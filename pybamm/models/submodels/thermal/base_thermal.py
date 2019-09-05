@@ -4,7 +4,7 @@
 import pybamm
 
 
-class BaseModel(pybamm.BaseSubModel):
+class BaseThermal(pybamm.BaseSubModel):
     """Base class for thermal effects
 
     Parameters
@@ -19,15 +19,18 @@ class BaseModel(pybamm.BaseSubModel):
     def __init__(self, param):
         super().__init__(param)
 
-    def _get_standard_fundamental_variables(self, T):
+    def _get_standard_fundamental_variables(self, T, T_cn, T_cp):
         param = self.param
         T_n, T_s, T_p = T.orphans
 
-        T_av = pybamm.x_average(T)
+        T_x_av = pybamm.x_average(T)
+        T_vol_av = self._yz_average(T_x_av)
 
         q = self._flux_law(T)
 
         variables = {
+            "Negative current collector temperature": T_cn,
+            "Negative current collector temperature [K]": param.Delta_T * T_cn,
             "X-averaged negative electrode temperature": pybamm.x_average(T_n),
             "X-averaged negative electrode temperature [K]": param.Delta_T
             * pybamm.x_average(T_n)
@@ -46,10 +49,15 @@ class BaseModel(pybamm.BaseSubModel):
             + param.T_ref,
             "Positive electrode temperature": T_p,
             "Positive electrode temperature [K]": param.Delta_T * T_p + param.T_ref,
+            "Positive current collector temperature": T_cp,
+            "Positive current collector temperature [K]": param.Delta_T * T_cp,
             "Cell temperature": T,
             "Cell temperature [K]": param.Delta_T * T + param.T_ref,
-            "X-averaged cell temperature": T_av,
-            "X-averaged cell temperature [K]": param.Delta_T * T_av + param.T_ref,
+            "X-averaged cell temperature": T_x_av,
+            "X-averaged cell temperature [K]": param.Delta_T * T_x_av + param.T_ref,
+            "Volume-averaged cell temperature": T_vol_av,
+            "Volume-averaged cell temperature [K]": param.Delta_T * T_vol_av
+            + param.T_ref,
             "Heat flux": q,
             "Heat flux [W.m-2]": q,
         }
@@ -80,6 +88,7 @@ class BaseModel(pybamm.BaseSubModel):
         phi_s_n = variables["Negative electrode potential"]
         phi_s_p = variables["Positive electrode potential"]
 
+        Q_ohm_s_cn, Q_ohm_s_cp = self._current_collector_heating(variables)
         Q_ohm_s_n = -pybamm.inner(i_s_n, pybamm.grad(phi_s_n))
         Q_ohm_s_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
         Q_ohm_s_p = -pybamm.inner(i_s_p, pybamm.grad(phi_s_p))
@@ -112,6 +121,10 @@ class BaseModel(pybamm.BaseSubModel):
         Q = Q_ohm + Q_rxn + Q_rev
         Q_av = pybamm.x_average(Q)
 
+        # Compute the x-average over the current collectors.
+        Q_av = self._x_average(Q, Q_ohm_s_cn, Q_ohm_s_cp)
+        Q_vol_av = self._yz_average(Q_av)
+
         variables.update(
             {
                 "Ohmic heating": Q_ohm,
@@ -139,11 +152,13 @@ class BaseModel(pybamm.BaseSubModel):
                 * param.potential_scale
                 * Q_av
                 / param.L_x,
+                "Volume-averaged total heating": Q_vol_av,
+                "Volume-averaged total heating [A.V.m-3]": param.i_typ
+                * param.potential_scale
+                * Q_vol_av
+                / param.L_x,
             }
         )
-
-        # TODO: add units for heat flux
-
         return variables
 
     def _flux_law(self, T):
@@ -152,8 +167,22 @@ class BaseModel(pybamm.BaseSubModel):
     def _unpack(self, variables):
         raise NotImplementedError
 
-    def set_initial_conditions(self, variables):
+    def _yz_average(self, var):
+        raise NotImplementedError
 
-        T, _, _ = self._unpack(variables)
-
-        self.initial_conditions = {T: self.param.T_init}
+    def _x_average(self, var, var_cn, var_cp):
+        """
+        Computes the x-average over the whole cell (including current collectors)
+        from the x-averaged variable in the cell (negative electrode, separator,
+        positive electrode), negative current collector, and positive current
+        collector.
+        Note: we do this as we cannot create a single variable which is
+        the concatenation [var_cn, var, var_cp] since var_cn and var_cp share the
+        same domian. (In the N+1D formulation the current collector variables are
+        assumed independent of x, so we do not make the distinction between negative
+        and positive current collectors in the geometry).
+        """
+        out = (
+            self.param.l_cn * var_cn + pybamm.x_average(var) + self.param.l_cp * var_cp
+        ) / self.param.l
+        return out

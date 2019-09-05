@@ -84,12 +84,12 @@ class TestSPM(unittest.TestCase):
         modeltest.test_all()
 
     def test_thermal(self):
-        options = {"thermal": "lumped"}
+        options = {"thermal": "x-lumped"}
         model = pybamm.lithium_ion.SPM(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-        options = {"thermal": "full"}
+        options = {"thermal": "x-full"}
         model = pybamm.lithium_ion.SPM(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()

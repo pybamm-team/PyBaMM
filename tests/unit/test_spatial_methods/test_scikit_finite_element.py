@@ -50,6 +50,11 @@ class TestScikitFiniteElement(unittest.TestCase):
             pybamm.laplacian(var) - pybamm.source(2 * var, var),
             pybamm.laplacian(var) - pybamm.source(unit_source ** 2 + 1 / var, var),
             pybamm.Integral(var, [y, z]) - 1,
+            pybamm.source(var, var, boundary=True),
+            pybamm.laplacian(var) - pybamm.source(unit_source, var, boundary=True),
+            pybamm.laplacian(var)
+            - pybamm.source(unit_source ** 2 + 1 / var, var, boundary=True),
+            pybamm.grad_squared(var),
         ]:
             # Check that equation can be evaluated in each case
             # Dirichlet
@@ -107,6 +112,18 @@ class TestScikitFiniteElement(unittest.TestCase):
         }
         with self.assertRaises(ValueError):
             eqn_disc = disc.process_symbol(eqn)
+
+        # raise ModelError if no BCs provided
+        new_var = pybamm.Variable("new_var", domain="current collector")
+        disc.set_variable_slices([new_var])
+        eqn = pybamm.laplacian(new_var)
+        with self.assertRaises(pybamm.ModelError):
+            eqn_disc = disc.process_symbol(eqn)
+
+        # check GeometryError if using scikit-fem not in y or z
+        x = pybamm.SpatialVariable("x", ["current collector"])
+        with self.assertRaises(pybamm.GeometryError):
+            disc.process_symbol(x)
 
     def test_manufactured_solution(self):
         mesh = get_unit_2p1D_mesh_for_testing(ypts=32, zpts=32)

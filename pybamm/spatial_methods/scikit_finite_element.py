@@ -153,6 +153,15 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
         return -stiffness_matrix @ discretised_symbol + boundary_load
 
+    def gradient_squared(self, symbol, discretised_symbol, boundary_conditions):
+        """Matrix-vector multiplication to implement the inner product of the
+        gradient operator with itself.
+        See :meth:`pybamm.SpatialMethod.gradient_squared`
+        """
+        stiffness_matrix = self.stiffness_matrix(symbol, boundary_conditions)
+
+        return stiffness_matrix @ (discretised_symbol ** 2)
+
     def stiffness_matrix(self, symbol, boundary_conditions):
         """
         Laplacian (stiffness) matrix for finite elements in the appropriate domain.
@@ -183,8 +192,13 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         stiffness = skfem.asm(stiffness_form, mesh.basis)
 
         # get boundary conditions and type, here lbc: negative tab, rbc: positive tab
-        _, lbc_type = boundary_conditions[symbol.id]["left"]
-        _, rbc_type = boundary_conditions[symbol.id]["right"]
+        try:
+            _, lbc_type = boundary_conditions[symbol.id]["left"]
+            _, rbc_type = boundary_conditions[symbol.id]["right"]
+        except KeyError:
+            raise pybamm.ModelError(
+                "No boundary conditions provided for symbol `{}``".format(symbol)
+            )
 
         # adjust matrix for Dirichlet boundary conditions
         if lbc_type == "Dirichlet":
@@ -365,6 +379,51 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         :class:`pybamm.Matrix`
             The (sparse) mass matrix for the spatial method.
         """
+        return self.assemble_mass_form(symbol, boundary_conditions)
+
+    def boundary_mass_matrix(self, symbol, boundary_conditions):
+        """
+        Calculates the mass matrix for the finite element method assembled
+        over the boundary.
+
+        Parameters
+        ----------
+        symbol: :class:`pybamm.Variable`
+            The variable corresponding to the equation for which we are
+            calculating the mass matrix.
+        boundary_conditions : dict
+            The boundary conditions of the model
+            ({symbol.id: {"left": left bc, "right": right bc}})
+
+        Returns
+        -------
+        :class:`pybamm.Matrix`
+            The (sparse) mass matrix for the spatial method.
+        """
+        return self.assemble_mass_form(symbol, boundary_conditions, region="boundary")
+
+    def assemble_mass_form(self, symbol, boundary_conditions, region="interior"):
+        """
+        Assembles the form of the finite element mass matrix over the domain
+        interior or boundary.
+
+        Parameters
+        ----------
+        symbol: :class:`pybamm.Variable`
+            The variable corresponding to the equation for which we are
+            calculating the mass matrix.
+        boundary_conditions : dict
+            The boundary conditions of the model
+            ({symbol.id: {"left": left bc, "right": right bc}})
+        region: str, optional
+            The domain over which to assemble the mass matrix form. Can be "interior"
+            (defualt) or "boundary".
+
+        Returns
+        -------
+        :class:`pybamm.Matrix`
+            The (sparse) mass matrix for the spatial method.
+        """
         # get primary domain mesh
         domain = symbol.domain[0]
         mesh = self.mesh[domain][0]
@@ -375,7 +434,10 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             return u * v
 
         # assemble mass matrix
-        mass = skfem.asm(mass_form, mesh.basis)
+        if region == "interior":
+            mass = skfem.asm(mass_form, mesh.basis)
+        if region == "boundary":
+            mass = skfem.asm(mass_form, mesh.facet_basis)
 
         # get boundary conditions and type, here lbc: negative tab, rbc: positive tab
         if symbol.id in boundary_conditions:

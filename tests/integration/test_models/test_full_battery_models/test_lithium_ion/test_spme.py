@@ -68,12 +68,12 @@ class TestSPMe(unittest.TestCase):
 
     def test_thermal(self):
         pybamm.settings.debug_mode = True
-        options = {"thermal": "lumped"}
+        options = {"thermal": "x-lumped"}
         model = pybamm.lithium_ion.SPMe(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-        options = {"thermal": "full"}
+        options = {"thermal": "x-full"}
         model = pybamm.lithium_ion.SPMe(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
