@@ -1,0 +1,70 @@
+We recommend the use of Windows Subsystem for Linux (WSL) to install PyBaMM, see the
+instructions below to get PyBaMM working using Windows, WSL and VSCode.
+
+## Install WSL
+
+Follow the instructions from Microsoft
+[here](https://docs.microsoft.com/en-us/windows/wsl/install-win10). When given the
+option, choose the Ubuntu 18.04 LTS distribution to install. Don't forget to initialise
+the Ubuntu installation using the instructions given
+[here](https://docs.microsoft.com/en-us/windows/wsl/initialize-distro)
+
+## Install PyBaMM
+
+Open a terminal window in your installed Ubuntu distribution by selecting "Ubuntu" from
+the start menu. This should give you a bash prompt in your home directory. 
+
+To download the PyBaMM source code, you first need to install git, which you can do by
+typing
+
+```bash 
+$ sudo apt install git-core
+```
+
+Now use git to clone the PyBaMM repository:
+
+```bash
+$ git clone https://github.com/pybamm-team/PyBaMM.git
+```
+
+This will create a new directly called `PyBaMM`, you can move to this directory in bash
+using the `cd` command:
+
+```bash 
+$ cd PyBaMM 
+```
+
+If you are unfamiliar with the linux command line, please see this
+[tutorial](https://tutorials.ubuntu.com/tutorial/command-line-for-beginners) by Ubuntu
+
+Now head over and follow the installation instructions for PyBaMM for linux
+[here](INSTALL_LINUX.md).
+
+## Use Visual Studio Code to run PyBaMM 
+
+You will probably want to use a native Windows IDE such as Visual Studio Code or the
+full Microsoft Visual Studio IDE. Both of these packages can connect to WSL so that you
+can write python code in a native windows environment, while at the same time using WSL
+to run the code using your installed Ubuntu distribution. The following instructions
+assume that you are using Visual Studio Code.
+
+First, setup vscode to run within the `PyBaMM` directory that you created above, using
+the instructions provided [here](https://code.visualstudio.com/docs/remote/wsl). 
+
+Once you have opened the `PyBaMM` folder in vscode, use the `Extensions` panel to
+install the `Python` extension from Microsoft. Note that extensions are either installed
+on the Windows (Local) or on in WSL (WSL:Ubuntu), so even if you have used vscode
+previously with the Python extension, you probably haven't installed it in WSL. Make
+sure to reload after installing the Python extension so that it is available.
+
+If you have installed PyBaMM into the virtual environment `env` as in the PyBaMM linux
+install guide, then vscode should automatically start using this environment and you
+should see something similar to "Python 3.6.8 64-bit ('env': venv)" in the bottom bar.
+
+To test that vscode can run a PyBaMM script, navigate to the `examples/scripts` folder
+and right click on the `create-model.py` script. Select "Run current file in Python
+Interactive Window". This should run the script, which sets up and solves a model of SEI
+thickness using PyBaMM. You should see a plot of SEI thickness versus time pop up in the
+interactive window.
+
+
