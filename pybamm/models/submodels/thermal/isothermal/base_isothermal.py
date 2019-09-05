@@ -63,9 +63,3 @@ class BaseModel(BaseThermal):
             "current collector",
         )
         return q
-
-    def _current_collector_heating(self, variables):
-        """Returns zeros for current collector heat source terms"""
-        Q_s_cn = pybamm.Scalar(0)
-        Q_s_cp = pybamm.Scalar(0)
-        return Q_s_cn, Q_s_cp
