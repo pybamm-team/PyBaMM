@@ -7,7 +7,7 @@ Follow the instructions from Microsoft
 [here](https://docs.microsoft.com/en-us/windows/wsl/install-win10). When given the
 option, choose the Ubuntu 18.04 LTS distribution to install. Don't forget to initialise
 the Ubuntu installation using the instructions given
-[here](https://docs.microsoft.com/en-us/windows/wsl/initialize-distro)
+[here](https://docs.microsoft.com/en-us/windows/wsl/initialize-distro).
 
 ## Install PyBaMM
 
