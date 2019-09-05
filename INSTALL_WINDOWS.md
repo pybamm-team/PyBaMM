@@ -34,8 +34,8 @@ using the `cd` command:
 $ cd PyBaMM 
 ```
 
-If you are unfamiliar with the linux command line, please see this
-[tutorial](https://tutorials.ubuntu.com/tutorial/command-line-for-beginners) by Ubuntu
+If you are unfamiliar with the linux command line, you might find it useful to work through this
+[tutorial](https://tutorials.ubuntu.com/tutorial/command-line-for-beginners) provided by Ubuntu.
 
 Now head over and follow the installation instructions for PyBaMM for linux
 [here](INSTALL_LINUX.md).
