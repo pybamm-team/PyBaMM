@@ -463,15 +463,15 @@ class BaseBatteryModel(pybamm.BaseModel):
             if self.options["dimensionality"] == 0:
                 # note here we will just call the x_lumped model
                 # because it is equivalent
-                if self.options["current collector"] is False:
+                if self.options["thermal current collector"] is False:
                     thermal_submodel = pybamm.thermal.x_lumped.NoCurrentCollector(
                         self.param
                     )
-                elif self.options["current collector"] is True:
+                elif self.options["thermal current collector"] is True:
                     thermal_submodel = pybamm.thermal.x_lumped.CurrentCollector0D(
                         self.param
                     )
-            if self.options["dimensionality"] == 1:
+            elif self.options["dimensionality"] == 1:
                 thermal_submodel = pybamm.thermal.xyz_lumped.CurrentCollector1D(
                     self.param
                 )
@@ -487,7 +487,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 thermal_submodel = pybamm.thermal.x_lumped.CurrentCollector0D(
                     self.param
                 )
-            if self.options["dimensionality"] == 1:
+            elif self.options["dimensionality"] == 1:
                 thermal_submodel = pybamm.thermal.xyz_lumped.CurrentCollector1D(
                     self.param
                 )
