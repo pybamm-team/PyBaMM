@@ -99,7 +99,7 @@ class TestMesh(unittest.TestCase):
         var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 12}
         geometry = pybamm.Geometry1p1DMicro()
         with self.assertRaisesRegex(KeyError, "Points not given"):
-            pybamm.Mesh(geometry, submesh_types, var_pts)    
+            pybamm.Mesh(geometry, submesh_types, var_pts)
 
     def test_mesh_sizes(self):
         param = pybamm.ParameterValues(
