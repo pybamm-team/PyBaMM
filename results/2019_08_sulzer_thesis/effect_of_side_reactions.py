@@ -16,7 +16,7 @@ except ImportError:
 
 
 def plot_voltages(all_variables, t_eval):
-    linestyles = ["k-", "b--"]
+    linestyles = ["k-", "r--"]
     shared_plotting.plot_voltages(all_variables, t_eval, linestyles, figsize=(6.4, 2.5))
     file_name = "side_reactions_voltage_comparison.eps"
     plt.subplots_adjust(bottom=0.4)
@@ -27,10 +27,10 @@ def plot_voltages(all_variables, t_eval):
 def plot_interfacial_currents(all_variables, t_eval):
     file_name = "side_reactions_interfacial_current_density_comparison.eps"
     output_vars = [
-        "Average positive electrode interfacial current density",
-        "Average positive electrode oxygen interfacial current density",
-        "Average negative electrode oxygen interfacial current density",
-        "Average negative electrode interfacial current density",
+        "X-averaged positive electrode interfacial current density",
+        "X-averaged positive electrode oxygen interfacial current density",
+        "X-averaged negative electrode oxygen interfacial current density",
+        "X-averaged negative electrode interfacial current density",
     ]
     labels = [
         "Pos electrode\n(main)",
@@ -60,11 +60,11 @@ def charge_states(compute):
             ),
         ]
         Crates = [-0.1, -1, -5]
-        t_eval = np.linspace(0, 5, 100)
+        t_eval = np.linspace(0, 4.5, 100)
         extra_parameter_values = {
-            "Positive electrode"
-            + "reference exchange-current density (oxygen) [A.m-2]": 1e-24,
-            "Initial State of Charge": 0.5,
+            # "Positive electrode"
+            # + "reference exchange-current density (oxygen) [A.m-2]": 1e-24,
+            "Initial State of Charge": 0.5
         }
         all_variables1, t_eval1 = model_comparison(
             models1, Crates, t_eval, extra_parameter_values=extra_parameter_values

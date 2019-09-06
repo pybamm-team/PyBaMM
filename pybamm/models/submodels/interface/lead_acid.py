@@ -49,8 +49,8 @@ class BaseInterfaceLeadAcid(BaseInterface):
             j0 = self.param.j0_n_S_ref * c_e
 
         elif self.domain == "Positive":
-            c_w = self.param.c_w(c_e)
-            j0 = self.param.j0_p_S_ref * c_e ** 2 * c_w
+            # c_w = self.param.c_w(c_e)
+            j0 = self.param.j0_p_S_ref * c_e ** 2  # * c_w
 
         return j0
 

@@ -350,12 +350,13 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "x_s [m]": var.x_s * L_x,
                 "x_p": var.x_p,
                 "x_p [m]": var.x_p * L_x,
-                "y": var.y,
-                "y [m]": var.y * L_y,
-                "z": var.z,
-                "z [m]": var.z * L_z,
             }
         )
+
+        if self.options["dimensionality"] >= 1:
+            self.variables.update({"z": var.z, "z [m]": var.z * L_z})
+        if self.options["dimensionality"] == 2:
+            self.variables.update({"y": var.y, "y [m]": var.y * L_y})
 
     def build_model(self):
         pybamm.logger.info("Building {}".format(self.name))
@@ -564,6 +565,10 @@ class BaseBatteryModel(pybamm.BaseModel):
                 {
                     "Current collector overpotential": cc_overpotential,
                     "Current collector overpotential [V]": cc_overpotential_dim,
+                    "Battery current collector overpotential [V]": cc_overpotential_dim
+                    * pybamm.Parameter(
+                        "Number of cells connected in series to make a battery"
+                    ),
                     "Voltage minus cc overpotential": V,
                     "Voltage minus cc overpotential [V]": V_dim,
                 }

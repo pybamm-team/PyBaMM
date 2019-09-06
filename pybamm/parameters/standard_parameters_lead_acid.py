@@ -416,13 +416,18 @@ def kappa_e(c_e, T):
     return kappa_e_dimensional(c_e_dimensional, T_ref) / kappa_scale
 
 
-# (1-2*t_plus) is for Nernst-Planck
-# 2*(1-t_plus) for Stefan-Maxwell
+def t_plus_function(t_plus):
+    "Function of t_plus in the MacInnes equation"
+    # (1-2*t_plus) is for Nernst-Planck
+    # 2*(1-t_plus) for Stefan-Maxwell
+    return pybamm.FunctionParameter("MacInnes t_plus function", t_plus)
+
+
 def chi(c_e, c_ox=0, c_hy=0):
     return (
         chi_dimensional(c_e_typ * c_e)
-        * (2 * (1 - t_plus))
-        / (V_w * c_T(c_e_typ * c_e, c_e_typ * c_ox, c_e_typ * c_hy))
+        * t_plus_function(t_plus)
+        # / (V_w * c_T(c_e_typ * c_e, c_e_typ * c_ox, c_e_typ * c_hy))
     )
 
 

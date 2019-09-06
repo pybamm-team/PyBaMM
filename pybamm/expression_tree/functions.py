@@ -23,12 +23,13 @@ class Function(pybamm.Symbol):
     **Extends:** :class:`pybamm.Symbol`
     """
 
-    def __init__(self, function, *children):
+    def __init__(self, function, *children, name=None):
 
-        try:
-            name = "function ({})".format(function.__name__)
-        except AttributeError:
-            name = "function ({})".format(function.__class__)
+        if name is None:
+            try:
+                name = "function ({})".format(function.__name__)
+            except AttributeError:
+                name = "function ({})".format(function.__class__)
         children_list = list(children)
         domain = self.get_children_domains(children_list)
         auxiliary_domains = self.get_children_auxiliary_domains(children)

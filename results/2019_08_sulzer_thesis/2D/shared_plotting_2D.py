@@ -8,7 +8,7 @@ from collections import defaultdict
 
 
 def plot_voltages(
-    all_variables, t_eval, linestyles=None, linewidths=None, figsize=(6.4, 5)
+    all_variables, t_eval, linestyles=None, linewidths=None, figsize=(6.4, 4)
 ):
     """
     all_variables is a dict of dicts of dicts of dicts.
@@ -92,7 +92,7 @@ def plot_voltages(
                 )
     leg = fig.legend(labels, loc="lower center", ncol=len(labels))
     plt.subplots_adjust(
-        bottom=0.17, top=0.95, left=0.28, right=0.97, hspace=0.08, wspace=0.05
+        bottom=0.23, top=0.92, left=0.28, right=0.97, hspace=0.08, wspace=0.05
     )
     leg.get_frame().set_edgecolor("k")
     return fig, axes
@@ -101,14 +101,14 @@ def plot_voltages(
 def plot_variable(
     all_variables,
     times,
+    sigma,
     variable,
     limits_exceptions=None,
     yaxis="SOC",
     linestyles=None,
     linewidths=None,
-    figsize=(6.4, 5),
+    figsize=(6.4, 4),
 ):
-    sigma = 10 * 8000
     limits_exceptions = limits_exceptions or {}
     linestyles = linestyles or ["k-", "g--", "r:", "b-."]
     linewidths = linewidths or [1.4, 1.4, 1.4, 1.4]
@@ -204,27 +204,133 @@ def plot_variable(
     leg = fig.legend(labels, loc="lower center", ncol=len(labels), frameon=True)
     leg.get_frame().set_edgecolor("k")
     plt.subplots_adjust(
-        bottom=0.17, top=0.95, left=0.18, right=0.97, hspace=0.08, wspace=0.05
+        bottom=0.23, top=0.92, left=0.18, right=0.97, hspace=0.08, wspace=0.05
+    )
+    return fig, axes
+
+
+def plot_variable_allsigma(
+    all_variables,
+    time,
+    variable,
+    limits_exceptions=None,
+    yaxis="SOC",
+    linestyles=None,
+    linewidths=None,
+    figsize=(6.4, 4),
+):
+    limits_exceptions = limits_exceptions or {}
+    linestyles = linestyles or ["k-", "g--", "r:", "b-."]
+    linewidths = linewidths or [1.4, 1.4, 1.4, 1.4]
+    n = len(list(all_variables.values())[0])
+    m = len(all_variables)
+    Crates = list(all_variables.keys())
+    sigmas = list(all_variables[Crates[0]].keys())
+    labels = list(all_variables[Crates[0]][sigmas[0]].keys())
+
+    z = all_variables[Crates[0]][sigmas[0]][labels[0]]["z"](0, z=np.linspace(0, 1))[
+        :, 0
+    ]
+    z_dim = all_variables[Crates[0]][sigmas[0]][labels[0]]["z [m]"](
+        0, z=np.linspace(0, 1)
+    )[:, 0]
+
+    fig, axes = plt.subplots(n, m, figsize=figsize)
+
+    # Default limits
+    y_min = pybamm.ax_min(
+        [
+            np.nanmin(variables[variable](np.linspace(0, 1), z=z))
+            for allsigma_models_variables in all_variables.values()
+            for models_variables in allsigma_models_variables.values()
+            for variables in models_variables.values()
+        ]
+    )
+    y_max = pybamm.ax_max(
+        [
+            np.nanmax(variables[variable](np.linspace(0, 1), z=z))
+            for allsigma_models_variables in all_variables.values()
+            for models_variables in allsigma_models_variables.values()
+            for variables in models_variables.values()
+        ]
+    )
+    # Exceptions
+    if "min" in limits_exceptions:
+        y_min = limits_exceptions["min"]
+    if "max" in limits_exceptions:
+        y_max = limits_exceptions["max"]
+
+    # Plot
+    for i, (Crate, allsigma_models_variables) in enumerate(all_variables.items()):
+        for j, (sigma, models_variables) in enumerate(
+            allsigma_models_variables.items()
+        ):
+            if len(sigmas) == 1:
+                ax = axes[i]
+            else:
+                ax = axes[j, i]
+            ax.set_xlim([z_dim[0], z_dim[-1]])
+            ax.set_ylim([y_min, y_max])
+            ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+
+            # Title
+            if j == 0:
+                ax.set_title(
+                    "\\textbf{{({})}} {}C ($\\mathcal{{C}}_e={}$)".format(
+                        chr(97 + i), abs(Crate), abs(Crate) * 0.6
+                    )
+                )
+            # x-axis
+            if j == len(sigmas) - 1:
+                ax.set_xlabel("z [m]")
+            else:
+                ax.set_xticklabels([])
+
+            # y-axis
+            if i == 0:
+                # If we only want to plot one time the y label is the variable
+                if len(sigmas) == 1:
+                    ax.set_ylabel(variable)
+                # Otherwise the y label is the time
+                else:
+                    sigma_exponent = int(np.floor(np.log10(sigma)))
+                    sigma_dash = 0.05 * sigma / 8000
+                    ax.set_ylabel(
+                        (
+                            "$\\hat{{\\sigma}}_p = {}\\times 10^{{{}}}$ S/m"
+                            + "\n$(\\sigma'_p={}/\\mathcal{{C}})$"
+                        ).format(
+                            sigma / 10 ** sigma_exponent, sigma_exponent, sigma_dash
+                        ),
+                        rotation=0,
+                        labelpad=50,
+                    )
+                    ax.yaxis.get_label().set_verticalalignment("center")
+            else:
+                ax.set_yticklabels([])
+
+            # Plot
+            for j, variables in enumerate(models_variables.values()):
+                ax.plot(z_dim, variables[variable](time, z=z), linestyles[j])
+    leg = fig.legend(labels, loc="lower center", ncol=len(labels), frameon=True)
+    leg.get_frame().set_edgecolor("k")
+    plt.subplots_adjust(
+        bottom=0.2, top=0.92, left=0.28, right=0.97, hspace=0.08, wspace=0.05
     )
     return fig, axes
 
 
 def plot_variable_x_z(
-    all_variables,
-    time_Crate_sigma,
-    variable,
-    limits_exceptions=None,
-    figsize=(6.4, 6.4),
+    all_variables, time_Crate_sigma, variable, limits_exceptions=None, figsize=(6.4, 3)
 ):
     time, Crate, sigma = time_Crate_sigma
-    sigma = 8000
     models = ["1+1D LOQS", "1+1D Composite", "1+1D Full"]
     time = 0.1
     limits_exceptions = limits_exceptions or {}
     n = 1  # len(times)
     m = 3  # len(all_variables)
     models_variables = all_variables[Crate][sigma]
-    fig, axes = plt.figure(figsize=figsize)
+    fig, axes = plt.subplots(n, m, figsize=figsize)
 
     x = models_variables[models[0]]["x"](0, x=np.linspace(0.1, 0.9))[:, 0]
     x_dim = models_variables[models[0]]["x [m]"](0, x=np.linspace(0.1, 0.9))[:, 0]
@@ -246,8 +352,22 @@ def plot_variable_x_z(
     )
 
     # Plot
+    L_n = (
+        pybamm.lead_acid.BaseModel()
+        .default_parameter_values.process_symbol(
+            pybamm.standard_parameters_lead_acid.L_n
+        )
+        .evaluate()
+    )
+    L_s = (
+        pybamm.lead_acid.BaseModel()
+        .default_parameter_values.process_symbol(
+            pybamm.standard_parameters_lead_acid.L_s
+        )
+        .evaluate()
+    )
     for i, model in enumerate(models):
-        ax = fig.add_subplot(2, 3, i + 1)
+        ax = axes.flat[i]
 
         # Title
         ax.set_title(model)
@@ -265,25 +385,22 @@ def plot_variable_x_z(
             vmin=v_min,
             vmax=v_max,
             levels=100,
+            cmap="jet",
         )
         for c in CS.collections:
             c.set_edgecolor("face")
-        ax1 = ax
 
-    fig.colorbar(CS, ax=ax1)
+        # Electrodes
+        ax.axvline(L_n, color="k", linestyle="--", linewidth=0.5)
+        ax.axvline(L_n + L_s, color="k", linestyle="--", linewidth=0.5)
 
-    # Electrodes
-    L_n = pybamm.lead_acid.BaseModel().default_parameter_values.process_symbol(
-        pybamm.standard_parameters_lead_acid.L_n
-    )
-    L_s = pybamm.lead_acid.BaseModel().default_parameter_values.process_symbol(
-        pybamm.standard_parameters_lead_acid.L_s
-    )
-    # ax.plot([L_n, L_n], [0, np.max(z_dim)], "k--")
+    cb_ax = fig.add_axes([0.86, 0.15, 0.02, 0.73])
+    cbar = fig.colorbar(CS, cax=cb_ax)
+    cbar.set_label("Electrolyte concentration [Molar]", rotation=270, labelpad=20)
 
     # Plot
-    plt.subplots_adjust(hspace=0.35, wspace=0.05)
-    return fig
+    plt.subplots_adjust(hspace=0.35, wspace=0.05, right=0.84, bottom=0.15)
+    return fig, axes
 
 
 def plot_voltage_components(all_variables, t_eval, model, sigmas):
@@ -315,9 +432,13 @@ def plot_voltage_components(all_variables, t_eval, model, sigmas):
         ax.set_ylim([y_min, y_max])
         ax.set_xlabel("Time [h]")
         sigma_exponent = int(np.floor(np.log10(sigma)))
+        sigma_dash = 0.05 * sigma / 8000
         ax.set_title(
-            "\\textbf{{({})}} $\\hat{{\\sigma}}_p = {}\\times 10^{{{}}}$ S/m".format(
-                chr(97 + k), sigma / 10 ** sigma_exponent, sigma_exponent
+            (
+                "\\textbf{{({})}} $\\hat{{\\sigma}}_p = {}\\times 10^{{{}}}$ S/m"
+                + "\n$(\\sigma'_p={}/\\mathcal{{C}})$"
+            ).format(
+                chr(97 + k), sigma / 10 ** sigma_exponent, sigma_exponent, sigma_dash
             )
         )
         ax.xaxis.set_major_locator(plt.MaxNLocator(3))
@@ -345,19 +466,27 @@ def plot_voltage_components(all_variables, t_eval, model, sigmas):
     fig.tight_layout()
 
 
-def plot_times(models_times, linestyles=None):
-    linestyles = {
-        "1+1D Full": "k-",
-        "1D Full": "k:",
-        "1+1D Composite": "b-",
-        "1+1D Composite Averaged": "b--",
-        # "1D Composite": "b:",
-        "1+1D LOQS": "g-",
-        "1D LOQS": "g:",
-    }
+def plot_times(models_times, dimensions):
+    if dimensions == 1:
+        linestyles = {
+            "1D Full": "k-",
+            "1D Composite": "b-",
+            # "1D FOQS": "r-",
+            "1D LOQS": "g-",
+        }
+    elif dimensions == 2:
+        linestyles = {
+            "1+1D Full": "k-",
+            "1+1D Composite": "b-",
+            "1D Full": "k:",
+            "1+1D Composite Averaged": "b--",
+            # "1D Composite": "b:",
+            "1+1D LOQS": "g-",
+            "1D LOQS": "g:",
+        }
     all_npts = defaultdict(list)
     solver_times = defaultdict(list)
-    fig, ax = plt.subplots(1, 1)
+    fig, ax = plt.subplots(1, 1, figsize=(6.4, 3))
     for i, (model, linestyle) in enumerate(linestyles.items()):
         times = models_times[model]
         for npts, solver_time in times.items():

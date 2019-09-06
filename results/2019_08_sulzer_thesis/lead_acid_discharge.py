@@ -64,7 +64,7 @@ def discharge_states(compute):
             pybamm.lead_acid.NewmanTiedemann(name="Full"),
             pybamm.lead_acid.LOQS(name="LOQS"),
             pybamm.lead_acid.FOQS(name="FOQS"),
-            pybamm.lead_acid.Composite(name="Composite"),
+            pybamm.lead_acid.CompositeExtended(name="Composite"),
         ]
         Crates = [0.1, 0.2, 0.5, 1, 2, 4, 5, 10, 20]
         t_eval = np.linspace(0, 1, 100)

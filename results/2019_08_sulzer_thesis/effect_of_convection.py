@@ -15,11 +15,13 @@ except ImportError:
     OUTPUT_DIR = None
 
 
-def plot_voltages(all_variables, t_eval, bigger_beta=False):
-    linestyles = ["k-", "b--"]
+def plot_voltages(all_variables, t_eval, operation="standard"):
+    linestyles = ["k-", "r--"]
     shared_plotting.plot_voltages(all_variables, t_eval, linestyles, figsize=(6.4, 2.5))
-    if bigger_beta:
+    if operation == "big beta":
         file_name = "convection_voltage_comparison_bigger_beta.eps"
+    elif operation == "high C":
+        file_name = "convection_voltage_comparison_high_C.eps"
     else:
         file_name = "convection_voltage_comparison.eps"
     plt.subplots_adjust(bottom=0.4)
@@ -27,18 +29,25 @@ def plot_voltages(all_variables, t_eval, bigger_beta=False):
         plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
-def plot_variables(all_variables, t_eval, bigger_beta=False):
+def plot_variables(all_variables, t_eval, operation="standard"):
     # Set up
     times = np.array([0.195])
-    linestyles = ["k-", "b--"]
-    if bigger_beta:
+    linestyles = ["k-", "r--"]
+    if operation == "big beta":
         var_file_names = {
             "Volume-averaged velocity [m.s-1]"
             + "": "convection_velocity_comparison_bigger_beta.eps",
             "Electrolyte concentration [Molar]"
             + "": "convection_electrolyte_concentration_comparison_bigger_beta.eps",
         }
-    else:
+    elif operation == "high C":
+        var_file_names = {
+            "Volume-averaged velocity [m.s-1]"
+            + "": "convection_velocity_comparison_high_C.eps",
+            "Electrolyte concentration [Molar]"
+            + "": "convection_electrolyte_concentration_comparison_high_C.eps",
+        }
+    elif operation == "standard":
         var_file_names = {
             "Volume-averaged velocity [m.s-1]": "convection_velocity_comparison.eps",
             "Electrolyte concentration [Molar]"
@@ -63,7 +72,7 @@ def charge_states(compute):
     if compute:
         models = [
             pybamm.lead_acid.NewmanTiedemann(
-                {"convection": True}, name="With convection"
+                {"convection": {"transverse": "uniform"}}, name="With convection"
             ),
             pybamm.lead_acid.NewmanTiedemann(name="Without convection"),
         ]
@@ -85,18 +94,48 @@ def charge_states(compute):
     plot_variables(all_variables, t_eval)
 
 
+def charge_states_high_C(compute):
+    savefile = "effect_of_convection_high_C_data.pickle"
+    if compute:
+        models = [
+            pybamm.lead_acid.NewmanTiedemann(
+                {"surface form": "algebraic", "convection": {"transverse": "uniform"}},
+                name="With convection",
+            ),
+            pybamm.lead_acid.NewmanTiedemann(
+                {"surface form": "algebraic"}, name="Without convection"
+            ),
+        ]
+        Crates = [10, 25]
+        t_eval = np.linspace(0, 0.24, 100)
+        all_variables, t_eval = model_comparison(models, Crates, t_eval)
+        with open(savefile, "wb") as f:
+            data = (all_variables, t_eval)
+            pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+    else:
+        try:
+            with open(savefile, "rb") as f:
+                (all_variables, t_eval) = pickle.load(f)
+        except FileNotFoundError:
+            raise FileNotFoundError(
+                "Run script with '--compute' first to generate results"
+            )
+    plot_voltages(all_variables, t_eval, operation="high C")
+    plot_variables(all_variables, t_eval, operation="high C")
+
+
 def charge_states_bigger_volume_change(compute):
     savefile = "effect_of_convection_bigger_beta_data.pickle"
     if compute:
         models = [
             pybamm.lead_acid.NewmanTiedemann(
-                {"convection": True}, name="With convection"
+                {"convection": {"transverse": "uniform"}}, name="With convection"
             ),
             pybamm.lead_acid.NewmanTiedemann(name="Without convection"),
         ]
         Crates = [0.5, 1, 5]
         t_eval = np.linspace(0, 1, 100)
-        extra_parameter_values = {"Volume change factor": 10}
+        extra_parameter_values = {"Volume change factor": 5}
         all_variables, t_eval = model_comparison(
             models, Crates, t_eval, extra_parameter_values=extra_parameter_values
         )
@@ -111,8 +150,8 @@ def charge_states_bigger_volume_change(compute):
             raise FileNotFoundError(
                 "Run script with '--compute' first to generate results"
             )
-    plot_voltages(all_variables, t_eval, bigger_beta=True)
-    plot_variables(all_variables, t_eval, bigger_beta=True)
+    plot_voltages(all_variables, t_eval, operation="big beta")
+    plot_variables(all_variables, t_eval, operation="big beta")
 
 
 if __name__ == "__main__":
@@ -121,5 +160,6 @@ if __name__ == "__main__":
     parser.add_argument("--compute", action="store_true", help="(Re)-compute results.")
     args = parser.parse_args()
     charge_states(args.compute)
+    charge_states_high_C(args.compute)
     charge_states_bigger_volume_change(args.compute)
     plt.show()
