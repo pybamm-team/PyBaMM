@@ -636,7 +636,7 @@ class BoundaryOperator(SpatialOperator):
 
     def __init__(self, name, child, side):
         self.side = side
-        # integral of a child takes the domain from auxiliary domain of the child
+        # boundary value of a child takes the domain from auxiliary domain of the child
         if child.auxiliary_domains != {}:
             domain = child.auxiliary_domains["secondary"]
         # if child has no auxiliary domain, integral removes domain

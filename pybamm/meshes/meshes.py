@@ -75,7 +75,7 @@ class Mesh(dict):
         # evaluate any expressions in geometry
         for domain in geometry:
             for prim_sec_tabs, variables in geometry[domain].items():
-                # process tab information if using 2D current collectors
+                # process tab information if using 1 or 2D current collectors
                 if prim_sec_tabs == "tabs":
                     for tab, position_size in variables.items():
                         for position_size, sym in position_size.items():
@@ -95,10 +95,11 @@ class Mesh(dict):
 
         # Create submeshes
         for domain in geometry:
-            # need to pass tab information if primary domian is 2D current collector
+            # need to pass tab information if primary domain is 1 or 2D
+            # current collector
             if (
                 domain == "current collector"
-                and submesh_types[domain] == pybamm.Scikit2DSubMesh
+                and submesh_types[domain] != pybamm.SubMesh0D
             ):
                 self[domain] = [
                     submesh_types[domain](

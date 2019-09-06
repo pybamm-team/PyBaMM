@@ -98,12 +98,12 @@ class PotentialPair1plus1D(BasePotentialPair):
         # even though phi_s_cp isn't a pybamm.Variable object
         self.boundary_conditions = {
             phi_s_cn: {
-                "left": (pybamm.Scalar(0), "Neumann"),
-                "right": (pybamm.Scalar(0), "Dirichlet"),
+                "negative tab": (pybamm.Scalar(0), "Dirichlet"),
+                "positive tab": (pybamm.Scalar(0), "Neumann"),
             },
             phi_s_cp: {
-                "left": (pybamm.Scalar(0), "Neumann"),
-                "right": (pos_tab_bc, "Neumann"),
+                "negative tab": (pybamm.Scalar(0), "Neumann"),
+                "positive tab": (pos_tab_bc, "Neumann"),
             },
         }
 
@@ -147,12 +147,12 @@ class PotentialPair2plus1D(BasePotentialPair):
         # even though phi_s_cp isn't a pybamm.Variable object
         self.boundary_conditions = {
             phi_s_cn: {
-                "left": (pybamm.Scalar(0), "Dirichlet"),
-                "right": (pybamm.Scalar(0), "Neumann"),
+                "negative tab": (pybamm.Scalar(0), "Dirichlet"),
+                "positive tab": (pybamm.Scalar(0), "Neumann"),
             },
             phi_s_cp: {
-                "left": (pybamm.Scalar(0), "Neumann"),
-                "right": (pos_tab_bc, "Neumann"),
+                "negative tab": (pybamm.Scalar(0), "Neumann"),
+                "positive tab": (pos_tab_bc, "Neumann"),
             },
         }
 

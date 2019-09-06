@@ -325,6 +325,13 @@ class Discretisation(object):
         for key, bcs in model.boundary_conditions.items():
             processed_bcs[key.id] = {}
             for side, bc in bcs.items():
+                # if boundary conditions are applied on "negative tab" or
+                # "positive tab" *and* the mesh is 1D then change side to
+                # "left" or "right" as appropriate
+                if side in ["negative tab", "positive tab"]:
+                    mesh = self.mesh[key.domain[0]][0]
+                    if isinstance(mesh, pybamm.SubMesh1D):
+                        side = mesh.tabs[side]
                 eqn, typ = bc
                 pybamm.logger.debug("Discretise {} ({} bc)".format(key, side))
                 processed_eqn = self.process_symbol(eqn)
@@ -335,6 +342,13 @@ class Discretisation(object):
     def _process_bc_entry(self, key, bcs):
         processed_entry = {key.id: {}}
         for side, bc in bcs.items():
+            # if boundary conditions are applied on "negative tab" or
+            # "positive tab" *and* the mesh is 1D then change side to
+            # "left" or "right" as appropriate
+            if side in ["negative tab", "positive tab"]:
+                mesh = self.mesh[key.domain[0]][0]
+                if isinstance(mesh, pybamm.SubMesh1D):
+                    side = mesh.tabs[side]
             eqn, typ = bc
             pybamm.logger.debug("Discretise {} ({} bc)".format(key, side))
             processed_eqn = self.process_symbol(eqn)
@@ -574,6 +588,13 @@ class Discretisation(object):
                 return symbol
 
             elif isinstance(symbol, pybamm.BoundaryOperator):
+                # if boundary operator applied on "negative tab" or
+                # "positive tab" *and* the mesh is 1D then change side to
+                # "left" or "right" as appropriate
+                if symbol.side in ["negative tab", "positive tab"]:
+                    mesh = self.mesh[symbol.children[0].domain[0]][0]
+                    if isinstance(mesh, pybamm.SubMesh1D):
+                        symbol.side = mesh.tabs[symbol.side]
                 return child_spatial_method.boundary_value_or_flux(symbol, disc_child)
 
             else:
