@@ -66,5 +66,3 @@ and right click on the `create-model.py` script. Select "Run current file in Pyt
 Interactive Window". This should run the script, which sets up and solves a model of SEI
 thickness using PyBaMM. You should see a plot of SEI thickness versus time pop up in the
 interactive window.
-
-
