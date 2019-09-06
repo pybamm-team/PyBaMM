@@ -18,7 +18,7 @@ def plot_voltages(
                 Fourth key: variables name -> ProcessedVariable object
     """
     # Plot
-    linestyles = linestyles or ["k-", "g--", "r:", "b-."]
+    linestyles = linestyles or ["k-", "g--", "b:", "r-."]
     linewidths = linewidths or [1.4, 1.4, 1.4, 1.4]
     n = len(list(all_variables.values())[0])
     m = len(all_variables)
@@ -110,7 +110,7 @@ def plot_variable(
     figsize=(6.4, 4),
 ):
     limits_exceptions = limits_exceptions or {}
-    linestyles = linestyles or ["k-", "g--", "r:", "b-."]
+    linestyles = linestyles or ["k-", "g--", "b:", "r-."]
     linewidths = linewidths or [1.4, 1.4, 1.4, 1.4]
     n = len(times)
     m = len(all_variables)
@@ -220,7 +220,7 @@ def plot_variable_allsigma(
     figsize=(6.4, 4),
 ):
     limits_exceptions = limits_exceptions or {}
-    linestyles = linestyles or ["k-", "g--", "r:", "b-."]
+    linestyles = linestyles or ["k-", "g--", "b:", "r-."]
     linewidths = linewidths or [1.4, 1.4, 1.4, 1.4]
     n = len(list(all_variables.values())[0])
     m = len(all_variables)
@@ -470,16 +470,16 @@ def plot_times(models_times, dimensions):
     if dimensions == 1:
         linestyles = {
             "1D Full": "k-",
-            "1D Composite": "b-",
+            "1D Composite": "r-",
             # "1D FOQS": "r-",
             "1D LOQS": "g-",
         }
     elif dimensions == 2:
         linestyles = {
             "1+1D Full": "k-",
-            "1+1D Composite": "b-",
+            "1+1D Composite": "r-",
             "1D Full": "k:",
-            "1+1D Composite Averaged": "b--",
+            "1+1D Composite Averaged": "r--",
             # "1D Composite": "b:",
             "1+1D LOQS": "g-",
             "1D LOQS": "g:",

@@ -23,7 +23,7 @@ def plot_voltages(all_variables, t_eval):
         for k, v in all_variables.items()
         if k in Crates
     }
-    linestyles = ["k:", "k-", "g--", "b-."]
+    linestyles = ["k:", "k-", "g--", "r-."]
     linewidths = [0.7, 1.4, 1.4, 1.4]
     shared_plotting_2D.plot_voltages(
         all_variables,

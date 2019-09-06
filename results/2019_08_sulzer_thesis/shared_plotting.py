@@ -9,7 +9,7 @@ from collections import defaultdict
 
 def plot_voltages(all_variables, t_eval, linestyles=None, figsize=(6.4, 4.5)):
     # Plot
-    linestyles = linestyles or ["k-", "g--", "r:", "b-."]
+    linestyles = linestyles or ["k-", "g--", "b:", "r-."]
     n = int(len(all_variables) // np.sqrt(len(all_variables)))
     m = int(np.ceil(len(all_variables) / n))
     fig, axes = plt.subplots(n, m, figsize=figsize)
@@ -83,7 +83,7 @@ def plot_variable(
     figsize=(6.4, 5),
 ):
     limits_exceptions = limits_exceptions or {}
-    linestyles = linestyles or ["k-", "g--", "r:", "b-."]
+    linestyles = linestyles or ["k-", "g--", "b:", "r-."]
     n = len(times)
     m = len(all_variables)
     Crates = list(all_variables.keys())
@@ -317,7 +317,7 @@ def plot_voltage_components(all_variables, t_eval, model, Crates):
 
 
 def plot_times(models_times_and_voltages, Crate=1, linestyles=None):
-    linestyles = linestyles or ["k-", "g--", "r:", "b-."]
+    linestyles = linestyles or ["k-", "g--", "b:", "r-."]
     all_npts = defaultdict(list)
     solver_times = defaultdict(list)
     fig, ax = plt.subplots(1, 1)

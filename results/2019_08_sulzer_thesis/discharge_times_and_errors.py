@@ -19,9 +19,21 @@ except ImportError:
 def plot_errors_and_times(model_voltages, model_times):
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(6.4, 3))
 
-    # Errors
-    linestyles = {"Full": "k-", "LOQS": "g--", "FOQS": "r:", "Composite": "b-."}
+    # Times
+    linestyles = {"Full": "k-", "LOQS": "g--", "FOQS": "b:", "Composite": "r-."}
+    plots = [None] * len(linestyles)
     models = list(linestyles.keys())
+    # ntps is number of points in each electrode
+    all_npts = [x * 3 for x in model_times[models[0]].keys()]
+    for i, model in enumerate(models):
+        times = list(model_times[model].values())
+        plots[i], = ax2.loglog(all_npts, times, linestyles[model], label=model)
+        ax2.set_xlim(min(all_npts), max(all_npts))
+        ax2.set_xlabel("Number of grid points")
+        ax2.set_ylabel("Solver time [s]")
+        ax2.set_title("\\textbf{(b)} Times")
+
+    # Errors
     Crates = list(model_voltages[models[0]].keys())
     errors = np.zeros(len(Crates))
     for i, model in enumerate(models):
@@ -37,18 +49,7 @@ def plot_errors_and_times(model_voltages, model_times):
     ax1.set_label("log(RMSE) [V]")
     ax1.set_title("\\textbf{(a)} Errors")
 
-    # Times
-    # ntps is number of points in each electrode
-    all_npts = [x * 3 for x in model_times[models[0]].keys()]
-    for model in models:
-        times = list(model_times[model].values())
-        ax2.loglog(all_npts, times, linestyles[model])
-    ax2.set_xlim(min(all_npts), max(all_npts))
-    ax2.set_xlabel("Number of grid points")
-    ax2.set_ylabel("Solver time [s]")
-    ax2.set_title("\\textbf{(b)} Times")
-
-    leg = fig.legend(models, loc="lower center", ncol=len(models))
+    leg = fig.legend(plots, models, loc="lower center", ncol=len(models))
     plt.subplots_adjust(bottom=0.3, right=0.95, wspace=0.5)
     leg.get_frame().set_edgecolor("k")
 

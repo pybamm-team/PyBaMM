@@ -129,9 +129,9 @@ else:
 fig, axes = plt.subplots(len(sigmas), len(Crates), sharey=True, figsize=(6.4, 5))
 linestyles = {
     "1D COMSOL": "k:",
-    "1D PyBaMM": "b:",
+    "1D PyBaMM": "r:",
     "2D COMSOL": "k-",
-    "1+1D PyBaMM": "b-",
+    "1+1D PyBaMM": "r-",
 }
 for i, Crate in enumerate(Crates):
     for j, sigma in enumerate(sigmas):

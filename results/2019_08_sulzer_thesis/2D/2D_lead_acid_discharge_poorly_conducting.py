@@ -24,7 +24,7 @@ def plot_voltages(all_variables, t_eval):
         for k, v in all_variables.items()
         if k in Crates
     }
-    linestyles = ["k:", "k-", "g--", "b-."]
+    linestyles = ["k:", "k-", "g--", "r-."]
     linewidths = [0.7, 1.4, 1.4, 1.4]
     shared_plotting_2D.plot_voltages(
         all_variables,
@@ -47,7 +47,7 @@ def plot_variables(all_variables, t_eval):
         + "": "2d_poor_discharge_average_electrolyte_concentration_comparison"
     }
     limits_exceptions = {"X-averaged electrolyte concentration [Molar]": {"min": 0}}
-    linestyles = ["k:", "k-", "g--", "b-."]
+    linestyles = ["k:", "k-", "g--", "r-."]
     linewidths = [0.7, 1.4, 1.4, 1.4]
     all_variables = {k: v for k, v in all_variables.items() if k in Crates}
     for var, file_name in var_file_names.items():

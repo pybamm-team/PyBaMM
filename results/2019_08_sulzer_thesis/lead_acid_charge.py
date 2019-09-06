@@ -19,7 +19,7 @@ def plot_voltages(all_variables, t_eval):
     Crates = [-0.1, -0.2, -0.5, -1, -2, -5]
     all_variables = {k: v for k, v in all_variables.items() if k in Crates}
     shared_plotting.plot_voltages(
-        all_variables, t_eval, linestyles=["k-", "g--", "b-."]
+        all_variables, t_eval, linestyles=["k-", "g--", "r-."]
     )
     file_name = "charge_voltage_comparison.eps"
     if OUTPUT_DIR is not None:
@@ -47,7 +47,7 @@ def plot_interfacial_currents(all_variables, t_eval):
         t_eval,
         output_vars,
         labels,
-        colors=["k", "g", "b"],
+        colors=["k", "g", "r"],
         figsize=(6.4, 4),
     )
     plt.subplots_adjust(
@@ -78,7 +78,7 @@ def plot_variables(all_variables, t_eval):
             times,
             var,
             exceptions,
-            linestyles=["k-", "g--", "b-."],
+            linestyles=["k-", "g--", "r-."],
             yaxis="FCI",
         )
         if OUTPUT_DIR is not None:
