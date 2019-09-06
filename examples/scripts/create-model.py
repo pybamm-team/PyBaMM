@@ -85,13 +85,13 @@ def Diffusivity(cc):
     return cc * 10 ** (-5)
 
 
-# parameter values
+# parameter values (not physically based, for example only!)
 param = pybamm.ParameterValues(
     {
-        "Reaction rate constant": 1e1,
+        "Reaction rate constant": 20,
         "Initial thickness": 1e-6,
         "Partial molar volume": 10,
-        "Bulk electrolyte solvent concentration": 1000,
+        "Bulk electrolyte solvent concentration": 1,
         "Diffusivity": Diffusivity,
     }
 )
