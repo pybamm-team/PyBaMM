@@ -6,6 +6,7 @@ from tests import (
     get_mesh_for_testing,
     get_p2d_mesh_for_testing,
     get_1p1d_mesh_for_testing,
+    get_2p1d_mesh_for_testing,
 )
 
 import numpy as np

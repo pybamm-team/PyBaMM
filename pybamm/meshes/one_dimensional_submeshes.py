@@ -29,15 +29,11 @@ class SubMesh1D:
             def near(x, point, tol=3e-16):
                 return abs(x - point) < tol
 
-            if near(tabs["negative"]["z_centre"], 0):
-                self.tabs["negative tab"] = "left"
-            elif near(tabs["negative"]["z_centre"], l_z):
-                self.tabs["negative tab"] = "right"
-
-            if near(tabs["positive"]["z_centre"], 0):
-                self.tabs["positive tab"] = "left"
-            elif near(tabs["positive"]["z_centre"], l_z):
-                self.tabs["positive tab"] = "right"
+            for tab in ["negative", "positive"]:
+                if near(tabs[tab]["z_centre"], 0):
+                    self.tabs[tab + " tab"] = "left"
+                elif near(tabs[tab]["z_centre"], l_z):
+                    self.tabs[tab + " tab"] = "right"
 
 
 class Uniform1DSubMesh(SubMesh1D):

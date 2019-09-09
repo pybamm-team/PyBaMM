@@ -324,24 +324,27 @@ class Discretisation(object):
         # in discrisation of other boundary conditions
         for key, bcs in model.boundary_conditions.items():
             processed_bcs[key.id] = {}
-            # TO DO: fix this so it works if the "side" keys are in a different order
-            for side, bc in bcs.items():
-                # if boundary conditions are applied on "negative tab" or
-                # "positive tab" or where there isn't a tab ("no tab") *and*
-                # the mesh is 1D then change side to "left" or "right" as appropriate
-                if side in ["negative tab", "positive tab"]:
-                    mesh = self.mesh[key.domain[0]][0]
-                    if isinstance(mesh, pybamm.SubMesh1D):
-                        side = mesh.tabs[side]
-                elif side == "no tab":
-                    mesh = self.mesh[key.domain[0]][0]
-                    if isinstance(mesh, pybamm.SubMesh1D):
-                        # the side of the tab has already been set to left or right,
-                        # so set the "no tab" boundary condition on the opposite side
-                        if "right" in list(processed_bcs[key.id].keys()):
-                            side = "left"
+
+            # If boundary conditions are applied on "negative tab", "positive tab"
+            # or "no tab" *and* the mesh is 1D, replace side key with "left" (tab
+            # at z=0) or "right" (tab at z=l_z) depending on the tab location
+            # stored in the mesh.
+            if any("tab" in side for side in list(bcs.keys())):
+                mesh = self.mesh[key.domain[0]][0]
+                if isinstance(mesh, pybamm.SubMesh1D):
+                    # process negative and/or positive tab
+                    for tab in ["negative tab", "positive tab"]:
+                        if any(tab in side for side in list(bcs.keys())):
+                            bcs[mesh.tabs[tab]] = bcs.pop(tab)
+                    # process no tab
+                    if any("no tab" in side for side in list(bcs.keys())):
+                        if "left" in list(processed_bcs[key.id].keys()):
+                            bcs["right"] = bcs.pop("no tab")  # tab at bottom
                         else:
-                            side = "right"
+                            bcs["left"] = bcs.pop("no tab")  # tab at top
+
+            # Process boundary conditions
+            for side, bc in bcs.items():
                 eqn, typ = bc
                 pybamm.logger.debug("Discretise {} ({} bc)".format(key, side))
                 processed_eqn = self.process_symbol(eqn)

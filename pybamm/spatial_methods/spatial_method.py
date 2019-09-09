@@ -17,7 +17,7 @@ class SpatialMethod:
     Parameters
     ----------
     mesh : :class: `pybamm.Mesh`
-        Contains all the submeshes for discretisation
+        Contains all the submeshes for discretisationz
     """
 
     def __init__(self, mesh):
