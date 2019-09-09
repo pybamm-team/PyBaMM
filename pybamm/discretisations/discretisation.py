@@ -324,37 +324,30 @@ class Discretisation(object):
         # in discrisation of other boundary conditions
         for key, bcs in model.boundary_conditions.items():
             processed_bcs[key.id] = {}
+            # TO DO: fix this so it works if the "side" keys are in a different order
             for side, bc in bcs.items():
                 # if boundary conditions are applied on "negative tab" or
-                # "positive tab" *and* the mesh is 1D then change side to
-                # "left" or "right" as appropriate
+                # "positive tab" or where there isn't a tab ("no tab") *and*
+                # the mesh is 1D then change side to "left" or "right" as appropriate
                 if side in ["negative tab", "positive tab"]:
                     mesh = self.mesh[key.domain[0]][0]
                     if isinstance(mesh, pybamm.SubMesh1D):
                         side = mesh.tabs[side]
+                elif side == "no tab":
+                    mesh = self.mesh[key.domain[0]][0]
+                    if isinstance(mesh, pybamm.SubMesh1D):
+                        # the side of the tab has already been set to left or right,
+                        # so set the "no tab" boundary condition on the opposite side
+                        if "right" in list(processed_bcs[key.id].keys()):
+                            side = "left"
+                        else:
+                            side = "right"
                 eqn, typ = bc
                 pybamm.logger.debug("Discretise {} ({} bc)".format(key, side))
                 processed_eqn = self.process_symbol(eqn)
                 processed_bcs[key.id][side] = (processed_eqn, typ)
 
         return processed_bcs
-
-    def _process_bc_entry(self, key, bcs):
-        processed_entry = {key.id: {}}
-        for side, bc in bcs.items():
-            # if boundary conditions are applied on "negative tab" or
-            # "positive tab" *and* the mesh is 1D then change side to
-            # "left" or "right" as appropriate
-            if side in ["negative tab", "positive tab"]:
-                mesh = self.mesh[key.domain[0]][0]
-                if isinstance(mesh, pybamm.SubMesh1D):
-                    side = mesh.tabs[side]
-            eqn, typ = bc
-            pybamm.logger.debug("Discretise {} ({} bc)".format(key, side))
-            processed_eqn = self.process_symbol(eqn)
-            processed_entry[key.id][side] = (processed_eqn, typ)
-
-        return processed_entry
 
     def process_rhs_and_algebraic(self, model):
         """Discretise model equations - differential ('rhs') and algebraic.

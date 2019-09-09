@@ -124,15 +124,15 @@ class ParameterValues(dict):
             model.initial_conditions[variable] = processing_function(equation)
 
         # Boundary conditions are dictionaries {"left": left bc, "right": right bc}
-        # in general, but may be imposed on the tabs for a small number of
-        # variables, i.e. {"negative tab": neg. tab bc, "positive tab": pos. tab bc}
+        # in general, but may be imposed on the tabs (or *not* on the tab) for a
+        # small number of variables, e.g. {"negative tab": neg. tab bc,
+        # "positive tab": pos. tab bc "no tab": no tab bc}.
         new_boundary_conditions = {}
         for variable, bcs in model.boundary_conditions.items():
             processed_variable = processing_function(variable)
             new_boundary_conditions[processed_variable] = {}
-            # TO DO: tidy this up
-            try:
-                for side in ["left", "right"]:
+            for side in ["left", "right", "negative tab", "positive tab", "no tab"]:
+                try:
                     bc, typ = bcs[side]
                     pybamm.logger.debug(
                         "{} parameters for {!r} ({} bc)".format(
@@ -141,16 +141,9 @@ class ParameterValues(dict):
                     )
                     processed_bc = (processing_function(bc), typ)
                     new_boundary_conditions[processed_variable][side] = processed_bc
-            except KeyError:
-                for side in ["negative tab", "positive tab"]:
-                    bc, typ = bcs[side]
-                    pybamm.logger.debug(
-                        "{} parameters for {!r} ({} bc)".format(
-                            processing.capitalize(), variable, side
-                        )
-                    )
-                    processed_bc = (processing_function(bc), typ)
-                    new_boundary_conditions[processed_variable][side] = processed_bc
+                except KeyError:
+                    pass
+
         model.boundary_conditions = new_boundary_conditions
 
         for variable, equation in model.variables.items():

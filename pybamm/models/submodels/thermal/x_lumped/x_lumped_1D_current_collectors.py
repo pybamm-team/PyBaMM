@@ -30,6 +30,10 @@ class CurrentCollector1D(BaseModel):
         T_av_left = pybamm.boundary_value(T_av, "negative tab")
         T_av_right = pybamm.boundary_value(T_av, "positive tab")
 
+        # Three boundary conditions here to handle the cases of both tabs at
+        # the same side (top or bottom), or one either side. For both tabs on the
+        # same side, T_av_left and T_av_right are equal, and the boundary condition
+        # "no tab" is used on the other side.
         self.boundary_conditions = {
             T_av: {
                 "negative tab": (
@@ -38,6 +42,10 @@ class CurrentCollector1D(BaseModel):
                 ),
                 "positive tab": (
                     -self.param.h * T_av_right / self.param.lambda_k / self.param.delta,
+                    "Neumann",
+                ),
+                "no tab": (
+                    pybamm.Scalar(0),
                     "Neumann",
                 ),
             }

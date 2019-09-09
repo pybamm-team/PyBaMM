@@ -99,10 +99,10 @@ class PotentialPair1plus1D(BasePotentialPair):
         self.boundary_conditions = {
             phi_s_cn: {
                 "negative tab": (pybamm.Scalar(0), "Dirichlet"),
-                "positive tab": (pybamm.Scalar(0), "Neumann"),
+                "no tab": (pybamm.Scalar(0), "Neumann"),
             },
             phi_s_cp: {
-                "negative tab": (pybamm.Scalar(0), "Neumann"),
+                "no tab": (pybamm.Scalar(0), "Neumann"),
                 "positive tab": (pos_tab_bc, "Neumann"),
             },
         }
@@ -145,6 +145,8 @@ class PotentialPair2plus1D(BasePotentialPair):
 
         # Boundary condition needs to be on the variables that go into the Laplacian,
         # even though phi_s_cp isn't a pybamm.Variable object
+        # In the 2D formulation it is assumed that no flux boundary conditions
+        # are applied everywhere apart from the tabs.
         self.boundary_conditions = {
             phi_s_cn: {
                 "negative tab": (pybamm.Scalar(0), "Dirichlet"),
