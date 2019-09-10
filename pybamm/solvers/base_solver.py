@@ -72,7 +72,7 @@ class BaseSolver(object):
         )
         return solution
 
-    def step(self, model, dt, npts=1, t0=0.0):
+    def step(self, model, dt, npts=2):
         """Step the solution of the model forward by a given time increment. The
         first time this method is called it computes the necessary setup by
         calling `self.set_up(model)`.
@@ -86,21 +86,18 @@ class BaseSolver(object):
             The timestep over which to step the solution
         npts : int, optional
             The number of points at which the solution will be returned during
-            the step dt. Defualt is 1.
-        t0 : numeric type, optional
-            The start time used to set the time when function is first called
-            and increment from thereafter. Defualt is zero.
+            the step dt. Defualt is 2 (returns the solution at t0 and t0 + dt).
 
         """
         # Set timer
         timer = pybamm.Timer()
         set_up_time = None
-        
+
         # Run set up on first step
         if not hasattr(self, 'y0'):
             start_time = timer.time()
             self.set_up(model)
-            self.t = t0
+            self.t = 0.0
             set_up_time = timer.time() - start_time
 
         # Step

@@ -614,6 +614,73 @@ class TestScikitsSolvers(unittest.TestCase):
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
 
+    def test_model_step_ode(self):
+        # Create model
+        model = pybamm.BaseModel()
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var = pybamm.Variable("var", domain=whole_cell)
+        model.rhs = {var: 0.1 * var}
+        model.initial_conditions = {var: 1}
+        disc = get_discretisation_for_testing()
+        disc.process_model(model)
+
+        solver = pybamm.ScikitsOdeSolver(tol=1e-9)
+
+        # Step once
+        dt = 0.1
+        step1 = solver.step(model, dt)
+        np.testing.assert_array_equal(step1.t, [0, dt])
+        np.testing.assert_allclose(step1.y[0], np.exp(0.1 * step1.t))
+
+        # Step again (return 5 points)
+        step2 = solver.step(model, dt, npts=5)
+        np.testing.assert_array_equal(step2.t, np.linspace(dt, 2 * dt, 5))
+        np.testing.assert_allclose(step2.y[0], np.exp(0.1 * step2.t))
+
+        # Check steps give same solution as solve
+        t_eval = np.concatenate((step1.t, step2.t[1:]))
+        solution = solver.solve(model, t_eval)
+        concatenated_steps = np.concatenate((step1.y[0], step2.y[0, 1:]))
+        np.testing.assert_allclose(solution.y[0], concatenated_steps)
+
+    def test_model_step_dae(self):
+        # Create model
+        model = pybamm.BaseModel()
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var1 = pybamm.Variable("var1", domain=whole_cell)
+        var2 = pybamm.Variable("var2", domain=whole_cell)
+        model.rhs = {var1: 0.1 * var1}
+        model.algebraic = {var2: 2 * var1 - var2}
+        model.initial_conditions = {var1: 1, var2: 2}
+        model.use_jacobian = False
+        disc = get_discretisation_for_testing()
+        disc.process_model(model)
+
+        solver = pybamm.ScikitsDaeSolver(tol=1e-8)
+
+        # Step once
+        dt = 0.1
+        step1 = solver.step(model, dt)
+        np.testing.assert_array_equal(step1.t, [0, dt])
+        np.testing.assert_allclose(step1.y[0], np.exp(0.1 * step1.t))
+        np.testing.assert_allclose(step1.y[-1], 2 * np.exp(0.1 * step1.t))
+
+        # Step again (return 5 points)
+        step2 = solver.step(model, dt, npts=5)
+        np.testing.assert_array_equal(step2.t, np.linspace(dt, 2 * dt, 5))
+        np.testing.assert_allclose(step2.y[0], np.exp(0.1 * step2.t))
+        np.testing.assert_allclose(step2.y[-1], 2 * np.exp(0.1 * step2.t))
+
+        # Check steps give same solution as solve
+        t_eval = np.concatenate((step1.t, step2.t[1:]))
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_allclose(
+            solution.y[0], np.concatenate((step1.y[0, :], step2.y[0, 1:]))
+        )
+        np.testing.assert_allclose(
+            solution.y[-1], np.concatenate((step1.y[-1, :], step2.y[-1, 1:]))
+        )
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

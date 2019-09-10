@@ -234,6 +234,40 @@ class TestScipySolver(unittest.TestCase):
             np.ones((N, T.size)) * (T[np.newaxis, :] - np.exp(T[np.newaxis, :])),
         )
 
+    def test_model_step(self):
+        # Create model
+        model = pybamm.BaseModel()
+        domain = ["negative electrode", "separator", "positive electrode"]
+        var = pybamm.Variable("var", domain=domain)
+        model.rhs = {var: 0.1 * var}
+        model.initial_conditions = {var: 1}
+        # No need to set parameters; can use base discretisation (no spatial operators)
+
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
+
+        solver = pybamm.ScipySolver(tol=1e-8, method="RK45")
+
+        # Step once
+        dt = 0.1
+        step1 = solver.step(model, dt)
+        np.testing.assert_array_equal(step1.t, [0, dt])
+        np.testing.assert_allclose(step1.y[0], np.exp(0.1 * step1.t))
+
+        # Step again (return 5 points)
+        step2 = solver.step(model, dt, npts=5)
+        np.testing.assert_array_equal(step2.t, np.linspace(dt, 2 * dt, 5))
+        np.testing.assert_allclose(step2.y[0], np.exp(0.1 * step2.t))
+
+        # Check steps give same solution as solve
+        t_eval = np.concatenate((step1.t, step2.t[1:]))
+        solution = solver.solve(model, t_eval)
+        concatenated_steps = np.concatenate((step1.y[0], step2.y[0, 1:]))
+        np.testing.assert_allclose(solution.y[0], concatenated_steps)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
