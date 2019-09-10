@@ -72,19 +72,55 @@ class DaeSolver(pybamm.BaseSolver):
         # Set up
         timer = pybamm.Timer()
         start_time = timer.time()
-        self.set_up(model)
+        concatenated_rhs, concatenated_algebraic, y0, model_events, jac = self.set_up(
+            model
+        )
         set_up_time = timer.time() - start_time
+
+        # get mass matrix entries
+        mass_matrix = model.mass_matrix.entries
+
+        def residuals(t, y, ydot):
+            pybamm.logger.debug(
+                "Evaluating residuals for {} at t={}".format(model.name, t)
+            )
+            y = y[:, np.newaxis]
+            rhs_eval, known_evals = concatenated_rhs.evaluate(t, y, known_evals={})
+            # reuse known_evals
+            alg_eval = concatenated_algebraic.evaluate(t, y, known_evals=known_evals)[0]
+            # turn into 1D arrays
+            rhs_eval = rhs_eval[:, 0]
+            alg_eval = alg_eval[:, 0]
+            return np.concatenate((rhs_eval, alg_eval)) - mass_matrix @ ydot
+
+        # Create event-dependent function to evaluate events
+        def event_fun(event):
+            def eval_event(t, y):
+                return event.evaluate(t, y)
+
+            return eval_event
+
+        events = [event_fun(event) for event in model_events.values()]
+
+        # Create function to evaluate jacobian
+        if jac is not None:
+
+            def jacobian(t, y):
+                return jac.evaluate(t, y, known_evals={})[0]
+
+        else:
+            jacobian = None
 
         # Solve
         solve_start_time = timer.time()
         pybamm.logger.info("Calling DAE solver")
         solution = self.integrate(
-            self.residuals,
-            self.y0,
+            residuals,
+            y0,
             t_eval,
-            events=self.event_funs,
-            mass_matrix=model.mass_matrix.entries,
-            jacobian=self.jacobian,
+            events=events,
+            mass_matrix=mass_matrix,
+            jacobian=jacobian,
         )
         # Assign times
         solution.solve_time = timer.time() - solve_start_time
@@ -92,7 +128,7 @@ class DaeSolver(pybamm.BaseSolver):
         solution.set_up_time = set_up_time
 
         # Identify the event that caused termination
-        termination = self.get_termination_reason(solution, self.events)
+        termination = self.get_termination_reason(solution, model_events)
 
         pybamm.logger.info("Finish solving {} ({})".format(model.name, termination))
         pybamm.logger.info(
@@ -102,76 +138,6 @@ class DaeSolver(pybamm.BaseSolver):
                 timer.format(solution.total_time),
             )
         )
-        return solution
-
-    def step(self, model, dt, npts=1, t0=0.0):
-        """Calculate the solution of the model at specified times.
-
-        Parameters
-        ----------
-        model : :class:`pybamm.BaseModel`
-            The model whose solution to calculate. Must have attributes rhs and
-            initial_conditions
-        dt : numeric type
-            The timestep over which to step the solution
-        npts : int, optional
-            The number of points at which the solution will be returned during
-            the step dt. Defualt is 1.
-        t0 : numeric type, optional
-            The start time used to set the time when function is first called
-            and increment from thereafter. Defualt is zero.
-
-        """
-        # Set timer
-        timer = pybamm.Timer()
-        start_time = timer.time()
-        set_up_time = None
-
-        # Run set up on first step
-        if not hasattr(self, "y0"):
-            self.set_up(model)
-            self.t = t0
-            set_up_time = timer.time() - start_time
-
-        # Step
-        t_eval = np.linspace(self.t, self.t + dt, npts)
-        solve_start_time = timer.time()
-        pybamm.logger.info("Calling DAE solver")
-        solution = self.integrate(
-            self.residuals,
-            self.y0,
-            t_eval,
-            events=self.event_funs,
-            mass_matrix=model.mass_matrix.entries,
-            jacobian=self.jacobian,
-        )
-
-        # Assign times
-        solution.solve_time = timer.time() - solve_start_time
-        if set_up_time:
-            solution.total_time = timer.time() - start_time
-            solution.set_up_time = set_up_time
-
-        # Set self.t and self.y0 to their values at the final step
-        self.t = solution.t[-1]
-        self.y0 = solution.y[:, -1]
-
-        # Identify the event that caused termination
-        termination = self.get_termination_reason(solution, self.events)
-
-        pybamm.logger.info("Finish stepping {} ({})".format(model.name, termination))
-        if set_up_time:
-            pybamm.logger.info(
-                "Set-up time: {}, Step time: {}, Total time: {}".format(
-                    timer.format(solution.set_up_time),
-                    timer.format(solution.solve_time),
-                    timer.format(solution.total_time),
-                )
-            )
-        else:
-            pybamm.logger.info(
-                "Step time: {}".format(timer.format(solution.solve_time))
-            )
         return solution
 
     def set_up(self, model):
@@ -202,7 +168,7 @@ class DaeSolver(pybamm.BaseSolver):
             If the model contains any algebraic equations (in which case a DAE solver
             should be used instead)
         """
-        # create simplified rhs, algebraic and event expressions
+        # create simplified rhs algebraic and event expressions
         concatenated_rhs = model.concatenated_rhs
         concatenated_algebraic = model.concatenated_algebraic
         events = model.events
@@ -269,46 +235,7 @@ class DaeSolver(pybamm.BaseSolver):
             # can use DAE solver to solve ODE model
             y0 = model.concatenated_initial_conditions[:, 0]
 
-        # Create functions to evaluate residuals
-        def residuals(t, y, ydot):
-            pybamm.logger.debug(
-                "Evaluating residuals for {} at t={}".format(model.name, t)
-            )
-            y = y[:, np.newaxis]
-            rhs_eval, known_evals = concatenated_rhs.evaluate(t, y, known_evals={})
-            # reuse known_evals
-            alg_eval = concatenated_algebraic.evaluate(t, y, known_evals=known_evals)[0]
-            # turn into 1D arrays
-            rhs_eval = rhs_eval[:, 0]
-            alg_eval = alg_eval[:, 0]
-            return (
-                np.concatenate((rhs_eval, alg_eval)) - model.mass_matrix.entries @ ydot
-            )
-
-        # Create event-dependent function to evaluate events
-        def event_fun(event):
-            def eval_event(t, y):
-                return event.evaluate(t, y)
-
-            return eval_event
-
-        event_funs = [event_fun(event) for event in events.values()]
-
-        # Create function to evaluate jacobian
-        if jac is not None:
-
-            def jacobian(t, y):
-                return jac.evaluate(t, y, known_evals={})[0]
-
-        else:
-            jacobian = None
-
-        # Add the solver attributes
-        self.y0 = y0
-        self.residuals = residuals
-        self.events = events
-        self.event_funs = event_funs
-        self.jacobian = jacobian
+        return concatenated_rhs, concatenated_algebraic, y0, events, jac
 
     def calculate_consistent_initial_conditions(
         self, rhs, algebraic, y0_guess, jac=None

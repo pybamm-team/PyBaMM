@@ -29,10 +29,6 @@ class OdeSolver(pybamm.BaseSolver):
             The times at which to compute the solution
 
         """
-        if len(model.algebraic) > 0:
-            raise pybamm.SolverError(
-                """Cannot use ODE solver to solve model with DAEs"""
-            )
         pybamm.logger.info("Start solving {}".format(model.name))
 
         # Set up
@@ -48,7 +44,7 @@ class OdeSolver(pybamm.BaseSolver):
             self.dydt,
             self.y0,
             t_eval,
-            events=self.events,
+            events=self.event_funs,
             mass_matrix=model.mass_matrix.entries,
             jacobian=self.jacobian,
         )
@@ -59,7 +55,7 @@ class OdeSolver(pybamm.BaseSolver):
         solution.set_up_time = set_up_time
 
         # Identify the event that caused termination
-        termination = self.get_termination_reason(solution, model.events)
+        termination = self.get_termination_reason(solution, self.events)
 
         pybamm.logger.info("Finish solving {} ({})".format(model.name, termination))
         pybamm.logger.info(
@@ -108,7 +104,7 @@ class OdeSolver(pybamm.BaseSolver):
             self.dydt,
             self.y0,
             t_eval,
-            events=self.events,
+            events=self.event_funs,
             mass_matrix=model.mass_matrix.entries,
             jacobian=self.jacobian,
         )
@@ -124,7 +120,7 @@ class OdeSolver(pybamm.BaseSolver):
         self.y0 = solution.y[:, -1]
 
         # Identify the event that caused termination
-        termination = self.get_termination_reason(solution, model.events)
+        termination = self.get_termination_reason(solution, self.events)
 
         pybamm.logger.info("Finish stepping {} ({})".format(model.name, termination))
         if set_up_time:
@@ -159,7 +155,13 @@ class OdeSolver(pybamm.BaseSolver):
             should be used instead)
 
         """
-
+        # Check for algebraic equations
+        if len(model.algebraic) > 0:
+            raise pybamm.SolverError(
+                """Cannot use ODE solver to solve model with DAEs"""
+            )
+            
+        # create simplified rhs and event expressions
         concatenated_rhs = model.concatenated_rhs
         events = model.events
 
@@ -213,7 +215,7 @@ class OdeSolver(pybamm.BaseSolver):
 
             return eval_event
 
-        events = [event_fun(event) for event in events.values()]
+        event_funs = [event_fun(event) for event in events.values()]
 
         # Create function to evaluate jacobian
         if jac_rhs is not None:
@@ -224,9 +226,11 @@ class OdeSolver(pybamm.BaseSolver):
         else:
             jacobian = None
 
+        # Add the solver attributes
         self.y0 = y0
         self.dydt = dydt
         self.events = events
+        self.event_funs = event_funs
         self.jacobian = jacobian
 
     def integrate(
