@@ -17,7 +17,7 @@ class OdeSolver(pybamm.BaseSolver):
     def __init__(self, method=None, tol=1e-8):
         super().__init__(method, tol)
 
-    def solve(self, model, t_eval):
+    def compute_solution(self, model, t_eval):
         """Calculate the solution of the model at specified times.
 
         Parameters
@@ -29,15 +29,8 @@ class OdeSolver(pybamm.BaseSolver):
             The times at which to compute the solution
 
         """
-        pybamm.logger.info("Start solving {}".format(model.name))
-
-        # Set up
         timer = pybamm.Timer()
-        start_time = timer.time()
-        self.set_up(model)
-        set_up_time = timer.time() - start_time
 
-        # Solve
         solve_start_time = timer.time()
         pybamm.logger.info("Calling ODE solver")
         solution = self.integrate(
@@ -48,96 +41,12 @@ class OdeSolver(pybamm.BaseSolver):
             mass_matrix=model.mass_matrix.entries,
             jacobian=self.jacobian,
         )
-
-        # Assign times
-        solution.solve_time = timer.time() - solve_start_time
-        solution.total_time = timer.time() - start_time
-        solution.set_up_time = set_up_time
+        solve_time = timer.time() - solve_start_time
 
         # Identify the event that caused termination
         termination = self.get_termination_reason(solution, self.events)
 
-        pybamm.logger.info("Finish solving {} ({})".format(model.name, termination))
-        pybamm.logger.info(
-            "Set-up time: {}, Solve time: {}, Total time: {}".format(
-                timer.format(solution.set_up_time),
-                timer.format(solution.solve_time),
-                timer.format(solution.total_time),
-            )
-        )
-        return solution
-
-    def step(self, model, dt, npts=1, t0=0.0):
-        """Calculate the solution of the model at specified times.
-
-        Parameters
-        ----------
-        model : :class:`pybamm.BaseModel`
-            The model whose solution to calculate. Must have attributes rhs and
-            initial_conditions
-        dt : numeric type
-            The timestep over which to step the solution
-        npts : int, optional
-            The number of points at which the solution will be returned during
-            the step dt. Defualt is 1.
-        t0 : numeric type, optional
-            The start time used to set the time when function is first called
-            and increment from thereafter. Defualt is zero.
-
-        """
-        # Set timer
-        timer = pybamm.Timer()
-        start_time = timer.time()
-        set_up_time = None
-
-        # Run set up on first step
-        if not hasattr(self, 'y0'):
-            self.set_up(model)
-            self.t = t0
-            set_up_time = timer.time() - start_time
-
-        # Step
-        t_eval = np.linspace(self.t, self.t + dt, npts)
-        solve_start_time = timer.time()
-        pybamm.logger.info("Calling ODE solver")
-        solution = self.integrate(
-            self.dydt,
-            self.y0,
-            t_eval,
-            events=self.event_funs,
-            mass_matrix=model.mass_matrix.entries,
-            jacobian=self.jacobian,
-        )
-
-        # Assign times
-        solution.solve_time = timer.time() - solve_start_time
-        if set_up_time:
-            solution.total_time = timer.time() - start_time
-            solution.set_up_time = set_up_time
-
-        # Set self.t and self.y0 to their values at the final step
-        self.t = solution.t[-1]
-        self.y0 = solution.y[:, -1]
-
-        # Identify the event that caused termination
-        termination = self.get_termination_reason(solution, self.events)
-
-        pybamm.logger.info("Finish stepping {} ({})".format(model.name, termination))
-        if set_up_time:
-            pybamm.logger.info(
-                "Set-up time: {}, Step time: {}, Total time: {}".format(
-                    timer.format(solution.set_up_time),
-                    timer.format(solution.solve_time),
-                    timer.format(solution.total_time),
-                )
-            )
-        else:
-            pybamm.logger.info(
-                "Step time: {}".format(
-                    timer.format(solution.solve_time),
-                )
-            )
-        return solution
+        return solution, solve_time, termination
 
     def set_up(self, model):
         """Unpack model, perform checks, simplify and calculate jacobian.
@@ -160,7 +69,7 @@ class OdeSolver(pybamm.BaseSolver):
             raise pybamm.SolverError(
                 """Cannot use ODE solver to solve model with DAEs"""
             )
-            
+
         # create simplified rhs and event expressions
         concatenated_rhs = model.concatenated_rhs
         events = model.events
