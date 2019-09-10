@@ -94,7 +94,8 @@ class BaseSolver(object):
         """
         # Set timer
         timer = pybamm.Timer()
-
+        set_up_time = None
+        
         # Run set up on first step
         if not hasattr(self, 'y0'):
             start_time = timer.time()
