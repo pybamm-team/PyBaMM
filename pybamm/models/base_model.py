@@ -13,6 +13,10 @@ class BaseModel(object):
     Attributes
     ----------
 
+    name: str
+        A string giving the name of the model
+    options: dict
+        A dictionary of options to be passed to the model
     rhs: dict
         A dictionary that maps expressions (variables) to expressions that represent
         the rhs
@@ -35,7 +39,31 @@ class BaseModel(object):
     events: list
         A list of events that should cause the solver to terminate (e.g. concentration
         goes negative)
-
+    concatenated_rhs : :class:`pybamm.Concatenation`
+        After discretisation, contains the expressions representing the rhs equations
+        concatenated into a single expression
+    concatenated_algebraic : :class:`pybamm.Concatenation`
+        After discretisation, contains the expressions representing the algebraic
+        equations concatenated into a single expression
+    concatenated_initial_conditions : :class:`numpy.array`
+        After discretisation, contains the vector of initial conditions
+    mass_matrix : :class:`pybamm.Matrix`
+        After discretisation, contains the mass matrix for the model. This is computed
+        automatically
+    jacobian : :class:`pybamm.Concatenation`
+        Contains the Jacobian for the model. If model.use_jacobian is True, the
+        Jacobian is computed automatically during the set up in solve
+    use_jacobian : bool
+        Whether to use the Jacobian when solving the model (default is True)
+    use_simplify : bool
+        Whether to simplify the expression tress representing the rhs and
+        algebraic equations, Jacobain (if using) and events, before solving the
+        model (default is True)
+    use_to_python : bool
+        Whether to convert the expression tress representing the rhs and
+        algebraic equations, Jacobain (if using) and events into pure python code
+        that will calculate the result of calling `evaluate(t, y)` on the given
+        expression tree (defualt is True)
     """
 
     def __init__(self, name="Unnamed model"):
@@ -50,6 +78,7 @@ class BaseModel(object):
         self._variables = {}
         self._events = {}
         self._concatenated_rhs = None
+        self._concatenated_algebraic = None
         self._concatenated_initial_conditions = None
         self._mass_matrix = None
         self._jacobian = None
@@ -164,6 +193,14 @@ class BaseModel(object):
     @concatenated_rhs.setter
     def concatenated_rhs(self, concatenated_rhs):
         self._concatenated_rhs = concatenated_rhs
+
+    @property
+    def concatenated_algebraic(self):
+        return self._concatenated_algebraic
+
+    @concatenated_algebraic.setter
+    def concatenated_algebraic(self, concatenated_algebraic):
+        self._concatenated_algebraic = concatenated_algebraic
 
     @property
     def concatenated_initial_conditions(self):

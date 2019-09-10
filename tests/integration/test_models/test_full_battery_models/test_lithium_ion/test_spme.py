@@ -80,7 +80,7 @@ class TestSPMe(unittest.TestCase):
 
     def test_particle_fast_diffusion(self):
         options = {"particle": "fast diffusion"}
-        model = pybamm.lithium_ion.SPM(options)
+        model = pybamm.lithium_ion.SPMe(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
