@@ -26,8 +26,8 @@ class LeadingOrder(BaseModel):
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 
-        j_n_av = variables["Average negative electrode interfacial current density"]
-        j_p_av = variables["Average positive electrode interfacial current density"]
+        j_n_av = variables["X-averaged negative electrode interfacial current density"]
+        j_p_av = variables["X-averaged positive electrode interfacial current density"]
 
         # Volume-averaged velocity
         v_box_n = param.beta_n * pybamm.outer(j_n_av, x_n)

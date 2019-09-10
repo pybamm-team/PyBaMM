@@ -5,22 +5,60 @@ import pybamm
 
 
 class Geometry(dict):
-    """A geometry class to store the details features of the cell geometry.
-        Geometry extends the class dictionary and uses the key words:
-        "negative electrode", "positive electrode", etc to indicate the subdomain.
-        Within each subdomain, there are "primary" and "secondary" dimensions.
-        "primary" dimensions correspond to dimensiones on which spatial
-        operators will be applied (e.g. the gradient and divergence). In contrast,
-        spatial operators do not act along "secondary" dimensions. This allows for
-        multiple independent particles to be included into a model.
 
-     **Extends**: :class:`dict`
+    """
+    A geometry class to store the details features of the cell geometry.
 
-     Parameters
-     ----------
+    Geometry extends the class dictionary and uses the key words: "negative electrode",
+    "positive electrode", etc to indicate the subdomain.  Within each subdomain, there
+    are "primary", "secondary" or "tabs" dimensions.  "primary" dimensions correspond to
+    dimensions on which spatial operators will be applied (e.g. the gradient and
+    divergence). In contrast, spatial operators do not act along "secondary" dimensions.
+    This allows for multiple independent particles to be included into a model.
 
-     custom_geometry : dict containing any extra user defined geometry
-     """
+    The values assigned to each domain are dictionaries containing the spatial variables
+    in that domain, along with expression trees giving their min and maximum extents.
+    For example, the following dictionary structure would represent a Geometry with a
+    single domain "negative electrode", defined using the variable `x_n` which has a
+    range from 0 to the pre-defined parameter `l_n`.
+
+    .. code-block:: python
+
+       {
+           "negative electrode": {
+               "primary": {x_n: {"min": pybamm.Scalar(0), "max": l_n}}
+           }
+       }
+
+    A user can create a new Geometry by combining one or more of the pre-defined
+    geometries defined with the names given below.
+
+    - "1D macro": macroscopic 1D cell geometry (i.e. electrodes)
+    - "3D macro": macroscopic 3D cell geometry
+    - "1+1D macro": 1D macroscopic cell geometry with a 1D current collector
+    - "1+2D macro": 1D macroscopic cell geometry with a 2D current collector
+    - "1D micro": 1D microscopic cell geometry (i.e. particles)
+    - "1+1D micro": This is the geometry used in the standard DFN or P2D model
+    - "(1+0)+1D micro": 0D macroscopic cell geometry with 1D current collector,
+                        along with the microscopic 1D particle geometry.
+    - "(2+0)+1D micro": 0D macroscopic cell geometry with 1D current collector,
+                        along with the microscopic 1D particle geometry.
+    - "(1+1)+1D micro": 1D macroscopic cell geometry, with 1D current collector model,
+                        along with the microscopic 1D particle geometry.
+    - "(2+1)+1D micro": 1D macroscopic cell geometry, with 2D current collector model,
+                        along with the microscopic 1D particle geometry.
+    - "2D current collector": macroscopic 2D current collector geometry
+
+    **Extends**: :class:`dict`
+
+    Parameters
+    ----------
+
+    geometries: one or more strings or Geometry objects. A string will be assumed to be
+                one of the predefined Geometries given above
+
+    custom_geometry : dict containing any extra user defined geometry
+    """
 
     def __init__(self, *geometries, custom_geometry={}):
         for geometry in geometries:
@@ -44,12 +82,71 @@ class Geometry(dict):
                 geometry = Geometryxp1p1DMicro(cc_dimension=1)
             elif geometry == "(2+1)+1D micro":
                 geometry = Geometryxp1p1DMicro(cc_dimension=2)
+            elif geometry == "2D current collector":
+                geometry = Geometry2DCurrentCollector()
             # avoid combining geometries that clash
             if any([k in self.keys() for k in geometry.keys()]):
                 raise ValueError("trying to overwrite existing geometry")
-            self.update(geometry)
+
+            for k, v in geometry.items():
+                self.add_domain(k, v)
+
         # Allow overwriting with a custom geometry
-        self.update(custom_geometry)
+        for k, v in custom_geometry.items():
+            self.add_domain(k, v)
+
+    def add_domain(self, name, geometry):
+        """
+        Add a new domain to the geometry
+
+        Parameters
+        ----------
+
+        name: string giving the name of the domain
+
+        geometry: dict of variables in the domain, along with the minimum and maximum
+                extents (e.g. {"primary": {x_n: {"min": pybamm.Scalar(0), "max": l_n}}}
+        """
+        if not isinstance(name, str):
+            raise ValueError("name must be a string")
+
+        for k, v in geometry.items():
+            if k not in ["primary", "secondary", "tabs"]:
+                raise ValueError(
+                    "keys of geometry must be either \"primary\", \"secondary\" or "
+                    "\"tabs\""
+                )
+            if k != "tabs":
+                for variable, rnge in v.items():
+                    if not isinstance(variable, pybamm.SpatialVariable):
+                        raise ValueError(
+                            "inner dict of geometry must have pybamm.SpatialVariable "
+                            "as keys"
+                        )
+                    if list(rnge.keys()) != ["position"]:
+                        if "min" not in rnge.keys():
+                            raise ValueError(
+                                "no minimum extents for variable {}".format(variable)
+                            )
+                        if "max" not in rnge.keys():
+                            raise ValueError(
+                                "no maximum extents for variable {}".format(variable)
+                            )
+            else:
+                for region, params in v.items():
+                    if region not in ["negative", "positive"]:
+                        raise ValueError(
+                            "tabs region must be \"negative\" or \"positive\""
+
+                        )
+                    for pname in params.keys():
+                        if pname not in ["y_centre", "z_centre", "width"]:
+                            raise ValueError(
+                                "tabs region params must be \"y_centre\", "
+                                "\"z_centre\" or \"width\""
+                            )
+
+        self.update({name: geometry})
 
 
 class Geometry1DMacro(Geometry):
@@ -77,6 +174,7 @@ class Geometry1DMacro(Geometry):
         self["positive electrode"] = {
             "primary": {var.x_p: {"min": l_n + l_s, "max": pybamm.Scalar(1)}}
         }
+        self["current collector"] = {"primary": {var.z: {"position": pybamm.Scalar(1)}}}
 
         # update with custom geometry if non empty
         self.update(custom_geometry)
@@ -352,7 +450,7 @@ class Geometryxp1p1DMicro(Geometry1DMicro):
                     "max": pybamm.geometric_parameters.l_z,
                 },
             }
-            self["negative particle"]["secondary"] = {
+            self["positive particle"]["secondary"] = {
                 var.x_p: {"min": l_n + l_s, "max": pybamm.Scalar(1)},
                 var.z: {
                     "min": pybamm.Scalar(0),
@@ -371,7 +469,7 @@ class Geometryxp1p1DMicro(Geometry1DMicro):
                     "max": pybamm.geometric_parameters.l_z,
                 },
             }
-            self["negative particle"]["secondary"] = {
+            self["positive particle"]["secondary"] = {
                 var.x_p: {"min": l_n + l_s, "max": pybamm.Scalar(1)},
                 var.y: {
                     "min": pybamm.Scalar(0),
@@ -388,6 +486,52 @@ class Geometryxp1p1DMicro(Geometry1DMicro):
                     cc_dimension
                 )
             )
+
+        # update with custom geometry if non empty
+        self.update(custom_geometry)
+
+
+class Geometry2DCurrentCollector(Geometry):
+    """
+    A geometry class to store the details features of the macroscopic 2D
+    current collector geometry.
+
+    **Extends**: :class:`Geometry`
+
+    Parameters
+    ----------
+
+    custom_geometry : dict containing any extra user defined geometry
+    """
+
+    def __init__(self, custom_geometry={}):
+        super().__init__()
+        var = pybamm.standard_spatial_vars
+
+        self["current collector"] = {
+            "primary": {
+                var.y: {
+                    "min": pybamm.Scalar(0),
+                    "max": pybamm.geometric_parameters.l_y,
+                },
+                var.z: {
+                    "min": pybamm.Scalar(0),
+                    "max": pybamm.geometric_parameters.l_z,
+                },
+            },
+            "tabs": {
+                "negative": {
+                    "y_centre": pybamm.geometric_parameters.centre_y_tab_n,
+                    "z_centre": pybamm.geometric_parameters.centre_z_tab_n,
+                    "width": pybamm.geometric_parameters.l_tab_n,
+                },
+                "positive": {
+                    "y_centre": pybamm.geometric_parameters.centre_y_tab_p,
+                    "z_centre": pybamm.geometric_parameters.centre_z_tab_p,
+                    "width": pybamm.geometric_parameters.l_tab_p,
+                },
+            },
+        }
 
         # update with custom geometry if non empty
         self.update(custom_geometry)

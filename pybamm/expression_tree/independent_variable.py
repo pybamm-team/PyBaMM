@@ -65,16 +65,18 @@ class SpatialVariable(IndependentVariable):
     Parameters
     ----------
     name : str
-        name of the node (e.g. "x_n")
+        name of the node (e.g. "x", "y", "z", "r", "x_n", "x_s", "x_p", "r_n", "r_p")
     domain : iterable of str
-        list of domains that this variable is valid over
+        list of domains that this variable is valid over (e.g. "cartesian", "spherical
+        polar")
 
     *Extends:* :class:`Symbol`
     """
 
-    def __init__(self, name, domain=[], coord_sys=None):
+    def __init__(self, name, domain=None, coord_sys=None):
         self.coord_sys = coord_sys
         super().__init__(name, domain=domain)
+        domain = self.domain
 
         if name not in KNOWN_SPATIAL_VARS:
             raise ValueError(
@@ -82,11 +84,18 @@ class SpatialVariable(IndependentVariable):
             )
         if domain == []:
             raise ValueError("domain must be provided")
-        if name in ["r", "r_n", "r_p"] and domain not in [
-            ["negative particle"],
-            ["positive particle"],
-        ]:
+
+        # Check symbol name vs domain name
+        if name == "r" and not (len(domain) == 1 and "particle" in domain[0]):
             raise pybamm.DomainError("domain must be particle if name is 'r'")
+        elif name == "r_n" and domain != ["negative particle"]:
+            raise pybamm.DomainError(
+                "domain must be negative particle if name is 'r_n'"
+            )
+        elif name == "r_p" and domain != ["positive particle"]:
+            raise pybamm.DomainError(
+                "domain must be positive particle if name is 'r_p'"
+            )
         elif name in ["x", "y", "z", "x_n", "x_s", "x_p"] and any(
             ["particle" in dom for dom in domain]
         ):

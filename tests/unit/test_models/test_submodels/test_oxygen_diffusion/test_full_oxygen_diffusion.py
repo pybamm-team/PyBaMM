@@ -13,21 +13,21 @@ class TestFull(unittest.TestCase):
         a = pybamm.Scalar(0)
         variables = {
             "Porosity": pybamm.Concatenation(
-                pybamm.Broadcast(a, "negative electrode"),
-                pybamm.Broadcast(a, "separator"),
-                pybamm.Broadcast(a, "positive electrode"),
+                pybamm.FullBroadcast(a, "negative electrode", "current collector"),
+                pybamm.FullBroadcast(a, "separator", "current collector"),
+                pybamm.FullBroadcast(a, "positive electrode", "current collector"),
             ),
             "Porosity change": pybamm.Concatenation(
-                pybamm.Broadcast(a, "negative electrode"),
-                pybamm.Broadcast(a, "separator"),
-                pybamm.Broadcast(a, "positive electrode"),
+                pybamm.FullBroadcast(a, "negative electrode", "current collector"),
+                pybamm.FullBroadcast(a, "separator", "current collector"),
+                pybamm.FullBroadcast(a, "positive electrode", "current collector"),
             ),
             "Volume-averaged velocity": a,
-            "Negative electrode interfacial current density": pybamm.Broadcast(
-                a, "negative electrode"
+            "Negative electrode interfacial current density": pybamm.FullBroadcast(
+                a, "negative electrode", "current collector"
             ),
-            "Positive electrode interfacial current density": pybamm.Broadcast(
-                a, "positive electrode"
+            "Positive electrode interfacial current density": pybamm.FullBroadcast(
+                a, "positive electrode", "current collector"
             ),
         }
         reactions = {
@@ -53,4 +53,5 @@ if __name__ == "__main__":
 
     if "-v" in sys.argv:
         debug = True
+    pybamm.settings.debug_mode = True
     unittest.main()

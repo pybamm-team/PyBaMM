@@ -14,12 +14,13 @@ class TestFull(unittest.TestCase):
         variables = {
             "Porosity": a,
             "Electrolyte concentration": a,
-            "Negative electrode interfacial current density": pybamm.Broadcast(
-                a, "negative electrode"
+            "Negative electrode interfacial current density": pybamm.FullBroadcast(
+                a, "negative electrode", "current collector"
             ),
-            "Positive electrode interfacial current density": pybamm.Broadcast(
-                a, "positive electrode"
+            "Positive electrode interfacial current density": pybamm.FullBroadcast(
+                a, "positive electrode", "current collector"
             ),
+            "Cell temperature": a,
         }
         icd = " interfacial current density"
         reactions = {

@@ -21,6 +21,7 @@ class TestLithiumIon(unittest.TestCase):
             "Negative electrode open circuit potential": a_n,
             "Negative electrolyte concentration": a_n,
             "Negative particle surface concentration": a_n,
+            "Negative electrode temperature": a_n,
         }
         submodel = pybamm.interface.lithium_ion.ButlerVolmer(param, "Negative")
         std_tests = tests.StandardSubModelTests(submodel, variables)
@@ -36,6 +37,7 @@ class TestLithiumIon(unittest.TestCase):
             "Positive particle surface concentration": a_p,
             "Negative electrode interfacial current density": a_n,
             "Negative electrode exchange current density": a_n,
+            "Positive electrode temperature": a_p,
         }
         submodel = pybamm.interface.lithium_ion.ButlerVolmer(param, "Positive")
         std_tests = tests.StandardSubModelTests(submodel, variables)

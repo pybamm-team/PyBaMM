@@ -13,7 +13,9 @@ class TestFull(unittest.TestCase):
 
         a = pybamm.Scalar(0)
         variables = {
-            "Current collector current density": a,
+            "Current collector current density": pybamm.PrimaryBroadcast(
+                a, "current collector"
+            ),
             "Interfacial current density": a,
         }
         submodel = pybamm.convection.Full(param)

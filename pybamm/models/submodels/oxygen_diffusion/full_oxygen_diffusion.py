@@ -35,9 +35,10 @@ class Full(BaseModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
+    reactions : dict
+        Dictionary of reaction terms
 
-
-    **Extends:** :class:`pybamm.oxygen.stefan_maxwell.diffusion.BaseModel`
+    **Extends:** :class:`pybamm.oxygen_diffusion.BaseModel`
     """
 
     def __init__(self, param, reactions):
@@ -45,10 +46,16 @@ class Full(BaseModel):
 
     def get_fundamental_variables(self):
         # Oxygen concentration (oxygen concentration is zero in the negative electrode)
-        c_ox_n = pybamm.Broadcast(0, "negative electrode")
-        c_ox_s = pybamm.Variable("Separator oxygen concentration", ["separator"])
+        c_ox_n = pybamm.FullBroadcast(0, "negative electrode", "current collector")
+        c_ox_s = pybamm.Variable(
+            "Separator oxygen concentration",
+            domain="separator",
+            auxiliary_domains={"secondary": "current collector"},
+        )
         c_ox_p = pybamm.Variable(
-            "Positive oxygen concentration", ["positive electrode"]
+            "Positive oxygen concentration",
+            domain="positive electrode",
+            auxiliary_domains={"secondary": "current collector"},
         )
         c_ox_s_p = pybamm.Concatenation(c_ox_s, c_ox_p)
         variables = {"Separator and positive electrode oxygen concentration": c_ox_s_p}
@@ -71,7 +78,9 @@ class Full(BaseModel):
 
         N_ox = N_ox_diffusion + c_ox * v_box
         # Flux in the negative electrode is zero
-        N_ox = pybamm.Concatenation(pybamm.Broadcast(0, "negative electrode"), N_ox)
+        N_ox = pybamm.Concatenation(
+            pybamm.FullBroadcast(0, "negative electrode", "current collector"), N_ox
+        )
 
         variables.update(self._get_standard_flux_variables(N_ox))
 
@@ -88,7 +97,7 @@ class Full(BaseModel):
 
         source_terms = sum(
             pybamm.Concatenation(
-                pybamm.Broadcast(0, "separator"),
+                pybamm.FullBroadcast(0, "separator", "current collector"),
                 reaction["Positive"]["s_ox"] * variables[reaction["Positive"]["aj"]],
             )
             for reaction in self.reactions.values()

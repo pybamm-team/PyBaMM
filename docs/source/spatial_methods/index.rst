@@ -5,3 +5,5 @@ Spatial Methods
 
   spatial_method
   finite_volume
+  scikit_finite_element
+  zero_dimensional_method

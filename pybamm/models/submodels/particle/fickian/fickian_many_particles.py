@@ -30,12 +30,21 @@ class ManyParticles(BaseModel):
         elif self.domain == "Positive":
             c_s = pybamm.standard_variables.c_s_p
 
-        N_s = self._flux_law(c_s)
-        # TODO: fix average so can do X-average N_s
-
         variables = self._get_standard_concentration_variables(c_s, c_s)
-        variables.update(self._get_standard_flux_variables(N_s, N_s))
 
+        return variables
+
+    def get_coupled_variables(self, variables):
+
+        c_s = variables[self.domain + " particle concentration"]
+        T_k = pybamm.PrimaryBroadcast(
+            variables[self.domain + " electrode temperature"],
+            [self.domain.lower() + " particle"],
+        )
+
+        N_s = self._flux_law(c_s, T_k)
+
+        variables.update(self._get_standard_flux_variables(N_s, N_s))
         return variables
 
     def _unpack(self, variables):

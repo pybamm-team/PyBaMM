@@ -28,14 +28,16 @@ class LeadingOrder(BaseModel):
 
     def get_coupled_variables(self, variables):
 
-        j_n = variables["Negative electrode interfacial current density"].orphans[0]
-        j_p = variables["Positive electrode interfacial current density"].orphans[0]
+        j_n = variables["X-averaged negative electrode interfacial current density"]
+        j_p = variables["X-averaged positive electrode interfacial current density"]
 
-        deps_dt_n = pybamm.Broadcast(
+        deps_dt_n = pybamm.PrimaryBroadcast(
             -self.param.beta_surf_n * j_n, ["negative electrode"]
         )
-        deps_dt_s = pybamm.Broadcast(0, ["separator"])
-        deps_dt_p = pybamm.Broadcast(
+        deps_dt_s = pybamm.FullBroadcast(
+            0, "separator", auxiliary_domains={"secondary": "current collector"}
+        )
+        deps_dt_p = pybamm.PrimaryBroadcast(
             -self.param.beta_surf_p * j_p, ["positive electrode"]
         )
 
@@ -48,15 +50,15 @@ class LeadingOrder(BaseModel):
     def set_rhs(self, variables):
         self.rhs = {}
         for domain in ["negative electrode", "separator", "positive electrode"]:
-            eps_av = variables["Average " + domain + " porosity"]
-            deps_dt_av = variables["Average " + domain + " porosity change"]
+            eps_av = variables["X-averaged " + domain + " porosity"]
+            deps_dt_av = variables["X-averaged " + domain + " porosity change"]
             self.rhs.update({eps_av: deps_dt_av})
 
     def set_initial_conditions(self, variables):
 
-        eps_n_av = variables["Average negative electrode porosity"]
-        eps_s_av = variables["Average separator porosity"]
-        eps_p_av = variables["Average positive electrode porosity"]
+        eps_n_av = variables["X-averaged negative electrode porosity"]
+        eps_s_av = variables["X-averaged separator porosity"]
+        eps_p_av = variables["X-averaged positive electrode porosity"]
 
         self.initial_conditions = {eps_n_av: self.param.eps_n_init}
         self.initial_conditions.update({eps_s_av: self.param.eps_s_init})

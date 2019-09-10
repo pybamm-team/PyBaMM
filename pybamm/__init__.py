@@ -41,16 +41,20 @@ ABSOLUTE_PATH = os.path.join(os.path.split(script_path)[0], "..")
 #
 # Utility classes and methods
 #
-from .util import root_dir
 from .util import Timer
-from .util import load_function
+from .util import root_dir, load_function, rmse, get_infinite_nested_dict
 from .logger import logger, set_logging_level
 from .settings import settings
 
 #
 # Classes for the Expression Tree
 #
-from .expression_tree.symbol import Symbol, evaluate_for_shape_using_domain
+from .expression_tree.symbol import (
+    Symbol,
+    domain_size,
+    create_object_of_size,
+    evaluate_for_shape_using_domain,
+)
 from .expression_tree.binary_operators import (
     is_scalar_zero,
     is_matrix_zero,
@@ -85,22 +89,29 @@ from .expression_tree.unary_operators import (
     Gradient,
     Divergence,
     Laplacian,
+    Gradient_Squared,
     Mass,
+    BoundaryMass,
     BoundaryOperator,
     BoundaryValue,
-    BoundaryFlux,
+    BoundaryGradient,
     Integral,
     IndefiniteIntegral,
+    DefiniteIntegralVector,
+    BoundaryIntegral,
     grad,
     div,
     laplacian,
+    grad_squared,
     surf,
-    average,
+    x_average,
+    z_average,
+    yz_average,
     boundary_value,
 )
 from .expression_tree.functions import *
 from .expression_tree.parameter import Parameter, FunctionParameter
-from .expression_tree.broadcasts import Broadcast
+from .expression_tree.broadcasts import Broadcast, PrimaryBroadcast, FullBroadcast
 from .expression_tree.scalar import Scalar
 from .expression_tree.variable import Variable
 from .expression_tree.independent_variable import (
@@ -109,7 +120,8 @@ from .expression_tree.independent_variable import (
     SpatialVariable,
 )
 from .expression_tree.independent_variable import t
-from .expression_tree.vector import Vector, StateVector
+from .expression_tree.vector import Vector
+from .expression_tree.state_vector import StateVector
 
 from .expression_tree.exceptions import (
     DomainError,
@@ -189,6 +201,7 @@ from .geometry.geometry import (
     Geometryxp1DMacro,
     Geometryxp0p1DMicro,
     Geometryxp1p1DMicro,
+    Geometry2DCurrentCollector,
 )
 
 from .expression_tree.independent_variable import KNOWN_SPATIAL_VARS, KNOWN_COORD_SYS
@@ -199,13 +212,15 @@ from .geometry import standard_spatial_vars
 #
 from .discretisations.discretisation import Discretisation
 from .meshes.meshes import Mesh
-from .meshes.submeshes import SubMesh1D, Uniform1DSubMesh
+from .meshes.zero_dimensional_submesh import SubMesh0D
+from .meshes.one_dimensional_submeshes import SubMesh1D, Uniform1DSubMesh
 from .meshes.scikit_fem_submeshes import Scikit2DSubMesh, have_scikit_fem
 
 #
 # Spatial Methods
 #
 from .spatial_methods.spatial_method import SpatialMethod
+from .spatial_methods.zero_dimensional_method import ZeroDimensionalMethod
 from .spatial_methods.finite_volume import FiniteVolume
 from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 
@@ -220,6 +235,7 @@ from .solvers.scipy_solver import ScipySolver
 from .solvers.scikits_dae_solver import ScikitsDaeSolver
 from .solvers.scikits_ode_solver import ScikitsOdeSolver
 from .solvers.scikits_ode_solver import have_scikits_odes
+from .solvers.algebraic_solver import AlgebraicSolver
 
 #
 # Current profiles
@@ -235,7 +251,7 @@ from .parameters.standard_current_functions.get_current_data import GetCurrentDa
 # other
 #
 from .processed_variable import post_process_variables, ProcessedVariable
-from .quick_plot import QuickPlot
+from .quick_plot import QuickPlot, ax_min, ax_max
 
 #
 # Remove any imported modules, so we don't expose them as part of pybamm

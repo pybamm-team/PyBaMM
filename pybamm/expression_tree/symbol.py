@@ -11,10 +11,9 @@ import autograd.numpy as np
 from anytree.exporter import DotExporter
 
 
-def evaluate_for_shape_using_domain(domain, typ="vector"):
+def domain_size(domain):
     """
-    Return a vector of the appropriate shape, based on the domain.
-    Domain 'sizes' can clash, but are unlikely to, and won't cause failures if they do.
+    Get the domain size.
 
     Empty domain has size 1.
     If the domain falls within the list of standard battery domains, the size is read
@@ -29,16 +28,38 @@ def evaluate_for_shape_using_domain(domain, typ="vector"):
         "separator": 13,
         "positive electrode": 17,
     }
-    if domain == []:
+    if isinstance(domain, str):
+        domain = [domain]
+    if domain in [[], None]:
         size = 1
     elif all(dom in fixed_domain_sizes for dom in domain):
         size = sum(fixed_domain_sizes[dom] for dom in domain)
     else:
         size = sum(hash(dom) % 100 for dom in domain)
+    return size
+
+
+def create_object_of_size(size, typ="vector"):
+    "Return object, consisting of NaNs, of the right shape"
     if typ == "vector":
         return np.nan * np.ones((size, 1))
     elif typ == "matrix":
         return np.nan * np.ones((size, size))
+
+
+def evaluate_for_shape_using_domain(domain, auxiliary_domains=None, typ="vector"):
+    """
+    Return a vector of the appropriate shape, based on the domain.
+    Domain 'sizes' can clash, but are unlikely to, and won't cause failures if they do.
+    """
+    _domain_size = domain_size(domain)
+    if auxiliary_domains is None:
+        _auxiliary_domain_sizes = 1
+    else:
+        _auxiliary_domain_sizes = int(
+            np.prod([domain_size(dom) for dom in auxiliary_domains.values()])
+        )
+    return create_object_of_size(_domain_size * _auxiliary_domain_sizes, typ)
 
 
 class Symbol(anytree.NodeMixin):
@@ -57,9 +78,21 @@ class Symbol(anytree.NodeMixin):
 
     """
 
-    def __init__(self, name, children=[], domain=[]):
+    def __init__(self, name, children=None, domain=None, auxiliary_domains=None):
         super(Symbol, self).__init__()
         self.name = name
+
+        if children is None:
+            children = []
+        if domain is None:
+            domain = []
+        elif isinstance(domain, str):
+            domain = [domain]
+        if auxiliary_domains is None:
+            auxiliary_domains = {}
+        for level, dom in auxiliary_domains.items():
+            if isinstance(dom, str):
+                auxiliary_domains[level] = [dom]
 
         for child in children:
             # copy child before adding
@@ -69,6 +102,8 @@ class Symbol(anytree.NodeMixin):
         # cache children
         self.cached_children = super(Symbol, self).children
 
+        # Set auxiliary domains
+        self.auxiliary_domains = auxiliary_domains
         # Set domain (and hence id)
         self.domain = domain
 
@@ -145,6 +180,7 @@ class Symbol(anytree.NodeMixin):
             (self.__class__, self.name)
             + tuple([child.id for child in self.children])
             + tuple(self.domain)
+            + tuple([(k, tuple(v)) for k, v in self.auxiliary_domains.items()])
         )
 
     @property
@@ -160,7 +196,10 @@ class Symbol(anytree.NodeMixin):
         children)
         """
         for pre, _, node in anytree.RenderTree(self):
-            print("%s%s" % (pre, str(node.name)))
+            if isinstance(node, pybamm.Scalar) and node.name != str(node.value):
+                print("{}{} = {}".format(pre, node.name, node.value))
+            else:
+                print("{}{}".format(pre, node.name))
 
     def visualise(self, filename):
         """
@@ -243,12 +282,15 @@ class Symbol(anytree.NodeMixin):
 
     def __repr__(self):
         """returns the string `__class__(id, name, children, domain)`"""
-        return "{!s}({}, {!s}, children={!s}, domain={!s})".format(
+        return (
+            "{!s}({}, {!s}, children={!s}, domain={!s}, auxiliary_domains={!s})"
+        ).format(
             self.__class__.__name__,
             hex(self.id),
             self._name,
             [str(child) for child in self.children],
             [str(subdomain) for subdomain in self.domain],
+            {k: str(v) for k, v in self.auxiliary_domains.items()},
         )
 
     def __add__(self, other):
@@ -525,17 +567,18 @@ class Symbol(anytree.NodeMixin):
         Returns True if a symbol evaluates on an edge, i.e. symbol contains a gradient
         operator, but not a divergence operator, and is not an IndefiniteIntegral.
         """
-        return (
-            self.has_symbol_of_class(pybamm.Gradient)
-            and not self.has_symbol_of_class(pybamm.Divergence)
-            and not self.has_symbol_of_class(pybamm.IndefiniteIntegral)
-            and not self.has_symbol_of_class(pybamm.Inner)
-            and not self.has_symbol_of_class(pybamm.Index)
-        )
+        # Default behaviour: return False
+        return False
 
-    def has_symbol_of_class(self, symbol_class):
-        """Returns True if equation has a term of the class(es) `symbol_class`."""
-        return any(isinstance(symbol, symbol_class) for symbol in self.pre_order())
+    def has_symbol_of_classes(self, symbol_classes):
+        """Returns True if equation has a term of the class(es) `symbol_class`.
+
+        Parameters
+        ----------
+        symbol_classes : pybamm class or iterable of classes
+            The classes to test the symbol against
+        """
+        return any(isinstance(symbol, symbol_classes) for symbol in self.pre_order())
 
     def simplify(self, simplified_symbols=None):
         """ Simplify the expression tree. See :class:`pybamm.Simplification`. """
@@ -566,20 +609,37 @@ class Symbol(anytree.NodeMixin):
         Shape of an object, found by evaluating it with appropriate t and y.
         """
         # Default behaviour is to try to evaluate the object directly
-        state_vectors_in_node = [
-            x for x in self.pre_order() if isinstance(x, pybamm.StateVector)
-        ]
-        if state_vectors_in_node == []:
-            y = None
-        else:
-            min_y_size = max(x.y_slice.stop for x in state_vectors_in_node)
-            # Pick a y that won't cause RuntimeWarnings
-            y = np.linspace(0.1, 0.9, min_y_size)
-        evaluated_self = self.evaluate(0, y)
+        # Try with some large y, to avoid having to use pre_order (slow)
+        try:
+            y = np.linspace(0.1, 0.9, int(1e4))
+            evaluated_self = self.evaluate(0, y)
+        # If that fails, fall back to calculating how big y should really be
+        except ValueError:
+            state_vectors_in_node = [
+                x for x in self.pre_order() if isinstance(x, pybamm.StateVector)
+            ]
+            if state_vectors_in_node == []:
+                y = None
+            else:
+                min_y_size = max(
+                    len(x._evaluation_array) for x in state_vectors_in_node
+                )
+                # Pick a y that won't cause RuntimeWarnings
+                y = np.linspace(0.1, 0.9, min_y_size)
+            evaluated_self = self.evaluate(0, y)
+
+        # Return shape of evaluated object
         if isinstance(evaluated_self, numbers.Number):
             return ()
         else:
             return evaluated_self.shape
+
+    @property
+    def size_for_testing(self):
+        """
+        Size of an object, based on shape for testing
+        """
+        return np.prod(self.shape_for_testing)
 
     @property
     def shape_for_testing(self):

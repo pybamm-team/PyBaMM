@@ -14,15 +14,13 @@ class TestElectricalParameters(unittest.TestCase):
             pybamm.electrical_parameters.dimensional_current_density_with_time
         )
         dimensionless_current = pybamm.electrical_parameters.current_with_time
-        dimensionless_current_density = (
-            pybamm.electrical_parameters.current_density_with_time
-        )
+        dimensionless_current_density = pybamm.electrical_parameters.current_with_time
 
         # process
         parameter_values = pybamm.ParameterValues(
             {
                 "Electrode height [m]": 0.1,
-                "Electrode depth [m]": 0.1,
+                "Electrode width [m]": 0.1,
                 "Number of electrodes connected in parallel to make a cell": 8,
                 "Typical current [A]": 2,
                 "Typical timescale [s]": 60,

@@ -23,8 +23,14 @@ class BaseModel(BaseParticle):
     def __init__(self, param, domain):
         super().__init__(param, domain)
 
-    def _flux_law(self, c):
-        return -pybamm.grad(c)
+    def _flux_law(self, c, T):
+
+        if self.domain == "Negative":
+            D = self.param.D_n(c, T)
+        elif self.domain == "Positive":
+            D = self.param.D_p(c, T)
+
+        return -D * pybamm.grad(c)
 
     def _unpack(self, variables):
         raise NotImplementedError

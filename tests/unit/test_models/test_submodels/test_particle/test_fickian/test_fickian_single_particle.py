@@ -11,14 +11,20 @@ class TestSingleParticle(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.standard_parameters_lithium_ion
 
-        a = pybamm.Scalar(0)
-        variables = {"Average negative electrode interfacial current density": a}
+        a = pybamm.PrimaryBroadcast(pybamm.Scalar(0), "current collector")
+        variables = {
+            "X-averaged negative electrode interfacial current density": a,
+            "X-averaged negative electrode temperature": a,
+        }
 
         submodel = pybamm.particle.fickian.SingleParticle(param, "Negative")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
-        variables = {"Average positive electrode interfacial current density": a}
+        variables = {
+            "X-averaged positive electrode interfacial current density": a,
+            "X-averaged positive electrode temperature": a,
+        }
         submodel = pybamm.particle.fickian.SingleParticle(param, "Positive")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()

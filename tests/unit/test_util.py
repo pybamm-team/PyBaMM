@@ -1,9 +1,7 @@
 #
-# Tests the Timer class.
+# Tests the utility functions.
 #
-# The code in this file is adapted from Pints
-# (see https://github.com/pints-team/pints)
-#
+import numpy as np
 import os
 import pybamm
 import unittest
@@ -60,6 +58,24 @@ class TestUtil(unittest.TestCase):
         # Test function load with relative path
         func = pybamm.load_function("process_symbol_test_function.py")
         self.assertEqual(func(3), 369)
+
+    def test_rmse(self):
+        self.assertEqual(pybamm.rmse(np.ones(5), np.zeros(5)), 1)
+        self.assertEqual(pybamm.rmse(2 * np.ones(5), np.zeros(5)), 2)
+        self.assertEqual(pybamm.rmse(2 * np.ones(5), np.ones(5)), 1)
+
+        x = np.array([1, 2, 3, 4, 5])
+        self.assertEqual(pybamm.rmse(x, x), 0)
+
+        with self.assertRaisesRegex(ValueError, "same length"):
+            pybamm.rmse(np.ones(5), np.zeros(3))
+
+    def test_infinite_nested_dict(self):
+        d = pybamm.get_infinite_nested_dict()
+        d[1][2][3] = "x"
+        self.assertEqual(d[1][2][3], "x")
+        d[4][5] = "y"
+        self.assertEqual(d[4][5], "y")
 
 
 if __name__ == "__main__":

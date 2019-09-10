@@ -61,13 +61,19 @@ class TestAsymptoticConvergence(unittest.TestCase):
             t_comp, y_comp = solution_comp.t, solution_comp.y
             t_full, y_full = solution_full.t, solution_full.y
             voltage_loqs = pybamm.ProcessedVariable(
-                leading_order_model.variables["Terminal voltage"], t_loqs, y_loqs
+                leading_order_model.variables["Terminal voltage"],
+                t_loqs,
+                y_loqs,
+                loqs_disc.mesh,
             )
             voltage_comp = pybamm.ProcessedVariable(
-                composite_model.variables["Terminal voltage"], t_comp, y_comp
+                composite_model.variables["Terminal voltage"],
+                t_comp,
+                y_comp,
+                comp_disc.mesh,
             )
             voltage_full = pybamm.ProcessedVariable(
-                full_model.variables["Terminal voltage"], t_full, y_full
+                full_model.variables["Terminal voltage"], t_full, y_full, full_disc.mesh
             )
 
             # Compare
@@ -84,8 +90,8 @@ class TestAsymptoticConvergence(unittest.TestCase):
         loqs_rates = np.log2(loqs_errs[:-1] / loqs_errs[1:])
         np.testing.assert_array_less(0.99 * np.ones_like(loqs_rates), loqs_rates)
         # Composite not converging as expected
-        # comp_rates = np.log2(comp_errs[:-1] / comp_errs[1:])
-        # np.testing.assert_array_less(0.99 * np.ones_like(comp_rates), comp_rates)
+        comp_rates = np.log2(comp_errs[:-1] / comp_errs[1:])
+        np.testing.assert_array_less(0.99 * np.ones_like(comp_rates), comp_rates)
         # Check composite more accurate than loqs
         np.testing.assert_array_less(comp_errs, loqs_errs)
 

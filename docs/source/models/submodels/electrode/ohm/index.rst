@@ -5,6 +5,6 @@ Ohmic
 
   base_ohm
   leading_ohm
-  combined_ohm
+  composite_ohm
   full_ohm
   surface_form_ohm
