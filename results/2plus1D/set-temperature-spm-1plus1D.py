@@ -3,14 +3,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 
-plt.close('all')
+plt.close("all")
 # set logging level
 pybamm.set_logging_level("INFO")
 
 # load (1+1D) SPM model
-options = {"current collector": "jelly roll",
-           "dimensionality": 1,
-           "thermal": "set external temperature"}
+options = {
+    "current collector": "jelly roll",
+    "dimensionality": 1,
+    "thermal": "set external temperature",
+}
 model = pybamm.lithium_ion.SPM(options)
 
 # create geometry
@@ -22,7 +24,7 @@ param.process_model(model)
 param.process_geometry(geometry)
 
 # set mesh
-nbat = 108
+nbat = 2
 var = pybamm.standard_spatial_vars
 var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.r_n: 5, var.r_p: 5, var.z: nbat}
 # depnding on number of points in y-z plane may need to increase recursion depth...
@@ -33,9 +35,6 @@ mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
 disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
 
-t_sec = param.process_symbol(pybamm.standard_parameters_lithium_ion.tau_discharge).evaluate()
-t_hour = t_sec/(3600)
-
 
 # define a method which updates statevector
 def update_statevector(variables, statevector):
@@ -43,40 +42,33 @@ def update_statevector(variables, statevector):
     for name, new_vector in variables.items():
         var_slice = model.variables[name].y_slices
         statevector[var_slice] = new_vector
-    return statevector[:, np.newaxis]  # should be column vector
+    return statevector
 
 
-# define a method which takes a dimensional potential [V] and converts to the
-# dimensionless potential used in pybamm
-pot_scale = param.process_symbol(
-    pybamm.standard_parameters_lithium_ion.potential_scale
-).evaluate()  # potential scaled on thermal voltage
-pot_ref = param.process_symbol(
-    pybamm.standard_parameters_lithium_ion.U_p_ref
-    - pybamm.standard_parameters_lithium_ion.U_n_ref
-).evaluate()  # positive potential measured with respect to reference OCV
-
-
-def non_dim_potential(phi_dim, domain):
-    if domain == "negative":
-        phi = phi_dim / pot_scale
-    elif domain == "positive":
-        phi = (phi_dim - pot_ref) / pot_scale
-    return phi
-
+# define a method to non-dimensionalise a temperature
 def non_dim_temperature(temperature):
-    Delta_T = param.process_symbol(model.submodels['thermal'].param.Delta_T).evaluate()
-    T_ref = param.process_symbol(model.submodels['thermal'].param.T_ref).evaluate()
-    return (temperature - T_ref)/Delta_T
+    "takes in a temperature and returns the non-dimensional version"
+    Delta_T = param.process_symbol(model.submodels["thermal"].param.Delta_T).evaluate()
+    T_ref = param.process_symbol(model.submodels["thermal"].param.T_ref).evaluate()
+    return (temperature - T_ref) / Delta_T
 
-# solve model -- replace with step
-t_eval1 = np.linspace(0, 0.1, 20)
-solution1 = model.default_solver.solve(model, t_eval1)
+
+# step model in time
+solver = model.default_solver
+dt = 0.1  # timestep to take
+npts = 20  # number of points to store the solution at during this step
+solution1 = solver.step(model, dt, npts=npts)
 phi_s_cn_step1 = pybamm.ProcessedVariable(
-    model.variables["Negative current collector potential [V]"], solution1.t, solution1.y, mesh=mesh
+    model.variables["Negative current collector potential [V]"],
+    solution1.t,
+    solution1.y,
+    mesh=mesh,
 )
 phi_s_cp_step1 = pybamm.ProcessedVariable(
-    model.variables["Positive current collector potential [V]"], solution1.t, solution1.y, mesh=mesh
+    model.variables["Positive current collector potential [V]"],
+    solution1.t,
+    solution1.y,
+    mesh=mesh,
 )
 voltage_step1 = pybamm.ProcessedVariable(
     model.variables["Terminal voltage [V]"], solution1.t, solution1.y, mesh=mesh
@@ -85,45 +77,55 @@ current_step1 = pybamm.ProcessedVariable(
     model.variables["Current [A]"], solution1.t, solution1.y, mesh=mesh
 )
 heating_step1 = pybamm.ProcessedVariable(
-    model.variables["X-averaged total heating [A.V.m-3]"], solution1.t, solution1.y, mesh=mesh
+    model.variables["X-averaged total heating [A.V.m-3]"],
+    solution1.t,
+    solution1.y,
+    mesh=mesh,
 )
 particle_step1 = pybamm.ProcessedVariable(
-    model.variables["X-averaged positive particle surface concentration [mol.m-3]"], solution1.t, solution1.y, mesh=mesh
+    model.variables["X-averaged positive particle surface concentration [mol.m-3]"],
+    solution1.t,
+    solution1.y,
+    mesh=mesh,
 )
 temperature_step1 = pybamm.ProcessedVariable(
-    model.variables["X-averaged cell temperature [K]"], solution1.t, solution1.y, mesh=mesh
+    model.variables["X-averaged cell temperature [K]"],
+    solution1.t,
+    solution1.y,
+    mesh=mesh,
 )
 
+# get the current state and temperature
 current_state = solution1.y[:, -1]
-
 temp_ave = current_state[model.variables["X-averaged cell temperature"].y_slices]
-temp_neg = current_state[model.variables["X-averaged negative electrode temperature"].y_slices]
-temp_pos = current_state[model.variables["X-averaged positive electrode temperature"].y_slices]
-temp_sep = current_state[model.variables["X-averaged separator temperature"].y_slices]
 
-T_ref = param.process_symbol(model.submodels['thermal'].param.T_ref).evaluate()
+# update the temperature
+T_ref = param.process_symbol(model.submodels["thermal"].param.T_ref).evaluate()
 t_external = np.linspace(T_ref, T_ref + 6.0, nbat)
 non_dim_t_external = non_dim_temperature(t_external)
-variables = {
-    "X-averaged cell temperature": non_dim_t_external,
-    "X-averaged negative electrode temperature": non_dim_t_external,
-    "X-averaged positive electrode temperature": non_dim_t_external,
-    "X-averaged separator temperature": non_dim_t_external,
-}
-
+variables = {"X-averaged cell temperature": non_dim_t_external}
 new_state = update_statevector(variables, current_state)
 
-# solve again -- replace with step
-# use new state as initial condition
-model.concatenated_initial_conditions = new_state
-#model.concatenated_initial_conditions = current_state[:, np.newaxis]
-t_eval2 = np.linspace(0.1, 0.2, 20)
-solution2 = model.default_solver.solve(model, t_eval2)
+# step in time again
+# use new state as initial condition. Note: need to to recompute consistent initial
+# values for the algebraic part of the model. Since the (dummy) equation for the
+# temperature is an ODE, the imposed change in temperature is unaffected by this
+# process
+solver.y0 = solver.calculate_consistent_initial_conditions(
+    solver.rhs, solver.algebraic, new_state
+)
+solution2 = solver.step(model, dt, npts=npts)
 phi_s_cn_step2 = pybamm.ProcessedVariable(
-    model.variables["Negative current collector potential [V]"], solution2.t, solution2.y, mesh=mesh
+    model.variables["Negative current collector potential [V]"],
+    solution2.t,
+    solution2.y,
+    mesh=mesh,
 )
 phi_s_cp_step2 = pybamm.ProcessedVariable(
-    model.variables["Positive current collector potential [V]"], solution2.t, solution2.y, mesh=mesh
+    model.variables["Positive current collector potential [V]"],
+    solution2.t,
+    solution2.y,
+    mesh=mesh,
 )
 voltage_step2 = pybamm.ProcessedVariable(
     model.variables["Terminal voltage [V]"], solution2.t, solution2.y, mesh=mesh
@@ -132,51 +134,92 @@ current_step2 = pybamm.ProcessedVariable(
     model.variables["Current [A]"], solution2.t, solution2.y, mesh=mesh
 )
 heating_step2 = pybamm.ProcessedVariable(
-    model.variables["X-averaged total heating [A.V.m-3]"], solution2.t, solution2.y, mesh=mesh
+    model.variables["X-averaged total heating [A.V.m-3]"],
+    solution2.t,
+    solution2.y,
+    mesh=mesh,
 )
 particle_step2 = pybamm.ProcessedVariable(
-    model.variables["X-averaged positive particle surface concentration [mol.m-3]"], solution2.t, solution2.y, mesh=mesh
+    model.variables["X-averaged positive particle surface concentration [mol.m-3]"],
+    solution2.t,
+    solution2.y,
+    mesh=mesh,
 )
 temperature_step2 = pybamm.ProcessedVariable(
-    model.variables["X-averaged cell temperature [K]"], solution2.t, solution2.y, mesh=mesh
+    model.variables["X-averaged cell temperature [K]"],
+    solution2.t,
+    solution2.y,
+    mesh=mesh,
 )
+
 # plot
+t_sec = param.process_symbol(
+    pybamm.standard_parameters_lithium_ion.tau_discharge
+).evaluate()
+t_hour = t_sec / (3600)
 plt.figure()
 z = np.linspace(0, 1, nbat)
 for bat_id in range(nbat):
-    plt.plot(t_eval1*t_hour, phi_s_cp_step1(t_eval1, z=z)[bat_id, :] - phi_s_cn_step1(t_eval1, z=z)[bat_id, :], t_eval2*t_hour, phi_s_cp_step2(t_eval2, z=z)[bat_id, :] - phi_s_cn_step2(t_eval2, z=z)[bat_id, :])
-plt.xlabel('t [hrs]')
-plt.ylabel('Local voltage [V]')
+    plt.plot(
+        solution1.t * t_hour,
+        phi_s_cp_step1(solution1.t, z=z)[bat_id, :]
+        - phi_s_cn_step1(solution1.t, z=z)[bat_id, :],
+        solution2.t * t_hour,
+        phi_s_cp_step2(solution2.t, z=z)[bat_id, :]
+        - phi_s_cn_step2(solution2.t, z=z)[bat_id, :],
+    )
+plt.xlabel("t [hrs]")
+plt.ylabel("Local voltage [V]")
 plt.figure()
-plt.plot(t_eval1, voltage_step1(t_eval1), t_eval2, voltage_step2(t_eval2))
-plt.xlabel('t')
-plt.ylabel('Voltage [V]')
+plt.plot(
+    solution1.t, voltage_step1(solution1.t), solution2.t, voltage_step2(solution2.t)
+)
+plt.xlabel("t")
+plt.ylabel("Voltage [V]")
 plt.show()
 plt.figure()
-plt.plot(t_eval1, current_step1(t_eval1), t_eval2, current_step2(t_eval2))
-plt.xlabel('t')
-plt.ylabel('Current [A]')
+plt.plot(
+    solution1.t, current_step1(solution1.t), solution2.t, current_step2(solution2.t)
+)
+plt.xlabel("t")
+plt.ylabel("Current [A]")
 plt.show()
 plt.figure()
 z = np.linspace(0, 1, nbat)
 for bat_id in range(nbat):
-    plt.plot(t_eval1*t_hour, heating_step1(t_eval1, z=z)[bat_id, :], t_eval2*t_hour, heating_step2(t_eval2, z=z)[bat_id, :])
-plt.xlabel('t [hrs]')
-plt.ylabel('X-averaged total heating [A.V.m-3]')
-plt.yscale('log')
+    plt.plot(
+        solution1.t * t_hour,
+        heating_step1(solution1.t, z=z)[bat_id, :],
+        solution2.t * t_hour,
+        heating_step2(solution2.t, z=z)[bat_id, :],
+    )
+plt.xlabel("t [hrs]")
+plt.ylabel("X-averaged total heating [A.V.m-3]")
+plt.yscale("log")
 plt.show()
 plt.figure()
 for bat_id in range(nbat):
-    plt.plot(t_eval1*t_hour, particle_step1(t_eval1,z=z)[bat_id, :], t_eval2*t_hour, particle_step2(t_eval2,z=z)[bat_id, :])
-plt.xlabel('t [hrs]')
-plt.ylabel('X-averaged positive particle surface concentration [mol.m-3]')
+    plt.plot(
+        solution1.t * t_hour,
+        particle_step1(solution1.t, z=z)[bat_id, :],
+        solution2.t * t_hour,
+        particle_step2(solution2.t, z=z)[bat_id, :],
+    )
+plt.xlabel("t [hrs]")
+plt.ylabel("X-averaged positive particle surface concentration [mol.m-3]")
 plt.show()
 plt.figure()
 for bat_id in range(nbat):
-    plt.plot(t_eval1*t_hour, temperature_step1(t_eval1,z=z)[bat_id, :], t_eval2*t_hour, temperature_step2(t_eval2,z=z)[bat_id, :])
-plt.xlabel('t [hrs]')
-plt.ylabel('X-averaged cell temperature [K]')
+    plt.plot(
+        solution1.t * t_hour,
+        temperature_step1(solution1.t, z=z)[bat_id, :],
+        solution2.t * t_hour,
+        temperature_step2(solution2.t, z=z)[bat_id, :],
+    )
+plt.xlabel("t [hrs]")
+plt.ylabel("X-averaged cell temperature [K]")
 plt.show()
+
 
 def plot_var(var, solution, time=-1):
     variable = model.variables[var]
@@ -196,11 +239,12 @@ def plot_var(var, solution, time=-1):
     plt.imshow(entries[:, :, time])
     plt.title(var)
 
-#plot_var(var="Positive current collector potential", solution=solution1, time=-1)
-#plot_var(var="Total heating [A.V.m-3]", solution=solution1, time=-1)
-#plot_var(var="Interfacial current density", solution=solution2, time=-1)
-#plot_var(var="Negative particle concentration [mol.m-3]", solution=solution2, time=-1)
-#plot_var(var="Positive particle concentration [mol.m-3]", solution=solution2, time=-1)
+
+# plot_var(var="Positive current collector potential", solution=solution1, time=-1)
+# plot_var(var="Total heating [A.V.m-3]", solution=solution1, time=-1)
+# plot_var(var="Interfacial current density", solution=solution2, time=-1)
+# plot_var(var="Negative particle concentration [mol.m-3]", solution=solution2, time=-1)
+# plot_var(var="Positive particle concentration [mol.m-3]", solution=solution2, time=-1)
 
 var_names = list(model.variables.keys())
 var_names.sort()

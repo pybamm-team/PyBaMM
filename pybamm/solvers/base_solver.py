@@ -1,6 +1,8 @@
 #
 # Base solver class
 #
+import pybamm
+import numpy as np
 
 
 class BaseSolver(object):
@@ -44,7 +46,122 @@ class BaseSolver(object):
             The times at which to compute the solution
 
         """
+        pybamm.logger.info("Start solving {}".format(model.name))
 
+        # Set up
+        timer = pybamm.Timer()
+        start_time = timer.time()
+        self.set_up(model)
+        set_up_time = timer.time() - start_time
+
+        # Solve
+        solution, solve_time, termination = self.compute_solution(model, t_eval)
+
+        # Assign times
+        solution.solve_time = solve_time
+        solution.total_time = timer.time() - start_time
+        solution.set_up_time = set_up_time
+
+        pybamm.logger.info("Finish solving {} ({})".format(model.name, termination))
+        pybamm.logger.info(
+            "Set-up time: {}, Solve time: {}, Total time: {}".format(
+                timer.format(solution.set_up_time),
+                timer.format(solution.solve_time),
+                timer.format(solution.total_time),
+            )
+        )
+        return solution
+
+    def step(self, model, dt, npts=2):
+        """Step the solution of the model forward by a given time increment. The
+        first time this method is called it computes the necessary setup by
+        calling `self.set_up(model)`.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model whose solution to calculate. Must have attributes rhs and
+            initial_conditions
+        dt : numeric type
+            The timestep over which to step the solution
+        npts : int, optional
+            The number of points at which the solution will be returned during
+            the step dt. Defualt is 2 (returns the solution at t0 and t0 + dt).
+
+        """
+        # Set timer
+        timer = pybamm.Timer()
+        set_up_time = None
+
+        # Run set up on first step
+        if not hasattr(self, 'y0'):
+            start_time = timer.time()
+            self.set_up(model)
+            self.t = 0.0
+            set_up_time = timer.time() - start_time
+
+        # Step
+        pybamm.logger.info("Start stepping {}".format(model.name))
+        t_eval = np.linspace(self.t, self.t + dt, npts)
+        solution, solve_time, termination = self.compute_solution(model, t_eval)
+
+        # Assign times
+        solution.solve_time = solve_time
+        if set_up_time:
+            solution.total_time = timer.time() - start_time
+            solution.set_up_time = set_up_time
+
+        # Set self.t and self.y0 to their values at the final step
+        self.t = solution.t[-1]
+        self.y0 = solution.y[:, -1]
+
+        pybamm.logger.info("Finish stepping {} ({})".format(model.name, termination))
+        if set_up_time:
+            pybamm.logger.info(
+                "Set-up time: {}, Step time: {}, Total time: {}".format(
+                    timer.format(solution.set_up_time),
+                    timer.format(solution.solve_time),
+                    timer.format(solution.total_time),
+                )
+            )
+        else:
+            pybamm.logger.info(
+                "Step time: {}".format(
+                    timer.format(solution.solve_time),
+                )
+            )
+        return solution
+
+    def compute_solution(self, model, t_eval):
+        """Calculate the solution of the model at specified times.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model whose solution to calculate. Must have attributes rhs and
+            initial_conditions
+        t_eval : numeric type
+            The times at which to compute the solution
+
+        """
+        raise NotImplementedError
+
+    def set_up(self, model):
+        """Unpack model, perform checks, simplify and calculate jacobian.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model whose solution to calculate. Must have attributes rhs and
+            initial_conditions
+
+        Raises
+        ------
+        :class:`pybamm.SolverError`
+            If the model contains any algebraic equations (in which case a DAE solver
+            should be used instead)
+
+        """
         raise NotImplementedError
 
     def get_termination_reason(self, solution, events):
