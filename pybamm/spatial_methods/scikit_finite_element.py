@@ -234,7 +234,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         domain : list
             The domain(s) of integration
         vector_type : str, optional
-            Whether to return a row or column vector (defualt is row)
+            Whether to return a row or column vector (default is row)
 
         Returns
         -------
@@ -417,7 +417,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             ({symbol.id: {"left": left bc, "right": right bc}})
         region: str, optional
             The domain over which to assemble the mass matrix form. Can be "interior"
-            (defualt) or "boundary".
+            (default) or "boundary".
 
         Returns
         -------
@@ -465,7 +465,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             Array of the indicies which correspond to the boundary.
         zero: bool, optional
             If True, the rows of M given by the indicies in boundary are set to zero.
-            If False, the diagonal element is set to one. Defualt is False.
+            If False, the diagonal element is set to one. default is False.
         """
         row = np.arange(0, np.size(boundary))
         if zero:
