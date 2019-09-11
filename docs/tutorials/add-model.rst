@@ -8,7 +8,7 @@ Adding a Model
 As with any contribution to PyBaMM, please follow the workflow in CONTRIBUTING.md_.
 In particular, start by creating an issue to discuss what you want to do - this is a good way to avoid wasted coding hours!
 
-We aim here to provide an overview of how a new model is entered into PyBaMM in a form which can be eventually merged into the master branch of the PyBaMM project. However, we recommend that you first read through the notebook: `create a model <https://github.com/pybamm-team/PyBaMM/blob/master/examples/notebooks/create-model.ipynb>` which goes step-by-step through the procedure for creating a model. Once you understand that procedure, you can then formalise your model following the outline provided here.
+We aim here to provide an overview of how a new model is entered into PyBaMM in a form which can be eventually merged into the master branch of the PyBaMM project. However, we recommend that you first read through the notebook: `create a model <https://github.com/pybamm-team/PyBaMM/blob/master/examples/notebooks/create-model.ipynb>`_, which goes step-by-step through the procedure for creating a model. Once you understand that procedure, you can then formalise your model following the outline provided here.
 
 The role of models
 ------------------

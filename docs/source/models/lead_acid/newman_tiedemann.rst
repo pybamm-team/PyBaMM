@@ -1,5 +1,5 @@
-Newman-Tiedemann Model
-======================
+Full Model
+==========
 
 .. autoclass:: pybamm.lead_acid.NewmanTiedemann
     :members:
