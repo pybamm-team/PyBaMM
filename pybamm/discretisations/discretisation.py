@@ -529,8 +529,16 @@ class Discretisation(object):
             elif isinstance(symbol, pybamm.Laplacian):
                 return child_spatial_method.laplacian(child, disc_child, self.bcs)
 
+            elif isinstance(symbol, pybamm.Gradient_Squared):
+                return child_spatial_method.gradient_squared(
+                    child, disc_child, self.bcs
+                )
+
             elif isinstance(symbol, pybamm.Mass):
                 return child_spatial_method.mass_matrix(child, self.bcs)
+
+            elif isinstance(symbol, pybamm.BoundaryMass):
+                return child_spatial_method.boundary_mass_matrix(child, self.bcs)
 
             elif isinstance(symbol, pybamm.IndefiniteIntegral):
                 return child_spatial_method.indefinite_integral(child, disc_child)
@@ -545,6 +553,7 @@ class Discretisation(object):
                 return child_spatial_method.definite_integral_matrix(
                     child.domain, vector_type=symbol.vector_type
                 )
+
             elif isinstance(symbol, pybamm.BoundaryIntegral):
                 return child_spatial_method.boundary_integral(
                     child, disc_child, symbol.region

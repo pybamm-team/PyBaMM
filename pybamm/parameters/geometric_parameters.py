@@ -50,6 +50,7 @@ l_cp = L_cp / L_x
 l_y = L_y / L_z
 l_z = L_z / L_z
 
+l = L / L_x
 delta = L_x / L_z
 
 # Tab geometry

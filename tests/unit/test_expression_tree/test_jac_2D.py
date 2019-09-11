@@ -231,9 +231,8 @@ class TestJacobian(unittest.TestCase):
 
         # when child evaluates to number
         func = pybamm.sin(const)
-        jacobian = np.array([[0, 0, 0, 0, 0, 0, 0, 0]])
         dfunc_dy = func.jac(y).evaluate(y=y0)
-        np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
+        np.testing.assert_array_equal(0, dfunc_dy)
 
         # several children
         func = pybamm.Function(test_multi_var_function, 2 * y, 3 * y)
