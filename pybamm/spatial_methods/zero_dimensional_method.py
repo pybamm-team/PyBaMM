@@ -12,7 +12,7 @@ class ZeroDimensionalMethod(pybamm.SpatialMethod):
     Parameters
     ----------
     mesh : :class: `pybamm.Mesh`
-        Contains all the submeshes for discretisationz
+        Contains all the submeshes for discretisation
 
     **Extends** : :class:`pybamm.SpatialMethod`
     """

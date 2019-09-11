@@ -242,7 +242,7 @@ class TestScikitFiniteElement(unittest.TestCase):
         self.assertEqual(vec_disc.shape[0], mesh["current collector"][0].npts)
         self.assertEqual(vec_disc.shape[1], 1)
 
-    def test_left_right(self):
+    def test_neg_pos(self):
         mesh = get_2p1d_mesh_for_testing()
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume,
@@ -252,15 +252,18 @@ class TestScikitFiniteElement(unittest.TestCase):
         var = pybamm.Variable("var", domain="current collector")
         disc.set_variable_slices([var])
 
-        extrap_left = pybamm.BoundaryValue(var, "negative tab")
-        extrap_right = pybamm.BoundaryValue(var, "positive tab")
-        extrap_left_disc = disc.process_symbol(extrap_left)
-        extrap_right_disc = disc.process_symbol(extrap_right)
-
+        extrap_neg = pybamm.BoundaryValue(var, "negative tab")
+        extrap_pos = pybamm.BoundaryValue(var, "positive tab")
+        extrap_neg_disc = disc.process_symbol(extrap_neg)
+        extrap_pos_disc = disc.process_symbol(extrap_pos)
         # check constant returns constant at tab
-        constant_y = np.ones(mesh["current collector"][0].npts)
-        self.assertEqual(extrap_left_disc.evaluate(None, constant_y), 1)
-        self.assertEqual(extrap_right_disc.evaluate(None, constant_y), 1)
+        constant_y = np.ones(mesh["current collector"][0].npts)[:, np.newaxis]
+        np.testing.assert_array_almost_equal(
+            extrap_neg_disc.evaluate(None, constant_y), 1
+        )
+        np.testing.assert_array_almost_equal(
+            extrap_pos_disc.evaluate(None, constant_y), 1
+        )
 
     def test_boundary_integral(self):
         mesh = get_2p1d_mesh_for_testing()
