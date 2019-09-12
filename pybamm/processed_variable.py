@@ -94,8 +94,10 @@ class ProcessedVariable(object):
             self.base_eval = base_variable.evaluate(t_sol[0], u_sol[:, 0])
 
         # handle 2D (in space) finite element variables differently
-        if mesh and "current collector" in self.domain and isinstance(
-            self.mesh[self.domain[0]][0], pybamm.Scikit2DSubMesh
+        if (
+            mesh
+            and "current collector" in self.domain
+            and isinstance(self.mesh[self.domain[0]][0], pybamm.Scikit2DSubMesh)
         ):
             if len(self.t_sol) == 1:
                 # space only (steady solution)
@@ -209,7 +211,16 @@ class ProcessedVariable(object):
     def initialise_3D(self):
         """
         Initialise a 3D object that depends on x and r, or x and z.
-        Needs to be generalised to deal with other domains
+        Needs to be generalised to deal with other domains.
+
+        Notes
+        -----
+        There is different behaviour between a variable on an electrode domain
+        broadcast to a particle (such as temperature) and a variable on a particle
+        domain broadcast to an electrode (such as particle concentration). We deal with
+        this by reshaping the former with the Fortran order ("F") and the latter with
+        the C order ("C"). These are transposes of each other, so this approach simply
+        avoids having to transpose later.
         """
         # Dealt with weird particle/electrode case
         if self.domain in [
@@ -219,12 +230,13 @@ class ProcessedVariable(object):
             ["negative particle"],
             ["positive particle"],
         ]:
-            # Switch domain and auxiliary domains and set order to "F"
+            # Switch domain and auxiliary domains and set order to Fortran order ("F")
             dom = self.domain
             self.domain = self.auxiliary_domains["secondary"]
             self.auxiliary_domains["secondary"] = dom
             order = "F"
         else:
+            # Set order to C order ("C")
             order = "C"
 
         # Process x-r or x-z
@@ -393,7 +405,7 @@ class ProcessedVariable(object):
 
     def call_2D(self, t, x, r, z):
         "Evaluate a 2D variable"
-        spatial_var = eval(self.spatial_var_name)
+        spatial_var = eval_dimension_name(self.spatial_var_name, t, x, r, None, z)
         if spatial_var is not None:
             return self._interpolation_function(t, spatial_var)
         else:
@@ -401,8 +413,8 @@ class ProcessedVariable(object):
 
     def call_3D(self, t, x, r, y, z):
         "Evaluate a 3D variable"
-        first_dim = eval(self.first_dimension)
-        second_dim = eval(self.second_dimension)
+        first_dim = eval_dimension_name(self.first_dimension, t, x, r, y, z)
+        second_dim = eval_dimension_name(self.second_dimension, t, x, r, y, z)
         if first_dim is None or second_dim is None:
             raise ValueError(
                 "inputs {} and {} cannot be None".format(
@@ -420,3 +432,16 @@ class ProcessedVariable(object):
                 second_dim = second_dim[:, np.newaxis]
 
         return self._interpolation_function((first_dim, second_dim, t))
+
+
+def eval_dimension_name(name, t, x, r, y, z):
+    if name == "t":
+        return t
+    elif name == "x":
+        return x
+    elif name == "r":
+        return r
+    elif name == "y":
+        return y
+    elif name == "z":
+        return z
