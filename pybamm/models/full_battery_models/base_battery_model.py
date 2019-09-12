@@ -30,8 +30,6 @@ class BaseBatteryModel(pybamm.BaseModel):
                 Whether to include the effects of convection in the model. Can be
                 False (default), "differential" or "algebraic". Must be 'False' for
                 lithium-ion models.
-            * "first-order potential" : str, optional
-                Can be "linear" (default). I don't know what this option does?
             * "side reactions" : list, optional
                 Contains a list of any side reactions to include. Default is []. If this
                 list is not empty (i.e. side reactions are included in the model), then
@@ -189,7 +187,6 @@ class BaseBatteryModel(pybamm.BaseModel):
             "dimensionality": 0,
             "surface form": False,
             "convection": False,
-            "first-order potential": "linear",
             "side reactions": [],
             "interfacial surface area": "constant",
             "current collector": "uniform",
