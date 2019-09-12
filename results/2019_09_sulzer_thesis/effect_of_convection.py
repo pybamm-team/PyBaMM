@@ -1,5 +1,5 @@
 #
-# Simulations: effect of side reactions for charge of a lead-acid battery
+# Effect of convection for discharge of a lead-acid battery
 #
 import argparse
 import matplotlib.pyplot as plt

@@ -407,7 +407,14 @@ def plot_voltage_components(all_variables, t_eval, model, sigmas):
     n = int(len(sigmas) // np.sqrt(len(sigmas)))
     m = int(np.ceil(len(sigmas) / n))
     fig, axes = plt.subplots(n, m, sharey=True, figsize=(6.4, 2.3))
-    labels = ["V", "$V_U$", "$V_k$", "$V_c$", "$V_o$", "$V_{cc}$"]
+    labels = [
+        "V",
+        "$V_\\mathrm{U}$",
+        "$V_\\mathrm{k}$",
+        "$V_\\mathrm{c}$",
+        "$V_\\mathrm{o}$",
+        "$V_\\mathrm{cc}$",
+    ]
     overpotentials = [
         "Average battery reaction overpotential [V]",
         "Average battery concentration overpotential [V]",

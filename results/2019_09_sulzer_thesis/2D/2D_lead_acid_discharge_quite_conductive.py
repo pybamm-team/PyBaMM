@@ -1,5 +1,5 @@
 #
-# Simulations: discharge of a lead-acid battery
+# Discharge of a lead-acid battery with quite conductive electrodes
 #
 import argparse
 import matplotlib.pyplot as plt
@@ -40,7 +40,7 @@ def plot_voltages(all_variables, t_eval):
 def plot_voltage_components(all_variables, t_eval):
     Crate = 1
     sigmas = [5 * 8000, 10 * 8000, 100 * 8000]
-    model = "1+1D Composite"
+    model = "1+1D Composite\n(quite conductive)"
     all_variables = {
         sigma: models
         for sigma, models in all_variables[Crate].items()
@@ -102,7 +102,7 @@ def discharge_states(compute):
         extra_parameter_values=extra_parameter_values,
     )
     plot_voltages(all_variables, t_eval)
-    # plot_voltage_components(all_variables, t_eval)
+    plot_voltage_components(all_variables, t_eval)
 
 
 if __name__ == "__main__":

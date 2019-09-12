@@ -6,7 +6,6 @@ V Sulzer. *Mathematical modelling of lead-acid batteries*. PhD thesis, Universit
 
 The plots were formatted using a formatting file `matplotlibrc` identical to [this one](_matplotlibrc) (but not included in the GitHub repo to avoid clashes with different formatting files).
 Each file can be run individually to generate the results described below.
-To generate all results, run the [main file](main.py).
 
 
 ## Chapter 2 - Model
@@ -40,7 +39,7 @@ To generate all results, run the [main file](main.py).
         - Voltages
         - Concentration snapshots at a fixed time (as functions of x and z)
         - X-averaged concentration at various times (as functions of z)
-    - [Quite conductive](2D/2D_lead_acid_dicharge_quite_conducting.py):
+    - [Quite conductive](2D/2D_lead_acid_dicharge_quite_conductive.py):
         - Voltages
         - Decomposition of voltage into constituent overpotentials
 - [Times and errors](2D/2D_all_times_errors.py): Errors compared to full model and time taken to solve each model

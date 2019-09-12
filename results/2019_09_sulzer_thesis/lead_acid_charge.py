@@ -1,5 +1,5 @@
 #
-# Simulations: charge of a lead-acid battery
+# Charge of a lead-acid battery
 #
 import argparse
 import matplotlib.pyplot as plt

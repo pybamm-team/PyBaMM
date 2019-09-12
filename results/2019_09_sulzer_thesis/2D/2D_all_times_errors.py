@@ -1,5 +1,5 @@
 #
-# Simulations: discharge of a lead-acid battery
+# Times and errors for discharge of a lead-acid battery in 2D
 #
 import argparse
 import matplotlib.pyplot as plt
