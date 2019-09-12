@@ -20,9 +20,6 @@ C_rate = "1"  # choose the key from the above dictionary of available results
 comsol_variables = pickle.load(
     open("input/comsol_results/comsol_{}C.pickle".format(C_rate), "rb")
 )
-import ipdb
-
-ipdb.set_trace()
 
 "-----------------------------------------------------------------------------"
 "Create and solve pybamm model"

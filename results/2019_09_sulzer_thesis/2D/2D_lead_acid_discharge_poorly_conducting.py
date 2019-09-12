@@ -4,10 +4,8 @@
 import argparse
 import matplotlib.pyplot as plt
 import numpy as np
-import pickle
 import pybamm
 import shared_plotting_2D
-from collections import defaultdict
 from shared_solutions_2D import model_comparison, variables_to_keep
 
 try:
@@ -41,7 +39,6 @@ def plot_voltages(all_variables, t_eval):
 def plot_variables(all_variables, t_eval):
     # Set up
     Crates = [0.1, 1, 2]
-    times = np.array([0, 0.078, 0.156])
     var_file_names = {
         "X-averaged electrolyte concentration [Molar]"
         + "": "2d_poor_discharge_average_electrolyte_concentration_comparison"
@@ -55,22 +52,6 @@ def plot_variables(all_variables, t_eval):
             exceptions = limits_exceptions[var]
         else:
             exceptions = {}
-        # for sigma in [8000, 5 * 8000, 10 * 8000]:
-        #     shared_plotting_2D.plot_variable(
-        #         all_variables,
-        #         times,
-        #         sigma,
-        #         var,
-        #         exceptions,
-        #         linestyles=linestyles,
-        #         linewidths=linewidths,
-        #     )
-        #     if OUTPUT_DIR is not None:
-        #         plt.savefig(
-        #             OUTPUT_DIR + file_name + "_sigma={}.eps".format(sigma),
-        #             format="eps",
-        #             dpi=1000,
-        #         )
         shared_plotting_2D.plot_variable_allsigma(
             all_variables,
             0.1,
@@ -125,10 +106,6 @@ def discharge_states(compute):
             {"dimensionality": 1, "current collector": "potential pair"},
             name="1+1D LOQS",
         ),
-        # pybamm.lead_acid.FOQS(
-        #     {"dimensionality": 1, "current collector": "potential pair"},
-        #     name="FOQS",
-        # ),
         pybamm.lead_acid.CompositeExtended(
             {"dimensionality": 1, "current collector": "potential pair"},
             name="1+1D Composite",

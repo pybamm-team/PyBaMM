@@ -103,13 +103,6 @@ def charge_states(compute):
             pybamm.lead_acid.LOQS(
                 {"surface form": "algebraic", "side reactions": ["oxygen"]}, name="LOQS"
             ),
-            # pybamm.lead_acid.FOQS(
-            #     {"surface form": "algebraic", "side reactions": ["oxygen"]}, name="FOQS"
-            # ),
-            # pybamm.lead_acid.Composite(
-            #     {"surface form": "algebraic", "side reactions": ["oxygen"]},
-            #     name="Composite",
-            # ),
             pybamm.lead_acid.CompositeExtended(
                 {"surface form": "algebraic", "side reactions": ["oxygen"]},
                 name="Composite",

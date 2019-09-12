@@ -160,7 +160,7 @@ def time_comparison(models, Crate, all_npts, t_eval, extra_parameter_values=None
                 time = solution.solve_time
             except pybamm.SolverError:
                 pybamm.logger.error(
-                    "Could not solve {!s} at {} A".format(model.name, current)
+                    "Could not solve {!s} at {} A".format(model.name, Crate * 17)
                 )
                 time = np.nan
             model_times[model.name][npts] = time

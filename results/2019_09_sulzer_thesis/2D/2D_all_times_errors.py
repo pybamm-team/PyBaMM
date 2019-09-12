@@ -7,7 +7,6 @@ import numpy as np
 import pickle
 import pybamm
 import shared_plotting_2D
-from collections import defaultdict
 from shared_solutions_2D import error_comparison, time_comparison
 
 try:
@@ -26,7 +25,6 @@ def fill_nan(array):
 
 
 def plot_errors(model_voltages):
-    t_eval = np.linspace(0, 1)
     models = list(model_voltages.keys())
     Crates = list(model_voltages[models[0]].keys())
     sigmas = list(model_voltages[models[0]][Crates[0]].keys())

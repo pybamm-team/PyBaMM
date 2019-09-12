@@ -61,11 +61,7 @@ def charge_states(compute):
         ]
         Crates = [-0.1, -1, -5]
         t_eval = np.linspace(0, 4.5, 100)
-        extra_parameter_values = {
-            # "Positive electrode"
-            # + "reference exchange-current density (oxygen) [A.m-2]": 1e-24,
-            "Initial State of Charge": 0.5
-        }
+        extra_parameter_values = {"Initial State of Charge": 0.5}
         all_variables1, t_eval1 = model_comparison(
             models1, Crates, t_eval, extra_parameter_values=extra_parameter_values
         )

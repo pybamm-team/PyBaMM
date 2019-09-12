@@ -4,7 +4,6 @@
 import argparse
 import matplotlib.pyplot as plt
 import numpy as np
-import pickle
 import pybamm
 import shared_plotting_2D
 from shared_solutions_2D import model_comparison, variables_to_keep
@@ -69,10 +68,6 @@ def discharge_states(compute):
             },
             name="1+1D LOQS\n(quite conductive)",
         ),
-        # pybamm.lead_acid.FOQS(
-        #     {"dimensionality": 1, "current collector": "potential pair"},
-        #     name="FOQS",
-        # ),
         pybamm.lead_acid.CompositeExtended(
             {
                 "dimensionality": 1,

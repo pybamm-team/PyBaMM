@@ -18,7 +18,7 @@ C_rate = 1
 # load the comsol results
 comsol_variables = pickle.load(
     open(
-        "results/2019_08_sulzer_thesis/compare_comsol/comsol_data_{}C.pickle".format(
+        "results/2019_09_sulzer_thesis/compare_comsol/comsol_data_{}C.pickle".format(
             C_rate
         ),
         "rb",

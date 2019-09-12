@@ -3,7 +3,6 @@ import pybamm
 import numpy as np
 import os
 import pickle
-import scipy.interpolate as interp
 import matplotlib.pyplot as plt
 
 try:
@@ -29,7 +28,7 @@ sigmas = [8000, 5 * 8000, 10 * 8000, 100 * 8000]
 
 # load the comsol results
 comsol_voltages = pickle.load(
-    open("results/2019_08_sulzer_thesis/compare_comsol/comsol_voltages_2D.pickle", "rb")
+    open("results/2019_09_sulzer_thesis/compare_comsol/comsol_voltages_2D.pickle", "rb")
 )
 savefile = "comsol_voltage_comparison_data.pickle"
 

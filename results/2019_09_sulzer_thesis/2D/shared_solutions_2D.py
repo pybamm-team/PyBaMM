@@ -258,7 +258,7 @@ def time_comparison(
                 except pybamm.SolverError:
                     pybamm.logger.error(
                         "Could not solve {!s} at {} A with sigma={}".format(
-                            model.name, current, sigma
+                            model.name, Crate * 17, sigma
                         )
                     )
                     time = np.nan

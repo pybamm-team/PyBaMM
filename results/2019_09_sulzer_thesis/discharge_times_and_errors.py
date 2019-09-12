@@ -6,9 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pickle
 import pybamm
-import shared_plotting
-from collections import defaultdict
-from shared_solutions import model_comparison, error_comparison, time_comparison
+from shared_solutions import error_comparison, time_comparison
 
 try:
     from config import OUTPUT_DIR

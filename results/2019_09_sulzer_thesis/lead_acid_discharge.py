@@ -7,8 +7,7 @@ import numpy as np
 import pickle
 import pybamm
 import shared_plotting
-from collections import defaultdict
-from shared_solutions import model_comparison, convergence_study
+from shared_solutions import model_comparison
 
 try:
     from config import OUTPUT_DIR

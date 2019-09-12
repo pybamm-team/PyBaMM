@@ -11,7 +11,7 @@ from config import OUTPUT_DIR
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from shared_solutions import model_comparison, convergence_study
 
-save_folder = "results/2019_08_sulzer_thesis/data/capacitance_results/"
+save_folder = "results/2019_09_sulzer_thesis/data/capacitance_results/"
 
 
 def plot_voltages(all_variables, t_eval):

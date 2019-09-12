@@ -60,13 +60,6 @@ def plot_voltages(
                         chr(97 + k), abs(Crate), abs(Crate) * 0.6
                     )
                 )
-                # # Hide the right and top spines
-                # ax.spines["right"].set_visible(False)
-                # ax.spines["top"].set_visible(False)
-                #
-                # # Only show ticks on the left and bottom spines
-                # ax.yaxis.set_ticks_position("left")
-                # ax.xaxis.set_ticks_position("bottom")
             ax.xaxis.set_major_locator(plt.MaxNLocator(3))
             if k % m == 0:
                 sigma_exponent = int(np.floor(np.log10(sigma)))
@@ -80,9 +73,6 @@ def plot_voltages(
                     labelpad=50,
                 )
                 ax.yaxis.get_label().set_verticalalignment("center")
-
-            # else:
-            #     ax.set_yticklabels([])
 
             for j, variables in enumerate(models_variables.values()):
                 ax.plot(
@@ -452,9 +442,7 @@ def plot_voltage_components(all_variables, t_eval, model, sigmas):
         if k % m == 0:
             ax.set_ylabel("Voltage [V]")
 
-        # Plot
         # Initialise
-        # for lead-acid we multiply everything by 6 to
         time = variables["Time [h]"](t_eval)
         initial_ocv = variables["Average battery open circuit voltage [V]"](0)
         ocv = variables["Average battery open circuit voltage [V]"](t_eval)
@@ -475,19 +463,13 @@ def plot_voltage_components(all_variables, t_eval, model, sigmas):
 
 def plot_times(models_times, dimensions):
     if dimensions == 1:
-        linestyles = {
-            "1D Full": "k-",
-            "1D Composite": "r-",
-            # "1D FOQS": "r-",
-            "1D LOQS": "g-",
-        }
+        linestyles = {"1D Full": "k-", "1D Composite": "r-", "1D LOQS": "g-"}
     elif dimensions == 2:
         linestyles = {
             "1+1D Full": "k-",
             "1+1D Composite": "r-",
             "1D Full": "k:",
             "1+1D Composite Averaged": "r--",
-            # "1D Composite": "b:",
             "1+1D LOQS": "g-",
             "1D LOQS": "g:",
         }
