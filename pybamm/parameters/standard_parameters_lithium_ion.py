@@ -35,6 +35,7 @@ L_cp = pybamm.geometric_parameters.L_cp
 L_x = pybamm.geometric_parameters.L_x
 L_y = pybamm.geometric_parameters.L_y
 L_z = pybamm.geometric_parameters.L_z
+L = pybamm.geometric_parameters.L
 A_cc = pybamm.geometric_parameters.A_cc
 
 
@@ -139,7 +140,7 @@ def D_n_dimensional(c_n, T):
 def D_p_dimensional(c_p, T):
     "Dimensional diffusivity in positive particle"
     return pybamm.FunctionParameter(
-        "Positive electrode diffusivity", c_p, T, T_ref, E_r_p, R
+        "Positive electrode diffusivity", c_p, T, T_ref, E_D_s_p, R
     )
 
 
@@ -244,6 +245,7 @@ l_p = pybamm.geometric_parameters.l_p
 l_cp = pybamm.geometric_parameters.l_cp
 l_y = pybamm.geometric_parameters.l_y
 l_z = pybamm.geometric_parameters.l_z
+l = pybamm.geometric_parameters.l
 delta = pybamm.geometric_parameters.delta
 
 # Tab geometry
@@ -271,12 +273,17 @@ sigma_cn = sigma_cn_dimensional * potential_scale / i_typ / L_x
 sigma_n = sigma_n_dim * potential_scale / i_typ / L_x
 sigma_p = sigma_p_dim * potential_scale / i_typ / L_x
 sigma_cp = sigma_cp_dimensional * potential_scale / i_typ / L_x
-
+sigma_cn_prime = sigma_cn * delta ** 2
+sigma_n_prime = sigma_n * delta
+sigma_p_prime = sigma_p * delta
+sigma_cp_prime = sigma_cp * delta ** 2
+sigma_cn_dbl_prime = sigma_cn_prime * delta
+sigma_cp_dbl_prime = sigma_cp_prime * delta
 # should rename this to avoid confusion with Butler-Volmer
-
-alpha = 1 / (sigma_cn * (L_x / L_z) ** 2 * l_cn) + 1 / (
-    sigma_cp * (L_x / L_z) ** 2 * l_cp
+alpha = 1 / (sigma_cn * delta ** 2 * l_cn) + 1 / (
+    sigma_cp * delta ** 2 * l_cp
 )
+alpha_prime = alpha / delta
 
 # Electrolyte Properties
 t_plus = pybamm.Parameter("Cation transference number")

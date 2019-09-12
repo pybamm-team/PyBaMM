@@ -8,7 +8,7 @@ import unittest
 class TestBaseBatteryModel(unittest.TestCase):
     def test_process_parameters_and_discretise(self):
         model = pybamm.ReactionDiffusionModel()
-        c = pybamm.Parameter("Negative electrode width [m]") * pybamm.Variable(
+        c = pybamm.Parameter("Negative electrode thickness [m]") * pybamm.Variable(
             "Negative electrolyte concentration",
             domain="negative electrode",
             auxiliary_domains={"secondary": "current collector"},

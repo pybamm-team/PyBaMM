@@ -34,7 +34,7 @@ geometry = pybamm_model.default_geometry
 
 # load parameters and process model and geometry
 param = pybamm_model.default_parameter_values
-param["Electrode depth [m]"] = 1
+param["Electrode width [m]"] = 1
 param["Electrode height [m]"] = 1
 param["Typical current [A]"] = 24 * C_rates[C_rate]
 param.process_model(pybamm_model)

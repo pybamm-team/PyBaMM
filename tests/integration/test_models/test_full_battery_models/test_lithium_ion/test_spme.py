@@ -16,7 +16,25 @@ class TestSPMe(unittest.TestCase):
         modeltest.test_all()
 
     @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
-    @unittest.skipIf(pybamm.have_scikit_fem(), "scikits.odes not installed")
+    @unittest.skipIf(pybamm.have_scikit_fem(), "scikit-fem not installed")
+    def test_basic_processing_1plus1D(self):
+        options = {"current collector": "potential pair", "dimensionality": 1}
+        model = pybamm.lithium_ion.SPMe(options)
+        var = pybamm.standard_spatial_vars
+        var_pts = {
+            var.x_n: 5,
+            var.x_s: 5,
+            var.x_p: 5,
+            var.r_n: 5,
+            var.r_p: 5,
+            var.y: 5,
+            var.z: 5,
+        }
+        modeltest = tests.StandardModelTest(model, var_pts=var_pts)
+        modeltest.test_all(skip_output_tests=True)
+
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
+    @unittest.skipIf(pybamm.have_scikit_fem(), "scikit-fem not installed")
     def test_basic_processing_2plus1D(self):
         options = {"current collector": "potential pair", "dimensionality": 2}
         model = pybamm.lithium_ion.SPMe(options)
@@ -25,10 +43,10 @@ class TestSPMe(unittest.TestCase):
             var.x_n: 5,
             var.x_s: 5,
             var.x_p: 5,
-            var.r_n: 10,
-            var.r_p: 10,
-            var.y: 8,
-            var.z: 8,
+            var.r_n: 5,
+            var.r_p: 5,
+            var.y: 5,
+            var.z: 5,
         }
         modeltest = tests.StandardModelTest(model, var_pts=var_pts)
         modeltest.test_all(skip_output_tests=True)
@@ -50,12 +68,12 @@ class TestSPMe(unittest.TestCase):
 
     def test_thermal(self):
         pybamm.settings.debug_mode = True
-        options = {"thermal": "lumped"}
+        options = {"thermal": "x-lumped"}
         model = pybamm.lithium_ion.SPMe(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-        options = {"thermal": "full"}
+        options = {"thermal": "x-full"}
         model = pybamm.lithium_ion.SPMe(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()

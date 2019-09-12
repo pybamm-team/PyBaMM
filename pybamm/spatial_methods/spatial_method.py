@@ -158,6 +158,29 @@ class SpatialMethod:
         """
         raise NotImplementedError
 
+    def gradient_squared(self, symbol, discretised_symbol, boundary_conditions):
+        """
+        Implements the inner product of the gradient with itself for a spatial method.
+
+        Parameters
+        ----------
+        symbol: :class:`pybamm.Symbol`
+            The symbol that we will take the gradient of.
+        discretised_symbol: :class:`pybamm.Symbol`
+            The discretised symbol of the correct size
+
+        boundary_conditions : dict
+            The boundary conditions of the model
+            ({symbol.id: {"left": left bc, "right": right bc}})
+
+        Returns
+        -------
+        :class: `pybamm.Array`
+            Contains the result of taking the inner product of the result of acting
+            the discretised gradient on the child discretised_symbol with itself
+        """
+        raise NotImplementedError
+
     def integral(self, child, discretised_child):
         """
         Implements the integral for a spatial method.
@@ -192,6 +215,31 @@ class SpatialMethod:
         -------
         :class: `pybamm.Array`
             Contains the result of acting the discretised indefinite integral on
+            the child discretised_symbol
+        """
+        raise NotImplementedError
+
+    def boundary_integral(self, child, discretised_child, region):
+        """
+        Implements the boundary integral for a spatial method.
+
+        Parameters
+        ----------
+        child: :class:`pybamm.Symbol`
+            The symbol to which is being integrated
+        discretised_child: :class:`pybamm.Symbol`
+            The discretised symbol of the correct size
+        region: str
+            The region of the boundary over which to integrate. If region is None
+            (default) the integration is carried out over the entire boundary. If
+            region is `negative tab` or `positive tab` then the integration is only
+            carried out over the appropriate part of the boundary corresponding to
+            the tab.
+
+        Returns
+        -------
+        :class: `pybamm.Array`
+            Contains the result of acting the discretised boundary integral on
             the child discretised_symbol
         """
         raise NotImplementedError

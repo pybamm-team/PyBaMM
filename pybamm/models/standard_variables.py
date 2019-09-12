@@ -159,6 +159,9 @@ eps_piecewise_constant = pybamm.Concatenation(
 )
 
 # Temperature
+T_cn = pybamm.Variable(
+    "Negative currents collector temperature", domain="current collector"
+)
 T_n = pybamm.Variable(
     "Negative electrode temperature",
     domain="negative electrode",
@@ -174,5 +177,9 @@ T_p = pybamm.Variable(
     domain="positive electrode",
     auxiliary_domains={"secondary": "current collector"},
 )
+T_cp = pybamm.Variable(
+    "Positive currents collector temperature", domain="current collector"
+)
 T = pybamm.Concatenation(T_n, T_s, T_p)
 T_av = pybamm.Variable("X-averaged cell temperature", domain="current collector")
+T_vol_av = pybamm.Variable("Volume-averaged cell temperature")
