@@ -63,7 +63,7 @@ class BaseModel(object):
         Whether to convert the expression tress representing the rhs and
         algebraic equations, Jacobain (if using) and events into pure python code
         that will calculate the result of calling `evaluate(t, y)` on the given
-        expression tree (defualt is True)
+        expression tree (default is True)
     """
 
     def __init__(self, name="Unnamed model"):

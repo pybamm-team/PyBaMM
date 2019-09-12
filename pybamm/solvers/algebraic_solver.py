@@ -71,7 +71,7 @@ class AlgebraicSolver(object):
                 # systems, so jac is arbitrarily evaluated at t=0. Also, needs
                 # to be converted from sparse to dense, so in very large
                 # algebraic models it may be best to switch use_jacobian to False
-                # by defualt.
+                # by default.
                 return jac.evaluate(0, y, known_evals={})[0].toarray()
 
         else:

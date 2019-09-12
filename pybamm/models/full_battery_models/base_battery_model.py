@@ -20,7 +20,7 @@ class BaseBatteryModel(pybamm.BaseModel):
 
             * "dimensionality" : int, optional
                 Sets the dimension of the current collector problem. Can be 0
-                (defualt), 1 or 2.
+                (default), 1 or 2.
             * "surface form" : bool, optional
                 Whether to use the surface formulation of the problem (default
                 is False).
@@ -28,25 +28,25 @@ class BaseBatteryModel(pybamm.BaseModel):
                 Whether to include the effects of convection in the model. Can be
                 False (default), "differential" or "algebraic".
             * "first-order potential" : str, optional
-                Can be "linear" (defualt). I don't know what this option does?
+                Can be "linear" (default). I don't know what this option does?
             * "side reactions" : list, optional
                 Contains a list of any side reactions to include. Default is [].
             * "interfacial surface area" : str, optional
                 Sets the model for the interfacial surface area. Can be "constant"
-                (defualt) or "varying".
+                (default) or "varying".
             * "current collector" : str, optional
                 Sets the current collector model to use. Can be "uniform" (default),
                 "potential pair", "potential pair quite conductive" or "single particle
                 potential pair".
             * "particle" : str, optional
                 Sets the submodel to use to describe behaviour within the particle.
-                Can be "Fickian diffusion" (defualt) or "fast diffusion".
+                Can be "Fickian diffusion" (default) or "fast diffusion".
             * "thermal" : str, optional
-                Sets the thermal model to use. Can be "isothermal" (defualt),
+                Sets the thermal model to use. Can be "isothermal" (default),
                 "x-full", "x-lumped", "xyz-lumped" or "lumped".
             * "thermal current collector" : bool, optional
                 Whether to include thermal effects in the current collector in
-                one-dimensional models (defualt is False). Note that this option
+                one-dimensional models (default is False). Note that this option
                 only takes effect if "dimensionality" is 0. If "dimensionality"
                 is 1 or 2 current collector effects are always included.
 
@@ -245,10 +245,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             raise pybamm.OptionError(
                 "Unknown thermal model '{}'".format(options["thermal"])
             )
-        if options["particle"] not in [
-            "Fickian diffusion",
-            "fast diffusion",
-        ]:
+        if options["particle"] not in ["Fickian diffusion", "fast diffusion"]:
             raise pybamm.OptionError(
                 "particle model '{}' not recognised".format(options["particle"])
             )
