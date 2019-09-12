@@ -51,11 +51,11 @@ def charge_states(compute):
     savefile2 = "effect_of_side_reactions_loqs_data.pickle"
     if compute:
         models1 = [
-            pybamm.lead_acid.NewmanTiedemann(
+            pybamm.lead_acid.Full(
                 {"surface form": "algebraic", "side reactions": ["oxygen"]},
                 name="With oxygen",
             ),
-            pybamm.lead_acid.NewmanTiedemann(
+            pybamm.lead_acid.Full(
                 {"surface form": "algebraic"}, name="Without oxygen"
             ),
         ]
@@ -72,7 +72,7 @@ def charge_states(compute):
         # Use LOQS without voltage cut-off for interfacial current densities, so that
         # the current goes all the way
         models2 = [
-            pybamm.lead_acid.NewmanTiedemann(
+            pybamm.lead_acid.Full(
                 {"surface form": "algebraic", "side reactions": ["oxygen"]},
                 name="With oxygen",
             ),

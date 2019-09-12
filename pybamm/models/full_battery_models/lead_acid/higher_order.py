@@ -11,9 +11,9 @@ class BaseHigherOrderModel(BaseModel):
 
     References
     ----------
-    .. [1] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster Lead-Acid
-           Battery Simulations from Porous-Electrode Theory: II. Asymptotic Analysis.
-           arXiv preprint arXiv:1902.01774, 2019.
+    .. [1] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster lead-acid
+           battery simulations from porous-electrode theory: Part II. Asymptotic
+           analysis. Journal of The Electrochemical Society 166.12 (2019), A2372–A2382.
 
 
     **Extends:** :class:`pybamm.lead_acid.BaseModel`
@@ -237,8 +237,8 @@ class CompositeExtended(BaseHigherOrderModel):
 
     References
     ----------
-    .. [1] V Sulzer. Mathematical modelling of lead-acid batteries. PhD thesis,
-           Universityof Oxford, 2019.
+    .. [2] V Sulzer. Mathematical modelling of lead-acid batteries. PhD thesis,
+           University of Oxford, 2019.
 
 
     **Extends:** :class:`pybamm.lead_acid.BaseHigherOrderModel`
