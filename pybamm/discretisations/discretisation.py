@@ -548,7 +548,7 @@ class Discretisation(object):
 
         if symbol.domain != []:
             spatial_method = self.spatial_methods[symbol.domain[0]]
-            # If boundary conditions, need to check for BCs on tabs
+            # If boundary conditions are provided, need to check for BCs on tabs
             if self.bcs:
                 key_id = list(self.bcs.keys())[0]
                 if any("tab" in side for side in list(self.bcs[key_id].keys())):

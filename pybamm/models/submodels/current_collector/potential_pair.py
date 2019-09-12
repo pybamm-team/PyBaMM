@@ -145,8 +145,21 @@ class PotentialPair2plus1D(BasePotentialPair):
 
         # Boundary condition needs to be on the variables that go into the Laplacian,
         # even though phi_s_cp isn't a pybamm.Variable object
+        # In the 2+1D model, the equations for the current collector potentials
+        # are solved on a 2D domain and the regions "negative tab" and "positive tab"
+        # are the projections of the tabs onto this 2D domain.
         # In the 2D formulation it is assumed that no flux boundary conditions
         # are applied everywhere apart from the tabs.
+        # The reference potenital is taken to be zero on the negative tab,
+        # giving the zero Dirichlet condition on phi_s_cn. Elsewhere, the boundary
+        # is insulated, giving no flux conditions on phi_s_cn. This is automatically
+        # applied everywhere, apart from the region corresponding to the projection
+        # of the positive tab, so we need to explititly apply a zero-flux boundary
+        # condition on the region "positive tab" for phi_s_cn.
+        # A current is drawn from the positive tab, giving the non-zero Neumann
+        # boundary condition on phi_s_cp at "positive tab". Elsewhere, the boundary is
+        # insulated, so, as with phi_s_cn, we need to explicitly give the zero-flux
+        # condition on the region "negative tab" for phi_s_cp.
         self.boundary_conditions = {
             phi_s_cn: {
                 "negative tab": (pybamm.Scalar(0), "Dirichlet"),
