@@ -710,20 +710,45 @@ def outer(left, right):
         return pybamm.Outer(left, right)
 
 
-def source(left, right):
+def source(left, right, boundary=False):
     """A convinience function for creating (part of) an expression tree representing
-    a source term in the (weak) finite element formulation. The left child is the
-    symbol representing the source term and the right child is the symbol of the
-    equation variable (key). The method returns the matrix-vector product of the
-    mass matrix (adjusted to account for the boundary conditions imposed the the
-    right symbol) and the discretised left symbol.
+    a source term. This is necessary for spatial methods where the mass matrix
+    is not the identity (e.g. finite element formulation with piecwise linear
+    basis functions). The left child is the symbol representing the source term
+    and the right child is the symbol of the equation variable (currently, the
+    finite element formulation in PyBaMM assumes all functions are constructed
+    using the same basis, and the matrix here is constructed accoutning for the
+    boundary conditions of the right child). The method returns the matrix-vector
+    product of the mass matrix (adjusted to account for any Dirichlet boundary
+    conditions imposed the the right symbol) and the discretised left symbol.
+
+    Parameters
+    ----------
+
+    left : :class:`Symbol`
+        The left child node, which represents the expression for the source term.
+    right : :class:`Symbol`
+        The right child node. This is the symbol whose boundary conditions are
+        accounted for in the construction of the mass matrix.
+    boundary : bool, optional
+        If True, then the mass matrix should is assembled over the boundary,
+        corresponding to a source term which only acts on the boundary of the
+        domain. If False (default), the matrix is assembled over the entire domain,
+        corresponding to a source term in the bulk.
+
     """
+    # Broadcast if left is number
+    if isinstance(left, numbers.Number):
+        left = pybamm.Broadcast(left, "current collector")
 
     if left.domain != ["current collector"] or right.domain != ["current collector"]:
         raise pybamm.DomainError(
-            """finite element method only implemented in the 'current collector' domain,
+            """'source' only implemented in the 'current collector' domain,
             but symbols have domains {} and {}""".format(
                 left.domain, right.domain
             )
         )
-    return pybamm.Mass(right) @ left
+    if boundary:
+        return pybamm.BoundaryMass(right) @ left
+    else:
+        return pybamm.Mass(right) @ left

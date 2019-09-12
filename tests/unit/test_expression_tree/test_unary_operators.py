@@ -265,6 +265,42 @@ class TestUnaryOperators(unittest.TestCase):
         with self.assertRaises(pybamm.DomainError):
             pybamm.x_average(a)
 
+    def test_yz_average(self):
+        a = pybamm.Scalar(1)
+        z_average_a = pybamm.z_average(a)
+        yz_average_a = pybamm.yz_average(a)
+        self.assertEqual(z_average_a.id, a.id)
+        self.assertEqual(yz_average_a.id, a.id)
+
+        z_average_broad_a = pybamm.z_average(pybamm.Broadcast(a, ["current collector"]))
+        yz_average_broad_a = pybamm.yz_average(
+            pybamm.Broadcast(a, ["current collector"])
+        )
+        self.assertEqual(z_average_broad_a.evaluate(), np.array([1]))
+        self.assertEqual(yz_average_broad_a.evaluate(), np.array([1]))
+
+        a = pybamm.Symbol("a", domain=["current collector"])
+        y = pybamm.SpatialVariable("y", ["current collector"])
+        z = pybamm.SpatialVariable("z", ["current collector"])
+        z_av_a = pybamm.z_average(a)
+        yz_av_a = pybamm.yz_average(a)
+
+        self.assertIsInstance(z_av_a, pybamm.Division)
+        self.assertIsInstance(yz_av_a, pybamm.Division)
+        self.assertIsInstance(z_av_a.children[0], pybamm.Integral)
+        self.assertIsInstance(yz_av_a.children[0], pybamm.Integral)
+        self.assertEqual(z_av_a.children[0].integration_variable[0].domain, z.domain)
+        self.assertEqual(yz_av_a.children[0].integration_variable[0].domain, y.domain)
+        self.assertEqual(yz_av_a.children[0].integration_variable[1].domain, z.domain)
+        self.assertEqual(z_av_a.domain, [])
+        self.assertEqual(yz_av_a.domain, [])
+
+        a = pybamm.Symbol("a", domain="bad domain")
+        with self.assertRaises(pybamm.DomainError):
+            pybamm.z_average(a)
+        with self.assertRaises(pybamm.DomainError):
+            pybamm.yz_average(a)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

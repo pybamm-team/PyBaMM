@@ -89,17 +89,24 @@ from .expression_tree.unary_operators import (
     Gradient,
     Divergence,
     Laplacian,
+    Gradient_Squared,
     Mass,
+    BoundaryMass,
     BoundaryOperator,
     BoundaryValue,
     BoundaryGradient,
     Integral,
     IndefiniteIntegral,
+    DefiniteIntegralVector,
+    BoundaryIntegral,
     grad,
     div,
     laplacian,
+    grad_squared,
     surf,
     x_average,
+    z_average,
+    yz_average,
     boundary_value,
 )
 from .expression_tree.functions import *
@@ -194,6 +201,7 @@ from .geometry.geometry import (
     Geometryxp1DMacro,
     Geometryxp0p1DMicro,
     Geometryxp1p1DMicro,
+    Geometry2DCurrentCollector,
 )
 
 from .expression_tree.independent_variable import KNOWN_SPATIAL_VARS, KNOWN_COORD_SYS
@@ -227,6 +235,7 @@ from .solvers.scipy_solver import ScipySolver
 from .solvers.scikits_dae_solver import ScikitsDaeSolver
 from .solvers.scikits_ode_solver import ScikitsOdeSolver
 from .solvers.scikits_ode_solver import have_scikits_odes
+from .solvers.algebraic_solver import AlgebraicSolver
 
 #
 # Current profiles

@@ -29,4 +29,3 @@ def graphite_electrolyte_reaction_rate(T, T_inf, E_r, R_g):
     arrhenius = np.exp(E_r / R_g * (1 / T_inf - 1 / T))
 
     return m_ref * arrhenius
-

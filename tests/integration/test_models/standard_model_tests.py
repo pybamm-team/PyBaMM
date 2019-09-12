@@ -106,9 +106,9 @@ class StandardModelTest(object):
                 length in param.keys()
                 and param[length] != self.parameter_values[length]
                 for length in [
-                    "Negative electrode width [m]",
-                    "Separator width [m]",
-                    "Positive electrode width [m]",
+                    "Negative electrode thickness [m]",
+                    "Separator thickness [m]",
+                    "Positive electrode thickness [m]",
                 ]
             ]
         ):
