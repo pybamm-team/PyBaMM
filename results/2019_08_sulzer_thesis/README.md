@@ -1,6 +1,7 @@
 # Results: Valentin Sulzer's Thesis
 
-This folder contains the scripts used to generate results for Valentin Sulzer's thesis
+This folder contains the scripts used to generate results for Valentin Sulzer's thesis:
+
 The plots were formatted using a formatting file `matplotlibrc` identical to [this one](_matplotlibrc) (but not included in the GitHub repo to avoid clashes with different formatting files).
 
 ## Chapter 2 - Model
@@ -41,6 +42,7 @@ The plots were formatted using a formatting file `matplotlibrc` identical to [th
 
 ## Chapter 4 - Small aspect ratio cells
 
+- Comparison with COMSOL (1D and 3D)
 - 2+1D model
     - Model and capacitance formulation
     - Concentrations and potentials as functions of x, y, z
