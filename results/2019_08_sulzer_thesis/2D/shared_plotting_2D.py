@@ -169,7 +169,7 @@ def plot_variable(
                 )
             # x-axis
             if j == len(times) - 1:
-                ax.set_xlabel("z [m]")
+                ax.set_xlabel("$z$ [m]")
             else:
                 ax.set_xticklabels([])
 
@@ -282,7 +282,7 @@ def plot_variable_allsigma(
                 )
             # x-axis
             if j == len(sigmas) - 1:
-                ax.set_xlabel("z [m]")
+                ax.set_xlabel("$z$ [m]")
             else:
                 ax.set_xticklabels([])
 
@@ -372,10 +372,10 @@ def plot_variable_x_z(
         # Title
         ax.set_title(model)
         # x-axis
-        ax.set_xlabel("x [m]")
+        ax.set_xlabel("$x$ [m]")
         # y-axis
         if i == 0:
-            ax.set_ylabel("z [m]")
+            ax.set_ylabel("$z$ [m]")
         else:
             ax.set_yticklabels([])
         CS = ax.contourf(

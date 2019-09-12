@@ -134,7 +134,7 @@ def plot_variable(
                 )
             # x-axis
             if j == len(times) - 1:
-                ax.set_xlabel("x [m]")
+                ax.set_xlabel("$x$ [m]")
             else:
                 ax.set_xticklabels([])
 

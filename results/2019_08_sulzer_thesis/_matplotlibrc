@@ -5,12 +5,13 @@ figure.figsize: 6.4, 4.
 font.family: serif
 font.serif: ComputerModern
 text.usetex: true
+mathtext.default: regular
 
 # Backend options (42: use TrueType fonts)
 pdf.fonttype: 42
 ps.fonttype: 42
 
-# Set large font sizes for paper figures
+# Set font sizes for paper figures
 axes.labelsize: 11
 axes.titlesize: 11
 xtick.labelsize: 11
