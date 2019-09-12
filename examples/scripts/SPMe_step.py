@@ -1,3 +1,6 @@
+#
+# Example to compare solving for all times against stepping individually
+#
 import pybamm
 import numpy as np
 import matplotlib.pyplot as plt
@@ -32,28 +35,27 @@ dt = 0.05
 time = 0
 end_time = solution.t[-1]
 step_solver = model.default_solver
-step_solutions = []
+step_solution = None
 while time < end_time:
     step_sol = step_solver.step(model, dt=dt, npts=10)
-    step_solutions.append(step_sol)
+    if step_solution:
+        # append step_sol.t to solution.t and step_sol.y to solution.y
+        step_solution.append(step_sol)
+    else:
+        step_solution = step_sol  # creta solution object on first step
     time += dt
 
 # plot
 voltage = pybamm.ProcessedVariable(
-    model.variables["Terminal voltage [V]"],
-    solution.t,
-    solution.y,
-    mesh=mesh,
+    model.variables["Terminal voltage [V]"], solution.t, solution.y, mesh=mesh
 )
-plt.plot(solution.t, voltage(solution.t), 'b-', label="SPMe")
-for i, sol in enumerate(step_solutions):
-    voltage = pybamm.ProcessedVariable(
-        model.variables["Terminal voltage [V]"],
-        sol.t,
-        sol.y,
-        mesh=mesh,
-    )
-    plt.plot(sol.t, voltage(sol.t), 'o', label="SPMe Step {}".format(i))
+step_voltage = pybamm.ProcessedVariable(
+    model.variables["Terminal voltage [V]"], step_solution.t, step_solution.y, mesh=mesh
+)
+plt.plot(solution.t, voltage(solution.t), "b-", label="SPMe (continuous solve)")
+plt.plot(
+    step_solution.t, step_voltage(step_solution.t), "ro", label="SPMe (steppped solve)"
+)
 plt.xlabel(r"$t$")
 plt.ylabel("Terminal voltage [V]")
 plt.legend()

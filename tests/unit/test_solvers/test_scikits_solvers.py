@@ -628,19 +628,19 @@ class TestScikitsSolvers(unittest.TestCase):
 
         # Step once
         dt = 0.1
-        step1 = solver.step(model, dt)
-        np.testing.assert_array_equal(step1.t, [0, dt])
-        np.testing.assert_allclose(step1.y[0], np.exp(0.1 * step1.t))
+        step_sol = solver.step(model, dt)
+        np.testing.assert_array_equal(step_sol.t, [0, dt])
+        np.testing.assert_allclose(step_sol.y[0], np.exp(0.1 * step_sol.t))
 
         # Step again (return 5 points)
-        step2 = solver.step(model, dt, npts=5)
-        np.testing.assert_array_equal(step2.t, np.linspace(dt, 2 * dt, 5))
-        np.testing.assert_allclose(step2.y[0], np.exp(0.1 * step2.t))
+        step_sol_2 = solver.step(model, dt, npts=5)
+        np.testing.assert_array_equal(step_sol_2.t, np.linspace(dt, 2 * dt, 5))
+        np.testing.assert_allclose(step_sol_2.y[0], np.exp(0.1 * step_sol_2.t))
 
         # Check steps give same solution as solve
-        t_eval = np.concatenate((step1.t, step2.t[1:]))
+        t_eval = np.concatenate((step_sol.t, step_sol_2.t[1:]))
         solution = solver.solve(model, t_eval)
-        concatenated_steps = np.concatenate((step1.y[0], step2.y[0, 1:]))
+        concatenated_steps = np.concatenate((step_sol.y[0], step_sol_2.y[0, 1:]))
         np.testing.assert_allclose(solution.y[0], concatenated_steps)
 
     def test_model_step_dae(self):
@@ -660,26 +660,25 @@ class TestScikitsSolvers(unittest.TestCase):
 
         # Step once
         dt = 0.1
-        step1 = solver.step(model, dt)
-        np.testing.assert_array_equal(step1.t, [0, dt])
-        np.testing.assert_allclose(step1.y[0], np.exp(0.1 * step1.t))
-        np.testing.assert_allclose(step1.y[-1], 2 * np.exp(0.1 * step1.t))
+        step_sol = solver.step(model, dt)
+        np.testing.assert_array_equal(step_sol.t, [0, dt])
+        np.testing.assert_allclose(step_sol.y[0], np.exp(0.1 * step_sol.t))
+        np.testing.assert_allclose(step_sol.y[-1], 2 * np.exp(0.1 * step_sol.t))
 
         # Step again (return 5 points)
-        step2 = solver.step(model, dt, npts=5)
-        np.testing.assert_array_equal(step2.t, np.linspace(dt, 2 * dt, 5))
-        np.testing.assert_allclose(step2.y[0], np.exp(0.1 * step2.t))
-        np.testing.assert_allclose(step2.y[-1], 2 * np.exp(0.1 * step2.t))
+        step_sol_2 = solver.step(model, dt, npts=5)
+        np.testing.assert_array_equal(step_sol_2.t, np.linspace(dt, 2 * dt, 5))
+        np.testing.assert_allclose(step_sol_2.y[0], np.exp(0.1 * step_sol_2.t))
+        np.testing.assert_allclose(step_sol_2.y[-1], 2 * np.exp(0.1 * step_sol_2.t))
+
+        # append solutions
+        step_sol.append(step_sol_2)
 
         # Check steps give same solution as solve
-        t_eval = np.concatenate((step1.t, step2.t[1:]))
+        t_eval = step_sol.t
         solution = solver.solve(model, t_eval)
-        np.testing.assert_allclose(
-            solution.y[0], np.concatenate((step1.y[0, :], step2.y[0, 1:]))
-        )
-        np.testing.assert_allclose(
-            solution.y[-1], np.concatenate((step1.y[-1, :], step2.y[-1, 1:]))
-        )
+        np.testing.assert_allclose(solution.y[0], step_sol.y[0, :])
+        np.testing.assert_allclose(solution.y[-1], step_sol.y[-1, :])
 
 
 if __name__ == "__main__":
