@@ -309,20 +309,34 @@ class ParticleConcentrationTests(BaseOutputTest):
         """Test that no flux holds in the centre of the particle. Test that surface
         flux in the negative particles is greater than zero and that the flux in the
         positive particles is less than zero during a discharge."""
-        t, x_n, x_p, r_n, r_p = self.t, self.x_n, self.x_p, self.r_n_edge, self.r_p_edge
-
-        if self.operating_condition == "discharge":
-            np.testing.assert_array_less(0, self.N_s_n(t[1:], x_n, r_n[1:]))
-            np.testing.assert_array_less(self.N_s_p(t[1:], x_p, r_p[1:]), 0)
-        if self.operating_condition == "charge":
-            np.testing.assert_array_less(self.N_s_n(t[1:], x_n, r_n[1:]), 0)
-            np.testing.assert_array_less(0, self.N_s_p(t[1:], x_p, r_p[1:]))
-        if self.operating_condition == "off":
+        # At the moment the zero flux is Broadcasted onto cell centres, not edges
+        # in the case of fast diffusion. This should be fixed by allowing Broadcasting
+        # to edges. For now, evaluate on r nodes for "fast diffusion" in particles
+        if self.model.options["particle"] == "fast diffusion":
+            t, x_n, x_p, r_n, r_p = self.t, self.x_n, self.x_p, self.r_n, self.r_p
             np.testing.assert_array_almost_equal(self.N_s_n(t, x_n, r_n), 0)
             np.testing.assert_array_almost_equal(self.N_s_p(t, x_p, r_p), 0)
+        else:
+            t, x_n, x_p, r_n, r_p = (
+                self.t,
+                self.x_n,
+                self.x_p,
+                self.r_n_edge,
+                self.r_p_edge,
+            )
 
-        np.testing.assert_array_equal(0, self.N_s_n(t, x_n, r_n[0]))
-        np.testing.assert_array_equal(0, self.N_s_p(t, x_p, r_p[0]))
+            if self.operating_condition == "discharge":
+                np.testing.assert_array_less(0, self.N_s_n(t[1:], x_n, r_n[1:]))
+                np.testing.assert_array_less(self.N_s_p(t[1:], x_p, r_p[1:]), 0)
+            if self.operating_condition == "charge":
+                np.testing.assert_array_less(self.N_s_n(t[1:], x_n, r_n[1:]), 0)
+                np.testing.assert_array_less(0, self.N_s_p(t[1:], x_p, r_p[1:]))
+            if self.operating_condition == "off":
+                np.testing.assert_array_almost_equal(self.N_s_n(t, x_n, r_n), 0)
+                np.testing.assert_array_almost_equal(self.N_s_p(t, x_p, r_p), 0)
+
+            np.testing.assert_array_equal(0, self.N_s_n(t, x_n, r_n[0]))
+            np.testing.assert_array_equal(0, self.N_s_p(t, x_p, r_p[0]))
 
     def test_all(self):
         self.test_concentration_increase_decrease()

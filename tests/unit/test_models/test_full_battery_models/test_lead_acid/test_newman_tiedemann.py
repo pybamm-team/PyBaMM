@@ -11,7 +11,7 @@ class TestLeadAcidNewmanTiedemann(unittest.TestCase):
         model.check_well_posedness()
 
     def test_well_posed_with_convection(self):
-        options = {"thermal": None, "convection": True}
+        options = {"thermal": "isothermal", "convection": True}
         model = pybamm.lead_acid.NewmanTiedemann(options)
         model.check_well_posedness()
 
