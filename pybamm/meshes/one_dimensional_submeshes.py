@@ -31,13 +31,11 @@ class Uniform1DSubMesh(SubMesh1D):
         A dictionary that contains the limits of the spatial variables
     npts : dict
         A dictionary that contains the number of points to be used on each
-        spatial variable
+        spatial variable. Note: the number of nodes (located at the cell centres)
+        is npts, and the number of edges is npts+1.
     """
 
     def __init__(self, lims, npts):
-
-        # currently accept lims and npts as dicts. This may get changed at a future
-        # date depending on the form of mesh we desire for 2D/3D
 
         # check that only one variable passed in
         if len(lims) != 1:
@@ -49,6 +47,118 @@ class Uniform1DSubMesh(SubMesh1D):
 
         edges = np.linspace(spatial_lims["min"], spatial_lims["max"], npts + 1)
 
+        coord_sys = spatial_var.coord_sys
+
+        super().__init__(edges, coord_sys=coord_sys)
+
+
+class Chebyshev1DSubMesh(SubMesh1D):
+    """
+    A class to generate a submesh on a 1D domain using Chebyshev nodes on the
+    interval (a, b), given by
+
+   .. math::
+    x_{k} = \\frac{1}{2}(a+b) + \\frac{1}{2}(b-a) \\cos(\\frac{2k-1}{2N}\\pi),
+
+    for k = 1, ..., N, where N is the number of nodes. Note: this mesh then
+    appends the boundary nodes, so that the mesh edges are given by
+
+    .. math ::
+     a < x_{1} < ... < x_{N} < b.
+
+
+    Parameters
+    ----------
+    lims : dict
+        A dictionary that contains the limits of the spatial variables
+    npts : dict
+        A dictionary that contains the number of points to be used on each
+        spatial variable. Note: the number of nodes (located at the cell centres)
+        is npts, and the number of edges is npts+1.
+    """
+
+    def __init__(self, lims, npts):
+
+        # check that only one variable passed in
+        if len(lims) != 1:
+            raise pybamm.GeometryError("lims should only contain a single variable")
+
+        spatial_var = list(lims.keys())[0]
+        spatial_lims = lims[spatial_var]
+        npts = npts[spatial_var.id]
+
+        # Create N Chebyshev nodes in the interval (a,b)
+        N = npts - 2
+        ii = np.array(range(1, N + 1))
+        a = spatial_lims["min"]
+        b = spatial_lims["max"]
+        x_cheb = (a + b) / 2 + (b - a) / 2 * np.cos((2 * ii - 1) * np.pi / 2 / N)
+
+        # Append the boundary nodes. Note: we need to flip the order the Chebyshev
+        # nodes as they are created in descending order.
+        edges = np.concatenate(([a], np.flip(x_cheb), [b]))
+        coord_sys = spatial_var.coord_sys
+
+        super().__init__(edges, coord_sys=coord_sys)
+
+
+class ExponentialEdges1DSubMesh(SubMesh1D):
+    """
+    A class to generate a submesh on a 1D domain in which the points are clustered
+    close to the boundaries using an exponential formula on the interval [a,b].
+    The first half of the interval is meshed using the gridpoints
+
+   .. math::
+    x_{k} = (\\frac{b}{2}-a) + \\frac{\\exp{\\alpha k / N} - 1}{\\exp{\\alpha} - 1}} + a,
+
+    for k = 1, ..., N, where N is the number of nodes. The grid spacing is then
+    reflected to contruct the grid on the full interval [a,b].
+
+
+    Parameters
+    ----------
+    lims : dict
+        A dictionary that contains the limits of the spatial variables
+    npts : dict
+        A dictionary that contains the number of points to be used on each
+        spatial variable. Note: the number of nodes (located at the cell centres)
+        is npts, and the number of edges is npts+1.
+    """
+
+    def __init__(self, lims, npts):
+
+        # check that only one variable passed in
+        if len(lims) != 1:
+            raise pybamm.GeometryError("lims should only contain a single variable")
+
+        spatial_var = list(lims.keys())[0]
+        spatial_lims = lims[spatial_var]
+        npts = npts[spatial_var.id]
+
+        # Strech factor. TODO: allows parameters to be passed to mesh
+        alpha = 1
+
+        # Mesh half-interval [a, b/2]
+        if npts % 2 == 0:
+            ii = np.array(range(0, int((npts) / 2)))
+        else:
+            ii = np.array(range(0, int((npts + 1) / 2)))
+
+        a = spatial_lims["min"]
+        b = spatial_lims["max"]
+        x_exp_left = (b / 2 - a) * (np.exp(alpha * ii / npts) - 1) / (
+            np.exp(alpha) - 1
+        ) + a
+
+        # Refelct mesh
+        x_exp_right = b * np.ones_like(x_exp_left) - (x_exp_left[::-1] - a)
+
+        # Combine left and right halves of the mesh, adding a node at the centre
+        # if npts is even (odd number of edges)
+        if npts % 2 == 0:
+            edges = np.concatenate((x_exp_left, [(a + b) / 2], x_exp_right))
+        else:
+            edges = np.concatenate((x_exp_left, x_exp_right))
         coord_sys = spatial_var.coord_sys
 
         super().__init__(edges, coord_sys=coord_sys)
