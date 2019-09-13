@@ -103,7 +103,7 @@ def get_1p1d_mesh_for_testing(xpts=None, zpts=15, cc_submesh=pybamm.Uniform1DSub
 
 
 def get_2p1d_mesh_for_testing(
-    xpts=None, ypts=15, zpts=15, cc_submesh=pybamm.Scikit2DSubMesh
+    xpts=None, ypts=15, zpts=15, cc_submesh=pybamm.ScikitUniform2DSubMesh
 ):
     geometry = pybamm.Geometry("2+1D macro")
     return get_mesh_for_testing(
@@ -138,7 +138,7 @@ def get_unit_2p1D_mesh_for_testing(ypts=15, zpts=15):
         "negative electrode": pybamm.Uniform1DSubMesh,
         "separator": pybamm.Uniform1DSubMesh,
         "positive electrode": pybamm.Uniform1DSubMesh,
-        "current collector": pybamm.Scikit2DSubMesh,
+        "current collector": pybamm.ScikitUniform2DSubMesh,
     }
 
     return pybamm.Mesh(geometry, submesh_types, var_pts)

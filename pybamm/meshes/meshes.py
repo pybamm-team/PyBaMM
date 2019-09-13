@@ -98,7 +98,7 @@ class Mesh(dict):
             # need to pass tab information if primary domian is 2D current collector
             if (
                 domain == "current collector"
-                and submesh_types[domain] == pybamm.Scikit2DSubMesh
+                and issubclass(submesh_types[domain], pybamm.ScikitSubMesh2D)
             ):
                 self[domain] = [
                     submesh_types[domain](
@@ -175,7 +175,7 @@ class Mesh(dict):
             (domain, submesh_list)
             for domain, submesh_list in self.items()
             if not isinstance(
-                submesh_list[0], (pybamm.SubMesh0D, pybamm.Scikit2DSubMesh)
+                submesh_list[0], (pybamm.SubMesh0D, pybamm.ScikitSubMesh2D)
             )
         ]
         for domain, submesh_list in submeshes:

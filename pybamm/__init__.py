@@ -221,7 +221,12 @@ from .meshes.one_dimensional_submeshes import (
     LeftExponential1DSubMesh,
     RightExponential1DSubMesh,
 )
-from .meshes.scikit_fem_submeshes import Scikit2DSubMesh, have_scikit_fem
+from .meshes.scikit_fem_submeshes import (
+    have_scikit_fem,
+    ScikitSubMesh2D,
+    ScikitUniform2DSubMesh,
+    ScikitChebyshev2DSubMesh,
+)
 
 #
 # Spatial Methods
