@@ -66,7 +66,6 @@ class Chebyshev1DSubMesh(SubMesh1D):
     .. math ::
      a < x_{1} < ... < x_{N} < b.
 
-
     Parameters
     ----------
     lims : dict
@@ -88,7 +87,7 @@ class Chebyshev1DSubMesh(SubMesh1D):
         npts = npts[spatial_var.id]
 
         # Create N Chebyshev nodes in the interval (a,b)
-        N = npts - 2
+        N = npts - 1
         ii = np.array(range(1, N + 1))
         a = spatial_lims["min"]
         b = spatial_lims["max"]
@@ -102,18 +101,19 @@ class Chebyshev1DSubMesh(SubMesh1D):
         super().__init__(edges, coord_sys=coord_sys)
 
 
-class ExponentialEdges1DSubMesh(SubMesh1D):
+class SymmetricExponential1DSubMesh(SubMesh1D):
     """
     A class to generate a submesh on a 1D domain in which the points are clustered
     close to the boundaries using an exponential formula on the interval [a,b].
     The first half of the interval is meshed using the gridpoints
 
    .. math::
-    x_{k} = (\\frac{b}{2}-a) + \\frac{\\exp{\\alpha k / N} - 1}{\\exp{\\alpha} - 1}} + a,
+    x_{k} = (b/2-a) + \\frac{\\exp{\\alpha k / N} - 1}{\\exp{\\alpha} - 1}} + a,
 
     for k = 1, ..., N, where N is the number of nodes. The grid spacing is then
-    reflected to contruct the grid on the full interval [a,b].
-
+    reflected to contruct the grid on the full interval [a,b]. Here alpha is
+    a stretching factor. As the number of gridpoints tends to infinity, the ratio
+    of the largest and smallest grid cells tends to exp(alpha).
 
     Parameters
     ----------
@@ -135,8 +135,8 @@ class ExponentialEdges1DSubMesh(SubMesh1D):
         spatial_lims = lims[spatial_var]
         npts = npts[spatial_var.id]
 
-        # Strech factor. TODO: allows parameters to be passed to mesh
-        alpha = 1
+        # Strech factor. TODO: allow parameters to be passed to mesh
+        alpha = 2.3 / 2
 
         # Mesh half-interval [a, b/2]
         if npts % 2 == 0:
@@ -159,6 +159,98 @@ class ExponentialEdges1DSubMesh(SubMesh1D):
             edges = np.concatenate((x_exp_left, [(a + b) / 2], x_exp_right))
         else:
             edges = np.concatenate((x_exp_left, x_exp_right))
+        coord_sys = spatial_var.coord_sys
+
+        super().__init__(edges, coord_sys=coord_sys)
+
+
+class LeftExponential1DSubMesh(SubMesh1D):
+    """
+    A class to generate a submesh on a 1D domain in which the points are clustered
+    close to the left boundary using an exponential formula on the interval [a,b].
+    The gridpoints are given by
+
+   .. math::
+    x_{k} = (b-a) + \\frac{\\exp{\\alpha k / N} - 1}{\\exp{\\alpha} - 1}} + a,
+
+    for k = 1, ..., N, where N is the number of nodes. Here alpha is
+    a stretching factor. As the number of gridpoints tends to infinity, the ratio
+    of the largest and smallest grid cells tends to exp(alpha).
+
+    Parameters
+    ----------
+    lims : dict
+        A dictionary that contains the limits of the spatial variables
+    npts : dict
+        A dictionary that contains the number of points to be used on each
+        spatial variable. Note: the number of nodes (located at the cell centres)
+        is npts, and the number of edges is npts+1.
+    """
+
+    def __init__(self, lims, npts):
+
+        # check that only one variable passed in
+        if len(lims) != 1:
+            raise pybamm.GeometryError("lims should only contain a single variable")
+
+        spatial_var = list(lims.keys())[0]
+        spatial_lims = lims[spatial_var]
+        npts = npts[spatial_var.id]
+
+        # Strech factor. TODO: allow parameters to be passed to mesh
+        alpha = 2.3
+
+        ii = np.array(range(0, npts + 1))
+        a = spatial_lims["min"]
+        b = spatial_lims["max"]
+        edges = (b - a) * (np.exp(alpha * ii / npts) - 1) / (np.exp(alpha) - 1) + a
+
+        coord_sys = spatial_var.coord_sys
+
+        super().__init__(edges, coord_sys=coord_sys)
+
+
+class RightExponential1DSubMesh(SubMesh1D):
+    """
+    A class to generate a submesh on a 1D domain in which the points are clustered
+    close to the right boundary using an exponential formula on the interval [a,b].
+    The gridpoints are given by
+
+   .. math::
+    x_{k} = (b-a) + \\frac{\\exp{-\\alpha k / N} - 1}{\\exp{-\\alpha} - 1}} + a,
+
+    for k = 1, ..., N, where N is the number of nodes. Here alpha is
+    a stretching factor. As the number of gridpoints tends to infinity, the ratio
+    of the largest and smallest grid cells tends to exp(alpha).
+
+    Parameters
+    ----------
+    lims : dict
+        A dictionary that contains the limits of the spatial variables
+    npts : dict
+        A dictionary that contains the number of points to be used on each
+        spatial variable. Note: the number of nodes (located at the cell centres)
+        is npts, and the number of edges is npts+1.
+    """
+
+    def __init__(self, lims, npts):
+
+        # check that only one variable passed in
+        if len(lims) != 1:
+            raise pybamm.GeometryError("lims should only contain a single variable")
+
+        spatial_var = list(lims.keys())[0]
+        spatial_lims = lims[spatial_var]
+        npts = npts[spatial_var.id]
+
+        # Strech factor. TODO: allow parameters to be passed to mesh
+        alpha = 2.3
+
+        ii = np.array(range(0, npts + 1))
+        a = spatial_lims["min"]
+        b = spatial_lims["max"]
+        edges = (b - a) * (np.exp(-alpha * ii / npts) - 1) / (np.exp(-alpha) - 1) + a
+
         coord_sys = spatial_var.coord_sys
 
         super().__init__(edges, coord_sys=coord_sys)
