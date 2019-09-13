@@ -83,6 +83,8 @@ class TestBaseBatteryModel(unittest.TestCase):
         )
 
     def test_bad_options(self):
+        with self.assertRaisesRegex(pybamm.OptionError, "option"):
+            pybamm.BaseBatteryModel({"bad option": "bad option"})
         with self.assertRaisesRegex(pybamm.OptionError, "current collector model"):
             pybamm.BaseBatteryModel({"current collector": "bad current collector"})
         with self.assertRaisesRegex(pybamm.OptionError, "thermal model"):
@@ -97,6 +99,8 @@ class TestBaseBatteryModel(unittest.TestCase):
             pybamm.OptionError, "cannot have transverse convection in 0D model"
         ):
             pybamm.BaseBatteryModel({"convection": {"transverse": "full"}})
+        with self.assertRaisesRegex(pybamm.OptionError, "particle model"):
+            pybamm.BaseBatteryModel({"particle": "bad particle"})
 
 
 if __name__ == "__main__":

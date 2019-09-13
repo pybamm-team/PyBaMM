@@ -32,13 +32,16 @@ def D(cc):
 
 
 # variables
+x = pybamm.SpatialVariable("x", domain="SEI layer", coord_sys="cartesian")
 c = pybamm.Variable("Solvent concentration", domain="SEI layer")
 L = pybamm.Variable("SEI thickness")
 
 # 3. State governing equations ---------------------------------------------------------
 R = k * pybamm.BoundaryValue(c, "left")  # SEI reaction flux
 N = -(1 / L) * D(c) * pybamm.grad(c)  # solvent flux
-dcdt = -(1 / L) * pybamm.div(N)  # solvent concentration governing equation
+dcdt = (V_hat * R) * pybamm.inner(x / L, pybamm.grad(c)) - (1 / L) * pybamm.div(
+    N
+)  # solvent concentration governing equation
 dLdt = V_hat * R  # SEI thickness governing equation
 
 model.rhs = {c: dcdt, L: dLdt}  # add to model
@@ -72,7 +75,6 @@ model.variables = {
 "Using the model"
 
 # define geometry
-x = pybamm.SpatialVariable("x", domain="SEI layer", coord_sys="cartesian")
 geometry = {
     "SEI layer": {"primary": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
 }
@@ -83,11 +85,11 @@ def Diffusivity(cc):
     return cc * 10 ** (-5)
 
 
-# parameter values
+# parameter values (not physically based, for example only!)
 param = pybamm.ParameterValues(
     {
-        "Reaction rate constant": 1e1,
-        "Initial thickness": 2,
+        "Reaction rate constant": 20,
+        "Initial thickness": 1e-6,
         "Partial molar volume": 10,
         "Bulk electrolyte solvent concentration": 1,
         "Diffusivity": Diffusivity,
@@ -100,7 +102,7 @@ param.process_geometry(geometry)
 
 # mesh and discretise
 submesh_types = {"SEI layer": pybamm.Uniform1DSubMesh}
-var_pts = {x: 100}
+var_pts = {x: 50}
 mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
 spatial_methods = {"SEI layer": pybamm.FiniteVolume}
