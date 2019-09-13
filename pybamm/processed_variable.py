@@ -392,7 +392,9 @@ class ProcessedVariable(object):
         )
 
     def __call__(self, t=None, x=None, r=None, y=None, z=None):
-        "Evaluate the variable at arbitrary t (and x and/or r), using interpolation"
+        """
+        Evaluate the variable at arbitrary t (and x, r, y and/or z), using interpolation
+        """
         if self.dimensions == 1:
             return self._interpolation_function(t)
         elif self.dimensions == 2:
@@ -405,7 +407,7 @@ class ProcessedVariable(object):
 
     def call_2D(self, t, x, r, z):
         "Evaluate a 2D variable"
-        spatial_var = eval_dimension_name(self.spatial_var_name, t, x, r, None, z)
+        spatial_var = eval_dimension_name(self.spatial_var_name, x, r, None, z)
         if spatial_var is not None:
             return self._interpolation_function(t, spatial_var)
         else:
@@ -413,8 +415,8 @@ class ProcessedVariable(object):
 
     def call_3D(self, t, x, r, y, z):
         "Evaluate a 3D variable"
-        first_dim = eval_dimension_name(self.first_dimension, t, x, r, y, z)
-        second_dim = eval_dimension_name(self.second_dimension, t, x, r, y, z)
+        first_dim = eval_dimension_name(self.first_dimension, x, r, y, z)
+        second_dim = eval_dimension_name(self.second_dimension, x, r, y, z)
         if first_dim is None or second_dim is None:
             raise ValueError(
                 "inputs {} and {} cannot be None".format(
@@ -434,10 +436,8 @@ class ProcessedVariable(object):
         return self._interpolation_function((first_dim, second_dim, t))
 
 
-def eval_dimension_name(name, t, x, r, y, z):
-    if name == "t":
-        return t
-    elif name == "x":
+def eval_dimension_name(name, x, r, y, z):
+    if name == "x":
         return x
     elif name == "r":
         return r

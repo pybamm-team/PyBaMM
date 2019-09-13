@@ -175,7 +175,7 @@ class Symbol(anytree.NodeMixin):
         for child in children:
             for level in child.auxiliary_domains.keys():
                 if (
-                    not hasattr(aux_domains, level)
+                    not level in aux_domains
                     or aux_domains[level] == []
                     or child.auxiliary_domains[level] == aux_domains[level]
                 ):
