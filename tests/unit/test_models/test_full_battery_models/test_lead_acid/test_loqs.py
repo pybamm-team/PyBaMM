@@ -7,12 +7,12 @@ import unittest
 
 class TestLeadAcidLOQS(unittest.TestCase):
     def test_well_posed(self):
-        options = {"thermal": None}
+        options = {"thermal": "isothermal"}
         model = pybamm.lead_acid.LOQS(options)
         model.check_well_posedness()
 
     def test_well_posed_with_convection(self):
-        options = {"thermal": None, "convection": True}
+        options = {"thermal": "isothermal", "convection": True}
         model = pybamm.lead_acid.LOQS(options)
         model.check_well_posedness()
 
@@ -35,7 +35,7 @@ class TestLeadAcidLOQS(unittest.TestCase):
         model.check_well_posedness()
 
     def test_default_geometry(self):
-        options = {"thermal": None}
+        options = {"thermal": "isothermal"}
         model = pybamm.lead_acid.LOQS(options)
         self.assertIsInstance(model.default_geometry, pybamm.Geometry)
         self.assertNotIn("negative particle", model.default_geometry)

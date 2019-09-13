@@ -233,7 +233,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             The finite volume integral matrix for the domain
         vector_type : str, optional
             Whether to return a row or column vector in the primary dimension
-            (defualt is row)
+            (default is row)
         """
         # Create appropriate submesh by combining submeshes in domain
         submesh_list = self.mesh.combine_submeshes(*domain)
