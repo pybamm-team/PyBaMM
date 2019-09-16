@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import sys
 
 # set logging level
-pybamm.set_logging_level("INFO")
+pybamm.set_logging_level("DEBUG")
 
 # load (2+1D) SPM model
 options = {

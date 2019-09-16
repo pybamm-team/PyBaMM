@@ -6,3 +6,9 @@ Scikits FEM Submeshes
 
 .. autoclass:: pybamm.ScikitUniform2DSubMesh
     :members:
+
+.. autoclass:: pybamm.ScikitChebyshev2DSubMesh
+    :members:
+
+.. autoclass:: pybamm.ScikitTopExponential2DSubMesh
+    :members:

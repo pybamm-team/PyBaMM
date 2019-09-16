@@ -35,11 +35,11 @@ var_pts = {
     var.x_p: 5,
     var.r_n: 5,
     var.r_p: 5,
-    var.y: 10,
-    var.z: 10,
+    var.y: 5,
+    var.z: 5,
 }
 submesh_types = model.default_submesh_types
-submesh_types["current collector"] = pybamm.ScikitChebyshev2DSubMesh
+submesh_types["current collector"] = pybamm.ScikitTopExponential2DSubMesh
 # depnding on number of points in y-z plane may need to increase recursion depth...
 sys.setrecursionlimit(10000)
 mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -47,8 +47,6 @@ mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 # discretise model
 disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
-
-import ipdb; ipdb.set_trace()
 
 # solve model -- simulate one hour discharge
 tau = param.process_symbol(pybamm.standard_parameters_lithium_ion.tau_discharge)

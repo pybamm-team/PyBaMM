@@ -5,10 +5,9 @@ import unittest
 class TestExponential1DSubMesh(unittest.TestCase):
     def test_exceptions(self):
         lims = [[0, 1], [0, 1]]
+        mesh = pybamm.GetExponential1DSubMesh()
         with self.assertRaises(pybamm.GeometryError):
-            pybamm.SymmetricExponential1DSubMesh(lims, None)
-            pybamm.LeftExponential1DSubMesh(lims, None)
-            pybamm.RightExponential1DSubMesh(lims, None)
+            mesh(lims, None)
 
     def test_symmetric_mesh_creation_no_parameters(self):
         r = pybamm.SpatialVariable(
@@ -21,7 +20,9 @@ class TestExponential1DSubMesh(unittest.TestCase):
             }
         }
 
-        submesh_types = {"negative particle": pybamm.SymmetricExponential1DSubMesh}
+        submesh_types = {
+            "negative particle": pybamm.GetExponential1DSubMesh(side="symmetric")
+        }
         var_pts = {r: 20}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
@@ -36,7 +37,7 @@ class TestExponential1DSubMesh(unittest.TestCase):
         self.assertEqual(len(mesh["negative particle"][0].nodes), var_pts[r])
         self.assertEqual(
             len(mesh["negative particle"][0].edges),
-            len(mesh["negative particle"][0].nodes) + 1
+            len(mesh["negative particle"][0].nodes) + 1,
         )
 
     def test_left_mesh_creation_no_parameters(self):
@@ -50,7 +51,9 @@ class TestExponential1DSubMesh(unittest.TestCase):
             }
         }
 
-        submesh_types = {"negative particle": pybamm.LeftExponential1DSubMesh}
+        submesh_types = {
+            "negative particle": pybamm.GetExponential1DSubMesh(side="left")
+        }
         var_pts = {r: 20}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
@@ -65,7 +68,7 @@ class TestExponential1DSubMesh(unittest.TestCase):
         self.assertEqual(len(mesh["negative particle"][0].nodes), var_pts[r])
         self.assertEqual(
             len(mesh["negative particle"][0].edges),
-            len(mesh["negative particle"][0].nodes) + 1
+            len(mesh["negative particle"][0].nodes) + 1,
         )
 
     def test_right_mesh_creation_no_parameters(self):
@@ -79,7 +82,9 @@ class TestExponential1DSubMesh(unittest.TestCase):
             }
         }
 
-        submesh_types = {"negative particle": pybamm.RightExponential1DSubMesh}
+        submesh_types = {
+            "negative particle": pybamm.GetExponential1DSubMesh(side="right")
+        }
         var_pts = {r: 20}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
@@ -94,7 +99,7 @@ class TestExponential1DSubMesh(unittest.TestCase):
         self.assertEqual(len(mesh["negative particle"][0].nodes), var_pts[r])
         self.assertEqual(
             len(mesh["negative particle"][0].edges),
-            len(mesh["negative particle"][0].nodes) + 1
+            len(mesh["negative particle"][0].nodes) + 1,
         )
 
 

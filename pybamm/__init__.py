@@ -217,15 +217,14 @@ from .meshes.one_dimensional_submeshes import (
     SubMesh1D,
     Uniform1DSubMesh,
     Chebyshev1DSubMesh,
-    SymmetricExponential1DSubMesh,
-    LeftExponential1DSubMesh,
-    RightExponential1DSubMesh,
+    GetExponential1DSubMesh,
 )
 from .meshes.scikit_fem_submeshes import (
     have_scikit_fem,
     ScikitSubMesh2D,
     ScikitUniform2DSubMesh,
     ScikitChebyshev2DSubMesh,
+    ScikitTopExponential2DSubMesh,
 )
 
 #

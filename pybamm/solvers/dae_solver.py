@@ -106,6 +106,9 @@ class DaeSolver(pybamm.BaseSolver):
         if jac is not None:
 
             def jacobian(t, y):
+                pybamm.logger.debug(
+                    "Evaluating Jacobian for {} at t={}".format(model.name, t)
+                )
                 return jac.evaluate(t, y, known_evals={})[0]
 
         else:

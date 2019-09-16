@@ -6,3 +6,12 @@
 
 .. autoclass:: pybamm.Uniform1DSubMesh
     :members:
+
+.. autoclass:: pybamm.Chebyshev1DSubMesh
+    :members:
+
+.. autoclass:: pybamm.GetExponential1DSubMesh
+    :members:
+
+.. autoclass:: pybamm.Exponential1DSubMesh
+    :members:

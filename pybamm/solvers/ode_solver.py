@@ -57,6 +57,9 @@ class OdeSolver(pybamm.BaseSolver):
         if jac_rhs is not None:
 
             def jacobian(t, y):
+                pybamm.logger.debug(
+                    "Evaluating Jacobian for {} at t={}".format(model.name, t)
+                )
                 return jac_rhs.evaluate(t, y, known_evals={})[0]
 
         else:
