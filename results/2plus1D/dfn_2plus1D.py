@@ -10,9 +10,10 @@ pybamm.set_logging_level("INFO")
 options = {
     "current collector": "potential pair",
     "dimensionality": 2,
-    "thermal": "full",
+    "thermal": "x-lumped",
 }
 model = pybamm.lithium_ion.DFN(options)
+model.use_simplify_jacobian = False  # simplifying jac for large models is slow
 
 # create geometry
 geometry = model.default_geometry
@@ -30,13 +31,13 @@ param.process_geometry(geometry)
 # set mesh
 var = pybamm.standard_spatial_vars
 var_pts = {
-    var.x_n: 5,
-    var.x_s: 5,
-    var.x_p: 5,
-    var.r_n: 5,
-    var.r_p: 5,
+    var.x_n: 15,
+    var.x_s: 4,
+    var.x_p: 15,
+    var.r_n: 10,
+    var.r_p: 10,
     var.y: 5,
-    var.z: 5,
+    var.z: 7,
 }
 # depnding on number of points in y-z plane may need to increase recursion depth...
 sys.setrecursionlimit(10000)

@@ -145,7 +145,7 @@ class OdeSolver(pybamm.BaseSolver):
             jac_rhs = concatenated_rhs.jac(y)
             model.jacobian = jac_rhs
 
-            if model.use_simplify:
+            if model.use_simplify_jacobian:
                 pybamm.logger.info("Simplifying jacobian")
                 jac_rhs = simp.simplify(jac_rhs)
 
