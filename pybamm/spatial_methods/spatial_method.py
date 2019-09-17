@@ -244,15 +244,15 @@ class SpatialMethod:
         """
         raise NotImplementedError
 
-    def delta_function(self, discretised_child, side):
+    def delta_function(self, symbol, discretised_symbol):
         """
         Implements the delta function on the approriate side for a spatial method.
 
         Parameters
         ----------
-        child: :class:`pybamm.Symbol`
+        symbol: :class:`pybamm.Symbol`
             The symbol to which is being integrated
-        discretised_child: :class:`pybamm.Symbol`
+        discretised_symbol: :class:`pybamm.Symbol`
             The discretised symbol of the correct size
         """
         raise NotImplementedError
