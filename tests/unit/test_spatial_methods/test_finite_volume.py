@@ -1310,7 +1310,6 @@ class TestFiniteVolume(unittest.TestCase):
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
-        # add ghost nodes
         c_s_n = pybamm.Variable("c_s_n", domain=["negative particle"])
         c_s_p = pybamm.Variable("c_s_p", domain=["positive particle"])
 
@@ -1331,6 +1330,33 @@ class TestFiniteVolume(unittest.TestCase):
         c_s_p_surf_disc = disc.process_symbol(c_s_p_surf)
         self.assertEqual(c_s_n_surf_disc.domain, ["negative electrode"])
         self.assertEqual(c_s_p_surf_disc.domain, ["positive electrode"])
+
+    def test_delta_function(self):
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        var = pybamm.Variable("var")
+        delta_fn = pybamm.DeltaFunction(var, "left", "negative electrode", {})
+        disc.set_variable_slices([var])
+        delta_fn_disc = disc.process_symbol(delta_fn)
+
+        # Basic shape and type tests
+        y = np.ones_like(mesh["negative electrode"][0].nodes[:, np.newaxis])
+        self.assertEqual(delta_fn_disc.domain, delta_fn.domain)
+        self.assertEqual(delta_fn_disc.auxiliary_domains, delta_fn.auxiliary_domains)
+        self.assertIsInstance(delta_fn_disc, pybamm.Multiplication)
+        self.assertIsInstance(delta_fn_disc.left, pybamm.Matrix)
+        np.testing.assert_array_equal(delta_fn_disc.left.evaluate().toarray()[:, 1:], 0)
+        self.assertEqual(delta_fn_disc.shape, y.shape)
+
+        # Value tests
+        var_disc = disc.process_symbol(var)
+        x = pybamm.standard_spatial_vars.x_n
+        delta_fn_int_disc = disc.process_symbol(pybamm.Integral(delta_fn, x))
+        np.testing.assert_array_equal(
+            var_disc.evaluate(y=y), np.sum(delta_fn_int_disc.evaluate(y=y))
+        )
 
 
 if __name__ == "__main__":

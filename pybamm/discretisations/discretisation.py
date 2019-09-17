@@ -573,6 +573,9 @@ class Discretisation(object):
                     )
                 return symbol
 
+            elif isinstance(symbol, pybamm.DeltaFunction):
+                return spatial_method.delta_function(symbol, disc_child)
+
             elif isinstance(symbol, pybamm.BoundaryOperator):
                 return child_spatial_method.boundary_value_or_flux(symbol, disc_child)
 

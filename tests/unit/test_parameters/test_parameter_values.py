@@ -91,6 +91,16 @@ class TestParameterValues(unittest.TestCase):
         self.assertIsInstance(processed_grad.children[0], pybamm.Scalar)
         self.assertEqual(processed_grad.children[0].value, 1)
 
+        # process delta function
+        aa = pybamm.Parameter("a")
+        delta_aa = pybamm.DeltaFunction(aa, "left", "some domain", {})
+        processed_delta_aa = parameter_values.process_symbol(delta_aa)
+        self.assertIsInstance(processed_delta_aa, pybamm.DeltaFunction)
+        self.assertEqual(processed_delta_aa.side, "left")
+        processed_a = processed_delta_aa.children[0]
+        self.assertIsInstance(processed_a, pybamm.Scalar)
+        self.assertEqual(processed_a.value, 1)
+
         # process boundary operator (test for BoundaryValue)
         aa = pybamm.Parameter("a", domain=["negative electrode"])
         x = pybamm.SpatialVariable("x", domain=["negative electrode"])
