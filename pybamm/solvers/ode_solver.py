@@ -91,6 +91,7 @@ class OdeSolver(pybamm.BaseSolver):
             y = pybamm.StateVector(slice(0, np.size(y0)))
             pybamm.logger.info("Calculating jacobian")
             jac_rhs = concatenated_rhs.jac(y)
+            model.jacobian = jac_rhs
 
             if model.use_simplify:
                 pybamm.logger.info("Simplifying jacobian")
