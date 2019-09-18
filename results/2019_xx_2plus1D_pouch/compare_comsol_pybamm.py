@@ -71,8 +71,9 @@ tau = param.process_symbol(
     pybamm.standard_parameters_lithium_ion.tau_discharge
 ).evaluate()
 
-# solve model at comsol times
-time = comsol_variables["time"] / tau
+# solve model to final comsol time
+t_end = comsol_variables["time"][-1] / tau
+time = np.linspace(0, t_end, 50)
 solution = pybamm_model.default_solver.solve(pybamm_model, time)
 
 

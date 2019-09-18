@@ -3,6 +3,8 @@ import os
 import pandas as pd
 import pickle
 import numpy as np
+import scipy.interpolate as interp
+import matplotlib.pyplot as plt
 
 # change working directory the root of pybamm
 os.chdir(pybamm.root_dir())
@@ -35,22 +37,22 @@ phi_s_cn = np.reshape(
     comsol[3].values, (yz_npts, time_npts), order="C"
 )  # fourth column is phi_s_cn vals
 
-## test interp onto regular grid
-# y = np.linspace(0, np.max(y_neg_cc), 5)
-# z = np.linspace(0, np.max(z_neg_cc), 4)
-# grid_y, grid_z = np.meshgrid(y, z)
-# interp_var = np.zeros((len(z), len(y), len(time)))
-# for i in range(0, phi_s_cn.shape[1]):
+# test interp onto regular grid
+#y = np.linspace(0, np.max(y_neg_cc), 5)
+#z = np.linspace(0, np.max(z_neg_cc), 4)
+#grid_y, grid_z = np.meshgrid(y, z)
+#interp_var = np.zeros((len(z), len(y), len(time)))
+#for i in range(0, phi_s_cn.shape[1]):
 #    interp_var[:, :, i] = interp.griddata(
 #        np.column_stack((y_neg_cc, z_neg_cc)), phi_s_cn[:, i],(grid_y, grid_z), method="cubic")
 #
 #
-# def myinterp(t):
+#def myinterp(t):
 #    return interp.interp1d(time, interp_var, axis=2)(t)
 #
 #
-# plt.pcolormesh(y,z,myinterp(2),shading="gouraud")
-# plt.show()
+#plt.pcolormesh(y,z,myinterp(2),shading="gouraud")
+#plt.show()
 
 # positive current collector potential (stored as a (yz_npts, time_npts) size
 # array)
