@@ -46,6 +46,8 @@ class BaseSolver(object):
             The times at which to compute the solution
 
         """
+        if model is None:
+            raise NotImplementedError
         pybamm.logger.info("Start solving {}".format(model.name))
 
         # Set up
