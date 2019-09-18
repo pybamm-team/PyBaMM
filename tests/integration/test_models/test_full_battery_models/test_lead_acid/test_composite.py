@@ -10,20 +10,20 @@ import numpy as np
 
 class TestLeadAcidComposite(unittest.TestCase):
     def test_basic_processing(self):
-        options = {"thermal": None, "convection": False}
+        options = {"thermal": "isothermal", "convection": False}
         model = pybamm.lead_acid.Composite(options)
         parameter_values = model.default_parameter_values
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 
     def test_basic_processing_with_convection(self):
-        options = {"thermal": None, "convection": True}
+        options = {"thermal": "isothermal", "convection": True}
         model = pybamm.lead_acid.Composite(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_optimisations(self):
-        options = {"thermal": None, "convection": False}
+        options = {"thermal": "isothermal", "convection": False}
         model = pybamm.lead_acid.Composite(options)
         optimtest = tests.OptimisationsTest(model)
 
@@ -40,20 +40,32 @@ class TestLeadAcidComposite(unittest.TestCase):
 
 class TestLeadAcidCompositeSurfaceForm(unittest.TestCase):
     def test_basic_processing_differential(self):
-        options = {"surface form": "differential", "thermal": None, "convection": False}
+        options = {
+            "surface form": "differential",
+            "thermal": "isothermal",
+            "convection": False,
+        }
         model = pybamm.lead_acid.Composite(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing_algebraic(self):
-        options = {"surface form": "algebraic", "thermal": None, "convection": False}
+        options = {
+            "surface form": "algebraic",
+            "thermal": "isothermal",
+            "convection": False,
+        }
         model = pybamm.lead_acid.Composite(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_optimisations(self):
-        options = {"surface form": "differential", "thermal": None, "convection": False}
+        options = {
+            "surface form": "differential",
+            "thermal": "isothermal",
+            "convection": False,
+        }
         model = pybamm.lead_acid.Composite(options)
         optimtest = tests.OptimisationsTest(model)
 
