@@ -192,5 +192,3 @@ class PotentialPairUnrolled(PotentialPair1plus1D):
                 "right": (pos_tab_bc, "Neumann"),
             },
         }
-
-        
