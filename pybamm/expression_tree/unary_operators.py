@@ -984,3 +984,38 @@ def boundary_value(symbol, side):
     # Otherwise, calculate boundary value
     else:
         return BoundaryValue(symbol, side)
+
+
+def r_average(symbol):
+    """convenience function for creating an average in the r-direction
+
+    Parameters
+    ----------
+    symbol : :class:`pybamm.Symbol`
+        The function to be averaged
+
+    Returns
+    -------
+    :class:`Symbol`
+        the new averaged symbol
+    """
+    # Symbol must have domain [] or ["current collector"]
+    if "particle" not in symbol.domain and symbol.domain is not []:
+        raise pybamm.DomainError(
+            """r-average only implemented in the 'particle' domain,
+            but symbol has domains {}""".format(
+                symbol.domain
+            )
+        )
+    # If symbol doesn't have a domain, its average value is itself
+    elif symbol.domain is []:
+        new_symbol = symbol.new_copy()
+        new_symbol.parent = None
+        return new_symbol
+    else:
+        r = pybamm.SpatialVariable("r", [symbol.domain])
+        if symbol.domain == ["negative particle"]:
+            l_r = pybamm.geometric_parameters.R_n
+        elif symbol.domain == ["positive particle"]:
+            l_r = pybamm.geometric_parameters.R_p
+        return Integral(symbol, r) / l_r
