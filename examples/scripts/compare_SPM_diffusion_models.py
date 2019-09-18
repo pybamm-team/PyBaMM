@@ -1,5 +1,5 @@
 #
-# Compare lithium-ion battery models
+# Compare SPM with Fickian (default) and fast diffusion in the particles
 #
 import argparse
 import numpy as np
@@ -16,13 +16,10 @@ else:
     pybamm.set_logging_level("INFO")
 
 # load models
-options = {"thermal": "isothermal"}
 models = [
-    pybamm.lithium_ion.SPM(options),
-    pybamm.lithium_ion.SPMe(options),
-    pybamm.lithium_ion.DFN(options),
+    pybamm.lithium_ion.SPM(name="Fickian diffusion"),
+    pybamm.lithium_ion.SPM({"particle": "fast diffusion"}, name="Fast diffusion"),
 ]
-
 
 # load parameter values and process models and geometry
 param = models[0].default_parameter_values
@@ -50,5 +47,10 @@ for i, model in enumerate(models):
     solutions[i] = model.default_solver.solve(model, t_eval)
 
 # plot
-plot = pybamm.QuickPlot(models, mesh, solutions)
+variables = [
+    "X-averaged negative particle surface concentration [mol.m-3]",
+    "X-averaged positive particle surface concentration [mol.m-3]",
+    "Terminal voltage [V]",
+]
+plot = pybamm.QuickPlot(models, mesh, solutions, variables)
 plot.dynamic_plot()

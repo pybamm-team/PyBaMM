@@ -7,12 +7,12 @@ import unittest
 
 class TestSPMe(unittest.TestCase):
     def test_well_posed(self):
-        options = {"thermal": None}
+        options = {"thermal": "isothermal"}
         model = pybamm.lithium_ion.SPMe(options)
         model.check_well_posedness()
 
     def test_default_geometry(self):
-        options = {"thermal": None}
+        options = {"thermal": "isothermal"}
         model = pybamm.lithium_ion.SPMe(options)
         self.assertIsInstance(model.default_geometry, pybamm.Geometry)
         self.assertTrue("negative particle" in model.default_geometry)
@@ -156,12 +156,17 @@ class TestSPMe(unittest.TestCase):
 
     @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_default_solver(self):
-        options = {"thermal": None}
+        options = {"thermal": "isothermal"}
         model = pybamm.lithium_ion.SPMe(options)
         self.assertIsInstance(model.default_solver, pybamm.ScipySolver)
         options = {"current collector": "potential pair", "dimensionality": 2}
         model = pybamm.lithium_ion.SPMe(options)
         self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
+
+    def test_particle_fast_diffusion(self):
+        options = {"particle": "fast diffusion"}
+        model = pybamm.lithium_ion.SPMe(options)
+        model.check_well_posedness()
 
 
 if __name__ == "__main__":
