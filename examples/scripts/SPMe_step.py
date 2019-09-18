@@ -56,8 +56,6 @@ r_n = model.variables["r_p"].evaluate().flatten()
 
 print('Solution match', np.allclose(step_sol.y[:, -1], cont_sol.y[:, -1]))
 
-# for i, iv in enumerate(state_variables):
-
 f_step = pybamm.ProcessedVariable(
      model.variables["Electrolyte concentration [mol.m-3]"],
      step_sol.t, step_sol.y, mesh=mesh
