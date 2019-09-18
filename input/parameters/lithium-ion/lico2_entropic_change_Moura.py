@@ -18,6 +18,11 @@ def lico2_entropic_change_Moura(sto, c_p_max):
 
     """
 
+    # Since the equation for LiCo2 from this ref. has the stretch factor,
+    # should this too? If not, the "bumps" in the OCV don't line up.
+    stretch = 1.062
+    sto = stretch * sto
+
     du_dT = (
         0.07645 * (-54.4806 / c_p_max) * ((1.0 / np.cosh(30.834 - 54.4806 * sto)) ** 2)
         + 2.1581 * (-50.294 / c_p_max) * ((np.cosh(52.294 - 50.294 * sto)) ** (-2))

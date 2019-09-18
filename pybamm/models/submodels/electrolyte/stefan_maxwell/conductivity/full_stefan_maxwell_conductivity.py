@@ -15,7 +15,8 @@ class Full(BaseModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
-
+    reactions : dict
+        Dictionary of reaction terms
 
     **Extends:** :class:`pybamm.BaseStefanMaxwellConductivity`
     """
@@ -25,18 +26,19 @@ class Full(BaseModel):
 
     def get_fundamental_variables(self):
         phi_e = pybamm.standard_variables.phi_e
-        phi_e_av = pybamm.average(phi_e)
+        phi_e_av = pybamm.x_average(phi_e)
 
         variables = self._get_standard_potential_variables(phi_e, phi_e_av)
         return variables
 
     def get_coupled_variables(self, variables):
         param = self.param
+        T = variables["Cell temperature"]
         eps = variables["Porosity"]
         c_e = variables["Electrolyte concentration"]
         phi_e = variables["Electrolyte potential"]
 
-        i_e = (param.kappa_e(c_e) * (eps ** param.b) * param.gamma_e / param.C_e) * (
+        i_e = (param.kappa_e(c_e, T) * (eps ** param.b) * param.gamma_e / param.C_e) * (
             param.chi(c_e) * pybamm.grad(c_e) / c_e - pybamm.grad(phi_e)
         )
 
@@ -50,7 +52,7 @@ class Full(BaseModel):
         sum_j = sum(
             pybamm.Concatenation(
                 variables[reaction["Negative"]["aj"]],
-                pybamm.Broadcast(0, "separator"),
+                pybamm.FullBroadcast(0, "separator", "current collector"),
                 variables[reaction["Positive"]["aj"]],
             )
             for reaction in self.reactions.values()
@@ -60,7 +62,8 @@ class Full(BaseModel):
 
     def set_initial_conditions(self, variables):
         phi_e = variables["Electrolyte potential"]
-        self.initial_conditions = {phi_e: -self.param.U_n(self.param.c_n_init)}
+        T_ref = self.param.T_ref
+        self.initial_conditions = {phi_e: -self.param.U_n(self.param.c_n_init, T_ref)}
 
     @property
     def default_solver(self):

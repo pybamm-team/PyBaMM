@@ -15,7 +15,8 @@ class Full(BaseModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
-
+    reactions : dict
+        Dictionary of reaction terms
 
     **Extends:** :class:`pybamm.electrolyte.stefan_maxwell.diffusion.BaseModel`
     """
@@ -34,10 +35,11 @@ class Full(BaseModel):
         c_e = variables["Electrolyte concentration"]
         # i_e = variables["Electrolyte current density"]
         v_box = variables["Volume-averaged velocity"]
+        T = variables["Cell temperature"]
 
         param = self.param
 
-        N_e_diffusion = -(eps ** param.b) * param.D_e(c_e) * pybamm.grad(c_e)
+        N_e_diffusion = -(eps ** param.b) * param.D_e(c_e, T) * pybamm.grad(c_e)
         # N_e_migration = (param.C_e * param.t_plus) / param.gamma_e * i_e
         # N_e_convection = c_e * v_box
 
@@ -59,13 +61,12 @@ class Full(BaseModel):
         N_e = variables["Electrolyte flux"]
         # i_e = variables["Electrolyte current density"]
 
-        # TODO: check lead acid version in new form
         # source_term = ((param.s - param.t_plus) / param.gamma_e) * pybamm.div(i_e)
         # source_term = pybamm.div(i_e) / param.gamma_e  # lithium-ion
         source_terms = sum(
             pybamm.Concatenation(
                 reaction["Negative"]["s"] * variables[reaction["Negative"]["aj"]],
-                pybamm.Broadcast(0, "separator"),
+                pybamm.FullBroadcast(0, "separator", "current collector"),
                 reaction["Positive"]["s"] * variables[reaction["Positive"]["aj"]],
             )
             / param.gamma_e

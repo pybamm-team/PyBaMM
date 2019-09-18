@@ -16,7 +16,6 @@ class DFN(BaseModel):
         super().__init__(options, name)
 
         self.set_reactions()
-        self.set_current_collector_submodel()
         self.set_porosity_submodel()
         self.set_convection_submodel()
         self.set_interfacial_submodel()
@@ -24,14 +23,9 @@ class DFN(BaseModel):
         self.set_solid_submodel()
         self.set_electrolyte_submodel()
         self.set_thermal_submodel()
+        self.set_current_collector_submodel()
 
         self.build_model()
-
-    def set_current_collector_submodel(self):
-
-        self.submodels["current collector"] = pybamm.current_collector.Uniform(
-            self.param
-        )
 
     def set_porosity_submodel(self):
 
@@ -52,12 +46,20 @@ class DFN(BaseModel):
 
     def set_particle_submodel(self):
 
-        self.submodels["negative particle"] = pybamm.particle.fickian.ManyParticles(
-            self.param, "Negative"
-        )
-        self.submodels["positive particle"] = pybamm.particle.fickian.ManyParticles(
-            self.param, "Positive"
-        )
+        if self.options["particle"] == "Fickian diffusion":
+            self.submodels["negative particle"] = pybamm.particle.fickian.ManyParticles(
+                self.param, "Negative"
+            )
+            self.submodels["positive particle"] = pybamm.particle.fickian.ManyParticles(
+                self.param, "Positive"
+            )
+        elif self.options["particle"] == "fast diffusion":
+            self.submodels["negative particle"] = pybamm.particle.fast.ManyParticles(
+                self.param, "Negative"
+            )
+            self.submodels["positive particle"] = pybamm.particle.fast.ManyParticles(
+                self.param, "Positive"
+            )
 
     def set_solid_submodel(self):
 
@@ -81,7 +83,13 @@ class DFN(BaseModel):
 
     @property
     def default_geometry(self):
-        return pybamm.Geometry("1D macro", "1+1D micro")
+        dimensionality = self.options["dimensionality"]
+        if dimensionality == 0:
+            return pybamm.Geometry("1D macro", "1+1D micro")
+        elif dimensionality == 1:
+            return pybamm.Geometry("1+1D macro", "(1+1)+1D micro")
+        elif dimensionality == 2:
+            return pybamm.Geometry("2+1D macro", "(2+1)+1D micro")
 
     @property
     def default_solver(self):

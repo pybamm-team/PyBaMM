@@ -12,8 +12,8 @@ class TestLeadingOrder(unittest.TestCase):
         param = pybamm.standard_parameters_lead_acid
         a = pybamm.Broadcast(pybamm.Scalar(0), "test")
         variables = {
-            "Negative electrode interfacial current density": a,
-            "Positive electrode interfacial current density": a,
+            "X-averaged negative electrode interfacial current density": a,
+            "X-averaged positive electrode interfacial current density": a,
         }
         submodel = pybamm.porosity.LeadingOrder(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)

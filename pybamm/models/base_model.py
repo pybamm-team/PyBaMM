@@ -13,6 +13,10 @@ class BaseModel(object):
     Attributes
     ----------
 
+    name: str
+        A string giving the name of the model
+    options: dict
+        A dictionary of options to be passed to the model
     rhs: dict
         A dictionary that maps expressions (variables) to expressions that represent
         the rhs
@@ -35,11 +39,36 @@ class BaseModel(object):
     events: list
         A list of events that should cause the solver to terminate (e.g. concentration
         goes negative)
-
+    concatenated_rhs : :class:`pybamm.Concatenation`
+        After discretisation, contains the expressions representing the rhs equations
+        concatenated into a single expression
+    concatenated_algebraic : :class:`pybamm.Concatenation`
+        After discretisation, contains the expressions representing the algebraic
+        equations concatenated into a single expression
+    concatenated_initial_conditions : :class:`numpy.array`
+        After discretisation, contains the vector of initial conditions
+    mass_matrix : :class:`pybamm.Matrix`
+        After discretisation, contains the mass matrix for the model. This is computed
+        automatically
+    jacobian : :class:`pybamm.Concatenation`
+        Contains the Jacobian for the model. If model.use_jacobian is True, the
+        Jacobian is computed automatically during the set up in solve
+    use_jacobian : bool
+        Whether to use the Jacobian when solving the model (default is True)
+    use_simplify : bool
+        Whether to simplify the expression tress representing the rhs and
+        algebraic equations, Jacobain (if using) and events, before solving the
+        model (default is True)
+    use_to_python : bool
+        Whether to convert the expression tress representing the rhs and
+        algebraic equations, Jacobain (if using) and events into pure python code
+        that will calculate the result of calling `evaluate(t, y)` on the given
+        expression tree (default is True)
     """
 
     def __init__(self, name="Unnamed model"):
         self.name = name
+        self.options = {}
 
         # Initialise empty model
         self._rhs = {}
@@ -49,6 +78,7 @@ class BaseModel(object):
         self._variables = {}
         self._events = {}
         self._concatenated_rhs = None
+        self._concatenated_algebraic = None
         self._concatenated_initial_conditions = None
         self._mass_matrix = None
         self._jacobian = None
@@ -165,6 +195,14 @@ class BaseModel(object):
         self._concatenated_rhs = concatenated_rhs
 
     @property
+    def concatenated_algebraic(self):
+        return self._concatenated_algebraic
+
+    @concatenated_algebraic.setter
+    def concatenated_algebraic(self, concatenated_algebraic):
+        self._concatenated_algebraic = concatenated_algebraic
+
+    @property
     def concatenated_initial_conditions(self):
         return self._concatenated_initial_conditions
 
@@ -191,6 +229,14 @@ class BaseModel(object):
     @property
     def set_of_parameters(self):
         return self._set_of_parameters
+
+    @property
+    def options(self):
+        return self._options
+
+    @options.setter
+    def options(self, options):
+        self._options = options
 
     def __getitem__(self, key):
         return self.rhs[key]
@@ -245,7 +291,12 @@ class BaseModel(object):
         self.check_well_determined(post_discretisation)
         self.check_algebraic_equations(post_discretisation)
         self.check_ics_bcs()
-        self.check_variables()
+        self.check_default_variables_dictionaries()
+        # Can't check variables after discretising, since Variable objects get replaced
+        # by StateVector objects
+        # Checking variables is slow, so only do it in debug mode
+        if pybamm.settings.debug_mode is True and post_discretisation is False:
+            self.check_variables()
 
     def check_well_determined(self, post_discretisation):
         """ Check that the model is not under- or over-determined. """
@@ -330,9 +381,9 @@ class BaseModel(object):
 
         # Boundary conditions
         for var, eqn in {**self.rhs, **self.algebraic}.items():
-            if eqn.has_symbol_of_class(
+            if eqn.has_symbol_of_classes(
                 (pybamm.Gradient, pybamm.Divergence)
-            ) and not eqn.has_symbol_of_class(pybamm.Integral):
+            ) and not eqn.has_symbol_of_classes(pybamm.Integral):
                 # I have relaxed this check for now so that the lumped temperature
                 # equation doesn't raise errors (this has and average in it)
 
@@ -351,7 +402,7 @@ class BaseModel(object):
                         )
                     )
 
-    def check_variables(self):
+    def check_default_variables_dictionaries(self):
         """ Chec that the right variables are provided. """
         missing_vars = []
         for output, expression in self._variables.items():
@@ -369,6 +420,7 @@ class BaseModel(object):
             for output in missing_vars:
                 del self._variables[output]
 
+    def check_variables(self):
         # Create list of all Variable nodes that appear in the model's list of variables
         all_vars = {}
         for eqn in self.variables.values():
@@ -380,8 +432,9 @@ class BaseModel(object):
         for var in {**self.rhs, **self.algebraic}.keys():
             if isinstance(var, pybamm.Variable):
                 var_ids_in_keys.add(var.id)
+            # Key can be a concatenation
             elif isinstance(var, pybamm.Concatenation):
-                var_ids_in_keys.update([x.id for x in var.children])
+                var_ids_in_keys.update([child.id for child in var.children])
         for var_id, var in all_vars.items():
             if var_id not in var_ids_in_keys:
                 raise pybamm.ModelError(

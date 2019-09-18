@@ -82,9 +82,8 @@ class TestConcatenations(unittest.TestCase):
         )
 
     def test_numpy_domain_concatenation(self):
-        # create discretisation
-        disc = get_discretisation_for_testing()
-        mesh = disc.mesh
+        # create mesh
+        mesh = get_mesh_for_testing()
 
         a_dom = ["negative electrode"]
         b_dom = ["positive electrode"]
@@ -183,9 +182,9 @@ class TestConcatenations(unittest.TestCase):
         mesh = disc.mesh
 
         # Piecewise constant scalars
-        a = pybamm.Broadcast(1, domain=["negative electrode"])
-        b = pybamm.Broadcast(2, domain=["separator"])
-        c = pybamm.Broadcast(3, domain=["positive electrode"])
+        a = pybamm.Broadcast(1, ["negative electrode"])
+        b = pybamm.Broadcast(2, ["separator"])
+        c = pybamm.Broadcast(3, ["positive electrode"])
         conc = pybamm.Concatenation(a, b, c)
 
         self.assertEqual(
@@ -207,9 +206,9 @@ class TestConcatenations(unittest.TestCase):
         )
 
         # Piecewise constant functions of time
-        a_t = pybamm.Broadcast(pybamm.t, domain=["negative electrode"])
-        b_t = pybamm.Broadcast(2 * pybamm.t, domain=["separator"])
-        c_t = pybamm.Broadcast(3 * pybamm.t, domain=["positive electrode"])
+        a_t = pybamm.Broadcast(pybamm.t, ["negative electrode"])
+        b_t = pybamm.Broadcast(2 * pybamm.t, ["separator"])
+        c_t = pybamm.Broadcast(3 * pybamm.t, ["positive electrode"])
         conc = pybamm.Concatenation(a_t, b_t, c_t)
 
         self.assertEqual(
@@ -284,6 +283,20 @@ class TestConcatenations(unittest.TestCase):
         b = pybamm.Symbol("b")
         with self.assertRaisesRegex(pybamm.DomainError, "domain cannot be empty"):
             pybamm.DomainConcatenation([a, b], None)
+
+    def test_numpy_concatenation_simplify(self):
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+        c = pybamm.Variable("c")
+        # simplifying flattens the concatenations into a single concatenation
+        self.assertEqual(
+            pybamm.NumpyConcatenation(pybamm.NumpyConcatenation(a, b), c).simplify().id,
+            pybamm.NumpyConcatenation(a, b, c).id,
+        )
+        self.assertEqual(
+            pybamm.NumpyConcatenation(a, pybamm.NumpyConcatenation(b, c)).simplify().id,
+            pybamm.NumpyConcatenation(a, b, c).id,
+        )
 
 
 if __name__ == "__main__":

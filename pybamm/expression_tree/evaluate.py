@@ -72,13 +72,16 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
         # the right line, avoiding these checks
         if isinstance(symbol, pybamm.Multiplication):
             symbol_str = (
-                "{0}.multiply({1}) if scipy.sparse.issparse({0}) else "
-                "{1}.multiply({0}) if scipy.sparse.issparse({1}) else "
+                "scipy.sparse.csr_matrix({0}.multiply({1})) "
+                "if scipy.sparse.issparse({0}) else "
+                "scipy.sparse.csr_matrix({1}.multiply({0})) "
+                "if scipy.sparse.issparse({1}) else "
                 "{0} * {1}".format(children_vars[0], children_vars[1])
             )
         elif isinstance(symbol, pybamm.Division):
             symbol_str = (
-                "{0}.multiply(1/{1}) if scipy.sparse.issparse({0}) else "
+                "scipy.sparse.csr_matrix({0}.multiply(1/{1})) "
+                "if scipy.sparse.issparse({0}) else "
                 "{0} / {1}".format(children_vars[0], children_vars[1])
             )
         elif isinstance(symbol, pybamm.Outer):
@@ -86,7 +89,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
                 children_vars[0], children_vars[1]
             )
         elif isinstance(symbol, pybamm.Kron):
-            symbol_str = "scipy.sparse.kron({}, {})".format(
+            symbol_str = "scipy.sparse.csr_matrix(scipy.sparse.kron({}, {}))".format(
                 children_vars[0], children_vars[1]
             )
         else:
@@ -134,18 +137,22 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
         # which we must follow
         elif isinstance(symbol, pybamm.DomainConcatenation):
             slice_starts = []
-            child_vectors = []
-            for child_var, slices in zip(children_vars, symbol._children_slices):
-                for child_dom, child_slice in slices.items():
-                    slice_starts.append(symbol._slices[child_dom].start)
-                    child_vectors.append(
-                        "{}[{}:{}]".format(
-                            child_var, child_slice.start, child_slice.stop
+            all_child_vectors = []
+            for i in range(symbol.secondary_dimensions_npts):
+                child_vectors = []
+                for child_var, slices in zip(children_vars, symbol._children_slices):
+                    for child_dom, child_slice in slices.items():
+                        slice_starts.append(symbol._slices[child_dom][i].start)
+                        child_vectors.append(
+                            "{}[{}:{}]".format(
+                                child_var, child_slice[i].start, child_slice[i].stop
+                            )
                         )
-                    )
-            child_vectors = [v for _, v in sorted(zip(slice_starts, child_vectors))]
-            if len(children_vars) > 1:
-                symbol_str = "np.concatenate(({}))".format(",".join(child_vectors))
+                all_child_vectors.extend(
+                    [v for _, v in sorted(zip(slice_starts, child_vectors))]
+                )
+            if len(children_vars) > 1 or symbol.secondary_dimensions_npts > 1:
+                symbol_str = "np.concatenate(({}))".format(",".join(all_child_vectors))
             else:
                 symbol_str = "{}".format(",".join(children_vars))
         else:
@@ -153,7 +160,9 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
 
     # Note: we assume that y is being passed as a column vector
     elif isinstance(symbol, pybamm.StateVector):
-        symbol_str = symbol.name
+        symbol_str = "y[:{}][{}]".format(
+            len(symbol.evaluation_array), symbol.evaluation_array
+        )
 
     elif isinstance(symbol, pybamm.Time):
         symbol_str = "t"

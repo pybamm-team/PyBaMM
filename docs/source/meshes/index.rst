@@ -2,6 +2,8 @@ Meshes
 ======
 
 .. toctree::
-  
+
   meshes
-  submeshes
+  one_dimensional_submeshes
+  scikits_fem_submeshes
+  zero_dimensional_submeshes

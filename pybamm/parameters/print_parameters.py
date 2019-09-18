@@ -80,14 +80,13 @@ def print_parameters(parameters, parameter_values, output_file=None):
     # Calculate C-dependence of the parameters based on the difference between the
     # value at 1C and the value at C / 10
     for name, values in evaluated_parameters.items():
-        if abs(values[0] - values[1]) < 1e-10:
+        if values[1] == 0 or abs(values[0] / values[1] - 1) < 1e-10:
             C_dependence = ""
-        elif abs(values[0] - 10 * values[1]) < 1e-10:
+        elif abs(values[0] / values[1] - 10) < 1e-10:
             C_dependence = " * Crate"
-        elif abs(10 * values[0] - values[1]) < 1e-10:
+        elif abs(values[0] / values[1] - 0.1) < 1e-10:
             C_dependence = " / Crate"
         evaluated_parameters[name] = (values[0], C_dependence)
-
     # Print the evaluated_parameters dict to output_file
     if output_file:
         print_evaluated_parameters(evaluated_parameters, output_file)

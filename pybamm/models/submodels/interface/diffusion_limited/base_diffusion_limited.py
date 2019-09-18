@@ -27,7 +27,7 @@ class BaseModel(BaseInterface):
     def get_coupled_variables(self, variables):
         # Calculate delta_phi_s from phi_s and phi_e if it isn't already known
         if self.domain + " electrode surface potential difference" not in variables:
-            variables = self._get_delta_phi_s(variables)
+            variables = self._get_delta_phi(variables)
         delta_phi_s = variables[self.domain + " electrode surface potential difference"]
         # If delta_phi_s was broadcast, take only the orphan
         if isinstance(delta_phi_s, pybamm.Broadcast):
@@ -76,3 +76,9 @@ class BaseModel(BaseInterface):
 
     def _get_diffusion_limited_current_density(self, variables):
         raise NotImplementedError
+
+    def _get_dj_dc(self, variables):
+        return pybamm.Scalar(0)
+
+    def _get_dj_ddeltaphi(self, variables):
+        return pybamm.Scalar(0)

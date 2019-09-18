@@ -17,25 +17,31 @@ class LeadingOrder(BaseModel):
     reactions : dict
         Dictionary of reaction terms
 
-    **Extends:** :class:`pybamm.oxygen.stefan_maxwell.diffusion.BaseModel`
+    **Extends:** :class:`pybamm.oxgen_diffusion.BaseModel`
     """
 
     def __init__(self, param, reactions):
         super().__init__(param, reactions)
 
     def get_fundamental_variables(self):
-        c_ox_av = pybamm.Variable("Average oxygen concentration")
-        c_ox_n = pybamm.Broadcast(c_ox_av, ["negative electrode"])
-        c_ox_s = pybamm.Broadcast(c_ox_av, ["separator"])
-        c_ox_p = pybamm.Broadcast(c_ox_av, ["positive electrode"])
+        c_ox_av = pybamm.Variable("X-averaged oxygen concentration")
+        c_ox_n = pybamm.FullBroadcast(
+            c_ox_av, ["negative electrode"], "current collector"
+        )
+        c_ox_s = pybamm.FullBroadcast(c_ox_av, ["separator"], "current collector")
+        c_ox_p = pybamm.FullBroadcast(
+            c_ox_av, ["positive electrode"], "current collector"
+        )
         c_ox = pybamm.Concatenation(c_ox_n, c_ox_s, c_ox_p)
 
         return self._get_standard_concentration_variables(c_ox)
 
     def get_coupled_variables(self, variables):
 
-        N_ox = pybamm.Broadcast(
-            0, ["negative electrode", "separator", "positive electrode"]
+        N_ox = pybamm.FullBroadcast(
+            0,
+            ["negative electrode", "separator", "positive electrode"],
+            "current collector",
         )
 
         variables.update(self._get_standard_flux_variables(N_ox))
@@ -46,22 +52,22 @@ class LeadingOrder(BaseModel):
 
         param = self.param
 
-        c_ox_av = variables["Average oxygen concentration"]
+        c_ox_av = variables["X-averaged oxygen concentration"]
 
-        eps_n_av = variables["Average negative electrode porosity"]
-        eps_s_av = variables["Average separator porosity"]
-        eps_p_av = variables["Average positive electrode porosity"]
+        eps_n_av = variables["X-averaged negative electrode porosity"]
+        eps_s_av = variables["X-averaged separator porosity"]
+        eps_p_av = variables["X-averaged positive electrode porosity"]
 
-        deps_n_dt_av = variables["Average negative electrode porosity change"]
-        deps_p_dt_av = variables["Average positive electrode porosity change"]
+        deps_n_dt_av = variables["X-averaged negative electrode porosity change"]
+        deps_p_dt_av = variables["X-averaged positive electrode porosity change"]
 
         source_terms = sum(
             param.l_n
             * rxn["Negative"]["s_ox"]
-            * variables[rxn["Negative"]["aj"]].orphans[0]
+            * variables["X-averaged " + rxn["Negative"]["aj"].lower()]
             + param.l_p
             * rxn["Positive"]["s_ox"]
-            * variables[rxn["Positive"]["aj"]].orphans[0]
+            * variables["X-averaged " + rxn["Positive"]["aj"].lower()]
             for rxn in self.reactions.values()
         )
 
@@ -75,5 +81,5 @@ class LeadingOrder(BaseModel):
         }
 
     def set_initial_conditions(self, variables):
-        c_ox = variables["Average oxygen concentration"]
+        c_ox = variables["X-averaged oxygen concentration"]
         self.initial_conditions = {c_ox: self.param.c_ox_init}

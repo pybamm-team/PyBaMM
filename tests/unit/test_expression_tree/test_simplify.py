@@ -1,5 +1,5 @@
 #
-# Test for the Symbol class
+# Test for the Simplify class
 #
 import math
 import numpy as np
@@ -76,7 +76,9 @@ class TestSimplify(unittest.TestCase):
 
         # BoundaryValue
         v_neg = pybamm.Variable("v", domain=["negative electrode"])
-        self.assertIsInstance((pybamm.surf(v_neg)).simplify(), pybamm.BoundaryValue)
+        self.assertIsInstance(
+            (pybamm.boundary_value(v_neg, "right")).simplify(), pybamm.BoundaryValue
+        )
 
         # addition
         self.assertIsInstance((a + b).simplify(), pybamm.Scalar)
@@ -224,11 +226,6 @@ class TestSimplify(unittest.TestCase):
         self.assertTrue(np.isnan((a / a).simplify().evaluate()))
         self.assertIsInstance((b / b).simplify(), pybamm.Scalar)
         self.assertEqual((b / b).simplify().evaluate(), 1)
-
-        # Spatial variable
-        x = pybamm.SpatialVariable("x", ["negative electrode"])
-        self.assertIsInstance(x.simplify(), pybamm.SpatialVariable)
-        self.assertEqual(x.simplify().id, x.id)
 
         # not implemented for Symbol
         sym = pybamm.Symbol("sym")
@@ -544,8 +541,9 @@ class TestSimplify(unittest.TestCase):
 
         y = mesh.combine_submeshes(*conc.domain)[0].nodes ** 2
         self.assertIsInstance(conc_simp, pybamm.StateVector)
-        self.assertEqual(conc_simp.y_slice.start, 0)
-        self.assertEqual(conc_simp.y_slice.stop, len(y))
+        self.assertEqual(len(conc_simp.y_slices), 1)
+        self.assertEqual(conc_simp.y_slices[0].start, 0)
+        self.assertEqual(conc_simp.y_slices[0].stop, len(y))
         np.testing.assert_array_equal(conc_disc.evaluate(y=y), conc_simp.evaluate(y=y))
 
     def test_simplify_outer(self):

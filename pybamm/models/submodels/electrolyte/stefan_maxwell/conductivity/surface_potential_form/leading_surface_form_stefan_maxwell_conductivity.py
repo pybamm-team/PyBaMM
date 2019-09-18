@@ -15,7 +15,10 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
     ----------
     param : parameter class
         The parameters to use for this submodel
-
+    domain : str
+        The domain in which the model holds
+    reactions : dict
+        Dictionary of reaction terms
 
     **Extends:** :class:`pybamm.electrolyte.stefan_maxwell.conductivity.surface_potential_form.BaseModel`
     """  # noqa: E501
@@ -41,12 +44,14 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
             return
 
         delta_phi = variables[
-            "Average " + self.domain.lower() + " electrode surface potential difference"
+            "X-averaged "
+            + self.domain.lower()
+            + " electrode surface potential difference"
         ]
         if self.domain == "Negative":
-            delta_phi_init = self.param.U_n(self.param.c_n_init)
+            delta_phi_init = self.param.U_n(self.param.c_n_init, self.param.T_ref)
         elif self.domain == "Positive":
-            delta_phi_init = self.param.U_p(self.param.c_p_init)
+            delta_phi_init = self.param.U_p(self.param.c_p_init, self.param.T_ref)
 
         self.initial_conditions = {delta_phi: delta_phi_init}
 
@@ -55,7 +60,7 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
         # potential difference and current
         if self.domain == "Negative":
             delta_phi_n_av = variables[
-                "Average negative electrode surface potential difference"
+                "X-averaged negative electrode surface potential difference"
             ]
             phi_e_av = -delta_phi_n_av
             return self._get_coupled_variables_from_potential(variables, phi_e_av)
@@ -99,17 +104,19 @@ class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):
         param = self.param
 
         sum_j = sum(
-            variables[reaction[self.domain]["aj"]].orphans[0]
+            variables["X-averaged " + reaction[self.domain]["aj"].lower()]
             for reaction in self.reactions.values()
         )
 
         sum_j_av = variables[
-            "Average "
+            "X-averaged "
             + self.domain.lower()
             + " electrode total interfacial current density"
         ]
         delta_phi = variables[
-            "Average " + self.domain.lower() + " electrode surface potential difference"
+            "X-averaged "
+            + self.domain.lower()
+            + " electrode surface potential difference"
         ]
 
         if self.domain == "Negative":
@@ -142,17 +149,19 @@ class LeadingOrderAlgebraic(BaseLeadingOrderSurfaceForm):
             return
 
         sum_j = sum(
-            variables[reaction[self.domain]["aj"]].orphans[0]
+            variables["X-averaged " + reaction[self.domain]["aj"].lower()]
             for reaction in self.reactions.values()
         )
 
         sum_j_av = variables[
-            "Average "
+            "X-averaged "
             + self.domain.lower()
             + " electrode total interfacial current density"
         ]
         delta_phi = variables[
-            "Average " + self.domain.lower() + " electrode surface potential difference"
+            "X-averaged "
+            + self.domain.lower()
+            + " electrode surface potential difference"
         ]
 
         self.algebraic[delta_phi] = sum_j_av - sum_j

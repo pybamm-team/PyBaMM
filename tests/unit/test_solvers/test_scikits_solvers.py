@@ -70,6 +70,8 @@ class TestScikitsSolvers(unittest.TestCase):
         self.assertLess(len(solution.t), len(t_eval))
         np.testing.assert_array_less(0, solution.y[0])
         np.testing.assert_array_less(solution.t, 0.5)
+        np.testing.assert_allclose(solution.t_event, 0.5)
+        np.testing.assert_allclose(solution.y_event, 0)
         self.assertEqual(solution.termination, "event")
 
         # Expnonential growth
@@ -93,6 +95,8 @@ class TestScikitsSolvers(unittest.TestCase):
         np.testing.assert_allclose(np.exp(solution.t), solution.y[0], rtol=1e-4)
         np.testing.assert_array_less(solution.y, 9)
         np.testing.assert_array_less(solution.y ** 2, 7)
+        np.testing.assert_allclose(solution.t_event, np.log(7) / 2, rtol=1e-4)
+        np.testing.assert_allclose(solution.y_event ** 2, 7, rtol=1e-4)
         self.assertEqual(solution.termination, "event")
 
     def test_ode_integrate_with_jacobian(self):
@@ -295,6 +299,9 @@ class TestScikitsSolvers(unittest.TestCase):
         np.testing.assert_allclose(1.0 * solution.t, solution.y[1])
         np.testing.assert_array_less(solution.y[0], 2)
         np.testing.assert_array_less(solution.y[1], 5)
+        np.testing.assert_allclose(solution.t_event, 4)
+        np.testing.assert_allclose(solution.y_event[0], 2)
+        np.testing.assert_allclose(solution.y_event[1], 4)
         self.assertEqual(solution.termination, "event")
 
         # Exponential decay
@@ -320,6 +327,9 @@ class TestScikitsSolvers(unittest.TestCase):
         np.testing.assert_allclose(solution.y[1], 2 * np.exp(-0.1 * solution.t))
         np.testing.assert_array_less(0.9, solution.y[0])
         np.testing.assert_array_less(solution.t, 0.5)
+        np.testing.assert_allclose(solution.t_event, 0.5)
+        np.testing.assert_allclose(solution.y_event[0], np.exp(-0.1 * 0.5))
+        np.testing.assert_allclose(solution.y_event[1], 2 * np.exp(-0.1 * 0.5))
         self.assertEqual(solution.termination, "event")
 
     def test_dae_integrate_with_jacobian(self):
@@ -603,6 +613,72 @@ class TestScikitsSolvers(unittest.TestCase):
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
+
+    def test_model_step_ode(self):
+        # Create model
+        model = pybamm.BaseModel()
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var = pybamm.Variable("var", domain=whole_cell)
+        model.rhs = {var: 0.1 * var}
+        model.initial_conditions = {var: 1}
+        disc = get_discretisation_for_testing()
+        disc.process_model(model)
+
+        solver = pybamm.ScikitsOdeSolver(tol=1e-9)
+
+        # Step once
+        dt = 0.1
+        step_sol = solver.step(model, dt)
+        np.testing.assert_array_equal(step_sol.t, [0, dt])
+        np.testing.assert_allclose(step_sol.y[0], np.exp(0.1 * step_sol.t))
+
+        # Step again (return 5 points)
+        step_sol_2 = solver.step(model, dt, npts=5)
+        np.testing.assert_array_equal(step_sol_2.t, np.linspace(dt, 2 * dt, 5))
+        np.testing.assert_allclose(step_sol_2.y[0], np.exp(0.1 * step_sol_2.t))
+
+        # Check steps give same solution as solve
+        t_eval = np.concatenate((step_sol.t, step_sol_2.t[1:]))
+        solution = solver.solve(model, t_eval)
+        concatenated_steps = np.concatenate((step_sol.y[0], step_sol_2.y[0, 1:]))
+        np.testing.assert_allclose(solution.y[0], concatenated_steps)
+
+    def test_model_step_dae(self):
+        # Create model
+        model = pybamm.BaseModel()
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var1 = pybamm.Variable("var1", domain=whole_cell)
+        var2 = pybamm.Variable("var2", domain=whole_cell)
+        model.rhs = {var1: 0.1 * var1}
+        model.algebraic = {var2: 2 * var1 - var2}
+        model.initial_conditions = {var1: 1, var2: 2}
+        model.use_jacobian = False
+        disc = get_discretisation_for_testing()
+        disc.process_model(model)
+
+        solver = pybamm.ScikitsDaeSolver(tol=1e-8)
+
+        # Step once
+        dt = 0.1
+        step_sol = solver.step(model, dt)
+        np.testing.assert_array_equal(step_sol.t, [0, dt])
+        np.testing.assert_allclose(step_sol.y[0], np.exp(0.1 * step_sol.t))
+        np.testing.assert_allclose(step_sol.y[-1], 2 * np.exp(0.1 * step_sol.t))
+
+        # Step again (return 5 points)
+        step_sol_2 = solver.step(model, dt, npts=5)
+        np.testing.assert_array_equal(step_sol_2.t, np.linspace(dt, 2 * dt, 5))
+        np.testing.assert_allclose(step_sol_2.y[0], np.exp(0.1 * step_sol_2.t))
+        np.testing.assert_allclose(step_sol_2.y[-1], 2 * np.exp(0.1 * step_sol_2.t))
+
+        # append solutions
+        step_sol.append(step_sol_2)
+
+        # Check steps give same solution as solve
+        t_eval = step_sol.t
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_allclose(solution.y[0], step_sol.y[0, :])
+        np.testing.assert_allclose(solution.y[-1], step_sol.y[-1, :])
 
 
 if __name__ == "__main__":

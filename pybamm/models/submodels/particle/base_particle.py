@@ -25,7 +25,7 @@ class BaseParticle(pybamm.BaseSubModel):
 
         c_s_surf = pybamm.surf(c_s, set_domain=True)
 
-        c_s_surf_av = pybamm.average(c_s_surf)
+        c_s_surf_av = pybamm.x_average(c_s_surf)
 
         if self.domain == "Negative":
             c_scale = self.param.c_n_max
@@ -35,17 +35,17 @@ class BaseParticle(pybamm.BaseSubModel):
         variables = {
             self.domain + " particle concentration": c_s,
             self.domain + " particle concentration [mol.m-3]": c_s * c_scale,
-            "X-average " + self.domain.lower() + " particle concentration": c_s_xav,
-            "X-average "
+            "X-averaged " + self.domain.lower() + " particle concentration": c_s_xav,
+            "X-averaged "
             + self.domain.lower()
             + " particle concentration [mol.m-3]": c_s_xav * c_scale,
             self.domain + " particle surface concentration": c_s_surf,
             self.domain
             + " particle surface concentration [mol.m-3]": c_scale * c_s_surf,
-            "Average "
+            "X-averaged "
             + self.domain.lower()
             + " particle surface concentration": c_s_surf_av,
-            "Average "
+            "X-averaged "
             + self.domain.lower()
             + " particle surface concentration [mol.m-3]": c_scale * c_s_surf_av,
         }
@@ -55,12 +55,12 @@ class BaseParticle(pybamm.BaseSubModel):
     def _get_standard_flux_variables(self, N_s, N_s_xav):
         variables = {
             self.domain + " particle flux": N_s,
-            "X-average " + self.domain.lower() + " particle flux": N_s_xav,
+            "X-averaged " + self.domain.lower() + " particle flux": N_s_xav,
         }
 
         return variables
 
-    def _flux_law(self, c):
+    def _flux_law(self, c, T):
         raise NotImplementedError
 
     def _unpack(self, variables):

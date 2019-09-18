@@ -9,10 +9,15 @@ import unittest
 
 class TestUniformModel(unittest.TestCase):
     def test_public_functions(self):
-        param = pybamm.standard_parameters_lead_acid
+        param = pybamm.standard_parameters_lithium_ion
 
         submodel = pybamm.current_collector.Uniform(param)
-        std_tests = tests.StandardSubModelTests(submodel)
+        variables = {
+            "Positive current collector potential": pybamm.PrimaryBroadcast(
+                0, "current collector"
+            )
+        }
+        std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
 

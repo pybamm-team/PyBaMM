@@ -24,18 +24,14 @@ class TestLeadingOrder(unittest.TestCase):
         }
         a = pybamm.Scalar(0)
         variables = {
-            "Average negative electrode porosity": a,
-            "Average separator porosity": a,
-            "Average positive electrode porosity": a,
-            "Average negative electrode porosity change": a,
-            "Average separator porosity change": a,
-            "Average positive electrode porosity change": a,
-            "Negative electrode interfacial current density": pybamm.Broadcast(
-                a, "negative electrode"
-            ),
-            "Positive electrode interfacial current density": pybamm.Broadcast(
-                a, "positive electrode"
-            ),
+            "X-averaged negative electrode porosity": a,
+            "X-averaged separator porosity": a,
+            "X-averaged positive electrode porosity": a,
+            "X-averaged negative electrode porosity change": a,
+            "X-averaged separator porosity change": a,
+            "X-averaged positive electrode porosity change": a,
+            "X-averaged negative electrode interfacial current density": a,
+            "X-averaged positive electrode interfacial current density": a,
         }
         submodel = pybamm.oxygen_diffusion.LeadingOrder(param, reactions)
         std_tests = tests.StandardSubModelTests(submodel, variables)
@@ -48,4 +44,5 @@ if __name__ == "__main__":
 
     if "-v" in sys.argv:
         debug = True
+    pybamm.settings.debug_mode = True
     unittest.main()

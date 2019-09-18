@@ -17,12 +17,12 @@ def simplify_if_constant(symbol):
         result = symbol.evaluate_ignoring_errors()
         if result is not None:
             if isinstance(result, numbers.Number):
-                return pybamm.Scalar(result, domain=symbol.domain)
+                return pybamm.Scalar(result)
             elif isinstance(result, np.ndarray) or issparse(result):
                 if result.ndim == 1 or result.shape[1] == 1:
-                    return pybamm.Vector(result, domain=symbol.domain)
+                    return pybamm.Vector(result)
                 else:
-                    return pybamm.Matrix(result, domain=symbol.domain)
+                    return pybamm.Matrix(result)
 
     return symbol
 
@@ -567,15 +567,19 @@ class Simplification(object):
         :class:`pybamm.Symbol`
         Simplified symbol
         """
+
         try:
             return self._simplified_symbols[symbol.id]
         except KeyError:
             simplified_symbol = self._simplify(symbol)
             self._simplified_symbols[symbol.id] = simplified_symbol
+
             return simplified_symbol
 
     def _simplify(self, symbol):
         """ See :meth:`Simplification.simplify()`. """
+        symbol.domain = []
+        symbol.auxiliary_domains = {}
 
         if isinstance(symbol, pybamm.BinaryOperator):
             left, right = symbol.children
@@ -584,33 +588,29 @@ class Simplification(object):
             new_right = self.simplify(right)
             # _binary_simplify defined in derived classes for specific rules
             new_symbol = symbol._binary_simplify(new_left, new_right)
-            new_symbol.domain = symbol.domain
-            return simplify_if_constant(new_symbol)
 
         elif isinstance(symbol, pybamm.UnaryOperator):
             new_child = self.simplify(symbol.child)
             new_symbol = symbol._unary_simplify(new_child)
-            new_symbol.domain = symbol.domain
-            return simplify_if_constant(new_symbol)
 
         elif isinstance(symbol, pybamm.Function):
             simplified_children = [None] * len(symbol.children)
             for i, child in enumerate(symbol.children):
                 simplified_children[i] = self.simplify(child)
             new_symbol = symbol._function_simplify(simplified_children)
-            new_symbol.domain = symbol.domain
-            return simplify_if_constant(new_symbol)
 
         elif isinstance(symbol, pybamm.Concatenation):
             new_children = [self.simplify(child) for child in symbol.children]
             new_symbol = symbol._concatenation_simplify(new_children)
-            return simplify_if_constant(new_symbol)
 
         else:
             # Backup option: return new copy of the object
             try:
-                return symbol.new_copy()
+                new_symbol = symbol.new_copy()
+                return new_symbol
             except NotImplementedError:
                 raise NotImplementedError(
                     "Cannot simplify symbol of type '{}'".format(type(symbol))
                 )
+
+        return simplify_if_constant(new_symbol)

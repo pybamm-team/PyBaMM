@@ -11,7 +11,7 @@ class TestLeadAcidNewmanTiedemann(unittest.TestCase):
         model.check_well_posedness()
 
     def test_well_posed_with_convection(self):
-        options = {"thermal": None, "convection": True}
+        options = {"thermal": "isothermal", "convection": True}
         model = pybamm.lead_acid.NewmanTiedemann(options)
         model.check_well_posedness()
 
@@ -24,6 +24,11 @@ class TestLeadAcidNewmanTiedemann(unittest.TestCase):
 class TestLeadAcidNewmanTiedemannSurfaceForm(unittest.TestCase):
     def test_well_posed_differential(self):
         options = {"surface form": "differential"}
+        model = pybamm.lead_acid.NewmanTiedemann(options)
+        model.check_well_posedness()
+
+    def test_well_posed_differential_1plus1d(self):
+        options = {"surface form": "differential", "dimensionality": 1}
         model = pybamm.lead_acid.NewmanTiedemann(options)
         model.check_well_posedness()
 

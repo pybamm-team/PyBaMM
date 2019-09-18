@@ -23,8 +23,14 @@ class UnaryOperator(pybamm.Symbol):
 
     """
 
-    def __init__(self, name, child):
-        super().__init__(name, children=[child], domain=child.domain)
+    def __init__(self, name, child, domain=None, auxiliary_domains=None):
+        if domain is None:
+            domain = child.domain
+        if auxiliary_domains is None:
+            auxiliary_domains = child.auxiliary_domains
+        super().__init__(
+            name, children=[child], domain=domain, auxiliary_domains=auxiliary_domains
+        )
         self.child = self.children[0]
 
     def __str__(self):
@@ -70,6 +76,10 @@ class UnaryOperator(pybamm.Symbol):
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
         """
         return self.children[0].evaluate_for_shape()
+
+    def evaluates_on_edges(self):
+        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+        return self.child.evaluates_on_edges()
 
 
 class Negate(UnaryOperator):
@@ -181,10 +191,7 @@ class Index(UnaryOperator):
         # tree for StateVectors and return a matrix of zeros of the correct size
         # if none are found.
         if all([not (isinstance(n, pybamm.StateVector)) for n in self.pre_order()]):
-            variable_y_indices = np.arange(
-                variable.y_slice.start, variable.y_slice.stop
-            )
-            jac = csr_matrix((1, np.size(variable_y_indices)))
+            jac = csr_matrix((1, variable.evaluation_array.count(True)))
             return pybamm.Matrix(jac)
         else:
             child_jac = self.child.jac(variable)
@@ -213,7 +220,11 @@ class Index(UnaryOperator):
         return self.__class__(child, self.index)
 
     def evaluate_for_shape(self):
-        return self.children[0].evaluate_for_shape()[self.slice]
+        return self._unary_evaluate(self.children[0].evaluate_for_shape())
+
+    def evaluates_on_edges(self):
+        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+        return False
 
 
 class SpatialOperator(UnaryOperator):
@@ -237,8 +248,8 @@ class SpatialOperator(UnaryOperator):
 
     """
 
-    def __init__(self, name, child):
-        super().__init__(name, child)
+    def __init__(self, name, child, domain=None, auxiliary_domains=None):
+        super().__init__(name, child, domain, auxiliary_domains)
 
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
@@ -272,6 +283,10 @@ class Gradient(SpatialOperator):
     def __init__(self, child):
         super().__init__("grad", child)
 
+    def evaluates_on_edges(self):
+        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+        return True
+
 
 class Divergence(SpatialOperator):
     """A node in the expression tree representing a div operator
@@ -281,6 +296,10 @@ class Divergence(SpatialOperator):
 
     def __init__(self, child):
         super().__init__("div", child)
+
+    def evaluates_on_edges(self):
+        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+        return False
 
 
 class Laplacian(SpatialOperator):
@@ -293,16 +312,50 @@ class Laplacian(SpatialOperator):
     def __init__(self, child):
         super().__init__("laplacian", child)
 
+    def evaluates_on_edges(self):
+        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+        return False
 
-class Mass(SpatialOperator):
-    """Returns the mass matrix for a given symbol, accounting for boundary conditions
-    where necessary (e.g. in the finite element formualtion)
+
+class Gradient_Squared(SpatialOperator):
+    """A node in the expression tree representing a the inner product of the grad
+    operator with itself. In particular, this is useful in the finite element
+    formualtion where we only require the (sclar valued) square of the gradient,
+    and  not the gradient itself.
 
     **Extends:** :class:`SpatialOperator`
     """
 
     def __init__(self, child):
+        super().__init__("grad squared", child)
+
+    def evaluates_on_edges(self):
+        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+        return True
+
+
+class Mass(SpatialOperator):
+    """Returns the mass matrix for a given symbol, accounting for Dirchlet boundary
+    conditions where necessary (e.g. in the finite element formualtion)
+    **Extends:** :class:`SpatialOperator`
+    """
+
+    def __init__(self, child):
         super().__init__("mass", child)
+
+    def evaluate_for_shape(self):
+        return pybamm.evaluate_for_shape_using_domain(self.domain, typ="matrix")
+
+
+class BoundaryMass(SpatialOperator):
+    """Returns the mass matrix for a given symbol assembled over the boundary of
+    the domain, accounting for Dirchlet boundary conditions where necessary
+    (e.g. in the finite element formualtion)
+    **Extends:** :class:`SpatialOperator`
+    """
+
+    def __init__(self, child):
+        super().__init__("boundary mass", child)
 
     def evaluate_for_shape(self):
         return pybamm.evaluate_for_shape_using_domain(self.domain, typ="matrix")
@@ -332,6 +385,17 @@ class Integral(SpatialOperator):
         if not isinstance(integration_variable, list):
             integration_variable = [integration_variable]
 
+        # integral of a child takes the domain from auxiliary domain of the child
+        if child.auxiliary_domains != {}:
+            domain = child.auxiliary_domains["secondary"]
+            try:
+                auxiliary_domains = {"secondary": child.auxiliary_domains["tertiary"]}
+            except KeyError:
+                auxiliary_domains = {}
+        # if child has no auxiliary domain, integral removes domain
+        else:
+            domain = []
+            auxiliary_domains = {}
         name = "integral"
         for var in integration_variable:
             if isinstance(var, pybamm.SpatialVariable):
@@ -353,9 +417,9 @@ class Integral(SpatialOperator):
             name += " {}".format(child.domain)
 
         self._integration_variable = integration_variable
-        super().__init__(name, child)
-        # integrating removes the domain
-        self.domain = []
+        super().__init__(
+            name, child, domain=domain, auxiliary_domains=auxiliary_domains
+        )
 
     @property
     def integration_variable(self):
@@ -391,6 +455,10 @@ class Integral(SpatialOperator):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
         return pybamm.evaluate_for_shape_using_domain(self.domain)
 
+    def evaluates_on_edges(self):
+        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+        return False
+
 
 class IndefiniteIntegral(Integral):
     """A node in the expression tree representing an indefinite integral operator
@@ -420,17 +488,135 @@ class IndefiniteIntegral(Integral):
             else:
                 integration_variable = integration_variable[0]
         super().__init__(child, integration_variable)
+        # overwrite domains with child domains
+        self.auxiliary_domains = child.auxiliary_domains
+        self.domain = child.domain
         # Overwrite the name
         self.name = "{} integrated w.r.t {}".format(
             child.name, integration_variable.name
         )
         if isinstance(integration_variable, pybamm.SpatialVariable):
             self.name += " on {}".format(integration_variable.domain)
-        # the integrated variable has the same domain as the child
-        self.domain = child.domain
 
     def evaluate_for_shape(self):
         return self.children[0].evaluate_for_shape()
+
+
+class DefiniteIntegralVector(SpatialOperator):
+    """A node in the expression tree representing an integral of the basis used
+    for discretisation
+
+    .. math::
+        I = \\int_{a}^{b}\\!\\psi(x)\\,dx,
+
+    where :math:`a` and :math:`b` are the left-hand and right-hand boundaries of
+    the domain respectively and :math:`\\psi` is the basis function.
+
+    Parameters
+    ----------
+    variable : :class:`pybamm.Symbol`
+        The variable whose basis will be integrated over the entire domain
+    vector_type : str, optional
+        Whether to return a row or column vector (default is row)
+
+    **Extends:** :class:`SpatialOperator`
+    """
+
+    def __init__(self, child, vector_type="row"):
+        name = "basis integral"
+        self.vector_type = vector_type
+        super().__init__(name, child)
+        # integrating removes the domain
+        self.domain = []
+
+    def set_id(self):
+        """ See :meth:`pybamm.Symbol.set_id()` """
+        self._id = hash(
+            (self.__class__, self.name, self.vector_type)
+            + (self.children[0].id,)
+            + tuple(self.domain)
+        )
+
+    def _unary_simplify(self, simplified_child):
+        """ See :meth:`UnaryOperator._unary_simplify()`. """
+
+        return self.__class__(simplified_child, vector_type=self.vector_type)
+
+    def _unary_new_copy(self, child):
+        """ See :meth:`UnaryOperator._unary_new_copy()`. """
+
+        return self.__class__(child, vector_type=self.vector_type)
+
+    def evaluate_for_shape(self):
+        """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
+        return pybamm.evaluate_for_shape_using_domain(self.domain)
+
+
+class BoundaryIntegral(SpatialOperator):
+    """A node in the expression tree representing an integral operator over the
+    boundary of a domain
+
+    .. math::
+        I = \\int_{\\partial a}\\!f(u)\\,du,
+
+    where :math:`\\partial a` is the boundary of the domain, and
+    :math:`u\\in\\text{domain boundary}`.
+
+    Parameters
+    ----------
+    function : :class:`pybamm.Symbol`
+        The function to be integrated (will become self.children[0])
+    region : str, optional
+        The region of the boundary over which to integrate. If region is `entire`
+        (default) the integration is carried out over the entire boundary. If
+        region is `negative tab` or `positive tab` then the integration is only
+        carried out over the appropriate part of the boundary corresponding to
+        the tab.
+    **Extends:** :class:`SpatialOperator`
+    """
+
+    def __init__(self, child, region="entire"):
+        # boundary integral removes domain
+        domain = []
+        auxiliary_domains = {}
+
+        name = "boundary integral over "
+        if region == "entire":
+            name += "entire boundary"
+        elif region == "negative tab":
+            name += "negative tab"
+        elif region == "positive tab":
+            name += "positive tab"
+        self.region = region
+        super().__init__(
+            name, child, domain=domain, auxiliary_domains=auxiliary_domains
+        )
+
+    def set_id(self):
+        """ See :meth:`pybamm.Symbol.set_id()` """
+        self._id = hash(
+            (self.__class__, self.name)
+            + (self.children[0].id,)
+            + tuple(self.domain)
+        )
+
+    def _unary_simplify(self, simplified_child):
+        """ See :meth:`UnaryOperator._unary_simplify()`. """
+
+        return self.__class__(simplified_child, region=self.region)
+
+    def _unary_new_copy(self, child):
+        """ See :meth:`UnaryOperator._unary_new_copy()`. """
+
+        return self.__class__(child, region=self.region)
+
+    def evaluate_for_shape(self):
+        """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
+        return pybamm.evaluate_for_shape_using_domain(self.domain)
+
+    def evaluates_on_edges(self):
+        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+        return False
 
 
 class BoundaryOperator(SpatialOperator):
@@ -450,10 +636,20 @@ class BoundaryOperator(SpatialOperator):
 
     def __init__(self, name, child, side):
         self.side = side
-        # Domain of Boundary must be ([]) so that expressions can be formed
-        # of boundary values of variables in different domains
-        super().__init__(name, child)
-        self.domain = []
+        # integral of a child takes the domain from auxiliary domain of the child
+        if child.auxiliary_domains != {}:
+            domain = child.auxiliary_domains["secondary"]
+        # if child has no auxiliary domain, integral removes domain
+        else:
+            domain = []
+        # tertiary auxiliary domain shift down to secondary
+        try:
+            auxiliary_domains = {"secondary": child.auxiliary_domains["tertiary"]}
+        except KeyError:
+            auxiliary_domains = {}
+        super().__init__(
+            name, child, domain=domain, auxiliary_domains=auxiliary_domains
+        )
 
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()` """
@@ -472,7 +668,9 @@ class BoundaryOperator(SpatialOperator):
 
     def evaluate_for_shape(self):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
-        return pybamm.evaluate_for_shape_using_domain(self.domain)
+        return pybamm.evaluate_for_shape_using_domain(
+            self.domain, self.auxiliary_domains
+        )
 
 
 class BoundaryValue(BoundaryOperator):
@@ -492,7 +690,7 @@ class BoundaryValue(BoundaryOperator):
         super().__init__("boundary value", child, side)
 
 
-class BoundaryFlux(BoundaryOperator):
+class BoundaryGradient(BoundaryOperator):
     """A node in the expression tree which gets the boundary flux of a variable.
 
     Parameters
@@ -510,7 +708,7 @@ class BoundaryFlux(BoundaryOperator):
 
 
 #
-# Methods to call Gradient and Divergence
+# Methods to call Gradient, Divergence, Laplacian and Gradient_Squared
 #
 
 
@@ -571,54 +769,62 @@ def laplacian(expression):
     return Laplacian(expression)
 
 
+def grad_squared(expression):
+    """convenience function for creating a :class:`Gradient_Squared`
+
+    Parameters
+    ----------
+
+    expression : :class:`Symbol`
+        the inner product of the gradient with itself will be performed on this
+        sub-expression
+
+    Returns
+    -------
+
+    :class:`Gradient_Squared`
+        inner product of the gradient of ``expression`` with itself
+    """
+
+    return Gradient_Squared(expression)
+
 #
 # Method to call SurfaceValue
 #
 
 
-def surf(variable, set_domain=False):
+def surf(symbol, set_domain=False):
     """convenience function for creating a right :class:`BoundaryValue`, usually in the
     spherical geometry
 
     Parameters
     ----------
 
-    variable : :class:`Symbol`
-        the surface value of this variable will be returned
+    symbol : :class:`pybamm.Symbol`
+        the surface value of this symbol will be returned
 
     Returns
     -------
-
-    :class:`GetSurfaceValue`
-        the surface value of ``variable``
+    :class:`pybamm.BoundaryValue`
+        the surface value of ``symbol``
     """
-    if variable.domain == ["negative electrode"] and isinstance(
-        variable, pybamm.Broadcast
+    if symbol.domain in [["negative electrode"], ["positive electrode"]] and isinstance(
+        symbol, pybamm.PrimaryBroadcast
     ):
-        child_surf = boundary_value(variable.orphans[0], "right")
-        out = pybamm.Broadcast(
-            child_surf, ["negative electrode"], broadcast_type="primary"
-        )
-    elif variable.domain == ["positive electrode"] and isinstance(
-        variable, pybamm.Broadcast
-    ):
-        child_surf = boundary_value(variable.orphans[0], "right")
-        out = pybamm.Broadcast(
-            child_surf, ["positive electrode"], broadcast_type="primary"
-        )
+        child_surf = boundary_value(symbol.orphans[0], "right")
+        out = pybamm.PrimaryBroadcast(child_surf, symbol.domain)
     else:
-        out = boundary_value(variable, "right")
+        out = boundary_value(symbol, "right")
         if set_domain:
-            if variable.domain == ["negative particle"]:
+            if symbol.domain == ["negative particle"]:
                 out.domain = ["negative electrode"]
-            elif variable.domain == ["positive particle"]:
+            elif symbol.domain == ["positive particle"]:
                 out.domain = ["positive electrode"]
-
     return out
 
 
-def average(symbol):
-    """convenience function for creating an average
+def x_average(symbol):
+    """convenience function for creating an average in the x-direction
 
     Parameters
     ----------
@@ -678,8 +884,82 @@ def average(symbol):
         return Integral(symbol, x) / l
 
 
+def z_average(symbol):
+    """convenience function for creating an average in the z-direction
+
+    Parameters
+    ----------
+    symbol : :class:`pybamm.Symbol`
+        The function to be averaged
+
+    Returns
+    -------
+    :class:`Symbol`
+        the new averaged symbol
+    """
+    # Symbol must have domain [] or ["current collector"]
+    if symbol.domain not in [[], ["current collector"]]:
+        raise pybamm.DomainError(
+            """z-average only implemented in the 'current collector' domain,
+            but symbol has domains {}""".format(
+                symbol.domain
+            )
+        )
+    # If symbol doesn't have a domain, its average value is itself
+    if symbol.domain == []:
+        new_symbol = symbol.new_copy()
+        new_symbol.parent = None
+        return new_symbol
+    # If symbol is a Broadcast, its average value is its child
+    elif isinstance(symbol, pybamm.Broadcast):
+        return symbol.orphans[0]
+    # Otherwise, use Integral to calculate average value
+    else:
+        z = pybamm.standard_spatial_vars.z
+        l_z = pybamm.geometric_parameters.l_z
+        return Integral(symbol, z) / l_z
+
+
+def yz_average(symbol):
+    """convenience function for creating an average in the y-z-direction
+
+    Parameters
+    ----------
+    symbol : :class:`pybamm.Symbol`
+        The function to be averaged
+
+    Returns
+    -------
+    :class:`Symbol`
+        the new averaged symbol
+    """
+    # Symbol must have domain [] or ["current collector"]
+    if symbol.domain not in [[], ["current collector"]]:
+        raise pybamm.DomainError(
+            """y-z-average only implemented in the 'current collector' domain,
+            but symbol has domains {}""".format(
+                symbol.domain
+            )
+        )
+    # If symbol doesn't have a domain, its average value is itself
+    if symbol.domain == []:
+        new_symbol = symbol.new_copy()
+        new_symbol.parent = None
+        return new_symbol
+    # If symbol is a Broadcast, its average value is its child
+    elif isinstance(symbol, pybamm.Broadcast):
+        return symbol.orphans[0]
+    # Otherwise, use Integral to calculate average value
+    else:
+        y = pybamm.standard_spatial_vars.y
+        z = pybamm.standard_spatial_vars.z
+        l_y = pybamm.geometric_parameters.l_y
+        l_z = pybamm.geometric_parameters.l_z
+        return Integral(symbol, [y, z]) / (l_y * l_z)
+
+
 def boundary_value(symbol, side):
-    """convenience function for creating a :class:`Integral`
+    """convenience function for creating a :class:`pybamm.BoundaryValue`
 
     Parameters
     ----------

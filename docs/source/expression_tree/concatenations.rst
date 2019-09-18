@@ -9,3 +9,6 @@ Concatenations
 
 .. autoclass:: pybamm.DomainConcatenation
   :members:
+
+.. autoclass:: pybamm.SparseStack
+  :members:

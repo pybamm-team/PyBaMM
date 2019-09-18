@@ -88,13 +88,26 @@ class Scikit2DSubMesh:
         self.basis = skfem.InteriorBasis(self.fem_mesh, self.element)
         self.facet_basis = skfem.FacetBasis(self.fem_mesh, self.element)
 
-        # get degrees of freedom which correspond to tabs
-        self.negative_tab = self.basis.get_dofs(
+        # get degrees of freedom and facets which correspond to tabs, and
+        # create facet basis for sub regions
+        self.negative_tab_dofs = self.basis.get_dofs(
             lambda x: self.on_boundary(x[0], x[1], tabs["negative"])
         ).all()
-        self.positive_tab = self.basis.get_dofs(
+        self.positive_tab_dofs = self.basis.get_dofs(
             lambda x: self.on_boundary(x[0], x[1], tabs["positive"])
         ).all()
+        self.negative_tab_facets = self.fem_mesh.facets_satisfying(
+            lambda x: self.on_boundary(x[0], x[1], tabs["negative"])
+        )
+        self.positive_tab_facets = self.fem_mesh.facets_satisfying(
+            lambda x: self.on_boundary(x[0], x[1], tabs["positive"])
+        )
+        self.negative_tab_basis = skfem.FacetBasis(
+            self.fem_mesh, self.element, facets=self.negative_tab_facets
+        )
+        self.positive_tab_basis = skfem.FacetBasis(
+            self.fem_mesh, self.element, facets=self.positive_tab_facets
+        )
 
     def on_boundary(self, y, z, tab):
         """
@@ -105,10 +118,10 @@ class Scikit2DSubMesh:
         l_y = self.edges["y"][-1]
         l_z = self.edges["z"][-1]
 
-        def near(x, point, tol=1e-6):
+        def near(x, point, tol=3e-16):
             return abs(x - point) < tol
 
-        def between(x, interval, tol=1e-6):
+        def between(x, interval, tol=3e-16):
             return x > interval[0] - tol and x < interval[1] + tol
 
         # Tab on top

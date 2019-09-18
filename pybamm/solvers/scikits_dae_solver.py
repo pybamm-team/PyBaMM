@@ -31,7 +31,7 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
         The tolerance for the initial-condition solver (default is 1e-8).
     max_steps: int, optional
         The maximum number of steps the solver will take before terminating
-        (defualt is 1000).
+        (default is 1000).
     """
 
     def __init__(
@@ -116,7 +116,11 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
             elif sol.flag == 2:
                 termination = "event"
             return pybamm.Solution(
-                sol.values.t, np.transpose(sol.values.y), termination
+                sol.values.t,
+                np.transpose(sol.values.y),
+                sol.roots.t,
+                np.transpose(sol.roots.y),
+                termination
             )
         else:
             raise pybamm.SolverError(sol.message)

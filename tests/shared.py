@@ -43,7 +43,7 @@ def get_mesh_for_testing(
 ):
     param = pybamm.ParameterValues(
         base_parameters={
-            "Electrode depth [m]": 0.4,
+            "Electrode width [m]": 0.4,
             "Electrode height [m]": 0.5,
             "Negative tab width [m]": 0.1,
             "Negative tab centre y-coordinate [m]": 0.1,
@@ -51,9 +51,9 @@ def get_mesh_for_testing(
             "Positive tab width [m]": 0.1,
             "Positive tab centre y-coordinate [m]": 0.3,
             "Positive tab centre z-coordinate [m]": 0.5,
-            "Negative electrode width [m]": 0.3,
-            "Separator width [m]": 0.3,
-            "Positive electrode width [m]": 0.3,
+            "Negative electrode thickness [m]": 0.3,
+            "Separator thickness [m]": 0.3,
+            "Positive electrode thickness [m]": 0.3,
         }
     )
 
@@ -67,7 +67,7 @@ def get_mesh_for_testing(
         "positive electrode": pybamm.Uniform1DSubMesh,
         "negative particle": pybamm.Uniform1DSubMesh,
         "positive particle": pybamm.Uniform1DSubMesh,
-        "current collector": pybamm.Uniform1DSubMesh,
+        "current collector": pybamm.SubMesh0D,
     }
     if cc_submesh:
         submesh_types["current collector"] = cc_submesh
@@ -95,9 +95,11 @@ def get_p2d_mesh_for_testing(xpts=None, rpts=10):
     return get_mesh_for_testing(xpts=xpts, rpts=rpts, geometry=geometry)
 
 
-def get_1p1d_mesh_for_testing(xpts=None, zpts=15):
+def get_1p1d_mesh_for_testing(xpts=None, zpts=15, cc_submesh=pybamm.Uniform1DSubMesh):
     geometry = pybamm.Geometry("1+1D macro")
-    return get_mesh_for_testing(xpts=xpts, zpts=zpts, geometry=geometry)
+    return get_mesh_for_testing(
+        xpts=xpts, zpts=zpts, geometry=geometry, cc_submesh=cc_submesh
+    )
 
 
 def get_2p1d_mesh_for_testing(
@@ -112,7 +114,7 @@ def get_2p1d_mesh_for_testing(
 def get_unit_2p1D_mesh_for_testing(ypts=15, zpts=15):
     param = pybamm.ParameterValues(
         base_parameters={
-            "Electrode depth [m]": 1,
+            "Electrode width [m]": 1,
             "Electrode height [m]": 1,
             "Negative tab width [m]": 1,
             "Negative tab centre y-coordinate [m]": 0.5,
@@ -120,9 +122,9 @@ def get_unit_2p1D_mesh_for_testing(ypts=15, zpts=15):
             "Positive tab width [m]": 1,
             "Positive tab centre y-coordinate [m]": 0.5,
             "Positive tab centre z-coordinate [m]": 1,
-            "Negative electrode width [m]": 0.3,
-            "Separator width [m]": 0.3,
-            "Positive electrode width [m]": 0.3,
+            "Negative electrode thickness [m]": 0.3,
+            "Separator thickness [m]": 0.3,
+            "Positive electrode thickness [m]": 0.3,
         }
     )
 

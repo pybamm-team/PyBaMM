@@ -66,6 +66,8 @@ class TestScipySolver(unittest.TestCase):
         solution = solver.integrate(constant_growth, y0, t_eval, events=[y_eq_2])
         self.assertLess(len(solution.t), len(t_eval))
         np.testing.assert_allclose(0.5 * solution.t, solution.y[0])
+        np.testing.assert_allclose(solution.t_event, 4)
+        np.testing.assert_allclose(solution.y_event, 2)
         self.assertEqual(solution.termination, "event")
 
         # Exponential decay
@@ -89,6 +91,9 @@ class TestScipySolver(unittest.TestCase):
         np.testing.assert_allclose(solution.y[1], 2 * np.exp(solution.t), rtol=1e-6)
         np.testing.assert_array_less(solution.t, 6)
         np.testing.assert_array_less(solution.y, 5)
+        np.testing.assert_allclose(solution.t_event, np.log(5 / 2), rtol=1e-6)
+        np.testing.assert_allclose(solution.y_event[0], 5 / 2, rtol=1e-6)
+        np.testing.assert_allclose(solution.y_event[1], 5, rtol=1e-6)
 
     def test_ode_integrate_with_jacobian(self):
         # Linear
@@ -228,6 +233,42 @@ class TestScipySolver(unittest.TestCase):
             model.variables["var2"].evaluate(T, Y),
             np.ones((N, T.size)) * (T[np.newaxis, :] - np.exp(T[np.newaxis, :])),
         )
+
+    def test_model_step(self):
+        # Create model
+        model = pybamm.BaseModel()
+        domain = ["negative electrode", "separator", "positive electrode"]
+        var = pybamm.Variable("var", domain=domain)
+        model.rhs = {var: 0.1 * var}
+        model.initial_conditions = {var: 1}
+        # No need to set parameters; can use base discretisation (no spatial operators)
+
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
+
+        solver = pybamm.ScipySolver(tol=1e-8, method="RK45")
+
+        # Step once
+        dt = 0.1
+        step_sol = solver.step(model, dt)
+        np.testing.assert_array_equal(step_sol.t, [0, dt])
+        np.testing.assert_allclose(step_sol.y[0], np.exp(0.1 * step_sol.t))
+
+        # Step again (return 5 points)
+        step_sol_2 = solver.step(model, dt, npts=5)
+        np.testing.assert_array_equal(step_sol_2.t, np.linspace(dt, 2 * dt, 5))
+        np.testing.assert_allclose(step_sol_2.y[0], np.exp(0.1 * step_sol_2.t))
+
+        # append solutions
+        step_sol.append(step_sol_2)
+
+        # Check steps give same solution as solve
+        t_eval = step_sol.t
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_allclose(solution.y[0], step_sol.y[0])
 
 
 if __name__ == "__main__":

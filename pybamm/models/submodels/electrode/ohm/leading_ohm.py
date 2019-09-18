@@ -29,6 +29,7 @@ class LeadingOrder(BaseModel):
         Returns variables which are derived from the fundamental variables in the model.
         """
         i_boundary_cc = variables["Current collector current density"]
+        phi_s_cn = variables["Negative current collector potential"]
 
         # import parameters and spatial variables
         l_n = self.param.l_n
@@ -37,26 +38,26 @@ class LeadingOrder(BaseModel):
         x_p = pybamm.standard_spatial_vars.x_p
 
         if self.domain == "Negative":
-            phi_s = pybamm.Broadcast(0, ["negative electrode"])
+            phi_s = pybamm.PrimaryBroadcast(phi_s_cn, "negative electrode")
             i_s = pybamm.outer(i_boundary_cc, 1 - x_n / l_n)
 
         elif self.domain == "Positive":
-            ocp_p_av = variables["Average positive electrode open circuit potential"]
-            eta_r_p_av = variables["Average positive electrode reaction overpotential"]
-            phi_e_p_av = variables["Average positive electrolyte potential"]
+            # recall delta_phi = phi_s - phi_e
+            delta_phi_p_av = variables[
+                "X-averaged positive electrode surface potential difference"
+            ]
+            phi_e_p_av = variables["X-averaged positive electrolyte potential"]
 
-            v = ocp_p_av + eta_r_p_av + phi_e_p_av
+            v = delta_phi_p_av + phi_e_p_av
 
-            phi_s = pybamm.Broadcast(
-                v, ["positive electrode"], broadcast_type="primary"
-            )
+            phi_s = pybamm.PrimaryBroadcast(v, ["positive electrode"])
             i_s = pybamm.outer(i_boundary_cc, 1 - (1 - x_p) / l_p)
 
         variables.update(self._get_standard_potential_variables(phi_s))
         variables.update(self._get_standard_current_variables(i_s))
 
         if self.domain == "Positive":
-            variables.update(self._get_standard_whole_cell_current_variables(variables))
+            variables.update(self._get_standard_whole_cell_variables(variables))
 
         return variables
 

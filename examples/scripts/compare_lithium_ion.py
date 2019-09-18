@@ -1,9 +1,22 @@
-import pybamm
+#
+# Compare lithium-ion battery models
+#
+import argparse
 import numpy as np
+import pybamm
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--debug", action="store_true", help="Set logging level to 'DEBUG'."
+)
+args = parser.parse_args()
+if args.debug:
+    pybamm.set_logging_level("DEBUG")
+else:
+    pybamm.set_logging_level("INFO")
 
 # load models
-options = {"thermal": None}
-pybamm.set_logging_level("INFO")
+options = {"thermal": "isothermal"}
 models = [
     pybamm.lithium_ion.SPM(options),
     pybamm.lithium_ion.SPMe(options),

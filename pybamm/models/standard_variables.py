@@ -4,36 +4,76 @@
 import pybamm
 
 # Electrolyte concentration
-c_e_n = pybamm.Variable("Negative electrolyte concentration", ["negative electrode"])
-c_e_s = pybamm.Variable("Separator electrolyte concentration", ["separator"])
-c_e_p = pybamm.Variable("Positive electrolyte concentration", ["positive electrode"])
+c_e_n = pybamm.Variable(
+    "Negative electrolyte concentration",
+    domain="negative electrode",
+    auxiliary_domains={"secondary": "current collector"},
+)
+c_e_s = pybamm.Variable(
+    "Separator electrolyte concentration",
+    domain="separator",
+    auxiliary_domains={"secondary": "current collector"},
+)
+c_e_p = pybamm.Variable(
+    "Positive electrolyte concentration",
+    domain="positive electrode",
+    auxiliary_domains={"secondary": "current collector"},
+)
 c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
 
-c_e_av = pybamm.Variable("Average electrolyte concentration")
+c_e_av = pybamm.Variable(
+    "X-averaged electrolyte concentration", domain="current collector"
+)
 
 # Electrolyte potential
-phi_e_n = pybamm.Variable("Negative electrolyte potential", ["negative electrode"])
-phi_e_s = pybamm.Variable("Separator electrolyte potential", ["separator"])
-phi_e_p = pybamm.Variable("Positive electrolyte potential", ["positive electrode"])
+phi_e_n = pybamm.Variable(
+    "Negative electrolyte potential",
+    domain="negative electrode",
+    auxiliary_domains={"secondary": "current collector"},
+)
+phi_e_s = pybamm.Variable(
+    "Separator electrolyte potential",
+    domain="separator",
+    auxiliary_domains={"secondary": "current collector"},
+)
+phi_e_p = pybamm.Variable(
+    "Positive electrolyte potential",
+    domain="positive electrode",
+    auxiliary_domains={"secondary": "current collector"},
+)
 phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
 
 # Electrode potential
-phi_s_n = pybamm.Variable("Negative electrode potential", ["negative electrode"])
-phi_s_p = pybamm.Variable("Positive electrode potential", ["positive electrode"])
+phi_s_n = pybamm.Variable(
+    "Negative electrode potential",
+    domain="negative electrode",
+    auxiliary_domains={"secondary": "current collector"},
+)
+phi_s_p = pybamm.Variable(
+    "Positive electrode potential",
+    domain="positive electrode",
+    auxiliary_domains={"secondary": "current collector"},
+)
 
 # Potential difference
 delta_phi_n = pybamm.Variable(
-    "Negative electrode surface potential difference", ["negative electrode"]
+    "Negative electrode surface potential difference",
+    domain="negative electrode",
+    auxiliary_domains={"secondary": "current collector"},
 )
 delta_phi_p = pybamm.Variable(
-    "Positive electrode surface potential difference", ["positive electrode"]
+    "Positive electrode surface potential difference",
+    domain="positive electrode",
+    auxiliary_domains={"secondary": "current collector"},
 )
 
 delta_phi_n_av = pybamm.Variable(
-    "Average negative electrode surface potential difference"
+    "X-averaged negative electrode surface potential difference",
+    domain="current collector",
 )
 delta_phi_p_av = pybamm.Variable(
-    "Average positive electrode surface potential difference"
+    "X-averaged positive electrode surface potential difference",
+    domain="current collector",
 )
 
 # current collector variables
@@ -46,44 +86,137 @@ phi_s_cp = pybamm.Variable(
 i_boundary_cc = pybamm.Variable(
     "Current collector current density", domain="current collector"
 )
+phi_s_cn_composite = pybamm.Variable(
+    "Composite negative current collector potential", domain="current collector"
+)
+phi_s_cp_composite = pybamm.Variable(
+    "Composite positive current collector potential", domain="current collector"
+)
+i_boundary_cc_composite = pybamm.Variable(
+    "Composite current collector current density", domain="current collector"
+)
 
 
 # Particle concentration
-c_s_n = pybamm.Variable("Negative particle concentration", ["negative particle"])
-c_s_p = pybamm.Variable("Positive particle concentration", ["positive particle"])
+c_s_n = pybamm.Variable(
+    "Negative particle concentration",
+    "negative particle",
+    auxiliary_domains={
+        "secondary": "negative electrode",
+        "tertiary": "current collector",
+    },
+)
+c_s_p = pybamm.Variable(
+    "Positive particle concentration",
+    "positive particle",
+    auxiliary_domains={
+        "secondary": "positive electrode",
+        "tertiary": "current collector",
+    },
+)
 c_s_n_xav = pybamm.Variable(
-    "X-average negative particle concentration", ["negative particle"]
+    "X-averaged negative particle concentration",
+    "negative particle",
+    auxiliary_domains={"secondary": "current collector"},
 )
 c_s_p_xav = pybamm.Variable(
-    "X-average positive particle concentration", ["positive particle"]
+    "X-averaged positive particle concentration",
+    "positive particle",
+    auxiliary_domains={"secondary": "current collector"},
+)
+c_s_n_surf = pybamm.Variable(
+    "Negative particle surface concentration",
+    "negative electrode",
+    auxiliary_domains={"secondary": "current collector"},
+)
+c_s_p_surf = pybamm.Variable(
+    "Positive particle surface concentration",
+    "positive electrode",
+    auxiliary_domains={"secondary": "current collector"},
+)
+c_s_n_surf_xav = pybamm.Variable(
+    "X-averaged negative particle surface concentration",
+    "current collector",
+)
+c_s_p_surf_xav = pybamm.Variable(
+    "X-averaged positive particle surface concentration",
+    "current collector",
 )
 
+
 # Porosity
-eps_n = pybamm.Variable("Negative electrode porosity", domain=["negative electrode"])
-eps_s = pybamm.Variable("Separator porosity", domain=["separator"])
-eps_p = pybamm.Variable("Positive electrode porosity", domain=["positive electrode"])
+eps_n = pybamm.Variable(
+    "Negative electrode porosity",
+    domain="negative electrode",
+    auxiliary_domains={"secondary": "current collector"},
+)
+eps_s = pybamm.Variable(
+    "Separator porosity",
+    domain="separator",
+    auxiliary_domains={"secondary": "current collector"},
+)
+eps_p = pybamm.Variable(
+    "Positive electrode porosity",
+    domain="positive electrode",
+    auxiliary_domains={"secondary": "current collector"},
+)
 eps = pybamm.Concatenation(eps_n, eps_s, eps_p)
 
 # Piecewise constant (for asymptotic models)
-eps_n_pc = pybamm.Variable("Negative electrode porosity")
-eps_s_pc = pybamm.Variable("Separator porosity")
-eps_p_pc = pybamm.Variable("Positive electrode porosity")
+eps_n_pc = pybamm.Variable(
+    "X-averaged negative electrode porosity", domain="current collector"
+)
+eps_s_pc = pybamm.Variable("X-averaged separator porosity", domain="current collector")
+eps_p_pc = pybamm.Variable(
+    "X-averaged positive electrode porosity", domain="current collector"
+)
 
 eps_piecewise_constant = pybamm.Concatenation(
-    pybamm.Broadcast(eps_n_pc, ["negative electrode"]),
-    pybamm.Broadcast(eps_s_pc, ["separator"]),
-    pybamm.Broadcast(eps_p_pc, ["positive electrode"]),
+    pybamm.PrimaryBroadcast(eps_n_pc, "negative electrode"),
+    pybamm.PrimaryBroadcast(eps_s_pc, "separator"),
+    pybamm.PrimaryBroadcast(eps_p_pc, "positive electrode"),
 )
 
 # Electrolyte pressure
-pressure_n = pybamm.Variable("Negative electrolyte pressure", ["negative electrode"])
-pressure_s = pybamm.Variable("Separator electrolyte pressure", ["separator"])
-pressure_p = pybamm.Variable("Positive electrolyte pressure", ["positive electrode"])
+pressure_n = pybamm.Variable(
+    "Negative electrolyte pressure",
+    domain="negative electrode",
+    auxiliary_domains={"secondary": "current collector"},
+)
+pressure_s = pybamm.Variable(
+    "Separator electrolyte pressure",
+    domain="separator",
+    auxiliary_domains={"secondary": "current collector"},
+)
+pressure_p = pybamm.Variable(
+    "Positive electrolyte pressure",
+    domain="positive electrode",
+    auxiliary_domains={"secondary": "current collector"},
+)
 pressure = pybamm.Concatenation(pressure_n, pressure_s, pressure_p)
 
 # Temperature
-T_n = pybamm.Variable("Negative electrode temperature", ["negative electrode"])
-T_s = pybamm.Variable("Separator temperature", ["separator"])
-T_p = pybamm.Variable("Positive electrode temperature", ["positive electrode"])
+T_cn = pybamm.Variable(
+    "Negative currents collector temperature", domain="current collector"
+)
+T_n = pybamm.Variable(
+    "Negative electrode temperature",
+    domain="negative electrode",
+    auxiliary_domains={"secondary": "current collector"},
+)
+T_s = pybamm.Variable(
+    "Separator temperature",
+    domain="separator",
+    auxiliary_domains={"secondary": "current collector"},
+)
+T_p = pybamm.Variable(
+    "Positive electrode temperature",
+    domain="positive electrode",
+    auxiliary_domains={"secondary": "current collector"},
+)
+T_cp = pybamm.Variable(
+    "Positive currents collector temperature", domain="current collector"
+)
 T = pybamm.Concatenation(T_n, T_s, T_p)
-T_av = pybamm.Variable("Average cell temperature")
+T_av = pybamm.Variable("X-averaged cell temperature", domain="current collector")
+T_vol_av = pybamm.Variable("Volume-averaged cell temperature")
