@@ -31,7 +31,9 @@ class BaseParticle(pybamm.BaseSubModel):
             c_scale = self.param.c_n_max
         elif self.domain == "Positive":
             c_scale = self.param.c_p_max
-
+        rad = pybamm.SpatialVariable("r", [self.domain.lower() + " particle"])
+#        c_s_r_av = pybamm.r_average(pybamm.x_average(c_s))
+        c_s_r_av = pybamm.r_average(c_s_xav)
         variables = {
             self.domain + " particle concentration": c_s,
             self.domain + " particle concentration [mol.m-3]": c_s * c_scale,
@@ -39,6 +41,10 @@ class BaseParticle(pybamm.BaseSubModel):
             "X-averaged "
             + self.domain.lower()
             + " particle concentration [mol.m-3]": c_s_xav * c_scale,
+            "RX-averaged " + self.domain.lower() + " particle concentration": c_s_r_av,
+            "RX-averaged "
+            + self.domain.lower()
+            + " particle concentration [mol.m-3]": c_s_r_av * c_scale,
             self.domain + " particle surface concentration": c_s_surf,
             self.domain
             + " particle surface concentration [mol.m-3]": c_scale * c_s_surf,

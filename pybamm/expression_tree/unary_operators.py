@@ -999,8 +999,9 @@ def r_average(symbol):
     :class:`Symbol`
         the new averaged symbol
     """
+    ok_domains = [['positive particle'], ['negative particle'], []]
     # Symbol must have domain [] or ["current collector"]
-    if "particle" not in symbol.domain and symbol.domain is not []:
+    if symbol.domain not in ok_domains:
         raise pybamm.DomainError(
             """r-average only implemented in the 'particle' domain,
             but symbol has domains {}""".format(
@@ -1008,14 +1009,14 @@ def r_average(symbol):
             )
         )
     # If symbol doesn't have a domain, its average value is itself
-    elif symbol.domain is []:
+    elif symbol.domain == []:
         new_symbol = symbol.new_copy()
         new_symbol.parent = None
         return new_symbol
+    # If symbol is a Broadcast, its average value is its child
+    elif isinstance(symbol, pybamm.Broadcast):
+        return symbol.orphans[0]
     else:
-        r = pybamm.SpatialVariable("r", [symbol.domain])
-        if symbol.domain == ["negative particle"]:
-            l_r = pybamm.geometric_parameters.R_n
-        elif symbol.domain == ["positive particle"]:
-            l_r = pybamm.geometric_parameters.R_p
-        return Integral(symbol, r) / l_r
+        r = pybamm.SpatialVariable("r", symbol.domain)
+        v = pybamm.Broadcast(pybamm.Scalar(1), symbol.domain)
+        return Integral(symbol, r) / Integral(v, r)
