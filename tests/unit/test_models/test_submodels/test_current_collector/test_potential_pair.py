@@ -22,6 +22,9 @@ class TestBaseModel(unittest.TestCase):
         submodel = pybamm.current_collector.PotentialPair2plus1D(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
+        submodel = pybamm.current_collector.PotentialPairUnrolled(param)
+        std_tests = tests.StandardSubModelTests(submodel, variables)
+        std_tests.test_all()
 
 
 if __name__ == "__main__":
