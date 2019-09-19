@@ -134,9 +134,10 @@ class BinaryOperator(pybamm.Symbol):
         new_left = self.left.new_copy()
         new_right = self.right.new_copy()
 
-        # make new symbol, ensure domain remains the same
+        # make new symbol, ensure domain(s) remain the same
         out = self.__class__(new_left, new_right)
         out.domain = self.domain
+        out.auxiliary_domains = self.auxiliary_domains
 
         return out
 
