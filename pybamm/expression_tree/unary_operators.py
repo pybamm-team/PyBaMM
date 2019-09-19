@@ -517,7 +517,7 @@ class DefiniteIntegralVector(SpatialOperator):
     variable : :class:`pybamm.Symbol`
         The variable whose basis will be integrated over the entire domain
     vector_type : str, optional
-        Whether to return a row or column vector (defualt is row)
+        Whether to return a row or column vector (default is row)
 
     **Extends:** :class:`SpatialOperator`
     """

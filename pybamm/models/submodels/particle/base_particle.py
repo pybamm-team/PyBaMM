@@ -35,8 +35,8 @@ class BaseParticle(pybamm.BaseSubModel):
         variables = {
             self.domain + " particle concentration": c_s,
             self.domain + " particle concentration [mol.m-3]": c_s * c_scale,
-            "X-average " + self.domain.lower() + " particle concentration": c_s_xav,
-            "X-average "
+            "X-averaged " + self.domain.lower() + " particle concentration": c_s_xav,
+            "X-averaged "
             + self.domain.lower()
             + " particle concentration [mol.m-3]": c_s_xav * c_scale,
             self.domain + " particle surface concentration": c_s_surf,
@@ -55,12 +55,12 @@ class BaseParticle(pybamm.BaseSubModel):
     def _get_standard_flux_variables(self, N_s, N_s_xav):
         variables = {
             self.domain + " particle flux": N_s,
-            "X-average " + self.domain.lower() + " particle flux": N_s_xav,
+            "X-averaged " + self.domain.lower() + " particle flux": N_s_xav,
         }
 
         return variables
 
-    def _flux_law(self, c):
+    def _flux_law(self, c, T):
         raise NotImplementedError
 
     def _unpack(self, variables):

@@ -205,7 +205,7 @@ class EffectiveResistance2D(pybamm.BaseModel):
 
     @property
     def default_parameter_values(self):
-        # Defualt li-ion parameter values
+        # default li-ion parameter values
         input_path = os.path.join(
             pybamm.root_dir(), "input", "parameters", "lithium-ion"
         )

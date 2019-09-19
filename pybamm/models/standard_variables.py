@@ -115,15 +115,34 @@ c_s_p = pybamm.Variable(
     },
 )
 c_s_n_xav = pybamm.Variable(
-    "X-average negative particle concentration",
+    "X-averaged negative particle concentration",
     "negative particle",
     auxiliary_domains={"secondary": "current collector"},
 )
 c_s_p_xav = pybamm.Variable(
-    "X-average positive particle concentration",
+    "X-averaged positive particle concentration",
     "positive particle",
     auxiliary_domains={"secondary": "current collector"},
 )
+c_s_n_surf = pybamm.Variable(
+    "Negative particle surface concentration",
+    "negative electrode",
+    auxiliary_domains={"secondary": "current collector"},
+)
+c_s_p_surf = pybamm.Variable(
+    "Positive particle surface concentration",
+    "positive electrode",
+    auxiliary_domains={"secondary": "current collector"},
+)
+c_s_n_surf_xav = pybamm.Variable(
+    "X-averaged negative particle surface concentration",
+    "current collector",
+)
+c_s_p_surf_xav = pybamm.Variable(
+    "X-averaged positive particle surface concentration",
+    "current collector",
+)
+
 
 # Porosity
 eps_n = pybamm.Variable(

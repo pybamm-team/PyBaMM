@@ -10,9 +10,9 @@ class LOQS(BaseModel):
 
     References
     ----------
-    .. [1] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster Lead-Acid
-           Battery Simulations from Porous-Electrode Theory: II. Asymptotic Analysis.
-           arXiv preprint arXiv:1902.01774, 2019.
+    .. [1] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster lead-acid
+           battery simulations from porous-electrode theory: Part II. Asymptotic
+           analysis. Journal of The Electrochemical Society 166.12 (2019), A2372–A2382.
 
 
     **Extends:** :class:`pybamm.lead_acid.BaseModel`
