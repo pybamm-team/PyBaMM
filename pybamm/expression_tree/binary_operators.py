@@ -650,8 +650,6 @@ class Outer(BinaryOperator):
         """ See :meth:`pybamm.Symbol._jac()`. """
         # right cannot be a StateVector, so no need for product rule
         left, right = self.orphans
-        # make sure left child keeps same domain
-        # left.domain = self.left.domain
         if left.evaluates_to_number():
             # Return zeros of correct size
             return pybamm.Matrix(
