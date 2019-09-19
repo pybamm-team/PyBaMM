@@ -55,12 +55,10 @@ class BaseModel(object):
         Jacobian is computed automatically during the set up in solve
     use_jacobian : bool
         Whether to use the Jacobian when solving the model (default is True)
-    use_simplify_jacobian : bool
-        Whether to simplify the expression tree representing Jacobain (if using)
-        before solving the model (default is True)
     use_simplify : bool
-        Whether to simplify the expression trees representing the rhs and
-        algebraic equations and events, before solving the model (default is True)
+        Whether to simplify the expression tress representing the rhs and
+        algebraic equations, Jacobain (if using) and events, before solving the
+        model (default is True)
     use_to_python : bool
         Whether to convert the expression trees representing the rhs and
         algebraic equations, Jacobain (if using) and events into pure python code
@@ -87,7 +85,6 @@ class BaseModel(object):
 
         # Default behaviour is to use the jacobian and simplify
         self.use_jacobian = True
-        self.use_simplify_jacobian = True
         self.use_simplify = True
         self.use_to_python = True
 

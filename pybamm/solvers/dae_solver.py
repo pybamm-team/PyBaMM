@@ -127,7 +127,7 @@ class DaeSolver(pybamm.BaseSolver):
             jac = pybamm.SparseStack(jac_rhs, jac_algebraic)
             model.jacobian = jac
 
-            if model.use_simplify_jacobian:
+            if model.use_simplify:
                 pybamm.logger.info("Simplifying jacobian")
                 jac_algebraic = simp.simplify(jac_algebraic)
                 jac = simp.simplify(jac)

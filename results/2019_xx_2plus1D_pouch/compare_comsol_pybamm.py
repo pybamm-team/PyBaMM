@@ -35,7 +35,7 @@ options = {
     "thermal": "x-lumped",
 }
 pybamm_model = pybamm.lithium_ion.SPM(options)
-pybamm_model.use_simplify_jacobian = False
+pybamm_model.use_simplify = False
 geometry = pybamm_model.default_geometry
 
 # load parameters and process model and geometry
@@ -57,7 +57,7 @@ var_pts = {
     var.x_p: 5,
     var.r_n: 5,
     var.r_p: 5,
-    var.y: 5,
+    var.y: 7,
     var.z: 5,
 }
 mesh = pybamm.Mesh(geometry, pybamm_model.default_submesh_types, var_pts)
@@ -73,7 +73,7 @@ tau = param.process_symbol(
 
 # solve model to final comsol time
 t_end = comsol_variables["time"][-1] / tau
-time = np.linspace(0, t_end, 50)
+time = np.linspace(0, t_end, 60)
 solution = pybamm_model.default_solver.solve(pybamm_model, time)
 
 
@@ -145,12 +145,13 @@ comsol_model.variables = {
     "X-averaged cell temperature [K]": comsol_temperature,
 }
 
-# Process variables
+# Process pybamm variables
 output_variables = {}
 for var in comsol_model.variables.keys():
     output_variables[var] = pybamm.ProcessedVariable(
         pybamm_model.variables[var], solution.t, solution.y, mesh=mesh
     )
+
 
 # Plotting function
 def plot(var, t, cmap="viridis"):
@@ -164,7 +165,7 @@ def plot(var, t, cmap="viridis"):
     pybamm_plot = plt.pcolormesh(
         y_plot,
         z_plot,
-        np.transpose(output_variables[var](y=y_plot/L_y, z=z_plot/L_z, t=solution.t[ind])),
+        np.transpose(output_variables[var](y=pybamm_y, z=pybamm_z, t=solution.t[ind])),
         shading="gouraud",
     )
     plt.axis([0, y_plot[-1], 0, z_plot[-1]])
@@ -195,7 +196,7 @@ def plot(var, t, cmap="viridis"):
         y_plot,
         z_plot,
         np.abs(
-            np.transpose(output_variables[var](y=y_plot/L_y, z=z_plot/L_z, t=solution.t[ind]))
+            np.transpose(output_variables[var](y=pybamm_y, z=pybamm_z, t=solution.t[ind]))
             - comsol_model.variables[var](t=solution.t[ind])
         ),
         shading="gouraud",
@@ -208,7 +209,9 @@ def plot(var, t, cmap="viridis"):
     plt.colorbar(diff_plot)
 
 
-plot("Negative current collector potential [V]", comsol_t[-1] / 2, cmap="cividis")
-#plot("Positive current collector potential [V]", comsol_t[-1] / 2, cmap="cividis")
-#plot("X-averaged cell temperature [K]", comsol_t[-1] / 2, cmap="cividis")
+# Make plots
+t_plot = comsol_t[-2]
+plot("Negative current collector potential [V]", t_plot, cmap="cividis")
+plot("Positive current collector potential [V]", t_plot, cmap="viridis")
+plot("X-averaged cell temperature [K]", t_plot, cmap="inferno")
 plt.show()
