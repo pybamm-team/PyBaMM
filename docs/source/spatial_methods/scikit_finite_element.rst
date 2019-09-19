@@ -1,5 +1,5 @@
-Finite Volume
-=============
+Scikit Finite Elements
+======================
 
 .. autoclass:: pybamm.ScikitFiniteElement
     :members:

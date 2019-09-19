@@ -6,7 +6,14 @@ from .base_lithium_ion_model import BaseModel
 
 
 class SPMe(BaseModel):
-    """Single Particle Model with Electrolyte (SPMe) of a lithium-ion battery.
+    """Single Particle Model with Electrolyte (SPMe) of a lithium-ion battery, from
+    [1]_.
+
+    References
+    ----------
+    .. [1] SG Marquis, V Sulzer, R Timms, CP Please and SJ Chapman. “An asymptotic
+           derivation of a single particle model with electrolyte”. In: arXiv preprint
+           arXiv:1905.12553 (2019).
 
     **Extends:** :class:`pybamm.lithium_ion.BaseModel`
     """

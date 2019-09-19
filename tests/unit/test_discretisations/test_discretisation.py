@@ -821,6 +821,21 @@ class TestDiscretise(unittest.TestCase):
         }
         disc.process_model(model)
 
+    def test_check_tab_bcs_error(self):
+        a = pybamm.Variable("a", domain=["current collector"])
+        b = pybamm.Variable("b", domain=["negative electrode"])
+        bcs = {"negative tab": (0, "Dirichlet"), "positive tab": (0, "Neumann")}
+
+        disc = get_discretisation_for_testing()
+
+        # for 0D bcs keys should be unchanged
+        new_bcs = disc.check_tab_conditions(a, bcs)
+        self.assertListEqual(list(bcs.keys()), list(new_bcs.keys()))
+
+        # error if domain not "current collector"
+        with self.assertRaisesRegex(pybamm.ModelError, "Boundary conditions"):
+            disc.check_tab_conditions(b, bcs)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
