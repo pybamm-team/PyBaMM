@@ -9,7 +9,7 @@ pybamm.set_logging_level("INFO")
 # load (2+1D) SPM model
 options = {
     "current collector": "potential pair",
-    "dimensionality": 1,
+    "dimensionality": 2,
     "thermal": "x-lumped",
 }
 model = pybamm.lithium_ion.SPM(options)
