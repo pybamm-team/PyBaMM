@@ -5,15 +5,15 @@ import pybamm
 from .base_lead_acid_model import BaseModel
 
 
-class HigherOrderBaseModel(BaseModel):
+class BaseHigherOrderModel(BaseModel):
     """Base model for higher-order models for lead-acid, from [1]_.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
     References
     ----------
-    .. [1] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster Lead-Acid
-           Battery Simulations from Porous-Electrode Theory: II. Asymptotic Analysis.
-           arXiv preprint arXiv:1902.01774, 2019.
+    .. [1] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster lead-acid
+           battery simulations from porous-electrode theory: Part II. Asymptotic
+           analysis. Journal of The Electrochemical Society 166.12 (2019), A2372–A2382.
 
 
     **Extends:** :class:`pybamm.lead_acid.BaseModel`
@@ -168,18 +168,11 @@ class HigherOrderBaseModel(BaseModel):
             return pybamm.ScipySolver()
 
 
-class FOQS(HigherOrderBaseModel):
+class FOQS(BaseHigherOrderModel):
     """First-order quasi-static model for lead-acid, from [1]_.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
-    References
-    ----------
-    .. [1] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster Lead-Acid
-           Battery Simulations from Porous-Electrode Theory: II. Asymptotic Analysis.
-           arXiv preprint arXiv:1902.01774, 2019.
-
-
-    **Extends:** :class:`pybamm.lead_acid.HigherOrderBaseModel`
+    **Extends:** :class:`pybamm.lead_acid.BaseHigherOrderModel`
     """
 
     def __init__(self, options=None, name="FOQS model"):
@@ -207,18 +200,11 @@ class FOQS(HigherOrderBaseModel):
         pass
 
 
-class Composite(HigherOrderBaseModel):
+class Composite(BaseHigherOrderModel):
     """Composite model for lead-acid, from [1]_.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
-    References
-    ----------
-    .. [1] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster Lead-Acid
-           Battery Simulations from Porous-Electrode Theory: II. Asymptotic Analysis.
-           arXiv preprint arXiv:1902.01774, 2019.
-
-
-    **Extends:** :class:`pybamm.lead_acid.HigherOrderBaseModel`
+    **Extends:** :class:`pybamm.lead_acid.BaseHigherOrderModel`
     """
 
     def __init__(self, options=None, name="Composite model"):
@@ -245,11 +231,17 @@ class Composite(HigherOrderBaseModel):
         self.submodels["full porosity"] = pybamm.porosity.Full(self.param)
 
 
-class CompositeExtended(HigherOrderBaseModel):
-    """Extended composite model for lead-acid.
+class CompositeExtended(BaseHigherOrderModel):
+    """Extended composite model for lead-acid, from [2]_.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
-    **Extends:** :class:`pybamm.lead_acid.HigherOrderBaseModel`
+    References
+    ----------
+    .. [2] V Sulzer. Mathematical modelling of lead-acid batteries. PhD thesis,
+           University of Oxford, 2019.
+
+
+    **Extends:** :class:`pybamm.lead_acid.BaseHigherOrderModel`
     """
 
     def __init__(self, options=None, name="Extended composite model"):
