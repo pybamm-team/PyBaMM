@@ -12,9 +12,7 @@ class TestSetPotetetialSPM1plus1DModel(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.standard_parameters_lithium_ion
         submodel = cc.SetPotentialSingleParticle1plus1D(param)
-        val = pybamm.PrimaryBroadcast(
-                0.0, "current collector"
-            )
+        val = pybamm.PrimaryBroadcast(0.0, "current collector")
         variables = {
             "X-averaged positive electrode open circuit potential": val,
             "X-averaged negative electrode open circuit potential": val,
