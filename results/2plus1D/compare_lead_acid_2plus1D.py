@@ -55,6 +55,8 @@ times = [None] * len(models)
 voltages = [None] * len(models)
 t_eval = np.linspace(0, 1, 1000)
 for i, model in enumerate(models):
+    if "2+1D" in model.name:
+        model.use_simplify = False  # simplifying jacobian slow for large systems    
     solution = model.default_solver.solve(model, t_eval)
     solutions[i] = solution
     times[i] = pybamm.ProcessedVariable(

@@ -13,7 +13,7 @@ options = {
     "thermal": "x-lumped",
 }
 model = pybamm.lithium_ion.DFN(options)
-model.use_simplify_jacobian = False  # simplifying jac for large models is slow
+model.use_simplify = False  # simplifying jacobian slow for large systems
 
 # create geometry
 geometry = model.default_geometry
