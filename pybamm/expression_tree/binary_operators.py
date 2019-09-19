@@ -650,8 +650,14 @@ class Outer(BinaryOperator):
         # right cannot be a StateVector, so no need for product rule
         left, right = self.orphans
         # make sure left child keeps same domain
-        left.domain = self.left.domain
-        return pybamm.Kron(left.jac(variable), right)
+        # left.domain = self.left.domain
+        if left.evaluates_to_number():
+            # Return zeros of correct size
+            return pybamm.Matrix(
+                csr_matrix((self.size, variable.evaluation_array.count(True)))
+            )
+        else:
+            return pybamm.Kron(left.jac(variable), right)
 
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
