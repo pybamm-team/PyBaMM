@@ -53,7 +53,7 @@ solutions = {}
 for name, model in models.items():
     if name == "Current collector":
         solutions[name] = model.default_solver.solve(model)
-    else:        
+    else:
         solutions[name] = model.default_solver.solve(model, t_eval)
 
 # plot terminal voltage
