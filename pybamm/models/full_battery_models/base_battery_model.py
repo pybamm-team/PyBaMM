@@ -639,26 +639,15 @@ class BaseBatteryModel(pybamm.BaseModel):
         eta_r_av = eta_r_p_av - eta_r_n_av
         eta_r_av_dim = eta_r_p_av_dim - eta_r_n_av_dim
 
-        # terminal voltage
-        phi_s_cn = self.variables["Negative current collector potential"]
+        # terminal voltage (Note: phi_s_cn is zero at the negative tab)
         phi_s_cp = self.variables["Positive current collector potential"]
-        phi_s_cn_dim = self.variables["Negative current collector potential [V]"]
         phi_s_cp_dim = self.variables["Positive current collector potential [V]"]
         if self.options["dimensionality"] == 0:
             V = phi_s_cp
             V_dim = phi_s_cp_dim
-        elif self.options["dimensionality"] == 1:
-            # In 1D both tabs are at "right"
-            V = pybamm.BoundaryValue(phi_s_cp, "right")
-            V_dim = pybamm.BoundaryValue(phi_s_cp_dim, "right")
-        elif self.options["dimensionality"] == 2:
-            # In 2D left corresponds to the negative tab and right the positive tab
-            V = pybamm.BoundaryValue(phi_s_cp, "right") - pybamm.BoundaryValue(
-                phi_s_cn, "left"
-            )
-            V_dim = pybamm.BoundaryValue(phi_s_cp_dim, "right") - pybamm.BoundaryValue(
-                phi_s_cn_dim, "left"
-            )
+        elif self.options["dimensionality"] in [1, 2]:
+            V = pybamm.BoundaryValue(phi_s_cp, "positive tab")
+            V_dim = pybamm.BoundaryValue(phi_s_cp_dim, "positive tab")
 
         # TODO: add current collector losses to the voltage in 3D
 
