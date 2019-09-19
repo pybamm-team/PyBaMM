@@ -95,19 +95,6 @@ class DaeSolver(pybamm.BaseSolver):
             The model whose solution to calculate. Must have attributes rhs and
             initial_conditions
 
-        Returns
-        -------
-        concatenated_rhs : :class:`pybamm.Concatenation`
-            Right-hand side of differential equations
-        concatenated_algebraic : :class:`pybamm.Concatenation`
-            Algebraic equations, which should evaluate to zero
-        y0 : :class:`numpy.array`
-            Vector of initial conditions
-        events : dict
-            Dicitonary of events at which the model should terminate
-        jac : :class:`pybamm.SparseStack`
-            Jacobian matrix for the differential and algebraic equations
-
         Raises
         ------
         :class:`pybamm.SolverError`

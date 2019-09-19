@@ -35,7 +35,8 @@ class BaseSolver(object):
         self._tol = value
 
     def solve(self, model, t_eval):
-        """Calculate the solution of the model at specified times.
+        """Execute the solver setup and calculate the solution of the model at
+        specified times.
 
         Parameters
         ----------
@@ -46,8 +47,6 @@ class BaseSolver(object):
             The times at which to compute the solution
 
         """
-        if model is None:
-            raise NotImplementedError
         pybamm.logger.info("Start solving {}".format(model.name))
 
         # Set up
@@ -76,7 +75,7 @@ class BaseSolver(object):
 
     def step(self, model, dt, npts=2):
         """Step the solution of the model forward by a given time increment. The
-        first time this method is called it computes the necessary setup by
+        first time this method is called it executes the necessary setup by
         calling `self.set_up(model)`.
 
         Parameters
@@ -93,7 +92,6 @@ class BaseSolver(object):
         """
         # Set timer
         timer = pybamm.Timer()
-        set_up_time = None
 
         # Run set up on first step
         if not hasattr(self, 'y0'):
@@ -101,6 +99,8 @@ class BaseSolver(object):
             self.set_up(model)
             self.t = 0.0
             set_up_time = timer.time() - start_time
+        else:
+            set_up_time = None
 
         # Step
         pybamm.logger.info("Start stepping {}".format(model.name))
@@ -135,7 +135,8 @@ class BaseSolver(object):
         return solution
 
     def compute_solution(self, model, t_eval):
-        """Calculate the solution of the model at specified times.
+        """Calculate the solution of the model at specified times. Note: this
+        does *not* execute the solver setup.
 
         Parameters
         ----------
