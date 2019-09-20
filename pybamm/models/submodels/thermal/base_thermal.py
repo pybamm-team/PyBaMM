@@ -119,7 +119,6 @@ class BaseThermal(pybamm.BaseSubModel):
         )
 
         Q = Q_ohm + Q_rxn + Q_rev
-        Q_av = pybamm.x_average(Q)
 
         # Compute the x-average over the current collectors.
         Q_av = self._x_average(Q, Q_ohm_s_cn, Q_ohm_s_cp)

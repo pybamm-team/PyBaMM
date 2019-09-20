@@ -71,9 +71,8 @@ tau = param.process_symbol(
     pybamm.standard_parameters_lithium_ion.tau_discharge
 ).evaluate()
 
-# solve model to final comsol time
-t_end = comsol_variables["time"][-1] / tau
-time = np.linspace(0, t_end, 60)
+# solve model at comsol times
+time = comsol_variables["time"] / tau
 solution = pybamm_model.default_solver.solve(pybamm_model, time)
 
 
@@ -157,17 +156,15 @@ for var in comsol_model.variables.keys():
 def plot(var, t, cmap="viridis"):
     fig, ax = plt.subplots(figsize=(15, 8))
 
-    # find t index (note: t is dimensional)
-    ind = (np.abs(solution.t - t / tau)).argmin()
-
     # plot pybamm solution
-    plt.subplot(131)
-    pybamm_plot = plt.pcolormesh(
-        y_plot,
-        z_plot,
-        np.transpose(output_variables[var](y=pybamm_y, z=pybamm_z, t=solution.t[ind])),
-        shading="gouraud",
+    y_plot_non_dim = y_plot / L_y
+    z_plot_non_dim = z_plot / L_z
+    t_non_dim = t / tau
+    pybamm_var = np.transpose(
+        output_variables[var](y=y_plot_non_dim, z=z_plot_non_dim, t=t_non_dim)
     )
+    plt.subplot(131)
+    pybamm_plot = plt.pcolormesh(y_plot, z_plot, pybamm_var, shading="gouraud")
     plt.axis([0, y_plot[-1], 0, z_plot[-1]])
     plt.xlabel(r"$y$")
     plt.ylabel(r"$z$")
@@ -178,10 +175,7 @@ def plot(var, t, cmap="viridis"):
     # plot comsol solution
     plt.subplot(132)
     comsol_plot = plt.pcolormesh(
-        y_plot,
-        z_plot,
-        comsol_model.variables[var](t=solution.t[ind]),
-        shading="gouraud",
+        y_plot, z_plot, comsol_model.variables[var](t=t), shading="gouraud"
     )
     plt.axis([0, y_plot[-1], 0, z_plot[-1]])
     plt.xlabel(r"$y$")
@@ -195,10 +189,7 @@ def plot(var, t, cmap="viridis"):
     diff_plot = plt.pcolormesh(
         y_plot,
         z_plot,
-        np.abs(
-            np.transpose(output_variables[var](y=pybamm_y, z=pybamm_z, t=solution.t[ind]))
-            - comsol_model.variables[var](t=solution.t[ind])
-        ),
+        np.abs(pybamm_var - comsol_model.variables[var](t=t)),
         shading="gouraud",
     )
     plt.axis([0, y_plot[-1], 0, z_plot[-1]])
@@ -210,7 +201,12 @@ def plot(var, t, cmap="viridis"):
 
 
 # Make plots
-t_plot = comsol_t[-2]
+t_plot = comsol_t[-1] / 2
+plt.plot(comsol_t, comsol_model.variables["Terminal voltage [V]"](comsol_t), label="COMSOL")
+plt.plot(comsol_t, output_variables["Terminal voltage [V]"](t=(comsol_t / tau)), label="PyBaMM")
+plt.xlabel(r"$t$")
+plt.ylabel("Voltage [V]")
+plt.legend()
 plot("Negative current collector potential [V]", t_plot, cmap="cividis")
 plot("Positive current collector potential [V]", t_plot, cmap="viridis")
 plot("X-averaged cell temperature [K]", t_plot, cmap="inferno")

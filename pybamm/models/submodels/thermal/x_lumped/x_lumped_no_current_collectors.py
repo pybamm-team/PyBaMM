@@ -21,14 +21,25 @@ class NoCurrentCollector(BaseModel):
         super().__init__(param)
 
     def set_rhs(self, variables):
+        # Note: need to get the total heating and avergae over the negative
+        # electrode,separator and positive electrode. The variable ["X-averaged
+        # total heating"] is the avergae in x *including* the current collectors
+        # so results in an underprediction of heating when compared with the submodel
+        # "x_full_no_current_collector". For the same reason, we use
+        # `pybamm.x_average(T)` in the cooling term. The equation is still for the
+        # x-averaged temperature `T_av`, which gets broadcasted over the entire cell.
+        T = variables["Cell temperature"]
         T_av = variables["X-averaged cell temperature"]
-        Q_av = variables["X-averaged total heating"]
+        Q = variables["Total heating"]
+        Q_av = pybamm.x_average(Q)
 
         self.rhs = {
             T_av: (
-                self.param.B * Q_av - 2 * self.param.h / (self.param.delta ** 2) * T_av
+                self.param.B * Q_av
+                - (2 * self.param.h / (self.param.delta ** 2) / self.param.l)
+                * pybamm.x_average(T)
             )
-            / (self.param.C_th * self.param.rho)
+            / self.param.C_th
         }
 
     def _current_collector_heating(self, variables):

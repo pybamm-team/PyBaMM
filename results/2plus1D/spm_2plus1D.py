@@ -139,4 +139,4 @@ def plot(t):
     plt.show()
 
 
-plot(solution.t[-1] / 2)
+plot(1800 / tau.evaluate(0))

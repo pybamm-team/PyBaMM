@@ -38,8 +38,8 @@ phi_s_cn = np.reshape(
 )  # fourth column is phi_s_cn vals
 
 # test interp onto regular grid
-#y = np.linspace(0, np.max(y_neg_cc), 5)
-#z = np.linspace(0, np.max(z_neg_cc), 4)
+#y = np.linspace(0, 0.207, 5)
+#z = np.linspace(0, 0.137, 4)
 #grid_y, grid_z = np.meshgrid(y, z)
 #interp_var = np.zeros((len(z), len(y), len(time)))
 #for i in range(0, phi_s_cn.shape[1]):
