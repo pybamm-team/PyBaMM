@@ -227,7 +227,13 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(boundary_a_tert.domain, ["current collector"])
         self.assertEqual(boundary_a_tert.auxiliary_domains, {"secondary": ["bla"]})
 
-    def test_x_average(self):
+        # error if boundary value on tabs and domain is not "current collector"
+        var = pybamm.Variable("var", domain=["negative electrode"])
+        with self.assertRaisesRegex(pybamm.ModelError, "Can only take boundary"):
+            pybamm.boundary_value(var, "negative tab")
+            pybamm.boundary_value(var, "positive tab")
+
+    def test_average(self):
         a = pybamm.Scalar(1)
         average_a = pybamm.x_average(a)
         self.assertEqual(average_a.id, a.id)
