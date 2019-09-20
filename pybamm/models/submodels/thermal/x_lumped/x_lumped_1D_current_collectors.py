@@ -20,7 +20,7 @@ class CurrentCollector1D(BaseModel):
             T_av: (
                 pybamm.laplacian(T_av)
                 + self.param.B * Q_av
-                - 2 * self.param.h / (self.param.delta ** 2) * T_av
+                - (2 * self.param.h / (self.param.delta ** 2) / self.param.l) * T_av
             )
             / self.param.C_th
         }
@@ -37,17 +37,14 @@ class CurrentCollector1D(BaseModel):
         self.boundary_conditions = {
             T_av: {
                 "negative tab": (
-                    self.param.h * T_av_left / self.param.lambda_k / self.param.delta,
+                    self.param.h * T_av_left / self.param.delta,
                     "Neumann",
                 ),
                 "positive tab": (
-                    -self.param.h * T_av_right / self.param.lambda_k / self.param.delta,
+                    -self.param.h * T_av_right / self.param.delta,
                     "Neumann",
                 ),
-                "no tab": (
-                    pybamm.Scalar(0),
-                    "Neumann",
-                ),
+                "no tab": (pybamm.Scalar(0), "Neumann"),
             }
         }
 
