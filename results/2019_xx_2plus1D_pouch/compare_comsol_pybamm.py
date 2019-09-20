@@ -3,8 +3,8 @@ import numpy as np
 import os
 import sys
 import pickle
-import scipy.interpolate as interp
 import matplotlib.pyplot as plt
+import shared
 
 # change working directory to the root of pybamm
 os.chdir(pybamm.root_dir())
@@ -22,7 +22,10 @@ C_rates = {"01": 0.1, "05": 0.5, "1": 1, "2": 2, "3": 3}
 C_rate = "1"  # choose the key from the above dictionary of available results
 
 # load the comsol results
-comsol_variables = pickle.load(open("comsol_{}C.pickle".format(C_rate), "rb"))
+try:
+    comsol_variables = pickle.load(open("comsol_{}C.pickle".format(C_rate), "rb"))
+except FileNotFoundError:
+    raise FileNotFoundError("COMSOL data not found. Try running load_comsol_data.py")
 
 "-----------------------------------------------------------------------------"
 "Create and solve pybamm model"
@@ -80,142 +83,50 @@ solution = pybamm_model.default_solver.solve(pybamm_model, t_eval)
 "-----------------------------------------------------------------------------"
 "Make Comsol 'model' for comparison"
 
-comsol_t = comsol_variables["time"]
+comsol_model = shared.make_comsol_model(comsol_variables, mesh, param)
 
-pybamm_y = mesh["current collector"][0].edges["y"]
-pybamm_z = mesh["current collector"][0].edges["z"]
-
-# plot using *dimensional* space. Note that both y and z are scaled with L_z
-L_z = param.process_symbol(pybamm.standard_parameters_lithium_ion.L_z).evaluate()
-y_plot = pybamm_y * L_z  # np.linspace(0, L_y, 20)
-z_plot = pybamm_z * L_z  # np.linspace(0, L_z, 20)
-grid_y, grid_z = np.meshgrid(y_plot, z_plot)
-
-
-def get_interp_fun(variable, domain):
-    """
-    Interpolate in space to plotting nodes, and then create function to interpolate
-    in time that can be called for plotting at any t.
-    """
-    if domain == ["negative current collector"]:
-        comsol_y = comsol_variables["y_neg_cc"]
-        comsol_z = comsol_variables["z_neg_cc"]
-    elif domain == ["positive current collector"]:
-        comsol_y = comsol_variables["y_pos_cc"]
-        comsol_z = comsol_variables["z_pos_cc"]
-    elif domain == ["separator"]:
-        comsol_y = comsol_variables["y_sep"]
-        comsol_z = comsol_variables["z_sep"]
-
-    # Note order of rows and cols!
-    interp_var = np.zeros((len(z_plot), len(y_plot), variable.shape[1]))
-    for i in range(0, variable.shape[1]):
-        interp_var[:, :, i] = interp.griddata(
-            np.column_stack((comsol_y, comsol_z)),
-            variable[:, i],
-            (grid_y, grid_z),
-            method="cubic",
-        )
-
-    def myinterp(t):
-        return interp.interp1d(comsol_t, interp_var, axis=2)(t)
-
-    return myinterp
-
-
-# Create interpolating functions to put in comsol_model.variables dict
-def comsol_voltage(t):
-    return interp.interp1d(comsol_t, comsol_variables["voltage"])(t)
-
-
-comsol_phi_s_cn = get_interp_fun(
-    comsol_variables["phi_s_cn"], ["negative current collector"]
-)
-comsol_phi_s_cp = get_interp_fun(
-    comsol_variables["phi_s_cp"], ["positive current collector"]
-)
-comsol_temperature = get_interp_fun(comsol_variables["temperature"], ["separator"])
-
-# Create comsol model with dictionary of Matrix variables
-comsol_model = pybamm.BaseModel()
-comsol_model.variables = {
-    "Terminal voltage [V]": comsol_voltage,
-    "Negative current collector potential [V]": comsol_phi_s_cn,
-    "Positive current collector potential [V]": comsol_phi_s_cp,
-    "X-averaged cell temperature [K]": comsol_temperature,
-}
-
-# Process pybamm variables
+# Process pybamm variables for which we have corresponding comsol variables
 output_variables = {}
 for var in comsol_model.variables.keys():
     output_variables[var] = pybamm.ProcessedVariable(
         pybamm_model.variables[var], solution.t, solution.y, mesh=mesh
     )
 
+"-----------------------------------------------------------------------------"
+"Make plots"
 
-# Plotting function
-def plot(var, t, cmap="viridis"):
-    fig, ax = plt.subplots(figsize=(15, 8))
-
-    # plot pybamm solution
-    y_plot_non_dim = y_plot / L_z  # Note that both y and z are scaled with L_z
-    z_plot_non_dim = z_plot / L_z
-    t_non_dim = t / tau
-
-    pybamm_var = np.transpose(
-        output_variables[var](y=y_plot_non_dim, z=z_plot_non_dim, t=t_non_dim)
-    )
-    plt.subplot(131)
-    pybamm_plot = plt.pcolormesh(y_plot, z_plot, pybamm_var, shading="gouraud")
-    plt.axis([0, y_plot[-1], 0, z_plot[-1]])
-    plt.xlabel(r"$y$")
-    plt.ylabel(r"$z$")
-    plt.title(r"PyBaMM: " + var)
-    plt.set_cmap(cmap)
-    plt.colorbar(pybamm_plot)
-
-    # plot comsol solution
-    plt.subplot(132)
-    comsol_plot = plt.pcolormesh(
-        y_plot, z_plot, comsol_model.variables[var](t=t), shading="gouraud"
-    )
-    plt.axis([0, y_plot[-1], 0, z_plot[-1]])
-    plt.xlabel(r"$y$")
-    plt.ylabel(r"$z$")
-    plt.title(r"COMSOL: " + var)
-    plt.set_cmap(cmap)
-    plt.colorbar(comsol_plot)
-
-    # plot "error"
-    plt.subplot(133)
-    diff_plot = plt.pcolormesh(
-        y_plot,
-        z_plot,
-        np.abs(pybamm_var - comsol_model.variables[var](t=t)),
-        shading="gouraud",
-    )
-    plt.axis([0, y_plot[-1], 0, z_plot[-1]])
-    plt.xlabel(r"$y$")
-    plt.ylabel(r"$z$")
-    plt.title(r"Error: " + var)
-    plt.set_cmap(cmap)
-    plt.colorbar(diff_plot)
-
-
-# Make plots
+t_plot = comsol_variables["time"]  # dimensional in seconds
+shared.plot_t_var("Terminal voltage [V]", t_plot, comsol_model, output_variables, param)
+shared.plot_t_var(
+    "Volume-averaged cell temperature [K]",
+    t_plot,
+    comsol_model,
+    output_variables,
+    param,
+)
 t_plot = 1800  # dimensional in seconds
-plt.plot(
-    comsol_t, comsol_model.variables["Terminal voltage [V]"](comsol_t), label="COMSOL"
+shared.plot_2D_var(
+    "Negative current collector potential [V]",
+    t_plot,
+    comsol_model,
+    output_variables,
+    param,
+    cmap="cividis",
 )
-plt.plot(
-    comsol_t,
-    output_variables["Terminal voltage [V]"](t=(comsol_t / tau)),
-    label="PyBaMM",
+shared.plot_2D_var(
+    "Positive current collector potential [V]",
+    t_plot,
+    comsol_model,
+    output_variables,
+    param,
+    cmap="viridis",
 )
-plt.xlabel(r"$t$")
-plt.ylabel("Voltage [V]")
-plt.legend()
-plot("Negative current collector potential [V]", t_plot, cmap="cividis")
-plot("Positive current collector potential [V]", t_plot, cmap="viridis")
-plot("X-averaged cell temperature [K]", t_plot, cmap="inferno")
+shared.plot_2D_var(
+    "X-averaged cell temperature [K]",
+    t_plot,
+    comsol_model,
+    output_variables,
+    param,
+    cmap="inferno",
+)
 plt.show()
