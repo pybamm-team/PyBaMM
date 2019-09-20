@@ -24,7 +24,7 @@ class CurrentCollector2D(BaseModel):
                 + self.param.B * pybamm.source(Q_av, T_av)
                 - (2 * self.param.h / (self.param.delta ** 2) / self.param.l)
                 * pybamm.source(T_av, T_av)
-                + (self.param.h / self.param.delta)
+                - (self.param.h / self.param.delta)
                 * pybamm.source(T_av, T_av, boundary=True)
             )
             / self.param.C_th

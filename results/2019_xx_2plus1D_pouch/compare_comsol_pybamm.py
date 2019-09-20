@@ -57,7 +57,7 @@ var_pts = {
     var.x_p: 5,
     var.r_n: 5,
     var.r_p: 5,
-    var.y: 7,
+    var.y: 5,
     var.z: 5,
 }
 mesh = pybamm.Mesh(geometry, pybamm_model.default_submesh_types, var_pts)
@@ -71,9 +71,10 @@ tau = param.process_symbol(
     pybamm.standard_parameters_lithium_ion.tau_discharge
 ).evaluate()
 
-# solve model at comsol times
-time = comsol_variables["time"] / tau
-solution = pybamm_model.default_solver.solve(pybamm_model, time)
+# solve model -- simulate one hour discharge
+t_end = 3600 / tau
+t_eval = np.linspace(0, t_end, 120)
+solution = pybamm_model.default_solver.solve(pybamm_model, t_eval)
 
 
 "-----------------------------------------------------------------------------"
@@ -81,11 +82,11 @@ solution = pybamm_model.default_solver.solve(pybamm_model, time)
 
 comsol_t = comsol_variables["time"]
 
-L_y = param.process_symbol(pybamm.standard_parameters_lithium_ion.L_y).evaluate()
-L_z = param.process_symbol(pybamm.standard_parameters_lithium_ion.L_z).evaluate()
 pybamm_y = mesh["current collector"][0].edges["y"]
 pybamm_z = mesh["current collector"][0].edges["z"]
 
+# plot using *dimensional* space. Note that both y and z are scaled with L_z
+L_z = param.process_symbol(pybamm.standard_parameters_lithium_ion.L_z).evaluate()
 y_plot = pybamm_y * L_z  # np.linspace(0, L_y, 20)
 z_plot = pybamm_z * L_z  # np.linspace(0, L_z, 20)
 grid_y, grid_z = np.meshgrid(y_plot, z_plot)
@@ -157,9 +158,10 @@ def plot(var, t, cmap="viridis"):
     fig, ax = plt.subplots(figsize=(15, 8))
 
     # plot pybamm solution
-    y_plot_non_dim = y_plot / L_y
+    y_plot_non_dim = y_plot / L_z  # Note that both y and z are scaled with L_z
     z_plot_non_dim = z_plot / L_z
     t_non_dim = t / tau
+
     pybamm_var = np.transpose(
         output_variables[var](y=y_plot_non_dim, z=z_plot_non_dim, t=t_non_dim)
     )
@@ -201,9 +203,15 @@ def plot(var, t, cmap="viridis"):
 
 
 # Make plots
-t_plot = comsol_t[-1] / 2
-plt.plot(comsol_t, comsol_model.variables["Terminal voltage [V]"](comsol_t), label="COMSOL")
-plt.plot(comsol_t, output_variables["Terminal voltage [V]"](t=(comsol_t / tau)), label="PyBaMM")
+t_plot = 1800  # dimensional in seconds
+plt.plot(
+    comsol_t, comsol_model.variables["Terminal voltage [V]"](comsol_t), label="COMSOL"
+)
+plt.plot(
+    comsol_t,
+    output_variables["Terminal voltage [V]"](t=(comsol_t / tau)),
+    label="PyBaMM",
+)
 plt.xlabel(r"$t$")
 plt.ylabel("Voltage [V]")
 plt.legend()
