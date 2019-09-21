@@ -595,9 +595,7 @@ class BoundaryIntegral(SpatialOperator):
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()` """
         self._id = hash(
-            (self.__class__, self.name)
-            + (self.children[0].id,)
-            + tuple(self.domain)
+            (self.__class__, self.name) + (self.children[0].id,) + tuple(self.domain)
         )
 
     def _unary_simplify(self, simplified_child):
@@ -797,6 +795,7 @@ def grad_squared(expression):
     """
 
     return Gradient_Squared(expression)
+
 
 #
 # Method to call SurfaceValue
@@ -1009,17 +1008,8 @@ def r_average(symbol):
     :class:`Symbol`
         the new averaged symbol
     """
-    ok_domains = [['positive particle'], ['negative particle'], []]
-    # Symbol must have domain [] or ["current collector"]
-    if symbol.domain not in ok_domains:
-        raise pybamm.DomainError(
-            """r-average only implemented in the 'particle' domain,
-            but symbol has domains {}""".format(
-                symbol.domain
-            )
-        )
-    # If symbol doesn't have a domain, its average value is itself
-    elif symbol.domain == []:
+    # If symbol doesn't have a particle domain, its r-averaged value is itself
+    if symbol.domain not in [["positive particle"], ["negative particle"]]:
         new_symbol = symbol.new_copy()
         new_symbol.parent = None
         return new_symbol
