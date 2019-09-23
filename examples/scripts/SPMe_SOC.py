@@ -16,7 +16,7 @@ param = model.default_parameter_values
 
 param.update(
     {
-        "Negative electrode surface area density [m-1]": 180000.0,
+        "Negative electrode surface area density [m-1]": 150000.0,
         "Positive electrode surface area density [m-1]": 150000.0,
     }
 )
@@ -49,12 +49,13 @@ sol = model.default_solver.solve(model, t_eval)
 
 # plot
 out_vars = [
+    "Negative active lithium",
+    "Positive active lithium",
+    "X-averaged electrolyte concentration [mol.m-3]",
+    "Negative active volume density",
+    "Positive active volume density",
     "RX-averaged positive particle concentration [mol.m-3]",
     "RX-averaged negative particle concentration [mol.m-3]",
-    "X-averaged electrolyte concentration [mol.m-3]",
-    "X-averaged positive electrode porosity",
-    "X-averaged negative electrode porosity",
-    "X-averaged separator porosity",
 ]
 plot = pybamm.QuickPlot(model, mesh, sol, output_variables=out_vars)
 plot.dynamic_plot()
@@ -68,9 +69,9 @@ rp = np.linspace(0, 1.0, 11)
 
 plt.figure()
 rplt = 0.0
-plt.plot(np.ones(len(sol.t)) * max_neg * por_neg, "r--", label="Max Neg")
+#plt.plot(np.ones(len(sol.t)) * max_neg * por_neg, "r--", label="Max Neg")
 plt.plot(xnpc(sol.t, r=rplt) * por_neg, "r", label="Neg Li")
-plt.plot(np.ones(len(sol.t)) * max_pos * por_pos, "b--", label="Max Pos")
+#plt.plot(np.ones(len(sol.t)) * max_pos * por_pos, "b--", label="Max Pos")
 plt.plot(xppc(sol.t, r=rplt) * por_pos, "b", label="Pos Li")
 plt.plot(xec(sol.t, r=rplt), "g", label="Elec Li")
 tot = xnpc(sol.t, r=rplt) * por_neg + xppc(sol.t, r=rplt) * por_pos + xec(sol.t, r=rplt)
