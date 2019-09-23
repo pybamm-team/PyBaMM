@@ -378,6 +378,80 @@ class TestMesh(unittest.TestCase):
         with self.assertRaises(pybamm.GeometryError):
             pybamm.Mesh(geometry, submesh_types, var_pts)
 
+    def test_1plus1D_tabs_left_right(self):
+        param = pybamm.ParameterValues(
+            base_parameters={
+                "Electrode width [m]": 0.4,
+                "Electrode height [m]": 0.5,
+                "Negative tab centre z-coordinate [m]": 0.0,
+                "Positive tab centre z-coordinate [m]": 0.5,
+                "Negative electrode thickness [m]": 0.3,
+                "Separator thickness [m]": 0.3,
+                "Positive electrode thickness [m]": 0.3,
+            }
+        )
+
+        geometry = pybamm.Geometryxp1DMacro(cc_dimension=1)
+        param.process_geometry(geometry)
+
+        var = pybamm.standard_spatial_vars
+        var_pts = {var.x_n: 10, var.x_s: 7, var.x_p: 12, var.z: 24}
+
+        submesh_types = {
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "positive electrode": pybamm.Uniform1DSubMesh,
+            "current collector": pybamm.Uniform1DSubMesh,
+        }
+
+        mesh_type = pybamm.Mesh
+
+        # create mesh
+        mesh = mesh_type(geometry, submesh_types, var_pts)
+
+        # negative tab should be "left"
+        self.assertEqual(mesh["current collector"][0].tabs["negative tab"], "left")
+
+        # positive tab should be "right"
+        self.assertEqual(mesh["current collector"][0].tabs["positive tab"], "right")
+
+    def test_1plus1D_tabs_right_left(self):
+        param = pybamm.ParameterValues(
+            base_parameters={
+                "Electrode width [m]": 0.4,
+                "Electrode height [m]": 0.5,
+                "Negative tab centre z-coordinate [m]": 0.5,
+                "Positive tab centre z-coordinate [m]": 0.0,
+                "Negative electrode thickness [m]": 0.3,
+                "Separator thickness [m]": 0.3,
+                "Positive electrode thickness [m]": 0.3,
+            }
+        )
+
+        geometry = pybamm.Geometryxp1DMacro(cc_dimension=1)
+        param.process_geometry(geometry)
+
+        var = pybamm.standard_spatial_vars
+        var_pts = {var.x_n: 10, var.x_s: 7, var.x_p: 12, var.z: 24}
+
+        submesh_types = {
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "positive electrode": pybamm.Uniform1DSubMesh,
+            "current collector": pybamm.Uniform1DSubMesh,
+        }
+
+        mesh_type = pybamm.Mesh
+
+        # create mesh
+        mesh = mesh_type(geometry, submesh_types, var_pts)
+
+        # negative tab should be "right"
+        self.assertEqual(mesh["current collector"][0].tabs["negative tab"], "right")
+
+        # positive tab should be "left"
+        self.assertEqual(mesh["current collector"][0].tabs["positive tab"], "left")
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

@@ -9,7 +9,7 @@ import unittest
 
 class TestSPM(unittest.TestCase):
     def test_basic_processing(self):
-        options = {"thermal": None}
+        options = {"thermal": "isothermal"}
         model = pybamm.lithium_ion.SPM(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
@@ -49,7 +49,7 @@ class TestSPM(unittest.TestCase):
         modeltest.test_all(skip_output_tests=True)
 
     def test_optimisations(self):
-        options = {"thermal": None}
+        options = {"thermal": "isothermal"}
         model = pybamm.lithium_ion.SPM(options)
         optimtest = tests.OptimisationsTest(model)
 
@@ -64,7 +64,7 @@ class TestSPM(unittest.TestCase):
         np.testing.assert_array_almost_equal(original, simp_and_python)
 
     def test_charge(self):
-        options = {"thermal": None}
+        options = {"thermal": "isothermal"}
         model = pybamm.lithium_ion.SPM(options)
         parameter_values = model.default_parameter_values
         parameter_values.update({"Typical current [A]": -1})
@@ -72,7 +72,7 @@ class TestSPM(unittest.TestCase):
         modeltest.test_all()
 
     def test_zero_current(self):
-        options = {"thermal": None}
+        options = {"thermal": "isothermal"}
         model = pybamm.lithium_ion.SPM(options)
         parameter_values = model.default_parameter_values
         parameter_values.update(
@@ -82,12 +82,18 @@ class TestSPM(unittest.TestCase):
         modeltest.test_all()
 
     def test_thermal(self):
-        options = {"thermal": "lumped"}
+        options = {"thermal": "x-lumped"}
         model = pybamm.lithium_ion.SPM(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-        options = {"thermal": "full"}
+        options = {"thermal": "x-full"}
+        model = pybamm.lithium_ion.SPM(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+    def test_particle_fast_diffusion(self):
+        options = {"particle": "fast diffusion"}
         model = pybamm.lithium_ion.SPM(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()

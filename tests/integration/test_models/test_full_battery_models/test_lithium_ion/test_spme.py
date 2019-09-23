@@ -10,7 +10,7 @@ import unittest
 
 class TestSPMe(unittest.TestCase):
     def test_basic_processing(self):
-        options = {"thermal": None}
+        options = {"thermal": "isothermal"}
         model = pybamm.lithium_ion.SPMe(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
@@ -50,7 +50,7 @@ class TestSPMe(unittest.TestCase):
         modeltest.test_all(skip_output_tests=True)
 
     def test_optimisations(self):
-        options = {"thermal": None}
+        options = {"thermal": "isothermal"}
         model = pybamm.lithium_ion.SPMe(options)
         optimtest = tests.OptimisationsTest(model)
 
@@ -66,12 +66,18 @@ class TestSPMe(unittest.TestCase):
 
     def test_thermal(self):
         pybamm.settings.debug_mode = True
-        options = {"thermal": "lumped"}
+        options = {"thermal": "x-lumped"}
         model = pybamm.lithium_ion.SPMe(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-        options = {"thermal": "full"}
+        options = {"thermal": "x-full"}
+        model = pybamm.lithium_ion.SPMe(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+    def test_particle_fast_diffusion(self):
+        options = {"particle": "fast diffusion"}
         model = pybamm.lithium_ion.SPMe(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()

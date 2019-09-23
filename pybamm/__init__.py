@@ -89,7 +89,9 @@ from .expression_tree.unary_operators import (
     Gradient,
     Divergence,
     Laplacian,
+    Gradient_Squared,
     Mass,
+    BoundaryMass,
     BoundaryOperator,
     BoundaryValue,
     BoundaryGradient,
@@ -100,8 +102,11 @@ from .expression_tree.unary_operators import (
     grad,
     div,
     laplacian,
+    grad_squared,
     surf,
     x_average,
+    z_average,
+    yz_average,
     boundary_value,
 )
 from .expression_tree.functions import *

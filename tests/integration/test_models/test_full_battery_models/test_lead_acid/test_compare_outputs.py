@@ -17,7 +17,7 @@ class TestCompareOutputs(unittest.TestCase):
         models = [
             pybamm.lead_acid.LOQS(),
             pybamm.lead_acid.Composite(),
-            pybamm.lead_acid.NewmanTiedemann(),
+            pybamm.lead_acid.Full(),
         ]
 
         # load parameter values (same for all models)
@@ -61,7 +61,7 @@ class TestCompareOutputs(unittest.TestCase):
         ]
         model_combos = [
             ([pybamm.lead_acid.LOQS(opt) for opt in options]),
-            ([pybamm.lead_acid.NewmanTiedemann(opt) for opt in options]),
+            ([pybamm.lead_acid.Full(opt) for opt in options]),
         ]
 
         for models in model_combos:
