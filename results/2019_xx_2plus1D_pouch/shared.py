@@ -25,15 +25,17 @@ def make_comsol_model(comsol_variables, mesh, param, y_interp=None, z_interp=Non
         Interpolate in space to plotting nodes, and then create function to interpolate
         in time that can be called for plotting at any t.
         """
-        if domain == ["negative current collector"]:
-            comsol_y = comsol_variables["y_neg_cc"]
-            comsol_z = comsol_variables["z_neg_cc"]
-        elif domain == ["positive current collector"]:
-            comsol_y = comsol_variables["y_pos_cc"]
-            comsol_z = comsol_variables["z_pos_cc"]
-        elif domain == ["separator"]:
-            comsol_y = comsol_variables["y_sep"]
-            comsol_z = comsol_variables["z_sep"]
+        #if domain == ["negative current collector"]:
+        #    comsol_y = comsol_variables["y_neg_cc"]
+        #    comsol_z = comsol_variables["z_neg_cc"]
+        #elif domain == ["positive current collector"]:
+        #    comsol_y = comsol_variables["y_pos_cc"]
+        #    comsol_z = comsol_variables["z_pos_cc"]
+        #elif domain == ["separator"]:
+        #    comsol_y = comsol_variables["y_sep"]
+        #    comsol_z = comsol_variables["z_sep"]
+        comsol_y = comsol_variables["y"]
+        comsol_z = comsol_variables["z"]
 
         # Note order of rows and cols!
         interp_var = np.zeros((len(z_interp), len(y_interp), variable.shape[1]))

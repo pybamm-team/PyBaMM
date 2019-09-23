@@ -58,10 +58,10 @@ var_pts = {
     var.x_n: 5,
     var.x_s: 5,
     var.x_p: 5,
-    var.r_n: 5,
-    var.r_p: 5,
-    var.y: 5,
-    var.z: 5,
+    var.r_n: 10,
+    var.r_p: 10,
+    var.y: 10,
+    var.z: 10,
 }
 mesh = pybamm.Mesh(geometry, pybamm_model.default_submesh_types, var_pts)
 
