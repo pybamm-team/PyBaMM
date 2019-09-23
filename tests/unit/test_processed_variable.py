@@ -74,7 +74,6 @@ class TestProcessedVariable(unittest.TestCase):
             np.reshape(y_sol, [len(x_sol), len(r_sol), len(t_sol)]),
         )
 
-    @unittest.skipIf(pybamm.have_scikit_fem(), "scikit-fem not installed")
     def test_processed_variable_3D_scikit(self):
         var = pybamm.Variable("var", domain=["current collector"])
         y = pybamm.SpatialVariable("y", domain=["current collector"])
@@ -94,7 +93,6 @@ class TestProcessedVariable(unittest.TestCase):
             np.reshape(u_sol, [len(y_sol), len(z_sol), len(t_sol)]),
         )
 
-    @unittest.skipIf(pybamm.have_scikit_fem(), "scikit-fem not installed")
     def test_processed_variable_2Dspace_scikit(self):
         var = pybamm.Variable("var", domain=["current collector"])
         y = pybamm.SpatialVariable("y", domain=["current collector"])
@@ -287,7 +285,6 @@ class TestProcessedVariable(unittest.TestCase):
             processed_var(t_sol, x_sol, r_sol).shape, (35, 10, 50)
         )
 
-    @unittest.skipIf(pybamm.have_scikit_fem(), "scikit-fem not installed")
     def test_processed_var_3D_scikit_interpolation(self):
         var = pybamm.Variable("var", domain=["current collector"])
         y = pybamm.SpatialVariable("y", domain=["current collector"])
@@ -327,7 +324,6 @@ class TestProcessedVariable(unittest.TestCase):
         # 3 scalars
         np.testing.assert_array_equal(processed_var(0.2, y=0.2, z=0.2).shape, ())
 
-    @unittest.skipIf(pybamm.have_scikit_fem(), "scikit-fem not installed")
     def test_processed_var_2Dspace_scikit_interpolation(self):
         var = pybamm.Variable("var", domain=["current collector"])
         y = pybamm.SpatialVariable("y", domain=["current collector"])

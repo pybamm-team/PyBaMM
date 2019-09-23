@@ -364,7 +364,7 @@ class Discretisation(object):
 
         # Concatenate rhs into a single state vector
         # Need to concatenate in order as the ordering of equations could be different
-        # in processed_rhs and model.rhs (for Python Version <= 3.5)
+        # in processed_rhs and model.rhs
         processed_concatenated_rhs = self._concatenate_in_order(processed_rhs)
 
         # Discretise and concatenate algebraic equations
