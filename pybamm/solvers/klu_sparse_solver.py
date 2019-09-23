@@ -4,7 +4,7 @@
 import pybamm
 
 import numpy as np
-import c_solvers.klu as klu
+from .c_solvers import klu
 import scipy.sparse as sparse
 
 
@@ -62,9 +62,6 @@ class KLU(pybamm.DaeSolver):
         def eqsres(t, y, ydot, return_residuals):
             return_residuals[:] = residuals(t, y, ydot)
 
-        def rootfn(t, y, ydot, return_root):
-            return_root[:] = [event(t, y) for event in events]
-
         extra_options = {
             "old_api": False,
             "rtol": self.tol,
@@ -87,6 +84,7 @@ class KLU(pybamm.DaeSolver):
 
             extra_options.update({"jacfn": jacfn})
 
+        # just defining this here for now...
         class SundialsJacobian:
             def __init__(self):
                 self.J = None
@@ -109,9 +107,6 @@ class KLU(pybamm.DaeSolver):
             def get_jac_col_ptrs(self):
                 return self.J.indptr
 
-        if events:
-            extra_options.update({"rootfn": rootfn, "nr_rootfns": len(events)})
-
         # solver works with ydot0 set to zero
         ydot0 = np.zeros_like(y0)
 
@@ -119,6 +114,11 @@ class KLU(pybamm.DaeSolver):
 
         num_of_events = len(events)
         use_jac = 1
+
+        def rootfn(t, y):
+            return_root = np.zeros((num_of_events,))
+            return_root[:] = [event(t, y) for event in events]
+            return return_root
 
         # solve
         time = klu.solve(
@@ -131,7 +131,7 @@ class KLU(pybamm.DaeSolver):
             jac_class.get_jac_row_vals,
             jac_class.get_jac_col_ptrs,
             jac_class.nnz,
-            events,
+            rootfn,
             num_of_events,
             use_jac,
         )
