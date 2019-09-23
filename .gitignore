@@ -64,4 +64,5 @@ pyvenv.cfg
 
 # sundials
 sundials
+sundials4
 SuiteSparse
