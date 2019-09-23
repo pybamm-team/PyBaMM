@@ -4,7 +4,6 @@
 
 import pybamm
 import os
-from collections import OrderedDict
 
 
 class BaseBatteryModel(pybamm.BaseModel):

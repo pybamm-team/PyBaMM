@@ -5,6 +5,7 @@ import pybamm
 
 from scipy.sparse import csr_matrix
 import autograd.numpy as np
+import skfem
 
 
 class ScikitFiniteElement(pybamm.SpatialMethod):
