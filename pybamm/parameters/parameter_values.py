@@ -124,19 +124,26 @@ class ParameterValues(dict):
             model.initial_conditions[variable] = processing_function(equation)
 
         # Boundary conditions are dictionaries {"left": left bc, "right": right bc}
+        # in general, but may be imposed on the tabs (or *not* on the tab) for a
+        # small number of variables, e.g. {"negative tab": neg. tab bc,
+        # "positive tab": pos. tab bc "no tab": no tab bc}.
         new_boundary_conditions = {}
         for variable, bcs in model.boundary_conditions.items():
             processed_variable = processing_function(variable)
             new_boundary_conditions[processed_variable] = {}
-            for side in ["left", "right"]:
-                bc, typ = bcs[side]
-                pybamm.logger.debug(
-                    "{} parameters for {!r} ({} bc)".format(
-                        processing.capitalize(), variable, side
+            for side in ["left", "right", "negative tab", "positive tab", "no tab"]:
+                try:
+                    bc, typ = bcs[side]
+                    pybamm.logger.debug(
+                        "{} parameters for {!r} ({} bc)".format(
+                            processing.capitalize(), variable, side
+                        )
                     )
-                )
-                processed_bc = (processing_function(bc), typ)
-                new_boundary_conditions[processed_variable][side] = processed_bc
+                    processed_bc = (processing_function(bc), typ)
+                    new_boundary_conditions[processed_variable][side] = processed_bc
+                except KeyError:
+                    pass
+
         model.boundary_conditions = new_boundary_conditions
 
         for variable, equation in model.variables.items():
@@ -187,7 +194,7 @@ class ParameterValues(dict):
         """
         for domain in geometry:
             for prim_sec_tabs, variables in geometry[domain].items():
-                # process tab information if using 2D current collectors
+                # process tab information if using 1 or 2D current collectors
                 if prim_sec_tabs == "tabs":
                     for tab, position_size in variables.items():
                         for position_size, sym in position_size.items():

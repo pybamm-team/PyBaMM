@@ -5,9 +5,7 @@ import pybamm
 
 from scipy.sparse import csr_matrix
 import autograd.numpy as np
-
-if not pybamm.have_scikit_fem():
-    import skfem
+import skfem
 
 
 class ScikitFiniteElement(pybamm.SpatialMethod):
@@ -29,9 +27,6 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
     """
 
     def __init__(self, mesh):
-        if pybamm.have_scikit_fem() is None:
-            raise ImportError("scikit-fem is not installed")
-
         super().__init__(mesh)
         # add npts_for_broadcast to mesh domains for this particular discretisation
         for dom in mesh.keys():
@@ -91,7 +86,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             The discretised symbol of the correct size
         boundary_conditions : dict
             The boundary conditions of the model
-            ({symbol.id: {"left": left bc, "right": right bc}})
+            ({symbol.id: {"negative tab": neg. tab bc, "positive tab": pos. tab bc}})
 
         Returns
         -------
@@ -104,50 +99,50 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
         stiffness_matrix = self.stiffness_matrix(symbol, boundary_conditions)
 
-        # get boundary conditions and type, here lbc: negative tab, rbc: positive tab
-        lbc_value, lbc_type = boundary_conditions[symbol.id]["left"]
-        rbc_value, rbc_type = boundary_conditions[symbol.id]["right"]
+        # get boundary conditions and type
+        neg_bc_value, neg_bc_type = boundary_conditions[symbol.id]["negative tab"]
+        pos_bc_value, pos_bc_type = boundary_conditions[symbol.id]["positive tab"]
         # boundary load vector is adjusted to account for boundary conditions below
         boundary_load = pybamm.Vector(np.zeros(mesh.npts))
 
         # assemble boundary load if Neumann boundary conditions
-        if "Neumann" in [lbc_type, rbc_type]:
+        if "Neumann" in [neg_bc_type, pos_bc_type]:
             # make form for unit load over the boundary
             @skfem.linear_form
             def unit_bc_load_form(v, dv, w):
                 return v
 
-        if lbc_type == "Neumann":
+        if neg_bc_type == "Neumann":
             # assemble unit load over tab
-            lbc_load = skfem.asm(unit_bc_load_form, mesh.negative_tab_basis)
+            neg_bc_load = skfem.asm(unit_bc_load_form, mesh.negative_tab_basis)
             # value multiplied by weights
-            boundary_load = boundary_load + lbc_value * pybamm.Vector(lbc_load)
-        elif lbc_type == "Dirichlet":
+            boundary_load = boundary_load + neg_bc_value * pybamm.Vector(neg_bc_load)
+        elif neg_bc_type == "Dirichlet":
             # set Dirichlet value at facets corresponding to tab
-            lbc_load = np.zeros(mesh.npts)
-            lbc_load[mesh.negative_tab_dofs] = 1
-            boundary_load = boundary_load - lbc_value * pybamm.Vector(lbc_load)
+            neg_bc_load = np.zeros(mesh.npts)
+            neg_bc_load[mesh.negative_tab_dofs] = 1
+            boundary_load = boundary_load - neg_bc_value * pybamm.Vector(neg_bc_load)
         else:
             raise ValueError(
                 "boundary condition must be Dirichlet or Neumann, not '{}'".format(
-                    lbc_type
+                    neg_bc_type
                 )
             )
 
-        if rbc_type == "Neumann":
+        if pos_bc_type == "Neumann":
             # assemble unit load over tab
-            rbc_load = skfem.asm(unit_bc_load_form, mesh.positive_tab_basis)
+            pos_bc_load = skfem.asm(unit_bc_load_form, mesh.positive_tab_basis)
             # value multiplied by weights
-            boundary_load = boundary_load + rbc_value * pybamm.Vector(rbc_load)
-        elif rbc_type == "Dirichlet":
+            boundary_load = boundary_load + pos_bc_value * pybamm.Vector(pos_bc_load)
+        elif pos_bc_type == "Dirichlet":
             # set Dirichlet value at facets corresponding to tab
-            rbc_load = np.zeros(mesh.npts)
-            rbc_load[mesh.positive_tab_dofs] = 1
-            boundary_load = boundary_load - rbc_value * pybamm.Vector(rbc_load)
+            pos_bc_load = np.zeros(mesh.npts)
+            pos_bc_load[mesh.positive_tab_dofs] = 1
+            boundary_load = boundary_load - pos_bc_value * pybamm.Vector(pos_bc_load)
         else:
             raise ValueError(
                 "boundary condition must be Dirichlet or Neumann, not '{}'".format(
-                    rbc_type
+                    pos_bc_type
                 )
             )
 
@@ -172,7 +167,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             The symbol for which we want to calculate the laplacian matrix
         boundary_conditions : dict
             The boundary conditions of the model
-            ({symbol.id: {"left": left bc, "right": right bc}})
+            ({symbol.id: {"negative tab": neg. tab bc, "positive tab": pos. tab bc}})
 
         Returns
         -------
@@ -191,19 +186,19 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         # assemble the stifnness matrix
         stiffness = skfem.asm(stiffness_form, mesh.basis)
 
-        # get boundary conditions and type, here lbc: negative tab, rbc: positive tab
+        # get boundary conditions and type
         try:
-            _, lbc_type = boundary_conditions[symbol.id]["left"]
-            _, rbc_type = boundary_conditions[symbol.id]["right"]
+            _, neg_bc_type = boundary_conditions[symbol.id]["negative tab"]
+            _, pos_bc_type = boundary_conditions[symbol.id]["positive tab"]
         except KeyError:
             raise pybamm.ModelError(
                 "No boundary conditions provided for symbol `{}``".format(symbol)
             )
 
         # adjust matrix for Dirichlet boundary conditions
-        if lbc_type == "Dirichlet":
+        if neg_bc_type == "Dirichlet":
             self.bc_apply(stiffness, mesh.negative_tab_dofs)
-        if rbc_type == "Dirichlet":
+        if pos_bc_type == "Dirichlet":
             self.bc_apply(stiffness, mesh.positive_tab_dofs)
 
         return pybamm.Matrix(stiffness)
@@ -329,19 +324,19 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
     def boundary_value_or_flux(self, symbol, discretised_child):
         """
-        Returns the average value of the symbol over the negative tab ("left")
-        or the positive tab ("right") in the Finite Element Method.
+        Returns the average value of the symbol over the negative tab ("negative tab")
+        or the positive tab ("positive tab") in the Finite Element Method.
 
         Overwrites the default :meth:`pybamm.SpatialMethod.boundary_value`
         """
 
-        # Return average value on the negative tab for "left" and positive tab
-        # for "right"
+        # Return average value on the negative tab for "negative tab" and positive tab
+        # for "positive tab"
         if isinstance(symbol, pybamm.BoundaryValue):
             # get integration_vector
-            if symbol.side == "left":
+            if symbol.side == "negative tab":
                 region = "negative tab"
-            elif symbol.side == "right":
+            elif symbol.side == "positive tab":
                 region = "positive tab"
             domain = symbol.children[0].domain[0]
             integration_vector = self.boundary_integral_vector(domain, region=region)
@@ -372,7 +367,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             calculating the mass matrix.
         boundary_conditions : dict
             The boundary conditions of the model
-            ({symbol.id: {"left": left bc, "right": right bc}})
+            ({symbol.id: {"negative tab": neg. tab bc, "positive tab": pos. tab bc}})
 
         Returns
         -------
@@ -393,7 +388,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             calculating the mass matrix.
         boundary_conditions : dict
             The boundary conditions of the model
-            ({symbol.id: {"left": left bc, "right": right bc}})
+            ({symbol.id: {"negative tab": neg. tab bc, "positive tab": pos. tab bc}})
 
         Returns
         -------
@@ -414,7 +409,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             calculating the mass matrix.
         boundary_conditions : dict
             The boundary conditions of the model
-            ({symbol.id: {"left": left bc, "right": right bc}})
+            ({symbol.id: {"negative tab": neg. tab bc, "positive tab": pos. tab bc}})
         region: str, optional
             The domain over which to assemble the mass matrix form. Can be "interior"
             (default) or "boundary".
@@ -439,15 +434,15 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         if region == "boundary":
             mass = skfem.asm(mass_form, mesh.facet_basis)
 
-        # get boundary conditions and type, here lbc: negative tab, rbc: positive tab
+        # get boundary conditions and type
         if symbol.id in boundary_conditions:
-            _, lbc_type = boundary_conditions[symbol.id]["left"]
-            _, rbc_type = boundary_conditions[symbol.id]["right"]
+            _, neg_bc_type = boundary_conditions[symbol.id]["negative tab"]
+            _, pos_bc_type = boundary_conditions[symbol.id]["positive tab"]
 
-            if lbc_type == "Dirichlet":
+            if neg_bc_type == "Dirichlet":
                 # set source terms to zero on boundary by zeroing out mass matrix
                 self.bc_apply(mass, mesh.negative_tab_dofs, zero=True)
-            if rbc_type == "Dirichlet":
+            if pos_bc_type == "Dirichlet":
                 # set source terms to zero on boundary by zeroing out mass matrix
                 self.bc_apply(mass, mesh.positive_tab_dofs, zero=True)
 

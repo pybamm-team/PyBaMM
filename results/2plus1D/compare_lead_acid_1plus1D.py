@@ -9,12 +9,12 @@ sys.setrecursionlimit(10000)
 
 # load models
 models = [
-    pybamm.lead_acid.NewmanTiedemann(name="1D NewmanTiedemann"),
+    pybamm.lead_acid.Full(name="1D Full"),
     pybamm.lead_acid.Composite(name="1D composite"),
     pybamm.lead_acid.LOQS(name="1D LOQS"),
-    pybamm.lead_acid.NewmanTiedemann(
+    pybamm.lead_acid.Full(
         {"current collector": "potential pair", "dimensionality": 1},
-        name="1+1D NewmanTiedemann",
+        name="1+1D Full",
     ),
     pybamm.lead_acid.Composite(
         {"current collector": "potential pair", "dimensionality": 1},

@@ -1,6 +1,0 @@
-Discretisations
-===============
-
-.. toctree::
-
-  discretisation
