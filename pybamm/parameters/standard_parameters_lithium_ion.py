@@ -198,7 +198,7 @@ m_p_ref_dimensional = m_p_dimensional(T_ref)
 # concentration
 electrolyte_concentration_scale = c_e_typ
 negative_particle_concentration_scale = c_n_max
-positive_particle_concentration_scale = c_n_max
+positive_particle_concentration_scale = c_p_max
 
 # electrical
 potential_scale = R * T_ref / F
