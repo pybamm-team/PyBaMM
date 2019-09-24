@@ -244,6 +244,19 @@ class SpatialMethod:
         """
         raise NotImplementedError
 
+    def delta_function(self, symbol, discretised_symbol):
+        """
+        Implements the delta function on the approriate side for a spatial method.
+
+        Parameters
+        ----------
+        symbol: :class:`pybamm.Symbol`
+            The symbol to which is being integrated
+        discretised_symbol: :class:`pybamm.Symbol`
+            The discretised symbol of the correct size
+        """
+        raise NotImplementedError
+
     def internal_neumann_condition(
         self, left_symbol_disc, right_symbol_disc, left_mesh, right_mesh
     ):
@@ -281,7 +294,7 @@ class SpatialMethod:
 
         Returns
         -------
-        :class:`pybamm.Variable`
+        :class:`pybamm.MatrixMultiplication`
             The variable representing the surface value.
         """
         if any(len(self.mesh[dom]) > 1 for dom in discretised_child.domain):

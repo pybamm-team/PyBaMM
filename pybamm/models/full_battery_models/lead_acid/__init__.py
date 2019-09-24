@@ -11,4 +11,4 @@ from .higher_order import (
     CompositeAverageCorrection,
     CompositeExtended,
 )
-from .newman_tiedemann import NewmanTiedemann
+from .full import Full

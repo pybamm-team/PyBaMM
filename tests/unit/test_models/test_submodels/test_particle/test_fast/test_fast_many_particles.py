@@ -18,17 +18,13 @@ class TestManyParticles(unittest.TestCase):
             pybamm.Scalar(0), "positive electrode", {"secondary": "current collector"}
         )
 
-        variables = {
-            "Negative electrode interfacial current density": a_n,
-        }
+        variables = {"Negative electrode interfacial current density": a_n}
 
         submodel = pybamm.particle.fast.ManyParticles(param, "Negative")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
-        variables = {
-            "Positive electrode interfacial current density": a_p,
-        }
+        variables = {"Positive electrode interfacial current density": a_p}
         submodel = pybamm.particle.fast.ManyParticles(param, "Positive")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()

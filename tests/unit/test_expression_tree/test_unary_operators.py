@@ -184,6 +184,13 @@ class TestUnaryOperators(unittest.TestCase):
         un5 = pybamm.UnaryOperator("test", d)
         self.assertNotEqual(un1.id, un5.id)
 
+    def test_delta_function(self):
+        a = pybamm.Symbol("a")
+        delta_a = pybamm.DeltaFunction(a, "right", "some domain", {})
+        self.assertEqual(delta_a.side, "right")
+        self.assertEqual(delta_a.child.id, a.id)
+        self.assertFalse(delta_a.evaluates_on_edges())
+
     def test_boundary_operators(self):
         a = pybamm.Symbol("a", domain="some domain")
         boundary_a = pybamm.BoundaryOperator("boundary", a, "right")
@@ -229,6 +236,12 @@ class TestUnaryOperators(unittest.TestCase):
         boundary_a_tert = pybamm.boundary_value(a_tert, "right")
         self.assertEqual(boundary_a_tert.domain, ["current collector"])
         self.assertEqual(boundary_a_tert.auxiliary_domains, {"secondary": ["bla"]})
+
+        # error if boundary value on tabs and domain is not "current collector"
+        var = pybamm.Variable("var", domain=["negative electrode"])
+        with self.assertRaisesRegex(pybamm.ModelError, "Can only take boundary"):
+            pybamm.boundary_value(var, "negative tab")
+            pybamm.boundary_value(var, "positive tab")
 
     def test_average(self):
         a = pybamm.Scalar(1)

@@ -15,54 +15,50 @@ if args.debug:
 else:
     pybamm.set_logging_level("INFO")
 
-# Only run if have scikits-fem
-if not pybamm.have_scikit_fem():
-    # load models
-    models = [
-        pybamm.lithium_ion.SPM(
-            {"current collector": "potential pair", "dimensionality": 2},
-            name="2+1D SPM",
-        ),
-        pybamm.lithium_ion.SPMe(
-            {"current collector": "potential pair", "dimensionality": 2},
-            name="2+1D SPMe",
-        ),
-    ]
+# load models
+models = [
+    pybamm.lithium_ion.SPM(
+        {"current collector": "potential pair", "dimensionality": 2},
+        name="2+1D SPM",
+    ),
+    pybamm.lithium_ion.SPMe(
+        {"current collector": "potential pair", "dimensionality": 2},
+        name="2+1D SPMe",
+    ),
+]
 
-    # load parameter values and process models
-    param = models[0].default_parameter_values
-    for model in models:
-        param.process_model(model)
+# load parameter values and process models
+param = models[0].default_parameter_values
+for model in models:
+    param.process_model(model)
 
-    # process geometry and discretise models
-    for model in models:
-        geometry = model.default_geometry
-        param.process_geometry(geometry)
-        var = pybamm.standard_spatial_vars
-        var_pts = {
-            var.x_n: 5,
-            var.x_s: 5,
-            var.x_p: 5,
-            var.r_n: 5,
-            var.r_p: 5,
-            var.y: 5,
-            var.z: 5,
-        }
-        mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
-        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-        disc.process_model(model)
+# process geometry and discretise models
+for model in models:
+    geometry = model.default_geometry
+    param.process_geometry(geometry)
+    var = pybamm.standard_spatial_vars
+    var_pts = {
+        var.x_n: 5,
+        var.x_s: 5,
+        var.x_p: 5,
+        var.r_n: 5,
+        var.r_p: 5,
+        var.y: 5,
+        var.z: 5,
+    }
+    mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
+    disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+    disc.process_model(model)
 
-    # solve model
-    solutions = [None] * len(models)
-    t_eval = np.linspace(0, 1, 1000)
-    for i, model in enumerate(models):
-        solution = model.default_solver.solve(model, t_eval)
-        solutions[i] = solution
+# solve model
+solutions = [None] * len(models)
+t_eval = np.linspace(0, 1, 1000)
+for i, model in enumerate(models):
+    solution = model.default_solver.solve(model, t_eval)
+    solutions[i] = solution
 
-    # plot
-    # TO DO: plotting 3D variables
-    output_variables = ["Terminal voltage [V]"]
-    plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)
-    plot.dynamic_plot()
-else:
-    print("Must install scikit-fem to compare 2+1D models")
+# plot
+# TO DO: plotting 3D variables
+output_variables = ["Terminal voltage [V]"]
+plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)
+plot.dynamic_plot()

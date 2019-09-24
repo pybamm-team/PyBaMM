@@ -22,8 +22,8 @@ def self_discharge_states(compute):
     save_file = "self_discharge_data.pickle"
     if compute:
         models = [
-            pybamm.lead_acid.NewmanTiedemann(name="Full, without oxygen"),
-            pybamm.lead_acid.NewmanTiedemann(
+            pybamm.lead_acid.Full(name="Full, without oxygen"),
+            pybamm.lead_acid.Full(
                 {"side reactions": ["oxygen"]}, name="Full, with oxygen"
             ),
             pybamm.lead_acid.LOQS(

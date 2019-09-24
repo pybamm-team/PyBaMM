@@ -51,7 +51,7 @@ def print_parameters(parameters, parameter_values, output_file=None):
     Notes
     -----
     A C-rate of 1 C is the current required to fully discharge the battery in 1 hour,
-    2 C is current to discharge to the battery in 0.5 hours, etc
+    2 C is current to discharge the battery in 0.5 hours, etc
     """
     # If 'parameters' is a class, extract the dict
     if not isinstance(parameters, dict):

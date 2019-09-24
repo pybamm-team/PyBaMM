@@ -36,8 +36,8 @@ class CurrentCollector2D(BaseModel):
         # TODO: update to allow different cooling conditions at the tabs
         self.boundary_conditions = {
             T_av: {
-                "left": (pybamm.Scalar(0), "Neumann"),
-                "right": (pybamm.Scalar(0), "Neumann"),
+                "negative tab": (pybamm.Scalar(0), "Neumann"),
+                "positive tab": (pybamm.Scalar(0), "Neumann"),
             }
         }
 

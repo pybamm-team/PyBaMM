@@ -22,19 +22,6 @@ models = [
     pybamm.lead_acid.FOQS(),
     pybamm.lead_acid.FOQSAverageCorrection(),
     pybamm.lead_acid.CompositeExtended(),
-    # pybamm.lead_acid.Composite(
-    #     {"surface form": "differential", "side reactions": ["oxygen"]}
-    # ),
-    # # pybamm.lead_acid.CompositeExtended(
-    # #     {"surface form": "differential", "side reactions": ["oxygen"]}
-    # # ),
-    # # pybamm.lead_acid.CompositeAverageCorrection(
-    # #     {"surface form": "differential", "side reactions": ["oxygen"]}
-    # # ),
-    # pybamm.lead_acid.LOQS(
-    #     {"surface form": "differential", "side reactions": ["oxygen"]}
-    # ),
-    # # pybamm.lead_acid.FOQS({"surface form": "algebraic"}),
 ]
 
 # load parameter values and process models and geometry

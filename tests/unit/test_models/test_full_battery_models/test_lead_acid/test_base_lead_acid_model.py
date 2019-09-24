@@ -27,6 +27,16 @@ class TestBaseLeadAcidModel(unittest.TestCase):
             pybamm.Scalar(0).id,
         )
 
+    def test_incompatible_options(self):
+        with self.assertRaisesRegex(
+            pybamm.OptionError, "thermal effects not implemented"
+        ):
+            pybamm.lead_acid.BaseModel({"thermal": "x-full"})
+        with self.assertRaisesRegex(
+            pybamm.OptionError, "thermal effects not implemented"
+        ):
+            pybamm.lead_acid.BaseModel({"thermal current collector": True})
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

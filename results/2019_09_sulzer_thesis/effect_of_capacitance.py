@@ -72,12 +72,12 @@ def discharge_states(compute):
     savefile = "effect_of_capacitance_data.pickle"
     if compute:
         models = [
-            pybamm.lead_acid.NewmanTiedemann(name="direct form"),
-            pybamm.lead_acid.NewmanTiedemann(
+            pybamm.lead_acid.Full(name="direct form"),
+            pybamm.lead_acid.Full(
                 {"surface form": "differential"},
                 name="capacitance form\n(differential)",
             ),
-            pybamm.lead_acid.NewmanTiedemann(
+            pybamm.lead_acid.Full(
                 {"surface form": "algebraic"}, name="capacitance form\n(algebraic)"
             ),
         ]
@@ -119,12 +119,12 @@ def discharge_times_and_errors(compute):
         except FileNotFoundError:
             models_times_and_voltages = pybamm.get_infinite_nested_dict()
         models = [
-            pybamm.lead_acid.NewmanTiedemann(name="direct form"),
-            pybamm.lead_acid.NewmanTiedemann(
+            pybamm.lead_acid.Full(name="direct form"),
+            pybamm.lead_acid.Full(
                 {"surface form": "differential"},
                 name="capacitance form\n(differential)",
             ),
-            pybamm.lead_acid.NewmanTiedemann(
+            pybamm.lead_acid.Full(
                 {"surface form": "algebraic"}, name="capacitance form\n(algebraic)"
             ),
         ]

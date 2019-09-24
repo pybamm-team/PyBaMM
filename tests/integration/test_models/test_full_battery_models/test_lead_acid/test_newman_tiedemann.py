@@ -1,5 +1,5 @@
 #
-# Tests for the lead-acid Newman-Tiedemann model
+# Tests for the lead-acid Full model
 #
 import pybamm
 import tests
@@ -8,18 +8,18 @@ import unittest
 import numpy as np
 
 
-class TestLeadAcidNewmanTiedemann(unittest.TestCase):
+class TestLeadAcidFull(unittest.TestCase):
     @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing(self):
         options = {"thermal": "isothermal"}
-        model = pybamm.lead_acid.NewmanTiedemann(options)
+        model = pybamm.lead_acid.Full(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all(t_eval=np.linspace(0, 0.6))
 
     @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing_with_convection(self):
         options = {"thermal": "isothermal", "convection": True}
-        model = pybamm.lead_acid.NewmanTiedemann(options)
+        model = pybamm.lead_acid.Full(options)
         var = pybamm.standard_spatial_vars
         var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10}
         modeltest = tests.StandardModelTest(model, var_pts=var_pts)
@@ -27,7 +27,7 @@ class TestLeadAcidNewmanTiedemann(unittest.TestCase):
 
     def test_optimisations(self):
         options = {"thermal": "isothermal"}
-        model = pybamm.lead_acid.NewmanTiedemann(options)
+        model = pybamm.lead_acid.Full(options)
         optimtest = tests.OptimisationsTest(model)
 
         original = optimtest.evaluate_model()
@@ -41,23 +41,23 @@ class TestLeadAcidNewmanTiedemann(unittest.TestCase):
         np.testing.assert_array_almost_equal(original, simp_and_python)
 
 
-class TestLeadAcidNewmanTiedemannSurfaceForm(unittest.TestCase):
+class TestLeadAcidFullSurfaceForm(unittest.TestCase):
     def test_basic_processing_differential(self):
         options = {"surface form": "differential"}
-        model = pybamm.lead_acid.NewmanTiedemann(options)
+        model = pybamm.lead_acid.Full(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing_algebraic(self):
         options = {"surface form": "algebraic"}
-        model = pybamm.lead_acid.NewmanTiedemann(options)
+        model = pybamm.lead_acid.Full(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_optimisations(self):
         options = {"surface form": "differential"}
-        model = pybamm.lead_acid.NewmanTiedemann(options)
+        model = pybamm.lead_acid.Full(options)
         optimtest = tests.OptimisationsTest(model)
 
         original = optimtest.evaluate_model()

@@ -1,24 +1,25 @@
 #
-# Lead-acid Newman-Tiedemann model
+# Lead-acid Full model
 #
 import pybamm
 from .base_lead_acid_model import BaseModel
 
 
-class NewmanTiedemann(BaseModel):
-    """Porous electrode model for lead-acid, from [1]_.
+class Full(BaseModel):
+    """Porous electrode model for lead-acid, from [1]_, based on the Full
+    model.
 
     References
     ----------
-    .. [1] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster Lead-Acid
-           Battery Simulations from Porous-Electrode Theory: I. Physical Model.
-           arXiv preprint arXiv:1902.01771, 2019.
+    .. [1] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster lead-acid
+           battery simulations from porous-electrode theory: Part II. Asymptotic
+           analysis. Journal of The Electrochemical Society 166.12 (2019), A2372–A2382.
 
 
     **Extends:** :class:`pybamm.lead_acid.BaseModel`
     """
 
-    def __init__(self, options=None, name="Newman-Tiedemann model"):
+    def __init__(self, options=None, name="Full model"):
         super().__init__(options, name)
 
         self.set_reactions()
