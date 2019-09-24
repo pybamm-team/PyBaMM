@@ -5,7 +5,6 @@ import autograd
 import numpy as np
 import pybamm
 from inspect import signature
-from scipy.sparse import csr_matrix
 
 
 class Function(pybamm.Symbol):
@@ -70,27 +69,6 @@ class Function(pybamm.Symbol):
 
         return domain
 
-    def get_children_auxiliary_domains(self, children):
-        "Combine auxiliary domains from children, at all levels"
-        aux_domains = {}
-        for child in children:
-            for level in child.auxiliary_domains.keys():
-                if (
-                    not hasattr(aux_domains, level)
-                    or aux_domains[level] == []
-                    or child.auxiliary_domains[level] == aux_domains[level]
-                ):
-                    aux_domains[level] = child.auxiliary_domains[level]
-                else:
-                    raise pybamm.DomainError(
-                        """children must have same or empty auxiliary domains,
-                        not {!s} and {!s}""".format(
-                            aux_domains[level], child.auxiliary_domains[level]
-                        )
-                    )
-
-        return aux_domains
-
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
         if variable.id == self.id:
@@ -121,10 +99,7 @@ class Function(pybamm.Symbol):
         """ See :meth:`pybamm.Symbol._jac()`. """
 
         if all(child.evaluates_to_number() for child in self.children):
-            # if children all evaluate to numbers the return zeros
-            # of right size
-            jac = csr_matrix((1, variable.evaluation_array.count(True)))
-            jacobian = pybamm.Matrix(jac)
+            jacobian = pybamm.Scalar(0)
         else:
 
             # if at least one child contains variable dependence, then

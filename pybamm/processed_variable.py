@@ -94,10 +94,17 @@ class ProcessedVariable(object):
             self.base_eval = base_variable.evaluate(t_sol[0], u_sol[:, 0])
 
         # handle 2D (in space) finite element variables differently
-        if "current collector" in self.domain and isinstance(
-            self.mesh[self.domain[0]][0], pybamm.Scikit2DSubMesh
+        if (
+            mesh
+            and "current collector" in self.domain
+            and isinstance(self.mesh[self.domain[0]][0], pybamm.Scikit2DSubMesh)
         ):
-            self.initialise_3D_scikit_fem()
+            if len(self.t_sol) == 1:
+                # space only (steady solution)
+                self.initialise_2Dspace_scikit_fem()
+            else:
+                self.initialise_3D_scikit_fem()
+
         # check variable shape
         elif (
             isinstance(self.base_eval, numbers.Number)
@@ -190,6 +197,9 @@ class ProcessedVariable(object):
         elif self.domain == ["current collector"]:
             self.spatial_var_name = "z"
             self.z_sol = space
+        else:
+            self.spatial_var_name = "x"
+            self.x_sol = space
 
         # set up interpolation
         # note that the order of 't' and 'space' is the reverse of what you'd expect
@@ -201,7 +211,16 @@ class ProcessedVariable(object):
     def initialise_3D(self):
         """
         Initialise a 3D object that depends on x and r, or x and z.
-        Needs to be generalised to deal with other domains
+        Needs to be generalised to deal with other domains.
+
+        Notes
+        -----
+        There is different behaviour between a variable on an electrode domain
+        broadcast to a particle (such as temperature) and a variable on a particle
+        domain broadcast to an electrode (such as particle concentration). We deal with
+        this by reshaping the former with the Fortran order ("F") and the latter with
+        the C order ("C"). These are transposes of each other, so this approach simply
+        avoids having to transpose later.
         """
         # Dealt with weird particle/electrode case
         if self.domain in [
@@ -211,12 +230,13 @@ class ProcessedVariable(object):
             ["negative particle"],
             ["positive particle"],
         ]:
-            # Switch domain and auxiliary domains and set order to "F"
+            # Switch domain and auxiliary domains and set order to Fortran order ("F")
             dom = self.domain
             self.domain = self.auxiliary_domains["secondary"]
             self.auxiliary_domains["secondary"] = dom
             order = "F"
         else:
+            # Set order to C order ("C")
             order = "C"
 
         # Process x-r or x-z
@@ -245,7 +265,7 @@ class ProcessedVariable(object):
             r_sol = None
             self.first_dimension = "x"
             self.second_dimension = "z"
-            ## SUPER HACKY: set order back to F
+            # SUPER HACKY: set order back to Fortran order
             order = "F"
 
             if self.base_eval.size // len(z_sol) == len(x_nodes):
@@ -316,6 +336,28 @@ class ProcessedVariable(object):
             fill_value=np.nan,
         )
 
+    def initialise_2Dspace_scikit_fem(self):
+        y_sol = self.mesh[self.domain[0]][0].edges["y"]
+        len_y = len(y_sol)
+        z_sol = self.mesh[self.domain[0]][0].edges["z"]
+        len_z = len(z_sol)
+
+        # Evaluate the base_variable
+        entries = np.reshape(self.base_variable.evaluate(0, self.u_sol), [len_y, len_z])
+
+        # assign attributes for reference
+        self.entries = entries
+        self.dimensions = 2
+        self.y_sol = y_sol
+        self.z_sol = z_sol
+        self.first_dimension = "y"
+        self.second_dimension = "z"
+
+        # set up interpolation
+        self._interpolation_function = interp.interp2d(
+            y_sol, z_sol, entries, kind=self.interp_kind, fill_value=np.nan
+        )
+
     def initialise_3D_scikit_fem(self):
         y_sol = self.mesh[self.domain[0]][0].edges["y"]
         len_y = len(y_sol)
@@ -354,18 +396,21 @@ class ProcessedVariable(object):
             fill_value=np.nan,
         )
 
-    def __call__(self, t, x=None, r=None, y=None, z=None):
+    def __call__(self, t=None, x=None, r=None, y=None, z=None):
         "Evaluate the variable at arbitrary t (and x and/or r), using interpolation"
         if self.dimensions == 1:
             return self._interpolation_function(t)
         elif self.dimensions == 2:
-            return self.call_2D(t, x, r, z)
+            if t is None:
+                return self._interpolation_function(y, z)
+            else:
+                return self.call_2D(t, x, r, z)
         elif self.dimensions == 3:
             return self.call_3D(t, x, r, y, z)
 
     def call_2D(self, t, x, r, z):
         "Evaluate a 2D variable"
-        spatial_var = eval(self.spatial_var_name)
+        spatial_var = eval_dimension_name(self.spatial_var_name, t, x, r, None, z)
         if spatial_var is not None:
             return self._interpolation_function(t, spatial_var)
         else:
@@ -373,8 +418,8 @@ class ProcessedVariable(object):
 
     def call_3D(self, t, x, r, y, z):
         "Evaluate a 3D variable"
-        first_dim = eval(self.first_dimension)
-        second_dim = eval(self.second_dimension)
+        first_dim = eval_dimension_name(self.first_dimension, t, x, r, y, z)
+        second_dim = eval_dimension_name(self.second_dimension, t, x, r, y, z)
         if first_dim is None or second_dim is None:
             raise ValueError(
                 "inputs {} and {} cannot be None".format(
@@ -392,3 +437,16 @@ class ProcessedVariable(object):
                 second_dim = second_dim[:, np.newaxis]
 
         return self._interpolation_function((first_dim, second_dim, t))
+
+
+def eval_dimension_name(name, t, x, r, y, z):
+    if name == "t":
+        return t
+    elif name == "x":
+        return x
+    elif name == "r":
+        return r
+    elif name == "y":
+        return y
+    elif name == "z":
+        return z

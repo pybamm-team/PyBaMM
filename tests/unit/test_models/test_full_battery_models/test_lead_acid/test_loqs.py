@@ -10,6 +10,10 @@ class TestLeadAcidLOQS(unittest.TestCase):
         options = {"thermal": "isothermal"}
         model = pybamm.lead_acid.LOQS(options)
         model.check_well_posedness()
+
+    def test_default_geometry(self):
+        options = {"thermal": "isothermal"}
+        model = pybamm.lead_acid.LOQS(options)
         self.assertIsInstance(model.default_geometry, pybamm.Geometry)
         self.assertNotIn("negative particle", model.default_geometry)
         self.assertIsInstance(model.default_spatial_methods, dict)

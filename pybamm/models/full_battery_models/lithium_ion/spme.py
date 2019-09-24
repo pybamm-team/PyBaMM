@@ -58,12 +58,20 @@ class SPMe(BaseModel):
 
     def set_particle_submodel(self):
 
-        self.submodels["negative particle"] = pybamm.particle.fickian.SingleParticle(
-            self.param, "Negative"
-        )
-        self.submodels["positive particle"] = pybamm.particle.fickian.SingleParticle(
-            self.param, "Positive"
-        )
+        if self.options["particle"] == "Fickian diffusion":
+            self.submodels[
+                "negative particle"
+            ] = pybamm.particle.fickian.SingleParticle(self.param, "Negative")
+            self.submodels[
+                "positive particle"
+            ] = pybamm.particle.fickian.SingleParticle(self.param, "Positive")
+        elif self.options["particle"] == "fast diffusion":
+            self.submodels["negative particle"] = pybamm.particle.fast.SingleParticle(
+                self.param, "Negative"
+            )
+            self.submodels["positive particle"] = pybamm.particle.fast.SingleParticle(
+                self.param, "Positive"
+            )
 
     def set_negative_electrode_submodel(self):
 

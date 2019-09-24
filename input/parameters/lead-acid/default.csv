@@ -5,11 +5,11 @@ Name [units],Value,Reference,Notes
 Reference temperature [K],294.85,Room temperature,
 ,,,
 # Macroscale geometry,,,
-Negative electrode width [m],0.0009,Manufacturer,
-Separator width [m],0.0015,Manufacturer,
-Positive electrode width [m],0.00125,Manufacturer,
+Negative electrode thickness [m],0.0009,Manufacturer,
+Separator thickness [m],0.0015,Manufacturer,
+Positive electrode thickness [m],0.00125,Manufacturer,
 Electrode height [m],0.114,Manufacturer,
-Electrode depth [m],0.065,Manufacturer,
+Electrode width [m],0.065,Manufacturer,
 Negative tab width [m],0.04,,Estimated value
 Negative tab centre y-coordinate [m],0.06,,Estimated value
 Negative tab centre z-coordinate [m],0.114,Tab at top,

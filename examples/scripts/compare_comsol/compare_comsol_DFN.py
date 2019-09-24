@@ -20,9 +20,6 @@ C_rate = "1"  # choose the key from the above dictionary of available results
 comsol_variables = pickle.load(
     open("input/comsol_results/comsol_{}C.pickle".format(C_rate), "rb")
 )
-import ipdb
-
-ipdb.set_trace()
 
 "-----------------------------------------------------------------------------"
 "Create and solve pybamm model"
@@ -34,7 +31,7 @@ geometry = pybamm_model.default_geometry
 
 # load parameters and process model and geometry
 param = pybamm_model.default_parameter_values
-param["Electrode depth [m]"] = 1
+param["Electrode width [m]"] = 1
 param["Electrode height [m]"] = 1
 param["Typical current [A]"] = 24 * C_rates[C_rate]
 param.process_model(pybamm_model)

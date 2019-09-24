@@ -261,7 +261,7 @@ l_s = pybamm.geometric_parameters.l_s
 l_p = pybamm.geometric_parameters.l_p
 l_y = pybamm.geometric_parameters.l_y
 l_z = pybamm.geometric_parameters.l_z
-# In lead-acid the current collector and electrodes are the same (same width)
+# In lead-acid the current collector and electrodes are the same (same thickness)
 l_cn = l_n
 l_cp = l_p
 
@@ -298,10 +298,10 @@ sigma_cn = sigma_cn_dimensional * potential_scale / i_typ / L_x
 sigma_n = sigma_n_dim * potential_scale / current_scale / L_x
 sigma_p = sigma_p_dim * potential_scale / current_scale / L_x
 sigma_cp = sigma_cp_dimensional * potential_scale / i_typ / L_x
-sigma_n_dash = sigma_n * delta ** 2
-sigma_p_dash = sigma_p * delta ** 2
-sigma_cn_dash = sigma_cn * delta ** 2
-sigma_cp_dash = sigma_cp * delta ** 2
+sigma_n_prime = sigma_n * delta ** 2
+sigma_p_prime = sigma_p * delta ** 2
+sigma_cn_prime = sigma_cn * delta ** 2
+sigma_cp_prime = sigma_cp * delta ** 2
 delta_pore_n = 1 / (a_n_dim * L_x)
 delta_pore_p = 1 / (a_p_dim * L_x)
 Q_n_max = Q_n_max_dimensional / (c_e_typ * F)

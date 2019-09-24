@@ -6,4 +6,4 @@ Particle
 
   base_particle
   fickian/index
-
+  fast/index

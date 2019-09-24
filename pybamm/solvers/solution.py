@@ -15,14 +15,21 @@ class Solution(object):
     y : :class:`numpy.array`, size (m, n)
         A two-dimensional array containing the values of the solution. y[i, :] is the
         vector of solutions at time t[i].
+    t_event : :class:`numpy.array`, size (1,)
+        A zero-dimensional array containing the time at which the event happens.
+    y_event : :class:`numpy.array`, size (m,)
+        A one-dimensional array containing the value of the solution at the time when
+        the event happens.
     termination : str
         String to indicate why the solution terminated
 
     """
 
-    def __init__(self, t, y, termination):
+    def __init__(self, t, y, t_event, y_event, termination):
         self.t = t
         self.y = y
+        self.t_event = t_event
+        self.y_event = y_event
         self.termination = termination
 
     @property
@@ -44,6 +51,26 @@ class Solution(object):
     def y(self, value):
         "Updates the solution values"
         self._y = value
+
+    @property
+    def t_event(self):
+        "Time at which the event happens"
+        return self._t_event
+
+    @t_event.setter
+    def t_event(self, value):
+        "Updates the event time"
+        self._t_event = value
+
+    @property
+    def y_event(self):
+        "Value of the solution at the time of the event"
+        return self._y_event
+
+    @y_event.setter
+    def y_event(self, value):
+        "Updates the solution at the time of the event"
+        self._y_event = value
 
     @property
     def termination(self):

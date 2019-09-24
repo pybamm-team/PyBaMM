@@ -178,7 +178,7 @@ class ParameterValues(dict):
 
     def process_geometry(self, geometry):
         """
-        Assign parameter values to a geometry (inplace), *and* evaluate.
+        Assign parameter values to a geometry (inplace).
 
         Parameters
         ----------
@@ -191,17 +191,15 @@ class ParameterValues(dict):
                 if prim_sec_tabs == "tabs":
                     for tab, position_size in variables.items():
                         for position_size, sym in position_size.items():
-                            sym_eval = self.process_symbol(sym).evaluate()
                             geometry[domain][prim_sec_tabs][tab][
                                 position_size
-                            ] = sym_eval
+                            ] = self.process_symbol(sym)
                 else:
                     for spatial_variable, spatial_limits in variables.items():
                         for lim, sym in spatial_limits.items():
-                            sym_eval = self.process_symbol(sym).evaluate()
                             geometry[domain][prim_sec_tabs][spatial_variable][
                                 lim
-                            ] = sym_eval
+                            ] = self.process_symbol(sym)
 
     def process_symbol(self, symbol):
         """Walk through the symbol and replace any Parameter with a Value.
@@ -329,15 +327,24 @@ class ParameterValues(dict):
                     # KeyError -> name not in parameter dict, don't update
                     continue
             elif isinstance(x, pybamm.Function):
-                # Need to update values in parameters_eval dict of current functions
                 if isinstance(x.function, pybamm.GetCurrent):
+                    # Need to update parameters dict to be that of the new current
+                    # function and make new parameters_eval dict to be processed
+                    x.function.parameters = self["Current function"].parameters
+                    x.function.parameters_eval = x.function.parameters.copy()
                     for param, sym in x.function.parameters.items():
-                        if isinstance(sym, pybamm.Scalar):
+                        # Need to process again as new symbols may be passed
+                        # e.g. may explicitly pass pybamm.Scalar(1) instead of
+                        # pybamm.electrical_parameters.I_typ
+                        if isinstance(sym, pybamm.Symbol):
+                            new_sym = self.process_symbol(sym)
+                            x.function.parameters[param] = new_sym
                             try:
-                                x.function.parameters_eval[param] = self[sym.name]
+                                x.function.parameters_eval[param] = self[new_sym.name]
                             except KeyError:
-                                # KeyError -> name not in parameter dict, don't update
-                                continue
+                                # KeyError -> name not in parameter dict, evaluate
+                                # unnamed Scalar
+                                x.function.parameters_eval[param] = new_sym.evaluate()
                     if isinstance(x.function, pybamm.GetCurrentData):
                         # update interpolant
                         x.function.interpolate()

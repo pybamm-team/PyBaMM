@@ -307,11 +307,20 @@ class TestBinaryOperators(unittest.TestCase):
         # check doesn't evaluate on edges anymore
         self.assertEqual(model.variables["inner"].evaluates_on_edges(), False)
 
+    def test_source(self):
+        u = pybamm.Variable("u", domain="current collector")
+        v = pybamm.Variable("v", domain="current collector")
+
+        source = pybamm.source(u, v)
+        self.assertIsInstance(source.children[0], pybamm.Mass)
+        boundary_source = pybamm.source(u, v, boundary=True)
+        self.assertIsInstance(boundary_source.children[0], pybamm.BoundaryMass)
+
     def test_source_error(self):
         # test error with domain not current collector
         v = pybamm.Vector(np.ones(5), domain="current collector")
         w = pybamm.Vector(2 * np.ones(3), domain="test")
-        with self.assertRaisesRegex(pybamm.DomainError, "finite element method"):
+        with self.assertRaisesRegex(pybamm.DomainError, "'source'"):
             pybamm.source(v, w)
 
 

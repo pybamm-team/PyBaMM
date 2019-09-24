@@ -16,7 +16,7 @@ geometry = model.default_geometry
 
 # load parameters and process model and geometry
 param = model.default_parameter_values
-param["Electrode depth [m]"] = 1
+param["Electrode width [m]"] = 1
 param["Electrode height [m]"] = 1
 param.process_model(model)
 param.process_geometry(geometry)

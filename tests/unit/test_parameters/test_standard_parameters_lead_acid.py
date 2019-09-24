@@ -18,7 +18,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
     def test_all_defined(self):
         parameters = pybamm.standard_parameters_lead_acid
         parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values
-        output_file = "results/2019_08_sulzer_thesis/parameters.txt"
+        output_file = "results/2019_09_sulzer_thesis/parameters.txt"
         pybamm.print_parameters(parameters, parameter_values, output_file)
         # test print_parameters with dict and without C-rate
         del parameter_values["Cell capacity [A.h]"]
@@ -83,10 +83,10 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         parameter_values = pybamm.ParameterValues(
             {
                 "Electrode height [m]": 0.1,
-                "Electrode depth [m]": 0.1,
-                "Negative electrode width [m]": 1,
-                "Separator width [m]": 1,
-                "Positive electrode width [m]": 1,
+                "Electrode width [m]": 0.1,
+                "Negative electrode thickness [m]": 1,
+                "Separator thickness [m]": 1,
+                "Positive electrode thickness [m]": 1,
                 "Typical electrolyte concentration [mol.m-3]": 1,
                 "Number of electrodes connected in parallel to make a cell": 8,
                 "Typical current [A]": 2,

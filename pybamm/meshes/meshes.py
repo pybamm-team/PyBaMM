@@ -72,6 +72,27 @@ class Mesh(dict):
             if domain not in ["negative electrode", "separator", "positive electrode"]:
                 self.domain_order.append(domain)
 
+        # evaluate any expressions in geometry
+        for domain in geometry:
+            for prim_sec_tabs, variables in geometry[domain].items():
+                # process tab information if using 2D current collectors
+                if prim_sec_tabs == "tabs":
+                    for tab, position_size in variables.items():
+                        for position_size, sym in position_size.items():
+                            if isinstance(sym, pybamm.Symbol):
+                                sym_eval = sym.evaluate()
+                                geometry[domain][prim_sec_tabs][tab][
+                                    position_size
+                                ] = sym_eval
+                else:
+                    for spatial_variable, spatial_limits in variables.items():
+                        for lim, sym in spatial_limits.items():
+                            if isinstance(sym, pybamm.Symbol):
+                                sym_eval = sym.evaluate()
+                                geometry[domain][prim_sec_tabs][spatial_variable][
+                                    lim
+                                ] = sym_eval
+
         # Create submeshes
         for domain in geometry:
             # need to pass tab information if primary domian is 2D current collector

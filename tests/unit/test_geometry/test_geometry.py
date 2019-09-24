@@ -167,6 +167,62 @@ class TestGeometryxp1p1DMicro(unittest.TestCase):
 
 
 class TestGeometry(unittest.TestCase):
+    def test_add_domain(self):
+        L = pybamm.Parameter('L')
+        zero = pybamm.Scalar(0)
+        x = pybamm.SpatialVariable('x', domain=["negative electrode"])
+        geometry = pybamm.Geometry()
+
+        geometry.add_domain("name_of_domain",
+                            {"primary": {x: {"min": zero, "max": L}}}
+                            )
+
+        geometry.add_domain("name_of_domain",
+                            {"tabs": {"negative": {"z_centre": L}}}
+                            )
+
+        # name must be a string
+        with self.assertRaisesRegex(ValueError, "name must be a string"):
+            geometry.add_domain(123,
+                                {"primary": {x: {"min": zero, "max": L}}}
+                                )
+
+        # keys of geometry must be either \"primary\" or \"secondary\"
+        with self.assertRaisesRegex(ValueError, "primary.*secondary"):
+            geometry.add_domain("name_of_domain",
+                                {"primaryy": {x: {"min": zero, "max": L}}}
+                                )
+
+        # inner dict of geometry must have pybamm.SpatialVariable as keys
+        with self.assertRaisesRegex(ValueError, "pybamm\.SpatialVariable as keys"):
+            geometry.add_domain("name_of_domain",
+                                {"primary": {L: {"min": zero, "max": L}}}
+                                )
+
+        # no minimum extents for variable
+        with self.assertRaisesRegex(ValueError, "minimum"):
+            geometry.add_domain("name_of_domain",
+                                {"primary": {x: {"max": L}}}
+                                )
+
+        # no maximum extents for variable
+        with self.assertRaisesRegex(ValueError, "maximum"):
+            geometry.add_domain("name_of_domain",
+                                {"primary": {x: {"min": zero}}}
+                                )
+
+        # tabs region must be \"negative\" or \"positive\"
+        with self.assertRaisesRegex(ValueError, "negative.*positive"):
+            geometry.add_domain("name_of_domain",
+                                {"tabs": {"negativee": {"z_centre": L}}}
+                                )
+
+        # tabs region params must be \"y_centre\", "\"z_centre\" or \"width\"
+        with self.assertRaisesRegex(ValueError, "y_centre.*z_centre.*width"):
+            geometry.add_domain("name_of_domain",
+                                {"tabs": {"negative": {"z_centree": L}}}
+                                )
+
     def test_combine_geometries(self):
         geometry1Dmacro = pybamm.Geometry1DMacro()
         geometry1Dmicro = pybamm.Geometry1DMicro()
@@ -251,6 +307,33 @@ class TestGeometry(unittest.TestCase):
                 ]
             ),
         )
+
+
+class TestGeometry2DCurrentCollector(unittest.TestCase):
+    def test_add_custom_geometry(self):
+        geometry = pybamm.Geometry2DCurrentCollector()
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        x = pybamm.SpatialVariable("x", whole_cell)
+        custom_geometry = {
+            "negative electrode": {
+                "primary": {x: {"min": pybamm.Scalar(1), "max": pybamm.Scalar(2)}}
+            }
+        }
+
+        geometry.update(custom_geometry)
+        self.assertEqual(
+            geometry["negative electrode"], custom_geometry["negative electrode"]
+        )
+
+    def test_geometry_keys(self):
+        geometry = pybamm.Geometry2DCurrentCollector()
+        for prim_sec_vars in geometry.values():
+            for spatial_vars in prim_sec_vars.values():
+                all(
+                    self.assertIsInstance(spatial_var, pybamm.SpatialVariable)
+                    for spatial_var in spatial_vars.keys()
+                    if spatial_var not in ["negative", "positive"]
+                )
 
 
 if __name__ == "__main__":
