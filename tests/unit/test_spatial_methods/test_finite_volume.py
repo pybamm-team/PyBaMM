@@ -1362,18 +1362,28 @@ class TestFiniteVolume(unittest.TestCase):
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
         var = pybamm.Variable("var")
-        delta_fn = pybamm.DeltaFunction(var, "left", "negative electrode", {})
+        delta_fn_left = pybamm.DeltaFunction(var, "left", "negative electrode", {})
+        delta_fn_right = pybamm.DeltaFunction(var, "right", "negative electrode", {})
         disc.set_variable_slices([var])
-        delta_fn_disc = disc.process_symbol(delta_fn)
+        delta_fn_left_disc = disc.process_symbol(delta_fn_left)
+        delta_fn_right_disc = disc.process_symbol(delta_fn_right)
 
         # Basic shape and type tests
         y = np.ones_like(mesh["negative electrode"][0].nodes[:, np.newaxis])
-        self.assertEqual(delta_fn_disc.domain, delta_fn.domain)
-        self.assertEqual(delta_fn_disc.auxiliary_domains, delta_fn.auxiliary_domains)
-        self.assertIsInstance(delta_fn_disc, pybamm.Multiplication)
-        self.assertIsInstance(delta_fn_disc.left, pybamm.Matrix)
-        np.testing.assert_array_equal(delta_fn_disc.left.evaluate().toarray()[:, 1:], 0)
-        self.assertEqual(delta_fn_disc.shape, y.shape)
+        # Left
+        self.assertEqual(delta_fn_left_disc.domain, delta_fn_left.domain)
+        self.assertEqual(delta_fn_left_disc.auxiliary_domains, delta_fn_left.auxiliary_domains)
+        self.assertIsInstance(delta_fn_left_disc, pybamm.Multiplication)
+        self.assertIsInstance(delta_fn_left_disc.left, pybamm.Matrix)
+        np.testing.assert_array_equal(delta_fn_left_disc.left.evaluate().toarray()[:, 1:], 0)
+        self.assertEqual(delta_fn_left_disc.shape, y.shape)
+        # Right
+        self.assertEqual(delta_fn_right_disc.domain, delta_fn_right.domain)
+        self.assertEqual(delta_fn_right_disc.auxiliary_domains, delta_fn_right.auxiliary_domains)
+        self.assertIsInstance(delta_fn_right_disc, pybamm.Multiplication)
+        self.assertIsInstance(delta_fn_right_disc.right, pybamm.Matrix)
+        np.testing.assert_array_equal(delta_fn_right_disc.right.evaluate().toarray()[:, :-1], 0)
+        self.assertEqual(delta_fn_right_disc.shape, y.shape)
 
         # Value tests
         var_disc = disc.process_symbol(var)
