@@ -165,3 +165,9 @@ class OptimisationsTest(object):
             result = np.concatenate([result, eqn_eval])
 
         return result
+
+    def set_up_model(self, simplify=False, to_python=False):
+        self.model.use_simplify = simplify
+        self.model.use_to_python = to_python
+        self.model.default_solver.set_up(self.model)
+        return None
