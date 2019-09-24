@@ -429,8 +429,9 @@ class Symbol(anytree.NodeMixin):
             return pybamm.Scalar(1)
         else:
             jac = self._jac(variable)
-            # jacobian removes the domain
+            # jacobian removes the domain(s)
             jac.domain = []
+            jac.auxiliary_domains = {}
             return jac
 
     def _jac(self, variable):
