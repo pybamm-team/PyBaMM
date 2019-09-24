@@ -38,15 +38,15 @@ class BaseBatteryModel(pybamm.BaseModel):
                 (default) or "varying". Not currently implemented in any of the models.
             * "current collector" : str, optional
                 Sets the current collector model to use. Can be "uniform" (default),
-                "potential pair", "potential pair quite conductive" or "single particle
-                potential pair".
+                "potential pair", "potential pair quite conductive", "single particle
+                potential pair", "jelly roll" or "set external potential".
             * "particle" : str, optional
                 Sets the submodel to use to describe behaviour within the particle.
                 Can be "Fickian diffusion" (default) or "fast diffusion".
             * "thermal" : str, optional
                 Sets the thermal model to use. Can be "isothermal" (default),
-                "x-full", "x-lumped", "xyz-lumped" or "lumped". Must be "isothermal" for
-                lead-acid models.
+                "x-full", "x-lumped", "xyz-lumped", "lumped" or "set external
+                temperature". Must be "isothermal" for lead-acid models.
             * "thermal current collector" : bool, optional
                 Whether to include thermal effects in the current collector in
                 one-dimensional models (default is False). Note that this option
@@ -592,9 +592,19 @@ class BaseBatteryModel(pybamm.BaseModel):
                 submodel = pybamm.current_collector.SetPotentialSingleParticle1plus1D(
                     self.param
                 )
+            elif self.options["dimensionality"] in [0, 2]:
+                raise NotImplementedError(
+                    """Set potential model only implemented for 1D current
+                    collectors"""
+                )
         elif self.options["current collector"] == "jelly roll":
-            submodel = pybamm.current_collector.PotentialPairUnrolled(self.param)
-
+            if self.options["dimensionality"] == 1:
+                submodel = pybamm.current_collector.PotentialPairUnrolled(self.param)
+            elif self.options["dimensionality"] in [0, 2]:
+                raise NotImplementedError(
+                    """Jelly roll model only implemented for 1D current
+                    collectors"""
+                )
         self.submodels["current collector"] = submodel
 
     def set_voltage_variables(self):

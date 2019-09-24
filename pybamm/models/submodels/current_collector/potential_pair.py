@@ -73,7 +73,7 @@ class BasePotentialPair(BaseModel):
 
 
 class PotentialPair1plus1D(BasePotentialPair):
-    "Base class for a 1+1D potential pair model. Note: assumes both tabs at top"
+    "Base class for a 1+1D potential pair model."
 
     def __init__(self, param):
         super().__init__(param)
@@ -177,7 +177,10 @@ class PotentialPair2plus1D(BasePotentialPair):
 
 
 class PotentialPairUnrolled(PotentialPair1plus1D):
-    "Base class for 1+1D model used to model an jelly roll with a tab at either end"
+    """
+    Base class for 1+1D model used to model an 'unrolled' jelly roll with a tab
+    at either end
+    """
 
     def set_boundary_conditions(self, variables):
 

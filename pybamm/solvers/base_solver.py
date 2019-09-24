@@ -35,7 +35,8 @@ class BaseSolver(object):
         self._tol = value
 
     def solve(self, model, t_eval):
-        """Execute the solver setup and calculate the solution of the model at
+        """
+        Execute the solver setup and calculate the solution of the model at
         specified times.
 
         Parameters
@@ -74,7 +75,8 @@ class BaseSolver(object):
         return solution
 
     def step(self, model, dt, npts=2):
-        """Step the solution of the model forward by a given time increment. The
+        """
+        Step the solution of the model forward by a given time increment. The
         first time this method is called it executes the necessary setup by
         calling `self.set_up(model)`.
 

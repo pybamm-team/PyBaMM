@@ -1,3 +1,7 @@
+#
+# Example of 1+1D SPM where the potenital can be set by the user
+#
+
 import pybamm
 import numpy as np
 import sys
@@ -7,7 +11,7 @@ plt.close("all")
 # set logging level
 pybamm.set_logging_level("INFO")
 
-# load (2+1D) SPM model
+# load (1+1D) SPM model
 options = {"current collector": "set external potential", "dimensionality": 1}
 model = pybamm.lithium_ion.SPM(options)
 model.check_well_posedness()

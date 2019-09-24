@@ -6,12 +6,19 @@ import pybamm
 
 class SetPotentialSingleParticle1plus1D(pybamm.BaseSubModel):
     """A submodel 1D current collectors which *doesn't* update the potentials
-    during solve.
+    during solve. This class uses the current-voltage relationship from the
+    SPM(e) (see [1]_) to calculate the current.
 
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
+
+    References
+    ----------
+    .. [1] SG Marquis, V Sulzer, R Timms, CP Please and SJ Chapman. “An asymptotic
+           derivation of a single particle model with electrolyte”. In: arXiv preprint
+           arXiv:1905.12553 (2019).
 
 
     **Extends:** :class:`pybamm.current_collector.BaseModel`
@@ -41,9 +48,8 @@ class SetPotentialSingleParticle1plus1D(pybamm.BaseSubModel):
         # Local potential difference
         V_cc = phi_s_cp - phi_s_cn
 
-        # In 2D left corresponds to the negative tab and right the positive tab
-        phi_neg_tab = pybamm.BoundaryValue(phi_s_cn, "left")
-        phi_pos_tab = pybamm.BoundaryValue(phi_s_cp, "right")
+        phi_neg_tab = pybamm.BoundaryValue(phi_s_cn, "negative tab")
+        phi_pos_tab = pybamm.BoundaryValue(phi_s_cp, "positive tab")
 
         variables = {
             "Negative current collector potential": phi_s_cn,
