@@ -80,6 +80,12 @@ class TestSimplify(unittest.TestCase):
             (pybamm.boundary_value(v_neg, "right")).simplify(), pybamm.BoundaryValue
         )
 
+        # Delta function
+        self.assertIsInstance(
+            (pybamm.DeltaFunction(v_neg, "right", None, None)).simplify(),
+            pybamm.DeltaFunction,
+        )
+
         # addition
         self.assertIsInstance((a + b).simplify(), pybamm.Scalar)
         self.assertEqual((a + b).simplify().evaluate(), 1)

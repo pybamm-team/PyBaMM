@@ -630,7 +630,7 @@ class DeltaFunction(SpatialOperator):
     **Extends:** :class:`SpatialOperator`
     """
 
-    def __init__(self, child, side, domain, auxiliary_domains):
+    def __init__(self, child, side, domain, auxiliary_domains=None):
         self.side = side
         super().__init__("delta function", child, domain, auxiliary_domains)
 
