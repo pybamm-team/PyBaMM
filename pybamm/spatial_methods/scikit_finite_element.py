@@ -5,9 +5,7 @@ import pybamm
 
 from scipy.sparse import csr_matrix
 import autograd.numpy as np
-
-if not pybamm.have_scikit_fem():
-    import skfem
+import skfem
 
 
 class ScikitFiniteElement(pybamm.SpatialMethod):
@@ -29,9 +27,6 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
     """
 
     def __init__(self, mesh):
-        if pybamm.have_scikit_fem() is None:
-            raise ImportError("scikit-fem is not installed")
-
         super().__init__(mesh)
         # add npts_for_broadcast to mesh domains for this particular discretisation
         for dom in mesh.keys():

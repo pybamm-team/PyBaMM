@@ -4,7 +4,6 @@
 
 import pybamm
 import os
-from collections import OrderedDict
 
 
 class BaseBatteryModel(pybamm.BaseModel):
@@ -63,7 +62,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         super().__init__(name)
         self.options = options
         self.set_standard_output_variables()
-        self.submodels = OrderedDict()  # ordered dict not default in 3.5
+        self.submodels = {}
         self._built = False
 
     @property
