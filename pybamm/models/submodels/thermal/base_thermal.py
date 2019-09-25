@@ -23,7 +23,11 @@ class BaseThermal(pybamm.BaseSubModel):
         param = self.param
         T_n, T_s, T_p = T.orphans
 
-        T_x_av = pybamm.x_average(T)
+        # Compute the x-average over the current collectors by defualt.
+        # Note: the method 'self._x_average' is overwritten by models which do
+        # not include current collector effects, so that the avergage is just taken
+        # over the negative electrode, separator and positive electrode.
+        T_x_av = self._x_average(T, T_cn, T_cp)
         T_vol_av = self._yz_average(T_x_av)
 
         q = self._flux_law(T)
@@ -120,7 +124,10 @@ class BaseThermal(pybamm.BaseSubModel):
 
         Q = Q_ohm + Q_rxn + Q_rev
 
-        # Compute the x-average over the current collectors.
+        # Compute the x-average over the current collectors by defualt.
+        # Note: the method 'self._x_average' is overwritten by models which do
+        # not include current collector effects, so that the avergage is just taken
+        # over the negative electrode, separator and positive electrode.
         Q_av = self._x_average(Q, Q_ohm_s_cn, Q_ohm_s_cp)
         Q_vol_av = self._yz_average(Q_av)
 
@@ -166,22 +173,45 @@ class BaseThermal(pybamm.BaseSubModel):
     def _unpack(self, variables):
         raise NotImplementedError
 
+    def _current_collector_heating(self, variables):
+        raise NotImplementedError
+
     def _yz_average(self, var):
         raise NotImplementedError
 
     def _x_average(self, var, var_cn, var_cp):
         """
         Computes the x-average over the whole cell (including current collectors)
-        from the x-averaged variable in the cell (negative electrode, separator,
+        from the variable in the cell (negative electrode, separator,
         positive electrode), negative current collector, and positive current
-        collector.
+        collector. This method is overwritten by models which do not include
+        current collector effects, so that the avergage is just taken over the
+        negative electrode, separator and positive electrode.
         Note: we do this as we cannot create a single variable which is
         the concatenation [var_cn, var, var_cp] since var_cn and var_cp share the
         same domian. (In the N+1D formulation the current collector variables are
         assumed independent of x, so we do not make the distinction between negative
         and positive current collectors in the geometry).
         """
-        out = (
-            self.param.l_cn * var_cn + pybamm.x_average(var) + self.param.l_cp * var_cp
-        ) / self.param.l
+        # When averging the temperature for x-lumped or xyz-lumped models, var
+        # is a concatenation of broadcasts of the X- or Volume- averaged temperature.
+        # In this instance we return the (unmodified) variable corresponding to
+        # the correct average to avoid a ModelError (the unmodified variables must
+        # be the key in model.rhs)
+        if isinstance(var, pybamm.Concatenation) and all(
+            isinstance(child, pybamm.Broadcast) for child in var.children
+        ):
+            # Create list of var.ids
+            var_ids = [child.children[0].id for child in var.children]
+            var_ids.extend([var_cn.id, var_cp.id])
+            # If all var.ids the same, then the variable is uniform in x so can
+            # just return one the values (arbitrarily var_cn here)
+            if len(set(var_ids)) == 1:
+                out = var_cn
+        else:
+            out = (
+                self.param.l_cn * var_cn
+                + pybamm.x_average(var)
+                + self.param.l_cp * var_cp
+            ) / self.param.l
         return out

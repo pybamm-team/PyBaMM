@@ -9,10 +9,11 @@ import unittest
 
 class TestBaseModel(unittest.TestCase):
     def test_public_functions(self):
-        submodel = pybamm.thermal.isothermal.BaseModel(None)
+        param = pybamm.standard_parameters_lithium_ion
+        submodel = pybamm.thermal.isothermal.BaseModel(param)
         std_tests = tests.StandardSubModelTests(submodel)
-        with self.assertRaises(NotImplementedError):
-            std_tests.test_all()
+        #with self.assertRaises(NotImplementedError):
+        std_tests.test_all()
 
 
 if __name__ == "__main__":
@@ -23,4 +24,3 @@ if __name__ == "__main__":
         debug = True
     pybamm.settings.debug_mode = True
     unittest.main()
-
