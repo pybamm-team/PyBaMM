@@ -46,16 +46,14 @@ class Uniform1DSubMesh(SubMesh1D):
         A dictionary that contains the limits of the spatial variables
     npts : dict
         A dictionary that contains the number of points to be used on each
-        spatial variable
+        spatial variable. Note: the number of nodes (located at the cell centres)
+        is npts, and the number of edges is npts+1.
     tabs : dict, optional
         A dictionary that contains information about the size and location of
         the tabs
     """
 
     def __init__(self, lims, npts, tabs=None):
-
-        # currently accept lims and npts as dicts. This may get changed at a future
-        # date depending on the form of mesh we desire for 2D/3D
 
         # check that only one variable passed in
         if len(lims) != 1:
@@ -66,6 +64,71 @@ class Uniform1DSubMesh(SubMesh1D):
         npts = npts[spatial_var.id]
 
         edges = np.linspace(spatial_lims["min"], spatial_lims["max"], npts + 1)
+
+        coord_sys = spatial_var.coord_sys
+
+        super().__init__(edges, coord_sys=coord_sys, tabs=tabs)
+
+
+class GetUserSupplied1DSubMesh:
+    """
+    A class to generate a submesh on a 1D domain using a user supplied vector of
+    nodes.
+
+    Parameters
+    ----------
+    edges : array_like
+        The array of points which correspond to the edges of the mesh.
+
+
+    """
+
+    def __init__(self, nodes):
+        self.nodes = nodes
+
+    def __call__(self, lims, npts, tabs=None):
+        return UserSupplied1DSubMesh(lims, npts, tabs, self.nodes)
+
+
+class UserSupplied1DSubMesh(SubMesh1D):
+    """
+    A class to generate a submesh on a 1D domain from a user supplied array of
+    nodes.
+
+    Parameters
+    ----------
+    lims : dict
+        A dictionary that contains the limits of the spatial variables
+    npts : dict
+        A dictionary that contains the number of points to be used on each
+        spatial variable. Note: the number of nodes (located at the cell centres)
+        is npts, and the number of edges is npts+1.
+    tabs : dict
+        A dictionary that contains information about the size and location of
+        the tabs
+    edges : array_like
+        The array of points which correspond to the edges of the mesh.
+    """
+
+    def __init__(self, lims, npts, tabs, edges):
+
+        # check that only one variable passed in
+        if len(lims) != 1:
+            raise pybamm.GeometryError("lims should only contain a single variable")
+
+        spatial_var = list(lims.keys())[0]
+        spatial_lims = lims[spatial_var]
+        npts = npts[spatial_var.id]
+
+        # check that npts + 1 equals number of user-supplied edges
+        if (npts + 1) != len(edges):
+            raise pybamm.GeometryError("Number of points for")
+
+        # check end points of edges agrees with spatial_lims
+        if edges[0] != spatial_lims["min"]:
+            raise pybamm.GeometryError()
+        if edges[-1] != spatial_lims["max"]:
+            raise pybamm.GeometryError()
 
         coord_sys = spatial_var.coord_sys
 
