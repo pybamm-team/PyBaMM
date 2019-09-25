@@ -129,7 +129,7 @@ class UserSupplied1DSubMesh(SubMesh1D):
                 )
             )
 
-        # check end points of edges agrees with spatial_lims
+        # check end points of edges agree with spatial_lims
         if edges[0] != spatial_lims["min"]:
             raise pybamm.GeometryError(
                 """First entry of edges is {}, but should be equal to {}
