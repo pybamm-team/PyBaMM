@@ -238,12 +238,12 @@ class TestScikitFiniteElement(unittest.TestCase):
         # laplace of u = cos(pi*y)*sin(pi*z)
         var = pybamm.Variable("var", domain="current collector")
         laplace_eqn = pybamm.laplacian(var)
-        # set boundary conditions ("left" = bottom of unit square, "right" = top
-        # of unit square, elsewhere normal derivative is zero)
+        # set boundary conditions ("negative tab" = bottom of unit square,
+        # "positive tab" = top of unit square, elsewhere normal derivative is zero)
         disc.bcs = {
             var.id: {
-                "left": (pybamm.Scalar(0), "Dirichlet"),
-                "right": (pybamm.Scalar(0), "Dirichlet"),
+                "negative tab": (pybamm.Scalar(0), "Dirichlet"),
+                "positive tab": (pybamm.Scalar(0), "Dirichlet"),
             }
         }
         disc.set_variable_slices([var])
@@ -298,12 +298,12 @@ class TestScikitFiniteElement(unittest.TestCase):
         # laplace of u = cos(pi*y)*sin(pi*z)
         var = pybamm.Variable("var", domain="current collector")
         laplace_eqn = pybamm.laplacian(var)
-        # set boundary conditions ("left" = bottom of unit square, "right" = top
-        # of unit square, elsewhere normal derivative is zero)
+        # set boundary conditions ("negative tab" = bottom of unit square,
+        # "positive tab" = top of unit square, elsewhere normal derivative is zero)
         disc.bcs = {
             var.id: {
-                "left": (pybamm.Scalar(0), "Dirichlet"),
-                "right": (pybamm.Scalar(0), "Dirichlet"),
+                "negative tab": (pybamm.Scalar(0), "Dirichlet"),
+                "positive tab": (pybamm.Scalar(0), "Dirichlet"),
             }
         }
         disc.set_variable_slices([var])

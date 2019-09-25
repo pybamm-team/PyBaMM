@@ -95,23 +95,9 @@ class Mesh(dict):
 
         # Create submeshes
         for domain in geometry:
-            # TODO: tidy up
-            if isinstance(submesh_types[domain], pybamm.GetExponential1DSubMesh):
-                if "secondary" in geometry[domain].keys():
-                    repeats = 1
-                    for var in geometry[domain]["secondary"].keys():
-                        repeats *= submesh_pts[domain][var.id]  # note (specific to FV)
-                else:
-                    repeats = 1
-                self[domain] = [
-                    submesh_types[domain](
-                        geometry[domain]["primary"], submesh_pts[domain]
-                    )
-                ] * repeats
-            # need to pass tab information if primary domian is 2D current collector
-            elif (
+            if (
                 domain == "current collector"
-                and issubclass(submesh_types[domain], pybamm.ScikitSubMesh2D)
+                and submesh_types[domain] != pybamm.SubMesh0D
             ):
                 self[domain] = [
                     submesh_types[domain](

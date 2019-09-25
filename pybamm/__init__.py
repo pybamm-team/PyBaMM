@@ -218,9 +218,9 @@ from .meshes.one_dimensional_submeshes import (
     Uniform1DSubMesh,
     Chebyshev1DSubMesh,
     GetExponential1DSubMesh,
+    Exponential1DSubMesh,
 )
 from .meshes.scikit_fem_submeshes import (
-    have_scikit_fem,
     ScikitSubMesh2D,
     ScikitUniform2DSubMesh,
     ScikitChebyshev2DSubMesh,

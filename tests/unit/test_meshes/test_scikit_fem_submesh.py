@@ -174,7 +174,6 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
         mesh_type(geometry, submesh_types, var_pts)
 
 
-@unittest.skipIf(pybamm.have_scikit_fem(), "scikit-fem not installed")
 class TestScikitFiniteElementChebyshev2DSubMesh(unittest.TestCase):
     def test_mesh_creation(self):
         param = pybamm.ParameterValues(
