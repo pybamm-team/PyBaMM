@@ -33,8 +33,13 @@ class FullDiffusionLimited(BaseModel):
                 * param.curlyD_ox
                 * pybamm.BoundaryGradient(c_ox_s, "left")
             )
-            N_ox_neg_sep_interface.domain = ["current collector"]
+            import ipdb
 
-            j = -N_ox_neg_sep_interface / param.C_e / param.s_ox_Ox / param.l_n
+            ipdb.set_trace()
+            j = -pybamm.DeltaFunction(
+                N_ox_neg_sep_interface / param.C_e / param.s_ox_Ox / param.l_n,
+                "right",
+                "negative electrode",
+            )
 
         return j

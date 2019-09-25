@@ -636,6 +636,14 @@ class DeltaFunction(SpatialOperator):
         self.side = side
         super().__init__("delta function", child, domain, auxiliary_domains)
 
+    def set_id(self):
+        """ See :meth:`pybamm.Symbol.set_id()` """
+        self._id = hash(
+            (self.__class__, self.name, self.side, self.children[0].id)
+            + tuple(self.domain)
+            + tuple([(k, tuple(v)) for k, v in self.auxiliary_domains.items()])
+        )
+
     def evaluates_on_edges(self):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
         return False
@@ -698,6 +706,7 @@ class BoundaryOperator(SpatialOperator):
         self._id = hash(
             (self.__class__, self.name, self.side, self.children[0].id)
             + tuple(self.domain)
+            + tuple([(k, tuple(v)) for k, v in self.auxiliary_domains.items()])
         )
 
     def _unary_simplify(self, simplified_child):

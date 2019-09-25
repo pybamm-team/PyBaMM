@@ -17,11 +17,15 @@ else:
 
 # load models
 models = [
-    pybamm.lead_acid.NewmanTiedemann(),
-    pybamm.lead_acid.LOQS(),
-    pybamm.lead_acid.FOQS(),
-    pybamm.lead_acid.FOQSAverageCorrection(),
-    pybamm.lead_acid.CompositeExtended(),
+    pybamm.lead_acid.Full(
+        {"surface form": "algebraic", "side reactions": ["oxygen"]}
+    ),
+    pybamm.lead_acid.LOQS({"surface form": "algebraic", "side reactions": ["oxygen"]}),
+    # pybamm.lead_acid.FOQS({"surface form": "algebraic", "side reactions": ["oxygen"]}),
+    # pybamm.lead_acid.FOQSAverageCorrection({"surface form": "algebraic", "side reactions": ["oxygen"]}),
+    pybamm.lead_acid.CompositeExtended(
+        {"surface form": "algebraic", "side reactions": ["oxygen"]}
+    ),
 ]
 
 # load parameter values and process models and geometry

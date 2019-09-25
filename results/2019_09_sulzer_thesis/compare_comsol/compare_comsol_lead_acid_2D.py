@@ -39,10 +39,10 @@ if args.compute:
     # load model and geometry
     pybamm.set_logging_level("INFO")
     pybamm_models = [
-        pybamm.lead_acid.NewmanTiedemann(
+        pybamm.lead_acid.Full(
             {"surface form": "algebraic"}, name="1D PyBaMM"
         ),
-        pybamm.lead_acid.NewmanTiedemann(
+        pybamm.lead_acid.Full(
             {
                 "surface form": "algebraic",
                 "current collector": "potential pair",

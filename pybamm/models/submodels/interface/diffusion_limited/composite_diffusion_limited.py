@@ -7,7 +7,9 @@ from .full_diffusion_limited import FullDiffusionLimited
 
 class CompositeDiffusionLimited(FullDiffusionLimited):
     """
-    Full submodel for diffusion-limited kinetics
+    Composite submodel for diffusion-limited kinetics.
+    Similar to full model, but also adds the first-order x-averaged interfacial current
+    density to the dictionary of variables.
 
     Parameters
     ----------
@@ -17,7 +19,7 @@ class CompositeDiffusionLimited(FullDiffusionLimited):
         The domain to implement the model, either: 'Negative' or 'Positive'.
 
 
-    **Extends:** :class:`pybamm.interface.diffusion_limited.BaseModel`
+    **Extends:** :class:`pybamm.interface.diffusion_limited.FullDiffusionLimited`
     """
 
     def __init__(self, param, domain):

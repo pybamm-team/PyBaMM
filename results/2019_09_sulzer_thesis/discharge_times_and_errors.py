@@ -61,7 +61,7 @@ def discharge_times_and_errors(compute_times, compute_errors):
     savefile_errors = "1d_discharge_asymptotics_errors.pickle"
     savefile_times = "1d_discharge_asymptotics_times.pickle"
     models = [
-        pybamm.lead_acid.NewmanTiedemann({"surface form": "algebraic"}, name="Full"),
+        pybamm.lead_acid.Full({"surface form": "algebraic"}, name="Full"),
         pybamm.lead_acid.LOQS(name="LOQS"),
         pybamm.lead_acid.FOQS(name="FOQS"),
         pybamm.lead_acid.CompositeExtended(name="Composite"),

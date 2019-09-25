@@ -54,10 +54,10 @@ def plot_voltage_components(all_variables, t_eval):
 def discharge_states(compute):
     savefile = "2d_quite_discharge_asymptotics_data.pickle"
     models = [
-        pybamm.lead_acid.NewmanTiedemann(
+        pybamm.lead_acid.Full(
             {"surface form": "algebraic", "dimensionality": 1}, name="1D Full"
         ),
-        pybamm.lead_acid.NewmanTiedemann(
+        pybamm.lead_acid.Full(
             {"dimensionality": 1, "current collector": "potential pair"},
             name="1+1D Full",
         ),

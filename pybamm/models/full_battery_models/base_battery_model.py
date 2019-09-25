@@ -687,7 +687,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         param = self.param
         i_av = param.current_with_time
         if (
-            isinstance(self, pybamm.lead_acid.HigherOrderBaseModel)
+            isinstance(self, pybamm.lead_acid.BaseHigherOrderModel)
             and self.options["current collector"]
             == "potential pair quite conductive averaged"
         ):

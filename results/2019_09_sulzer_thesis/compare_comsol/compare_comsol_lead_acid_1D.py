@@ -30,7 +30,7 @@ comsol_variables = pickle.load(
 
 # load model and geometry
 pybamm.set_logging_level("INFO")
-pybamm_model = pybamm.lead_acid.NewmanTiedemann()
+pybamm_model = pybamm.lead_acid.Full()
 geometry = pybamm_model.default_geometry
 
 # load parameters and process model and geometry

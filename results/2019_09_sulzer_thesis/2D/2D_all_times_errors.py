@@ -83,7 +83,7 @@ def discharge_errors(compute):
     savefile = "nocutoff_8by8_2d_discharge_asymptotics_errors.pickle"
     if compute:
         models = [
-            pybamm.lead_acid.NewmanTiedemann(
+            pybamm.lead_acid.Full(
                 {"surface form": "algebraic"}, name="1D Full"
             ),
             pybamm.lead_acid.LOQS(name="1D LOQS"),
@@ -92,7 +92,7 @@ def discharge_errors(compute):
                 {"current collector": "potential pair quite conductive averaged"},
                 name="1+1D Composite Averaged",
             ),
-            pybamm.lead_acid.NewmanTiedemann(
+            pybamm.lead_acid.Full(
                 {
                     "surface form": "algebraic",
                     "dimensionality": 1,
@@ -130,7 +130,7 @@ def discharge_times(compute):
     savefile = "2d_discharge_asymptotics_times.pickle"
     if compute:
         models = [
-            pybamm.lead_acid.NewmanTiedemann(
+            pybamm.lead_acid.Full(
                 {"surface form": "algebraic"}, name="1D Full"
             ),
             pybamm.lead_acid.LOQS(name="1D LOQS"),
@@ -139,7 +139,7 @@ def discharge_times(compute):
                 {"current collector": "potential pair quite conductive averaged"},
                 name="1+1D Composite Averaged",
             ),
-            pybamm.lead_acid.NewmanTiedemann(
+            pybamm.lead_acid.Full(
                 {
                     "surface form": "algebraic",
                     "dimensionality": 1,

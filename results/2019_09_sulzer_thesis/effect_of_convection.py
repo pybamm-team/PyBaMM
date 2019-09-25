@@ -98,11 +98,11 @@ def charge_states_high_C(compute):
     savefile = "effect_of_convection_high_C_data.pickle"
     if compute:
         models = [
-            pybamm.lead_acid.NewmanTiedemann(
+            pybamm.lead_acid.Full(
                 {"surface form": "algebraic", "convection": {"transverse": "uniform"}},
                 name="With convection",
             ),
-            pybamm.lead_acid.NewmanTiedemann(
+            pybamm.lead_acid.Full(
                 {"surface form": "algebraic"}, name="Without convection"
             ),
         ]

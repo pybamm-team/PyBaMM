@@ -213,7 +213,7 @@ class FOQSAverageCorrection(FOQS):
            arXiv preprint arXiv:1902.01774, 2019.
 
 
-    **Extends:** :class:`pybamm.lead_acid.HigherOrderBaseModel`
+    **Extends:** :class:`pybamm.lead_acid.BaseHigherOrderModel`
     """
 
     def __init__(self, options=None, name="FOQS model"):
@@ -299,7 +299,7 @@ class CompositeAverageCorrection(Composite):
     """Extended composite model for lead-acid.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
-    **Extends:** :class:`pybamm.lead_acid.HigherOrderBaseModel`
+    **Extends:** :class:`pybamm.lead_acid.BaseHigherOrderModel`
     """
 
     def __init__(self, options=None, name="Extended composite model (average)"):
