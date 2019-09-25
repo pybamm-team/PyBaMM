@@ -630,8 +630,12 @@ class DeltaFunction(SpatialOperator):
     **Extends:** :class:`SpatialOperator`
     """
 
-    def __init__(self, child, side, domain, auxiliary_domains=None):
+    def __init__(self, child, side, domain):
         self.side = side
+        if child.domain != []:
+            auxiliary_domains = {"secondary": child.domain}
+        else:
+            auxiliary_domains = {}
         super().__init__("delta function", child, domain, auxiliary_domains)
 
     def set_id(self):
@@ -648,13 +652,11 @@ class DeltaFunction(SpatialOperator):
 
     def _unary_simplify(self, simplified_child):
         """ See :meth:`UnaryOperator._unary_simplify()`. """
-        return self.__class__(
-            simplified_child, self.side, self.domain, self.auxiliary_domains
-        )
+        return self.__class__(simplified_child, self.side, self.domain)
 
     def _unary_new_copy(self, child):
         """ See :meth:`UnaryOperator._unary_new_copy()`. """
-        return self.__class__(child, self.side, self.domain, self.auxiliary_domains)
+        return self.__class__(child, self.side, self.domain)
 
 
 class BoundaryOperator(SpatialOperator):

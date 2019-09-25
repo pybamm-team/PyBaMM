@@ -93,7 +93,7 @@ class TestParameterValues(unittest.TestCase):
 
         # process delta function
         aa = pybamm.Parameter("a")
-        delta_aa = pybamm.DeltaFunction(aa, "left", "some domain", {})
+        delta_aa = pybamm.DeltaFunction(aa, "left", "some domain")
         processed_delta_aa = parameter_values.process_symbol(delta_aa)
         self.assertIsInstance(processed_delta_aa, pybamm.DeltaFunction)
         self.assertEqual(processed_delta_aa.side, "left")

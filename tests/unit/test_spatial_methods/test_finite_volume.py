@@ -1362,8 +1362,8 @@ class TestFiniteVolume(unittest.TestCase):
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
         var = pybamm.Variable("var")
-        delta_fn_left = pybamm.DeltaFunction(var, "left", "negative electrode", {})
-        delta_fn_right = pybamm.DeltaFunction(var, "right", "negative electrode", {})
+        delta_fn_left = pybamm.DeltaFunction(var, "left", "negative electrode")
+        delta_fn_right = pybamm.DeltaFunction(var, "right", "negative electrode")
         disc.set_variable_slices([var])
         delta_fn_left_disc = disc.process_symbol(delta_fn_left)
         delta_fn_right_disc = disc.process_symbol(delta_fn_right)
