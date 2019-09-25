@@ -32,7 +32,7 @@ class Mesh(dict):
         submesh_pts = {}
         for domain in geometry:
             # Zero dimensional submesh case (only one point)
-            if issubclass(submesh_types[domain], pybamm.SubMesh0D):
+            if submesh_types[domain] == pybamm.SubMesh0D:
                 submesh_pts[domain] = 1
             # other cases
             else:
@@ -95,8 +95,6 @@ class Mesh(dict):
 
         # Create submeshes
         for domain in geometry:
-            # need to pass tab information if primary domain is 1 or 2D
-            # current collector
             if (
                 domain == "current collector"
                 and submesh_types[domain] != pybamm.SubMesh0D
@@ -176,7 +174,7 @@ class Mesh(dict):
             (domain, submesh_list)
             for domain, submesh_list in self.items()
             if not isinstance(
-                submesh_list[0], (pybamm.SubMesh0D, pybamm.Scikit2DSubMesh)
+                submesh_list[0], (pybamm.SubMesh0D, pybamm.ScikitSubMesh2D)
             )
         ]
         for domain, submesh_list in submeshes:
