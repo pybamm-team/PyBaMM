@@ -24,8 +24,8 @@ param.update(
     {
         "Typical current [A]": C_rate * current_1C,
         "Initial temperature [K]": 298.15,
-        "Negative current collector conductivity [S.m-1]": 1e5,
-        "Positive current collector conductivity [S.m-1]": 1e5,
+        "Negative current collector conductivity [S.m-1]": 1e7,
+        "Positive current collector conductivity [S.m-1]": 1e7,
         "Heat transfer coefficient [W.m-2.K-1]": 1,
     }
 )

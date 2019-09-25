@@ -119,11 +119,14 @@ class BaseThermal(pybamm.BaseSubModel):
         )
 
         Q = Q_ohm + Q_rxn + Q_rev
-        Q_av = pybamm.x_average(Q)
+#        Q_av = pybamm.x_average(Q)
 
         # Compute the x-average over the current collectors.
-        Q_av = self._x_average(Q, Q_ohm_s_cn, Q_ohm_s_cp)
-        Q_vol_av = self._yz_average(Q_av)
+        Q_av_ohm = self._x_average(Q_ohm, Q_ohm_s_cn, Q_ohm_s_cp)
+        Q_av_rxn = pybamm.x_average(Q_rxn)
+        Q_av_rev = pybamm.x_average(Q_rev)
+        Q_av_tot = self._x_average(Q, Q_ohm_s_cn, Q_ohm_s_cp)
+        Q_vol_av = self._yz_average(Q_av_tot)
 
         variables.update(
             {
@@ -147,10 +150,25 @@ class BaseThermal(pybamm.BaseSubModel):
                 * param.potential_scale
                 * Q
                 / param.L_x,
-                "X-averaged total heating": Q_av,
+                "X-averaged Ohmic heating": Q_av_ohm,
+                "X-averaged Ohmic heating [A.V.m-3]": param.i_typ
+                * param.potential_scale
+                * Q_av_ohm
+                / param.L_x,
+                "X-averaged irreversible electrochemical heating": Q_av_rxn,
+                "X-averaged irreversible electrochemical heating [A.V.m-3]": param.i_typ
+                * param.potential_scale
+                * Q_av_rxn
+                / param.L_x,
+                "X-averaged reversible heating": Q_av_rev,
+                "X-averaged reversible heating [A.V.m-3]": param.i_typ
+                * param.potential_scale
+                * Q_av_rev
+                / param.L_x,
+                "X-averaged total heating": Q_av_tot,
                 "X-averaged total heating [A.V.m-3]": param.i_typ
                 * param.potential_scale
-                * Q_av
+                * Q_av_tot
                 / param.L_x,
                 "Volume-averaged total heating": Q_vol_av,
                 "Volume-averaged total heating [A.V.m-3]": param.i_typ
