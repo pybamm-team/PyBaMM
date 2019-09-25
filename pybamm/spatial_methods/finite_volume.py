@@ -364,7 +364,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # not supported by the default kron format
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
-        matrix = csr_matrix(kron(eye(sec_pts), sub_matrix))
+        matrix = kron(eye(sec_pts), sub_matrix).toarray()
 
         # Return delta function, keep domains
         delta_fn = pybamm.Matrix(1 / dx * matrix) * discretised_symbol

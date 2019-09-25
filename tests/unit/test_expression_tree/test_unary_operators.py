@@ -186,7 +186,7 @@ class TestUnaryOperators(unittest.TestCase):
 
     def test_delta_function(self):
         a = pybamm.Symbol("a")
-        delta_a = pybamm.DeltaFunction(a, "right", "some domain", {})
+        delta_a = pybamm.DeltaFunction(a, "right", "some domain")
         self.assertEqual(delta_a.side, "right")
         self.assertEqual(delta_a.child.id, a.id)
         self.assertFalse(delta_a.evaluates_on_edges())

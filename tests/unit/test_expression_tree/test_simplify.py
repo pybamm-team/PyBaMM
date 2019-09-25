@@ -82,7 +82,7 @@ class TestSimplify(unittest.TestCase):
 
         # Delta function
         self.assertIsInstance(
-            (pybamm.DeltaFunction(v_neg, "right", None, None)).simplify(),
+            (pybamm.DeltaFunction(v_neg, "right", None)).simplify(),
             pybamm.DeltaFunction,
         )
 
