@@ -218,7 +218,7 @@ from .meshes.one_dimensional_submeshes import (
     Uniform1DSubMesh,
     GetUserSupplied1DSubMesh,
 )
-from .meshes.scikit_fem_submeshes import Scikit2DSubMesh
+from .meshes.scikit_fem_submeshes import ScikitSubMesh2D, ScikitUniform2DSubMesh
 
 #
 # Spatial Methods

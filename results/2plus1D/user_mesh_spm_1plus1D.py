@@ -28,11 +28,13 @@ param.update(
 param.process_model(model)
 param.process_geometry(geometry)
 
-# set mesh
+# set mesh using user-supplied edges in z
+z_edges = np.array([0, 0.03, 0.1, 0.3, 0.47, 0.5, 0.73, 0.8, 0.911, 1])
 submesh_types = model.default_submesh_types
-z = np.array([0, 0.1, 0.3, 0.5, 0.8, 1])
-npts_z = len(z) - 1
-submesh_types["current collector"] = pybamm.GetUserSupplied1DSubMesh(z)
+submesh_types["current collector"] = pybamm.GetUserSupplied1DSubMesh(z_edges)
+# Need to make sure var_pts for z is ones less than number of edges (variables are
+# evaluated at cell centres)
+npts_z = len(z_edges) - 1
 var = pybamm.standard_spatial_vars
 var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.r_n: 10, var.r_p: 10, var.z: npts_z}
 # depnding on number of points in y-z plane may need to increase recursion depth...
@@ -40,7 +42,7 @@ sys.setrecursionlimit(10000)
 mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
 # discretise model
-disc = pybamm.Discretisation(mesh, model.defualt_spatial_methods)
+disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
 
 # solve model -- simulate one hour discharge

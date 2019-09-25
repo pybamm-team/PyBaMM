@@ -88,7 +88,8 @@ class TestLeadAcidLOQS(unittest.TestCase):
         )
         self.assertTrue(
             issubclass(
-                model.default_submesh_types["current collector"], pybamm.Scikit2DSubMesh
+                model.default_submesh_types["current collector"],
+                pybamm.ScikitUniform2DSubMesh,
             )
         )
 

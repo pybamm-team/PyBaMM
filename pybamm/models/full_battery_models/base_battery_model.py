@@ -150,7 +150,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         elif self.options["dimensionality"] == 1:
             base_submeshes["current collector"] = pybamm.Uniform1DSubMesh
         elif self.options["dimensionality"] == 2:
-            base_submeshes["current collector"] = pybamm.Scikit2DSubMesh
+            base_submeshes["current collector"] = pybamm.ScikitUniform2DSubMesh
         return base_submeshes
 
     @property

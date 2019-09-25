@@ -119,9 +119,7 @@ class UserSupplied1DSubMesh(SubMesh1D):
         spatial_var = list(lims.keys())[0]
         spatial_lims = lims[spatial_var]
         npts = npts[spatial_var.id]
-        import ipdb
 
-        ipdb.set_trace()
         # check that npts + 1 equals number of user-supplied edges
         if (npts + 1) != len(edges):
             raise pybamm.GeometryError(
@@ -134,13 +132,15 @@ class UserSupplied1DSubMesh(SubMesh1D):
         # check end points of edges agrees with spatial_lims
         if edges[0] != spatial_lims["min"]:
             raise pybamm.GeometryError(
-                "First entry of edges is , but should be equal to {} for domain {}.".format(
+                """First entry of edges is {}, but should be equal to {}
+                 for domain {}.""".format(
                     edges[0], spatial_lims["min"], spatial_var.domain
                 )
             )
         if edges[-1] != spatial_lims["max"]:
             raise pybamm.GeometryError(
-                "Last entry of edges is , but should be equal to {} for domain {}.".format(
+                """Last entry of edges is {}, but should be equal to {}
+                for domain {}.""".format(
                     edges[-1], spatial_lims["max"], spatial_var.domain
                 )
             )
