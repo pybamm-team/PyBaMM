@@ -7,7 +7,6 @@ import numpy as np
 import unittest
 
 
-@unittest.skipIf(pybamm.have_scikit_fem(), "scikit-fem not installed")
 class TestScikitFiniteElement(unittest.TestCase):
     def test_not_implemented(self):
         mesh = get_2p1d_mesh_for_testing()
@@ -37,8 +36,8 @@ class TestScikitFiniteElement(unittest.TestCase):
         unit_source = pybamm.Broadcast(1, "current collector")
         disc.bcs = {
             var.id: {
-                "left": (pybamm.Scalar(0), "Neumann"),
-                "right": (pybamm.Scalar(0), "Neumann"),
+                "negative tab": (pybamm.Scalar(0), "Neumann"),
+                "positive tab": (pybamm.Scalar(0), "Neumann"),
             }
         }
 
@@ -60,8 +59,8 @@ class TestScikitFiniteElement(unittest.TestCase):
             # Dirichlet
             disc.bcs = {
                 var.id: {
-                    "left": (pybamm.Scalar(0), "Dirichlet"),
-                    "right": (pybamm.Scalar(1), "Dirichlet"),
+                    "negative tab": (pybamm.Scalar(0), "Dirichlet"),
+                    "positive tab": (pybamm.Scalar(1), "Dirichlet"),
                 }
             }
             eqn_disc = disc.process_symbol(eqn)
@@ -69,8 +68,8 @@ class TestScikitFiniteElement(unittest.TestCase):
             # Neumann
             disc.bcs = {
                 var.id: {
-                    "left": (pybamm.Scalar(0), "Neumann"),
-                    "right": (pybamm.Scalar(1), "Neumann"),
+                    "negative tab": (pybamm.Scalar(0), "Neumann"),
+                    "positive tab": (pybamm.Scalar(1), "Neumann"),
                 }
             }
             eqn_disc = disc.process_symbol(eqn)
@@ -78,8 +77,8 @@ class TestScikitFiniteElement(unittest.TestCase):
             # One of each
             disc.bcs = {
                 var.id: {
-                    "left": (pybamm.Scalar(0), "Neumann"),
-                    "right": (pybamm.Scalar(1), "Dirichlet"),
+                    "negative tab": (pybamm.Scalar(0), "Neumann"),
+                    "positive tab": (pybamm.Scalar(1), "Dirichlet"),
                 }
             }
             eqn_disc = disc.process_symbol(eqn)
@@ -87,8 +86,8 @@ class TestScikitFiniteElement(unittest.TestCase):
             # One of each
             disc.bcs = {
                 var.id: {
-                    "left": (pybamm.Scalar(0), "Dirichlet"),
-                    "right": (pybamm.Scalar(1), "Neumann"),
+                    "negative tab": (pybamm.Scalar(0), "Dirichlet"),
+                    "positive tab": (pybamm.Scalar(1), "Neumann"),
                 }
             }
             eqn_disc = disc.process_symbol(eqn)
@@ -98,16 +97,16 @@ class TestScikitFiniteElement(unittest.TestCase):
         eqn = pybamm.laplacian(var) - pybamm.source(unit_source, var)
         disc.bcs = {
             var.id: {
-                "left": (pybamm.Scalar(0), "Dirichlet"),
-                "right": (pybamm.Scalar(1), "Other BC"),
+                "negative tab": (pybamm.Scalar(0), "Dirichlet"),
+                "positive tab": (pybamm.Scalar(1), "Other BC"),
             }
         }
         with self.assertRaises(ValueError):
             eqn_disc = disc.process_symbol(eqn)
         disc.bcs = {
             var.id: {
-                "left": (pybamm.Scalar(0), "Other BC"),
-                "right": (pybamm.Scalar(1), "Neumann"),
+                "negative tab": (pybamm.Scalar(0), "Other BC"),
+                "positive tab": (pybamm.Scalar(1), "Neumann"),
             }
         }
         with self.assertRaises(ValueError):
@@ -157,12 +156,12 @@ class TestScikitFiniteElement(unittest.TestCase):
         # laplace of u = sin(pi*z)
         var = pybamm.Variable("var", domain="current collector")
         eqn_zz = pybamm.laplacian(var)
-        # set boundary conditions ("left" = bottom of unit square, "right" = top
-        # of unit square, elsewhere normal derivative is zero)
+        # set boundary conditions ("negative tab" = bottom of unit square,
+        # "positive tab" = top of unit square, elsewhere normal derivative is zero)
         disc.bcs = {
             var.id: {
-                "left": (pybamm.Scalar(0), "Dirichlet"),
-                "right": (pybamm.Scalar(0), "Dirichlet"),
+                "negative tab": (pybamm.Scalar(0), "Dirichlet"),
+                "positive tab": (pybamm.Scalar(0), "Dirichlet"),
             }
         }
         disc.set_variable_slices([var])
@@ -179,12 +178,12 @@ class TestScikitFiniteElement(unittest.TestCase):
         # laplace of u = cos(pi*y)*sin(pi*z)
         var = pybamm.Variable("var", domain="current collector")
         laplace_eqn = pybamm.laplacian(var)
-        # set boundary conditions ("left" = bottom of unit square, "right" = top
-        # of unit square, elsewhere normal derivative is zero)
+        # set boundary conditions ("negative tab" = bottom of unit square,
+        # "positive tab" = top of unit square, elsewhere normal derivative is zero)
         disc.bcs = {
             var.id: {
-                "left": (pybamm.Scalar(0), "Dirichlet"),
-                "right": (pybamm.Scalar(0), "Dirichlet"),
+                "negative tab": (pybamm.Scalar(0), "Dirichlet"),
+                "positive tab": (pybamm.Scalar(0), "Dirichlet"),
             }
         }
         disc.set_variable_slices([var])
@@ -362,7 +361,7 @@ class TestScikitFiniteElement(unittest.TestCase):
         self.assertEqual(vec_disc.shape[0], mesh["current collector"][0].npts)
         self.assertEqual(vec_disc.shape[1], 1)
 
-    def test_left_right(self):
+    def test_neg_pos(self):
         mesh = get_2p1d_mesh_for_testing()
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume,
@@ -372,15 +371,18 @@ class TestScikitFiniteElement(unittest.TestCase):
         var = pybamm.Variable("var", domain="current collector")
         disc.set_variable_slices([var])
 
-        extrap_left = pybamm.BoundaryValue(var, "left")
-        extrap_right = pybamm.BoundaryValue(var, "right")
-        extrap_left_disc = disc.process_symbol(extrap_left)
-        extrap_right_disc = disc.process_symbol(extrap_right)
-
+        extrap_neg = pybamm.BoundaryValue(var, "negative tab")
+        extrap_pos = pybamm.BoundaryValue(var, "positive tab")
+        extrap_neg_disc = disc.process_symbol(extrap_neg)
+        extrap_pos_disc = disc.process_symbol(extrap_pos)
         # check constant returns constant at tab
-        constant_y = np.ones(mesh["current collector"][0].npts)
-        self.assertEqual(extrap_left_disc.evaluate(None, constant_y), 1)
-        self.assertEqual(extrap_right_disc.evaluate(None, constant_y), 1)
+        constant_y = np.ones(mesh["current collector"][0].npts)[:, np.newaxis]
+        np.testing.assert_array_almost_equal(
+            extrap_neg_disc.evaluate(None, constant_y), 1
+        )
+        np.testing.assert_array_almost_equal(
+            extrap_pos_disc.evaluate(None, constant_y), 1
+        )
 
     def test_boundary_integral(self):
         mesh = get_2p1d_mesh_for_testing()
@@ -434,10 +436,10 @@ class TestScikitFiniteElement(unittest.TestCase):
             c: pybamm.Integral(u, [y, z]) + 0 * c,
         }
         model.initial_conditions = {u: pybamm.Scalar(0), c: pybamm.Scalar(0)}
-        # set boundary conditions ("left" = bottom of unit square, "right" = top
-        # of unit square, elsewhere normal derivative is zero)
+        # set boundary conditions ("negative tab" = bottom of unit square,
+        # "positive tab" = top of unit square, elsewhere normal derivative is zero)
         model.boundary_conditions = {
-            u: {"left": (0, "Neumann"), "right": (1, "Neumann")}
+            u: {"negative tab": (0, "Neumann"), "positive tab": (1, "Neumann")}
         }
         model.variables = {"c": c, "u": u}
         # create discretisation

@@ -1,6 +1,7 @@
 #
 # Solution class
 #
+import numpy as np
 
 
 class Solution(object):
@@ -81,3 +82,14 @@ class Solution(object):
     def termination(self, value):
         "Updates the reason for termination"
         self._termination = value
+
+    def append(self, solution):
+        """
+        Appends solution.t and solution.y onto self.t and self.y.
+        Note: this process removes the initial time and state of solution to avoid
+        duplicate times and states being stored (self.t[-1] is equal to solution.t[0],
+        and self.y[:, -1] is equal to solution.y[:, 0]).
+
+        """
+        self.t = np.concatenate((self.t, solution.t[1:]))
+        self.y = np.concatenate((self.y, solution.y[:, 1:]), axis=1)

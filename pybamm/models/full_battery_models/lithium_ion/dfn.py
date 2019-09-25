@@ -6,7 +6,13 @@ from .base_lithium_ion_model import BaseModel
 
 
 class DFN(BaseModel):
-    """Doyle-Fuller-Newman (DFN) model of a lithium-ion battery.
+    """Doyle-Fuller-Newman (DFN) model of a lithium-ion battery, from [1]_.
+
+    References
+    ----------
+    .. [1] SG Marquis, V Sulzer, R Timms, CP Please and SJ Chapman. “An asymptotic
+           derivation of a single particle model with electrolyte”. In: arXiv preprint
+           arXiv:1905.12553 (2019).
 
 
     **Extends:** :class:`pybamm.lithium_ion.BaseModel`
@@ -46,12 +52,20 @@ class DFN(BaseModel):
 
     def set_particle_submodel(self):
 
-        self.submodels["negative particle"] = pybamm.particle.fickian.ManyParticles(
-            self.param, "Negative"
-        )
-        self.submodels["positive particle"] = pybamm.particle.fickian.ManyParticles(
-            self.param, "Positive"
-        )
+        if self.options["particle"] == "Fickian diffusion":
+            self.submodels["negative particle"] = pybamm.particle.fickian.ManyParticles(
+                self.param, "Negative"
+            )
+            self.submodels["positive particle"] = pybamm.particle.fickian.ManyParticles(
+                self.param, "Positive"
+            )
+        elif self.options["particle"] == "fast diffusion":
+            self.submodels["negative particle"] = pybamm.particle.fast.ManyParticles(
+                self.param, "Negative"
+            )
+            self.submodels["positive particle"] = pybamm.particle.fast.ManyParticles(
+                self.param, "Positive"
+            )
 
     def set_solid_submodel(self):
 

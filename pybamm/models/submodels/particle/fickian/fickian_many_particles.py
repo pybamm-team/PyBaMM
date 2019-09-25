@@ -35,7 +35,6 @@ class ManyParticles(BaseModel):
         return variables
 
     def get_coupled_variables(self, variables):
-
         c_s = variables[self.domain + " particle concentration"]
         T_k = pybamm.PrimaryBroadcast(
             variables[self.domain + " electrode temperature"],

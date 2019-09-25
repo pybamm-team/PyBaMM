@@ -47,7 +47,7 @@ def get_mesh_for_testing(
             "Electrode height [m]": 0.5,
             "Negative tab width [m]": 0.1,
             "Negative tab centre y-coordinate [m]": 0.1,
-            "Negative tab centre z-coordinate [m]": 0.5,
+            "Negative tab centre z-coordinate [m]": 0.0,
             "Positive tab width [m]": 0.1,
             "Positive tab centre y-coordinate [m]": 0.3,
             "Positive tab centre z-coordinate [m]": 0.5,

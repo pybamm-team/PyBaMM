@@ -9,16 +9,31 @@ import numpy as np
 class SubMesh1D:
     """
     1D submesh class.
-    Contains the position of the nodes and the number of mesh points.
+    Contains the position of the nodes, the number of mesh points, and
+    (optionally) information about the tab locations.
     """
 
-    def __init__(self, edges, coord_sys):
+    def __init__(self, edges, coord_sys, tabs=None):
         self.edges = edges
         self.nodes = (self.edges[1:] + self.edges[:-1]) / 2
         self.d_edges = np.diff(self.edges)
         self.d_nodes = np.diff(self.nodes)
         self.npts = self.nodes.size
         self.coord_sys = coord_sys
+
+        # Add tab locations in terms of "left" and "right"
+        if tabs:
+            self.tabs = {}
+            l_z = self.edges[-1]
+
+            def near(x, point, tol=3e-16):
+                return abs(x - point) < tol
+
+            for tab in ["negative", "positive"]:
+                if near(tabs[tab]["z_centre"], 0):
+                    self.tabs[tab + " tab"] = "left"
+                elif near(tabs[tab]["z_centre"], l_z):
+                    self.tabs[tab + " tab"] = "right"
 
 
 class Uniform1DSubMesh(SubMesh1D):
@@ -33,9 +48,12 @@ class Uniform1DSubMesh(SubMesh1D):
         A dictionary that contains the number of points to be used on each
         spatial variable. Note: the number of nodes (located at the cell centres)
         is npts, and the number of edges is npts+1.
+    tabs : dict, optional
+        A dictionary that contains information about the size and location of
+        the tabs
     """
 
-    def __init__(self, lims, npts):
+    def __init__(self, lims, npts, tabs=None):
 
         # check that only one variable passed in
         if len(lims) != 1:
@@ -49,7 +67,7 @@ class Uniform1DSubMesh(SubMesh1D):
 
         coord_sys = spatial_var.coord_sys
 
-        super().__init__(edges, coord_sys=coord_sys)
+        super().__init__(edges, coord_sys=coord_sys, tabs=tabs)
 
 
 class Chebyshev1DSubMesh(SubMesh1D):
@@ -74,9 +92,12 @@ class Chebyshev1DSubMesh(SubMesh1D):
         A dictionary that contains the number of points to be used on each
         spatial variable. Note: the number of nodes (located at the cell centres)
         is npts, and the number of edges is npts+1.
+    tabs : dict, optional
+        A dictionary that contains information about the size and location of
+        the tabs
     """
 
-    def __init__(self, lims, npts):
+    def __init__(self, lims, npts, tabs=None):
 
         # check that only one variable passed in
         if len(lims) != 1:
@@ -98,7 +119,7 @@ class Chebyshev1DSubMesh(SubMesh1D):
         edges = np.concatenate(([a], np.flip(x_cheb), [b]))
         coord_sys = spatial_var.coord_sys
 
-        super().__init__(edges, coord_sys=coord_sys)
+        super().__init__(edges, coord_sys=coord_sys, tabs=tabs)
 
 
 class GetExponential1DSubMesh:
@@ -127,8 +148,8 @@ class GetExponential1DSubMesh:
         elif side in ["left", "right"]:
             self.stretch = 2.3
 
-    def __call__(self, lims, npts):
-        return Exponential1DSubMesh(lims, npts, self.side, self.stretch)
+    def __call__(self, lims, npts, tabs=None):
+        return Exponential1DSubMesh(lims, npts, tabs, self.side, self.stretch)
 
 
 class Exponential1DSubMesh(SubMesh1D):
@@ -174,11 +195,14 @@ class Exponential1DSubMesh(SubMesh1D):
     side : str
         Whether the points are clustered near to the left or right boundary,
         or both boundaries. Can be "left", "right" or "symmetric"
+    tabs : dict
+        A dictionary that contains information about the size and location of
+        the tabs
     stretch : float
         The factor which appears in the exponential.
     """
 
-    def __init__(self, lims, npts, side, stretch):
+    def __init__(self, lims, npts, tabs, side, stretch):
 
         # check that only one variable passed in
         if len(lims) != 1:
@@ -223,4 +247,4 @@ class Exponential1DSubMesh(SubMesh1D):
             else:
                 edges = np.concatenate((x_exp_left, x_exp_right))
 
-        super().__init__(edges, coord_sys=coord_sys)
+        super().__init__(edges, coord_sys=coord_sys, tabs=tabs)

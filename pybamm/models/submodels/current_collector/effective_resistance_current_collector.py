@@ -68,10 +68,13 @@ class EffectiveResistance2D(pybamm.BaseModel):
 
         self.boundary_conditions = {
             psi: {
-                "left": (psi_neg_tab_bc, "Neumann"),
-                "right": (psi_pos_tab_bc, "Neumann"),
+                "negative tab": (psi_neg_tab_bc, "Neumann"),
+                "positive tab": (psi_pos_tab_bc, "Neumann"),
             },
-            W: {"left": (W_neg_tab_bc, "Neumann"), "right": (W_pos_tab_bc, "Neumann")},
+            W: {
+                "negative tab": (W_neg_tab_bc, "Neumann"),
+                "positive tab": (W_pos_tab_bc, "Neumann")
+            },
         }
 
         # "Initial conditions" provides initial guess for solver
@@ -84,10 +87,10 @@ class EffectiveResistance2D(pybamm.BaseModel):
         }
 
         # Define effective current collector resistance
-        psi_neg_tab = pybamm.BoundaryValue(psi, "left")
-        psi_pos_tab = pybamm.BoundaryValue(psi, "right")
-        W_neg_tab = pybamm.BoundaryValue(W, "left")
-        W_pos_tab = pybamm.BoundaryValue(W, "right")
+        psi_neg_tab = pybamm.BoundaryValue(psi, "negative tab")
+        psi_pos_tab = pybamm.BoundaryValue(psi, "positive tab")
+        W_neg_tab = pybamm.BoundaryValue(W, "negative tab")
+        W_pos_tab = pybamm.BoundaryValue(W, "positive tab")
 
         R_cc = (
             (alpha_prime / l_y)
@@ -202,7 +205,7 @@ class EffectiveResistance2D(pybamm.BaseModel):
 
     @property
     def default_parameter_values(self):
-        # Defualt li-ion parameter values
+        # default li-ion parameter values
         input_path = os.path.join(
             pybamm.root_dir(), "input", "parameters", "lithium-ion"
         )

@@ -4,12 +4,56 @@
 
 import pybamm
 import os
-from collections import OrderedDict
 
 
 class BaseBatteryModel(pybamm.BaseModel):
     """
     Base model class with some default settings and required variables
+
+    Attributes
+    ----------
+
+    options: dict
+        A dictionary of options to be passed to the model. The options that can
+        be set are listed below. Note that not all of the options are compatible with
+        each other and with all of the models implemented in PyBaMM.
+
+            * "dimensionality" : int, optional
+                Sets the dimension of the current collector problem. Can be 0
+                (default), 1 or 2.
+            * "surface form" : bool or str, optional
+                Whether to use the surface formulation of the problem. Can be False
+                (default), "differential" or "algebraic". Must be 'False' for
+                lithium-ion models.
+            * "convection" : bool or str, optional
+                Whether to include the effects of convection in the model. Can be
+                False (default), "differential" or "algebraic". Must be 'False' for
+                lithium-ion models.
+            * "side reactions" : list, optional
+                Contains a list of any side reactions to include. Default is []. If this
+                list is not empty (i.e. side reactions are included in the model), then
+                "surface form" cannot be 'False'.
+            * "interfacial surface area" : str, optional
+                Sets the model for the interfacial surface area. Can be "constant"
+                (default) or "varying". Not currently implemented in any of the models.
+            * "current collector" : str, optional
+                Sets the current collector model to use. Can be "uniform" (default),
+                "potential pair", "potential pair quite conductive" or "single particle
+                potential pair".
+            * "particle" : str, optional
+                Sets the submodel to use to describe behaviour within the particle.
+                Can be "Fickian diffusion" (default) or "fast diffusion".
+            * "thermal" : str, optional
+                Sets the thermal model to use. Can be "isothermal" (default),
+                "x-full", "x-lumped", "xyz-lumped" or "lumped". Must be "isothermal" for
+                lead-acid models.
+            * "thermal current collector" : bool, optional
+                Whether to include thermal effects in the current collector in
+                one-dimensional models (default is False). Note that this option
+                only takes effect if "dimensionality" is 0. If "dimensionality"
+                is 1 or 2 current collector effects are always included. Must be 'False'
+                for lead-acid models.
+
 
     **Extends:** :class:`pybamm.BaseModel`
     """
@@ -18,7 +62,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         super().__init__(name)
         self.options = options
         self.set_standard_output_variables()
-        self.submodels = OrderedDict()  # ordered dict not default in 3.5
+        self.submodels = {}
         self._built = False
 
     @property
@@ -142,12 +186,12 @@ class BaseBatteryModel(pybamm.BaseModel):
             "dimensionality": 0,
             "surface form": False,
             "convection": False,
-            "first-order potential": "linear",
             "side reactions": [],
             "interfacial surface area": "constant",
             "current collector": "uniform",
-            "thermal": None,
-            "thermal current collector": False
+            "particle": "Fickian diffusion",
+            "thermal": "isothermal",
+            "thermal current collector": False,
         }
         options = default_options
         # any extra options overwrite the default options
@@ -193,7 +237,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 )
             )
         if options["thermal"] not in [
-            None,
+            "isothermal",
             "x-full",
             "x-lumped",
             "xyz-lumped",
@@ -202,7 +246,30 @@ class BaseBatteryModel(pybamm.BaseModel):
             raise pybamm.OptionError(
                 "Unknown thermal model '{}'".format(options["thermal"])
             )
+        if options["particle"] not in ["Fickian diffusion", "fast diffusion"]:
+            raise pybamm.OptionError(
+                "particle model '{}' not recognised".format(options["particle"])
+            )
 
+        # Options that are incompatible with models
+        if isinstance(self, pybamm.lithium_ion.BaseModel):
+            if options["surface form"] is not False:
+                raise pybamm.OptionError(
+                    "surface form not implemented for lithium-ion models"
+                )
+            if options["convection"] is True:
+                raise pybamm.OptionError(
+                    "convection not implemented for lithium-ion models"
+                )
+        if isinstance(self, pybamm.lead_acid.BaseModel):
+            if options["thermal"] != "isothermal":
+                raise pybamm.OptionError(
+                    "thermal effects not implemented for lead-acid models"
+                )
+            if options["thermal current collector"] is True:
+                raise pybamm.OptionError(
+                    "thermal effects not implemented for lead-acid models"
+                )
         self._options = options
 
     def set_standard_output_variables(self):
@@ -404,7 +471,7 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     def set_thermal_submodel(self):
 
-        if self.options["thermal"] is None:
+        if self.options["thermal"] == "isothermal":
             if self.options["dimensionality"] == 0:
                 thermal_submodel = pybamm.thermal.isothermal.NoCurrentCollector(
                     self.param
@@ -571,26 +638,15 @@ class BaseBatteryModel(pybamm.BaseModel):
         eta_r_av = eta_r_p_av - eta_r_n_av
         eta_r_av_dim = eta_r_p_av_dim - eta_r_n_av_dim
 
-        # terminal voltage
-        phi_s_cn = self.variables["Negative current collector potential"]
+        # terminal voltage (Note: phi_s_cn is zero at the negative tab)
         phi_s_cp = self.variables["Positive current collector potential"]
-        phi_s_cn_dim = self.variables["Negative current collector potential [V]"]
         phi_s_cp_dim = self.variables["Positive current collector potential [V]"]
         if self.options["dimensionality"] == 0:
             V = phi_s_cp
             V_dim = phi_s_cp_dim
-        elif self.options["dimensionality"] == 1:
-            # In 1D both tabs are at "right"
-            V = pybamm.BoundaryValue(phi_s_cp, "right")
-            V_dim = pybamm.BoundaryValue(phi_s_cp_dim, "right")
-        elif self.options["dimensionality"] == 2:
-            # In 2D left corresponds to the negative tab and right the positive tab
-            V = pybamm.BoundaryValue(phi_s_cp, "right") - pybamm.BoundaryValue(
-                phi_s_cn, "left"
-            )
-            V_dim = pybamm.BoundaryValue(phi_s_cp_dim, "right") - pybamm.BoundaryValue(
-                phi_s_cn_dim, "left"
-            )
+        elif self.options["dimensionality"] in [1, 2]:
+            V = pybamm.BoundaryValue(phi_s_cp, "positive tab")
+            V_dim = pybamm.BoundaryValue(phi_s_cp_dim, "positive tab")
 
         # TODO: add current collector losses to the voltage in 3D
 

@@ -4,25 +4,27 @@
 import pybamm
 
 import numpy as np
-import importlib
-
-skfem_spec = importlib.util.find_spec("skfem")
-if skfem_spec is not None:
-    skfem = importlib.util.module_from_spec(skfem_spec)
-    skfem_spec.loader.exec_module(skfem)
-
-
-def have_scikit_fem():
-    return skfem_spec is None
+import skfem
 
 
 class ScikitSubMesh2D:
-    """
-    Contains information about the 2D finite element mesh.
-    Note: This class only allows for the use of piecewise-linear triangular
-    finite elements.
-    """
+    """ Submesh class.
+        Contains information about the 2D finite element mesh.
+        Note: This class only allows for the use of piecewise-linear triangular
+        finite elements.
 
+        Parameters
+        ----------
+        lims : dict
+            A dictionary that contains the limits of each
+            spatial variable
+        npts : dict
+            A dictionary that contains the number of points to be used on each
+            spatial variable
+        tabs : dict
+            A dictionary that contains information about the size and location of
+            the tabs
+        """
     def __init__(self, edges, coord_sys, tabs):
         self.edges = edges
         self.nodes = dict.fromkeys(["y", "z"])
@@ -131,8 +133,6 @@ class ScikitUniform2DSubMesh(ScikitSubMesh2D):
     """
 
     def __init__(self, lims, npts, tabs):
-        if skfem_spec is None:
-            raise ImportError("scikit-fem is not installed")
 
         # check that two variables have been passed in
         if len(lims) != 2:
@@ -201,8 +201,6 @@ class ScikitChebyshev2DSubMesh(ScikitSubMesh2D):
     """
 
     def __init__(self, lims, npts, tabs):
-        if skfem_spec is None:
-            raise ImportError("scikit-fem is not installed")
 
         # check that two variables have been passed in
         if len(lims) != 2:
@@ -277,8 +275,6 @@ class ScikitTopExponential2DSubMesh(ScikitSubMesh2D):
     """
 
     def __init__(self, lims, npts, tabs):
-        if skfem_spec is None:
-            raise ImportError("scikit-fem is not installed")
 
         # check that two variables have been passed in
         if len(lims) != 2:

@@ -11,19 +11,19 @@ import numpy as np
 class TestLeadAcidFOQS(unittest.TestCase):
     def test_basic_processing(self):
         # pybamm.set_logging_level("DEBUG")
-        options = {"thermal": None, "convection": False}
+        options = {"thermal": "isothermal", "convection": False}
         model = pybamm.lead_acid.FOQS(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_basic_processing_with_convection(self):
-        options = {"thermal": None, "convection": True}
+        options = {"thermal": "isothermal", "convection": True}
         model = pybamm.lead_acid.FOQS(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_optimisations(self):
-        options = {"thermal": None, "convection": False}
+        options = {"thermal": "isothermal", "convection": False}
         model = pybamm.lead_acid.FOQS(options)
         optimtest = tests.OptimisationsTest(model)
 
@@ -37,23 +37,44 @@ class TestLeadAcidFOQS(unittest.TestCase):
         np.testing.assert_array_almost_equal(original, simp_and_known)
         np.testing.assert_array_almost_equal(original, simp_and_python)
 
+    def test_set_up(self):
+        options = {"thermal": "isothermal", "convection": False}
+        model = pybamm.lead_acid.FOQS(options)
+        optimtest = tests.OptimisationsTest(model)
+        optimtest.set_up_model(simplify=False, to_python=True)
+        optimtest.set_up_model(simplify=True, to_python=True)
+        optimtest.set_up_model(simplify=False, to_python=False)
+        optimtest.set_up_model(simplify=True, to_python=False)
+
 
 class TestLeadAcidFOQSSurfaceForm(unittest.TestCase):
     def test_basic_processing_differential(self):
-        options = {"surface form": "differential", "thermal": None, "convection": False}
+        options = {
+            "surface form": "differential",
+            "thermal": "isothermal",
+            "convection": False,
+        }
         model = pybamm.lead_acid.FOQS(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing_algebraic(self):
-        options = {"surface form": "algebraic", "thermal": None, "convection": False}
+        options = {
+            "surface form": "algebraic",
+            "thermal": "isothermal",
+            "convection": False,
+        }
         model = pybamm.lead_acid.FOQS(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_optimisations(self):
-        options = {"surface form": "differential", "thermal": None, "convection": False}
+        options = {
+            "surface form": "differential",
+            "thermal": "isothermal",
+            "convection": False,
+        }
         model = pybamm.lead_acid.FOQS(options)
         optimtest = tests.OptimisationsTest(model)
 
@@ -66,6 +87,19 @@ class TestLeadAcidFOQSSurfaceForm(unittest.TestCase):
         np.testing.assert_array_almost_equal(original, using_known_evals)
         np.testing.assert_array_almost_equal(original, simp_and_known)
         np.testing.assert_array_almost_equal(original, simp_and_python)
+
+    def test_set_up(self):
+        options = {
+            "surface form": "differential",
+            "thermal": "isothermal",
+            "convection": False,
+        }
+        model = pybamm.lead_acid.FOQS(options)
+        optimtest = tests.OptimisationsTest(model)
+        optimtest.set_up_model(simplify=False, to_python=True)
+        optimtest.set_up_model(simplify=True, to_python=True)
+        optimtest.set_up_model(simplify=False, to_python=False)
+        optimtest.set_up_model(simplify=True, to_python=False)
 
 
 if __name__ == "__main__":
