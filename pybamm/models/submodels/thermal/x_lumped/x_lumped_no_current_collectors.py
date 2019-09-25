@@ -1,12 +1,16 @@
 #
-# Class for lumped thermal submodel
+# Class for lumped thermal submodel with no current collectors
 #
 import pybamm
+
 from .base_x_lumped import BaseModel
 
 
 class NoCurrentCollector(BaseModel):
-    """Class for x-lumped thermal submodel without current collectors
+    """
+    Class for x-lumped thermal submodel without current collectors. Note: since
+    there are no current collectors in this model, the electrochemical model
+    must be 1D (x-direction only).
 
     Parameters
     ----------
@@ -21,23 +25,13 @@ class NoCurrentCollector(BaseModel):
         super().__init__(param)
 
     def set_rhs(self, variables):
-        # Note: need to get the total heating and avergae over the negative
-        # electrode,separator and positive electrode. The variable ["X-averaged
-        # total heating"] is the avergae in x *including* the current collectors
-        # so results in an underprediction of heating when compared with the submodel
-        # "x_full_no_current_collector". For the same reason, we use
-        # `pybamm.x_average(T)` in the cooling term. The equation is still for the
-        # x-averaged temperature `T_av`, which gets broadcasted over the entire cell.
-        T = variables["Cell temperature"]
         T_av = variables["X-averaged cell temperature"]
-        Q = variables["Total heating"]
-        Q_av = pybamm.x_average(Q)
+        Q_av = variables["X-averaged total heating"]
 
         self.rhs = {
             T_av: (
                 self.param.B * Q_av
-                - (2 * self.param.h / (self.param.delta ** 2) / self.param.l)
-                * pybamm.x_average(T)
+                - (2 * self.param.h / (self.param.delta ** 2) / self.param.l) * T_av
             )
             / self.param.C_th
         }
@@ -49,5 +43,12 @@ class NoCurrentCollector(BaseModel):
         return Q_s_cn, Q_s_cp
 
     def _yz_average(self, var):
-        """Computes the y-z avergage (just the variable when no current collectors)"""
+        """In 1D volume-averaged quantities are unchanged"""
         return var
+
+    def _x_average(self, var, var_cn, var_cp):
+        """
+        Computes the x-average over the whole cell *not* including current
+        collectors. This overwrites the defualt behaviour of 'base_thermal'.
+        """
+        return pybamm.x_average(var)

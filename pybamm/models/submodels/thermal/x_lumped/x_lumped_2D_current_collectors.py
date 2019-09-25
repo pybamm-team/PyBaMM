@@ -2,6 +2,7 @@
 # Class for x-lumped thermal submodels with 2D current collectors
 #
 import pybamm
+
 from .base_x_lumped import BaseModel
 
 

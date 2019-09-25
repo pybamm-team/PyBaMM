@@ -53,3 +53,10 @@ class NoCurrentCollector(BaseModel):
         """Computes the y-z avergage by integration over y and z
             In this case this is just equal to the input variable"""
         return var
+
+    def _x_average(self, var, var_cn, var_cp):
+        """
+        Computes the x-average over the whole cell *not* including current
+        collectors. This overwrites the defualt behaviour of 'base_thermal'.
+        """
+        return pybamm.x_average(var)

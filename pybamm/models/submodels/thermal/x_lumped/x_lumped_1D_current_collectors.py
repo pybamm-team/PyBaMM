@@ -15,7 +15,6 @@ class CurrentCollector1D(BaseModel):
     def set_rhs(self, variables):
         T_av = variables["X-averaged cell temperature"]
         Q_av = variables["X-averaged total heating"]
-
         self.rhs = {
             T_av: (
                 pybamm.laplacian(T_av)
