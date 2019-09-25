@@ -185,7 +185,7 @@ class BaseThermal(pybamm.BaseSubModel):
         from the variable in the cell (negative electrode, separator,
         positive electrode), negative current collector, and positive current
         collector. This method is overwritten by models which do not include
-        current collector effects, so that the avergage is just taken over the
+        current collector effects, so that the average is just taken over the
         negative electrode, separator and positive electrode.
         Note: we do this as we cannot create a single variable which is
         the concatenation [var_cn, var, var_cp] since var_cn and var_cp share the
