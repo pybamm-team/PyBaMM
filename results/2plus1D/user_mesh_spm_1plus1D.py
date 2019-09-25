@@ -6,11 +6,7 @@ import sys
 pybamm.set_logging_level("INFO")
 
 # load (1+1D) SPMe model
-options = {
-    "current collector": "jelly roll",
-    "dimensionality": 1,
-    "thermal": "lumped",
-}
+options = {"current collector": "jelly roll", "dimensionality": 1, "thermal": "lumped"}
 model = pybamm.lithium_ion.SPM(options)
 
 # create geometry
@@ -33,13 +29,14 @@ param.process_model(model)
 param.process_geometry(geometry)
 
 # set mesh
-var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.r_n: 10, var.r_p: 10, var.z: 15}
-# depnding on number of points in y-z plane may need to increase recursion depth...
-sys.setrecursionlimit(10000)
 submesh_types = model.default_submesh_types
 z = np.array([0, 0.1, 0.3, 0.5, 0.8, 1])
+npts_z = len(z) - 1
 submesh_types["current collector"] = pybamm.GetUserSupplied1DSubMesh(z)
+var = pybamm.standard_spatial_vars
+var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.r_n: 10, var.r_p: 10, var.z: npts_z}
+# depnding on number of points in y-z plane may need to increase recursion depth...
+sys.setrecursionlimit(10000)
 mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
 # discretise model
@@ -56,7 +53,7 @@ solution = model.default_solver.solve(model, t_eval)
 output_variables = [
     "X-averaged negative particle surface concentration [mol.m-3]",
     "X-averaged positive particle surface concentration [mol.m-3]",
-    #"X-averaged cell temperature [K]",
+    # "X-averaged cell temperature [K]",
     "Local potenital difference [V]",
     "Current collector current density [A.m-2]",
     "Terminal voltage [V]",
