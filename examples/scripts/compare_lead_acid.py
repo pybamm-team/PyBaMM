@@ -28,7 +28,7 @@ models = [
 
 # load parameter values and process models and geometry
 param = models[0].default_parameter_values
-param.update({"Typical current [A]": -20, "Initial State of Charge": 0.5})
+param.update({"Typical current [A]": -17 * 4, "Initial State of Charge": 0.5})
 for model in models:
     param.process_model(model)
 

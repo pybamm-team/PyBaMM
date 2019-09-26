@@ -16,7 +16,7 @@ except ImportError:
 
 
 def plot_voltages(all_variables, t_eval):
-    Crates = [-0.1, -0.2, -0.5, -1, -2, -5]
+    Crates = [-0.1, -0.2, -0.5, -1, -2, -4]
     all_variables = {k: v for k, v in all_variables.items() if k in Crates}
     shared_plotting.plot_voltages(
         all_variables, t_eval, linestyles=["k-", "g--", "r-."]
@@ -27,7 +27,7 @@ def plot_voltages(all_variables, t_eval):
 
 
 def plot_interfacial_currents(all_variables, t_eval):
-    Crates = [-0.1, -2, -5]
+    Crates = [-0.1, -2, -4]
     all_variables = {Crate: v for Crate, v in all_variables.items() if Crate in Crates}
     file_name = "charge_interfacial_current_density_comparison.eps"
     output_vars = [
@@ -59,7 +59,7 @@ def plot_interfacial_currents(all_variables, t_eval):
 
 def plot_variables(all_variables, t_eval):
     # Set up
-    Crates = [-0.1, -2, -5]
+    Crates = [-0.1, -2, -4]
     times = np.linspace(0, 2, 4)
     var_file_names = {
         "Electrolyte concentration [Molar]"
@@ -86,7 +86,7 @@ def plot_variables(all_variables, t_eval):
 
 
 def plot_voltage_components(all_variables, t_eval):
-    Crates = [-0.1, -2, -5]
+    Crates = [-0.1, -2, -4]
     model = "Composite"
     shared_plotting.plot_voltage_components(all_variables, t_eval, model, Crates)
     file_name = "charge_voltage_components.eps"
@@ -97,9 +97,7 @@ def plot_voltage_components(all_variables, t_eval):
 def charge_states(compute):
     if compute:
         models = [
-            pybamm.lead_acid.Full(
-                {"side reactions": ["oxygen"]}, name="Full"
-            ),
+            pybamm.lead_acid.Full({"side reactions": ["oxygen"]}, name="Full"),
             pybamm.lead_acid.LOQS(
                 {"surface form": "algebraic", "side reactions": ["oxygen"]}, name="LOQS"
             ),
@@ -108,7 +106,7 @@ def charge_states(compute):
                 name="Composite",
             ),
         ]
-        Crates = [-0.1, -0.2, -0.5, -1, -2, -5]
+        Crates = [-0.1, -0.2, -0.5, -1, -2, -4, -5]
         t_eval = np.linspace(0, 3, 100)
         extra_parameter_values = {
             "Positive electrode"
