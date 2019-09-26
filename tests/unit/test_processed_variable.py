@@ -58,10 +58,10 @@ class TestProcessedVariable(unittest.TestCase):
     def test_processed_variable_2D_unknown_domain(self):
         x = pybamm.SpatialVariable("x", domain="SEI layer", coord_sys="cartesian")
         geometry = pybamm.Geometry()
-        geometry.add_domain("SEI layer",
-                            {"primary":
-                                {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
-                            )
+        geometry.add_domain(
+            "SEI layer",
+            {"primary": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}},
+        )
 
         submesh_types = {"SEI layer": pybamm.Uniform1DSubMesh}
         var_pts = {x: 100}
@@ -74,13 +74,11 @@ class TestProcessedVariable(unittest.TestCase):
             np.zeros((var_pts[x], nt)),
             np.linspace(0, 1, 1),
             np.zeros((var_pts[x])),
-            "test"
+            "test",
         )
 
         c = pybamm.StateVector(slice(0, var_pts[x]), domain=["SEI layer"])
-        pybamm.ProcessedVariable(
-            c, solution.t, solution.y, mesh
-        )
+        pybamm.ProcessedVariable(c, solution.t, solution.y, mesh)
 
     def test_processed_variable_3D(self):
         var = pybamm.Variable("var", domain=["negative particle"])
@@ -135,8 +133,7 @@ class TestProcessedVariable(unittest.TestCase):
 
         processed_var = pybamm.ProcessedVariable(var_sol, t_sol, u_sol, mesh=disc.mesh)
         np.testing.assert_array_equal(
-            processed_var.entries,
-            np.reshape(u_sol, [len(y_sol), len(z_sol)]),
+            processed_var.entries, np.reshape(u_sol, [len(y_sol), len(z_sol)])
         )
 
     def test_processed_var_1D_interpolation(self):
