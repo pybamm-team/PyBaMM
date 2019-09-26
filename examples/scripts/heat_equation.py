@@ -48,7 +48,7 @@ param.process_model(model)
 param.process_geometry(geometry)
 
 # Pick mesh, spatial method, and discretise
-submesh_types = {"rod": pybamm.Uniform1DSubMesh}
+submesh_types = {"rod": pybamm.one_dimensional_meshes.Uniform1DSubMesh}
 var_pts = {x: 30}
 mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 spatial_methods = {"rod": pybamm.FiniteVolume}

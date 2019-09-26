@@ -6,7 +6,7 @@ class TestUniform1DSubMesh(unittest.TestCase):
     def test_exceptions(self):
         lims = [[0, 1], [0, 1]]
         with self.assertRaises(pybamm.GeometryError):
-            pybamm.Uniform1DSubMesh(lims, None)
+            pybamm.one_dimensional_meshes.Uniform1DSubMesh(lims, None)
 
 
 if __name__ == "__main__":

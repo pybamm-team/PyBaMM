@@ -101,7 +101,7 @@ param.process_model(model)
 param.process_geometry(geometry)
 
 # mesh and discretise
-submesh_types = {"SEI layer": pybamm.Uniform1DSubMesh}
+submesh_types = {"SEI layer": pybamm.one_dimensional_meshes.Uniform1DSubMesh}
 var_pts = {x: 50}
 mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 

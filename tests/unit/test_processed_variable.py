@@ -63,7 +63,7 @@ class TestProcessedVariable(unittest.TestCase):
                                 {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
                             )
 
-        submesh_types = {"SEI layer": pybamm.Uniform1DSubMesh}
+        submesh_types = {"SEI layer": pybamm.one_dimensional_meshes.Uniform1DSubMesh}
         var_pts = {x: 100}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 

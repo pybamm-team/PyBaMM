@@ -150,7 +150,7 @@ class PotentialPair2plus1D(BasePotentialPair):
         # are the projections of the tabs onto this 2D domain.
         # In the 2D formulation it is assumed that no flux boundary conditions
         # are applied everywhere apart from the tabs.
-        # The reference potenital is taken to be zero on the negative tab,
+        # The reference potential is taken to be zero on the negative tab,
         # giving the zero Dirichlet condition on phi_s_cn. Elsewhere, the boundary
         # is insulated, giving no flux conditions on phi_s_cn. This is automatically
         # applied everywhere, apart from the region corresponding to the projection

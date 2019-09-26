@@ -1,24 +1,15 @@
 #
-# Chebyshev one-dimensional submesh
+# Uniform one-dimensional submesh
 #
 import pybamm
+from .base_submesh import SubMesh1D
 
 import numpy as np
 
 
-class Chebyshev1DSubMesh(pybamm.SubMesh1D):
+class Uniform1DSubMesh(SubMesh1D):
     """
-    A class to generate a submesh on a 1D domain using Chebyshev nodes on the
-    interval (a, b), given by
-
-   .. math::
-    x_{k} = \\frac{1}{2}(a+b) + \\frac{1}{2}(b-a) \\cos(\\frac{2k-1}{2N}\\pi),
-
-    for k = 1, ..., N, where N is the number of nodes. Note: this mesh then
-    appends the boundary nodes, so that the mesh edges are given by
-
-    .. math ::
-     a < x_{1} < ... < x_{N} < b.
+    A class to generate a uniform submesh on a 1D domain
 
     Parameters
     ----------
@@ -43,16 +34,8 @@ class Chebyshev1DSubMesh(pybamm.SubMesh1D):
         spatial_lims = lims[spatial_var]
         npts = npts[spatial_var.id]
 
-        # Create N Chebyshev nodes in the interval (a,b)
-        N = npts - 1
-        ii = np.array(range(1, N + 1))
-        a = spatial_lims["min"]
-        b = spatial_lims["max"]
-        x_cheb = (a + b) / 2 + (b - a) / 2 * np.cos((2 * ii - 1) * np.pi / 2 / N)
+        edges = np.linspace(spatial_lims["min"], spatial_lims["max"], npts + 1)
 
-        # Append the boundary nodes. Note: we need to flip the order the Chebyshev
-        # nodes as they are created in descending order.
-        edges = np.concatenate(([a], np.flip(x_cheb), [b]))
         coord_sys = spatial_var.coord_sys
 
         super().__init__(edges, coord_sys=coord_sys, tabs=tabs)

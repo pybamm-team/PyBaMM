@@ -2,6 +2,7 @@
 # User supplied one-dimensional submesh
 #
 import pybamm
+from .base_submesh import SubMesh1D
 
 
 class GetUserSupplied1DSubMesh:
@@ -21,7 +22,7 @@ class GetUserSupplied1DSubMesh:
         return UserSupplied1DSubMesh(lims, npts, tabs, self.nodes)
 
 
-class UserSupplied1DSubMesh(pybamm.SubMesh1D):
+class UserSupplied1DSubMesh(SubMesh1D):
     """
     A class to generate a submesh on a 1D domain from a user supplied array of
     nodes.

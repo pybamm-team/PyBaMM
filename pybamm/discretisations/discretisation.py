@@ -374,7 +374,7 @@ class Discretisation(object):
             )
 
         # Replace keys with "left" and "right" as appropriate for 1D meshes
-        if isinstance(mesh, pybamm.SubMesh1D):
+        if isinstance(mesh, pybamm.one_dimensional_meshes.SubMesh1D):
             # replace negative and/or positive tab
             for tab in ["negative tab", "positive tab"]:
                 if any(tab in side for side in list(bcs.keys())):
@@ -633,7 +633,7 @@ class Discretisation(object):
                 # "left" or "right" as appropriate
                 if symbol.side in ["negative tab", "positive tab"]:
                     mesh = self.mesh[symbol.children[0].domain[0]][0]
-                    if isinstance(mesh, pybamm.SubMesh1D):
+                    if isinstance(mesh, pybamm.one_dimensional_meshes.SubMesh1D):
                         symbol.side = mesh.tabs[symbol.side]
                 return child_spatial_method.boundary_value_or_flux(symbol, disc_child)
 

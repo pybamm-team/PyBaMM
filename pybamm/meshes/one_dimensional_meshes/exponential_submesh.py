@@ -2,6 +2,7 @@
 # Exponential formula for one-dimensional submesh
 #
 import pybamm
+from .base_submesh import SubMesh1D
 
 import numpy as np
 
@@ -36,7 +37,7 @@ class GetExponential1DSubMesh:
         return Exponential1DSubMesh(lims, npts, tabs, self.side, self.stretch)
 
 
-class Exponential1DSubMesh(pybamm.SubMesh1D):
+class Exponential1DSubMesh(SubMesh1D):
     """
     A class to generate a submesh on a 1D domain in which the points are clustered
     close to one or both of boundaries using an exponential formula on the interval

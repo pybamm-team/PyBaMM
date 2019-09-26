@@ -32,7 +32,7 @@ class Mesh(dict):
         submesh_pts = {}
         for domain in geometry:
             # Zero dimensional submesh case (only one point)
-            if submesh_types[domain] == pybamm.SubMesh0D:
+            if submesh_types[domain] == pybamm.zero_dimensional_meshes.SubMesh0D:
                 submesh_pts[domain] = 1
             # other cases
             else:
@@ -97,7 +97,7 @@ class Mesh(dict):
         for domain in geometry:
             if (
                 domain == "current collector"
-                and submesh_types[domain] != pybamm.SubMesh0D
+                and submesh_types[domain] != pybamm.zero_dimensional_meshes.SubMesh0D
             ):
                 self[domain] = [
                     submesh_types[domain](
@@ -160,7 +160,9 @@ class Mesh(dict):
                 + [self[submeshname][i].edges[1:] for submeshname in submeshnames[1:]]
             )
             coord_sys = self[submeshnames[0]][i].coord_sys
-            submeshes[i] = pybamm.SubMesh1D(combined_submesh_edges, coord_sys)
+            submeshes[i] = pybamm.one_dimensional_meshes.SubMesh1D(
+                combined_submesh_edges, coord_sys
+            )
         return submeshes
 
     def add_ghost_meshes(self):
@@ -174,7 +176,11 @@ class Mesh(dict):
             (domain, submesh_list)
             for domain, submesh_list in self.items()
             if not isinstance(
-                submesh_list[0], (pybamm.SubMesh0D, pybamm.ScikitSubMesh2D)
+                submesh_list[0],
+                (
+                    pybamm.zero_dimensional_meshes.SubMesh0D,
+                    pybamm.two_dimensional_meshes.ScikitSubMesh2D,
+                ),
             )
         ]
         for domain, submesh_list in submeshes:
@@ -186,13 +192,17 @@ class Mesh(dict):
 
                 # left ghost cell: two edges, one node, to the left of existing submesh
                 lgs_edges = np.array([2 * edges[0] - edges[1], edges[0]])
-                self[domain + "_left ghost cell"][i] = pybamm.SubMesh1D(
+                self[domain + "_left ghost cell"][
+                    i
+                ] = pybamm.one_dimensional_meshes.SubMesh1D(
                     lgs_edges, submesh.coord_sys
                 )
 
                 # right ghost cell: two edges, one node, to the right of
                 # existing submesh
                 rgs_edges = np.array([edges[-1], 2 * edges[-1] - edges[-2]])
-                self[domain + "_right ghost cell"][i] = pybamm.SubMesh1D(
+                self[domain + "_right ghost cell"][
+                    i
+                ] = pybamm.one_dimensional_meshes.SubMesh1D(
                     rgs_edges, submesh.coord_sys
                 )

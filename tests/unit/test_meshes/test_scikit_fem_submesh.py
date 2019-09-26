@@ -30,10 +30,10 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
         var_pts = {var.x_n: 10, var.x_s: 7, var.x_p: 12, var.y: 16, var.z: 24}
 
         submesh_types = {
-            "negative electrode": pybamm.Uniform1DSubMesh,
-            "separator": pybamm.Uniform1DSubMesh,
-            "positive electrode": pybamm.Uniform1DSubMesh,
-            "current collector": pybamm.ScikitUniform2DSubMesh,
+            "negative electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
+            "separator": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
+            "positive electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
+            "current collector": pybamm.two_dimensional_meshes.ScikitUniform2DSubMesh,
         }
 
         mesh_type = pybamm.Mesh
@@ -64,10 +64,10 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
 
     def test_init_failure(self):
         submesh_types = {
-            "negative electrode": pybamm.Uniform1DSubMesh,
-            "separator": pybamm.Uniform1DSubMesh,
-            "positive electrode": pybamm.Uniform1DSubMesh,
-            "current collector": pybamm.ScikitUniform2DSubMesh,
+            "negative electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
+            "separator": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
+            "positive electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
+            "current collector": pybamm.two_dimensional_meshes.ScikitUniform2DSubMesh,
         }
         geometry = pybamm.Geometryxp1DMacro(cc_dimension=2)
         with self.assertRaises(KeyError):
@@ -81,14 +81,14 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
 
         lims = {var.x_n: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
         with self.assertRaises(pybamm.GeometryError):
-            pybamm.ScikitUniform2DSubMesh(lims, None, None)
+            pybamm.two_dimensional_meshes.ScikitUniform2DSubMesh(lims, None, None)
 
         lims = {
             var.x_n: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
             var.x_p: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
         }
         with self.assertRaises(pybamm.DomainError):
-            pybamm.ScikitUniform2DSubMesh(lims, None, None)
+            pybamm.two_dimensional_meshes.ScikitUniform2DSubMesh(lims, None, None)
 
         lims = {
             var.y: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
@@ -97,7 +97,7 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
         npts = {var.y.id: 10, var.z.id: 10}
         var.z.coord_sys = "not cartesian"
         with self.assertRaises(pybamm.DomainError):
-            pybamm.ScikitUniform2DSubMesh(lims, npts, None)
+            pybamm.two_dimensional_meshes.ScikitUniform2DSubMesh(lims, npts, None)
         var.z.coord_sys = "cartesian"
 
     def test_tab_error(self):
@@ -106,10 +106,10 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
         var_pts = {var.x_n: 2, var.x_s: 2, var.x_p: 2, var.y: 64, var.z: 64}
 
         submesh_types = {
-            "negative electrode": pybamm.Uniform1DSubMesh,
-            "separator": pybamm.Uniform1DSubMesh,
-            "positive electrode": pybamm.Uniform1DSubMesh,
-            "current collector": pybamm.ScikitUniform2DSubMesh,
+            "negative electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
+            "separator": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
+            "positive electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
+            "current collector": pybamm.two_dimensional_meshes.ScikitUniform2DSubMesh,
         }
 
         mesh_type = pybamm.Mesh
@@ -143,10 +143,10 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
         var_pts = {var.x_n: 2, var.x_s: 2, var.x_p: 2, var.y: 64, var.z: 64}
 
         submesh_types = {
-            "negative electrode": pybamm.Uniform1DSubMesh,
-            "separator": pybamm.Uniform1DSubMesh,
-            "positive electrode": pybamm.Uniform1DSubMesh,
-            "current collector": pybamm.ScikitUniform2DSubMesh,
+            "negative electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
+            "separator": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
+            "positive electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
+            "current collector": pybamm.two_dimensional_meshes.ScikitUniform2DSubMesh,
         }
 
         mesh_type = pybamm.Mesh
@@ -199,10 +199,10 @@ class TestScikitFiniteElementChebyshev2DSubMesh(unittest.TestCase):
         var_pts = {var.x_n: 10, var.x_s: 7, var.x_p: 12, var.y: 16, var.z: 24}
 
         submesh_types = {
-            "negative electrode": pybamm.Uniform1DSubMesh,
-            "separator": pybamm.Uniform1DSubMesh,
-            "positive electrode": pybamm.Uniform1DSubMesh,
-            "current collector": pybamm.ScikitChebyshev2DSubMesh,
+            "negative electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
+            "separator": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
+            "positive electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
+            "current collector": pybamm.two_dimensional_meshes.ScikitChebyshev2DSubMesh,
         }
 
         mesh_type = pybamm.Mesh
@@ -237,7 +237,7 @@ class TestScikitFiniteElementChebyshev2DSubMesh(unittest.TestCase):
         # only one lim
         lims = {var.x_n: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
         with self.assertRaises(pybamm.GeometryError):
-            pybamm.ScikitChebyshev2DSubMesh(lims, None, None)
+            pybamm.two_dimensional_meshes.ScikitChebyshev2DSubMesh(lims, None, None)
 
         # different coord_sys
         lims = {
@@ -245,7 +245,7 @@ class TestScikitFiniteElementChebyshev2DSubMesh(unittest.TestCase):
             var.z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
         }
         with self.assertRaises(pybamm.DomainError):
-            pybamm.ScikitChebyshev2DSubMesh(lims, None, None)
+            pybamm.two_dimensional_meshes.ScikitChebyshev2DSubMesh(lims, None, None)
 
         # not y and z
         lims = {
@@ -253,7 +253,7 @@ class TestScikitFiniteElementChebyshev2DSubMesh(unittest.TestCase):
             var.z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
         }
         with self.assertRaises(pybamm.DomainError):
-            pybamm.ScikitChebyshev2DSubMesh(lims, None, None)
+            pybamm.two_dimensional_meshes.ScikitChebyshev2DSubMesh(lims, None, None)
 
 
 if __name__ == "__main__":

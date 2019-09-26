@@ -62,12 +62,12 @@ def get_mesh_for_testing(
     param.process_geometry(geometry)
 
     submesh_types = {
-        "negative electrode": pybamm.Uniform1DSubMesh,
-        "separator": pybamm.Uniform1DSubMesh,
-        "positive electrode": pybamm.Uniform1DSubMesh,
-        "negative particle": pybamm.Uniform1DSubMesh,
-        "positive particle": pybamm.Uniform1DSubMesh,
-        "current collector": pybamm.SubMesh0D,
+        "negative electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
+        "separator": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
+        "positive electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
+        "negative particle": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
+        "positive particle": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
+        "current collector": pybamm.zero_dimensional_meshes.SubMesh0D,
     }
     if cc_submesh:
         submesh_types["current collector"] = cc_submesh
@@ -95,7 +95,9 @@ def get_p2d_mesh_for_testing(xpts=None, rpts=10):
     return get_mesh_for_testing(xpts=xpts, rpts=rpts, geometry=geometry)
 
 
-def get_1p1d_mesh_for_testing(xpts=None, zpts=15, cc_submesh=pybamm.Uniform1DSubMesh):
+def get_1p1d_mesh_for_testing(
+    xpts=None, zpts=15, cc_submesh=pybamm.one_dimensional_meshes.Uniform1DSubMesh
+):
     geometry = pybamm.Geometry("1+1D macro")
     return get_mesh_for_testing(
         xpts=xpts, zpts=zpts, geometry=geometry, cc_submesh=cc_submesh
@@ -103,7 +105,10 @@ def get_1p1d_mesh_for_testing(xpts=None, zpts=15, cc_submesh=pybamm.Uniform1DSub
 
 
 def get_2p1d_mesh_for_testing(
-    xpts=None, ypts=15, zpts=15, cc_submesh=pybamm.ScikitUniform2DSubMesh
+    xpts=None,
+    ypts=15,
+    zpts=15,
+    cc_submesh=pybamm.two_dimensional_meshes.ScikitUniform2DSubMesh,
 ):
     geometry = pybamm.Geometry("2+1D macro")
     return get_mesh_for_testing(
@@ -135,10 +140,10 @@ def get_unit_2p1D_mesh_for_testing(ypts=15, zpts=15):
     var_pts = {var.x_n: 3, var.x_s: 3, var.x_p: 3, var.y: ypts, var.z: zpts}
 
     submesh_types = {
-        "negative electrode": pybamm.Uniform1DSubMesh,
-        "separator": pybamm.Uniform1DSubMesh,
-        "positive electrode": pybamm.Uniform1DSubMesh,
-        "current collector": pybamm.ScikitUniform2DSubMesh,
+        "negative electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
+        "separator": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
+        "positive electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
+        "current collector": pybamm.two_dimensional_meshes.ScikitUniform2DSubMesh,
     }
 
     return pybamm.Mesh(geometry, submesh_types, var_pts)

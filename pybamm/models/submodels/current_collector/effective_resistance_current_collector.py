@@ -73,7 +73,7 @@ class EffectiveResistance2D(pybamm.BaseModel):
             },
             W: {
                 "negative tab": (W_neg_tab_bc, "Neumann"),
-                "positive tab": (W_pos_tab_bc, "Neumann")
+                "positive tab": (W_pos_tab_bc, "Neumann"),
             },
         }
 
@@ -232,7 +232,9 @@ class EffectiveResistance2D(pybamm.BaseModel):
 
     @property
     def default_submesh_types(self):
-        return {"current collector": pybamm.ScikitUniform2DSubMesh}
+        return {
+            "current collector": pybamm.two_dimensional_meshes.ScikitUniform2DSubMesh
+        }
 
     @property
     def default_spatial_methods(self):
