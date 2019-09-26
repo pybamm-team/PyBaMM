@@ -341,7 +341,10 @@ class FiniteVolume(pybamm.SpatialMethod):
     def delta_function(self, symbol, discretised_symbol):
         """
         Delta function. Implemented as a vector whose only non-zero element is the
-        first (if symbol.side = "left") or last (if symbol.side = "right").
+        first (if symbol.side = "left") or last (if symbol.side = "right"), with
+        appropriate value so that the integral of the delta function across the whole
+        domain is the same as the integral of the discretised symbol across the whole
+        domain.
 
         See :meth:`pybamm.SpatialMethod.delta_function`
         """
@@ -359,15 +362,18 @@ class FiniteVolume(pybamm.SpatialMethod):
             dx = submesh_list[0].d_nodes[-1]
             sub_matrix = csr_matrix(([1], ([prim_pts - 1], [0])), shape=(prim_pts, 1))
 
+        # Calculate domain width, to make sure that the integral of the delta function
+        # is the same as the integral of the child
+        domain_width = submesh_list[0].edges[-1] - submesh_list[0].edges[0]
         # Generate full matrix from the submatrix
         # Convert to csr_matrix so that we can take the index (row-slicing), which is
         # not supported by the default kron format
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
-        matrix = csr_matrix(kron(eye(sec_pts), sub_matrix))
+        matrix = kron(eye(sec_pts), sub_matrix).toarray()
 
         # Return delta function, keep domains
-        delta_fn = pybamm.Matrix(1 / dx * matrix) * discretised_symbol
+        delta_fn = pybamm.Matrix(domain_width / dx * matrix) * discretised_symbol
         delta_fn.domain = symbol.domain
         delta_fn.auxiliary_domains = symbol.auxiliary_domains
 
