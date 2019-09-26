@@ -65,7 +65,7 @@ for name in ["Average SPMe", "2+1D SPMe"]:
         model.variables["Terminal voltage [V]"], t, y, mesh=meshes[name]
     )(t)
 
-    # add current collector Ohmic losses to avergae SPMEe to get SPMeCC voltage
+    # add current collector Ohmic losses to average SPMEe to get SPMeCC voltage
     if model.name == "Average SPMe":
         current = pybamm.ProcessedVariable(model.variables["Current [A]"], t, y)(t)
         delta = param.process_symbol(

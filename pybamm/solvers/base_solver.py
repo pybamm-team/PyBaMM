@@ -89,7 +89,7 @@ class BaseSolver(object):
             The timestep over which to step the solution
         npts : int, optional
             The number of points at which the solution will be returned during
-            the step dt. Defualt is 2 (returns the solution at t0 and t0 + dt).
+            the step dt. default is 2 (returns the solution at t0 and t0 + dt).
 
         """
         # Set timer
