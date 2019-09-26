@@ -62,10 +62,10 @@ def charge_states(compute):
     savefile = "effect_of_convection_data.pickle"
     if compute:
         models = [
-            pybamm.lead_acid.NewmanTiedemann(
+            pybamm.lead_acid.Full(
                 {"convection": True}, name="With convection"
             ),
-            pybamm.lead_acid.NewmanTiedemann(name="Without convection"),
+            pybamm.lead_acid.Full(name="Without convection"),
         ]
         Crates = [0.5, 1, 5]
         t_eval = np.linspace(0, 1, 100)
@@ -89,10 +89,10 @@ def charge_states_bigger_volume_change(compute):
     savefile = "effect_of_convection_bigger_beta_data.pickle"
     if compute:
         models = [
-            pybamm.lead_acid.NewmanTiedemann(
+            pybamm.lead_acid.Full(
                 {"convection": True}, name="With convection"
             ),
-            pybamm.lead_acid.NewmanTiedemann(name="Without convection"),
+            pybamm.lead_acid.Full(name="Without convection"),
         ]
         Crates = [0.5, 1, 5]
         t_eval = np.linspace(0, 1, 100)

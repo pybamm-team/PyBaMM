@@ -175,7 +175,7 @@ class Symbol(anytree.NodeMixin):
         for child in children:
             for level in child.auxiliary_domains.keys():
                 if (
-                    not level in aux_domains
+                    level not in aux_domains
                     or aux_domains[level] == []
                     or child.auxiliary_domains[level] == aux_domains[level]
                 ):
@@ -458,8 +458,9 @@ class Symbol(anytree.NodeMixin):
             return pybamm.Scalar(1)
         else:
             jac = self._jac(variable)
-            # jacobian removes the domain
+            # jacobian removes the domain(s)
             jac.domain = []
+            jac.auxiliary_domains = {}
             return jac
 
     def _jac(self, variable):

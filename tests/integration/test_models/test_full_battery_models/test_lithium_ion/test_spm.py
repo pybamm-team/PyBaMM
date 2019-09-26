@@ -15,7 +15,6 @@ class TestSPM(unittest.TestCase):
         modeltest.test_all()
 
     @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
-    @unittest.skipIf(pybamm.have_scikit_fem(), "scikit-fem not installed")
     def test_basic_processing_1plus1D(self):
         options = {"current collector": "potential pair", "dimensionality": 1}
         model = pybamm.lithium_ion.SPM(options)
@@ -33,7 +32,6 @@ class TestSPM(unittest.TestCase):
         modeltest.test_all(skip_output_tests=True)
 
     @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
-    @unittest.skipIf(pybamm.have_scikit_fem(), "scikit-fem not installed")
     def test_basic_processing_2plus1D(self):
         options = {"current collector": "potential pair", "dimensionality": 2}
         model = pybamm.lithium_ion.SPM(options)
@@ -64,6 +62,14 @@ class TestSPM(unittest.TestCase):
         np.testing.assert_array_almost_equal(original, using_known_evals)
         np.testing.assert_array_almost_equal(original, simp_and_known)
         np.testing.assert_array_almost_equal(original, simp_and_python)
+
+    def test_set_up(self):
+        model = pybamm.lithium_ion.SPM()
+        optimtest = tests.OptimisationsTest(model)
+        optimtest.set_up_model(simplify=False, to_python=True)
+        optimtest.set_up_model(simplify=True, to_python=True)
+        optimtest.set_up_model(simplify=False, to_python=False)
+        optimtest.set_up_model(simplify=True, to_python=False)
 
     def test_charge(self):
         options = {"thermal": "isothermal"}

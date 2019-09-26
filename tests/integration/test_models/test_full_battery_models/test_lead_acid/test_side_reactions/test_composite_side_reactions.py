@@ -1,5 +1,5 @@
 #
-# Tests for the lead-acid Newman-Tiedemann model
+# Tests for the lead-acid Full model
 #
 import pybamm
 import tests

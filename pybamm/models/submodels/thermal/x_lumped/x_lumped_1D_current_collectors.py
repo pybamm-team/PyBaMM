@@ -15,31 +15,35 @@ class CurrentCollector1D(BaseModel):
     def set_rhs(self, variables):
         T_av = variables["X-averaged cell temperature"]
         Q_av = variables["X-averaged total heating"]
-
         self.rhs = {
             T_av: (
                 pybamm.laplacian(T_av)
                 + self.param.B * Q_av
-                - 2 * self.param.h / (self.param.delta ** 2) * T_av
+                - (2 * self.param.h / (self.param.delta ** 2) / self.param.l) * T_av
             )
             / self.param.C_th
         }
 
     def set_boundary_conditions(self, variables):
         T_av = variables["X-averaged cell temperature"]
-        T_av_left = pybamm.boundary_value(T_av, "left")
-        T_av_right = pybamm.boundary_value(T_av, "right")
+        T_av_left = pybamm.boundary_value(T_av, "negative tab")
+        T_av_right = pybamm.boundary_value(T_av, "positive tab")
 
+        # Three boundary conditions here to handle the cases of both tabs at
+        # the same side (top or bottom), or one either side. For both tabs on the
+        # same side, T_av_left and T_av_right are equal, and the boundary condition
+        # "no tab" is used on the other side.
         self.boundary_conditions = {
             T_av: {
-                "left": (
-                    self.param.h * T_av_left / self.param.lambda_k / self.param.delta,
+                "negative tab": (
+                    self.param.h * T_av_left / self.param.delta,
                     "Neumann",
                 ),
-                "right": (
-                    -self.param.h * T_av_right / self.param.lambda_k / self.param.delta,
+                "positive tab": (
+                    -self.param.h * T_av_right / self.param.delta,
                     "Neumann",
                 ),
+                "no tab": (pybamm.Scalar(0), "Neumann"),
             }
         }
 
@@ -56,5 +60,5 @@ class CurrentCollector1D(BaseModel):
         return Q_s_cn, Q_s_cp
 
     def _yz_average(self, var):
-        """Computes the y-z avergage by integration over z (no y-direction)"""
+        """Computes the y-z average by integration over z (no y-direction)"""
         return pybamm.z_average(var)

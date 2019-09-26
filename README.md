@@ -21,7 +21,7 @@ can be found
 
 You'll need the following requirements:
 
-- Python 3.5+
+- Python 3.6+
 - Git (`git` package on Ubuntu distributions)
 - Python libraries: `venv` (`python3-venv` package on Ubuntu distributions)
 
@@ -136,21 +136,6 @@ echo "export LD_LIBRARY_PATH=$INSTALL_DIR/lib:\$LD_LIBRARY_PATH" >> ~/.bashrc
 Please see the [scikits.odes
 documentation](https://scikits-odes.readthedocs.io/en/latest/installation.html) for more
 detailed installation instructions.
-
-### [scikit.fem](https://github.com/kinnala/scikit-fem)
-
-Users can install [scikit.fem](https://github.com/kinnala/scikit-fem) in order to
-generate meshes and assemble discrete operators for use in the finite element method. At present,
-the finite element method is only implemented for a small number of submodels in PyBaMM
-(for example, see the [current collector submodel](https://github.com/pybamm-team/PyBaMM/blob/master/pybamm/models/submodels/current_collector.py)).
-
-Note that scikit-fem requires Python 3.6+. To install scikit-fem, on the command-line type:
-
-```bash
-pip install scikit-fem
-```
-
-Please see the [scikit.fem documentation](https://kinnala.github.io/scikit-fem-docs/learning.html) for more information.
 
 ## How can I contribute to PyBaMM?
 

@@ -1,8 +1,9 @@
-Spatial Methods
-===============
+Discretisation and spatial methods
+==================================
 
 .. toctree::
 
+  discretisation
   spatial_method
   finite_volume
   scikit_finite_element

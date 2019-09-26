@@ -11,13 +11,13 @@ class CurrentCollector0D(BaseModel):
         super().__init__(param)
 
     def set_rhs(self, variables):
-        T_volume_av = variables["Volume-averaged cell temperature"]
-        Q_volume_av = variables["Volume-averaged total heating"]
+        T_av = variables["X-averaged cell temperature"]
+        Q_av = variables["X-averaged total heating"]
 
         self.rhs = {
-            T_volume_av: (
-                self.param.B * Q_volume_av
-                + -2 * self.param.h / (self.param.delta ** 2) * T_volume_av
+            T_av: (
+                self.param.B * Q_av
+                - (2 * self.param.h / (self.param.delta ** 2) / self.param.l) * T_av
             )
             / self.param.C_th
         }

@@ -2,6 +2,7 @@
 # Class for x-lumped thermal submodels with 2D current collectors
 #
 import pybamm
+
 from .base_x_lumped import BaseModel
 
 
@@ -16,14 +17,16 @@ class CurrentCollector2D(BaseModel):
         Q_av = variables["X-averaged total heating"]
 
         # Add boundary source term which accounts for surface cooling around
-        # the edge of the domain in  the weak formulation.
+        # the edge of the domain in the weak formulation.
         # TODO: update to allow different cooling conditions at the tabs
         self.rhs = {
             T_av: (
                 pybamm.laplacian(T_av)
-                + self.param.B * Q_av
-                - 2 * self.param.h / (self.param.delta ** 2) * T_av
-                + self.param.h * pybamm.source(T_av, T_av, boundary=True)
+                + self.param.B * pybamm.source(Q_av, T_av)
+                - (2 * self.param.h / (self.param.delta ** 2) / self.param.l)
+                * pybamm.source(T_av, T_av)
+                - (self.param.h / self.param.delta)
+                * pybamm.source(T_av, T_av, boundary=True)
             )
             / self.param.C_th
         }
@@ -36,8 +39,8 @@ class CurrentCollector2D(BaseModel):
         # TODO: update to allow different cooling conditions at the tabs
         self.boundary_conditions = {
             T_av: {
-                "left": (pybamm.Scalar(0), "Neumann"),
-                "right": (pybamm.Scalar(0), "Neumann"),
+                "negative tab": (pybamm.Scalar(0), "Neumann"),
+                "positive tab": (pybamm.Scalar(0), "Neumann"),
             }
         }
 
@@ -52,5 +55,5 @@ class CurrentCollector2D(BaseModel):
         return Q_s_cn, Q_s_cp
 
     def _yz_average(self, var):
-        """Computes the y-z avergage by integration over y and z"""
+        """Computes the y-z average by integration over y and z"""
         return pybamm.yz_average(var)

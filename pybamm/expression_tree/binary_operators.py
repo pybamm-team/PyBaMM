@@ -124,9 +124,10 @@ class BinaryOperator(pybamm.Symbol):
         new_left = self.left.new_copy()
         new_right = self.right.new_copy()
 
-        # make new symbol, ensure domain remains the same
+        # make new symbol, ensure domain(s) remain the same
         out = self.__class__(new_left, new_right)
         out.domain = self.domain
+        out.auxiliary_domains = self.auxiliary_domains
 
         return out
 
@@ -639,9 +640,13 @@ class Outer(BinaryOperator):
         """ See :meth:`pybamm.Symbol._jac()`. """
         # right cannot be a StateVector, so no need for product rule
         left, right = self.orphans
-        # make sure left child keeps same domain
-        left.domain = self.left.domain
-        return pybamm.Kron(left.jac(variable), right)
+        if left.evaluates_to_number():
+            # Return zeros of correct size
+            return pybamm.Matrix(
+                csr_matrix((self.size, variable.evaluation_array.count(True)))
+            )
+        else:
+            return pybamm.Kron(left.jac(variable), right)
 
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """

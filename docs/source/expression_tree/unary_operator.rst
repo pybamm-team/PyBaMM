@@ -43,6 +43,9 @@ Unary Operators
 .. autoclass:: pybamm.BoundaryIntegral
   :members:
 
+.. autoclass:: pybamm.DeltaFunction
+  :members:
+
 .. autoclass:: pybamm.BoundaryOperator
   :members:
 
