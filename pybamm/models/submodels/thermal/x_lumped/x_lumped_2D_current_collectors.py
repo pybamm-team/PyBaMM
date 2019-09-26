@@ -55,5 +55,5 @@ class CurrentCollector2D(BaseModel):
         return Q_s_cn, Q_s_cp
 
     def _yz_average(self, var):
-        """Computes the y-z avergage by integration over y and z"""
+        """Computes the y-z average by integration over y and z"""
         return pybamm.yz_average(var)

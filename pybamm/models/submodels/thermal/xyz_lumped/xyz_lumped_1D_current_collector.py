@@ -38,5 +38,5 @@ class CurrentCollector1D(BaseModel):
         )
 
     def _yz_average(self, var):
-        """Computes the y-z avergage by integration over z (no y-direction)"""
+        """Computes the y-z average by integration over z (no y-direction)"""
         return pybamm.z_average(var)
