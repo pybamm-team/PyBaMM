@@ -6,11 +6,7 @@ import sys
 pybamm.set_logging_level("INFO")
 
 # load (1+1D) SPMe model
-options = {
-    "current collector": "jelly roll",
-    "dimensionality": 1,
-    "thermal": "lumped",
-}
+options = {"current collector": "jelly roll", "dimensionality": 1, "thermal": "lumped"}
 model = pybamm.lithium_ion.SPM(options)
 
 # create geometry
@@ -32,18 +28,21 @@ param.update(
 param.process_model(model)
 param.process_geometry(geometry)
 
-# set mesh
-var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.r_n: 10, var.r_p: 10, var.z: 15}
-# depnding on number of points in y-z plane may need to increase recursion depth...
-sys.setrecursionlimit(10000)
+# set mesh using user-supplied edges in z
+z_edges = np.array([0, 0.03, 0.1, 0.3, 0.47, 0.5, 0.73, 0.8, 0.911, 1])
 submesh_types = model.default_submesh_types
-z = np.array([0, 0.1, 0.3, 0.5, 0.8, 1])
-submesh_types["current collector"] = pybamm.GetUserSupplied1DSubMesh(z)
+submesh_types["current collector"] = pybamm.GetUserSupplied1DSubMesh(z_edges)
+# Need to make sure var_pts for z is one less than number of edges (variables are
+# evaluated at cell centres)
+npts_z = len(z_edges) - 1
+var = pybamm.standard_spatial_vars
+var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.r_n: 10, var.r_p: 10, var.z: npts_z}
+# depending on number of points in y-z plane may need to increase recursion depth...
+sys.setrecursionlimit(10000)
 mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
 # discretise model
-disc = pybamm.Discretisation(mesh, model.defualt_spatial_methods)
+disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
 
 # solve model -- simulate one hour discharge
@@ -56,7 +55,7 @@ solution = model.default_solver.solve(model, t_eval)
 output_variables = [
     "X-averaged negative particle surface concentration [mol.m-3]",
     "X-averaged positive particle surface concentration [mol.m-3]",
-    #"X-averaged cell temperature [K]",
+    # "X-averaged cell temperature [K]",
     "Local potenital difference [V]",
     "Current collector current density [A.m-2]",
     "Terminal voltage [V]",

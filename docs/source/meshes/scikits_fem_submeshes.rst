@@ -1,5 +1,5 @@
 Scikits FEM Submeshes
 =====================
 
-.. autoclass:: pybamm.Scikit2DSubMesh
+.. autoclass:: pybamm.ScikitUniform2DSubMesh
     :members:
