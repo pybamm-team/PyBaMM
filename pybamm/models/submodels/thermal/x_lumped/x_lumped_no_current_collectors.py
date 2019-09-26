@@ -1,12 +1,16 @@
 #
-# Class for lumped thermal submodel
+# Class for lumped thermal submodel with no current collectors
 #
 import pybamm
+
 from .base_x_lumped import BaseModel
 
 
 class NoCurrentCollector(BaseModel):
-    """Class for x-lumped thermal submodel without current collectors
+    """
+    Class for x-lumped thermal submodel without current collectors. Note: since
+    there are no current collectors in this model, the electrochemical model
+    must be 1D (x-direction only).
 
     Parameters
     ----------
@@ -26,9 +30,10 @@ class NoCurrentCollector(BaseModel):
 
         self.rhs = {
             T_av: (
-                self.param.B * Q_av - 2 * self.param.h / (self.param.delta ** 2) * T_av
+                self.param.B * Q_av
+                - (2 * self.param.h / (self.param.delta ** 2) / self.param.l) * T_av
             )
-            / (self.param.C_th * self.param.rho)
+            / self.param.C_th
         }
 
     def _current_collector_heating(self, variables):
@@ -38,5 +43,12 @@ class NoCurrentCollector(BaseModel):
         return Q_s_cn, Q_s_cp
 
     def _yz_average(self, var):
-        """Computes the y-z avergage (just the variable when no current collectors)"""
+        """In 1D volume-averaged quantities are unchanged"""
         return var
+
+    def _x_average(self, var, var_cn, var_cp):
+        """
+        Computes the x-average over the whole cell *not* including current
+        collectors. This overwrites the default behaviour of 'base_thermal'.
+        """
+        return pybamm.x_average(var)

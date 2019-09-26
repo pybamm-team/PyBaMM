@@ -9,7 +9,8 @@ import unittest
 
 class TestBaseModel(unittest.TestCase):
     def test_public_functions(self):
-        submodel = pybamm.thermal.x_full.BaseModel(None)
+        param = pybamm.standard_parameters_lithium_ion
+        submodel = pybamm.thermal.x_full.BaseModel(param)
         std_tests = tests.StandardSubModelTests(submodel)
         with self.assertRaises(NotImplementedError):
             std_tests.test_all()
