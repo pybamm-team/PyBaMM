@@ -193,11 +193,13 @@ int events(realtype t, N_Vector yy, N_Vector yp, realtype *events_ptr,
     yval = N_VGetArrayPointer(yy);
     ypval = N_VGetArrayPointer(yp);
 
-    py::array_t<double> y_np = py::array_t<double>(2, yval);
-    py::array_t<double> yp_np = py::array_t<double>(2, ypval);
-
     PybammFunctions *python_functions_ptr = static_cast<PybammFunctions *>(user_data);
     PybammFunctions python_functions = *python_functions_ptr;
+
+    int number_of_events = python_functions.number_of_events;
+    int number_of_states = python_functions.number_of_states;
+    py::array_t<double> y_np = py::array_t<double>(number_of_states, yval);
+    py::array_t<double> yp_np = py::array_t<double>(number_of_states, ypval);
 
     py::array_t<double> events_np_array;
 
@@ -206,7 +208,6 @@ int events(realtype t, N_Vector yy, N_Vector yp, realtype *events_ptr,
     double *events_np_data_ptr = (double *)events_np_array.request().ptr;
 
     // just copying data into Sunmatrix (figure out how to pass pointers later)
-    int number_of_events = 2;
     int i;
     for (i = 0; i < number_of_events; i++)
     {
@@ -266,6 +267,7 @@ np_array solve(np_array t_np,
     // initialise solver
     realtype t0 = RCONST(0.0);
     retval = IDAInit(ida_mem, residual, t0, yy, yp);
+    printf("\n Set init %d \n", retval);
 
     // set tolerances
     rtol = RCONST(1.0e-4);
@@ -277,19 +279,23 @@ np_array solve(np_array t_np,
     }
 
     retval = IDASVtolerances(ida_mem, rtol, avtol);
+    printf("\n Set tols %d \n", retval);
 
     // set events
     retval = IDARootInit(ida_mem, number_of_events, events);
+    printf("\n Set root init %d \n", retval);
 
     // set pybamm functions by passing pointer to it
     PybammFunctions pybamm_functions(res, jac, gjd, gjrv, gjcp, event, number_of_states, number_of_events);
     void *user_data = &pybamm_functions;
     IDASetUserData(ida_mem, user_data);
+    printf("\n Set user data %d \n", retval);
 
     // set linear solver
     J = SUNSparseMatrix(number_of_states, number_of_states, nnz, CSR_MAT); // jacobian type (must be dense for dense solvers, p183 of ida_guide.pdf)
     LS = SUNLinSol_KLU(yy, J);
     retval = IDASetLinearSolver(ida_mem, LS, J);
+    printf("\n Set Lin sol %d \n", retval);
 
     // sparse stuff  (must use sparse solvers e.g. KLU or SuperLUMT, p183 of ida_guide.pdf)
     // J = SUNSparseMatrix(2, 2, 2, CSR_MAT); // template jacobian
@@ -301,6 +307,7 @@ np_array solve(np_array t_np,
     {
         printf("\nSetting jacobian \n");
         retval = IDASetJacFn(ida_mem, jacobian);
+        printf("\n Set jac %d \n", retval);
     }
 
     realtype tout, tret;
@@ -317,7 +324,11 @@ np_array solve(np_array t_np,
             break;
         }
 
-        printf("t=%f, y=%f, a=%f \n", tret, yval[0], yval[1]);
+        if (retval == IDA_TSTOP_RETURN)
+        {
+            printf("Completed solve");
+            break;
+        }
     }
 
     /* Free memory */

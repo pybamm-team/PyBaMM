@@ -7,6 +7,8 @@ import numpy as np
 from .c_solvers import klu
 import scipy.sparse as sparse
 
+import time
+
 
 class KLU(pybamm.DaeSolver):
     """Solve a discretised model, using sundials with the KLU sparse linear solver.
@@ -116,12 +118,14 @@ class KLU(pybamm.DaeSolver):
         use_jac = 1
 
         def rootfn(t, y):
-            return_root = np.zeros((num_of_events,))
-            return_root[:] = [event(t, y) for event in events]
+            return_root = np.ones((num_of_events,))
+            [event(t, y) for event in events]
+
             return return_root
 
         # solve
-        time = klu.solve(
+        tic = time.time()
+        t_out = klu.solve(
             t_eval,
             y0,
             ydot0,
@@ -135,6 +139,10 @@ class KLU(pybamm.DaeSolver):
             num_of_events,
             use_jac,
         )
+
+        toc = time.time()
+
+        print("Solve time is: ", toc - tic, " seconds")
 
         print(time)
 
