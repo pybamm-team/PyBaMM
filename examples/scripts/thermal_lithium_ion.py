@@ -6,6 +6,8 @@ import pybamm
 import numpy as np
 
 # load model
+pybamm.set_logging_level("INFO")
+
 options = {"thermal": "x-full"}
 full_thermal_model = pybamm.lithium_ion.SPMe(options)
 

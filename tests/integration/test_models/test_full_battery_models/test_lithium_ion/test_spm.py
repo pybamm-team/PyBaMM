@@ -63,6 +63,14 @@ class TestSPM(unittest.TestCase):
         np.testing.assert_array_almost_equal(original, simp_and_known)
         np.testing.assert_array_almost_equal(original, simp_and_python)
 
+    def test_set_up(self):
+        model = pybamm.lithium_ion.SPM()
+        optimtest = tests.OptimisationsTest(model)
+        optimtest.set_up_model(simplify=False, to_python=True)
+        optimtest.set_up_model(simplify=True, to_python=True)
+        optimtest.set_up_model(simplify=False, to_python=False)
+        optimtest.set_up_model(simplify=True, to_python=False)
+
     def test_charge(self):
         options = {"thermal": "isothermal"}
         model = pybamm.lithium_ion.SPM(options)
