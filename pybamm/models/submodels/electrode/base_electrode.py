@@ -13,7 +13,9 @@ class BaseElectrode(pybamm.BaseSubModel):
         The parameters to use for this submodel
     domain : str
         Either 'Negative' or 'Positive'
-
+    set_positive_potential :  bool, optional
+        If True the battery model sets the positve potential based on the current.
+        If False, the potential is specified by the user. Default is True.
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 

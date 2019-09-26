@@ -30,10 +30,18 @@ class SubMesh1D:
                 return abs(x - point) < tol
 
             for tab in ["negative", "positive"]:
-                if near(tabs[tab]["z_centre"], 0):
+                tab_location = tabs[tab]["z_centre"]
+                if near(tab_location, 0):
                     self.tabs[tab + " tab"] = "left"
-                elif near(tabs[tab]["z_centre"], l_z):
+                elif near(tab_location, l_z):
                     self.tabs[tab + " tab"] = "right"
+                else:
+                    raise pybamm.GeometryError(
+                        """{} tab located at {}, but must be at either 0 or {}
+                        (in dimensionless coordinates).""".format(
+                            tab, tab_location, l_z
+                        )
+                    )
 
 
 class Uniform1DSubMesh(SubMesh1D):

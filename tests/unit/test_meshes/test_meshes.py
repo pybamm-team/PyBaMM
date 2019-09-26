@@ -292,8 +292,8 @@ class TestMesh(unittest.TestCase):
                 "Separator thickness [m]": 0.2,
                 "Positive electrode thickness [m]": 0.3,
                 "Electrode height [m]": 0.4,
-                "Negative tab centre z-coordinate [m]": 0.2,
-                "Positive tab centre z-coordinate [m]": 0.2,
+                "Negative tab centre z-coordinate [m]": 0.0,
+                "Positive tab centre z-coordinate [m]": 0.4,
             }
         )
 
