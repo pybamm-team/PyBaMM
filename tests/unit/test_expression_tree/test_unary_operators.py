@@ -181,6 +181,13 @@ class TestUnaryOperators(unittest.TestCase):
         un5 = pybamm.UnaryOperator("test", d)
         self.assertNotEqual(un1.id, un5.id)
 
+    def test_delta_function(self):
+        a = pybamm.Symbol("a")
+        delta_a = pybamm.DeltaFunction(a, "right", "some domain")
+        self.assertEqual(delta_a.side, "right")
+        self.assertEqual(delta_a.child.id, a.id)
+        self.assertFalse(delta_a.evaluates_on_edges())
+
     def test_boundary_operators(self):
         a = pybamm.Symbol("a", domain="some domain")
         boundary_a = pybamm.BoundaryOperator("boundary", a, "right")

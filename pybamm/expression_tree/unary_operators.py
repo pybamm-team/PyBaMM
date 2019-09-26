@@ -595,9 +595,7 @@ class BoundaryIntegral(SpatialOperator):
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()` """
         self._id = hash(
-            (self.__class__, self.name)
-            + (self.children[0].id,)
-            + tuple(self.domain)
+            (self.__class__, self.name) + (self.children[0].id,) + tuple(self.domain)
         )
 
     def _unary_simplify(self, simplified_child):
@@ -617,6 +615,48 @@ class BoundaryIntegral(SpatialOperator):
     def evaluates_on_edges(self):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
         return False
+
+
+class DeltaFunction(SpatialOperator):
+    """Delta function. Currently can only be implemented at the edge of a domain
+
+    Parameters
+    ----------
+    child : :class:`pybamm.Symbol`
+        The variable that sets the strength of the delta function
+    side : str
+        Which side of the domain to implement the delta function on
+
+    **Extends:** :class:`SpatialOperator`
+    """
+
+    def __init__(self, child, side, domain):
+        self.side = side
+        if child.domain != []:
+            auxiliary_domains = {"secondary": child.domain}
+        else:
+            auxiliary_domains = {}
+        super().__init__("delta function", child, domain, auxiliary_domains)
+
+    def set_id(self):
+        """ See :meth:`pybamm.Symbol.set_id()` """
+        self._id = hash(
+            (self.__class__, self.name, self.side, self.children[0].id)
+            + tuple(self.domain)
+            + tuple([(k, tuple(v)) for k, v in self.auxiliary_domains.items()])
+        )
+
+    def evaluates_on_edges(self):
+        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+        return False
+
+    def _unary_simplify(self, simplified_child):
+        """ See :meth:`UnaryOperator._unary_simplify()`. """
+        return self.__class__(simplified_child, self.side, self.domain)
+
+    def _unary_new_copy(self, child):
+        """ See :meth:`UnaryOperator._unary_new_copy()`. """
+        return self.__class__(child, self.side, self.domain)
 
 
 class BoundaryOperator(SpatialOperator):
@@ -666,6 +706,7 @@ class BoundaryOperator(SpatialOperator):
         self._id = hash(
             (self.__class__, self.name, self.side, self.children[0].id)
             + tuple(self.domain)
+            + tuple([(k, tuple(v)) for k, v in self.auxiliary_domains.items()])
         )
 
     def _unary_simplify(self, simplified_child):
@@ -797,6 +838,7 @@ def grad_squared(expression):
     """
 
     return Gradient_Squared(expression)
+
 
 #
 # Method to call SurfaceValue

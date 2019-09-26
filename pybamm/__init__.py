@@ -99,6 +99,7 @@ from .expression_tree.unary_operators import (
     IndefiniteIntegral,
     DefiniteIntegralVector,
     BoundaryIntegral,
+    DeltaFunction,
     grad,
     div,
     laplacian,
