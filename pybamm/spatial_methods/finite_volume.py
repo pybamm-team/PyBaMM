@@ -365,9 +365,10 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
         matrix = kron(eye(sec_pts), sub_matrix).toarray()
+        domain_width = submesh_list[0].edges[-1] - submesh_list[0].edges[0]
 
         # Return delta function, keep domains
-        delta_fn = pybamm.Matrix(1 / dx * matrix) * discretised_symbol
+        delta_fn = pybamm.Matrix(domain_width / dx * matrix) * discretised_symbol
         delta_fn.domain = symbol.domain
         delta_fn.auxiliary_domains = symbol.auxiliary_domains
 
