@@ -4,5 +4,6 @@ scipy>=1.0
 pandas>=0.23
 anytree>=2.4.3
 autograd>=1.2
+scikit-fem>=0.2.0
 guzzle-sphinx-theme
 sphinx>=1.5

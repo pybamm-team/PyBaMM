@@ -1,14 +1,13 @@
 #
-# Class for base isothermal submodel
+# Class for isothermal submodel
 #
-
 import pybamm
 
 from ..base_thermal import BaseThermal
 
 
-class BaseModel(BaseThermal):
-    """Class for base isothermal submodel.
+class Isothermal(BaseThermal):
+    """Class for isothermal submodel.
 
     Parameters
     ----------
@@ -63,3 +62,17 @@ class BaseModel(BaseThermal):
             "current collector",
         )
         return q
+
+    def _yz_average(self, var):
+        """
+        Temperature is uniform and heat source terms are zero, so the average
+        returns the input variable.
+        """
+        return var
+
+    def _x_average(self, var, var_cn, var_cp):
+        """
+        Temperature is uniform and heat source terms are zero, so the average
+        returns the input variable.
+        """
+        return var

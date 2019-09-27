@@ -338,6 +338,47 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return pybamm.Matrix(matrix)
 
+    def delta_function(self, symbol, discretised_symbol):
+        """
+        Delta function. Implemented as a vector whose only non-zero element is the
+        first (if symbol.side = "left") or last (if symbol.side = "right"), with
+        appropriate value so that the integral of the delta function across the whole
+        domain is the same as the integral of the discretised symbol across the whole
+        domain.
+
+        See :meth:`pybamm.SpatialMethod.delta_function`
+        """
+        # Find the number of submeshes
+        submesh_list = self.mesh.combine_submeshes(*symbol.domain)
+
+        prim_pts = submesh_list[0].npts
+        sec_pts = len(submesh_list)
+
+        # Create submatrix to compute delta function as a flux
+        if symbol.side == "left":
+            dx = submesh_list[0].d_nodes[0]
+            sub_matrix = csr_matrix(([1], ([0], [0])), shape=(prim_pts, 1))
+        elif symbol.side == "right":
+            dx = submesh_list[0].d_nodes[-1]
+            sub_matrix = csr_matrix(([1], ([prim_pts - 1], [0])), shape=(prim_pts, 1))
+
+        # Calculate domain width, to make sure that the integral of the delta function
+        # is the same as the integral of the child
+        domain_width = submesh_list[0].edges[-1] - submesh_list[0].edges[0]
+        # Generate full matrix from the submatrix
+        # Convert to csr_matrix so that we can take the index (row-slicing), which is
+        # not supported by the default kron format
+        # Note that this makes column-slicing inefficient, but this should not be an
+        # issue
+        matrix = kron(eye(sec_pts), sub_matrix).toarray()
+
+        # Return delta function, keep domains
+        delta_fn = pybamm.Matrix(domain_width / dx * matrix) * discretised_symbol
+        delta_fn.domain = symbol.domain
+        delta_fn.auxiliary_domains = symbol.auxiliary_domains
+
+        return delta_fn
+
     def internal_neumann_condition(
         self, left_symbol_disc, right_symbol_disc, left_mesh, right_mesh
     ):
