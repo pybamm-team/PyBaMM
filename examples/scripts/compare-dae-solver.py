@@ -4,7 +4,7 @@ import numpy as np
 pybamm.set_logging_level("INFO")
 
 # load model
-model = pybamm.lithium_ion.SPM()
+model = pybamm.lithium_ion.DFN()
 
 # create geometry
 geometry = model.default_geometry
@@ -18,6 +18,7 @@ param.process_geometry(geometry)
 var = pybamm.standard_spatial_vars
 
 var_pts = {var.x_n: 60, var.x_s: 100, var.x_p: 60, var.r_n: 50, var.r_p: 50}
+# var_pts = model.default_var_pts
 mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
 
 # discretise model
@@ -25,9 +26,13 @@ disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
 
 # solve model
-t_eval = np.linspace(0, 1, 100)
+t_eval = np.linspace(0, 0.2, 100)
 
-# solutions = model.default_solver.solve(model, t_eval)
+klu_sol = pybamm.KLU(tol=1e-8).solve(model, t_eval)
+scikits_sol = pybamm.ScikitsDaeSolver(tol=1e-8).solve(model, t_eval)
 
-solver = pybamm.KLU()
-solution = solver.solve(model, t_eval)
+# plot
+models = [model, model]
+solutions = [scikits_sol, klu_sol]
+plot = pybamm.QuickPlot(models, mesh, solutions)
+plot.dynamic_plot()

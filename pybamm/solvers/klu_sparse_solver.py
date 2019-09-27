@@ -62,12 +62,8 @@ class KLU(pybamm.DaeSolver):
         def eqsres(t, y, ydot, return_residuals):
             return_residuals[:] = residuals(t, y, ydot)
 
-        extra_options = {
-            "old_api": False,
-            "rtol": self.tol,
-            "atol": self.tol,
-            "max_steps": self.max_steps,
-        }
+        rtol = self.tol
+        atol = self.tol
 
         if jacobian:
             jac_y0_t0 = jacobian(t_eval[0], y0)
@@ -81,8 +77,6 @@ class KLU(pybamm.DaeSolver):
                 def jacfn(t, y, cj):
                     jac_eval = jacobian(t, y) - cj * mass_matrix
                     return sparse.csr_matrix(jac_eval)
-
-            extra_options.update({"jacfn": jacfn})
 
         # just defining this here for now...
         class SundialsJacobian:
@@ -135,6 +129,9 @@ class KLU(pybamm.DaeSolver):
             rootfn,
             num_of_events,
             use_jac,
+            mass_matrix.diagonal(),  # this should always just be the diagonals
+            rtol,
+            atol,
         )
 
         t = sol.t

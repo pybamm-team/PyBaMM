@@ -241,7 +241,11 @@ Solution solve(np_array t_np,
                jac_get_type gjcp,
                int nnz,
                event_type event,
-               int number_of_events, int use_jacobian)
+               int number_of_events,
+               int use_jacobian,
+               np_array rhs_alg_id,
+               double abs_tol,
+               double rel_tol)
 {
     auto t = t_np.unchecked<1>();
     auto y0 = y0_np.unchecked<1>();
@@ -280,16 +284,16 @@ Solution solve(np_array t_np,
     ida_mem = IDACreate();
 
     // initialise solver
-    realtype t0 = RCONST(0.0);
+    realtype t0 = RCONST(t(0));
     retval = IDAInit(ida_mem, residual, t0, yy, yp);
 
     // set tolerances
-    rtol = RCONST(1.0e-4);
+    rtol = RCONST(rel_tol);
     atval = N_VGetArrayPointer(avtol);
 
     for (i = 0; i < number_of_states; i++)
     {
-        atval[i] = RCONST(1.0e-8); // nb: this can be set differently for each state
+        atval[i] = RCONST(abs_tol); // nb: this can be set differently for each state
     }
 
     retval = IDASVtolerances(ida_mem, rtol, avtol);
@@ -333,6 +337,22 @@ Solution solve(np_array t_np,
     {
         y_return[j] = yval[j];
     }
+
+    // calculate consistent initial conditions
+    N_Vector id;
+    auto id_np_val = rhs_alg_id.unchecked<1>();
+    id = N_VNew_Serial(number_of_states);
+    realtype *id_val;
+    id_val = N_VGetArrayPointer(id);
+
+    int ii;
+    for (ii = 0; ii < number_of_states; ii++)
+    {
+        id_val[ii] = id_np_val[ii];
+    }
+
+    retval = IDASetId(ida_mem, id);
+    retval = IDACalcIC(ida_mem, IDA_YA_YDP_INIT, t(1));
 
     while (true)
     {
@@ -391,6 +411,9 @@ PYBIND11_MODULE(klu, m)
           py::arg("events"),
           py::arg("number_of_events"),
           py::arg("use_jacobian"),
+          py::arg("rhs_alg_id"),
+          py::arg("rtol"),
+          py::arg("atol"),
           py::return_value_policy::take_ownership);
 
     py::class_<Solution>(m, "solution")
