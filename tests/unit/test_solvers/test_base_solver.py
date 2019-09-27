@@ -14,7 +14,6 @@ class TestBaseSolver(unittest.TestCase):
         solver.tol = 1e-5
         self.assertEqual(solver.tol, 1e-5)
 
-        model = pybamm.BaseModel()
         with self.assertRaises(NotImplementedError):
             solver.compute_solution(None, None)
         with self.assertRaises(NotImplementedError):
