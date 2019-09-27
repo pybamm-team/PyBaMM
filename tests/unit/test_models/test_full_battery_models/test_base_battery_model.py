@@ -6,18 +6,6 @@ import unittest
 
 
 class TestBaseBatteryModel(unittest.TestCase):
-    def test_process_parameters_and_discretise(self):
-        model = pybamm.ReactionDiffusionModel()
-        c = pybamm.Parameter("Negative electrode thickness [m]") * pybamm.Variable(
-            "Negative electrolyte concentration",
-            domain="negative electrode",
-            auxiliary_domains={"secondary": "current collector"},
-        )
-        processed_c = model.process_parameters_and_discretise(c)
-        self.assertIsInstance(processed_c, pybamm.Multiplication)
-        self.assertIsInstance(processed_c.left, pybamm.Scalar)
-        self.assertIsInstance(processed_c.right, pybamm.StateVector)
-
     def test_default_geometry(self):
         var = pybamm.standard_spatial_vars
 
