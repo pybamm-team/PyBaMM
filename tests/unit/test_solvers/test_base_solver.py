@@ -16,10 +16,17 @@ class TestBaseSolver(unittest.TestCase):
 
         model = pybamm.BaseModel()
         with self.assertRaises(NotImplementedError):
-            solver.solve(model, None)
-            solver.step(model, None)
             solver.compute_solution(None, None)
+        with self.assertRaises(NotImplementedError):
             solver.set_up(None)
+
+    def test_step_or_solve_empty_model(self):
+        model = pybamm.BaseModel()
+        solver = pybamm.BaseSolver()
+        with self.assertRaisesRegex(pybamm.ModelError, "Cannot step empty model"):
+            solver.step(model, None)
+        with self.assertRaisesRegex(pybamm.ModelError, "Cannot solve empty model"):
+            solver.solve(model, None)
 
 
 if __name__ == "__main__":

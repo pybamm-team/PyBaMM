@@ -95,6 +95,7 @@ class Discretisation(object):
         """
         pybamm.logger.info("Start discretising {}".format(model.name))
 
+        # Make sure model isn't empty
         if len(model.rhs) == 0 and len(model.algebraic) == 0:
             raise pybamm.ModelError("Cannot discretise empty model")
         # Check well-posedness to avoid obscure errors
