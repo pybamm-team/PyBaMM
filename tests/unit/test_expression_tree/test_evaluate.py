@@ -385,6 +385,14 @@ class TestEvaluate(unittest.TestCase):
         result = evaluator.evaluate()
         np.testing.assert_allclose(result, expr.evaluate())
 
+        # test Inner
+        v = pybamm.Vector(np.ones(5), domain="test")
+        w = pybamm.Vector(2 * np.ones(5), domain="test")
+        expr = pybamm.Inner(v, w)
+        evaluator = pybamm.EvaluatorPython(expr)
+        result = evaluator.evaluate()
+        np.testing.assert_allclose(result, expr.evaluate())
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

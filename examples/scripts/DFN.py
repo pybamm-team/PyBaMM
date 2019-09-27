@@ -1,3 +1,7 @@
+#
+# Example showing how to load and solve the DFN
+#
+
 import pybamm
 import numpy as np
 

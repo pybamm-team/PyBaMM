@@ -33,7 +33,7 @@ class TestMesh(unittest.TestCase):
         self.assertEqual(len(mesh["negative particle"][0].nodes), var_pts[r])
         self.assertEqual(
             len(mesh["negative particle"][0].edges),
-            len(mesh["negative particle"][0].nodes) + 1
+            len(mesh["negative particle"][0].nodes) + 1,
         )
 
     def test_mesh_creation(self):
