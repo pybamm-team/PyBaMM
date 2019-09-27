@@ -10,15 +10,20 @@ class GetUserSupplied2DSubMesh:
     A class to generate a tensor product submesh on a 2D domain by using two user
     supplied vectors of edges: one for the y-direction and one for the z-direction.
     ----------
-    edges : array_like
-        The array of points which correspond to the edges of the mesh.
+    y_edges : array_like
+        The array of points which correspond to the edges in the y direction
+        of the mesh.
+    z_edges : array_like
+        The array of points which correspond to the edges in the z direction
+        of the mesh.
     """
 
-    def __init__(self, nodes):
-        self.nodes = nodes
+    def __init__(self, y_edges, z_edges):
+        self.y_edges = y_edges
+        self.z_edges = z_edges
 
     def __call__(self, lims, npts, tabs=None):
-        return UserSupplied2DSubMesh(lims, npts, tabs, self.nodes)
+        return UserSupplied2DSubMesh(lims, npts, tabs, self.y_edges, self.z_edges)
 
 
 class UserSupplied2DSubMesh(ScikitSubMesh2D):
@@ -37,11 +42,15 @@ class UserSupplied2DSubMesh(ScikitSubMesh2D):
     tabs : dict
         A dictionary that contains information about the size and location of
         the tabs
-    edges : array_like
-        The array of points which correspond to the edges of the mesh.
+    y_edges : array_like
+        The array of points which correspond to the edges in the y direction
+        of the mesh.
+    z_edges : array_like
+        The array of points which correspond to the edges in the z direction
+        of the mesh.
     """
 
-    def __init__(self, lims, npts, tabs, edges):
+    def __init__(self, lims, npts, tabs, y_edges, z_edges):
 
         # check that two variables have been passed in
         if len(lims) != 2:
@@ -63,31 +72,34 @@ class UserSupplied2DSubMesh(ScikitSubMesh2D):
                 )
             )
 
-        # check that npts equals number of user-supplied edges
-        if npts != len(edges):
-            raise pybamm.GeometryError(
-                """User-suppled edges has should have length npts but has length {}.
-                 Number of points (npts) for domain {} is {}.""".format(
-                    len(edges), spatial_var.domain, npts
-                )
-            )
+        # check and store edges
+        edges = {"y": y_edges, "z": z_edges}
+        for var in spatial_vars:
 
-        # check end points of edges agree with spatial_lims
-        if edges[0] != spatial_lims["min"]:
-            raise pybamm.GeometryError(
-                """First entry of edges is {}, but should be equal to {}
-                 for domain {}.""".format(
-                    edges[0], spatial_lims["min"], spatial_var.domain
+            # check that npts equals number of user-supplied edges
+            if npts[var.id] != len(edges[var.name]):
+                raise pybamm.GeometryError(
+                    """User-suppled edges has should have length npts but has length {}.
+                     Number of points (npts) for variable {} in
+                     domain {} is {}.""".format(
+                        len(edges[var.name]), var.name, var.domain, npts[var.id]
+                    )
                 )
-            )
-        if edges[-1] != spatial_lims["max"]:
-            raise pybamm.GeometryError(
-                """Last entry of edges is {}, but should be equal to {}
-                for domain {}.""".format(
-                    edges[-1], spatial_lims["max"], spatial_var.domain
-                )
-            )
 
-        coord_sys = spatial_var.coord_sys
+            # check end points of edges agree with spatial_lims
+            if edges[var.name][0] != lims[var]["min"]:
+                raise pybamm.GeometryError(
+                    """First entry of edges is {}, but should be equal to {}
+                     for variable {} in domain {}.""".format(
+                        edges[var.name][0], lims[var]["min"], var.name, var.domain
+                    )
+                )
+            if edges[var.name][-1] != lims[var]["max"]:
+                raise pybamm.GeometryError(
+                    """Last entry of edges is {}, but should be equal to {}
+                    for variable {} in domain {}.""".format(
+                        edges[var.name][-1], lims[var]["max"], var.name, var.domain
+                    )
+                )
 
         super().__init__(edges, coord_sys=coord_sys, tabs=tabs)
