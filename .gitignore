@@ -54,6 +54,7 @@ pyproject.toml
 # virtual enviroment
 venv/
 venv3.5/
+Pybamm-env/
 bin/
 etc/
 lib/

@@ -126,7 +126,6 @@ class TestProcessedVariable(unittest.TestCase):
             np.reshape(y_sol, [len(x_sol), len(z_sol), len(t_sol)]),
         )
 
-    @unittest.skipIf(pybamm.have_scikit_fem(), "scikit-fem not installed")
     def test_processed_variable_3D_scikit(self):
         var = pybamm.Variable("var", domain=["current collector"])
         y = pybamm.SpatialVariable("y", domain=["current collector"])
