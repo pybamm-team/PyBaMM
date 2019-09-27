@@ -1,32 +1,31 @@
 #
-# User supplied one-dimensional submesh
+# User supplied two-dimensional scikit-fem submesh
 #
 import pybamm
-from .base_submesh import SubMesh1D
+from .base_scikit_fem_submesh import ScikitSubMesh2D
 
 
-class GetUserSupplied1DSubMesh:
+class GetUserSupplied2DSubMesh:
     """
-    A class to generate a submesh on a 1D domain using a user supplied vector of
-    edges.
-    Parameters
+    A class to generate a tensor product submesh on a 2D domain by using two user
+    supplied vectors of edges: one for the y-direction and one for the z-direction.
     ----------
     edges : array_like
         The array of points which correspond to the edges of the mesh.
     """
 
-    def __init__(self, edges):
-        self.edges = edges
+    def __init__(self, nodes):
+        self.nodes = nodes
 
     def __call__(self, lims, npts, tabs=None):
-        return UserSupplied1DSubMesh(lims, npts, tabs, self.edges)
+        return UserSupplied2DSubMesh(lims, npts, tabs, self.nodes)
 
 
-class UserSupplied1DSubMesh(SubMesh1D):
+class UserSupplied2DSubMesh(ScikitSubMesh2D):
     """
-    A class to generate a submesh on a 1D domain from a user supplied array of
-    Note: this mesh should be created using :class:`GetUserSupplied1DSubMesh`.
-    edges.
+    A class to generate a tensor product submesh on a 2D domain by using two user
+    supplied vectors of edges: one for the y-direction and one for the z-direction.
+    Note: this mesh should be created using :class:`GetUserSupplied2DSubMesh`.
     Parameters
     ----------
     lims : dict
@@ -44,18 +43,30 @@ class UserSupplied1DSubMesh(SubMesh1D):
 
     def __init__(self, lims, npts, tabs, edges):
 
-        # check that only one variable passed in
-        if len(lims) != 1:
-            raise pybamm.GeometryError("lims should only contain a single variable")
-
-        spatial_var = list(lims.keys())[0]
-        spatial_lims = lims[spatial_var]
-        npts = npts[spatial_var.id]
-
-        # check that npts + 1 equals number of user-supplied edges
-        if (npts + 1) != len(edges):
+        # check that two variables have been passed in
+        if len(lims) != 2:
             raise pybamm.GeometryError(
-                """User-suppled edges has should have length (npts + 1) but has length {}.
+                "lims should contain exactly two variables, not {}".format(len(lims))
+            )
+
+        # get spatial variables
+        spatial_vars = list(lims.keys())
+
+        # check coordinate system agrees
+        if spatial_vars[0].coord_sys == spatial_vars[1].coord_sys:
+            coord_sys = spatial_vars[0].coord_sys
+        else:
+            raise pybamm.DomainError(
+                """spatial variables should have the same coordinate system,
+                but have coordinate systems {} and {}""".format(
+                    spatial_vars[0].coord_sys, spatial_vars[1].coord_sys
+                )
+            )
+
+        # check that npts equals number of user-supplied edges
+        if npts != len(edges):
+            raise pybamm.GeometryError(
+                """User-suppled edges has should have length npts but has length {}.
                  Number of points (npts) for domain {} is {}.""".format(
                     len(edges), spatial_var.domain, npts
                 )
