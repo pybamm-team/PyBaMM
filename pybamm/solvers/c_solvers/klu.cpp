@@ -207,7 +207,7 @@ int events(realtype t, N_Vector yy, N_Vector yp, realtype *events_ptr,
 
     double *events_np_data_ptr = (double *)events_np_array.request().ptr;
 
-    // just copying data into Sunmatrix (figure out how to pass pointers later)
+    // just copying data (figure out how to pass pointers later)
     int i;
     for (i = 0; i < number_of_events; i++)
     {
@@ -217,8 +217,21 @@ int events(realtype t, N_Vector yy, N_Vector yp, realtype *events_ptr,
     return (0);
 }
 
+class Solution
+{
+public:
+    Solution(int retval, np_array t_np, np_array y_np)
+        : flag(retval), t(t_np), y(y_np)
+    {
+    }
+
+    int flag;
+    np_array t;
+    np_array y;
+};
+
 /* main program */
-np_array solve(np_array t_np,
+Solution solve(np_array t_np,
                np_array y0_np,
                np_array yp0_np,
                residual_type res,
@@ -236,6 +249,8 @@ np_array solve(np_array t_np,
 
     int number_of_states;
     number_of_states = y0_np.request().size;
+    int number_of_timesteps;
+    number_of_timesteps = t_np.request().size;
 
     void *ida_mem;          // pointer to memory
     N_Vector yy, yp, avtol; // y, y', and absolute tolerance
@@ -267,7 +282,6 @@ np_array solve(np_array t_np,
     // initialise solver
     realtype t0 = RCONST(0.0);
     retval = IDAInit(ida_mem, residual, t0, yy, yp);
-    printf("\n Set init %d \n", retval);
 
     // set tolerances
     rtol = RCONST(1.0e-4);
@@ -279,23 +293,19 @@ np_array solve(np_array t_np,
     }
 
     retval = IDASVtolerances(ida_mem, rtol, avtol);
-    printf("\n Set tols %d \n", retval);
 
     // set events
     retval = IDARootInit(ida_mem, number_of_events, events);
-    printf("\n Set root init %d \n", retval);
 
     // set pybamm functions by passing pointer to it
     PybammFunctions pybamm_functions(res, jac, gjd, gjrv, gjcp, event, number_of_states, number_of_events);
     void *user_data = &pybamm_functions;
     IDASetUserData(ida_mem, user_data);
-    printf("\n Set user data %d \n", retval);
 
     // set linear solver
     J = SUNSparseMatrix(number_of_states, number_of_states, nnz, CSR_MAT); // jacobian type (must be dense for dense solvers, p183 of ida_guide.pdf)
     LS = SUNLinSol_KLU(yy, J);
     retval = IDASetLinearSolver(ida_mem, LS, J);
-    printf("\n Set Lin sol %d \n", retval);
 
     // sparse stuff  (must use sparse solvers e.g. KLU or SuperLUMT, p183 of ida_guide.pdf)
     // J = SUNSparseMatrix(2, 2, 2, CSR_MAT); // template jacobian
@@ -305,28 +315,48 @@ np_array solve(np_array t_np,
 
     if (use_jacobian == 1)
     {
-        printf("\nSetting jacobian \n");
         retval = IDASetJacFn(ida_mem, jacobian);
-        printf("\n Set jac %d \n", retval);
     }
 
+    int t_i = 1;
     realtype tout, tret;
-    realtype t_final = t(99);
+    realtype t_next;
+    realtype t_final = t(number_of_timesteps - 1);
 
-    while (tret < t_final)
+    // set return vectors
+    double t_return[number_of_timesteps] = {0};
+    double y_return[number_of_timesteps * number_of_states] = {0};
+
+    t_return[0] = t(0);
+    int j;
+    for (j = 0; j < number_of_states; j++)
     {
-        // IDA_ONE_STEP_TSTOP
-        // IDA_NORMAL
-        retval = IDASolve(ida_mem, t_final, &tret, yy, yp, IDA_ONE_STEP);
+        y_return[j] = yval[j];
+    }
 
-        if (retval == IDA_ROOT_RETURN)
-        {
-            break;
-        }
+    while (true)
+    {
+        t_next = t(t_i);
+        IDASetStopTime(ida_mem, t_next);
+        retval = IDASolve(ida_mem, t_final, &tret, yy, yp, IDA_NORMAL);
 
         if (retval == IDA_TSTOP_RETURN)
         {
-            printf("Completed solve");
+            t_return[t_i] = tret;
+            for (j = 0; j < number_of_states; j++)
+            {
+                y_return[t_i * number_of_states + j] = yval[j];
+            }
+            t_i += 1;
+        }
+
+        if (retval == IDA_SUCCESS || retval == IDA_ROOT_RETURN)
+        {
+            t_return[t_i] = tret;
+            for (j = 0; j < number_of_states; j++)
+            {
+                y_return[t_i * number_of_states + j] = yval[j];
+            }
             break;
         }
     }
@@ -338,9 +368,12 @@ np_array solve(np_array t_np,
     N_VDestroy(avtol);
     N_VDestroy(yp);
 
-    printf("t=%f, y=%f, a=%f \n", tret, yval[0], yval[1]);
+    py::array_t<double> t_ret = py::array_t<double>((t_i + 1), t_return);
+    py::array_t<double> y_ret = py::array_t<double>((t_i + 1) * number_of_states, y_return);
 
-    return py::array_t<double>(number_of_states, yval);
+    Solution sol(retval, t_ret, y_ret);
+
+    return sol;
 }
 
 PYBIND11_MODULE(klu, m)
@@ -359,4 +392,9 @@ PYBIND11_MODULE(klu, m)
           py::arg("number_of_events"),
           py::arg("use_jacobian"),
           py::return_value_policy::take_ownership);
+
+    py::class_<Solution>(m, "solution")
+        .def_readwrite("t", &Solution::t)
+        .def_readwrite("y", &Solution::y)
+        .def_readwrite("flag", &Solution::flag);
 }

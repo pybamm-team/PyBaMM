@@ -7,8 +7,6 @@ import numpy as np
 from .c_solvers import klu
 import scipy.sparse as sparse
 
-import time
-
 
 class KLU(pybamm.DaeSolver):
     """Solve a discretised model, using sundials with the KLU sparse linear solver.
@@ -119,13 +117,12 @@ class KLU(pybamm.DaeSolver):
 
         def rootfn(t, y):
             return_root = np.ones((num_of_events,))
-            [event(t, y) for event in events]
+            return_root[:] = [event(t, y) for event in events]
 
             return return_root
 
         # solve
-        tic = time.time()
-        t_out = klu.solve(
+        sol = klu.solve(
             t_eval,
             y0,
             ydot0,
@@ -140,26 +137,21 @@ class KLU(pybamm.DaeSolver):
             use_jac,
         )
 
-        toc = time.time()
+        t = sol.t
+        number_of_timesteps = t.size
+        number_of_states = y0.size
+        y_out = sol.y.reshape((number_of_timesteps, number_of_states))
 
-        print("Solve time is: ", toc - tic, " seconds")
-
-        print(time)
-
-        # # return solution, we need to tranpose y to match scipy's interface
-        # if sol.flag in [0, 2]:
-        #     # 0 = solved for all t_eval
-        #     if sol.flag == 0:
-        #         termination = "final time"
-        #     # 2 = found root(s)
-        #     elif sol.flag == 2:
-        #         termination = "event"
-        #     return pybamm.Solution(
-        #         sol.values.t,
-        #         np.transpose(sol.values.y),
-        #         sol.roots.t,
-        #         np.transpose(sol.roots.y),
-        #         termination,
-        #     )
-        # else:
-        #     raise pybamm.SolverError(sol.message)
+        # return solution, we need to tranpose y to match scipy's interface
+        if sol.flag in [0, 2]:
+            # 0 = solved for all t_eval
+            if sol.flag == 0:
+                termination = "final time"
+            # 2 = found root(s)
+            elif sol.flag == 2:
+                termination = "event"
+            return pybamm.Solution(
+                sol.t, np.transpose(y_out), t[-1], np.transpose(y_out[-1]), termination
+            )
+        else:
+            raise pybamm.SolverError(sol.message)

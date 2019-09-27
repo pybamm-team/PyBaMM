@@ -4,9 +4,7 @@ import numpy as np
 pybamm.set_logging_level("INFO")
 
 # load model
-model = pybamm.lithium_ion.DFN(
-    # {"current collector": "potential pair", "dimensionality": 2}, name="2+1D DFN"
-)
+model = pybamm.lithium_ion.SPM()
 
 # create geometry
 geometry = model.default_geometry
@@ -27,9 +25,9 @@ disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
 
 # solve model
-t_eval = np.linspace(0, 0.1, 100)
+t_eval = np.linspace(0, 1, 100)
 
-solutions = model.default_solver.solve(model, t_eval)
+# solutions = model.default_solver.solve(model, t_eval)
 
 solver = pybamm.KLU()
 solution = solver.solve(model, t_eval)
