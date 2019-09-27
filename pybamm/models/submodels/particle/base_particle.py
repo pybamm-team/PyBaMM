@@ -34,7 +34,6 @@ class BaseParticle(pybamm.BaseSubModel):
         elif self.domain == "Positive":
             c_scale = self.param.c_p_max
             active_volume = geo_param.a_p_dim * geo_param.R_p / 3
-        # c_s_r_av = pybamm.r_average(pybamm.x_average(c_s))
         c_s_r_av = pybamm.r_average(c_s_xav)
 
         variables = {
@@ -44,10 +43,10 @@ class BaseParticle(pybamm.BaseSubModel):
             "X-averaged "
             + self.domain.lower()
             + " particle concentration [mol.m-3]": c_s_xav * c_scale,
-            "RX-averaged " + self.domain.lower() + " particle concentration": c_s_r_av,
-            "RX-averaged "
-            + self.domain.lower()
-            + " particle concentration [mol.m-3]": c_s_r_av * c_scale,
+#            "RX-averaged " + self.domain.lower() + " particle concentration": c_s_r_av,
+#            "RX-averaged "
+#            + self.domain.lower()
+#            + " particle concentration [mol.m-3]": c_s_r_av * c_scale,
             self.domain + " particle surface concentration": c_s_surf,
             self.domain
             + " particle surface concentration [mol.m-3]": c_scale * c_s_surf,
@@ -57,8 +56,9 @@ class BaseParticle(pybamm.BaseSubModel):
             "X-averaged "
             + self.domain.lower()
             + " particle surface concentration [mol.m-3]": c_scale * c_s_surf_av,
-            self.domain + " active volume density": active_volume,
-            self.domain + " active lithium": active_volume * c_s_r_av * c_scale
+            self.domain + " electrode active volume fraction": active_volume,
+            self.domain + " electrode volume-averaged concentration [mol.m-3]": active_volume * c_s_r_av * c_scale,
+            self.domain + " electrode average extent of lithiation": c_s_r_av
         }
 
         return variables
