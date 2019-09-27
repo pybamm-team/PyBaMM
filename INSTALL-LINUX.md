@@ -2,7 +2,7 @@
 
 You'll need the following requirements:
 
-- Python 3.5+
+- Python 3.6+
 - Git (`git` package on Ubuntu distributions)
 - Python libraries: `venv` (`python3-venv` package on Ubuntu distributions)
 
@@ -44,9 +44,9 @@ deactivate
 ```
 
 PyBaMM has the following python libraries as dependencies: `numpy`, `scipy`, `pandas`,
-`matplotlib`. These, along with PyBaMM, can easily be installed using `pip`. First, make
-sure you have activated your virtual environment as above, and that you have the latest
-version of pip installed:
+`matplotlib`. These will be installed automatically when you install PyBaMM using `pip`,
+following the instructions below. First, make sure you have activated your virtual 
+environment as above, and that you have the latest version of pip installed:
 
 ```bash
 pip install --upgrade pip
@@ -66,7 +66,13 @@ Or, if you want to install PyBaMM as a [developer](CONTRIBUTING.md), use
 pip install -e .[dev,docs]
 ```
 
-To uninstall again, type
+To check whether PyBaMM has installed properly, you can run the tests:
+
+```bash
+python3 run-tests.py --unit
+```
+
+To uninstall PyBaMM, type
 
 ```bash
 pip uninstall pybamm
@@ -80,15 +86,21 @@ Users can install [scikits.odes](https://github.com/bmcage/odes) in order to use
 wrapped SUNDIALS ODE and DAE
 [solvers](https://pybamm.readthedocs.io/en/latest/source/solvers/scikits_solvers.html).
 
-Before installing odes, you need to have installed:
+Before installing scikits.odes, you need to have installed:
 
 - Python header files (`python-dev/python3-dev` on Debian/Ubuntu-based distributions)
 - C compiler
 - Fortran compiler (e.g. gfortran)
 - BLAS/LAPACK install (OpenBLAS is recommended by the scikits.odes developers)
-- Sundials 3.1.1
+- cmake (for building Sundials)
 
-To install Sundials 3.1.1, on the command-line type:
+To install these, on the command-line type:
+
+```bash
+sudo apt-get install python3-dev gcc gfortran libopenblas-dev cmake
+```
+
+Then install Sundials 3.1.1, by typing:
 
 ```bash
 INSTALL_DIR=`pwd`/sundials
@@ -125,18 +137,3 @@ echo "export LD_LIBRARY_PATH=$INSTALL_DIR/lib:\$LD_LIBRARY_PATH" >> ~/.bashrc
 Please see the [scikits.odes
 documentation](https://scikits-odes.readthedocs.io/en/latest/installation.html) for more
 detailed installation instructions.
-
-### [scikit.fem](https://github.com/kinnala/scikit-fem)
-
-Users can install [scikit.fem](https://github.com/kinnala/scikit-fem) in order to
-generate meshes and assemble discrete operators for use in the finite element method. At present,
-the finite element method is only implemented for a small number of submodels in PyBaMM
-(for example, see the [current collector submodel](https://github.com/pybamm-team/PyBaMM/blob/master/pybamm/models/submodels/current_collector.py)).
-
-Note that scikit-fem requires Python 3.6+. To install scikit-fem, on the command-line type:
-
-```bash
-pip install scikit-fem
-```
-
-Please see the [scikit.fem documentation](https://kinnala.github.io/scikit-fem-docs/learning.html) for more information.

@@ -9,12 +9,11 @@ sys.setrecursionlimit(10000)
 
 # load models
 models = [
-    pybamm.lead_acid.NewmanTiedemann(name="1D NewmanTiedemann"),
+    pybamm.lead_acid.Full(name="1D Full"),
     pybamm.lead_acid.Composite(name="1D composite"),
     pybamm.lead_acid.LOQS(name="1D LOQS"),
-    pybamm.lead_acid.NewmanTiedemann(
-        {"current collector": "potential pair", "dimensionality": 2},
-        name="2+1D NewmanTiedemann",
+    pybamm.lead_acid.Full(
+        {"current collector": "potential pair", "dimensionality": 2}, name="2+1D Full"
     ),
     pybamm.lead_acid.Composite(
         {"current collector": "potential pair", "dimensionality": 2},
@@ -55,6 +54,8 @@ times = [None] * len(models)
 voltages = [None] * len(models)
 t_eval = np.linspace(0, 1, 1000)
 for i, model in enumerate(models):
+    if "2+1D" in model.name:
+        model.use_simplify = False  # simplifying jacobian slow for large systems
     solution = model.default_solver.solve(model, t_eval)
     solutions[i] = solution
     times[i] = pybamm.ProcessedVariable(

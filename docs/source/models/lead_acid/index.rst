@@ -6,5 +6,5 @@ Lead Acid Models
 
   base_lead_acid_model
   loqs
-  composite
-  newman_tiedemann
+  higher_order
+  full

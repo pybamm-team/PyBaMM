@@ -12,10 +12,6 @@ if skfem_spec is not None:
     skfem_spec.loader.exec_module(skfem)
 
 
-def have_scikit_fem():
-    return skfem_spec is None
-
-
 class Scikit2DSubMesh:
     """ Submesh class.
         Contains information about the 2D finite element mesh.

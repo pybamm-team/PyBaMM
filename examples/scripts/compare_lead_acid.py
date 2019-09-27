@@ -17,10 +17,10 @@ else:
 
 # load models
 models = [
-    pybamm.lead_acid.NewmanTiedemann(
+    pybamm.lead_acid.Full(
         {"surface form": "algebraic", "convection": True}, name="With convection"
     ),
-    pybamm.lead_acid.NewmanTiedemann(name="Without convection"),
+    pybamm.lead_acid.Full(name="Without convection"),
 ]
 
 # load parameter values and process models and geometry

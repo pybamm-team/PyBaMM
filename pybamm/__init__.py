@@ -99,6 +99,7 @@ from .expression_tree.unary_operators import (
     IndefiniteIntegral,
     DefiniteIntegralVector,
     BoundaryIntegral,
+    DeltaFunction,
     grad,
     div,
     laplacian,
@@ -214,7 +215,7 @@ from .discretisations.discretisation import Discretisation
 from .meshes.meshes import Mesh
 from .meshes.zero_dimensional_submesh import SubMesh0D
 from .meshes.one_dimensional_submeshes import SubMesh1D, Uniform1DSubMesh
-from .meshes.scikit_fem_submeshes import Scikit2DSubMesh, have_scikit_fem
+from .meshes.scikit_fem_submeshes import Scikit2DSubMesh
 
 #
 # Spatial Methods

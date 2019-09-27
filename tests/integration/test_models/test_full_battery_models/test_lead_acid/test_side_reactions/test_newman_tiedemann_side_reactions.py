@@ -1,5 +1,5 @@
 #
-# Tests for the lead-acid Newman-Tiedemann model
+# Tests for the lead-acid Full model
 #
 import pybamm
 import tests
@@ -8,30 +8,30 @@ import unittest
 import numpy as np
 
 
-class TestLeadAcidNewmanTiedemannSideReactions(unittest.TestCase):
+class TestLeadAcidFullSideReactions(unittest.TestCase):
     @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing(self):
         options = {"side reactions": ["oxygen"]}
-        model = pybamm.lead_acid.NewmanTiedemann(options)
+        model = pybamm.lead_acid.Full(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all(skip_output_tests=True, t_eval=np.linspace(0, 0.6))
 
     def test_basic_processing_differential(self):
         options = {"side reactions": ["oxygen"], "surface form": "differential"}
-        model = pybamm.lead_acid.NewmanTiedemann(options)
+        model = pybamm.lead_acid.Full(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all(skip_output_tests=True)
 
     @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing_algebraic(self):
         options = {"side reactions": ["oxygen"], "surface form": "algebraic"}
-        model = pybamm.lead_acid.NewmanTiedemann(options)
+        model = pybamm.lead_acid.Full(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all(skip_output_tests=True)
 
     def test_basic_processing_charge(self):
         options = {"side reactions": ["oxygen"], "surface form": "differential"}
-        model = pybamm.lead_acid.NewmanTiedemann(options)
+        model = pybamm.lead_acid.Full(options)
         parameter_values = model.default_parameter_values
         parameter_values.update(
             {"Typical current [A]": -1, "Initial State of Charge": 0.5}
@@ -41,7 +41,7 @@ class TestLeadAcidNewmanTiedemannSideReactions(unittest.TestCase):
 
     def test_basic_processing_zero_current(self):
         options = {"side reactions": ["oxygen"], "surface form": "differential"}
-        model = pybamm.lead_acid.NewmanTiedemann(options)
+        model = pybamm.lead_acid.Full(options)
         parameter_values = model.default_parameter_values
         parameter_values.update(
             {"Current function": pybamm.GetConstantCurrent(current=0)}
@@ -51,7 +51,7 @@ class TestLeadAcidNewmanTiedemannSideReactions(unittest.TestCase):
 
     def test_optimisations(self):
         options = {"side reactions": ["oxygen"], "surface form": "differential"}
-        model = pybamm.lead_acid.NewmanTiedemann(options)
+        model = pybamm.lead_acid.Full(options)
         optimtest = tests.OptimisationsTest(model)
 
         original = optimtest.evaluate_model()
