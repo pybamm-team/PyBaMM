@@ -1,5 +1,5 @@
 #
-# Class for two-dimensional current collectors
+# Class for one- and two-dimensional potential pair current collector models
 #
 import pybamm
 from .base_current_collector import BaseModel

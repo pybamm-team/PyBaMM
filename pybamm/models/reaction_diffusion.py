@@ -45,7 +45,11 @@ class ReactionDiffusionModel(pybamm.BaseBatteryModel):
             self.param, self.reactions
         )
         self.variables.update(
-            {"Positive current collector potential": pybamm.Scalar(0)}
+            {
+                "Positive current collector potential": pybamm.PrimaryBroadcast(
+                    pybamm.Scalar(0), "current collector"
+                )
+            }
         )
 
     def set_interfacial_submodel(self):

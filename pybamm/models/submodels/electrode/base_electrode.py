@@ -124,8 +124,6 @@ class BaseElectrode(pybamm.BaseSubModel):
             The variables in the whole model with the whole-cell
             current variables added.
         """
-        pot_scale = self.param.potential_scale
-        U_ref = self.param.U_p_ref - self.param.U_n_ref
 
         i_s_n = variables["Negative electrode current density"]
         i_s_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
@@ -135,21 +133,13 @@ class BaseElectrode(pybamm.BaseSubModel):
 
         if self.set_positive_potential:
             phi_s_p = variables["Positive electrode potential"]
-            phi_s_cn = variables["Negative current collector potential"]
             phi_s_cp = pybamm.boundary_value(phi_s_p, "right")
-            v_boundary_cc = phi_s_cp - phi_s_cn
-
             variables = {
                 "Electrode current density": i_s,
                 "Positive current collector potential": phi_s_cp,
-                "Local current collector potential difference": v_boundary_cc,
-                "Local current collector potential difference [V]": U_ref
-                + v_boundary_cc * pot_scale,
             }
         else:
-            variables = {
-                "Electrode current density": i_s,
-            }
+            variables = {"Electrode current density": i_s}
 
         return variables
 
