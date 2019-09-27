@@ -87,11 +87,18 @@ class Discretisation(object):
             have also been discretised in place so model == model_disc. If
             ``inplace`` is False, model != model_disc
 
+        Raises
+        ------
+        :class:`pybamm.ModelError`
+            If an empty model is passed (`model.rhs = {}` and `model.algebraic={}`)
+
         """
+        pybamm.logger.info("Start discretising {}".format(model.name))
+
+        if len(model.rhs) == 0 and len(model.algebraic) == 0:
+            raise pybamm.ModelError("Cannot discretise empty model")
         # Check well-posedness to avoid obscure errors
         model.check_well_posedness()
-
-        pybamm.logger.info("Start discretising {}".format(model.name))
 
         # Prepare discretisation
         # set variables (we require the full variable not just id)
