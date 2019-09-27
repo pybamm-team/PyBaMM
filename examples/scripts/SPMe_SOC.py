@@ -70,6 +70,12 @@ for enum, I_app in enumerate([-1.0, 1.0]):
     var = "Negative electrode average extent of lithiation"
     xnext = pybamm.ProcessedVariable(model.variables[var],
                                      sol.t, sol.y, mesh=mesh)
+    var = "X-averaged positive particle surface concentration"
+    xpsurf = pybamm.ProcessedVariable(model.variables[var],
+                                      sol.t, sol.y, mesh=mesh)
+    var = "X-averaged negative particle surface concentration"
+    xnsurf = pybamm.ProcessedVariable(model.variables[var],
+                                      sol.t, sol.y, mesh=mesh)
     time = pybamm.ProcessedVariable(model.variables["Time [h]"],
                                     sol.t, sol.y, mesh=mesh)
 
@@ -80,9 +86,13 @@ for enum, I_app in enumerate([-1.0, 1.0]):
     cap = np.absolute(I_app * 1000 * dc_time)
 
     axes[enum].plot(np.absolute(I_app)*1000*time_hours,
-                    xnext(sol.t), 'r-', label='Negative')
+                    xnext(sol.t), 'r-', label='Average Neg')
     axes[enum].plot(np.absolute(I_app)*1000*time_hours,
-                    xpext(sol.t), 'b-', label='Positive')
+                    xpext(sol.t), 'b-', label='Average Pos')
+    axes[enum].plot(np.absolute(I_app)*1000*time_hours,
+                    xnsurf(sol.t), 'r--', label='Surface Neg')
+    axes[enum].plot(np.absolute(I_app)*1000*time_hours,
+                    xpsurf(sol.t), 'b--', label='Surface Pos')
     axes[enum].set_xlabel('Capacity [mAh]')
     plt.legend()
     if I_app < 0.0:
