@@ -5,12 +5,14 @@ import matplotlib.pyplot as plt
 plt.close("all")
 pybamm.set_logging_level("INFO")
 
+factor = 6.38
+
 # Dimensions
 h = 0.137
-w = 0.207
+w = 0.207/factor
 A = h * w
-l_n = 1e-3
-l_p = 1e-3
+l_n = 1e-4
+l_p = 1e-4
 l_s = 2.5e-5
 l1d = (l_n + l_p + l_s)
 vol = h * w * l1d # m^3
@@ -19,7 +21,7 @@ vol_cm3 = vol * 1e6
 tot_cap = 0.0
 tot_time = 0.0
 
-I_mag = 1.0
+I_mag = 862e-3
 for I_app in [-1.0, 1.0]:
     I_app*=I_mag
     # load model
@@ -83,8 +85,8 @@ for I_app in [-1.0, 1.0]:
         "X-averaged negative electrolyte concentration [mol.m-3]",
         "X-averaged separator electrolyte concentration [mol.m-3]"
     ]
-    plot = pybamm.QuickPlot(model, mesh, sol, output_variables=vars)
-    plot.dynamic_plot()
+#    plot = pybamm.QuickPlot(model, mesh, sol, output_variables=vars)
+#    plot.dynamic_plot()
 #    keys = list(model.variables.keys())
 #    keys.sort()
     
