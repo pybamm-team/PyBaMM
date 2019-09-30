@@ -8,12 +8,20 @@ import unittest
 class TestBaseBatteryModel(unittest.TestCase):
     def test_process_parameters_and_discretise(self):
         model = pybamm.lithium_ion.SPM()
+        # Set up geometry and parameters
+        geometry = model.default_geometry
+        parameter_values = model.default_parameter_values
+        parameter_values.process_geometry(geometry)
+        # Set up discretisation
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        # Process expression
         c = pybamm.Parameter("Negative electrode thickness [m]") * pybamm.Variable(
             "X-averaged negative particle concentration",
             domain="negative particle",
             auxiliary_domains={"secondary": "current collector"},
         )
-        processed_c = model.process_parameters_and_discretise(c)
+        processed_c = model.process_parameters_and_discretise(c, parameter_values, disc)
         self.assertIsInstance(processed_c, pybamm.Multiplication)
         self.assertIsInstance(processed_c.left, pybamm.Scalar)
         self.assertIsInstance(processed_c.right, pybamm.StateVector)
