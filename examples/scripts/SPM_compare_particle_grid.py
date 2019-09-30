@@ -58,13 +58,13 @@ for i, model in enumerate(models):
 processed_variables = [None] * len(models)
 for i, solution in enumerate(solutions):
     c_n = pybamm.ProcessedVariable(
-        models[i].variables["X-average negative particle concentration [mol.m-3]"],
+        models[i].variables["X-averaged negative particle concentration [mol.m-3]"],
         solution.t,
         solution.y,
         mesh=meshes[i],
     )
     c_p = pybamm.ProcessedVariable(
-        models[i].variables["X-average positive particle concentration [mol.m-3]"],
+        models[i].variables["X-averaged positive particle concentration [mol.m-3]"],
         solution.t,
         solution.y,
         mesh=meshes[i],
