@@ -7,10 +7,10 @@ import unittest
 
 class TestBaseBatteryModel(unittest.TestCase):
     def test_process_parameters_and_discretise(self):
-        model = pybamm.ReactionDiffusionModel()
+        model = pybamm.lithium_ion.SPM()
         c = pybamm.Parameter("Negative electrode thickness [m]") * pybamm.Variable(
-            "Negative electrolyte concentration",
-            domain="negative electrode",
+            "X-averaged negative particle concentration",
+            domain="negative particle",
             auxiliary_domains={"secondary": "current collector"},
         )
         processed_c = model.process_parameters_and_discretise(c)

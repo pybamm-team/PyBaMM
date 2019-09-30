@@ -1335,7 +1335,6 @@ class TestFiniteVolume(unittest.TestCase):
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
-        # add ghost nodes
         c_s_n = pybamm.Variable("c_s_n", domain=["negative particle"])
         c_s_p = pybamm.Variable("c_s_p", domain=["positive particle"])
 
@@ -1356,6 +1355,49 @@ class TestFiniteVolume(unittest.TestCase):
         c_s_p_surf_disc = disc.process_symbol(c_s_p_surf)
         self.assertEqual(c_s_n_surf_disc.domain, ["negative electrode"])
         self.assertEqual(c_s_p_surf_disc.domain, ["positive electrode"])
+
+    def test_delta_function(self):
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        var = pybamm.Variable("var")
+        delta_fn_left = pybamm.DeltaFunction(var, "left", "negative electrode")
+        delta_fn_right = pybamm.DeltaFunction(var, "right", "negative electrode")
+        disc.set_variable_slices([var])
+        delta_fn_left_disc = disc.process_symbol(delta_fn_left)
+        delta_fn_right_disc = disc.process_symbol(delta_fn_right)
+
+        # Basic shape and type tests
+        y = np.ones_like(mesh["negative electrode"][0].nodes[:, np.newaxis])
+        # Left
+        self.assertEqual(delta_fn_left_disc.domain, delta_fn_left.domain)
+        self.assertEqual(
+            delta_fn_left_disc.auxiliary_domains, delta_fn_left.auxiliary_domains
+        )
+        self.assertIsInstance(delta_fn_left_disc, pybamm.Multiplication)
+        self.assertIsInstance(delta_fn_left_disc.left, pybamm.Matrix)
+        np.testing.assert_array_equal(delta_fn_left_disc.left.evaluate()[:, 1:], 0)
+        self.assertEqual(delta_fn_left_disc.shape, y.shape)
+        # Right
+        self.assertEqual(delta_fn_right_disc.domain, delta_fn_right.domain)
+        self.assertEqual(
+            delta_fn_right_disc.auxiliary_domains, delta_fn_right.auxiliary_domains
+        )
+        self.assertIsInstance(delta_fn_right_disc, pybamm.Multiplication)
+        self.assertIsInstance(delta_fn_right_disc.left, pybamm.Matrix)
+        np.testing.assert_array_equal(delta_fn_right_disc.left.evaluate()[:, :-1], 0)
+        self.assertEqual(delta_fn_right_disc.shape, y.shape)
+
+        # Value tests
+        # Delta function should integrate to the same thing as variable
+        var_disc = disc.process_symbol(var)
+        x = pybamm.standard_spatial_vars.x_n
+        delta_fn_int_disc = disc.process_symbol(pybamm.Integral(delta_fn_left, x))
+        np.testing.assert_array_equal(
+            var_disc.evaluate(y=y) * mesh["negative electrode"][0].edges[-1],
+            np.sum(delta_fn_int_disc.evaluate(y=y)),
+        )
 
     def test_grad_div_with_bcs_on_tab(self):
         # 2d macroscale

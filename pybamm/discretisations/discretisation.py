@@ -627,6 +627,9 @@ class Discretisation(object):
                     )
                 return symbol
 
+            elif isinstance(symbol, pybamm.DeltaFunction):
+                return spatial_method.delta_function(symbol, disc_child)
+
             elif isinstance(symbol, pybamm.BoundaryOperator):
                 # if boundary operator applied on "negative tab" or
                 # "positive tab" *and* the mesh is 1D then change side to

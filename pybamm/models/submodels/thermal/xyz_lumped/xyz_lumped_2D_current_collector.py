@@ -34,10 +34,10 @@ class CurrentCollector2D(BaseModel):
     def _surface_cooling_coefficient(self):
         """Returns the surface cooling coefficient in 2+1D"""
         return (
-            -2 * self.param.h / (self.param.delta ** 2)
+            -2 * self.param.h / (self.param.delta ** 2) / self.param.l
             - 2 * (self.param.l_y + self.param.l_z) * self.param.h / self.param.delta
         )
 
     def _yz_average(self, var):
-        """Computes the y-z avergage by integration over y and z"""
+        """Computes the y-z average by integration over y and z"""
         return pybamm.yz_average(var)

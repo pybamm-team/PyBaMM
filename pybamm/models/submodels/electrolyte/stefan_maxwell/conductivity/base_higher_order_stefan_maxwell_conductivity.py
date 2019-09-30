@@ -47,7 +47,12 @@ class BaseHigherOrder(BaseModel):
         eps_n_av = variables["Leading-order x-averaged negative electrode porosity"]
         eps_s_av = variables["Leading-order x-averaged separator porosity"]
         eps_p_av = variables["Leading-order x-averaged positive electrode porosity"]
-        T_av = variables["X-averaged cell temperature"]
+
+        # Note: here we want the average of the temperature over the negative
+        # electrode, separator and positive electrode (not including the current
+        # collectors)
+        T = variables["Cell temperature"]
+        T_av = pybamm.x_average(T)
 
         c_e_n, c_e_s, c_e_p = c_e.orphans
 

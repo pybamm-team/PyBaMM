@@ -77,6 +77,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
             ),
             {
+                "Typical timescale [s]": 1,
                 "Typical current [A]": 1,
                 "Current function": pybamm.GetConstantCurrent(
                     pybamm.standard_parameters_lithium_ion.I_typ
@@ -478,18 +479,7 @@ class BaseBatteryModel(pybamm.BaseModel):
     def set_thermal_submodel(self):
 
         if self.options["thermal"] == "isothermal":
-            if self.options["dimensionality"] == 0:
-                thermal_submodel = pybamm.thermal.isothermal.NoCurrentCollector(
-                    self.param
-                )
-            elif self.options["dimensionality"] == 1:
-                thermal_submodel = pybamm.thermal.isothermal.CurrentCollector1D(
-                    self.param
-                )
-            elif self.options["dimensionality"] == 2:
-                thermal_submodel = pybamm.thermal.isothermal.CurrentCollector2D(
-                    self.param
-                )
+            thermal_submodel = pybamm.thermal.isothermal.Isothermal(self.param)
 
         elif self.options["thermal"] == "x-lumped":
             if self.options["dimensionality"] == 0:
