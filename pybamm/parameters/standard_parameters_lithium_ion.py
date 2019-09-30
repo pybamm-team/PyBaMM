@@ -280,9 +280,7 @@ sigma_cp_prime = sigma_cp * delta ** 2
 sigma_cn_dbl_prime = sigma_cn_prime * delta
 sigma_cp_dbl_prime = sigma_cp_prime * delta
 # should rename this to avoid confusion with Butler-Volmer
-alpha = 1 / (sigma_cn * delta ** 2 * l_cn) + 1 / (
-    sigma_cp * delta ** 2 * l_cp
-)
+alpha = 1 / (sigma_cn * delta ** 2 * l_cn) + 1 / (sigma_cp * delta ** 2 * l_cp)
 alpha_prime = alpha / delta
 
 # Electrolyte Properties

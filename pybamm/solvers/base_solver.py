@@ -96,7 +96,7 @@ class BaseSolver(object):
         timer = pybamm.Timer()
 
         # Run set up on first step
-        if not hasattr(self, 'y0'):
+        if not hasattr(self, "y0"):
             start_time = timer.time()
             self.set_up(model)
             self.t = 0.0
@@ -130,9 +130,7 @@ class BaseSolver(object):
             )
         else:
             pybamm.logger.info(
-                "Step time: {}".format(
-                    timer.format(solution.solve_time),
-                )
+                "Step time: {}".format(timer.format(solution.solve_time))
             )
         return solution
 

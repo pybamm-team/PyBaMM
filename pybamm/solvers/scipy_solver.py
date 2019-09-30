@@ -90,12 +90,6 @@ class ScipySolver(pybamm.OdeSolver):
                 termination = "final time"
                 t_event = None
                 y_event = np.array(None)
-            return pybamm.Solution(
-                sol.t,
-                sol.y,
-                t_event,
-                y_event,
-                termination
-            )
+            return pybamm.Solution(sol.t, sol.y, t_event, y_event, termination)
         else:
             raise pybamm.SolverError(sol.message)

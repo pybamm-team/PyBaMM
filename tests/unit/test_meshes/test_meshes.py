@@ -18,9 +18,7 @@ class TestMesh(unittest.TestCase):
             }
         }
 
-        submesh_types = {
-            "negative particle": pybamm.Uniform1DSubMesh
-        }
+        submesh_types = {"negative particle": pybamm.Uniform1DSubMesh}
         var_pts = {r: 20}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
@@ -282,14 +280,8 @@ class TestMesh(unittest.TestCase):
         self.assertEqual(len(mesh["positive particle"]), 10)
 
         for i in range(10):
-            self.assertIsInstance(
-                mesh["negative particle"][i],
-                pybamm.Uniform1DSubMesh,
-            )
-            self.assertIsInstance(
-                mesh["positive particle"][i],
-                pybamm.Uniform1DSubMesh,
-            )
+            self.assertIsInstance(mesh["negative particle"][i], pybamm.Uniform1DSubMesh)
+            self.assertIsInstance(mesh["positive particle"][i], pybamm.Uniform1DSubMesh)
             self.assertEqual(mesh["negative particle"][i].npts, 5)
             self.assertEqual(mesh["positive particle"][i].npts, 6)
 
@@ -330,15 +322,11 @@ class TestMesh(unittest.TestCase):
 
         for i in range(5):
             self.assertIsInstance(
-                mesh["negative electrode"][i],
-                pybamm.Uniform1DSubMesh,
+                mesh["negative electrode"][i], pybamm.Uniform1DSubMesh
             )
+            self.assertIsInstance(mesh["separator"][i], pybamm.Uniform1DSubMesh)
             self.assertIsInstance(
-                mesh["separator"][i], pybamm.Uniform1DSubMesh
-            )
-            self.assertIsInstance(
-                mesh["positive electrode"][i],
-                pybamm.Uniform1DSubMesh,
+                mesh["positive electrode"][i], pybamm.Uniform1DSubMesh
             )
             self.assertEqual(mesh["negative electrode"][i].npts, 10)
             self.assertEqual(mesh["separator"][i].npts, 15)
@@ -386,9 +374,7 @@ class TestMesh(unittest.TestCase):
                 "primary": {var.x_n: {"min": 0, "max": 1}, var.y: {"min": 0, "max": 1}}
             }
         }
-        submesh_types = {
-            "negative electrode": pybamm.Uniform1DSubMesh
-        }
+        submesh_types = {"negative electrode": pybamm.Uniform1DSubMesh}
         with self.assertRaises(pybamm.GeometryError):
             pybamm.Mesh(geometry, submesh_types, var_pts)
 

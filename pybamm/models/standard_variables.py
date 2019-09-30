@@ -135,12 +135,10 @@ c_s_p_surf = pybamm.Variable(
     auxiliary_domains={"secondary": "current collector"},
 )
 c_s_n_surf_xav = pybamm.Variable(
-    "X-averaged negative particle surface concentration",
-    "current collector",
+    "X-averaged negative particle surface concentration", "current collector"
 )
 c_s_p_surf_xav = pybamm.Variable(
-    "X-averaged positive particle surface concentration",
-    "current collector",
+    "X-averaged positive particle surface concentration", "current collector"
 )
 
 

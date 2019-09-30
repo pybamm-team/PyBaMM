@@ -147,17 +147,11 @@ class BaseBatteryModel(pybamm.BaseModel):
             "positive particle": pybamm.Uniform1DSubMesh,
         }
         if self.options["dimensionality"] == 0:
-            base_submeshes[
-                "current collector"
-            ] = pybamm.SubMesh0D
+            base_submeshes["current collector"] = pybamm.SubMesh0D
         elif self.options["dimensionality"] == 1:
-            base_submeshes[
-                "current collector"
-            ] = pybamm.Uniform1DSubMesh
+            base_submeshes["current collector"] = pybamm.Uniform1DSubMesh
         elif self.options["dimensionality"] == 2:
-            base_submeshes[
-                "current collector"
-            ] = pybamm.ScikitUniform2DSubMesh
+            base_submeshes["current collector"] = pybamm.ScikitUniform2DSubMesh
         return base_submeshes
 
     @property

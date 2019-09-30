@@ -120,7 +120,7 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
                 np.transpose(sol.values.y),
                 sol.roots.t,
                 np.transpose(sol.roots.y),
-                termination
+                termination,
             )
         else:
             raise pybamm.SolverError(sol.message)
