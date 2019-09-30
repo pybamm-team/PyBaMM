@@ -84,7 +84,8 @@ pip uninstall pybamm
 
 Users can install [scikits.odes](https://github.com/bmcage/odes) in order to use the
 wrapped SUNDIALS ODE and DAE
-[solvers](https://pybamm.readthedocs.io/en/latest/source/solvers/scikits_solvers.html).
+[solvers](https://pybamm.readthedocs.io/en/latest/source/solvers/scikits_solvers.html). 
+The Sundials DAE solver is required to solve the DFN battery model in PyBaMM.
 
 Before installing scikits.odes, you need to have installed:
 
