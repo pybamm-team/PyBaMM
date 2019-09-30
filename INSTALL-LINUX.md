@@ -44,9 +44,9 @@ deactivate
 ```
 
 PyBaMM has the following python libraries as dependencies: `numpy`, `scipy`, `pandas`,
-`matplotlib`. These will be installed automatically when you install PyBaMM using `pip`,
-following the instructions below. First, make sure you have activated your virtual 
-environment as above, and that you have the latest version of pip installed:
+`matplotlib`. These, along with PyBaMM, can easily be installed using `pip`. First, make
+sure you have activated your virtual environment as above, and that you have the latest
+version of pip installed:
 
 ```bash
 pip install --upgrade pip
@@ -92,15 +92,16 @@ Before installing scikits.odes, you need to have installed:
 - C compiler
 - Fortran compiler (e.g. gfortran)
 - BLAS/LAPACK install (OpenBLAS is recommended by the scikits.odes developers)
-- cmake (for building Sundials)
+- CMake (for building Sundials)
+- Sundials 3.1.1
 
-To install these, on the command-line type:
+You can install these on Ubuntu or Debian using apt-get:
 
 ```bash
-sudo apt-get install python3-dev gcc gfortran libopenblas-dev cmake
+sudo apt-get install python3-dev gfortran gcc cmake libopenblas-dev
 ```
 
-Then install Sundials 3.1.1, by typing:
+To install Sundials 3.1.1, on the command-line type:
 
 ```bash
 INSTALL_DIR=`pwd`/sundials
@@ -137,3 +138,41 @@ echo "export LD_LIBRARY_PATH=$INSTALL_DIR/lib:\$LD_LIBRARY_PATH" >> ~/.bashrc
 Please see the [scikits.odes
 documentation](https://scikits-odes.readthedocs.io/en/latest/installation.html) for more
 detailed installation instructions.
+
+## Troubleshooting
+
+**Problem:** I've made edits to source files in PyBaMM, but these are not being used 
+when I run my Python script.
+
+**Solution:** Make sure you have installed PyBaMM using the `-e` flag, i.e. `pip install 
+-e .`. This sets the installed location of the source files to your current directory.
+
+**Problem:** When running `python run-tests.py --quick`, gives error `FileNotFoundError: 
+[Errno 2] No such file or directory: 'flake8': 'flake8`.
+
+**Solution:** make sure you have included the `[dev,docs]` flags when you pip installed 
+PyBaMM, i.e. `pip install -e .[dev,docs]`
+
+**Problem:** Errors when solving model `ValueError: Integrator name ida does not 
+exsist`, or `ValueError: Integrator name cvode does not exsist`.
+
+**Solution:** This could mean that you have not installed `scikits.odes` correctly, 
+check the instrutions given above and make sure each command was successful.
+
+One possibility is that you have not set your `LD_LIBRARY_PATH` to point to the sundials
+library, type `echo $LD_LIBRARY_PATH` and make sure one of the directories printed out 
+corresponds to where the sundials libraries are located.
+
+Another common reason is that you forget to install a BLAS library such as OpenBLAS 
+before installing sundials. Check the cmake output when you configured Sundials, it 
+might say:
+
+```
+-- A library with BLAS API not found. Please specify library location.
+-- LAPACK requires BLAS
+```
+
+If this is the case, on a Debian or Ubuntu system you can install OpenBLAS using `sudo 
+apt-get install libopenblas-dev` and then re-install sundials using the instructions 
+above.
+
