@@ -66,3 +66,17 @@ and right click on the `create-model.py` script. Select "Run current file in Pyt
 Interactive Window". This should run the script, which sets up and solves a model of SEI
 thickness using PyBaMM. You should see a plot of SEI thickness versus time pop up in the
 interactive window.
+
+The Python Interactive Window in VSCode can be used to view plots, but is restricted in 
+functionality and cannot, for example, launch separate windows to show plot. To setup an 
+xserver on windows and use this to launch windows for plotting, follow these 
+instructions:
+
+1. Install VcXsrv from [here](https://sourceforge.net/projects/vcxsrv/).
+1. Set the display port in the WSL command-line: `echo "export DISPLAY=localhost:0.0" >> 
+   ~/.bashrc`
+1. Install python3-tk in WSL: `sudo apt-get install python3-tk`
+1. Set the matplotlib backend to TKAgg in WSL: `echo "backend : TKAgg" >> 
+   ~/.config/matplotlib/matplotlibrc`
+1. Before running the code, just launch XLaunch (with the default settings) from within 
+   Windows. Then the code works as usual.
