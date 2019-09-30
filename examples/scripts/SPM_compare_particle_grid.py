@@ -74,19 +74,19 @@ for i, solution in enumerate(solutions):
 
 # plot
 def plot(t):
-    fig, ax = plt.subplots(figsize=(15, 8))
+    fig, _ = plt.subplots(figsize=(15, 8))
     plt.subplot(121)
     plt.xlabel(r"$r_n$")
     plt.ylabel("Negative particle concentration [mol.m-3]")
-    for i, vars in enumerate(processed_variables):
+    for i, variables in enumerate(processed_variables):
         r_n = meshes[i]["negative particle"][0].nodes
-        neg_plot, = plt.plot(r_n, vars["c_n"](r=r_n, t=t), '-o', label=models[i].name)
+        plt.plot(r_n, variables["c_n"](r=r_n, t=t), "-o", label=models[i].name)
     plt.subplot(122)
     plt.xlabel(r"$r_p$")
     plt.ylabel("Positive particle concentration [mol.m-3]")
-    for i, vars in enumerate(processed_variables):
+    for i, variables in enumerate(processed_variables):
         r_p = meshes[i]["positive particle"][0].nodes
-        pos_plot, = plt.plot(r_p, vars["c_p"](r=r_p, t=t), '-o', label=models[i].name)
+        plt.plot(r_p, variables["c_p"](r=r_p, t=t), "-o", label=models[i].name)
     plt.legend()
     plt.show()
 
