@@ -77,6 +77,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
             ),
             {
+                "Typical timescale [s]": 1,
                 "Typical current [A]": 1,
                 "Current function": pybamm.GetConstantCurrent(
                     pybamm.standard_parameters_lithium_ion.I_typ
