@@ -44,9 +44,9 @@ deactivate
 ```
 
 PyBaMM has the following python libraries as dependencies: `numpy`, `scipy`, `pandas`,
-`matplotlib`. These, along with PyBaMM, can easily be installed using `pip`. First, make
-sure you have activated your virtual environment as above, and that you have the latest
-version of pip installed:
+`matplotlib`. These will be installed automatically when you install PyBaMM using `pip`,
+following the instructions below. First, make sure you have activated your virtual 
+environment as above, and that you have the latest version of pip installed:
 
 ```bash
 pip install --upgrade pip
