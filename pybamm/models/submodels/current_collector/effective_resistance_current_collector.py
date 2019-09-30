@@ -233,7 +233,7 @@ class EffectiveResistance2D(pybamm.BaseModel):
     @property
     def default_submesh_types(self):
         return {
-            "current collector": pybamm.two_dimensional_meshes.ScikitUniform2DSubMesh
+            "current collector": pybamm.ScikitUniform2DSubMesh
         }
 
     @property

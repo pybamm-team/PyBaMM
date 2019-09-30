@@ -19,7 +19,7 @@ class TestMesh(unittest.TestCase):
         }
 
         submesh_types = {
-            "negative particle": pybamm.one_dimensional_meshes.Uniform1DSubMesh
+            "negative particle": pybamm.Uniform1DSubMesh
         }
         var_pts = {r: 20}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -54,12 +54,12 @@ class TestMesh(unittest.TestCase):
         var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 12, var.r_n: 5, var.r_p: 6}
 
         submesh_types = {
-            "negative electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "separator": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "positive electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "negative particle": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "positive particle": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "current collector": pybamm.zero_dimensional_meshes.SubMesh0D,
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "positive electrode": pybamm.Uniform1DSubMesh,
+            "negative particle": pybamm.Uniform1DSubMesh,
+            "positive particle": pybamm.Uniform1DSubMesh,
+            "current collector": pybamm.SubMesh0D,
         }
 
         mesh_type = pybamm.Mesh
@@ -87,12 +87,12 @@ class TestMesh(unittest.TestCase):
     def test_init_failure(self):
         geometry = pybamm.Geometry1DMacro()
         submesh_types = {
-            "negative electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "separator": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "positive electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "negative particle": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "positive particle": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "current collector": pybamm.zero_dimensional_meshes.SubMesh0D,
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "positive electrode": pybamm.Uniform1DSubMesh,
+            "negative particle": pybamm.Uniform1DSubMesh,
+            "positive particle": pybamm.Uniform1DSubMesh,
+            "current collector": pybamm.SubMesh0D,
         }
         with self.assertRaisesRegex(KeyError, "Points not given"):
             pybamm.Mesh(geometry, submesh_types, {})
@@ -119,12 +119,12 @@ class TestMesh(unittest.TestCase):
         var = pybamm.standard_spatial_vars
         var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 12, var.r_n: 5, var.r_p: 6}
         submesh_types = {
-            "negative electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "separator": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "positive electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "negative particle": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "positive particle": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "current collector": pybamm.zero_dimensional_meshes.SubMesh0D,
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "positive electrode": pybamm.Uniform1DSubMesh,
+            "negative particle": pybamm.Uniform1DSubMesh,
+            "positive particle": pybamm.Uniform1DSubMesh,
+            "current collector": pybamm.SubMesh0D,
         }
 
         mesh_type = pybamm.Mesh
@@ -162,12 +162,12 @@ class TestMesh(unittest.TestCase):
         var = pybamm.standard_spatial_vars
         var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 12, var.r_n: 5, var.r_p: 6}
         submesh_types = {
-            "negative electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "separator": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "positive electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "negative particle": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "positive particle": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "current collector": pybamm.zero_dimensional_meshes.SubMesh0D,
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "positive electrode": pybamm.Uniform1DSubMesh,
+            "negative particle": pybamm.Uniform1DSubMesh,
+            "positive particle": pybamm.Uniform1DSubMesh,
+            "current collector": pybamm.SubMesh0D,
         }
 
         mesh_type = pybamm.Mesh
@@ -225,12 +225,12 @@ class TestMesh(unittest.TestCase):
         var = pybamm.standard_spatial_vars
         var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 12, var.r_n: 5, var.r_p: 6}
         submesh_types = {
-            "negative electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "separator": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "positive electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "negative particle": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "positive particle": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "current collector": pybamm.zero_dimensional_meshes.SubMesh0D,
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "positive electrode": pybamm.Uniform1DSubMesh,
+            "negative particle": pybamm.Uniform1DSubMesh,
+            "positive particle": pybamm.Uniform1DSubMesh,
+            "current collector": pybamm.SubMesh0D,
         }
 
         mesh_type = pybamm.Mesh
@@ -268,9 +268,9 @@ class TestMesh(unittest.TestCase):
         var = pybamm.standard_spatial_vars
         var_pts = {var.x_n: 10, var.x_p: 10, var.r_n: 5, var.r_p: 6}
         submesh_types = {
-            "negative particle": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "positive particle": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "current collector": pybamm.zero_dimensional_meshes.SubMesh0D,
+            "negative particle": pybamm.Uniform1DSubMesh,
+            "positive particle": pybamm.Uniform1DSubMesh,
+            "current collector": pybamm.SubMesh0D,
         }
 
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -284,11 +284,11 @@ class TestMesh(unittest.TestCase):
         for i in range(10):
             self.assertIsInstance(
                 mesh["negative particle"][i],
-                pybamm.one_dimensional_meshes.Uniform1DSubMesh,
+                pybamm.Uniform1DSubMesh,
             )
             self.assertIsInstance(
                 mesh["positive particle"][i],
-                pybamm.one_dimensional_meshes.Uniform1DSubMesh,
+                pybamm.Uniform1DSubMesh,
             )
             self.assertEqual(mesh["negative particle"][i].npts, 5)
             self.assertEqual(mesh["positive particle"][i].npts, 6)
@@ -312,10 +312,10 @@ class TestMesh(unittest.TestCase):
         var = pybamm.standard_spatial_vars
         var_pts = {var.x_n: 10, var.x_s: 15, var.x_p: 20, var.z: 5}
         submesh_types = {
-            "negative electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "separator": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "positive electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "current collector": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "positive electrode": pybamm.Uniform1DSubMesh,
+            "current collector": pybamm.Uniform1DSubMesh,
         }
 
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -331,14 +331,14 @@ class TestMesh(unittest.TestCase):
         for i in range(5):
             self.assertIsInstance(
                 mesh["negative electrode"][i],
-                pybamm.one_dimensional_meshes.Uniform1DSubMesh,
+                pybamm.Uniform1DSubMesh,
             )
             self.assertIsInstance(
-                mesh["separator"][i], pybamm.one_dimensional_meshes.Uniform1DSubMesh
+                mesh["separator"][i], pybamm.Uniform1DSubMesh
             )
             self.assertIsInstance(
                 mesh["positive electrode"][i],
-                pybamm.one_dimensional_meshes.Uniform1DSubMesh,
+                pybamm.Uniform1DSubMesh,
             )
             self.assertEqual(mesh["negative electrode"][i].npts, 10)
             self.assertEqual(mesh["separator"][i].npts, 15)
@@ -360,12 +360,12 @@ class TestMesh(unittest.TestCase):
         var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 12, var.r_n: 5, var.r_p: 6}
 
         submesh_types = {
-            "negative electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "separator": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "positive electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "negative particle": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "positive particle": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "current collector": pybamm.zero_dimensional_meshes.SubMesh0D,
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "positive electrode": pybamm.Uniform1DSubMesh,
+            "negative particle": pybamm.Uniform1DSubMesh,
+            "positive particle": pybamm.Uniform1DSubMesh,
+            "current collector": pybamm.SubMesh0D,
         }
 
         mesh_type = pybamm.Mesh
@@ -375,7 +375,7 @@ class TestMesh(unittest.TestCase):
 
         for submeshlist in mesh.values():
             for submesh in submeshlist:
-                if not isinstance(submesh, pybamm.zero_dimensional_meshes.SubMesh0D):
+                if not isinstance(submesh, pybamm.SubMesh0D):
                     self.assertTrue(submesh.coord_sys in pybamm.KNOWN_COORD_SYS)
 
     def test_unimplemented_meshes(self):
@@ -387,7 +387,7 @@ class TestMesh(unittest.TestCase):
             }
         }
         submesh_types = {
-            "negative electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh
+            "negative electrode": pybamm.Uniform1DSubMesh
         }
         with self.assertRaises(pybamm.GeometryError):
             pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -412,10 +412,10 @@ class TestMesh(unittest.TestCase):
         var_pts = {var.x_n: 10, var.x_s: 7, var.x_p: 12, var.z: 24}
 
         submesh_types = {
-            "negative electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "separator": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "positive electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "current collector": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "positive electrode": pybamm.Uniform1DSubMesh,
+            "current collector": pybamm.Uniform1DSubMesh,
         }
 
         mesh_type = pybamm.Mesh
@@ -449,10 +449,10 @@ class TestMesh(unittest.TestCase):
         var_pts = {var.x_n: 10, var.x_s: 7, var.x_p: 12, var.z: 24}
 
         submesh_types = {
-            "negative electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "separator": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "positive electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "current collector": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "positive electrode": pybamm.Uniform1DSubMesh,
+            "current collector": pybamm.Uniform1DSubMesh,
         }
 
         mesh_type = pybamm.Mesh

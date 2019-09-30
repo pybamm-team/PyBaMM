@@ -5,7 +5,7 @@ import unittest
 class TestExponential1DSubMesh(unittest.TestCase):
     def test_exceptions(self):
         lims = [[0, 1], [0, 1]]
-        mesh = pybamm.one_dimensional_meshes.GetExponential1DSubMesh()
+        mesh = pybamm.GetExponential1DSubMesh()
         with self.assertRaises(pybamm.GeometryError):
             mesh(lims, None)
 
@@ -21,7 +21,7 @@ class TestExponential1DSubMesh(unittest.TestCase):
         }
 
         submesh_types = {
-            "negative particle": pybamm.one_dimensional_meshes.GetExponential1DSubMesh(
+            "negative particle": pybamm.GetExponential1DSubMesh(
                 side="symmetric"
             )
         }
@@ -54,7 +54,7 @@ class TestExponential1DSubMesh(unittest.TestCase):
         }
 
         submesh_types = {
-            "negative particle": pybamm.one_dimensional_meshes.GetExponential1DSubMesh(
+            "negative particle": pybamm.GetExponential1DSubMesh(
                 side="left"
             )
         }
@@ -87,7 +87,7 @@ class TestExponential1DSubMesh(unittest.TestCase):
         }
 
         submesh_types = {
-            "negative particle": pybamm.one_dimensional_meshes.GetExponential1DSubMesh(
+            "negative particle": pybamm.GetExponential1DSubMesh(
                 side="right"
             )
         }

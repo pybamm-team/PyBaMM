@@ -139,24 +139,24 @@ class BaseBatteryModel(pybamm.BaseModel):
     @property
     def default_submesh_types(self):
         base_submeshes = {
-            "negative electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "separator": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "positive electrode": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "negative particle": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
-            "positive particle": pybamm.one_dimensional_meshes.Uniform1DSubMesh,
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "positive electrode": pybamm.Uniform1DSubMesh,
+            "negative particle": pybamm.Uniform1DSubMesh,
+            "positive particle": pybamm.Uniform1DSubMesh,
         }
         if self.options["dimensionality"] == 0:
             base_submeshes[
                 "current collector"
-            ] = pybamm.zero_dimensional_meshes.SubMesh0D
+            ] = pybamm.SubMesh0D
         elif self.options["dimensionality"] == 1:
             base_submeshes[
                 "current collector"
-            ] = pybamm.one_dimensional_meshes.Uniform1DSubMesh
+            ] = pybamm.Uniform1DSubMesh
         elif self.options["dimensionality"] == 2:
             base_submeshes[
                 "current collector"
-            ] = pybamm.two_dimensional_meshes.ScikitUniform2DSubMesh
+            ] = pybamm.ScikitUniform2DSubMesh
         return base_submeshes
 
     @property

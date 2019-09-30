@@ -7,7 +7,7 @@ class TestUser1DSubMesh(unittest.TestCase):
     def test_exceptions(self):
         lims = [[0, 1], [0, 1]]
         edges = np.array([0, 0.3, 1])
-        mesh = pybamm.one_dimensional_meshes.GetUserSupplied1DSubMesh(edges)
+        mesh = pybamm.GetUserSupplied1DSubMesh(edges)
         # test too many lims
         with self.assertRaises(pybamm.GeometryError):
             mesh(lims, None)
@@ -40,7 +40,7 @@ class TestUser1DSubMesh(unittest.TestCase):
 
         edges = np.array([0, 0.3, 1])
         submesh_types = {
-            "negative particle": pybamm.one_dimensional_meshes.GetUserSupplied1DSubMesh(
+            "negative particle": pybamm.GetUserSupplied1DSubMesh(
                 edges
             )
         }

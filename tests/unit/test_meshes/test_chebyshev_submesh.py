@@ -6,7 +6,7 @@ class TestChebyshev1DSubMesh(unittest.TestCase):
     def test_exceptions(self):
         lims = [[0, 1], [0, 1]]
         with self.assertRaises(pybamm.GeometryError):
-            pybamm.one_dimensional_meshes.Chebyshev1DSubMesh(lims, None)
+            pybamm.Chebyshev1DSubMesh(lims, None)
 
     def test_mesh_creation_no_parameters(self):
         r = pybamm.SpatialVariable(
@@ -20,7 +20,7 @@ class TestChebyshev1DSubMesh(unittest.TestCase):
         }
 
         submesh_types = {
-            "negative particle": pybamm.one_dimensional_meshes.Chebyshev1DSubMesh
+            "negative particle": pybamm.Chebyshev1DSubMesh
         }
         var_pts = {r: 20}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)

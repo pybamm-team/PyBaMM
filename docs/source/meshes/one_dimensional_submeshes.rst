@@ -1,23 +1,23 @@
 1D Sub Meshes
 =============
 
-.. autoclass:: pybamm.one_dimensional_meshes.SubMesh1D
+.. autoclass:: pybamm.SubMesh1D
     :members:
 
-.. autoclass:: pybamm.one_dimensional_meshes.Uniform1DSubMesh
+.. autoclass:: pybamm.Uniform1DSubMesh
     :members:
 
-.. autoclass:: pybamm.one_dimensional_meshes.Chebyshev1DSubMesh
+.. autoclass:: pybamm.Exponential1DSubMesh
     :members:
 
-.. autoclass:: pybamm.one_dimensional_meshes.GetExponential1DSubMesh
+.. autoclass:: pybamm.GetExponential1DSubMesh
     :members:
 
-.. autoclass:: pybamm.one_dimensional_meshes.Exponential1DSubMesh
+.. autoclass:: pybamm.Chebyshev1DSubMesh
     :members:
 
-.. autoclass:: pybamm.one_dimensional_meshes.GetUserSupplied1DSubMesh
+.. autoclass:: pybamm.UserSupplied1DSubMesh
     :members:
 
-.. autoclass:: pybamm.one_dimensional_meshes.UserSupplied1DSubMesh
+.. autoclass:: pybamm.GetUserSupplied1DSubMesh
     :members:

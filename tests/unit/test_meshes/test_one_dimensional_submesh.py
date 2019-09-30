@@ -7,7 +7,7 @@ class TestSubMesh1D(unittest.TestCase):
     def test_tabs(self):
         edges = np.linspace(0, 1, 10)
         tabs = {"negative": {"z_centre": 0}, "positive": {"z_centre": 1}}
-        mesh = pybamm.one_dimensional_meshes.SubMesh1D(edges, None, tabs=tabs)
+        mesh = pybamm.SubMesh1D(edges, None, tabs=tabs)
         self.assertEqual(mesh.tabs["negative tab"], "left")
         self.assertEqual(mesh.tabs["positive tab"], "right")
 
@@ -15,7 +15,7 @@ class TestSubMesh1D(unittest.TestCase):
         edges = np.linspace(0, 1, 10)
         tabs = {"negative": {"z_centre": 0.2}, "positive": {"z_centre": 1}}
         with self.assertRaises(pybamm.GeometryError):
-            pybamm.one_dimensional_meshes.SubMesh1D(edges, None, tabs=tabs)
+            pybamm.SubMesh1D(edges, None, tabs=tabs)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,0 @@
-from .base_scikit_fem_submesh import ScikitSubMesh2D
-
-from .chebyshev_scikit_fem_submesh import ScikitChebyshev2DSubMesh
-from .exponential_scikit_fem_submesh import ScikitTopExponential2DSubMesh
-from .uniform_scikit_fem_submesh import ScikitUniform2DSubMesh
-from .user_supplied_submesh import GetUserSupplied2DSubMesh, UserSupplied2DSubMesh

@@ -1,14 +1,20 @@
 2D Sub Meshes
 =============
 
-.. autoclass:: pybamm.two_dimensional_meshes.ScikitSubMesh2D
+.. autoclass:: pybamm.ScikitSubMesh2D
     :members:
 
-.. autoclass:: pybamm.two_dimensional_meshes.ScikitUniform2DSubMesh
+.. autoclass:: pybamm.ScikitUniform2DSubMesh
     :members:
 
-.. autoclass:: pybamm.two_dimensional_meshes.ScikitChebyshev2DSubMesh
+.. autoclass:: pybamm.ScikitTopExponential2DSubMesh
     :members:
 
-.. autoclass:: pybamm.two_dimensional_meshes.ScikitTopExponential2DSubMesh
+.. autoclass:: pybamm.ScikitChebyshev2DSubMesh
+    :members:
+
+.. autoclass:: pybamm.UserSupplied2DSubMesh
+    :members:
+
+.. autoclass:: pybamm.GetUserSupplied2DSubMesh
     :members:

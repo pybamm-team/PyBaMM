@@ -212,24 +212,24 @@ from .geometry import standard_spatial_vars
 #
 from .discretisations.discretisation import Discretisation
 from .meshes.meshes import Mesh
-from .meshes import zero_dimensional_meshes
-from .meshes import one_dimensional_meshes
-from .meshes import two_dimensional_meshes
-
-#from .meshes.zero_dimensional_submesh import SubMesh0D
-#from .meshes.one_dimensional_submeshes import (
-#    SubMesh1D,
-#    Uniform1DSubMesh,
-#    Chebyshev1DSubMesh,
-#    GetExponential1DSubMesh,
-#    Exponential1DSubMesh,
-#)
-#from .meshes.scikit_fem_submeshes import (
-#    ScikitSubMesh2D,
-#    ScikitUniform2DSubMesh,
-#    ScikitChebyshev2DSubMesh,
-#    ScikitTopExponential2DSubMesh,
-#)
+from .meshes.zero_dimensional_submesh import SubMesh0D
+from .meshes.one_dimensional_submeshes import (
+    SubMesh1D,
+    Uniform1DSubMesh,
+    Exponential1DSubMesh,
+    GetExponential1DSubMesh,
+    Chebyshev1DSubMesh,
+    UserSupplied1DSubMesh,
+    GetUserSupplied1DSubMesh,
+)
+from .meshes.scikit_fem_submeshes import (
+    ScikitSubMesh2D,
+    ScikitUniform2DSubMesh,
+    ScikitTopExponential2DSubMesh,
+    ScikitChebyshev2DSubMesh,
+    UserSupplied2DSubMesh,
+    GetUserSupplied2DSubMesh,
+)
 
 #
 # Spatial Methods
