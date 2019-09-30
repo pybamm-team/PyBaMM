@@ -21,12 +21,12 @@ can be found
 
 ### Linux
 
-For instructions on installing PyBaMM on Debian-based distributions, please see [here](INSTALL_LINUX.md)
+For instructions on installing PyBaMM on Debian-based distributions, please see [here](INSTALL-LINUX.md)
 
 ### Windows
 
 We recommend using Windows Subsystem for Linux to install PyBaMM on a Windows OS, for
-instructions please see [here](INSTALL_WINDOWS.md)
+instructions please see [here](INSTALL-WINDOWS.md)
 
 ## How can I contribute to PyBaMM?
 
