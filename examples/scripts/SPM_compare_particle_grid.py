@@ -74,7 +74,7 @@ for i, solution in enumerate(solutions):
 
 # plot
 def plot(t):
-    fig, _ = plt.subplots(figsize=(15, 8))
+    plt.subplots(figsize=(15, 8))
     plt.subplot(121)
     plt.xlabel(r"$r_n$")
     plt.ylabel("Negative particle concentration [mol.m-3]")
