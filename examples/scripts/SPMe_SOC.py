@@ -9,7 +9,7 @@ factor = 6.38
 
 # Dimensions
 h = 0.137
-w = 0.207/factor
+w = 0.207 / factor
 A = h * w
 l_n = 1e-4
 l_p = 1e-4
@@ -21,7 +21,7 @@ vol_cm3 = vol * 1e6
 tot_cap = 0.0
 tot_time = 0.0
 fig, axes = plt.subplots(1, 2, sharey=True)
-I_mag = 1.01/factor
+I_mag = 1.01 / factor
 for enum, I_app in enumerate([-1.0, 1.0]):
     I_app *= I_mag
     # load model
@@ -32,22 +32,21 @@ for enum, I_app in enumerate([-1.0, 1.0]):
     param = model.default_parameter_values
 
     param.update(
-        {
-            "Electrode height [m]": h,
-            "Electrode width [m]": w,
-            "Negative electrode thickness [m]": l_n,
-            "Positive electrode thickness [m]": l_p,
-            "Separator thickness [m]": l_s,
-            "Lower voltage cut-off [V]": 3.105,
-            "Upper voltage cut-off [V]": 4.7,
-            "Maximum concentration in negative electrode [mol.m-3]": 25000,
-            "Maximum concentration in positive electrode [mol.m-3]": 50000,
-            "Initial concentration in negative electrode [mol.m-3]": 12500,
-            "Initial concentration in positive electrode [mol.m-3]": 25000,
-            "Negative electrode surface area density [m-1]": 180000.0,
-            "Positive electrode surface area density [m-1]": 150000.0,
-            "Typical current [A]": I_app,
-        }
+        {"Electrode height [m]": h,
+         "Electrode width [m]": w,
+         "Negative electrode thickness [m]": l_n,
+         "Positive electrode thickness [m]": l_p,
+         "Separator thickness [m]": l_s,
+         "Lower voltage cut-off [V]": 3.105,
+         "Upper voltage cut-off [V]": 4.7,
+         "Maximum concentration in negative electrode [mol.m-3]": 25000,
+         "Maximum concentration in positive electrode [mol.m-3]": 50000,
+         "Initial concentration in negative electrode [mol.m-3]": 12500,
+         "Initial concentration in positive electrode [mol.m-3]": 25000,
+         "Negative electrode surface area density [m-1]": 180000.0,
+         "Positive electrode surface area density [m-1]": 150000.0,
+         "Typical current [A]": I_app,
+         }
     )
 
     param.process_model(model)
@@ -84,14 +83,15 @@ for enum, I_app in enumerate([-1.0, 1.0]):
     dc_time = np.around(time_hours[-1], 3)
     # Capacity mAh
     cap = np.absolute(I_app * 1000 * dc_time)
+    cap_time = np.absolute(I_app * 1000 * time_hours)
 
-    axes[enum].plot(np.absolute(I_app)*1000*time_hours,
+    axes[enum].plot(cap_time,
                     xnext(sol.t), 'r-', label='Average Neg')
-    axes[enum].plot(np.absolute(I_app)*1000*time_hours,
+    axes[enum].plot(cap_time,
                     xpext(sol.t), 'b-', label='Average Pos')
-    axes[enum].plot(np.absolute(I_app)*1000*time_hours,
+    axes[enum].plot(cap_time,
                     xnsurf(sol.t), 'r--', label='Surface Neg')
-    axes[enum].plot(np.absolute(I_app)*1000*time_hours,
+    axes[enum].plot(cap_time,
                     xpsurf(sol.t), 'b--', label='Surface Pos')
     axes[enum].set_xlabel('Capacity [mAh]')
     plt.legend()
@@ -107,4 +107,4 @@ for enum, I_app in enumerate([-1.0, 1.0]):
 
 print('Total Charge/Discharge Time', tot_time, 'hrs')
 print('Total Capacity', np.around(tot_cap, 3), 'mAh')
-print('Total Capacity', np.around(tot_cap, 3)/vol_cm3, 'mAh.cm-3')
+print('Total Capacity', np.around(tot_cap, 3) / vol_cm3, 'mAh.cm-3')
