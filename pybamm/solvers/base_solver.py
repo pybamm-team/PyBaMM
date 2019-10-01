@@ -210,4 +210,6 @@ class BaseSolver(object):
                     event.evaluate(solution.t_event, solution.y_event)
                 )
             termination_event = min(final_event_values, key=final_event_values.get)
+            # Add the event to the solution object
+            solution.termination = "event: {}".format(termination_event)
             return "the termination event '{}' occurred".format(termination_event)
