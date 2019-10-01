@@ -256,9 +256,9 @@ class TestJacobian(unittest.TestCase):
 
     def test_jac_of_symbol(self):
         a = pybamm.Symbol("a")
-        b = pybamm.Symbol("b")
+        y = pybamm.StateVector(slice(0, 1))
 
-        self.assertEqual(a.jac(b).evaluate(), 0)
+        self.assertEqual(a.jac(y).evaluate(), 0)
 
     def test_spatial_operator(self):
         a = pybamm.Variable("a")
@@ -269,7 +269,7 @@ class TestJacobian(unittest.TestCase):
     def test_jac_of_inner(self):
         a = pybamm.Scalar(1)
         b = pybamm.Scalar(2)
-        y = pybamm.Variable("y")
+        y = pybamm.StateVector(slice(0, 1))
         self.assertEqual(pybamm.inner(a, b).jac(y).evaluate(), 0)
         self.assertEqual(pybamm.inner(a, y).jac(y).evaluate(), 1)
         self.assertEqual(pybamm.inner(y, b).jac(y).evaluate(), 2)

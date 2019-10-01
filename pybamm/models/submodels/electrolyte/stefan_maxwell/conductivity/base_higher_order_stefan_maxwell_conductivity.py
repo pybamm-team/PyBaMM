@@ -48,7 +48,7 @@ class BaseHigherOrder(BaseModel):
         eps_s_av = variables["Leading-order x-averaged separator porosity"]
         eps_p_av = variables["Leading-order x-averaged positive electrode porosity"]
 
-        # Note: here we want the avergae of the temperature over the negative
+        # Note: here we want the average of the temperature over the negative
         # electrode, separator and positive electrode (not including the current
         # collectors)
         T = variables["Cell temperature"]

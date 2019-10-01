@@ -660,6 +660,12 @@ class TestDiscretise(unittest.TestCase):
         )
         discretised_model.check_well_posedness()
 
+    def test_process_empty_model(self):
+        model = pybamm.BaseModel()
+        disc = pybamm.Discretisation()
+        with self.assertRaisesRegex(pybamm.ModelError, "Cannot discretise empty model"):
+            disc.process_model(model)
+
     def test_broadcast(self):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
 
