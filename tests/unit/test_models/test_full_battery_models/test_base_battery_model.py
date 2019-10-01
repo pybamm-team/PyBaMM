@@ -25,6 +25,21 @@ class TestBaseBatteryModel(unittest.TestCase):
         self.assertIsInstance(processed_c, pybamm.Multiplication)
         self.assertIsInstance(processed_c.left, pybamm.Scalar)
         self.assertIsInstance(processed_c.right, pybamm.StateVector)
+        # Process flux manually and check result against flux computed in particle
+        # submodel
+        c_n = model.variables["X-averaged negative particle concentration"]
+        T = pybamm.PrimaryBroadcast(
+            model.variables["X-averaged negative electrode temperature"],
+            ["negative particle"],
+        )
+        D = model.param.D_n(c_n, T)
+        N = -D * pybamm.grad(c_n)
+
+        flux_1 = model.process_parameters_and_discretise(N, parameter_values, disc)
+        flux_2 = model.variables["X-averaged negative particle flux"]
+        param_flux_2 = parameter_values.process_symbol(flux_2)
+        disc_flux_2 = disc.process_symbol(param_flux_2)
+        self.assertEqual(flux_1.id, disc_flux_2.id)
 
     def test_default_geometry(self):
         var = pybamm.standard_spatial_vars

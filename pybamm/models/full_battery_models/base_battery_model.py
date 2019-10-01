@@ -696,9 +696,9 @@ class BaseBatteryModel(pybamm.BaseModel):
         """
         Process parameters and discretise a symbol using supplied parameter values
         and discretisation. Note: care should be taken if using spatial operators
-        on dimensional sysmbols. Operators in pybamm are written in non-dimensional
-        form, so may need to be scaled by the appropriate length scale. It is advised
-        to use this method on non-dimensional symbols.
+        on dimensional symbols. Operators in pybamm are written in non-dimensional
+        form, so may need to be scaled by the appropriate length scale. It is
+        recommended to use this method on non-dimensional symbols.
 
         Parameters
         ----------
@@ -714,11 +714,14 @@ class BaseBatteryModel(pybamm.BaseModel):
         :class:`pybamm.Symbol`
             Processed symbol
         """
-
         # Set y slices
         if disc.y_slices == {}:
             variables = list(self.rhs.keys()) + list(self.algebraic.keys())
             disc.set_variable_slices(variables)
+
+        # Set boundary condtions
+        if disc.bcs == {}:
+            disc.bcs = disc.process_boundary_conditions(self)
 
         # Process
         param_symbol = parameter_values.process_symbol(symbol)
