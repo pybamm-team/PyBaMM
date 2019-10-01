@@ -44,7 +44,9 @@ class TestExponential1DSubMesh(unittest.TestCase):
         }
 
         submesh_types = {
-            "negative particle": pybamm.GetExponential1DSubMesh(side="symmetric")
+            "negative particle": pybamm.GetExponential1DSubMesh(
+                side="symmetric", stretch=1.5
+            )
         }
         var_pts = {r: 20}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -77,7 +79,7 @@ class TestExponential1DSubMesh(unittest.TestCase):
         submesh_types = {
             "negative particle": pybamm.GetExponential1DSubMesh(side="left")
         }
-        var_pts = {r: 20}
+        var_pts = {r: 21}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
         # create mesh
@@ -170,21 +172,26 @@ class TestUser1DSubMesh(unittest.TestCase):
         # test too many lims
         with self.assertRaises(pybamm.GeometryError):
             mesh(lims, None)
-        lims = [0, 1]
 
-        # error if len(edges) != npts+1
+        x_n = pybamm.standard_spatial_vars.x_n
+
+        # error if npts+1 != len(edges)
+        lims = {x_n: {"min": 0, "max": 1}}
+        npts = {x_n.id: 10}
         with self.assertRaises(pybamm.GeometryError):
-            mesh(lims, 5)
+            mesh(lims, npts)
 
         # error if lims[0] not equal to edges[0]
-        lims = [0.1, 1]
+        lims = {x_n: {"min": 0.1, "max": 1}}
+        npts = {x_n.id: len(edges) - 1}
         with self.assertRaises(pybamm.GeometryError):
-            mesh(lims, len(edges) - 1)
+            mesh(lims, npts)
 
         # error if lims[-1] not equal to edges[-1]
-        lims = [0, 0.9]
+        lims = {x_n: {"min": 0, "max": 10}}
+        npts = {x_n.id: len(edges) - 1}
         with self.assertRaises(pybamm.GeometryError):
-            mesh(lims, len(edges) - 1)
+            mesh(lims, npts)
 
     def test_mesh_creation_no_parameters(self):
         r = pybamm.SpatialVariable(

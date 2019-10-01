@@ -427,6 +427,12 @@ class TestScikitUser2DSubMesh(unittest.TestCase):
         with self.assertRaises(pybamm.GeometryError):
             mesh(lims, npts)
 
+        # error if different coordinate system
+        lims = {var.y: {"min": 0, "max": 1}, var.r_n: {"min": 0, "max": 1}}
+        npts = {var.y.id: 3, var.r_n.id: 3}
+        with self.assertRaises(pybamm.DomainError):
+            mesh(lims, npts)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
