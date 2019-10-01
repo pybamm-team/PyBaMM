@@ -18,7 +18,9 @@ class SPMe(BaseModel):
     **Extends:** :class:`pybamm.lithium_ion.BaseModel`
     """
 
-    def __init__(self, options=None, name="Single Particle Model with electrolyte"):
+    def __init__(
+        self, options=None, name="Single Particle Model with electrolyte", build=True
+    ):
         super().__init__(options, name)
 
         self.set_reactions()
@@ -32,17 +34,8 @@ class SPMe(BaseModel):
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
 
-        self.build_model()
-
-        # Massive hack for consistent delta_phi = phi_s - phi_e
-        # This needs to be corrected
-        for domain in ["Negative", "Positive"]:
-            phi_s = self.variables[domain + " electrode potential"]
-            phi_e = self.variables[domain + " electrolyte potential"]
-            delta_phi = phi_s - phi_e
-            s = self.submodels[domain.lower() + " interface"]
-            var = s._get_standard_surface_potential_difference_variables(delta_phi)
-            self.variables.update(var)
+        if build:
+            self.build_model()
 
     def set_porosity_submodel(self):
 

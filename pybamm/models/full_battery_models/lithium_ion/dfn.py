@@ -18,7 +18,7 @@ class DFN(BaseModel):
     **Extends:** :class:`pybamm.lithium_ion.BaseModel`
     """
 
-    def __init__(self, options=None, name="Doyle-Fuller-Newman model"):
+    def __init__(self, options=None, name="Doyle-Fuller-Newman model", build=True):
         super().__init__(options, name)
 
         self.set_reactions()
@@ -31,7 +31,8 @@ class DFN(BaseModel):
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
 
-        self.build_model()
+        if build:
+            self.build_model()
 
     def set_porosity_submodel(self):
 

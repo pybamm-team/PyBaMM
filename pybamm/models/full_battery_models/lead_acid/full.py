@@ -19,7 +19,7 @@ class Full(BaseModel):
     **Extends:** :class:`pybamm.lead_acid.BaseModel`
     """
 
-    def __init__(self, options=None, name="Full model"):
+    def __init__(self, options=None, name="Full model", build=True):
         super().__init__(options, name)
 
         self.set_reactions()
@@ -32,7 +32,8 @@ class Full(BaseModel):
         self.set_side_reaction_submodels()
         self.set_current_collector_submodel()
 
-        self.build_model()
+        if build:
+            self.build_model()
 
     def set_porosity_submodel(self):
         self.submodels["porosity"] = pybamm.porosity.Full(self.param)

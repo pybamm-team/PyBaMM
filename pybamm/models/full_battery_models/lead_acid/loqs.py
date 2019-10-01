@@ -18,7 +18,7 @@ class LOQS(BaseModel):
     **Extends:** :class:`pybamm.lead_acid.BaseModel`
     """
 
-    def __init__(self, options=None, name="LOQS model"):
+    def __init__(self, options=None, name="LOQS model", build=True):
         super().__init__(options, name)
 
         self.set_reactions()
@@ -32,7 +32,8 @@ class LOQS(BaseModel):
         self.set_side_reaction_submodels()
         self.set_current_collector_submodel()
 
-        self.build_model()
+        if build:
+            self.build_model()
 
         if self.options["dimensionality"] == 0:
             self.use_jacobian = False
