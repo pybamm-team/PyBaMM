@@ -35,7 +35,7 @@ class BaseParticle(pybamm.BaseSubModel):
             c_scale = self.param.c_p_max
             active_volume = geo_param.a_p_dim * geo_param.R_p / 3
         c_s_r_av = pybamm.r_average(c_s_xav)
-        c_s_r_av_vol = active_volume * c_s_r_av * c_scale
+        c_s_r_av_vol = active_volume * c_s_r_av
         variables = {
             self.domain + " particle concentration": c_s,
             self.domain + " particle concentration [mol.m-3]": c_s * c_scale,
@@ -54,7 +54,9 @@ class BaseParticle(pybamm.BaseSubModel):
             + " particle surface concentration [mol.m-3]": c_scale * c_s_surf_av,
             self.domain + " electrode active volume fraction": active_volume,
             self.domain
-            + " electrode volume-averaged concentration [mol.m-3]": c_s_r_av_vol,
+            + " electrode volume-averaged concentration": c_s_r_av_vol,
+            self.domain + " electrode "
+            + "volume-averaged concentration [mol.m-3]": c_s_r_av_vol * c_scale,
             self.domain + " electrode average extent of lithiation": c_s_r_av
         }
 
