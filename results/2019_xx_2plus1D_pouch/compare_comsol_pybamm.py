@@ -55,9 +55,9 @@ param.process_geometry(geometry)
 # create mesh
 var = pybamm.standard_spatial_vars
 var_pts = {
-    var.x_n: 5,
-    var.x_s: 5,
-    var.x_p: 5,
+    var.x_n: 10,
+    var.x_s: 10,
+    var.x_p: 10,
     var.r_n: 10,
     var.r_p: 10,
     var.y: 10,
@@ -113,6 +113,7 @@ shared.plot_2D_var(
     param,
     cmap="cividis",
 )
+U_ref = param.process_symbol(pybamm.standard_parameters_lithium_ion.U_p_ref - pybamm.standard_parameters_lithium_ion.U_n_ref).evaluate()
 shared.plot_2D_var(
     "Positive current collector potential [V]",
     t_plot,
@@ -120,7 +121,9 @@ shared.plot_2D_var(
     output_variables,
     param,
     cmap="viridis",
+    ref=U_ref,
 )
+T0 = param.process_symbol(pybamm.standard_parameters_lithium_ion.T_ref).evaluate()
 shared.plot_2D_var(
     "X-averaged cell temperature [K]",
     t_plot,
@@ -128,5 +131,6 @@ shared.plot_2D_var(
     output_variables,
     param,
     cmap="inferno",
+    ref=T0,
 )
 plt.show()
