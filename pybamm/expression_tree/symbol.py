@@ -7,7 +7,6 @@ import anytree
 import numbers
 import copy
 import autograd.numpy as np
-
 from anytree.exporter import DotExporter
 
 

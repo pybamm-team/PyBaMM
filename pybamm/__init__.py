@@ -109,6 +109,7 @@ from .expression_tree.unary_operators import (
     z_average,
     yz_average,
     boundary_value,
+    r_average
 )
 from .expression_tree.functions import *
 from .expression_tree.parameter import Parameter, FunctionParameter
@@ -157,10 +158,6 @@ from .models import standard_variables
 from .models.full_battery_models.base_battery_model import BaseBatteryModel
 from .models.full_battery_models import lead_acid
 from .models.full_battery_models import lithium_ion
-
-# Other models
-from .models.reaction_diffusion import ReactionDiffusionModel
-from .models.simple_ode_model import SimpleODEModel
 
 #
 # Submodel classes
