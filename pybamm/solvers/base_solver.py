@@ -47,8 +47,17 @@ class BaseSolver(object):
         t_eval : numeric type
             The times at which to compute the solution
 
+        Raises
+        ------
+        :class:`pybamm.ModelError`
+            If an empty model is passed (`model.rhs = {}` and `model.algebraic={}`)
+
         """
         pybamm.logger.info("Start solving {}".format(model.name))
+
+        # Make sure model isn't empty
+        if len(model.rhs) == 0 and len(model.algebraic) == 0:
+            raise pybamm.ModelError("Cannot solve empty model")
 
         # Set up
         timer = pybamm.Timer()
@@ -91,12 +100,21 @@ class BaseSolver(object):
             The number of points at which the solution will be returned during
             the step dt. default is 2 (returns the solution at t0 and t0 + dt).
 
+        Raises
+        ------
+        :class:`pybamm.ModelError`
+            If an empty model is passed (`model.rhs = {}` and `model.algebraic={}`)
+
         """
+        # Make sure model isn't empty
+        if len(model.rhs) == 0 and len(model.algebraic) == 0:
+            raise pybamm.ModelError("Cannot step empty model")
+
         # Set timer
         timer = pybamm.Timer()
 
         # Run set up on first step
-        if not hasattr(self, 'y0'):
+        if not hasattr(self, "y0"):
             start_time = timer.time()
             self.set_up(model)
             self.t = 0.0
@@ -130,9 +148,7 @@ class BaseSolver(object):
             )
         else:
             pybamm.logger.info(
-                "Step time: {}".format(
-                    timer.format(solution.solve_time),
-                )
+                "Step time: {}".format(timer.format(solution.solve_time))
             )
         return solution
 
@@ -194,4 +210,6 @@ class BaseSolver(object):
                     event.evaluate(solution.t_event, solution.y_event)
                 )
             termination_event = min(final_event_values, key=final_event_values.get)
+            # Add the event to the solution object
+            solution.termination = "event: {}".format(termination_event)
             return "the termination event '{}' occurred".format(termination_event)
