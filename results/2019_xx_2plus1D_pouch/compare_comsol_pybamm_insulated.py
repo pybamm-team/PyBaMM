@@ -23,7 +23,7 @@ C_rate = "1"  # choose the key from the above dictionary of available results
 
 # load the comsol results
 try:
-    comsol_variables = pickle.load(open("comsol_{}C.pickle".format(C_rate), "rb"))
+    comsol_variables = pickle.load(open("comsol_nocool_{}C.pickle".format(C_rate), "rb"))
 except FileNotFoundError:
     raise FileNotFoundError("COMSOL data not found. Try running load_comsol_data.py")
 
@@ -49,6 +49,7 @@ param["Typical current [A]"] = (
     * 24
     * param.process_symbol(pybamm.geometric_parameters.A_cc).evaluate()
 )
+#param["Heat transfer coefficient [W.m-2.K-1]"] = 1e-6
 param.process_model(pybamm_model)
 param.process_geometry(geometry)
 

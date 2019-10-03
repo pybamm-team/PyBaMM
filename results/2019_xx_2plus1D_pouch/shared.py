@@ -20,20 +20,11 @@ def make_comsol_model(comsol_variables, mesh, param, y_interp=None, z_interp=Non
         z_interp = pybamm_z * L_z  # np.linspace(0, L_z, 20)
     grid_y, grid_z = np.meshgrid(y_interp, z_interp)
 
-    def get_interp_fun(variable, domain):
+    def get_interp_fun(variable):
         """
         Interpolate in space to plotting nodes, and then create function to interpolate
         in time that can be called for plotting at any t.
         """
-        #if domain == ["negative current collector"]:
-        #    comsol_y = comsol_variables["y_neg_cc"]
-        #    comsol_z = comsol_variables["z_neg_cc"]
-        #elif domain == ["positive current collector"]:
-        #    comsol_y = comsol_variables["y_pos_cc"]
-        #    comsol_z = comsol_variables["z_pos_cc"]
-        #elif domain == ["separator"]:
-        #    comsol_y = comsol_variables["y_sep"]
-        #    comsol_z = comsol_variables["z_sep"]
         comsol_y = comsol_variables["y"]
         comsol_z = comsol_variables["z"]
 
@@ -56,13 +47,11 @@ def make_comsol_model(comsol_variables, mesh, param, y_interp=None, z_interp=Non
     def comsol_voltage(t):
         return interp.interp1d(comsol_t, comsol_variables["voltage"])(t)
 
-    comsol_phi_s_cn = get_interp_fun(
-        comsol_variables["phi_s_cn"], ["negative current collector"]
-    )
-    comsol_phi_s_cp = get_interp_fun(
-        comsol_variables["phi_s_cp"], ["positive current collector"]
-    )
-    comsol_temperature = get_interp_fun(comsol_variables["temperature"], ["separator"])
+    comsol_phi_s_cn = get_interp_fun(comsol_variables["phi_s_cn"])
+    comsol_phi_s_cp = get_interp_fun(comsol_variables["phi_s_cp"])
+    comsol_temperature = get_interp_fun(comsol_variables["temperature"])
+
+    comsol_current = get_interp_fun(comsol_variables["current"])
 
     def comsol_vol_av_temperature(t):
         return interp.interp1d(
@@ -77,6 +66,7 @@ def make_comsol_model(comsol_variables, mesh, param, y_interp=None, z_interp=Non
         "Positive current collector potential [V]": comsol_phi_s_cp,
         "X-averaged cell temperature [K]": comsol_temperature,
         "Volume-averaged cell temperature [K]": comsol_vol_av_temperature,
+        "Current collector current density [A.m-2]": comsol_current,
     }
     comsol_model.y_interp = y_interp
     comsol_model.z_interp = z_interp
@@ -129,9 +119,7 @@ def plot_2D_var(var, t, comsol_model, output_variables, param, cmap="viridis", r
     # plot comsol solution
     comsol_var = comsol_model.variables[var](t=t)
     plt.subplot(132)
-    comsol_plot = plt.pcolormesh(
-        y_plot, z_plot, comsol_var, shading="gouraud"
-    )
+    comsol_plot = plt.pcolormesh(y_plot, z_plot, comsol_var, shading="gouraud")
     plt.axis([0, y_plot[-1], 0, z_plot[-1]])
     plt.xlabel(r"$y$")
     plt.ylabel(r"$z$")

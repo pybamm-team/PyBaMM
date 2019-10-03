@@ -38,7 +38,7 @@ try:
 except ValueError:
     raise ValueError(
         """COMSOL data for the negative current collector potential is the wrong shape.
-        Check csv file for missing data.""",
+        Check csv file for missing data."""
     )
 
 # positive current collector potential (stored as a (yz_npts, time_npts) size
@@ -58,7 +58,7 @@ try:
 except ValueError:
     raise ValueError(
         """COMSOL data for the positive current collector potential is the wrong shape.
-        Check csv file for missing data.""",
+        Check csv file for missing data."""
     )
 
 # temperature (evaluated on separator nodes) (stored as a (yz_npts, time_npts)
@@ -76,7 +76,7 @@ try:
 except ValueError:
     raise ValueError(
         """COMSOL data for the temperature is the wrong shape.
-        Check csv file for missing data.""",
+        Check csv file for missing data."""
     )
 
 # volume-averaged temperature
