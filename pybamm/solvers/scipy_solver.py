@@ -15,12 +15,12 @@ class ScipySolver(pybamm.OdeSolver):
     method : str, optional
         The method to use in solve_ivp (default is "BDF")
     rtol : float, optional
-        The relative tolerance for the solver (default is 1e-3).
+        The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
         The relative tolerance for the solver (default is 1e-6).
     """
 
-    def __init__(self, method="BDF", rtol=1e-3, atol=1e-6):
+    def __init__(self, method="BDF", rtol=1e-6, atol=1e-6):
         super().__init__(method, rtol, atol)
 
     def integrate(
