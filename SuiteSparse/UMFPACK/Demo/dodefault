@@ -1,0 +1,36 @@
+#!/bin/csh
+# usage: dodefault file.rsa.gz
+#
+# file.rsa.gz is a compressed Harwell/Boeing file containing
+# a symmetric positive definite matrix
+#
+echo '================================================================='
+echo 'Matrix:: ' $1:t:r:r
+
+echo '3'	>  tmp/control.umf4 ; # 1: print level
+echo '0.2'	>> tmp/control.umf4 ; # 2: dense row control
+echo '0.2'	>> tmp/control.umf4 ; # 3: dense col control
+echo '0.1'	>> tmp/control.umf4 ; # 4: pivot tol (offdiag) DEFAULT 
+echo '32'	>> tmp/control.umf4 ; # 5: block size
+echo '0'	>> tmp/control.umf4 ; # 6: auto strategy, DEFAULT
+echo '0.7'	>> tmp/control.umf4 ; # 7: initial alloc
+echo '2'	>> tmp/control.umf4 ; # 8: max iter. refinement
+echo '1'	>> tmp/control.umf4 ; # 9:
+echo '0'	>> tmp/control.umf4 ; # 10:
+echo '0'	>> tmp/control.umf4 ; # 11: disable singletons
+echo '0'	>> tmp/control.umf4 ; # 12:
+echo '0'   	>> tmp/control.umf4 ; # 13:
+echo '0'	>> tmp/control.umf4 ; # 14: Q fixed (auto)
+echo '10'	>> tmp/control.umf4 ; # 15: AMD dense row control
+echo '0.001'	>> tmp/control.umf4 ; # 16: diag pivot tolerance DEFAULT
+echo '0'	>> tmp/control.umf4 ; # 17: scaling, NON-DEFAULT
+echo '0.5'	>> tmp/control.umf4 ; # 18: frontal matrix alloc.
+echo '0'	>> tmp/control.umf4 ; # 19: drop tolerance
+echo '1'	>> tmp/control.umf4 ; # 20: AMD/COLAMD aggressive absorption
+
+zcat $1 | readhb_nozeros > tmp/A
+zcat $1 | readhb_size    > tmp/Asize
+umf4
+
+echo '================================================================='
+

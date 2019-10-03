@@ -1,0 +1,131 @@
+Dec 28, 2018: version 2.0.9
+
+    * SuiteSparseQR.hpp: changed where CUDA files are #include'd,
+	controlled by SUITESPARSE_GPU_EXTERN_ON (see also CHOLMOD).
+
+Dec 8, 2016: version 2.0.8
+
+    * minor changes to documentation and compile scripts
+        for submitting SPQR to ACM TOMS.  No changes to code
+        except version numbers in include files.
+
+May 4, 2016: version 2.0.7
+
+    * minor changes to Makefile
+
+Apr 1, 2016: version 2.0.6
+
+    * licensing simplified (no other change); refer to SPQR/Doc/License.txt
+
+Feb 1, 2016: version 2.0.5
+
+    * update to Makefiles
+    * better error handling when only some modules are used in CHOLMOD.
+	SuiteSparseQR requires the CHOLMOD/Supernodal module.  This is now
+	checked both at compile time and at run time.
+
+Jan 30, 2016: versions 2.0.4
+
+    * modifications to Makefiles
+    * correction to mexFunctions required for MATLAB R2015b,
+	for sparse empty matrices and NULL mxGetPr
+    * added "#include <algorithm>" to spqr_tol.cpp.
+
+Jan 1, 2016: version 2.0.3
+
+    * modified Makefile to create shared libraries
+        No change to C code except version number
+
+Aug 28, 2015: version 2.0.2
+
+    * changed the default tol when A has inf's
+
+Mar 24, 2015: version 2.0.1
+
+    * minor changes to documentation
+
+Oct 17, 2014: version 2.0.0
+
+    * MAJOR UPDATE:  added GPU support.  Up to 11x faster than CPU version.
+
+July 18, 2014: version 1.3.3
+
+    * minor change to SPQR/Demo/Makefile, for the case when CHOLMOD is compiled
+        with the GPU.  No changes to the SPQR library code itself.
+
+Aug 22, 2013: version 1.3.2
+
+    * changed malloc, printf, hypot, and divcomplex pointers to use
+        SuiteSparse_config
+
+Jun 20, 2012: verison 1.3.1
+
+    * minor update for Windows (removed filesep)
+
+Jun 1, 2012: version 1.3.0
+
+    * changed from UFconfig to SuiteSparse_config
+    * removed -DTIMING option.  Timing is now enabled by default.
+    * added SuiteSparse_tic, SuiteSparse_toc, SuiteSparse_time timing functions
+    * spqr_time removed (use SuiteSparse_time instead)
+
+Dec 7, 2011: version 1.2.3
+
+    * fixed the Makefile to better align with CFLAGS and other standards
+    * minor fix to SPQR/MATLAB/spqr_make.m
+    * Makefile now detects whether or not METIS is present, and
+        sets -DNPARTITION if it is not
+
+May 10, 2011: version 1.2.2
+
+    * minor fix to SPQR/Include/SuiteSparseQR_C.h to accomodate the mixing
+        of C/C++ with a particular compiler  
+
+Jan 25, 2011: version 1.2.1
+
+    * minor fix to "make install"
+    * added more examples to SPRQ/Demo/qrdemo.cpp
+    * fixed error-condition return value for Source/SuiteSparseQR.cpp
+    * minor fix to SPQR/Tcov/qrtest.cpp
+
+Nov 30, 2009: version 1.2.0
+
+    * fixed interface to 64-bit BLAS for MATLAB 7.8
+    * added "make install" and "make uninstall"
+    * added info struct output to spqr mexFunction
+    * added 2-norm of w statistic
+    * changed default ordering back to always use COLAMD.  Default in v1.1.2
+        and v1.1.1 was to use COLAMD if m < 2*n and use AMD(A'A)
+        or METIS(A'A) otherwise.
+
+May 1, 2009, version 1.1.2
+
+    * added more examples to user guide and to spqr.m
+    * removed "static" declaration of functions in Source/* files.  This
+	corrects a problem with the Mac OS compiler.
+
+Mar 24, 2009, version 1.1.1
+
+    * #include <cstring> added to SPQR/Include/spqr.hpp, required
+        by gcc 4.3.2 (but not needed by gcc 4.1.0 or other compilers...).
+
+Sept 20, 2008, version 1.1.0
+
+    * No bugs fixed since no known bugs were present in v1.0.0
+    * Added new ordering options, in particular the default ordering:
+        - COLAMD if m <= 2*n after removing singletons; otherwise:
+          AMD then try METIS if installed and if AMD gives a high fill-in
+          and flop count.
+    * User Guide, and two draft journal articles (to be submitted to ACM TOMS)
+           in the SPQR/Doc directory.
+    * Added control of the # of threads used by TBB (it was set
+	to the TBB default in version 1.0.0).
+    * Additional demos.
+    * Added -DTIMING option, and additional components to info output
+    * Added spqr_singletons mexFunction
+    * Modified example in comments of spqr_assemble.cpp to coincide with article
+
+Aug 21, 2008
+
+    * version 1.0.0
+

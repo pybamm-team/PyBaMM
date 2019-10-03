@@ -1,0 +1,71 @@
+May 4, 2016: version 2.2.6
+
+    * minor changes to Makefile
+
+Apr 1, 2016: version 2.2.5
+
+    * licensing simplified (no other change); refer to RBio/Doc/License.txt
+
+Feb 1, 2016: version 2.2.4
+
+    * update to Makefiles
+
+Jan 30, 2016: version 2.2.3
+
+    * modifications to Makefiles
+
+Jan 1, 2016: version 2.2.2
+
+    * modified Makefile to create shared libraries
+        No change to C code except version number
+
+Oct 10, 2014: version 2.2.1
+
+    * modified RBmake.m.  No change to C code except version number.
+
+July 31, 2013: version 2.2.0
+
+    * changed malloc and printf pointers to use SuiteSparse_config
+
+Jun 20, 2012: verison 2.1.1
+
+    * minor update for Windows (removed filesep)
+
+Jun 1, 2012: version 2.1.0
+
+    * changed from UFconfig to SuiteSparse_config
+
+Dec 7, 2011: version 2.0.2
+
+    * fixed the Makefile to better align with CFLAGS and other standards
+    * added more detailed error message to mexFunction
+
+Jan 25, 2011: version 2.0.1
+
+    * minor fix to "make install"
+
+Nov 30, 2009: version 2.0.0
+
+    * rewrote the entire package in C.  The advantage is that the code is
+	now more portable.  It does not rely on a Fortran compiler that
+	supports the non-standard %val construct.  The minor disadvantage is
+	it can no longer read older Harwell/Boeing matrices if the Fortran
+	format they use does not put at least one space between the values.
+	The Rutherford/Boeing format does require at least one space, so the
+	package can read any Rutherford/Boeing matrix.  No changes to MATLAB
+	m-file interface.
+
+May 1, 2009: version 1.1.2
+
+    * minor change to RBmake.m to compile 64-bit version
+
+Nov 1, 2007: version 1.1.1
+
+    * minor lint cleanup
+
+May 31, 2007: version 1.1
+
+    * port to 64-bit MATLAB.  Tested on Linux 32-bit and 64-bit.  Not tested on
+	Windows, since I do not have a Fortran compiler on that platform.
+
+Dec 1, 2006: version 1.0 released

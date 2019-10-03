@@ -1,0 +1,31 @@
+#!/bin/csh
+
+# 57 unique statements:
+valgrind ./klultest < ../Matrix/impcol_a.mtx
+
+# 20:
+valgrind ./klultest < ../Matrix/GD99_cc.mtx
+
+# 17:
+valgrind ./klultest < ../Matrix/two.mtx
+
+# 10:
+valgrind ./klultest < ../Matrix/w156.mtx
+
+# 3, xsize memgrow in klu_kernel
+valgrind ./klultest < ../Matrix/arrow.mtx
+
+# 3, xsize memgrow in klu_kernel, 1 in klu_z_condest,
+valgrind ./klultest < ../Matrix/arrowc.mtx
+
+# 2 in klu_z_kernel (if pivot == 0 and halt_if_singular, and in complex divide)
+valgrind ./klultest < ../Matrix/onec.mtx
+
+# 1 in klu_kernel (if pivot == 0 and halt if singular)
+valgrind ./klultest < ../Matrix/one.mtx
+
+# 1 in klu_z_condest:
+valgrind ./klultest < ../Matrix/1c.mtx
+
+# 1 in klu_z_condest:
+valgrind ./klultest < ../Matrix/ctina.mtx

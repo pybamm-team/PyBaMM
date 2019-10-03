@@ -1,0 +1,180 @@
+@string{TOMS        = "{ACM} Trans. Math. Software"}
+@string{SIMAX       = "{SIAM} J. Matrix Anal. Appl."}
+@string{SIAMJSC     = "{SIAM} J. Sci. Comput."}
+
+@article{Davis08a,
+	author = {Davis, T. A.},
+	title = {Multifrontal multithreaded rank-revealing sparse {QR} factorization},
+	journal=TOMS,
+	year = {2008},
+        note = {under submission}
+        }
+
+@article{Davis08b,
+	author = {Davis, T. A.},
+	title = {Algorithm 8xx: {SuiteSparseQR}, a multifrontal multithreaded sparse QR factorization package},
+	journal=TOMS,
+	year = {2008},
+        note = {under submission}
+        }
+
+@article{GilbertMolerSchreiber,
+	author={Gilbert, J. R. and Moler, C. and Schreiber, R.},
+	title={Sparse matrices in {MATLAB}:  design and implementation},
+	journal=SIMAX,
+	year={1992}
+	,volume={13}
+	,number={1}
+	,pages={333-356}
+}
+
+@incollection{BoisvertPozoRemingtonBarrettDongarra97,
+	author={Boisvert, R. F. and Pozo, R. and Remington, K. and Barrett, R. and Dongarra, J. J.},
+	title={The {M}atrix {M}arket: A web resource for test matrix collections},
+	booktitle={Quality of Numerical Software, Assessment and Enhancement},
+	publisher={Chapman \& Hall},
+	year={1997}
+	,editor={Boisvert, R. F.}
+	,pages={125-137}
+	,address={London}
+	,note={({\tt http://math.nist.gov/MatrixMarket})}
+}
+
+@article{AmestoyDavisDuff03,
+	author={Amestoy, P. R. and Davis, T. A. and Duff, I. S.},
+	title={Algorithm 837: {AMD}, an approximate minimum degree ordering algorithm},
+	journal=TOMS,
+	year={2004}
+	,volume={30}
+	,number={3}
+	,pages={381-388}}
+
+@article{AmestoyDavisDuff96,
+	author={Amestoy, P. R. and Davis, T. A. and Duff, I. S.},
+	title={An approximate minimum degree ordering algorithm},
+	journal=SIMAX,
+	year={1996}
+	,volume={17}
+	,number={4}
+	,pages={886--905}
+}
+
+@Article{ChenDavisHagerRajamanickam09,
+  author =       "Y. Chen and T. A. Davis and W. W. Hager and S. Rajamanickam",
+  title =        "Algorithm 887: {CHOLMOD}, Supernodal Sparse {Cholesky} Factorization and Update/Downdate",
+  journal =      TOMS,
+  volume =       "35",
+  year = {2009},
+  number =       "3",
+  accepted =     "26 March 2008",
+  upcoming =     "true",
+  abstract =     "CHOLMOD is a set of routines for factorizing sparse symmetric
+positive definite matrices of the form $A$ or $AA^T$, updating/downdating a
+sparse Cholesky factorization, solving linear systems, updating/downdating the
+solution to the triangular system $Lx=b$, and many other sparse matrix
+functions for both symmetric and unsymmetric matrices. Its supernodal Cholesky
+factorization relies on LAPACK and the Level-3 BLAS, and obtains a substantial
+fraction of the peak performance of the BLAS.  Both real and complex matrices
+are supported.  CHOLMOD is written in ANSI/ISO C, with both C and
+MATLAB\texttrademark interfaces. It appears in MATLAB 7.2 as \verb'x=A\b' when
+\verb'A' is sparse symmetric positive definite, as well as in several other
+sparse matrix functions." }
+
+@Article{DavisHager09,
+  author =       "T. A. Davis and W. W. Hager",
+  title =        "Dynamic Supernodes in Sparse {Cholesky} Update/downdate and Triangular Solves",
+  journal =      TOMS,
+  volume =       "35",
+  year = {2009},
+  number =       "4",
+  accepted =     "2 May 2008",
+  upcoming =     "true",
+  abstract =     "The supernodal method for sparse Cholesky factorization
+represents the factor $L$ as a set of supernodes, each consisting of a
+contiguous set of columns of $L$ with identical nonzero pattern.  A
+conventional supernode is stored as a dense submatrix.  While this is suitable
+for sparse Cholesky factorization where the nonzero pattern of $L$ does not
+change, it is not suitable for methods that modify a sparse Cholesky
+factorization after a low-rank change to $A$ (an update/downdate, $\overline{A}
+= A \pm WW^T$). Supernodes merge and split apart during an update/downdate.
+Dynamic supernodes are introduced, which allow a sparse Cholesky
+update/downdate to obtain performance competitive with conventional supernodal
+methods.  A dynamic supernodal solver is shown to exceed the performance of the
+conventional (BLAS-based) supernodal method for solving triangular systems.
+These methods are incorporated into CHOLMOD, a sparse Cholesky factorization
+and update/downdate package, which forms the basis of \verb'x=A\b' in MATLAB
+when \verb'A' is sparse and symmetric positive definite." }
+
+@article{DavisGilbertLarimoreNg00,
+	author={Davis, T. A. and Gilbert, J. R. and Larimore, S. I. and Ng, E. G.},
+	title={A column approximate minimum degree ordering algorithm},
+	journal=TOMS,
+	year={2004}
+	,volume={30}
+	,number={3}
+	,pages={353-376}}
+
+@article{DavisGilbertLarimoreNg00_algo,
+	author={Davis, T. A. and Gilbert, J. R. and Larimore, S. I. and Ng, E. G.},
+	title={Algorithm 836:  {COLAMD}, a column approximate minimum degree ordering algorithm},
+	journal=TOMS,
+	year={2004}
+	,volume={30}
+	,number={3}
+	,pages={377-380}}
+
+@article{dddh:90,
+   author="J. J. Dongarra and J. J. {Du Croz} and Duff, I. S.  and S. Hammarling",
+   year="1990",
+   title="A set of {L}evel 3 {B}asic {L}inear {A}lgebra {S}ubprograms",
+   journal=TOMS,
+   volume ={16},
+   pages  ={1--17}
+}
+
+@book{LAPACK,
+     author={Anderson, E. and Bai, Z. and Bischof, C. H. and Blackford, S.
+	and Demmel, J. W. and Dongarra, J. J. and {Du Croz}, J. and
+	Greenbaum, A.  and Hammarling, S. and McKenney, A. and Sorensen, D. C.},
+     title={{LAPACK} Users' Guide},
+     publisher={SIAM},
+     year=1999,
+     address={Philadelphia},
+     edition={3rd}
+}
+
+@Article{GotoVanDeGeijn08,
+  author =       "K. Goto and R. van de Geijn",
+  title =        "High Performance Implementation of the Level-3 {BLAS}",
+  journal =      TOMS,
+  volume =       "35",
+  number =       "1",
+  month =        jul,
+  year =         "2008",
+  pages =        "4",
+  note =         "Article 4, 14 pages",
+  URL =          "http://doi.acm.org/10.1145/1377603.1377607",
+  abstract =     "A simple but highly effective approach for transforming
+high-performance implementations on cache-based architectures of matrix-matrix
+multiplication into implementations of other commonly used matrix-matrix
+computations (the level-3 BLAS) is presented. Exceptional performance is
+demonstrated on various architectures." }
+
+
+@book{Reinders07,
+     author={Reinders, J.},
+     title={Intel Threading Building Blocks: Outfitting C++ for Multi-core Processor Parallelism},
+     publisher={O'Reilly Media},
+     address={Sebastopol, CA},
+     year={2007}
+}
+
+@article{KarypisKumar98e,
+	author={Karypis, G. and Kumar, V.},
+	title={A fast and high quality multilevel scheme for partitioning irregular graphs},
+	journal=SIAMJSC,
+	year={1998}
+	,volume={20}
+	,pages={359-392}
+	,annote={f. also TR-95-035, Dept. of Computer Science, Univ. of Minnesota, was KarypisKumar95a}
+}

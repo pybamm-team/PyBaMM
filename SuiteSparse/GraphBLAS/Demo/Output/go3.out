@@ -1,0 +1,634 @@
+
+--------------------------------------------------------------------------------
+/research/davisgroup/GraphChallenge/snap/roadNet-CA/roadNet-CA_adj.tsv.gz
+--------------------------------------------------------------
+ntuples: 5533214
+nrows 1965206 ncols 1965206
+time to prune self-edges:     0.085450
+time to build the graph with GrB_Matrix_build:     0.625015
+make symmetric
+A = (C+C')/2
+A = (C+C')/2 time     0.196161
+
+Matrix from file:
+
+GraphBLAS matrix: *A_output 
+nrows: 1965206 ncols: 1965206 max # entries: 5533214
+format: standard CSR vlen: 1965206 nvec_nonempty: 1965206 nvec: 1965206 plen: 1965206 vdim: 1965206
+hyper_ratio 0.0625
+GraphBLAS type:  bool size: 1
+number of entries: 5533214 
+row: 0 : 3 entries [0:2]
+    column 1: bool 1
+    column 1079579: bool 1
+    column 1377168: bool 1
+row: 1 : 3 entries [3:5]
+    column 0: bool 1
+    column 1284159: bool 1
+    column 1522281: bool 1
+row: 2 : 4 entries [6:9]
+    column 110797: bool 1
+    column 110798: bool 1
+    column 1787727: bool 1
+    column 1854191: bool 1
+row: 3 : 4 entries [10:13]
+    column 33232: bool 1
+    column 410357: bool 1
+    column 1606598: bool 1
+    column 1954115: bool 1
+row: 4 : 3 entries [14:16]
+    column 1114: bool 1
+    column 1311498: bool 1
+    column 1964098: bool 1
+row: 5 : 3 entries [17:19]
+    column 116: bool 1
+    column 1964432: bool 1
+    column 1964764: bool 1
+row: 6 : 3 entries [20:22]
+    column 17: bool 1
+    column 28: bool 1
+    column 83: bool 1
+row: 7 : 3 entries [23:25]
+    column 8: bool 1
+    column 18: bool 1
+    column 1965201: bool 1
+row: 8 : 3 entries [26:28]
+    column 7: bool 1
+    column 187: bool 1
+    column 188: bool 1
+row: 9 : 3 entries [29:31]
+    column 25578: bool 1
+...
+matrix 1965206 by 1965206, 5533214 entries, from stdin
+
+GraphBLAS matrix: from get_matrix: 
+nrows: 1965206 ncols: 1965206 max # entries: 5533214
+format: standard CSR vlen: 1965206 nvec_nonempty: 1965206 nvec: 1965206 plen: 1965206 vdim: 1965206
+hyper_ratio 0.0625
+GraphBLAS type:  bool size: 1
+number of entries: 5533214 
+row: 0 : 3 entries [0:2]
+    column 1: bool 1
+    column 1079579: bool 1
+    column 1377168: bool 1
+row: 1 : 3 entries [3:5]
+    column 0: bool 1
+    column 1284159: bool 1
+    column 1522281: bool 1
+row: 2 : 4 entries [6:9]
+    column 110797: bool 1
+    column 110798: bool 1
+    column 1787727: bool 1
+    column 1854191: bool 1
+row: 3 : 4 entries [10:13]
+    column 33232: bool 1
+    column 410357: bool 1
+    column 1606598: bool 1
+    column 1954115: bool 1
+row: 4 : 3 entries [14:16]
+    column 1114: bool 1
+    column 1311498: bool 1
+    column 1964098: bool 1
+row: 5 : 3 entries [17:19]
+    column 116: bool 1
+    column 1964432: bool 1
+    column 1964764: bool 1
+row: 6 : 3 entries [20:22]
+    column 17: bool 1
+    column 28: bool 1
+    column 83: bool 1
+row: 7 : 3 entries [23:25]
+    column 8: bool 1
+    column 18: bool 1
+    column 1965201: bool 1
+row: 8 : 3 entries [26:28]
+    column 7: bool 1
+    column 187: bool 1
+    column 188: bool 1
+row: 9 : 3 entries [29:31]
+    column 25578: bool 1
+...
+
+total time to read A matrix:       4.491742 sec
+
+n 1965206 # edges 2766607
+U=triu(A) time:        0.065908 sec
+read A, create U memory usage: 0.246362 GB
+
+------------------------------------- dot product method:
+L=tril(A) time:        0.054096 sec
+# triangles 120676
+
+tricount time:         0.104375 sec (dot product method)
+tri+prep time:         0.224379 sec (incl time to compute L and U)
+compute C time:        0.103686 sec
+reduce (C) time:       0.000688 sec
+rate      12.33 million edges/sec (incl time for U=triu(A))
+rate      26.51 million edges/sec (just tricount itself)
+
+tricount (dot)   memory usage: 0.246362 GB
+
+----------------------------------- outer product method:
+tricount time:         0.083517 sec (outer product method)
+tri+prep time:         0.137613 sec (incl time to compute L)
+compute C time:        0.082922 sec
+reduce (C) time:       0.000595 sec
+rate      20.10 million edges/sec (incl time for L=tril(A))
+rate      33.13 million edges/sec (just tricount itself)
+
+tricount (outer) memory usage: 0.246362 GB
+
+
+--------------------------------------------------------------------------------
+/research/davisgroup/GraphChallenge/snap/roadNet-PA/roadNet-PA_adj.tsv.gz
+--------------------------------------------------------------
+ntuples: 3083796
+nrows 1088092 ncols 1088092
+time to prune self-edges:     0.043490
+time to build the graph with GrB_Matrix_build:     0.328117
+make symmetric
+A = (C+C')/2
+A = (C+C')/2 time     0.100532
+
+Matrix from file:
+
+GraphBLAS matrix: *A_output 
+nrows: 1088092 ncols: 1088092 max # entries: 3083796
+format: standard CSR vlen: 1088092 nvec_nonempty: 1088092 nvec: 1088092 plen: 1088092 vdim: 1088092
+hyper_ratio 0.0625
+GraphBLAS type:  bool size: 1
+number of entries: 3083796 
+row: 0 : 3 entries [0:2]
+    column 1: bool 1
+    column 679115: bool 1
+    column 683992: bool 1
+row: 1 : 1 entries [3:3]
+    column 0: bool 1
+row: 2 : 3 entries [4:6]
+    column 101798: bool 1
+    column 223777: bool 1
+    column 833239: bool 1
+row: 3 : 3 entries [7:9]
+    column 88666: bool 1
+    column 99767: bool 1
+    column 1076994: bool 1
+row: 4 : 3 entries [10:12]
+    column 968202: bool 1
+    column 981845: bool 1
+    column 1086984: bool 1
+row: 5 : 3 entries [13:15]
+    column 797340: bool 1
+    column 815598: bool 1
+    column 822031: bool 1
+row: 6 : 3 entries [16:18]
+    column 17: bool 1
+    column 28: bool 1
+    column 1088081: bool 1
+row: 7 : 2 entries [19:20]
+    column 8: bool 1
+    column 1088091: bool 1
+row: 8 : 3 entries [21:23]
+    column 7: bool 1
+    column 9: bool 1
+    column 578: bool 1
+row: 9 : 3 entries [24:26]
+    column 8: bool 1
+...
+matrix 1088092 by 1088092, 3083796 entries, from stdin
+
+GraphBLAS matrix: from get_matrix: 
+nrows: 1088092 ncols: 1088092 max # entries: 3083796
+format: standard CSR vlen: 1088092 nvec_nonempty: 1088092 nvec: 1088092 plen: 1088092 vdim: 1088092
+hyper_ratio 0.0625
+GraphBLAS type:  bool size: 1
+number of entries: 3083796 
+row: 0 : 3 entries [0:2]
+    column 1: bool 1
+    column 679115: bool 1
+    column 683992: bool 1
+row: 1 : 1 entries [3:3]
+    column 0: bool 1
+row: 2 : 3 entries [4:6]
+    column 101798: bool 1
+    column 223777: bool 1
+    column 833239: bool 1
+row: 3 : 3 entries [7:9]
+    column 88666: bool 1
+    column 99767: bool 1
+    column 1076994: bool 1
+row: 4 : 3 entries [10:12]
+    column 968202: bool 1
+    column 981845: bool 1
+    column 1086984: bool 1
+row: 5 : 3 entries [13:15]
+    column 797340: bool 1
+    column 815598: bool 1
+    column 822031: bool 1
+row: 6 : 3 entries [16:18]
+    column 17: bool 1
+    column 28: bool 1
+    column 1088081: bool 1
+row: 7 : 2 entries [19:20]
+    column 8: bool 1
+    column 1088091: bool 1
+row: 8 : 3 entries [21:23]
+    column 7: bool 1
+    column 9: bool 1
+    column 578: bool 1
+row: 9 : 3 entries [24:26]
+    column 8: bool 1
+...
+
+total time to read A matrix:       2.279788 sec
+
+n 1088092 # edges 1541898
+U=triu(A) time:        0.040767 sec
+read A, create U memory usage: 0.137132 GB
+
+------------------------------------- dot product method:
+L=tril(A) time:        0.037810 sec
+# triangles 67150
+
+tricount time:         0.060451 sec (dot product method)
+tri+prep time:         0.139029 sec (incl time to compute L and U)
+compute C time:        0.059972 sec
+reduce (C) time:       0.000479 sec
+rate      11.09 million edges/sec (incl time for U=triu(A))
+rate      25.51 million edges/sec (just tricount itself)
+
+tricount (dot)   memory usage: 0.137132 GB
+
+----------------------------------- outer product method:
+tricount time:         0.048549 sec (outer product method)
+tri+prep time:         0.086359 sec (incl time to compute L)
+compute C time:        0.048201 sec
+reduce (C) time:       0.000347 sec
+rate      17.85 million edges/sec (incl time for L=tril(A))
+rate      31.76 million edges/sec (just tricount itself)
+
+tricount (outer) memory usage: 0.137132 GB
+
+
+--------------------------------------------------------------------------------
+/research/davisgroup/GraphChallenge/snap/roadNet-TX/roadNet-TX_adj.tsv.gz
+--------------------------------------------------------------
+ntuples: 3843320
+nrows 1379917 ncols 1379917
+time to prune self-edges:     0.043654
+time to build the graph with GrB_Matrix_build:     0.412676
+make symmetric
+A = (C+C')/2
+A = (C+C')/2 time     0.131372
+
+Matrix from file:
+
+GraphBLAS matrix: *A_output 
+nrows: 1379917 ncols: 1379917 max # entries: 3843320
+format: standard CSR vlen: 1379917 nvec_nonempty: 1379917 nvec: 1379917 plen: 1379917 vdim: 1379917
+hyper_ratio 0.0625
+GraphBLAS type:  bool size: 1
+number of entries: 3843320 
+row: 0 : 3 entries [0:2]
+    column 1: bool 1
+    column 500958: bool 1
+    column 599260: bool 1
+row: 1 : 3 entries [3:5]
+    column 0: bool 1
+    column 533845: bool 1
+    column 632071: bool 1
+row: 2 : 3 entries [6:8]
+    column 110510: bool 1
+    column 830498: bool 1
+    column 1159914: bool 1
+row: 3 : 2 entries [9:10]
+    column 11046: bool 1
+    column 1105070: bool 1
+row: 4 : 1 entries [11:11]
+    column 1376617: bool 1
+row: 5 : 3 entries [12:14]
+    column 717769: bool 1
+    column 732327: bool 1
+    column 732438: bool 1
+row: 6 : 3 entries [15:17]
+    column 5176: bool 1
+    column 1379807: bool 1
+    column 1379895: bool 1
+row: 7 : 3 entries [18:20]
+    column 8: bool 1
+    column 9: bool 1
+    column 1379916: bool 1
+row: 8 : 2 entries [21:22]
+    column 7: bool 1
+    column 1379901: bool 1
+row: 9 : 4 entries [23:26]
+    column 7: bool 1
+...
+matrix 1379917 by 1379917, 3843320 entries, from stdin
+
+GraphBLAS matrix: from get_matrix: 
+nrows: 1379917 ncols: 1379917 max # entries: 3843320
+format: standard CSR vlen: 1379917 nvec_nonempty: 1379917 nvec: 1379917 plen: 1379917 vdim: 1379917
+hyper_ratio 0.0625
+GraphBLAS type:  bool size: 1
+number of entries: 3843320 
+row: 0 : 3 entries [0:2]
+    column 1: bool 1
+    column 500958: bool 1
+    column 599260: bool 1
+row: 1 : 3 entries [3:5]
+    column 0: bool 1
+    column 533845: bool 1
+    column 632071: bool 1
+row: 2 : 3 entries [6:8]
+    column 110510: bool 1
+    column 830498: bool 1
+    column 1159914: bool 1
+row: 3 : 2 entries [9:10]
+    column 11046: bool 1
+    column 1105070: bool 1
+row: 4 : 1 entries [11:11]
+    column 1376617: bool 1
+row: 5 : 3 entries [12:14]
+    column 717769: bool 1
+    column 732327: bool 1
+    column 732438: bool 1
+row: 6 : 3 entries [15:17]
+    column 5176: bool 1
+    column 1379807: bool 1
+    column 1379895: bool 1
+row: 7 : 3 entries [18:20]
+    column 8: bool 1
+    column 9: bool 1
+    column 1379916: bool 1
+row: 8 : 2 entries [21:22]
+    column 7: bool 1
+    column 1379901: bool 1
+row: 9 : 4 entries [23:26]
+    column 7: bool 1
+...
+
+total time to read A matrix:       2.847809 sec
+
+n 1379917 # edges 1921660
+U=triu(A) time:        0.045020 sec
+read A, create U memory usage: 0.171478 GB
+
+------------------------------------- dot product method:
+L=tril(A) time:        0.046434 sec
+# triangles 82869
+
+tricount time:         0.074654 sec (dot product method)
+tri+prep time:         0.166108 sec (incl time to compute L and U)
+compute C time:        0.074066 sec
+reduce (C) time:       0.000588 sec
+rate      11.57 million edges/sec (incl time for U=triu(A))
+rate      25.74 million edges/sec (just tricount itself)
+
+tricount (dot)   memory usage: 0.171479 GB
+
+----------------------------------- outer product method:
+tricount time:         0.060397 sec (outer product method)
+tri+prep time:         0.106831 sec (incl time to compute L)
+compute C time:        0.059814 sec
+reduce (C) time:       0.000583 sec
+rate      17.99 million edges/sec (incl time for L=tril(A))
+rate      31.82 million edges/sec (just tricount itself)
+
+tricount (outer) memory usage: 0.171478 GB
+
+
+--------------------------------------------------------------------------------
+/research/davisgroup/GraphChallenge/ssget/DIMACS10/hugebubbles-00020_adj.tsv.gz
+--------------------------------------------------------------
+ntuples: 63580358
+nrows 21198119 ncols 21198119
+time to prune self-edges:     0.557711
+time to build the graph with GrB_Matrix_build:     9.948563
+make symmetric
+A = (C+C')/2
+A = (C+C')/2 time     6.531527
+
+Matrix from file:
+
+GraphBLAS matrix: *A_output 
+nrows: 21198119 ncols: 21198119 max # entries: 63580358
+format: standard CSR vlen: 21198119 nvec_nonempty: 21198119 nvec: 21198119 plen: 21198119 vdim: 21198119
+hyper_ratio 0.0625
+GraphBLAS type:  bool size: 1
+number of entries: 63580358 
+row: 0 : 3 entries [0:2]
+    column 42704: bool 1
+    column 43297: bool 1
+    column 2422992: bool 1
+row: 1 : 3 entries [3:5]
+    column 42704: bool 1
+    column 43297: bool 1
+    column 2392763: bool 1
+row: 2 : 3 entries [6:8]
+    column 32104: bool 1
+    column 45491: bool 1
+    column 4439423: bool 1
+row: 3 : 3 entries [9:11]
+    column 32104: bool 1
+    column 45491: bool 1
+    column 5276299: bool 1
+row: 4 : 3 entries [12:14]
+    column 1204889: bool 1
+    column 13506658: bool 1
+    column 15142297: bool 1
+row: 5 : 3 entries [15:17]
+    column 255858: bool 1
+    column 1177801: bool 1
+    column 5052995: bool 1
+row: 6 : 3 entries [18:20]
+    column 1909372: bool 1
+    column 20696422: bool 1
+    column 20742514: bool 1
+row: 7 : 3 entries [21:23]
+    column 2203688: bool 1
+    column 20696422: bool 1
+    column 20742514: bool 1
+row: 8 : 3 entries [24:26]
+    column 1943469: bool 1
+    column 2072685: bool 1
+    column 21167571: bool 1
+row: 9 : 3 entries [27:29]
+    column 1793040: bool 1
+...
+matrix 21198119 by 21198119, 63580358 entries, from stdin
+
+GraphBLAS matrix: from get_matrix: 
+nrows: 21198119 ncols: 21198119 max # entries: 63580358
+format: standard CSR vlen: 21198119 nvec_nonempty: 21198119 nvec: 21198119 plen: 21198119 vdim: 21198119
+hyper_ratio 0.0625
+GraphBLAS type:  bool size: 1
+number of entries: 63580358 
+row: 0 : 3 entries [0:2]
+    column 42704: bool 1
+    column 43297: bool 1
+    column 2422992: bool 1
+row: 1 : 3 entries [3:5]
+    column 42704: bool 1
+    column 43297: bool 1
+    column 2392763: bool 1
+row: 2 : 3 entries [6:8]
+    column 32104: bool 1
+    column 45491: bool 1
+    column 4439423: bool 1
+row: 3 : 3 entries [9:11]
+    column 32104: bool 1
+    column 45491: bool 1
+    column 5276299: bool 1
+row: 4 : 3 entries [12:14]
+    column 1204889: bool 1
+    column 13506658: bool 1
+    column 15142297: bool 1
+row: 5 : 3 entries [15:17]
+    column 255858: bool 1
+    column 1177801: bool 1
+    column 5052995: bool 1
+row: 6 : 3 entries [18:20]
+    column 1909372: bool 1
+    column 20696422: bool 1
+    column 20742514: bool 1
+row: 7 : 3 entries [21:23]
+    column 2203688: bool 1
+    column 20696422: bool 1
+    column 20742514: bool 1
+row: 8 : 3 entries [24:26]
+    column 1943469: bool 1
+    column 2072685: bool 1
+    column 21167571: bool 1
+row: 9 : 3 entries [27:29]
+    column 1793040: bool 1
+...
+
+total time to read A matrix:      59.462019 sec
+
+n 21198119 # edges 31790179
+U=triu(A) time:        0.846669 sec
+read A, create U memory usage: 2.79765 GB
+
+------------------------------------- dot product method:
+L=tril(A) time:        0.796455 sec
+# triangles 0
+
+tricount time:         2.995358 sec (dot product method)
+tri+prep time:         4.638482 sec (incl time to compute L and U)
+compute C time:        2.995331 sec
+reduce (C) time:       0.000027 sec
+rate       6.85 million edges/sec (incl time for U=triu(A))
+rate      10.61 million edges/sec (just tricount itself)
+
+tricount (dot)   memory usage: 2.79765 GB
+
+----------------------------------- outer product method:
+tricount time:         1.796372 sec (outer product method)
+tri+prep time:         2.592827 sec (incl time to compute L)
+compute C time:        1.796361 sec
+reduce (C) time:       0.000010 sec
+rate      12.26 million edges/sec (incl time for L=tril(A))
+rate      17.70 million edges/sec (just tricount itself)
+
+tricount (outer) memory usage: 2.79765 GB
+
+
+--------------------------------------------------------------------------------
+/research/davisgroup/GraphChallenge/ssget/Freescale/circuit5M_adj.tsv.gz
+--------------------------------------------------------------
+ntuples: 53967852
+nrows 5558326 ncols 5558326
+time to prune self-edges:     0.508008
+time to build the graph with GrB_Matrix_build:     6.961801
+make symmetric
+A = (C+C')/2
+A = (C+C')/2 time     1.532079
+
+Matrix from file:
+
+GraphBLAS matrix: *A_output 
+nrows: 5558326 ncols: 5558326 max # entries: 53967852
+format: standard CSR vlen: 5558326 nvec_nonempty: 5558311 nvec: 5558326 plen: 5558326 vdim: 5558326
+hyper_ratio 0.0625
+GraphBLAS type:  bool size: 1
+number of entries: 53967852 
+row: 0 : 1 entries [0:0]
+    column 329097: bool 1
+row: 1 : 1 entries [1:1]
+    column 329098: bool 1
+row: 2 : 1 entries [2:2]
+    column 329099: bool 1
+row: 3 : 1 entries [3:3]
+    column 329100: bool 1
+row: 4 : 1 entries [4:4]
+    column 329101: bool 1
+row: 5 : 1 entries [5:5]
+    column 329102: bool 1
+row: 6 : 1 entries [6:6]
+    column 329103: bool 1
+row: 7 : 1 entries [7:7]
+    column 329104: bool 1
+row: 8 : 1 entries [8:8]
+    column 329105: bool 1
+row: 9 : 1 entries [9:9]
+    column 329106: bool 1
+...
+matrix 5558326 by 5558326, 53967852 entries, from stdin
+
+GraphBLAS matrix: from get_matrix: 
+nrows: 5558326 ncols: 5558326 max # entries: 53967852
+format: standard CSR vlen: 5558326 nvec_nonempty: 5558311 nvec: 5558326 plen: 5558326 vdim: 5558326
+hyper_ratio 0.0625
+GraphBLAS type:  bool size: 1
+number of entries: 53967852 
+row: 0 : 1 entries [0:0]
+    column 329097: bool 1
+row: 1 : 1 entries [1:1]
+    column 329098: bool 1
+row: 2 : 1 entries [2:2]
+    column 329099: bool 1
+row: 3 : 1 entries [3:3]
+    column 329100: bool 1
+row: 4 : 1 entries [4:4]
+    column 329101: bool 1
+row: 5 : 1 entries [5:5]
+    column 329102: bool 1
+row: 6 : 1 entries [6:6]
+    column 329103: bool 1
+row: 7 : 1 entries [7:7]
+    column 329104: bool 1
+row: 8 : 1 entries [8:8]
+    column 329105: bool 1
+row: 9 : 1 entries [9:9]
+    column 329106: bool 1
+...
+
+total time to read A matrix:      40.475536 sec
+
+n 5558326 # edges 26983926
+U=triu(A) time:        0.422206 sec
+read A, create U memory usage: 2.07624 GB
+
+------------------------------------- dot product method:
+L=tril(A) time:        0.410885 sec
+# triangles 31019473
+
+tricount time:         2.084657 sec (dot product method)
+tri+prep time:         2.917747 sec (incl time to compute L and U)
+compute C time:        1.948489 sec
+reduce (C) time:       0.136168 sec
+rate       9.25 million edges/sec (incl time for U=triu(A))
+rate      12.94 million edges/sec (just tricount itself)
+
+tricount (dot)   memory usage: 2.07624 GB
+
+----------------------------------- outer product method:
+tricount time:       258.979952 sec (outer product method)
+tri+prep time:       259.390836 sec (incl time to compute L)
+compute C time:      258.862237 sec
+reduce (C) time:       0.117714 sec
+rate       0.10 million edges/sec (incl time for L=tril(A))
+rate       0.10 million edges/sec (just tricount itself)
+
+tricount (outer) memory usage: 2.07624 GB
+

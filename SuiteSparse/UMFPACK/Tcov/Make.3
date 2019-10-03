@@ -1,0 +1,38 @@
+#===============================================================================
+# no BLAS, test for integer overflow.
+#===============================================================================
+
+INSTALL ?= /garbage
+INSTALL_LIB = $(INSTALL)/lib
+INSTALL_INCLUDE = $(INSTALL)/include
+INSTALL_DOC = $(INSTALL)/doc
+
+CC = gcc
+CF = -O3 -fPIC -fopenmp
+UMFPACK_CONFIG = -DNBLAS -DTEST_FOR_INTEGER_OVERFLOW -DTESTING
+LDLIBS = -L$(INSTALL)/lib -llapack -lrefblas -lgfortran -lm -lrt \
+    -Wl,-rpath=lib
+
+ifneq ($(CUDA),no)
+    CUDA_PATH = $(shell which nvcc 2>/dev/null | sed "s/\/bin\/nvcc//")
+endif
+ifneq ($(wildcard $(CUDA_PATH)),)
+    # CHOLMOD was compiled to use CUDA
+    LDLIBS += $(CUDA_PATH)/lib64/libcudart.so $(CUDA_PATH)/lib64/libcublas.so
+endif
+
+RANLIB = ranlib
+MV = mv -f
+CP = cp -f
+ARCHIVE = ar rv
+
+AR_TARGET = $(LIBRARY).a
+SO_PLAIN  = $(LIBRARY).so
+SO_MAIN   = $(LIBRARY).so.$(SO_VERSION)
+SO_TARGET = $(LIBRARY).so.$(VERSION)
+SO_OPTS   = -shared -Wl,-soname -Wl,$(SO_MAIN)
+SO_INSTALL_NAME = echo
+
+#===============================================================================
+
+CLEAN = *.o *.obj *.ln *.bb *.bbg *.da *.c.tcov *.c.gcov gmon.out

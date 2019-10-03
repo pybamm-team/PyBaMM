@@ -1,0 +1,98 @@
+#!/bin/csh
+# ucov.dl: construct gcov files for umfpack, dl version
+
+gcov -o umf_l_analyze umf_analyze.c
+gcov -o umf_l_apply_order umf_apply_order.c
+gcov -o umf_l_colamd umf_colamd.c
+gcov -o umf_l_cholmod umf_cholmod.c
+gcov -o umf_l_free umf_free.c
+gcov -o umf_l_fsize umf_fsize.c
+gcov -o umf_l_is_permutation umf_is_permutation.c
+gcov -o umf_l_malloc umf_malloc.c
+gcov -o umf_l_realloc umf_realloc.c
+gcov -o umf_l_report_perm umf_report_perm.c
+gcov -o umf_l_singletons umf_singletons.c
+
+gcov -o umf_dl_blas3_update umf_blas3_update.c
+gcov -o umf_dl_build_tuples umf_build_tuples.c
+gcov -o umf_dl_create_element umf_create_element.c
+gcov -o umf_dl_extend_front umf_extend_front.c
+gcov -o umf_dl_garbage_collection umf_garbage_collection.c
+gcov -o umf_dl_get_memory umf_get_memory.c
+gcov -o umf_dl_grow_front umf_grow_front.c
+gcov -o umf_dl_init_front umf_init_front.c
+gcov -o umf_dl_kernel umf_kernel.c
+gcov -o umf_dl_kernel_init umf_kernel_init.c
+gcov -o umf_dl_kernel_wrapup umf_kernel_wrapup.c
+gcov -o umf_dl_local_search umf_local_search.c
+gcov -o umf_dl_lsolve umf_lsolve.c
+gcov -o umf_dl_mem_alloc_element umf_mem_alloc_element.c
+gcov -o umf_dl_mem_alloc_head_block umf_mem_alloc_head_block.c
+gcov -o umf_dl_mem_alloc_tail_block umf_mem_alloc_tail_block.c
+gcov -o umf_dl_mem_free_tail_block umf_mem_free_tail_block.c
+gcov -o umf_dl_mem_init_memoryspace umf_mem_init_memoryspace.c
+gcov -o umf_dl_report_vector umf_report_vector.c
+gcov -o umf_dl_row_search umf_row_search.c
+gcov -o umf_dl_scale umf_scale.c
+gcov -o umf_dl_scale_column umf_scale_column.c
+gcov -o umf_dl_set_stats umf_set_stats.c
+gcov -o umf_dl_solve umf_solve.c
+gcov -o umf_dl_start_front umf_start_front.c
+gcov -o umf_dl_symbolic_usage umf_symbolic_usage.c
+gcov -o umf_dl_transpose umf_transpose.c
+
+gcov -o umf_dl_tuple_lengths umf_tuple_lengths.c
+gcov -o umf_dl_usolve umf_usolve.c
+gcov -o umf_dl_valid_numeric umf_valid_numeric.c
+gcov -o umf_dl_valid_symbolic umf_valid_symbolic.c
+gcov -o umfpack_dl_col_to_triplet umfpack_col_to_triplet.c
+gcov -o umfpack_dl_defaults umfpack_defaults.c
+gcov -o umfpack_dl_free_numeric umfpack_free_numeric.c
+gcov -o umfpack_dl_free_symbolic umfpack_free_symbolic.c
+gcov -o umfpack_dl_get_lunz umfpack_get_lunz.c
+gcov -o umfpack_dl_get_numeric umfpack_get_numeric.c
+gcov -o umfpack_dl_get_determinant umfpack_get_determinant.c
+gcov -o umfpack_dl_get_symbolic umfpack_get_symbolic.c
+gcov -o umfpack_dl_load_numeric umfpack_load_numeric.c
+gcov -o umfpack_dl_load_symbolic umfpack_load_symbolic.c
+gcov -o umfpack_dl_numeric umfpack_numeric.c
+gcov -o umfpack_dl_qsymbolic umfpack_qsymbolic.c
+gcov -o umfpack_dl_report_control umfpack_report_control.c
+gcov -o umfpack_dl_report_info umfpack_report_info.c
+gcov -o umfpack_dl_report_matrix umfpack_report_matrix.c
+gcov -o umfpack_dl_report_numeric umfpack_report_numeric.c
+gcov -o umfpack_dl_report_perm umfpack_report_perm.c
+gcov -o umfpack_dl_report_status umfpack_report_status.c
+gcov -o umfpack_dl_report_symbolic umfpack_report_symbolic.c
+gcov -o umfpack_dl_report_triplet umfpack_report_triplet.c
+gcov -o umfpack_dl_report_vector umfpack_report_vector.c
+gcov -o umfpack_dl_save_numeric umfpack_save_numeric.c
+gcov -o umfpack_dl_save_symbolic umfpack_save_symbolic.c
+gcov -o umfpack_dl_scale umfpack_scale.c
+gcov -o umfpack_dl_symbolic umfpack_symbolic.c
+gcov -o umfpack_dl_transpose umfpack_transpose.c
+gcov -o umfpack_dl_triplet_to_col umfpack_triplet_to_col.c
+
+gcov -o umfpack_gn_tictoc umfpack_tictoc.c
+gcov -o umfpack_gn_timer umfpack_timer.c
+
+# multiple versions
+gcov -o umf_dl_uhsolve umf_utsolve.c		; mv -f umf_utsolve.c.gcov umf_uhsolve.c.gcov
+gcov -o umf_dl_utsolve umf_utsolve.c
+
+gcov -o umf_dl_lhsolve umf_ltsolve.c		; mv -f umf_ltsolve.c.gcov umf_lhsolve.c.gcov
+gcov -o umf_dl_ltsolve umf_ltsolve.c
+
+gcov -o umfpack_dl_wsolve umfpack_solve.c	; mv -f umfpack_solve.c.gcov umfpack_wsolve.c.gcov
+gcov -o umfpack_dl_solve umfpack_solve.c
+
+gcov -o umf_dl_store_lu_drop umf_store_lu.c	; mv -f umf_store_lu.c.gcov umf_store_lu_drop.c.gcov
+gcov -o umf_dl_store_lu umf_store_lu.c
+
+gcov -o umf_dl_assemble_fixq umf_assemble.c	; mv -f umf_assemble.c.gcov umf_assemble_fixq.c.gcov
+gcov -o umf_dl_assemble umf_assemble.c
+
+gcov -o umf_dl_triplet_map_x umf_triplet.c	; mv -f umf_triplet.c.gcov umf_triplet_map_x.c.gcov
+gcov -o umf_dl_triplet_nomap_x umf_triplet.c	; mv -f umf_triplet.c.gcov umf_triplet_nomap_x.c.gcov
+gcov -o umf_dl_triplet_map_nox umf_triplet.c	; mv -f umf_triplet.c.gcov umf_triplet_map_nox.c.gcov
+gcov -o umf_dl_triplet_nomap_nox umf_triplet.c	; mv -f umf_triplet.c.gcov umf_triplet_nomap_nox.c.gcov

@@ -1,0 +1,4 @@
+%%MatrixMarket matrix coordinate real symmetric
+2 2 2
+1 1 1e99
+2 2 1e-99

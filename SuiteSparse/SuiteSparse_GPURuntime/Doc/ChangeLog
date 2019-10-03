@@ -1,0 +1,20 @@
+May 4, 2016: version 1.0.5
+
+    * minor changes to Makefile
+
+Apr 1, 2016: version 1.0.4
+
+    * licensing simplified (no other change); refer to
+        SuiteSparse_GPURuntime/Doc/License.txt
+
+Feb 1, 2016: version 1.0.3
+
+    * update to Makefiles
+
+Jan 30, 2016: version 1.0.2
+
+    * modifications to Makefiles
+
+Oct 17, 2014: version 1.0.0
+
+    * first stable release

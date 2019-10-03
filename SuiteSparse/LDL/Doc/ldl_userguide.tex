@@ -1,0 +1,655 @@
+\documentclass[12pt]{article}
+
+\newcommand{\m}[1]{{\bf{#1}}}       % for matrices and vectors
+\newcommand{\tr}{^{\sf T}}          % transpose
+
+\topmargin 0in
+\textheight 9in
+\oddsidemargin 0pt
+\evensidemargin 0pt
+\textwidth 6.5in
+
+%-------------------------------------------------------------------------------
+\begin{document}
+%-------------------------------------------------------------------------------
+
+\title{User Guide for LDL, a concise sparse Cholesky package}
+\author{Timothy A. Davis\thanks{
+email: DrTimothyAldenDavis@gmail.com,
+http://www.suitesparse.com.
+This work was supported by the National
+Science Foundation, under grant CCR-0203270.
+Portions of the work were done while on sabbatical at Stanford University
+and Lawrence Berkeley National Laboratory (with funding from Stanford
+University and the SciDAC program).
+}}
+
+\date{VERSION 2.2.6, May 4, 2016}
+
+\maketitle
+
+%-------------------------------------------------------------------------------
+\begin{abstract}
+The {\tt LDL} software package is a set of short, concise routines for
+factorizing symmetric positive-definite sparse matrices, with some
+applicability to symmetric indefinite matrices.  Its primary purpose is
+to illustrate much of the basic theory of sparse matrix algorithms in as
+concise a code as possible, including an elegant method
+of sparse symmetric factorization that computes the factorization row-by-row
+but stores it column-by-column.  The entire symbolic and numeric factorization
+consists of less than 50 lines of code.  The package is written in C,
+and includes a MATLAB interface.
+\end{abstract}
+%-------------------------------------------------------------------------------
+
+%-------------------------------------------------------------------------------
+\section{Overview}
+%-------------------------------------------------------------------------------
+
+{\tt LDL} is a set of short, concise routines that compute the $\m{LDL}\tr$
+factorization of a sparse symmetric matrix $\m{A}$.  Its primary purpose is
+to illustrate much of the basic theory of sparse matrix algorithms in as
+compact a code as possible, including an elegant method of
+sparse symmetric factorization (related to \cite{Liu86c,Liu91}).
+The lower triangular factor $\m{L}$ is computed row-by-row, in contrast to the
+conventional column-by-column method.
+Although it does not achieve the same level of performance
+as methods based on dense matrix kernels
+(such as \cite{NgPeyton93,RothbergGupta91}),
+its performance is competitive with column-by-column methods that do not
+use dense kernels \cite{GeorgeLiu79, GeorgeLiu, GilbertMolerSchreiber}.
+
+Section~\ref{Algorithm} gives a brief description of the algorithm
+used in the symbolic and numeric factorization.  A more detailed tutorial-level
+discussion may be found in \cite{Stewart03}.  Details
+of the concise implementation of this method are given in
+Section~\ref{Implementation}.  Sections~\ref{MATLAB}~and~\ref{C} give an
+overview of how to use the package in MATLAB and in a stand-alone C program.
+
+%-------------------------------------------------------------------------------
+\section{Algorithm}
+\label{Algorithm}
+%-------------------------------------------------------------------------------
+
+The underlying numerical algorithm is described below.  The $k$th
+step solves a lower triangular system of dimension $k-1$ to compute the
+$k$th row of $\m{L}$ and the $d_{kk}$ entry of the diagonal matrix $\m{D}$.
+Colon notation is used for submatrices.  For example,
+$\m{L}_{k,1:k-1}$ refers to the first $k-1$ columns of
+the $k$th row of $\m{L}$.  Similarly, $\m{L}_{1:k-1,1:k-1}$ refers to
+the leading $(k-1)$-by-$(k-1)$ submatrix of $\m{L}$.
+%---------------
+\vspace{-0.2in}
+\begin{tabbing}
+\hspace{2em} \= \hspace{2em} \= \hspace{2em} \= \\
+{\bf Algorithm~1
+($\m{LDL}\tr$ factorization of a $n$-by-$n$ symmetric matrix $\m{A}$)} \\
+\> {\bf for} $k = 1$ {\bf to} $n$ \\
+\>\> (step 1) Solve $\m{L}_{1:k-1,1:k-1}\m{y} = \m{A}_{1:k-1,k}$ for $\m{y}$ \\
+\>\> (step 2) $\m{L}_{k,1:k-1} = (\m{D}_{1:k-1,1:k-1}^{-1} \m{y})\tr$ \\
+\>\> (step 3) $l_{kk} = 1$ \\
+\>\> (step 4) $d_{kk} = a_{kk} - \m{L}_{k,1:k-1}\m{y}$ \\
+\> {\bf end for}
+\end{tabbing}
+%---------------
+
+The algorithm computes an $\m{LDL}\tr$ factorization without numerical pivoting.
+It can thus factorize any symmetric positive definite matrix, and any
+symmetric indefinite matrix whose leading minors are all well-conditioned.
+
+When $\m{A}$ and $\m{L}$ are sparse, step 1 of Algorithm~1 requires a
+triangular solve of the form $\m{Lx}=\m{b}$, where all three terms in
+the equation are sparse.  This is the most costly step of the Algorithm.
+Steps 2 through 4 are fairly straightforward.
+
+Let ${\cal X}$ and ${\cal B}$ refer to the set of indices of nonzero entries
+in $\m{x}$ and $\m{b}$, respectively, in the lower triangular system
+$\m{Lx}=\m{b}$.  To compute $\m{x}$ efficiently
+the nonzero pattern ${\cal X}$ must be found first.
+In the general case when $\m{L}$ is arbitrary \cite{GilbertPeierls88},
+the nonzero
+pattern ${\cal X}$ is the set of nodes reachable via paths in the graph $G_L$
+from all nodes in the set ${\cal B}$, and where the graph $G_L$ has
+$n$ nodes and a directed edge $(j,i)$ if and only if $l_{ij}$ is nonzero.
+To compute the numerical solution to $\m{Lx}=\m{b}$ by accessing the columns of
+$\m{L}$ one at a time, ${\cal X}$ can be traversed
+in any topological order of the subgraph of $G_L$ consisting of nodes in
+${\cal X}$.  That is, $x_j$ must be computed before $x_i$ if there is a path
+from $j$ to $i$ in $G_L$.  The natural order ($1, 2, \ldots, n$) is one such
+ordering, but that requires a costly sort of ${\cal X}$.
+With a graph traversal and topological sort, the solution of $\m{Lx}=\m{b}$
+can be computed using Algorithm~2 below.
+The computation of ${\cal X}$ and $\m{x}$ both take
+time proportional to the floating-point operation count.
+%---------------
+\vspace{-0.2in}
+\begin{tabbing}
+\hspace{2em} \= \hspace{2em} \= \hspace{2em} \= \\
+{\bf Algorithm~2
+(Solve $\m{Lx}=\m{b}$, where $\m{L}$ is lower triangular with unit diagonal)} \\
+\> ${\cal X} = \mbox{Reach}_{G_L} ({\cal B})$ \\
+\> $\m{x} = \m{b}$ \\
+\> {\bf for} $i \in {\cal X}$ in any topological order \\
+\>\> $\m{x}_{i+1:n} = \m{x}_{i+1:n} - \m{L}_{i+1:n,i} x_i$ \\
+\> {\bf end for}
+\end{tabbing}
+%---------------
+
+The general result also governs the pattern of $\m{y}$ in Algorithm~1.
+However, in this case $\m{L}$ arises from a sparse Cholesky factorization,
+and is governed by the elimination tree \cite{Liu90a}.
+A general graph traversal is not required.
+In the elimination tree, the parent of node $i$ is the smallest $j > i$
+such that $l_{ji}$ is nonzero.  Node $i$ has no parent if column $i$ of
+$\m{L}$ is completely zero below the diagonal; $i$ is a root of the
+elimination tree in this case.  The nonzero pattern of $\m{x}$ is the
+union of all the nodes on the paths from any node $i$ (where $b_i$ is nonzero) to the
+root of the elimination tree \cite[Thm 2.4]{Liu86c}.  It is referred to here as a tree,
+but in general it can be a forest.
+
+Rather than a general topological sort of the subgraph of $G_L$ consisting
+nodes reachable from nodes in ${\cal B}$, a simpler
+tree traversal can be used.  First, select any nonzero entry $b_i$
+and follow the path from $i$ to the root of tree.
+Nodes along this path are marked and placed in a stack,
+with $i$ at the top of the
+stack and the root at the bottom.
+Repeat for every other nonzero entry in $b_i$, in arbitrary order, but stop
+just before reaching a marked node (the result can be empty if $i$ is already
+in the stack).  The stack now contains ${\cal X}$, a topological ordering of
+the nonzero pattern of $\m{x}$, which can be used in Algorithm~2 to solve
+$\m{Lx}=\m{b}$.  The time to compute ${\cal X}$
+using an elimination tree traversal is much faster than the general graph
+traversal, taking time proportional to the size of ${\cal X}$ rather than the
+number of floating-point operations required to compute $\m{x}$.
+
+In the $k$th step of the factorization, the set ${\cal X}$ becomes the
+nonzero pattern of row $k$ of $\m{L}$.  This step requires the elimination
+tree of $\m{L}_{1:k-1,1:k-1}$, and must construct the elimination tree of
+$\m{L}_{1:k,1:k}$ for step $k+1$.  Recall that the parent of $i$ in the
+tree is the smallest $j$ such that $i < j$ and $l_{ji} \ne 0$.
+Thus, if any node $i$ already has a parent $j$, then $j$ will remain the
+parent of $i$ in the elimination trees of all other larger leading submatrices
+of $\m{L}$, and in the elimination tree of $\m{L}$ itself.
+If $l_{ki} \ne 0$ and $i$ does not have a parent in the elimination tree of
+$\m{L}_{1:k-1,1:k-1}$, then the parent of $i$ is $k$
+in the elimination tree of $\m{L}_{1:k,1:k}$.
+Node $k$ becomes the parent of any node $i \in {\cal X}$ that does not yet
+have a parent.
+
+Since Algorithm~2 traverses $\m{L}$ in column order, $\m{L}$ is stored in a
+conventional sparse column representation.  Each column $j$ is stored as a list
+of nonzero values and their corresponding row indices.  When row $k$ is
+computed, the new entries can be placed at the end of each list.  As
+a by-product of computing $\m{L}$ one row at a time,
+the columns of $\m{L}$ are computed in a sorted manner.  This is a convenient
+form of the output.
+MATLAB requires the columns of its sparse matrices to be sorted, for example.
+Sorted columns improve the speed of Algorithm~2, since the memory access
+pattern is more regular.  The conventional column-by-column algorithm
+\cite{GeorgeLiu79,GeorgeLiu} does not produce columns of $\m{L}$ with
+sorted row indices.
+
+A simple symbolic pre-analysis can be obtained by repeating the subtree traversals.
+All that is required to compute the nonzero pattern of
+the $k$th row of $\m{L}$ is the partially constructed elimination tree
+and the nonzero pattern of the $k$th column of $\m{A}$.  This is computed
+in time proportional to the size of this set, using the elimination tree
+traversal.  Once constructed, the number of nonzeros in each column of
+$\m{L}$ is incremented, for each entry in ${\cal X}$, and then ${\cal X}$
+is discarded.  The set ${\cal X}$ need not be constructed in topological
+order, so no stack is required.  The run time of the symbolic analysis
+algorithm is thus proportional to the number of nonzeros in $\m{L}$.
+This is more costly than the optimal algorithm \cite{GilbertNgPeyton94},
+which takes time essentially proportional to the number of nonzeros in $\m{A}$.
+The memory requirements are just the matrix $\m{A}$ and a few size-$n$ integer
+arrays.  The result of the algorithm is the elimination tree, a count
+of the number of nonzeros in each column of $\m{L}$, and
+the cumulative sum of the column counts.
+
+%-------------------------------------------------------------------------------
+\section{Implementation}
+\label{Implementation}
+%-------------------------------------------------------------------------------
+
+Because of its simplicity, the implementation of this algorithm leads to
+a very short, concise code.  The symbolic analysis routine {\tt ldl\_symbolic}
+shown in Figure~\ref{ldlsymbolic}
+consists of only 18 lines of executable C code.
+This includes 5 lines of code to allow for a
+sparsity-preserving ordering $\m{P}$ so that either $\m{A}$ or $\m{PAP}\tr$
+can be analyzed, 3 lines of code to compute the cumulative sum of
+the column counts, and one line of code to speed up a {\tt for} loop.
+An additional line of code allows for a more general form of the input
+sparse matrix $\m{A}$.
+
+The {\tt n}-by-{\tt n} sparse matrix $\m{A}$ is provided in compressed column
+form as an {\tt int} array {\tt Ap} of length {\tt n+1},
+an {\tt int} array {\tt Ai} of length {\tt nz},
+and a {\tt double} array {\tt Ax} also of length {\tt nz},
+where {\tt nz} is the number of entries in the matrix.
+The numerical values of entries in column $j$ are stored in
+{\tt Ax[Ap[j]} $\ldots$ {\tt Ap[j+1]-1]}
+and the corresponding row indices are in
+{\tt Ai[Ap[j]} $\ldots$ {\tt Ap[j+1]-1]}.
+With {\tt Ap[0] = 0}, the number of entries in the matrix is {\tt nz = Ap[n]}.
+If no fill-reducing ordering {\tt P} is provided,
+only entries in the upper triangular part of $\m{A}$ are considered.
+If {\tt P} is provided and row/column {\tt i} of the
+matrix $\m{A}$ is the {\tt k}-th row/column of $\m{PAP}\tr$, then {\tt P[k]=i}.
+Only entries in the upper
+triangular part of $\m{PAP}\tr$ are considered.  These entries may be
+in the lower triangular part of $\m{A}$, so to ensure that the correct matrix
+is factorized, all entries of $\m{A}$ should be provided when using the
+permutation input {\tt P}.
+
+The outputs of {\tt ldl\_symbolic} are three size-{\tt n} arrays:
+{\tt Parent} holds the elimination tree,
+{\tt Lnz} holds the counts of the number of entries in each column of
+$\m{L}$, and
+{\tt Lp} holds the cumulative sum of {\tt Lnz}.
+The size-{\tt n} array {\tt Flag} is used as workspace.
+None of the output or workspace arrays need to be initialized.
+
+\begin{figure}
+\caption{{\tt ldl\_symbolic:} finding the elimination tree and column counts}
+\label{ldlsymbolic}
+{\scriptsize
+\begin{verbatim}
+void ldl_symbolic
+(
+    int n,              /* A and L are n-by-n, where n >= 0 */
+    int Ap [ ],         /* input of size n+1, not modified */
+    int Ai [ ],         /* input of size nz=Ap[n], not modified */
+    int Lp [ ],         /* output of size n+1, not defined on input */
+    int Parent [ ],     /* output of size n, not defined on input */
+    int Lnz [ ],        /* output of size n, not defined on input */
+    int Flag [ ],       /* workspace of size n, not defn. on input or output */
+    int P [ ],          /* optional input of size n */
+    int Pinv [ ]        /* optional output of size n (used if P is not NULL) */
+)
+{
+    int i, k, p, kk, p2 ;
+    if (P)
+    {
+        /* If P is present then compute Pinv, the inverse of P */
+        for (k = 0 ; k < n ; k++)
+        {
+            Pinv [P [k]] = k ;
+        }
+    }
+    for (k = 0 ; k < n ; k++)
+    {
+        /* L(k,:) pattern: all nodes reachable in etree from nz in A(0:k-1,k) */
+        Parent [k] = -1 ;           /* parent of k is not yet known */
+        Flag [k] = k ;              /* mark node k as visited */
+        Lnz [k] = 0 ;               /* count of nonzeros in column k of L */
+        kk = (P) ? (P [k]) : (k) ;  /* kth original, or permuted, column */
+        p2 = Ap [kk+1] ;
+        for (p = Ap [kk] ; p < p2 ; p++)
+        {
+            /* A (i,k) is nonzero (original or permuted A) */
+            i = (Pinv) ? (Pinv [Ai [p]]) : (Ai [p]) ;
+            if (i < k)
+            {
+                /* follow path from i to root of etree, stop at flagged node */
+                for ( ; Flag [i] != k ; i = Parent [i])
+                {
+                    /* find parent of i if not yet determined */
+                    if (Parent [i] == -1) Parent [i] = k ;
+                    Lnz [i]++ ;                         /* L (k,i) is nonzero */
+                    Flag [i] = k ;                      /* mark i as visited */
+                }
+            }
+        }
+    }
+    /* construct Lp index array from Lnz column counts */
+    Lp [0] = 0 ;
+    for (k = 0 ; k < n ; k++)
+    {
+        Lp [k+1] = Lp [k] + Lnz [k] ;
+    }
+}
+\end{verbatim}
+}
+\end{figure}
+
+The {\tt ldl\_numeric} numeric factorization routine shown
+in Figure~\ref{ldlnumeric} consists of only 31 lines of
+executable code.  It includes this same subtree traversal algorithm
+as {\tt ldl\_symbolic},
+except that each path is placed on a stack that holds
+nonzero pattern of the $k$th row of $\m{L}$.
+This traversal is followed by a sparse forward solve
+using this pattern, and all of the nonzero entries in
+the resulting $k$th row of $\m{L}$ are appended to their respective columns
+in the data structure of $\m{L}$.
+
+\begin{figure}
+\caption{{\tt ldl\_numeric:} numeric factorization}
+\label{ldlnumeric}
+{\scriptsize
+\begin{verbatim}
+int ldl_numeric         /* returns n if successful, k if D (k,k) is zero */
+(
+    int n,              /* A and L are n-by-n, where n >= 0 */
+    int Ap [ ],         /* input of size n+1, not modified */
+    int Ai [ ],         /* input of size nz=Ap[n], not modified */
+    double Ax [ ],      /* input of size nz=Ap[n], not modified */
+    int Lp [ ],         /* input of size n+1, not modified */
+    int Parent [ ],     /* input of size n, not modified */
+    int Lnz [ ],        /* output of size n, not defn. on input */
+    int Li [ ],         /* output of size lnz=Lp[n], not defined on input */
+    double Lx [ ],      /* output of size lnz=Lp[n], not defined on input */
+    double D [ ],       /* output of size n, not defined on input */
+    double Y [ ],       /* workspace of size n, not defn. on input or output */
+    int Pattern [ ],    /* workspace of size n, not defn. on input or output */
+    int Flag [ ],       /* workspace of size n, not defn. on input or output */
+    int P [ ],          /* optional input of size n */
+    int Pinv [ ]        /* optional input of size n */
+)
+{
+    double yi, l_ki ;
+    int i, k, p, kk, p2, len, top ;
+    for (k = 0 ; k < n ; k++)
+    {
+        /* compute nonzero Pattern of kth row of L, in topological order */
+        Y [k] = 0.0 ;               /* Y(0:k) is now all zero */
+        top = n ;                   /* stack for pattern is empty */
+        Flag [k] = k ;              /* mark node k as visited */
+        Lnz [k] = 0 ;               /* count of nonzeros in column k of L */
+        kk = (P) ? (P [k]) : (k) ;  /* kth original, or permuted, column */
+        p2 = Ap [kk+1] ;
+        for (p = Ap [kk] ; p < p2 ; p++)
+        {
+            i = (Pinv) ? (Pinv [Ai [p]]) : (Ai [p]) ;   /* get A(i,k) */
+            if (i <= k)
+            {
+                Y [i] += Ax [p] ;  /* scatter A(i,k) into Y (sum duplicates) */
+                for (len = 0 ; Flag [i] != k ; i = Parent [i])
+                {
+                    Pattern [len++] = i ;   /* L(k,i) is nonzero */
+                    Flag [i] = k ;          /* mark i as visited */
+                }
+                while (len > 0) Pattern [--top] = Pattern [--len] ;
+            }
+        }
+        /* compute numerical values kth row of L (a sparse triangular solve) */
+        D [k] = Y [k] ;             /* get D(k,k) and clear Y(k) */
+        Y [k] = 0.0 ;
+        for ( ; top < n ; top++)
+        {
+            i = Pattern [top] ;     /* Pattern [top:n-1] is pattern of L(:,k) */
+            yi = Y [i] ;            /* get and clear Y(i) */
+            Y [i] = 0.0 ;
+            p2 = Lp [i] + Lnz [i] ;
+            for (p = Lp [i] ; p < p2 ; p++)
+            {
+                Y [Li [p]] -= Lx [p] * yi ;
+            }
+            l_ki = yi / D [i] ;     /* the nonzero entry L(k,i) */
+            D [k] -= l_ki * yi ;
+            Li [p] = k ;            /* store L(k,i) in column form of L */
+            Lx [p] = l_ki ;
+            Lnz [i]++ ;             /* increment count of nonzeros in col i */
+        }
+        if (D [k] == 0.0) return (k) ;      /* failure, D(k,k) is zero */
+    }
+    return (n) ;        /* success, diagonal of D is all nonzero */
+}
+\end{verbatim}
+}
+\end{figure}
+
+After the matrix is factorized, the {\tt ldl\_lsolve}, {\tt ldl\_dsolve},
+and {\tt ldl\_ltsolve} routines shown in Figure~\ref{ldlsolve}
+are provided to solve
+$\m{Lx}=\m{b}$, $\m{Dx}=\m{b}$, and $\m{L}\tr\m{x}=\m{b}$, respectively.
+Together, they solve $\m{Ax}=\m{b}$, and consist of only 10 lines of executable
+code.  If a fill-reducing permutation is used,
+{\tt ldl\_perm} and {\tt ldl\_permt} must be used to permute $\m{b}$ and
+$\m{x}$ accordingly.
+
+\begin{figure}
+\caption{Solve routines}
+\label{ldlsolve}
+{\scriptsize
+\begin{verbatim}
+void ldl_lsolve
+(
+    int n,              /* L is n-by-n, where n >= 0 */
+    double X [ ],       /* size n.  right-hand-side on input, soln. on output */
+    int Lp [ ],         /* input of size n+1, not modified */
+    int Li [ ],         /* input of size lnz=Lp[n], not modified */
+    double Lx [ ]       /* input of size lnz=Lp[n], not modified */
+)
+{
+    int j, p, p2 ;
+    for (j = 0 ; j < n ; j++)
+    {
+        p2 = Lp [j+1] ;
+        for (p = Lp [j] ; p < p2 ; p++)
+        {
+            X [Li [p]] -= Lx [p] * X [j] ;
+        }
+    }
+}
+
+void ldl_dsolve
+(
+    int n,              /* D is n-by-n, where n >= 0 */
+    double X [ ],       /* size n.  right-hand-side on input, soln. on output */
+    double D [ ]        /* input of size n, not modified */
+)
+{
+    int j ;
+    for (j = 0 ; j < n ; j++)
+    {
+        X [j] /= D [j] ;
+    }
+}
+
+void ldl_ltsolve
+(
+    int n,              /* L is n-by-n, where n >= 0 */
+    double X [ ],       /* size n.  right-hand-side on input, soln. on output */
+    int Lp [ ],         /* input of size n+1, not modified */
+    int Li [ ],         /* input of size lnz=Lp[n], not modified */
+    double Lx [ ]       /* input of size lnz=Lp[n], not modified */
+)
+{
+    int j, p, p2 ;
+    for (j = n-1 ; j >= 0 ; j--)
+    {
+        p2 = Lp [j+1] ;
+        for (p = Lp [j] ; p < p2 ; p++)
+        {
+            X [j] -= Lx [p] * X [Li [p]] ;
+        }
+    }
+}
+\end{verbatim}
+}
+\end{figure}
+
+In addition to appearing as a Collected Algorithm of the ACM \cite{Davis05},
+{\tt LDL} is available at http://www.suitesparse.com.
+
+%-------------------------------------------------------------------------------
+\section{Using LDL in MATLAB}
+\label{MATLAB}
+%-------------------------------------------------------------------------------
+
+The simplest way to use {\tt LDL} is within MATLAB.  Once the {\tt ldlsparse}
+mexFunction is compiled and installed, the MATLAB statement
+{\tt [L, D, Parent, fl] = ldlsparse (A)} returns the sparse factorization
+{\tt A = (L+I)*D*(L+I)'}, where {\tt L} is lower triangular, {\tt D} is a
+diagonal matrix, and {\tt I} is the {\tt n}-by-{\tt n}
+identity matrix ({\tt ldlsparse} does not return the unit diagonal of {\tt L}).
+The elimination tree is returned in {\tt Parent}.
+If no zero on the diagonal of {\tt D} is encountered, {\tt fl} is the
+floating-point operation count.  Otherwise, {\tt D(-fl,-fl)} is the first
+zero entry encountered.  Let {\tt d=-fl}.  The function returns the
+factorization of {\tt A (1:d,1:d)}, where rows {\tt d+1} to {\tt n} of {\tt L}
+and {\tt D} are all zero.  If a sparsity preserving permutation {\tt P} is
+passed, {\tt [L, D, Parent, fl] = ldlsparse (A,P)}
+operates on {\tt A(P,P)} without
+forming it explicitly.
+
+The statement {\tt x = ldlsparse (A, [ ], b)} is roughly equivalent to
+{\tt x = A}$\backslash${\tt b}, when {\tt A} is sparse, real, and symmetric.
+The $\m{LDL}\tr$ factorization of {\tt A} is performed.  If {\tt P} is
+provided, {\tt x = ldlsparse (A, P, b)} still performs
+{\tt x = A}$\backslash${\tt b}, except that {\tt A(P,P)} is factorized
+instead.
+
+%-------------------------------------------------------------------------------
+\section{Using LDL in a C program}
+\label{C}
+%-------------------------------------------------------------------------------
+
+To compile the library, do {\tt make}.  To install the shared library in
+/usr/local/include and /usr/local/lib, do {\tt make install}; to remove it
+from there, use {\tt make uninstall}.
+For alternative installation locations, see the instructions in
+{\tt SuiteSparse/README.txt}.
+
+The C-callable {\tt LDL} library consists of nine user-callable routines
+and one include file.
+
+\begin{itemize}
+\item {\tt ldl\_symbolic}:  given the nonzero pattern of a sparse symmetric
+    matrix $\m{A}$ and an optional permutation $\m{P}$, analyzes either
+    $\m{A}$ or $\m{PAP}\tr$, and returns the elimination tree, the
+    number of nonzeros in each column of $\m{L}$, and the {\tt Lp} array
+    for the sparse matrix data structure for $\m{L}$.
+    Duplicate entries are allowed in the columns of $\m{A}$, and the
+    row indices in each column need not be sorted.
+    Providing a sparsity-preserving ordering is critical for obtaining
+    good performance.  A minimum degree ordering
+    (such as AMD \cite{AmestoyDavisDuff96,AmestoyDavisDuff03})
+    or a graph-partitioning based ordering are appropriate.
+\item {\tt ldl\_numeric}:  given {\tt Lp} and the elimination tree computed
+    by {\tt ldl\_symbolic}, and an optional permutation $\m{P}$,
+    returns the numerical factorization of $\m{A}$ or $\m{PAP}\tr$.
+    Duplicate entries are allowed in the columns of $\m{A}$
+    (any duplicate entries are summed), and the
+    row indices in each column need not be sorted.
+    The data structure for $\m{L}$ is the same as $\m{A}$, except that
+    no duplicates appear, and each column has sorted row indices.
+\item {\tt ldl\_lsolve}:  given the factor $\m{L}$ computed by
+    {\tt ldl\_numeric}, solves the linear system $\m{Lx}=\m{b}$, where
+    $\m{x}$ and $\m{b}$ are full $n$-by-1 vectors.
+\item {\tt ldl\_dsolve}:  given the factor $\m{D}$ computed by
+    {\tt ldl\_numeric}, solves the linear system $\m{Dx}=\m{b}$.
+\item {\tt ldl\_ltsolve}:  given the factor $\m{L}$ computed by
+    {\tt ldl\_numeric}, solves the linear system $\m{L}\tr\m{x}=\m{b}$.
+\item {\tt ldl\_perm}: given a vector $\m{b}$ and a permutation $\m{P}$,
+    returns $\m{x}=\m{Pb}$.
+\item {\tt ldl\_permt}: given a vector $\m{b}$ and a permutation $\m{P}$,
+    returns $\m{x}=\m{P}\tr\m{b}$.
+\item {\tt ldl\_valid\_perm}:  Except for checking if the diagonal of
+    $\m{D}$ is zero, none of the above routines check their inputs for errors.
+    This routine checks the validity of a permutation $\m{P}$.
+\item {\tt ldl\_valid\_matrix}:  checks if a matrix $\m{A}$ is valid as input
+    to {\tt ldl\_symbolic} and {\tt ldl\_numeric}.
+\end{itemize}
+
+Note that the primary input to the {\tt ldl\_symbolic} and
+{\tt ldl\_numeric} is the sparse matrix $\m{A}$.  It is provided in
+column-oriented form, and only the upper triangular part is accessed.
+This is slightly different than the primary output: the matrix $\m{L}$, 
+which is lower triangular in column-oriented form.
+If you wish to factorize a symmetric matrix $\m{A}$ for which only the lower
+triangular part is supplied, you would need to transpose $\m{A}$ before
+passing it {\tt ldl\_symbolic} and {\tt ldl\_numeric}.
+
+An additional set of routines is available for use in a 64-bit environment.
+Each routine name changes uniformly; {\tt ldl\_symbolic} becomes
+{\tt ldl\_l\_symbolic}, and each {\tt int} parameter becomes type
+{\tt SuiteSparse\_long}.  The {\tt SuiteSparse\_long} type is {\tt long}, except for
+Microsoft Windows 64, where it becomes {\tt \_\_int64}.
+
+\begin{figure}
+\caption{Example of use}
+\label{ldlsimple}
+{\scriptsize
+\begin{verbatim}
+#include <stdio.h>
+#include "ldl.h"
+#define N 10    /* A is 10-by-10 */
+#define ANZ 19  /* # of nonzeros on diagonal and upper triangular part of A */
+#define LNZ 13  /* # of nonzeros below the diagonal of L */
+
+int main (void)
+{
+    /* only the upper triangular part of A is required */
+    int    Ap [N+1] = {0, 1, 2, 3, 4,   6, 7,   9,   11,      15,     ANZ},
+           Ai [ANZ] = {0, 1, 2, 3, 1,4, 5, 4,6, 4,7, 0,4,7,8, 1,4,6,9 } ;
+    double Ax [ANZ] = {1.7, 1., 1.5, 1.1, .02,2.6, 1.2, .16,1.3, .09,1.6,
+                     .13,.52,.11,1.4, .01,.53,.56,3.1},
+           b [N] = {.287, .22, .45, .44, 2.486, .72, 1.55, 1.424, 1.621, 3.759};
+    double Lx [LNZ], D [N], Y [N] ;
+    int Li [LNZ], Lp [N+1], Parent [N], Lnz [N], Flag [N], Pattern [N], d, i ;
+
+    /* factorize A into LDL' (P and Pinv not used) */
+    ldl_symbolic (N, Ap, Ai, Lp, Parent, Lnz, Flag, NULL, NULL) ;
+    printf ("Nonzeros in L, excluding diagonal: %d\n", Lp [N]) ;
+    d = ldl_numeric (N, Ap, Ai, Ax, Lp, Parent, Lnz, Li, Lx, D, Y, Pattern,
+        Flag, NULL, NULL) ;
+
+    if (d == N)
+    {
+        /* solve Ax=b, overwriting b with the solution x */
+        ldl_lsolve (N, b, Lp, Li, Lx) ;
+        ldl_dsolve (N, b, D) ;
+        ldl_ltsolve (N, b, Lp, Li, Lx) ;
+        for (i = 0 ; i < N ; i++) printf ("x [%d] = %g\n", i, b [i]) ;
+    }
+    else
+    {
+        printf ("ldl_numeric failed, D (%d,%d) is zero\n", d, d) ;
+    }
+    return (0) ;
+}
+\end{verbatim}
+}
+\end{figure}
+
+The program in Figure~\ref{ldlsimple}
+illustrates the basic usage of the {\tt LDL} routines.
+It analyzes and factorizes the sparse symmetric positive-definite matrix
+{\small
+\[
+\m{A} = \left[
+\begin{array}{cccccccccc}
+      1.7 &   0 &   0 &   0 &   0 &   0 &   0 &   0 & .13 &   0 \\
+        0 &  1. &   0 &   0 & .02 &   0 &   0 &   0 &   0 & .01 \\
+        0 &   0 & 1.5 &   0 &   0 &   0 &   0 &   0 &   0 &   0 \\
+        0 &   0 &   0 & 1.1 &   0 &   0 &   0 &   0 &   0 &   0 \\
+        0 & .02 &   0 &   0 & 2.6 &   0 & .16 & .09 & .52 & .53 \\
+        0 &   0 &   0 &   0 &   0 & 1.2 &   0 &   0 &   0 &   0 \\
+        0 &   0 &   0 &   0 & .16 &   0 & 1.3 &   0 &   0 & .56 \\
+        0 &   0 &   0 &   0 & .09 &   0 &   0 & 1.6 & .11 &   0 \\
+      .13 &   0 &   0 &   0 & .52 &   0 &   0 & .11 & 1.4 &   0 \\
+        0 & .01 &   0 &   0 & .53 &   0 & .56 &   0 &   0 & 3.1 \\
+\end{array}
+\right]
+\]
+}
+and then solves a system $\m{Ax}=\m{b}$ whose true solution is
+$x_i = i/10$.  Note that {\tt Li} and {\tt Lx} are statically allocated.
+Normally they would be allocated after their size, {\tt Lp[n]},
+is determined by {\tt ldl\_symbolic}.
+More example programs are included with the {\tt LDL} package.
+
+\section{Acknowledgments}
+
+I would like to thank Pete Stewart for his comments on an earlier draft
+of this software and its accompanying paper.
+
+\newpage
+\bibliographystyle{plain}
+\bibliography{ldl}
+
+\end{document}

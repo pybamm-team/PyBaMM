@@ -1,0 +1,18 @@
+codecov:
+  branch: edgesep
+
+coverage:
+  precision: 2
+  round: down
+  range: "70...100"
+  ignore: 
+  - Demo/.*
+  - Tests/.*
+  - External/.*
+  - SuiteSparse_config/.*
+  - Source/Mongoose_Debug.*
+
+comment:
+  layout: "header, diff, changes, sunburst, uncovered"
+  branches: edgesep
+  behavior: default

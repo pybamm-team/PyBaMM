@@ -1,0 +1,769 @@
+\documentclass[11pt]{article}
+
+\newcommand{\m}[1]{{\bf{#1}}}       % for matrices and vectors
+\newcommand{\tr}{^{\sf T}}          % transpose
+
+\topmargin 0in
+\textheight 9in
+\oddsidemargin 0pt
+\evensidemargin 0pt
+\textwidth 6.5in
+
+%------------------------------------------------------------------------------
+\begin{document}
+%------------------------------------------------------------------------------
+
+\title{AMD User Guide}
+\author{Patrick R. Amestoy\thanks{ENSEEIHT-IRIT,
+2 rue Camichel 31017 Toulouse, France.
+email: amestoy@enseeiht.fr.  http://www.enseeiht.fr/$\sim$amestoy.}
+\and Timothy A. Davis\thanks{
+email: DrTimothyAldenDavis@gmail.com,
+http://www.suitesparse.com.
+This work was supported by the National
+Science Foundation, under grants ASC-9111263, DMS-9223088, and CCR-0203270.
+Portions of the work were done while on sabbatical at Stanford University
+and Lawrence Berkeley National Laboratory (with funding from Stanford
+University and the SciDAC program).
+}
+\and Iain S. Duff\thanks{Rutherford Appleton Laboratory, Chilton, Didcot, 
+Oxon OX11 0QX, England. email: i.s.duff@rl.ac.uk.  
+http://www.numerical.rl.ac.uk/people/isd/isd.html.
+This work was supported by the EPSRC under grant GR/R46441.
+}}
+
+\date{VERSION 2.4.6, May 4, 2016}
+\maketitle
+
+%------------------------------------------------------------------------------
+\begin{abstract}
+AMD is a set of routines that implements the approximate minimum degree ordering
+algorithm to permute sparse matrices prior to
+numerical factorization.
+There are versions written in both C and Fortran 77.
+A MATLAB interface is included.
+\end{abstract}
+%------------------------------------------------------------------------------
+
+AMD Copyright\copyright 2013 by Timothy A.
+Davis, Patrick R. Amestoy, and Iain S. Duff.  All Rights Reserved.
+AMD is available under alternate licences; contact T. Davis for details.
+
+{\bf AMD License:} Refer to the AMD/Doc/License.txt file for the license
+for your particular copy of AMD.
+
+{\bf Availability:}
+    http://www.suitesparse.com
+
+{\bf Acknowledgments:}
+
+    This work was supported by the National Science Foundation, under
+    grants ASC-9111263 and DMS-9223088 and CCR-0203270.
+    The conversion to C, the addition of the elimination tree
+    post-ordering, and the handling of dense rows and columns
+    were done while Davis was on sabbatical at
+    Stanford University and Lawrence Berkeley National Laboratory.
+
+%------------------------------------------------------------------------------
+\newpage
+\section{Overview}
+%------------------------------------------------------------------------------
+
+AMD is a set of routines for preordering a sparse matrix prior to
+numerical factorization.  It uses an approximate minimum degree ordering
+algorithm \cite{AmestoyDavisDuff96,AmestoyDavisDuff04}
+to find a permutation matrix $\m{P}$
+so that the Cholesky factorization $\m{PAP}\tr=\m{LL}\tr$ has fewer
+(often much fewer) nonzero entries than the Cholesky factorization of $\m{A}$.
+The algorithm is typically much faster than other ordering methods
+and  minimum degree ordering
+algorithms that compute an exact degree \cite{GeorgeLiu89}.
+Some methods, such as approximate deficiency
+\cite{RothbergEisenstat98} and graph-partitioning based methods
+\cite{Chaco,KarypisKumar98e,PellegriniRomanAmestoy00,schu:01}
+can produce better orderings, depending on the matrix.
+
+The algorithm starts with an undirected graph representation of a
+symmetric sparse matrix $\m{A}$.  Node $i$ in the graph corresponds to row
+and column $i$ of the matrix, and there is an edge $(i,j)$ in the graph if
+$a_{ij}$ is nonzero.
+The degree of a node is initialized to the number of off-diagonal nonzeros
+in row $i$, which is the size of the set of nodes
+adjacent to $i$ in the graph.
+
+The selection of a pivot $a_{ii}$ from the diagonal of $\m{A}$ and the first
+step of Gaussian elimination corresponds to one step of graph elimination.
+Numerical fill-in causes new nonzero entries in the matrix
+(fill-in refers to
+nonzeros in $\m{L}$ that are not in $\m{A}$).
+Node $i$ is eliminated and edges are added to its neighbors
+so that they form a clique (or {\em element}).  To reduce fill-in,
+node $i$ is selected as the node of least degree in the graph.
+This process repeats until the graph is eliminated.
+
+The clique is represented implicitly.  Rather than listing all the
+new edges in the graph, a single list of nodes is kept which represents
+the clique.  This list corresponds to the nonzero pattern of the first
+column of $\m{L}$.  As the elimination proceeds, some of these cliques
+become subsets of subsequent cliques, and are removed.   This graph
+can be stored in place, that is
+using the same amount of memory as the original graph.
+
+The most costly part of the minimum degree algorithm is the recomputation
+of the degrees of nodes adjacent to the current pivot element.
+Rather than keep track of the exact degree, the approximate minimum degree
+algorithm finds an upper bound on the degree that is easier to compute.
+For nodes of least degree, this bound tends to be tight.  Using the
+approximate degree instead of the exact degree leads to a substantial savings
+in run time, particularly for very irregularly structured matrices.
+It has no effect on the quality of the ordering.
+
+In the C version of AMD, the elimination phase is followed by an
+elimination tree post-ordering.  This has no effect on fill-in, but
+reorganizes the ordering so that the subsequent numerical factorization is
+more efficient.  It also includes a pre-processing phase in which nodes of
+very high degree are removed (without causing fill-in), and placed last in the
+permutation $\m{P}$.  This reduces the run time substantially if the matrix
+has a few rows with many nonzero entries, and has little effect on the quality
+of the ordering.
+The C version operates on the
+symmetric nonzero pattern of $\m{A}+\m{A}\tr$, so it can be given
+an unsymmetric matrix, or either the lower or upper triangular part of
+a symmetric matrix.
+
+The two Fortran versions of AMD are essentially identical to two versions of
+the AMD algorithm discussed in an earlier paper \cite{AmestoyDavisDuff96}
+(approximate minimum external degree, both with and without aggressive
+absorption).
+For a discussion of the long history of the minimum degree algorithm,
+see \cite{GeorgeLiu89}.
+
+%------------------------------------------------------------------------------
+\section{Availability}
+%------------------------------------------------------------------------------
+
+In addition to appearing as a Collected Algorithm of the ACM, \newline
+AMD is available at http://www.suitesparse.com.
+The Fortran version is available as the routine {\tt MC47} in HSL
+(formerly the Harwell Subroutine Library) \cite{hsl:2002}.
+
+%------------------------------------------------------------------------------
+\section{Using AMD in MATLAB}
+%------------------------------------------------------------------------------
+
+The MATLAB function {\tt amd} is now a built-in function in MATLAB 7.3
+(R2006b).  The built-in {\tt amd} and the {\tt amd2} function provided here
+differ in how the optional parameters are passed
+(the 2nd input parameter).
+
+To use AMD2 in MATLAB, you must first compile the AMD2 mexFunction.
+Just type {\tt make} in the Unix system shell, while in the {\tt AMD/MATLAB}
+directory.  You can also type {\tt amd\_make} in MATLAB, while in the
+{\tt AMD/MATLAB} directory.  Place the {\tt AMD/MATLAB} directory in your
+MATLAB path.  This can be done on any system with MATLAB, including Windows.
+See Section~\ref{Install} for more details on how to install AMD.
+
+The MATLAB statement {\tt p=amd(A)} finds a permutation vector {\tt p} such
+that the Cholesky factorization {\tt chol(A(p,p))} is typically sparser than
+{\tt chol(A)}.
+If {\tt A} is unsymmetric, {\tt amd(A)} is identical to {\tt amd(A+A')}
+(ignoring numerical cancellation).
+If {\tt A} is not symmetric positive definite,
+but has substantial diagonal entries and a mostly symmetric nonzero pattern,
+then this ordering is also suitable for LU factorization.  A partial pivoting
+threshold may be required to prevent pivots from being selected off the
+diagonal, such as the statement {\tt [L,U,P] = lu (A (p,p), 0.1)}.
+Type {\tt help lu} for more details.
+The statement {\tt [L,U,P,Q] = lu (A (p,p))} in MATLAB 6.5 is
+not suitable, however, because it uses UMFPACK Version 4.0 and thus
+does not attempt to select pivots from the diagonal.
+UMFPACK Version 4.1 in MATLAB 7.0 and later
+uses several strategies, including a symmetric pivoting strategy, and
+will give you better results if you want to factorize an unsymmetric matrix
+of this type.  Refer to the UMFPACK User Guide for more details, at
+http://www.suitesparse.com.
+
+The AMD mexFunction is much faster than the built-in MATLAB symmetric minimum
+degree ordering methods, SYMAMD and SYMMMD.  Its ordering quality is
+comparable to SYMAMD, and better than SYMMMD
+\cite{DavisGilbertLarimoreNg04}.
+
+An optional input argument can be used to modify the control parameters for
+AMD (aggressive absorption, dense row/column handling, and printing of
+statistics).  An optional output
+argument provides statistics on the ordering, including an analysis of the
+fill-in and the floating-point operation count for a subsequent factorization.
+For more details (once AMD is installed),
+type {\tt help amd} in the MATLAB command window.
+
+%------------------------------------------------------------------------------
+\section{Using AMD in a C program}
+\label{Cversion}
+%------------------------------------------------------------------------------
+
+The C-callable AMD library consists of seven user-callable routines and one
+include file.  There are two versions of each of the routines, with
+{\tt int} and {\tt long} integers.
+The routines with prefix
+{\tt amd\_l\_} use {\tt long} integer arguments; the others use
+{\tt int} integer arguments.  If you compile AMD in the standard
+ILP32 mode (32-bit {\tt int}'s, {\tt long}'s, and pointers) then the versions
+are essentially identical.  You will be able to solve problems using up to 2GB
+of memory.  If you compile AMD in the standard LP64 mode, the size of an
+{\tt int} remains 32-bits, but the size of a {\tt long} and a pointer both get
+promoted to 64-bits.
+
+The following routines are fully described in Section~\ref{Primary}:
+
+\begin{itemize}
+\item {\tt amd\_order}
+({\tt long} version: {\tt amd\_l\_order})
+    {\footnotesize
+    \begin{verbatim}
+    #include "amd.h"
+    int n, Ap [n+1], Ai [nz], P [n] ;
+    double Control [AMD_CONTROL], Info [AMD_INFO] ;
+    int result = amd_order (n, Ap, Ai, P, Control, Info) ;
+    \end{verbatim}
+    }
+    Computes the approximate minimum degree ordering of an $n$-by-$n$ matrix
+    $\m{A}$.  Returns a permutation vector {\tt P} of size {\tt n}, where
+    {\tt P[k] = i} if row and column {\tt i} are the {\tt k}th row and
+    column in the permuted matrix.
+    This routine allocates its own memory of size $1.2e+9n$ integers,
+    where $e$ is the number of nonzeros in $\m{A}+\m{A}\tr$.
+    It computes statistics about the matrix $\m{A}$, such as the symmetry of
+    its nonzero pattern, the number of nonzeros in $\m{L}$,
+    and the number of floating-point operations required for Cholesky and LU
+    factorizations (which are returned in the {\tt Info} array).
+    The user's input matrix is not modified.
+    It returns {\tt AMD\_OK} if successful,
+    {\tt AMD\_OK\_BUT\_JUMBLED} if successful (but the matrix had unsorted
+    and/or duplicate row indices),
+    {\tt AMD\_INVALID} if the matrix is invalid,
+    {\tt AMD\_OUT\_OF\_MEMORY} if out of memory.
+
+\item {\tt amd\_defaults}
+({\tt long} version: {\tt amd\_l\_defaults})
+    {\footnotesize
+    \begin{verbatim}
+    #include "amd.h"
+    double Control [AMD_CONTROL] ;
+    amd_defaults (Control) ;
+    \end{verbatim}
+    }
+    Sets the default control parameters in the {\tt Control} array.  These can
+    then be modified as desired before passing the array to the other AMD
+    routines.
+
+\item {\tt amd\_control}
+({\tt long} version: {\tt amd\_l\_control})
+    {\footnotesize
+    \begin{verbatim}
+    #include "amd.h"
+    double Control [AMD_CONTROL] ;
+    amd_control (Control) ;
+    \end{verbatim}
+    }
+    Prints a description of the control parameters, and their values.
+
+\item {\tt amd\_info}
+({\tt long} version: {\tt amd\_l\_info})
+    {\footnotesize
+    \begin{verbatim}
+    #include "amd.h"
+    double Info [AMD_INFO] ;
+    amd_info (Info) ;
+    \end{verbatim}
+    }
+    Prints a description of the statistics computed by AMD, and their values.
+
+\item {\tt amd\_valid}
+({\tt long} version: {\tt amd\_valid})
+    {\footnotesize
+    \begin{verbatim}
+    #include "amd.h"
+    int n, Ap [n+1], Ai [nz] ;
+    int result = amd_valid (n, n, Ap, Ai) ;
+    \end{verbatim}
+    }
+    Returns {\tt AMD\_OK} or {\tt AMD\_OK\_BUT\_JUMBLED}
+    if the matrix is valid as input to {\tt amd\_order};
+    the latter is returned if the matrix has unsorted and/or duplicate
+    row indices in one or more columns. 
+    Returns {\tt AMD\_INVALID} if the matrix cannot be passed to
+    {\tt amd\_order}.
+    For {\tt amd\_order}, the matrix must
+    also be square.  The first two arguments are the number of rows and the
+    number of columns of the matrix.  For its use in AMD, these must both
+    equal {\tt n}.
+
+\item {\tt amd\_2}
+({\tt long} version: {\tt amd\_l2})
+    AMD ordering kernel.  It is faster than {\tt amd\_order}, and
+    can be called by the user, but it is difficult to use.
+    It does not check its inputs for errors.
+    It does not require the columns of its input matrix to be sorted,
+    but it destroys the matrix on output.  Additional workspace must be passed.
+    Refer to the source file {\tt AMD/Source/amd\_2.c} for a description.
+
+\end{itemize}
+
+The nonzero pattern of the matrix $\m{A}$ is represented in compressed column
+form.
+For an $n$-by-$n$ matrix $\m{A}$ with {\tt nz} nonzero entries, the
+representation consists of two arrays: {\tt Ap} of size {\tt n+1} and {\tt Ai}
+of size {\tt nz}.  The row indices of entries in column {\tt j} are stored in
+    {\tt Ai[Ap[j]} $\ldots$ {\tt Ap[j+1]-1]}.
+For {\tt amd\_order},
+if duplicate row indices are present, or if the row indices in any given
+column are not sorted in ascending order, then {\tt amd\_order} creates
+an internal copy of the matrix with sorted rows and no duplicate entries,
+and orders the copy.  This adds slightly to the time and memory usage of
+{\tt amd\_order}, but is not an error condition.
+
+The matrix is 0-based, and thus
+row indices must be in the range {\tt 0} to {\tt n-1}.
+The first entry {\tt Ap[0]} must be zero.
+The total number of entries in the matrix is thus {\tt nz = Ap[n]}.
+
+The matrix must be square, but it does not need to be symmetric.
+The {\tt amd\_order} routine constructs the nonzero pattern of
+$\m{B} = \m{A}+\m{A}\tr$ (without forming $\m{A}\tr$ explicitly if
+$\m{A}$ has sorted columns and no duplicate entries),
+and then orders the matrix $\m{B}$.  Thus, either the
+lower triangular part of $\m{A}$, the upper triangular part,
+or any combination may be passed.  The transpose $\m{A}\tr$ may also be
+passed to {\tt amd\_order}.
+The diagonal entries may be present, but are ignored.
+
+%------------------------------------------------------------------------------
+\subsection{Control parameters}
+\label{control_param}
+%------------------------------------------------------------------------------
+
+Control parameters are set in an optional {\tt Control} array.
+It is optional in the sense that if
+a {\tt NULL} pointer is passed for the {\tt Control} input argument,
+then default control parameters are used.
+%
+\begin{itemize}
+\item {\tt Control[AMD\_DENSE]} (or {\tt Control(1)} in MATLAB):
+controls the threshold for ``dense''
+rows/columns.  A dense row/column in $\m{A}+\m{A}\tr$
+can cause AMD to spend significant time
+in ordering the matrix.  If {\tt Control[AMD\_DENSE]} $\ge 0$,
+rows/columns with
+more than {\tt Control[AMD\_DENSE]} $\sqrt{n}$ entries are ignored during
+the ordering, and placed last in the output order.  The default
+value of {\tt Control[AMD\_DENSE]} is 10.  If negative, no rows/columns
+are treated as ``dense.''  Rows/columns with 16 or fewer off-diagonal
+entries are never considered ``dense.''
+%
+\item {\tt Control[AMD\_AGGRESSIVE]} (or {\tt Control(2)} in MATLAB):
+controls whether or not to use
+aggressive absorption, in which a prior element is absorbed into the current
+element if it is a subset of the current element, even if it is not
+adjacent to the current pivot element (refer
+to \cite{AmestoyDavisDuff96,AmestoyDavisDuff04}
+for more details).  The default value is nonzero,
+which means that aggressive absorption will be performed.  This nearly always
+leads to a better ordering (because the approximate degrees are more
+accurate) and a lower execution time.  There are cases where it can
+lead to a slightly worse ordering, however.  To turn it off, set
+{\tt Control[AMD\_AGGRESSIVE]} to 0.
+%
+\end{itemize}
+
+Statistics are returned in the {\tt Info} array
+(if {\tt Info} is {\tt NULL}, then no statistics are returned).
+Refer to {\tt amd.h} file, for more details
+(14 different statistics are returned, so the list is not included here).
+
+%------------------------------------------------------------------------------
+\subsection{Sample C program}
+%------------------------------------------------------------------------------
+
+The following program, {\tt amd\_demo.c}, illustrates the basic use of AMD.
+See Section~\ref{Synopsis} for a short description
+of each calling sequence.
+
+{\footnotesize
+\begin{verbatim}
+#include <stdio.h>
+#include "amd.h"
+
+int n = 5 ;
+int Ap [ ] = { 0,   2,       6,       10,  12, 14} ;
+int Ai [ ] = { 0,1, 0,1,2,4, 1,2,3,4, 2,3, 1,4   } ;
+int P [5] ;
+
+int main (void)
+{
+    int k ;
+    (void) amd_order (n, Ap, Ai, P, (double *) NULL, (double *) NULL) ;
+    for (k = 0 ; k < n ; k++) printf ("P [%d] = %d\n", k, P [k]) ;
+    return (0) ;
+}
+\end{verbatim}
+}
+
+The {\tt Ap} and {\tt Ai} arrays represent the binary matrix
+\[
+\m{A} = \left[
+\begin{array}{rrrrr}
+ 1 &  1 &  0 &  0 &  0 \\
+ 1 &  1 &  1 &  0 &  1 \\
+ 0 &  1 &  1 &  1 &  0 \\
+ 0 &  0 &  1 &  1 &  0 \\
+ 0 &  1 &  1 &  0 &  1 \\
+\end{array}
+\right].
+\]
+The diagonal entries are ignored.
+%
+AMD constructs the pattern of $\m{A}+\m{A}\tr$,
+and returns a permutation vector of $(0, 3, 1, 4, 2)$.
+%
+Since the matrix is unsymmetric but with a mostly symmetric nonzero
+pattern, this would be a suitable permutation for an LU factorization of a
+matrix with this nonzero pattern and whose diagonal entries are not too small.
+The program uses default control settings and does not return any statistics
+about the ordering, factorization, or solution ({\tt Control} and {\tt Info}
+are both {\tt (double *) NULL}).  It also ignores the status value returned by
+{\tt amd\_order}.
+
+More example programs are included with the AMD package.
+The {\tt amd\_demo.c} program provides a more detailed demo of AMD.
+Another example is the AMD mexFunction, {\tt amd\_mex.c}.
+
+%------------------------------------------------------------------------------
+\subsection{A note about zero-sized arrays}
+%------------------------------------------------------------------------------
+
+AMD uses several user-provided arrays of size {\tt n} or {\tt nz}.
+Either {\tt n} or {\tt nz} can be zero.
+If you attempt to {\tt malloc} an array of size zero,
+however, {\tt malloc} will return a null pointer which AMD will report
+as invalid.  If you {\tt malloc} an array of
+size {\tt n} or {\tt nz} to pass to AMD, make sure that you handle the
+{\tt n} = 0 and {\tt nz = 0} cases correctly.
+
+%------------------------------------------------------------------------------
+\section{Synopsis of C-callable routines}
+\label{Synopsis}
+%------------------------------------------------------------------------------
+
+The matrix $\m{A}$ is {\tt n}-by-{\tt n} with {\tt nz} entries.
+
+{\footnotesize
+\begin{verbatim}
+#include "amd.h"
+int n, status, Ap [n+1], Ai [nz], P [n] ;
+double Control [AMD_CONTROL], Info [AMD_INFO] ;
+amd_defaults (Control) ;
+status = amd_order (n, Ap, Ai, P, Control, Info) ;
+amd_control (Control) ;
+amd_info (Info) ;
+status = amd_valid (n, n, Ap, Ai) ;
+\end{verbatim}
+}
+
+The {\tt amd\_l\_*} routines are identical, except that all {\tt int}
+arguments become {\tt long}:
+
+{\footnotesize
+\begin{verbatim}
+#include "amd.h"
+long n, status, Ap [n+1], Ai [nz], P [n] ;
+double Control [AMD_CONTROL], Info [AMD_INFO] ;
+amd_l_defaults (Control) ;
+status = amd_l_order (n, Ap, Ai, P, Control, Info) ;
+amd_l_control (Control) ;
+amd_l_info (Info) ;
+status = amd_l_valid (n, n, Ap, Ai) ;
+\end{verbatim}
+}
+
+%------------------------------------------------------------------------------
+\section{Using AMD in a Fortran program}
+%------------------------------------------------------------------------------
+
+Two Fortran versions of AMD are provided.  The {\tt AMD} routine computes the
+approximate minimum degree ordering, using aggressive absorption.  The
+{\tt AMDBAR} routine is identical, except that it does not perform aggressive
+absorption.  The {\tt AMD} routine is essentially identical to the HSL
+routine {\tt MC47B/BD}.
+Note that earlier versions of the Fortran
+{\tt AMD} and {\tt AMDBAR} routines included an {\tt IOVFLO} argument,
+which is no longer present.
+
+In contrast to the C version, the Fortran routines require a symmetric
+nonzero pattern, with no diagonal entries present although the {\tt MC47A/AD}
+wrapper in HSL allows duplicates, ignores out-of-range entries, and only
+uses entries from the upper triangular part of the matrix.  Although we
+have an experimental Fortran code for treating ``dense'' rows, the Fortran
+codes in this release do not treat
+``dense'' rows and columns of $\m{A}$ differently, and thus their run time
+can be high if there are a few dense rows and columns in the matrix.
+They do not perform a post-ordering of the elimination tree,
+compute statistics on the ordering, or check the validity of their input
+arguments. These facilities are provided by {\tt MC47A/AD} and other
+subroutines from HSL.
+Only one {\tt integer}
+version of each Fortran routine is provided.  
+Both Fortran routines overwrite the user's input
+matrix, in contrast to the C version.  
+%
+The C version does not return the elimination or assembly tree.
+The Fortran version returns an assembly tree;
+refer to the User Guide for details.
+The following is the syntax of the {\tt AMD} Fortran routine.
+The {\tt AMDBAR} routine is identical except for the routine name.
+
+{\footnotesize
+\begin{verbatim}
+        INTEGER N, IWLEN, PFREE, NCMPA, IW (IWLEN), PE (N), DEGREE (N), NV (N),
+     $          NEXT (N), LAST (N), HEAD (N), ELEN (N), W (N), LEN (N)
+        CALL AMD (N, PE, IW, LEN, IWLEN, PFREE, NV, NEXT,
+     $          LAST, HEAD, ELEN, DEGREE, NCMPA, W)
+        CALL AMDBAR (N, PE, IW, LEN, IWLEN, PFREE, NV, NEXT,
+     $          LAST, HEAD, ELEN, DEGREE, NCMPA, W)
+\end{verbatim}
+}
+
+The input matrix is provided to {\tt AMD} and {\tt AMDBAR}
+in three arrays, {\tt PE}, of size {\tt N},
+{\tt LEN}, of size {\tt N}, and {\tt IW}, of size {\tt IWLEN}.  The size of
+{\tt IW} must be at least {\tt NZ+N}.  The recommended size is
+{\tt 1.2*NZ + N}.
+On input, the indices of nonzero entries in row {\tt I} are stored in {\tt IW}.
+{\tt PE(I)} is the index in {\tt IW} of the start of row {\tt I}.
+{\tt LEN(I)} is the number of entries in row {\tt I}.
+The matrix is 1-based, with row and column indices in the range 1 to {\tt N}.
+Row {\tt I} is contained in
+{\tt IW (PE(I)} $\ldots \:$ {\tt PE(I) + LEN(I) - 1)}.
+The diagonal entries must not be present.  The indices within each row must
+not contain any duplicates, but they need not be sorted.  The rows
+themselves need not be in any particular order, and there may be empty space
+between the rows.  If {\tt LEN(I)} is zero, then there are no off-diagonal
+entries in row {\tt I}, and {\tt PE(I)} is ignored.  The integer
+{\tt PFREE} defines what part of {\tt IW} contains the user's input matrix,
+which is held in {\tt IW(1}~$\ldots~\:${\tt PFREE-1)}.
+The contents of {\tt IW} and {\tt LEN} are undefined on output,
+and {\tt PE} is modified to contain information about the ordering.
+
+As the algorithm proceeds, it modifies the {\tt IW} array, placing the
+pattern of the partially eliminated matrix in
+{\tt IW(PFREE} $\ldots \:${\tt IWLEN)}.
+If this space is exhausted, the space is compressed.
+The number of compressions performed on the {\tt IW} array is
+returned in the scalar {\tt NCMPA}.  The value of {\tt PFREE} on output is the
+length of {\tt IW} required for no compressions to be needed.
+
+The output permutation is returned in the array {\tt LAST}, of size {\tt N}.
+If {\tt I=LAST(K)}, then {\tt I} is the {\tt K}th row in the permuted
+matrix.  The inverse permutation is returned in the array {\tt ELEN}, where
+{\tt K=ELEN(I)} if {\tt I} is the {\tt K}th row in the permuted matrix.
+On output, the {\tt PE} and {\tt NV} arrays hold the assembly tree,
+a supernodal elimination tree that represents the relationship between
+columns of the Cholesky factor $\m{L}$.
+If {\tt NV(I)} $> 0$, then {\tt I} is a node in the assembly
+tree, and the parent of {\tt I} is {\tt -PE(I)}.  If {\tt I} is a root of
+the tree, then {\tt PE(I)} is zero.  The value of {\tt NV(I)} is the
+number of entries in the corresponding column of $\m{L}$, including the
+diagonal.
+If {\tt NV(I)} is zero, then {\tt I} is a non-principal node that is
+not in the assembly tree.  Node {\tt -PE(I)} is the parent of node {\tt I}
+in a subtree, the root of which is a node in the assembly tree.  All nodes
+in one subtree belong to the same supernode in the assembly tree.
+The other size {\tt N} arrays
+({\tt DEGREE}, {\tt HEAD}, {\tt NEXT}, and {\tt W}) are used as workspace,
+and are not defined on input or output.
+
+If you want to use a simpler user-interface and compute the elimination
+tree post-ordering, you should be able to call the C routines {\tt amd\_order}
+or {\tt amd\_l\_order} from a Fortran program.   Just be sure to take into
+account the 0-based indexing in the {\tt P}, {\tt Ap}, and {\tt Ai} arguments
+to {\tt amd\_order} and {\tt amd\_l\_order}.  A sample interface is provided
+in the files {\tt AMD/Demo/amd\_f77cross.f} and
+{\tt AMD/Demo/amd\_f77wrapper.c}.  To compile the {\tt amd\_f77cross} program,
+type {\tt make cross} in the {\tt AMD/Demo} directory.  The
+Fortran-to-C calling conventions are highly non-portable, so this example
+is not guaranteed to work with your compiler C and Fortran compilers.
+The output of {\tt amd\_f77cross} is in {\tt amd\_f77cross.out}.
+
+%------------------------------------------------------------------------------
+\section{Sample Fortran main program}
+%------------------------------------------------------------------------------
+
+The following program illustrates the basic usage of the Fortran version of AMD.
+The {\tt AP} and {\tt AI} arrays represent the binary matrix
+\[
+\m{A} = \left[
+\begin{array}{rrrrr}
+ 1 &  1 &  0 &  0 &  0 \\
+ 1 &  1 &  1 &  0 &  1 \\
+ 0 &  1 &  1 &  1 &  1 \\
+ 0 &  0 &  1 &  1 &  0 \\
+ 0 &  1 &  1 &  0 &  1 \\
+\end{array}
+\right]
+\]
+in a conventional 1-based column-oriented form,
+except that the diagonal entries are not present.
+The matrix has the same as nonzero pattern of $\m{A}+\m{A}\tr$ in the C
+program, in Section~\ref{Cversion}.
+The output permutation is $(4, 1, 3, 5, 2)$.
+It differs from the permutation returned by the C routine {\tt amd\_order}
+because a post-order of the elimination tree has not yet been performed.
+
+{\footnotesize
+\begin{verbatim}
+        INTEGER N, NZ, J, K, P, IWLEN, PFREE, NCMPA
+        PARAMETER (N = 5, NZ = 10, IWLEN = 17)
+        INTEGER AP (N+1), AI (NZ), LAST (N), PE (N), LEN (N), ELEN (N),
+     $      IW (IWLEN), DEGREE (N), NV (N), NEXT (N), HEAD (N), W (N)
+        DATA AP / 1, 2,     5,     8,  9,  11/
+        DATA AI / 2, 1,3,5, 2,4,5, 3,  2,3   /
+C       load the matrix into the AMD workspace
+        DO 10 J = 1,N
+            PE (J) = AP (J)
+            LEN (J) = AP (J+1) - AP (J)
+10      CONTINUE
+        DO 20 P = 1,NZ
+            IW (P) = AI (P)
+20      CONTINUE
+        PFREE = NZ + 1
+C       order the matrix (destroys the copy of A in IW, PE, and LEN)
+        CALL AMD (N, PE, IW, LEN, IWLEN, PFREE, NV, NEXT, LAST, HEAD,
+     $      ELEN, DEGREE, NCMPA, W)
+        DO 60 K = 1, N
+            PRINT 50, K, LAST (K)
+50          FORMAT ('P (',I2,') = ', I2)
+60      CONTINUE
+        END
+\end{verbatim}
+}
+
+The {\tt Demo} directory contains an example of how the C version
+may be called from a Fortran program, but this is highly non-portable.
+For this reason, it is placed in the {\tt Demo} directory, not in the
+primary {\tt Source} directory.
+
+%------------------------------------------------------------------------------
+\section{Installation}
+\label{Install}
+%------------------------------------------------------------------------------
+
+The following discussion assumes you have the {\tt make} program, either in
+Unix, or in Windows with Cygwin.
+
+System-dependent configurations are in the
+{\tt ../SuiteSparse\_config/SuiteSparse\_config.mk}
+file.  You can edit that file to customize the compilation.  The default
+settings will work on most systems.
+Sample configuration files are provided
+for Mac, Linux, Sun Solaris, and IBM AIX.
+The system you are on is detected automatically.
+
+To compile and install the C-callable AMD library,
+go to the {\tt AMD} directory and type {\tt make}.
+A dynamic library is placed in
+in {\tt AMD/Lib/libamd.so.*}, ({\tt *.dylib} for the Mac).
+Three demo programs of the AMD ordering routine will be compiled and tested in
+the {\tt AMD/Demo} directory.
+The outputs of these demo programs will then be compared with output
+files in the distribution.
+
+To compile and install the Fortran-callable AMD library,
+go to the {\tt AMD} directory and type {\tt make fortran}.
+The library will be placed in {\tt AMD/Lib/libamdf77.a}.
+A demo program will be compiled and tested in the {\tt AMD/Demo} directory.
+The output will be compared with an output file in the distribution.
+
+Typing {\tt make clean} will remove all but the final compiled libraries
+and demo programs.  Typing {\tt make purge} or {\tt make distclean}
+removes all files not in the original distribution.
+If you compile AMD and then later change the
+{\tt ../SuiteSparse\_config/SuiteSparse\_config.mk} file
+then you should type {\tt make purge} and then {\tt make} to recompile.
+
+When you compile your program that uses the C-callable AMD library,
+you need to add the {\tt AMD/Lib/libamd.*} library
+and you need to tell your compiler to look in the
+{\tt AMD/Include} directory for include
+files.   To compile a Fortran program that calls the Fortran AMD library,
+you need to add the {\tt AMD/Lib/libamdf77.a} library.
+See {\tt AMD/Demo/Makefile} for an example.
+
+By doing {\tt make}, all compiled dynamic libraries are also copied into {\tt
+SuiteSparse/lib} the include files are coped into {\tt SuiteSparse/include},
+and documentation is copied into {\tt SuiteSparse/doc}.
+
+Alternatively, you can install the shared library
+and include files in /usr/local/lib and /usr/local/include, and
+the documenation in /usr/local/doc.
+Just do {\tt make} then {\tt make install}.
+Now you can simply use {\tt -lamd} when you compile your own program.
+
+If all you want to use is the AMD2 mexFunction in MATLAB, you can skip
+the use of the {\tt make} command entirely.  Simply type
+{\tt amd\_make} in MATLAB while in the {\tt AMD/MATLAB} directory.
+This works on any system with MATLAB, including Windows.
+Alternately, type {\tt make} in the {\tt AMD/MATLAB} directory,
+or just use the built-in {\tt amd} in MATLAB 7.3 or later.
+
+If you are including AMD as a subset of a larger library and do not want
+to link the C standard I/O library, or if you simply do not need to use
+them, you can safely remove the {\tt amd\_control.c} and {\tt amd\_info.c}
+files.  Similarly, if you use default parameters (or define your
+own {\tt Control} array), then you can exclude the {\tt amd\_defaults.c}
+file.
+Each of these files contains the user-callable routines of the same
+name.  None of these auxiliary routines are directly called by
+{\tt amd\_order}.
+The {\tt amd\_dump.c} file contains debugging routines
+that are neither used nor compiled unless debugging is enabled.
+The {\tt amd\_internal.h} file must be edited to enable debugging;
+refer to the instructions in that file.
+The bare minimum files required to use just {\tt amd\_order} are
+{\tt amd.h} and {\tt amd\_internal.h}
+in the {\tt Include} directory,
+and
+{\tt amd\_1.c},
+{\tt amd\_2.c},
+{\tt amd\_aat.c},
+{\tt amd\_global.c},
+{\tt and\_order.c},
+{\tt amd\_postorder.c},
+{\tt amd\_post\_tree.c},
+{\tt amd\_preprocess.c},
+and
+{\tt amd\_valid.c}
+in the {\tt Source} directory.
+
+%------------------------------------------------------------------------------
+\newpage
+\section{The AMD routines}
+\label{Primary}
+%------------------------------------------------------------------------------
+
+The file {\tt AMD/Include/amd.h} listed below
+describes each user-callable routine in the C version of AMD,
+and gives details on their use.
+
+{\footnotesize
+\input{amd_h.tex}
+}
+
+
+%------------------------------------------------------------------------------
+\newpage
+% References
+%------------------------------------------------------------------------------
+
+\bibliographystyle{plain}
+\bibliography{AMD_UserGuide}
+
+\end{document}

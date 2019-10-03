@@ -1,0 +1,51 @@
+Input matrix: 5-by- 5 with 14 entries
+
+Column:  1 number of entries:  2 with row indices in AI (  1 ...   2)
+    row indices:   1  2
+
+Column:  2 number of entries:  4 with row indices in AI (  3 ...   6)
+    row indices:   1  2  3  5
+
+Column:  3 number of entries:  4 with row indices in AI (  7 ...  10)
+    row indices:   2  3  4  5
+
+Column:  4 number of entries:  2 with row indices in AI ( 11 ...  12)
+    row indices:   3  4
+
+Column:  5 number of entries:  2 with row indices in AI ( 13 ...  14)
+    row indices:   2  5
+
+amd:  approximate minimum degree ordering, results:
+    status: OK
+    n, dimension of A:                                  5
+    nz, number of nonzeros in A:                        14
+    symmetry of A:                                      0.8889
+    number of nonzeros on diagonal:                     5
+    nonzeros in pattern of A+A' (excl. diagonal):       10
+    # dense rows/columns of A+A':                       0
+    memory used, in bytes:                              228
+    # of memory compactions:                            0
+
+    The following approximate statistics are for a subsequent
+    factorization of A(P,P) + A(P,P)'.  They are slight upper
+    bounds if there are no dense rows/columns in A+A', and become
+    looser if dense rows/columns exist.
+
+    nonzeros in L (excluding diagonal):                 5
+    nonzeros in L (including diagonal):                 10
+    # divide operations for LDL' or LU:                 5
+    # multiply-subtract operations for LDL':            6
+    # multiply-subtract operations for LU:              7
+    max nz. in any column of L (incl. diagonal):        3
+
+    chol flop count for real A, sqrt counted as 1 flop: 22
+    LDL' flop count for real A:                         17
+    LDL' flop count for complex A:                      93
+    LU flop count for real A (with no pivoting):        19
+    LU flop count for complex A (with no pivoting):     101
+
+PERM ( 1) =  1
+PERM ( 2) =  4
+PERM ( 3) =  3
+PERM ( 4) =  5
+PERM ( 5) =  2

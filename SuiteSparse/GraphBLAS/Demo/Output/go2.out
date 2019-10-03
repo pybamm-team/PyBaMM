@@ -1,0 +1,294 @@
+
+--------------------------------------------------------------------------------
+/research/davisgroup/GraphChallenge/ssget/Mallya/lhr71_adj.tsv.gz
+--------------------------------------------------------------
+ntuples: 2985588
+nrows 70304 ncols 70304
+time to prune self-edges:     0.047424
+time to build the graph with GrB_Matrix_build:     0.375828
+make symmetric
+A = (C+C')/2
+A = (C+C')/2 time     0.065104
+
+Matrix from file:
+
+GraphBLAS matrix: *A_output 
+nrows: 70304 ncols: 70304 max # entries: 2985588
+format: standard CSR vlen: 70304 nvec_nonempty: 70304 nvec: 70304 plen: 70304 vdim: 70304
+hyper_ratio 0.0625
+GraphBLAS type:  bool size: 1
+number of entries: 2985588 
+row: 0 : 3 entries [0:2]
+    column 392: bool 1
+    column 423: bool 1
+    column 424: bool 1
+row: 1 : 3 entries [3:5]
+    column 393: bool 1
+    column 423: bool 1
+    column 424: bool 1
+row: 2 : 3 entries [6:8]
+    column 394: bool 1
+    column 423: bool 1
+    column 424: bool 1
+row: 3 : 3 entries [9:11]
+    column 395: bool 1
+    column 423: bool 1
+    column 424: bool 1
+row: 4 : 3 entries [12:14]
+    column 396: bool 1
+    column 423: bool 1
+    column 424: bool 1
+row: 5 : 3 entries [15:17]
+    column 397: bool 1
+    column 423: bool 1
+    column 424: bool 1
+row: 6 : 3 entries [18:20]
+    column 398: bool 1
+    column 423: bool 1
+    column 424: bool 1
+row: 7 : 3 entries [21:23]
+    column 399: bool 1
+    column 423: bool 1
+    column 424: bool 1
+row: 8 : 3 entries [24:26]
+    column 400: bool 1
+    column 423: bool 1
+    column 424: bool 1
+row: 9 : 3 entries [27:29]
+    column 401: bool 1
+...
+matrix 70304 by 70304, 2985588 entries, from stdin
+
+GraphBLAS matrix: from get_matrix: 
+nrows: 70304 ncols: 70304 max # entries: 2985588
+format: standard CSR vlen: 70304 nvec_nonempty: 70304 nvec: 70304 plen: 70304 vdim: 70304
+hyper_ratio 0.0625
+GraphBLAS type:  bool size: 1
+number of entries: 2985588 
+row: 0 : 3 entries [0:2]
+    column 392: bool 1
+    column 423: bool 1
+    column 424: bool 1
+row: 1 : 3 entries [3:5]
+    column 393: bool 1
+    column 423: bool 1
+    column 424: bool 1
+row: 2 : 3 entries [6:8]
+    column 394: bool 1
+    column 423: bool 1
+    column 424: bool 1
+row: 3 : 3 entries [9:11]
+    column 395: bool 1
+    column 423: bool 1
+    column 424: bool 1
+row: 4 : 3 entries [12:14]
+    column 396: bool 1
+    column 423: bool 1
+    column 424: bool 1
+row: 5 : 3 entries [15:17]
+    column 397: bool 1
+    column 423: bool 1
+    column 424: bool 1
+row: 6 : 3 entries [18:20]
+    column 398: bool 1
+    column 423: bool 1
+    column 424: bool 1
+row: 7 : 3 entries [21:23]
+    column 399: bool 1
+    column 423: bool 1
+    column 424: bool 1
+row: 8 : 3 entries [24:26]
+    column 400: bool 1
+    column 423: bool 1
+    column 424: bool 1
+row: 9 : 3 entries [27:29]
+    column 401: bool 1
+...
+
+total time to read A matrix:       2.068612 sec
+
+n 70304 # edges 1492794
+U=triu(A) time:        0.022588 sec
+read A, create U memory usage: 0.109169 GB
+
+------------------------------------- dot product method:
+L=tril(A) time:        0.021563 sec
+# triangles 160592
+
+tricount time:         0.020056 sec (dot product method)
+tri+prep time:         0.064207 sec (incl time to compute L and U)
+compute C time:        0.019738 sec
+reduce (C) time:       0.000317 sec
+rate      23.25 million edges/sec (incl time for U=triu(A))
+rate      74.43 million edges/sec (just tricount itself)
+
+tricount (dot)   memory usage: 0.10917 GB
+
+----------------------------------- outer product method:
+tricount time:         0.015299 sec (outer product method)
+tri+prep time:         0.036862 sec (incl time to compute L)
+compute C time:        0.014767 sec
+reduce (C) time:       0.000532 sec
+rate      40.50 million edges/sec (incl time for L=tril(A))
+rate      97.58 million edges/sec (just tricount itself)
+
+tricount (outer) memory usage: 0.109169 GB
+
+
+--------------------------------------------------------------------------------
+/research/davisgroup/GraphChallenge/snap/email-EuAll/email-EuAll_adj.tsv.gz
+--------------------------------------------------------------
+ntuples: 728962
+nrows 265214 ncols 265214
+time to prune self-edges:     0.011432
+time to build the graph with GrB_Matrix_build:     0.099236
+make symmetric
+A = (C+C')/2
+A = (C+C')/2 time     0.036471
+
+Matrix from file:
+
+GraphBLAS matrix: *A_output 
+nrows: 265214 ncols: 265214 max # entries: 728962
+format: standard CSR vlen: 265214 nvec_nonempty: 265009 nvec: 265214 plen: 265214 vdim: 265214
+hyper_ratio 0.0625
+GraphBLAS type:  bool size: 1
+number of entries: 728962 
+row: 0 : 15 entries [0:14]
+    column 1: bool 1
+    column 11113: bool 1
+    column 33336: bool 1
+    column 66669: bool 1
+    column 74302: bool 1
+    column 111113: bool 1
+    column 194239: bool 1
+    column 198548: bool 1
+    column 201350: bool 1
+    column 201883: bool 1
+    column 207437: bool 1
+    column 209659: bool 1
+    column 228326: bool 1
+    column 235882: bool 1
+    column 242992: bool 1
+row: 1 : 957 entries [15:971]
+    column 0: bool 1
+    column 80: bool 1
+    column 311: bool 1
+    column 495: bool 1
+    column 798: bool 1
+    column 1062: bool 1
+    column 2311: bool 1
+    column 3099: bool 1
+    column 3144: bool 1
+    column 3423: bool 1
+    column 3448: bool 1
+    column 3613: bool 1
+    column 3670: bool 1
+    column 3767: bool 1
+    column 3799: bool 1
+    ...
+row: 2 : 1587 entries [972:2558]
+    ...
+row: 3 : 1 entries [2559:2559]
+    ...
+row: 4 : 2 entries [2560:2561]
+    ...
+row: 5 : 1 entries [2562:2562]
+    ...
+row: 6 : 1 entries [2563:2563]
+    ...
+row: 7 : 1 entries [2564:2564]
+    ...
+row: 8 : 1 entries [2565:2565]
+    ...
+row: 9 : 1 entries [2566:2566]
+    ...
+...
+matrix 265214 by 265214, 728962 entries, from stdin
+
+GraphBLAS matrix: from get_matrix: 
+nrows: 265214 ncols: 265214 max # entries: 728962
+format: standard CSR vlen: 265214 nvec_nonempty: 265009 nvec: 265214 plen: 265214 vdim: 265214
+hyper_ratio 0.0625
+GraphBLAS type:  bool size: 1
+number of entries: 728962 
+row: 0 : 15 entries [0:14]
+    column 1: bool 1
+    column 11113: bool 1
+    column 33336: bool 1
+    column 66669: bool 1
+    column 74302: bool 1
+    column 111113: bool 1
+    column 194239: bool 1
+    column 198548: bool 1
+    column 201350: bool 1
+    column 201883: bool 1
+    column 207437: bool 1
+    column 209659: bool 1
+    column 228326: bool 1
+    column 235882: bool 1
+    column 242992: bool 1
+row: 1 : 957 entries [15:971]
+    column 0: bool 1
+    column 80: bool 1
+    column 311: bool 1
+    column 495: bool 1
+    column 798: bool 1
+    column 1062: bool 1
+    column 2311: bool 1
+    column 3099: bool 1
+    column 3144: bool 1
+    column 3423: bool 1
+    column 3448: bool 1
+    column 3613: bool 1
+    column 3670: bool 1
+    column 3767: bool 1
+    column 3799: bool 1
+    ...
+row: 2 : 1587 entries [972:2558]
+    ...
+row: 3 : 1 entries [2559:2559]
+    ...
+row: 4 : 2 entries [2560:2561]
+    ...
+row: 5 : 1 entries [2562:2562]
+    ...
+row: 6 : 1 entries [2563:2563]
+    ...
+row: 7 : 1 entries [2564:2564]
+    ...
+row: 8 : 1 entries [2565:2565]
+    ...
+row: 9 : 1 entries [2566:2566]
+    ...
+...
+
+total time to read A matrix:       0.596851 sec
+
+n 265214 # edges 364481
+U=triu(A) time:        0.007397 sec
+read A, create U memory usage: 0.0326087 GB
+
+------------------------------------- dot product method:
+L=tril(A) time:        0.006926 sec
+# triangles 267313
+
+tricount time:         0.063228 sec (dot product method)
+tri+prep time:         0.077551 sec (incl time to compute L and U)
+compute C time:        0.062763 sec
+reduce (C) time:       0.000465 sec
+rate       4.70 million edges/sec (incl time for U=triu(A))
+rate       5.76 million edges/sec (just tricount itself)
+
+tricount (dot)   memory usage: 0.0326089 GB
+
+----------------------------------- outer product method:
+tricount time:         0.040130 sec (outer product method)
+tri+prep time:         0.047056 sec (incl time to compute L)
+compute C time:        0.039440 sec
+reduce (C) time:       0.000690 sec
+rate       7.75 million edges/sec (incl time for L=tril(A))
+rate       9.08 million edges/sec (just tricount itself)
+
+tricount (outer) memory usage: 0.0326087 GB
+

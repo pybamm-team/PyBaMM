@@ -1,0 +1,210 @@
+CAMD demo, with a jumbled version of the 24-by-24
+Harwell/Boeing matrix, can_24:
+
+camd version 2.4, May 4, 2016:  approximate minimum degree ordering:
+    dense row parameter: 10
+    (rows with more than max (10 * sqrt (n), 16) entries are
+    considered "dense", and placed last in output permutation)
+    aggressive absorption:  yes
+    size of CAMD integer: 4
+
+
+Jumbled input matrix:  24-by-24, with 116 entries.
+   Note that for a symmetric matrix such as this one, only the
+   strictly lower or upper triangular parts would need to be
+   passed to CAMD, since CAMD computes the ordering of A+A'.  The
+   diagonal entries are also not needed, since CAMD ignores them.
+   This version of the matrix has jumbled columns and duplicate
+   row indices.
+
+Column: 0, number of entries: 9, with row indices in Ai [0 ... 8]:
+    row indices: 0 17 18 21 5 12 5 0 13
+
+Column: 1, number of entries: 5, with row indices in Ai [9 ... 13]:
+    row indices: 14 1 8 13 17
+
+Column: 2, number of entries: 6, with row indices in Ai [14 ... 19]:
+    row indices: 2 20 11 6 11 22
+
+Column: 3, number of entries: 8, with row indices in Ai [20 ... 27]:
+    row indices: 3 3 10 7 18 18 15 19
+
+Column: 4, number of entries: 5, with row indices in Ai [28 ... 32]:
+    row indices: 7 9 15 14 16
+
+Column: 5, number of entries: 4, with row indices in Ai [33 ... 36]:
+    row indices: 5 13 6 17
+
+Column: 6, number of entries: 7, with row indices in Ai [37 ... 43]:
+    row indices: 5 0 11 6 12 6 23
+
+Column: 7, number of entries: 9, with row indices in Ai [44 ... 52]:
+    row indices: 3 4 9 7 14 16 15 17 18
+
+Column: 8, number of entries: 5, with row indices in Ai [53 ... 57]:
+    row indices: 1 9 14 14 14
+
+Column: 9, number of entries: 5, with row indices in Ai [58 ... 62]:
+    row indices: 7 13 8 1 17
+
+Column: 10, number of entries: 0, with row indices in Ai [63 ... 62]:
+    row indices:
+
+Column: 11, number of entries: 3, with row indices in Ai [63 ... 65]:
+    row indices: 2 12 23
+
+Column: 12, number of entries: 3, with row indices in Ai [66 ... 68]:
+    row indices: 5 11 12
+
+Column: 13, number of entries: 3, with row indices in Ai [69 ... 71]:
+    row indices: 0 13 17
+
+Column: 14, number of entries: 3, with row indices in Ai [72 ... 74]:
+    row indices: 1 9 14
+
+Column: 15, number of entries: 3, with row indices in Ai [75 ... 77]:
+    row indices: 3 15 16
+
+Column: 16, number of entries: 4, with row indices in Ai [78 ... 81]:
+    row indices: 16 4 4 15
+
+Column: 17, number of entries: 4, with row indices in Ai [82 ... 85]:
+    row indices: 13 17 19 17
+
+Column: 18, number of entries: 5, with row indices in Ai [86 ... 90]:
+    row indices: 15 17 19 9 10
+
+Column: 19, number of entries: 6, with row indices in Ai [91 ... 96]:
+    row indices: 17 19 20 0 6 10
+
+Column: 20, number of entries: 4, with row indices in Ai [97 ... 100]:
+    row indices: 22 10 20 21
+
+Column: 21, number of entries: 11, with row indices in Ai [101 ... 111]:
+    row indices: 6 2 10 19 20 11 21 22 22 22 22
+
+Column: 22, number of entries: 0, with row indices in Ai [112 ... 111]:
+    row indices:
+
+Column: 23, number of entries: 4, with row indices in Ai [112 ... 115]:
+    row indices: 12 11 12 23
+
+Plot of (jumbled) input matrix pattern:
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3
+ 0:  X . . . . . X . . . . . . X . . . . . X . . . .
+ 1:  . X . . . . . . X X . . . . X . . . . . . . . .
+ 2:  . . X . . . . . . . . X . . . . . . . . . X . .
+ 3:  . . . X . . . X . . . . . . . X . . . . . . . .
+ 4:  . . . . . . . X . . . . . . . . X . . . . . . .
+ 5:  X . . . . X X . . . . . X . . . . . . . . . . .
+ 6:  . . X . . X X . . . . . . . . . . . . X . X . .
+ 7:  . . . X X . . X . X . . . . . . . . . . . . . .
+ 8:  . X . . . . . . . X . . . . . . . . . . . . . .
+ 9:  . . . . X . . X X . . . . . X . . . X . . . . .
+10:  . . . X . . . . . . . . . . . . . . X X X X . .
+11:  . . X . . . X . . . . . X . . . . . . . . X . X
+12:  X . . . . . X . . . . X X . . . . . . . . . . X
+13:  X X . . . X . . . X . . . X . . . X . . . . . .
+14:  . X . . X . . X X . . . . . X . . . . . . . . .
+15:  . . . X X . . X . . . . . . . X X . X . . . . .
+16:  . . . . X . . X . . . . . . . X X . . . . . . .
+17:  X X . . . X . X . X . . . X . . . X X X . . . .
+18:  X . . X . . . X . . . . . . . . . . . . . . . .
+19:  . . . X . . . . . . . . . . . . . X X X . X . .
+20:  . . X . . . . . . . . . . . . . . . . X X X . .
+21:  X . . . . . . . . . . . . . . . . . . . X X . .
+22:  . . X . . . . . . . . . . . . . . . . . X X . .
+23:  . . . . . . X . . . . X . . . . . . . . . . . X
+
+Plot of symmetric matrix to be ordered by camd_order:
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3
+ 0:  X . . . . X X . . . . . X X . . . X X X . X . .
+ 1:  . X . . . . . . X X . . . X X . . X . . . . . .
+ 2:  . . X . . . X . . . . X . . . . . . . . X X X .
+ 3:  . . . X . . . X . . X . . . . X . . X X . . . .
+ 4:  . . . . X . . X . X . . . . X X X . . . . . . .
+ 5:  X . . . . X X . . . . . X X . . . X . . . . . .
+ 6:  X . X . . X X . . . . X X . . . . . . X . X . X
+ 7:  . . . X X . . X . X . . . . X X X X X . . . . .
+ 8:  . X . . . . . . X X . . . . X . . . . . . . . .
+ 9:  . X . . X . . X X X . . . X X . . X X . . . . .
+10:  . . . X . . . . . . X . . . . . . . X X X X . .
+11:  . . X . . . X . . . . X X . . . . . . . . X . X
+12:  X . . . . X X . . . . X X . . . . . . . . . . X
+13:  X X . . . X . . . X . . . X . . . X . . . . . .
+14:  . X . . X . . X X X . . . . X . . . . . . . . .
+15:  . . . X X . . X . . . . . . . X X . X . . . . .
+16:  . . . . X . . X . . . . . . . X X . . . . . . .
+17:  X X . . . X . X . X . . . X . . . X X X . . . .
+18:  X . . X . . . X . X X . . . . X . X X X . . . .
+19:  X . . X . . X . . . X . . . . . . X X X X X . .
+20:  . . X . . . . . . . X . . . . . . . . X X X X .
+21:  X . X . . . X . . . X X . . . . . . . X X X X .
+22:  . . X . . . . . . . . . . . . . . . . . X X X .
+23:  . . . . . . X . . . . X X . . . . . . . . . . X
+return value from camd_order: 1 (should be 1)
+
+CAMD version 2.4.6, May 4, 2016, results:
+    status: OK, but jumbled
+    n, dimension of A:                                  24
+    nz, number of nonzeros in A:                        102
+    symmetry of A:                                      0.4000
+    number of nonzeros on diagonal:                     17
+    nonzeros in pattern of A+A' (excl. diagonal):       136
+    # dense rows/columns of A+A':                       0
+    memory used, in bytes:                              2208
+    # of memory compactions:                            0
+
+    The following approximate statistics are for a subsequent
+    factorization of A(P,P) + A(P,P)'.  They are slight upper
+    bounds if there are no dense rows/columns in A+A', and become
+    looser if dense rows/columns exist.
+
+    nonzeros in L (excluding diagonal):                 140
+    nonzeros in L (including diagonal):                 164
+    # divide operations for LDL' or LU:                 140
+    # multiply-subtract operations for LDL':            593
+    # multiply-subtract operations for LU:              1046
+    max nz. in any column of L (incl. diagonal):        13
+
+    chol flop count for real A, sqrt counted as 1 flop: 1350
+    LDL' flop count for real A:                         1326
+    LDL' flop count for complex A:                      6004
+    LU flop count for real A (with no pivoting):        2232
+    LU flop count for complex A (with no pivoting):     9628
+
+Permutation vector:
+ 23  3  1  5  4  8  9  7 17 22 21  6 10 14  0  2 11 15 20 13 16 12 18 19
+Permuted constraints:
+  0  0  0  1  1  2  2  2  2  2  2  2  3  3  3  4  4  4  4  5  5  5  8 10
+
+Inverse permutation vector:
+ 14  2 15  1  4  3 11  7  5  6 12 16 21 19 13 17 20  8 22 23 18 10  9  0
+
+
+Plot of (symmetrized) permuted matrix pattern:
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3
+ 0:  X . . . . . . . . . . X . . . . X . . . . X . .
+ 1:  . X . . . . . X . . . . X . . . . X . . . . X X
+ 2:  . . X . . X X . X . . . . X . . . . . X . . . .
+ 3:  . . . X . . . . X . . X . . X . . . . X . X . .
+ 4:  . . . . X . X X . . . . . X . . . X . . X . . .
+ 5:  . . X . . X X . . . . . . X . . . . . . . . . .
+ 6:  . . X . X X X X X . . . . X . . . . . X . . X .
+ 7:  . X . . X . X X X . . . . X . . . X . . X . X .
+ 8:  . . X X . . X X X . . . . . X . . . . X . . X X
+ 9:  . . . . . . . . . X X . . . . X . . X . . . . .
+10:  . . . . . . . . . X X X X . X X X . X . . . . X
+11:  X . . X . . . . . . X X . . X X X . . . . X . X
+12:  . X . . . . . . . . X . X . . . . . X . . . X X
+13:  . . X . X X X X . . . . . X . . . . . . . . . .
+14:  . . . X . . . . X . X X . . X . . . . X . X X X
+15:  . . . . . . . . . X X X . . . X X . X . . . . .
+16:  X . . . . . . . . . X X . . . X X . . . . X . .
+17:  . X . . X . . X . . . . . . . . . X . . X . X .
+18:  . . . . . . . . . X X . X . . X . . X . . . . X
+19:  . . X X . . X . X . . . . . X . . . . X . . . .
+20:  . . . . X . . X . . . . . . . . . X . . X . . .
+21:  X . . X . . . . . . . X . . X . X . . . . X . .
+22:  . X . . . . X X X . . . X . X . . X . . . . X X
+23:  . X . . . . . . X . X X X . X . . . X . . . X X

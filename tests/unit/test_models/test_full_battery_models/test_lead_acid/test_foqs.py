@@ -13,13 +13,6 @@ class TestLeadAcidFOQS(unittest.TestCase):
         pybamm.settings.debug_mode = True
         model.check_well_posedness()
 
-        # Test build after init
-        pybamm.settings.debug_mode = False
-        model = pybamm.lead_acid.FOQS(build=False)
-        model.build_model()
-        pybamm.settings.debug_mode = True
-        model.check_well_posedness()
-
 
 class TestLeadAcidFOQSWithSideReactions(unittest.TestCase):
     def test_well_posed_differential(self):

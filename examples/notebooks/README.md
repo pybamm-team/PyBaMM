@@ -23,7 +23,7 @@ It is also easy to add new models or change the setting that are used:
 - [Add a model (example)](./create-model.ipynb)
 - [Using submodels](./using-submodels.ipynb)
 - [Change the settings](./change-settings.ipynb) (parameters, spatial method or solver)
-- [Change the applied current](./change-input-current.ipynb) 
+- [Change the applied current](./change-input-current.ipynb)
 
 For more advanced usage, new sets of parameters, spatial methods and solvers can be added:
 - [Add parameters](https://pybamm.readthedocs.io/en/latest/tutorials/add-parameter-values.html)
@@ -54,7 +54,7 @@ The following models are implemented and can easily be used or [compared](./mode
 
 ### Spatial Methods
 
-The following spatial method is implemented
+The following spatial methods are implemented
 - [Finite Volumes](./spatial_methods/finite-volumes.ipynb)
 - Finite Elements (only for 2D current collector domains)
 

@@ -1,0 +1,179 @@
+AMD version 2.4.6, date: May 4, 2016
+AMD demo, with the 24-by-24 Harwell/Boeing matrix, can_24:
+
+AMD version 2.4.6, May 4, 2016: approximate minimum degree ordering
+    dense row parameter: 10
+    (rows with more than max (10 * sqrt (n), 16) entries are
+    considered "dense", and placed last in output permutation)
+    aggressive absorption:  yes
+    size of AMD integer: 8
+
+
+Input matrix:  24-by-24, with 160 entries.
+   Note that for a symmetric matrix such as this one, only the
+   strictly lower or upper triangular parts would need to be
+   passed to AMD, since AMD computes the ordering of A+A'.  The
+   diagonal entries are also not needed, since AMD ignores them.
+
+Column: 0, number of entries: 9, with row indices in Ai [0 ... 8]:
+    row indices: 0 5 6 12 13 17 18 19 21
+
+Column: 1, number of entries: 6, with row indices in Ai [9 ... 14]:
+    row indices: 1 8 9 13 14 17
+
+Column: 2, number of entries: 6, with row indices in Ai [15 ... 20]:
+    row indices: 2 6 11 20 21 22
+
+Column: 3, number of entries: 6, with row indices in Ai [21 ... 26]:
+    row indices: 3 7 10 15 18 19
+
+Column: 4, number of entries: 6, with row indices in Ai [27 ... 32]:
+    row indices: 4 7 9 14 15 16
+
+Column: 5, number of entries: 6, with row indices in Ai [33 ... 38]:
+    row indices: 0 5 6 12 13 17
+
+Column: 6, number of entries: 9, with row indices in Ai [39 ... 47]:
+    row indices: 0 2 5 6 11 12 19 21 23
+
+Column: 7, number of entries: 9, with row indices in Ai [48 ... 56]:
+    row indices: 3 4 7 9 14 15 16 17 18
+
+Column: 8, number of entries: 4, with row indices in Ai [57 ... 60]:
+    row indices: 1 8 9 14
+
+Column: 9, number of entries: 9, with row indices in Ai [61 ... 69]:
+    row indices: 1 4 7 8 9 13 14 17 18
+
+Column: 10, number of entries: 6, with row indices in Ai [70 ... 75]:
+    row indices: 3 10 18 19 20 21
+
+Column: 11, number of entries: 6, with row indices in Ai [76 ... 81]:
+    row indices: 2 6 11 12 21 23
+
+Column: 12, number of entries: 6, with row indices in Ai [82 ... 87]:
+    row indices: 0 5 6 11 12 23
+
+Column: 13, number of entries: 6, with row indices in Ai [88 ... 93]:
+    row indices: 0 1 5 9 13 17
+
+Column: 14, number of entries: 6, with row indices in Ai [94 ... 99]:
+    row indices: 1 4 7 8 9 14
+
+Column: 15, number of entries: 6, with row indices in Ai [100 ... 105]:
+    row indices: 3 4 7 15 16 18
+
+Column: 16, number of entries: 4, with row indices in Ai [106 ... 109]:
+    row indices: 4 7 15 16
+
+Column: 17, number of entries: 9, with row indices in Ai [110 ... 118]:
+    row indices: 0 1 5 7 9 13 17 18 19
+
+Column: 18, number of entries: 9, with row indices in Ai [119 ... 127]:
+    row indices: 0 3 7 9 10 15 17 18 19
+
+Column: 19, number of entries: 9, with row indices in Ai [128 ... 136]:
+    row indices: 0 3 6 10 17 18 19 20 21
+
+Column: 20, number of entries: 6, with row indices in Ai [137 ... 142]:
+    row indices: 2 10 19 20 21 22
+
+Column: 21, number of entries: 9, with row indices in Ai [143 ... 151]:
+    row indices: 0 2 6 10 11 19 20 21 22
+
+Column: 22, number of entries: 4, with row indices in Ai [152 ... 155]:
+    row indices: 2 20 21 22
+
+Column: 23, number of entries: 4, with row indices in Ai [156 ... 159]:
+    row indices: 6 11 12 23
+
+Plot of input matrix pattern:
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3
+ 0:  X . . . . X X . . . . . X X . . . X X X . X . .
+ 1:  . X . . . . . . X X . . . X X . . X . . . . . .
+ 2:  . . X . . . X . . . . X . . . . . . . . X X X .
+ 3:  . . . X . . . X . . X . . . . X . . X X . . . .
+ 4:  . . . . X . . X . X . . . . X X X . . . . . . .
+ 5:  X . . . . X X . . . . . X X . . . X . . . . . .
+ 6:  X . X . . X X . . . . X X . . . . . . X . X . X
+ 7:  . . . X X . . X . X . . . . X X X X X . . . . .
+ 8:  . X . . . . . . X X . . . . X . . . . . . . . .
+ 9:  . X . . X . . X X X . . . X X . . X X . . . . .
+10:  . . . X . . . . . . X . . . . . . . X X X X . .
+11:  . . X . . . X . . . . X X . . . . . . . . X . X
+12:  X . . . . X X . . . . X X . . . . . . . . . . X
+13:  X X . . . X . . . X . . . X . . . X . . . . . .
+14:  . X . . X . . X X X . . . . X . . . . . . . . .
+15:  . . . X X . . X . . . . . . . X X . X . . . . .
+16:  . . . . X . . X . . . . . . . X X . . . . . . .
+17:  X X . . . X . X . X . . . X . . . X X X . . . .
+18:  X . . X . . . X . X X . . . . X . X X X . . . .
+19:  X . . X . . X . . . X . . . . . . X X X X X . .
+20:  . . X . . . . . . . X . . . . . . . . X X X X .
+21:  X . X . . . X . . . X X . . . . . . . X X X X .
+22:  . . X . . . . . . . . . . . . . . . . . X X X .
+23:  . . . . . . X . . . . X X . . . . . . . . . . X
+return value from amd_l_order: 0 (should be 0)
+
+AMD version 2.4.6, May 4, 2016, results:
+    status: OK
+    n, dimension of A:                                  24
+    nz, number of nonzeros in A:                        160
+    symmetry of A:                                      1.0000
+    number of nonzeros on diagonal:                     24
+    nonzeros in pattern of A+A' (excl. diagonal):       136
+    # dense rows/columns of A+A':                       0
+    memory used, in bytes:                              3032
+    # of memory compactions:                            0
+
+    The following approximate statistics are for a subsequent
+    factorization of A(P,P) + A(P,P)'.  They are slight upper
+    bounds if there are no dense rows/columns in A+A', and become
+    looser if dense rows/columns exist.
+
+    nonzeros in L (excluding diagonal):                 97
+    nonzeros in L (including diagonal):                 121
+    # divide operations for LDL' or LU:                 97
+    # multiply-subtract operations for LDL':            275
+    # multiply-subtract operations for LU:              453
+    max nz. in any column of L (incl. diagonal):        8
+
+    chol flop count for real A, sqrt counted as 1 flop: 671
+    LDL' flop count for real A:                         647
+    LDL' flop count for complex A:                      3073
+    LU flop count for real A (with no pivoting):        1003
+    LU flop count for complex A (with no pivoting):     4497
+
+Permutation vector:
+ 22 20 10 23 12  5 16  8 14  4 15  7  1  9 13 17  0  2  3  6 11 18 21 19
+
+Inverse permutation vector:
+ 16 12 17 18  9  5 19 11  7 13  2 20  4 14  8 10  6 15 21 23  1 22  0  3
+
+
+Plot of permuted matrix pattern:
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3
+ 0:  X X . . . . . . . . . . . . . . . X . . . . X .
+ 1:  X X X . . . . . . . . . . . . . . X . . . . X X
+ 2:  . X X . . . . . . . . . . . . . . . X . . X X X
+ 3:  . . . X X . . . . . . . . . . . . . . X X . . .
+ 4:  . . . X X X . . . . . . . . . . X . . X X . . .
+ 5:  . . . . X X . . . . . . . . X X X . . X . . . .
+ 6:  . . . . . . X . . X X X . . . . . . . . . . . .
+ 7:  . . . . . . . X X . . . X X . . . . . . . . . .
+ 8:  . . . . . . . X X X . X X X . . . . . . . . . .
+ 9:  . . . . . . X . X X X X . X . . . . . . . . . .
+10:  . . . . . . X . . X X X . . . . . . X . . X . .
+11:  . . . . . . X . X X X X . X . X . . X . . X . .
+12:  . . . . . . . X X . . . X X X X . . . . . . . .
+13:  . . . . . . . X X X . X X X X X . . . . . X . .
+14:  . . . . . X . . . . . . X X X X X . . . . . . .
+15:  . . . . . X . . . . . X X X X X X . . . . X . X
+16:  . . . . X X . . . . . . . . X X X . . X . X X X
+17:  X X . . . . . . . . . . . . . . . X . X X . X .
+18:  . . X . . . . . . . X X . . . . . . X . . X . X
+19:  . . . X X X . . . . . . . . . . X X . X X . X X
+20:  . . . X X . . . . . . . . . . . . X . X X . X .
+21:  . . X . . . . . . . X X . X . X X . X . . X . X
+22:  X X X . . . . . . . . . . . . . X X . X X . X X
+23:  . X X . . . . . . . . . . . . X X . X X . X X X

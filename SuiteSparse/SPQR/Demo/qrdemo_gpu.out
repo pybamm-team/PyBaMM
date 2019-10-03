@@ -1,0 +1,18 @@
+./qrdemo_gpu  ../Matrix/west0067.mtx 2
+available GPU memory: 11160.8 MB, warmup time: 0.376328
+Matrix     67-by-67     nnz:    294
+
+norm(Ax-b):  4.6e-17
+norm(A'(Ax-b))          1.6e-14 rank: 67 of 67
+./qrdemo_gpu  ../Matrix/lp_e226_transposed.mtx 2
+available GPU memory: 11160.8 MB, warmup time: 0.372199
+Matrix    472-by-223    nnz:   2768
+
+norm(Ax-b):  9.2e+00
+norm(A'(Ax-b))          2.1e-10 rank: 223 of 223
+./qrdemo_gpu  ../Matrix/lp_e226_transposed.mtx 6
+available GPU memory: 11160.8 MB, warmup time: 0.36664
+Matrix    472-by-223    nnz:   2768
+
+norm(Ax-b):  9.2e+00
+norm(A'(Ax-b))          4.4e-10 rank: 223 of 223

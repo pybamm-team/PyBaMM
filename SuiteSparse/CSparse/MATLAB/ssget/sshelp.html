@@ -1,0 +1,534 @@
+<STYLE TYPE="text/css">
+<!--
+BODY
+   {
+      font-family:sans-serif;
+      font-size:16;
+    }
+-->
+</STYLE>
+
+<html>
+<body>
+<font family="sans-serif">
+<h1>The SuiteSparse Matrix Collection</h1>
+
+Tim Davis,
+<a href=http://www.suitesparse.com>http://www.suitesparse.com</a>,
+Texas A&amp;M University.
+
+<h2>1. Overview</h2>
+<ul>
+
+ssgui is a Java GUI interface to the SuiteSparse Matrix Collection at
+<a href=https://sparse.tamu.edu>https://sparse.tamu.edu</a>
+(formerly called the University of Florida Sparse Matrix Collection).  It
+provides an easy way to select matrices from the collection based on their
+matrix properties.  To access the collection from within MATLAB,
+see ssget.  This GUI can also download the *.mat files for later use in ssget.
+</ul>
+
+<h2>2. Quick Start</h2>
+<ul>
+
+First, download the ssget archive (tar.gz or zip file), and uncompress it.
+Open the ssget folder.
+
+<p>
+If your web browswer requires an HTTP proxy, or if you wish to change
+the download location, first see the <b>Customization</b> section below,
+to configure ssgui before you run it.
+
+<p>
+To run ssgui, double-click its icon or type the following command in your
+command window / terminal:
+</ul>
+
+<pre>
+        java -jar ssgui.jar
+</pre>
+
+<ul>
+If the above command fails, then you need to install Java.
+See <a href=http://www.java.com/en/download/manual.jsp>
+http://www.java.com/en/download/manual.jsp</a> for details.
+
+<p>
+You can skip reading this document by simply navigating the GUI itself.  Most
+of the buttons, check boxes, lists, and table columns have a short "tool tip"
+which is visible if you hover your mouse over the item.
+
+<p> When the ssgui starts, it checks for any missing matrix icons and
+downloads a new table if needed.  This might take a few minutes, so
+just sit back and enjoy the slideshow.  It will only happen occassionaly.
+</ul>
+
+<h2>3. A Sparse Matrix Problem</h2>
+<ul>
+
+The SuiteSparse Matrix Collection is a simplified name.  It is actually a
+collection
+of sparse matrix <i>problems</i>, not just sparse matrices.  Each problem
+includes one primary sparse matrix and meta-data about that matrix.  Some
+problems include additional matrices and vectors (sparse or dense) such as
+right-hand-sides to a linear system <i>Ax=b</i>, or cost constraints for a
+linear programming problem.  As a short-hand, a "problem" in the collection is
+often called simply a "matrix", refering to the primary sparse matrix in the
+problem (<i>A</i>, below).
+
+<p>
+The following data is always present in any sparse matrix problem
+(not all fields are shown in the table in the ssgui program, however):
+
+    <ul>
+    <li> <b>name</b>: the full name of the problem, in the form
+        <i>Group/Name</i>, where <i>Group</i> indicates the source of the
+        problem (a person, organization, or other collection), and <i>Name</i>
+        is the name of the problem within that <i>Group</i>.
+
+    <li> <b>title</b>: a short descriptive title.
+
+    <li> <b>A</b>: the primary sparse matrix itself.
+        It is the properties of this matrix that determine
+        the selection criteria.
+
+    <li> <b>id</b>: a unique serial number ranging from 1 to the number of
+        matrices in the collection.  As new matrices are added to the
+        collection they are given higher id's, so new matrices are always
+        at the end of the table when sorted by id.
+
+    <li> <b>date</b>: the date the matrix was created, or the date it was
+        added to the SuiteSparse Matrix Collection if the creation date is not
+        known.
+
+    <li> <b>author</b>: the person or persons who created the matrix.
+
+    <li> <b>ed</b>: the person or persons to acquired the matrix from the
+        author and placed it in a widely accessible collection (this
+        one or others such as the Rutherford/Boeing collection or
+        the Matrix Market collection).
+
+    <li> <b>kind</b>: the domain of the problem, such as "circuit simulation",
+        "chemical process simulation", "finite-element problem", and so on.
+
+    </ul>
+
+The following data is present in some problems but not all:
+
+    <ul>
+    <li> <b>Zeros</b>: a binary matrix holding the pattern of 
+        entries explicitly provided by the matrix author which are equal to
+        zero.  These may represent entries that may become nonzero later on in
+        a simulation, but they are equal to zero in this instance of the
+        matrix.  Since they were provided by the matrix author(s), they are
+        preserved in this collection.  In the MATLAB format, this matrix is
+        held as a different sparse matrix, since MATLAB removes explicit zeros
+        from its sparse matrices.  In the Matrix Market and Rutherford/Boeing
+        collection, these entries are included in the primary sparse matrix
+        itself, as explicitly zero entries.
+
+    <li> <b>b</b>: the right-hand-side to a linear system or least-squares
+        problem.  This can be a vector or matrix, real or complex, and
+        sparse or dense.
+
+    <li> <b>x</b>: the solution to a linear system or least-squares problem.
+
+    <li> <b>notes</b>: text, with a discussion about the problem, in no
+        particular format.
+
+    <li> <b>aux</b>: Any number of matrices, vectors, or text.  For example, an
+        optimization problem may include a cost vector <i>c</i>, and vectors
+        that specify upper/lower bounds on the solution.  Details of how to
+        interpret this auxiliary data are normally given in the <i>notes</i>
+        field.  In the MATLAB format this is a struct containing each of the
+        items.  In the Matrix Market and Rutherford/Boeing formats, this data
+        resides alongsize the primary matrix in a single compressed folder.
+
+    </ul>
+
+</ul>
+
+<h2>4. Matrix Formats</h2>
+<ul>
+
+Each matrix in the collection appears in three different formats.  The data
+within each format is identical, down to the very last bit (if you find a
+discrepency between the same problem in different formats, please let me know).
+
+<ul>
+<li> <b>MATLAB&#8482; *.mat file</b>.  This can be loaded into MATLAB directly,
+    or it can be accessed via the ssget.m MATLAB interface to the collection.
+    Type <i>help ssget</i> in MATLAB for more details.  The name of the MATLAB
+    file is of the form mat/Group/Name.mat (such as mat/HB/west0067.mat for the
+    west0067 matrix from the HB, or Harwell/Boeing, group).
+
+<li> <b>Matrix Market *.mtx file</b> and associated files.  Short meta-data
+    (name, title, id, date, author, ed, kind, and notes) is given as structured
+    comments in the primary *.mtx file.  This file and any associated files (b,
+    x, and any aux matrices) are in a single folder which is then archived into
+    a *.tar.gz file.  Windows users will need a 3rd-party program for handling
+    *.tar.gz files.  For example, the Matrix Market format for the HB/west0067
+    matrix is held in the MM/HB/west0067.tar.gz file. See
+    <a href=http://math.nist.gov/MatrixMarket/index.html>
+http://math.nist.gov/MatrixMarket/index.html</a>
+    for more information about the
+    Matrix Market format.
+
+<li> <b>Rutherford/Boeing *.rb file</b> and associated files.  Short meta-data
+    (name, title, id, date, author, ed, kind, and notes) is given as structured
+    comments in a separate text file.  The matrix file, the informational text
+    file, and any associated files (b, x, and any aux matrices) are in a single
+    folder which is then archived into a *.tar.gz file.  For example, the
+    Rutherford/Boeing format for the HB/west0067 file is held in the
+    RB/HB/west0067.tar.gz file.  See
+<a href=http://www.cse.scitech.ac.uk/nag/hb/>
+http://www.cse.scitech.ac.uk/nag/hb/</a>
+    for more information about the Rutherford/Boeing format.
+
+</ul>
+</ul>
+
+<h2>5. Selecting Matrices</h2>
+<ul>
+
+In the ssgui you are presented with four primary panels.
+
+<p> <b>Selection Criteria panel</b>:
+
+This is used for rule-based selections of matrix subsets.  A matrix must
+satisfy all properties in this panel to be selected.  With the default settings
+(available when the ssgui starts or after clicking <i>Reset criteria</i>) all
+matrices fit the criteria.  However, no matrix is selected until you press the
+<i>Select</i> button or select them individually in the table by clicking the
+checkbox in the <i>select</i> column.
+
+<p> The selection criteria are based on the matrices properties described in
+the matrix table (described below).  To select matrices from one or more groups
+and/or "kinds," click on the choices in the "group" and/or "kind" lists.
+Shift-click the list to select a range of groups or kinds, and control-click
+the list to add a single item to your highlighted choices.  To clear your
+choices, click the <i>Reset criteria</i> button, described below.
+
+<p> When you select/deselect matrices, the boxes to the left of each matrix in
+the Table of Matrices get checked/unchecked.  You still see all the matrices
+in the list, because you can then modify your selection by checking/unchecking
+matrices one at a time in the Table itself.
+
+<p>
+At the bottom of the Selection Criteria panel is a row of buttons:
+
+    <ul>
+    <li> <b>Select</b>: Click this to add matrices to your selection
+        that fit the criteria.  No matrix is removed from any prior selection.
+        For example, to select all square matrices with fewer than 1000 rows,
+        plus all complex matrices, do the following.  First enter 1000 in the
+        top-right text field, click the <i>square</i> radio button, and then
+        click <i>Select</i>.  Then click <i>Reset criteria</i>.  Next, click
+        <i>complex</i> and then <i>Select</i>.
+
+    <li> <b>Deselect</b>: Click this to remove matrices from your selection
+        that fit the criteria.  In general, if you want matrices that meet some
+        criteria (a) but not (b), then set the controls for (a) and click
+        <i>Select</i>.  Next, click <i>Reset criteria</i>, set the criteria
+        (b), and click <i>Deselect</i>.  For example, to select all square
+        matrices with fewer than 1000 rows that are not complex, you could just
+        do this with a single click of <i>Select</i> (click <i>square</i>,
+        <i>real</i>, and enter 1000 in the top-right text field, then click
+        <i>Select</i>).  Alternatively, you could click <i>square</i> and enter
+        1000 as the upper bound on the number of rows and click <i>Select</i>
+        then <i>Reset criteria</i>, select <i>complex</i>, and click
+        <i>Deselect</i>.
+
+    <li> <b>Reset criteria</b>:  This has no effect on your selection.  It
+        simply resets the criteria to the default (all matrices).  Thus, to
+        select all matrices, click <i>Reset criteria</i> and then
+        <i>Select</i>.  To deselect all matrices, click <i>Reset criteria</i>
+        and then <i>Deselect</i>.
+
+    <li> <b>Clear selections</b>:  This has no effect on your selection
+        criteria.  It simply clears all selections, deselecting all matrices by
+        unchecking the <i>select</i> column in the table.  This is useful if
+        you have a complex selection criteria and don't want to lose it by
+        clicking <i>Reset criteria</i>, but you wish to clear all your
+        selections anyway.
+
+    <li> <b>Help</b>: this button brings up the text you're reading.
+
+    </ul>
+
+<p> <b>Matrix icon panel</b>:
+
+To the right of the Selection Criteria panel is an icon of the most recent
+matrix highlighted, downloaded, or in the process of being downloaded.
+
+<p> <b>Table of matrices</b>:
+
+This is a list of all the matrices in the collection.  You can click on any
+column header to sort the table by that column.  Clicking a row (to the right
+of the select column) will highlight that row.  You can highlight a range of
+rows by shift-clicking another row.  Control-click will add individual rows.
+Next, right-clicking in the table will pull up a pop-up menu allowing you to
+select or deselect the highlighted matrices and to export your selection to a
+file.  You can export a list of your selected matrices to a comma-separarted
+file (*.csv) or to a MATLAB (*.m) file.  When you highlight a matrix, its icon
+is displayed.
+
+<p> The table contains the following columns (you can also hover your mouse
+over each column header for a short description):
+
+        <ul>
+        <li><b>select</b>: whether or not you have selected the matrix. 
+            You can click on the check boxes in this column to modify your
+            selection on a matrix-by-matrix basis.  This is the only column in
+            the table that you can edit.
+
+        <li><b>mat</b>: this box is checked if you have downloaded the matrix
+            in its MATLAB format.  The location of the HB/west0067.mat file
+            will be ssget/mat/HB/west0067.mat, for example.
+
+        <li><b>MM</b>: this is checked if you have already downloaded
+            the matrix in its Matrix Market format.
+
+        <li><b>RB</b>: this is checked if you have already downloaded
+            the matrix in its Rutherford/Boeing format.
+
+        <li><b>id</b>: the matrix id, in the range 1 to the number of
+            matrices in the collection.  When the ssgui starts,
+            the table is sorted in this order.
+
+        <li><b>Group</b>: the group the matrix belongs to.
+
+        <li><b>Name</b>: the (short) name of the matrix.  The full name of
+            a matrix is Group/Name.
+
+        <li><b># rows</b>: the number of rows of the matrix.
+
+        <li><b># cols</b>: the number of columns of the matrix.
+
+        <li><b># nonzeros</b>: the number of nonzeros in the matrix.
+
+        <li><b>real</b>: this box is checked if the matrix is real.
+            It is complex otherwise.
+            Note that <i>real</i> matrices include any matrix that is not
+            complex.  In particular, integer and binary matrices are
+            considered <i>real</i> in this search criterion.
+
+        <li><b>binary</b>: this box is checked if the matrix is binary.
+            It is non-binary otherwise (there are no binary complex matrices,
+            so any matrix that is binary is also marked as real).
+
+        <li><b>2D/3D</b>: this box is checked if the matrix comes
+            from a discretization of a 2D or 3D geometry.
+
+        <li> <b>posdef</b>: this box is checked if the matrix is
+            symmetric and positive definite.
+
+        <li><b>psym</b>: the symmetry of the nonzero pattern of the
+            matrix A (including the binary <i>Zeros</i> matrix as well).  Let
+            <i>S = pattern(pattern(A)+Zeros)</i> where <i>pattern(A)</i> is a
+            binary matrix with entries equal to 1 where <i>A(i,j)</i> is
+            nonzero, and zero elsewhere.  The <i>psym</i> metric is zero if the
+            pattern of <i>S</i> is completely unsymmetric, and 1.0 if the
+            pattern is exactly symmetric.  Let <i>pmatched</i> be the number of
+            off-diagonal entries <i>S(i,j)</i> for which <i>S(i,j)=S(j,i)</i>
+            and let <i>pnzoffdiag</i> be the total number off-diagonal entries
+            in <i>S</i>.  Then <i>psym</i> is the ratio
+            <i>pmatched/pnzoffdiag</i>.
+
+        <li><b>nsym</b>:  the symmetry of the numerical values of the
+            matrix.  This property ignores the <i>Zeros</i> matrix.  It is
+            equal to 0 for a perfectly unsymmetric matrix, and 1.0 for a
+            symmetric matrix.  Let <i>matched</i> be the number of nonzero
+            off-diagonal entries <i>A(i,j)</i> for which <i>A(i,j)=A(j,i)</i>
+            and let <i>nzoffdiag</i> be the total number off-diagonal nonzero
+            entries in <i>A</i>.  Then <i>psym</i> is the ratio
+            <i>matched/nzoffdiag</i>.
+
+        <li><b>kind</b>: the problem domain.  Note that this is typically
+            related to the problem group, since many matrix authors submit
+            matrices to the collection that arise from a single problem domain.
+            Some group have problems from many domains, however.
+
+        </ul>
+
+<p> <b>Download panel</b>:
+
+This panel controls the downloading of matrices, with
+three check boxes, three buttons, and informational items:
+
+    <ul>
+
+    <li> <b>Download</b>: click this to begin the download of the
+        selected matrices.  Matrices that are already downloaded are skipped
+        (thus, if one of your matrix files happens to get corrupted, simply
+        remove the file and restart the ssgui).  Matrices are downloaded into
+        the <i>mat</i>, <i>MM</i>, and <i>RB</i> folders inside the ssget
+        folder, in the same order as they appear in the table view.  For
+        example, if you click on the <i># nonzeros</i> column heading prior to
+        clicking <i>Download</i>, your selected matrices will be downloaded in
+        order of increasing number of nonzero entries.  If you hover your mouse
+        over the download button, a tool tip will tell you what it will do.
+
+    <li><b>MATLAB (mat)</b> format: click this to download the selected
+        matrices in MATLAB *.mat format.
+
+    <li><b>Matrix Market (MM)</b> format: click this to download the selected
+        matrices in Matrix Market format.
+
+    <li> <b>Rutherford/Boeing (RB)</b> format: click this to download the
+        selected matrices in Rutherford/Boeing format.
+
+    <li> <b>Matrices selected:</b> gives a running total of the number of
+        matrices selected in the table.
+
+    <li> <b>Cancel</b>: click to cancel the current download, deleting the
+        matrix currently being downloaded.  Matrices already fully downloaded
+        are never deleted by the ssgui program.
+
+    <li> <b>Overall progress</b>:  this progress bar advances after each
+        matrix is downloaded.
+
+    <li> <b>Current file</b>:  this progress bar advances as the current
+        matrix is downloaded.  The icon and name of the matrix currently
+        being downloaded is shown in the icon panel.
+
+    </ul>
+
+<p> The contents of the <i>mat</i>, <i>files</i>,
+    <i>MM</i>, and <i>RB</i>
+    folders ("directories" for Unix users), and the ssstats.txt file itself,
+    maybe be deleted at will when the program is not running.  They will be
+    recreated when the program restarts.  If you delete the <i>files</i>
+    directory, for example, matrix icons are redownloaded, which makes for a
+    fun slide show.  Sit back and watch.
+
+</ul>
+<h2>6. Customization</h2>
+<ul>
+
+The <i>ssgui.java</i> file includes five parameters
+that you can modify.  You can change these parameters simply by
+editting ssgui.java and recompiling the file into the compiled
+ssgui.jar file.  Each parameter is a string.
+
+<ul>
+<li> <i>ssarchive:</i> The default folder containing the <i>mat</i>,
+    <i>MM</i>, <i>RB</i> and <i>files</i>
+    directories.  It is displayed
+    on the GUI just above the table of matrices.  The line is blank
+    by default.  If left blank, these folders are to be found in the
+    current working directory.  You can modify this parameter to refer to
+    another folder.  For example, if I were to create my own folder called
+    <i>MyMatrices</i> in my home directory, I would use
+    <i>ssarchive = '/home/davis/MyMatrices/'</i> in Unix/Linux,
+    <i>ssarchive = '/Users/davis/MyMatrices/'</i> in Mac OS X, or
+    <i>ssarchive = 'C:\Documents and
+    Settings\davis\My Documents\MyMatrices\</i> in Windows.
+    Both the slash (\) and backslash (/)
+    characters are interpretted as your system's file-separator ('\' for
+    Windows, '/' for everything else).
+
+<li> <i>sssite:</i> The root URL of the SuiteSparse Matrix Collection,
+    <a href=https://sparse.tamu.edu>https://sparse.tamu.edu</a>.
+    This only needs to change in the
+    event that the entire collection moves to a new URL,
+    or if you wish to use a mirror of the collection.
+
+<li> <i>refresh:</i> The number of days after which a new list of matrices (in
+    <i>files/ssstats.csv</i> and <i>files/ss_index.mat</i>) should be
+    downloaded.  By default this is set to 30.  A value of <i>inf</i> means
+    that these files are never downloaded automatically.  If
+    the <i>files/ssstats.csv</i> is missing or corrupted when ssgui starts,
+    it will download fresh copies of both files.  Thus, to force a refresh,
+    simply delete the <i>files/ssstats.csv</i> file and then start ssgui.
+    You may also download the files with the MATLAB command
+    <i>ssget('refresh')</i> prior to running ssgui.
+
+<li> <i>proxy_server:</i>
+    the name of your HTTP proxy server, if you connect to
+    the internet via a proxy.  If left blank, no proxy is used.
+
+<li><i>proxy_port:</i> the port number for your HTTP proxy.  If blank,
+    the default of 80 is used.
+
+</ul>
+</ul>
+
+<h2>7. Limitations and known issues</h2>
+
+<ul>
+<ul>
+
+<li> When a download is complete, the table order jitters slightly.  This is
+    because the <i>mat</i>, <i>MM</i>, and <i>RB</i> columns are updated. The
+    table sort order is temporarily modified, even if you have not currently
+    selected one of those columns to sort.  It then returns to the proper order
+    immediately.  This appears to be a limitation of the Java Swing library in
+    JDK 6.
+
+<li> When cancelling a download with the Cancel button, or terminating the
+    program normally (by clicking the [x] icon to close the ssgui window), any
+    partial file currently being downloaded is safely deleted.  These files
+    have the term _IN_PROGRESS appended to their name.  If the ssgui program
+    terminates abnormally and suddenly in the middle of a download, however, it
+    will leave behind files of this form.  You can safely delete any
+    *_IN_PROGRESS file when the ssgui program is not running.
+
+<li> Working through an HTTP proxy can be sluggish, and I have even seen
+    downloads stall completely.  If you are using a proxy and the download
+    stalls, try clicking <i>Cancel</i> and then <i>Download</i>.  If that
+    fails, terminate ssgui.  If you terminate it abnormally (not by clicking
+    the [x] in the window, but with "kill -9" in Linux, or by forcing it to
+    quit via your OS), you may need to delete the *_IN_PROGRESS file.  Please
+    let me know if this happens.
+
+</ul>
+</ul>
+
+<h2>8. Copyright and License</h2>
+
+<ul>
+Copyright (c) 2009-2017, Timothy A. Davis.  All rights reserved.
+See ssget/Doc/License.txt for the license.
+</ul>
+
+<h2>9. Version and Change-Log</h2>
+<ul>
+
+<ul>
+<li> See ssget/Doc/Changelog for the changes in each version.
+
+<li> Version 2.0.0, Sept 3, 2017.  Transition from UFgui to ssgui.
+    Collection renamed to the SuiteSparse Matrix Collection.
+
+<li> When a new version of this software is available, simply move the
+    <i>mat</i>, <i>MM</i>, and <i>RB</i> folders from the old
+    <i>ssget</i> folder into the new one, to preserve the matrices you have
+    already downloaded.
+
+</ul>
+</ul>
+
+<h2>10. For Further Help</h2>
+<ul>
+
+Contact the author of this ssgui program, and the maintainer of the
+SuiteSparse Matrix Collection: Tim Davis
+(<a href=http://www.suitesparse.com>
+http://www.suitesparse.com</a>, email
+<a href=mailto:DrTimothyAldenDavis@gmail.com>DrTimothyAldenDavis@gmail.com</a>).
+To print this document,
+open the file <i>sshelp.html</i> in your favorite web browser.
+</ul>
+
+<h2>11. Acknowledgements</h2>
+
+<ul>
+I would like to thank Iain Duff and Xiangrui Meng for their feedback,
+which has improved this package.  Designing a GUI is an art, and getting
+usability feedback from others is vital. 
+</ul>
+
+</font>
+</body>
+</html>

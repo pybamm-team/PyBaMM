@@ -1,0 +1,16 @@
+Apr 1, 2016:
+
+    * Licensing simplified.  See MATLAB_Tools/Doc/License.txt
+
+Oct 10, 2014
+
+    * modified ssmult_install.m  No change to C code.
+
+Dec 7, 2011
+
+    * minor fix to ssmult_install.m
+
+Nov 2, 2010
+
+    * changed mxCreateScalarDouble (which is obsolete) to mxCreateDoubleScalar,
+	in ssmultsym.c

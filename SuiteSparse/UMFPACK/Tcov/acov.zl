@@ -1,0 +1,15 @@
+#!/bin/csh
+# acov.zl: construct gcov files for AMD, zl version
+
+gcov -o amd_l_1 amd_1.c
+gcov -o amd_l_2 amd_2.c
+gcov -o amd_l_aat amd_aat.c
+gcov -o amd_l_control amd_control.c
+gcov -o amd_l_defaults amd_defaults.c
+gcov -o amd_l_info amd_info.c
+gcov -o amd_l_order amd_order.c
+gcov -o amd_l_post_tree amd_post_tree.c
+gcov -o amd_l_postorder amd_postorder.c
+gcov -o amd_l_preprocess amd_preprocess.c
+gcov -o amd_l_valid amd_valid.c
+

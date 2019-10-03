@@ -1,0 +1,268 @@
+#!/usr/bin/env python
+from __future__ import absolute_import, print_function, unicode_literals
+from subprocess import call, check_output
+import os       # For filesystem access
+import sys      # For sys.exit()
+import argparse # For parsing command-line arguments
+import urllib   # For downloading the ssget index
+import ssl
+import tarfile  # For un-tar/unzipping matrix files
+import csv      # For reading the ssget index
+import shutil   # For using 'which'
+from distutils.spawn import find_executable # For using find_executable
+
+def main():
+    # Check to make sure we're in the build directory - if not, exit
+    checkLocation()
+
+    # Parse the command-line arguments
+    args = parseArguments()
+
+    # Run tests if needed
+    if args.tests != "none":
+        runTests(args)
+
+    # If the coverage flag is on, run gcov (or similar)
+    if args.coverage or args.html_coverage:
+        runCoverageUtility(args)
+
+def runTests(args):
+    # Create or locate matrix temporary storage directory
+    matrix_dir = getMatrixDirectory(args)
+
+    # Download the matrix stats csv file
+    stats_file = downloadStatsFile(matrix_dir)
+    
+    with open(stats_file, 'rb') as f:
+        reader = csv.reader(f)
+
+        # Matrix IDs are not listed in the stats file - we just have to keep count
+        matrix_id = 0
+        for row in reader:
+
+            if len(row) == 12: # Only rows with 12 elements represent matrix data
+                matrix_id += 1
+
+                # Check if the matrix ID is in the proper range and 
+                # that the matrix is real and symmetric
+                isInBounds = ((matrix_id >= args.id_min) and (matrix_id <= args.id_max))
+                isSquare = (row[2] == row[3])
+                isReal = (row[5] == '1')
+
+                if (isInBounds and isSquare and isReal):
+                    if args.ids is None or matrix_id in args.ids:
+                        matrix_name = row[0] + '/' + row[1] + '.tar.gz'
+                        gzip_path = matrix_dir + row[0] + '_' + row[1] + '.tar.gz'
+                        matrix_path = matrix_dir + row[1] + '/' + row[1] + ".mtx"
+                        
+                        matrix_exists = os.path.isfile(gzip_path)
+                        if matrix_exists:
+                            tar = tarfile.open(gzip_path, mode='r:gz')
+                            matrix_files = tar.getnames()
+                        else:
+                            # Download matrix if it doesn't exist
+                            print("Downloading " + matrix_name)
+                            sslcontext = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+                            testfile = urllib.URLopener(context=sslcontext)
+                            testfile.retrieve("https://sparse.tamu.edu/MM/" + matrix_name, gzip_path)
+                            tar = tarfile.open(gzip_path, mode='r:gz')
+                            tar.extractall(path=matrix_dir) # Extract the matrix from the tar.gz file
+                            tar.close()
+
+                        # Determine which test executables to run
+                        if args.tests == 'all':
+                            print("Calling ALL Tests...")
+                        if args.tests == 'memory' or args.tests == 'all':
+                            print("Calling Memory Test...")
+                            status = call(["./tests/mongoose_test_memory", matrix_path])
+                            if status:
+                                print("Error! Memory Test Failure")
+                                cleanup(args, row, matrix_exists, gzip_path)
+                                sys.exit(status)
+                        if args.tests == 'valgrind' or args.tests == 'all':
+                            print("Calling Valgrind Test...")
+                            valgrind = find_executable('valgrind')
+                            if valgrind:
+                                status = call([valgrind + " --leak-check=full ./tests/mongoose_test_memory", matrix_path])
+                                if status:
+                                    print("Error! Valgrind Test Failure")
+                                    cleanup(args, row, matrix_exists, gzip_path)
+                                    sys.exit(status)
+                            else:
+                                print("\033[91mERROR!\033[0m Unable to find Valgrind. Skipping Valgrind Test...")
+                        if args.tests == 'io' or args.tests == 'all':
+                            print("Calling I/O Test...")
+                            status = call(["./tests/mongoose_test_io", matrix_path, "1"])
+                            if status:
+                                print("Error! I/O Test Failure")
+                                cleanup(args, row, matrix_exists, gzip_path)
+                                sys.exit(status)
+                        if args.tests == 'edgesep' or args.tests == 'all':
+                            print("Calling Edge Separator Test...")
+                            target_split = args.target_split
+                            status = call(["./tests/mongoose_test_edgesep", matrix_path, str(target_split)])
+                            if status:
+                                print("Error! Edge Separator Test Failure")
+                                cleanup(args, row, matrix_exists, gzip_path)
+                                sys.exit(status)
+                        if args.tests == 'performance' or args.tests == 'all':
+                            print("Calling Performance Test...")
+                            status = call(["./tests/mongoose_test_performance", matrix_path, row[0] + '_' + row[1] + '_performance.txt'])
+                            if status:
+                                print("Error! Performance Test Failure")
+                                cleanup(args, row, matrix_exists, gzip_path)
+                                sys.exit(status)
+
+                        # Delete the matrix only if we downloaded it and the keep
+                        # flag is off
+                        cleanup(args, row, matrix_exists, gzip_path)
+
+
+    # Delete the ssstats.csv file now that we're done
+    os.remove(stats_file)
+
+def cleanup(args, row, matrix_exists, gzip_path):
+    matrix_dir = args.matrix_directory
+
+    if args.purge or not (args.keep or matrix_exists):
+        files = os.listdir(matrix_dir + row[1])
+        for file in files:
+            os.remove(os.path.join(matrix_dir + row[1] + '/', file))
+        os.rmdir(matrix_dir + row[1])
+        os.remove(gzip_path)
+
+def getMatrixDirectory(args):
+    # Check if the supplied matrix download directory exists - if not, create it
+    matrix_dir = args.matrix_directory
+    if not os.path.exists(matrix_dir):
+        os.makedirs(matrix_dir)
+
+    # Make sure the directory ends with '/'
+    if not matrix_dir.endswith('/'):
+        matrix_dir = matrix_dir + '/'
+
+    return matrix_dir
+
+def downloadStatsFile(matrix_dir):
+    sslcontext = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+    downloader = urllib.URLopener(context=sslcontext)
+    downloader.retrieve(
+        "https://sparse.tamu.edu/files/ssstats.csv",
+        matrix_dir + "/ssstats.csv")
+
+    stats_file = matrix_dir + "/ssstats.csv"
+    return stats_file
+
+def runCoverageUtility(args):
+    if args.gcov:
+        gcov = args.gcov
+    else:
+        gcov = find_executable('gcov')
+
+    if gcov:
+        # Determine if we are using GCC gcov or LLVM gcov
+        gcov_version = check_output([gcov, "--version"])
+        if gcov_version.find('LLVM') == -1:
+            call([gcov + " -o ./CMakeFiles/mongoose_lib_dbg.dir/Source ../Source/*.cpp"], shell=True)
+        else:
+            call(gcov + " -o=./CMakeFiles/mongoose_lib_dbg.dir/Source ../Source/*.cpp", shell=True)
+    
+    gcovr = find_executable('gcovr')
+    if gcovr:
+        if args.html_coverage:
+            print("Running gcovr with HTML generation")
+            call([gcovr, 
+                  "--html",
+                  "--html-details", 
+                  "--output=coverage.html",
+                  "--gcov-executable=" + gcov, 
+                  "--object-directory=CMakeFiles/mongoose_lib_dbg.dir/Source",
+                  "--root=../Source/"])
+        else:
+            print("Running gcovr without HTML generation")
+            call([gcovr, "--gcov-executable=" + gcov, "--object-directory=CMakeFiles/mongoose_lib_dbg.dir/Source", "--root=../Source/"])
+    else:
+        print("\033[91mERROR!\033[0m Cannot generate HTML coverage report, gcovr not found!")
+
+def parseArguments():
+    parser = argparse.ArgumentParser(
+                        description='Run tests on the Mongoose library.')
+    parser.add_argument('-k', '--keep', 
+                        action='store_true', 
+                        help='do not remove downloaded files when test is complete')
+    parser.add_argument('-p', '--purge', 
+                        action='store_true', 
+                        help='force remove downloaded matrix files when complete')
+    parser.add_argument('-min', 
+                        action='store', 
+                        metavar='min_id', 
+                        type=int, 
+                        default=1,
+                        dest='id_min',
+                        help='minimum matrix ID to run tests on [default: 1]')
+    parser.add_argument('-max', 
+                        action='store', 
+                        metavar='max_id', 
+                        type=int, 
+                        default=2757,
+                        dest='id_max',
+                        help='maximum matrix ID to run tests on [default: 2757]')
+    parser.add_argument('-i', '--ids', 
+                        action='store', 
+                        nargs='+', 
+                        metavar='matrix_ID', 
+                        type=int,
+                        help='list of matrix IDs to run tests on')
+    parser.add_argument('-t', '--tests',
+                        choices=['all', 'memory', 'io', 'edgesep', 'performance', 'valgrind', 'none'],
+                        default='none',
+                        help='choice of which tests to run')
+    parser.add_argument('-s', '--split',
+                        action='store',
+                        metavar='target_split',
+                        type=float,
+                        dest='target_split',
+                        default=0.5,
+                        help='target split ratio for edge separator test [default: 0.5]')
+    parser.add_argument('-d', '--matrix-directory', 
+                        action='store', 
+                        metavar='matrix_dir',
+                        default='../Matrix/',
+                        help='download directory for Matrix Market data files')
+    parser.add_argument('-c', '--coverage', 
+                        action='store_true',
+                        help='generate coverage information')
+    parser.add_argument('--html-coverage',
+                        action='store_true',
+                        help='generate html coverage pages if gcovr is available')
+    parser.add_argument('--gcov', 
+                        action='store',
+                        metavar='gcov_path',
+                        help='path to gcov tool')
+
+    return parser.parse_args()
+
+def checkLocation():
+    # Check if we are in the right location - if not, exit
+    if not (os.path.isdir('./CMakeFiles/mongoose_lib_dbg.dir/Source')
+            and os.path.isdir('../Source')):
+        print(
+            "\n\033[91mERROR!\033[0m Looks like you might not be running this from "
+            "your build directory.\n\n"
+            "Make sure that... \n\n"
+            "  * You are in your build directory (e.g. Mongoose/build) and\n"
+            "  * You have built Mongoose ('cmake ..' followed by 'make')\n")
+        sys.exit()
+
+    # Check if Mongoose has been built - if not, exit
+    if not (os.path.exists('./CMakeFiles/mongoose_lib_dbg.dir/Source/Mongoose_Graph.o')):
+        print(
+            "\n\033[91mERROR!\033[0m Looks like you might not have built Mongoose "
+            "yet.\n\n"
+            "Make sure that... \n\n"
+            "  * You are in your build directory (e.g. Mongoose/build) and\n"
+            "  * You have built Mongoose ('cmake ..' followed by 'make')\n")
+        sys.exit()
+
+if __name__=="__main__":
+   main()

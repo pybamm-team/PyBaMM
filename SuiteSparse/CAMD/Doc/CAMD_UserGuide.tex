@@ -1,0 +1,610 @@
+\documentclass[11pt]{article}
+
+\newcommand{\m}[1]{{\bf{#1}}}       % for matrices and vectors
+\newcommand{\tr}{^{\sf T}}          % transpose
+
+\topmargin 0in
+\textheight 9in
+\oddsidemargin 0pt
+\evensidemargin 0pt
+\textwidth 6.5in
+
+%------------------------------------------------------------------------------
+\begin{document}
+%------------------------------------------------------------------------------
+
+\title{CAMD User Guide}
+\author{Patrick R. Amestoy\thanks{ENSEEIHT-IRIT,
+2 rue Camichel 31017 Toulouse, France.
+email: amestoy@enseeiht.fr.  http://www.enseeiht.fr/$\sim$amestoy.}
+\and Yanqing (Morris) Chen
+\and Timothy A. Davis\thanks{
+email: DrTimothyAldenDavis@gmail.com,
+http://www.suitesparse.com.
+This work was supported by the National
+Science Foundation, under grants ASC-9111263, DMS-9223088, and CCR-0203270.
+Portions of the work were done while on sabbatical at Stanford University
+and Lawrence Berkeley National Laboratory (with funding from Stanford
+University and the SciDAC program).  Ordering constraints added with
+support from Sandia National Laboratory (Dept. of Energy).
+}
+\and Iain S. Duff\thanks{Rutherford Appleton Laboratory, Chilton, Didcot, 
+Oxon OX11 0QX, England. email: i.s.duff@rl.ac.uk.  
+http://www.numerical.rl.ac.uk/people/isd/isd.html.
+This work was supported by the EPSRC under grant GR/R46441.
+}}
+
+\date{VERSION 2.4.6, May 4, 2016}
+\maketitle
+
+%------------------------------------------------------------------------------
+\begin{abstract}
+CAMD is a set of ANSI C routines that implements the approximate minimum degree
+ordering algorithm to permute sparse matrices prior to
+numerical factorization.  Ordering constraints can be optionally provided.
+A MATLAB interface is included.
+\end{abstract}
+%------------------------------------------------------------------------------
+
+CAMD Copyright\copyright 2013 by Timothy A.  Davis,
+Yanqing (Morris) Chen,
+Patrick R. Amestoy, and Iain S. Duff.  All Rights Reserved.
+CAMD is available under alternate licences; contact T. Davis for details.
+
+{\bf CAMD License:} Refer to CAMD/Doc/License.txt for the license.
+
+{\bf Availability:}
+    http://www.suitesparse.com.
+
+{\bf Acknowledgments:}
+
+    This work was supported by the National Science Foundation, under
+    grants ASC-9111263 and DMS-9223088 and CCR-0203270, and by Sandia
+    National Labs (a grant from DOE).
+    The conversion to C, the addition of the elimination tree
+    post-ordering, and the handling of dense rows and columns
+    were done while Davis was on sabbatical at
+    Stanford University and Lawrence Berkeley National Laboratory.
+    The ordering constraints were added by Chen and Davis.
+
+%------------------------------------------------------------------------------
+\newpage
+\section{Overview}
+%------------------------------------------------------------------------------
+
+CAMD is a set of routines for preordering a sparse matrix prior to
+numerical factorization.  It uses an approximate minimum degree ordering
+algorithm \cite{AmestoyDavisDuff96,AmestoyDavisDuff04}
+to find a permutation matrix $\m{P}$
+so that the Cholesky factorization $\m{PAP}\tr=\m{LL}\tr$ has fewer
+(often much fewer) nonzero entries than the Cholesky factorization of $\m{A}$.
+The algorithm is typically much faster than other ordering methods
+and  minimum degree ordering
+algorithms that compute an exact degree \cite{GeorgeLiu89}.
+Some methods, such as approximate deficiency
+\cite{RothbergEisenstat98} and graph-partitioning based methods
+\cite{Chaco,KarypisKumar98e,PellegriniRomanAmestoy00,schu:01}
+can produce better orderings, depending on the matrix.
+
+The algorithm starts with an undirected graph representation of a
+symmetric sparse matrix $\m{A}$.  Node $i$ in the graph corresponds to row
+and column $i$ of the matrix, and there is an edge $(i,j)$ in the graph if
+$a_{ij}$ is nonzero.
+The degree of a node is initialized to the number of off-diagonal nonzeros
+in row $i$, which is the size of the set of nodes
+adjacent to $i$ in the graph.
+
+The selection of a pivot $a_{ii}$ from the diagonal of $\m{A}$ and the first
+step of Gaussian elimination corresponds to one step of graph elimination.
+Numerical fill-in causes new nonzero entries in the matrix
+(fill-in refers to
+nonzeros in $\m{L}$ that are not in $\m{A}$).
+Node $i$ is eliminated and edges are added to its neighbors
+so that they form a clique (or {\em element}).  To reduce fill-in,
+node $i$ is selected as the node of least degree in the graph.
+This process repeats until the graph is eliminated.
+
+The clique is represented implicitly.  Rather than listing all the
+new edges in the graph, a single list of nodes is kept which represents
+the clique.  This list corresponds to the nonzero pattern of the first
+column of $\m{L}$.  As the elimination proceeds, some of these cliques
+become subsets of subsequent cliques, and are removed.   This graph
+can be stored in place, that is
+using the same amount of memory as the original graph.
+
+The most costly part of the minimum degree algorithm is the recomputation
+of the degrees of nodes adjacent to the current pivot element.
+Rather than keep track of the exact degree, the approximate minimum degree
+algorithm finds an upper bound on the degree that is easier to compute.
+For nodes of least degree, this bound tends to be tight.  Using the
+approximate degree instead of the exact degree leads to a substantial savings
+in run time, particularly for very irregularly structured matrices.
+It has no effect on the quality of the ordering.
+
+The elimination phase is followed by an
+elimination tree post-ordering.  This has no effect on fill-in, but
+reorganizes the ordering so that the subsequent numerical factorization is
+more efficient.  It also includes a pre-processing phase in which nodes of
+very high degree are removed (without causing fill-in), and placed last in the
+permutation $\m{P}$ (subject to the constraints).
+This reduces the run time substantially if the matrix
+has a few rows with many nonzero entries, and has little effect on the quality
+of the ordering.
+CAMD operates on the
+symmetric nonzero pattern of $\m{A}+\m{A}\tr$, so it can be given
+an unsymmetric matrix, or either the lower or upper triangular part of
+a symmetric matrix.
+
+CAMD has the ability to order the matrix with constraints.  Each
+node $i$ in the graph (row/column $i$ in the matrix) has a constraint,
+{\tt C[i]}, which is in the range {\tt 0} to {\tt n-1}.  All nodes with
+{\tt C[i] = 0} are
+ordered first, followed by all nodes with constraint {\tt 1}, and so on.
+That is, {\tt C[P[k]]} is monotonically non-decreasing as {\tt k} varies from
+{\tt 0} to {\tt n-1}.  If {\tt C} is NULL, no
+constraints are used (the ordering will be similar to AMD's ordering,
+except that the postordering is different).
+The optional {\tt C} parameter is also provided in the MATLAB interface,
+({\tt p = camd (A,Control,C)}).
+
+For a discussion of the long history of the minimum degree algorithm,
+see \cite{GeorgeLiu89}.
+
+%------------------------------------------------------------------------------
+\section{Availability}
+%------------------------------------------------------------------------------
+
+CAMD is available at http://www.suitesparse.com.
+The Fortran version is available as the routine {\tt MC47} in HSL
+(formerly the Harwell Subroutine Library) \cite{hsl:2002}. {\tt MC47} does
+not include ordering constraints.
+
+%------------------------------------------------------------------------------
+\section{Using CAMD in MATLAB}
+%------------------------------------------------------------------------------
+
+To use CAMD in MATLAB, you must first compile the CAMD mexFunction.
+Just type {\tt make} in the Unix system shell, while in the {\tt CAMD}
+directory.  You can also type {\tt camd\_make} in MATLAB, while in the
+{\tt CAMD/MATLAB} directory.  Place the {\tt CAMD/MATLAB} directory in your
+MATLAB path.  This can be done on any system with MATLAB, including Windows.
+See Section~\ref{Install} for more details on how to install CAMD.
+
+The MATLAB statement {\tt p=camd(A)} finds a permutation vector {\tt p} such
+that the Cholesky factorization {\tt chol(A(p,p))} is typically sparser than
+{\tt chol(A)}.
+If {\tt A} is unsymmetric, {\tt camd(A)} is identical to {\tt camd(A+A')}
+(ignoring numerical cancellation).
+If {\tt A} is not symmetric positive definite,
+but has substantial diagonal entries and a mostly symmetric nonzero pattern,
+then this ordering is also suitable for LU factorization.  A partial pivoting
+threshold may be required to prevent pivots from being selected off the
+diagonal, such as the statement {\tt [L,U,P] = lu (A (p,p), 0.1)}.
+Type {\tt help lu} for more details.
+The statement {\tt [L,U,P,Q] = lu (A (p,p))} in MATLAB 6.5 is
+not suitable, however, because it uses UMFPACK Version 4.0 and thus
+does not attempt to select pivots from the diagonal.
+UMFPACK Version 4.1 in MATLAB 7.0 and later
+uses several strategies, including a symmetric pivoting strategy, and
+will give you better results if you want to factorize an unsymmetric matrix
+of this type.  Refer to the UMFPACK User Guide for more details, at
+http://www.suitesparse.com.
+
+The CAMD mexFunction is much faster than the built-in MATLAB symmetric minimum
+degree ordering methods, SYMAMD and SYMMMD.  Its ordering quality is
+essentially identical to AMD, comparable to SYMAMD, and better than SYMMMD
+\cite{DavisGilbertLarimoreNg04}.
+
+An optional input argument can be used to modify the control parameters for
+CAMD (aggressive absorption, dense row/column handling, and printing of
+statistics).  An optional output
+argument provides statistics on the ordering, including an analysis of the
+fill-in and the floating-point operation count for a subsequent factorization.
+For more details (once CAMD is installed),
+type {\tt help camd} in the MATLAB command window.
+
+%------------------------------------------------------------------------------
+\section{Using CAMD in a C program}
+\label{Cversion}
+%------------------------------------------------------------------------------
+
+The C-callable CAMD library consists of seven user-callable routines and one
+include file.  There are two versions of each of the routines, with
+{\tt int} and {\tt long} integers.
+The routines with prefix
+{\tt camd\_l\_} use {\tt long} integer arguments; the others use
+{\tt int} integer arguments.  If you compile CAMD in the standard
+ILP32 mode (32-bit {\tt int}'s, {\tt long}'s, and pointers) then the versions
+are essentially identical.  You will be able to solve problems using up to 2GB
+of memory.  If you compile CAMD in the standard LP64 mode, the size of an
+{\tt int} remains 32-bits, but the size of a {\tt long} and a pointer both get
+promoted to 64-bits.
+
+The following routines are fully described in Section~\ref{Primary}:
+
+\begin{itemize}
+\item {\tt camd\_order}
+({\tt long} version: {\tt camd\_l\_order})
+    {\footnotesize
+    \begin{verbatim}
+    #include "camd.h"
+    int n, Ap [n+1], Ai [nz], P [n], C [n] ;
+    double Control [CAMD_CONTROL], Info [CAMD_INFO] ;
+    int result = camd_order (n, Ap, Ai, P, Control, Info, C) ;
+    \end{verbatim}
+    }
+    Computes the approximate minimum degree ordering of an $n$-by-$n$ matrix
+    $\m{A}$.  Returns a permutation vector {\tt P} of size {\tt n}, where
+    {\tt P[k] = i} if row and column {\tt i} are the {\tt k}th row and
+    column in the permuted matrix.
+    This routine allocates its own memory of size $1.2e+9n$ integers,
+    where $e$ is the number of nonzeros in $\m{A}+\m{A}\tr$.
+    It computes statistics about the matrix $\m{A}$, such as the symmetry of
+    its nonzero pattern, the number of nonzeros in $\m{L}$,
+    and the number of floating-point operations required for Cholesky and LU
+    factorizations (which are returned in the {\tt Info} array).
+    The user's input matrix is not modified.
+    It returns {\tt CAMD\_OK} if successful,
+    {\tt CAMD\_OK\_BUT\_JUMBLED} if successful (but the matrix had unsorted
+    and/or duplicate row indices),
+    {\tt CAMD\_INVALID} if the matrix is invalid,
+    {\tt CAMD\_OUT\_OF\_MEMORY} if out of memory.
+
+    The array {\tt C} provides the ordering constraints.
+    On input, {\tt C} may be null (to denote no constraints);
+    otherwise, it must be an array size {\tt n}, with entries in the range
+    {\tt 0} to {\tt n-1}.
+    On output, {\tt C[P[0..n-1]]} is monotonically non-descreasing.  
+
+\item {\tt camd\_defaults}
+({\tt long} version: {\tt camd\_l\_defaults})
+    {\footnotesize
+    \begin{verbatim}
+    #include "camd.h"
+    double Control [CAMD_CONTROL] ;
+    camd_defaults (Control) ;
+    \end{verbatim}
+    }
+    Sets the default control parameters in the {\tt Control} array.  These can
+    then be modified as desired before passing the array to the other CAMD
+    routines.
+
+\item {\tt camd\_control}
+({\tt long} version: {\tt camd\_l\_control})
+    {\footnotesize
+    \begin{verbatim}
+    #include "camd.h"
+    double Control [CAMD_CONTROL] ;
+    camd_control (Control) ;
+    \end{verbatim}
+    }
+    Prints a description of the control parameters, and their values.
+
+\item {\tt camd\_info}
+({\tt long} version: {\tt camd\_l\_info})
+    {\footnotesize
+    \begin{verbatim}
+    #include "camd.h"
+    double Info [CAMD_INFO] ;
+    camd_info (Info) ;
+    \end{verbatim}
+    }
+    Prints a description of the statistics computed by CAMD, and their values.
+
+\item {\tt camd\_valid}
+({\tt long} version: {\tt camd\_valid})
+    {\footnotesize
+    \begin{verbatim}
+    #include "camd.h"
+    int n, Ap [n+1], Ai [nz] ;
+    int result = camd_valid (n, n, Ap, Ai) ;
+    \end{verbatim}
+    }
+    Returns {\tt CAMD\_OK} or {\tt CAMD\_OK\_BUT\_JUMBLED}
+    if the matrix is valid as input to {\tt camd\_order};
+    the latter is returned if the matrix has unsorted and/or duplicate
+    row indices in one or more columns. 
+    Returns {\tt CAMD\_INVALID} if the matrix cannot be passed to
+    {\tt camd\_order}.
+    For {\tt camd\_order}, the matrix must
+    also be square.  The first two arguments are the number of rows and the
+    number of columns of the matrix.  For its use in CAMD, these must both
+    equal {\tt n}.
+
+\item {\tt camd\_2}
+({\tt long} version: {\tt camd\_l2})
+    CAMD ordering kernel.  It is faster than {\tt camd\_order}, and
+    can be called by the user, but it is difficult to use.
+    It does not check its inputs for errors.
+    It does not require the columns of its input matrix to be sorted,
+    but it destroys the matrix on output.  Additional workspace must be passed.
+    Refer to the source file {\tt CAMD/Source/camd\_2.c} for a description.
+
+\end{itemize}
+
+The nonzero pattern of the matrix $\m{A}$ is represented in compressed column
+form.
+For an $n$-by-$n$ matrix $\m{A}$ with {\tt nz} nonzero entries, the
+representation consists of two arrays: {\tt Ap} of size {\tt n+1} and {\tt Ai}
+of size {\tt nz}.  The row indices of entries in column {\tt j} are stored in
+    {\tt Ai[Ap[j]} $\ldots$ {\tt Ap[j+1]-1]}.
+For {\tt camd\_order},
+if duplicate row indices are present, or if the row indices in any given
+column are not sorted in ascending order, then {\tt camd\_order} creates
+an internal copy of the matrix with sorted rows and no duplicate entries,
+and orders the copy.  This adds slightly to the time and memory usage of
+{\tt camd\_order}, but is not an error condition.
+
+The matrix is 0-based, and thus
+row indices must be in the range {\tt 0} to {\tt n-1}.
+The first entry {\tt Ap[0]} must be zero.
+The total number of entries in the matrix is thus {\tt nz = Ap[n]}.
+
+The matrix must be square, but it does not need to be symmetric.
+The {\tt camd\_order} routine constructs the nonzero pattern of
+$\m{B} = \m{A}+\m{A}\tr$ (without forming $\m{A}\tr$ explicitly if
+$\m{A}$ has sorted columns and no duplicate entries),
+and then orders the matrix $\m{B}$.  Thus, either the
+lower triangular part of $\m{A}$, the upper triangular part,
+or any combination may be passed.  The transpose $\m{A}\tr$ may also be
+passed to {\tt camd\_order}.
+The diagonal entries may be present, but are ignored.
+
+%------------------------------------------------------------------------------
+\subsection{Control parameters}
+\label{control_param}
+%------------------------------------------------------------------------------
+
+Control parameters are set in an optional {\tt Control} array.
+It is optional in the sense that if
+a {\tt NULL} pointer is passed for the {\tt Control} input argument,
+then default control parameters are used.
+%
+\begin{itemize}
+\item {\tt Control[CAMD\_DENSE]} (or {\tt Control(1)} in MATLAB):
+controls the threshold for ``dense''
+rows/columns.  A dense row/column in $\m{A}+\m{A}\tr$
+can cause CAMD to spend significant time
+in ordering the matrix.  If {\tt Control[CAMD\_DENSE]} $\ge 0$,
+rows/columns with
+more than {\tt Control[CAMD\_DENSE]} $\sqrt{n}$ entries are ignored during
+the ordering, and placed last in the output order.  The default
+value of {\tt Control[CAMD\_DENSE]} is 10.  If negative, no rows/columns
+are treated as ``dense.''  Rows/columns with 16 or fewer off-diagonal
+entries are never considered ``dense.''
+%
+\item {\tt Control[CAMD\_AGGRESSIVE]} (or {\tt Control(2)} in MATLAB):
+controls whether or not to use
+aggressive absorption, in which a prior element is absorbed into the current
+element if it is a subset of the current element, even if it is not
+adjacent to the current pivot element (refer
+to \cite{AmestoyDavisDuff96,AmestoyDavisDuff04}
+for more details).  The default value is nonzero,
+which means that aggressive absorption will be performed.  This nearly always
+leads to a better ordering (because the approximate degrees are more
+accurate) and a lower execution time.  There are cases where it can
+lead to a slightly worse ordering, however.  To turn it off, set
+{\tt Control[CAMD\_AGGRESSIVE]} to 0.
+%
+\end{itemize}
+
+Statistics are returned in the {\tt Info} array
+(if {\tt Info} is {\tt NULL}, then no statistics are returned).
+Refer to {\tt camd.h} file, for more details
+(14 different statistics are returned, so the list is not included here).
+
+%------------------------------------------------------------------------------
+\subsection{Sample C program}
+%------------------------------------------------------------------------------
+
+The following program, {\tt camd\_demo.c}, illustrates the basic use of CAMD.
+See Section~\ref{Synopsis} for a short description
+of each calling sequence.
+
+{\footnotesize
+\begin{verbatim}
+#include <stdio.h>
+#include "camd.h"
+
+int n = 5 ;
+int Ap [ ] = { 0,   2,       6,       10,  12, 14} ;
+int Ai [ ] = { 0,1, 0,1,2,4, 1,2,3,4, 2,3, 1,4   } ;
+int C [ ] = { 2, 0, 0, 0, 1 } ;
+int P [5] ;
+
+int main (void)
+{
+    int k ;
+    (void) camd_order (n, Ap, Ai, P, (double *) NULL, (double *) NULL, C) ;
+    for (k = 0 ; k < n ; k++) printf ("P [%d] = %d\n", k, P [k]) ;
+    return (0) ;
+}
+
+\end{verbatim}
+}
+
+The {\tt Ap} and {\tt Ai} arrays represent the binary matrix
+\[
+\m{A} = \left[
+\begin{array}{rrrrr}
+ 1 &  1 &  0 &  0 &  0 \\
+ 1 &  1 &  1 &  0 &  1 \\
+ 0 &  1 &  1 &  1 &  0 \\
+ 0 &  0 &  1 &  1 &  0 \\
+ 0 &  1 &  1 &  0 &  1 \\
+\end{array}
+\right].
+\]
+The diagonal entries are ignored.
+%
+CAMD constructs the pattern of $\m{A}+\m{A}\tr$,
+and returns a permutation vector of $(3, 2, 1, 4, 0)$.
+Note that nodes 1, 2, and 3 appear first (they are in the constraint set 0),
+node 4 appears next (since {\tt C[4] = 1}), and node 0 appears last.
+%
+Since the matrix is unsymmetric but with a mostly symmetric nonzero
+pattern, this would be a suitable permutation for an LU factorization of a
+matrix with this nonzero pattern and whose diagonal entries are not too small.
+The program uses default control settings and does not return any statistics
+about the ordering, factorization, or solution ({\tt Control} and {\tt Info}
+are both {\tt (double *) NULL}).  It also ignores the status value returned by
+{\tt camd\_order}.
+
+More example programs are included with the CAMD package.
+The {\tt camd\_demo.c} program provides a more detailed demo of CAMD.
+Another example is the CAMD mexFunction, {\tt camd\_mex.c}.
+
+%------------------------------------------------------------------------------
+\subsection{A note about zero-sized arrays}
+%------------------------------------------------------------------------------
+
+CAMD uses several user-provided arrays of size {\tt n} or {\tt nz}.
+Either {\tt n} or {\tt nz} can be zero.
+If you attempt to {\tt malloc} an array of size zero,
+however, {\tt malloc} will return a null pointer which CAMD will report
+as invalid.  If you {\tt malloc} an array of
+size {\tt n} or {\tt nz} to pass to CAMD, make sure that you handle the
+{\tt n} = 0 and {\tt nz = 0} cases correctly.
+
+%------------------------------------------------------------------------------
+\section{Synopsis of C-callable routines}
+\label{Synopsis}
+%------------------------------------------------------------------------------
+
+The matrix $\m{A}$ is {\tt n}-by-{\tt n} with {\tt nz} entries.
+
+{\footnotesize
+\begin{verbatim}
+#include "camd.h"
+int n, status, Ap [n+1], Ai [nz], P [n], C [n] ;
+double Control [CAMD_CONTROL], Info [CAMD_INFO] ;
+camd_defaults (Control) ;
+status = camd_order (n, Ap, Ai, P, Control, Info, C) ;
+camd_control (Control) ;
+camd_info (Info) ;
+status = camd_valid (n, n, Ap, Ai) ;
+\end{verbatim}
+}
+
+The {\tt camd\_l\_*} routines are identical, except that all {\tt int}
+arguments become {\tt long}:
+
+{\footnotesize
+\begin{verbatim}
+#include "camd.h"
+long n, status, Ap [n+1], Ai [nz], P [n], C [n] ;
+double Control [CAMD_CONTROL], Info [CAMD_INFO] ;
+camd_l_defaults (Control) ;
+status = camd_l_order (n, Ap, Ai, P, Control, Info, C) ;
+camd_l_control (Control) ;
+camd_l_info (Info) ;
+status = camd_l_valid (n, n, Ap, Ai) ;
+\end{verbatim}
+}
+
+%------------------------------------------------------------------------------
+\section{Installation}
+\label{Install}
+%------------------------------------------------------------------------------
+
+The following discussion assumes you have the {\tt make} program, either in
+Unix, or in Windows with Cygwin.
+
+System-dependent configurations are in the
+{\tt ../SuiteSparse\_config/SuiteSparse\_config.mk}
+file.  You can edit that file to customize the compilation.  The default
+settings will work on most systems.
+Sample configuration files are provided
+for Mac, Linux, Sun Solaris, and IBM AIX.
+The system you are on is detected automatically.
+
+To compile and install the C-callable CAMD library,
+go to the {\tt CAMD} directory and type {\tt make}.
+A dynamic library is placed in
+in {\tt AMD/Lib/libcamd.so.*}, ({\tt *.dylib} for the Mac).
+Three demo programs of the AMD ordering routine will be compiled and tested in
+the {\tt CAMD/Demo} directory.
+The outputs of these demo programs will then be compared with output
+files in the distribution.
+
+Typing {\tt make clean} will remove all but the final compiled libraries
+and demo programs.  Typing {\tt make purge} or {\tt make distclean}
+removes all files not in the original distribution.
+If you compile CAMD and then later change the
+{\tt ../SuiteSparse\_config/SuiteSparse\_config.mk} file
+then you should type {\tt make purge} and then {\tt make} to recompile.
+
+When you compile your program that uses the C-callable CAMD library,
+you need to add the {\tt CAMD/Lib/libcamd.*} library
+and you need to tell your compiler to look in the
+{\tt CAMD/Include} directory for include
+files.
+See {\tt CAMD/Demo/Makefile} for an example.
+
+By doing {\tt make}, all compiled dynamic libraries are also copied into {\tt
+SuiteSparse/lib} the include files are coped into {\tt SuiteSparse/include},
+and documentation is copied into {\tt SuiteSparse/doc}.
+
+Alternatively, you can install the shared library
+and include files in /usr/local/lib and /usr/local/include, and
+the documenation in /usr/local/doc.
+Just do {\tt make} then {\tt make install}.
+Now you can simply use {\tt -lcamd} when you compile your own program.
+
+If all you want to use is the CAMD mexFunction in MATLAB, you can skip
+the use of the {\tt make} command entirely.  Simply type
+{\tt camd\_make} in MATLAB while in the {\tt CAMD/MATLAB} directory.
+This works on any system with MATLAB, including Windows.
+Alternately, type {\tt make} in the {\tt CAMD/MATLAB} directory.
+
+If you are including CAMD as a subset of a larger library and do not want
+to link the C standard I/O library, or if you simply do not need to use
+them, you can safely remove the {\tt camd\_control.c} and {\tt camd\_info.c}
+files.  Similarly, if you use default parameters (or define your
+own {\tt Control} array), then you can exclude the {\tt camd\_defaults.c}
+file.
+Each of these files contains the user-callable routines of the same
+name.  None of these auxiliary routines are directly called by
+{\tt camd\_order}.
+The {\tt camd\_dump.c} file contains debugging routines
+that are neither used nor compiled unless debugging is enabled.
+The {\tt camd\_internal.h} file must be edited to enable debugging;
+refer to the instructions in that file.
+The bare minimum files required to use just {\tt camd\_order} are
+{\tt camd.h} and {\tt camd\_internal.h}
+in the {\tt Include} directory,
+and
+{\tt camd\_1.c},
+{\tt camd\_2.c},
+{\tt camd\_aat.c},
+{\tt camd\_global.c},
+{\tt and\_order.c},
+{\tt camd\_postorder.c},
+{\tt camd\_preprocess.c},
+and
+{\tt camd\_valid.c}
+in the {\tt Source} directory.
+
+%------------------------------------------------------------------------------
+\newpage
+\section{The CAMD routines}
+\label{Primary}
+%------------------------------------------------------------------------------
+
+The file {\tt CAMD/Include/camd.h} listed below
+describes each user-callable routine in CAMD,
+and gives details on their use.
+
+{\footnotesize
+\input{camd_h.tex}
+}
+
+%------------------------------------------------------------------------------
+\newpage
+% References
+%------------------------------------------------------------------------------
+
+\bibliographystyle{plain}
+\bibliography{CAMD_UserGuide}
+
+\end{document}

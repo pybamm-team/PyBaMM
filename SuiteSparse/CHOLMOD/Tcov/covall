@@ -1,0 +1,5 @@
+#!/bin/csh
+./gcovs z*.c l_*c
+./covs > covs.out
+echo -n "statments not yet tested: "
+grep -c "#####" covs.out

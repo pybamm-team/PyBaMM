@@ -1,0 +1,5 @@
+#!/bin/csh
+# usage: gcovs files
+foreach file ($argv[1-])
+	gcov $file > /dev/null
+	end

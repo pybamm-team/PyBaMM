@@ -1,0 +1,72 @@
+{
+  "@context": "https://doi.org/10.5063/schema/codemeta-2.0",
+  "@type": "SoftwareSourceCode",
+  "identifier": "Mongoose",
+  "description": "Mongoose is a hybrid graph partitioning library.",
+  "name": "Mongoose: A Graph Coarsening and Partitioning Library",
+  "codeRepository": "https://github.com/ScottKolo/Mongoose",
+  "issueTracker": "https://github.com/ScottKolo/Mongoose/issues",
+  "license": "https://spdx.org/licenses/GPL-3.0-only.html",
+  "version": "@Mongoose_VERSION_MAJOR@.@Mongoose_VERSION_MINOR@.@Mongoose_VERSION_PATCH@",
+  "softwareVersion": "@Mongoose_VERSION_MAJOR@.@Mongoose_VERSION_MINOR@.@Mongoose_VERSION_PATCH@",
+  "author": [
+    {
+      "@type": "Person",
+      "givenName": "Scott",
+      "familyName": "Kolodziej",
+      "email": "scottk@tamu.edu",
+      "@id": "https://orcid.org/0000-0001-8340-0824",
+      "affiliation": "Texas A&M University"
+    },
+    {
+      "@type": "Person",
+      "givenName": "Timothy",
+      "familyName": "Davis",
+      "email": "davis@tamu.edu",
+      "@id": "https://orcid.org/0000-0001-7614-6899",
+      "affiliation": "Texas A&M University"
+    },
+    {
+      "@type": "Person",
+      "givenName": "Nuri",
+      "familyName": "Yeralan",
+      "@id": "https://orcid.org/0000-0002-8689-5268",
+      "affiliation": "Microsoft Corporation"
+    },
+    {
+      "@type": "Person",
+      "givenName": "William",
+      "familyName": "Hager",
+      "email": "hager@ufl.edu",
+      "affiliation": "University of Florida"
+    }
+  ],
+  "maintainer":
+    {
+      "@id": "https://orcid.org/0000-0001-8340-0824"
+    },
+  "contIntegration": "https://travis-ci.com/ScottKolo/Mongoose",
+  "developmentStatus": "active",
+  "downloadUrl": "https://github.com/ScottKolo/Mongoose/archive/v@Mongoose_VERSION_MAJOR@.@Mongoose_VERSION_MINOR@.@Mongoose_VERSION_PATCH@.zip",
+  "funding":"Office of Naval Research grant N00014-11-1-0068",
+  "funding":"Office of Naval Research grant N00014-15-1-2048",
+  "funding":"Office of Naval Research grant N00014-18-1-2100",
+  "funding":"National Science Foundation grant CMMI 0620286",
+  "funding":"National Science Foundation grant DMS-1522629",
+  "keywords": [
+    "Mongoose",
+    "SuiteSparse",
+    "software",
+    "graph partitioning",
+    "sparse matrices",
+    "graph coarsening",
+    "edge cut",
+    "scientific software",
+    "mathematical software"
+  ],
+  "dateCreated":"2018-04-09",
+  "datePublished":"2018-05-25",
+  "dateModified":"@Mongoose_NUMERIC_DATE@",
+  "programmingLanguage": "C++",
+  "programmingLanguage": "MATLAB"
+}

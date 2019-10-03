@@ -11,11 +11,6 @@ class TestSPMe(unittest.TestCase):
         model = pybamm.lithium_ion.SPMe(options)
         model.check_well_posedness()
 
-        # Test build after init
-        model = pybamm.lithium_ion.SPMe(build=False)
-        model.build_model()
-        model.check_well_posedness()
-
     def test_default_geometry(self):
         options = {"thermal": "isothermal"}
         model = pybamm.lithium_ion.SPMe(options)

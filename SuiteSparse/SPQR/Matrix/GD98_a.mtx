@@ -1,0 +1,74 @@
+%%MatrixMarket matrix coordinate pattern general
+%-------------------------------------------------------------------------------
+% UF Sparse Matrix Collection, Tim Davis
+% http://www.cise.ufl.edu/research/sparse/matrices/Pajek/GD98_a
+% name: Pajek/GD98_a
+% [Pajek network: Graph Drawing contest 1998]
+% id: 1495
+% date: 1998
+% author: Graph Drawing Contest
+% ed: V. Batagelj
+% fields: name title A id kind notes aux date author ed
+% aux: nodename coord
+% kind: directed graph
+%-------------------------------------------------------------------------------
+% notes:
+% ------------------------------------------------------------------------------
+% Pajek network converted to sparse adjacency matrix for inclusion in UF sparse 
+% matrix collection, Tim Davis.  For Pajek datasets, See V. Batagelj & A. Mrvar,
+% http://vlado.fmf.uni-lj.si/pub/networks/data/.                                
+% ------------------------------------------------------------------------------
+% The original problem had 3D xyz coordinates, but all values of z were equal   
+% to 0.5, and have been removed.  This graph has 2D coordinates.                
+%-------------------------------------------------------------------------------
+38 38 50
+2 1
+3 1
+11 1
+15 1
+22 1
+23 1
+27 1
+1 2
+10 2
+1 4
+1 5
+10 5
+2 6
+1 7
+10 7
+3 8
+1 9
+2 10
+3 10
+11 10
+15 10
+23 10
+27 10
+37 10
+10 12
+1 13
+3 14
+23 14
+10 16
+6 17
+11 17
+24 17
+1 18
+10 18
+10 19
+20 21
+1 23
+10 23
+24 25
+10 26
+11 27
+6 28
+24 28
+10 29
+1 30
+10 31
+1 32
+33 34
+35 36
+5 38

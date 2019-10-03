@@ -1,0 +1,15 @@
+
+setenv CHOLMOD_USE_GPU 1
+printenv
+make
+make gpu
+
+unsetenv CHOLMOD_USE_GPU
+printenv
+make
+make gpu
+
+setenv CHOLMOD_USE_GPU 0
+printenv
+make
+make gpu

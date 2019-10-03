@@ -1,0 +1,1236 @@
+
+
+--------------------------------------------------------
+Input file: ../Matrix/A01
+name: Dense/0  n: 0 entries: 0
+--------------------------------------------------------
+
+
+AMD version 2.4.6, May 4, 2016: approximate minimum degree ordering
+    dense row parameter: 10
+    (rows with more than max (10 * sqrt (n), 16) entries are
+    considered "dense", and placed last in output permutation)
+    aggressive absorption:  yes
+    size of AMD integer: 4
+
+
+AMD version 2.4.6, May 4, 2016, results:
+    status: OK
+    n, dimension of A:                                  0
+
+    The following approximate statistics are for a subsequent
+    factorization of A(P,P) + A(P,P)'.  They are slight upper
+    bounds if there are no dense rows/columns in A+A', and become
+    looser if dense rows/columns exist.
+
+Factorize PAP'=LDL' and solve Ax=b
+Nz in L: 0  Flop count: 0
+relative maxnorm of residual: 0
+Factorize A=LDL' and solve Ax=b
+Nz in L: 0  Flop count: 0
+relative maxnorm of residual: 0
+
+
+--------------------------------------------------------
+Input file: ../Matrix/A02
+name: Dense/0  n: 0 entries: 0  (jumbled version)
+--------------------------------------------------------
+
+
+AMD version 2.4.6, May 4, 2016: approximate minimum degree ordering
+    dense row parameter: 10
+    (rows with more than max (10 * sqrt (n), 16) entries are
+    considered "dense", and placed last in output permutation)
+    aggressive absorption:  yes
+    size of AMD integer: 4
+
+
+AMD version 2.4.6, May 4, 2016, results:
+    status: OK
+    n, dimension of A:                                  0
+
+    The following approximate statistics are for a subsequent
+    factorization of A(P,P) + A(P,P)'.  They are slight upper
+    bounds if there are no dense rows/columns in A+A', and become
+    looser if dense rows/columns exist.
+
+Factorize PAP'=LDL' and solve Ax=b
+Nz in L: 0  Flop count: 0
+relative maxnorm of residual: 0
+Factorize A=LDL' and solve Ax=b
+Nz in L: 0  Flop count: 0
+relative maxnorm of residual: 0
+
+
+--------------------------------------------------------
+Input file: ../Matrix/A03
+name: Dense/1  n: 1 entries: 1
+--------------------------------------------------------
+
+
+AMD version 2.4.6, May 4, 2016: approximate minimum degree ordering
+    dense row parameter: 10
+    (rows with more than max (10 * sqrt (n), 16) entries are
+    considered "dense", and placed last in output permutation)
+    aggressive absorption:  yes
+    size of AMD integer: 4
+
+
+AMD version 2.4.6, May 4, 2016, results:
+    status: OK
+    n, dimension of A:                                  1
+    nz, number of nonzeros in A:                        1
+    symmetry of A:                                      1.0000
+    number of nonzeros on diagonal:                     1
+    nonzeros in pattern of A+A' (excl. diagonal):       0
+    # dense rows/columns of A+A':                       0
+    memory used, in bytes:                              36
+    # of memory compactions:                            0
+
+    The following approximate statistics are for a subsequent
+    factorization of A(P,P) + A(P,P)'.  They are slight upper
+    bounds if there are no dense rows/columns in A+A', and become
+    looser if dense rows/columns exist.
+
+    nonzeros in L (excluding diagonal):                 0
+    nonzeros in L (including diagonal):                 1
+    # divide operations for LDL' or LU:                 0
+    # multiply-subtract operations for LDL':            0
+    # multiply-subtract operations for LU:              0
+    max nz. in any column of L (incl. diagonal):        1
+
+    chol flop count for real A, sqrt counted as 1 flop: 1
+    LDL' flop count for real A:                         0
+    LDL' flop count for complex A:                      0
+    LU flop count for real A (with no pivoting):        0
+    LU flop count for complex A (with no pivoting):     0
+
+Factorize PAP'=LDL' and solve Ax=b
+Nz in L: 0  Flop count: 0
+relative maxnorm of residual: 0
+Factorize A=LDL' and solve Ax=b
+Nz in L: 0  Flop count: 0
+relative maxnorm of residual: 0
+
+
+--------------------------------------------------------
+Input file: ../Matrix/A04
+name: Dense/1  n: 1 entries: 2  (jumbled version)
+--------------------------------------------------------
+
+
+AMD version 2.4.6, May 4, 2016: approximate minimum degree ordering
+    dense row parameter: 10
+    (rows with more than max (10 * sqrt (n), 16) entries are
+    considered "dense", and placed last in output permutation)
+    aggressive absorption:  yes
+    size of AMD integer: 4
+
+
+AMD version 2.4.6, May 4, 2016, results:
+    status: OK, but jumbled
+    n, dimension of A:                                  1
+    nz, number of nonzeros in A:                        1
+    symmetry of A:                                      1.0000
+    number of nonzeros on diagonal:                     1
+    nonzeros in pattern of A+A' (excl. diagonal):       0
+    # dense rows/columns of A+A':                       0
+    memory used, in bytes:                              52
+    # of memory compactions:                            0
+
+    The following approximate statistics are for a subsequent
+    factorization of A(P,P) + A(P,P)'.  They are slight upper
+    bounds if there are no dense rows/columns in A+A', and become
+    looser if dense rows/columns exist.
+
+    nonzeros in L (excluding diagonal):                 0
+    nonzeros in L (including diagonal):                 1
+    # divide operations for LDL' or LU:                 0
+    # multiply-subtract operations for LDL':            0
+    # multiply-subtract operations for LU:              0
+    max nz. in any column of L (incl. diagonal):        1
+
+    chol flop count for real A, sqrt counted as 1 flop: 1
+    LDL' flop count for real A:                         0
+    LDL' flop count for complex A:                      0
+    LU flop count for real A (with no pivoting):        0
+    LU flop count for complex A (with no pivoting):     0
+
+Factorize PAP'=LDL' and solve Ax=b
+Nz in L: 0  Flop count: 0
+relative maxnorm of residual: 8.32667e-17
+Factorize A=LDL' and solve Ax=b
+Nz in L: 0  Flop count: 0
+relative maxnorm of residual: 8.32667e-17
+
+
+--------------------------------------------------------
+Input file: ../Matrix/A05
+name: Dense/2  n: 2 entries: 4
+--------------------------------------------------------
+
+
+AMD version 2.4.6, May 4, 2016: approximate minimum degree ordering
+    dense row parameter: 10
+    (rows with more than max (10 * sqrt (n), 16) entries are
+    considered "dense", and placed last in output permutation)
+    aggressive absorption:  yes
+    size of AMD integer: 4
+
+
+AMD version 2.4.6, May 4, 2016, results:
+    status: OK
+    n, dimension of A:                                  2
+    nz, number of nonzeros in A:                        4
+    symmetry of A:                                      1.0000
+    number of nonzeros on diagonal:                     2
+    nonzeros in pattern of A+A' (excl. diagonal):       2
+    # dense rows/columns of A+A':                       0
+    memory used, in bytes:                              80
+    # of memory compactions:                            0
+
+    The following approximate statistics are for a subsequent
+    factorization of A(P,P) + A(P,P)'.  They are slight upper
+    bounds if there are no dense rows/columns in A+A', and become
+    looser if dense rows/columns exist.
+
+    nonzeros in L (excluding diagonal):                 1
+    nonzeros in L (including diagonal):                 3
+    # divide operations for LDL' or LU:                 1
+    # multiply-subtract operations for LDL':            1
+    # multiply-subtract operations for LU:              1
+    max nz. in any column of L (incl. diagonal):        2
+
+    chol flop count for real A, sqrt counted as 1 flop: 5
+    LDL' flop count for real A:                         3
+    LDL' flop count for complex A:                      17
+    LU flop count for real A (with no pivoting):        3
+    LU flop count for complex A (with no pivoting):     17
+
+Factorize PAP'=LDL' and solve Ax=b
+Nz in L: 1  Flop count: 3
+relative maxnorm of residual: 5.55112e-17
+Factorize A=LDL' and solve Ax=b
+Nz in L: 1  Flop count: 3
+relative maxnorm of residual: 5.55112e-17
+
+
+--------------------------------------------------------
+Input file: ../Matrix/A06
+name: Dense/2  n: 2 entries: 5  (jumbled version)
+--------------------------------------------------------
+
+
+AMD version 2.4.6, May 4, 2016: approximate minimum degree ordering
+    dense row parameter: 10
+    (rows with more than max (10 * sqrt (n), 16) entries are
+    considered "dense", and placed last in output permutation)
+    aggressive absorption:  yes
+    size of AMD integer: 4
+
+
+AMD version 2.4.6, May 4, 2016, results:
+    status: OK, but jumbled
+    n, dimension of A:                                  2
+    nz, number of nonzeros in A:                        4
+    symmetry of A:                                      1.0000
+    number of nonzeros on diagonal:                     2
+    nonzeros in pattern of A+A' (excl. diagonal):       2
+    # dense rows/columns of A+A':                       0
+    memory used, in bytes:                              112
+    # of memory compactions:                            0
+
+    The following approximate statistics are for a subsequent
+    factorization of A(P,P) + A(P,P)'.  They are slight upper
+    bounds if there are no dense rows/columns in A+A', and become
+    looser if dense rows/columns exist.
+
+    nonzeros in L (excluding diagonal):                 1
+    nonzeros in L (including diagonal):                 3
+    # divide operations for LDL' or LU:                 1
+    # multiply-subtract operations for LDL':            1
+    # multiply-subtract operations for LU:              1
+    max nz. in any column of L (incl. diagonal):        2
+
+    chol flop count for real A, sqrt counted as 1 flop: 5
+    LDL' flop count for real A:                         3
+    LDL' flop count for complex A:                      17
+    LU flop count for real A (with no pivoting):        3
+    LU flop count for complex A (with no pivoting):     17
+
+Factorize PAP'=LDL' and solve Ax=b
+Nz in L: 1  Flop count: 3
+relative maxnorm of residual: 1.11022e-16
+Factorize A=LDL' and solve Ax=b
+Nz in L: 1  Flop count: 3
+relative maxnorm of residual: 1.11022e-16
+
+
+--------------------------------------------------------
+Input file: ../Matrix/A07
+name: Dense/3  n: 3 entries: 9
+--------------------------------------------------------
+
+
+AMD version 2.4.6, May 4, 2016: approximate minimum degree ordering
+    dense row parameter: 10
+    (rows with more than max (10 * sqrt (n), 16) entries are
+    considered "dense", and placed last in output permutation)
+    aggressive absorption:  yes
+    size of AMD integer: 4
+
+
+AMD version 2.4.6, May 4, 2016, results:
+    status: OK
+    n, dimension of A:                                  3
+    nz, number of nonzeros in A:                        9
+    symmetry of A:                                      1.0000
+    number of nonzeros on diagonal:                     3
+    nonzeros in pattern of A+A' (excl. diagonal):       6
+    # dense rows/columns of A+A':                       0
+    memory used, in bytes:                              136
+    # of memory compactions:                            0
+
+    The following approximate statistics are for a subsequent
+    factorization of A(P,P) + A(P,P)'.  They are slight upper
+    bounds if there are no dense rows/columns in A+A', and become
+    looser if dense rows/columns exist.
+
+    nonzeros in L (excluding diagonal):                 3
+    nonzeros in L (including diagonal):                 6
+    # divide operations for LDL' or LU:                 3
+    # multiply-subtract operations for LDL':            4
+    # multiply-subtract operations for LU:              5
+    max nz. in any column of L (incl. diagonal):        3
+
+    chol flop count for real A, sqrt counted as 1 flop: 14
+    LDL' flop count for real A:                         11
+    LDL' flop count for complex A:                      59
+    LU flop count for real A (with no pivoting):        13
+    LU flop count for complex A (with no pivoting):     67
+
+Factorize PAP'=LDL' and solve Ax=b
+Nz in L: 3  Flop count: 11
+relative maxnorm of residual: 1.11022e-16
+Factorize A=LDL' and solve Ax=b
+Nz in L: 3  Flop count: 11
+relative maxnorm of residual: 1.11022e-16
+
+
+--------------------------------------------------------
+Input file: ../Matrix/A08
+name: Dense/3  n: 3 entries: 11  (jumbled version)
+--------------------------------------------------------
+
+
+AMD version 2.4.6, May 4, 2016: approximate minimum degree ordering
+    dense row parameter: 10
+    (rows with more than max (10 * sqrt (n), 16) entries are
+    considered "dense", and placed last in output permutation)
+    aggressive absorption:  yes
+    size of AMD integer: 4
+
+
+AMD version 2.4.6, May 4, 2016, results:
+    status: OK, but jumbled
+    n, dimension of A:                                  3
+    nz, number of nonzeros in A:                        9
+    symmetry of A:                                      1.0000
+    number of nonzeros on diagonal:                     3
+    nonzeros in pattern of A+A' (excl. diagonal):       6
+    # dense rows/columns of A+A':                       0
+    memory used, in bytes:                              196
+    # of memory compactions:                            0
+
+    The following approximate statistics are for a subsequent
+    factorization of A(P,P) + A(P,P)'.  They are slight upper
+    bounds if there are no dense rows/columns in A+A', and become
+    looser if dense rows/columns exist.
+
+    nonzeros in L (excluding diagonal):                 3
+    nonzeros in L (including diagonal):                 6
+    # divide operations for LDL' or LU:                 3
+    # multiply-subtract operations for LDL':            4
+    # multiply-subtract operations for LU:              5
+    max nz. in any column of L (incl. diagonal):        3
+
+    chol flop count for real A, sqrt counted as 1 flop: 14
+    LDL' flop count for real A:                         11
+    LDL' flop count for complex A:                      59
+    LU flop count for real A (with no pivoting):        13
+    LU flop count for complex A (with no pivoting):     67
+
+Factorize PAP'=LDL' and solve Ax=b
+Nz in L: 3  Flop count: 11
+relative maxnorm of residual: 1.38778e-16
+Factorize A=LDL' and solve Ax=b
+Nz in L: 3  Flop count: 11
+relative maxnorm of residual: 1.38778e-16
+
+
+--------------------------------------------------------
+Input file: ../Matrix/A09
+name: HB/can_24  n: 24 entries: 160
+--------------------------------------------------------
+
+
+AMD version 2.4.6, May 4, 2016: approximate minimum degree ordering
+    dense row parameter: 10
+    (rows with more than max (10 * sqrt (n), 16) entries are
+    considered "dense", and placed last in output permutation)
+    aggressive absorption:  yes
+    size of AMD integer: 4
+
+
+AMD version 2.4.6, May 4, 2016, results:
+    status: OK
+    n, dimension of A:                                  24
+    nz, number of nonzeros in A:                        160
+    symmetry of A:                                      1.0000
+    number of nonzeros on diagonal:                     24
+    nonzeros in pattern of A+A' (excl. diagonal):       136
+    # dense rows/columns of A+A':                       0
+    memory used, in bytes:                              1516
+    # of memory compactions:                            0
+
+    The following approximate statistics are for a subsequent
+    factorization of A(P,P) + A(P,P)'.  They are slight upper
+    bounds if there are no dense rows/columns in A+A', and become
+    looser if dense rows/columns exist.
+
+    nonzeros in L (excluding diagonal):                 97
+    nonzeros in L (including diagonal):                 121
+    # divide operations for LDL' or LU:                 97
+    # multiply-subtract operations for LDL':            275
+    # multiply-subtract operations for LU:              453
+    max nz. in any column of L (incl. diagonal):        8
+
+    chol flop count for real A, sqrt counted as 1 flop: 671
+    LDL' flop count for real A:                         647
+    LDL' flop count for complex A:                      3073
+    LU flop count for real A (with no pivoting):        1003
+    LU flop count for complex A (with no pivoting):     4497
+
+Factorize PAP'=LDL' and solve Ax=b
+Nz in L: 96  Flop count: 632
+Ax=b not solved since D(1,1) is zero.
+Factorize A=LDL' and solve Ax=b
+Nz in L: 146  Flop count: 1360
+Ax=b not solved since D(5,5) is zero.
+
+
+--------------------------------------------------------
+Input file: ../Matrix/A10
+name: HB/can_24  n: 24 entries: 188  (jumbled version)
+--------------------------------------------------------
+
+
+AMD version 2.4.6, May 4, 2016: approximate minimum degree ordering
+    dense row parameter: 10
+    (rows with more than max (10 * sqrt (n), 16) entries are
+    considered "dense", and placed last in output permutation)
+    aggressive absorption:  yes
+    size of AMD integer: 4
+
+
+AMD version 2.4.6, May 4, 2016, results:
+    status: OK, but jumbled
+    n, dimension of A:                                  24
+    nz, number of nonzeros in A:                        160
+    symmetry of A:                                      1.0000
+    number of nonzeros on diagonal:                     24
+    nonzeros in pattern of A+A' (excl. diagonal):       136
+    # dense rows/columns of A+A':                       0
+    memory used, in bytes:                              2368
+    # of memory compactions:                            0
+
+    The following approximate statistics are for a subsequent
+    factorization of A(P,P) + A(P,P)'.  They are slight upper
+    bounds if there are no dense rows/columns in A+A', and become
+    looser if dense rows/columns exist.
+
+    nonzeros in L (excluding diagonal):                 97
+    nonzeros in L (including diagonal):                 121
+    # divide operations for LDL' or LU:                 97
+    # multiply-subtract operations for LDL':            275
+    # multiply-subtract operations for LU:              453
+    max nz. in any column of L (incl. diagonal):        8
+
+    chol flop count for real A, sqrt counted as 1 flop: 671
+    LDL' flop count for real A:                         647
+    LDL' flop count for complex A:                      3073
+    LU flop count for real A (with no pivoting):        1003
+    LU flop count for complex A (with no pivoting):     4497
+
+Factorize PAP'=LDL' and solve Ax=b
+Nz in L: 96  Flop count: 632
+Ax=b not solved since D(1,1) is zero.
+Factorize A=LDL' and solve Ax=b
+Nz in L: 146  Flop count: 1360
+Ax=b not solved since D(5,5) is zero.
+
+
+--------------------------------------------------------
+Input file: ../Matrix/A11
+name: FIDAP/ex5  n: 27 entries: 279
+--------------------------------------------------------
+
+
+AMD version 2.4.6, May 4, 2016: approximate minimum degree ordering
+    dense row parameter: 10
+    (rows with more than max (10 * sqrt (n), 16) entries are
+    considered "dense", and placed last in output permutation)
+    aggressive absorption:  yes
+    size of AMD integer: 4
+
+
+AMD version 2.4.6, May 4, 2016, results:
+    status: OK
+    n, dimension of A:                                  27
+    nz, number of nonzeros in A:                        279
+    symmetry of A:                                      1.0000
+    number of nonzeros on diagonal:                     27
+    nonzeros in pattern of A+A' (excl. diagonal):       252
+    # dense rows/columns of A+A':                       0
+    memory used, in bytes:                              2180
+    # of memory compactions:                            0
+
+    The following approximate statistics are for a subsequent
+    factorization of A(P,P) + A(P,P)'.  They are slight upper
+    bounds if there are no dense rows/columns in A+A', and become
+    looser if dense rows/columns exist.
+
+    nonzeros in L (excluding diagonal):                 126
+    nonzeros in L (including diagonal):                 153
+    # divide operations for LDL' or LU:                 126
+    # multiply-subtract operations for LDL':            414
+    # multiply-subtract operations for LU:              702
+    max nz. in any column of L (incl. diagonal):        9
+
+    chol flop count for real A, sqrt counted as 1 flop: 981
+    LDL' flop count for real A:                         954
+    LDL' flop count for complex A:                      4446
+    LU flop count for real A (with no pivoting):        1530
+    LU flop count for complex A (with no pivoting):     6750
+
+Factorize PAP'=LDL' and solve Ax=b
+Nz in L: 126  Flop count: 954
+relative maxnorm of residual: 2.59625e-10
+Factorize A=LDL' and solve Ax=b
+Nz in L: 276  Flop count: 4206
+relative maxnorm of residual: 2.72848e-10
+
+
+--------------------------------------------------------
+Input file: ../Matrix/A12
+name: FIDAP/ex5  n: 27 entries: 325  (jumbled version)
+--------------------------------------------------------
+
+
+AMD version 2.4.6, May 4, 2016: approximate minimum degree ordering
+    dense row parameter: 10
+    (rows with more than max (10 * sqrt (n), 16) entries are
+    considered "dense", and placed last in output permutation)
+    aggressive absorption:  yes
+    size of AMD integer: 4
+
+
+AMD version 2.4.6, May 4, 2016, results:
+    status: OK, but jumbled
+    n, dimension of A:                                  27
+    nz, number of nonzeros in A:                        279
+    symmetry of A:                                      1.0000
+    number of nonzeros on diagonal:                     27
+    nonzeros in pattern of A+A' (excl. diagonal):       252
+    # dense rows/columns of A+A':                       0
+    memory used, in bytes:                              3592
+    # of memory compactions:                            0
+
+    The following approximate statistics are for a subsequent
+    factorization of A(P,P) + A(P,P)'.  They are slight upper
+    bounds if there are no dense rows/columns in A+A', and become
+    looser if dense rows/columns exist.
+
+    nonzeros in L (excluding diagonal):                 126
+    nonzeros in L (including diagonal):                 153
+    # divide operations for LDL' or LU:                 126
+    # multiply-subtract operations for LDL':            414
+    # multiply-subtract operations for LU:              702
+    max nz. in any column of L (incl. diagonal):        9
+
+    chol flop count for real A, sqrt counted as 1 flop: 981
+    LDL' flop count for real A:                         954
+    LDL' flop count for complex A:                      4446
+    LU flop count for real A (with no pivoting):        1530
+    LU flop count for complex A (with no pivoting):     6750
+
+Factorize PAP'=LDL' and solve Ax=b
+Nz in L: 126  Flop count: 954
+relative maxnorm of residual: 3.27418e-10
+Factorize A=LDL' and solve Ax=b
+Nz in L: 276  Flop count: 4206
+relative maxnorm of residual: 2.32376e-10
+
+
+--------------------------------------------------------
+Input file: ../Matrix/A13
+name: HB/bcsstk01  n: 48 entries: 400
+--------------------------------------------------------
+
+
+AMD version 2.4.6, May 4, 2016: approximate minimum degree ordering
+    dense row parameter: 10
+    (rows with more than max (10 * sqrt (n), 16) entries are
+    considered "dense", and placed last in output permutation)
+    aggressive absorption:  yes
+    size of AMD integer: 4
+
+
+AMD version 2.4.6, May 4, 2016, results:
+    status: OK
+    n, dimension of A:                                  48
+    nz, number of nonzeros in A:                        400
+    symmetry of A:                                      1.0000
+    number of nonzeros on diagonal:                     48
+    nonzeros in pattern of A+A' (excl. diagonal):       352
+    # dense rows/columns of A+A':                       0
+    memory used, in bytes:                              3416
+    # of memory compactions:                            0
+
+    The following approximate statistics are for a subsequent
+    factorization of A(P,P) + A(P,P)'.  They are slight upper
+    bounds if there are no dense rows/columns in A+A', and become
+    looser if dense rows/columns exist.
+
+    nonzeros in L (excluding diagonal):                 441
+    nonzeros in L (including diagonal):                 489
+    # divide operations for LDL' or LU:                 441
+    # multiply-subtract operations for LDL':            2760
+    # multiply-subtract operations for LU:              5079
+    max nz. in any column of L (incl. diagonal):        20
+
+    chol flop count for real A, sqrt counted as 1 flop: 6009
+    LDL' flop count for real A:                         5961
+    LDL' flop count for complex A:                      26049
+    LU flop count for real A (with no pivoting):        10599
+    LU flop count for complex A (with no pivoting):     44601
+
+Factorize PAP'=LDL' and solve Ax=b
+Nz in L: 441  Flop count: 5961
+relative maxnorm of residual: 2.38712e-13
+Factorize A=LDL' and solve Ax=b
+Nz in L: 829  Flop count: 20103
+relative maxnorm of residual: 2.27374e-13
+
+
+--------------------------------------------------------
+Input file: ../Matrix/A14
+name: HB/bcsstk01  n: 48 entries: 472  (jumbled version)
+--------------------------------------------------------
+
+
+AMD version 2.4.6, May 4, 2016: approximate minimum degree ordering
+    dense row parameter: 10
+    (rows with more than max (10 * sqrt (n), 16) entries are
+    considered "dense", and placed last in output permutation)
+    aggressive absorption:  yes
+    size of AMD integer: 4
+
+
+AMD version 2.4.6, May 4, 2016, results:
+    status: OK, but jumbled
+    n, dimension of A:                                  48
+    nz, number of nonzeros in A:                        400
+    symmetry of A:                                      1.0000
+    number of nonzeros on diagonal:                     48
+    nonzeros in pattern of A+A' (excl. diagonal):       352
+    # dense rows/columns of A+A':                       0
+    memory used, in bytes:                              5500
+    # of memory compactions:                            0
+
+    The following approximate statistics are for a subsequent
+    factorization of A(P,P) + A(P,P)'.  They are slight upper
+    bounds if there are no dense rows/columns in A+A', and become
+    looser if dense rows/columns exist.
+
+    nonzeros in L (excluding diagonal):                 441
+    nonzeros in L (including diagonal):                 489
+    # divide operations for LDL' or LU:                 441
+    # multiply-subtract operations for LDL':            2760
+    # multiply-subtract operations for LU:              5079
+    max nz. in any column of L (incl. diagonal):        20
+
+    chol flop count for real A, sqrt counted as 1 flop: 6009
+    LDL' flop count for real A:                         5961
+    LDL' flop count for complex A:                      26049
+    LU flop count for real A (with no pivoting):        10599
+    LU flop count for complex A (with no pivoting):     44601
+
+Factorize PAP'=LDL' and solve Ax=b
+Nz in L: 441  Flop count: 5961
+relative maxnorm of residual: 2.27374e-13
+Factorize A=LDL' and solve Ax=b
+Nz in L: 829  Flop count: 20103
+relative maxnorm of residual: 3.83693e-13
+
+
+--------------------------------------------------------
+Input file: ../Matrix/A15
+name: HB/bcsstm01  n: 48 entries: 24
+--------------------------------------------------------
+
+
+AMD version 2.4.6, May 4, 2016: approximate minimum degree ordering
+    dense row parameter: 10
+    (rows with more than max (10 * sqrt (n), 16) entries are
+    considered "dense", and placed last in output permutation)
+    aggressive absorption:  yes
+    size of AMD integer: 4
+
+
+AMD version 2.4.6, May 4, 2016, results:
+    status: OK
+    n, dimension of A:                                  48
+    nz, number of nonzeros in A:                        24
+    symmetry of A:                                      1.0000
+    number of nonzeros on diagonal:                     24
+    nonzeros in pattern of A+A' (excl. diagonal):       0
+    # dense rows/columns of A+A':                       0
+    memory used, in bytes:                              1728
+    # of memory compactions:                            0
+
+    The following approximate statistics are for a subsequent
+    factorization of A(P,P) + A(P,P)'.  They are slight upper
+    bounds if there are no dense rows/columns in A+A', and become
+    looser if dense rows/columns exist.
+
+    nonzeros in L (excluding diagonal):                 0
+    nonzeros in L (including diagonal):                 48
+    # divide operations for LDL' or LU:                 0
+    # multiply-subtract operations for LDL':            0
+    # multiply-subtract operations for LU:              0
+    max nz. in any column of L (incl. diagonal):        1
+
+    chol flop count for real A, sqrt counted as 1 flop: 48
+    LDL' flop count for real A:                         0
+    LDL' flop count for complex A:                      0
+    LU flop count for real A (with no pivoting):        0
+    LU flop count for complex A (with no pivoting):     0
+
+Factorize PAP'=LDL' and solve Ax=b
+Nz in L: 0  Flop count: 0
+Ax=b not solved since D(3,3) is zero.
+Factorize A=LDL' and solve Ax=b
+Nz in L: 0  Flop count: 0
+Ax=b not solved since D(3,3) is zero.
+
+
+--------------------------------------------------------
+Input file: ../Matrix/A16
+name: HB/bcsstm01  n: 48 entries: 26  (jumbled version)
+--------------------------------------------------------
+
+
+AMD version 2.4.6, May 4, 2016: approximate minimum degree ordering
+    dense row parameter: 10
+    (rows with more than max (10 * sqrt (n), 16) entries are
+    considered "dense", and placed last in output permutation)
+    aggressive absorption:  yes
+    size of AMD integer: 4
+
+
+AMD version 2.4.6, May 4, 2016, results:
+    status: OK, but jumbled
+    n, dimension of A:                                  48
+    nz, number of nonzeros in A:                        24
+    symmetry of A:                                      1.0000
+    number of nonzeros on diagonal:                     24
+    nonzeros in pattern of A+A' (excl. diagonal):       0
+    # dense rows/columns of A+A':                       0
+    memory used, in bytes:                              2028
+    # of memory compactions:                            0
+
+    The following approximate statistics are for a subsequent
+    factorization of A(P,P) + A(P,P)'.  They are slight upper
+    bounds if there are no dense rows/columns in A+A', and become
+    looser if dense rows/columns exist.
+
+    nonzeros in L (excluding diagonal):                 0
+    nonzeros in L (including diagonal):                 48
+    # divide operations for LDL' or LU:                 0
+    # multiply-subtract operations for LDL':            0
+    # multiply-subtract operations for LU:              0
+    max nz. in any column of L (incl. diagonal):        1
+
+    chol flop count for real A, sqrt counted as 1 flop: 48
+    LDL' flop count for real A:                         0
+    LDL' flop count for complex A:                      0
+    LU flop count for real A (with no pivoting):        0
+    LU flop count for complex A (with no pivoting):     0
+
+Factorize PAP'=LDL' and solve Ax=b
+Nz in L: 0  Flop count: 0
+Ax=b not solved since D(3,3) is zero.
+Factorize A=LDL' and solve Ax=b
+Nz in L: 0  Flop count: 0
+Ax=b not solved since D(3,3) is zero.
+
+
+--------------------------------------------------------
+Input file: ../Matrix/A17
+name: Pothen/mesh1e1  n: 48 entries: 306
+--------------------------------------------------------
+
+
+AMD version 2.4.6, May 4, 2016: approximate minimum degree ordering
+    dense row parameter: 10
+    (rows with more than max (10 * sqrt (n), 16) entries are
+    considered "dense", and placed last in output permutation)
+    aggressive absorption:  yes
+    size of AMD integer: 4
+
+
+AMD version 2.4.6, May 4, 2016, results:
+    status: OK
+    n, dimension of A:                                  48
+    nz, number of nonzeros in A:                        306
+    symmetry of A:                                      1.0000
+    number of nonzeros on diagonal:                     48
+    nonzeros in pattern of A+A' (excl. diagonal):       258
+    # dense rows/columns of A+A':                       0
+    memory used, in bytes:                              2964
+    # of memory compactions:                            1
+
+    The following approximate statistics are for a subsequent
+    factorization of A(P,P) + A(P,P)'.  They are slight upper
+    bounds if there are no dense rows/columns in A+A', and become
+    looser if dense rows/columns exist.
+
+    nonzeros in L (excluding diagonal):                 288
+    nonzeros in L (including diagonal):                 336
+    # divide operations for LDL' or LU:                 288
+    # multiply-subtract operations for LDL':            1171
+    # multiply-subtract operations for LU:              2054
+    max nz. in any column of L (incl. diagonal):        13
+
+    chol flop count for real A, sqrt counted as 1 flop: 2678
+    LDL' flop count for real A:                         2630
+    LDL' flop count for complex A:                      11960
+    LU flop count for real A (with no pivoting):        4396
+    LU flop count for complex A (with no pivoting):     19024
+
+Factorize PAP'=LDL' and solve Ax=b
+Nz in L: 288  Flop count: 2630
+relative maxnorm of residual: 5.96745e-16
+Factorize A=LDL' and solve Ax=b
+Nz in L: 511  Flop count: 7383
+relative maxnorm of residual: 6.93889e-16
+
+
+--------------------------------------------------------
+Input file: ../Matrix/A18
+name: Pothen/mesh1e1  n: 48 entries: 359  (jumbled version)
+--------------------------------------------------------
+
+
+AMD version 2.4.6, May 4, 2016: approximate minimum degree ordering
+    dense row parameter: 10
+    (rows with more than max (10 * sqrt (n), 16) entries are
+    considered "dense", and placed last in output permutation)
+    aggressive absorption:  yes
+    size of AMD integer: 4
+
+
+AMD version 2.4.6, May 4, 2016, results:
+    status: OK, but jumbled
+    n, dimension of A:                                  48
+    nz, number of nonzeros in A:                        306
+    symmetry of A:                                      1.0000
+    number of nonzeros on diagonal:                     48
+    nonzeros in pattern of A+A' (excl. diagonal):       258
+    # dense rows/columns of A+A':                       0
+    memory used, in bytes:                              4596
+    # of memory compactions:                            1
+
+    The following approximate statistics are for a subsequent
+    factorization of A(P,P) + A(P,P)'.  They are slight upper
+    bounds if there are no dense rows/columns in A+A', and become
+    looser if dense rows/columns exist.
+
+    nonzeros in L (excluding diagonal):                 288
+    nonzeros in L (including diagonal):                 336
+    # divide operations for LDL' or LU:                 288
+    # multiply-subtract operations for LDL':            1171
+    # multiply-subtract operations for LU:              2054
+    max nz. in any column of L (incl. diagonal):        13
+
+    chol flop count for real A, sqrt counted as 1 flop: 2678
+    LDL' flop count for real A:                         2630
+    LDL' flop count for complex A:                      11960
+    LU flop count for real A (with no pivoting):        4396
+    LU flop count for complex A (with no pivoting):     19024
+
+Factorize PAP'=LDL' and solve Ax=b
+Nz in L: 288  Flop count: 2630
+relative maxnorm of residual: 5.55112e-16
+Factorize A=LDL' and solve Ax=b
+Nz in L: 511  Flop count: 7383
+relative maxnorm of residual: 5.55112e-16
+
+
+--------------------------------------------------------
+Input file: ../Matrix/A19
+name: Bai/bfwb62  n: 62 entries: 342
+--------------------------------------------------------
+
+
+AMD version 2.4.6, May 4, 2016: approximate minimum degree ordering
+    dense row parameter: 10
+    (rows with more than max (10 * sqrt (n), 16) entries are
+    considered "dense", and placed last in output permutation)
+    aggressive absorption:  yes
+    size of AMD integer: 4
+
+
+AMD version 2.4.6, May 4, 2016, results:
+    status: OK
+    n, dimension of A:                                  62
+    nz, number of nonzeros in A:                        342
+    symmetry of A:                                      1.0000
+    number of nonzeros on diagonal:                     62
+    nonzeros in pattern of A+A' (excl. diagonal):       280
+    # dense rows/columns of A+A':                       0
+    memory used, in bytes:                              3576
+    # of memory compactions:                            0
+
+    The following approximate statistics are for a subsequent
+    factorization of A(P,P) + A(P,P)'.  They are slight upper
+    bounds if there are no dense rows/columns in A+A', and become
+    looser if dense rows/columns exist.
+
+    nonzeros in L (excluding diagonal):                 226
+    nonzeros in L (including diagonal):                 288
+    # divide operations for LDL' or LU:                 226
+    # multiply-subtract operations for LDL':            623
+    # multiply-subtract operations for LU:              1020
+    max nz. in any column of L (incl. diagonal):        9
+
+    chol flop count for real A, sqrt counted as 1 flop: 1534
+    LDL' flop count for real A:                         1472
+    LDL' flop count for complex A:                      7018
+    LU flop count for real A (with no pivoting):        2266
+    LU flop count for complex A (with no pivoting):     10194
+
+Factorize PAP'=LDL' and solve Ax=b
+Nz in L: 226  Flop count: 1472
+relative maxnorm of residual: 5.55112e-16
+Factorize A=LDL' and solve Ax=b
+Nz in L: 662  Flop count: 11350
+relative maxnorm of residual: 1.11022e-15
+
+
+--------------------------------------------------------
+Input file: ../Matrix/A20
+name: Bai/bfwb62  n: 62 entries: 407  (jumbled version)
+--------------------------------------------------------
+
+
+AMD version 2.4.6, May 4, 2016: approximate minimum degree ordering
+    dense row parameter: 10
+    (rows with more than max (10 * sqrt (n), 16) entries are
+    considered "dense", and placed last in output permutation)
+    aggressive absorption:  yes
+    size of AMD integer: 4
+
+
+AMD version 2.4.6, May 4, 2016, results:
+    status: OK, but jumbled
+    n, dimension of A:                                  62
+    nz, number of nonzeros in A:                        342
+    symmetry of A:                                      1.0000
+    number of nonzeros on diagonal:                     62
+    nonzeros in pattern of A+A' (excl. diagonal):       280
+    # dense rows/columns of A+A':                       0
+    memory used, in bytes:                              5456
+    # of memory compactions:                            0
+
+    The following approximate statistics are for a subsequent
+    factorization of A(P,P) + A(P,P)'.  They are slight upper
+    bounds if there are no dense rows/columns in A+A', and become
+    looser if dense rows/columns exist.
+
+    nonzeros in L (excluding diagonal):                 226
+    nonzeros in L (including diagonal):                 288
+    # divide operations for LDL' or LU:                 226
+    # multiply-subtract operations for LDL':            623
+    # multiply-subtract operations for LU:              1020
+    max nz. in any column of L (incl. diagonal):        9
+
+    chol flop count for real A, sqrt counted as 1 flop: 1534
+    LDL' flop count for real A:                         1472
+    LDL' flop count for complex A:                      7018
+    LU flop count for real A (with no pivoting):        2266
+    LU flop count for complex A (with no pivoting):     10194
+
+Factorize PAP'=LDL' and solve Ax=b
+Nz in L: 226  Flop count: 1472
+relative maxnorm of residual: 5.68434e-14
+Factorize A=LDL' and solve Ax=b
+Nz in L: 662  Flop count: 11350
+relative maxnorm of residual: 2.15827e-12
+
+
+--------------------------------------------------------
+Input file: ../Matrix/A21
+name: HB/bcsstk02  n: 66 entries: 4356
+--------------------------------------------------------
+
+
+AMD version 2.4.6, May 4, 2016: approximate minimum degree ordering
+    dense row parameter: 10
+    (rows with more than max (10 * sqrt (n), 16) entries are
+    considered "dense", and placed last in output permutation)
+    aggressive absorption:  yes
+    size of AMD integer: 4
+
+
+AMD version 2.4.6, May 4, 2016, results:
+    status: OK
+    n, dimension of A:                                  66
+    nz, number of nonzeros in A:                        4356
+    symmetry of A:                                      1.0000
+    number of nonzeros on diagonal:                     66
+    nonzeros in pattern of A+A' (excl. diagonal):       4290
+    # dense rows/columns of A+A':                       0
+    memory used, in bytes:                              22968
+    # of memory compactions:                            0
+
+    The following approximate statistics are for a subsequent
+    factorization of A(P,P) + A(P,P)'.  They are slight upper
+    bounds if there are no dense rows/columns in A+A', and become
+    looser if dense rows/columns exist.
+
+    nonzeros in L (excluding diagonal):                 2145
+    nonzeros in L (including diagonal):                 2211
+    # divide operations for LDL' or LU:                 2145
+    # multiply-subtract operations for LDL':            47905
+    # multiply-subtract operations for LU:              93665
+    max nz. in any column of L (incl. diagonal):        66
+
+    chol flop count for real A, sqrt counted as 1 flop: 98021
+    LDL' flop count for real A:                         97955
+    LDL' flop count for complex A:                      402545
+    LU flop count for real A (with no pivoting):        189475
+    LU flop count for complex A (with no pivoting):     768625
+
+Factorize PAP'=LDL' and solve Ax=b
+Nz in L: 2145  Flop count: 97955
+relative maxnorm of residual: 7.50219e-13
+Factorize A=LDL' and solve Ax=b
+Nz in L: 2145  Flop count: 97955
+relative maxnorm of residual: 7.50219e-13
+
+
+--------------------------------------------------------
+Input file: ../Matrix/A22
+name: HB/bcsstk02  n: 66 entries: 5175  (jumbled version)
+--------------------------------------------------------
+
+
+AMD version 2.4.6, May 4, 2016: approximate minimum degree ordering
+    dense row parameter: 10
+    (rows with more than max (10 * sqrt (n), 16) entries are
+    considered "dense", and placed last in output permutation)
+    aggressive absorption:  yes
+    size of AMD integer: 4
+
+
+AMD version 2.4.6, May 4, 2016, results:
+    status: OK, but jumbled
+    n, dimension of A:                                  66
+    nz, number of nonzeros in A:                        4356
+    symmetry of A:                                      1.0000
+    number of nonzeros on diagonal:                     66
+    nonzeros in pattern of A+A' (excl. diagonal):       4290
+    # dense rows/columns of A+A':                       0
+    memory used, in bytes:                              43936
+    # of memory compactions:                            0
+
+    The following approximate statistics are for a subsequent
+    factorization of A(P,P) + A(P,P)'.  They are slight upper
+    bounds if there are no dense rows/columns in A+A', and become
+    looser if dense rows/columns exist.
+
+    nonzeros in L (excluding diagonal):                 2145
+    nonzeros in L (including diagonal):                 2211
+    # divide operations for LDL' or LU:                 2145
+    # multiply-subtract operations for LDL':            47905
+    # multiply-subtract operations for LU:              93665
+    max nz. in any column of L (incl. diagonal):        66
+
+    chol flop count for real A, sqrt counted as 1 flop: 98021
+    LDL' flop count for real A:                         97955
+    LDL' flop count for complex A:                      402545
+    LU flop count for real A (with no pivoting):        189475
+    LU flop count for complex A (with no pivoting):     768625
+
+Factorize PAP'=LDL' and solve Ax=b
+Nz in L: 2145  Flop count: 97955
+relative maxnorm of residual: 8.59759e-13
+Factorize A=LDL' and solve Ax=b
+Nz in L: 2145  Flop count: 97955
+relative maxnorm of residual: 8.59759e-13
+
+
+--------------------------------------------------------
+Input file: ../Matrix/A23
+name: HB/bcsstm02  n: 66 entries: 66
+--------------------------------------------------------
+
+
+AMD version 2.4.6, May 4, 2016: approximate minimum degree ordering
+    dense row parameter: 10
+    (rows with more than max (10 * sqrt (n), 16) entries are
+    considered "dense", and placed last in output permutation)
+    aggressive absorption:  yes
+    size of AMD integer: 4
+
+
+AMD version 2.4.6, May 4, 2016, results:
+    status: OK
+    n, dimension of A:                                  66
+    nz, number of nonzeros in A:                        66
+    symmetry of A:                                      1.0000
+    number of nonzeros on diagonal:                     66
+    nonzeros in pattern of A+A' (excl. diagonal):       0
+    # dense rows/columns of A+A':                       0
+    memory used, in bytes:                              2376
+    # of memory compactions:                            0
+
+    The following approximate statistics are for a subsequent
+    factorization of A(P,P) + A(P,P)'.  They are slight upper
+    bounds if there are no dense rows/columns in A+A', and become
+    looser if dense rows/columns exist.
+
+    nonzeros in L (excluding diagonal):                 0
+    nonzeros in L (including diagonal):                 66
+    # divide operations for LDL' or LU:                 0
+    # multiply-subtract operations for LDL':            0
+    # multiply-subtract operations for LU:              0
+    max nz. in any column of L (incl. diagonal):        1
+
+    chol flop count for real A, sqrt counted as 1 flop: 66
+    LDL' flop count for real A:                         0
+    LDL' flop count for complex A:                      0
+    LU flop count for real A (with no pivoting):        0
+    LU flop count for complex A (with no pivoting):     0
+
+Factorize PAP'=LDL' and solve Ax=b
+Nz in L: 0  Flop count: 0
+relative maxnorm of residual: 2.22045e-16
+Factorize A=LDL' and solve Ax=b
+Nz in L: 0  Flop count: 0
+relative maxnorm of residual: 2.22045e-16
+
+
+--------------------------------------------------------
+Input file: ../Matrix/A24
+name: HB/bcsstm02  n: 66 entries: 72  (jumbled version)
+--------------------------------------------------------
+
+
+AMD version 2.4.6, May 4, 2016: approximate minimum degree ordering
+    dense row parameter: 10
+    (rows with more than max (10 * sqrt (n), 16) entries are
+    considered "dense", and placed last in output permutation)
+    aggressive absorption:  yes
+    size of AMD integer: 4
+
+
+AMD version 2.4.6, May 4, 2016, results:
+    status: OK, but jumbled
+    n, dimension of A:                                  66
+    nz, number of nonzeros in A:                        66
+    symmetry of A:                                      1.0000
+    number of nonzeros on diagonal:                     66
+    nonzeros in pattern of A+A' (excl. diagonal):       0
+    # dense rows/columns of A+A':                       0
+    memory used, in bytes:                              2932
+    # of memory compactions:                            0
+
+    The following approximate statistics are for a subsequent
+    factorization of A(P,P) + A(P,P)'.  They are slight upper
+    bounds if there are no dense rows/columns in A+A', and become
+    looser if dense rows/columns exist.
+
+    nonzeros in L (excluding diagonal):                 0
+    nonzeros in L (including diagonal):                 66
+    # divide operations for LDL' or LU:                 0
+    # multiply-subtract operations for LDL':            0
+    # multiply-subtract operations for LU:              0
+    max nz. in any column of L (incl. diagonal):        1
+
+    chol flop count for real A, sqrt counted as 1 flop: 66
+    LDL' flop count for real A:                         0
+    LDL' flop count for complex A:                      0
+    LU flop count for real A (with no pivoting):        0
+    LU flop count for complex A (with no pivoting):     0
+
+Factorize PAP'=LDL' and solve Ax=b
+Nz in L: 0  Flop count: 0
+relative maxnorm of residual: 2.22045e-16
+Factorize A=LDL' and solve Ax=b
+Nz in L: 0  Flop count: 0
+relative maxnorm of residual: 2.22045e-16
+
+
+--------------------------------------------------------
+Input file: ../Matrix/A25
+name: Dense/0  n: 0 entries: 0 (invalid matrix, Ap [0] = 1)
+--------------------------------------------------------
+
+ldlamd: invalid matrix and/or permutation
+
+
+--------------------------------------------------------
+Input file: ../Matrix/A26
+name: Dense/2  n: 2 entries: 4 (invalid perm, P[1]=99)
+--------------------------------------------------------
+
+ldlamd: invalid matrix and/or permutation
+
+
+--------------------------------------------------------
+Input file: ../Matrix/A27
+name: Dense/3  n: 3 entries: 9 (invalid perm)
+--------------------------------------------------------
+
+ldlamd: invalid matrix and/or permutation
+
+
+--------------------------------------------------------
+Input file: ../Matrix/A28
+name: Dense/3  n: 3 entries: 9 (invalid Ap)
+--------------------------------------------------------
+
+ldlamd: invalid matrix and/or permutation
+
+
+--------------------------------------------------------
+Input file: ../Matrix/A29
+name: Dense/3  n: 3 entries: 9 (invalid Ai)
+--------------------------------------------------------
+
+ldlamd: invalid matrix and/or permutation
+
+
+--------------------------------------------------------
+Input file: ../Matrix/A30
+name: Dense/3  n: 3 entries: 9 (invalid Ai)
+--------------------------------------------------------
+
+ldlamd: invalid matrix and/or permutation
+
+Largest residual during all tests: 3.27418e-10
+
+ldlamd: all tests passed

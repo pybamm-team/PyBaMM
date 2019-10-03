@@ -1,0 +1,83 @@
+May 4, 2016: version 1.2.6
+
+    * minor changes to Makefile
+
+Apr 1, 2016: version 1.2.5
+
+    * licensing simplified (no other change); refer to BTF/Doc/License.txt
+
+Feb 1, 2016: version 1.2.4
+
+    * update to Makefiles
+
+Jan 30, 2016: version 1.2.3
+
+    * modifications to Makefiles
+
+Jan 1, 2016: version 1.2.2
+
+    * modified Makefile to create shared libraries
+        No change to C code except version number
+
+Oct 10, 2014: version 1.2.1
+
+    modified MATLAB/btf_make.m.  No change to C code except version number.
+
+Jun 1, 2012: version 1.2.0
+
+    * changed from UFconfig to SuiteSparse_config
+
+Dec 7, 2011: version 1.1.3
+
+    * fixed the Makefile to better align with CFLAGS and other standards
+
+Jan 25, 2011: version 1.1.2
+
+    * minor fix to "make install"
+
+Nov 30, 2009: version 1.1.1
+
+    * added "make install" and "make uninstall"
+
+Mar 24, 2009: version 1.1.0
+
+    * tabs expanded to 8 spaces; version number updated to stay in sync with KLU
+
+Nov 1, 2007: version 1.0.1
+
+    * trivial change to BTF/MATLAB/btf.c mexFunction: unused variable removed.
+
+May 31, 2007:  version 1.0 released
+
+    * the C application program interface has been modified (see below)
+
+    * maxtrans function renamed to btf_maxtrans
+
+    * strongcomp function renamed to btf_strongcomp
+
+    * full statement coverage tests (KLU/Tcov)
+
+    * maxwork parameter added to btf_maxtrans and btf_order
+
+    * btf_maxtrans modified; now returns Q[i] = -1 if row i is unmatched;
+        code to complete the permutation moved to btf_order.  This also
+        changes the maxtrans mexFunction.
+
+    * btf_install added for easy MATLAB installation
+
+    * illustrative recursive version of maxtrans removed (see the recursive
+        version of cs_maxtrans in CSparse instead)
+
+    * MAXTRANS_* macros renamed BTF_*
+
+    * no bug fixes in this release
+
+Dec 12, 2006: version 0.11
+
+    * minor MATLAB cleanup
+
+Apr 30, 2006:
+
+    * minor editing of comments.  dmperm.c moved to MATLAB directory, since
+        it requires MATLAB.  Version number not changed.
+

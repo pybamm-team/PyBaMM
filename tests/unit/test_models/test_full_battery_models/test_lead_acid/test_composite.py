@@ -10,11 +10,6 @@ class TestLeadAcidComposite(unittest.TestCase):
         model = pybamm.lead_acid.Composite()
         model.check_well_posedness()
 
-        # Test build after init
-        model = pybamm.lead_acid.Composite(build=False)
-        model.build_model()
-        model.check_well_posedness()
-
     def test_well_posed_with_convection(self):
         options = {"convection": True}
         model = pybamm.lead_acid.Composite(options)

@@ -1,0 +1,180 @@
+May 4, 2016: version 2.4.6
+
+    * minor changes to Makefile
+
+Apr 1, 2016: version 2.4.5
+
+    * licensing simplified (no other change); refer to AMD/Doc/License.txt
+
+Feb 1, 2016: version 2.4.4
+
+    * update to Makefiles
+
+Jan 30, 2016: version 2.4.3
+
+    * modifications to Makefiles
+
+Jan 1, 2016: version 2.4.2
+
+    * modified Makefile to create shared libraries
+        No change to C code except version number
+
+Oct 10, 2014: version 2.4.1
+
+    modified MATLAB/amd_make.m.  No change to C code except version number.
+
+July 31, 2013: version 2.4.0
+
+    * changed malloc and printf pointers to use SuiteSparse_config
+
+Jun 20, 2012: verison 2.3.1
+
+    * minor update for Windows (removed filesep)
+
+Jun 1, 2012: version 2.3.0
+
+    * changed from UFconfig to SuiteSparse_config
+
+May 15, 2012: version 2.2.4
+
+    * minor fix to SIZE_T_MAX definition (finicky compiler workaround)
+
+Dec 7, 2011: version 2.2.3
+
+    * fixed the Makefile to better align with CFLAGS and other standards
+
+Jan 25, 2011: version 2.2.2
+
+    * minor fix to "make install"
+
+Nov 30, 2009: version 2.2.1
+
+    * added "make install" and "make uninstall"
+
+May 31, 2007: version 2.2.0
+
+    * port to 64-bit MATLAB
+
+    * Makefile moved from Source/ to Lib/
+
+    * minor changes to printing routines (amd_control.c, amd_info.c)
+
+Dec 12, 2006, version 2.0.4
+
+    * minor MATLAB code cleanup
+
+Nov 29, 2006, version 2.0.3
+
+    * changed MATLAB function name to amd2, so as not to conflict with
+	the now built-in version of AMD in MATLAB (which is the same thing
+	as the AMD here...).
+
+Sept 28, 2006, version 2.0.2
+
+    * #define SIZE_T_MAX not done if already defined (Mac OSX).
+
+Aug 31, 2006:
+
+    * trivial change to comments in amd.m
+
+Apr 30, 2006: AMD Version 2.0:
+
+    * long integer redefined as UF_long, controlled by UFconfig.h.
+
+    * amd_order no longer requires its input to have sorted columns.  It can
+	also tolerate duplicate entries in each column.  If these conditions
+	hold, but the matrix is otherwise valid, amd_order returns
+	AMD_OK_BUT_JUMBLED (a warning, not an error).
+
+    * amd_preprocess no longer deemed user-callable, since it is no longer
+	needed (it was used to ensure the input matrix had sorted columns with
+	no duplicate entries).  It still exists, with additional parameters,
+	and is called by amd_order if necessary.  amd_wpreprocess and
+	amd_preprocess_valid removed.  Fortran interface routine amdpreproc
+	removed.
+
+    * Integer overflow computations modified, to extend the size of problem
+	that the "int" version can solve when used in an LP64 compilation.
+
+    * amd_demo2.c simplified (it tests AMD with a jumbled matrix).
+
+    * amd_valid returned TRUE/FALSE in v1.2.  It now returns AMD_OK,
+	AMD_OK_BUT_JUMBLED, or AMD_INVALID.  Only in the latter case is the
+	matrix unsuitable as input to amd_order.
+
+    * amd_internal.h include file moved from AMD/Source to AMD/Include.
+
+Nov 15, 2005:
+
+    * minor editting of comments; version number (1.2) unchanged.
+
+Aug. 30, 2005: AMD Version 1.2
+
+    * AMD v1.2 is upward compatible with v1.1 and v1.0, except that v1.2 no
+	longer includes the compile-time redefinition of malloc and free.
+
+    * Makefile modified to use UFconfig.mk.  "Make" directory removed.
+
+    * Easier inclusion in C++ programs.
+
+    * option to allow compile-time redefinition of malloc and free
+	(added to v1.1) removed for v1.2.  Replaced with a run-time
+	redefinition.  AMD includes function pointers for malloc, free,
+	calloc, realloc, and printf, so that all those routines can be
+	redefined at compile time.  These function pointers are global
+	variables, and so are not technically thread-safe, unless you
+	use defaults and don't need to change them (the common case)
+	or if you change them in one thread before using them in other
+	threads.
+
+    * added #define'd version number
+
+    * minor modification to AMD_2 to ensure all lines can be tested, without
+	conditional compilation.
+
+    * moved the prototype for AMD_2 from amd_internal.h to amd.h
+
+    * moved the prototype for AMD_valid from amd_internal.h to amd.h
+
+    * MATLAB mexFunction uses libamd.a (compiled with cc) instead of compiling
+	each AMD source file with the mex command
+
+    * long demo (amd_l_demo.c) added.
+
+Jan. 21, 2004: AMD Version 1.1
+
+    * No bugs found or fixed - new features added, only
+    * amd_preprocess added, to allow for more general input of the matrix A.
+    * ME=0 added to amd*.f, unused DEXT variable removed from amdbar.f,
+	to avoid spurious compiler warnings (this was not a bug).
+    * amd_demo2.c and amd_demo2.out added, to test/demo amd_preprocess.
+    * option to allow compile-time redefinition of malloc, free, printf added
+    * amd_demo.c shortened slightly (removed printing of PAP')
+    * User Guide modified (more details added)
+    * linewidth reduced from 80 to 79 columns
+
+Oct. 7, 2003:  AMD version 1.0.1.
+
+    * MATLAB mexFunction modified, to remove call to mexCallMATLAB function.
+      This function can take a long time to call, particularly if you are
+      ordering many small matrices.
+
+May 6, 2003:  AMD Version 1.0 released.
+
+    * converted to C (compare amd.f and amdbar.f with amd_2.c)
+    * dense rows/column removed prior to ordering
+    * elimination tree post-ordering added
+    * demos, user guide written
+    * statistics added (nz in L, flop count, symmetry of A)
+    * computes the pattern of A+A' if A is unsymmetric
+    * user's input matrix no longer overwritten
+    * degree lists initialized differently
+    * IOVFLO argument removed from Fortran versions (amd.f and amdbar.f)
+    * parameters added (dense row/column detection, aggressive absorption)
+    * MATLAB mexFunction added
+
+Jan, 1996:
+
+    * amdbar.f posted at http://www.netlib.org (with a restricted License)
+    * amd.f appears as MC47B/BD in the Harwell Subroutine Library
+	(without the IOVFLO argument)

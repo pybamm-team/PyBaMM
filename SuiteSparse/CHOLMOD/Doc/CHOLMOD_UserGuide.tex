@@ -1,0 +1,3637 @@
+%-------------------------------------------------------------------------------
+% The CHOLMOD/Doc/UserGuide.tex file.
+%-------------------------------------------------------------------------------
+
+\documentclass[11pt]{article}
+
+\newcommand{\m}[1]{{\bf{#1}}}       % for matrices and vectors
+\newcommand{\tr}{^{\sf T}}          % transpose
+\newcommand{\new}[1]{\overline{#1}}
+
+\topmargin 0in
+\textheight 8.5in
+\oddsidemargin 0pt
+\evensidemargin 0pt
+\textwidth 6.5in
+
+\begin{document}
+
+\author{Timothy A. Davis \\
+DrTimothyAldenDavis@gmail.com, http://www.suitesparse.com }
+\title{User Guide for CHOLMOD: a sparse Cholesky factorization and
+modification package}
+
+\date{VERSION 3.0.13, Dec 20, 2018}
+\maketitle
+
+%-------------------------------------------------------------------------------
+\begin{abstract}
+    CHOLMOD\footnote{CHOLMOD is short for CHOLesky MODification,
+    since a key feature of the package is its ability to update/downdate
+    a sparse Cholesky factorization}
+    is a set of routines for factorizing sparse symmetric positive
+    definite matrices of the form $\m{A}$ or $\m{AA}\tr$, updating/downdating
+    a sparse Cholesky factorization, solving linear systems, updating/downdating
+    the solution to the triangular system $\m{Lx}=\m{b}$, and many other sparse
+    matrix functions for both symmetric and unsymmetric matrices.
+    Its supernodal Cholesky factorization
+    relies on LAPACK and the Level-3 BLAS, and obtains a substantial fraction
+    of the peak performance of the BLAS.  Both real and complex matrices
+    are supported.  
+    It also includes a non-supernodal $\m{LDL}^T$ factorization method
+    that can factorize symmetric indefinite matrices if all of their
+    leading submatrices are well-conditioned ($\m{D}$ is diagonal).
+    CHOLMOD is written in ANSI/ISO C, with both
+    C and MATLAB interfaces.  This code works on Microsoft Windows and many versions
+    of Unix and Linux.
+\end{abstract}
+%-------------------------------------------------------------------------------
+
+CHOLMOD Copyright\copyright 2005-2015 by Timothy A. Davis.  Portions are also
+copyrighted by William W. Hager (the {\tt Modify} Module),
+and the University of Florida (the {\tt Partition} and {\tt Core} Modules).
+All Rights Reserved.
+
+See CHOLMOD/Doc/License.txt for the license.
+CHOLMOD is also available under other licenses that permit its use in
+proprietary applications; contact the authors for details.
+See http://www.suitesparse.com for the code and all documentation,
+including this User Guide.
+
+\newpage
+\tableofcontents
+
+%-------------------------------------------------------------------------------
+\newpage \section{Overview}
+%-------------------------------------------------------------------------------
+
+CHOLMOD is a set of ANSI C routines for solving systems of linear
+equations, $\m{Ax}=\m{b}$, when $\m{A}$ is sparse and symmetric positive definite,
+and $\m{x}$ and $\m{b}$ can be either sparse or dense.\footnote{Some support
+is provided for symmetric indefinite matrices.}
+Complex matrices are supported, in two different formats.
+CHOLMOD includes high-performance left-looking supernodal factorization
+and solve methods \cite{NgPeyton91b},
+based on LAPACK \cite{LAPACK} and the BLAS \cite{ACM679a}.
+After a matrix is factorized, its factors can be updated or downdated using
+the techniques described by Davis and Hager
+in \cite{DavisHager99,DavisHager01,DavisHager05}.
+Many additional sparse matrix operations are provided, for both
+symmetric and unsymmetric matrices (square or rectangular), including
+sparse matrix multiply, add, transpose, permutation, scaling,
+norm, concatenation, sub-matrix access, and converting to alternate data structures.
+Interfaces to many ordering methods are provided, including minimum degree
+(AMD \cite{AmestoyDavisDuff96,AmestoyDavisDuff03},
+COLAMD \cite{DavisGilbertLarimoreNg00_algo,DavisGilbertLarimoreNg00}),
+constrained minimum degree (CSYMAMD, CCOLAMD, CAMD), and
+graph-partitioning-based nested dissection (METIS \cite{KarypisKumar98}).
+Most of its operations are available within MATLAB via mexFunction interfaces.
+
+    CHOLMOD also includes a non-supernodal $\m{LDL}^T$ factorization method
+    that can factorize symmetric indefinite matrices if all of their
+    leading submatrices are well-conditioned ($\m{D}$ is diagonal).
+
+A pair of articles on CHOLMOD has been submitted to the ACM Transactions
+on Mathematical Software:
+\cite{ChenDavisHagerRajamanickam06,DavisHager06}.
+
+CHOLMOD 1.0 replaces {\tt chol} (the sparse case), {\tt symbfact}, and {\tt etree}
+in MATLAB 7.2 (R2006a), and is used for {\tt x=A}$\backslash${\tt b}
+when {\tt A} is symmetric positive definite \cite{GilbertMolerSchreiber}.
+It will replace {\tt sparse} in a future version of MATLAB.
+
+The C-callable CHOLMOD library consists of 133 user-callable routines and one
+include file.  Each routine comes in two versions, one for {\tt int} integers
+and another for {\tt long}.  Many of the routines can support either real or
+complex matrices, simply by passing a matrix of the appropriate type.
+
+Nick Gould, Yifan Hu, and Jennifer Scott have independently tested CHOLMOD's
+performance, comparing it with nearly a dozen or so other solvers
+\cite{GouldHuScott05,GouldHuScott05b}.  Its performance was quite competitive.
+
+%-------------------------------------------------------------------------------
+\newpage \section{Primary routines and data structures}
+%-------------------------------------------------------------------------------
+
+Five primary CHOLMOD routines are required to factorize $\m{A}$ or $\m{AA}\tr$
+and solve the related system $\m{Ax}=\m{b}$ or $\m{AA}\tr\m{x}=\m{b}$,
+for either the real or complex cases:
+\begin{enumerate}
+\item {\tt cholmod\_start}:
+    This must be the first call to CHOLMOD.
+
+\item {\tt cholmod\_analyze}:
+    Finds a fill-reducing ordering, and performs the symbolic factorization,
+    either simplicial (non-supernodal) or supernodal.
+
+\item {\tt cholmod\_factorize}:
+    Numerical factorization, either simplicial or supernodal, $\m{LL}\tr$ or $\m{LDL}\tr$
+    using either the symbolic factorization from {\tt cholmod\_analyze} or the numerical
+    factorization from a prior call to {\tt cholmod\_factorize}.
+
+\item {\tt cholmod\_solve}:
+    Solves $\m{Ax}=\m{b}$, or many other related systems, where $\m{x}$ and
+    $\m{b}$ are dense matrices.  The {\tt cholmod\_spsolve} routine handles
+    the sparse case.  Any mixture of real and complex $\m{A}$ and $\m{b}$ are
+    allowed.
+
+\item {\tt cholmod\_finish}:
+    This must be the last call to CHOLMOD.
+\end{enumerate}
+
+Additional routines are also required to create and destroy
+the matrices $\m{A}$, $\m{x}$, $\m{b}$, and the $\m{LL}\tr$ or $\m{LDL}\tr$ factorization.
+CHOLMOD has five kinds of data structures, referred to as objects and implemented
+as pointers to {\tt struct}'s:
+
+\begin{enumerate}
+\item {\tt cholmod\_common}:  parameter settings, statistics, and workspace
+    used internally by CHOLMOD.
+    See Section~\ref{cholmod_common} for details.
+
+\item {\tt cholmod\_sparse}:  a sparse matrix in compressed-column form,
+    either pattern-only, real, complex, or ``zomplex.''  In its basic form,
+    the matrix {\tt A} contains:
+    \begin{itemize}
+	\item {\tt A->p}, an integer array of size {\tt A->ncol+1}.
+	\item {\tt A->i}, an integer array of size {\tt A->nzmax}.
+	\item {\tt A->x}, a {\tt double} array of size {\tt A->nzmax} or twice that for the complex case.
+	    This is compatible with the Fortran and ANSI C99 complex data type.
+	\item {\tt A->z}, a {\tt double} array of size {\tt A->nzmax} if {\tt A} is zomplex.
+	    A zomplex matrix has a {\tt z} array, thus the name.
+	    This is compatible with the MATLAB representation of complex matrices.
+    \end{itemize}
+    For all four types of matrices, the row indices of entries of column {\tt j}
+    are located in {\tt A->i [A->p [j] ... A->p [j+1]-1]}.
+    For a real matrix, the corresponding numerical values are in {\tt A->x} at the same location.
+    For a complex matrix, the entry whose row index is {\tt A->i [p]} is contained in
+	{\tt A->x [2*p]} (the real part) and {\tt A->x [2*p+1]} (the imaginary part).
+    For a zomplex matrix, the real part is in {\tt A->x [p]} and imaginary part is in {\tt A->z [p]}.
+    See Section~\ref{cholmod_sparse} for more details.
+
+\item {\tt cholmod\_factor}:
+    A symbolic or numeric factorization, either real, complex, or zomplex.
+    It can be either an $\m{LL}\tr$ or $\m{LDL}\tr$ factorization, and either
+    simplicial or supernodal.  You will normally not need to examine its contents.
+    See Section~\ref{cholmod_factor} for more details.
+
+\item {\tt cholmod\_dense}:
+    A dense matrix, either real, complex or zomplex, in column-major order.
+    This differs from the row-major convention used in C.  A dense matrix {\tt X} contains
+    \begin{itemize}
+	\item {\tt X->x}, a double array of size {\tt X->nzmax} or twice that for the complex case.
+	\item {\tt X->z}, a double array of size {\tt X->nzmax} if {\tt X} is zomplex.
+    \end{itemize}
+    For a real dense matrix $x_{ij}$ is {\tt X->x [i+j*d]} where {\tt d = X->d} is the leading dimension of {\tt X}.
+    For a complex dense matrix, the real part of $x_{ij}$ is {\tt X->x [2*(i+j*d)]} and the imaginary part is {\tt X->x [2*(i+j*d)+1]}.
+    For a zomplex dense matrix, the real part of $x_{ij}$ is {\tt X->x [i+j*d]} and the imaginary part is {\tt X->z [i+j*d]}.
+    Real and complex dense matrices can be passed to LAPACK and the BLAS.
+    See Section~\ref{cholmod_dense} for more details.
+
+\item {\tt cholmod\_triplet}:
+    CHOLMOD's sparse matrix ({\tt cholmod\_sparse}) is the primary input for nearly all CHOLMOD
+    routines, but it can be difficult for the user to construct.
+    A simpler method of creating a sparse matrix is to first create a {\tt cholmod\_triplet} matrix,
+    and then convert it to a {\tt cholmod\_sparse} matrix via
+    the {\tt cholmod\_triplet\_to\_sparse} routine.
+    In its basic form, the triplet matrix {\tt T} contains
+    \begin{itemize}
+	\item {\tt T->i} and {\tt T->j}, integer arrays of size {\tt T->nzmax}.
+	\item {\tt T->x}, a double array of size {\tt T->nzmax} or twice that for the complex case.
+	\item {\tt T->z}, a double array of size {\tt T->nzmax} if {\tt T} is zomplex.
+    \end{itemize}
+    The {\tt k}th entry in the data structure has row index
+    {\tt T->i [k]} and column index {\tt T->j [k]}.
+    For a real triplet matrix, its numerical value is {\tt T->x [k]}.
+    For a complex triplet matrix, its real part is {\tt T->x [2*k]} and its imaginary part is {\tt T->x [2*k+1]}.
+    For a zomplex matrix, the real part is {\tt T->x [k]} and imaginary part is {\tt T->z [k]}.
+    The entries can be in any order, and duplicates are permitted.
+    See Section~\ref{cholmod_triplet} for more details.
+
+\end{enumerate}
+
+Each of the five objects has a routine in CHOLMOD to create and destroy it.
+CHOLMOD provides many other operations on these objects as well.
+A few of the most important ones are illustrated in the sample program in the
+next section.
+
+%-------------------------------------------------------------------------------
+\newpage \section{Simple example program}
+%-------------------------------------------------------------------------------
+
+\input{_simple.tex}
+The {\tt Demo/cholmod\_simple.c} program illustrates the
+basic usage of CHOLMOD.  It reads a triplet matrix from a file
+(in Matrix Market format), converts it into a sparse matrix,
+creates a linear system, solves it, and prints the norm of the residual.
+
+See the {\tt CHOLMOD/Demo/cholmod\_demo.c} program for a more elaborate
+example, and \newline
+{\tt CHOLMOD/Demo/cholmod\_l\_demo.c} for its {\tt long} integer version.
+
+%-------------------------------------------------------------------------------
+\newpage \section{Installation of the C-callable library}
+\label{Install}
+%-------------------------------------------------------------------------------
+
+CHOLMOD requires a suite of external packages, many of which are distributed
+along with CHOLMOD, but three of which are not.  Those included with CHOLMOD are:
+\begin{itemize}
+\item AMD: an approximate minimum degree ordering algorithm,
+    by Tim Davis, Patrick Amestoy, and Iain Duff
+    \cite{AmestoyDavisDuff96,AmestoyDavisDuff03}.
+\item COLAMD: an approximate column minimum degree ordering algorithm,
+    by Tim Davis, Stefan Larimore, John Gilbert, and Esmond Ng
+    \cite{DavisGilbertLarimoreNg00_algo,DavisGilbertLarimoreNg00}.
+\item CCOLAMD: a constrained approximate column minimum degree ordering
+    algorithm,
+    by Tim Davis and Siva Rajamanickam, based directly on COLAMD.
+    This package is not required if CHOLMOD is compiled with the
+    {\tt -DNCAMD} flag.
+\item CAMD: a constrained approximate minimum degree ordering
+    algorithm,
+    by Tim Davis and Yanqing Chen, based directly on AMD.
+    This package is not required if CHOLMOD is compiled with the
+    {\tt -DNCAMD} flag.
+\item {\tt SuiteSparse\_config}:
+    a single place where all sparse matrix packages authored
+    or co-authored by Davis are configured.  Also includes a version of the
+    {\tt xerbla} routine for the BLAS.
+\end{itemize}
+
+Three other packages are required for optimal performance:
+\begin{itemize}
+\item {\tt METIS 5.1.0}: a graph partitioning package by George Karypis,
+    Univ. of Minnesota.  Not needed if {\tt -DNPARTITION} is used.
+    See http://www-users.cs.umn.edu/$\sim$karypis/metis.
+\item BLAS: the Basic Linear Algebra Subprograms.
+    Not needed if {\tt -DNSUPERNODAL} is used.
+    See http://www.netlib.org for the reference BLAS (not meant for production
+    use).  For Kazushige Goto's optimized BLAS (highly recommended for CHOLMOD)
+    see \newline
+    http://www.tacc.utexas.edu/$\sim$kgoto/ or
+    http://www.cs.utexas.edu/users/flame/goto/.
+    I recommend that you avoid the Intel MKL BLAS; one recent
+    version returns NaN's, where both the Goto BLAS and the standard
+    Fortran reference BLAS return the correct answer.
+    See {\tt CHOLMOD/README} for more information.
+\item LAPACK: the Basic Linear Algebra Subprograms.
+    Not needed if {\tt -DNSUPERNODAL} is used.
+    See http://www.netlib.org.
+\item CUDA BLAS:  CHOLMOD can exploit an NVIDIA GPU by using the CUDA BLAS
+    for large supernodes.  This feature is new to CHOLMOD v2.0.0.
+\end{itemize}
+
+You must first obtain and install LAPACK, and the BLAS.
+METIS 5.1.0 is optional; a copy of it is in {\tt SuiteSparse}.
+System-dependent configurations in the
+{\tt SuiteSparse\_config/SuiteSparse\_config.mk} file.
+This file has been changed in CHOLMOD version 3.0.7;
+it now automatically detects your system, your BLAS, and whether or not
+you have CUDA installed, and whether or not you have METIS 5.1.0.
+You still may need to edit it to refine the
+compilation parameters for your particular system, but it is likely it
+will work unmodified.
+
+\noindent
+Here are some of the various parameters that you can control in your
+{\tt SuiteSparse\_config/SuiteSparse\_config.mk} file.
+You can set them without editing that file, simply by including
+them on your {\tt make} command.  For example, to {\tt -lmyblas},
+use {\tt make BLAS=-lmyblas}.  For a complete list, including
+their default values, do {\tt make config}.
+\begin{itemize}
+\item {\tt CC = } your C compiler, such as {\tt cc}.
+\item {\tt CF = } optimization flags, such as {\tt -O}.
+\item {\tt RANLIB = } your system's {\tt ranlib} program, if needed.
+\item {\tt ARCHIVE =} the command to create a library (such as {\tt ar}).
+\item {\tt RM =} the command to delete a file.
+\item {\tt MV =} the command to rename a file.
+\item {\tt F77 =} the command to compile a Fortran program (optional).
+\item {\tt F77FLAGS =} the Fortran compiler flags (optional).
+\item {\tt F77LIB =} the Fortran libraries (optional).
+\item {\tt LDLIBS = } basic libraries, such as {\tt -lm}.
+\item {\tt BLAS =} your BLAS library.
+\item {\tt LAPACK =} your LAPACK library.
+\item {\tt METIS\_PATH =} the path to your copy of the METIS 5.1.0 source code.
+\item {\tt METIS =} your METIS library.
+\item {\tt GPU\_CONFIG = } configuration settings specific to the CUDA BLAS.
+\item {\tt CHOLMOD\_CONFIG = } configuration settings specific to CHOLMOD.
+\end{itemize}
+
+\noindent
+CHOLMOD's specific settings are given by the {\tt CHOLMOD\_CONFIG} string:
+\begin{itemize}
+\item {\tt -DNCHECK}:	    do not include the Check module.
+\item {\tt -DNCHOLESKY}:    do not include the Cholesky module.
+\item {\tt -DNPARTITION}:   do not include the interface to METIS in
+                            the Partition module.
+\item {\tt -DCAMD}:         do not include the interfaces to CAMD, CCOLAMD,
+                            and CSYMAMD in the Partition module.
+\item {\tt -DNMATRIXOPS}:   do not include the MatrixOps module.
+                            Note that the Demo requires the MatrixOps module.
+\item {\tt -DNMODIFY}:	    do not include the Modify module.
+\item {\tt -DNSUPERNODAL}:  do not include the Supernodal module.
+\item {\tt -DNPRINT}:	    do not print anything.
+\item {\tt -D'LONGBLAS=long'} or {\tt -DLONGBLAS='long long'}
+			    defines the integers used by LAPACK
+                            and the BLAS (defaults to {\tt int}).
+\item {\tt -DNSUNPERF}:	    for Solaris only.  If defined, do not use the
+                            Sun Performance Library.
+\item {\tt -DNLARGEFILE}:   CHOLMOD now assumes support for large files (2GB or
+                            larger).  If this causes problems, you can compile
+                            CHOLMOD with -DNLARGEFILE.  To use large files, you
+                            should {\tt \#include "cholmod.h"} (or at least
+                            {\tt \#include "cholmod\_io64.h"}) before any other
+                            {\tt \#include} statements, in your application
+                            that uses CHOLMOD.  You may need to use {\tt
+                            fopen64} to create a file pointer to pass to
+                            CHOLMOD, if you are using a non-gcc compiler.
+\end{itemize}
+
+Type {\tt make} in the {\tt CHOLMOD} directory.  The AMD,
+COLAMD, CAMD, CCOLAMD, and {\tt CHOLMOD} libraries will be compiled,
+as will the C version of the null-output {\tt xerbla} routine in case you need it.
+No Fortran compiler is required in this case.  A short demo program will
+be compiled and tested on a few matrices.  The residuals should all be small.
+Compare your output with the {\tt CHOLMOD/Demo/make.out} file.
+
+CHOLMOD is now ready for use in your own applications.  You must link
+your programs with the
+{\tt libcholmod.*},
+{\tt libamd.*},
+{\tt libcolamd.*},
+LAPACK,
+and
+BLAS libraries,
+as well as the {\tt xerbla} library if you need it
+({\tt SuiteSparse\_config/xerbla/libcerbla.*} for the C version or
+\newline
+ {\tt SuiteSparse\_config/xerbla/libxerbla.*} for the Fortran version).
+Unless you use {\tt -DNPARTITION}, you must also link with the METIS 5.1.0
+library.
+Unless {\tt -DNCAMD} is present at compile time,
+you must link with {\tt CAMD/libcamd.*}, and {\tt CCOLAMD/libccolamd.*}.
+
+The {\tt make} command now copies all of these libraries and include files
+into a single place: {\tt SuiteSparse/lib} and {\tt SuiteSparse/include}.
+To tell your your compiler where to find them, use
+{\tt -LSuiteSparse/lib} and {\tt -ISuiteSparse/include}.
+
+To install CHOLMOD in /usr/local/lib and /usr/local/include, do
+{\tt make install}.
+If you do this, youdo not need the {\tt -L} and {\tt -I} option when compiling
+your program.
+Documentation is also installed in /usr/local/doc.
+The installation location can be changed at the {\tt make} command line; see the
+{\tt SuiteSparse/README.txt} file for details.
+To remove CHOLMOD, do {\tt make uninstall}.
+
+%-------------------------------------------------------------------------------
+\newpage \section{Using CHOLMOD in MATLAB}
+%-------------------------------------------------------------------------------
+
+CHOLMOD includes a set of m-files and mexFunctions in the CHOLMOD/MATLAB
+directory.  The following functions are provided:
+
+\vspace{0.1in}
+\begin{tabular}{ll}
+\hline
+{\tt analyze}	    & order and analyze a matrix \\
+{\tt bisect}	    & find a node separator \\
+{\tt chol2}	    & same as {\tt chol} \\
+{\tt cholmod2}	    & same as {\tt x=A}$\backslash${\tt b} if {\tt A} is symmetric positive definite \\
+{\tt cholmod\_demo} & a short demo program \\
+{\tt cholmod\_make} & compiles CHOLMOD for use in MATLAB \\
+{\tt etree2}	    & same as {\tt etree} \\
+{\tt graph\_demo}   & graph partitioning demo \\
+{\tt lchol}	    & {\tt L*L'} factorization \\
+{\tt ldlchol}	    & {\tt L*D*L'} factorization \\
+{\tt ldl\_normest}  & estimate {\tt norm(A-L*D*L')} \\
+{\tt ldlsolve}	    & {\tt x = L'}$\backslash${\tt (D}$\backslash${\tt (L}$\backslash${\tt b))} \\
+{\tt ldlsplit}	    & split the output of {\tt ldlchol} into {\tt L} and {\tt D} \\
+{\tt ldlupdate}	    & update/downdate an {\tt L*D*L'} factorization \\
+{\tt ldlrowmod}	    & add/delete a row from an {\tt L*D*L'} factorization \\
+{\tt metis}	    & interface to {\tt METIS\_NodeND} ordering \\
+{\tt mread}	    & read a sparse or dense Matrix Market file \\
+{\tt mwrite}	    & write a sparse or dense Matrix Market file \\
+{\tt nesdis}	    & CHOLMOD's nested dissection ordering \\
+{\tt resymbol}	    & recomputes the symbolic factorization \\
+{\tt sdmult}	    & {\tt S*F} where {\tt S} is sparse and {\tt F} is dense \\
+{\tt spsym}	    & determine symmetry \\
+{\tt sparse2}	    & same as {\tt sparse} \\
+{\tt symbfact2}	    & same as {\tt symbfact} \\
+\hline
+\end{tabular}
+
+\vspace{0.1in}\noindent
+Each function is described in the next sections.
+
+\newpage
+\subsection{{\tt analyze}: order and analyze}					\input{_analyze_m.tex}
+\subsection{{\tt bisect}: find a node separator}				\input{_bisect_m.tex}
+\subsection{{\tt chol2}: same as {\tt chol}}					\input{_chol2_m.tex}
+\newpage
+\subsection{{\tt cholmod2}: supernodal backslash}				\input{_cholmod2_m.tex}
+\newpage
+\subsection{{\tt cholmod\_demo}: a short demo program}				\input{_cholmod_demo_m.tex}
+\subsection{{\tt cholmod\_make}: compile CHOLMOD in MATLAB}			\input{_cholmod_make_m.tex}
+\newpage
+\subsection{{\tt etree2}: same as {\tt etree}}					\input{_etree2_m.tex}
+\newpage
+\subsection{{\tt graph\_demo}: graph partitioning demo}				\input{_graph_demo_m.tex}
+\newpage
+\subsection{{\tt lchol}: $\m{LL}\tr$ factorization}				\input{_lchol_m.tex}
+\subsection{{\tt ldlchol}: $\m{LDL}\tr$ factorization}				\input{_ldlchol_m.tex}
+\newpage
+\subsection{{\tt ldlsolve}: solve using an $\m{LDL}\tr$ factorization}		\input{_ldlsolve_m.tex}
+\subsection{{\tt ldlsplit}: split an $\m{LDL}\tr$ factorization}		\input{_ldlsplit_m.tex}
+\newpage
+\subsection{{\tt ldlupdate}: update/downdate an $\m{LDL}\tr$ factorization}	\input{_ldlupdate_m.tex}
+\newpage
+\subsection{{\tt ldlrowmod}: add/delete a row from an $\m{LDL}\tr$ factorization}	\input{_ldlrowmod_m.tex}
+\newpage
+\subsection{{\tt mread}: read a sparse or dense matrix from a Matrix Market file}\input{_mread_m.tex}
+\subsection{{\tt mwrite}: write a sparse or dense matrix to a Matrix Market file}	\input{_mwrite_m.tex}
+\newpage
+\subsection{{\tt metis}: order with METIS}					\input{_metis_m.tex}
+\newpage
+\subsection{{\tt nesdis}: order with CHOLMOD nested dissection}			\input{_nesdis_m.tex}
+\newpage
+\subsection{{\tt resymbol}: re-do symbolic factorization}			\input{_resymbol_m.tex}
+\subsection{{\tt sdmult}: sparse matrix times dense matrix}			\input{_sdmult_m.tex}
+\newpage
+\subsection{{\tt spsym}: determine symmetry}				\input{_spsym_m.tex}
+\newpage
+\subsection{{\tt sparse2}: same as {\tt sparse}}				\input{_sparse2_m.tex}
+\newpage
+\subsection{{\tt symbfact2}: same as {\tt symbfact}}				\input{_symbfact2_m.tex}
+
+%-------------------------------------------------------------------------------
+\newpage \section{Installation for use in MATLAB}
+%-------------------------------------------------------------------------------
+
+%-------------------------------------------------------------------------------
+\subsection{{\tt cholmod\_make}: compiling CHOLMOD in MATLAB}
+%-------------------------------------------------------------------------------
+
+This is the preferred method, since it allows METIS to be reconfigured to
+use the MATLAB memory-management functions instead of {\tt malloc} and {\tt free};
+this avoids the issue of METIS terminating MATLAB if it runs out of memory.
+It is also simpler for Windows users, who do not have the {\tt make}
+command (unless you obtain a copy of {\tt Cygwin}).
+
+Start MATLAB, {\tt cd} to the {\tt CHOLMOD/MATLAB} directory, and
+type {\tt cholmod\_make} in the MATLAB command window.  This will compile
+the MATLAB interfaces for AMD, COLAMD, CAMD, CCOLAMD, METIS, and CHOLMOD.
+
+%-------------------------------------------------------------------------------
+\newpage \section{Using CHOLMOD with GPU acceleration}
+%-------------------------------------------------------------------------------
+
+Starting with CHOLMOD v2.0.0, it is possible to accelerate the numerical
+factorization phase of CHOLMOD using NVIDIA GPUs.  Due to the large
+computational capability of the GPUs, enabling this capability can result in
+significant performance improvements.  Similar to CPU processing, the GPU is
+better able to accelerate the dense math associated with larger supernodes.
+Hence the GPU will provide more significant performance improvements for larger
+matrices that have more, larger supernodes.
+
+In CHOLMOD v2.3.0 this GPU capability has been improved to provide a
+significant increase in performance and the interface has been expanded to make
+the use of GPUs more flexible.  CHOLMOD can take advantage of a single NVIDIA
+GPU that supports CUDA and has at least 64MB of memory.  (But substantially
+more memory, typically about 3 GB, is recommended for best performance.)
+
+Only the {\tt long} integer version of CHOLMOD can leverage GPU acceleration.
+
+%-------------------------------------------------------------------------------
+\subsection{Compiling CHOLMOD with GPU support}
+%-------------------------------------------------------------------------------
+
+In order to support GPU processing, CHOLMOD must be compiled with the
+preprocessor macro {\tt GPU\_BLAS} defined.  All GPU code is conditional upon
+this macro.  As well, the environment variable {\tt CUDA\_ROOT} must be defined
+and point to the installation of the CUDA toolkit to be used for compilation of
+CHOLMOD.  Typically this would be {\tt /usr/local/cuda}.
+
+The {\tt SuiteSparse\_config.mk} should automatically detect if you have
+CUDA installed on your system.  If so, then it will do everything for you
+without the need to edit the {\tt SuiteSparse\_config.mk} file.
+
+%-------------------------------------------------------------------------------
+\subsection{Enabling GPU acceleration in CHOLMOD}
+%-------------------------------------------------------------------------------
+
+Even if compiled with GPU support, in CHOLMOD v.2.3.0, GPU processing is not
+enabled by default and must be specifically requested.  There are two ways to
+do this, either in the code calling CHOLMOD or using environment variables.
+
+The code author can specify the use of GPU processing with the {\tt
+Common->useGPU} variable.  If this is set to {\tt 1}, CHOLMOD will attempt to
+use the GPU.  If this is set to {\tt 0} the use of the GPU will be prohibited.
+If this is set to {\tt -1}, which is the default case, then the environment
+variables (following paragraph) will be queried to determine if the GPU is to
+be used.  Note that the default value of {\tt -1} is set when {\tt
+cholmod\_start(Common)} is called, so the code author must set {\tt
+Common->useGPU} after calling {\tt cholmod\_start}.
+
+Alternatively, or if it is not possible to modify the code calling CHOLMOD, GPU
+processing can invoked using the {\tt CHOLMOD\_USE\_GPU} environment variable.
+This makes it possible for any CHOLMOD user to invoke GPU processing even if
+the author of the calling program did not consider this.  The interpretation of
+the environment variable {\tt CHOLMOD\_USE\_GPU} is that if the string
+evaluates to an integer other than zero, GPU processing will be enabled.  Note
+that the setting of {\tt Common->useGPU} takes precedence and the environment
+variable {\tt CHOLMOD\_USE\_GPU} will only be queried if {\tt Common->useGPU =
+-1}.
+
+Note that in either case, if GPU processing is requested, but there is no GPU
+present, CHOLMOD will continue using the CPU only.  Consequently it is always
+safe to request GPU processing.
+
+%-------------------------------------------------------------------------------
+\newpage \subsection{Adjustable parameters}
+%-------------------------------------------------------------------------------
+
+There are a number of parameters that have been added to CHOLMOD to control GPU
+processing.  All of these have appropriate defaults such that GPU processing
+can be used without any modification.  However, for any particular combination
+of CPU/GPU, better performance might be obtained by adjusting these parameters.
+
+\bigskip
+
+From {\tt t\_cholmod\_gpu.c}
+
+\begin{quote}
+  {\tt CHOLMOD\_ND\_ROW\_LIMIT} : Minimum number of rows required in a
+  descendant supernode to be eligible for GPU processing during supernode
+  assembly
+
+
+  {\tt CHOLMOD\_ND\_COL\_LIMIT} : Minimum number of columns in a descendant
+  supernode to be eligible for GPU processing during supernode assembly
+
+
+  {\tt CHOLMOD\_POTRF\_LIMIT} : Minimum number of columns in a supernode to be
+  eligible for {\tt POTRF} and {\tt TRSM} processing on the GPU
+
+
+  {\tt CHOLMOD\_GPU\_SKIP} : Number of small descendant supernodes to assembled
+  on the CPU before querying if the GPU is needs more descendant supernodes
+  queued 
+
+\end{quote}
+
+From {\tt cholmod\_core.h}
+
+\begin{quote}
+  {\tt CHOLMOD\_HOST\_SUPERNODE\_BUFFERS} : Number of buffers in which to queue
+  descendant supernodes for GPU processing
+
+\end{quote}
+
+Programatically
+
+\begin{quote}
+
+  {\tt Common->maxGpuMemBytes} : Specifies the maximum amount of memory, in
+  bytes, that CHOLMOD can allocate on the GPU.  If this parameter is not set,
+  CHOLMOD will allocate as much GPU memory as possible.  Hence, the purpose of
+  this parameter is to restrict CHOLMOD's GPU memory use so that CHOLMOD can be
+  used simultaneously with other codes that also use GPU acceleration and
+  require some amount of GPU memory.  If the specified amount of GPU memory is
+  not allocatable, CHOLMOD will allocate the available memory and continue.
+
+  {\tt Common->maxGpuMemFraction} : Entirely similar to {\tt
+  Common->maxGpuMemBytes} but with the memory specified as a fraction of total
+  GPU memory.  Note that if both {\tt maxGpuMemBytes} and {\tt
+  maxGpuMemFraction} are specified, whichever results in the minimum amount of
+  memory will be used.
+
+\end{quote}
+
+Environment variables
+
+\begin{quote}
+  {\tt CHOLMOD\_GPU\_MEM\_BYTES} : Environment variable with a meaning
+  equivalent to {\tt Common->maxGpuMemBytes}.  This will only be queried if
+  {\tt Common->useGPU = -1}.
+
+  {\tt CHOLMOD\_GPU\_MEM\_FRACTION} : Environment variable with a meaning
+  equivalent to {\tt Common->maxGpuMemFraction}.  This will only be queried if
+  {\tt Common->useGPU = -1}.
+
+\end{quote}
+
+%-------------------------------------------------------------------------------
+\newpage \section{Integer and floating-point types, and notation used}
+%-------------------------------------------------------------------------------
+
+CHOLMOD supports both {\tt int} and {\tt long} integers.  CHOLMOD
+routines with the prefix {\tt cholmod\_} use {\tt int} integers,
+{\tt cholmod\_l\_} routines use {\tt long}.  All floating-point
+values are {\tt double}.
+
+The {\tt long} integer is redefinable, via {\tt SuiteSparse\_config.h}.
+That file defines a C preprocessor token {\tt SuiteSparse\_long} which is
+{\tt long} on all systems except for Windows-64, in which case it is
+defined as {\tt \_\_int64}.  The intent is that with suitable compile-time
+switches, {\tt int} is a 32-bit integer and {\tt SuiteSparse\_long} is a 64-bit
+integer.  The term {\tt long} is used to describe the latter
+integer throughout this document (except in the prototypes).
+
+Two kinds of complex matrices are supported: complex and zomplex.
+A complex matrix is held in a manner that is compatible with the
+Fortran and ANSI C99 complex data type.  A complex array of size {\tt n}
+is a {\tt double} array {\tt x} of size {\tt 2*n}, with the real and imaginary
+parts interleaved (the real part comes first, as a {\tt double}, followed the
+imaginary part, also as a {\tt double}.  Thus, the real part of the {\tt k}th
+entry is {\tt x[2*k]} and the imaginary part is {\tt x[2*k+1]}.
+
+A zomplex matrix of size {\tt n} stores its real part in one
+{\tt double} array of size {\tt n} called {\tt x} and its imaginary part
+in another {\tt double} array of size {\tt n} called {\tt z} (thus the
+name ``zomplex'').  This also how MATLAB stores its complex matrices.
+The real part of the {\tt k}th entry is {\tt x[k]} and the imaginary part is
+{\tt z[k]}.
+
+Unlike {\tt UMFPACK}, the same routine name in CHOLMOD is used for pattern-only,
+real, complex, and zomplex matrices.  For example, the statement
+\begin{verbatim}
+    C = cholmod_copy_sparse (A, &Common) ;
+\end{verbatim}
+creates a copy of a pattern, real, complex, or zomplex sparse matrix {\tt A}.
+The xtype (pattern, real, complex, or zomplex) of the resulting sparse matrix {\tt C}
+is the same as {\tt A} (a pattern-only sparse matrix contains no floating-point
+values).  In the above case, {\tt C} and {\tt A} use {\tt int} integers.
+For {\tt long} integers, the statement would become:
+\begin{verbatim}
+    C = cholmod_l_copy_sparse (A, &Common) ;
+\end{verbatim}
+The last parameter of all CHOLMOD routines is always {\tt \&Common},
+a pointer to the
+{\tt cholmod\_common} object, which contains parameters, statistics,
+and workspace used throughout CHOLMOD.
+
+The {\tt xtype} of a CHOLMOD object (sparse matrix, triplet matrix, dense
+matrix, or factorization) determines whether it is pattern-only,
+real, complex, or zomplex.
+
+The names of the {\tt int} versions are primarily used in this document.
+To obtain the name of the {\tt long} version of the same routine, simply
+replace {\tt cholmod\_} with {\tt cholmod\_l\_}.
+
+MATLAB matrix notation is used throughout this document and in
+the comments in the CHOLMOD code itself.  If you are not familiar with
+MATLAB, here is a short introduction to the notation, and a few
+minor variations used in CHOLMOD:
+
+\begin{itemize}
+    \item {\tt C=A+B} and {\tt C=A*B}, respectively are a matrix add and multiply if both
+	{\tt A} and {\tt B} are matrices of appropriate size.  If {\tt A} is
+	a scalar, then it is added to or multiplied with every entry in {\tt B}.
+    \item {\tt a:b} where {\tt a} and {\tt b} are integers refers to the
+	sequence {\tt a}, {\tt a+1}, ... {\tt b}.
+    \item {\tt [A B]} and {\tt [A,B]} are the horizontal concatenation of {\tt A} and {\tt B}.
+    \item {\tt [A;B]} is the vertical concatenation of {\tt A} and {\tt B}.
+    \item {\tt A(i,j)} can refer either to a scalar or a submatrix.
+	For example: \newline
+	\vspace{0.05in}
+	\begin{tabular}{ll}
+	\hline
+	{\tt A(1,1)} & a scalar. \\
+	{\tt A(:,j)} & column {\tt j} of {\tt A}. \\
+	{\tt A(i,:)} & row {\tt i} of {\tt A}. \\
+	{\tt A([1 2], [1 2])} & a 2-by-2 matrix containing the 2-by-2 leading minor of {\tt A}. \\
+	\hline
+	\end{tabular} \newline
+	\vspace{0.1in}
+	If {\tt p} is a permutation of {\tt 1:n}, and {\tt A} is {\tt n}-by-{\tt n},
+	then {\tt A(p,p)} corresponds to the permuted matrix $\m{PAP}\tr$.
+    \item {\tt tril(A)} is the lower triangular part of {\tt A}, including the diagonal.
+    \item {\tt tril(A,k)} is the lower triangular part of {\tt A}, including entries
+	on and below the $k$th diagonal.
+    \item {\tt triu(A)} is the upper triangular part of {\tt A}, including the diagonal.
+    \item {\tt triu(A,k)} is the upper triangular part of {\tt A}, including entries
+	on and above the $k$th diagonal.
+    \item {\tt size(A)} returns the dimensions of {\tt A}.
+    \item {\tt find(x)} if {\tt x} is a vector returns a list of indices {\tt i}
+	for which {\tt x(i)} is nonzero.
+    \item {\tt A'} is the transpose of {\tt A} if {\tt A} is real, or
+	the complex conjugate transpose if {\tt A} is complex.
+    \item {\tt A.'} is the array transpose of {\tt A}.
+    \item {\tt diag(A)} is the diagonal of {\tt A} if {\tt A} is a matrix.
+    \item {\tt C=diag(s)} is a diagonal matrix if {\tt s} is a vector,
+	with the values of {\tt s} on the diagonal of {\tt C}.
+    \item {\tt S=spones(A)} returns a binary matrix {\tt S} with the
+	same nonzero pattern of {\tt A}.
+    \item {\tt nnz(A)} is the number of nonzero entries in {\tt A}.
+\end{itemize}
+
+\noindent Variations to MATLAB notation used in this document:
+\begin{itemize}
+    \item CHOLMOD uses 0-based notation (the first entry in the matrix is
+	{\tt A(0,0)}).  MATLAB is 1-based.  The context is usually clear.
+    \item {\tt I} is the identity matrix.
+    \item {\tt A(:,f)}, where {\tt f} is a set of columns, is interpreted
+	differently in CHOLMOD, but just for the set named {\tt f}.
+	See {\tt cholmod\_transpose\_unsym} for details.
+\end{itemize}
+
+%-------------------------------------------------------------------------------
+\newpage \section{The CHOLMOD Modules, objects, and functions}
+\label{Modules}
+%-------------------------------------------------------------------------------
+
+CHOLMOD contains a total of 133 {\tt int}-based routines (and the same number
+of {\tt long} routines), divided into a set of inter-related
+Modules.  Each Module contains a set of related functions.  The functions
+are divided into two types: Primary and Secondary, to reflect how a user will
+typically use CHOLMOD.  Most users will find the Primary routines to be
+sufficient to use CHOLMOD in their programs.  Each Module exists as a
+sub-directory (a folder for Windows users) within the CHOLMOD directory
+(or folder).
+
+\vspace{0.1in}
+\noindent There are seven Modules that provide user-callable routines for CHOLMOD.
+    \begin{enumerate}
+    \item {\tt Core}: basic data structures and definitions
+    \item {\tt Check}: prints/checks each of CHOLMOD's objects
+    \item {\tt Cholesky}: sparse Cholesky factorization
+    \item {\tt Modify}: sparse Cholesky update/downdate and row-add/row-delete
+    \item {\tt MatrixOps}: sparse matrix operators (add, multiply, norm, scale)
+    \item {\tt Supernodal}: supernodal sparse Cholesky factorization
+    \item {\tt Partition}: graph-partitioning-based orderings
+    \end{enumerate}
+
+\noindent Two additional Modules are required to compile the CHOLMOD library:
+    \begin{enumerate}
+    \item {\tt Include}: include files for CHOLMOD and programs that use CHOLMOD
+    \item {\tt Lib}: where the CHOLMOD library is built
+    \end{enumerate}
+
+\noindent Five additional Modules provide support functions and documentation:
+    \begin{enumerate}
+    \item {\tt Demo}: simple programs that illustrate the use of CHOLMOD
+    \item {\tt Doc}: documentation (including this document)
+    \item {\tt MATLAB}: CHOLMOD's interface to MATLAB
+    \item {\tt Tcov}: an exhaustive test coverage (requires Linux or Solaris)
+    \item {\tt Valgrind}: runs the {\tt Tcov} test under {\tt valgrind} (requires Linux)
+    \end{enumerate}
+
+%-------------------------------------------------------------------------------
+\newpage \subsection{{\tt Core} Module: basic data structures and definitions}
+%-------------------------------------------------------------------------------
+
+CHOLMOD includes five basic objects, defined in the {\tt Core} Module.
+The {\tt Core Module} provides basic operations for these objects
+and is required by all six other CHOLMOD library Modules:
+
+\subsubsection{{\tt cholmod\_common}: parameters, statistics, and workspace}
+    You must call {\tt cholmod\_start} before calling any other
+    CHOLMOD routine, and you must call {\tt cholmod\_finish} as your
+    last call to CHOLMOD (with the exception of
+    {\tt cholmod\_print\_common} and {\tt cholmod\_check\_common}
+    in the {\tt Check} Module).
+    Once the {\tt cholmod\_common} object is initialized,
+    the user may modify CHOLMOD's parameters held in this object,
+    and obtain statistics on CHOLMOD's activity.
+
+\vspace{0.1in}
+\noindent Primary routines for the {\tt cholmod\_common} object:
+% 2
+    \begin{itemize}
+    \item {\tt cholmod\_start}: the first call to CHOLMOD.
+    \item {\tt cholmod\_finish}: the last call to CHOLMOD (frees workspace in the {\tt cholmod\_common} object).
+    \end{itemize}
+
+\noindent Secondary routines for the {\tt cholmod\_common} object:
+% 9
+    \begin{itemize}
+    \item {\tt cholmod\_defaults}: restores default parameters
+    \item {\tt cholmod\_maxrank}: determine maximum rank for update/downdate.
+    \item {\tt cholmod\_allocate\_work}: allocate workspace.
+    \item {\tt cholmod\_free\_work}: free workspace.
+    \item {\tt cholmod\_clear\_flag}: clear {\tt Flag} array.
+    \item {\tt cholmod\_error}: called when CHOLMOD encounters and error.
+    \item {\tt cholmod\_dbound}: bounds the diagonal of $\m{L}$ or $\m{D}$.
+    \item {\tt cholmod\_hypot}: compute {\tt sqrt(x*x+y*y)} accurately.
+    \item {\tt cholmod\_divcomplex}: complex divide.
+    \end{itemize}
+
+%-------------------------------------------------------------------------------
+\newpage \subsubsection{{\tt cholmod\_sparse}: a sparse matrix in compressed column form}
+%-------------------------------------------------------------------------------
+    A sparse matrix {\tt A} is held in compressed column form.  In the basic
+    type (``packed,'' which corresponds to how MATLAB stores its sparse
+    matrices), and {\tt nrow}-by-{\tt ncol} matrix with {\tt nzmax} entries
+    is held in three arrays: {\tt p} of size {\tt ncol+1},
+    {\tt i} of size {\tt nzmax}, and {\tt x} of size {\tt nzmax}.
+    Row indices of nonzero entries in column {\tt j} are held in
+    {\tt i [p[j] ... p[j+1]-1]}, and their corresponding numerical values
+    are held in {\tt x [p[j] ... p[j+1]-1]}.  The first column starts at
+    location zero ({\tt p[0]=0}).
+    There may be no duplicate entries.  Row indices in each column may
+    be sorted or unsorted (the {\tt A->sorted} flag must be false if
+    the columns are unsorted).  The {\tt A->stype} determines the 
+    storage mode: 0 if the matrix is unsymmetric, 1 if the matrix is
+    symmetric with just the upper triangular part stored, and -1 if
+    the matrix is symmetric with just the lower triangular part stored.
+
+    In ``unpacked'' form, an additional array {\tt nz} of size {\tt ncol}
+    is used.  The end of column {\tt j} in {\tt i} and {\tt x}
+    is given by {\tt p[j]+nz[j]}.  Columns not need be in any particular
+    order ({\tt p[0]} need not be zero), and there may be gaps between
+    the columns.
+
+\vspace{0.1in}
+\noindent Primary routines for the {\tt cholmod\_sparse} object:
+% 2
+    \begin{itemize}
+    \item {\tt cholmod\_allocate\_sparse}: allocate a sparse matrix
+    \item {\tt cholmod\_free\_sparse}: free a sparse matrix
+    \end{itemize}
+
+\noindent Secondary routines for the {\tt cholmod\_sparse} object:
+% 16
+    \begin{itemize}
+    \item {\tt cholmod\_reallocate\_sparse}: change the size (number of entries) of a sparse matrix.
+    \item {\tt cholmod\_nnz}: number of nonzeros in a sparse matrix.
+    \item {\tt cholmod\_speye}: sparse identity matrix.
+    \item {\tt cholmod\_spzeros}: sparse zero matrix.
+    \item {\tt cholmod\_transpose}: transpose a sparse matrix.
+    \item {\tt cholmod\_ptranspose}: transpose/permute a sparse matrix.
+    \item {\tt cholmod\_transpose\_unsym}: transpose/permute an unsymmetric sparse matrix.
+    \item {\tt cholmod\_transpose\_sym}: transpose/permute a symmetric sparse matrix.
+    \item {\tt cholmod\_sort}: sort row indices in each column of a sparse matrix.
+    \item {\tt cholmod\_band}: extract a band of a sparse matrix.
+    \item {\tt cholmod\_band\_inplace}: remove entries not with a band.
+    \item {\tt cholmod\_aat}: {\tt C = A*A'}.
+    \item {\tt cholmod\_copy\_sparse}: {\tt C = A}, create an exact copy of a sparse matrix.
+    \item {\tt cholmod\_copy}: {\tt C = A}, with possible change of {\tt stype}.
+    \item {\tt cholmod\_add}: {\tt C = alpha*A + beta*B}.
+    \item {\tt cholmod\_sparse\_xtype}: change the {\tt xtype} of a sparse matrix.
+    \end{itemize}
+
+%-------------------------------------------------------------------------------
+\newpage \subsubsection{{\tt cholmod\_factor}: a symbolic or numeric factorization}
+%-------------------------------------------------------------------------------
+
+    A factor can be in $\m{LL}\tr$ or $\m{LDL}\tr$ form, and either supernodal
+    or simplicial form.  In simplicial form, this is very much like a
+    packed or unpacked {\tt cholmod\_sparse} matrix.  In supernodal
+    form, adjacent columns with similar nonzero pattern are stored as
+    a single block (a supernode).
+
+\vspace{0.1in}
+\noindent Primary routine for the {\tt cholmod\_factor} object:
+% 1
+    \begin{itemize}
+    \item {\tt cholmod\_free\_factor}: free a factor
+    \end{itemize}
+
+\noindent Secondary routines for the {\tt cholmod\_factor} object:
+% 8
+    \begin{itemize}
+    \item {\tt cholmod\_allocate\_factor}: allocate a factor.  You will normally use {\tt cholmod\_analyze} to create a factor.
+    \item {\tt cholmod\_reallocate\_factor}: change the number of entries in a factor.
+    \item {\tt cholmod\_change\_factor}: change the type of a factor ($\m{LDL}\tr$ to $\m{LL}\tr$, supernodal to simplicial, etc.).
+    \item {\tt cholmod\_pack\_factor}: pack the columns of a factor.
+    \item {\tt cholmod\_reallocate\_column}: resize a single column of a factor.
+    \item {\tt cholmod\_factor\_to\_sparse}: create a sparse matrix copy of a factor.
+    \item {\tt cholmod\_copy\_factor}: create a copy of a factor.
+    \item {\tt cholmod\_factor\_xtype}: change the xtype of a factor.
+    \end{itemize}
+
+%-------------------------------------------------------------------------------
+\subsubsection{{\tt cholmod\_dense}: a dense matrix}
+%-------------------------------------------------------------------------------
+    This consists of a dense array of numerical values and its dimensions.
+
+\vspace{0.1in}
+\noindent Primary routines for the {\tt cholmod\_dense} object:
+% 2
+    \begin{itemize}
+    \item {\tt cholmod\_allocate\_dense}: allocate a dense matrix.
+    \item {\tt cholmod\_free\_dense}: free a dense matrix.
+    \end{itemize}
+
+\vspace{0.1in}
+\noindent Secondary routines for the {\tt cholmod\_dense} object:
+% 8
+    \begin{itemize}
+    \item {\tt cholmod\_zeros}: allocate a dense matrix of all zeros.
+    \item {\tt cholmod\_ones}: allocate a dense matrix of all ones.
+    \item {\tt cholmod\_eye}: allocate a dense identity matrix .
+    \item {\tt cholmod\_sparse\_to\_dense}: create a dense matrix copy of a sparse matrix.
+    \item {\tt cholmod\_dense\_to\_sparse}: create a sparse matrix copy of a dense matrix.
+    \item {\tt cholmod\_copy\_dense}: create a copy of a dense matrix.
+    \item {\tt cholmod\_copy\_dense2}: copy a dense matrix (pre-allocated).
+    \item {\tt cholmod\_dense\_xtype}: change the {\tt xtype} of a dense matrix.
+    \end{itemize}
+
+%-------------------------------------------------------------------------------
+\newpage \subsubsection{{\tt cholmod\_triplet}: a sparse matrix in ``triplet'' form}
+%-------------------------------------------------------------------------------
+    The {\tt cholmod\_sparse} matrix is the basic sparse matrix used in
+    CHOLMOD, but it can be difficult for the user to construct.  It also
+    does not easily support the inclusion of new entries in the matrix.
+    The {\tt cholmod\_triplet} matrix is provided to address these issues.
+    A sparse matrix in triplet form consists of three arrays of size
+    {\tt nzmax}: {\tt i}, {\tt j}, and {\tt x}, and a {\tt z} array
+    for the zomplex case.
+
+\vspace{0.1in}
+\noindent Primary routines for the {\tt cholmod\_triplet} object:
+% 3
+    \begin{itemize}
+    \item {\tt cholmod\_allocate\_triplet}: allocate a triplet matrix.
+    \item {\tt cholmod\_free\_triplet}: free a triplet matrix.
+    \item {\tt cholmod\_triplet\_to\_sparse}: create a sparse matrix copy of a triplet matrix.
+    \end{itemize}
+
+\noindent Secondary routines for the {\tt cholmod\_triplet} object:
+% 4
+    \begin{itemize}
+    \item {\tt cholmod\_reallocate\_triplet}: change the number of entries in a triplet matrix.
+    \item {\tt cholmod\_sparse\_to\_triplet}: create a triplet matrix copy of a sparse matrix.
+    \item {\tt cholmod\_copy\_triplet}: create a copy of a triplet matrix.
+    \item {\tt cholmod\_triplet\_xtype}: change the {\tt xtype} of a triplet matrix.
+    \end{itemize}
+
+%-------------------------------------------------------------------------------
+\subsubsection{Memory management routines}
+%-------------------------------------------------------------------------------
+    By default, CHOLMOD uses the ANSI C {\tt malloc}, {\tt free},
+    {\tt calloc}, and {\tt realloc} routines.  You may use different
+    routines by modifying function pointers in the {\tt cholmod\_common} object.
+
+\vspace{0.1in}
+\noindent Primary routines:
+% 2
+    \begin{itemize}
+    \item {\tt cholmod\_malloc}: {\tt malloc} wrapper.
+    \item {\tt cholmod\_free}: {\tt free} wrapper.
+    \end{itemize}
+
+\noindent Secondary routines:
+% 3
+    \begin{itemize}
+    \item {\tt cholmod\_calloc}: {\tt calloc} wrapper.
+    \item {\tt cholmod\_realloc}: {\tt realloc} wrapper.
+    \item {\tt cholmod\_realloc\_multiple}: {\tt realloc} wrapper for multiple objects.
+    \end{itemize}
+
+%-------------------------------------------------------------------------------
+\subsubsection{{\tt cholmod\_version:} Version control}
+%-------------------------------------------------------------------------------
+The {\tt cholmod\_version} function returns the current version of CHOLMOD.
+
+%-------------------------------------------------------------------------------
+\newpage \subsection{{\tt Check} Module: print/check the CHOLMOD objects}
+%-------------------------------------------------------------------------------
+    The {\tt Check} Module contains routines that check and print the five
+    basic objects in CHOLMOD, and three kinds of integer vectors (a set,
+    a permutation, and a tree).  It also provides a routine to read a sparse
+    matrix from a file in Matrix Market format (http://www.nist.gov/MatrixMarket).
+    Requires the {\tt Core} Module.
+
+\vspace{0.1in}
+\noindent Primary routines:
+% 4
+    \begin{itemize}
+    \item {\tt cholmod\_print\_common}: print the {\tt cholmod\_common} object,
+	including statistics on CHOLMOD's behavior (fill-in, flop count,
+	ordering methods used, and so on).
+    \item {\tt cholmod\_write\_sparse}: write a sparse matrix to a file
+	in Matrix Market format.
+    \item {\tt cholmod\_write\_dense}: write a sparse matrix to a file
+	in Matrix Market format.
+    \item {\tt cholmod\_read\_matrix}: read a sparse or dense matrix from a file
+	in Matrix Market format.
+    \end{itemize}
+
+\vspace{0.1in}
+\noindent Secondary routines:
+% 18
+    \begin{itemize}
+    \item {\tt cholmod\_check\_common}: check the {\tt cholmod\_common} object
+    \item {\tt cholmod\_check\_sparse}: check a sparse matrix
+    \item {\tt cholmod\_print\_sparse}: print a sparse matrix
+    \item {\tt cholmod\_check\_dense}: check a dense matrix
+    \item {\tt cholmod\_print\_dense}: print a dense matrix
+    \item {\tt cholmod\_check\_factor}: check a Cholesky factorization
+    \item {\tt cholmod\_print\_factor}: print a Cholesky factorization
+    \item {\tt cholmod\_check\_triplet}: check a triplet matrix
+    \item {\tt cholmod\_print\_triplet}: print a triplet matrix
+    \item {\tt cholmod\_check\_subset}: check a subset (integer vector in given range)
+    \item {\tt cholmod\_print\_subset}: print a subset (integer vector in given range)
+    \item {\tt cholmod\_check\_perm}: check a permutation (an integer vector)
+    \item {\tt cholmod\_print\_perm}: print a permutation (an integer vector)
+    \item {\tt cholmod\_check\_parent}: check an elimination tree (an integer vector)
+    \item {\tt cholmod\_print\_parent}: print an elimination tree (an integer vector)
+    \item {\tt cholmod\_read\_triplet}: read a triplet matrix from a file
+    \item {\tt cholmod\_read\_sparse}: read a sparse matrix from a file
+    \item {\tt cholmod\_read\_dense}: read a dense matrix from a file
+    \end{itemize}
+
+%-------------------------------------------------------------------------------
+\newpage \subsection{{\tt Cholesky} Module: sparse Cholesky factorization}
+%-------------------------------------------------------------------------------
+
+The primary routines are all that a user requires to order, analyze, and
+factorize a sparse symmetric positive definite matrix $\m{A}$ (or $\m{AA}\tr$), and
+to solve $\m{Ax}=\m{b}$ (or $\m{AA}\tr\m{x}=\m{b}$).  The primary routines rely on the secondary
+routines, the {\tt Core} Module, and the AMD and COLAMD packages.  They
+make optional use of the {\tt Supernodal} and {\tt Partition} Modules, the
+METIS package, the CAMD package, and
+the CCOLAMD package.  The {\tt Cholesky} Module is
+required by the {\tt Partition} Module.
+
+\vspace{0.1in}
+\noindent Primary routines:
+% 4
+    \begin{itemize}
+    \item {\tt cholmod\_analyze}: order and analyze (simplicial or supernodal).
+    \item {\tt cholmod\_factorize}: simplicial or supernodal Cholesky factorization.
+    \item {\tt cholmod\_solve}: solve a linear system (simplicial or supernodal, dense $\m{x}$ and $\m{b}$).
+    \item {\tt cholmod\_spsolve}: solve a linear system (simplicial or supernodal, sparse $\m{x}$ and $\m{b}$ ).
+    \end{itemize}
+
+\noindent Secondary routines:
+% 15
+    \begin{itemize}
+    \item {\tt cholmod\_analyze\_p}: analyze, with user-provided permutation or $\m{f}$ set.
+    \item {\tt cholmod\_factorize\_p}: factorize, with user-provided permutation or $\m{f}$.
+    \item {\tt cholmod\_analyze\_ordering}:  analyze a permutation
+    \item {\tt cholmod\_solve2}: solve a linear system, reusing workspace.
+    \item {\tt cholmod\_etree}: find the elimination tree.
+    \item {\tt cholmod\_rowcolcounts}: compute the row/column counts of $\m{L}$.
+    \item {\tt cholmod\_amd}: order using AMD.
+    \item {\tt cholmod\_colamd}: order using COLAMD.
+    \item {\tt cholmod\_rowfac}: incremental simplicial factorization.
+    \item {\tt cholmod\_row\_subtree}: find the nonzero pattern of a row of $\m{L}$.
+    \item {\tt cholmod\_row\_lsubtree}: find the nonzero pattern of a row of $\m{L}$.
+    \item {\tt cholmod\_row\_lsubtree}: find the nonzero pattern of $\m{L}^{-1}b$.
+    \item {\tt cholmod\_resymbol}: recompute the symbolic pattern of $\m{L}$.
+    \item {\tt cholmod\_resymbol\_noperm}: recompute the symbolic pattern of $\m{L}$, no permutation.
+    \item {\tt cholmod\_postorder}: postorder a tree.
+    \item {\tt cholmod\_rcond}: compute the reciprocal condition number estimate.
+    \item {\tt cholmod\_rowfac\_mask}: for use in LPDASA only.
+    \end{itemize}
+
+%-------------------------------------------------------------------------------
+\newpage \subsection{{\tt Modify} Module: update/downdate a sparse Cholesky factorization}
+%-------------------------------------------------------------------------------
+
+The {\tt Modify} Module contains sparse Cholesky modification routines:
+update, downdate, row-add, and row-delete.
+It can also modify a corresponding solution to $\m{Lx}=\m{b}$ when L is modified.
+This module is most useful when applied on a Cholesky factorization computed by
+the {\tt Cholesky} module, but it does not actually require the {\tt Cholesky} module.
+The {\tt Core} module can create an identity Cholesky factorization ($\m{LDL}\tr$ where
+$\m{L}=\m{D}=\m{I}$) that can then be modified by these routines.
+Requires the {\tt Core} module.  Not required by any other CHOLMOD Module.
+
+\vspace{0.1in}
+\noindent Primary routine:
+% 1
+    \begin{itemize}
+    \item {\tt cholmod\_updown}: multiple rank update/downdate
+    \end{itemize}
+
+\noindent Secondary routines:
+% 8
+    \begin{itemize}
+    \item {\tt cholmod\_updown\_solve}: update/downdate, and modify solution to $\m{Lx=b}$
+    \item {\tt cholmod\_updown\_mark}: update/downdate, and modify solution to partial $\m{Lx=b}$
+    \item {\tt cholmod\_updown\_mask}: for use in LPDASA only.
+    \item {\tt cholmod\_rowadd}: add a row to an $\m{LDL}\tr$ factorization
+    \item {\tt cholmod\_rowadd\_solve}: add a row, and update solution to $\m{Lx=b}$
+    \item {\tt cholmod\_rowadd\_mark}: add a row, and update solution to partial $\m{Lx=b}$
+    \item {\tt cholmod\_rowdel}: delete a row from an $\m{LDL}\tr$ factorization
+    \item {\tt cholmod\_rowdel\_solve}: delete a row, and downdate $\m{Lx=b}$
+    \item {\tt cholmod\_rowdel\_mark}: delete a row, and downdate solution to partial $\m{Lx=b}$
+    \end{itemize}
+
+%-------------------------------------------------------------------------------
+\subsection{{\tt MatrixOps} Module: basic sparse matrix operations}
+%-------------------------------------------------------------------------------
+
+The {\tt MatrixOps} Module provides
+basic operations on sparse and dense matrices.
+Requires the {\tt Core} module.  Not required by any other CHOLMOD module.
+In the descriptions below,
+{\tt A}, {\tt B}, and {\tt C:} are sparse matrices ({\tt cholmod\_sparse}),
+{\tt X} and {\tt Y} are dense matrices ({\tt cholmod\_dense}),
+{\tt s} is a scalar or vector, and
+{\tt alpha} {\tt beta} are scalars.
+
+% 10
+    \begin{itemize}
+    \item {\tt cholmod\_drop}: drop entries from A with absolute value $\ge$ a given tolerance.
+    \item {\tt cholmod\_norm\_dense}: {\tt s = norm (X)}, 1-norm, infinity-norm, or 2-norm
+    \item {\tt cholmod\_norm\_sparse}: {\tt s = norm (A)}, 1-norm or infinity-norm
+    \item {\tt cholmod\_horzcat}: {\tt C = [A,B]}
+    \item {\tt cholmod\_scale}: {\tt A = diag(s)*A}, {\tt A*diag(s)}, {\tt s*A} or {\tt diag(s)*A*diag(s)}.
+    \item {\tt cholmod\_sdmult}: {\tt Y = alpha*(A*X) + beta*Y} or {\tt alpha*(A'*X) + beta*Y}.
+    \item {\tt cholmod\_ssmult}: {\tt C = A*B}
+    \item {\tt cholmod\_submatrix}: {\tt C = A (i,j)}, where {\tt i} and {\tt j} are arbitrary integer vectors.
+    \item {\tt cholmod\_vertcat}: {\tt C = [A ; B]}.
+    \item {\tt cholmod\_symmetry}: determine symmetry of a matrix.
+    \end{itemize}
+
+%-------------------------------------------------------------------------------
+\newpage \subsection{{\tt Supernodal} Module: supernodal sparse Cholesky factorization}
+%-------------------------------------------------------------------------------
+
+The {\tt Supernodal} Module performs
+supernodal analysis, factorization, and solve.  The simplest way to use
+these routines is via the {\tt Cholesky} Module.  This Module does not provide any
+fill-reducing orderings.  It normally operates on matrices ordered by the
+{\tt Cholesky} Module.
+It does not require the {\tt Cholesky} Module itself, however.
+Requires the {\tt Core} Module, and two external packages: LAPACK and the BLAS.
+Optionally used by the {\tt Cholesky} Module.  All are secondary routines
+since these functions are more easily used via the {\tt Cholesky} Module.
+
+\vspace{0.1in}
+\noindent Secondary routines:
+% 4
+    \begin{itemize}
+    \item {\tt cholmod\_super\_symbolic}: supernodal symbolic analysis
+    \item {\tt cholmod\_super\_numeric}: supernodal numeric factorization
+    \item {\tt cholmod\_super\_lsolve}: supernodal $\m{Lx}=\m{b}$ solve
+    \item {\tt cholmod\_super\_ltsolve}: supernodal $\m{L}\tr\m{x}=\m{b}$ solve
+    \end{itemize}
+
+%-------------------------------------------------------------------------------
+\subsection{{\tt Partition} Module: graph-partitioning-based orderings}
+%-------------------------------------------------------------------------------
+
+The {\tt Partition} Module provides
+graph partitioning and graph-partition-based orderings.  It includes an
+interface to CAMD, CCOLAMD, and CSYMAMD, constrained minimum degree ordering
+methods which order a matrix following constraints determined via nested
+dissection.
+Requires the {\tt Core} and {\tt Cholesky} Modules, and two packages: {\tt METIS 5.1.0}, CAMD, and CCOLAMD.
+Optionally used by the {\tt Cholesky} Module.  All are secondary routines since
+these are more easily used by the {\tt Cholesky} Module.
+
+Note that METIS does not have a version that uses {\tt long} integers.  If you try to use
+these routines (except the CAMD, CCOLAMD, and CSYMAMD interfaces)
+on a matrix that is too large, an error code will be returned.
+
+\vspace{0.1in}
+\noindent Secondary routines:
+% 8
+    \begin{itemize}
+    \item {\tt cholmod\_nested\_dissection}: CHOLMOD nested dissection ordering
+    \item {\tt cholmod\_metis}: METIS nested dissection ordering ({\tt METIS\_NodeND})
+    \item {\tt cholmod\_camd}: interface to CAMD ordering
+    \item {\tt cholmod\_ccolamd}: interface to CCOLAMD ordering
+    \item {\tt cholmod\_csymamd}: interface to CSYMAMD ordering
+    \item {\tt cholmod\_bisect}: graph partitioner (currently based on METIS)
+    \item {\tt cholmod\_metis\_bisector}: direct interface to {\tt METIS\_NodeComputeSeparator}.
+    \item {\tt cholmod\_collapse\_septree}: pruned a separator tree from
+    {\tt cholmod\_nested\_dissection}.
+    \end{itemize}
+
+%-------------------------------------------------------------------------------
+\newpage \section{CHOLMOD naming convention, parameters, and return values}
+%-------------------------------------------------------------------------------
+
+All routine names, data types, and CHOLMOD library files use the
+{\tt cholmod\_} prefix.  All macros and other {\tt \#define} statements
+visible to the user program use the {\tt CHOLMOD} prefix.
+The {\tt cholmod.h} file must be included in user programs that use CHOLMOD:
+
+{\footnotesize
+\begin{verbatim}
+        #include "cholmod.h"
+\end{verbatim}
+}
+
+\noindent
+All CHOLMOD routines (in all modules) use the following protocol for return values:
+\begin{itemize}
+\item {\tt int}: {\tt TRUE} (1) if successful, or {\tt FALSE} (0) otherwise. (exception: {\tt cholmod\_divcomplex}).
+\item {\tt long}: a value $\ge 0$ if successful, or -1 otherwise.
+\item {\tt double}: a value $\ge 0$ if successful, or -1 otherwise.
+\item {\tt size\_t}: a value $>$ 0 if successful, or 0 otherwise.
+\item {\tt void *}: a non-{\tt NULL} pointer to newly allocated memory if successful, or {\tt NULL} otherwise.
+\item {\tt cholmod\_sparse *}:  a non-{\tt NULL} pointer to a newly allocated sparse matrix if successful, or {\tt NULL} otherwise.
+\item {\tt cholmod\_factor *}:  a non-{\tt NULL} pointer to a newly allocated factor if successful, or {\tt NULL} otherwise.
+\item {\tt cholmod\_triplet *}: a non-{\tt NULL} pointer to a newly allocated triplet matrix if successful, or {\tt NULL} otherwise.
+\item {\tt cholmod\_dense *}:   a non-{\tt NULL} pointer to a newly allocated dense matrix if successful, or {\tt NULL} otherwise.
+\end{itemize}
+
+{\tt TRUE} and {\tt FALSE} are not defined in {\tt cholmod.h},
+since they may conflict with the user program.  A routine that described
+here returning {\tt TRUE} or {\tt FALSE} returns 1 or 0, respectively.
+Any {\tt TRUE}/{\tt FALSE} parameter is true if nonzero, false if zero.
+
+\noindent
+Input, output, and input/output parameters:
+\begin{itemize}
+\item Input parameters appear first in the parameter lists of all CHOLMOD routines.
+They are not modified by CHOLMOD.
+\item Input/output parameters (except for {\tt Common}) appear next.
+They must be defined on input, and are modified on output.
+\item Output parameters are listed next.  If they are pointers, they must
+point to allocated space on input, but their contents are not defined on input.
+\item Workspace parameters appear next.  They are used in only two routines in the Supernodal module.
+\item The {\tt cholmod\_common *Common} parameter always appears as the last parameter
+(with two exceptions: {\tt cholmod\_hypot} and {\tt cholmod\_divcomplex}).
+It is always an input/output parameter.
+\end{itemize}
+
+A floating-point scalar is passed to CHOLMOD as a pointer to a {\tt double}
+array of size two.  The first entry in this array is the real part of the
+scalar, and the second entry is the imaginary part.  The imaginary part is
+only accessed if the other inputs are complex or zomplex.  In some cases
+the imaginary part is always ignored ({\tt cholmod\_factor\_p}, for example).
+
+%-------------------------------------------------------------------------------
+\newpage \section{{\tt Core} Module: {\tt cholmod\_common} object}
+\label{cholmod_common}
+%-------------------------------------------------------------------------------
+
+%---------------------------------------
+\subsection{Constant definitions}
+%---------------------------------------
+
+\input{_defn.tex}
+These definitions are used within the {\tt cholmod\_common} object,
+called {\tt Common} both here and throughout the code.
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_common}: parameters, statistics, and workspace}
+%---------------------------------------
+
+\input{_common.tex}
+The {\tt cholmod\_common Common} object contains parameters, statistics, and
+workspace used within CHOLMOD.  The first call to CHOLMOD must be
+{\tt cholmod\_start}, which initializes this object.
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_start}: start CHOLMOD}
+%---------------------------------------
+
+\input{_start.tex}
+Sets the default parameters, clears the statistics, and initializes all
+workspace pointers to {\tt NULL}.  The {\tt int}/{\tt long} type
+is set in {\tt Common->itype}.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_finish}: finish CHOLMOD}
+%---------------------------------------
+
+\input{_finish.tex}
+This must be the last call to CHOLMOD.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_defaults}: set default parameters}
+%---------------------------------------
+
+\input{_defaults.tex}
+Sets the default parameters.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_maxrank}: maximum update/downdate rank}
+%---------------------------------------
+
+\input{_maxrank.tex}
+Returns the maximum rank for an update/downdate.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_allocate\_work}: allocate workspace}
+%---------------------------------------
+
+\input{_allocate_work.tex}
+Allocates workspace in {\tt Common}.  The workspace consists
+of the integer {\tt Head}, {\tt Flag}, and {\tt Iwork} arrays,
+of size {\tt nrow+1}, {\tt nrow}, and {\tt iworksize},
+respectively, and a {\tt double} array {\tt Xwork} of size
+{\tt xworksize}.  The {\tt Head} array is normally equal to -1
+when it is cleared.  If the {\tt Flag} array is cleared,
+all entries are less than {\tt Common->mark}.  The {\tt Iwork} array is
+not kept in any particular state.
+The integer type is {\tt int} or {\tt long}, depending
+on whether the {\tt cholmod\_} or {\tt cholmod\_l\_} routines
+are used.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_free\_work}: free workspace}
+%---------------------------------------
+
+\input{_free_work.tex}
+Frees the workspace in {\tt Common}.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_clear\_flag}: clear Flag array}
+%---------------------------------------
+
+\input{_clear_flag.tex}
+Increments {\tt Common->mark} so that the {\tt Flag} array is now cleared.
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_error}: report error}
+%---------------------------------------
+
+\input{_error.tex}
+This routine is called when CHOLMOD encounters an error.
+It prints a message (if printing is enabled), sets
+{\tt Common->status}.  It then calls the
+user error handler routine {\tt Common->error\_handler},
+if it is not {\tt NULL}.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_dbound}: bound diagonal of $\m{L}$}
+%---------------------------------------
+
+\input{_dbound.tex}
+Ensures that entries on the diagonal of $\m{L}$ for an $\m{LL}\tr$
+factorization are greater than or equal to {\tt Common->dbound}.
+For an $\m{LDL}\tr$ factorization, it ensures that the magnitude
+of the entries of $\m{D}$ are greater than or equal to {\tt Common->dbound}.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_hypot}: {\tt sqrt(x*x+y*y)}}
+%---------------------------------------
+
+\input{_hypot.tex}
+Computes the magnitude of a complex number.
+This routine is the default value for the {\tt Common->hypotenuse} function pointer.
+See also {\tt hypot}, in the standard {\tt math.h} header.  If you have
+the ANSI C99 {\tt hypot}, you can use {\tt Common->hypotenuse = hypot}.
+The {\tt cholmod\_hypot} routine is provided in case you are using the
+ANSI C89 standard, which does not have {\tt hypot}.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_divcomplex}: complex divide}
+%---------------------------------------
+
+\input{_divcomplex.tex}
+Divides two complex numbers.  It returns 1 if a divide-by-zero occurred, or 0 otherwise.
+This routine is the default value for the {\tt Common->complex\_divide} function pointer.
+This return value is the single exception to the CHOLMOD rule that states all {\tt int} return
+values are {\tt TRUE} if successful or {\tt FALSE} otherwise.
+The exception is made to match the return value of a different complex divide routine
+that is not a part of CHOLMOD, but can be used via the function pointer.
+
+%-------------------------------------------------------------------------------
+\newpage \section{{\tt Core} Module: {\tt cholmod\_sparse} object}
+\label{cholmod_sparse}
+%-------------------------------------------------------------------------------
+
+%---------------------------------------
+\subsection{{\tt cholmod\_sparse}: compressed-column sparse matrix}
+%---------------------------------------
+
+\input{_sparse.tex}
+Stores a sparse matrix in compressed-column form.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_allocate\_sparse}: allocate sparse matrix}
+%---------------------------------------
+
+\input{_allocate_sparse.tex}
+Allocates a sparse matrix.  {\tt A->i}, {\tt A->x}, and {\tt A->z} are not initialized.
+The matrix returned is all zero, but it contains space enough for {\tt nzmax} entries.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_free\_sparse}: free sparse matrix}
+%---------------------------------------
+
+\input{_free_sparse.tex}
+Frees a sparse matrix.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_reallocate\_sparse}: reallocate sparse matrix}
+%---------------------------------------
+
+\input{_reallocate_sparse.tex}
+Reallocates a sparse matrix, so that it can contain {\tt nznew} entries.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_nnz}: number of entries in sparse matrix}
+%---------------------------------------
+
+\input{_nnz.tex}
+Returns the number of entries in a sparse matrix.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_speye}: sparse identity matrix}
+%---------------------------------------
+
+\input{_speye.tex}
+Returns the sparse identity matrix.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_spzeros}: sparse zero matrix}
+%---------------------------------------
+
+\input{_spzeros.tex}
+Returns the sparse zero matrix.  This is another name
+for {\tt cholmod\_allocate\_sparse}, but with fewer parameters
+(the matrix is packed, sorted, and unsymmetric).
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_transpose}: transpose sparse matrix}
+%---------------------------------------
+
+\input{_transpose.tex}
+Returns the transpose or complex conjugate transpose of a sparse matrix.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_ptranspose}: transpose/permute sparse matrix}
+%---------------------------------------
+
+\input{_ptranspose.tex}
+Returns {\tt A'} or {\tt A(p,p)'} if {\tt A} is symmetric.
+Returns {\tt A'}, {\tt A(:,f)'}, or {\tt A(p,f)'} if {\tt A} is unsymmetric.
+See {\tt cholmod\_transpose\_unsym} for a discussion of how {\tt f} is used;
+this usage deviates from the MATLAB notation.
+Can also return the array transpose.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_sort}: sort columns of a sparse matrix}
+%---------------------------------------
+
+\input{_sort.tex}
+Sorts the columns of the matrix {\tt A}.  Returns  {\tt A} in packed form, even if it
+starts as unpacked.  Removes entries in the ignored part of a symmetric matrix.
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_transpose\_unsym}: transpose/permute unsymmetric sparse matrix}
+%---------------------------------------
+
+\input{_transpose_unsym.tex}
+Transposes and optionally permutes an unsymmetric sparse matrix.
+The output matrix must be preallocated before calling this routine.
+
+Computes {\tt F=A'}, {\tt F=A(:,f)'} or {\tt F=A(p,f)'}, except that the
+indexing by {\tt f} does not work the same as the MATLAB notation (see below).
+{\tt A->stype} is zero, which denotes that both the upper and lower triangular
+parts of A are present (and used).  The matrix {\tt A} may in fact be symmetric in pattern
+and/or value; {\tt A->stype} just denotes which part of {\tt A} are stored.  {\tt A} may be
+rectangular.
+ 
+The integer vector
+{\tt p} is a permutation of {\tt 0:m-1}, and {\tt f} is a subset of {\tt 0:n-1},
+where A is {\tt m}-by-{\tt n}.
+There can be no duplicate entries in {\tt p} or {\tt f}.
+
+\noindent
+Three kinds of transposes are available, depending on the {\tt values} parameter:
+\begin{itemize}
+\item    0: do not transpose the numerical values; create a {\tt CHOLMOD\_PATTERN} matrix
+\item    1: array transpose
+\item    2: complex conjugate transpose (same as 2 if input is real or pattern)
+\end{itemize}
+
+\noindent
+The set {\tt f} is held in fset and fsize:
+\begin{itemize}
+\item  {\tt fset = NULL} means ``{\tt :}'' in MATLAB. {\tt fset} is ignored.
+\item  {\tt fset != NULL} means {\tt f = fset [0..fsize-1]}.
+\item  {\tt fset != NULL} and {\tt fsize = 0} means {\tt f} is the empty set.
+\end{itemize}
+ 
+Columns not in the set {\tt f} are considered to be zero.  That is,
+if {\tt A} is 5-by-10 then {\tt F=A(:,[3 4])'} is not 2-by-5, but 10-by-5,
+and rows 3 and 4 of {\tt F} are equal to columns 3 and 4 of {\tt A} (the other
+rows of {\tt F} are zero).  More precisely, in MATLAB notation:
+
+\begin{verbatim}
+        [m n] = size (A)
+        F = A
+        notf = ones (1,n)
+        notf (f) = 0
+        F (:, find (notf)) = 0
+        F = F'
+\end{verbatim}
+
+If you want the MATLAB equivalent {\tt F=A(p,f)} operation, use
+{\tt cholmod\_submatrix} instead (which does not compute the transpose).
+{\tt F->nzmax} must be large enough to hold the matrix {\tt F}.
+If {\tt F->nz} is present then {\tt F->nz [j]} is equal to the number of entries in column {\tt j} of {\tt F}.
+{\tt A} can be sorted or unsorted, with packed or unpacked columns.
+If {\tt f} is present and not sorted in ascending order, then {\tt F} is unsorted
+(that is, it may contain columns whose row indices do not appear in
+ascending order).  Otherwise, {\tt F} is sorted (the row indices in each
+column of {\tt F} appear in strictly ascending order).
+
+{\tt F} is returned in packed or unpacked form, depending on {\tt F->packed} on input.
+If {\tt F->packed} is {\tt FALSE}, then {\tt F} is returned in unpacked form ({\tt F->nz} must be
+present).  Each row {\tt i} of {\tt F} is large enough to hold all the entries in row {\tt i}
+of {\tt A}, even if {\tt f} is provided.  That is, {\tt F->i} and
+{\tt F->x [F->p [i] .. F->p [i] + F->nz [i] - 1]} contain all entries in {\tt A(i,f)},
+but {\tt F->p [i+1] - F->p [i]} is equal to the number of nonzeros in {\tt A (i,:)},
+not just {\tt A (i,f)}.
+The {\tt cholmod\_transpose\_unsym} routine is the only operation in CHOLMOD that
+can produce an unpacked matrix.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_transpose\_sym}: transpose/permute symmetric sparse matrix}
+%---------------------------------------
+
+\input{_transpose_sym.tex}
+Computes {\tt F = A'} or {\tt F = A(p,p)'}, the transpose or permuted transpose, where
+{\tt A->stype} is nonzero.  {\tt A} must be square and symmetric.
+If {\tt A->stype} $> 0$, then {\tt A} is a symmetric matrix where just the upper part
+of the matrix is stored.  Entries in the lower triangular part may be
+present, but are ignored.
+If {\tt A->stype} $< 0$, then {\tt A} is a symmetric matrix where just the lower part
+of the matrix is stored.  Entries in the upper triangular part may be present, but are ignored.
+If {\tt F=A'}, then {\tt F} is returned
+sorted; otherwise {\tt F} is unsorted for the {\tt F=A(p,p)'} case.
+There can be no duplicate entries in {\tt p}.
+
+Three kinds of transposes are available, depending on the {\tt values} parameter:
+\begin{itemize}
+\item    0: do not transpose the numerical values; create a {\tt CHOLMOD\_PATTERN} matrix
+\item    1: array transpose
+\item    2: complex conjugate transpose (same as 2 if input is real or pattern)
+\end{itemize}
+
+For {\tt cholmod\_transpose\_unsym} and {\tt cholmod\_transpose\_sym}, the output matrix
+{\tt F} must already be pre-allocated by the caller, with the correct dimensions.
+If {\tt F} is not valid or has the wrong dimensions, it is not modified.
+Otherwise, if {\tt F} is too small, the transpose is not computed; the contents
+of {\tt F->p} contain the column pointers of the resulting matrix, where
+{\tt F->p [F->ncol] > F->nzmax}.  In this case, the remaining contents of {\tt F} are
+not modified.  {\tt F} can still be properly freed with {\tt cholmod\_free\_sparse}.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_band}: extract band of a sparse matrix}
+%---------------------------------------
+
+\input{_band.tex}
+Returns {\tt C = tril (triu (A,k1), k2)}.
+{\tt C} is a matrix consisting of the diagonals of A from {\tt k1} to {\tt k2}.
+{\tt k=0} is the main diagonal of {\tt A}, {\tt k=1} is the superdiagonal, {\tt k=-1} is the
+subdiagonal, and so on.  If {\tt A} is {\tt m}-by-{\tt n}, then:
+\begin{itemize}
+\item {\tt k1=-m} means {\tt C = tril (A,k2)}
+\item {\tt k2=n} means {\tt C = triu (A,k1)}
+\item {\tt k1=0} and {\tt k2=0} means {\tt C = diag(A)}, except {\tt C} is a matrix, not a vector
+\end{itemize}
+Values of {\tt k1} and {\tt k2} less than {\tt -m} are treated as {\tt -m}, and values greater
+than {\tt n} are treated as {\tt n}.
+
+{\tt A} can be of any symmetry (upper, lower, or unsymmetric); {\tt C} is returned in
+the same form, and packed.  If {\tt A->stype} $> 0$, entries in the lower
+triangular part of {\tt A} are ignored, and the opposite is true if
+{\tt A->stype} $< 0$.  If {\tt A} has sorted columns, then so does {\tt C}.
+{\tt C} has the same size as {\tt A}.
+
+{\tt C} can be returned as a numerical valued matrix (if {\tt A} has numerical values
+and {\tt mode} $> 0$), as a pattern-only ({\tt mode} $=0$), or as a pattern-only but with
+the diagonal entries removed ({\tt mode} $< 0$).
+
+The xtype of {\tt A} can be pattern or real.  Complex or zomplex cases are supported only
+if {\tt mode} is $\le 0$ (in which case the numerical values are ignored).
+
+%---------------------------------------
+\subsection{{\tt cholmod\_band\_inplace}: extract band, in place}
+%---------------------------------------
+
+\input{_band_inplace.tex}
+Same as {\tt cholmod\_band}, except that it always operates in place.
+Only packed matrices can be converted in place.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_aat}: compute $\m{AA}\tr$}
+%---------------------------------------
+
+\input{_aat.tex}
+Computes {\tt C = A*A'} or {\tt C = A(:,f)*A(:,f)'}.
+{\tt A} can be packed or unpacked, sorted or unsorted, but must be stored with
+both upper and lower parts ({\tt A->stype} of zero).  {\tt C} is returned as packed,
+{\tt C->stype} of zero (both upper and lower parts present), and unsorted.  See
+{\tt cholmod\_ssmult} in the {\tt MatrixOps} Module for a more general matrix-matrix
+multiply.
+The xtype of {\tt A} can be pattern or real.  Complex or zomplex cases are supported only
+if {\tt mode} is $\le 0$ (in which case the numerical values are ignored).
+You can trivially convert {\tt C} to a symmetric upper/lower matrix
+by changing {\tt C->stype} to 1 or -1, respectively, after calling this routine.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_copy\_sparse}: copy sparse matrix}
+%---------------------------------------
+
+\input{_copy_sparse.tex}
+Returns an exact copy of the input sparse matrix {\tt A}.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_copy}: copy (and change) sparse matrix}
+%---------------------------------------
+
+\input{_copy.tex}
+{\tt C = A}, which allocates {\tt C} and copies {\tt A} into {\tt C}, with possible change of
+{\tt stype}.  The diagonal can optionally be removed.  The numerical entries
+can optionally be copied.  This routine differs from {\tt cholmod\_copy\_sparse},
+which makes an exact copy of a sparse matrix.
+
+{\tt A} can be of any type (packed/unpacked, upper/lower/unsymmetric).  {\tt C} is
+packed and can be of any stype (upper/lower/unsymmetric), except that if
+{\tt A} is rectangular {\tt C} can only be unsymmetric.  If the stype of A and C
+differ, then the appropriate conversion is made.
+
+\noindent
+There are three cases for {\tt A->stype}:
+\begin{itemize}
+\item $<0$,  lower: assume {\tt A} is symmetric with just {\tt tril(A)} stored; the rest of {\tt A} is ignored
+\item $ 0$,  unsymmetric: assume {\tt A} is unsymmetric; consider all entries in A
+\item $>0$,  upper: assume {\tt A} is symmetric with just {\tt triu(A)} stored; the rest of {\tt A} is ignored
+\end{itemize}
+
+\noindent
+There are three cases for the requested symmetry of {\tt C} ({\tt stype} parameter):
+\begin{itemize}
+\item $<0$,  lower: return just {\tt tril(C)}
+\item $0$,   unsymmetric: return all of {\tt C}
+\item $>0$,  upper: return just {\tt triu(C)}
+\end{itemize}
+
+\noindent
+This gives a total of nine combinations: \newline
+\begin{tabular}{ll}
+\hline
+Equivalent MATLAB statements			    & Using {\tt cholmod\_copy} \\
+\hline
+{\tt C = A ;						   }& {\tt A} unsymmetric, {\tt C} unsymmetric \\
+{\tt C = tril (A) ;					   }& {\tt A} unsymmetric, {\tt C} lower \\
+{\tt C = triu (A) ;					   }& {\tt A} unsymmetric, {\tt C} upper \\
+{\tt U = triu (A) ; L = tril (U',-1) ; C = L+U ;	   }& {\tt A} upper, {\tt C} unsymmetric \\
+{\tt C = triu (A)' ;					   }& {\tt A} upper, {\tt C} lower \\
+{\tt C = triu (A) ;					   }& {\tt A} upper, {\tt C} upper \\
+{\tt L = tril (A) ; U = triu (L',1) ; C = L+U ;		   }& {\tt A} lower, {\tt C} unsymmetric \\
+{\tt C = tril (A) ;					   }& {\tt A} lower, {\tt C} lower \\
+{\tt C = tril (A)' ;					   }& {\tt A} lower, {\tt C} upper \\
+\hline
+\end{tabular}
+
+\vspace{0.1in}
+The xtype of {\tt A} can be pattern or real.  Complex or zomplex cases are supported only
+if {\tt values} is {\tt FALSE} (in which case the numerical values are ignored).
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_add}: add sparse matrices}
+%---------------------------------------
+
+\input{_add.tex}
+Returns {\tt C = alpha*A + beta*B}.
+If the {\tt stype} of {\tt A} and {\tt B} match, then {\tt C} has
+the same {\tt stype}.  Otherwise, {\tt C->stype} is zero ({\tt C} is
+unsymmetric).
+
+%---------------------------------------
+\subsection{{\tt cholmod\_sparse\_xtype}: change sparse xtype}
+%---------------------------------------
+
+\input{_sparse_xtype.tex}
+Changes the {\tt xtype} of a sparse matrix, to pattern, real, complex, or zomplex.
+Changing from complex or zomplex to real discards the imaginary part.
+
+%-------------------------------------------------------------------------------
+\newpage \section{{\tt Core} Module: {\tt cholmod\_factor} object}
+\label{cholmod_factor}
+%-------------------------------------------------------------------------------
+
+%---------------------------------------
+\subsection{{\tt cholmod\_factor} object: a sparse Cholesky factorization}
+%---------------------------------------
+
+\input{_factor.tex}
+An $\m{LL}\tr$ or $\m{LDL}\tr$ factorization in simplicial or supernodal form.
+A simplicial factor is very similar to a {\tt cholmod\_sparse} matrix.
+For an $\m{LDL}\tr$ factorization, the diagonal matrix $\m{D}$ is stored
+as the diagonal of $\m{L}$; the unit-diagonal of $\m{L}$ is not stored.
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_free\_factor}: free factor}
+%---------------------------------------
+
+\input{_free_factor.tex}
+Frees a factor.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_allocate\_factor}: allocate factor}
+%---------------------------------------
+
+\input{_allocate_factor.tex}
+Allocates a factor and sets it to identity.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_reallocate\_factor}: reallocate factor}
+%---------------------------------------
+
+\input{_reallocate_factor.tex}
+Reallocates a simplicial factor so that it can contain {\tt nznew} entries.
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_change\_factor}: change factor}
+%---------------------------------------
+
+\input{_change_factor.tex}
+Change the numeric or symbolic, $\m{LL}\tr$ or $\m{LDL}\tr$, simplicial or super, packed or unpacked, and
+monotonic or non-monotonic status of a {\tt cholmod\_factor} object.
+
+There are four basic classes of factor types:
+\begin{enumerate}
+\item simplicial symbolic:  Consists of two size-{\tt n} arrays: the fill-reducing
+permutation ({\tt L->Perm}) and the nonzero count for each column of L
+({\tt L->ColCount}).  All other factor types also include this information.
+{\tt L->ColCount} may be exact (obtained from the analysis routines), or
+it may be a guess.  During factorization, and certainly after update/downdate,
+the columns of {\tt L} can have a different number of nonzeros.
+{\tt L->ColCount} is used to allocate space.  {\tt L->ColCount} is exact for the
+supernodal factorizations.  The nonzero pattern of {\tt L} is not kept.
+
+\item simplicial numeric:  These represent {\tt L} in a compressed column form.  The
+variants of this type are:
+
+\begin{itemize}
+\item $\m{LDL}\tr$:	{\tt L} is unit diagonal.  Row indices in column {\tt j} are located in
+    {\tt L->i [L->p [j] ... L->p [j] + L->nz [j]]}, and corresponding numeric
+    values are in the same locations in {\tt L->x}.  The total number of
+    entries is the sum of {\tt L->nz [j]}.  The unit diagonal is not stored;
+    {\tt D} is stored on the diagonal of {\tt L} instead.  {\tt L->p} may or may not be
+    monotonic.  The order of storage of the columns in {\tt L->i} and {\tt L->x} is
+    given by a doubly-linked list ({\tt L->prev} and {\tt L->next}).  {\tt L->p} is of
+    size {\tt n+1}, but only the first {\tt n} entries are used.
+
+    For the complex case, {\tt L->x} is stored interleaved with real and imaginary
+    parts, and is of size {\tt 2*lnz*sizeof(double)}.  For the zomplex case,
+    {\tt L->x} is of size {\tt lnz*sizeof(double)} and holds the real part; {\tt L->z}
+    is the same size and holds the imaginary part.
+
+\item $\m{LL}\tr$:  This is identical to the $\m{LDL}\tr$ form, except that the non-unit
+    diagonal of {\tt L} is stored as the first entry in each column of {\tt L}.
+\end{itemize}
+
+\item supernodal symbolic:  A representation of the nonzero pattern of the
+supernodes for a supernodal factorization.  There are {\tt L->nsuper}
+supernodes.  Columns {\tt L->super [k]} to {\tt L->super [k+1]-1} are in the {\tt k}th
+supernode.  The row indices for the {\tt k}th supernode are in
+{\tt L->s [L->pi [k] ... L->pi [k+1]-1]}.  The numerical values are not
+allocated ({\tt L->x}), but when they are they will be located in
+{\tt L->x [L->px [k] ... L->px [k+1]-1]}, and the {\tt L->px} array is defined
+in this factor type.
+
+For the complex case, {\tt L->x} is stored interleaved with real/imaginary parts,
+and is of size \newline
+{\tt 2*L->xsize*sizeof(double)}.  The zomplex supernodal case
+is not supported, since it is not compatible with LAPACK and the BLAS.
+
+\item supernodal numeric:  Always an $\m{LL}\tr$ factorization.  {\tt L} has a non-unit
+     diagonal.  {\tt L->x} contains the numerical values of the supernodes, as
+     described above for the supernodal symbolic factor.
+     For the complex case, {\tt L->x} is stored interleaved, and is of size
+     {\tt 2*L->xsize*sizeof(double)}.  The zomplex supernodal case is not
+     supported, since it is not compatible with LAPACK and the BLAS.
+\end{enumerate}
+
+
+In all cases, the row indices in each column ({\tt L->i} for simplicial {\tt L} and
+{\tt L->s} for supernodal {\tt L}) are kept sorted from low indices to high indices.
+This means the diagonal of {\tt L} (or {\tt D} for a $\m{LDL}\tr$ factorization) is always kept as the
+first entry in each column.  The elimination tree is not kept.  The parent
+of node {\tt j} can be found as the second row index in the {\tt j}th column.
+If column {\tt j} has no off-diagonal entries then node {\tt j} is a root
+of the elimination tree.
+
+The {\tt cholmod\_change\_factor} routine can do almost all possible conversions.
+It cannot do the following conversions:
+
+\begin{itemize}
+\item Simplicial numeric types cannot be converted to a supernodal
+    symbolic type.  This would simultaneously deallocate the
+    simplicial pattern and numeric values and reallocate uninitialized
+    space for the supernodal pattern.  This isn't useful for the user,
+    and not needed by CHOLMOD's own routines either.
+\item Only a symbolic factor (simplicial to supernodal) can be converted
+    to a supernodal numeric factor.
+\end{itemize}
+
+Some conversions are meant only to be used internally by other CHOLMOD
+routines, and should not be performed by the end user.  They allocate space
+whose contents are undefined:
+
+\begin{itemize}
+\item converting from simplicial symbolic to supernodal symbolic.
+\item converting any factor to supernodal numeric.
+\end{itemize}
+
+Supports all xtypes, except that there is no supernodal zomplex L.
+
+The {\tt to\_xtype} parameter is used only when converting from symbolic to numeric
+or numeric to symbolic.  It cannot be used to convert a numeric xtype (real,
+complex, or zomplex) to a different numeric xtype.  For that conversion,
+use {\tt cholmod\_factor\_xtype} instead.
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_pack\_factor}: pack the columns of a factor}
+%---------------------------------------
+
+\input{_pack_factor.tex}
+Pack the columns of a simplicial $\m{LDL}\tr$ or $\m{LL}\tr$ factorization.  This can be followed
+by a call to {\tt cholmod\_reallocate\_factor} to reduce the size of {\tt L} to the exact
+size required by the factor, if desired.  Alternatively, you can leave the
+size of {\tt L->i} and {\tt L->x} the same, to allow space for future updates/rowadds.
+Each column is reduced in size so that it has at most {\tt Common->grow2} free
+space at the end of the column.
+Does nothing and returns silently if given any other type of factor.
+Does not force the columns of {\tt L} to be monotonic.  It thus differs from
+\begin{verbatim}
+    cholmod_change_factor (xtype, L->is_ll, FALSE, TRUE, TRUE, L, Common)
+\end{verbatim}
+which packs the columns and ensures that they appear in monotonic order.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_reallocate\_column}: reallocate one column of a factor}
+%---------------------------------------
+
+\input{_reallocate_column.tex}
+Reallocates the space allotted to a single column of $\m{L}$.
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_factor\_to\_sparse}: sparse matrix copy of a factor}
+%---------------------------------------
+
+\input{_factor_to_sparse.tex}
+Returns a column-oriented sparse matrix containing the pattern and values
+of a simplicial or supernodal numerical factor, and then converts the factor
+into a simplicial symbolic factor.  If {\tt L} is already packed, monotonic,
+and simplicial (which is the case when {\tt cholmod\_factorize} uses the simplicial
+Cholesky factorization algorithm) then this routine requires only a small
+amount of time and memory, independent of {\tt n}.
+It only operates on numeric factors (real, complex, or zomplex).  It does not
+change {\tt L->xtype} (the resulting sparse matrix has the same {\tt xtype}
+as {\tt L}).  If this routine fails, {\tt L} is left unmodified.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_copy\_factor}: copy factor}
+%---------------------------------------
+
+\input{_copy_factor.tex}
+Returns an exact copy of a factor.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_factor\_xtype}: change factor xtype}
+%---------------------------------------
+
+\input{_factor_xtype.tex}
+Changes the {\tt xtype} of a factor, to pattern, real, complex, or zomplex.
+Changing from complex or zomplex to real discards the imaginary part.
+You cannot change a supernodal factor to the zomplex xtype.
+
+%-------------------------------------------------------------------------------
+\newpage \section{{\tt Core} Module: {\tt cholmod\_dense} object}
+\label{cholmod_dense}
+%-------------------------------------------------------------------------------
+
+%---------------------------------------
+\subsection{{\tt cholmod\_dense} object: a dense matrix}
+%---------------------------------------
+
+\input{_dense.tex}
+Contains a dense matrix.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_allocate\_dense}: allocate dense matrix}
+%---------------------------------------
+
+\input{_allocate_dense.tex}
+Allocates a dense matrix.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_free\_dense}: free dense matrix}
+%---------------------------------------
+
+\input{_free_dense.tex}
+Frees a dense matrix.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_ensure\_dense}: ensure dense matrix has a given size
+and type}
+%---------------------------------------
+
+\input{_ensure_dense.tex}
+Ensures a dense matrix has a given size and type.
+
+%---------------------------------------
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_zeros}: dense zero matrix}
+%---------------------------------------
+
+\input{_zeros.tex}
+Returns an all-zero dense matrix.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_ones}: dense matrix, all ones}
+%---------------------------------------
+
+\input{_ones.tex}
+Returns a dense matrix with each entry equal to one.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_eye}: dense identity matrix}
+%---------------------------------------
+
+\input{_eye.tex}
+Returns a dense identity matrix.
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_sparse\_to\_dense}: dense matrix copy of a sparse matrix}
+%---------------------------------------
+
+\input{_sparse_to_dense.tex}
+Returns a dense copy of a sparse matrix.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_dense\_to\_sparse}: sparse matrix copy of a dense matrix}
+%---------------------------------------
+
+\input{_dense_to_sparse.tex}
+Returns a sparse copy of a dense matrix.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_copy\_dense}: copy dense matrix}
+%---------------------------------------
+
+\input{_copy_dense.tex}
+Returns a copy of a dense matrix.
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_copy\_dense2}: copy dense matrix (preallocated)}
+%---------------------------------------
+
+\input{_copy_dense2.tex}
+Returns a copy of a dense matrix, placing the result in a preallocated matrix {\tt Y}.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_dense\_xtype}: change dense matrix xtype}
+%---------------------------------------
+
+\input{_dense_xtype.tex}
+Changes the {\tt xtype} of a dense matrix, to real, complex, or zomplex.
+Changing from complex or zomplex to real discards the imaginary part.
+
+%-------------------------------------------------------------------------------
+\newpage \section{{\tt Core} Module: {\tt cholmod\_triplet} object}
+\label{cholmod_triplet}
+%-------------------------------------------------------------------------------
+
+%---------------------------------------
+\subsection{{\tt cholmod\_triplet} object: sparse matrix in triplet form}
+%---------------------------------------
+
+\input{_triplet.tex}
+Contains a sparse matrix in triplet form.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_allocate\_triplet}: allocate triplet matrix}
+%---------------------------------------
+
+\input{_allocate_triplet.tex}
+Allocates a triplet matrix.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_free\_triplet}: free triplet matrix}
+%---------------------------------------
+
+\input{_free_triplet.tex}
+Frees a triplet matrix.
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_reallocate\_triplet}: reallocate triplet matrix}
+%---------------------------------------
+
+\input{_reallocate_triplet.tex}
+Reallocates a triplet matrix so that it can hold {\tt nznew} entries.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_sparse\_to\_triplet}: triplet matrix copy of a sparse matrix}
+%---------------------------------------
+
+\input{_sparse_to_triplet.tex}
+Returns a triplet matrix copy of a sparse matrix.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_triplet\_to\_sparse}: sparse matrix copy of a triplet matrix}
+%---------------------------------------
+
+\input{_triplet_to_sparse.tex}
+Returns a sparse matrix copy of a triplet matrix.
+If the triplet matrix is symmetric with just the lower part present ({\tt T->stype} $< 0$),
+then entries in the upper part are transposed and placed in the lower part when
+converting to a sparse matrix.  Similarly,
+if the triplet matrix is symmetric with just the upper part present ({\tt T->stype} $> 0$),
+then entries in the lower part are transposed and placed in the upper part when
+converting to a sparse matrix.
+Any duplicate entries are summed.
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_copy\_triplet}: copy triplet matrix}
+%---------------------------------------
+
+\input{_copy_triplet.tex}
+Returns an exact copy of a triplet matrix.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_triplet\_xtype}: change triplet xtype}
+%---------------------------------------
+
+\input{_triplet_xtype.tex}
+Changes the {\tt xtype} of a dense matrix, to real, complex, or zomplex.
+Changing from complex or zomplex to real discards the imaginary part.
+
+%-------------------------------------------------------------------------------
+\newpage \section{{\tt Core} Module: memory management}
+%-------------------------------------------------------------------------------
+
+%---------------------------------------
+\subsection{{\tt cholmod\_malloc}: allocate memory}
+%---------------------------------------
+
+\input{_malloc.tex}
+Allocates a block of memory of size {\tt n*size},
+using the {\tt SuiteSparse\_config.malloc\_func}
+function pointer (default is to use the ANSI C {\tt malloc} routine).
+A value of {\tt n=0} is treated as {\tt n=1}.
+If not successful, {\tt NULL} is returned and {\tt Common->status} is set to {\tt CHOLMOD\_OUT\_OF\_MEMORY}.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_calloc}: allocate and clear memory}
+%---------------------------------------
+
+\input{_calloc.tex}
+Allocates a block of memory of size {\tt n*size},
+using the {\tt SuiteSparse\_config.calloc\_func}
+function pointer (default is to use the ANSI C {\tt calloc} routine).
+A value of {\tt n=0} is treated as {\tt n=1}.
+If not successful, {\tt NULL} is returned and {\tt Common->status} is set to {\tt CHOLMOD\_OUT\_OF\_MEMORY}.
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_free}: free memory}
+%---------------------------------------
+
+\input{_free.tex}
+Frees a block of memory of size {\tt n*size},
+using the {\tt SuiteSparse\_config.free\_func}
+function pointer (default is to use the ANSI C {\tt free} routine).
+The size of the block ({\tt n} and {\tt size}) is only required so that CHOLMOD
+can keep track of its current and peak memory usage.  This is a useful statistic,
+and it can also help in tracking down memory leaks.  After the call to
+{\tt cholmod\_finish}, the count of allocated blocks ({\tt Common->malloc\_count})
+should be zero, and the count of bytes in use ({\tt Common->memory\_inuse}) also
+should be zero.  If you allocate a block with one size and free it with another,
+the {\tt Common->memory\_inuse} count will be wrong, but CHOLMOD will not
+have a memory leak.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_realloc}: reallocate memory}
+%---------------------------------------
+
+\input{_realloc.tex}
+Reallocates a block of memory whose current size {\tt n*size},
+and whose new size will be {\tt nnew*size} if successful,
+using the {\tt SuiteSparse\_config.calloc\_func}
+function pointer (default is to use the ANSI C {\tt realloc} routine).
+If the reallocation is not successful, {\tt p} is returned unchanged
+and {\tt Common->status} is set to {\tt CHOLMOD\_OUT\_OF\_MEMORY}.
+The value of {\tt n} is set to {\tt nnew} if successful, or left
+unchanged otherwise.
+A value of {\tt nnew=0} is treated as {\tt nnew=1}.
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_realloc\_multiple}: reallocate memory}
+%---------------------------------------
+
+\input{_realloc_multiple.tex}
+Reallocates multiple blocks of memory, all with the same number of items
+(but with different item sizes).  Either all reallocations succeed,
+or all are returned to their original size.
+
+%-------------------------------------------------------------------------------
+\newpage \section{{\tt Core} Module: version control}
+%-------------------------------------------------------------------------------
+
+\subsection{{\tt cholmod\_version}: return current CHOLMOD version}
+
+\input{_version.tex}
+Returns the CHOLMOD version number, so that it can be tested at run time, even
+if the caller does not have access to the CHOLMOD include files.  For example,
+for a CHOLMOD version 3.2.1, the {\tt version} array will contain 3, 2, and 1,
+in that order.  This function appears in CHOLMOD 2.1.1 and later.  You can
+check if the function exists with the {\tt CHOLMOD\_HAS\_VERSION\_FUNCTION}
+macro, so that the following code fragment works in any version of CHOLMOD:
+
+\begin{verbatim}
+   #ifdef CHOLMOD_HAS_VERSION_FUNCTION
+   v = cholmod_version (NULL) ;
+   #else
+   v = CHOLMOD_VERSION ;
+   #endif
+\end{verbatim}
+
+Note that {\tt cholmod\_version} and {\tt cholmod\_l\_version} have identical
+prototypes.  Both use {\tt int}'s.  Unlike all other CHOLMOD functions, this
+function does not take the {\tt Common} object as an input parameter, and it
+does not use any definitions from any include files.  Thus, the caller can
+access this function even if the caller does not include any CHOLMOD include
+files.
+
+The above code fragment does require the {\tt \#include "cholmod.h"},
+of course, but {\tt cholmod\_version} can be called without it, if necessary.
+
+%-------------------------------------------------------------------------------
+\newpage \section{{\tt Check} Module routines}
+%-------------------------------------------------------------------------------
+
+No CHOLMOD routines print anything, except for the {\tt cholmod\_print\_*}
+routines in the {\tt Check} Module, and the {\tt cholmod\_error} routine.  The
+{\tt SuiteSparse\_config.printf\_function} is a pointer to {\tt printf} by default;
+you can redirect the output of CHOLMOD by redefining this pointer.
+If the function pointer is {\tt NULL}, CHOLMOD does not print anything.
+
+The {\tt Common->print} parameter determines how much detail is printed.
+Each value of {\tt Common->print} listed below also prints the items listed
+for smaller values of {\tt Common->print}:
+\begin{itemize}
+\item 0: print nothing; check the data structures and return {\tt TRUE} or {\tt FALSE}.
+\item 1: print error messages.
+\item 2: print warning messages.
+\item 3: print a one-line summary of the object.
+\item 4: print a short summary of the object (first and last few entries).
+\item 5: print the entire contents of the object.
+\end{itemize}
+Values less than zero are treated as zero, and values greater than five are
+treated as five.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_check\_common}: check Common object}
+%---------------------------------------
+
+\input{_check_common.tex}
+Check if the {\tt Common} object is valid.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_print\_common}: print Common object}
+%---------------------------------------
+
+\input{_print_common.tex}
+Print the {\tt Common} object and check if it is valid.
+This prints the CHOLMOD parameters and statistics.
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_check\_sparse}: check sparse matrix}
+%---------------------------------------
+
+\input{_check_sparse.tex}
+Check if a sparse matrix is valid.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_print\_sparse}: print sparse matrix}
+%---------------------------------------
+
+\input{_print_sparse.tex}
+Print a sparse matrix and check if it is valid.
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_check\_dense}: check dense matrix}
+%---------------------------------------
+
+\input{_check_dense.tex}
+Check if a dense matrix is valid.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_print\_dense}: print dense matrix}
+%---------------------------------------
+
+\input{_print_dense.tex}
+Print a dense matrix and check if it is valid.
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_check\_factor}: check factor}
+%---------------------------------------
+
+\input{_check_factor.tex}
+Check if a factor is valid.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_print\_factor}: print factor}
+%---------------------------------------
+
+\input{_print_factor.tex}
+Print a factor and check if it is valid.
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_check\_triplet}: check triplet matrix}
+%---------------------------------------
+
+\input{_check_triplet.tex}
+Check if a triplet matrix is valid.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_print\_triplet}: print triplet matrix}
+%---------------------------------------
+
+\input{_print_triplet.tex}
+Print a triplet matrix and check if it is valid.
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_check\_subset}: check subset}
+%---------------------------------------
+
+\input{_check_subset.tex}
+Check if a subset is valid.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_print\_subset}: print subset}
+%---------------------------------------
+
+\input{_print_subset.tex}
+Print a subset and check if it is valid.
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_check\_perm}: check permutation}
+%---------------------------------------
+
+\input{_check_perm.tex}
+Check if a permutation is valid.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_print\_perm}: print permutation}
+%---------------------------------------
+
+\input{_print_perm.tex}
+Print a permutation and check if it is valid.
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_check\_parent}: check elimination tree}
+%---------------------------------------
+
+\input{_check_parent.tex}
+Check if an elimination tree is valid.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_print\_parent}: print elimination tree}
+%---------------------------------------
+
+\input{_print_parent.tex}
+Print an elimination tree and check if it is valid.
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_read\_triplet}: read triplet matrix from file}
+%---------------------------------------
+
+\input{_read_triplet.tex}
+Read a sparse matrix in triplet form, using the the {\tt coord} 
+Matrix Market format (http://www.nist.gov/MatrixMarket).
+Skew-symmetric and complex symmetric matrices are returned with
+both upper and lower triangular parts present (an stype of zero).
+Real symmetric and complex Hermitian matrices are returned with just
+their upper or lower triangular part, depending on their stype.
+The Matrix Market {\tt array} data type for dense matrices is not supported
+(use {\tt cholmod\_read\_dense} for that case).
+
+If the first line of the file starts with {\tt \%\%MatrixMarket}, then it is
+interpreted as a file in Matrix Market format.  The header line is optional.
+If present, this line must have the following format:
+\vspace{0.1in}
+
+        {\tt \%\%MatrixMarket matrix coord} {\em type storage}
+
+\vspace{0.1in}
+\noindent
+where {\em type} is one of: {\tt real}, {\tt complex}, {\tt pattern},
+or {\tt integer}, and {\em storage} is one of: {\tt general}, {\tt hermitian},
+{\tt symmetric}, or {\tt skew-symmetric}.
+In CHOLMOD, these roughly correspond to the {\tt xtype}
+(pattern, real, complex, or zomplex) and {\tt stype}
+(unsymmetric, symmetric/upper, and symmetric/lower).
+The strings are case-insensitive.  Only the first character (or the
+first two for skew-symmetric) is significant.
+The {\tt coord} token can be replaced with {\tt array} in the Matrix Market format, but
+this format not supported by {\tt cholmod\_read\_triplet}.
+The {\tt integer} type is converted to real.
+The {\em type} is ignored; the actual type (real, complex, or pattern) is
+inferred from the number of tokens in each line of the file (2: pattern,
+3: real, 4: complex).  This is compatible with the Matrix Market format.
+
+A storage of {\tt general} implies an stype of zero
+(see below).  A storage of {\tt symmetric} and {\tt hermitian} imply an stype of -1.
+Skew-symmetric and complex symmetric matrices are returned with an stype of 0.
+Blank lines, any other lines starting with ``{\tt \%}'' are treated as comments, and are ignored.
+
+The first non-comment line contains 3 or 4 integers:
+\vspace{0.1in}
+
+	{\em nrow ncol nnz stype}
+
+\vspace{0.1in}
+\noindent
+where {\em stype} is optional (stype does not appear in the Matrix Market format).
+The matrix is {\em nrow}-by-{\em ncol}.  The following {\em nnz} lines (excluding comments)
+each contain a single entry.  Duplicates are permitted, and are summed in
+the output matrix.
+
+If stype is present, it denotes the storage format for the matrix.
+\begin{itemize}
+\item stype = 0 denotes an unsymmetric matrix (same as Matrix Market {\tt general}).
+\item stype = -1 denotes a symmetric or Hermitian matrix whose lower triangular 
+	entries are stored.  Entries may be present in the upper triangular
+	part, but these are ignored (same as Matrix Market {\tt symmetric}
+	for the real case, {\tt hermitian} for the complex case).
+\item stype = 1 denotes a symmetric or Hermitian matrix whose upper triangular 
+	entries are stored.  Entries may be present in the lower triangular
+	part, but these are ignored.  This format is not available in the Matrix
+	Market format.
+\end{itemize}
+
+If neither the stype nor the Matrix Market header are present, then
+the stype is inferred from the rest of the data.  If the matrix is
+rectangular, or has
+entries in both the upper and lower triangular parts, then it is assumed to
+be unsymmetric (stype=0).  If only entries in the lower triangular part are
+present, the matrix is assumed to have stype = -1.  If only entries in the
+upper triangular part are present, the matrix is assumed to have stype = 1.
+
+Each nonzero consists of one line with 2, 3, or 4 entries.  All lines must
+have the same number of entries.  The first two entries are the row and
+column indices of the nonzero.  If 3 entries are present, the 3rd entry is
+the numerical value, and the matrix is real.  If 4 entries are present,
+the 3rd and 4th entries in the line are the real and imaginary parts of
+a complex value.
+
+The matrix can be either 0-based or 1-based.  It is first assumed to be
+one-based (compatible with Matrix Market), with row indices in the range
+1 to ncol and column indices in the range 1 to nrow.  If a row or column
+index of zero is found, the matrix is assumed to be zero-based (with row
+indices in the range 0 to ncol-1 and column indices in the range 0 to
+nrow-1).  This test correctly determines that all Matrix Market
+matrices are in 1-based form.
+
+For symmetric pattern-only matrices, the kth diagonal (if present) is set to
+one plus the degree of the row k or column k (whichever is larger), and the
+off-diagonals are set to -1.  A symmetric pattern-only matrix with a
+zero-free diagonal is thus converted into a symmetric positive definite
+matrix.  All entries are set to one for an unsymmetric pattern-only matrix.
+This differs from the MatrixMarket format ({\tt A = mmread ('file')} returns
+a binary pattern for A for symmetric pattern-only matrices).
+To return a binary format for all pattern-only matrices, use
+{\tt A = mread('file',1)}.
+
+Example matrices that follow this format can be found in the
+{\tt CHOLMOD/Demo/Matrix} and \newline
+{\tt CHOLMOD/Tcov/Matrix} directories.
+You can also try any of the matrices in the Matrix Market collection
+at http://www.nist.gov/MatrixMarket.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_read\_sparse}: read sparse matrix from file}
+%---------------------------------------
+
+\input{_read_sparse.tex}
+Read a sparse matrix in triplet form from a file (using {\tt cholmod\_read\_triplet})
+and convert to a CHOLMOD sparse matrix.
+The Matrix Market format is used.
+If {\tt Common->prefer\_upper} is {\tt TRUE} (the default case), a symmetric matrix is
+returned stored in upper-triangular form ({\tt A->stype} is 1).
+Otherwise, it is left in its original form, either upper or lower.
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_read\_dense}: read dense matrix from file}
+%---------------------------------------
+
+\input{_read_dense.tex}
+Read a dense matrix from a file, using the the {\tt array} 
+Matrix Market format 
+\newline (http://www.nist.gov/MatrixMarket).
+
+%---------------------------------------
+\subsection{{\tt cholmod\_read\_matrix}: read a matrix from file}
+%---------------------------------------
+
+\input{_read_matrix.tex}
+Read a sparse or dense matrix from a file, in Matrix Market format.
+Returns a {\tt void} pointer to either a
+{\tt cholmod\_triplet},
+{\tt cholmod\_sparse}, or
+{\tt cholmod\_dense} object.
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_write\_sparse}: write a sparse matrix to a file}
+%---------------------------------------
+
+\input{_write_sparse.tex}
+Write a sparse matrix to a file in Matrix Market format.   Optionally include
+comments, and print explicit zero entries given by the pattern of the {\tt Z}
+matrix.  If not NULL, the {\tt Z} matrix must have the same dimensions and stype
+as {\tt A}.
+
+Returns the symmetry in which the matrix was printed
+(1 to 7) or -1 on failure.  See the {\tt cholmod\_symmetry} function for
+a description of the return codes.
+
+If {\tt A} and {\tt Z} are sorted on input, and either unsymmetric (stype = 0) or
+symmetric-lower (stype < 0), and if {\tt A} and {\tt Z} do not overlap,
+then the triplets
+are sorted, first by column and then by row index within each column, with
+no duplicate entries.  If all the above holds except stype > 0, then the
+triplets are sorted by row first and then column.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_write\_dense}: write a dense matrix to a file}
+%---------------------------------------
+
+\input{_write_dense.tex}
+Write a dense matrix to a file in Matrix Market format.   Optionally include
+comments.  Returns > 0 if successful, -1 otherwise (1 if rectangular, 2 if
+square).
+A dense matrix is written in "general" format; symmetric formats in the
+Matrix Market standard are not exploited.
+
+%-------------------------------------------------------------------------------
+\newpage \section{{\tt Cholesky} Module routines}
+%-------------------------------------------------------------------------------
+
+%---------------------------------------
+\subsection{{\tt cholmod\_analyze}: symbolic factorization}
+%---------------------------------------
+
+\input{_analyze.tex}
+Orders and analyzes a matrix (either simplicial or supernodal), in preparation
+for numerical factorization via {\tt cholmod\_factorize} or via the ``expert''
+routines {\tt cholmod\_rowfac} and {\tt cholmod\_super\_numeric}.
+
+In the symmetric case, {\tt A} or {\tt A(p,p)} is analyzed,
+where {\tt p} is the fill-reducing ordering.
+In the unsymmetric case, {\tt A*A'} or {\tt A(p,:)*A(p,:)'} is analyzed.
+The {\tt cholmod\_analyze\_p} routine can be given a user-provided permutation {\tt p}
+(see below).
+
+The default ordering strategy is to first try AMD.
+The ordering quality is analyzed, and if AMD obtains an ordering where
+{\tt nnz(L)} is greater than or equal to {\tt 5*nnz(tril(A))}
+(or {\tt 5*nnz(tril(A*A'))} if {\tt A} is unsymmetric) and
+the floating-point operation count for the subsequent factorization is
+greater than or equal to {\tt 500*nnz(L)}, then METIS is tried (if installed).
+For {\tt cholmod\_analyze\_p}, the user-provided ordering is also tried.
+This default behavior is obtained when {\tt Common->nmethods} is zero.
+In this case, methods 0, 1, and 2 in {\tt Common->method[...]} are reset
+to user-provided, AMD, and METIS, respectively.
+The ordering with the smallest {\tt nnz(L)} is kept.
+
+If {\tt Common->default\_nesdis} is true (nonzero), then CHOLMOD's
+nested dissection (NESDIS) is used for the default strategy described
+above, in place of METIS.
+
+Other ordering options can be requested.  These include:
+\begin{enumerate}
+\item	natural:    A is not permuted to reduce fill-in.
+\item	user-provided:	    a permutation can be provided to {\tt cholmod\_analyze\_p}.
+\item	AMD:	    approximate minimum degree (AMD for the symmetric case, COLAMD for the {\tt A*A'} case).
+\item	METIS:	    nested dissection with {\tt METIS\_NodeND}
+\item	{\tt NESDIS}:	    CHOLMOD's nested dissection using
+    {\tt METIS\_NodeComputeSeparator},
+    followed by a constrained minimum degree
+    (CAMD or CSYMAMD for the symmetric case, CCOLAMD for the {\tt A*A'} case).
+    This is typically slower than METIS, but typically provides better orderings.
+\end{enumerate}
+
+Multiple ordering options can be tried (up to 9 of them), and the best one
+is selected (the one that gives the smallest number of nonzeros in the
+simplicial factor L).  If one method fails, {\tt cholmod\_analyze} keeps going, and
+picks the best among the methods that succeeded.  This routine fails (and
+returns {\tt NULL}) if either the initial memory allocation fails, all ordering methods
+fail, or the supernodal analysis (if requested) fails.  Change {\tt Common->nmethods} to the
+number of methods you wish to try.  By default, the 9 methods available are:
+
+\begin{enumerate}
+\item user-provided permutation (only for {\tt cholmod\_analyze\_p}).
+\item AMD with default parameters.
+\item METIS with default parameters.
+\item {\tt NESDIS} with default parameters: stopping the partitioning when
+	    the graph is of size {\tt nd\_small} = 200 or less, remove nodes with
+	    more than {\tt max (16, prune\_dense * sqrt (n))} nodes where
+	    {\tt prune\_dense} = 10, and follow partitioning with
+	    constrained minimum degree ordering
+	    (CAMD for the symmetric case,
+	    CCOLAMD for the unsymmetric case).
+\item natural ordering (with weighted postorder).
+\item NESDIS, {\tt nd\_small} = 20000, {\tt prune\_dense} = 10.
+\item NESDIS, {\tt nd\_small} =     4, {\tt prune\_dense} = 10,
+    no constrained minimum degree.
+\item NESDIS, {\tt nd\_small} =   200, {\tt prune\_dense} = 0.
+\item COLAMD for {\tt A*A'} or AMD for {\tt A}
+\end{enumerate}
+
+You can modify these 9 methods and the number of methods tried by changing
+parameters in the {\tt Common} argument.  If you know the best ordering for your
+matrix, set {\tt Common->nmethods} to 1 and set {\tt Common->method[0].ordering} to the
+requested ordering method.  Parameters for each method can also be modified
+(refer to the description of {\tt cholmod\_common} for details).
+
+Note that it is possible for METIS to terminate your program if it runs out
+of memory.  This is not the case for any CHOLMOD or minimum degree ordering
+routine (AMD, COLAMD, CAMD, CCOLAMD, or CSYMAMD).
+Since {\tt NESDIS} relies on METIS, it too can terminate your program.
+
+The selected ordering is followed by a weighted postorder of the elimination
+tree by default (see {\tt cholmod\_postorder} for details),
+unless {\tt Common->postorder} is set to {\tt FALSE}.
+The postorder does not change the number of nonzeros in $\m{L}$ or
+the floating-point operation count.  It does improve performance,
+particularly for the supernodal factorization.
+If you truly want the natural ordering with no postordering,
+you must set {\tt Common->postorder} to {\tt FALSE}.
+
+The factor {\tt L} is returned as simplicial symbolic if
+{\tt Common->supernodal} is {\tt CHOLMOD\_SIMPLICIAL} (zero) or as supernodal symbolic if
+{\tt Common->supernodal} is {\tt CHOLMOD\_SUPERNODAL} (two).  If \newline
+{\tt Common->supernodal} is {\tt CHOLMOD\_AUTO} (one),
+then {\tt L} is simplicial if the flop count per nonzero in {\tt L} is less than
+{\tt Common->supernodal\_switch} (default: 40), and
+supernodal otherwise.  In both cases, {\tt L->xtype} is {\tt CHOLMOD\_PATTERN}.
+A subsequent call to {\tt cholmod\_factorize} will perform a
+simplicial or supernodal factorization, depending on the type of {\tt L}.
+
+For the simplicial case, {\tt L} contains the fill-reducing permutation ({\tt L->Perm})
+and the counts of nonzeros in each column of {\tt L} ({\tt L->ColCount}).  For the
+supernodal case, {\tt L} also contains the nonzero pattern of each supernode.
+
+If a simplicial factorization is selected, it will be $\m{LDL}\tr$ by default, since
+this is the kind required by the {\tt Modify} Module.  CHOLMOD does not include a
+supernodal $\m{LDL}\tr$ factorization, so if a supernodal factorization is selected,
+it will be in the form $\m{LL}\tr$.  The $\m{LDL}\tr$ method can be used to
+factorize positive definite matrices and indefinite matrices whose leading minors
+are well-conditioned (2-by-2 pivoting is not supported).  The $\m{LL}\tr$ method
+is restricted to positive definite matrices.  To factorize a large indefinite matrix,
+set {\tt Common->supernodal} to {\tt CHOLMOD\_SIMPLICIAL}, and the simplicial 
+$\m{LDL}\tr$ method will always be used.  This will be significantly slower than
+a supernodal $\m{LL}\tr$ factorization, however.
+
+Refer to {\tt cholmod\_transpose\_unsym} for a description of {\tt f}.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_factorize}: numeric factorization}
+%---------------------------------------
+
+\input{_factorize.tex}
+Computes the numerical factorization of a symmetric matrix.  The % primary
+inputs to this routine are a sparse matrix {\tt A} and the symbolic factor {\tt L} from
+{\tt cholmod\_analyze} or a prior numerical factor {\tt L}.  If {\tt A} is symmetric, this
+routine factorizes {\tt A(p,p)}. %+beta*I (beta can be zero),
+where p is the fill-reducing permutation ({\tt L->Perm}).  If {\tt A} is unsymmetric,
+% either
+{\tt A(p,:)*A(p,:)'} % +beta*I  or A(p,f)*A(p,f)'+beta*I
+is factorized.  %  The set f and
+The nonzero pattern of the matrix {\tt A} must be the same as the matrix passed to
+{\tt cholmod\_analyze} for the supernodal case.  For the simplicial case, it can
+be different, but it should be the same for best performance. %  beta is real.
+
+A simplicial factorization or supernodal factorization is chosen, based on
+the type of the factor {\tt L}.  If {\tt L->is\_super} is {\tt TRUE}, a supernodal $\m{LL}\tr$
+factorization is computed.  Otherwise, a simplicial numeric factorization
+is computed, either $\m{LL}\tr$ or $\m{LDL}\tr$, depending on {\tt Common->final\_ll}
+(the default for the simplicial case is to compute an $\m{LDL}\tr$ factorization).
+
+Once the factorization is complete, it can be left as is or optionally
+converted into any simplicial numeric type, depending on the
+{\tt Common->final\_*} parameters.  If converted from a supernodal to simplicial
+type, and {\tt Common->final\_resymbol} is {\tt TRUE}, then numerically
+zero entries in {\tt L} due to relaxed supernodal amalgamation are removed from
+the simplicial factor (they are always left in the supernodal form of {\tt L}).
+Entries that are numerically zero but present in the simplicial symbolic
+pattern of {\tt L} are left in place (the graph of {\tt L} remains chordal).
+This is required for the update/downdate/rowadd/rowdel routines to work
+properly.
+
+If the matrix is not positive definite the routine returns {\tt TRUE}, but
+{\tt Common->status} is set to {\tt CHOLMOD\_NOT\_POSDEF} and {\tt L->minor} is set to the
+column at which the failure occurred.  Columns {\tt L->minor} to {\tt L->n-1}
+are set to zero.
+
+Supports any xtype (pattern, real, complex, or zomplex), except that the
+input matrix {\tt A} cannot be pattern-only.  If {\tt L} is simplicial, its numeric
+xtype matches {\tt A} on output.  If {\tt L} is supernodal, its xtype is real if {\tt A} is
+real, or complex if {\tt A} is complex or zomplex.  CHOLMOD does not provide
+a supernodal zomplex factor, since it is incompatible with how complex numbers are
+stored in LAPACK and the BLAS.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_analyze\_p}: symbolic factorization, given permutation}
+%---------------------------------------
+
+\input{_analyze_p.tex}
+Identical to {\tt cholmod\_analyze}, except that a user-provided
+permutation {\tt p} can be provided, and the set {\tt f} for the unsymmetric case
+can be provided.  The matrices {\tt A(:,f)*A(:,f)'} or {\tt A(p,f)*A(p,f)'}
+can be analyzed in the the unsymmetric case.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_factorize\_p}: numeric factorization, given permutation}
+%---------------------------------------
+
+\input{_factorize_p.tex}
+Identical to {\tt cholmod\_factorize}, but with additional options.
+The set {\tt f} can be provided for the unsymmetric case;
+{\tt A(p,f)*A(p,f)'} is factorized.  The term {\tt beta*I} can be added to
+the matrix before it is factorized, where {\tt beta} is real.
+Only the real part, {\tt beta[0]}, is used.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_solve}: solve a linear system}
+%---------------------------------------
+
+\input{_solve.tex}
+Returns a solution {\tt X} that solves one of the following systems:
+
+\begin{tabular}{ll|ll}
+	\hline
+	system			    & {\tt sys} parameter & system		    & {\tt sys} parameter \\
+	$\m{Ax}=\m{b}$		    & 0: {\tt CHOLMOD\_A}	&			    &			\\
+	$\m{LDL}\tr\m{x}=\m{b}$	    & 1: {\tt CHOLMOD\_LDLt}	& $\m{L}\tr\m{x}=\m{b}$	    & 5: {\tt CHOLMOD\_Lt}	\\
+	$\m{LDx}=\m{b}$		    & 2: {\tt CHOLMOD\_LD}	& $\m{Dx}=\m{b}$	    & 6: {\tt CHOLMOD\_D}	\\
+	$\m{DL}\tr\m{x}=\m{b}$	    & 3: {\tt CHOLMOD\_DLt}	& $\m{x}=\m{Pb}$	    & 7: {\tt CHOLMOD\_P}	\\
+	$\m{Lx}=\m{b}$		    & 4: {\tt CHOLMOD\_L}	& $\m{x}=\m{P}\tr\m{b}$	    & 8: {\tt CHOLMOD\_Pt}	\\
+	\hline
+\end{tabular}
+
+The factorization can be simplicial $\m{LDL}\tr$, simplicial $\m{LL}\tr$, or supernodal $\m{LL}\tr$.
+For an $\m{LL}\tr$ factorization, $\m{D}$ is the identity matrix.  Thus {\tt CHOLMOD\_LD} and
+{\tt CHOLMOD\_L} solve the same system if an $\m{LL}\tr$ factorization was performed,
+for example.
+This is one of the few routines in CHOLMOD for which the xtype of the input
+arguments need not match.
+If both {\tt L} and {\tt B} are real, then {\tt X} is returned real.  If either is complex
+or zomplex, {\tt X} is returned as either complex or zomplex, depending on the
+{\tt Common->prefer\_zomplex} parameter (default is complex).
+
+This routine does not check to see if the diagonal of $\m{L}$ or $\m{D}$ is zero,
+because sometimes a partial solve can be done with an indefinite or singular
+matrix.  If you wish to check in your own code, test {\tt L->minor}.  If
+{\tt L->minor == L->n}, then the matrix has no zero diagonal entries.
+If {\tt k = L->minor < L->n}, then {\tt L(k,k)} is zero for an $\m{LL}\tr$ factorization, or
+{\tt D(k,k)} is zero for an $\m{LDL}\tr$ factorization.
+
+Iterative refinement is not performed, but this can be easily done with
+the {\tt MatrixOps} Module.  See {\tt Demo/cholmod\_demo.c} for an example.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_spsolve}: solve a linear system}
+%---------------------------------------
+
+\input{_spsolve.tex}
+Identical to {\tt cholmod\_solve}, except that {\tt B} and {\tt X} are sparse.
+This function converts {\tt B} to full format, solves the system, and then
+converts {\tt X} back to sparse.  If you want to solve with a sparse {\tt B}
+and get just a partial solution back in {\tt X} (corresponding to the pattern
+of {\tt B}), use {\tt cholmod\_solve2} below.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_solve2}: solve a linear system, reusing workspace}
+%---------------------------------------
+
+\input{_solve2.tex}
+Solve a linear system, optionally reusing workspace from a prior call
+to {\tt cholmod\_solve2}.
+
+The inputs to this function are the same as {\tt cholmod\_solve},
+with the addition of three parameters:
+{\tt X},
+{\tt Y},
+and
+{\tt E}.  The dense matrix {\tt X} is the solution on output.
+On input, {\tt \&X} can point to a NULL matrix, or be the wrong size.
+If that is the case, it is freed and allocated to be the proper size. 
+If {\tt X} has the right size and type on input, then the allocation
+is skipped.  In contrast, the {\tt cholmod\_solve} function always
+allocates its output {\tt X}.  This {\tt cholmod\_solve2} function
+allows you to reuse the memory space of a prior {\tt X}, thereby
+saving time.
+
+The two workspace matrices {\tt Y} and {\tt E} can also be reused
+between calls.
+You must free
+{\tt X}
+{\tt Y},
+and 
+{\tt E} yourself, when your computations are done.  Below is an
+example of usage.
+Note that 
+{\tt X}
+{\tt Y},
+and 
+{\tt E} must be defined on input (either NULL, or valid dense matrices).
+
+\begin{verbatim}
+        cholmod_dense *X = NULL, *Y = NULL, *E = NULL ;
+        ...
+        cholmod_l_solve2 (sys, L, B1, NULL, &X, NULL, &Y, &E, Common) ;
+        cholmod_l_solve2 (sys, L, B2, NULL, &X, NULL, &Y, &E, Common) ;
+        cholmod_l_solve2 (sys, L, B3, NULL, &X, NULL, &Y, &E, Common) ;
+        cholmod_l_free_dense (&X, Common) ;
+        cholmod_l_free_dense (&Y, Common) ;
+        cholmod_l_free_dense (&E, Common) ;
+\end{verbatim}
+
+The equivalent when using {\tt cholmod\_solve} is:
+
+\begin{verbatim}
+        cholmod_dense *X = NULL, *Y = NULL, *E = NULL ;
+        ...
+        X = cholmod_l_solve (sys, L, B1, Common) ;
+        cholmod_l_free_dense (&X, Common) ;
+        X = cholmod_l_solve (sys, L, B2, Common) ;
+        cholmod_l_free_dense (&X, Common) ;
+        X = cholmod_l_solve (sys, L, B3, Common) ;
+        cholmod_l_free_dense (&X, Common) ;
+\end{verbatim}
+
+Both methods work fine, but in the second method with {\tt cholmod\_solve},
+the internal workspaces ({\tt Y} and {\tt E}) and the solution ({\tt X})
+are allocated and freed on each call.
+
+The {\tt cholmod\_solve2 function} can also solve for a subset of the solution
+vector {\tt X}, if the optional {\tt Bset} parameter is non-NULL.  The
+right-hand-side {\tt B} must be a single column vector, and its complexity
+(real, complex, zomplex) must match that of {\tt L}.  The vector {\tt B} is
+dense, but it is assumed to be zero except for row indices specified in {\tt
+Bset}.  The vector {\tt Bset} must be a sparse column vector, of dimension the
+same as {\tt B}.  Only the pattern of {\tt Bset} is used.  The solution {\tt X}
+(a dense column vector) is modified on output, but is defined only in the rows
+defined by the sparse vector {\tt Xset}.  The entries in {\tt Bset} are a
+subset of {\tt Xset} (except if {\tt sys} is {\tt CHOLMOD\_P} or {\tt
+CHOLMOD\_Pt}).
+
+No memory allocations are done if the outputs and internal
+workspaces ({\tt X}, {\tt Xset}, {\tt Y}, and {\tt E}) have been allocated
+by a prior call (or if allocated by the user).  To let {\tt cholmod\_solve2}
+allocate these outputs and workspaces for you, simply initialize them to
+NULL (as in the example above).  Since it is possible for this function
+to reallocate these 4 arrays, you should always re-acquire the pointers to
+their internal data ({\tt X->x} for example) after calling
+{\tt cholmod\_solve2}), since they may change.  They normally will not
+change except in the first call to this function.
+
+On the first call to {\tt cholmod\_solve2} when {\tt Bset} is NULL,
+the factorization is converted from supernodal to simplicial, if needed.
+The inverse permutation is also computed and stored in the factorization
+object, {\tt L}.  This can take a modest amount of time.  Subsequent
+calls to {\tt cholmod\_solve2} with a small {\tt Bset}
+are very fast (both asymptotically and in practice).
+
+You can find an example of how to use {\tt cholmod\_solve2} in the
+two demo programs, {\tt cholmod\_demo} and {\tt cholmod\_l\_demo}.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_etree}: find elimination tree}
+%---------------------------------------
+
+\input{_etree.tex}
+Computes the elimination tree of {\tt A} or {\tt A'*A}.
+In the symmetric case, the upper triangular part of {\tt A} is used.  Entries not
+in this part of the matrix are ignored.  Computing the etree of a symmetric
+matrix from just its lower triangular entries is not supported.
+In the unsymmetric case, all of {\tt A} is used, and the etree of {\tt A'*A} is computed.
+Refer to \cite{Liu90a} for a discussion of the elimination tree
+and its use in sparse Cholesky factorization.
+% J. Liu, "The role of elimination trees in sparse factorization", SIAM J.
+% Matrix Analysis \& Applic., vol 11, 1990, pp. 134-172.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_rowcolcounts}: nonzeros counts of a factor}
+%---------------------------------------
+
+\input{_rowcolcounts.tex}
+Compute the row and column counts of the Cholesky factor {\tt L} of the matrix
+{\tt A} or {\tt A*A'}.  The etree and its postordering must already be computed (see
+{\tt cholmod\_etree} and {\tt cholmod\_postorder}) and given as inputs to this routine.
+For the symmetric case ($\m{LL}\tr=\m{A}$), {\tt A} must be stored in
+symmetric/lower form ({\tt A->stype = -1}).
+In the unsymmetric case, {\tt A*A'} or {\tt A(:,f)*A(:,f)'} can be analyzed.
+The fundamental floating-point operation count is returned in {\tt Common->fl}
+(this excludes extra flops due to relaxed supernodal amalgamation).
+Refer to {\tt cholmod\_transpose\_unsym} for a description of {\tt f}.
+The algorithm is described in \cite{GilbertLiNgPeyton01,GilbertNgPeyton94}.
+
+% J. Gilbert, E. Ng, B. Peyton, "An efficient algorithm to compute row and
+% column counts for sparse Cholesky factorization", SIAM J. Matrix Analysis \&
+% Applic., vol 15, 1994, pp. 1075-1091.
+% 
+% J. Gilbert, X. Li, E. Ng, B. Peyton, "Computing row and column counts for
+% sparse QR and LU factorization", BIT, vol 41, 2001, pp. 693-710.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_analyze\_ordering}: analyze a permutation}
+%---------------------------------------
+
+\input{_analyze_ordering.tex}
+Given a matrix {\tt A} and its fill-reducing permutation, compute the elimination
+tree, its (non-weighted) postordering, and the number of nonzeros in each
+column of {\tt L}.  Also computes the flop count, the total nonzeros in {\tt L}, and
+the nonzeros in {\tt tril(A)} ({\tt Common->fl}, {\tt Common->lnz}, and {\tt Common->anz}).
+In the unsymmetric case, {\tt A(p,f)*A(p,f)'} is analyzed, and {\tt Common->anz}
+is the number of nonzero entries in the lower triangular part of the product,
+not in {\tt A} itself.
+
+Refer to {\tt cholmod\_transpose\_unsym} for a description of {\tt f}.
+
+The column counts of {\tt L}, flop count, and other statistics from
+{\tt cholmod\_rowcolcounts} are not computed if {\tt ColCount} is {\tt NULL}.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_amd}: interface to AMD}
+%---------------------------------------
+
+\input{_amd.tex}
+CHOLMOD interface to the AMD ordering package.  Orders {\tt A} if the matrix is
+symmetric.  On output, {\tt Perm [k] = i} if row/column {\tt i} of {\tt A} is the {\tt k}th
+row/column of {\tt P*A*P'}.  This corresponds to {\tt A(p,p)} in MATLAB notation.
+If A is unsymmetric, {\tt cholmod\_amd} orders {\tt A*A'} or {\tt A(:,f)*A(:,f)'}.
+On output, {\tt Perm [k] = i} if
+row/column {\tt i} of {\tt A*A'} is the {\tt k}th row/column of {\tt P*A*A'*P'}.
+This corresponds to {\tt A(p,:)*A(p,:)'} in MATLAB notation.
+If {\tt f} is present, {\tt A(p,f)*A(p,f)'} is the permuted matrix.
+Refer to {\tt cholmod\_transpose\_unsym} for a description of {\tt f}.
+
+Computes the flop count for a subsequent $\m{LL}\tr$ factorization, the number
+of nonzeros in {\tt L}, and the number of nonzeros in the matrix ordered
+({\tt A}, {\tt A*A'} or {\tt A(:,f)*A(:,f)'}).
+These statistics are returned in
+{\tt Common->fl}, {\tt Common->lnz}, and {\tt Common->anz}, respectively.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_colamd}: interface to COLAMD}
+%---------------------------------------
+
+\input{_colamd.tex}
+CHOLMOD interface to the COLAMD ordering package.
+Finds a permutation {\tt p} such that the Cholesky factorization of {\tt P*A*A'*P'} is
+sparser than {\tt A*A'}, using COLAMD.  If the {\tt postorder} input parameter is {\tt TRUE},
+the column elimination tree is found and postordered, and the COLAMD ordering is then
+combined with its postordering (COLAMD itself does not perform this postordering).
+{\tt A} must be unsymmetric ({\tt A->stype = 0}).
+
+%---------------------------------------
+\subsection{{\tt cholmod\_rowfac}: row-oriented Cholesky factorization}
+%---------------------------------------
+
+\input{_rowfac.tex}
+Full or incremental numerical $\m{LDL}\tr$ or $\m{LL}\tr$ factorization (simplicial, not
+supernodal).  {\tt cholmod\_factorize} is the ``easy'' wrapper for this code, but it
+does not provide access to incremental factorization.
+The algorithm is the row-oriented, up-looking method described in \cite{Davis05}.
+See also \cite{Liu86c}.  No 2-by-2 pivoting (or any other pivoting) is performed.
+
+{\tt cholmod\_rowfac} computes the full or incremental $\m{LDL}\tr$ or $\m{LL}\tr$ factorization of
+{\tt A+beta*I} (where {\tt A} is symmetric) or {\tt A*F+beta*I}
+(where {\tt A} and {\tt F} are unsymmetric
+and only the upper triangular part of {\tt A*F+beta*I} is used).  It computes
+{\tt L} (and {\tt D}, for $\m{LDL}\tr$) one row at a time.
+The input scalar {\tt beta} is real; only the real part ({\tt beta[0]}) is used.
+
+{\tt L} can be a simplicial symbolic or numeric ({\tt L->is\_super} must be {\tt FALSE}).
+A symbolic factor is converted immediately into a numeric factor containing
+the identity matrix.
+
+For a full factorization, use {\tt kstart = 0} and {\tt kend = nrow}.  The existing nonzero
+entries (numerical values in {\tt L->x} and {\tt L->z} for the zomplex case, and indices
+in {\tt L->i}) are overwritten.
+
+To compute an incremental factorization, select {\tt kstart} and {\tt kend} as the range
+of rows of {\tt L} you wish to compute.    Rows {\tt kstart} to {\tt kend-1} of {\tt L}
+will be computed.  A correct factorization will be computed
+only if all descendants of all nodes {\tt kstart} to {\tt kend-1} in the elimination tree have
+been factorized by a prior call to this routine, and if rows {\tt kstart} to {\tt kend-1}
+have not been factorized.  This condition is {\bf not} checked on input.
+
+In the symmetric case, {\tt A} must be stored in upper form ({\tt A->stype} is greater than zero).
+The matrix {\tt F} is not accessed and may be {\tt NULL}.  Only
+columns {\tt kstart} to {\tt kend-1} of {\tt A} are accessed.
+
+In the unsymmetric case,
+	the typical case is {\tt F=A'}.  Alternatively, if {\tt F=A(:,f)'}, then this
+	routine factorizes the matrix {\tt S = beta*I + A(:,f)*A(:,f)'}.
+	The product {\tt A*F} is assumed to be symmetric;
+	only the upper triangular part of {\tt A*F} is used.
+	{\tt F} must be of size {\tt A->ncol} by {\tt A->nrow}.
+
+% J. Liu, "A compact row storage scheme for Cholesky factors", ACM Trans.
+% Math. Software, vol 12, 1986, pp. 127-148.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_rowfac\_mask}: row-oriented Cholesky factorization}
+%---------------------------------------
+
+\input{_rowfac_mask.tex}
+For use in LPDASA only.
+
+
+%---------------------------------------
+\subsection{{\tt cholmod\_row\_subtree}: pattern of row of a factor}
+%---------------------------------------
+
+\input{_row_subtree.tex}
+Compute the nonzero pattern of the solution to the lower triangular system
+\begin{verbatim}
+    L(0:k-1,0:k-1) * x = A (0:k-1,k)
+\end{verbatim}
+if {\tt A} is symmetric, or
+\begin{verbatim}
+    L(0:k-1,0:k-1) * x = A (0:k-1,:) * A (:,k)'
+\end{verbatim}
+if {\tt A} is unsymmetric.
+This gives the nonzero pattern of row {\tt k} of {\tt L} (excluding the diagonal).
+The pattern is returned postordered, according to the subtree of the elimination
+tree rooted at node {\tt k}.
+
+The symmetric case requires {\tt A} to be in symmetric-upper form.
+
+The result is returned in {\tt R}, a pre-allocated sparse matrix of size {\tt nrow}-by-1,
+with {\tt R->nzmax >= nrow}.  {\tt R} is assumed to be packed ({\tt Rnz [0]} is not updated);
+the number of entries in {\tt R} is given by {\tt Rp [0]}.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_row\_lsubtree}: pattern of row of a factor}
+%---------------------------------------
+
+\input{_row_lsubtree.tex}
+Identical to {\tt cholmod\_row\_subtree}, except the elimination tree is
+found from {\tt L} itself, not {\tt Parent}.  Also, {\tt F=A'} is not provided;
+the nonzero pattern of the {\tt k}th column of {\tt F} is given by 
+{\tt Fi} and {\tt fnz} instead.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_resymbol}: re-do symbolic factorization}
+%---------------------------------------
+
+\input{_resymbol.tex}
+Recompute the symbolic pattern of {\tt L}.  Entries not in the symbolic pattern
+of the factorization of {\tt A(p,p)} or {\tt F*F'}, where
+{\tt F=A(p,f)} or {\tt F=A(:,f)}, are dropped, where
+{\tt p = L->Perm} is used to permute the input matrix {\tt A}.
+
+Refer to {\tt cholmod\_transpose\_unsym} for a description of {\tt f}.
+
+If an entry in {\tt L} is kept, its numerical value does not change.
+
+This routine is used after a supernodal factorization is converted into
+a simplicial one, to remove zero entries that were added due to relaxed
+supernode amalgamation.  It can also be used after a series of downdates
+to remove entries that would no longer be present if the matrix were
+factorized from scratch.  A downdate ({\tt cholmod\_updown}) does not remove any
+entries from {\tt L}.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_resymbol\_noperm}: re-do symbolic factorization}
+%---------------------------------------
+
+\input{_resymbol_noperm.tex}
+Identical to {\tt cholmod\_resymbol}, except that the fill-reducing
+ordering {\tt L->Perm} is not used.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_postorder}: tree postorder}
+%---------------------------------------
+
+\input{_postorder.tex}
+Postorder a tree.  The tree is either an elimination tree (the output from
+{\tt cholmod\_etree}) or a component tree (from {\tt cholmod\_nested\_dissection}).
+
+An elimination tree is a complete tree of {\tt n} nodes with {\tt Parent [j] > j} or
+{\tt Parent [j] = -1} if j is a root.  On output {\tt Post [0..n-1]} is a complete
+permutation vector;
+{\tt Post [k] = j} if node {\tt j} is the {\tt k}th node in the
+postordered elimination tree, where {\tt k} is in the range 0 to {\tt n-1}.
+
+A component tree is a subset of {\tt 0:n-1}.  {\tt Parent [j] = -2} if node {\tt j} is not
+in the component tree.  {\tt Parent [j] = -1} if {\tt j} is a root of the component
+tree, and {\tt Parent [j]} is in the range 0 to {\tt n-1} if {\tt j} is in the component
+tree but not a root.  On output, {\tt Post [k]} is defined only for nodes in
+the component tree.  {\tt Post [k] = j} if node {\tt j} is the {\tt k}th node in the
+postordered component tree, where {\tt k} is in the range 0 to the number of
+components minus 1.
+Node {\tt j} is ignored and not included in the postorder if {\tt Parent [j] < -1}.
+As a result, {\tt cholmod\_check\_parent (Parent, ...)} and {\tt cholmod\_check\_perm (Post, ...)}
+fail if used for a component tree and its postordering.
+
+An optional node weight can be given.  When starting a postorder at node {\tt j},
+the children of {\tt j} are ordered in decreasing order of their weight.
+If no weights are given ({\tt Weight} is {\tt NULL}) then children are ordered in
+decreasing order of their node number.  The weight of a node must be in the
+range 0 to {\tt n-1}.  Weights outside that range are silently converted to that
+range (weights $<$ 0 are treated as zero, and weights $\ge$ {\tt n} are treated as {\tt n-1}).
+
+%---------------------------------------
+\subsection{{\tt cholmod\_rcond}: reciprocal condition number}
+%---------------------------------------
+
+\input{_rcond.tex}
+Returns a rough estimate of the reciprocal of the condition number:
+the minimum entry on the diagonal of {\tt L} (or absolute entry of {\tt D} for an $\m{LDL}\tr$
+factorization) divided by the maximum entry.  {\tt L} can be real, complex, or
+zomplex.  Returns -1 on error, 0 if the matrix is singular or has a zero or NaN
+entry on the diagonal of {\tt L}, 1 if the matrix is 0-by-0, or
+{\tt min(diag(L))/max(diag(L))} otherwise.  Never returns NaN; if {\tt L} has a NaN on
+the diagonal it returns zero instead.
+
+%-------------------------------------------------------------------------------
+\newpage \section{{\tt Modify} Module routines}
+%-------------------------------------------------------------------------------
+
+%---------------------------------------
+\subsection{{\tt cholmod\_updown}: update/downdate}
+%---------------------------------------
+
+\input{_updown.tex}
+Updates/downdates the $\m{LDL}\tr$ factorization (symbolic, then numeric), by
+computing a new factorization of
+\[
+\new{\m{L}}\new{\m{D}}\new{\m{L}}\tr = \m{LDL}\tr \pm \m{CC}\tr
+\]
+where $\new{\m{L}}$ denotes the new factor.
+{\tt C} must be sorted.  It can be either packed or unpacked.  As in all CHOLMOD
+routines, the columns of {\tt L} are sorted on input, and also on output.
+If {\tt L} does not contain a simplicial numeric $\m{LDL}\tr$ factorization, it
+is converted into one.  Thus, a supernodal $\m{LL}\tr$ factorization
+can be passed to {\tt cholmod\_updown}.
+A symbolic {\tt L} is converted into a numeric identity matrix.
+If the initial conversion fails, the factor is returned unchanged.
+
+If memory runs out during the update, the factor is returned as a simplicial
+symbolic factor.  That is, everything is freed except for the fill-reducing
+ordering and its corresponding column counts (typically computed by
+{\tt cholmod\_analyze}).
+
+Note that the fill-reducing permutation {\tt L->Perm} is not used.  The row
+indices of {\tt C} refer to the rows of {\tt L}, not {\tt A}.  If your original system is
+$\m{LDL}\tr = \m{PAP}\tr$ (where $\m{P} =$ {\tt L->Perm}), and you want to compute the $\m{LDL}\tr$
+factorization of $\m{A}+\m{CC}\tr$, then you must permute $\m{C}$ first.  That is,
+if
+\[
+    \m{PAP}\tr = \m{LDL}\tr
+\]
+is the initial factorization, then
+\[
+\m{P}(\m{A}+\m{CC}\tr)\m{P}\tr
+    = \m{PAP}\tr+\m{PCC}\tr\m{P}\tr
+    = \m{LDL}\tr + (\m{PC})(\m{PC})\tr
+    = \m{LDL}\tr + \new{\m{C}}\new{\m{C}}\tr
+\]
+where $\new{\m{C}} = \m{PC}$.
+
+You can use the {\tt cholmod\_submatrix} routine in the {\tt MatrixOps} Module
+to permute {\tt C}, with:
+\begin{verbatim}
+    Cnew = cholmod_submatrix (C, L->Perm, L->n, NULL, -1, TRUE, TRUE, Common) ;
+\end{verbatim}
+
+Note that the {\tt sorted} input parameter to {\tt cholmod\_submatrix} must be {\tt TRUE},
+because {\tt cholmod\_updown} requires {\tt C} with sorted columns.
+Only real matrices are supported.
+The algorithms are described in \cite{DavisHager99,DavisHager01}.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_updown\_solve}: update/downdate}
+%---------------------------------------
+
+\input{_updown_solve.tex}
+Identical to {\tt cholmod\_updown}, except
+the system $\m{Lx}=\m{b}$ is also updated/downdated.
+The new system is $\new{\m{L}}\new{\m{x}}=\m{b} + \Delta \m{b}$.  The old solution $\m{x}$ is overwritten
+with $\new{\m{x}}$.  Note that as in the update/downdate of $\m{L}$ itself, the fill-
+reducing permutation {\tt L->Perm} is not used.  The vectors $\m{x}$ and $\m{b}$ are in the permuted
+ordering, not your original ordering.  This routine does not handle multiple right-hand-sides.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_updown\_mark}: update/downdate}
+%---------------------------------------
+
+\input{_updown_mark.tex}
+Identical to {\tt cholmod\_updown\_solve}, except that only part of $\m{L}$
+is used in the update of the solution to $\m{Lx}=\m{b}$.  For more details,
+see the source code file {\tt CHOLMOD/Modify/cholmod\_updown.c}.
+This routine is meant for use in the {\tt LPDASA} linear program solver only,
+by Hager and Davis.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_updown\_mask}: update/downdate}
+%---------------------------------------
+
+\input{_updown_mask.tex}
+For use in LPDASA only.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_rowadd}: add row to factor}
+%---------------------------------------
+
+\input{_rowadd.tex}
+Adds a row and column to an $\m{LDL}\tr$ factorization.  The {\tt k}th
+row and column of {\tt L} must be equal to the {\tt k}th row and
+column of the identity matrix on input.
+Only real matrices are supported.
+The algorithm is described in \cite{DavisHager05}.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_rowadd\_solve}: add row to factor}
+%---------------------------------------
+
+\input{_rowadd_solve.tex}
+Identical to {\tt cholmod\_rowadd}, except the system $\m{Lx}=\m{b}$ is also updated/downdated, just like {\tt cholmod\_updown\_solve}.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_rowdel}: delete row from factor}
+%---------------------------------------
+
+\input{_rowdel.tex}
+Deletes a row and column from an $\m{LDL}\tr$ factorization.  The {\tt k}th
+row and column of {\tt L} is equal to the {\tt k}th row and
+column of the identity matrix on output.
+Only real matrices are supported.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_rowdel\_solve}: delete row from factor}
+%---------------------------------------
+
+\input{_rowdel_solve.tex}
+Identical to {\tt cholmod\_rowdel}, except the system $\m{Lx}=\m{b}$ is also updated/downdated, just like {\tt cholmod\_updown\_solve}.
+When row/column $k$ of $\m{A}$ is deleted from the system $\m{Ay}=\m{b}$, this can induce
+a change to $\m{x}$, in addition to changes arising when $\m{L}$ and $\m{b}$ are modified.
+If this is the case, the kth entry of $\m{y}$ is required as input ({\tt yk}).
+The algorithm is described in \cite{DavisHager05}.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_rowadd\_mark}: add row to factor}
+%---------------------------------------
+
+\input{_rowadd_mark.tex}
+Identical to {\tt cholmod\_rowadd\_solve}, except that only part of $\m{L}$
+is used in the update of the solution to $\m{Lx}=\m{b}$.  For more details,
+see the source code file {\tt CHOLMOD/Modify/cholmod\_rowadd.c}.
+This routine is meant for use in the {\tt LPDASA} linear program solver only.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_rowdel\_mark}: delete row from factor}
+%---------------------------------------
+
+\input{_rowdel_mark.tex}
+Identical to {\tt cholmod\_rowadd\_solve}, except that only part of $\m{L}$
+is used in the update of the solution to $\m{Lx}=\m{b}$.  For more details,
+see the source code file {\tt CHOLMOD/Modify/cholmod\_rowdel.c}.
+This routine is meant for use in the {\tt LPDASA} linear program solver only.
+
+%-------------------------------------------------------------------------------
+\newpage \section{{\tt MatrixOps} Module routines}
+%-------------------------------------------------------------------------------
+
+%---------------------------------------
+\subsection{{\tt cholmod\_drop}: drop small entries}
+%---------------------------------------
+
+\input{_drop.tex}
+Drop small entries from {\tt A}, and entries in the ignored part of {\tt A} if {\tt A}
+is symmetric.  No CHOLMOD routine drops small numerical entries
+from a matrix, except for this one.  NaN's and Inf's are kept.
+
+Supports pattern and real matrices; complex and zomplex matrices are not supported.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_norm\_dense}: dense matrix norm}
+%---------------------------------------
+
+\input{_norm_dense.tex}
+Returns the infinity-norm, 1-norm, or 2-norm of a dense matrix.
+Can compute the 2-norm only for a dense column vector.
+All xtypes are supported.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_norm\_sparse}: sparse matrix norm}
+%---------------------------------------
+
+\input{_norm_sparse.tex}
+Returns the infinity-norm or 1-norm of a sparse matrix.
+All xtypes are supported.
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_scale}: scale sparse matrix}
+%---------------------------------------
+
+\input{_scale.tex}
+Scales a matrix:  {\tt A = diag(s)*A}, {\tt A*diag(s)}, {\tt s*A}, or {\tt diag(s)*A*diag(s)}.
+
+{\tt A} can be of any type (packed/unpacked, upper/lower/unsymmetric).
+The symmetry of {\tt A} is ignored; all entries in the matrix are modified.
+
+If {\tt A} is {\tt m}-by-{\tt n} unsymmetric but scaled symmetrically, the result is
+\begin{verbatim}
+    A = diag (s (1:m)) * A * diag (s (1:n))
+\end{verbatim}
+
+Row or column scaling of a symmetric matrix still results in a symmetric
+matrix, since entries are still ignored by other routines.
+For example, when row-scaling a symmetric matrix where just the upper
+triangular part is stored (and lower triangular entries ignored)
+{\tt A = diag(s)*triu(A)} is performed, where the result {\tt A} is also
+symmetric-upper.  This has the effect of modifying the implicit lower
+triangular part.  In MATLAB notation:
+\begin{verbatim}
+    U = diag(s)*triu(A) ;
+    L = tril (U',-1)
+    A = L + U ;
+\end{verbatim}
+
+The scale parameter determines the kind of scaling to perform and the size of {\tt S}:
+
+\begin{tabular}{lll}
+\hline
+{\tt scale} & operation & size of {\tt S} \\
+\hline
+{\tt CHOLMOD\_SCALAR} & {\tt s[0]*A}		& 1 \\
+{\tt CHOLMOD\_ROW}    & {\tt diag(s)*A}		& {\tt nrow}-by-1 or 1-by-{\tt nrow} \\
+{\tt CHOLMOD\_COL}    & {\tt A*diag(s)}		& {\tt ncol}-by-1 or 1-by-{\tt ncol} \\
+{\tt CHOLMOD\_SYM}    & {\tt diag(s)*A*diag(s)}	& {\tt max(nrow,ncol)}-by-1, or 1-by-{\tt max(nrow,ncol)} \\
+\hline
+\end{tabular}
+
+Only real matrices are supported.
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_sdmult}: sparse-times-dense matrix}
+%---------------------------------------
+
+\input{_sdmult.tex}
+Sparse matrix times dense matrix:
+{\tt Y = alpha*(A*X) + beta*Y} or {\tt Y = alpha*(A'*X) + beta*Y},
+where {\tt A} is sparse and {\tt X} and {\tt Y} are dense.
+When using {\tt A},
+{\tt X} has {\tt A->ncol} rows and
+{\tt Y} has {\tt A->nrow} rows.
+When using {\tt A'},
+{\tt X} has {\tt A->nrow} rows and
+{\tt Y} has {\tt A->ncol} rows.
+If {\tt transpose = 0}, then {\tt A} is used;
+otherwise, {\tt A'} is used (the complex conjugate transpose).
+The {\tt transpose} parameter is ignored if the matrix is symmetric or Hermitian.
+(the array transpose {\tt A.'} is not supported).
+Supports real, complex, and zomplex matrices, but the xtypes of {\tt A}, {\tt X}, and {\tt Y} must all match.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_ssmult}: sparse-times-sparse matrix}
+%---------------------------------------
+
+\input{_ssmult.tex}
+Computes {\tt C = A*B}; multiplying two sparse matrices.
+{\tt C} is returned as packed, and either unsorted or sorted, depending on the
+{\tt sorted} input parameter.  If {\tt C} is returned sorted, then either {\tt C = (B'*A')'}
+or {\tt C = (A*B)''} is computed, depending on the number of nonzeros in {\tt A}, {\tt B}, and {\tt C}.
+The stype of {\tt C} is determined by the {\tt stype} parameter.
+Only pattern and real matrices are supported.  Complex and zomplex matrices
+are supported only when the numerical values are not computed ({\tt values}
+is {\tt FALSE}).
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_submatrix}: sparse submatrix}
+%---------------------------------------
+
+\input{_submatrix.tex}
+Returns {\tt C = A (rset,cset)}, where {\tt C} becomes {\tt length(rset)}-by-{\tt length(cset)} in dimension.
+{\tt rset} and {\tt cset} can have duplicate entries.  {\tt A} must be unsymmetric.  {\tt C} unsymmetric and
+is packed.  If {\tt sorted} is {\tt TRUE} on input, or {\tt rset} is sorted and {\tt A} is
+sorted, then {\tt C} is sorted; otherwise {\tt C} is unsorted.
+
+If {\tt rset} is {\tt NULL}, it means ``{\tt [ ]}'' in MATLAB notation, the empty set.
+The number of rows in the result {\tt C} will be zero if {\tt rset} is {\tt NULL}.
+Likewise if {\tt cset} means the empty set; the number of columns in the result {\tt C} will be zero if {\tt cset} is {\tt NULL}.
+If {\tt rsize} or {\tt csize} is negative, it denotes ``{\tt :}'' in MATLAB notation.
+Thus, if both {\tt rsize} and {\tt csize} are negative {\tt C = A(:,:) = A} is returned.
+
+For permuting a matrix, this routine is an alternative to {\tt cholmod\_ptranspose}
+(which permutes and transposes a matrix and can work on symmetric matrices).
+
+The time taken by this routine is O({\tt A->nrow}) if the {\tt Common} workspace needs
+to be initialized, plus O({\tt C->nrow + C->ncol + nnz (A (:,cset))}).  Thus, if {\tt C}
+is small and the workspace is not initialized, the time can be dominated by
+the call to {\tt cholmod\_allocate\_work}.  However, once the workspace is
+allocated, subsequent calls take less time.
+
+Only pattern and real matrices are supported.  Complex and zomplex matrices
+are supported only when {\tt values} is {\tt FALSE}.
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_horzcat}: horizontal concatenation}
+%---------------------------------------
+
+\input{_horzcat.tex}
+Horizontal concatenation, returns {\tt C = [A,B]} in MATLAB notation.
+{\tt A} and {\tt B} can have any stype.  {\tt C} is returned unsymmetric and packed.
+{\tt A} and {\tt B} must have the same number of rows.
+{\tt C} is sorted if both {\tt A} and {\tt B} are sorted.
+{\tt A} and {\tt B} must have the same numeric xtype, unless {\tt values} is {\tt FALSE}.
+{\tt A} and {\tt B} cannot be complex or zomplex, unless {\tt values} is {\tt FALSE}.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_vertcat}: vertical concatenation}
+%---------------------------------------
+
+\input{_vertcat.tex}
+Vertical concatenation, returns {\tt C = [A;B]} in MATLAB notation.
+{\tt A} and {\tt B} can have any stype.  {\tt C} is returned unsymmetric and packed.
+{\tt A} and {\tt B} must have the same number of columns.
+{\tt C} is sorted if both {\tt A} and {\tt B} are sorted.
+{\tt A} and {\tt B} must have the same numeric xtype, unless {\tt values} is {\tt FALSE}.
+{\tt A} and {\tt B} cannot be complex or zomplex, unless {\tt values} is {\tt FALSE}.
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_symmetry}: compute the symmetry of a matrix}
+%---------------------------------------
+
+\input{_symmetry.tex}
+
+Determines if a sparse matrix is rectangular, unsymmetric, symmetric,
+skew-symmetric, or Hermitian.  It does so by looking at its numerical values
+of both upper and lower triangular parts of a CHOLMOD "unsymmetric"
+matrix, where A->stype == 0.  The transpose of A is NOT constructed.
+
+If not unsymmetric, it also determines if the matrix has a diagonal whose
+entries are all real and positive (and thus a candidate for sparse Cholesky
+if A->stype is changed to a nonzero value).
+
+Note that a Matrix Market "general" matrix is either rectangular or
+unsymmetric.
+
+The row indices in the column of each matrix MUST be sorted for this function
+to work properly (A->sorted must be TRUE).  This routine returns EMPTY if
+A->stype is not zero, or if A->sorted is FALSE.  The exception to this rule
+is if A is rectangular.
+
+If option == 0, then this routine returns immediately when it finds a
+non-positive diagonal entry (or one with nonzero imaginary part).   If the
+matrix is not a candidate for sparse Cholesky, it returns the value
+{\tt CHOLMOD\_MM\_UNSYMMETRIC}, even if the matrix might in fact be symmetric or
+Hermitian.
+
+This routine is useful inside the MATLAB backslash, which must look at an
+arbitrary matrix (A->stype == 0) and determine if it is a candidate for
+sparse Cholesky.  In that case, option should be 0.
+
+This routine is also useful when writing a MATLAB matrix to a file in
+Rutherford/Boeing or Matrix Market format.  Those formats require a
+determination as to the symmetry of the matrix, and thus this routine should
+not return upon encountering the first non-positive diagonal.  In this case,
+option should be 1.
+
+If option is 2, this function can be used to compute the numerical and
+pattern symmetry, where 0 is a completely unsymmetric matrix, and 1 is a
+perfectly symmetric matrix.  This option is used when computing the following
+statistics for the matrices in the UF Sparse Matrix Collection.
+
+	numerical symmetry: number of matched off-diagonal nonzeros over
+	the total number of off-diagonal entries.  A real entry $a_{ij}$,  $i \ne j$,
+	is matched if $a_{ji} = a_{ij}$, but this is only counted if both
+	$a_{ji}$ and $a_{ij}$ are nonzero.  This does not depend on {\tt Z}.
+	(If A is complex, then the above test is modified; $a_{ij}$ is matched
+	if $\mbox{conj}(a_{ji}) = a_{ij}$.
+
+	Then numeric symmetry = xmatched / nzoffdiag, or 1 if nzoffdiag = 0.
+ 
+	pattern symmetry: number of matched offdiagonal entries over the
+	total number of offdiagonal entries.  An entry $a_{ij}$, $i \ne j$, is
+	matched if $a_{ji}$ is also an entry.
+
+	Then pattern symmetry = pmatched / nzoffdiag, or 1 if nzoffdiag = 0.
+ 
+The symmetry of a matrix with no offdiagonal entries is equal to 1.
+
+A workspace of size ncol integers is allocated; EMPTY is returned if this
+allocation fails.
+
+Summary of return values:
+
+\begin{tabular}{ll}
+{\tt EMPTY (-1)}		    & out of memory, stype not zero, A not sorted \\
+{\tt CHOLMOD\_MM\_RECTANGULAR 1}    & A is rectangular \\
+{\tt CHOLMOD\_MM\_UNSYMMETRIC 2}    & A is unsymmetric \\
+{\tt CHOLMOD\_MM\_SYMMETRIC 3}	    & A is symmetric, but with non-pos. diagonal \\
+{\tt CHOLMOD\_MM\_HERMITIAN 4}	    & A is Hermitian, but with non-pos. diagonal \\
+{\tt CHOLMOD\_MM\_SKEW\_SYMMETRIC 5}    & A is skew symmetric \\
+{\tt CHOLMOD\_MM\_SYMMETRIC\_POSDIAG 6} & A is symmetric with positive diagonal \\
+{\tt CHOLMOD\_MM\_HERMITIAN\_POSDIAG 7} & A is Hermitian with positive diagonal \\
+\end{tabular}
+
+See also the {\tt spsym} mexFunction, which is a MATLAB interface for this code.
+
+If the matrix is a candidate for sparse Cholesky, it will return a result
+\newline
+{\tt CHOLMOD\_MM\_SYMMETRIC\_POSDIAG} if real, or {\tt CHOLMOD\_MM\_HERMITIAN\_POSDIAG} if
+complex.  Otherwise, it will return a value less than this.  This is true
+regardless of the value of the option parameter.
+
+
+
+%-------------------------------------------------------------------------------
+\newpage \section{{\tt Supernodal} Module routines}
+%-------------------------------------------------------------------------------
+
+%---------------------------------------
+\subsection{{\tt cholmod\_super\_symbolic}: supernodal symbolic factorization}
+%---------------------------------------
+
+\input{_super_symbolic.tex}
+Supernodal symbolic analysis of the $\m{LL}\tr$ factorization of {\tt A}, {\tt A*A'}, or {\tt A(:,f)*A(:,f)'}.
+This routine must be preceded by a simplicial symbolic analysis
+({\tt cholmod\_rowcolcounts}).  See {\tt Cholesky/cholmod\_analyze.c} for an example of how to use
+this routine.
+The user need not call this directly; {\tt cholmod\_analyze} is a ``simple'' wrapper for this routine.
+{\tt A} can be symmetric (upper), or unsymmetric.  The symmetric/lower form is not supported.
+In the unsymmetric case {\tt F} is the normally transpose of {\tt A}.
+Alternatively, if {\tt F=A(:,f)'} then {\tt F*F'} is analyzed.
+Requires {\tt Parent} and {\tt L->ColCount} to be defined on input; these are the
+simplicial {\tt Parent} and {\tt ColCount} arrays as computed by {\tt cholmod\_rowcolcounts}.
+Does not use {\tt L->Perm}; the input matrices {\tt A} and {\tt F} must already be properly
+permuted.  Allocates and computes the supernodal pattern of {\tt L}
+({\tt L->super}, {\tt L->pi}, {\tt L->px}, and {\tt L->s}).
+Does not allocate the real part ({\tt L->x}).
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_super\_numeric}: supernodal numeric factorization}
+%---------------------------------------
+
+\input{_super_numeric.tex}
+Computes the numerical Cholesky factorization of {\tt A+beta*I} or {\tt A*F+beta*I}.  Only the
+lower triangular part of {\tt A+beta*I} or {\tt A*F+beta*I} is accessed.  The
+matrices {\tt A} and {\tt F} must already be permuted according to the fill-reduction
+permutation {\tt L->Perm}.  {\tt cholmod\_factorize} is an "easy" wrapper for this code
+which applies that permutation.
+The input scalar {\tt beta} is real; only the real part ({\tt beta[0]} is used.
+
+Symmetric case: {\tt A} is a symmetric (lower) matrix.  {\tt F} is not accessed and may be {\tt NULL}.
+With a fill-reducing permutation, {\tt A(p,p)} should be passed for {\tt A}, where is
+{\tt p} is {\tt L->Perm}.
+
+Unsymmetric case: {\tt A} is unsymmetric, and {\tt F} must be present.  Normally, {\tt F=A'}.
+With a fill-reducing permutation, {\tt A(p,f)} and {\tt A(p,f)'} should be passed as the
+parameters {\tt A} and {\tt F}, respectively, where {\tt f} is a list of the subset of the columns of {\tt A}.
+
+The input factorization {\tt L} must be supernodal ({\tt L->is\_super} is {\tt TRUE}).  It can
+either be symbolic or numeric.  In the first case, {\tt L} has been analyzed by
+{\tt cholmod\_analyze} or {\tt cholmod\_super\_symbolic}, but the matrix has not yet been
+numerically factorized.  The numerical values are allocated here and the
+factorization is computed.  In the second case, a prior matrix has been
+analyzed and numerically factorized, and a new matrix is being factorized.
+The numerical values of {\tt L} are replaced with the new numerical factorization.
+
+{\tt L->is\_ll} is ignored on input, and set to {\tt TRUE} on output.  This routine always computes an $\m{LL}\tr$
+factorization.  Supernodal $\m{LDL}\tr$ factorization is not supported.
+
+If the matrix is not positive definite the routine returns {\tt TRUE}, but sets
+{\tt Common->status} to {\tt CHOLMOD\_NOT\_POSDEF} and {\tt L->minor} is set to the column at
+which the failure occurred.  Columns {\tt L->minor} to {\tt L->n-1} are set to zero.
+
+If {\tt L} is supernodal symbolic on input, it is converted to a supernodal numeric
+factor on output, with an xtype of real if {\tt A} is real, or complex if {\tt A} is
+complex or zomplex.  If {\tt L} is supernodal numeric on input, its xtype must
+match {\tt A} (except that {\tt L} can be complex and {\tt A} zomplex).  The xtype of {\tt A} and {\tt F}
+must match.
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_super\_lsolve}: supernodal forward solve}
+%---------------------------------------
+
+\input{_super_lsolve.tex}
+Solve $\m{Lx}=\m{b}$ for a supernodal factorization.  This routine does not
+apply the permutation {\tt L->Perm}.  See {\tt cholmod\_solve} for a more general
+interface that performs that operation.
+Only real and complex xtypes are supported.
+{\tt L}, {\tt X}, and {\tt E} must have the same xtype.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_super\_ltsolve}: supernodal backsolve}
+%---------------------------------------
+
+\input{_super_ltsolve.tex}
+Solve $\m{L}\tr\m{x}=\m{b}$ for a supernodal factorization.  This routine does not
+apply the permutation {\tt L->Perm}.  See {\tt cholmod\_solve} for a more general
+interface that performs that operation.
+Only real and complex xtypes are supported.
+{\tt L}, {\tt X}, and {\tt E} must have the same xtype.
+
+%-------------------------------------------------------------------------------
+\newpage \section{{\tt Partition} Module routines}
+%-------------------------------------------------------------------------------
+
+%---------------------------------------
+\subsection{{\tt cholmod\_nested\_dissection}: nested dissection ordering}
+%---------------------------------------
+
+\input{_nested_dissection.tex}
+CHOLMOD's nested dissection algorithm:
+	using its own compression and connected-components
+	algorithms, an external graph partitioner (METIS), and a constrained
+	minimum degree ordering algorithm (CAMD, CCOLAMD, or CSYMAMD).  Typically
+	gives better orderings than {\tt METIS\_NodeND} (about 5\% to 10\% fewer
+	nonzeros in {\tt L}).
+
+This method uses a node bisector, applied recursively (but using a
+non-recursive implementation).  Once the graph is partitioned, it calls a
+constrained minimum degree code (CAMD or CSYMAMD for {\tt A+A'},
+and CCOLAMD for {\tt A*A'}) to
+order all the nodes in the graph - but obeying the constraints determined
+by the separators.  This routine is similar to {\tt METIS\_NodeND}, except for
+how
+it treats the leaf nodes.  {\tt METIS\_NodeND} orders the leaves of the separator
+tree with {\tt MMD}, ignoring the rest of the matrix when ordering a single leaf.
+This routine orders the whole matrix with CAMD, CSYMAMD, or CCOLAMD, all at once,
+when the graph partitioning is done.
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_metis}: interface to METIS nested dissection}
+%---------------------------------------
+
+\input{_metis.tex}
+CHOLMOD wrapper for the {\tt METIS\_NodeND} ordering routine.  Creates {\tt A+A'},
+{\tt A*A'} or {\tt A(:,f)*A(:,f)'} and then calls {\tt METIS\_NodeND} on the resulting graph.
+This routine is comparable to {\tt cholmod\_nested\_dissection}, except that it
+calls {\tt METIS\_NodeND} directly, and it does not return the separator tree.
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_camd}: interface to CAMD}
+%---------------------------------------
+
+\input{_camd.tex}
+CHOLMOD interface to the CAMD ordering routine.  Finds a permutation
+{\tt p} such that the Cholesky factorization of {\tt A(p,p)}
+is sparser than {\tt A}.  If {\tt A} is unsymmetric,
+{\tt A*A'} is ordered.
+If {\tt Cmember[i]=c} then node {\tt i} is in set {\tt c}.
+All nodes in set 0 are ordered first, followed by all nodes in set 1, and so on.
+
+%---------------------------------------
+\newpage \subsection{{\tt cholmod\_ccolamd}: interface to CCOLAMD}
+%---------------------------------------
+
+\input{_ccolamd.tex}
+CHOLMOD interface to the CCOLAMD ordering routine.  Finds a permutation
+{\tt p} such that the Cholesky factorization of {\tt A(p,:)*A(p,:)'} is sparser than {\tt A*A'}.
+The column elimination is found and postordered, and the CCOLAMD ordering is then
+combined with its postordering.  {\tt A} must be unsymmetric.
+If {\tt Cmember[i]=c} then node {\tt i} is in set {\tt c}.
+All nodes in set 0 are ordered first, followed by all nodes in set 1, and so on.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_csymamd}: interface to CSYMAMD}
+%---------------------------------------
+
+\input{_csymamd.tex}
+CHOLMOD interface to the CSYMAMD ordering routine.  Finds a permutation
+{\tt p} such that the Cholesky factorization of {\tt A(p,p)} is sparser than {\tt A}.
+The elimination tree is found and postordered, and the CSYMAMD
+ordering is then combined with its postordering.  If {\tt A} is unsymmetric,
+{\tt A+A'} is ordered ({\tt A} must be square).
+If {\tt Cmember[i]=c} then node {\tt i} is in set {\tt c}.
+All nodes in set 0 are ordered first, followed by all nodes in set 1, and so on.
+
+%---------------------------------------
+\newpage
+\subsection{{\tt cholmod\_bisect}: graph bisector}
+%---------------------------------------
+
+\input{_bisect.tex}
+Finds a node bisector of {\tt A}, {\tt A*A'}, {\tt A(:,f)*A(:,f)'}:
+a set of nodes that partitions the graph into two parts.
+Compresses the graph first, ensures the graph is symmetric with
+no diagonal entries, and then calls METIS.
+
+%---------------------------------------
+\subsection{{\tt cholmod\_metis\_bisector}: interface to METIS node bisector}
+%---------------------------------------
+
+\input{_metis_bisector.tex}
+Finds a set of nodes that bisects the graph of {\tt A} or {\tt A*A'} (a direct interface to \newline
+{\tt METIS\_NodeComputeSeparator}).
+
+The input matrix {\tt A} must be square, symmetric (with both upper and lower
+parts present) and with no diagonal entries.  These conditions are not
+checked.  Use cholmod\_bisect to check these conditions.
+
+%---------------------------------------
+\newpage
+\subsection{{\tt cholmod\_collapse\_septree}: prune a separator tree}
+%---------------------------------------
+
+\input{_collapse_septree.tex}
+Prunes a separator tree obtained from {\tt cholmod\_nested\_dissection}.
+
+\newpage
+\bibliographystyle{plain}
+\bibliography{UserGuide}
+\end{document}

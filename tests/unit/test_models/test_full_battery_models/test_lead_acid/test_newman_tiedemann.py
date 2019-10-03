@@ -10,11 +10,6 @@ class TestLeadAcidFull(unittest.TestCase):
         model = pybamm.lead_acid.Full()
         model.check_well_posedness()
 
-        # Test build after init
-        model = pybamm.lead_acid.Full(build=False)
-        model.build_model()
-        model.check_well_posedness()
-
     def test_well_posed_with_convection(self):
         options = {"thermal": "isothermal", "convection": True}
         model = pybamm.lead_acid.Full(options)

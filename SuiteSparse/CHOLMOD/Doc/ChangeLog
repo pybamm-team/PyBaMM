@@ -1,0 +1,365 @@
+Dec 20, 2018: version 3.0.13
+
+    * bug fix to cholmod_core.h: so that a CUDA include file is properly
+        included in a C++ caller; also required for SPQR.
+
+Mar 12, 2018: version 3.0.12
+
+    * bug fix to cholmod_rowcolcounts.c (int overflow was possible)
+
+May 4, 2016: version 3.0.11
+
+    * minor changes to Makefile
+
+Apr 1, 2016: version 3.0.10
+
+    * licensing simplified (no other change); refer to CHOLMOD/Doc/License.txt
+
+Feb 1, 2016: version 3.0.9
+
+    * update to Makefiles
+    * minor change to CHOLMOD/Check/cholmod_write.c, when compiling with
+	certain modules disabled.
+    * more verbose error reporting
+    * Demos now compile with MatrixOps module disabled, but they don't
+        compute all residuals (requires the CHOLMOD/MatrixOps package)
+
+Jan 30, 2016: version 3.0.8
+
+    * better Makefiles for creating and installing shared libraries
+    * CHOLMOD now uses METIS 5.1.0, which is distributed with SuiteSparse
+    * correction to mexFunctions required for MATLAB R2015b,
+	for sparse empty matrices and NULL mxGetPr
+
+Jan 1, 2016: version 3.0.7
+
+    * modified Makefile to create shared libraries
+        No change to C code except version number
+
+July 14, 2015: version 3.0.6
+
+    * disabling of MatrixOps, Modify, and Supernodal modules didn't work
+        properly.
+    * added MATLAB interface for row add/delete (lurowmod mexFunction)
+
+Jan 19, 2015: version 3.0.5
+
+    * minor bug fix to cholmod_symmetry.c for the 'quick return'
+        (option == 0).
+
+Jan 7, 2015: version 3.0.4
+
+    * serious bug fix to supernodal factorization.  The bug was introduced in
+	CHOLMOD v3.0.0 when the GPU acceleration was given a major update.
+	The bug can cause a segfault, whether or not the GPU is used.
+
+Oct 23, 2014: version 3.0.3
+
+    * minor fix for CHOLMOD/Supernodal/cholmod_super_symbolic.c (was using a
+      non-ANSI C method to declare and initialize a variable).
+    * added additional paper in CHOLMOD/Doc
+
+Oct 10, 2014: version 3.0.2
+
+    * changes to accomodate GPU-accelerated SPQR
+    * added CHOLMOD/Include/cholmod_function.h for backward compatibility
+        for function pointers (moved from Common to SuiteSparse_config,
+        as of v2.2.0)
+
+July 18, 2014: version 3.0.1
+
+    * minor correction to 3.0.0 Beta build process, to compile SPQR when
+        CHOLMOD is compiled on the GPU
+    * added cholmod_rowfac_mask2 function for LPDASA
+    * to test the GPU, use 'make big' in CHOLMOD/Demo.  You will need to first
+        download the GHS_psdef/audikw_1.mtx from the UF collection:
+        http://www.cise.ufl.edu/research/sparse/matrices/GHS_psdef/audikw_1.html
+
+March 26, 2014: version 3.0.0 (beta)
+
+    * major update to GPU acceleration.  Released at NVIDIA GTC 2014.
+
+July 31, 2013: version 2.2.0
+
+    * modified the CHOLMOD Common so that it is the same size regardless
+        of whether or not the GPU is used.
+    * changed malloc, printf, hypot, and divcomplex pointers to use
+        SuiteSparse_config.  Removed CHOLMOD Common-> function pointers.
+
+Apr 25, 2013: version 2.1.2
+
+    * minor update for CHOLMOD/Cholesky/*solve*.c:
+        version 2.1.0 broke the Microsoft Visual C/C++ compiler
+
+Apr 16, 2013: version 2.1.1
+
+    * bug fix to Lib/Makefile and Demo/Makefile, to handle -DNCAMD correctly.
+    * changes to Supernodal/t_cholmod_gpu.c: to fix a GPU memory leak,
+        to fix the statistics on TRSM timing, and to reduce CPU-GPU memory
+        traffic.
+    * added cholmod_version function.
+
+Mar 27, 2013: version 2.1.0
+
+    * added the -DNCAMD option.  Formerly, the -DNPARTITION option disabled
+        both METIS and the interface to CAMD, CCOLAMD, and CSYMAMD.
+        Now, -DNPARTITION controls just whether or not the interface to
+        METIS is compiled.  The new -DNCAMD option controls whether or not
+        the interfaces to CAMD, CCOLAMD, and CSYMAMD are compiled.
+        Both features remain in the Partition Module, as in prior versions.
+    * added cholmod_lsolve_pattern and modified cholmod_row_lsubtree,
+        to compute nonzero pattern of L\b where b is sparse
+    * added cholmod_solve2 and cholmod_ensure_dense, so that repeated
+        forward/backsolves can be done without the need to malloc/free,
+        memory on each solve.  Also provides the option for solving for
+        a subset of the solution vector x (via the Bset and Xset
+        parameters to cholmod_solve2).  The last option required an IPerm
+        member to be added to the Cholesky factorization object.  It is only
+        allocated and used if cholmod_solve2 solves with Bset.
+
+Jun 20, 2012: verison 2.0.1
+
+    * minor update for Windows (removed filesep, compiler port fix)
+    * minor changes to format of User Guide
+    * bug fix for GPU code (singular case)
+
+Jun 1, 2012: version 2.0.0
+
+    * changed from UFconfig to SuiteSparse_config
+    * added interface to CUDA BLAS
+
+Dec 7, 2011: version 1.7.4
+
+    * fixed the Makefile to better align with CFLAGS and other standards
+    * Makefile now detects whether or not METIS is present, and
+        sets -DNPARTITION if it is not
+
+Jan 25, 2011: version 1.7.3
+
+    * minor fix to "make install"
+    * minor change to Core/cholmod_memory.c, rename "I" which conflicts with
+        a predefined token in some compilers
+
+Nov 30, 2009: version 1.7.2
+
+    * added "make install" and "make uninstall"
+    * fixed interface to 64-bit BLAS for MATLAB 7.8
+
+Sept 30, 2008, version 1.7.1
+
+    * bug fix to cholmod_symmetry; it reported incorrectly if the matrix
+        had a zero-free diagonal or not.  No effect on the use of CHOLMOD in
+        MATLAB.  No effect on the mwrite function, either, which uses
+        cholmod_symmetry.  Note that the number of nonzeros on the diagonal was
+        (and still is) correctly computed.  Only effect is on the
+        UF_Index.cholcand statistic reported in the UFget index, and on the web
+        pages, for the UF Sparse Matrix Collection (the UF_Index.cholcand
+        field).  This affects the output of spsym.
+
+Sept 20, 2008, version 1.7.0
+
+    * update for SuiteSparseQR:
+
+	- add SuiteSparseQR knobs and stats to CHOLMOD Common
+	- SuiteSparseQR uses CHOLMOD for its multifrontal symbolic analysis
+	- changed (char *) input parameters to (const char *), to avoid
+	    spurious compiler warnings when C++ calls C.
+	- minor change to the AMD backup strategy in cholmod_analyze, to better
+	    suit SuiteSparseQR
+	- modified cholmod_analyze and cholmod_super_symbolic,
+	    to add "for_cholesky" parameter; new function cholmod_analyze_p2.
+	    This parameter is false for SuiteSparseQR.
+	- minor correction to comments in cholmod_postorder.c
+	- performance enhancement to supernodal symbolic analysis, when
+	    A or AA' is fairly dense
+
+Nov 1, 2007, version 1.6.0
+
+    * minor lint cleanup (no bugs)
+
+    * new CHOLMOD_CLEAR_FLAG macro, which speeds up the calls to
+	cholmod_clear_flag, avoiding the function call if not needed.  Note
+	that this leads to untested lines in the Tcov test, but the lines of
+	the macro are tested in several places, just not everywhere it appers.
+
+    * port to MATLAB 7.5 (mex -lmwblas option now required for Linux)
+
+    * minor bug fix to cholmod_add.c to avoid potential Int overflow
+
+    * extra option added to cholmod2 mexFunction
+
+    * sparse2 mexFunction modified to ensure nnz(A) == nzmax(A) always holds
+	(It didn't in v1.5.0 if numerically zero entries were dropped in A).
+
+    * correction to Help comments for spsym function
+
+    * bug fix to cholmod_symmetry.c: determination of Hermitian vs non-Hermitian
+	matrices was incorrect if the diagonal was imaginary.
+
+    * performance fix for cholmod_nesdis.c and nesdis mexFunction
+
+May 31, 2007, version 1.5.0
+
+    * 64-bit MATLAB interface
+    
+    * MATLAB interface back-ported to MATLAB 6.1.
+
+    * bug fix: solving Dx=b using a supernodal factorization, in
+	cholmod_l_solve, when sizeof(UF_long) > sizeof(BLAS integer)
+
+    * changes to Makefiles to reflect directory changes in COLAMD and CCOLAMD
+	v2.7.0 directory structure (CHOLMOD v1.5 requires v2.7.0 of those
+	two packages)
+
+    * update to Modify/cholmod_updown.c, to allow input vector R to be packed
+	or unpacked.
+
+    * bug fix to Tcov/huge.c test code, for 64-bit case (this has no effect
+	on the CHOLMOD library itself, just the test code)
+
+Dec 12, 2006, version 1.4.0
+
+    * added support for large files (larger than 2GB)
+
+    * minor MATLAB cleanup
+
+    * renamed MATLAB function from cholmod to cholmod2, to avoid filename clash
+	with itself (the built-in version of cholmod).
+
+Dec 2, 2006, version 1.3.0
+
+    * Major modification to cholmod_read.c; now fully supports all forms of the
+	Matrix Market format.  Added cholmod_read_dense and cholmod_read_matrix
+	functions to cholmod_read.c.  Major changes to mread MATLAB function.
+	Added Common->prefer_binary option for cholmod_read.
+
+    * Added cholmod_write.c (cholmod_write_sparse and cholmod_write_dense
+	functions).  Added mwrite MATLAB function.
+
+    * Added 2nd output argument to sparse2 (Z, binary pattern of explicit
+	zero entries).
+
+    * Added the function cholmod_symmetry to the MatrixOps module.
+	Added spsym MATLAB function.
+
+    * 2nd argument to cholmod_triplet_to_sparse changed from int to size_t.
+
+    * minor correction to cholmod_analyze_ordering, cholmod_dense.c
+
+    * minor change to cholmod_rowfac.c, cholmod_solve.c, ...
+	to allow for easier testing.
+
+Sept 28, 2006, version 1.2.1
+
+    * bug fix to cholmod_matlab.c, when working with sparse INT64 matrices
+	in the "sparse2" function
+
+Aug 31, 2006, version 1.2
+
+    * Common->default_nesdis parameter and Common->called_nd statistic added.
+	Otherwise, no change to user interface.  v1.2 is fully upward
+	compatible with v1.1 (even binary compatible).
+
+    * non-supernodal Lx=b and L'x=b solves simplified, slight increase in
+	performance.
+
+    * update/downdate performance improved.
+
+    * ordering options and output statistics added to MATLAB/cholmod
+	mexFunction.
+
+July 27, 2006, version 1.1.1
+
+    * bug fix for cholmod_rowfac_mask, for the complex case.  Has no
+	effect on MATLAB.
+
+June 27, 2006:
+
+    * trivial changes to nested dissection code, and cholmod_read.c (for
+	debugging, and to add explicit typecasts so compilers don't complain).
+
+May, 2006:
+
+    * Added new routines for LPDASA: cholmod_rowfac_mask, cholmod_updown_mask.
+	Added cholmod_collapse_septree.  Added nd_oksep, nd_components
+	parameters to Common.
+
+Apr 30, 2006: version 1.1
+
+    * added interface to CAMD.  cholmod_nested_dissection can now call
+	CCOLAMD, CSYMAMD, and CAMD.  Common->nd_camd usage extended.
+	New argument added to nesdis mexFunction.  New cholmod_camd function
+	added.  No other changes to CHOLMOD user interface.
+
+    * more careful integer overflow checks.  Added non-user-callable functions
+	to add and multiply size_t integers, with overflow checks.
+
+    * added Common->no_workspace_reallocate
+
+    * flop count is now correct for A*A' case (Common->rowfacfl).
+
+Jan 18, 2006: version 1.0.2
+
+    * bug fix: MATLAB interface incorrect for full logical matrices.
+
+    * Tcov tests modified to generate fewer intentional nan's, to make it
+	easier to look for errors in BLAS libraries that incorrectly
+	generate nan's.
+
+Dec 16, 2005: version 1.0.1
+
+    * bug fix: cholmod_amd allocated too small of a workspace when ordering A*A'
+
+Dec 8, 2005: version 1.0
+
+    * no real changes.  Version 1.0 is the same as version 0.8.  Version 1.0 is
+	simply the formal stable release.
+
+    * known issue:  the floating point operation count, Common->rowfacfl, is
+	statistic is incorrect when factorizing A*A'.  This will be fixed in
+	version 1.1.
+
+Nov 15, 2005: version 0.8
+
+    * bug fix in t_cholmod_super_numeric, for [R,p]=chol(A) usage.
+
+    * Common->quick_return_if_not_posdef added.
+
+    * Added cholmod_row_lsubtree (required for LPDASA)
+
+    * bug fix: cholmod_rcond returned sqrt(1/cond) for an LL' factorization;
+	1/cond is required.
+
+    * new statistics added: flop counts for cholmod_rowfac, # of factor column
+	reallocations, # of factor reallocations due to column reallocations,
+	and # of times the (non-default) bounds on diag(L) are hit.
+
+    * factor column reallocation skipped if space already big enough.
+
+    * bug fix: cholmod_copy_factor did not copy L->is_monotonic.
+
+    * bug fix: cholmod_change_factor (diagonal entry was wrong in one case)
+
+    * rcond added to cholmod mexFunction ([x,rcond] = cholmod(A,b)).
+
+    * cholmod_rowadd, cholmod_rowdel modified.  rowdel no longer removes
+	entries from the matrix; it sets them to zero instead.
+
+Oct 10, 2005: version 0.7
+
+    * minor changes:  minor change to Check/cholmod_check.c (coerce
+	sizeof(...) to (int) when printing. Less strict check on A->p for
+	unpacked matrices) , removed a few unused variables in
+	Check/cholmod_read.c and Demo/cholmod*demo.c, changed "exit(0)" to
+	"return(0)" in Demo/cholmod_simple.c.  Changed Makefile so that "." is
+	not assumed to be on the $path.  Added Cygwin to architecture detection
+	in Include/cholmod_blas.h.  Added cparent and cmember to nesdis.m.
+	Space for future expansion added to cholmod_common.
+
+    * removed "rowmark" from the Modify module, which affects how partial
+	updates to Lx=b solves are done during update/downdate.  Should only
+	affect LPDASA.
+
+    * added CHOLMOD_SUBSUB_VERSION
+
+Aug 31, 2005:  version 0.6 released.

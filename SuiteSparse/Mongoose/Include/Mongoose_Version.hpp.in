@@ -1,0 +1,34 @@
+/* ========================================================================== */
+/* === Include/Mongoose_Version.hpp ========================================= */
+/* ========================================================================== */
+
+/* -----------------------------------------------------------------------------
+ * Mongoose Graph Partitioning Library  Copyright (C) 2017-2018,
+ * Scott P. Kolodziej, Nuri S. Yeralan, Timothy A. Davis, William W. Hager
+ * Mongoose is licensed under Version 3 of the GNU General Public License.
+ * Mongoose is also available under other licenses; contact authors for details.
+ * -------------------------------------------------------------------------- */
+
+// #pragma once
+#ifndef MONGOOSE_VERSION_HPP
+#define MONGOOSE_VERSION_HPP
+
+#include <string>
+
+// Configuration information from CMake
+#define Mongoose_VERSION_MAJOR @Mongoose_VERSION_MAJOR@
+#define Mongoose_VERSION_MINOR @Mongoose_VERSION_MINOR@
+#define Mongoose_VERSION_PATCH @Mongoose_VERSION_PATCH@
+#define Mongoose_DATE "@Mongoose_DATE@"
+
+namespace Mongoose
+{
+
+int major_version();
+int minor_version();
+int patch_version();
+std::string mongoose_version();
+
+} // end namespace Mongoose
+
+#endif

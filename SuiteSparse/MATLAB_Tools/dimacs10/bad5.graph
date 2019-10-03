@@ -1,0 +1,9 @@
+% invalid graph (unsymmetric).  mangled version of fig8a.graph
+7 11
+5 3 4
+1 3 4
+5 4 2 1
+2 3 6 7
+1 3 6
+5 4 7
+6 4

@@ -1,0 +1,57 @@
+# Test coverage for UMFPACK
+# usage: DO.all tempdirectory
+
+# no BLAS, test for int overflow
+./DO $1 1 di all
+./DO $1 1 dl all
+./DO $1 1 zi all
+./DO $1 1 zl all
+
+# BLAS, do not test for int overflow
+./DO $1 2 di all
+./DO $1 2 dl all
+./DO $1 2 zi all
+./DO $1 2 zl all
+
+# no BLAS, test for int overflow, no reciprocal
+./DO $1 5 di all
+./DO $1 5 dl all
+./DO $1 5 zi all
+./DO $1 5 zl all
+
+# BLAS, do not test for int overflow.  No timers
+./DO $1 6 di all
+./DO $1 6 dl all
+./DO $1 6 zi all
+./DO $1 6 zl all
+
+# no BLAS, test for int overflow, no divide-by-zero
+./DO $1 7 di all
+./DO $1 7 dl all
+./DO $1 7 zi all
+./DO $1 7 zl all
+
+# BLAS, do not test for int overflow.  No divide-by-zero
+./DO $1 8 di all
+./DO $1 8 dl all
+./DO $1 8 zi all
+./DO $1 8 zl all
+
+# no BLAS, test for int overflow.  Optimizations turned on.
+# These tests do not use statement coverage
+./DO $1 3 di run
+./DO $1 3 dl run
+./DO $1 3 zi run
+./DO $1 3 zl run
+
+# BLAS, do not test for int overflow.  Optimizations turned on.
+# These tests do not use statement coverage
+./DO $1 4 di run
+./DO $1 4 dl run
+./DO $1 4 zi run
+./DO $1 4 zl run
+
+# coverage summary.  Any line with "24" is missed in all 24 tests.
+./covall $1 > cover.out 2>covall_err.out
+cat cover.out
+

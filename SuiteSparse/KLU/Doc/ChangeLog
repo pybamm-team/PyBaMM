@@ -1,0 +1,127 @@
+Mar 12, 2018: version 1.3.9
+
+    * swapped arguments for KLU_malloc; not a bug, just more readable now
+
+May 4, 2016: version 1.3.8
+
+    * minor changes to Makefile
+
+Apr 1, 2016: version 1.3.7
+
+    * licensing simplified (no other change); refer to KLU/Doc/License.txt
+
+Feb 1, 2016: version 1.3.6
+
+    * update to Makefiles
+
+Jan 30, 2016: version 1.3.5
+
+    * modifications to Makefiles
+
+Jan 1, 2016: version 1.3.4
+
+    * modified Makefile to create shared libraries
+        No change to C code except version number
+
+June 3, 2015: version 1.3.3
+
+    * fix to klu_dump.c, only when debugging is enabled.
+	No affect on production code.
+
+Oct 23, 2014: version 1.3.2
+
+    * modified MATLAB/klu_make.m.  No change to C source code.
+
+Oct 10, 2014: version 1.3.1
+
+    * modified MATLAB/klu_make.m.
+    * trivial change to Tcov/Makefile to allow the Tcov test to work when
+        CHOLMOD is compiled with GPU acceleration.  No change to source
+        code of KLU proper (except for the version number).
+
+July 31, 2013: version 1.3.0
+
+    * changed malloc and printf pointers to use SuiteSparse_config
+
+Jun 20, 2012: verison 1,2,1
+
+    * minor update for Windows (removed filesep)
+
+Jun 1, 2012: version 1.2.0
+
+    * changed from UFconfig to SuiteSparse_config
+
+Jan 20, 2012: version 1.1.4
+
+    * bug fix:  INT_MAX changed to Int_MAX (used for checking Int overflow).
+
+Dec 7, 2011: version 1.1.3
+
+    * fixed the Makefile to better align with CFLAGS and other standards
+    * minor fix to KLU mexFunction
+
+Jan 25, 2011: version 1.1.2
+
+    * minor fix to "make install"
+    * port of Tcov to Mac OSX 10.6.6
+
+Nov 30, 2009: version 1.1.1
+
+    * added "make install" and "make uninstall"
+
+March 24, 2009, version 1.1.0
+
+    * updates to documentation
+    * tabs expanded to spaces in all source code files
+
+Nov 1, 2007, version 1.0.1
+
+    * minor lint cleanup
+
+May 31, 2007, version 1.0
+
+    * Overview:  this is the first clean release of KLU.  Only one bug was
+	fixed since in the last pre-1.0 version (see below).  This release adds
+	a 64-bit version, a better Demo, a 100% statement coverage test, new
+	parameters and statistics in the KLU Common object, reduced memory
+	usage, a method for limiting worst-case work in the BTF ordering, and a
+	completely redesigned MATLAB interface.
+
+    * scaling default changed from no scaling, to max row scaling
+
+    * C-callable API modified for klu_malloc, klu_free, klu_realloc, klu_rcond,
+	klu_rgrowth, klu_condest.  API of other user-callable KLU functions not
+	modified.
+
+    * user ordering function prototype modified (final argument is now
+	klu_common, not Common->user_data)
+
+    * User Guide added.
+
+    * KLU Demo completely rewritten.  Now depends on CHOLMOD to read in its
+	matrices, in Matrix Market format.
+
+    * port to 64-bit version
+
+    * reduction in memory usage, particularly when the BTF form results in
+	many small diagonal blocks
+
+    * new Common parameter (maxwork) and statistics (work, memusage, mempeak)
+
+    * Makefile and object files (*.o) now placed in KLU/Lib, not KLU/Source
+
+    * added klu_install.m, klu_demo.m, klu_make.m to KLU/MATLAB.
+
+    * klu mexFunction now returns a struct for LU, not a lengthy list of
+	matrices.  MATLAB interface completely rewritten.
+
+    * Tcov tests completely rewritten
+
+    * bug fix in complex klu_z_refactor, when both btf and scaling are in use
+
+    * bug fix in klu_rgrowth, when the matrix is scaled
+
+Dec 12, 2006: version 0.11
+
+    * minor MATLAB cleanup
+

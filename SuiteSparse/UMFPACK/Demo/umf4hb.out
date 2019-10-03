@@ -1,0 +1,133 @@
+UMFPACK V5.6.0 (Jun 1, 2012), Control:
+    Matrix entry defined as: double
+    Int (generic integer) defined as: int
+
+    0: print level: 2
+    1: dense row parameter:    0.2
+        "dense" rows have    > max (16, (0.2)*16*sqrt(n_col) entries)
+    2: dense column parameter: 0.2
+        "dense" columns have > max (16, (0.2)*16*sqrt(n_row) entries)
+    3: pivot tolerance: 0.1
+    4: block size for dense matrix kernels: 32
+    5: strategy: 0 (auto)
+    10: ordering: 1 AMD/COLAMD
+    11: singleton filter: enabled
+    6: initial allocation ratio: 0.7
+    7: max iterative refinement steps: 2
+    13: Q fixed during numerical factorization: 0 (auto)
+    14: AMD dense row/col parameter:    10
+       "dense" rows/columns have > max (16, (10)*sqrt(n)) entries
+        Only used if the AMD ordering is used.
+    15: diagonal pivot tolerance: 0.001
+        Only used if diagonal pivoting is attempted.
+    16: scaling: 1 (divide each row by sum of abs. values in each row)
+    17: frontal matrix allocation ratio: 0.5
+    18: drop tolerance: 0
+    19: AMD and COLAMD aggressive absorption: 1 (yes)
+
+    The following options can only be changed at compile-time:
+    8: BLAS library used:  Fortran BLAS.  size of BLAS integer: 4
+    compiled for ANSI C
+    POSIX C clock_getttime.
+    computer/operating system: Linux
+    size of int: 4 SuiteSparse_long: 8 Int: 4 pointer: 8 double: 8 Entry: 8 (in bytes)
+
+UMFPACK V5.6.0 (Jun 1, 2012), Info:
+    matrix entry defined as:          double
+    Int (generic integer) defined as: int
+    BLAS library used: Fortran BLAS.  size of BLAS integer: 4
+    MATLAB:                           no.
+    CPU timer:                        POSIX C clock_getttime ( ) routine.
+    number of rows in matrix A:       67
+    number of columns in matrix A:    67
+    entries in matrix A:              294
+    memory usage reported in:         8-byte Units
+    size of int:                      4 bytes
+    size of SuiteSparse_long:         8 bytes
+    size of pointer:                  8 bytes
+    size of numerical entry:          8 bytes
+
+    strategy used:                    unsymmetric
+    ordering used:                    colamd on A
+    modify Q during factorization:    yes
+    prefer diagonal pivoting:         no
+    pivots with zero Markowitz cost:               1
+    submatrix S after removing zero-cost pivots:
+        number of "dense" rows:                    0
+        number of "dense" columns:                 0
+        number of empty rows:                      0
+        number of empty columns                    0
+        submatrix S not square or diagonal not preserved
+    symbolic factorization defragmentations:       1
+    symbolic memory usage (Units):                 1639
+    symbolic memory usage (MBytes):                0.0
+    Symbolic size (Units):                         252
+    Symbolic size (MBytes):                        0
+    symbolic factorization wallclock time(sec):    0.00
+
+    matrix scaled: yes (divided each row by sum of abs values in each row)
+    minimum sum (abs (rows of A)):              1.00000e+00
+    maximum sum (abs (rows of A)):              6.59006e+00
+
+    symbolic/numeric factorization:      upper bound               actual      %
+    variable-sized part of Numeric object:
+        initial size (Units)                    1711                 1577    92%
+        peak size (Units)                       6115                 3581    59%
+        final size (Units)                      1628                  681    42%
+    Numeric final size (Units)                  2108                 1128    54%
+    Numeric final size (MBytes)                  0.0                  0.0    54%
+    peak memory usage (Units)                   7476                 4942    66%
+    peak memory usage (MBytes)                   0.1                  0.0    66%
+    numeric factorization flops          1.41920e+04          2.51700e+03    18%
+    nz in L (incl diagonal)                      542                  325    60%
+    nz in U (incl diagonal)                      902                  339    38%
+    nz in L+U (incl diagonal)                   1377                  597    43%
+    largest front (# entries)                    483                   80    17%
+    largest # rows in front                       21                   10    48%
+    largest # columns in front                    23                   11    48%
+
+    initial allocation ratio used:                 0.7
+    # of forced updates due to frontal growth:     0
+    nz in L (incl diagonal), if none dropped       325
+    nz in U (incl diagonal), if none dropped       339
+    number of small entries dropped                0
+    nonzeros on diagonal of U:                     67
+    min abs. value on diagonal of U:               2.74e-02
+    max abs. value on diagonal of U:               2.28e+00
+    estimate of reciprocal of condition number:    1.20e-02
+    indices in compressed pattern:                 259
+    numerical values stored in Numeric object:     600
+    numeric factorization defragmentations:        1
+    numeric factorization reallocations:           1
+    costly numeric factorization reallocations:    0
+    numeric factorization wallclock time (sec):    0.00
+
+    solve flops:                                   1.19400e+03
+    iterative refinement steps taken:              0
+    iterative refinement steps attempted:          0
+    solve wall clock time (sec):                   0.00
+
+    total symbolic + numeric + solve flops:        3.71100e+03
+
+ Matrix key: WEST0067                      
+symbolic analysis:
+   status:     0.
+   time:      0.17E-03 (sec)
+   estimates (upper bound) for numeric LU:
+   size of LU:          0.02 (MB)
+   memory needed:       0.06 (MB)
+   flop count:      0.14E+05
+   nnz (L):             542.
+   nnz (U):             902.
+numeric factorization:
+   status:     0.
+   time:      0.46E-03
+   actual numeric LU statistics:
+   size of LU:          0.01 (MB)
+   memory needed:       0.04 (MB)
+   flop count:      0.25E+04
+   nnz (L):             325.
+   nnz (U):             339.
+ norm (A*x-b):   2.44249065417534439E-015
+ norm (A*x-b):   2.13162820728030056E-014
+ norm (A*x-b):   2.13162820728030056E-014

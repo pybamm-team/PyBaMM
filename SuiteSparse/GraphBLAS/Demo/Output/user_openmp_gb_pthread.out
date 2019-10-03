@@ -1,0 +1,859 @@
+Demo: ./openmp_demo:
+GraphBLAS is using a POSIX pthread mutex
+to synchronize user threads.
+User threads in this program are OpenMP pthreads.
+
+================= worker 0 starts:
+
+================= worker 1 starts:
+
+================= worker 4 starts:
+
+================= worker 6 starts:
+
+================= worker 7 starts:
+
+================= worker 5 starts:
+
+================= worker 3 starts:
+
+================= worker 2 starts:
+
+----------------- worker 1 intentional error:
+GraphBLAS error: GrB_INVALID_INDEX
+function: GrB_Matrix_setElement_INT32 (C, row, col, x)
+Row index 1001 out of range; must be < 6
+
+
+----------------- worker 0 intentional error:
+GraphBLAS error: GrB_INVALID_INDEX
+function: GrB_Matrix_setElement_INT32 (C, row, col, x)
+Row index 1000 out of range; must be < 6
+
+
+----------------- worker 5 intentional error:
+GraphBLAS error: GrB_INVALID_INDEX
+function: GrB_Matrix_setElement_INT32 (C, row, col, x)
+Row index 1005 out of range; must be < 6
+
+
+----------------- worker 3 intentional error:
+GraphBLAS error: GrB_INVALID_INDEX
+function: GrB_Matrix_setElement_INT32 (C, row, col, x)
+Row index 1003 out of range; must be < 6
+
+
+----------------- worker 2 intentional error:
+GraphBLAS error: GrB_INVALID_INDEX
+function: GrB_Matrix_setElement_INT32 (C, row, col, x)
+Row index 1002 out of range; must be < 6
+
+
+----------------- worker 4 intentional error:
+GraphBLAS error: GrB_INVALID_INDEX
+function: GrB_Matrix_setElement_INT32 (C, row, col, x)
+Row index 1004 out of range; must be < 6
+
+
+----------------- worker 7 intentional error:
+GraphBLAS error: GrB_INVALID_INDEX
+function: GrB_Matrix_setElement_INT32 (C, row, col, x)
+Row index 1007 out of range; must be < 6
+
+
+----------------- worker 6 intentional error:
+GraphBLAS error: GrB_INVALID_INDEX
+function: GrB_Matrix_setElement_INT32 (C, row, col, x)
+Row index 1006 out of range; must be < 6
+
+
+----------------- worker 3 is done:
+
+GraphBLAS matrix: A 
+nrows: 6 ncols: 6 max # entries: 36
+format: standard CSR vlen: 6 nvec_nonempty: 6 nvec: 6 plen: 6 vdim: 6
+hyper_ratio 0.0625
+GraphBLAS type:  double size: 8
+number of entries: 36 
+row: 0 : 6 entries [0:5]
+    column 0: double 101003
+    column 1: double 102003
+    column 2: double 103003
+    column 3: double 104003
+    column 4: double 105003
+    column 5: double 106003
+row: 1 : 6 entries [6:11]
+    column 0: double 201003
+    column 1: double 202003
+    column 2: double 203003
+    column 3: double 204003
+    column 4: double 205003
+    column 5: double 206003
+row: 2 : 6 entries [12:17]
+    column 0: double 301003
+    column 1: double 302003
+    column 2: double 303003
+    column 3: double 304003
+    column 4: double 305003
+    column 5: double 306003
+row: 3 : 6 entries [18:23]
+    column 0: double 401003
+    column 1: double 402003
+    column 2: double 403003
+    column 3: double 404003
+    column 4: double 405003
+    column 5: double 406003
+row: 4 : 6 entries [24:29]
+    column 0: double 501003
+    column 1: double 502003
+    column 2: double 503003
+    column 3: double 504003
+    column 4: double 505003
+    column 5: double 506003
+row: 5 : 6 entries [30:35]
+    ...
+
+----------------- worker 7 is done:
+
+GraphBLAS matrix: A 
+nrows: 6 ncols: 6 max # entries: 36
+format: standard CSR vlen: 6 nvec_nonempty: 6 nvec: 6 plen: 6 vdim: 6
+hyper_ratio 0.0625
+GraphBLAS type:  double size: 8
+number of entries: 36 
+row: 0 : 6 entries [0:5]
+    column 0: double 101007
+    column 1: double 102007
+    column 2: double 103007
+    column 3: double 104007
+    column 4: double 105007
+    column 5: double 106007
+row: 1 : 6 entries [6:11]
+    column 0: double 201007
+    column 1: double 202007
+    column 2: double 203007
+    column 3: double 204007
+    column 4: double 205007
+    column 5: double 206007
+row: 2 : 6 entries [12:17]
+    column 0: double 301007
+    column 1: double 302007
+    column 2: double 303007
+    column 3: double 304007
+    column 4: double 305007
+    column 5: double 306007
+row: 3 : 6 entries [18:23]
+    column 0: double 401007
+    column 1: double 402007
+    column 2: double 403007
+    column 3: double 404007
+    column 4: double 405007
+    column 5: double 406007
+row: 4 : 6 entries [24:29]
+    column 0: double 501007
+    column 1: double 502007
+    column 2: double 503007
+    column 3: double 504007
+    column 4: double 505007
+    column 5: double 506007
+row: 5 : 6 entries [30:35]
+    ...
+
+----------------- worker 1 is done:
+
+GraphBLAS matrix: A 
+nrows: 6 ncols: 6 max # entries: 36
+format: standard CSR vlen: 6 nvec_nonempty: 6 nvec: 6 plen: 6 vdim: 6
+hyper_ratio 0.0625
+GraphBLAS type:  double size: 8
+number of entries: 36 
+row: 0 : 6 entries [0:5]
+    column 0: double 101001
+    column 1: double 102001
+    column 2: double 103001
+    column 3: double 104001
+    column 4: double 105001
+    column 5: double 106001
+row: 1 : 6 entries [6:11]
+    column 0: double 201001
+    column 1: double 202001
+    column 2: double 203001
+    column 3: double 204001
+    column 4: double 205001
+    column 5: double 206001
+row: 2 : 6 entries [12:17]
+    column 0: double 301001
+    column 1: double 302001
+    column 2: double 303001
+    column 3: double 304001
+    column 4: double 305001
+    column 5: double 306001
+row: 3 : 6 entries [18:23]
+    column 0: double 401001
+    column 1: double 402001
+    column 2: double 403001
+    column 3: double 404001
+    column 4: double 405001
+    column 5: double 406001
+row: 4 : 6 entries [24:29]
+    column 0: double 501001
+    column 1: double 502001
+    column 2: double 503001
+    column 3: double 504001
+    column 4: double 505001
+    column 5: double 506001
+row: 5 : 6 entries [30:35]
+    ...
+
+----------------- worker 6 is done:
+
+GraphBLAS matrix: A 
+nrows: 6 ncols: 6 max # entries: 36
+format: standard CSR vlen: 6 nvec_nonempty: 6 nvec: 6 plen: 6 vdim: 6
+hyper_ratio 0.0625
+GraphBLAS type:  double size: 8
+number of entries: 36 
+row: 0 : 6 entries [0:5]
+    column 0: double 101006
+    column 1: double 102006
+    column 2: double 103006
+    column 3: double 104006
+    column 4: double 105006
+    column 5: double 106006
+row: 1 : 6 entries [6:11]
+    column 0: double 201006
+    column 1: double 202006
+    column 2: double 203006
+    column 3: double 204006
+    column 4: double 205006
+    column 5: double 206006
+row: 2 : 6 entries [12:17]
+    column 0: double 301006
+    column 1: double 302006
+    column 2: double 303006
+    column 3: double 304006
+    column 4: double 305006
+    column 5: double 306006
+row: 3 : 6 entries [18:23]
+    column 0: double 401006
+    column 1: double 402006
+    column 2: double 403006
+    column 3: double 404006
+    column 4: double 405006
+    column 5: double 406006
+row: 4 : 6 entries [24:29]
+    column 0: double 501006
+    column 1: double 502006
+    column 2: double 503006
+    column 3: double 504006
+    column 4: double 505006
+    column 5: double 506006
+row: 5 : 6 entries [30:35]
+    ...
+
+----------------- worker 4 is done:
+
+GraphBLAS matrix: A 
+nrows: 6 ncols: 6 max # entries: 36
+format: standard CSR vlen: 6 nvec_nonempty: 6 nvec: 6 plen: 6 vdim: 6
+hyper_ratio 0.0625
+GraphBLAS type:  double size: 8
+number of entries: 36 
+row: 0 : 6 entries [0:5]
+    column 0: double 101004
+    column 1: double 102004
+    column 2: double 103004
+    column 3: double 104004
+    column 4: double 105004
+    column 5: double 106004
+row: 1 : 6 entries [6:11]
+    column 0: double 201004
+    column 1: double 202004
+    column 2: double 203004
+    column 3: double 204004
+    column 4: double 205004
+    column 5: double 206004
+row: 2 : 6 entries [12:17]
+    column 0: double 301004
+    column 1: double 302004
+    column 2: double 303004
+    column 3: double 304004
+    column 4: double 305004
+    column 5: double 306004
+row: 3 : 6 entries [18:23]
+    column 0: double 401004
+    column 1: double 402004
+    column 2: double 403004
+    column 3: double 404004
+    column 4: double 405004
+    column 5: double 406004
+row: 4 : 6 entries [24:29]
+    column 0: double 501004
+    column 1: double 502004
+    column 2: double 503004
+    column 3: double 504004
+    column 4: double 505004
+    column 5: double 506004
+row: 5 : 6 entries [30:35]
+    ...
+
+----------------- worker 7 error should be same:
+GraphBLAS error: GrB_INVALID_INDEX
+function: GrB_Matrix_setElement_INT32 (C, row, col, x)
+Row index 1007 out of range; must be < 6
+
+
+----------------- worker 3 error should be same:
+GraphBLAS error: GrB_INVALID_INDEX
+function: GrB_Matrix_setElement_INT32 (C, row, col, x)
+Row index 1003 out of range; must be < 6
+
+
+----------------- worker 5 is done:
+
+GraphBLAS matrix: A 
+nrows: 6 ncols: 6 max # entries: 36
+format: standard CSR vlen: 6 nvec_nonempty: 6 nvec: 6 plen: 6 vdim: 6
+hyper_ratio 0.0625
+GraphBLAS type:  double size: 8
+number of entries: 36 
+row: 0 : 6 entries [0:5]
+    column 0: double 101005
+    column 1: double 102005
+    column 2: double 103005
+    column 3: double 104005
+    column 4: double 105005
+    column 5: double 106005
+row: 1 : 6 entries [6:11]
+    column 0: double 201005
+    column 1: double 202005
+    column 2: double 203005
+    column 3: double 204005
+    column 4: double 205005
+    column 5: double 206005
+row: 2 : 6 entries [12:17]
+    column 0: double 301005
+    column 1: double 302005
+    column 2: double 303005
+    column 3: double 304005
+    column 4: double 305005
+    column 5: double 306005
+row: 3 : 6 entries [18:23]
+    column 0: double 401005
+    column 1: double 402005
+    column 2: double 403005
+    column 3: double 404005
+    column 4: double 405005
+    column 5: double 406005
+row: 4 : 6 entries [24:29]
+    column 0: double 501005
+    column 1: double 502005
+    column 2: double 503005
+    column 3: double 504005
+    column 4: double 505005
+    column 5: double 506005
+row: 5 : 6 entries [30:35]
+    ...
+
+----------------- worker 1 error should be same:
+GraphBLAS error: GrB_INVALID_INDEX
+function: GrB_Matrix_setElement_INT32 (C, row, col, x)
+Row index 1001 out of range; must be < 6
+
+
+----------------- worker 0 is done:
+
+GraphBLAS matrix: A 
+nrows: 6 ncols: 6 max # entries: 36
+format: standard CSR vlen: 6 nvec_nonempty: 6 nvec: 6 plen: 6 vdim: 6
+hyper_ratio 0.0625
+GraphBLAS type:  double size: 8
+number of entries: 36 
+row: 0 : 6 entries [0:5]
+    column 0: double 101000
+    column 1: double 102000
+    column 2: double 103000
+    column 3: double 104000
+    column 4: double 105000
+    column 5: double 106000
+row: 1 : 6 entries [6:11]
+    column 0: double 201000
+    column 1: double 202000
+    column 2: double 203000
+    column 3: double 204000
+    column 4: double 205000
+    column 5: double 206000
+row: 2 : 6 entries [12:17]
+    column 0: double 301000
+    column 1: double 302000
+    column 2: double 303000
+    column 3: double 304000
+    column 4: double 305000
+    column 5: double 306000
+row: 3 : 6 entries [18:23]
+    column 0: double 401000
+    column 1: double 402000
+    column 2: double 403000
+    column 3: double 404000
+    column 4: double 405000
+    column 5: double 406000
+row: 4 : 6 entries [24:29]
+    column 0: double 501000
+    column 1: double 502000
+    column 2: double 503000
+    column 3: double 504000
+    column 4: double 505000
+    column 5: double 506000
+row: 5 : 6 entries [30:35]
+    ...
+
+----------------- worker 5 error should be same:
+GraphBLAS error: GrB_INVALID_INDEX
+function: GrB_Matrix_setElement_INT32 (C, row, col, x)
+Row index 1005 out of range; must be < 6
+
+
+----------------- worker 6 error should be same:
+GraphBLAS error: GrB_INVALID_INDEX
+function: GrB_Matrix_setElement_INT32 (C, row, col, x)
+Row index 1006 out of range; must be < 6
+
+
+----------------- worker 0 error should be same:
+GraphBLAS error: GrB_INVALID_INDEX
+function: GrB_Matrix_setElement_INT32 (C, row, col, x)
+Row index 1000 out of range; must be < 6
+
+
+----------------- worker 4 error should be same:
+GraphBLAS error: GrB_INVALID_INDEX
+function: GrB_Matrix_setElement_INT32 (C, row, col, x)
+Row index 1004 out of range; must be < 6
+
+
+----------------- worker 2 is done:
+
+GraphBLAS matrix: A 
+nrows: 6 ncols: 6 max # entries: 36
+format: standard CSR vlen: 6 nvec_nonempty: 6 nvec: 6 plen: 6 vdim: 6
+hyper_ratio 0.0625
+GraphBLAS type:  double size: 8
+number of entries: 36 
+row: 0 : 6 entries [0:5]
+    column 0: double 101002
+    column 1: double 102002
+    column 2: double 103002
+    column 3: double 104002
+    column 4: double 105002
+    column 5: double 106002
+row: 1 : 6 entries [6:11]
+    column 0: double 201002
+    column 1: double 202002
+    column 2: double 203002
+    column 3: double 204002
+    column 4: double 205002
+    column 5: double 206002
+row: 2 : 6 entries [12:17]
+    column 0: double 301002
+    column 1: double 302002
+    column 2: double 303002
+    column 3: double 304002
+    column 4: double 305002
+    column 5: double 306002
+row: 3 : 6 entries [18:23]
+    column 0: double 401002
+    column 1: double 402002
+    column 2: double 403002
+    column 3: double 404002
+    column 4: double 405002
+    column 5: double 406002
+row: 4 : 6 entries [24:29]
+    column 0: double 501002
+    column 1: double 502002
+    column 2: double 503002
+    column 3: double 504002
+    column 4: double 505002
+    column 5: double 506002
+row: 5 : 6 entries [30:35]
+    ...
+
+----------------- worker 2 error should be same:
+GraphBLAS error: GrB_INVALID_INDEX
+function: GrB_Matrix_setElement_INT32 (C, row, col, x)
+Row index 1002 out of range; must be < 6
+
+
+---- Master prints matrix 0
+
+GraphBLAS matrix: A 
+nrows: 6 ncols: 6 max # entries: 36
+format: standard CSR vlen: 6 nvec_nonempty: 6 nvec: 6 plen: 6 vdim: 6
+hyper_ratio 0.0625
+GraphBLAS type:  double size: 8
+number of entries: 36 
+row: 0 : 6 entries [0:5]
+    column 0: double 101000
+    column 1: double 102000
+    column 2: double 103000
+    column 3: double 104000
+    column 4: double 105000
+    column 5: double 106000
+row: 1 : 6 entries [6:11]
+    column 0: double 201000
+    column 1: double 202000
+    column 2: double 203000
+    column 3: double 204000
+    column 4: double 205000
+    column 5: double 206000
+row: 2 : 6 entries [12:17]
+    column 0: double 301000
+    column 1: double 302000
+    column 2: double 303000
+    column 3: double 304000
+    column 4: double 305000
+    column 5: double 306000
+row: 3 : 6 entries [18:23]
+    column 0: double 401000
+    column 1: double 402000
+    column 2: double 403000
+    column 3: double 404000
+    column 4: double 405000
+    column 5: double 406000
+row: 4 : 6 entries [24:29]
+    column 0: double 501000
+    column 1: double 502000
+    column 2: double 503000
+    column 3: double 504000
+    column 4: double 505000
+    column 5: double 506000
+row: 5 : 6 entries [30:35]
+    ...
+
+---- Master prints matrix 1
+
+GraphBLAS matrix: A 
+nrows: 6 ncols: 6 max # entries: 36
+format: standard CSR vlen: 6 nvec_nonempty: 6 nvec: 6 plen: 6 vdim: 6
+hyper_ratio 0.0625
+GraphBLAS type:  double size: 8
+number of entries: 36 
+row: 0 : 6 entries [0:5]
+    column 0: double 101001
+    column 1: double 102001
+    column 2: double 103001
+    column 3: double 104001
+    column 4: double 105001
+    column 5: double 106001
+row: 1 : 6 entries [6:11]
+    column 0: double 201001
+    column 1: double 202001
+    column 2: double 203001
+    column 3: double 204001
+    column 4: double 205001
+    column 5: double 206001
+row: 2 : 6 entries [12:17]
+    column 0: double 301001
+    column 1: double 302001
+    column 2: double 303001
+    column 3: double 304001
+    column 4: double 305001
+    column 5: double 306001
+row: 3 : 6 entries [18:23]
+    column 0: double 401001
+    column 1: double 402001
+    column 2: double 403001
+    column 3: double 404001
+    column 4: double 405001
+    column 5: double 406001
+row: 4 : 6 entries [24:29]
+    column 0: double 501001
+    column 1: double 502001
+    column 2: double 503001
+    column 3: double 504001
+    column 4: double 505001
+    column 5: double 506001
+row: 5 : 6 entries [30:35]
+    ...
+
+---- Master prints matrix 2
+
+GraphBLAS matrix: A 
+nrows: 6 ncols: 6 max # entries: 36
+format: standard CSR vlen: 6 nvec_nonempty: 6 nvec: 6 plen: 6 vdim: 6
+hyper_ratio 0.0625
+GraphBLAS type:  double size: 8
+number of entries: 36 
+row: 0 : 6 entries [0:5]
+    column 0: double 101002
+    column 1: double 102002
+    column 2: double 103002
+    column 3: double 104002
+    column 4: double 105002
+    column 5: double 106002
+row: 1 : 6 entries [6:11]
+    column 0: double 201002
+    column 1: double 202002
+    column 2: double 203002
+    column 3: double 204002
+    column 4: double 205002
+    column 5: double 206002
+row: 2 : 6 entries [12:17]
+    column 0: double 301002
+    column 1: double 302002
+    column 2: double 303002
+    column 3: double 304002
+    column 4: double 305002
+    column 5: double 306002
+row: 3 : 6 entries [18:23]
+    column 0: double 401002
+    column 1: double 402002
+    column 2: double 403002
+    column 3: double 404002
+    column 4: double 405002
+    column 5: double 406002
+row: 4 : 6 entries [24:29]
+    column 0: double 501002
+    column 1: double 502002
+    column 2: double 503002
+    column 3: double 504002
+    column 4: double 505002
+    column 5: double 506002
+row: 5 : 6 entries [30:35]
+    ...
+
+---- Master prints matrix 3
+
+GraphBLAS matrix: A 
+nrows: 6 ncols: 6 max # entries: 36
+format: standard CSR vlen: 6 nvec_nonempty: 6 nvec: 6 plen: 6 vdim: 6
+hyper_ratio 0.0625
+GraphBLAS type:  double size: 8
+number of entries: 36 
+row: 0 : 6 entries [0:5]
+    column 0: double 101003
+    column 1: double 102003
+    column 2: double 103003
+    column 3: double 104003
+    column 4: double 105003
+    column 5: double 106003
+row: 1 : 6 entries [6:11]
+    column 0: double 201003
+    column 1: double 202003
+    column 2: double 203003
+    column 3: double 204003
+    column 4: double 205003
+    column 5: double 206003
+row: 2 : 6 entries [12:17]
+    column 0: double 301003
+    column 1: double 302003
+    column 2: double 303003
+    column 3: double 304003
+    column 4: double 305003
+    column 5: double 306003
+row: 3 : 6 entries [18:23]
+    column 0: double 401003
+    column 1: double 402003
+    column 2: double 403003
+    column 3: double 404003
+    column 4: double 405003
+    column 5: double 406003
+row: 4 : 6 entries [24:29]
+    column 0: double 501003
+    column 1: double 502003
+    column 2: double 503003
+    column 3: double 504003
+    column 4: double 505003
+    column 5: double 506003
+row: 5 : 6 entries [30:35]
+    ...
+
+---- Master prints matrix 4
+
+GraphBLAS matrix: A 
+nrows: 6 ncols: 6 max # entries: 36
+format: standard CSR vlen: 6 nvec_nonempty: 6 nvec: 6 plen: 6 vdim: 6
+hyper_ratio 0.0625
+GraphBLAS type:  double size: 8
+number of entries: 36 
+row: 0 : 6 entries [0:5]
+    column 0: double 101004
+    column 1: double 102004
+    column 2: double 103004
+    column 3: double 104004
+    column 4: double 105004
+    column 5: double 106004
+row: 1 : 6 entries [6:11]
+    column 0: double 201004
+    column 1: double 202004
+    column 2: double 203004
+    column 3: double 204004
+    column 4: double 205004
+    column 5: double 206004
+row: 2 : 6 entries [12:17]
+    column 0: double 301004
+    column 1: double 302004
+    column 2: double 303004
+    column 3: double 304004
+    column 4: double 305004
+    column 5: double 306004
+row: 3 : 6 entries [18:23]
+    column 0: double 401004
+    column 1: double 402004
+    column 2: double 403004
+    column 3: double 404004
+    column 4: double 405004
+    column 5: double 406004
+row: 4 : 6 entries [24:29]
+    column 0: double 501004
+    column 1: double 502004
+    column 2: double 503004
+    column 3: double 504004
+    column 4: double 505004
+    column 5: double 506004
+row: 5 : 6 entries [30:35]
+    ...
+
+---- Master prints matrix 5
+
+GraphBLAS matrix: A 
+nrows: 6 ncols: 6 max # entries: 36
+format: standard CSR vlen: 6 nvec_nonempty: 6 nvec: 6 plen: 6 vdim: 6
+hyper_ratio 0.0625
+GraphBLAS type:  double size: 8
+number of entries: 36 
+row: 0 : 6 entries [0:5]
+    column 0: double 101005
+    column 1: double 102005
+    column 2: double 103005
+    column 3: double 104005
+    column 4: double 105005
+    column 5: double 106005
+row: 1 : 6 entries [6:11]
+    column 0: double 201005
+    column 1: double 202005
+    column 2: double 203005
+    column 3: double 204005
+    column 4: double 205005
+    column 5: double 206005
+row: 2 : 6 entries [12:17]
+    column 0: double 301005
+    column 1: double 302005
+    column 2: double 303005
+    column 3: double 304005
+    column 4: double 305005
+    column 5: double 306005
+row: 3 : 6 entries [18:23]
+    column 0: double 401005
+    column 1: double 402005
+    column 2: double 403005
+    column 3: double 404005
+    column 4: double 405005
+    column 5: double 406005
+row: 4 : 6 entries [24:29]
+    column 0: double 501005
+    column 1: double 502005
+    column 2: double 503005
+    column 3: double 504005
+    column 4: double 505005
+    column 5: double 506005
+row: 5 : 6 entries [30:35]
+    ...
+
+---- Master prints matrix 6
+
+GraphBLAS matrix: A 
+nrows: 6 ncols: 6 max # entries: 36
+format: standard CSR vlen: 6 nvec_nonempty: 6 nvec: 6 plen: 6 vdim: 6
+hyper_ratio 0.0625
+GraphBLAS type:  double size: 8
+number of entries: 36 
+row: 0 : 6 entries [0:5]
+    column 0: double 101006
+    column 1: double 102006
+    column 2: double 103006
+    column 3: double 104006
+    column 4: double 105006
+    column 5: double 106006
+row: 1 : 6 entries [6:11]
+    column 0: double 201006
+    column 1: double 202006
+    column 2: double 203006
+    column 3: double 204006
+    column 4: double 205006
+    column 5: double 206006
+row: 2 : 6 entries [12:17]
+    column 0: double 301006
+    column 1: double 302006
+    column 2: double 303006
+    column 3: double 304006
+    column 4: double 305006
+    column 5: double 306006
+row: 3 : 6 entries [18:23]
+    column 0: double 401006
+    column 1: double 402006
+    column 2: double 403006
+    column 3: double 404006
+    column 4: double 405006
+    column 5: double 406006
+row: 4 : 6 entries [24:29]
+    column 0: double 501006
+    column 1: double 502006
+    column 2: double 503006
+    column 3: double 504006
+    column 4: double 505006
+    column 5: double 506006
+row: 5 : 6 entries [30:35]
+    ...
+
+---- Master prints matrix 7
+
+GraphBLAS matrix: A 
+nrows: 6 ncols: 6 max # entries: 36
+format: standard CSR vlen: 6 nvec_nonempty: 6 nvec: 6 plen: 6 vdim: 6
+hyper_ratio 0.0625
+GraphBLAS type:  double size: 8
+number of entries: 36 
+row: 0 : 6 entries [0:5]
+    column 0: double 101007
+    column 1: double 102007
+    column 2: double 103007
+    column 3: double 104007
+    column 4: double 105007
+    column 5: double 106007
+row: 1 : 6 entries [6:11]
+    column 0: double 201007
+    column 1: double 202007
+    column 2: double 203007
+    column 3: double 204007
+    column 4: double 205007
+    column 5: double 206007
+row: 2 : 6 entries [12:17]
+    column 0: double 301007
+    column 1: double 302007
+    column 2: double 303007
+    column 3: double 304007
+    column 4: double 305007
+    column 5: double 306007
+row: 3 : 6 entries [18:23]
+    column 0: double 401007
+    column 1: double 402007
+    column 2: double 403007
+    column 3: double 404007
+    column 4: double 405007
+    column 5: double 406007
+row: 4 : 6 entries [24:29]
+    column 0: double 501007
+    column 1: double 502007
+    column 2: double 503007
+    column 3: double 504007
+    column 4: double 505007
+    column 5: double 506007
+row: 5 : 6 entries [30:35]
+    ...
+
+
+---- Master thread prints an error message:
+master -1 : Error: GraphBLAS error: GrB_NULL_POINTER
+function: GrB_Matrix_new (&A, type, nrows, ncols)
+Required argument is null: [A]
+

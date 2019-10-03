@@ -1,0 +1,19 @@
+./RBdemo < ../RBio/private/west0479.rua
+
+===========================================================
+title: [1U 8 STAGE COLUMN SECTION, ALL SECTIONS RIGOROUS ( CHEM. ENG. )]
+status 0
+key [WEST0479] nrow 479 ncol 479
+mkind 0 skind 0 asize 3820 znz 22
+mtype from file:               [RUA]
+(A) RBok status 0 0 0
+(Z) RBok status 0 0 0
+mtype from examining matrix:   [rua]
+mtype after reading from file: [rua]
+raw nrow 479 ncol 479 nnz 1910 nelnz 0 xsize 1910
+mtype from raw read from file: [rua]
+(P) RBok status 0 0 0
+mtype of pattern:              [pua]
+mtype of tril(A):              [rua]
+(L) RBok status 0 0 22
+RBdemo OK

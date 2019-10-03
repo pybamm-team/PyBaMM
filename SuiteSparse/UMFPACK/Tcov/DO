@@ -1,0 +1,66 @@
+#!/bin/csh
+
+echo '################################################################################'
+echo 'Tcov test:' $1 $2 $3 $4
+echo '################################################################################'
+
+#-------------------------------------------------------------------------------
+
+mkdir -p $1/UMFPACK_TCOV_TMP
+
+# delete the target directory
+/bin/rm -rf $1/UMFPACK_TCOV_TMP/$2_$3
+
+# copy in the pre-compiled libraries
+mkdir $1/UMFPACK_TCOV_TMP/$2_$3
+mkdir $1/UMFPACK_TCOV_TMP/$2_$3/doc
+mkdir $1/UMFPACK_TCOV_TMP/$2_$3/bin
+/bin/cp -pr ../../lib     $1/UMFPACK_TCOV_TMP/$2_$3/lib
+/bin/cp -pr ../../include $1/UMFPACK_TCOV_TMP/$2_$3/include
+
+# put in UMFPACK (excluding Tcov and MATLAB directories)
+mkdir -p $1/UMFPACK_TCOV_TMP/$2_$3/UMFPACK/Doc
+/bin/cp -pr ../Source       $1/UMFPACK_TCOV_TMP/$2_$3/UMFPACK
+/bin/cp -pr ../Include      $1/UMFPACK_TCOV_TMP/$2_$3/UMFPACK
+/bin/cp -pr ../Demo         $1/UMFPACK_TCOV_TMP/$2_$3/UMFPACK
+/bin/cp -pr ../Doc          $1/UMFPACK_TCOV_TMP/$2_$3/UMFPACK
+/bin/cp -pr ../Makefile     $1/UMFPACK_TCOV_TMP/$2_$3/UMFPACK
+/bin/cp -pr ../README.txt   $1/UMFPACK_TCOV_TMP/$2_$3/UMFPACK
+( cd $1/UMFPACK_TCOV_TMP/$2_$3/UMFPACK ; ln -s Source Lib )
+/bin/cp -pr ../Lib/Makefile $1/UMFPACK_TCOV_TMP/$2_$3/UMFPACK/Source/Makefile
+
+# put in AMD
+/bin/cp -pr ../../AMD $1/UMFPACK_TCOV_TMP/$2_$3
+/bin/rm -rf  $1/UMFPACK_TCOV_TMP/$2_$3/AMD/Lib
+( cd $1/UMFPACK_TCOV_TMP/$2_$3/AMD ; ln -s Source Lib )
+/bin/cp -pr ../../AMD/Lib/Makefile $1/UMFPACK_TCOV_TMP/$2_$3/AMD/Source/Makefile
+
+# put in links to include files
+mkdir $1/UMFPACK_TCOV_TMP/$2_$3/CHOLMOD
+( cd $1/UMFPACK_TCOV_TMP/$2_$3/CHOLMOD ; ln -s ../include Include )
+
+# put in the debug settings
+/bin/cp debug.* $1/UMFPACK_TCOV_TMP/$2_$3
+
+# put in the SuiteSparse Makefile
+/bin/cp Makefile.$3 $1/UMFPACK_TCOV_TMP/$2_$3/Makefile
+
+# put in SuiteSparse_config and the replacement SuiteSparse_config.mk file
+/bin/cp -pr ../../SuiteSparse_config $1/UMFPACK_TCOV_TMP/$2_$3
+/bin/cp -f  Make.$2 $1/UMFPACK_TCOV_TMP/$2_$3/SuiteSparse_config/SuiteSparse_config.mk
+( cd $1/UMFPACK_TCOV_TMP/$2_$3/SuiteSparse_config ; make purge > $2_$3.out )
+
+# put in the main program
+/bin/cp ut.c $1/UMFPACK_TCOV_TMP/$2_$3
+
+# put in the test matrices
+/bin/cp -f badnum*.umf $1/UMFPACK_TCOV_TMP/$2_$3
+/bin/cp -f badsym*.umf $1/UMFPACK_TCOV_TMP/$2_$3
+/bin/cp -pr TestMat $1/UMFPACK_TCOV_TMP/$2_$3
+
+# put in the gcov files
+/bin/cp -f ucov.* $1/UMFPACK_TCOV_TMP/$2_$3/UMFPACK/Source
+/bin/cp -f acov.* $1/UMFPACK_TCOV_TMP/$2_$3/AMD/Source
+
+# compile and run
+( cd $1/UMFPACK_TCOV_TMP/$2_$3 ; time make $4 >> $2_$3.out )

@@ -1,0 +1,88 @@
+klu_demo
+MATLAB condest: 1.42443e+12 KLU condest: 1.42443e+12 cond: 3.25816e+11
+
+KLU with scaling, AMD ordering and condition number estimate:
+resid: 7.8484e-13 KLU condest: 1.42443e+12 rgrowth: 1.85769e-05
+    noffdiag: 12
+    nrealloc: 0
+       rcond: 7.1253e-09
+     rgrowth: 1.8577e-05
+       flops: 31592
+     nblocks: 166
+    ordering: 0
+       scale: 1
+         lnz: 1923
+         unz: 1892
+       offnz: 450
+         tol: 1.0000e-03
+      memory: 136748
+
+
+KLU with COLAMD ordering
+resid: 3.91883e-11
+    noffdiag: 14
+    nrealloc: 0
+       rcond: 9.1888e-10
+     rgrowth: 4.3963e-08
+       flops: 42513
+     nblocks: 166
+    ordering: 1
+       scale: 2
+         lnz: 1956
+         unz: 2490
+       offnz: 450
+         tol: 1.0000e-03
+      memory: 397692
+
+
+KLU with natural ordering (lots of fillin)
+resid: 2.42321e-11
+    noffdiag: 437
+    nrealloc: 0
+       rcond: 6.4525e-08
+     rgrowth: 1.7654e-04
+       flops: 328911
+     nblocks: 2
+    ordering: 2
+       scale: 2
+         lnz: 7846
+         unz: 7332
+       offnz: 40
+         tol: 1.0000e-03
+      memory: 453556
+
+
+KLU with CHOLMOD(A'*A) ordering
+resid: 2.22827e-13
+    noffdiag: 24
+    nrealloc: 0
+       rcond: 4.1814e-09
+     rgrowth: 1.0676e-04
+       flops: 36747
+     nblocks: 166
+    ordering: 3
+       scale: 2
+         lnz: 2020
+         unz: 2227
+       offnz: 450
+         tol: 1.0000e-03
+      memory: 191132
+
+
+KLU with CHOLMOD(A+A') ordering
+resid: 1.45166e-12
+    noffdiag: 13
+    nrealloc: 0
+       rcond: 3.9046e-11
+     rgrowth: 2.4378e-06
+       flops: 31925
+     nblocks: 166
+    ordering: 4
+       scale: 2
+         lnz: 2000
+         unz: 1878
+       offnz: 450
+         tol: 1.0000e-03
+      memory: 136044
+
+diary off

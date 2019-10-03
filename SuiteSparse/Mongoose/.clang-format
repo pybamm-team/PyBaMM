@@ -1,0 +1,20 @@
+﻿---
+AlignAfterOpenBracket: 'Align'
+AlignConsecutiveAssignments: 'true'
+AlignOperands: 'true'
+AlignTrailingComments: 'true'
+AllowShortFunctionsOnASingleLine: 'false'
+AllowShortIfStatementsOnASingleLine: 'false'
+BasedOnStyle: WebKit
+BinPackArguments: 'true'
+BinPackParameters: 'true'
+BreakBeforeBraces: Allman
+ColumnLimit: '80'
+Language: Cpp
+PointerAlignment: 'Right'
+ReflowComments: 'true'
+Standard: Cpp03
+TabWidth: '4'
+UseTab: Never
+
+...

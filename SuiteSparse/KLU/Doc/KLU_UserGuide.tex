@@ -1,0 +1,1302 @@
+\documentclass[11pt]{article}
+
+\newcommand{\m}[1]{{\bf{#1}}}       % for matrices and vectors
+\newcommand{\tr}{^{\sf T}}          % transpose
+
+\topmargin 0in
+\textheight 9in
+\oddsidemargin 0pt
+\evensidemargin 0pt
+\textwidth 6.5in
+
+%------------------------------------------------------------------------------
+\begin{document}
+%------------------------------------------------------------------------------
+
+\title{User Guide for KLU and BTF}
+\author{
+Timothy A. Davis\thanks{
+DrTimothyAldenDavis@gmail.com,
+http://www.suitesparse.com.
+This work was supported by Sandia National Labs, and the National
+Science Foundation.
+Portions of the work were done while on sabbatical at Stanford University
+and Lawrence Berkeley National Laboratory (with funding from Stanford
+University and the SciDAC program).
+}
+\and Eka Palamadai Natarajan}
+
+\date{VERSION 1.3.9, Mar 12, 2018}
+\maketitle
+
+%------------------------------------------------------------------------------
+\begin{abstract}
+KLU is a set of routines for solving sparse linear systems of equations.
+It is particularly well-suited to matrices arising in SPICE-like circuit
+simulation applications.
+It relies on a permutation to block triangular form (BTF), several methods
+for finding a fill-reducing ordering (variants of approximate minimum degree,
+and nested dissection), and a sparse left-looking LU factorization method
+to factorize each block.  A MATLAB interface is included.
+KLU appears as Collected Algorithm 907 of the ACM \cite{DavisNatarajan10}.
+\end{abstract}
+%------------------------------------------------------------------------------
+
+\newpage
+\tableofcontents
+\newpage
+
+%------------------------------------------------------------------------------
+\section{License and Copyright}
+%------------------------------------------------------------------------------
+
+KLU, Copyright\copyright 2004-2011 University of Florida.
+All Rights Reserved.
+KLU is available under alternate licenses; contact T. Davis for details.
+
+{\bf KLU License:} see KLU/Doc/License.txt for the license.
+
+{\bf Availability:} {\tt http://www.suitesparse.com}
+
+{\bf Acknowledgments:}
+
+    This work was supported by Sandia National Laboratories (Mike Heroux)
+    and the National Science Foundation under grants 0203270 and 0620286.
+
+
+%------------------------------------------------------------------------------
+\newpage
+\section{Overview}
+%------------------------------------------------------------------------------
+
+KLU is a set of routines for solving sparse linear systems of equations.  It
+first permutes the matrix into upper block triangular form, via the BTF
+package.  This is done by first finding a permutation for a zero-free diagonal
+(a maximum transversal) \cite{Duff81}. If there is no such permutation, then
+the matrix is structurally rank-deficient, and is numerically singular.  Next,
+Tarjan's method \cite{Duff78a,Tarjan72} is used to find the strongly-connected
+components of the graph.  The block triangular form is essentially unique; any
+method will lead to the same number and sizes of blocks, although the ordering
+of the blocks may vary (consider a diagonal matrix, for example).  Assuming the
+matrix has full structural rank, the permuted matrix has the following form:
+\[
+PAQ =
+\left[
+\begin{array}{ccc}
+A_{11} & \cdots & A_{1k} \\
+       & \ddots & \vdots \\
+       &        & A_{kk} \\
+\end{array}
+\right],
+\]
+where each diagonal block is square with a zero-free diagonal.
+
+Next, each diagonal block is factorized with a sparse left-looking method
+\cite{GilbertPeierls88}.  The kernel of this factorization method is an
+efficient method for solving $Lx=b$ when $L$, $x$, and $b$ are all sparse.
+This kernel is used to compute each column of $L$ and $U$, one column at a time.
+The total work performed by this method is always proportional to the number of
+floating-point operations, something that is not true of any other sparse LU
+factorization method.
+
+Prior to factorizing each diagonal block, the blocks are ordered to reduce
+fill-in.  By default, the symmetric approximate minimum degree (AMD) ordering
+is used on $A_{ii}+A_{ii}^T$ \cite{AmestoyDavisDuff96,AmestoyDavisDuff03}.
+Another ordering option is to find a column ordering via COLAMD
+\cite{DavisGilbertLarimoreNg00_algo,DavisGilbertLarimoreNg00}.
+Alternatively, a permutation can be provided by the user, or a pointer to
+a user-provided ordering function can be passed, which is then used to order
+each block.
+
+Only the diagonal blocks need to be factorized.  Consider a linear system where
+the matrix is permuted into three blocks, for example:
+\[
+\left[
+\begin{array}{ccc}
+A_{11} & A_{12} & A_{13} \\
+       & A_{22} & A_{23} \\
+       &        & A_{33} \\
+\end{array}
+\right]
+\left[
+\begin{array}{c}
+x_{1} \\
+x_{2} \\
+x_{3} \\
+\end{array}
+\right]
+=
+\left[
+\begin{array}{c}
+b_{1} \\
+b_{2} \\
+b_{3} \\
+\end{array}
+\right].
+\]
+
+The non-singular system $A_{33} x_{3} = b_{3}$ can first be solved for $x_{3}$.
+After a block back substitution, the resulting system becomes
+\[
+\left[
+\begin{array}{cc}
+A_{11} & A_{12} \\
+       & A_{22} \\
+\end{array}
+\right]
+\left[
+\begin{array}{c}
+x_{1} \\
+x_{2} \\
+\end{array}
+\right]
+=
+\left[
+\begin{array}{c}
+b_{1} - A_{13} x_{3}\\
+b_{2} - A_{23} x_{3}\\
+\end{array}
+\right]
+=
+\left[
+\begin{array}{c}
+b'_{1} \\
+b'_{2} \\
+\end{array}
+\right]
+\]
+and the $A_{22} x_{2} = b'_{2}$ system can be solved for $x_{2}$.  The primary
+advantage of this method is that no fill-in occurs in the off-diagonal blocks
+($A_{12}$, $A_{13}$, and $A_{23}$).  This is particular critical for sparse
+linear systems arising in SPICE-like circuit simulation
+\cite{Kundert86,KundertSangiovanniVincentelli85,NagelPederson,Quarles:M89/42}.
+Circuit matrices are typically permutable into block triangular form, with many
+singletons (1-by-1 blocks).  They also often have a handful of rows and columns
+with many nonzero entries, due to voltage and current sources.  These rows and
+columns are pushed into the upper block triangular form, and related to the
+singleton blocks (for example, $A_{33}$ in the above system is 1-by-1, and the
+column in $A_{13}$ and $A_{23}$ has many nonzero entries).  Since these
+nearly-dense rows and columns do not appear in the LU factorization of the
+diagonal blocks, they cause no fill-in.
+
+The structural rank of a matrix is based solely on the pattern of its entries,
+not their numerical values.  With random entries, the two ranks are equal with
+probability one.   The structural rank of any matrix is an upper bound on the
+numerical rank.  The maximum transversal algorithm in the BTF package is useful
+in determining if a matrix is structurally rank deficient, and if so, it
+reveals a (non-unique) set of rows and columns that contribute to that rank
+deficiency.  This is useful in determining what parts of a circuit are poorly
+formulated (such as dangling components).
+
+When ordered and factorized with KLU, very little fill-in occurs in the
+resulting LU factors, which means that there is little scope for use of the
+BLAS \cite{ACM679a}.  Sparse LU factorization methods that use the BLAS (such
+as SuperLU \cite{SuperLU99} amd UMFPACK \cite{Davis03_algo,Davis03}) are slower
+than KLU when applied to sparse matrices arising in circuit simulation.  Both
+KLU and SuperLU are based on Gilbert and Peierl's left-looking method
+\cite{GilbertPeierls88}.  SuperLU uses supernodes, but KLU does not; thus the
+name {\em KLU} refers to a ``Clark Kent'' LU factorization algorithm (what
+SuperLU was before it became Super).
+
+For details of the permutation to block triangular form, left-looking sparse
+LU factorization, and approximate minimum degree, refer to \cite{Davis06book}.
+Concise versions of these methods can be found in the CSparse package.  KLU is
+also the topic of a Master's thesis by Palamadai Natarajan \cite{Palamadai05};
+a copy of
+the thesis can be found in the {\tt KLU/Doc} directory.  It includes a
+description of an earlier version of KLU; some of the function names and
+parameter lists have changed in this version.  The descriptions of the methods
+used still applies to the current version of KLU, however.
+
+KLU appears as {\em Algorithm 907: KLU, a direct sparse solver for circuit
+simulation problems}, ACM Transactions on Mathematical Software, vol 37, no 3,
+2010.
+
+%------------------------------------------------------------------------------
+\section{Availability}
+%------------------------------------------------------------------------------
+
+KLU and its required ordering packages (BTF, COLAMD, AMD, and
+SuiteSparse\_config) are
+available at \newline {\tt http://www.suitesparse.com.}  In
+addition, KLU can make use of any user-provided ordering function.  One such
+function is included, which provides KLU with an interface to the ordering
+methods used in CHOLMOD \cite{ChenDavisHagerRajamanickam06}, such as METIS, a
+nested dissection method \cite{KarypisKumar98e}.  After permutation to block
+triangular form, circuit matrices have very good node separators, and are thus
+excellent candidates for nested dissection.  The METIS ordering takes much more
+time to compute than the AMD ordering, but if the ordering is reused many times
+(typical in circuit simulation) the better-quality ordering can pay off in
+lower total simulation time. 
+
+To use KLU, you must obtain the KLU, BTF, SuiteSparse\_config,
+AMD, and COLAMD packages
+in the SuiteSparse suite of sparse matrix libraries.  See 
+{\tt http://www.suitesparse.com} for each of these packages.
+They are also all contained within the single {\tt SuiteSparse.zip} or
+{\tt SuiteSparse.tar.gz} distribution.
+
+%------------------------------------------------------------------------------
+\section{Using KLU and BTF in MATLAB}
+%------------------------------------------------------------------------------
+
+KLU has a single MATLAB interface which provides several options for factorizing
+a matrix and/or using the factors to solve a linear system.  The following is
+a synopsis of its use.  For more details, type {\tt help klu} in MATLAB.
+
+{\footnotesize
+\begin{verbatim}
+   LU = klu (A)            factorizes R\A(p,q) into L*U+F, returning a struct
+   x = klu (A,'\',b)       x = A\b
+   x = klu (b,'/',A)       x = b/A
+   x = klu (LU,'\',b)      x = A\b, where LU = klu(A)
+   x = klu (b,'/',LU)      x = b/A, where LU = klu(A)
+\end{verbatim}
+}
+
+With a single input {\tt klu(A)} returns a MATLAB struct containing the LU
+factors.  The factorization is in the form \verb'L*U + F = R \ A(p,q)'
+where {\tt L*U} is the LU factorization of just the diagonal blocks of the
+block triangular form, {\tt F} is a sparse matrix containing the entries in
+the off-diagonal blocks, {\tt R} is a diagonal matrix containing the row
+scale factors, and {\tt p} and {\tt q} are permutation vectors.  The {\tt LU}
+struct also contains a vector {\tt r} which describes the block boundaries
+(the same as the third output parameter of {\tt dmperm}).  The {\tt k}th
+block consists of rows and columns {\tt r(k)} to {\tt r(k+1)-1} in the
+permuted matrix {\tt A(p,q)} and the factors {\tt L} and {\tt U}.
+
+An optional final input argument ({\tt klu(A,opts)} for example) provides a
+way of modifying KLU's user-definable parameters, including a partial pivoting
+tolerance and ordering options.  A second output argument
+({\tt [LU,info] = klu ( ... )}) provides statistics on the factorization.
+
+The BTF package includes three user-callable MATLAB functions which replicate
+most of features of the MATLAB built-in {\tt dmperm} function, and provide an
+additional option which can significantly limit the worst-case time taken by
+{\tt dmperm}.  For more details, type {\tt help btf}, {\tt help maxtrans},
+and {\tt help strongcomp} in MATLAB.  Additional information about how
+these functions work can be found in \cite{Davis06book}.
+
+{\footnotesize
+\begin{verbatim}
+   [p,q,r] = btf (A)         similar to [p,q,r] = dmperm (A)
+   q = maxtrans (A)          similar to q = dmperm (A')
+   [p,r] = strongcomp (A)    similar to [p,q,r] = dmperm (A + speye(n))
+\end{verbatim}
+}
+
+Both {\tt btf} and {\tt maxtrans} include a second option input, {\tt maxwork},
+which limits the total work performed in the maximum transversal to
+{\tt maxwork * nnz(A)}.  The worst-case time taken by the algorithm is
+$O$ ({\tt n * nnz(A)}), where the matrix {\tt A} is {\tt n}-by-{\tt n}, but
+this worst-case time is rarely reached in practice.
+
+To use the KLU and BTF functions in MATLAB, you must first compile and install
+them.  In the {\tt BTF/MATLAB} directory, type {\tt btf\_install}, and then
+type {\tt klu\_install} in the {\tt KLU/MATLAB} directory.  Alternatively, if
+you have the entire SuiteSparse, simply run the {\tt SuiteSparse\_install}
+function in the {\tt SuiteSparse} directory.
+
+After running the installation scripts, type {\tt pathtool} and save your path
+for future MATLAB sessions.  If you cannot save your path because of file
+permissions, edit your {\tt startup.m} by adding {\tt addpath} commands (type
+{\tt doc startup} and {\tt doc addpath} for more information).
+
+%------------------------------------------------------------------------------
+\section{Using KLU and BTF in a C program}
+\label{Cversion}
+%------------------------------------------------------------------------------
+
+KLU and BTF include the following C-callable functions.  Each function is
+available in two or four versions: with {\tt int} or {\tt long} integers, and
+(for functions that deal with numerical values), with {\tt double} or complex
+{\tt double} values.  The {\tt long} integer is actually a {\tt SuiteSparse\_long},
+which is typically a {\tt long}, defined with a {\tt \#define} statement.  It
+becomes an {\tt \_\_int64} on Microsoft Windows 64, however.
+
+The usage of real and complex, and {\tt int} and {\tt SuiteSparse\_long}, must not be
+mixed, except that some functions can be used for both real and complex cases.
+
+%------------------------------------------------------------------------------
+\subsection{KLU Common object}
+%------------------------------------------------------------------------------
+
+The {\tt klu\_common} object ({\tt klu\_l\_common} for the {\tt SuiteSparse\_long}
+version) contains user-definable parameters and statistics returned from
+KLU functions.  This object appears in every KLU function as the last
+parameter.  Details are given in the {\tt klu.h} include file, which also
+appears below in Section~\ref{klu_include}.  Primary parameters and statistics
+are summarized below.  The defaults are chosen specifically for circuit
+simulation matrices.
+
+\begin{itemize}
+\item {\tt tol}: partial pivoting tolerance.  If the diagonal entry has a
+magnitude greater than or equal to {\tt tol} times the largest magnitude
+of entries in the pivot column, then the diagonal entry is chosen.
+Default value: 0.001.
+
+\item {\tt ordering}: which fill-reducing ordering to use: 0 for AMD,
+1 for COLAMD, 2 for a user-provided permutation {\tt P} and {\tt Q}
+(or a natural ordering if {\tt P} and {\tt Q} are NULL), or 3 for
+the {\tt user\_order} function.  Default: 0 (AMD).
+
+\item {\tt scale}: whether or not the matrix should be scaled.
+If {\tt scale < 0}, then no scaling is performed and the input matrix
+is not checked for errors.  If {\tt scale >= 0}, the input matrix is
+check for errors.
+If {\tt scale=0}, then no scaling is performed.
+If {\tt scale=1}, then each row of {\tt A} is divided by the sum of
+the absolute values in that row.
+If {\tt scale=2}, then each row of {\tt A} is divided by the maximum
+absolute value in that row.  Default: 2.
+
+\item {\tt btf}:  if nonzero, then BTF is used to permute the input matrix
+into block upper triangular form.  This step is skipped if {\tt Common.btf}
+is zero.  Default: 1.
+
+\item {\tt maxwork}: sets an upper limit on the amount of work performed in
+{\tt btf\_maxtrans} to \newline {\tt maxwork*nnz(A)}.  If the limit is reached,
+a partial zero-free diagonal might be found.  This has no effect on whether or
+not the matrix can be factorized, since the matrix can be factorized with no
+BTF pre-ordering at all.  This option provides a tradeoff between the
+effectiveness of the BTF ordering and the cost to compute it.  A partial result
+can result in fewer, and larger, blocks in the BTF form, resulting to more work
+required to factorize the matrix.  No limit is enforced if {\tt maxwork <= 0}.
+Default: 0.
+
+\item {\tt user\_order}: a pointer to a function that can be provided by the
+application that uses KLU, to redefine the fill-reducing ordering used by KLU
+for each diagonal block.  The {\tt int} and {\tt SuiteSparse\_long} prototypes must be
+as follows:
+
+{\footnotesize
+\begin{verbatim}
+int my_ordering_function (int n, int Ap [ ], int Ai [ ], int Perm [ ], klu_common *Common) ;
+
+
+SuiteSparse_long my_long_ordering_function (SuiteSparse_long n,
+    SuiteSparse_long Ap [ ], SuiteSparse_long Ai [ ],
+    SuiteSparse_long Perm [ ], klu_l_common *Common);
+\end{verbatim}
+}
+
+The function should return 0 if an error occurred, and either -1 or a positive
+(nonzero) value if no error occurred.  If greater than zero, then the return
+value is interpreted by KLU as an estimate of the number of nonzeros in $L$ or
+$U$ (whichever is greater), when the permuted matrix is factorized.  Only an
+estimate is possible, since partial pivoting with row interchanges is performed
+during numerical factorization.  The input matrix is provided to the function
+in the parameters {\tt n}, {\tt Ap}, and {\tt Ai}, in compressed-column form.
+The matrix {\tt A} is {\tt n}-by-{\tt n}.  The {\tt Ap} array is of size {\tt
+n+1}; the {\tt j}th column of {\tt A} has row indices {\tt Ai[Ap[j] ...
+Ap[j+1]-1]}.  The {\tt Ai} array is of size {\tt Ap[n]}.  The first column
+pointer {\tt Ap[0]} is zero.  The row indices might not appear sorted in each
+column, but no duplicates will appear.
+
+The output permutation is to be passed back in the {\tt Perm} array, where
+{\tt Perm[k]=j} means that row and column {\tt j} of {\tt A} will appear as
+the {\tt k}th row and column of the permuted matrix factorized by KLU.  The
+{\tt Perm} array is already allocated when it is passed to the user function.
+
+The user function may use, and optionally modify, the contents of the {\tt
+klu\_common Common} object.  In particular, prior to calling KLU, the user
+application can set both {\tt Common.user\_order} and {\tt Common.user\_data}.
+The latter is a {\tt void *} pointer that KLU does not use, except to pass to
+the user ordering function pointed to by {\tt Common.user\_order}.  This is a
+mechanism for passing additional arguments to the user function.
+
+An example user function is provided in the {\tt KLU/User} directory, which
+provides an interface to the ordering method in CHOLMOD.
+
+\end{itemize}
+
+%------------------------------------------------------------------------------
+\subsection{KLU Symbolic object}
+%------------------------------------------------------------------------------
+
+KLU performs its sparse LU factorization in two steps.  The first is purely
+symbolic, and does not depend on the numerical values.  This analysis returns a
+{\tt klu\_symbolic} object ({\tt klu\_l\_symbolic} in the {\tt SuiteSparse\_long}
+version).  The {\tt Symbolic} object contains a pre-ordering which combines the
+block triangular form with the fill-reducing ordering, and an estimate of the
+number of nonzeros in the factors of each block.  Its size is thus modest, only
+proportional to {\tt n}, the dimension of {\tt A}.  It can be reused multiple
+times for the factorization of a sequence of matrices with identical nonzero
+pattern.  Note: a {\em nonzero} in this sense is an entry present in the data
+structure of {\tt A}; such entries may in fact be numerically zero.
+
+%------------------------------------------------------------------------------
+\subsection{KLU Numeric object}
+%------------------------------------------------------------------------------
+
+The {\tt Numeric} object contains the numeric sparse LU factorization, including
+the final pivot permutations.  To solve a linear system, both the {\tt Symbolic}
+and {\tt Numeric} objects are required.
+
+%------------------------------------------------------------------------------
+\subsection{A sparse matrix in KLU}
+%------------------------------------------------------------------------------
+
+% From here on, only the {\tt int} version is described.  In the {\tt SuiteSparse\_long}
+% version, the function names change slightly ({\tt klu\_factor} becomes
+% {\tt klu\_l\_factor}, and the {\tt int}/complex version {\tt klu\_z\_factor}
+% becomes {\tt klu\_zl\_factor}, for example).  For more details on the
+% {\tt SuiteSparse\_long} version, refer to Section~\ref{klu_include}.
+
+The input matrix provided to KLU is in sparse compressed-column form, which is
+the same data structure used internally in MATLAB, except that the version used
+here allows for the row indices to appear in any ordering, and this version
+also allows explicit zero entries to appear in the data structure.  The same
+data structure is used in CSparse, which is fully documented in
+\cite{Davis06book}.  If you wish to use a simpler input data structure,
+consider creating a triplet matrix in CSparse (or CXSparse if you use the long
+and/or complex versions of KLU), and then convert this data structure into a
+sparse compressed-column data structure, using the CSparse {\tt cs\_compress}
+and {\tt cs\_dupl} functions.  Similar functions are available in CHOLMOD
+{\tt cholmod\_triplet\_to\_sparse}.
+
+The matrix is described with four parameters:
+
+\begin{itemize}
+\item {\tt n}: an integer scalar.  The matrix is {\tt n}-by-{\tt n}.  Note that
+KLU only operates on square matrices.
+
+\item {\tt Ap}: an integer array of size {\tt n+1}.  The first entry is {\tt
+Ap[0]=0}, and the last entry {\tt nz=Ap[n]} is equal to the number of entries
+in the matrix.
+
+\item {\tt Ai}: an integer array of size {\tt nz = Ap[n]}.
+The row indices of entries in column {\tt j} of {\tt A} are located in
+{\tt Ai [Ap [j] ... Ap [j+1]-1]}.  The matrix is zero-based; row and column
+indices are in the range 0 to {\tt n-1}.
+
+\item {\tt Ax}: a {\tt double} array of size {\tt nz} for the real case, or
+{\tt 2*nz} for the complex case.  For the complex case, the real and imaginary
+parts are interleaved, compatible with Fortran and the ANSI C99 Complex data
+type.  KLU does not rely on the ANSI C99 data type, however, for portability
+reasons.  The numerical values in column {\tt j} of a real matrix are located
+in {\tt Ax [Ap [j] ... Ap [j+1]-1]}.  For a complex matrix, they appear in {\tt
+Ax [2*Ap [j] ... 2*Ap [j+1]-1]}, as real/imaginary pairs (the real part appears
+first, followed by the imaginary part).
+
+\end{itemize}
+
+%-------------------------------------------------------------------------------
+\subsection{{\tt klu\_defaults}: set default parameters}
+%-------------------------------------------------------------------------------
+
+This function sets the default parameters for KLU and clears the statistics.
+It may be used for either the real or complex cases.  A value of 0 is returned
+if an error occurs, 1 otherwise.  This function {\bf must} be called before
+any other KLU function can be called.
+
+{\footnotesize
+\begin{verbatim}
+    #include "klu.h"
+    int ok ;
+    klu_common Common ;
+    ok = klu_defaults (&Common) ;                                             /* real or complex */
+
+
+    #include "klu.h"
+    SuiteSparse_long ok ;
+    klu_l_common Common ;
+    ok = klu_l_defaults (&Common) ;                                           /* real or complex */
+\end{verbatim}
+}
+
+%-------------------------------------------------------------------------------
+\subsection{{\tt klu\_analyze}: order and analyze a matrix}
+%-------------------------------------------------------------------------------
+
+The following usage returns a {\tt Symbolic} object that contains the
+fill-reducing ordering needed to factorize the matrix {\tt A}.  A NULL pointer
+is returned if a failure occurs.  The error status for this function, and all
+others, is returned in {\tt Common.status}.  These functions may be used for
+both real and complex cases.  The AMD ordering is used if {\tt Common.ordering
+= 0}, COLAMD is used if it is 1, the natural ordering is used if it is 2, and
+the user-provided {\tt Common.user\_ordering} is used if it is 3.
+
+{\footnotesize
+\begin{verbatim}
+    #include "klu.h"
+    int n, Ap [n+1], Ai [nz] ;
+    klu_symbolic *Symbolic ;
+    klu_common Common ;
+    Symbolic = klu_analyze (n, Ap, Ai, &Common) ;                             /* real or complex */
+
+
+    #include "klu.h"
+    SuiteSparse_long n, Ap [n+1], Ai [nz] ;
+    klu_l_symbolic *Symbolic ;
+    klu_l_common Common ;
+    Symbolic = klu_l_analyze (n, Ap, Ai, &Common) ;                           /* real or complex */
+\end{verbatim}
+}
+
+%-------------------------------------------------------------------------------
+\subsection{{\tt klu\_analyze\_given}: order and analyze a matrix}
+%-------------------------------------------------------------------------------
+
+In this routine, the fill-reducing ordering is provided by the user ({\tt
+Common.ordering} is ignored).  Instead, the row permutation {\tt P} and column
+permutation {\tt Q} are used.  These are integer arrays of size {\tt n}.  If
+NULL, a natural ordering is used (so to provide just a column ordering, pass
+{\tt Q} as non-NULL and {\tt P} as NULL).  A NULL pointer is returned if an
+error occurs.  These functions may be used for both real and complex cases.
+
+{\footnotesize
+\begin{verbatim}
+    #include "klu.h"
+    int n, Ap [n+1], Ai [nz], P [n], Q [n] ;
+    klu_symbolic *Symbolic ;
+    klu_common Common ;
+    Symbolic = klu_analyze_given (n, Ap, Ai, P, Q, &Common) ;                 /* real or complex */
+
+
+    #include "klu.h"
+    SuiteSparse_long n, Ap [n+1], Ai [nz], P [n], Q [n] ;
+    klu_l_symbolic *Symbolic ;
+    klu_l_common Common ;
+    Symbolic = klu_l_analyze_given (n, Ap, Ai, P, Q, &Common) ;               /* real or complex */
+\end{verbatim}
+}
+
+%-------------------------------------------------------------------------------
+\subsection{{\tt klu\_factor}: numerical factorization}
+%-------------------------------------------------------------------------------
+
+The {\tt klu\_factor} function factorizes a matrix, using a sparse left-looking
+method with threshold partial pivoting.  The inputs {\tt Ap} and {\tt Ai} must
+be unchanged from the previous call to {\tt klu\_analyze} that created the {\tt
+Symbolic} object.  A NULL pointer is returned if an error occurs.
+
+{\footnotesize
+\begin{verbatim}
+    #include "klu.h"
+    int Ap [n+1], Ai [nz] ;
+    double Ax [nz], Az [2*nz] ;
+    klu_symbolic *Symbolic ;
+    klu_numeric *Numeric ;
+    klu_common Common ;
+    Numeric = klu_factor (Ap, Ai, Ax, Symbolic, &Common) ;                            /* real */
+    Numeric = klu_z_factor (Ap, Ai, Az, Symbolic, &Common) ;                          /* complex */
+
+
+    #include "klu.h"
+    SuiteSparse_long Ap [n+1], Ai [nz] ;
+    double Ax [nz], Az [2*nz] ;
+    klu_l_symbolic *Symbolic ;
+    klu_l_numeric *Numeric ;
+    klu_l_common Common ;
+    Numeric = klu_l_factor (Ap, Ai, Ax, Symbolic, &Common) ;                          /* real */
+    Numeric = klu_zl_factor (Ap, Ai, Az, Symbolic, &Common) ;                         /* complex */
+\end{verbatim}
+}
+
+%-------------------------------------------------------------------------------
+\subsection{{\tt klu\_solve}: solve a linear system}
+%-------------------------------------------------------------------------------
+
+Solves the linear system $Ax=b$, using the {\tt Symbolic} and  {\tt Numeric}
+objects.  The right-hand side {\tt B} is overwritten with the solution on
+output.  The array {\tt B} is stored in column major order, with a leading
+dimension of {\tt ldim}, and {\tt nrhs} columns.  Thus, the real entry $b_{ij}$
+is stored in {\tt B [i+j*ldim]}, where {\tt ldim >= n} must hold.  A complex
+entry $b_{ij}$ is stored in {\tt B [2*(i+j*ldim)]} and {\tt B [2*(i+j*ldim)+1]}
+(for the real and imaginary parts, respectively).  Returns 1 if successful,
+0 if an error occurs.
+
+{\footnotesize
+\begin{verbatim}
+    #include "klu.h"
+    int ldim, nrhs, ok ;
+    double B [ldim*nrhs], Bz [2*ldim*nrhs] ;
+    klu_symbolic *Symbolic ;
+    klu_numeric *Numeric ;
+    klu_common Common ;
+    ok = klu_solve (Symbolic, Numeric, ldim, nrhs, B, &Common) ;                      /* real */
+    ok = klu_z_solve (Symbolic, Numeric, ldim, nrhs, Bz, &Common) ;                   /* complex */
+
+
+    #include "klu.h"
+    SuiteSparse_long ldim, nrhs, ok ;
+    double B [ldim*nrhs], Bz [2*ldim*nrhs] ;
+    klu_symbolic *Symbolic ;
+    klu_numeric *Numeric ;
+    klu_common Common ;
+    ok = klu_l_solve (Symbolic, Numeric, ldim, nrhs, B, &Common) ;                    /* real */
+    ok = klu_zl_solve (Symbolic, Numeric, ldim, nrhs, Bz, &Common) ;                  /* complex */
+\end{verbatim}
+}
+
+%-------------------------------------------------------------------------------
+\subsection{{\tt klu\_tsolve}: solve a transposed linear system}
+%-------------------------------------------------------------------------------
+
+Solves the linear system $A^Tx=b$ or $A^Hx=b$.  The {\tt conj\_solve} input
+is 0 for $A^Tx=b$, or nonzero for $A^Hx=b$.  Otherwise, the function is
+identical to {\tt klu\_solve}.
+
+
+{\footnotesize
+\begin{verbatim}
+    #include "klu.h"
+    int ldim, nrhs, ok ;
+    double B [ldim*nrhs], Bz [2*ldim*nrhs] ;
+    klu_symbolic *Symbolic ;
+    klu_numeric *Numeric ;
+    klu_common Common ;
+    ok = klu_tsolve (Symbolic, Numeric, ldim, nrhs, B, &Common) ;                     /* real */
+    ok = klu_z_tsolve (Symbolic, Numeric, ldim, nrhs, Bz, conj_solve, &Common) ;      /* complex */
+
+
+    #include "klu.h"
+    SuiteSparse_long ldim, nrhs, ok ;
+    double B [ldim*nrhs], Bz [2*ldim*nrhs] ;
+    klu_symbolic *Symbolic ;
+    klu_numeric *Numeric ;
+    klu_common Common ;
+    ok = klu_l_tsolve (Symbolic, Numeric, ldim, nrhs, B, &Common) ;                   /* real */
+    ok = klu_zl_tsolve (Symbolic, Numeric, ldim, nrhs, Bz, conj_solve, &Common) ;     /* complex */
+\end{verbatim}
+}
+
+
+%-------------------------------------------------------------------------------
+\subsection{{\tt klu\_refactor}: numerical refactorization}
+%-------------------------------------------------------------------------------
+
+The {\tt klu\_refactor} function takes as input the {\tt Numeric} object
+created by {\tt klu\_factor} (or as modified by a previous call to {\tt
+klu\_refactor}).  It factorizes a new matrix with the same nonzero pattern as
+that given to the call to {\tt klu\_factor} which created it.  The same pivot
+order is used.  Since this can lead to numeric instability, the use of {\tt
+klu\_rcond}, {\tt klu\_rgrowth}, or {\tt klu\_condest} is recommended to check
+the accuracy of the resulting factorization.  The inputs {\tt Ap} and {\tt Ai}
+must be unmodified since the call to {\tt klu\_factor} that first created the
+{\tt Numeric} object.  This is function is much faster than {\tt klu\_factor},
+and requires no dynamic memory allocation.
+
+{\footnotesize
+\begin{verbatim}
+    #include "klu.h"
+    int ok, Ap [n+1], Ai [nz] ;
+    double Ax [nz], Az [2*nz] ;
+    klu_symbolic *Symbolic ;
+    klu_numeric *Numeric ;
+    klu_common Common ;
+    ok = klu_refactor (Ap, Ai, Ax, Symbolic, Numeric, &Common) ;                      /* real */
+    ok = klu_z_refactor (Ap, Ai, Az, Symbolic, Numeric, &Common) ;                    /* complex */
+
+
+    #include "klu.h"
+    SuiteSparse_long ok, Ap [n+1], Ai [nz] ;
+    double Ax [nz], Az [2*nz] ;
+    klu_l_symbolic *Symbolic ;
+    klu_l_numeric *Numeric ;
+    klu_l_common Common ;
+    ok = klu_l_refactor (Ap, Ai, Ax, Symbolic, Numeric, &Common) ;                    /* real */
+    ok = klu_zl_refactor (Ap, Ai, Az, Symbolic, Numeric, &Common) ;                   /* complex */
+\end{verbatim}
+}
+
+%-------------------------------------------------------------------------------
+\subsection{{\tt klu\_free\_symbolic}: destroy the {\tt Symbolic} object}
+%-------------------------------------------------------------------------------
+
+It is the user's responsibility to destroy the {\tt Symbolic} object when it is
+no longer needed, or else a memory leak will occur.  It is safe to pass a NULL
+{\tt Symbolic} pointer.  These functions may be used for both real and complex
+cases.
+
+{\footnotesize
+\begin{verbatim}
+    #include "klu.h"
+    klu_symbolic *Symbolic ;
+    klu_common Common ;
+    klu_free_symbolic (&Symbolic, &Common) ;                                  /* real or complex */
+
+
+    #include "klu.h"
+    klu_l_symbolic *Symbolic ;
+    klu_l_common Common ;
+    klu_l_free_symbolic (&Symbolic, &Common) ;                                /* real or complex */
+\end{verbatim}
+}
+
+%-------------------------------------------------------------------------------
+\subsection{{\tt klu\_free\_numeric}: destroy the {\tt Numeric} object}
+%-------------------------------------------------------------------------------
+
+It is the user's responsibility to destroy the {\tt Numeric} object when it is
+no longer needed, or else a memory leak will occur.  It is safe to pass a NULL
+{\tt Numeric} pointer.
+
+{\footnotesize
+\begin{verbatim}
+    #include "klu.h"
+    klu_numeric *Numeric ;
+    klu_common Common ;
+    klu_free_numeric (&Numeric, &Common) ;                                            /* real */
+    klu_z_free_numeric (&Numeric, &Common) ;                                          /* complex */
+
+
+    #include "klu.h"
+    klu_l_numeric *Numeric ;
+    klu_l_common Common ;
+    klu_l_free_numeric (&Numeric, &Common) ;                                          /* real */
+    klu_zl_free_numeric (&Numeric, &Common) ;                                         /* complex */
+\end{verbatim}
+}
+
+%-------------------------------------------------------------------------------
+\subsection{{\tt klu\_sort}: sort the columns of L and U}
+%-------------------------------------------------------------------------------
+
+The {\tt klu\_factor} function creates a {\tt Numeric} object with factors
+{\tt L} and {\tt U} stored in a compressed-column form (not the same data
+structure as {\tt A}, but similar).  The columns typically contain lists of
+row indices in unsorted order.  This function sorts these indices, for two
+purposes:  (1) to return {\tt L} and {\tt U} to MATLAB, which expects its
+sparse matrices to have sorted columns, and (2) to slightly improve the
+performance of subsequent calls to {\tt klu\_solve} and {\tt klu\_tsolve}.
+Except within a MATLAB mexFunction (see {\tt KLU/MATLAB/klu\_mex.c}, the use
+of this function is optional.
+
+{\footnotesize
+\begin{verbatim}
+    #include "klu.h"
+    int ok ;
+    klu_symbolic *Symbolic ;
+    klu_numeric *Numeric ;
+    klu_common Common ;
+    ok = klu_sort (Symbolic, Numeric, &Common) ;                                      /* real */
+    ok = klu_z_sort (Symbolic, Numeric, &Common) ;                                    /* complex */
+
+
+    #include "klu.h"
+    SuiteSparse_long ok ;
+    klu_l_symbolic *Symbolic ;
+    klu_l_numeric *Numeric ;
+    klu_l_common Common ;
+    ok = klu_l_sort (Symbolic, Numeric, &Common) ;                                    /* real */
+    ok = klu_zl_sort (Symbolic, Numeric, &Common) ;                                   /* complex */
+\end{verbatim}
+}
+
+%-------------------------------------------------------------------------------
+\subsection{{\tt klu\_flops}: determine the flop count}
+%-------------------------------------------------------------------------------
+
+This function determines the number of floating-point operations performed
+when the matrix was factorized by {\tt klu\_factor} or {\tt klu\_refactor}.
+The result is returned in {\tt Common.flops}.
+
+
+{\footnotesize
+\begin{verbatim}
+    #include "klu.h"
+    int ok ;
+    klu_symbolic *Symbolic ;
+    klu_numeric *Numeric ;
+    klu_common Common ;
+    ok = klu_flops (Symbolic, Numeric, &Common) ;                                     /* real */
+    ok = klu_z_flops (Symbolic, Numeric, &Common) ;                                   /* complex */
+
+
+    #include "klu.h"
+    SuiteSparse_long ok ;
+    klu_l_symbolic *Symbolic ;
+    klu_l_numeric *Numeric ;
+    klu_l_common Common ;
+    ok = klu_l_flops (Symbolic, Numeric, &Common) ;                                   /* real */
+    ok = klu_zl_flops (Symbolic, Numeric, &Common) ;                                  /* complex */
+\end{verbatim}
+}
+
+%-------------------------------------------------------------------------------
+\subsection{{\tt klu\_rgrowth}: determine the pivot growth}
+%-------------------------------------------------------------------------------
+
+Computes the reciprocal pivot growth,
+$\mbox{\em rgrowth} = \min_j (( \max_i |c_{ij}| ) / ( \max_i |u_{ij}| ))$,
+where $c_{ij}$ is a scaled entry in a diagonal block of the block triangular
+form.  In MATLAB notation:
+\begin{verbatim}
+    rgrowth = min (max (abs (R\A(p,q) - F)) ./ max (abs (U)))
+\end{verbatim}
+where the factorization is \verb'L*U + F = R \ A(p,q)'.
+This function returns 0 if an error occurred, 1 otherwise.  If {\tt rgrowth} is
+very small, an inaccurate factorization may have been performed.  The inputs
+{\tt Ap}, {\tt Ai}, and {\tt Ax}  ({\tt Az} in the complex case) must be
+unchanged since the last call to {\tt klu\_factor} or {\tt klu\_refactor}.  The
+result is returned in {\tt Common.rgrowth}.
+
+{\footnotesize
+\begin{verbatim}
+    #include "klu.h"
+    int ok, Ap [n+1], Ai [nz] ;
+    double Ax [nz], Az [2*nz] ;
+    klu_symbolic *Symbolic ;
+    klu_numeric *Numeric ;
+    klu_common Common ;
+    ok = klu_rgrowth (Ap, Ai, Ax, Symbolic, Numeric, &Common) ;                       /* real */
+    ok = klu_z_rgrowth (Ap, Ai, Az, Symbolic, Numeric, &Common) ;                     /* complex */
+
+
+    #include "klu.h"
+    SuiteSparse_long ok, Ap [n+1], Ai [nz] ;
+    double Ax [nz], Az [2*nz] ;
+    klu_l_symbolic *Symbolic ;
+    klu_l_numeric *Numeric ;
+    klu_l_common Common ;
+    ok = klu_l_rgrowth (Ap, Ai, Ax, Symbolic, Numeric, &Common) ;                     /* real */
+    ok = klu_zl_rgrowth (Ap, Ai, Az, Symbolic, Numeric, &Common) ;                    /* complex */
+\end{verbatim}
+}
+
+%-------------------------------------------------------------------------------
+\subsection{{\tt klu\_condest}: accurate condition number estimation}
+%-------------------------------------------------------------------------------
+
+This function is essentially the same as the MATLAB {\tt condest} function.  It
+computes an estimate of the 1-norm condition number, using Hager's method
+\cite{Hager84} and the generalization by Higham and Tisseur
+\cite{HighamTisseur00}.  The inputs {\tt Ap}, and {\tt Ax} ({\tt Az} in the
+complex case) must be unchanged since the last call to {\tt klu\_factor} or
+{\tt klu\_refactor}.  The result is returned in {\tt Common.condest}.
+
+{\footnotesize
+\begin{verbatim}
+    #include "klu.h"
+    int ok, Ap [n+1] ;
+    double Ax [nz], Az [2*nz] ;
+    klu_symbolic *Symbolic ;
+    klu_numeric *Numeric ;
+    klu_common Common ;
+    ok = klu_condest (Ap, Ax, Symbolic, Numeric, &Common) ;                           /* real */
+    ok = klu_z_condest (Ap, Az, Symbolic, Numeric, &Common) ;                         /* complex */
+
+
+    #include "klu.h"
+    SuiteSparse_long ok, Ap [n+1] ;
+    double Ax [nz], Az [2*nz] ;
+    klu_l_symbolic *Symbolic ;
+    klu_l_numeric *Numeric ;
+    klu_l_common Common ;
+    ok = klu_l_condest (Ap, Ax, Symbolic, Numeric, &Common) ;                         /* real */
+    ok = klu_zl_condest (Ap, Az, Symbolic, Numeric, &Common) ;                        /* complex */
+\end{verbatim}
+}
+
+
+%-------------------------------------------------------------------------------
+\subsection{{\tt klu\_rcond}: cheap reciprocal condition number estimation}
+%-------------------------------------------------------------------------------
+
+This function returns the smallest diagonal entry of {\tt U} divided by the
+largest, which is a very crude estimate of the reciprocal of the condition
+number of the matrix {\tt A}.  It is very cheap to compute, however.
+In MATLAB notation, {\tt rcond = min(abs(diag(U))) / max(abs(diag(U)))}.
+If the matrix is singular, {\tt rcond} will be zero.  The result is returned
+in {\tt Common.rcond}.
+
+
+{\footnotesize
+\begin{verbatim}
+    #include "klu.h"
+    int ok ;
+    klu_symbolic *Symbolic ;
+    klu_numeric *Numeric ;
+    klu_common Common ;
+    ok = klu_rcond (Symbolic, Numeric, &Common) ;                                     /* real */
+    ok = klu_z_rcond (Symbolic, Numeric, &Common) ;                                   /* complex */
+
+
+    #include "klu.h"
+    SuiteSparse_long ok ;
+    klu_l_symbolic *Symbolic ;
+    klu_l_numeric *Numeric ;
+    klu_l_common Common ;
+    ok = klu_l_rcond (Symbolic, Numeric, &Common) ;                                   /* real */
+    ok = klu_zl_rcond (Symbolic, Numeric, &Common) ;                                  /* complex */
+\end{verbatim}
+}
+
+
+%-------------------------------------------------------------------------------
+\subsection{{\tt klu\_scale}: scale and check a sparse matrix}
+%-------------------------------------------------------------------------------
+
+This function computes the row scaling factors of a matrix and checks to see if
+it is a valid sparse matrix.  It can perform two kinds of scaling, computing
+either the largest magnitude in each row, or the sum of the magnitudes of the
+entries each row.  KLU calls this function itself, depending upon the {\tt
+Common.scale} parameter, where {\tt scale < 0} means no scaling, {\tt scale=1}
+means the sum, and {\tt scale=2} means the maximum.  That is, in MATLAB
+notation, {\tt Rs = sum(abs(A'))} or {\tt Rs = max(abs(A'))}.  KLU then divides
+each row of {\tt A} by its corresponding scale factor.  The function returns 0
+if the matrix is invalid, or 1 otherwise.  A valid sparse matrix must meet the
+following conditions:
+
+\begin{enumerate}
+\item {\tt n > 0}.  Note that KLU does not handle empty (0-by-0) matrices.
+\item {\tt Ap}, {\tt Ai}, and {\tt Ax} ({\tt Az} for the complex case) must not be NULL.
+\item {\tt Ap[0]=0}, and {\tt Ap [j] <= Ap [j+1]} for all {\tt j} in the range 0 to {\tt n-1}.
+\item The row indices in each column, {\tt Ai [Ap [j] ... Ap [j+1]-1]}, must be in
+the range 0 to {\tt n-1}, and no duplicates can appear.  If the workspace {\tt W} is
+NULL on input, the check for duplicate entries is skipped.
+\end{enumerate}
+
+{\footnotesize
+\begin{verbatim}
+    #include "klu.h"
+    int scale, ok, n, Ap [n+1], Ai [nz], W [n] ;
+    double Ax [nz], Az [2*nz], Rs [n] ;
+    klu_common Common ;
+    ok = klu_scale (scale, n, Ap, Ai, Ax, Symbolic, Numeric, &Common) ;               /* real */
+    ok = klu_z_scale (scale, n, Ap, Ai, Az, Symbolic, Numeric, &Common) ;             /* complex */
+
+
+    #include "klu.h"
+    SuiteSparse_long scale, ok, n, Ap [n+1], Ai [nz], W [n] ;
+    double Ax [nz], Az [2*nz], Rs [n] ;
+    klu_l_common Common ;
+    ok = klu_l_scale (scale, n, Ap, Ai, Ax, Symbolic, Numeric, &Common) ;             /* real */
+    ok = klu_zl_scale (scale, n, Ap, Ai, Az, Symbolic, Numeric, &Common) ;            /* complex */
+\end{verbatim}
+}
+
+%-------------------------------------------------------------------------------
+\subsection{{\tt klu\_extract}: extract the LU factorization}
+%-------------------------------------------------------------------------------
+
+This function extracts the LU factorization into a set of data structures
+suitable for passing back to MATLAB, with matrices in conventional
+compressed-column form.  The {\tt klu\_sort} function should be called first if
+the row indices should be returned sorted.  The factorization is returned in
+caller-provided arrays; if any of them are NULL, that part of the factorization
+is not extracted (this is not an error).  Returns 1 if successful, 0 otherwise.
+
+The sizes of {\tt Li}, {\tt Lx}, and {\tt Lz} are {\tt Numeric->lnz},
+{\tt Ui}, {\tt Ux}, and {\tt Uz} are of size {\tt Numeric->unz}, and
+{\tt Fi}, {\tt Fx}, and {\tt Fz} are of size {\tt Numeric->nzoff}.
+Note that in the complex versions, the real and imaginary parts are returned
+in separate arrays, to be compatible with how MATLAB stores complex matrices.
+
+This function is not required to solve a linear system with KLU.  KLU does not
+itself make use of the extracted LU factorization returned by this function.
+It is only provided to simplify the MATLAB interface to KLU, and it may be of
+use to the end user who wishes to examine the contents of the LU factors.
+
+{\footnotesize
+\begin{verbatim}
+    #include "klu.h"
+    int ok, Lp [n+1], Li [lnz], Up [n+1], Ui [unz], Fp [n+1], Fi [nzoff], P [n], Q [n], R [n] ;
+    double Lx [lnz], Lz [lnz], Ux [unz], Uz [unz], Fx [nzoff], Fz [nzoff], Rs [n] ;
+    klu_symbolic *Symbolic ;
+    klu_numeric *Numeric ;
+    klu_common Common ;
+    ok = klu_extract (Numeric, Symbolic,
+        Lp, Li, Lx, Up, Ui, Ux, Fp, Fi, Fx, P, Q, Rs, R, &Common) ;                   /* real */
+    ok = klu_z_extract (Numeric, Symbolic,
+        Lp, Li, Lx, Lz, Up, Ui, Ux, Uz, Fp, Fi, Fx, Fz, P, Q, Rs, R, &Common) ;       /* complex */
+
+
+    #include "klu.h"
+    SuiteSparse_long ok, Lp [n+1], Li [lnz], Up [n+1], Ui [unz], Fp [n+1],
+        Fi [nzoff], P [n], Q [n], R [n] ;
+    double Lx [lnz], Lz [lnz], Ux [unz], Uz [unz], Fx [nzoff], Fz [nzoff], Rs [n] ;
+    klu_l_symbolic *Symbolic ;
+    klu_l_numeric *Numeric ;
+    klu_l_common Common ;
+    ok = klu_l_extract (Numeric, Symbolic,
+        Lp, Li, Lx, Up, Ui, Ux, Fp, Fi, Fx, P, Q, Rs, R, &Common) ;                   /* real */
+    ok = klu_zl_extract (Numeric, Symbolic,
+        Lp, Li, Lx, Lz, Up, Ui, Ux, Uz, Fp, Fi, Fx, Fz, P, Q, Rs, R, &Common) ;       /* complex */
+\end{verbatim}
+}
+
+%-------------------------------------------------------------------------------
+\subsection{{\tt klu\_malloc}, {\tt klu\_free}, {\tt klu\_realloc}:
+memory management}
+%-------------------------------------------------------------------------------
+
+KLU uses a set of wrapper routines for {\tt malloc}, {\tt free}, and {\tt
+realloc}.  By default, these wrapper routines call the ANSI C versions of these
+functions.  However, pointers to functions in {\tt Common} can be modified
+after calling {\tt klu\_defaults} to allow the use of other memory management
+functions (such as the MATLAB {\tt mxMalloc}, {\tt mxFree}, and {\tt
+mxRealloc}.  These wrapper functions keep track of the current and peak memory
+usage of KLU.  They can be called by the user.
+
+{\tt klu\_malloc} is essentially the same as {\tt p = malloc (n * sizeof
+(size))}, {\tt klu\_free} is essentially the same as {\tt free(p)} except that
+{\tt klu\_free} returns NULL which can then be assigned to {\tt p}.  {\tt
+klu\_realloc} is similar to {\tt realloc}, except that if the reallocation
+fails, {\tt p} is returned unchanged.  Failure conditions are returned in {\tt
+Common.status}.
+
+{\footnotesize
+\begin{verbatim}
+    #include "klu.h"
+    size_t n, nnew, nold, size ;
+    void *p ;
+    klu_common Common ;
+    p = klu_malloc (n, size, &Common) ;
+    p = klu_free (p, n, size, &Common) ;
+    p = klu_realloc (nnew, nold, size, p, &Common) ;
+
+
+    #include "klu.h"
+    size_t n, nnew, nold, size ;
+    void *p ;
+    klu_l_common Common ;
+    p = klu_l_malloc (n, size, &Common) ;
+    p = klu_l_free (p, n, size, &Common) ;
+    p = klu_l_realloc (nnew, nold, size, p, &Common) ;
+    \end{verbatim}
+}
+
+%-------------------------------------------------------------------------------
+\subsection{{\tt btf\_maxtrans}: maximum transversal}
+%-------------------------------------------------------------------------------
+
+The BTF package includes three user-callable functions (each with {\tt int}
+and {\tt SuiteSparse\_long} versions).  They do not need to be called directly by an
+application that uses KLU.  KLU will call these functions to perform the
+permutation into upper block triangular form.
+
+The {\tt btf\_maxtrans} function finds a column permutation {\tt Q} that gives
+{\tt A*Q} a zero-free diagonal, if one exists.  If row {\tt i} is matched to
+column {\tt j}, then {\tt Match[i]=j}.  If the matrix is structurally singular,
+there will be some unmatched rows.  If row {\tt i} is unmatched, then {\tt
+Match[i]=-1}.  If the matrix is square and structurally non-singular, then {\tt
+Q=Match} is the column permutation.  The {\tt btf\_maxtrans} function can
+accept as input a rectangular matrix; it operates on the bipartite graph of
+{\tt A}.  It returns the number of columns matched.  Unlike the KLU
+user-callable functions, the BTF functions do not check its inputs at all; a
+segmentation fault will occur if any input pointers are NULL, for example.
+
+The function can require up to $O$({\tt n*nnz(A)}) time (excluding the {\em
+cheap match} phase, which takes another $O$({\tt nnz(A)}) time.  If {\tt
+maxwork > 0} on input, the work is limited to $O$({\tt maxwork*nnz(A)})
+(excluding the cheap match), but the maximum transversal might not be found if
+the limit is reached.
+
+The {\tt Work} array is workspace required by the methods; its contents
+are undefined on input and output.
+
+{\footnotesize
+\begin{verbatim}
+    int nrow, ncol, Ap [ncol+1], Ai [nz], Match [nrow], Work [5*ncol], nmatch ;
+    double maxwork, work ;
+    nmatch = btf_maxtrans (nrow, ncol, Ap, Ai, maxwork, &work, Match, Work) ;
+
+
+    SuiteSparse_long nrow, ncol, Ap [ncol+1], Ai [nz], Match [nrow], Work [5*ncol], nmatch ;
+    double maxwork, work ;
+    nmatch = btf_l_maxtrans (nrow, ncol, Ap, Ai, maxwork, &work, Match, Work) ;
+\end{verbatim}
+}
+
+%-------------------------------------------------------------------------------
+\subsection{{\tt btf\_strongcomp}: strongly connected components}
+%-------------------------------------------------------------------------------
+
+The {\tt btf\_strongcomp} function finds the strongly connected components of a
+directed graph, returning a symmetric permutation {\tt P}.  The matrix {\tt A}
+must be square.  The diagonal of {\tt A} (or {\tt A*Q} if a column permutation
+is given on input) is ignored.  If {\tt Q} is NULL on input, the matrix
+{\tt P*A*P'} is in upper block triangular form.  Otherwise, {\tt Q} is modified
+on output so that {\tt P*A*Q} is in upper block triangular form.  The vector
+{\tt R} gives the block boundaries, where the {\tt k}th block consists of
+rows and columns {\tt R[k]} through {\tt R[k+1]-1} in the permuted matrix.
+The function returns the number of strongly connected components found
+(the diagonal blocks in the block triangular form).
+
+{\footnotesize
+\begin{verbatim}
+    int n, Ap [n+1], Ai [nz], Q [n], P [n], R [n+1], Work [4*n], ncomp ;
+    ncomp = btf_strongcomp (n, Ap, Ai, Q, P, R, Work) ;
+
+
+    SuiteSparse_long n, Ap [n+1], Ai [nz], Q [n], P [n], R [n+1], Work [4*n], ncomp ;
+    ncomp = btf_l_strongcomp (n, Ap, Ai, Q, P, R, Work) ;
+\end{verbatim}
+}
+
+%-------------------------------------------------------------------------------
+\subsection{{\tt btf\_order}: permutation to block triangular form}
+%-------------------------------------------------------------------------------
+
+
+The {\tt btf\_order} function combines the above two functions, first finding a
+maximum transversal and then permuting the resulting matrix into upper block
+triangular form.  Unlike {\tt dmperm} in MATLAB, it always reveals the maximum
+matching along the diagonal, even if the matrix is structurally singular.
+
+On output, {\tt P} and {\tt Q} are the row and column permutations, where
+{\tt i = P[k]} if row {\tt i} of {\tt A} is the {\tt k}th row of {\tt P*A*Q},
+and {\tt j = BTF\_UNFLIP(Q[k])} if column {\tt j} of {\tt A} is the {\tt k}th
+column of {\tt P*A*Q}.  If {\tt Q[k] < 0}, then the {\tt (k,k)}th entry in
+{\tt P*A*Q} is structurally zero.  The vector {\tt R}, and the return value,
+are the same as {\tt btf\_strongcomp}.
+
+{\footnotesize
+\begin{verbatim}
+    int n, Ap [n+1], Ai [nz], P [n], Q [n], R [n+1], nfound, Work [5*n], ncomp, nfound ;
+    double maxwork, work ;
+    ncomp = btf_order (n, Ap, Ai, maxwork, &work, P, Q, R, &nfound, Work) ;
+
+
+    SuiteSparse_long n, Ap [n+1], Ai [nz], P [n], Q [n], R [n+1], nfound, Work [5*n], ncomp, nfound ;
+    double maxwork, work ;
+    ncomp = btf_l_order (n, Ap, Ai, maxwork, &work, P, Q, R, &nfound, Work) ;
+\end{verbatim}
+}
+
+%------------------------------------------------------------------------------
+\subsection{Sample C programs that use KLU}
+%------------------------------------------------------------------------------
+
+Here is a simple main program, {\tt klu\_simple.c}, that illustrates the basic
+usage of KLU.  It uses KLU, and indirectly makes use of BTF and AMD.  COLAMD is
+required to compile the demo, but it is not called by this example.  It uses
+statically defined global variables for the sparse matrix {\tt A}, which would
+not be typical of a complete application.  It just makes for a simpler example.
+
+{\footnotesize
+\input{klu_simple_c.tex}
+}
+
+The {\tt Ap}, {\tt Ai}, and {\tt Ax} arrays represent the matrix
+\[
+A = \left[
+\begin{array}{ccccc}
+ 2 &  3 &  0 &  0 &  0 \\
+ 3 &  0 &  4 &  0 &  6 \\
+ 0 & -1 & -3 &  2 &  0 \\
+ 0 &  0 &  1 &  0 &  0 \\
+ 0 &  4 &  2 &  0 &  1 \\
+\end{array}
+\right].
+\]
+The solution to $Ax=b$ is $x = [1 \, 2 \, 3 \, 4 \, 5]^T$.  The program
+uses default control settings (no scaling, permutation to block triangular
+form, and the AMD ordering).  It ignores the error codes in the return values
+and {\tt Common.status}.
+
+The block triangular form found by {\tt btf\_order} for this matrix is
+given below
+\[
+PAQ = \left[
+\begin{array}{c|ccc|c}
+2 & 0 & 0 & -1 & -3 \\
+\hline
+  & 2 & 0 & 3 & 0 \\
+  & 3 & 6 & 0 & 4 \\
+  & 0 & 1 & 4 & 1 \\
+\hline
+  &   &   &   & 1 \\
+\end{array}
+\right].
+\]
+This ordering is not modified by the AMD ordering because the 3-by-3 matrix
+$A_{22} + A_{22}^T$ happens to be a dense matrix.  No partial pivoting happens
+to occur during LU factorization; all pivots are selected along the diagonal of
+each block.  The matrix contains two singletons, which are the original entries
+$a_{34}=2$ and $a_{43}=1$, and one 3-by-3 diagonal block (in which a single
+fill-in entry occurs during factorization: the $u_{23}$ entry of this 3-by-3
+matrix).
+
+For a more complete program that uses KLU, see {\tt KLU/Demo/kludemo.c} for an
+{\tt int} version, and {\tt KLU/Demo/kluldemo.c} for a version that uses {\tt
+SuiteSparse\_long} instead.  The top-level main routine uses CHOLMOD to read in a
+compressed-column sparse matrix from a Matrix Market file, because KLU does not
+include such a function.  Otherwise, no CHOLMOD functions are used.  Unlike
+{\tt klu\_simple.c}, CHOLMOD is required to run the {\tt kludemo.c} and {\tt
+kluldemo.c} programs.
+
+%------------------------------------------------------------------------------
+\section{Installation}
+\label{Install}
+%------------------------------------------------------------------------------
+
+Installation of the C-callable interface requires the {\tt make} utility, in
+Linux/Unix.  Alternatively, you can use the Cygwin {\tt make} in Windows.
+The MATLAB installation in any platform, including Windows is simple; just
+type {\tt klu\_install} to compile and install KLU, BTF, AMD, and COLAMD.
+
+For {\tt make}, system-dependent configurations are in the {\tt
+../SuiteSparse\_config/SuiteSparse\_config.mk} file.
+You can edit that file to customize the
+compilation, but it now automatically detecs your system (Linux, Mac, etc).
+So it's not likely that you will need to edit that file.
+
+To compile and install the C-callable KLU, BTF, AMD, and COLAMD libraries, go
+to the {\tt KLU} directory and type {\tt make}.  The KLU and BTF libraries are
+placed in {\tt KLU/Lib/libklu.*} and {\tt BTF/Lib/libbtf.*}.
+Two KLU demo
+programs will be compiled and tested in the {\tt KLU/Demo} directory.  You can
+compare the output of {\tt make} with the results in the KLU distribution, {\tt
+kludemo.out}.
+
+Typing {\tt make clean} will remove all but the final compiled libraries and
+demo programs.  Typing {\tt make purge} or {\tt make distclean} removes all
+files not in the original distribution.  If you compile KLU or BTF and then
+later change the {\tt ../SuiteSparse\_config/SuiteSparse\_config.mk}
+file then you should type {\tt
+make purge} and then {\tt make} to recompile.
+
+When you compile your program that uses the C-callable KLU library, you need to
+add the {\tt KLU/Lib/libklu.*}, {\tt BTF/Lib/libbtf.*}, {\tt AMD/Lib/libamd.*},
+and {\tt COLAMD/Lib/libcolamd.*} libraries, and you need to tell your compiler to
+look in the {\tt KLU/Include} and {\tt BTF/Include} directory for include
+files.
+Alternatively, do {\tt make install}, and KLU will be installed in
+/usr/local/lib and /usr/local/include, and documentation is placed in
+/usr/local/doc.  These installation locations can be changed;
+see {\tt SuiteSparse/README.txt} for details.
+
+If all you want to use is the KLU mexFunction in MATLAB, you can skip the use
+of the {\tt make} command entirely.  Simply type {\tt klu\_install} in the
+MATLAB command window while in the {\tt KLU/MATLAB} directory.  This works on
+any system with MATLAB, including Windows.
+
+%------------------------------------------------------------------------------
+\newpage
+\section{The KLU routines}
+\label{klu_include}
+%------------------------------------------------------------------------------
+
+The file {\tt KLU/Include/klu.h} listed below describes each user-callable
+routine in the C version of KLU, and gives details on their use.
+
+{\footnotesize
+\input{klu_h.tex}
+}
+
+%------------------------------------------------------------------------------
+\newpage
+\section{The BTF routines}
+\label{btf_include}
+%------------------------------------------------------------------------------
+
+The file {\tt BTF/Include/btf.h} listed below describes each user-callable
+routine in the C version of BTF, and gives details on their use.
+
+{\footnotesize
+\input{btf_h.tex}
+}
+
+%------------------------------------------------------------------------------
+\newpage
+% References
+%------------------------------------------------------------------------------
+
+\bibliographystyle{plain}
+\bibliography{KLU_UserGuide}
+
+\end{document}

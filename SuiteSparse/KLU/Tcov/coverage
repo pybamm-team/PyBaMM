@@ -1,0 +1,4 @@
+#!/bin/csh
+gcov cov*.c >& /dev/null
+echo -n 'statements not covered: '
+grep "#####"  *.c.gcov | wc -l

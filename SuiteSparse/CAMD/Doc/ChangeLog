@@ -1,0 +1,107 @@
+May 4, 2016: version 2.4.6
+
+    * minor changes to Makefile
+
+Apr 1, 2016: version 2.4.5
+
+    * licensing simplified (no other change); refer to CAMD/Doc/License.txt
+
+Feb 1, 2016: version 2.4.4
+
+    * update to Makefiles
+
+Jan 30, 2016: version 2.4.3
+
+    * modifications to Makefiles
+
+Jan 1, 2016: version 2.4.2
+
+    * modified Makefile to create shared libraries
+            No change to C code except version number
+
+Oct 10, 2014: version 2.4.1
+
+    modified MATLAB/camd_make.m.  No change to C code except version number.
+
+July 31, 2013: version 2.4.0
+
+    * changed malloc and printf pointers to use SuiteSparse_config
+
+Jun 20, 2012: verison 2.3.1
+
+    * minor update for Windows (removed filesep)
+
+Jun 1, 2012: version 2.3.0
+
+    * changed from UFconfig to SuiteSparse_config
+
+May 15, 2012: version 2.2.4
+
+    * minor fix to SIZE_T_MAX definition (finicky compiler workaround)
+
+Dec 7, 2011: version 2.2.3
+
+    * fixed the Makefile to better align with CFLAGS and other standards
+
+Jan 25, 2011: version 2.2.2
+
+    * minor fix to "make install"
+
+Nov 30, 2009: version 2.2.1
+
+    * added "make install" and "make uninstall"
+
+May 31, 2007: version 2.2.0
+
+    * port to 64-bit MATLAB
+
+    * Makefile moved from Source/ to Lib/
+
+Dec 12, 2006, v2.1.3
+
+    * minor MATLAB cleanup
+
+Sept 28, 2006, v2.1.2
+
+    * #define SIZE_T_MAX not done if already defined (Mac OSX).
+
+Aug 31, 2006: v2.1.1
+
+    * trivial change to comments in camd.m
+
+June 27, 2006: CAMD Version 2.1
+
+    * bug fix.  Ordering constraints not always met if dense and/or empty
+	nodes are present in the matrix.
+
+Apr. 30, 2006: CAMD Version 2.0
+
+    * CAMD released, based on AMD v2.0.  To compare the two codes, type the
+	command ./docdiff in this directory (the "CAMD" and "camd" strings
+	are replaced with "AMD" and "amd" when the two packages are compared,
+	to make more evident the substantive differences between the packages).
+
+	Primary differences with AMD v2.0:
+
+	CAMD adds the ability to order the matrix with constraints.  Each
+	node i in the graph (row/column i in the matrix) has a constraint,
+	C[i], which is in the range 0 to n-1.  All nodes with C[i] = 0 are
+	ordered first, followed by all nodes with constraint 1, and so on.
+	That is, C[P[k]] is monotonically non-decreasing as k varies from 0
+	to n-1.  camd_order has an additional C parameter; if NULL, no
+	constraints are used (the ordering will be similar to AMD's ordering).
+	The optional C parameter is also added to the MATLAB interface,
+	p = camd (A,Control,C).
+
+	Since the C parameter is optional, CAMD can replace AMD in any
+	application that uses AMD.  Just pass C = NULL (or omit C in the MATLAB
+	interface).  There is no Fortran version of CAMD, however.
+
+	The postordering is different, and there is no camd_post_tree.c file.
+
+	A new routine, camd_cvalid, has been added to check the validity of C.
+
+	CAMD requires more workspace than AMD (n+1 integers).
+
+	All user-visible names AMD* and amd* replaced with CAMD* and camd*.
+

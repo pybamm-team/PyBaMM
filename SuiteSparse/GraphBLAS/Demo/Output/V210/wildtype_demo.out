@@ -1,0 +1,409 @@
+WildType size: 128
+GraphBLAS type: WildType user-defined: [wildtype] size: 128
+
+a wildtype scalar: scalar1 [this is from scalar1]
+       0.0        1.0        2.0        3.0 
+     100.0      101.0      102.0      103.0 
+     200.0      201.0      202.0      203.0 
+     300.0      301.0      302.0      303.0 
+
+a wildtype scalar: got scalar2 = C(7,2) [this is A(2,7)]
+       0.0        1.0        2.0        3.0 
+     100.0      101.0      102.0      103.0 
+     200.0      201.0      202.0      203.0 
+     300.0      301.0      302.0      303.0 
+
+a wildtype scalar: scalar2 [here is scalar2]
+       0.5        1.5        2.5        3.5 
+      -0.5        0.5        1.5        2.5 
+      -1.5       -0.5        0.5        1.5 
+      -2.5       -1.5       -0.5        0.5 
+
+a wildtype scalar: scalar_identity for the monoid [identity]
+       0.0        0.0        0.0        0.0 
+       0.0        0.0        0.0        0.0 
+       0.0        0.0        0.0        0.0 
+       0.0        0.0        0.0        0.0 
+
+GraphBLAS Semiring: InTheWild (user-defined at run-time)
+GraphBLAS Monoid: semiring->add (user-defined at run-time)
+GraphBLAS BinaryOp: monoid->op (user-defined) z=wildtype_add(x,y)
+GraphBLAS type: ztype user-defined: [wildtype] size: 128
+GraphBLAS type: xtype user-defined: [wildtype] size: 128
+GraphBLAS type: ytype user-defined: [wildtype] size: 128
+identity: [ [user-defined value] ]
+
+GraphBLAS BinaryOp: semiring->multiply (user-defined) z=wildtype_mult(x,y)
+GraphBLAS type: ztype user-defined: [wildtype] size: 128
+GraphBLAS type: xtype user-defined: [wildtype] size: 128
+GraphBLAS type: ytype user-defined: [wildtype] size: 128
+
+multiplication C=A*B InTheWild semiring:
+
+Printing the matrix with GxB_Matrix_fprint:
+
+GraphBLAS matrix: input A 
+nrows: 10 ncols: 10 max # entries: 3
+format: standard CSR vlen: 10 nvec_nonempty: 2 nvec: 10 plen: 10 vdim: 10
+hyper_ratio 0.0625
+GraphBLAS type:  user-defined: [wildtype] size: 128
+number of entries: 3 
+row: 2 : 2 entries [0:1]
+    column 4: [user-defined value]
+    column 7: [user-defined value]
+row: 3 : 1 entries [2:2]
+    column 7: [user-defined value]
+
+
+============= printing the WildType matrix: input A (10-by-10 with 3 entries)
+
+----------- input A(2,4):
+
+a wildtype scalar:  [this is A(2,4)]
+       0.0        1.0        2.0        3.0 
+     100.0      101.0      102.0      103.0 
+     200.0      201.0      202.0      909.0 
+     300.0      301.0      302.0       42.0 
+
+----------- input A(2,7):
+
+a wildtype scalar:  [this is A(2,7)]
+       0.0        1.0        2.0        3.0 
+     100.0      101.0      102.0      103.0 
+     200.0      201.0      202.0      203.0 
+     300.0      301.0      302.0      303.0 
+
+----------- input A(3,7):
+
+a wildtype scalar:  [this is A(3,7)]
+       0.0        1.0        2.0        3.0 
+     100.0      101.0      102.0      103.0 
+     200.0      201.0      202.0      909.0 
+     300.0      301.0      302.0      303.0 
+
+============= that was the WildType matrix input A
+
+Printing the matrix with GxB_Matrix_fprint:
+
+GraphBLAS matrix: input B 
+nrows: 10 ncols: 10 max # entries: 0
+format: hypersparse CSR vlen: 10 nvec_nonempty: 0 nvec: 0 plen: 1 vdim: 10
+hyper_ratio 0.0625
+GraphBLAS type:  user-defined: [wildtype] size: 128
+empty
+number of entries: 0 
+pending tuples: 3 max pending: 256 zombies: 0
+pending tuples:
+GraphBLAS type:  user-defined: [wildtype] size: 128
+row: 7 col: 2 [user-defined value]
+row: 7 col: 5 [user-defined value]
+row: 4 col: 2 [user-defined value]
+pending operator: implicit 2nd
+
+
+============= printing the WildType matrix: input B (10-by-10 with 3 entries)
+
+----------- input B(4,2):
+
+a wildtype scalar:  [finally, B(4,2)]
+      -1.0        1.5        2.5       77.0 
+      -0.5        0.5        1.5        2.5 
+      -1.5       -0.5        0.5        1.5 
+      -2.5       -1.5       -0.5        0.5 
+
+----------- input B(7,2):
+
+a wildtype scalar:  [this is B(7,2)]
+       0.5        1.5        2.5        3.5 
+      -0.5        0.5        1.5        2.5 
+      -1.5       -0.5        0.5        1.5 
+      -2.5       -1.5       -0.5        0.5 
+
+----------- input B(7,5):
+
+a wildtype scalar:  [here is B(7,5)]
+      -1.0        1.5        2.5        3.5 
+      -0.5        0.5        1.5        2.5 
+      -1.5       -0.5        0.5        1.5 
+      -2.5       -1.5       -0.5        0.5 
+
+============= that was the WildType matrix input B
+
+a wildtype scalar: x for multiply: [this is A(2,7)]
+       0.0        1.0        2.0        3.0 
+     100.0      101.0      102.0      103.0 
+     200.0      201.0      202.0      203.0 
+     300.0      301.0      302.0      303.0 
+
+a wildtype scalar: y for multiply: [this is B(7,2)]
+       0.5        1.5        2.5        3.5 
+      -0.5        0.5        1.5        2.5 
+      -1.5       -0.5        0.5        1.5 
+      -2.5       -1.5       -0.5        0.5 
+
+do the multiply:
+   [this was multiplied] = [this is A(2,7)] * [this is B(7,2)]
+
+a wildtype scalar: z = x*y: [this was multiplied]
+     -11.0       -5.0        1.0        7.0 
+    -411.0       -5.0      401.0      807.0 
+    -811.0       -5.0      801.0     1607.0 
+   -1211.0       -5.0     1201.0     2407.0 
+
+a wildtype scalar: x for add: [identity]
+       0.0        0.0        0.0        0.0 
+       0.0        0.0        0.0        0.0 
+       0.0        0.0        0.0        0.0 
+       0.0        0.0        0.0        0.0 
+
+a wildtype scalar: y for add: [this was multiplied]
+     -11.0       -5.0        1.0        7.0 
+    -411.0       -5.0      401.0      807.0 
+    -811.0       -5.0      801.0     1607.0 
+   -1211.0       -5.0     1201.0     2407.0 
+
+do the add:
+    [this was added] = [this was added] + [this was multiplied]
+
+a wildtype scalar: z = x+y: [this was added]
+     -11.0       -5.0        1.0        7.0 
+    -411.0       -5.0      401.0      807.0 
+    -811.0       -5.0      801.0     1607.0 
+   -1211.0       -5.0     1201.0     2407.0 
+
+a wildtype scalar: x for multiply: [this is A(2,4)]
+       0.0        1.0        2.0        3.0 
+     100.0      101.0      102.0      103.0 
+     200.0      201.0      202.0      909.0 
+     300.0      301.0      302.0       42.0 
+
+a wildtype scalar: y for multiply: [finally, B(4,2)]
+      -1.0        1.5        2.5       77.0 
+      -0.5        0.5        1.5        2.5 
+      -1.5       -0.5        0.5        1.5 
+      -2.5       -1.5       -0.5        0.5 
+
+do the multiply:
+   [this was multiplied] = [this is A(2,4)] * [finally, B(4,2)]
+
+a wildtype scalar: z = x*y: [this was multiplied]
+     -11.0       -5.0        1.0        7.0 
+    -561.0       -5.0      401.0     8157.0 
+   -2876.0    -1064.0      448.0    16660.0 
+   -1008.5      386.5     1331.5    24326.5 
+
+a wildtype scalar: x for add: [this was added]
+     -11.0       -5.0        1.0        7.0 
+    -411.0       -5.0      401.0      807.0 
+    -811.0       -5.0      801.0     1607.0 
+   -1211.0       -5.0     1201.0     2407.0 
+
+a wildtype scalar: y for add: [this was multiplied]
+     -11.0       -5.0        1.0        7.0 
+    -561.0       -5.0      401.0     8157.0 
+   -2876.0    -1064.0      448.0    16660.0 
+   -1008.5      386.5     1331.5    24326.5 
+
+do the add:
+    [this was added] = [this was added] + [this was multiplied]
+
+a wildtype scalar: z = x+y: [this was added]
+     -22.0      -10.0        2.0       14.0 
+    -972.0      -10.0      802.0     8964.0 
+   -3687.0    -1069.0     1249.0    18267.0 
+   -2219.5      381.5     2532.5    26733.5 
+
+a wildtype scalar: x for multiply: [this is A(2,7)]
+       0.0        1.0        2.0        3.0 
+     100.0      101.0      102.0      103.0 
+     200.0      201.0      202.0      203.0 
+     300.0      301.0      302.0      303.0 
+
+a wildtype scalar: y for multiply: [here is B(7,5)]
+      -1.0        1.5        2.5        3.5 
+      -0.5        0.5        1.5        2.5 
+      -1.5       -0.5        0.5        1.5 
+      -2.5       -1.5       -0.5        0.5 
+
+do the multiply:
+   [this was multiplied] = [this is A(2,7)] * [here is B(7,5)]
+
+a wildtype scalar: z = x*y: [this was multiplied]
+     -11.0       -5.0        1.0        7.0 
+    -561.0       -5.0      401.0      807.0 
+   -1111.0       -5.0      801.0     1607.0 
+   -1661.0       -5.0     1201.0     2407.0 
+
+a wildtype scalar: x for multiply: [this is A(3,7)]
+       0.0        1.0        2.0        3.0 
+     100.0      101.0      102.0      103.0 
+     200.0      201.0      202.0      909.0 
+     300.0      301.0      302.0      303.0 
+
+a wildtype scalar: y for multiply: [this is B(7,2)]
+       0.5        1.5        2.5        3.5 
+      -0.5        0.5        1.5        2.5 
+      -1.5       -0.5        0.5        1.5 
+      -2.5       -1.5       -0.5        0.5 
+
+do the multiply:
+   [this was multiplied] = [this is A(3,7)] * [this is B(7,2)]
+
+a wildtype scalar: z = x*y: [this was multiplied]
+     -11.0       -5.0        1.0        7.0 
+    -411.0       -5.0      401.0      807.0 
+   -2576.0    -1064.0      448.0     1960.0 
+   -1211.0       -5.0     1201.0     2407.0 
+
+a wildtype scalar: x for multiply: [this is A(3,7)]
+       0.0        1.0        2.0        3.0 
+     100.0      101.0      102.0      103.0 
+     200.0      201.0      202.0      909.0 
+     300.0      301.0      302.0      303.0 
+
+a wildtype scalar: y for multiply: [here is B(7,5)]
+      -1.0        1.5        2.5        3.5 
+      -0.5        0.5        1.5        2.5 
+      -1.5       -0.5        0.5        1.5 
+      -2.5       -1.5       -0.5        0.5 
+
+do the multiply:
+   [this was multiplied] = [this is A(3,7)] * [here is B(7,5)]
+
+a wildtype scalar: z = x*y: [this was multiplied]
+     -11.0       -5.0        1.0        7.0 
+    -561.0       -5.0      401.0      807.0 
+   -2876.0    -1064.0      448.0     1960.0 
+   -1661.0       -5.0     1201.0     2407.0 
+
+Printing the matrix with GxB_Matrix_fprint:
+
+GraphBLAS matrix: output C 
+nrows: 10 ncols: 10 max # entries: 4
+format: standard CSR vlen: 10 nvec_nonempty: 2 nvec: 10 plen: 10 vdim: 10
+hyper_ratio 0.0625
+GraphBLAS type:  user-defined: [wildtype] size: 128
+number of entries: 4 
+row: 2 : 2 entries [0:1]
+    column 2: [user-defined value]
+    column 5: [user-defined value]
+row: 3 : 2 entries [2:3]
+    column 2: [user-defined value]
+    column 5: [user-defined value]
+
+
+============= printing the WildType matrix: output C (10-by-10 with 4 entries)
+
+----------- output C(2,2):
+
+a wildtype scalar:  [this was added]
+     -22.0      -10.0        2.0       14.0 
+    -972.0      -10.0      802.0     8964.0 
+   -3687.0    -1069.0     1249.0    18267.0 
+   -2219.5      381.5     2532.5    26733.5 
+
+----------- output C(2,5):
+
+a wildtype scalar:  [this was multiplied]
+     -11.0       -5.0        1.0        7.0 
+    -561.0       -5.0      401.0      807.0 
+   -1111.0       -5.0      801.0     1607.0 
+   -1661.0       -5.0     1201.0     2407.0 
+
+----------- output C(3,2):
+
+a wildtype scalar:  [this was multiplied]
+     -11.0       -5.0        1.0        7.0 
+    -411.0       -5.0      401.0      807.0 
+   -2576.0    -1064.0      448.0     1960.0 
+   -1211.0       -5.0     1201.0     2407.0 
+
+----------- output C(3,5):
+
+a wildtype scalar:  [this was multiplied]
+     -11.0       -5.0        1.0        7.0 
+    -561.0       -5.0      401.0      807.0 
+   -2876.0    -1064.0      448.0     1960.0 
+   -1661.0       -5.0     1201.0     2407.0 
+
+============= that was the WildType matrix output C
+
+C is now stored by column, but it looks just the same to the
+GraphBLAS user application.  The difference is opaque, in the
+internal data structure.
+
+Printing the matrix with GxB_Matrix_fprint:
+
+GraphBLAS matrix: output C 
+nrows: 10 ncols: 10 max # entries: 4
+format: standard CSC vlen: 10 nvec_nonempty: 2 nvec: 10 plen: 10 vdim: 10
+hyper_ratio 0.0625
+GraphBLAS type:  user-defined: [wildtype] size: 128
+number of entries: 4 
+column: 2 : 2 entries [0:1]
+    row 2: [user-defined value]
+    row 3: [user-defined value]
+column: 5 : 2 entries [2:3]
+    row 2: [user-defined value]
+    row 3: [user-defined value]
+
+
+============= printing the WildType matrix: output C (10-by-10 with 4 entries)
+
+----------- output C(2,2):
+
+a wildtype scalar:  [this was added]
+     -22.0      -10.0        2.0       14.0 
+    -972.0      -10.0      802.0     8964.0 
+   -3687.0    -1069.0     1249.0    18267.0 
+   -2219.5      381.5     2532.5    26733.5 
+
+----------- output C(2,5):
+
+a wildtype scalar:  [this was multiplied]
+     -11.0       -5.0        1.0        7.0 
+    -561.0       -5.0      401.0      807.0 
+   -1111.0       -5.0      801.0     1607.0 
+   -1661.0       -5.0     1201.0     2407.0 
+
+----------- output C(3,2):
+
+a wildtype scalar:  [this was multiplied]
+     -11.0       -5.0        1.0        7.0 
+    -411.0       -5.0      401.0      807.0 
+   -2576.0    -1064.0      448.0     1960.0 
+   -1211.0       -5.0     1201.0     2407.0 
+
+----------- output C(3,5):
+
+a wildtype scalar:  [this was multiplied]
+     -11.0       -5.0        1.0        7.0 
+    -561.0       -5.0      401.0      807.0 
+   -2876.0    -1064.0      448.0     1960.0 
+   -1661.0       -5.0     1201.0     2407.0 
+
+============= that was the WildType matrix output C
+
+Printing the matrix with GxB_Matrix_fprint:
+
+GraphBLAS matrix: D 
+nrows: 10 ncols: 10 max # entries: 0
+format: hypersparse CSR vlen: 10 nvec_nonempty: 0 nvec: 0 plen: 1 vdim: 10
+hyper_ratio 0.0625
+GraphBLAS type:  float size: 4
+empty
+number of entries: 0 
+
+
+The matrix D is not wild enough to print.
+
+This supposed to fail, as a demo of GrB_error:
+
+=================================================================
+GraphBLAS error: GrB_DOMAIN_MISMATCH
+function: GrB_eWiseAdd_Matrix_BinaryOp (C, Mask, accum, add, A, B, desc)
+incompatible type for z=wildtype_add(x,y):
+second input of type [float]
+cannot be typecast to y input of type [wildtype]
+=================================================================
+

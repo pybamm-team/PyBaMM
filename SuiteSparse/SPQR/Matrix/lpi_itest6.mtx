@@ -1,0 +1,79 @@
+%%MatrixMarket matrix coordinate real general
+%-------------------------------------------------------------------------------
+% UF Sparse Matrix Collection, Tim Davis
+% http://www.cise.ufl.edu/research/sparse/matrices/LPnetlib/lpi_itest6
+% name: LPnetlib/lpi_itest6
+% [Netlib LP problem itest6: minimize c'*x, where Ax=b, lo<=x<=hi]
+% id: 720
+% date: 1991
+% author: J. Chinneck, E. Dravnieks
+% ed: J. Chinneck
+% fields: title name A b id aux kind date author ed notes
+% aux: c lo hi z0
+% kind: linear programming problem
+%-------------------------------------------------------------------------------
+% notes:
+% An infeasible Netlib LP problem, in lp/infeas.  For more information        
+% send email to netlib@ornl.gov with the message:                             
+%                                                                             
+% 	send index from lp                                                         
+% 	send readme from lp/infeas                                                 
+%                                                                             
+% The lp/infeas directory contains infeasible linear programming test problems
+% collected by John W. Chinneck, Carleton Univ, Ontario Canada.  The following
+% are relevant excerpts from lp/infeas/readme (by John W. Chinneck):          
+%                                                                             
+% In the following, IIS stands for Irreducible Infeasible Subsystem, a set    
+% of constraints which is itself infeasible, but becomes feasible when any    
+% one member is removed.  Isolating an IIS from within the larger set of      
+% constraints defining the model is one analysis approach.                    
+%                                                                             
+% PROBLEM DESCRIPTION                                                         
+% -------------------                                                         
+%                                                                             
+% ITEST6, ITEST2:  very small problems having numerous clustered IISs.        
+% These match problems 1 and 2, respectively, in Chinneck and Dravnieks       
+% [1991].  Contributors:  J.W.  Chinneck and E.W.  Dravnieks, Carleton        
+% University.                                                                 
+%                                                                             
+% Name       Rows   Cols   Nonzeros Bounds      Notes                         
+% itest6       12      8       23                                             
+%                                                                             
+% REFERENCES                                                                  
+% ----------                                                                  
+%                                                                             
+% J.W.  Chinneck and E.W.  Dravnieks (1991).  "Locating Minimal Infeasible    
+% Constraint Sets in Linear Programs", ORSA Journal on Computing, Volume      
+% 3, No. 2.                                                                   
+%                                                                             
+%-------------------------------------------------------------------------------
+11 17 29
+1 1 1
+2 2 1
+3 3 1
+4 4 -1
+5 5 -1
+6 6 1
+7 7 -1
+8 8 1
+11 9 -1
+2 10 1
+4 11 -1
+5 11 -1
+9 11 1
+10 11 1
+11 11 1
+1 12 .8
+4 12 1
+6 12 1
+9 12 -.05
+10 12 -.04
+1 13 1
+5 13 1
+10 13 -.05
+7 14 -3
+8 14 .5
+3 15 2
+8 15 .6
+7 16 1
+3 17 -1

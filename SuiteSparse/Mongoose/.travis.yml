@@ -1,0 +1,517 @@
+sudo: false
+dist: trusty
+
+language: cpp
+
+matrix:
+  include:
+    # Codecov.io build
+    - os: linux
+      compiler: gcc
+      env:
+        - CXX=g++-4.8
+        - CC=gcc-4.8
+        - SPECIAL=codecov
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - george-edison55-precise-backports
+          packages:
+            - cmake
+            - cmake-data
+            - gcc-4.8
+            - g++-4.8
+            - lcov
+      before_script:
+        - pyenv install -s 2.7.13
+        - pyenv global 2.7.13
+        - export CXX=g++-4.8
+        - export CC=gcc-4.8
+      after_success:
+        - lcov --directory ./CMakeFiles/mongoose_dbg.dir/Source --capture --output-file coverage.info # capture coverage info
+        - lcov --remove coverage.info '/usr/*' --output-file coverage.info # filter out system
+        - lcov --list coverage.info #debug info
+        - bash <(curl -s https://codecov.io/bash) -t 6bf41c84-78ee-406d-95b8-7f86895b532c
+
+    # Valgrind build
+    - os: linux
+      compiler: gcc
+      env:
+        - CXX=g++-6
+        - CC=gcc-6
+        - SPECIAL=valgrind
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - george-edison55-precise-backports
+          packages:
+            - cmake
+            - cmake-data
+            - gcc-6
+            - g++-6
+            - valgrind
+      before_script:
+        - pyenv install -s 2.7.13
+        - pyenv global 2.7.13
+        - export CXX=g++-6
+        - export CC=gcc-6
+      after_success:
+        - valgrind --error-exitcode=1 --leak-check=full --show-reachable=yes ./tests/mongoose_test_memory ../Matrix/bcspwr04.mtx
+
+    # cppcheck build
+    - os: linux
+      compiler: gcc
+      env:
+        - CXX=g++-6
+        - CC=gcc-6
+        - SPECIAL=cppcheck
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - george-edison55-precise-backports
+          packages:
+            - cmake
+            - cmake-data
+            - gcc-6
+            - g++-6
+            # libpcre3-dev is needed to build a recent cppcheck
+            - libpcre3-dev
+      before_script:
+        - pyenv install -s 2.7.13
+        - pyenv global 2.7.13
+        - export CXX=g++-6
+        - export CC=gcc-6
+        - curl -OL https://github.com/danmar/cppcheck/archive/1.79.tar.gz
+        - tar -xvf 1.79.tar.gz
+        - cd cppcheck-1.79
+        - make
+        - cd ..
+      after_success:
+        - ../cppcheck-1.79/cppcheck --enable=all --error-exitcode=1 --project=compile_commands.json
+
+    # Debug Assertion build
+    - os: linux
+      compiler: gcc
+      env:
+        - CXX=g++-6
+        - CC=gcc-6
+        - SPECIAL=assertions
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - george-edison55-precise-backports
+          packages:
+            - cmake
+            - cmake-data
+            - gcc-6
+            - g++-6
+      before_script:
+        - pyenv install -s 2.7.13
+        - pyenv global 2.7.13
+        - export CXX=g++-6
+        - export CC=gcc-6
+        - "sed -i 's:// #undef NDEBUG:#undef NDEBUG:' ./Include/Mongoose_Debug.hpp"
+
+    # Linux GCC 6 build
+    - os: linux
+      compiler: gcc
+      env:
+        - CXX=g++-6
+        - CC=gcc-6
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - george-edison55-precise-backports
+          packages:
+            - cmake
+            - cmake-data
+            - gcc-6
+            - g++-6
+      before_script:
+        - pyenv install -s 2.7.13
+        - pyenv global 2.7.13
+        - export CXX=g++-6
+        - export CC=gcc-6
+
+    # Linux GCC 5 build
+    - os: linux
+      compiler: gcc
+      env:
+        - CXX=g++-5
+        - CC=gcc-5
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - george-edison55-precise-backports
+          packages:
+            - cmake
+            - cmake-data
+            - gcc-5
+            - g++-5
+      before_script:
+        - pyenv install -s 2.7.13
+        - pyenv global 2.7.13
+        - export CXX=g++-5
+        - export CC=gcc-5
+
+    # Linux GCC 4.9 build
+    - os: linux
+      compiler: gcc
+      env:
+        - CXX=g++-4.9
+        - CC=gcc-4.9
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - george-edison55-precise-backports
+          packages:
+            - cmake
+            - cmake-data
+            - gcc-4.9
+            - g++-4.9
+      before_script:
+        - pyenv install -s 2.7.13
+        - pyenv global 2.7.13
+        - export CXX=g++-4.9
+        - export CC=gcc-4.9
+
+    # Linux GCC 4.8 build
+    - os: linux
+      compiler: gcc
+      env:
+        - CXX=g++-4.8
+        - CC=gcc-4.8
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - george-edison55-precise-backports
+          packages:
+            - cmake
+            - cmake-data
+            - gcc-4.8
+            - g++-4.8
+      before_script:
+        - pyenv install -s 2.7.13
+        - pyenv global 2.7.13
+        - export CXX=g++-4.8
+        - export CC=gcc-4.8
+
+    # Linux GCC 4.7 build
+    - os: linux
+      compiler: gcc
+      env:
+        - CXX=g++-4.7
+        - CC=gcc-4.7
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - george-edison55-precise-backports
+          packages:
+            - cmake
+            - cmake-data
+            - gcc-4.7
+            - g++-4.7
+      before_script:
+        - pyenv install -s 2.7.13
+        - pyenv global 2.7.13
+        - export CXX=g++-4.7
+        - export CC=gcc-4.7
+
+    # Linux GCC 4.6 build
+    - os: linux
+      compiler: gcc
+      env:
+        - CXX=g++-4.6
+        - CC=gcc-4.6
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - george-edison55-precise-backports
+          packages:
+            - cmake
+            - cmake-data
+            - gcc-4.6
+            - g++-4.6
+      before_script:
+        - pyenv install -s 2.7.13
+        - pyenv global 2.7.13
+        - export CXX=g++-4.6
+        - export CC=gcc-4.6
+
+    # Linux GCC 4.4 build
+    - os: linux
+      compiler: gcc
+      env:
+        - CXX=g++-4.4
+        - CC=gcc-4.4
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - george-edison55-precise-backports
+          packages:
+            - cmake
+            - cmake-data
+            - gcc-4.4
+            - g++-4.4
+      before_script:
+        - pyenv install -s 2.7.13
+        - pyenv global 2.7.13
+        - export CXX=g++-4.4
+        - export CC=gcc-4.4
+
+    # Linux Clang 5.0 build
+    - os: linux
+      compiler: clang
+      env:
+       - CXX=clang++-5.0
+       - CC=clang-5.0
+      addons:
+       apt:
+         sources:
+           - ubuntu-toolchain-r-test
+           - llvm-toolchain-trusty-5.0
+         packages:
+           - cmake
+           - cmake-data
+           - clang-5.0
+           - clang++-5.0
+      before_script:
+        - pyenv install -s 2.7.13
+        - pyenv global 2.7.13
+        - export CXX=clang++-5.0
+        - export CC=clang-5.0
+
+    # Linux Clang 4.0 build
+    - os: linux
+      compiler: clang
+      env:
+       - CXX=clang++-4.0
+       - CC=clang-4.0
+      addons:
+       apt:
+         sources:
+           - ubuntu-toolchain-r-test
+           - llvm-toolchain-trusty-4.0
+         packages:
+           - cmake
+           - cmake-data
+           - clang-4.0
+           - clang++-4.0
+      before_script:
+        - pyenv install -s 2.7.13
+        - pyenv global 2.7.13
+        - export CXX=clang++-4.0
+        - export CC=clang-4.0
+
+#    # Linux Clang 3.9 build
+#    - os: linux
+#      compiler: clang
+#      env:
+#        - CXX=clang++-3.9
+#        - CC=clang-3.9
+#      addons:
+#        apt:
+#          sources:
+#            - ubuntu-toolchain-r-test
+#            - llvm-toolchain-trusty-3.9
+#          packages:
+#            - cmake
+#            - cmake-data
+#            - clang-3.9
+#            - clang++-3.9
+#            - binutils-2.26
+#      before_script:
+#        - pyenv install -s 2.7.13
+#        - pyenv global 2.7.13
+#        - export CXX=clang++-3.9
+#        - export CC=clang-3.9
+
+    # Linux Clang 3.8 build
+    - os: linux
+      compiler: clang
+      env:
+        - CXX=clang++-3.8
+        - CC=clang-3.8
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-precise-3.8
+            - george-edison55-precise-backports
+          packages:
+            - cmake
+            - cmake-data
+            - clang-3.8
+            - clang++-3.8
+      before_script:
+        - pyenv install -s 2.7.13
+        - pyenv global 2.7.13
+        - export CXX=clang++-3.8
+        - export CC=clang-3.8
+
+    # Linux Clang 3.7 build
+    - os: linux
+      compiler: clang
+      env:
+        - CXX=clang++-3.7
+        - CC=clang-3.7
+      addons:
+        apt:
+          sources:
+            - llvm-toolchain-precise-3.7
+            - ubuntu-toolchain-r-test
+            - george-edison55-precise-backports
+          packages:
+            - cmake
+            - cmake-data
+            - clang-3.7
+            - clang++-3.7
+      before_script:
+        - pyenv install -s 2.7.13
+        - pyenv global 2.7.13
+        - export CXX=clang++-3.7
+        - export CC=clang-3.7
+
+    # Linux Clang 3.6.0 build
+    - os: linux
+      compiler: clang
+      env:
+        - CXX=clang++-3.6
+        - CC=clang-3.6
+      addons:
+        apt:
+          sources:
+            - llvm-toolchain-precise-3.6
+            - ubuntu-toolchain-r-test
+            - george-edison55-precise-backports
+          packages:
+            - cmake
+            - cmake-data
+            - clang-3.6
+            - clang++-3.6
+      before_script:
+        - pyenv install -s 2.7.13
+        - pyenv global 2.7.13
+        - export CXX=clang++-3.6
+        - export CC=clang-3.6
+
+    # Linux Clang 3.5.0 build
+    - os: linux
+      compiler: clang
+      env:
+        - CXX=clang++-3.5
+        - CC=clang-3.5
+      addons:
+        apt:
+          sources:
+            - llvm-toolchain-precise-3.5
+            - ubuntu-toolchain-r-test
+            - george-edison55-precise-backports
+          packages:
+            - cmake
+            - cmake-data
+            - clang-3.5
+            - clang++-3.5
+      before_script:
+        - pyenv install -s 2.7.13
+        - pyenv global 2.7.13
+        - export CXX=clang++-3.5
+        - export CC=clang-3.5
+
+    # macOS
+    - os: osx
+      osx_image: xcode6.4
+      before_script:
+        - brew update
+        - brew install cmake || brew upgrade cmake
+        - brew install pyenv || brew upgrade pyenv
+        - pyenv install -s 2.7.13
+        - pyenv global 2.7.13
+        - eval "$(pyenv init -)"
+
+    - os: osx
+      osx_image: xcode7.3
+      before_script:
+        - brew update
+        - brew install cmake || brew upgrade cmake
+        - brew install pyenv || brew upgrade pyenv
+        - pyenv install -s 2.7.13
+        - pyenv global 2.7.13
+        - eval "$(pyenv init -)"
+
+    - os: osx
+      osx_image: xcode8
+      before_script:
+        - brew update
+        - brew install cmake || brew upgrade cmake
+        - brew install pyenv || brew upgrade pyenv
+        - pyenv install -s 2.7.13
+        - pyenv global 2.7.13
+        - eval "$(pyenv init -)"
+
+    - os: osx
+      osx_image: xcode8.1
+      before_script:
+        - brew update
+        - brew install cmake || brew upgrade cmake
+        - brew install pyenv || brew upgrade pyenv
+        - pyenv install -s 2.7.13
+        - pyenv global 2.7.13
+        - eval "$(pyenv init -)"
+
+    - os: osx
+      osx_image: xcode8.2
+      before_script:
+        - brew update
+        - brew install cmake || brew upgrade cmake
+        - brew install pyenv || brew upgrade pyenv
+        - pyenv install -s 2.7.13
+        - pyenv global 2.7.13
+        - eval "$(pyenv init -)"
+
+    - os: osx
+      osx_image: xcode8.3
+      before_script:
+        - brew update
+        - brew install cmake || brew upgrade cmake
+        - brew install pyenv || brew upgrade pyenv
+        - pyenv install -s 2.7.13
+        - pyenv global 2.7.13
+        - eval "$(pyenv init -)"
+
+    - os: osx
+      osx_image: xcode9
+      before_script:
+        - brew update
+        - brew install cmake || brew upgrade cmake
+        - brew install pyenv || brew upgrade pyenv
+        - pyenv install -s 2.7.13
+        - pyenv global 2.7.13
+        - eval "$(pyenv init -)"
+
+script:
+  # show OS/compiler version
+  - uname -a
+  - $CXX --version
+  - $CC --version
+  - python --version
+  - python -c "import ssl; print ssl.OPENSSL_VERSION"
+
+  # compile
+  - cd build
+  - cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ..
+  - make VERBOSE=1
+
+  # execute tests
+  - make test

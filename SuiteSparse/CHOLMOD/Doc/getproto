@@ -1,0 +1,6 @@
+#!/bin/bash
+echo -n $1 > _temp.awk
+cat rule.awk >> _temp.awk
+cat header.tex
+expand -8 $2 | awk -f _temp.awk
+cat footer.tex
