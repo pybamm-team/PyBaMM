@@ -109,6 +109,7 @@ from .expression_tree.unary_operators import (
     z_average,
     yz_average,
     boundary_value,
+    r_average
 )
 from .expression_tree.functions import *
 from .expression_tree.parameter import Parameter, FunctionParameter
