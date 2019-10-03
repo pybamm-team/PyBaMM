@@ -1,4 +1,0 @@
-#
-echo diff $1 $2
-sed -f camd.sed < $1 > camd_temp
-diff camd_temp $2
