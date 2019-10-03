@@ -383,10 +383,7 @@ class TestProcessedVariable(unittest.TestCase):
         model.rhs = {c: -c}
         model.initial_conditions = {c: 1}
         model.variables = {"c": c}
-        solver = model.default_solver
-        solver.rtol = 1e-8
-        solver.atol = 1e-8
-        modeltest = tests.StandardModelTest(model, solver=solver)
+        modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
         t_sol, y_sol = modeltest.solution.t, modeltest.solution.y
         processed_vars = pybamm.post_process_variables(model.variables, t_sol, y_sol)
@@ -410,10 +407,7 @@ class TestProcessedVariable(unittest.TestCase):
             "c_s": c_s,
             "N_s": pybamm.grad(c_s),
         }
-        solver = model.default_solver
-        solver.rtol = 1e-8
-        solver.atol = 1e-8
-        modeltest = tests.StandardModelTest(model, solver=solver)
+        modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
         # set up testing
         t_sol, y_sol = modeltest.solution.t, modeltest.solution.y

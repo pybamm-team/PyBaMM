@@ -71,6 +71,10 @@ class StandardModelTest(object):
         # Overwrite solver if given
         if solver is not None:
             self.solver = solver
+        else:
+            # use tighter default tolerances for testing
+            self.solver.rtol = 1e-8
+            self.solver.atol = 1e-8
         if t_eval is None:
             t_eval = np.linspace(0, 1, 100)
 
