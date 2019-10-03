@@ -7,7 +7,7 @@ import pickle
 os.chdir(pybamm.root_dir())
 
 # pick C_rate and load comsol data
-C_rate = "nocool_1"  # choose the key from the above dictionary of available results
+C_rate = "isothermal_1"  # choose the key from the above dictionary of available results
 
 # time-voltage (both just 1D arrays)
 comsol = pd.read_csv(

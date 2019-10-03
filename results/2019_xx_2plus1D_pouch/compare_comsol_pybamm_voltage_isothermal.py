@@ -5,6 +5,7 @@ import sys
 import pickle
 import matplotlib.pyplot as plt
 import shared
+import scipy.interpolate as interp
 
 # change working directory to the root of pybamm
 os.chdir(pybamm.root_dir())
@@ -23,7 +24,7 @@ C_rate = "1"  # choose the key from the above dictionary of available results
 
 # load the comsol results
 try:
-    comsol_variables = pickle.load(open("comsol_nocool_{}C.pickle".format(C_rate), "rb"))
+    comsol_variables = pickle.load(open("comsol_isothermal_{}C.pickle".format(C_rate), "rb"))
 except FileNotFoundError:
     raise FileNotFoundError("COMSOL data not found. Try running load_comsol_data.py")
 
@@ -33,11 +34,10 @@ except FileNotFoundError:
 # load model and geometry
 pybamm.set_logging_level("INFO")
 options = {
-    "current collector": "potential pair",
-    "dimensionality": 2,
-    "thermal": "x-lumped",
+    #"current collector": "potential pair",
+    #"dimensionality": 2,
 }
-pybamm_model = pybamm.lithium_ion.SPM(options)
+pybamm_model = pybamm.lithium_ion.DFN(options)
 pybamm_model.use_simplify = False
 geometry = pybamm_model.default_geometry
 
@@ -49,18 +49,17 @@ param["Typical current [A]"] = (
     * 24
     * param.process_symbol(pybamm.geometric_parameters.A_cc).evaluate()
 )
-#param["Heat transfer coefficient [W.m-2.K-1]"] = 1e-6
 param.process_model(pybamm_model)
 param.process_geometry(geometry)
 
 # create mesh
 var = pybamm.standard_spatial_vars
 var_pts = {
-    var.x_n: 10,
-    var.x_s: 10,
-    var.x_p: 10,
-    var.r_n: 10,
-    var.r_p: 10,
+    var.x_n: 31,
+    var.x_s: 11,
+    var.x_p: 31,
+    var.r_n: 11,
+    var.r_p: 11,
     var.y: 10,
     var.z: 10,
 }
@@ -76,7 +75,7 @@ tau = param.process_symbol(
 ).evaluate()
 
 # solve model -- simulate one hour discharge
-t_end = 3600 / tau
+t_end = 120 / tau
 t_eval = np.linspace(0, t_end, 120)
 solution = pybamm_model.default_solver.solve(pybamm_model, t_eval)
 
@@ -84,7 +83,15 @@ solution = pybamm_model.default_solver.solve(pybamm_model, t_eval)
 "-----------------------------------------------------------------------------"
 "Make Comsol 'model' for comparison"
 
-comsol_model = shared.make_comsol_model(comsol_variables, mesh, param)
+comsol_model = pybamm.BaseModel()
+comsol_t = comsol_variables["time"]
+
+
+def comsol_voltage(t):
+    return interp.interp1d(comsol_t, comsol_variables["voltage"])(t)
+
+
+comsol_model.variables = {"Terminal voltage [V]": comsol_voltage}
 
 # Process pybamm variables for which we have corresponding comsol variables
 output_variables = {}
@@ -98,52 +105,4 @@ for var in comsol_model.variables.keys():
 
 t_plot = comsol_variables["time"]  # dimensional in seconds
 shared.plot_t_var("Terminal voltage [V]", t_plot, comsol_model, output_variables, param)
-shared.plot_t_var(
-    "Volume-averaged cell temperature [K]",
-    t_plot,
-    comsol_model,
-    output_variables,
-    param,
-)
-t_plot = 1800  # dimensional in seconds
-shared.plot_2D_var(
-    "Negative current collector potential [V]",
-    t_plot,
-    comsol_model,
-    output_variables,
-    param,
-    cmap="cividis",
-)
-U_ref = param.process_symbol(
-    pybamm.standard_parameters_lithium_ion.U_p_ref
-    - pybamm.standard_parameters_lithium_ion.U_n_ref
-).evaluate()
-shared.plot_2D_var(
-    "Positive current collector potential [V]",
-    t_plot,
-    comsol_model,
-    output_variables,
-    param,
-    cmap="viridis",
-    ref=U_ref,
-)
-T0 = param.process_symbol(pybamm.standard_parameters_lithium_ion.T_ref).evaluate()
-shared.plot_2D_var(
-    "X-averaged cell temperature [K]",
-    t_plot,
-    comsol_model,
-    output_variables,
-    param,
-    cmap="inferno",
-    ref=T0,
-)
-shared.plot_2D_var(
-    "Current collector current density [A.m-2]",
-    t_plot,
-    comsol_model,
-    output_variables,
-    param,
-    cmap="plasma",
-    ref=T0,
-)
 plt.show()
