@@ -328,8 +328,11 @@ Solution solve(np_array t_np,
     realtype t_final = t(number_of_timesteps - 1);
 
     // set return vectors
-    double t_return[number_of_timesteps] = {0};
-    double y_return[number_of_timesteps * number_of_states] = {0};
+    // double t_return[number_of_timesteps] = {0};
+    // double y_return[number_of_timesteps * number_of_states] = {0};
+
+    std::vector<double> t_return(number_of_timesteps);
+    std::vector<double> y_return(number_of_timesteps * number_of_states);
 
     t_return[0] = t(0);
     int j;
@@ -388,8 +391,8 @@ Solution solve(np_array t_np,
     N_VDestroy(avtol);
     N_VDestroy(yp);
 
-    py::array_t<double> t_ret = py::array_t<double>((t_i + 1), t_return);
-    py::array_t<double> y_ret = py::array_t<double>((t_i + 1) * number_of_states, y_return);
+    py::array_t<double> t_ret = py::array_t<double>((t_i + 1), &t_return[0]);
+    py::array_t<double> y_ret = py::array_t<double>((t_i + 1) * number_of_states, &y_return[0]);
 
     Solution sol(retval, t_ret, y_ret);
 
