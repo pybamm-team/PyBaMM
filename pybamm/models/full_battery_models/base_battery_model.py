@@ -128,9 +128,9 @@ class BaseBatteryModel(pybamm.BaseModel):
     def default_var_pts(self):
         var = pybamm.standard_spatial_vars
         return {
-            var.x_n: 40,
-            var.x_s: 25,
-            var.x_p: 35,
+            var.x_n: 20,
+            var.x_s: 20,
+            var.x_p: 20,
             var.r_n: 10,
             var.r_p: 10,
             var.y: 10,
