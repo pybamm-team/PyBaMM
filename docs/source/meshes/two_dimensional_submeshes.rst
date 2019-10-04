@@ -16,5 +16,5 @@
 .. autoclass:: pybamm.UserSupplied2DSubMesh
     :members:
 
-.. autoclass:: pybamm.GetUserSupplied2DSubMesh
+.. autoclass:: pybamm.UserSupplied2DSubMeshGenerator
     :members:

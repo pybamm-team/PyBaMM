@@ -196,3 +196,20 @@ class Mesh(dict):
                 self[domain + "_right ghost cell"][i] = pybamm.SubMesh1D(
                     rgs_edges, submesh.coord_sys
                 )
+
+
+class MeshGenerator:
+    """
+    Base class for mesh generator objects that are used to generate submeshes
+    that require input paramaters.
+    """
+
+    def __init__(self):
+        pass
+
+    def __call__(self):
+        """
+        Each Mesh Generator should implemented a call method which returns
+        an instance of a submesh.
+        """
+        raise NotImplementedError

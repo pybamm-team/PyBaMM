@@ -208,16 +208,16 @@ from .geometry import standard_spatial_vars
 # Mesh and Discretisation classes
 #
 from .discretisations.discretisation import Discretisation
-from .meshes.meshes import Mesh
+from .meshes.meshes import Mesh, MeshGenerator
 from .meshes.zero_dimensional_submesh import SubMesh0D
 from .meshes.one_dimensional_submeshes import (
     SubMesh1D,
     Uniform1DSubMesh,
     Exponential1DSubMesh,
-    GetExponential1DSubMesh,
+    Exponential1DSubMeshGenerator,
     Chebyshev1DSubMesh,
     UserSupplied1DSubMesh,
-    GetUserSupplied1DSubMesh,
+    UserSupplied1DSubMeshGenerator,
 )
 from .meshes.scikit_fem_submeshes import (
     ScikitSubMesh2D,
@@ -225,7 +225,7 @@ from .meshes.scikit_fem_submeshes import (
     ScikitTopExponential2DSubMesh,
     ScikitChebyshev2DSubMesh,
     UserSupplied2DSubMesh,
-    GetUserSupplied2DSubMesh,
+    UserSupplied2DSubMeshGenerator,
 )
 
 #

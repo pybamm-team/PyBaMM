@@ -2,6 +2,7 @@
 # One-dimensional submeshes
 #
 import pybamm
+from .meshes import MeshGenerator
 
 import numpy as np
 
@@ -82,7 +83,8 @@ class Exponential1DSubMesh(SubMesh1D):
     """
     A class to generate a submesh on a 1D domain in which the points are clustered
     close to one or both of boundaries using an exponential formula on the interval
-    [a,b]. Note: this mesh should be created using :class:`GetExponential1DSubMesh`.
+    [a,b]. Note: this mesh should be created using
+    :class:`Exponential1DSubMeshGenerator`.
 
     If side is "left", the gridpoints are given by
 
@@ -125,7 +127,7 @@ class Exponential1DSubMesh(SubMesh1D):
         A dictionary that contains information about the size and location of
         the tabs
     stretch : float
-        The factor which appears in the exponential.
+        The factor (alpha) which appears in the exponential.
     """
 
     def __init__(self, lims, npts, tabs, side, stretch):
@@ -176,7 +178,7 @@ class Exponential1DSubMesh(SubMesh1D):
         super().__init__(edges, coord_sys=coord_sys, tabs=tabs)
 
 
-class GetExponential1DSubMesh:
+class Exponential1DSubMeshGenerator(MeshGenerator):
     """
     A class to generate a submesh on a 1D domain in which the points are clustered
     close to one or both boundaries using an exponential formula on the interval [a,b].
@@ -188,8 +190,8 @@ class GetExponential1DSubMesh:
         or both boundaries. Can be "left", "right" or "symmetric". Defualt is
         "symmetric".
     stretch : float, optional
-        The factor which appears in the exponential, defualt is 1.15 is side is
-        "symmetric" and 2.3 is side is "left" or "right".
+        The factor (alpha) which appears in the exponential, defualt is 1.15 is
+        side is "symmetric" and 2.3 is side is "left" or "right".
 
     """
 
@@ -261,7 +263,7 @@ class Chebyshev1DSubMesh(SubMesh1D):
 class UserSupplied1DSubMesh(SubMesh1D):
     """
     A class to generate a submesh on a 1D domain from a user supplied array of
-    Note: this mesh should be created using :class:`GetUserSupplied1DSubMesh`.
+    Note: this mesh should be created using :class:`UserSupplied1DSubMeshGenerator`.
     edges.
 
     Parameters
@@ -319,7 +321,7 @@ class UserSupplied1DSubMesh(SubMesh1D):
         super().__init__(edges, coord_sys=coord_sys, tabs=tabs)
 
 
-class GetUserSupplied1DSubMesh:
+class UserSupplied1DSubMeshGenerator(MeshGenerator):
     """
     A class to generate a submesh on a 1D domain using a user supplied vector of
     edges.

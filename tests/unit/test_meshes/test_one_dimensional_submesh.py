@@ -28,7 +28,7 @@ class TestUniform1DSubMesh(unittest.TestCase):
 class TestExponential1DSubMesh(unittest.TestCase):
     def test_exceptions(self):
         lims = [[0, 1], [0, 1]]
-        mesh = pybamm.GetExponential1DSubMesh()
+        mesh = pybamm.Exponential1DSubMeshGenerator()
         with self.assertRaises(pybamm.GeometryError):
             mesh(lims, None)
 
@@ -44,7 +44,7 @@ class TestExponential1DSubMesh(unittest.TestCase):
         }
 
         submesh_types = {
-            "negative particle": pybamm.GetExponential1DSubMesh(
+            "negative particle": pybamm.Exponential1DSubMeshGenerator(
                 side="symmetric", stretch=1.5
             )
         }
@@ -77,7 +77,7 @@ class TestExponential1DSubMesh(unittest.TestCase):
         }
 
         submesh_types = {
-            "negative particle": pybamm.GetExponential1DSubMesh(side="left")
+            "negative particle": pybamm.Exponential1DSubMeshGenerator(side="left")
         }
         var_pts = {r: 21}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -108,7 +108,7 @@ class TestExponential1DSubMesh(unittest.TestCase):
         }
 
         submesh_types = {
-            "negative particle": pybamm.GetExponential1DSubMesh(side="right")
+            "negative particle": pybamm.Exponential1DSubMeshGenerator(side="right")
         }
         var_pts = {r: 20}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -168,7 +168,7 @@ class TestUser1DSubMesh(unittest.TestCase):
     def test_exceptions(self):
         lims = [[0, 1], [0, 1]]
         edges = np.array([0, 0.3, 1])
-        mesh = pybamm.GetUserSupplied1DSubMesh(edges)
+        mesh = pybamm.UserSupplied1DSubMeshGenerator(edges)
         # test too many lims
         with self.assertRaises(pybamm.GeometryError):
             mesh(lims, None)
@@ -205,7 +205,9 @@ class TestUser1DSubMesh(unittest.TestCase):
         }
 
         edges = np.array([0, 0.3, 1])
-        submesh_types = {"negative particle": pybamm.GetUserSupplied1DSubMesh(edges)}
+        submesh_types = {
+            "negative particle": pybamm.UserSupplied1DSubMeshGenerator(edges)
+        }
         var_pts = {r: len(edges) - 1}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 

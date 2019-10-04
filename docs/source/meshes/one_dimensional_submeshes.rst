@@ -10,7 +10,7 @@
 .. autoclass:: pybamm.Exponential1DSubMesh
     :members:
 
-.. autoclass:: pybamm.GetExponential1DSubMesh
+.. autoclass:: pybamm.Exponential1DSubMeshGenerator
     :members:
 
 .. autoclass:: pybamm.Chebyshev1DSubMesh
@@ -19,5 +19,5 @@
 .. autoclass:: pybamm.UserSupplied1DSubMesh
     :members:
 
-.. autoclass:: pybamm.GetUserSupplied1DSubMesh
+.. autoclass:: pybamm.UserSupplied1DSubMeshGenerator
     :members:

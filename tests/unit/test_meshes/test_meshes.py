@@ -453,6 +453,13 @@ class TestMesh(unittest.TestCase):
         self.assertEqual(mesh["current collector"][0].tabs["positive tab"], "left")
 
 
+class TestMeshGenerator(unittest.TestCase):
+    def test_not_implemented(self):
+        generator = pybamm.MeshGenerator()
+        with self.assertRaises(NotImplementedError):
+            generator()
+
+
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys

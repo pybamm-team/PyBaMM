@@ -370,7 +370,9 @@ class TestScikitUser2DSubMesh(unittest.TestCase):
             "negative electrode": pybamm.Uniform1DSubMesh,
             "separator": pybamm.Uniform1DSubMesh,
             "positive electrode": pybamm.Uniform1DSubMesh,
-            "current collector": pybamm.GetUserSupplied2DSubMesh(y_edges, z_edges),
+            "current collector": pybamm.UserSupplied2DSubMeshGenerator(
+                y_edges, z_edges
+            ),
         }
 
         mesh_type = pybamm.Mesh
@@ -404,7 +406,7 @@ class TestScikitUser2DSubMesh(unittest.TestCase):
         lims = {var.y: {"min": 0, "max": 1}}
         y_edges = np.array([0, 0.3, 1])
         z_edges = np.array([0, 0.3, 1])
-        mesh = pybamm.GetUserSupplied2DSubMesh(y_edges, z_edges)
+        mesh = pybamm.UserSupplied2DSubMeshGenerator(y_edges, z_edges)
         # test not enough lims
         with self.assertRaises(pybamm.GeometryError):
             mesh(lims, None)

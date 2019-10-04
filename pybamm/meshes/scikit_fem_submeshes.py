@@ -2,6 +2,7 @@
 # scikit-fem meshes for use in PyBaMM
 #
 import pybamm
+from .meshes import MeshGenerator
 
 import skfem
 import numpy as np
@@ -325,7 +326,7 @@ class UserSupplied2DSubMesh(ScikitSubMesh2D):
     """
     A class to generate a tensor product submesh on a 2D domain by using two user
     supplied vectors of edges: one for the y-direction and one for the z-direction.
-    Note: this mesh should be created using :class:`GetUserSupplied2DSubMesh`.
+    Note: this mesh should be created using :class:`UserSupplied2DSubMeshGenerator`.
 
     Parameters
     ----------
@@ -401,7 +402,7 @@ class UserSupplied2DSubMesh(ScikitSubMesh2D):
         super().__init__(edges, coord_sys=coord_sys, tabs=tabs)
 
 
-class GetUserSupplied2DSubMesh:
+class UserSupplied2DSubMeshGenerator(MeshGenerator):
     """
     A class to generate a tensor product submesh on a 2D domain by using two user
     supplied vectors of edges: one for the y-direction and one for the z-direction.
