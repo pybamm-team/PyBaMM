@@ -1,8 +1,7 @@
 import pybamm
-import numpy as np
 import os
+import pandas as pd
 import sys
-import pickle
 import matplotlib.pyplot as plt
 import shared
 import scipy.interpolate as interp
@@ -14,19 +13,19 @@ os.chdir(pybamm.root_dir())
 sys.setrecursionlimit(10000)
 
 "-----------------------------------------------------------------------------"
-"Pick C_rate and load comsol data"
+"Load comsol data"
 
-# C_rate
-# NOTE: the results in pybamm stop when a voltage cutoff is reached, so
-# for higher C-rate the pybamm solution may stop before the comsol solution
 C_rates = {"01": 0.1, "05": 0.5, "1": 1, "2": 2, "3": 3}
 C_rate = "1"  # choose the key from the above dictionary of available results
 
-# load the comsol results
-try:
-    comsol_variables = pickle.load(open("comsol_{}C.pickle".format(C_rate), "rb"))
-except FileNotFoundError:
-    raise FileNotFoundError("COMSOL data not found. Try running load_comsol_data.py")
+# time-voltage (both just 1D arrays)
+comsol = pd.read_csv(
+    "input/comsol_results_csv/2plus1D/{}C/voltage.csv".format(C_rate),
+    sep=",",
+    header=None,
+)
+comsol_time = comsol[0].values
+comsol_voltage = comsol[1].values
 
 "-----------------------------------------------------------------------------"
 "Create and solve pybamm model"
@@ -38,7 +37,7 @@ options = {
     #"dimensionality": 2,
     "thermal": "x-lumped",
 }
-pybamm_model = pybamm.lithium_ion.SPM(options)
+pybamm_model = pybamm.lithium_ion.DFN(options)
 pybamm_model.use_simplify = False
 geometry = pybamm_model.default_geometry
 
@@ -50,6 +49,9 @@ param["Typical current [A]"] = (
     * 24
     * param.process_symbol(pybamm.geometric_parameters.A_cc).evaluate()
 )
+#param["Typical current [A]"] = 24 * C_rates[C_rate]
+#param["Electrode width [m]"] = 1
+#param["Electrode height [m]"] = 1
 param.process_model(pybamm_model)
 param.process_geometry(geometry)
 
@@ -75,9 +77,8 @@ tau = param.process_symbol(
     pybamm.standard_parameters_lithium_ion.tau_discharge
 ).evaluate()
 
-# solve model -- simulate one hour discharge
-t_end = 3600 / tau
-t_eval = np.linspace(0, t_end, 120)
+# solve model at comsol times
+t_eval = comsol_time / tau
 solution = pybamm_model.default_solver.solve(pybamm_model, t_eval)
 
 
@@ -85,14 +86,13 @@ solution = pybamm_model.default_solver.solve(pybamm_model, t_eval)
 "Make Comsol 'model' for comparison"
 
 comsol_model = pybamm.BaseModel()
-comsol_t = comsol_variables["time"]
 
 
-def comsol_voltage(t):
-    return interp.interp1d(comsol_t, comsol_variables["voltage"])(t)
+def comsol_voltage_fun(t):
+    return interp.interp1d(comsol_time, comsol_voltage)(t)
 
 
-comsol_model.variables = {"Terminal voltage [V]": comsol_voltage}
+comsol_model.variables = {"Terminal voltage [V]": comsol_voltage_fun}
 
 # Process pybamm variables for which we have corresponding comsol variables
 output_variables = {}
@@ -103,7 +103,6 @@ for var in comsol_model.variables.keys():
 
 "-----------------------------------------------------------------------------"
 "Make plots"
-
-t_plot = comsol_variables["time"]  # dimensional in seconds
+t_plot = comsol_time  # dimensional in seconds
 shared.plot_t_var("Terminal voltage [V]", t_plot, comsol_model, output_variables, param)
 plt.show()

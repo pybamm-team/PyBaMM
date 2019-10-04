@@ -37,13 +37,13 @@ options = {
     "dimensionality": 2,
     "thermal": "x-lumped",
 }
-pybamm_model = pybamm.lithium_ion.SPM(options)
+pybamm_model = pybamm.lithium_ion.SPMe(options)
 pybamm_model.use_simplify = False
 geometry = pybamm_model.default_geometry
 
 # load parameters and process model and geometry
 param = pybamm_model.default_parameter_values
-# adjust current to correspond to a typical current density of 24 [A.m-2]
+# adjust current to correspond to a typical current density of C_rate * 24 [A.m-2]
 param["Typical current [A]"] = (
     C_rates[C_rate]
     * 24
@@ -55,13 +55,13 @@ param.process_geometry(geometry)
 # create mesh
 var = pybamm.standard_spatial_vars
 var_pts = {
-    var.x_n: 10,
-    var.x_s: 10,
-    var.x_p: 10,
-    var.r_n: 10,
-    var.r_p: 10,
-    var.y: 10,
-    var.z: 10,
+    var.x_n: 5,
+    var.x_s: 5,
+    var.x_p: 5,
+    var.r_n: 5,
+    var.r_p: 5,
+    var.y: 5,
+    var.z: 5,
 }
 mesh = pybamm.Mesh(geometry, pybamm_model.default_submesh_types, var_pts)
 
@@ -136,6 +136,7 @@ shared.plot_2D_var(
     cmap="inferno",
     ref=T0,
 )
+I0 = param.process_symbol(pybamm.standard_parameters_lithium_ion.i_typ).evaluate()
 shared.plot_2D_var(
     "Current collector current density [A.m-2]",
     t_plot,
