@@ -451,7 +451,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                         )
                         submodels.remove(submodel_name)
                     except KeyError as key:
-                        if len(submodels) == 0:
+                        if len(submodels) == 1:
                             # no more submodels to try
                             raise pybamm.ModelError(
                                 """Submodel "{}" requires the variable {}, but it cannot be found.

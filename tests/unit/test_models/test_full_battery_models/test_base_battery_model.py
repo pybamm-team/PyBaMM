@@ -103,6 +103,14 @@ class TestBaseBatteryModel(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.ModelError, "Model already built"):
             model.build_model()
 
+    def test_get_coupled_variables(self):
+        model = pybamm.lithium_ion.BaseModel()
+        model.submodels["current collector"] = pybamm.current_collector.Uniform(
+            model.param
+        )
+        with self.assertRaisesRegex(pybamm.ModelError, "Submodel"):
+            model.build_model()
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
