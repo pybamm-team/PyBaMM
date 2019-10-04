@@ -13,7 +13,7 @@ class BaseSolver(object):
     rtol : float, optional
         The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
-        The relative tolerance for the solver (default is 1e-6).
+        The absolute tolerance for the solver (default is 1e-6).
     """
 
     def __init__(self, method=None, rtol=1e-6, atol=1e-6):

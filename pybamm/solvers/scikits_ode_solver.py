@@ -29,7 +29,7 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
     rtol : float, optional
         The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
-        The relative tolerance for the solver (default is 1e-6).
+        The absolute tolerance for the solver (default is 1e-6).
     linsolver : str, optional
             Can be 'dense' (= default), 'lapackdense', 'spgmr', 'spbcgs', 'sptfqmr'
     """
