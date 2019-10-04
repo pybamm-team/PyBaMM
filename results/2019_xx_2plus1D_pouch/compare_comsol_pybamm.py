@@ -23,7 +23,9 @@ C_rate = "1"  # choose the key from the above dictionary of available results
 
 # load the comsol results
 try:
-    comsol_variables = pickle.load(open("comsol_{}C.pickle".format(C_rate), "rb"))
+    comsol_variables = pickle.load(
+        open("comsol_normal_mesh_{}C.pickle".format(C_rate), "rb")
+    )
 except FileNotFoundError:
     raise FileNotFoundError("COMSOL data not found. Try running load_comsol_data.py")
 
@@ -55,13 +57,13 @@ param.process_geometry(geometry)
 # create mesh
 var = pybamm.standard_spatial_vars
 var_pts = {
-    var.x_n: 5,
-    var.x_s: 5,
-    var.x_p: 5,
-    var.r_n: 5,
-    var.r_p: 5,
-    var.y: 5,
-    var.z: 5,
+    var.x_n: 10,
+    var.x_s: 10,
+    var.x_p: 10,
+    var.r_n: 10,
+    var.r_p: 10,
+    var.y: 10,
+    var.z: 10,
 }
 mesh = pybamm.Mesh(geometry, pybamm_model.default_submesh_types, var_pts)
 
@@ -83,7 +85,18 @@ solution = pybamm_model.default_solver.solve(pybamm_model, t_eval)
 "-----------------------------------------------------------------------------"
 "Make Comsol 'model' for comparison"
 
-comsol_model = shared.make_comsol_model(comsol_variables, mesh, param)
+# interpolate using *dimensional* space. Note that both y and z are scaled with L_z
+L_z = param.process_symbol(pybamm.standard_parameters_lithium_ion.L_z).evaluate()
+pybamm_y = mesh["current collector"][0].edges["y"]
+pybamm_z = mesh["current collector"][0].edges["z"]
+# y_interp = pybamm_y * L_z
+# z_interp = pybamm_z * L_z
+y_interp = np.linspace(pybamm_y[0], pybamm_y[-1], 100) * L_z
+z_interp = np.linspace(pybamm_z[0], pybamm_z[-1], 100) * L_z
+
+comsol_model = shared.make_comsol_model(
+    comsol_variables, mesh, param, y_interp=y_interp, z_interp=z_interp
+)
 
 # Process pybamm variables for which we have corresponding comsol variables
 output_variables = {}

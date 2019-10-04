@@ -9,14 +9,13 @@ def make_comsol_model(comsol_variables, mesh, param, y_interp=None, z_interp=Non
 
     comsol_t = comsol_variables["time"]
 
-    pybamm_y = mesh["current collector"][0].edges["y"]
-    pybamm_z = mesh["current collector"][0].edges["z"]
-
-    # plot using *dimensional* space. Note that both y and z are scaled with L_z
+    # interpolate using *dimensional* space. Note that both y and z are scaled with L_z
     L_z = param.process_symbol(pybamm.standard_parameters_lithium_ion.L_z).evaluate()
-    if not y_interp:
+    if y_interp is None:
+        pybamm_y = mesh["current collector"][0].edges["y"]
         y_interp = pybamm_y * L_z
-    if not z_interp:
+    if z_interp is None:
+        pybamm_z = mesh["current collector"][0].edges["z"]
         z_interp = pybamm_z * L_z  # np.linspace(0, L_z, 20)
     grid_y, grid_z = np.meshgrid(y_interp, z_interp)
 
@@ -88,10 +87,12 @@ def plot_t_var(var, t, comsol_model, output_variables, param):
     plt.legend()
 
 
-def plot_2D_var(var, t, comsol_model, output_variables, param, cmap="viridis", error="abs", ref=0):
+def plot_2D_var(
+    var, t, comsol_model, output_variables, param, cmap="viridis", error="abs", ref=0
+):
     fig, ax = plt.subplots(figsize=(15, 8))
 
-    # get y and z vals from comsol interp points
+    # get y and z vals from comsol interp points (will be dimensional)
     y_plot = comsol_model.y_interp
     z_plot = comsol_model.z_interp
 
@@ -133,12 +134,7 @@ def plot_2D_var(var, t, comsol_model, output_variables, param, cmap="viridis", e
         error = np.abs(pybamm_var - comsol_var)
     elif error == "rel":
         error = np.abs(pybamm_var - comsol_var / (comsol_var - ref))
-    diff_plot = plt.pcolormesh(
-        y_plot,
-        z_plot,
-        error,
-        shading="gouraud",
-    )
+    diff_plot = plt.pcolormesh(y_plot, z_plot, error, shading="gouraud")
     plt.axis([0, y_plot[-1], 0, z_plot[-1]])
     plt.xlabel(r"$y$")
     plt.ylabel(r"$z$")
