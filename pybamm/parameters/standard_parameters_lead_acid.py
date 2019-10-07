@@ -158,12 +158,12 @@ Delta_T = pybamm.Scalar(0)
 
 def D_e_dimensional(c_e, T):
     "Dimensional diffusivity in electrolyte"
-    return pybamm.FunctionParameter("Electrolyte diffusivity", c_e)
+    return pybamm.FunctionParameter("Electrolyte diffusivity [m2.s-1]", c_e)
 
 
 def kappa_e_dimensional(c_e, T):
     "Dimensional electrolyte conductivity"
-    return pybamm.FunctionParameter("Electrolyte conductivity", c_e)
+    return pybamm.FunctionParameter("Electrolyte conductivity [S.m-1]", c_e)
 
 
 def chi_dimensional(c_e):
@@ -208,24 +208,32 @@ def mu_dimensional(c_e):
     """
     Dimensional viscosity of electrolyte [kg.m-1.s-1].
     """
-    return pybamm.FunctionParameter("Electrolyte viscosity", c_e)
+    return pybamm.FunctionParameter("Electrolyte viscosity [kg.m-1.s-1]", c_e)
 
 
 def U_n_dimensional(c_e, T):
     "Dimensional open-circuit voltage in the negative electrode [V]"
-    return pybamm.FunctionParameter("Negative electrode OCV", m_dimensional(c_e))
+    return pybamm.FunctionParameter(
+        "Negative electrode open-circuit potential [V]", m_dimensional(c_e)
+    )
 
 
 def U_p_dimensional(c_e, T):
     "Dimensional open-circuit voltage in the positive electrode [V]"
-    return pybamm.FunctionParameter("Positive electrode OCV", m_dimensional(c_e))
+    return pybamm.FunctionParameter(
+        "Positive electrode open-circuit potential [V]", m_dimensional(c_e)
+    )
 
 
 D_e_typ = D_e_dimensional(c_e_typ, T_ref)
 rho_typ = rho_dimensional(c_e_typ)
 mu_typ = mu_dimensional(c_e_typ)
-U_n_ref = pybamm.FunctionParameter("Negative electrode OCV", pybamm.Scalar(1))
-U_p_ref = pybamm.FunctionParameter("Positive electrode OCV", pybamm.Scalar(1))
+U_n_ref = pybamm.FunctionParameter(
+    "Negative electrode open-circuit potential [V]", pybamm.Scalar(1)
+)
+U_p_ref = pybamm.FunctionParameter(
+    "Positive electrode open-circuit potential [V]", pybamm.Scalar(1)
+)
 
 
 # --------------------------------------------------------------------------------------

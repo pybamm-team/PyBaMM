@@ -1,12 +1,12 @@
 #
-# Electrolyte viscosity
+# Sulfuric acid viscosity
 #
 
 
 def electrolyte_viscosity_Chapman1968(c_e):
     """
-    Dimensional viscosity of electrolyte [kg.m-1.s-1], from data in [1]_, as a function
-    of the electrolyte concentration c_e [mol.m-3].
+    Dimensional viscosity of sulfuric acid [kg.m-1.s-1], from data in [1]_, as a
+    function of the electrolyte concentration c_e [mol.m-3].
 
     References
     ----------

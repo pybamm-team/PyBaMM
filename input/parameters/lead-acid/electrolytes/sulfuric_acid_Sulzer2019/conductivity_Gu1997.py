@@ -1,12 +1,13 @@
 #
-# Electrolyte diffusivity
+# Sulfuric acid conductivity
 #
+import autograd.numpy as np
 
 
-def electrolyte_diffusivity_Gu1997(c_e):
+def conductivity_Gu1997(c_e):
     """
-    Dimensional Fickian diffusivity in the electrolyte [m2.s-1], from [1]_ citing [2]_
-    and agreeing with data in [3]_, as a function of the electrolyte concentration
+    Dimensional conductivity of sulfuric acid [S.m-1], from [1]_ citing [2]_ and
+    agreeing with data in [3]_, as a function of the electrolyte concentration
     c_e [mol.m-3].
 
     References
@@ -22,4 +23,4 @@ def electrolyte_diffusivity_Gu1997(c_e):
            California Univ., Berkeley. Lawrence Radiation Lab., 1968.
 
     """
-    return (1.75 + 260e-6 * c_e) * 1e-9
+    return c_e * np.exp(6.23 - 1.34e-4 * c_e - 1.61e-8 * c_e ** 2) * 1e-4

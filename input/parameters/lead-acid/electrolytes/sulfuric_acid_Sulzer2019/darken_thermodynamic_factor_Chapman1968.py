@@ -1,11 +1,11 @@
 #
-# Darken thermodynamic factor
+# Darken thermodynamic factor of sulfuric acid
 #
 
 
 def darken_thermodynamic_factor_Chapman1968(c_e):
     """
-    Dimensional Darken thermodynamic factor in the electrolyte, from data in
+    Dimensional Darken thermodynamic factor of sulfuric acid, from data in
     [1, 2]_, as a function of the electrolyte concentration c_e [mol.m-3].
 
     References

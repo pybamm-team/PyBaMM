@@ -3,6 +3,7 @@
 #
 import pybamm
 import pandas as pd
+import os
 
 
 class ParameterValues(dict):
@@ -11,33 +12,64 @@ class ParameterValues(dict):
 
     Parameters
     ----------
-    base_parameters : dict or string
-        The base parameters
+    values : dict or string
+        Explicit set of parameters, or reference to a file of parameters
         If string, gets passed to read_parameters_csv to read a file.
+    chemistry : dict
+        Dict of strings for default chemistries. Must be of the form:
+        {"base chemistry": base_chemistry
+         "anode": anode_chemistry_authorYear,
+         "cathode": cathode_chemistry_authorYear,
+         "electrolyte": electrolyte_chemistry_authorYear}.
+        Then the anode chemistry is loaded from the file
+        base_chemistry/anodes/anode_chemistry_authorYear, etc.
 
-    optional_parameters : dict or string
-        Optional parameters, overwrites base_parameters if there is a conflict
-        If string, gets passed to read_parameters_csv to read a file.
+    Examples
+    --------
+    >>> values = {"some parameter": 1, "another parameter": 2}
+    >>> param = pybamm.ParameterValues(values)
+    >>> param["some parameter"]
+    1
 
     """
 
-    def __init__(self, base_parameters={}, optional_parameters={}):
-        # Default parameters
-        # If base_parameters is a filename, load from that filename
-        if isinstance(base_parameters, str):
-            base_parameters = self.read_parameters_csv(base_parameters)
-        self.update(base_parameters)
+    def __init__(self, values=None, chemistry=None):
+        if values is None and chemistry is None:
+            raise ValueError("values and chemistry cannot all be None")
+        # First load chemistry
+        if chemistry is not None:
+            base_chemistry = chemistry["chemistry"]
+            # Load each component name
+            for component_name in ["electrolyte", "anode", "cathode"]:
+                try:
+                    component = chemistry[component_name]
+                except KeyError:
+                    raise KeyError(
+                        "must provide {} for {} chemistry".format(
+                            component_name, chemistry
+                        )
+                    )
+                self.update(
+                    self.read_parameters_csv(
+                        os.path.join(
+                            pybamm.root_dir(),
+                            "input",
+                            "parameters",
+                            base_chemistry,
+                            component_name + "s",
+                            component,
+                            "parameters.csv",
+                        )
+                    )
+                )
+        # Then update with values dictionary or file
+        if values is not None:
+            if isinstance(values, str):
+                values = self.read_parameters_csv(values)
+            # If base_parameters is a filename, load from that filename
+            self.update(values)
 
-        # Optional parameters
-        # If optional_parameters is a filename, load from that filename
-        if isinstance(optional_parameters, str):
-            optional_parameters = self.read_parameters_csv(optional_parameters)
-
-        # Overwrite raw parameters with optional values where given
-        # This avoids having to read a base parameter file each time, for example when
-        # doing parameter studies
-        self.update(optional_parameters)
-
+        # Initialise empty _processed_symbols dict (for caching)
         self._processed_symbols = {}
 
     def read_parameters_csv(self, filename):
