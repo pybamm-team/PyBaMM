@@ -14,7 +14,7 @@ Molar volume of lead [m3.mol-1],1.82539682539683E-05,,Calculated as 207e-3 / 11.
 Molar volume of lead-dioxide [m3.mol-1],2.54797441364606E-05,,Calculated as 239e-3 / 9.38e3
 Molar volume of lead sulfate [m3.mol-1],4.81717011128776E-05,,Calculated as 303e-3 / 6.29e3
 Negative electrode volumetric capacity [C.m-3],3.473e9,bernardi1995mathematical,
-Negative electrode open-circuit potential [V],ocp_bode1997.py,,
+Negative electrode open-circuit potential [V],ocp_Bode1977,,
 ,,,
 # Microstructure,,,
 Negative electrode surface area density [m-1],2300000,,

@@ -38,30 +38,7 @@ class ParameterValues(dict):
             raise ValueError("values and chemistry cannot all be None")
         # First load chemistry
         if chemistry is not None:
-            base_chemistry = chemistry["chemistry"]
-            # Load each component name
-            for component_name in ["electrolyte", "anode", "cathode"]:
-                try:
-                    component = chemistry[component_name]
-                except KeyError:
-                    raise KeyError(
-                        "must provide {} for {} chemistry".format(
-                            component_name, chemistry
-                        )
-                    )
-                self.update(
-                    self.read_parameters_csv(
-                        os.path.join(
-                            pybamm.root_dir(),
-                            "input",
-                            "parameters",
-                            base_chemistry,
-                            component_name + "s",
-                            component,
-                            "parameters.csv",
-                        )
-                    )
-                )
+            self.update_from_chemistry(chemistry)
         # Then update with values dictionary or file
         if values is not None:
             if isinstance(values, str):
@@ -71,6 +48,38 @@ class ParameterValues(dict):
 
         # Initialise empty _processed_symbols dict (for caching)
         self._processed_symbols = {}
+
+    def update_from_chemistry(self, chemistry):
+        """
+        Load standard set of components from a 'chemistry' dictionary
+        """
+        base_chemistry = chemistry["chemistry"]
+        # Create path to file and load miscellaneous values
+        path = os.path.join(pybamm.root_dir(), "input", "parameters", base_chemistry)
+        self.update(self.read_parameters_csv(os.path.join(path, "misc_parameters.csv")))
+        # Load each component name
+        for component_group in ["electrolyte", "anode", "cathode"]:
+            # Make sure component is provided
+            try:
+                component = chemistry[component_group]
+            except KeyError:
+                raise KeyError(
+                    "must provide {} for {} chemistry".format(
+                        component_group, chemistry
+                    )
+                )
+            # Create path to component and load values
+            component_path = os.path.join(path, component_group + "s", component)
+            component_params = self.read_parameters_csv(
+                os.path.join(component_path, "parameters.csv")
+            )
+            self.update(component_params)
+            # Load functions if they are specified
+            for name, param in component_params.items():
+                try:
+                    self[name] = float(param)
+                except ValueError:
+                    self[name] = os.path.join(component_path, param + ".py")
 
     def read_parameters_csv(self, filename):
         """Reads parameters from csv file into dict.

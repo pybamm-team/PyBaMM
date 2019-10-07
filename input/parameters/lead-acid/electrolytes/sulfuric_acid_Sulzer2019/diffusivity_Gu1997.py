@@ -3,7 +3,7 @@
 #
 
 
-def electrolyte_diffusivity_Gu1997(c_e):
+def diffusivity_Gu1997(c_e):
     """
     Dimensional Fickian diffusivity of sulfuric acid [m2.s-1], from [1]_ citing [2]_
     and agreeing with data in [3]_, as a function of the electrolyte concentration
