@@ -10,12 +10,14 @@ class OdeSolver(pybamm.BaseSolver):
 
     Parameters
     ----------
-    tolerance : float, optional
-        The tolerance for the solver (default is 1e-8).
+    rtol : float, optional
+        The relative tolerance for the solver (default is 1e-6).
+    atol : float, optional
+        The absolute tolerance for the solver (default is 1e-6).
     """
 
-    def __init__(self, method=None, tol=1e-8):
-        super().__init__(method, tol)
+    def __init__(self, method=None, rtol=1e-6, atol=1e-6):
+        super().__init__(method, rtol, atol)
 
     def compute_solution(self, model, t_eval):
         """Calculate the solution of the model at specified times.
