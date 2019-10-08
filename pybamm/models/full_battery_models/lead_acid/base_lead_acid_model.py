@@ -46,6 +46,11 @@ class BaseModel(pybamm.BaseBatteryModel):
         elif self.options["dimensionality"] == 2:
             return pybamm.Geometry("2+1D macro")
 
+    @property
+    def default_var_pts(self):
+        var = pybamm.standard_spatial_vars
+        return {var.x_n: 30, var.x_s: 30, var.x_p: 30, var.y: 10, var.z: 10}
+
     def set_standard_output_variables(self):
         super().set_standard_output_variables()
         # Current
