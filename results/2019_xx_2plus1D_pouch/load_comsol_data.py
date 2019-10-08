@@ -8,7 +8,7 @@ os.chdir(pybamm.root_dir())
 
 # pick C_rate and load comsol data
 C_rate = (
-    "normal_mesh_1"
+    "1"
 )  # choose the key from the above dictionary of available results
 
 # time-voltage (both just 1D arrays)

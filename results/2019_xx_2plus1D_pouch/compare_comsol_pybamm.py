@@ -24,7 +24,7 @@ C_rate = "1"  # choose the key from the above dictionary of available results
 # load the comsol results
 try:
     comsol_variables = pickle.load(
-        open("comsol_normal_mesh_{}C.pickle".format(C_rate), "rb")
+        open("comsol_{}C.pickle".format(C_rate), "rb")
     )
 except FileNotFoundError:
     raise FileNotFoundError("COMSOL data not found. Try running load_comsol_data.py")
@@ -157,6 +157,6 @@ shared.plot_2D_var(
     output_variables,
     param,
     cmap="plasma",
-    ref=T0,
+    ref=I0,
 )
 plt.show()
