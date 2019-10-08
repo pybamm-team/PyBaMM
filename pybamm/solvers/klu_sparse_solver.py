@@ -70,7 +70,8 @@ class KLU(pybamm.DaeSolver):
             if sparse.issparse(jac_y0_t0):
 
                 def jacfn(t, y, cj):
-                    return jacobian(t, y) - cj * mass_matrix
+                    j = jacobian(t, y) - cj * mass_matrix
+                    return j
 
             else:
 
@@ -83,7 +84,8 @@ class KLU(pybamm.DaeSolver):
             def __init__(self):
                 self.J = None
 
-                J = jacfn(0, y0, 0.1)
+                random = np.random.random(size=y0.size)
+                J = jacfn(10, random, 20)
                 self.nnz = J.nnz  # hoping nnz remains constant...
 
             def jac_res(self, t, y, cj):
@@ -93,6 +95,7 @@ class KLU(pybamm.DaeSolver):
                 self.J = jacfn(t, y, cj)
 
             def get_jac_data(self):
+                # print("nnz: ", self.J.nnz)
                 return self.J.data
 
             def get_jac_row_vals(self):

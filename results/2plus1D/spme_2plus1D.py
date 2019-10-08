@@ -51,7 +51,7 @@ disc.process_model(model)
 tau = param.process_symbol(pybamm.standard_parameters_lithium_ion.tau_discharge)
 t_end = 3600 / tau.evaluate(0)
 t_eval = np.linspace(0, t_end, 120)
-solution = pybamm.KLU().solve(model, t_eval)
+solution = pybamm.KLU(1e-8).solve(model, t_eval)
 
 # TO DO: 2+1D automated plotting
 phi_s_cn = pybamm.ProcessedVariable(
