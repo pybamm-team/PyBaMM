@@ -13,8 +13,6 @@ import os
 #
 def _load_version_int():
     try:
-        import os
-
         root = os.path.abspath(os.path.dirname(__file__))
         with open(os.path.join(root, "version"), "r") as f:
             version = f.read().strip().split(",")
