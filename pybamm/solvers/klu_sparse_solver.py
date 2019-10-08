@@ -115,6 +115,11 @@ class KLU(pybamm.DaeSolver):
 
             return return_root
 
+        # get ids of rhs and algebraic variables
+        rhs_ids = np.ones(self.rhs(0, y0).shape)
+        alg_ids = np.zeros(self.algebraic(0, y0).shape)
+        ids = np.concatenate((rhs_ids, alg_ids))
+
         # solve
         sol = klu.solve(
             t_eval,
@@ -129,7 +134,7 @@ class KLU(pybamm.DaeSolver):
             rootfn,
             num_of_events,
             use_jac,
-            mass_matrix.diagonal(),  # this should always just be the diagonals
+            ids,
             rtol,
             atol,
         )
