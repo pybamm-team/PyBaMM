@@ -9,23 +9,37 @@ import sys
 import os
 
 #
-# Version info: Remember to keep this in sync with setup.py!
+# Version info
 #
-VERSION_INT = 0, 0, 0
-VERSION = ".".join([str(x) for x in VERSION_INT])
+def _load_version_int():
+    try:
+        root = os.path.abspath(os.path.dirname(__file__))
+        with open(os.path.join(root, "version"), "r") as f:
+            version = f.read().strip().split(",")
+        major, minor, revision = [int(x) for x in version]
+        return major, minor, revision
+    except Exception as e:
+        raise RuntimeError("Unable to read version number (" + str(e) + ").")
+
+
+__version_int__ = _load_version_int()
+__version__ = ".".join([str(x) for x in __version_int__])
 if sys.version_info[0] < 3:
-    del x  # Before Python3, list comprehension iterators leaked
+    del (x)  # Before Python3, list comprehension iterators leaked
 
 #
-# Expose pybamm version
+# Expose PyBaMM version
 #
-
-
 def version(formatted=False):
+    """
+    Returns the version number, as a 3-part integer (major, minor, revision).
+    If ``formatted=True``, it returns a string formatted version (for example
+    "PyBaMM 1.0.0").
+    """
     if formatted:
-        return "PyBaMM " + VERSION
+        return "PyBaMM " + __version__
     else:
-        return VERSION_INT
+        return __version_int__
 
 
 #
@@ -109,7 +123,7 @@ from .expression_tree.unary_operators import (
     z_average,
     yz_average,
     boundary_value,
-    r_average
+    r_average,
 )
 from .expression_tree.functions import *
 from .expression_tree.parameter import Parameter, FunctionParameter
