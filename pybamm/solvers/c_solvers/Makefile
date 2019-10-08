@@ -29,7 +29,7 @@ SUITESPARSE_LIBS = ${KLU_LIB} ${AMD_LIB} ${COLAMD_LIB} ${BTF_LIB} ${SUITESPARSE_
 all: klu
 
 klu:
-	g++ -O3 -shared -std=c++11 -fPIC `python3 -m pybind11 --includes` ${SUNDIALS_INCLUDE} ${SUITESPARSE_INCLUDES} -o klu`python3-config --extension-suffix` klu.cpp -L${SUNDIALS_LIB} -lsundials_sunmatrixsparse -lsundials_ida -lsundials_nvecserial -lm /usr/lib/x86_64-linux-gnu/librt.so -Wl,-rpath,${SUNDIALS_LIB} -lsundials_sunlinsolklu ${SUITESPARSE_LIBS} 
+	g++ -O3 -shared -std=c++11 -fPIC -Wall `python3 -m pybind11 --includes` ${SUNDIALS_INCLUDE} ${SUITESPARSE_INCLUDES} -o klu`python3-config --extension-suffix` klu.cpp -L${SUNDIALS_LIB} -lsundials_sunmatrixsparse -lsundials_ida -lsundials_nvecserial -lm /usr/lib/x86_64-linux-gnu/librt.so -Wl,-rpath,${SUNDIALS_LIB} -lsundials_sunlinsolklu ${SUITESPARSE_LIBS} 
 
 clean:
 	rm *.so

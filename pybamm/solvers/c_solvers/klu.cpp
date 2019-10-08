@@ -23,9 +23,14 @@ using np_array = py::array_t<double>;
 
 using jac_get_type = std::function<np_array()>;
 
+#pragma GCC visibility push(hidden)
 class PybammFunctions
 {
+
 public:
+    int number_of_states;
+    int number_of_events;
+
     PybammFunctions(const residual_type &res,
                     const jacobian_type &jac,
                     const jac_get_type &get_jac_data_in,
@@ -34,19 +39,16 @@ public:
                     const event_type &event,
                     const int n_s,
                     int n_e)
-        : py_res(res),
+        : number_of_states(n_s),
+          number_of_events(n_e),
+          py_res(res),
           py_jac(jac),
           py_event(event),
           py_get_jac_data(get_jac_data_in),
           py_get_jac_row_vals(get_jac_row_vals_in),
-          py_get_jac_col_ptrs(get_jac_col_ptrs_in),
-          number_of_states(n_s),
-          number_of_events(n_e)
+          py_get_jac_col_ptrs(get_jac_col_ptrs_in)
     {
     }
-
-    int number_of_states;
-    int number_of_events;
 
     py::array_t<double> operator()(double t, py::array_t<double> y, py::array_t<double> yp)
     {
@@ -88,11 +90,12 @@ public:
 private:
     residual_type py_res;
     jacobian_type py_jac;
+    event_type py_event;
     jac_get_type py_get_jac_data;
     jac_get_type py_get_jac_row_vals;
     jac_get_type py_get_jac_col_ptrs;
-    event_type py_event;
 };
+#pragma GCC visibility pop
 
 int residual(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr, void *user_data)
 {
@@ -217,6 +220,7 @@ int events(realtype t, N_Vector yy, N_Vector yp, realtype *events_ptr,
     return (0);
 }
 
+#pragma GCC visibility push(hidden)
 class Solution
 {
 public:
@@ -229,6 +233,7 @@ public:
     np_array t;
     np_array y;
 };
+#pragma GCC visibility pop
 
 /* main program */
 Solution solve(np_array t_np,
@@ -259,11 +264,9 @@ Solution solve(np_array t_np,
     void *ida_mem;          // pointer to memory
     N_Vector yy, yp, avtol; // y, y', and absolute tolerance
     realtype rtol, *yval, *ypval, *atval;
-    int iout, retval, retvalr;
-    int rootsfound[number_of_events];
+    int retval;
     SUNMatrix J;
     SUNLinearSolver LS;
-    SUNNonlinearSolver NLS;
 
     // allocate vectors
     yy = N_VNew_Serial(number_of_states);
@@ -323,7 +326,7 @@ Solution solve(np_array t_np,
     }
 
     int t_i = 1;
-    realtype tout, tret;
+    realtype tret;
     realtype t_next;
     realtype t_final = t(number_of_timesteps - 1);
 
