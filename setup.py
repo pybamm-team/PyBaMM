@@ -7,6 +7,7 @@ except ImportError:
 with open("README.md") as f:
     readme = f.read()
 
+
 # Read version number from file
 def load_version():
     try:
