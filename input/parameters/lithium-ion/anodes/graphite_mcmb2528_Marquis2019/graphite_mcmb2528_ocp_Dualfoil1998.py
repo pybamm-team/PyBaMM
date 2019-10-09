@@ -1,7 +1,7 @@
 import autograd.numpy as np
 
 
-def graphite_mcmb2528_ocp_Dualfoil(sto):
+def graphite_mcmb2528_ocp_Dualfoil1998(sto):
     """
        Graphite MCMB 2528 Open Circuit Potential (OCP) as a function of the
        stochiometry. The fit is taken from Dualfoil [1]. Dualfoil states that the data

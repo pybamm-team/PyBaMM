@@ -53,9 +53,9 @@ class TestUpdateParameters(unittest.TestCase):
         )
         # process and solve with updated parameter values
         parameter_values_update = pybamm.ParameterValues(
-            values=model2.default_parameter_values,
-            optional_parameters={"Typical current [A]": 2},
+            values=model2.default_parameter_values
         )
+        parameter_values_update.update({"Typical current [A]": 2})
         modeltest2.test_update_parameters(parameter_values_update)
         self.assertEqual(
             model2.variables["Current [A]"].function.parameters_eval["Current [A]"], 2

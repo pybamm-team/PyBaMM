@@ -192,8 +192,10 @@ class TestParameterValues(unittest.TestCase):
         parameter_values = pybamm.ParameterValues(
             {
                 "a": 3,
-                "func": "process_symbol_test_function.py",
-                "const": "process_symbol_test_constant_function.py",
+                "func": pybamm.load_function("process_symbol_test_function.py"),
+                "const": pybamm.load_function(
+                    "process_symbol_test_constant_function.py"
+                ),
             }
         )
         a = pybamm.Parameter("a")

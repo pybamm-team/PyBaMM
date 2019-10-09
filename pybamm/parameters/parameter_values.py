@@ -85,7 +85,9 @@ class ParameterValues(dict):
             for name, param in component_params.items():
                 # Functions are flagged with the string "[function]"
                 if isinstance(param, str) and param.startswith("[function]"):
-                    self[name] = os.path.join(component_path, param[10:] + ".py")
+                    self[name] = pybamm.load_function(
+                        os.path.join(component_path, param[10:] + ".py")
+                    )
                 # Data is flagged with the string "[data]"
                 # if isinstance(param, str) and param.startswith("[data]"):
                 # TODO: implement interpolating function for data
@@ -121,7 +123,7 @@ class ParameterValues(dict):
             if (
                 check_conflict is True
                 and k in self.keys()
-                and (k == float(v) or k == v)
+                and (self[k] == float(v) or self[k] == v)
             ):
                 raise ValueError(
                     "parameter '{}' already defined with value '{}'".format(k, self[k])
@@ -329,13 +331,8 @@ class ParameterValues(dict):
                 if isinstance(function_name, pybamm.GetCurrentData):
                     function_name.interpolate()
 
-            if callable(function_name):
-                function = pybamm.Function(function_name, *new_children)
-            else:
-                function = pybamm.Function(
-                    pybamm.load_function(function_name), *new_children
-                )
-
+            # Create Function object and differentiate if necessary
+            function = pybamm.Function(function_name, *new_children)
             if symbol.diff_variable is None:
                 return function
             else:

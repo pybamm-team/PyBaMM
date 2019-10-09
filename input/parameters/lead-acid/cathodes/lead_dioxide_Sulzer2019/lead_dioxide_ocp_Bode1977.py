@@ -4,7 +4,7 @@
 import autograd.numpy as np
 
 
-def ocp_Bode1977(m):
+def lead_dioxide_ocp_Bode1977(m):
     """
     Dimensional open-circuit voltage in the positive (lead-dioxide) electrode [V],
     from [1]_, as a function of the molar mass m [mol.kg-1].

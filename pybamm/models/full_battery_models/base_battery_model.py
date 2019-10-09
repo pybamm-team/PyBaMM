@@ -69,7 +69,15 @@ class BaseBatteryModel(pybamm.BaseModel):
     def default_parameter_values(self):
         # Default parameter values
         # Lion parameters left as default parameter set for tests
-        return pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
+        return pybamm.ParameterValues(
+            values={
+                "Typical current [A]": 1,
+                "Current function": pybamm.GetConstantCurrent(
+                    pybamm.standard_parameters_lead_acid.I_typ
+                ),
+            },
+            chemistry=pybamm.parameter_sets.Marquis2019,
+        )
 
     @property
     def default_geometry(self):

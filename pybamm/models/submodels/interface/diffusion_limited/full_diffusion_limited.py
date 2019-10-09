@@ -28,8 +28,14 @@ class FullDiffusionLimited(BaseModel):
         if self.domain == "Negative":
             eps_s = variables["Separator porosity"]
             c_ox_s = variables["Separator oxygen concentration"]
+            b = pybamm.Concatenation(
+                pybamm.FullBroadcast(param.b_s, ["separator"], "current collector"),
+                pybamm.FullBroadcast(
+                    param.b_p, ["positive electrode"], "current collector"
+                ),
+            )
             N_ox_neg_sep_interface = (
-                -pybamm.boundary_value(eps_s ** param.b, "left")
+                -pybamm.boundary_value(eps_s ** b, "left")
                 * param.curlyD_ox
                 * pybamm.BoundaryGradient(c_ox_s, "left")
             )

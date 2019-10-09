@@ -166,28 +166,32 @@ def m_p_dimensional(T):
 
 
 def dUdT_n_dimensional(sto):
-    "Dimensional entropic change of the negative electrode open circuit voltage [V.K-1]"
+    """
+    Dimensional entropic change of the negative electrode open-circuit potential [V.K-1]
+    """
     return pybamm.FunctionParameter(
-        "Negative electrode OCV entropic change", sto, c_n_max
+        "Negative electrode OCP entropic change [V.K-1]", sto, c_n_max
     )
 
 
 def dUdT_p_dimensional(sto):
-    "Dimensional entropic change of the positive electrode open circuit voltage [V.K-1]"
+    """
+    Dimensional entropic change of the positive electrode open-circuit potential [V.K-1]
+    """
     return pybamm.FunctionParameter(
-        "Positive electrode OCV entropic change", sto, c_p_max
+        "Positive electrode OCP entropic change [V.K-1]", sto, c_p_max
     )
 
 
 def U_n_dimensional(sto, T):
-    "Dimensional open-circuit voltage in the negative electrode [V]"
-    u_ref = pybamm.FunctionParameter("Negative electrode OCV", sto)
+    "Dimensional open-circuit potential in the negative electrode [V]"
+    u_ref = pybamm.FunctionParameter("Negative electrode OCP [V]", sto)
     return u_ref + (T - T_ref) * dUdT_n_dimensional(sto)
 
 
 def U_p_dimensional(sto, T):
-    "Dimensional open-circuit voltage in the positive electrode [V]"
-    u_ref = pybamm.FunctionParameter("Positive electrode OCV", sto)
+    "Dimensional open-circuit potential in the positive electrode [V]"
+    u_ref = pybamm.FunctionParameter("Positive electrode OCP [V]", sto)
     return u_ref + (T - T_ref) * dUdT_p_dimensional(sto)
 
 
