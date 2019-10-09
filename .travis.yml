@@ -51,14 +51,14 @@ matrix:
             - PYBAMM_EXAMPLES=true
             - PYBAMM_SCIKITS_ODES=true
           if: type != cron
-        # Unit testing on Python3.6 on OS/X and Ubuntu
+        # Unit testing on Python3.7 on OS/X and Ubuntu
         - os: osx
           language: generic
           env:
-            - PYTHON=3.6.5
+            - PYTHON=3.7.4
             - PYBAMM_UNIT=true
           if: type != cron
-        - python: "3.6"
+        - python: "3.7"
           addons:
             apt:
               sources:
@@ -69,12 +69,12 @@ matrix:
                 - libopenblas-dev
                 - liblapack-dev
                 - graphviz
-                - python3.6-dev
+                - python3.7-dev
           env:
             - PYBAMM_UNIT=true
             - PYBAMM_SCIKITS_ODES=true
-        # Unit testing on Python3.6 on Ubuntu without scikit odes
-        - python: "3.6"
+        # Unit testing on Python3.7 on Ubuntu without scikit odes
+        - python: "3.7"
           addons:
             apt:
               sources:
@@ -85,7 +85,7 @@ matrix:
                 - libopenblas-dev
                 - liblapack-dev
                 - graphviz
-                - python3.6-dev
+                - python3.7-dev
           env:
             - PYBAMM_UNIT=true
           if: type != cron
