@@ -67,3 +67,9 @@ pyvenv.cfg
 sundials
 sundials4
 SuiteSparse
+
+# cmakefiles
+CMakeFiles
+Makefile
+*.cmake
+*.so

@@ -4,7 +4,8 @@
 import pybamm
 
 import numpy as np
-from .c_solvers import klu
+
+import klu
 import scipy.sparse as sparse
 
 
