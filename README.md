@@ -138,15 +138,15 @@ documentation](https://scikits-odes.readthedocs.io/en/latest/installation.html) 
 detailed installation instructions.
 
 ### Sundials with KLU sparse solver
-If you wish so simulate large systems such as the 2+1D models in PyBaMM, we recommend employing a 
-sparse solver. PyBaMM currently offers a direct interface to the KLU solver within Sundials. If you are
-on a linux based distribution, a bash script has been provided which should install everything for 
-you correctly. Please note you will require the python header files, openblas, 
+If you wish so simulate large systems such as the 2+1D models, we recommend employing a 
+sparse solver. PyBaMM currently offers a direct interface to the sparse KLU solver within Sundials. 
+If you are on a linux based distribution, a bash script has been provided which should 
+install everything for you correctly. Please note you will require the python header files, openblas, 
 a c compiler (e.g. gcc), and cmake, all of which you should be able to install on ubuntu using
 ```bash
 apt install python3-dev libopenblas-dev cmake gcc
 ```
-You will likely need to prepend sudo command to the above command.
+You will likely need to prepend `sudo` to the above command.
 
 To install KLU, from within the main PyBaMM directory type
 ```bash
