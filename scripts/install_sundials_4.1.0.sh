@@ -38,7 +38,7 @@ cd $TMP_DIR
 wget $SUNDIALS_URL -O $SUNDIALS_NAME
 tar -xvf $SUNDIALS_NAME
 
-# # replace the sundials cmake file by a modified version that finds the KLU libraries and headers
+# replace the sundials cmake file by a modified version that finds the KLU libraries and headers
 cd sundials-4.1.0
 cp $CURRENT_DIR/scripts/replace-cmake/CMakeLists.txt .
 
@@ -77,3 +77,20 @@ rm -rf $TMP_DIR
 export LD_LIBRARY_PATH=$INSTALL_DIR/lib:$LD_LIBRARY_PATH
 export SUNDIALS_INST=$INSTALL_DIR
 export SUITESPARSE=$SUITESPARSE_DIR
+
+# get pybind11
+cd $CURRENT_DIR
+mkdir -p third-party
+cd third-party
+# if already cloned then pull otherwise clone pybind11
+if cd pybind11; then git pull; else git clone https://github.com/pybind/pybind11.git; fi
+
+cd $CURRENT_DIR
+pip install pybind11 # also do a pip install for good measure
+cmake .
+make
+
+# remove cmakefiles etc just to clean things up 
+rm -rf CMakeFiles
+rm CMakeCache.txt
+rm cmake_install.cmake
