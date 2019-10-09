@@ -73,6 +73,7 @@ sigma_cp_dimensional = sigma_p_dim
 a_n_dim = pybamm.geometric_parameters.a_n_dim
 a_p_dim = pybamm.geometric_parameters.a_p_dim
 b_n = pybamm.geometric_parameters.b_n
+b_s = pybamm.geometric_parameters.b_s
 b_p = pybamm.geometric_parameters.b_p
 b = pybamm.geometric_parameters.b
 xi_n = pybamm.Parameter("Negative electrode morphological parameter")

@@ -53,7 +53,7 @@ class TestUpdateParameters(unittest.TestCase):
         )
         # process and solve with updated parameter values
         parameter_values_update = pybamm.ParameterValues(
-            base_parameters=model2.default_parameter_values,
+            values=model2.default_parameter_values,
             optional_parameters={"Typical current [A]": 2},
         )
         modeltest2.test_update_parameters(parameter_values_update)
@@ -71,7 +71,7 @@ class TestUpdateParameters(unittest.TestCase):
         modeltest3 = tests.StandardModelTest(model3)
         modeltest3.test_all(skip_output_tests=True)
         parameter_values_update = pybamm.ParameterValues(
-            base_parameters=model3.default_parameter_values,
+            values=model3.default_parameter_values,
             optional_parameters={
                 "Current function": pybamm.GetConstantCurrent(current=pybamm.Scalar(0))
             },
@@ -104,7 +104,7 @@ class TestUpdateParameters(unittest.TestCase):
 
         # trying to update the geometry fails
         parameter_values_update = pybamm.ParameterValues(
-            base_parameters=model1.default_parameter_values,
+            values=model1.default_parameter_values,
             optional_parameters={
                 "Negative electrode thickness [m]": 0.00002,
                 "Separator thickness [m]": 0.00003,
@@ -117,7 +117,7 @@ class TestUpdateParameters(unittest.TestCase):
         # instead we need to make a new model and re-discretise
         model2 = pybamm.lead_acid.LOQS()
         parameter_values_update = pybamm.ParameterValues(
-            base_parameters=model2.default_parameter_values,
+            values=model2.default_parameter_values,
             optional_parameters={
                 "Negative electrode thickness [m]": 0.00002,
                 "Separator thickness [m]": 0.00003,

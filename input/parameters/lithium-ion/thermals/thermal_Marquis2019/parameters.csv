@@ -1,0 +1,6 @@
+Name [units],Value,Reference,Notes
+# Empty rows and rows starting with ‘#’ will be ignored,,,
+,,,
+Reference temperature [K],298.15,25C,
+Heat transfer coefficient [W.m-2.K-1],10,,
+Initial temperature [K],298.15,,

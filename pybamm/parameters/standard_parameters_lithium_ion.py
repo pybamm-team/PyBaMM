@@ -83,6 +83,9 @@ a_k_dim = pybamm.Concatenation(
 )
 R_n = pybamm.geometric_parameters.R_n
 R_p = pybamm.geometric_parameters.R_p
+b_n = pybamm.geometric_parameters.b_n
+b_s = pybamm.geometric_parameters.b_s
+b_p = pybamm.geometric_parameters.b_p
 b = pybamm.geometric_parameters.b
 
 # Electrochemical reactions
@@ -122,25 +125,29 @@ velocity_scale = pybamm.Scalar(1)
 
 def D_e_dimensional(c_e, T):
     "Dimensional diffusivity in electrolyte"
-    return pybamm.FunctionParameter("Electrolyte diffusivity", c_e, T, T_ref, E_D_e, R)
+    return pybamm.FunctionParameter(
+        "Electrolyte diffusivity [m2.s-1]", c_e, T, T_ref, E_D_e, R
+    )
 
 
 def kappa_e_dimensional(c_e, T):
     "Dimensional electrolyte conductivity"
-    return pybamm.FunctionParameter("Electrolyte conductivity", c_e, T, T_ref, E_k_e, R)
+    return pybamm.FunctionParameter(
+        "Electrolyte conductivity [S.m-1]", c_e, T, T_ref, E_k_e, R
+    )
 
 
 def D_n_dimensional(c_n, T):
     "Dimensional diffusivity in negative particle"
     return pybamm.FunctionParameter(
-        "Negative electrode diffusivity", c_n, T, T_ref, E_D_s_n, R
+        "Negative electrode diffusivity [m2.s-1]", c_n, T, T_ref, E_D_s_n, R
     )
 
 
 def D_p_dimensional(c_p, T):
     "Dimensional diffusivity in positive particle"
     return pybamm.FunctionParameter(
-        "Positive electrode diffusivity", c_p, T, T_ref, E_D_s_p, R
+        "Positive electrode diffusivity [m2.s-1]", c_p, T, T_ref, E_D_s_p, R
     )
 
 
@@ -280,9 +287,7 @@ sigma_cp_prime = sigma_cp * delta ** 2
 sigma_cn_dbl_prime = sigma_cn_prime * delta
 sigma_cp_dbl_prime = sigma_cp_prime * delta
 # should rename this to avoid confusion with Butler-Volmer
-alpha = 1 / (sigma_cn * delta ** 2 * l_cn) + 1 / (
-    sigma_cp * delta ** 2 * l_cp
-)
+alpha = 1 / (sigma_cn * delta ** 2 * l_cn) + 1 / (sigma_cp * delta ** 2 * l_cp)
 alpha_prime = alpha / delta
 
 # Electrolyte Properties

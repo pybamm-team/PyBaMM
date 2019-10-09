@@ -83,10 +83,15 @@ class ParameterValues(dict):
             self.update(component_params, check_conflict=True)
             # Load functions if they are specified
             for name, param in component_params.items():
-                try:
+                # Functions are flagged with the string "[function]"
+                if isinstance(param, str) and param.startswith("[function]"):
+                    self[name] = os.path.join(component_path, param[10:] + ".py")
+                # Data is flagged with the string "[data]"
+                # if isinstance(param, str) and param.startswith("[data]"):
+                # TODO: implement interpolating function for data
+                # Anything else should be a float
+                else:
                     self[name] = float(param)
-                except ValueError:
-                    self[name] = os.path.join(component_path, param + ".py")
 
     def read_parameters_csv(self, filename):
         """Reads parameters from csv file into dict.
