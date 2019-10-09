@@ -13,7 +13,7 @@ from tests import get_mesh_for_testing, get_discretisation_for_testing
 class TestScikitsSolvers(unittest.TestCase):
     def test_ode_integrate(self):
         # Constant
-        solver = pybamm.ScikitsOdeSolver(tol=1e-8)
+        solver = pybamm.ScikitsOdeSolver(rtol=1e-8, atol=1e-8)
 
         def constant_growth(t, y):
             return 0.5 * np.ones_like(y)
@@ -25,7 +25,7 @@ class TestScikitsSolvers(unittest.TestCase):
         np.testing.assert_allclose(0.5 * solution.t, solution.y[0])
 
         # Exponential decay
-        solver = pybamm.ScikitsOdeSolver(tol=1e-8)
+        solver = pybamm.ScikitsOdeSolver(rtol=1e-8, atol=1e-8)
 
         def exponential_decay(t, y):
             return -0.1 * y
@@ -55,7 +55,7 @@ class TestScikitsSolvers(unittest.TestCase):
 
     def test_ode_integrate_with_event(self):
         # Constant
-        solver = pybamm.ScikitsOdeSolver(tol=1e-8)
+        solver = pybamm.ScikitsOdeSolver(rtol=1e-8, atol=1e-8)
 
         def constant_decay(t, y):
             return -2 * np.ones_like(y)
@@ -75,7 +75,7 @@ class TestScikitsSolvers(unittest.TestCase):
         self.assertEqual(solution.termination, "event")
 
         # Expnonential growth
-        solver = pybamm.ScikitsOdeSolver(tol=1e-8)
+        solver = pybamm.ScikitsOdeSolver(rtol=1e-8, atol=1e-8)
 
         def exponential_growth(t, y):
             return y
@@ -101,7 +101,7 @@ class TestScikitsSolvers(unittest.TestCase):
 
     def test_ode_integrate_with_jacobian(self):
         # Linear
-        solver = pybamm.ScikitsOdeSolver(tol=1e-8)
+        solver = pybamm.ScikitsOdeSolver(rtol=1e-8, atol=1e-8)
 
         def linear_ode(t, y):
             return np.array([0.5, 2 - y[0]])
@@ -134,7 +134,7 @@ class TestScikitsSolvers(unittest.TestCase):
         )
         np.testing.assert_allclose(0.5 * solution.t, solution.y[0])
 
-        solver = pybamm.ScikitsOdeSolver(tol=1e-8, linsolver="spgmr")
+        solver = pybamm.ScikitsOdeSolver(rtol=1e-8, atol=1e-8, linsolver="spgmr")
 
         solution = solver.integrate(linear_ode, y0, t_eval, jacobian=jacobian)
         np.testing.assert_array_equal(solution.t, t_eval)
@@ -152,7 +152,7 @@ class TestScikitsSolvers(unittest.TestCase):
         np.testing.assert_allclose(0.5 * solution.t, solution.y[0])
 
         # Nonlinear exponential grwoth
-        solver = pybamm.ScikitsOdeSolver(tol=1e-8)
+        solver = pybamm.ScikitsOdeSolver(rtol=1e-8, atol=1e-8)
 
         def exponential_growth(t, y):
             return np.array([y[0], (1.0 - y[0]) * y[1]])
@@ -182,7 +182,7 @@ class TestScikitsSolvers(unittest.TestCase):
             np.exp(1 + solution.t - np.exp(solution.t)), solution.y[1], rtol=1e-4
         )
 
-        solver = pybamm.ScikitsOdeSolver(tol=1e-8, linsolver="spgmr")
+        solver = pybamm.ScikitsOdeSolver(rtol=1e-8, atol=1e-8, linsolver="spgmr")
 
         solution = solver.integrate(exponential_growth, y0, t_eval, jacobian=jacobian)
         np.testing.assert_array_equal(solution.t, t_eval)
@@ -202,7 +202,7 @@ class TestScikitsSolvers(unittest.TestCase):
 
     def test_dae_integrate(self):
         # Constant
-        solver = pybamm.ScikitsDaeSolver(tol=1e-8)
+        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
 
         def constant_growth_dae(t, y, ydot):
             return [0.5 * np.ones_like(y[0]) - ydot[0], 2 * y[0] - y[1]]
@@ -215,7 +215,7 @@ class TestScikitsSolvers(unittest.TestCase):
         np.testing.assert_allclose(1.0 * solution.t, solution.y[1])
 
         # Exponential decay
-        solver = pybamm.ScikitsDaeSolver(tol=1e-8)
+        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
 
         def exponential_decay_dae(t, y, ydot):
             return [-0.1 * y[0] - ydot[0], 2 * y[0] - y[1]]
@@ -228,7 +228,7 @@ class TestScikitsSolvers(unittest.TestCase):
         self.assertEqual(solution.termination, "final time")
 
     def test_dae_integrate_failure(self):
-        solver = pybamm.ScikitsDaeSolver(tol=1e-8)
+        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
 
         def constant_growth_dae(t, y, ydot):
             return [0.5 * np.ones_like(y[0]) - ydot[0], 2 * y[0] - y[1]]
@@ -240,7 +240,7 @@ class TestScikitsSolvers(unittest.TestCase):
 
     def test_dae_integrate_bad_ics(self):
         # Constant
-        solver = pybamm.ScikitsDaeSolver(tol=1e-8)
+        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
 
         def constant_growth_dae(t, y, ydot):
             return [0.5 * np.ones_like(y[0]) - ydot[0], 2 * y[0] - y[1]]
@@ -265,7 +265,7 @@ class TestScikitsSolvers(unittest.TestCase):
         np.testing.assert_allclose(1.0 * solution.t, solution.y[1])
 
         # Exponential decay
-        solver = pybamm.ScikitsDaeSolver(tol=1e-8)
+        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
 
         def exponential_decay_dae(t, y, ydot):
             return [-0.1 * y[0] - ydot[0], 2 * y[0] - y[1]]
@@ -278,7 +278,7 @@ class TestScikitsSolvers(unittest.TestCase):
 
     def test_dae_integrate_with_event(self):
         # Constant
-        solver = pybamm.ScikitsDaeSolver(tol=1e-8)
+        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
 
         def constant_growth_dae(t, y, ydot):
             return [0.5 * np.ones_like(y[0]) - ydot[0], 2 * y[0] - y[1]]
@@ -305,7 +305,7 @@ class TestScikitsSolvers(unittest.TestCase):
         self.assertEqual(solution.termination, "event")
 
         # Exponential decay
-        solver = pybamm.ScikitsDaeSolver(tol=1e-8)
+        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
 
         def exponential_decay_dae(t, y, ydot):
             return np.array([-0.1 * y[0] - ydot[0], 2 * y[0] - y[1]])
@@ -334,7 +334,7 @@ class TestScikitsSolvers(unittest.TestCase):
 
     def test_dae_integrate_with_jacobian(self):
         # Constant
-        solver = pybamm.ScikitsDaeSolver(tol=1e-8)
+        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
 
         def constant_growth_dae(t, y, ydot):
             return np.array([0.5 * np.ones_like(y[0]) - ydot[0], 2.0 * y[0] - y[1]])
@@ -354,7 +354,7 @@ class TestScikitsSolvers(unittest.TestCase):
         np.testing.assert_allclose(1.0 * solution.t, solution.y[1])
 
         # Nonlinear (tests when Jacobian a function of y)
-        solver = pybamm.ScikitsDaeSolver(tol=1e-8)
+        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
 
         def nonlinear_dae(t, y, ydot):
             return np.array([0.5 * np.ones_like(y[0]) - ydot[0], 2 * y[0] ** 2 - y[1]])
@@ -375,7 +375,7 @@ class TestScikitsSolvers(unittest.TestCase):
 
     def test_dae_integrate_with_non_unity_mass(self):
         # Constant
-        solver = pybamm.ScikitsDaeSolver(tol=1e-8)
+        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
 
         def constant_growth_dae(t, y, ydot):
             return np.array([0.5 * np.ones_like(y[0]) - 4 * ydot[0], 2.0 * y[0] - y[1]])
@@ -405,7 +405,7 @@ class TestScikitsSolvers(unittest.TestCase):
         disc.process_model(model)
 
         # Solve
-        solver = pybamm.ScikitsOdeSolver(tol=1e-9)
+        solver = pybamm.ScikitsOdeSolver(rtol=1e-9, atol=1e-9)
         t_eval = np.linspace(0, 1, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
@@ -431,7 +431,7 @@ class TestScikitsSolvers(unittest.TestCase):
         disc.process_model(model)
 
         # Solve
-        solver = pybamm.ScikitsOdeSolver(tol=1e-9)
+        solver = pybamm.ScikitsOdeSolver(rtol=1e-9, atol=1e-9)
         t_eval = np.linspace(0, 10, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
@@ -474,7 +474,7 @@ class TestScikitsSolvers(unittest.TestCase):
         model.jacobian = jacobian
 
         # Solve
-        solver = pybamm.ScikitsOdeSolver(tol=1e-9)
+        solver = pybamm.ScikitsOdeSolver(rtol=1e-9, atol=1e-9)
         t_eval = np.linspace(0, 1, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
@@ -503,7 +503,7 @@ class TestScikitsSolvers(unittest.TestCase):
         disc.process_model(model)
 
         # Solve
-        solver = pybamm.ScikitsDaeSolver(tol=1e-8)
+        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 1, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
@@ -528,7 +528,7 @@ class TestScikitsSolvers(unittest.TestCase):
         disc.process_model(model)
 
         # Solve
-        solver = pybamm.ScikitsDaeSolver(tol=1e-8)
+        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 1, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
@@ -552,7 +552,7 @@ class TestScikitsSolvers(unittest.TestCase):
         disc.process_model(model)
 
         # Solve
-        solver = pybamm.ScikitsDaeSolver(tol=1e-8)
+        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 5, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_less(solution.y[0], 1.5)
@@ -591,7 +591,7 @@ class TestScikitsSolvers(unittest.TestCase):
         model.jacobian = jacobian
 
         # Solve
-        solver = pybamm.ScikitsDaeSolver(tol=1e-8)
+        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 1, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
@@ -608,7 +608,7 @@ class TestScikitsSolvers(unittest.TestCase):
         disc.process_model(model)
 
         # Solve
-        solver = pybamm.ScikitsDaeSolver(tol=1e-8)
+        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 1, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
@@ -624,7 +624,7 @@ class TestScikitsSolvers(unittest.TestCase):
         disc = get_discretisation_for_testing()
         disc.process_model(model)
 
-        solver = pybamm.ScikitsOdeSolver(tol=1e-9)
+        solver = pybamm.ScikitsOdeSolver(rtol=1e-9, atol=1e-9)
 
         # Step once
         dt = 0.1
@@ -656,7 +656,7 @@ class TestScikitsSolvers(unittest.TestCase):
         disc = get_discretisation_for_testing()
         disc.process_model(model)
 
-        solver = pybamm.ScikitsDaeSolver(tol=1e-8)
+        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
 
         # Step once
         dt = 0.1
