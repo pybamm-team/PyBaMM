@@ -17,7 +17,7 @@ addons:
 
 matrix:
     include:
-        # Unit testing on all supported Python versions on Ubuntu
+        # Unit and example testing on all supported Python versions on Ubuntu
         - python: "3.6"
           addons:
             apt:
@@ -34,36 +34,6 @@ matrix:
             - PYBAMM_UNIT=true
             - PYBAMM_EXAMPLES=true
             - PYBAMM_SCIKITS_ODES=true
-        - python: "3.6"
-          addons:
-            apt:
-              sources:
-                - deadsnakes
-              packages:
-                - gfortran
-                - gcc
-                - libopenblas-dev
-                - liblapack-dev
-                - graphviz
-                - python3.6-dev
-          env:
-            - PYBAMM_UNIT=true
-            - PYBAMM_SCIKITS_ODES=true
-        - python: "3.6"
-          addons:
-            apt:
-              sources:
-                - deadsnakes
-              packages:
-                - gfortran
-                - gcc
-                - libopenblas-dev
-                - liblapack-dev
-                - graphviz
-                - python3.6-dev
-          env:
-            - PYBAMM_UNIT=true
-          if: type != cron
         - python: "3.7"
           addons:
             apt:
@@ -81,14 +51,13 @@ matrix:
             - PYBAMM_EXAMPLES=true
             - PYBAMM_SCIKITS_ODES=true
           if: type != cron
-        # Unit testing on OS/X
+        # Unit testing on Python3.6 on OS/X and Ubuntu
         - os: osx
           language: generic
           env:
             - PYTHON=3.6.5
             - PYBAMM_UNIT=true
           if: type != cron
-        # Docs, style and cover checking, latest Python version only
         - python: "3.6"
           addons:
             apt:
@@ -102,8 +71,9 @@ matrix:
                 - graphviz
                 - python3.6-dev
           env:
-            - PYBAMM_DOCS=true
-          if: type != cron
+            - PYBAMM_UNIT=true
+            - PYBAMM_SCIKITS_ODES=true
+        # Unit testing on Python3.6 on Ubuntu without scikit odes
         - python: "3.6"
           addons:
             apt:
@@ -117,9 +87,10 @@ matrix:
                 - graphviz
                 - python3.6-dev
           env:
-            - PYBAMM_STYLE=true
+            - PYBAMM_UNIT=true
           if: type != cron
-        - python: "3.6"
+        # Cover, docs and style checking, latest Python version only
+        - python: "3.7"
           addons:
             apt:
               sources:
@@ -130,13 +101,12 @@ matrix:
                 - libopenblas-dev
                 - liblapack-dev
                 - graphviz
-                - python3.6-dev
+                - python3.7-dev
           env:
             - PYBAMM_COVER=true
             - PYBAMM_SCIKITS_ODES=true
           if: type != cron
-          # Cron jobs
-        - python: "3.6"
+        - python: "3.7"
           addons:
             apt:
               sources:
@@ -147,8 +117,40 @@ matrix:
                 - libopenblas-dev
                 - liblapack-dev
                 - graphviz
-                - python3.6-dev
+                - python3.7-dev
           env:
+            - PYBAMM_DOCS=true
+          if: type != cron
+        - python: "3.7"
+          addons:
+            apt:
+              sources:
+                - deadsnakes
+              packages:
+                - gfortran
+                - gcc
+                - libopenblas-dev
+                - liblapack-dev
+                - graphviz
+                - python3.7-dev
+          env:
+            - PYBAMM_STYLE=true
+          if: type != cron
+          # Cron jobs
+        - python: "3.7"
+          addons:
+            apt:
+              sources:
+                - deadsnakes
+              packages:
+                - gfortran
+                - gcc
+                - libopenblas-dev
+                - liblapack-dev
+                - graphviz
+                - python3.7-dev
+          env:
+            - PYBAMM_UNIT=true
             - PYBAMM_EXAMPLES=true
             - PYBAMM_SCIKITS_ODES=true
           if: type == cron
