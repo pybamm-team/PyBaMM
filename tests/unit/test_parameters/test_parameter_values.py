@@ -11,8 +11,8 @@ import tests.shared as shared
 
 class TestParameterValues(unittest.TestCase):
     def test_read_parameters_csv(self):
-        data = pybamm.ParameterValues().read_parameters_csv(
-            "input/parameters/lead-acid/default.csv"
+        data = pybamm.ParameterValues({}).read_parameters_csv(
+            "input/parameters/lead-acid/thermals/default/parameters.csv"
         )
         self.assertEqual(data["Reference temperature [K]"], 294.85)
 
@@ -21,25 +21,26 @@ class TestParameterValues(unittest.TestCase):
         param = pybamm.ParameterValues({"a": 1})
         self.assertEqual(param["a"], 1)
         # from file
-        param = pybamm.ParameterValues("input/parameters/lead-acid/default.csv")
+        param = pybamm.ParameterValues(
+            values="input/parameters/lead-acid/thermals/default/parameters.csv"
+        )
         self.assertEqual(param["Reference temperature [K]"], 294.85)
 
-    def test_overwrite(self):
-        # from dicts
-        param = pybamm.ParameterValues(
-            base_parameters={"a": 1, "b": 2}, optional_parameters={"b": 3}
-        )
+    def test_update(self):
+        param = pybamm.ParameterValues({"a": 1})
         self.assertEqual(param["a"], 1)
-        self.assertEqual(param["b"], 3)
-        param.update({"a": 4})
-        self.assertEqual(param["a"], 4)
-        # from files
-        param = pybamm.ParameterValues(
-            base_parameters="input/parameters/lead-acid/default.csv",
-            optional_parameters="input/parameters/lead-acid/optional_test.csv",
-        )
-        self.assertEqual(param["Reference temperature [K]"], 294.85)
-        self.assertEqual(param["Negative electrode thickness [m]"], 0.5)
+        # no conflict
+        param.update({"a": 2})
+        self.assertEqual(param["a"], 2)
+        param.update({"a": 2}, check_conflict=True)
+        self.assertEqual(param["a"], 2)
+        # with conflict
+        param.update({"a": 3})
+        self.assertEqual(param["a"], 3)
+        with self.assertRaisesRegex(
+            ValueError, "parameter 'a' already defined with value '3'"
+        ):
+            param.update({"a": 4}, check_conflict=True)
 
     def test_check_parameter_values(self):
         # Can't provide a current density of 0, as this will cause a ZeroDivision error
@@ -268,7 +269,7 @@ class TestParameterValues(unittest.TestCase):
         scal2 = pybamm.Scalar(4)
         expression = (scal1 * (par1 + var2)) / ((var1 - par2) + scal2)
 
-        param = pybamm.ParameterValues(base_parameters={"par1": 1, "par2": 2})
+        param = pybamm.ParameterValues(values={"par1": 1, "par2": 2})
         exp_param = param.process_symbol(expression)
         self.assertIsInstance(exp_param, pybamm.Division)
         # left side

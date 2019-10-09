@@ -4,7 +4,6 @@ Name [units],Value,Reference,Notes
 # Electrode properties,,,
 Positive electrode conductivity [S.m-1],80000,,Lead-oxide
 Positive electrode pore size [m],1E-07,,
-Maximum porosity of separator,0.92,,
 Maximum porosity of positive electrode,0.57,,
 Molar volume of lead-dioxide [m3.mol-1],2.54797441364606E-05,,Calculated as 239e-3 / 9.38e3
 Molar volume of lead sulfate [m3.mol-1],4.81717011128776E-05,,Calculated as 303e-3 / 6.29e3
@@ -13,7 +12,7 @@ Positive electrode open-circuit potential [V],ocp_Bode1977,,
 ,,,
 # Microstructure,,,
 Positive electrode surface area density [m-1],23000000,,
-Positive electrode bruggeman coefficient,1.5,,
+Positive electrode Bruggeman coefficient,1.5,,
 Positive electrode morphological parameter,0.6,srinivasan2003mathematical,
 Positive electrode capacity [C.m-3],2745000000,,
 ,,,

@@ -36,8 +36,13 @@ a_n_dim = pybamm.Parameter("Negative electrode surface area density [m-1]")
 a_p_dim = pybamm.Parameter("Positive electrode surface area density [m-1]")
 R_n = pybamm.Parameter("Negative particle radius [m]")
 R_p = pybamm.Parameter("Positive particle radius [m]")
-b = pybamm.Parameter("Bruggeman coefficient")
-
+b_n = pybamm.Parameter("Negative electrode Bruggeman coefficient")
+b_p = pybamm.Parameter("Positive electrode Bruggeman coefficient")
+b = pybamm.Concatenation(
+    pybamm.FullBroadcast(b_n, ["negative electrode"], "current collector"),
+    pybamm.FullBroadcast(0, ["separator"], "current collector"),
+    pybamm.FullBroadcast(b_p, ["positive electrode"], "current collector"),
+)
 
 # --------------------------------------------------------------------------------------
 "Dimensionless Parameters"

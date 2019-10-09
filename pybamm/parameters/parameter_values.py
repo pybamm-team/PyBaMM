@@ -54,18 +54,24 @@ class ParameterValues(dict):
         Load standard set of components from a 'chemistry' dictionary
         """
         base_chemistry = chemistry["chemistry"]
-        # Create path to file and load miscellaneous values
+        # Create path to file
         path = os.path.join(pybamm.root_dir(), "input", "parameters", base_chemistry)
-        self.update(self.read_parameters_csv(os.path.join(path, "misc_parameters.csv")))
         # Load each component name
-        for component_group in ["electrolyte", "anode", "cathode"]:
+        for component_group in [
+            "cell",
+            "anode",
+            "cathode",
+            "separator",
+            "electrolyte",
+            "thermal",
+        ]:
             # Make sure component is provided
             try:
                 component = chemistry[component_group]
             except KeyError:
                 raise KeyError(
-                    "must provide {} for {} chemistry".format(
-                        component_group, chemistry
+                    "must provide '{}' parameters for {} chemistry".format(
+                        component_group, base_chemistry
                     )
                 )
             # Create path to component and load values
@@ -73,7 +79,8 @@ class ParameterValues(dict):
             component_params = self.read_parameters_csv(
                 os.path.join(component_path, "parameters.csv")
             )
-            self.update(component_params)
+            # Update parameters, making sure to check any conflicts
+            self.update(component_params, check_conflict=True)
             # Load functions if they are specified
             for name, param in component_params.items():
                 try:
@@ -100,12 +107,23 @@ class ParameterValues(dict):
         df.dropna(how="all", inplace=True)
         return {k: v for (k, v) in zip(df["Name [units]"], df["Value"])}
 
-    def update(self, values):
+    def update(self, values, check_conflict=False):
         # check parameter values
         self.check_parameter_values(values)
         # update
         for k, v in values.items():
-            self[k] = v
+            # check for conflicts
+            if (
+                check_conflict is True
+                and k in self.keys()
+                and (k == float(v) or k == v)
+            ):
+                raise ValueError(
+                    "parameter '{}' already defined with value '{}'".format(k, self[k])
+                )
+            # if no conflicts, update
+            else:
+                self[k] = v
         # reset processed symbols
         self._processed_symbols = {}
 

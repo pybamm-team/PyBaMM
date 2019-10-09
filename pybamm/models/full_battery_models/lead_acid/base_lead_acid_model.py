@@ -3,7 +3,6 @@
 #
 
 import pybamm
-import os
 
 
 class BaseModel(pybamm.BaseBatteryModel):
@@ -29,12 +28,7 @@ class BaseModel(pybamm.BaseBatteryModel):
                     pybamm.standard_parameters_lead_acid.I_typ
                 ),
             },
-            chemistry={
-                "chemistry": "lead-acid",
-                "anode": "lead_Sulzer2019",
-                "cathode": "lead_dioxide_Sulzer2019",
-                "electrolyte": "sulfuric_acid_Sulzer2019",
-            },
+            chemistry=pybamm.parameter_sets.Sulzer2019,
         )
 
     @property

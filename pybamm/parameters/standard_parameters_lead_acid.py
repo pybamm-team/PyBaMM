@@ -72,8 +72,11 @@ sigma_cp_dimensional = sigma_p_dim
 # Microstructure
 a_n_dim = pybamm.geometric_parameters.a_n_dim
 a_p_dim = pybamm.geometric_parameters.a_p_dim
+b_n = pybamm.geometric_parameters.b_n
+b_p = pybamm.geometric_parameters.b_p
 b = pybamm.geometric_parameters.b
-xi = pybamm.Parameter("Electrode morphological parameter")
+xi_n = pybamm.Parameter("Negative electrode morphological parameter")
+xi_p = pybamm.Parameter("Positive electrode morphological parameter")
 
 # Electrochemical reactions
 # Main
@@ -87,7 +90,12 @@ s_plus_n_S_dim = pybamm.Parameter("Negative electrode cation signed stoichiometr
 s_plus_p_S_dim = pybamm.Parameter("Positive electrode cation signed stoichiometry")
 ne_n_S = pybamm.Parameter("Negative electrode electrons in reaction")
 ne_p_S = pybamm.Parameter("Positive electrode electrons in reaction")
-C_dl_dimensional = pybamm.Parameter("Double-layer capacity [F.m-2]")
+C_dl_n_dimensional = pybamm.Parameter(
+    "Negative electrode double-layer capacity [F.m-2]"
+)
+C_dl_p_dimensional = pybamm.Parameter(
+    "Positive electrode double-layer capacity [F.m-2]"
+)
 # Oxygen
 j0_n_Ox_ref_dimensional = pybamm.Parameter(
     "Negative electrode reference exchange-current density (oxygen) [A.m-2]"
@@ -140,7 +148,8 @@ V_PbO2 = pybamm.Parameter("Molar volume of lead-dioxide [m3.mol-1]")
 V_PbSO4 = pybamm.Parameter("Molar volume of lead sulfate [m3.mol-1]")
 DeltaVsurf_n = V_Pb - V_PbSO4  # Net Molar Volume consumed in neg electrode [m3.mol-1]
 DeltaVsurf_p = V_PbSO4 - V_PbO2  # Net Molar Volume consumed in pos electrode [m3.mol-1]
-d = pybamm.Parameter("Pore size [m]")
+d_n = pybamm.Parameter("Negative electrode pore size [m]")
+d_p = pybamm.Parameter("Positive electrode pore size [m]")
 eps_n_max = pybamm.Parameter("Maximum porosity of negative electrode")
 eps_s_max = pybamm.Parameter("Maximum porosity of separator")
 eps_p_max = pybamm.Parameter("Maximum porosity of positive electrode")
@@ -289,7 +298,7 @@ omega_i = c_e_typ * M_e / rho_typ * (t_plus + M_minus / M_e)
 omega_c_e = c_e_typ * M_e / rho_typ * (1 - M_w * V_e / V_w * M_e)
 C_e = tau_diffusion_e / tau_discharge
 # Ratio of viscous pressure scale to osmotic pressure scale (electrolyte)
-pi_os_e = mu_typ * velocity_scale * L_x / (d ** 2 * R * T_ref * c_e_typ)
+pi_os_e = mu_typ * velocity_scale * L_x / (d_n ** 2 * R * T_ref * c_e_typ)
 # ratio of electrolyte concentration to electrode concentration, undefined
 gamma_e = pybamm.Scalar(1)
 # Reynolds number
@@ -331,10 +340,10 @@ s = pybamm.Concatenation(
 j0_n_S_ref = j0_n_S_ref_dimensional / interfacial_current_scale_n
 j0_p_S_ref = j0_p_S_ref_dimensional / interfacial_current_scale_p
 C_dl_n = (
-    C_dl_dimensional * potential_scale / interfacial_current_scale_n / tau_discharge
+    C_dl_n_dimensional * potential_scale / interfacial_current_scale_n / tau_discharge
 )
 C_dl_p = (
-    C_dl_dimensional * potential_scale / interfacial_current_scale_p / tau_discharge
+    C_dl_p_dimensional * potential_scale / interfacial_current_scale_p / tau_discharge
 )
 ne_n = ne_n_S
 ne_p = ne_p_S
