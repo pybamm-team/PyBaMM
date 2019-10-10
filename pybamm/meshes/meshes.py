@@ -200,11 +200,18 @@ class Mesh(dict):
 
 class MeshGenerator:
     """
-    Base class for mesh generator objects that are used to generate submeshes
-    that require input paramaters.
+    Base class for mesh generator objects that are used to generate submeshes.
+
+    Parameters
+    ----------
+
+    submesh_type: str
+        The type of submeshes to use.
+    submesh_params: dict, optional
+        Contains any parameters required by the submesh.
     """
 
-    def __init__(self):
+    def __init__(self, submesh_type, submesh_params=None):
         pass
 
     def __call__(self):

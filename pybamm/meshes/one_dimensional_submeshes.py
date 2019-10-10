@@ -45,6 +45,53 @@ class SubMesh1D:
                     )
 
 
+class MeshGenerator1D(MeshGenerator):
+    """
+    A class to generate a submesh on a 1D domain.
+
+    Parameters
+    ----------
+
+    submesh_type: str
+        The type of submeshes to use. Can be "Uniform", "Exponential", "Chebyshev"
+        or "User".
+    submesh_params: dict, optional
+        Contains any parameters required by the submesh.
+    """
+
+    def __init__(self, submesh_type, submesh_params=None):
+        self.submesh_type = submesh_type
+        self.submesh_params = submesh_params
+
+    def __call__(self, lims, npts, tabs=None):
+
+        if self.submesh_type == "Uniform":
+            return Uniform1DSubMesh(lims, npts, tabs)
+
+        elif self.submesh_type == "Exponential":
+            try:
+                side = self.submesh_params["side"]
+            except KeyError:
+                raise pybamm.GeometryError("Exponenital mesh requires parameter 'side'")
+            if self.submesh_params["stretch"]:
+                stretch = self.submesh_params["stretch"]
+            elif side == "symmetric":
+                stretch = 1.15
+            elif side in ["left", "right"]:
+                stretch = 2.3
+            return Exponential1DSubMesh(lims, npts, tabs, side, stretch)
+
+        elif self.submesh_type == "Chebyshev":
+            return Chebyshev1DSubMesh(lims, npts, tabs)
+
+        elif self.submesh_type == "User":
+            try:
+                edges = self.submesh_params["edges"]
+            except KeyError:
+                raise pybamm.GeometryError("User mesh requires parameter 'edges'")
+            return UserSupplied1DSubMesh(lims, npts, tabs, edges)
+
+
 class Uniform1DSubMesh(SubMesh1D):
     """
     A class to generate a uniform submesh on a 1D domain
