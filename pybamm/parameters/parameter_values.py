@@ -123,7 +123,7 @@ class ParameterValues(dict):
             if (
                 check_conflict is True
                 and k in self.keys()
-                and (self[k] == float(v) or self[k] == v)
+                and not (self[k] == float(v) or self[k] == v)
             ):
                 raise ValueError(
                     "parameter '{}' already defined with value '{}'".format(k, self[k])

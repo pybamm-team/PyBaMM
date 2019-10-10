@@ -73,7 +73,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             values={
                 "Typical current [A]": 1,
                 "Current function": pybamm.GetConstantCurrent(
-                    pybamm.standard_parameters_lead_acid.I_typ
+                    pybamm.standard_parameters_lithium_ion.I_typ
                 ),
             },
             chemistry=pybamm.parameter_sets.Marquis2019,
