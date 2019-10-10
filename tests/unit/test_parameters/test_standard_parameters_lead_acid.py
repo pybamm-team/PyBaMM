@@ -58,8 +58,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
 
         # process parameters and discretise
         parameter_values = pybamm.ParameterValues(
-            values={"Typical current [A]": 1},
-            chemistry=pybamm.parameter_sets.Sulzer2019,
+            chemistry=pybamm.parameter_sets.Sulzer2019
         )
         disc = get_discretisation_for_testing()
         processed_s = disc.process_symbol(parameter_values.process_symbol(s_param))

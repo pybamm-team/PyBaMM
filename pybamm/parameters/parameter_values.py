@@ -84,13 +84,19 @@ class ParameterValues(dict):
             # Load functions if they are specified
             for name, param in component_params.items():
                 # Functions are flagged with the string "[function]"
-                if isinstance(param, str) and param.startswith("[function]"):
-                    self[name] = pybamm.load_function(
-                        os.path.join(component_path, param[10:] + ".py")
-                    )
-                # Data is flagged with the string "[data]"
-                # if isinstance(param, str) and param.startswith("[data]"):
-                # TODO: implement interpolating function for data
+                if isinstance(param, str):
+                    if param.startswith("[function]"):
+                        self[name] = pybamm.load_function(
+                            os.path.join(component_path, param[10:] + ".py")
+                        )
+                    # Inbuilt functions are flagged with the string "[inbuilt]"
+                    elif param.startswith("[inbuilt class]"):
+                        # Extra set of brackets at the end makes an instance of the
+                        # class
+                        self[name] = getattr(pybamm, param[15:])()
+                    # Data is flagged with the string "[data]"
+                    # elif param.startswith("[data]"):
+                    # TODO: implement interpolating function for data
                 # Anything else should be a float
                 else:
                     self[name] = float(param)
@@ -116,7 +122,7 @@ class ParameterValues(dict):
 
     def update(self, values, check_conflict=False):
         # check parameter values
-        self.check_parameter_values(values)
+        values = self.check_and_update_parameter_values(values)
         # update
         for k, v in values.items():
             # check for conflicts
@@ -134,20 +140,48 @@ class ParameterValues(dict):
         # reset processed symbols
         self._processed_symbols = {}
 
-    def check_parameter_values(self, values):
-        if (
-            "Crate" in values
-            and "Typical current [A]" in values
-            and "Cell capacity [A.h]" in (values or self)
-        ):
-            check_consistent
+    def check_and_update_parameter_values(self, values):
+        # Make sure "C-rate" and current are both non-zero
+        if "C-rate" in values and values["C-rate"] == 0:
+            raise ValueError(
+                """
+                "C-rate" cannot be zero. A possible alternative is to set
+                "Current function" to `pybamm.GetConstantCurrent(current=0)` instead.
+                """
+            )
         if "Typical current [A]" in values and values["Typical current [A]"] == 0:
             raise ValueError(
                 """
                 "Typical current [A]" cannot be zero. A possible alternative is to set
-                "Current function" to `pybamm.GetConstantCurrent(current=0)` instead
+                "Current function" to `pybamm.GetConstantCurrent(current=0)` instead.
                 """
             )
+        # If the capacity of the cell has been provided, make sure "C-rate" and current
+        # match with the stated capacity
+        if "Cell capacity [A.h]" in (values or self):
+            # Capacity from values takes precedence
+            if "Cell capacity [A.h]" in values:
+                capacity = values["Cell capacity [A.h]"]
+            else:
+                capacity = self["Cell capacity [A.h]"]
+            # Make sure they match if both provided
+            if "C-rate" in values and "Typical current [A]" in values:
+                if values["C-rate"] * capacity != values["Typical current [A]"]:
+                    raise ValueError(
+                        """
+                        "C-rate" ({}C) and Typical current ({} A) provided do not match
+                        given capacity ({} Ah). These can be updated individually
+                        instead.
+                        """.format(
+                            values["C-rate"], values["Typical current [A]"], capacity
+                        )
+                    )
+            # Update the other if only one provided
+            elif "C-rate" in values:
+                values["Typical current [A]"] = values["C-rate"] * capacity
+            elif "Typical current [A]" in values:
+                values["C-rate"] = values["Typical current [A]"] / capacity
+        return values
 
     def process_model(self, model, processing="process"):
         """Assign parameter values to a model.
