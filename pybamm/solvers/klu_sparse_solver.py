@@ -2,11 +2,19 @@
 # Solver class using sundials with the KLU sparse linear solver
 #
 import pybamm
-
 import numpy as np
-
-import klu
 import scipy.sparse as sparse
+
+import importlib
+
+klu_spec = importlib.util.find_spec("klu")
+if klu_spec is not None:
+    klu = importlib.util.module_from_spec(klu_spec)
+    klu_spec.loader.exec_module(klu)
+
+
+def have_klu():
+    return klu_spec is None
 
 
 class KLU(pybamm.DaeSolver):
@@ -31,6 +39,8 @@ class KLU(pybamm.DaeSolver):
     def __init__(
         self, method="ida", tol=1e-8, root_method="lm", root_tol=1e-6, max_steps=1000
     ):
+        if klu_spec is None:
+            raise ImportError("KLU is not installed")
 
         super().__init__(method, tol, root_method, root_tol, max_steps)
 
