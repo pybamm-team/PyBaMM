@@ -154,7 +154,7 @@ class Index(UnaryOperator):
         Whether to check if the slice size exceeds the child size. Default is True.
         This should always be True when creating a new symbol so that the appropriate
         check is performed, but should be False for creating a new copy to avoid
-        unecessarily repeating the check.
+        unnecessarily repeating the check.
     """
 
     def __init__(self, child, index, name=None, check_size=True):
