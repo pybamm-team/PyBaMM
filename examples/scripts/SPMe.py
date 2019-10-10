@@ -27,7 +27,7 @@ disc.process_model(model)
 
 # solve model
 t_eval = np.linspace(0, 0.2, 100)
-solution = pybamm.KLU().solve(model, t_eval)
+solution = model.default_solver.solve(model, t_eval)
 
 # plot
 plot = pybamm.QuickPlot(model, mesh, solution)
