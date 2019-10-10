@@ -1,78 +1,131 @@
+#
+#  Example to show the state of charge of a battery using the SPMe model
+#  Initial conditions are specified to start each electrode in 1/2 charged
+#  state. A charge and discharge are performed with current chosen to be
+#  1C rate when electrode dimensions are euqal.
+#  Coulomb counting is performed to calculate the capacity of the
+#  battery within the operating voltage limits and maximum particle concs.
+#  The anode thickenss is varied to highlight the importance of electrode
+#  sizing to enable full lithium utilization
+#
 import pybamm
 import numpy as np
 import matplotlib.pyplot as plt
 
 plt.close("all")
-pybamm.set_logging_level("INFO")
+pybamm.set_logging_level(30)
 
-# load model
-model = pybamm.lithium_ion.SPMe()
+factor = 6.38
+capacities = []
+specific_capacities = []
+l_p = 1e-4
+thicknesses = np.linspace(1.0, 2.5, 11) * l_p
+for l_n in thicknesses:
+    e_ratio = np.around(l_n / l_p, 3)
+    # Dimensions
+    h = 0.137
+    w = 0.207 / factor
+    A = h * w
+    l_s = 2.5e-5
+    l1d = (l_n + l_p + l_s)
+    vol = h * w * l1d
+    vol_cm3 = vol * 1e6
+    tot_cap = 0.0
+    tot_time = 0.0
+    fig, axes = plt.subplots(1, 2, sharey=True)
+    I_mag = 1.01 / factor
+    print('*' * 30)
+    for enum, I_app in enumerate([-1.0, 1.0]):
+        I_app *= I_mag
+        # load model
+        model = pybamm.lithium_ion.SPMe()
+        # create geometry
+        geometry = model.default_geometry
+        # load parameter values and process model and geometry
+        param = model.default_parameter_values
+        param.update(
+            {"Electrode height [m]": h,
+             "Electrode width [m]": w,
+             "Negative electrode thickness [m]": l_n,
+             "Positive electrode thickness [m]": l_p,
+             "Separator thickness [m]": l_s,
+             "Lower voltage cut-off [V]": 2.8,
+             "Upper voltage cut-off [V]": 4.7,
+             "Maximum concentration in negative electrode [mol.m-3]": 25000,
+             "Maximum concentration in positive electrode [mol.m-3]": 50000,
+             "Initial concentration in negative electrode [mol.m-3]": 12500,
+             "Initial concentration in positive electrode [mol.m-3]": 25000,
+             "Negative electrode surface area density [m-1]": 180000.0,
+             "Positive electrode surface area density [m-1]": 150000.0,
+             "Typical current [A]": I_app,
+             }
+        )
+        param.process_model(model)
+        param.process_geometry(geometry)
+        s_var = pybamm.standard_spatial_vars
+        var_pts = {s_var.x_n: 5, s_var.x_s: 5, s_var.x_p: 5,
+                   s_var.r_n: 5, s_var.r_p: 10}
+        # set mesh
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
+        # discretise model
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        disc.process_model(model)
+        # solve model
+        t_eval = np.linspace(0, 0.2, 100)
+        sol = model.default_solver.solve(model, t_eval)
+        var = "Positive electrode average extent of lithiation"
+        xpext = pybamm.ProcessedVariable(model.variables[var],
+                                         sol.t, sol.y, mesh=mesh)
+        var = "Negative electrode average extent of lithiation"
+        xnext = pybamm.ProcessedVariable(model.variables[var],
+                                         sol.t, sol.y, mesh=mesh)
+        var = "X-averaged positive particle surface concentration"
+        xpsurf = pybamm.ProcessedVariable(model.variables[var],
+                                          sol.t, sol.y, mesh=mesh)
+        var = "X-averaged negative particle surface concentration"
+        xnsurf = pybamm.ProcessedVariable(model.variables[var],
+                                          sol.t, sol.y, mesh=mesh)
+        time = pybamm.ProcessedVariable(model.variables["Time [h]"],
+                                        sol.t, sol.y, mesh=mesh)
+        # Coulomb counting
+        time_hours = time(sol.t)
+        dc_time = np.around(time_hours[-1], 3)
+        # Capacity mAh
+        cap = np.absolute(I_app * 1000 * dc_time)
+        cap_time = np.absolute(I_app * 1000 * time_hours)
+        axes[enum].plot(cap_time,
+                        xnext(sol.t), 'r-', label='Average Neg')
+        axes[enum].plot(cap_time,
+                        xpext(sol.t), 'b-', label='Average Pos')
+        axes[enum].plot(cap_time,
+                        xnsurf(sol.t), 'r--', label='Surface Neg')
+        axes[enum].plot(cap_time,
+                        xpsurf(sol.t), 'b--', label='Surface Pos')
+        axes[enum].set_xlabel('Capacity [mAh]')
+        handles, labels = axes[enum].get_legend_handles_labels()
+        axes[enum].legend(handles, labels)
+        if I_app < 0.0:
+            axes[enum].set_ylabel('Extent of Lithiation, Elecrode Ratio: '
+                                  + str(e_ratio))
+            axes[enum].title.set_text('Charge')
+        else:
+            axes[enum].title.set_text('Discharge')
+        print('Applied Current', I_app, 'A', 'Time',
+              dc_time, 'hrs', 'Capacity', cap, 'mAh')
+        tot_cap += cap
+        tot_time += dc_time
 
-# create geometry
-geometry = model.default_geometry
+    print('Anode : Cathode thickness', e_ratio)
+    print('Total Charge/Discharge Time', tot_time, 'hrs')
+    print('Total Capacity', np.around(tot_cap, 3), 'mAh')
+    specific_cap = np.around(tot_cap, 3) / vol_cm3
+    print('Total Capacity', specific_cap, 'mAh.cm-3')
+    capacities.append(tot_cap)
+    specific_capacities.append(specific_cap)
 
-# load parameter values and process model and geometry
-param = model.default_parameter_values
-
-param.update(
-    {
-        "Negative electrode surface area density [m-1]": 180000.0,
-        "Positive electrode surface area density [m-1]": 150000.0,
-    }
-)
-
-
-max_neg = param["Maximum concentration in negative electrode [mol.m-3]"]
-max_pos = param["Maximum concentration in positive electrode [mol.m-3]"]
-a_neg = param["Negative electrode surface area density [m-1]"]
-a_pos = param["Positive electrode surface area density [m-1]"]
-l_neg = param["Negative electrode thickness [m]"]
-l_pos = param["Positive electrode thickness [m]"]
-por_neg = param["Negative electrode porosity"]
-por_pos = param["Positive electrode porosity"]
-
-param.process_model(model)
-param.process_geometry(geometry)
-
-s_var = pybamm.standard_spatial_vars
-var_pts = {s_var.x_n: 5, s_var.x_s: 5, s_var.x_p: 5, s_var.r_n: 5, s_var.r_p: 10}
-# set mesh
-mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
-
-# discretise model
-disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-disc.process_model(model)
-
-# solve model
-t_eval = np.linspace(0, 0.2, 100)
-sol = model.default_solver.solve(model, t_eval)
-
-# plot
-out_vars = [
-    "RX-averaged positive particle concentration [mol.m-3]",
-    "RX-averaged negative particle concentration [mol.m-3]",
-    "X-averaged electrolyte concentration [mol.m-3]",
-    "X-averaged positive electrode porosity",
-    "X-averaged negative electrode porosity",
-    "X-averaged separator porosity",
-]
-plot = pybamm.QuickPlot(model, mesh, sol, output_variables=out_vars)
-plot.dynamic_plot()
-keys = list(model.variables.keys())
-keys.sort()
-
-xppc = pybamm.ProcessedVariable(model.variables[out_vars[0]], sol.t, sol.y, mesh=mesh)
-xnpc = pybamm.ProcessedVariable(model.variables[out_vars[1]], sol.t, sol.y, mesh=mesh)
-xec = pybamm.ProcessedVariable(model.variables[out_vars[2]], sol.t, sol.y, mesh=mesh)
-rp = np.linspace(0, 1.0, 11)
-
-plt.figure()
-rplt = 0.0
-plt.plot(np.ones(len(sol.t)) * max_neg * por_neg, "r--", label="Max Neg")
-plt.plot(xnpc(sol.t, r=rplt) * por_neg, "r", label="Neg Li")
-plt.plot(np.ones(len(sol.t)) * max_pos * por_pos, "b--", label="Max Pos")
-plt.plot(xppc(sol.t, r=rplt) * por_pos, "b", label="Pos Li")
-plt.plot(xec(sol.t, r=rplt), "g", label="Elec Li")
-tot = xnpc(sol.t, r=rplt) * por_neg + xppc(sol.t, r=rplt) * por_pos + xec(sol.t, r=rplt)
-plt.plot(tot, "k-", label="Total Li")
-plt.legend()
+fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
+ax1.plot(thicknesses / l_p, capacities)
+ax2.plot(thicknesses / l_p, specific_capacities)
+ax1.set_ylabel('Capacity [mAh]')
+ax2.set_ylabel('Specific Capacity [mAh.cm-3]')
+ax2.set_xlabel('Anode : Cathode thickness')

@@ -150,9 +150,14 @@ class Index(UnaryOperator):
         The index (if int) or indices (if slice) to extract from the symbol
     name : str, optional
         The name of the symbol
+    check_size : bool, optional
+        Whether to check if the slice size exceeds the child size. Default is True.
+        This should always be True when creating a new symbol so that the appropriate
+        check is performed, but should be False for creating a new copy to avoid
+        unnecessarily repeating the check.
     """
 
-    def __init__(self, child, index, name=None):
+    def __init__(self, child, index, name=None, check_size=True):
         self.index = index
         if index == -1:
             self.slice = slice(index, None)
@@ -172,10 +177,11 @@ class Index(UnaryOperator):
         else:
             raise TypeError("index must be integer or slice")
 
-        if self.slice in (slice(0, 1), slice(-1, None)):
-            pass
-        elif self.slice.stop > child.size:
-            raise ValueError("slice size exceeds child size")
+        if check_size:
+            if self.slice in (slice(0, 1), slice(-1, None)):
+                pass
+            elif self.slice.stop > child.size:
+                raise ValueError("slice size exceeds child size")
 
         super().__init__(name, child)
 
@@ -217,7 +223,7 @@ class Index(UnaryOperator):
     def _unary_new_copy(self, child):
         """ See :meth:`UnaryOperator._unary_new_copy()`. """
 
-        return self.__class__(child, self.index)
+        return self.__class__(child, self.index, check_size=False)
 
     def evaluate_for_shape(self):
         return self._unary_evaluate(self.children[0].evaluate_for_shape())
@@ -617,6 +623,48 @@ class BoundaryIntegral(SpatialOperator):
         return False
 
 
+class DeltaFunction(SpatialOperator):
+    """Delta function. Currently can only be implemented at the edge of a domain
+
+    Parameters
+    ----------
+    child : :class:`pybamm.Symbol`
+        The variable that sets the strength of the delta function
+    side : str
+        Which side of the domain to implement the delta function on
+
+    **Extends:** :class:`SpatialOperator`
+    """
+
+    def __init__(self, child, side, domain):
+        self.side = side
+        if child.domain != []:
+            auxiliary_domains = {"secondary": child.domain}
+        else:
+            auxiliary_domains = {}
+        super().__init__("delta function", child, domain, auxiliary_domains)
+
+    def set_id(self):
+        """ See :meth:`pybamm.Symbol.set_id()` """
+        self._id = hash(
+            (self.__class__, self.name, self.side, self.children[0].id)
+            + tuple(self.domain)
+            + tuple([(k, tuple(v)) for k, v in self.auxiliary_domains.items()])
+        )
+
+    def evaluates_on_edges(self):
+        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+        return False
+
+    def _unary_simplify(self, simplified_child):
+        """ See :meth:`UnaryOperator._unary_simplify()`. """
+        return self.__class__(simplified_child, self.side, self.domain)
+
+    def _unary_new_copy(self, child):
+        """ See :meth:`UnaryOperator._unary_new_copy()`. """
+        return self.__class__(child, self.side, self.domain)
+
+
 class BoundaryOperator(SpatialOperator):
     """A node in the expression tree which gets the boundary value of a variable.
 
@@ -664,6 +712,7 @@ class BoundaryOperator(SpatialOperator):
         self._id = hash(
             (self.__class__, self.name, self.side, self.children[0].id)
             + tuple(self.domain)
+            + tuple([(k, tuple(v)) for k, v in self.auxiliary_domains.items()])
         )
 
     def _unary_simplify(self, simplified_child):

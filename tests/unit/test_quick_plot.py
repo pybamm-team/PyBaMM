@@ -5,7 +5,38 @@ import numpy as np
 
 class TestQuickPlot(unittest.TestCase):
     def test_simple_ode_model(self):
-        model = pybamm.SimpleODEModel()
+        model = pybamm.BaseBatteryModel(name="Simple ODE Model")
+
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        # Create variables: domain is explicitly empty since these variables are only
+        # functions of time
+        a = pybamm.Variable("a", domain=[])
+        b = pybamm.Variable("b", domain=[])
+        c = pybamm.Variable("c", domain=[])
+
+        # Simple ODEs
+        model.rhs = {a: pybamm.Scalar(2), b: pybamm.Scalar(0), c: -c}
+
+        # Simple initial conditions
+        model.initial_conditions = {
+            a: pybamm.Scalar(0),
+            b: pybamm.Scalar(1),
+            c: pybamm.Scalar(1),
+        }
+        # no boundary conditions for an ODE model
+        # Broadcast some of the variables
+        model.variables = {
+            "a": a,
+            "b broadcasted": pybamm.FullBroadcast(b, whole_cell, "current collector"),
+            "c broadcasted": pybamm.FullBroadcast(
+                c, ["negative electrode", "separator"], "current collector"
+            ),
+        }
+
+        # ODEs only (don't use jacobian)
+        model.use_jacobian = False
+
+        # Process and solve
         geometry = model.default_geometry
         param = model.default_parameter_values
         param.process_model(model)

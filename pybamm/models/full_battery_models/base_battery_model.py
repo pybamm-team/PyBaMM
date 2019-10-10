@@ -77,6 +77,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
             ),
             {
+                "Typical timescale [s]": 1,
                 "Typical current [A]": 1,
                 "Current function": pybamm.GetConstantCurrent(
                     pybamm.standard_parameters_lithium_ion.I_typ
@@ -127,9 +128,9 @@ class BaseBatteryModel(pybamm.BaseModel):
     def default_var_pts(self):
         var = pybamm.standard_spatial_vars
         return {
-            var.x_n: 40,
-            var.x_s: 25,
-            var.x_p: 35,
+            var.x_n: 20,
+            var.x_s: 20,
+            var.x_p: 20,
             var.r_n: 10,
             var.r_p: 10,
             var.y: 10,
@@ -691,35 +692,36 @@ class BaseBatteryModel(pybamm.BaseModel):
         """
         pass
 
-    def process_parameters_and_discretise(self, symbol):
+    def process_parameters_and_discretise(self, symbol, parameter_values, disc):
         """
-        Process parameters and discretise a symbol using default parameter values,
-        geometry, etc. Note that the model needs to be built first for this to be
-        possible.
+        Process parameters and discretise a symbol using supplied parameter values
+        and discretisation. Note: care should be taken if using spatial operators
+        on dimensional symbols. Operators in pybamm are written in non-dimensional
+        form, so may need to be scaled by the appropriate length scale. It is
+        recommended to use this method on non-dimensional symbols.
 
         Parameters
         ----------
         symbol : :class:`pybamm.Symbol`
             Symbol to be processed
+        parameter_values : :class:`pybamm.ParameterValues`
+            The parameter values to use during processing
+        disc : :class:`pybamm.Discretisation`
+            The discrisation to use
 
         Returns
         -------
         :class:`pybamm.Symbol`
             Processed symbol
         """
-        if not self._built:
-            self.build_model()
+        # Set y slices
+        if disc.y_slices == {}:
+            variables = list(self.rhs.keys()) + list(self.algebraic.keys())
+            disc.set_variable_slices(variables)
 
-        # Set up parameters
-        geometry = self.default_geometry
-        parameter_values = self.default_parameter_values
-        parameter_values.process_geometry(geometry)
-
-        # Set up discretisation
-        mesh = pybamm.Mesh(geometry, self.default_submesh_types, self.default_var_pts)
-        disc = pybamm.Discretisation(mesh, self.default_spatial_methods)
-        variables = list(self.rhs.keys()) + list(self.algebraic.keys())
-        disc.set_variable_slices(variables)
+        # Set boundary condtions
+        if disc.bcs == {}:
+            disc.bcs = disc.process_boundary_conditions(self)
 
         # Process
         param_symbol = parameter_values.process_symbol(symbol)

@@ -124,9 +124,6 @@ class PrimaryBroadcast(Broadcast):
         child node
     broadcast_domain : iterable of str
         Primary domain for broadcast. This will become the domain of the symbol
-    broadcast_type : str, optional
-        Whether to broadcast to the full domain (primary and secondary) or only in the
-        primary direction. Default is "full".
     name : str
         name of the node
 
