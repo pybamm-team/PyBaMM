@@ -3,7 +3,6 @@
 #
 
 import pybamm
-import os
 
 
 class BaseBatteryModel(pybamm.BaseModel):
