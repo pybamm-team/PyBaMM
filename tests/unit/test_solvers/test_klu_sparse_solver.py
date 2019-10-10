@@ -1,11 +1,10 @@
-# Tests for the Scikits Solver classes
+#
+# Tests for the KLU Solver class
 #
 import pybamm
 import numpy as np
 import scipy.sparse as sparse
 import unittest
-import warnings
-from tests import get_mesh_for_testing, get_discretisation_for_testing
 
 
 @unittest.skipIf(pybamm.have_klu(), "klu is not installed")
