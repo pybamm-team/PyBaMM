@@ -34,9 +34,7 @@ class KLU(pybamm.DaeSolver):
 
         super().__init__(method, tol, root_method, root_tol, max_steps)
 
-    def integrate(
-        self, residuals, y0, t_eval, events=None, mass_matrix=None, jacobian=None
-    ):
+    def integrate(self, residuals, y0, t_eval, events, mass_matrix, jacobian):
         """
         Solve a DAE model defined by residuals with initial conditions y0.
 
@@ -49,12 +47,12 @@ class KLU(pybamm.DaeSolver):
             The initial conditions
         t_eval : numeric type
             The times at which to compute the solution
-        events : method, optional
+        events : method,
             A function that takes in t and y and returns conditions for the solver to
             stop
-        mass_matrix : array_like, optional
+        mass_matrix : array_like,
             The (sparse) mass matrix for the chosen spatial method.
-        jacobian : method, optional
+        jacobian : method,
             A function that takes in t and y and returns the Jacobian. If
             None, the solver will approximate the Jacobian.
             (see `SUNDIALS docs. <https://computation.llnl.gov/projects/sundials>`).
@@ -80,7 +78,6 @@ class KLU(pybamm.DaeSolver):
                     jac_eval = jacobian(t, y) - cj * mass_matrix
                     return sparse.csr_matrix(jac_eval)
 
-        # just defining this here for now...
         class SundialsJacobian:
             def __init__(self):
                 self.J = None
@@ -96,7 +93,6 @@ class KLU(pybamm.DaeSolver):
                 self.J = jacfn(t, y, cj)
 
             def get_jac_data(self):
-                # print("nnz: ", self.J.nnz)
                 return self.J.data
 
             def get_jac_row_vals(self):
