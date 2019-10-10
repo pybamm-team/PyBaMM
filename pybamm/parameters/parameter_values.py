@@ -63,7 +63,7 @@ class ParameterValues(dict):
             "cathode",
             "separator",
             "electrolyte",
-            "thermal",
+            "experiment",
         ]:
             # Make sure component is provided
             try:
@@ -135,6 +135,12 @@ class ParameterValues(dict):
         self._processed_symbols = {}
 
     def check_parameter_values(self, values):
+        if (
+            "Crate" in values
+            and "Typical current [A]" in values
+            and "Cell capacity [A.h]" in (values or self)
+        ):
+            check_consistent
         if "Typical current [A]" in values and values["Typical current [A]"] == 0:
             raise ValueError(
                 """

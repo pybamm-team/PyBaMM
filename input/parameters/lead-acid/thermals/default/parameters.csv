@@ -1,6 +1,0 @@
-Name [units],Value,Reference,Notes
-# Empty rows and rows starting with ‘#’ will be ignored,,,
-,,,
-# Temperature,,,
-Reference temperature [K],294.85,Room temperature,
-Maximum temperature [K],333.15,,

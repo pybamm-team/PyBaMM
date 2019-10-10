@@ -31,7 +31,7 @@ Marquis2019 = {
     "separator": "separator_Marquis2019",
     "cathode": "lico2_Marquis2019",
     "electrolyte": "lipf6_Marquis2019",
-    "thermal": "thermal_Marquis2019",
+    "experiment": "1C_discharge_from_full_Marquis2019",
 }
 
 #
@@ -44,6 +44,6 @@ Sulzer2019 = {
     "separator": "agm_Sulzer2019",
     "cathode": "lead_dioxide_Sulzer2019",
     "electrolyte": "sulfuric_acid_Sulzer2019",
-    "thermal": "default",
+    "experiment": "1C_discharge_from_full",
 }
 

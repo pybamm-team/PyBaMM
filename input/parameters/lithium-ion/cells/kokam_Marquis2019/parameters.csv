@@ -18,12 +18,6 @@ Positive tab width [m],0.04,,Need to find actual value for KOKAM cell
 Positive tab centre y-coordinate [m],0.147,,Need to find actual value for KOKAM cell
 Positive tab centre z-coordinate [m],0.137,,Need to find actual value for KOKAM cell
 ,,,
-# Electrical			
-Number of electrodes connected in parallel to make a cell,1,,
-Number of cells connected in series to make a battery,1,,
-Lower voltage cut-off [V],3.105,,
-Upper voltage cut-off [V],4.7,,
-,,,
 # Current collector properties ,,,
 Negative current collector conductivity [S.m-1],59600000,LIONSIMBA,carbon
 Positive current collector conductivity [S.m-1],35500000,LIONSIMBA,aluminium
