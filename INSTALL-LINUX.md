@@ -244,7 +244,7 @@ pip install pybind11
 ```
 
 #### Build the KLU wrapper
-We now have all the tools to build a shared library to interface to the KLU solver. Within you PyBaMM home directory build the required Makefile using
+We now have all the tools to build a shared library to interface to the KLU solver. Within your PyBaMM home directory build the required Makefile using
 ```
 cmake .
 ```
