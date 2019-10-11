@@ -353,6 +353,14 @@ class TestParameterValues(unittest.TestCase):
             isinstance(model.variables["d_var1"].children[1], pybamm.Variable)
         )
 
+    def test_process_empty_model(self):
+        model = pybamm.BaseModel()
+        parameter_values = pybamm.ParameterValues({"a": 1, "b": 2, "c": 3, "d": 42})
+        with self.assertRaisesRegex(
+            pybamm.ModelError, "Cannot process parameters for empty model"
+        ):
+            parameter_values.process_model(model)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

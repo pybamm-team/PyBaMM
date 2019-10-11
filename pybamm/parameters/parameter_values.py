@@ -93,8 +93,16 @@ class ParameterValues(dict):
             * 'update': Calls :meth:`update_scalars()` for use on already-processed \
             model (update the value of any Scalars in the expression tree.)
 
+        Raises
+        ------
+        :class:`pybamm.ModelError`
+            If an empty model is passed (`model.rhs = {}` and `model.algebraic={}`)
+
         """
         pybamm.logger.info("Start setting parameters for {}".format(model.name))
+
+        if len(model.rhs) == 0 and len(model.algebraic) == 0:
+            raise pybamm.ModelError("Cannot process parameters for empty model")
 
         if processing == "process":
             processing_function = self.process_symbol
