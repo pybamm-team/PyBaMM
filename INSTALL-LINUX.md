@@ -200,7 +200,7 @@ The cmake instructions provided with Sundials have trouble linking the required 
 ```
 cp scripts/replace-cmake/CMakeLists.txt sundials-4.1.0/CMakeLists.txt
 ```
-Now create a directory to build sundials in and set the install directory for  sundials to: 
+Now create a directory to build sundials in and set the install directory for sundials: 
 ```
 mkdir build-sundials-4.1.0
 INSTALL_DIR=`pwd`/sundials4
