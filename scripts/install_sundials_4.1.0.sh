@@ -83,7 +83,7 @@ cd $CURRENT_DIR
 mkdir -p third-party
 cd third-party
 rm -rf pybind11 # just remove it if it is already there
-git clone https://github.com/pybind/pybind11.git; fi
+git clone https://github.com/pybind/pybind11.git
 
 cd $CURRENT_DIR
 pip install pybind11 # also do a pip install for good measure
