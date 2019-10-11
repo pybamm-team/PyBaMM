@@ -12,20 +12,6 @@ make
 cd $CURRENT_DIR
 rm $SUITESPARSE_NAME
 
-# sparse suite library paths
-KLU_LIB=$SUITESPARSE_DIR/KLU/Lib/libklu.a
-AMD_LIB=$SUITESPARSE_DIR/AMD/Lib/libamd.a
-COLAMD_LIB=$SUITESPARSE_DIR/COLAMD/Lib/libcolamd.a
-BTF_LIB=$SUITESPARSE_DIR/BTF/Lib/libbtf.a
-SUITESPARSE_CONFIG_LIB=$SUITESPARSE_DIR/SuiteSparse_config/libsuitesparseconfig.a
-
-# sparse suite header directories
-KLU_INCLUDE=$SUITESPARSE_DIR/KLU/Include
-AMD_INCLUDE=$SUITESPARSE_DIR/AMD/Include
-COLAMD_INCLUDE=$SUITESPARSE_DIR/COLAMD/Include
-BTF_INCLUDE=$SUITESPARSE_DIR/BTF/Include
-SUITESPARSE_CONFIG_INCLUDE=$SUITESPARSE_DIR/SuiteSparse_config
-
 # install sundials-4.1.0
 SUNDIALS_URL=https://computing.llnl.gov/projects/sundials/download/sundials-4.1.0.tar.gz
 SUNDIALS_NAME=sundials-4.1.0.tar.gz
@@ -46,8 +32,6 @@ cd $TMP_DIR
 mkdir build-sundials-4.1.0
 cd build-sundials-4.1.0/
 
-# need to turn on blas, LAPACK, KLU libraries etc
-# only build it ida solver (not idas, or cvode etc)
 cmake -DBLAS_ENABLE=ON\
       -DLAPACK_ENABLE=ON\
       -DSUNDIALS_INDEX_SIZE=32\
@@ -59,17 +43,9 @@ cmake -DBLAS_ENABLE=ON\
       -DEXAMPLES_ENABLE:BOOL=OFF\
       -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR ../sundials-4.1.0/\
       -DKLU_ENABLE=ON\
-      -DKLU_INCLUDE_DIR=$KLU_INCLUDE\
-      -DAMD_INCLUDE_DIR=$AMD_INCLUDE\
-      -DCOLAMD_INCLUDE_DIR=$COLAMD_INCLUDE\
-      -DBTF_INCLUDE_DIR=$BTF_INCLUDE\
-      -DSUITESPARSECONFIG_INCLUDE_DIR=$SUITESPARSE_CONFIG_INCLUDE\
-      -DKLU_LIBRARY=$KLU_LIB\
-      -DAMD_LIBRARY=$AMD_LIB\
-      -DCOLAMD_LIBRARY=$COLAMD_LIB\
-      -DBTF_LIBRARY=$BTF_LIB\
-      -DSUITESPARSECONFIG_LIBRARY=$SUITESPARSE_CONFIG_LIB\
+      -DSUITESPARSE_DIR=$SUITESPARSE_DIR\
       ../sundials-4.1.0
+
 
 make install
 cd $CURRENT_DIR

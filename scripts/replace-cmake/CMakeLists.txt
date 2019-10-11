@@ -995,18 +995,25 @@ IF(KLU_ENABLE)
 
   # setting the paths for KLU directly without testing - scott marquis
   # INCLUDE(SundialsKLU) 
+  set(KLU_LIBRARY ${SUITESPARSE_DIR}/KLU/Lib/libklu.a)
+  set(AMD_LIBRARY ${SUITESPARSE_DIR}/AMD/Lib/libamd.a)
+  set(COLAMD_LIBRARY ${SUITESPARSE_DIR}/COLAMD/Lib/libcolamd.a)
+  set(BTF_LIBRARY ${SUITESPARSE_DIR}/BTF/Lib/libbtf.a)
+  set(SUITESPARSECONFIG_LIBRARY ${SUITESPARSE_DIR}/SuiteSparse_config/libsuitesparseconfig.a)
   set(KLU_LIBRARIES ${KLU_LIBRARY} ${AMD_LIBRARY} ${COLAMD_LIBRARY} ${BTF_LIBRARY} ${SUITESPARSECONFIG_LIBRARY})
 
-  # set(AMD_INCLUDE_DIR /home/scott/Projects/sparse-test/SuiteSparse/AMD/Include)
-  # set(COLAMD_INCLUDE_DIR /home/scott/Projects/sparse-test/SuiteSparse/COLAMD/Include)
-  # set(BTF_INCLUDE_DIR /home/scott/Projects/sparse-test/SuiteSparse/BTF/Include)
-  # set(SUITESPARSECONFIG_INCLUDE_DIR /home/scott/Projects/sparse-test/SuiteSparse/SuiteSparse_config)
 
   set(KLU_FOUND TRUE)
 
   IF(KLU_FOUND)
     # sundials_config.h symbol
     SET(SUNDIALS_KLU TRUE)
+    set(KLU_INCLUDE_DIR ${SUITESPARSE_DIR}/KLU/Include)
+    set(AMD_INCLUDE_DIR ${SUITESPARSE_DIR}/AMD/Include)
+    set(COLAMD_INCLUDE_DIR ${SUITESPARSE_DIR}/COLAMD/Include)
+    set(BTF_INCLUDE_DIR ${SUITESPARSE_DIR}/BTF/Include)
+    set(SUITESPARSECONFIG_INCLUDE_DIR ${SUITESPARSE_DIR}/SuiteSparse_config)
+
     INCLUDE_DIRECTORIES(${AMD_INCLUDE_DIR} ${COLAMD_INCLUDE_DIR} ${BTF_INCLUDE_DIR} ${SUITESPARSECONFIG_INCLUDE_DIR} ${KLU_INCLUDE_DIR})
   ENDIF(KLU_FOUND)
 

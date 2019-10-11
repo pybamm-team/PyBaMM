@@ -155,13 +155,46 @@ To install KLU, from within the main PyBaMM directory type
 ```bash
 ./scripts/install_sundials_4.1.0.sh
 ```
-Note that this script has only been tested on Ubuntu 18.04.3 LTS. If you run into issues on 
-another distribution, we recommend you first have a look through `install_sundials_4.1.0.sh` 
-as it may be relatively simple to modify this for your purposes. 
+Note that this script has only been tested on Ubuntu 18.04.3 LTS. If this script does not work 
+for you, you can try following the instructions step by step as described here.
 
-In principle, the install should be possible in other operating systems by following the same
-process as performed in `install_sundials_4.1.0.sh`. Although there may be some issues on 
-Windows in building SuiteSparse as the only build option is via a Makefile. 
+#### Download and Build SuiteSparse
+**In PyBaMM home directory**, i.e.
+```
+cd PyBaMM
+```
+download SuiteSparse using:
+```bash
+wget http://faculty.cse.tamu.edu/davis/SuiteSparse/SuiteSparse-5.4.0.tar.gz -O SuiteSparse-5.4.0.tar.gz
+```
+Unpack compressed SuiteSparse files using:
+```bash
+tar -xvf SuiteSparse-5.4.0.taz.gz
+```
+and remove the .tar.gz file to keep your directory clean using:
+```bash
+rm SuiteSparse-5.4.0.tar.gz
+```
+Now build SuiteSparse using:
+```bash
+cd SuiteSparse
+make
+```
+Then return to your PyBaMM home directory
+```
+cd ..
+```
+
+#### Set paths of SuiteSparse
+
+
+
+
+
+
+
+
+
 
 
 ## Troubleshooting
