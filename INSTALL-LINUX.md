@@ -223,21 +223,22 @@ cmake -DBLAS_ENABLE=ON\
       ../sundials-4.1.0
 make install
 ```
-Now return to your PyBaMM home directory and remove the build-sundials-4.1.0 folder:
+Now return to your PyBaMM home directory and remove the build-sundials-4.1.0 folder and the download folder:
 ```
 cd ..
 rm -rf build-sundials-4.1.0
+rm -rf sundials-4.1.0
 ```
 
 #### Install pybind11
-To interface with Sundials which is written in C, we require pybind11. Clone the pybind11 repository into a folder called "third-party":
+To interface with Sundials which is written in C, we require pybind11. Clone the pybind11 repository whilst within a folder the third-party folder:
 ```
 mkdir third-party
 cd third-party
 git clone https://github.com/pybind/pybind11.git
 cd ..
 ```
-You will also require pybind11 to be pip installed so, from within your virtual enviroment (if you are using one) type: 
+You will also require pybind11 to be pip installed so from within your virtual enviroment (if you are using one) type: 
 ```
 pip install pybind11
 ```
