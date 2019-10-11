@@ -4,7 +4,7 @@ import sys
 import unittest
 
 
-@unittest.skipIf(pybamm.have_klu(), "klu is not installed")
+@unittest.skipIf(pybamm.have_klu(), "klu solver is not installed")
 class TestKLUSolver(unittest.TestCase):
     def test_on_spme(self):
         model = pybamm.lithium_ion.SPMe()

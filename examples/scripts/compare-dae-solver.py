@@ -28,8 +28,8 @@ disc.process_model(model)
 # solve model
 t_eval = np.linspace(0, 0.2, 100)
 
-klu_sol = pybamm.KLU(tol=1e-8).solve(model, t_eval)
-scikits_sol = pybamm.ScikitsDaeSolver(tol=1e-8).solve(model, t_eval)
+klu_sol = pybamm.KLU(atol=1e-8, rtol=1e-8).solve(model, t_eval)
+scikits_sol = pybamm.ScikitsDaeSolver(atol=1e-8, rtol=1e-8).solve(model, t_eval)
 
 # plot
 models = [model, model]

@@ -68,6 +68,12 @@ class KLU(pybamm.DaeSolver):
             (see `SUNDIALS docs. <https://computation.llnl.gov/projects/sundials>`).
         """
 
+        if not jacobian:
+            pybamm.SolverError("KLU requires the Jacobian to be provided")
+
+        if not events:
+            pybamm.SolverError("KLU requires events to be provided")
+
         def eqsres(t, y, ydot, return_residuals):
             return_residuals[:] = residuals(t, y, ydot)
 
