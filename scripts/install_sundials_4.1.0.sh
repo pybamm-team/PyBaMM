@@ -82,8 +82,8 @@ export SUITESPARSE=$SUITESPARSE_DIR
 cd $CURRENT_DIR
 mkdir -p third-party
 cd third-party
-# if already cloned then pull otherwise clone pybind11
-if cd pybind11; then git pull; else git clone https://github.com/pybind/pybind11.git; fi
+rm -rf pybind11 # just remove it if it is already there
+git clone https://github.com/pybind/pybind11.git; fi
 
 cd $CURRENT_DIR
 pip install pybind11 # also do a pip install for good measure
