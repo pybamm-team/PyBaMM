@@ -4,17 +4,17 @@
 .. autoclass:: pybamm.ScikitSubMesh2D
     :members:
 
+.. autoclass:: pybamm.MeshGenerator2D
+    :members:
+
 .. autoclass:: pybamm.ScikitUniform2DSubMesh
     :members:
 
-.. autoclass:: pybamm.ScikitTopExponential2DSubMesh
+.. autoclass:: pybamm.ScikitExponential2DSubMesh
     :members:
 
 .. autoclass:: pybamm.ScikitChebyshev2DSubMesh
     :members:
 
 .. autoclass:: pybamm.UserSupplied2DSubMesh
-    :members:
-
-.. autoclass:: pybamm.UserSupplied2DSubMeshGenerator
     :members:

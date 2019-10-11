@@ -10,8 +10,16 @@ class TestSubMesh0D(unittest.TestCase):
 
     def test_init(self):
         position = {"x": 1}
-        mesh = pybamm.SubMesh0D(position)
+        generator = pybamm.MeshGenerator0D()
+        mesh = generator(position)
         mesh.add_ghost_meshes()
+
+
+class TestMeshGenerator0D(unittest.TestCase):
+    def test_exceptions(self):
+        generator = pybamm.MeshGenerator1D("bad mesh")
+        with self.assertRaisesRegex(pybamm.GeometryError, "Submesh"):
+            generator(None, None)
 
 
 if __name__ == "__main__":

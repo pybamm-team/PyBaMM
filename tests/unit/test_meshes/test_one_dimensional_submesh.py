@@ -24,14 +24,6 @@ class TestUniform1DSubMesh(unittest.TestCase):
         with self.assertRaises(pybamm.GeometryError):
             pybamm.Uniform1DSubMesh(lims, None)
 
-
-class TestExponential1DSubMesh(unittest.TestCase):
-    def test_exceptions(self):
-        lims = [[0, 1], [0, 1]]
-        mesh = pybamm.Exponential1DSubMeshGenerator()
-        with self.assertRaises(pybamm.GeometryError):
-            mesh(lims, None)
-
     def test_symmetric_mesh_creation_no_parameters(self):
         r = pybamm.SpatialVariable(
             "r", domain=["negative particle"], coord_sys="spherical polar"
@@ -43,12 +35,80 @@ class TestExponential1DSubMesh(unittest.TestCase):
             }
         }
 
+        submesh_types = {"negative particle": pybamm.MeshGenerator1D("Uniform")}
+        var_pts = {r: 20}
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        # create mesh
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        # check boundary locations
+        self.assertEqual(mesh["negative particle"][0].edges[0], 0)
+        self.assertEqual(mesh["negative particle"][0].edges[-1], 1)
+
+        # check number of edges and nodes
+        self.assertEqual(len(mesh["negative particle"][0].nodes), var_pts[r])
+        self.assertEqual(
+            len(mesh["negative particle"][0].edges),
+            len(mesh["negative particle"][0].nodes) + 1,
+        )
+
+
+class TestExponential1DSubMesh(unittest.TestCase):
+    def test_exceptions(self):
+        lims = [[0, 1], [0, 1]]
+        mesh = pybamm.MeshGenerator1D("Exponential")
+        with self.assertRaises(pybamm.GeometryError):
+            mesh(lims, None)
+
+    def test_symmetric_mesh_creation_no_parameters_even(self):
+        r = pybamm.SpatialVariable(
+            "r", domain=["negative particle"], coord_sys="spherical polar"
+        )
+
+        geometry = {
+            "negative particle": {
+                "primary": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
+            }
+        }
+
+        submesh_params = {"side": "symmetric"}
         submesh_types = {
-            "negative particle": pybamm.Exponential1DSubMeshGenerator(
-                side="symmetric", stretch=1.5
-            )
+            "negative particle": pybamm.MeshGenerator1D("Exponential", submesh_params)
         }
         var_pts = {r: 20}
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        # create mesh
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        # check boundary locations
+        self.assertEqual(mesh["negative particle"][0].edges[0], 0)
+        self.assertEqual(mesh["negative particle"][0].edges[-1], 1)
+
+        # check number of edges and nodes
+        self.assertEqual(len(mesh["negative particle"][0].nodes), var_pts[r])
+        self.assertEqual(
+            len(mesh["negative particle"][0].edges),
+            len(mesh["negative particle"][0].nodes) + 1,
+        )
+
+    def test_symmetric_mesh_creation_no_parameters_odd(self):
+        r = pybamm.SpatialVariable(
+            "r", domain=["negative particle"], coord_sys="spherical polar"
+        )
+
+        geometry = {
+            "negative particle": {
+                "primary": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
+            }
+        }
+
+        submesh_params = {"side": "symmetric", "stretch": 1.5}
+        submesh_types = {
+            "negative particle": pybamm.MeshGenerator1D("Exponential", submesh_params)
+        }
+        var_pts = {r: 21}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
         # create mesh
@@ -76,8 +136,9 @@ class TestExponential1DSubMesh(unittest.TestCase):
             }
         }
 
+        submesh_params = {"side": "left"}
         submesh_types = {
-            "negative particle": pybamm.Exponential1DSubMeshGenerator(side="left")
+            "negative particle": pybamm.MeshGenerator1D("Exponential", submesh_params)
         }
         var_pts = {r: 21}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -107,8 +168,9 @@ class TestExponential1DSubMesh(unittest.TestCase):
             }
         }
 
+        submesh_params = {"side": "right", "stretch": 2}
         submesh_types = {
-            "negative particle": pybamm.Exponential1DSubMeshGenerator(side="right")
+            "negative particle": pybamm.MeshGenerator1D("Exponential", submesh_params)
         }
         var_pts = {r: 20}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -145,7 +207,7 @@ class TestChebyshev1DSubMesh(unittest.TestCase):
             }
         }
 
-        submesh_types = {"negative particle": pybamm.Chebyshev1DSubMesh}
+        submesh_types = {"negative particle": pybamm.MeshGenerator1D("Chebyshev")}
         var_pts = {r: 20}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
@@ -168,7 +230,8 @@ class TestUser1DSubMesh(unittest.TestCase):
     def test_exceptions(self):
         lims = [[0, 1], [0, 1]]
         edges = np.array([0, 0.3, 1])
-        mesh = pybamm.UserSupplied1DSubMeshGenerator(edges)
+        submesh_params = {"edges": edges}
+        mesh = pybamm.MeshGenerator1D("User", submesh_params)
         # test too many lims
         with self.assertRaises(pybamm.GeometryError):
             mesh(lims, None)
@@ -205,8 +268,9 @@ class TestUser1DSubMesh(unittest.TestCase):
         }
 
         edges = np.array([0, 0.3, 1])
+        submesh_params = {"edges": edges}
         submesh_types = {
-            "negative particle": pybamm.UserSupplied1DSubMeshGenerator(edges)
+            "negative particle": pybamm.MeshGenerator1D("User", submesh_params)
         }
         var_pts = {r: len(edges) - 1}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -224,6 +288,17 @@ class TestUser1DSubMesh(unittest.TestCase):
             len(mesh["negative particle"][0].edges),
             len(mesh["negative particle"][0].nodes) + 1,
         )
+
+
+class TestMeshGenerator1D(unittest.TestCase):
+    def test_exceptions(self):
+        generator = pybamm.MeshGenerator1D("bad mesh")
+        with self.assertRaisesRegex(pybamm.GeometryError, "Submesh"):
+            generator(None, None)
+
+        generator = pybamm.MeshGenerator1D("User")
+        with self.assertRaisesRegex(pybamm.GeometryError, "User mesh requires"):
+            generator(None, None)
 
 
 if __name__ == "__main__":

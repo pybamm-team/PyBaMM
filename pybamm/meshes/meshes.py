@@ -32,7 +32,9 @@ class Mesh(dict):
         submesh_pts = {}
         for domain in geometry:
             # Zero dimensional submesh case (only one point)
-            if submesh_types[domain] == pybamm.SubMesh0D:
+            if submesh_types[domain] == pybamm.SubMesh0D or isinstance(
+                submesh_types[domain], pybamm.MeshGenerator0D
+            ):
                 submesh_pts[domain] = 1
             # other cases
             else:
@@ -95,9 +97,9 @@ class Mesh(dict):
 
         # Create submeshes
         for domain in geometry:
-            if (
-                domain == "current collector"
-                and submesh_types[domain] != pybamm.SubMesh0D
+            if domain == "current collector" and not (
+                submesh_types[domain] == pybamm.SubMesh0D
+                or isinstance(submesh_types[domain], pybamm.MeshGenerator0D)
             ):
                 self[domain] = [
                     submesh_types[domain](
@@ -205,14 +207,15 @@ class MeshGenerator:
     Parameters
     ----------
 
-    submesh_type: str
-        The type of submeshes to use.
+    submesh_type: str, optional
+        The type of submeshes to use. Default is "Uniform".
     submesh_params: dict, optional
         Contains any parameters required by the submesh.
     """
 
-    def __init__(self, submesh_type, submesh_params=None):
-        pass
+    def __init__(self, submesh_type="Uniform", submesh_params={}):
+        self.submesh_type = submesh_type
+        self.submesh_params = submesh_params
 
     def __call__(self):
         """

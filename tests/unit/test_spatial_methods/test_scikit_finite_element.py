@@ -285,7 +285,7 @@ class TestScikitFiniteElement(unittest.TestCase):
             "negative electrode": pybamm.Uniform1DSubMesh,
             "separator": pybamm.Uniform1DSubMesh,
             "positive electrode": pybamm.Uniform1DSubMesh,
-            "current collector": pybamm.ScikitTopExponential2DSubMesh,
+            "current collector": pybamm.ScikitExponential2DSubMesh,
         }
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 

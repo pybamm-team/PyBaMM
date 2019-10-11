@@ -224,23 +224,22 @@ from .geometry import standard_spatial_vars
 #
 from .discretisations.discretisation import Discretisation
 from .meshes.meshes import Mesh, MeshGenerator
-from .meshes.zero_dimensional_submesh import SubMesh0D
+from .meshes.zero_dimensional_submesh import SubMesh0D, MeshGenerator0D
 from .meshes.one_dimensional_submeshes import (
     SubMesh1D,
+    MeshGenerator1D,
     Uniform1DSubMesh,
     Exponential1DSubMesh,
-    Exponential1DSubMeshGenerator,
     Chebyshev1DSubMesh,
     UserSupplied1DSubMesh,
-    UserSupplied1DSubMeshGenerator,
 )
 from .meshes.scikit_fem_submeshes import (
     ScikitSubMesh2D,
+    MeshGenerator2D,
     ScikitUniform2DSubMesh,
-    ScikitTopExponential2DSubMesh,
+    ScikitExponential2DSubMesh,
     ScikitChebyshev2DSubMesh,
     UserSupplied2DSubMesh,
-    UserSupplied2DSubMeshGenerator,
 )
 
 #

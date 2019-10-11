@@ -4,20 +4,17 @@
 .. autoclass:: pybamm.SubMesh1D
     :members:
 
+.. autoclass:: pybamm.MeshGenerator1D
+    :members:
+
 .. autoclass:: pybamm.Uniform1DSubMesh
     :members:
 
 .. autoclass:: pybamm.Exponential1DSubMesh
     :members:
 
-.. autoclass:: pybamm.Exponential1DSubMeshGenerator
-    :members:
-
 .. autoclass:: pybamm.Chebyshev1DSubMesh
     :members:
 
 .. autoclass:: pybamm.UserSupplied1DSubMesh
-    :members:
-
-.. autoclass:: pybamm.UserSupplied1DSubMeshGenerator
     :members:

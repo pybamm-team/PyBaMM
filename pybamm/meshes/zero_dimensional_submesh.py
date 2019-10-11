@@ -2,6 +2,8 @@
 # Zero dimensional submesh
 #
 import pybamm
+from .meshes import MeshGenerator
+
 import numpy as np
 
 
@@ -28,8 +30,39 @@ class SubMesh0D:
         self.nodes = np.array([spatial_position])
         self.edges = np.array([spatial_position])
         self.coord_sys = None
+        self.dimension = 0
         self.npts = 1
 
     def add_ghost_meshes(self):
         # No ghost meshes to be added to this class
         pass
+
+
+class MeshGenerator0D(MeshGenerator):
+    """
+    A class to generate a submesh on a 1D domain.
+
+    Parameters
+    ----------
+
+    submesh_type: str, optional
+        The type of submeshes to use. Can be "Position". Default is "Position".
+    submesh_params: dict, optional
+        Contains any parameters required by the submesh.
+
+    **Extends**: :class:`pybamm.MeshGenerator`
+    """
+
+    def __init__(self, submesh_type="Position", submesh_params={}):
+        self.submesh_type = submesh_type
+        self.submesh_params = submesh_params
+        self.dimension = 0
+
+    def __call__(self, position, npts=None):
+
+        if self.submesh_type == "Position":
+            return SubMesh0D(position, npts)
+        else:
+            raise pybamm.GeometryError(
+                "Submesh {} not recognised.".format(self.submesh_type)
+            )

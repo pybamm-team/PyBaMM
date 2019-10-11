@@ -64,24 +64,16 @@ class TestBaseBatteryModel(unittest.TestCase):
 
     def test_default_submesh_types(self):
         model = pybamm.BaseBatteryModel({"dimensionality": 0})
-        self.assertTrue(
-            issubclass(
-                model.default_submesh_types["current collector"], pybamm.SubMesh0D
-            )
+        self.assertIsInstance(
+            model.default_submesh_types["current collector"], pybamm.MeshGenerator0D
         )
         model = pybamm.BaseBatteryModel({"dimensionality": 1})
-        self.assertTrue(
-            issubclass(
-                model.default_submesh_types["current collector"],
-                pybamm.Uniform1DSubMesh,
-            )
+        self.assertIsInstance(
+            model.default_submesh_types["current collector"], pybamm.MeshGenerator1D
         )
         model = pybamm.BaseBatteryModel({"dimensionality": 2})
-        self.assertTrue(
-            issubclass(
-                model.default_submesh_types["current collector"],
-                pybamm.ScikitUniform2DSubMesh,
-            )
+        self.assertIsInstance(
+            model.default_submesh_types["current collector"], pybamm.MeshGenerator2D
         )
 
     def test_default_spatial_methods(self):

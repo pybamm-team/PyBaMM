@@ -52,14 +52,16 @@ class MeshGenerator1D(MeshGenerator):
     Parameters
     ----------
 
-    submesh_type: str
+    submesh_type: str, optional
         The type of submeshes to use. Can be "Uniform", "Exponential", "Chebyshev"
-        or "User".
+        or "User". Default is "Uniform".
     submesh_params: dict, optional
         Contains any parameters required by the submesh.
+
+    **Extends**: :class:`pybamm.MeshGenerator`
     """
 
-    def __init__(self, submesh_type, submesh_params=None):
+    def __init__(self, submesh_type="Uniform", submesh_params={}):
         self.submesh_type = submesh_type
         self.submesh_params = submesh_params
 
@@ -69,17 +71,7 @@ class MeshGenerator1D(MeshGenerator):
             return Uniform1DSubMesh(lims, npts, tabs)
 
         elif self.submesh_type == "Exponential":
-            try:
-                side = self.submesh_params["side"]
-            except KeyError:
-                raise pybamm.GeometryError("Exponenital mesh requires parameter 'side'")
-            if self.submesh_params["stretch"]:
-                stretch = self.submesh_params["stretch"]
-            elif side == "symmetric":
-                stretch = 1.15
-            elif side in ["left", "right"]:
-                stretch = 2.3
-            return Exponential1DSubMesh(lims, npts, tabs, side, stretch)
+            return Exponential1DSubMesh(lims, npts, tabs, **self.submesh_params)
 
         elif self.submesh_type == "Chebyshev":
             return Chebyshev1DSubMesh(lims, npts, tabs)
@@ -90,6 +82,11 @@ class MeshGenerator1D(MeshGenerator):
             except KeyError:
                 raise pybamm.GeometryError("User mesh requires parameter 'edges'")
             return UserSupplied1DSubMesh(lims, npts, tabs, edges)
+
+        else:
+            raise pybamm.GeometryError(
+                "Submesh {} not recognised.".format(self.submesh_type)
+            )
 
 
 class Uniform1DSubMesh(SubMesh1D):
@@ -130,8 +127,7 @@ class Exponential1DSubMesh(SubMesh1D):
     """
     A class to generate a submesh on a 1D domain in which the points are clustered
     close to one or both of boundaries using an exponential formula on the interval
-    [a,b]. Note: this mesh should be created using
-    :class:`Exponential1DSubMeshGenerator`.
+    [a,b].
 
     If side is "left", the gridpoints are given by
 
@@ -167,17 +163,20 @@ class Exponential1DSubMesh(SubMesh1D):
         A dictionary that contains the number of points to be used on each
         spatial variable. Note: the number of nodes (located at the cell centres)
         is npts, and the number of edges is npts+1.
-    side : str
-        Whether the points are clustered near to the left or right boundary,
-        or both boundaries. Can be "left", "right" or "symmetric"
     tabs : dict
         A dictionary that contains information about the size and location of
         the tabs
-    stretch : float
-        The factor (alpha) which appears in the exponential.
+    side : str, optional
+        Whether the points are clustered near to the left or right boundary,
+        or both boundaries. Can be "left", "right" or "symmetric". Default is
+        "symmetric"
+    stretch : float, optional
+        The factor (alpha) which appears in the exponential. If side is "symmetric"
+        then the default stretch is 1.15. If side is "left" or "right" then the
+        default stretch is 2.3.
     """
 
-    def __init__(self, lims, npts, tabs, side, stretch):
+    def __init__(self, lims, npts, tabs, side="symmetric", stretch=None):
 
         # check that only one variable passed in
         if len(lims) != 1:
@@ -190,6 +189,14 @@ class Exponential1DSubMesh(SubMesh1D):
         npts = npts[spatial_var.id]
         coord_sys = spatial_var.coord_sys
 
+        # Set stretch if not provided
+        if not stretch:
+            if side == "symmetric":
+                stretch = 1.15
+            elif side in ["left", "right"]:
+                stretch = 2.3
+
+        # Create edges accoriding to "side"
         if side == "left":
             ii = np.array(range(0, npts + 1))
             edges = (b - a) * (np.exp(stretch * ii / npts) - 1) / (
@@ -223,36 +230,6 @@ class Exponential1DSubMesh(SubMesh1D):
                 edges = np.concatenate((x_exp_left, x_exp_right))
 
         super().__init__(edges, coord_sys=coord_sys, tabs=tabs)
-
-
-class Exponential1DSubMeshGenerator(MeshGenerator):
-    """
-    A class to generate a submesh on a 1D domain in which the points are clustered
-    close to one or both boundaries using an exponential formula on the interval [a,b].
-
-    Parameters
-    ----------
-    side : str, optional
-        Whether the points are clustered near to the left or right boundary,
-        or both boundaries. Can be "left", "right" or "symmetric". Defualt is
-        "symmetric".
-    stretch : float, optional
-        The factor (alpha) which appears in the exponential, defualt is 1.15 is
-        side is "symmetric" and 2.3 is side is "left" or "right".
-
-    """
-
-    def __init__(self, side="symmetric", stretch=None):
-        self.side = side
-        if stretch:
-            self.stretch = stretch
-        elif side == "symmetric":
-            self.stretch = 1.15
-        elif side in ["left", "right"]:
-            self.stretch = 2.3
-
-    def __call__(self, lims, npts, tabs=None):
-        return Exponential1DSubMesh(lims, npts, tabs, self.side, self.stretch)
 
 
 class Chebyshev1DSubMesh(SubMesh1D):
@@ -310,7 +287,6 @@ class Chebyshev1DSubMesh(SubMesh1D):
 class UserSupplied1DSubMesh(SubMesh1D):
     """
     A class to generate a submesh on a 1D domain from a user supplied array of
-    Note: this mesh should be created using :class:`UserSupplied1DSubMeshGenerator`.
     edges.
 
     Parameters
@@ -366,21 +342,3 @@ class UserSupplied1DSubMesh(SubMesh1D):
         coord_sys = spatial_var.coord_sys
 
         super().__init__(edges, coord_sys=coord_sys, tabs=tabs)
-
-
-class UserSupplied1DSubMeshGenerator(MeshGenerator):
-    """
-    A class to generate a submesh on a 1D domain using a user supplied vector of
-    edges.
-
-    Parameters
-    ----------
-    edges : array_like
-        The array of points which correspond to the edges of the mesh.
-    """
-
-    def __init__(self, edges):
-        self.edges = edges
-
-    def __call__(self, lims, npts, tabs=None):
-        return UserSupplied1DSubMesh(lims, npts, tabs, self.edges)
