@@ -160,7 +160,7 @@ Note that this script has only been tested on Ubuntu 18.04.3 LTS. If this script
 #### Download and Build SuiteSparse (KLU)
 The sparse linear solver, KLU, is contained within SuiteSparse. For more information on the installation process please refer to the README.txt contained in the SuiteSparse download.
 
-**In PyBaMM home directory**, i.e.
+In PyBaMM home directory, i.e.
 ```
 cd PyBaMM
 ```
