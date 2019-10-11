@@ -3,7 +3,6 @@
 #
 
 import pybamm
-import os
 
 
 class BaseModel(pybamm.BaseBatteryModel):
@@ -22,20 +21,7 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     @property
     def default_parameter_values(self):
-        return pybamm.ParameterValues(
-            values={
-                "Typical current [A]": 1,
-                "Current function": pybamm.GetConstantCurrent(
-                    pybamm.standard_parameters_lead_acid.I_typ
-                ),
-            },
-            chemistry={
-                "chemistry": "lead-acid",
-                "anode": "lead_Sulzer2019",
-                "cathode": "lead_dioxide_Sulzer2019",
-                "electrolyte": "sulfuric_acid_Sulzer2019",
-            },
-        )
+        return pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Sulzer2019)
 
     @property
     def default_geometry(self):

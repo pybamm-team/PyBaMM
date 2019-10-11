@@ -17,11 +17,6 @@ models = {"Current collector": cc_model, "Average SPMe": spme_av, "2+1D SPMe": s
 
 # set parameters based on the spme
 param = spme.default_parameter_values
-# adjust current to correspond to a typical current density of 24 [A.m-2]
-C_rate = 1
-param["Typical current [A]"] = (
-    C_rate * 24 * param.process_symbol(pybamm.geometric_parameters.A_cc).evaluate()
-)
 
 # set mesh
 var = pybamm.standard_spatial_vars

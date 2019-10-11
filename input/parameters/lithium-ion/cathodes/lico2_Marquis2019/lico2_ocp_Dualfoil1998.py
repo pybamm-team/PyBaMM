@@ -1,7 +1,7 @@
 import autograd.numpy as np
 
 
-def lico2_ocp_Dualfoil(sto):
+def lico2_ocp_Dualfoil1998(sto):
     """
         Lithium Cobalt Oxide (LiCO2) Open Circuit Potential (OCP) as a a function of the
         stochiometry. The fit is taken from Dualfoil [1]. Dualfoil states that the data

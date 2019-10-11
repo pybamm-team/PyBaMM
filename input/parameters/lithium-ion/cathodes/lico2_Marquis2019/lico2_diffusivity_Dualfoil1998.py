@@ -1,7 +1,7 @@
 import autograd.numpy as np
 
 
-def lico2_diffusivity_Dualfoil(sto, T, T_inf, E_D_s, R_g):
+def lico2_diffusivity_Dualfoil1998(sto, T, T_inf, E_D_s, R_g):
     """
     LiCo2 diffusivity as a function of stochiometry, in this case the
     diffusivity is taken to be a constant. The value is taken from Dualfoil [1].

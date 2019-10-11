@@ -53,9 +53,9 @@ class TestUpdateParameters(unittest.TestCase):
         )
         # process and solve with updated parameter values
         parameter_values_update = pybamm.ParameterValues(
-            base_parameters=model2.default_parameter_values,
-            optional_parameters={"Typical current [A]": 2},
+            chemistry=pybamm.parameter_sets.Marquis2019
         )
+        parameter_values_update.update({"Typical current [A]": 2})
         modeltest2.test_update_parameters(parameter_values_update)
         self.assertEqual(
             model2.variables["Current [A]"].function.parameters_eval["Current [A]"], 2
@@ -71,10 +71,7 @@ class TestUpdateParameters(unittest.TestCase):
         modeltest3 = tests.StandardModelTest(model3)
         modeltest3.test_all(skip_output_tests=True)
         parameter_values_update = pybamm.ParameterValues(
-            base_parameters=model3.default_parameter_values,
-            optional_parameters={
-                "Current function": pybamm.GetConstantCurrent(current=pybamm.Scalar(0))
-            },
+            chemistry=pybamm.parameter_sets.Marquis2019
         )
         modeltest3.test_update_parameters(parameter_values_update)
         modeltest3.test_solving(t_eval=t_eval)
@@ -104,12 +101,12 @@ class TestUpdateParameters(unittest.TestCase):
 
         # trying to update the geometry fails
         parameter_values_update = pybamm.ParameterValues(
-            base_parameters=model1.default_parameter_values,
-            optional_parameters={
+            values={
                 "Negative electrode thickness [m]": 0.00002,
                 "Separator thickness [m]": 0.00003,
                 "Positive electrode thickness [m]": 0.00004,
             },
+            chemistry=pybamm.parameter_sets.Sulzer2019,
         )
         with self.assertRaisesRegex(ValueError, "geometry has changed"):
             modeltest1.test_update_parameters(parameter_values_update)
@@ -117,12 +114,12 @@ class TestUpdateParameters(unittest.TestCase):
         # instead we need to make a new model and re-discretise
         model2 = pybamm.lead_acid.LOQS()
         parameter_values_update = pybamm.ParameterValues(
-            base_parameters=model2.default_parameter_values,
-            optional_parameters={
+            values={
                 "Negative electrode thickness [m]": 0.00002,
                 "Separator thickness [m]": 0.00003,
                 "Positive electrode thickness [m]": 0.00004,
             },
+            chemistry=pybamm.parameter_sets.Sulzer2019,
         )
         # nb: need to be careful make parameters a reasonable size
         modeltest2 = tests.StandardModelTest(model2)

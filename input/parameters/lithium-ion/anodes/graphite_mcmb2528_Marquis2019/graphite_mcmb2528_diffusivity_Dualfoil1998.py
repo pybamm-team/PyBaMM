@@ -1,7 +1,7 @@
 import autograd.numpy as np
 
 
-def graphite_mcmb2528_diffusivity_Dualfoil(sto, T, T_inf, E_D_s, R_g):
+def graphite_mcmb2528_diffusivity_Dualfoil1998(sto, T, T_inf, E_D_s, R_g):
     """
     Graphite MCMB 2528 diffusivity as a function of stochiometry, in this case the
     diffusivity is taken to be a constant. The value is taken from Dualfoil [1].

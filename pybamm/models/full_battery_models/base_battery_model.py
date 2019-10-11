@@ -3,7 +3,6 @@
 #
 
 import pybamm
-import os
 
 
 class BaseBatteryModel(pybamm.BaseModel):
@@ -67,53 +66,9 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     @property
     def default_parameter_values(self):
-        # Default parameter values, geometry, submesh, spatial methods and solver
+        # Default parameter values
         # Lion parameters left as default parameter set for tests
-        input_path = os.path.join(
-            pybamm.root_dir(), "input", "parameters", "lithium-ion"
-        )
-        return pybamm.ParameterValues(
-            os.path.join(
-                input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
-            ),
-            {
-                "Typical timescale [s]": 1,
-                "Typical current [A]": 1,
-                "Current function": pybamm.GetConstantCurrent(
-                    pybamm.standard_parameters_lithium_ion.I_typ
-                ),
-                "Electrolyte diffusivity": os.path.join(
-                    input_path, "electrolyte_diffusivity_Capiglia1999.py"
-                ),
-                "Electrolyte conductivity": os.path.join(
-                    input_path, "electrolyte_conductivity_Capiglia1999.py"
-                ),
-                "Negative electrode OCV": os.path.join(
-                    input_path, "graphite_mcmb2528_ocp_Dualfoil.py"
-                ),
-                "Positive electrode OCV": os.path.join(
-                    input_path, "lico2_ocp_Dualfoil.py"
-                ),
-                "Negative electrode diffusivity": os.path.join(
-                    input_path, "graphite_mcmb2528_diffusivity_Dualfoil.py"
-                ),
-                "Positive electrode diffusivity": os.path.join(
-                    input_path, "lico2_diffusivity_Dualfoil.py"
-                ),
-                "Negative electrode reaction rate": os.path.join(
-                    input_path, "graphite_electrolyte_reaction_rate.py"
-                ),
-                "Positive electrode reaction rate": os.path.join(
-                    input_path, "lico2_electrolyte_reaction_rate.py"
-                ),
-                "Negative electrode OCV entropic change": os.path.join(
-                    input_path, "graphite_entropic_change_Moura.py"
-                ),
-                "Positive electrode OCV entropic change": os.path.join(
-                    input_path, "lico2_entropic_change_Moura.py"
-                ),
-            },
-        )
+        return pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
 
     @property
     def default_geometry(self):

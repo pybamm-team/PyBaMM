@@ -1,7 +1,7 @@
 import autograd.numpy as np
 
 
-def lico2_entropic_change_Moura(sto, c_p_max):
+def lico2_entropic_change_Moura2016(sto, c_p_max):
     """
         Lithium Cobalt Oxide (LiCO2) entropic change in open circuit potential (OCP) at
         a temperature of 298.15K as a function of the stochiometry. The fit is taken
