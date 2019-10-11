@@ -248,7 +248,7 @@ We now have all the tools to build a shared library to interface to the KLU solv
 ```
 cmake .
 ```
-You can now simply run make to build the library (you can simply run this command if you make some changed to klu.cpp)
+You can now simply run make to build the library (you can just run this command if you make some changes to klu.cpp)
 ```
 make
 ```
