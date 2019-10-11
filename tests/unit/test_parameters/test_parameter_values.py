@@ -12,9 +12,9 @@ import tests.shared as shared
 class TestParameterValues(unittest.TestCase):
     def test_read_parameters_csv(self):
         data = pybamm.ParameterValues({}).read_parameters_csv(
-            "input/parameters/lead-acid/thermals/default/parameters.csv"
+            "input/parameters/lithium-ion/cathodes/lico2_Marquis2019/parameters.csv"
         )
-        self.assertEqual(data["Reference temperature [K]"], 294.85)
+        self.assertEqual(data["Reference temperature [K]"], "298.15")
 
     def test_init(self):
         # from dict
@@ -22,9 +22,10 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(param["a"], 1)
         # from file
         param = pybamm.ParameterValues(
-            values="input/parameters/lead-acid/thermals/default/parameters.csv"
+            values="input/parameters/lithium-ion/cathodes/lico2_Marquis2019/"
+            + "parameters.csv"
         )
-        self.assertEqual(param["Reference temperature [K]"], 294.85)
+        self.assertEqual(param["Reference temperature [K]"], "298.15")
 
     def test_update(self):
         param = pybamm.ParameterValues({"a": 1})
@@ -42,11 +43,27 @@ class TestParameterValues(unittest.TestCase):
         ):
             param.update({"a": 4}, check_conflict=True)
 
-    def test_check_parameter_values(self):
+    def test_check_and_update_parameter_values(self):
         # Can't provide a current density of 0, as this will cause a ZeroDivision error
         bad_values = {"Typical current [A]": 0}
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegex(ValueError, "Typical current"):
             pybamm.ParameterValues(bad_values)
+        # same with C-rate
+        bad_values = {"C-rate": 0}
+        with self.assertRaisesRegex(ValueError, "C-rate"):
+            pybamm.ParameterValues(bad_values)
+        # if both C-rate and current are provided they must match with capacity
+        bad_values = {"C-rate": 1, "Typical current [A]": 5, "Cell capacity [A.h]": 10}
+        with self.assertRaisesRegex(ValueError, "do not match"):
+            pybamm.ParameterValues(bad_values)
+        # if only C-rate and capacity provided, update current
+        values = {"C-rate": 1, "Cell capacity [A.h]": 10}
+        param = pybamm.ParameterValues(values)
+        self.assertEqual(param["Typical current [A]"], 10)
+        # if only current and capacity provided, update C-rate
+        values = {"Typical current [A]": 1, "Cell capacity [A.h]": 10}
+        param = pybamm.ParameterValues(values)
+        self.assertEqual(param["C-rate"], 1 / 10)
 
     def test_process_symbol(self):
         parameter_values = pybamm.ParameterValues({"a": 1, "b": 2, "c": 3})

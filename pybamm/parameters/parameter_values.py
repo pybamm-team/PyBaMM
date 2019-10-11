@@ -158,7 +158,7 @@ class ParameterValues(dict):
             )
         # If the capacity of the cell has been provided, make sure "C-rate" and current
         # match with the stated capacity
-        if "Cell capacity [A.h]" in (values or self):
+        if "Cell capacity [A.h]" in values or "Cell capacity [A.h]" in self:
             # Capacity from values takes precedence
             if "Cell capacity [A.h]" in values:
                 capacity = values["Cell capacity [A.h]"]
@@ -178,9 +178,9 @@ class ParameterValues(dict):
                     )
             # Update the other if only one provided
             elif "C-rate" in values:
-                values["Typical current [A]"] = values["C-rate"] * capacity
+                values["Typical current [A]"] = float(values["C-rate"]) * capacity
             elif "Typical current [A]" in values:
-                values["C-rate"] = values["Typical current [A]"] / capacity
+                values["C-rate"] = float(values["Typical current [A]"]) / capacity
         return values
 
     def process_model(self, model, processing="process"):

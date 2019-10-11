@@ -378,7 +378,7 @@ class TestStandardBatteryBaseModel(unittest.TestCase):
         # check parameters are read in ok
         model = pybamm.BaseBatteryModel()
         self.assertEqual(
-            model.default_parameter_values["Reference temperature [K]"], 298.15
+            model.default_parameter_values["Reference temperature [K]"], "298.15"
         )
 
         # change path and try again
@@ -388,7 +388,7 @@ class TestStandardBatteryBaseModel(unittest.TestCase):
         os.chdir("..")
         model = pybamm.BaseBatteryModel()
         self.assertEqual(
-            model.default_parameter_values["Reference temperature [K]"], 298.15
+            model.default_parameter_values["Reference temperature [K]"], "298.15"
         )
         os.chdir(cwd)
 
