@@ -155,10 +155,11 @@ To install KLU, from within the main PyBaMM directory type
 ```bash
 ./scripts/install_sundials_4.1.0.sh
 ```
-Note that this script has only been tested on Ubuntu 18.04.3 LTS. If this script does not work 
-for you, you can try following the instructions step by step as described here.
+Note that this script has only been tested on Ubuntu 18.04.3 LTS. If this script does not work for you, you can try following the step-by-step instructions below:
 
-#### Download and Build SuiteSparse
+#### Download and Build SuiteSparse (KLU)
+The sparse linear solver, KLU, is contained within SuiteSparse. For more information on the installation process please refer to the README.txt contained in the SuiteSparse download.
+
 **In PyBaMM home directory**, i.e.
 ```
 cd PyBaMM
@@ -167,7 +168,7 @@ download SuiteSparse using:
 ```bash
 wget http://faculty.cse.tamu.edu/davis/SuiteSparse/SuiteSparse-5.4.0.tar.gz -O SuiteSparse-5.4.0.tar.gz
 ```
-Unpack compressed SuiteSparse files using:
+Unpack the compressed SuiteSparse files using:
 ```bash
 tar -xvf SuiteSparse-5.4.0.taz.gz
 ```
@@ -179,23 +180,83 @@ Now build SuiteSparse using:
 ```bash
 cd SuiteSparse
 make
-```
-Then return to your PyBaMM home directory
-```
 cd ..
 ```
+and set the path of the SuiteSparse directory for reference later:
+```bash
+SUITESPARSE_DIR = `pwd`/SuiteSparse
+```
 
-#### Set paths of SuiteSparse
+#### Download and build Sundials 4.1.0
+The KLU solver is interfaced using an updated version of Sundials so even if you have installed Sundials for use with Scikits.odes, you still need to install sundials here. If you want more information on the sundials installation please refer to the the ida_guide.pdf available at on the [sundials site](https://computing.llnl.gov/projects/sundials/sundials-software) 
 
+First, download Sundials 4.1.0 using
+```bash
+wget https://computing.llnl.gov/projects/sundials/download/sundials-4.1.0.tar.gz -O sundials-4.1.0.tar.gz
+tar -xvf sundials-4.1.0.tar.gz
+rm sundials-4.1.0.tar.gz
+```
+The cmake instructions provided with Sundials have trouble linking the required libraries related to the KLU solver, therefore we have provided a modified `CMakeLists.txt` file which fixes this. Copy this across into the sundials-4.1.0 folder, overwriting the old file, using
+```
+cp scripts/replace-cmake/CMakeLists.txt sundials-4.1.0/CMakeLists.txt
+```
+Now create a directory to build sundials in and set the install directory for  sundials to: 
+```
+mkdir build-sundials-4.1.0
+INSTALL_DIR=`pwd`/sundials4
+```
+Now enter the build directory, use cmake to generate the appropriate make files, and then build sundials and install sundials into the install directory using make:
+```
+cd build-sundials-4.1.0
+cmake -DBLAS_ENABLE=ON\
+      -DLAPACK_ENABLE=ON\
+      -DSUNDIALS_INDEX_SIZE=32\
+      -DBUILD_ARKODE=OFF\
+      -DBUILD_CVODE=OFF\
+      -DBUILD_CVODES=OFF\
+      -DBUILD_IDAS=OFF\
+      -DBUILD_KINSOL=OFF\
+      -DEXAMPLES_ENABLE:BOOL=OFF\
+      -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR ../sundials-4.1.0/\
+      -DKLU_ENABLE=ON\
+      -DSUITESPARSE_DIR=$SUITESPARSE_DIR\
+      ../sundials-4.1.0
+make install
+```
+Now return to your PyBaMM home directory and remove the build-sundials-4.1.0 folder:
+```
+cd ..
+rm -rf build-sundials-4.1.0
+```
 
+#### Install pybind11
+To interface with Sundials which is written in C, we require pybind11. Clone the pybind11 repository into a folder called "third-party":
+```
+mkdir third-party
+cd third-party
+git clone https://github.com/pybind/pybind11.git
+cd ..
+```
+You will also require pybind11 to be pip installed so, from within your virtual enviroment (if you are using one) type: 
+```
+pip install pybind11
+```
 
-
-
-
-
-
-
-
+#### Build the KLU wrapper
+We now have all the tools to build a shared library to interface to the KLU solver. Within you PyBaMM home directory build the required Makefile using
+```
+cmake .
+```
+You can now simply run make to build the library (you can simply run this command if you make some changed to klu.cpp)
+```
+make
+```
+To clean up you directory you can now remove the automatically generated cmake files:
+```
+rm -rf CMakeFiles
+rm CMakeCache.txt
+rm cmake_install.cmake
+```
 
 ## Troubleshooting
 
