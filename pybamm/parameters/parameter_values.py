@@ -17,19 +17,30 @@ class ParameterValues(dict):
         If string, gets passed to read_parameters_csv to read a file.
     chemistry : dict
         Dict of strings for default chemistries. Must be of the form:
-        {"base chemistry": base_chemistry
-         "anode": anode_chemistry_authorYear,
-         "cathode": cathode_chemistry_authorYear,
-         "electrolyte": electrolyte_chemistry_authorYear}.
+        {"base chemistry": base_chemistry,
+        "cell": cell_properties_authorYear,
+        "anode": anode_chemistry_authorYear,
+        "separator": separator_chemistry_authorYear,
+        "cathode": cathode_chemistry_authorYear,
+        "electrolyte": electrolyte_chemistry_authorYear,
+        "experiment": experimental_conditions_authorYear}.
         Then the anode chemistry is loaded from the file
-        base_chemistry/anodes/anode_chemistry_authorYear, etc.
+        inputs/parameters/base_chemistry/anodes/anode_chemistry_authorYear, etc.
 
     Examples
     --------
+    >>> import pybamm
     >>> values = {"some parameter": 1, "another parameter": 2}
     >>> param = pybamm.ParameterValues(values)
     >>> param["some parameter"]
     1
+    >>> file = "/input/parameters/lithium-ion/cells/kokam_Marquis2019/parameters.csv"
+    >>> param = pybamm.ParameterValues(values=pybamm.root_dir() + file)
+    >>> param["Negative current collector thickness [m]"]
+    2.5e-05
+    >>> param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
+    >>> param["Reference temperature [K]"]
+    298.15
 
     """
 
@@ -107,9 +118,9 @@ class ParameterValues(dict):
                     # Data is flagged with the string "[data]"
                     # elif param.startswith("[data]"):
                     # TODO: implement interpolating function for data
-                # Anything else should be a float
-                else:
-                    self[name] = float(param)
+                    # Anything else should be a converted to a float
+                    else:
+                        self[name] = float(param)
 
     def read_parameters_csv(self, filename):
         """Reads parameters from csv file into dict.
