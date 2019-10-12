@@ -34,8 +34,18 @@ class ParameterValues(dict):
     """
 
     def __init__(self, values=None, chemistry=None):
+        # Must provide either values or chemistry, not both (nor neither)
+        if values is not None and chemistry is not None:
+            raise ValueError(
+                """
+                Only one of values and chemistry can be provided. To change parameters
+                slightly from a chemistry, first load parameters with the chemistry
+                (param = pybamm.ParameterValues(chemistry=...)) and then update with
+                param.update({dict of values}).
+                """
+            )
         if values is None and chemistry is None:
-            raise ValueError("values and chemistry cannot all be None")
+            raise ValueError("values and chemistry cannot both be None")
         # First load chemistry
         if chemistry is not None:
             self.update_from_chemistry(chemistry)

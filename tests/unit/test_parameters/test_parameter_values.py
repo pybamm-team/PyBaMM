@@ -27,6 +27,21 @@ class TestParameterValues(unittest.TestCase):
         )
         self.assertEqual(param["Reference temperature [K]"], "298.15")
 
+        # values vs chemistry
+        with self.assertRaisesRegex(
+            ValueError, "values and chemistry cannot both be None"
+        ):
+            pybamm.ParameterValues()
+        with self.assertRaisesRegex(
+            ValueError, "Only one of values and chemistry can be provided."
+        ):
+            pybamm.ParameterValues(values=1, chemistry={})
+
+    def test_update_from_chemistry(self):
+        # incomplete chemistry
+        with self.assertRaisesRegex(KeyError, "must provide 'cell' parameters"):
+            pybamm.ParameterValues(chemistry={"chemistry": "lithium-ion"})
+
     def test_update(self):
         param = pybamm.ParameterValues({"a": 1})
         self.assertEqual(param["a"], 1)

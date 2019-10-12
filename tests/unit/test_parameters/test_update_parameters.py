@@ -105,12 +105,14 @@ class TestUpdateParameters(unittest.TestCase):
 
         # trying to update the geometry fails
         parameter_values_update = pybamm.ParameterValues(
-            values={
+            chemistry=pybamm.parameter_sets.Sulzer2019
+        )
+        parameter_values_update.update(
+            {
                 "Negative electrode thickness [m]": 0.0002,
                 "Separator thickness [m]": 0.0003,
                 "Positive electrode thickness [m]": 0.0004,
-            },
-            chemistry=pybamm.parameter_sets.Sulzer2019,
+            }
         )
         with self.assertRaisesRegex(ValueError, "geometry has changed"):
             modeltest1.test_update_parameters(parameter_values_update)
