@@ -73,7 +73,7 @@ class Function(pybamm.Symbol):
                 # if variable appears in the function,use autograd to differentiate
                 # function, and apply chain rule
                 if variable.id in [symbol.id for symbol in child.pre_order()]:
-                    partial_derivatives[i] = child.diff(variable) * self._diff(children)
+                    partial_derivatives[i] = self._diff(children) * child.diff(variable)
 
             # remove None entries
             partial_derivatives = list(filter(None, partial_derivatives))

@@ -16,8 +16,9 @@ class Interpolant(pybamm.Function):
     child : :class:`pybamm.Symbol`
     name : str, optional
     interpolator : str, optional
-        Which interpolator to use ("linear", "pchip" or "cubic spline"). Default is
-        "pchip".
+        Which interpolator to use ("pchip" or "cubic spline"). Note that whichever
+        interpolator is used must be differentiable (for ``Interpolator._diff``).
+        Default is "pchip".
     extrapolate : bool, optional
         Whether to extrapolate for points that are outside of the parametrisation
         range, or return NaN (following default behaviour from scipy). Default is True.
@@ -29,14 +30,6 @@ class Interpolant(pybamm.Function):
                 "data should have exactly two columns (x and y) but has shape {}".format(
                     data.shape
                 )
-            )
-        if interpolator == "linear":
-            if extrapolate is True:
-                fill_value = "extrapolate"
-            else:
-                fill_value = np.nan
-            interpolating_function = interpolate.interp1d(
-                data[:, 0], data[:, 1], fill_value=fill_value
             )
         elif interpolator == "pchip":
             interpolating_function = interpolate.PchipInterpolator(
@@ -56,11 +49,11 @@ class Interpolant(pybamm.Function):
         self.interpolator = interpolator
         self.extrapolate = extrapolate
 
-    def _diff(self, variable):
+    def _diff(self, children):
         """
         Overwrite the base Function `_diff` to use `.derivative` directly instead of
         autograd.
         See :meth:`pybamm.Function._diff()`.
         """
         interpolating_function = self.function
-        return pybamm.Function(interpolating_function.derivative(), *self.children)
+        return pybamm.Function(interpolating_function.derivative(), *children)
