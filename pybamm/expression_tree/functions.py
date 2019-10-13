@@ -233,7 +233,7 @@ class Cosh(SpecificFunction):
         super().__init__(np.cosh, child)
 
     def _diff(self, children):
-        """ See :meth:`pybamm.Symbol._diff()`. """
+        """ See :meth:`pybamm.Function._diff()`. """
         return Sinh(children[0])
 
 
@@ -249,7 +249,7 @@ class Exponential(SpecificFunction):
         super().__init__(np.exp, child)
 
     def _diff(self, children):
-        """ See :meth:`pybamm.Symbol._diff()`. """
+        """ See :meth:`pybamm.Function._diff()`. """
         return Exponential(children[0])
 
 
@@ -265,7 +265,7 @@ class Log(SpecificFunction):
         super().__init__(np.log, child)
 
     def _diff(self, children):
-        """ See :meth:`pybamm.Symbol._diff()`. """
+        """ See :meth:`pybamm.Function._diff()`. """
         return 1 / children[0]
 
 
@@ -291,7 +291,7 @@ class Sin(SpecificFunction):
         super().__init__(np.sin, child)
 
     def _diff(self, children):
-        """ See :meth:`pybamm.Symbol._diff()`. """
+        """ See :meth:`pybamm.Function._diff()`. """
         return Cos(children[0])
 
 
@@ -307,7 +307,7 @@ class Sinh(SpecificFunction):
         super().__init__(np.sinh, child)
 
     def _diff(self, children):
-        """ See :meth:`pybamm.Symbol._diff()`. """
+        """ See :meth:`pybamm.Function._diff()`. """
         return Cosh(children[0])
 
 
