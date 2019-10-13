@@ -6,11 +6,11 @@ Fixes # (issue)
 
 ## Type of change
 
-Please delete options that are not relevant.
+Please add a line in the relevant section of [CHANGELOG.md](https://github.com/pybamm-team/PyBaMM/blob/master/CHANGELOG.md) to document the change (include PR #) - note reverse order of PR #s.
 
-- [ ] Bug fix (non-breaking change which fixes an issue)
 - [ ] New feature (non-breaking change which adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
+- [ ] Optimization (back-end change that speeds up the code)
+- [ ] Bug fix (non-breaking change which fixes an issue)
 
 
 # Key checklist:
@@ -21,8 +21,7 @@ Please delete options that are not relevant.
 
 You can run all three at once, using `$ python run-tests.py --quick`.
 
-## Further checks: 
+## Further checks:
 
 - [ ] Code is commented, particularly in hard-to-understand areas
 - [ ] Tests added that prove fix is effective or that feature works
-- [ ] Any dependent changes have been merged and published in downstream modules
