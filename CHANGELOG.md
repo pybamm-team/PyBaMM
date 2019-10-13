@@ -2,6 +2,7 @@
 
 ## Features
 
+- Allow parameters to be set by material or by specifying a particular paper (#647)
 - Set relative and absolute tolerances independently in solvers (#645)
 
 ## Optimizations
