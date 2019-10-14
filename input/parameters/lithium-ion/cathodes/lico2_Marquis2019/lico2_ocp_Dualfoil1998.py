@@ -37,14 +37,3 @@ def lico2_ocp_Dualfoil1998(sto):
     )
 
     return u_eq
-
-
-import pybamm
-
-sto = np.linspace(0, 1)[:, np.newaxis]
-data = np.hstack([sto, lico2_ocp_Dualfoil1998(sto)])
-np.savetxt(
-    pybamm.root_dir()
-    + "/input/parameters/lithium-ion/cathodes/lico2_Marquis2019/lico2_data_example.csv",
-    data,
-)
