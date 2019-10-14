@@ -10,13 +10,16 @@ class BaseSolver(object):
 
     Parameters
     ----------
-    tolerance : float, optional
-        The tolerance for the solver (default is 1e-8).
+    rtol : float, optional
+        The relative tolerance for the solver (default is 1e-6).
+    atol : float, optional
+        The absolute tolerance for the solver (default is 1e-6).
     """
 
-    def __init__(self, method=None, tol=1e-8):
+    def __init__(self, method=None, rtol=1e-6, atol=1e-6):
         self._method = method
-        self._tol = tol
+        self._rtol = rtol
+        self._atol = atol
 
     @property
     def method(self):
@@ -27,12 +30,20 @@ class BaseSolver(object):
         self._method = value
 
     @property
-    def tol(self):
-        return self._tol
+    def rtol(self):
+        return self._rtol
 
-    @tol.setter
-    def tol(self, value):
-        self._tol = value
+    @rtol.setter
+    def rtol(self, value):
+        self._rtol = value
+
+    @property
+    def atol(self):
+        return self._atol
+
+    @atol.setter
+    def atol(self, value):
+        self._atol = value
 
     def solve(self, model, t_eval):
         """
@@ -210,4 +221,6 @@ class BaseSolver(object):
                     event.evaluate(solution.t_event, solution.y_event)
                 )
             termination_event = min(final_event_values, key=final_event_values.get)
+            # Add the event to the solution object
+            solution.termination = "event: {}".format(termination_event)
             return "the termination event '{}' occurred".format(termination_event)
