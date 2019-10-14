@@ -12,10 +12,10 @@ pybind11_add_module(klu pybamm/solvers/c_solvers/klu.cpp)
 set(SUNDIALS_INCLUDE "sundials4/include")
 TARGET_INCLUDE_DIRECTORIES(klu PRIVATE ${SUNDIALS_INCLUDE})
 
-find_library(SUNMATSPARSE sundials_sunmatrixsparse PATHS "sundials4/lib")
-find_library(IDA sundials_ida PATHS "sundials4/lib")
-find_library(NVECTOR sundials_nvecserial PATHS "sundials4/lib")
-find_library(SUNKLU sundials_sunlinsolklu PATHS "sundials4/lib")
+find_library(SUNMATSPARSE sundials_sunmatrixsparse PATHS "sundials4/lib" NO_DEFAULT_PATH)
+find_library(IDA sundials_ida PATHS "sundials4/lib" NO_DEFAULT_PATH)
+find_library(NVECTOR sundials_nvecserial PATHS "sundials4/lib" NO_DEFAULT_PATH)
+find_library(SUNKLU sundials_sunlinsolklu PATHS "sundials4/lib" NO_DEFAULT_PATH)
 TARGET_LINK_LIBRARIES(klu PRIVATE ${SUNMATSPARSE} ${IDA} ${NVECTOR} ${SUNKLU})
 
 # System libraries
@@ -38,10 +38,10 @@ TARGET_INCLUDE_DIRECTORIES(klu PRIVATE
     )
 
 ## Link Libraries
-find_library(KLU klu PATHS "SuiteSparse/KLU/Lib")
-find_library(AMD amd PATHS "SuiteSparse/AMD/Lib")
-find_library(COLAMD colamd PATHS "SuiteSparse/COLAMD/Lib")
-find_library(BTF btf PATHS "SuiteSparse/BTF/Lib")
+find_library(KLU klu PATHS "SuiteSparse/KLU/Lib" NO_DEFAULT_PATH)
+find_library(AMD amd PATHS "SuiteSparse/AMD/Lib" NO_DEFAULT_PATH)
+find_library(COLAMD colamd PATHS "SuiteSparse/COLAMD/Lib" NO_DEFAULT_PATH)
+find_library(BTF btf PATHS "SuiteSparse/BTF/Lib" NO_DEFAULT_PATH)
 find_library(SUITESPARSE_CONFIG suitesparseconfig PATHS "SuiteSparse/SuiteSparse_config")
 TARGET_LINK_LIBRARIES(klu PRIVATE 
     ${KLU} 
