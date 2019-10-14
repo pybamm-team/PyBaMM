@@ -52,9 +52,10 @@ class Interpolant(pybamm.Function):
         else:
             raise ValueError("interpolator '{}' not recognised".format(interpolator))
         # Set name
-        self.name = "interpolating function"
         if name is not None:
-            self.name += " ({})".format(name)
+            name = "interpolating function ({})".format(name)
+        else:
+            name = "interpolating function"
         super().__init__(
             interpolating_function, child, name=name, derivative="derivative"
         )
