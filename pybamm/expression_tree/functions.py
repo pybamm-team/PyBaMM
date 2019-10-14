@@ -18,20 +18,26 @@ class Function(pybamm.Symbol):
         func(child0.evaluate(t, y), child1.evaluate(t, y), etc).
     children : :class:`pybamm.Symbol`
         The children nodes to apply the function to
-
+    derivative : str, optional
+        Which derivative to use when differentiating ("autograd" or "derivative").
+        Default is "autograd".
     **Extends:** :class:`pybamm.Symbol`
     """
 
-    def __init__(self, function, *children):
+    def __init__(self, function, *children, name=None, derivative="autograd"):
 
-        try:
-            name = "function ({})".format(function.__name__)
-        except AttributeError:
-            name = "function ({})".format(function.__class__)
+        if name is not None:
+            self.name = name
+        else:
+            try:
+                name = "function ({})".format(function.__name__)
+            except AttributeError:
+                name = "function ({})".format(function.__class__)
         children_list = list(children)
         domain = self.get_children_domains(children_list)
 
         self.function = function
+        self.derivative = derivative
 
         # hack to work out whether function takes any params
         # (signature doesn't work for numpy)
@@ -86,7 +92,13 @@ class Function(pybamm.Symbol):
 
     def _diff(self, children):
         """ See :meth:`pybamm.Symbol._diff()`. """
-        return Function(autograd.elementwise_grad(self.function), *children)
+        if self.derivative == "autograd":
+            return Function(autograd.elementwise_grad(self.function), *children)
+        elif self.derivative == "derivative":
+            # keep using "derivative" as derivative
+            return pybamm.Function(
+                self.function.derivative(), *children, derivative="derivative"
+            )
 
     def _jac(self, variable):
         """ See :meth:`pybamm.Symbol._jac()`. """
@@ -158,7 +170,9 @@ class Function(pybamm.Symbol):
             : :pybamm.Function
             A new copy of the function
         """
-        return pybamm.Function(self.function, *children)
+        return pybamm.Function(
+            self.function, *children, name=self.name, derivative=self.derivative
+        )
 
     def _function_simplify(self, simplified_children):
         """
@@ -181,7 +195,12 @@ class Function(pybamm.Symbol):
             # If self.function() is a constant current then simplify to scalar
             return pybamm.Scalar(self.function.parameters_eval["Current [A]"])
         else:
-            return pybamm.Function(self.function, *simplified_children)
+            return pybamm.Function(
+                self.function,
+                *simplified_children,
+                name=self.name,
+                derivative=self.derivative
+            )
 
 
 class SpecificFunction(Function):

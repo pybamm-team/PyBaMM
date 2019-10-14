@@ -5,8 +5,6 @@ import pybamm
 
 import unittest
 import numpy as np
-import autograd.numpy as auto_np
-from scipy.interpolate import interp1d
 
 
 class TestInterpolant(unittest.TestCase):

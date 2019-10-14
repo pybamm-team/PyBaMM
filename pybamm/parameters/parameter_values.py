@@ -4,6 +4,7 @@
 import pybamm
 import pandas as pd
 import os
+import numpy as np
 
 
 class ParameterValues(dict):
@@ -101,26 +102,7 @@ class ParameterValues(dict):
                 os.path.join(component_path, "parameters.csv")
             )
             # Update parameters, making sure to check any conflicts
-            self.update(component_params, check_conflict=True)
-            # Load functions if they are specified
-            for name, param in component_params.items():
-                # Functions are flagged with the string "[function]"
-                if isinstance(param, str):
-                    if param.startswith("[function]"):
-                        self[name] = pybamm.load_function(
-                            os.path.join(component_path, param[10:] + ".py")
-                        )
-                    # Inbuilt functions are flagged with the string "[inbuilt]"
-                    elif param.startswith("[inbuilt class]"):
-                        # Extra set of brackets at the end makes an instance of the
-                        # class
-                        self[name] = getattr(pybamm, param[15:])()
-                    # Data is flagged with the string "[data]"
-                    # elif param.startswith("[data]"):
-                    # TODO: implement interpolating function for data
-                    # Anything else should be a converted to a float
-                    else:
-                        self[name] = float(param)
+            self.update(component_params, check_conflict=True, path=component_path)
 
     def read_parameters_csv(self, filename):
         """Reads parameters from csv file into dict.
@@ -141,23 +123,45 @@ class ParameterValues(dict):
         df.dropna(how="all", inplace=True)
         return {k: v for (k, v) in zip(df["Name [units]"], df["Value"])}
 
-    def update(self, values, check_conflict=False):
+    def update(self, values, check_conflict=False, path=""):
         # check parameter values
         values = self.check_and_update_parameter_values(values)
         # update
-        for k, v in values.items():
+        for name, value in values.items():
             # check for conflicts
             if (
                 check_conflict is True
-                and k in self.keys()
-                and not (self[k] == float(v) or self[k] == v)
+                and name in self.keys()
+                and not (self[name] == float(value) or self[name] == value)
             ):
                 raise ValueError(
-                    "parameter '{}' already defined with value '{}'".format(k, self[k])
+                    "parameter '{}' already defined with value '{}'".format(
+                        name, self[name]
+                    )
                 )
-            # if no conflicts, update
+            # if no conflicts, update, loading functions and data if they are specified
             else:
-                self[k] = v
+                # Functions are flagged with the string "[function]"
+                if isinstance(value, str):
+                    if value.startswith("[function]"):
+                        self[name] = pybamm.load_function(
+                            os.path.join(path, value[10:] + ".py")
+                        )
+                    # Inbuilt functions are flagged with the string "[inbuilt]"
+                    elif value.startswith("[inbuilt class]"):
+                        # Extra set of brackets at the end makes an instance of the
+                        # class
+                        self[name] = getattr(pybamm, value[15:])()
+                    # Data is flagged with the string "[data]"
+                    elif value.startswith("[data]"):
+                        data = np.loadtxt(os.path.join(path, value[6:] + ".csv"))
+                        # Save name and data
+                        self[name] = (value[6:], data)
+                    # Anything else should be a converted to a float
+                    else:
+                        self[name] = float(value)
+                else:
+                    self[name] = value
         # reset processed symbols
         self._processed_symbols = {}
 
@@ -392,8 +396,16 @@ class ParameterValues(dict):
                 if isinstance(function_name, pybamm.GetCurrentData):
                     function_name.interpolate()
 
-            # Create Function object and differentiate if necessary
-            function = pybamm.Function(function_name, *new_children)
+            # Create Function or Interpolant objec
+            if isinstance(function_name, tuple):
+                # If function_name is a tuple then it should be (name, data) and we need
+                # to create an Interpolant
+                name, data = function_name
+                function = pybamm.Interpolant(data, *new_children, name=name)
+            else:
+                # otherwise create standard function
+                function = pybamm.Function(function_name, *new_children)
+            # Differentiate if necessary
             if symbol.diff_variable is None:
                 return function
             else:

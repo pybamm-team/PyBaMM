@@ -2,7 +2,6 @@
 # Interpolating class
 #
 import pybamm
-import numpy as np
 from scipy import interpolate
 
 
@@ -13,21 +12,32 @@ class Interpolant(pybamm.Function):
     Parameters
     ----------
     data : :class:`numpy.ndarray`
+        Numpy array of data to use for interpolation. Must have exactly two columns (x
+        and y data)
     child : :class:`pybamm.Symbol`
+        Node to use when evaluating the interpolant
     name : str, optional
+        Name of the interpolant. Default is None, in which case the name "interpolating
+        function" is given.
     interpolator : str, optional
         Which interpolator to use ("pchip" or "cubic spline"). Note that whichever
         interpolator is used must be differentiable (for ``Interpolator._diff``).
-        Default is "pchip".
+        Default is "cubic spline". Note that "pchip" may give slow results.
     extrapolate : bool, optional
         Whether to extrapolate for points that are outside of the parametrisation
         range, or return NaN (following default behaviour from scipy). Default is True.
+
+    **Extends**: :class:`pybamm.Function`
     """
 
-    def __init__(self, data, child, name=None, interpolator="pchip", extrapolate=True):
+    def __init__(
+        self, data, child, name=None, interpolator="cubic spline", extrapolate=True
+    ):
         if data.ndim != 2 or data.shape[1] != 2:
             raise ValueError(
-                "data should have exactly two columns (x and y) but has shape {}".format(
+                """
+                data should have exactly two columns (x and y) but has shape {}
+                """.format(
                     data.shape
                 )
             )
@@ -41,19 +51,13 @@ class Interpolant(pybamm.Function):
             )
         else:
             raise ValueError("interpolator '{}' not recognised".format(interpolator))
-        super().__init__(interpolating_function, child)
-        # Overwrite name if given
+        # Set name
+        self.name = "interpolating function"
         if name is not None:
-            self.name = "interpolating function ({})".format(name)
+            self.name += " ({})".format(name)
+        super().__init__(
+            interpolating_function, child, name=name, derivative="derivative"
+        )
         # Store information as attributes
         self.interpolator = interpolator
         self.extrapolate = extrapolate
-
-    def _diff(self, children):
-        """
-        Overwrite the base Function `_diff` to use `.derivative` directly instead of
-        autograd.
-        See :meth:`pybamm.Function._diff()`.
-        """
-        interpolating_function = self.function
-        return pybamm.Function(interpolating_function.derivative(), *children)

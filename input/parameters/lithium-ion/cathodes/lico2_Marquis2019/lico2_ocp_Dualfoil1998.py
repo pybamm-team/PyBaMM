@@ -3,23 +3,23 @@ import autograd.numpy as np
 
 def lico2_ocp_Dualfoil1998(sto):
     """
-        Lithium Cobalt Oxide (LiCO2) Open Circuit Potential (OCP) as a a function of the
-        stochiometry. The fit is taken from Dualfoil [1]. Dualfoil states that the data
-        was measured by Oscar Garcia 2001 using Quallion electrodes for 0.5 < sto < 0.99
-        and by Marc Doyle for sto<0.4 (for unstated electrodes). We could not find any
-        other records of the Garcia measurements. Doyles fits can be found in his
-        thesis [2] but we could not find any other record of his measurments.
+    Lithium Cobalt Oxide (LiCO2) Open Circuit Potential (OCP) as a a function of the
+    stochiometry. The fit is taken from Dualfoil [1]. Dualfoil states that the data
+    was measured by Oscar Garcia 2001 using Quallion electrodes for 0.5 < sto < 0.99
+    and by Marc Doyle for sto<0.4 (for unstated electrodes). We could not find any
+    other records of the Garcia measurements. Doyles fits can be found in his
+    thesis [2] but we could not find any other record of his measurments.
 
-        References
-        ----------
-        .. [1] http://www.cchem.berkeley.edu/jsngrp/fortran.html
-        .. [2] CM Doyle. Design and simulation of lithium rechargeable batteries,
-               1995.
+    References
+    ----------
+    .. [1] http://www.cchem.berkeley.edu/jsngrp/fortran.html
+    .. [2] CM Doyle. Design and simulation of lithium rechargeable batteries,
+           1995.
 
-          Parameters
-          ----------
-          sto: double
-               Stochiometry of material (li-fraction)
+    Parameters
+    ----------
+    sto: double
+       Stochiometry of material (li-fraction)
 
     """
 
@@ -37,3 +37,14 @@ def lico2_ocp_Dualfoil1998(sto):
     )
 
     return u_eq
+
+
+import pybamm
+
+sto = np.linspace(0, 1)[:, np.newaxis]
+data = np.hstack([sto, lico2_ocp_Dualfoil1998(sto)])
+np.savetxt(
+    pybamm.root_dir()
+    + "/input/parameters/lithium-ion/cathodes/lico2_Marquis2019/lico2_data_example.csv",
+    data,
+)

@@ -25,7 +25,7 @@ class TestParameterValues(unittest.TestCase):
             values="input/parameters/lithium-ion/cathodes/lico2_Marquis2019/"
             + "parameters.csv"
         )
-        self.assertEqual(param["Reference temperature [K]"], "298.15")
+        self.assertEqual(param["Reference temperature [K]"], 298.15)
 
         # values vs chemistry
         with self.assertRaisesRegex(
@@ -293,6 +293,27 @@ class TestParameterValues(unittest.TestCase):
         processed_func = parameter_values.process_symbol(func)
         self.assertIsInstance(processed_func, pybamm.Function)
         self.assertEqual(processed_func.evaluate(), 3)
+
+    def test_process_interpolant(self):
+        name = "times two"
+        x = np.linspace(0, 10)[:, np.newaxis]
+        data = np.hstack([x, 2 * x])
+
+        parameter_values = pybamm.ParameterValues(
+            {"a": 3.01, "Diffusivity": ("times two", data)}
+        )
+
+        a = pybamm.Parameter("a")
+        func = pybamm.FunctionParameter("Diffusivity", a)
+
+        processed_func = parameter_values.process_symbol(func)
+        self.assertIsInstance(processed_func, pybamm.Interpolant)
+        self.assertEqual(processed_func.evaluate(), 6.02)
+
+        # process differentiated function parameter
+        diff_func = func.diff(a)
+        processed_diff_func = parameter_values.process_symbol(diff_func)
+        self.assertEqual(processed_diff_func.evaluate(), 2)
 
     def test_process_complex_expression(self):
         var1 = pybamm.Variable("var1")
