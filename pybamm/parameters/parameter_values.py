@@ -27,6 +27,9 @@ class ParameterValues(dict):
         "experiment": experimental_conditions_authorYear}.
         Then the anode chemistry is loaded from the file
         inputs/parameters/base_chemistry/anodes/anode_chemistry_authorYear, etc.
+        Parameters in "cell" should include geometry and current collector properties.
+        Parameters in "experiment" should include parameters relating to experimental
+        conditions, such as initial conditions and currents.
 
     Examples
     --------
