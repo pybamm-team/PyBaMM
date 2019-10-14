@@ -30,7 +30,6 @@ class SubMesh0D:
         self.nodes = np.array([spatial_position])
         self.edges = np.array([spatial_position])
         self.coord_sys = None
-        self.dimension = 0
         self.npts = 1
 
     def add_ghost_meshes(self):
@@ -53,10 +52,9 @@ class MeshGenerator0D(MeshGenerator):
     **Extends**: :class:`pybamm.MeshGenerator`
     """
 
-    def __init__(self, submesh_type="Position", submesh_params={}):
+    def __init__(self, submesh_type="Position", submesh_params=None):
         self.submesh_type = submesh_type
-        self.submesh_params = submesh_params
-        self.dimension = 0
+        self.submesh_params = submesh_params or {}
 
     def __call__(self, position, npts=None):
 

@@ -213,9 +213,9 @@ class MeshGenerator:
         Contains any parameters required by the submesh.
     """
 
-    def __init__(self, submesh_type="Uniform", submesh_params={}):
+    def __init__(self, submesh_type="Uniform", submesh_params=None):
         self.submesh_type = submesh_type
-        self.submesh_params = submesh_params
+        self.submesh_params = submesh_params or {}
 
     def __call__(self):
         """
