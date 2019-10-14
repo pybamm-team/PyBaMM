@@ -126,6 +126,7 @@ from .expression_tree.unary_operators import (
     r_average,
 )
 from .expression_tree.functions import *
+from .expression_tree.interpolant import Interpolant
 from .expression_tree.parameter import Parameter, FunctionParameter
 from .expression_tree.broadcasts import Broadcast, PrimaryBroadcast, FullBroadcast
 from .expression_tree.scalar import Scalar
