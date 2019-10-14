@@ -455,7 +455,7 @@ class TestMesh(unittest.TestCase):
 
 class TestMeshGenerator(unittest.TestCase):
     def test_not_implemented(self):
-        generator = pybamm.MeshGenerator()
+        generator = pybamm.MeshGenerator(submesh_type="Uniform")
         with self.assertRaises(NotImplementedError):
             generator()
 
