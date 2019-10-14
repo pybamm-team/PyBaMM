@@ -36,7 +36,7 @@ class BaseModel(BaseElectrode):
 
         elif self.domain == "Positive":
             lbc = (pybamm.Scalar(0), "Neumann")
-            sigma_eff = self.param.sigma_p * (1 - eps) ** self.param.b
+            sigma_eff = self.param.sigma_p * (1 - eps) ** self.param.b_p
             rbc = (
                 i_boundary_cc / pybamm.boundary_value(-sigma_eff, "right"),
                 "Neumann",
