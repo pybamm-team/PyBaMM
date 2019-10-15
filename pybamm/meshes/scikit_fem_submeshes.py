@@ -134,7 +134,7 @@ class ScikitUniform2DSubMesh(ScikitSubMesh2D):
         A dictionary that contains information about the size and location of
         the tabs
 
-    **Extends:"": :class:`pybamm.SubMesh2D`
+    **Extends:"": :class:`pybamm.ScikitSubMesh2D`
     """
 
     def __init__(self, lims, npts, tabs):
@@ -209,10 +209,16 @@ class ScikitExponential2DSubMesh(ScikitSubMesh2D):
     stretch : float, optional
         The factor (alpha) which appears in the exponential. Default is 2.3.
 
-    **Extends:"": :class:`pybamm.SubMesh2D`
+    **Extends:"": :class:`pybamm.ScikitSubMesh2D`
     """
 
     def __init__(self, lims, npts, tabs, side="top", stretch=2.3):
+
+        # check side is top
+        if side != "top":
+            raise pybamm.GeometryError(
+                "At present, side can only be 'top', but is set to ".format(side)
+            )
 
         # check that two variables have been passed in
         if len(lims) != 2:
@@ -246,14 +252,12 @@ class ScikitExponential2DSubMesh(ScikitSubMesh2D):
                     lims[var]["min"], lims[var]["max"], npts[var.id]
                 )
             elif var.name == "z":
-                # Strech factor. TODO: allow parameters to be passed to mesh
-                alpha = 2.3
                 ii = np.array(range(0, npts[var.id]))
                 a = lims[var]["min"]
                 b = lims[var]["max"]
                 edges[var.name] = (b - a) * (
-                    np.exp(-alpha * ii / (npts[var.id] - 1)) - 1
-                ) / (np.exp(-alpha) - 1) + a
+                    np.exp(-stretch * ii / (npts[var.id] - 1)) - 1
+                ) / (np.exp(-stretch) - 1) + a
 
         super().__init__(edges, coord_sys, tabs)
 
@@ -288,7 +292,7 @@ class ScikitChebyshev2DSubMesh(ScikitSubMesh2D):
         A dictionary that contains information about the size and location of
         the tabs
 
-    **Extends:"": :class:`pybamm.SubMesh2D`
+    **Extends:"": :class:`pybamm.ScikitSubMesh2D`
     """
 
     def __init__(self, lims, npts, tabs):
@@ -361,7 +365,7 @@ class UserSupplied2DSubMesh(ScikitSubMesh2D):
         The array of points which correspond to the edges in the z direction
         of the mesh.
 
-    **Extends:"": :class:`pybamm.SubMesh2D`
+    **Extends:"": :class:`pybamm.ScikitSubMesh2D`
     """
 
     def __init__(self, lims, npts, tabs, y_edges=None, z_edges=None):
