@@ -217,7 +217,7 @@ class ScikitExponential2DSubMesh(ScikitSubMesh2D):
         # check side is top
         if side != "top":
             raise pybamm.GeometryError(
-                "At present, side can only be 'top', but is set to ".format(side)
+                "At present, side can only be 'top', but is set to {}".format(side)
             )
 
         # check that two variables have been passed in
