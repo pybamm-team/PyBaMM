@@ -9,6 +9,18 @@ class BaseHigherOrderModel(BaseModel):
     """Base model for higher-order models for lead-acid, from [1]_.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
+    Parameters
+    ----------
+    options : dict, optional
+        A dictionary of options to be passed to the model.
+    name : str, optional
+        The name of the model.
+    build :  bool, optional
+        Whether to build the model on instantiation. Default is True. Setting this
+        option to False allows users to change any number of the submodels before
+        building the complete model (submodels cannot be changed after the model is
+        built).
+
     References
     ----------
     .. [1] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster lead-acid
@@ -19,7 +31,7 @@ class BaseHigherOrderModel(BaseModel):
     **Extends:** :class:`pybamm.lead_acid.BaseModel`
     """
 
-    def __init__(self, options=None, name="Composite model"):
+    def __init__(self, options=None, name="Composite model", build=True):
         super().__init__(options, name)
 
         self.set_leading_order_model()
@@ -40,7 +52,8 @@ class BaseHigherOrderModel(BaseModel):
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
 
-        self.build_model()
+        if build:
+            self.build_model()
 
     def set_current_collector_submodel(self):
         cc = pybamm.current_collector
@@ -172,11 +185,23 @@ class FOQS(BaseHigherOrderModel):
     """First-order quasi-static model for lead-acid, from [1]_.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
+    Parameters
+    ----------
+    options : dict, optional
+        A dictionary of options to be passed to the model.
+    name : str, optional
+        The name of the model.
+    build :  bool, optional
+        Whether to build the model on instantiation. Default is True. Setting this
+        option to False allows users to change any number of the submodels before
+        building the complete model (submodels cannot be changed after the model is
+        built).
+
     **Extends:** :class:`pybamm.lead_acid.BaseHigherOrderModel`
     """
 
-    def __init__(self, options=None, name="FOQS model"):
-        super().__init__(options, name)
+    def __init__(self, options=None, name="FOQS model", build=True):
+        super().__init__(options, name, build=build)
 
     def set_electrolyte_diffusion_submodel(self):
         self.submodels[
@@ -207,8 +232,8 @@ class Composite(BaseHigherOrderModel):
     **Extends:** :class:`pybamm.lead_acid.BaseHigherOrderModel`
     """
 
-    def __init__(self, options=None, name="Composite model"):
-        super().__init__(options, name)
+    def __init__(self, options=None, name="Composite model", build=True):
+        super().__init__(options, name, build=build)
 
     def set_electrolyte_diffusion_submodel(self):
         self.submodels[
@@ -235,6 +260,18 @@ class CompositeExtended(BaseHigherOrderModel):
     """Extended composite model for lead-acid, from [2]_.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
+    Parameters
+    ----------
+    options : dict, optional
+        A dictionary of options to be passed to the model.
+    name : str, optional
+        The name of the model.
+    build :  bool, optional
+        Whether to build the model on instantiation. Default is True. Setting this
+        option to False allows users to change any number of the submodels before
+        building the complete model (submodels cannot be changed after the model is
+        built).
+
     References
     ----------
     .. [2] V Sulzer. Mathematical modelling of lead-acid batteries. PhD thesis,
@@ -244,8 +281,8 @@ class CompositeExtended(BaseHigherOrderModel):
     **Extends:** :class:`pybamm.lead_acid.BaseHigherOrderModel`
     """
 
-    def __init__(self, options=None, name="Extended composite model"):
-        super().__init__(options, name)
+    def __init__(self, options=None, name="Extended composite model", build=True):
+        super().__init__(options, name, build=build)
 
     def set_electrolyte_diffusion_submodel(self):
         self.submodels[
