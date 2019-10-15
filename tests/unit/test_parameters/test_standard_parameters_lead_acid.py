@@ -4,7 +4,6 @@
 import pybamm
 from tests import get_discretisation_for_testing
 
-import os
 import unittest
 
 
@@ -59,7 +58,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
 
         # process parameters and discretise
         parameter_values = pybamm.ParameterValues(
-            "input/parameters/lead-acid/default.csv", {"Typical current [A]": 1}
+            chemistry=pybamm.parameter_sets.Sulzer2019
         )
         disc = get_discretisation_for_testing()
         processed_s = disc.process_symbol(parameter_values.process_symbol(s_param))
@@ -129,33 +128,11 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
             ),
         }
         # Process
-        input_path = os.path.join(os.getcwd(), "input", "parameters", "lead-acid")
         parameter_values = pybamm.ParameterValues(
-            "input/parameters/lead-acid/default.csv",
-            {
-                "Typical current [A]": 1,
-                "Current function": pybamm.GetConstantCurrent(),
-                "Electrolyte diffusivity": os.path.join(
-                    input_path, "electrolyte_diffusivity_Gu1997.py"
-                ),
-                "Electrolyte conductivity": os.path.join(
-                    input_path, "electrolyte_conductivity_Gu1997.py"
-                ),
-                "Darken thermodynamic factor": os.path.join(
-                    input_path, "darken_thermodynamic_factor_Chapman1968.py"
-                ),
-                "Negative electrode OCV": os.path.join(
-                    input_path, "lead_electrode_ocv_Bode1977.py"
-                ),
-                "Positive electrode OCV": os.path.join(
-                    input_path, "lead_dioxide_electrode_ocv_Bode1977.py"
-                ),
-            },
+            chemistry=pybamm.parameter_sets.Sulzer2019
         )
-        param_eval = {
-            name: parameter_values.process_symbol(parameter).evaluate()
-            for name, parameter in parameters.items()
-        }
+        param_eval = pybamm.print_parameters(parameters, parameter_values)
+        param_eval = {k: v[0] for k, v in param_eval.items()}
 
         # Known values for dimensionless functions
         self.assertEqual(param_eval["D_e_1"], 1)

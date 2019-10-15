@@ -127,13 +127,14 @@ class BaseModel(BaseStefanMaxwellConductivity):
         T = variables[self.domain + " electrode temperature"]
         if self.domain == "Negative":
             sigma = param.sigma_n
+            b = param.b_n
         elif self.domain == "Positive":
             sigma = param.sigma_p
-
-        sigma_eff = sigma * (1 - eps) ** self.param.b
+            b = param.b_p
+        sigma_eff = sigma * (1 - eps) ** b
         conductivity = (
             param.kappa_e(c_e, T)
-            * (eps ** param.b)
+            * (eps ** b)
             / (param.C_e / param.gamma_e + param.kappa_e(c_e, T) / sigma_eff)
         )
 
@@ -184,7 +185,7 @@ class BaseModel(BaseStefanMaxwellConductivity):
         T = variables["Separator temperature"]
 
         chi_e_s = param.chi(c_e_s)
-        kappa_s_eff = param.kappa_e(c_e_s, T) * (eps_s ** param.b)
+        kappa_s_eff = param.kappa_e(c_e_s, T) * (eps_s ** param.b_s)
 
         phi_e_s = pybamm.PrimaryBroadcast(
             pybamm.boundary_value(phi_e_n, "right"), "separator"
@@ -223,7 +224,7 @@ class BaseModel(BaseStefanMaxwellConductivity):
         i_s = pybamm.PrimaryBroadcast(i_boundary_cc, self.domain_for_broadcast) - i_e
 
         if self.domain == "Negative":
-            conductivity = param.sigma_n * (1 - eps) ** param.b
+            conductivity = param.sigma_n * (1 - eps) ** param.b_n
             phi_s = -pybamm.IndefiniteIntegral(i_s / conductivity, x_n)
 
         elif self.domain == "Positive":
@@ -231,7 +232,7 @@ class BaseModel(BaseStefanMaxwellConductivity):
             phi_e_s = variables["Separator electrolyte potential"]
             delta_phi_p = variables["Positive electrode surface potential difference"]
 
-            conductivity = param.sigma_p * (1 - eps) ** param.b
+            conductivity = param.sigma_p * (1 - eps) ** param.b_p
 
             phi_s = -pybamm.IndefiniteIntegral(
                 i_s / conductivity, x_p

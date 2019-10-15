@@ -2,7 +2,6 @@
 # Class for calcuting the effective resistance of two-dimensional current collectors
 #
 import pybamm
-import os
 
 
 class EffectiveResistance2D(pybamm.BaseModel):
@@ -205,21 +204,7 @@ class EffectiveResistance2D(pybamm.BaseModel):
 
     @property
     def default_parameter_values(self):
-        # default li-ion parameter values
-        input_path = os.path.join(
-            pybamm.root_dir(), "input", "parameters", "lithium-ion"
-        )
-        return pybamm.ParameterValues(
-            os.path.join(
-                input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
-            ),
-            {
-                "Typical current [A]": 1,
-                "Current function": pybamm.GetConstantCurrent(
-                    pybamm.standard_parameters_lithium_ion.I_typ
-                ),
-            },
-        )
+        return pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
 
     @property
     def default_geometry(self):

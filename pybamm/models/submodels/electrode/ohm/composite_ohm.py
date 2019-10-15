@@ -41,7 +41,7 @@ class Composite(BaseModel):
         phi_s_cn = variables["Negative current collector potential"]
 
         if self._domain == "Negative":
-            sigma_eff_0 = self.param.sigma_n * (1 - eps_0) ** self.param.b
+            sigma_eff_0 = self.param.sigma_n * (1 - eps_0) ** self.param.b_n
             phi_s = pybamm.PrimaryBroadcast(
                 phi_s_cn, "negative electrode"
             ) + pybamm.outer(
@@ -55,7 +55,7 @@ class Composite(BaseModel):
             ]
             phi_e_p_av = variables["X-averaged positive electrolyte potential"]
 
-            sigma_eff_0 = self.param.sigma_p * (1 - eps_0) ** self.param.b
+            sigma_eff_0 = self.param.sigma_p * (1 - eps_0) ** self.param.b_p
 
             const = (
                 delta_phi_p_av
@@ -92,14 +92,8 @@ class Composite(BaseModel):
 
         elif self.domain == "Positive":
             lbc = (pybamm.Scalar(0), "Neumann")
-            sigma_eff_0 = self.param.sigma_p * (1 - eps_0) ** self.param.b
+            sigma_eff_0 = self.param.sigma_p * (1 - eps_0) ** self.param.b_p
             rbc = (-i_boundary_cc_0 / sigma_eff_0, "Neumann")
 
         self.boundary_conditions[phi_s] = {"left": lbc, "right": rbc}
 
-    @property
-    def default_solver(self):
-        """
-        Create and return the default solver for this model
-        """
-        return pybamm.ScikitsOdeSolver()

@@ -152,6 +152,9 @@ def load_function(filename):
             "No function {} found in module {}".format(valid_module, valid_module)
         )
 
+    # Remove valid_path from sys_path to avoid clashes down the line
+    sys.path.remove(valid_path)
+
     return getattr(module_object, valid_module)
 
 

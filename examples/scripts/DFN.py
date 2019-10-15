@@ -19,7 +19,9 @@ param.process_model(model)
 param.process_geometry(geometry)
 
 # set mesh
-mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+var = pybamm.standard_spatial_vars
+var_pts = {var.x_n: 30, var.x_s: 30, var.x_p: 30, var.r_n: 10, var.r_p: 10}
+mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
 
 # discretise model
 disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
@@ -27,7 +29,10 @@ disc.process_model(model)
 
 # solve model
 t_eval = np.linspace(0, 0.2, 100)
-solution = model.default_solver.solve(model, t_eval)
+solver = model.default_solver
+solver.rtol = 1e-3
+solver.atol = 1e-6
+solution = solver.solve(model, t_eval)
 
 # plot
 plot = pybamm.QuickPlot(model, mesh, solution)

@@ -42,7 +42,7 @@ def get_mesh_for_testing(
     xpts=None, rpts=10, ypts=15, zpts=15, geometry=None, cc_submesh=None
 ):
     param = pybamm.ParameterValues(
-        base_parameters={
+        values={
             "Electrode width [m]": 0.4,
             "Electrode height [m]": 0.5,
             "Negative tab width [m]": 0.1,
@@ -118,7 +118,7 @@ def get_2p1d_mesh_for_testing(
 
 def get_unit_2p1D_mesh_for_testing(ypts=15, zpts=15):
     param = pybamm.ParameterValues(
-        base_parameters={
+        values={
             "Electrode width [m]": 1,
             "Electrode height [m]": 1,
             "Negative tab width [m]": 1,
