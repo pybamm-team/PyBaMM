@@ -3,7 +3,6 @@
 #
 
 import pybamm
-import os
 
 
 class BaseModel(pybamm.BaseBatteryModel):
@@ -22,34 +21,7 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     @property
     def default_parameter_values(self):
-        input_path = os.path.join(pybamm.root_dir(), "input", "parameters", "lead-acid")
-        return pybamm.ParameterValues(
-            os.path.join(input_path, "default.csv"),
-            {
-                "Typical current [A]": 1,
-                "Current function": pybamm.GetConstantCurrent(
-                    pybamm.standard_parameters_lead_acid.I_typ
-                ),
-                "Electrolyte diffusivity": os.path.join(
-                    input_path, "electrolyte_diffusivity_Gu1997.py"
-                ),
-                "Electrolyte conductivity": os.path.join(
-                    input_path, "electrolyte_conductivity_Gu1997.py"
-                ),
-                "Electrolyte viscosity": os.path.join(
-                    input_path, "electrolyte_viscosity_Chapman1968.py"
-                ),
-                "Darken thermodynamic factor": os.path.join(
-                    input_path, "darken_thermodynamic_factor_Chapman1968.py"
-                ),
-                "Negative electrode OCV": os.path.join(
-                    input_path, "lead_electrode_ocv_Bode1977.py"
-                ),
-                "Positive electrode OCV": os.path.join(
-                    input_path, "lead_dioxide_electrode_ocv_Bode1977.py"
-                ),
-            },
-        )
+        return pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Sulzer2019)
 
     @property
     def default_geometry(self):

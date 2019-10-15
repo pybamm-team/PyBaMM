@@ -40,10 +40,8 @@ class TestAsymptoticConvergence(unittest.TestCase):
         def get_max_error(current):
             pybamm.logger.info("current = {}".format(current))
             # Update current (and hence C_e) in the parameters
-            param = pybamm.ParameterValues(
-                base_parameters=full_model.default_parameter_values,
-                optional_parameters={"Typical current [A]": current},
-            )
+            param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Sulzer2019)
+            param.update({"Typical current [A]": current})
             param.update_model(leading_order_model, loqs_disc)
             param.update_model(composite_model, comp_disc)
             param.update_model(full_model, full_disc)

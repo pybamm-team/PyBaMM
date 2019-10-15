@@ -58,16 +58,10 @@ def print_parameters(parameters, parameter_values, output_file=None):
         parameters = {k: v for k, v in parameters.__dict__.items() if k not in ignore}
 
     evaluated_parameters = defaultdict(list)
-    # Calculate the currents required for C-rates of 1C and C / 10
-    try:
-        current_for_1C = parameter_values["Cell capacity [A.h]"]
-    except KeyError:
-        current_for_1C = 1
-    current_for_C_over_10 = current_for_1C / 10
     # Calculate parameters for each C-rate
-    for current in [current_for_1C, current_for_C_over_10]:
+    for Crate in [1, 10]:
         # Update Crate
-        parameter_values.update({"Typical current [A]": current})
+        parameter_values.update({"C-rate": Crate})
         for name, symbol in parameters.items():
             if not callable(symbol):
                 proc_symbol = parameter_values.process_symbol(symbol)
