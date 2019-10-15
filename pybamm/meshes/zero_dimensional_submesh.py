@@ -2,12 +2,12 @@
 # Zero dimensional submesh
 #
 import pybamm
-from .meshes import MeshGenerator
+from .meshes import SubMesh
 
 import numpy as np
 
 
-class SubMesh0D:
+class SubMesh0D(SubMesh):
     """
     0D submesh class.
     Contains the position of the node.
@@ -19,9 +19,15 @@ class SubMesh0D:
     npts : dict, optional
         Number of points to be used. Included for compatibility with other meshes, but
         ignored by this mesh class
+    tabs : dict
+        A dictionary that contains information about the size and location of
+        the tabs. Included for compatibility with other meshes, but
+        ignored by this mesh class
+
+    **Extends:"": :class:`pybamm.SubMesh`
     """
 
-    def __init__(self, position, npts=None):
+    def __init__(self, position, npts=None, tabs=None):
         # check that only one variable passed in
         if len(position) != 1:
             raise pybamm.GeometryError("position should only contain a single variable")
@@ -35,32 +41,3 @@ class SubMesh0D:
     def add_ghost_meshes(self):
         # No ghost meshes to be added to this class
         pass
-
-
-class MeshGenerator0D(MeshGenerator):
-    """
-    A class to generate a submesh on a 1D domain.
-
-    Parameters
-    ----------
-
-    submesh_type: str, optional
-        The type of submeshes to use. Can be "Position". Default is "Position".
-    submesh_params: dict, optional
-        Contains any parameters required by the submesh.
-
-    **Extends**: :class:`pybamm.MeshGenerator`
-    """
-
-    def __init__(self, submesh_type="Position", submesh_params=None):
-        self.submesh_type = submesh_type
-        self.submesh_params = submesh_params or {}
-
-    def __call__(self, position, npts=None):
-
-        if self.submesh_type == "Position":
-            return SubMesh0D(position, npts)
-        else:
-            raise pybamm.GeometryError(
-                "Submesh {} not recognised.".format(self.submesh_type)
-            )

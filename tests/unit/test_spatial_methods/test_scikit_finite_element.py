@@ -222,10 +222,10 @@ class TestScikitFiniteElement(unittest.TestCase):
         var_pts = {var.x_n: 3, var.x_s: 3, var.x_p: 3, var.y: 32, var.z: 32}
 
         submesh_types = {
-            "negative electrode": pybamm.Uniform1DSubMesh,
-            "separator": pybamm.Uniform1DSubMesh,
-            "positive electrode": pybamm.Uniform1DSubMesh,
-            "current collector": pybamm.ScikitChebyshev2DSubMesh,
+            "negative electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "separator": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "positive electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "current collector": pybamm.MeshGenerator(pybamm.ScikitChebyshev2DSubMesh),
         }
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
@@ -282,10 +282,12 @@ class TestScikitFiniteElement(unittest.TestCase):
         var_pts = {var.x_n: 3, var.x_s: 3, var.x_p: 3, var.y: 32, var.z: 32}
 
         submesh_types = {
-            "negative electrode": pybamm.Uniform1DSubMesh,
-            "separator": pybamm.Uniform1DSubMesh,
-            "positive electrode": pybamm.Uniform1DSubMesh,
-            "current collector": pybamm.ScikitExponential2DSubMesh,
+            "negative electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "separator": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "positive electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "current collector": pybamm.MeshGenerator(
+                pybamm.ScikitExponential2DSubMesh
+            ),
         }
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 

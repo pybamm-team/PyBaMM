@@ -4,9 +4,6 @@
 .. autoclass:: pybamm.SubMesh1D
     :members:
 
-.. autoclass:: pybamm.MeshGenerator1D
-    :members:
-
 .. autoclass:: pybamm.Uniform1DSubMesh
     :members:
 

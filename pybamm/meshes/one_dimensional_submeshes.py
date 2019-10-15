@@ -2,16 +2,28 @@
 # One-dimensional submeshes
 #
 import pybamm
-from .meshes import MeshGenerator
+from .meshes import SubMesh
 
 import numpy as np
 
 
-class SubMesh1D:
+class SubMesh1D(SubMesh):
     """
     1D submesh class.
     Contains the position of the nodes, the number of mesh points, and
     (optionally) information about the tab locations.
+
+    Parameters
+    ----------
+    edges : array_like
+        An array containing the points corresponding to the edges of the submesh
+    coord_sys : string
+        The coordinate system of the submesh
+    tabs : dict, optional
+        A dictionary that contains information about the size and location of
+        the tabs
+
+    **Extends:"": :class:`pybamm.SubMesh`
     """
 
     def __init__(self, edges, coord_sys, tabs=None):
@@ -45,50 +57,6 @@ class SubMesh1D:
                     )
 
 
-class MeshGenerator1D(MeshGenerator):
-    """
-    A class to generate a submesh on a 1D domain.
-
-    Parameters
-    ----------
-
-    submesh_type: str, optional
-        The type of submeshes to use. Can be "Uniform", "Exponential", "Chebyshev"
-        or "User". Default is "Uniform".
-    submesh_params: dict, optional
-        Contains any parameters required by the submesh.
-
-    **Extends**: :class:`pybamm.MeshGenerator`
-    """
-
-    def __init__(self, submesh_type="Uniform", submesh_params=None):
-        self.submesh_type = submesh_type
-        self.submesh_params = submesh_params or {}
-
-    def __call__(self, lims, npts, tabs=None):
-
-        if self.submesh_type == "Uniform":
-            return Uniform1DSubMesh(lims, npts, tabs)
-
-        elif self.submesh_type == "Exponential":
-            return Exponential1DSubMesh(lims, npts, tabs, **self.submesh_params)
-
-        elif self.submesh_type == "Chebyshev":
-            return Chebyshev1DSubMesh(lims, npts, tabs)
-
-        elif self.submesh_type == "User":
-            try:
-                edges = self.submesh_params["edges"]
-            except KeyError:
-                raise pybamm.GeometryError("User mesh requires parameter 'edges'")
-            return UserSupplied1DSubMesh(lims, npts, tabs, edges)
-
-        else:
-            raise pybamm.GeometryError(
-                "Submesh {} not recognised.".format(self.submesh_type)
-            )
-
-
 class Uniform1DSubMesh(SubMesh1D):
     """
     A class to generate a uniform submesh on a 1D domain
@@ -104,6 +72,8 @@ class Uniform1DSubMesh(SubMesh1D):
     tabs : dict, optional
         A dictionary that contains information about the size and location of
         the tabs
+
+    **Extends:"": :class:`pybamm.SubMesh1D`
     """
 
     def __init__(self, lims, npts, tabs=None):
@@ -174,6 +144,8 @@ class Exponential1DSubMesh(SubMesh1D):
         The factor (alpha) which appears in the exponential. If side is "symmetric"
         then the default stretch is 1.15. If side is "left" or "right" then the
         default stretch is 2.3.
+
+    **Extends:"": :class:`pybamm.SubMesh1D`
     """
 
     def __init__(self, lims, npts, tabs, side="symmetric", stretch=None):
@@ -257,6 +229,8 @@ class Chebyshev1DSubMesh(SubMesh1D):
     tabs : dict, optional
         A dictionary that contains information about the size and location of
         the tabs
+
+    **Extends:"": :class:`pybamm.SubMesh1D`
     """
 
     def __init__(self, lims, npts, tabs=None):
@@ -302,9 +276,15 @@ class UserSupplied1DSubMesh(SubMesh1D):
         the tabs
     edges : array_like
         The array of points which correspond to the edges of the mesh.
+
+    **Extends:"": :class:`pybamm.SubMesh1D`
     """
 
-    def __init__(self, lims, npts, tabs, edges):
+    def __init__(self, lims, npts, tabs, edges=None):
+
+        # raise error if no edges passed
+        if edges is None:
+            raise pybamm.GeometryError("User mesh requires parameter 'edges'")
 
         # check that only one variable passed in
         if len(lims) != 1:

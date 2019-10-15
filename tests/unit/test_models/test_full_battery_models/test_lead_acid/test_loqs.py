@@ -50,8 +50,11 @@ class TestLeadAcidLOQS(unittest.TestCase):
                 pybamm.ZeroDimensionalMethod,
             )
         )
-        self.assertIsInstance(
-            model.default_submesh_types["current collector"], pybamm.MeshGenerator0D
+        self.assertTrue(
+            issubclass(
+                model.default_submesh_types["current collector"].submesh_type,
+                pybamm.SubMesh0D,
+            )
         )
         model = pybamm.lead_acid.LOQS(
             {
@@ -65,8 +68,11 @@ class TestLeadAcidLOQS(unittest.TestCase):
                 model.default_spatial_methods["current collector"], pybamm.FiniteVolume
             )
         )
-        self.assertIsInstance(
-            model.default_submesh_types["current collector"], pybamm.MeshGenerator1D
+        self.assertTrue(
+            issubclass(
+                model.default_submesh_types["current collector"].submesh_type,
+                pybamm.Uniform1DSubMesh,
+            )
         )
         model = pybamm.lead_acid.LOQS(
             {
@@ -81,8 +87,11 @@ class TestLeadAcidLOQS(unittest.TestCase):
                 pybamm.ScikitFiniteElement,
             )
         )
-        self.assertIsInstance(
-            model.default_submesh_types["current collector"], pybamm.MeshGenerator2D
+        self.assertTrue(
+            issubclass(
+                model.default_submesh_types["current collector"].submesh_type,
+                pybamm.ScikitUniform2DSubMesh,
+            )
         )
 
 

@@ -2,30 +2,31 @@
 # scikit-fem meshes for use in PyBaMM
 #
 import pybamm
-from .meshes import MeshGenerator
+from .meshes import SubMesh
 
 import skfem
 import numpy as np
 
 
-class ScikitSubMesh2D:
-    """ Submesh class.
-        Contains information about the 2D finite element mesh.
-        Note: This class only allows for the use of piecewise-linear triangular
-        finite elements.
+class ScikitSubMesh2D(SubMesh):
+    """
+    2D submesh class.
+    Contains information about the 2D finite element mesh.
+    Note: This class only allows for the use of piecewise-linear triangular
+    finite elements.
 
-        Parameters
-        ----------
-        lims : dict
-            A dictionary that contains the limits of each
-            spatial variable
-        npts : dict
-            A dictionary that contains the number of points to be used on each
-            spatial variable
-        tabs : dict
-            A dictionary that contains information about the size and location of
-            the tabs
-        """
+    Parameters
+    ----------
+    edges : array_like
+        An array containing the points corresponding to the edges of the submesh
+    coord_sys : string
+        The coordinate system of the submesh
+    tabs : dict, optional
+        A dictionary that contains information about the size and location of
+        the tabs
+
+    **Extends:"": :class:`pybamm.SubMesh`
+    """
 
     def __init__(self, edges, coord_sys, tabs):
         self.edges = edges
@@ -114,54 +115,6 @@ class ScikitSubMesh2D:
             raise pybamm.GeometryError("tab location not valid")
 
 
-class MeshGenerator2D(MeshGenerator):
-    """
-    A class to generate a submesh on a 2D domain.
-
-    Parameters
-    ----------
-
-    submesh_type: str, optional
-        The type of submeshes to use. Can be "Uniform", "Exponential", "Chebyshev"
-        or "User". Default is "Uniform".
-    submesh_params: dict, optional
-        Contains any parameters required by the submesh.
-
-    **Extends**: :class:`pybamm.MeshGenerator`
-    """
-
-    def __init__(self, submesh_type="Uniform", submesh_params=None):
-        self.submesh_type = submesh_type
-        self.submesh_params = submesh_params or {}
-
-    def __call__(self, lims, npts, tabs=None):
-
-        if self.submesh_type == "Uniform":
-            return ScikitUniform2DSubMesh(lims, npts, tabs)
-
-        elif self.submesh_type == "Exponential":
-            return ScikitExponential2DSubMesh(lims, npts, tabs, **self.submesh_params)
-
-        elif self.submesh_type == "Chebyshev":
-            return ScikitChebyshev2DSubMesh(lims, npts, tabs)
-
-        elif self.submesh_type == "User":
-            try:
-                y_edges = self.submesh_params["y_edges"]
-            except KeyError:
-                raise pybamm.GeometryError("User mesh requires parameter 'y_edges'")
-            try:
-                z_edges = self.submesh_params["z_edges"]
-            except KeyError:
-                raise pybamm.GeometryError("User mesh requires parameter 'z_edges'")
-            return UserSupplied2DSubMesh(lims, npts, tabs, y_edges, z_edges)
-
-        else:
-            raise pybamm.GeometryError(
-                "Submesh {} not recognised.".format(self.submesh_type)
-            )
-
-
 class ScikitUniform2DSubMesh(ScikitSubMesh2D):
     """
     Contains information about the 2D finite element mesh with uniform grid
@@ -180,6 +133,8 @@ class ScikitUniform2DSubMesh(ScikitSubMesh2D):
     tabs : dict
         A dictionary that contains information about the size and location of
         the tabs
+
+    **Extends:"": :class:`pybamm.SubMesh2D`
     """
 
     def __init__(self, lims, npts, tabs):
@@ -253,6 +208,8 @@ class ScikitExponential2DSubMesh(ScikitSubMesh2D):
         can only be "top". Default is "top".
     stretch : float, optional
         The factor (alpha) which appears in the exponential. Default is 2.3.
+
+    **Extends:"": :class:`pybamm.SubMesh2D`
     """
 
     def __init__(self, lims, npts, tabs, side="top", stretch=2.3):
@@ -330,6 +287,8 @@ class ScikitChebyshev2DSubMesh(ScikitSubMesh2D):
     tabs : dict
         A dictionary that contains information about the size and location of
         the tabs
+
+    **Extends:"": :class:`pybamm.SubMesh2D`
     """
 
     def __init__(self, lims, npts, tabs):
@@ -401,9 +360,17 @@ class UserSupplied2DSubMesh(ScikitSubMesh2D):
     z_edges : array_like
         The array of points which correspond to the edges in the z direction
         of the mesh.
+
+    **Extends:"": :class:`pybamm.SubMesh2D`
     """
 
-    def __init__(self, lims, npts, tabs, y_edges, z_edges):
+    def __init__(self, lims, npts, tabs, y_edges=None, z_edges=None):
+
+        # raise error if no edges passed
+        if y_edges is None:
+            raise pybamm.GeometryError("User mesh requires parameter 'y_edges'")
+        if z_edges is None:
+            raise pybamm.GeometryError("User mesh requires parameter 'z_edges'")
 
         # check that two variables have been passed in
         if len(lims) != 2:
