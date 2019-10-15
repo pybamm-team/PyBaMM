@@ -200,7 +200,7 @@ class TestScikitFiniteElement(unittest.TestCase):
 
     def test_manufactured_solution_cheb_grid(self):
         param = pybamm.ParameterValues(
-            base_parameters={
+            values={
                 "Electrode width [m]": 1,
                 "Electrode height [m]": 1,
                 "Negative tab width [m]": 1,
@@ -260,7 +260,7 @@ class TestScikitFiniteElement(unittest.TestCase):
 
     def test_manufactured_solution_exponential_grid(self):
         param = pybamm.ParameterValues(
-            base_parameters={
+            values={
                 "Electrode width [m]": 1,
                 "Electrode height [m]": 1,
                 "Negative tab width [m]": 1,

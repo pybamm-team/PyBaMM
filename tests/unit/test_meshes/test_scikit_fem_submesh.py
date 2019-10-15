@@ -178,7 +178,7 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
 class TestScikitFiniteElementChebyshev2DSubMesh(unittest.TestCase):
     def test_mesh_creation(self):
         param = pybamm.ParameterValues(
-            base_parameters={
+            values={
                 "Electrode width [m]": 0.4,
                 "Electrode height [m]": 0.5,
                 "Negative tab width [m]": 0.1,
@@ -260,7 +260,7 @@ class TestScikitFiniteElementChebyshev2DSubMesh(unittest.TestCase):
 class TestScikitExponential2DSubMesh(unittest.TestCase):
     def test_mesh_creation(self):
         param = pybamm.ParameterValues(
-            base_parameters={
+            values={
                 "Electrode width [m]": 0.4,
                 "Electrode height [m]": 0.5,
                 "Negative tab width [m]": 0.1,
@@ -344,7 +344,7 @@ class TestScikitExponential2DSubMesh(unittest.TestCase):
 class TestScikitUser2DSubMesh(unittest.TestCase):
     def test_mesh_creation(self):
         param = pybamm.ParameterValues(
-            base_parameters={
+            values={
                 "Electrode width [m]": 0.4,
                 "Electrode height [m]": 0.5,
                 "Negative tab width [m]": 0.1,
