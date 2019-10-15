@@ -150,18 +150,21 @@ from .expression_tree.exceptions import (
     UndefinedOperationError,
     GeometryError,
 )
-from .expression_tree.simplify import (
+
+# Operations
+from .expression_tree.operations.simplify import (
     Simplification,
     simplify_if_constant,
     simplify_addition_subtraction,
     simplify_multiplication_division,
 )
-from .expression_tree.evaluate import (
+from .expression_tree.operations.evaluate import (
     find_symbols,
     id_to_python_variable,
     to_python,
     EvaluatorPython,
 )
+from .expression_tree.operations.convert_to_casadi import CasadiConverter
 
 #
 # Model classes

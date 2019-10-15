@@ -584,6 +584,13 @@ class Symbol(anytree.NodeMixin):
         """ Simplify the expression tree. See :class:`pybamm.Simplification`. """
         return pybamm.Simplification(simplified_symbols).simplify(self)
 
+    def to_casadi(self, casadi_symbols=None):
+        """
+        Convert the expression tree to a CasADi expression tree.
+        See :class:`pybamm.CasadiConverter`.
+        """
+        return pybamm.CasadiConverter(casadi_symbols).convert(self)
+
     def new_copy(self):
         """
         Make a new copy of a symbol, to avoid Tree corruption errors while bypassing
