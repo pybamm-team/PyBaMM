@@ -49,7 +49,24 @@ class TestCasadiConverter(unittest.TestCase):
         self.assertEqual((b / d).to_casadi(), casadi.SX(1 / 2))
 
     def test_convert_array_symbols(self):
-        pass
+        # Arrays
+        a = np.array([1, 2, 3, 4, 5])
+        pybamm_a = pybamm.Array(a)
+        self.assertTrue(casadi.is_equal(pybamm_a.to_casadi(), casadi.SX(a)))
+
+        casadi_t = casadi.SX.sym("t")
+        casadi_y = casadi.SX.sym("y", 10)
+
+        pybamm_t = pybamm.Time()
+        pybamm_y = pybamm.StateVector(slice(0, 10))
+
+        # Time
+        self.assertEqual(pybamm_t.to_casadi(casadi_t, casadi_y), casadi_t)
+
+        # State Vector
+        self.assertTrue(
+            casadi.is_equal(pybamm_y.to_casadi(casadi_t, casadi_y), casadi_y)
+        )
 
 
 if __name__ == "__main__":

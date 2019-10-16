@@ -96,4 +96,3 @@ class Composite(BaseModel):
             rbc = (-i_boundary_cc_0 / sigma_eff_0, "Neumann")
 
         self.boundary_conditions[phi_s] = {"left": lbc, "right": rbc}
-

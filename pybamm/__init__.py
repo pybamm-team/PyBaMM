@@ -25,7 +25,7 @@ def _load_version_int():
 __version_int__ = _load_version_int()
 __version__ = ".".join([str(x) for x in __version_int__])
 if sys.version_info[0] < 3:
-    del (x)  # Before Python3, list comprehension iterators leaked
+    del x  # Before Python3, list comprehension iterators leaked
 
 #
 # Expose PyBaMM version
@@ -248,11 +248,11 @@ from .solvers.solution import Solution
 from .solvers.base_solver import BaseSolver
 from .solvers.ode_solver import OdeSolver
 from .solvers.dae_solver import DaeSolver
-from .solvers.scipy_solver import ScipySolver
-from .solvers.scikits_dae_solver import ScikitsDaeSolver
-from .solvers.scikits_ode_solver import ScikitsOdeSolver
-from .solvers.scikits_ode_solver import have_scikits_odes
 from .solvers.algebraic_solver import AlgebraicSolver
+from .solvers.casadi_solver import CasadiSolver
+from .solvers.scikits_dae_solver import ScikitsDaeSolver
+from .solvers.scikits_ode_solver import ScikitsOdeSolver, have_scikits_odes
+from .solvers.scipy_solver import ScipySolver
 
 #
 # Current profiles

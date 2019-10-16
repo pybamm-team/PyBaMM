@@ -53,11 +53,11 @@ class BaseParticle(pybamm.BaseSubModel):
             + self.domain.lower()
             + " particle surface concentration [mol.m-3]": c_scale * c_s_surf_av,
             self.domain + " electrode active volume fraction": active_volume,
+            self.domain + " electrode volume-averaged concentration": c_s_r_av_vol,
             self.domain
-            + " electrode volume-averaged concentration": c_s_r_av_vol,
-            self.domain + " electrode "
+            + " electrode "
             + "volume-averaged concentration [mol.m-3]": c_s_r_av_vol * c_scale,
-            self.domain + " electrode average extent of lithiation": c_s_r_av
+            self.domain + " electrode average extent of lithiation": c_s_r_av,
         }
 
         return variables

@@ -19,8 +19,8 @@ else:
 options = {"thermal": "isothermal"}
 models = [
     pybamm.lithium_ion.SPM(options),
-    pybamm.lithium_ion.SPMe(options),
-    pybamm.lithium_ion.DFN(options),
+    # pybamm.lithium_ion.SPMe(options),
+    # pybamm.lithium_ion.DFN(options),
 ]
 
 
@@ -47,7 +47,7 @@ for model in models:
 solutions = [None] * len(models)
 t_eval = np.linspace(0, 0.17, 100)
 for i, model in enumerate(models):
-    solutions[i] = model.default_solver.solve(model, t_eval)
+    solutions[i] = pybamm.CasadiSolver().solve(model, t_eval)
 
 # plot
 plot = pybamm.QuickPlot(models, mesh, solutions)

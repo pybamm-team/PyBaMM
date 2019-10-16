@@ -113,7 +113,7 @@ class StateVector(pybamm.Symbol):
             )
         else:
             out = (y[: len(self._evaluation_array)])[self._evaluation_array]
-            if out.ndim == 1:
+            if isinstance(out, np.ndarray) and out.ndim == 1:
                 out = out[:, np.newaxis]
             return out
 
