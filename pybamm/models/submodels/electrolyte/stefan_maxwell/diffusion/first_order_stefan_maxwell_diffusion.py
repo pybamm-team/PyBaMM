@@ -70,9 +70,9 @@ class FirstOrder(BaseModel):
         )
 
         # Diffusivities
-        D_e_n = (eps_n_0 ** param.b) * param.D_e(c_e_0, T_0)
-        D_e_s = (eps_s_0 ** param.b) * param.D_e(c_e_0, T_0)
-        D_e_p = (eps_p_0 ** param.b) * param.D_e(c_e_0, T_0)
+        D_e_n = (eps_n_0 ** param.b_n) * param.D_e(c_e_0, T_0)
+        D_e_s = (eps_s_0 ** param.b_s) * param.D_e(c_e_0, T_0)
+        D_e_p = (eps_p_0 ** param.b_p) * param.D_e(c_e_0, T_0)
 
         # Fluxes
         N_e_n_1 = -pybamm.outer(rhs_n, x_n)

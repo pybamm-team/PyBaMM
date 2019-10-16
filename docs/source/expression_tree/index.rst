@@ -17,4 +17,5 @@ Expression Tree
   broadcasts
   simplify
   functions
+  interpolant
   evaluate

@@ -38,7 +38,7 @@ class TestMesh(unittest.TestCase):
 
     def test_mesh_creation(self):
         param = pybamm.ParameterValues(
-            base_parameters={
+            values={
                 "Negative electrode thickness [m]": 0.1,
                 "Separator thickness [m]": 0.2,
                 "Positive electrode thickness [m]": 0.3,
@@ -103,7 +103,7 @@ class TestMesh(unittest.TestCase):
 
     def test_mesh_sizes(self):
         param = pybamm.ParameterValues(
-            base_parameters={
+            values={
                 "Negative electrode thickness [m]": 0.1,
                 "Separator thickness [m]": 0.2,
                 "Positive electrode thickness [m]": 0.3,
@@ -146,7 +146,7 @@ class TestMesh(unittest.TestCase):
 
     def test_combine_submeshes(self):
         param = pybamm.ParameterValues(
-            base_parameters={
+            values={
                 "Negative electrode thickness [m]": 0.1,
                 "Separator thickness [m]": 0.2,
                 "Positive electrode thickness [m]": 0.3,
@@ -209,7 +209,7 @@ class TestMesh(unittest.TestCase):
 
     def test_ghost_cells(self):
         param = pybamm.ParameterValues(
-            base_parameters={
+            values={
                 "Negative electrode thickness [m]": 0.1,
                 "Separator thickness [m]": 0.2,
                 "Positive electrode thickness [m]": 0.3,
@@ -251,7 +251,7 @@ class TestMesh(unittest.TestCase):
 
     def test_multiple_meshes(self):
         param = pybamm.ParameterValues(
-            base_parameters={
+            values={
                 "Negative electrode thickness [m]": 0.1,
                 "Separator thickness [m]": 0.2,
                 "Positive electrode thickness [m]": 0.3,
@@ -287,7 +287,7 @@ class TestMesh(unittest.TestCase):
 
     def test_multiple_meshes_macro(self):
         param = pybamm.ParameterValues(
-            base_parameters={
+            values={
                 "Negative electrode thickness [m]": 0.1,
                 "Separator thickness [m]": 0.2,
                 "Positive electrode thickness [m]": 0.3,
@@ -334,7 +334,7 @@ class TestMesh(unittest.TestCase):
 
     def test_mesh_coord_sys(self):
         param = pybamm.ParameterValues(
-            base_parameters={
+            values={
                 "Negative electrode thickness [m]": 0.1,
                 "Separator thickness [m]": 0.2,
                 "Positive electrode thickness [m]": 0.3,
@@ -380,7 +380,7 @@ class TestMesh(unittest.TestCase):
 
     def test_1plus1D_tabs_left_right(self):
         param = pybamm.ParameterValues(
-            base_parameters={
+            values={
                 "Electrode width [m]": 0.4,
                 "Electrode height [m]": 0.5,
                 "Negative tab centre z-coordinate [m]": 0.0,
@@ -417,7 +417,7 @@ class TestMesh(unittest.TestCase):
 
     def test_1plus1D_tabs_right_left(self):
         param = pybamm.ParameterValues(
-            base_parameters={
+            values={
                 "Electrode width [m]": 0.4,
                 "Electrode height [m]": 0.5,
                 "Negative tab centre z-coordinate [m]": 0.5,

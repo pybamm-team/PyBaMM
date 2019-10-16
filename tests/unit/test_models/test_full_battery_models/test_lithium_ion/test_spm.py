@@ -11,6 +11,11 @@ class TestSPM(unittest.TestCase):
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
+        # Test build after init
+        model = pybamm.lithium_ion.SPM(build=False)
+        model.build_model()
+        model.check_well_posedness()
+
     def test_default_geometry(self):
         options = {"thermal": "isothermal"}
         model = pybamm.lithium_ion.SPM(options)

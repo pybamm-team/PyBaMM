@@ -8,6 +8,18 @@ from .base_lithium_ion_model import BaseModel
 class SPM(BaseModel):
     """Single Particle Model (SPM) of a lithium-ion battery, from [1]_.
 
+    Parameters
+    ----------
+    options : dict, optional
+        A dictionary of options to be passed to the model.
+    name : str, optional
+        The name of the model.
+    build :  bool, optional
+        Whether to build the model on instantiation. Default is True. Setting this
+        option to False allows users to change any number of the submodels before
+        building the complete model (submodels cannot be changed after the model is
+        built).
+
     References
     ----------
     .. [1] SG Marquis, V Sulzer, R Timms, CP Please and SJ Chapman. “An asymptotic
@@ -17,7 +29,7 @@ class SPM(BaseModel):
     **Extends:** :class:`pybamm.lithium_ion.BaseModel`
     """
 
-    def __init__(self, options=None, name="Single Particle Model"):
+    def __init__(self, options=None, name="Single Particle Model", build=True):
         super().__init__(options, name)
 
         self.set_porosity_submodel()
@@ -30,7 +42,8 @@ class SPM(BaseModel):
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
 
-        self.build_model()
+        if build:
+            self.build_model()
 
     def set_porosity_submodel(self):
 
