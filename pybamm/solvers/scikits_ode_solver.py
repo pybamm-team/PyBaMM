@@ -27,14 +27,14 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
     method : str, optional
         The method to use in solve_ivp (default is "BDF")
     rtol : float, optional
-        The relative tolerance for the solver (default is 1e-3).
-    atol : float, optional
         The relative tolerance for the solver (default is 1e-6).
+    atol : float, optional
+        The absolute tolerance for the solver (default is 1e-6).
     linsolver : str, optional
             Can be 'dense' (= default), 'lapackdense', 'spgmr', 'spbcgs', 'sptfqmr'
     """
 
-    def __init__(self, method="cvode", rtol=1e-3, atol=1e-6, linsolver="dense"):
+    def __init__(self, method="cvode", rtol=1e-6, atol=1e-6, linsolver="dense"):
         if scikits_odes_spec is None:
             raise ImportError("scikits.odes is not installed")
 

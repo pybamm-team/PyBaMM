@@ -29,7 +29,7 @@ class FullDiffusionLimited(BaseModel):
             eps_s = variables["Separator porosity"]
             c_ox_s = variables["Separator oxygen concentration"]
             N_ox_neg_sep_interface = (
-                -pybamm.boundary_value(eps_s ** param.b, "left")
+                -pybamm.boundary_value(eps_s ** param.b_s, "left")
                 * param.curlyD_ox
                 * pybamm.BoundaryGradient(c_ox_s, "left")
             )

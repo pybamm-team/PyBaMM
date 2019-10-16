@@ -23,9 +23,9 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
     method : str, optional
         The method to use in solve_ivp (default is "BDF")
     rtol : float, optional
-        The relative tolerance for the solver (default is 1e-3).
-    atol : float, optional
         The relative tolerance for the solver (default is 1e-6).
+    atol : float, optional
+        The absolute tolerance for the solver (default is 1e-6).
     root_method : str, optional
         The method to use to find initial conditions (default is "lm")
     root_tol : float, optional
@@ -38,7 +38,7 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
     def __init__(
         self,
         method="ida",
-        rtol=1e-3,
+        rtol=1e-6,
         atol=1e-6,
         root_method="lm",
         root_tol=1e-6,

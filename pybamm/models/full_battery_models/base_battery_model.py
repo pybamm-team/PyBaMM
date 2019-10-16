@@ -3,7 +3,6 @@
 #
 
 import pybamm
-import os
 
 
 class BaseBatteryModel(pybamm.BaseModel):
@@ -67,53 +66,9 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     @property
     def default_parameter_values(self):
-        # Default parameter values, geometry, submesh, spatial methods and solver
+        # Default parameter values
         # Lion parameters left as default parameter set for tests
-        input_path = os.path.join(
-            pybamm.root_dir(), "input", "parameters", "lithium-ion"
-        )
-        return pybamm.ParameterValues(
-            os.path.join(
-                input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
-            ),
-            {
-                "Typical timescale [s]": 1,
-                "Typical current [A]": 1,
-                "Current function": pybamm.GetConstantCurrent(
-                    pybamm.standard_parameters_lithium_ion.I_typ
-                ),
-                "Electrolyte diffusivity": os.path.join(
-                    input_path, "electrolyte_diffusivity_Capiglia1999.py"
-                ),
-                "Electrolyte conductivity": os.path.join(
-                    input_path, "electrolyte_conductivity_Capiglia1999.py"
-                ),
-                "Negative electrode OCV": os.path.join(
-                    input_path, "graphite_mcmb2528_ocp_Dualfoil.py"
-                ),
-                "Positive electrode OCV": os.path.join(
-                    input_path, "lico2_ocp_Dualfoil.py"
-                ),
-                "Negative electrode diffusivity": os.path.join(
-                    input_path, "graphite_mcmb2528_diffusivity_Dualfoil.py"
-                ),
-                "Positive electrode diffusivity": os.path.join(
-                    input_path, "lico2_diffusivity_Dualfoil.py"
-                ),
-                "Negative electrode reaction rate": os.path.join(
-                    input_path, "graphite_electrolyte_reaction_rate.py"
-                ),
-                "Positive electrode reaction rate": os.path.join(
-                    input_path, "lico2_electrolyte_reaction_rate.py"
-                ),
-                "Negative electrode OCV entropic change": os.path.join(
-                    input_path, "graphite_entropic_change_Moura.py"
-                ),
-                "Positive electrode OCV entropic change": os.path.join(
-                    input_path, "lico2_entropic_change_Moura.py"
-                ),
-            },
-        )
+        return pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
 
     @property
     def default_geometry(self):
@@ -140,18 +95,22 @@ class BaseBatteryModel(pybamm.BaseModel):
     @property
     def default_submesh_types(self):
         base_submeshes = {
-            "negative electrode": pybamm.Uniform1DSubMesh,
-            "separator": pybamm.Uniform1DSubMesh,
-            "positive electrode": pybamm.Uniform1DSubMesh,
-            "negative particle": pybamm.Uniform1DSubMesh,
-            "positive particle": pybamm.Uniform1DSubMesh,
+            "negative electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "separator": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "positive electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "negative particle": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "positive particle": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
         }
         if self.options["dimensionality"] == 0:
-            base_submeshes["current collector"] = pybamm.SubMesh0D
+            base_submeshes["current collector"] = pybamm.MeshGenerator(pybamm.SubMesh0D)
         elif self.options["dimensionality"] == 1:
-            base_submeshes["current collector"] = pybamm.Uniform1DSubMesh
+            base_submeshes["current collector"] = pybamm.MeshGenerator(
+                pybamm.Uniform1DSubMesh
+            )
         elif self.options["dimensionality"] == 2:
-            base_submeshes["current collector"] = pybamm.Scikit2DSubMesh
+            base_submeshes["current collector"] = pybamm.MeshGenerator(
+                pybamm.ScikitUniform2DSubMesh
+            )
         return base_submeshes
 
     @property
@@ -412,6 +371,14 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
 
     def build_model(self):
+
+        # Check if already built
+        if self._built:
+            raise pybamm.ModelError(
+                """Model already built. If you are adding a new submodel, try using
+                `model.update` instead."""
+            )
+
         pybamm.logger.info("Building {}".format(self.name))
 
         # Get the fundamental variables
@@ -424,13 +391,37 @@ class BaseBatteryModel(pybamm.BaseModel):
             self.variables.update(submodel.get_fundamental_variables())
 
         # Get coupled variables
-        for submodel_name, submodel in self.submodels.items():
-            pybamm.logger.debug(
-                "Getting coupled variables for {} submodel ({})".format(
-                    submodel_name, self.name
-                )
-            )
-            self.variables.update(submodel.get_coupled_variables(self.variables))
+        # Note: pybamm will try to get the coupled variables for the submodels in the
+        # order they are set by the user. If this fails for a particular submodel,
+        # return to it later and try again. If setting coupled variables fails and
+        # there are no more submodels to try, raise an error.
+        submodels = list(self.submodels.keys())
+        while len(submodels) > 0:
+            for submodel_name, submodel in self.submodels.items():
+                if submodel_name in submodels:
+                    pybamm.logger.debug(
+                        "Getting coupled variables for {} submodel ({})".format(
+                            submodel_name, self.name
+                        )
+                    )
+                    try:
+                        self.variables.update(
+                            submodel.get_coupled_variables(self.variables)
+                        )
+                        submodels.remove(submodel_name)
+                    except KeyError as key:
+                        if len(submodels) == 1:
+                            # no more submodels to try
+                            raise pybamm.ModelError(
+                                """Submodel "{}" requires the variable {}, but it cannot be found.
+                                Check the selected submodels provide all of the required
+                                variables.""".format(
+                                    submodel_name, key
+                                )
+                            )
+                        else:
+                            # try setting coupled variables on next loop through
+                            pass
 
         # Set model equations
         for submodel_name, submodel in self.submodels.items():
@@ -467,6 +458,17 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         pybamm.logger.debug("Setting SoC variables")
         self.set_soc_variables()
+
+        # Massive hack for consistent delta_phi = phi_s - phi_e with SPMe
+        # This needs to be corrected
+        if isinstance(self, pybamm.lithium_ion.SPMe):
+            for domain in ["Negative", "Positive"]:
+                phi_s = self.variables[domain + " electrode potential"]
+                phi_e = self.variables[domain + " electrolyte potential"]
+                delta_phi = phi_s - phi_e
+                s = self.submodels[domain.lower() + " interface"]
+                var = s._get_standard_surface_potential_difference_variables(delta_phi)
+                self.variables.update(var)
 
         self._built = True
 

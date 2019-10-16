@@ -66,20 +66,22 @@ class TestBaseBatteryModel(unittest.TestCase):
         model = pybamm.BaseBatteryModel({"dimensionality": 0})
         self.assertTrue(
             issubclass(
-                model.default_submesh_types["current collector"], pybamm.SubMesh0D
+                model.default_submesh_types["current collector"].submesh_type,
+                pybamm.SubMesh0D,
             )
         )
         model = pybamm.BaseBatteryModel({"dimensionality": 1})
         self.assertTrue(
             issubclass(
-                model.default_submesh_types["current collector"],
+                model.default_submesh_types["current collector"].submesh_type,
                 pybamm.Uniform1DSubMesh,
             )
         )
         model = pybamm.BaseBatteryModel({"dimensionality": 2})
         self.assertTrue(
             issubclass(
-                model.default_submesh_types["current collector"], pybamm.Scikit2DSubMesh
+                model.default_submesh_types["current collector"].submesh_type,
+                pybamm.ScikitUniform2DSubMesh,
             )
         )
 
@@ -120,6 +122,19 @@ class TestBaseBatteryModel(unittest.TestCase):
             pybamm.BaseBatteryModel({"surface form": "bad surface form"})
         with self.assertRaisesRegex(pybamm.OptionError, "particle model"):
             pybamm.BaseBatteryModel({"particle": "bad particle"})
+
+    def test_build_twice(self):
+        model = pybamm.lithium_ion.SPM()  # need to pick a model to set vars and build
+        with self.assertRaisesRegex(pybamm.ModelError, "Model already built"):
+            model.build_model()
+
+    def test_get_coupled_variables(self):
+        model = pybamm.lithium_ion.BaseModel()
+        model.submodels["current collector"] = pybamm.current_collector.Uniform(
+            model.param
+        )
+        with self.assertRaisesRegex(pybamm.ModelError, "Submodel"):
+            model.build_model()
 
 
 if __name__ == "__main__":

@@ -23,7 +23,7 @@ class BaseThermal(pybamm.BaseSubModel):
         param = self.param
         T_n, T_s, T_p = T.orphans
 
-        # Compute the x-average over the current collectors by default.
+        # Compute the X-average over the current collectors by default.
         # Note: the method 'self._x_average' is overwritten by models which do
         # not include current collector effects, so that the average is just taken
         # over the negative electrode, separator and positive electrode.
@@ -124,7 +124,7 @@ class BaseThermal(pybamm.BaseSubModel):
 
         Q = Q_ohm + Q_rxn + Q_rev
 
-        # Compute the x-average over the current collectors by default.
+        # Compute the X-average over the current collectors by default.
         # Note: the method 'self._x_average' is overwritten by models which do
         # not include current collector effects, so that the average is just taken
         # over the negative electrode, separator and positive electrode.
@@ -218,7 +218,7 @@ class BaseThermal(pybamm.BaseSubModel):
 
     def _x_average(self, var, var_cn, var_cp):
         """
-        Computes the x-average over the whole cell (including current collectors)
+        Computes the X-average over the whole cell (including current collectors)
         from the variable in the cell (negative electrode, separator,
         positive electrode), negative current collector, and positive current
         collector. This method is overwritten by models which do not include

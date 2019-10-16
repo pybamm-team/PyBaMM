@@ -13,9 +13,9 @@ class DaeSolver(pybamm.BaseSolver):
     Parameters
     ----------
     rtol : float, optional
-        The relative tolerance for the solver (default is 1e-3).
+        The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
-        The relative tolerance for the solver (default is 1e-6)
+        The absolute tolerance for the solver (default is 1e-6).
     root_method : str, optional
         The method to use to find initial conditions (default is "lm")
     root_tol : float, optional
@@ -28,7 +28,7 @@ class DaeSolver(pybamm.BaseSolver):
     def __init__(
         self,
         method=None,
-        rtol=1e-3,
+        rtol=1e-6,
         atol=1e-6,
         root_method="lm",
         root_tol=1e-6,
