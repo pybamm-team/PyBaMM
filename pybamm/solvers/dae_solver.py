@@ -125,13 +125,15 @@ class DaeSolver(pybamm.BaseSolver):
             events = {name: simp.simplify(event) for name, event in events.items()}
 
         if model.use_jacobian:
-            # Create Jacobian from simplified rhs
+            # Create Jacobian from simplified rhs and algebraic
             y = pybamm.StateVector(
                 slice(0, np.size(model.concatenated_initial_conditions))
             )
+            # set up Jacobian object, for re-use of dict
+            jacobian = pybamm.Jacobian()
             pybamm.logger.info("Calculating jacobian")
-            jac_rhs = concatenated_rhs.jac(y)
-            jac_algebraic = concatenated_algebraic.jac(y)
+            jac_rhs = jacobian.jac(concatenated_rhs, y)
+            jac_algebraic = jacobian.jac(concatenated_algebraic, y)
             jac = pybamm.SparseStack(jac_rhs, jac_algebraic)
             model.jacobian = jac
 

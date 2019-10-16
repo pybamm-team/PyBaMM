@@ -412,26 +412,12 @@ class Symbol(anytree.NodeMixin):
         "Default behaviour for differentiation, overriden by Binary and Unary Operators"
         raise NotImplementedError
 
-    def jac(self, variable):
+    def jac(self, variable, known_jacs=None):
         """
         Differentiate a symbol with respect to a (slice of) a State Vector.
-        Default behaviour is to return `1` if differentiating with respect to
-        yourself and zero otherwise. Binary and Unary Operators override this.
-
-        Parameters
-        ----------
-        variable : :class:`pybamm.Symbol`
-            The variable with respect to which to differentiate
-
+        See :class:`pybamm.Jacobian`.
         """
-        if variable.id == self.id:
-            return pybamm.Scalar(1)
-        else:
-            jac = self._jac(variable)
-            # jacobian removes the domain(s)
-            jac.domain = []
-            jac.auxiliary_domains = {}
-            return jac
+        return pybamm.Jacobian(known_jacs).jac(self, variable)
 
     def _jac(self, variable):
         "Default behaviour for jacobian, overriden by Binary and Unary Operators"
