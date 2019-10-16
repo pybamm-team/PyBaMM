@@ -8,6 +8,7 @@ wget $SUITESPARSE_URL -O $SUITESPARSE_NAME
 tar -xvf $SUITESPARSE_NAME
 SUITESPARSE_DIR=$CURRENT_DIR/SuiteSparse
 cd $SUITESPARSE_DIR
+make clean
 make
 cd $CURRENT_DIR
 rm $SUITESPARSE_NAME
@@ -47,6 +48,7 @@ cmake -DBLAS_ENABLE=ON\
       ../sundials-4.1.0
 
 
+make clean
 make install
 cd $CURRENT_DIR
 rm -rf $TMP_DIR
@@ -64,6 +66,7 @@ git clone https://github.com/pybind/pybind11.git
 cd $CURRENT_DIR
 pip install pybind11 # also do a pip install for good measure
 cmake .
+make clean
 make
 
 # remove cmakefiles etc just to clean things up 
