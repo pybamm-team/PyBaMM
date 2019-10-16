@@ -198,6 +198,128 @@ class TestScikitFiniteElement(unittest.TestCase):
             laplace_eqn_disc.evaluate(None, u), mass_disc.entries @ soln, decimal=2
         )
 
+    def test_manufactured_solution_cheb_grid(self):
+        param = pybamm.ParameterValues(
+            values={
+                "Electrode width [m]": 1,
+                "Electrode height [m]": 1,
+                "Negative tab width [m]": 1,
+                "Negative tab centre y-coordinate [m]": 0.5,
+                "Negative tab centre z-coordinate [m]": 0,
+                "Positive tab width [m]": 1,
+                "Positive tab centre y-coordinate [m]": 0.5,
+                "Positive tab centre z-coordinate [m]": 1,
+                "Negative electrode thickness [m]": 0.3,
+                "Separator thickness [m]": 0.3,
+                "Positive electrode thickness [m]": 0.3,
+            }
+        )
+
+        geometry = pybamm.Geometryxp1DMacro(cc_dimension=2)
+        param.process_geometry(geometry)
+
+        var = pybamm.standard_spatial_vars
+        var_pts = {var.x_n: 3, var.x_s: 3, var.x_p: 3, var.y: 32, var.z: 32}
+
+        submesh_types = {
+            "negative electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "separator": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "positive electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "current collector": pybamm.MeshGenerator(pybamm.ScikitChebyshev2DSubMesh),
+        }
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume,
+            "current collector": pybamm.ScikitFiniteElement,
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        # laplace of u = cos(pi*y)*sin(pi*z)
+        var = pybamm.Variable("var", domain="current collector")
+        laplace_eqn = pybamm.laplacian(var)
+        # set boundary conditions ("negative tab" = bottom of unit square,
+        # "positive tab" = top of unit square, elsewhere normal derivative is zero)
+        disc.bcs = {
+            var.id: {
+                "negative tab": (pybamm.Scalar(0), "Dirichlet"),
+                "positive tab": (pybamm.Scalar(0), "Dirichlet"),
+            }
+        }
+        disc.set_variable_slices([var])
+        laplace_eqn_disc = disc.process_symbol(laplace_eqn)
+        y_vertices = mesh["current collector"][0].coordinates[0, :][:, np.newaxis]
+        z_vertices = mesh["current collector"][0].coordinates[1, :][:, np.newaxis]
+        u = np.cos(np.pi * y_vertices) * np.sin(np.pi * z_vertices)
+        mass = pybamm.Mass(var)
+        mass_disc = disc.process_symbol(mass)
+        soln = -np.pi ** 2 * u
+        np.testing.assert_array_almost_equal(
+            laplace_eqn_disc.evaluate(None, u), mass_disc.entries @ soln, decimal=1
+        )
+
+    def test_manufactured_solution_exponential_grid(self):
+        param = pybamm.ParameterValues(
+            values={
+                "Electrode width [m]": 1,
+                "Electrode height [m]": 1,
+                "Negative tab width [m]": 1,
+                "Negative tab centre y-coordinate [m]": 0.5,
+                "Negative tab centre z-coordinate [m]": 0,
+                "Positive tab width [m]": 1,
+                "Positive tab centre y-coordinate [m]": 0.5,
+                "Positive tab centre z-coordinate [m]": 1,
+                "Negative electrode thickness [m]": 0.3,
+                "Separator thickness [m]": 0.3,
+                "Positive electrode thickness [m]": 0.3,
+            }
+        )
+
+        geometry = pybamm.Geometryxp1DMacro(cc_dimension=2)
+        param.process_geometry(geometry)
+
+        var = pybamm.standard_spatial_vars
+        var_pts = {var.x_n: 3, var.x_s: 3, var.x_p: 3, var.y: 32, var.z: 32}
+
+        submesh_types = {
+            "negative electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "separator": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "positive electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "current collector": pybamm.MeshGenerator(
+                pybamm.ScikitExponential2DSubMesh
+            ),
+        }
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume,
+            "current collector": pybamm.ScikitFiniteElement,
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        # laplace of u = cos(pi*y)*sin(pi*z)
+        var = pybamm.Variable("var", domain="current collector")
+        laplace_eqn = pybamm.laplacian(var)
+        # set boundary conditions ("negative tab" = bottom of unit square,
+        # "positive tab" = top of unit square, elsewhere normal derivative is zero)
+        disc.bcs = {
+            var.id: {
+                "negative tab": (pybamm.Scalar(0), "Dirichlet"),
+                "positive tab": (pybamm.Scalar(0), "Dirichlet"),
+            }
+        }
+        disc.set_variable_slices([var])
+        laplace_eqn_disc = disc.process_symbol(laplace_eqn)
+        y_vertices = mesh["current collector"][0].coordinates[0, :][:, np.newaxis]
+        z_vertices = mesh["current collector"][0].coordinates[1, :][:, np.newaxis]
+        u = np.cos(np.pi * y_vertices) * np.sin(np.pi * z_vertices)
+        mass = pybamm.Mass(var)
+        mass_disc = disc.process_symbol(mass)
+        soln = -np.pi ** 2 * u
+        np.testing.assert_array_almost_equal(
+            laplace_eqn_disc.evaluate(None, u), mass_disc.entries @ soln, decimal=1
+        )
+
     def test_definite_integral(self):
         mesh = get_2p1d_mesh_for_testing()
         spatial_methods = {

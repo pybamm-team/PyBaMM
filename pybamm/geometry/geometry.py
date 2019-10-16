@@ -113,8 +113,8 @@ class Geometry(dict):
         for k, v in geometry.items():
             if k not in ["primary", "secondary", "tabs"]:
                 raise ValueError(
-                    "keys of geometry must be either \"primary\", \"secondary\" or "
-                    "\"tabs\""
+                    'keys of geometry must be either "primary", "secondary" or '
+                    '"tabs"'
                 )
             if k != "tabs":
                 for variable, rnge in v.items():
@@ -135,15 +135,12 @@ class Geometry(dict):
             else:
                 for region, params in v.items():
                     if region not in ["negative", "positive"]:
-                        raise ValueError(
-                            "tabs region must be \"negative\" or \"positive\""
-
-                        )
+                        raise ValueError('tabs region must be "negative" or "positive"')
                     for pname in params.keys():
                         if pname not in ["y_centre", "z_centre", "width"]:
                             raise ValueError(
-                                "tabs region params must be \"y_centre\", "
-                                "\"z_centre\" or \"width\""
+                                'tabs region params must be "y_centre", '
+                                '"z_centre" or "width"'
                             )
 
         self.update({name: geometry})

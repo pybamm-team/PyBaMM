@@ -57,7 +57,8 @@ class TestLeadAcidLOQS(unittest.TestCase):
         )
         self.assertTrue(
             issubclass(
-                model.default_submesh_types["current collector"], pybamm.SubMesh0D
+                model.default_submesh_types["current collector"].submesh_type,
+                pybamm.SubMesh0D,
             )
         )
         model = pybamm.lead_acid.LOQS(
@@ -74,7 +75,7 @@ class TestLeadAcidLOQS(unittest.TestCase):
         )
         self.assertTrue(
             issubclass(
-                model.default_submesh_types["current collector"],
+                model.default_submesh_types["current collector"].submesh_type,
                 pybamm.Uniform1DSubMesh,
             )
         )
@@ -93,7 +94,7 @@ class TestLeadAcidLOQS(unittest.TestCase):
         )
         self.assertTrue(
             issubclass(
-                model.default_submesh_types["current collector"],
+                model.default_submesh_types["current collector"].submesh_type,
                 pybamm.ScikitUniform2DSubMesh,
             )
         )

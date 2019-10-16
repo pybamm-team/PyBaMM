@@ -27,6 +27,8 @@ param.update(
         "Negative current collector conductivity [S.m-1]": 1e5,
         "Positive current collector conductivity [S.m-1]": 1e5,
         "Heat transfer coefficient [W.m-2.K-1]": 1,
+        "Negative tab centre z-coordinate [m]": 0,  # negative tab at bottom
+        "Positive tab centre z-coordinate [m]": 0.137,  # positive tab at top
     }
 )
 param.process_model(model)
@@ -35,7 +37,9 @@ param.process_geometry(geometry)
 # set mesh using user-supplied edges in z
 z_edges = np.array([0, 0.03, 0.1, 0.3, 0.47, 0.5, 0.73, 0.8, 0.911, 1])
 submesh_types = model.default_submesh_types
-submesh_types["current collector"] = pybamm.GetUserSupplied1DSubMesh(z_edges)
+submesh_types["current collector"] = pybamm.MeshGenerator(
+    pybamm.UserSupplied1DSubMesh, submesh_params={"edges": z_edges}
+)
 # Need to make sure var_pts for z is one less than number of edges (variables are
 # evaluated at cell centres)
 npts_z = len(z_edges) - 1
@@ -60,7 +64,7 @@ output_variables = [
     "X-averaged negative particle surface concentration [mol.m-3]",
     "X-averaged positive particle surface concentration [mol.m-3]",
     # "X-averaged cell temperature [K]",
-    "Local potenital difference [V]",
+    "Local current collector potential difference [V]",
     "Current collector current density [A.m-2]",
     "Terminal voltage [V]",
     "Volume-averaged cell temperature [K]",
