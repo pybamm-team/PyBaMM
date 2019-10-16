@@ -6,12 +6,33 @@ from .base_lithium_ion_model import BaseModel
 
 
 class SPMe(BaseModel):
-    """Single Particle Model with Electrolyte (SPMe) of a lithium-ion battery.
+    """Single Particle Model with Electrolyte (SPMe) of a lithium-ion battery, from
+    [1]_.
+
+    Parameters
+    ----------
+    options : dict, optional
+        A dictionary of options to be passed to the model.
+    name : str, optional
+        The name of the model.
+    build :  bool, optional
+        Whether to build the model on instantiation. Default is True. Setting this
+        option to False allows users to change any number of the submodels before
+        building the complete model (submodels cannot be changed after the model is
+        built).
+
+    References
+    ----------
+    .. [1] SG Marquis, V Sulzer, R Timms, CP Please and SJ Chapman. “An asymptotic
+           derivation of a single particle model with electrolyte”. In: arXiv preprint
+           arXiv:1905.12553 (2019).
 
     **Extends:** :class:`pybamm.lithium_ion.BaseModel`
     """
 
-    def __init__(self, options=None, name="Single Particle Model with electrolyte"):
+    def __init__(
+        self, options=None, name="Single Particle Model with electrolyte", build=True
+    ):
         super().__init__(options, name)
 
         self.set_reactions()
@@ -25,17 +46,8 @@ class SPMe(BaseModel):
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
 
-        self.build_model()
-
-        # Massive hack for consistent delta_phi = phi_s - phi_e
-        # This needs to be corrected
-        for domain in ["Negative", "Positive"]:
-            phi_s = self.variables[domain + " electrode potential"]
-            phi_e = self.variables[domain + " electrolyte potential"]
-            delta_phi = phi_s - phi_e
-            s = self.submodels[domain.lower() + " interface"]
-            var = s._get_standard_surface_potential_difference_variables(delta_phi)
-            self.variables.update(var)
+        if build:
+            self.build_model()
 
     def set_porosity_submodel(self):
 
@@ -56,12 +68,20 @@ class SPMe(BaseModel):
 
     def set_particle_submodel(self):
 
-        self.submodels["negative particle"] = pybamm.particle.fickian.SingleParticle(
-            self.param, "Negative"
-        )
-        self.submodels["positive particle"] = pybamm.particle.fickian.SingleParticle(
-            self.param, "Positive"
-        )
+        if self.options["particle"] == "Fickian diffusion":
+            self.submodels[
+                "negative particle"
+            ] = pybamm.particle.fickian.SingleParticle(self.param, "Negative")
+            self.submodels[
+                "positive particle"
+            ] = pybamm.particle.fickian.SingleParticle(self.param, "Positive")
+        elif self.options["particle"] == "fast diffusion":
+            self.submodels["negative particle"] = pybamm.particle.fast.SingleParticle(
+                self.param, "Negative"
+            )
+            self.submodels["positive particle"] = pybamm.particle.fast.SingleParticle(
+                self.param, "Positive"
+            )
 
     def set_negative_electrode_submodel(self):
 

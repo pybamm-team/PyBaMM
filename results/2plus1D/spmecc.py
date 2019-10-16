@@ -12,11 +12,6 @@ models = [cell_model, cc_model]
 
 # set parameters based on the cell model
 param = cell_model.default_parameter_values
-# adjust current to correspond to a typical current density of 24 [A.m-2]
-C_rate = 1
-param["Typical current [A]"] = (
-    C_rate * 24 * param.process_symbol(pybamm.geometric_parameters.A_cc).evaluate()
-)
 
 # make current collectors not so conductive, just for illustrative purposes
 param["Negative current collector conductivity [S.m-1]"] = 5.96e5

@@ -47,7 +47,12 @@ class BaseHigherOrder(BaseModel):
         eps_n_av = variables["Leading-order x-averaged negative electrode porosity"]
         eps_s_av = variables["Leading-order x-averaged separator porosity"]
         eps_p_av = variables["Leading-order x-averaged positive electrode porosity"]
-        T_av = variables["X-averaged cell temperature"]
+
+        # Note: here we want the average of the temperature over the negative
+        # electrode, separator and positive electrode (not including the current
+        # collectors)
+        T = variables["Cell temperature"]
+        T_av = pybamm.x_average(T)
 
         c_e_n, c_e_s, c_e_p = c_e.orphans
 
@@ -59,9 +64,9 @@ class BaseHigherOrder(BaseModel):
         x_p = pybamm.standard_spatial_vars.x_p
 
         # bulk conductivities
-        kappa_n_av = param.kappa_e(c_e_av, T_av) * eps_n_av ** param.b
-        kappa_s_av = param.kappa_e(c_e_av, T_av) * eps_s_av ** param.b
-        kappa_p_av = param.kappa_e(c_e_av, T_av) * eps_p_av ** param.b
+        kappa_n_av = param.kappa_e(c_e_av, T_av) * eps_n_av ** param.b_n
+        kappa_s_av = param.kappa_e(c_e_av, T_av) * eps_s_av ** param.b_s
+        kappa_p_av = param.kappa_e(c_e_av, T_av) * eps_p_av ** param.b_p
 
         chi_av = param.chi(c_e_av)
         if chi_av.domain == ["current collector"]:

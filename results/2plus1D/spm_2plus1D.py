@@ -4,35 +4,35 @@ import matplotlib.pyplot as plt
 import sys
 
 # set logging level
-pybamm.set_logging_level("INFO")
+pybamm.set_logging_level("DEBUG")
 
 # load (2+1D) SPM model
-options = {"current collector": "potential pair", "dimensionality": 2}
+options = {
+    "current collector": "potential pair",
+    "dimensionality": 2,
+    "thermal": "x-lumped",
+}
 model = pybamm.lithium_ion.SPM(options)
+model.use_simplify = False  # simplifying jacobian slow for large systems
 
 # create geometry
 geometry = model.default_geometry
 
 # load parameter values and process model and geometry
 param = model.default_parameter_values
-# adjust current to correspond to a typical current density of 24 [A.m-2]
-C_rate = 1
-param["Typical current [A]"] = (
-    C_rate * 24 * param.process_symbol(pybamm.geometric_parameters.A_cc).evaluate()
-)
 param.process_model(model)
 param.process_geometry(geometry)
 
 # set mesh
 var = pybamm.standard_spatial_vars
 var_pts = {
-    var.x_n: 10,
-    var.x_s: 10,
-    var.x_p: 10,
-    var.r_n: 10,
-    var.r_p: 10,
-    var.y: 10,
-    var.z: 10,
+    var.x_n: 5,
+    var.x_s: 5,
+    var.x_p: 5,
+    var.r_n: 5,
+    var.r_p: 5,
+    var.y: 5,
+    var.z: 5,
 }
 # depnding on number of points in y-z plane may need to increase recursion depth...
 sys.setrecursionlimit(10000)
@@ -61,6 +61,12 @@ phi_s_cp = pybamm.ProcessedVariable(
     solution.y,
     mesh=mesh,
 )
+T = pybamm.ProcessedVariable(
+    model.variables["X-averaged cell temperature [K]"],
+    solution.t,
+    solution.y,
+    mesh=mesh,
+)
 l_y = phi_s_cp.y_sol[-1]
 l_z = phi_s_cp.z_sol[-1]
 y_plot = np.linspace(0, l_y, 21)
@@ -76,7 +82,7 @@ def plot(t):
     ind = (np.abs(solution.t - t)).argmin()
 
     # negative current collector potential
-    plt.subplot(121)
+    plt.subplot(131)
     phi_s_cn_plot = plt.pcolormesh(
         y_plot,
         z_plot,
@@ -86,12 +92,12 @@ def plot(t):
     plt.axis([0, l_y, 0, l_z])
     plt.xlabel(r"$y$")
     plt.ylabel(r"$z$")
-    plt.title(r"$\phi_{s,cn}$")
+    plt.title(r"$\phi_{s,cn}$ [V]")
     plt.set_cmap("cividis")
     plt.colorbar(phi_s_cn_plot)
 
     # positive current collector potential
-    plt.subplot(122)
+    plt.subplot(132)
     phi_s_cp_plot = plt.pcolormesh(
         y_plot,
         z_plot,
@@ -102,9 +108,25 @@ def plot(t):
     plt.axis([0, l_y, 0, l_z])
     plt.xlabel(r"$y$")
     plt.ylabel(r"$z$")
-    plt.title(r"$\phi_{s,cp}$")
+    plt.title(r"$\phi_{s,cp}$ [V]")
     plt.set_cmap("viridis")
     plt.colorbar(phi_s_cp_plot)
+
+    # temperature
+    plt.subplot(133)
+    T_plot = plt.pcolormesh(
+        y_plot,
+        z_plot,
+        np.transpose(T(y=y_plot, z=z_plot, t=solution.t[ind])),
+        shading="gouraud",
+    )
+
+    plt.axis([0, l_y, 0, l_z])
+    plt.xlabel(r"$y$")
+    plt.ylabel(r"$z$")
+    plt.title(r"$T$ [K]")
+    plt.set_cmap("inferno")
+    plt.colorbar(T_plot)
 
     plt.subplots_adjust(
         top=0.92, bottom=0.15, left=0.10, right=0.9, hspace=0.5, wspace=0.5

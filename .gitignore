@@ -7,6 +7,7 @@
 # don't ignore important .txt files
 !requirements*
 !LICENSE.txt
+!CMakeLists.txt
 
 # running files
 *.pyc
@@ -64,6 +65,8 @@ pyvenv.cfg
 
 # sundials
 sundials
+sundials4
+SuiteSparse
 
-# experimental data
-/results/LGM50/data/
+# LGM50 files
+results/LGM50

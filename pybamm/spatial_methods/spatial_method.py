@@ -158,6 +158,29 @@ class SpatialMethod:
         """
         raise NotImplementedError
 
+    def gradient_squared(self, symbol, discretised_symbol, boundary_conditions):
+        """
+        Implements the inner product of the gradient with itself for a spatial method.
+
+        Parameters
+        ----------
+        symbol: :class:`pybamm.Symbol`
+            The symbol that we will take the gradient of.
+        discretised_symbol: :class:`pybamm.Symbol`
+            The discretised symbol of the correct size
+
+        boundary_conditions : dict
+            The boundary conditions of the model
+            ({symbol.id: {"left": left bc, "right": right bc}})
+
+        Returns
+        -------
+        :class: `pybamm.Array`
+            Contains the result of taking the inner product of the result of acting
+            the discretised gradient on the child discretised_symbol with itself
+        """
+        raise NotImplementedError
+
     def integral(self, child, discretised_child):
         """
         Implements the integral for a spatial method.
@@ -221,6 +244,19 @@ class SpatialMethod:
         """
         raise NotImplementedError
 
+    def delta_function(self, symbol, discretised_symbol):
+        """
+        Implements the delta function on the approriate side for a spatial method.
+
+        Parameters
+        ----------
+        symbol: :class:`pybamm.Symbol`
+            The symbol to which is being integrated
+        discretised_symbol: :class:`pybamm.Symbol`
+            The discretised symbol of the correct size
+        """
+        raise NotImplementedError
+
     def internal_neumann_condition(
         self, left_symbol_disc, right_symbol_disc, left_mesh, right_mesh
     ):
@@ -258,7 +294,7 @@ class SpatialMethod:
 
         Returns
         -------
-        :class:`pybamm.Variable`
+        :class:`pybamm.MatrixMultiplication`
             The variable representing the surface value.
         """
         if any(len(self.mesh[dom]) > 1 for dom in discretised_child.domain):

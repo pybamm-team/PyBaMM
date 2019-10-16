@@ -5,21 +5,33 @@ import pybamm
 from .base_lead_acid_model import BaseModel
 
 
-class HigherOrderBaseModel(BaseModel):
+class BaseHigherOrderModel(BaseModel):
     """Base model for higher-order models for lead-acid, from [1]_.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
+    Parameters
+    ----------
+    options : dict, optional
+        A dictionary of options to be passed to the model.
+    name : str, optional
+        The name of the model.
+    build :  bool, optional
+        Whether to build the model on instantiation. Default is True. Setting this
+        option to False allows users to change any number of the submodels before
+        building the complete model (submodels cannot be changed after the model is
+        built).
+
     References
     ----------
-    .. [1] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster Lead-Acid
-           Battery Simulations from Porous-Electrode Theory: II. Asymptotic Analysis.
-           arXiv preprint arXiv:1902.01774, 2019.
+    .. [1] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster lead-acid
+           battery simulations from porous-electrode theory: Part II. Asymptotic
+           analysis. Journal of The Electrochemical Society 166.12 (2019), A2372–A2382.
 
 
     **Extends:** :class:`pybamm.lead_acid.BaseModel`
     """
 
-    def __init__(self, options=None, name="Composite model"):
+    def __init__(self, options=None, name="Composite model", build=True):
         super().__init__(options, name)
 
         self.set_leading_order_model()
@@ -40,7 +52,8 @@ class HigherOrderBaseModel(BaseModel):
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
 
-        self.build_model()
+        if build:
+            self.build_model()
 
     def set_current_collector_submodel(self):
         cc = pybamm.current_collector
@@ -168,22 +181,27 @@ class HigherOrderBaseModel(BaseModel):
             return pybamm.ScipySolver()
 
 
-class FOQS(HigherOrderBaseModel):
+class FOQS(BaseHigherOrderModel):
     """First-order quasi-static model for lead-acid, from [1]_.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
-    References
+    Parameters
     ----------
-    .. [1] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster Lead-Acid
-           Battery Simulations from Porous-Electrode Theory: II. Asymptotic Analysis.
-           arXiv preprint arXiv:1902.01774, 2019.
+    options : dict, optional
+        A dictionary of options to be passed to the model.
+    name : str, optional
+        The name of the model.
+    build :  bool, optional
+        Whether to build the model on instantiation. Default is True. Setting this
+        option to False allows users to change any number of the submodels before
+        building the complete model (submodels cannot be changed after the model is
+        built).
 
-
-    **Extends:** :class:`pybamm.lead_acid.HigherOrderBaseModel`
+    **Extends:** :class:`pybamm.lead_acid.BaseHigherOrderModel`
     """
 
-    def __init__(self, options=None, name="FOQS model"):
-        super().__init__(options, name)
+    def __init__(self, options=None, name="FOQS model", build=True):
+        super().__init__(options, name, build=build)
 
     def set_electrolyte_diffusion_submodel(self):
         self.submodels[
@@ -207,22 +225,15 @@ class FOQS(HigherOrderBaseModel):
         pass
 
 
-class Composite(HigherOrderBaseModel):
+class Composite(BaseHigherOrderModel):
     """Composite model for lead-acid, from [1]_.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
-    References
-    ----------
-    .. [1] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster Lead-Acid
-           Battery Simulations from Porous-Electrode Theory: II. Asymptotic Analysis.
-           arXiv preprint arXiv:1902.01774, 2019.
-
-
-    **Extends:** :class:`pybamm.lead_acid.HigherOrderBaseModel`
+    **Extends:** :class:`pybamm.lead_acid.BaseHigherOrderModel`
     """
 
-    def __init__(self, options=None, name="Composite model"):
-        super().__init__(options, name)
+    def __init__(self, options=None, name="Composite model", build=True):
+        super().__init__(options, name, build=build)
 
     def set_electrolyte_diffusion_submodel(self):
         self.submodels[
@@ -245,15 +256,33 @@ class Composite(HigherOrderBaseModel):
         self.submodels["full porosity"] = pybamm.porosity.Full(self.param)
 
 
-class CompositeExtended(HigherOrderBaseModel):
-    """Extended composite model for lead-acid.
+class CompositeExtended(BaseHigherOrderModel):
+    """Extended composite model for lead-acid, from [2]_.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
-    **Extends:** :class:`pybamm.lead_acid.HigherOrderBaseModel`
+    Parameters
+    ----------
+    options : dict, optional
+        A dictionary of options to be passed to the model.
+    name : str, optional
+        The name of the model.
+    build :  bool, optional
+        Whether to build the model on instantiation. Default is True. Setting this
+        option to False allows users to change any number of the submodels before
+        building the complete model (submodels cannot be changed after the model is
+        built).
+
+    References
+    ----------
+    .. [2] V Sulzer. Mathematical modelling of lead-acid batteries. PhD thesis,
+           University of Oxford, 2019.
+
+
+    **Extends:** :class:`pybamm.lead_acid.BaseHigherOrderModel`
     """
 
-    def __init__(self, options=None, name="Extended composite model"):
-        super().__init__(options, name)
+    def __init__(self, options=None, name="Extended composite model", build=True):
+        super().__init__(options, name, build=build)
 
     def set_electrolyte_diffusion_submodel(self):
         self.submodels[

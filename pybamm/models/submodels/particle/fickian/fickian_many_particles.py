@@ -30,12 +30,13 @@ class ManyParticles(BaseModel):
         elif self.domain == "Positive":
             c_s = pybamm.standard_variables.c_s_p
 
+        # TODO: implement c_s_xav for Fickian many particles (tricky because this
+        # requires averaging a secondary domain)
         variables = self._get_standard_concentration_variables(c_s, c_s)
 
         return variables
 
     def get_coupled_variables(self, variables):
-
         c_s = variables[self.domain + " particle concentration"]
         T_k = pybamm.PrimaryBroadcast(
             variables[self.domain + " electrode temperature"],

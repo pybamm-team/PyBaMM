@@ -25,11 +25,8 @@ models = [
 
 # load parameter values
 param = models[0].default_parameter_values
-# adjust current to correspond to a typical current density of 24 [A.m-2]
 C_rate = 1
-param["Typical current [A]"] = (
-    C_rate * 24 * param.process_symbol(pybamm.geometric_parameters.A_cc).evaluate()
-)
+param.update({"C-rate": C_rate})
 # make current collectors not so conductive, just for illustrative purposes
 param["Negative current collector conductivity [S.m-1]"] = 5.96e6
 param["Positive current collector conductivity [S.m-1]"] = 3.55e6
@@ -63,6 +60,8 @@ times = [None] * len(models)
 voltages = [None] * len(models)
 t_eval = np.linspace(0, 1, 1000)
 for i, model in enumerate(models):
+    if "2+1D" in model.name:
+        model.use_simplify = False  # simplifying jacobian slow for large systems
     solution = model.default_solver.solve(model, t_eval)
     solutions[i] = solution
     times[i] = pybamm.ProcessedVariable(

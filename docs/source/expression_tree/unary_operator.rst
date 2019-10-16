@@ -25,6 +25,9 @@ Unary Operators
 .. autoclass:: pybamm.Laplacian
   :members:
 
+.. autoclass:: pybamm.Gradient_Squared
+  :members:
+
 .. autoclass:: pybamm.Mass
   :members:
 
@@ -38,6 +41,9 @@ Unary Operators
   :members:
 
 .. autoclass:: pybamm.BoundaryIntegral
+  :members:
+
+.. autoclass:: pybamm.DeltaFunction
   :members:
 
 .. autoclass:: pybamm.BoundaryOperator
@@ -54,6 +60,8 @@ Unary Operators
 .. autofunction:: pybamm.div
 
 .. autofunction:: pybamm.laplacian
+
+.. autofunction:: pybamm.grad_squared
 
 .. autofunction:: pybamm.surf
 

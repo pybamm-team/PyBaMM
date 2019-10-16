@@ -2,50 +2,83 @@
 # Tests for the Base Parameter Values class
 #
 import pybamm
-
-import unittest
+import os
 import numpy as np
 
+import unittest
 import tests.shared as shared
 
 
 class TestParameterValues(unittest.TestCase):
     def test_read_parameters_csv(self):
-        data = pybamm.ParameterValues().read_parameters_csv(
-            "input/parameters/lead-acid/default.csv"
+        data = pybamm.ParameterValues({}).read_parameters_csv(
+            "input/parameters/lithium-ion/cathodes/lico2_Marquis2019/parameters.csv"
         )
-        self.assertEqual(data["Reference temperature [K]"], 294.85)
+        self.assertEqual(data["Reference temperature [K]"], "298.15")
 
     def test_init(self):
         # from dict
         param = pybamm.ParameterValues({"a": 1})
         self.assertEqual(param["a"], 1)
         # from file
-        param = pybamm.ParameterValues("input/parameters/lead-acid/default.csv")
-        self.assertEqual(param["Reference temperature [K]"], 294.85)
-
-    def test_overwrite(self):
-        # from dicts
         param = pybamm.ParameterValues(
-            base_parameters={"a": 1, "b": 2}, optional_parameters={"b": 3}
+            values="input/parameters/lithium-ion/cathodes/lico2_Marquis2019/"
+            + "parameters.csv"
         )
+        self.assertEqual(param["Reference temperature [K]"], 298.15)
+
+        # values vs chemistry
+        with self.assertRaisesRegex(
+            ValueError, "values and chemistry cannot both be None"
+        ):
+            pybamm.ParameterValues()
+        with self.assertRaisesRegex(
+            ValueError, "Only one of values and chemistry can be provided."
+        ):
+            pybamm.ParameterValues(values=1, chemistry={})
+
+    def test_update_from_chemistry(self):
+        # incomplete chemistry
+        with self.assertRaisesRegex(KeyError, "must provide 'cell' parameters"):
+            pybamm.ParameterValues(chemistry={"chemistry": "lithium-ion"})
+
+    def test_update(self):
+        param = pybamm.ParameterValues({"a": 1})
         self.assertEqual(param["a"], 1)
-        self.assertEqual(param["b"], 3)
-        param.update({"a": 4})
-        self.assertEqual(param["a"], 4)
-        # from files
-        param = pybamm.ParameterValues(
-            base_parameters="input/parameters/lead-acid/default.csv",
-            optional_parameters="input/parameters/lead-acid/optional_test.csv",
-        )
-        self.assertEqual(param["Reference temperature [K]"], 294.85)
-        self.assertEqual(param["Negative electrode thickness [m]"], 0.5)
+        # no conflict
+        param.update({"a": 2})
+        self.assertEqual(param["a"], 2)
+        param.update({"a": 2}, check_conflict=True)
+        self.assertEqual(param["a"], 2)
+        # with conflict
+        param.update({"a": 3})
+        self.assertEqual(param["a"], 3)
+        with self.assertRaisesRegex(
+            ValueError, "parameter 'a' already defined with value '3'"
+        ):
+            param.update({"a": 4}, check_conflict=True)
 
-    def test_check_parameter_values(self):
+    def test_check_and_update_parameter_values(self):
         # Can't provide a current density of 0, as this will cause a ZeroDivision error
         bad_values = {"Typical current [A]": 0}
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegex(ValueError, "Typical current"):
             pybamm.ParameterValues(bad_values)
+        # same with C-rate
+        bad_values = {"C-rate": 0}
+        with self.assertRaisesRegex(ValueError, "C-rate"):
+            pybamm.ParameterValues(bad_values)
+        # if both C-rate and current are provided they must match with capacity
+        bad_values = {"C-rate": 1, "Typical current [A]": 5, "Cell capacity [A.h]": 10}
+        with self.assertRaisesRegex(ValueError, "do not match"):
+            pybamm.ParameterValues(bad_values)
+        # if only C-rate and capacity provided, update current
+        values = {"C-rate": 1, "Cell capacity [A.h]": 10}
+        param = pybamm.ParameterValues(values)
+        self.assertEqual(param["Typical current [A]"], 10)
+        # if only current and capacity provided, update C-rate
+        values = {"Typical current [A]": 1, "Cell capacity [A.h]": 10}
+        param = pybamm.ParameterValues(values)
+        self.assertEqual(param["C-rate"], 1 / 10)
 
     def test_process_symbol(self):
         parameter_values = pybamm.ParameterValues({"a": 1, "b": 2, "c": 3})
@@ -90,6 +123,16 @@ class TestParameterValues(unittest.TestCase):
         self.assertIsInstance(processed_grad, pybamm.Gradient)
         self.assertIsInstance(processed_grad.children[0], pybamm.Scalar)
         self.assertEqual(processed_grad.children[0].value, 1)
+
+        # process delta function
+        aa = pybamm.Parameter("a")
+        delta_aa = pybamm.DeltaFunction(aa, "left", "some domain")
+        processed_delta_aa = parameter_values.process_symbol(delta_aa)
+        self.assertIsInstance(processed_delta_aa, pybamm.DeltaFunction)
+        self.assertEqual(processed_delta_aa.side, "left")
+        processed_a = processed_delta_aa.children[0]
+        self.assertIsInstance(processed_a, pybamm.Scalar)
+        self.assertEqual(processed_a.value, 1)
 
         # process boundary operator (test for BoundaryValue)
         aa = pybamm.Parameter("a", domain=["negative electrode"])
@@ -181,8 +224,10 @@ class TestParameterValues(unittest.TestCase):
         parameter_values = pybamm.ParameterValues(
             {
                 "a": 3,
-                "func": "process_symbol_test_function.py",
-                "const": "process_symbol_test_constant_function.py",
+                "func": pybamm.load_function("process_symbol_test_function.py"),
+                "const": pybamm.load_function(
+                    "process_symbol_test_constant_function.py"
+                ),
             }
         )
         a = pybamm.Parameter("a")
@@ -249,6 +294,61 @@ class TestParameterValues(unittest.TestCase):
         self.assertIsInstance(processed_func, pybamm.Function)
         self.assertEqual(processed_func.evaluate(), 3)
 
+    def test_process_interpolant(self):
+        x = np.linspace(0, 10)[:, np.newaxis]
+        data = np.hstack([x, 2 * x])
+        parameter_values = pybamm.ParameterValues(
+            {"a": 3.01, "Diffusivity": ("times two", data)}
+        )
+
+        a = pybamm.Parameter("a")
+        func = pybamm.FunctionParameter("Diffusivity", a)
+
+        processed_func = parameter_values.process_symbol(func)
+        self.assertIsInstance(processed_func, pybamm.Interpolant)
+        self.assertEqual(processed_func.evaluate(), 6.02)
+
+        # process differentiated function parameter
+        diff_func = func.diff(a)
+        processed_diff_func = parameter_values.process_symbol(diff_func)
+        self.assertEqual(processed_diff_func.evaluate(), 2)
+
+    def test_interpolant_against_function(self):
+        parameter_values = pybamm.ParameterValues({"a": 0.6})
+        parameter_values.update(
+            {
+                "function": "[function]lico2_ocp_Dualfoil1998",
+                "interpolation": "[data]lico2_data_example",
+            },
+            path=os.path.join(
+                pybamm.root_dir(),
+                "input",
+                "parameters",
+                "lithium-ion",
+                "cathodes",
+                "lico2_Marquis2019",
+            ),
+        )
+
+        a = pybamm.Parameter("a")
+        func = pybamm.FunctionParameter("function", a)
+        interp = pybamm.FunctionParameter("interpolation", a)
+
+        processed_func = parameter_values.process_symbol(func)
+        processed_interp = parameter_values.process_symbol(interp)
+        np.testing.assert_array_almost_equal(
+            processed_func.evaluate(), processed_interp.evaluate(), decimal=4
+        )
+
+        # process differentiated function parameter
+        diff_func = func.diff(a)
+        diff_interp = interp.diff(a)
+        processed_diff_func = parameter_values.process_symbol(diff_func)
+        processed_diff_interp = parameter_values.process_symbol(diff_interp)
+        np.testing.assert_array_almost_equal(
+            processed_diff_func.evaluate(), processed_diff_interp.evaluate(), decimal=2
+        )
+
     def test_process_complex_expression(self):
         var1 = pybamm.Variable("var1")
         var2 = pybamm.Variable("var2")
@@ -258,7 +358,7 @@ class TestParameterValues(unittest.TestCase):
         scal2 = pybamm.Scalar(4)
         expression = (scal1 * (par1 + var2)) / ((var1 - par2) + scal2)
 
-        param = pybamm.ParameterValues(base_parameters={"par1": 1, "par2": 2})
+        param = pybamm.ParameterValues(values={"par1": 1, "par2": 2})
         exp_param = param.process_symbol(expression)
         self.assertIsInstance(exp_param, pybamm.Division)
         # left side
@@ -342,6 +442,14 @@ class TestParameterValues(unittest.TestCase):
         self.assertTrue(
             isinstance(model.variables["d_var1"].children[1], pybamm.Variable)
         )
+
+    def test_process_empty_model(self):
+        model = pybamm.BaseModel()
+        parameter_values = pybamm.ParameterValues({"a": 1, "b": 2, "c": 3, "d": 42})
+        with self.assertRaisesRegex(
+            pybamm.ModelError, "Cannot process parameters for empty model"
+        ):
+            parameter_values.process_model(model)
 
 
 if __name__ == "__main__":

@@ -660,6 +660,12 @@ class TestDiscretise(unittest.TestCase):
         )
         discretised_model.check_well_posedness()
 
+    def test_process_empty_model(self):
+        model = pybamm.BaseModel()
+        disc = pybamm.Discretisation()
+        with self.assertRaisesRegex(pybamm.ModelError, "Cannot discretise empty model"):
+            disc.process_model(model)
+
     def test_broadcast(self):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
 
@@ -820,6 +826,21 @@ class TestDiscretise(unittest.TestCase):
             c_n.name: pybamm.Broadcast(pybamm.Scalar(2), ["negative electrode"])
         }
         disc.process_model(model)
+
+    def test_check_tab_bcs_error(self):
+        a = pybamm.Variable("a", domain=["current collector"])
+        b = pybamm.Variable("b", domain=["negative electrode"])
+        bcs = {"negative tab": (0, "Dirichlet"), "positive tab": (0, "Neumann")}
+
+        disc = get_discretisation_for_testing()
+
+        # for 0D bcs keys should be unchanged
+        new_bcs = disc.check_tab_conditions(a, bcs)
+        self.assertListEqual(list(bcs.keys()), list(new_bcs.keys()))
+
+        # error if domain not "current collector"
+        with self.assertRaisesRegex(pybamm.ModelError, "Boundary conditions"):
+            disc.check_tab_conditions(b, bcs)
 
 
 if __name__ == "__main__":

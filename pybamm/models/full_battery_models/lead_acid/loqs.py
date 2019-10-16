@@ -8,17 +8,29 @@ from .base_lead_acid_model import BaseModel
 class LOQS(BaseModel):
     """Leading-Order Quasi-Static model for lead-acid, from [1]_.
 
+    Parameters
+    ----------
+    options : dict, optional
+        A dictionary of options to be passed to the model.
+    name : str, optional
+        The name of the model.
+    build :  bool, optional
+        Whether to build the model on instantiation. Default is True. Setting this
+        option to False allows users to change any number of the submodels before
+        building the complete model (submodels cannot be changed after the model is
+        built).
+
     References
     ----------
-    .. [1] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster Lead-Acid
-           Battery Simulations from Porous-Electrode Theory: II. Asymptotic Analysis.
-           arXiv preprint arXiv:1902.01774, 2019.
+    .. [1] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster lead-acid
+           battery simulations from porous-electrode theory: Part II. Asymptotic
+           analysis. Journal of The Electrochemical Society 166.12 (2019), A2372–A2382.
 
 
     **Extends:** :class:`pybamm.lead_acid.BaseModel`
     """
 
-    def __init__(self, options=None, name="LOQS model"):
+    def __init__(self, options=None, name="LOQS model", build=True):
         super().__init__(options, name)
 
         self.set_reactions()
@@ -32,7 +44,8 @@ class LOQS(BaseModel):
         self.set_side_reaction_submodels()
         self.set_current_collector_submodel()
 
-        self.build_model()
+        if build:
+            self.build_model()
 
         if self.options["dimensionality"] == 0:
             self.use_jacobian = False

@@ -40,9 +40,24 @@ lambda_cp_dim = pybamm.Parameter(
 
 # Thermal parameters
 h_dim = pybamm.Parameter("Heat transfer coefficient [W.m-2.K-1]")
-Delta_T = pybamm.Parameter("Typical temperature variation [K]")
-rho_eff_dim = pybamm.Parameter("Lumped effective thermal density [J.K-1.m-3]")
-lambda_eff_dim = pybamm.Parameter("Effective thermal conductivity [W.m-1.K-1]")
+Phi_dim = pybamm.Scalar(1)  # typical scale for voltage drop across cell (order 1V)
+Delta_T = (
+    pybamm.electrical_parameters.i_typ * Phi_dim / h_dim
+)  # computed from balance of typical cross-cell Ohmic heating with surface heat loss
+rho_eff_dim = (
+    rho_cn_dim * c_p_cn_dim * pybamm.geometric_parameters.L_cn
+    + rho_n_dim * c_p_n_dim * pybamm.geometric_parameters.L_n
+    + rho_s_dim * c_p_s_dim * pybamm.geometric_parameters.L_s
+    + rho_p_dim * c_p_p_dim * pybamm.geometric_parameters.L_p
+    + rho_cp_dim * c_p_cp_dim * pybamm.geometric_parameters.L_cp
+) / pybamm.geometric_parameters.L
+lambda_eff_dim = (
+    lambda_cn_dim * pybamm.geometric_parameters.L_cn
+    + lambda_n_dim * pybamm.geometric_parameters.L_n
+    + lambda_s_dim * pybamm.geometric_parameters.L_s
+    + lambda_p_dim * pybamm.geometric_parameters.L_p
+    + lambda_cp_dim * pybamm.geometric_parameters.L_cp
+) / pybamm.geometric_parameters.L
 
 # Activation energies
 E_r_n = pybamm.Parameter("Negative reaction rate activation energy [J.mol-1]")

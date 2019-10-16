@@ -87,11 +87,19 @@ class Discretisation(object):
             have also been discretised in place so model == model_disc. If
             ``inplace`` is False, model != model_disc
 
+        Raises
+        ------
+        :class:`pybamm.ModelError`
+            If an empty model is passed (`model.rhs = {}` and `model.algebraic={}`)
+
         """
+        pybamm.logger.info("Start discretising {}".format(model.name))
+
+        # Make sure model isn't empty
+        if len(model.rhs) == 0 and len(model.algebraic) == 0:
+            raise pybamm.ModelError("Cannot discretise empty model")
         # Check well-posedness to avoid obscure errors
         model.check_well_posedness()
-
-        pybamm.logger.info("Start discretising {}".format(model.name))
 
         # Prepare discretisation
         # set variables (we require the full variable not just id)
@@ -324,6 +332,12 @@ class Discretisation(object):
         # in discrisation of other boundary conditions
         for key, bcs in model.boundary_conditions.items():
             processed_bcs[key.id] = {}
+
+            # Handle any boundary conditions applied on the tabs
+            if any("tab" in side for side in list(bcs.keys())):
+                bcs = self.check_tab_conditions(key, bcs)
+
+            # Process boundary conditions
             for side, bc in bcs.items():
                 eqn, typ = bc
                 pybamm.logger.debug("Discretise {} ({} bc)".format(key, side))
@@ -332,15 +346,55 @@ class Discretisation(object):
 
         return processed_bcs
 
-    def _process_bc_entry(self, key, bcs):
-        processed_entry = {key.id: {}}
-        for side, bc in bcs.items():
-            eqn, typ = bc
-            pybamm.logger.debug("Discretise {} ({} bc)".format(key, side))
-            processed_eqn = self.process_symbol(eqn)
-            processed_entry[key.id][side] = (processed_eqn, typ)
+    def check_tab_conditions(self, symbol, bcs):
+        """
+        Check any boundary conditions applied on "negative tab", "positive tab"
+        and "no tab". For 1D current collector meshes, these conditions are
+        converted into boundary conditions on "left" (tab at z=0) or "right"
+        (tab at z=l_z) depending on the tab location stored in the mesh. For 2D
+        current collector meshes, the boundary conditions can be applied on the
+        tabs directly.
 
-        return processed_entry
+        Parameters
+        ----------
+        symbol : :class:`pybamm.expression_tree.symbol.Symbol`
+            The symbol on which the boundary conditions are applied.
+        bcs : dict
+            The dictionary of boundary conditions (a dict of {side: equation}).
+
+        Returns
+        -------
+        dict
+            The dictionary of boundary conditions, with the keys changed to
+            "left" and "right" where necessary.
+
+        """
+        # Check symbol domain
+        domain = symbol.domain[0]
+        mesh = self.mesh[domain][0]
+
+        if domain != "current collector":
+            raise pybamm.ModelError(
+                """Boundary conditions can only be applied on the tabs in the domain
+            'current collector', but {} has domain {}""".format(
+                    symbol, domain
+                )
+            )
+
+        # Replace keys with "left" and "right" as appropriate for 1D meshes
+        if isinstance(mesh, pybamm.SubMesh1D):
+            # replace negative and/or positive tab
+            for tab in ["negative tab", "positive tab"]:
+                if any(tab in side for side in list(bcs.keys())):
+                    bcs[mesh.tabs[tab]] = bcs.pop(tab)
+            # replace no tab
+            if any("no tab" in side for side in list(bcs.keys())):
+                if "left" in list(bcs.keys()):
+                    bcs["right"] = bcs.pop("no tab")  # tab at bottom
+                else:
+                    bcs["left"] = bcs.pop("no tab")  # tab at top
+
+        return bcs
 
     def process_rhs_and_algebraic(self, model):
         """Discretise model equations - differential ('rhs') and algebraic.
@@ -364,7 +418,7 @@ class Discretisation(object):
 
         # Concatenate rhs into a single state vector
         # Need to concatenate in order as the ordering of equations could be different
-        # in processed_rhs and model.rhs (for Python Version <= 3.5)
+        # in processed_rhs and model.rhs
         processed_concatenated_rhs = self._concatenate_in_order(processed_rhs)
 
         # Discretise and concatenate algebraic equations
@@ -502,6 +556,13 @@ class Discretisation(object):
 
         if symbol.domain != []:
             spatial_method = self.spatial_methods[symbol.domain[0]]
+            # If boundary conditions are provided, need to check for BCs on tabs
+            if self.bcs:
+                key_id = list(self.bcs.keys())[0]
+                if any("tab" in side for side in list(self.bcs[key_id].keys())):
+                    self.bcs[key_id] = self.check_tab_conditions(
+                        symbol, self.bcs[key_id]
+                    )
 
         if isinstance(symbol, pybamm.BinaryOperator):
             # Pre-process children
@@ -520,6 +581,7 @@ class Discretisation(object):
             disc_child = self.process_symbol(child)
             if child.domain != []:
                 child_spatial_method = self.spatial_methods[child.domain[0]]
+
             if isinstance(symbol, pybamm.Gradient):
                 return child_spatial_method.gradient(child, disc_child, self.bcs)
 
@@ -529,8 +591,16 @@ class Discretisation(object):
             elif isinstance(symbol, pybamm.Laplacian):
                 return child_spatial_method.laplacian(child, disc_child, self.bcs)
 
+            elif isinstance(symbol, pybamm.Gradient_Squared):
+                return child_spatial_method.gradient_squared(
+                    child, disc_child, self.bcs
+                )
+
             elif isinstance(symbol, pybamm.Mass):
                 return child_spatial_method.mass_matrix(child, self.bcs)
+
+            elif isinstance(symbol, pybamm.BoundaryMass):
+                return child_spatial_method.boundary_mass_matrix(child, self.bcs)
 
             elif isinstance(symbol, pybamm.IndefiniteIntegral):
                 return child_spatial_method.indefinite_integral(child, disc_child)
@@ -545,6 +615,7 @@ class Discretisation(object):
                 return child_spatial_method.definite_integral_matrix(
                     child.domain, vector_type=symbol.vector_type
                 )
+
             elif isinstance(symbol, pybamm.BoundaryIntegral):
                 return child_spatial_method.boundary_integral(
                     child, disc_child, symbol.region
@@ -564,7 +635,17 @@ class Discretisation(object):
                     )
                 return symbol
 
+            elif isinstance(symbol, pybamm.DeltaFunction):
+                return spatial_method.delta_function(symbol, disc_child)
+
             elif isinstance(symbol, pybamm.BoundaryOperator):
+                # if boundary operator applied on "negative tab" or
+                # "positive tab" *and* the mesh is 1D then change side to
+                # "left" or "right" as appropriate
+                if symbol.side in ["negative tab", "positive tab"]:
+                    mesh = self.mesh[symbol.children[0].domain[0]][0]
+                    if isinstance(mesh, pybamm.SubMesh1D):
+                        symbol.side = mesh.tabs[symbol.side]
                 return child_spatial_method.boundary_value_or_flux(symbol, disc_child)
 
             else:

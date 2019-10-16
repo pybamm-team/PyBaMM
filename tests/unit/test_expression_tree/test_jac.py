@@ -78,6 +78,12 @@ class TestJacobian(unittest.TestCase):
         dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
 
+        # test jac of outer if left evaluates to number
+        func = pybamm.Outer(pybamm.Scalar(1), pybamm.Scalar(4))
+        jacobian = np.zeros((1, 4))
+        dfunc_dy = func.jac(y).evaluate(y=y0)
+        np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
+
     def test_nonlinear(self):
         y = pybamm.StateVector(slice(0, 4))
         u = pybamm.StateVector(slice(0, 2))
@@ -181,9 +187,8 @@ class TestJacobian(unittest.TestCase):
 
         # when child evaluates to number
         func = pybamm.Function(auto_np.sin, const)
-        jacobian = np.array([[0, 0, 0, 0]])
         dfunc_dy = func.jac(y).evaluate(y=y0)
-        np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
+        np.testing.assert_array_equal(0, dfunc_dy)
 
         # several children
         func = pybamm.Function(test_multi_var_function, 2 * y, 3 * y)
@@ -251,9 +256,9 @@ class TestJacobian(unittest.TestCase):
 
     def test_jac_of_symbol(self):
         a = pybamm.Symbol("a")
-        b = pybamm.Symbol("b")
+        y = pybamm.StateVector(slice(0, 1))
 
-        self.assertEqual(a.jac(b).evaluate(), 0)
+        self.assertEqual(a.jac(y).evaluate(), 0)
 
     def test_spatial_operator(self):
         a = pybamm.Variable("a")
@@ -264,7 +269,7 @@ class TestJacobian(unittest.TestCase):
     def test_jac_of_inner(self):
         a = pybamm.Scalar(1)
         b = pybamm.Scalar(2)
-        y = pybamm.Variable("y")
+        y = pybamm.StateVector(slice(0, 1))
         self.assertEqual(pybamm.inner(a, b).jac(y).evaluate(), 0)
         self.assertEqual(pybamm.inner(a, y).jac(y).evaluate(), 1)
         self.assertEqual(pybamm.inner(y, b).jac(y).evaluate(), 2)

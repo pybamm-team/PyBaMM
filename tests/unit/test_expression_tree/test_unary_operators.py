@@ -181,6 +181,13 @@ class TestUnaryOperators(unittest.TestCase):
         un5 = pybamm.UnaryOperator("test", d)
         self.assertNotEqual(un1.id, un5.id)
 
+    def test_delta_function(self):
+        a = pybamm.Symbol("a")
+        delta_a = pybamm.DeltaFunction(a, "right", "some domain")
+        self.assertEqual(delta_a.side, "right")
+        self.assertEqual(delta_a.child.id, a.id)
+        self.assertFalse(delta_a.evaluates_on_edges())
+
     def test_boundary_operators(self):
         a = pybamm.Symbol("a", domain="some domain")
         boundary_a = pybamm.BoundaryOperator("boundary", a, "right")
@@ -227,6 +234,12 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(boundary_a_tert.domain, ["current collector"])
         self.assertEqual(boundary_a_tert.auxiliary_domains, {"secondary": ["bla"]})
 
+        # error if boundary value on tabs and domain is not "current collector"
+        var = pybamm.Variable("var", domain=["negative electrode"])
+        with self.assertRaisesRegex(pybamm.ModelError, "Can only take boundary"):
+            pybamm.boundary_value(var, "negative tab")
+            pybamm.boundary_value(var, "positive tab")
+
     def test_average(self):
         a = pybamm.Scalar(1)
         average_a = pybamm.x_average(a)
@@ -261,6 +274,67 @@ class TestUnaryOperators(unittest.TestCase):
         a = pybamm.Symbol("a", domain="bad domain")
         with self.assertRaises(pybamm.DomainError):
             pybamm.x_average(a)
+
+    def test_r_average(self):
+        a = pybamm.Scalar(1)
+        average_a = pybamm.r_average(a)
+        self.assertEqual(average_a.id, a.id)
+
+        average_broad_a = pybamm.r_average(pybamm.Broadcast(a, ["negative particle"]))
+        self.assertEqual(average_broad_a.evaluate(), np.array([1]))
+
+        for domain in [
+            ["negative particle"],
+            ["positive particle"]
+        ]:
+            a = pybamm.Symbol("a", domain=domain)
+            r = pybamm.SpatialVariable("r", domain)
+            av_a = pybamm.r_average(a)
+            self.assertIsInstance(av_a, pybamm.Division)
+            self.assertIsInstance(av_a.children[0], pybamm.Integral)
+            self.assertEqual(av_a.children[0].integration_variable[0].domain, r.domain)
+            # electrode domains go to current collector when averaged
+            self.assertEqual(av_a.domain, [])
+
+        a = pybamm.Symbol("a", domain="bad domain")
+        with self.assertRaises(pybamm.DomainError):
+            pybamm.x_average(a)
+
+    def test_yz_average(self):
+        a = pybamm.Scalar(1)
+        z_average_a = pybamm.z_average(a)
+        yz_average_a = pybamm.yz_average(a)
+        self.assertEqual(z_average_a.id, a.id)
+        self.assertEqual(yz_average_a.id, a.id)
+
+        z_average_broad_a = pybamm.z_average(pybamm.Broadcast(a, ["current collector"]))
+        yz_average_broad_a = pybamm.yz_average(
+            pybamm.Broadcast(a, ["current collector"])
+        )
+        self.assertEqual(z_average_broad_a.evaluate(), np.array([1]))
+        self.assertEqual(yz_average_broad_a.evaluate(), np.array([1]))
+
+        a = pybamm.Symbol("a", domain=["current collector"])
+        y = pybamm.SpatialVariable("y", ["current collector"])
+        z = pybamm.SpatialVariable("z", ["current collector"])
+        z_av_a = pybamm.z_average(a)
+        yz_av_a = pybamm.yz_average(a)
+
+        self.assertIsInstance(z_av_a, pybamm.Division)
+        self.assertIsInstance(yz_av_a, pybamm.Division)
+        self.assertIsInstance(z_av_a.children[0], pybamm.Integral)
+        self.assertIsInstance(yz_av_a.children[0], pybamm.Integral)
+        self.assertEqual(z_av_a.children[0].integration_variable[0].domain, z.domain)
+        self.assertEqual(yz_av_a.children[0].integration_variable[0].domain, y.domain)
+        self.assertEqual(yz_av_a.children[0].integration_variable[1].domain, z.domain)
+        self.assertEqual(z_av_a.domain, [])
+        self.assertEqual(yz_av_a.domain, [])
+
+        a = pybamm.Symbol("a", domain="bad domain")
+        with self.assertRaises(pybamm.DomainError):
+            pybamm.z_average(a)
+        with self.assertRaises(pybamm.DomainError):
+            pybamm.yz_average(a)
 
 
 if __name__ == "__main__":

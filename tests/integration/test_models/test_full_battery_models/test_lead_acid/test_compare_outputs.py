@@ -17,11 +17,12 @@ class TestCompareOutputs(unittest.TestCase):
         models = [
             pybamm.lead_acid.LOQS(),
             pybamm.lead_acid.Composite(),
-            pybamm.lead_acid.NewmanTiedemann(),
+            pybamm.lead_acid.Full(),
         ]
 
         # load parameter values (same for all models)
         param = models[0].default_parameter_values
+        param.update({"Typical current [A]": 1})
         for model in models:
             param.process_model(model)
 
@@ -61,12 +62,13 @@ class TestCompareOutputs(unittest.TestCase):
         ]
         model_combos = [
             ([pybamm.lead_acid.LOQS(opt) for opt in options]),
-            ([pybamm.lead_acid.NewmanTiedemann(opt) for opt in options]),
+            ([pybamm.lead_acid.Full(opt) for opt in options]),
         ]
 
         for models in model_combos:
             # load parameter values (same for all models)
             param = models[0].default_parameter_values
+            param.update({"Typical current [A]": 1})
             for model in models:
                 param.process_model(model)
 

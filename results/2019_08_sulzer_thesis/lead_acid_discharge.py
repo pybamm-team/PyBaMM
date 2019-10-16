@@ -61,7 +61,7 @@ def discharge_states(compute):
     savefile = "discharge_asymptotics_data.pickle"
     if compute:
         models = [
-            pybamm.lead_acid.NewmanTiedemann(name="Full"),
+            pybamm.lead_acid.Full(name="Full"),
             pybamm.lead_acid.LOQS(name="LOQS"),
             pybamm.lead_acid.FOQS(name="FOQS"),
             pybamm.lead_acid.Composite(name="Composite"),
@@ -131,7 +131,7 @@ def discharge_times_and_errors(compute):
         except FileNotFoundError:
             models_times_and_voltages = pybamm.get_infinite_nested_dict()
         models = [
-            pybamm.lead_acid.NewmanTiedemann(
+            pybamm.lead_acid.Full(
                 {"surface form": "algebraic"}, name="Full"
             ),
             pybamm.lead_acid.LOQS(name="LOQS"),
