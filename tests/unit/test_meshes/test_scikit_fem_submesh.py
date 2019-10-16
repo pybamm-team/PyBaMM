@@ -340,6 +340,10 @@ class TestScikitExponential2DSubMesh(unittest.TestCase):
         with self.assertRaises(pybamm.DomainError):
             pybamm.ScikitExponential2DSubMesh(lims, None, None)
 
+        # side not top
+        with self.assertRaises(pybamm.GeometryError):
+            pybamm.ScikitExponential2DSubMesh(None, None, None, side="bottom")
+
 
 class TestScikitUser2DSubMesh(unittest.TestCase):
     def test_mesh_creation(self):

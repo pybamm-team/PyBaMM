@@ -82,7 +82,7 @@ class QuickPlot(object):
             # If only one mesh is passed but there are multiple models, try to use
             # the same mesh for all of them
             meshes = [meshes] * len(models)
-        elif not isinstance(models, list):
+        elif not isinstance(meshes, list):
             raise TypeError("'meshes' must be 'pybamm.Mesh' or list")
         if isinstance(solutions, pybamm.Solution):
             solutions = [solutions]

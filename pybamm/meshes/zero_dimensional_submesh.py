@@ -15,10 +15,11 @@ class SubMesh0D(SubMesh):
     Parameters
     ----------
     position : dict
-        A dictionary that contains the position of the spatial variable
+        A dictionary that contains the position of the 0D submesh (a signle point)
+        in space
     npts : dict, optional
-        Number of points to be used. Included for compatibility with other meshes, but
-        ignored by this mesh class
+        Number of points to be used. Included for compatibility with other meshes,
+        but ignored by this mesh class
     tabs : dict
         A dictionary that contains information about the size and location of
         the tabs. Included for compatibility with other meshes, but
