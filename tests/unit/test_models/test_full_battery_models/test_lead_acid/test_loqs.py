@@ -11,6 +11,11 @@ class TestLeadAcidLOQS(unittest.TestCase):
         model = pybamm.lead_acid.LOQS(options)
         model.check_well_posedness()
 
+        # Test build after init
+        model = pybamm.lead_acid.LOQS(build=False)
+        model.build_model()
+        model.check_well_posedness()
+
     def test_well_posed_with_convection(self):
         options = {"thermal": "isothermal", "convection": True}
         model = pybamm.lead_acid.LOQS(options)
@@ -52,7 +57,8 @@ class TestLeadAcidLOQS(unittest.TestCase):
         )
         self.assertTrue(
             issubclass(
-                model.default_submesh_types["current collector"], pybamm.SubMesh0D
+                model.default_submesh_types["current collector"].submesh_type,
+                pybamm.SubMesh0D,
             )
         )
         model = pybamm.lead_acid.LOQS(
@@ -69,7 +75,7 @@ class TestLeadAcidLOQS(unittest.TestCase):
         )
         self.assertTrue(
             issubclass(
-                model.default_submesh_types["current collector"],
+                model.default_submesh_types["current collector"].submesh_type,
                 pybamm.Uniform1DSubMesh,
             )
         )
@@ -88,7 +94,8 @@ class TestLeadAcidLOQS(unittest.TestCase):
         )
         self.assertTrue(
             issubclass(
-                model.default_submesh_types["current collector"], pybamm.Scikit2DSubMesh
+                model.default_submesh_types["current collector"].submesh_type,
+                pybamm.ScikitUniform2DSubMesh,
             )
         )
 

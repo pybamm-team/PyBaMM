@@ -95,18 +95,22 @@ class BaseBatteryModel(pybamm.BaseModel):
     @property
     def default_submesh_types(self):
         base_submeshes = {
-            "negative electrode": pybamm.Uniform1DSubMesh,
-            "separator": pybamm.Uniform1DSubMesh,
-            "positive electrode": pybamm.Uniform1DSubMesh,
-            "negative particle": pybamm.Uniform1DSubMesh,
-            "positive particle": pybamm.Uniform1DSubMesh,
+            "negative electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "separator": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "positive electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "negative particle": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "positive particle": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
         }
         if self.options["dimensionality"] == 0:
-            base_submeshes["current collector"] = pybamm.SubMesh0D
+            base_submeshes["current collector"] = pybamm.MeshGenerator(pybamm.SubMesh0D)
         elif self.options["dimensionality"] == 1:
-            base_submeshes["current collector"] = pybamm.Uniform1DSubMesh
+            base_submeshes["current collector"] = pybamm.MeshGenerator(
+                pybamm.Uniform1DSubMesh
+            )
         elif self.options["dimensionality"] == 2:
-            base_submeshes["current collector"] = pybamm.Scikit2DSubMesh
+            base_submeshes["current collector"] = pybamm.MeshGenerator(
+                pybamm.ScikitUniform2DSubMesh
+            )
         return base_submeshes
 
     @property
@@ -367,6 +371,14 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
 
     def build_model(self):
+
+        # Check if already built
+        if self._built:
+            raise pybamm.ModelError(
+                """Model already built. If you are adding a new submodel, try using
+                `model.update` instead."""
+            )
+
         pybamm.logger.info("Building {}".format(self.name))
 
         # Get the fundamental variables
@@ -379,13 +391,37 @@ class BaseBatteryModel(pybamm.BaseModel):
             self.variables.update(submodel.get_fundamental_variables())
 
         # Get coupled variables
-        for submodel_name, submodel in self.submodels.items():
-            pybamm.logger.debug(
-                "Getting coupled variables for {} submodel ({})".format(
-                    submodel_name, self.name
-                )
-            )
-            self.variables.update(submodel.get_coupled_variables(self.variables))
+        # Note: pybamm will try to get the coupled variables for the submodels in the
+        # order they are set by the user. If this fails for a particular submodel,
+        # return to it later and try again. If setting coupled variables fails and
+        # there are no more submodels to try, raise an error.
+        submodels = list(self.submodels.keys())
+        while len(submodels) > 0:
+            for submodel_name, submodel in self.submodels.items():
+                if submodel_name in submodels:
+                    pybamm.logger.debug(
+                        "Getting coupled variables for {} submodel ({})".format(
+                            submodel_name, self.name
+                        )
+                    )
+                    try:
+                        self.variables.update(
+                            submodel.get_coupled_variables(self.variables)
+                        )
+                        submodels.remove(submodel_name)
+                    except KeyError as key:
+                        if len(submodels) == 1:
+                            # no more submodels to try
+                            raise pybamm.ModelError(
+                                """Submodel "{}" requires the variable {}, but it cannot be found.
+                                Check the selected submodels provide all of the required
+                                variables.""".format(
+                                    submodel_name, key
+                                )
+                            )
+                        else:
+                            # try setting coupled variables on next loop through
+                            pass
 
         # Set model equations
         for submodel_name, submodel in self.submodels.items():
@@ -422,6 +458,17 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         pybamm.logger.debug("Setting SoC variables")
         self.set_soc_variables()
+
+        # Massive hack for consistent delta_phi = phi_s - phi_e with SPMe
+        # This needs to be corrected
+        if isinstance(self, pybamm.lithium_ion.SPMe):
+            for domain in ["Negative", "Positive"]:
+                phi_s = self.variables[domain + " electrode potential"]
+                phi_e = self.variables[domain + " electrolyte potential"]
+                delta_phi = phi_s - phi_e
+                s = self.submodels[domain.lower() + " interface"]
+                var = s._get_standard_surface_potential_difference_variables(delta_phi)
+                self.variables.update(var)
 
         self._built = True
 

@@ -217,7 +217,9 @@ class EffectiveResistance2D(pybamm.BaseModel):
 
     @property
     def default_submesh_types(self):
-        return {"current collector": pybamm.Scikit2DSubMesh}
+        return {
+            "current collector": pybamm.MeshGenerator(pybamm.ScikitUniform2DSubMesh)
+        }
 
     @property
     def default_spatial_methods(self):

@@ -2,11 +2,17 @@ import pybamm
 import unittest
 
 
-class TestUniform1DSubMesh(unittest.TestCase):
+class TestSubMesh0D(unittest.TestCase):
     def test_exceptions(self):
-        lims = [[0, 1], [0, 1]]
+        position = {"x": 0, "y": 0}
         with self.assertRaises(pybamm.GeometryError):
-            pybamm.Uniform1DSubMesh(lims, None)
+            pybamm.SubMesh0D(position)
+
+    def test_init(self):
+        position = {"x": 1}
+        generator = pybamm.MeshGenerator(pybamm.SubMesh0D)
+        mesh = generator(position, None)
+        mesh.add_ghost_meshes()
 
 
 if __name__ == "__main__":

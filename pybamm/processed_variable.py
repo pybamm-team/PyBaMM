@@ -97,7 +97,7 @@ class ProcessedVariable(object):
         if (
             mesh
             and "current collector" in self.domain
-            and isinstance(self.mesh[self.domain[0]][0], pybamm.Scikit2DSubMesh)
+            and isinstance(self.mesh[self.domain[0]][0], pybamm.ScikitSubMesh2D)
         ):
             if len(self.t_sol) == 1:
                 # space only (steady solution)
