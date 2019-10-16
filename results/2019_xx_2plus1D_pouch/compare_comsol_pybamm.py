@@ -45,23 +45,18 @@ geometry = pybamm_model.default_geometry
 
 # load parameters and process model and geometry
 param = pybamm_model.default_parameter_values
-# adjust current to correspond to a typical current density of C_rate * 24 [A.m-2]
-param["Typical current [A]"] = (
-    C_rates[C_rate]
-    * 24
-    * param.process_symbol(pybamm.geometric_parameters.A_cc).evaluate()
-)
+param.update({"C-rate": C_rates[C_rate]})
 param.process_model(pybamm_model)
 param.process_geometry(geometry)
 
 # create mesh
 var = pybamm.standard_spatial_vars
 var_pts = {
-    var.x_n: 10,
-    var.x_s: 10,
-    var.x_p: 10,
-    var.r_n: 10,
-    var.r_p: 10,
+    var.x_n: 5,
+    var.x_s: 5,
+    var.x_p: 5,
+    var.r_n: 5,
+    var.r_p: 5,
     var.y: 10,
     var.z: 10,
 }
@@ -125,11 +120,8 @@ shared.plot_2D_var(
     output_variables,
     param,
     cmap="cividis",
+    error="rel",
 )
-U_ref = param.process_symbol(
-    pybamm.standard_parameters_lithium_ion.U_p_ref
-    - pybamm.standard_parameters_lithium_ion.U_n_ref
-).evaluate()
 shared.plot_2D_var(
     "Positive current collector potential [V]",
     t_plot,
@@ -137,9 +129,8 @@ shared.plot_2D_var(
     output_variables,
     param,
     cmap="viridis",
-    ref=U_ref,
+    error="rel",
 )
-T0 = param.process_symbol(pybamm.standard_parameters_lithium_ion.T_ref).evaluate()
 shared.plot_2D_var(
     "X-averaged cell temperature [K]",
     t_plot,
@@ -147,9 +138,8 @@ shared.plot_2D_var(
     output_variables,
     param,
     cmap="inferno",
-    ref=T0,
+    error="rel",
 )
-I0 = param.process_symbol(pybamm.standard_parameters_lithium_ion.i_typ).evaluate()
 shared.plot_2D_var(
     "Current collector current density [A.m-2]",
     t_plot,
@@ -157,6 +147,6 @@ shared.plot_2D_var(
     output_variables,
     param,
     cmap="plasma",
-    ref=I0,
+    error="rel",
 )
 plt.show()

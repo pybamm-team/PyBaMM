@@ -88,7 +88,7 @@ def plot_t_var(var, t, comsol_model, output_variables, param):
 
 
 def plot_2D_var(
-    var, t, comsol_model, output_variables, param, cmap="viridis", error="abs", ref=0
+    var, t, comsol_model, output_variables, param, cmap="viridis", error="abs"
 ):
     fig, ax = plt.subplots(figsize=(15, 8))
 
@@ -133,7 +133,7 @@ def plot_2D_var(
     if error == "abs":
         error = np.abs(pybamm_var - comsol_var)
     elif error == "rel":
-        error = np.abs(pybamm_var - comsol_var / (comsol_var - ref))
+        error = np.abs((pybamm_var - comsol_var) / comsol_var)
     diff_plot = plt.pcolormesh(y_plot, z_plot, error, shading="gouraud")
     plt.axis([0, y_plot[-1], 0, z_plot[-1]])
     plt.xlabel(r"$y$")

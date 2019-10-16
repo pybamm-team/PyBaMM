@@ -53,15 +53,7 @@ geometry = pybamm_model.default_geometry
 
 # load parameters and process model and geometry
 param = pybamm_model.default_parameter_values
-# adjust current to correspond to a typical current density of 24 [A.m-2]
-param["Typical current [A]"] = (
-    C_rates[C_rate]
-    * 24
-    * param.process_symbol(pybamm.geometric_parameters.A_cc).evaluate()
-)
-# param["Typical current [A]"] = 24 * C_rates[C_rate]
-# param["Electrode width [m]"] = 1
-# param["Electrode height [m]"] = 1
+param.update({"C-rate": C_rates[C_rate]})
 param.process_model(pybamm_model)
 param.process_geometry(geometry)
 
