@@ -1,9 +1,12 @@
+#
+# Example of 1+1D SPM where the temperature can be set by the user
+#
+
 import pybamm
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
 
-plt.close("all")
 # set logging level
 pybamm.set_logging_level("INFO")
 
@@ -24,7 +27,7 @@ param.process_model(model)
 param.process_geometry(geometry)
 
 # set mesh
-nbat = 2
+nbat = 5
 var = pybamm.standard_spatial_vars
 var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.r_n: 5, var.r_p: 5, var.z: nbat}
 # depending on number of points in y-z plane may need to increase recursion depth...
@@ -152,13 +155,15 @@ temperature_step2 = pybamm.ProcessedVariable(
     mesh=mesh,
 )
 
-# plot
+# plots
 t_sec = param.process_symbol(
     pybamm.standard_parameters_lithium_ion.tau_discharge
 ).evaluate()
 t_hour = t_sec / (3600)
-plt.figure()
 z = np.linspace(0, 1, nbat)
+
+# local voltage
+plt.figure()
 for bat_id in range(nbat):
     plt.plot(
         solution1.t * t_hour,
@@ -170,20 +175,16 @@ for bat_id in range(nbat):
     )
 plt.xlabel("t [hrs]")
 plt.ylabel("Local voltage [V]")
-plt.figure()
-plt.plot(
-    solution1.t, voltage_step1(solution1.t), solution2.t, voltage_step2(solution2.t)
-)
-plt.xlabel("t")
-plt.ylabel("Voltage [V]")
-plt.show()
+
+# applied current
 plt.figure()
 plt.plot(
     solution1.t, current_step1(solution1.t), solution2.t, current_step2(solution2.t)
 )
 plt.xlabel("t")
 plt.ylabel("Current [A]")
-plt.show()
+
+# local heating
 plt.figure()
 z = np.linspace(0, 1, nbat)
 for bat_id in range(nbat):
@@ -196,7 +197,8 @@ for bat_id in range(nbat):
 plt.xlabel("t [hrs]")
 plt.ylabel("X-averaged total heating [A.V.m-3]")
 plt.yscale("log")
-plt.show()
+
+# local concentration
 plt.figure()
 for bat_id in range(nbat):
     plt.plot(
@@ -207,7 +209,8 @@ for bat_id in range(nbat):
     )
 plt.xlabel("t [hrs]")
 plt.ylabel("X-averaged positive particle surface concentration [mol.m-3]")
-plt.show()
+
+# local temperature
 plt.figure()
 for bat_id in range(nbat):
     plt.plot(
@@ -218,33 +221,5 @@ for bat_id in range(nbat):
     )
 plt.xlabel("t [hrs]")
 plt.ylabel("X-averaged cell temperature [K]")
+
 plt.show()
-
-
-def plot_var(var, solution, time=-1):
-    variable = model.variables[var]
-    len_x = len(mesh.combine_submeshes(*variable.domain))
-    len_z = variable.shape[0] // len_x
-    entries = np.empty((len_x, len_z, len(solution.t)))
-
-    for idx in range(len(solution.t)):
-        t = solution.t[idx]
-        y = solution.y[:, idx]
-        entries[:, :, idx] = np.reshape(variable.evaluate(t, y), [len_x, len_z])
-    plt.figure()
-    for bat_id in range(len_x):
-        plt.plot(range(len_z), entries[bat_id, :, time].flatten())
-    plt.title(var)
-    plt.figure()
-    plt.imshow(entries[:, :, time])
-    plt.title(var)
-
-
-# plot_var(var="Positive current collector potential", solution=solution1, time=-1)
-# plot_var(var="Total heating [A.V.m-3]", solution=solution1, time=-1)
-# plot_var(var="Interfacial current density", solution=solution2, time=-1)
-# plot_var(var="Negative particle concentration [mol.m-3]", solution=solution2, time=-1)
-# plot_var(var="Positive particle concentration [mol.m-3]", solution=solution2, time=-1)
-
-var_names = list(model.variables.keys())
-var_names.sort()

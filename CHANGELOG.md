@@ -6,6 +6,8 @@
 - Allow parameters to be set by material or by specifying a particular paper (#647)
 - Set relative and absolute tolerances independently in solvers (#645)
 - Add some non-uniform meshes in 1D and 2D (#617)
+- Adds submodels which allow the user to pass an array to set the entries of the `StateVector`
+  object corresponding to the temperature and potential in the 1+1D model formulation (#548) 
 
 ## Optimizations
 
