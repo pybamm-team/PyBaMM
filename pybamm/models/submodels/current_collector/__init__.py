@@ -7,7 +7,6 @@ from .potential_pair import (
     BasePotentialPair,
     PotentialPair1plus1D,
     PotentialPair2plus1D,
-    PotentialPairUnrolled
 )
 from .composite_potential_pair import (
     BaseCompositePotentialPair,

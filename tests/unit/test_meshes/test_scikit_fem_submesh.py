@@ -168,7 +168,7 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
             }
         )
 
-        # check error raised if tab not on boundary
+        # check mesh can be built
         geometry = pybamm.Geometryxp1DMacro(cc_dimension=2)
         param.process_geometry(geometry)
         mesh_type(geometry, submesh_types, var_pts)

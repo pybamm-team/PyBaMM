@@ -73,7 +73,7 @@ class BaseSolver(object):
         solution.total_time = timer.time() - start_time
         solution.set_up_time = set_up_time
 
-        pybamm.logger.info("Finish solving {} ({})".format(model.name, termination))
+        pybamm.logger.warning("Finish solving {} ({})".format(model.name, termination))
         pybamm.logger.info(
             "Set-up time: {}, Solve time: {}, Total time: {}".format(
                 timer.format(solution.set_up_time),

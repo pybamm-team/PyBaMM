@@ -9,7 +9,7 @@ pybamm.set_logging_level("INFO")
 
 # load (1+1D) SPM model
 options = {
-    "current collector": "jelly roll",
+    "current collector": "potential pair",
     "dimensionality": 1,
     "thermal": "set external temperature",
 }

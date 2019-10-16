@@ -3,6 +3,28 @@ import unittest
 import numpy as np
 
 
+class TestSubMesh1D(unittest.TestCase):
+    def test_tabs(self):
+        edges = np.linspace(0, 1, 10)
+        tabs = {"negative": {"z_centre": 0}, "positive": {"z_centre": 1}}
+        mesh = pybamm.SubMesh1D(edges, None, tabs=tabs)
+        self.assertEqual(mesh.tabs["negative tab"], "left")
+        self.assertEqual(mesh.tabs["positive tab"], "right")
+
+    def test_exceptions(self):
+        edges = np.linspace(0, 1, 10)
+        tabs = {"negative": {"z_centre": 0.2}, "positive": {"z_centre": 1}}
+        with self.assertRaises(pybamm.GeometryError):
+            pybamm.SubMesh1D(edges, None, tabs=tabs)
+
+
+class TestUniform1DSubMesh(unittest.TestCase):
+    def test_exceptions(self):
+        lims = [[0, 1], [0, 1]]
+        with self.assertRaises(pybamm.GeometryError):
+            pybamm.Uniform1DSubMesh(lims, None)
+
+
 class TestUser1DSubMesh(unittest.TestCase):
     def test_exceptions(self):
         lims = [[0, 1], [0, 1]]
@@ -39,11 +61,7 @@ class TestUser1DSubMesh(unittest.TestCase):
         }
 
         edges = np.array([0, 0.3, 1])
-        submesh_types = {
-            "negative particle": pybamm.GetUserSupplied1DSubMesh(
-                edges
-            )
-        }
+        submesh_types = {"negative particle": pybamm.GetUserSupplied1DSubMesh(edges)}
         var_pts = {r: len(edges) - 1}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 

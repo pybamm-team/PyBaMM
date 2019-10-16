@@ -39,7 +39,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             * "current collector" : str, optional
                 Sets the current collector model to use. Can be "uniform" (default),
                 "potential pair", "potential pair quite conductive", "single particle
-                potential pair", "jelly roll" or "set external potential". The submodel
+                potential pair" or "set external potential". The submodel
                 "single particle potential pair" can only be used with lithium-ion
                 single particle models. The submodel "set external potential" can only
                 be used with the SPM.
@@ -231,7 +231,6 @@ class BaseBatteryModel(pybamm.BaseModel):
             "potential pair quite conductive",
             "single particle potential pair",
             "set external potential",
-            "jelly roll",
         ]:
             raise pybamm.OptionError(
                 "current collector model '{}' not recognised".format(
@@ -609,14 +608,6 @@ class BaseBatteryModel(pybamm.BaseModel):
             elif self.options["dimensionality"] in [0, 2]:
                 raise NotImplementedError(
                     """Set potential model only implemented for 1D current
-                    collectors"""
-                )
-        elif self.options["current collector"] == "jelly roll":
-            if self.options["dimensionality"] == 1:
-                submodel = pybamm.current_collector.PotentialPairUnrolled(self.param)
-            elif self.options["dimensionality"] in [0, 2]:
-                raise NotImplementedError(
-                    """Jelly roll model only implemented for 1D current
                     collectors"""
                 )
         self.submodels["current collector"] = submodel
