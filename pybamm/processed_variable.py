@@ -94,8 +94,10 @@ class ProcessedVariable(object):
             self.base_eval = base_variable.evaluate(t_sol[0], u_sol[:, 0])
 
         # handle 2D (in space) finite element variables differently
-        if mesh and "current collector" in self.domain and isinstance(
-            self.mesh[self.domain[0]][0], pybamm.Scikit2DSubMesh
+        if (
+            mesh
+            and "current collector" in self.domain
+            and isinstance(self.mesh[self.domain[0]][0], pybamm.ScikitSubMesh2D)
         ):
             if len(self.t_sol) == 1:
                 # space only (steady solution)
