@@ -77,5 +77,3 @@ Makefile
 *.cmake
 *.so
 
-# pybind11
-third-party
