@@ -45,7 +45,7 @@ deactivate
 
 PyBaMM has the following python libraries as dependencies: `numpy`, `scipy`, `pandas`,
 `matplotlib`. These will be installed automatically when you install PyBaMM using `pip`,
-following the instructions below. First, make sure you have activated your virtual 
+following the instructions below. First, make sure you have activated your virtual
 environment as above, and that you have the latest version of pip installed:
 
 ```bash
@@ -84,7 +84,7 @@ pip uninstall pybamm
 
 Users can install [scikits.odes](https://github.com/bmcage/odes) in order to use the
 wrapped SUNDIALS ODE and DAE
-[solvers](https://pybamm.readthedocs.io/en/latest/source/solvers/scikits_solvers.html). 
+[solvers](https://pybamm.readthedocs.io/en/latest/source/solvers/scikits_solvers.html).
 The Sundials DAE solver is required to solve the DFN battery model in PyBaMM.
 
 Before installing scikits.odes, you need to have installed:
@@ -141,10 +141,10 @@ documentation](https://scikits-odes.readthedocs.io/en/latest/installation.html) 
 detailed installation instructions.
 
 ### Sundials with KLU sparse solver
-If you wish so simulate large systems such as the 2+1D models, we recommend employing a 
-sparse solver. PyBaMM currently offers a direct interface to the sparse KLU solver within Sundials. 
-If you are on a linux based distribution, a bash script has been provided which should 
-install everything for you correctly. Please note you will require the python header files, openblas, 
+If you wish so simulate large systems such as the 2+1D models, we recommend employing a
+sparse solver. PyBaMM currently offers a direct interface to the sparse KLU solver within Sundials.
+If you are on a linux based distribution, a bash script has been provided which should
+install everything for you correctly. Please note you will require the python header files, openblas,
 a c compiler (e.g. gcc), and cmake, all of which you should be able to install on ubuntu using
 ```bash
 apt install python3-dev libopenblas-dev cmake gcc
@@ -170,7 +170,7 @@ wget http://faculty.cse.tamu.edu/davis/SuiteSparse/SuiteSparse-5.4.0.tar.gz -O S
 ```
 Unpack the compressed SuiteSparse files using:
 ```bash
-tar -xvf SuiteSparse-5.4.0.taz.gz
+tar -xvf SuiteSparse-5.4.0.tar.gz
 ```
 and remove the .tar.gz file to keep your directory clean using:
 ```bash
@@ -184,11 +184,11 @@ cd ..
 ```
 and set the path of the SuiteSparse directory for reference later:
 ```bash
-SUITESPARSE_DIR = `pwd`/SuiteSparse
+SUITESPARSE_DIR=`pwd`/SuiteSparse
 ```
 
 #### Download and build Sundials 4.1.0
-The KLU solver is interfaced using an updated version of Sundials so even if you have installed Sundials for use with Scikits.odes, you still need to install sundials here. If you want more information on the sundials installation please refer to the the ida_guide.pdf available at on the [sundials site](https://computing.llnl.gov/projects/sundials/sundials-software) 
+The KLU solver is interfaced using an updated version of Sundials so even if you have installed Sundials for use with Scikits.odes, you still need to install sundials here. If you want more information on the sundials installation please refer to the the ida_guide.pdf available at on the [sundials site](https://computing.llnl.gov/projects/sundials/sundials-software)
 
 First, download Sundials 4.1.0 using
 ```bash
@@ -200,7 +200,7 @@ The cmake instructions provided with Sundials have trouble linking the required 
 ```
 cp scripts/replace-cmake/CMakeLists.txt sundials-4.1.0/CMakeLists.txt
 ```
-Now create a directory to build sundials in and set the install directory for sundials: 
+Now create a directory to build sundials in and set the install directory for sundials:
 ```
 mkdir build-sundials-4.1.0
 INSTALL_DIR=`pwd`/sundials4
@@ -238,7 +238,7 @@ cd third-party
 git clone https://github.com/pybind/pybind11.git
 cd ..
 ```
-You will also require pybind11 to be pip installed so from within your virtual enviroment (if you are using one) type: 
+You will also require pybind11 to be pip installed so from within your virtual enviroment (if you are using one) type:
 ```
 pip install pybind11
 ```
@@ -261,30 +261,30 @@ rm cmake_install.cmake
 
 ## Troubleshooting
 
-**Problem:** I've made edits to source files in PyBaMM, but these are not being used 
+**Problem:** I've made edits to source files in PyBaMM, but these are not being used
 when I run my Python script.
 
-**Solution:** Make sure you have installed PyBaMM using the `-e` flag, i.e. `pip install 
+**Solution:** Make sure you have installed PyBaMM using the `-e` flag, i.e. `pip install
 -e .`. This sets the installed location of the source files to your current directory.
 
-**Problem:** When running `python run-tests.py --quick`, gives error `FileNotFoundError: 
+**Problem:** When running `python run-tests.py --quick`, gives error `FileNotFoundError:
 [Errno 2] No such file or directory: 'flake8': 'flake8`.
 
-**Solution:** make sure you have included the `[dev,docs]` flags when you pip installed 
+**Solution:** make sure you have included the `[dev,docs]` flags when you pip installed
 PyBaMM, i.e. `pip install -e .[dev,docs]`
 
-**Problem:** Errors when solving model `ValueError: Integrator name ida does not 
+**Problem:** Errors when solving model `ValueError: Integrator name ida does not
 exsist`, or `ValueError: Integrator name cvode does not exsist`.
 
-**Solution:** This could mean that you have not installed `scikits.odes` correctly, 
+**Solution:** This could mean that you have not installed `scikits.odes` correctly,
 check the instrutions given above and make sure each command was successful.
 
 One possibility is that you have not set your `LD_LIBRARY_PATH` to point to the sundials
-library, type `echo $LD_LIBRARY_PATH` and make sure one of the directories printed out 
+library, type `echo $LD_LIBRARY_PATH` and make sure one of the directories printed out
 corresponds to where the sundials libraries are located.
 
-Another common reason is that you forget to install a BLAS library such as OpenBLAS 
-before installing sundials. Check the cmake output when you configured Sundials, it 
+Another common reason is that you forget to install a BLAS library such as OpenBLAS
+before installing sundials. Check the cmake output when you configured Sundials, it
 might say:
 
 ```
@@ -292,7 +292,6 @@ might say:
 -- LAPACK requires BLAS
 ```
 
-If this is the case, on a Debian or Ubuntu system you can install OpenBLAS using `sudo 
-apt-get install libopenblas-dev` and then re-install sundials using the instructions 
+If this is the case, on a Debian or Ubuntu system you can install OpenBLAS using `sudo
+apt-get install libopenblas-dev` and then re-install sundials using the instructions
 above.
-
