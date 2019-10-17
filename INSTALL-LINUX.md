@@ -179,7 +179,6 @@ rm SuiteSparse-5.4.0.tar.gz
 Now build SuiteSparse using:
 ```bash
 cd SuiteSparse
-make clean
 make
 cd ..
 ```
@@ -222,7 +221,6 @@ cmake -DBLAS_ENABLE=ON\
       -DKLU_ENABLE=ON\
       -DSUITESPARSE_DIR=$SUITESPARSE_DIR\
       ../sundials-4.1.0
-make clean
 make install
 ```
 Now return to your PyBaMM home directory and remove the build-sundials-4.1.0 folder and the download folder:
@@ -252,7 +250,6 @@ cmake .
 ```
 You can now simply run make to build the library (you can just run this command if you make some changes to klu.cpp)
 ```
-make clean
 make
 ```
 To clean up you directory you can now remove the automatically generated cmake files:
