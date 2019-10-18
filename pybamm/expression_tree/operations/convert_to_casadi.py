@@ -3,6 +3,7 @@
 #
 import pybamm
 import casadi
+import numpy as np
 
 
 class CasadiConverter(object):
@@ -51,7 +52,7 @@ class CasadiConverter(object):
             converted_left = self.convert(left, t, y)
             converted_right = self.convert(right, t, y)
             if isinstance(symbol, pybamm.Outer):
-                return casadi.outer_prod(converted_left, converted_right)
+                return casadi.kron(converted_left, converted_right)
             else:
                 # _binary_evaluate defined in derived classes for specific rules
                 return symbol._binary_evaluate(converted_left, converted_right)
@@ -63,16 +64,41 @@ class CasadiConverter(object):
             return symbol._unary_evaluate(converted_child)
 
         elif isinstance(symbol, pybamm.Function):
-            converted_children = [None] * len(symbol.children)
-            for i, child in enumerate(symbol.children):
-                converted_children[i] = self.convert(child, t, y)
-            return symbol._function_evaluate(converted_children)
+            converted_children = [
+                self.convert(child, t, y) for child in symbol.children
+            ]
+            if symbol.function == np.min:
+                return casadi.mmin(*converted_children)
+            elif symbol.function == np.max:
+                return casadi.mmax(*converted_children)
+            else:
+                return symbol._function_evaluate(converted_children)
 
         elif isinstance(symbol, pybamm.Concatenation):
             converted_children = [
                 self.convert(child, t, y) for child in symbol.children
             ]
-            return symbol._concatenation_evaluate(converted_children)
+            if isinstance(symbol, (pybamm.NumpyConcatenation, pybamm.SparseStack)):
+                return casadi.vertcat(*converted_children)
+            # DomainConcatenation specifies a particular ordering for the concatenation,
+            # which we must follow
+            elif isinstance(symbol, pybamm.DomainConcatenation):
+                slice_starts = []
+                all_child_vectors = []
+                for i in range(symbol.secondary_dimensions_npts):
+                    child_vectors = []
+                    for child_var, slices in zip(
+                        converted_children, symbol._children_slices
+                    ):
+                        for child_dom, child_slice in slices.items():
+                            slice_starts.append(symbol._slices[child_dom][i].start)
+                            child_vectors.append(
+                                child_var[child_slice[i].start : child_slice[i].stop]
+                            )
+                    all_child_vectors.extend(
+                        [v for _, v in sorted(zip(slice_starts, child_vectors))]
+                    )
+                return casadi.vertcat(*all_child_vectors)
 
         else:
             raise TypeError(

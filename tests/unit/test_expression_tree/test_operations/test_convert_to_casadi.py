@@ -6,7 +6,7 @@ import math
 import numpy as np
 import pybamm
 import unittest
-from tests import get_discretisation_for_testing
+from tests import get_mesh_for_testing, get_1p1d_discretisation_for_testing
 
 
 class TestCasadiConverter(unittest.TestCase):
@@ -67,6 +67,45 @@ class TestCasadiConverter(unittest.TestCase):
         self.assertTrue(
             casadi.is_equal(pybamm_y.to_casadi(casadi_t, casadi_y), casadi_y)
         )
+
+        # outer product
+        outer = pybamm.Outer(pybamm_a, pybamm_a)
+        self.assertTrue(casadi.is_equal(outer.to_casadi(), casadi.SX(outer.evaluate())))
+
+    def test_special_functions(self):
+        a = np.array([1, 2, 3, 4, 5])
+        pybamm_a = pybamm.Array(a)
+        self.assertEqual(pybamm.min(pybamm_a).to_casadi(), casadi.SX(1))
+
+    def test_concatenations(self):
+        y = np.linspace(0, 1, 10)[:, np.newaxis]
+        a = pybamm.Vector(y)
+        b = pybamm.Scalar(16)
+        c = pybamm.Scalar(3)
+        conc = pybamm.NumpyConcatenation(a, b, c)
+        self.assertTrue(casadi.is_equal(conc.to_casadi(), casadi.SX(conc.evaluate())))
+
+        # Domain concatenation
+        mesh = get_mesh_for_testing()
+        a_dom = ["negative electrode"]
+        b_dom = ["positive electrode"]
+        a = 2 * pybamm.Vector(np.ones_like(mesh[a_dom[0]][0].nodes), domain=a_dom)
+        b = pybamm.Vector(np.ones_like(mesh[b_dom[0]][0].nodes), domain=b_dom)
+        conc = pybamm.DomainConcatenation([b, a], mesh)
+        self.assertTrue(casadi.is_equal(conc.to_casadi(), casadi.SX(conc.evaluate())))
+
+        # 2d
+        disc = get_1p1d_discretisation_for_testing()
+        a = pybamm.Variable("a", domain=a_dom)
+        b = pybamm.Variable("b", domain=b_dom)
+        conc = pybamm.Concatenation(a, b)
+        disc.set_variable_slices([conc])
+        expr = disc.process_symbol(conc)
+        y = casadi.SX.sym("y", expr.size)
+        x = expr.to_casadi(None, y)
+        f = casadi.Function("f", [x], [x])
+        y_eval = np.linspace(0, 1, expr.size)
+        self.assertTrue(casadi.is_equal(f(y_eval), casadi.SX(expr.evaluate(y=y_eval))))
 
 
 if __name__ == "__main__":

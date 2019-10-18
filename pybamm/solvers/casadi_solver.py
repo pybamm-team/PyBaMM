@@ -70,10 +70,14 @@ class CasadiSolver(pybamm.BaseSolver):
 
         t = casadi.SX.sym("t")
         y_diff = casadi.SX.sym("y_diff", len(model.concatenated_rhs.evaluate(0, y0)))
-        # y_alg = casadi.SX.sym("y_alg")
+        y_alg = casadi.SX.sym(
+            "y_alg", len(model.concatenated_algebraic.evaluate(0, y0))
+        )
+        y = casadi.vertcat(y_diff, y_alg)
         # create simplified rhs and event expressions
-        concatenated_rhs = model.concatenated_rhs.to_casadi(t, y_diff)
-        events = model.events.to_casadi(t, y_diff)
+        concatenated_rhs = model.concatenated_rhs.to_casadi(t, y)
+        concatenated_algebraic = model.concatenated_algebraic.to_casadi(t, y)
+        events = {name: event.to_casadi(t, y) for name, event in model.events.items()}
 
         # Create function to evaluate rhs
         def dydt(t, y):
