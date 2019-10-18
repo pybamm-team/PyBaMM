@@ -93,9 +93,7 @@ class Discretisation(object):
             If an empty model is passed (`model.rhs = {}` and `model.algebraic={}`)
 
         """
-        timer = pybamm.Timer()
 
-        start_time = timer.time()
         pybamm.logger.info("Start discretising {}".format(model.name))
 
         # Make sure model isn't empty
@@ -160,32 +158,14 @@ class Discretisation(object):
             processed_events[event] = self.process_symbol(equation)
         model_disc.events = processed_events
 
-        disc_time = timer.time() - start_time
-
         # Create mass matrix
         pybamm.logger.info("Create mass matrix for {}".format(model.name))
         model_disc.mass_matrix = self.create_mass_matrix(model_disc)
 
-        # Compute Jacobian
-        if model_disc.use_jacobian:
-            pybamm.logger.info("Create Jacobian for {}".format(model.name))
-            model_disc.jacobian, model_disc.jacobian_algebraic = self.create_jacobian(
-                model_disc
-            )
-        jacobian_time = timer.time() - disc_time
-
         # Check that resulting model makes sense
         self.check_model(model_disc)
 
-        total_time = timer.time() - start_time
         pybamm.logger.info("Finish discretising {}".format(model.name))
-        pybamm.logger.info(
-            """Discretisation time: {}, Jacobian time: {}, Total time: {}""".format(
-                timer.format(disc_time),
-                timer.format(jacobian_time),
-                timer.format(total_time),
-            )
-        )
 
         return model_disc
 
@@ -524,9 +504,7 @@ class Discretisation(object):
     def create_jacobian(self, model):
         """Creates Jacobian of the discretised model.
         Note that the model is assumed to be of the form M*y_dot = f(t,y), where
-        M is the (possibly singular) mass matrix. The Jacobian is df/dy. If any
-        of the model equations are algebriac, the algebraic part of the system may
-        be written as g(t,y) = 0, and the Jacobian of the algebraic part is dg/dy.
+        M is the (possibly singular) mass matrix. The Jacobian is df/dy.
 
         Parameters
         ----------
@@ -537,8 +515,7 @@ class Discretisation(object):
         Returns
         -------
         :class:`pybamm.Concatenation`
-            The expression trees corresponding to the Jacobian of the the full
-            system (df/dy) and the Jacobian of the algebraic part (dg/dy)
+            The expression trees corresponding to the Jacobian of the model
         """
         # create state vector to differentiate with respect to
         y = pybamm.StateVector(slice(0, np.size(model.concatenated_initial_conditions)))
@@ -571,7 +548,7 @@ class Discretisation(object):
         else:
             jac = jac_algebraic
 
-        return jac, jac_algebraic
+        return jac
 
     def process_dict(self, var_eqn_dict):
         """Discretise a dictionary of {variable: equation}, broadcasting if necessary
