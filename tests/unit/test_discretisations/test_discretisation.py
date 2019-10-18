@@ -496,6 +496,10 @@ class TestDiscretise(unittest.TestCase):
         jacobian = model.concatenated_rhs.jac(y).evaluate(0, y0)
         np.testing.assert_array_equal(np.eye(np.size(y0)), jacobian.toarray())
 
+        # test jacobian by eqn gives same as jacobian of concatenated rhs
+        model_jacobian = disc.create_jacobian(model).evaluate(0, y0)
+        np.testing.assert_array_equal(model_jacobian.toarray(), jacobian.toarray())
+
         # test that not enough initial conditions raises an error
         model = pybamm.BaseModel()
         model.rhs = {c: pybamm.div(N), T: pybamm.div(q), S: pybamm.div(p)}
@@ -589,6 +593,10 @@ class TestDiscretise(unittest.TestCase):
             ]
         )
         np.testing.assert_array_equal(jacobian_actual, jacobian.toarray())
+
+        # test jacobian by eqn gives same as jacobian of concatenated rhs & algebraic
+        model_jacobian = disc.create_jacobian(model).evaluate(0, y0)
+        np.testing.assert_array_equal(model_jacobian.toarray(), jacobian.toarray())
 
         # test known_evals
         expr = pybamm.SparseStack(jac_rhs, jac_algebraic)

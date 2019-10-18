@@ -1,7 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM)
 
 ## Features
-
+- Add `Jacobian` class to reuse known Jacobians of expressions (#665)
 - Add `Interpolant` class to interpolate experimental data (e.g. OCP curves) (#661)
 - Allow parameters to be set by material or by specifying a particular paper (#647)
 - Set relative and absolute tolerances independently in solvers (#645)

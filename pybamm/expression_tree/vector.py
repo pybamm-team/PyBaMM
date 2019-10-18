@@ -4,7 +4,6 @@
 import pybamm
 
 import numpy as np
-from scipy.sparse import csr_matrix
 
 
 class Vector(pybamm.Array):
@@ -40,9 +39,3 @@ class Vector(pybamm.Array):
             name = "Column vector of length {!s}".format(entries.shape[0])
 
         super().__init__(entries, name, domain, entries_string)
-
-    def _jac(self, variable):
-        """ See :meth:`pybamm.Symbol._jac()`. """
-        # Return zeros of correct size
-        jac = csr_matrix((self.size, variable.evaluation_array.count(True)))
-        return pybamm.Matrix(jac)

@@ -21,7 +21,7 @@ def is_scalar_zero(expr):
 
 def is_matrix_zero(expr):
     """
-    Utility function to test if an expression evaluates to a constant scalar zero
+    Utility function to test if an expression evaluates to a constant matrix zero
     """
     if expr.is_constant():
         result = expr.evaluate_ignoring_errors()
@@ -368,17 +368,25 @@ class Multiplication(BinaryOperator):
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
 
-        # anything multiplied by a scalar zero returns a scalar zero
+        # simplify multiply by scalar zero, being careful about shape
         if is_scalar_zero(left):
-            if right.shape_for_testing == ():
+            shape = right.shape_for_testing
+            if shape == ():
                 return pybamm.Scalar(0)
             else:
-                return pybamm.Array(np.zeros(right.shape_for_testing))
+                if len(shape) == 1 or shape[1] == 1:
+                    return pybamm.Vector(np.zeros(shape))
+                else:
+                    return pybamm.Matrix(csr_matrix(shape))
         if is_scalar_zero(right):
-            if left.shape_for_testing == ():
+            shape = left.shape_for_testing
+            if shape == ():
                 return pybamm.Scalar(0)
             else:
-                return pybamm.Array(np.zeros(left.shape_for_testing))
+                if len(shape) == 1 or shape[1] == 1:
+                    return pybamm.Vector(np.zeros(shape))
+                else:
+                    return pybamm.Matrix(csr_matrix(shape))
 
         # if one of the children is a zero matrix, we have to be careful about shapes
         if is_matrix_zero(left) or is_matrix_zero(right):
@@ -441,9 +449,12 @@ class MatrixMultiplication(BinaryOperator):
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
-        # anything multiplied by a scalar zero returns a scalar zero
-        if is_scalar_zero(left) or is_scalar_zero(right):
-            return pybamm.Scalar(0)
+        if is_matrix_zero(left) or is_matrix_zero(right):
+            shape = (left @ right).shape
+            if len(shape) == 1 or shape[1] == 1:
+                return pybamm.Vector(np.zeros(shape))
+            else:
+                return pybamm.Matrix(csr_matrix(shape))
 
         return pybamm.simplify_multiplication_division(self.__class__, left, right)
 
@@ -497,12 +508,20 @@ class Division(BinaryOperator):
         if is_scalar_zero(left) and is_scalar_zero(right):
             return pybamm.Scalar(np.nan)
 
-        # zero divided by anything returns zero
+        # zero divided by anything returns zero (being careful about shape)
         if is_scalar_zero(left):
-            if right.shape_for_testing == ():
+            shape = right.shape_for_testing
+            if shape == ():
                 return pybamm.Scalar(0)
             else:
-                return pybamm.Array(np.zeros(right.shape_for_testing))
+                if len(shape) == 1 or shape[1] == 1:
+                    return pybamm.Vector(np.zeros(shape))
+                else:
+                    return pybamm.Matrix(csr_matrix(shape))
+
+        # matrix zero divided by anything returns matrix zero (i.e. itself)
+        if is_matrix_zero(left):
+            return left
 
         # anything divided by zero returns inf
         if is_scalar_zero(right):
@@ -573,17 +592,25 @@ class Inner(BinaryOperator):
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
 
-        # anything multiplied by a scalar zero returns a scalar zero
+        # simplify multiply by scalar zero, being careful about shape
         if is_scalar_zero(left):
-            if isinstance(right, pybamm.Array):
-                return pybamm.Array(np.zeros(right.shape))
-            else:
+            shape = right.shape_for_testing
+            if shape == ():
                 return pybamm.Scalar(0)
+            else:
+                if len(shape) == 1 or shape[1] == 1:
+                    return pybamm.Vector(np.zeros(shape))
+                else:
+                    return pybamm.Matrix(csr_matrix(shape))
         if is_scalar_zero(right):
-            if isinstance(left, pybamm.Array):
-                return pybamm.Array(np.zeros(left.shape))
-            else:
+            shape = left.shape_for_testing
+            if shape == ():
                 return pybamm.Scalar(0)
+            else:
+                if len(shape) == 1 or shape[1] == 1:
+                    return pybamm.Vector(np.zeros(shape))
+                else:
+                    return pybamm.Matrix(csr_matrix(shape))
 
         # if one of the children is a zero matrix, we have to be careful about shapes
         if is_matrix_zero(left) or is_matrix_zero(right):
@@ -665,8 +692,6 @@ class Outer(BinaryOperator):
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
-        # Make sure left child keeps same domain
-        left.domain = self.left.domain
         return pybamm.Outer(left, right)
 
 
@@ -689,8 +714,8 @@ class Kron(BinaryOperator):
         """ See :meth:`pybamm.Symbol.diff()`. """
         raise NotImplementedError("diff not implemented for symbol of type 'Kron'")
 
-    def jac(self, variable):
-        """ See :meth:`pybamm.Symbol.jac()`. """
+    def _jac(self, variable):
+        """ See :meth:`pybamm.Symbol._jac()`. """
         raise NotImplementedError("jac not implemented for symbol of type 'Kron'")
 
     def _binary_evaluate(self, left, right):
