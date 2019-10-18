@@ -131,6 +131,10 @@ class Discretisation(object):
 
         model_disc.bcs = self.bcs
 
+        # Set up simplification object, for re-use of dict
+        if model_disc.use_simplify:
+            self.simp = pybamm.Simplification()
+
         # Process initial condtions
         pybamm.logger.info("Discretise initial conditions for {}".format(model.name))
         ics, concat_ics = self.process_initial_conditions(model)
@@ -155,11 +159,21 @@ class Discretisation(object):
         for event, equation in model.events.items():
             pybamm.logger.debug("Discretise event '{}'".format(event))
             processed_events[event] = self.process_symbol(equation)
+        #if model_disc.use_simplify:
+        #    pybamm.logger.info("Simplifying events")
+        #    processed_events = {name: self.simp.simplify(event) for name, event in processed_events.items()}
         model_disc.events = processed_events
 
         # Create mass matrix
         pybamm.logger.info("Create mass matrix for {}".format(model.name))
         model_disc.mass_matrix = self.create_mass_matrix(model_disc)
+
+        ## Compute Jacobian
+        #if model_disc.use_jacobian:
+        #    pybamm.logger.info("Create Jacobian for {}".format(model.name))
+        #    model_disc.jacobian, model_disc.jacobian_algebraic = self.create_jacobian(
+        #        model_disc
+        #    )
 
         # Check that resulting model makes sense
         self.check_model(model_disc)
@@ -416,6 +430,10 @@ class Discretisation(object):
         # Discretise right-hand sides, passing domain from variable
         processed_rhs = self.process_dict(model.rhs)
 
+        ## Simplify rhs
+        #if model.use_simplify:
+        #    pybamm.logger.info("Simplifying RHS")
+
         # Concatenate rhs into a single state vector
         # Need to concatenate in order as the ordering of equations could be different
         # in processed_rhs and model.rhs
@@ -423,6 +441,10 @@ class Discretisation(object):
 
         # Discretise and concatenate algebraic equations
         processed_algebraic = self.process_dict(model.algebraic)
+
+        ## Simplify algebraic
+        #if model.use_simplify:
+        #    pybamm.logger.info("Simplifying algebraic")
 
         processed_concatenated_algebraic = self._concatenate_in_order(
             processed_algebraic
@@ -497,15 +519,80 @@ class Discretisation(object):
 
         return pybamm.Matrix(mass_matrix)
 
+    def create_jacobian(self, model):
+        """Creates Jacobian of the discretised model.
+        Note that the model is assumed to be of the form M*y_dot = f(t,y), where
+        M is the (possibly singular) mass matrix. The Jacobian is df/dy. The
+        algebraic part of the system may be written as g(t,y) = 0, and the Jacobian
+        of the algebraic part is dg/dy.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            Discretised model. Must have attributes rhs, initial_conditions and
+            boundary_conditions (all dicts of {variable: equation})
+
+        Returns
+        -------
+        :class:`pybamm.Concatenation`
+            The expression tress corresponding to the Jacobian of the the full
+            system (df/dy) and the Jacobian of the algebraic part (dg/dy)
+        """
+        # create state vector to differentiate with respect to
+        y = pybamm.StateVector(slice(0, np.size(model.concatenated_initial_conditions)))
+        # set up Jacobian object, for re-use of dict
+        jacobian = pybamm.Jacobian()
+
+        # calculate Jacobian of rhs by equation
+        jac_rhs_eqn_dict = {}
+        for eqn_key, eqn in model.rhs.items():
+            pybamm.logger.info(
+                "Calculating block of Jacobian for {!r}".format(eqn_key.name)
+            )
+            jac = jacobian.jac(eqn, y)
+            if model.use_simplify:
+                pybamm.logger.info(
+                    "Simplifying block of Jacobian for {!r}".format(eqn_key.name)
+                )
+                jac = self.simp.simplify(jac)
+            jac_rhs_eqn_dict[eqn_key] = jac
+        jac = self._concatenate_in_order(jac_rhs_eqn_dict, sparse=True)
+
+        # calculate Jacobian of algebraic by equation
+        if model.algebraic.keys():
+            jac_algebraic_eqn_dict = {}
+            for eqn_key, eqn in model.algebraic.items():
+                pybamm.logger.info(
+                    "Calculating block of Jacobian for {!r}".format(eqn_key.name)
+                )
+                jac = jacobian.jac(eqn, y)
+                if model.use_simplify:
+                    pybamm.logger.info(
+                        "Simplifying block of Jacobian for {!r}".format(eqn_key.name)
+                    )
+                    jac = self.simp.simplify(jac)
+                jac_algebraic_eqn_dict[eqn_key] = jac
+            jac_algebraic = self._concatenate_in_order(
+                jac_algebraic_eqn_dict, sparse=True
+            )
+            # Add to full Jacobian
+            jac = pybamm.SparseStack(jac, jac_algebraic)
+        else:
+            jac_algebraic = None
+
+        return jac, jac_algebraic
+
     def process_dict(self, var_eqn_dict):
         """Discretise a dictionary of {variable: equation}, broadcasting if necessary
-        (can be model.rhs, model.initial_conditions or model.variables).
+        (can be model.rhs, model.algebraic, model.initial_conditions or
+        model.variables).
 
         Parameters
         ----------
         var_eqn_dict : dict
             Equations ({variable: equation} dict) to dicretise
-            (can be model.rhs, model.initial_conditions or model.variables)
+            (can be model.rhs, model.algebraic, model.initial_conditions or
+            model.variables)
 
         Returns
         -------
@@ -526,6 +613,28 @@ class Discretisation(object):
             new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
 
             new_var_eqn_dict[eqn_key].test_shape()
+
+        return new_var_eqn_dict
+
+    def simplify_dict(self, var_eqn_dict):
+        """Simplify a dictionary of {variable: equation}.
+
+        Parameters
+        ----------
+        var_eqn_dict : dict
+            Equations ({variable: equation} dict) to simplify
+
+        Returns
+        -------
+        new_var_eqn_dict : dict
+            Simplified equations
+
+        """
+        new_var_eqn_dict = {}
+
+        for eqn_key, eqn in var_eqn_dict.items():
+            pybamm.logger.debug("Simplifying {!r}".format(eqn_key))
+            new_var_eqn_dict[eqn_key] = self.simp.simplify(eqn)
 
         return new_var_eqn_dict
 
@@ -680,10 +789,13 @@ class Discretisation(object):
                     "Cannot discretise symbol of type '{}'".format(type(symbol))
                 )
 
-    def concatenate(self, *symbols):
-        return pybamm.NumpyConcatenation(*symbols)
+    def concatenate(self, *symbols, sparse=False):
+        if sparse:
+            return pybamm.SparseStack(*symbols)
+        else:
+            return pybamm.NumpyConcatenation(*symbols)
 
-    def _concatenate_in_order(self, var_eqn_dict, check_complete=False):
+    def _concatenate_in_order(self, var_eqn_dict, check_complete=False, sparse=False):
         """
         Concatenate a dictionary of {variable: equation} using self.y_slices
 
@@ -736,7 +848,7 @@ class Discretisation(object):
         # sort equations according to slices
         sorted_equations = [eq for _, eq in sorted(zip(slices, equations))]
 
-        return self.concatenate(*sorted_equations)
+        return self.concatenate(*sorted_equations, sparse=sparse)
 
     def check_model(self, model):
         """ Perform some basic checks to make sure the discretised model makes sense."""

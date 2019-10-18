@@ -125,7 +125,7 @@ class DaeSolver(pybamm.BaseSolver):
             events = {name: simp.simplify(event) for name, event in events.items()}
 
         if model.use_jacobian:
-            # Create Jacobian from simplified rhs and algebraic
+            # Create Jacobian from simplified rhs
             y = pybamm.StateVector(
                 slice(0, np.size(model.concatenated_initial_conditions))
             )

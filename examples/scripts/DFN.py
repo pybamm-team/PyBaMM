@@ -9,6 +9,7 @@ pybamm.set_logging_level("INFO")
 
 # load model
 model = pybamm.lithium_ion.DFN()
+model.use_simplify = False
 
 # create geometry
 geometry = model.default_geometry
