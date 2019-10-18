@@ -34,6 +34,7 @@ matrix:
             - PYBAMM_UNIT=true
             - PYBAMM_EXAMPLES=true
             - PYBAMM_SCIKITS_ODES=true
+            - PYBAMM_KLU=true
         - python: "3.7"
           addons:
             apt:
@@ -50,6 +51,7 @@ matrix:
             - PYBAMM_UNIT=true
             - PYBAMM_EXAMPLES=true
             - PYBAMM_SCIKITS_ODES=true
+            - PYBAMM_KLU=true
           if: type != cron
         # Unit testing on Python3.7 on OS/X and Ubuntu
         - os: osx
@@ -153,6 +155,7 @@ matrix:
             - PYBAMM_UNIT=true
             - PYBAMM_EXAMPLES=true
             - PYBAMM_SCIKITS_ODES=true
+            - PYBAMM_KLU=true
           if: type == cron
 
 # Install graphviz for macs
@@ -190,6 +193,7 @@ install:
   - if [[ $PYBAMM_STYLE == true || $PYBAMM_EXAMPLES ]]; then pip install -e .[dev]; fi;
   - if [[ $PYBAMM_COVER == true ]]; then pip install coverage codecov; fi;
   - if [[ $PYBAMM_SCIKITS_ODES == true ]]; then source scripts/install_scikits_odes.sh; fi;
+  - if [[ $PYBAMM_KLU == true ]]; then source scripts/install_sundials_4.1.0.sh; fi;
 
 before_script:
 - python --version
