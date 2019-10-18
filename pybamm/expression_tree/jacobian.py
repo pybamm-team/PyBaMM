@@ -1,7 +1,6 @@
 #
 # Calculate the Jacobian of a symbol
 #
-import pybamm
 
 
 class Jacobian(object):
@@ -36,7 +35,6 @@ class Jacobian(object):
         except KeyError:
             jac = self._jac(symbol, variable)
             self._known_jacs[symbol.id] = jac
-
             return jac
 
     def _jac(self, symbol, variable):

@@ -7,7 +7,6 @@ import anytree
 import numbers
 import copy
 import autograd.numpy as np
-from scipy.sparse import csr_matrix
 from anytree.exporter import DotExporter
 
 

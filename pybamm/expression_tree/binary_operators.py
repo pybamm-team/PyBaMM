@@ -449,9 +449,8 @@ class MatrixMultiplication(BinaryOperator):
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
-        # if one of the children is a zero matrix, we have to be careful about shapes
         if is_matrix_zero(left) or is_matrix_zero(right):
-            shape = (left * right).shape
+            shape = (left @ right).shape
             if len(shape) == 1 or shape[1] == 1:
                 return pybamm.Vector(np.zeros(shape))
             else:

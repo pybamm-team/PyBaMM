@@ -136,6 +136,8 @@ class OdeSolver(pybamm.BaseSolver):
             jacobian = None
 
         # Add the solver attributes
+        # Note: these are the (possibly) converted to python version rhs, algebraic
+        # etc. The expression tree versions of these are attributes of the model
         self.y0 = y0
         self.dydt = dydt
         self.events = events
