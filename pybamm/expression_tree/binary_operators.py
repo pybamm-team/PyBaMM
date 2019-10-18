@@ -715,8 +715,8 @@ class Kron(BinaryOperator):
         """ See :meth:`pybamm.Symbol.diff()`. """
         raise NotImplementedError("diff not implemented for symbol of type 'Kron'")
 
-    def jac(self, variable):
-        """ See :meth:`pybamm.Symbol.jac()`. """
+    def _jac(self, variable):
+        """ See :meth:`pybamm.Symbol._jac()`. """
         raise NotImplementedError("jac not implemented for symbol of type 'Kron'")
 
     def _binary_evaluate(self, left, right):

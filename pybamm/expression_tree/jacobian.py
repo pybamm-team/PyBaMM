@@ -41,9 +41,6 @@ class Jacobian(object):
 
     def _jac(self, symbol, variable):
         """ See :meth:`Jacobian.jac()`. """
-        #if variable.id == symbol.id:
-        #    jac = pybamm.Scalar(1)
-        #else:
         jac = symbol._jac(variable)
         # jacobian removes the domain(s)
         jac.domain = []

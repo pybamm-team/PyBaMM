@@ -7,6 +7,7 @@ import anytree
 import numbers
 import copy
 import autograd.numpy as np
+from scipy.sparse import csr_matrix
 from anytree.exporter import DotExporter
 
 
@@ -420,11 +421,11 @@ class Symbol(anytree.NodeMixin):
         return pybamm.Jacobian(known_jacs).jac(self, variable)
 
     def _jac(self, variable):
-        "Default behaviour for jacobian, overriden by Binary and Unary Operators"
-        if variable.id == self.id:
-            return pybamm.Scalar(1)
-        else:
-            return pybamm.Scalar(0)
+        """
+        Default behaviour for jacobian, will raise a ``NotImplementedError``
+        if this member function has not been defined for the node.
+        """
+        raise NotImplementedError
 
     def _base_evaluate(self, t=None, y=None):
         """evaluate expression tree

@@ -126,8 +126,8 @@ class AbsoluteValue(UnaryOperator):
             "Derivative of absolute function is not defined"
         )
 
-    def jac(self, variable):
-        """ See :meth:`pybamm.Symbol.jac()`. """
+    def _jac(self, variable):
+        """ See :meth:`pybamm.Symbol._jac()`. """
         # Derivative is not well-defined
         raise pybamm.UndefinedOperationError(
             "Derivative of absolute function is not defined"
@@ -260,10 +260,6 @@ class SpatialOperator(UnaryOperator):
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
         # We shouldn't need this
-        raise NotImplementedError
-
-    def jac(self, variable):
-        """ See :meth:`pybamm.Symbol.jac()`. """
         raise NotImplementedError
 
     def _unary_simplify(self, child):
