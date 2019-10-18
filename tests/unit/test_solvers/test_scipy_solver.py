@@ -216,8 +216,6 @@ class TestScipySolver(unittest.TestCase):
         def jacobian(t, y):
             return J
 
-        model.jacobian = jacobian
-
         # Solve
         solver = pybamm.ScipySolver(rtol=1e-9, atol=1e-9)
         t_eval = np.linspace(0, 1, 100)

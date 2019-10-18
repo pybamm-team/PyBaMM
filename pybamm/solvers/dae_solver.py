@@ -125,17 +125,9 @@ class DaeSolver(pybamm.BaseSolver):
             events = {name: simp.simplify(event) for name, event in events.items()}
 
         if model.use_jacobian:
-            # Create Jacobian from simplified rhs
-            y = pybamm.StateVector(
-                slice(0, np.size(model.concatenated_initial_conditions))
-            )
-            # set up Jacobian object, for re-use of dict
-            jacobian = pybamm.Jacobian()
-            pybamm.logger.info("Calculating jacobian")
-            jac_rhs = jacobian.jac(concatenated_rhs, y)
-            jac_algebraic = jacobian.jac(concatenated_algebraic, y)
-            jac = pybamm.SparseStack(jac_rhs, jac_algebraic)
-            model.jacobian = jac
+            # Get jacobian from model
+            jac_algebraic = model.jacobian_algebraic
+            jac = model.jacobian
 
             if model.use_simplify:
                 pybamm.logger.info("Simplifying jacobian")
@@ -214,6 +206,8 @@ class DaeSolver(pybamm.BaseSolver):
             jacobian = None
 
         # Add the solver attributes
+        # Note: these are the (possibly) converted to python version rhs, algebraic
+        # etc. The expression tree versions of these are attributes of the model
         self.y0 = y0
         self.rhs = rhs
         self.algebraic = algebraic
