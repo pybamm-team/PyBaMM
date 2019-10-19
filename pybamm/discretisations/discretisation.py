@@ -127,7 +127,7 @@ class Discretisation(object):
             model_disc.options = model.options
             model_disc.use_jacobian = model.use_jacobian
             model_disc.use_simplify = model.use_simplify
-            model_disc.use_to_python = model.use_to_python
+            model_disc.convert_to_format = model.convert_to_format
 
         model_disc.bcs = self.bcs
 

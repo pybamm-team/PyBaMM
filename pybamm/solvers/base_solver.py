@@ -73,7 +73,10 @@ class BaseSolver(object):
         # Set up
         timer = pybamm.Timer()
         start_time = timer.time()
-        self.set_up(model)
+        if model.convert_to_format == "casadi":
+            self.set_up_casadi(model)
+        else:
+            self.set_up(model)
         set_up_time = timer.time() - start_time
 
         # Solve
@@ -127,7 +130,10 @@ class BaseSolver(object):
         # Run set up on first step
         if not hasattr(self, "y0"):
             start_time = timer.time()
-            self.set_up(model)
+            if model.convert_to_format == "casadi":
+                self.set_up_casadi(model)
+            else:
+                self.set_up(model)
             self.t = 0.0
             set_up_time = timer.time() - start_time
         else:
@@ -187,11 +193,17 @@ class BaseSolver(object):
             The model whose solution to calculate. Must have attributes rhs and
             initial_conditions
 
-        Raises
-        ------
-        :class:`pybamm.SolverError`
-            If the model contains any algebraic equations (in which case a DAE solver
-            should be used instead)
+        """
+        raise NotImplementedError
+
+    def set_up_casadi(self, model):
+        """Convert model to casadi format and use their inbuilt functionalities.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model whose solution to calculate. Must have attributes rhs and
+            initial_conditions
 
         """
         raise NotImplementedError

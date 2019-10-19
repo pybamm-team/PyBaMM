@@ -99,13 +99,13 @@ class OdeSolver(pybamm.BaseSolver):
                 pybamm.logger.info("Simplifying jacobian")
                 jac_rhs = simp.simplify(jac_rhs)
 
-            if model.use_to_python:
+            if model.convert_to_format == "python":
                 pybamm.logger.info("Converting jacobian to python")
                 jac_rhs = pybamm.EvaluatorPython(jac_rhs)
         else:
             jac_rhs = None
 
-        if model.use_to_python:
+        if model.convert_to_format == "python":
             pybamm.logger.info("Converting RHS to python")
             concatenated_rhs = pybamm.EvaluatorPython(concatenated_rhs)
             pybamm.logger.info("Converting events to python")
@@ -134,6 +134,83 @@ class OdeSolver(pybamm.BaseSolver):
 
             def jacobian(t, y):
                 return jac_rhs.evaluate(t, y, known_evals={})[0]
+
+        else:
+            jacobian = None
+
+        # Add the solver attributes
+        self.y0 = y0
+        self.dydt = dydt
+        self.events = events
+        self.event_funs = event_funs
+        self.jacobian = jacobian
+
+    def set_up_casadi(self, model):
+        """Convert model to casadi format and use their inbuilt functionalities.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model whose solution to calculate. Must have attributes rhs and
+            initial_conditions
+
+        Raises
+        ------
+        :class:`pybamm.SolverError`
+            If the model contains any algebraic equations (in which case a DAE solver
+            should be used instead)
+
+        """
+        # Check for algebraic equations
+        if len(model.algebraic) > 0:
+            raise pybamm.SolverError(
+                """Cannot use ODE solver to solve model with DAEs"""
+            )
+
+        # create simplified rhs and event expressions
+        concatenated_rhs = model.concatenated_rhs
+        events = model.events
+
+        y0 = model.concatenated_initial_conditions[:, 0]
+
+        t_casadi = casadi.SX.sym("t")
+        y_casadi = casadi.SX.sym("y", len(y0))
+        pybamm.logger.info("Converting RHS to CasADi")
+        concatenated_rhs = concatenated_rhs.to_casadi(t_casadi, y_casadi)
+        pybamm.logger.info("Converting events to CasADi")
+        events = {
+            name: event.to_casadi(t_casadi, y_casadi) for name, event in events.items()
+        }
+
+        # Create function to evaluate rhs
+        concatenated_rhs_fn = casadi.Function(
+            "rhs", [t_casadi, y_casadi], [concatenated_rhs]
+        )
+
+        def dydt(t, y):
+            pybamm.logger.debug("Evaluating RHS for {} at t={}".format(model.name, t))
+            dy = concatenated_rhs_fn(t, y).full()
+            return dy[:, 0]
+
+        # Create event-dependent function to evaluate events
+        def event_fun(event):
+            event_fn = casadi.Function("event", [t_casadi, y_casadi], [event])
+
+            def eval_event(t, y):
+                return event_fun(t, y)
+
+            return eval_event
+
+        event_funs = [event_fun(event) for event in events.values()]
+
+        # Create function to evaluate jacobian
+        if model.use_jacobian:
+
+            casadi_jac = casadi.jacobian()
+            casadi_jac_fn = casadi.Function("jac", [t_casadi, y_casadi], [casadi_jac])
+
+            def jacobian(t, y):
+                return casadi_jac_fn(t, y)
 
         else:
             jacobian = None

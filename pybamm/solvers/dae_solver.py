@@ -140,7 +140,7 @@ class DaeSolver(pybamm.BaseSolver):
                 jac_algebraic = simp.simplify(jac_algebraic)
                 jac = simp.simplify(jac)
 
-            if model.use_to_python:
+            if model.convert_to_format == "python":
                 pybamm.logger.info("Converting jacobian to python")
                 jac_algebraic = pybamm.EvaluatorPython(jac_algebraic)
                 jac = pybamm.EvaluatorPython(jac)
@@ -152,7 +152,7 @@ class DaeSolver(pybamm.BaseSolver):
             jac = None
             jac_alg_fn = None
 
-        if model.use_to_python:
+        if model.convert_to_format == "python":
             pybamm.logger.info("Converting RHS to python")
             concatenated_rhs = pybamm.EvaluatorPython(concatenated_rhs)
             pybamm.logger.info("Converting algebraic to python")
