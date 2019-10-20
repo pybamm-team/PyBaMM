@@ -74,3 +74,4 @@ CMakeFiles
 Makefile
 *.cmake
 *.so
+*.json

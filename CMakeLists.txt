@@ -42,7 +42,7 @@ find_library(KLU klu PATHS "SuiteSparse/KLU/Lib" NO_DEFAULT_PATH)
 find_library(AMD amd PATHS "SuiteSparse/AMD/Lib" NO_DEFAULT_PATH)
 find_library(COLAMD colamd PATHS "SuiteSparse/COLAMD/Lib" NO_DEFAULT_PATH)
 find_library(BTF btf PATHS "SuiteSparse/BTF/Lib" NO_DEFAULT_PATH)
-find_library(SUITESPARSE_CONFIG suitesparseconfig PATHS "SuiteSparse/SuiteSparse_config")
+find_library(SUITESPARSE_CONFIG suitesparseconfig PATHS "SuiteSparse/SuiteSparse_config" NO_DEFAULT_PATH)
 TARGET_LINK_LIBRARIES(klu PRIVATE 
     ${KLU} 
     ${AMD} 

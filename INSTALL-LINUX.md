@@ -248,6 +248,8 @@ We now have all the tools to build a shared library to interface to the KLU solv
 ```
 cmake .
 ```
+This will automatically find the latest version of python installed on your machine. If you are using an older version (e.g python3.6) within your virtual environment, then you instead can use `cmake -DPYBIND11_PYTHON_VERSION=3.6 .`.
+
 You can now simply run make to build the library (you can just run this command if you make some changes to klu.cpp)
 ```
 make
