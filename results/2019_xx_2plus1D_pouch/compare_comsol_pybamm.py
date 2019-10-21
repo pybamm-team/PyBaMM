@@ -24,7 +24,8 @@ C_rate = "1"  # choose the key from the above dictionary of available results
 # load the comsol results
 try:
     comsol_variables = pickle.load(
-        open("comsol_{}C.pickle".format(C_rate), "rb")
+        # open("comsol_{}C.pickle".format(C_rate), "rb")
+        open("comsol_normal_mesh_{}C.pickle".format(C_rate), "rb")
     )
 except FileNotFoundError:
     raise FileNotFoundError("COMSOL data not found. Try running load_comsol_data.py")
@@ -40,7 +41,7 @@ options = {
     "thermal": "x-lumped",
 }
 pybamm_model = pybamm.lithium_ion.SPMe(options)
-pybamm_model.use_simplify = False
+# pybamm_model.use_simplify = False
 geometry = pybamm_model.default_geometry
 
 # load parameters and process model and geometry
@@ -55,11 +56,21 @@ var_pts = {
     var.x_n: 5,
     var.x_s: 5,
     var.x_p: 5,
-    var.r_n: 5,
-    var.r_p: 5,
-    var.y: 10,
-    var.z: 10,
+    var.r_n: 10,
+    var.r_p: 10,
+    var.y: 5,
+    var.z: 5,
 }
+submesh_types = pybamm_model.default_submesh_types
+submesh_types["negative particle"] = pybamm.MeshGenerator(
+    pybamm.Exponential1DSubMesh, submesh_params={"side": "right"}
+)
+submesh_types["positive particle"] = pybamm.MeshGenerator(
+    pybamm.Exponential1DSubMesh, submesh_params={"side": "right"}
+)
+submesh_types["current collector"] = pybamm.MeshGenerator(
+    pybamm.ScikitExponential2DSubMesh
+)
 mesh = pybamm.Mesh(geometry, pybamm_model.default_submesh_types, var_pts)
 
 # discretise model
@@ -74,7 +85,8 @@ tau = param.process_symbol(
 # solve model -- simulate one hour discharge
 t_end = 3600 / tau
 t_eval = np.linspace(0, t_end, 120)
-solution = pybamm_model.default_solver.solve(pybamm_model, t_eval)
+solver = pybamm.KLU(atol=1e-8, rtol=1e-8, root_tol=1e-8)
+solution = solver.solve(pybamm_model, t_eval)
 
 
 "-----------------------------------------------------------------------------"
