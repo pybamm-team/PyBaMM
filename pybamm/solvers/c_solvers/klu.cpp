@@ -117,15 +117,12 @@ int jacobian(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
   yval = N_VGetArrayPointer(yy);
   ypval = N_VGetArrayPointer(yp);
 
-  yval = N_VGetArrayPointer(yy);
-
   PybammFunctions *python_functions_ptr =
       static_cast<PybammFunctions *>(user_data);
   PybammFunctions python_functions = *python_functions_ptr;
 
   int n = python_functions.number_of_states;
   py::array_t<double> y_np = py::array_t<double>(n, yval);
-  py::array_t<double> yp_np = py::array_t<double>(n, ypval);
 
   // create pointer to jac data, column pointers, and row values
   sunindextype *jac_colptrs = SUNSparseMatrix_IndexPointers(JJ);
@@ -184,7 +181,6 @@ int events(realtype t, N_Vector yy, N_Vector yp, realtype *events_ptr,
   int number_of_events = python_functions.number_of_events;
   int number_of_states = python_functions.number_of_states;
   py::array_t<double> y_np = py::array_t<double>(number_of_states, yval);
-  py::array_t<double> yp_np = py::array_t<double>(number_of_states, ypval);
 
   py::array_t<double> events_np_array;
 
@@ -258,7 +254,7 @@ Solution solve(np_array t_np, np_array y0_np, np_array yp0_np,
 
   // initialise solver
   realtype t0 = RCONST(t(0));
-  retval = IDAInit(ida_mem, residual, t0, yy, yp);
+  IDAInit(ida_mem, residual, t0, yy, yp);
 
   // set tolerances
   rtol = RCONST(rel_tol);
@@ -270,10 +266,10 @@ Solution solve(np_array t_np, np_array y0_np, np_array yp0_np,
         RCONST(abs_tol); // nb: this can be set differently for each state
   }
 
-  retval = IDASVtolerances(ida_mem, rtol, avtol);
+  IDASVtolerances(ida_mem, rtol, avtol);
 
   // set events
-  retval = IDARootInit(ida_mem, number_of_events, events);
+  IDARootInit(ida_mem, number_of_events, events);
 
   // set pybamm functions by passing pointer to it
   PybammFunctions pybamm_functions(res, jac, gjd, gjrv, gjcp, event,
@@ -282,22 +278,14 @@ Solution solve(np_array t_np, np_array y0_np, np_array yp0_np,
   IDASetUserData(ida_mem, user_data);
 
   // set linear solver
-  J = SUNSparseMatrix(number_of_states, number_of_states, nnz,
-                      CSR_MAT); // jacobian type (must be dense for dense
-                                // solvers, p183 of ida_guide.pdf)
-  LS = SUNLinSol_KLU(yy, J);
-  retval = IDASetLinearSolver(ida_mem, LS, J);
+  J = SUNSparseMatrix(number_of_states, number_of_states, nnz, CSR_MAT);
 
-  // sparse stuff  (must use sparse solvers e.g. KLU or SuperLUMT, p183 of
-  // ida_guide.pdf) J = SUNSparseMatrix(2, 2, 2, CSR_MAT); // template
-  // jacobian
-  // // set the indices values and pts of the jacobian (leaving the values
-  // unset) realtype *csr_index_vals_ptr = SM_INDEXVALS_S(JJ); realtype
-  // *csr_index_ptrs_ptr = SM_INDEXPTRS_S(JJ);
+  LS = SUNLinSol_KLU(yy, J);
+  IDASetLinearSolver(ida_mem, LS, J);
 
   if (use_jacobian == 1)
   {
-    retval = IDASetJacFn(ida_mem, jacobian);
+    IDASetJacFn(ida_mem, jacobian);
   }
 
   int t_i = 1;
@@ -332,8 +320,8 @@ Solution solve(np_array t_np, np_array y0_np, np_array yp0_np,
     id_val[ii] = id_np_val[ii];
   }
 
-  retval = IDASetId(ida_mem, id);
-  retval = IDACalcIC(ida_mem, IDA_YA_YDP_INIT, t(1));
+  IDASetId(ida_mem, id);
+  IDACalcIC(ida_mem, IDA_YA_YDP_INIT, t(1));
 
   while (true)
   {

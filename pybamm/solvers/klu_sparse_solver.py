@@ -74,9 +74,6 @@ class KLU(pybamm.DaeSolver):
         if events is None:
             pybamm.SolverError("KLU requires events to be provided")
 
-        def eqsres(t, y, ydot, return_residuals):
-            return_residuals[:] = residuals(t, y, ydot)
-
         rtol = self._rtol
         atol = self._atol
 
