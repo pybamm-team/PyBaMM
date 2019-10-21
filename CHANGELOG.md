@@ -1,16 +1,18 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM)
 
 ## Features
-- Add `Jacobian` class to reuse known Jacobians of expressions (#665)
-- Add `Interpolant` class to interpolate experimental data (e.g. OCP curves) (#661)
-- Allow parameters to be set by material or by specifying a particular paper (#647)
-- Set relative and absolute tolerances independently in solvers (#645)
-- Add some non-uniform meshes in 1D and 2D (#617)
+
+- Add method to evaluate parameters more easily (#669 )
+- Add `Jacobian` class to reuse known Jacobians of expressions (#665 )
+- Add `Interpolant` class to interpolate experimental data (e.g. OCP curves) (#661 )
+- Allow parameters to be set by material or by specifying a particular paper (#647 )
+- Set relative and absolute tolerances independently in solvers (#645 )
+- Add some non-uniform meshes in 1D and 2D (#617 )
 
 ## Optimizations
 
-- Avoid re-checking size when making a copy of an `Index` object (#656)
-- Avoid recalculating `_evaluation_array` when making a copy of a `StateVector` object (#653)
+- Avoid re-checking size when making a copy of an `Index` object (#656 )
+- Avoid recalculating `_evaluation_array` when making a copy of a `StateVector` object (#653 )
 
 ## Bug fixes
 
