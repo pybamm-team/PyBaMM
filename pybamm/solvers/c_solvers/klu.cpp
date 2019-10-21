@@ -98,7 +98,7 @@ int residual(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
 
   r_np = python_functions.res(tres, y_np, yp_np);
 
-  double *r_np_ptr = (double *)r_np.request().ptr;
+  auto r_np_ptr = r_np.unchecked<1>();
 
   // just copying data
   int i;
