@@ -135,7 +135,7 @@ int jacobian(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
 
   np_array jac_np_data = python_functions.get_jac_data();
   int n_data = jac_np_data.request().size;
-  double *jac_np_data_ptr = (double *)jac_np_data.request().ptr;
+  auto jac_np_data_ptr = jac_np_data.unchecked<1>();
 
   // just copy across data
   int i;
@@ -146,7 +146,7 @@ int jacobian(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
 
   np_array jac_np_row_vals = python_functions.get_jac_row_vals();
   int n_row_vals = jac_np_row_vals.request().size;
-  double *jac_np_row_vals_ptr = (double *)jac_np_row_vals.request().ptr;
+  auto jac_np_row_vals_ptr = jac_np_row_vals.unchecked<1>();
 
   // just copy across row vals (this might be unneeded)
   for (i = 0; i < n_row_vals; i++)
@@ -156,7 +156,7 @@ int jacobian(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
 
   np_array jac_np_col_ptrs = python_functions.get_jac_col_ptrs();
   int n_col_ptrs = jac_np_col_ptrs.request().size;
-  double *jac_np_col_ptrs_ptr = (double *)jac_np_col_ptrs.request().ptr;
+  auto jac_np_col_ptrs_ptr = jac_np_col_ptrs.unchecked<1>();
 
   // just copy across col ptrs (this might be unneeded)
   for (i = 0; i < n_col_ptrs; i++)
@@ -186,7 +186,7 @@ int events(realtype t, N_Vector yy, N_Vector yp, realtype *events_ptr,
 
   events_np_array = python_functions.events(t, y_np);
 
-  double *events_np_data_ptr = (double *)events_np_array.request().ptr;
+  auto events_np_data_ptr = events_np_array.unchecked<1>();
 
   // just copying data (figure out how to pass pointers later)
   int i;
@@ -294,9 +294,6 @@ Solution solve(np_array t_np, np_array y0_np, np_array yp0_np,
   realtype t_final = t(number_of_timesteps - 1);
 
   // set return vectors
-  // double t_return[number_of_timesteps] = {0};
-  // double y_return[number_of_timesteps * number_of_states] = {0};
-
   std::vector<double> t_return(number_of_timesteps);
   std::vector<double> y_return(number_of_timesteps * number_of_states);
 
