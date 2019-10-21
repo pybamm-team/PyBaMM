@@ -198,6 +198,7 @@ class AlgebraicSolver(object):
             pybamm.logger.info("Calculating jacobian")
             jac = jacobian.jac(concatenated_algebraic, y)
             model.jacobian = jac
+            model.jacobian_algebraic = jac
 
             if model.use_simplify:
                 pybamm.logger.info("Simplifying jacobian")

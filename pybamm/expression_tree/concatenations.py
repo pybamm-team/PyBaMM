@@ -99,6 +99,10 @@ class Concatenation(pybamm.Symbol):
         new_symbol = self.__class__(*children)
         return new_symbol
 
+    def _concatenation_jac(self, children_jacs):
+        """ Calculate the jacobian of a concatenation """
+        return NotImplementedError
+
     def _concatenation_simplify(self, children):
         """ See :meth:`pybamm.Symbol.simplify()`. """
         new_symbol = self.__class__(*children)
@@ -148,13 +152,13 @@ class NumpyConcatenation(Concatenation):
             concat_fun=np.concatenate
         )
 
-    def _jac(self, variable):
-        """ See :meth:`pybamm.Symbol._jac()`. """
+    def _concatenation_jac(self, children_jacs):
+        """ See :meth:`pybamm.Concatenation.concatenation_jac()`. """
         children = self.cached_children
         if len(children) == 0:
             return pybamm.Scalar(0)
         else:
-            return SparseStack(*[child.jac(variable) for child in children])
+            return SparseStack(*children_jacs)
 
     def _concatenation_simplify(self, children):
         """ See :meth:`pybamm.Symbol.simplify()`. """
@@ -274,14 +278,13 @@ class DomainConcatenation(Concatenation):
 
         return vector
 
-    def _jac(self, variable):
-        """ See :meth:`pybamm.Symbol._jac()`. """
+    def _concatenation_jac(self, children_jacs):
+        """ See :meth:`pybamm.Concatenation.concatenation_jac()`. """
         # note that this assumes that the children are in the right order and only have
         # one domain each
         jacs = []
-        child_jacs = [child.jac(variable) for child in self.cached_children]
         for i in range(self.secondary_dimensions_npts):
-            for child_jac, slices in zip(child_jacs, self._children_slices):
+            for child_jac, slices in zip(children_jacs, self._children_slices):
                 if len(slices) > 1:
                     raise NotImplementedError(
                         """jacobian only implemented for when each child has

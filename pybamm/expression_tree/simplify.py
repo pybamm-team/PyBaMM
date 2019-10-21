@@ -593,17 +593,20 @@ class Simplification(object):
 
         elif isinstance(symbol, pybamm.UnaryOperator):
             new_child = self.simplify(symbol.child)
+            # _unary_simplify defined in derived classes for specific rules
             new_symbol = symbol._unary_simplify(new_child)
 
         elif isinstance(symbol, pybamm.Function):
             simplified_children = [None] * len(symbol.children)
             for i, child in enumerate(symbol.children):
                 simplified_children[i] = self.simplify(child)
+            # _function_simplify defined in function class
             new_symbol = symbol._function_simplify(simplified_children)
 
         elif isinstance(symbol, pybamm.Concatenation):
             new_children = [self.simplify(child) for child in symbol.children]
             new_symbol = symbol._concatenation_simplify(new_children)
+
         else:
             # Backup option: return new copy of the object
             try:

@@ -1,6 +1,7 @@
 #
 # Calculate the Jacobian of a symbol
 #
+import pybamm
 
 
 class Jacobian(object):
@@ -39,7 +40,41 @@ class Jacobian(object):
 
     def _jac(self, symbol, variable):
         """ See :meth:`Jacobian.jac()`. """
-        jac = symbol._jac(variable)
+
+        if isinstance(symbol, pybamm.BinaryOperator):
+            left, right = symbol.children
+            # process children
+            left_jac = self.jac(left, variable)
+            right_jac = self.jac(right, variable)
+            # _binary_jac defined in derived classes for specific rules
+            jac = symbol._binary_jac(left_jac, right_jac)
+
+        elif isinstance(symbol, pybamm.UnaryOperator):
+            child_jac = self.jac(symbol.child, variable)
+            # _unary_jac defined in derived classes for specific rules
+            jac = symbol._unary_jac(child_jac)
+
+        elif isinstance(symbol, pybamm.Function):
+            children_jacs = [None] * len(symbol.children)
+            for i, child in enumerate(symbol.children):
+                children_jacs[i] = self.jac(child, variable)
+            # _function_jac defined in function class
+            jac = symbol._function_jac(children_jacs)
+
+        elif isinstance(symbol, pybamm.Concatenation):
+            children_jacs = [child.jac(variable) for child in symbol.cached_children]
+            jac = symbol._concatenation_jac(children_jacs)
+
+        else:
+            try:
+                jac = symbol._jac(variable)
+            except NotImplementedError:
+                raise NotImplementedError(
+                    "Cannot calculate Jacobian of symbl of type '{}'".format(
+                        type(symbol)
+                    )
+                )
+
         # jacobian removes the domain(s)
         jac.domain = []
         jac.auxiliary_domains = {}

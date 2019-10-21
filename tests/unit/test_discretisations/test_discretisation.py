@@ -497,7 +497,8 @@ class TestDiscretise(unittest.TestCase):
         np.testing.assert_array_equal(np.eye(np.size(y0)), jacobian.toarray())
 
         # test jacobian by eqn gives same as jacobian of concatenated rhs
-        model_jacobian = disc.create_jacobian(model).evaluate(0, y0)
+        model.jacobian, _, _ = disc.create_jacobian(model)
+        model_jacobian = model.jacobian.evaluate(0, y0)
         np.testing.assert_array_equal(model_jacobian.toarray(), jacobian.toarray())
 
         # test that not enough initial conditions raises an error
@@ -595,7 +596,8 @@ class TestDiscretise(unittest.TestCase):
         np.testing.assert_array_equal(jacobian_actual, jacobian.toarray())
 
         # test jacobian by eqn gives same as jacobian of concatenated rhs & algebraic
-        model_jacobian = disc.create_jacobian(model).evaluate(0, y0)
+        model.jacobian, _, _ = disc.create_jacobian(model)
+        model_jacobian = model.jacobian.evaluate(0, y0)
         np.testing.assert_array_equal(model_jacobian.toarray(), jacobian.toarray())
 
         # test known_evals
