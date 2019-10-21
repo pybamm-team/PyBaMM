@@ -244,6 +244,17 @@ class TestJacobian(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             b.jac(None)
 
+    def test_jac_of_unary_operator(self):
+        a = pybamm.Scalar(1)
+        b = pybamm.UnaryOperator("Operator", a)
+        with self.assertRaises(NotImplementedError):
+            b.jac(None)
+
+    def test_jac_of_independent_variable(self):
+        a = pybamm.IndependentVariable("Variable")
+        y = pybamm.StateVector(slice(0, 1))
+        self.assertEqual(a.jac(y).evaluate(), 0)
+
     def test_jac_of_inner(self):
         a = pybamm.Scalar(1)
         b = pybamm.Scalar(2)
