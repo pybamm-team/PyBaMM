@@ -648,11 +648,20 @@ class Outer(BinaryOperator):
         """ See :meth:`pybamm.Symbol.diff()`. """
         raise NotImplementedError("diff not implemented for symbol of type 'Outer'")
 
-    def _binary_jac(self, left_jac, right_jac):
-        """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
+    def _outer_jac(self, left_jac, right_jac, variable):
+        """
+        Calculate jacobian of outer product.
+        See :meth:`pybamm.Jacobian._jac()`.
+        """
         # right cannot be a StateVector, so no need for product rule
         left, right = self.orphans
-        return pybamm.Kron(left_jac, right)
+        if left.evaluates_to_number():
+            # Return zeros of correct size
+            return pybamm.Matrix(
+                csr_matrix((self.size, variable.evaluation_array.count(True)))
+            )
+        else:
+            return pybamm.Kron(left_jac, right)
 
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """

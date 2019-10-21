@@ -41,7 +41,18 @@ class Jacobian(object):
     def _jac(self, symbol, variable):
         """ See :meth:`Jacobian.jac()`. """
 
-        if isinstance(symbol, pybamm.BinaryOperator):
+        if isinstance(symbol, pybamm.Outer):
+            # Need to treat outer differently. If the left child of an Outer
+            # evaluates to number then we need to return a matrix of zeros
+            # of the correct size, which requires variable.evaluation_array
+            left, right = symbol.children
+            # process children
+            left_jac = self.jac(left, variable)
+            right_jac = self.jac(right, variable)
+            # _outer_jac defined in pybamm.Outer
+            jac = symbol._outer_jac(left_jac, right_jac, variable)
+
+        elif isinstance(symbol, pybamm.BinaryOperator):
             left, right = symbol.children
             # process children
             left_jac = self.jac(left, variable)
@@ -70,7 +81,7 @@ class Jacobian(object):
                 jac = symbol._jac(variable)
             except NotImplementedError:
                 raise NotImplementedError(
-                    "Cannot calculate Jacobian of symbl of type '{}'".format(
+                    "Cannot calculate Jacobian of symbol of type '{}'".format(
                         type(symbol)
                     )
                 )
