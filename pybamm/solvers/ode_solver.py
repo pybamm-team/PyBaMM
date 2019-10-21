@@ -1,6 +1,7 @@
 #
 # Base solver class
 #
+import casadi
 import pybamm
 import numpy as np
 
@@ -178,7 +179,7 @@ class OdeSolver(pybamm.BaseSolver):
         pybamm.logger.info("Converting RHS to CasADi")
         concatenated_rhs = concatenated_rhs.to_casadi(t_casadi, y_casadi)
         pybamm.logger.info("Converting events to CasADi")
-        events = {
+        casadi_events = {
             name: event.to_casadi(t_casadi, y_casadi) for name, event in events.items()
         }
 
@@ -194,20 +195,22 @@ class OdeSolver(pybamm.BaseSolver):
 
         # Create event-dependent function to evaluate events
         def event_fun(event):
-            event_fn = casadi.Function("event", [t_casadi, y_casadi], [event])
+            casadi_event_fn = casadi.Function("event", [t_casadi, y_casadi], [event])
 
             def eval_event(t, y):
-                return event_fun(t, y)
+                return casadi_event_fn(t, y)
 
             return eval_event
 
-        event_funs = [event_fun(event) for event in events.values()]
+        event_funs = [event_fun(event) for event in casadi_events.values()]
 
         # Create function to evaluate jacobian
         if model.use_jacobian:
 
-            casadi_jac = casadi.jacobian()
-            casadi_jac_fn = casadi.Function("jac", [t_casadi, y_casadi], [casadi_jac])
+            casadi_jac = casadi.jacobian(concatenated_rhs, y_casadi)
+            casadi_jac_fn = casadi.Function(
+                "jacobian", [t_casadi, y_casadi], [casadi_jac]
+            )
 
             def jacobian(t, y):
                 return casadi_jac_fn(t, y)

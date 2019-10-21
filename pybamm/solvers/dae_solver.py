@@ -102,12 +102,6 @@ class DaeSolver(pybamm.BaseSolver):
         model : :class:`pybamm.BaseModel`
             The model whose solution to calculate. Must have attributes rhs and
             initial_conditions
-
-        Raises
-        ------
-        :class:`pybamm.SolverError`
-            If the model contains any algebraic equations (in which case a DAE solver
-            should be used instead)
         """
         # create simplified rhs, algebraic and event expressions
         concatenated_rhs = model.concatenated_rhs
@@ -151,6 +145,127 @@ class DaeSolver(pybamm.BaseSolver):
         else:
             jac = None
             jac_alg_fn = None
+
+        if model.convert_to_format == "python":
+            pybamm.logger.info("Converting RHS to python")
+            concatenated_rhs = pybamm.EvaluatorPython(concatenated_rhs)
+            pybamm.logger.info("Converting algebraic to python")
+            concatenated_algebraic = pybamm.EvaluatorPython(concatenated_algebraic)
+            pybamm.logger.info("Converting events to python")
+            events = {
+                name: pybamm.EvaluatorPython(event) for name, event in events.items()
+            }
+
+        # Calculate consistent initial conditions for the algebraic equations
+        def rhs(t, y):
+            return concatenated_rhs.evaluate(t, y, known_evals={})[0][:, 0]
+
+        def algebraic(t, y):
+            return concatenated_algebraic.evaluate(t, y, known_evals={})[0][:, 0]
+
+        if len(model.algebraic) > 0:
+            y0 = self.calculate_consistent_initial_conditions(
+                rhs, algebraic, model.concatenated_initial_conditions[:, 0], jac_alg_fn
+            )
+        else:
+            # can use DAE solver to solve ODE model
+            y0 = model.concatenated_initial_conditions[:, 0]
+
+        # Create functions to evaluate residuals
+        def residuals(t, y, ydot):
+            pybamm.logger.debug(
+                "Evaluating residuals for {} at t={}".format(model.name, t)
+            )
+            y = y[:, np.newaxis]
+            rhs_eval, known_evals = concatenated_rhs.evaluate(t, y, known_evals={})
+            # reuse known_evals
+            alg_eval = concatenated_algebraic.evaluate(t, y, known_evals=known_evals)[0]
+            # turn into 1D arrays
+            rhs_eval = rhs_eval[:, 0]
+            alg_eval = alg_eval[:, 0]
+            return (
+                np.concatenate((rhs_eval, alg_eval)) - model.mass_matrix.entries @ ydot
+            )
+
+        # Create event-dependent function to evaluate events
+        def event_fun(event):
+            def eval_event(t, y):
+                return event.evaluate(t, y)
+
+            return eval_event
+
+        event_funs = [event_fun(event) for event in events.values()]
+
+        # Create function to evaluate jacobian
+        if jac is not None:
+
+            def jacobian(t, y):
+                return jac.evaluate(t, y, known_evals={})[0]
+
+        else:
+            jacobian = None
+
+        # Add the solver attributes
+        self.y0 = y0
+        self.rhs = rhs
+        self.algebraic = algebraic
+        self.residuals = residuals
+        self.events = events
+        self.event_funs = event_funs
+        self.jacobian = jacobian
+
+    def set_up_casadi(self, model):
+        """Convert model to casadi format and use their inbuilt functionalities.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model whose solution to calculate. Must have attributes rhs and
+            initial_conditions
+        """
+        # create simplified rhs, algebraic and event expressions
+        concatenated_rhs = model.concatenated_rhs
+        concatenated_algebraic = model.concatenated_algebraic
+        events = model.events
+
+        t_casadi = casadi.SX.sym("t")
+        y_casadi = casadi.SX.sym("y", len(y0))
+        pybamm.logger.info("Converting RHS to CasADi")
+        concatenated_rhs = concatenated_rhs.to_casadi(t_casadi, y_casadi)
+        concatenated_algebraic = concatenated_algebraic.to_casadi(t_casadi, y_casadi)
+        if model.use_simplify:
+            simp = pybamm.Simplification()
+            pybamm.logger.info("Simplifying events")
+            events = {name: simp.simplify(event) for name, event in events.items()}
+        # pybamm.logger.info("Converting events to python")
+        # events = {name: pybamm.EvaluatorPython(event) for name, event in events.items()}
+
+        # Create functions to evaluate rhs and algebraic
+        concatenated_rhs_fn = casadi.Function(
+            "rhs", [t_casadi, y_casadi], [concatenated_rhs]
+        )
+        concatenated_algebraic_fn = casadi.Function(
+            "algebraic", [t_casadi, y_casadi], [concatenated_algebraic]
+        )
+
+        def dydt(t, y):
+            pybamm.logger.debug("Evaluating RHS for {} at t={}".format(model.name, t))
+            dy = concatenated_rhs_fn(t, y).full()
+            return dy[:, 0]
+
+        if model.use_jacobian:
+
+            casadi_jac = casadi.jacobian(concatenated_rhs, y_casadi)
+            casadi_jac_fn = casadi.Function(
+                "jacobian", [t_casadi, y_casadi], [casadi_jac]
+            )
+
+            def jacobian(t, y):
+                return casadi_jac_fn(t, y)
+
+        else:
+            jacobian = None
+            jacobian_alg = None
 
         if model.convert_to_format == "python":
             pybamm.logger.info("Converting RHS to python")
