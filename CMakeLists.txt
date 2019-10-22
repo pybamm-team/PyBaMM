@@ -37,21 +37,27 @@ TARGET_LINK_LIBRARIES(klu PRIVATE ${RT})
 #     )
 
 # set(SUITESPARSE_INCLUDE_DIR "/usr/include/suitesparse")
-INCLUDE_DIRECTORIES(${SUITESPARSE_INCLUDE_DIR})
+# find_path(SUITESPARSE_INCLUDE_DIR suitesparse)
+# INCLUDE_DIRECTORIES(${SUITESPARSE_INCLUDE_DIR})
 
-## Link Libraries
-find_library(KLU klu)
-find_library(AMD amd)
-find_library(COLAMD colamd)
-find_library(BTF btf)
-find_library(SUITESPARSE_CONFIG suitesparseconfig)
-TARGET_LINK_LIBRARIES(klu PRIVATE 
-    ${KLU} 
-    ${AMD} 
-    ${COLAMD} 
-    ${BTF} 
-    ${SUITESPARSE_CONFIG}
-    )
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
+find_package(SuiteSparse)
+include_directories(${SuiteSparse_INCLUDE_DIRS})
+target_link_libraries(klu PRIVATE ${SuiteSparse_LIBRARIES})
+
+# ## Link Libraries
+# find_library(KLU klu)
+# find_library(AMD amd)
+# find_library(COLAMD colamd)
+# find_library(BTF btf)
+# find_library(SUITESPARSE_CONFIG suitesparseconfig)
+# TARGET_LINK_LIBRARIES(klu PRIVATE 
+#     ${KLU} 
+#     ${AMD} 
+#     ${COLAMD} 
+#     ${BTF} 
+#     ${SUITESPARSE_CONFIG}
+#     )
 
 # ---------------
 
