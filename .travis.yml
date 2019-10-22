@@ -14,6 +14,7 @@ addons:
     - libopenblas-dev
     - liblapack-dev
     - graphviz
+    - libsuitesparse-dev
 
 matrix:
     include:
@@ -30,6 +31,7 @@ matrix:
                 - liblapack-dev
                 - graphviz
                 - python3.6-dev
+                - libsuitesparse-dev
           env:
             - PYBAMM_UNIT=true
             - PYBAMM_EXAMPLES=true
@@ -47,6 +49,7 @@ matrix:
                 - liblapack-dev
                 - graphviz
                 - python3.7-dev
+                - libsuitesparse-dev
           env:
             - PYBAMM_UNIT=true
             - PYBAMM_EXAMPLES=true
