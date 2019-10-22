@@ -43,7 +43,7 @@ t, y = solution.t, solution.y
 time = pybamm.ProcessedVariable(cell_model.variables["Time [h]"], t, y)(t)
 voltage = pybamm.ProcessedVariable(cell_model.variables["Terminal voltage [V]"], t, y)
 current = pybamm.ProcessedVariable(cell_model.variables["Current [A]"], t, y)(t)
-delta = param.process_symbol(pybamm.standard_parameters_lithium_ion.delta).evaluate()
+delta = param.evaluate(pybamm.standard_parameters_lithium_ion.delta)
 R_cc = param.process_symbol(
     cc_model.variables["Effective current collector resistance [Ohm]"]
 ).evaluate(t=cc_solution.t, y=cc_solution.y)[0][0]

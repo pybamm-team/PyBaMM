@@ -80,9 +80,9 @@ class TestJacobian(unittest.TestCase):
 
         # test jac of outer if left evaluates to number
         func = pybamm.Outer(pybamm.Scalar(1), pybamm.Scalar(4))
-        jacobian = np.zeros((1, 4))
+        # jacobian = np.zeros((1, 4))
         dfunc_dy = func.jac(y).evaluate(y=y0)
-        np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
+        np.testing.assert_array_equal(0, dfunc_dy.toarray())
 
     def test_nonlinear(self):
         y = pybamm.StateVector(slice(0, 4))
@@ -243,6 +243,17 @@ class TestJacobian(unittest.TestCase):
         b = pybamm.SpatialOperator("Operator", a)
         with self.assertRaises(NotImplementedError):
             b.jac(None)
+
+    def test_jac_of_unary_operator(self):
+        a = pybamm.Scalar(1)
+        b = pybamm.UnaryOperator("Operator", a)
+        with self.assertRaises(NotImplementedError):
+            b.jac(None)
+
+    def test_jac_of_independent_variable(self):
+        a = pybamm.IndependentVariable("Variable")
+        y = pybamm.StateVector(slice(0, 1))
+        self.assertEqual(a.jac(y).evaluate(), 0)
 
     def test_jac_of_inner(self):
         a = pybamm.Scalar(1)

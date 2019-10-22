@@ -65,9 +65,7 @@ for name in ["Average SPMe", "2+1D SPMe"]:
     # add current collector Ohmic losses to average SPMEe to get SPMeCC voltage
     if model.name == "Average SPMe":
         current = pybamm.ProcessedVariable(model.variables["Current [A]"], t, y)(t)
-        delta = param.process_symbol(
-            pybamm.standard_parameters_lithium_ion.delta
-        ).evaluate()
+        delta = param.evaluate(pybamm.standard_parameters_lithium_ion.delta)
         R_cc = param.process_symbol(
             cc_model.variables["Effective current collector resistance [Ohm]"]
         ).evaluate(

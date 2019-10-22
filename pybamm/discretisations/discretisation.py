@@ -506,6 +506,13 @@ class Discretisation(object):
         Note that the model is assumed to be of the form M*y_dot = f(t,y), where
         M is the (possibly singular) mass matrix. The Jacobian is df/dy.
 
+        Note: At present, calculation of the Jacobian is deferred until after
+        simplification, since it is much faster to compute the Jacobian of the
+        simplified model. However, in some use cases (e.g. running the same
+        model multiple times but with different parameters) it may be more
+        efficient to compute the Jacobian once, before simplification, so that
+        parameters in the Jacobian can be updated (see PR #670).
+
         Parameters
         ----------
         model : :class:`pybamm.BaseModel`
@@ -548,7 +555,7 @@ class Discretisation(object):
         else:
             jac = jac_algebraic
 
-        return jac
+        return jac, jac_rhs, jac_algebraic
 
     def process_dict(self, var_eqn_dict):
         """Discretise a dictionary of {variable: equation}, broadcasting if necessary
@@ -755,12 +762,12 @@ class Discretisation(object):
         var_eqn_dict : dict
             Equations ({variable: equation} dict) to dicretise
         check_complete : bool, optional
-            Whether to check keys in var_eqn_dict against self.y_slices. Defualt
+            Whether to check keys in var_eqn_dict against self.y_slices. Default
             is False
         sparse : bool, optional
             If True the concatenation will be a :class:`pybamm.SparseStack`. If
             False the concatenation will be a :class:`pybamm.NumpyConcatenation`.
-            Defualt is False
+            Default is False
 
         Returns
         -------

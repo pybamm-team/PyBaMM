@@ -100,22 +100,20 @@ class Function(pybamm.Symbol):
                 self.function.derivative(), *children, derivative="derivative"
             )
 
-    def _jac(self, variable):
-        """ See :meth:`pybamm.Symbol._jac()`. """
+    def _function_jac(self, children_jacs):
+        """ Calculate the jacobian of a function. """
 
         if all(child.evaluates_to_number() for child in self.children):
             jacobian = pybamm.Scalar(0)
         else:
-
             # if at least one child contains variable dependence, then
             # calculate the required partial jacobians and add them
             jacobian = None
             children = self.orphans
-            for child in children:
+            for i, child in enumerate(children):
                 if not child.evaluates_to_number():
-                    jac_fun = self._diff(children) * child.jac(variable)
-
-                    jac_fun.domain = self.domain
+                    jac_fun = self._diff(children) * children_jacs[i]
+                    jac_fun.domain = []
                     if jacobian is None:
                         jacobian = jac_fun
                     else:

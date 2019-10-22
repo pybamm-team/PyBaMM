@@ -19,7 +19,7 @@ class DaeSolver(pybamm.BaseSolver):
     root_method : str, optional
         The method to use to find initial conditions (default is "lm")
     root_tol : float, optional
-        The tolerance for the initial-condition solver (default is 1e-8).
+        The tolerance for the initial-condition solver (default is 1e-6).
     max_steps: int, optional
         The maximum number of steps the solver will take before terminating
         (default is 1000).
@@ -136,6 +136,8 @@ class DaeSolver(pybamm.BaseSolver):
             jac_algebraic = jacobian.jac(concatenated_algebraic, y)
             jac = pybamm.SparseStack(jac_rhs, jac_algebraic)
             model.jacobian = jac
+            model.jacobian_rhs = jac_rhs
+            model.jacobian_algebraic = jac_algebraic
 
             if model.use_simplify:
                 pybamm.logger.info("Simplifying jacobian")

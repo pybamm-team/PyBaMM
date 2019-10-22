@@ -47,6 +47,10 @@ class UnaryOperator(pybamm.Symbol):
 
         return self.__class__(child)
 
+    def _unary_jac(self, child_jac):
+        """ Calculate the jacobian of a unary operator. """
+        raise NotImplementedError
+
     def _unary_simplify(self, simplified_child):
         """
         Simplify a unary operator. Default behaviour is to make a new copy, with
@@ -100,9 +104,9 @@ class Negate(UnaryOperator):
         """ See :meth:`pybamm.Symbol._diff()`. """
         return -self.child.diff(variable)
 
-    def _jac(self, variable):
-        """ See :meth:`pybamm.Symbol._jac()`. """
-        return -self.child.jac(variable)
+    def _unary_jac(self, child_jac):
+        """ See :meth:`pybamm.UnaryOperator._unary_jac()`. """
+        return -child_jac
 
     def _unary_evaluate(self, child):
         """ See :meth:`UnaryOperator._unary_evaluate()`. """
@@ -126,8 +130,8 @@ class AbsoluteValue(UnaryOperator):
             "Derivative of absolute function is not defined"
         )
 
-    def _jac(self, variable):
-        """ See :meth:`pybamm.Symbol._jac()`. """
+    def _unary_jac(self, child_jac):
+        """ See :meth:`pybamm.UnaryOperator._unary_jac()`. """
         # Derivative is not well-defined
         raise pybamm.UndefinedOperationError(
             "Derivative of absolute function is not defined"
@@ -189,18 +193,17 @@ class Index(UnaryOperator):
         if isinstance(index, int):
             self.domain = []
 
-    def _jac(self, variable):
-        """ See :meth:`pybamm.Symbol._jac()`. """
+    def _unary_jac(self, child_jac):
+        """ See :meth:`pybamm.UnaryOperator._unary_jac()`. """
 
         # if child.jac returns a matrix of zeros, this subsequently gives a bug
         # when trying to simplify the node Index(child_jac). Instead, search the
         # tree for StateVectors and return a matrix of zeros of the correct size
         # if none are found.
         if all([not (isinstance(n, pybamm.StateVector)) for n in self.pre_order()]):
-            jac = csr_matrix((1, variable.evaluation_array.count(True)))
+            jac = csr_matrix((1, child_jac.shape[1]))
             return pybamm.Matrix(jac)
         else:
-            child_jac = self.child.jac(variable)
             return Index(child_jac, self.index)
 
     def set_id(self):

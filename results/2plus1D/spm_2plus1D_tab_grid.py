@@ -36,9 +36,7 @@ var_pts = {
     var.z: 5,
 }
 submesh_types = model.default_submesh_types
-submesh_types[
-    "current collector"
-] = pybamm.ScikitExponential2DSubMesh
+submesh_types["current collector"] = pybamm.ScikitExponential2DSubMesh
 # depnding on number of points in y-z plane may need to increase recursion depth...
 sys.setrecursionlimit(10000)
 mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
