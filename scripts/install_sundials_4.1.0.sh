@@ -1,18 +1,6 @@
 #!/bin/bash
 CURRENT_DIR=`pwd`
 
-# build SparseSuite to use KLU sparse linear solver
-SUITESPARSE_URL=http://faculty.cse.tamu.edu/davis/SuiteSparse/SuiteSparse-5.4.0.tar.gz
-SUITESPARSE_NAME=SuiteSparse-5.4.0.tar.gz
-wget $SUITESPARSE_URL -O $SUITESPARSE_NAME
-tar -xvf $SUITESPARSE_NAME
-SUITESPARSE_DIR=$CURRENT_DIR/SuiteSparse
-cd $SUITESPARSE_DIR
-make clean
-make
-cd $CURRENT_DIR
-rm $SUITESPARSE_NAME
-
 # install sundials-4.1.0
 SUNDIALS_URL=https://computing.llnl.gov/projects/sundials/download/sundials-4.1.0.tar.gz
 SUNDIALS_NAME=sundials-4.1.0.tar.gz
@@ -44,7 +32,7 @@ cmake -DBLAS_ENABLE=ON\
       -DEXAMPLES_ENABLE:BOOL=OFF\
       -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR ../sundials-4.1.0/\
       -DKLU_ENABLE=ON\
-      -DSUITESPARSE_DIR=$SUITESPARSE_DIR\
+      -DSUITESPARSE_INCLUDE_DIR="/usr/include/suitesparse"\
       ../sundials-4.1.0
 
 

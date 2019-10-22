@@ -158,33 +158,13 @@ To install KLU, from within the main PyBaMM directory type
 Note that this script has only been tested on Ubuntu 18.04.3 LTS. If this script does not work for you, you can try following the step-by-step instructions below:
 
 #### Download and Build SuiteSparse (KLU)
-The sparse linear solver, KLU, is contained within SuiteSparse. For more information on the installation process please refer to the README.txt contained in the SuiteSparse download.
-
-In PyBaMM home directory, i.e.
-```
-cd PyBaMM
-```
-download SuiteSparse using:
+The sparse linear solver, KLU, is contained within SuiteSparse. Suitesparse is available on the apt store on Debian based systems (e.g. Ubuntu). Therefore, it can be installed by simply typing
 ```bash
-wget http://faculty.cse.tamu.edu/davis/SuiteSparse/SuiteSparse-5.4.0.tar.gz -O SuiteSparse-5.4.0.tar.gz
+    sudo apt install suitesparse-dev
 ```
-Unpack the compressed SuiteSparse files using:
+We will need to know the location of the include directories for suitesparse. In ubuntu, this can be set with the following
 ```bash
-tar -xvf SuiteSparse-5.4.0.tar.gz
-```
-and remove the .tar.gz file to keep your directory clean using:
-```bash
-rm SuiteSparse-5.4.0.tar.gz
-```
-Now build SuiteSparse using:
-```bash
-cd SuiteSparse
-make
-cd ..
-```
-and set the path of the SuiteSparse directory for reference later:
-```bash
-SUITESPARSE_DIR=`pwd`/SuiteSparse
+    SUITESPARSE_INCLUDE_DIR="/usr/include/suitesparse"
 ```
 
 #### Download and build Sundials 4.1.0
@@ -219,7 +199,7 @@ cmake -DBLAS_ENABLE=ON\
       -DEXAMPLES_ENABLE:BOOL=OFF\
       -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR ../sundials-4.1.0/\
       -DKLU_ENABLE=ON\
-      -DSUITESPARSE_DIR=$SUITESPARSE_DIR\
+      -DSUITESPARSE_INCLUDE_DIR=$SUITESPARSE_INCLUDE_DIR\
       ../sundials-4.1.0
 make install
 ```
@@ -246,9 +226,9 @@ pip install pybind11
 #### Build the KLU wrapper
 We now have all the tools to build a shared library to interface to the KLU solver. Within your PyBaMM home directory build the required Makefile using
 ```
-cmake .
+cmake -DSUITESPARSE_INCLUDE_DIR=$SUITESPARSE_INCLUDE_DIR.
 ```
-This will automatically find the latest version of python installed on your machine. If you are using an older version (e.g python3.6) within your virtual environment, then you instead can use `cmake -DPYBIND11_PYTHON_VERSION=3.6 .`.
+This will automatically find the headers for the latest version of python installed on your machine. If you are using an older version (e.g python3.6) within your virtual environment, then you instead can use `cmake -DPYBIND11_PYTHON_VERSION=3.6 .`.
 
 You can now simply run make to build the library (you can just run this command if you make some changes to klu.cpp)
 ```
