@@ -14,7 +14,6 @@ addons:
     - libopenblas-dev
     - liblapack-dev
     - graphviz
-    - cmake
 
 matrix:
     include:
@@ -198,7 +197,6 @@ install:
 
 before_script:
 - python --version
-- cmake --version
 
 # Note that default timeout is 10 minutes
 # This can be changed with travis_wait, but that leads to
