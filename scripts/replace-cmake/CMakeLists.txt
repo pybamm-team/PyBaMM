@@ -1011,6 +1011,7 @@ IF(KLU_ENABLE)
 
   set(KLU_FOUND TRUE)
   set(PYBAMM_DIR ${PROJECT_SOURCE_DIR}/..)
+  message("PYBAMM DIR")
   message(${PYBAMM_DIR})
   set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PYBAMM_DIR}) # use FindSuiteSparse.cmake that is in PyBaMM root
   find_package(SuiteSparse)

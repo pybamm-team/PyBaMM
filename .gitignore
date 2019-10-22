@@ -74,6 +74,7 @@ SuiteSparse/.gitignore
 # cmakefiles
 CMakeFiles
 Makefile
-*.cmake
+cmake_install.cmake
 *.so
 *.json
+
