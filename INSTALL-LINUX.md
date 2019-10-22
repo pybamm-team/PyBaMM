@@ -145,23 +145,19 @@ If you wish so simulate large systems such as the 2+1D models, we recommend empl
 sparse solver. PyBaMM currently offers a direct interface to the sparse KLU solver within Sundials.
 If you are on a linux based distribution, a bash script has been provided which should
 install everything for you correctly. Please note you will require the python header files, openblas,
-a c compiler (e.g. gcc), and cmake, all of which you should be able to install on ubuntu using
+a c compiler (e.g. gcc), cmake, and suitesparse all of which you should be able to install on ubuntu using
 ```bash
-apt install python3-dev libopenblas-dev cmake gcc
+apt install python3-dev libopenblas-dev cmake gcc libsuitesparse-dev
 ```
 You will likely need to prepend `sudo` to the above command.
 
-To install KLU, from within the main PyBaMM directory type
+To install sundials with KLU, from within the main PyBaMM directory type
 ```bash
 ./scripts/install_sundials_4.1.0.sh
 ```
 Note that this script has only been tested on Ubuntu 18.04.3 LTS. If this script does not work for you, you can try following the step-by-step instructions below:
 
-#### Download and Build SuiteSparse (KLU)
-The sparse linear solver, KLU, is contained within SuiteSparse. Suitesparse is available on the apt store on Debian based systems (e.g. Ubuntu). Therefore, it can be installed by simply typing
-```bash
-    sudo apt install suitesparse-dev
-```
+#### Set SuiteSparse include directory
 We will need to know the location of the include directories for suitesparse. In ubuntu, this can be set with the following
 ```bash
     SUITESPARSE_INCLUDE_DIR="/usr/include/suitesparse"

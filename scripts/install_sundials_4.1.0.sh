@@ -1,6 +1,9 @@
 #!/bin/bash
 CURRENT_DIR=`pwd`
 
+# this is ubuntu specfic change if you have issues
+SUITESPARSE_INCLUDE_DIR="/usr/include/suitesparse"
+
 # install sundials-4.1.0
 SUNDIALS_URL=https://computing.llnl.gov/projects/sundials/download/sundials-4.1.0.tar.gz
 SUNDIALS_NAME=sundials-4.1.0.tar.gz
@@ -32,7 +35,7 @@ cmake -DBLAS_ENABLE=ON\
       -DEXAMPLES_ENABLE:BOOL=OFF\
       -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR ../sundials-4.1.0/\
       -DKLU_ENABLE=ON\
-      -DSUITESPARSE_INCLUDE_DIR="/usr/include/suitesparse"\
+      -DSUITESPARSE_INCLUDE_DIR=${SUITESPARSE_INCLUDE_DIR}\
       ../sundials-4.1.0
 
 
@@ -42,7 +45,6 @@ cd $CURRENT_DIR
 rm -rf $TMP_DIR
 export LD_LIBRARY_PATH=$INSTALL_DIR/lib:$LD_LIBRARY_PATH
 export SUNDIALS_INST=$INSTALL_DIR
-export SUITESPARSE=$SUITESPARSE_DIR
 
 # get pybind11
 cd $CURRENT_DIR
@@ -53,7 +55,7 @@ git clone https://github.com/pybind/pybind11.git
 
 cd $CURRENT_DIR
 pip install pybind11 # also do a pip install for good measure
-cmake .
+cmake -DSUITESPARSE_INCLUDE_DIR=${SUITESPARSE_INCLUDE_DIR} .
 make clean
 make
 
