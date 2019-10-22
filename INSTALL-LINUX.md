@@ -157,12 +157,6 @@ To install sundials with KLU, from within the main PyBaMM directory type
 ```
 Note that this script has only been tested on Ubuntu 18.04.3 LTS. If this script does not work for you, you can try following the step-by-step instructions below:
 
-#### Set SuiteSparse include directory
-We will need to know the location of the include directories for suitesparse. In ubuntu, this can be set with the following
-```bash
-    SUITESPARSE_INCLUDE_DIR="/usr/include/suitesparse"
-```
-
 #### Download and build Sundials 4.1.0
 The KLU solver is interfaced using an updated version of Sundials so even if you have installed Sundials for use with Scikits.odes, you still need to install sundials here. If you want more information on the sundials installation please refer to the the ida_guide.pdf available at on the [sundials site](https://computing.llnl.gov/projects/sundials/sundials-software)
 
@@ -195,7 +189,6 @@ cmake -DBLAS_ENABLE=ON\
       -DEXAMPLES_ENABLE:BOOL=OFF\
       -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR ../sundials-4.1.0/\
       -DKLU_ENABLE=ON\
-      -DSUITESPARSE_INCLUDE_DIR=$SUITESPARSE_INCLUDE_DIR\
       ../sundials-4.1.0
 make install
 ```
