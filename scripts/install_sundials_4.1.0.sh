@@ -1,17 +1,8 @@
 #!/bin/bash
 CURRENT_DIR=`pwd`
 
-# build SparseSuite to use KLU sparse linear solver
-SUITESPARSE_URL=http://faculty.cse.tamu.edu/davis/SuiteSparse/SuiteSparse-5.4.0.tar.gz
-SUITESPARSE_NAME=SuiteSparse-5.4.0.tar.gz
-wget $SUITESPARSE_URL -O $SUITESPARSE_NAME
-tar -xvf $SUITESPARSE_NAME
-SUITESPARSE_DIR=$CURRENT_DIR/SuiteSparse
-cd $SUITESPARSE_DIR
-make clean
-make
-cd $CURRENT_DIR
-rm $SUITESPARSE_NAME
+# this is ubuntu specfic change if you have issues
+SUITESPARSE_INCLUDE_DIR="/usr/include/suitesparse"
 
 # install sundials-4.1.0
 SUNDIALS_URL=https://computing.llnl.gov/projects/sundials/download/sundials-4.1.0.tar.gz
@@ -44,7 +35,7 @@ cmake -DBLAS_ENABLE=ON\
       -DEXAMPLES_ENABLE:BOOL=OFF\
       -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR ../sundials-4.1.0/\
       -DKLU_ENABLE=ON\
-      -DSUITESPARSE_DIR=$SUITESPARSE_DIR\
+      -DSUITESPARSE_INCLUDE_DIR=${SUITESPARSE_INCLUDE_DIR}\
       ../sundials-4.1.0
 
 
@@ -54,7 +45,6 @@ cd $CURRENT_DIR
 rm -rf $TMP_DIR
 export LD_LIBRARY_PATH=$INSTALL_DIR/lib:$LD_LIBRARY_PATH
 export SUNDIALS_INST=$INSTALL_DIR
-export SUITESPARSE=$SUITESPARSE_DIR
 
 # get pybind11
 cd $CURRENT_DIR
@@ -65,7 +55,7 @@ git clone https://github.com/pybind/pybind11.git
 
 cd $CURRENT_DIR
 pip install pybind11 # also do a pip install for good measure
-cmake .
+cmake -DSUITESPARSE_INCLUDE_DIR=${SUITESPARSE_INCLUDE_DIR} .
 make clean
 make
 
