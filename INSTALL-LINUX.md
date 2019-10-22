@@ -215,7 +215,7 @@ pip install pybind11
 #### Build the KLU wrapper
 We now have all the tools to build a shared library to interface to the KLU solver. Within your PyBaMM home directory build the required Makefile using
 ```
-cmake -DSUITESPARSE_INCLUDE_DIR=$SUITESPARSE_INCLUDE_DIR.
+cmake .
 ```
 This will automatically find the headers for the latest version of python installed on your machine. If you are using an older version (e.g python3.6) within your virtual environment, then you instead can use `cmake -DPYBIND11_PYTHON_VERSION=3.6 .`.
 
