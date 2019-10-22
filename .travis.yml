@@ -75,6 +75,7 @@ matrix:
                 - liblapack-dev
                 - graphviz
                 - python3.7-dev
+                - libsuitesparse-dev
           env:
             - PYBAMM_UNIT=true
             - PYBAMM_SCIKITS_ODES=true
@@ -91,6 +92,7 @@ matrix:
                 - liblapack-dev
                 - graphviz
                 - python3.7-dev
+                - libsuitesparse-dev
           env:
             - PYBAMM_UNIT=true
           if: type != cron
@@ -107,6 +109,7 @@ matrix:
                 - liblapack-dev
                 - graphviz
                 - python3.7-dev
+                - libsuitesparse-dev
           env:
             - PYBAMM_COVER=true
             - PYBAMM_SCIKITS_ODES=true
@@ -123,6 +126,7 @@ matrix:
                 - liblapack-dev
                 - graphviz
                 - python3.7-dev
+                - libsuitesparse-dev
           env:
             - PYBAMM_DOCS=true
           if: type != cron
@@ -138,6 +142,7 @@ matrix:
                 - liblapack-dev
                 - graphviz
                 - python3.7-dev
+                - libsuitesparse-dev
           env:
             - PYBAMM_STYLE=true
           if: type != cron
@@ -154,6 +159,7 @@ matrix:
                 - liblapack-dev
                 - graphviz
                 - python3.7-dev
+                - libsuitesparse-dev
           env:
             - PYBAMM_UNIT=true
             - PYBAMM_EXAMPLES=true
