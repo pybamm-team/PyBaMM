@@ -314,6 +314,9 @@ class DaeSolver(pybamm.BaseSolver):
         self.event_funs = event_funs
         self.jacobian = jacobian
 
+        # Create CasADi problem for the CasADi solver
+        self.casadi_problem = {"x": y_casadi, "ode": concatenated_rhs}
+
     def calculate_consistent_initial_conditions(
         self, rhs, algebraic, y0_guess, jac=None
     ):

@@ -1,11 +1,12 @@
 #
-# Wrap CasADi
+# CasADi Solver class
 #
-import pybamm
 import casadi
+import pybamm
+import numpy as np
 
 
-class CasadiSolver(pybamm.BaseSolver):
+class CasadiSolver(pybamm.DaeSolver):
     """Solve a discretised model, using CasADi.
 
     Parameters
@@ -14,13 +15,25 @@ class CasadiSolver(pybamm.BaseSolver):
         The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
         The absolute tolerance for the solver (default is 1e-6).
+
+    **Extends**: :class:`pybamm.DaeSolver`
     """
 
-    def __init__(self, method=None, rtol=1e-6, atol=1e-6):
-        super().__init__(method, rtol, atol)
+    def __init__(
+        self,
+        method="idas",
+        rtol=1e-6,
+        atol=1e-6,
+        root_method="lm",
+        root_tol=1e-6,
+        max_steps=1000,
+    ):
+        super().__init__(method, rtol, atol, root_method, root_tol, max_steps)
 
     def compute_solution(self, model, t_eval):
-        """Calculate the solution of the model at specified times.
+        """Calculate the solution of the model at specified times. In this class, we
+        overwrite the behaviour of :class:`pybamm.DaeSolver`, since CasADi requires
+        slightly different syntax.
 
         Parameters
         ----------
@@ -31,17 +44,19 @@ class CasadiSolver(pybamm.BaseSolver):
             The times at which to compute the solution
 
         """
+        # Convert to CasADi if not already done
+        if not hasattr(self, "casadi_problem"):
+            pybamm.logger.info(
+                "Converting model to CasADi format, required for CasADi solver"
+            )
+            self.set_up_casadi(model)
+
         timer = pybamm.Timer()
 
         solve_start_time = timer.time()
-        pybamm.logger.info("Calling ODE solver")
-        solution = self.integrate(
-            self.dydt,
-            self.y0,
-            t_eval,
-            events=self.event_funs,
-            mass_matrix=model.mass_matrix.entries,
-            jacobian=self.jacobian,
+        pybamm.logger.info("Calling DAE solver")
+        solution = self.integrate_casadi(
+            self.casadi_problem, self.y0, t_eval, mass_matrix=model.mass_matrix.entries
         )
         solve_time = timer.time() - solve_start_time
 
@@ -50,87 +65,47 @@ class CasadiSolver(pybamm.BaseSolver):
 
         return solution, solve_time, termination
 
-    def set_up(self, model):
-        """Unpack model, perform checks, simplify and calculate jacobian.
+    def integrate_casadi(self, problem, y0, t_eval, mass_matrix=None):
+        """
+        Solve a DAE model defined by residuals with initial conditions y0.
 
         Parameters
         ----------
-        model : :class:`pybamm.BaseModel`
-            The model whose solution to calculate. Must have attributes rhs and
-            initial_conditions
-
-        Raises
-        ------
-        :class:`pybamm.SolverError`
-            If the model contains any algebraic equations (in which case a DAE solver
-            should be used instead)
-
-        """
-        y0 = model.concatenated_initial_conditions[:, 0]
-
-        t = casadi.SX.sym("t")
-        y_diff = casadi.SX.sym("y_diff", len(model.concatenated_rhs.evaluate(0, y0)))
-        y_alg = casadi.SX.sym(
-            "y_alg", len(model.concatenated_algebraic.evaluate(0, y0))
-        )
-        y = casadi.vertcat(y_diff, y_alg)
-        # create simplified rhs and event expressions
-        concatenated_rhs = model.concatenated_rhs.to_casadi(t, y)
-        concatenated_algebraic = model.concatenated_algebraic.to_casadi(t, y)
-        events = {name: event.to_casadi(t, y) for name, event in model.events.items()}
-
-        # Create function to evaluate rhs
-        def dydt(t, y):
-            pybamm.logger.debug("Evaluating RHS for {} at t={}".format(model.name, t))
-            y = y[:, np.newaxis]
-            dy = concatenated_rhs.evaluate(t, y, known_evals={})[0]
-            return dy[:, 0]
-
-        # Create event-dependent function to evaluate events
-        def event_fun(event):
-            def eval_event(t, y):
-                return event.evaluate(t, y)
-
-            return eval_event
-
-        event_funs = [event_fun(event) for event in events.values()]
-
-        # Create function to evaluate jacobian
-        if jac_rhs is not None:
-
-            def jacobian(t, y):
-                return jac_rhs.evaluate(t, y, known_evals={})[0]
-
-        else:
-            jacobian = None
-
-        # Add the solver attributes
-        self.y0 = y0
-        self.dydt = dydt
-        self.events = events
-        self.event_funs = event_funs
-        self.jacobian = jacobian
-
-    def integrate(
-        self, derivs, y0, t_eval, events=None, mass_matrix=None, jacobian=None
-    ):
-        """
-        Solve a model defined by dydt with initial conditions y0.
-
-        Parameters
-        ----------
-        derivs : method
-            A function that takes in t and y and returns the time-derivative dydt
+        residuals : method
+            A function that takes in t, y and ydot and returns the residuals of the
+            equations
         y0 : numeric type
             The initial conditions
         t_eval : numeric type
             The times at which to compute the solution
-        events : method, optional
-            A function that takes in t and y and returns conditions for the solver to
-            stop
         mass_matrix : array_like, optional
-            The (sparse) mass matrix for the chosen spatial method.
-        jacobian : method, optional
-            A function that takes in t and y and returns the Jacobian
+            The (sparse) mass matrix for the chosen spatial method. This is only passed
+            to check that the mass matrix is diagonal with 1s for the odes and 0s for
+            the algebraic equations, as CasADi does not allow to pass mass matrices.
         """
-        raise NotImplementedError
+        options = {
+            "grid": t_eval,
+            "reltol": self.rtol,
+            "abstol": self.atol,
+            "output_t0": True,
+        }
+        if self.method == "idas":
+            options["calc_ic"] = True
+
+        # set up and solve
+        integrator = casadi.integrator("F", self.method, problem, options)
+        try:
+            # return solution
+            sol = integrator(x0=y0)
+            y_values = np.concatenate([sol["xf"].full(), sol["zf"].full()])
+            return pybamm.Solution(t_eval, y_values, None, None, "final time")
+        except RuntimeError as e:
+            raise pybamm.SolverError(e.args[0])
+
+    def set_up(self, model):
+        "Skip classic set up with this solver"
+        pass
+
+    # def calculate_consistent_initial_conditions(self):
+    #     "No need to calculate initial conditions separately with this solver"
+    #     pass
