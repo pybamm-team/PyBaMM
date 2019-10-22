@@ -168,19 +168,16 @@ class OdeSolver(pybamm.BaseSolver):
                 """Cannot use ODE solver to solve model with DAEs"""
             )
 
-        # create simplified rhs and event expressions
-        concatenated_rhs = model.concatenated_rhs
-        events = model.events
-
         y0 = model.concatenated_initial_conditions[:, 0]
 
         t_casadi = casadi.SX.sym("t")
         y_casadi = casadi.SX.sym("y", len(y0))
         pybamm.logger.info("Converting RHS to CasADi")
-        concatenated_rhs = concatenated_rhs.to_casadi(t_casadi, y_casadi)
+        concatenated_rhs = model.concatenated_rhs.to_casadi(t_casadi, y_casadi)
         pybamm.logger.info("Converting events to CasADi")
         casadi_events = {
-            name: event.to_casadi(t_casadi, y_casadi) for name, event in events.items()
+            name: event.to_casadi(t_casadi, y_casadi)
+            for name, event in model.events.items()
         }
 
         # Create function to evaluate rhs
@@ -221,7 +218,7 @@ class OdeSolver(pybamm.BaseSolver):
         # Add the solver attributes
         self.y0 = y0
         self.dydt = dydt
-        self.events = events
+        self.events = model.events
         self.event_funs = event_funs
         self.jacobian = jacobian
 
