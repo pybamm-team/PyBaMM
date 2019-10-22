@@ -71,6 +71,9 @@ sundials4
 SuiteSparse
 SuiteSparse/.gitignore
 
+# third party
+third-party
+
 # cmakefiles
 CMakeFiles
 Makefile
