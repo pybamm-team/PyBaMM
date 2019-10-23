@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import sys
 
 # set logging level
-pybamm.set_logging_level("DEBUG")
+pybamm.set_logging_level("INFO")
 
 # load (2+1D) SPM model
 options = {
@@ -13,7 +13,7 @@ options = {
     "thermal": "x-lumped",
 }
 model = pybamm.lithium_ion.SPM(options)
-model.use_simplify = False  # simplifying jacobian slow for large systems
+# model.use_simplify = False  # simplifying jacobian slow for large systems
 
 # create geometry
 geometry = model.default_geometry

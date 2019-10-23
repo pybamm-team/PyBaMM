@@ -7,9 +7,7 @@ import pickle
 os.chdir(pybamm.root_dir())
 
 # pick C_rate and load comsol data
-C_rate = (
-    "1"
-)  # choose the key from the above dictionary of available results
+C_rate = "1"  # choose the key from the above dictionary of available results
 
 # time-voltage (both just 1D arrays)
 comsol = pd.read_csv(
@@ -28,6 +26,46 @@ comsol = pd.read_csv(
     header=None,
 )
 vol_av_T = comsol[1].values
+
+# electrode-averaged irreverisble heating
+comsol = pd.read_csv(
+    "input/comsol_results_csv/2plus1D/{}C/irrev_heat_neg.csv".format(C_rate),
+    sep=",",
+    header=None,
+)
+Q_irrev_n = comsol[1].values
+
+# separator irreverisble heating
+comsol = pd.read_csv(
+    "input/comsol_results_csv/2plus1D/{}C/irrev_heat_sep.csv".format(C_rate),
+    sep=",",
+    header=None,
+)
+Q_irrev_s = comsol[1].values
+
+# electrode-averaged irreverisble heating
+comsol = pd.read_csv(
+    "input/comsol_results_csv/2plus1D/{}C/irrev_heat_pos.csv".format(C_rate),
+    sep=",",
+    header=None,
+)
+Q_irrev_p = comsol[1].values
+
+# electrode-averaged reverisble heating
+comsol = pd.read_csv(
+    "input/comsol_results_csv/2plus1D/{}C/rev_heat_neg.csv".format(C_rate),
+    sep=",",
+    header=None,
+)
+Q_rev_n = comsol[1].values
+
+# electrode-averaged reverisble heating
+comsol = pd.read_csv(
+    "input/comsol_results_csv/2plus1D/{}C/rev_heat_pos.csv".format(C_rate),
+    sep=",",
+    header=None,
+)
+Q_rev_p = comsol[1].values
 
 # negative current collector potential (stored as a (yz_npts, time_npts) size
 # array)
@@ -86,6 +124,11 @@ comsol_variables = {
     "phi_s_cp": phi_s_cp,
     "temperature": T,
     "current": I,
+    "averaged Q_irrev_n": Q_irrev_n,
+    "averaged Q_irrev_s": Q_irrev_s,
+    "averaged Q_irrev_p": Q_irrev_p,
+    "averaged Q_rev_n": Q_rev_n,
+    "averaged Q_rev_p": Q_rev_p,
 }
 
 savefile = "comsol_{}C.pickle".format(C_rate)

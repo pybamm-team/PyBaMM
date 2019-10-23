@@ -5,8 +5,8 @@ import pybamm
 import numpy as np
 
 # load model
-pybamm.set_logging_level("INFO")
-model = pybamm.lithium_ion.SPMe()
+pybamm.set_logging_level("DEBUG")
+model = pybamm.lithium_ion.DFN()
 
 # create geometry
 geometry = model.default_geometry
@@ -31,7 +31,8 @@ tau = param.process_symbol(
 t_eval = np.linspace(0, 600 / tau, 600)
 
 # need to increase max solver steps if solving DAEs along with an erratic drive cycle
-solver = model.default_solver
+# solver = model.default_solver
+solver = pybamm.KLU(rtol=1e-6, atol=1e-6)
 if isinstance(solver, pybamm.DaeSolver):
     solver.max_steps = 10000
 
