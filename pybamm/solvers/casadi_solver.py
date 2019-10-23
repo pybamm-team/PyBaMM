@@ -44,13 +44,6 @@ class CasadiSolver(pybamm.DaeSolver):
             The times at which to compute the solution
 
         """
-        # Convert to CasADi if not already done
-        if not hasattr(self, "casadi_problem"):
-            pybamm.logger.info(
-                "Converting model to CasADi format, required for CasADi solver"
-            )
-            self.set_up_casadi(model)
-
         timer = pybamm.Timer()
 
         solve_start_time = timer.time()
@@ -105,10 +98,6 @@ class CasadiSolver(pybamm.DaeSolver):
         except RuntimeError as e:
             # If it doesn't work raise error
             raise pybamm.SolverError(e.args[0])
-
-    def set_up(self, model):
-        "Skip classic set up with this solver, just reset initial conditions"
-        self.y0 = model.concatenated_initial_conditions
 
     def calculate_consistent_initial_conditions(
         self, rhs, algebraic, y0_guess, jac=None

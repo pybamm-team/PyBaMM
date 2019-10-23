@@ -74,7 +74,7 @@ class BaseSolver(object):
         # Set up
         timer = pybamm.Timer()
         start_time = timer.time()
-        if model.convert_to_format == "casadi":
+        if model.convert_to_format == "casadi" or isinstance(self, pybamm.CasadiSolver):
             self.set_up_casadi(model)
         else:
             self.set_up(model)
@@ -131,7 +131,9 @@ class BaseSolver(object):
         # Run set up on first step
         if not hasattr(self, "y0"):
             start_time = timer.time()
-            if model.convert_to_format == "casadi":
+            if model.convert_to_format == "casadi" or isinstance(
+                self, pybamm.CasadiSolver
+            ):
                 self.set_up_casadi(model)
             else:
                 self.set_up(model)
