@@ -2,7 +2,6 @@
 # Test for the Simplify class
 #
 import casadi
-import math
 import numpy as np
 import autograd.numpy as anp
 import pybamm

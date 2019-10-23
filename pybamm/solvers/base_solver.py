@@ -1,7 +1,6 @@
 #
 # Base solver class
 #
-import casadi
 import pybamm
 import numpy as np
 
