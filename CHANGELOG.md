@@ -2,17 +2,22 @@
 
 ## Features
 
-- Add `Interpolant` class to interpolate experimental data (e.g. OCP curves) (#661)
-- Allow parameters to be set by material or by specifying a particular paper (#647)
-- Set relative and absolute tolerances independently in solvers (#645)
-- Add some non-uniform meshes in 1D and 2D (#617)
+- Add interface to CasADi solver
+- Add option to use CasADi's Algorithmic Differentiation framework to calculate Jacobians
+- Add `Interpolant` class to interpolate experimental data (e.g. OCP curves) ([#661](https://github.com/pybamm-team/PyBaMM/pull/661))
+- Allow parameters to be set by material or by specifying a particular paper ([#647](https://github.com/pybamm-team/PyBaMM/pull/647))
+- Set relative and absolute tolerances independently in solvers ([#645](https://github.com/pybamm-team/PyBaMM/pull/645))
+- Add some non-uniform meshes in 1D and 2D ([#617](https://github.com/pybamm-team/PyBaMM/pull/617))
 
 ## Optimizations
 
-- Avoid re-checking size when making a copy of an `Index` object (#656)
-- Avoid recalculating `_evaluation_array` when making a copy of a `StateVector` object (#653)
+- Avoid re-checking size when making a copy of an `Index` object ([#656](https://github.com/pybamm-team/PyBaMM/pull/656))
+- Avoid recalculating `_evaluation_array` when making a copy of a `StateVector` object ([#653](https://github.com/pybamm-team/PyBaMM/pull/653))
 
 ## Bug fixes
+
+- Fix differentiation of functions that have more than one argument
+
 
 # [v0.1.0](https://github.com/pybamm-team/PyBaMM/tree/v0.1.0) - 2019-10-08
 

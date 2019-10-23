@@ -18,9 +18,9 @@ else:
 # load models
 models = [
     pybamm.lead_acid.LOQS(),
-    # pybamm.lead_acid.FOQS(),
-    # pybamm.lead_acid.Composite(),
-    # pybamm.lead_acid.Full(),
+    pybamm.lead_acid.FOQS(),
+    pybamm.lead_acid.Composite(),
+    pybamm.lead_acid.Full(),
 ]
 
 # load parameter values and process models and geometry
@@ -41,10 +41,10 @@ for model in models:
 
 # solve model
 solutions = [None] * len(models)
-t_eval = np.linspace(0, 3, 1000)
+t_eval = np.linspace(0, 0.66, 1000)
 for i, model in enumerate(models):
     model.convert_to_format = "casadi"
-    solution = model.default_solver.solve(model, t_eval)
+    solution = pybamm.CasadiSolver().solve(model, t_eval)
     solutions[i] = solution
 
 # plot

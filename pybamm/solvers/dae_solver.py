@@ -223,7 +223,12 @@ class DaeSolver(pybamm.BaseSolver):
         """
         # Convert model attributes to casadi
         t_casadi = casadi.SX.sym("t")
-        y_casadi = casadi.SX.sym("y", len(model.concatenated_initial_conditions))
+        y0 = model.concatenated_initial_conditions
+        y_diff = casadi.SX.sym("y_diff", len(model.concatenated_rhs.evaluate(0, y0)))
+        y_alg = casadi.SX.sym(
+            "y_alg", len(model.concatenated_algebraic.evaluate(0, y0))
+        )
+        y_casadi = casadi.vertcat(y_diff, y_alg)
         pybamm.logger.info("Converting RHS to CasADi")
         concatenated_rhs = model.concatenated_rhs.to_casadi(t_casadi, y_casadi)
         pybamm.logger.info("Converting algebraic to CasADi")
@@ -248,6 +253,7 @@ class DaeSolver(pybamm.BaseSolver):
 
         if model.use_jacobian:
 
+            pybamm.logger.info("Calculating jacobian")
             casadi_jac = casadi.jacobian(all_states, y_casadi)
             casadi_jac_fn = casadi.Function(
                 "jacobian", [t_casadi, y_casadi], [casadi_jac]
@@ -315,7 +321,12 @@ class DaeSolver(pybamm.BaseSolver):
         self.jacobian = jacobian
 
         # Create CasADi problem for the CasADi solver
-        self.casadi_problem = {"x": y_casadi, "ode": concatenated_rhs}
+        self.casadi_problem = {
+            "x": y_diff,
+            "z": y_alg,
+            "ode": concatenated_rhs,
+            "alg": concatenated_algebraic,
+        }
 
     def calculate_consistent_initial_conditions(
         self, rhs, algebraic, y0_guess, jac=None

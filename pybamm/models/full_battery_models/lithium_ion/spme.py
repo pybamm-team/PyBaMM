@@ -124,7 +124,6 @@ class SPMe(BaseModel):
         # Different solver depending on whether we solve ODEs or DAEs
         dimensionality = self.options["dimensionality"]
         if dimensionality == 0:
-            return pybamm.CasadiSolver()
-            # return pybamm.ScipySolver()
+            return pybamm.ScipySolver()
         else:
             return pybamm.ScikitsDaeSolver()

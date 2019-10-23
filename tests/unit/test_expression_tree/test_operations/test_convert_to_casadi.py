@@ -4,6 +4,7 @@
 import casadi
 import math
 import numpy as np
+import autograd.numpy as anp
 import pybamm
 import unittest
 from tests import get_mesh_for_testing, get_1p1d_discretisation_for_testing
@@ -29,13 +30,13 @@ class TestCasadiConverter(unittest.TestCase):
             return np.sin(x)
 
         f = pybamm.Function(sin, b)
-        self.assertEqual((f).to_casadi(), casadi.SX(np.sin(1)))
+        self.assertEqual(f.to_casadi(), casadi.SX(np.sin(1)))
 
         def myfunction(x, y):
             return x + y
 
         f = pybamm.Function(myfunction, b, d)
-        self.assertEqual((f).to_casadi(), casadi.SX(3))
+        self.assertEqual(f.to_casadi(), casadi.SX(3))
 
         # addition
         self.assertEqual((a + b).to_casadi(), casadi.SX(1))
@@ -106,6 +107,25 @@ class TestCasadiConverter(unittest.TestCase):
         f = casadi.Function("f", [x], [x])
         y_eval = np.linspace(0, 1, expr.size)
         self.assertTrue(casadi.is_equal(f(y_eval), casadi.SX(expr.evaluate(y=y_eval))))
+
+    def test_convert_differentiated_function(self):
+        a = pybamm.Scalar(0)
+        b = pybamm.Scalar(1)
+
+        # function
+        def sin(x):
+            return anp.sin(x)
+
+        f = pybamm.Function(sin, b).diff(b)
+        self.assertEqual(f.to_casadi(), casadi.SX(np.cos(1)))
+
+        def myfunction(x, y):
+            return x + y ** 3
+
+        f = pybamm.Function(myfunction, a, b).diff(a)
+        self.assertEqual(f.to_casadi(), casadi.SX(1))
+        f = pybamm.Function(myfunction, a, b).diff(b)
+        self.assertEqual(f.to_casadi(), casadi.SX(3))
 
 
 if __name__ == "__main__":

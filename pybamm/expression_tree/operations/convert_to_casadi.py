@@ -67,13 +67,29 @@ class CasadiConverter(object):
             converted_children = [
                 self.convert(child, t, y) for child in symbol.children
             ]
+            # Special functions
             if symbol.function == np.min:
                 return casadi.mmin(*converted_children)
             elif symbol.function == np.max:
                 return casadi.mmax(*converted_children)
+            elif not isinstance(
+                symbol.function, pybamm.GetCurrent
+            ) and symbol.function.__name__.startswith("elementwise_grad_of_"):
+                differentiating_child_idx = int(symbol.function.__name__[-1])
+                # Create dummy symbolic variables in order to differentiate using CasADi
+                dummy_vars = [
+                    casadi.SX.sym("y_" + str(i)) for i in range(len(converted_children))
+                ]
+                func_diff = casadi.gradient(
+                    symbol.differentiated_function(*dummy_vars),
+                    dummy_vars[differentiating_child_idx],
+                )
+                # Create function and evaluate it using the children
+                casadi_func_diff = casadi.Function("func_diff", dummy_vars, [func_diff])
+                return casadi_func_diff(*converted_children)
+            # Other functions
             else:
                 return symbol._function_evaluate(converted_children)
-
         elif isinstance(symbol, pybamm.Concatenation):
             converted_children = [
                 self.convert(child, t, y) for child in symbol.children

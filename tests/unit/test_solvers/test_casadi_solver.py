@@ -80,43 +80,41 @@ class TestCasadiSolver(unittest.TestCase):
             solution.total_time, solution.solve_time + solution.set_up_time
         )
 
-    #
-    # def test_model_step(self):
-    #     # Create model
-    #     model = pybamm.BaseModel()
-    #     domain = ["negative electrode", "separator", "positive electrode"]
-    #     var = pybamm.Variable("var", domain=domain)
-    #     model.rhs = {var: 0.1 * var}
-    #     model.initial_conditions = {var: 1}
-    #     # No need to set parameters; can use base discretisation (no spatial operators)
-    #
-    #     # create discretisation
-    #     mesh = get_mesh_for_testing()
-    #     spatial_methods = {"macroscale": pybamm.FiniteVolume}
-    #     disc = pybamm.Discretisation(mesh, spatial_methods)
-    #     disc.process_model(model)
-    #
-    #     solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8, method="idas")
-    #
-    #     # Step once
-    #     dt = 0.1
-    #     step_sol = solver.step(model, dt)
-    #     np.testing.assert_array_equal(step_sol.t, [0, dt])
-    #     np.testing.assert_allclose(step_sol.y[0], np.exp(0.1 * step_sol.t))
-    #
-    #     # Step again (return 5 points)
-    #     step_sol_2 = solver.step(model, dt, npts=5)
-    #     np.testing.assert_array_equal(step_sol_2.t, np.linspace(dt, 2 * dt, 5))
-    #     np.testing.assert_allclose(step_sol_2.y[0], np.exp(0.1 * step_sol_2.t))
-    #
-    #     # append solutions
-    #     step_sol.append(step_sol_2)
-    #
-    #     # Check steps give same solution as solve
-    #     t_eval = step_sol.t
-    #     solution = solver.solve(model, t_eval)
-    #     np.testing.assert_allclose(solution.y[0], step_sol.y[0])
-    #
+    def test_model_step(self):
+        # Create model
+        model = pybamm.BaseModel()
+        domain = ["negative electrode", "separator", "positive electrode"]
+        var = pybamm.Variable("var", domain=domain)
+        model.rhs = {var: 0.1 * var}
+        model.initial_conditions = {var: 1}
+        # No need to set parameters; can use base discretisation (no spatial operators)
+
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
+
+        solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8, method="idas")
+
+        # Step once
+        dt = 0.1
+        step_sol = solver.step(model, dt)
+        np.testing.assert_array_equal(step_sol.t, [0, dt])
+        np.testing.assert_allclose(step_sol.y[0], np.exp(0.1 * step_sol.t))
+
+        # Step again (return 5 points)
+        step_sol_2 = solver.step(model, dt, npts=5)
+        np.testing.assert_array_equal(step_sol_2.t, np.linspace(dt, 2 * dt, 5))
+        np.testing.assert_allclose(step_sol_2.y[0], np.exp(0.1 * step_sol_2.t))
+
+        # append solutions
+        step_sol.append(step_sol_2)
+
+        # Check steps give same solution as solve
+        t_eval = step_sol.t
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_allclose(solution.y[0], step_sol.y[0])
 
 
 if __name__ == "__main__":

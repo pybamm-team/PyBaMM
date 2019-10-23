@@ -88,6 +88,7 @@ class CasadiSolver(pybamm.DaeSolver):
             "reltol": self.rtol,
             "abstol": self.atol,
             "output_t0": True,
+            "disable_internal_warnings": True,
         }
         if self.method == "idas":
             options["calc_ic"] = True
@@ -95,17 +96,22 @@ class CasadiSolver(pybamm.DaeSolver):
         # set up and solve
         integrator = casadi.integrator("F", self.method, problem, options)
         try:
-            # return solution
-            sol = integrator(x0=y0)
+            # Try solving
+            len_rhs = problem["x"].size()[0]
+            y0_diff, y0_alg = np.split(y0, [len_rhs])
+            sol = integrator(x0=y0_diff, z0=y0_alg)
             y_values = np.concatenate([sol["xf"].full(), sol["zf"].full()])
             return pybamm.Solution(t_eval, y_values, None, None, "final time")
         except RuntimeError as e:
+            # If it doesn't work raise error
             raise pybamm.SolverError(e.args[0])
 
     def set_up(self, model):
-        "Skip classic set up with this solver"
-        pass
+        "Skip classic set up with this solver, just reset initial conditions"
+        self.y0 = model.concatenated_initial_conditions
 
-    # def calculate_consistent_initial_conditions(self):
-    #     "No need to calculate initial conditions separately with this solver"
-    #     pass
+    def calculate_consistent_initial_conditions(
+        self, rhs, algebraic, y0_guess, jac=None
+    ):
+        "No need to calculate initial conditions separately with this solver"
+        return y0_guess
