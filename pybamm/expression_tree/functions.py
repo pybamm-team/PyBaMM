@@ -139,9 +139,9 @@ class Function(pybamm.Symbol):
             # calculate the required partial jacobians and add them
             jacobian = None
             children = self.orphans
-            for child in children:
+            for i, child in enumerate(children):
                 if not child.evaluates_to_number():
-                    jac_fun = self._diff(children) * child.jac(variable)
+                    jac_fun = self._diff(children, i) * child.jac(variable)
 
                     jac_fun.domain = self.domain
                     if jacobian is None:
