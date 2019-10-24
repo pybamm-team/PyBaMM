@@ -11,7 +11,7 @@ exclude=
     lib64,
     share,
     pyvenv.cfg,
-    third-party
+    third-party,
 ignore=
     # False positive for white space before ':' on list slice
     # black should format these correctly
