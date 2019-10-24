@@ -187,7 +187,7 @@ cmake -DBLAS_ENABLE=ON\
       -DBUILD_IDAS=OFF\
       -DBUILD_KINSOL=OFF\
       -DEXAMPLES_ENABLE:BOOL=OFF\
-      -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR ../sundials-4.1.0/\
+      -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR\
       -DKLU_ENABLE=ON\
       ../sundials-4.1.0
 make install
