@@ -27,8 +27,10 @@ class CasadiSolver(pybamm.DaeSolver):
         root_method="lm",
         root_tol=1e-6,
         max_steps=1000,
+        **extra_options,
     ):
         super().__init__(method, rtol, atol, root_method, root_tol, max_steps)
+        self.extra_options = extra_options
 
     def compute_solution(self, model, t_eval):
         """Calculate the solution of the model at specified times. In this class, we
@@ -81,8 +83,8 @@ class CasadiSolver(pybamm.DaeSolver):
             "reltol": self.rtol,
             "abstol": self.atol,
             "output_t0": True,
-            "disable_internal_warnings": True,
         }
+        options.update(self.extra_options)
         if self.method == "idas":
             options["calc_ic"] = True
 

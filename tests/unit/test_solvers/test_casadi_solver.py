@@ -45,7 +45,13 @@ class TestCasadiSolver(unittest.TestCase):
 
         y0 = np.array([1])
         t_eval = np.linspace(0, 3, 100)
-        solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8, method="idas")
+        solver = pybamm.CasadiSolver(
+            rtol=1e-8,
+            atol=1e-8,
+            method="idas",
+            disable_internal_warnings=True,
+            regularity_check=False,
+        )
         problem = {"x": y, "ode": sqrt_decay}
         # Expect solver to fail when y goes negative
         with self.assertRaises(pybamm.SolverError):
