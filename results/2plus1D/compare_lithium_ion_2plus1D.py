@@ -28,8 +28,12 @@ param = models[0].default_parameter_values
 C_rate = 1
 param.update({"C-rate": C_rate})
 # make current collectors not so conductive, just for illustrative purposes
-param["Negative current collector conductivity [S.m-1]"] = 5.96e6
-param["Positive current collector conductivity [S.m-1]"] = 3.55e6
+param.update(
+    {
+        "Negative current collector conductivity [S.m-1]": 5.96e6,
+        "Positive current collector conductivity [S.m-1]": 3.55e6,
+    }
+)
 
 # process models
 for model in models:
