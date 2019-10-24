@@ -126,6 +126,18 @@ class TestProcessedVariable(unittest.TestCase):
             np.reshape(y_sol, [len(x_sol), len(z_sol), len(t_sol)]),
         )
 
+        # On edges
+        x_s_edge = pybamm.Matrix(
+            np.repeat(disc.mesh["separator"][0].edges, len(z_sol)),
+            domain="separator",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        processed_x_s_edge = pybamm.ProcessedVariable(x_s_edge, t_sol, y_sol, disc.mesh)
+        np.testing.assert_array_equal(
+            x_s_edge.entries[:, 0],
+            processed_x_s_edge.entries[:, :, 0].reshape(-1, 1)[:, 0],
+        )
+
     def test_processed_variable_3D_scikit(self):
         var = pybamm.Variable("var", domain=["current collector"])
         y = pybamm.SpatialVariable("y", domain=["current collector"])

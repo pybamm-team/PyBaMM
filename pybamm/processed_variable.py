@@ -408,21 +408,12 @@ class ProcessedVariable(object):
     def call_2D(self, t, x, r, z):
         "Evaluate a 2D variable"
         spatial_var = eval_dimension_name(self.spatial_var_name, x, r, None, z)
-        if spatial_var is not None:
-            return self._interpolation_function(t, spatial_var)
-        else:
-            raise ValueError("input {} cannot be None".format(self.spatial_var_name))
+        return self._interpolation_function(t, spatial_var)
 
     def call_3D(self, t, x, r, y, z):
         "Evaluate a 3D variable"
         first_dim = eval_dimension_name(self.first_dimension, x, r, y, z)
         second_dim = eval_dimension_name(self.second_dimension, x, r, y, z)
-        if first_dim is None or second_dim is None:
-            raise ValueError(
-                "inputs {} and {} cannot be None".format(
-                    self.first_dimension, self.second_dimension
-                )
-            )
         if isinstance(first_dim, np.ndarray):
             if isinstance(second_dim, np.ndarray) and isinstance(t, np.ndarray):
                 first_dim = first_dim[:, np.newaxis, np.newaxis]
@@ -438,10 +429,15 @@ class ProcessedVariable(object):
 
 def eval_dimension_name(name, x, r, y, z):
     if name == "x":
-        return x
+        out = x
     elif name == "r":
-        return r
+        out = r
     elif name == "y":
-        return y
+        out = y
     elif name == "z":
-        return z
+        out = z
+
+    if out is None:
+        raise ValueError("inputs {} cannot be None".format(name))
+    else:
+        return out
