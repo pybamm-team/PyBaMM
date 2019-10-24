@@ -80,7 +80,6 @@ class TestJacobian(unittest.TestCase):
 
         # test jac of outer if left evaluates to number
         func = pybamm.Outer(pybamm.Scalar(1), pybamm.Scalar(4))
-        # jacobian = np.zeros((1, 4))
         dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_equal(0, dfunc_dy.toarray())
 
