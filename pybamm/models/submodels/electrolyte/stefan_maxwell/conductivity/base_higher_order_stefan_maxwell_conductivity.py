@@ -64,9 +64,9 @@ class BaseHigherOrder(BaseModel):
         x_p = pybamm.standard_spatial_vars.x_p
 
         # bulk conductivities
-        kappa_n_av = param.kappa_e(c_e_av, T_av) * eps_n_av ** param.b
-        kappa_s_av = param.kappa_e(c_e_av, T_av) * eps_s_av ** param.b
-        kappa_p_av = param.kappa_e(c_e_av, T_av) * eps_p_av ** param.b
+        kappa_n_av = param.kappa_e(c_e_av, T_av) * eps_n_av ** param.b_n
+        kappa_s_av = param.kappa_e(c_e_av, T_av) * eps_s_av ** param.b_s
+        kappa_p_av = param.kappa_e(c_e_av, T_av) * eps_p_av ** param.b_p
 
         chi_av = param.chi(c_e_av)
         if chi_av.domain == ["current collector"]:

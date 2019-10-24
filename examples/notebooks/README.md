@@ -16,10 +16,14 @@ from your local PyBaMM repository, or used online through [Binder](https://mybin
 The easiest way to start with PyBaMM is by running and comparing some of the inbuilt models:
 - [Run the Single Particle Model (SPM)](./models/SPM.ipynb)
 - [Compare models](./models/lead-acid.ipynb)
+- [Comparison with COMSOL](./compare-comsol-discharge-curve.ipynb)
 
-It is also easy to new models or change the setting that are used:
-- [Add a model](https://pybamm.readthedocs.io/en/latest/tutorials/add-model.html)
+It is also easy to add new models or change the setting that are used:
+- [Add a model (documentation)](https://pybamm.readthedocs.io/en/latest/tutorials/add-model.html)
+- [Add a model (example)](./create-model.ipynb)
+- [Using submodels](./using-submodels.ipynb)
 - [Change the settings](./change-settings.ipynb) (parameters, spatial method or solver)
+- [Change the applied current](./change-input-current.ipynb)
 
 For more advanced usage, new sets of parameters, spatial methods and solvers can be added:
 - [Add parameters](https://pybamm.readthedocs.io/en/latest/tutorials/add-parameter-values.html)
@@ -50,8 +54,9 @@ The following models are implemented and can easily be used or [compared](./mode
 
 ### Spatial Methods
 
-The following spatial method is implemented
+The following spatial methods are implemented
 - [Finite Volumes](./spatial_methods/finite-volumes.ipynb)
+- Finite Elements (only for 2D current collector domains)
 
 See [here](https://pybamm.readthedocs.io/en/latest/tutorials/add-spatial-method.html) for instructions on adding new spatial methods.
 

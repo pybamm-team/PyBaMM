@@ -150,9 +150,14 @@ class Index(UnaryOperator):
         The index (if int) or indices (if slice) to extract from the symbol
     name : str, optional
         The name of the symbol
+    check_size : bool, optional
+        Whether to check if the slice size exceeds the child size. Default is True.
+        This should always be True when creating a new symbol so that the appropriate
+        check is performed, but should be False for creating a new copy to avoid
+        unnecessarily repeating the check.
     """
 
-    def __init__(self, child, index, name=None):
+    def __init__(self, child, index, name=None, check_size=True):
         self.index = index
         if index == -1:
             self.slice = slice(index, None)
@@ -172,8 +177,7 @@ class Index(UnaryOperator):
         else:
             raise TypeError("index must be integer or slice")
 
-        # Perform some additional checks if debug_mode is True (child.size is slow)
-        if pybamm.settings.debug_mode is True:
+        if check_size:
             if self.slice in (slice(0, 1), slice(-1, None)):
                 pass
             elif self.slice.stop > child.size:
@@ -219,7 +223,7 @@ class Index(UnaryOperator):
     def _unary_new_copy(self, child):
         """ See :meth:`UnaryOperator._unary_new_copy()`. """
 
-        return self.__class__(child, self.index)
+        return self.__class__(child, self.index, check_size=False)
 
     def evaluate_for_shape(self):
         return self._unary_evaluate(self.children[0].evaluate_for_shape())
@@ -1038,3 +1042,30 @@ def boundary_value(symbol, side):
     # Otherwise, calculate boundary value
     else:
         return BoundaryValue(symbol, side)
+
+
+def r_average(symbol):
+    """convenience function for creating an average in the r-direction
+
+    Parameters
+    ----------
+    symbol : :class:`pybamm.Symbol`
+        The function to be averaged
+
+    Returns
+    -------
+    :class:`Symbol`
+        the new averaged symbol
+    """
+    # If symbol doesn't have a particle domain, its r-averaged value is itself
+    if symbol.domain not in [["positive particle"], ["negative particle"]]:
+        new_symbol = symbol.new_copy()
+        new_symbol.parent = None
+        return new_symbol
+    # If symbol is a Broadcast, its average value is its child
+    elif isinstance(symbol, pybamm.Broadcast):
+        return symbol.orphans[0]
+    else:
+        r = pybamm.SpatialVariable("r", symbol.domain)
+        v = pybamm.Broadcast(pybamm.Scalar(1), symbol.domain)
+        return Integral(symbol, r) / Integral(v, r)

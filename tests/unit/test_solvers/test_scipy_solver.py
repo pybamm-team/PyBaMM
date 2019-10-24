@@ -11,7 +11,7 @@ import warnings
 class TestScipySolver(unittest.TestCase):
     def test_integrate(self):
         # Constant
-        solver = pybamm.ScipySolver(tol=1e-8, method="RK45")
+        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
 
         def constant_growth(t, y):
             return 0.5 * np.ones_like(y)
@@ -23,7 +23,7 @@ class TestScipySolver(unittest.TestCase):
         np.testing.assert_allclose(0.5 * solution.t, solution.y[0])
 
         # Exponential decay
-        solver = pybamm.ScipySolver(tol=1e-8, method="BDF")
+        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="BDF")
 
         def exponential_decay(t, y):
             return -0.1 * y
@@ -43,7 +43,7 @@ class TestScipySolver(unittest.TestCase):
 
         y0 = np.array([1])
         t_eval = np.linspace(0, 3, 100)
-        solver = pybamm.ScipySolver(tol=1e-8, method="RK45")
+        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
         # Expect solver to fail when y goes negative
         with self.assertRaises(pybamm.SolverError):
             solver.integrate(sqrt_decay, y0, t_eval)
@@ -53,7 +53,7 @@ class TestScipySolver(unittest.TestCase):
 
     def test_integrate_with_event(self):
         # Constant
-        solver = pybamm.ScipySolver(tol=1e-8, method="RK45")
+        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
 
         def constant_growth(t, y):
             return 0.5 * np.ones_like(y)
@@ -71,7 +71,7 @@ class TestScipySolver(unittest.TestCase):
         self.assertEqual(solution.termination, "event")
 
         # Exponential decay
-        solver = pybamm.ScipySolver(tol=1e-8, method="BDF")
+        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="BDF")
 
         def exponential_growth(t, y):
             return y
@@ -97,7 +97,7 @@ class TestScipySolver(unittest.TestCase):
 
     def test_ode_integrate_with_jacobian(self):
         # Linear
-        solver = pybamm.ScipySolver(tol=1e-8, method="BDF")
+        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="BDF")
 
         def linear_ode(t, y):
             return np.array([0.5 * np.ones_like(y[0]), 2.0 - y[0]])
@@ -115,7 +115,7 @@ class TestScipySolver(unittest.TestCase):
         )
 
         # Nonlinear exponential grwoth
-        solver = pybamm.ScipySolver(tol=1e-8, method="BDF")
+        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="BDF")
 
         def exponential_growth(t, y):
             return np.array([y[0], (1.0 - y[0]) * y[1]])
@@ -147,7 +147,7 @@ class TestScipySolver(unittest.TestCase):
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
         # Solve
-        solver = pybamm.ScipySolver(tol=1e-8, method="RK45")
+        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
         t_eval = np.linspace(0, 1, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
@@ -174,7 +174,7 @@ class TestScipySolver(unittest.TestCase):
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
         # Solve
-        solver = pybamm.ScipySolver(tol=1e-8, method="RK45")
+        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
         t_eval = np.linspace(0, 10, 100)
         solution = solver.solve(model, t_eval)
         self.assertLess(len(solution.t), len(t_eval))
@@ -219,7 +219,7 @@ class TestScipySolver(unittest.TestCase):
         model.jacobian = jacobian
 
         # Solve
-        solver = pybamm.ScipySolver(tol=1e-9)
+        solver = pybamm.ScipySolver(rtol=1e-9, atol=1e-9)
         t_eval = np.linspace(0, 1, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
@@ -249,7 +249,7 @@ class TestScipySolver(unittest.TestCase):
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
 
-        solver = pybamm.ScipySolver(tol=1e-8, method="RK45")
+        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
 
         # Step once
         dt = 0.1

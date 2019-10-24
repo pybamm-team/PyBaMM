@@ -41,8 +41,8 @@ class FirstOrder(BaseModel):
         eps_p_0_av = variables["Leading-order x-averaged positive electrode porosity"]
 
         # Diffusivities
-        D_ox_s = (eps_s_0_av ** param.b) * param.curlyD_ox
-        D_ox_p = (eps_p_0_av ** param.b) * param.curlyD_ox
+        D_ox_s = (eps_s_0_av ** param.b_s) * param.curlyD_ox
+        D_ox_p = (eps_p_0_av ** param.b_p) * param.curlyD_ox
 
         # Reactions
         sj_ox_p = sum(

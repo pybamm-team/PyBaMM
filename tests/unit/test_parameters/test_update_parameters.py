@@ -35,27 +35,28 @@ class TestUpdateParameters(unittest.TestCase):
         self.assertEqual(eqn_updated.evaluate(), 10)
 
     def test_update_model(self):
-        # standard model
-        model1 = pybamm.ReactionDiffusionModel()
+        # test on simple lithium-ion model
+        model1 = pybamm.lithium_ion.SPM()
         modeltest1 = tests.StandardModelTest(model1)
-        t_eval = np.linspace(0, 0.9)
+        t_eval = np.linspace(0, 0.1)
 
-        modeltest1.test_all(t_eval=t_eval)
+        modeltest1.test_all(t_eval=t_eval, skip_output_tests=True)
         Y1 = modeltest1.solution.y
 
         # double initial conditions
-        model2 = pybamm.ReactionDiffusionModel()
+        model2 = pybamm.lithium_ion.SPM()
         # process and solve the model a first time
         modeltest2 = tests.StandardModelTest(model2)
-        modeltest2.test_all()
+        modeltest2.test_all(skip_output_tests=True)
         self.assertEqual(
-            model2.variables["Current [A]"].function.parameters_eval["Current [A]"], 1.0
+            model2.variables["Current [A]"].function.parameters_eval["Current [A]"],
+            0.68,
         )
         # process and solve with updated parameter values
         parameter_values_update = pybamm.ParameterValues(
-            base_parameters=model2.default_parameter_values,
-            optional_parameters={"Typical current [A]": 2},
+            chemistry=pybamm.parameter_sets.Marquis2019
         )
+        parameter_values_update.update({"Typical current [A]": 2})
         modeltest2.test_update_parameters(parameter_values_update)
         self.assertEqual(
             model2.variables["Current [A]"].function.parameters_eval["Current [A]"], 2
@@ -67,14 +68,14 @@ class TestUpdateParameters(unittest.TestCase):
         self.assertNotEqual(np.linalg.norm(Y1 - Y2), 0)
 
         # test with new current function
-        model3 = pybamm.ReactionDiffusionModel()
+        model3 = pybamm.lithium_ion.SPM()
         modeltest3 = tests.StandardModelTest(model3)
-        modeltest3.test_all()
+        modeltest3.test_all(skip_output_tests=True)
         parameter_values_update = pybamm.ParameterValues(
-            base_parameters=model3.default_parameter_values,
-            optional_parameters={
-                "Current function": pybamm.GetConstantCurrent(current=pybamm.Scalar(0))
-            },
+            chemistry=pybamm.parameter_sets.Marquis2019
+        )
+        parameter_values_update.update(
+            {"Current function": pybamm.GetConstantCurrent(current=pybamm.Scalar(0))}
         )
         modeltest3.test_update_parameters(parameter_values_update)
         modeltest3.test_solving(t_eval=t_eval)
@@ -94,39 +95,35 @@ class TestUpdateParameters(unittest.TestCase):
         self.assertNotEqual(np.linalg.norm(Y1 - Y3), 0)
 
     def test_update_geometry(self):
-        # standard model
-        model1 = pybamm.ReactionDiffusionModel()
+        # test on simple lead-acid model
+        model1 = pybamm.lead_acid.LOQS()
         modeltest1 = tests.StandardModelTest(model1)
-        t_eval = np.linspace(0, 0.9)
-        modeltest1.test_all(t_eval=t_eval)
+        t_eval = np.linspace(0, 0.5)
+        modeltest1.test_all(t_eval=t_eval, skip_output_tests=True)
 
         T1, Y1 = modeltest1.solution.t, modeltest1.solution.y
 
         # trying to update the geometry fails
         parameter_values_update = pybamm.ParameterValues(
-            base_parameters=model1.default_parameter_values,
-            optional_parameters={
-                "Negative electrode thickness [m]": 0.000002,
-                "Separator thickness [m]": 0.000003,
-                "Positive electrode thickness [m]": 0.000004,
-            },
+            chemistry=pybamm.parameter_sets.Sulzer2019
+        )
+        parameter_values_update.update(
+            {
+                "Negative electrode thickness [m]": 0.0002,
+                "Separator thickness [m]": 0.0003,
+                "Positive electrode thickness [m]": 0.0004,
+            }
         )
         with self.assertRaisesRegex(ValueError, "geometry has changed"):
             modeltest1.test_update_parameters(parameter_values_update)
 
         # instead we need to make a new model and re-discretise
-        model2 = pybamm.ReactionDiffusionModel()
-        parameter_values_update = pybamm.ParameterValues(
-            base_parameters=model2.default_parameter_values,
-            optional_parameters={
-                "Negative electrode thickness [m]": 0.000002,
-                "Separator thickness [m]": 0.000003,
-                "Positive electrode thickness [m]": 0.000004,
-            },
-        )
+        model2 = pybamm.lead_acid.LOQS()
         # nb: need to be careful make parameters a reasonable size
         modeltest2 = tests.StandardModelTest(model2)
-        modeltest2.test_all(param=parameter_values_update, t_eval=t_eval)
+        modeltest2.test_all(
+            param=parameter_values_update, t_eval=t_eval, skip_output_tests=True
+        )
         T2, Y2 = modeltest2.solution.t, modeltest2.solution.y
         # results should be different
         c1 = pybamm.ProcessedVariable(

@@ -7,6 +7,7 @@
 # don't ignore important .txt files
 !requirements*
 !LICENSE.txt
+!CMakeLists.txt
 
 # running files
 *.pyc
@@ -54,7 +55,7 @@ pyproject.toml
 # virtual enviroment
 venv/
 venv3.5/
-Pybamm-env/
+PyBaMM-env/
 bin/
 etc/
 lib/
@@ -65,3 +66,5 @@ pyvenv.cfg
 
 # sundials
 sundials
+sundials4
+SuiteSparse

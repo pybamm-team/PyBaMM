@@ -12,11 +12,6 @@ models = [cell_model, cc_model]
 
 # set parameters based on the cell model
 param = cell_model.default_parameter_values
-# adjust current to correspond to a typical current density of 24 [A.m-2]
-C_rate = 1
-param["Typical current [A]"] = (
-    C_rate * 24 * param.process_symbol(pybamm.geometric_parameters.A_cc).evaluate()
-)
 
 # make current collectors not so conductive, just for illustrative purposes
 param["Negative current collector conductivity [S.m-1]"] = 5.96e5
@@ -46,7 +41,7 @@ t, y = solution.t, solution.y
 time = pybamm.ProcessedVariable(cell_model.variables["Time [h]"], t, y)(t)
 voltage = pybamm.ProcessedVariable(cell_model.variables["Terminal voltage [V]"], t, y)
 current = pybamm.ProcessedVariable(cell_model.variables["Current [A]"], t, y)(t)
-delta = param.process_symbol(pybamm.standard_parameters_lithium_ion.delta).evaluate()
+delta = param.evaluate(pybamm.standard_parameters_lithium_ion.delta)
 R_cc = param.process_symbol(
     cc_model.variables["Effective current collector resistance [Ohm]"]
 ).evaluate(t=cc_solution.t, y=cc_solution.y)[0][0]

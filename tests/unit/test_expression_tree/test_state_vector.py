@@ -45,6 +45,18 @@ class TestStateVector(unittest.TestCase):
         )
         self.assertEqual(sv.name, "y[0:10,20:30,...,60:70]")
 
+    def test_pass_evaluation_array(self):
+        # Turn off debug mode for this test
+        original_debug_mode = pybamm.settings.debug_mode
+        pybamm.settings.debug_mode = False
+        # Test that evaluation array gets passed down (doesn't have to be the correct
+        # array for this test)
+        array = np.array([1, 2, 3, 4, 5])
+        sv = pybamm.StateVector(slice(0, 10), evaluation_array=array)
+        np.testing.assert_array_equal(sv.evaluation_array, array)
+        # Turn debug mode back to what is was before
+        pybamm.settings.debug_mode = original_debug_mode
+
     def test_failure(self):
         with self.assertRaisesRegex(TypeError, "all y_slices must be slice objects"):
             pybamm.StateVector(slice(0, 10), 1)
