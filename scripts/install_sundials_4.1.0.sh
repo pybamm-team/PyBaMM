@@ -14,7 +14,7 @@ tar -xvf $SUNDIALS_NAME
 cd sundials-4.1.0
 cp $CURRENT_DIR/scripts/replace-cmake/CMakeLists.txt .
 
-cd ${CURRENT_DIR}
+cd $CURRENT_DIR
 mkdir build-sundials-4.1.0
 cd build-sundials-4.1.0/
 
@@ -50,8 +50,8 @@ git clone https://github.com/pybind/pybind11.git
 cd $CURRENT_DIR
 pip install pybind11 # also do a pip install for good measure
 
-PY_VERSION=PY_VER=$(python --version 2>&1 | awk '{print $2}')
-cmake -DPYBIND11_PYTHON_VERSION=${PY_VERSION} .
+PY_VERSION=$(python --version 2>&1 | awk '{print $2}')
+cmake -DPYBIND11_PYTHON_VERSION=$PY_VERSION .
 make clean
 make
 
