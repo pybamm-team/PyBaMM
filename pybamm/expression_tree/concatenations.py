@@ -45,27 +45,6 @@ class Concatenation(pybamm.Symbol):
                 raise pybamm.DomainError("""domain of children must be disjoint""")
         return domain
 
-    def get_children_auxiliary_domains(self, children):
-        "Combine auxiliary domains from children, at all levels"
-        aux_domains = {}
-        for child in children:
-            for level in child.auxiliary_domains.keys():
-                if (
-                    not hasattr(aux_domains, level)
-                    or aux_domains[level] == []
-                    or child.auxiliary_domains[level] == aux_domains[level]
-                ):
-                    aux_domains[level] = child.auxiliary_domains[level]
-                else:
-                    raise pybamm.DomainError(
-                        """children must have same or empty auxiliary domains,
-                        not {!s} and {!s}""".format(
-                            aux_domains[level], child.auxiliary_domains[level]
-                        )
-                    )
-
-        return aux_domains
-
     def _concatenation_evaluate(self, children_eval):
         """ See :meth:`Concatenation._concatenation_evaluate()`. """
         if len(children_eval) == 0:
