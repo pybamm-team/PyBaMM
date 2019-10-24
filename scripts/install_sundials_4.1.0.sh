@@ -5,11 +5,9 @@ CURRENT_DIR=`pwd`
 SUNDIALS_URL=https://computing.llnl.gov/projects/sundials/download/sundials-4.1.0.tar.gz
 SUNDIALS_NAME=sundials-4.1.0.tar.gz
 
-TMP_DIR=$CURRENT_DIR/tmp
 mkdir $TMP_DIR
 INSTALL_DIR=$CURRENT_DIR/sundials4
 
-cd $TMP_DIR
 wget $SUNDIALS_URL -O $SUNDIALS_NAME
 tar -xvf $SUNDIALS_NAME
 
@@ -17,7 +15,6 @@ tar -xvf $SUNDIALS_NAME
 cd sundials-4.1.0
 cp $CURRENT_DIR/scripts/replace-cmake/CMakeLists.txt .
 
-cd $TMP_DIR
 mkdir build-sundials-4.1.0
 cd build-sundials-4.1.0/
 
@@ -38,7 +35,8 @@ cmake -DBLAS_ENABLE=ON\
 make clean
 make install
 cd $CURRENT_DIR
-rm -rf $TMP_DIR
+rm -rf build-sundials-4.1.0
+rm -rf sundials-4.1.0
 export LD_LIBRARY_PATH=$INSTALL_DIR/lib:$LD_LIBRARY_PATH
 export SUNDIALS_INST=$INSTALL_DIR
 
