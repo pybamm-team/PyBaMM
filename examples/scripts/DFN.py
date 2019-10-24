@@ -30,9 +30,7 @@ disc.process_model(model)
 # solve model
 t_eval = np.linspace(0, 0.2, 100)
 # solver = model.default_solver
-solver = pybamm.KLU()
-solver.rtol = 1e-3
-solver.atol = 1e-6
+solver = pybamm.KLU(rtol=1e-6, atol=1e-6)
 solution = solver.solve(model, t_eval)
 
 # plot

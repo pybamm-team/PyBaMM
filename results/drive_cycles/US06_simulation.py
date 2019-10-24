@@ -5,7 +5,7 @@ import pybamm
 import numpy as np
 
 # load model
-pybamm.set_logging_level("DEBUG")
+pybamm.set_logging_level("INFO")
 model = pybamm.lithium_ion.DFN()
 
 # create geometry
@@ -18,7 +18,9 @@ param.process_model(model)
 param.process_geometry(geometry)
 
 # set mesh
-mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+var = pybamm.standard_spatial_vars
+var_pts = {var.x_n: 9, var.x_s: 4, var.x_p: 9, var.r_n: 9, var.r_p: 9}
+mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
 
 # discretise model
 disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
