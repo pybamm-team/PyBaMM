@@ -9,8 +9,6 @@ Positive electrode thickness [m],0.0001,Scott Moura FastDFN,
 Positive current collector thickness [m],2.5E-05,Scott Moura FastDFN,
 Electrode height [m],0.137,KOKAM SLPB78205130H,Not needed for 1D
 Electrode width [m],0.207,KOKAM SLPB78205130H,Not needed for 1D
-Negative current collector thickness [m],2.5E-05,Scott Moura FastDFN,
-Positive current collector thickness [m],2.5E-05,Scott Moura FastDFN,
 Negative tab width [m],0.04,,Need to find actual value for KOKAM cell
 Negative tab centre y-coordinate [m],0.06,,Need to find actual value for KOKAM cell
 Negative tab centre z-coordinate [m],0.137,,Need to find actual value for KOKAM cell
