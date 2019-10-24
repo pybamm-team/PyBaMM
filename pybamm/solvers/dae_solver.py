@@ -20,7 +20,7 @@ class DaeSolver(pybamm.BaseSolver):
     root_method : str, optional
         The method to use to find initial conditions (default is "lm")
     root_tol : float, optional
-        The tolerance for the initial-condition solver (default is 1e-8).
+        The tolerance for the initial-condition solver (default is 1e-6).
     max_steps: int, optional
         The maximum number of steps the solver will take before terminating
         (default is 1000).
@@ -120,15 +120,19 @@ class DaeSolver(pybamm.BaseSolver):
             events = {name: simp.simplify(event) for name, event in events.items()}
 
         if model.use_jacobian:
-            # Create Jacobian from simplified rhs
+            # Create Jacobian from concatenated rhs and algebraic
             y = pybamm.StateVector(
                 slice(0, np.size(model.concatenated_initial_conditions))
             )
+            # set up Jacobian object, for re-use of dict
+            jacobian = pybamm.Jacobian()
             pybamm.logger.info("Calculating jacobian")
-            jac_rhs = concatenated_rhs.jac(y)
-            jac_algebraic = concatenated_algebraic.jac(y)
+            jac_rhs = jacobian.jac(concatenated_rhs, y)
+            jac_algebraic = jacobian.jac(concatenated_algebraic, y)
             jac = pybamm.SparseStack(jac_rhs, jac_algebraic)
             model.jacobian = jac
+            model.jacobian_rhs = jac_rhs
+            model.jacobian_algebraic = jac_algebraic
 
             if model.use_simplify:
                 pybamm.logger.info("Simplifying jacobian")
@@ -312,6 +316,8 @@ class DaeSolver(pybamm.BaseSolver):
         event_funs = [event_fun(event) for event in casadi_events.values()]
 
         # Add the solver attributes
+        # Note: these are the (possibly) converted to python version rhs, algebraic
+        # etc. The expression tree versions of these are attributes of the model
         self.y0 = y0
         self.rhs = rhs
         self.algebraic = algebraic

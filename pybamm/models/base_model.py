@@ -52,7 +52,16 @@ class BaseModel(object):
         automatically
     jacobian : :class:`pybamm.Concatenation`
         Contains the Jacobian for the model. If model.use_jacobian is True, the
-        Jacobian is computed automatically during the set up in solve
+        Jacobian is computed automatically during solver set up
+    jacobian_rhs : :class:`pybamm.Concatenation`
+        Contains the Jacobian for the part of the model which contains time derivatives.
+        If model.use_jacobian is True, the Jacobian is computed automatically during
+        solver set up
+    jacobian_algebraic : :class:`pybamm.Concatenation`
+        Contains the Jacobian for the algebraic part of the model. This may be used
+        by the solver when calculating consistent initial conditions. If
+        model.use_jacobian is True, the Jacobian is computed automatically during
+        solver set up
     use_jacobian : bool
         Whether to use the Jacobian when solving the model (default is True)
     use_simplify : bool
@@ -88,6 +97,7 @@ class BaseModel(object):
         self._concatenated_initial_conditions = None
         self._mass_matrix = None
         self._jacobian = None
+        self._jacobian_algebraic = None
 
         # Default behaviour is to use the jacobian and simplify
         self.use_jacobian = True
@@ -231,6 +241,22 @@ class BaseModel(object):
     @jacobian.setter
     def jacobian(self, jacobian):
         self._jacobian = jacobian
+
+    @property
+    def jacobian_rhs(self):
+        return self._jacobian_rhs
+
+    @jacobian_rhs.setter
+    def jacobian_rhs(self, jacobian_rhs):
+        self._jacobian_rhs = jacobian_rhs
+
+    @property
+    def jacobian_algebraic(self):
+        return self._jacobian_algebraic
+
+    @jacobian_algebraic.setter
+    def jacobian_algebraic(self, jacobian_algebraic):
+        self._jacobian_algebraic = jacobian_algebraic
 
     @property
     def set_of_parameters(self):

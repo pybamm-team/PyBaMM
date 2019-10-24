@@ -164,6 +164,7 @@ from .expression_tree.operations.evaluate import (
     to_python,
     EvaluatorPython,
 )
+from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
 
 #

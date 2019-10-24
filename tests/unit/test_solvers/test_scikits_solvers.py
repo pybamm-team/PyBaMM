@@ -471,8 +471,6 @@ class TestScikitsSolvers(unittest.TestCase):
         def jacobian(t, y):
             return J
 
-        model.jacobian = jacobian
-
         # Solve
         solver = pybamm.ScikitsOdeSolver(rtol=1e-9, atol=1e-9)
         t_eval = np.linspace(0, 1, 100)
@@ -587,8 +585,6 @@ class TestScikitsSolvers(unittest.TestCase):
                     [2.0 * np.eye(N), -1.0 * np.eye(N)],
                 ]
             )
-
-        model.jacobian = jacobian
 
         # Solve
         solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)

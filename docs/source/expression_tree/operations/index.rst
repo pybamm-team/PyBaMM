@@ -7,4 +7,5 @@ Classes and functions that operate on the expression tree
 
   simplify
   evaluate
+  jacobian
   convert_to_casadi

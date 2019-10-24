@@ -117,7 +117,7 @@ class StateVector(pybamm.Symbol):
                 out = out[:, np.newaxis]
             return out
 
-    def jac(self, variable):
+    def _jac(self, variable):
         """
         Differentiate a slice of a StateVector of size m with respect to another
         slice of a StateVector of size n. This returns a (sparse) matrix of size

@@ -17,4 +17,10 @@ Expression Tree
   broadcasts
   functions
   interpolant
+<<<<<<< HEAD
   operations/index
+=======
+  evaluate
+  simplify
+  jacobian
+>>>>>>> master

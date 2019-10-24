@@ -451,6 +451,21 @@ class TestParameterValues(unittest.TestCase):
         ):
             parameter_values.process_model(model)
 
+    def test_evaluate(self):
+        parameter_values = pybamm.ParameterValues({"a": 1, "b": 2, "c": 3})
+        a = pybamm.Parameter("a")
+        b = pybamm.Parameter("b")
+        c = pybamm.Parameter("c")
+        self.assertEqual(parameter_values.evaluate(a), 1)
+        self.assertEqual(parameter_values.evaluate(a + (b * c)), 7)
+
+        y = pybamm.StateVector(slice(0, 1))
+        with self.assertRaises(ValueError):
+            parameter_values.evaluate(y)
+        array = pybamm.Array(np.array([1, 2, 3]))
+        with self.assertRaises(ValueError):
+            parameter_values.evaluate(array)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
