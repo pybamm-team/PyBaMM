@@ -31,6 +31,8 @@ class TestIndependentVariable(unittest.TestCase):
         with self.assertRaises(ValueError):
             t.evaluate(None)
 
+        self.assertEqual(t.evaluate_for_shape(), 0)
+
     def test_spatial_variable(self):
         x = pybamm.SpatialVariable("x", "negative electrode")
         self.assertEqual(x.name, "x")

@@ -13,6 +13,7 @@
 *.pyc
 *.py~
 .~lock*
+*.swp
 
 # Python cache
 *__pycache__/
@@ -68,3 +69,11 @@ pyvenv.cfg
 sundials
 sundials4
 SuiteSparse
+SuiteSparse/.gitignore
+
+# cmakefiles
+CMakeFiles
+Makefile
+*.cmake
+*.so
+

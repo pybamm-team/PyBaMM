@@ -3,7 +3,7 @@
 #
 import numpy as np
 import pybamm
-from scipy.sparse import issparse
+from scipy.sparse import issparse, csr_matrix
 
 
 class Array(pybamm.Symbol):
@@ -81,6 +81,12 @@ class Array(pybamm.Symbol):
         self._id = hash(
             (self.__class__, self.name, self.entries_string) + tuple(self.domain)
         )
+
+    def _jac(self, variable):
+        """ See :meth:`pybamm.Symbol._jac()`. """
+        # Return zeros of correct size
+        jac = csr_matrix((self.size, variable.evaluation_array.count(True)))
+        return pybamm.Matrix(jac)
 
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
