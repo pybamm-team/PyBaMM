@@ -214,19 +214,19 @@ class Power(BinaryOperator):
             + base * pybamm.log(base) * exponent.diff(variable)
         )
 
-    def _binary_jac(self, base_jac, exponent_jac):
+    def _binary_jac(self, left_jac, right_jac):
         """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
         # apply chain rule and power rule
-        base, exponent = self.orphans
-        if base.evaluates_to_number() and exponent.evaluates_to_number():
+        left, right = self.orphans
+        if left.evaluates_to_number() and right.evaluates_to_number():
             return pybamm.Scalar(0)
-        elif exponent.evaluates_to_number():
-            return (exponent * base ** (exponent - 1)) * base_jac
-        elif base.evaluates_to_number():
-            return (base ** exponent * pybamm.log(base)) * exponent_jac
+        elif right.evaluates_to_number():
+            return (right * left ** (right - 1)) * left_jac
+        elif left.evaluates_to_number():
+            return (left ** right * pybamm.log(left)) * right_jac
         else:
-            return (base ** (exponent - 1)) * (
-                exponent * base_jac + base * pybamm.log(base) * exponent_jac
+            return (left ** (right - 1)) * (
+                right * left_jac + left * pybamm.log(left) * right_jac
             )
 
     def _binary_evaluate(self, left, right):
@@ -476,18 +476,18 @@ class Division(BinaryOperator):
         top, bottom = self.orphans
         return (top.diff(variable) * bottom - top * bottom.diff(variable)) / bottom ** 2
 
-    def _binary_jac(self, top_jac, bottom_jac):
+    def _binary_jac(self, left_jac, right_jac):
         """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
         # apply quotient rule
-        top, bottom = self.orphans
-        if top.evaluates_to_number() and bottom.evaluates_to_number():
+        left, right = self.orphans
+        if left.evaluates_to_number() and right.evaluates_to_number():
             return pybamm.Scalar(0)
-        elif top.evaluates_to_number():
-            return -top / bottom ** 2 * bottom_jac
-        elif bottom.evaluates_to_number():
-            return top_jac / bottom
+        elif left.evaluates_to_number():
+            return -left / right ** 2 * right_jac
+        elif right.evaluates_to_number():
+            return left_jac / right
         else:
-            return (bottom * top_jac - top * bottom_jac) / bottom ** 2
+            return (right * left_jac - left * right_jac) / right ** 2
 
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
