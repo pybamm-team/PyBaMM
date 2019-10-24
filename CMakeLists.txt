@@ -21,43 +21,8 @@ TARGET_LINK_LIBRARIES(klu PRIVATE ${SUNMATSPARSE} ${IDA} ${NVECTOR} ${SUNKLU})
 find_library(RT rt)
 TARGET_LINK_LIBRARIES(klu PRIVATE ${RT})
 
-## KLU ------
-## Add the includes
-# set(KLU_INCLUDE_DIR "SuiteSparse/KLU/Include")
-# set(AMD_INCLUDE_DIR "SuiteSparse/AMD/Include")
-# set(COLAMD_INCLUDE_DIR "SuiteSparse/COLAMD/Include")
-# set(BTF_INCLUDE_DIR "SuiteSparse/BTF/Include")
-# set(SUITESPARSECONFIG_INCLUDE_DIR "SuiteSparse/SuiteSparse_config")
-# TARGET_INCLUDE_DIRECTORIES(klu PRIVATE 
-#     ${AMD_INCLUDE_DIR} 
-#     ${COLAMD_INCLUDE_DIR} 
-#     ${BTF_INCLUDE_DIR} 
-#     ${SUITESPARSECONFIG_INCLUDE_DIR} 
-#     ${KLU_INCLUDE_DIR}
-#     )
-
-# set(SUITESPARSE_INCLUDE_DIR "/usr/include/suitesparse")
-# find_path(SUITESPARSE_INCLUDE_DIR suitesparse)
-# INCLUDE_DIRECTORIES(${SUITESPARSE_INCLUDE_DIR})
-
+# link suitesparse
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 find_package(SuiteSparse)
 include_directories(${SuiteSparse_INCLUDE_DIRS})
 target_link_libraries(klu PRIVATE ${SuiteSparse_LIBRARIES})
-
-# ## Link Libraries
-# find_library(KLU klu)
-# find_library(AMD amd)
-# find_library(COLAMD colamd)
-# find_library(BTF btf)
-# find_library(SUITESPARSE_CONFIG suitesparseconfig)
-# TARGET_LINK_LIBRARIES(klu PRIVATE 
-#     ${KLU} 
-#     ${AMD} 
-#     ${COLAMD} 
-#     ${BTF} 
-#     ${SUITESPARSE_CONFIG}
-#     )
-
-# ---------------
-

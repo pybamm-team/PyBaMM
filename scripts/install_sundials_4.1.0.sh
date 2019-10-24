@@ -49,7 +49,9 @@ git clone https://github.com/pybind/pybind11.git
 
 cd $CURRENT_DIR
 pip install pybind11 # also do a pip install for good measure
-cmake .
+
+PY_VERSION=PY_VER=$(python --version 2>&1 | awk '{print $2}')
+cmake -DPYBIND11_PYTHON_VERSION=${PY_VERSION} .
 make clean
 make
 
