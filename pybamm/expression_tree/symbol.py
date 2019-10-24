@@ -74,6 +74,14 @@ class Symbol(anytree.NodeMixin):
     domain : iterable of str, or str
         list of domains over which the node is valid (empty list indicates the symbol
         is valid over all domains)
+    auxiliary_domains : dict of str
+        dictionary of auxiliary domains over which the node is valid (empty dictionary
+        indicates no auxiliary domains). Keys can be "secondary" or "tertiary". The
+        symbol is broadcast over its auxiliary domains.
+        For example, a symbol might have domain "negative particle", secondary domain
+        "separator" and tertiary domain "current collector" (`domain="negative
+        particle", auxiliary_domains={"secondary": "separator", "tertiary": "current
+        collector"}`).
 
     """
 
@@ -159,6 +167,27 @@ class Symbol(anytree.NodeMixin):
             self._domain = domain
             # Update id since domain has changed
             self.set_id()
+
+    def get_children_auxiliary_domains(self, children):
+        "Combine auxiliary domains from children, at all levels"
+        aux_domains = {}
+        for child in children:
+            for level in child.auxiliary_domains.keys():
+                if (
+                    level not in aux_domains
+                    or aux_domains[level] == []
+                    or child.auxiliary_domains[level] == aux_domains[level]
+                ):
+                    aux_domains[level] = child.auxiliary_domains[level]
+                else:
+                    raise pybamm.DomainError(
+                        """children must have same or empty auxiliary domains,
+                        not {!s} and {!s}""".format(
+                            aux_domains[level], child.auxiliary_domains[level]
+                        )
+                    )
+
+        return aux_domains
 
     @property
     def id(self):

@@ -35,6 +35,7 @@ class Function(pybamm.Symbol):
                 name = "function ({})".format(function.__class__)
         children_list = list(children)
         domain = self.get_children_domains(children_list)
+        auxiliary_domains = self.get_children_auxiliary_domains(children)
 
         self.function = function
         self.derivative = derivative
@@ -46,7 +47,12 @@ class Function(pybamm.Symbol):
         else:
             self.takes_no_params = len(signature(function).parameters) == 0
 
-        super().__init__(name, children=children_list, domain=domain)
+        super().__init__(
+            name,
+            children=children_list,
+            domain=domain,
+            auxiliary_domains=auxiliary_domains,
+        )
 
     def get_children_domains(self, children_list):
         """Obtains the unique domain of the children. If the

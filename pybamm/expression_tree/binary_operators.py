@@ -82,11 +82,10 @@ class BinaryOperator(pybamm.Symbol):
         # right child.
         if isinstance(self, (pybamm.Outer, pybamm.Kron)):
             domain = right.domain
+            auxiliary_domains = {"secondary": left.domain}
         else:
             domain = self.get_children_domains(left.domain, right.domain)
-        auxiliary_domains = self.get_children_auxiliary_domains(
-            left.auxiliary_domains, right.auxiliary_domains
-        )
+            auxiliary_domains = self.get_children_auxiliary_domains([left, right])
         super().__init__(
             name,
             children=[left, right],
@@ -117,15 +116,6 @@ class BinaryOperator(pybamm.Symbol):
                     ldomain, rdomain
                 )
             )
-
-    def get_children_auxiliary_domains(self, l_aux_domains, r_aux_domains):
-        "Combine auxiliary domains from children, at all levels"
-        aux_domains = {}
-        for level in set(l_aux_domains.keys()).union(r_aux_domains.keys()):
-            ldomain = l_aux_domains.get(level, [])
-            rdomain = r_aux_domains.get(level, [])
-            aux_domains[level] = self.get_children_domains(ldomain, rdomain)
-        return aux_domains
 
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
