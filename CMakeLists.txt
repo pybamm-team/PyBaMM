@@ -17,10 +17,6 @@ find_library(NVECTOR sundials_nvecserial PATHS "sundials4/lib" NO_DEFAULT_PATH)
 find_library(SUNKLU sundials_sunlinsolklu PATHS "sundials4/lib" NO_DEFAULT_PATH)
 TARGET_LINK_LIBRARIES(idaklu PRIVATE ${SUNMATSPARSE} ${IDA} ${NVECTOR} ${SUNKLU})
 
-# System libraries
-find_library(RT rt)
-TARGET_LINK_LIBRARIES(idaklu PRIVATE ${RT})
-
 # link suitesparse
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 find_package(SuiteSparse OPTIONAL_COMPONENTS KLU AMD COLAMD BTF)
