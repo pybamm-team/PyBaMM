@@ -73,12 +73,13 @@ class BaseModel(object):
         algebraic equations, Jacobain (if using) and events into a different format:
 
         - None: keep PyBaMM expression tree structure.
-        - "python": convert into pure python code that will calculate the result of
+        - "python": convert into pure python code that will calculate the result of \
         calling `evaluate(t, y)` on the given expression treeself.
-        - "casadi": convert into CasADi expression tree, which then uses CasADi's
+        - "casadi": convert into CasADi expression tree, which then uses CasADi's \
         algorithm to calculate the Jacobian.
 
         Default is "python".
+
     """
 
     def __init__(self, name="Unnamed model"):
