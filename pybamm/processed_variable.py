@@ -404,9 +404,9 @@ class ProcessedVariable(object):
                 out = self.call_2D(t, x, r, z)
         elif self.dimensions == 3:
             out = self.call_3D(t, x, r, y, z)
-        if warn is True and out is None:
+        if warn is True and np.isnan(out).any():
             pybamm.logger.warning(
-                "Calling variable outside interpolation range (returns 'None')"
+                "Calling variable outside interpolation range (returns 'nan')"
             )
         return out
 
