@@ -113,6 +113,7 @@ matrix:
           env:
             - PYBAMM_COVER=true
             - PYBAMM_SCIKITS_ODES=true
+            - PYBAMM_KLU=true
           if: type != cron
         - python: "3.7"
           addons:
