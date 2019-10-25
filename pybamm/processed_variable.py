@@ -391,19 +391,24 @@ class ProcessedVariable(object):
             fill_value=np.nan,
         )
 
-    def __call__(self, t=None, x=None, r=None, y=None, z=None):
+    def __call__(self, t=None, x=None, r=None, y=None, z=None, warn=True):
         """
         Evaluate the variable at arbitrary t (and x, r, y and/or z), using interpolation
         """
         if self.dimensions == 1:
-            return self._interpolation_function(t)
+            out = self._interpolation_function(t)
         elif self.dimensions == 2:
             if t is None:
-                return self._interpolation_function(y, z)
+                out = self._interpolation_function(y, z)
             else:
-                return self.call_2D(t, x, r, z)
+                out = self.call_2D(t, x, r, z)
         elif self.dimensions == 3:
-            return self.call_3D(t, x, r, y, z)
+            out = self.call_3D(t, x, r, y, z)
+        if warn is True and out is None:
+            pybamm.logger.warning(
+                "Calling variable outside interpolation range (returns 'None')"
+            )
+        return out
 
     def call_2D(self, t, x, r, z):
         "Evaluate a 2D variable"
