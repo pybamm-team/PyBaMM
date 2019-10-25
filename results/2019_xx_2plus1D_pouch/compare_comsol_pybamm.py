@@ -40,7 +40,7 @@ options = {
     "dimensionality": 2,
     "thermal": "x-lumped",
 }
-pybamm_model = pybamm.lithium_ion.SPM(options)
+pybamm_model = pybamm.lithium_ion.SPMe(options)
 # pybamm_model.use_simplify = False
 geometry = pybamm_model.default_geometry
 
@@ -70,21 +70,21 @@ l_tab_n = param.evaluate(pybamm.geometric_parameters.l_tab_n)
 l_tab_p = param.evaluate(pybamm.geometric_parameters.l_tab_p)
 centre_tab_n = param.evaluate(pybamm.geometric_parameters.centre_y_tab_n)
 centre_tab_p = param.evaluate(pybamm.geometric_parameters.centre_y_tab_p)
-y0 = np.linspace(0, centre_tab_n - l_tab_n / 2, 2)  # mesh up to start of neg tab
+y0 = np.linspace(0, centre_tab_n - l_tab_n / 2, 3)  # mesh up to start of neg tab
 y1 = np.linspace(
-    centre_tab_n - l_tab_n / 2, centre_tab_n + l_tab_n / 2, 2
+    centre_tab_n - l_tab_n / 2, centre_tab_n + l_tab_n / 2, 3
 )  # mesh neg tab
 y2 = np.linspace(
-    centre_tab_n + l_tab_n / 2, centre_tab_p - l_tab_p / 2, 2
+    centre_tab_n + l_tab_n / 2, centre_tab_p - l_tab_p / 2, 3
 )  # mesh gap between tabs
 y3 = np.linspace(
-    centre_tab_p - l_tab_p / 2, centre_tab_p + l_tab_p / 2, 2
+    centre_tab_p - l_tab_p / 2, centre_tab_p + l_tab_p / 2, 3
 )  # mesh pos tab
-y4 = np.linspace(centre_tab_p + l_tab_p / 2, l_y, 2)  # mesh from pos tab to cell edge
+y4 = np.linspace(centre_tab_p + l_tab_p / 2, l_y, 3)  # mesh from pos tab to cell edge
 y_edges = np.concatenate((y0, y1[1:], y2[1:], y3[1:], y4[1:]))
 
-# cube root sequence in z direction
-z_edges = np.linspace(0, 1, 5) ** (1 / 3)
+# square root sequence in z direction
+z_edges = np.linspace(0, 1, 10) ** (1 / 2)
 submesh_types["current collector"] = pybamm.MeshGenerator(
     pybamm.UserSupplied2DSubMesh,
     submesh_params={"y_edges": y_edges, "z_edges": z_edges},
@@ -114,6 +114,7 @@ tau = param.process_symbol(
 t_end = 3600 / tau
 t_eval = np.linspace(0, t_end, 120)
 solver = pybamm.KLU(atol=1e-8, rtol=1e-8, root_tol=1e-8)
+pybamm_model.convert_to_format = "casadi"
 solution = solver.solve(pybamm_model, t_eval)
 
 
@@ -134,6 +135,7 @@ comsol_model = shared.make_comsol_model(
 )
 
 # Process pybamm variables for which we have corresponding comsol variables
+pybamm.set_logging_level("DEBUG")
 output_variables = {}
 for var in comsol_model.variables.keys():
     try:

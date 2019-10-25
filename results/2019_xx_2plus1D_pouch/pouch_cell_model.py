@@ -22,7 +22,7 @@ geometry = model.default_geometry
 
 # load parameters and process model and geometry
 param = model.default_parameter_values
-param.update({"C-rate": 1})
+param.update({"C-rate": 2, "Heat transfer coefficient [W.m-2.K-1]": 0.1})
 param.process_model(model)
 param.process_geometry(geometry)
 
@@ -46,21 +46,21 @@ l_tab_n = param.evaluate(pybamm.geometric_parameters.l_tab_n)
 l_tab_p = param.evaluate(pybamm.geometric_parameters.l_tab_p)
 centre_tab_n = param.evaluate(pybamm.geometric_parameters.centre_y_tab_n)
 centre_tab_p = param.evaluate(pybamm.geometric_parameters.centre_y_tab_p)
-y0 = np.linspace(0, centre_tab_n - l_tab_n / 2, 2)  # mesh up to start of neg tab
+y0 = np.linspace(0, centre_tab_n - l_tab_n / 2, 3)  # mesh up to start of neg tab
 y1 = np.linspace(
-    centre_tab_n - l_tab_n / 2, centre_tab_n + l_tab_n / 2, 2
+    centre_tab_n - l_tab_n / 2, centre_tab_n + l_tab_n / 2, 3
 )  # mesh neg tab
 y2 = np.linspace(
-    centre_tab_n + l_tab_n / 2, centre_tab_p - l_tab_p / 2, 2
+    centre_tab_n + l_tab_n / 2, centre_tab_p - l_tab_p / 2, 3
 )  # mesh gap between tabs
 y3 = np.linspace(
-    centre_tab_p - l_tab_p / 2, centre_tab_p + l_tab_p / 2, 2
+    centre_tab_p - l_tab_p / 2, centre_tab_p + l_tab_p / 2, 3
 )  # mesh pos tab
-y4 = np.linspace(centre_tab_p + l_tab_p / 2, l_y, 2)  # mesh from pos tab to cell edge
+y4 = np.linspace(centre_tab_p + l_tab_p / 2, l_y, 3)  # mesh from pos tab to cell edge
 y_edges = np.concatenate((y0, y1[1:], y2[1:], y3[1:], y4[1:]))
 
 # cube root sequence in z direction
-z_edges = np.linspace(0, 1, 5) ** (1 / 3)
+z_edges = np.linspace(0, 1, 10) ** (1 / 3)
 submesh_types["current collector"] = pybamm.MeshGenerator(
     pybamm.UserSupplied2DSubMesh,
     submesh_params={"y_edges": y_edges, "z_edges": z_edges},
@@ -87,9 +87,10 @@ tau = param.process_symbol(
 ).evaluate()
 
 # solve model -- simulate one hour discharge
-t_end = 3600 / tau / 4
+t_end = 900 / tau
 t_eval = np.linspace(0, t_end, 120)
 solver = pybamm.KLU(atol=1e-8, rtol=1e-8, root_tol=1e-8)
+model.convert_to_format = "casadi"
 solution = solver.solve(model, t_eval)
 
 # TO DO: 2+1D automated plotting
@@ -163,7 +164,7 @@ def plot(t):
     plt.colorbar(phi_s_cp_plot)
 
     # current
-    plt.subplot(224)
+    plt.subplot(223)
     I_plot = plt.pcolormesh(
         y_plot,
         z_plot,
@@ -203,5 +204,5 @@ def plot(t):
     )
 
 
-plot(600 / tau)
+plot(800 / tau)
 plt.show()
