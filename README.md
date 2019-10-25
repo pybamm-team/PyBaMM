@@ -21,7 +21,11 @@ can be found
 
 ### Linux
 
-For instructions on installing PyBaMM on Debian-based distributions, please see [here](INSTALL-LINUX.md)
+For instructions on installing PyBaMM on Debian-based distributions, please see [here](INSTALL-LINUX-MAC.md)
+
+### Mac OS
+
+For instructions on installing PyBaMM on Mac OS distributions, please see [here](INSTALL-LINUX-MAC.md)
 
 ### Windows
 
