@@ -68,12 +68,16 @@ pyvenv.cfg
 # sundials
 sundials
 sundials4
-SuiteSparse
-SuiteSparse/.gitignore
+
+# third party
+third-party
 
 # cmakefiles
 CMakeFiles
 Makefile
-*.cmake
+cmake_install.cmake
 *.so
+*.json
 
+
+third-party/pybind11

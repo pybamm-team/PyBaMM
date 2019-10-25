@@ -20,7 +20,7 @@ class Variable(pybamm.Symbol):
     auxiliary_domains : dict
         dictionary of auxiliary domains ({'secondary': ..., 'tertiary': ...}). For
         example, for the single particle model, the particle concentration would be a
-        Variable with domain 'negative partilce' and secondary auxiliary domain 'current
+        Variable with domain 'negative particle' and secondary auxiliary domain 'current
         collector'. For the DFN, the particle concentration would be a Variable with
         domain 'negative particle', secondary domain 'negative electrode' and tertiary
         domain 'current collector'

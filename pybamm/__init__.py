@@ -263,6 +263,8 @@ from .solvers.scikits_dae_solver import ScikitsDaeSolver
 from .solvers.scikits_ode_solver import ScikitsOdeSolver
 from .solvers.scikits_ode_solver import have_scikits_odes
 from .solvers.algebraic_solver import AlgebraicSolver
+from .solvers.idaklu_solver import IDAKLU, have_idaklu
+
 
 #
 # Current profiles
