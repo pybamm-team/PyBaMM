@@ -178,7 +178,7 @@ when I run my Python script.
 -e .`. This sets the installed location of the source files to your current directory.
 
 **Problem:** When running `python run-tests.py --quick`, gives error `FileNotFoundError: 
-[Errno 2] No such file or directory: 'flake8': 'flake8'.
+[Errno 2] No such file or directory: `flake8`: `flake8`.
 
 **Solution:** make sure you have included the `[dev,docs]` flags when you pip installed 
 PyBaMM, i.e. `pip install -e .[dev,docs]`
