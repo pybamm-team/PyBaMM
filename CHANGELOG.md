@@ -4,6 +4,7 @@
 
 -   Add interface to CasADi solver
 -   Add option to use CasADi's Algorithmic Differentiation framework to calculate Jacobians
+-   Added interface (via pybind11) to sundials with the KLU sparse linear solver ([#633] https://github.com/pybamm-team/PyBaMM/pull/657)
 -   Add method to evaluate parameters more easily ([#669](https://github.com/pybamm-team/PyBaMM/pull/669))
 -   Add `Jacobian` class to reuse known Jacobians of expressions ([#665](https://github.com/pybamm-team/PyBaMM/pull/670))
 -   Add `Interpolant` class to interpolate experimental data (e.g. OCP curves) ([#661](https://github.com/pybamm-team/PyBaMM/pull/661))
@@ -66,4 +67,5 @@ with the following optional physics:
 - Scipy
 - Scikits ODE
 - Scikits DAE
+- Sundials (with KLU sparse solver)
 - Algebraic (root-finding)
