@@ -10,12 +10,14 @@ class OdeSolver(pybamm.BaseSolver):
 
     Parameters
     ----------
-    tolerance : float, optional
-        The tolerance for the solver (default is 1e-8).
+    rtol : float, optional
+        The relative tolerance for the solver (default is 1e-6).
+    atol : float, optional
+        The absolute tolerance for the solver (default is 1e-6).
     """
 
-    def __init__(self, method=None, tol=1e-8):
-        super().__init__(method, tol)
+    def __init__(self, method=None, rtol=1e-6, atol=1e-6):
+        super().__init__(method, rtol, atol)
 
     def compute_solution(self, model, t_eval):
         """Calculate the solution of the model at specified times.
@@ -87,11 +89,14 @@ class OdeSolver(pybamm.BaseSolver):
         y0 = model.concatenated_initial_conditions[:, 0]
 
         if model.use_jacobian:
-            # Create Jacobian from simplified rhs
+            # Create Jacobian from concatenated rhs
             y = pybamm.StateVector(slice(0, np.size(y0)))
+            # set up Jacobian object, for re-use of dict
+            jacobian = pybamm.Jacobian()
             pybamm.logger.info("Calculating jacobian")
-            jac_rhs = concatenated_rhs.jac(y)
+            jac_rhs = jacobian.jac(concatenated_rhs, y)
             model.jacobian = jac_rhs
+            model.jacobian_rhs = jac_rhs
 
             if model.use_simplify:
                 pybamm.logger.info("Simplifying jacobian")
@@ -137,6 +142,8 @@ class OdeSolver(pybamm.BaseSolver):
             jacobian = None
 
         # Add the solver attributes
+        # Note: these are the (possibly) converted to python version rhs, algebraic
+        # etc. The expression tree versions of these are attributes of the model
         self.y0 = y0
         self.dydt = dydt
         self.events = events

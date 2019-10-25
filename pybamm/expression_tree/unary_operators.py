@@ -47,6 +47,10 @@ class UnaryOperator(pybamm.Symbol):
 
         return self.__class__(child)
 
+    def _unary_jac(self, child_jac):
+        """ Calculate the jacobian of a unary operator. """
+        raise NotImplementedError
+
     def _unary_simplify(self, simplified_child):
         """
         Simplify a unary operator. Default behaviour is to make a new copy, with
@@ -100,9 +104,9 @@ class Negate(UnaryOperator):
         """ See :meth:`pybamm.Symbol._diff()`. """
         return -self.child.diff(variable)
 
-    def _jac(self, variable):
-        """ See :meth:`pybamm.Symbol._jac()`. """
-        return -self.child.jac(variable)
+    def _unary_jac(self, child_jac):
+        """ See :meth:`pybamm.UnaryOperator._unary_jac()`. """
+        return -child_jac
 
     def _unary_evaluate(self, child):
         """ See :meth:`UnaryOperator._unary_evaluate()`. """
@@ -126,8 +130,8 @@ class AbsoluteValue(UnaryOperator):
             "Derivative of absolute function is not defined"
         )
 
-    def jac(self, variable):
-        """ See :meth:`pybamm.Symbol.jac()`. """
+    def _unary_jac(self, child_jac):
+        """ See :meth:`pybamm.UnaryOperator._unary_jac()`. """
         # Derivative is not well-defined
         raise pybamm.UndefinedOperationError(
             "Derivative of absolute function is not defined"
@@ -150,9 +154,14 @@ class Index(UnaryOperator):
         The index (if int) or indices (if slice) to extract from the symbol
     name : str, optional
         The name of the symbol
+    check_size : bool, optional
+        Whether to check if the slice size exceeds the child size. Default is True.
+        This should always be True when creating a new symbol so that the appropriate
+        check is performed, but should be False for creating a new copy to avoid
+        unnecessarily repeating the check.
     """
 
-    def __init__(self, child, index, name=None):
+    def __init__(self, child, index, name=None, check_size=True):
         self.index = index
         if index == -1:
             self.slice = slice(index, None)
@@ -172,10 +181,11 @@ class Index(UnaryOperator):
         else:
             raise TypeError("index must be integer or slice")
 
-        if self.slice in (slice(0, 1), slice(-1, None)):
-            pass
-        elif self.slice.stop > child.size:
-            raise ValueError("slice size exceeds child size")
+        if check_size:
+            if self.slice in (slice(0, 1), slice(-1, None)):
+                pass
+            elif self.slice.stop > child.size:
+                raise ValueError("slice size exceeds child size")
 
         super().__init__(name, child)
 
@@ -183,18 +193,17 @@ class Index(UnaryOperator):
         if isinstance(index, int):
             self.domain = []
 
-    def _jac(self, variable):
-        """ See :meth:`pybamm.Symbol._jac()`. """
+    def _unary_jac(self, child_jac):
+        """ See :meth:`pybamm.UnaryOperator._unary_jac()`. """
 
         # if child.jac returns a matrix of zeros, this subsequently gives a bug
         # when trying to simplify the node Index(child_jac). Instead, search the
         # tree for StateVectors and return a matrix of zeros of the correct size
         # if none are found.
         if all([not (isinstance(n, pybamm.StateVector)) for n in self.pre_order()]):
-            jac = csr_matrix((1, variable.evaluation_array.count(True)))
+            jac = csr_matrix((1, child_jac.shape[1]))
             return pybamm.Matrix(jac)
         else:
-            child_jac = self.child.jac(variable)
             return Index(child_jac, self.index)
 
     def set_id(self):
@@ -217,7 +226,7 @@ class Index(UnaryOperator):
     def _unary_new_copy(self, child):
         """ See :meth:`UnaryOperator._unary_new_copy()`. """
 
-        return self.__class__(child, self.index)
+        return self.__class__(child, self.index, check_size=False)
 
     def evaluate_for_shape(self):
         return self._unary_evaluate(self.children[0].evaluate_for_shape())
@@ -254,10 +263,6 @@ class SpatialOperator(UnaryOperator):
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
         # We shouldn't need this
-        raise NotImplementedError
-
-    def jac(self, variable):
-        """ See :meth:`pybamm.Symbol.jac()`. """
         raise NotImplementedError
 
     def _unary_simplify(self, child):
@@ -595,9 +600,7 @@ class BoundaryIntegral(SpatialOperator):
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()` """
         self._id = hash(
-            (self.__class__, self.name)
-            + (self.children[0].id,)
-            + tuple(self.domain)
+            (self.__class__, self.name) + (self.children[0].id,) + tuple(self.domain)
         )
 
     def _unary_simplify(self, simplified_child):
@@ -617,6 +620,48 @@ class BoundaryIntegral(SpatialOperator):
     def evaluates_on_edges(self):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
         return False
+
+
+class DeltaFunction(SpatialOperator):
+    """Delta function. Currently can only be implemented at the edge of a domain
+
+    Parameters
+    ----------
+    child : :class:`pybamm.Symbol`
+        The variable that sets the strength of the delta function
+    side : str
+        Which side of the domain to implement the delta function on
+
+    **Extends:** :class:`SpatialOperator`
+    """
+
+    def __init__(self, child, side, domain):
+        self.side = side
+        if child.domain != []:
+            auxiliary_domains = {"secondary": child.domain}
+        else:
+            auxiliary_domains = {}
+        super().__init__("delta function", child, domain, auxiliary_domains)
+
+    def set_id(self):
+        """ See :meth:`pybamm.Symbol.set_id()` """
+        self._id = hash(
+            (self.__class__, self.name, self.side, self.children[0].id)
+            + tuple(self.domain)
+            + tuple([(k, tuple(v)) for k, v in self.auxiliary_domains.items()])
+        )
+
+    def evaluates_on_edges(self):
+        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+        return False
+
+    def _unary_simplify(self, simplified_child):
+        """ See :meth:`UnaryOperator._unary_simplify()`. """
+        return self.__class__(simplified_child, self.side, self.domain)
+
+    def _unary_new_copy(self, child):
+        """ See :meth:`UnaryOperator._unary_new_copy()`. """
+        return self.__class__(child, self.side, self.domain)
 
 
 class BoundaryOperator(SpatialOperator):
@@ -666,6 +711,7 @@ class BoundaryOperator(SpatialOperator):
         self._id = hash(
             (self.__class__, self.name, self.side, self.children[0].id)
             + tuple(self.domain)
+            + tuple([(k, tuple(v)) for k, v in self.auxiliary_domains.items()])
         )
 
     def _unary_simplify(self, simplified_child):
@@ -797,6 +843,7 @@ def grad_squared(expression):
     """
 
     return Gradient_Squared(expression)
+
 
 #
 # Method to call SurfaceValue
@@ -994,3 +1041,30 @@ def boundary_value(symbol, side):
     # Otherwise, calculate boundary value
     else:
         return BoundaryValue(symbol, side)
+
+
+def r_average(symbol):
+    """convenience function for creating an average in the r-direction
+
+    Parameters
+    ----------
+    symbol : :class:`pybamm.Symbol`
+        The function to be averaged
+
+    Returns
+    -------
+    :class:`Symbol`
+        the new averaged symbol
+    """
+    # If symbol doesn't have a particle domain, its r-averaged value is itself
+    if symbol.domain not in [["positive particle"], ["negative particle"]]:
+        new_symbol = symbol.new_copy()
+        new_symbol.parent = None
+        return new_symbol
+    # If symbol is a Broadcast, its average value is its child
+    elif isinstance(symbol, pybamm.Broadcast):
+        return symbol.orphans[0]
+    else:
+        r = pybamm.SpatialVariable("r", symbol.domain)
+        v = pybamm.Broadcast(pybamm.Scalar(1), symbol.domain)
+        return Integral(symbol, r) / Integral(v, r)

@@ -139,8 +139,11 @@ class TestUnaryOperators(unittest.TestCase):
         # errors
         with self.assertRaisesRegex(TypeError, "index must be integer or slice"):
             pybamm.Index(vec, 0.0)
+        debug_mode = pybamm.settings.debug_mode
+        pybamm.settings.debug_mode = True
         with self.assertRaisesRegex(ValueError, "slice size exceeds child size"):
             pybamm.Index(vec, 5)
+        pybamm.settings.debug_mode = debug_mode
 
     def test_diff(self):
         a = pybamm.StateVector(slice(0, 1))
@@ -180,6 +183,13 @@ class TestUnaryOperators(unittest.TestCase):
         d = pybamm.Scalar(42)
         un5 = pybamm.UnaryOperator("test", d)
         self.assertNotEqual(un1.id, un5.id)
+
+    def test_delta_function(self):
+        a = pybamm.Symbol("a")
+        delta_a = pybamm.DeltaFunction(a, "right", "some domain")
+        self.assertEqual(delta_a.side, "right")
+        self.assertEqual(delta_a.child.id, a.id)
+        self.assertFalse(delta_a.evaluates_on_edges())
 
     def test_boundary_operators(self):
         a = pybamm.Symbol("a", domain="some domain")
@@ -261,6 +271,31 @@ class TestUnaryOperators(unittest.TestCase):
             self.assertIsInstance(av_a, pybamm.Division)
             self.assertIsInstance(av_a.children[0], pybamm.Integral)
             self.assertEqual(av_a.children[0].integration_variable[0].domain, x.domain)
+            # electrode domains go to current collector when averaged
+            self.assertEqual(av_a.domain, [])
+
+        a = pybamm.Symbol("a", domain="bad domain")
+        with self.assertRaises(pybamm.DomainError):
+            pybamm.x_average(a)
+
+    def test_r_average(self):
+        a = pybamm.Scalar(1)
+        average_a = pybamm.r_average(a)
+        self.assertEqual(average_a.id, a.id)
+
+        average_broad_a = pybamm.r_average(pybamm.Broadcast(a, ["negative particle"]))
+        self.assertEqual(average_broad_a.evaluate(), np.array([1]))
+
+        for domain in [
+            ["negative particle"],
+            ["positive particle"]
+        ]:
+            a = pybamm.Symbol("a", domain=domain)
+            r = pybamm.SpatialVariable("r", domain)
+            av_a = pybamm.r_average(a)
+            self.assertIsInstance(av_a, pybamm.Division)
+            self.assertIsInstance(av_a.children[0], pybamm.Integral)
+            self.assertEqual(av_a.children[0].integration_variable[0].domain, r.domain)
             # electrode domains go to current collector when averaged
             self.assertEqual(av_a.domain, [])
 

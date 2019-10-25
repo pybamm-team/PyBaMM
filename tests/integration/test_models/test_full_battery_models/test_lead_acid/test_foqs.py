@@ -13,13 +13,17 @@ class TestLeadAcidFOQS(unittest.TestCase):
         # pybamm.set_logging_level("DEBUG")
         options = {"thermal": "isothermal", "convection": False}
         model = pybamm.lead_acid.FOQS(options)
-        modeltest = tests.StandardModelTest(model)
+        param = model.default_parameter_values
+        param.update({"Typical current [A]": 1})
+        modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_all()
 
     def test_basic_processing_with_convection(self):
         options = {"thermal": "isothermal", "convection": True}
         model = pybamm.lead_acid.FOQS(options)
-        modeltest = tests.StandardModelTest(model)
+        param = model.default_parameter_values
+        param.update({"Typical current [A]": 1})
+        modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_all()
 
     def test_optimisations(self):
@@ -55,7 +59,9 @@ class TestLeadAcidFOQSSurfaceForm(unittest.TestCase):
             "convection": False,
         }
         model = pybamm.lead_acid.FOQS(options)
-        modeltest = tests.StandardModelTest(model)
+        param = model.default_parameter_values
+        param.update({"Typical current [A]": 1})
+        modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_all()
 
     @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
@@ -66,7 +72,9 @@ class TestLeadAcidFOQSSurfaceForm(unittest.TestCase):
             "convection": False,
         }
         model = pybamm.lead_acid.FOQS(options)
-        modeltest = tests.StandardModelTest(model)
+        param = model.default_parameter_values
+        param.update({"Typical current [A]": 1})
+        modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_all()
 
     def test_optimisations(self):

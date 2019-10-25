@@ -39,7 +39,14 @@ class Composite(Full):
 
         param = self.param
 
-        N_ox_diffusion = -(eps_0 ** param.b) * param.curlyD_ox * pybamm.grad(c_ox)
+        b = pybamm.Concatenation(
+            pybamm.FullBroadcast(param.b_s, ["separator"], "current collector"),
+            pybamm.FullBroadcast(
+                param.b_p, ["positive electrode"], "current collector"
+            ),
+        )
+
+        N_ox_diffusion = -(eps_0 ** b) * param.curlyD_ox * pybamm.grad(c_ox)
 
         N_ox = N_ox_diffusion  # + c_ox * v_box
         # Flux in the negative electrode is zero

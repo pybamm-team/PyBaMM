@@ -48,7 +48,7 @@ class NoCurrentCollector(BaseModel):
 
     def _x_average(self, var, var_cn, var_cp):
         """
-        Computes the x-average over the whole cell *not* including current
+        Computes the X-average over the whole cell *not* including current
         collectors. This overwrites the default behaviour of 'base_thermal'.
         """
         return pybamm.x_average(var)

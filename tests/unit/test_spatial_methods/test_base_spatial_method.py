@@ -27,6 +27,8 @@ class TestSpatialMethod(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             spatial_method.boundary_integral(None, None, None)
         with self.assertRaises(NotImplementedError):
+            spatial_method.delta_function(None, None)
+        with self.assertRaises(NotImplementedError):
             spatial_method.internal_neumann_condition(None, None, None, None)
 
     def test_discretise_spatial_variable(self):

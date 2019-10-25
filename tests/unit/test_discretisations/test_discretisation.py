@@ -496,6 +496,11 @@ class TestDiscretise(unittest.TestCase):
         jacobian = model.concatenated_rhs.jac(y).evaluate(0, y0)
         np.testing.assert_array_equal(np.eye(np.size(y0)), jacobian.toarray())
 
+        # test jacobian by eqn gives same as jacobian of concatenated rhs
+        model.jacobian, _, _ = disc.create_jacobian(model)
+        model_jacobian = model.jacobian.evaluate(0, y0)
+        np.testing.assert_array_equal(model_jacobian.toarray(), jacobian.toarray())
+
         # test that not enough initial conditions raises an error
         model = pybamm.BaseModel()
         model.rhs = {c: pybamm.div(N), T: pybamm.div(q), S: pybamm.div(p)}
@@ -590,6 +595,11 @@ class TestDiscretise(unittest.TestCase):
         )
         np.testing.assert_array_equal(jacobian_actual, jacobian.toarray())
 
+        # test jacobian by eqn gives same as jacobian of concatenated rhs & algebraic
+        model.jacobian, _, _ = disc.create_jacobian(model)
+        model_jacobian = model.jacobian.evaluate(0, y0)
+        np.testing.assert_array_equal(model_jacobian.toarray(), jacobian.toarray())
+
         # test known_evals
         expr = pybamm.SparseStack(jac_rhs, jac_algebraic)
         jacobian, known_evals = expr.evaluate(0, y0, known_evals={})
@@ -659,6 +669,12 @@ class TestDiscretise(unittest.TestCase):
             y0, discretised_model.concatenated_rhs.evaluate(None, y0)
         )
         discretised_model.check_well_posedness()
+
+    def test_process_empty_model(self):
+        model = pybamm.BaseModel()
+        disc = pybamm.Discretisation()
+        with self.assertRaisesRegex(pybamm.ModelError, "Cannot discretise empty model"):
+            disc.process_model(model)
 
     def test_broadcast(self):
         whole_cell = ["negative electrode", "separator", "positive electrode"]

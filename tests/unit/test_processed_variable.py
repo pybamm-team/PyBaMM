@@ -58,10 +58,10 @@ class TestProcessedVariable(unittest.TestCase):
     def test_processed_variable_2D_unknown_domain(self):
         x = pybamm.SpatialVariable("x", domain="SEI layer", coord_sys="cartesian")
         geometry = pybamm.Geometry()
-        geometry.add_domain("SEI layer",
-                            {"primary":
-                                {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
-                            )
+        geometry.add_domain(
+            "SEI layer",
+            {"primary": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}},
+        )
 
         submesh_types = {"SEI layer": pybamm.Uniform1DSubMesh}
         var_pts = {x: 100}
@@ -74,16 +74,18 @@ class TestProcessedVariable(unittest.TestCase):
             np.zeros((var_pts[x], nt)),
             np.linspace(0, 1, 1),
             np.zeros((var_pts[x])),
-            "test"
+            "test",
         )
 
         c = pybamm.StateVector(slice(0, var_pts[x]), domain=["SEI layer"])
-        pybamm.ProcessedVariable(
-            c, solution.t, solution.y, mesh
-        )
+        pybamm.ProcessedVariable(c, solution.t, solution.y, mesh)
 
-    def test_processed_variable_3D(self):
-        var = pybamm.Variable("var", domain=["negative particle"])
+    def test_processed_variable_3D_x_r(self):
+        var = pybamm.Variable(
+            "var",
+            domain=["negative particle"],
+            auxiliary_domains={"secondary": ["negative electrode"]},
+        )
         x = pybamm.SpatialVariable("x", domain=["negative electrode"])
         r = pybamm.SpatialVariable("r", domain=["negative particle"])
 
@@ -99,6 +101,41 @@ class TestProcessedVariable(unittest.TestCase):
         np.testing.assert_array_equal(
             processed_var.entries,
             np.reshape(y_sol, [len(x_sol), len(r_sol), len(t_sol)]),
+        )
+
+    def test_processed_variable_3D_x_z(self):
+        var = pybamm.Variable(
+            "var",
+            domain=["negative electrode", "separator"],
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        x = pybamm.SpatialVariable("x", domain=["negative electrode", "separator"])
+        z = pybamm.SpatialVariable("z", domain=["current collector"])
+
+        disc = tests.get_1p1d_discretisation_for_testing()
+        disc.set_variable_slices([var])
+        x_sol = disc.process_symbol(x).entries[:, 0]
+        z_sol = disc.process_symbol(z).entries[:, 0]
+        var_sol = disc.process_symbol(var)
+        t_sol = np.linspace(0, 1)
+        y_sol = np.ones(len(x_sol) * len(z_sol))[:, np.newaxis] * np.linspace(0, 5)
+
+        processed_var = pybamm.ProcessedVariable(var_sol, t_sol, y_sol, mesh=disc.mesh)
+        np.testing.assert_array_equal(
+            processed_var.entries,
+            np.reshape(y_sol, [len(x_sol), len(z_sol), len(t_sol)]),
+        )
+
+        # On edges
+        x_s_edge = pybamm.Matrix(
+            np.repeat(disc.mesh["separator"][0].edges, len(z_sol)),
+            domain="separator",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        processed_x_s_edge = pybamm.ProcessedVariable(x_s_edge, t_sol, y_sol, disc.mesh)
+        np.testing.assert_array_equal(
+            x_s_edge.entries[:, 0],
+            processed_x_s_edge.entries[:, :, 0].reshape(-1, 1)[:, 0],
         )
 
     def test_processed_variable_3D_scikit(self):
@@ -135,8 +172,7 @@ class TestProcessedVariable(unittest.TestCase):
 
         processed_var = pybamm.ProcessedVariable(var_sol, t_sol, u_sol, mesh=disc.mesh)
         np.testing.assert_array_equal(
-            processed_var.entries,
-            np.reshape(u_sol, [len(y_sol), len(z_sol)]),
+            processed_var.entries, np.reshape(u_sol, [len(y_sol), len(z_sol)])
         )
 
     def test_processed_var_1D_interpolation(self):
@@ -209,7 +245,11 @@ class TestProcessedVariable(unittest.TestCase):
         )
 
     def test_processed_var_3D_interpolation(self):
-        var = pybamm.Variable("var", domain=["negative particle"])
+        var = pybamm.Variable(
+            "var",
+            domain=["negative particle"],
+            auxiliary_domains={"secondary": ["negative electrode"]},
+        )
         x = pybamm.SpatialVariable("x", domain=["negative electrode"])
         r = pybamm.SpatialVariable("r", domain=["negative particle"])
 
@@ -242,7 +282,11 @@ class TestProcessedVariable(unittest.TestCase):
         np.testing.assert_array_equal(processed_var(0.2, 0.2, 0.2).shape, ())
 
         # positive particle
-        var = pybamm.Variable("var", domain=["positive particle"])
+        var = pybamm.Variable(
+            "var",
+            domain=["positive particle"],
+            auxiliary_domains={"secondary": ["positive electrode"]},
+        )
         x = pybamm.SpatialVariable("x", domain=["positive electrode"])
         r = pybamm.SpatialVariable("r", domain=["positive particle"])
 
@@ -260,7 +304,11 @@ class TestProcessedVariable(unittest.TestCase):
         )
 
     def test_processed_var_3D_r_first_dimension(self):
-        var = pybamm.Variable("var", domain=["negative particle"])
+        var = pybamm.Variable(
+            "var",
+            domain=["negative particle"],
+            auxiliary_domains={"secondary": ["negative electrode"]},
+        )
         broad_var = pybamm.PrimaryBroadcast(var, "negative electrode")
         x = pybamm.SpatialVariable("x", domain=["negative electrode"])
         r = pybamm.SpatialVariable("r", domain=["negative particle"])
@@ -397,7 +445,11 @@ class TestProcessedVariable(unittest.TestCase):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         model = pybamm.BaseBatteryModel()
         c = pybamm.Variable("conc", domain=whole_cell)
-        c_s = pybamm.Variable("particle conc", domain="negative particle")
+        c_s = pybamm.Variable(
+            "particle conc",
+            domain="negative particle",
+            auxiliary_domains={"secondary": ["negative electrode"]},
+        )
         model.rhs = {c: -c, c_s: 1 - c_s}
         model.initial_conditions = {c: 1, c_s: 0.5}
         model.boundary_conditions = {
@@ -426,16 +478,6 @@ class TestProcessedVariable(unittest.TestCase):
             np.ones_like(x_sol)[:, np.newaxis] * np.exp(-t_sol),
         )
 
-    def test_failure(self):
-        t = np.ones(25)
-        y = np.ones((120, 25))
-        mat = pybamm.Vector(np.ones(120), domain=["negative particle"])
-        disc = tests.get_p2d_discretisation_for_testing()
-        with self.assertRaisesRegex(
-            ValueError, "3D variable shape does not match domain shape"
-        ):
-            pybamm.ProcessedVariable(mat, t, y, disc.mesh)
-
     def test_call_failure(self):
         # x domain
         var = pybamm.Variable("var x", domain=["negative electrode", "separator"])
@@ -448,9 +490,7 @@ class TestProcessedVariable(unittest.TestCase):
         y_sol = x_sol[:, np.newaxis] * np.linspace(0, 5)
 
         processed_var = pybamm.ProcessedVariable(var_sol, t_sol, y_sol, mesh=disc.mesh)
-        with self.assertRaisesRegex(
-            ValueError, "x cannot be None for macroscale variable"
-        ):
+        with self.assertRaisesRegex(ValueError, "x cannot be None"):
             processed_var(0)
 
         # r domain
@@ -463,13 +503,9 @@ class TestProcessedVariable(unittest.TestCase):
         y_sol = r_sol[:, np.newaxis] * np.linspace(0, 5)
 
         processed_var = pybamm.ProcessedVariable(var_sol, t_sol, y_sol, mesh=disc.mesh)
-        with self.assertRaisesRegex(
-            ValueError, "r cannot be None for microscale variable"
-        ):
+        with self.assertRaisesRegex(ValueError, "r cannot be None"):
             processed_var(0)
-        with self.assertRaisesRegex(
-            ValueError, "r cannot be None for microscale variable"
-        ):
+        with self.assertRaisesRegex(ValueError, "r cannot be None"):
             processed_var(0, 1)
 
 

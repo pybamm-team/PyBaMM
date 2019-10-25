@@ -16,7 +16,9 @@ def simplify_if_constant(symbol):
     if symbol.is_constant():
         result = symbol.evaluate_ignoring_errors()
         if result is not None:
-            if isinstance(result, numbers.Number):
+            if isinstance(result, numbers.Number) or (
+                isinstance(result, np.ndarray) and result.ndim == 0
+            ):
                 return pybamm.Scalar(result)
             elif isinstance(result, np.ndarray) or issparse(result):
                 if result.ndim == 1 or result.shape[1] == 1:
@@ -591,12 +593,14 @@ class Simplification(object):
 
         elif isinstance(symbol, pybamm.UnaryOperator):
             new_child = self.simplify(symbol.child)
+            # _unary_simplify defined in derived classes for specific rules
             new_symbol = symbol._unary_simplify(new_child)
 
         elif isinstance(symbol, pybamm.Function):
             simplified_children = [None] * len(symbol.children)
             for i, child in enumerate(symbol.children):
                 simplified_children[i] = self.simplify(child)
+            # _function_simplify defined in function class
             new_symbol = symbol._function_simplify(simplified_children)
 
         elif isinstance(symbol, pybamm.Concatenation):

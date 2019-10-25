@@ -31,6 +31,10 @@ class IndependentVariable(pybamm.Symbol):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
         return pybamm.evaluate_for_shape_using_domain(self.domain)
 
+    def _jac(self, variable):
+        """ See :meth:`pybamm.Symbol._jac()`. """
+        return pybamm.Scalar(0)
+
 
 class Time(IndependentVariable):
     """A node in the expression tree representing time

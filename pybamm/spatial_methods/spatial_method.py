@@ -84,11 +84,11 @@ class SpatialMethod:
             out = pybamm.Outer(
                 symbol, pybamm.Vector(np.ones(primary_pts_for_broadcast), domain=domain)
             )
-            out.auxiliary_domains = auxiliary_domains
 
         elif broadcast_type == "full":
             out = symbol * pybamm.Vector(np.ones(full_pts_for_broadcast), domain=domain)
 
+        out.auxiliary_domains = auxiliary_domains
         return out
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
@@ -244,6 +244,19 @@ class SpatialMethod:
         """
         raise NotImplementedError
 
+    def delta_function(self, symbol, discretised_symbol):
+        """
+        Implements the delta function on the approriate side for a spatial method.
+
+        Parameters
+        ----------
+        symbol: :class:`pybamm.Symbol`
+            The symbol to which is being integrated
+        discretised_symbol: :class:`pybamm.Symbol`
+            The discretised symbol of the correct size
+        """
+        raise NotImplementedError
+
     def internal_neumann_condition(
         self, left_symbol_disc, right_symbol_disc, left_mesh, right_mesh
     ):
@@ -281,7 +294,7 @@ class SpatialMethod:
 
         Returns
         -------
-        :class:`pybamm.Variable`
+        :class:`pybamm.MatrixMultiplication`
             The variable representing the surface value.
         """
         if any(len(self.mesh[dom]) > 1 for dom in discretised_child.domain):

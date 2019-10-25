@@ -2,7 +2,6 @@
 # Class for calcuting the effective resistance of two-dimensional current collectors
 #
 import pybamm
-import os
 
 
 class EffectiveResistance2D(pybamm.BaseModel):
@@ -73,7 +72,7 @@ class EffectiveResistance2D(pybamm.BaseModel):
             },
             W: {
                 "negative tab": (W_neg_tab_bc, "Neumann"),
-                "positive tab": (W_pos_tab_bc, "Neumann")
+                "positive tab": (W_pos_tab_bc, "Neumann"),
             },
         }
 
@@ -124,15 +123,15 @@ class EffectiveResistance2D(pybamm.BaseModel):
         """
         # Get required processed parameters
         param = self.param
-        l_cn = param_values.process_symbol(param.l_cn).evaluate()
-        l_cp = param_values.process_symbol(param.l_cp).evaluate()
-        l_y = param_values.process_symbol(param.l_y).evaluate()
-        l_z = param_values.process_symbol(param.l_z).evaluate()
-        sigma_cn_prime = param_values.process_symbol(param.sigma_cn_prime).evaluate()
-        sigma_cp_prime = param_values.process_symbol(param.sigma_cp_prime).evaluate()
-        alpha = param_values.process_symbol(param.alpha).evaluate()
-        pot_scale = param_values.process_symbol(param.potential_scale).evaluate()
-        U_ref = param_values.process_symbol(param.U_p_ref - param.U_n_ref).evaluate()
+        l_cn = param_values.evaluate(param.l_cn)
+        l_cp = param_values.evaluate(param.l_cp)
+        l_y = param_values.evaluate(param.l_y)
+        l_z = param_values.evaluate(param.l_z)
+        sigma_cn_prime = param_values.evaluate(param.sigma_cn_prime)
+        sigma_cp_prime = param_values.evaluate(param.sigma_cp_prime)
+        alpha = param_values.evaluate(param.alpha)
+        pot_scale = param_values.evaluate(param.potential_scale)
+        U_ref = param_values.evaluate(param.U_p_ref - param.U_n_ref)
 
         # Process psi and W, and their (average) values at the negative tab
         psi = pybamm.ProcessedVariable(
@@ -205,21 +204,7 @@ class EffectiveResistance2D(pybamm.BaseModel):
 
     @property
     def default_parameter_values(self):
-        # default li-ion parameter values
-        input_path = os.path.join(
-            pybamm.root_dir(), "input", "parameters", "lithium-ion"
-        )
-        return pybamm.ParameterValues(
-            os.path.join(
-                input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
-            ),
-            {
-                "Typical current [A]": 1,
-                "Current function": pybamm.GetConstantCurrent(
-                    pybamm.standard_parameters_lithium_ion.I_typ
-                ),
-            },
-        )
+        return pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
 
     @property
     def default_geometry(self):
@@ -232,7 +217,9 @@ class EffectiveResistance2D(pybamm.BaseModel):
 
     @property
     def default_submesh_types(self):
-        return {"current collector": pybamm.Scikit2DSubMesh}
+        return {
+            "current collector": pybamm.MeshGenerator(pybamm.ScikitUniform2DSubMesh)
+        }
 
     @property
     def default_spatial_methods(self):
