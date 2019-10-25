@@ -361,7 +361,7 @@ Solution solve(np_array t_np, np_array y0_np, np_array yp0_np,
   return sol;
 }
 
-PYBIND11_MODULE(klu, m)
+PYBIND11_MODULE(idaklu, m)
 {
   m.doc() = "sundials solvers"; // optional module docstring
 

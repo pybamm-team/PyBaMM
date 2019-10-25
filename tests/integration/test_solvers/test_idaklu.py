@@ -4,8 +4,8 @@ import sys
 import unittest
 
 
-@unittest.skipIf(pybamm.have_klu(), "klu solver is not installed")
-class TestKLUSolver(unittest.TestCase):
+@unittest.skipIf(pybamm.have_idaklu(), "idaklu solver is not installed")
+class TestIDAKLUSolver(unittest.TestCase):
     def test_on_spme(self):
         model = pybamm.lithium_ion.SPMe()
         geometry = model.default_geometry
@@ -16,7 +16,7 @@ class TestKLUSolver(unittest.TestCase):
         disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
         disc.process_model(model)
         t_eval = np.linspace(0, 0.2, 100)
-        solution = pybamm.KLU().solve(model, t_eval)
+        solution = pybamm.IDAKLU().solve(model, t_eval)
         np.testing.assert_array_less(1, solution.t.size)
 
 
