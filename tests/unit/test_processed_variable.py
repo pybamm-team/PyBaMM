@@ -195,6 +195,11 @@ class TestProcessedVariable(unittest.TestCase):
         np.testing.assert_array_equal(processed_eqn(t_sol), t_sol * y_sol[0])
         np.testing.assert_array_almost_equal(processed_eqn(0.5), 0.5 * 2.5)
 
+        # Suppress warning for this test
+        pybamm.set_logging_level("ERROR")
+        np.testing.assert_array_equal(processed_eqn(2), np.nan)
+        pybamm.set_logging_level("WARNING")
+
     def test_processed_var_2D_interpolation(self):
         t = pybamm.t
         var = pybamm.Variable("var", domain=["negative electrode", "separator"])

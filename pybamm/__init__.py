@@ -25,7 +25,7 @@ def _load_version_int():
 __version_int__ = _load_version_int()
 __version__ = ".".join([str(x) for x in __version_int__])
 if sys.version_info[0] < 3:
-    del (x)  # Before Python3, list comprehension iterators leaked
+    del x  # Before Python3, list comprehension iterators leaked
 
 #
 # Expose PyBaMM version
