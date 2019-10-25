@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import sys
 
 # set logging level
-pybamm.set_logging_level("DEBUG")
+pybamm.set_logging_level("INFO")
 
 # load (2+1D) SPM model
 options = {
@@ -13,13 +13,17 @@ options = {
     "thermal": "x-lumped",
 }
 model = pybamm.lithium_ion.SPM(options)
-model.use_simplify = False  # simplifying jacobian slow for large systems
 
 # create geometry
 geometry = model.default_geometry
 
 # load parameter values and process model and geometry
 param = model.default_parameter_values
+# adjust current to correspond to a typical current density of 24 [A.m-2]
+C_rate = 1
+param["Typical current [A]"] = (
+    C_rate * 24 * param.evaluate(pybamm.geometric_parameters.A_cc)
+)
 param.process_model(model)
 param.process_geometry(geometry)
 
@@ -34,9 +38,11 @@ var_pts = {
     var.y: 5,
     var.z: 5,
 }
+submesh_types = model.default_submesh_types
+submesh_types["current collector"] = pybamm.ScikitExponential2DSubMesh
 # depnding on number of points in y-z plane may need to increase recursion depth...
 sys.setrecursionlimit(10000)
-mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
+mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
 # discretise model
 disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
@@ -46,7 +52,7 @@ disc.process_model(model)
 tau = param.process_symbol(pybamm.standard_parameters_lithium_ion.tau_discharge)
 t_end = 3600 / tau.evaluate(0)
 t_eval = np.linspace(0, t_end, 120)
-solution = pybamm.KLU().solve(model, t_eval)
+solution = model.default_solver.solve(model, t_eval)
 
 # TO DO: 2+1D automated plotting
 phi_s_cn = pybamm.ProcessedVariable(

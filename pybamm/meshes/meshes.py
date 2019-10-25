@@ -31,8 +31,14 @@ class Mesh(dict):
         # create submesh_pts from var_pts
         submesh_pts = {}
         for domain in geometry:
+            # create mesh generator if just class is passed (will throw an error
+            # later if the mesh needed parameters)
+            if not isinstance(
+                submesh_types[domain], pybamm.MeshGenerator
+            ) and issubclass(submesh_types[domain], pybamm.SubMesh):
+                submesh_types[domain] = pybamm.MeshGenerator(submesh_types[domain])
             # Zero dimensional submesh case (only one point)
-            if issubclass(submesh_types[domain], pybamm.SubMesh0D):
+            if issubclass(submesh_types[domain].submesh_type, pybamm.SubMesh0D):
                 submesh_pts[domain] = 1
             # other cases
             else:
@@ -95,26 +101,23 @@ class Mesh(dict):
 
         # Create submeshes
         for domain in geometry:
-            # need to pass tab information if primary domain is 1 or 2D
-            # current collector
-            if (
-                domain == "current collector"
-                and submesh_types[domain] != pybamm.SubMesh0D
-            ):
+            # repeat mesh if domain has secondary dimension
+            if "secondary" in geometry[domain].keys():
+                repeats = 1
+                for var in geometry[domain]["secondary"].keys():
+                    repeats *= submesh_pts[domain][var.id]  # note (specific to FV)
+            else:
+                repeats = 1
+            # create submesh, passing tab information if provided
+            if "tabs" in geometry[domain].keys():
                 self[domain] = [
                     submesh_types[domain](
                         geometry[domain]["primary"],
                         submesh_pts[domain],
                         geometry[domain]["tabs"],
                     )
-                ]
+                ] * repeats
             else:
-                if "secondary" in geometry[domain].keys():
-                    repeats = 1
-                    for var in geometry[domain]["secondary"].keys():
-                        repeats *= submesh_pts[domain][var.id]  # note (specific to FV)
-                else:
-                    repeats = 1
                 self[domain] = [
                     submesh_types[domain](
                         geometry[domain]["primary"], submesh_pts[domain]
@@ -176,7 +179,7 @@ class Mesh(dict):
             (domain, submesh_list)
             for domain, submesh_list in self.items()
             if not isinstance(
-                submesh_list[0], (pybamm.SubMesh0D, pybamm.Scikit2DSubMesh)
+                submesh_list[0], (pybamm.SubMesh0D, pybamm.ScikitSubMesh2D)
             )
         ]
         for domain, submesh_list in submeshes:
@@ -198,3 +201,40 @@ class Mesh(dict):
                 self[domain + "_right ghost cell"][i] = pybamm.SubMesh1D(
                     rgs_edges, submesh.coord_sys
                 )
+
+
+class SubMesh:
+    """
+    Base submesh class.
+    Contains the position of the nodes, the number of mesh points, and
+    (optionally) information about the tab locations.
+    """
+
+    def __init__(self):
+        pass
+
+
+class MeshGenerator:
+    """
+    Base class for mesh generator objects that are used to generate submeshes.
+
+    Parameters
+    ----------
+
+    submesh_type: :class:`pybamm.SubMesh`
+        The type of submesh to use (e.g. Uniform1DSubMesh).
+    submesh_params: dict, optional
+        Contains any parameters required by the submesh.
+    """
+
+    def __init__(self, submesh_type, submesh_params=None):
+        self.submesh_type = submesh_type
+        self.submesh_params = submesh_params or {}
+
+    def __call__(self, lims, npts, tabs=None):
+        return self.submesh_type(lims, npts, tabs, **self.submesh_params)
+
+    def __repr__(self):
+        return "Generator for {}".format(
+            self.submesh_type.__name__
+        )

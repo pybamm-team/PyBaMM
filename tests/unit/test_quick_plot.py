@@ -102,7 +102,9 @@ class TestQuickPlot(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "mismatching variable domains"):
             pybamm.QuickPlot(model, mesh, solution, [["a", "b broadcasted"]])
         model.variables["3D variable"] = disc.process_symbol(
-            pybamm.Broadcast(1, ["negative particle"])
+            pybamm.FullBroadcast(
+                1, "negative particle", {"secondary": "negative electrode"}
+            )
         )
         with self.assertRaisesRegex(NotImplementedError, "cannot plot 3D variables"):
             pybamm.QuickPlot(model, mesh, solution, ["3D variable"])
@@ -111,8 +113,7 @@ class TestQuickPlot(unittest.TestCase):
         t_eval = np.linspace(0, 0.01, 2)
 
         # SPM
-        options = {"thermal": "isothermal"}
-        for model in [pybamm.lithium_ion.SPM(options), pybamm.lead_acid.LOQS()]:
+        for model in [pybamm.lithium_ion.SPM(), pybamm.lead_acid.LOQS()]:
             geometry = model.default_geometry
             param = model.default_parameter_values
             param.process_model(model)
@@ -126,15 +127,33 @@ class TestQuickPlot(unittest.TestCase):
             solution = solver.solve(model, t_eval)
             pybamm.QuickPlot(model, mesh, solution)
 
+            # test quick plot of particle for spm
+            if model.name == "Single Particle Model":
+                output_variables = [
+                    "X-averaged negative particle concentration [mol.m-3]",
+                    "X-averaged positive particle concentration [mol.m-3]",
+                ]
+                pybamm.QuickPlot(model, mesh, solution, output_variables)
+
     def test_failure(self):
         with self.assertRaisesRegex(TypeError, "'models' must be"):
             pybamm.QuickPlot(1, None, None)
+        with self.assertRaisesRegex(TypeError, "'meshes' must be"):
+            model = pybamm.lithium_ion.SPM()
+            pybamm.QuickPlot(model, 1, None)
         with self.assertRaisesRegex(TypeError, "'solutions' must be"):
-            pybamm.QuickPlot(pybamm.BaseModel(), None, 1)
+            geometry = model.default_geometry
+            param = model.default_parameter_values
+            param.process_model(model)
+            param.process_geometry(geometry)
+            mesh = pybamm.Mesh(
+                geometry, model.default_submesh_types, model.default_var_pts
+            )
+            pybamm.QuickPlot(model, mesh, 1)
         with self.assertRaisesRegex(ValueError, "must provide the same"):
             pybamm.QuickPlot(
-                pybamm.BaseModel(),
-                None,
+                model,
+                mesh,
                 [pybamm.Solution(0, 0, 0, 0, ""), pybamm.Solution(0, 0, 0, 0, "")],
             )
 

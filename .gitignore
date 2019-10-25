@@ -68,8 +68,6 @@ pyvenv.cfg
 # sundials
 sundials
 sundials4
-SuiteSparse
-SuiteSparse/.gitignore
 
 # third party
 third-party
@@ -80,4 +78,5 @@ Makefile
 cmake_install.cmake
 *.so
 *.json
+
 

@@ -54,8 +54,8 @@ class Scalar(pybamm.Symbol):
         """ See :meth:`pybamm.Symbol._base_evaluate()`. """
         return self._value
 
-    def jac(self, variable):
-        """ See :meth:`pybamm.Symbol.jac()`. """
+    def _jac(self, variable):
+        """ See :meth:`pybamm.Symbol._jac()`. """
         return pybamm.Scalar(0)
 
     def new_copy(self):
