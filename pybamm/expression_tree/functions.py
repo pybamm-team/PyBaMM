@@ -35,6 +35,7 @@ class Function(pybamm.Symbol):
                 name = "function ({})".format(function.__class__)
         children_list = list(children)
         domain = self.get_children_domains(children_list)
+        auxiliary_domains = self.get_children_auxiliary_domains(children)
 
         self.function = function
         self.derivative = derivative
@@ -46,7 +47,12 @@ class Function(pybamm.Symbol):
         else:
             self.takes_no_params = len(signature(function).parameters) == 0
 
-        super().__init__(name, children=children_list, domain=domain)
+        super().__init__(
+            name,
+            children=children_list,
+            domain=domain,
+            auxiliary_domains=auxiliary_domains,
+        )
 
     def get_children_domains(self, children_list):
         """Obtains the unique domain of the children. If the
@@ -100,22 +106,20 @@ class Function(pybamm.Symbol):
                 self.function.derivative(), *children, derivative="derivative"
             )
 
-    def _jac(self, variable):
-        """ See :meth:`pybamm.Symbol._jac()`. """
+    def _function_jac(self, children_jacs):
+        """ Calculate the jacobian of a function. """
 
         if all(child.evaluates_to_number() for child in self.children):
             jacobian = pybamm.Scalar(0)
         else:
-
             # if at least one child contains variable dependence, then
             # calculate the required partial jacobians and add them
             jacobian = None
             children = self.orphans
-            for child in children:
+            for i, child in enumerate(children):
                 if not child.evaluates_to_number():
-                    jac_fun = self._diff(children) * child.jac(variable)
-
-                    jac_fun.domain = self.domain
+                    jac_fun = self._diff(children) * children_jacs[i]
+                    jac_fun.domain = []
                     if jacobian is None:
                         jacobian = jac_fun
                     else:

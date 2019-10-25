@@ -80,9 +80,8 @@ class TestJacobian(unittest.TestCase):
 
         # test jac of outer if left evaluates to number
         func = pybamm.Outer(pybamm.Scalar(1), pybamm.Scalar(4))
-        jacobian = np.zeros((1, 4))
         dfunc_dy = func.jac(y).evaluate(y=y0)
-        np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
+        np.testing.assert_array_equal(0, dfunc_dy.toarray())
 
     def test_nonlinear(self):
         y = pybamm.StateVector(slice(0, 4))
@@ -208,28 +207,6 @@ class TestJacobian(unittest.TestCase):
         jac = ind.jac(vec).evaluate(y=np.linspace(0, 2, 5)).toarray()
         np.testing.assert_array_equal(jac, np.array([[0, 0, 0, 0, 0]]))
 
-    def test_jac_of_self(self):
-        "Jacobian of variable with respect to itself should be one."
-        a = pybamm.Variable("a")
-        b = pybamm.Variable("b")
-
-        self.assertEqual(a.jac(a).evaluate(), 1)
-
-        add = a + b
-        self.assertEqual(add.jac(add).evaluate(), 1)
-
-        subtract = a - b
-        self.assertEqual(subtract.jac(subtract).evaluate(), 1)
-
-        multiply = a * b
-        self.assertEqual(multiply.jac(multiply).evaluate(), 1)
-
-        divide = a / b
-        self.assertEqual(divide.jac(divide).evaluate(), 1)
-
-        power = a ** b
-        self.assertEqual(power.jac(power).evaluate(), 1)
-
     def test_jac_of_number(self):
         "Jacobian of a number should be zero"
         a = pybamm.Scalar(1)
@@ -257,14 +234,25 @@ class TestJacobian(unittest.TestCase):
     def test_jac_of_symbol(self):
         a = pybamm.Symbol("a")
         y = pybamm.StateVector(slice(0, 1))
-
-        self.assertEqual(a.jac(y).evaluate(), 0)
+        with self.assertRaises(NotImplementedError):
+            a.jac(y)
 
     def test_spatial_operator(self):
         a = pybamm.Variable("a")
         b = pybamm.SpatialOperator("Operator", a)
         with self.assertRaises(NotImplementedError):
             b.jac(None)
+
+    def test_jac_of_unary_operator(self):
+        a = pybamm.Scalar(1)
+        b = pybamm.UnaryOperator("Operator", a)
+        with self.assertRaises(NotImplementedError):
+            b.jac(None)
+
+    def test_jac_of_independent_variable(self):
+        a = pybamm.IndependentVariable("Variable")
+        y = pybamm.StateVector(slice(0, 1))
+        self.assertEqual(a.jac(y).evaluate(), 0)
 
     def test_jac_of_inner(self):
         a = pybamm.Scalar(1)

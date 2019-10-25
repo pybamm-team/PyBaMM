@@ -21,6 +21,7 @@ The easiest way to start with PyBaMM is by running and comparing some of the inb
 It is also easy to add new models or change the setting that are used:
 - [Add a model (documentation)](https://pybamm.readthedocs.io/en/latest/tutorials/add-model.html)
 - [Add a model (example)](./create-model.ipynb)
+- [Change model options](./using-model-options_thermal-example.ipynb)
 - [Using submodels](./using-submodels.ipynb)
 - [Change the settings](./change-settings.ipynb) (parameters, spatial method or solver)
 - [Change the applied current](./change-input-current.ipynb)

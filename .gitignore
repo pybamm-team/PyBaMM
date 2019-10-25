@@ -13,6 +13,7 @@
 *.pyc
 *.py~
 .~lock*
+*.swp
 
 # Python cache
 *__pycache__/
@@ -67,4 +68,16 @@ pyvenv.cfg
 # sundials
 sundials
 sundials4
-SuiteSparse
+
+# third party
+third-party
+
+# cmakefiles
+CMakeFiles
+Makefile
+cmake_install.cmake
+*.so
+*.json
+
+
+third-party/pybind11

@@ -25,7 +25,7 @@ def _load_version_int():
 __version_int__ = _load_version_int()
 __version__ = ".".join([str(x) for x in __version_int__])
 if sys.version_info[0] < 3:
-    del (x)  # Before Python3, list comprehension iterators leaked
+    del x  # Before Python3, list comprehension iterators leaked
 
 #
 # Expose PyBaMM version
@@ -156,6 +156,7 @@ from .expression_tree.simplify import (
     simplify_addition_subtraction,
     simplify_multiplication_division,
 )
+from .expression_tree.jacobian import Jacobian
 from .expression_tree.evaluate import (
     find_symbols,
     id_to_python_variable,
@@ -262,6 +263,8 @@ from .solvers.scikits_dae_solver import ScikitsDaeSolver
 from .solvers.scikits_ode_solver import ScikitsOdeSolver
 from .solvers.scikits_ode_solver import have_scikits_odes
 from .solvers.algebraic_solver import AlgebraicSolver
+from .solvers.idaklu_solver import IDAKLU, have_idaklu
+
 
 #
 # Current profiles
