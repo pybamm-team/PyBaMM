@@ -102,8 +102,9 @@ class TestBinaryOperators(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             kron.diff(None)
 
+        y = pybamm.StateVector(slice(0, 2))
         with self.assertRaises(NotImplementedError):
-            kron.jac(None)
+            kron.jac(y)
 
     def test_known_eval(self):
         # Scalars
