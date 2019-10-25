@@ -33,8 +33,9 @@ cmake -DBLAS_ENABLE=ON\
       ../sundials-4.1.0
 
 
+NUM_OF_CORES=$(cat /proc/cpuinfo | grep processor | wc -l)
 make clean
-make install
+make -j$NUM_OF_CORES install
 cd $CURRENT_DIR
 rm -rf build-sundials-4.1.0
 rm -rf sundials-4.1.0
