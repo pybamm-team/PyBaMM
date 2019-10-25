@@ -17,7 +17,7 @@ param.process_geometry(geometry)
 # set mesh
 var = pybamm.standard_spatial_vars
 
-var_pts = {var.x_n: 60, var.x_s: 100, var.x_p: 60, var.r_n: 50, var.r_p: 50}
+var_pts = {var.x_n: 50, var.x_s: 10, var.x_p: 50, var.r_n: 20, var.r_p: 20}
 # var_pts = model.default_var_pts
 mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
 
@@ -26,13 +26,14 @@ disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
 
 # solve model
-t_eval = np.linspace(0, 0.2, 100)
+t_eval = np.linspace(0, 0.17, 100)
 
+casadi_sol = pybamm.CasadiSolver(atol=1e-8, rtol=1e-8).solve(model, t_eval)
 klu_sol = pybamm.IDAKLU(atol=1e-8, rtol=1e-8).solve(model, t_eval)
 scikits_sol = pybamm.ScikitsDaeSolver(atol=1e-8, rtol=1e-8).solve(model, t_eval)
 
 # plot
-models = [model, model]
-solutions = [scikits_sol, klu_sol]
+models = [model, model, model]
+solutions = [scikits_sol, klu_sol, casadi_sol]
 plot = pybamm.QuickPlot(models, mesh, solutions)
 plot.dynamic_plot()
