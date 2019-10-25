@@ -23,6 +23,6 @@ TARGET_LINK_LIBRARIES(klu PRIVATE ${RT})
 
 # link suitesparse
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
-find_package(SuiteSparse)
+find_package(SuiteSparse OPTIONAL_COMPONENTS KLU AMD COLAMD BTF)
 include_directories(${SuiteSparse_INCLUDE_DIRS})
 target_link_libraries(klu PRIVATE ${SuiteSparse_LIBRARIES})

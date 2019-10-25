@@ -992,27 +992,10 @@ IF(KLU_ENABLE)
   SHOW_VARIABLE(KLU_LIBRARY_DIR PATH
     "Klu library directory" "${KLU_LIBRARY_DIR}")
 
-
-  # setting the paths for KLU directly without testing - scott marquis
-  # INCLUDE(SundialsKLU) 
-  # set(KLU_LIBRARY ${SUITESPARSE_DIR}/KLU/Lib/libklu.a)
-  # set(AMD_LIBRARY ${SUITESPARSE_DIR}/AMD/Lib/libamd.a)
-  # set(COLAMD_LIBRARY ${SUITESPARSE_DIR}/COLAMD/Lib/libcolamd.a)
-  # set(BTF_LIBRARY ${SUITESPARSE_DIR}/BTF/Lib/libbtf.a)
-  # set(SUITESPARSECONFIG_LIBRARY ${SUITESPARSE_DIR}/SuiteSparse_config/libsuitesparseconfig.a)
-  # set(KLU_LIBRARIES ${KLU_LIBRARY} ${AMD_LIBRARY} ${COLAMD_LIBRARY} ${BTF_LIBRARY} ${SUITESPARSECONFIG_LIBRARY})
-
-  # find_library(KLU_LIBRARY klu)
-  # find_library(AMD_LIBRARY amd)
-  # find_library(COLAMD_LIBRARY colamd)
-  # find_library(BTF_LIBRARY btf)
-  # find_library(SUITESPARSECONFIG_LIBRARY suitesparseconfig)
-  # set(KLU_LIBRARIES ${KLU_LIBRARY} ${AMD_LIBRARY} ${COLAMD_LIBRARY} ${BTF_LIBRARY} ${SUITESPARSECONFIG_LIBRARY})
-
   set(KLU_FOUND TRUE)
   get_filename_component(PYBAMM_DIR ${PROJECT_SOURCE_DIR} DIRECTORY)
   set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PYBAMM_DIR}) # use FindSuiteSparse.cmake that is in PyBaMM root
-  find_package(SuiteSparse)
+  find_package(SuiteSparse OPTIONAL_COMPONENTS KLU AMD COLAMD BTF)
   include_directories(${SuiteSparse_INCLUDE_DIRS})
   set(KLU_LIBRARIES ${SuiteSparse_LIBRARIES})
 
