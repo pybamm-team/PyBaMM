@@ -21,6 +21,10 @@ def test_multi_var_function(arg1, arg2):
     return arg1 + arg2
 
 
+def test_multi_var_function_cube(arg1, arg2):
+    return arg1 + arg2 ** 3
+
+
 class TestFunction(unittest.TestCase):
     def test_constant_functions(self):
         d = pybamm.Scalar(6)
@@ -52,8 +56,9 @@ class TestFunction(unittest.TestCase):
             logvar.evaluate(y=y, known_evals={})[0], np.log1p(y)
         )
 
-    def test_with_autograd(self):
+    def test_diff(self):
         a = pybamm.StateVector(slice(0, 1))
+        b = pybamm.StateVector(slice(1, 2))
         y = np.array([5])
         func = pybamm.Function(test_function, a)
         self.assertEqual(func.diff(a).evaluate(y=y), 2)
@@ -68,6 +73,21 @@ class TestFunction(unittest.TestCase):
         # multiple variables
         func = pybamm.Function(test_multi_var_function, 4 * a, 3 * a)
         self.assertEqual(func.diff(a).evaluate(y=y), 7)
+        func = pybamm.Function(test_multi_var_function, 4 * a, 3 * b)
+        self.assertEqual(func.diff(a).evaluate(y=np.array([5, 6])), 4)
+        self.assertEqual(func.diff(b).evaluate(y=np.array([5, 6])), 3)
+        func = pybamm.Function(test_multi_var_function_cube, 4 * a, 3 * b)
+        self.assertEqual(func.diff(a).evaluate(y=np.array([5, 6])), 4)
+        self.assertEqual(
+            func.diff(b).evaluate(y=np.array([5, 6])), 3 * 3 * (3 * 6) ** 2
+        )
+
+        # exceptions
+        func = pybamm.Function(
+            test_multi_var_function_cube, 4 * a, 3 * b, derivative="derivative"
+        )
+        with self.assertRaises(ValueError):
+            func.diff(a)
 
     def test_function_of_multiple_variables(self):
         a = pybamm.Variable("a")

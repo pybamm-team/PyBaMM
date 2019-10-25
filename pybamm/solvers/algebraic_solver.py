@@ -204,14 +204,14 @@ class AlgebraicSolver(object):
                 pybamm.logger.info("Simplifying jacobian")
                 jac = simp.simplify(jac)
 
-            if model.use_to_python:
+            if model.convert_to_format == "python":
                 pybamm.logger.info("Converting jacobian to python")
                 jac = pybamm.EvaluatorPython(jac)
 
         else:
             jac = None
 
-        if model.use_to_python:
+        if model.convert_to_format == "python":
             pybamm.logger.info("Converting algebraic to python")
             concatenated_algebraic = pybamm.EvaluatorPython(concatenated_algebraic)
 

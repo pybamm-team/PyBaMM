@@ -18,12 +18,10 @@ else:
 # load models
 models = [
     pybamm.lithium_ion.SPM(
-        {"current collector": "potential pair", "dimensionality": 2},
-        name="2+1D SPM",
+        {"current collector": "potential pair", "dimensionality": 2}, name="2+1D SPM"
     ),
     pybamm.lithium_ion.SPMe(
-        {"current collector": "potential pair", "dimensionality": 2},
-        name="2+1D SPMe",
+        {"current collector": "potential pair", "dimensionality": 2}, name="2+1D SPMe"
     ),
 ]
 
@@ -54,6 +52,7 @@ for model in models:
 solutions = [None] * len(models)
 t_eval = np.linspace(0, 1, 1000)
 for i, model in enumerate(models):
+    model.convert_to_format = "casadi"
     solution = model.default_solver.solve(model, t_eval)
     solutions[i] = solution
 

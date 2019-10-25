@@ -32,7 +32,7 @@ for model in models:
 
 # set mesh
 var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.r_n: 5, var.r_p: 5}
+var_pts = {var.x_n: 50, var.x_s: 50, var.x_p: 50, var.r_n: 50, var.r_p: 50}
 
 # discretise models
 for model in models:
@@ -47,6 +47,7 @@ for model in models:
 solutions = [None] * len(models)
 t_eval = np.linspace(0, 0.17, 100)
 for i, model in enumerate(models):
+    model.convert_to_format = "casadi"
     solutions[i] = model.default_solver.solve(model, t_eval)
 
 # plot

@@ -2,6 +2,8 @@
 
 ## Features
 
+-   Add interface to CasADi solver
+-   Add option to use CasADi's Algorithmic Differentiation framework to calculate Jacobians
 -   Add method to evaluate parameters more easily ([#669](https://github.com/pybamm-team/PyBaMM/pull/669))
 -   Add `Jacobian` class to reuse known Jacobians of expressions ([#665](https://github.com/pybamm-team/PyBaMM/pull/670))
 -   Add `Interpolant` class to interpolate experimental data (e.g. OCP curves) ([#661](https://github.com/pybamm-team/PyBaMM/pull/661))
@@ -16,6 +18,7 @@
 
 ## Bug fixes
 
+-   Fix differentiation of functions that have more than one argument
 -   Improve the way `ProcessedVariable` objects are created in higher dimensions ([#581](https://github.com/pybamm-team/PyBaMM/pull/581))
 
 # [v0.1.0](https://github.com/pybamm-team/PyBaMM/tree/v0.1.0) - 2019-10-08

@@ -17,6 +17,4 @@ Expression Tree
   broadcasts
   functions
   interpolant
-  evaluate
-  simplify
-  jacobian
+  operations/index
