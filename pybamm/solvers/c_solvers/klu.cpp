@@ -113,9 +113,8 @@ int jacobian(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
              N_Vector resvec, SUNMatrix JJ, void *user_data, N_Vector tempv1,
              N_Vector tempv2, N_Vector tempv3)
 {
-  realtype *yval, *ypval;
+  realtype *yval;
   yval = N_VGetArrayPointer(yy);
-  ypval = N_VGetArrayPointer(yp);
 
   PybammFunctions *python_functions_ptr =
       static_cast<PybammFunctions *>(user_data);

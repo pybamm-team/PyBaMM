@@ -9,6 +9,7 @@ INSTALL_DIR=$CURRENT_DIR/sundials4
 
 wget $SUNDIALS_URL -O $SUNDIALS_NAME
 tar -xvf $SUNDIALS_NAME
+rm ${SUNDIALS_NAME}
 
 # replace the sundials cmake file by a modified version that finds the KLU libraries and headers
 cd sundials-4.1.0
