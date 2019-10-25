@@ -250,7 +250,7 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
 
         variables = {
             domain + " electrolyte current density": i_e,
-            domain + " electrolyte current density [V]": i_e * i_typ,
+            domain + " electrolyte current density [A.m-2]": i_e * i_typ,
         }
 
         return variables
