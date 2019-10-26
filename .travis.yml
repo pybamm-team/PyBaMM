@@ -177,6 +177,8 @@ before_install: |
     brew update;
     # Per the `pyenv homebrew recommendations <https://github.com/yyuu/pyenv/wiki#suggested-build-environment>`_.
     brew install graphviz openssl readline;
+    # Other brew packages
+    brew install gcc cmake openblas suitesparse;
     # See https://docs.travis-ci.com/user/osx-ci-environment/#A-note-on-upgrading-packages.
     brew outdated pyenv || brew upgrade pyenv
     # virtualenv doesn't work without pyenv knowledge. venv in Python 3.3
