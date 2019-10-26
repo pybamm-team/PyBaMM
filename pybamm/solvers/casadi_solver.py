@@ -101,8 +101,3 @@ class CasadiSolver(pybamm.DaeSolver):
             # If it doesn't work raise error
             raise pybamm.SolverError(e.args[0])
 
-    def calculate_consistent_initial_conditions(
-        self, rhs, algebraic, y0_guess, jac=None
-    ):
-        "No need to calculate initial conditions separately with this solver"
-        return y0_guess
