@@ -27,7 +27,7 @@ disc.process_model(model)
 t_eval = np.linspace(0, 0.17, 100)
 
 casadi_sol = pybamm.CasadiSolver(atol=1e-8, rtol=1e-8).solve(model, t_eval)
-klu_sol = pybamm.IDAKLU(atol=1e-8, rtol=1e-8).solve(model, t_eval)
+klu_sol = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8).solve(model, t_eval)
 scikits_sol = pybamm.ScikitsDaeSolver(atol=1e-8, rtol=1e-8).solve(model, t_eval)
 
 # plot

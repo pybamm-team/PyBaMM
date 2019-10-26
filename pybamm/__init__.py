@@ -266,7 +266,7 @@ from .solvers.casadi_solver import CasadiSolver
 from .solvers.scikits_dae_solver import ScikitsDaeSolver
 from .solvers.scikits_ode_solver import ScikitsOdeSolver, have_scikits_odes
 from .solvers.scipy_solver import ScipySolver
-from .solvers.idaklu_solver import IDAKLU, have_idaklu
+from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
 
 
 #
