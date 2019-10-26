@@ -62,6 +62,7 @@ matrix:
           env:
             - PYTHON=3.7.4
             - PYBAMM_UNIT=true
+            - PYBAMM_SCIKITS_ODES=true
             - PYBAMM_KLU=true
           if: type != cron
         - python: "3.7"
