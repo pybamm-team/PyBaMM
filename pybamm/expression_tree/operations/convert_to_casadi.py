@@ -72,6 +72,8 @@ class CasadiConverter(object):
                 return casadi.mmin(*converted_children)
             elif symbol.function == np.max:
                 return casadi.mmax(*converted_children)
+            elif symbol.function == np.abs:
+                return casadi.fabs(*converted_children)
             elif not isinstance(
                 symbol.function, pybamm.GetCurrent
             ) and symbol.function.__name__.startswith("elementwise_grad_of_"):
