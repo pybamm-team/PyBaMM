@@ -279,7 +279,7 @@ class TestScipySolver(unittest.TestCase):
             model.rhs = {var: -0.1 * var}
             model.initial_conditions = {var: 1}
             model.events = {"var=0.5": pybamm.min(var - 0.5)}
-            # No need to set parameters; can use base discretisation (no spatial 
+            # No need to set parameters; can use base discretisation (no spatial
             # operators)
 
             # create discretisation
