@@ -1,6 +1,7 @@
 #
 # Tests for the electrical parameters
 #
+import casadi
 import pybamm
 
 import unittest
