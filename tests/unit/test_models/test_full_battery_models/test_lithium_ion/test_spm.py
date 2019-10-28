@@ -56,7 +56,7 @@ class TestSPM(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             model = pybamm.lithium_ion.SPM(options)
 
-    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
+    @unittest.skipIf(~pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_x_full_Nplus1D_not_implemented(self):
         # 1plus1D
         options = {
@@ -99,7 +99,7 @@ class TestSPM(unittest.TestCase):
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
-    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
+    @unittest.skipIf(~pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_xyz_lumped_thermal_1D_current_collector(self):
         options = {
             "current collector": "potential pair",
@@ -117,7 +117,7 @@ class TestSPM(unittest.TestCase):
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
-    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
+    @unittest.skipIf(~pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_xyz_lumped_thermal_2D_current_collector(self):
         options = {
             "current collector": "potential pair",
@@ -135,7 +135,7 @@ class TestSPM(unittest.TestCase):
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
-    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
+    @unittest.skipIf(~pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_x_lumped_thermal_1D_current_collector(self):
         options = {
             "current collector": "potential pair",
@@ -145,7 +145,7 @@ class TestSPM(unittest.TestCase):
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
-    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
+    @unittest.skipIf(~pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_x_lumped_thermal_2D_current_collector(self):
         options = {
             "current collector": "potential pair",
@@ -155,7 +155,7 @@ class TestSPM(unittest.TestCase):
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
-    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
+    @unittest.skipIf(~pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_default_solver(self):
         options = {"thermal": "isothermal"}
         model = pybamm.lithium_ion.SPM(options)

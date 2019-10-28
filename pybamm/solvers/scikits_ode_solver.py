@@ -16,7 +16,7 @@ if scikits_odes_spec is not None:
 
 
 def have_scikits_odes():
-    return scikits_odes_spec is None
+    return scikits_odes_spec is not None
 
 
 class ScikitsOdeSolver(pybamm.OdeSolver):

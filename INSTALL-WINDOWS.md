@@ -18,20 +18,20 @@ To download the PyBaMM source code, you first need to install git, which you can
 typing
 
 ```bash 
-$ sudo apt install git-core
+sudo apt install git-core
 ```
 
 Now use git to clone the PyBaMM repository:
 
 ```bash
-$ git clone https://github.com/pybamm-team/PyBaMM.git
+git clone https://github.com/pybamm-team/PyBaMM.git
 ```
 
 This will create a new directly called `PyBaMM`, you can move to this directory in bash
 using the `cd` command:
 
 ```bash 
-$ cd PyBaMM 
+cd PyBaMM 
 ```
 
 If you are unfamiliar with the linux command line, you might find it useful to work through this

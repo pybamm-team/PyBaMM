@@ -15,7 +15,7 @@ class TestLeadAcidCompositeSideReactions(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all(skip_output_tests=True)
 
-    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
+    @unittest.skipIf(~pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing_algebraic(self):
         options = {"side reactions": ["oxygen"], "surface form": "algebraic"}
         model = pybamm.lead_acid.Composite(options)

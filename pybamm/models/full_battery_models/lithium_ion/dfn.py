@@ -116,5 +116,7 @@ class DFN(BaseModel):
         Create and return the default solver for this model
         """
 
-        # Default solver to DAE
-        return pybamm.ScikitsDaeSolver()
+        if pybamm.have_scikit_odes():
+            return pybamm.ScikitsDaeSolver()
+        elif pybamm.have_idaklu():  # pragma: no cover
+            return pybamm.IDAKLU()

@@ -8,7 +8,7 @@ import unittest
 
 
 class TestAsymptoticConvergence(unittest.TestCase):
-    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
+    @unittest.skipIf(~pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_leading_order_convergence(self):
         """
         Check that the leading-order model solution converges linearly in C_e to the
