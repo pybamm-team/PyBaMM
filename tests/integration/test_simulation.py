@@ -8,6 +8,12 @@ class TestSimulation(unittest.TestCase):
         sim = pybamm.Simulation(model)
         sim.solve()
 
+    def test_update_parameters(self):
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model)
+
+        sim.parameterize_model()
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
