@@ -23,9 +23,10 @@ def load_version():
 
 setup(
     name="pybamm",
-    version=load_version()+".post3",
+    version=load_version()+".post4",
     description="Python Battery Mathematical Modelling.",
     long_description=readme,
+    long_description_content_type="text/markdown",
     url="https://github.com/pybamm-team/PyBaMM",
     include_package_data=True,
     packages=find_packages(include=("pybamm", "pybamm.*")),
