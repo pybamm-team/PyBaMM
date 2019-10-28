@@ -55,8 +55,8 @@ class CasadiSolver(pybamm.DaeSolver):
         )
         solve_time = timer.time() - solve_start_time
 
-        # Identify the event that caused termination
-        termination = self.get_termination_reason(solution, self.events)
+        # Events not implemented, termination is always 'final time'
+        termination = "final time"
 
         return solution, solve_time, termination
 
