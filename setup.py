@@ -23,14 +23,15 @@ def load_version():
 
 setup(
     name="pybamm",
-    version=load_version(),
+    version=load_version()+".post3",
     description="Python Battery Mathematical Modelling.",
     long_description=readme,
     url="https://github.com/pybamm-team/PyBaMM",
-    # include_package_data=True,
+    include_package_data=True,
     packages=find_packages(include=("pybamm", "pybamm.*")),
     package_data={
         "pybamm": [
+            "./version",
             "../input/parameters/lithium-ion/*.csv",
             "../input/parameters/lithium-ion/*.py",
             "../input/parameters/lead-acid/*.csv",
