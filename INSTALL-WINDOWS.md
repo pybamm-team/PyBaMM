@@ -38,7 +38,7 @@ If you are unfamiliar with the linux command line, you might find it useful to w
 [tutorial](https://tutorials.ubuntu.com/tutorial/command-line-for-beginners) provided by Ubuntu.
 
 Now head over and follow the installation instructions for PyBaMM for linux
-[here](INSTALL_LINUX.md).
+[here](INSTALL-LINUX.md).
 
 ## Use Visual Studio Code to run PyBaMM 
 

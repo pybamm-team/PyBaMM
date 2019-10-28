@@ -16,8 +16,12 @@ C_rate = 1
 param.update({"C-rate": C_rate})
 
 # make current collectors not so conductive, just for illustrative purposes
-param["Negative current collector conductivity [S.m-1]"] = 5.96e5
-param["Positive current collector conductivity [S.m-1]"] = 3.55e5
+param.update(
+    {
+        "Negative current collector conductivity [S.m-1]": 5.96e6,
+        "Positive current collector conductivity [S.m-1]": 3.55e6,
+    }
+)
 
 # process model and geometry, and discretise
 for model in models:

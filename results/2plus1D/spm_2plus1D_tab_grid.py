@@ -19,8 +19,6 @@ geometry = model.default_geometry
 
 # load parameter values and process model and geometry
 param = model.default_parameter_values
-C_rate = 1
-param.update({"C-rate": C_rate})
 param.process_model(model)
 param.process_geometry(geometry)
 
