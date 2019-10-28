@@ -150,19 +150,22 @@ from .expression_tree.exceptions import (
     UndefinedOperationError,
     GeometryError,
 )
-from .expression_tree.simplify import (
+
+# Operations
+from .expression_tree.operations.simplify import (
     Simplification,
     simplify_if_constant,
     simplify_addition_subtraction,
     simplify_multiplication_division,
 )
-from .expression_tree.jacobian import Jacobian
-from .expression_tree.evaluate import (
+from .expression_tree.operations.evaluate import (
     find_symbols,
     id_to_python_variable,
     to_python,
     EvaluatorPython,
 )
+from .expression_tree.operations.jacobian import Jacobian
+from .expression_tree.operations.convert_to_casadi import CasadiConverter
 
 #
 # Model classes
@@ -258,12 +261,12 @@ from .solvers.solution import Solution
 from .solvers.base_solver import BaseSolver
 from .solvers.ode_solver import OdeSolver
 from .solvers.dae_solver import DaeSolver
-from .solvers.scipy_solver import ScipySolver
-from .solvers.scikits_dae_solver import ScikitsDaeSolver
-from .solvers.scikits_ode_solver import ScikitsOdeSolver
-from .solvers.scikits_ode_solver import have_scikits_odes
 from .solvers.algebraic_solver import AlgebraicSolver
-from .solvers.idaklu_solver import IDAKLU, have_idaklu
+from .solvers.casadi_solver import CasadiSolver
+from .solvers.scikits_dae_solver import ScikitsDaeSolver
+from .solvers.scikits_ode_solver import ScikitsOdeSolver, have_scikits_odes
+from .solvers.scipy_solver import ScipySolver
+from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
 
 
 #

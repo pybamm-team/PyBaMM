@@ -53,7 +53,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         def alg(t, y):
             return np.array([1 - y[1]])
 
-        solver = pybamm.IDAKLU()
+        solver = pybamm.IDAKLUSolver()
         solver.residuals = res
         solver.rhs = rhs
         solver.algebraic = alg
