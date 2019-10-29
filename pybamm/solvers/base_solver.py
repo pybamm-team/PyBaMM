@@ -64,7 +64,7 @@ class BaseSolver(object):
             If an empty model is passed (`model.rhs = {}` and `model.algebraic={}`)
 
         """
-        pybamm.logger.info("Start solving {}".format(model.name))
+        pybamm.logger.info("Start solving {} with {}".format(model.name, self.name))
 
         # Make sure model isn't empty
         if len(model.rhs) == 0 and len(model.algebraic) == 0:
@@ -84,7 +84,6 @@ class BaseSolver(object):
 
         # Assign times
         solution.solve_time = solve_time
-        solution.total_time = timer.time() - start_time
         solution.set_up_time = set_up_time
 
         pybamm.logger.info("Finish solving {} ({})".format(model.name, termination))
@@ -129,7 +128,6 @@ class BaseSolver(object):
 
         # Run set up on first step
         if not hasattr(self, "y0"):
-            start_time = timer.time()
             if model.convert_to_format == "casadi" or isinstance(
                 self, pybamm.CasadiSolver
             ):
@@ -137,7 +135,7 @@ class BaseSolver(object):
             else:
                 self.set_up(model)
             self.t = 0.0
-            set_up_time = timer.time() - start_time
+            set_up_time = timer.time()
         else:
             set_up_time = None
 
@@ -149,7 +147,6 @@ class BaseSolver(object):
         # Assign times
         solution.solve_time = solve_time
         if set_up_time:
-            solution.total_time = timer.time() - start_time
             solution.set_up_time = set_up_time
 
         # Set self.t and self.y0 to their values at the final step

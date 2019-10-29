@@ -21,7 +21,7 @@ class CasadiSolver(pybamm.DaeSolver):
 
     def __init__(
         self,
-        method="idas",
+        method="ida",
         rtol=1e-6,
         atol=1e-6,
         root_method="lm",
@@ -31,6 +31,68 @@ class CasadiSolver(pybamm.DaeSolver):
     ):
         super().__init__(method, rtol, atol, root_method, root_tol, max_steps)
         self.extra_options = extra_options
+        self.name = "CasADi solver ({})".format(method)
+
+    def solve(self, model, t_eval, mode="safe"):
+        """
+        Execute the solver setup and calculate the solution of the model at
+        specified times.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model whose solution to calculate. Must have attributes rhs and
+            initial_conditions
+        t_eval : numeric type
+            The times at which to compute the solution
+        mode : str
+            How to solve the model (default is "safe"):
+
+            - "fast": perform direct integration, without accounting for events. \
+            Recommended when simulating a drive cycle or other simulation where \
+            no events should be triggered.
+            - "safe": perform step-and-check integration, checking whether events have \
+            been triggered. Recommended for simulations of a full charge or discharge.    
+
+        Raises
+        ------
+        :class:`pybamm.ValueError`
+            If an invalid mode is passed.
+        :class:`pybamm.ModelError`
+            If an empty model is passed (`model.rhs = {}` and `model.algebraic={}`)
+
+        """
+        if mode == "fast":
+            # Solve model normally by calling the solve method from parent class
+            return super().solve(model, t_eval)
+        elif mode == "safe":
+            # Step-and-check
+            # old_event_signs = np.sign(
+            #     np.concatenate([event(0, y0) for event in self.events])
+            # )
+            timer = pybamm.Timer()
+            self.set_up_casadi(model)
+            set_up_time = timer.time()
+            self.t = 0.0
+            solution = None
+            for dt in np.diff(t_eval):
+                current_step_sol = self.step(model, dt)
+                if not solution:
+                    # create solution object on first step
+                    solution = current_step_sol
+                    solution.set_up_time = set_up_time
+                else:
+                    # append solution from the current step to solution
+                    solution.append(current_step_sol)
+            return solution
+        else:
+            raise ValueError(
+                """
+                invalid mode '{}'. Must be either 'safe', for solving with events, 
+                or 'fast', for solving quickly without events""".format(
+                    mode
+                )
+            )
 
     def compute_solution(self, model, t_eval):
         """Calculate the solution of the model at specified times. In this class, we

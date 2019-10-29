@@ -93,3 +93,8 @@ class Solution(object):
         """
         self.t = np.concatenate((self.t, solution.t[1:]))
         self.y = np.concatenate((self.y, solution.y[:, 1:]), axis=1)
+        self.solve_time += solution.solve_time
+
+    @property
+    def total_time(self):
+        return self.set_up_time + self.solve_time

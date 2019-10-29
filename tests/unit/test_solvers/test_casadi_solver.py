@@ -60,6 +60,11 @@ class TestCasadiSolver(unittest.TestCase):
         # Turn warnings back on
         warnings.simplefilter("default")
 
+    def test_bad_mode(self):
+        solver = pybamm.CasadiSolver()
+        with self.assertRaisesRegex(ValueError, "invalid mode"):
+            solver.solve(None, None, "bad mode")
+
     def test_model_solver(self):
         # Create model
         model = pybamm.BaseModel()
@@ -80,11 +85,6 @@ class TestCasadiSolver(unittest.TestCase):
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
-
-        # Test time
-        self.assertGreater(
-            solution.total_time, solution.solve_time + solution.set_up_time
-        )
 
     def test_model_step(self):
         # Create model
