@@ -92,16 +92,31 @@ class BaseThermal(pybamm.BaseSubModel):
         phi_s_n = variables["Negative electrode potential"]
         phi_s_p = variables["Positive electrode potential"]
 
+        # Ohmic heating in solid
         Q_ohm_s_cn, Q_ohm_s_cp = self._current_collector_heating(variables)
         Q_ohm_s_n = -pybamm.inner(i_s_n, pybamm.grad(phi_s_n))
         Q_ohm_s_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
         Q_ohm_s_p = -pybamm.inner(i_s_p, pybamm.grad(phi_s_p))
         Q_ohm_s = pybamm.Concatenation(Q_ohm_s_n, Q_ohm_s_s, Q_ohm_s_p)
 
-        Q_ohm_e = -pybamm.inner(i_e, pybamm.grad(phi_e))
+        # Ohmic heating in electrolyte
+        # TODO: change full stefan-maxwell conductivity so that i_e is always
+        # a Concatenation
+        if isinstance(i_e, pybamm.Concatenation):
+            # compute by domain if possible
+            i_e_n, i_e_s, i_e_p = i_e.orphans
+            phi_e_n, phi_e_s, phi_e_p = phi_e.orphans
+            Q_ohm_e_n = -pybamm.inner(i_e_n, pybamm.grad(phi_e_n))
+            Q_ohm_e_s = -pybamm.inner(i_e_s, pybamm.grad(phi_e_s))
+            Q_ohm_e_p = -pybamm.inner(i_e_p, pybamm.grad(phi_e_p))
+            Q_ohm_e = pybamm.Concatenation(Q_ohm_e_n, Q_ohm_e_s, Q_ohm_e_p)
+        else:
+            Q_ohm_e = -pybamm.inner(i_e, pybamm.grad(phi_e))
 
+        # Total Ohmic heating
         Q_ohm = Q_ohm_s + Q_ohm_e
 
+        # Irreversible electrochemical heating
         Q_rxn_n = j_n * eta_r_n
         Q_rxn_p = j_p * eta_r_p
         Q_rxn = pybamm.Concatenation(
@@ -112,6 +127,7 @@ class BaseThermal(pybamm.BaseSubModel):
             ]
         )
 
+        # Reversible electrochemical heating
         Q_rev_n = j_n * (param.Theta ** (-1) + T_n) * dUdT_n
         Q_rev_p = j_p * (param.Theta ** (-1) + T_p) * dUdT_p
         Q_rev = pybamm.Concatenation(
@@ -122,6 +138,7 @@ class BaseThermal(pybamm.BaseSubModel):
             ]
         )
 
+        # Total heating
         Q = Q_ohm + Q_rxn + Q_rev
 
         # Compute the X-average over the current collectors by default.
@@ -133,75 +150,192 @@ class BaseThermal(pybamm.BaseSubModel):
         Q_rev_av = self._x_average(Q_rev, 0, 0)
         Q_av = self._x_average(Q, Q_ohm_s_cn, Q_ohm_s_cp)
 
+        # Compute volume-averaged heat source terms
         Q_ohm_vol_av = self._yz_average(Q_ohm_av)
         Q_rxn_vol_av = self._yz_average(Q_rxn_av)
         Q_rev_vol_av = self._yz_average(Q_rev_av)
         Q_vol_av = self._yz_average(Q_av)
 
+        # Dimensional scaling for heat source terms
+        Q_scale = param.i_typ * param.potential_scale / param.L_x
+
+        # Geat heat source by domain
+        if isinstance(Q_ohm_e, pybamm.Concatenation):
+            variables.update(
+                self._get_domain_heat_source_terms(Q_ohm_s, Q_ohm_e, Q_rxn, Q_rev)
+            )
+
         variables.update(
             {
                 "Ohmic heating": Q_ohm,
-                "Ohmic heating [A.V.m-3]": param.i_typ
-                * param.potential_scale
-                * Q_ohm
-                / param.L_x,
+                "Ohmic heating [W.m-3]": Q_ohm * Q_scale,
                 "X-averaged Ohmic heating": Q_ohm_av,
-                "X-averaged Ohmic heating [A.V.m-3]": param.i_typ
-                * param.potential_scale
-                * Q_ohm_av
-                / param.L_x,
+                "X-averaged Ohmic heating [W.m-3]": Q_ohm_av * Q_scale,
                 "Volume-averaged Ohmic heating": Q_ohm_vol_av,
-                "Volume-averaged Ohmic heating [A.V.m-3]": param.i_typ
-                * param.potential_scale
-                * Q_ohm_vol_av
-                / param.L_x,
+                "Volume-averaged Ohmic heating [W.m-3]": Q_ohm_vol_av * Q_scale,
                 "Irreversible electrochemical heating": Q_rxn,
-                "Irreversible electrochemical heating [A.V.m-3]": param.i_typ
-                * param.potential_scale
-                * Q_rxn
-                / param.L_x,
-                "X-averaged electrochemical heating": Q_rxn_av,
-                "X-averaged electrochemical heating [A.V.m-3]": param.i_typ
-                * param.potential_scale
-                * Q_rxn_av
-                / param.L_x,
-                "Volume-averaged electrochemical heating": Q_rxn_vol_av,
-                "Volume-averaged electrochemical heating [A.V.m-3]": param.i_typ
-                * param.potential_scale
-                * Q_rxn_vol_av
-                / param.L_x,
+                "Irreversible electrochemical heating [W.m-3]": Q_rxn * Q_scale,
+                "X-averaged irreversible electrochemical heating": Q_rxn_av,
+                "X-averaged irreversible electrochemical heating [W.m-3]": Q_rxn_av
+                * Q_scale,
+                "Volume-averaged irreversible electrochemical heating": Q_rxn_vol_av,
+                "Volume-averaged irreversible electrochemical heating [W.m-3]": Q_rxn_vol_av
+                * Q_scale,
                 "Reversible heating": Q_rev,
-                "Reversible heating [A.V.m-3]": param.i_typ
-                * param.potential_scale
-                * Q_rev
-                / param.L_x,
+                "Reversible heating [W.m-3]": Q_rev * Q_scale,
                 "X-averaged reversible heating": Q_rev_av,
-                "X-averaged reversible heating [A.V.m-3]": param.i_typ
-                * param.potential_scale
-                * Q_rev_av
-                / param.L_x,
+                "X-averaged reversible heating [W.m-3]": Q_rev_av * Q_scale,
                 "Volume-averaged reversible heating": Q_rev_vol_av,
-                "Volume-averaged reversible heating [A.V.m-3]": param.i_typ
-                * param.potential_scale
-                * Q_rev_vol_av
-                / param.L_x,
+                "Volume-averaged reversible heating [W.m-3]": Q_rev_vol_av * Q_scale,
                 "Total heating": Q,
-                "Total heating [A.V.m-3]": param.i_typ
-                * param.potential_scale
-                * Q
-                / param.L_x,
+                "Total heating [W.m-3]": Q * Q_scale,
                 "X-averaged total heating": Q_av,
-                "X-averaged total heating [A.V.m-3]": param.i_typ
-                * param.potential_scale
-                * Q_av
-                / param.L_x,
+                "X-averaged total heating [W.m-3]": Q_av * Q_scale,
                 "Volume-averaged total heating": Q_vol_av,
-                "Volume-averaged total heating [A.V.m-3]": param.i_typ
-                * param.potential_scale
-                * Q_vol_av
-                / param.L_x,
+                "Volume-averaged total heating [W.m-3]": Q_vol_av * Q_scale,
             }
         )
+        return variables
+
+    def _get_domain_heat_source_terms(self, Q_ohm_s, Q_ohm_e, Q_rxn, Q_rev):
+        """
+        A private function to obtain the heat source terms split
+        by domain: 'negative electrode', 'separator' and 'positive electrode'.
+
+        Parameters
+        ----------
+        Q_ohm_s : :class:`pybamm.Symbol`
+            The Ohmic heating in the solid.
+        Q_ohm_e : :class:`pybamm.Symbol`
+            The Ohmic heating in the electrolyte.
+        Q_rxn : :class:`pybamm.Symbol`
+            The irreversible electrochemical heating.
+        Q_ohm_s : :class:`pybamm.Symbol`
+            The reversible electrochemical heating.
+
+        Returns
+        -------
+        variables : dict
+            The variables corresponding to the heat source terms in the
+            separate domains.
+        """
+        param = self.param
+
+        # Unpack by domain
+        Q_ohm_s_n, _, Q_ohm_s_p = Q_ohm_s.orphans
+        Q_ohm_e_n, Q_ohm_e_s, Q_ohm_e_p = Q_ohm_e.orphans
+        Q_ohm_n = Q_ohm_s_n + Q_ohm_e_n
+        Q_ohm_p = Q_ohm_s_p + Q_ohm_e_p
+        Q_rxn_n, _, Q_rxn_p = Q_rxn.orphans
+        Q_rev_n, _, Q_rev_p = Q_rev.orphans
+        Q_n = Q_ohm_n + Q_rxn_n + Q_rev_n
+        Q_s = Q_ohm_e_s
+        Q_p = Q_ohm_p + Q_rxn_p + Q_rev_p
+
+        # X-average
+        Q_ohm_n_av = pybamm.x_average(Q_ohm_n)
+        Q_ohm_s_av = pybamm.x_average(Q_ohm_e_s)
+        Q_ohm_p_av = pybamm.x_average(Q_ohm_p)
+        Q_rxn_n_av = pybamm.x_average(Q_rxn_n)
+        Q_rxn_p_av = pybamm.x_average(Q_rxn_n)
+        Q_rev_n_av = pybamm.x_average(Q_rev_n)
+        Q_rev_p_av = pybamm.x_average(Q_rev_n)
+        Q_n_av = pybamm.x_average(Q_n)
+        Q_s_av = pybamm.x_average(Q_s)
+        Q_p_av = pybamm.x_average(Q_p)
+
+        # Volume average
+        Q_ohm_n_vol_av = self._yz_average(Q_ohm_n_av)
+        Q_ohm_s_vol_av = self._yz_average(Q_ohm_s_av)
+        Q_ohm_p_vol_av = self._yz_average(Q_ohm_p_av)
+        Q_rxn_n_vol_av = self._yz_average(Q_rxn_n_av)
+        Q_rxn_p_vol_av = self._yz_average(Q_rxn_p_av)
+        Q_rev_n_vol_av = self._yz_average(Q_rev_n_av)
+        Q_rev_p_vol_av = self._yz_average(Q_rev_p_av)
+        Q_n_vol_av = self._yz_average(Q_n_av)
+        Q_s_vol_av = self._yz_average(Q_s_av)
+        Q_p_vol_av = self._yz_average(Q_p_av)
+
+        # Dimensional scaling for heat source terms
+        Q_scale = param.i_typ * param.potential_scale / param.L_x
+
+        variables = {
+            "Negative electrode Ohmic heating": Q_ohm_n,
+            "Negative electrode Ohmic heating [W.m-3]": Q_ohm_n * Q_scale,
+            "X-averaged negative electrode Ohmic heating": Q_ohm_n_av,
+            "X-averaged negative electrode Ohmic heating [W.m-3]": Q_ohm_n_av * Q_scale,
+            "Volume-averaged negative electrode ohm heating": Q_ohm_n_vol_av,
+            "Volume-averaged negative electrode ohm heating [W.m-3]": Q_ohm_n_vol_av
+            * Q_scale,
+            "Separator Ohmic heating": Q_ohm_s,
+            "Separator Ohmic heating [W.m-3]": Q_ohm_s * Q_scale,
+            "X-averaged separator Ohmic heating": Q_ohm_s_av,
+            "X-averaged separator Ohmic heating [W.m-3]": Q_ohm_s_av * Q_scale,
+            "Volume-averaged separator ohm heating": Q_ohm_s_vol_av,
+            "Volume-averaged separator ohm heating [W.m-3]": Q_ohm_s_vol_av * Q_scale,
+            "Positive electrode Ohmic heating": Q_ohm_p,
+            "Positive electrode Ohmic heating [W.m-3]": Q_ohm_p * Q_scale,
+            "X-averaged positive electrode Ohmic heating": Q_ohm_p_av,
+            "X-averaged positive electrode Ohmic heating [W.m-3]": Q_ohm_p_av * Q_scale,
+            "Volume-averaged positive electrode Ohmic heating": Q_ohm_p_vol_av,
+            "Volume-averaged positive electrode Ohmic heating [W.m-3]": Q_ohm_p_vol_av
+            * Q_scale,
+            "Negative electrode irreversible electrochemical heating": Q_rxn_n_av,
+            "Negative electrode irreversible electrochemical heating [W.m-3]": Q_rxn_n_av
+            * Q_scale,
+            "X-averaged negative electrode irreversible electrochemical heating": Q_rxn_n_av,
+            "X-averaged negative electrode irreversible electrochemical heating [W.m-3]": Q_rxn_n_av
+            * Q_scale,
+            "Volume-averaged negative electrode irreversible electrochemical heating": Q_rxn_n_vol_av,
+            "Volume-averaged negative electrode irreversible electrochemical heating [W.m-3]": Q_rxn_n_vol_av
+            * Q_scale,
+            "Positive electrode irreversible electrochemical heating": Q_rxn_p_av,
+            "Positive electrode irreversible electrochemical heating [W.m-3]": Q_rxn_p_av
+            * Q_scale,
+            "X-averaged positive electrode irreversible electrochemical heating": Q_rxn_p_av,
+            "X-averaged positive electrode irreversible electrochemical heating [W.m-3]": Q_rxn_p_av
+            * Q_scale,
+            "Volume-averaged positive electrode irreversible electrochemical heating": Q_rxn_p_vol_av,
+            "Volume-averaged positive electrode irreversible electrochemical heating [W.m-3]": Q_rxn_p_vol_av
+            * Q_scale,
+            "Negative electrode reversible heating": Q_rev_n,
+            "Negative electrode reversible heating [W.m-3]": Q_rev_n * Q_scale,
+            "X-averaged negative electrode reversible heating": Q_rev_n_av,
+            "X-averaged negative electrode reversible heating [W.m-3]": Q_rev_n_av
+            * Q_scale,
+            "Volume-averaged negative electrode reversible heating": Q_rev_n_vol_av,
+            "Volume-averaged negative electrode reversible heating [W.m-3]": Q_rev_n_vol_av
+            * Q_scale,
+            "Positive electrode reversible heating": Q_rev_p,
+            "Positive electrode reversible heating [W.m-3]": Q_rev_p * Q_scale,
+            "X-averaged positive electrode reversible heating": Q_rev_p_av,
+            "X-averaged positive electrode reversible heating [W.m-3]": Q_rev_p_av
+            * Q_scale,
+            "Volume-averaged positive electrode reversible heating": Q_rev_p_vol_av,
+            "Volume-averaged positive electrode reversible heating [W.m-3]": Q_rev_p_vol_av
+            * Q_scale,
+            "Negative electrode total heating": Q_n,
+            "Negative electrode total heating [W.m-3]": Q_n * Q_scale,
+            "X-averaged negative electrode total heating": Q_n_av,
+            "X-averaged negative electrode total heating [W.m-3]": Q_n_av * Q_scale,
+            "Volume-averaged negative electrode total heating": Q_n_vol_av,
+            "Volume-averaged negative electrode total heating [W.m-3]": Q_n_vol_av
+            * Q_scale,
+            "Separator total heating": Q_s,
+            "Separator total heating [W.m-3]": Q_s * Q_scale,
+            "X-averaged separator total heating": Q_s_av,
+            "X-averaged separator total heating [W.m-3]": Q_s_av * Q_scale,
+            "Volume-averaged separator total heating": Q_s_vol_av,
+            "Volume-averaged separator total heating [W.m-3]": Q_s_vol_av * Q_scale,
+            "Positive electrode total heating": Q_p,
+            "Positive electrode total heating [W.m-3]": Q_p * Q_scale,
+            "X-averaged postive electrode total heating": Q_p_av,
+            "X-averaged postive electrode total heating [W.m-3]": Q_p_av * Q_scale,
+            "Volume-averaged postive electrode total heating": Q_p_vol_av,
+            "Volume-averaged positive electrode total heating [W.m-3]": Q_p_vol_av
+            * Q_scale,
+        }
+
         return variables
 
     def _flux_law(self, T):
@@ -252,3 +386,16 @@ class BaseThermal(pybamm.BaseSubModel):
                 + self.param.l_cp * var_cp
             ) / self.param.l
         return out
+
+    def _effective_properties(self):
+        """
+        Computes the effective effective product of density and specific heat, and
+        effective thermal conductivity, respectively. These are computed differently
+        depending upon whether current collectors are included or not. Defualt
+        behaviour is to assume the presence of current collectors. Due to the choice
+        of non-dimensionalisation, the dimensionless effective properties are equal
+        to 1 in the case where current collectors are accounted for.
+        """
+        rho_eff = pybamm.Scalar(1)
+        lambda_eff = pybamm.Scalar(1)
+        return rho_eff, lambda_eff

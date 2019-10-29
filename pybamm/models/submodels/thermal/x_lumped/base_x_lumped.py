@@ -51,3 +51,11 @@ class BaseModel(BaseThermal):
     def set_initial_conditions(self, variables):
         T = variables["X-averaged cell temperature"]
         self.initial_conditions = {T: self.param.T_init}
+
+    def _surface_cooling_coefficient(self):
+        """Returns the surface cooling coefficient in for x-lumped models."""
+        # Account for surface area to volume ratio in cooling coefficient
+        # Note: assumes pouch cell geometry
+        A = self.param.l_y * self.param.l_z
+        V = self.param.l * self.param.l_y * self.param.l_z
+        return -2 * self.param.h * A / V / (self.param.delta ** 2)

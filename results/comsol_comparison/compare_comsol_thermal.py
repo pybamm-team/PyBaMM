@@ -31,7 +31,7 @@ param.process_geometry(geometry)
 
 # create mesh
 var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 31, var.x_s: 11, var.x_p: 31, var.r_n: 11, var.r_p: 11}
+var_pts = {var.x_n: 101, var.x_s: 51, var.x_p: 101, var.r_n: 31, var.r_p: 31}
 mesh = pybamm.Mesh(geometry, pybamm_model.default_submesh_types, var_pts)
 
 # discretise model
@@ -39,11 +39,14 @@ disc = pybamm.Discretisation(mesh, pybamm_model.default_spatial_methods)
 disc.process_model(pybamm_model)
 
 # discharge timescale
-tau = param.process_symbol(pybamm.standard_parameters_lithium_ion.tau_discharge)
+tau = param.process_symbol(
+    pybamm.standard_parameters_lithium_ion.tau_discharge
+).evaluate(0)
 
 # solve model at comsol times
-time = comsol_variables["time"] / tau.evaluate(0)
-solution = pybamm_model.default_solver.solve(pybamm_model, time)
+time = comsol_variables["time"] / tau
+solver = pybamm.CasadiSolver()
+solution = solver.solve(pybamm_model, time)
 
 "-----------------------------------------------------------------------------"
 "Make Comsol 'model' for comparison"
@@ -88,6 +91,9 @@ comsol_phi_e = get_interp_fun(comsol_variables["phi_e"], whole_cell)
 comsol_phi_p = get_interp_fun(comsol_variables["phi_p"], ["positive electrode"])
 comsol_voltage = interp.interp1d(comsol_t, comsol_variables["voltage"])
 comsol_temperature = get_interp_fun(comsol_variables["temperature"], whole_cell)
+comsol_temperature_av = interp.interp1d(
+    comsol_t, comsol_variables["average temperature"]
+)
 comsol_q_irrev_n = get_interp_fun(comsol_variables["Q_irrev_n"], ["negative electrode"])
 comsol_q_irrev_p = get_interp_fun(comsol_variables["Q_irrev_p"], ["positive electrode"])
 comsol_q_rev_n = get_interp_fun(comsol_variables["Q_rev_n"], ["negative electrode"])
@@ -108,19 +114,202 @@ comsol_model.variables = {
     "Positive electrode potential [V]": comsol_phi_p,
     "Terminal voltage [V]": pybamm.Function(comsol_voltage, pybamm.t * tau),
     "Cell temperature [K]": comsol_temperature,
+    "Volume-averaged cell temperature [K]": pybamm.Function(
+        comsol_temperature_av, pybamm.t * tau
+    ),
+    "Negative electrode irreversible electrochemical heating [W.m-3]": comsol_q_irrev_n,
+    "Positive electrode irreversible electrochemical heating [W.m-3]": comsol_q_irrev_p,
+    "Negative electrode reversible heating [W.m-3]": comsol_q_rev_n,
+    "Positive electrode reversible heating [W.m-3]": comsol_q_rev_p,
+    "Negative electrode total heating [W.m-3]": comsol_q_total_n,
+    "Separator total heating [W.m-3]": comsol_q_total_s,
+    "Positive electrode total heating [W.m-3]": comsol_q_total_p,
 }
 
 "-----------------------------------------------------------------------------"
 "Plot comparison"
 
-#TODO: fix QuickPlot
-for var in comsol_model.variables.keys():
-    plot = pybamm.QuickPlot(
-        [pybamm_model, comsol_model],
-        mesh,
-        [solution, solution],
-        output_variables=[var],
-        labels=["PyBaMM", "Comsol"],
+plot_times = comsol_variables["time"]
+pybamm_T = pybamm.ProcessedVariable(
+    pybamm_model.variables["Volume-averaged cell temperature [K]"],
+    solution.t,
+    solution.y,
+    mesh=mesh,
+)(plot_times / tau)
+comsol_T = pybamm.ProcessedVariable(
+    comsol_model.variables["Volume-averaged cell temperature [K]"],
+    solution.t,
+    solution.y,
+    mesh=mesh,
+)(plot_times / tau)
+plt.figure()
+plt.plot(plot_times, pybamm_T, "-", label="PyBaMM")
+plt.plot(plot_times, comsol_T, "o", label="COMSOL")
+plt.xlabel("t")
+plt.ylabel("T")
+plt.legend()
+
+pybamm_voltage = pybamm.ProcessedVariable(
+    pybamm_model.variables["Terminal voltage [V]"],
+    solution.t,
+    solution.y,
+    mesh=mesh,
+)(plot_times / tau)
+comsol_voltage = pybamm.ProcessedVariable(
+    comsol_model.variables["Terminal voltage [V]"],
+    solution.t,
+    solution.y,
+    mesh=mesh,
+)(plot_times / tau)
+plt.figure()
+plt.plot(plot_times, pybamm_voltage, "-", label="PyBaMM")
+plt.plot(plot_times, comsol_voltage, "o", label="COMSOL")
+plt.xlabel("t")
+plt.ylabel("Voltage [V]")
+plt.legend()
+
+# Get mesh nodes
+x_n = mesh.combine_submeshes(*["negative electrode"])[0].nodes
+x_s = mesh.combine_submeshes(*["separator"])[0].nodes
+x_p = mesh.combine_submeshes(*["positive electrode"])[0].nodes
+x = mesh.combine_submeshes(*whole_cell)[0].nodes
+
+
+def comparison_plot(var, plot_times=None):
+    """
+    Plot pybamm heat source (defined over whole cell) against comsol heat source
+    (defined by component)
+    """
+    if plot_times is None:
+        plot_times = comsol_variables["time"]
+
+    # Process pybamm heat source
+    pybamm_q = pybamm.ProcessedVariable(
+        pybamm_model.variables[var], solution.t, solution.y, mesh=mesh
     )
-    plot.dynamic_plot(testing=True)
+
+    # Process comsol heat source in negative electrode
+    comsol_q_n = pybamm.ProcessedVariable(
+        comsol_model.variables["Negative electrode " + var[0].lower() + var[1:]],
+        solution.t,
+        solution.y,
+        mesh=mesh,
+    )
+    # Process comsol heat source in separator (if defined here)
+    try:
+        comsol_q_s = pybamm.ProcessedVariable(
+            comsol_model.variables["Separator " + var[0].lower() + var[1:]],
+            solution.t,
+            solution.y,
+            mesh=mesh,
+        )
+    except KeyError:
+        comsol_q_s = None
+        print("Variable " + var + " not defined in separator")
+    # Process comsol heat source in positive electrode
+    comsol_q_p = pybamm.ProcessedVariable(
+        comsol_model.variables["Positive electrode " + var[0].lower() + var[1:]],
+        solution.t,
+        solution.y,
+        mesh=mesh,
+    )
+
+    # Make plot
+    if comsol_q_s:
+        n_cols = 3
+    else:
+        n_cols = 2
+    fig, ax = plt.subplots(1, n_cols, figsize=(15, 8))
+    cmap = plt.get_cmap("inferno")
+
+    for ind, t in enumerate(plot_times):
+        color = cmap(float(ind) / len(plot_times))
+        ax[0].plot(x_n * L_x, pybamm_q(x=x_n, t=t / tau), "-", color=color)
+        ax[0].plot(x_n * L_x, comsol_q_n(x=x_n, t=t / tau), "o", color=color)
+        if comsol_q_s:
+            ax[1].plot(x_s * L_x, pybamm_q(x=x_s, t=t / tau), "-", color=color)
+            ax[1].plot(x_s * L_x, comsol_q_s(x=x_s, t=t / tau), "o", color=color)
+        ax[n_cols - 1].plot(
+            x_p * L_x,
+            pybamm_q(x=x_p, t=t / tau),
+            "-",
+            color=color,
+            label="PyBaMM" if ind == 0 else "",
+        )
+        ax[n_cols - 1].plot(
+            x_p * L_x,
+            comsol_q_p(x=x_p, t=t / tau),
+            "o",
+            color=color,
+            label="COMSOL" if ind == 0 else "",
+        )
+
+    ax[0].set_xlabel("x_n")
+    ax[0].set_ylabel(var)
+    if comsol_q_s:
+        ax[1].set_xlabel("x_s")
+        ax[1].set_ylabel(var)
+    ax[n_cols - 1].set_xlabel("x_p")
+    ax[n_cols - 1].set_ylabel(var)
+    plt.legend()
+    plt.tight_layout()
+
+
+def temperature_plot(plot_times=None):
+    """
+    Plot pybamm heat source (defined over whole cell) against comsol heat source
+    (defined by component)
+    """
+    if plot_times is None:
+        plot_times = comsol_variables["time"]
+
+    # Process pybamm heat source
+    pybamm_T = pybamm.ProcessedVariable(
+        pybamm_model.variables["Cell temperature [K]"],
+        solution.t,
+        solution.y,
+        mesh=mesh,
+    )
+
+    # Process comsol heat source in negative electrode
+    comsol_T = pybamm.ProcessedVariable(
+        comsol_model.variables["Cell temperature [K]"],
+        solution.t,
+        solution.y,
+        mesh=mesh,
+    )
+
+    # Make plot
+    plt.figure(figsize=(15, 8))
+    cmap = plt.get_cmap("inferno")
+
+    for ind, t in enumerate(plot_times):
+        color = cmap(float(ind) / len(plot_times))
+        plt.plot(
+            x * L_x,
+            pybamm_T(x=x, t=t / tau),
+            "-",
+            color=color,
+            label="PyBaMM" if ind == 0 else "",
+        )
+        plt.plot(
+            x * L_x,
+            comsol_T(x=x, t=t / tau),
+            "o",
+            color=color,
+            label="COMSOL" if ind == 0 else "",
+        )
+
+    plt.xlabel("x")
+    plt.ylabel("Temperature [K]")
+    plt.legend()
+    plt.tight_layout()
+
+
+# Make plots
+plot_times = comsol_variables["time"][0::10]
+comparison_plot("Irreversible electrochemical heating [W.m-3]", plot_times=plot_times)
+comparison_plot("Reversible heating [W.m-3]", plot_times=plot_times)
+comparison_plot("Total heating [W.m-3]", plot_times=plot_times)
+# temperature_plot(plot_times)
 plt.show()

@@ -65,6 +65,9 @@ comsol_temp_vals = np.reshape(
     comsol[1].values, (comsol_x_npts, comsol_time_npts), order="F"
 )
 
+# average temperature
+comsol_temp_av = np.mean(comsol_temp_vals, axis=0)
+
 # irreversible heat source in negative electrode
 comsol = pd.read_csv(path + "q_irrev_n.csv", sep=",", header=None)
 comsol_q_irrev_n_vals = np.reshape(
@@ -125,6 +128,7 @@ comsol_variables = {
     "c_p_surf": comsol_c_p_surf_vals,
     "c_e": comsol_c_e_vals,
     "temperature": comsol_temp_vals,
+    "average temperature": comsol_temp_av,
     "Q_irrev_n": comsol_q_irrev_n_vals,
     "Q_irrev_p": comsol_q_irrev_p_vals,
     "Q_rev_n": comsol_q_rev_n_vals,
