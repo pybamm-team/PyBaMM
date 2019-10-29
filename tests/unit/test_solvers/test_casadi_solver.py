@@ -5,7 +5,7 @@ import casadi
 import pybamm
 import unittest
 import numpy as np
-from tests import get_mesh_for_testing
+from tests import get_mesh_for_testing, get_discretisation_for_testing
 import warnings
 
 
@@ -62,8 +62,10 @@ class TestCasadiSolver(unittest.TestCase):
 
     def test_bad_mode(self):
         solver = pybamm.CasadiSolver()
+        model = pybamm.BaseModel()
+        model.events = {1: 2}
         with self.assertRaisesRegex(ValueError, "invalid mode"):
-            solver.solve(None, None, "bad mode")
+            solver.solve(model, None, "bad mode")
 
     def test_model_solver(self):
         # Create model
@@ -85,6 +87,35 @@ class TestCasadiSolver(unittest.TestCase):
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
+
+    def test_model_solver_events(self):
+        # Create model
+        model = pybamm.BaseModel()
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var1 = pybamm.Variable("var1", domain=whole_cell)
+        var2 = pybamm.Variable("var2", domain=whole_cell)
+        model.rhs = {var1: 0.1 * var1}
+        model.algebraic = {var2: 2 * var1 - var2}
+        model.initial_conditions = {var1: 1, var2: 2}
+        model.events = {
+            "var1 = 1.5": pybamm.min(var1 - 1.5),
+            "var2 = 2.5": pybamm.min(var2 - 2.5),
+        }
+        disc = get_discretisation_for_testing()
+        disc.process_model(model)
+
+        # Solve
+        solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
+        t_eval = np.linspace(0, 5, 100)
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_array_less(solution.y[0], 1.5)
+        np.testing.assert_array_less(solution.y[-1], 2.5)
+        np.testing.assert_array_almost_equal(
+            solution.y[0], np.exp(0.1 * solution.t), decimal=5
+        )
+        np.testing.assert_array_almost_equal(
+            solution.y[-1], 2 * np.exp(0.1 * solution.t), decimal=5
+        )
 
     def test_model_step(self):
         # Create model

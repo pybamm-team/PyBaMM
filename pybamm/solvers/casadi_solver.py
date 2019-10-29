@@ -21,7 +21,7 @@ class CasadiSolver(pybamm.DaeSolver):
 
     def __init__(
         self,
-        method="ida",
+        method="idas",
         rtol=1e-6,
         atol=1e-6,
         root_method="lm",
@@ -65,25 +65,51 @@ class CasadiSolver(pybamm.DaeSolver):
         if mode == "fast":
             # Solve model normally by calling the solve method from parent class
             return super().solve(model, t_eval)
+        elif model.events == {}:
+            pybamm.logger.info("No events found, running fast mode")
+            # Solve model normally by calling the solve method from parent class
+            return super().solve(model, t_eval)
         elif mode == "safe":
             # Step-and-check
-            # old_event_signs = np.sign(
-            #     np.concatenate([event(0, y0) for event in self.events])
-            # )
             timer = pybamm.Timer()
             self.set_up_casadi(model)
             set_up_time = timer.time()
+            init_event_signs = np.sign(
+                np.concatenate([event(0, self.y0) for event in self.event_funs])
+            )
             self.t = 0.0
             solution = None
+            pybamm.logger.info("Start solving {} with {}".format(model.name, self.name))
             for dt in np.diff(t_eval):
+                # Step
                 current_step_sol = self.step(model, dt)
-                if not solution:
-                    # create solution object on first step
-                    solution = current_step_sol
-                    solution.set_up_time = set_up_time
+                # Check most recent y
+                new_event_signs = np.sign(
+                    np.concatenate(
+                        [
+                            event(0, current_step_sol.y[:, -1])
+                            for event in self.event_funs
+                        ]
+                    )
+                )
+                # Exit loop if the sign of an event changes
+                if (new_event_signs != init_event_signs).any():
+                    break
                 else:
-                    # append solution from the current step to solution
-                    solution.append(current_step_sol)
+                    if not solution:
+                        # create solution object on first step
+                        solution = current_step_sol
+                        solution.set_up_time = set_up_time
+                    else:
+                        # append solution from the current step to solution
+                        solution.append(current_step_sol)
+            pybamm.logger.info(
+                "Set-up time: {}, Step time: {}, Total time: {}".format(
+                    timer.format(solution.set_up_time),
+                    timer.format(solution.solve_time),
+                    timer.format(solution.total_time),
+                )
+            )
             return solution
         else:
             raise ValueError(
@@ -111,7 +137,7 @@ class CasadiSolver(pybamm.DaeSolver):
         timer = pybamm.Timer()
 
         solve_start_time = timer.time()
-        pybamm.logger.info("Calling DAE solver")
+        pybamm.logger.debug("Calling DAE solver")
         solution = self.integrate_casadi(
             self.casadi_problem, self.y0, t_eval, mass_matrix=model.mass_matrix.entries
         )
