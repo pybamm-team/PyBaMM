@@ -27,9 +27,11 @@ class CasadiSolver(pybamm.DaeSolver):
         root_method="lm",
         root_tol=1e-6,
         max_steps=1000,
+        max_step_decrease_count=10,
         **extra_options,
     ):
         super().__init__(method, rtol, atol, root_method, root_tol, max_steps)
+        self.max_step_decrease_count = max_step_decrease_count
         self.extra_options = extra_options
         self.name = "CasADi solver ({})".format(method)
 
@@ -77,12 +79,38 @@ class CasadiSolver(pybamm.DaeSolver):
             init_event_signs = np.sign(
                 np.concatenate([event(0, self.y0) for event in self.event_funs])
             )
-            self.t = 0.0
             solution = None
-            pybamm.logger.info("Start solving {} with {}".format(model.name, self.name))
+            pybamm.logger.info(
+                "Start solving {} with {} in 'safe' mode".format(model.name, self.name)
+            )
             for dt in np.diff(t_eval):
                 # Step
-                current_step_sol = self.step(model, dt)
+                solved = False
+                count = 0
+                while not solved:
+                    # Try to solve with the current step, if it fails then halve the
+                    # step size and try again. This will make solution.t slightly
+                    # different to t_eval, but shouldn't matter too much as it should
+                    # only happen near events.
+                    try:
+                        current_step_sol = self.step(model, dt)
+                        solved = True
+                    except pybamm.SolverError:
+                        dt /= 2
+                    count += 1
+                    if count >= self.max_step_decrease_count:
+                        if solution is None:
+                            t = 0
+                        else:
+                            t = solution.t
+                        raise pybamm.SolverError(
+                            """
+                            Maximum number of decreased steps occurred at t={}. Try 
+                            solving the model up to this time only
+                            """.format(
+                                t
+                            )
+                        )
                 # Check most recent y
                 new_event_signs = np.sign(
                     np.concatenate(
@@ -104,7 +132,7 @@ class CasadiSolver(pybamm.DaeSolver):
                         # append solution from the current step to solution
                         solution.append(current_step_sol)
             pybamm.logger.info(
-                "Set-up time: {}, Step time: {}, Total time: {}".format(
+                "Set-up time: {}, Solve time: {}, Total time: {}".format(
                     timer.format(solution.set_up_time),
                     timer.format(solution.solve_time),
                     timer.format(solution.total_time),

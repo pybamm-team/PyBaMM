@@ -20,6 +20,7 @@ class BaseSolver(object):
         self._method = method
         self._rtol = rtol
         self._atol = atol
+        self.name = "Base solver"
 
     @property
     def method(self):
