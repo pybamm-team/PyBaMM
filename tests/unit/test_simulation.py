@@ -35,6 +35,7 @@ class TestSimulation(unittest.TestCase):
             self.assertFalse(val.has_symbol_of_classes(pybamm.Parameter))
             self.assertTrue(val.has_symbol_of_classes(pybamm.Matrix))
 
+        sim.reset()
         sim.parameterize()
         self.assertEqual(sim._status, "Parameterized")
         self.assertEqual(sim._mesh, None)
