@@ -73,9 +73,9 @@ class BaseModel(BaseStefanMaxwellConductivity):
         i_boundary_cc = variables["Current collector current density"]
         c_e = variables[self.domain + " electrolyte concentration"]
         delta_phi = variables[self.domain + " electrode surface potential difference"]
-        T = variables["Cell temperature"]
 
         if self.domain == "Negative":
+            T = variables["Negative electrode temperature"]
             c_e_flux = pybamm.BoundaryGradient(c_e, "right")
             flux_left = -i_boundary_cc * pybamm.BoundaryValue(1 / sigma_eff, "left")
             flux_right = (
@@ -93,6 +93,7 @@ class BaseModel(BaseStefanMaxwellConductivity):
             rbc_c_e = (c_e_flux, "Neumann")
 
         elif self.domain == "Positive":
+            T = variables["Positive electrode temperature"]
             c_e_flux = pybamm.BoundaryGradient(c_e, "left")
             flux_left = (
                 (i_boundary_cc / pybamm.BoundaryValue(conductivity, "left"))
@@ -159,7 +160,7 @@ class BaseModel(BaseStefanMaxwellConductivity):
         i_boundary_cc = variables["Current collector current density"]
         c_e = variables[self.domain + " electrolyte concentration"]
         delta_phi = variables[self.domain + " electrode surface potential difference"]
-        T = variables[self.domain + " temperature"]
+        T = variables[self.domain + " electrode temperature"]
 
         i_e = conductivity * (
             ((1 + param.Theta * T) * param.chi(c_e) / c_e) * pybamm.grad(c_e)
