@@ -83,7 +83,7 @@ class ScipySolver(pybamm.OdeSolver):
                 termination = "event"
                 t_event = []
                 for time in sol.t_events:
-                    if time:
+                    if time.size > 0:
                         t_event = np.append(t_event, np.max(time))
                 t_event = np.array([np.max(t_event)])
                 y_event = sol.sol(t_event)

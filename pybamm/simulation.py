@@ -4,14 +4,25 @@ import copy
 
 
 class Simulation:
+    """A Simulation class for easy building and running of PyBaMM simulations.
+
+    Parameters
+    ----------
+    model : :class:`pybamm.BaseModel`
+        The model to be simulated
+    """
+
     def __init__(self, model):
         self.model = model
         self.set_defaults()
         self.reset()
 
     def set_defaults(self):
+        """
+        A method to set all the simulation specs to default values for the
+        supplied model.
+        """
         self.geometry = self._model.default_geometry
-
         self._parameter_values = self._model.default_parameter_values
         self._submesh_types = self._model.default_submesh_types
         self._var_pts = self._model.default_var_pts
@@ -20,44 +31,85 @@ class Simulation:
         self._quick_plot_vars = None
 
     def reset(self):
+        """
+        A method to reset a simulation back to its unprocessed state.
+        """
         self.model = self._model_class(self._model_options)
         self.geometry = copy.deepcopy(self._unprocessed_geometry)
         self._mesh = None
-        self._discretization = None
+        self._disc = None
         self._solution = None
         self._status = "Unprocessed"
 
     def parameterize(self):
-        if self._status == "Unprocessed":
-            self._parameter_values.process_model(self._model)
-            self._parameter_values.process_geometry(self._geometry)
-            self._status = "Parameterized"
-        elif self._status == "Built":
-            # There is a function to update parameters in the model
-            # but this misses some geometric parameters. This class
-            # is for convenience and not speed so just re-build.
-            self.reset()
-            self.build()
+        """
+        A method to set the parameters in the model and the associated geometry. If
+        the model has already been built or solved then this will first reset to the
+        unprocessed state and then set the parameter values.
+        """
+
+        if self._status != "Unprocessed":
+            return None
+
+        self._parameter_values.process_model(self._model)
+        self._parameter_values.process_geometry(self._geometry)
+        self._status = "Parameterized"
 
     def build(self):
-        if self._status != "Built":
-            self.parameterize()
-            self._mesh = pybamm.Mesh(self._geometry, self._submesh_types, self._var_pts)
-            self._disc = pybamm.Discretisation(self._mesh, self._spatial_methods)
-            self._disc.process_model(self._model)
-            self._model_status = "Built"
+        """
+        A method to build the model as a pure linear algebra expression. If the model
+        has already been built or solved then this function will have no effect.
+        If you want to rebuild, first use "reset()". This method will
+        automatically set the parameters if they have not already been set.
+        """
 
-    def solve(self, t_eval=None):
+        if self._status == "Built" or self._status == "Solved":
+            return None
+
+        self.parameterize()
+        self._mesh = pybamm.Mesh(self._geometry, self._submesh_types, self._var_pts)
+        self._disc = pybamm.Discretisation(self._mesh, self._spatial_methods)
+        self._disc.process_model(self._model)
+        self._status = "Built"
+
+    def solve(self, t_eval=None, solver=None):
+        """
+        A method to solve the model. This method will automatically build
+        and set the model parameters if not already done so.
+
+        Parameters
+        ----------
+        t_eval : numeric type (optional)
+            The times at which to compute the solution
+        solver : :class:`pybamm.BaseSolver`
+            The solver to use to solve the model.
+        """
         self.build()
 
         if t_eval is None:
             t_eval = np.linspace(0, 1, 100)
 
-        self._solution = self.solver.solve(self._model, t_eval)
+        if solver is None:
+            solver = self.solver
 
-    def plot(self):
+        self._solution = solver.solve(self._model, t_eval)
+        self._status = "Solved"
+
+    def plot(self, quick_plot_vars=None):
+        """
+        A method to quickly plot the outputs of the simulation.
+
+        Parameters
+        ----------
+        quick_plot_vars: list
+            A list of the variables to plot.
+        """
+
+        if quick_plot_vars is None:
+            quick_plot_vars = self.quick_plot_vars
+
         plot = pybamm.QuickPlot(
-            self._model, self._mesh, self._solution, self._quick_plot_vars
+            self._model, self._mesh, self._solution, quick_plot_vars
         )
         plot.dynamic_plot()
 
@@ -85,19 +137,12 @@ class Simulation:
         self._unprocessed_geometry = copy.deepcopy(geometry)
 
     @property
+    def unprocessed_geometry(self):
+        return self._unprocessed_geometry
+
+    @property
     def parameter_values(self):
-        return self.parameter_values
-
-    @parameter_values.setter
-    def parameter_values(self, parameter_values):
-        self._parameter_values = parameter_values
-
-        if self._status == "Parameterized":
-            self.reset()
-            self.parameterize()
-
-        elif self._status == "Built":
-            self._parameter_values.update_model(self._model, self._disc)
+        return self._parameter_values
 
     @property
     def submesh_types(self):
@@ -115,15 +160,23 @@ class Simulation:
     def solver(self):
         return self._solver
 
+    @solver.setter
+    def solver(self, solver):
+        self._solver = solver
+
     @property
     def quick_plot_vars(self):
         return self._quick_plot_vars
+
+    @quick_plot_vars.setter
+    def quick_plot_vars(self, quick_plot_vars):
+        self._quick_plot_vars = quick_plot_vars
 
     @property
     def solution(self):
         return self._solution
 
-    def set_specs(
+    def specs(
         self,
         model_options=None,
         geometry=None,
@@ -134,6 +187,32 @@ class Simulation:
         solver=None,
         quick_plot_vars=None,
     ):
+        """
+        A method to set the various specs of the simulation. This method
+        automatically resets the model after the new specs have been set.
+
+        Parameters
+        ----------
+        model_options: dict (optional)
+            A dictionary of options to tweak the model you are using
+        geometry: :class:`pybamm.Geometry` (optional)
+            The geometry upon which to solve the model
+        parameter_values: dict (optional)
+            A dictionary of parameters and their corresponding numerical
+            values
+        submesh_types: dict (optional)
+            A dictionary of the types of submesh to use on each subdomain
+        var_pts: dict (optional)
+            A dictionary of the number of points used by each spatial
+            variable
+        spatial_methods: dict (optional)
+            A dictionary of the types of spatial method to use on each
+            domain (e.g. pybamm.FiniteVolume)
+        solver: :class:`pybamm.BaseSolver`
+            The solver to use to solve the model.
+        quick_plot_vars: list
+            A list of variables to plot automatically
+        """
 
         if model_options:
             self._model_options = model_options
@@ -154,10 +233,4 @@ class Simulation:
         if quick_plot_vars:
             self._quick_plot_vars = quick_plot_vars
 
-        if self._status == "Parameterized":
-            self.reset()
-            self.parameterize
-        elif self._status == "Built":
-            self.reset()
-            self.build()
-
+        self.reset()
