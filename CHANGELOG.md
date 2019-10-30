@@ -2,6 +2,7 @@
 
 ## Features
 
+-   Added Simulation class ([#693](https://github.com/pybamm-team/PyBaMM/pull/693))
 -   Added interface (via pybind11) to sundials with the IDA KLU sparse linear solver ([#657](https://github.com/pybamm-team/PyBaMM/pull/657))
 -   Add method to evaluate parameters more easily ([#669](https://github.com/pybamm-team/PyBaMM/pull/669))
 -   Add `Jacobian` class to reuse known Jacobians of expressions ([#665](https://github.com/pybamm-team/PyBaMM/pull/670))
