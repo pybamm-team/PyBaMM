@@ -102,6 +102,17 @@ class TestSimplify(unittest.TestCase):
         self.assertIsInstance((b - a).simplify(), pybamm.Scalar)
         self.assertEqual((b - a).simplify().evaluate(), 1)
 
+        # addition and subtraction with matrix zero
+        v = pybamm.Vector(np.zeros((10, 1)))
+        self.assertIsInstance((b + v).simplify(), pybamm.Array)
+        np.testing.assert_array_equal((b + v).simplify().evaluate(), np.ones((10, 1)))
+        self.assertIsInstance((v + b).simplify(), pybamm.Array)
+        np.testing.assert_array_equal((v + b).simplify().evaluate(), np.ones((10, 1)))
+        self.assertIsInstance((b - v).simplify(), pybamm.Array)
+        np.testing.assert_array_equal((b - v).simplify().evaluate(), np.ones((10, 1)))
+        self.assertIsInstance((v - b).simplify(), pybamm.Array)
+        np.testing.assert_array_equal((v - b).simplify().evaluate(), -np.ones((10, 1)))
+
         # multiplication
         self.assertIsInstance((a * b).simplify(), pybamm.Scalar)
         self.assertEqual((a * b).simplify().evaluate(), 0)
