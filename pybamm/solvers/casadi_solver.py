@@ -68,7 +68,7 @@ class CasadiSolver(pybamm.DaeSolver):
             Recommended when simulating a drive cycle or other simulation where \
             no events should be triggered.
             - "safe": perform step-and-check integration, checking whether events have \
-            been triggered. Recommended for simulations of a full charge or discharge.   
+            been triggered. Recommended for simulations of a full charge or discharge.
 
         Raises
         ------
