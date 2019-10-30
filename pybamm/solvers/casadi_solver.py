@@ -9,14 +9,29 @@ import numpy as np
 class CasadiSolver(pybamm.DaeSolver):
     """Solve a discretised model, using CasADi.
 
+    **Extends**: :class:`pybamm.DaeSolver`
+
     Parameters
     ----------
+    method : str, optional
+        The method to use for solving the system ('cvodes', for ODEs, or 'idas', for
+        DAEs). Default is 'idas'.
     rtol : float, optional
         The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
         The absolute tolerance for the solver (default is 1e-6).
+    root_method : str, optional
+        The method to use for finding consistend initial conditions. Default is 'lm'.
+    root_tol : float, optional
+        The tolerance for root-finding. Default is 1e-6.
+    max_step_decrease_counts : float, optional
+        The maximum number of times step size can be decreased before an error is
+        raised. Default is 10.
+    extra_options : keyword arguments, optional
+        Any extra keyword-arguments; these are passed directly to the CasADi integrator.
+        Please consult `CasADi documentation <https://tinyurl.com/y5rk76os>`_ for
+        details.
 
-    **Extends**: :class:`pybamm.DaeSolver`
     """
 
     def __init__(
@@ -26,11 +41,10 @@ class CasadiSolver(pybamm.DaeSolver):
         atol=1e-6,
         root_method="lm",
         root_tol=1e-6,
-        max_steps=1000,
         max_step_decrease_count=10,
         **extra_options,
     ):
-        super().__init__(method, rtol, atol, root_method, root_tol, max_steps)
+        super().__init__(method, rtol, atol, root_method, root_tol)
         self.max_step_decrease_count = max_step_decrease_count
         self.extra_options = extra_options
         self.name = "CasADi solver ({})".format(method)
@@ -54,7 +68,7 @@ class CasadiSolver(pybamm.DaeSolver):
             Recommended when simulating a drive cycle or other simulation where \
             no events should be triggered.
             - "safe": perform step-and-check integration, checking whether events have \
-            been triggered. Recommended for simulations of a full charge or discharge.    
+            been triggered. Recommended for simulations of a full charge or discharge.   
 
         Raises
         ------
@@ -83,6 +97,7 @@ class CasadiSolver(pybamm.DaeSolver):
             pybamm.logger.info(
                 "Start solving {} with {} in 'safe' mode".format(model.name, self.name)
             )
+            self.t = 0.0
             for dt in np.diff(t_eval):
                 # Step
                 solved = False
@@ -105,7 +120,7 @@ class CasadiSolver(pybamm.DaeSolver):
                             t = solution.t
                         raise pybamm.SolverError(
                             """
-                            Maximum number of decreased steps occurred at t={}. Try 
+                            Maximum number of decreased steps occurred at t={}. Try
                             solving the model up to this time only
                             """.format(
                                 t
@@ -122,6 +137,9 @@ class CasadiSolver(pybamm.DaeSolver):
                 )
                 # Exit loop if the sign of an event changes
                 if (new_event_signs != init_event_signs).any():
+                    solution.termination = "event"
+                    solution.t_event = solution.t[-1]
+                    solution.y_event = solution.y[:, -1]
                     break
                 else:
                     if not solution:
@@ -131,6 +149,14 @@ class CasadiSolver(pybamm.DaeSolver):
                     else:
                         # append solution from the current step to solution
                         solution.append(current_step_sol)
+            if not hasattr(solution, "termination"):
+                solution.termination = "final time"
+
+            # Calculate more exact termination reason
+            solution.termination = self.get_termination_reason(solution, self.events)
+            pybamm.logger.info(
+                "Finish solving {} ({})".format(model.name, solution.termination)
+            )
             pybamm.logger.info(
                 "Set-up time: {}, Solve time: {}, Total time: {}".format(
                     timer.format(solution.set_up_time),
@@ -142,7 +168,7 @@ class CasadiSolver(pybamm.DaeSolver):
         else:
             raise ValueError(
                 """
-                invalid mode '{}'. Must be either 'safe', for solving with events, 
+                invalid mode '{}'. Must be either 'safe', for solving with events,
                 or 'fast', for solving quickly without events""".format(
                     mode
                 )
@@ -171,8 +197,8 @@ class CasadiSolver(pybamm.DaeSolver):
         )
         solve_time = timer.time() - solve_start_time
 
-        # Identify the event that caused termination
-        termination = self.get_termination_reason(solution, self.events)
+        # Events not implemented, termination is always 'final time'
+        termination = "final time"
 
         return solution, solve_time, termination
 

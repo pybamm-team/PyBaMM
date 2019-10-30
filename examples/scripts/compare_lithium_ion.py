@@ -47,7 +47,7 @@ for model in models:
 solutions = [None] * len(models)
 t_eval = np.linspace(0, 0.3, 100)
 for i, model in enumerate(models):
-    solutions[i] = pybamm.CasadiSolver().solve(model, t_eval)
+    solutions[i] = model.default_solver.solve(model, t_eval)
 
 # plot
 plot = pybamm.QuickPlot(models, mesh, solutions)
