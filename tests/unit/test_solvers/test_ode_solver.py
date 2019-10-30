@@ -24,6 +24,10 @@ class TestOdeSolver(unittest.TestCase):
             pybamm.SolverError, "Cannot use ODE solver to solve model with DAEs"
         ):
             solver.solve(model, None)
+        with self.assertRaisesRegex(
+            pybamm.SolverError, "Cannot use ODE solver to solve model with DAEs"
+        ):
+            solver.set_up_casadi(model)
 
 
 if __name__ == "__main__":

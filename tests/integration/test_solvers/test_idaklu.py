@@ -16,7 +16,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
         disc.process_model(model)
         t_eval = np.linspace(0, 0.2, 100)
-        solution = pybamm.IDAKLU().solve(model, t_eval)
+        solution = pybamm.IDAKLUSolver().solve(model, t_eval)
         np.testing.assert_array_less(1, solution.t.size)
 
 

@@ -68,11 +68,18 @@ class BaseModel(object):
         Whether to simplify the expression tress representing the rhs and
         algebraic equations, Jacobain (if using) and events, before solving the
         model (default is True)
-    use_to_python : bool
-        Whether to convert the expression tress representing the rhs and
-        algebraic equations, Jacobain (if using) and events into pure python code
-        that will calculate the result of calling `evaluate(t, y)` on the given
-        expression tree (default is True)
+    convert_to_format : str
+        Whether to convert the expression trees representing the rhs and
+        algebraic equations, Jacobain (if using) and events into a different format:
+
+        - None: keep PyBaMM expression tree structure.
+        - "python": convert into pure python code that will calculate the result of \
+        calling `evaluate(t, y)` on the given expression treeself.
+        - "casadi": convert into CasADi expression tree, which then uses CasADi's \
+        algorithm to calculate the Jacobian.
+
+        Default is "python".
+
     """
 
     def __init__(self, name="Unnamed model"):
@@ -96,7 +103,7 @@ class BaseModel(object):
         # Default behaviour is to use the jacobian and simplify
         self.use_jacobian = True
         self.use_simplify = True
-        self.use_to_python = True
+        self.convert_to_format = "python"
 
     def _set_dictionary(self, dict, name):
         """

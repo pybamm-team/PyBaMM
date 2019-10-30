@@ -21,8 +21,7 @@ models = [
     #     {"current collector": "potential pair", "dimensionality": 2}, name="2+1D LOQS"
     # ),
     pybamm.lead_acid.Full(
-        {"current collector": "potential pair", "dimensionality": 1},
-        name="1+1D Full",
+        {"current collector": "potential pair", "dimensionality": 1}, name="1+1D Full"
     ),
     # pybamm.lead_acid.Full(
     #     {"dimensionality": 1}, name="1+1D uniform Full"
