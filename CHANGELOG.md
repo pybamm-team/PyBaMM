@@ -2,19 +2,26 @@
 
 ## Features
 
-- Add `Interpolant` class to interpolate experimental data (e.g. OCP curves) (#661)
-- Allow parameters to be set by material or by specifying a particular paper (#647)
-- Set relative and absolute tolerances independently in solvers (#645)
-- Add some non-uniform meshes in 1D and 2D (#617)
-- Adds submodels which allow the user to pass an array to set the entries of the `StateVector`
-  object corresponding to the temperature and potential in the 1+1D model formulation (#548) 
+-   Add interface to CasADi solver ([#687](https://github.com/pybamm-team/PyBaMM/pull/687))
+-   Add option to use CasADi's Algorithmic Differentiation framework to calculate Jacobians ([#687](https://github.com/pybamm-team/PyBaMM/pull/687))
+-   Add method to evaluate parameters more easily ([#669](https://github.com/pybamm-team/PyBaMM/pull/669))
+-   Add `Jacobian` class to reuse known Jacobians of expressions ([#665](https://github.com/pybamm-team/PyBaMM/pull/670))
+-   Add `Interpolant` class to interpolate experimental data (e.g. OCP curves) ([#661](https://github.com/pybamm-team/PyBaMM/pull/661))
+-   Added interface (via pybind11) to sundials with the IDA KLU sparse linear solver ([#657](https://github.com/pybamm-team/PyBaMM/pull/657))
+-   Allow parameters to be set by material or by specifying a particular paper ([#647](https://github.com/pybamm-team/PyBaMM/pull/647))
+-   Set relative and absolute tolerances independently in solvers ([#645](https://github.com/pybamm-team/PyBaMM/pull/645))
+-   Add some non-uniform meshes in 1D and 2D ([#617](https://github.com/pybamm-team/PyBaMM/pull/617))
 
 ## Optimizations
 
-- Avoid re-checking size when making a copy of an `Index` object (#656)
-- Avoid recalculating `_evaluation_array` when making a copy of a `StateVector` object (#653)
+-   Avoid re-checking size when making a copy of an `Index` object ([#656](https://github.com/pybamm-team/PyBaMM/pull/656))
+-   Avoid recalculating `_evaluation_array` when making a copy of a `StateVector` object ([#653](https://github.com/pybamm-team/PyBaMM/pull/653))
 
 ## Bug fixes
+
+-   Fix differentiation of functions that have more than one argument ([#687](https://github.com/pybamm-team/PyBaMM/pull/687))
+-   Add warning if `ProcessedVariable` is called outisde its interpolation range ([#681](https://github.com/pybamm-team/PyBaMM/pull/681))
+-   Improve the way `ProcessedVariable` objects are created in higher dimensions ([#581](https://github.com/pybamm-team/PyBaMM/pull/581))
 
 # [v0.1.0](https://github.com/pybamm-team/PyBaMM/tree/v0.1.0) - 2019-10-08
 
@@ -61,4 +68,5 @@ with the following optional physics:
 - Scipy
 - Scikits ODE
 - Scikits DAE
+- IDA KLU sparse linear solver (Sundials)
 - Algebraic (root-finding)

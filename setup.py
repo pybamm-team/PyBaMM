@@ -45,6 +45,7 @@ setup(
         "anytree>=2.4.3",
         "autograd>=1.2",
         "scikit-fem>=0.2.0",
+        "casadi>=3.5.0",
         # Note: Matplotlib is loaded for debug plots, but to ensure pybamm runs
         # on systems without an attached display, it should never be imported
         # outside of plot() methods.

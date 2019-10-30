@@ -113,11 +113,11 @@ class StateVector(pybamm.Symbol):
             )
         else:
             out = (y[: len(self._evaluation_array)])[self._evaluation_array]
-            if out.ndim == 1:
+            if isinstance(out, np.ndarray) and out.ndim == 1:
                 out = out[:, np.newaxis]
             return out
 
-    def jac(self, variable):
+    def _jac(self, variable):
         """
         Differentiate a slice of a StateVector of size m with respect to another
         slice of a StateVector of size n. This returns a (sparse) matrix of size

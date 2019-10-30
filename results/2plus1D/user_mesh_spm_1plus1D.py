@@ -19,7 +19,7 @@ geometry = model.default_geometry
 # load parameter values and process model and geometry
 param = model.default_parameter_values
 C_rate = 1
-current_1C = 24 * param.process_symbol(pybamm.geometric_parameters.A_cc).evaluate()
+current_1C = 24 * param.evaluate(pybamm.geometric_parameters.A_cc)
 param.update(
     {
         "Typical current [A]": C_rate * current_1C,

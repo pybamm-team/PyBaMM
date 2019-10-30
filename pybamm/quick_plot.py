@@ -320,7 +320,9 @@ class QuickPlot(object):
                             spatial_scale = self.spatial_scales[spatial_var_name]
                         self.plots[key][i][j], = ax.plot(
                             spatial_var_value * spatial_scale,
-                            variable(t, **{spatial_var_name: spatial_var_value}),
+                            variable(
+                                t, **{spatial_var_name: spatial_var_value}, warn=False
+                            ),
                             lw=2,
                             color=colors[i],
                             linestyle=linestyles[j],
@@ -333,7 +335,7 @@ class QuickPlot(object):
                         full_t = self.ts[i]
                         self.plots[key][i][j], = ax.plot(
                             full_t * self.time_scale,
-                            variable(full_t),
+                            variable(full_t, warn=False),
                             lw=2,
                             color=colors[i],
                             linestyle=linestyles[j],
@@ -394,7 +396,9 @@ class QuickPlot(object):
                     for j, variable in enumerate(variable_lists):
                         plot[i][j].set_ydata(
                             variable(
-                                t_dimensionless, **{spatial_var_name: spatial_var_value}
+                                t_dimensionless,
+                                **{spatial_var_name: spatial_var_value},
+                                warn=False
                             )
                         )
             else:

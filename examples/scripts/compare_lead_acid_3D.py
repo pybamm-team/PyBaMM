@@ -21,8 +21,7 @@ models = [
     #     {"current collector": "potential pair", "dimensionality": 2}, name="2+1D LOQS"
     # ),
     pybamm.lead_acid.Full(
-        {"current collector": "potential pair", "dimensionality": 1},
-        name="1+1D Full",
+        {"current collector": "potential pair", "dimensionality": 1}, name="1+1D Full"
     ),
     # pybamm.lead_acid.Full(
     #     {"dimensionality": 1}, name="1+1D uniform Full"
@@ -83,6 +82,7 @@ t_eval = np.linspace(0, 3, 1000)
 for i, model in enumerate(models):
     solution = model.default_solver.solve(model, t_eval)
     solutions[i] = solution
+    pybamm.post_process_variables(model.variables, solution.t, solution.y, mesh=mesh)
 
 # plot
 output_variables = [

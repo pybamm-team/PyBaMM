@@ -189,24 +189,29 @@ class AlgebraicSolver(object):
             concatenated_algebraic = simp.simplify(concatenated_algebraic)
 
         if model.use_jacobian:
+            # Create Jacobian from concatenated algebraic
             y = pybamm.StateVector(
                 slice(0, np.size(model.concatenated_initial_conditions))
             )
+            # set up Jacobian object, for re-use of dict
+            jacobian = pybamm.Jacobian()
             pybamm.logger.info("Calculating jacobian")
-            jac = concatenated_algebraic.jac(y)
+            jac = jacobian.jac(concatenated_algebraic, y)
+            model.jacobian = jac
+            model.jacobian_algebraic = jac
 
             if model.use_simplify:
                 pybamm.logger.info("Simplifying jacobian")
-                jac = jac.simplify()
+                jac = simp.simplify(jac)
 
-            if model.use_to_python:
+            if model.convert_to_format == "python":
                 pybamm.logger.info("Converting jacobian to python")
                 jac = pybamm.EvaluatorPython(jac)
 
         else:
             jac = None
 
-        if model.use_to_python:
+        if model.convert_to_format == "python":
             pybamm.logger.info("Converting algebraic to python")
             concatenated_algebraic = pybamm.EvaluatorPython(concatenated_algebraic)
 

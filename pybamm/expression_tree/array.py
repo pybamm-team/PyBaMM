@@ -3,7 +3,7 @@
 #
 import numpy as np
 import pybamm
-from scipy.sparse import issparse
+from scipy.sparse import issparse, csr_matrix
 
 
 class Array(pybamm.Symbol):
@@ -19,11 +19,22 @@ class Array(pybamm.Symbol):
         the name of the node
     domain : iterable of str, optional
         list of domains the parameter is valid over, defaults to empty list
+    auxiliary_domainds : dict, optional
+        dictionary of auxiliary domains, defaults to empty dict
+    entries_string : str
+        String representing the entries (slow to recalculate when copying)
 
     *Extends:* :class:`Symbol`
     """
 
-    def __init__(self, entries, name=None, domain=[], entries_string=None):
+    def __init__(
+        self,
+        entries,
+        name=None,
+        domain=None,
+        auxiliary_domains=None,
+        entries_string=None,
+    ):
         if entries.ndim == 1:
             entries = entries[:, np.newaxis]
         if name is None:
@@ -31,7 +42,7 @@ class Array(pybamm.Symbol):
         self._entries = entries
         # Use known entries string to avoid re-hashing, where possible
         self.entries_string = entries_string
-        super().__init__(name, domain=domain)
+        super().__init__(name, domain=domain, auxiliary_domains=auxiliary_domains)
 
     @property
     def entries(self):
@@ -71,9 +82,21 @@ class Array(pybamm.Symbol):
             (self.__class__, self.name, self.entries_string) + tuple(self.domain)
         )
 
+    def _jac(self, variable):
+        """ See :meth:`pybamm.Symbol._jac()`. """
+        # Return zeros of correct size
+        jac = csr_matrix((self.size, variable.evaluation_array.count(True)))
+        return pybamm.Matrix(jac)
+
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
-        return self.__class__(self.entries, self.name, self.domain, self.entries_string)
+        return self.__class__(
+            self.entries,
+            self.name,
+            self.domain,
+            self.auxiliary_domains,
+            self.entries_string,
+        )
 
     def _base_evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol._base_evaluate()`. """

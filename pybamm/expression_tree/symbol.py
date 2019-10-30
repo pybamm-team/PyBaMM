@@ -74,6 +74,14 @@ class Symbol(anytree.NodeMixin):
     domain : iterable of str, or str
         list of domains over which the node is valid (empty list indicates the symbol
         is valid over all domains)
+    auxiliary_domains : dict of str
+        dictionary of auxiliary domains over which the node is valid (empty dictionary
+        indicates no auxiliary domains). Keys can be "secondary" or "tertiary". The
+        symbol is broadcast over its auxiliary domains.
+        For example, a symbol might have domain "negative particle", secondary domain
+        "separator" and tertiary domain "current collector" (`domain="negative
+        particle", auxiliary_domains={"secondary": "separator", "tertiary": "current
+        collector"}`).
 
     """
 
@@ -159,6 +167,27 @@ class Symbol(anytree.NodeMixin):
             self._domain = domain
             # Update id since domain has changed
             self.set_id()
+
+    def get_children_auxiliary_domains(self, children):
+        "Combine auxiliary domains from children, at all levels"
+        aux_domains = {}
+        for child in children:
+            for level in child.auxiliary_domains.keys():
+                if (
+                    level not in aux_domains
+                    or aux_domains[level] == []
+                    or child.auxiliary_domains[level] == aux_domains[level]
+                ):
+                    aux_domains[level] = child.auxiliary_domains[level]
+                else:
+                    raise pybamm.DomainError(
+                        """children must have same or empty auxiliary domains,
+                        not {!s} and {!s}""".format(
+                            aux_domains[level], child.auxiliary_domains[level]
+                        )
+                    )
+
+        return aux_domains
 
     @property
     def id(self):
@@ -412,33 +441,19 @@ class Symbol(anytree.NodeMixin):
         "Default behaviour for differentiation, overriden by Binary and Unary Operators"
         raise NotImplementedError
 
-    def jac(self, variable):
+    def jac(self, variable, known_jacs=None):
         """
         Differentiate a symbol with respect to a (slice of) a State Vector.
-        Default behaviour is to return `1` if differentiating with respect to
-        yourself and zero otherwise. Binary and Unary Operators override this.
-
-        Parameters
-        ----------
-        variable : :class:`pybamm.Symbol`
-            The variable with respect to which to differentiate
-
+        See :class:`pybamm.Jacobian`.
         """
-        if variable.id == self.id:
-            return pybamm.Scalar(1)
-        else:
-            jac = self._jac(variable)
-            # jacobian removes the domain(s)
-            jac.domain = []
-            jac.auxiliary_domains = {}
-            return jac
+        return pybamm.Jacobian(known_jacs).jac(self, variable)
 
     def _jac(self, variable):
-        "Default behaviour for jacobian, overriden by Binary and Unary Operators"
-        if variable.id == self.id:
-            return pybamm.Scalar(1)
-        else:
-            return pybamm.Scalar(0)
+        """
+        Default behaviour for jacobian, will raise a ``NotImplementedError``
+        if this member function has not been defined for the node.
+        """
+        raise NotImplementedError
 
     def _base_evaluate(self, t=None, y=None):
         """evaluate expression tree
@@ -583,6 +598,13 @@ class Symbol(anytree.NodeMixin):
     def simplify(self, simplified_symbols=None):
         """ Simplify the expression tree. See :class:`pybamm.Simplification`. """
         return pybamm.Simplification(simplified_symbols).simplify(self)
+
+    def to_casadi(self, t=None, y=None, casadi_symbols=None):
+        """
+        Convert the expression tree to a CasADi expression tree.
+        See :class:`pybamm.CasadiConverter`.
+        """
+        return pybamm.CasadiConverter(casadi_symbols).convert(self, t, y)
 
     def new_copy(self):
         """
