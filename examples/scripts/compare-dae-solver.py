@@ -16,7 +16,7 @@ param.process_geometry(geometry)
 
 # set mesh
 var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 50, var.x_s: 50, var.x_p: 50, var.r_n: 20, var.r_p: 20}
+var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.r_n: 5, var.r_p: 5}
 mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
 
 # discretise model
@@ -31,7 +31,10 @@ klu_sol = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8).solve(model, t_eval)
 scikits_sol = pybamm.ScikitsDaeSolver(atol=1e-8, rtol=1e-8).solve(model, t_eval)
 
 # plot
+import warnings
+
+warnings.simplefilter("error")
 models = [model, model, model]
-solutions = [scikits_sol, klu_sol, casadi_sol]
-plot = pybamm.QuickPlot(models, mesh, solutions)
-plot.dynamic_plot()
+solutions = [casadi_sol, klu_sol, casadi_sol]
+# plot = pybamm.QuickPlot(models, mesh, solutions)
+# plot.dynamic_plot()
