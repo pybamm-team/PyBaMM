@@ -172,6 +172,7 @@ class OptimisationsTest(object):
 
     def set_up_model(self, simplify=False, to_python=False):
         self.model.use_simplify = simplify
-        self.model.use_to_python = to_python
+        if to_python is True:
+            self.model.convert_to_format = "python"
         self.model.default_solver.set_up(self.model)
         return None

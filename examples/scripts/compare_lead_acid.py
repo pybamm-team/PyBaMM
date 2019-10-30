@@ -41,16 +41,18 @@ for model in models:
 
 # solve model
 solutions = [None] * len(models)
-t_eval = np.linspace(0, 3, 1000)
+t_eval = np.linspace(0, 1, 1000)
 for i, model in enumerate(models):
     solution = model.default_solver.solve(model, t_eval)
     solutions[i] = solution
 
 # plot
 output_variables = [
-    "Electrolyte pressure",
-    "Electrolyte concentration",
-    "Volume-averaged velocity [m.s-1]",
+    "Interfacial current density [A.m-2]",
+    "Electrolyte concentration [mol.m-3]",
+    "Current [A]",
+    "Porosity",
+    "Electrolyte potential [V]",
     "Terminal voltage [V]",
 ]
 plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)
