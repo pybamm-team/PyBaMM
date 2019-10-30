@@ -6,8 +6,8 @@ import pybamm
 from .base_current_collector import BaseModel
 
 
-class SetPotentialSingleParticle1plus1D(BaseModel):
-    """A submodel 1D current collectors which *doesn't* update the potentials
+class BaseSetPotentialSingleParticle(BaseModel):
+    """A submodel for current collectors which *doesn't* update the potentials
     during solve. This class uses the current-voltage relationship from the
     SPM(e) (see [1]_) to calculate the current.
 
@@ -86,6 +86,7 @@ class SetPotentialSingleParticle1plus1D(BaseModel):
 
         param = self.param
         applied_current = param.current_with_time
+        cc_area = self._get_effective_current_collector_area()
         phi_s_cn = variables["Negative current collector potential"]
         phi_s_cp = variables["Positive current collector potential"]
         i_boundary_cc = variables["Current collector current density"]
@@ -94,5 +95,27 @@ class SetPotentialSingleParticle1plus1D(BaseModel):
             phi_s_cn: pybamm.Scalar(0),
             phi_s_cp: param.U_p(param.c_p_init, param.T_ref)
             - param.U_n(param.c_n_init, param.T_ref),
-            i_boundary_cc: applied_current / param.l_y / param.l_z,
+            i_boundary_cc: applied_current / cc_area,
         }
+
+
+class SetPotentialSingleParticle1plus1D(BaseSetPotentialSingleParticle):
+    "Class for 1+1D set potential model"
+
+    def __init__(self, param):
+        super().__init__(param)
+
+    def _get_effective_current_collector_area(self):
+        "In the 1+1D models the current collector effectively has surface area l_z"
+        return self.param.l_z
+
+
+class SetPotentialSingleParticle2plus1D(BaseSetPotentialSingleParticle):
+    "Class for 1+1D set potential model"
+
+    def __init__(self, param):
+        super().__init__(param)
+
+    def _get_effective_current_collector_area(self):
+        "Return the area of the current collector"
+        return self.param.l_y * self.param.l_z

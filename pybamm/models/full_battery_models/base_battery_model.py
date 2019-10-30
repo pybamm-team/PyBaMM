@@ -239,7 +239,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 )
         if options[
             "current collector"
-        ] == "single particle potenetial pair" and not isinstance(
+        ] == "single particle potential pair" and not isinstance(
             self, (pybamm.lithium_ion.SPM, pybamm.lithium_ion.SPMe)
         ):
             raise pybamm.OptionError(
@@ -607,9 +607,13 @@ class BaseBatteryModel(pybamm.BaseModel):
                 submodel = pybamm.current_collector.SetPotentialSingleParticle1plus1D(
                     self.param
                 )
-            elif self.options["dimensionality"] in [0, 2]:
+            elif self.options["dimensionality"] == 2:
+                submodel = pybamm.current_collector.SetPotentialSingleParticle2plus1D(
+                    self.param
+                )
+            elif self.options["dimensionality"] == 0:
                 raise NotImplementedError(
-                    """Set potential model only implemented for 1D current
+                    """Set potential model only implemented for 1D or 2D current
                     collectors"""
                 )
         self.submodels["current collector"] = submodel

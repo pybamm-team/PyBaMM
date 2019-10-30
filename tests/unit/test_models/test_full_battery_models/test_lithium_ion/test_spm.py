@@ -57,6 +57,10 @@ class TestSPM(unittest.TestCase):
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
+        options = {"current collector": "set external potential", "dimensionality": 2}
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
+
     def test_x_full_thermal_model_no_current_collector(self):
         options = {"thermal": "x-full"}
         model = pybamm.lithium_ion.SPM(options)

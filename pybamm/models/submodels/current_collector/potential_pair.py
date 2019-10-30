@@ -154,7 +154,7 @@ class PotentialPair2plus1D(BasePotentialPair):
         # giving the zero Dirichlet condition on phi_s_cn. Elsewhere, the boundary
         # is insulated, giving no flux conditions on phi_s_cn. This is automatically
         # applied everywhere, apart from the region corresponding to the projection
-        # of the positive tab, so we need to explititly apply a zero-flux boundary
+        # of the positive tab, so we need to explitly apply a zero-flux boundary
         # condition on the region "positive tab" for phi_s_cn.
         # A current is drawn from the positive tab, giving the non-zero Neumann
         # boundary condition on phi_s_cp at "positive tab". Elsewhere, the boundary is
