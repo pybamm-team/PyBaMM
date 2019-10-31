@@ -1,5 +1,5 @@
 #
-# Class for two-dimensional current collectors - composite models
+# Class for one- and two-dimensional composite potential pair current collector models
 #
 import pybamm
 from .potential_pair import (

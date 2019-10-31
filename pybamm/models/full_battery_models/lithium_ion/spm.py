@@ -87,8 +87,14 @@ class SPM(BaseModel):
 
     def set_positive_electrode_submodel(self):
 
+        if self.options["current collector"] == "set external potential":
+            # Potentials are set by external model
+            set_positive_potential = False
+        else:
+            # Potential determined by 1D model
+            set_positive_potential = True
         self.submodels["positive electrode"] = pybamm.electrode.ohm.LeadingOrder(
-            self.param, "Positive"
+            self.param, "Positive", set_positive_potential=set_positive_potential
         )
 
     def set_electrolyte_submodel(self):
