@@ -19,8 +19,8 @@ class TestSimulation(unittest.TestCase):
             self.assertTrue(val.has_symbol_of_classes(pybamm.Parameter))
             self.assertFalse(val.has_symbol_of_classes(pybamm.Matrix))
 
-        sim.parameterize()
-        self.assertEqual(sim._status, "Parameterized")
+        sim.set_parameters()
+        self.assertEqual(sim._status, "Parameters set")
         self.assertEqual(sim._mesh, None)
         self.assertEqual(sim._disc, None)
         for val in list(sim.model.rhs.values()):
@@ -36,8 +36,8 @@ class TestSimulation(unittest.TestCase):
             self.assertTrue(val.has_symbol_of_classes(pybamm.Matrix))
 
         sim.reset()
-        sim.parameterize()
-        self.assertEqual(sim._status, "Parameterized")
+        sim.set_parameters()
+        self.assertEqual(sim._status, "Parameters set")
         self.assertEqual(sim._mesh, None)
         self.assertEqual(sim._disc, None)
         for val in list(sim.model.rhs.values()):
@@ -76,8 +76,8 @@ class TestSimulation(unittest.TestCase):
 
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
 
-        sim.parameterize()
-        sim.parameterize()
+        sim.set_parameters()
+        sim.set_parameters()
 
         sim.build()
         sim.build()
@@ -87,7 +87,7 @@ class TestSimulation(unittest.TestCase):
 
         sim.build()
         sim.solve()
-        sim.parameterize()
+        sim.set_parameters()
 
     def test_specs(self):
         # test can rebuild after setting specs

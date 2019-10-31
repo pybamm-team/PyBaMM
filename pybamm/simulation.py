@@ -59,7 +59,7 @@ class Simulation:
         self._solution = None
         self._status = "Unprocessed"
 
-    def parameterize(self):
+    def set_parameters(self):
         """
         A method to set the parameters in the model and the associated geometry. If
         the model has already been built or solved then this will first reset to the
@@ -71,7 +71,7 @@ class Simulation:
 
         self._parameter_values.process_model(self._model)
         self._parameter_values.process_geometry(self._geometry)
-        self._status = "Parameterized"
+        self._status = "Parameters set"
 
     def build(self):
         """
@@ -84,7 +84,7 @@ class Simulation:
         if self._status == "Built" or self._status == "Solved":
             return None
 
-        self.parameterize()
+        self.set_parameters()
         self._mesh = pybamm.Mesh(self._geometry, self._submesh_types, self._var_pts)
         self._disc = pybamm.Discretisation(self._mesh, self._spatial_methods)
         self._disc.process_model(self._model)
@@ -251,4 +251,12 @@ class Simulation:
         if quick_plot_vars:
             self._quick_plot_vars = quick_plot_vars
 
-        self.reset()
+        if (
+            model_options
+            or geometry
+            or parameter_values
+            or submesh_types
+            or var_pts
+            or spatial_methods
+        ):
+            self.reset()
