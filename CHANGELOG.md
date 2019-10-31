@@ -19,6 +19,7 @@
 
 ## Bug fixes
 
+-   Adds missing temperature dependence in electrolyte and interface submodels ([#698](https://github.com/pybamm-team/PyBaMM/pull/698))
 -   Fix differentiation of functions that have more than one argument ([#687](https://github.com/pybamm-team/PyBaMM/pull/687))
 -   Add warning if `ProcessedVariable` is called outisde its interpolation range ([#681](https://github.com/pybamm-team/PyBaMM/pull/681))
 -   Improve the way `ProcessedVariable` objects are created in higher dimensions ([#581](https://github.com/pybamm-team/PyBaMM/pull/581))
