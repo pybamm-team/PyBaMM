@@ -75,10 +75,11 @@ class Simulation:
 
     def build(self):
         """
-        A method to build the model as a pure linear algebra expression. If the model
-        has already been built or solved then this function will have no effect.
-        If you want to rebuild, first use "reset()". This method will
-        automatically set the parameters if they have not already been set.
+        A method to build the model into a system of matrices and vectors suitable for
+        performing numerical computations. If the model has already been built or
+        solved then this function will have no effect. If you want to rebuild,
+        first use "reset()". This method will automatically set the parameters
+        if they have not already been set.
         """
 
         if self._status == "Built" or self._status == "Solved":
