@@ -18,7 +18,6 @@ class Composite(BaseModel):
     domain : str
         Either 'Negative electrode' or 'Positive electrode'
 
-
     **Extends:** :class:`pybamm.BaseOhm`
     """
 

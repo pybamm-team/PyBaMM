@@ -160,13 +160,14 @@ class BaseThermal(pybamm.BaseSubModel):
                 * param.potential_scale
                 * Q_rxn
                 / param.L_x,
-                "X-averaged electrochemical heating": Q_rxn_av,
-                "X-averaged electrochemical heating [A.V.m-3]": param.i_typ
+                "X-averaged irreversible electrochemical heating": Q_rxn_av,
+                "X-averaged irreversible electrochemical heating [A.V.m-3]": param.i_typ
                 * param.potential_scale
                 * Q_rxn_av
                 / param.L_x,
-                "Volume-averaged electrochemical heating": Q_rxn_vol_av,
-                "Volume-averaged electrochemical heating [A.V.m-3]": param.i_typ
+                "Volume-averaged irreversible electrochemical heating": Q_rxn_vol_av,
+                "Volume-averaged irreversible electrochemical heating [A.V.m-3]":
+                param.i_typ
                 * param.potential_scale
                 * Q_rxn_vol_av
                 / param.L_x,
