@@ -12,7 +12,6 @@ class TestSimulation(unittest.TestCase):
         self.assertEqual(model.options, sim._model_options)
 
         # check that the model is unprocessed
-        self.assertEqual(sim._status, "Unprocessed")
         self.assertEqual(sim._mesh, None)
         self.assertEqual(sim._disc, None)
         for val in list(sim.model.rhs.values()):
@@ -20,35 +19,35 @@ class TestSimulation(unittest.TestCase):
             self.assertFalse(val.has_symbol_of_classes(pybamm.Matrix))
 
         sim.set_parameters()
-        self.assertEqual(sim._status, "Parameters set")
         self.assertEqual(sim._mesh, None)
         self.assertEqual(sim._disc, None)
-        for val in list(sim.model.rhs.values()):
+        for val in list(sim.model_with_set_params.rhs.values()):
             self.assertFalse(val.has_symbol_of_classes(pybamm.Parameter))
             self.assertFalse(val.has_symbol_of_classes(pybamm.Matrix))
 
         sim.build()
-        self.assertEqual(sim._status, "Built")
         self.assertFalse(sim._mesh is None)
         self.assertFalse(sim._disc is None)
-        for val in list(sim.model.rhs.values()):
+        for val in list(sim.built_model.rhs.values()):
             self.assertFalse(val.has_symbol_of_classes(pybamm.Parameter))
             self.assertTrue(val.has_symbol_of_classes(pybamm.Matrix))
 
         sim.reset()
         sim.set_parameters()
-        self.assertEqual(sim._status, "Parameters set")
         self.assertEqual(sim._mesh, None)
         self.assertEqual(sim._disc, None)
-        for val in list(sim.model.rhs.values()):
+        self.assertEqual(sim.built_model, None)
+
+        for val in list(sim.model_with_set_params.rhs.values()):
             self.assertFalse(val.has_symbol_of_classes(pybamm.Parameter))
             self.assertFalse(val.has_symbol_of_classes(pybamm.Matrix))
 
         sim.build()
         sim.reset()
-        self.assertEqual(sim._status, "Unprocessed")
         self.assertEqual(sim._mesh, None)
         self.assertEqual(sim._disc, None)
+        self.assertEqual(sim.model_with_set_params, None)
+        self.assertEqual(sim.built_model, None)
         for val in list(sim.model.rhs.values()):
             self.assertTrue(val.has_symbol_of_classes(pybamm.Parameter))
             self.assertFalse(val.has_symbol_of_classes(pybamm.Matrix))
@@ -58,19 +57,18 @@ class TestSimulation(unittest.TestCase):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
         sim.solve()
         self.assertFalse(sim._solution is None)
-        self.assertEqual(sim._status, "Solved")
-        for val in list(sim.model.rhs.values()):
+        for val in list(sim.built_model.rhs.values()):
             self.assertFalse(val.has_symbol_of_classes(pybamm.Parameter))
             self.assertTrue(val.has_symbol_of_classes(pybamm.Matrix))
 
         sim.reset()
-        self.assertEqual(sim._status, "Unprocessed")
+        self.assertEqual(sim.model_with_set_params, None)
+        self.assertEqual(sim.built_model, None)
         for val in list(sim.model.rhs.values()):
             self.assertTrue(val.has_symbol_of_classes(pybamm.Parameter))
             self.assertFalse(val.has_symbol_of_classes(pybamm.Matrix))
 
         self.assertEqual(sim._solution, None)
-        # check can now re-parameterize model
 
     def test_reuse_commands(self):
 

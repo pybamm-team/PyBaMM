@@ -54,10 +54,11 @@ class Simulation:
         """
         self.model = self._model_class(self._model_options)
         self.geometry = copy.deepcopy(self._unprocessed_geometry)
+        self._model_with_set_params = None
+        self._built_model = None
         self._mesh = None
         self._disc = None
         self._solution = None
-        self._status = "Unprocessed"
 
     def set_parameters(self):
         """
@@ -66,12 +67,13 @@ class Simulation:
         unprocessed state and then set the parameter values.
         """
 
-        if self._status != "Unprocessed":
+        if self.model_with_set_params:
             return None
 
-        self._parameter_values.process_model(self._model)
+        self._model_with_set_params = self._parameter_values.process_model(
+            self._model, inplace=True
+        )
         self._parameter_values.process_geometry(self._geometry)
-        self._status = "Parameters set"
 
     def build(self):
         """
@@ -82,14 +84,13 @@ class Simulation:
         if they have not already been set.
         """
 
-        if self._status == "Built" or self._status == "Solved":
+        if self.built_model:
             return None
 
         self.set_parameters()
         self._mesh = pybamm.Mesh(self._geometry, self._submesh_types, self._var_pts)
         self._disc = pybamm.Discretisation(self._mesh, self._spatial_methods)
         self._built_model = self._disc.process_model(self._model, inplace=False)
-        self._status = "Built"
 
     def solve(self, t_eval=None, solver=None):
         """
@@ -111,8 +112,7 @@ class Simulation:
         if solver is None:
             solver = self.solver
 
-        self._solution = solver.solve(self._model, t_eval)
-        self._status = "Solved"
+        self._solution = solver.solve(self.built_model, t_eval)
 
     def plot(self, quick_plot_vars=None):
         """
@@ -141,6 +141,14 @@ class Simulation:
         self._model = model
         self._model_class = model.__class__
         self._model_options = model.options
+
+    @property
+    def model_with_set_params(self):
+        return self._model_with_set_params
+
+    @property
+    def built_model(self):
+        return self._built_model
 
     @property
     def model_options(self):
