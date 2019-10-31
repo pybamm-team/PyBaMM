@@ -247,7 +247,7 @@ class ParameterValues(dict):
             model = unprocessed_model
         else:
             # create a blank model of the same class
-            model = model.__class__(model.options)
+            model = unprocessed_model.__class__(unprocessed_model.options)
             model.name = unprocessed_model.name
             model.options = unprocessed_model.options
             model.use_jacobian = unprocessed_model.use_jacobian
