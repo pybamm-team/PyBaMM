@@ -211,13 +211,13 @@ class ParameterValues(dict):
                 values["C-rate"] = float(values["Typical current [A]"]) / capacity
         return values
 
-    def process_model(self, model, processing="process"):
+    def process_model(self, unprocessed_model, processing="process", inplace=True):
         """Assign parameter values to a model.
         Currently inplace, could be changed to return a new model.
 
         Parameters
         ----------
-        model : :class:`pybamm.BaseModel`
+        unprocessed_model : :class:`pybamm.BaseModel`
             Model to assign parameter values for
         processing : str, optional
             Flag to indicate how to process model (default 'process')
@@ -226,6 +226,9 @@ class ParameterValues(dict):
             and replace any Parameter with a Value)
             * 'update': Calls :meth:`update_scalars()` for use on already-processed \
             model (update the value of any Scalars in the expression tree.)
+        inplace: bool, optional
+            If True, replace the parameters in the model in place. Otherwise, return a
+            new model with parameter values set. Default is True.
 
         Raises
         ------
@@ -233,9 +236,25 @@ class ParameterValues(dict):
             If an empty model is passed (`model.rhs = {}` and `model.algebraic={}`)
 
         """
-        pybamm.logger.info("Start setting parameters for {}".format(model.name))
+        pybamm.logger.info(
+            "Start setting parameters for {}".format(unprocessed_model.name)
+        )
 
-        if len(model.rhs) == 0 and len(model.algebraic) == 0:
+        # set up inplace vs not inplace
+        if inplace:
+            # any changes to model_disc attributes will change model attributes
+            # since they point to the same object
+            model = unprocessed_model
+        else:
+            # create a blank model of the same class
+            model = unprocessed_model.__class__(unprocessed_model.options)
+            model.name = unprocessed_model.name
+            model.options = unprocessed_model.options
+            model.use_jacobian = unprocessed_model.use_jacobian
+            model.use_simplify = unprocessed_model.use_simplify
+            model.convert_to_format = unprocessed_model.convert_to_format
+
+        if len(unprocessed_model.rhs) == 0 and len(unprocessed_model.algebraic) == 0:
             raise pybamm.ModelError("Cannot process parameters for empty model")
 
         if processing == "process":
@@ -243,13 +262,13 @@ class ParameterValues(dict):
         elif processing == "update":
             processing_function = self.update_scalars
 
-        for variable, equation in model.rhs.items():
+        for variable, equation in unprocessed_model.rhs.items():
             pybamm.logger.debug(
                 "{} parameters for {!r} (rhs)".format(processing.capitalize(), variable)
             )
             model.rhs[variable] = processing_function(equation)
 
-        for variable, equation in model.algebraic.items():
+        for variable, equation in unprocessed_model.algebraic.items():
             pybamm.logger.debug(
                 "{} parameters for {!r} (algebraic)".format(
                     processing.capitalize(), variable
@@ -257,7 +276,7 @@ class ParameterValues(dict):
             )
             model.algebraic[variable] = processing_function(equation)
 
-        for variable, equation in model.initial_conditions.items():
+        for variable, equation in unprocessed_model.initial_conditions.items():
             pybamm.logger.debug(
                 "{} parameters for {!r} (initial conditions)".format(
                     processing.capitalize(), variable
@@ -270,7 +289,7 @@ class ParameterValues(dict):
         # small number of variables, e.g. {"negative tab": neg. tab bc,
         # "positive tab": pos. tab bc "no tab": no tab bc}.
         new_boundary_conditions = {}
-        for variable, bcs in model.boundary_conditions.items():
+        for variable, bcs in unprocessed_model.boundary_conditions.items():
             processed_variable = processing_function(variable)
             new_boundary_conditions[processed_variable] = {}
             for side in ["left", "right", "negative tab", "positive tab", "no tab"]:
@@ -288,20 +307,22 @@ class ParameterValues(dict):
 
         model.boundary_conditions = new_boundary_conditions
 
-        for variable, equation in model.variables.items():
+        for variable, equation in unprocessed_model.variables.items():
             pybamm.logger.debug(
                 "{} parameters for {!r} (variables)".format(
                     processing.capitalize(), variable
                 )
             )
             model.variables[variable] = processing_function(equation)
-        for event, equation in model.events.items():
+        for event, equation in unprocessed_model.events.items():
             pybamm.logger.debug(
                 "{} parameters for event '{}''".format(processing.capitalize(), event)
             )
             model.events[event] = processing_function(equation)
 
         pybamm.logger.info("Finish setting parameters for {}".format(model.name))
+
+        return model
 
     def update_model(self, model, disc):
         """Process a discretised model.
