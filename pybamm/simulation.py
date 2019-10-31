@@ -12,9 +12,27 @@ class Simulation:
         The model to be simulated
     """
 
-    def __init__(self, model):
+    def __init__(
+        self,
+        model,
+        geometry=None,
+        parameter_values=None,
+        submesh_types=None,
+        var_pts=None,
+        spatial_methods=None,
+        solver=None,
+        quick_plot_vars=None,
+    ):
         self.model = model
-        self.set_defaults()
+
+        self.geometry = geometry or model.default_geometry
+        self._parameter_values = parameter_values or model.default_parameter_values
+        self._submesh_types = submesh_types or model.default_submesh_types
+        self._var_pts = var_pts or model.default_var_pts
+        self._spatial_methods = spatial_methods or model.default_spatial_methods
+        self._solver = solver or self._model.default_solver
+        self._quick_plot_vars = quick_plot_vars
+
         self.reset()
 
     def set_defaults(self):
