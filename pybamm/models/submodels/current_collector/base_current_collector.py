@@ -74,12 +74,15 @@ class BaseModel(pybamm.BaseSubModel):
         pot_scale = self.param.potential_scale
         U_ref = self.param.U_p_ref - self.param.U_n_ref
 
-        # add more to this
+        # Local potential difference
+        V_cc = phi_s_cp - phi_s_cn
+
         variables = {
             "Positive current collector potential": phi_s_cp,
             "Positive current collector potential [V]": U_ref + phi_s_cp * pot_scale,
-            "Local potential difference": phi_s_cp - phi_s_cn,
-            "Local potential difference [V]": U_ref + (phi_s_cp - phi_s_cn) * pot_scale,
+            "Local current collector potential difference": V_cc,
+            "Local current collector potential difference [V]": U_ref
+            + V_cc * pot_scale,
         }
         variables.update(self._get_standard_negative_potential_variables(phi_s_cn))
 
