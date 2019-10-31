@@ -992,30 +992,13 @@ IF(KLU_ENABLE)
   SHOW_VARIABLE(KLU_LIBRARY_DIR PATH
     "Klu library directory" "${KLU_LIBRARY_DIR}")
 
-
-  # setting the paths for KLU directly without testing - scott marquis
-  # INCLUDE(SundialsKLU) 
-  set(KLU_LIBRARY ${SUITESPARSE_DIR}/KLU/Lib/libklu.a)
-  set(AMD_LIBRARY ${SUITESPARSE_DIR}/AMD/Lib/libamd.a)
-  set(COLAMD_LIBRARY ${SUITESPARSE_DIR}/COLAMD/Lib/libcolamd.a)
-  set(BTF_LIBRARY ${SUITESPARSE_DIR}/BTF/Lib/libbtf.a)
-  set(SUITESPARSECONFIG_LIBRARY ${SUITESPARSE_DIR}/SuiteSparse_config/libsuitesparseconfig.a)
-  set(KLU_LIBRARIES ${KLU_LIBRARY} ${AMD_LIBRARY} ${COLAMD_LIBRARY} ${BTF_LIBRARY} ${SUITESPARSECONFIG_LIBRARY})
-
-
   set(KLU_FOUND TRUE)
+  get_filename_component(PYBAMM_DIR ${PROJECT_SOURCE_DIR} DIRECTORY)
+  set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PYBAMM_DIR}) # use FindSuiteSparse.cmake that is in PyBaMM root
+  find_package(SuiteSparse OPTIONAL_COMPONENTS KLU AMD COLAMD BTF)
+  include_directories(${SuiteSparse_INCLUDE_DIRS})
+  set(KLU_LIBRARIES ${SuiteSparse_LIBRARIES})
 
-  IF(KLU_FOUND)
-    # sundials_config.h symbol
-    SET(SUNDIALS_KLU TRUE)
-    set(KLU_INCLUDE_DIR ${SUITESPARSE_DIR}/KLU/Include)
-    set(AMD_INCLUDE_DIR ${SUITESPARSE_DIR}/AMD/Include)
-    set(COLAMD_INCLUDE_DIR ${SUITESPARSE_DIR}/COLAMD/Include)
-    set(BTF_INCLUDE_DIR ${SUITESPARSE_DIR}/BTF/Include)
-    set(SUITESPARSECONFIG_INCLUDE_DIR ${SUITESPARSE_DIR}/SuiteSparse_config)
-
-    INCLUDE_DIRECTORIES(${AMD_INCLUDE_DIR} ${COLAMD_INCLUDE_DIR} ${BTF_INCLUDE_DIR} ${SUITESPARSECONFIG_INCLUDE_DIR} ${KLU_INCLUDE_DIR})
-  ENDIF(KLU_FOUND)
 
   IF(KLU_LIBRARIES AND NOT KLU_FOUND)
     PRINT_WARNING("KLU not functional - support will not be provided"

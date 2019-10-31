@@ -73,6 +73,6 @@ class Isothermal(BaseThermal):
     def _x_average(self, var, var_cn, var_cp):
         """
         Temperature is uniform and heat source terms are zero, so the average
-        returns the input variable.
+        returns zeros broadcasted onto the current collector domain.
         """
-        return var
+        return pybamm.PrimaryBroadcast(0, "current collector")

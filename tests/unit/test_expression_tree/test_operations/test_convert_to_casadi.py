@@ -73,9 +73,13 @@ class TestCasadiConverter(unittest.TestCase):
         self.assertTrue(casadi.is_equal(outer.to_casadi(), casadi.SX(outer.evaluate())))
 
     def test_special_functions(self):
-        a = np.array([1, 2, 3, 4, 5])
-        pybamm_a = pybamm.Array(a)
-        self.assertEqual(pybamm.min(pybamm_a).to_casadi(), casadi.SX(1))
+        a = pybamm.Array(np.array([1, 2, 3, 4, 5]))
+        self.assertEqual(pybamm.max(a).to_casadi(), casadi.SX(5))
+        self.assertEqual(pybamm.min(a).to_casadi(), casadi.SX(1))
+        b = pybamm.Array(np.array([-2]))
+        c = pybamm.Array(np.array([3]))
+        self.assertEqual(pybamm.Function(np.abs, b).to_casadi(), casadi.SX(2))
+        self.assertEqual(pybamm.Function(np.abs, c).to_casadi(), casadi.SX(3))
 
     def test_concatenations(self):
         y = np.linspace(0, 1, 10)[:, np.newaxis]
@@ -125,6 +129,16 @@ class TestCasadiConverter(unittest.TestCase):
         self.assertEqual(f.to_casadi(), casadi.SX(1))
         f = pybamm.Function(myfunction, a, b).diff(b)
         self.assertEqual(f.to_casadi(), casadi.SX(3))
+
+    def test_errors(self):
+        y = pybamm.StateVector(slice(0, 10))
+        with self.assertRaisesRegex(
+            ValueError, "Must provide a 'y' for converting state vectors"
+        ):
+            y.to_casadi()
+        var = pybamm.Variable("var")
+        with self.assertRaisesRegex(TypeError, "Cannot convert symbol of type"):
+            var.to_casadi()
 
 
 if __name__ == "__main__":

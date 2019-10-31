@@ -41,8 +41,27 @@ class TestSPM(unittest.TestCase):
 
         options = {
             "current collector": "single particle potential pair",
+            "dimensionality": 1,
+        }
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
+
+        options = {
+            "current collector": "single particle potential pair",
             "dimensionality": 2,
         }
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
+
+        options = {"current collector": "set external potential", "dimensionality": 0}
+        with self.assertRaises(NotImplementedError):
+            pybamm.lithium_ion.SPM(options)
+
+        options = {"current collector": "set external potential", "dimensionality": 1}
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
+
+        options = {"current collector": "set external potential", "dimensionality": 2}
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
@@ -154,6 +173,24 @@ class TestSPM(unittest.TestCase):
         }
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
+
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
+    def test_x_lumped_thermal_set_temperature_1D(self):
+        options = {
+            "current collector": "potential pair",
+            "dimensionality": 1,
+            "thermal": "set external temperature",
+        }
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
+
+        options = {
+            "current collector": "potential pair",
+            "dimensionality": 2,
+            "thermal": "set external temperature",
+        }
+        with self.assertRaises(NotImplementedError):
+            model = pybamm.lithium_ion.SPM(options)
 
     @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_default_solver(self):

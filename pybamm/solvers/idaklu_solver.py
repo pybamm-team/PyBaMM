@@ -7,17 +7,17 @@ import scipy.sparse as sparse
 
 import importlib
 
-klu_spec = importlib.util.find_spec("klu")
-if klu_spec is not None:
-    klu = importlib.util.module_from_spec(klu_spec)
-    klu_spec.loader.exec_module(klu)
+idaklu_spec = importlib.util.find_spec("idaklu")
+if idaklu_spec is not None:
+    idaklu = importlib.util.module_from_spec(idaklu_spec)
+    idaklu_spec.loader.exec_module(idaklu)
 
 
-def have_klu():
-    return klu_spec is None
+def have_idaklu():
+    return idaklu_spec is None
 
 
-class KLU(pybamm.DaeSolver):
+class IDAKLUSolver(pybamm.DaeSolver):
     """Solve a discretised model, using sundials with the KLU sparse linear solver.
 
      Parameters
@@ -39,7 +39,7 @@ class KLU(pybamm.DaeSolver):
         self, rtol=1e-6, atol=1e-6, root_method="lm", root_tol=1e-6, max_steps=1000
     ):
 
-        if klu_spec is None:
+        if idaklu_spec is None:
             raise ImportError("KLU is not installed")
 
         super().__init__("ida", rtol, atol, root_method, root_tol, max_steps)
@@ -73,9 +73,6 @@ class KLU(pybamm.DaeSolver):
 
         if events is None:
             pybamm.SolverError("KLU requires events to be provided")
-
-        def eqsres(t, y, ydot, return_residuals):
-            return_residuals[:] = residuals(t, y, ydot)
 
         rtol = self._rtol
         atol = self._atol
@@ -137,7 +134,7 @@ class KLU(pybamm.DaeSolver):
         ids = np.concatenate((rhs_ids, alg_ids))
 
         # solve
-        sol = klu.solve(
+        sol = idaklu.solve(
             t_eval,
             y0,
             ydot0,

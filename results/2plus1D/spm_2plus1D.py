@@ -37,7 +37,7 @@ var_pts = {
     var.y: 5,
     var.z: 5,
 }
-# depnding on number of points in y-z plane may need to increase recursion depth...
+# depending on number of points in y-z plane may need to increase recursion depth...
 sys.setrecursionlimit(10000)
 mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
 
@@ -49,7 +49,7 @@ disc.process_model(model)
 tau = param.process_symbol(pybamm.standard_parameters_lithium_ion.tau_discharge)
 t_end = 3600 / tau.evaluate(0)
 t_eval = np.linspace(0, t_end, 120)
-solution = pybamm.KLU().solve(model, t_eval)
+solution = pybamm.IDAKLUSolver().solve(model, t_eval)
 
 # TO DO: 2+1D automated plotting
 phi_s_cn = pybamm.ProcessedVariable(

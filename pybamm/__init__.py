@@ -263,10 +263,11 @@ from .solvers.ode_solver import OdeSolver
 from .solvers.dae_solver import DaeSolver
 from .solvers.algebraic_solver import AlgebraicSolver
 from .solvers.casadi_solver import CasadiSolver
-from .solvers.klu_sparse_solver import KLU, have_klu
 from .solvers.scikits_dae_solver import ScikitsDaeSolver
 from .solvers.scikits_ode_solver import ScikitsOdeSolver, have_scikits_odes
 from .solvers.scipy_solver import ScipySolver
+from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
+
 
 #
 # Current profiles

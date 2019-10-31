@@ -271,26 +271,29 @@ class TestScipySolver(unittest.TestCase):
     def test_model_solver_with_event_with_casadi(self):
         # Create model
         model = pybamm.BaseModel()
-        model.convert_to_format = "casadi"
-        domain = ["negative electrode", "separator", "positive electrode"]
-        var = pybamm.Variable("var", domain=domain)
-        model.rhs = {var: -0.1 * var}
-        model.initial_conditions = {var: 1}
-        model.events = {"var=0.5": pybamm.min(var - 0.5)}
-        # No need to set parameters; can use base discretisation (no spatial operators)
+        for use_jacobian in [True, False]:
+            model.use_jacobian = use_jacobian
+            model.convert_to_format = "casadi"
+            domain = ["negative electrode", "separator", "positive electrode"]
+            var = pybamm.Variable("var", domain=domain)
+            model.rhs = {var: -0.1 * var}
+            model.initial_conditions = {var: 1}
+            model.events = {"var=0.5": pybamm.min(var - 0.5)}
+            # No need to set parameters; can use base discretisation (no spatial
+            # operators)
 
-        # create discretisation
-        mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.FiniteVolume}
-        disc = pybamm.Discretisation(mesh, spatial_methods)
-        disc.process_model(model)
-        # Solve
-        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
-        t_eval = np.linspace(0, 10, 100)
-        solution = solver.solve(model, t_eval)
-        self.assertLess(len(solution.t), len(t_eval))
-        np.testing.assert_array_equal(solution.t, t_eval[: len(solution.t)])
-        np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
+            # create discretisation
+            mesh = get_mesh_for_testing()
+            spatial_methods = {"macroscale": pybamm.FiniteVolume}
+            disc = pybamm.Discretisation(mesh, spatial_methods)
+            disc.process_model(model)
+            # Solve
+            solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
+            t_eval = np.linspace(0, 10, 100)
+            solution = solver.solve(model, t_eval)
+            self.assertLess(len(solution.t), len(t_eval))
+            np.testing.assert_array_equal(solution.t, t_eval[: len(solution.t)])
+            np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
 
 
 if __name__ == "__main__":

@@ -7,8 +7,8 @@ import scipy.sparse as sparse
 import unittest
 
 
-@unittest.skipIf(pybamm.have_klu(), "klu solver is not installed")
-class TestKLUSolver(unittest.TestCase):
+@unittest.skipIf(pybamm.have_idaklu(), "idaklu solver is not installed")
+class TestIDAKLUSolver(unittest.TestCase):
     def test_ida_roberts_klu(self):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
@@ -53,7 +53,7 @@ class TestKLUSolver(unittest.TestCase):
         def alg(t, y):
             return np.array([1 - y[1]])
 
-        solver = pybamm.KLU()
+        solver = pybamm.IDAKLUSolver()
         solver.residuals = res
         solver.rhs = rhs
         solver.algebraic = alg

@@ -95,9 +95,9 @@ class Function(pybamm.Symbol):
                 # if variable appears in the function,use autograd to differentiate
                 # function, and apply chain rule
                 if variable.id in [symbol.id for symbol in child.pre_order()]:
-                    partial_derivatives[i] = self._diff(children, i) * child.diff(
-                        variable
-                    )
+                    partial_derivatives[i] = self._function_diff(
+                        children, i
+                    ) * child.diff(variable)
 
             # remove None entries
             partial_derivatives = list(filter(None, partial_derivatives))
@@ -108,8 +108,11 @@ class Function(pybamm.Symbol):
 
             return derivative
 
-    def _diff(self, children, idx):
-        """ See :meth:`pybamm.Symbol._diff()`. """
+    def _function_diff(self, children, idx):
+        """
+        Derivative with respect to child number 'idx'.
+        See :meth:`pybamm.Symbol._diff()`.
+        """
         # Store differentiated function, needed in case we want to convert to CasADi
         if self.derivative == "autograd":
             return Function(
@@ -146,7 +149,7 @@ class Function(pybamm.Symbol):
             children = self.orphans
             for i, child in enumerate(children):
                 if not child.evaluates_to_number():
-                    jac_fun = self._diff(children, i) * children_jacs[i]
+                    jac_fun = self._function_diff(children, i) * children_jacs[i]
                     jac_fun.domain = []
                     if jacobian is None:
                         jacobian = jac_fun
@@ -272,8 +275,8 @@ class Cos(SpecificFunction):
     def __init__(self, child):
         super().__init__(np.cos, child)
 
-    def _diff(self, children, idx):
-        """ See :meth:`pybamm.Symbol._diff()`. """
+    def _function_diff(self, children, idx):
+        """ See :meth:`pybamm.Symbol._function_diff()`. """
         return -Sin(children[0])
 
 
@@ -288,8 +291,8 @@ class Cosh(SpecificFunction):
     def __init__(self, child):
         super().__init__(np.cosh, child)
 
-    def _diff(self, children, idx):
-        """ See :meth:`pybamm.Function._diff()`. """
+    def _function_diff(self, children, idx):
+        """ See :meth:`pybamm.Function._function_diff()`. """
         return Sinh(children[0])
 
 
@@ -304,8 +307,8 @@ class Exponential(SpecificFunction):
     def __init__(self, child):
         super().__init__(np.exp, child)
 
-    def _diff(self, children, idx):
-        """ See :meth:`pybamm.Function._diff()`. """
+    def _function_diff(self, children, idx):
+        """ See :meth:`pybamm.Function._function_diff()`. """
         return Exponential(children[0])
 
 
@@ -320,8 +323,8 @@ class Log(SpecificFunction):
     def __init__(self, child):
         super().__init__(np.log, child)
 
-    def _diff(self, children, idx):
-        """ See :meth:`pybamm.Function._diff()`. """
+    def _function_diff(self, children, idx):
+        """ See :meth:`pybamm.Function._function_diff()`. """
         return 1 / children[0]
 
 
@@ -346,8 +349,8 @@ class Sin(SpecificFunction):
     def __init__(self, child):
         super().__init__(np.sin, child)
 
-    def _diff(self, children, idx):
-        """ See :meth:`pybamm.Function._diff()`. """
+    def _function_diff(self, children, idx):
+        """ See :meth:`pybamm.Function._function_diff()`. """
         return Cos(children[0])
 
 
@@ -362,8 +365,8 @@ class Sinh(SpecificFunction):
     def __init__(self, child):
         super().__init__(np.sinh, child)
 
-    def _diff(self, children, idx):
-        """ See :meth:`pybamm.Function._diff()`. """
+    def _function_diff(self, children, idx):
+        """ See :meth:`pybamm.Function._function_diff()`. """
         return Cosh(children[0])
 
 

@@ -208,7 +208,6 @@ class OdeSolver(pybamm.BaseSolver):
 
         # Create function to evaluate jacobian
         if model.use_jacobian:
-
             pybamm.logger.info("Calculating jacobian")
             casadi_jac = casadi.jacobian(concatenated_rhs, y_casadi)
             casadi_jac_fn = casadi.Function(

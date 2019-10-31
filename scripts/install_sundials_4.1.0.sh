@@ -1,35 +1,21 @@
 #!/bin/bash
 CURRENT_DIR=`pwd`
 
-# build SparseSuite to use KLU sparse linear solver
-SUITESPARSE_URL=http://faculty.cse.tamu.edu/davis/SuiteSparse/SuiteSparse-5.4.0.tar.gz
-SUITESPARSE_NAME=SuiteSparse-5.4.0.tar.gz
-wget $SUITESPARSE_URL -O $SUITESPARSE_NAME
-tar -xvf $SUITESPARSE_NAME
-SUITESPARSE_DIR=$CURRENT_DIR/SuiteSparse
-cd $SUITESPARSE_DIR
-make clean
-make
-cd $CURRENT_DIR
-rm $SUITESPARSE_NAME
-
 # install sundials-4.1.0
 SUNDIALS_URL=https://computing.llnl.gov/projects/sundials/download/sundials-4.1.0.tar.gz
 SUNDIALS_NAME=sundials-4.1.0.tar.gz
 
-TMP_DIR=$CURRENT_DIR/tmp
-mkdir $TMP_DIR
 INSTALL_DIR=$CURRENT_DIR/sundials4
 
-cd $TMP_DIR
 wget $SUNDIALS_URL -O $SUNDIALS_NAME
 tar -xvf $SUNDIALS_NAME
+rm ${SUNDIALS_NAME}
 
 # replace the sundials cmake file by a modified version that finds the KLU libraries and headers
 cd sundials-4.1.0
 cp $CURRENT_DIR/scripts/replace-cmake/CMakeLists.txt .
 
-cd $TMP_DIR
+cd $CURRENT_DIR
 mkdir build-sundials-4.1.0
 cd build-sundials-4.1.0/
 
@@ -42,19 +28,19 @@ cmake -DBLAS_ENABLE=ON\
       -DBUILD_IDAS=OFF\
       -DBUILD_KINSOL=OFF\
       -DEXAMPLES_ENABLE:BOOL=OFF\
-      -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR ../sundials-4.1.0/\
+      -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR\
       -DKLU_ENABLE=ON\
-      -DSUITESPARSE_DIR=$SUITESPARSE_DIR\
       ../sundials-4.1.0
 
 
+NUM_OF_CORES=$(cat /proc/cpuinfo | grep processor | wc -l)
 make clean
-make install
+make -j$NUM_OF_CORES install
 cd $CURRENT_DIR
-rm -rf $TMP_DIR
+rm -rf build-sundials-4.1.0
+rm -rf sundials-4.1.0
 export LD_LIBRARY_PATH=$INSTALL_DIR/lib:$LD_LIBRARY_PATH
 export SUNDIALS_INST=$INSTALL_DIR
-export SUITESPARSE=$SUITESPARSE_DIR
 
 # get pybind11
 cd $CURRENT_DIR
@@ -65,7 +51,9 @@ git clone https://github.com/pybind/pybind11.git
 
 cd $CURRENT_DIR
 pip install pybind11 # also do a pip install for good measure
-cmake .
+
+PY_VERSION=$(python --version 2>&1 | awk '{print $2}')
+cmake -DPYBIND11_PYTHON_VERSION=$PY_VERSION .
 make clean
 make
 

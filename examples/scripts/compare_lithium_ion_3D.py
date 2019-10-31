@@ -52,7 +52,6 @@ for model in models:
 solutions = [None] * len(models)
 t_eval = np.linspace(0, 1, 1000)
 for i, model in enumerate(models):
-    model.convert_to_format = "casadi"
     solution = model.default_solver.solve(model, t_eval)
     solutions[i] = solution
 
