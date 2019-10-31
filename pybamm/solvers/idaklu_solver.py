@@ -44,6 +44,84 @@ class IDAKLUSolver(pybamm.DaeSolver):
 
         super().__init__("ida", rtol, atol, root_method, root_tol, max_steps)
 
+    def set_tolerances_by_variable(self, variables_with_tols, model):
+        """
+        A method to set the absolute tolerances in the solver by state variable.
+
+        Parameters
+        ----------
+        variables_with_tols : dict
+            A dictionary with keys that are strings indicating the variable you
+            wish to set the tolerance of and values that are the tolerances.
+
+        model : :class:`pybamm.BaseModel`
+            The model that is going to be solved.
+        """
+
+        size = model.concatenated_initial_conditions.size
+        self._check_atol_type(size)
+        for var, tol in variables_with_tols.items():
+            variable = model.variables[var]
+            if isinstance(variable, pybamm.StateVector):
+                self.set_state_vec_tol(variable, tol)
+            elif isinstance(variable, pybamm.Concatenation):
+                for child in variable.children:
+                    if isinstance(child, pybamm.StateVector):
+                        self.set_state_vec_tol(child, tol)
+                    else:
+                        raise pybamm.SolverError(
+                            """Can only set tolerances for state variables
+                            or concatenations of state variables"""
+                        )
+            else:
+                raise pybamm.SolverError(
+                    """Can only set tolerances for state variables or
+                    concatenations of state variables"""
+                )
+
+    def set_state_vec_tol(self, state_vec, tol):
+        """
+        A method to set the tolerances in the atol vector of a specific
+        state variable.
+
+        Parameters
+        ----------
+        state_vec : :class:`pybamm.StateVector`
+            The state vector to apply to the tolerance to
+        tol: float
+            The tolerance value
+        """
+        slices = state_vec.y_slices[0]
+        self._atol[slices] = tol
+
+    def _check_atol_type(self, size):
+        """
+        This method checks that the atol vector is of the right shape and
+        type.
+
+        Parameters
+        ----------
+        size: int
+            The length of the atol vector
+        """
+
+        if isinstance(self._atol, float):
+            self._atol = self._atol * np.ones(size)
+        elif isinstance(self._atol, list):
+            self._atol = np.array(self._atol)
+        elif isinstance(self._atol, np.ndarray):
+            pass
+        else:
+            raise pybamm.SolverError(
+                "Absolute tolerances must be a numpy array, float, or list"
+            )
+
+        if self._atol.size != size:
+            raise pybamm.SolverError(
+                """Absolute tolerances must be either a scalar or a numpy arrray
+                of the same shape at y0"""
+            )
+
     def integrate(self, residuals, y0, t_eval, events, mass_matrix, jacobian):
         """
         Solve a DAE model defined by residuals with initial conditions y0.
@@ -75,24 +153,8 @@ class IDAKLUSolver(pybamm.DaeSolver):
             pybamm.SolverError("KLU requires events to be provided")
 
         rtol = self._rtol
+        self._check_atol_type(y0.size)
         atol = self._atol
-
-        if isinstance(atol, float):
-            atol = atol * np.ones_like(y0)
-        elif isinstance(atol, list):
-            atol = np.array(atol)
-        elif isinstance(atol, np.ndarray):
-            pass
-        else:
-            raise pybamm.SolverError(
-                "Absolute tolerances must be a numpy array, float, or list"
-            )
-
-        if atol.shape != y0.shape:
-            raise pybamm.SolverError(
-                """Absolute tolerances must be either a scalar or a numpy arrray
-                of the same shape at y0"""
-            )
 
         if jacobian:
             jac_y0_t0 = jacobian(t_eval[0], y0)
