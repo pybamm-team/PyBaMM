@@ -18,3 +18,8 @@ from .quite_conductive_potential_pair import (
     QuiteConductivePotentialPair1plus1D,
     QuiteConductivePotentialPair2plus1D,
 )
+from .set_potential_single_particle import (
+    BaseSetPotentialSingleParticle,
+    SetPotentialSingleParticle1plus1D,
+    SetPotentialSingleParticle2plus1D,
+)
