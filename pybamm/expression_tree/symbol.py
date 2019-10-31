@@ -6,7 +6,7 @@ import pybamm
 import anytree
 import numbers
 import copy
-import autograd.numpy as np
+import numpy as np
 from anytree.exporter import DotExporter
 
 

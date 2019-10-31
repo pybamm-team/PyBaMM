@@ -13,8 +13,7 @@ from scipy.sparse import (
     lil_matrix,
     coo_matrix,
 )
-import autograd.numpy as np
-from autograd.builtins import isinstance
+import numpy as np
 
 
 class FiniteVolume(pybamm.SpatialMethod):

@@ -3,7 +3,7 @@
 #
 import pybamm
 
-import autograd.numpy as np
+import numpy as np
 import numbers
 from scipy.sparse import issparse
 

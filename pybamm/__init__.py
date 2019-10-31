@@ -94,37 +94,7 @@ from .expression_tree.concatenations import (
 )
 from .expression_tree.array import Array
 from .expression_tree.matrix import Matrix
-from .expression_tree.unary_operators import (
-    UnaryOperator,
-    Negate,
-    AbsoluteValue,
-    Index,
-    SpatialOperator,
-    Gradient,
-    Divergence,
-    Laplacian,
-    Gradient_Squared,
-    Mass,
-    BoundaryMass,
-    BoundaryOperator,
-    BoundaryValue,
-    BoundaryGradient,
-    Integral,
-    IndefiniteIntegral,
-    DefiniteIntegralVector,
-    BoundaryIntegral,
-    DeltaFunction,
-    grad,
-    div,
-    laplacian,
-    grad_squared,
-    surf,
-    x_average,
-    z_average,
-    yz_average,
-    boundary_value,
-    r_average,
-)
+from .expression_tree.unary_operators import *
 from .expression_tree.functions import *
 from .expression_tree.interpolant import Interpolant
 from .expression_tree.parameter import Parameter, FunctionParameter

@@ -3,7 +3,7 @@
 #
 
 import pybamm
-import autograd.numpy as np
+import numpy as np
 from .base_inverse_kinetics import BaseInverseKinetics
 from ..kinetics.butler_volmer import ButlerVolmer
 
@@ -29,4 +29,4 @@ class InverseButlerVolmer(BaseInverseKinetics, ButlerVolmer):
         super().__init__(param, domain)
 
     def _get_overpotential(self, j, j0, ne):
-        return (2 / ne) * pybamm.Function(np.arcsinh, j / (2 * j0))
+        return (2 / ne) * pybamm.arcsinh(j / (2 * j0))

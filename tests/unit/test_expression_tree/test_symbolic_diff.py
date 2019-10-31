@@ -1,7 +1,7 @@
 #
 # Tests for the symbolic differentiation methods
 #
-import autograd.numpy as np
+import numpy as np
 import pybamm
 import unittest
 from numpy import testing

@@ -1,4 +1,4 @@
-import autograd.numpy as np
+from pybamm import exp
 
 
 def lico2_diffusivity_Dualfoil1998(sto, T, T_inf, E_D_s, R_g):
@@ -30,7 +30,7 @@ def lico2_diffusivity_Dualfoil1998(sto, T, T_inf, E_D_s, R_g):
     """
 
     D_ref = 1 * 10 ** (-13)
-    arrhenius = np.exp(E_D_s / R_g * (1 / T_inf - 1 / T))
+    arrhenius = exp(E_D_s / R_g * (1 / T_inf - 1 / T))
 
     # Removing the fudge factor 0 * sto requires different handling of either
     # either simplifications or how sto is passed into this function.

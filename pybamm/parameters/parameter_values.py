@@ -427,8 +427,8 @@ class ParameterValues(dict):
                 name, data = function_name
                 function = pybamm.Interpolant(data, *new_children, name=name)
             else:
-                # otherwise create standard function
-                function = pybamm.Function(function_name, *new_children)
+                # otherwise evaluate the function to create a new PyBaMM object
+                function = function_name(*new_children)
             # Differentiate if necessary
             if symbol.diff_variable is None:
                 return function

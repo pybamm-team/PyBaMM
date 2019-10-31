@@ -269,6 +269,22 @@ class SpecificFunction(Function):
         return self.__class__(*simplified_children)
 
 
+class Arcsinh(SpecificFunction):
+    """ Arcsinh function """
+
+    def __init__(self, child):
+        super().__init__(np.arcsinh, child)
+
+    def _function_diff(self, children, idx):
+        """ See :meth:`pybamm.Symbol._function_diff()`. """
+        return 1 / Sqrt(children[0] ** 2 + 1)
+
+
+def arcsinh(child):
+    " Returns arcsinh function of child. "
+    return Arcsinh(child)
+
+
 class Cos(SpecificFunction):
     """ Cosine function """
 
@@ -328,9 +344,17 @@ class Log(SpecificFunction):
         return 1 / children[0]
 
 
-def log(child):
-    " Returns logarithmic function of child. "
-    return Log(child)
+def log(child, base="e"):
+    " Returns logarithmic function of child (any base, default 'e'). "
+    if base == "e":
+        return Log(child)
+    else:
+        return Log(child) / np.log(base)
+
+
+def log10(child):
+    " Returns logarithmic function of child, with base 10. "
+    return log(child, base=10)
 
 
 def max(child):
@@ -341,6 +365,11 @@ def max(child):
 def min(child):
     " Returns min function of child. "
     return Function(np.min, child)
+
+
+def sech(child):
+    " Returns hyperbolic sec function of child. "
+    return 1 / Cosh(child)
 
 
 class Sin(SpecificFunction):
@@ -373,3 +402,35 @@ class Sinh(SpecificFunction):
 def sinh(child):
     " Returns hyperbolic sine function of child. "
     return Sinh(child)
+
+
+class Sqrt(SpecificFunction):
+    """ Square root function """
+
+    def __init__(self, child):
+        super().__init__(np.sqrt, child)
+
+    def _function_diff(self, children, idx):
+        """ See :meth:`pybamm.Function._function_diff()`. """
+        return 1 / (2 * Sqrt(children[0]))
+
+
+def sqrt(child):
+    " Returns square root function of child. "
+    return Sqrt(child)
+
+
+class Tanh(SpecificFunction):
+    """ Hyperbolic tan function """
+
+    def __init__(self, child):
+        super().__init__(np.tanh, child)
+
+    def _function_diff(self, children, idx):
+        """ See :meth:`pybamm.Function._function_diff()`. """
+        return sech(children[0]) ** 2
+
+
+def tanh(child):
+    " Returns hyperbolic tan function of child. "
+    return Tanh(child)
