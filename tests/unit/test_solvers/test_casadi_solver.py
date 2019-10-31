@@ -61,11 +61,8 @@ class TestCasadiSolver(unittest.TestCase):
         warnings.simplefilter("default")
 
     def test_bad_mode(self):
-        solver = pybamm.CasadiSolver()
-        model = pybamm.BaseModel()
-        model.events = {1: 2}
         with self.assertRaisesRegex(ValueError, "invalid mode"):
-            solver.solve(model, None, "bad mode")
+            pybamm.CasadiSolver(mode="bad mode")
 
     def test_model_solver(self):
         # Create model
@@ -83,6 +80,13 @@ class TestCasadiSolver(unittest.TestCase):
         disc.process_model(model)
         # Solve
         solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8, method="idas")
+        t_eval = np.linspace(0, 1, 100)
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_array_equal(solution.t, t_eval)
+        np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
+
+        # Fast mode
+        solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8, method="idas", mode="fast")
         t_eval = np.linspace(0, 1, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)

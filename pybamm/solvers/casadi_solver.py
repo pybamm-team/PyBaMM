@@ -16,6 +16,14 @@ class CasadiSolver(pybamm.DaeSolver):
     method : str, optional
         The method to use for solving the system ('cvodes', for ODEs, or 'idas', for
         DAEs). Default is 'idas'.
+    mode : str
+            How to solve the model (default is "safe"):
+
+            - "fast": perform direct integration, without accounting for events. \
+            Recommended when simulating a drive cycle or other simulation where \
+            no events should be triggered.
+            - "safe": perform step-and-check integration, checking whether events have \
+            been triggered. Recommended for simulations of a full charge or discharge.
     rtol : float, optional
         The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
@@ -37,6 +45,7 @@ class CasadiSolver(pybamm.DaeSolver):
     def __init__(
         self,
         method="idas",
+        mode="safe",
         rtol=1e-6,
         atol=1e-6,
         root_method="lm",
@@ -45,11 +54,21 @@ class CasadiSolver(pybamm.DaeSolver):
         **extra_options,
     ):
         super().__init__(method, rtol, atol, root_method, root_tol)
+        if mode in ["safe", "fast"]:
+            self.mode = mode
+        else:
+            raise ValueError(
+                """
+                invalid mode '{}'. Must be either 'safe', for solving with events,
+                or 'fast', for solving quickly without events""".format(
+                    mode
+                )
+            )
         self.max_step_decrease_count = max_step_decrease_count
         self.extra_options = extra_options
-        self.name = "CasADi solver ({})".format(method)
+        self.name = "CasADi solver ({}) with '{}' mode".format(method, mode)
 
-    def solve(self, model, t_eval, mode="safe"):
+    def solve(self, model, t_eval):
         """
         Execute the solver setup and calculate the solution of the model at
         specified times.
@@ -61,15 +80,7 @@ class CasadiSolver(pybamm.DaeSolver):
             initial_conditions
         t_eval : numeric type
             The times at which to compute the solution
-        mode : str
-            How to solve the model (default is "safe"):
-
-            - "fast": perform direct integration, without accounting for events. \
-            Recommended when simulating a drive cycle or other simulation where \
-            no events should be triggered.
-            - "safe": perform step-and-check integration, checking whether events have \
-            been triggered. Recommended for simulations of a full charge or discharge.
-
+        
         Raises
         ------
         :class:`pybamm.ValueError`
@@ -78,14 +89,14 @@ class CasadiSolver(pybamm.DaeSolver):
             If an empty model is passed (`model.rhs = {}` and `model.algebraic={}`)
 
         """
-        if mode == "fast":
+        if self.mode == "fast":
             # Solve model normally by calling the solve method from parent class
             return super().solve(model, t_eval)
         elif model.events == {}:
             pybamm.logger.info("No events found, running fast mode")
             # Solve model normally by calling the solve method from parent class
             return super().solve(model, t_eval)
-        elif mode == "safe":
+        elif self.mode == "safe":
             # Step-and-check
             timer = pybamm.Timer()
             self.set_up_casadi(model)
@@ -165,14 +176,6 @@ class CasadiSolver(pybamm.DaeSolver):
                 )
             )
             return solution
-        else:
-            raise ValueError(
-                """
-                invalid mode '{}'. Must be either 'safe', for solving with events,
-                or 'fast', for solving quickly without events""".format(
-                    mode
-                )
-            )
 
     def compute_solution(self, model, t_eval):
         """Calculate the solution of the model at specified times. In this class, we
