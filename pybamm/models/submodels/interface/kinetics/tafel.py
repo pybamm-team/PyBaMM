@@ -82,5 +82,5 @@ class BackwardTafel(BaseModel):
     def __init__(self, param, domain):
         super().__init__(param, domain)
 
-    def _get_kinetics(self, j0, ne, eta_r):
-        return -j0 * pybamm.exp(-(ne / 2) * eta_r)
+    def _get_kinetics(self, j0, ne, eta_r, T):
+        return -j0 * pybamm.exp(-(ne / (2 * (1 + self.param.Theta * T))) * eta_r)
