@@ -246,8 +246,8 @@ class ParameterValues(dict):
             # since they point to the same object
             model = unprocessed_model
         else:
-            # create a blank model so that original model is unchanged
-            model = pybamm.BaseModel()
+            # create a blank model of the same class
+            model = model.__class__(model.options)
             model.name = unprocessed_model.name
             model.options = unprocessed_model.options
             model.use_jacobian = unprocessed_model.use_jacobian

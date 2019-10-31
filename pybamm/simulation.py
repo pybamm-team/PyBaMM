@@ -124,11 +124,19 @@ class Simulation:
             A list of the variables to plot.
         """
 
+        if self._solution is None:
+            raise ValueError(
+                "Model has not been solved, please solve the model before plotting."
+            )
+
         if quick_plot_vars is None:
             quick_plot_vars = self.quick_plot_vars
 
         plot = pybamm.QuickPlot(
-            self._model, self._mesh, self._solution, quick_plot_vars
+            self.built_model,
+            self._mesh,
+            self._solution,
+            output_variables=quick_plot_vars,
         )
         plot.dynamic_plot()
 
