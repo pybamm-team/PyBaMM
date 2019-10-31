@@ -211,13 +211,13 @@ class ParameterValues(dict):
                 values["C-rate"] = float(values["Typical current [A]"]) / capacity
         return values
 
-    def process_model(self, model, processing="process"):
+    def process_model(self, unprocessed_model, processing="process", inplace=True):
         """Assign parameter values to a model.
         Currently inplace, could be changed to return a new model.
 
         Parameters
         ----------
-        model : :class:`pybamm.BaseModel`
+        unprocessed_model : :class:`pybamm.BaseModel`
             Model to assign parameter values for
         processing : str, optional
             Flag to indicate how to process model (default 'process')
@@ -226,6 +226,9 @@ class ParameterValues(dict):
             and replace any Parameter with a Value)
             * 'update': Calls :meth:`update_scalars()` for use on already-processed \
             model (update the value of any Scalars in the expression tree.)
+        inplace: bool, optional
+            If True, replace the parameters in the model in place. Otherwise, return a
+            new model with parameter values set. Default is True.
 
         Raises
         ------
@@ -233,7 +236,21 @@ class ParameterValues(dict):
             If an empty model is passed (`model.rhs = {}` and `model.algebraic={}`)
 
         """
-        pybamm.logger.info("Start setting parameters for {}".format(model.name))
+        pybamm.logger.info("Start setting parameters for {}".format(unprocessed_model.name))
+
+        # set up inplace vs not inplace
+        if inplace:
+            # any changes to model_disc attributes will change model attributes
+            # since they point to the same object
+            model = unprocessed_model
+        else:
+            # create a blank model so that original model is unchanged
+            model = pybamm.BaseModel()
+            model.name = unprocessed_model.name
+            model.options = unprocessed_model.options
+            model.use_jacobian = unprocessed_model.use_jacobian
+            model.use_simplify = unprocessed_model.use_simplify
+            model.convert_to_format = unprocessed_model.convert_to_format
 
         if len(model.rhs) == 0 and len(model.algebraic) == 0:
             raise pybamm.ModelError("Cannot process parameters for empty model")

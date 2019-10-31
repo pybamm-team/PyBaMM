@@ -88,7 +88,7 @@ class Simulation:
         self.set_parameters()
         self._mesh = pybamm.Mesh(self._geometry, self._submesh_types, self._var_pts)
         self._disc = pybamm.Discretisation(self._mesh, self._spatial_methods)
-        self._disc.process_model(self._model)
+        self._built_model = self._disc.process_model(self._model, inplace=False)
         self._status = "Built"
 
     def solve(self, t_eval=None, solver=None):
