@@ -77,6 +77,23 @@ class IDAKLUSolver(pybamm.DaeSolver):
         rtol = self._rtol
         atol = self._atol
 
+        if isinstance(atol, float):
+            atol = atol * np.ones_like(y0)
+        elif isinstance(atol, list):
+            atol = np.array(atol)
+        elif isinstance(atol, np.ndarray):
+            pass
+        else:
+            raise pybamm.SolverError(
+                "Absolute tolerances must be a numpy array, float, or list"
+            )
+
+        if atol.shape != y0.shape:
+            raise pybamm.SolverError(
+                """Absolute tolerances must be either a scalar or a numpy arrray
+                of the same shape at y0"""
+            )
+
         if jacobian:
             jac_y0_t0 = jacobian(t_eval[0], y0)
             if sparse.issparse(jac_y0_t0):
@@ -148,8 +165,8 @@ class IDAKLUSolver(pybamm.DaeSolver):
             num_of_events,
             use_jac,
             ids,
-            rtol,
             atol,
+            rtol,
         )
 
         t = sol.t

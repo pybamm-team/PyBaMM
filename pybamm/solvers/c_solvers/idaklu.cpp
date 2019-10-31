@@ -214,11 +214,12 @@ Solution solve(np_array t_np, np_array y0_np, np_array yp0_np,
                residual_type res, jacobian_type jac, jac_get_type gjd,
                jac_get_type gjrv, jac_get_type gjcp, int nnz, event_type event,
                int number_of_events, int use_jacobian, np_array rhs_alg_id,
-               double abs_tol, double rel_tol)
+               np_array atol_np, double rel_tol)
 {
   auto t = t_np.unchecked<1>();
   auto y0 = y0_np.unchecked<1>();
   auto yp0 = yp0_np.unchecked<1>();
+  auto atol = atol_np.unchecked<1>();
 
   int number_of_states;
   number_of_states = y0_np.request().size;
@@ -240,11 +241,13 @@ Solution solve(np_array t_np, np_array y0_np, np_array yp0_np,
   // set initial value
   yval = N_VGetArrayPointer(yy);
   ypval = N_VGetArrayPointer(yp);
+  atval = N_VGetArrayPointer(avtol);
   int i;
   for (i = 0; i < number_of_states; i++)
   {
     yval[i] = y0[i];
     ypval[i] = yp0[i];
+    atval[i] = atol[i];
   }
 
   // allocate memory for solver
@@ -256,13 +259,6 @@ Solution solve(np_array t_np, np_array y0_np, np_array yp0_np,
 
   // set tolerances
   rtol = RCONST(rel_tol);
-  atval = N_VGetArrayPointer(avtol);
-
-  for (i = 0; i < number_of_states; i++)
-  {
-    atval[i] =
-        RCONST(abs_tol); // nb: this can be set differently for each state
-  }
 
   IDASVtolerances(ida_mem, rtol, avtol);
 
