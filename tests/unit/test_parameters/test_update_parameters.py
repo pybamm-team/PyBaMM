@@ -94,6 +94,17 @@ class TestUpdateParameters(unittest.TestCase):
         # results should be different
         self.assertNotEqual(np.linalg.norm(Y1 - Y3), 0)
 
+    def test_inplace(self):
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        new_model = param.process_model(model, inplace=False)
+
+        for val in list(model.rhs.values()):
+            self.assertTrue(val.has_symbol_of_classes(pybamm.Parameter))
+
+        for val in list(new_model.rhs.values()):
+            self.assertFalse(val.has_symbol_of_classes(pybamm.Parameter))
+
     def test_update_geometry(self):
         # test on simple lead-acid model
         model1 = pybamm.lead_acid.LOQS()
