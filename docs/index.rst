@@ -32,6 +32,7 @@ Contents
     source/solvers/index
     source/processed_variable
     source/util
+    source/simulation
 
 Examples
 ========
