@@ -45,17 +45,40 @@ class TestCasadiSolver(unittest.TestCase):
 
         y0 = np.array([1])
         t_eval = np.linspace(0, 3, 100)
-        solver = pybamm.CasadiSolver(
-            rtol=1e-8,
-            atol=1e-8,
-            method="idas",
-            disable_internal_warnings=True,
-            regularity_check=False,
-        )
+        solver = pybamm.CasadiSolver()
         problem = {"x": y, "ode": sqrt_decay}
         # Expect solver to fail when y goes negative
         with self.assertRaises(pybamm.SolverError):
             solver.integrate_casadi(problem, y0, t_eval)
+
+        # Set up as a model and solve
+        # Create model
+        model = pybamm.BaseModel()
+        domain = ["negative electrode", "separator", "positive electrode"]
+        var = pybamm.Variable("var", domain=domain)
+        model.rhs = {var: -pybamm.Function(np.sqrt, var)}
+        model.initial_conditions = {var: 1}
+        # add events so that safe mode is used (won't be triggered)
+        model.events = {"10": var - 10}
+        # No need to set parameters; can use base discretisation (no spatial operators)
+
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
+        # Solve with failure at t=2
+        solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8, method="idas")
+        t_eval = np.linspace(0, 20, 100)
+        with self.assertRaises(pybamm.SolverError):
+            solver.solve(model, t_eval)
+        # Solve with failure at t=0
+        model.initial_conditions = {var: 0}
+        disc.process_model(model)
+        solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8, method="idas")
+        t_eval = np.linspace(0, 20, 100)
+        with self.assertRaises(pybamm.SolverError):
+            solver.solve(model, t_eval)
 
         # Turn warnings back on
         warnings.simplefilter("default")
@@ -85,8 +108,10 @@ class TestCasadiSolver(unittest.TestCase):
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
 
-        # Fast mode
-        solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8, method="idas", mode="fast")
+        # Safe mode (enforce events that won't be triggered)
+        model.events = {"an event": var + 1}
+        disc.process_model(model)
+        solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8, method="idas")
         t_eval = np.linspace(0, 1, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)

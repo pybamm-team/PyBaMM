@@ -34,7 +34,7 @@ class CasadiSolver(pybamm.DaeSolver):
         The tolerance for root-finding. Default is 1e-6.
     max_step_decrease_counts : float, optional
         The maximum number of times step size can be decreased before an error is
-        raised. Default is 10.
+        raised. Default is 5.
     extra_options : keyword arguments, optional
         Any extra keyword-arguments; these are passed directly to the CasADi integrator.
         Please consult `CasADi documentation <https://tinyurl.com/y5rk76os>`_ for
@@ -50,7 +50,7 @@ class CasadiSolver(pybamm.DaeSolver):
         atol=1e-6,
         root_method="lm",
         root_tol=1e-6,
-        max_step_decrease_count=10,
+        max_step_decrease_count=5,
         **extra_options,
     ):
         super().__init__(method, rtol, atol, root_method, root_tol)
@@ -80,7 +80,7 @@ class CasadiSolver(pybamm.DaeSolver):
             initial_conditions
         t_eval : numeric type
             The times at which to compute the solution
-        
+
         Raises
         ------
         :class:`pybamm.ValueError`
@@ -128,7 +128,7 @@ class CasadiSolver(pybamm.DaeSolver):
                         if solution is None:
                             t = 0
                         else:
-                            t = solution.t
+                            t = solution.t[-1]
                         raise pybamm.SolverError(
                             """
                             Maximum number of decreased steps occurred at t={}. Try
@@ -160,8 +160,6 @@ class CasadiSolver(pybamm.DaeSolver):
                     else:
                         # append solution from the current step to solution
                         solution.append(current_step_sol)
-            if not hasattr(solution, "termination"):
-                solution.termination = "final time"
 
             # Calculate more exact termination reason
             solution.termination = self.get_termination_reason(solution, self.events)

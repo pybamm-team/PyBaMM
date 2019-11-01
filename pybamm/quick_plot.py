@@ -256,14 +256,26 @@ class QuickPlot(object):
             # Get min and max y values
             y_min = np.min(
                 [
-                    ax_min(var(self.ts[i], **{spatial_var_name: spatial_var_value}, warn=False))
+                    ax_min(
+                        var(
+                            self.ts[i],
+                            **{spatial_var_name: spatial_var_value},
+                            warn=False
+                        )
+                    )
                     for i, variable_list in enumerate(variable_lists)
                     for var in variable_list
                 ]
             )
             y_max = np.max(
                 [
-                    ax_max(var(self.ts[i], **{spatial_var_name: spatial_var_value}, warn=False))
+                    ax_max(
+                        var(
+                            self.ts[i],
+                            **{spatial_var_name: spatial_var_value},
+                            warn=False
+                        )
+                    )
                     for i, variable_list in enumerate(variable_lists)
                     for var in variable_list
                 ]
