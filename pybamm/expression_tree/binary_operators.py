@@ -277,9 +277,15 @@ class Addition(BinaryOperator):
             return left
         # Check matrices after checking scalars
         if is_matrix_zero(left):
-            return right
+            if right.evaluates_to_number():
+                return right * pybamm.Matrix(np.ones(left.shape))
+            else:
+                return right
         if is_matrix_zero(right):
-            return left
+            if left.evaluates_to_number():
+                return left * pybamm.Matrix(np.ones(right.shape))
+            else:
+                return left
 
         return pybamm.simplify_addition_subtraction(self.__class__, left, right)
 

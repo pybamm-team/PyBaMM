@@ -4,6 +4,7 @@
 import pybamm
 import pandas as pd
 import os
+import numbers
 import numpy as np
 
 
@@ -429,6 +430,9 @@ class ParameterValues(dict):
             else:
                 # otherwise evaluate the function to create a new PyBaMM object
                 function = function_name(*new_children)
+                # this might return a scalar, in which case convert to a pybamm scalar
+                if isinstance(function, numbers.Number):
+                    function = pybamm.Scalar(function)
             # Differentiate if necessary
             if symbol.diff_variable is None:
                 return function

@@ -573,7 +573,11 @@ class Simplification(object):
         try:
             return self._simplified_symbols[symbol.id]
         except KeyError:
-            simplified_symbol = self._simplify(symbol)
+            try:
+                simplified_symbol = self._simplify(symbol)
+            except:
+                import ipdb; ipdb.set_trace()
+                
             self._simplified_symbols[symbol.id] = simplified_symbol
 
             return simplified_symbol
