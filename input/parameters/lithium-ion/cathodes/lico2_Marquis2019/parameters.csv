@@ -4,7 +4,6 @@ Name [units],Value,Reference,Notes
 # Electrode properties,,,
 Positive electrode conductivity [S.m-1],10,Scott Moura FastDFN,lithium cobalt oxide
 Maximum concentration in positive electrode [mol.m-3],51217.9257309275,Scott Moura FastDFN,
-Positive electrode diffusion coefficient [m2.s-1],1E-13,Scott Moura FastDFN,
 Positive electrode diffusivity [m2.s-1],[function]lico2_diffusivity_Dualfoil1998,,
 Positive electrode OCP [V],[function]lico2_ocp_Dualfoil1998,
 ,,,
@@ -17,7 +16,6 @@ Positive electrode Bruggeman coefficient,1.5,Scott Moura FastDFN,
 # Interfacial reactions,,,
 Positive electrode cation signed stoichiometry,-1,,
 Positive electrode electrons in reaction,1,,
-Positive electrode reference exchange-current density [A.m-2(m3.mol)1.5],6E-07,Scott Moura FastDFN,Be careful how we implement BV
 Reference OCP vs SHE in the positive electrode [V],,,
 Positive electrode charge transfer coefficient,0.5,Scott Moura FastDFN,
 Positive electrode double-layer capacity [F.m-2],0.2,,
