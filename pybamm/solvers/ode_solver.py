@@ -19,6 +19,7 @@ class OdeSolver(pybamm.BaseSolver):
 
     def __init__(self, method=None, rtol=1e-6, atol=1e-6):
         super().__init__(method, rtol, atol)
+        self.name = "Base ODE solver"
 
     def compute_solution(self, model, t_eval):
         """Calculate the solution of the model at specified times.
