@@ -14,21 +14,22 @@ class BuildSundials(Command):
     description = 'Compiles the SUNDIALS library.'
     user_options = [
         # The format is (long option, short option, description).
-        ('sundials-dir=', None, 'relative path to sundials source dir')
+        ('sundials-src=', None, 'Absolute path to sundials source dir'),
+        ('install-dir=', None, 'Absolute path to sundials install directory'),
     ]
     pybamm_dir = os.path.abspath(os.path.dirname(__file__))
     build_temp = 'build_sundials'
-    install_dir = os.path.join(pybamm_dir,'sundials')
 
     def initialize_options(self):
         """Set default values for option(s)"""
         # Each user option is listed here with its default value.
-        self.sundials_dir = os.path.join(self.pybamm_dir,'sundials-3.1.1')
+        self.sundials_src = os.path.join(self.pybamm_dir,'sundials-3.1.1')
+        self.install_dir = os.path.join(self.pybamm_dir,'sundials')
 
     def finalize_options(self):
         """Post-process options"""
-        if self.sundials_dir:
-            CMakeLists=os.path.join(self.sundials_dir,'CMakeLists.txt')
+        if self.sundials_src:
+            CMakeLists=os.path.join(self.sundials_src,'CMakeLists.txt')
             assert os.path.exists(CMakeLists), ('Could not find {}.'.format(CMakeLists))
 
     def _update_LD_LIBRARY_PATH(self):
