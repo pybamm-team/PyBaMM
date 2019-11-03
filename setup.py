@@ -87,6 +87,40 @@ class BuildSundials(Command):
 
         self._update_LD_LIBRARY_PATH()
 
+class InstallODES(Command):
+    """ A custom command to install scikits.ode with pip as part of the PyBaMM
+        installation process.
+    """
+
+    description = 'Installs scikits.odes using pip.'
+    user_options = [
+        # The format is (long option, short option, description).
+        ('sundials-inst=', None, 'Absolute path to sundials installation directory.')
+    ]
+
+    def initialize_options(self):
+        """Set default values for option(s)"""
+        # Each user option is listed here with its default value.
+        self.sundials_inst = None
+
+    def finalize_options(self):
+        """Post-process options"""
+        # If option specified the check dir exists
+        if self.sundials_inst:
+            assert os.path.exists(self.sundials_inst), \
+                ("Could not find SUNDIALS directory {}".format(self.sundials_inst))
+        else:
+            # Inherit directory from build_sundials command
+            self.set_undefined_options('build_sundials', \
+                                       ('install_dir', 'sundials_inst'))
+    def run(self):
+        # At the time scikits.odes is pip installed, the path to the sundials
+        # library must be contained in an env variable SUNDIALS_INST
+        # see https://scikits-odes.readthedocs.io/en/latest/installation.html#id1
+
+        os.environ['SUNDIALS_INST'] = self.sundials_inst
+        env = os.environ.copy()
+        subprocess.run(['pip', 'install', 'scikits.odes'], env=env)
 
 # Load text for description and license
 with open("README.md") as f:
@@ -107,6 +141,7 @@ def load_version():
 setuptools.setup(
     cmdclass = {
         'build_sundials': BuildSundials,
+        'install_odes': InstallODES,
     },
     name="pybamm",
     version=load_version()+".post4",
