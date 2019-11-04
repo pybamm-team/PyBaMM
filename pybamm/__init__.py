@@ -268,7 +268,6 @@ from .solvers.scikits_ode_solver import ScikitsOdeSolver, have_scikits_odes
 from .solvers.scipy_solver import ScipySolver
 from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
 
-
 #
 # Current profiles
 #
@@ -284,6 +283,8 @@ from .parameters.standard_current_functions.get_current_data import GetCurrentDa
 #
 from .processed_variable import post_process_variables, ProcessedVariable
 from .quick_plot import QuickPlot, ax_min, ax_max
+
+from .simulation import Simulation
 
 #
 # Remove any imported modules, so we don't expose them as part of pybamm

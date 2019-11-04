@@ -154,7 +154,7 @@ class TestScipySolver(unittest.TestCase):
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
 
         # Test time
-        self.assertGreater(
+        self.assertEqual(
             solution.total_time, solution.solve_time + solution.set_up_time
         )
 
