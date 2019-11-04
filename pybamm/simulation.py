@@ -3,6 +3,19 @@ import numpy as np
 import copy
 
 
+def isnotebook():
+    try:
+        shell = get_ipython().__class__.__name__
+        if shell == "ZMQInteractiveShell":
+            return True  # Jupyter notebook or qtconsole
+        elif shell == "TerminalInteractiveShell":
+            return False  # Terminal running IPython
+        else:
+            return False  # Other type (?)
+    except NameError:
+        return False  # Probably standard Python interpreter
+
+
 class Simulation:
     """A Simulation class for easy building and running of PyBaMM simulations.
 
@@ -34,6 +47,12 @@ class Simulation:
         self._quick_plot_vars = quick_plot_vars
 
         self.reset()
+
+        # ignore runtime warnings in notebooks
+        if isnotebook():
+            import warnings
+
+            warnings.filterwarnings("ignore")
 
     def set_defaults(self):
         """
@@ -138,7 +157,16 @@ class Simulation:
             self._solution,
             output_variables=quick_plot_vars,
         )
-        plot.dynamic_plot()
+
+        if isnotebook:
+            import ipywidgets as widgets
+
+            widgets.interact(
+                plot.plot,
+                t=widgets.FloatSlider(min=0, max=plot.max_t, step=0.05, value=0),
+            )
+        else:
+            plot.dynamic_plot()
 
     @property
     def model(self):
