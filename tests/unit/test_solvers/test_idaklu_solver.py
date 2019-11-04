@@ -76,6 +76,20 @@ class TestIDAKLUSolver(unittest.TestCase):
         true_solution = 0.1 * solution.t
         np.testing.assert_array_almost_equal(solution.y[0, :], true_solution)
 
+    def test_set_atol(self):
+        model = pybamm.lithium_ion.SPMe()
+        geometry = model.default_geometry
+        param = model.default_parameter_values
+        param.process_model(model)
+        param.process_geometry(geometry)
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        disc.process_model(model)
+        solver = pybamm.IDAKLUSolver()
+
+        variable_tols = {"Electrolyte concentration": 1e-3}
+        solver.set_tolerances_by_variable(variable_tols, model)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
