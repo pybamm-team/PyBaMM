@@ -107,11 +107,6 @@ class TestAlgebraicSolver(unittest.TestCase):
             model.variables["var2"].evaluate(t=None, y=solution.y), sol[100:]
         )
 
-        # Test time
-        self.assertGreater(
-            solution.total_time, solution.solve_time + solution.set_up_time
-        )
-
         # Test without jacobian
         model.use_jacobian = False
         solution_no_jac = solver.solve(model)

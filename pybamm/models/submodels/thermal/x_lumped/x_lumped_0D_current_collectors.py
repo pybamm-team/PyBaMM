@@ -14,12 +14,10 @@ class CurrentCollector0D(BaseModel):
         T_av = variables["X-averaged cell temperature"]
         Q_av = variables["X-averaged total heating"]
 
+        cooling_coeff = self._surface_cooling_coefficient()
+
         self.rhs = {
-            T_av: (
-                self.param.B * Q_av
-                - (2 * self.param.h / (self.param.delta ** 2) / self.param.l) * T_av
-            )
-            / self.param.C_th
+            T_av: (self.param.B * Q_av + cooling_coeff * T_av) / self.param.C_th
         }
 
     def _current_collector_heating(self, variables):

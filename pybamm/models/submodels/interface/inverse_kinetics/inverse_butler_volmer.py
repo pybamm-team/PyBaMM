@@ -28,5 +28,7 @@ class InverseButlerVolmer(BaseInverseKinetics, ButlerVolmer):
     def __init__(self, param, domain):
         super().__init__(param, domain)
 
-    def _get_overpotential(self, j, j0, ne):
-        return (2 / ne) * pybamm.Function(np.arcsinh, j / (2 * j0))
+    def _get_overpotential(self, j, j0, ne, T):
+        return (2 * (1 + self.param.Theta * T) / ne) * pybamm.Function(
+            np.arcsinh, j / (2 * j0)
+        )
