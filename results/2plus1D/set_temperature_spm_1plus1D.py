@@ -66,7 +66,7 @@ output_variables = [
     "Negative current collector potential [V]",
     "Positive current collector potential [V]",
     "Current [A]",
-    "X-averaged total heating [A.V.m-3]",
+    "X-averaged total heating [W.m-3]",
     "X-averaged positive particle surface concentration [mol.m-3]",
     "X-averaged cell temperature [K]",
 ]
@@ -145,16 +145,16 @@ z = np.linspace(0, 1, nbat)
 for bat_id in range(nbat):
     plt.plot(
         solution1.t * t_hour,
-        processed_vars_step1["X-averaged total heating [A.V.m-3]"](solution1.t, z=z)[
+        processed_vars_step1["X-averaged total heating [W.m-3]"](solution1.t, z=z)[
             bat_id, :
         ],
         solution2.t * t_hour,
-        processed_vars_step2["X-averaged total heating [A.V.m-3]"](solution2.t, z=z)[
+        processed_vars_step2["X-averaged total heating [W.m-3]"](solution2.t, z=z)[
             bat_id, :
         ],
     )
 plt.xlabel("t [hrs]")
-plt.ylabel("X-averaged total heating [A.V.m-3]")
+plt.ylabel("X-averaged total heating [W.m-3]")
 plt.yscale("log")
 
 # local concentration

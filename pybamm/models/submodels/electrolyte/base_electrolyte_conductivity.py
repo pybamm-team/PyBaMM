@@ -250,7 +250,7 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
 
         variables = {
             domain + " electrolyte current density": i_e,
-            domain + " electrolyte current density [V]": i_e * i_typ,
+            domain + " electrolyte current density [A.m-2]": i_e * i_typ,
         }
 
         return variables
@@ -258,7 +258,7 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
     def _get_whole_cell_variables(self, variables):
         """
         A private function to obtain the potential and current concatenated
-        across the whole cell. Note required 'variables' to contain the potential
+        across the whole cell. Note: requires 'variables' to contain the potential
         and current in the subdomains: 'negative electrode', 'separator', and
         'positive electrode'.
 

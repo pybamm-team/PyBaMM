@@ -43,6 +43,7 @@ class IDAKLUSolver(pybamm.DaeSolver):
             raise ImportError("KLU is not installed")
 
         super().__init__("ida", rtol, atol, root_method, root_tol, max_steps)
+        self.name = "IDA KLU solver"
 
     @property
     def atol(self):

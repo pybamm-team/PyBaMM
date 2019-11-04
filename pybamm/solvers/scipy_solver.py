@@ -22,6 +22,7 @@ class ScipySolver(pybamm.OdeSolver):
 
     def __init__(self, method="BDF", rtol=1e-6, atol=1e-6):
         super().__init__(method, rtol, atol)
+        self.name = "Scipy solver ({})".format(method)
 
     def integrate(
         self, derivs, y0, t_eval, events=None, mass_matrix=None, jacobian=None

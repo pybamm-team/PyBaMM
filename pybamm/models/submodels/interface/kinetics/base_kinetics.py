@@ -40,8 +40,13 @@ class BaseModel(BaseInterface):
         eta_r = delta_phi - ocp
         # Get number of electrons in reaction
         ne = self._get_number_of_electrons_in_reaction()
-
-        j = self._get_kinetics(j0, ne, eta_r)
+        # Get kinetics. Note: T must have the same domain as j0 and eta_r
+        if j0.domain in ["current collector", ["current collector"]]:
+            T = variables["X-averaged cell temperature"]
+        else:
+            T = variables[self.domain + " electrode temperature"]
+        j = self._get_kinetics(j0, ne, eta_r, T)
+        # Get average interfacial current density
         j_tot_av = self._get_average_total_interfacial_current_density(variables)
         # j = j_tot_av + (j - pybamm.x_average(j))  # enforce true average
 
@@ -73,7 +78,7 @@ class BaseModel(BaseInterface):
     def _get_exchange_current_density(self, variables):
         raise NotImplementedError
 
-    def _get_kinetics(self, j0, ne, eta_r):
+    def _get_kinetics(self, j0, ne, eta_r, T):
         raise NotImplementedError
 
     def _get_open_circuit_potential(self, variables):
@@ -84,10 +89,10 @@ class BaseModel(BaseInterface):
         Default to calculate derivative of interfacial current density with respect to
         concentration. Can be overwritten by specific kinetic functions.
         """
-        c_e, delta_phi, j0, ne, ocp = self._get_interface_variables_for_first_order(
+        c_e, delta_phi, j0, ne, ocp, T = self._get_interface_variables_for_first_order(
             variables
         )
-        j = self._get_kinetics(j0, ne, delta_phi - ocp)
+        j = self._get_kinetics(j0, ne, delta_phi - ocp, T)
         return j.diff(c_e)
 
     def _get_dj_ddeltaphi(self, variables):
@@ -95,10 +100,10 @@ class BaseModel(BaseInterface):
         Default to calculate derivative of interfacial current density with respect to
         surface potential difference. Can be overwritten by specific kinetic functions.
         """
-        _, delta_phi, j0, ne, ocp = self._get_interface_variables_for_first_order(
+        _, delta_phi, j0, ne, ocp, T = self._get_interface_variables_for_first_order(
             variables
         )
-        j = self._get_kinetics(j0, ne, delta_phi - ocp)
+        j = self._get_kinetics(j0, ne, delta_phi - ocp, T)
         return j.diff(delta_phi)
 
     def _get_interface_variables_for_first_order(self, variables):
@@ -118,7 +123,11 @@ class BaseModel(BaseInterface):
         j0 = self._get_exchange_current_density(hacked_variables)
         ne = self._get_number_of_electrons_in_reaction()
         ocp = self._get_open_circuit_potential(hacked_variables)[0]
-        return c_e_0, delta_phi, j0, ne, ocp
+        if j0.domain in ["current collector", ["current collector"]]:
+            T = variables["X-averaged cell temperature"]
+        else:
+            T = variables[self.domain + " electrode temperature"]
+        return c_e_0, delta_phi, j0, ne, ocp, T
 
     def _get_j_diffusion_limited_first_order(self, variables):
         """

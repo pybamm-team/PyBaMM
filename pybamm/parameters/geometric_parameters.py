@@ -53,11 +53,13 @@ l_n = L_n / L_x
 l_s = L_s / L_x
 l_p = L_p / L_x
 l_cp = L_cp / L_x
+l_x = L_x / L_x
 l_y = L_y / L_z
 l_z = L_z / L_z
+a_cc = l_y * l_z
 
 l = L / L_x
-delta = L_x / L_z
+delta = L_x / L_z  # Aspect ratio
 
 # Tab geometry
 l_tab_n = L_tab_n / L_z
