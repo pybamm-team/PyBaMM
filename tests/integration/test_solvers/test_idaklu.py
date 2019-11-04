@@ -32,7 +32,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         solver = pybamm.IDAKLUSolver()
 
         variable_tols = {"Electrolyte concentration": 1e-3}
-        solver.set_tolerances_by_variable(variable_tols, model)
+        solver.set_atol_by_variable(variable_tols, model)
 
         solver.solve(model, t_eval)
 

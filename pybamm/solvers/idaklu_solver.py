@@ -45,12 +45,7 @@ class IDAKLUSolver(pybamm.DaeSolver):
         super().__init__("ida", rtol, atol, root_method, root_tol, max_steps)
         self.name = "IDA KLU solver"
 
-    @property
-    def atol(self):
-        return self._atol
-
-    @atol.setter
-    def atol(self, variables_with_tols, model):
+    def set_atol_by_variable(self, variables_with_tols, model):
         """
         A method to set the absolute tolerances in the solver by state variable.
         This method modifies self._atol.

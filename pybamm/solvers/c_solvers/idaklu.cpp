@@ -365,7 +365,7 @@ PYBIND11_MODULE(idaklu, m)
         py::arg("yp0"), py::arg("res"), py::arg("jac"), py::arg("get_jac_data"),
         py::arg("get_jac_row_vals"), py::arg("get_jac_col_ptr"), py::arg("nnz"),
         py::arg("events"), py::arg("number_of_events"), py::arg("use_jacobian"),
-        py::arg("rhs_alg_id"), py::arg("rtol"), py::arg("atol"),
+        py::arg("rhs_alg_id"), py::arg("atol"), py::arg("rtol"),
         py::return_value_policy::take_ownership);
 
   py::class_<Solution>(m, "solution")
