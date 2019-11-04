@@ -4,7 +4,6 @@ Name [units],Value,Reference,Notes
 # Electrode properties,,,
 Negative electrode conductivity [S.m-1],100,Scott Moura FastDFN,graphite
 Maximum concentration in negative electrode [mol.m-3],24983.2619938437,Scott Moura FastDFN,
-Negative electrode diffusion coefficient [m2.s-1],3.9E-14,Scott Moura FastDFN,
 Negative electrode diffusivity [m2.s-1],[function]graphite_mcmb2528_diffusivity_Dualfoil1998,,
 Negative electrode OCP [V],[function]graphite_mcmb2528_ocp_Dualfoil1998,
 ,,,
