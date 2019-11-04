@@ -1,7 +1,8 @@
 import os
 import subprocess
 try:
-    import setuptools
+    from setuptools import setup, find_packages
+    import setuptools.command.install as orig
 except ImportError:
     from distutils.core import setup, find_packages
 from distutils.cmd import Command
@@ -23,11 +24,19 @@ class BuildSundials(Command):
     def initialize_options(self):
         """Set default values for option(s)"""
         # Each user option is listed here with its default value.
-        self.sundials_src = os.path.join(self.pybamm_dir,'sundials-3.1.1')
-        self.install_dir = os.path.join(self.pybamm_dir,'sundials')
+        self.sundials_src = None
+        self.install_dir = None
 
     def finalize_options(self):
         """Post-process options"""
+        # Any unspecified option is set to the value of the 'install' command
+        # This could be the default value if 'build_sundials' is invoked on its own
+        # or a user-specified value if 'build_sundials' is called from 'install'
+        # with options.
+        self.set_undefined_options('install',
+                                   ('sundials_src', 'sundials_src'),
+                                   ('sundials_inst', 'install_dir'))
+        # Check that the sundials source dir contains the CMakeLists.txt
         if self.sundials_src:
             CMakeLists=os.path.join(self.sundials_src,'CMakeLists.txt')
             assert os.path.exists(CMakeLists), ('Could not find {}.'.format(CMakeLists))
@@ -78,7 +87,7 @@ class BuildSundials(Command):
 
         # CMakeLists.txt is in the same directory as this setup.py file
         print('-'*10, 'Running CMake prepare', '-'*40)
-        subprocess.run(['cmake', self.sundials_dir] + cmake_args,
+        subprocess.run(['cmake', self.sundials_src] + cmake_args,
                               cwd=self.build_temp)
 
         print('-'*10, 'Building the sundials', '-'*40)
@@ -105,14 +114,16 @@ class InstallODES(Command):
 
     def finalize_options(self):
         """Post-process options"""
+        # Any unspecified option is set to the value of the 'install' command
+        # This could be the default value if 'install_odes' is invoked on its own
+        # or a user-specified value if 'install_odes' is called from 'install'
+        # with options.
         # If option specified the check dir exists
-        if self.sundials_inst:
-            assert os.path.exists(self.sundials_inst), \
-                ("Could not find SUNDIALS directory {}".format(self.sundials_inst))
-        else:
-            # Inherit directory from build_sundials command
-            self.set_undefined_options('build_sundials', \
-                                       ('install_dir', 'sundials_inst'))
+        self.set_undefined_options('install', \
+                                   ('sundials_inst', 'sundials_inst'))
+        assert os.path.exists(self.sundials_inst), \
+            ("Could not find SUNDIALS directory {}".format(self.sundials_inst))
+
     def run(self):
         # At the time scikits.odes is pip installed, the path to the sundials
         # library must be contained in an env variable SUNDIALS_INST
@@ -121,6 +132,45 @@ class InstallODES(Command):
         os.environ['SUNDIALS_INST'] = self.sundials_inst
         env = os.environ.copy()
         subprocess.run(['pip', 'install', 'scikits.odes'], env=env)
+
+class InstallPyBaMM(orig.install):
+    """ Install the PyBaMM package, along with the SUNDIALS and
+    scikits.odes package
+    """
+    # This custom command is an overloading of the setuptools.command.install command,
+    # which itself overload the distutils.command.install command.
+    # This class is therefore inspired from the setuptools.command.install command
+
+    user_options = orig.install.user_options + [
+        ('no-sundials', None, "Do not install the SUNDIALS library. scikits.odes is not installed."),
+        ('sundials-src=', None, 'Absolute path to sundials source dir'),
+        ('sundials-inst=', None, 'Absolute path to sundials install directory'),
+    ]
+
+    pybamm_dir = os.path.abspath(os.path.dirname(__file__))
+
+    def initialize_options(self):
+        """Set default values for option(s)"""
+        orig.install.initialize_options(self)
+        # Each user option is listed here with its default value.
+        self.sundials_src = os.path.join(self.pybamm_dir,'sundials-3.1.1')
+        self.sundials_inst = os.path.join(self.pybamm_dir,'sundials')
+        self.no_sundials = None
+
+    def finalize_options(self):
+        """Post-process options"""
+        orig.install.finalize_options(self)
+        if self.no_sundials:
+            self.build_sundials = False
+        else:
+            self.build_sundials=True
+
+    def run(self):
+        """Install PyBaMM"""
+        orig.install.run(self)
+        if self.build_sundials:
+            self.run_command('build_sundials')
+            self.run_command('install_odes')
 
 # Load text for description and license
 with open("README.md") as f:
@@ -138,10 +188,11 @@ def load_version():
     except Exception as e:
         raise RuntimeError("Unable to read version number (" + str(e) + ").")
 
-setuptools.setup(
+setup(
     cmdclass = {
         'build_sundials': BuildSundials,
         'install_odes': InstallODES,
+        'install': InstallPyBaMM,
     },
     name="pybamm",
     version=load_version()+".post4",
@@ -150,7 +201,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/pybamm-team/PyBaMM",
     include_package_data=True,
-    packages=setuptools.find_packages(include=("pybamm", "pybamm.*")),
+    packages=find_packages(include=("pybamm", "pybamm.*")),
     package_data={
         "pybamm": [
             "./version",
