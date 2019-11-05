@@ -121,7 +121,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             # set Dirichlet value at facets corresponding to tab
             neg_bc_load = np.zeros(mesh.npts)
             neg_bc_load[mesh.negative_tab_dofs] = 1
-            boundary_load = boundary_load - neg_bc_value * pybamm.Vector(neg_bc_load)
+            boundary_load = boundary_load + neg_bc_value * pybamm.Vector(neg_bc_load)
         else:
             raise ValueError(
                 "boundary condition must be Dirichlet or Neumann, not '{}'".format(
@@ -138,7 +138,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             # set Dirichlet value at facets corresponding to tab
             pos_bc_load = np.zeros(mesh.npts)
             pos_bc_load[mesh.positive_tab_dofs] = 1
-            boundary_load = boundary_load - pos_bc_value * pybamm.Vector(pos_bc_load)
+            boundary_load = boundary_load + pos_bc_value * pybamm.Vector(pos_bc_load)
         else:
             raise ValueError(
                 "boundary condition must be Dirichlet or Neumann, not '{}'".format(

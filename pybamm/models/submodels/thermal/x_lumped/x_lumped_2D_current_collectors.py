@@ -51,8 +51,10 @@ class CurrentCollector2D(BaseModel):
         phi_s_cp = variables["Positive current collector potential"]
         # Note: grad not implemented in 2D weak form, but can compute grad squared
         # directly
-        Q_s_cn = self.param.sigma_cn_prime * pybamm.grad_squared(phi_s_cn)
-        Q_s_cp = self.param.sigma_cp_prime * pybamm.grad_squared(phi_s_cp)
+        #Q_s_cn = self.param.sigma_cn_prime * pybamm.grad_squared(phi_s_cn)
+        #Q_s_cp = self.param.sigma_cp_prime * pybamm.grad_squared(phi_s_cp)
+        Q_s_cn = pybamm.Scalar(0)
+        Q_s_cp = pybamm.Scalar(0)
         return Q_s_cn, Q_s_cp
 
     def _yz_average(self, var):

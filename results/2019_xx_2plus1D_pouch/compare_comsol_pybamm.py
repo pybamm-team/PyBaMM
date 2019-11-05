@@ -83,9 +83,9 @@ submesh_types["current collector"] = pybamm.MeshGenerator(
 )
 
 var_pts = {
-    var.x_n: 5,
-    var.x_s: 5,
-    var.x_p: 5,
+    var.x_n: 10,
+    var.x_s: 10,
+    var.x_p: 10,
     var.r_n: len(r_n_edges) - 1,  # Finite Volume nodes one less than edges
     var.r_p: len(r_p_edges) - 1,  # Finite Volume nodes one less than edges
     var.y: len(y_edges),
@@ -105,9 +105,9 @@ tau = param.process_symbol(
 # solve model -- simulate one hour discharge
 t_end = 3600 / tau
 t_eval = np.linspace(0, t_end, 120)
-# solver = pybamm.CasadiSolver(atol=1e-8, rtol=1e-8, root_tol=1e-8)
-pybamm_model.convert_to_format = "casadi"
-solver = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8, root_tol=1e-8)
+solver = pybamm.CasadiSolver(atol=1e-8, rtol=1e-8, root_tol=1e-8, mode="fast")
+#pybamm_model.convert_to_format = "casadi"
+#solver = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8, root_tol=1e-8)
 solution = solver.solve(pybamm_model, t_eval)
 
 

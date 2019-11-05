@@ -9,52 +9,52 @@ sys.setrecursionlimit(10000)
 
 # load models
 models = [
-    pybamm.lithium_ion.SPM({"thermal": "x-lumped"}, name="1D SPM (lumped)"),
-    pybamm.lithium_ion.SPMe({"thermal": "x-lumped"}, name="1D SPMe (lumped)"),
+    #pybamm.lithium_ion.SPM({"thermal": "x-lumped"}, name="1D SPM (lumped)"),
+    #pybamm.lithium_ion.SPMe({"thermal": "x-lumped"}, name="1D SPMe (lumped)"),
     pybamm.lithium_ion.DFN({"thermal": "x-lumped"}, name="1D DFN (lumped)"),
-    pybamm.lithium_ion.SPM({"thermal": "x-full"}, name="1D SPM (full)"),
-    pybamm.lithium_ion.SPMe({"thermal": "x-full"}, name="1D SPMe (full)"),
-    pybamm.lithium_ion.DFN({"thermal": "x-full"}, name="1D DFN (full)"),
-    pybamm.lithium_ion.SPM(
-        {
-            "current collector": "potential pair",
-            "dimensionality": 2,
-            "thermal": "xyz-lumped",
-        },
-        name="2+1D SPM (lumped)",
-    ),
-    pybamm.lithium_ion.SPMe(
-        {
-            "current collector": "potential pair",
-            "dimensionality": 2,
-            "thermal": "xyz-lumped",
-        },
-        name="2+1D SPMe (lumped)",
-    ),
-    pybamm.lithium_ion.DFN(
-        {
-            "current collector": "potential pair",
-            "dimensionality": 2,
-            "thermal": "xyz-lumped",
-        },
-        name="2+1D DFN (lumped)",
-    ),
-    pybamm.lithium_ion.SPM(
-        {
-            "current collector": "potential pair",
-            "dimensionality": 2,
-            "thermal": "x-lumped",
-        },
-        name="2+1D SPM (full)",
-    ),
-    pybamm.lithium_ion.SPMe(
-        {
-            "current collector": "potential pair",
-            "dimensionality": 2,
-            "thermal": "x-lumped",
-        },
-        name="2+1D SPMe (full)",
-    ),
+    #pybamm.lithium_ion.SPM({"thermal": "x-full"}, name="1D SPM (full)"),
+    #pybamm.lithium_ion.SPMe({"thermal": "x-full"}, name="1D SPMe (full)"),
+    #pybamm.lithium_ion.DFN({"thermal": "x-full"}, name="1D DFN (full)"),
+    #pybamm.lithium_ion.SPM(
+    #    {
+    #        "current collector": "potential pair",
+    #        "dimensionality": 2,
+    #        "thermal": "xyz-lumped",
+    #    },
+    #    name="2+1D SPM (lumped)",
+    #),
+    #pybamm.lithium_ion.SPMe(
+    #    {
+    #        "current collector": "potential pair",
+    #        "dimensionality": 2,
+    #        "thermal": "xyz-lumped",
+    #    },
+    #    name="2+1D SPMe (lumped)",
+    #),
+    #pybamm.lithium_ion.DFN(
+    #    {
+    #        "current collector": "potential pair",
+    #        "dimensionality": 2,
+    #        "thermal": "xyz-lumped",
+    #    },
+    #    name="2+1D DFN (lumped)",
+    #),
+    #pybamm.lithium_ion.SPM(
+    #    {
+    #        "current collector": "potential pair",
+    #        "dimensionality": 2,
+    #        "thermal": "x-lumped",
+    #    },
+    #    name="2+1D SPM (full)",
+    #),
+    #pybamm.lithium_ion.SPMe(
+    #    {
+    #        "current collector": "potential pair",
+    #        "dimensionality": 2,
+    #        "thermal": "x-lumped",
+    #    },
+    #    name="2+1D SPMe (full)",
+    #),
     pybamm.lithium_ion.DFN(
         {
             "current collector": "potential pair",
@@ -99,11 +99,11 @@ times = [None] * len(models)
 voltages = [None] * len(models)
 temperatures = [None] * len(models)
 
-t_eval = np.linspace(0, 1, 1000)
+t_eval = np.linspace(0, 1, 100)
 for i, model in enumerate(models):
-    if "2+1D" in model.name:
-        model.use_simplify = False  # simplifying jacobian slow for large systems
-    solution = model.default_solver.solve(model, t_eval)
+    model.convert_to_format = "casadi"  # use casadi for jacobian
+    solver = model.default_solver
+    solution = solver.solve(model, t_eval)
     solutions[i] = solution
     times[i] = pybamm.ProcessedVariable(
         model.variables["Time [h]"], solution.t, solution.y
