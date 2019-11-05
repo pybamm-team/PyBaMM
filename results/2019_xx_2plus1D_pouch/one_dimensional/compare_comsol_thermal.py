@@ -11,9 +11,12 @@ os.chdir(pybamm.root_dir())
 "-----------------------------------------------------------------------------"
 "Load comsol data"
 
-comsol_variables = pickle.load(
-    open("input/comsol_results/comsol_thermal_1C.pickle", "rb")
-)
+try:
+    comsol_variables = pickle.load(
+        open("input/comsol_results/comsol_thermal_1C.pickle", "rb")
+    )
+except FileNotFoundError:
+    raise FileNotFoundError("COMSOL data not found. Try running load_comsol_data.py")
 
 "-----------------------------------------------------------------------------"
 "Create and solve pybamm model"
@@ -231,18 +234,11 @@ def whole_cell_by_domain_comparison_plot(var, plot_times=None):
 
     for ind, t in enumerate(plot_times):
         color = cmap(float(ind) / len(plot_times))
-        ax[0].plot(x_n * L_x, pybamm_var(x=x_n, t=t / tau), "-", color=color)
         ax[0].plot(x_n * L_x, comsol_var_n(x=x_n, t=t / tau), "o", color=color)
+        ax[0].plot(x_n * L_x, pybamm_var(x=x_n, t=t / tau), "-", color=color)
         if comsol_var_s:
-            ax[1].plot(x_s * L_x, pybamm_var(x=x_s, t=t / tau), "-", color=color)
             ax[1].plot(x_s * L_x, comsol_var_s(x=x_s, t=t / tau), "o", color=color)
-        ax[n_cols - 1].plot(
-            x_p * L_x,
-            pybamm_var(x=x_p, t=t / tau),
-            "-",
-            color=color,
-            label="PyBaMM" if ind == 0 else "",
-        )
+            ax[1].plot(x_s * L_x, pybamm_var(x=x_s, t=t / tau), "-", color=color)
         ax[n_cols - 1].plot(
             x_p * L_x,
             comsol_var_p(x=x_p, t=t / tau),
@@ -250,7 +246,13 @@ def whole_cell_by_domain_comparison_plot(var, plot_times=None):
             color=color,
             label="COMSOL" if ind == 0 else "",
         )
-
+        ax[n_cols - 1].plot(
+            x_p * L_x,
+            pybamm_var(x=x_p, t=t / tau),
+            "-",
+            color=color,
+            label="PyBaMM (t={:.0f} s)".format(t),
+        )
     ax[0].set_xlabel("x_n")
     ax[0].set_ylabel(var)
     if comsol_var_s:
@@ -296,15 +298,8 @@ def electrode_comparison_plot(var, plot_times=None):
 
     for ind, t in enumerate(plot_times):
         color = cmap(float(ind) / len(plot_times))
-        ax[0].plot(x_n * L_x, pybamm_var_n(x=x_n, t=t / tau), "-", color=color)
         ax[0].plot(x_n * L_x, comsol_var_n(x=x_n, t=t / tau), "o", color=color)
-        ax[1].plot(
-            x_p * L_x,
-            pybamm_var_p(x=x_p, t=t / tau),
-            "-",
-            color=color,
-            label="PyBaMM" if ind == 0 else "",
-        )
+        ax[0].plot(x_n * L_x, pybamm_var_n(x=x_n, t=t / tau), "-", color=color)
         ax[1].plot(
             x_p * L_x,
             comsol_var_p(x=x_p, t=t / tau),
@@ -312,7 +307,13 @@ def electrode_comparison_plot(var, plot_times=None):
             color=color,
             label="COMSOL" if ind == 0 else "",
         )
-
+        ax[1].plot(
+            x_p * L_x,
+            pybamm_var_p(x=x_p, t=t / tau),
+            "-",
+            color=color,
+            label="PyBaMM (t={:.0f} s)".format(t),
+        )
     ax[0].set_xlabel("x_n")
     ax[0].set_ylabel(var)
     ax[1].set_xlabel("x_p")
@@ -346,19 +347,18 @@ def whole_cell_comparison_plot(var, plot_times=None):
         color = cmap(float(ind) / len(plot_times))
         plt.plot(
             x * L_x,
-            pybamm_var(x=x, t=t / tau),
-            "-",
-            color=color,
-            label="PyBaMM" if ind == 0 else "",
-        )
-        plt.plot(
-            x * L_x,
             comsol_var(x=x, t=t / tau),
             "o",
             color=color,
             label="COMSOL" if ind == 0 else "",
         )
-
+        plt.plot(
+            x * L_x,
+            pybamm_var(x=x, t=t / tau),
+            "-",
+            color=color,
+            label="PyBaMM (t={:.0f} s)".format(t),
+        )
     plt.xlabel("x")
     plt.ylabel(var)
     plt.legend()

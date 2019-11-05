@@ -13,19 +13,11 @@ os.chdir(pybamm.root_dir())
 sys.setrecursionlimit(10000)
 
 "-----------------------------------------------------------------------------"
-"Pick C_rate and load comsol data"
+"Load comsol data"
 
-# C_rate
-# NOTE: the results in pybamm stop when a voltage cutoff is reached, so
-# for higher C-rate the pybamm solution may stop before the comsol solution
-C_rates = {"01": 0.1, "05": 0.5, "1": 1, "2": 2, "3": 3}
-C_rate = "1"  # choose the key from the above dictionary of available results
-
-# load the comsol results
 try:
     comsol_variables = pickle.load(
-        open("comsol_{}C.pickle".format(C_rate), "rb")
-        # open("comsol_normal_mesh_{}C.pickle".format(C_rate), "rb")
+        open("input/comsol_results/comsol_2plus1D_1C.pickle", "rb")
     )
 except FileNotFoundError:
     raise FileNotFoundError("COMSOL data not found. Try running load_comsol_data.py")
@@ -46,7 +38,7 @@ geometry = pybamm_model.default_geometry
 
 # load parameters and process model and geometry
 param = pybamm_model.default_parameter_values
-param.update({"C-rate": C_rates[C_rate]})
+param.update({"C-rate": 1})
 param.process_model(pybamm_model)
 param.process_geometry(geometry)
 
@@ -113,8 +105,9 @@ tau = param.process_symbol(
 # solve model -- simulate one hour discharge
 t_end = 3600 / tau
 t_eval = np.linspace(0, t_end, 120)
-solver = pybamm.KLU(atol=1e-8, rtol=1e-8, root_tol=1e-8)
+# solver = pybamm.CasadiSolver(atol=1e-8, rtol=1e-8, root_tol=1e-8)
 pybamm_model.convert_to_format = "casadi"
+solver = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8, root_tol=1e-8)
 solution = solver.solve(pybamm_model, t_eval)
 
 
@@ -135,7 +128,6 @@ comsol_model = shared.make_comsol_model(
 )
 
 # Process pybamm variables for which we have corresponding comsol variables
-pybamm.set_logging_level("DEBUG")
 output_variables = {}
 for var in comsol_model.variables.keys():
     try:
@@ -160,45 +152,6 @@ shared.plot_t_var(
     param,
 )
 # plt.savefig("temperature_av.eps", format="eps", dpi=1000)
-try:
-    shared.plot_t_var(
-        "Volume-averaged negative electrode irreversible heating [W.m-3]",
-        t_plot,
-        comsol_model,
-        output_variables,
-        param,
-    )
-    shared.plot_t_var(
-        "Volume-averaged separator irreversible heating [W.m-3]",
-        t_plot,
-        comsol_model,
-        output_variables,
-        param,
-    )
-    shared.plot_t_var(
-        "Volume-averaged positive electrode irreversible heating [W.m-3]",
-        t_plot,
-        comsol_model,
-        output_variables,
-        param,
-    )
-    shared.plot_t_var(
-        "Volume-averaged negative electrode reversible heating [W.m-3]",
-        t_plot,
-        comsol_model,
-        output_variables,
-        param,
-    )
-    shared.plot_t_var(
-        "Volume-averaged positive electrode reversible heating [W.m-3]",
-        t_plot,
-        comsol_model,
-        output_variables,
-        param,
-    )
-except KeyError:
-    pass
-
 t_plot = 1800  # dimensional in seconds
 shared.plot_2D_var(
     "Negative current collector potential [V]",

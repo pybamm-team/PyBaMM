@@ -51,21 +51,6 @@ def make_comsol_model(comsol_variables, mesh, param, y_interp=None, z_interp=Non
             comsol_t, comsol_variables["volume-averaged temperature"]
         )(t)
 
-    def comsol_Q_irrev_n(t):
-        return interp.interp1d(comsol_t, comsol_variables["averaged Q_irrev_n"])(t)
-
-    def comsol_Q_irrev_s(t):
-        return interp.interp1d(comsol_t, comsol_variables["averaged Q_irrev_s"])(t)
-
-    def comsol_Q_irrev_p(t):
-        return interp.interp1d(comsol_t, comsol_variables["averaged Q_irrev_p"])(t)
-
-    def comsol_Q_rev_n(t):
-        return interp.interp1d(comsol_t, comsol_variables["averaged Q_rev_n"])(t)
-
-    def comsol_Q_rev_p(t):
-        return interp.interp1d(comsol_t, comsol_variables["averaged Q_rev_p"])(t)
-
     comsol_phi_s_cn = get_interp_fun(comsol_variables["phi_s_cn"])
     comsol_phi_s_cp = get_interp_fun(comsol_variables["phi_s_cp"])
     comsol_temperature = get_interp_fun(comsol_variables["temperature"])
@@ -80,13 +65,6 @@ def make_comsol_model(comsol_variables, mesh, param, y_interp=None, z_interp=Non
         "X-averaged cell temperature [K]": comsol_temperature,
         "Volume-averaged cell temperature [K]": comsol_vol_av_temperature,
         "Current collector current density [A.m-2]": comsol_current,
-        "Volume-averaged negative electrode irreversible heating [W.m-3]":
-        comsol_Q_irrev_n,
-        "Volume-averaged separator irreversible heating [W.m-3]": comsol_Q_irrev_s,
-        "Volume-averaged positive electrode irreversible heating [W.m-3]":
-        comsol_Q_irrev_p,
-        "Volume-averaged negative electrode reversible heating [W.m-3]": comsol_Q_rev_n,
-        "Volume-averaged positive electrode reversible heating [W.m-3]": comsol_Q_rev_n,
     }
     comsol_model.y_interp = y_interp
     comsol_model.z_interp = z_interp
