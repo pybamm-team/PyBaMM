@@ -572,7 +572,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return pybamm.Matrix(matrix) @ discretised_symbol + bcs_vector
 
-    def boundary_value_or_flux(self, symbol, discretised_child):
+    def boundary_value_or_flux(self, symbol, discretised_child, extrapolation="linear"):
         """
         Uses linear extrapolation to get the boundary value or flux of a variable in the
         Finite Volume Method.
@@ -588,27 +588,58 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # Create submatrix to compute boundary values or fluxes
         if isinstance(symbol, pybamm.BoundaryValue):
+
+            nodes = submesh_list[0].nodes
+            edges = submesh_list[0].edges
+
+            # assumes uniform!
             if symbol.side == "left":
-                sub_matrix = csr_matrix(
-                    ([1.5, -0.5], ([0, 0], [0, 1])), shape=(1, prim_pts)
-                )
+                dx0 = nodes[0] - edges[0]
+                dx1 = submesh_list[0].d_nodes[0]
+
+                if extrapolation == "linear":
+                    sub_matrix = csr_matrix(
+                        ([1 + (dx0 / dx1), -(dx0 / dx1)], ([0, 0], [0, 1])),
+                        shape=(1, prim_pts),
+                    )
+                else:
+                    raise NotImplementedError
             elif symbol.side == "right":
-                sub_matrix = csr_matrix(
-                    ([-0.5, 1.5], ([0, 0], [prim_pts - 2, prim_pts - 1])),
-                    shape=(1, prim_pts),
-                )
+                dxN = edges[-1] - nodes[-1]
+                dxNm1 = submesh_list[0].d_nodes[-1]
+
+                if extrapolation == "linear":
+                    sub_matrix = csr_matrix(
+                        (
+                            [-(dxN / dxNm1), 1 + (dxN / dxNm1)],
+                            ([0, 0], [prim_pts - 2, prim_pts - 1]),
+                        ),
+                        shape=(1, prim_pts),
+                    )
+                else:
+                    raise NotImplementedError
+
         elif isinstance(symbol, pybamm.BoundaryGradient):
             if symbol.side == "left":
                 dx = submesh_list[0].d_nodes[0]
-                sub_matrix = (1 / dx) * csr_matrix(
-                    ([-1, 1], ([0, 0], [0, 1])), shape=(1, prim_pts)
-                )
+
+                if extrapolation == "linear":
+                    sub_matrix = (1 / dx) * csr_matrix(
+                        ([-1, 1], ([0, 0], [0, 1])), shape=(1, prim_pts)
+                    )
+                else:
+                    raise NotImplementedError
+
             elif symbol.side == "right":
                 dx = submesh_list[0].d_nodes[-1]
-                sub_matrix = (1 / dx) * csr_matrix(
-                    ([-1, 1], ([0, 0], [prim_pts - 2, prim_pts - 1])),
-                    shape=(1, prim_pts),
-                )
+
+                if extrapolation == "linear":
+                    sub_matrix = (1 / dx) * csr_matrix(
+                        ([-1, 1], ([0, 0], [prim_pts - 2, prim_pts - 1])),
+                        shape=(1, prim_pts),
+                    )
+                else:
+                    raise NotImplementedError
 
         # Generate full matrix from the submatrix
         # Convert to csr_matrix so that we can take the index (row-slicing), which is
