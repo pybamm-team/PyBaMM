@@ -865,6 +865,8 @@ def surf(symbol, set_domain=False, extrapolation="quadratic"):
 
     symbol : :class:`pybamm.Symbol`
         the surface value of this symbol will be returned
+    extrapolation : str
+        The type of extrapolation method to use ("linear" or "quadratic")
 
     Returns
     -------
@@ -1030,6 +1032,8 @@ def boundary_value(symbol, side, extrapolation="quadratic"):
         The symbol whose boundary value to take
     side : str
         Which side to take the boundary value on ("left" or "right")
+    extrapolation : str
+        The type of extrapolation method to use ("linear" or "quadratic")
 
     Returns
     -------
