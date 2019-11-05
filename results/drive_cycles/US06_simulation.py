@@ -13,7 +13,7 @@ geometry = model.default_geometry
 
 # load parameter values and process model and geometry
 param = model.default_parameter_values
-param["Current function"] = pybamm.GetCurrentData("US06.csv", units="[A]")
+param["Current function"] = "[current data]US06"
 param.process_model(model)
 param.process_geometry(geometry)
 
@@ -31,7 +31,7 @@ tau = param.process_symbol(
 t_eval = np.linspace(0, 600 / tau, 600)
 
 # need to increase max solver steps if solving DAEs along with an erratic drive cycle
-solver = model.default_solver
+solver = pybamm.CasadiSolver(mode="fast")  # model.default_solver
 if isinstance(solver, pybamm.DaeSolver):
     solver.max_steps = 10000
 

@@ -80,7 +80,7 @@ class CasadiConverter(object):
                     *converted_children
                 )
             elif not isinstance(
-                symbol.function, pybamm.GetCurrent
+                symbol.function, pybamm.BaseCurrent
             ) and symbol.function.__name__.startswith("elementwise_grad_of_"):
                 differentiating_child_idx = int(symbol.function.__name__[-1])
                 # Create dummy symbolic variables in order to differentiate using CasADi
