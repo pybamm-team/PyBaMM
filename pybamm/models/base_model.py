@@ -52,18 +52,34 @@ class BaseModel(object):
         automatically
     jacobian : :class:`pybamm.Concatenation`
         Contains the Jacobian for the model. If model.use_jacobian is True, the
-        Jacobian is computed automatically during the set up in solve
+        Jacobian is computed automatically during solver set up
+    jacobian_rhs : :class:`pybamm.Concatenation`
+        Contains the Jacobian for the part of the model which contains time derivatives.
+        If model.use_jacobian is True, the Jacobian is computed automatically during
+        solver set up
+    jacobian_algebraic : :class:`pybamm.Concatenation`
+        Contains the Jacobian for the algebraic part of the model. This may be used
+        by the solver when calculating consistent initial conditions. If
+        model.use_jacobian is True, the Jacobian is computed automatically during
+        solver set up
     use_jacobian : bool
         Whether to use the Jacobian when solving the model (default is True)
     use_simplify : bool
         Whether to simplify the expression tress representing the rhs and
         algebraic equations, Jacobain (if using) and events, before solving the
         model (default is True)
-    use_to_python : bool
-        Whether to convert the expression tress representing the rhs and
-        algebraic equations, Jacobain (if using) and events into pure python code
-        that will calculate the result of calling `evaluate(t, y)` on the given
-        expression tree (default is True)
+    convert_to_format : str
+        Whether to convert the expression trees representing the rhs and
+        algebraic equations, Jacobain (if using) and events into a different format:
+
+        - None: keep PyBaMM expression tree structure.
+        - "python": convert into pure python code that will calculate the result of \
+        calling `evaluate(t, y)` on the given expression treeself.
+        - "casadi": convert into CasADi expression tree, which then uses CasADi's \
+        algorithm to calculate the Jacobian.
+
+        Default is "python".
+
     """
 
     def __init__(self, name="Unnamed model"):
@@ -82,11 +98,12 @@ class BaseModel(object):
         self._concatenated_initial_conditions = None
         self._mass_matrix = None
         self._jacobian = None
+        self._jacobian_algebraic = None
 
         # Default behaviour is to use the jacobian and simplify
         self.use_jacobian = True
         self.use_simplify = True
-        self.use_to_python = True
+        self.convert_to_format = "python"
 
     def _set_dictionary(self, dict, name):
         """
@@ -225,6 +242,22 @@ class BaseModel(object):
     @jacobian.setter
     def jacobian(self, jacobian):
         self._jacobian = jacobian
+
+    @property
+    def jacobian_rhs(self):
+        return self._jacobian_rhs
+
+    @jacobian_rhs.setter
+    def jacobian_rhs(self, jacobian_rhs):
+        self._jacobian_rhs = jacobian_rhs
+
+    @property
+    def jacobian_algebraic(self):
+        return self._jacobian_algebraic
+
+    @jacobian_algebraic.setter
+    def jacobian_algebraic(self, jacobian_algebraic):
+        self._jacobian_algebraic = jacobian_algebraic
 
     @property
     def set_of_parameters(self):

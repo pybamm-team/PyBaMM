@@ -28,8 +28,12 @@ param = models[0].default_parameter_values
 C_rate = 1
 param.update({"C-rate": C_rate})
 # make current collectors not so conductive, just for illustrative purposes
-param["Negative current collector conductivity [S.m-1]"] = 5.96e6
-param["Positive current collector conductivity [S.m-1]"] = 3.55e6
+param.update(
+    {
+        "Negative current collector conductivity [S.m-1]": 5.96e6,
+        "Positive current collector conductivity [S.m-1]": 3.55e6,
+    }
+)
 
 # process models
 for model in models:
@@ -79,8 +83,8 @@ plt.xlabel("Time [h]")
 plt.ylabel("Terminal voltage [V]")
 plt.legend()
 # add C-rate, delta, and alpha to title
-delta = param.process_symbol(pybamm.standard_parameters_lithium_ion.delta).evaluate()
-alpha = param.process_symbol(pybamm.standard_parameters_lithium_ion.alpha).evaluate()
+delta = param.evaluate(pybamm.standard_parameters_lithium_ion.delta)
+alpha = param.evaluate(pybamm.standard_parameters_lithium_ion.alpha)
 plt.title(
     r"C-rate = {:3d}, $\alpha$ = {:.6f} , $\delta$ = {:.6f}".format(
         C_rate, alpha, delta

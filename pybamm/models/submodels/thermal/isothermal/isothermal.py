@@ -39,17 +39,17 @@ class Isothermal(BaseThermal):
         variables.update(
             {
                 "Ohmic heating": pybamm.Scalar(0),
-                "Ohmic heating [A.V.m-3]": pybamm.Scalar(0),
+                "Ohmic heating [W.m-3]": pybamm.Scalar(0),
                 "Irreversible electrochemical heating": pybamm.Scalar(0),
-                "Irreversible electrochemical heating [A.V.m-3]": pybamm.Scalar(0),
+                "Irreversible electrochemical heating [W.m-3]": pybamm.Scalar(0),
                 "Reversible heating": pybamm.Scalar(0),
-                "Reversible heating [A.V.m-3]": pybamm.Scalar(0),
+                "Reversible heating [W.m-3]": pybamm.Scalar(0),
                 "Total heating": pybamm.Scalar(0),
-                "Total heating [A.V.m-3]": pybamm.Scalar(0),
+                "Total heating [W.m-3]": pybamm.Scalar(0),
                 "X-averaged total heating": pybamm.Scalar(0),
-                "X-averaged total heating [A.V.m-3]": pybamm.Scalar(0),
+                "X-averaged total heating [W.m-3]": pybamm.Scalar(0),
                 "Volume-averaged total heating": pybamm.Scalar(0),
-                "Volume-averaged total heating [A.V.m-3]": pybamm.Scalar(0),
+                "Volume-averaged total heating [W.m-3]": pybamm.Scalar(0),
             }
         )
         return variables
@@ -73,6 +73,6 @@ class Isothermal(BaseThermal):
     def _x_average(self, var, var_cn, var_cp):
         """
         Temperature is uniform and heat source terms are zero, so the average
-        returns the input variable.
+        returns zeros broadcasted onto the current collector domain.
         """
-        return var
+        return pybamm.PrimaryBroadcast(0, "current collector")

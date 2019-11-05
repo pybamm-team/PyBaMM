@@ -19,11 +19,6 @@ geometry = model.default_geometry
 
 # load parameter values and process model and geometry
 param = model.default_parameter_values
-# adjust current to correspond to a typical current density of 24 [A.m-2]
-C_rate = 1
-param["Typical current [A]"] = (
-    C_rate * 24 * param.process_symbol(pybamm.geometric_parameters.A_cc).evaluate()
-)
 param.process_model(model)
 param.process_geometry(geometry)
 
@@ -39,9 +34,7 @@ var_pts = {
     var.z: 5,
 }
 submesh_types = model.default_submesh_types
-submesh_types[
-    "current collector"
-] = pybamm.ScikitExponential2DSubMesh
+submesh_types["current collector"] = pybamm.ScikitExponential2DSubMesh
 # depnding on number of points in y-z plane may need to increase recursion depth...
 sys.setrecursionlimit(10000)
 mesh = pybamm.Mesh(geometry, submesh_types, var_pts)

@@ -32,6 +32,7 @@ class CurrentCollector1D(BaseModel):
 
     def _surface_cooling_coefficient(self):
         """Returns the surface cooling coefficient in 1+1D"""
+        # Note: assumes pouch cell geometry
         return (
             -2 * self.param.h / (self.param.delta ** 2) / self.param.l
             - self.param.l_z * self.param.h / self.param.delta

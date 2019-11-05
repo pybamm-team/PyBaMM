@@ -29,7 +29,7 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
     root_method : str, optional
         The method to use to find initial conditions (default is "lm")
     root_tol : float, optional
-        The tolerance for the initial-condition solver (default is 1e-8).
+        The tolerance for the initial-condition solver (default is 1e-6).
     max_steps: int, optional
         The maximum number of steps the solver will take before terminating
         (default is 1000).
@@ -48,6 +48,7 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
             raise ImportError("scikits.odes is not installed")
 
         super().__init__(method, rtol, atol, root_method, root_tol, max_steps)
+        self.name = "Scikits DAE solver ({})".format(method)
 
     def integrate(
         self, residuals, y0, t_eval, events=None, mass_matrix=None, jacobian=None

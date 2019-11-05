@@ -15,7 +15,6 @@ Expression Tree
   unary_operator
   concatenations
   broadcasts
-  simplify
   functions
   interpolant
-  evaluate
+  operations/index

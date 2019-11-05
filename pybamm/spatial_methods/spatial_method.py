@@ -84,11 +84,11 @@ class SpatialMethod:
             out = pybamm.Outer(
                 symbol, pybamm.Vector(np.ones(primary_pts_for_broadcast), domain=domain)
             )
-            out.auxiliary_domains = auxiliary_domains
 
         elif broadcast_type == "full":
             out = symbol * pybamm.Vector(np.ones(full_pts_for_broadcast), domain=domain)
 
+        out.auxiliary_domains = auxiliary_domains
         return out
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):

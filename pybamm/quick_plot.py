@@ -8,7 +8,7 @@ from collections import defaultdict
 
 def ax_min(data):
     "Calculate appropriate minimum axis value for plotting"
-    data_min = np.min(data)
+    data_min = np.nanmin(data)
     if data_min <= 0:
         return 1.04 * data_min
     else:
@@ -17,7 +17,7 @@ def ax_min(data):
 
 def ax_max(data):
     "Calculate appropriate maximum axis value for plotting"
-    data_max = np.max(data)
+    data_max = np.nanmax(data)
     if data_max <= 0:
         return 0.96 * data_max
     else:
@@ -256,14 +256,26 @@ class QuickPlot(object):
             # Get min and max y values
             y_min = np.min(
                 [
-                    ax_min(var(self.ts[i], **{spatial_var_name: spatial_var_value}))
+                    ax_min(
+                        var(
+                            self.ts[i],
+                            **{spatial_var_name: spatial_var_value},
+                            warn=False
+                        )
+                    )
                     for i, variable_list in enumerate(variable_lists)
                     for var in variable_list
                 ]
             )
             y_max = np.max(
                 [
-                    ax_max(var(self.ts[i], **{spatial_var_name: spatial_var_value}))
+                    ax_max(
+                        var(
+                            self.ts[i],
+                            **{spatial_var_name: spatial_var_value},
+                            warn=False
+                        )
+                    )
                     for i, variable_list in enumerate(variable_lists)
                     for var in variable_list
                 ]
@@ -320,7 +332,9 @@ class QuickPlot(object):
                             spatial_scale = self.spatial_scales[spatial_var_name]
                         self.plots[key][i][j], = ax.plot(
                             spatial_var_value * spatial_scale,
-                            variable(t, **{spatial_var_name: spatial_var_value}),
+                            variable(
+                                t, **{spatial_var_name: spatial_var_value}, warn=False
+                            ),
                             lw=2,
                             color=colors[i],
                             linestyle=linestyles[j],
@@ -333,7 +347,7 @@ class QuickPlot(object):
                         full_t = self.ts[i]
                         self.plots[key][i][j], = ax.plot(
                             full_t * self.time_scale,
-                            variable(full_t),
+                            variable(full_t, warn=False),
                             lw=2,
                             color=colors[i],
                             linestyle=linestyles[j],
@@ -394,7 +408,9 @@ class QuickPlot(object):
                     for j, variable in enumerate(variable_lists):
                         plot[i][j].set_ydata(
                             variable(
-                                t_dimensionless, **{spatial_var_name: spatial_var_value}
+                                t_dimensionless,
+                                **{spatial_var_name: spatial_var_value},
+                                warn=False
                             )
                         )
             else:
