@@ -84,7 +84,7 @@ class TestSPM(unittest.TestCase):
         model = pybamm.lithium_ion.SPM(options)
         parameter_values = model.default_parameter_values
         parameter_values.update(
-            {"Current function": pybamm.GetConstantCurrent(current=0)}
+            {"Current function": pybamm.ConstantCurrent(current=0)}
         )
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()

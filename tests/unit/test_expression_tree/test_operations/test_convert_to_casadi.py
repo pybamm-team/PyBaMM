@@ -81,6 +81,27 @@ class TestCasadiConverter(unittest.TestCase):
         self.assertEqual(pybamm.Function(np.abs, b).to_casadi(), casadi.SX(2))
         self.assertEqual(pybamm.Function(np.abs, c).to_casadi(), casadi.SX(3))
 
+    def test_interpolation(self):
+        x = np.linspace(0, 1)[:, np.newaxis]
+        y = pybamm.StateVector(slice(0, 2))
+        casadi_y = casadi.MX.sym("y", 2)
+        # linear
+        linear = np.hstack([x, 2 * x])
+        y_test = np.array([0.4, 0.6])
+        for interpolator in ["pchip", "cubic spline"]:
+            interp = pybamm.Interpolant(linear, y, interpolator=interpolator)
+            interp_casadi = interp.to_casadi(y=casadi_y)
+            f = casadi.Function("f", [casadi_y], [interp_casadi])
+            np.testing.assert_array_almost_equal(interp.evaluate(y=y_test), f(y_test))
+        # square
+        square = np.hstack([x, x ** 2])
+        y = pybamm.StateVector(slice(0, 1))
+        for interpolator in ["pchip", "cubic spline"]:
+            interp = pybamm.Interpolant(square, y, interpolator=interpolator)
+            interp_casadi = interp.to_casadi(y=casadi_y)
+            f = casadi.Function("f", [casadi_y], [interp_casadi])
+            np.testing.assert_array_almost_equal(interp.evaluate(y=y_test), f(y_test))
+
     def test_concatenations(self):
         y = np.linspace(0, 1, 10)[:, np.newaxis]
         a = pybamm.Vector(y)

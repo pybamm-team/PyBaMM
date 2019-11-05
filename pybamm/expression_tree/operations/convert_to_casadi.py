@@ -4,6 +4,7 @@
 import pybamm
 import casadi
 import numpy as np
+from scipy.interpolate import PchipInterpolator, CubicSpline
 
 
 class CasadiConverter(object):
@@ -74,13 +75,17 @@ class CasadiConverter(object):
                 return casadi.mmax(*converted_children)
             elif symbol.function == np.abs:
                 return casadi.fabs(*converted_children)
+            elif isinstance(symbol.function, (PchipInterpolator, CubicSpline)):
+                return casadi.interpolant("LUT", "bspline", [symbol.x], symbol.y)(
+                    *converted_children
+                )
             elif not isinstance(
                 symbol.function, pybamm.GetCurrent
             ) and symbol.function.__name__.startswith("elementwise_grad_of_"):
                 differentiating_child_idx = int(symbol.function.__name__[-1])
                 # Create dummy symbolic variables in order to differentiate using CasADi
                 dummy_vars = [
-                    casadi.SX.sym("y_" + str(i)) for i in range(len(converted_children))
+                    casadi.MX.sym("y_" + str(i)) for i in range(len(converted_children))
                 ]
                 func_diff = casadi.gradient(
                     symbol.differentiated_function(*dummy_vars),

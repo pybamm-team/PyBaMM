@@ -4,7 +4,7 @@
 import pybamm
 
 
-class GetConstantCurrent(pybamm.GetCurrent):
+class ConstantCurrent(pybamm.GetCurrent):
     """
     Sets a constant input current for a simulation.
 

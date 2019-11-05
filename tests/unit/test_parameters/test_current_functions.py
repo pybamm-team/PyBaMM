@@ -13,7 +13,7 @@ class TestCurrentFunctions(unittest.TestCase):
         self.assertEqual(function(10), 1)
 
     def test_constant_current(self):
-        function = pybamm.GetConstantCurrent(current=4)
+        function = pybamm.ConstantCurrent(current=4)
         assert isinstance(function(0), numbers.Number)
         assert isinstance(function(np.zeros(3)), numbers.Number)
         assert isinstance(function(np.zeros([3, 3])), numbers.Number)
@@ -24,7 +24,7 @@ class TestCurrentFunctions(unittest.TestCase):
             {
                 "Typical current [A]": 2,
                 "Typical timescale [s]": 1,
-                "Current function": pybamm.GetConstantCurrent(),
+                "Current function": pybamm.ConstantCurrent(),
             }
         )
         processed_current = parameter_values.process_symbol(current)
@@ -69,9 +69,9 @@ class TestCurrentFunctions(unittest.TestCase):
         A = pybamm.electrical_parameters.I_typ
         omega = 3
 
-        # pass my_fun to GetUserCurrent class, giving the additonal parameters as
+        # pass my_fun to UserCurrent class, giving the additonal parameters as
         # keyword arguments
-        current = pybamm.GetUserCurrent(my_fun, A=A, omega=omega)
+        current = pybamm.UserCurrent(my_fun, A=A, omega=omega)
 
         # set and process parameters
         parameter_values = pybamm.ParameterValues(

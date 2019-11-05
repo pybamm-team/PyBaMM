@@ -3,7 +3,7 @@
 ## Features
 
 -   Added Simulation class ([#693](https://github.com/pybamm-team/PyBaMM/pull/693))
--   Add interface to CasADi solver ([#687](https://github.com/pybamm-team/PyBaMM/pull/687))
+-   Add interface to CasADi solver ([#687](https://github.com/pybamm-team/PyBaMM/pull/687), [#691](https://github.com/pybamm-team/PyBaMM/pull/691))
 -   Add option to use CasADi's Algorithmic Differentiation framework to calculate Jacobians ([#687](https://github.com/pybamm-team/PyBaMM/pull/687))
 -   Add method to evaluate parameters more easily ([#669](https://github.com/pybamm-team/PyBaMM/pull/669))
 -   Add `Jacobian` class to reuse known Jacobians of expressions ([#665](https://github.com/pybamm-team/PyBaMM/pull/670))

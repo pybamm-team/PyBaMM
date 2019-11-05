@@ -273,9 +273,9 @@ from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
 #
 from .parameters.standard_current_functions.base_current import GetCurrent
 from .parameters.standard_current_functions.get_constant_current import (
-    GetConstantCurrent,
+    ConstantCurrent,
 )
-from .parameters.standard_current_functions.get_user_current import GetUserCurrent
+from .parameters.standard_current_functions.get_user_current import UserCurrent
 from .parameters.standard_current_functions.get_current_data import GetCurrentData
 
 #

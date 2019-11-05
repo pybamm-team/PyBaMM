@@ -60,5 +60,7 @@ class Interpolant(pybamm.Function):
             interpolating_function, child, name=name, derivative="derivative"
         )
         # Store information as attributes
+        self.x = data[:, 0]
+        self.y = data[:, 1]
         self.interpolator = interpolator
         self.extrapolate = extrapolate

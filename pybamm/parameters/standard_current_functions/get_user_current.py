@@ -4,7 +4,7 @@
 import pybamm
 
 
-class GetUserCurrent(pybamm.GetCurrent):
+class UserCurrent(pybamm.GetCurrent):
     """
     Sets a user-defined function as the input current for a simulation.
 
