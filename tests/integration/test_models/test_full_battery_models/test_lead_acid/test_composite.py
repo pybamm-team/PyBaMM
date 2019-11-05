@@ -55,7 +55,6 @@ class TestLeadAcidCompositeSurfaceForm(unittest.TestCase):
         modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_all()
 
-    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing_algebraic(self):
         options = {"surface form": "algebraic"}
         model = pybamm.lead_acid.Composite(options)

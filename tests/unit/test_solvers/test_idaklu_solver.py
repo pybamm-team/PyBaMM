@@ -7,7 +7,7 @@ import scipy.sparse as sparse
 import unittest
 
 
-@unittest.skipIf(pybamm.have_idaklu(), "idaklu solver is not installed")
+@unittest.skipIf(~pybamm.have_idaklu(), "idaklu solver is not installed")
 class TestIDAKLUSolver(unittest.TestCase):
     def test_ida_roberts_klu(self):
         # this test implements a python version of the ida Roberts
