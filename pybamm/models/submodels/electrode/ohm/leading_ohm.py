@@ -77,4 +77,7 @@ class LeadingOrder(BaseModel):
         """
         Create and return the default solver for this model
         """
-        return pybamm.ScikitsOdeSolver()
+        if pybamm.have_idaklu():
+            return pybamm.IDAKLUSolver()
+        else:
+            return pybamm.CasadiSolver()

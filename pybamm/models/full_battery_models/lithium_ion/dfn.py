@@ -117,4 +117,7 @@ class DFN(BaseModel):
         """
 
         # Default solver to DAE
-        return pybamm.ScikitsDaeSolver()
+        if pybamm.have_idaklu():
+            return pybamm.IDAKLUSolver()
+        else:
+            return pybamm.CasadiSolver()

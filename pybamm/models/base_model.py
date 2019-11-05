@@ -103,7 +103,7 @@ class BaseModel(object):
         # Default behaviour is to use the jacobian and simplify
         self.use_jacobian = True
         self.use_simplify = True
-        self.convert_to_format = "python"
+        self.convert_to_format = "casadi"
 
     def _set_dictionary(self, dict, name):
         """

@@ -176,7 +176,10 @@ class BaseHigherOrderModel(BaseModel):
             self.options["current collector"] != "uniform"
             or self.options["surface form"] == "algebraic"
         ):
-            return pybamm.ScikitsDaeSolver()
+            if pybamm.have_idaklu():
+                return pybamm.IDAKLUSolver()
+            else:
+                return pybamm.CasadiSolver()
         else:
             return pybamm.ScipySolver()
 

@@ -49,4 +49,7 @@ class BaseModel(BaseElectrode):
         """
         Create and return the default solver for this model
         """
-        return pybamm.ScikitsDaeSolver()
+        if pybamm.have_idaklu():
+            return pybamm.IDAKLUSolver()
+        else:
+            return pybamm.CasadiSolver()

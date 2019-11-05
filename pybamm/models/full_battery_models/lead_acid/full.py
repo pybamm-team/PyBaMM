@@ -134,5 +134,7 @@ class Full(BaseModel):
             and self.options["current collector"] == "uniform"
         ):
             return pybamm.ScipySolver()
+        elif pybamm.have_idaklu():
+            return pybamm.IDAKLUSolver()
         else:
-            return pybamm.ScikitsDaeSolver()
+            return pybamm.CasadiSolver()

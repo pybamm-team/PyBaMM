@@ -139,7 +139,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         """
         Create and return the default solver for this model
         """
-        return pybamm.ScipySolver()
+        return pybamm.CasadiSolver()
 
     @property
     def options(self):

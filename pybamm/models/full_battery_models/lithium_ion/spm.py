@@ -128,4 +128,7 @@ class SPM(BaseModel):
         if dimensionality == 0:
             return pybamm.ScipySolver()
         else:
-            return pybamm.ScikitsDaeSolver()
+            if pybamm.have_idaklu():
+                return pybamm.IDAKLUSolver()
+            else:
+                return pybamm.CasadiSolver()
