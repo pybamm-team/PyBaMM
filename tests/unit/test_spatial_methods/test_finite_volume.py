@@ -56,7 +56,7 @@ class TestFiniteVolume(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.ShapeError, "child must have size n_nodes"):
             fin_vol.concatenation(edges)
 
-    def test_extrapolate_left_right(self):
+    def test_linear_extrapolate_left_right(self):
         # create discretisation
         mesh = get_mesh_for_testing()
         spatial_methods = {
@@ -74,8 +74,8 @@ class TestFiniteVolume(unittest.TestCase):
         # create variable
         var = pybamm.Variable("var", domain=whole_cell)
         # boundary value should work with something more complicated than a variable
-        extrap_left = pybamm.BoundaryValue(2 * var, "left")
-        extrap_right = pybamm.BoundaryValue(4 - var, "right")
+        extrap_left = pybamm.BoundaryValue(2 * var, "left", "linear")
+        extrap_right = pybamm.BoundaryValue(4 - var, "right", "linear")
         disc.set_variable_slices([var])
         extrap_left_disc = disc.process_symbol(extrap_left)
         extrap_right_disc = disc.process_symbol(extrap_right)
@@ -107,17 +107,133 @@ class TestFiniteVolume(unittest.TestCase):
         # Microscale
         # create variable
         var = pybamm.Variable("var", domain="negative particle")
+        surf_eqn = pybamm.surf(var, extrapolation="linear")
+        disc.set_variable_slices([var])
+        surf_eqn_disc = disc.process_symbol(surf_eqn)
+
+        # check constant extrapolates to constant
+        constant_y = np.ones_like(micro_submesh[0].nodes[:, np.newaxis])
+        self.assertEqual(surf_eqn_disc.evaluate(None, constant_y), 1.0)
+
+        # check linear variable extrapolates correctly
+        linear_y = micro_submesh[0].nodes
+        y_surf = micro_submesh[0].edges[-1]
+        np.testing.assert_array_almost_equal(
+            surf_eqn_disc.evaluate(None, linear_y), y_surf
+        )
+
+    def test_quadratic_extrapolate_left_right(self):
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume,
+            "negative particle": pybamm.FiniteVolume,
+            "current collector": pybamm.ZeroDimensionalMethod,
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        macro_submesh = mesh.combine_submeshes(*whole_cell)
+        micro_submesh = mesh["negative particle"]
+
+        # Macroscale
+        # create variable
+        var = pybamm.Variable("var", domain=whole_cell)
+        # boundary value should work with something more complicated than a variable
+        extrap_left = pybamm.BoundaryValue(2 * var, "left", "quadratic")
+        extrap_right = pybamm.BoundaryValue(4 - var, "right", "quadratic")
+        disc.set_variable_slices([var])
+        extrap_left_disc = disc.process_symbol(extrap_left)
+        extrap_right_disc = disc.process_symbol(extrap_right)
+
+        # check constant extrapolates to constant
+        constant_y = np.ones_like(macro_submesh[0].nodes[:, np.newaxis])
+        np.testing.assert_array_almost_equal(
+            extrap_left_disc.evaluate(None, constant_y), 2.0
+        )
+        np.testing.assert_array_almost_equal(
+            extrap_right_disc.evaluate(None, constant_y), 3.0
+        )
+
+        # check linear variable extrapolates correctly
+        linear_y = macro_submesh[0].nodes
+        np.testing.assert_array_almost_equal(
+            extrap_left_disc.evaluate(None, linear_y), 0
+        )
+        np.testing.assert_array_almost_equal(
+            extrap_right_disc.evaluate(None, linear_y), 3
+        )
+
+        # Fluxes
+        extrap_flux_left = pybamm.BoundaryGradient(2 * var, "left")
+        extrap_flux_right = pybamm.BoundaryGradient(1 - var, "right")
+        extrap_flux_left_disc = disc.process_symbol(extrap_flux_left)
+        extrap_flux_right_disc = disc.process_symbol(extrap_flux_right)
+
+        # check constant extrapolates to constant
+        self.assertEqual(extrap_flux_left_disc.evaluate(None, constant_y), 0)
+        self.assertEqual(extrap_flux_right_disc.evaluate(None, constant_y), 0)
+
+        # check linear variable extrapolates correctly
+        self.assertEqual(extrap_flux_left_disc.evaluate(None, linear_y), 2)
+        self.assertEqual(extrap_flux_right_disc.evaluate(None, linear_y), -1)
+
+        # Microscale
+        # create variable
+        var = pybamm.Variable("var", domain="negative particle")
         surf_eqn = pybamm.surf(var)
         disc.set_variable_slices([var])
         surf_eqn_disc = disc.process_symbol(surf_eqn)
 
         # check constant extrapolates to constant
         constant_y = np.ones_like(micro_submesh[0].nodes[:, np.newaxis])
-        self.assertEqual(surf_eqn_disc.evaluate(None, constant_y), 1)
+        np.testing.assert_array_almost_equal(
+            surf_eqn_disc.evaluate(None, constant_y), 1
+        )
 
         # check linear variable extrapolates correctly
         linear_y = micro_submesh[0].nodes
-        y_surf = micro_submesh[0].nodes[-1] + micro_submesh[0].d_nodes[-1] / 2
+        y_surf = micro_submesh[0].edges[-1]
+        np.testing.assert_array_almost_equal(
+            surf_eqn_disc.evaluate(None, linear_y), y_surf
+        )
+
+    def test_extrapolate_on_nonuniform_grid(self):
+        geometry = pybamm.Geometry("1D micro")
+
+        submesh_types = {
+            "negative particle": pybamm.MeshGenerator(pybamm.Exponential1DSubMesh),
+            "positive particle": pybamm.MeshGenerator(pybamm.Exponential1DSubMesh),
+        }
+
+        var = pybamm.standard_spatial_vars
+        rpts = 10
+        var_pts = {
+            var.r_n: rpts,
+            var.r_p: rpts,
+        }
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+        spatial_methods = {
+            "negative particle": pybamm.FiniteVolume,
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        var = pybamm.Variable("var", domain="negative particle")
+        surf_eqn = pybamm.surf(var)
+        disc.set_variable_slices([var])
+        surf_eqn_disc = disc.process_symbol(surf_eqn)
+
+        micro_submesh = mesh["negative particle"]
+
+        # check constant extrapolates to constant
+        constant_y = np.ones_like(micro_submesh[0].nodes[:, np.newaxis])
+        np.testing.assert_array_almost_equal(
+            surf_eqn_disc.evaluate(None, constant_y), 1
+        )
+
+        # check linear variable extrapolates correctly
+        linear_y = micro_submesh[0].nodes
+        y_surf = micro_submesh[0].edges[-1]
         np.testing.assert_array_almost_equal(
             surf_eqn_disc.evaluate(None, linear_y), y_surf
         )
@@ -1033,7 +1149,7 @@ class TestFiniteVolume(unittest.TestCase):
             }
         }
         int_grad_phi_disc = disc.process_symbol(int_grad_phi)
-        left_boundary_value = pybamm.BoundaryValue(int_grad_phi, "left")
+        left_boundary_value = pybamm.BoundaryValue(int_grad_phi, "left", "linear")
         left_boundary_value_disc = disc.process_symbol(left_boundary_value)
 
         combined_submesh = mesh.combine_submeshes("negative electrode", "separator")
@@ -1087,7 +1203,9 @@ class TestFiniteVolume(unittest.TestCase):
         )
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
         np.testing.assert_array_almost_equal(phi_exact, phi_approx)
-        self.assertEqual(left_boundary_value_disc.evaluate(y=phi_exact), 0)
+        np.testing.assert_array_almost_equal(
+            left_boundary_value_disc.evaluate(y=phi_exact), 0
+        )
 
         # sine case
         phi_exact = np.sin(
@@ -1095,7 +1213,9 @@ class TestFiniteVolume(unittest.TestCase):
         )
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
         np.testing.assert_array_almost_equal(phi_exact, phi_approx)
-        self.assertEqual(left_boundary_value_disc.evaluate(y=phi_exact), 0)
+        np.testing.assert_array_almost_equal(
+            left_boundary_value_disc.evaluate(y=phi_exact), 0
+        )
 
         # --------------------------------------------------------------------
         # micrsoscale case
@@ -1112,7 +1232,7 @@ class TestFiniteVolume(unittest.TestCase):
         }
 
         c_integral_disc = disc.process_symbol(c_integral)
-        left_boundary_value = pybamm.BoundaryValue(c_integral, "left")
+        left_boundary_value = pybamm.BoundaryValue(c_integral, "left", "linear")
         left_boundary_value_disc = disc.process_symbol(left_boundary_value)
         combined_submesh = mesh["negative particle"]
 
@@ -1127,13 +1247,17 @@ class TestFiniteVolume(unittest.TestCase):
         c_exact = combined_submesh[0].nodes[:, np.newaxis]
         c_approx = c_integral_disc.evaluate(None, c_exact)
         np.testing.assert_array_almost_equal(c_exact, c_approx)
-        self.assertEqual(left_boundary_value_disc.evaluate(y=c_exact), 0)
+        np.testing.assert_array_almost_equal(
+            left_boundary_value_disc.evaluate(y=c_exact), 0
+        )
 
         # sine case
         c_exact = np.sin(combined_submesh[0].nodes[:, np.newaxis])
         c_approx = c_integral_disc.evaluate(None, c_exact)
         np.testing.assert_array_almost_equal(c_exact, c_approx, decimal=3)
-        self.assertEqual(left_boundary_value_disc.evaluate(y=c_exact), 0)
+        np.testing.assert_array_almost_equal(
+            left_boundary_value_disc.evaluate(y=c_exact), 0
+        )
 
     def test_indefinite_integral_on_nodes(self):
         mesh = get_mesh_for_testing()

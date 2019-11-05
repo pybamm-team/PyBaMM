@@ -596,23 +596,72 @@ class FiniteVolume(pybamm.SpatialMethod):
             if symbol.side == "left":
                 dx0 = nodes[0] - edges[0]
                 dx1 = submesh_list[0].d_nodes[0]
+                dx2 = submesh_list[0].d_nodes[1]
 
                 if extrapolation == "linear":
+                    # to find value at x* use formula:
+                    # f(x*) = f_1 - (dx0 / dx1) (f_2 - f_1)
+                    # where
+                    # dx0 is distance between edge and first node
+                    # dx1 is distance between first and second nodes
+
                     sub_matrix = csr_matrix(
                         ([1 + (dx0 / dx1), -(dx0 / dx1)], ([0, 0], [0, 1])),
                         shape=(1, prim_pts),
                     )
+                elif extrapolation == "quadratic":
+                    # to find value at x* use formula:
+                    # see mathematica notebook at:
+                    # https://github.com/Scottmar93/extrapolation-coefficents/tree/master
+                    # f(x*) = a f_1 + b f_2 + c f_3
+
+                    a = (dx0 + dx1) * (dx0 + dx1 + dx2) / (dx1 * (dx1 + dx2))
+                    b = -dx0 * (dx0 + dx1 + dx2) / (dx1 * dx2)
+                    c = dx0 * (dx0 + dx1) / (dx2 * (dx1 + dx2))
+
+                    sub_matrix = csr_matrix(
+                        ([a, b, c], ([0, 0, 0], [0, 1, 2])), shape=(1, prim_pts),
+                    )
                 else:
                     raise NotImplementedError
+
             elif symbol.side == "right":
                 dxN = edges[-1] - nodes[-1]
                 dxNm1 = submesh_list[0].d_nodes[-1]
+                dxNm2 = submesh_list[0].d_nodes[-2]
 
                 if extrapolation == "linear":
+                    # to find value at x* use formula:
+                    # f(x*) = f_N - (dxN / dxNm1) (f_N - f_Nm1)
+                    # where
+                    # dxN is distance between edge and last node
+                    # dxNm1 is distance between second lase and last nodes
+
                     sub_matrix = csr_matrix(
                         (
                             [-(dxN / dxNm1), 1 + (dxN / dxNm1)],
                             ([0, 0], [prim_pts - 2, prim_pts - 1]),
+                        ),
+                        shape=(1, prim_pts),
+                    )
+                elif extrapolation == "quadratic":
+                    # to find value at x* use formula:
+                    # see mathematica notebook at:
+                    # https://github.com/Scottmar93/extrapolation-coefficents/tree/master
+                    # f(x*) = a f_N + b f_Nm1 + c f_Nm2
+
+                    a = (
+                        (dxN + dxNm1)
+                        * (dxN + dxNm1 + dxNm2)
+                        / (dxNm1 * (dxNm1 + dxNm2))
+                    )
+                    b = -dxN * (dxN + dxNm1 + dxNm2) / (dxNm1 * dxNm2)
+                    c = dxN * (dxN + dxNm1) / (dxNm2 * (dxNm1 + dxNm2))
+
+                    sub_matrix = csr_matrix(
+                        (
+                            [c, b, a],
+                            ([0, 0, 0], [prim_pts - 3, prim_pts - 2, prim_pts - 1]),
                         ),
                         shape=(1, prim_pts),
                     )
