@@ -82,15 +82,16 @@ disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
 
 # discharge timescale
-tau = param.process_symbol(
+tau = param.evaluate(
     pybamm.standard_parameters_lithium_ion.tau_discharge
-).evaluate()
+)
 
-# solve model -- simulate one hour discharge
+# solve model
 t_end = 900 / tau
 t_eval = np.linspace(0, t_end, 120)
-solver = pybamm.KLU(atol=1e-8, rtol=1e-8, root_tol=1e-8)
-model.convert_to_format = "casadi"
+model.convert_to_format = "casadi"  # use casadi for jacobian
+solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
+# solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
 solution = solver.solve(model, t_eval)
 
 # TO DO: 2+1D automated plotting

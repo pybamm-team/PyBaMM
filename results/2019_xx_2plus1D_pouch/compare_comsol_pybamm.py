@@ -32,8 +32,7 @@ options = {
     "dimensionality": 2,
     "thermal": "x-lumped",
 }
-pybamm_model = pybamm.lithium_ion.SPMe(options)
-# pybamm_model.use_simplify = False
+pybamm_model = pybamm.lithium_ion.DFN(options)
 geometry = pybamm_model.default_geometry
 
 # load parameters and process model and geometry
@@ -47,14 +46,14 @@ var = pybamm.standard_spatial_vars
 submesh_types = pybamm_model.default_submesh_types
 
 # cube root sequence in particles
-r_n_edges = np.linspace(0, 1, 11) ** (1 / 3)
-submesh_types["negative particle"] = pybamm.MeshGenerator(
-    pybamm.UserSupplied1DSubMesh, submesh_params={"edges": r_n_edges}
-)
-r_p_edges = np.linspace(0, 1, 11) ** (1 / 3)
-submesh_types["positive particle"] = pybamm.MeshGenerator(
-    pybamm.UserSupplied1DSubMesh, submesh_params={"edges": r_p_edges}
-)
+#r_n_edges = np.linspace(0, 1, 11) ** (1 / 3)
+#submesh_types["negative particle"] = pybamm.MeshGenerator(
+#    pybamm.UserSupplied1DSubMesh, submesh_params={"edges": r_n_edges}
+#)
+#r_p_edges = np.linspace(0, 1, 11) ** (1 / 3)
+#submesh_types["positive particle"] = pybamm.MeshGenerator(
+#    pybamm.UserSupplied1DSubMesh, submesh_params={"edges": r_p_edges}
+#)
 
 # custom mesh in y to ensure edges align with tab edges
 l_y = param.evaluate(pybamm.geometric_parameters.l_y)
@@ -83,11 +82,11 @@ submesh_types["current collector"] = pybamm.MeshGenerator(
 )
 
 var_pts = {
-    var.x_n: 10,
-    var.x_s: 10,
-    var.x_p: 10,
-    var.r_n: len(r_n_edges) - 1,  # Finite Volume nodes one less than edges
-    var.r_p: len(r_p_edges) - 1,  # Finite Volume nodes one less than edges
+    var.x_n: 5,
+    var.x_s: 5,
+    var.x_p: 5,
+    var.r_n: 11, #len(r_n_edges) - 1,  # Finite Volume nodes one less than edges
+    var.r_p: 11, #len(r_p_edges) - 1,  # Finite Volume nodes one less than edges
     var.y: len(y_edges),
     var.z: len(z_edges),
 }
@@ -98,16 +97,15 @@ disc = pybamm.Discretisation(mesh, pybamm_model.default_spatial_methods)
 disc.process_model(pybamm_model)
 
 # discharge timescale
-tau = param.process_symbol(
+tau = param.evaluate(
     pybamm.standard_parameters_lithium_ion.tau_discharge
-).evaluate()
+)
 
-# solve model -- simulate one hour discharge
-t_end = 3600 / tau
-t_eval = np.linspace(0, t_end, 120)
-solver = pybamm.CasadiSolver(atol=1e-8, rtol=1e-8, root_tol=1e-8, mode="fast")
-#pybamm_model.convert_to_format = "casadi"
-#solver = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8, root_tol=1e-8)
+# solve model at comsol times
+t_eval = comsol_variables["time"] / tau
+#solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6, mode="fast")
+pybamm_model.convert_to_format = "casadi"
+solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
 solution = solver.solve(pybamm_model, t_eval)
 
 
@@ -115,7 +113,7 @@ solution = solver.solve(pybamm_model, t_eval)
 "Make Comsol 'model' for comparison"
 
 # interpolate using *dimensional* space. Note that both y and z are scaled with L_z
-L_z = param.process_symbol(pybamm.standard_parameters_lithium_ion.L_z).evaluate()
+L_z = param.evaluate(pybamm.standard_parameters_lithium_ion.L_z)
 pybamm_y = mesh["current collector"][0].edges["y"]
 pybamm_z = mesh["current collector"][0].edges["z"]
 y_interp = pybamm_y * L_z

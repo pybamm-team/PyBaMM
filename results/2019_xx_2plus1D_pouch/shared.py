@@ -10,7 +10,7 @@ def make_comsol_model(comsol_variables, mesh, param, y_interp=None, z_interp=Non
     comsol_t = comsol_variables["time"]
 
     # interpolate using *dimensional* space. Note that both y and z are scaled with L_z
-    L_z = param.process_symbol(pybamm.standard_parameters_lithium_ion.L_z).evaluate()
+    L_z = param.evaluate(pybamm.standard_parameters_lithium_ion.L_z)
     if y_interp is None:
         pybamm_y = mesh["current collector"][0].edges["y"]
         y_interp = pybamm_y * L_z
@@ -96,10 +96,8 @@ def plot_2D_var(
     z_plot = comsol_model.z_interp
 
     # plot pybamm solution
-    L_z = param.process_symbol(pybamm.standard_parameters_lithium_ion.L_z).evaluate()
-    tau = param.process_symbol(
-        pybamm.standard_parameters_lithium_ion.tau_discharge
-    ).evaluate()
+    L_z = param.evaluate(pybamm.standard_parameters_lithium_ion.L_z)
+    tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
     y_plot_non_dim = y_plot / L_z  # Note that both y and z are scaled with L_z
     z_plot_non_dim = z_plot / L_z
     t_non_dim = t / tau

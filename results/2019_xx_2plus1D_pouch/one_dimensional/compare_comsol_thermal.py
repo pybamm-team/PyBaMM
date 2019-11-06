@@ -29,17 +29,19 @@ geometry = pybamm_model.default_geometry
 
 # load parameters and process model and geometry
 param = pybamm_model.default_parameter_values
-param.update({
-    "C-rate": 1,
-#    "Negative electrode conductivity [S.m-1]": 1e6,
-#    "Positive electrode conductivity [S.m-1]": 1e6,
-})
+param.update(
+    {
+        "C-rate": 1,
+        #    "Negative electrode conductivity [S.m-1]": 1e6,
+        #    "Positive electrode conductivity [S.m-1]": 1e6,
+    }
+)
 param.process_model(pybamm_model)
 param.process_geometry(geometry)
 
 # create mesh
 var = pybamm.standard_spatial_vars
-#var_pts = {var.x_n: 101, var.x_s: 31, var.x_p: 101, var.r_n: 31, var.r_p: 31}
+# var_pts = {var.x_n: 101, var.x_s: 31, var.x_p: 101, var.r_n: 31, var.r_p: 31}
 var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.r_n: 10, var.r_p: 10}
 mesh = pybamm.Mesh(geometry, pybamm_model.default_submesh_types, var_pts)
 
@@ -54,7 +56,8 @@ tau = param.process_symbol(
 
 # solve model at comsol times
 time = comsol_variables["time"] / tau
-solver = pybamm.CasadiSolver(mode="fast")
+pybamm_model.convert_to_format = "casadi"
+solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
 solution = solver.solve(pybamm_model, time)
 
 "-----------------------------------------------------------------------------"
@@ -368,15 +371,15 @@ def whole_cell_comparison_plot(var, plot_times=None):
 
 # Make plots
 plot_times = comsol_variables["time"][0::10]
-#plot_times = [600, 1200, 1800, 2400, 3000]
+# plot_times = [600, 1200, 1800, 2400, 3000]
 # heat sources
-#whole_cell_by_domain_comparison_plot(
+# whole_cell_by_domain_comparison_plot(
 #    "Irreversible electrochemical heating [W.m-3]", plot_times=plot_times
-#)
-#whole_cell_by_domain_comparison_plot(
+# )
+# whole_cell_by_domain_comparison_plot(
 #    "Reversible heating [W.m-3]", plot_times=plot_times
-#)
-#whole_cell_by_domain_comparison_plot("Total heating [W.m-3]", plot_times=plot_times)
+# )
+# whole_cell_by_domain_comparison_plot("Total heating [W.m-3]", plot_times=plot_times)
 # potentials
 electrode_comparison_plot("electrode potential [V]", plot_times=plot_times)
 whole_cell_comparison_plot("Electrolyte potential [V]", plot_times=plot_times)
