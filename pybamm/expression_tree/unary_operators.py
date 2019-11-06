@@ -738,15 +738,12 @@ class BoundaryValue(BoundaryOperator):
         The variable whose boundary value to take
     side : str
         Which side to take the boundary value on ("left" or "right")
-    extrapolation : str
-        What extrapolation method to use for this variable ("linear" or "quadratic")
 
     **Extends:** :class:`BoundaryOperator`
     """
 
-    def __init__(self, child, side, extrapolation="quadratic"):
+    def __init__(self, child, side):
         super().__init__("boundary value", child, side)
-        self.extrapolation = extrapolation
 
 
 class BoundaryGradient(BoundaryOperator):
@@ -758,15 +755,12 @@ class BoundaryGradient(BoundaryOperator):
         The variable whose boundary flux to take
     side : str
         Which side to take the boundary flux on ("left" or "right")
-    extrapolation : str
-        What extrapolation method to use on this variable ("linear" or "quadratic")
 
     **Extends:** :class:`BoundaryOperator`
     """
 
-    def __init__(self, child, side, extrapolation="linear"):
+    def __init__(self, child, side):
         super().__init__("boundary flux", child, side)
-        self.extrapolation = extrapolation
 
 
 #
@@ -856,7 +850,7 @@ def grad_squared(expression):
 #
 
 
-def surf(symbol, set_domain=False, extrapolation="quadratic"):
+def surf(symbol, set_domain=False):
     """convenience function for creating a right :class:`BoundaryValue`, usually in the
     spherical geometry
 
@@ -865,8 +859,6 @@ def surf(symbol, set_domain=False, extrapolation="quadratic"):
 
     symbol : :class:`pybamm.Symbol`
         the surface value of this symbol will be returned
-    extrapolation : str
-        The type of extrapolation method to use ("linear" or "quadratic")
 
     Returns
     -------
@@ -876,10 +868,10 @@ def surf(symbol, set_domain=False, extrapolation="quadratic"):
     if symbol.domain in [["negative electrode"], ["positive electrode"]] and isinstance(
         symbol, pybamm.PrimaryBroadcast
     ):
-        child_surf = boundary_value(symbol.orphans[0], "right", extrapolation)
+        child_surf = boundary_value(symbol.orphans[0], "right")
         out = pybamm.PrimaryBroadcast(child_surf, symbol.domain)
     else:
-        out = boundary_value(symbol, "right", extrapolation)
+        out = boundary_value(symbol, "right")
         if set_domain:
             if symbol.domain == ["negative particle"]:
                 out.domain = ["negative electrode"]
@@ -1023,7 +1015,7 @@ def yz_average(symbol):
         return Integral(symbol, [y, z]) / (l_y * l_z)
 
 
-def boundary_value(symbol, side, extrapolation="quadratic"):
+def boundary_value(symbol, side):
     """convenience function for creating a :class:`pybamm.BoundaryValue`
 
     Parameters
@@ -1032,8 +1024,6 @@ def boundary_value(symbol, side, extrapolation="quadratic"):
         The symbol whose boundary value to take
     side : str
         Which side to take the boundary value on ("left" or "right")
-    extrapolation : str
-        The type of extrapolation method to use ("linear" or "quadratic")
 
     Returns
     -------
@@ -1050,7 +1040,7 @@ def boundary_value(symbol, side, extrapolation="quadratic"):
         return symbol.orphans[0]
     # Otherwise, calculate boundary value
     else:
-        return BoundaryValue(symbol, side, extrapolation)
+        return BoundaryValue(symbol, side)
 
 
 def r_average(symbol):

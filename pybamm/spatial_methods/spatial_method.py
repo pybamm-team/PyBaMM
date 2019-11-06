@@ -278,7 +278,7 @@ class SpatialMethod:
 
         raise NotImplementedError
 
-    def boundary_value_or_flux(self, symbol, discretised_child, extrapolation="linear"):
+    def boundary_value_or_flux(self, symbol, discretised_child):
         """
         Returns the boundary value or flux using the approriate expression for the
         spatial method. To do this, we create a sparse vector 'bv_vector' that extracts

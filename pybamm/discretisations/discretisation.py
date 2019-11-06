@@ -707,9 +707,7 @@ class Discretisation(object):
                     mesh = self.mesh[symbol.children[0].domain[0]][0]
                     if isinstance(mesh, pybamm.SubMesh1D):
                         symbol.side = mesh.tabs[symbol.side]
-                return child_spatial_method.boundary_value_or_flux(
-                    symbol, disc_child, symbol.extrapolation
-                )
+                return child_spatial_method.boundary_value_or_flux(symbol, disc_child)
 
             else:
                 return symbol._unary_new_copy(disc_child)

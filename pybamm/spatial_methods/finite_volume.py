@@ -34,6 +34,10 @@ class FiniteVolume(pybamm.SpatialMethod):
 
     def __init__(self, mesh):
         super().__init__(mesh)
+
+        # there is no way to set this at the moment
+        self.extrapolation = "linear"
+
         # add npts_for_broadcast to mesh domains for this particular discretisation
         for dom in mesh.keys():
             for i in range(len(mesh[dom])):
@@ -572,7 +576,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return pybamm.Matrix(matrix) @ discretised_symbol + bcs_vector
 
-    def boundary_value_or_flux(self, symbol, discretised_child, extrapolation="linear"):
+    def boundary_value_or_flux(self, symbol, discretised_child):
         """
         Uses linear extrapolation to get the boundary value or flux of a variable in the
         Finite Volume Method.
@@ -592,13 +596,17 @@ class FiniteVolume(pybamm.SpatialMethod):
             nodes = submesh_list[0].nodes
             edges = submesh_list[0].edges
 
-            # assumes uniform!
-            if symbol.side == "left":
-                dx0 = nodes[0] - edges[0]
-                dx1 = submesh_list[0].d_nodes[0]
-                dx2 = submesh_list[0].d_nodes[1]
+            dx0 = nodes[0] - edges[0]
+            dx1 = submesh_list[0].d_nodes[0]
+            dx2 = submesh_list[0].d_nodes[1]
 
-                if extrapolation == "linear":
+            dxN = edges[-1] - nodes[-1]
+            dxNm1 = submesh_list[0].d_nodes[-1]
+            dxNm2 = submesh_list[0].d_nodes[-2]
+
+            if symbol.side == "left":
+
+                if self.extrapolation == "linear":
                     # to find value at x* use formula:
                     # f(x*) = f_1 - (dx0 / dx1) (f_2 - f_1)
                     # where
@@ -609,7 +617,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                         ([1 + (dx0 / dx1), -(dx0 / dx1)], ([0, 0], [0, 1])),
                         shape=(1, prim_pts),
                     )
-                elif extrapolation == "quadratic":
+                elif self.extrapolation == "quadratic":
                     # to find value at x* use formula:
                     # see mathematica notebook at:
                     # https://github.com/Scottmar93/extrapolation-coefficents/tree/master
@@ -626,11 +634,8 @@ class FiniteVolume(pybamm.SpatialMethod):
                     raise NotImplementedError
 
             elif symbol.side == "right":
-                dxN = edges[-1] - nodes[-1]
-                dxNm1 = submesh_list[0].d_nodes[-1]
-                dxNm2 = submesh_list[0].d_nodes[-2]
 
-                if extrapolation == "linear":
+                if self.extrapolation == "linear":
                     # to find value at x* use formula:
                     # f(x*) = f_N - (dxN / dxNm1) (f_N - f_Nm1)
                     # where
@@ -644,7 +649,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                         ),
                         shape=(1, prim_pts),
                     )
-                elif extrapolation == "quadratic":
+                elif self.extrapolation == "quadratic":
                     # to find value at x* use formula:
                     # see mathematica notebook at:
                     # https://github.com/Scottmar93/extrapolation-coefficents/tree/master
@@ -670,11 +675,22 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         elif isinstance(symbol, pybamm.BoundaryGradient):
             if symbol.side == "left":
-                dx = submesh_list[0].d_nodes[0]
+                # use formula:
+                # f'(x*) = (f_2 - f_1) / dx1
+                # where dx1 = x_2 - x_1
 
-                if extrapolation == "linear":
-                    sub_matrix = (1 / dx) * csr_matrix(
+                if self.extrapolation == "linear":
+                    sub_matrix = (1 / dx1) * csr_matrix(
                         ([-1, 1], ([0, 0], [0, 1])), shape=(1, prim_pts)
+                    )
+                elif self.extrapolation == "quadratic":
+
+                    a = -(2 * dx0 + 2 * dx1 + dx2) / (dx1 ** 2 + dx1 * dx2)
+                    b = (2 * dx0 + dx1 + dx2) / (dx1 * dx2)
+                    c = -(2 * dx0 + dx1) / (dx1 * dx2 + dx2 ** 2)
+
+                    sub_matrix = csr_matrix(
+                        ([a, b, c], ([0, 0, 0], [0, 1, 2])), shape=(1, prim_pts)
                     )
                 else:
                     raise NotImplementedError
@@ -682,9 +698,21 @@ class FiniteVolume(pybamm.SpatialMethod):
             elif symbol.side == "right":
                 dx = submesh_list[0].d_nodes[-1]
 
-                if extrapolation == "linear":
+                if self.extrapolation == "linear":
                     sub_matrix = (1 / dx) * csr_matrix(
                         ([-1, 1], ([0, 0], [prim_pts - 2, prim_pts - 1])),
+                        shape=(1, prim_pts),
+                    )
+                elif self.extrapolation == "quadratic":
+                    a = (2 * dxN + 2 * dxNm1 + dxNm2) / (dxNm1 ** 2 + dxNm1 * dxNm2)
+                    b = -(2 * dxN + dxNm1 + dxNm2) / (dxNm1 * dxNm2)
+                    c = (2 * dxN + dxNm1) / (dxNm1 * dxNm2 + dxNm2 ** 2)
+
+                    sub_matrix = csr_matrix(
+                        (
+                            [c, b, a],
+                            ([0, 0, 0], [prim_pts - 3, prim_pts - 2, prim_pts - 1]),
+                        ),
                         shape=(1, prim_pts),
                     )
                 else:

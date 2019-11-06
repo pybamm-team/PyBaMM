@@ -322,7 +322,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
         return pybamm.Matrix(integration_vector[np.newaxis, :])
 
-    def boundary_value_or_flux(self, symbol, discretised_child, extrapolation="linear"):
+    def boundary_value_or_flux(self, symbol, discretised_child):
         """
         Returns the average value of the symbol over the negative tab ("negative tab")
         or the positive tab ("positive tab") in the Finite Element Method.
