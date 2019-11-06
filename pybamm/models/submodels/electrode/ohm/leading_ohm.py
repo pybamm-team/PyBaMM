@@ -71,13 +71,3 @@ class LeadingOrder(BaseModel):
         rbc = (pybamm.Scalar(0), "Neumann")
 
         self.boundary_conditions[phi_s] = {"left": lbc, "right": rbc}
-
-    @property
-    def default_solver(self):
-        """
-        Create and return the default solver for this model
-        """
-        if pybamm.have_idaklu():
-            return pybamm.IDAKLUSolver()
-        else:
-            return pybamm.CasadiSolver()

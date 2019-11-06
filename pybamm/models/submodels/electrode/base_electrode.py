@@ -142,13 +142,3 @@ class BaseElectrode(pybamm.BaseSubModel):
             variables = {"Electrode current density": i_s}
 
         return variables
-
-    @property
-    def default_solver(self):
-        """
-        Create and return the default solver for this model
-        """
-        if pybamm.have_idaklu():
-            return pybamm.IDAKLUSolver()
-        else:
-            return pybamm.CasadiSolver()

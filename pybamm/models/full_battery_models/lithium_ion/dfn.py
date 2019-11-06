@@ -109,15 +109,3 @@ class DFN(BaseModel):
             return pybamm.Geometry("1+1D macro", "(1+1)+1D micro")
         elif dimensionality == 2:
             return pybamm.Geometry("2+1D macro", "(2+1)+1D micro")
-
-    @property
-    def default_solver(self):
-        """
-        Create and return the default solver for this model
-        """
-
-        # Default solver to DAE
-        if pybamm.have_idaklu():
-            return pybamm.IDAKLUSolver()
-        else:
-            return pybamm.CasadiSolver()

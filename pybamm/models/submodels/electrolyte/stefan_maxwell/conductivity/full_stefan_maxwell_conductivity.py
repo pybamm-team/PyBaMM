@@ -65,13 +65,3 @@ class Full(BaseModel):
         phi_e = variables["Electrolyte potential"]
         T_ref = self.param.T_ref
         self.initial_conditions = {phi_e: -self.param.U_n(self.param.c_n_init, T_ref)}
-
-    @property
-    def default_solver(self):
-        """
-        Create and return the default solver for this model
-        """
-        if pybamm.have_idaklu():
-            return pybamm.IDAKLUSolver()
-        else:
-            return pybamm.CasadiSolver()
