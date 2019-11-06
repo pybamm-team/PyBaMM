@@ -416,6 +416,19 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
             self.variables.update(submodel.get_fundamental_variables())
 
+        # Get any external variables
+        self.external_variables = []
+        for submodel_name, submodel in self.submodels.items():
+            pybamm.logger.debug(
+                "Getting external variables for {} submodel ({})".format(
+                    submodel_name, self.name
+                )
+            )
+            variables, external_variables = submodel.get_external_variables()
+
+            self.variables.update(variables)
+            self.external_variables += external_variables
+
         # Get coupled variables
         # Note: pybamm will try to get the coupled variables for the submodels in the
         # order they are set by the user. If this fails for a particular submodel,
@@ -454,6 +467,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             pybamm.logger.debug(
                 "Setting rhs for {} submodel ({})".format(submodel_name, self.name)
             )
+
             submodel.set_rhs(self.variables)
             pybamm.logger.debug(
                 "Setting algebraic for {} submodel ({})".format(

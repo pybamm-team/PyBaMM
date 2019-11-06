@@ -101,6 +101,21 @@ class BaseSubModel:
         """
         return {}
 
+    def set_external_variables(self):
+        """
+        A public method that creates and returns the variables in a submodel which are
+        suppled external to the model.
+
+        Returns
+        -------
+        dict :
+            The variables created by the submodel which are independent of variables in
+            other submodels.
+        list :
+            A list of the external variables in the model.
+        """
+        return {}, []
+
     def get_coupled_variables(self, variables):
         """
         A public method that creates and returns the variables in a submodel which
