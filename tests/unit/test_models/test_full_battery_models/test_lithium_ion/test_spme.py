@@ -173,14 +173,6 @@ class TestSPMe(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             model = pybamm.lithium_ion.SPMe(options)
 
-    def test_default_solver(self):
-        options = {"thermal": "isothermal"}
-        model = pybamm.lithium_ion.SPMe(options)
-        self.assertIsInstance(model.default_solver, pybamm.ScipySolver)
-        options = {"current collector": "potential pair", "dimensionality": 2}
-        model = pybamm.lithium_ion.SPMe(options)
-        self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
-
     def test_particle_fast_diffusion(self):
         options = {"particle": "fast diffusion"}
         model = pybamm.lithium_ion.SPMe(options)

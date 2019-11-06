@@ -146,21 +146,6 @@ class TestLeadAcidLOQSSurfaceForm(unittest.TestCase):
         model = pybamm.lead_acid.LOQS(options)
         model.check_well_posedness()
 
-    def test_default_solver(self):
-        options = {"surface form": "differential"}
-        model = pybamm.lead_acid.LOQS(options)
-        self.assertIsInstance(model.default_solver, pybamm.ScipySolver)
-        options = {
-            "surface form": "differential",
-            "current collector": "potential pair",
-            "dimensionality": 1,
-        }
-        model = pybamm.lead_acid.LOQS(options)
-        self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
-        options = {"surface form": "algebraic"}
-        model = pybamm.lead_acid.LOQS(options)
-        self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
-
     def test_default_geometry(self):
         options = {"surface form": "differential"}
         model = pybamm.lead_acid.LOQS(options)
