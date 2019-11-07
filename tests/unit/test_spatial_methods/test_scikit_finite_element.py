@@ -461,6 +461,68 @@ class TestScikitFiniteElement(unittest.TestCase):
         u_exact = z ** 2 / 2 - 1 / 6
         np.testing.assert_array_almost_equal(solution.y[:-1], u_exact, decimal=1)
 
+    def test_dirichlet_bcs(self):
+        # manufactured solution u = a*z^2 + b*z + c
+        model = pybamm.BaseModel()
+        a = 3
+        b = 4
+        c = 5
+        u = pybamm.Variable("variable", domain="current collector")
+        model.algebraic = {u: -pybamm.laplacian(u) + pybamm.source(2 * a, u)}
+        # set boundary conditions ("negative tab" = bottom of unit square,
+        # "positive tab" = top of unit square, elsewhere normal derivative is zero)
+        model.boundary_conditions = {
+            u: {
+                "negative tab": (pybamm.Scalar(c), "Dirichlet"),
+                "positive tab": (pybamm.Scalar(a + b + c), "Dirichlet"),
+            }
+        }
+        # bad initial guess (on purpose)
+        model.initial_conditions = {u: pybamm.Scalar(1)}
+        model.variables = {"u": u}
+        # create discretisation
+        mesh = get_unit_2p1D_mesh_for_testing(ypts=8, zpts=32)
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume,
+            "current collector": pybamm.ScikitFiniteElement,
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
+
+        # solve model
+        solver = pybamm.AlgebraicSolver()
+        solution = solver.solve(model)
+
+        # indepedent of y, so just check values for one y
+        z = mesh["current collector"][0].edges["z"][:, np.newaxis]
+        u_exact = a * z ** 2 + b * z + c
+        np.testing.assert_array_almost_equal(solution.y[0 : len(z)], u_exact)
+
+    def test_disc_spatial_var(self):
+        mesh = get_unit_2p1D_mesh_for_testing(ypts=4, zpts=5)
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume,
+            "current collector": pybamm.ScikitFiniteElement,
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        # discretise y and z
+        y = pybamm.SpatialVariable("y", ["current collector"])
+        z = pybamm.SpatialVariable("z", ["current collector"])
+        y_disc = disc.process_symbol(y)
+        z_disc = disc.process_symbol(z)
+
+        # create expected meshgrid
+        y_vec = np.linspace(0, 1, 4)
+        z_vec = np.linspace(0, 1, 5)
+        Y, Z = np.meshgrid(y_vec, z_vec)
+        y_actual = np.transpose(Y).flatten()[:, np.newaxis]
+        z_actual = np.transpose(Z).flatten()[:, np.newaxis]
+
+        # spatial vars should discretise to the flattend meshgrid
+        np.testing.assert_array_equal(y_disc.evaluate(), y_actual)
+        np.testing.assert_array_equal(z_disc.evaluate(), z_actual)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

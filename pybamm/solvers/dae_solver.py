@@ -39,6 +39,7 @@ class DaeSolver(pybamm.BaseSolver):
         self.root_method = root_method
         self.root_tol = root_tol
         self.max_steps = max_steps
+        self.name = "Base DAE solver"
 
     @property
     def root_method(self):

@@ -250,7 +250,7 @@ class TestSpecificFunctions(unittest.TestCase):
             (pybamm.sqrt(pybamm.Scalar(3 + h)).evaluate() - fun.evaluate()) / h,
             places=5,
         )
-        
+
     def test_tanh(self):
         a = pybamm.Scalar(3)
         fun = pybamm.tanh(a)

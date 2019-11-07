@@ -416,6 +416,9 @@ curlyU_p_init = Q_e_max * (1.2 - q_init) / (Q_p_max * l_p)
 c_n_init = c_e_init
 c_p_init = c_e_init
 
+# Thermal effects not implemented for lead-acid, but parameter needed for consistency
+Theta = pybamm.Scalar(0)  # ratio of typical temperature change to ambient temperature
+
 
 # --------------------------------------------------------------------------------------
 "5. Dimensionless Functions"

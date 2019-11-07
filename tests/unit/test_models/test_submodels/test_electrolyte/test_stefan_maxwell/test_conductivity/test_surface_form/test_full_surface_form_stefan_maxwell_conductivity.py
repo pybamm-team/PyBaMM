@@ -27,6 +27,8 @@ class TestFull(unittest.TestCase):
             "Negative electrode interfacial current density": a_n,
             "Electrolyte potential": pybamm.Concatenation(a_n, a_s, a_p),
             "Negative electrode temperature": a_n,
+            "Separator temperature": a_s,
+            "Positive electrode temperature": a_p,
         }
         icd = " interfacial current density"
         reactions = {

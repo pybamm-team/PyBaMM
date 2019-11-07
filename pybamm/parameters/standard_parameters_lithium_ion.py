@@ -38,7 +38,6 @@ L_z = pybamm.geometric_parameters.L_z
 L = pybamm.geometric_parameters.L
 A_cc = pybamm.geometric_parameters.A_cc
 
-
 # Tab geometry
 L_tab_n = pybamm.geometric_parameters.L_tab_n
 Centre_y_tab_n = pybamm.geometric_parameters.Centre_y_tab_n
@@ -254,8 +253,10 @@ l_n = pybamm.geometric_parameters.l_n
 l_s = pybamm.geometric_parameters.l_s
 l_p = pybamm.geometric_parameters.l_p
 l_cp = pybamm.geometric_parameters.l_cp
+l_x = pybamm.geometric_parameters.l_x
 l_y = pybamm.geometric_parameters.l_y
 l_z = pybamm.geometric_parameters.l_z
+a_cc = pybamm.geometric_parameters.a_cc
 l = pybamm.geometric_parameters.l
 delta = pybamm.geometric_parameters.delta
 
@@ -405,13 +406,15 @@ def m_p(T):
 def U_n(c_s_n, T):
     "Dimensionless open-circuit potential in the negative electrode"
     sto = c_s_n
-    return (U_n_dimensional(sto, T) - U_n_ref) / potential_scale
+    T_dim = Delta_T * T + T_ref
+    return (U_n_dimensional(sto, T_dim) - U_n_ref) / potential_scale
 
 
 def U_p(c_s_p, T):
     "Dimensionless open-circuit potential in the positive electrode"
     sto = c_s_p
-    return (U_p_dimensional(sto, T) - U_p_ref) / potential_scale
+    T_dim = Delta_T * T + T_ref
+    return (U_p_dimensional(sto, T_dim) - U_p_ref) / potential_scale
 
 
 def dUdT_n(c_s_n):

@@ -277,13 +277,13 @@ class Addition(BinaryOperator):
             return left
         # Check matrices after checking scalars
         if is_matrix_zero(left):
-            if right.evaluates_to_number():
-                return right * pybamm.Matrix(np.ones(left.shape))
+            if isinstance(right, pybamm.Scalar):
+                return pybamm.Array(right.value * np.ones(left.shape_for_testing))
             else:
                 return right
         if is_matrix_zero(right):
-            if left.evaluates_to_number():
-                return left * pybamm.Matrix(np.ones(right.shape))
+            if isinstance(left, pybamm.Scalar):
+                return pybamm.Array(left.value * np.ones(right.shape_for_testing))
             else:
                 return left
 
@@ -331,9 +331,15 @@ class Subtraction(BinaryOperator):
             return left
         # Check matrices after checking scalars
         if is_matrix_zero(left):
-            return -right
+            if isinstance(right, pybamm.Scalar):
+                return pybamm.Array(-right.value * np.ones(left.shape_for_testing))
+            else:
+                return -right
         if is_matrix_zero(right):
-            return left
+            if isinstance(left, pybamm.Scalar):
+                return pybamm.Array(left.value * np.ones(right.shape_for_testing))
+            else:
+                return left
 
         return pybamm.simplify_addition_subtraction(self.__class__, left, right)
 

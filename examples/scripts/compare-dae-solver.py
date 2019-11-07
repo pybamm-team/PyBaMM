@@ -32,6 +32,6 @@ scikits_sol = pybamm.ScikitsDaeSolver(atol=1e-8, rtol=1e-8).solve(model, t_eval)
 
 # plot
 models = [model, model, model]
-solutions = [scikits_sol, klu_sol, casadi_sol]
+solutions = [casadi_sol, klu_sol, casadi_sol]
 plot = pybamm.QuickPlot(models, mesh, solutions)
 plot.dynamic_plot()

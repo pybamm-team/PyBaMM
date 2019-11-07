@@ -38,12 +38,7 @@ lambda_cp_dim = pybamm.Parameter(
     "Positive current collector thermal conductivity [W.m-1.K-1]"
 )
 
-# Thermal parameters
-h_dim = pybamm.Parameter("Heat transfer coefficient [W.m-2.K-1]")
-Phi_dim = pybamm.Scalar(1)  # typical scale for voltage drop across cell (order 1V)
-Delta_T = (
-    pybamm.electrical_parameters.i_typ * Phi_dim / h_dim
-)  # computed from balance of typical cross-cell Ohmic heating with surface heat loss
+# Effective thermal properties
 rho_eff_dim = (
     rho_cn_dim * c_p_cn_dim * pybamm.geometric_parameters.L_cn
     + rho_n_dim * c_p_n_dim * pybamm.geometric_parameters.L_n
@@ -58,6 +53,15 @@ lambda_eff_dim = (
     + lambda_p_dim * pybamm.geometric_parameters.L_p
     + lambda_cp_dim * pybamm.geometric_parameters.L_cp
 ) / pybamm.geometric_parameters.L
+
+# Cooling coefficient
+h_dim = pybamm.Parameter("Heat transfer coefficient [W.m-2.K-1]")
+
+# Typical temperature rise
+Phi_dim = pybamm.Scalar(1)  # typical scale for voltage drop across cell (order 1V)
+Delta_T = (
+    pybamm.electrical_parameters.i_typ * Phi_dim / h_dim
+)  # computed from balance of typical cross-cell Ohmic heating with surface heat loss
 
 # Activation energies
 E_r_n = pybamm.Parameter("Negative reaction rate activation energy [J.mol-1]")
