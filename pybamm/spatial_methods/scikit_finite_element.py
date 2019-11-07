@@ -23,6 +23,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
     mesh : :class:`pybamm.Mesh`
         Contains all the submeshes for discretisation
 
+
     **Extends:"": :class:`pybamm.SpatialMethod`
     """
 
@@ -325,13 +326,16 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
         return pybamm.Matrix(integration_vector[np.newaxis, :])
 
-    def boundary_value_or_flux(self, symbol, discretised_child):
+    def boundary_value_or_flux(self, symbol, discretised_child, bcs=None):
         """
         Returns the average value of the symbol over the negative tab ("negative tab")
         or the positive tab ("positive tab") in the Finite Element Method.
 
         Overwrites the default :meth:`pybamm.SpatialMethod.boundary_value`
         """
+
+        if bcs is None:
+            bcs = {}
 
         # Return average value on the negative tab for "negative tab" and positive tab
         # for "positive tab"

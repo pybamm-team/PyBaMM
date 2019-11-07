@@ -8,8 +8,11 @@ from scipy.sparse import eye
 class SpatialMethodForTesting(pybamm.SpatialMethod):
     """Identity operators, no boundary conditions."""
 
-    def __init__(self, mesh):
-        super().__init__(mesh)
+    def __init__(self, options=None):
+        super().__init__(options)
+
+    def build(self, mesh):
+        super().build(mesh)
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         n = 0
@@ -155,10 +158,10 @@ def get_discretisation_for_testing(
     if mesh is None:
         mesh = get_mesh_for_testing(xpts=xpts, rpts=rpts)
     spatial_methods = {
-        "macroscale": SpatialMethodForTesting,
-        "negative particle": SpatialMethodForTesting,
-        "positive particle": SpatialMethodForTesting,
-        "current collector": cc_method,
+        "macroscale": SpatialMethodForTesting(),
+        "negative particle": SpatialMethodForTesting(),
+        "positive particle": SpatialMethodForTesting(),
+        "current collector": cc_method(),
     }
     return pybamm.Discretisation(mesh, spatial_methods)
 
