@@ -73,7 +73,7 @@ class Interpolant(pybamm.Function):
             *children,
             name=self.name,
             interpolator=self.interpolator,
-            extrapolate=self.extrapolate,
+            extrapolate=self.extrapolate
         )
 
     def _function_simplify(self, simplified_children):
