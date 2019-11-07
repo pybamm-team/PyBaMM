@@ -485,8 +485,9 @@ class BaseModel(object):
         "Return default solver based on whether model is ODE model or DAE model"
         if len(self.algebraic) == 0:
             return pybamm.ScipySolver()
-        elif pybamm.have_idaklu():
+        elif pybamm.have_idaklu() and self.use_jacobian is True:
+            # KLU solver requires jacobian to be provided
             return pybamm.IDAKLUSolver()
         else:
-            return pybamm.CasadiSolver()
+            return pybamm.CasadiSolver(mode="safe")
 

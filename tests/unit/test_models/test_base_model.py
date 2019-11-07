@@ -381,6 +381,10 @@ class TestStandardBatteryBaseModel(unittest.TestCase):
             model.default_solver, (pybamm.IDAKLUSolver, pybamm.CasadiSolver)
         )
 
+        # Check that turning off jacobian gives casadi solver
+        model.use_jacobian = False
+        self.assertIsInstance(model.default_solver, pybamm.CasadiSolver)
+
     def test_default_parameters(self):
         # check parameters are read in ok
         model = pybamm.BaseBatteryModel()

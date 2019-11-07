@@ -282,10 +282,11 @@ class DaeSolver(pybamm.BaseSolver):
         def rhs(t, y):
             return concatenated_rhs_fn(t, y).full()[:, 0]
 
-        def algebraic(t, y):
-            return concatenated_algebraic_fn(t, y).full()[:, 0]
-
         if len(model.algebraic) > 0:
+
+            def algebraic(t, y):
+                return concatenated_algebraic_fn(t, y).full()[:, 0]
+
             y0 = self.calculate_consistent_initial_conditions(
                 rhs,
                 algebraic,
@@ -293,7 +294,10 @@ class DaeSolver(pybamm.BaseSolver):
                 jacobian_alg,
             )
         else:
-            # can use DAE solver to solve ODE model
+            # can use DAE solver to solve ODE model (just return empty algebraic)
+            def algebraic(t, y):
+                return np.empty(0)
+
             y0 = model.concatenated_initial_conditions[:, 0]
 
         # Create functions to evaluate residuals

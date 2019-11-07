@@ -4,7 +4,7 @@ import sys
 import unittest
 
 
-@unittest.skipIf(~pybamm.have_idaklu(), "idaklu solver is not installed")
+@unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
 class TestIDAKLUSolver(unittest.TestCase):
     def test_on_spme(self):
         model = pybamm.lithium_ion.SPMe()

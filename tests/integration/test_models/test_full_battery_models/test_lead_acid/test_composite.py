@@ -61,7 +61,7 @@ class TestLeadAcidCompositeSurfaceForm(unittest.TestCase):
         param = model.default_parameter_values
         param.update({"Typical current [A]": 1})
         modeltest = tests.StandardModelTest(model, parameter_values=param)
-        modeltest.test_all()
+        modeltest.test_all()  # solver=pybamm.CasadiSolver())
 
 
 class TestLeadAcidCompositeExtended(unittest.TestCase):
