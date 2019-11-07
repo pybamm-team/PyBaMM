@@ -15,7 +15,7 @@ import numpy as np
 import unittest
 
 
-def errors(pts, function, extrap):
+def errors(pts, function, method_options):
 
     domain = "test"
     x = pybamm.SpatialVariable("x", domain=domain)
@@ -26,10 +26,9 @@ def errors(pts, function, extrap):
     var_pts = {x: pts}
     mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
-    spatial_methods = {"test": pybamm.FiniteVolume}
+    spatial_methods = {"test": pybamm.FiniteVolume(method_options)}
     disc = pybamm.Discretisation(mesh, spatial_methods)
 
-    disc.spatial_methods["test"].extrapolation = extrap
     var = pybamm.Variable("var", domain="test")
     left_extrap = pybamm.BoundaryValue(var, "left")
     right_extrap = pybamm.BoundaryValue(var, "right")
@@ -47,21 +46,23 @@ def errors(pts, function, extrap):
     return l_error, r_error
 
 
-def get_errors(function, extrap, pts):
+def get_errors(function, method_options, pts):
 
     l_errors = np.zeros(pts.shape)
     r_errors = np.zeros(pts.shape)
 
     for i, pt in enumerate(pts):
-        l_errors[i], r_errors[i] = errors(pt, function, extrap)
+        l_errors[i], r_errors[i] = errors(pt, function, method_options)
 
     return l_errors, r_errors
 
 
 class TestExtrapolation(unittest.TestCase):
-    def test_quadratic_convergence(self):
+    def test_convergence_without_bcs(self):
 
         # all tests are performed on x in [0, 1]
+        linear = {"extrapolation": {"order": "linear"}}
+        quad = {"extrapolation": {"order": "quadratic"}}
 
         def x_squared(x):
             y = x ** 2
@@ -71,8 +72,9 @@ class TestExtrapolation(unittest.TestCase):
 
         pts = 10 ** np.arange(1, 6, 1)
         dx = 1 / pts
-        l_errors_lin, r_errors_lin = get_errors(x_squared, "linear", pts)
-        l_errors_quad, r_errors_quad = get_errors(x_squared, "quadratic", pts)
+
+        l_errors_lin, r_errors_lin = get_errors(x_squared, linear, pts)
+        l_errors_quad, r_errors_quad = get_errors(x_squared, quad, pts)
 
         l_lin_rates = np.log(l_errors_lin[:-1] / l_errors_lin[1:]) / np.log(
             dx[:-1] / dx[1:]
@@ -95,7 +97,7 @@ class TestExtrapolation(unittest.TestCase):
             r_true = 1
             return y, l_true, r_true
 
-        l_errors_lin, r_errors_lin = get_errors(x_squared, "linear", pts)
+        l_errors_lin, r_errors_lin = get_errors(x_squared, linear, pts)
 
         l_lin_rates = np.log(l_errors_lin[:-1] / l_errors_lin[1:]) / np.log(
             dx[:-1] / dx[1:]
@@ -111,7 +113,7 @@ class TestExtrapolation(unittest.TestCase):
         # quadratic case
         pts = 5 ** np.arange(1, 7, 1)
         dx = 1 / pts
-        l_errors_quad, r_errors_quad = get_errors(x_cubed, "quadratic", pts)
+        l_errors_quad, r_errors_quad = get_errors(x_cubed, quad, pts)
 
         l_quad_rates = np.log(l_errors_quad[:-1] / l_errors_quad[1:]) / np.log(
             dx[:-1] / dx[1:]
@@ -123,6 +125,9 @@ class TestExtrapolation(unittest.TestCase):
 
         np.testing.assert_array_almost_equal(l_quad_rates, 3)
         np.testing.assert_array_almost_equal(r_quad_rates, 3, decimal=3)
+
+    def test_extrapolation_with_bcs(self):
+        # simple particle with a flux bc
 
 
 if __name__ == "__main__":

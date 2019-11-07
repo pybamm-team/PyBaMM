@@ -24,8 +24,13 @@ class SpatialMethod:
 
         self.options = {"extrapolation": {"order": "quadratic", "use bcs": True}}
 
+        # update double-layered dict
         if options:
-            self.options.update(options)
+            for opt, val in options.items():
+                if isinstance(val, dict):
+                    self.options[opt].update(val)
+                else:
+                    self.options[opt] = val
 
         self._mesh = None
 
