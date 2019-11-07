@@ -10,52 +10,58 @@ from tests import get_mesh_for_testing, get_1p1d_discretisation_for_testing
 
 
 class TestCasadiConverter(unittest.TestCase):
+    def assert_casadi_equal(self, a, b, evalf=False):
+        if evalf is True:
+            self.assertTrue((casadi.evalf(a) - casadi.evalf(b)).is_zero())
+        else:
+            self.assertTrue((a - b).is_zero())
+
     def test_convert_scalar_symbols(self):
         a = pybamm.Scalar(0)
         b = pybamm.Scalar(1)
         c = pybamm.Scalar(-1)
         d = pybamm.Scalar(2)
 
-        self.assertEqual(a.to_casadi(), casadi.SX(0))
-        self.assertEqual(d.to_casadi(), casadi.SX(2))
+        self.assertEqual(a.to_casadi(), casadi.MX(0))
+        self.assertEqual(d.to_casadi(), casadi.MX(2))
 
         # negate
-        self.assertEqual((-b).to_casadi(), casadi.SX(-1))
+        self.assertEqual((-b).to_casadi(), casadi.MX(-1))
         # absolute value
-        self.assertEqual(abs(c).to_casadi(), casadi.SX(1))
+        self.assertEqual(abs(c).to_casadi(), casadi.MX(1))
 
         # function
         def sin(x):
             return np.sin(x)
 
         f = pybamm.Function(sin, b)
-        self.assertEqual(f.to_casadi(), casadi.SX(np.sin(1)))
+        self.assertEqual(f.to_casadi(), casadi.MX(np.sin(1)))
 
         def myfunction(x, y):
             return x + y
 
         f = pybamm.Function(myfunction, b, d)
-        self.assertEqual(f.to_casadi(), casadi.SX(3))
+        self.assertEqual(f.to_casadi(), casadi.MX(3))
 
         # addition
-        self.assertEqual((a + b).to_casadi(), casadi.SX(1))
+        self.assertEqual((a + b).to_casadi(), casadi.MX(1))
         # subtraction
-        self.assertEqual((c - d).to_casadi(), casadi.SX(-3))
+        self.assertEqual((c - d).to_casadi(), casadi.MX(-3))
         # multiplication
-        self.assertEqual((c * d).to_casadi(), casadi.SX(-2))
+        self.assertEqual((c * d).to_casadi(), casadi.MX(-2))
         # power
-        self.assertEqual((c ** d).to_casadi(), casadi.SX(1))
+        self.assertEqual((c ** d).to_casadi(), casadi.MX(1))
         # division
-        self.assertEqual((b / d).to_casadi(), casadi.SX(1 / 2))
+        self.assertEqual((b / d).to_casadi(), casadi.MX(1 / 2))
 
     def test_convert_array_symbols(self):
         # Arrays
         a = np.array([1, 2, 3, 4, 5])
         pybamm_a = pybamm.Array(a)
-        self.assertTrue(casadi.is_equal(pybamm_a.to_casadi(), casadi.SX(a)))
+        self.assert_casadi_equal(pybamm_a.to_casadi(), casadi.MX(a))
 
-        casadi_t = casadi.SX.sym("t")
-        casadi_y = casadi.SX.sym("y", 10)
+        casadi_t = casadi.MX.sym("t")
+        casadi_y = casadi.MX.sym("y", 10)
 
         pybamm_t = pybamm.Time()
         pybamm_y = pybamm.StateVector(slice(0, 10))
@@ -64,22 +70,26 @@ class TestCasadiConverter(unittest.TestCase):
         self.assertEqual(pybamm_t.to_casadi(casadi_t, casadi_y), casadi_t)
 
         # State Vector
-        self.assertTrue(
-            casadi.is_equal(pybamm_y.to_casadi(casadi_t, casadi_y), casadi_y)
-        )
+        self.assert_casadi_equal(pybamm_y.to_casadi(casadi_t, casadi_y), casadi_y)
 
         # outer product
         outer = pybamm.Outer(pybamm_a, pybamm_a)
-        self.assertTrue(casadi.is_equal(outer.to_casadi(), casadi.SX(outer.evaluate())))
+        self.assert_casadi_equal(
+            outer.to_casadi(), casadi.MX(outer.evaluate()), evalf=True
+        )
 
     def test_special_functions(self):
         a = pybamm.Array(np.array([1, 2, 3, 4, 5]))
-        self.assertEqual(pybamm.max(a).to_casadi(), casadi.SX(5))
-        self.assertEqual(pybamm.min(a).to_casadi(), casadi.SX(1))
+        self.assert_casadi_equal(pybamm.max(a).to_casadi(), casadi.MX(5), evalf=True)
+        self.assert_casadi_equal(pybamm.min(a).to_casadi(), casadi.MX(1), evalf=True)
         b = pybamm.Array(np.array([-2]))
         c = pybamm.Array(np.array([3]))
-        self.assertEqual(pybamm.Function(np.abs, b).to_casadi(), casadi.SX(2))
-        self.assertEqual(pybamm.Function(np.abs, c).to_casadi(), casadi.SX(3))
+        self.assert_casadi_equal(
+            pybamm.Function(np.abs, b).to_casadi(), casadi.MX(2), evalf=True
+        )
+        self.assert_casadi_equal(
+            pybamm.Function(np.abs, c).to_casadi(), casadi.MX(3), evalf=True
+        )
 
     def test_interpolation(self):
         x = np.linspace(0, 1)[:, np.newaxis]
@@ -108,7 +118,9 @@ class TestCasadiConverter(unittest.TestCase):
         b = pybamm.Scalar(16)
         c = pybamm.Scalar(3)
         conc = pybamm.NumpyConcatenation(a, b, c)
-        self.assertTrue(casadi.is_equal(conc.to_casadi(), casadi.SX(conc.evaluate())))
+        self.assert_casadi_equal(
+            conc.to_casadi(), casadi.MX(conc.evaluate()), evalf=True
+        )
 
         # Domain concatenation
         mesh = get_mesh_for_testing()
@@ -117,7 +129,9 @@ class TestCasadiConverter(unittest.TestCase):
         a = 2 * pybamm.Vector(np.ones_like(mesh[a_dom[0]][0].nodes), domain=a_dom)
         b = pybamm.Vector(np.ones_like(mesh[b_dom[0]][0].nodes), domain=b_dom)
         conc = pybamm.DomainConcatenation([b, a], mesh)
-        self.assertTrue(casadi.is_equal(conc.to_casadi(), casadi.SX(conc.evaluate())))
+        self.assert_casadi_equal(
+            conc.to_casadi(), casadi.MX(conc.evaluate()), evalf=True
+        )
 
         # 2d
         disc = get_1p1d_discretisation_for_testing()
@@ -130,7 +144,7 @@ class TestCasadiConverter(unittest.TestCase):
         x = expr.to_casadi(None, y)
         f = casadi.Function("f", [x], [x])
         y_eval = np.linspace(0, 1, expr.size)
-        self.assertTrue(casadi.is_equal(f(y_eval), casadi.SX(expr.evaluate(y=y_eval))))
+        self.assert_casadi_equal(f(y_eval), casadi.SX(expr.evaluate(y=y_eval)))
 
     def test_convert_differentiated_function(self):
         a = pybamm.Scalar(0)
@@ -141,15 +155,15 @@ class TestCasadiConverter(unittest.TestCase):
             return anp.sin(x)
 
         f = pybamm.Function(sin, b).diff(b)
-        self.assertEqual(f.to_casadi(), casadi.SX(np.cos(1)))
+        self.assert_casadi_equal(f.to_casadi(), casadi.MX(np.cos(1)), evalf=True)
 
         def myfunction(x, y):
             return x + y ** 3
 
         f = pybamm.Function(myfunction, a, b).diff(a)
-        self.assertEqual(f.to_casadi(), casadi.SX(1))
+        self.assert_casadi_equal(f.to_casadi(), casadi.MX(1), evalf=True)
         f = pybamm.Function(myfunction, a, b).diff(b)
-        self.assertEqual(f.to_casadi(), casadi.SX(3))
+        self.assert_casadi_equal(f.to_casadi(), casadi.MX(3), evalf=True)
 
     def test_errors(self):
         y = pybamm.StateVector(slice(0, 10))
