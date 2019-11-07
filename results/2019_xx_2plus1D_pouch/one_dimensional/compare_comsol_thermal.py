@@ -42,7 +42,7 @@ param.process_geometry(geometry)
 # create mesh
 var = pybamm.standard_spatial_vars
 # var_pts = {var.x_n: 101, var.x_s: 31, var.x_p: 101, var.r_n: 31, var.r_p: 31}
-var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.r_n: 10, var.r_p: 10}
+var_pts = {var.x_n: 45, var.x_s: 11, var.x_p: 56, var.r_n: 101, var.r_p: 101}
 mesh = pybamm.Mesh(geometry, pybamm_model.default_submesh_types, var_pts)
 
 # discretise model
@@ -50,14 +50,15 @@ disc = pybamm.Discretisation(mesh, pybamm_model.default_spatial_methods)
 disc.process_model(pybamm_model)
 
 # discharge timescale
-tau = param.process_symbol(
+tau = param.evaluate(
     pybamm.standard_parameters_lithium_ion.tau_discharge
-).evaluate(0)
+)
 
 # solve model at comsol times
 time = comsol_variables["time"] / tau
 pybamm_model.convert_to_format = "casadi"
-solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
+#solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
+solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6, mode="fast")
 solution = solver.solve(pybamm_model, time)
 
 "-----------------------------------------------------------------------------"
