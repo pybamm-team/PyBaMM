@@ -1,5 +1,6 @@
 #
-# Class for two-dimensional current collectors
+# Class for one- and two-dimensional potential pair "quite conductive"
+# current collector models
 #
 import pybamm
 from .potential_pair import (

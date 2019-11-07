@@ -87,8 +87,14 @@ class SPM(BaseModel):
 
     def set_positive_electrode_submodel(self):
 
+        if self.options["current collector"] == "set external potential":
+            # Potentials are set by external model
+            set_positive_potential = False
+        else:
+            # Potential determined by 1D model
+            set_positive_potential = True
         self.submodels["positive electrode"] = pybamm.electrode.ohm.LeadingOrder(
-            self.param, "Positive"
+            self.param, "Positive", set_positive_potential=set_positive_potential
         )
 
     def set_electrolyte_submodel(self):
@@ -111,15 +117,3 @@ class SPM(BaseModel):
             return pybamm.Geometry("1+1D macro", "(1+0)+1D micro")
         elif dimensionality == 2:
             return pybamm.Geometry("2+1D macro", "(2+0)+1D micro")
-
-    @property
-    def default_solver(self):
-        """
-        Create and return the default solver for this model
-        """
-        # Different solver depending on whether we solve ODEs or DAEs
-        dimensionality = self.options["dimensionality"]
-        if dimensionality == 0:
-            return pybamm.ScipySolver()
-        else:
-            return pybamm.ScikitsDaeSolver()

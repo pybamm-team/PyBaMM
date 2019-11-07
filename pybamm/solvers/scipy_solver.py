@@ -22,6 +22,7 @@ class ScipySolver(pybamm.OdeSolver):
 
     def __init__(self, method="BDF", rtol=1e-6, atol=1e-6):
         super().__init__(method, rtol, atol)
+        self.name = "Scipy solver ({})".format(method)
 
     def integrate(
         self, derivs, y0, t_eval, events=None, mass_matrix=None, jacobian=None
@@ -83,7 +84,7 @@ class ScipySolver(pybamm.OdeSolver):
                 termination = "event"
                 t_event = []
                 for time in sol.t_events:
-                    if time:
+                    if time.size > 0:
                         t_event = np.append(t_event, np.max(time))
                 t_event = np.array([np.max(t_event)])
                 y_event = sol.sol(t_event)

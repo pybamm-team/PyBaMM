@@ -122,20 +122,3 @@ class Full(BaseModel):
             self.submodels[
                 "negative oxygen interface"
             ] = pybamm.interface.lead_acid_oxygen.NoReaction(self.param, "Negative")
-
-    @property
-    def default_solver(self):
-        """
-        Create and return the default solver for this model
-        """
-        # Different solver depending on whether we solve ODEs or DAEs
-        if (
-            self.options["surface form"] == "differential"
-            and self.options["current collector"] == "uniform"
-        ):
-            return pybamm.ScipySolver()
-        else:
-            if pybamm.have_scikit_odes():
-                return pybamm.ScikitsDaeSolver()
-            elif pybamm.have_idaklu():  # pragma: no cover
-                return pybamm.IDAKLU()

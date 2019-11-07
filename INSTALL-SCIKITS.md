@@ -7,7 +7,6 @@ This file provides installation instructions for either Ubuntu-based distributio
 
 ---
 
-
 Users can install [scikits.odes](https://github.com/bmcage/odes) in order to use the
 wrapped SUNDIALS ODE and DAE
 [solvers](https://pybamm.readthedocs.io/en/latest/source/solvers/scikits_solvers.html).
@@ -20,7 +19,7 @@ Before installing scikits.odes, you need to have installed:
 - Fortran compiler (e.g. gfortran, comes with gcc in brew)
 - BLAS/LAPACK install (OpenBLAS is recommended by the scikits.odes developers)
 - CMake (for building Sundials)
-- Sundials 3.1.1 (see instructions below)
+- Sundials 4.1.0 (see instructions below)
 
 You can install these on Ubuntu or Debian using apt-get:
 
@@ -48,18 +47,17 @@ If this works, skip to [the final section](#setting-library-path). Otherwise, tr
 
 ## Option 2: install manually
 
-
-To install SUNDIALS 3.1.1 manually, on the command-line type:
+To install SUNDIALS 4.1.0 manually, on the command-line type:
 
 ```bash
 INSTALL_DIR=`pwd`/sundials
-wget https://computation.llnl.gov/projects/sundials/download/sundials-3.1.1.tar.gz
-tar -xvf sundials-3.1.1.tar.gz
-mkdir build-sundials-3.1.1
-cd build-sundials-3.1.1/
-cmake -DLAPACK_ENABLE=ON -DSUNDIALS_INDEX_TYPE=int32_t -DBUILD_ARKODE:BOOL=OFF -DEXAMPLES_ENABLE:BOOL=OFF -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR ../sundials-3.1.1/
+wget https://computation.llnl.gov/projects/sundials/download/sundials-4.1.0.tar.gz
+tar -xvf sundials-4.1.0.tar.gz
+mkdir build-sundials-4.1.0
+cd build-sundials-4.1.0/
+cmake -DLAPACK_ENABLE=ON -DSUNDIALS_INDEX_TYPE=int32_t -DBUILD_ARKODE:BOOL=OFF -DEXAMPLES_ENABLE:BOOL=OFF -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR ../sundials-4.1.0/
 make install
-rm -r ../sundials-3.1.1
+rm -r ../sundials-4.1.0
 ```
 
 Then install [scikits.odes](https://github.com/bmcage/odes), letting it know the sundials install location:

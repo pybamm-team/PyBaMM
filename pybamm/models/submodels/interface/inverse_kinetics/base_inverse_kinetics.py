@@ -41,8 +41,13 @@ class BaseInverseKinetics(BaseInterface):
             ne = self.param.ne_n
         elif self.domain == "Positive":
             ne = self.param.ne_p
+        # Note: T must have the same domain as j0 and eta_r
+        if j0.domain in ["current collector", ["current collector"]]:
+            T = variables["X-averaged cell temperature"]
+        else:
+            T = variables[self.domain + " electrode temperature"]
 
-        eta_r = self._get_overpotential(j, j0, ne)
+        eta_r = self._get_overpotential(j, j0, ne, T)
         delta_phi = eta_r + ocp
 
         variables.update(self._get_standard_interfacial_current_variables(j))
@@ -73,5 +78,5 @@ class BaseInverseKinetics(BaseInterface):
 
         return variables
 
-    def _get_overpotential(self, j, j0, ne):
+    def _get_overpotential(self, j, j0, ne, T):
         raise NotImplementedError

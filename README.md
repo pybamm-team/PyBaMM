@@ -11,7 +11,17 @@ Python Battery Mathematical Modelling solves continuum models for batteries, usi
 
 ## How do I use PyBaMM?
 
-PyBaMM comes with a number of [detailed examples](examples/notebooks/README.md), hosted here on
+The easiest way to use PyBaMM is to run a 1C constant-current discharge with a model of your choice with all the default settings:
+```python3
+import pybamm
+model = pybamm.lithium_ion.DFN() # Doyle-Fuller-Newman model
+sim = pybamm.Simulation(model)
+sim.solve()
+sim.plot()
+```
+However, much greater customisation is available. It is possible to change the physics, parameter values, geometry, submesh type,  number of submesh points, methods for spatial discretisation and solver for integration (see DFN [script](examples/scripts/DFN.py) or [notebook](examples/notebooks/models/dfn.ipynb)).
+
+Further details can be found in a number of [detailed examples](examples/notebooks/README.md), hosted here on
 github. In addition, there is a [full API documentation](http://pybamm.readthedocs.io/),
 hosted on [Read The Docs](readthedocs.io). A set of slides giving an overview of PyBaMM
 can be found

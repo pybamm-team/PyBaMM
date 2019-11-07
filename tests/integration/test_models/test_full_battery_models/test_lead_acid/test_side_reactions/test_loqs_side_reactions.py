@@ -23,7 +23,6 @@ class TestLeadAcidLOQSWithSideReactions(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-    @unittest.skipIf(~pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_discharge_algebraic(self):
         options = {"surface form": "algebraic", "side reactions": ["oxygen"]}
         model = pybamm.lead_acid.LOQS(options)
@@ -44,9 +43,7 @@ class TestLeadAcidLOQSWithSideReactions(unittest.TestCase):
         options = {"surface form": "differential", "side reactions": ["oxygen"]}
         model = pybamm.lead_acid.LOQS(options)
         parameter_values = model.default_parameter_values
-        parameter_values.update(
-            {"Current function": pybamm.GetConstantCurrent(current=0)}
-        )
+        parameter_values.update({"Current function": pybamm.ConstantCurrent(current=0)})
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all(skip_output_tests=True)
 

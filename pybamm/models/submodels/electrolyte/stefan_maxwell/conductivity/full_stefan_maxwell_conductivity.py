@@ -39,7 +39,8 @@ class Full(BaseModel):
         phi_e = variables["Electrolyte potential"]
 
         i_e = (param.kappa_e(c_e, T) * (eps ** param.b) * param.gamma_e / param.C_e) * (
-            param.chi(c_e) * pybamm.grad(c_e) / c_e - pybamm.grad(phi_e)
+            param.chi(c_e) * (1 + param.Theta * T) * pybamm.grad(c_e) / c_e
+            - pybamm.grad(phi_e)
         )
 
         variables.update(self._get_standard_current_variables(i_e))
@@ -64,10 +65,3 @@ class Full(BaseModel):
         phi_e = variables["Electrolyte potential"]
         T_ref = self.param.T_ref
         self.initial_conditions = {phi_e: -self.param.U_n(self.param.c_n_init, T_ref)}
-
-    @property
-    def default_solver(self):
-        """
-        Create and return the default solver for this model
-        """
-        return pybamm.ScikitsDaeSolver()

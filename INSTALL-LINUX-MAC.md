@@ -97,17 +97,18 @@ pip uninstall pybamm
 
 ## Optional dependencies
 
-Two DAE solvers (`scikits.odes` and `KLU`) can be optionally installed in PyBaMM. At least one of these is required to solve DAE models, such as the DFN, but you can install both if you like.
-
-### [scikits.odes](https://github.com/bmcage/odes)
-
-A python wrapper for the SUNDIALS ODE and DAE integrators. [Installation instructions](INSTALL-SCIKITS.md).
+CasADi's DAE solvers are included by default in PyBaMM, but two additional DAE solvers (`scikits.odes` and `KLU`) can be optionally installed as well. 
+In particular, the [KLU sparse solver](INSTALL-KLU.md) is recommended for solving the DFN.
 
 ### Sundials with KLU sparse solver
 
 If you wish so simulate large systems such as the 2+1D models, we recommend employing a
 sparse solver. PyBaMM currently offers a direct interface to the sparse KLU solver within Sundials.
 [Installation instructions](INSTALL-KLU.md).
+
+### [scikits.odes](https://github.com/bmcage/odes)
+
+A python wrapper for the SUNDIALS ODE and DAE integrators. [Installation instructions](INSTALL-SCIKITS.md).
 
 ## Troubleshooting
 

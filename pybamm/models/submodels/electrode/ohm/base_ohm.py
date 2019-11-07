@@ -20,8 +20,8 @@ class BaseModel(BaseElectrode):
     **Extends:** :class:`pybamm.electrode.BaseElectrode`
     """
 
-    def __init__(self, param, domain, reactions=None):
-        super().__init__(param, domain, reactions)
+    def __init__(self, param, domain, reactions=None, set_positive_potential=True):
+        super().__init__(param, domain, reactions, set_positive_potential)
 
     def set_boundary_conditions(self, variables):
 
@@ -43,10 +43,3 @@ class BaseModel(BaseElectrode):
             )
 
         self.boundary_conditions[phi_s] = {"left": lbc, "right": rbc}
-
-    @property
-    def default_solver(self):
-        """
-        Create and return the default solver for this model
-        """
-        return pybamm.ScikitsDaeSolver()

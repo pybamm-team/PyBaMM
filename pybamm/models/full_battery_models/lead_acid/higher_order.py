@@ -166,23 +166,6 @@ class BaseHigherOrderModel(BaseModel):
         """
         self.submodels["full porosity"] = pybamm.porosity.Full(self.param)
 
-    @property
-    def default_solver(self):
-        """
-        Create and return the default solver for this model
-        """
-        # Different solver depending on whether we solve ODEs or DAEs
-        if (
-            self.options["current collector"] != "uniform"
-            or self.options["surface form"] == "algebraic"
-        ):
-            if pybamm.have_scikit_odes():
-                return pybamm.ScikitsDaeSolver()
-            elif pybamm.have_idaklu():  # pragma: no cover
-                return pybamm.IDAKLU()
-        else:
-            return pybamm.ScipySolver()
-
 
 class FOQS(BaseHigherOrderModel):
     """First-order quasi-static model for lead-acid, from [1]_.

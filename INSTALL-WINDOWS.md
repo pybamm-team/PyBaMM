@@ -21,7 +21,14 @@ typing
 sudo apt install git-core
 ```
 
-Now use git to clone the PyBaMM repository:
+For easier integration with WSL, we recommend that you install PyBaMM in your *Windows* 
+Documents folder, for example by first navigating to
+
+```bash
+$ cd /mnt/c/Users/USER_NAME/Documents
+```
+
+where USER_NAME is your username. Exact path to Windows documents may vary. Now use git to clone the PyBaMM repository:
 
 ```bash
 git clone https://github.com/pybamm-team/PyBaMM.git

@@ -20,6 +20,7 @@ class BaseSolver(object):
         self._method = method
         self._rtol = rtol
         self._atol = atol
+        self.name = "Base solver"
 
     @property
     def method(self):
@@ -64,7 +65,7 @@ class BaseSolver(object):
             If an empty model is passed (`model.rhs = {}` and `model.algebraic={}`)
 
         """
-        pybamm.logger.info("Start solving {}".format(model.name))
+        pybamm.logger.info("Start solving {} with {}".format(model.name, self.name))
 
         # Make sure model isn't empty
         if len(model.rhs) == 0 and len(model.algebraic) == 0:
@@ -73,7 +74,10 @@ class BaseSolver(object):
         # Set up
         timer = pybamm.Timer()
         start_time = timer.time()
-        self.set_up(model)
+        if model.convert_to_format == "casadi" or isinstance(self, pybamm.CasadiSolver):
+            self.set_up_casadi(model)
+        else:
+            self.set_up(model)
         set_up_time = timer.time() - start_time
 
         # Solve
@@ -81,7 +85,6 @@ class BaseSolver(object):
 
         # Assign times
         solution.solve_time = solve_time
-        solution.total_time = timer.time() - start_time
         solution.set_up_time = set_up_time
 
         pybamm.logger.info("Finish solving {} ({})".format(model.name, termination))
@@ -94,7 +97,7 @@ class BaseSolver(object):
         )
         return solution
 
-    def step(self, model, dt, npts=2):
+    def step(self, model, dt, npts=2, log=True):
         """
         Step the solution of the model forward by a given time increment. The
         first time this method is called it executes the necessary setup by
@@ -126,31 +129,40 @@ class BaseSolver(object):
 
         # Run set up on first step
         if not hasattr(self, "y0"):
-            start_time = timer.time()
-            self.set_up(model)
+            pybamm.logger.info(
+                "Start stepping {} with {}".format(model.name, self.name)
+            )
+
+            if model.convert_to_format == "casadi" or isinstance(
+                self, pybamm.CasadiSolver
+            ):
+                self.set_up_casadi(model)
+            else:
+                pybamm.logger.debug(
+                    "Start stepping {} with {}".format(model.name, self.name)
+                )
+                self.set_up(model)
             self.t = 0.0
-            set_up_time = timer.time() - start_time
+            set_up_time = timer.time()
         else:
             set_up_time = None
 
         # Step
-        pybamm.logger.info("Start stepping {}".format(model.name))
         t_eval = np.linspace(self.t, self.t + dt, npts)
         solution, solve_time, termination = self.compute_solution(model, t_eval)
 
         # Assign times
         solution.solve_time = solve_time
         if set_up_time:
-            solution.total_time = timer.time() - start_time
             solution.set_up_time = set_up_time
 
         # Set self.t and self.y0 to their values at the final step
         self.t = solution.t[-1]
         self.y0 = solution.y[:, -1]
 
-        pybamm.logger.info("Finish stepping {} ({})".format(model.name, termination))
+        pybamm.logger.debug("Finish stepping {} ({})".format(model.name, termination))
         if set_up_time:
-            pybamm.logger.info(
+            pybamm.logger.debug(
                 "Set-up time: {}, Step time: {}, Total time: {}".format(
                     timer.format(solution.set_up_time),
                     timer.format(solution.solve_time),
@@ -158,7 +170,7 @@ class BaseSolver(object):
                 )
             )
         else:
-            pybamm.logger.info(
+            pybamm.logger.debug(
                 "Step time: {}".format(timer.format(solution.solve_time))
             )
         return solution
@@ -187,11 +199,17 @@ class BaseSolver(object):
             The model whose solution to calculate. Must have attributes rhs and
             initial_conditions
 
-        Raises
-        ------
-        :class:`pybamm.SolverError`
-            If the model contains any algebraic equations (in which case a DAE solver
-            should be used instead)
+        """
+        raise NotImplementedError
+
+    def set_up_casadi(self, model):
+        """Convert model to casadi format and use their inbuilt functionalities.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model whose solution to calculate. Must have attributes rhs and
+            initial_conditions
 
         """
         raise NotImplementedError

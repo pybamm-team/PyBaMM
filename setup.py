@@ -17,10 +17,11 @@ setup(
     description="Python Battery Mathematical Modelling.",
     long_description=readme,
     url="https://github.com/pybamm-team/PyBaMM",
-    # include_package_data=True,
+    include_package_data=True,
     packages=find_packages(include=("pybamm", "pybamm.*")),
     package_data={
         "pybamm": [
+            "./version",
             "../input/parameters/lithium-ion/*.csv",
             "../input/parameters/lithium-ion/*.py",
             "../input/parameters/lead-acid/*.csv",
@@ -35,6 +36,8 @@ setup(
         "anytree>=2.4.3",
         "autograd>=1.2",
         "scikit-fem>=0.2.0",
+        "casadi>=3.5.0",
+        "jupyter",  # For example notebooks
         # Note: Matplotlib is loaded for debug plots, but to ensure pybamm runs
         # on systems without an attached display, it should never be imported
         # outside of plot() methods.
@@ -46,7 +49,6 @@ setup(
         "dev": [
             "flake8>=3",  # For code style checking
             "black",  # For code style auto-formatting
-            "jupyter",  # For documentation and testing
         ],
     },
 )

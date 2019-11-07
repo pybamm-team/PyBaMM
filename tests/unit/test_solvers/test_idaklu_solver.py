@@ -7,7 +7,7 @@ import scipy.sparse as sparse
 import unittest
 
 
-@unittest.skipIf(pybamm.have_idaklu(), "idaklu solver is not installed")
+@unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
 class TestIDAKLUSolver(unittest.TestCase):
     def test_ida_roberts_klu(self):
         # this test implements a python version of the ida Roberts
@@ -53,7 +53,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         def alg(t, y):
             return np.array([1 - y[1]])
 
-        solver = pybamm.IDAKLU()
+        solver = pybamm.IDAKLUSolver()
         solver.residuals = res
         solver.rhs = rhs
         solver.algebraic = alg
@@ -75,6 +75,20 @@ class TestIDAKLUSolver(unittest.TestCase):
         # test that y[0] = to true solution
         true_solution = 0.1 * solution.t
         np.testing.assert_array_almost_equal(solution.y[0, :], true_solution)
+
+    def test_set_atol(self):
+        model = pybamm.lithium_ion.SPMe()
+        geometry = model.default_geometry
+        param = model.default_parameter_values
+        param.process_model(model)
+        param.process_geometry(geometry)
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        disc.process_model(model)
+        solver = pybamm.IDAKLUSolver()
+
+        variable_tols = {"Electrolyte concentration": 1e-3}
+        solver.set_atol_by_variable(variable_tols, model)
 
 
 if __name__ == "__main__":

@@ -34,8 +34,22 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     @property
     def default_var_pts(self):
+        # Choose points that give uniform grid for the standard parameter values
         var = pybamm.standard_spatial_vars
-        return {var.x_n: 30, var.x_s: 30, var.x_p: 30, var.y: 10, var.z: 10}
+        return {var.x_n: 25, var.x_s: 41, var.x_p: 34, var.y: 10, var.z: 10}
+
+    @property
+    def default_solver(self):
+        """
+        Return default solver based on whether model is ODE model or DAE model.
+        There are bugs with KLU on the lead-acid models.
+        """
+        if len(self.algebraic) == 0:
+            return pybamm.ScipySolver()
+        elif pybamm.have_scikits_odes():
+            return pybamm.ScikitsDaeSolver()
+        else:
+            return pybamm.CasadiSolver(mode="safe")
 
     def set_standard_output_variables(self):
         super().set_standard_output_variables()

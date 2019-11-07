@@ -9,7 +9,7 @@ import warnings
 from tests import get_mesh_for_testing, get_discretisation_for_testing
 
 
-@unittest.skipIf(~pybamm.have_scikits_odes(), "scikits.odes not installed")
+@unittest.skipIf(not pybamm.have_scikits_odes(), "scikits.odes not installed")
 class TestScikitsSolvers(unittest.TestCase):
     def test_ode_integrate(self):
         # Constant
@@ -411,11 +411,6 @@ class TestScikitsSolvers(unittest.TestCase):
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
 
-        # Test time
-        self.assertGreater(
-            solution.total_time, solution.solve_time + solution.set_up_time
-        )
-
     def test_model_solver_ode_events(self):
         # Create model
         model = pybamm.BaseModel()
@@ -507,11 +502,6 @@ class TestScikitsSolvers(unittest.TestCase):
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
         np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
-
-        # Test time
-        self.assertGreater(
-            solution.total_time, solution.solve_time + solution.set_up_time
-        )
 
     def test_model_solver_dae_bad_ics(self):
         # Create model
@@ -675,6 +665,57 @@ class TestScikitsSolvers(unittest.TestCase):
         solution = solver.solve(model, t_eval)
         np.testing.assert_allclose(solution.y[0], step_sol.y[0, :])
         np.testing.assert_allclose(solution.y[-1], step_sol.y[-1, :])
+
+    def test_model_solver_ode_events_casadi(self):
+        # Create model
+        model = pybamm.BaseModel()
+        model.convert_to_format = "casadi"
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var = pybamm.Variable("var", domain=whole_cell)
+        model.rhs = {var: 0.1 * var}
+        model.initial_conditions = {var: 1}
+        model.events = {
+            "2 * var = 2.5": pybamm.min(2 * var - 2.5),
+            "var = 1.5": pybamm.min(var - 1.5),
+        }
+        disc = get_discretisation_for_testing()
+        disc.process_model(model)
+
+        # Solve
+        solver = pybamm.ScikitsOdeSolver(rtol=1e-9, atol=1e-9)
+        t_eval = np.linspace(0, 10, 100)
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
+        np.testing.assert_array_less(solution.y[0], 1.5)
+        np.testing.assert_array_less(solution.y[0], 1.25)
+
+    def test_model_solver_dae_events_casadi(self):
+        # Create model
+        model = pybamm.BaseModel()
+        for use_jacobian in [True, False]:
+            model.use_jacobian = use_jacobian
+            model.convert_to_format = "casadi"
+            whole_cell = ["negative electrode", "separator", "positive electrode"]
+            var1 = pybamm.Variable("var1", domain=whole_cell)
+            var2 = pybamm.Variable("var2", domain=whole_cell)
+            model.rhs = {var1: 0.1 * var1}
+            model.algebraic = {var2: 2 * var1 - var2}
+            model.initial_conditions = {var1: 1, var2: 2}
+            model.events = {
+                "var1 = 1.5": pybamm.min(var1 - 1.5),
+                "var2 = 2.5": pybamm.min(var2 - 2.5),
+            }
+            disc = get_discretisation_for_testing()
+            disc.process_model(model)
+
+            # Solve
+            solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
+            t_eval = np.linspace(0, 5, 100)
+            solution = solver.solve(model, t_eval)
+            np.testing.assert_array_less(solution.y[0], 1.5)
+            np.testing.assert_array_less(solution.y[-1], 2.5)
+            np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
+            np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
 
 
 if __name__ == "__main__":

@@ -3,6 +3,7 @@
 *.tmp
 *.png
 /local/
+*.DS_Store
 
 # don't ignore important .txt files
 !requirements*

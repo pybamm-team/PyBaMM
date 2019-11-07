@@ -75,7 +75,7 @@ class TestUpdateParameters(unittest.TestCase):
             chemistry=pybamm.parameter_sets.Marquis2019
         )
         parameter_values_update.update(
-            {"Current function": pybamm.GetConstantCurrent(current=pybamm.Scalar(0))}
+            {"Current function": pybamm.ConstantCurrent(current=pybamm.Scalar(0))}
         )
         modeltest3.test_update_parameters(parameter_values_update)
         modeltest3.test_solving(t_eval=t_eval)
@@ -93,6 +93,17 @@ class TestUpdateParameters(unittest.TestCase):
 
         # results should be different
         self.assertNotEqual(np.linalg.norm(Y1 - Y3), 0)
+
+    def test_inplace(self):
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        new_model = param.process_model(model, inplace=False)
+
+        for val in list(model.rhs.values()):
+            self.assertTrue(val.has_symbol_of_classes(pybamm.Parameter))
+
+        for val in list(new_model.rhs.values()):
+            self.assertFalse(val.has_symbol_of_classes(pybamm.Parameter))
 
     def test_update_geometry(self):
         # test on simple lead-acid model

@@ -41,7 +41,7 @@ current1 = pybamm.ProcessedVariable(
 
 # solve again with zero current, using last step of solution1 as initial conditions
 # update the current to be zero
-param["Current function"] = pybamm.GetConstantCurrent(current=pybamm.Scalar(0))
+param["Current function"] = pybamm.ConstantCurrent(current=pybamm.Scalar(0))
 param.update_model(model, disc)
 # Note: need to update model.concatenated_initial_conditions *after* update_model,
 # as update_model updates model.concatenated_initial_conditions, by concatenting

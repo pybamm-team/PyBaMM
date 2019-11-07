@@ -12,7 +12,7 @@ class ButlerVolmer(BaseModel):
     Base submodel which implements the forward Butler-Volmer equation:
 
     .. math::
-        j = j_0(c) * \\sinh(\\eta_r(c))
+        j = 2 * j_0(c) * \\sinh( (ne / (2 * (1 + \\Theta T)) * \\eta_r(c))
 
     Parameters
     ----------
@@ -28,26 +28,29 @@ class ButlerVolmer(BaseModel):
     def __init__(self, param, domain):
         super().__init__(param, domain)
 
-    def _get_kinetics(self, j0, ne, eta_r):
-        return 2 * j0 * pybamm.sinh((ne / 2) * eta_r)
+    def _get_kinetics(self, j0, ne, eta_r, T):
+        prefactor = ne / (2 * (1 + self.param.Theta * T))
+        return 2 * j0 * pybamm.sinh(prefactor * eta_r)
 
     def _get_dj_dc(self, variables):
         "See :meth:`pybamm.interface.kinetics.BaseModel._get_dj_dc`"
-        c_e, delta_phi, j0, ne, ocp = self._get_interface_variables_for_first_order(
+        c_e, delta_phi, j0, ne, ocp, T = self._get_interface_variables_for_first_order(
             variables
         )
         eta_r = delta_phi - ocp
-        return (2 * j0.diff(c_e) * pybamm.sinh((ne / 2) * eta_r)) - (
-            2 * j0 * (ne / 2) * ocp.diff(c_e) * pybamm.cosh((ne / 2) * eta_r)
+        prefactor = ne / (2 * (1 + self.param.Theta * T))
+        return (2 * j0.diff(c_e) * pybamm.sinh(prefactor * eta_r)) - (
+            2 * j0 * prefactor * ocp.diff(c_e) * pybamm.cosh(prefactor * eta_r)
         )
 
     def _get_dj_ddeltaphi(self, variables):
         "See :meth:`pybamm.interface.kinetics.BaseModel._get_dj_ddeltaphi`"
-        _, delta_phi, j0, ne, ocp = self._get_interface_variables_for_first_order(
+        _, delta_phi, j0, ne, ocp, T = self._get_interface_variables_for_first_order(
             variables
         )
         eta_r = delta_phi - ocp
-        return 2 * j0 * (ne / 2) * pybamm.cosh((ne / 2) * eta_r)
+        prefactor = ne / (2 * (1 + self.param.Theta * T))
+        return 2 * j0 * prefactor * pybamm.cosh(prefactor * eta_r)
 
 
 class FirstOrderButlerVolmer(ButlerVolmer, BaseFirstOrderKinetics):
