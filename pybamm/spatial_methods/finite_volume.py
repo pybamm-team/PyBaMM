@@ -36,7 +36,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         super().__init__(mesh)
 
         # there is no way to set this at the moment
-        self.extrapolation = "linear"
+        self.extrapolation = "quadratic"
 
         # add npts_for_broadcast to mesh domains for this particular discretisation
         for dom in mesh.keys():
@@ -576,9 +576,9 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return pybamm.Matrix(matrix) @ discretised_symbol + bcs_vector
 
-    def boundary_value_or_flux(self, symbol, discretised_child):
+    def boundary_value_or_flux(self, symbol, discretised_child, bcs=None):
         """
-        Uses linear extrapolation to get the boundary value or flux of a variable in the
+        Uses extrapolation to get the boundary value or flux of a variable in the
         Finite Volume Method.
 
         See :meth:`pybamm.SpatialMethod.boundary_value`
@@ -590,9 +590,14 @@ class FiniteVolume(pybamm.SpatialMethod):
         prim_pts = submesh_list[0].npts
         sec_pts = len(submesh_list)
 
+        if not bcs:
+            bcs = {}
+
         # Create submatrix to compute boundary values or fluxes
         if isinstance(symbol, pybamm.BoundaryValue):
 
+            # Derivation of extrapolation formula can be found at:
+            # https://github.com/Scottmar93/extrapolation-coefficents/tree/master
             nodes = submesh_list[0].nodes
             edges = submesh_list[0].edges
 
@@ -604,85 +609,140 @@ class FiniteVolume(pybamm.SpatialMethod):
             dxNm1 = submesh_list[0].d_nodes[-1]
             dxNm2 = submesh_list[0].d_nodes[-2]
 
+            child = symbol.child
+
             if symbol.side == "left":
 
                 if self.extrapolation == "linear":
                     # to find value at x* use formula:
                     # f(x*) = f_1 - (dx0 / dx1) (f_2 - f_1)
-                    # where
-                    # dx0 is distance between edge and first node
-                    # dx1 is distance between first and second nodes
 
-                    sub_matrix = csr_matrix(
-                        ([1 + (dx0 / dx1), -(dx0 / dx1)], ([0, 0], [0, 1])),
-                        shape=(1, prim_pts),
-                    )
+                    if pybamm.has_bc_condition_of_form(
+                        child, symbol.side, bcs, "Neumann"
+                    ):
+                        sub_matrix = csr_matrix(([1], ([0], [0])), shape=(1, prim_pts),)
+
+                        additive = -dx0 * bcs[child.id][symbol.side][0]
+
+                    else:
+                        sub_matrix = csr_matrix(
+                            ([1 + (dx0 / dx1), -(dx0 / dx1)], ([0, 0], [0, 1])),
+                            shape=(1, prim_pts),
+                        )
+                        additive = pybamm.Scalar(0)
+
                 elif self.extrapolation == "quadratic":
-                    # to find value at x* use formula:
-                    # see mathematica notebook at:
-                    # https://github.com/Scottmar93/extrapolation-coefficents/tree/master
-                    # f(x*) = a f_1 + b f_2 + c f_3
 
-                    a = (dx0 + dx1) * (dx0 + dx1 + dx2) / (dx1 * (dx1 + dx2))
-                    b = -dx0 * (dx0 + dx1 + dx2) / (dx1 * dx2)
-                    c = dx0 * (dx0 + dx1) / (dx2 * (dx1 + dx2))
+                    if pybamm.has_bc_condition_of_form(
+                        child, symbol.side, bcs, "Neumann"
+                    ):
+                        a = (dx0 + dx1) ** 2 / (dx1 * (2 * dx0 + dx1))
+                        b = -(dx0 ** 2) / (2 * dx0 * dx1 + dx1 ** 2)
+                        alpha = -(dx0 * (dx0 + dx1)) / (2 * dx0 + dx1)
 
-                    sub_matrix = csr_matrix(
-                        ([a, b, c], ([0, 0, 0], [0, 1, 2])), shape=(1, prim_pts),
-                    )
+                        sub_matrix = csr_matrix(
+                            ([a, b], ([0, 0], [0, 1])), shape=(1, prim_pts),
+                        )
+                        additive = alpha * bcs[child.id][symbol.side][0]
+
+                    else:
+                        a = (dx0 + dx1) * (dx0 + dx1 + dx2) / (dx1 * (dx1 + dx2))
+                        b = -dx0 * (dx0 + dx1 + dx2) / (dx1 * dx2)
+                        c = dx0 * (dx0 + dx1) / (dx2 * (dx1 + dx2))
+
+                        sub_matrix = csr_matrix(
+                            ([a, b, c], ([0, 0, 0], [0, 1, 2])), shape=(1, prim_pts),
+                        )
+
+                        additive = pybamm.Scalar(0)
                 else:
                     raise NotImplementedError
 
             elif symbol.side == "right":
 
                 if self.extrapolation == "linear":
-                    # to find value at x* use formula:
-                    # f(x*) = f_N - (dxN / dxNm1) (f_N - f_Nm1)
-                    # where
-                    # dxN is distance between edge and last node
-                    # dxNm1 is distance between second lase and last nodes
 
-                    sub_matrix = csr_matrix(
-                        (
-                            [-(dxN / dxNm1), 1 + (dxN / dxNm1)],
-                            ([0, 0], [prim_pts - 2, prim_pts - 1]),
-                        ),
-                        shape=(1, prim_pts),
-                    )
+                    if pybamm.has_bc_condition_of_form(
+                        child, symbol.side, bcs, "Neumann"
+                    ):
+                        # use formula:
+                        # f(x*) = fN + dxN * f'(x*)
+                        sub_matrix = csr_matrix(
+                            ([1], ([0], [prim_pts - 1]),), shape=(1, prim_pts),
+                        )
+                        additive = dxN * bcs[child.id][symbol.side][0]
+
+                    elif pybamm.has_bc_condition_of_form(
+                        child, symbol.side, bcs, "Dirichlet"
+                    ):
+                        # just use the value from the bc: f(x*)
+                        sub_matrix = csr_matrix((1, prim_pts))
+                        additive = bcs[child.id][symbol.side][0]
+
+                    else:
+                        # to find value at x* use formula:
+                        # f(x*) = f_N - (dxN / dxNm1) (f_N - f_Nm1)
+                        sub_matrix = csr_matrix(
+                            (
+                                [-(dxN / dxNm1), 1 + (dxN / dxNm1)],
+                                ([0, 0], [prim_pts - 2, prim_pts - 1]),
+                            ),
+                            shape=(1, prim_pts),
+                        )
+                        additive = pybamm.Scalar(0)
                 elif self.extrapolation == "quadratic":
-                    # to find value at x* use formula:
-                    # see mathematica notebook at:
-                    # https://github.com/Scottmar93/extrapolation-coefficents/tree/master
-                    # f(x*) = a f_N + b f_Nm1 + c f_Nm2
 
-                    a = (
-                        (dxN + dxNm1)
-                        * (dxN + dxNm1 + dxNm2)
-                        / (dxNm1 * (dxNm1 + dxNm2))
-                    )
-                    b = -dxN * (dxN + dxNm1 + dxNm2) / (dxNm1 * dxNm2)
-                    c = dxN * (dxN + dxNm1) / (dxNm2 * (dxNm1 + dxNm2))
+                    if pybamm.has_bc_condition_of_form(
+                        child, symbol.side, bcs, "Neumann"
+                    ):
+                        a = (dxN + dxNm1) ** 2 / (dxNm1 * (2 * dxN + dxNm1))
+                        b = -(dxN ** 2) / (2 * dxN * dxNm1 + dxNm1 ** 2)
+                        alpha = dxN * (dxN + dxNm1) / (2 * dxN + dxNm1)
+                        sub_matrix = csr_matrix(
+                            ([b, a], ([0, 0], [prim_pts - 2, prim_pts - 1]),),
+                            shape=(1, prim_pts),
+                        )
 
-                    sub_matrix = csr_matrix(
-                        (
-                            [c, b, a],
-                            ([0, 0, 0], [prim_pts - 3, prim_pts - 2, prim_pts - 1]),
-                        ),
-                        shape=(1, prim_pts),
-                    )
+                        additive = alpha * bcs[child.id][symbol.side][0]
+
+                    else:
+                        a = (
+                            (dxN + dxNm1)
+                            * (dxN + dxNm1 + dxNm2)
+                            / (dxNm1 * (dxNm1 + dxNm2))
+                        )
+                        b = -dxN * (dxN + dxNm1 + dxNm2) / (dxNm1 * dxNm2)
+                        c = dxN * (dxN + dxNm1) / (dxNm2 * (dxNm1 + dxNm2))
+
+                        sub_matrix = csr_matrix(
+                            (
+                                [c, b, a],
+                                ([0, 0, 0], [prim_pts - 3, prim_pts - 2, prim_pts - 1]),
+                            ),
+                            shape=(1, prim_pts),
+                        )
+                        additive = pybamm.Scalar(0)
                 else:
                     raise NotImplementedError
 
         elif isinstance(symbol, pybamm.BoundaryGradient):
             if symbol.side == "left":
-                # use formula:
-                # f'(x*) = (f_2 - f_1) / dx1
-                # where dx1 = x_2 - x_1
 
                 if self.extrapolation == "linear":
-                    sub_matrix = (1 / dx1) * csr_matrix(
-                        ([-1, 1], ([0, 0], [0, 1])), shape=(1, prim_pts)
-                    )
+
+                    if pybamm.has_bc_condition_of_form(
+                        child, symbol.side, bcs, "Neumann"
+                    ):
+                        # just use the value from the bc: f'(x*)
+                        sub_matrix = csr_matrix((1, prim_pts))
+                        additive = bcs[child.id][symbol.side][0]
+                    else:
+                        # use formula:
+                        # f'(x*) = (f_2 - f_1) / dx1
+                        sub_matrix = (1 / dx1) * csr_matrix(
+                            ([-1, 1], ([0, 0], [0, 1])), shape=(1, prim_pts)
+                        )
+                        additive = pybamm.Scalar(0)
                 elif self.extrapolation == "quadratic":
 
                     a = -(2 * dx0 + 2 * dx1 + dx2) / (dx1 ** 2 + dx1 * dx2)
@@ -692,17 +752,28 @@ class FiniteVolume(pybamm.SpatialMethod):
                     sub_matrix = csr_matrix(
                         ([a, b, c], ([0, 0, 0], [0, 1, 2])), shape=(1, prim_pts)
                     )
+                    additive = pybamm.Scalar(0)
                 else:
                     raise NotImplementedError
 
             elif symbol.side == "right":
-                dx = submesh_list[0].d_nodes[-1]
 
                 if self.extrapolation == "linear":
-                    sub_matrix = (1 / dx) * csr_matrix(
-                        ([-1, 1], ([0, 0], [prim_pts - 2, prim_pts - 1])),
-                        shape=(1, prim_pts),
-                    )
+                    if pybamm.has_bc_condition_of_form(
+                        child, symbol.side, bcs, "Neumann"
+                    ):
+                        # just use the value from the bc: f'(x*)
+                        sub_matrix = csr_matrix((1, prim_pts))
+                        additive = bcs[child.id][symbol.side][0]
+                    else:
+                        # use formula:
+                        # f'(x*) = (f_N - f_Nm1) / dxNm1
+                        sub_matrix = (1 / dxNm1) * csr_matrix(
+                            ([-1, 1], ([0, 0], [prim_pts - 2, prim_pts - 1])),
+                            shape=(1, prim_pts),
+                        )
+                        additive = pybamm.Scalar(0)
+
                 elif self.extrapolation == "quadratic":
                     a = (2 * dxN + 2 * dxNm1 + dxNm2) / (dxNm1 ** 2 + dxNm1 * dxNm2)
                     b = -(2 * dxN + dxNm1 + dxNm2) / (dxNm1 * dxNm2)
@@ -715,6 +786,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                         ),
                         shape=(1, prim_pts),
                     )
+                    additive = pybamm.Scalar(0)
                 else:
                     raise NotImplementedError
 
@@ -729,6 +801,10 @@ class FiniteVolume(pybamm.SpatialMethod):
         boundary_value = pybamm.Matrix(matrix) @ discretised_child
         boundary_value.domain = symbol.domain
         boundary_value.auxiliary_domains = symbol.auxiliary_domains
+
+        additive.domain = symbol.domain
+        additive.auxiliary_domains = symbol.auxiliary_domains
+        boundary_value += additive
 
         return boundary_value
 

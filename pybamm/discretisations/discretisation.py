@@ -7,6 +7,19 @@ from collections import defaultdict, OrderedDict
 from scipy.sparse import block_diag, csr_matrix
 
 
+def has_bc_condition_of_form(symbol, side, bcs, form):
+
+    if symbol.id in bcs:
+        return True
+        if bcs[symbol.id][side][1] == form:
+            return True
+        else:
+            return False
+
+    else:
+        return False
+
+
 class Discretisation(object):
     """The discretisation class, with methods to process a model and replace
     Spatial Operators with Matrices and Variables with StateVectors
@@ -707,7 +720,9 @@ class Discretisation(object):
                     mesh = self.mesh[symbol.children[0].domain[0]][0]
                     if isinstance(mesh, pybamm.SubMesh1D):
                         symbol.side = mesh.tabs[symbol.side]
-                return child_spatial_method.boundary_value_or_flux(symbol, disc_child)
+                return child_spatial_method.boundary_value_or_flux(
+                    symbol, disc_child, self.bcs
+                )
 
             else:
                 return symbol._unary_new_copy(disc_child)
