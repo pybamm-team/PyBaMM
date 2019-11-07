@@ -590,7 +590,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         prim_pts = submesh_list[0].npts
         sec_pts = len(submesh_list)
 
-        if not bcs:
+        if bcs is None:
             bcs = {}
 
         # Create submatrix to compute boundary values or fluxes

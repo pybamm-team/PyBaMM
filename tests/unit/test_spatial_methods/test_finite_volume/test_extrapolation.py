@@ -15,7 +15,7 @@ import numpy as np
 import unittest
 
 
-def errors(pts, function, method_options):
+def errors(pts, function, method_options, bcs=None):
 
     domain = "test"
     x = pybamm.SpatialVariable("x", domain=domain)
@@ -33,6 +33,12 @@ def errors(pts, function, method_options):
     left_extrap = pybamm.BoundaryValue(var, "left")
     right_extrap = pybamm.BoundaryValue(var, "right")
 
+    if bcs:
+        model = pybamm.BaseBatteryModel()
+        bc_dict = {var: bcs}
+        model.boundary_conditions = bc_dict
+        disc.bcs = disc.process_boundary_conditions(model)
+
     submesh = mesh["test"]
     y, l_true, r_true = function(submesh[0].nodes)
 
@@ -46,13 +52,13 @@ def errors(pts, function, method_options):
     return l_error, r_error
 
 
-def get_errors(function, method_options, pts):
+def get_errors(function, method_options, pts, bcs=None):
 
     l_errors = np.zeros(pts.shape)
     r_errors = np.zeros(pts.shape)
 
     for i, pt in enumerate(pts):
-        l_errors[i], r_errors[i] = errors(pt, function, method_options)
+        l_errors[i], r_errors[i] = errors(pt, function, method_options, bcs)
 
     return l_errors, r_errors
 
@@ -126,8 +132,115 @@ class TestExtrapolation(unittest.TestCase):
         np.testing.assert_array_almost_equal(l_quad_rates, 3)
         np.testing.assert_array_almost_equal(r_quad_rates, 3, decimal=3)
 
-    def test_extrapolation_with_bcs(self):
+    def test_extrapolation_with_bcs_right_neumann(self):
         # simple particle with a flux bc
+
+        pts = 10 ** np.arange(1, 6, 1)
+        dx = 1 / pts
+
+        left_val = 1
+        right_flux = 2
+
+        def x_cubed(x):
+            n = 3
+            f_x = x ** n
+            f_l = 0
+            fp_r = n
+            y = f_x + (right_flux - fp_r) * x + (left_val - f_l)
+
+            true_left = left_val
+            true_right = 1 + (right_flux - fp_r) + (left_val - f_l)
+
+            return y, true_left, true_right
+
+        bcs = {"left": (left_val, "Dirichlet"), "right": (right_flux, "Neumann")}
+
+        linear = {"extrapolation": {"order": "linear", "use bcs": True}}
+        quad = {"extrapolation": {"order": "quadratic", "use bcs": True}}
+        l_errors_lin_no_bc, r_errors_lin_no_bc = get_errors(x_cubed, linear, pts,)
+        l_errors_quad_no_bc, r_errors_quad_no_bc = get_errors(x_cubed, quad, pts,)
+
+        l_errors_lin_with_bc, r_errors_lin_with_bc = get_errors(
+            x_cubed, linear, pts, bcs
+        )
+        l_errors_quad_with_bc, r_errors_quad_with_bc = get_errors(
+            x_cubed, quad, pts, bcs
+        )
+
+        # test that with bc is better than without
+
+        np.testing.assert_array_less(l_errors_lin_with_bc, l_errors_lin_no_bc)
+        np.testing.assert_array_less(r_errors_lin_with_bc, r_errors_lin_no_bc)
+        np.testing.assert_array_less(l_errors_quad_with_bc, l_errors_quad_no_bc)
+        np.testing.assert_array_less(r_errors_quad_with_bc, r_errors_quad_no_bc)
+
+        # note that with bcs we now obtain the left Dirichlet condition exactly
+
+        r_lin_rates_bc = np.log(
+            r_errors_lin_with_bc[:-1] / r_errors_lin_with_bc[1:]
+        ) / np.log(dx[:-1] / dx[1:])
+        r_quad_rates_bc = np.log(
+            r_errors_quad_with_bc[:-1] / r_errors_quad_with_bc[1:]
+        ) / np.log(dx[:-1] / dx[1:])
+
+        # check convergence is about the correct order
+        np.testing.assert_array_almost_equal(r_lin_rates_bc, 2, decimal=2)
+        np.testing.assert_array_almost_equal(r_quad_rates_bc, 3, decimal=1)
+
+    def test_extrapolation_with_bcs_left_neumann(self):
+        # simple particle with a flux bc
+
+        pts = 10 ** np.arange(1, 5, 1)
+        dx = 1 / pts
+
+        left_flux = 2
+        right_val = 1
+
+        def x_cubed(x):
+            n = 3
+            f_x = x ** n
+            fp_l = 0
+            f_r = 1
+            y = f_x + (left_flux - fp_l) * x + (right_val - f_r - left_flux + fp_l)
+
+            true_left = right_val - f_r - left_flux + fp_l
+            true_right = right_val
+
+            return y, true_left, true_right
+
+        bcs = {"left": (left_flux, "Neumann"), "right": (right_val, "Dirichlet")}
+
+        linear = {"extrapolation": {"order": "linear", "use bcs": True}}
+        quad = {"extrapolation": {"order": "quadratic", "use bcs": True}}
+        l_errors_lin_no_bc, r_errors_lin_no_bc = get_errors(x_cubed, linear, pts,)
+        l_errors_quad_no_bc, r_errors_quad_no_bc = get_errors(x_cubed, quad, pts,)
+
+        l_errors_lin_with_bc, r_errors_lin_with_bc = get_errors(
+            x_cubed, linear, pts, bcs
+        )
+        l_errors_quad_with_bc, r_errors_quad_with_bc = get_errors(
+            x_cubed, quad, pts, bcs
+        )
+
+        # test that with bc is better than without
+
+        np.testing.assert_array_less(l_errors_lin_with_bc, l_errors_lin_no_bc)
+        np.testing.assert_array_less(r_errors_lin_with_bc, r_errors_lin_no_bc)
+        np.testing.assert_array_less(l_errors_quad_with_bc, l_errors_quad_no_bc)
+        np.testing.assert_array_less(r_errors_quad_with_bc, r_errors_quad_no_bc)
+
+        # note that with bcs we now obtain the right Dirichlet condition exactly
+
+        l_lin_rates_bc = np.log(
+            l_errors_lin_with_bc[:-1] / l_errors_lin_with_bc[1:]
+        ) / np.log(dx[:-1] / dx[1:])
+        l_quad_rates_bc = np.log(
+            l_errors_quad_with_bc[:-1] / l_errors_quad_with_bc[1:]
+        ) / np.log(dx[:-1] / dx[1:])
+
+        # check convergence is about the correct order
+        np.testing.assert_array_less(2, l_lin_rates_bc)
+        np.testing.assert_array_almost_equal(l_quad_rates_bc, 3, decimal=1)
 
 
 if __name__ == "__main__":

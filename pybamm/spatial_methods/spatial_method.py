@@ -12,7 +12,7 @@ class SpatialMethod:
     operations.
     All spatial methods will follow the general form of SpatialMethod in
     that they contain a method for broadcasting variables onto a mesh,
-    a gradient operator, and a diverence operator.
+    a gradient operator, and a divergence operator.
 
     Parameters
     ----------
