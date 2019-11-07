@@ -230,7 +230,7 @@ class Function(pybamm.Symbol):
         if self.takes_no_params is True:
             # If self.function() takes no parameters then we can always simplify it
             return pybamm.Scalar(self.function())
-        elif isinstance(self.function, pybamm.GetConstantCurrent):
+        elif isinstance(self.function, pybamm.ConstantCurrent):
             # If self.function() is a constant current then simplify to scalar
             return pybamm.Scalar(self.function.parameters_eval["Current [A]"])
         else:

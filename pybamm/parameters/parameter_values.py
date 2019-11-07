@@ -5,7 +5,6 @@ import pybamm
 import pandas as pd
 import os
 import numbers
-import numpy as np
 
 
 class ParameterValues(dict):
@@ -127,6 +126,13 @@ class ParameterValues(dict):
         df.dropna(how="all", inplace=True)
         return {k: v for (k, v) in zip(df["Name [units]"], df["Value"])}
 
+    def __setitem__(self, key, value):
+        "Call the update functionality when doing a setitem"
+        self.update({key: value})
+
+    def setitemsuper(self, key, value):
+        super().__setitem__(key, value)
+
     def update(self, values, check_conflict=False, path=""):
         # check parameter values
         values = self.check_and_update_parameter_values(values)
@@ -156,16 +162,29 @@ class ParameterValues(dict):
                         # Extra set of brackets at the end makes an instance of the
                         # class
                         self[name] = getattr(pybamm, value[15:])()
-                    # Data is flagged with the string "[data]"
-                    elif value.startswith("[data]"):
-                        data = np.loadtxt(os.path.join(path, value[6:] + ".csv"))
+                    # Data is flagged with the string "[data]" or "[current data]"
+                    elif value.startswith("[current data]") or value.startswith(
+                        "[data]"
+                    ):
+                        if value.startswith("[current data]"):
+                            data_path = os.path.join(
+                                pybamm.root_dir(), "input", "drive_cycles"
+                            )
+                            filename = os.path.join(data_path, value[14:] + ".csv")
+                            function_name = value[14:]
+                        else:
+                            filename = os.path.join(path, value[6:] + ".csv")
+                            function_name = value[6:]
+                        data = pd.read_csv(
+                            filename, comment="#", skip_blank_lines=True
+                        ).to_numpy()
                         # Save name and data
-                        self[name] = (value[6:], data)
+                        self.setitemsuper(name, (function_name, data))
                     # Anything else should be a converted to a float
                     else:
-                        self[name] = float(value)
+                        self.setitemsuper(name, float(value))
                 else:
-                    self[name] = value
+                    self.setitemsuper(name, value)
         # reset processed symbols
         self._processed_symbols = {}
 
@@ -175,14 +194,14 @@ class ParameterValues(dict):
             raise ValueError(
                 """
                 "C-rate" cannot be zero. A possible alternative is to set
-                "Current function" to `pybamm.GetConstantCurrent(current=0)` instead.
+                "Current function" to `pybamm.ConstantCurrent(current=0)` instead.
                 """
             )
         if "Typical current [A]" in values and values["Typical current [A]"] == 0:
             raise ValueError(
                 """
                 "Typical current [A]" cannot be zero. A possible alternative is to set
-                "Current function" to `pybamm.GetConstantCurrent(current=0)` instead.
+                "Current function" to `pybamm.ConstantCurrent(current=0)` instead.
                 """
             )
         # If the capacity of the cell has been provided, make sure "C-rate" and current
@@ -410,16 +429,12 @@ class ParameterValues(dict):
 
             # if current setter, process any parameters that are symbols and
             # store the evaluated symbol in the parameters_eval dict
-            if isinstance(function_name, pybamm.GetCurrent):
+            if isinstance(function_name, pybamm.BaseCurrent):
                 for param, sym in function_name.parameters.items():
                     if isinstance(sym, pybamm.Symbol):
                         new_sym = self.process_symbol(sym)
                         function_name.parameters[param] = new_sym
                         function_name.parameters_eval[param] = new_sym.evaluate()
-                # If loading data, need to update interpolant with
-                # evaluated parameters
-                if isinstance(function_name, pybamm.GetCurrentData):
-                    function_name.interpolate()
 
             # Create Function or Interpolant objec
             if isinstance(function_name, tuple):
@@ -504,7 +519,7 @@ class ParameterValues(dict):
                     # KeyError -> name not in parameter dict, don't update
                     continue
             elif isinstance(x, pybamm.Function):
-                if isinstance(x.function, pybamm.GetCurrent):
+                if isinstance(x.function, pybamm.BaseCurrent):
                     # Need to update parameters dict to be that of the new current
                     # function and make new parameters_eval dict to be processed
                     x.function.parameters = self["Current function"].parameters
@@ -522,9 +537,6 @@ class ParameterValues(dict):
                                 # KeyError -> name not in parameter dict, evaluate
                                 # unnamed Scalar
                                 x.function.parameters_eval[param] = new_sym.evaluate()
-                    if isinstance(x.function, pybamm.GetCurrentData):
-                        # update interpolant
-                        x.function.interpolate()
 
         return symbol
 

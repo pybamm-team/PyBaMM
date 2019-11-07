@@ -14,7 +14,7 @@ if idaklu_spec is not None:
 
 
 def have_idaklu():
-    return idaklu_spec is None
+    return idaklu_spec is not None
 
 
 class IDAKLUSolver(pybamm.DaeSolver):

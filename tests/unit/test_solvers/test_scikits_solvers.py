@@ -9,7 +9,7 @@ import warnings
 from tests import get_mesh_for_testing, get_discretisation_for_testing
 
 
-@unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
+@unittest.skipIf(not pybamm.have_scikits_odes(), "scikits.odes not installed")
 class TestScikitsSolvers(unittest.TestCase):
     def test_ode_integrate(self):
         # Constant
