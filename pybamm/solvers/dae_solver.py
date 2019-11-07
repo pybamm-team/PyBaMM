@@ -329,6 +329,7 @@ class DaeSolver(pybamm.BaseSolver):
 
         # Create CasADi problem for the CasADi solver
         self.casadi_problem = {
+            "t": t_casadi,
             "x": y_diff,
             "z": y_alg,
             "ode": concatenated_rhs,

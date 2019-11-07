@@ -170,13 +170,15 @@ class ParameterValues(dict):
                                 pybamm.root_dir(), "input", "drive_cycles"
                             )
                             filename = os.path.join(data_path, value[14:] + ".csv")
+                            function_name = value[14:]
                         else:
                             filename = os.path.join(path, value[6:] + ".csv")
+                            function_name = value[6:]
                         data = pd.read_csv(
                             filename, comment="#", skip_blank_lines=True
                         ).to_numpy()
                         # Save name and data
-                        self.setitemsuper(name, (value[6:], data))
+                        self.setitemsuper(name, (function_name, data))
                     # Anything else should be a converted to a float
                     else:
                         self.setitemsuper(name, float(value))

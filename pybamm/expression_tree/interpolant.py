@@ -60,7 +60,22 @@ class Interpolant(pybamm.Function):
             interpolating_function, child, name=name, derivative="derivative"
         )
         # Store information as attributes
+        self.data = data
         self.x = data[:, 0]
         self.y = data[:, 1]
         self.interpolator = interpolator
         self.extrapolate = extrapolate
+
+    def _function_new_copy(self, children):
+        """ See :meth:`Function._function_new_copy()` """
+        return pybamm.Interpolant(
+            self.data,
+            *children,
+            name=self.name,
+            interpolator=self.interpolator,
+            extrapolate=self.extrapolate,
+        )
+
+    def _function_simplify(self, simplified_children):
+        """ See :meth:`Function._function_new_simplify()` """
+        return self._function_new_copy(simplified_children)

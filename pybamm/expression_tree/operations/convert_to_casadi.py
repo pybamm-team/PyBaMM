@@ -40,7 +40,7 @@ class CasadiConverter(object):
     def _convert(self, symbol, t, y):
         """ See :meth:`CasadiConverter.convert()`. """
         if isinstance(symbol, (pybamm.Scalar, pybamm.Array, pybamm.Time)):
-            return casadi.SX(symbol.evaluate(t, y))
+            return casadi.MX(symbol.evaluate(t, y))
 
         elif isinstance(symbol, pybamm.StateVector):
             if y is None:
