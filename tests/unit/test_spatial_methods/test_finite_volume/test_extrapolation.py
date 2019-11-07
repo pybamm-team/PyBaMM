@@ -2,6 +2,11 @@
 # Test for the extrapolations in the finite volume class
 #
 import pybamm
+from tests import (
+    get_mesh_for_testing,
+    get_p2d_mesh_for_testing,
+    get_1p1d_mesh_for_testing,
+)
 import numpy as np
 import unittest
 
@@ -232,6 +237,274 @@ class TestExtrapolation(unittest.TestCase):
         # check convergence is about the correct order
         np.testing.assert_array_less(2, l_lin_rates_bc)
         np.testing.assert_array_almost_equal(l_quad_rates_bc, 3, decimal=1)
+
+    def test_linear_extrapolate_left_right(self):
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        method_options = {"extrapolation": {"order": "linear", "use bcs": True}}
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume(method_options),
+            "negative particle": pybamm.FiniteVolume(method_options),
+            "current collector": pybamm.ZeroDimensionalMethod(method_options),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        macro_submesh = mesh.combine_submeshes(*whole_cell)
+        micro_submesh = mesh["negative particle"]
+
+        # Macroscale
+        # create variable
+        var = pybamm.Variable("var", domain=whole_cell)
+        # boundary value should work with something more complicated than a variable
+        extrap_left = pybamm.BoundaryValue(2 * var, "left")
+        extrap_right = pybamm.BoundaryValue(4 - var, "right")
+        disc.set_variable_slices([var])
+        extrap_left_disc = disc.process_symbol(extrap_left)
+        extrap_right_disc = disc.process_symbol(extrap_right)
+
+        # check constant extrapolates to constant
+        constant_y = np.ones_like(macro_submesh[0].nodes[:, np.newaxis])
+        self.assertEqual(extrap_left_disc.evaluate(None, constant_y), 2)
+        self.assertEqual(extrap_right_disc.evaluate(None, constant_y), 3)
+
+        # check linear variable extrapolates correctly
+        linear_y = macro_submesh[0].nodes
+        self.assertEqual(extrap_left_disc.evaluate(None, linear_y), 0)
+        self.assertEqual(extrap_right_disc.evaluate(None, linear_y), 3)
+
+        # Fluxes
+        extrap_flux_left = pybamm.BoundaryGradient(2 * var, "left")
+        extrap_flux_right = pybamm.BoundaryGradient(1 - var, "right")
+        extrap_flux_left_disc = disc.process_symbol(extrap_flux_left)
+        extrap_flux_right_disc = disc.process_symbol(extrap_flux_right)
+
+        # check constant extrapolates to constant
+        self.assertEqual(extrap_flux_left_disc.evaluate(None, constant_y), 0)
+        self.assertEqual(extrap_flux_right_disc.evaluate(None, constant_y), 0)
+
+        # check linear variable extrapolates correctly
+        self.assertEqual(extrap_flux_left_disc.evaluate(None, linear_y), 2)
+        self.assertEqual(extrap_flux_right_disc.evaluate(None, linear_y), -1)
+
+        # Microscale
+        # create variable
+        var = pybamm.Variable("var", domain="negative particle")
+        surf_eqn = pybamm.surf(var)
+        disc.set_variable_slices([var])
+        surf_eqn_disc = disc.process_symbol(surf_eqn)
+
+        # check constant extrapolates to constant
+        constant_y = np.ones_like(micro_submesh[0].nodes[:, np.newaxis])
+        self.assertEqual(surf_eqn_disc.evaluate(None, constant_y), 1.0)
+
+        # check linear variable extrapolates correctly
+        linear_y = micro_submesh[0].nodes
+        y_surf = micro_submesh[0].edges[-1]
+        np.testing.assert_array_almost_equal(
+            surf_eqn_disc.evaluate(None, linear_y), y_surf
+        )
+
+    def test_quadratic_extrapolate_left_right(self):
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        method_options = {"extrapolation": {"order": "quadratic", "use bcs": False}}
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume(method_options),
+            "negative particle": pybamm.FiniteVolume(method_options),
+            "current collector": pybamm.ZeroDimensionalMethod(method_options),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        macro_submesh = mesh.combine_submeshes(*whole_cell)
+        micro_submesh = mesh["negative particle"]
+
+        # Macroscale
+        # create variable
+        var = pybamm.Variable("var", domain=whole_cell)
+        # boundary value should work with something more complicated than a variable
+        extrap_left = pybamm.BoundaryValue(2 * var, "left")
+        extrap_right = pybamm.BoundaryValue(4 - var, "right")
+        disc.set_variable_slices([var])
+        extrap_left_disc = disc.process_symbol(extrap_left)
+        extrap_right_disc = disc.process_symbol(extrap_right)
+
+        # check constant extrapolates to constant
+        constant_y = np.ones_like(macro_submesh[0].nodes[:, np.newaxis])
+        np.testing.assert_array_almost_equal(
+            extrap_left_disc.evaluate(None, constant_y), 2.0
+        )
+        np.testing.assert_array_almost_equal(
+            extrap_right_disc.evaluate(None, constant_y), 3.0
+        )
+
+        # check linear variable extrapolates correctly
+        linear_y = macro_submesh[0].nodes
+        np.testing.assert_array_almost_equal(
+            extrap_left_disc.evaluate(None, linear_y), 0
+        )
+        np.testing.assert_array_almost_equal(
+            extrap_right_disc.evaluate(None, linear_y), 3
+        )
+
+        # Fluxes
+        extrap_flux_left = pybamm.BoundaryGradient(2 * var, "left")
+        extrap_flux_right = pybamm.BoundaryGradient(1 - var, "right")
+        extrap_flux_left_disc = disc.process_symbol(extrap_flux_left)
+        extrap_flux_right_disc = disc.process_symbol(extrap_flux_right)
+
+        # check constant extrapolates to constant
+        np.testing.assert_array_almost_equal(
+            extrap_flux_left_disc.evaluate(None, constant_y), 0
+        )
+        self.assertEqual(extrap_flux_right_disc.evaluate(None, constant_y), 0)
+
+        # check linear variable extrapolates correctly
+        np.testing.assert_array_almost_equal(
+            extrap_flux_left_disc.evaluate(None, linear_y), 2
+        )
+        np.testing.assert_array_almost_equal(
+            extrap_flux_right_disc.evaluate(None, linear_y), -1
+        )
+
+        # Microscale
+        # create variable
+        var = pybamm.Variable("var", domain="negative particle")
+        surf_eqn = pybamm.surf(var)
+        disc.set_variable_slices([var])
+        surf_eqn_disc = disc.process_symbol(surf_eqn)
+
+        # check constant extrapolates to constant
+        constant_y = np.ones_like(micro_submesh[0].nodes[:, np.newaxis])
+        np.testing.assert_array_almost_equal(
+            surf_eqn_disc.evaluate(None, constant_y), 1
+        )
+
+        # check linear variable extrapolates correctly
+        linear_y = micro_submesh[0].nodes
+        y_surf = micro_submesh[0].edges[-1]
+        np.testing.assert_array_almost_equal(
+            surf_eqn_disc.evaluate(None, linear_y), y_surf
+        )
+
+    def test_extrapolate_on_nonuniform_grid(self):
+        geometry = pybamm.Geometry("1D micro")
+
+        submesh_types = {
+            "negative particle": pybamm.MeshGenerator(pybamm.Exponential1DSubMesh),
+            "positive particle": pybamm.MeshGenerator(pybamm.Exponential1DSubMesh),
+        }
+
+        var = pybamm.standard_spatial_vars
+        rpts = 10
+        var_pts = {
+            var.r_n: rpts,
+            var.r_p: rpts,
+        }
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+        method_options = {"extrapolation": {"order": "linear", "use bcs": False}}
+        spatial_methods = {
+            "negative particle": pybamm.FiniteVolume(method_options),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        var = pybamm.Variable("var", domain="negative particle")
+        surf_eqn = pybamm.surf(var)
+        disc.set_variable_slices([var])
+        surf_eqn_disc = disc.process_symbol(surf_eqn)
+
+        micro_submesh = mesh["negative particle"]
+
+        # check constant extrapolates to constant
+        constant_y = np.ones_like(micro_submesh[0].nodes[:, np.newaxis])
+        np.testing.assert_array_almost_equal(
+            surf_eqn_disc.evaluate(None, constant_y), 1
+        )
+
+        # check linear variable extrapolates correctly
+        linear_y = micro_submesh[0].nodes
+        y_surf = micro_submesh[0].edges[-1]
+        np.testing.assert_array_almost_equal(
+            surf_eqn_disc.evaluate(None, linear_y), y_surf
+        )
+
+    def test_extrapolate_2d_models(self):
+        # create discretisation
+        mesh = get_p2d_mesh_for_testing()
+        method_options = {"extrapolation": {"order": "linear", "use bcs": False}}
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume(method_options),
+            "negative particle": pybamm.FiniteVolume(method_options),
+            "positive particle": pybamm.FiniteVolume(method_options),
+            "current collector": pybamm.FiniteVolume(method_options),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        # Microscale
+        var = pybamm.Variable("var", domain="negative particle")
+        extrap_right = pybamm.BoundaryValue(var, "right")
+        disc.set_variable_slices([var])
+        extrap_right_disc = disc.process_symbol(extrap_right)
+        self.assertEqual(extrap_right_disc.domain, [])
+        # domain for boundary values must now be explicitly set
+        extrap_right.domain = ["negative electrode"]
+        disc.set_variable_slices([var])
+        extrap_right_disc = disc.process_symbol(extrap_right)
+        self.assertEqual(extrap_right_disc.domain, ["negative electrode"])
+        # evaluate
+        y_macro = mesh["negative electrode"][0].nodes
+        y_micro = mesh["negative particle"][0].nodes
+        y = np.outer(y_macro, y_micro).reshape(-1, 1)
+        # extrapolate to r=1 --> should evaluate to y_macro
+        np.testing.assert_array_almost_equal(
+            extrap_right_disc.evaluate(y=y)[:, 0], y_macro
+        )
+
+        var = pybamm.Variable("var", domain="positive particle")
+        extrap_right = pybamm.BoundaryValue(var, "right")
+        disc.set_variable_slices([var])
+        extrap_right_disc = disc.process_symbol(extrap_right)
+        self.assertEqual(extrap_right_disc.domain, [])
+        # domain for boundary values must now be explicitly set
+        extrap_right.domain = ["positive electrode"]
+        disc.set_variable_slices([var])
+        extrap_right_disc = disc.process_symbol(extrap_right)
+        self.assertEqual(extrap_right_disc.domain, ["positive electrode"])
+
+        # 2d macroscale
+        mesh = get_1p1d_mesh_for_testing()
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        var = pybamm.Variable("var", domain="negative electrode")
+        extrap_right = pybamm.BoundaryValue(var, "right")
+        disc.set_variable_slices([var])
+        extrap_right_disc = disc.process_symbol(extrap_right)
+        self.assertEqual(extrap_right_disc.domain, [])
+
+        # test extrapolate to "negative tab" gives same as "left" and
+        # "positive tab" gives same "right" (see get_mesh_for_testing)
+        var = pybamm.Variable("var", domain="current collector")
+        disc.set_variable_slices([var])
+        submesh = mesh["current collector"]
+        constant_y = np.ones_like(submesh[0].nodes[:, np.newaxis])
+
+        extrap_neg = pybamm.BoundaryValue(var, "negative tab")
+        extrap_neg_disc = disc.process_symbol(extrap_neg)
+        extrap_left = pybamm.BoundaryValue(var, "left")
+        extrap_left_disc = disc.process_symbol(extrap_left)
+        np.testing.assert_array_equal(
+            extrap_neg_disc.evaluate(None, constant_y),
+            extrap_left_disc.evaluate(None, constant_y),
+        )
+
+        extrap_pos = pybamm.BoundaryValue(var, "positive tab")
+        extrap_pos_disc = disc.process_symbol(extrap_pos)
+        extrap_right = pybamm.BoundaryValue(var, "right")
+        extrap_right_disc = disc.process_symbol(extrap_right)
+        np.testing.assert_array_equal(
+            extrap_pos_disc.evaluate(None, constant_y),
+            extrap_right_disc.evaluate(None, constant_y),
+        )
 
 
 if __name__ == "__main__":

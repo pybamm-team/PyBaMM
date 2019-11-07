@@ -593,26 +593,26 @@ class FiniteVolume(pybamm.SpatialMethod):
         if bcs is None:
             bcs = {}
 
+        extrap_order = self.options["extrapolation"]["order"]
+        use_bcs = self.options["extrapolation"]["use bcs"]
+
+        nodes = submesh_list[0].nodes
+        edges = submesh_list[0].edges
+
+        dx0 = nodes[0] - edges[0]
+        dx1 = submesh_list[0].d_nodes[0]
+        dx2 = submesh_list[0].d_nodes[1]
+
+        dxN = edges[-1] - nodes[-1]
+        dxNm1 = submesh_list[0].d_nodes[-1]
+        dxNm2 = submesh_list[0].d_nodes[-2]
+
+        child = symbol.child
+
         # Create submatrix to compute boundary values or fluxes
+        # Derivation of extrapolation formula can be found at:
+        # https://github.com/Scottmar93/extrapolation-coefficents/tree/master
         if isinstance(symbol, pybamm.BoundaryValue):
-
-            # Derivation of extrapolation formula can be found at:
-            # https://github.com/Scottmar93/extrapolation-coefficents/tree/master
-            nodes = submesh_list[0].nodes
-            edges = submesh_list[0].edges
-
-            dx0 = nodes[0] - edges[0]
-            dx1 = submesh_list[0].d_nodes[0]
-            dx2 = submesh_list[0].d_nodes[1]
-
-            dxN = edges[-1] - nodes[-1]
-            dxNm1 = submesh_list[0].d_nodes[-1]
-            dxNm2 = submesh_list[0].d_nodes[-2]
-
-            child = symbol.child
-
-            extrap_order = self.options["extrapolation"]["order"]
-            use_bcs = self.options["extrapolation"]["use bcs"]
 
             if use_bcs and pybamm.has_bc_condition_of_form(
                 child, symbol.side, bcs, "Dirichlet"
@@ -761,7 +761,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
             elif symbol.side == "right":
 
-                if self.extrapolation == "linear":
+                if extrap_order == "linear":
                     # use formula:
                     # f'(x*) = (f_N - f_Nm1) / dxNm1
                     sub_matrix = (1 / dxNm1) * csr_matrix(
@@ -770,7 +770,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                     )
                     additive = pybamm.Scalar(0)
 
-                elif self.extrapolation == "quadratic":
+                elif extrap_order == "quadratic":
                     a = (2 * dxN + 2 * dxNm1 + dxNm2) / (dxNm1 ** 2 + dxNm1 * dxNm2)
                     b = -(2 * dxN + dxNm1 + dxNm2) / (dxNm1 * dxNm2)
                     c = (2 * dxN + dxNm1) / (dxNm1 * dxNm2 + dxNm2 ** 2)
