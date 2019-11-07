@@ -1,17 +1,8 @@
 #
-# Test for the operator class
+# Test for the extrapolations in the finite volume class
 #
 import pybamm
-
-# from tests import (
-#     get_mesh_for_testing,
-#     get_p2d_mesh_for_testing,
-#     get_1p1d_mesh_for_testing,
-# )
-
 import numpy as np
-
-# from scipy.sparse import kron, eye
 import unittest
 
 
