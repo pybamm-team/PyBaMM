@@ -44,7 +44,7 @@ class Discretisation(object):
                 spatial_methods["separator"] = method
                 spatial_methods["positive electrode"] = method
             self._spatial_methods = {
-                dom: method(mesh) for dom, method in spatial_methods.items()
+                dom: method.build(mesh) for dom, method in spatial_methods.items()
             }
         self.bcs = {}
         self.y_slices = {}

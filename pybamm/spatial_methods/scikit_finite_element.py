@@ -26,8 +26,11 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
     **Extends:"": :class:`pybamm.SpatialMethod`
     """
 
-    def __init__(self, mesh):
-        super().__init__(mesh)
+    def __init__(self, options=None):
+        super().__init__(options)
+
+    def build(self, mesh):
+        super().build(mesh)
         # add npts_for_broadcast to mesh domains for this particular discretisation
         for dom in mesh.keys():
             for i in range(len(mesh[dom])):

@@ -32,11 +32,11 @@ class FiniteVolume(pybamm.SpatialMethod):
     **Extends:"": :class:`pybamm.SpatialMethod`
     """
 
-    def __init__(self, mesh):
-        super().__init__(mesh)
+    def __init__(self, options=None):
+        super().__init__(options)
 
-        # there is no way to set this at the moment
-        self.options = {"extrapolation": {"order": "quadratic", "use bcs": True}}
+    def build(self, mesh):
+        super().build(mesh)
 
         # add npts_for_broadcast to mesh domains for this particular discretisation
         for dom in mesh.keys():
@@ -731,7 +731,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         elif isinstance(symbol, pybamm.BoundaryGradient):
 
             if use_bcs and pybamm.has_bc_condition_of_form(
-                    child, symbol.side, bcs, "Neumann"
+                child, symbol.side, bcs, "Neumann"
             ):
                 # just use the value from the bc: f'(x*)
                 sub_matrix = csr_matrix((1, prim_pts))

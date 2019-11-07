@@ -20,7 +20,14 @@ class SpatialMethod:
         Contains all the submeshes for discretisation
     """
 
-    def __init__(self, mesh):
+    def __init__(self, options=None):
+
+        self.options = {"extrapolation": {"order": "quadratic", "use bcs": True}}
+
+        if options:
+            self.options.update(options)
+
+    def build(self, mesh):
         # add npts_for_broadcast to mesh domains for this particular discretisation
         for dom in mesh.keys():
             for i in range(len(mesh[dom])):
