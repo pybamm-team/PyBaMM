@@ -50,9 +50,9 @@ class TestLeadAcidLOQS(unittest.TestCase):
         self.assertIsInstance(model.default_spatial_methods, dict)
         self.assertNotIn("negative particle", model.default_geometry)
         self.assertTrue(
-            issubclass(
+            isinstance(
                 model.default_spatial_methods["current collector"],
-                pybamm.ZeroDimensionalMethod(),
+                pybamm.ZeroDimensionalMethod,
             )
         )
         self.assertTrue(
@@ -69,7 +69,7 @@ class TestLeadAcidLOQS(unittest.TestCase):
             }
         )
         self.assertTrue(
-            issubclass(
+            isinstance(
                 model.default_spatial_methods["current collector"], pybamm.FiniteVolume
             )
         )
@@ -87,7 +87,7 @@ class TestLeadAcidLOQS(unittest.TestCase):
             }
         )
         self.assertTrue(
-            issubclass(
+            isinstance(
                 model.default_spatial_methods["current collector"],
                 pybamm.ScikitFiniteElement,
             )
