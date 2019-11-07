@@ -1459,6 +1459,41 @@ class TestFiniteVolume(unittest.TestCase):
         div_eqn_disc = disc.process_symbol(div_eqn)
         div_eqn_disc.evaluate(None, y_test)
 
+    def test_neg_pos_bcs(self):
+        # 2d macroscale
+        mesh = get_1p1d_mesh_for_testing()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume,
+            "negative particle": pybamm.FiniteVolume,
+            "positive particle": pybamm.FiniteVolume,
+            "current collector": pybamm.FiniteVolume,
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        # var
+        var = pybamm.Variable("var", domain="current collector")
+        disc.set_variable_slices([var])
+        # grad
+        grad_eqn = pybamm.grad(var)
+
+        # bcs (on each tab)
+        boundary_conditions = {
+            var.id: {
+                "negative tab": (pybamm.Scalar(1), "Dirichlet"),
+                "positive tab": (pybamm.Scalar(0), "Neumann"),
+                "no tab": (pybamm.Scalar(8), "Dirichlet"),
+            }
+        }
+        disc.bcs = boundary_conditions
+
+        # check after disc that negative tab goes to left and positive tab goes
+        # to right
+        disc.process_symbol(grad_eqn)
+        self.assertEqual(disc.bcs[var.id]["left"][0].id, pybamm.Scalar(1).id)
+        self.assertEqual(disc.bcs[var.id]["left"][1], "Dirichlet")
+        self.assertEqual(disc.bcs[var.id]["right"][0].id, pybamm.Scalar(0).id)
+        self.assertEqual(disc.bcs[var.id]["right"][1], "Neumann")
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
