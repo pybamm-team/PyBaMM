@@ -10,9 +10,19 @@ import os
 
 #
 # Version info
-# Keep up to date with setup.py!
 #
-__version_int__ = (0, 1, 0)
+def _load_version_int():
+    try:
+        root = os.path.abspath(os.path.dirname(__file__))
+        with open(os.path.join(root, "version"), "r") as f:
+            version = f.read().strip().split(",")
+        major, minor, revision = [int(x) for x in version]
+        return major, minor, revision
+    except Exception as e:
+        raise RuntimeError("Unable to read version number (" + str(e) + ").")
+
+
+__version_int__ = _load_version_int()
 __version__ = ".".join([str(x) for x in __version_int__])
 if sys.version_info[0] < 3:
     del x  # Before Python3, list comprehension iterators leaked

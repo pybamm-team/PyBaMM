@@ -8,12 +8,22 @@ with open("README.md") as f:
     readme = f.read()
 
 
-# Keep up to date with __init__!
-version = "0.1.0"
+# Read version number from file
+def load_version():
+    try:
+        import os
+
+        root = os.path.abspath(os.path.dirname(__file__))
+        with open(os.path.join(root, "pybamm", "version"), "r") as f:
+            version = f.read().strip().split(",")
+        return ".".join([str(int(x)) for x in version])
+    except Exception as e:
+        raise RuntimeError("Unable to read version number (" + str(e) + ").")
+
 
 setup(
     name="pybamm",
-    version=version,
+    version=load_version(),
     description="Python Battery Mathematical Modelling.",
     long_description=readme,
     url="https://github.com/pybamm-team/PyBaMM",
