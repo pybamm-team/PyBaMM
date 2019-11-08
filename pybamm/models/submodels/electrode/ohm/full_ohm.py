@@ -102,10 +102,3 @@ class Full(BaseModel):
             )
 
         self.initial_conditions[phi_s] = phi_s_init
-
-    @property
-    def default_solver(self):
-        """
-        Create and return the default solver for this model
-        """
-        return pybamm.ScikitsDaeSolver()

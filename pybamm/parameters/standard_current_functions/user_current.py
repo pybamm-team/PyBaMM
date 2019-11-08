@@ -4,7 +4,7 @@
 import pybamm
 
 
-class GetUserCurrent(pybamm.GetCurrent):
+class UserCurrent(pybamm.BaseCurrent):
     """
     Sets a user-defined function as the input current for a simulation.
 
@@ -16,7 +16,7 @@ class GetUserCurrent(pybamm.GetCurrent):
         any keyword arguments, i.e. function(t, **kwargs).
     **kwargs : Any keyword arguments required by function.
 
-    **Extends:"": :class:`pybamm.GetCurrent`
+    **Extends:"": :class:`pybamm.BaseCurrent`
     """
 
     def __init__(self, function, **kwargs):
@@ -25,7 +25,7 @@ class GetUserCurrent(pybamm.GetCurrent):
         self.function = function
 
     def __str__(self):
-        return "User defined current"
+        return "User defined current ({})".format(self.function.__name__)
 
     def __call__(self, t):
         return self.function(t, **self.parameters_eval)

@@ -4,7 +4,7 @@
 import pybamm
 
 
-class GetConstantCurrent(pybamm.GetCurrent):
+class ConstantCurrent(pybamm.BaseCurrent):
     """
     Sets a constant input current for a simulation.
 
@@ -13,7 +13,7 @@ class GetConstantCurrent(pybamm.GetCurrent):
     current : :class:`pybamm.Symbol` or float
         The size of the current in Amperes.
 
-    **Extends:"": :class:`pybamm.GetCurrent`
+    **Extends:"": :class:`pybamm.BaseCurrent`
     """
 
     def __init__(self, current=pybamm.electrical_parameters.I_typ):

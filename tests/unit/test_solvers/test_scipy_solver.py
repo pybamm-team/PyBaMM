@@ -132,9 +132,10 @@ class TestScipySolver(unittest.TestCase):
             np.exp(1 + solution.t - np.exp(solution.t)), solution.y[1], rtol=1e-4
         )
 
-    def test_model_solver(self):
+    def test_model_solver_python(self):
         # Create model
         model = pybamm.BaseModel()
+        model.convert_to_format = "python"
         domain = ["negative electrode", "separator", "positive electrode"]
         var = pybamm.Variable("var", domain=domain)
         model.rhs = {var: 0.1 * var}
@@ -158,9 +159,10 @@ class TestScipySolver(unittest.TestCase):
             solution.total_time, solution.solve_time + solution.set_up_time
         )
 
-    def test_model_solver_with_event(self):
+    def test_model_solver_with_event_python(self):
         # Create model
         model = pybamm.BaseModel()
+        model.convert_to_format = "python"
         domain = ["negative electrode", "separator", "positive electrode"]
         var = pybamm.Variable("var", domain=domain)
         model.rhs = {var: -0.1 * var}
@@ -181,9 +183,10 @@ class TestScipySolver(unittest.TestCase):
         np.testing.assert_array_equal(solution.t, t_eval[: len(solution.t)])
         np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
 
-    def test_model_solver_ode_with_jacobian(self):
+    def test_model_solver_ode_with_jacobian_python(self):
         # Create model
         model = pybamm.BaseModel()
+        model.convert_to_format = "python"
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         var1 = pybamm.Variable("var1", domain=whole_cell)
         var2 = pybamm.Variable("var2", domain=whole_cell)
@@ -232,9 +235,10 @@ class TestScipySolver(unittest.TestCase):
             np.ones((N, T.size)) * (T[np.newaxis, :] - np.exp(T[np.newaxis, :])),
         )
 
-    def test_model_step(self):
+    def test_model_step_python(self):
         # Create model
         model = pybamm.BaseModel()
+        model.convert_to_format = "python"
         domain = ["negative electrode", "separator", "positive electrode"]
         var = pybamm.Variable("var", domain=domain)
         model.rhs = {var: 0.1 * var}
