@@ -51,7 +51,7 @@ class TestCurrentFunctions(unittest.TestCase):
     def test_user_current(self):
         # create user-defined sin function
         def my_fun(t, A, omega):
-            return A * np.sin(2 * np.pi * omega * t)
+            return A * pybamm.sin(2 * np.pi * omega * t)
 
         # choose amplitude and frequency
         A = pybamm.electrical_parameters.I_typ
@@ -59,7 +59,8 @@ class TestCurrentFunctions(unittest.TestCase):
 
         # pass my_fun to UserCurrent class, giving the additonal parameters as
         # keyword arguments
-        current = pybamm.UserCurrent(my_fun, A=A, omega=omega)
+        t = pybamm.t
+        current = my_fun(t, A, omega)
         self.assertEqual(str(current), "User defined current (my_fun)")
 
         # set and process parameters
