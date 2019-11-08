@@ -46,7 +46,7 @@ class BaseSubModel:
         symbols.
     """
 
-    def __init__(self, param, domain=None, reactions=None):
+    def __init__(self, param, domain=None, reactions=None, external=False):
         super().__init__()
         self.param = param
         # Initialise empty variables (to avoid overwriting with 'None')
@@ -61,6 +61,8 @@ class BaseSubModel:
         self.domain = domain
         self.set_domain_for_broadcast()
         self.reactions = reactions
+
+        self.external = external
 
     @property
     def domain(self):
@@ -101,20 +103,40 @@ class BaseSubModel:
         """
         return {}
 
-    def set_external_variables(self):
+    def get_external_variables(self):
         """
-        A public method that creates and returns the variables in a submodel which are
-        suppled external to the model.
+        A public method that returns the variables in a submodel which are
+        supplied by an external source.
 
         Returns
         -------
-        dict :
-            The variables created by the submodel which are independent of variables in
-            other submodels.
         list :
             A list of the external variables in the model.
         """
-        return {}, []
+
+        external_variables = []
+        list_of_vars = []
+
+        if self.external is True:
+            # look through all the variables in the submodel and get the
+            # variables which are state vectors
+            submodel_variables = self.get_fundamental_variables()
+            for var in submodel_variables.values():
+                if isinstance(var, pybamm.Variable):
+                    list_of_vars += [var]
+                elif isinstance(var, pybamm.Concatenation):
+                    for child in var.children:
+                        if isinstance(child, pybamm.Variable):
+                            list_of_vars += [child]
+
+            # remove duplicates
+            unique_ids = []
+            for var in list_of_vars:
+                if var.id not in unique_ids:
+                    external_variables += [var]
+                    unique_ids += [var.id]
+
+        return external_variables
 
     def get_coupled_variables(self, variables):
         """

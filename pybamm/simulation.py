@@ -33,7 +33,7 @@ class Simulation:
         self._solver = solver or self._model.default_solver
         self._quick_plot_vars = quick_plot_vars
 
-        self.reset()
+        self.reset(update_model=False)
 
     def set_defaults(self):
         """
@@ -48,11 +48,12 @@ class Simulation:
         self._solver = self._model.default_solver
         self._quick_plot_vars = None
 
-    def reset(self):
+    def reset(self, update_model=True):
         """
         A method to reset a simulation back to its unprocessed state.
         """
-        self.model = self._model_class(self._model_options)
+        if update_model:
+            self.model = self._model_class(self._model_options)
         self.geometry = copy.deepcopy(self._unprocessed_geometry)
         self._model_with_set_params = None
         self._built_model = None

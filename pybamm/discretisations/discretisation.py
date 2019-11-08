@@ -104,7 +104,11 @@ class Discretisation(object):
 
         # Prepare discretisation
         # set variables (we require the full variable not just id)
-        variables = list(model.rhs.keys()) + list(model.algebraic.keys())
+        variables = (
+            list(model.rhs.keys())
+            + list(model.algebraic.keys())
+            + model.external_variables
+        )
 
         # Set the y split for variables
         pybamm.logger.info("Set variable slices for {}".format(model.name))
@@ -131,6 +135,8 @@ class Discretisation(object):
             model_disc.convert_to_format = model.convert_to_format
 
         model_disc.bcs = self.bcs
+
+        self.external_variables = model.external_variables
 
         # Process initial condtions
         pybamm.logger.info("Discretise initial conditions for {}".format(model.name))
@@ -795,7 +801,11 @@ class Discretisation(object):
         if check_complete:
             # Check keys from the given var_eqn_dict against self.y_slices
             ids = {v.id for v in unpacked_variables}
-            if ids != self.y_slices.keys():
+            external_id = {v.id for v in self.external_variables}
+            y_slices_with_external_removed = set(self.y_slices.keys()).difference(
+                external_id
+            )
+            if ids != y_slices_with_external_removed:
                 given_variable_names = [v.name for v in var_eqn_dict.keys()]
                 raise pybamm.ModelError(
                     "Initial conditions are insufficient. Only "
