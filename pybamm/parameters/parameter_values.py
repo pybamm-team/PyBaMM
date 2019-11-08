@@ -452,11 +452,13 @@ class ParameterValues(dict):
                     function = pybamm.Scalar(function)
             # Differentiate if necessary
             if symbol.diff_variable is None:
-                return function
+                function_out = function
             else:
                 # return differentiated function
                 new_diff_variable = self.process_symbol(symbol.diff_variable)
-                return function.diff(new_diff_variable)
+                function_out = function.diff(new_diff_variable)
+            # Process again just to be sure
+            return self.process_symbol(function_out)
 
         elif isinstance(symbol, pybamm.BinaryOperator):
             # process children
@@ -520,25 +522,6 @@ class ParameterValues(dict):
                 except KeyError:
                     # KeyError -> name not in parameter dict, don't update
                     continue
-            elif isinstance(x, pybamm.Function):
-                if isinstance(x.function, pybamm.BaseCurrent):
-                    # Need to update parameters dict to be that of the new current
-                    # function and make new parameters_eval dict to be processed
-                    x.function.parameters = self["Current function"].parameters
-                    x.function.parameters_eval = x.function.parameters.copy()
-                    for param, sym in x.function.parameters.items():
-                        # Need to process again as new symbols may be passed
-                        # e.g. may explicitly pass pybamm.Scalar(1) instead of
-                        # pybamm.electrical_parameters.I_typ
-                        if isinstance(sym, pybamm.Symbol):
-                            new_sym = self.process_symbol(sym)
-                            x.function.parameters[param] = new_sym
-                            try:
-                                x.function.parameters_eval[param] = self[new_sym.name]
-                            except KeyError:
-                                # KeyError -> name not in parameter dict, evaluate
-                                # unnamed Scalar
-                                x.function.parameters_eval[param] = new_sym.evaluate()
 
         return symbol
 

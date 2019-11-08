@@ -8,23 +8,14 @@ import numpy as np
 
 
 class TestCurrentFunctions(unittest.TestCase):
-    def test_base_current(self):
-        function = pybamm.BaseCurrent()
-        self.assertEqual(function(10), 1)
-
     def test_constant_current(self):
-        function = pybamm.ConstantCurrent(current=4)
-        assert isinstance(function(0), numbers.Number)
-        assert isinstance(function(np.zeros(3)), numbers.Number)
-        assert isinstance(function(np.zeros([3, 3])), numbers.Number)
-
         # test simplify
         current = pybamm.electrical_parameters.current_with_time
         parameter_values = pybamm.ParameterValues(
             {
                 "Typical current [A]": 2,
                 "Typical timescale [s]": 1,
-                "Current function": pybamm.ConstantCurrent(),
+                "Current function": 1,
             }
         )
         processed_current = parameter_values.process_symbol(current)
@@ -55,19 +46,17 @@ class TestCurrentFunctions(unittest.TestCase):
 
         # choose amplitude and frequency
         A = pybamm.electrical_parameters.I_typ
-        omega = 3
+        omega = pybamm.Parameter("omega")
 
-        # pass my_fun to UserCurrent class, giving the additonal parameters as
-        # keyword arguments
-        t = pybamm.t
-        current = my_fun(t, A, omega)
-        self.assertEqual(str(current), "User defined current (my_fun)")
+        def current(t):
+            return my_fun(t, A, omega)
 
         # set and process parameters
         parameter_values = pybamm.ParameterValues(
             {
                 "Typical current [A]": 2,
                 "Typical timescale [s]": 1,
+                "omega": 3,
                 "Current function": current,
             }
         )

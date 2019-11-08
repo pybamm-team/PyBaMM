@@ -32,7 +32,7 @@ def self_discharge_states(compute):
             ),
         ]
         extra_parameter_values = {
-            "Current function": pybamm.ConstantCurrent(current=0)
+            "Current function": 0
         }
         t_eval = np.linspace(0, 1000, 100)
         all_variables, t_eval = model_comparison(
