@@ -227,10 +227,10 @@ class DaeSolver(pybamm.BaseSolver):
             initial_conditions
         """
         # Convert model attributes to casadi
-        t_casadi = casadi.SX.sym("t")
+        t_casadi = casadi.MX.sym("t")
         y0 = model.concatenated_initial_conditions
-        y_diff = casadi.SX.sym("y_diff", len(model.concatenated_rhs.evaluate(0, y0)))
-        y_alg = casadi.SX.sym(
+        y_diff = casadi.MX.sym("y_diff", len(model.concatenated_rhs.evaluate(0, y0)))
+        y_alg = casadi.MX.sym(
             "y_alg", len(model.concatenated_algebraic.evaluate(0, y0))
         )
         y_casadi = casadi.vertcat(y_diff, y_alg)
@@ -286,6 +286,7 @@ class DaeSolver(pybamm.BaseSolver):
             return concatenated_algebraic_fn(t, y).full()[:, 0]
 
         if len(model.algebraic) > 0:
+
             y0 = self.calculate_consistent_initial_conditions(
                 rhs,
                 algebraic,
@@ -329,6 +330,7 @@ class DaeSolver(pybamm.BaseSolver):
 
         # Create CasADi problem for the CasADi solver
         self.casadi_problem = {
+            "t": t_casadi,
             "x": y_diff,
             "z": y_alg,
             "ode": concatenated_rhs,

@@ -14,7 +14,6 @@ class TestSPM(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing_1plus1D(self):
         options = {"current collector": "potential pair", "dimensionality": 1}
         model = pybamm.lithium_ion.SPM(options)
@@ -31,7 +30,6 @@ class TestSPM(unittest.TestCase):
         modeltest = tests.StandardModelTest(model, var_pts=var_pts)
         modeltest.test_all(skip_output_tests=True)
 
-    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing_2plus1D(self):
         options = {"current collector": "potential pair", "dimensionality": 2}
         model = pybamm.lithium_ion.SPM(options)
@@ -83,9 +81,7 @@ class TestSPM(unittest.TestCase):
         options = {"thermal": "isothermal"}
         model = pybamm.lithium_ion.SPM(options)
         parameter_values = model.default_parameter_values
-        parameter_values.update(
-            {"Current function": pybamm.GetConstantCurrent(current=0)}
-        )
+        parameter_values.update({"Current function": pybamm.ConstantCurrent(current=0)})
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 

@@ -9,11 +9,11 @@ import numpy as np
 
 class TestCurrentFunctions(unittest.TestCase):
     def test_base_current(self):
-        function = pybamm.GetCurrent()
+        function = pybamm.BaseCurrent()
         self.assertEqual(function(10), 1)
 
     def test_constant_current(self):
-        function = pybamm.GetConstantCurrent(current=4)
+        function = pybamm.ConstantCurrent(current=4)
         assert isinstance(function(0), numbers.Number)
         assert isinstance(function(np.zeros(3)), numbers.Number)
         assert isinstance(function(np.zeros([3, 3])), numbers.Number)
@@ -24,30 +24,20 @@ class TestCurrentFunctions(unittest.TestCase):
             {
                 "Typical current [A]": 2,
                 "Typical timescale [s]": 1,
-                "Current function": pybamm.GetConstantCurrent(),
+                "Current function": pybamm.ConstantCurrent(),
             }
         )
         processed_current = parameter_values.process_symbol(current)
         self.assertIsInstance(processed_current.simplify(), pybamm.Scalar)
 
     def test_get_current_data(self):
-        # test units
-        function_list = [
-            pybamm.GetCurrentData("US06.csv", units="[A]"),
-            pybamm.GetCurrentData("car_current.csv", units="[]", current_scale=10),
-        ]
-        for function in function_list:
-            function.interpolate()
-
         # test process parameters
         dimensional_current = pybamm.electrical_parameters.dimensional_current_with_time
         parameter_values = pybamm.ParameterValues(
             {
                 "Typical current [A]": 2,
                 "Typical timescale [s]": 1,
-                "Current function": pybamm.GetCurrentData(
-                    "car_current.csv", units="[]"
-                ),
+                "Current function": "[current data]car_current",
             }
         )
         dimensional_current_eval = parameter_values.process_symbol(dimensional_current)
@@ -55,9 +45,7 @@ class TestCurrentFunctions(unittest.TestCase):
         def current(t):
             return dimensional_current_eval.evaluate(t=t)
 
-        function_list.append(current)
-
-        standard_tests = StandardCurrentFunctionTests(function_list, always_array=True)
+        standard_tests = StandardCurrentFunctionTests([current], always_array=True)
         standard_tests.test_all()
 
     def test_user_current(self):
@@ -69,9 +57,10 @@ class TestCurrentFunctions(unittest.TestCase):
         A = pybamm.electrical_parameters.I_typ
         omega = 3
 
-        # pass my_fun to GetUserCurrent class, giving the additonal parameters as
+        # pass my_fun to UserCurrent class, giving the additonal parameters as
         # keyword arguments
-        current = pybamm.GetUserCurrent(my_fun, A=A, omega=omega)
+        current = pybamm.UserCurrent(my_fun, A=A, omega=omega)
+        self.assertEqual(str(current), "User defined current (my_fun)")
 
         # set and process parameters
         parameter_values = pybamm.ParameterValues(

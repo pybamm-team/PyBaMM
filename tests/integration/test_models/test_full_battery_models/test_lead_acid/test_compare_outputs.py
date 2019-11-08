@@ -7,7 +7,6 @@ import unittest
 from tests import StandardOutputComparison
 
 
-@unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
 class TestCompareOutputs(unittest.TestCase):
     def test_compare_averages_asymptotics(self):
         """
