@@ -3,7 +3,7 @@
 #
 
 
-class GetCurrent(object):
+class BaseCurrent(object):
     """
     The base class for setting the input current for a simulation. The parameters
     dictionary holds the symbols of any paramters required to evaluate the current.

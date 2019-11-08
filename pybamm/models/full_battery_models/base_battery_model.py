@@ -135,13 +135,6 @@ class BaseBatteryModel(pybamm.BaseModel):
         return base_spatial_methods
 
     @property
-    def default_solver(self):
-        """
-        Create and return the default solver for this model
-        """
-        return pybamm.ScipySolver()
-
-    @property
     def options(self):
         return self._options
 

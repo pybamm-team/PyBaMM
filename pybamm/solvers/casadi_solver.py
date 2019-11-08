@@ -226,6 +226,7 @@ class CasadiSolver(pybamm.DaeSolver):
             "reltol": self.rtol,
             "abstol": self.atol,
             "output_t0": True,
+            "max_num_steps": self.max_steps,
         }
         options.update(self.extra_options)
         if self.method == "idas":
