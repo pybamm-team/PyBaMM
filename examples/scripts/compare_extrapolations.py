@@ -4,8 +4,6 @@ import pybamm
 x_n = pybamm.standard_spatial_vars.x_n
 x_s = pybamm.standard_spatial_vars.x_s
 x_p = pybamm.standard_spatial_vars.x_p
-r_n = pybamm.standard_spatial_vars.r_n
-r_p = pybamm.standard_spatial_vars.r_p
 
 var_pts = {x_n: 10, x_s: 3, x_p: 10}
 model_lin = pybamm.lead_acid.Full()

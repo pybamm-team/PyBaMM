@@ -334,9 +334,6 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         Overwrites the default :meth:`pybamm.SpatialMethod.boundary_value`
         """
 
-        if bcs is None:
-            bcs = {}
-
         # Return average value on the negative tab for "negative tab" and positive tab
         # for "positive tab"
         if isinstance(symbol, pybamm.BoundaryValue):

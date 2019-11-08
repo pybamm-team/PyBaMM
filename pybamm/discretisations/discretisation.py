@@ -28,8 +28,9 @@ class Discretisation(object):
     mesh : pybamm.Mesh
             contains all submeshes to be used on each domain
     spatial_methods : dict
-            a dictionary of the spatial method to be used on each
-            domain. The keys correspond to the keys in a pybamm.Model
+            a dictionary of the spatial methods to be used on each
+            domain. The keys correspond to the model domains and the
+            values to the spatial method.
     """
 
     def __init__(self, mesh=None, spatial_methods=None):

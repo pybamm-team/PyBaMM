@@ -305,8 +305,10 @@ class SpatialMethod:
             The boundary value or flux symbol
         discretised_child : :class:`pybamm.StateVector`
             The discretised variable from which to calculate the boundary value
-        bcs : dict
-            The boundary conditions
+        bcs : dict (optional)
+            The boundary conditions. If these are supplied and "use bcs" is True in
+            the options, then these will be used to improve the accuracy of the
+            extrapolation.
 
         Returns
         -------
