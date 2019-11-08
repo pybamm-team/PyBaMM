@@ -169,7 +169,6 @@ from .models.submodels import (
 # Parameters class and methods
 #
 from .parameters.parameter_values import ParameterValues
-from .parameters import standard_current_functions
 from .parameters import geometric_parameters
 from .parameters import electrical_parameters
 from .parameters import thermal_parameters
@@ -237,13 +236,6 @@ from .solvers.scikits_dae_solver import ScikitsDaeSolver
 from .solvers.scikits_ode_solver import ScikitsOdeSolver, have_scikits_odes
 from .solvers.scipy_solver import ScipySolver
 from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
-
-#
-# Current profiles
-#
-from .parameters.standard_current_functions.base_current import BaseCurrent
-from .parameters.standard_current_functions.constant_current import ConstantCurrent
-from .parameters.standard_current_functions.user_current import UserCurrent
 
 #
 # other

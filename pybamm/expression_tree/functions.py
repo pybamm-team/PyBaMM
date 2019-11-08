@@ -227,20 +227,7 @@ class Function(pybamm.Symbol):
          :: pybamm.Scalar() if no children
          :: pybamm.Function if there are children
         """
-        if self.takes_no_params is True:
-            # If self.function() takes no parameters then we can always simplify it
-            return pybamm.Scalar(self.function())
-        elif isinstance(self.function, pybamm.ConstantCurrent):
-            # If self.function() is a constant current then simplify to scalar
-            return pybamm.Scalar(self.function.parameters_eval["Current [A]"])
-        else:
-            return pybamm.Function(
-                self.function,
-                *simplified_children,
-                name=self.name,
-                derivative=self.derivative,
-                differentiated_function=self.differentiated_function
-            )
+        return self._function_new_copy(simplified_children)
 
 
 class SpecificFunction(Function):

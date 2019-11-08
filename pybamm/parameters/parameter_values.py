@@ -157,11 +157,6 @@ class ParameterValues(dict):
                         self[name] = pybamm.load_function(
                             os.path.join(path, value[10:] + ".py")
                         )
-                    # Inbuilt functions are flagged with the string "[inbuilt]"
-                    elif value.startswith("[inbuilt class]"):
-                        # Extra set of brackets at the end makes an instance of the
-                        # class
-                        self[name] = getattr(pybamm, value[15:])()
                     # Data is flagged with the string "[data]" or "[current data]"
                     elif value.startswith("[current data]") or value.startswith(
                         "[data]"
@@ -229,6 +224,18 @@ class ParameterValues(dict):
                 values["Typical current [A]"] = float(values["C-rate"]) * capacity
             elif "Typical current [A]" in values:
                 values["C-rate"] = float(values["Typical current [A]"]) / capacity
+
+        # The "Currrent function" can be provided as a scalar, but if it is it must be
+        # either 1 (for a constant-current charge/discharge) or 0 (for a hold)
+        if "Current function" in values:
+            curr = values["Current function"]
+            if isinstance(curr, numbers.Number) and curr not in [0, 1]:
+                raise ValueError(
+                    "If scalar, the current function must be 0 or 1, not '{}".format(
+                        curr
+                    )
+                )
+
         return values
 
     def process_model(self, unprocessed_model, processing="process", inplace=True):
@@ -427,21 +434,16 @@ class ParameterValues(dict):
             new_children = [self.process_symbol(child) for child in symbol.children]
             function_name = self[symbol.name]
 
-            # if current setter, process any parameters that are symbols and
-            # store the evaluated symbol in the parameters_eval dict
-            if isinstance(function_name, pybamm.BaseCurrent):
-                for param, sym in function_name.parameters.items():
-                    if isinstance(sym, pybamm.Symbol):
-                        new_sym = self.process_symbol(sym)
-                        function_name.parameters[param] = new_sym
-                        function_name.parameters_eval[param] = new_sym.evaluate()
-
-            # Create Function or Interpolant objec
+            # Create Function or Interpolant or Scalar objec
             if isinstance(function_name, tuple):
                 # If function_name is a tuple then it should be (name, data) and we need
                 # to create an Interpolant
                 name, data = function_name
                 function = pybamm.Interpolant(data, *new_children, name=name)
+            elif isinstance(function_name, numbers.Number):
+                # If the "function" is provided is actually a scalar, return a Scalar
+                # object instead of throwing an error
+                function = pybamm.Scalar(function_name)
             else:
                 # otherwise evaluate the function to create a new PyBaMM object
                 function = function_name(*new_children)
