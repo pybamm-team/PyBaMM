@@ -7,7 +7,7 @@ from collections import defaultdict, OrderedDict
 from scipy.sparse import block_diag, csr_matrix
 
 
-def has_bc_condition_of_form(symbol, side, bcs, form):
+def has_bc_of_form(symbol, side, bcs, form):
 
     if symbol.id in bcs:
         if bcs[symbol.id][side][1] == form:

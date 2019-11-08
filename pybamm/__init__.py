@@ -229,7 +229,7 @@ from .geometry import standard_spatial_vars
 # Mesh and Discretisation classes
 #
 from .discretisations.discretisation import Discretisation
-from .discretisations.discretisation import has_bc_condition_of_form
+from .discretisations.discretisation import has_bc_of_form
 from .meshes.meshes import Mesh, SubMesh, MeshGenerator
 from .meshes.zero_dimensional_submesh import SubMesh0D
 from .meshes.one_dimensional_submeshes import (

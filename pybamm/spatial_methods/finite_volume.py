@@ -614,7 +614,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # https://github.com/Scottmar93/extrapolation-coefficents/tree/master
         if isinstance(symbol, pybamm.BoundaryValue):
 
-            if use_bcs and pybamm.has_bc_condition_of_form(
+            if use_bcs and pybamm.has_bc_of_form(
                 child, symbol.side, bcs, "Dirichlet"
             ):
                 # just use the value from the bc: f(x*)
@@ -627,7 +627,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                     # to find value at x* use formula:
                     # f(x*) = f_1 - (dx0 / dx1) (f_2 - f_1)
 
-                    if use_bcs and pybamm.has_bc_condition_of_form(
+                    if use_bcs and pybamm.has_bc_of_form(
                         child, symbol.side, bcs, "Neumann"
                     ):
                         sub_matrix = csr_matrix(([1], ([0], [0])), shape=(1, prim_pts),)
@@ -643,7 +643,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
                 elif extrap_order == "quadratic":
 
-                    if use_bcs and pybamm.has_bc_condition_of_form(
+                    if use_bcs and pybamm.has_bc_of_form(
                         child, symbol.side, bcs, "Neumann"
                     ):
                         a = (dx0 + dx1) ** 2 / (dx1 * (2 * dx0 + dx1))
@@ -672,7 +672,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
                 if extrap_order == "linear":
 
-                    if use_bcs and pybamm.has_bc_condition_of_form(
+                    if use_bcs and pybamm.has_bc_of_form(
                         child, symbol.side, bcs, "Neumann"
                     ):
                         # use formula:
@@ -695,7 +695,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                         additive = pybamm.Scalar(0)
                 elif extrap_order == "quadratic":
 
-                    if use_bcs and pybamm.has_bc_condition_of_form(
+                    if use_bcs and pybamm.has_bc_of_form(
                         child, symbol.side, bcs, "Neumann"
                     ):
                         a = (dxN + dxNm1) ** 2 / (dxNm1 * (2 * dxN + dxNm1))
@@ -730,7 +730,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         elif isinstance(symbol, pybamm.BoundaryGradient):
 
-            if use_bcs and pybamm.has_bc_condition_of_form(
+            if use_bcs and pybamm.has_bc_of_form(
                 child, symbol.side, bcs, "Neumann"
             ):
                 # just use the value from the bc: f'(x*)
