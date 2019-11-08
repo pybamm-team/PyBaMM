@@ -25,7 +25,7 @@ class UserCurrent(pybamm.BaseCurrent):
         self.function = function
 
     def __str__(self):
-        return "User defined current"
+        return "User defined current ({})".format(self.function.__name__)
 
     def __call__(self, t):
         return self.function(t, **self.parameters_eval)

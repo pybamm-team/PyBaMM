@@ -48,7 +48,7 @@ class BaseModel(pybamm.BaseBatteryModel):
             return pybamm.ScipySolver()
         elif pybamm.have_scikits_odes():
             return pybamm.ScikitsDaeSolver()
-        else:
+        else:  # pragma: no cover
             return pybamm.CasadiSolver(mode="safe")
 
     def set_standard_output_variables(self):

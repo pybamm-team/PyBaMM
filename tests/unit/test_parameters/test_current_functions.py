@@ -60,6 +60,7 @@ class TestCurrentFunctions(unittest.TestCase):
         # pass my_fun to UserCurrent class, giving the additonal parameters as
         # keyword arguments
         current = pybamm.UserCurrent(my_fun, A=A, omega=omega)
+        self.assertEqual(str(current), "User defined current (my_fun)")
 
         # set and process parameters
         parameter_values = pybamm.ParameterValues(
