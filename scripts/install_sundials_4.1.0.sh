@@ -44,7 +44,8 @@ make -j$NUM_OF_CORES install
 cd $CURRENT_DIR
 rm -rf build-sundials-4.1.0
 rm -rf sundials-4.1.0
-export LD_LIBRARY_PATH=$INSTALL_DIR/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$INSTALL_DIR/lib:$LD_LIBRARY_PATH # For Linux
+export DYLD_LIBRARY_PATH=$INSTALL_DIR/lib:$DYLD_LIBRARY_PATH # For Mac
 export SUNDIALS_INST=$INSTALL_DIR
 
 # get pybind11
