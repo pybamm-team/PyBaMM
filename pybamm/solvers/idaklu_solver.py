@@ -211,7 +211,7 @@ class IDAKLUSolver(pybamm.DaeSolver):
 
         # get ids of rhs and algebraic variables
         rhs_ids = np.ones(self.rhs(0, y0).shape)
-        alg_ids = np.zeros(self.algebraic(0, y0).shape)
+        alg_ids = np.zeros(len(y0) - len(rhs_ids))
         ids = np.concatenate((rhs_ids, alg_ids))
 
         # solve
