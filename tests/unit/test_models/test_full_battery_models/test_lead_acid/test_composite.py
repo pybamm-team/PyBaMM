@@ -27,7 +27,7 @@ class TestLeadAcidCompositeMultiDimensional(unittest.TestCase):
             {"dimensionality": 1, "current collector": "potential pair"}
         )
         self.assertIsInstance(
-            model.default_solver, (pybamm.IDAKLUSolver, pybamm.CasadiSolver)
+            model.default_solver, (pybamm.ScikitsDaeSolver, pybamm.CasadiSolver)
         )
         model.check_well_posedness()
 
@@ -64,7 +64,7 @@ class TestLeadAcidCompositeWithSideReactions(unittest.TestCase):
         model = pybamm.lead_acid.Composite(options)
         model.check_well_posedness()
         self.assertIsInstance(
-            model.default_solver, (pybamm.IDAKLUSolver, pybamm.CasadiSolver)
+            model.default_solver, (pybamm.ScikitsDaeSolver, pybamm.CasadiSolver)
         )
 
 
