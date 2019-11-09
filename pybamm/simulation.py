@@ -146,11 +146,11 @@ class Simulation:
         if save is False or self._made_step is False:
             self._solution = solution
         else:
-            self.update_solution(solution)
+            self._update_solution(solution)
 
         self._made_step = True
 
-    def update_solution(self, solution):
+    def _update_solution(self, solution):
 
         self._solution.set_up_time += solution.set_up_time
         self._solution.solve_time += solution.solve_time
