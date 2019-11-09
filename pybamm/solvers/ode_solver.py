@@ -45,6 +45,7 @@ class OdeSolver(pybamm.BaseSolver):
             mass_matrix=model.mass_matrix.entries,
             jacobian=self.jacobian,
         )
+
         solve_time = timer.time() - solve_start_time
 
         # Identify the event that caused termination
@@ -121,14 +122,15 @@ class OdeSolver(pybamm.BaseSolver):
         # Create function to evaluate rhs
         def dydt(t, y):
             pybamm.logger.debug("Evaluating RHS for {} at t={}".format(model.name, t))
-            y = self.add_external(y)
             y = y[:, np.newaxis]
+            y = self.add_external(y)
             dy = concatenated_rhs.evaluate(t, y, known_evals={})[0]
             return dy[:, 0]
 
         # Create event-dependent function to evaluate events
         def event_fun(event):
             def eval_event(t, y):
+                y = y[:, np.newaxis]
                 y = self.add_external(y)
                 return event.evaluate(t, y)
 
@@ -140,6 +142,7 @@ class OdeSolver(pybamm.BaseSolver):
         if jac_rhs is not None:
 
             def jacobian(t, y):
+                y = y[:, np.newaxis]
                 y = self.add_external(y)
                 return jac_rhs.evaluate(t, y, known_evals={})[0]
 
@@ -196,6 +199,7 @@ class OdeSolver(pybamm.BaseSolver):
 
         def dydt(t, y):
             pybamm.logger.debug("Evaluating RHS for {} at t={}".format(model.name, t))
+            y = y[:, np.newaxis]
             y = self.add_external(y)
             dy = concatenated_rhs_fn(t, y).full()
             return dy[:, 0]
@@ -205,6 +209,7 @@ class OdeSolver(pybamm.BaseSolver):
             casadi_event_fn = casadi.Function("event", [t_casadi, y_casadi], [event])
 
             def eval_event(t, y):
+                y = y[:, np.newaxis]
                 y = self.add_external(y)
                 return casadi_event_fn(t, y)
 
@@ -221,6 +226,7 @@ class OdeSolver(pybamm.BaseSolver):
             )
 
             def jacobian(t, y):
+                y = y[:, np.newaxis]
                 y = self.add_external(y)
                 return casadi_jac_fn(t, y)
 

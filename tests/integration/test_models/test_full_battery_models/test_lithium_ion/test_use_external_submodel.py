@@ -17,6 +17,8 @@ class TestExternalSubmodel(unittest.TestCase):
 
         model = pybamm.lithium_ion.SPMe(model_options)
 
+        # model.convert_to_format = False
+
         neg_pts = 5
         sep_pts = 3
         pos_pts = 5
@@ -35,7 +37,7 @@ class TestExternalSubmodel(unittest.TestCase):
 
         t_eval = np.linspace(0, 0.17, 100)
 
-        for i, t in enumerate(t_eval):
+        for i in np.arange(1, len(t_eval) - 1):
             dt = t_eval[i + 1] - t_eval[i]
             T = np.zeros((tot_pts, 1))
             external_variables = {"Cell temperature": T}

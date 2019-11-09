@@ -152,7 +152,7 @@ class BaseSolver(object):
             set_up_time = timer.time()
 
             # create a y_pad vector of the correct size:
-            self.y_pad = np.zeros((model.external_start))
+            self.y_pad = np.zeros((model.y_length - model.external_start, 1))
 
         else:
             set_up_time = None
@@ -272,8 +272,9 @@ class BaseSolver(object):
             # Get final event value
             final_event_values = {}
             for name, event in events.items():
+                y_event = self.add_external(solution.y_event)
                 final_event_values[name] = abs(
-                    event.evaluate(solution.t_event, solution.y_event)
+                    event.evaluate(solution.t_event, y_event)
                 )
             termination_event = min(final_event_values, key=final_event_values.get)
             # Add the event to the solution object
