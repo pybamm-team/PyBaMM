@@ -35,10 +35,11 @@ class TestExternalSubmodel(unittest.TestCase):
 
         t_eval = np.linspace(0, 0.17, 100)
 
-        for t in t_eval:
+        for i, t in enumerate(t_eval):
+            dt = t_eval[i + 1] - t_eval[i]
             T = np.zeros((tot_pts, 1))
             external_variables = {"Cell temperature": T}
-            sim.step(external_variables=external_variables)
+            sim.step(dt, external_variables=external_variables)
 
 
 if __name__ == "__main__":

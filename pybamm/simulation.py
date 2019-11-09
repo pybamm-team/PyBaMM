@@ -134,7 +134,9 @@ class Simulation:
         if solver is None:
             solver = self.solver
 
-        self._solution = solver.step(self.built_model, dt, external_variables)
+        self._solution = solver.step(
+            self.built_model, dt, external_variables=external_variables
+        )
 
     def plot(self, quick_plot_vars=None):
         """

@@ -150,7 +150,10 @@ class Discretisation(object):
             elif isinstance(var, pybamm.Variable):
                 start_vals += [self.y_slices[var.id][0].start]
 
-        self.external_start = min(start_vals)
+        model_disc.external_variables = model.external_variables
+        model_disc.external_start = min(start_vals)
+        model_disc.y_length = self.y_length
+        model_disc.y_slices = self.y_slices
 
         pybamm.logger.info("Discretise initial conditions for {}".format(model.name))
         ics, concat_ics = self.process_initial_conditions(model)

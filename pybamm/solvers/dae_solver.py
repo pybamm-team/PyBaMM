@@ -188,6 +188,7 @@ class DaeSolver(pybamm.BaseSolver):
             pybamm.logger.debug(
                 "Evaluating residuals for {} at t={}".format(model.name, t)
             )
+            y = self.add_external(y)
             y = y[:, np.newaxis]
             rhs_eval, known_evals = concatenated_rhs.evaluate(t, y, known_evals={})
             # reuse known_evals
@@ -202,6 +203,7 @@ class DaeSolver(pybamm.BaseSolver):
         # Create event-dependent function to evaluate events
         def event_fun(event):
             def eval_event(t, y):
+                y = self.add_external(y)
                 return event.evaluate(t, y)
 
             return eval_event

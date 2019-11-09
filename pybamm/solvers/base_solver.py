@@ -22,6 +22,9 @@ class BaseSolver(object):
         self._atol = atol
         self.name = "Base solver"
 
+        self.y_pad = None
+        self.y_ext = None
+
     @property
     def method(self):
         return self._method
@@ -147,8 +150,15 @@ class BaseSolver(object):
                 self.set_up(model)
             self.t = 0.0
             set_up_time = timer.time()
+
+            # create a y_pad vector of the correct size:
+            self.y_pad = np.zeros((model.external_start))
+
         else:
             set_up_time = None
+
+        if external_variables is None:
+            external_variables = {}
 
         # load external variables into a state vector
         self.y_ext = np.zeros((model.y_length, 1))
@@ -192,6 +202,15 @@ class BaseSolver(object):
                 "Step time: {}".format(timer.format(solution.solve_time))
             )
         return solution
+
+    def add_external(self, y):
+        """
+        Pad the state vector and then add the external variables so that
+        it is of the correct shape for evaluate
+        """
+        if self.y_pad and self.y_ext:
+            y = np.concatenate(y, self.y_pad) + self.y_ext
+        return y
 
     def compute_solution(self, model, t_eval):
         """Calculate the solution of the model at specified times. Note: this
