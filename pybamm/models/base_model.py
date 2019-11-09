@@ -375,6 +375,11 @@ class BaseModel(object):
 
         # get ids of external variables
         external_ids = {var.id for var in self.external_variables}
+        for var in self.external_variables:
+            if isinstance(var, pybamm.Concatenation):
+                child_ids = {child.id for child in var.children}
+                external_ids = external_ids.union(child_ids)
+
         extra_variables = extra_variables_in_equations.difference(external_ids)
 
         if extra_variables:

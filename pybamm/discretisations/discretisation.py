@@ -114,6 +114,10 @@ class Discretisation(object):
         pybamm.logger.info("Set variable slices for {}".format(model.name))
         self.set_variable_slices(variables)
 
+        # now add extrapolated external variables to the boundary conditions
+        # if required by the spatial method
+        self._preprocess_external_variables(model)
+
         # set boundary conditions (only need key ids for boundary_conditions)
         pybamm.logger.info("Discretise boundary conditions for {}".format(model.name))
         self.bcs = self.process_boundary_conditions(model)
@@ -222,6 +226,30 @@ class Discretisation(object):
 
         # reset discretised_symbols
         self._discretised_symbols = {}
+
+    def _preprocess_external_variables(self, model):
+        """
+        A method to preprocess external variables so that they are
+        compatible with the spatial method. For example, in finite
+        volume, the user will supply a vector of values valid on the
+        cell centres. However, for model processing, we also require
+        the boundary edge fluxes. Therefore, we extrapolate and add
+        the boundary fluxes to the boundary conditions, which are
+        employed in generating the grad and div matrices.
+        The processing is delegated to spatial methods as
+        the preprocessing required for finite volume and finite
+        element will be different.
+        """
+
+        for var in model.external_variables:
+            if var.domain == []:
+                pass
+            else:
+                new_bcs = self.spatial_methods[
+                    var.domain[0]
+                ].preprocess_external_variables(var)
+
+                model.boundary_conditions.update(new_bcs)
 
     def set_internal_boundary_conditions(self, model):
         """
@@ -615,7 +643,10 @@ class Discretisation(object):
         except KeyError:
             discretised_symbol = self._process_symbol(symbol)
             self._discretised_symbols[symbol.id] = discretised_symbol
-            discretised_symbol.test_shape()
+            try:
+                discretised_symbol.test_shape()
+            except:
+                discretised_symbol.test_shape()
             return discretised_symbol
 
     def _process_symbol(self, symbol):
@@ -802,6 +833,9 @@ class Discretisation(object):
             # Check keys from the given var_eqn_dict against self.y_slices
             ids = {v.id for v in unpacked_variables}
             external_id = {v.id for v in self.external_variables}
+            for var in self.external_variables:
+                child_ids = {child.id for child in var.children}
+                external_id = external_id.union(child_ids)
             y_slices_with_external_removed = set(self.y_slices.keys()).difference(
                 external_id
             )

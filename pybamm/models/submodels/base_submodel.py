@@ -124,13 +124,24 @@ class BaseSubModel:
             for var in submodel_variables.values():
                 if isinstance(var, pybamm.Variable):
                     list_of_vars += [var]
-                elif isinstance(var, pybamm.Concatenation):
-                    for child in var.children:
-                        if isinstance(child, pybamm.Variable):
-                            list_of_vars += [child]
 
-            # remove duplicates
+                elif isinstance(var, pybamm.Concatenation):
+                    if all(
+                        isinstance(child, pybamm.Variable) for child in var.children
+                    ):
+                        list_of_vars += [var]
+
+            # first add only unique concatenations
             unique_ids = []
+            for var in list_of_vars:
+                if var.id not in unique_ids and isinstance(var, pybamm.Concatenation):
+                    external_variables += [var]
+                    unique_ids += [var.id]
+                    # also add the ids of the children to unique ids
+                    for child in var.children:
+                        unique_ids += [child.id]
+
+            # now add any unique variables that are not part of a concatentation
             for var in list_of_vars:
                 if var.id not in unique_ids:
                     external_variables += [var]
