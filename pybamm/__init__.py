@@ -83,6 +83,7 @@ from .expression_tree.binary_operators import (
     inner,
     Outer,
     Kron,
+    Heaviside,
     outer,
     source,
 )

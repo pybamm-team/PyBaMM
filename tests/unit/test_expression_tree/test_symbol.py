@@ -74,6 +74,10 @@ class TestSymbol(unittest.TestCase):
         self.assertIsInstance(a @ b, pybamm.MatrixMultiplication)
         self.assertIsInstance(a / b, pybamm.Division)
         self.assertIsInstance(a ** b, pybamm.Power)
+        self.assertIsInstance(a < b, pybamm.Heaviside)
+        self.assertIsInstance(a <= b, pybamm.Heaviside)
+        self.assertIsInstance(a > b, pybamm.Heaviside)
+        self.assertIsInstance(a >= b, pybamm.Heaviside)
 
         # binary - symbol and number
         self.assertIsInstance(a + 2, pybamm.Addition)
@@ -98,30 +102,10 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual((3 ** b).children[1].id, b.id)
 
         # error raising
-        with self.assertRaises(NotImplementedError):
+        with self.assertRaisesRegex(
+            NotImplementedError, "'Addition' not implemented for symbols of type"
+        ):
             a + "two"
-        with self.assertRaises(NotImplementedError):
-            a - "two"
-        with self.assertRaises(NotImplementedError):
-            a * "two"
-        with self.assertRaises(NotImplementedError):
-            a @ "two"
-        with self.assertRaises(NotImplementedError):
-            a / "two"
-        with self.assertRaises(NotImplementedError):
-            a ** "two"
-        with self.assertRaises(NotImplementedError):
-            "two" + a
-        with self.assertRaises(NotImplementedError):
-            "two" - a
-        with self.assertRaises(NotImplementedError):
-            "two" * a
-        with self.assertRaises(NotImplementedError):
-            "two" @ a
-        with self.assertRaises(NotImplementedError):
-            "two" / a
-        with self.assertRaises(NotImplementedError):
-            "two" ** a
 
     def test_multiple_symbols(self):
         a = pybamm.Symbol("a")

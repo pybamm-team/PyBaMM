@@ -4,7 +4,6 @@
 import autograd
 import numpy as np
 import pybamm
-from inspect import signature
 
 
 class Function(pybamm.Symbol):
@@ -49,13 +48,6 @@ class Function(pybamm.Symbol):
         self.function = function
         self.derivative = derivative
         self.differentiated_function = differentiated_function
-
-        # hack to work out whether function takes any params
-        # (signature doesn't work for numpy)
-        if isinstance(function, np.ufunc):
-            self.takes_no_params = False
-        else:
-            self.takes_no_params = len(signature(function).parameters) == 0
 
         super().__init__(
             name,
@@ -182,10 +174,7 @@ class Function(pybamm.Symbol):
         return self._function_evaluate(evaluated_children)
 
     def _function_evaluate(self, evaluated_children):
-        if self.takes_no_params is True:
-            return self.function()
-        else:
-            return self.function(*evaluated_children)
+        return self.function(*evaluated_children)
 
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
@@ -326,6 +315,13 @@ class Log(SpecificFunction):
     def __init__(self, child):
         super().__init__(np.log, child)
 
+    def _function_evaluate(self, evaluated_children):
+        " Avoid RuntimeWarning by manually overwriting non-positive outputs"
+        if evaluated_children[0] <= 0:
+            return np.nan * np.ones_like(evaluated_children[0])
+        else:
+            return np.log(*evaluated_children)
+
     def _function_diff(self, children, idx):
         """ See :meth:`pybamm.Function._function_diff()`. """
         return 1 / children[0]
@@ -396,6 +392,13 @@ class Sqrt(SpecificFunction):
 
     def __init__(self, child):
         super().__init__(np.sqrt, child)
+
+    def _function_evaluate(self, evaluated_children):
+        " Avoid RuntimeWarning by manually overwriting negative outputs"
+        if evaluated_children[0] < 0:
+            return np.nan * np.ones_like(evaluated_children[0])
+        else:
+            return np.sqrt(*evaluated_children)
 
     def _function_diff(self, children, idx):
         """ See :meth:`pybamm.Function._function_diff()`. """

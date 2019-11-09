@@ -60,6 +60,14 @@ class TestSymbolicDifferentiation(unittest.TestCase):
         self.assertEqual(func.diff(b).id, pybamm.Scalar(0).id)
         self.assertNotEqual(func.diff(a).id, pybamm.Scalar(0).id)
 
+    def test_diff_heaviside(self):
+        a = pybamm.Scalar(1)
+        b = pybamm.StateVector(slice(0, 1))
+
+        func = (a < b) * b ** 2
+        self.assertEqual(func.diff(b).evaluate(y=np.array([2])), 4)
+        self.assertEqual(func.diff(b).evaluate(y=np.array([-2])), 0)
+
     def test_exceptions(self):
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")
