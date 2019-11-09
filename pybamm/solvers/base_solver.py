@@ -155,7 +155,7 @@ class BaseSolver(object):
             self.y_pad = np.zeros((model.y_length - model.external_start, 1))
 
         else:
-            set_up_time = None
+            set_up_time = 0
 
         if external_variables is None:
             external_variables = {}
@@ -181,12 +181,11 @@ class BaseSolver(object):
 
         # Assign times
         solution.solve_time = solve_time
-        if set_up_time:
-            solution.set_up_time = set_up_time
+        solution.set_up_time = set_up_time
 
         # Set self.t and self.y0 to their values at the final step
         self.t = solution.t[-1]
-        self.y0 = solution.y[:, -1]
+        self.y0 = solution.y[: model.external_start, -1]
 
         pybamm.logger.debug("Finish stepping {} ({})".format(model.name, termination))
         if set_up_time:

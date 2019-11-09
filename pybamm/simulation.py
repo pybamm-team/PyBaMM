@@ -33,6 +33,8 @@ class Simulation:
         self._solver = solver or self._model.default_solver
         self._quick_plot_vars = quick_plot_vars
 
+        self._made_step = False
+
         self.reset(update_model=False)
 
     def set_defaults(self):
@@ -60,6 +62,7 @@ class Simulation:
         self._mesh = None
         self._disc = None
         self._solution = None
+        self._made_step = False
 
     def set_parameters(self):
         """
@@ -115,7 +118,7 @@ class Simulation:
 
         self._solution = solver.solve(self.built_model, t_eval)
 
-    def step(self, dt, solver=None, external_variables=None):
+    def step(self, dt, solver=None, external_variables=None, save=True):
         """
         A method to step the model forward one timestep. This method will
         automatically build and set the model parameters if not already done so.
@@ -129,14 +132,35 @@ class Simulation:
         external_variables : dict
             A dictionary of external variables and their corresponding
             values at the current time
+        save : bool
+            Turn on to store the solution of all previous timesteps
         """
 
         if solver is None:
             solver = self.solver
 
-        self._solution = solver.step(
+        solution = solver.step(
             self.built_model, dt, external_variables=external_variables
         )
+
+        if save is False or self._made_step is False:
+            self._solution = solution
+        else:
+            self.update_solution(solution)
+
+        self._made_step = True
+
+    def update_solution(self, solution):
+
+        self._solution.set_up_time += solution.set_up_time
+        self._solution.solve_time += solution.solve_time
+        self._solution.t = np.append(self._solution.t, solution.t[-1])
+        self._solution.t_event = solution.t_event
+        self._solution.termination = solution.termination
+        self._solution.y = np.concatenate(
+            [self._solution.y, solution.y[:, -1][:, np.newaxis]], axis=1
+        )
+        self._solution.y_event = solution.y_event
 
     def plot(self, quick_plot_vars=None):
         """

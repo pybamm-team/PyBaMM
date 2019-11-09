@@ -43,6 +43,8 @@ class TestExternalSubmodel(unittest.TestCase):
             external_variables = {"Cell temperature": T}
             sim.step(dt, external_variables=external_variables)
 
+        sim.plot(["Negative particle surface concentration"])
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
