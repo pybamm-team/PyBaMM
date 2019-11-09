@@ -97,7 +97,7 @@ class BaseSolver(object):
         )
         return solution
 
-    def step(self, model, dt, npts=2, log=True):
+    def step(self, model, dt, npts=2, log=True, external_variables=None):
         """
         Step the solution of the model forward by a given time increment. The
         first time this method is called it executes the necessary setup by
@@ -113,6 +113,9 @@ class BaseSolver(object):
         npts : int, optional
             The number of points at which the solution will be returned during
             the step dt. default is 2 (returns the solution at t0 and t0 + dt).
+        external_variables : dict
+            A dictionary of external variables and their corresponding
+            values at the current time
 
         Raises
         ------
@@ -146,6 +149,21 @@ class BaseSolver(object):
             set_up_time = timer.time()
         else:
             set_up_time = None
+
+        # load external variables into a state vector
+        self.y_ext = np.zeros((model.y_length, 1))
+        for var_name, var_vals in external_variables.items():
+            var = model.variables[var_name]
+            if isinstance(var, pybamm.Concatenation):
+                start = model.y_slices[var.children[0].id][0].start
+                stop = model.y_slices[var.children[-1].id][-1].stop
+                y_slice = slice(start, stop)
+
+            elif isinstance(var, pybamm.Variable):
+                start = model.y_slices[var.id][0].start
+                stop = model.y_slices[var.id][-1].stop
+                y_slice = slice(start, stop)
+            self.y_ext[y_slice] = var_vals
 
         # Step
         t_eval = np.linspace(self.t, self.t + dt, npts)

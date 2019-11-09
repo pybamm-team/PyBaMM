@@ -115,6 +115,27 @@ class Simulation:
 
         self._solution = solver.solve(self.built_model, t_eval)
 
+    def step(self, dt, solver=None, external_variables=None):
+        """
+        A method to step the model forward one timestep. This method will
+        automatically build and set the model parameters if not already done so.
+
+        Parameters
+        ----------
+        dt : numeric type
+            The timestep over which to step the solution
+        solver : :class:`pybamm.BaseSolver`
+            The solver to use to solve the model.
+        external_variables : dict
+            A dictionary of external variables and their corresponding
+            values at the current time
+        """
+
+        if solver is None:
+            solver = self.solver
+
+        self._solution = solver.step(self.built_model, dt, external_variables)
+
     def plot(self, quick_plot_vars=None):
         """
         A method to quickly plot the outputs of the simulation.

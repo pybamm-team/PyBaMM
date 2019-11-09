@@ -100,15 +100,6 @@ class FiniteVolume(pybamm.SpatialMethod):
             A dictionary containing the new boundary conditions
         """
 
-        if isinstance(var, pybamm.Concatenation):
-            left_var = var.children[0]
-            right_var = var.children[-1]
-        else:
-            left_var = var
-            right_var = var
-
-        print("hello")
-
         new_bcs = {
             var: {
                 "left": (pybamm.BoundaryGradient(var, "left"), "Neumann"),

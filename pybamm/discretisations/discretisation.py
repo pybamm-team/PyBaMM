@@ -141,8 +141,17 @@ class Discretisation(object):
         model_disc.bcs = self.bcs
 
         self.external_variables = model.external_variables
+        # find where external variables begin in state vector
+        start_vals = []
+        for var in self.external_variables:
+            if isinstance(var, pybamm.Concatenation):
+                for child in var.children:
+                    start_vals += [self.y_slices[child.id][0].start]
+            elif isinstance(var, pybamm.Variable):
+                start_vals += [self.y_slices[var.id][0].start]
 
-        # Process initial condtions
+        self.external_start = min(start_vals)
+
         pybamm.logger.info("Discretise initial conditions for {}".format(model.name))
         ics, concat_ics = self.process_initial_conditions(model)
         model_disc.initial_conditions = ics
@@ -223,6 +232,7 @@ class Discretisation(object):
                 start = end
 
         self.y_slices = y_slices
+        self.y_length = end
 
         # reset discretised_symbols
         self._discretised_symbols = {}
