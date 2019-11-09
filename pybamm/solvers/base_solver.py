@@ -165,13 +165,13 @@ class BaseSolver(object):
         for var_name, var_vals in external_variables.items():
             var = model.variables[var_name]
             if isinstance(var, pybamm.Concatenation):
-                start = model.y_slices[var.children[0].id][0].start
-                stop = model.y_slices[var.children[-1].id][-1].stop
+                start = var.children[0].y_slices[0].start
+                stop = var.children[-1].y_slices[-1].stop
                 y_slice = slice(start, stop)
 
             elif isinstance(var, pybamm.Variable):
-                start = model.y_slices[var.id][0].start
-                stop = model.y_slices[var.id][-1].stop
+                start = var.y_slices[0].start
+                stop = var.y_slices[-1].stop
                 y_slice = slice(start, stop)
             self.y_ext[y_slice] = var_vals
 
@@ -208,8 +208,8 @@ class BaseSolver(object):
         Pad the state vector and then add the external variables so that
         it is of the correct shape for evaluate
         """
-        if self.y_pad and self.y_ext:
-            y = np.concatenate(y, self.y_pad) + self.y_ext
+        if self.y_pad is not None and self.y_ext is not None:
+            y = np.concatenate([y, self.y_pad]) + self.y_ext
         return y
 
     def compute_solution(self, model, t_eval):
