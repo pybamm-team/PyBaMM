@@ -89,7 +89,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
                 "Typical electrolyte concentration [mol.m-3]": 1,
                 "Number of electrodes connected in parallel to make a cell": 8,
                 "Typical current [A]": 2,
-                "Current function": pybamm.ConstantCurrent(),
+                "Current function": 1,
             }
         )
         dimensional_current_density_eval = parameter_values.process_symbol(

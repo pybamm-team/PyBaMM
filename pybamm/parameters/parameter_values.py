@@ -189,14 +189,14 @@ class ParameterValues(dict):
             raise ValueError(
                 """
                 "C-rate" cannot be zero. A possible alternative is to set
-                "Current function" to `pybamm.ConstantCurrent(current=0)` instead.
+                "Current function" to `0` instead.
                 """
             )
         if "Typical current [A]" in values and values["Typical current [A]"] == 0:
             raise ValueError(
                 """
                 "Typical current [A]" cannot be zero. A possible alternative is to set
-                "Current function" to `pybamm.ConstantCurrent(current=0)` instead.
+                "Current function" to `0` instead.
                 """
             )
         # If the capacity of the cell has been provided, make sure "C-rate" and current

@@ -69,9 +69,7 @@ class TestUpdateParameters(unittest.TestCase):
         parameter_values_update = pybamm.ParameterValues(
             chemistry=pybamm.parameter_sets.Marquis2019
         )
-        parameter_values_update.update(
-            {"Current function": pybamm.ConstantCurrent(current=pybamm.Scalar(0))}
-        )
+        parameter_values_update.update({"Current function": 0})
         modeltest3.test_update_parameters(parameter_values_update)
         modeltest3.test_solving(t_eval=t_eval)
         Y3 = modeltest3.solution.y
