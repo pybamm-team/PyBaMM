@@ -247,7 +247,7 @@ class IDAKLUSolver(pybamm.DaeSolver):
             elif sol.flag == 2:
                 termination = "event"
             return pybamm.Solution(
-                sol.t, np.transpose(y_out), t[-1], np.transpose(y_out[-1]), termination
+                sol.t, np.transpose(y_out), t[-1], np.transpose(y_out[-1])[:, np.newaxis], termination
             )
         else:
             raise pybamm.SolverError(sol.message)

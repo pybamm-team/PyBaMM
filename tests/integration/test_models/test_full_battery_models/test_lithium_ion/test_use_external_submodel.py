@@ -107,10 +107,11 @@ class TestExternalSubmodel(unittest.TestCase):
             pybamm.standard_spatial_vars.r_p: 5,
         }
 
-        sim = pybamm.Simulation(model, var_pts=var_pts)
+        solver = pybamm.IDAKLUSolver()
+        sim = pybamm.Simulation(model, var_pts=var_pts, solver=solver)
         sim.build()
 
-        t_eval = np.linspace(0, 0.17, 100)
+        t_eval = np.linspace(0, 0.17, 20)
         x = np.linspace(0, 1, tot_pts)
 
         for i in np.arange(1, len(t_eval) - 1):
@@ -118,8 +119,10 @@ class TestExternalSubmodel(unittest.TestCase):
             T = (np.sin(2 * np.pi * x) * np.sin(2 * np.pi * 100 * t_eval[i]))[
                 :, np.newaxis
             ]
+            # T = np.ones((tot_pts, 1))
             external_variables = {"Cell temperature": T}
             sim.step(dt, external_variables=external_variables)
+            print(i)
 
         sim.plot(
             [

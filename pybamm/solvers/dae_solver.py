@@ -89,6 +89,7 @@ class DaeSolver(pybamm.BaseSolver):
             mass_matrix=model.mass_matrix.entries,
             jacobian=self.jacobian,
         )
+
         solve_time = timer.time() - solve_start_time
 
         # Identify the event that caused termination
@@ -240,6 +241,7 @@ class DaeSolver(pybamm.BaseSolver):
         # Convert model attributes to casadi
         t_casadi = casadi.SX.sym("t")
         y0 = model.concatenated_initial_conditions
+
         y_diff = casadi.SX.sym("y_diff", len(model.concatenated_rhs.evaluate(0, y0)))
         y_alg = casadi.SX.sym(
             "y_alg", len(model.concatenated_algebraic.evaluate(0, y0))

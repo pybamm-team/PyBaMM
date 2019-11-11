@@ -46,14 +46,6 @@ class OdeSolver(pybamm.BaseSolver):
             jacobian=self.jacobian,
         )
 
-        # add the external points onto the solution vector
-        full_y = np.zeros((model.y_length, solution.y.shape[1]))
-        for i in np.arange(solution.y.shape[1]):
-            sol_y = solution.y[:, i]
-            sol_y = sol_y[:, np.newaxis]
-            full_y[:, i] = self.add_external(sol_y)[:, 0]
-        solution.y = full_y
-
         solve_time = timer.time() - solve_start_time
 
         # Identify the event that caused termination

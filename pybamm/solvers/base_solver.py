@@ -164,13 +164,21 @@ class BaseSolver(object):
         t_eval = np.linspace(self.t, self.t + dt, npts)
         solution, solve_time, termination = self.compute_solution(model, t_eval)
 
+        # Set self.t and self.y0 to their values at the final step
+        self.t = solution.t[-1]
+        self.y0 = solution.y[:, -1]
+
+        # add the external points onto the solution
+        full_y = np.zeros((model.y_length, solution.y.shape[1]))
+        for i in np.arange(solution.y.shape[1]):
+            sol_y = solution.y[:, i]
+            sol_y = sol_y[:, np.newaxis]
+            full_y[:, i] = self.add_external(sol_y)[:, 0]
+        solution.y = full_y
+
         # Assign times
         solution.solve_time = solve_time
         solution.set_up_time = set_up_time
-
-        # Set self.t and self.y0 to their values at the final step
-        self.t = solution.t[-1]
-        self.y0 = solution.y[: model.external_start, -1]
 
         pybamm.logger.debug("Finish stepping {} ({})".format(model.name, termination))
         if set_up_time:
