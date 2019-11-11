@@ -146,9 +146,13 @@ class DaeSolver(pybamm.BaseSolver):
                 jac = pybamm.EvaluatorPython(jac)
 
             def jacobian(t, y):
+                y = y[:, np.newaxis]
+                y = self.add_external(y)
                 return jac.evaluate(t, y, known_evals={})[0]
 
             def jacobian_alg(t, y):
+                y = y[:, np.newaxis]
+                y = self.add_external(y)
                 return jac_algebraic.evaluate(t, y, known_evals={})[0]
 
         else:
@@ -167,9 +171,13 @@ class DaeSolver(pybamm.BaseSolver):
 
         # Calculate consistent initial conditions for the algebraic equations
         def rhs(t, y):
+            y = y[:, np.newaxis]
+            y = self.add_external(y)
             return concatenated_rhs.evaluate(t, y, known_evals={})[0][:, 0]
 
         def algebraic(t, y):
+            y = y[:, np.newaxis]
+            y = self.add_external(y)
             return concatenated_algebraic.evaluate(t, y, known_evals={})[0][:, 0]
 
         if len(model.algebraic) > 0:
@@ -188,8 +196,8 @@ class DaeSolver(pybamm.BaseSolver):
             pybamm.logger.debug(
                 "Evaluating residuals for {} at t={}".format(model.name, t)
             )
-            y = self.add_external(y)
             y = y[:, np.newaxis]
+            y = self.add_external(y)
             rhs_eval, known_evals = concatenated_rhs.evaluate(t, y, known_evals={})
             # reuse known_evals
             alg_eval = concatenated_algebraic.evaluate(t, y, known_evals=known_evals)[0]
@@ -203,6 +211,7 @@ class DaeSolver(pybamm.BaseSolver):
         # Create event-dependent function to evaluate events
         def event_fun(event):
             def eval_event(t, y):
+                y = y[:, np.newaxis]
                 y = self.add_external(y)
                 return event.evaluate(t, y)
 

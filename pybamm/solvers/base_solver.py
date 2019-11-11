@@ -133,6 +133,12 @@ class BaseSolver(object):
         # Set timer
         timer = pybamm.Timer()
 
+        if not hasattr(self, "y0"):
+            # create a y_pad vector of the correct size:
+            self.y_pad = np.zeros((model.y_length - model.external_start, 1))
+
+        self.set_external_variables(model, external_variables)
+
         # Run set up on first step
         if not hasattr(self, "y0"):
             pybamm.logger.info(
@@ -151,36 +157,8 @@ class BaseSolver(object):
             self.t = 0.0
             set_up_time = timer.time()
 
-            # create a y_pad vector of the correct size:
-            self.y_pad = np.zeros((model.y_length - model.external_start, 1))
-
         else:
             set_up_time = 0
-
-        if external_variables is None:
-            external_variables = {}
-
-        # load external variables into a state vector
-        self.y_ext = np.zeros((model.y_length, 1))
-        for var_name, var_vals in external_variables.items():
-            var = model.variables[var_name]
-            if isinstance(var, pybamm.Concatenation):
-                start = var.children[0].y_slices[0].start
-                stop = var.children[-1].y_slices[-1].stop
-                y_slice = slice(start, stop)
-
-            elif isinstance(var, pybamm.StateVector):
-                start = var.y_slices[0].start
-                stop = var.y_slices[-1].stop
-                y_slice = slice(start, stop)
-            else:
-                raise pybamm.InputError(
-                    """The variable you have inputted is not a StateVector or Concatenation
-            of StateVectors. Please check the submodel you have made "external" and
-            ensure that the variable you
-            are passing in is the variable that is solved for in that submodel"""
-                )
-            self.y_ext[y_slice] = var_vals
 
         # Step
         t_eval = np.linspace(self.t, self.t + dt, npts)
@@ -208,6 +186,32 @@ class BaseSolver(object):
                 "Step time: {}".format(timer.format(solution.solve_time))
             )
         return solution
+
+    def set_external_variables(self, model, external_variables):
+        if external_variables is None:
+            external_variables = {}
+
+        # load external variables into a state vector
+        self.y_ext = np.zeros((model.y_length, 1))
+        for var_name, var_vals in external_variables.items():
+            var = model.variables[var_name]
+            if isinstance(var, pybamm.Concatenation):
+                start = var.children[0].y_slices[0].start
+                stop = var.children[-1].y_slices[-1].stop
+                y_slice = slice(start, stop)
+
+            elif isinstance(var, pybamm.StateVector):
+                start = var.y_slices[0].start
+                stop = var.y_slices[-1].stop
+                y_slice = slice(start, stop)
+            else:
+                raise pybamm.InputError(
+                    """The variable you have inputted is not a StateVector or Concatenation
+            of StateVectors. Please check the submodel you have made "external" and
+            ensure that the variable you
+            are passing in is the variable that is solved for in that submodel"""
+                )
+            self.y_ext[y_slice] = var_vals
 
     def add_external(self, y):
         """
