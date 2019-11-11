@@ -11,7 +11,7 @@ import unittest
 class TestFiniteVolumeConvergence(unittest.TestCase):
     def test_cartesian_spherical_grad_convergence(self):
         # note that grad function is the same for cartesian and spherical
-        spatial_methods = {"macroscale": pybamm.FiniteVolume}
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
         whole_cell = ["negative electrode", "separator", "positive electrode"]
 
         # Define variable
@@ -62,7 +62,7 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
 
     def test_cartesian_div_convergence(self):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-        spatial_methods = {"macroscale": pybamm.FiniteVolume}
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
 
         # Function for convergence testing
         def get_error(n):
@@ -97,7 +97,7 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
 
     def test_spherical_div_convergence_quadratic(self):
         # test div( r**2 * sin(r) ) == 4*r*sin(r) - r**2*cos(r)
-        spatial_methods = {"negative particle": pybamm.FiniteVolume}
+        spatial_methods = {"negative particle": pybamm.FiniteVolume()}
 
         # Function for convergence testing
         def get_error(n):
@@ -134,7 +134,7 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
 
     def test_spherical_div_convergence_linear(self):
         # test div( r*sin(r) ) == 3*sin(r) + r*cos(r)
-        spatial_methods = {"negative particle": pybamm.FiniteVolume}
+        spatial_methods = {"negative particle": pybamm.FiniteVolume()}
 
         # Function for convergence testing
         def get_error(n):
@@ -169,7 +169,7 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
 
     def test_p2d_spherical_convergence_quadratic(self):
         # test div( r**2 * sin(r) ) == 4*r*sin(r) - r**2*cos(r)
-        spatial_methods = {"negative particle": pybamm.FiniteVolume}
+        spatial_methods = {"negative particle": pybamm.FiniteVolume()}
 
         # Function for convergence testing
         def get_error(m):
@@ -206,7 +206,7 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
 
     def test_p2d_with_x_dep_bcs_spherical_convergence(self):
         # test div_r( (r**2 * sin(r)) * x ) == (4*r*sin(r) - r**2*cos(r)) * x
-        spatial_methods = {"negative particle": pybamm.FiniteVolume}
+        spatial_methods = {"negative particle": pybamm.FiniteVolume()}
 
         # Function for convergence testing
         def get_error(m):

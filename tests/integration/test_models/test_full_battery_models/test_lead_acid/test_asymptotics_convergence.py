@@ -29,11 +29,17 @@ class TestAsymptoticConvergence(unittest.TestCase):
         var = pybamm.standard_spatial_vars
         var_pts = {var.x_n: 3, var.x_s: 3, var.x_p: 3}
         mesh = pybamm.Mesh(geometry, full_model.default_submesh_types, var_pts)
-        loqs_disc = pybamm.Discretisation(mesh, full_model.default_spatial_methods)
+
+        method_options = {"extrapolation": {"order": "linear", "use bcs": False}}
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume(method_options),
+            "current collector": pybamm.ZeroDimensionalMethod(method_options),
+        }
+        loqs_disc = pybamm.Discretisation(mesh, spatial_methods)
         loqs_disc.process_model(leading_order_model)
-        comp_disc = pybamm.Discretisation(mesh, full_model.default_spatial_methods)
+        comp_disc = pybamm.Discretisation(mesh, spatial_methods)
         comp_disc.process_model(composite_model)
-        full_disc = pybamm.Discretisation(mesh, full_model.default_spatial_methods)
+        full_disc = pybamm.Discretisation(mesh, spatial_methods)
         full_disc.process_model(full_model)
 
         def get_max_error(current):
@@ -91,6 +97,7 @@ class TestAsymptoticConvergence(unittest.TestCase):
         loqs_errs, comp_errs = [np.array(err) for err in zip(*errs)]
         # Get rates: expect linear convergence for loqs, quadratic for composite
         loqs_rates = np.log2(loqs_errs[:-1] / loqs_errs[1:])
+
         np.testing.assert_array_less(0.99 * np.ones_like(loqs_rates), loqs_rates)
         # Composite not converging as expected
         comp_rates = np.log2(comp_errs[:-1] / comp_errs[1:])
