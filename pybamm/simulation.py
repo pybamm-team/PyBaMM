@@ -135,6 +135,7 @@ class Simulation:
         save : bool
             Turn on to store the solution of all previous timesteps
         """
+        self.build()
 
         if solver is None:
             solver = self.solver

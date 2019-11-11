@@ -149,6 +149,7 @@ from .expression_tree.exceptions import (
     ModelWarning,
     UndefinedOperationError,
     GeometryError,
+    InputError,
 )
 
 # Operations

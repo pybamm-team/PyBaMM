@@ -169,10 +169,17 @@ class BaseSolver(object):
                 stop = var.children[-1].y_slices[-1].stop
                 y_slice = slice(start, stop)
 
-            elif isinstance(var, pybamm.Variable):
+            elif isinstance(var, pybamm.StateVector):
                 start = var.y_slices[0].start
                 stop = var.y_slices[-1].stop
                 y_slice = slice(start, stop)
+            else:
+                raise pybamm.InputError(
+                    """The variable you have inputted is not a StateVector or Concatenation
+            of StateVectors. Please check the submodel you have made "external" and
+            ensure that the variable you
+            are passing in is the variable that is solved for in that submodel"""
+                )
             self.y_ext[y_slice] = var_vals
 
         # Step
