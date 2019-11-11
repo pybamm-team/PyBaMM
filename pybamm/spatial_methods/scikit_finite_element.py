@@ -12,7 +12,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
     """
     A class which implements the steps specific to the finite element method during
     discretisation. The class uses scikit-fem to discretise the problem to obtain
-    the mass and stifnness matrices. At present, this class is only used for
+    the mass and stiffness matrices. At present, this class is only used for
     solving the Poisson problem -grad^2 u = f in the y-z plane (i.e. not the
     through-cell direction).
 
@@ -22,7 +22,6 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
     ----------
     mesh : :class:`pybamm.Mesh`
         Contains all the submeshes for discretisation
-
 
     **Extends:"": :class:`pybamm.SpatialMethod`
     """
