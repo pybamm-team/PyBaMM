@@ -381,19 +381,26 @@ class Discretisation(object):
                     symbol, domain
                 )
             )
-
         # Replace keys with "left" and "right" as appropriate for 1D meshes
         if isinstance(mesh, pybamm.SubMesh1D):
-            # replace negative and/or positive tab
+            # send boundary conditions applied on the tabs to "left" or "right"
+            # depending on the tab location stored in the mesh
             for tab in ["negative tab", "positive tab"]:
                 if any(tab in side for side in list(bcs.keys())):
                     bcs[mesh.tabs[tab]] = bcs.pop(tab)
-            # replace no tab
-            if any("no tab" in side for side in list(bcs.keys())):
-                if "left" in list(bcs.keys()):
-                    bcs["right"] = bcs.pop("no tab")  # tab at bottom
-                else:
-                    bcs["left"] = bcs.pop("no tab")  # tab at top
+            # if there was a tab at either end, then the boundary conditions
+            # have now been set on "left" and "right" as required by the spatial
+            # method, so there is no need to further modify the bcs dict
+            if all(side in list(bcs.keys()) for side in ["left", "right"]):
+                pass
+            # if both tabs are located at z=0 then the "right" boundary condition
+            # (at z=1) is the condition for "no tab"
+            elif "left" in list(bcs.keys()):
+                bcs["right"] = bcs.pop("no tab")
+            # else if both tabs are located at z=1, the "left" boundary condition
+            # (at z=0) is the condition for "no tab"
+            else:
+                bcs["left"] = bcs.pop("no tab")
 
         return bcs
 
