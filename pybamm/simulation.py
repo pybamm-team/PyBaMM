@@ -33,7 +33,7 @@ class Simulation:
         self._solver = solver or self._model.default_solver
         self._quick_plot_vars = quick_plot_vars
 
-        self._made_step = False
+        self._made_first_step = False
 
         self.reset(update_model=False)
 
@@ -62,7 +62,7 @@ class Simulation:
         self._mesh = None
         self._disc = None
         self._solution = None
-        self._made_step = False
+        self._made_first_step = False
 
     def set_parameters(self):
         """
@@ -143,12 +143,14 @@ class Simulation:
             self.built_model, dt, external_variables=external_variables
         )
 
-        if save is False or self._made_step is False:
+        if save is False or self._made_first_step is False:
             self._solution = solution
+        elif self._solution.t[-1] == solution.t[-1]:
+            pass
         else:
             self._update_solution(solution)
 
-        self._made_step = True
+        self._made_first_step = True
 
     def _update_solution(self, solution):
 
@@ -238,6 +240,10 @@ class Simulation:
     @property
     def spatial_methods(self):
         return self._spatial_methods
+
+    @property
+    def mesh(self):
+        return self._mesh
 
     @property
     def solver(self):
