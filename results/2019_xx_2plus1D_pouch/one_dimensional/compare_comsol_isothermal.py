@@ -13,7 +13,7 @@ os.chdir(pybamm.root_dir())
 
 try:
     comsol_variables = pickle.load(
-        open("input/comsol_results/comsol_thermal_1C.pickle", "rb")
+        open("input/comsol_results/comsol_isothermal_1C.pickle", "rb")
     )
 except FileNotFoundError:
     raise FileNotFoundError("COMSOL data not found. Try running load_comsol_data.py")
@@ -23,8 +23,7 @@ except FileNotFoundError:
 
 # load model and geometry
 pybamm.set_logging_level("INFO")
-options = {"thermal": "x-full"}
-pybamm_model = pybamm.lithium_ion.DFN(options)
+pybamm_model = pybamm.lithium_ion.DFN()
 geometry = pybamm_model.default_geometry
 
 # load parameters and process model and geometry
@@ -41,8 +40,8 @@ param.process_geometry(geometry)
 
 # create mesh
 var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 101, var.x_s: 31, var.x_p: 101, var.r_n: 31, var.r_p: 31}
-# var_pts = {var.x_n: 45, var.x_s: 11, var.x_p: 56, var.r_n: 51, var.r_p: 51}
+# var_pts = {var.x_n: 101, var.x_s: 31, var.x_p: 101, var.r_n: 31, var.r_p: 31}
+var_pts = {var.x_n: 45, var.x_s: 11, var.x_p: 56, var.r_n: 51, var.r_p: 51}
 mesh = pybamm.Mesh(geometry, pybamm_model.default_submesh_types, var_pts)
 
 # discretise model
@@ -105,17 +104,6 @@ comsol_i_s_p = get_interp_fun(comsol_variables["i_s_p"], ["positive electrode"])
 comsol_i_e_n = get_interp_fun(comsol_variables["i_e_n"], ["negative electrode"])
 comsol_i_e_p = get_interp_fun(comsol_variables["i_e_p"], ["positive electrode"])
 comsol_voltage = interp.interp1d(comsol_t, comsol_variables["voltage"])
-comsol_temperature = get_interp_fun(comsol_variables["temperature"], whole_cell)
-comsol_temperature_av = interp.interp1d(
-    comsol_t, comsol_variables["average temperature"]
-)
-comsol_q_irrev_n = get_interp_fun(comsol_variables["Q_irrev_n"], ["negative electrode"])
-comsol_q_irrev_p = get_interp_fun(comsol_variables["Q_irrev_p"], ["positive electrode"])
-comsol_q_rev_n = get_interp_fun(comsol_variables["Q_rev_n"], ["negative electrode"])
-comsol_q_rev_p = get_interp_fun(comsol_variables["Q_rev_p"], ["positive electrode"])
-comsol_q_total_n = get_interp_fun(comsol_variables["Q_total_n"], ["negative electrode"])
-comsol_q_total_s = get_interp_fun(comsol_variables["Q_total_s"], ["separator"])
-comsol_q_total_p = get_interp_fun(comsol_variables["Q_total_p"], ["positive electrode"])
 
 # Create comsol model with dictionary of Matrix variables
 comsol_model = pybamm.BaseModel()
@@ -132,42 +120,12 @@ comsol_model.variables = {
     "Negative electrode electrolyte current density [A.m-2]": comsol_i_e_n,
     "Positive electrode electrolyte current density [A.m-2]": comsol_i_e_p,
     "Terminal voltage [V]": pybamm.Function(comsol_voltage, pybamm.t * tau),
-    "Cell temperature [K]": comsol_temperature,
-    "Volume-averaged cell temperature [K]": pybamm.Function(
-        comsol_temperature_av, pybamm.t * tau
-    ),
-    "Negative electrode irreversible electrochemical heating [W.m-3]": comsol_q_irrev_n,
-    "Positive electrode irreversible electrochemical heating [W.m-3]": comsol_q_irrev_p,
-    "Negative electrode reversible heating [W.m-3]": comsol_q_rev_n,
-    "Positive electrode reversible heating [W.m-3]": comsol_q_rev_p,
-    "Negative electrode total heating [W.m-3]": comsol_q_total_n,
-    "Separator total heating [W.m-3]": comsol_q_total_s,
-    "Positive electrode total heating [W.m-3]": comsol_q_total_p,
 }
 
 "-----------------------------------------------------------------------------"
 "Plot comparison"
 
 plot_times = comsol_variables["time"]
-pybamm_T = pybamm.ProcessedVariable(
-    pybamm_model.variables["Volume-averaged cell temperature [K]"],
-    solution.t,
-    solution.y,
-    mesh=mesh,
-)(plot_times / tau)
-comsol_T = pybamm.ProcessedVariable(
-    comsol_model.variables["Volume-averaged cell temperature [K]"],
-    solution.t,
-    solution.y,
-    mesh=mesh,
-)(plot_times / tau)
-plt.figure()
-plt.plot(plot_times, pybamm_T, "-", label="PyBaMM")
-plt.plot(plot_times, comsol_T, "o", label="COMSOL")
-plt.xlabel("t")
-plt.ylabel("T")
-plt.legend()
-
 pybamm_voltage = pybamm.ProcessedVariable(
     pybamm_model.variables["Terminal voltage [V]"], solution.t, solution.y, mesh=mesh
 )(plot_times / tau)
@@ -371,31 +329,23 @@ def whole_cell_comparison_plot(var, plot_times=None):
 # Make plots
 plot_times = comsol_variables["time"][0::10]
 # plot_times = [600, 1200, 1800, 2400, 3000]
-# heat sources
-# whole_cell_by_domain_comparison_plot(
-#    "Irreversible electrochemical heating [W.m-3]", plot_times=plot_times
-# )
-# whole_cell_by_domain_comparison_plot(
-#    "Reversible heating [W.m-3]", plot_times=plot_times
-# )
-# whole_cell_by_domain_comparison_plot("Total heating [W.m-3]", plot_times=plot_times)
 # potentials
 electrode_comparison_plot("electrode potential [V]", plot_times=plot_times)
-plt.savefig("thermal1D_phi_s.eps", format="eps", dpi=1000)
+plt.savefig("iso1D_phi_s.eps", format="eps", dpi=1000)
 whole_cell_comparison_plot("Electrolyte potential [V]", plot_times=plot_times)
-plt.savefig("thermal1D_phi_e.eps", format="eps", dpi=1000)
+plt.savefig("iso1D_phi_e.eps", format="eps", dpi=1000)
 # current
 electrode_comparison_plot("electrode current density [A.m-2]", plot_times=plot_times)
-plt.savefig("thermal1D_i_s.eps", format="eps", dpi=1000)
+plt.savefig("iso1D_i_s.eps", format="eps", dpi=1000)
 whole_cell_by_domain_comparison_plot(
     "Electrolyte current density [A.m-2]", plot_times=plot_times
 )
-plt.savefig("thermal1D_i_e.eps", format="eps", dpi=1000)
+plt.savefig("iso1D_i_e.eps", format="eps", dpi=1000)
 # concentrations
 electrode_comparison_plot(
     "particle surface concentration [mol.m-3]", plot_times=plot_times
 )
-plt.savefig("thermal1D_c_surf.eps", format="eps", dpi=1000)
+plt.savefig("iso1D_c_surf.eps", format="eps", dpi=1000)
 whole_cell_comparison_plot("Electrolyte concentration [mol.m-3]", plot_times=plot_times)
-plt.savefig("thermal1D_c_e.eps", format="eps", dpi=1000)
+plt.savefig("iso1D_c_e.eps", format="eps", dpi=1000)
 plt.show()

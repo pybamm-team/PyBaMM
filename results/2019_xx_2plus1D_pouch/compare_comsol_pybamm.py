@@ -46,14 +46,14 @@ var = pybamm.standard_spatial_vars
 submesh_types = pybamm_model.default_submesh_types
 
 # cube root sequence in particles
-#r_n_edges = np.linspace(0, 1, 11) ** (1 / 3)
-#submesh_types["negative particle"] = pybamm.MeshGenerator(
+# r_n_edges = np.linspace(0, 1, 11) ** (1 / 3)
+# submesh_types["negative particle"] = pybamm.MeshGenerator(
 #    pybamm.UserSupplied1DSubMesh, submesh_params={"edges": r_n_edges}
-#)
-#r_p_edges = np.linspace(0, 1, 11) ** (1 / 3)
-#submesh_types["positive particle"] = pybamm.MeshGenerator(
+# )
+# r_p_edges = np.linspace(0, 1, 11) ** (1 / 3)
+# submesh_types["positive particle"] = pybamm.MeshGenerator(
 #    pybamm.UserSupplied1DSubMesh, submesh_params={"edges": r_p_edges}
-#)
+# )
 
 # custom mesh in y to ensure edges align with tab edges
 l_y = param.evaluate(pybamm.geometric_parameters.l_y)
@@ -75,7 +75,7 @@ y4 = np.linspace(centre_tab_p + l_tab_p / 2, l_y, 3)  # mesh from pos tab to cel
 y_edges = np.concatenate((y0, y1[1:], y2[1:], y3[1:], y4[1:]))
 
 # square root sequence in z direction
-z_edges = np.linspace(0, 1, 10) ** (1 / 2)
+z_edges = np.linspace(0, 1, 5) ** (1 / 2)
 submesh_types["current collector"] = pybamm.MeshGenerator(
     pybamm.UserSupplied2DSubMesh,
     submesh_params={"y_edges": y_edges, "z_edges": z_edges},
@@ -85,8 +85,8 @@ var_pts = {
     var.x_n: 5,
     var.x_s: 5,
     var.x_p: 5,
-    var.r_n: 11, #len(r_n_edges) - 1,  # Finite Volume nodes one less than edges
-    var.r_p: 11, #len(r_p_edges) - 1,  # Finite Volume nodes one less than edges
+    var.r_n: 5,  # len(r_n_edges) - 1,  # Finite Volume nodes one less than edges
+    var.r_p: 5,  # len(r_p_edges) - 1,  # Finite Volume nodes one less than edges
     var.y: len(y_edges),
     var.z: len(z_edges),
 }
@@ -97,13 +97,11 @@ disc = pybamm.Discretisation(mesh, pybamm_model.default_spatial_methods)
 disc.process_model(pybamm_model)
 
 # discharge timescale
-tau = param.evaluate(
-    pybamm.standard_parameters_lithium_ion.tau_discharge
-)
+tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
 
 # solve model at comsol times
 t_eval = comsol_variables["time"] / tau
-#solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6, mode="fast")
+# solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6, mode="fast")
 pybamm_model.convert_to_format = "casadi"
 solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
 solution = solver.solve(pybamm_model, t_eval)

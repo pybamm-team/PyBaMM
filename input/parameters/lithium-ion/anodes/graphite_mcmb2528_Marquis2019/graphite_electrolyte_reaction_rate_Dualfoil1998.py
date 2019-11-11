@@ -26,6 +26,8 @@ def graphite_electrolyte_reaction_rate_Dualfoil1998(T, T_inf, E_r, R_g):
         Reaction rate
     """
     m_ref = 2 * 10 ** (-5) / 2
-    arrhenius = np.exp(E_r / R_g * (1 / T_inf - 1 / T))
 
-    return m_ref #* arrhenius
+    # m constant is COMSOL
+    # arrhenius = np.exp(E_r / R_g * (1 / T_inf - 1 / T))
+
+    return m_ref  #* arrhenius

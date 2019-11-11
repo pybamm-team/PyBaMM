@@ -82,9 +82,7 @@ disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
 
 # discharge timescale
-tau = param.evaluate(
-    pybamm.standard_parameters_lithium_ion.tau_discharge
-)
+tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
 
 # solve model
 t_end = 900 / tau

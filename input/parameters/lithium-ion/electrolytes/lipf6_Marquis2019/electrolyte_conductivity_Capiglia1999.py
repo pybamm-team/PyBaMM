@@ -39,5 +39,5 @@ def electrolyte_conductivity_Capiglia1999(c_e, T, T_inf, E_k_e, R_g):
     )
 
     arrhenius = np.exp(E_k_e / R_g * (1 / T_inf - 1 / T))
-
+    
     return sigma_e * arrhenius
