@@ -1167,10 +1167,10 @@ class TestFiniteVolume(unittest.TestCase):
         # 2d macroscale
         mesh = get_1p1d_mesh_for_testing()
         spatial_methods = {
-            "macroscale": pybamm.FiniteVolume,
-            "negative particle": pybamm.FiniteVolume,
-            "positive particle": pybamm.FiniteVolume,
-            "current collector": pybamm.FiniteVolume,
+            "macroscale": pybamm.FiniteVolume(),
+            "negative particle": pybamm.FiniteVolume(),
+            "positive particle": pybamm.FiniteVolume(),
+            "current collector": pybamm.FiniteVolume(),
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
