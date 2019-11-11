@@ -74,11 +74,12 @@ class BuildSundials(Command):
         build_directory = os.path.abspath(self.build_temp)
 
         cmake_args = [
-            '-DLAPACK_ENABLE=ON' + build_directory,
+            '-DLAPACK_ENABLE=ON',
             '-DSUNDIALS_INDEX_TYPE=int32_t',
             '-DBUILD_ARKODE:BOOL=OFF',
             '-DEXAMPLES_ENABLE:BOOL=OFF',
             '-DCMAKE_INSTALL_PREFIX=' + self.install_dir,
+            self.sundials_src,
         ]
 
         if not os.path.exists(self.build_temp):
