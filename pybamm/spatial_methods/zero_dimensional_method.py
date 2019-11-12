@@ -17,7 +17,10 @@ class ZeroDimensionalMethod(pybamm.SpatialMethod):
     **Extends** : :class:`pybamm.SpatialMethod`
     """
 
-    def __init__(self, mesh=None):
+    def __init__(self, options=None):
+        super().__init__(options)
+
+    def build(self, mesh):
         self._mesh = mesh
 
     def mass_matrix(self, symbol, boundary_conditions):

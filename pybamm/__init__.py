@@ -230,6 +230,7 @@ from .geometry import standard_spatial_vars
 # Mesh and Discretisation classes
 #
 from .discretisations.discretisation import Discretisation
+from .discretisations.discretisation import has_bc_of_form
 from .meshes.meshes import Mesh, SubMesh, MeshGenerator
 from .meshes.zero_dimensional_submesh import SubMesh0D
 from .meshes.one_dimensional_submeshes import (
@@ -272,12 +273,9 @@ from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
 #
 # Current profiles
 #
-from .parameters.standard_current_functions.base_current import GetCurrent
-from .parameters.standard_current_functions.get_constant_current import (
-    GetConstantCurrent,
-)
-from .parameters.standard_current_functions.get_user_current import GetUserCurrent
-from .parameters.standard_current_functions.get_current_data import GetCurrentData
+from .parameters.standard_current_functions.base_current import BaseCurrent
+from .parameters.standard_current_functions.constant_current import ConstantCurrent
+from .parameters.standard_current_functions.user_current import UserCurrent
 
 #
 # other

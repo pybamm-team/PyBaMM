@@ -51,7 +51,14 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
         self.name = "Scikits DAE solver ({})".format(method)
 
     def integrate(
-        self, residuals, y0, t_eval, events=None, mass_matrix=None, jacobian=None
+        self,
+        residuals,
+        y0,
+        t_eval,
+        events=None,
+        mass_matrix=None,
+        jacobian=None,
+        model=None,
     ):
         """
         Solve a DAE model defined by residuals with initial conditions y0.
@@ -74,6 +81,8 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
             A function that takes in t and y and returns the Jacobian. If
             None, the solver will approximate the Jacobian.
             (see `SUNDIALS docs. <https://computation.llnl.gov/projects/sundials>`).
+        model : :class:`pybamm.BaseModel`
+            The model whose solution to calculate.
         """
 
         def eqsres(t, y, ydot, return_residuals):

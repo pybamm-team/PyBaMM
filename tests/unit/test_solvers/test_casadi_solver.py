@@ -14,8 +14,8 @@ class TestCasadiSolver(unittest.TestCase):
         # Constant
         solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8, method="idas")
 
-        y = casadi.SX.sym("y")
-        constant_growth = casadi.SX(0.5)
+        y = casadi.MX.sym("y")
+        constant_growth = casadi.MX(0.5)
         problem = {"x": y, "ode": constant_growth}
 
         y0 = np.array([0])
@@ -40,7 +40,7 @@ class TestCasadiSolver(unittest.TestCase):
         # Turn off warnings to ignore sqrt error
         warnings.simplefilter("ignore")
 
-        y = casadi.SX.sym("y")
+        y = casadi.MX.sym("y")
         sqrt_decay = -np.sqrt(y)
 
         y0 = np.array([1])
@@ -64,7 +64,7 @@ class TestCasadiSolver(unittest.TestCase):
 
         # create discretisation
         mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.FiniteVolume}
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
         # Solve with failure at t=2
@@ -98,7 +98,7 @@ class TestCasadiSolver(unittest.TestCase):
 
         # create discretisation
         mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.FiniteVolume}
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
         # Solve
@@ -157,7 +157,7 @@ class TestCasadiSolver(unittest.TestCase):
 
         # create discretisation
         mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.FiniteVolume}
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
 
