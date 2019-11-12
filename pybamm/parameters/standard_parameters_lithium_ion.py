@@ -406,13 +406,15 @@ def m_p(T):
 def U_n(c_s_n, T):
     "Dimensionless open-circuit potential in the negative electrode"
     sto = c_s_n
-    return (U_n_dimensional(sto, T) - U_n_ref) / potential_scale
+    T_dim = Delta_T * T + T_ref
+    return (U_n_dimensional(sto, T_dim) - U_n_ref) / potential_scale
 
 
 def U_p(c_s_p, T):
     "Dimensionless open-circuit potential in the positive electrode"
     sto = c_s_p
-    return (U_p_dimensional(sto, T) - U_p_ref) / potential_scale
+    T_dim = Delta_T * T + T_ref
+    return (U_p_dimensional(sto, T_dim) - U_p_ref) / potential_scale
 
 
 def dUdT_n(c_s_n):

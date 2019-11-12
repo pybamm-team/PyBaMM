@@ -172,17 +172,3 @@ class LOQS(BaseModel):
         self.reaction_submodels["Positive"].append(
             self.submodels["leading-order positive oxygen interface"]
         )
-
-    @property
-    def default_solver(self):
-        """
-        Create and return the default solver for this model
-        """
-
-        if (
-            self.options["current collector"] != "uniform"
-            or self.options["surface form"] == "algebraic"
-        ):
-            return pybamm.ScikitsDaeSolver()
-        else:
-            return pybamm.ScipySolver()

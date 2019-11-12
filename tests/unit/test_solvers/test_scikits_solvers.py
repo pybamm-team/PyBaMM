@@ -9,7 +9,7 @@ import warnings
 from tests import get_mesh_for_testing, get_discretisation_for_testing
 
 
-@unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
+@unittest.skipIf(not pybamm.have_scikits_odes(), "scikits.odes not installed")
 class TestScikitsSolvers(unittest.TestCase):
     def test_ode_integrate(self):
         # Constant
@@ -394,9 +394,9 @@ class TestScikitsSolvers(unittest.TestCase):
         np.testing.assert_allclose(0.125 * solution.t, solution.y[0])
         np.testing.assert_allclose(0.25 * solution.t, solution.y[1])
 
-    def test_model_solver_ode(self):
-        # Create model
+    def test_model_solver_ode_python(self):
         model = pybamm.BaseModel()
+        model.convert_to_format = "python"
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         var = pybamm.Variable("var", domain=whole_cell)
         model.rhs = {var: 0.1 * var}
@@ -411,9 +411,9 @@ class TestScikitsSolvers(unittest.TestCase):
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
 
-    def test_model_solver_ode_events(self):
-        # Create model
+    def test_model_solver_ode_events_python(self):
         model = pybamm.BaseModel()
+        model.convert_to_format = "python"
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         var = pybamm.Variable("var", domain=whole_cell)
         model.rhs = {var: 0.1 * var}
@@ -433,9 +433,9 @@ class TestScikitsSolvers(unittest.TestCase):
         np.testing.assert_array_less(solution.y[0], 1.5)
         np.testing.assert_array_less(solution.y[0], 1.25)
 
-    def test_model_solver_ode_jacobian(self):
-        # Create model
+    def test_model_solver_ode_jacobian_python(self):
         model = pybamm.BaseModel()
+        model.convert_to_format = "python"
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         var1 = pybamm.Variable("var1", domain=whole_cell)
         var2 = pybamm.Variable("var2", domain=whole_cell)
@@ -482,9 +482,9 @@ class TestScikitsSolvers(unittest.TestCase):
             np.ones((N, T.size)) * (T[np.newaxis, :] - np.exp(T[np.newaxis, :])),
         )
 
-    def test_model_solver_dae(self):
-        # Create model
+    def test_model_solver_dae_python(self):
         model = pybamm.BaseModel()
+        model.convert_to_format = "python"
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         var1 = pybamm.Variable("var1", domain=whole_cell)
         var2 = pybamm.Variable("var2", domain=whole_cell)
@@ -503,9 +503,9 @@ class TestScikitsSolvers(unittest.TestCase):
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
         np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
 
-    def test_model_solver_dae_bad_ics(self):
-        # Create model
+    def test_model_solver_dae_bad_ics_python(self):
         model = pybamm.BaseModel()
+        model.convert_to_format = "python"
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         var1 = pybamm.Variable("var1", domain=whole_cell)
         var2 = pybamm.Variable("var2", domain=whole_cell)
@@ -523,9 +523,9 @@ class TestScikitsSolvers(unittest.TestCase):
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
         np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
 
-    def test_model_solver_dae_events(self):
-        # Create model
+    def test_model_solver_dae_events_python(self):
         model = pybamm.BaseModel()
+        model.convert_to_format = "python"
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         var1 = pybamm.Variable("var1", domain=whole_cell)
         var2 = pybamm.Variable("var2", domain=whole_cell)
@@ -548,9 +548,9 @@ class TestScikitsSolvers(unittest.TestCase):
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
         np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
 
-    def test_model_solver_dae_with_jacobian(self):
-        # Create simple test model
+    def test_model_solver_dae_with_jacobian_python(self):
         model = pybamm.BaseModel()
+        model.convert_to_format = "python"
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         var1 = pybamm.Variable("var1", domain=whole_cell)
         var2 = pybamm.Variable("var2", domain=whole_cell)
@@ -584,9 +584,9 @@ class TestScikitsSolvers(unittest.TestCase):
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
         np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
 
-    def test_solve_ode_model_with_dae_solver(self):
-        # Create model
+    def test_solve_ode_model_with_dae_solver_python(self):
         model = pybamm.BaseModel()
+        model.convert_to_format = "python"
         var = pybamm.Variable("var")
         model.rhs = {var: 0.1 * var}
         model.initial_conditions = {var: 1}
@@ -600,9 +600,9 @@ class TestScikitsSolvers(unittest.TestCase):
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
 
-    def test_model_step_ode(self):
-        # Create model
+    def test_model_step_ode_python(self):
         model = pybamm.BaseModel()
+        model.convert_to_format = "python"
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         var = pybamm.Variable("var", domain=whole_cell)
         model.rhs = {var: 0.1 * var}
@@ -629,9 +629,9 @@ class TestScikitsSolvers(unittest.TestCase):
         concatenated_steps = np.concatenate((step_sol.y[0], step_sol_2.y[0, 1:]))
         np.testing.assert_allclose(solution.y[0], concatenated_steps)
 
-    def test_model_step_dae(self):
-        # Create model
+    def test_model_step_dae_python(self):
         model = pybamm.BaseModel()
+        model.convert_to_format = "python"
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         var1 = pybamm.Variable("var1", domain=whole_cell)
         var2 = pybamm.Variable("var2", domain=whole_cell)
@@ -716,6 +716,22 @@ class TestScikitsSolvers(unittest.TestCase):
             np.testing.assert_array_less(solution.y[-1], 2.5)
             np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
             np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
+
+    def test_solve_ode_model_with_dae_solver_casadi(self):
+        model = pybamm.BaseModel()
+        model.convert_to_format = "casadi"
+        var = pybamm.Variable("var")
+        model.rhs = {var: 0.1 * var}
+        model.initial_conditions = {var: 1}
+        disc = get_discretisation_for_testing()
+        disc.process_model(model)
+
+        # Solve
+        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
+        t_eval = np.linspace(0, 1, 100)
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_array_equal(solution.t, t_eval)
+        np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
 
 
 if __name__ == "__main__":

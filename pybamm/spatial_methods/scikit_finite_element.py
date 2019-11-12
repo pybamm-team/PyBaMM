@@ -12,7 +12,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
     """
     A class which implements the steps specific to the finite element method during
     discretisation. The class uses scikit-fem to discretise the problem to obtain
-    the mass and stifnness matrices. At present, this class is only used for
+    the mass and stiffness matrices. At present, this class is only used for
     solving the Poisson problem -grad^2 u = f in the y-z plane (i.e. not the
     through-cell direction).
 
@@ -26,8 +26,11 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
     **Extends:"": :class:`pybamm.SpatialMethod`
     """
 
-    def __init__(self, mesh):
-        super().__init__(mesh)
+    def __init__(self, options=None):
+        super().__init__(options)
+
+    def build(self, mesh):
+        super().build(mesh)
         # add npts_for_broadcast to mesh domains for this particular discretisation
         for dom in mesh.keys():
             for i in range(len(mesh[dom])):
@@ -51,11 +54,11 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         symbol_mesh = self.mesh
         if symbol.name == "y":
             vector = pybamm.Vector(
-                symbol_mesh["current collector"][0].edges["y"], domain=symbol.domain
+                symbol_mesh["current collector"][0].coordinates[0, :][:, np.newaxis]
             )
         elif symbol.name == "z":
             vector = pybamm.Vector(
-                symbol_mesh["current collector"][0].edges["z"], domain=symbol.domain
+                symbol_mesh["current collector"][0].coordinates[1, :][:, np.newaxis]
             )
         else:
             raise pybamm.GeometryError(
@@ -121,7 +124,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             # set Dirichlet value at facets corresponding to tab
             neg_bc_load = np.zeros(mesh.npts)
             neg_bc_load[mesh.negative_tab_dofs] = 1
-            boundary_load = boundary_load - neg_bc_value * pybamm.Vector(neg_bc_load)
+            boundary_load = boundary_load + neg_bc_value * pybamm.Vector(neg_bc_load)
         else:
             raise ValueError(
                 "boundary condition must be Dirichlet or Neumann, not '{}'".format(
@@ -138,7 +141,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             # set Dirichlet value at facets corresponding to tab
             pos_bc_load = np.zeros(mesh.npts)
             pos_bc_load[mesh.positive_tab_dofs] = 1
-            boundary_load = boundary_load - pos_bc_value * pybamm.Vector(pos_bc_load)
+            boundary_load = boundary_load + pos_bc_value * pybamm.Vector(pos_bc_load)
         else:
             raise ValueError(
                 "boundary condition must be Dirichlet or Neumann, not '{}'".format(
@@ -322,7 +325,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
         return pybamm.Matrix(integration_vector[np.newaxis, :])
 
-    def boundary_value_or_flux(self, symbol, discretised_child):
+    def boundary_value_or_flux(self, symbol, discretised_child, bcs=None):
         """
         Returns the average value of the symbol over the negative tab ("negative tab")
         or the positive tab ("positive tab") in the Finite Element Method.

@@ -14,7 +14,7 @@ if idaklu_spec is not None:
 
 
 def have_idaklu():
-    return idaklu_spec is None
+    return idaklu_spec is not None
 
 
 class IDAKLUSolver(pybamm.DaeSolver):
@@ -44,6 +44,85 @@ class IDAKLUSolver(pybamm.DaeSolver):
 
         super().__init__("ida", rtol, atol, root_method, root_tol, max_steps)
         self.name = "IDA KLU solver"
+
+    def set_atol_by_variable(self, variables_with_tols, model):
+        """
+        A method to set the absolute tolerances in the solver by state variable.
+        This method modifies self._atol.
+
+        Parameters
+        ----------
+        variables_with_tols : dict
+            A dictionary with keys that are strings indicating the variable you
+            wish to set the tolerance of and values that are the tolerances.
+
+        model : :class:`pybamm.BaseModel`
+            The model that is going to be solved.
+        """
+
+        size = model.concatenated_initial_conditions.size
+        self._check_atol_type(size)
+        for var, tol in variables_with_tols.items():
+            variable = model.variables[var]
+            if isinstance(variable, pybamm.StateVector):
+                self.set_state_vec_tol(variable, tol)
+            elif isinstance(variable, pybamm.Concatenation):
+                for child in variable.children:
+                    if isinstance(child, pybamm.StateVector):
+                        self.set_state_vec_tol(child, tol)
+                    else:
+                        raise pybamm.SolverError(
+                            """Can only set tolerances for state variables
+                            or concatenations of state variables"""
+                        )
+            else:
+                raise pybamm.SolverError(
+                    """Can only set tolerances for state variables or
+                    concatenations of state variables"""
+                )
+
+    def set_state_vec_tol(self, state_vec, tol):
+        """
+        A method to set the tolerances in the atol vector of a specific
+        state variable. This method modifies self._atol
+
+        Parameters
+        ----------
+        state_vec : :class:`pybamm.StateVector`
+            The state vector to apply to the tolerance to
+        tol: float
+            The tolerance value
+        """
+        slices = state_vec.y_slices[0]
+        self._atol[slices] = tol
+
+    def _check_atol_type(self, size):
+        """
+        This method checks that the atol vector is of the right shape and
+        type.
+
+        Parameters
+        ----------
+        size: int
+            The length of the atol vector
+        """
+
+        if isinstance(self._atol, float):
+            self._atol = self._atol * np.ones(size)
+        elif isinstance(self._atol, list):
+            self._atol = np.array(self._atol)
+        elif isinstance(self._atol, np.ndarray):
+            pass
+        else:
+            raise pybamm.SolverError(
+                "Absolute tolerances must be a numpy array, float, or list"
+            )
+
+        if self._atol.size != size:
+            raise pybamm.SolverError(
+                """Absolute tolerances must be either a scalar or a numpy arrray
+                of the same shape at y0"""
+            )
 
     def integrate(self, residuals, y0, t_eval, events, mass_matrix, jacobian):
         """
@@ -76,6 +155,7 @@ class IDAKLUSolver(pybamm.DaeSolver):
             pybamm.SolverError("KLU requires events to be provided")
 
         rtol = self._rtol
+        self._check_atol_type(y0.size)
         atol = self._atol
 
         if jacobian:
@@ -131,7 +211,7 @@ class IDAKLUSolver(pybamm.DaeSolver):
 
         # get ids of rhs and algebraic variables
         rhs_ids = np.ones(self.rhs(0, y0).shape)
-        alg_ids = np.zeros(self.algebraic(0, y0).shape)
+        alg_ids = np.zeros(len(y0) - len(rhs_ids))
         ids = np.concatenate((rhs_ids, alg_ids))
 
         # solve
@@ -149,8 +229,8 @@ class IDAKLUSolver(pybamm.DaeSolver):
             num_of_events,
             use_jac,
             ids,
-            rtol,
             atol,
+            rtol,
         )
 
         t = sol.t

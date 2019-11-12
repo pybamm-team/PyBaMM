@@ -212,6 +212,10 @@ class Simulation:
         return self._submesh_types
 
     @property
+    def mesh(self):
+        return self._mesh
+
+    @property
     def var_pts(self):
         return self._var_pts
 

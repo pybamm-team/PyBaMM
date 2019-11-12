@@ -176,8 +176,8 @@ class OdeSolver(pybamm.BaseSolver):
 
         y0 = model.concatenated_initial_conditions[:, 0]
 
-        t_casadi = casadi.SX.sym("t")
-        y_casadi = casadi.SX.sym("y", len(y0))
+        t_casadi = casadi.MX.sym("t")
+        y_casadi = casadi.MX.sym("y", len(y0))
         pybamm.logger.info("Converting RHS to CasADi")
         concatenated_rhs = model.concatenated_rhs.to_casadi(t_casadi, y_casadi)
         pybamm.logger.info("Converting events to CasADi")
