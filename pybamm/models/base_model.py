@@ -474,7 +474,13 @@ class BaseModel(object):
             )
         var_ids_in_keys = set()
 
-        for var in {**self.rhs, **self.algebraic}.keys():
+        model_and_external_variables = (
+            list(self.rhs.keys())
+            + list(self.algebraic.keys())
+            + self.external_variables
+        )
+
+        for var in model_and_external_variables:
             if isinstance(var, pybamm.Variable):
                 var_ids_in_keys.add(var.id)
             # Key can be a concatenation
