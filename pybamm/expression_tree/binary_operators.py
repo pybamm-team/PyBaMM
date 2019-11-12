@@ -389,11 +389,7 @@ class Multiplication(BinaryOperator):
             # Hadamard product is commutative, so we can switch right and left
             return csr_matrix(right.multiply(left))
         else:
-            # 0 * NaN gives 0
-            if left == 0 or right == 0:
-                return 0
-            else:
-                return left * right
+            return left * right
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_simplify()`. """

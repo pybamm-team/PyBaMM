@@ -47,7 +47,7 @@ class TestLOQS(unittest.TestCase):
         model = pybamm.lead_acid.LOQS()
         parameter_values = model.default_parameter_values
         parameter_values.update(
-            {"Current function": 0}
+            {"Current function": "[zero]"}
         )
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()

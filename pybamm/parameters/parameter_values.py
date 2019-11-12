@@ -130,9 +130,6 @@ class ParameterValues(dict):
         "Call the update functionality when doing a setitem"
         self.update({key: value})
 
-    def setitemsuper(self, key, value):
-        super().__setitem__(key, value)
-
     def update(self, values, check_conflict=False, path=""):
         # check parameter values
         values = self.check_and_update_parameter_values(values)
@@ -174,12 +171,15 @@ class ParameterValues(dict):
                             filename, comment="#", skip_blank_lines=True
                         ).to_numpy()
                         # Save name and data
-                        self.setitemsuper(name, (function_name, data))
+                        super().__setitem__(name, (function_name, data))
+                    # Special case (hacky) for zero current
+                    elif value == "[zero]":
+                        super().__setitem__(name, 0)
                     # Anything else should be a converted to a float
                     else:
-                        self.setitemsuper(name, float(value))
+                        super().__setitem__(name, float(value))
                 else:
-                    self.setitemsuper(name, value)
+                    super().__setitem__(name, value)
         # reset processed symbols
         self._processed_symbols = {}
 
@@ -225,16 +225,13 @@ class ParameterValues(dict):
             elif "Typical current [A]" in values:
                 values["C-rate"] = float(values["Typical current [A]"]) / capacity
 
-        # The "Currrent function" can be provided as a scalar, but if it is it must be
-        # either 1 (for a constant-current charge/discharge) or 0 (for a hold)
-        if "Current function" in values:
-            curr = values["Current function"]
-            if isinstance(curr, numbers.Number) and curr not in [0, 1]:
-                raise ValueError(
-                    "If scalar, the current function must be 0 or 1, not '{}".format(
-                        curr
-                    )
-                )
+        # Update the current function if it is constant
+        self_and_values = {**self, **values}
+        if "Current function" in self_and_values and (
+            self_and_values["Current function"] == "[constant]"
+            or isinstance(self_and_values["Current function"], numbers.Number)
+        ):
+            values["Current function"] = {**self, **values}["Typical current [A]"]
 
         return values
 
@@ -439,17 +436,18 @@ class ParameterValues(dict):
                 # If function_name is a tuple then it should be (name, data) and we need
                 # to create an Interpolant
                 name, data = function_name
+                import ipdb; ipdb.set_trace()
                 function = pybamm.Interpolant(data, *new_children, name=name)
             elif isinstance(function_name, numbers.Number):
                 # If the "function" is provided is actually a scalar, return a Scalar
                 # object instead of throwing an error
-                function = pybamm.Scalar(function_name)
+                function = pybamm.Scalar(function_name, name=symbol.name)
             else:
                 # otherwise evaluate the function to create a new PyBaMM object
                 function = function_name(*new_children)
                 # this might return a scalar, in which case convert to a pybamm scalar
                 if isinstance(function, numbers.Number):
-                    function = pybamm.Scalar(function)
+                    function = pybamm.Scalar(function, name=symbol.name)
             # Differentiate if necessary
             if symbol.diff_variable is None:
                 function_out = function
@@ -465,7 +463,7 @@ class ParameterValues(dict):
             new_left = self.process_symbol(symbol.left)
             new_right = self.process_symbol(symbol.right)
             # make new symbol, ensure domain remains the same
-            new_symbol = symbol.__class__(new_left, new_right)
+            new_symbol = symbol._binary_new_copy(new_left, new_right)
             new_symbol.domain = symbol.domain
             return new_symbol
 

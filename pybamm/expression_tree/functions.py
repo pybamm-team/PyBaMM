@@ -316,11 +316,7 @@ class Log(SpecificFunction):
         super().__init__(np.log, child)
 
     def _function_evaluate(self, evaluated_children):
-        " Avoid RuntimeWarning by manually overwriting non-positive outputs"
-        if evaluated_children[0] <= 0:
-            return np.nan * np.ones_like(evaluated_children[0])
-        else:
-            return np.log(*evaluated_children)
+        return np.log(*evaluated_children)
 
     def _function_diff(self, children, idx):
         """ See :meth:`pybamm.Function._function_diff()`. """
@@ -394,11 +390,7 @@ class Sqrt(SpecificFunction):
         super().__init__(np.sqrt, child)
 
     def _function_evaluate(self, evaluated_children):
-        " Avoid RuntimeWarning by manually overwriting negative outputs"
-        if evaluated_children[0] < 0:
-            return np.nan * np.ones_like(evaluated_children[0])
-        else:
-            return np.sqrt(*evaluated_children)
+        return np.sqrt(*evaluated_children)
 
     def _function_diff(self, children, idx):
         """ See :meth:`pybamm.Function._function_diff()`. """

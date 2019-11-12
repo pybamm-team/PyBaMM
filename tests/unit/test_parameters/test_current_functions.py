@@ -15,7 +15,7 @@ class TestCurrentFunctions(unittest.TestCase):
             {
                 "Typical current [A]": 2,
                 "Typical timescale [s]": 1,
-                "Current function": 1,
+                "Current function": "[constant]",
             }
         )
         processed_current = parameter_values.process_symbol(current)
@@ -73,7 +73,7 @@ class TestCurrentFunctions(unittest.TestCase):
         # check output correct value
         time = np.linspace(0, 3600, 600)
         np.testing.assert_array_almost_equal(
-            current(time), 2 * np.sin(2 * np.pi * 3 * time)
+            user_current(time), 2 * np.sin(2 * np.pi * 3 * time)
         )
 
 

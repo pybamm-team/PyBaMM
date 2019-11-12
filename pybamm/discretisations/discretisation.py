@@ -631,7 +631,7 @@ class Discretisation(object):
             disc_left = self.process_symbol(left)
             disc_right = self.process_symbol(right)
             if symbol.domain == []:
-                return symbol.__class__(disc_left, disc_right)
+                return symbol._binary_new_copy(disc_left, disc_right)
             else:
                 return spatial_method.process_binary_operators(
                     symbol, left, right, disc_left, disc_right

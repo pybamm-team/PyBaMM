@@ -12,10 +12,6 @@ def test_function(arg):
     return arg + arg
 
 
-def test_const_function():
-    return 1
-
-
 def test_multi_var_function(arg1, arg2):
     return arg1 + arg2
 
@@ -25,11 +21,6 @@ def test_multi_var_function_cube(arg1, arg2):
 
 
 class TestFunction(unittest.TestCase):
-    def test_constant_functions(self):
-        d = pybamm.Scalar(6)
-        funcd = pybamm.Function(test_const_function, d)
-        self.assertEqual(funcd.evaluate(), 1)
-
     def test_function_of_one_variable(self):
         a = pybamm.Symbol("a")
         funca = pybamm.Function(test_function, a)
