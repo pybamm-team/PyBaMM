@@ -277,6 +277,11 @@ epsilon = pybamm.Concatenation(
     pybamm.FullBroadcast(epsilon_s, ["separator"], "current collector"),
     pybamm.FullBroadcast(epsilon_p, ["positive electrode"], "current collector"),
 )
+epsilon_s_n = pybamm.Parameter("Negative electrode active material volume fraction")
+epsilon_s_p = pybamm.Parameter("Positive electrode active material volume fraction")
+epsilon_binder_n = 1 - epsilon_n - epsilon_s_n
+epsilon_binder_s = 1 - epsilon_s
+epsilon_binder_p = 1 - epsilon_p - epsilon_s_p
 a_n = a_n_dim * R_n
 a_p = a_p_dim * R_p
 

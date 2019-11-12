@@ -11,22 +11,33 @@ class BaseModel(pybamm.BaseSubModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
-    domain : str
-        The subdomain for the model ('Negative electrode', 'Negative electrolyte',
-        'Separator electrolyte', 'Positive electrode' or 'Positive electrolyte'). Note
-        that there is no 'Separator electrode' as the separator is insulating (no solid
-        problem there).
+    phase : str
+        The material for the model ('electrolyte' or 'electrode').
 
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, phase):
+        super().__init__(param)
+        self.phase = phase
 
     def _get_standard_tortuosity_variables(self, tor):
+        tor_n, tor_s, tor_p = tor.orphans
+
         variables = {
-            self.domain + " tortuosity": tor,
-            "X-averaged " + self.domain.lower() + " tortuosity": pybamm.x_average(tor),
+            self.phase + " tortuosity": tor,
+            "Negative " + self.phase.lower() + " tortuosity": tor_n,
+            "Separator " + self.phase.lower() + " tortuosity": tor_s,
+            "Positive " + self.phase.lower() + " tortuosity": tor_p,
+            "X-averaged negative "
+            + self.phase.lower()
+            + " tortuosity": pybamm.x_average(tor_n),
+            "X-averaged separator "
+            + self.phase.lower()
+            + " tortuosity": pybamm.x_average(tor_s),
+            "X-averaged positive "
+            + self.phase.lower()
+            + " tortuosity": pybamm.x_average(tor_p),
         }
 
         return variables

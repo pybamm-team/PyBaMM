@@ -13,16 +13,17 @@ class Bruggeman(BaseModel):
     """
 
     def get_coupled_variables(self, variables):
-        eps = variables[self.domain + " porosity"]
+        param = self.param
 
-        if "Negative" in self.domain:
-            brugg = self.param.b_n
-        elif self.domain == "Separator":
-            brugg = self.param.b_s
-        if "Positive" in self.domain:
-            brugg = self.param.b_p
+        if self.phase == "Electrolyte":
+            eps = variables["Porosity"]
+        elif self.phase == "Electrode":
+            eps = variables["Active material volume fraction"]
 
-        tor = eps ** brugg
+        eps_n, eps_s, eps_p = eps.orphans
+        tor = pybamm.Concatenation(
+            eps_n ** param.b_n, eps_s ** param.b_s, eps_p ** param.b_p
+        )
         variables.update(self._get_standard_tortuosity_variables(tor))
 
         return variables

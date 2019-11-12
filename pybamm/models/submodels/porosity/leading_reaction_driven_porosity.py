@@ -60,6 +60,6 @@ class LeadingOrder(BaseModel):
         eps_s_av = variables["X-averaged separator porosity"]
         eps_p_av = variables["X-averaged positive electrode porosity"]
 
-        self.initial_conditions = {eps_n_av: self.param.eps_n_init}
-        self.initial_conditions.update({eps_s_av: self.param.eps_s_init})
-        self.initial_conditions.update({eps_p_av: self.param.eps_p_init})
+        self.initial_conditions = {eps_n_av: self.param.epsilon_n_init}
+        self.initial_conditions.update({eps_s_av: self.param.epsilon_s_init})
+        self.initial_conditions.update({eps_p_av: self.param.epsilon_p_init})

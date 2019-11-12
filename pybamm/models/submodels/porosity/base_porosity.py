@@ -33,9 +33,29 @@ class BaseModel(pybamm.BaseSubModel):
             "X-averaged positive electrode porosity": pybamm.x_average(eps_p),
         }
 
+        # activate material volume fractions
+        eps_solid_n = eps_n - self.param.epsilon_binder_n
+        eps_solid_s = eps_s - self.param.epsilon_binder_s
+        eps_solid_p = eps_p - self.param.epsilon_binder_p
+        eps_solid = pybamm.Concatenation(eps_solid_n, eps_solid_s, eps_solid_p)
+
+        am = "active material volume fraction"
+        variables.update(
+            {
+                am.capitalize(): eps_solid,
+                "Negative electrode " + am: eps_solid_n,
+                "Separator " + am: eps_solid,
+                "Positive electrode " + am: eps_solid_p,
+                "X-averaged negative electrode " + am: pybamm.x_average(eps_solid_n),
+                "X-averaged separator " + am: pybamm.x_average(eps_solid),
+                "X-averaged positive electrode " + am: pybamm.x_average(eps_solid_p),
+            }
+        )
+
         if set_leading_order is True:
             variables.update(
                 {
+                    "Leading-order porosity": eps,
                     "Leading-order negative electrode porosity": eps_n,
                     "Leading-order separator porosity": eps_s,
                     "Leading-order positive electrode porosity": eps_p,
@@ -46,6 +66,18 @@ class BaseModel(pybamm.BaseSubModel):
                     ),
                     "Leading-order x-averaged "
                     + "positive electrode porosity": pybamm.x_average(eps_p),
+                    "Leading-order " + am: eps_solid,
+                    "Leading-order negative electrode " + am: eps_solid_n,
+                    "Leading-order separator " + am: eps_solid_s,
+                    "Leading-order positive electrode " + am: eps_solid_p,
+                    "Leading-order x-averaged "
+                    + "negative electrode "
+                    + am: pybamm.x_average(eps_solid_n),
+                    "Leading-order x-averaged separator "
+                    + am: pybamm.x_average(eps_solid_s),
+                    "Leading-order x-averaged "
+                    + "positive electrode "
+                    + am: pybamm.x_average(eps_solid_p),
                 }
             )
 
