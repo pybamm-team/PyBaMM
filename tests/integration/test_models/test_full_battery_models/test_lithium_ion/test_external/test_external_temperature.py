@@ -45,8 +45,6 @@ class TestExternalThermalModels(unittest.TestCase):
 
         model = pybamm.lithium_ion.SPM(model_options)
 
-        # model.convert_to_format = False
-
         neg_pts = 5
         sep_pts = 3
         pos_pts = 5

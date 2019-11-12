@@ -165,6 +165,35 @@ class Simulation:
         )
         self._solution.y_event = solution.y_event
 
+    def get_variable_array(self, *variables):
+        """
+        A helper function to easily obtain a dictionary of arrays of values
+        for a list of variables at the latest timestep.
+
+        Parameters
+        ----------
+        variable: str
+            The name of the variable/variables you wish to obtain the arrays for.
+
+        Returns
+        -------
+        variable_arrays: dict
+            A dictionary of the variable names and their corresponding
+            arrays.
+        """
+
+        variable_arrays = [
+            self.built_model.variables[var].evaluate(
+                self.solution.t[-1], self.solution.y[:, -1]
+            )
+            for var in variables
+        ]
+
+        if len(variable_arrays) == 1:
+            return variable_arrays[0]
+        else:
+            return tuple(variable_arrays)
+
     def plot(self, quick_plot_vars=None):
         """
         A method to quickly plot the outputs of the simulation.
