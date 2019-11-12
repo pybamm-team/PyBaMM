@@ -185,13 +185,13 @@ def dUdT_p_dimensional(sto):
 def U_n_dimensional(sto, T):
     "Dimensional open-circuit potential in the negative electrode [V]"
     u_ref = pybamm.FunctionParameter("Negative electrode OCP [V]", sto)
-    return u_ref #+ (T - T_ref) * dUdT_n_dimensional(sto)
+    return u_ref + (T - T_ref) * dUdT_n_dimensional(sto)
 
 
 def U_p_dimensional(sto, T):
     "Dimensional open-circuit potential in the positive electrode [V]"
     u_ref = pybamm.FunctionParameter("Positive electrode OCP [V]", sto)
-    return u_ref# + (T - T_ref) * dUdT_p_dimensional(sto)
+    return u_ref + (T - T_ref) * dUdT_p_dimensional(sto)
 
 
 # can maybe improve ref value at some stage

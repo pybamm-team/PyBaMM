@@ -25,9 +25,7 @@ def lico2_electrolyte_reaction_rate_Dualfoil1998(T, T_inf, E_r, R_g):
     : double
         Reaction rate
     """
-    m_ref = 6 * 10 ** (-7) / 2
+    m_ref = 6 * 10 ** (-7) 
+    arrhenius = np.exp(E_r / R_g * (1 / T_inf - 1 / T))
 
-    # m constant is COMSOL
-    #arrhenius = np.exp(E_r / R_g * (1 / T_inf - 1 / T))
-
-    return m_ref  #* arrhenius
+    return m_ref * arrhenius

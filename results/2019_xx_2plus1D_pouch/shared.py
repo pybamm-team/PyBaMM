@@ -19,13 +19,14 @@ def make_comsol_model(comsol_variables, mesh, param, y_interp=None, z_interp=Non
         z_interp = pybamm_z * L_z  # np.linspace(0, L_z, 20)
     grid_y, grid_z = np.meshgrid(y_interp, z_interp)
 
-    def get_interp_fun(variable):
+    def get_interp_fun(variable_name):
         """
         Interpolate in space to plotting nodes, and then create function to interpolate
         in time that can be called for plotting at any t.
         """
         comsol_y = comsol_variables["y"]
         comsol_z = comsol_variables["z"]
+        variable = comsol_variables[variable_name]
 
         # Note order of rows and cols!
         interp_var = np.zeros((len(z_interp), len(y_interp), variable.shape[1]))

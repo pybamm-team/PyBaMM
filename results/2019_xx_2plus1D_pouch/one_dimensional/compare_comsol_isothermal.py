@@ -67,12 +67,13 @@ comsol_t = comsol_variables["time"]
 L_x = param.evaluate(pybamm.standard_parameters_lithium_ion.L_x)
 
 
-def get_interp_fun(variable, domain):
+def get_interp_fun(variable_name, domain):
     """
     Create a :class:`pybamm.Function` object using the variable, to allow plotting with
     :class:`'pybamm.QuickPlot'` (interpolate in space to match edges, and then create
     function to interpolate in time)
     """
+    variable = comsol_variables[variable_name]
     if domain == ["negative electrode"]:
         comsol_x = comsol_variables["x_n"]
     elif domain == ["separator"]:
@@ -89,21 +90,21 @@ def get_interp_fun(variable, domain):
         return interp.interp1d(comsol_t, variable)(t)[:, np.newaxis]
 
     # Make sure to use dimensional time
-    fun = pybamm.Function(myinterp, pybamm.t * tau)
+    fun = pybamm.Function(myinterp, pybamm.t * tau, name=variable_name + "_comsol")
     fun.domain = domain
     return fun
 
 
-comsol_c_n_surf = get_interp_fun(comsol_variables["c_n_surf"], ["negative electrode"])
-comsol_c_e = get_interp_fun(comsol_variables["c_e"], whole_cell)
-comsol_c_p_surf = get_interp_fun(comsol_variables["c_p_surf"], ["positive electrode"])
-comsol_phi_n = get_interp_fun(comsol_variables["phi_n"], ["negative electrode"])
-comsol_phi_e = get_interp_fun(comsol_variables["phi_e"], whole_cell)
-comsol_phi_p = get_interp_fun(comsol_variables["phi_p"], ["positive electrode"])
-comsol_i_s_n = get_interp_fun(comsol_variables["i_s_n"], ["negative electrode"])
-comsol_i_s_p = get_interp_fun(comsol_variables["i_s_p"], ["positive electrode"])
-comsol_i_e_n = get_interp_fun(comsol_variables["i_e_n"], ["negative electrode"])
-comsol_i_e_p = get_interp_fun(comsol_variables["i_e_p"], ["positive electrode"])
+comsol_c_n_surf = get_interp_fun("c_n_surf", ["negative electrode"])
+comsol_c_e = get_interp_fun("c_e", whole_cell)
+comsol_c_p_surf = get_interp_fun("c_p_surf", ["positive electrode"])
+comsol_phi_n = get_interp_fun("phi_n", ["negative electrode"])
+comsol_phi_e = get_interp_fun("phi_e", whole_cell)
+comsol_phi_p = get_interp_fun("phi_p", ["positive electrode"])
+comsol_i_s_n = get_interp_fun("i_s_n", ["negative electrode"])
+comsol_i_s_p = get_interp_fun("i_s_p", ["positive electrode"])
+comsol_i_e_n = get_interp_fun("i_e_n", ["negative electrode"])
+comsol_i_e_p = get_interp_fun("i_e_p", ["positive electrode"])
 comsol_voltage = interp.interp1d(comsol_t, comsol_variables["voltage"])
 
 # Create comsol model with dictionary of Matrix variables

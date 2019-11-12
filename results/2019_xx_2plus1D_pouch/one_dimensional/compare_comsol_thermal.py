@@ -41,13 +41,16 @@ param.process_geometry(geometry)
 
 # create mesh
 var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 101, var.x_s: 31, var.x_p: 101, var.r_n: 5, var.r_p: 5}
-#var_pts = {var.x_n: 101, var.x_s: 31, var.x_p: 101, var.r_n: 31, var.r_p: 31}
+var_pts = {var.x_n: 101, var.x_s: 101, var.x_p: 101, var.r_n: 101, var.r_p: 101}
 # var_pts = {var.x_n: 45, var.x_s: 11, var.x_p: 56, var.r_n: 51, var.r_p: 51}
 mesh = pybamm.Mesh(geometry, pybamm_model.default_submesh_types, var_pts)
 
 # discretise model
-disc = pybamm.Discretisation(mesh, pybamm_model.default_spatial_methods)
+spatial_methods = pybamm_model.default_spatial_methods
+method_options = {"extrapolation": {"order": "quadratic", "use bcs": True}}
+spatial_methods["Negative particle"] = pybamm.FiniteVolume(method_options)
+spatial_methods["Positive particle"] = pybamm.FiniteVolume(method_options)
+disc = pybamm.Discretisation(mesh, spatial_methods)
 disc.process_model(pybamm_model)
 
 # discharge timescale
@@ -68,12 +71,13 @@ comsol_t = comsol_variables["time"]
 L_x = param.evaluate(pybamm.standard_parameters_lithium_ion.L_x)
 
 
-def get_interp_fun(variable, domain):
+def get_interp_fun(variable_name, domain):
     """
     Create a :class:`pybamm.Function` object using the variable, to allow plotting with
     :class:`'pybamm.QuickPlot'` (interpolate in space to match edges, and then create
     function to interpolate in time)
     """
+    variable = comsol_variables[variable_name]
     if domain == ["negative electrode"]:
         comsol_x = comsol_variables["x_n"]
     elif domain == ["separator"]:
@@ -90,33 +94,33 @@ def get_interp_fun(variable, domain):
         return interp.interp1d(comsol_t, variable)(t)[:, np.newaxis]
 
     # Make sure to use dimensional time
-    fun = pybamm.Function(myinterp, pybamm.t * tau)
+    fun = pybamm.Function(myinterp, pybamm.t * tau, name=variable_name + "_comsol")
     fun.domain = domain
     return fun
 
 
-comsol_c_n_surf = get_interp_fun(comsol_variables["c_n_surf"], ["negative electrode"])
-comsol_c_e = get_interp_fun(comsol_variables["c_e"], whole_cell)
-comsol_c_p_surf = get_interp_fun(comsol_variables["c_p_surf"], ["positive electrode"])
-comsol_phi_n = get_interp_fun(comsol_variables["phi_n"], ["negative electrode"])
-comsol_phi_e = get_interp_fun(comsol_variables["phi_e"], whole_cell)
-comsol_phi_p = get_interp_fun(comsol_variables["phi_p"], ["positive electrode"])
-comsol_i_s_n = get_interp_fun(comsol_variables["i_s_n"], ["negative electrode"])
-comsol_i_s_p = get_interp_fun(comsol_variables["i_s_p"], ["positive electrode"])
-comsol_i_e_n = get_interp_fun(comsol_variables["i_e_n"], ["negative electrode"])
-comsol_i_e_p = get_interp_fun(comsol_variables["i_e_p"], ["positive electrode"])
+comsol_c_n_surf = get_interp_fun("c_n_surf", ["negative electrode"])
+comsol_c_e = get_interp_fun("c_e", whole_cell)
+comsol_c_p_surf = get_interp_fun("c_p_surf", ["positive electrode"])
+comsol_phi_n = get_interp_fun("phi_n", ["negative electrode"])
+comsol_phi_e = get_interp_fun("phi_e", whole_cell)
+comsol_phi_p = get_interp_fun("phi_p", ["positive electrode"])
+comsol_i_s_n = get_interp_fun("i_s_n", ["negative electrode"])
+comsol_i_s_p = get_interp_fun("i_s_p", ["positive electrode"])
+comsol_i_e_n = get_interp_fun("i_e_n", ["negative electrode"])
+comsol_i_e_p = get_interp_fun("i_e_p", ["positive electrode"])
 comsol_voltage = interp.interp1d(comsol_t, comsol_variables["voltage"])
-comsol_temperature = get_interp_fun(comsol_variables["temperature"], whole_cell)
+comsol_temperature = get_interp_fun("temperature", whole_cell)
 comsol_temperature_av = interp.interp1d(
     comsol_t, comsol_variables["average temperature"]
 )
-comsol_q_irrev_n = get_interp_fun(comsol_variables["Q_irrev_n"], ["negative electrode"])
-comsol_q_irrev_p = get_interp_fun(comsol_variables["Q_irrev_p"], ["positive electrode"])
-comsol_q_rev_n = get_interp_fun(comsol_variables["Q_rev_n"], ["negative electrode"])
-comsol_q_rev_p = get_interp_fun(comsol_variables["Q_rev_p"], ["positive electrode"])
-comsol_q_total_n = get_interp_fun(comsol_variables["Q_total_n"], ["negative electrode"])
-comsol_q_total_s = get_interp_fun(comsol_variables["Q_total_s"], ["separator"])
-comsol_q_total_p = get_interp_fun(comsol_variables["Q_total_p"], ["positive electrode"])
+comsol_q_irrev_n = get_interp_fun("Q_irrev_n", ["negative electrode"])
+comsol_q_irrev_p = get_interp_fun("Q_irrev_p", ["positive electrode"])
+comsol_q_rev_n = get_interp_fun("Q_rev_n", ["negative electrode"])
+comsol_q_rev_p = get_interp_fun("Q_rev_p", ["positive electrode"])
+comsol_q_total_n = get_interp_fun("Q_total_n", ["negative electrode"])
+comsol_q_total_s = get_interp_fun("Q_total_s", ["separator"])
+comsol_q_total_p = get_interp_fun("Q_total_p", ["positive electrode"])
 
 # Create comsol model with dictionary of Matrix variables
 comsol_model = pybamm.BaseModel()
@@ -189,7 +193,7 @@ x_p = mesh.combine_submeshes(*["positive electrode"])[0].nodes
 x = mesh.combine_submeshes(*whole_cell)[0].nodes
 
 
-def whole_cell_by_domain_comparison_plot(var, plot_times=None):
+def whole_cell_by_domain_comparison_plot(var, plot_times=None, plot_error="rel"):
     """
     Plot pybamm variable (defined over whole cell) against comsol variable
     (defined by component)
@@ -203,7 +207,7 @@ def whole_cell_by_domain_comparison_plot(var, plot_times=None):
     )
 
     # Process comsol variable in negative electrode
-    comsol_var_n = pybamm.ProcessedVariable(
+    comsol_var_n_fun = pybamm.ProcessedVariable(
         comsol_model.variables["Negative electrode " + var[0].lower() + var[1:]],
         solution.t,
         solution.y,
@@ -211,17 +215,17 @@ def whole_cell_by_domain_comparison_plot(var, plot_times=None):
     )
     # Process comsol variable in separator (if defined here)
     try:
-        comsol_var_s = pybamm.ProcessedVariable(
+        comsol_var_s_fun = pybamm.ProcessedVariable(
             comsol_model.variables["Separator " + var[0].lower() + var[1:]],
             solution.t,
             solution.y,
             mesh=mesh,
         )
     except KeyError:
-        comsol_var_s = None
+        comsol_var_s_fun = None
         print("Variable " + var + " not defined in separator")
     # Process comsol variable in positive electrode
-    comsol_var_p = pybamm.ProcessedVariable(
+    comsol_var_p_fun = pybamm.ProcessedVariable(
         comsol_model.variables["Positive electrode " + var[0].lower() + var[1:]],
         solution.t,
         solution.y,
@@ -229,41 +233,88 @@ def whole_cell_by_domain_comparison_plot(var, plot_times=None):
     )
 
     # Make plot
-    if comsol_var_s:
+    # add extra row for errors
+    if plot_error in ["abs", "rel"]:
+        n_rows = 2
+    else:
+        n_rows = 1
+    # add extra column for separator
+    if comsol_var_s_fun:
         n_cols = 3
     else:
         n_cols = 2
-    fig, ax = plt.subplots(1, n_cols, figsize=(15, 8))
+    fig, ax = plt.subplots(n_rows, n_cols, figsize=(15, 8))
     cmap = plt.get_cmap("inferno")
 
     for ind, t in enumerate(plot_times):
         color = cmap(float(ind) / len(plot_times))
-        ax[0].plot(x_n * L_x, comsol_var_n(x=x_n, t=t / tau), "o", color=color)
-        ax[0].plot(x_n * L_x, pybamm_var(x=x_n, t=t / tau), "-", color=color)
-        if comsol_var_s:
-            ax[1].plot(x_s * L_x, comsol_var_s(x=x_s, t=t / tau), "o", color=color)
-            ax[1].plot(x_s * L_x, pybamm_var(x=x_s, t=t / tau), "-", color=color)
-        ax[n_cols - 1].plot(
+
+        # negative electrode
+        comsol_var_n = comsol_var_n_fun(x=x_n, t=t / tau)
+        pybamm_var_n = pybamm_var(x=x_n, t=t / tau)
+        ax[0, 0].plot(x_n * L_x, comsol_var_n, "o", color=color)
+        ax[0, 0].plot(x_n * L_x, pybamm_var_n, "-", color=color)
+        if plot_error == "abs":
+            error_n = np.abs(pybamm_var_n - comsol_var_n)
+            ax[1, 0].plot(x_n * L_x, error_n, "-", color=color)
+        elif plot_error == "rel":
+            error_n = np.abs((pybamm_var_n - comsol_var_n) / comsol_var_n)
+            ax[1, 0].plot(x_n * L_x, error_n, "-", color=color)
+
+        # separator
+        if comsol_var_s_fun:
+            comsol_var_s = comsol_var_s_fun(x=x_s, t=t / tau)
+            pybamm_var_s = pybamm_var(x=x_s, t=t / tau)
+            ax[0, 1].plot(x_s * L_x, comsol_var_s, "o", color=color)
+            ax[0, 1].plot(x_s * L_x, pybamm_var_s, "-", color=color)
+            if plot_error == "abs":
+                error_s = np.abs(pybamm_var_s - comsol_var_s)
+                ax[1, 1].plot(x_s * L_x, error_s, "-", color=color)
+            elif plot_error == "rel":
+                error_s = np.abs((pybamm_var_s - comsol_var_s) / comsol_var_s)
+                ax[1, 1].plot(x_s * L_x, error_s, "-", color=color)
+
+        # positive electrode
+        comsol_var_p = comsol_var_p_fun(x=x_p, t=t / tau)
+        pybamm_var_p = pybamm_var(x=x_p, t=t / tau)
+        ax[0, n_cols - 1].plot(
             x_p * L_x,
-            comsol_var_p(x=x_p, t=t / tau),
+            comsol_var_p,
             "o",
             color=color,
             label="COMSOL" if ind == 0 else "",
         )
-        ax[n_cols - 1].plot(
+        ax[0, n_cols - 1].plot(
             x_p * L_x,
-            pybamm_var(x=x_p, t=t / tau),
+            pybamm_var_p,
             "-",
             color=color,
             label="PyBaMM (t={:.0f} s)".format(t),
         )
-    ax[0].set_xlabel("x_n")
-    ax[0].set_ylabel(var)
-    if comsol_var_s:
-        ax[1].set_xlabel("x_s")
-        ax[1].set_ylabel(var)
-    ax[n_cols - 1].set_xlabel("x_p")
-    ax[n_cols - 1].set_ylabel(var)
+        if plot_error == "abs":
+            error_p = np.abs(pybamm_var_p - comsol_var_p)
+            ax[1, n_cols - 1].plot(x_p * L_x, error_p, "-", color=color)
+        elif plot_error == "rel":
+            error_p = np.abs((pybamm_var_p - comsol_var_p) / comsol_var_p)
+            ax[1, n_cols - 1].plot(
+                x_p * L_x, error_p, "-", color=color, label="t={:.0f} s".format(t),
+            )
+    # set labels
+    ax[0, 0].set_xlabel("x_n")
+    ax[0, 0].set_ylabel(var)
+    if comsol_var_s_fun:
+        ax[0, 1].set_xlabel("x_s")
+        ax[0, 1].set_ylabel(var)
+    ax[0, n_cols - 1].set_xlabel("x_p")
+    ax[0, n_cols - 1].set_ylabel(var)
+    if plot_error in ["abs", "rel"]:
+        ax[1, 0].set_xlabel("x_n")
+        ax[1, 0].set_ylabel(var + " error " + plot_error)
+        if comsol_var_s_fun:
+            ax[1, 1].set_xlabel("x_s")
+            ax[1, 1].set_ylabel(var + " error " + plot_error)
+        ax[1, n_cols - 1].set_xlabel("x_p")
+        ax[1, n_cols - 1].set_ylabel(var + " error " + plot_error)
     plt.legend()
     plt.tight_layout()
 
@@ -380,6 +431,8 @@ whole_cell_by_domain_comparison_plot(
     "Reversible heating [W.m-3]", plot_times=plot_times
 )
 whole_cell_by_domain_comparison_plot("Total heating [W.m-3]", plot_times=plot_times)
+# temperature
+whole_cell_comparison_plot("Cell temperature [K]", plot_times=plot_times)
 # potentials
 electrode_comparison_plot("electrode potential [V]", plot_times=plot_times)
 plt.savefig("thermal1D_phi_s.eps", format="eps", dpi=1000)

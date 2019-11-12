@@ -46,14 +46,14 @@ var = pybamm.standard_spatial_vars
 submesh_types = pybamm_model.default_submesh_types
 
 # cube root sequence in particles
-# r_n_edges = np.linspace(0, 1, 11) ** (1 / 3)
-# submesh_types["negative particle"] = pybamm.MeshGenerator(
-#    pybamm.UserSupplied1DSubMesh, submesh_params={"edges": r_n_edges}
-# )
-# r_p_edges = np.linspace(0, 1, 11) ** (1 / 3)
-# submesh_types["positive particle"] = pybamm.MeshGenerator(
-#    pybamm.UserSupplied1DSubMesh, submesh_params={"edges": r_p_edges}
-# )
+r_n_edges = np.linspace(0, 1, 11) ** (1 / 3)
+submesh_types["negative particle"] = pybamm.MeshGenerator(
+    pybamm.UserSupplied1DSubMesh, submesh_params={"edges": r_n_edges}
+)
+r_p_edges = np.linspace(0, 1, 11) ** (1 / 3)
+submesh_types["positive particle"] = pybamm.MeshGenerator(
+    pybamm.UserSupplied1DSubMesh, submesh_params={"edges": r_p_edges}
+)
 
 # custom mesh in y to ensure edges align with tab edges
 l_y = param.evaluate(pybamm.geometric_parameters.l_y)
@@ -85,8 +85,8 @@ var_pts = {
     var.x_n: 5,
     var.x_s: 5,
     var.x_p: 5,
-    var.r_n: 5,  # len(r_n_edges) - 1,  # Finite Volume nodes one less than edges
-    var.r_p: 5,  # len(r_p_edges) - 1,  # Finite Volume nodes one less than edges
+    var.r_n: len(r_n_edges) - 1,  # Finite Volume nodes one less than edges
+    var.r_p: len(r_p_edges) - 1,  # Finite Volume nodes one less than edges
     var.y: len(y_edges),
     var.z: len(z_edges),
 }

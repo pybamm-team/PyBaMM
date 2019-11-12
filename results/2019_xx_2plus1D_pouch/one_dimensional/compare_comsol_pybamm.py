@@ -6,7 +6,6 @@ import numpy as np
 import os
 import pickle
 import scipy.interpolate as interp
-import matplotlib.pyplot as plt
 
 # change working directory to the root of pybamm
 os.chdir(pybamm.root_dir())
@@ -23,7 +22,8 @@ models = [
 
 # load parameter values and process models and geometry
 param = models[0].default_parameter_values
-param.update({"C-rate": 1})
+C_rate = 1
+param.update({"C-rate": C_rate})
 for model in models:
     param.process_model(model)
 
@@ -43,7 +43,7 @@ for model in models:
 # solve model for one hour
 tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
 solutions = [None] * len(models)
-t_eval = np.linspace(0, 3600 / tau, 60)
+t_eval = np.linspace(0, 3600 / tau / C_rate, 60)
 for i, model in enumerate(models):
     solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6, mode="fast")
     solutions[i] = solver.solve(model, t_eval)
@@ -68,12 +68,13 @@ def make_comsol_model(comsol_variables, name):
     comsol_t = comsol_variables["time"]
     L_x = param.evaluate(pybamm.standard_parameters_lithium_ion.L_x)
 
-    def get_interp_fun(variable, domain):
+    def get_interp_fun(variable_name, domain):
         """
-        Create a :class:`pybamm.Function` object using the variable, to allow
-        plotting with :class:`'pybamm.QuickPlot'` (interpolate in space to match
-        edges, and then create function to interpolate in time)
+        Create a :class:`pybamm.Function` object using the variable, to allow plotting with
+        :class:`'pybamm.QuickPlot'` (interpolate in space to match edges, and then create
+        function to interpolate in time)
         """
+        variable = comsol_variables[variable_name]
         if domain == ["negative electrode"]:
             comsol_x = comsol_variables["x_n"]
         elif domain == ["separator"]:
@@ -90,24 +91,20 @@ def make_comsol_model(comsol_variables, name):
             return interp.interp1d(comsol_t, variable)(t)[:, np.newaxis]
 
         # Make sure to use dimensional time
-        fun = pybamm.Function(myinterp, pybamm.t * tau)
+        fun = pybamm.Function(myinterp, pybamm.t * tau, name=variable_name + "_comsol")
         fun.domain = domain
         return fun
 
-    comsol_c_n_surf = get_interp_fun(
-        comsol_variables["c_n_surf"], ["negative electrode"]
-    )
-    comsol_c_e = get_interp_fun(comsol_variables["c_e"], whole_cell)
-    comsol_c_p_surf = get_interp_fun(
-        comsol_variables["c_p_surf"], ["positive electrode"]
-    )
-    comsol_phi_n = get_interp_fun(comsol_variables["phi_n"], ["negative electrode"])
-    comsol_phi_e = get_interp_fun(comsol_variables["phi_e"], whole_cell)
-    comsol_phi_p = get_interp_fun(comsol_variables["phi_p"], ["positive electrode"])
-    comsol_i_s_n = get_interp_fun(comsol_variables["i_s_n"], ["negative electrode"])
-    comsol_i_s_p = get_interp_fun(comsol_variables["i_s_p"], ["positive electrode"])
-    comsol_i_e_n = get_interp_fun(comsol_variables["i_e_n"], ["negative electrode"])
-    comsol_i_e_p = get_interp_fun(comsol_variables["i_e_p"], ["positive electrode"])
+    comsol_c_n_surf = get_interp_fun("c_n_surf", ["negative electrode"])
+    comsol_c_e = get_interp_fun("c_e", whole_cell)
+    comsol_c_p_surf = get_interp_fun("c_p_surf", ["positive electrode"])
+    comsol_phi_n = get_interp_fun("phi_n", ["negative electrode"])
+    comsol_phi_e = get_interp_fun("phi_e", whole_cell)
+    comsol_phi_p = get_interp_fun("phi_p", ["positive electrode"])
+    comsol_i_s_n = get_interp_fun("i_s_n", ["negative electrode"])
+    comsol_i_s_p = get_interp_fun("i_s_p", ["positive electrode"])
+    comsol_i_e_n = get_interp_fun("i_e_n", ["negative electrode"])
+    comsol_i_e_p = get_interp_fun("i_e_p", ["positive electrode"])
     comsol_voltage = interp.interp1d(comsol_t, comsol_variables["voltage"])
     try:
         comsol_temperature_av = interp.interp1d(
@@ -159,9 +156,5 @@ solutions.append(solutions[1])
 "-----------------------------------------------------------------------------"
 "Make plots"
 
-# Use testing=True to make separate plots for each var
-for var in output_variables:
-    plot = pybamm.QuickPlot(models[2:], mesh, solutions[2:], output_variables=[var])
-    plot.dynamic_plot()
-#    plot.dynamic_plot(testing=True)
-# plt.show()
+plot = pybamm.QuickPlot(models, mesh, solutions, output_variables=output_variables)
+plot.dynamic_plot()
