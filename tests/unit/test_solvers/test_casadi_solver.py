@@ -64,7 +64,7 @@ class TestCasadiSolver(unittest.TestCase):
 
         # create discretisation
         mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.FiniteVolume}
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
         # Solve with failure at t=2
@@ -98,7 +98,7 @@ class TestCasadiSolver(unittest.TestCase):
 
         # create discretisation
         mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.FiniteVolume}
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
         # Solve
@@ -157,7 +157,7 @@ class TestCasadiSolver(unittest.TestCase):
 
         # create discretisation
         mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.FiniteVolume}
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
 

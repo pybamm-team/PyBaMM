@@ -51,7 +51,7 @@ param.process_geometry(geometry)
 submesh_types = {"rod": pybamm.Uniform1DSubMesh}
 var_pts = {x: 30}
 mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
-spatial_methods = {"rod": pybamm.FiniteVolume}
+spatial_methods = {"rod": pybamm.FiniteVolume()}
 disc = pybamm.Discretisation(mesh, spatial_methods)
 disc.process_model(model)
 
