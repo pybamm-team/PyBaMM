@@ -223,7 +223,7 @@ class EffectiveResistance2D(pybamm.BaseModel):
 
     @property
     def default_spatial_methods(self):
-        return {"current collector": pybamm.ScikitFiniteElement}
+        return {"current collector": pybamm.ScikitFiniteElement()}
 
     @property
     def default_solver(self):

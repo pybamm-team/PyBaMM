@@ -12,7 +12,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
     """
     A class which implements the steps specific to the finite element method during
     discretisation. The class uses scikit-fem to discretise the problem to obtain
-    the mass and stifnness matrices. At present, this class is only used for
+    the mass and stiffness matrices. At present, this class is only used for
     solving the Poisson problem -grad^2 u = f in the y-z plane (i.e. not the
     through-cell direction).
 
@@ -26,8 +26,11 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
     **Extends:"": :class:`pybamm.SpatialMethod`
     """
 
-    def __init__(self, mesh):
-        super().__init__(mesh)
+    def __init__(self, options=None):
+        super().__init__(options)
+
+    def build(self, mesh):
+        super().build(mesh)
         # add npts_for_broadcast to mesh domains for this particular discretisation
         for dom in mesh.keys():
             for i in range(len(mesh[dom])):
@@ -322,7 +325,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
         return pybamm.Matrix(integration_vector[np.newaxis, :])
 
-    def boundary_value_or_flux(self, symbol, discretised_child):
+    def boundary_value_or_flux(self, symbol, discretised_child, bcs=None):
         """
         Returns the average value of the symbol over the negative tab ("negative tab")
         or the positive tab ("positive tab") in the Finite Element Method.
