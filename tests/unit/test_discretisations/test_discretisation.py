@@ -66,6 +66,10 @@ class TestDiscretise(unittest.TestCase):
         for child in c_e.children:
             self.assertTrue(child.id in disc.bcs.keys())
 
+    def test_adding_external_variables(self):
+        print("hello")
+
+
     def test_discretise_slicing(self):
         # create discretisation
         mesh = get_mesh_for_testing()
