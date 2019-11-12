@@ -80,6 +80,14 @@ class TestParameterValues(unittest.TestCase):
         param = pybamm.ParameterValues(values)
         self.assertEqual(param["C-rate"], 1 / 10)
 
+        # Test with current function
+        values = {"Typical current [A]": 1, "Current function": "[constant]"}
+        param = pybamm.ParameterValues(values)
+        self.assertEqual(param["Current function"], 1)
+        values = {"Typical current [A]": 1, "Current function": "[zero]"}
+        param = pybamm.ParameterValues(values)
+        self.assertEqual(param["Current function"], 0)
+
     def test_process_symbol(self):
         parameter_values = pybamm.ParameterValues({"a": 1, "b": 2, "c": 3})
         # process parameter
