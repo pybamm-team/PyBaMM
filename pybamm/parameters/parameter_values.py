@@ -436,7 +436,6 @@ class ParameterValues(dict):
                 # If function_name is a tuple then it should be (name, data) and we need
                 # to create an Interpolant
                 name, data = function_name
-                import ipdb; ipdb.set_trace()
                 function = pybamm.Interpolant(data, *new_children, name=name)
             elif isinstance(function_name, numbers.Number):
                 # If the "function" is provided is actually a scalar, return a Scalar

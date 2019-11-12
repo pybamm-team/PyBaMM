@@ -64,8 +64,8 @@ class TestSymbolicDifferentiation(unittest.TestCase):
         a = pybamm.Scalar(1)
         b = pybamm.StateVector(slice(0, 1))
 
-        func = (a < b) * b ** 2
-        self.assertEqual(func.diff(b).evaluate(y=np.array([2])), 4)
+        func = (a < b) * (2 * b)
+        self.assertEqual(func.diff(b).evaluate(y=np.array([2])), 2)
         self.assertEqual(func.diff(b).evaluate(y=np.array([-2])), 0)
 
     def test_exceptions(self):
