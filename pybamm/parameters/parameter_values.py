@@ -444,9 +444,6 @@ class ParameterValues(dict):
             else:
                 # otherwise evaluate the function to create a new PyBaMM object
                 function = function_name(*new_children)
-                # this might return a scalar, in which case convert to a pybamm scalar
-                if isinstance(function, numbers.Number):
-                    function = pybamm.Scalar(function, name=symbol.name)
             # Differentiate if necessary
             if symbol.diff_variable is None:
                 function_out = function

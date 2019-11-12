@@ -332,12 +332,14 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(heav.evaluate(y=np.array([2])), 1)
         self.assertEqual(heav.evaluate(y=np.array([1])), 0)
         self.assertEqual(heav.evaluate(y=np.array([0])), 0)
+        self.assertEqual(str(heav), "1.0 < y[0:1]")
 
-        heav = a <= b
+        heav = a >= b
         self.assertTrue(heav.equal)
-        self.assertEqual(heav.evaluate(y=np.array([2])), 1)
+        self.assertEqual(heav.evaluate(y=np.array([2])), 0)
         self.assertEqual(heav.evaluate(y=np.array([1])), 1)
-        self.assertEqual(heav.evaluate(y=np.array([0])), 0)
+        self.assertEqual(heav.evaluate(y=np.array([0])), 1)
+        self.assertEqual(str(heav), "y[0:1] <= 1.0")
 
 
 class TestIsZero(unittest.TestCase):

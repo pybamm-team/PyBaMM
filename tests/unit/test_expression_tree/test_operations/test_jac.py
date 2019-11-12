@@ -264,6 +264,16 @@ class TestJacobian(unittest.TestCase):
         jac = pybamm.inner(a * vec, b * vec).jac(vec).evaluate(y=np.ones(2)).toarray()
         np.testing.assert_array_equal(jac, 4 * np.eye(2))
 
+    def test_jac_of_heaviside(self):
+        a = pybamm.Scalar(1)
+        y = pybamm.StateVector(slice(0, 5))
+        np.testing.assert_array_equal(
+            ((a < y) * y ** 2).jac(y).evaluate(y=5 * np.ones(5)), 10 * np.eye(5)
+        )
+        np.testing.assert_array_equal(
+            ((a < y) * y ** 2).jac(y).evaluate(y=-5 * np.ones(5)), 0
+        )
+
     def test_jac_of_domain_concatenation(self):
         # create mesh
         mesh = get_mesh_for_testing()
