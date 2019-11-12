@@ -99,6 +99,7 @@ class BaseModel(object):
         self._mass_matrix = None
         self._jacobian = None
         self._jacobian_algebraic = None
+        self.external_variables = []
 
         # Default behaviour is to use the jacobian and simplify
         self.use_jacobian = True
@@ -472,19 +473,21 @@ class BaseModel(object):
                 {x.id: x for x in eqn.pre_order() if isinstance(x, pybamm.Variable)}
             )
         var_ids_in_keys = set()
+
         for var in {**self.rhs, **self.algebraic}.keys():
             if isinstance(var, pybamm.Variable):
                 var_ids_in_keys.add(var.id)
             # Key can be a concatenation
             elif isinstance(var, pybamm.Concatenation):
                 var_ids_in_keys.update([child.id for child in var.children])
+
         for var_id, var in all_vars.items():
             if var_id not in var_ids_in_keys:
                 raise pybamm.ModelError(
                     """
                     No key set for variable '{}'. Make sure it is included in either
-                    model.rhs or model.algebraic in an unmodified form (e.g. not
-                    Broadcasted)
+                    model.rhs, model.algebraic, or model.external_variables in an
+                    unmodified form (e.g. not Broadcasted)
                     """.format(
                         var
                     )

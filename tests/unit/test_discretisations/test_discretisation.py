@@ -67,7 +67,20 @@ class TestDiscretise(unittest.TestCase):
             self.assertTrue(child.id in disc.bcs.keys())
 
     def test_adding_external_variables(self):
-        print("hello")
+        model = pybamm.BaseModel()
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+
+        model.rhs = {a: a * b}
+        model.initial_conditions = {a: 0}
+        model.external_variables = [b]
+        model.variables = {"a": a, "b": b, "c": a * b}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        model
+
 
 
     def test_discretise_slicing(self):

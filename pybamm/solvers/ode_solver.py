@@ -184,17 +184,21 @@ class OdeSolver(pybamm.BaseSolver):
 
         t_casadi = casadi.MX.sym("t")
         y_casadi = casadi.MX.sym("y", len(y0))
+
+        y_ext = casadi.MX.sym("y_ext", len(self.y_pad))
+        y_casadi_w_ext = casadi.vertcat(y_casadi, y_ext)
+
         pybamm.logger.info("Converting RHS to CasADi")
-        concatenated_rhs = model.concatenated_rhs.to_casadi(t_casadi, y_casadi)
+        concatenated_rhs = model.concatenated_rhs.to_casadi(t_casadi, y_casadi_w_ext)
         pybamm.logger.info("Converting events to CasADi")
         casadi_events = {
-            name: event.to_casadi(t_casadi, y_casadi)
+            name: event.to_casadi(t_casadi, y_casadi_w_ext)
             for name, event in model.events.items()
         }
 
         # Create function to evaluate rhs
         concatenated_rhs_fn = casadi.Function(
-            "rhs", [t_casadi, y_casadi], [concatenated_rhs]
+            "rhs", [t_casadi, y_casadi_w_ext], [concatenated_rhs]
         )
 
         def dydt(t, y):
@@ -206,7 +210,9 @@ class OdeSolver(pybamm.BaseSolver):
 
         # Create event-dependent function to evaluate events
         def event_fun(event):
-            casadi_event_fn = casadi.Function("event", [t_casadi, y_casadi], [event])
+            casadi_event_fn = casadi.Function(
+                "event", [t_casadi, y_casadi_w_ext], [event]
+            )
 
             def eval_event(t, y):
                 y = y[:, np.newaxis]
@@ -222,7 +228,7 @@ class OdeSolver(pybamm.BaseSolver):
             pybamm.logger.info("Calculating jacobian")
             casadi_jac = casadi.jacobian(concatenated_rhs, y_casadi)
             casadi_jac_fn = casadi.Function(
-                "jacobian", [t_casadi, y_casadi], [casadi_jac]
+                "jacobian", [t_casadi, y_casadi_w_ext], [casadi_jac]
             )
 
             def jacobian(t, y):

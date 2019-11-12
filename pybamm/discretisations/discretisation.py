@@ -52,6 +52,7 @@ class Discretisation(object):
         self.bcs = {}
         self.y_slices = {}
         self._discretised_symbols = {}
+        self.external_variables = []
 
     @property
     def mesh(self):
