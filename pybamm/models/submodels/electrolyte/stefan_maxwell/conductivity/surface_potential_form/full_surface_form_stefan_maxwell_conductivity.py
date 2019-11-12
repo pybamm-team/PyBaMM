@@ -130,21 +130,18 @@ class BaseModel(BaseStefanMaxwellConductivity):
 
     def _get_conductivities(self, variables):
         param = self.param
-        eps = variables[self.domain + " electrode porosity"]
+        tor_e = variables[self.domain + " electrolyte tortuosity"]
+        tor_s = variables[self.domain + " electrode tortuosity"]
         c_e = variables[self.domain + " electrolyte concentration"]
         T = variables[self.domain + " electrode temperature"]
         if self.domain == "Negative":
             sigma = param.sigma_n
-            b = param.b_n
         elif self.domain == "Positive":
             sigma = param.sigma_p
-            b = param.b_p
-        sigma_eff = sigma * (1 - eps) ** b
-        conductivity = (
-            param.kappa_e(c_e, T)
-            * (eps ** b)
-            / (param.C_e / param.gamma_e + param.kappa_e(c_e, T) / sigma_eff)
-        )
+
+        kappa_eff = param.kappa_e(c_e, T) * tor_e
+        sigma_eff = sigma * tor_s
+        conductivity = kappa_eff / (param.C_e / param.gamma_e + kappa_eff / sigma_eff)
 
         return conductivity, sigma_eff
 
