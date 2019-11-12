@@ -41,7 +41,8 @@ param.process_geometry(geometry)
 
 # create mesh
 var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 101, var.x_s: 31, var.x_p: 101, var.r_n: 31, var.r_p: 31}
+var_pts = {var.x_n: 101, var.x_s: 31, var.x_p: 101, var.r_n: 5, var.r_p: 5}
+#var_pts = {var.x_n: 101, var.x_s: 31, var.x_p: 101, var.r_n: 31, var.r_p: 31}
 # var_pts = {var.x_n: 45, var.x_s: 11, var.x_p: 56, var.r_n: 51, var.r_p: 51}
 mesh = pybamm.Mesh(geometry, pybamm_model.default_submesh_types, var_pts)
 
@@ -372,13 +373,13 @@ def whole_cell_comparison_plot(var, plot_times=None):
 plot_times = comsol_variables["time"][0::10]
 # plot_times = [600, 1200, 1800, 2400, 3000]
 # heat sources
-# whole_cell_by_domain_comparison_plot(
-#    "Irreversible electrochemical heating [W.m-3]", plot_times=plot_times
-# )
-# whole_cell_by_domain_comparison_plot(
-#    "Reversible heating [W.m-3]", plot_times=plot_times
-# )
-# whole_cell_by_domain_comparison_plot("Total heating [W.m-3]", plot_times=plot_times)
+whole_cell_by_domain_comparison_plot(
+    "Irreversible electrochemical heating [W.m-3]", plot_times=plot_times
+)
+whole_cell_by_domain_comparison_plot(
+    "Reversible heating [W.m-3]", plot_times=plot_times
+)
+whole_cell_by_domain_comparison_plot("Total heating [W.m-3]", plot_times=plot_times)
 # potentials
 electrode_comparison_plot("electrode potential [V]", plot_times=plot_times)
 plt.savefig("thermal1D_phi_s.eps", format="eps", dpi=1000)

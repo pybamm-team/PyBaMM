@@ -6,6 +6,7 @@ import numpy as np
 import os
 import pickle
 import scipy.interpolate as interp
+import matplotlib.pyplot as plt
 
 # change working directory to the root of pybamm
 os.chdir(pybamm.root_dir())
@@ -49,13 +50,13 @@ for i, model in enumerate(models):
 
 output_variables = [
     "Negative electrode potential [V]",
-    "Positive electrode potential [V]",
+    # "Positive electrode potential [V]",
     "Negative electrode current density [A.m-2]",
-    "Positive electrode current density [A.m-2]",
+    # "Positive electrode current density [A.m-2]",
     "Electrolyte concentration [mol.m-3]",
     "Electrolyte potential [V]",
-    "Terminal voltage [V]",
-    "Volume-averaged cell temperature [K]",
+    # "Terminal voltage [V]",
+    # "Volume-averaged cell temperature [K]",
 ]
 
 "-----------------------------------------------------------------------------"
@@ -115,7 +116,7 @@ def make_comsol_model(comsol_variables, name):
     except KeyError:
         # isothermal
         def comsol_temperature_av(t):
-            return 298.15
+            return param.evaluate(pybamm.thermal_parameters.T_ref)
 
     # Create comsol model with dictionary of Matrix variables
     comsol_model = pybamm.BaseModel(name=name)
@@ -158,5 +159,9 @@ solutions.append(solutions[1])
 "-----------------------------------------------------------------------------"
 "Make plots"
 
-plot = pybamm.QuickPlot(models, mesh, solutions, output_variables=output_variables)
-plot.dynamic_plot()
+# Use testing=True to make separate plots for each var
+for var in output_variables:
+    plot = pybamm.QuickPlot(models[2:], mesh, solutions[2:], output_variables=[var])
+    plot.dynamic_plot()
+#    plot.dynamic_plot(testing=True)
+# plt.show()

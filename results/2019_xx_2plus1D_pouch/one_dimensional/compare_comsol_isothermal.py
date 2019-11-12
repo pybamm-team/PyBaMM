@@ -31,6 +31,7 @@ param = pybamm_model.default_parameter_values
 param.update(
     {
         "C-rate": 1,
+        #    "Initial temperature [K]": 400,
         #    "Negative electrode conductivity [S.m-1]": 1e6,
         #    "Positive electrode conductivity [S.m-1]": 1e6,
     }

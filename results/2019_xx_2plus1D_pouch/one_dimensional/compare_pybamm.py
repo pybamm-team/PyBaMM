@@ -14,7 +14,7 @@ models = [
 # load parameter values and process models and geometry
 param = models[0].default_parameter_values
 C_rate = 1
-param.update({"C-rate": C_rate, "Heat transfer coefficient [W.m-2.K-1]": 1})
+param.update({"C-rate": C_rate})
 for model in models:
     param.process_model(model)
 
