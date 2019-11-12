@@ -10,7 +10,8 @@ from tests import get_mesh_for_testing, get_1p1d_mesh_for_testing
 class TestSpatialMethod(unittest.TestCase):
     def test_basics(self):
         mesh = get_mesh_for_testing()
-        spatial_method = pybamm.SpatialMethod(mesh)
+        spatial_method = pybamm.SpatialMethod()
+        spatial_method.build(mesh)
         self.assertEqual(spatial_method.mesh, mesh)
         with self.assertRaises(NotImplementedError):
             spatial_method.gradient(None, None, None)
@@ -34,7 +35,8 @@ class TestSpatialMethod(unittest.TestCase):
     def test_discretise_spatial_variable(self):
         # create discretisation
         mesh = get_mesh_for_testing()
-        spatial_method = pybamm.SpatialMethod(mesh)
+        spatial_method = pybamm.SpatialMethod()
+        spatial_method.build(mesh)
 
         # centre
         x1 = pybamm.SpatialVariable("x", ["negative electrode"])
@@ -62,12 +64,14 @@ class TestSpatialMethod(unittest.TestCase):
         child = pybamm.Symbol("sym", domain=["negative electrode"])
         symbol = pybamm.BoundaryGradient(child, "left")
         mesh = get_mesh_for_testing()
-        spatial_method = pybamm.SpatialMethod(mesh)
+        spatial_method = pybamm.SpatialMethod()
+        spatial_method.build(mesh)
         with self.assertRaisesRegex(TypeError, "Cannot process BoundaryGradient"):
             spatial_method.boundary_value_or_flux(symbol, child)
 
         mesh = get_1p1d_mesh_for_testing()
-        spatial_method = pybamm.SpatialMethod(mesh)
+        spatial_method = pybamm.SpatialMethod()
+        spatial_method.build(mesh)
         with self.assertRaisesRegex(NotImplementedError, "Cannot process 2D symbol"):
             spatial_method.boundary_value_or_flux(symbol, child)
 

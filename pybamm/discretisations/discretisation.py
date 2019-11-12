@@ -7,6 +7,18 @@ from collections import defaultdict, OrderedDict
 from scipy.sparse import block_diag, csr_matrix
 
 
+def has_bc_of_form(symbol, side, bcs, form):
+
+    if symbol.id in bcs:
+        if bcs[symbol.id][side][1] == form:
+            return True
+        else:
+            return False
+
+    else:
+        return False
+
+
 class Discretisation(object):
     """The discretisation class, with methods to process a model and replace
     Spatial Operators with Matrices and Variables with StateVectors
@@ -16,8 +28,9 @@ class Discretisation(object):
     mesh : pybamm.Mesh
             contains all submeshes to be used on each domain
     spatial_methods : dict
-            a dictionary of the spatial method to be used on each
-            domain. The keys correspond to the keys in a pybamm.Model
+            a dictionary of the spatial methods to be used on each
+            domain. The keys correspond to the model domains and the
+            values to the spatial method.
     """
 
     def __init__(self, mesh=None, spatial_methods=None):
@@ -31,9 +44,11 @@ class Discretisation(object):
                 spatial_methods["negative electrode"] = method
                 spatial_methods["separator"] = method
                 spatial_methods["positive electrode"] = method
-            self._spatial_methods = {
-                dom: method(mesh) for dom, method in spatial_methods.items()
-            }
+
+            self._spatial_methods = spatial_methods
+            for method in self._spatial_methods.values():
+                method.build(mesh)
+
         self.bcs = {}
         self.y_slices = {}
         self._discretised_symbols = {}
@@ -381,19 +396,26 @@ class Discretisation(object):
                     symbol, domain
                 )
             )
-
         # Replace keys with "left" and "right" as appropriate for 1D meshes
         if isinstance(mesh, pybamm.SubMesh1D):
-            # replace negative and/or positive tab
+            # send boundary conditions applied on the tabs to "left" or "right"
+            # depending on the tab location stored in the mesh
             for tab in ["negative tab", "positive tab"]:
                 if any(tab in side for side in list(bcs.keys())):
                     bcs[mesh.tabs[tab]] = bcs.pop(tab)
-            # replace no tab
-            if any("no tab" in side for side in list(bcs.keys())):
-                if "left" in list(bcs.keys()):
-                    bcs["right"] = bcs.pop("no tab")  # tab at bottom
-                else:
-                    bcs["left"] = bcs.pop("no tab")  # tab at top
+            # if there was a tab at either end, then the boundary conditions
+            # have now been set on "left" and "right" as required by the spatial
+            # method, so there is no need to further modify the bcs dict
+            if all(side in list(bcs.keys()) for side in ["left", "right"]):
+                pass
+            # if both tabs are located at z=0 then the "right" boundary condition
+            # (at z=1) is the condition for "no tab"
+            elif "left" in list(bcs.keys()):
+                bcs["right"] = bcs.pop("no tab")
+            # else if both tabs are located at z=1, the "left" boundary condition
+            # (at z=0) is the condition for "no tab"
+            else:
+                bcs["left"] = bcs.pop("no tab")
 
         return bcs
 
@@ -707,7 +729,9 @@ class Discretisation(object):
                     mesh = self.mesh[symbol.children[0].domain[0]][0]
                     if isinstance(mesh, pybamm.SubMesh1D):
                         symbol.side = mesh.tabs[symbol.side]
-                return child_spatial_method.boundary_value_or_flux(symbol, disc_child)
+                return child_spatial_method.boundary_value_or_flux(
+                    symbol, disc_child, self.bcs
+                )
 
             else:
                 return symbol._unary_new_copy(disc_child)

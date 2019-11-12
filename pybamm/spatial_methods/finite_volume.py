@@ -31,8 +31,12 @@ class FiniteVolume(pybamm.SpatialMethod):
     **Extends:"": :class:`pybamm.SpatialMethod`
     """
 
-    def __init__(self, mesh):
-        super().__init__(mesh)
+    def __init__(self, options=None):
+        super().__init__(options)
+
+    def build(self, mesh):
+        super().build(mesh)
+
         # add npts_for_broadcast to mesh domains for this particular discretisation
         for dom in mesh.keys():
             for i in range(len(mesh[dom])):
@@ -571,9 +575,9 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return pybamm.Matrix(matrix) @ discretised_symbol + bcs_vector
 
-    def boundary_value_or_flux(self, symbol, discretised_child):
+    def boundary_value_or_flux(self, symbol, discretised_child, bcs=None):
         """
-        Uses linear extrapolation to get the boundary value or flux of a variable in the
+        Uses extrapolation to get the boundary value or flux of a variable in the
         Finite Volume Method.
 
         See :meth:`pybamm.SpatialMethod.boundary_value`
@@ -585,29 +589,202 @@ class FiniteVolume(pybamm.SpatialMethod):
         prim_pts = submesh_list[0].npts
         sec_pts = len(submesh_list)
 
+        if bcs is None:
+            bcs = {}
+
+        extrap_order = self.options["extrapolation"]["order"]
+        use_bcs = self.options["extrapolation"]["use bcs"]
+
+        nodes = submesh_list[0].nodes
+        edges = submesh_list[0].edges
+
+        dx0 = nodes[0] - edges[0]
+        dx1 = submesh_list[0].d_nodes[0]
+        dx2 = submesh_list[0].d_nodes[1]
+
+        dxN = edges[-1] - nodes[-1]
+        dxNm1 = submesh_list[0].d_nodes[-1]
+        dxNm2 = submesh_list[0].d_nodes[-2]
+
+        child = symbol.child
+
         # Create submatrix to compute boundary values or fluxes
+        # Derivation of extrapolation formula can be found at:
+        # https://github.com/Scottmar93/extrapolation-coefficents/tree/master
         if isinstance(symbol, pybamm.BoundaryValue):
-            if symbol.side == "left":
-                sub_matrix = csr_matrix(
-                    ([1.5, -0.5], ([0, 0], [0, 1])), shape=(1, prim_pts)
-                )
+
+            if use_bcs and pybamm.has_bc_of_form(
+                child, symbol.side, bcs, "Dirichlet"
+            ):
+                # just use the value from the bc: f(x*)
+                sub_matrix = csr_matrix((1, prim_pts))
+                additive = bcs[child.id][symbol.side][0]
+
+            elif symbol.side == "left":
+
+                if extrap_order == "linear":
+                    # to find value at x* use formula:
+                    # f(x*) = f_1 - (dx0 / dx1) (f_2 - f_1)
+
+                    if use_bcs and pybamm.has_bc_of_form(
+                        child, symbol.side, bcs, "Neumann"
+                    ):
+                        sub_matrix = csr_matrix(([1], ([0], [0])), shape=(1, prim_pts),)
+
+                        additive = -dx0 * bcs[child.id][symbol.side][0]
+
+                    else:
+                        sub_matrix = csr_matrix(
+                            ([1 + (dx0 / dx1), -(dx0 / dx1)], ([0, 0], [0, 1])),
+                            shape=(1, prim_pts),
+                        )
+                        additive = pybamm.Scalar(0)
+
+                elif extrap_order == "quadratic":
+
+                    if use_bcs and pybamm.has_bc_of_form(
+                        child, symbol.side, bcs, "Neumann"
+                    ):
+                        a = (dx0 + dx1) ** 2 / (dx1 * (2 * dx0 + dx1))
+                        b = -(dx0 ** 2) / (2 * dx0 * dx1 + dx1 ** 2)
+                        alpha = -(dx0 * (dx0 + dx1)) / (2 * dx0 + dx1)
+
+                        sub_matrix = csr_matrix(
+                            ([a, b], ([0, 0], [0, 1])), shape=(1, prim_pts),
+                        )
+                        additive = alpha * bcs[child.id][symbol.side][0]
+
+                    else:
+                        a = (dx0 + dx1) * (dx0 + dx1 + dx2) / (dx1 * (dx1 + dx2))
+                        b = -dx0 * (dx0 + dx1 + dx2) / (dx1 * dx2)
+                        c = dx0 * (dx0 + dx1) / (dx2 * (dx1 + dx2))
+
+                        sub_matrix = csr_matrix(
+                            ([a, b, c], ([0, 0, 0], [0, 1, 2])), shape=(1, prim_pts),
+                        )
+
+                        additive = pybamm.Scalar(0)
+                else:
+                    raise NotImplementedError
+
             elif symbol.side == "right":
-                sub_matrix = csr_matrix(
-                    ([-0.5, 1.5], ([0, 0], [prim_pts - 2, prim_pts - 1])),
-                    shape=(1, prim_pts),
-                )
+
+                if extrap_order == "linear":
+
+                    if use_bcs and pybamm.has_bc_of_form(
+                        child, symbol.side, bcs, "Neumann"
+                    ):
+                        # use formula:
+                        # f(x*) = fN + dxN * f'(x*)
+                        sub_matrix = csr_matrix(
+                            ([1], ([0], [prim_pts - 1]),), shape=(1, prim_pts),
+                        )
+                        additive = dxN * bcs[child.id][symbol.side][0]
+
+                    else:
+                        # to find value at x* use formula:
+                        # f(x*) = f_N - (dxN / dxNm1) (f_N - f_Nm1)
+                        sub_matrix = csr_matrix(
+                            (
+                                [-(dxN / dxNm1), 1 + (dxN / dxNm1)],
+                                ([0, 0], [prim_pts - 2, prim_pts - 1]),
+                            ),
+                            shape=(1, prim_pts),
+                        )
+                        additive = pybamm.Scalar(0)
+                elif extrap_order == "quadratic":
+
+                    if use_bcs and pybamm.has_bc_of_form(
+                        child, symbol.side, bcs, "Neumann"
+                    ):
+                        a = (dxN + dxNm1) ** 2 / (dxNm1 * (2 * dxN + dxNm1))
+                        b = -(dxN ** 2) / (2 * dxN * dxNm1 + dxNm1 ** 2)
+                        alpha = dxN * (dxN + dxNm1) / (2 * dxN + dxNm1)
+                        sub_matrix = csr_matrix(
+                            ([b, a], ([0, 0], [prim_pts - 2, prim_pts - 1]),),
+                            shape=(1, prim_pts),
+                        )
+
+                        additive = alpha * bcs[child.id][symbol.side][0]
+
+                    else:
+                        a = (
+                            (dxN + dxNm1)
+                            * (dxN + dxNm1 + dxNm2)
+                            / (dxNm1 * (dxNm1 + dxNm2))
+                        )
+                        b = -dxN * (dxN + dxNm1 + dxNm2) / (dxNm1 * dxNm2)
+                        c = dxN * (dxN + dxNm1) / (dxNm2 * (dxNm1 + dxNm2))
+
+                        sub_matrix = csr_matrix(
+                            (
+                                [c, b, a],
+                                ([0, 0, 0], [prim_pts - 3, prim_pts - 2, prim_pts - 1]),
+                            ),
+                            shape=(1, prim_pts),
+                        )
+                        additive = pybamm.Scalar(0)
+                else:
+                    raise NotImplementedError
+
         elif isinstance(symbol, pybamm.BoundaryGradient):
-            if symbol.side == "left":
-                dx = submesh_list[0].d_nodes[0]
-                sub_matrix = (1 / dx) * csr_matrix(
-                    ([-1, 1], ([0, 0], [0, 1])), shape=(1, prim_pts)
-                )
+
+            if use_bcs and pybamm.has_bc_of_form(
+                child, symbol.side, bcs, "Neumann"
+            ):
+                # just use the value from the bc: f'(x*)
+                sub_matrix = csr_matrix((1, prim_pts))
+                additive = bcs[child.id][symbol.side][0]
+
+            elif symbol.side == "left":
+
+                if extrap_order == "linear":
+                    # f'(x*) = (f_2 - f_1) / dx1
+                    sub_matrix = (1 / dx1) * csr_matrix(
+                        ([-1, 1], ([0, 0], [0, 1])), shape=(1, prim_pts)
+                    )
+                    additive = pybamm.Scalar(0)
+
+                elif extrap_order == "quadratic":
+
+                    a = -(2 * dx0 + 2 * dx1 + dx2) / (dx1 ** 2 + dx1 * dx2)
+                    b = (2 * dx0 + dx1 + dx2) / (dx1 * dx2)
+                    c = -(2 * dx0 + dx1) / (dx1 * dx2 + dx2 ** 2)
+
+                    sub_matrix = csr_matrix(
+                        ([a, b, c], ([0, 0, 0], [0, 1, 2])), shape=(1, prim_pts)
+                    )
+                    additive = pybamm.Scalar(0)
+                else:
+                    raise NotImplementedError
+
             elif symbol.side == "right":
-                dx = submesh_list[0].d_nodes[-1]
-                sub_matrix = (1 / dx) * csr_matrix(
-                    ([-1, 1], ([0, 0], [prim_pts - 2, prim_pts - 1])),
-                    shape=(1, prim_pts),
-                )
+
+                if extrap_order == "linear":
+                    # use formula:
+                    # f'(x*) = (f_N - f_Nm1) / dxNm1
+                    sub_matrix = (1 / dxNm1) * csr_matrix(
+                        ([-1, 1], ([0, 0], [prim_pts - 2, prim_pts - 1])),
+                        shape=(1, prim_pts),
+                    )
+                    additive = pybamm.Scalar(0)
+
+                elif extrap_order == "quadratic":
+                    a = (2 * dxN + 2 * dxNm1 + dxNm2) / (dxNm1 ** 2 + dxNm1 * dxNm2)
+                    b = -(2 * dxN + dxNm1 + dxNm2) / (dxNm1 * dxNm2)
+                    c = (2 * dxN + dxNm1) / (dxNm1 * dxNm2 + dxNm2 ** 2)
+
+                    sub_matrix = csr_matrix(
+                        (
+                            [c, b, a],
+                            ([0, 0, 0], [prim_pts - 3, prim_pts - 2, prim_pts - 1]),
+                        ),
+                        shape=(1, prim_pts),
+                    )
+                    additive = pybamm.Scalar(0)
+
+                else:
+                    raise NotImplementedError
 
         # Generate full matrix from the submatrix
         # Convert to csr_matrix so that we can take the index (row-slicing), which is
@@ -620,6 +797,10 @@ class FiniteVolume(pybamm.SpatialMethod):
         boundary_value = pybamm.Matrix(matrix) @ discretised_child
         boundary_value.domain = symbol.domain
         boundary_value.auxiliary_domains = symbol.auxiliary_domains
+
+        additive.domain = symbol.domain
+        additive.auxiliary_domains = symbol.auxiliary_domains
+        boundary_value += additive
 
         return boundary_value
 

@@ -57,7 +57,7 @@ class TestDiscretise(unittest.TestCase):
         model.boundary_conditions = {c_e: {"left": lbc, "right": rbc}}
 
         mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": SpatialMethodForTesting}
+        spatial_methods = {"macroscale": SpatialMethodForTesting()}
 
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.bcs = disc.process_boundary_conditions(model)
@@ -69,7 +69,7 @@ class TestDiscretise(unittest.TestCase):
     def test_discretise_slicing(self):
         # create discretisation
         mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.FiniteVolume}
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
@@ -132,10 +132,10 @@ class TestDiscretise(unittest.TestCase):
         # create discretisation
         mesh = get_mesh_for_testing()
         spatial_methods = {
-            "macroscale": pybamm.SpatialMethod,
-            "negative particle": pybamm.SpatialMethod,
-            "positive particle": pybamm.SpatialMethod,
-            "current collector": pybamm.SpatialMethod,
+            "macroscale": pybamm.SpatialMethod(),
+            "negative particle": pybamm.SpatialMethod(),
+            "positive particle": pybamm.SpatialMethod(),
+            "current collector": pybamm.SpatialMethod(),
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
