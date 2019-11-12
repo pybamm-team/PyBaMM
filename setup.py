@@ -7,6 +7,62 @@ except ImportError:
     from distutils.core import setup, find_packages
 from distutils.cmd import Command
 
+class BuildKLU(Command):
+    """ A custom command to compile the SuiteSparse KLU library as part of the PyBaMM
+        installation process.
+    """
+
+    description = 'Compiles the SuiteSparse KLU module.'
+    user_options = [
+        # The format is (long option, short option, description).
+        ('suitesparse-dir=', None, 'Absolute path to sundials source dir'),
+    ]
+    pybamm_dir = os.path.abspath(os.path.dirname(__file__))
+
+    def initialize_options(self):
+        """Set default values for option(s)"""
+        # Each user option is listed here with its default value.
+        self.suitesparse_dir = None
+
+    def finalize_options(self):
+        """Post-process options"""
+        # Any unspecified option is set to the value of the 'install' command
+        # This could be the default value if 'build_sundials' is invoked on its own
+        # or a user-specified value if 'build_sundials' is called from 'install'
+        # with options.
+        self.set_undefined_options('install',
+                                   ('suitesparse_dir', 'suitesparse_dir'))
+        # Check that the sundials source dir contains the CMakeLists.txt
+        if self.suitesparse_dir:
+            klu_makefile=os.path.join(self.suitesparse_dir,'KLU','Makefile')
+            assert os.path.exists(klu_makefile), ('Could not find {}.'.format(klu_makefile))
+
+    def run(self):
+        try:
+            out = subprocess.check_output(['make', '--version'])
+        except OSError:
+            raise RuntimeError(
+                "Make must be installed to compile the SuiteSparse KLU module.")
+        # The SuiteSparse KLU module has 4 dependencies:
+        # - suitesparseconfig
+        # - amd
+        # - COLAMD
+        # - btf
+        print('-'*10, 'Building SuiteSparse_config', '-'*40)
+        make_cmd = ['make']
+        build_dir = os.path.join(self.suitesparse_dir,'SuiteSparse_config')
+        subprocess.run(make_cmd, cwd=build_dir)
+
+        print('-'*10, 'Building SuiteSparse KLU module dependencies', '-'*40)
+        make_cmd = ['make', 'library']
+        for libdir in ['AMD', 'COLAMD', 'BTF']:
+            build_dir = os.path.join(self.suitesparse_dir,libdir)
+            subprocess.run(make_cmd, cwd=build_dir)
+
+        print('-'*10, 'Building SuiteSparse KLU module', '-'*40)
+        build_dir = os.path.join(self.suitesparse_dir,'KLU')
+        subprocess.run(make_cmd, cwd=build_dir)
+
 class BuildSundials(Command):
     """ A custom command to compile the SUNDIALS library as part of the PyBaMM
         installation process.
@@ -146,6 +202,7 @@ class InstallPyBaMM(orig.install):
         ('no-sundials', None, "Do not install the SUNDIALS library. scikits.odes is not installed."),
         ('sundials-src=', None, 'Absolute path to sundials source dir'),
         ('sundials-inst=', None, 'Absolute path to sundials install directory'),
+        ('suitesparse-dir', None, 'Absolute path to SuiteSparse root directory'),
     ]
 
     pybamm_dir = os.path.abspath(os.path.dirname(__file__))
@@ -156,6 +213,7 @@ class InstallPyBaMM(orig.install):
         # Each user option is listed here with its default value.
         self.sundials_src = os.path.join(self.pybamm_dir,'sundials-3.1.1')
         self.sundials_inst = os.path.join(self.pybamm_dir,'sundials')
+        self.suitesparse_dir = os.path.join(self.pybamm_dir,'SuiteSparse-5.6.0')
         self.no_sundials = None
 
     def finalize_options(self):
@@ -193,6 +251,7 @@ setup(
     cmdclass = {
         'build_sundials': BuildSundials,
         'install_odes': InstallODES,
+        'build_klu': BuildKLU,
         'install': InstallPyBaMM,
     },
     name="pybamm",
