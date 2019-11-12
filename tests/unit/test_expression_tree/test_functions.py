@@ -21,6 +21,17 @@ def test_multi_var_function_cube(arg1, arg2):
 
 
 class TestFunction(unittest.TestCase):
+    def test_number_input(self):
+        # with numbers
+        log = pybamm.log(10)
+        self.assertIsInstance(log.children[0], pybamm.Scalar)
+        self.assertEqual(log.evaluate(), np.log(10))
+
+        summ = pybamm.Function(test_multi_var_function, 1, 2)
+        self.assertIsInstance(summ.children[0], pybamm.Scalar)
+        self.assertIsInstance(summ.children[1], pybamm.Scalar)
+        self.assertEqual(summ.evaluate(), 3)
+
     def test_function_of_one_variable(self):
         a = pybamm.Symbol("a")
         funca = pybamm.Function(test_function, a)

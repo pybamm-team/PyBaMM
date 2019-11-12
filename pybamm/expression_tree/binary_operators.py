@@ -202,10 +202,13 @@ class Power(BinaryOperator):
         """ See :meth:`pybamm.Symbol._diff()`. """
         # apply chain rule and power rule
         base, exponent = self.orphans
-        return base ** (exponent - 1) * (
-            exponent * base.diff(variable)
-            + base * pybamm.log(base) * exponent.diff(variable)
-        )
+        # derivative if variable is in the base
+        diff = exponent * (base ** (exponent - 1)) * base.diff(variable)
+        # derivative if variable is in the exponent (rare, check separately to avoid
+        # unecessarily big tree)
+        if any(variable.id == x.id for x in exponent.pre_order()):
+            diff += (base ** exponent) * pybamm.log(base) * exponent.diff(variable)
+        return diff
 
     def _binary_jac(self, left_jac, right_jac):
         """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
