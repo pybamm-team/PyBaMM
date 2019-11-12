@@ -62,7 +62,7 @@ class TestIDAKLUSolver(unittest.TestCase):
             model_disc = disc.process_model(model, inplace=False)
 
             # solve
-            solution = solver.solve(model_disc, t_eval)
+            solver.solve(model_disc, t_eval)
 
 
 if __name__ == "__main__":
