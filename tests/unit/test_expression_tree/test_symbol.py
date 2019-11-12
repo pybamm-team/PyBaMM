@@ -198,7 +198,7 @@ class TestSymbol(unittest.TestCase):
     def test_symbol_repr(self):
         """
         test that __repr___ returns the string
-        `__class__(id, name, parent expression)`
+        `__class__(id, name, children, domain, auxiliary_domains)`
         """
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")
