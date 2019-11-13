@@ -131,7 +131,9 @@ class Simulation:
             The solver to use to solve the model.
         external_variables : dict
             A dictionary of external variables and their corresponding
-            values at the current time
+            values at the current time. The variables must correspond to
+            the variables that would normally be found by solving the
+            submodels that have been made external.
         save : bool
             Turn on to store the solution of all previous timesteps
         """
