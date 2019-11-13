@@ -137,7 +137,7 @@ class TestSimulation(unittest.TestCase):
         submesh_types = {
             "Negative particle": pybamm.MeshGenerator(pybamm.Exponential1DSubMesh)
         }
-        solver = pybamm.IDAKLUSolver()
+        solver = pybamm.BaseSolver()
         quick_plot_vars = ["Negative particle surface concentration"]
         sim.specs(
             model_options=model_options,
