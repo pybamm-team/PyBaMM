@@ -167,10 +167,12 @@ class Discretisation(object):
                 start_vals += [self.y_slices[var.id][0].start]
 
         model_disc.external_variables = model.external_variables
-        if start_vals:
-            model_disc.external_start = min(start_vals)
         model_disc.y_length = self.y_length
         model_disc.y_slices = self.y_slices
+        if start_vals:
+            model_disc.external_start = min(start_vals)
+        else:
+            model_disc.external_start = self.y_length
 
         pybamm.logger.info("Discretise initial conditions for {}".format(model.name))
         ics, concat_ics = self.process_initial_conditions(model)

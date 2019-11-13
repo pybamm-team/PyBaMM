@@ -1,4 +1,5 @@
 import pybamm
+import numpy as np
 import unittest
 
 
@@ -128,6 +129,58 @@ class TestSimulation(unittest.TestCase):
         # nothing to change this to at the moment but just reload in
         sim.specs(spatial_methods=spatial_methods)
         sim.build()
+
+    def test_get_variable_array(self):
+
+        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
+        sim.solve()
+
+        phi_s_n = sim.get_variable_array("Negative electrode potential")
+
+        self.assertIsInstance(phi_s_n, np.ndarray)
+
+        c_s_n_surf, c_e = sim.get_variable_array(
+            "Negative particle surface concentration", "Electrolyte concentration"
+        )
+
+        self.assertIsInstance(c_s_n_surf, np.ndarray)
+        self.assertIsInstance(c_e, np.ndarray)
+
+    def test_set_external_variable(self):
+        model_options = {
+            "thermal": "x-lumped",
+            "external submodels": ["thermal"],
+        }
+        model = pybamm.lithium_ion.SPMe(model_options)
+        sim = pybamm.Simulation(model)
+
+        T_av = 0
+
+        dt = 0.001
+
+        external_variables = {"X-averaged cell temperature": T_av}
+        sim.step(dt, external_variables=external_variables)
+
+    def test_step(self):
+
+        dt = 0.001
+        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
+        sim.step(dt)  # 1 step stores first two points
+        self.assertEqual(sim.solution.t.size, 2)
+        self.assertEqual(sim.solution.y[0, :].size, 2)
+        self.assertEqual(sim.solution.t[0], 0)
+        self.assertEqual(sim.solution.t[1], dt)
+        sim.step(dt)  # automatically append the next step
+        self.assertEqual(sim.solution.t.size, 3)
+        self.assertEqual(sim.solution.y[0, :].size, 3)
+        self.assertEqual(sim.solution.t[0], 0)
+        self.assertEqual(sim.solution.t[1], dt)
+        self.assertEqual(sim.solution.t[2], 2 * dt)
+        sim.step(dt, save=False)  # now only store the two end step points
+        self.assertEqual(sim.solution.t.size, 2)
+        self.assertEqual(sim.solution.y[0, :].size, 2)
+        self.assertEqual(sim.solution.t[0], 2 * dt)
+        self.assertEqual(sim.solution.t[1], 3 * dt)
 
 
 if __name__ == "__main__":

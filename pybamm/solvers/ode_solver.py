@@ -185,8 +185,11 @@ class OdeSolver(pybamm.BaseSolver):
         t_casadi = casadi.MX.sym("t")
         y_casadi = casadi.MX.sym("y", len(y0))
 
-        y_ext = casadi.MX.sym("y_ext", len(self.y_pad))
-        y_casadi_w_ext = casadi.vertcat(y_casadi, y_ext)
+        if self.y_pad is not None:
+            y_ext = casadi.MX.sym("y_ext", len(self.y_pad))
+            y_casadi_w_ext = casadi.vertcat(y_casadi, y_ext)
+        else:
+            y_casadi_w_ext = y_casadi
 
         pybamm.logger.info("Converting RHS to CasADi")
         concatenated_rhs = model.concatenated_rhs.to_casadi(t_casadi, y_casadi_w_ext)
