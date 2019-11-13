@@ -465,7 +465,7 @@ class Residuals:
         # turn into 1D arrays
         rhs_eval = rhs_eval[:, 0]
         alg_eval = alg_eval[:, 0]
-        return np.concatenate((rhs_eval, alg_eval)) - self.mass_matrix @ ydot
+        return np.concatenate([rhs_eval, alg_eval]) - self.mass_matrix @ ydot
 
 
 class ResidualsCasadi(Residuals):
