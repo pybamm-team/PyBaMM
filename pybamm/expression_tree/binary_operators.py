@@ -202,10 +202,13 @@ class Power(BinaryOperator):
         """ See :meth:`pybamm.Symbol._diff()`. """
         # apply chain rule and power rule
         base, exponent = self.orphans
-        return base ** (exponent - 1) * (
-            exponent * base.diff(variable)
-            + base * pybamm.log(base) * exponent.diff(variable)
-        )
+        # derivative if variable is in the base
+        diff = exponent * (base ** (exponent - 1)) * base.diff(variable)
+        # derivative if variable is in the exponent (rare, check separately to avoid
+        # unecessarily big tree)
+        if any(variable.id == x.id for x in exponent.pre_order()):
+            diff += (base ** exponent) * pybamm.log(base) * exponent.diff(variable)
+        return diff
 
     def _binary_jac(self, left_jac, right_jac):
         """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
@@ -501,7 +504,9 @@ class Division(BinaryOperator):
             return csr_matrix(left.multiply(1 / right))
         else:
             if isinstance(right, numbers.Number) and right == 0:
-                return left * np.inf
+                # don't raise RuntimeWarning for NaNs
+                with np.errstate(invalid="ignore"):
+                    return left * np.inf
             else:
                 return left / right
 
@@ -712,7 +717,11 @@ class Heaviside(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
         # 'equal' determines whether to return 1 or 0 when left = right
         self.equal = equal
-        super().__init__("heaviside", left, right)
+        if equal is True:
+            name = "<="
+        else:
+            name = "<"
+        super().__init__(name, left, right)
 
     def __str__(self):
         """ See :meth:`pybamm.Symbol.__str__()`. """
@@ -735,10 +744,12 @@ class Heaviside(BinaryOperator):
 
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
-        if self.equal is True:
-            return left <= right
-        else:
-            return left < right
+        # don't raise RuntimeWarning for NaNs
+        with np.errstate(invalid="ignore"):
+            if self.equal is True:
+                return left <= right
+            else:
+                return left < right
 
     def _binary_new_copy(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_new_copy()`. """

@@ -2,6 +2,7 @@
 # Function classes and methods
 #
 import autograd
+import numbers
 import numpy as np
 import pybamm
 
@@ -33,6 +34,11 @@ class Function(pybamm.Symbol):
         derivative="autograd",
         differentiated_function=None
     ):
+        # Turn numbers into scalars
+        children = list(children)
+        for idx, child in enumerate(children):
+            if isinstance(child, numbers.Number):
+                children[idx] = pybamm.Scalar(child)
 
         if name is not None:
             self.name = name
@@ -41,8 +47,7 @@ class Function(pybamm.Symbol):
                 name = "function ({})".format(function.__name__)
             except AttributeError:
                 name = "function ({})".format(function.__class__)
-        children_list = list(children)
-        domain = self.get_children_domains(children_list)
+        domain = self.get_children_domains(children)
         auxiliary_domains = self.get_children_auxiliary_domains(children)
 
         self.function = function
@@ -50,10 +55,7 @@ class Function(pybamm.Symbol):
         self.differentiated_function = differentiated_function
 
         super().__init__(
-            name,
-            children=children_list,
-            domain=domain,
-            auxiliary_domains=auxiliary_domains,
+            name, children=children, domain=domain, auxiliary_domains=auxiliary_domains
         )
 
     def get_children_domains(self, children_list):
@@ -316,7 +318,9 @@ class Log(SpecificFunction):
         super().__init__(np.log, child)
 
     def _function_evaluate(self, evaluated_children):
-        return np.log(*evaluated_children)
+        # don't raise RuntimeWarning for NaNs
+        with np.errstate(invalid="ignore"):
+            return np.log(*evaluated_children)
 
     def _function_diff(self, children, idx):
         """ See :meth:`pybamm.Function._function_diff()`. """
@@ -390,7 +394,9 @@ class Sqrt(SpecificFunction):
         super().__init__(np.sqrt, child)
 
     def _function_evaluate(self, evaluated_children):
-        return np.sqrt(*evaluated_children)
+        # don't raise RuntimeWarning for NaNs
+        with np.errstate(invalid="ignore"):
+            return np.sqrt(*evaluated_children)
 
     def _function_diff(self, children, idx):
         """ See :meth:`pybamm.Function._function_diff()`. """

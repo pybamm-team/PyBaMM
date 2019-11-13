@@ -342,6 +342,20 @@ class TestEvaluate(unittest.TestCase):
             result = evaluator.evaluate(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
+        # test something with a heaviside
+        a = pybamm.Vector(np.array([1, 2]))
+        expr = a <= pybamm.StateVector(slice(0, 2))
+        evaluator = pybamm.EvaluatorPython(expr)
+        for t, y in zip(t_tests, y_tests):
+            result = evaluator.evaluate(t=t, y=y)
+            np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
+
+        expr = a > pybamm.StateVector(slice(0, 2))
+        evaluator = pybamm.EvaluatorPython(expr)
+        for t, y in zip(t_tests, y_tests):
+            result = evaluator.evaluate(t=t, y=y)
+            np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
+
         # test something with an index
         expr = pybamm.Index(A @ pybamm.StateVector(slice(0, 2)), 0)
         evaluator = pybamm.EvaluatorPython(expr)
