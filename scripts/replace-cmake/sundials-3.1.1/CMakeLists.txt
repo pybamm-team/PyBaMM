@@ -1010,6 +1010,7 @@ IF(KLU_ENABLE)
   set(KLU_FOUND TRUE)
   get_filename_component(PYBAMM_DIR ${PROJECT_SOURCE_DIR} DIRECTORY)
   set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PYBAMM_DIR}) # use FindSuiteSparse.cmake that is in PyBaMM root
+  set(SuiteSparse_ROOT ${PYBAMM_DIR}/SuiteSparse-5.6.0)
   find_package(SuiteSparse OPTIONAL_COMPONENTS KLU AMD COLAMD BTF)
   include_directories(${SuiteSparse_INCLUDE_DIRS})
   set(KLU_LIBRARIES ${SuiteSparse_LIBRARIES})
