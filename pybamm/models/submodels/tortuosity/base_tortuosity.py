@@ -27,18 +27,21 @@ class BaseModel(pybamm.BaseSubModel):
         variables = {
             self.phase + " tortuosity": tor,
             "Negative " + self.phase.lower() + " tortuosity": tor_n,
-            "Separator " + self.phase.lower() + " tortuosity": tor_s,
             "Positive " + self.phase.lower() + " tortuosity": tor_p,
             "X-averaged negative "
             + self.phase.lower()
             + " tortuosity": pybamm.x_average(tor_n),
-            "X-averaged separator "
-            + self.phase.lower()
-            + " tortuosity": pybamm.x_average(tor_s),
             "X-averaged positive "
             + self.phase.lower()
             + " tortuosity": pybamm.x_average(tor_p),
         }
+        if self.phase == "Electrolyte":
+            variables.update(
+                {
+                    "Separator tortuosity": tor_s,
+                    "X-averaged separator tortuosity": pybamm.x_average(tor_s),
+                }
+            )
 
         if set_leading_order is True:
             leading_order_variables = {

@@ -397,7 +397,7 @@ voltage_high_cut = (
 # Electrolyte volumetric capacity
 Q_e_max = (l_n * eps_n_max + l_s * eps_s_max + l_p * eps_p_max) / (s_p - s_n)
 Q_e_max_dimensional = Q_e_max * c_e_typ * F
-capacity = Q_e_max_dimensional * 8 * A_cs * L_x
+capacity = Q_e_max_dimensional * n_electrodes_parallel * A_cs * L_x
 
 # Initial conditions
 q_init = pybamm.Parameter("Initial State of Charge")

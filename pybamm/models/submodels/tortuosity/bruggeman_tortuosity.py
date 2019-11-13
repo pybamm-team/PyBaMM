@@ -12,6 +12,10 @@ class Bruggeman(BaseModel):
     **Extends:** :class:`pybamm.tortuosity.BaseModel`
     """
 
+    def __init__(self, param, phase, set_leading_order=False):
+        super().__init__(param, phase)
+        self.set_leading_order = set_leading_order
+
     def get_coupled_variables(self, variables):
         param = self.param
 
@@ -24,6 +28,8 @@ class Bruggeman(BaseModel):
         tor = pybamm.Concatenation(
             eps_n ** param.b_n, eps_s ** param.b_s, eps_p ** param.b_p
         )
-        variables.update(self._get_standard_tortuosity_variables(tor))
+        variables.update(
+            self._get_standard_tortuosity_variables(tor, self.set_leading_order)
+        )
 
         return variables

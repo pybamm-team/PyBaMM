@@ -94,7 +94,10 @@ class BaseModel(pybamm.BaseSubModel):
         return variables
 
     def set_events(self, variables):
-        eps = variables["Porosity"]
-        self.events["Zero porosity cut-off"] = pybamm.min(eps)
-        self.events["Max porosity cut-off"] = pybamm.max(eps) - 1
+        eps_n = variables["Negative electrode porosity"]
+        eps_p = variables["Positive electrode porosity"]
+        self.events["Zero negative electrode porosity cut-off"] = pybamm.min(eps_n)
+        self.events["Max negative electrode porosity cut-off"] = pybamm.max(eps_n) - 1
+        self.events["Zero positive electrode porosity cut-off"] = pybamm.min(eps_p)
+        self.events["Max positive electrode porosity cut-off"] = pybamm.max(eps_p) - 1
 
