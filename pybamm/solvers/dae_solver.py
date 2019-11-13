@@ -288,15 +288,14 @@ class DaeSolver(pybamm.BaseSolver):
         self.jacobian = jacobian
 
         # Create CasADi problem for the CasADi solver
-        # self.casadi_problem = {
-        #     "t": casadi.Function("t", [t_casadi], [t_casadi]),
-        #     "x": casadi.Function("t", [y_diff], [y_diff]),
-        #     "z": casadi.Function("t", [y_alg], [y_alg]),
-        #     "ode": casadi.Function("t", [concatenated_rhs], [concatenated_rhs]),
-        #     "alg": casadi.Function(
-        #         "t", [concatenated_algebraic], [concatenated_algebraic]
-        #     ),
-        # }
+        if isinstance(self, pybamm.CasadiSolver):
+            self.casadi_problem = {
+                "t": t_casadi,
+                "x": y_diff,
+                "z": y_alg,
+                "ode": concatenated_rhs,
+                "alg": concatenated_algebraic,
+            }
 
     def calculate_consistent_initial_conditions(
         self, rhs, algebraic, y0_guess, jac=None
