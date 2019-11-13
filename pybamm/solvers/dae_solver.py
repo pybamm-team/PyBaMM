@@ -287,15 +287,9 @@ class DaeSolver(pybamm.BaseSolver):
         self.event_funs = [get_event_class(event) for event in casadi_events.values()]
         self.jacobian = jacobian
 
-        # Create CasADi problem for the CasADi solver
-        if isinstance(self, pybamm.CasadiSolver):
-            self.casadi_problem = {
-                "t": t_casadi,
-                "x": y_diff,
-                "z": y_alg,
-                "ode": concatenated_rhs,
-                "alg": concatenated_algebraic,
-            }
+        # Save CasADi functions for the CasADi solver
+        self.casadi_rhs = concatenated_rhs_fn
+        self.casadi_algebraic = concatenated_algebraic_fn
 
     def calculate_consistent_initial_conditions(
         self, rhs, algebraic, y0_guess, jac=None

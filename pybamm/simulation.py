@@ -56,7 +56,7 @@ class Simulation:
         """
         A method to reset a simulation back to its unprocessed state.
         """
-        self.model = self.model.new_copy()
+        self.model = self.model.new_copy(self._model_options)
         self.geometry = copy.deepcopy(self._unprocessed_geometry)
         self._model_with_set_params = None
         self._built_model = None

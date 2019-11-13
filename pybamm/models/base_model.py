@@ -290,11 +290,11 @@ class BaseModel(object):
     def __getitem__(self, key):
         return self.rhs[key]
 
-    def new_copy(self):
-        "Create an empty copy with identical options"
-        new_model = self.__class__(self.options)
+    def new_copy(self, options=None):
+        "Create an empty copy with identical options, or new options if specified"
+        options = options or self.options
+        new_model = self.__class__(options)
         new_model.name = self.name
-        new_model.options = self.options
         new_model.use_jacobian = self.use_jacobian
         new_model.use_simplify = self.use_simplify
         new_model.convert_to_format = self.convert_to_format
