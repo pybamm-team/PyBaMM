@@ -26,10 +26,10 @@ class FullDiffusionLimited(BaseModel):
     def _get_diffusion_limited_current_density(self, variables):
         param = self.param
         if self.domain == "Negative":
-            eps_s = variables["Separator porosity"]
+            tor_s = variables["Separator tortuosity"]
             c_ox_s = variables["Separator oxygen concentration"]
             N_ox_neg_sep_interface = (
-                -pybamm.boundary_value(eps_s ** param.b_s, "left")
+                -pybamm.boundary_value(tor_s, "left")
                 * param.curlyD_ox
                 * pybamm.BoundaryGradient(c_ox_s, "left")
             )

@@ -13,6 +13,7 @@ class TestFull(unittest.TestCase):
         a = pybamm.Scalar(0)
         variables = {
             "Porosity": a,
+            "Electrolyte tortuosity": a,
             "Porosity change": a,
             "Volume-averaged velocity": a,
             "Electrolyte concentration": a,

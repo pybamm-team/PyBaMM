@@ -68,13 +68,25 @@ class BaseSubModel:
 
     @domain.setter
     def domain(self, domain):
-        if domain in ["Negative", "Separator", "Positive"]:
+        ok_domain_list = [
+            "Negative",
+            "Separator",
+            "Positive",
+            "Negative electrode",
+            "Negative electrolyte",
+            "Separator electrolyte",
+            "Positive electrode",
+            "Positive electrolyte",
+        ]
+        if domain in ok_domain_list:
             self._domain = domain
         elif domain is None:
             pass
         else:
             raise pybamm.DomainError(
-                "Domain must be either 'Negative' or 'Positive' not {}".format(domain)
+                "Domain '{}' not recognised (must be one of {})".format(
+                    domain, ok_domain_list
+                )
             )
 
     def set_domain_for_broadcast(self):

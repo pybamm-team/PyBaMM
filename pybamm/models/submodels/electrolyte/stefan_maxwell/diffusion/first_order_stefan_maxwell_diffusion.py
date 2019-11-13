@@ -40,6 +40,9 @@ class FirstOrder(BaseModel):
         eps_n_0 = variables["Leading-order x-averaged negative electrode porosity"]
         eps_s_0 = variables["Leading-order x-averaged separator porosity"]
         eps_p_0 = variables["Leading-order x-averaged positive electrode porosity"]
+        tor_n_0 = variables["Leading-order x-averaged negative electrolyte tortuosity"]
+        tor_s_0 = variables["Leading-order x-averaged separator tortuosity"]
+        tor_p_0 = variables["Leading-order x-averaged positive electrolyte tortuosity"]
         deps_n_0_dt = variables[
             "Leading-order x-averaged negative electrode porosity change"
         ]
@@ -70,9 +73,9 @@ class FirstOrder(BaseModel):
         )
 
         # Diffusivities
-        D_e_n = (eps_n_0 ** param.b_n) * param.D_e(c_e_0, T_0)
-        D_e_s = (eps_s_0 ** param.b_s) * param.D_e(c_e_0, T_0)
-        D_e_p = (eps_p_0 ** param.b_p) * param.D_e(c_e_0, T_0)
+        D_e_n = tor_n_0 * param.D_e(c_e_0, T_0)
+        D_e_s = tor_s_0 * param.D_e(c_e_0, T_0)
+        D_e_p = tor_p_0 * param.D_e(c_e_0, T_0)
 
         # Fluxes
         N_e_n_1 = -pybamm.outer(rhs_n, x_n)

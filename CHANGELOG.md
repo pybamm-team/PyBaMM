@@ -2,6 +2,8 @@
 
 ## Features
 
+-   Separated active and inactive material volume fractions ([#726](https://github.com/pybamm-team/PyBaMM/pull/726))
+-   Added submodels for tortuosity ([#726](https://github.com/pybamm-team/PyBaMM/pull/726))
 -   Simplified the interface for setting current functions ([#723](https://github.com/pybamm-team/PyBaMM/pull/723))
 -   Added Heaviside operator ([#723](https://github.com/pybamm-team/PyBaMM/pull/723))
 -   Added Simulation class ([#693](https://github.com/pybamm-team/PyBaMM/pull/693))
