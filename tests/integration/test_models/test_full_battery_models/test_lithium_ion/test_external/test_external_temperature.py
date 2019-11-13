@@ -49,8 +49,6 @@ class TestExternalThermalModels(unittest.TestCase):
 
         sim = pybamm.Simulation(model, var_pts=var_pts)
 
-        sim.solver = pybamm.IDAKLUSolver()
-
         t_eval = np.linspace(0, 0.01, 3)
         x = np.linspace(0, 1, tot_pts)
 
@@ -96,21 +94,8 @@ class TestExternalThermalModels(unittest.TestCase):
             T = (np.sin(2 * np.pi * x) * np.sin(2 * np.pi * 100 * t_eval[i]))[
                 :, np.newaxis
             ]
-            # T = np.ones((tot_pts, 1))
             external_variables = {"Cell temperature": T}
             sim.step(dt, external_variables=external_variables)
-            print(i)
-
-        sim.plot(
-            [
-                "Negative particle surface concentration",
-                "Electrolyte concentration",
-                "Positive particle surface concentration",
-                "Cell temperature [K]",
-                "Terminal voltage [V]",
-                "Total heating [W.m-3]",
-            ]
-        )
 
 
 if __name__ == "__main__":
