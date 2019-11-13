@@ -40,9 +40,9 @@ class FirstOrder(BaseModel):
         eps_n_0 = variables["Leading-order x-averaged negative electrode porosity"]
         eps_s_0 = variables["Leading-order x-averaged separator porosity"]
         eps_p_0 = variables["Leading-order x-averaged positive electrode porosity"]
-        tor_n_0 = variables["Leading-order x-averaged negative electrode tortuosity"]
+        tor_n_0 = variables["Leading-order x-averaged negative electrolyte tortuosity"]
         tor_s_0 = variables["Leading-order x-averaged separator tortuosity"]
-        tor_p_0 = variables["Leading-order x-averaged positive electrode tortuosity"]
+        tor_p_0 = variables["Leading-order x-averaged positive electrolyte tortuosity"]
         deps_n_0_dt = variables[
             "Leading-order x-averaged negative electrode porosity change"
         ]

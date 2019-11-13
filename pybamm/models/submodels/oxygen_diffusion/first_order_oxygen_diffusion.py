@@ -38,7 +38,9 @@ class FirstOrder(BaseModel):
 
         # Unpack
         tor_s_0_av = variables["Leading-order x-averaged separator tortuosity"]
-        tor_p_0_av = variables["Leading-order x-averaged positive electrode tortuosity"]
+        tor_p_0_av = variables[
+            "Leading-order x-averaged positive electrolyte tortuosity"
+        ]
 
         # Diffusivities
         D_ox_s = tor_s_0_av * param.curlyD_ox

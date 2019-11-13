@@ -44,9 +44,9 @@ class BaseHigherOrder(BaseModel):
             "X-averaged negative electrode surface potential difference"
         ]
         phi_s_n_av = variables["X-averaged negative electrode potential"]
-        tor_n_av = variables["Leading-order x-averaged negative electrode tortuosity"]
+        tor_n_av = variables["Leading-order x-averaged negative electrolyte tortuosity"]
         tor_s_av = variables["Leading-order x-averaged separator tortuosity"]
-        tor_p_av = variables["Leading-order x-averaged positive electrode tortuosity"]
+        tor_p_av = variables["Leading-order x-averaged positive electrolyte tortuosity"]
 
         T_av = variables["X-averaged cell temperature"]
         T_av_n = pybamm.PrimaryBroadcast(T_av, "negative electrode")
