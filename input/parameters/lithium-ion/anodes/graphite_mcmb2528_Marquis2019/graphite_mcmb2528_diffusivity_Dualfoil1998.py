@@ -32,7 +32,4 @@ def graphite_mcmb2528_diffusivity_Dualfoil1998(sto, T, T_inf, E_D_s, R_g):
     D_ref = 3.9 * 10 ** (-14)
     arrhenius = np.exp(E_D_s / R_g * (1 / T_inf - 1 / T))
 
-    # Removing the fudge factor 0 * sto requires different handling of either
-    # either simplifications or how sto is passed into this function.
-    # See #547
-    return D_ref * arrhenius + 0 * sto
+    return D_ref * arrhenius
