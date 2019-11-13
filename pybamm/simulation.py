@@ -1,3 +1,7 @@
+#
+# Simulation class
+#
+import pickle
 import pybamm
 import numpy as np
 import copy
@@ -281,3 +285,15 @@ class Simulation:
             or spatial_methods
         ):
             self.reset()
+
+    def save(self, filename):
+        """Save simulation using pickle"""
+        with open(filename, "wb") as f:
+            pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
+
+
+def load_sim(filename):
+    """Load a saved simulation"""
+    with open(filename, "rb") as f:
+        sim = pickle.load(f)
+    return sim

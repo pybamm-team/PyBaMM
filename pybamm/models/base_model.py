@@ -1,10 +1,20 @@
 #
 # Base model class
 #
-import pybamm
-
+import inspect
 import numbers
+import pybamm
 import warnings
+
+
+class ParamClass:
+    """Class for converting a module of parameters into a class. For pickling."""
+
+    def __init__(self, methods):
+        for k, v in methods.__dict__.items():
+            # don't save module attributes (e.g. pybamm, numpy)
+            if not (k.startswith("__") or inspect.ismodule(v)):
+                self.__dict__[k] = v
 
 
 class BaseModel(object):
@@ -260,8 +270,14 @@ class BaseModel(object):
         self._jacobian_algebraic = jacobian_algebraic
 
     @property
-    def set_of_parameters(self):
-        return self._set_of_parameters
+    def param(self):
+        return self._param
+
+    @param.setter
+    def param(self, values):
+        # convert module into a class
+        # (StackOverflow: https://tinyurl.com/yk3euon3)
+        self._param = ParamClass(values)
 
     @property
     def options(self):

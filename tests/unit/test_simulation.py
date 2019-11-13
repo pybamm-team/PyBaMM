@@ -129,6 +129,22 @@ class TestSimulation(unittest.TestCase):
         sim.specs(spatial_methods=spatial_methods)
         sim.build()
 
+    def test_save_load(self):
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model)
+
+        sim.save("test.pickle")
+        sim_load = pybamm.load_sim("test.pickle")
+        self.assertEqual(sim.model.name, sim_load.model.name)
+
+        # save after solving
+        sim.solve()
+        # TODO: allow pickling of solver objects
+        del sim._solver
+        sim.save("test.pickle")
+        sim_load = pybamm.load_sim("test.pickle")
+        self.assertEqual(sim.model.name, sim_load.model.name)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
