@@ -3,6 +3,8 @@
 ## Features
 
 -   Generalized importing of external variables ([#728](https://github.com/pybamm-team/PyBaMM/pull/728))
+-   Simplified the interface for setting current functions ([#723](https://github.com/pybamm-team/PyBaMM/pull/723))
+-   Added Heaviside operator ([#723](https://github.com/pybamm-team/PyBaMM/pull/723))
 -   New extrapolation methods ([#707](https://github.com/pybamm-team/PyBaMM/pull/707))
 -   Allow abs tolerance to be set by variable for IDA KLU solver ([#700](https://github.com/pybamm-team/PyBaMM/pull/700))
 -   Added Simulation class ([#693](https://github.com/pybamm-team/PyBaMM/pull/693))
@@ -25,6 +27,7 @@
 
 ## Bug fixes
 
+-   Improved flexibility of parameter values so that parameters (such as diffusivity or current) can be set as functions or scalars ([#723](https://github.com/pybamm-team/PyBaMM/pull/723))
 -   Fixed a bug where boundary conditions were sometimes handled incorrectly in 1+1D models ([#713](https://github.com/pybamm-team/PyBaMM/pull/713))
 -   Corrected a sign error in Dirichlet boundary conditions in the Finite Element Method ([#706](https://github.com/pybamm-team/PyBaMM/pull/706))
 -   Passed the correct dimensional temperature to open circuit potential ([#702](https://github.com/pybamm-team/PyBaMM/pull/702))

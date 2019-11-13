@@ -3,7 +3,7 @@
 #
 import pybamm
 
-import autograd.numpy as np
+import numpy as np
 import numbers
 from scipy.sparse import issparse
 
@@ -574,6 +574,7 @@ class Simplification(object):
             return self._simplified_symbols[symbol.id]
         except KeyError:
             simplified_symbol = self._simplify(symbol)
+
             self._simplified_symbols[symbol.id] = simplified_symbol
 
             return simplified_symbol

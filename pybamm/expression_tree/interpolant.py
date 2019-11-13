@@ -75,7 +75,3 @@ class Interpolant(pybamm.Function):
             interpolator=self.interpolator,
             extrapolate=self.extrapolate
         )
-
-    def _function_simplify(self, simplified_children):
-        """ See :meth:`Function._function_new_simplify()` """
-        return self._function_new_copy(simplified_children)

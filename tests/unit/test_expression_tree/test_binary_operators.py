@@ -41,9 +41,9 @@ class TestBinaryOperators(unittest.TestCase):
     def test_addition(self):
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")
-        sum = pybamm.Addition(a, b)
-        self.assertEqual(sum.children[0].name, a.name)
-        self.assertEqual(sum.children[1].name, b.name)
+        summ = pybamm.Addition(a, b)
+        self.assertEqual(summ.children[0].name, a.name)
+        self.assertEqual(summ.children[1].name, b.name)
 
     def test_power(self):
         a = pybamm.Symbol("a")
@@ -184,9 +184,9 @@ class TestBinaryOperators(unittest.TestCase):
     def test_addition_printing(self):
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")
-        sum = pybamm.Addition(a, b)
-        self.assertEqual(sum.name, "+")
-        self.assertEqual(str(sum), "a + b")
+        summ = pybamm.Addition(a, b)
+        self.assertEqual(summ.name, "+")
+        self.assertEqual(str(summ), "a + b")
 
     def test_id(self):
         a = pybamm.Scalar(4)
@@ -323,6 +323,23 @@ class TestBinaryOperators(unittest.TestCase):
         w = pybamm.Vector(2 * np.ones(3), domain="test")
         with self.assertRaisesRegex(pybamm.DomainError, "'source'"):
             pybamm.source(v, w)
+
+    def test_heaviside(self):
+        a = pybamm.Scalar(1)
+        b = pybamm.StateVector(slice(0, 1))
+        heav = a < b
+        self.assertFalse(heav.equal)
+        self.assertEqual(heav.evaluate(y=np.array([2])), 1)
+        self.assertEqual(heav.evaluate(y=np.array([1])), 0)
+        self.assertEqual(heav.evaluate(y=np.array([0])), 0)
+        self.assertEqual(str(heav), "1.0 < y[0:1]")
+
+        heav = a >= b
+        self.assertTrue(heav.equal)
+        self.assertEqual(heav.evaluate(y=np.array([2])), 0)
+        self.assertEqual(heav.evaluate(y=np.array([1])), 1)
+        self.assertEqual(heav.evaluate(y=np.array([0])), 1)
+        self.assertEqual(str(heav), "y[0:1] <= 1.0")
 
 
 class TestIsZero(unittest.TestCase):

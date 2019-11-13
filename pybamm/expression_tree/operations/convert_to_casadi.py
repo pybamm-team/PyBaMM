@@ -79,9 +79,7 @@ class CasadiConverter(object):
                 return casadi.interpolant("LUT", "bspline", [symbol.x], symbol.y)(
                     *converted_children
                 )
-            elif not isinstance(
-                symbol.function, pybamm.BaseCurrent
-            ) and symbol.function.__name__.startswith("elementwise_grad_of_"):
+            elif symbol.function.__name__.startswith("elementwise_grad_of_"):
                 differentiating_child_idx = int(symbol.function.__name__[-1])
                 # Create dummy symbolic variables in order to differentiate using CasADi
                 dummy_vars = [
