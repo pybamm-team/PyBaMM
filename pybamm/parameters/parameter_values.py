@@ -431,7 +431,7 @@ class ParameterValues(dict):
             new_children = [self.process_symbol(child) for child in symbol.children]
             function_name = self[symbol.name]
 
-            # Create Function or Interpolant or Scalar objec
+            # Create Function or Interpolant or Scalar object
             if isinstance(function_name, tuple):
                 # If function_name is a tuple then it should be (name, data) and we need
                 # to create an Interpolant
