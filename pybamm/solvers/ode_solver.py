@@ -120,11 +120,11 @@ class OdeSolver(pybamm.BaseSolver):
 
         # Create event-dependent function to evaluate events
         def get_event_class(event):
-            return EvalEventClass(event.evaluate)
+            return EvalEvent(event.evaluate)
 
         # Create function to evaluate jacobian
         if jac_rhs is not None:
-            jacobian = JacobianClass(jac_rhs.evaluate)
+            jacobian = Jacobian(jac_rhs.evaluate)
         else:
             jacobian = None
 
@@ -132,7 +132,7 @@ class OdeSolver(pybamm.BaseSolver):
         # Note: these are the (possibly) converted to python version rhs, algebraic
         # etc. The expression tree versions of these are attributes of the model
         self.y0 = y0
-        self.dydt = dydtClass(model, concatenated_rhs.evaluate)
+        self.dydt = Dydt(model, concatenated_rhs.evaluate)
         self.events = events
         self.event_funs = [get_event_class(event) for event in events.values()]
         self.jacobian = jacobian
@@ -179,7 +179,7 @@ class OdeSolver(pybamm.BaseSolver):
         # Create event-dependent function to evaluate events
         def get_event_class(event):
             casadi_event_fn = casadi.Function("event", [t_casadi, y_casadi], [event])
-            return EvalEventClass(casadi_event_fn)
+            return EvalEvent(casadi_event_fn)
 
         # Create function to evaluate jacobian
         if model.use_jacobian:
@@ -188,14 +188,14 @@ class OdeSolver(pybamm.BaseSolver):
             casadi_jac_fn = casadi.Function(
                 "jacobian", [t_casadi, y_casadi], [casadi_jac]
             )
-            jacobian = JacobianCasadiClass(casadi_jac_fn)
+            jacobian = JacobianCasadi(casadi_jac_fn)
 
         else:
             jacobian = None
 
         # Add the solver attributes
         self.y0 = y0
-        self.dydt = dydtCasadiClass(model, concatenated_rhs_fn)
+        self.dydt = DydtCasadi(model, concatenated_rhs_fn)
         self.events = model.events
         self.event_funs = [get_event_class(event) for event in casadi_events.values()]
         self.jacobian = jacobian
@@ -228,7 +228,7 @@ class OdeSolver(pybamm.BaseSolver):
 # Set up caller classes outside of the solver object to allow pickling
 
 
-class dydtClass:
+class Dydt:
     "Returns information about time derivatives at time t and state y"
 
     def __init__(self, model, concatenated_rhs_fn):
@@ -242,7 +242,7 @@ class dydtClass:
         return dy[:, 0]
 
 
-class dydtCasadiClass(dydtClass):
+class DydtCasadi(Dydt):
     "Returns information about time derivatives at time t and state y, with CasADi"
 
     def __call__(self, t, y):
@@ -251,7 +251,7 @@ class dydtCasadiClass(dydtClass):
         return dy[:, 0]
 
 
-class EvalEventClass:
+class EvalEvent:
     "Returns information about events at time t and state y"
 
     def __init__(self, event_fn):
@@ -261,7 +261,7 @@ class EvalEventClass:
         return self.event_fn(t, y)
 
 
-class JacobianClass:
+class Jacobian:
     "Returns information about the jacobian at time t and state y"
 
     def __init__(self, jac_fn):
@@ -271,7 +271,7 @@ class JacobianClass:
         return self.jac_fn(t, y, known_evals={})[0]
 
 
-class JacobianCasadiClass(JacobianClass):
+class JacobianCasadi(Jacobian):
     "Returns information about the jacobian at time t and state y, with CasADi"
 
     def __call__(self, t, y):

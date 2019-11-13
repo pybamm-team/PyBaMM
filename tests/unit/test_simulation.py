@@ -130,7 +130,8 @@ class TestSimulation(unittest.TestCase):
         sim.build()
 
     def test_save_load(self):
-        model = pybamm.lithium_ion.SPM()
+        model = pybamm.lead_acid.LOQS()
+        model.use_jacobian = True
         sim = pybamm.Simulation(model)
 
         sim.save("test.pickle")
@@ -155,6 +156,23 @@ class TestSimulation(unittest.TestCase):
             NotImplementedError, "Cannot save simulation if model format is python"
         ):
             sim.save("test.pickle")
+
+    def test_save_load_dae(self):
+        model = pybamm.lead_acid.LOQS({"surface form": "algebraic"})
+        model.use_jacobian = True
+        sim = pybamm.Simulation(model)
+
+        # save after solving
+        sim.solve()
+        sim.save("test.pickle")
+        sim_load = pybamm.load_sim("test.pickle")
+        self.assertEqual(sim.model.name, sim_load.model.name)
+
+        # with python format
+        model.convert_to_format = None
+        sim = pybamm.Simulation(model)
+        sim.solve()
+        sim.save("test.pickle")
 
 
 if __name__ == "__main__":
