@@ -21,7 +21,7 @@ class BaseModel(pybamm.BaseSubModel):
         super().__init__(param)
         self.phase = phase
 
-    def _get_standard_tortuosity_variables(self, tor):
+    def _get_standard_tortuosity_variables(self, tor, set_leading_order=False):
         tor_n, tor_s, tor_p = tor.orphans
 
         variables = {
@@ -39,5 +39,11 @@ class BaseModel(pybamm.BaseSubModel):
             + self.phase.lower()
             + " tortuosity": pybamm.x_average(tor_p),
         }
+
+        if set_leading_order is True:
+            leading_order_variables = {
+                "Leading-order " + name.lower(): var for name, var in variables.items()
+            }
+            variables.update(leading_order_variables)
 
         return variables

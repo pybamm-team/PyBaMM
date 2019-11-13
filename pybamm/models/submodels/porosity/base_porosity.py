@@ -34,9 +34,9 @@ class BaseModel(pybamm.BaseSubModel):
         }
 
         # activate material volume fractions
-        eps_solid_n = eps_n - self.param.epsilon_binder_n
-        eps_solid_s = eps_s - self.param.epsilon_binder_s
-        eps_solid_p = eps_p - self.param.epsilon_binder_p
+        eps_solid_n = 1 - eps_n - self.param.epsilon_binder_n
+        eps_solid_s = 1 - eps_s - self.param.epsilon_binder_s
+        eps_solid_p = 1 - eps_p - self.param.epsilon_binder_p
         eps_solid = pybamm.Concatenation(eps_solid_n, eps_solid_s, eps_solid_p)
 
         am = "active material volume fraction"
@@ -53,33 +53,10 @@ class BaseModel(pybamm.BaseSubModel):
         )
 
         if set_leading_order is True:
-            variables.update(
-                {
-                    "Leading-order porosity": eps,
-                    "Leading-order negative electrode porosity": eps_n,
-                    "Leading-order separator porosity": eps_s,
-                    "Leading-order positive electrode porosity": eps_p,
-                    "Leading-order x-averaged "
-                    + "negative electrode porosity": pybamm.x_average(eps_n),
-                    "Leading-order x-averaged separator porosity": pybamm.x_average(
-                        eps_s
-                    ),
-                    "Leading-order x-averaged "
-                    + "positive electrode porosity": pybamm.x_average(eps_p),
-                    "Leading-order " + am: eps_solid,
-                    "Leading-order negative electrode " + am: eps_solid_n,
-                    "Leading-order separator " + am: eps_solid_s,
-                    "Leading-order positive electrode " + am: eps_solid_p,
-                    "Leading-order x-averaged "
-                    + "negative electrode "
-                    + am: pybamm.x_average(eps_solid_n),
-                    "Leading-order x-averaged separator "
-                    + am: pybamm.x_average(eps_solid_s),
-                    "Leading-order x-averaged "
-                    + "positive electrode "
-                    + am: pybamm.x_average(eps_solid_p),
-                }
-            )
+            leading_order_variables = {
+                "Leading-order " + name.lower(): var for name, var in variables.items()
+            }
+            variables.update(leading_order_variables)
 
         return variables
 
