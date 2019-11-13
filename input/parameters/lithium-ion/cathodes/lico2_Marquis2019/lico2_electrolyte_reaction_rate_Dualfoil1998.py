@@ -1,4 +1,4 @@
-import autograd.numpy as np
+from pybamm import exp
 
 
 def lico2_electrolyte_reaction_rate_Dualfoil1998(T, T_inf, E_r, R_g):
@@ -26,6 +26,6 @@ def lico2_electrolyte_reaction_rate_Dualfoil1998(T, T_inf, E_r, R_g):
         Reaction rate
     """
     m_ref = 6 * 10 ** (-7)
-    arrhenius = np.exp(E_r / R_g * (1 / T_inf - 1 / T))
+    arrhenius = exp(E_r / R_g * (1 / T_inf - 1 / T))
 
     return m_ref * arrhenius

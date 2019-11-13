@@ -1,4 +1,4 @@
-import autograd.numpy as np
+from pybamm import tanh
 
 
 def lico2_ocp_Dualfoil1998(sto):
@@ -28,12 +28,12 @@ def lico2_ocp_Dualfoil1998(sto):
 
     u_eq = (
         2.16216
-        + 0.07645 * np.tanh(30.834 - 54.4806 * sto)
-        + 2.1581 * np.tanh(52.294 - 50.294 * sto)
-        - 0.14169 * np.tanh(11.0923 - 19.8543 * sto)
-        + 0.2051 * np.tanh(1.4684 - 5.4888 * sto)
-        + 0.2531 * np.tanh((-sto + 0.56478) / 0.1316)
-        - 0.02167 * np.tanh((sto - 0.525) / 0.006)
+        + 0.07645 * tanh(30.834 - 54.4806 * sto)
+        + 2.1581 * tanh(52.294 - 50.294 * sto)
+        - 0.14169 * tanh(11.0923 - 19.8543 * sto)
+        + 0.2051 * tanh(1.4684 - 5.4888 * sto)
+        + 0.2531 * tanh((-sto + 0.56478) / 0.1316)
+        - 0.02167 * tanh((sto - 0.525) / 0.006)
     )
 
     return u_eq

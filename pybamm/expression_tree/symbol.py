@@ -6,7 +6,7 @@ import pybamm
 import anytree
 import numbers
 import copy
-import autograd.numpy as np
+import numpy as np
 from anytree.exporter import DotExporter
 
 
@@ -323,87 +323,67 @@ class Symbol(anytree.NodeMixin):
 
     def __add__(self, other):
         """return an :class:`Addition` object"""
-        if isinstance(other, (Symbol, numbers.Number)):
-            return pybamm.Addition(self, other)
-        else:
-            raise NotImplementedError
+        return pybamm.Addition(self, other)
 
     def __radd__(self, other):
         """return an :class:`Addition` object"""
-        if isinstance(other, (Symbol, numbers.Number)):
-            return pybamm.Addition(other, self)
-        else:
-            raise NotImplementedError
+        return pybamm.Addition(other, self)
 
     def __sub__(self, other):
         """return a :class:`Subtraction` object"""
-        if isinstance(other, (Symbol, numbers.Number)):
-            return pybamm.Subtraction(self, other)
-        else:
-            raise NotImplementedError
+        return pybamm.Subtraction(self, other)
 
     def __rsub__(self, other):
         """return a :class:`Subtraction` object"""
-        if isinstance(other, (Symbol, numbers.Number)):
-            return pybamm.Subtraction(other, self)
-        else:
-            raise NotImplementedError
+        return pybamm.Subtraction(other, self)
 
     def __mul__(self, other):
         """return a :class:`Multiplication` object"""
-        if isinstance(other, (Symbol, numbers.Number)):
-            return pybamm.Multiplication(self, other)
-        else:
-            raise NotImplementedError
+        return pybamm.Multiplication(self, other)
 
     def __rmul__(self, other):
         """return a :class:`Multiplication` object"""
-        if isinstance(other, (Symbol, numbers.Number)):
-            return pybamm.Multiplication(other, self)
-        else:
-            raise NotImplementedError
+        return pybamm.Multiplication(other, self)
 
     def __matmul__(self, other):
         """return a :class:`MatrixMultiplication` object"""
-        if isinstance(other, (Symbol, numbers.Number)):
-            return pybamm.MatrixMultiplication(self, other)
-        else:
-            raise NotImplementedError
+        return pybamm.MatrixMultiplication(self, other)
 
     def __rmatmul__(self, other):
         """return a :class:`MatrixMultiplication` object"""
-        if isinstance(other, (Symbol, numbers.Number)):
-            return pybamm.MatrixMultiplication(other, self)
-        else:
-            raise NotImplementedError
+        return pybamm.MatrixMultiplication(other, self)
 
     def __truediv__(self, other):
         """return a :class:`Division` object"""
-        if isinstance(other, (Symbol, numbers.Number)):
-            return pybamm.Division(self, other)
-        else:
-            raise NotImplementedError
+        return pybamm.Division(self, other)
 
     def __rtruediv__(self, other):
         """return a :class:`Division` object"""
-        if isinstance(other, (Symbol, numbers.Number)):
-            return pybamm.Division(other, self)
-        else:
-            raise NotImplementedError
+        return pybamm.Division(other, self)
 
     def __pow__(self, other):
         """return a :class:`Power` object"""
-        if isinstance(other, (Symbol, numbers.Number)):
-            return pybamm.Power(self, other)
-        else:
-            raise NotImplementedError
+        return pybamm.Power(self, other)
 
     def __rpow__(self, other):
         """return a :class:`Power` object"""
-        if isinstance(other, (Symbol, numbers.Number)):
-            return pybamm.Power(other, self)
-        else:
-            raise NotImplementedError
+        return pybamm.Power(other, self)
+
+    def __lt__(self, other):
+        """return a :class:`Heaviside` object"""
+        return pybamm.Heaviside(self, other, equal=False)
+
+    def __le__(self, other):
+        """return a :class:`Heaviside` object"""
+        return pybamm.Heaviside(self, other, equal=True)
+
+    def __gt__(self, other):
+        """return a :class:`Heaviside` object"""
+        return pybamm.Heaviside(other, self, equal=False)
+
+    def __ge__(self, other):
+        """return a :class:`Heaviside` object"""
+        return pybamm.Heaviside(other, self, equal=True)
 
     def __neg__(self):
         """return a :class:`Negate` object"""

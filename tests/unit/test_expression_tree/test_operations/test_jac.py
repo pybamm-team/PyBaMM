@@ -4,7 +4,6 @@
 import pybamm
 
 import numpy as np
-import autograd.numpy as auto_np
 import unittest
 from scipy.sparse import eye
 from tests import get_mesh_for_testing
@@ -144,17 +143,17 @@ class TestJacobian(unittest.TestCase):
 
         y0 = np.array([1.0, 2.0, 3.0, 4.0])
 
-        func = pybamm.Function(auto_np.sin, u)
+        func = pybamm.sin(u)
         jacobian = np.array([[np.cos(1), 0, 0, 0], [0, np.cos(2), 0, 0]])
         dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
 
-        func = pybamm.Function(auto_np.cos, v)
+        func = pybamm.cos(v)
         jacobian = np.array([[0, 0, -np.sin(3), 0], [0, 0, 0, -np.sin(4)]])
         dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
 
-        func = pybamm.Function(auto_np.sin, 3 * u * v)
+        func = pybamm.sin(3 * u * v)
         jacobian = np.array(
             [
                 [9 * np.cos(9), 0, 3 * np.cos(9), 0],
@@ -164,7 +163,7 @@ class TestJacobian(unittest.TestCase):
         dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
 
-        func = pybamm.Function(auto_np.cos, 5 * pybamm.Function(auto_np.exp, u + v))
+        func = pybamm.cos(5 * pybamm.exp(u + v))
         jacobian = np.array(
             [
                 [
@@ -185,7 +184,7 @@ class TestJacobian(unittest.TestCase):
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
 
         # when child evaluates to number
-        func = pybamm.Function(auto_np.sin, const)
+        func = pybamm.sin(const)
         dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_equal(0, dfunc_dy)
 
@@ -264,6 +263,16 @@ class TestJacobian(unittest.TestCase):
         vec = pybamm.StateVector(slice(0, 2))
         jac = pybamm.inner(a * vec, b * vec).jac(vec).evaluate(y=np.ones(2)).toarray()
         np.testing.assert_array_equal(jac, 4 * np.eye(2))
+
+    def test_jac_of_heaviside(self):
+        a = pybamm.Scalar(1)
+        y = pybamm.StateVector(slice(0, 5))
+        np.testing.assert_array_equal(
+            ((a < y) * y ** 2).jac(y).evaluate(y=5 * np.ones(5)), 10 * np.eye(5)
+        )
+        np.testing.assert_array_equal(
+            ((a < y) * y ** 2).jac(y).evaluate(y=-5 * np.ones(5)), 0
+        )
 
     def test_jac_of_domain_concatenation(self):
         # create mesh
