@@ -2,10 +2,13 @@ import os
 import subprocess
 try:
     from setuptools import setup, find_packages
+    from setuptools.command.build_ext import build_ext
     import setuptools.command.install as orig
 except ImportError:
     from distutils.core import setup, find_packages
+    from disutils.command.build_ext import build_ext
 from distutils.cmd import Command
+from platform import python_version
 
 class BuildKLU(Command):
     """ A custom command to compile the SuiteSparse KLU library as part of the PyBaMM
@@ -166,6 +169,28 @@ class BuildSundials(Command):
 
         self._update_LD_LIBRARY_PATH()
 
+class BuildIDAKLUSolver(build_ext):
+    """ A custom command to build the PyBaMM idaklu solver using
+    cmake and pybind11.
+    """
+    description = 'Compile idaklu solver.'
+
+    try:
+        out = subprocess.run(['cmake', '--version'])
+    except OSError:
+        raise RuntimeError(
+            "CMake must be installed to build the following extensions: " +
+            ", ".join(e.name for e in self.extensions))
+
+    py_version = python_version()
+    cmake_args = ['-DPYBIND11_PYTHON_VERSION={}'.format(py_version)]
+
+    print('-'*10, 'Running CMake for idaklu solver', '-'*40)
+    subprocess.run(['cmake'] + cmake_args)
+
+    print('-'*10, 'Running Make for idaklu solver', '-'*40)
+    subprocess.run(['make'])
+
 class InstallODES(Command):
     """ A custom command to install scikits.ode with pip as part of the PyBaMM
         installation process.
@@ -267,6 +292,7 @@ setup(
         'build_sundials': BuildSundials,
         'install_odes': InstallODES,
         'build_klu': BuildKLU,
+        'build_idaklu_solver': BuildIDAKLUSolver,
         'install': InstallPyBaMM,
     },
     name="pybamm",
