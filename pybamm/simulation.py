@@ -56,7 +56,7 @@ class Simulation:
         """
         A method to reset a simulation back to its unprocessed state.
         """
-        self.model = self._model_class(self._model_options)
+        self.model = self.model.new_copy()
         self.geometry = copy.deepcopy(self._unprocessed_geometry)
         self._model_with_set_params = None
         self._built_model = None
@@ -288,6 +288,14 @@ class Simulation:
 
     def save(self, filename):
         """Save simulation using pickle"""
+        if self.model.convert_to_format == "python":
+            # We currently cannot save models in the 'python'
+            raise NotImplementedError(
+                """
+                Cannot save simulation if model format is python.
+                Set model.convert_to_format = 'casadi' instead.
+                """
+            )
         with open(filename, "wb") as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 

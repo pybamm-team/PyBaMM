@@ -290,6 +290,16 @@ class BaseModel(object):
     def __getitem__(self, key):
         return self.rhs[key]
 
+    def new_copy(self):
+        "Create an empty copy with identical options"
+        new_model = self.__class__(self.options)
+        new_model.name = self.name
+        new_model.options = self.options
+        new_model.use_jacobian = self.use_jacobian
+        new_model.use_simplify = self.use_simplify
+        new_model.convert_to_format = self.convert_to_format
+        return new_model
+
     def update(self, *submodels):
         """
         Update model to add new physics from submodels

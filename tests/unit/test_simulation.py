@@ -139,11 +139,22 @@ class TestSimulation(unittest.TestCase):
 
         # save after solving
         sim.solve()
-        # TODO: allow pickling of solver objects
-        del sim._solver
         sim.save("test.pickle")
         sim_load = pybamm.load_sim("test.pickle")
         self.assertEqual(sim.model.name, sim_load.model.name)
+
+        # with python formats
+        model.convert_to_format = None
+        sim = pybamm.Simulation(model)
+        sim.solve()
+        sim.save("test.pickle")
+        model.convert_to_format = "python"
+        sim = pybamm.Simulation(model)
+        sim.solve()
+        with self.assertRaisesRegex(
+            NotImplementedError, "Cannot save simulation if model format is python"
+        ):
+            sim.save("test.pickle")
 
 
 if __name__ == "__main__":
