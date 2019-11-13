@@ -34,9 +34,9 @@ class BaseModel(pybamm.BaseSubModel):
         }
 
         # activate material volume fractions
-        eps_solid_n = 1 - eps_n - self.param.epsilon_binder_n
-        eps_solid_s = 1 - eps_s - self.param.epsilon_binder_s
-        eps_solid_p = 1 - eps_p - self.param.epsilon_binder_p
+        eps_solid_n = 1 - eps_n - self.param.epsilon_inactive_n
+        eps_solid_s = 1 - eps_s - self.param.epsilon_inactive_s
+        eps_solid_p = 1 - eps_p - self.param.epsilon_inactive_p
         eps_solid = pybamm.Concatenation(eps_solid_n, eps_solid_s, eps_solid_p)
 
         am = "active material volume fraction"

@@ -72,16 +72,18 @@ sigma_cp_dimensional = sigma_p_dim
 # Microstructure
 a_n_dim = pybamm.geometric_parameters.a_n_dim
 a_p_dim = pybamm.geometric_parameters.a_p_dim
-b_n = pybamm.geometric_parameters.b_n
-b_s = pybamm.geometric_parameters.b_s
-b_p = pybamm.geometric_parameters.b_p
-b = pybamm.geometric_parameters.b
+b_e_n = pybamm.geometric_parameters.b_e_n
+b_e_s = pybamm.geometric_parameters.b_e_s
+b_e_p = pybamm.geometric_parameters.b_e_p
+b_s_n = pybamm.geometric_parameters.b_s_n
+b_s_s = pybamm.geometric_parameters.b_s_s
+b_s_p = pybamm.geometric_parameters.b_s_p
 xi_n = pybamm.Parameter("Negative electrode morphological parameter")
 xi_p = pybamm.Parameter("Positive electrode morphological parameter")
 # no binder
-epsilon_binder_n = pybamm.Scalar(0)
-epsilon_binder_s = pybamm.Scalar(0)
-epsilon_binder_p = pybamm.Scalar(0)
+epsilon_inactive_n = pybamm.Scalar(0)
+epsilon_inactive_s = pybamm.Scalar(0)
+epsilon_inactive_p = pybamm.Scalar(0)
 
 # Electrochemical reactions
 # Main

@@ -20,14 +20,16 @@ class Bruggeman(BaseModel):
         param = self.param
 
         if self.phase == "Electrolyte":
-            eps = variables["Porosity"]
+            eps_n, eps_s, eps_p = variables["Porosity"].orphans
+            tor = pybamm.Concatenation(
+                eps_n ** param.b_e_n, eps_s ** param.b_e_s, eps_p ** param.b_e_p
+            )
         elif self.phase == "Electrode":
-            eps = variables["Active material volume fraction"]
+            eps_n, eps_s, eps_p = variables["Active material volume fraction"].orphans
+            tor = pybamm.Concatenation(
+                eps_n ** param.b_s_n, eps_s ** param.b_s_s, eps_p ** param.b_s_p
+            )
 
-        eps_n, eps_s, eps_p = eps.orphans
-        tor = pybamm.Concatenation(
-            eps_n ** param.b_n, eps_s ** param.b_s, eps_p ** param.b_p
-        )
         variables.update(
             self._get_standard_tortuosity_variables(tor, self.set_leading_order)
         )
