@@ -8,10 +8,12 @@ Positive electrode diffusivity [m2.s-1],[function]lico2_diffusivity_Dualfoil1998
 Positive electrode OCP [V],[function]lico2_ocp_Dualfoil1998,
 ,,,
 # Microstructure,,,
-Positive electrode porosity,0.3,Scott Moura FastDFN,
+Positive electrode porosity,0.3,Scott Moura FastDFN,electrolyte volume fraction
+Positive electrode active material volume fraction,0.7,,assuming zero binder volume fraction
 Positive particle radius [m],1E-05,Scott Moura FastDFN,
 Positive electrode surface area density [m-1],150000,Scott Moura FastDFN,
-Positive electrode Bruggeman coefficient,1.5,Scott Moura FastDFN,
+Positive electrode Bruggeman coefficient (electrolyte),1.5,Scott Moura FastDFN,
+Positive electrode Bruggeman coefficient (electrode),1.5,Scott Moura FastDFN,
 ,,,
 # Interfacial reactions,,,
 Positive electrode cation signed stoichiometry,-1,,

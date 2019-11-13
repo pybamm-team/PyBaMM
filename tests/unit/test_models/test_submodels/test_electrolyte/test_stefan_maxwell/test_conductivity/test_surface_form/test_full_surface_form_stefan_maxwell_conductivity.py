@@ -23,6 +23,8 @@ class TestFull(unittest.TestCase):
                 a, "current collector"
             ),
             "Negative electrode porosity": a_n,
+            "Negative electrolyte tortuosity": a_n,
+            "Negative electrode tortuosity": a_n,
             "Negative electrolyte concentration": a_n,
             "Negative electrode interfacial current density": a_n,
             "Electrolyte potential": pybamm.Concatenation(a_n, a_s, a_p),
@@ -55,6 +57,8 @@ class TestFull(unittest.TestCase):
             "Separator electrolyte potential": a_s,
             "Separator electrolyte current density": a_s,
             "Positive electrode porosity": a_p,
+            "Positive electrolyte tortuosity": a_p,
+            "Positive electrode tortuosity": a_p,
             "Positive electrolyte concentration": a_p,
             "Positive electrode interfacial current density": a_p,
             "Positive electrode temperature": a_p,
