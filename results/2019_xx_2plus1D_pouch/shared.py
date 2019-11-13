@@ -24,8 +24,8 @@ def make_comsol_model(comsol_variables, mesh, param, y_interp=None, z_interp=Non
         Interpolate in space to plotting nodes, and then create function to interpolate
         in time that can be called for plotting at any t.
         """
-        comsol_y = comsol_variables["y"]
-        comsol_z = comsol_variables["z"]
+        comsol_y = comsol_variables[variable_name + "_y"]
+        comsol_z = comsol_variables[variable_name + "_z"]
         variable = comsol_variables[variable_name]
 
         # Note order of rows and cols!
@@ -52,10 +52,10 @@ def make_comsol_model(comsol_variables, mesh, param, y_interp=None, z_interp=Non
             comsol_t, comsol_variables["volume-averaged temperature"]
         )(t)
 
-    comsol_phi_s_cn = get_interp_fun(comsol_variables["phi_s_cn"])
-    comsol_phi_s_cp = get_interp_fun(comsol_variables["phi_s_cp"])
-    comsol_temperature = get_interp_fun(comsol_variables["temperature"])
-    comsol_current = get_interp_fun(comsol_variables["current"])
+    comsol_phi_s_cn = get_interp_fun("phi_s_cn")
+    comsol_phi_s_cp = get_interp_fun("phi_s_cp")
+    comsol_temperature = get_interp_fun("temperature")
+    comsol_current = get_interp_fun("current")
 
     # Create comsol model with dictionary of Matrix variables
     comsol_model = pybamm.BaseModel()

@@ -14,7 +14,6 @@ os.chdir(pybamm.root_dir())
 "Create and solve pybamm models"
 
 # load models
-options = {"thermal": "isothermal"}
 models = [
     pybamm.lithium_ion.DFN({"thermal": "isothermal"}, name="PyBaMM: isothermal"),
     pybamm.lithium_ion.DFN({"thermal": "x-full"}, name="PyBaMM: thermal"),
@@ -40,7 +39,7 @@ for model in models:
     disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
     disc.process_model(model)
 
-# solve model for one hour
+# solve model
 tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
 solutions = [None] * len(models)
 t_eval = np.linspace(0, 3600 / tau / C_rate, 60)
@@ -70,9 +69,9 @@ def make_comsol_model(comsol_variables, name):
 
     def get_interp_fun(variable_name, domain):
         """
-        Create a :class:`pybamm.Function` object using the variable, to allow plotting with
-        :class:`'pybamm.QuickPlot'` (interpolate in space to match edges, and then create
-        function to interpolate in time)
+        Create a :class:`pybamm.Function` object using the variable, to allow plotting
+        with :class:`'pybamm.QuickPlot'` (interpolate in space to match edges, and
+        then create function to interpolate in time)
         """
         variable = comsol_variables[variable_name]
         if domain == ["negative electrode"]:

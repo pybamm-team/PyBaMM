@@ -32,7 +32,7 @@ options = {
     "dimensionality": 2,
     "thermal": "x-lumped",
 }
-pybamm_model = pybamm.lithium_ion.DFN(options)
+pybamm_model = pybamm.lithium_ion.SPM(options)
 geometry = pybamm_model.default_geometry
 
 # load parameters and process model and geometry
@@ -102,7 +102,6 @@ tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
 # solve model at comsol times
 t_eval = comsol_variables["time"] / tau
 # solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6, mode="fast")
-pybamm_model.convert_to_format = "casadi"
 solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
 solution = solver.solve(pybamm_model, t_eval)
 

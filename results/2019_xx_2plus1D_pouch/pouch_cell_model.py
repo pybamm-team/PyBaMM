@@ -87,7 +87,6 @@ tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
 # solve model
 t_end = 900 / tau
 t_eval = np.linspace(0, t_end, 120)
-model.convert_to_format = "casadi"  # use casadi for jacobian
 solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
 # solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
 solution = solver.solve(model, t_eval)

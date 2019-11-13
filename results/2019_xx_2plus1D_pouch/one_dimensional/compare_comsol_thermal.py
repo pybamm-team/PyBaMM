@@ -58,7 +58,6 @@ tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
 
 # solve model at comsol times
 time = comsol_variables["time"] / tau
-pybamm_model.convert_to_format = "casadi"
 # solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
 solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6, mode="fast")
 solution = solver.solve(pybamm_model, time)
@@ -153,56 +152,119 @@ comsol_model.variables = {
 "-----------------------------------------------------------------------------"
 "Plot comparison"
 
-plot_times = comsol_variables["time"]
-pybamm_T = pybamm.ProcessedVariable(
-    pybamm_model.variables["Volume-averaged cell temperature [K]"],
-    solution.t,
-    solution.y,
-    mesh=mesh,
-)(plot_times / tau)
-comsol_T = pybamm.ProcessedVariable(
-    comsol_model.variables["Volume-averaged cell temperature [K]"],
-    solution.t,
-    solution.y,
-    mesh=mesh,
-)(plot_times / tau)
-plt.figure()
-plt.plot(plot_times, pybamm_T, "-", label="PyBaMM")
-plt.plot(plot_times, comsol_T, "o", label="COMSOL")
-plt.xlabel("t")
-plt.ylabel("T")
-plt.legend()
+# Define plotting functions
+# TODO: could be tidied up into shared file
 
-pybamm_voltage = pybamm.ProcessedVariable(
-    pybamm_model.variables["Terminal voltage [V]"], solution.t, solution.y, mesh=mesh
-)(plot_times / tau)
-comsol_voltage = pybamm.ProcessedVariable(
-    comsol_model.variables["Terminal voltage [V]"], solution.t, solution.y, mesh=mesh
-)(plot_times / tau)
-plt.figure()
-plt.plot(plot_times, pybamm_voltage, "-", label="PyBaMM")
-plt.plot(plot_times, comsol_voltage, "o", label="COMSOL")
-plt.xlabel("t")
-plt.ylabel("Voltage [V]")
-plt.legend()
 
-# Get mesh nodes
+def time_only_plot(var, plot_times=None, plot_error=None):
+    """
+    Plot pybamm variable against comsol variable where both are a function of
+    time only.
+
+    Parameters
+    ----------
+
+    var : str
+        The name of the variable to plot.
+    plot_times : array_like, optional
+        The times at which to plot. If None (default) the plot times will be
+        the times in the comsol model.
+    plot_error : str, optional
+        Whether to plot the error. Can be "rel" (plots the relative error), "abs"
+        (plots the abolute error), "both" (plots both the relative and abolsute
+        errors) or None (default, plots no errors).
+    """
+
+    # Set plot times if not provided
+    if plot_times is None:
+        plot_times = comsol_variables["time"]
+
+    # Process variables
+    pybamm_var = pybamm.ProcessedVariable(
+        pybamm_model.variables[var], solution.t, solution.y, mesh=mesh,
+    )(plot_times / tau)
+    comsol_var = pybamm.ProcessedVariable(
+        comsol_model.variables[var], solution.t, solution.y, mesh=mesh,
+    )(plot_times / tau)
+
+    # Make plot
+
+    # add extra row for errors
+    if plot_error in ["abs", "rel"]:
+        n_rows = 2
+    elif plot_error == "both":
+        n_rows = 3
+    else:
+        n_rows = 1
+    fig, ax = plt.subplots(n_rows, 1, figsize=(15, 8))
+
+    ax[0].plot(plot_times, pybamm_var, "-", label="PyBaMM")
+    ax[0].plot(plot_times, comsol_var, "o", fillstyle="none", label="COMSOL")
+    if plot_error == "abs":
+        error = np.abs(pybamm_var - comsol_var)
+        ax[1].plot(plot_times, error, "-")
+    elif plot_error == "rel":
+        error = np.abs((pybamm_var - comsol_var) / comsol_var)
+        ax[1].plot(plot_times, error, "-")
+    elif plot_error == "both":
+        abs_error = np.abs(pybamm_var - comsol_var)
+        rel_error = np.abs((pybamm_var - comsol_var) / comsol_var)
+        ax[1].plot(plot_times, abs_error, "-")
+        ax[2].plot(plot_times, rel_error, "-")
+
+    # set labels
+    ax[0].set_xlabel("t")
+    ax[0].set_ylabel(var)
+    if plot_error in ["abs", "rel"]:
+        ax[1].set_xlabel("t")
+        ax[1].set_ylabel("error (" + plot_error + ")")
+    elif plot_error == "both":
+        ax[1].set_xlabel("t")
+        ax[1].set_ylabel("error (abs)")
+        ax[2].set_xlabel("t")
+        ax[2].set_ylabel("error (rel)")
+    ax[0].legend(bbox_to_anchor=(1.04, 1), loc="upper left")
+    plt.tight_layout()
+
+
+# Get mesh nodes for spatial plots
 x_n = mesh.combine_submeshes(*["negative electrode"])[0].nodes
 x_s = mesh.combine_submeshes(*["separator"])[0].nodes
 x_p = mesh.combine_submeshes(*["positive electrode"])[0].nodes
 x = mesh.combine_submeshes(*whole_cell)[0].nodes
 
 
-def whole_cell_by_domain_comparison_plot(var, plot_times=None, plot_error="rel"):
+def whole_cell_by_domain_comparison_plot(var, plot_times=None, plot_error=None):
     """
     Plot pybamm variable (defined over whole cell) against comsol variable
-    (defined by component)
+    (defined by component). E.g. if var = "Electrolyte current density [A.m-2]"
+    then the pybamm variable will be "Electrolyte current density [A.m-2]", and
+    comsol variables will be "Negative electrode electrolyte current density [A.m-2]",
+    "Separator electrolyte current density [A.m-2]", and "Positive electrode electrolyte
+    current density [A.m-2]".
+
+    Parameters
+    ----------
+
+    var : str
+        The name of the variable to plot.
+    plot_times : array_like, optional
+        The times at which to plot. If None (default) the plot times will be
+        the times in the comsol model.
+    plot_error : str, optional
+        Whether to plot the error. Can be "rel" (plots the relative error), "abs"
+        (plots the abolute error), "both" (plots both the relative and abolsute
+        errors) or None (default, plots no errors).
     """
+
+    # Set plot times if not provided
     if plot_times is None:
         plot_times = comsol_variables["time"]
 
+    # Process variables
+
     # Process pybamm variable
-    pybamm_var = pybamm.ProcessedVariable(
+    pybamm_var_fun = pybamm.ProcessedVariable(
         pybamm_model.variables[var], solution.t, solution.y, mesh=mesh
     )
 
@@ -233,9 +295,12 @@ def whole_cell_by_domain_comparison_plot(var, plot_times=None, plot_error="rel")
     )
 
     # Make plot
+
     # add extra row for errors
     if plot_error in ["abs", "rel"]:
         n_rows = 2
+    elif plot_error == "both":
+        n_rows = 3
     else:
         n_rows = 1
     # add extra column for separator
@@ -246,13 +311,14 @@ def whole_cell_by_domain_comparison_plot(var, plot_times=None, plot_error="rel")
     fig, ax = plt.subplots(n_rows, n_cols, figsize=(15, 8))
     cmap = plt.get_cmap("inferno")
 
+    # Loop over plot_times
     for ind, t in enumerate(plot_times):
         color = cmap(float(ind) / len(plot_times))
 
         # negative electrode
         comsol_var_n = comsol_var_n_fun(x=x_n, t=t / tau)
-        pybamm_var_n = pybamm_var(x=x_n, t=t / tau)
-        ax[0, 0].plot(x_n * L_x, comsol_var_n, "o", color=color)
+        pybamm_var_n = pybamm_var_fun(x=x_n, t=t / tau)
+        ax[0, 0].plot(x_n * L_x, comsol_var_n, "o", color=color, fillstyle="none")
         ax[0, 0].plot(x_n * L_x, pybamm_var_n, "-", color=color)
         if plot_error == "abs":
             error_n = np.abs(pybamm_var_n - comsol_var_n)
@@ -260,12 +326,17 @@ def whole_cell_by_domain_comparison_plot(var, plot_times=None, plot_error="rel")
         elif plot_error == "rel":
             error_n = np.abs((pybamm_var_n - comsol_var_n) / comsol_var_n)
             ax[1, 0].plot(x_n * L_x, error_n, "-", color=color)
+        elif plot_error == "both":
+            abs_error_n = np.abs(pybamm_var_n - comsol_var_n)
+            rel_error_n = np.abs((pybamm_var_n - comsol_var_n) / comsol_var_n)
+            ax[1, 0].plot(x_n * L_x, abs_error_n, "-", color=color)
+            ax[2, 0].plot(x_n * L_x, rel_error_n, "-", color=color)
 
         # separator
         if comsol_var_s_fun:
             comsol_var_s = comsol_var_s_fun(x=x_s, t=t / tau)
-            pybamm_var_s = pybamm_var(x=x_s, t=t / tau)
-            ax[0, 1].plot(x_s * L_x, comsol_var_s, "o", color=color)
+            pybamm_var_s = pybamm_var_fun(x=x_s, t=t / tau)
+            ax[0, 1].plot(x_s * L_x, comsol_var_s, "o", color=color, fillstyle="none")
             ax[0, 1].plot(x_s * L_x, pybamm_var_s, "-", color=color)
             if plot_error == "abs":
                 error_s = np.abs(pybamm_var_s - comsol_var_s)
@@ -273,15 +344,21 @@ def whole_cell_by_domain_comparison_plot(var, plot_times=None, plot_error="rel")
             elif plot_error == "rel":
                 error_s = np.abs((pybamm_var_s - comsol_var_s) / comsol_var_s)
                 ax[1, 1].plot(x_s * L_x, error_s, "-", color=color)
+            elif plot_error == "both":
+                abs_error_s = np.abs(pybamm_var_s - comsol_var_s)
+                rel_error_s = np.abs((pybamm_var_s - comsol_var_s) / comsol_var_s)
+                ax[1, 1].plot(x_s * L_x, abs_error_s, "-", color=color)
+                ax[2, 1].plot(x_s * L_x, rel_error_s, "-", color=color)
 
         # positive electrode
         comsol_var_p = comsol_var_p_fun(x=x_p, t=t / tau)
-        pybamm_var_p = pybamm_var(x=x_p, t=t / tau)
+        pybamm_var_p = pybamm_var_fun(x=x_p, t=t / tau)
         ax[0, n_cols - 1].plot(
             x_p * L_x,
             comsol_var_p,
             "o",
             color=color,
+            fillstyle="none",
             label="COMSOL" if ind == 0 else "",
         )
         ax[0, n_cols - 1].plot(
@@ -296,9 +373,13 @@ def whole_cell_by_domain_comparison_plot(var, plot_times=None, plot_error="rel")
             ax[1, n_cols - 1].plot(x_p * L_x, error_p, "-", color=color)
         elif plot_error == "rel":
             error_p = np.abs((pybamm_var_p - comsol_var_p) / comsol_var_p)
-            ax[1, n_cols - 1].plot(
-                x_p * L_x, error_p, "-", color=color, label="t={:.0f} s".format(t),
-            )
+            ax[1, n_cols - 1].plot(x_p * L_x, error_p, "-", color=color)
+        elif plot_error == "both":
+            abs_error_p = np.abs(pybamm_var_p - comsol_var_p)
+            rel_error_p = np.abs((pybamm_var_p - comsol_var_p) / comsol_var_p)
+            ax[1, n_cols - 1].plot(x_p * L_x, abs_error_p, "-", color=color)
+            ax[2, n_cols - 1].plot(x_p * L_x, rel_error_p, "-", color=color)
+
     # set labels
     ax[0, 0].set_xlabel("x_n")
     ax[0, 0].set_ylabel(var)
@@ -309,147 +390,306 @@ def whole_cell_by_domain_comparison_plot(var, plot_times=None, plot_error="rel")
     ax[0, n_cols - 1].set_ylabel(var)
     if plot_error in ["abs", "rel"]:
         ax[1, 0].set_xlabel("x_n")
-        ax[1, 0].set_ylabel(var + " error " + plot_error)
+        ax[1, 0].set_ylabel("error (" + plot_error + ")")
         if comsol_var_s_fun:
             ax[1, 1].set_xlabel("x_s")
-            ax[1, 1].set_ylabel(var + " error " + plot_error)
+            ax[1, 1].set_ylabel("error (" + plot_error + ")")
         ax[1, n_cols - 1].set_xlabel("x_p")
-        ax[1, n_cols - 1].set_ylabel(var + " error " + plot_error)
-    plt.legend()
+        ax[1, n_cols - 1].set_ylabel("error (" + plot_error + ")")
+    elif plot_error == "both":
+        ax[1, 0].set_xlabel("x_n")
+        ax[1, 0].set_ylabel("error (abs)")
+        ax[2, 0].set_xlabel("x_n")
+        ax[2, 0].set_ylabel("error (rel)")
+        if comsol_var_s_fun:
+            ax[1, 1].set_xlabel("x_s")
+            ax[1, 1].set_ylabel("error (abs)")
+            ax[2, 1].set_xlabel("x_s")
+            ax[2, 1].set_ylabel("error (rel)")
+        ax[1, n_cols - 1].set_xlabel("x_p")
+        ax[1, n_cols - 1].set_ylabel("error (abs)")
+        ax[2, n_cols - 1].set_xlabel("x_p")
+        ax[2, n_cols - 1].set_ylabel("error (rel)")
+    ax[0, n_cols - 1].legend(bbox_to_anchor=(1.04, 1), loc="upper left")
     plt.tight_layout()
 
 
-def electrode_comparison_plot(var, plot_times=None):
+def electrode_comparison_plot(var, plot_times=None, plot_error=None):
     """
     Plot pybamm variable against comsol variable (both defined separately in the
-    negative and positive electrode)
+    negative and positive electrode) E.g. if var = "electrode current density [A.m-2]"
+    then the variables "Negative electrode current density [A.m-2]" and "Positive
+    electrode current density [A.m-2]" will be plotted.
+
+    Parameters
+    ----------
+
+    var : str
+        The name of the variable to plot with the domain (Negative or Positive)
+        removed from the beginning of the name.
+    plot_times : array_like, optional
+        The times at which to plot. If None (default) the plot times will be
+        the times in the comsol model.
+    plot_error : str, optional
+        Whether to plot the error. Can be "rel" (plots the relative error), "abs"
+        (plots the abolute error), "both" (plots both the relative and abolsute
+        errors) or None (default, plots no errors).
     """
+
+    # Set plot times if not provided
     if plot_times is None:
         plot_times = comsol_variables["time"]
 
+    # Process variables
+
     # Process pybamm variable in negative electrode
-    pybamm_var_n = pybamm.ProcessedVariable(
+    pybamm_var_n_fun = pybamm.ProcessedVariable(
         pybamm_model.variables["Negative " + var], solution.t, solution.y, mesh=mesh
     )
 
     # Process pybamm variable in positive electrode
-    pybamm_var_p = pybamm.ProcessedVariable(
+    pybamm_var_p_fun = pybamm.ProcessedVariable(
         pybamm_model.variables["Positive " + var], solution.t, solution.y, mesh=mesh
     )
 
     # Process comsol variable in negative electrode
-    comsol_var_n = pybamm.ProcessedVariable(
+    comsol_var_n_fun = pybamm.ProcessedVariable(
         comsol_model.variables["Negative " + var], solution.t, solution.y, mesh=mesh
     )
 
     # Process comsol variable in positive electrode
-    comsol_var_p = pybamm.ProcessedVariable(
+    comsol_var_p_fun = pybamm.ProcessedVariable(
         comsol_model.variables["Positive " + var], solution.t, solution.y, mesh=mesh
     )
 
     # Make plot
-    fig, ax = plt.subplots(1, 2, figsize=(15, 8))
+
+    # add extra row for errors
+    if plot_error in ["abs", "rel"]:
+        n_rows = 2
+    elif plot_error == "both":
+        n_rows = 3
+    else:
+        n_rows = 1
+    fig, ax = plt.subplots(n_rows, 2, figsize=(15, 8))
     cmap = plt.get_cmap("inferno")
 
+    # Loop over plot_times
     for ind, t in enumerate(plot_times):
         color = cmap(float(ind) / len(plot_times))
-        ax[0].plot(x_n * L_x, comsol_var_n(x=x_n, t=t / tau), "o", color=color)
-        ax[0].plot(x_n * L_x, pybamm_var_n(x=x_n, t=t / tau), "-", color=color)
-        ax[1].plot(
+
+        # negative electrode
+        comsol_var_n = comsol_var_n_fun(x=x_n, t=t / tau)
+        pybamm_var_n = pybamm_var_n_fun(x=x_n, t=t / tau)
+        ax[0, 0].plot(x_n * L_x, comsol_var_n, "o", color=color, fillstyle="none")
+        ax[0, 0].plot(x_n * L_x, pybamm_var_n, "-", color=color)
+        if plot_error == "abs":
+            error_n = np.abs(pybamm_var_n - comsol_var_n)
+            ax[1, 0].plot(x_n * L_x, error_n, "-", color=color)
+        elif plot_error == "rel":
+            error_n = np.abs((pybamm_var_n - comsol_var_n) / comsol_var_n)
+            ax[1, 0].plot(x_n * L_x, error_n, "-", color=color)
+        elif plot_error == "both":
+            abs_error_n = np.abs(pybamm_var_n - comsol_var_n)
+            rel_error_n = np.abs((pybamm_var_n - comsol_var_n) / comsol_var_n)
+            ax[1, 0].plot(x_n * L_x, abs_error_n, "-", color=color)
+            ax[2, 0].plot(x_n * L_x, rel_error_n, "-", color=color)
+
+        # positive electrode
+        comsol_var_p = comsol_var_p_fun(x=x_p, t=t / tau)
+        pybamm_var_p = pybamm_var_p_fun(x=x_p, t=t / tau)
+        ax[0, 1].plot(
             x_p * L_x,
-            comsol_var_p(x=x_p, t=t / tau),
+            comsol_var_p,
             "o",
             color=color,
+            fillstyle="none",
             label="COMSOL" if ind == 0 else "",
         )
-        ax[1].plot(
+        ax[0, 1].plot(
             x_p * L_x,
-            pybamm_var_p(x=x_p, t=t / tau),
+            pybamm_var_p,
             "-",
             color=color,
             label="PyBaMM (t={:.0f} s)".format(t),
         )
-    ax[0].set_xlabel("x_n")
-    ax[0].set_ylabel(var)
-    ax[1].set_xlabel("x_p")
-    ax[1].set_ylabel(var)
-    plt.legend()
+        if plot_error == "abs":
+            error_p = np.abs(pybamm_var_p - comsol_var_p)
+            ax[1, 1].plot(x_p * L_x, error_p, "-", color=color)
+        elif plot_error == "rel":
+            error_p = np.abs((pybamm_var_p - comsol_var_p) / comsol_var_p)
+            ax[1, 1].plot(x_p * L_x, error_p, "-", color=color)
+        elif plot_error == "both":
+            abs_error_p = np.abs(pybamm_var_p - comsol_var_p)
+            rel_error_p = np.abs((pybamm_var_p - comsol_var_p) / comsol_var_p)
+            ax[1, 1].plot(x_p * L_x, abs_error_p, "-", color=color)
+            ax[2, 1].plot(x_p * L_x, rel_error_p, "-", color=color)
+
+    # set labels
+    ax[0, 0].set_xlabel("x_n")
+    ax[0, 0].set_ylabel(var)
+    ax[0, 1].set_xlabel("x_p")
+    ax[0, 1].set_ylabel(var)
+    if plot_error in ["abs", "rel"]:
+        ax[1, 0].set_xlabel("x_n")
+        ax[1, 0].set_ylabel("error (" + plot_error + ")")
+        ax[1, 1].set_xlabel("x_p")
+        ax[1, 1].set_ylabel("error (" + plot_error + ")")
+    elif plot_error == "both":
+        ax[1, 0].set_xlabel("x_n")
+        ax[1, 0].set_ylabel("error (abs)")
+        ax[2, 0].set_xlabel("x_n")
+        ax[2, 0].set_ylabel("error (rel)")
+        ax[1, 1].set_xlabel("x_p")
+        ax[1, 1].set_ylabel("error (abs)")
+        ax[2, 0].set_xlabel("x_n")
+        ax[2, 1].set_ylabel("error (rel)")
+    ax[0, 1].legend(bbox_to_anchor=(1.04, 1), loc="upper left")
     plt.tight_layout()
 
 
-def whole_cell_comparison_plot(var, plot_times=None):
+def whole_cell_comparison_plot(var, plot_times=None, plot_error=None):
     """
     Plot pybamm variable against comsol variable (both defined over whole cell)
+
+    Parameters
+    ----------
+
+    var : str
+        The name of the variable to plot.
+    plot_times : array_like, optional
+        The times at which to plot. If None (default) the plot times will be
+        the times in the comsol model.
+    plot_error : str, optional
+        Whether to plot the error. Can be "rel" (plots the relative error), "abs"
+        (plots the abolute error), "both" (plots both the relative and abolsute
+        errors) or None (default, plots no errors).
     """
+
+    # Set plot times if not provided
     if plot_times is None:
         plot_times = comsol_variables["time"]
 
+    # Process variables
+
     # Process pybamm variable
-    pybamm_var = pybamm.ProcessedVariable(
+    pybamm_var_fun = pybamm.ProcessedVariable(
         pybamm_model.variables[var], solution.t, solution.y, mesh=mesh
     )
 
     # Process comsol variable
-    comsol_var = pybamm.ProcessedVariable(
+    comsol_var_fun = pybamm.ProcessedVariable(
         comsol_model.variables[var], solution.t, solution.y, mesh=mesh
     )
 
     # Make plot
-    plt.figure(figsize=(15, 8))
+
+    # add extra row for errors
+    if plot_error in ["abs", "rel"]:
+        n_rows = 2
+    elif plot_error == "both":
+        n_rows = 3
+    else:
+        n_rows = 1
+    fig, ax = plt.subplots(n_rows, 1, figsize=(15, 8))
     cmap = plt.get_cmap("inferno")
 
+    # Loop over plot_times
     for ind, t in enumerate(plot_times):
         color = cmap(float(ind) / len(plot_times))
-        plt.plot(
+
+        # whole cell
+        comsol_var = comsol_var_fun(x=x, t=t / tau)
+        pybamm_var = pybamm_var_fun(x=x, t=t / tau)
+        ax[0].plot(
             x * L_x,
-            comsol_var(x=x, t=t / tau),
+            comsol_var,
             "o",
             color=color,
+            fillstyle="none",
             label="COMSOL" if ind == 0 else "",
         )
-        plt.plot(
-            x * L_x,
-            pybamm_var(x=x, t=t / tau),
-            "-",
-            color=color,
-            label="PyBaMM (t={:.0f} s)".format(t),
+        ax[0].plot(
+            x * L_x, pybamm_var, "-", color=color, label="PyBaMM (t={:.0f} s)".format(t)
         )
-    plt.xlabel("x")
-    plt.ylabel(var)
-    plt.legend()
+        if plot_error == "abs":
+            error = np.abs(pybamm_var - comsol_var)
+            ax[1].plot(x * L_x, error, "-", color=color)
+        elif plot_error == "rel":
+            error = np.abs((pybamm_var - comsol_var) / comsol_var)
+            ax[1].plot(x_n * L_x, error, "-", color=color)
+        elif plot_error == "both":
+            abs_error = np.abs(pybamm_var - comsol_var)
+            rel_error = np.abs((pybamm_var - comsol_var) / comsol_var)
+            ax[1].plot(x * L_x, abs_error, "-", color=color)
+            ax[2].plot(x * L_x, rel_error, "-", color=color)
+
+    # set labels
+    ax[0].set_xlabel("x")
+    ax[0].set_ylabel(var)
+    if plot_error in ["abs", "rel"]:
+        ax[1].set_xlabel("x")
+        ax[1].set_ylabel("error (" + plot_error + ")")
+    elif plot_error == "both":
+        ax[1].set_xlabel("x")
+        ax[1].set_ylabel("error (abs)")
+        ax[2].set_xlabel("x")
+        ax[2].set_ylabel("error (rel)")
+    ax[0].legend(bbox_to_anchor=(1.04, 1), loc="upper left")
     plt.tight_layout()
 
 
 # Make plots
 plot_times = comsol_variables["time"][0::10]
+plot_error = "both"
 # plot_times = [600, 1200, 1800, 2400, 3000]
+# voltage
+time_only_plot("Terminal voltage [V]", plot_error=plot_error)
+# volume averaged temperature
+time_only_plot("Volume-averaged cell temperature [K]", plot_error=plot_error)
 # heat sources
 whole_cell_by_domain_comparison_plot(
-    "Irreversible electrochemical heating [W.m-3]", plot_times=plot_times
+    "Irreversible electrochemical heating [W.m-3]",
+    plot_times=plot_times,
+    plot_error=plot_error,
 )
 whole_cell_by_domain_comparison_plot(
-    "Reversible heating [W.m-3]", plot_times=plot_times
+    "Reversible heating [W.m-3]", plot_times=plot_times, plot_error=plot_error,
 )
-whole_cell_by_domain_comparison_plot("Total heating [W.m-3]", plot_times=plot_times)
+whole_cell_by_domain_comparison_plot(
+    "Total heating [W.m-3]", plot_times=plot_times, plot_error=plot_error
+)
 # temperature
-whole_cell_comparison_plot("Cell temperature [K]", plot_times=plot_times)
+# whole_cell_comparison_plot(
+#     "Cell temperature [K]", plot_times=plot_times, plot_error=plot_error
+# )
 # potentials
-electrode_comparison_plot("electrode potential [V]", plot_times=plot_times)
+electrode_comparison_plot(
+    "electrode potential [V]", plot_times=plot_times, plot_error=plot_error
+)
 plt.savefig("thermal1D_phi_s.eps", format="eps", dpi=1000)
-whole_cell_comparison_plot("Electrolyte potential [V]", plot_times=plot_times)
+whole_cell_comparison_plot(
+    "Electrolyte potential [V]", plot_times=plot_times, plot_error=plot_error
+)
 plt.savefig("thermal1D_phi_e.eps", format="eps", dpi=1000)
 # current
-electrode_comparison_plot("electrode current density [A.m-2]", plot_times=plot_times)
+electrode_comparison_plot(
+    "electrode current density [A.m-2]", plot_times=plot_times, plot_error=plot_error
+)
 plt.savefig("thermal1D_i_s.eps", format="eps", dpi=1000)
 whole_cell_by_domain_comparison_plot(
-    "Electrolyte current density [A.m-2]", plot_times=plot_times
+    "Electrolyte current density [A.m-2]", plot_times=plot_times, plot_error=plot_error,
 )
 plt.savefig("thermal1D_i_e.eps", format="eps", dpi=1000)
 # concentrations
 electrode_comparison_plot(
-    "particle surface concentration [mol.m-3]", plot_times=plot_times
+    "particle surface concentration [mol.m-3]",
+    plot_times=plot_times,
+    plot_error=plot_error,
 )
 plt.savefig("thermal1D_c_surf.eps", format="eps", dpi=1000)
-whole_cell_comparison_plot("Electrolyte concentration [mol.m-3]", plot_times=plot_times)
+whole_cell_comparison_plot(
+    "Electrolyte concentration [mol.m-3]", plot_times=plot_times, plot_error=plot_error
+)
 plt.savefig("thermal1D_c_e.eps", format="eps", dpi=1000)
 plt.show()
