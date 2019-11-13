@@ -2,6 +2,9 @@
 
 ## Features
 
+-   Generalized importing of external variables ([#728](https://github.com/pybamm-team/PyBaMM/pull/728))
+-   New extrapolation methods ([#707](https://github.com/pybamm-team/PyBaMM/pull/707))
+-   Allow abs tolerance to be set by variable for IDA KLU solver ([#700](https://github.com/pybamm-team/PyBaMM/pull/700))
 -   Added Simulation class ([#693](https://github.com/pybamm-team/PyBaMM/pull/693))
 -   Added interface to CasADi solver ([#687](https://github.com/pybamm-team/PyBaMM/pull/687), [#691](https://github.com/pybamm-team/PyBaMM/pull/691), [#714](https://github.com/pybamm-team/PyBaMM/pull/714)). This makes the SUNDIALS DAE solvers (Scikits and KLU) truly optional (though IDA KLU is recommended for solving the DFN).
 -   Added option to use CasADi's Algorithmic Differentiation framework to calculate Jacobians ([#687](https://github.com/pybamm-team/PyBaMM/pull/687))
