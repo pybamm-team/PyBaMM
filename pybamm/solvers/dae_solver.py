@@ -248,9 +248,13 @@ class DaeSolver(pybamm.BaseSolver):
         y_alg = casadi.MX.sym(
             "y_alg", len(model.concatenated_algebraic.evaluate(0, y0))
         )
-        y_ext = casadi.MX.sym("y_ext", len(self.y_pad))
         y_casadi = casadi.vertcat(y_diff, y_alg)
-        y_casadi_w_ext = casadi.vertcat(y_casadi, y_ext)
+        if self.y_pad is not None:
+            y_ext = casadi.MX.sym("y_ext", len(self.y_pad))
+            y_casadi_w_ext = casadi.vertcat(y_casadi, y_ext)
+        else:
+            y_casadi_w_ext = y_casadi
+
         pybamm.logger.info("Converting RHS to CasADi")
         concatenated_rhs = model.concatenated_rhs.to_casadi(t_casadi, y_casadi_w_ext)
         pybamm.logger.info("Converting algebraic to CasADi")
@@ -335,7 +339,9 @@ class DaeSolver(pybamm.BaseSolver):
 
         # Create event-dependent function to evaluate events
         def event_fun(event):
-            casadi_event_fn = casadi.Function("event", [t_casadi, y_casadi_w_ext], [event])
+            casadi_event_fn = casadi.Function(
+                "event", [t_casadi, y_casadi_w_ext], [event]
+            )
 
             def eval_event(t, y):
                 y = y[:, np.newaxis]

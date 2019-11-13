@@ -94,7 +94,13 @@ class TestDiscretise(unittest.TestCase):
         }
         model.initial_conditions = {a: 0}
         model.external_variables = [b]
-        model.variables = {"a": a, "b": b, "c": a * b, "grad b": pybamm.grad(b), "div grad b": pybamm.div(pybamm.grad(b))}
+        model.variables = {
+            "a": a,
+            "b": b,
+            "c": a * b,
+            "grad b": pybamm.grad(b),
+            "div grad b": pybamm.div(pybamm.grad(b)),
+        }
 
         x = pybamm.SpatialVariable("x", domain="test", coord_sys="cartesian")
         geometry = {

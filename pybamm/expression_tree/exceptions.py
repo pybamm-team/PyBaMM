@@ -60,6 +60,7 @@ class UndefinedOperationError(Exception):
 
     pass
 
+
 class InputError(Exception):
     """
     An external variable has been input incorrectly into PyBaMM

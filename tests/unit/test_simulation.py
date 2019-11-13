@@ -130,6 +130,31 @@ class TestSimulation(unittest.TestCase):
         sim.specs(spatial_methods=spatial_methods)
         sim.build()
 
+    def test_set_defaults(self):
+        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
+
+        model_options = {"thermal": "x-full"}
+        submesh_types = {
+            "Negative particle": pybamm.MeshGenerator(pybamm.Exponential1DSubMesh)
+        }
+        solver = pybamm.IDAKLUSolver()
+        quick_plot_vars = ["Negative particle surface concentration"]
+        sim.specs(
+            model_options=model_options,
+            submesh_types=submesh_types,
+            solver=solver,
+            quick_plot_vars=quick_plot_vars,
+        )
+
+        sim.set_defaults()
+
+        self.assertEqual(sim.model_options["thermal"], "x-full")
+        self.assertEqual(
+            sim.submesh_types["negative particle"].submesh_type, pybamm.Uniform1DSubMesh
+        )
+        self.assertEqual(sim.quick_plot_vars, None)
+        self.assertIsInstance(sim.solver, pybamm.ScipySolver)
+
     def test_get_variable_array(self):
 
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())

@@ -276,10 +276,6 @@ class Simulation:
         return self._spatial_methods
 
     @property
-    def mesh(self):
-        return self._mesh
-
-    @property
     def solver(self):
         return self._solver
 
