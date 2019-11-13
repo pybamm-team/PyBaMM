@@ -73,6 +73,7 @@ class BuildSundials(Command):
         # The format is (long option, short option, description).
         ('sundials-src=', None, 'Absolute path to sundials source dir'),
         ('install-dir=', None, 'Absolute path to sundials install directory'),
+        ('klu', None, 'Wether or not to build the the sundials with klu on'),
     ]
     pybamm_dir = os.path.abspath(os.path.dirname(__file__))
     build_temp = 'build_sundials'
@@ -82,6 +83,7 @@ class BuildSundials(Command):
         # Each user option is listed here with its default value.
         self.sundials_src = None
         self.install_dir = None
+        self.klu = None
 
     def finalize_options(self):
         """Post-process options"""
@@ -91,7 +93,8 @@ class BuildSundials(Command):
         # with options.
         self.set_undefined_options('install',
                                    ('sundials_src', 'sundials_src'),
-                                   ('sundials_inst', 'install_dir'))
+                                   ('sundials_inst', 'install_dir'),
+                                   ('klu', 'klu'))
         # Check that the sundials source dir contains the CMakeLists.txt
         if self.sundials_src:
             CMakeLists=os.path.join(self.sundials_src,'CMakeLists.txt')
@@ -127,6 +130,8 @@ class BuildSundials(Command):
                 "CMake must be installed to build the following extensions: " +
                 ", ".join(e.name for e in self.extensions))
 
+        # Temp build directory, note that final dir (containing the sundials
+        # lib) is self.install_dir
         build_directory = os.path.abspath(self.build_temp)
 
         cmake_args = [
@@ -135,8 +140,16 @@ class BuildSundials(Command):
             '-DBUILD_ARKODE:BOOL=OFF',
             '-DEXAMPLES_ENABLE:BOOL=OFF',
             '-DCMAKE_INSTALL_PREFIX=' + self.install_dir,
-            self.sundials_src,
         ]
+
+        if self.klu:
+            self.run_command('build_klu')
+            cmake_args = cmake_args + [
+                '-DBLAS_ENABLE=ON',
+                '-DKLU_ENABLE=ON',
+                ]
+
+        cmake_args.append(self.sundials_src)
 
         if not os.path.exists(self.build_temp):
             print('-'*10, 'Creating build dir', '-'*40)
@@ -203,6 +216,7 @@ class InstallPyBaMM(orig.install):
         ('sundials-src=', None, 'Absolute path to sundials source dir'),
         ('sundials-inst=', None, 'Absolute path to sundials install directory'),
         ('suitesparse-dir', None, 'Absolute path to SuiteSparse root directory'),
+        ('klu',None, 'Wether or not to build the the sundials with klu on'),
     ]
 
     pybamm_dir = os.path.abspath(os.path.dirname(__file__))
@@ -215,6 +229,7 @@ class InstallPyBaMM(orig.install):
         self.sundials_inst = os.path.join(self.pybamm_dir,'sundials')
         self.suitesparse_dir = os.path.join(self.pybamm_dir,'SuiteSparse-5.6.0')
         self.no_sundials = None
+        self.klu = None
 
     def finalize_options(self):
         """Post-process options"""
