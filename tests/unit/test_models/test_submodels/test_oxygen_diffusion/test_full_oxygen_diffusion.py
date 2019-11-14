@@ -17,6 +17,11 @@ class TestFull(unittest.TestCase):
                 pybamm.FullBroadcast(a, "separator", "current collector"),
                 pybamm.FullBroadcast(a, "positive electrode", "current collector"),
             ),
+            "Electrolyte tortuosity": pybamm.Concatenation(
+                pybamm.FullBroadcast(a, "negative electrode", "current collector"),
+                pybamm.FullBroadcast(a, "separator", "current collector"),
+                pybamm.FullBroadcast(a, "positive electrode", "current collector"),
+            ),
             "Porosity change": pybamm.Concatenation(
                 pybamm.FullBroadcast(a, "negative electrode", "current collector"),
                 pybamm.FullBroadcast(a, "separator", "current collector"),
