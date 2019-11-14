@@ -16,16 +16,23 @@ else:
     pybamm.set_logging_level("INFO")
 
 # load models
+options = {"operating mode": "voltage"}
 models = [
-    pybamm.lead_acid.LOQS(),
-    pybamm.lead_acid.FOQS(),
-    pybamm.lead_acid.Composite(),
-    pybamm.lead_acid.Full(),
+    pybamm.lead_acid.LOQS(options),
+    # pybamm.lead_acid.FOQS(options),
+    # pybamm.lead_acid.Composite(options),
+    pybamm.lead_acid.Full(options),
 ]
 
 # load parameter values and process models and geometry
 param = models[0].default_parameter_values
-param.update({"Typical current [A]": 10, "Initial State of Charge": 1})
+param.update(
+    {
+        "Typical current [A]": 10,
+        "Initial State of Charge": 1,
+        "Voltage function": 14 / 6,
+    }
+)
 for model in models:
     param.process_model(model)
 

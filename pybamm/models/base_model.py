@@ -338,7 +338,8 @@ class BaseModel(object):
         vars_in_rhs_keys = set()
         vars_in_algebraic_keys = set()
         vars_in_eqns = set()
-        # Get all variables ids from rhs and algebraic keys and equations
+        # Get all variables ids from rhs and algebraic keys and equations, and
+        # from boundary conditions
         # For equations we look through the whole expression tree.
         # "Variables" can be Concatenations so we also have to look in the whole
         # expression tree
@@ -356,11 +357,16 @@ class BaseModel(object):
             vars_in_eqns.update(
                 [x.id for x in eqn.pre_order() if isinstance(x, pybamm.Variable)]
             )
+        for var, side_eqn in self.boundary_conditions.items():
+            for side, (eqn, typ) in side_eqn.items():
+                vars_in_eqns.update(
+                    [x.id for x in eqn.pre_order() if isinstance(x, pybamm.Variable)]
+                )
         # If any keys are repeated between rhs and algebraic then the model is
         # overdetermined
         if not set(vars_in_rhs_keys).isdisjoint(vars_in_algebraic_keys):
             raise pybamm.ModelError("model is overdetermined (repeated keys)")
-        # If any algebraic keys don't appear in the eqns then the model is
+        # If any algebraic keys don't appear in the eqns (or bcs) then the model is
         # overdetermined (but rhs keys can be absent from the eqns, e.g. dcdt = -1 is
         # fine)
         # Skip this step after discretisation, as any variables in the equations will

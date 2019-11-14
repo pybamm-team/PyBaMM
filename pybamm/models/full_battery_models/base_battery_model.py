@@ -466,10 +466,10 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
             self.update(submodel)
 
-        pybamm.logger.debug("Setting voltage variables")
+        pybamm.logger.debug("Setting voltage variables ({})".format(self.name))
         self.set_voltage_variables()
 
-        pybamm.logger.debug("Setting SoC variables")
+        pybamm.logger.debug("Setting SoC variables ({})".format(self.name))
         self.set_soc_variables()
 
         # Massive hack for consistent delta_phi = phi_s - phi_e with SPMe

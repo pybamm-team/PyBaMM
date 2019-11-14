@@ -32,17 +32,10 @@ class VoltageControl(BaseModel):
         self.initial_conditions[i_cell] = self.param.current_with_time
 
     def set_algebraic(self, variables):
-        # Read off the current from the solid current density
-        # TODO: investigate whether defining the current differently gives better
-        # results (e.g. based on electrolyte current density in the separator)
-        # This also needs to be defined in a model-inpedendent way (currently assumes
-        # Ohm's law)
+        # External circuit submodels are always equations on the current
+        # Fix voltage to be equal to terminal voltage
         i_cell = variables["Total current density"]
-        phi_s_p = variables["Positive electrode potential"]
-        tor_p = variables["Positive electrode tortuosity"]
-        sigma_eff = self.param.sigma_p * tor_p
-        i_s_p_right = -pybamm.boundary_value(
-            sigma_eff, "right"
-        ) * pybamm.BoundaryGradient(phi_s_p, "right")
-
-        self.algebraic[i_cell] = i_cell - i_s_p_right
+        # TODO: change this to terminal voltage
+        V = variables["Local current collector potential difference"]
+        # TODO: find a way to get rid of 0 * i_cell
+        self.algebraic[i_cell] = V - self.param.voltage_with_time + 0 * i_cell

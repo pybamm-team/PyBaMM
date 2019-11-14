@@ -85,10 +85,10 @@ class DFN(BaseModel):
     def set_solid_submodel(self):
 
         self.submodels["negative electrode"] = pybamm.electrode.ohm.Full(
-            self.param, "Negative", self.reactions, self.options["operating mode"]
+            self.param, "Negative", self.reactions
         )
         self.submodels["positive electrode"] = pybamm.electrode.ohm.Full(
-            self.param, "Positive", self.reactions, self.options["operating mode"]
+            self.param, "Positive", self.reactions
         )
 
     def set_electrolyte_submodel(self):
