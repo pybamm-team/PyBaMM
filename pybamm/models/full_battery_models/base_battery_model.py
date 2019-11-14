@@ -141,6 +141,7 @@ class BaseBatteryModel(pybamm.BaseModel):
     @options.setter
     def options(self, extra_options):
         default_options = {
+            "operating mode": "current",
             "dimensionality": 0,
             "surface form": False,
             "convection": False,
@@ -161,6 +162,10 @@ class BaseBatteryModel(pybamm.BaseModel):
                     raise pybamm.OptionError("option {} not recognised".format(name))
 
         # Some standard checks to make sure options are compatible
+        if options["operating mode"] not in ["current", "potential"]:
+            raise pybamm.OptionError(
+                "operating mode '{}' not recognised".format(options["operating mode"])
+            )
         if (
             isinstance(self, (pybamm.lead_acid.LOQS, pybamm.lead_acid.Composite))
             and options["surface form"] is False
@@ -341,18 +346,6 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         self.variables = {}
 
-        # Current
-        i_cell = pybamm.electrical_parameters.current_with_time
-        i_cell_dim = pybamm.electrical_parameters.dimensional_current_density_with_time
-        I = pybamm.electrical_parameters.dimensional_current_with_time
-        self.variables.update(
-            {
-                "Total current density": i_cell,
-                "Total current density [A.m-2]": i_cell_dim,
-                "Current [A]": I,
-            }
-        )
-
         # Time
         time_scale = pybamm.electrical_parameters.timescale
         self.variables.update(
@@ -361,7 +354,6 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "Time [s]": pybamm.t * time_scale,
                 "Time [min]": pybamm.t * time_scale / 60,
                 "Time [h]": pybamm.t * time_scale / 3600,
-                "Discharge capacity [A.h]": I * pybamm.t * time_scale / 3600,
             }
         )
 
@@ -490,6 +482,20 @@ class BaseBatteryModel(pybamm.BaseModel):
                 self.variables.update(var)
 
         self._built = True
+
+    def set_external_circuit_submodel(self):
+        """
+        Define how the external circuit defines the boundary conditions for the model,
+        e.g. (not necessarily constant-) current, voltage, etc
+        """
+        if self.options["operating mode"] == "current":
+            self.submodels[
+                "external circuit"
+            ] = pybamm.external_circuit.ConstantCurrent(self.param)
+        if self.options["operating mode"] == "voltage":
+            self.submodels[
+                "external circuit"
+            ] = pybamm.external_circuit.ConstantVoltage(self.param)
 
     def set_thermal_submodel(self):
 

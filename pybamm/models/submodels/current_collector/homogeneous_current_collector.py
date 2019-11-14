@@ -21,12 +21,15 @@ class Uniform(BaseModel):
     def __init__(self, param):
         super().__init__(param)
 
-    def get_fundamental_variables(self):
+    def get_derived_variables(self, variables):
 
         # TODO: grad not implemented for 2D yet
         i_cc = pybamm.Scalar(0)
+        import ipdb
+
+        ipdb.set_trace()
         i_boundary_cc = pybamm.PrimaryBroadcast(
-            self.param.current_with_time, "current collector"
+            variables["Total current density"], "current collector"
         )
         phi_s_cn = pybamm.PrimaryBroadcast(0, "current collector")
 

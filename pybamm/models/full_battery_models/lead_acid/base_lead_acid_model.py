@@ -116,5 +116,5 @@ class BaseModel(pybamm.BaseBatteryModel):
         if "Fractional Charge Input" not in self.variables:
             fci = pybamm.Variable("Fractional Charge Input", domain="current collector")
             self.variables["Fractional Charge Input"] = fci
-            self.rhs[fci] = -self.param.current_with_time * 100
+            self.rhs[fci] = -self.variables["Total current density"] * 100
             self.initial_conditions[fci] = self.param.q_init * 100

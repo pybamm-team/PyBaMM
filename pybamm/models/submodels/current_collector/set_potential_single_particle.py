@@ -85,7 +85,7 @@ class BaseSetPotentialSingleParticle(BaseModel):
     def set_initial_conditions(self, variables):
 
         param = self.param
-        applied_current = param.current_with_time
+        applied_current = variables["Total current density"]
         cc_area = self._get_effective_current_collector_area()
         phi_s_cn = variables["Negative current collector potential"]
         phi_s_cp = variables["Positive current collector potential"]
