@@ -34,6 +34,7 @@ class BaseHigherOrderModel(BaseModel):
     def __init__(self, options=None, name="Composite model", build=True):
         super().__init__(options, name)
 
+        self.set_external_circuit_submodel()
         self.set_leading_order_model()
         self.set_reactions()
         # Electrolyte submodel to get first-order concentrations

@@ -35,8 +35,8 @@ class BaseModel(pybamm.BaseSubModel):
 
         Parameters
         ----------
-        phi_cc : :class:`pybamm.Symbol`
-            The potential in the current collector.
+        phi_s_cn : :class:`pybamm.Symbol`
+            The potential in the negative current collector.
 
         Returns
         -------
@@ -61,8 +61,10 @@ class BaseModel(pybamm.BaseSubModel):
 
         Parameters
         ----------
-        phi_cc : :class:`pybamm.Symbol`
-            The potential in the current collector.
+        phi_s_cn : :class:`pybamm.Symbol`
+            The potential in the negative current collector.
+        phi_s_cp : :class:`pybamm.Symbol`
+            The potential in the positive current collector.
 
         Returns
         -------

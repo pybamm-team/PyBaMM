@@ -21,20 +21,22 @@ models = [
     #     {"current collector": "potential pair", "dimensionality": 2}, name="2+1D LOQS"
     # ),
     pybamm.lead_acid.Full(
-        {"current collector": "uniform", "dimensionality": 1}, name="1+1D Full"
+        {"current collector": "potential pair", "dimensionality": 1}, name="1+1D Full"
     ),
     # pybamm.lead_acid.Full(
     #     {"dimensionality": 1}, name="1+1D uniform Full"
     # ),
     pybamm.lead_acid.Composite(
-        {"current collector": "uniform", "dimensionality": 1}, name="1+1D composite"
+        {"current collector": "potential pair quite conductive", "dimensionality": 1},
+        name="1+1D composite",
     ),
     pybamm.lead_acid.Composite(
-        {"current collector": "uniform", "dimensionality": 1}, name="1+1D composite"
+        {"current collector": "potential pair", "dimensionality": 1},
+        name="1+1D composite",
     ),
     # # pybamm.lead_acid.Composite({"dimensionality": 1}, name="composite"),
     pybamm.lead_acid.LOQS(
-        {"current collector": "uniform", "dimensionality": 1}, name="1+1D LOQS"
+        {"current collector": "potential pair", "dimensionality": 1}, name="1+1D LOQS"
     ),
     # pybamm.lead_acid.LOQS({"dimensionality": 1}, name="LOQS"),
 ]

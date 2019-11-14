@@ -235,6 +235,9 @@ tau_diffusion_p = R_p ** 2 / D_p_dimensional(c_p_max, T_ref)
 # Thermal diffusion timescale
 tau_th_yz = pybamm.thermal_parameters.tau_th_yz
 
+# Choose discharge timescale
+timescale = tau_discharge
+
 # --------------------------------------------------------------------------------------
 "4. Dimensionless Parameters"
 # Timescale ratios

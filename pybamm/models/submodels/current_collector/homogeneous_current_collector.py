@@ -21,13 +21,10 @@ class Uniform(BaseModel):
     def __init__(self, param):
         super().__init__(param)
 
-    def get_derived_variables(self, variables):
+    def get_coupled_variables(self, variables):
 
         # TODO: grad not implemented for 2D yet
         i_cc = pybamm.Scalar(0)
-        import ipdb
-
-        ipdb.set_trace()
         i_boundary_cc = pybamm.PrimaryBroadcast(
             variables["Total current density"], "current collector"
         )
@@ -43,4 +40,5 @@ class Uniform(BaseModel):
         variables["Leading-order current collector current density"] = variables[
             "Current collector current density"
         ]
+
         return variables

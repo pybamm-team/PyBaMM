@@ -277,6 +277,8 @@ tau_r_p = 1 / (j0_p_S_ref_dimensional * a_p_dim * c_e_typ ** 0.5)
 # Electrolyte diffusion timescale
 tau_diffusion_e = L_x ** 2 / D_e_typ
 
+# Choose discharge timescale
+timescale = tau_discharge
 
 # --------------------------------------------------------------------------------------
 "4. Dimensionless Parameters"

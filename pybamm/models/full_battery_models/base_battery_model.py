@@ -493,11 +493,11 @@ class BaseBatteryModel(pybamm.BaseModel):
         if self.options["operating mode"] == "current":
             self.submodels[
                 "external circuit"
-            ] = pybamm.external_circuit.ConstantCurrent(self.param)
+            ] = pybamm.external_circuit.CurrentControl(self.param)
         if self.options["operating mode"] == "voltage":
             self.submodels[
                 "external circuit"
-            ] = pybamm.external_circuit.ConstantVoltage(self.param)
+            ] = pybamm.external_circuit.VoltageControl(self.param)
             
     def set_tortuosity_submodels(self):
         self.submodels["electrolyte tortuosity"] = pybamm.tortuosity.Bruggeman(

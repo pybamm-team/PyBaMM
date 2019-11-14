@@ -32,6 +32,7 @@ class SPM(BaseModel):
     def __init__(self, options=None, name="Single Particle Model", build=True):
         super().__init__(options, name)
 
+        self.set_external_circuit_submodel()
         self.set_porosity_submodel()
         self.set_tortuosity_submodels()
         self.set_convection_submodel()

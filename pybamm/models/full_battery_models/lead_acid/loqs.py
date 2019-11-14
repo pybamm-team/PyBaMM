@@ -33,6 +33,7 @@ class LOQS(BaseModel):
     def __init__(self, options=None, name="LOQS model", build=True):
         super().__init__(options, name)
 
+        self.set_external_circuit_submodel()
         self.set_reactions()
         self.set_interfacial_submodel()
         self.set_convection_submodel()
