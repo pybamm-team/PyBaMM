@@ -686,16 +686,6 @@ class BaseBatteryModel(pybamm.BaseModel):
         eta_r_av = eta_r_p_av - eta_r_n_av
         eta_r_av_dim = eta_r_p_av_dim - eta_r_n_av_dim
 
-        # terminal voltage (Note: phi_s_cn is zero at the negative tab)
-        phi_s_cp = self.variables["Positive current collector potential"]
-        phi_s_cp_dim = self.variables["Positive current collector potential [V]"]
-        if self.options["dimensionality"] == 0:
-            V = phi_s_cp
-            V_dim = phi_s_cp_dim
-        elif self.options["dimensionality"] in [1, 2]:
-            V = pybamm.BoundaryValue(phi_s_cp, "positive tab")
-            V_dim = pybamm.BoundaryValue(phi_s_cp_dim, "positive tab")
-
         # TODO: add current collector losses to the voltage in 3D
 
         self.variables.update(
@@ -708,12 +698,11 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "X-averaged reaction overpotential [V]": eta_r_av_dim,
                 "X-averaged solid phase ohmic losses": delta_phi_s_av,
                 "X-averaged solid phase ohmic losses [V]": delta_phi_s_av_dim,
-                "Terminal voltage": V,
-                "Terminal voltage [V]": V_dim,
             }
         )
 
         # Battery-wide variables
+        V_dim = self.variables["Terminal voltage [V]"]
         eta_e_av_dim = self.variables.get("X-averaged electrolyte ohmic losses [V]", 0)
         eta_c_av_dim = self.variables.get(
             "X-averaged concentration overpotential [V]", 0

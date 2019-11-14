@@ -35,7 +35,6 @@ class VoltageControl(BaseModel):
         # External circuit submodels are always equations on the current
         # Fix voltage to be equal to terminal voltage
         i_cell = variables["Total current density"]
-        # TODO: change this to terminal voltage
-        V = variables["Local current collector potential difference"]
+        V = variables["Terminal voltage"]
         # TODO: find a way to get rid of 0 * i_cell
         self.algebraic[i_cell] = V - self.param.voltage_with_time + 0 * i_cell
