@@ -272,6 +272,7 @@ class TestSymbol(unittest.TestCase):
 
         variables = {
             "Porosity": param.epsilon,
+            "Electrolyte tortuosity": param.epsilon ** 1.5,
             "Porosity change": deps_dt,
             "Volume-averaged velocity": v_box,
             "Negative electrode interfacial current density": one_n,

@@ -44,9 +44,9 @@ class BaseHigherOrder(BaseModel):
             "X-averaged negative electrode surface potential difference"
         ]
         phi_s_n_av = variables["X-averaged negative electrode potential"]
-        eps_n_av = variables["Leading-order x-averaged negative electrode porosity"]
-        eps_s_av = variables["Leading-order x-averaged separator porosity"]
-        eps_p_av = variables["Leading-order x-averaged positive electrode porosity"]
+        tor_n_av = variables["Leading-order x-averaged negative electrolyte tortuosity"]
+        tor_s_av = variables["Leading-order x-averaged separator tortuosity"]
+        tor_p_av = variables["Leading-order x-averaged positive electrolyte tortuosity"]
 
         T_av = variables["X-averaged cell temperature"]
         T_av_n = pybamm.PrimaryBroadcast(T_av, "negative electrode")
@@ -63,9 +63,9 @@ class BaseHigherOrder(BaseModel):
         x_p = pybamm.standard_spatial_vars.x_p
 
         # bulk conductivities
-        kappa_n_av = param.kappa_e(c_e_av, T_av) * eps_n_av ** param.b_n
-        kappa_s_av = param.kappa_e(c_e_av, T_av) * eps_s_av ** param.b_s
-        kappa_p_av = param.kappa_e(c_e_av, T_av) * eps_p_av ** param.b_p
+        kappa_n_av = param.kappa_e(c_e_av, T_av) * tor_n_av
+        kappa_s_av = param.kappa_e(c_e_av, T_av) * tor_s_av
+        kappa_p_av = param.kappa_e(c_e_av, T_av) * tor_p_av
 
         chi_av = param.chi(c_e_av)
         if chi_av.domain == ["current collector"]:

@@ -37,6 +37,7 @@ class SPMe(BaseModel):
 
         self.set_reactions()
         self.set_porosity_submodel()
+        self.set_tortuosity_submodels()
         self.set_convection_submodel()
         self.set_interfacial_submodel()
         self.set_particle_submodel()
@@ -52,6 +53,14 @@ class SPMe(BaseModel):
     def set_porosity_submodel(self):
 
         self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
+
+    def set_tortuosity_submodels(self):
+        self.submodels["electrolyte tortuosity"] = pybamm.tortuosity.Bruggeman(
+            self.param, "Electrolyte", True
+        )
+        self.submodels["electrode tortuosity"] = pybamm.tortuosity.Bruggeman(
+            self.param, "Electrode", True
+        )
 
     def set_convection_submodel(self):
 

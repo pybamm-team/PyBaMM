@@ -25,21 +25,19 @@ class BaseModel(BaseElectrode):
 
     def set_boundary_conditions(self, variables):
 
-        phi_s = variables[self.domain + " electrode potential"]
-        eps = variables[self.domain + " electrode porosity"]
-        i_boundary_cc = variables["Current collector current density"]
-        phi_s_cn = variables["Negative current collector potential"]
-
         if self.domain == "Negative":
+            phi_s_cn = variables["Negative current collector potential"]
             lbc = (phi_s_cn, "Dirichlet")
             rbc = (pybamm.Scalar(0), "Neumann")
 
         elif self.domain == "Positive":
             lbc = (pybamm.Scalar(0), "Neumann")
-            sigma_eff = self.param.sigma_p * (1 - eps) ** self.param.b_p
+            i_boundary_cc = variables["Current collector current density"]
+            sigma_eff = self.param.sigma_p * variables["Positive electrode tortuosity"]
             rbc = (
                 i_boundary_cc / pybamm.boundary_value(-sigma_eff, "right"),
                 "Neumann",
             )
 
+        phi_s = variables[self.domain + " electrode potential"]
         self.boundary_conditions[phi_s] = {"left": lbc, "right": rbc}

@@ -34,13 +34,13 @@ class Composite(BaseModel):
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 
-        eps_0 = variables[
-            "Leading-order x-averaged " + self.domain.lower() + " electrode porosity"
+        tor_0 = variables[
+            "Leading-order x-averaged " + self.domain.lower() + " electrode tortuosity"
         ]
         phi_s_cn = variables["Negative current collector potential"]
 
         if self._domain == "Negative":
-            sigma_eff_0 = self.param.sigma_n * (1 - eps_0) ** self.param.b_n
+            sigma_eff_0 = self.param.sigma_n * tor_0
             phi_s = pybamm.PrimaryBroadcast(
                 phi_s_cn, "negative electrode"
             ) + pybamm.outer(
@@ -54,7 +54,7 @@ class Composite(BaseModel):
             ]
             phi_e_p_av = variables["X-averaged positive electrolyte potential"]
 
-            sigma_eff_0 = self.param.sigma_p * (1 - eps_0) ** self.param.b_p
+            sigma_eff_0 = self.param.sigma_p * tor_0
 
             const = (
                 delta_phi_p_av
@@ -80,8 +80,8 @@ class Composite(BaseModel):
     def set_boundary_conditions(self, variables):
 
         phi_s = variables[self.domain + " electrode potential"]
-        eps_0 = variables[
-            "Leading-order x-averaged " + self.domain.lower() + " electrode porosity"
+        tor_0 = variables[
+            "Leading-order x-averaged " + self.domain.lower() + " electrode tortuosity"
         ]
         i_boundary_cc_0 = variables["Leading-order current collector current density"]
 
@@ -91,7 +91,7 @@ class Composite(BaseModel):
 
         elif self.domain == "Positive":
             lbc = (pybamm.Scalar(0), "Neumann")
-            sigma_eff_0 = self.param.sigma_p * (1 - eps_0) ** self.param.b_p
+            sigma_eff_0 = self.param.sigma_p * tor_0
             rbc = (-i_boundary_cc_0 / sigma_eff_0, "Neumann")
 
         self.boundary_conditions[phi_s] = {"left": lbc, "right": rbc}
