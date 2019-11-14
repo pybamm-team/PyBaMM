@@ -16,17 +16,19 @@ else:
     pybamm.set_logging_level("INFO")
 
 # load models
-options = {"thermal": "isothermal"}
+options = {"thermal": "isothermal", "operating mode": "voltage"}
 models = [
-    pybamm.lithium_ion.SPM(options),
-    pybamm.lithium_ion.SPMe(options),
-    pybamm.lithium_ion.DFN(options),
+    # pybamm.lithium_ion.SPM(options),
+    # pybamm.lithium_ion.SPMe(options),
+    # pybamm.lithium_ion.DFN(),
+    pybamm.lithium_ion.DFN(options)
 ]
 
 
 # load parameter values and process models and geometry
 param = models[0].default_parameter_values
 param["Typical current [A]"] = 1.0
+param["Voltage function"] = 4
 for model in models:
     param.process_model(model)
 

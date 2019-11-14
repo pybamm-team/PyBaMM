@@ -483,14 +483,23 @@ def U_p(c_e_p, T):
 
 
 # --------------------------------------------------------------------------------------
-"6. Input current"
+# 6. Input current and voltage
+
 dimensional_current_with_time = pybamm.FunctionParameter(
-    "Current function", pybamm.t * tau_discharge
+    "Current function", pybamm.t * timescale
 )
 dimensional_current_density_with_time = dimensional_current_with_time / (
     n_electrodes_parallel * pybamm.geometric_parameters.A_cc
 )
-
 current_with_time = (
     dimensional_current_with_time / I_typ * pybamm.Function(np.sign, I_typ)
 )
+
+# Voltage
+dimensional_voltage_with_time = pybamm.FunctionParameter(
+    "Voltage function", pybamm.t * timescale
+)
+voltage_with_time = (
+    dimensional_voltage_with_time - (U_p_ref - U_n_ref)
+) / potential_scale
+

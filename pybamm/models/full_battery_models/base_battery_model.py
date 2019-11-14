@@ -162,7 +162,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                     raise pybamm.OptionError("option {} not recognised".format(name))
 
         # Some standard checks to make sure options are compatible
-        if options["operating mode"] not in ["current", "potential"]:
+        if options["operating mode"] not in ["current", "voltage"]:
             raise pybamm.OptionError(
                 "operating mode '{}' not recognised".format(options["operating mode"])
             )

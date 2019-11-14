@@ -74,6 +74,12 @@ class ParameterValues(dict):
         # Initialise empty _processed_symbols dict (for caching)
         self._processed_symbols = {}
 
+    def __getitem__(self, key):
+        try:
+            return super().__getitem__(key)
+        except KeyError as err:
+            raise KeyError("Parameter '{}' not recognised".format(err.args[0]))
+
     def update_from_chemistry(self, chemistry):
         """
         Load standard set of components from a 'chemistry' dictionary
@@ -313,10 +319,11 @@ class ParameterValues(dict):
         # small number of variables, e.g. {"negative tab": neg. tab bc,
         # "positive tab": pos. tab bc "no tab": no tab bc}.
         new_boundary_conditions = {}
+        sides = ["left", "right", "negative tab", "positive tab", "no tab"]
         for variable, bcs in unprocessed_model.boundary_conditions.items():
             processed_variable = processing_function(variable)
             new_boundary_conditions[processed_variable] = {}
-            for side in ["left", "right", "negative tab", "positive tab", "no tab"]:
+            for side in sides:
                 try:
                     bc, typ = bcs[side]
                     pybamm.logger.debug(
@@ -326,8 +333,14 @@ class ParameterValues(dict):
                     )
                     processed_bc = (processing_function(bc), typ)
                     new_boundary_conditions[processed_variable][side] = processed_bc
-                except KeyError:
-                    pass
+                except KeyError as err:
+                    # don't raise error if the key error comes from the side not being
+                    # found
+                    if err.args[0] in side:
+                        pass
+                    # do raise error otherwise (e.g. can't process symbol)
+                    else:
+                        raise KeyError(err)
 
         model.boundary_conditions = new_boundary_conditions
 

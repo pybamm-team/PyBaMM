@@ -19,8 +19,9 @@ class Full(BaseModel):
     **Extends:** :class:`pybamm.electrode.ohm.BaseModel`
     """
 
-    def __init__(self, param, domain, reactions):
+    def __init__(self, param, domain, reactions, operating_mode):
         super().__init__(param, domain, reactions)
+        self.operating_mode = operating_mode
 
     def get_fundamental_variables(self):
 
@@ -79,11 +80,14 @@ class Full(BaseModel):
 
         elif self.domain == "Positive":
             lbc = (pybamm.Scalar(0), "Neumann")
-            sigma_eff = self.param.sigma_p * tor
-            rbc = (
-                i_boundary_cc / pybamm.boundary_value(-sigma_eff, "right"),
-                "Neumann",
-            )
+            if self.operating_mode == "current":
+                sigma_eff = self.param.sigma_p * tor
+                rbc = (
+                    i_boundary_cc / pybamm.boundary_value(-sigma_eff, "right"),
+                    "Neumann",
+                )
+            elif self.operating_mode == "voltage":
+                rbc = (self.param.voltage_with_time, "Dirichlet")
 
         self.boundary_conditions[phi_s] = {"left": lbc, "right": rbc}
 
