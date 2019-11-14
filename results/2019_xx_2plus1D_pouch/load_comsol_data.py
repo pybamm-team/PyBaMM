@@ -55,11 +55,11 @@ comsol_variables = {
     "phi_s_cp_y": phi_s_cp_y,
     "phi_s_cp_z": phi_s_cp_z,
     "phi_s_cp": phi_s_cp,
-    "T_y": T_y,
-    "T_z": T_z,
+    "temperature_y": T_y,
+    "temperature_z": T_z,
     "temperature": T,
-    "I_y": I_y,
-    "I_z": I_z,
+    "current_y": I_y,
+    "current_z": I_z,
     "current": I,
 }
 

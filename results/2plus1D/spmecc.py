@@ -37,8 +37,8 @@ for model in models:
 cc_solution = cc_model.default_solver.solve(cc_model)
 
 # solve SPMe -- simulate one hour discharge
-tau = param.process_symbol(pybamm.standard_parameters_lithium_ion.tau_discharge)
-t_end = 3600 / tau.evaluate(0)
+tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
+t_end = 3600 / tau
 t_eval = np.linspace(0, t_end, 120)
 solution = cell_model.default_solver.solve(cell_model, t_eval)
 

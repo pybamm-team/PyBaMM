@@ -13,7 +13,6 @@ options = {
     "thermal": "x-lumped",
 }
 model = pybamm.lithium_ion.DFN(options)
-model.use_simplify = False  # simplifying jacobian slow for large systems
 
 # create geometry
 geometry = model.default_geometry
@@ -46,8 +45,8 @@ disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
 
 # solve model -- simulate one hour discharge
-tau = param.process_symbol(pybamm.standard_parameters_lithium_ion.tau_discharge)
-t_end = 3600 / tau.evaluate(0)
+tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
+t_end = 3600 / tau
 t_eval = np.linspace(0, t_end, 120)
 model.convert_to_format = "casadi"  # use casadi for jacobian
 solution = pybamm.IDAKLUSolver().solve(model, t_eval)
