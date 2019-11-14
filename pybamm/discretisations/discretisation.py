@@ -166,6 +166,8 @@ class Discretisation(object):
             elif isinstance(var, pybamm.Variable):
                 start_vals += [self.y_slices[var.id][0].start]
 
+        # attach properties of the state vector so that it
+        # can be divided correctly during the solving stage
         model_disc.external_variables = model.external_variables
         model_disc.y_length = self.y_length
         model_disc.y_slices = self.y_slices
@@ -274,9 +276,7 @@ class Discretisation(object):
         """
 
         for var in model.external_variables:
-            if var.domain == []:
-                pass
-            else:
+            if var.domain != []:
                 new_bcs = self.spatial_methods[
                     var.domain[0]
                 ].preprocess_external_variables(var)
