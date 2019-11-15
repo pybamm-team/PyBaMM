@@ -1,6 +1,6 @@
 # Getting started
 
-For new users we recommend the [Getting Started](./Getting%20Started/) guides. These are intended to be very simple step-by-step guides to show the basic functionality of PyBaMM. For more detailed notebooks, please see the examples listed below.
+For new users we recommend the [Getting Started](./Getting%20Started/) notebooks. These are intended to be very simple step-by-step guides to show the basic functionality of PyBaMM. For more detailed notebooks, please see the examples listed below.
 
 # Examples
 
@@ -41,7 +41,9 @@ For more advanced usage, new sets of parameters, spatial methods and solvers can
 
 PyBaMM is built around an expression tree structure.
 [This](expression_tree/expression-tree.ipynb) notebook explains how this works, from
-model creation to solution. The following notebooks are specific to different stages of the PyBaMM pipeline, such as choosing a model, spatial method, or solver.
+model creation to solution. 
+
+The following notebooks are specific to different stages of the PyBaMM pipeline, such as choosing a model, spatial method, or solver.
 
 ### Models
 
@@ -73,6 +75,6 @@ The following solvers are implemented
 - Scipy ODE solver
 - [Scikits ODE solver](./solvers/scikits-ode-solver.ipynb)
 - [Scikits DAE solver](./solvers/scikits-dae-solver.ipynb)
-- CasAdi DAE solver
+- CasADi DAE solver
 
 See [here](https://pybamm.readthedocs.io/en/latest/tutorials/add-solver.html) for instructions on adding new solvers.
