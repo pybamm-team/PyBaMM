@@ -21,6 +21,8 @@ sim.plot()
 ```
 However, much greater customisation is available. It is possible to change the physics, parameter values, geometry, submesh type,  number of submesh points, methods for spatial discretisation and solver for integration (see DFN [script](examples/scripts/DFN.py) or [notebook](examples/notebooks/models/dfn.ipynb)).
 
+For new users we recommend the [Getting Started](examples/notebooks/Getting%20Started/) guides. These are intended to be very simple step-by-step guides to show the basic functionality of PyBaMM.
+
 Further details can be found in a number of [detailed examples](examples/notebooks/README.md), hosted here on
 github. In addition, there is a [full API documentation](http://pybamm.readthedocs.io/),
 hosted on [Read The Docs](readthedocs.io). A set of slides giving an overview of PyBaMM

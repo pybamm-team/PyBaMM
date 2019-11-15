@@ -1,3 +1,7 @@
+# Getting started
+
+For new users we recommend the [Getting Started](./Getting%20Started/) guides. These are intended to be very simple step-by-step guides to show the basic functionality of PyBaMM. For more detailed notebooks, please see the examples listed below.
+
 # Examples
 
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/pybamm-team/PyBaMM/master)
@@ -11,7 +15,7 @@ $ jupyter notebook
 ```
 from your local PyBaMM repository, or used online through [Binder](https://mybinder.org/v2/gh/pybamm-team/PyBaMM/master), or you can simply copy/paste the relevant code.
 
-## Getting started
+## Using PyBaMM
 
 The easiest way to start with PyBaMM is by running and comparing some of the inbuilt models:
 - [Run the Single Particle Model (SPM)](./models/SPM.ipynb)
@@ -31,11 +35,13 @@ For more advanced usage, new sets of parameters, spatial methods and solvers can
 - [Add a spatial method](https://pybamm.readthedocs.io/en/latest/tutorials/add-spatial-method.html)
 - [Add a solver](https://pybamm.readthedocs.io/en/latest/tutorials/add-solver.html)
 
+
+
 ## Expression tree structure
 
 PyBaMM is built around an expression tree structure.
 [This](expression_tree/expression-tree.ipynb) notebook explains how this works, from
-model creation to solution.
+model creation to solution. The following notebooks are specific to different stages of the PyBaMM pipeline, such as choosing a model, spatial method, or solver.
 
 ### Models
 
@@ -67,5 +73,6 @@ The following solvers are implemented
 - Scipy ODE solver
 - [Scikits ODE solver](./solvers/scikits-ode-solver.ipynb)
 - [Scikits DAE solver](./solvers/scikits-dae-solver.ipynb)
+- CasAdi DAE solver
 
 See [here](https://pybamm.readthedocs.io/en/latest/tutorials/add-solver.html) for instructions on adding new solvers.

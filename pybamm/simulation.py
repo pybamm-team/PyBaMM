@@ -118,15 +118,25 @@ class Simulation:
 
         Parameters
         ----------
-        t_eval : numeric type (optional)
-            The times at which to compute the solution
+        t_eval : numeric type, optional
+            The times at which to compute the solution. If None the model will
+            be solved for a full discharge (1 hour / C_rate) if the discharge
+            timescale is provided. Otherwise the model will be solved up to a
+            non-dimensional time of 1.
         solver : :class:`pybamm.BaseSolver`
             The solver to use to solve the model.
         """
         self.build()
 
         if t_eval is None:
-            t_eval = np.linspace(0, 1, 100)
+            try:
+                # Try to compute discharge time
+                tau = self._parameter_values.evaluate(self.model.param.tau_discharge)
+                C_rate = self._parameter_values["C-rate"]
+                t_end = 3600 / tau / C_rate
+                t_eval = np.linspace(0, t_end, 100)
+            except AttributeError:
+                t_eval = np.linspace(0, 1, 100)
 
         if solver is None:
             solver = self.solver
@@ -158,7 +168,7 @@ class Simulation:
             output_variables=quick_plot_vars,
         )
 
-        if isnotebook:
+        if isnotebook():
             import ipywidgets as widgets
 
             widgets.interact(
@@ -260,19 +270,19 @@ class Simulation:
 
         Parameters
         ----------
-        model_options: dict (optional)
+        model_options: dict, optional
             A dictionary of options to tweak the model you are using
-        geometry: :class:`pybamm.Geometry` (optional)
+        geometry: :class:`pybamm.Geometry`, optional
             The geometry upon which to solve the model
-        parameter_values: dict (optional)
+        parameter_values: dict, optional
             A dictionary of parameters and their corresponding numerical
             values
-        submesh_types: dict (optional)
+        submesh_types: dict, optional
             A dictionary of the types of submesh to use on each subdomain
-        var_pts: dict (optional)
+        var_pts: dict, optional
             A dictionary of the number of points used by each spatial
             variable
-        spatial_methods: dict (optional)
+        spatial_methods: dict, optional
             A dictionary of the types of spatial method to use on each
             domain (e.g. pybamm.FiniteVolume)
         solver: :class:`pybamm.BaseSolver`
