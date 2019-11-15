@@ -1,5 +1,6 @@
 import pybamm
 import unittest
+import numpy as np
 
 
 class TestSimulation(unittest.TestCase):
@@ -192,6 +193,48 @@ class TestSimulation(unittest.TestCase):
         sim_load = pybamm.load_sim("test.pickle")
         self.assertEqual(sim.model.name, sim_load.model.name)
 
+    def test_set_defaults(self):
+        model = pybamm.lithium_ion.SPM()
+
+        # make simulation with silly options (should this be allowed?)
+        sim = pybamm.Simulation(
+            model,
+            geometry=1,
+            parameter_values=1,
+            submesh_types=1,
+            var_pts=1,
+            spatial_methods=1,
+            solver=1,
+            quick_plot_vars=1,
+        )
+
+        # reset and check
+        sim.set_defaults()
+        # Not sure of best way to test nested dicts?
+        # self.geometry = model.default_geometry
+        self.assertEqual(sim._parameter_values, model.default_parameter_values)
+        for domain, submesh in model.default_submesh_types.items():
+            self.assertEqual(
+                sim._submesh_types[domain].submesh_type, submesh.submesh_type
+            )
+        self.assertEqual(sim._var_pts, model.default_var_pts)
+        for domain, method in model.default_spatial_methods.items():
+            self.assertIsInstance(sim._spatial_methods[domain], type(method))
+        self.assertIsInstance(sim._solver, type(model.default_solver))
+        self.assertEqual(sim._quick_plot_vars, None)
+
+    def test_plot(self):
+        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
+
+        # test exception if not solved
+        with self.assertRaises(ValueError):
+            sim.plot()
+
+        # now solve and plot
+        t_eval = np.linspace(0, 0.01, 5)
+        sim.solve(t_eval=t_eval)
+        sim.plot(testing=True)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
@@ -200,4 +243,3 @@ if __name__ == "__main__":
     if "-v" in sys.argv:
         debug = True
     unittest.main()
-
