@@ -1,3 +1,6 @@
 from .base_external_circuit import BaseModel
 from .current_control_external_circuit import CurrentControl
+from .function_control_external_circuit import FunctionControl
 from .voltage_control_external_circuit import VoltageControl
+from .power_control_external_circuit import PowerControl
+

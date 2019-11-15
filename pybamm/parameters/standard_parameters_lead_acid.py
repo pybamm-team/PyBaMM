@@ -495,11 +495,3 @@ current_with_time = (
     dimensional_current_with_time / I_typ * pybamm.Function(np.sign, I_typ)
 )
 
-# Voltage
-dimensional_voltage_with_time = pybamm.FunctionParameter(
-    "Voltage function", pybamm.t * timescale
-)
-voltage_with_time = (
-    dimensional_voltage_with_time - (U_p_ref - U_n_ref)
-) / potential_scale
-

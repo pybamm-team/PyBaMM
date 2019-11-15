@@ -388,13 +388,21 @@ class BaseModel(object):
         After discretisation, there must be at least one StateVector in each algebraic
         equation
         """
+        vars_in_bcs = set()
+        for var, side_eqn in self.boundary_conditions.items():
+            for side, (eqn, typ) in side_eqn.items():
+                vars_in_bcs.update(
+                    [x.id for x in eqn.pre_order() if isinstance(x, pybamm.Variable)]
+                )
         if not post_discretisation:
             # After the model has been defined, each algebraic equation key should
-            # appear in that algebraic equation
+            # appear in that algebraic equation, or in the boundary conditions
             # this has been relaxed for concatenations for now
             for var, eqn in self.algebraic.items():
-                if not any(x.id == var.id for x in eqn.pre_order()) and not isinstance(
-                    var, pybamm.Concatenation
+                if not (
+                    any(x.id == var.id for x in eqn.pre_order())
+                    or var.id in vars_in_bcs
+                    or isinstance(var, pybamm.Concatenation)
                 ):
                     raise pybamm.ModelError(
                         "each variable in the algebraic eqn keys must appear in the eqn"

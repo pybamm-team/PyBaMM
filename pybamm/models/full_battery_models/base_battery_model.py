@@ -162,7 +162,12 @@ class BaseBatteryModel(pybamm.BaseModel):
                     raise pybamm.OptionError("option {} not recognised".format(name))
 
         # Some standard checks to make sure options are compatible
-        if options["operating mode"] not in ["current", "voltage"]:
+        if options["operating mode"] not in [
+            "current",
+            "voltage",
+            "power",
+            "arbitrary",
+        ]:
             raise pybamm.OptionError(
                 "operating mode '{}' not recognised".format(options["operating mode"])
             )
@@ -491,14 +496,22 @@ class BaseBatteryModel(pybamm.BaseModel):
         e.g. (not necessarily constant-) current, voltage, etc
         """
         if self.options["operating mode"] == "current":
+            self.submodels["external circuit"] = pybamm.external_circuit.CurrentControl(
+                self.param
+            )
+        elif self.options["operating mode"] == "voltage":
+            self.submodels["external circuit"] = pybamm.external_circuit.VoltageControl(
+                self.param
+            )
+        elif self.options["operating mode"] == "power":
+            self.submodels["external circuit"] = pybamm.external_circuit.PowerControl(
+                self.param
+            )
+        elif self.options["operating mode"] == "arbitrary":
             self.submodels[
                 "external circuit"
-            ] = pybamm.external_circuit.CurrentControl(self.param)
-        if self.options["operating mode"] == "voltage":
-            self.submodels[
-                "external circuit"
-            ] = pybamm.external_circuit.VoltageControl(self.param)
-            
+            ] = pybamm.external_circuit.FunctionControl(self.param)
+
     def set_tortuosity_submodels(self):
         self.submodels["electrolyte tortuosity"] = pybamm.tortuosity.Bruggeman(
             self.param, "Electrolyte"
@@ -731,6 +744,10 @@ class BaseBatteryModel(pybamm.BaseModel):
         voltage = self.variables["Terminal voltage"]
         self.events["Minimum voltage"] = voltage - self.param.voltage_low_cut
         self.events["Maximum voltage"] = voltage - self.param.voltage_high_cut
+
+        # Power
+        I_dim = self.variables["Current [A]"]
+        self.variables.update({"Terminal power [W]": I_dim * V_dim})
 
     def set_soc_variables(self):
         """
