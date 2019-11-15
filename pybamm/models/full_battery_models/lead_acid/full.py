@@ -37,6 +37,7 @@ class Full(BaseModel):
         self.set_reactions()
         self.set_interfacial_submodel()
         self.set_porosity_submodel()
+        self.set_tortuosity_submodels()
         self.set_convection_submodel()
         self.set_electrolyte_submodel()
         self.set_solid_submodel()

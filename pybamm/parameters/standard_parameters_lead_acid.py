@@ -72,12 +72,18 @@ sigma_cp_dimensional = sigma_p_dim
 # Microstructure
 a_n_dim = pybamm.geometric_parameters.a_n_dim
 a_p_dim = pybamm.geometric_parameters.a_p_dim
-b_n = pybamm.geometric_parameters.b_n
-b_s = pybamm.geometric_parameters.b_s
-b_p = pybamm.geometric_parameters.b_p
-b = pybamm.geometric_parameters.b
+b_e_n = pybamm.geometric_parameters.b_e_n
+b_e_s = pybamm.geometric_parameters.b_e_s
+b_e_p = pybamm.geometric_parameters.b_e_p
+b_s_n = pybamm.geometric_parameters.b_s_n
+b_s_s = pybamm.geometric_parameters.b_s_s
+b_s_p = pybamm.geometric_parameters.b_s_p
 xi_n = pybamm.Parameter("Negative electrode morphological parameter")
 xi_p = pybamm.Parameter("Positive electrode morphological parameter")
+# no binder
+epsilon_inactive_n = pybamm.Scalar(0)
+epsilon_inactive_s = pybamm.Scalar(0)
+epsilon_inactive_p = pybamm.Scalar(0)
 
 # Electrochemical reactions
 # Main
@@ -393,19 +399,19 @@ voltage_high_cut = (
 # Electrolyte volumetric capacity
 Q_e_max = (l_n * eps_n_max + l_s * eps_s_max + l_p * eps_p_max) / (s_p - s_n)
 Q_e_max_dimensional = Q_e_max * c_e_typ * F
-capacity = Q_e_max_dimensional * 8 * A_cs * L_x
+capacity = Q_e_max_dimensional * n_electrodes_parallel * A_cs * L_x
 
 # Initial conditions
 q_init = pybamm.Parameter("Initial State of Charge")
 c_e_init = q_init
 c_ox_init = c_ox_init_dim / c_ox_typ
-eps_n_init = eps_n_max - beta_surf_n * Q_e_max / l_n * (1 - q_init)
-eps_s_init = eps_s_max
-eps_p_init = eps_p_max + beta_surf_p * Q_e_max / l_p * (1 - q_init)
-eps_init = pybamm.Concatenation(
-    pybamm.FullBroadcast(eps_n_init, ["negative electrode"], "current collector"),
-    pybamm.FullBroadcast(eps_s_init, ["separator"], "current collector"),
-    pybamm.FullBroadcast(eps_p_init, ["positive electrode"], "current collector"),
+epsilon_n_init = eps_n_max - beta_surf_n * Q_e_max / l_n * (1 - q_init)
+epsilon_s_init = eps_s_max
+epsilon_p_init = eps_p_max + beta_surf_p * Q_e_max / l_p * (1 - q_init)
+epsilon_init = pybamm.Concatenation(
+    pybamm.FullBroadcast(epsilon_n_init, ["negative electrode"], "current collector"),
+    pybamm.FullBroadcast(epsilon_s_init, ["separator"], "current collector"),
+    pybamm.FullBroadcast(epsilon_p_init, ["positive electrode"], "current collector"),
 )
 curlyU_n_init = Q_e_max * (1.2 - q_init) / (Q_n_max * l_n)
 curlyU_p_init = Q_e_max * (1.2 - q_init) / (Q_p_max * l_p)

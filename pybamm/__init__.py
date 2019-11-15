@@ -165,6 +165,7 @@ from .models.submodels import (
     particle,
     porosity,
     thermal,
+    tortuosity,
 )
 
 #

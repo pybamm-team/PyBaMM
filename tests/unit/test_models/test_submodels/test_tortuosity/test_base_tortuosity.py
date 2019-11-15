@@ -1,5 +1,5 @@
 #
-# Test base porosity submodel
+# Test base tortuosity submodel
 #
 
 import pybamm
@@ -9,10 +9,12 @@ import unittest
 
 class TestBaseModel(unittest.TestCase):
     def test_public_functions(self):
-        a = pybamm.Scalar(0)
-        variables = {"Negative electrode porosity": a, "Positive electrode porosity": a}
-        submodel = pybamm.porosity.BaseModel(None)
-        std_tests = tests.StandardSubModelTests(submodel, variables)
+        submodel = pybamm.tortuosity.BaseModel(None, "Electrode")
+        std_tests = tests.StandardSubModelTests(submodel)
+        std_tests.test_all()
+
+        submodel = pybamm.tortuosity.BaseModel(None, "Electrolyte")
+        std_tests = tests.StandardSubModelTests(submodel)
         std_tests.test_all()
 
 
