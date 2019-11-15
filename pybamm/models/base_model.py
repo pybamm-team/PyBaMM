@@ -195,6 +195,9 @@ class BaseModel(object):
     def variables(self, variables):
         self._variables = variables
 
+    def variable_names(self):
+        return list(self._variables.keys())
+
     @property
     def events(self):
         return self._events
