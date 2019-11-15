@@ -137,13 +137,8 @@ class Discretisation(object):
             # since they point to the same object
             model_disc = model
         else:
-            # create a model of the same class as the original model
-            model_disc = model.__class__(model.options)
-            model_disc.name = model.name
-            model_disc.options = model.options
-            model_disc.use_jacobian = model.use_jacobian
-            model_disc.use_simplify = model.use_simplify
-            model_disc.convert_to_format = model.convert_to_format
+            # create an empty copy of the original model
+            model_disc = model.new_copy()
 
         model_disc.bcs = self.bcs
 

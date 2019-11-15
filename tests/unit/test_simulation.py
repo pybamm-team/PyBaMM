@@ -130,6 +130,69 @@ class TestSimulation(unittest.TestCase):
         sim.specs(spatial_methods=spatial_methods)
         sim.build()
 
+    def test_save_load(self):
+        model = pybamm.lead_acid.LOQS()
+        model.use_jacobian = True
+        sim = pybamm.Simulation(model)
+
+        sim.save("test.pickle")
+        sim_load = pybamm.load_sim("test.pickle")
+        self.assertEqual(sim.model.name, sim_load.model.name)
+
+        # save after solving
+        sim.solve()
+        sim.save("test.pickle")
+        sim_load = pybamm.load_sim("test.pickle")
+        self.assertEqual(sim.model.name, sim_load.model.name)
+
+        # with python formats
+        model.convert_to_format = None
+        sim = pybamm.Simulation(model)
+        sim.solve()
+        sim.save("test.pickle")
+        model.convert_to_format = "python"
+        sim = pybamm.Simulation(model)
+        sim.solve()
+        with self.assertRaisesRegex(
+            NotImplementedError, "Cannot save simulation if model format is python"
+        ):
+            sim.save("test.pickle")
+
+    def test_save_load_dae(self):
+        model = pybamm.lead_acid.LOQS({"surface form": "algebraic"})
+        model.use_jacobian = True
+        sim = pybamm.Simulation(model)
+
+        # save after solving
+        sim.solve()
+        sim.save("test.pickle")
+        sim_load = pybamm.load_sim("test.pickle")
+        self.assertEqual(sim.model.name, sim_load.model.name)
+
+        # with python format
+        model.convert_to_format = None
+        sim = pybamm.Simulation(model)
+        sim.solve()
+        sim.save("test.pickle")
+
+        # with Casadi solver
+        sim = pybamm.Simulation(model, solver=pybamm.CasadiSolver())
+        sim.solve()
+        sim.save("test.pickle")
+        sim_load = pybamm.load_sim("test.pickle")
+        self.assertEqual(sim.model.name, sim_load.model.name)
+
+    @unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
+    def test_save_load_klu(self):
+        model = pybamm.lead_acid.LOQS({"surface form": "algebraic"})
+        model.use_jacobian = True
+        # with KLU solver
+        sim = pybamm.Simulation(model, solver=pybamm.IDAKLUSolver())
+        sim.solve()
+        sim.save("test.pickle")
+        sim_load = pybamm.load_sim("test.pickle")
+        self.assertEqual(sim.model.name, sim_load.model.name)
+
     def test_set_defaults(self):
         model = pybamm.lithium_ion.SPM()
 

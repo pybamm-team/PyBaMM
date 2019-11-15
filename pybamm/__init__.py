@@ -246,7 +246,7 @@ from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
 from .processed_variable import post_process_variables, ProcessedVariable
 from .quick_plot import QuickPlot, ax_min, ax_max
 
-from .simulation import Simulation
+from .simulation import Simulation, load_sim
 
 #
 # Remove any imported modules, so we don't expose them as part of pybamm
