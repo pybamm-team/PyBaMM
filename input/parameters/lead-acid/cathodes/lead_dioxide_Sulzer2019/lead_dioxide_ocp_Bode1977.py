@@ -1,7 +1,7 @@
 #
 # Open-circuit voltage in the positive (lead-dioxide) electrode
 #
-import autograd.numpy as np
+from pybamm import log10
 
 
 def lead_dioxide_ocp_Bode1977(m):
@@ -16,9 +16,9 @@ def lead_dioxide_ocp_Bode1977(m):
     """
     U = (
         1.628
-        + 0.074 * np.log10(m)
-        + 0.033 * np.log10(m) ** 2
-        + 0.043 * np.log10(m) ** 3
-        + 0.022 * np.log10(m) ** 4
+        + 0.074 * log10(m)
+        + 0.033 * log10(m) ** 2
+        + 0.043 * log10(m) ** 3
+        + 0.022 * log10(m) ** 4
     )
     return U

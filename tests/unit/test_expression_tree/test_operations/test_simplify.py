@@ -8,10 +8,6 @@ import unittest
 from tests import get_discretisation_for_testing
 
 
-def test_const_function():
-    return 1
-
-
 class TestSimplify(unittest.TestCase):
     def test_symbol_simplify(self):
         a = pybamm.Scalar(0)
@@ -307,12 +303,6 @@ class TestSimplify(unittest.TestCase):
             self.assertIsInstance(expr.simplify(), pybamm.Vector)
             np.testing.assert_array_equal(expr.simplify().entries, np.zeros((10, 1)))
 
-    def test_function_simplify(self):
-        a = pybamm.Parameter("a")
-        funca = pybamm.Function(test_const_function, a).simplify()
-        self.assertIsInstance(funca, pybamm.Scalar)
-        self.assertEqual(funca.evaluate(), 1)
-
     def test_matrix_simplifications(self):
         a = pybamm.Matrix(np.zeros((2, 2)))
         b = pybamm.Matrix(np.ones((2, 2)))
@@ -607,6 +597,12 @@ class TestSimplify(unittest.TestCase):
         np.testing.assert_array_equal(
             kron_simp.evaluate().toarray(), np.kron(A.entries, b.entries)
         )
+
+    def test_simplify_heaviside(self):
+        a = pybamm.Scalar(1)
+        b = pybamm.Scalar(2)
+        self.assertEqual((a < b).simplify().id, pybamm.Scalar(1).id)
+        self.assertEqual((a >= b).simplify().id, pybamm.Scalar(0).id)
 
     def test_simplify_inner(self):
         a1 = pybamm.Scalar(0)

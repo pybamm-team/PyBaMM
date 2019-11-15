@@ -8,23 +8,14 @@ import numpy as np
 
 
 class TestCurrentFunctions(unittest.TestCase):
-    def test_base_current(self):
-        function = pybamm.BaseCurrent()
-        self.assertEqual(function(10), 1)
-
     def test_constant_current(self):
-        function = pybamm.ConstantCurrent(current=4)
-        assert isinstance(function(0), numbers.Number)
-        assert isinstance(function(np.zeros(3)), numbers.Number)
-        assert isinstance(function(np.zeros([3, 3])), numbers.Number)
-
         # test simplify
         current = pybamm.electrical_parameters.current_with_time
         parameter_values = pybamm.ParameterValues(
             {
                 "Typical current [A]": 2,
                 "Typical timescale [s]": 1,
-                "Current function": pybamm.ConstantCurrent(),
+                "Current function": "[constant]",
             }
         )
         processed_current = parameter_values.process_symbol(current)
@@ -51,22 +42,21 @@ class TestCurrentFunctions(unittest.TestCase):
     def test_user_current(self):
         # create user-defined sin function
         def my_fun(t, A, omega):
-            return A * np.sin(2 * np.pi * omega * t)
+            return A * pybamm.sin(2 * np.pi * omega * t)
 
         # choose amplitude and frequency
         A = pybamm.electrical_parameters.I_typ
-        omega = 3
+        omega = pybamm.Parameter("omega")
 
-        # pass my_fun to UserCurrent class, giving the additonal parameters as
-        # keyword arguments
-        current = pybamm.UserCurrent(my_fun, A=A, omega=omega)
-        self.assertEqual(str(current), "User defined current (my_fun)")
+        def current(t):
+            return my_fun(t, A, omega)
 
         # set and process parameters
         parameter_values = pybamm.ParameterValues(
             {
                 "Typical current [A]": 2,
                 "Typical timescale [s]": 1,
+                "omega": 3,
                 "Current function": current,
             }
         )
@@ -83,7 +73,7 @@ class TestCurrentFunctions(unittest.TestCase):
         # check output correct value
         time = np.linspace(0, 3600, 600)
         np.testing.assert_array_almost_equal(
-            current(time), 2 * np.sin(2 * np.pi * 3 * time)
+            user_current(time), 2 * np.sin(2 * np.pi * 3 * time)
         )
 
 

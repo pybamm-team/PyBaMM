@@ -3,7 +3,6 @@
 #
 import casadi
 import numpy as np
-import autograd.numpy as anp
 import pybamm
 import unittest
 from tests import get_mesh_for_testing, get_1p1d_discretisation_for_testing
@@ -149,13 +148,6 @@ class TestCasadiConverter(unittest.TestCase):
     def test_convert_differentiated_function(self):
         a = pybamm.Scalar(0)
         b = pybamm.Scalar(1)
-
-        # function
-        def sin(x):
-            return anp.sin(x)
-
-        f = pybamm.Function(sin, b).diff(b)
-        self.assert_casadi_equal(f.to_casadi(), casadi.MX(np.cos(1)), evalf=True)
 
         def myfunction(x, y):
             return x + y ** 3

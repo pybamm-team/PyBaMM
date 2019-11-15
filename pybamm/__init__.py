@@ -83,6 +83,7 @@ from .expression_tree.binary_operators import (
     inner,
     Outer,
     Kron,
+    Heaviside,
     outer,
     source,
 )
@@ -94,37 +95,7 @@ from .expression_tree.concatenations import (
 )
 from .expression_tree.array import Array
 from .expression_tree.matrix import Matrix
-from .expression_tree.unary_operators import (
-    UnaryOperator,
-    Negate,
-    AbsoluteValue,
-    Index,
-    SpatialOperator,
-    Gradient,
-    Divergence,
-    Laplacian,
-    Gradient_Squared,
-    Mass,
-    BoundaryMass,
-    BoundaryOperator,
-    BoundaryValue,
-    BoundaryGradient,
-    Integral,
-    IndefiniteIntegral,
-    DefiniteIntegralVector,
-    BoundaryIntegral,
-    DeltaFunction,
-    grad,
-    div,
-    laplacian,
-    grad_squared,
-    surf,
-    x_average,
-    z_average,
-    yz_average,
-    boundary_value,
-    r_average,
-)
+from .expression_tree.unary_operators import *
 from .expression_tree.functions import *
 from .expression_tree.interpolant import Interpolant
 from .expression_tree.parameter import Parameter, FunctionParameter
@@ -193,13 +164,13 @@ from .models.submodels import (
     particle,
     porosity,
     thermal,
+    tortuosity,
 )
 
 #
 # Parameters class and methods
 #
 from .parameters.parameter_values import ParameterValues
-from .parameters import standard_current_functions
 from .parameters import geometric_parameters
 from .parameters import electrical_parameters
 from .parameters import thermal_parameters
@@ -268,13 +239,6 @@ from .solvers.scikits_dae_solver import ScikitsDaeSolver
 from .solvers.scikits_ode_solver import ScikitsOdeSolver, have_scikits_odes
 from .solvers.scipy_solver import ScipySolver
 from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
-
-#
-# Current profiles
-#
-from .parameters.standard_current_functions.base_current import BaseCurrent
-from .parameters.standard_current_functions.constant_current import ConstantCurrent
-from .parameters.standard_current_functions.user_current import UserCurrent
 
 #
 # other

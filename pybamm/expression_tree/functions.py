@@ -2,9 +2,9 @@
 # Function classes and methods
 #
 import autograd
+import numbers
 import numpy as np
 import pybamm
-from inspect import signature
 
 
 class Function(pybamm.Symbol):
@@ -34,6 +34,11 @@ class Function(pybamm.Symbol):
         derivative="autograd",
         differentiated_function=None
     ):
+        # Turn numbers into scalars
+        children = list(children)
+        for idx, child in enumerate(children):
+            if isinstance(child, numbers.Number):
+                children[idx] = pybamm.Scalar(child)
 
         if name is not None:
             self.name = name
@@ -42,26 +47,15 @@ class Function(pybamm.Symbol):
                 name = "function ({})".format(function.__name__)
             except AttributeError:
                 name = "function ({})".format(function.__class__)
-        children_list = list(children)
-        domain = self.get_children_domains(children_list)
+        domain = self.get_children_domains(children)
         auxiliary_domains = self.get_children_auxiliary_domains(children)
 
         self.function = function
         self.derivative = derivative
         self.differentiated_function = differentiated_function
 
-        # hack to work out whether function takes any params
-        # (signature doesn't work for numpy)
-        if isinstance(function, np.ufunc):
-            self.takes_no_params = False
-        else:
-            self.takes_no_params = len(signature(function).parameters) == 0
-
         super().__init__(
-            name,
-            children=children_list,
-            domain=domain,
-            auxiliary_domains=auxiliary_domains,
+            name, children=children, domain=domain, auxiliary_domains=auxiliary_domains
         )
 
     def get_children_domains(self, children_list):
@@ -182,10 +176,7 @@ class Function(pybamm.Symbol):
         return self._function_evaluate(evaluated_children)
 
     def _function_evaluate(self, evaluated_children):
-        if self.takes_no_params is True:
-            return self.function()
-        else:
-            return self.function(*evaluated_children)
+        return self.function(*evaluated_children)
 
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
@@ -227,20 +218,7 @@ class Function(pybamm.Symbol):
          :: pybamm.Scalar() if no children
          :: pybamm.Function if there are children
         """
-        if self.takes_no_params is True:
-            # If self.function() takes no parameters then we can always simplify it
-            return pybamm.Scalar(self.function())
-        elif isinstance(self.function, pybamm.ConstantCurrent):
-            # If self.function() is a constant current then simplify to scalar
-            return pybamm.Scalar(self.function.parameters_eval["Current [A]"])
-        else:
-            return pybamm.Function(
-                self.function,
-                *simplified_children,
-                name=self.name,
-                derivative=self.derivative,
-                differentiated_function=self.differentiated_function
-            )
+        return self._function_new_copy(simplified_children)
 
 
 class SpecificFunction(Function):
@@ -267,6 +245,22 @@ class SpecificFunction(Function):
     def _function_simplify(self, simplified_children):
         """ See :meth:`pybamm.Function._function_simplify()` """
         return self.__class__(*simplified_children)
+
+
+class Arcsinh(SpecificFunction):
+    """ Arcsinh function """
+
+    def __init__(self, child):
+        super().__init__(np.arcsinh, child)
+
+    def _function_diff(self, children, idx):
+        """ See :meth:`pybamm.Symbol._function_diff()`. """
+        return 1 / Sqrt(children[0] ** 2 + 1)
+
+
+def arcsinh(child):
+    " Returns arcsinh function of child. "
+    return Arcsinh(child)
 
 
 class Cos(SpecificFunction):
@@ -323,14 +317,27 @@ class Log(SpecificFunction):
     def __init__(self, child):
         super().__init__(np.log, child)
 
+    def _function_evaluate(self, evaluated_children):
+        # don't raise RuntimeWarning for NaNs
+        with np.errstate(invalid="ignore"):
+            return np.log(*evaluated_children)
+
     def _function_diff(self, children, idx):
         """ See :meth:`pybamm.Function._function_diff()`. """
         return 1 / children[0]
 
 
-def log(child):
-    " Returns logarithmic function of child. "
-    return Log(child)
+def log(child, base="e"):
+    " Returns logarithmic function of child (any base, default 'e'). "
+    if base == "e":
+        return Log(child)
+    else:
+        return Log(child) / np.log(base)
+
+
+def log10(child):
+    " Returns logarithmic function of child, with base 10. "
+    return log(child, base=10)
 
 
 def max(child):
@@ -341,6 +348,11 @@ def max(child):
 def min(child):
     " Returns min function of child. "
     return Function(np.min, child)
+
+
+def sech(child):
+    " Returns hyperbolic sec function of child. "
+    return 1 / Cosh(child)
 
 
 class Sin(SpecificFunction):
@@ -373,3 +385,40 @@ class Sinh(SpecificFunction):
 def sinh(child):
     " Returns hyperbolic sine function of child. "
     return Sinh(child)
+
+
+class Sqrt(SpecificFunction):
+    """ Square root function """
+
+    def __init__(self, child):
+        super().__init__(np.sqrt, child)
+
+    def _function_evaluate(self, evaluated_children):
+        # don't raise RuntimeWarning for NaNs
+        with np.errstate(invalid="ignore"):
+            return np.sqrt(*evaluated_children)
+
+    def _function_diff(self, children, idx):
+        """ See :meth:`pybamm.Function._function_diff()`. """
+        return 1 / (2 * Sqrt(children[0]))
+
+
+def sqrt(child):
+    " Returns square root function of child. "
+    return Sqrt(child)
+
+
+class Tanh(SpecificFunction):
+    """ Hyperbolic tan function """
+
+    def __init__(self, child):
+        super().__init__(np.tanh, child)
+
+    def _function_diff(self, children, idx):
+        """ See :meth:`pybamm.Function._function_diff()`. """
+        return sech(children[0]) ** 2
+
+
+def tanh(child):
+    " Returns hyperbolic tan function of child. "
+    return Tanh(child)

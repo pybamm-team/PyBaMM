@@ -80,6 +80,14 @@ class TestParameterValues(unittest.TestCase):
         param = pybamm.ParameterValues(values)
         self.assertEqual(param["C-rate"], 1 / 10)
 
+        # Test with current function
+        values = {"Typical current [A]": 1, "Current function": "[constant]"}
+        param = pybamm.ParameterValues(values)
+        self.assertEqual(param["Current function"], 1)
+        values = {"Typical current [A]": 1, "Current function": "[zero]"}
+        param = pybamm.ParameterValues(values)
+        self.assertEqual(param["Current function"], 0)
+
     def test_process_symbol(self):
         parameter_values = pybamm.ParameterValues({"a": 1, "b": 2, "c": 3})
         # process parameter
@@ -225,9 +233,7 @@ class TestParameterValues(unittest.TestCase):
             {
                 "a": 3,
                 "func": pybamm.load_function("process_symbol_test_function.py"),
-                "const": pybamm.load_function(
-                    "process_symbol_test_constant_function.py"
-                ),
+                "const": 254,
             }
         )
         a = pybamm.Parameter("a")
@@ -235,13 +241,12 @@ class TestParameterValues(unittest.TestCase):
         # process function
         func = pybamm.FunctionParameter("func", a)
         processed_func = parameter_values.process_symbol(func)
-        self.assertIsInstance(processed_func, pybamm.Function)
         self.assertEqual(processed_func.evaluate(), 369)
 
         # process constant function
         const = pybamm.FunctionParameter("const", a)
         processed_const = parameter_values.process_symbol(const)
-        self.assertIsInstance(processed_const, pybamm.Function)
+        self.assertIsInstance(processed_const, pybamm.Scalar)
         self.assertEqual(processed_const.evaluate(), 254)
 
         # process differentiated function parameter
@@ -259,7 +264,6 @@ class TestParameterValues(unittest.TestCase):
         func = pybamm.FunctionParameter("Diffusivity", a)
 
         processed_func = parameter_values.process_symbol(func)
-        self.assertIsInstance(processed_func, pybamm.Function)
         self.assertEqual(processed_func.evaluate(), 9)
 
         # process differentiated function parameter
@@ -282,7 +286,7 @@ class TestParameterValues(unittest.TestCase):
 
     def test_multi_var_function_parameter(self):
         def D(a, b):
-            return a * np.exp(b)
+            return a * pybamm.exp(b)
 
         parameter_values = pybamm.ParameterValues({"a": 3, "b": 0, "Diffusivity": D})
 
@@ -291,7 +295,6 @@ class TestParameterValues(unittest.TestCase):
         func = pybamm.FunctionParameter("Diffusivity", a, b)
 
         processed_func = parameter_values.process_symbol(func)
-        self.assertIsInstance(processed_func, pybamm.Function)
         self.assertEqual(processed_func.evaluate(), 3)
 
     def test_process_interpolant(self):

@@ -88,6 +88,7 @@ class DaeSolver(pybamm.BaseSolver):
             events=self.event_funs,
             mass_matrix=model.mass_matrix.entries,
             jacobian=self.jacobian,
+            model=model,
         )
         solve_time = timer.time() - solve_start_time
 
