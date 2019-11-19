@@ -2,7 +2,7 @@ import pybamm
 import numpy as np
 
 
-def solve_reduced_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None):
+def solve_reduced_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None, params=None):
 
     options = {
         "current collector": "potential pair",
@@ -15,7 +15,9 @@ def solve_reduced_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None):
     model = pybamm.lithium_ion.SPMe(options=options)
 
     param = model.default_parameter_values
-    param.update({"C-rate": C_rate, "Heat transfer coefficient [W.m-2.K-1]": 0.1})
+    if params:
+        param.update(param)
+    param.update({"C-rate": C_rate})
 
     # discharge timescale
     if t_eval is None:
@@ -32,10 +34,7 @@ def solve_reduced_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None):
 
     sim.solve(t_eval=t_eval)
 
-    t = sim.solution.t
-    y = sim.solution.y
-
-    # get variables for plotting
+    mesh = sim.mesh
     t = sim.solution.t
     y = sim.solution.y
 
@@ -47,10 +46,34 @@ def solve_reduced_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None):
         sim.built_model.variables["Terminal voltage [V]"], t, y
     )(t)
 
+    phi_s_n_dim = pybamm.ProcessedVariable(
+        sim.built_model.variables["Negative current collector potential [V]"],
+        t,
+        y,
+        mesh=mesh,
+    )
+    phi_s_p_dim = pybamm.ProcessedVariable(
+        sim.built_model.variables["Positive current collector potential [V]"],
+        t,
+        y,
+        mesh=mesh,
+    )
+    V_loc = pybamm.ProcessedVariable(
+        sim.built_model.variables["Local voltage [V]"], t, y, mesh=mesh
+    )
+
+    y = sim.built_model.variables["y [m]"].evaluate()
+    z = sim.built_model.variables["z [m]"].evaluate()
+
     plotting_variables = {
         "Terminal voltage [V]": terminal_voltage,
         "Time [h]": time,
         "Discharge capacity [A.h]": discharge_capacity,
+        "Negative current collector potential [V]": phi_s_n_dim,
+        "Positive current collector potential [V]": phi_s_p_dim,
+        "Local voltage [V]": V_loc,
+        "y [m]": y,
+        "z [m]": z,
     }
 
     return plotting_variables

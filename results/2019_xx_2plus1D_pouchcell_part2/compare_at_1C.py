@@ -11,16 +11,28 @@ var_pts = {
     pybamm.standard_spatial_vars.x_n: 5,
     pybamm.standard_spatial_vars.x_s: 5,
     pybamm.standard_spatial_vars.x_p: 5,
-    pybamm.standard_spatial_vars.y: 7,
-    pybamm.standard_spatial_vars.z: 7,
+    pybamm.standard_spatial_vars.y: 5,
+    pybamm.standard_spatial_vars.z: 5,
     pybamm.standard_spatial_vars.r_n: 5,
     pybamm.standard_spatial_vars.r_p: 5,
 }
 
-spmecc = models.solve_spmecc(t_eval=t_eval, var_pts=var_pts)
+params = {
+    "Heat transfer coefficient [W.m-2.K-1]": 0.1,
+    "Negative current collector conductivity [S.m-1]": 5.96e6,
+    "Positive current collector conductivity [S.m-1]": 3.55e6,
+}
 
-fig, ax = plt.subplots()
-plots.plot_voltage(ax, spmecc=spmecc)
+spmecc = models.solve_spmecc(t_eval=t_eval, var_pts=var_pts, params=params)
+reduced = models.solve_reduced_2p1(t_eval=t_eval, var_pts=var_pts, params=params)
+# reduced = None
 
-plots.plot_yz_potential(spmecc=spmecc)
+# fig, ax = plt.subplots()
+# plots.plot_voltage(ax, spmecc=spmecc, reduced=reduced)
+
+times = [0, t_eval[30], t_eval[50], t_eval[70]]
+for t in times:
+    plots.plot_yz_potential(t, spmecc=spmecc, reduced=reduced)
+
+plt.show()
 

@@ -2,7 +2,7 @@ import pybamm
 import numpy as np
 
 
-def solve_spmecc(C_rate=1, t_eval=None, var_pts=None, thermal=False):
+def solve_spmecc(C_rate=1, t_eval=None, var_pts=None, thermal=False, params=None):
     """
     Solves the SPMeCC and returns variables for plotting.
     """
@@ -16,14 +16,11 @@ def solve_spmecc(C_rate=1, t_eval=None, var_pts=None, thermal=False):
     spme = pybamm.lithium_ion.SPMe(options)
 
     param = spme.default_parameter_values
+
+    param = spme.default_parameter_values
+    if params:
+        param.update(param)
     param.update({"C-rate": C_rate})
-    # make current collectors not so conductive, just for illustrative purposes
-    param.update(
-        {
-            "Negative current collector conductivity [S.m-1]": 5.96e6,
-            "Positive current collector conductivity [S.m-1]": 3.55e6,
-        }
-    )
 
     # discharge timescale
     if t_eval is None:
@@ -50,15 +47,17 @@ def solve_spmecc(C_rate=1, t_eval=None, var_pts=None, thermal=False):
     )(t)
     current = pybamm.ProcessedVariable(
         sim_spme.built_model.variables["Current [A]"], t, y_spme
-    )(t)
+    )
 
     V_av = pybamm.ProcessedVariable(
         sim_spme.built_model.variables["Terminal voltage [V]"], t, y_spme
-    )(t)
+    )
 
     plotting_variables = cc.get_processed_potentials(
         cc_solution, cc_mesh, cc_param, V_av, current
     )
+    current = current(t)
+    V_av = V_av(t)
     y = param.process_symbol(cc.variables["y [m]"]).evaluate(t=cc_solution, y=y_cc)[
         :, 0
     ]
@@ -78,14 +77,16 @@ def solve_spmecc(C_rate=1, t_eval=None, var_pts=None, thermal=False):
         + cc_ohmic_losses
     )
 
-    plotting_variables.update({
-        "Terminal voltage [V]": terminal_voltage,
-        "Time [h]": time,
-        "Discharge capacity [A.h]": discharge_capacity,
-        "Average current collector ohmic losses [Ohm]": cc_ohmic_losses,
-        "y [m]": y,
-        "z [m]": z,
-    })
+    plotting_variables.update(
+        {
+            "Terminal voltage [V]": terminal_voltage,
+            "Time [h]": time,
+            "Discharge capacity [A.h]": discharge_capacity,
+            "Average current collector ohmic losses [Ohm]": cc_ohmic_losses,
+            "y [m]": y,
+            "z [m]": z,
+        }
+    )
 
     return plotting_variables
 
