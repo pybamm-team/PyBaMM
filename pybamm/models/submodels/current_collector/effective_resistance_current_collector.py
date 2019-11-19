@@ -112,6 +112,11 @@ class EffectiveResistance2D(pybamm.BaseModel):
                 "Effective current collector resistance [Ohm]": R_cc_dim,
             }
         )
+        var = pybamm.standard_spatial_vars
+        gp = pybamm.geometric_parameters
+        self.variables.update(
+            {"y": var.y, "y [m]": var.y * gp.L_y, "z": var.z, "z [m]": var.z * gp.L_z}
+        )
 
     def get_processed_potentials(self, solution, mesh, param_values, V_av, I_av):
         """
