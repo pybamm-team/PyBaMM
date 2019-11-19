@@ -30,8 +30,6 @@ def lico2_diffusivity_Dualfoil1998(sto, T, T_inf, E_D_s, R_g):
     """
 
     D_ref = 1 * 10 ** (-13)
-    # D(T) doesnt compare well
-    # TODO: investigate why
-    arrhenius = 1  # np.exp(E_D_s / R_g * (1 / T_inf - 1 / T))
+    arrhenius = exp(E_D_s / R_g * (1 / T_inf - 1 / T))
 
     return D_ref * arrhenius

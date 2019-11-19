@@ -20,7 +20,7 @@ pybamm.set_logging_level("INFO")
 
 try:
     comsol_variables = pickle.load(
-        open("input/comsol_results/comsol_thermal_2plus1D_1C.pickle", "rb")
+        open("input/comsol_results/comsol_isothermal_2plus1D_1C.pickle", "rb")
     )
 except FileNotFoundError:
     raise FileNotFoundError("COMSOL data not found. Try running load_comsol_data.py")
@@ -30,7 +30,7 @@ except FileNotFoundError:
 "Load or set up pybamm simulation"
 
 compute = True
-filename = "results/2019_xx_2plus1D_pouch/pybamm_thermal_2plus1D_1C.pickle.pickle"
+filename = "results/2019_xx_2plus1D_pouch/pybamm_isothermal_2plus1D_1C.pickle.pickle"
 
 if compute is False:
     try:
@@ -41,11 +41,7 @@ if compute is False:
         )
 else:
     # model
-    options = {
-        "current collector": "potential pair",
-        "dimensionality": 2,
-        "thermal": "x-lumped",
-    }
+    options = {"current collector": "potential pair", "dimensionality": 2}
     pybamm_model = pybamm.lithium_ion.DFN(options)
 
     # parameters
@@ -105,7 +101,7 @@ else:
     }
 
     # solver
-    solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
+    solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6, mode="fast")
 
     # simulation object
     simulation = pybamm.Simulation(
@@ -165,14 +161,6 @@ output_variables = simulation.post_process_variables(
 t_plot = comsol_variables["time"]  # dimensional in seconds
 shared.plot_t_var("Terminal voltage [V]", t_plot, comsol_model, output_variables, param)
 # plt.savefig("voltage.eps", format="eps", dpi=1000)
-shared.plot_t_var(
-    "Volume-averaged cell temperature [K]",
-    t_plot,
-    comsol_model,
-    output_variables,
-    param,
-)
-# plt.savefig("temperature_av.eps", format="eps", dpi=1000)
 t_plot = 1800  # dimensional in seconds
 shared.plot_2D_var(
     "Negative current collector potential [V]",
@@ -194,16 +182,6 @@ shared.plot_2D_var(
     error="rel",
 )
 # plt.savefig("phi_s_cp.eps", format="eps", dpi=1000)
-shared.plot_2D_var(
-    "X-averaged cell temperature [K]",
-    t_plot,
-    comsol_model,
-    output_variables,
-    param,
-    cmap="inferno",
-    error="rel",
-)
-# plt.savefig("temperature.eps", format="eps", dpi=1000)
 shared.plot_2D_var(
     "Current collector current density [A.m-2]",
     t_plot,

@@ -184,6 +184,37 @@ class Simulation:
         else:
             plot.dynamic_plot(testing=testing)
 
+    def post_process_variables(self, variable_list, interp_kind="linear"):
+        """
+        Post-process the listed variables
+
+        Parameters
+        ----------
+        variable_list : list of str
+            List of the names of the variables to process
+        interp_kind : str
+            The method to use for interpolation
+
+        Returns
+        -------
+        dict
+            Dictionary of processed variables
+        """
+        if isinstance(variable_list, str):
+            variable_list = [variable_list]
+
+        variables = {}
+        for var in variable_list:
+            variables[var] = self.built_model.variables[var]
+
+        return pybamm.post_process_variables(
+            variables,
+            self._solution.t,
+            self._solution.y,
+            mesh=self._mesh,
+            interp_kind=interp_kind,
+        )
+
     @property
     def model(self):
         return self._model
