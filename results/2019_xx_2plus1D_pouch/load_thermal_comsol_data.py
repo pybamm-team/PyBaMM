@@ -8,8 +8,8 @@ import numpy as np
 os.chdir(pybamm.root_dir())
 
 # set filepath for data and name of file to pickle to
-path = "input/comsol_results_csv/2plus1D/1C/"
-savefile = "input/comsol_results/comsol_2plus1D_1C.pickle"
+path = "input/comsol_results_csv/2plus1D/thermal/1C/"
+savefile = "input/comsol_results/comsol_thermal_2plus1D_1C.pickle"
 
 # time-voltage (both just 1D arrays)
 comsol = pd.read_csv(path + "voltage.csv", sep=",", header=None,)

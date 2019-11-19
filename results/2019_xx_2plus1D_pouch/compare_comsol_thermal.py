@@ -17,13 +17,16 @@ sys.setrecursionlimit(10000)
 
 try:
     comsol_variables = pickle.load(
-        open("input/comsol_results/comsol_2plus1D_1C.pickle", "rb")
+        open("input/comsol_results/comsol_thermal_2plus1D_1C.pickle", "rb")
     )
 except FileNotFoundError:
     raise FileNotFoundError("COMSOL data not found. Try running load_comsol_data.py")
 
 "-----------------------------------------------------------------------------"
-"Create and solve pybamm model"
+"Load, or create and solve pybamm model"
+
+compute = True  # if True, results will be recomputed
+savefile = "results/2019_xx_2plus1D_pouch/pybamm_thermal_2plus1D_1C.pickle.pickle"
 
 # load model and geometry
 pybamm.set_logging_level("INFO")
@@ -61,21 +64,21 @@ l_tab_n = param.evaluate(pybamm.geometric_parameters.l_tab_n)
 l_tab_p = param.evaluate(pybamm.geometric_parameters.l_tab_p)
 centre_tab_n = param.evaluate(pybamm.geometric_parameters.centre_y_tab_n)
 centre_tab_p = param.evaluate(pybamm.geometric_parameters.centre_y_tab_p)
-y0 = np.linspace(0, centre_tab_n - l_tab_n / 2, 2)  # mesh up to start of neg tab
+y0 = np.linspace(0, centre_tab_n - l_tab_n / 2, 3)  # mesh up to start of neg tab
 y1 = np.linspace(
-    centre_tab_n - l_tab_n / 2, centre_tab_n + l_tab_n / 2, 2
+    centre_tab_n - l_tab_n / 2, centre_tab_n + l_tab_n / 2, 3
 )  # mesh neg tab
 y2 = np.linspace(
-    centre_tab_n + l_tab_n / 2, centre_tab_p - l_tab_p / 2, 2
+    centre_tab_n + l_tab_n / 2, centre_tab_p - l_tab_p / 2, 3
 )  # mesh gap between tabs
 y3 = np.linspace(
-    centre_tab_p - l_tab_p / 2, centre_tab_p + l_tab_p / 2, 2
+    centre_tab_p - l_tab_p / 2, centre_tab_p + l_tab_p / 2, 3
 )  # mesh pos tab
-y4 = np.linspace(centre_tab_p + l_tab_p / 2, l_y, 2)  # mesh from pos tab to cell edge
+y4 = np.linspace(centre_tab_p + l_tab_p / 2, l_y, 3)  # mesh from pos tab to cell edge
 y_edges = np.concatenate((y0, y1[1:], y2[1:], y3[1:], y4[1:]))
 
 # square root sequence in z direction
-z_edges = np.linspace(0, 1, 5) ** (1 / 2)
+z_edges = np.linspace(0, 1, 10) ** (1 / 2)
 submesh_types["current collector"] = pybamm.MeshGenerator(
     pybamm.UserSupplied2DSubMesh,
     submesh_params={"y_edges": y_edges, "z_edges": z_edges},
@@ -92,17 +95,28 @@ var_pts = {
 }
 mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
-# discretise model
-disc = pybamm.Discretisation(mesh, pybamm_model.default_spatial_methods)
-disc.process_model(pybamm_model)
+if compute:
+    # discretise model
+    disc = pybamm.Discretisation(mesh, pybamm_model.default_spatial_methods)
+    disc.process_model(pybamm_model)
 
-# discharge timescale
-tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
+    # discharge timescale
+    tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
 
-# solve model at comsol times
-t_eval = comsol_variables["time"] / tau
-solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
-solution = solver.solve(pybamm_model, t_eval)
+    # solve model at comsol times
+    t_eval = comsol_variables["time"] / tau
+    solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
+    solution = solver.solve(pybamm_model, t_eval)
+
+else:
+    try:
+        output_variables = pickle.load(
+            open(savefile, "rb")
+        )
+    except FileNotFoundError:
+        raise FileNotFoundError(
+            "Run script with compute=True first to generate results"
+        )
 
 
 "-----------------------------------------------------------------------------"
@@ -131,7 +145,8 @@ for var in comsol_model.variables.keys():
     except KeyError:
         pass
 
-
+with open(savefile, "wb") as f:
+    pickle.dump(comsol_variables, f, pickle.HIGHEST_PROTOCOL)
 "-----------------------------------------------------------------------------"
 "Make plots"
 
@@ -154,7 +169,7 @@ shared.plot_2D_var(
     output_variables,
     param,
     cmap="cividis",
-    error="abs",
+    error="rel",
 )
 # plt.savefig("phi_s_cn.eps", format="eps", dpi=1000)
 shared.plot_2D_var(
@@ -164,7 +179,7 @@ shared.plot_2D_var(
     output_variables,
     param,
     cmap="viridis",
-    error="abs",
+    error="rel",
 )
 # plt.savefig("phi_s_cp.eps", format="eps", dpi=1000)
 shared.plot_2D_var(
@@ -174,7 +189,7 @@ shared.plot_2D_var(
     output_variables,
     param,
     cmap="inferno",
-    error="abs",
+    error="rel",
 )
 # plt.savefig("temperature.eps", format="eps", dpi=1000)
 shared.plot_2D_var(
@@ -184,7 +199,7 @@ shared.plot_2D_var(
     output_variables,
     param,
     cmap="plasma",
-    error="abs",
+    error="rel",
 )
 # plt.savefig("current.eps", format="eps", dpi=1000)
 plt.show()
