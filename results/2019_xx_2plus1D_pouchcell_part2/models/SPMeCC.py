@@ -2,22 +2,22 @@ import pybamm
 import numpy as np
 
 
-def solve_spmecc(C_rate=1, t_eval=None, y_pts=5, z_pts=5):
+def solve_spmecc(C_rate=1, t_eval=None, var_pts=None, thermal=False):
     """
     Solves the SPMeCC and returns variables for plotting.
     """
 
+    options = {}
+
+    if thermal is True:
+        options.update({"thermal": "x-lumped"})
+
     # solve the 1D spme
-    spme = pybamm.lithium_ion.SPMe()
+    spme = pybamm.lithium_ion.SPMe(options)
+
 
     param = spme.default_parameter_values
     param.update({"C-rate": C_rate})
-
-    var_pts = spme.default_var_pts
-    var_pts.update(
-        {pybamm.standard_spatial_vars.y: y_pts, pybamm.standard_spatial_vars.z: z_pts}
-    )
-
     # make current collectors not so conductive, just for illustrative purposes
     param.update(
         {
@@ -36,7 +36,7 @@ def solve_spmecc(C_rate=1, t_eval=None, y_pts=5, z_pts=5):
     sim_spme.solve(t_eval=t_eval)
 
     # solve for the current collector
-    cc, cc_solution = solve_cc(y_pts, z_pts, param)
+    cc, cc_solution = solve_cc(var_pts, param)
 
     # get variables for plotting
     t = sim_spme.solution.t
@@ -76,7 +76,7 @@ def solve_spmecc(C_rate=1, t_eval=None, y_pts=5, z_pts=5):
     return plotting_variables
 
 
-def solve_cc(y_pts, z_pts, param):
+def solve_cc(var_pts, param):
     """
     Solving in a separate function as EffectiveResistance2D does not conform
     to the submodel structure.
@@ -87,7 +87,7 @@ def solve_cc(y_pts, z_pts, param):
     param.process_model(model)
     geometry = model.default_geometry
     param.process_geometry(geometry)
-    mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+    mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
     disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
     disc.process_model(model)
 

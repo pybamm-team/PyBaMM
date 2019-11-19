@@ -2,10 +2,14 @@ import pybamm
 import numpy as np
 
 
-def solve_spm(C_rate=1, t_eval=None):
+def solve_spm(C_rate=1, t_eval=None, var_pts=None, thermal=False):
     """
     Solves the SPMe and returns variables for plotting.
     """
+    options = {}
+
+    if thermal is True:
+        options.update({"thermal": "x-lumped"})
 
     spm = pybamm.lithium_ion.SPM()
 
@@ -18,16 +22,29 @@ def solve_spm(C_rate=1, t_eval=None):
         t_end = 900 / tau
         t_eval = np.linspace(0, t_end, 120)
 
-    sim = pybamm.Simulation(spm, parameter_values=param)
+    sim = pybamm.Simulation(spm, parameter_values=param, var_pts=var_pts)
     sim.solve(t_eval=t_eval)
 
-    mesh = sim.mesh
     t = sim.solution.t
     y = sim.solution.y
 
-    processed_variables = pybamm.post_process_variables(
-        sim.built_model.variables, t, y, mesh=mesh
-    )
+    # get variables for plotting
+    t = sim.solution.t
+    y = sim.solution.y
 
-    return processed_variables
+    time = pybamm.ProcessedVariable(sim.built_model.variables["Time [h]"], t, y)(t)
+    discharge_capacity = pybamm.ProcessedVariable(
+        sim.built_model.variables["Discharge capacity [A.h]"], t, y
+    )(t)
+    terminal_voltage = pybamm.ProcessedVariable(
+        sim.built_model.variables["Terminal voltage [V]"], t, y
+    )(t)
+
+    plotting_variables = {
+        "Terminal voltage [V]": terminal_voltage,
+        "Time [h]": time,
+        "Discharge capacity [A.h]": discharge_capacity,
+    }
+
+    return plotting_variables
 

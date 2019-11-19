@@ -17,7 +17,7 @@ options = {
     "dimensionality": 2,
     "thermal": "x-lumped",
 }
-model = pybamm.lithium_ion.SPM(options)
+model = pybamm.lithium_ion.DFN(options)
 geometry = model.default_geometry
 
 # load parameters and process model and geometry
