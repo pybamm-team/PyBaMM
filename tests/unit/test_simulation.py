@@ -1,5 +1,6 @@
 import pybamm
 import unittest
+import numpy as np
 
 
 class TestSimulation(unittest.TestCase):
@@ -129,6 +130,111 @@ class TestSimulation(unittest.TestCase):
         sim.specs(spatial_methods=spatial_methods)
         sim.build()
 
+    def test_save_load(self):
+        model = pybamm.lead_acid.LOQS()
+        model.use_jacobian = True
+        sim = pybamm.Simulation(model)
+
+        sim.save("test.pickle")
+        sim_load = pybamm.load_sim("test.pickle")
+        self.assertEqual(sim.model.name, sim_load.model.name)
+
+        # save after solving
+        sim.solve()
+        sim.save("test.pickle")
+        sim_load = pybamm.load_sim("test.pickle")
+        self.assertEqual(sim.model.name, sim_load.model.name)
+
+        # with python formats
+        model.convert_to_format = None
+        sim = pybamm.Simulation(model)
+        sim.solve()
+        sim.save("test.pickle")
+        model.convert_to_format = "python"
+        sim = pybamm.Simulation(model)
+        sim.solve()
+        with self.assertRaisesRegex(
+            NotImplementedError, "Cannot save simulation if model format is python"
+        ):
+            sim.save("test.pickle")
+
+    def test_save_load_dae(self):
+        model = pybamm.lead_acid.LOQS({"surface form": "algebraic"})
+        model.use_jacobian = True
+        sim = pybamm.Simulation(model)
+
+        # save after solving
+        sim.solve()
+        sim.save("test.pickle")
+        sim_load = pybamm.load_sim("test.pickle")
+        self.assertEqual(sim.model.name, sim_load.model.name)
+
+        # with python format
+        model.convert_to_format = None
+        sim = pybamm.Simulation(model)
+        sim.solve()
+        sim.save("test.pickle")
+
+        # with Casadi solver
+        sim = pybamm.Simulation(model, solver=pybamm.CasadiSolver())
+        sim.solve()
+        sim.save("test.pickle")
+        sim_load = pybamm.load_sim("test.pickle")
+        self.assertEqual(sim.model.name, sim_load.model.name)
+
+    @unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
+    def test_save_load_klu(self):
+        model = pybamm.lead_acid.LOQS({"surface form": "algebraic"})
+        model.use_jacobian = True
+        # with KLU solver
+        sim = pybamm.Simulation(model, solver=pybamm.IDAKLUSolver())
+        sim.solve()
+        sim.save("test.pickle")
+        sim_load = pybamm.load_sim("test.pickle")
+        self.assertEqual(sim.model.name, sim_load.model.name)
+
+    def test_set_defaults(self):
+        model = pybamm.lithium_ion.SPM()
+
+        # make simulation with silly options (should this be allowed?)
+        sim = pybamm.Simulation(
+            model,
+            geometry=1,
+            parameter_values=1,
+            submesh_types=1,
+            var_pts=1,
+            spatial_methods=1,
+            solver=1,
+            quick_plot_vars=1,
+        )
+
+        # reset and check
+        sim.set_defaults()
+        # Not sure of best way to test nested dicts?
+        # self.geometry = model.default_geometry
+        self.assertEqual(sim._parameter_values, model.default_parameter_values)
+        for domain, submesh in model.default_submesh_types.items():
+            self.assertEqual(
+                sim._submesh_types[domain].submesh_type, submesh.submesh_type
+            )
+        self.assertEqual(sim._var_pts, model.default_var_pts)
+        for domain, method in model.default_spatial_methods.items():
+            self.assertIsInstance(sim._spatial_methods[domain], type(method))
+        self.assertIsInstance(sim._solver, type(model.default_solver))
+        self.assertEqual(sim._quick_plot_vars, None)
+
+    def test_plot(self):
+        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
+
+        # test exception if not solved
+        with self.assertRaises(ValueError):
+            sim.plot()
+
+        # now solve and plot
+        t_eval = np.linspace(0, 0.01, 5)
+        sim.solve(t_eval=t_eval)
+        sim.plot(testing=True)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
@@ -137,4 +243,3 @@ if __name__ == "__main__":
     if "-v" in sys.argv:
         debug = True
     unittest.main()
-

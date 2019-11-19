@@ -137,13 +137,8 @@ class Discretisation(object):
             # since they point to the same object
             model_disc = model
         else:
-            # create a model of the same class as the original model
-            model_disc = model.__class__(model.options)
-            model_disc.name = model.name
-            model_disc.options = model.options
-            model_disc.use_jacobian = model.use_jacobian
-            model_disc.use_simplify = model.use_simplify
-            model_disc.convert_to_format = model.convert_to_format
+            # create an empty copy of the original model
+            model_disc = model.new_copy()
 
         model_disc.bcs = self.bcs
 
@@ -653,7 +648,7 @@ class Discretisation(object):
             disc_left = self.process_symbol(left)
             disc_right = self.process_symbol(right)
             if symbol.domain == []:
-                return symbol.__class__(disc_left, disc_right)
+                return symbol._binary_new_copy(disc_left, disc_right)
             else:
                 return spatial_method.process_binary_operators(
                     symbol, left, right, disc_left, disc_right

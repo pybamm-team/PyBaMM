@@ -1,10 +1,20 @@
 #
 # Base model class
 #
-import pybamm
-
+import inspect
 import numbers
+import pybamm
 import warnings
+
+
+class ParamClass:
+    """Class for converting a module of parameters into a class. For pickling."""
+
+    def __init__(self, methods):
+        for k, v in methods.__dict__.items():
+            # don't save module attributes (e.g. pybamm, numpy)
+            if not (k.startswith("__") or inspect.ismodule(v)):
+                self.__dict__[k] = v
 
 
 class BaseModel(object):
@@ -195,6 +205,9 @@ class BaseModel(object):
     def variables(self, variables):
         self._variables = variables
 
+    def variable_names(self):
+        return list(self._variables.keys())
+
     @property
     def events(self):
         return self._events
@@ -260,8 +273,14 @@ class BaseModel(object):
         self._jacobian_algebraic = jacobian_algebraic
 
     @property
-    def set_of_parameters(self):
-        return self._set_of_parameters
+    def param(self):
+        return self._param
+
+    @param.setter
+    def param(self, values):
+        # convert module into a class
+        # (StackOverflow: https://tinyurl.com/yk3euon3)
+        self._param = ParamClass(values)
 
     @property
     def options(self):
@@ -273,6 +292,16 @@ class BaseModel(object):
 
     def __getitem__(self, key):
         return self.rhs[key]
+
+    def new_copy(self, options=None):
+        "Create an empty copy with identical options, or new options if specified"
+        options = options or self.options
+        new_model = self.__class__(options)
+        new_model.name = self.name
+        new_model.use_jacobian = self.use_jacobian
+        new_model.use_simplify = self.use_simplify
+        new_model.convert_to_format = self.convert_to_format
+        return new_model
 
     def update(self, *submodels):
         """

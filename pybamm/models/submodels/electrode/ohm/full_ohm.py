@@ -36,16 +36,14 @@ class Full(BaseModel):
     def get_coupled_variables(self, variables):
 
         phi_s = variables[self.domain + " electrode potential"]
-        eps = variables[self.domain + " electrode porosity"]
+        tor = variables[self.domain + " electrode tortuosity"]
 
         if self.domain == "Negative":
             sigma = self.param.sigma_n
-            b = self.param.b_n
         elif self.domain == "Positive":
             sigma = self.param.sigma_p
-            b = self.param.b_p
 
-        sigma_eff = sigma * (1 - eps) ** b
+        sigma_eff = sigma * tor
         i_s = -sigma_eff * pybamm.grad(phi_s)
 
         variables.update({self.domain + " electrode effective conductivity": sigma_eff})
@@ -67,6 +65,27 @@ class Full(BaseModel):
         )
 
         self.algebraic[phi_s] = pybamm.div(i_s) + sum_j
+
+    def set_boundary_conditions(self, variables):
+
+        phi_s = variables[self.domain + " electrode potential"]
+        phi_s_cn = variables["Negative current collector potential"]
+        tor = variables[self.domain + " electrode tortuosity"]
+        i_boundary_cc = variables["Current collector current density"]
+
+        if self.domain == "Negative":
+            lbc = (phi_s_cn, "Dirichlet")
+            rbc = (pybamm.Scalar(0), "Neumann")
+
+        elif self.domain == "Positive":
+            lbc = (pybamm.Scalar(0), "Neumann")
+            sigma_eff = self.param.sigma_p * tor
+            rbc = (
+                i_boundary_cc / pybamm.boundary_value(-sigma_eff, "right"),
+                "Neumann",
+            )
+
+        self.boundary_conditions[phi_s] = {"left": lbc, "right": rbc}
 
     def set_initial_conditions(self, variables):
 

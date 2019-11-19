@@ -58,7 +58,9 @@ class TestIDAKLUSolver(unittest.TestCase):
         solver.rhs = rhs
         solver.algebraic = alg
 
-        solution = solver.integrate(res, y0, t_eval, events, mass_matrix, jac)
+        solution = solver.integrate(
+            res, y0, t_eval, events, mass_matrix, jac, model=None
+        )
 
         # test that final time is time of event
         # y = 0.1 t + y0 so y=0.2 when t=2

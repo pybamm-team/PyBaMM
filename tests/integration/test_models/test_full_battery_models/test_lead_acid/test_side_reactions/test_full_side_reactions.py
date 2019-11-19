@@ -41,7 +41,7 @@ class TestLeadAcidFullSideReactions(unittest.TestCase):
         options = {"side reactions": ["oxygen"], "surface form": "differential"}
         model = pybamm.lead_acid.Full(options)
         parameter_values = model.default_parameter_values
-        parameter_values.update({"Current function": pybamm.ConstantCurrent(current=0)})
+        parameter_values.update({"Current function": "[zero]"})
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all(skip_output_tests=True)
 

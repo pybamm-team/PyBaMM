@@ -89,7 +89,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
                 "Typical electrolyte concentration [mol.m-3]": 1,
                 "Number of electrodes connected in parallel to make a cell": 8,
                 "Typical current [A]": 2,
-                "Current function": pybamm.ConstantCurrent(),
+                "Current function": "[constant]",
             }
         )
         dimensional_current_density_eval = parameter_values.process_symbol(
@@ -157,9 +157,15 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         # Test that relevant parameters have changed as expected
         self.assertLess(param_eval_update["q_init"], param_eval["q_init"])
         self.assertLess(param_eval_update["c_e_init"], param_eval["c_e_init"])
-        self.assertLess(param_eval_update["eps_n_init"], param_eval["eps_n_init"])
-        self.assertEqual(param_eval_update["eps_s_init"], param_eval["eps_s_init"])
-        self.assertLess(param_eval_update["eps_p_init"], param_eval["eps_p_init"])
+        self.assertLess(
+            param_eval_update["epsilon_n_init"], param_eval["epsilon_n_init"]
+        )
+        self.assertEqual(
+            param_eval_update["epsilon_s_init"], param_eval["epsilon_s_init"]
+        )
+        self.assertLess(
+            param_eval_update["epsilon_p_init"], param_eval["epsilon_p_init"]
+        )
         self.assertGreater(
             param_eval_update["curlyU_n_init"], param_eval["curlyU_n_init"]
         )

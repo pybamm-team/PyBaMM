@@ -40,7 +40,7 @@ geometry = model.default_geometry
 
 # load parameter values and process model and geometry
 param = model.default_parameter_values
-param["Current function"] = pybamm.UserCurrent(car_current)
+param["Current function"] = car_current
 param.process_model(model)
 param.process_geometry(geometry)
 
