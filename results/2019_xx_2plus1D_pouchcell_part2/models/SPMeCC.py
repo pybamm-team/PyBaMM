@@ -15,7 +15,6 @@ def solve_spmecc(C_rate=1, t_eval=None, var_pts=None, thermal=False):
     # solve the 1D spme
     spme = pybamm.lithium_ion.SPMe(options)
 
-
     param = spme.default_parameter_values
     param.update({"C-rate": C_rate})
     # make current collectors not so conductive, just for illustrative purposes
