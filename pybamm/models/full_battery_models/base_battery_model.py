@@ -166,7 +166,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "current",
             "voltage",
             "power",
-            "arbitrary",
+            "custom",
         ]:
             raise pybamm.OptionError(
                 "operating mode '{}' not recognised".format(options["operating mode"])

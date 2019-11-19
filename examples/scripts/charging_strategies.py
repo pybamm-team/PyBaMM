@@ -2,7 +2,7 @@
 # Compare some charging strategies for lithium-ion batteries
 #
 # 1. CC-CV: Charge at 1A to 4.2V then 4.2V hold
-# 2. CV: Charge at 4.2V
+# 2. CV: Charge at 4.1V
 # 3. Constant Power-CV: Charge at 4W to 4.2V then 4.2V hold
 #
 import argparse
@@ -43,8 +43,8 @@ def cccv(I, V):
 params[0]["CCCV switch"] = 1  # start with CC
 params[0]["External circuit function"] = cccv
 
-# 2. CV: Charge at 4.2V
-params[1]["Voltage function"] = 4.2
+# 2. CV: Charge at 4.1V
+params[1]["Voltage function"] = 4.1
 for model, param in zip(models, params):
     param.process_model(model)
 

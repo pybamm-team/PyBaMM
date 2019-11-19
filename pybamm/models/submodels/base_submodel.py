@@ -46,7 +46,7 @@ class BaseSubModel:
         symbols.
     """
 
-    def __init__(self, param, domain=None, reactions=None):
+    def __init__(self, param, domain=None, reactions=None, name="Unnamed submodel"):
         super().__init__()
         self.param = param
         # Initialise empty variables (to avoid overwriting with 'None')
@@ -61,6 +61,7 @@ class BaseSubModel:
         self.domain = domain
         self.set_domain_for_broadcast()
         self.reactions = reactions
+        self.name = name
 
     @property
     def domain(self):
