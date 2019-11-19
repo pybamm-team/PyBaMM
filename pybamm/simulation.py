@@ -12,25 +12,25 @@ class Simulation:
         The model to be simulated
     geometry: :class:`pybamm.Geometry` (optional)
             The geometry upon which to solve the model
-        parameter_values: dict (optional)
-            A dictionary of all the parameters and their corresponding numerical
-            values. This will totally overwrite all default parameter values.
-        update_parameter_values: dict (optional)
-            A dictionary of a subset of the parameters and their corresponding
-            numerical values. This will only overwrite the parameter values in
-            this dictionary and leave the
-        submesh_types: dict (optional)
-            A dictionary of the types of submesh to use on each subdomain
-        var_pts: dict (optional)
-            A dictionary of the number of points used by each spatial
-            variable
-        spatial_methods: dict (optional)
-            A dictionary of the types of spatial method to use on each
-            domain (e.g. pybamm.FiniteVolume)
-        solver: :class:`pybamm.BaseSolver` (optional)
-            The solver to use to solve the model.
-        quick_plot_vars: list (optional)
-            A list of variables to plot automatically
+    parameter_values: dict (optional)
+        A dictionary of all the parameters and their corresponding numerical
+        values. This will totally overwrite all default parameter values.
+    update_parameter_values: dict (optional)
+        A dictionary of a subset of the parameters and their corresponding
+        numerical values. This will only overwrite the parameter values in
+        this dictionary and leave the
+    submesh_types: dict (optional)
+        A dictionary of the types of submesh to use on each subdomain
+    var_pts: dict (optional)
+        A dictionary of the number of points used by each spatial
+        variable
+    spatial_methods: dict (optional)
+        A dictionary of the types of spatial method to use on each
+        domain (e.g. pybamm.FiniteVolume)
+    solver: :class:`pybamm.BaseSolver` (optional)
+        The solver to use to solve the model.
+    quick_plot_vars: list (optional)
+        A list of variables to plot automatically
     """
 
     def __init__(
@@ -38,12 +38,12 @@ class Simulation:
         model,
         geometry=None,
         parameter_values=None,
+        update_parameter_values=None,
         submesh_types=None,
         var_pts=None,
         spatial_methods=None,
         solver=None,
         quick_plot_vars=None,
-        update_parameter_values=None,
     ):
         self.model = model
 
@@ -54,6 +54,9 @@ class Simulation:
         self._spatial_methods = spatial_methods or model.default_spatial_methods
         self._solver = solver or self._model.default_solver
         self._quick_plot_vars = quick_plot_vars
+
+        if update_parameter_values:
+            self._parameter_values.update(update_parameter_values)
 
         self.reset()
 
@@ -242,6 +245,7 @@ class Simulation:
         model_options=None,
         geometry=None,
         parameter_values=None,
+        update_parameter_values=None,
         submesh_types=None,
         var_pts=None,
         spatial_methods=None,
@@ -261,6 +265,10 @@ class Simulation:
         parameter_values: dict (optional)
             A dictionary of parameters and their corresponding numerical
             values
+        update_parameter_values: dict (optional)
+            A dictionary of a subset of the parameters and their corresponding
+            numerical values. This will only overwrite the parameter values in
+            this dictionary and leave the
         submesh_types: dict (optional)
             A dictionary of the types of submesh to use on each subdomain
         var_pts: dict (optional)
@@ -283,14 +291,22 @@ class Simulation:
 
         if parameter_values:
             self._parameter_values = parameter_values
+
+        if update_parameter_values:
+            self._parameter_values.update(update_parameter_values)
+
         if submesh_types:
             self._submesh_types = submesh_types
+
         if var_pts:
             self._var_pts = var_pts
+
         if spatial_methods:
             self._spatial_methods = spatial_methods
+
         if solver:
             self._solver = solver
+
         if quick_plot_vars:
             self._quick_plot_vars = quick_plot_vars
 

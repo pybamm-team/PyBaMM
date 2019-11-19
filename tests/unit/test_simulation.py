@@ -129,6 +129,15 @@ class TestSimulation(unittest.TestCase):
         sim.specs(spatial_methods=spatial_methods)
         sim.build()
 
+    def test_update_parameter_values(self):
+
+        param = {"Positive electrode porosity": 0.5}
+        sim = pybamm.Simulation(pybamm.lithium_ion.SPM(), update_parameter_values=param)
+        self.assertEqual(sim.parameter_values["Positive electrode porosity"], 0.5)
+        param = {"Positive electrode porosity": 0.1}
+        sim.specs(update_parameter_values=param)
+        self.assertEqual(sim.parameter_values["Positive electrode porosity"], 0.1)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
