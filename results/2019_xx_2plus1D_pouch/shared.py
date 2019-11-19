@@ -4,7 +4,9 @@ import scipy.interpolate as interp
 import matplotlib.pyplot as plt
 
 
-def make_comsol_model(comsol_variables, mesh, param, y_interp=None, z_interp=None):
+def make_comsol_model(
+    comsol_variables, mesh, param, y_interp=None, z_interp=None, thermal=True
+):
     "Make Comsol 'model' for comparison"
 
     comsol_t = comsol_variables["time"]
@@ -47,14 +49,8 @@ def make_comsol_model(comsol_variables, mesh, param, y_interp=None, z_interp=Non
     def comsol_voltage(t):
         return interp.interp1d(comsol_t, comsol_variables["voltage"])(t)
 
-    def comsol_vol_av_temperature(t):
-        return interp.interp1d(
-            comsol_t, comsol_variables["volume-averaged temperature"]
-        )(t)
-
     comsol_phi_s_cn = get_interp_fun("phi_s_cn")
     comsol_phi_s_cp = get_interp_fun("phi_s_cp")
-    comsol_temperature = get_interp_fun("temperature")
     comsol_current = get_interp_fun("current")
 
     # Create comsol model with dictionary of Matrix variables
@@ -63,10 +59,25 @@ def make_comsol_model(comsol_variables, mesh, param, y_interp=None, z_interp=Non
         "Terminal voltage [V]": comsol_voltage,
         "Negative current collector potential [V]": comsol_phi_s_cn,
         "Positive current collector potential [V]": comsol_phi_s_cp,
-        "X-averaged cell temperature [K]": comsol_temperature,
-        "Volume-averaged cell temperature [K]": comsol_vol_av_temperature,
         "Current collector current density [A.m-2]": comsol_current,
     }
+
+    # Add thermal if using
+    if thermal:
+        comsol_temperature = get_interp_fun("temperature")
+
+        def comsol_vol_av_temperature(t):
+            return interp.interp1d(
+                comsol_t, comsol_variables["volume-averaged temperature"]
+            )(t)
+
+        comsol_model.variables.update(
+            {
+                "X-averaged cell temperature [K]": comsol_temperature,
+                "Volume-averaged cell temperature [K]": comsol_vol_av_temperature,
+            }
+        )
+
     comsol_model.y_interp = y_interp
     comsol_model.z_interp = z_interp
 
@@ -130,9 +141,13 @@ def plot_2D_var(
     plt.subplot(133)
     if error == "abs":
         error = np.abs(pybamm_var - comsol_var)
+        diff_plot = plt.pcolormesh(y_plot, z_plot, error, shading="gouraud")
     elif error == "rel":
         error = np.abs((pybamm_var - comsol_var) / comsol_var)
-    diff_plot = plt.pcolormesh(y_plot, z_plot, error, shading="gouraud")
+        # plot relative errors in range of 0 to 0.1 (0.1 and higher all same color)
+        diff_plot = plt.pcolormesh(
+            y_plot, z_plot, error, shading="gouraud", vmin=0, vmax=0.1
+        )
     plt.axis([0, y_plot[-1], 0, z_plot[-1]])
     plt.xlabel(r"$y$")
     plt.ylabel(r"$z$")
