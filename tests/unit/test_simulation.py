@@ -130,6 +130,12 @@ class TestSimulation(unittest.TestCase):
         sim.specs(spatial_methods=spatial_methods)
         sim.build()
 
+    def test_set_crate(self):
+        sim = pybamm.Simulation(pybamm.lithium_ion.SPM(), C_rate=2)
+        self.assertEqual(sim.parameter_values["C-rate"], 2)
+        sim.specs(C_rate=3)
+        self.assertEqual(sim.parameter_values["C-rate"], 3)
+
     def test_set_defaults(self):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
 

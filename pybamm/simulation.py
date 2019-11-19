@@ -10,6 +10,26 @@ class Simulation:
     ----------
     model : :class:`pybamm.BaseModel`
         The model to be simulated
+    geometry: :class:`pybamm.Geometry` (optional)
+        The geometry upon which to solve the model
+    parameter_values: dict (optional)
+        A dictionary of parameters and their corresponding numerical
+        values
+    submesh_types: dict (optional)
+        A dictionary of the types of submesh to use on each subdomain
+    var_pts: dict (optional)
+        A dictionary of the number of points used by each spatial
+        variable
+    spatial_methods: dict (optional)
+        A dictionary of the types of spatial method to use on each
+        domain (e.g. pybamm.FiniteVolume)
+    solver: :class:`pybamm.BaseSolver` (optional)
+        The solver to use to solve the model.
+    quick_plot_vars: list (optional)
+        A list of variables to plot automatically
+    C_rate: float (optional)
+        The C_rate at which you would like to run a constant current
+        experiment at.
     """
 
     def __init__(
@@ -22,6 +42,7 @@ class Simulation:
         spatial_methods=None,
         solver=None,
         quick_plot_vars=None,
+        C_rate=None,
     ):
         self.model = model
 
@@ -32,6 +53,10 @@ class Simulation:
         self._spatial_methods = spatial_methods or model.default_spatial_methods
         self._solver = solver or self._model.default_solver
         self._quick_plot_vars = quick_plot_vars
+
+        self.C_rate = C_rate
+        if self.C_rate:
+            self._parameter_values.update({"C-rate": self.C_rate})
 
         self._made_first_step = False
 
@@ -307,6 +332,7 @@ class Simulation:
         spatial_methods=None,
         solver=None,
         quick_plot_vars=None,
+        C_rate=None,
     ):
         """
         A method to set the various specs of the simulation. This method
@@ -329,10 +355,13 @@ class Simulation:
         spatial_methods: dict (optional)
             A dictionary of the types of spatial method to use on each
             domain (e.g. pybamm.FiniteVolume)
-        solver: :class:`pybamm.BaseSolver`
+        solver: :class:`pybamm.BaseSolver` (optional)
             The solver to use to solve the model.
-        quick_plot_vars: list
+        quick_plot_vars: list (optional)
             A list of variables to plot automatically
+        C_rate: float (optional)
+            The C_rate at which you would like to run a constant current
+            experiment at.
         """
 
         if model_options:
@@ -353,6 +382,10 @@ class Simulation:
             self._solver = solver
         if quick_plot_vars:
             self._quick_plot_vars = quick_plot_vars
+
+        if C_rate:
+            self.C_rate = C_rate
+            self._parameter_values.update({"C-rate": self.C_rate})
 
         if (
             model_options

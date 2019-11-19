@@ -158,6 +158,8 @@ class Discretisation(object):
 
         self.external_variables = model.external_variables
         # find where external variables begin in state vector
+        # we always append external variables to the end, so
+        # it is sufficient to only know the starting location
         start_vals = []
         for var in self.external_variables:
             if isinstance(var, pybamm.Concatenation):
