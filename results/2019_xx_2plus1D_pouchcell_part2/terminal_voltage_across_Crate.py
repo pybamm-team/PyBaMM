@@ -36,8 +36,10 @@ for i, C_rate in enumerate(C_rates):
 
     spmecc = models.solve_spmecc(t_eval=t_eval, C_rate=C_rate, var_pts=var_pts)
     spm = models.solve_spm(t_eval=t_eval, C_rate=C_rate, var_pts=var_pts)
-    reduced = models.solve_reduced_2p1(t_eval=t_eval, C_rate=C_rate, var_pts=var_pts)
-    full = models.solve_full_2p1(t_eval=t_eval, C_rate=C_rate, var_pts=var_pts)
+    # reduced = models.solve_reduced_2p1(t_eval=t_eval, C_rate=C_rate, var_pts=var_pts)
+    reduced = None
+    # full = models.solve_full_2p1(t_eval=t_eval, C_rate=C_rate, var_pts=var_pts)
+    full = None
 
     plots.plot_voltage(
         ax,

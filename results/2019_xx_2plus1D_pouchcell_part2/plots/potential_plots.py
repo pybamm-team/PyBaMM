@@ -17,6 +17,9 @@ def plot_yz_potential(t, spmecc=None, reduced=None, full=None):
         r"$\mathcal{V}^*$ [V]",
     ]
 
+    # tuple (vmin, vmax) for each variable
+    color_lim = [(0, 0.01), (3.7, 3.9), (3.7, 3.9)]
+
     if spmecc:
         num_of_models += 1
     if reduced:
@@ -42,8 +45,10 @@ def plot_yz_potential(t, spmecc=None, reduced=None, full=None):
         ax = ax[:, np.newaxis]
 
     if spmecc:
-        y = spmecc["y [m]"]
-        z = spmecc["z [m]"]
+        y = np.linspace(0, 1.5, 100)
+        z = np.linspace(0, 1, 100)
+        y_dim = y * spmecc["L_z"]
+        z_dim = z * spmecc["L_z"]
 
         for i, var_name in enumerate(var_names):
             # just doing this because effective resistance model is
@@ -53,23 +58,32 @@ def plot_yz_potential(t, spmecc=None, reduced=None, full=None):
             else:
                 name = var_name
             make_2D_plot(
-                fig, ax[i, model_idx], y, z, spmecc[name](t, y, z), plot_names[i]
+                fig,
+                ax[i, model_idx],
+                y_dim,
+                z_dim,
+                np.transpose(spmecc[name](t=t, y=y, z=z)),
+                plot_names[i],
+                color_lim[i],
             )
 
         model_idx += 1
 
     if reduced:
-        y = reduced["y [m]"][:, 0]
-        z = reduced["z [m]"][:, 0]
+        y = np.linspace(0, 1.5, 100)
+        z = np.linspace(0, 1, 100)
+        y_dim = y * spmecc["L_z"]
+        z_dim = z * spmecc["L_z"]
 
         for i, var_name in enumerate(var_names):
             make_2D_plot(
                 fig,
                 ax[i, model_idx],
-                y,
-                z,
-                reduced[var_name](t=t, y=y, z=z),
+                y_dim,
+                z_dim,
+                np.transpose(reduced[var_name](t=t, y=y, z=z)),
                 plot_names[i],
+                color_lim[i],
             )
 
     plt.subplots_adjust(
@@ -77,10 +91,9 @@ def plot_yz_potential(t, spmecc=None, reduced=None, full=None):
     )
 
 
-def make_2D_plot(fig, ax, y, z, var, name):
-    im = ax.pcolormesh(y, z, var)
-    # ax.set_xlabel("y [m]")
-    # ax.set_ylabel("z [m]")
+def make_2D_plot(fig, ax, y, z, var, name, color_lim):
+    # im = ax.pcolormesh(y, z, var, vmin=color_lim[0], vmax=color_lim[1])
+    im = ax.pcolormesh(y, z, var, shading="gouraud")
     ax.set_xlabel(r"$y$")
     ax.set_ylabel(r"$z$")
     ax.set_title(name)

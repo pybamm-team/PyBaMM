@@ -165,7 +165,7 @@ class EffectiveResistance2D(pybamm.BaseModel):
         def V_cc_dim(t, y, z):
             return U_ref + V_cc(t, y, z) * pot_scale
 
-        denominator = sigma_cn_prime * l_cn + sigma_cn_prime * l_cp
+        denominator = sigma_cn_prime * l_cn + sigma_cp_prime * l_cp
 
         # The method only defines psi up to an arbitrary function of time. This
         # is fixed by ensuring phi_s_cn = 0 on the negative tab when reconstructing

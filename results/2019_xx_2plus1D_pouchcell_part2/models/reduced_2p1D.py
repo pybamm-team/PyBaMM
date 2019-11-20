@@ -62,8 +62,10 @@ def solve_reduced_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None, params
         sim.built_model.variables["Local voltage [V]"], t, y, mesh=mesh
     )
 
-    y = sim.built_model.variables["y [m]"].evaluate()
-    z = sim.built_model.variables["z [m]"].evaluate()
+    y_dim = sim.built_model.variables["y [m]"].evaluate()
+    z_dim = sim.built_model.variables["z [m]"].evaluate()
+    y = sim.built_model.variables["y"].evaluate()
+    z = sim.built_model.variables["z"].evaluate()
 
     plotting_variables = {
         "Terminal voltage [V]": terminal_voltage,
@@ -72,8 +74,7 @@ def solve_reduced_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None, params
         "Negative current collector potential [V]": phi_s_n_dim,
         "Positive current collector potential [V]": phi_s_p_dim,
         "Local voltage [V]": V_loc,
-        "y [m]": y,
-        "z [m]": z,
+        "L_z": param.process_symbol(pybamm.geometric_parameters.L_z).evaluate(),
     }
 
     return plotting_variables

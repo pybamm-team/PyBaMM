@@ -16,8 +16,6 @@ def solve_spmecc(C_rate=1, t_eval=None, var_pts=None, thermal=False, params=None
     spme = pybamm.lithium_ion.SPMe(options)
 
     param = spme.default_parameter_values
-
-    param = spme.default_parameter_values
     if params:
         param.update(param)
     param.update({"C-rate": C_rate})
@@ -47,23 +45,15 @@ def solve_spmecc(C_rate=1, t_eval=None, var_pts=None, thermal=False, params=None
     )(t)
     current = pybamm.ProcessedVariable(
         sim_spme.built_model.variables["Current [A]"], t, y_spme
-    )
+    )(t)
 
     V_av = pybamm.ProcessedVariable(
-        sim_spme.built_model.variables["Terminal voltage [V]"], t, y_spme
+        sim_spme.built_model.variables["Terminal voltage"], t, y_spme
+    )
+    I_av = pybamm.ProcessedVariable(
+        sim_spme.built_model.variables["Total current density"], t, y_spme
     )
 
-    plotting_variables = cc.get_processed_potentials(
-        cc_solution, cc_mesh, cc_param, V_av, current
-    )
-    current = current(t)
-    V_av = V_av(t)
-    y = param.process_symbol(cc.variables["y [m]"]).evaluate(t=cc_solution, y=y_cc)[
-        :, 0
-    ]
-    z = param.process_symbol(cc.variables["z [m]"]).evaluate(t=cc_solution, y=y_cc)[
-        :, 0
-    ]
     R_cc = param.process_symbol(
         cc.variables["Effective current collector resistance [Ohm]"]
     ).evaluate(t=cc_solution.t, y=y_cc)[0][0]
@@ -77,14 +67,17 @@ def solve_spmecc(C_rate=1, t_eval=None, var_pts=None, thermal=False, params=None
         + cc_ohmic_losses
     )
 
+    plotting_variables = cc.get_processed_potentials(
+        cc_solution, cc_mesh, cc_param, V_av, I_av
+    )
+
     plotting_variables.update(
         {
             "Terminal voltage [V]": terminal_voltage,
             "Time [h]": time,
             "Discharge capacity [A.h]": discharge_capacity,
             "Average current collector ohmic losses [Ohm]": cc_ohmic_losses,
-            "y [m]": y,
-            "z [m]": z,
+            "L_z": param.process_symbol(pybamm.geometric_parameters.L_z).evaluate(),
         }
     )
 

@@ -53,6 +53,7 @@ def solve_full_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None):
         "Terminal voltage [V]": terminal_voltage,
         "Time [h]": time,
         "Discharge capacity [A.h]": discharge_capacity,
+        "L_z": param.process_symbol(pybamm.geometric_parameters.L_z).evaluate(),
     }
 
     return plotting_variables
