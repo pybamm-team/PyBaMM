@@ -14,13 +14,14 @@ class TestCasadiSolver(unittest.TestCase):
         # Constant
         solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8, method="idas")
 
+        t = casadi.MX.sym("t")
         y = casadi.MX.sym("y")
         constant_growth = casadi.MX(0.5)
-        problem = {"x": y, "ode": constant_growth}
+        rhs = casadi.Function("rhs", [t, y], [constant_growth])
 
         y0 = np.array([0])
         t_eval = np.linspace(0, 1, 100)
-        solution = solver.integrate_casadi(problem, y0, t_eval)
+        solution = solver.integrate_casadi(rhs, None, y0, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_allclose(0.5 * solution.t, solution.y[0])
 
@@ -28,11 +29,11 @@ class TestCasadiSolver(unittest.TestCase):
         solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8, method="cvodes")
 
         exponential_decay = -0.1 * y
-        problem = {"x": y, "ode": exponential_decay}
+        rhs = casadi.Function("rhs", [t, y], [exponential_decay])
 
         y0 = np.array([1])
         t_eval = np.linspace(0, 1, 100)
-        solution = solver.integrate_casadi(problem, y0, t_eval)
+        solution = solver.integrate_casadi(rhs, None, y0, t_eval)
         np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
         self.assertEqual(solution.termination, "final time")
 
@@ -40,16 +41,17 @@ class TestCasadiSolver(unittest.TestCase):
         # Turn off warnings to ignore sqrt error
         warnings.simplefilter("ignore")
 
+        t = casadi.MX.sym("t")
         y = casadi.MX.sym("y")
         sqrt_decay = -np.sqrt(y)
 
         y0 = np.array([1])
         t_eval = np.linspace(0, 3, 100)
         solver = pybamm.CasadiSolver()
-        problem = {"x": y, "ode": sqrt_decay}
+        rhs = casadi.Function("rhs", [t, y], [sqrt_decay])
         # Expect solver to fail when y goes negative
         with self.assertRaises(pybamm.SolverError):
-            solver.integrate_casadi(problem, y0, t_eval)
+            solver.integrate_casadi(rhs, None, y0, t_eval)
 
         # Set up as a model and solve
         # Create model

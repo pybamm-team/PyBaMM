@@ -6,7 +6,7 @@ Fixes # (issue)
 
 ## Type of change
 
-Please add a line in the relevant section of [CHANGELOG.md](https://github.com/pybamm-team/PyBaMM/blob/master/CHANGELOG.md) to document the change (include PR #) - note reverse order of PR #s.
+Please add a line in the relevant section of [CHANGELOG.md](https://github.com/pybamm-team/PyBaMM/blob/master/CHANGELOG.md) to document the change (include PR #) - note reverse order of PR #s. If necessary, also add to the list of breaking changes.
 
 - [ ] New feature (non-breaking change which adds functionality)
 - [ ] Optimization (back-end change that speeds up the code)
