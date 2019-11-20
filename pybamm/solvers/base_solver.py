@@ -173,7 +173,7 @@ class BaseSolver(object):
         for i in np.arange(solution.y.shape[1]):
             sol_y = solution.y[:, i]
             sol_y = sol_y[:, np.newaxis]
-            full_y[:, i] = self.add_external(sol_y)[:, 0]
+            full_y[:, i] = add_external(sol_y, self.y_pad, self.y_ext)[:, 0]
         solution.y = full_y
 
         # Assign times
@@ -220,15 +220,6 @@ class BaseSolver(object):
             are passing in is the variable that is solved for in that submodel"""
                 )
             self.y_ext[y_slice] = var_vals
-
-    def add_external(self, y):
-        """
-        Pad the state vector and then add the external variables so that
-        it is of the correct shape for evaluate
-        """
-        if self.y_pad is not None and self.y_ext is not None:
-            y = np.concatenate([y, self.y_pad]) + self.y_ext
-        return y
 
     def compute_solution(self, model, t_eval):
         """Calculate the solution of the model at specified times. Note: this
@@ -290,7 +281,7 @@ class BaseSolver(object):
             # Get final event value
             final_event_values = {}
             for name, event in events.items():
-                y_event = self.add_external(solution.y_event)
+                y_event = add_external(solution.y_event, self.y_pad, self.y_ext)
                 final_event_values[name] = abs(
                     event.evaluate(solution.t_event, y_event)
                 )
@@ -298,3 +289,13 @@ class BaseSolver(object):
             # Add the event to the solution object
             solution.termination = "event: {}".format(termination_event)
             return "the termination event '{}' occurred".format(termination_event)
+
+
+def add_external(y, y_pad, y_ext):
+    """
+    Pad the state vector and then add the external variables so that
+    it is of the correct shape for evaluate
+    """
+    if y_pad is not None and y_ext is not None:
+        y = np.concatenate([y, y_pad]) + y_ext
+    return y

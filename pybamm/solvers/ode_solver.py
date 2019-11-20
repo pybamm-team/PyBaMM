@@ -5,6 +5,8 @@ import casadi
 import pybamm
 import numpy as np
 
+from .base_solver import add_external
+
 
 class OdeSolver(pybamm.BaseSolver):
     """Solve a discretised model.
@@ -34,6 +36,11 @@ class OdeSolver(pybamm.BaseSolver):
 
         """
         timer = pybamm.Timer()
+
+        self.dydt.set_pad_ext(self.y_pad, self.y_ext)
+        for evnt in self.event_funs:
+            evnt.set_pad_ext(self.y_pad, self.y_ext)
+        self.jacobian.set_pad_ext(self.y_pad, self.y_ext)
 
         solve_start_time = timer.time()
         pybamm.logger.info("Calling ODE solver")
@@ -121,11 +128,11 @@ class OdeSolver(pybamm.BaseSolver):
 
         # Create event-dependent function to evaluate events
         def get_event_class(event):
-            return EvalEvent(event.evaluate, self.y_pad, self.y_ext)
+            return EvalEvent(event.evaluate)
 
         # Create function to evaluate jacobian
         if jac_rhs is not None:
-            jacobian = Jacobian(jac_rhs.evaluate, self.y_pad, self.y_ext)
+            jacobian = Jacobian(jac_rhs.evaluate)
         else:
             jacobian = None
 
@@ -186,8 +193,10 @@ class OdeSolver(pybamm.BaseSolver):
 
         # Create event-dependent function to evaluate events
         def get_event_class(event):
-            casadi_event_fn = casadi.Function("event", [t_casadi, y_casadi], [event])
-            return EvalEvent(casadi_event_fn, self.y_pad, self.y_ext)
+            casadi_event_fn = casadi.Function(
+                "event", [t_casadi, y_casadi_w_ext], [event]
+            )
+            return EvalEvent(casadi_event_fn)
 
         # Create function to evaluate jacobian
         if model.use_jacobian:
@@ -197,7 +206,7 @@ class OdeSolver(pybamm.BaseSolver):
                 "jacobian", [t_casadi, y_casadi_w_ext], [casadi_jac]
             )
 
-            jacobian = JacobianCasadi(casadi_jac_fn, self.y_pad, self.y_ext)
+            jacobian = JacobianCasadi(casadi_jac_fn)
 
         else:
             jacobian = None
@@ -238,9 +247,11 @@ class OdeSolver(pybamm.BaseSolver):
 class Dydt:
     "Returns information about time derivatives at time t and state y"
 
-    def __init__(self, model, concatenated_rhs_fn, y_pad, y_ext):
+    def __init__(self, model, concatenated_rhs_fn):
         self.model = model
         self.concatenated_rhs_fn = concatenated_rhs_fn
+
+    def set_pad_ext(self, y_pad, y_ext):
         self.y_pad = y_pad
         self.y_ext = y_ext
 
@@ -255,14 +266,6 @@ class Dydt:
 class DydtCasadi(Dydt):
     "Returns information about time derivatives at time t and state y, with CasADi"
 
-    def __init__(self, y_pad, y_ext):
-        self.y_pad = y_pad
-        self.y_ext = y_ext
-
-    def set_pad_ext(self, y_pad, y_ext):
-        self.y_pad = y_pad
-        self.y_ext = y_ext
-
     def __call__(self, t, y):
         pybamm.logger.debug("Evaluating RHS for {} at t={}".format(self.model.name, t))
         y = y[:, np.newaxis]
@@ -274,10 +277,8 @@ class DydtCasadi(Dydt):
 class EvalEvent:
     "Returns information about events at time t and state y"
 
-    def __init__(self, event_fn, y_pad, y_ext):
+    def __init__(self, event_fn):
         self.event_fn = event_fn
-        self.y_pad = y_pad
-        self.y_ext = y_ext
 
     def set_pad_ext(self, y_pad, y_ext):
         self.y_pad = y_pad
@@ -292,10 +293,8 @@ class EvalEvent:
 class Jacobian:
     "Returns information about the jacobian at time t and state y"
 
-    def __init__(self, jac_fn, y_pad, y_ext):
+    def __init__(self, jac_fn):
         self.jac_fn = jac_fn
-        self.y_pad = y_pad
-        self.y_ext = y_ext
 
     def set_pad_ext(self, y_pad, y_ext):
         self.y_pad = y_pad
@@ -310,25 +309,7 @@ class Jacobian:
 class JacobianCasadi(Jacobian):
     "Returns information about the jacobian at time t and state y, with CasADi"
 
-    def __init__(self, y_pad, y_ext):
-        self.y_pad = y_pad
-        self.y_ext = y_ext
-
-    def set_pad_ext(self, y_pad, y_ext):
-        self.y_pad = y_pad
-        self.y_ext = y_ext
-
     def __call__(self, t, y):
         y = y[:, np.newaxis]
         y = add_external(y, self.y_pad, self.y_ext)
         return self.jac_fn(t, y)
-
-
-def add_external(y, y_pad, y_ext):
-    """
-    Pad the state vector and then add the external variables so that
-    it is of the correct shape for evaluate
-    """
-    if y_pad is not None and y_ext is not None:
-        y = np.concatenate([y, y_pad]) + y_ext
-    return y

@@ -32,7 +32,6 @@ class TestExternalCC(unittest.TestCase):
 
         for i in np.arange(1, len(t_eval) - 1):
             dt = t_eval[i + 1] - t_eval[i]
-            print(t_eval[i])
 
             # provide phi_s_n and i_cc
             phi_s_n = np.zeros((yz_pts ** 2, 1))
