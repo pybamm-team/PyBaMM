@@ -16,6 +16,7 @@ class TestSPM(unittest.TestCase):
 
     def test_basic_processing_1plus1D(self):
         options = {"current collector": "potential pair", "dimensionality": 1}
+
         model = pybamm.lithium_ion.SPM(options)
         var = pybamm.standard_spatial_vars
         var_pts = {

@@ -27,6 +27,26 @@ class Simulation:
     ----------
     model : :class:`pybamm.BaseModel`
         The model to be simulated
+    geometry: :class:`pybamm.Geometry` (optional)
+        The geometry upon which to solve the model
+    parameter_values: dict (optional)
+        A dictionary of parameters and their corresponding numerical
+        values
+    submesh_types: dict (optional)
+        A dictionary of the types of submesh to use on each subdomain
+    var_pts: dict (optional)
+        A dictionary of the number of points used by each spatial
+        variable
+    spatial_methods: dict (optional)
+        A dictionary of the types of spatial method to use on each
+        domain (e.g. pybamm.FiniteVolume)
+    solver: :class:`pybamm.BaseSolver` (optional)
+        The solver to use to solve the model.
+    quick_plot_vars: list (optional)
+        A list of variables to plot automatically
+    C_rate: float (optional)
+        The C_rate at which you would like to run a constant current
+        experiment at.
     """
 
     def __init__(
@@ -39,6 +59,7 @@ class Simulation:
         spatial_methods=None,
         solver=None,
         quick_plot_vars=None,
+        C_rate=None,
     ):
         self.model = model
 
@@ -50,7 +71,13 @@ class Simulation:
         self._solver = solver or self._model.default_solver
         self._quick_plot_vars = quick_plot_vars
 
-        self.reset()
+        self.C_rate = C_rate
+        if self.C_rate:
+            self._parameter_values.update({"C-rate": self.C_rate})
+
+        self._made_first_step = False
+
+        self.reset(update_model=False)
 
         # ignore runtime warnings in notebooks
         if isnotebook():
@@ -71,17 +98,19 @@ class Simulation:
         self._solver = self._model.default_solver
         self._quick_plot_vars = None
 
-    def reset(self):
+    def reset(self, update_model=True):
         """
         A method to reset a simulation back to its unprocessed state.
         """
-        self.model = self.model.new_copy(self._model_options)
+        if update_model:
+            self.model = self.model.new_copy(self._model_options)
         self.geometry = copy.deepcopy(self._unprocessed_geometry)
         self._model_with_set_params = None
         self._built_model = None
         self._mesh = None
         self._disc = None
         self._solution = None
+        self._made_first_step = False
 
     def set_parameters(self):
         """
@@ -146,6 +175,84 @@ class Simulation:
             solver = self.solver
 
         self._solution = solver.solve(self.built_model, t_eval)
+
+    def step(self, dt, solver=None, external_variables=None, save=True):
+        """
+        A method to step the model forward one timestep. This method will
+        automatically build and set the model parameters if not already done so.
+
+        Parameters
+        ----------
+        dt : numeric type
+            The timestep over which to step the solution
+        solver : :class:`pybamm.BaseSolver`
+            The solver to use to solve the model.
+        external_variables : dict
+            A dictionary of external variables and their corresponding
+            values at the current time. The variables must correspond to
+            the variables that would normally be found by solving the
+            submodels that have been made external.
+        save : bool
+            Turn on to store the solution of all previous timesteps
+        """
+        self.build()
+
+        if solver is None:
+            solver = self.solver
+
+        solution = solver.step(
+            self.built_model, dt, external_variables=external_variables
+        )
+
+        if save is False or self._made_first_step is False:
+            self._solution = solution
+        elif self._solution.t[-1] == solution.t[-1]:
+            pass
+        else:
+            self._update_solution(solution)
+
+        self._made_first_step = True
+
+    def _update_solution(self, solution):
+
+        self._solution.set_up_time += solution.set_up_time
+        self._solution.solve_time += solution.solve_time
+        self._solution.t = np.append(self._solution.t, solution.t[-1])
+        self._solution.t_event = solution.t_event
+        self._solution.termination = solution.termination
+        self._solution.y = np.concatenate(
+            [self._solution.y, solution.y[:, -1][:, np.newaxis]], axis=1
+        )
+        self._solution.y_event = solution.y_event
+
+    def get_variable_array(self, *variables):
+        """
+        A helper function to easily obtain a dictionary of arrays of values
+        for a list of variables at the latest timestep.
+
+        Parameters
+        ----------
+        variable: str
+            The name of the variable/variables you wish to obtain the arrays for.
+
+        Returns
+        -------
+        variable_arrays: dict
+            A dictionary of the variable names and their corresponding
+            arrays.
+        """
+
+        variable_arrays = [
+            self.built_model.variables[var].evaluate(
+                self.solution.t[-1], self.solution.y[:, -1]
+            )
+            for var in variables
+        ]
+
+        if len(variable_arrays) == 1:
+            return variable_arrays[0]
+        else:
+            return tuple(variable_arrays)
 
     def plot(self, quick_plot_vars=None, testing=False):
         """
@@ -269,6 +376,7 @@ class Simulation:
         spatial_methods=None,
         solver=None,
         quick_plot_vars=None,
+        C_rate=None,
     ):
         """
         A method to set the various specs of the simulation. This method
@@ -291,10 +399,13 @@ class Simulation:
         spatial_methods: dict, optional
             A dictionary of the types of spatial method to use on each
             domain (e.g. pybamm.FiniteVolume)
-        solver: :class:`pybamm.BaseSolver`
+        solver: :class:`pybamm.BaseSolver` (optional)
             The solver to use to solve the model.
-        quick_plot_vars: list
+        quick_plot_vars: list (optional)
             A list of variables to plot automatically
+        C_rate: float (optional)
+            The C_rate at which you would like to run a constant current
+            experiment at.
         """
 
         if model_options:
@@ -315,6 +426,10 @@ class Simulation:
             self._solver = solver
         if quick_plot_vars:
             self._quick_plot_vars = quick_plot_vars
+
+        if C_rate:
+            self.C_rate = C_rate
+            self._parameter_values.update({"C-rate": self.C_rate})
 
         if (
             model_options

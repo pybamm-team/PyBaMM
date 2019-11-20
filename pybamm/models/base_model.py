@@ -109,6 +109,7 @@ class BaseModel(object):
         self._mass_matrix = None
         self._jacobian = None
         self._jacobian_algebraic = None
+        self.external_variables = []
 
         # Default behaviour is to use the jacobian and simplify
         self.use_jacobian = True
@@ -400,7 +401,17 @@ class BaseModel(object):
         # If any variables in the equations don't appear in the keys then the model is
         # underdetermined
         vars_in_keys = vars_in_rhs_keys.union(vars_in_algebraic_keys)
-        extra_variables = vars_in_eqns.difference(vars_in_keys)
+        extra_variables_in_equations = vars_in_eqns.difference(vars_in_keys)
+
+        # get ids of external variables
+        external_ids = {var.id for var in self.external_variables}
+        for var in self.external_variables:
+            if isinstance(var, pybamm.Concatenation):
+                child_ids = {child.id for child in var.children}
+                external_ids = external_ids.union(child_ids)
+
+        extra_variables = extra_variables_in_equations.difference(external_ids)
+
         if extra_variables:
             raise pybamm.ModelError("model is underdetermined (too many variables)")
 
@@ -491,19 +502,27 @@ class BaseModel(object):
                 {x.id: x for x in eqn.pre_order() if isinstance(x, pybamm.Variable)}
             )
         var_ids_in_keys = set()
-        for var in {**self.rhs, **self.algebraic}.keys():
+
+        model_and_external_variables = (
+            list(self.rhs.keys())
+            + list(self.algebraic.keys())
+            + self.external_variables
+        )
+
+        for var in model_and_external_variables:
             if isinstance(var, pybamm.Variable):
                 var_ids_in_keys.add(var.id)
             # Key can be a concatenation
             elif isinstance(var, pybamm.Concatenation):
                 var_ids_in_keys.update([child.id for child in var.children])
+
         for var_id, var in all_vars.items():
             if var_id not in var_ids_in_keys:
                 raise pybamm.ModelError(
                     """
                     No key set for variable '{}'. Make sure it is included in either
-                    model.rhs or model.algebraic in an unmodified form (e.g. not
-                    Broadcasted)
+                    model.rhs, model.algebraic, or model.external_variables in an
+                    unmodified form (e.g. not Broadcasted)
                     """.format(
                         var
                     )
