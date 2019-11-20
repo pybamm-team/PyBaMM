@@ -90,9 +90,7 @@ def plot_voltage_components(all_variables, t_eval):
 def charge_states(compute):
     if compute:
         models = [
-            pybamm.lead_acid.Full(
-                {"side reactions": ["oxygen"]}, name="Full"
-            ),
+            pybamm.lead_acid.Full({"side reactions": ["oxygen"]}, name="Full"),
             pybamm.lead_acid.LOQS(
                 {"surface form": "algebraic", "side reactions": ["oxygen"]}, name="LOQS"
             ),

@@ -117,7 +117,7 @@ else:
     )
 
     # build and save simulation
-    simulation.build()
+    simulation.build(check_model=False)
     simulation.save(filename)
 
 "-----------------------------------------------------------------------------"

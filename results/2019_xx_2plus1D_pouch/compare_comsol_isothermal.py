@@ -53,11 +53,11 @@ else:
     submesh_types = pybamm_model.default_submesh_types
 
     # cube root sequence in particles
-    r_n_edges = np.linspace(0, 1, 4) ** (1 / 3)
+    r_n_edges = np.linspace(0, 1, 15) ** (1 / 3)
     submesh_types["negative particle"] = pybamm.MeshGenerator(
         pybamm.UserSupplied1DSubMesh, submesh_params={"edges": r_n_edges}
     )
-    r_p_edges = np.linspace(0, 1, 4) ** (1 / 3)
+    r_p_edges = np.linspace(0, 1, 15) ** (1 / 3)
     submesh_types["positive particle"] = pybamm.MeshGenerator(
         pybamm.UserSupplied1DSubMesh, submesh_params={"edges": r_p_edges}
     )
@@ -68,23 +68,23 @@ else:
     l_tab_p = param.evaluate(pybamm.geometric_parameters.l_tab_p)
     centre_tab_n = param.evaluate(pybamm.geometric_parameters.centre_y_tab_n)
     centre_tab_p = param.evaluate(pybamm.geometric_parameters.centre_y_tab_p)
-    y0 = np.linspace(0, centre_tab_n - l_tab_n / 2, 3)  # mesh up to start of neg tab
+    y0 = np.linspace(0, centre_tab_n - l_tab_n / 2, 5)  # mesh up to start of neg tab
     y1 = np.linspace(
-        centre_tab_n - l_tab_n / 2, centre_tab_n + l_tab_n / 2, 2
+        centre_tab_n - l_tab_n / 2, centre_tab_n + l_tab_n / 2, 5
     )  # mesh neg tab
     y2 = np.linspace(
-        centre_tab_n + l_tab_n / 2, centre_tab_p - l_tab_p / 2, 2
+        centre_tab_n + l_tab_n / 2, centre_tab_p - l_tab_p / 2, 5
     )  # mesh gap between tabs
     y3 = np.linspace(
-        centre_tab_p - l_tab_p / 2, centre_tab_p + l_tab_p / 2, 2
+        centre_tab_p - l_tab_p / 2, centre_tab_p + l_tab_p / 2, 5
     )  # mesh pos tab
     y4 = np.linspace(
-        centre_tab_p + l_tab_p / 2, l_y, 2
+        centre_tab_p + l_tab_p / 2, l_y, 5
     )  # mesh from pos tab to cell edge
     y_edges = np.concatenate((y0, y1[1:], y2[1:], y3[1:], y4[1:]))
 
     # square root sequence in z direction
-    z_edges = np.linspace(0, 1, 5) ** (1 / 2)
+    z_edges = np.linspace(0, 1, 10) ** (1 / 2)
     submesh_types["current collector"] = pybamm.MeshGenerator(
         pybamm.UserSupplied2DSubMesh,
         submesh_params={"y_edges": y_edges, "z_edges": z_edges},
@@ -101,7 +101,8 @@ else:
     }
 
     # solver
-    solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6, mode="fast")
+    solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-3, mode="fast")
+    #solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
 
     # simulation object
     simulation = pybamm.Simulation(
@@ -113,7 +114,7 @@ else:
     )
 
     # build and save simulation
-    simulation.build()
+    simulation.build(check_model=False)
     simulation.save(filename)
 
 "-----------------------------------------------------------------------------"
@@ -147,7 +148,7 @@ y_interp = np.linspace(pybamm_y[0], pybamm_y[-1], 100) * L_z
 z_interp = np.linspace(pybamm_z[0], pybamm_z[-1], 100) * L_z
 
 comsol_model = shared.make_comsol_model(
-    comsol_variables, mesh, param, y_interp=y_interp, z_interp=z_interp
+    comsol_variables, mesh, param, y_interp=y_interp, z_interp=z_interp, thermal=False
 )
 
 # Process pybamm variables for which we have corresponding comsol variables
@@ -169,7 +170,7 @@ shared.plot_2D_var(
     output_variables,
     param,
     cmap="cividis",
-    error="rel",
+    error="both",
 )
 # plt.savefig("phi_s_cn.eps", format="eps", dpi=1000)
 shared.plot_2D_var(
@@ -179,7 +180,7 @@ shared.plot_2D_var(
     output_variables,
     param,
     cmap="viridis",
-    error="rel",
+    error="both",
 )
 # plt.savefig("phi_s_cp.eps", format="eps", dpi=1000)
 shared.plot_2D_var(
@@ -189,7 +190,7 @@ shared.plot_2D_var(
     output_variables,
     param,
     cmap="plasma",
-    error="rel",
+    error="both",
 )
 # plt.savefig("current.eps", format="eps", dpi=1000)
 plt.show()

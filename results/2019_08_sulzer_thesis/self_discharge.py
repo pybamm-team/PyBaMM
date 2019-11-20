@@ -31,9 +31,7 @@ def self_discharge_states(compute):
                 name="LOQS, with oxygen",
             ),
         ]
-        extra_parameter_values = {
-            "Current function": "[zero]"
-        }
+        extra_parameter_values = {"Current function": "[zero]"}
         t_eval = np.linspace(0, 1000, 100)
         all_variables, t_eval = model_comparison(
             models, [1], t_eval, extra_parameter_values=extra_parameter_values

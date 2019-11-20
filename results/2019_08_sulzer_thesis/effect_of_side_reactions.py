@@ -55,9 +55,7 @@ def charge_states(compute):
                 {"surface form": "algebraic", "side reactions": ["oxygen"]},
                 name="With oxygen",
             ),
-            pybamm.lead_acid.Full(
-                {"surface form": "algebraic"}, name="Without oxygen"
-            ),
+            pybamm.lead_acid.Full({"surface form": "algebraic"}, name="Without oxygen"),
         ]
         Crates = [-0.1, -1, -5]
         t_eval = np.linspace(0, 5, 100)
