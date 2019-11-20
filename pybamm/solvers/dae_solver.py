@@ -293,10 +293,13 @@ class DaeSolver(pybamm.BaseSolver):
         # Save CasADi functions for the CasADi solver
         # Note: when we pass to casadi the ode part of the problem must be in explicit
         # form so we premultiply by the inverse of the mass matrix
-        self.casadi_rhs = casadi.Function(
-            "rhs", [t_casadi, y_casadi], [model.mass_matrix_inv.entries @ concatenated_rhs]
-        )
-        self.casadi_algebraic = concatenated_algebraic_fn
+        if isinstance(self, pybamm.CasadiSolver):
+            mass_matrix_inv = casadi.MX(model.mass_matrix_inv.entries)
+            explicit_rhs = mass_matrix_inv @ concatenated_rhs
+            self.casadi_rhs = casadi.Function(
+                "rhs", [t_casadi, y_casadi], [explicit_rhs]
+            )
+            self.casadi_algebraic = concatenated_algebraic_fn
 
     def calculate_consistent_initial_conditions(
         self, rhs, algebraic, y0_guess, jac=None

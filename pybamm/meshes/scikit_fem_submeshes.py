@@ -40,7 +40,7 @@ class ScikitSubMesh2D(SubMesh):
 
         # create elements and basis
         # TODO: pass proper options to the mesh
-        self.element_type = "P0"
+        self.element_type = "P1"
         if self.element_type == "P0":
             self.element = skfem.ElementTriP0()
             self.basis = skfem.InteriorBasis(self.fem_mesh, self.element)

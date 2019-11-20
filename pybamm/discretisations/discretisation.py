@@ -4,7 +4,7 @@
 import pybamm
 import numpy as np
 from collections import defaultdict, OrderedDict
-from scipy.sparse import block_diag, csr_matrix
+from scipy.sparse import block_diag, csr_matrix, csc_matrix
 from scipy.sparse.linalg import inv
 
 
@@ -514,12 +514,17 @@ class Discretisation(object):
                     .entries
                 )
                 mass_list.append(mass)
-                if isinstance(self.spatial_methods[var.domain[0]], pybamm.FiniteVolume):
-                    # for finite volumes the mass matrix is identity, so no need to
-                    # compute inverse
+                if isinstance(
+                    self.spatial_methods[var.domain[0]],
+                    (pybamm.ZeroDimensionalMethod, pybamm.FiniteVolume),
+                ):
+                    # for 0D methods the mass matrix is just a scalar 1 and for
+                    # finite volumes the mass matrix is identity, so no need to
+                    # compute the inverse
                     mass_inv_list.append(mass)
                 else:
-                    mass_inv = inv(mass)
+                    # inverse is faster in csc format
+                    mass_inv = inv(csc_matrix(mass))
                     mass_inv_list.append(mass_inv)
 
         # Create lumped mass matrix (of zeros) of the correct shape for the
@@ -529,11 +534,14 @@ class Discretisation(object):
             mass_algebraic = csr_matrix((mass_algebraic_size, mass_algebraic_size))
             mass_list.append(mass_algebraic)
 
-        # Create block diagonal (sparse) mass matrix
-        mass_matrix = block_diag(mass_list, format="csr")
-        mass_matrix_inv = block_diag(mass_inv_list, format="csr")
+        # Create block diagonal (sparse) mass matrix and inverse (if model has odes)
+        mass_matrix = pybamm.Matrix(block_diag(mass_list, format="csr"))
+        if model.rhs.keys():
+            mass_matrix_inv = pybamm.Matrix(block_diag(mass_inv_list, format="csr"))
+        else:
+            mass_matrix_inv = None
 
-        return pybamm.Matrix(mass_matrix), pybamm.Matrix(mass_matrix_inv)
+        return mass_matrix, mass_matrix_inv
 
     def create_jacobian(self, model):
         """Creates Jacobian of the discretised model.
