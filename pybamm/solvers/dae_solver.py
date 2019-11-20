@@ -185,6 +185,9 @@ class DaeSolver(pybamm.BaseSolver):
             return EvalEvent(event.evaluate)
 
         # Add the solver attributes
+        # Note: these are the (possibly) converted to python versions of rhs,
+        # algebraic etc. The expression tree versions of these are attributes of
+        # the model
         self.y0 = y0
         self.rhs = rhs
         self.algebraic = algebraic
@@ -277,7 +280,7 @@ class DaeSolver(pybamm.BaseSolver):
             return EvalEvent(casadi_event_fn)
 
         # Add the solver attributes
-        # Note: these are the (possibly) converted to python version rhs, algebraic
+        # Note: these are the converted to casadi versions of rhs, algebraic
         # etc. The expression tree versions of these are attributes of the model
         self.y0 = y0
         self.rhs = rhs
@@ -288,7 +291,11 @@ class DaeSolver(pybamm.BaseSolver):
         self.jacobian = jacobian
 
         # Save CasADi functions for the CasADi solver
-        self.casadi_rhs = concatenated_rhs_fn
+        # Note: when we pass to casadi the ode part of the problem must be in explicit
+        # form so we premultiply by the inverse of the mass matrix
+        self.casadi_rhs = casadi.Function(
+            "rhs", [t_casadi, y_casadi], [model.mass_matrix_inv.entries @ concatenated_rhs]
+        )
         self.casadi_algebraic = concatenated_algebraic_fn
 
     def calculate_consistent_initial_conditions(

@@ -5,6 +5,7 @@ import pybamm
 import numpy as np
 from collections import defaultdict, OrderedDict
 from scipy.sparse import block_diag, csr_matrix
+from scipy.sparse.linalg import inv
 
 
 def has_bc_of_form(symbol, side, bcs, form):
@@ -170,7 +171,9 @@ class Discretisation(object):
 
         # Create mass matrix
         pybamm.logger.info("Create mass matrix for {}".format(model.name))
-        model_disc.mass_matrix = self.create_mass_matrix(model_disc)
+        model_disc.mass_matrix, model_disc.mass_matrix_inv = self.create_mass_matrix(
+            model_disc
+        )
 
         # Check that resulting model makes sense
         self.check_model(model_disc)
@@ -471,10 +474,14 @@ class Discretisation(object):
         -------
         :class:`pybamm.Matrix`
             The mass matrix
+        :class:`pybamm.Matrix`
+            The inverse of the ode part of the mass matrix (required by solvers
+            which only accept the ODEs in explicit form)
         """
         # Create list of mass matrices for each equation to be put into block
         # diagonal mass matrix for the model
         mass_list = []
+        mass_inv_list = []
 
         # get a list of model rhs variables that are sorted according to
         # where they are in the state vector
@@ -499,12 +506,21 @@ class Discretisation(object):
             if var.domain == []:
                 # If variable domain empty then mass matrix is just 1
                 mass_list.append(1.0)
+                mass_inv_list.append(1.0)
             else:
-                mass_list.append(
+                mass = (
                     self.spatial_methods[var.domain[0]]
                     .mass_matrix(var, self.bcs)
                     .entries
                 )
+                mass_list.append(mass)
+                if isinstance(self.spatial_methods[var.domain[0]], pybamm.FiniteVolume):
+                    # for finite volumes the mass matrix is identity, so no need to
+                    # compute inverse
+                    mass_inv_list.append(mass)
+                else:
+                    mass_inv = inv(mass)
+                    mass_inv_list.append(mass_inv)
 
         # Create lumped mass matrix (of zeros) of the correct shape for the
         # discretised algebraic equations
@@ -515,8 +531,9 @@ class Discretisation(object):
 
         # Create block diagonal (sparse) mass matrix
         mass_matrix = block_diag(mass_list, format="csr")
+        mass_matrix_inv = block_diag(mass_inv_list, format="csr")
 
-        return pybamm.Matrix(mass_matrix)
+        return pybamm.Matrix(mass_matrix), pybamm.Matrix(mass_matrix_inv)
 
     def create_jacobian(self, model):
         """Creates Jacobian of the discretised model.
