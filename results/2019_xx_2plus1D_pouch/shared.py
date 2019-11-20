@@ -37,7 +37,7 @@ def make_comsol_model(
                 np.column_stack((comsol_y, comsol_z)),
                 variable[:, i],
                 (grid_y, grid_z),
-                method="cubic",
+                method="linear",
             )
 
         def myinterp(t):
@@ -114,9 +114,17 @@ def plot_2D_var(
     z_plot_non_dim = z_plot / L_z
     t_non_dim = t / tau
 
-    pybamm_var = np.transpose(
-        output_variables[var](y=y_plot_non_dim, z=z_plot_non_dim, t=t_non_dim)
-    )
+    # for pos potential compute relative to voltage
+    if var == "Positive current collector potential [V]":
+        pybamm_voltage = output_variables["Terminal voltage [V]"](t=t_non_dim)
+        pybamm_var = np.transpose(
+            output_variables[var](y=y_plot_non_dim, z=z_plot_non_dim, t=t_non_dim)
+        ) - pybamm_voltage
+    else:
+        pybamm_var = np.transpose(
+            output_variables[var](y=y_plot_non_dim, z=z_plot_non_dim, t=t_non_dim)
+        )
+
     if error in ["abs", "rel"]:
         plt.subplot(131)
     elif error == "both":
@@ -130,7 +138,14 @@ def plot_2D_var(
     plt.colorbar(pybamm_plot)
 
     # plot comsol solution
-    comsol_var = comsol_model.variables[var](t=t)
+
+    # for pos potential compute relative to voltage
+    if var == "Positive current collector potential [V]":
+        comsol_voltage = comsol_model.variables["Terminal voltage [V]"](t=t)
+        comsol_var = comsol_model.variables[var](t=t) - comsol_voltage
+    else:
+        comsol_var = comsol_model.variables[var](t=t)
+
     if error in ["abs", "rel"]:
         plt.subplot(132)
     elif error == "both":
@@ -153,8 +168,7 @@ def plot_2D_var(
             error = np.abs((pybamm_var - comsol_var) / comsol_var)
             # plot relative error up to max 10% (errors 10% and greater all take same
             # color in plot)
-            # vmax = np.min(np.max(error), 0.1)
-            vmax = np.max(error)
+            vmax = np.min([np.max(error), 0.1])
             diff_plot = plt.pcolormesh(
                 y_plot, z_plot, error, shading="gouraud", vmin=0, vmax=vmax
             )
@@ -176,7 +190,10 @@ def plot_2D_var(
         plt.colorbar(abs_diff_plot)
         plt.subplot(224)
         rel_error = np.abs((pybamm_var - comsol_var) / comsol_var)
-        rel_diff_plot = plt.pcolormesh(y_plot, z_plot, rel_error, shading="gouraud")
+        # plot relative error up to max 10% (errors 10% and greater all take same
+        # color in plot)
+        vmax = np.min([np.max(rel_error), 0.1])
+        rel_diff_plot = plt.pcolormesh(y_plot, z_plot, rel_error, shading="gouraud", vmin=0, vmax=vmax)
         plt.axis([0, y_plot[-1], 0, z_plot[-1]])
         plt.xlabel(r"$y$")
         plt.ylabel(r"$z$")
