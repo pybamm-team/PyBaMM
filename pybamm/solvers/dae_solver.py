@@ -261,12 +261,10 @@ class DaeSolver(pybamm.BaseSolver):
             jacobian_alg = None
 
         # Calculate consistent initial conditions for the algebraic equations
-        # Note: if we use the casadi solver then we let the casadi integrator
-        # calculate consistent initial conditions, so skip this stage
         rhs = RhsCasadi(concatenated_rhs_fn)
         algebraic = AlgebraicCasadi(concatenated_algebraic_fn)
 
-        if len(model.algebraic) > 0: # and not isinstance(self, pybamm.CasadiSolver):
+        if len(model.algebraic) > 0:
             y0 = self.calculate_consistent_initial_conditions(
                 rhs,
                 algebraic,
