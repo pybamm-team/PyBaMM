@@ -87,7 +87,8 @@ class DaeSolver(pybamm.BaseSolver):
         self.residuals.set_pad_ext(self.y_pad, self.y_ext)
         for evnt in self.event_funs:
             evnt.set_pad_ext(self.y_pad, self.y_ext)
-        self.jacobian.set_pad_ext(self.y_pad, self.y_ext)
+        if self.jacobian:
+            self.jacobian.set_pad_ext(self.y_pad, self.y_ext)
 
         solve_start_time = timer.time()
         pybamm.logger.info("Calling DAE solver")
@@ -443,6 +444,8 @@ class Rhs:
 
     def __init__(self, concatenated_rhs_fn):
         self.concatenated_rhs_fn = concatenated_rhs_fn
+        self.y_pad = None
+        self.y_ext = None
 
     def set_pad_ext(self, y_pad, y_ext):
         self.y_pad = y_pad
@@ -468,6 +471,8 @@ class Algebraic:
 
     def __init__(self, concatenated_algebraic_fn):
         self.concatenated_algebraic_fn = concatenated_algebraic_fn
+        self.y_pad = None
+        self.y_ext = None
 
     def set_pad_ext(self, y_pad, y_ext):
         self.y_pad = y_pad
@@ -496,6 +501,8 @@ class Residuals:
         self.concatenated_rhs_fn = concatenated_rhs_fn
         self.concatenated_algebraic_fn = concatenated_algebraic_fn
         self.mass_matrix = model.mass_matrix.entries
+        self.y_pad = None
+        self.y_ext = None
 
     def set_pad_ext(self, y_pad, y_ext):
         self.y_pad = y_pad
@@ -523,6 +530,8 @@ class ResidualsCasadi(Residuals):
         self.model = model
         self.all_states_fn = all_states_fn
         self.mass_matrix = model.mass_matrix.entries
+        self.y_pad = None
+        self.y_ext = None
 
     def __call__(self, t, y, ydot):
         pybamm.logger.debug(
@@ -539,6 +548,8 @@ class EvalEvent:
 
     def __init__(self, event_fn):
         self.event_fn = event_fn
+        self.y_pad = None
+        self.y_ext = None
 
     def set_pad_ext(self, y_pad, y_ext):
         self.y_pad = y_pad
@@ -555,6 +566,8 @@ class Jacobian:
 
     def __init__(self, jac_fn):
         self.jac_fn = jac_fn
+        self.y_pad = None
+        self.y_ext = None
 
     def set_pad_ext(self, y_pad, y_ext):
         self.y_pad = y_pad

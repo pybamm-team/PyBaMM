@@ -1,7 +1,6 @@
 import pybamm
 import numpy as np
 import unittest
-import numpy as np
 
 
 class TestSimulation(unittest.TestCase):
@@ -277,7 +276,7 @@ class TestSimulation(unittest.TestCase):
         sim_load = pybamm.load_sim("test.pickle")
         self.assertEqual(sim.model.name, sim_load.model.name)
 
-    def test_set_defaults(self):
+    def test_set_defaults2(self):
         model = pybamm.lithium_ion.SPM()
 
         # make simulation with silly options (should this be allowed?)

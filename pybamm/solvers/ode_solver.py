@@ -40,7 +40,8 @@ class OdeSolver(pybamm.BaseSolver):
         self.dydt.set_pad_ext(self.y_pad, self.y_ext)
         for evnt in self.event_funs:
             evnt.set_pad_ext(self.y_pad, self.y_ext)
-        self.jacobian.set_pad_ext(self.y_pad, self.y_ext)
+        if self.jacobian:
+            self.jacobian.set_pad_ext(self.y_pad, self.y_ext)
 
         solve_start_time = timer.time()
         pybamm.logger.info("Calling ODE solver")
@@ -250,6 +251,8 @@ class Dydt:
     def __init__(self, model, concatenated_rhs_fn):
         self.model = model
         self.concatenated_rhs_fn = concatenated_rhs_fn
+        self.y_pad = None
+        self.y_ext = None
 
     def set_pad_ext(self, y_pad, y_ext):
         self.y_pad = y_pad
@@ -279,6 +282,8 @@ class EvalEvent:
 
     def __init__(self, event_fn):
         self.event_fn = event_fn
+        self.y_pad = None
+        self.y_ext = None
 
     def set_pad_ext(self, y_pad, y_ext):
         self.y_pad = y_pad
@@ -295,6 +300,8 @@ class Jacobian:
 
     def __init__(self, jac_fn):
         self.jac_fn = jac_fn
+        self.y_pad = None
+        self.y_ext = None
 
     def set_pad_ext(self, y_pad, y_ext):
         self.y_pad = y_pad
