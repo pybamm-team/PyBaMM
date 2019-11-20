@@ -20,7 +20,7 @@ pybamm.set_logging_level("INFO")
 
 try:
     comsol_variables = pickle.load(
-        open("input/comsol_results/comsol_isothermal_2plus1D_1C.pickle", "rb")
+        open("input/comsol_results/comsol_thermal_2plus1D_1C.pickle", "rb")
     )
 except FileNotFoundError:
     raise FileNotFoundError("COMSOL data not found. Try running load_comsol_data.py")

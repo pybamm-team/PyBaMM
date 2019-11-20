@@ -4,7 +4,8 @@
 import pybamm
 import numpy as np
 from collections import defaultdict, OrderedDict
-from scipy.sparse import block_diag, csr_matrix
+from scipy.sparse import block_diag, csr_matrix, csc_matrix
+from scipy.sparse.linalg import inv
 
 
 def has_bc_of_form(symbol, side, bcs, form):
@@ -82,7 +83,7 @@ class Discretisation(object):
         # reset discretised_symbols
         self._discretised_symbols = {}
 
-    def process_model(self, model, inplace=True):
+    def process_model(self, model, inplace=True, check_model=True):
         """Discretise a model.
         Currently inplace, could be changed to return a new model.
 
@@ -91,9 +92,15 @@ class Discretisation(object):
         model : :class:`pybamm.BaseModel`
             Model to dicretise. Must have attributes rhs, initial_conditions and
             boundary_conditions (all dicts of {variable: equation})
-        inplace: bool, optional
+        inplace : bool, optional
             If True, discretise the model in place. Otherwise, return a new
             discretised model. Default is True.
+        check_model : bool, optional
+            If True, model checks are performed after discretisation. For large
+            systems these checks can be slow, so can be skipped by setting this
+            option to False. When developing, testing or debugging it is recommened
+            to leave this option as True as it may help to identify any errors.
+            Default is True.
 
         Returns
         -------
@@ -170,10 +177,14 @@ class Discretisation(object):
 
         # Create mass matrix
         pybamm.logger.info("Create mass matrix for {}".format(model.name))
-        model_disc.mass_matrix = self.create_mass_matrix(model_disc)
+        model_disc.mass_matrix, model_disc.mass_matrix_inv = self.create_mass_matrix(
+            model_disc
+        )
 
         # Check that resulting model makes sense
-        self.check_model(model_disc)
+        if check_model:
+            pybamm.logger.info("Performing model checks for {}".format(model.name))
+            self.check_model(model_disc)
 
         pybamm.logger.info("Finish discretising {}".format(model.name))
 
@@ -471,10 +482,14 @@ class Discretisation(object):
         -------
         :class:`pybamm.Matrix`
             The mass matrix
+        :class:`pybamm.Matrix`
+            The inverse of the ode part of the mass matrix (required by solvers
+            which only accept the ODEs in explicit form)
         """
         # Create list of mass matrices for each equation to be put into block
         # diagonal mass matrix for the model
         mass_list = []
+        mass_inv_list = []
 
         # get a list of model rhs variables that are sorted according to
         # where they are in the state vector
@@ -499,12 +514,26 @@ class Discretisation(object):
             if var.domain == []:
                 # If variable domain empty then mass matrix is just 1
                 mass_list.append(1.0)
+                mass_inv_list.append(1.0)
             else:
-                mass_list.append(
+                mass = (
                     self.spatial_methods[var.domain[0]]
                     .mass_matrix(var, self.bcs)
                     .entries
                 )
+                mass_list.append(mass)
+                if isinstance(
+                    self.spatial_methods[var.domain[0]],
+                    (pybamm.ZeroDimensionalMethod, pybamm.FiniteVolume),
+                ):
+                    # for 0D methods the mass matrix is just a scalar 1 and for
+                    # finite volumes the mass matrix is identity, so no need to
+                    # compute the inverse
+                    mass_inv_list.append(mass)
+                else:
+                    # inverse is faster in csc format
+                    mass_inv = inv(csc_matrix(mass))
+                    mass_inv_list.append(mass_inv)
 
         # Create lumped mass matrix (of zeros) of the correct shape for the
         # discretised algebraic equations
@@ -513,10 +542,14 @@ class Discretisation(object):
             mass_algebraic = csr_matrix((mass_algebraic_size, mass_algebraic_size))
             mass_list.append(mass_algebraic)
 
-        # Create block diagonal (sparse) mass matrix
-        mass_matrix = block_diag(mass_list, format="csr")
+        # Create block diagonal (sparse) mass matrix and inverse (if model has odes)
+        mass_matrix = pybamm.Matrix(block_diag(mass_list, format="csr"))
+        if model.rhs.keys():
+            mass_matrix_inv = pybamm.Matrix(block_diag(mass_inv_list, format="csr"))
+        else:
+            mass_matrix_inv = None
 
-        return pybamm.Matrix(mass_matrix)
+        return mass_matrix, mass_matrix_inv
 
     def create_jacobian(self, model):
         """Creates Jacobian of the discretised model.

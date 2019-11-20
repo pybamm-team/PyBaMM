@@ -2,7 +2,6 @@ import pybamm
 import os
 import pandas as pd
 import pickle
-import numpy as np
 
 # change working directory the root of pybamm
 os.chdir(pybamm.root_dir())

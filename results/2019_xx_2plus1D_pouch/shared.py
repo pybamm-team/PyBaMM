@@ -62,15 +62,15 @@ def make_comsol_model(
         "Current collector current density [A.m-2]": comsol_current,
     }
 
-    # Add thermal if using
+    # Add thermal variables
     if thermal:
-        comsol_temperature = get_interp_fun("temperature")
 
         def comsol_vol_av_temperature(t):
             return interp.interp1d(
                 comsol_t, comsol_variables["volume-averaged temperature"]
             )(t)
 
+        comsol_temperature = get_interp_fun("temperature")
         comsol_model.variables.update(
             {
                 "X-averaged cell temperature [K]": comsol_temperature,
@@ -99,7 +99,7 @@ def plot_t_var(var, t, comsol_model, output_variables, param):
 
 
 def plot_2D_var(
-    var, t, comsol_model, output_variables, param, cmap="viridis", error="abs"
+    var, t, comsol_model, output_variables, param, cmap="viridis", error="both"
 ):
     fig, ax = plt.subplots(figsize=(15, 8))
 
@@ -117,7 +117,10 @@ def plot_2D_var(
     pybamm_var = np.transpose(
         output_variables[var](y=y_plot_non_dim, z=z_plot_non_dim, t=t_non_dim)
     )
-    plt.subplot(131)
+    if error in ["abs", "rel"]:
+        plt.subplot(131)
+    elif error == "both":
+        plt.subplot(221)
     pybamm_plot = plt.pcolormesh(y_plot, z_plot, pybamm_var, shading="gouraud")
     plt.axis([0, y_plot[-1], 0, z_plot[-1]])
     plt.xlabel(r"$y$")
@@ -128,7 +131,10 @@ def plot_2D_var(
 
     # plot comsol solution
     comsol_var = comsol_model.variables[var](t=t)
-    plt.subplot(132)
+    if error in ["abs", "rel"]:
+        plt.subplot(132)
+    elif error == "both":
+        plt.subplot(222)
     comsol_plot = plt.pcolormesh(y_plot, z_plot, comsol_var, shading="gouraud")
     plt.axis([0, y_plot[-1], 0, z_plot[-1]])
     plt.xlabel(r"$y$")
@@ -138,19 +144,42 @@ def plot_2D_var(
     plt.colorbar(comsol_plot)
 
     # plot "error"
-    plt.subplot(133)
-    if error == "abs":
-        error = np.abs(pybamm_var - comsol_var)
-        diff_plot = plt.pcolormesh(y_plot, z_plot, error, shading="gouraud")
-    elif error == "rel":
-        error = np.abs((pybamm_var - comsol_var) / comsol_var)
-        # plot relative errors in range of 0 to 0.1 (0.1 and higher all same color)
-        diff_plot = plt.pcolormesh(
-            y_plot, z_plot, error, shading="gouraud", vmin=0, vmax=0.1
-        )
-    plt.axis([0, y_plot[-1], 0, z_plot[-1]])
-    plt.xlabel(r"$y$")
-    plt.ylabel(r"$z$")
-    plt.title(r"Error: " + var)
-    plt.set_cmap(cmap)
-    plt.colorbar(diff_plot)
+    if error in ["abs", "rel"]:
+        plt.subplot(133)
+        if error == "abs":
+            error = np.abs(pybamm_var - comsol_var)
+            diff_plot = plt.pcolormesh(y_plot, z_plot, error, shading="gouraud")
+        elif error == "rel":
+            error = np.abs((pybamm_var - comsol_var) / comsol_var)
+            # plot relative error up to max 10% (errors 10% and greater all take same
+            # color in plot)
+            # vmax = np.min(np.max(error), 0.1)
+            vmax = np.max(error)
+            diff_plot = plt.pcolormesh(
+                y_plot, z_plot, error, shading="gouraud", vmin=0, vmax=vmax
+            )
+        plt.axis([0, y_plot[-1], 0, z_plot[-1]])
+        plt.xlabel(r"$y$")
+        plt.ylabel(r"$z$")
+        plt.title(r"Error: " + var)
+        plt.set_cmap(cmap)
+        plt.colorbar(diff_plot)
+    elif error == "both":
+        plt.subplot(223)
+        abs_error = np.abs(pybamm_var - comsol_var)
+        abs_diff_plot = plt.pcolormesh(y_plot, z_plot, abs_error, shading="gouraud")
+        plt.axis([0, y_plot[-1], 0, z_plot[-1]])
+        plt.xlabel(r"$y$")
+        plt.ylabel(r"$z$")
+        plt.title(r"Error (abs): " + var)
+        plt.set_cmap(cmap)
+        plt.colorbar(abs_diff_plot)
+        plt.subplot(224)
+        rel_error = np.abs((pybamm_var - comsol_var) / comsol_var)
+        rel_diff_plot = plt.pcolormesh(y_plot, z_plot, rel_error, shading="gouraud")
+        plt.axis([0, y_plot[-1], 0, z_plot[-1]])
+        plt.xlabel(r"$y$")
+        plt.ylabel(r"$z$")
+        plt.title(r"Error (rel): " + var)
+        plt.set_cmap(cmap)
+        plt.colorbar(rel_diff_plot)

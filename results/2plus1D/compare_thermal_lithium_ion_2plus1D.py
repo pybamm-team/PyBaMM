@@ -9,28 +9,28 @@ sys.setrecursionlimit(10000)
 
 # load models
 models = [
-    #pybamm.lithium_ion.SPM({"thermal": "x-lumped"}, name="1D SPM (lumped)"),
-    #pybamm.lithium_ion.SPMe({"thermal": "x-lumped"}, name="1D SPMe (lumped)"),
+    # pybamm.lithium_ion.SPM({"thermal": "x-lumped"}, name="1D SPM (lumped)"),
+    # pybamm.lithium_ion.SPMe({"thermal": "x-lumped"}, name="1D SPMe (lumped)"),
     pybamm.lithium_ion.DFN({"thermal": "x-lumped"}, name="1D DFN (lumped)"),
-    #pybamm.lithium_ion.SPM({"thermal": "x-full"}, name="1D SPM (full)"),
-    #pybamm.lithium_ion.SPMe({"thermal": "x-full"}, name="1D SPMe (full)"),
+    # pybamm.lithium_ion.SPM({"thermal": "x-full"}, name="1D SPM (full)"),
+    # pybamm.lithium_ion.SPMe({"thermal": "x-full"}, name="1D SPMe (full)"),
     pybamm.lithium_ion.DFN({"thermal": "x-full"}, name="1D DFN (full)"),
-    #pybamm.lithium_ion.SPM(
+    # pybamm.lithium_ion.SPM(
     #    {
     #        "current collector": "potential pair",
     #        "dimensionality": 2,
     #        "thermal": "xyz-lumped",
     #    },
     #    name="2+1D SPM (lumped)",
-    #),
-    #pybamm.lithium_ion.SPMe(
+    # ),
+    # pybamm.lithium_ion.SPMe(
     #    {
     #        "current collector": "potential pair",
     #        "dimensionality": 2,
     #        "thermal": "xyz-lumped",
     #    },
     #    name="2+1D SPMe (lumped)",
-    #),
+    # ),
     pybamm.lithium_ion.DFN(
         {
             "current collector": "potential pair",
@@ -39,22 +39,22 @@ models = [
         },
         name="2+1D DFN (lumped)",
     ),
-    #pybamm.lithium_ion.SPM(
+    # pybamm.lithium_ion.SPM(
     #    {
     #        "current collector": "potential pair",
     #        "dimensionality": 2,
     #        "thermal": "x-lumped",
     #    },
     #    name="2+1D SPM (full)",
-    #),
-    #pybamm.lithium_ion.SPMe(
+    # ),
+    # pybamm.lithium_ion.SPMe(
     #    {
     #        "current collector": "potential pair",
     #        "dimensionality": 2,
     #        "thermal": "x-lumped",
     #    },
     #    name="2+1D SPMe (full)",
-    #),
+    # ),
     pybamm.lithium_ion.DFN(
         {
             "current collector": "potential pair",
