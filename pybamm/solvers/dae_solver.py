@@ -349,7 +349,7 @@ class DaeSolver(pybamm.BaseSolver):
             )
             return out
 
-        if jac:
+        if jac and self.root_method in ["hybr", "lm"]:
             if issparse(jac(0, y0_guess)):
 
                 def jac_fn(y0_alg):

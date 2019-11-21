@@ -84,18 +84,55 @@ def make_comsol_model(
     return comsol_model
 
 
-def plot_t_var(var, t, comsol_model, output_variables, param):
+def plot_t_var(
+    var, plot_times, comsol_model, output_variables, param, plot_error="both"
+):
     # discharge timescale
     tau = param.process_symbol(
         pybamm.standard_parameters_lithium_ion.tau_discharge
     ).evaluate()
 
-    plt.figure()
-    plt.plot(t, comsol_model.variables[var](t), label="COMSOL")
-    plt.plot(t, output_variables[var](t=(t / tau)), label="PyBaMM")
-    plt.xlabel(r"$t$")
-    plt.ylabel(var)
-    plt.legend()
+    pybamm_var = output_variables[var](t=(plot_times / tau))
+    comsol_var = comsol_model.variables[var](plot_times)
+
+    # Make plot
+
+    # add extra row for errors
+    if plot_error in ["abs", "rel"]:
+        n_rows = 2
+    elif plot_error == "both":
+        n_rows = 3
+    else:
+        n_rows = 1
+    fig, ax = plt.subplots(n_rows, 1, figsize=(15, 8))
+
+    ax[0].plot(plot_times, pybamm_var, "-", label="PyBaMM")
+    ax[0].plot(plot_times, comsol_var, "o", fillstyle="none", label="COMSOL")
+    if plot_error == "abs":
+        error = np.abs(pybamm_var - comsol_var)
+        ax[1].plot(plot_times, error, "-")
+    elif plot_error == "rel":
+        error = np.abs((pybamm_var - comsol_var) / comsol_var)
+        ax[1].plot(plot_times, error, "-")
+    elif plot_error == "both":
+        abs_error = np.abs(pybamm_var - comsol_var)
+        rel_error = np.abs((pybamm_var - comsol_var) / comsol_var)
+        ax[1].plot(plot_times, abs_error, "-")
+        ax[2].plot(plot_times, rel_error, "-")
+
+    # set labels
+    ax[0].set_xlabel("t")
+    ax[0].set_ylabel(var)
+    if plot_error in ["abs", "rel"]:
+        ax[1].set_xlabel("t")
+        ax[1].set_ylabel("error (" + plot_error + ")")
+    elif plot_error == "both":
+        ax[1].set_xlabel("t")
+        ax[1].set_ylabel("error (abs)")
+        ax[2].set_xlabel("t")
+        ax[2].set_ylabel("error (rel)")
+    ax[0].legend(bbox_to_anchor=(1.04, 1), loc="upper left")
+    plt.tight_layout()
 
 
 def plot_2D_var(
@@ -114,16 +151,9 @@ def plot_2D_var(
     z_plot_non_dim = z_plot / L_z
     t_non_dim = t / tau
 
-    # for pos potential compute relative to voltage
-    if var == "Positive current collector potential [V]":
-        pybamm_voltage = output_variables["Terminal voltage [V]"](t=t_non_dim)
-        pybamm_var = np.transpose(
-            output_variables[var](y=y_plot_non_dim, z=z_plot_non_dim, t=t_non_dim)
-        ) - pybamm_voltage
-    else:
-        pybamm_var = np.transpose(
-            output_variables[var](y=y_plot_non_dim, z=z_plot_non_dim, t=t_non_dim)
-        )
+    pybamm_var = np.transpose(
+        output_variables[var](y=y_plot_non_dim, z=z_plot_non_dim, t=t_non_dim)
+    )
 
     if error in ["abs", "rel"]:
         plt.subplot(131)
@@ -140,11 +170,7 @@ def plot_2D_var(
     # plot comsol solution
 
     # for pos potential compute relative to voltage
-    if var == "Positive current collector potential [V]":
-        comsol_voltage = comsol_model.variables["Terminal voltage [V]"](t=t)
-        comsol_var = comsol_model.variables[var](t=t) - comsol_voltage
-    else:
-        comsol_var = comsol_model.variables[var](t=t)
+    comsol_var = comsol_model.variables[var](t=t)
 
     if error in ["abs", "rel"]:
         plt.subplot(132)
@@ -189,11 +215,14 @@ def plot_2D_var(
         plt.set_cmap(cmap)
         plt.colorbar(abs_diff_plot)
         plt.subplot(224)
-        rel_error = np.abs((pybamm_var - comsol_var) / comsol_var)
+        scale = np.max(comsol_var) - np.min(comsol_var)
+        rel_error = np.abs((pybamm_var - comsol_var) / scale)
         # plot relative error up to max 10% (errors 10% and greater all take same
         # color in plot)
         vmax = np.min([np.max(rel_error), 0.1])
-        rel_diff_plot = plt.pcolormesh(y_plot, z_plot, rel_error, shading="gouraud", vmin=0, vmax=vmax)
+        rel_diff_plot = plt.pcolormesh(
+            y_plot, z_plot, rel_error, shading="gouraud", vmin=0, vmax=vmax
+        )
         plt.axis([0, y_plot[-1], 0, z_plot[-1]])
         plt.xlabel(r"$y$")
         plt.ylabel(r"$z$")

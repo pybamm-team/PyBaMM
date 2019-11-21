@@ -10,7 +10,7 @@ import shared
 os.chdir(pybamm.root_dir())
 
 # increase recursion limit for large expression trees
-sys.setrecursionlimit(10000)
+sys.setrecursionlimit(100000)
 
 pybamm.set_logging_level("INFO")
 
@@ -53,11 +53,11 @@ else:
     submesh_types = pybamm_model.default_submesh_types
 
     # cube root sequence in particles
-    r_n_edges = np.linspace(0, 1, 20) ** (1 / 3)
+    r_n_edges = np.linspace(0, 1, 15) ** (1 / 3)
     submesh_types["negative particle"] = pybamm.MeshGenerator(
         pybamm.UserSupplied1DSubMesh, submesh_params={"edges": r_n_edges}
     )
-    r_p_edges = np.linspace(0, 1, 20) ** (1 / 3)
+    r_p_edges = np.linspace(0, 1, 15) ** (1 / 3)
     submesh_types["positive particle"] = pybamm.MeshGenerator(
         pybamm.UserSupplied1DSubMesh, submesh_params={"edges": r_p_edges}
     )
@@ -84,7 +84,7 @@ else:
     y_edges = np.concatenate((y0, y1[1:], y2[1:], y3[1:], y4[1:]))
 
     # square root sequence in z direction
-    z_edges = np.linspace(0, 1, 20) ** (1 / 2)
+    z_edges = np.linspace(0, 1, 10) ** (1 / 2)
     submesh_types["current collector"] = pybamm.MeshGenerator(
         pybamm.UserSupplied2DSubMesh,
         submesh_params={"y_edges": y_edges, "z_edges": z_edges},
@@ -116,13 +116,13 @@ else:
     )
 
     # build and save simulation
-    simulation.build()
-    simulation.save(filename)
+    simulation.build(check_model=False)
+    # simulation.save(filename)
 
 "-----------------------------------------------------------------------------"
 "Solve model if not already solved"
 
-force_solve = False  # if True, then model is resolved
+force_solve = False  # if True, then model is re-solved
 
 # discharge timescale
 tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
@@ -163,7 +163,7 @@ output_variables = simulation.post_process_variables(
 
 t_plot = comsol_variables["time"]  # dimensional in seconds
 shared.plot_t_var("Terminal voltage [V]", t_plot, comsol_model, output_variables, param)
-plt.savefig("voltage.eps", format="eps", dpi=1000)
+# plt.savefig("voltage.eps", format="eps", dpi=1000)
 t_plot = 1800  # dimensional in seconds
 shared.plot_2D_var(
     "Negative current collector potential [V]",
@@ -172,9 +172,9 @@ shared.plot_2D_var(
     output_variables,
     param,
     cmap="cividis",
-    error="rel",
+    error="both",
 )
-plt.savefig("phi_s_cn.eps", format="eps", dpi=1000)
+# plt.savefig("phi_s_cn.eps", format="eps", dpi=1000)
 shared.plot_2D_var(
     "Positive current collector potential [V]",
     t_plot,
@@ -182,9 +182,9 @@ shared.plot_2D_var(
     output_variables,
     param,
     cmap="viridis",
-    error="rel",
+    error="both",
 )
-plt.savefig("phi_s_cp.eps", format="eps", dpi=1000)
+# plt.savefig("phi_s_cp.eps", format="eps", dpi=1000)
 shared.plot_2D_var(
     "Current collector current density [A.m-2]",
     t_plot,
@@ -192,7 +192,7 @@ shared.plot_2D_var(
     output_variables,
     param,
     cmap="plasma",
-    error="rel",
+    error="both",
 )
-plt.savefig("current.eps", format="eps", dpi=1000)
+# plt.savefig("current.eps", format="eps", dpi=1000)
 plt.show()
