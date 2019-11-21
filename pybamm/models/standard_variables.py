@@ -96,6 +96,13 @@ i_boundary_cc_composite = pybamm.Variable(
     "Composite current collector current density", domain="current collector"
 )
 
+R_cn = pybamm.Variable(
+    "Negative current collector resistance", domain="current collector"
+)
+R_cn = pybamm.Variable(
+    "Positive current collector resistance", domain="current collector"
+)
+
 
 # Particle concentration
 c_s_n = pybamm.Variable(
@@ -218,3 +225,4 @@ T_cp = pybamm.Variable(
 T = pybamm.Concatenation(T_n, T_s, T_p)
 T_av = pybamm.Variable("X-averaged cell temperature", domain="current collector")
 T_vol_av = pybamm.Variable("Volume-averaged cell temperature")
+
