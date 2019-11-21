@@ -46,11 +46,14 @@ class BaseSubModel:
         symbols.
     """
 
-<<<<<<< HEAD
-    def __init__(self, param, domain=None, reactions=None, name="Unnamed submodel"):
-=======
-    def __init__(self, param, domain=None, reactions=None, external=False):
->>>>>>> master
+    def __init__(
+        self,
+        param,
+        domain=None,
+        reactions=None,
+        name="Unnamed submodel",
+        external=False,
+    ):
         super().__init__()
         self.param = param
         # Initialise empty variables (to avoid overwriting with 'None')

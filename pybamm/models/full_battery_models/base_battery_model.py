@@ -543,7 +543,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             self.submodels["external circuit"] = pybamm.external_circuit.PowerControl(
                 self.param
             )
-        elif self.options["operating mode"] == "arbitrary":
+        elif self.options["operating mode"] == "custom":
             self.submodels[
                 "external circuit"
             ] = pybamm.external_circuit.FunctionControl(self.param)
