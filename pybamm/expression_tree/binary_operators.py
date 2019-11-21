@@ -227,7 +227,9 @@ class Power(BinaryOperator):
 
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
-        return left ** right
+        # don't raise RuntimeWarning for NaNs
+        with np.errstate(invalid="ignore"):
+            return left ** right
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_simplify()`. """

@@ -46,7 +46,11 @@ class BaseSubModel:
         symbols.
     """
 
+<<<<<<< HEAD
     def __init__(self, param, domain=None, reactions=None, name="Unnamed submodel"):
+=======
+    def __init__(self, param, domain=None, reactions=None, external=False):
+>>>>>>> master
         super().__init__()
         self.param = param
         # Initialise empty variables (to avoid overwriting with 'None')
@@ -62,6 +66,8 @@ class BaseSubModel:
         self.set_domain_for_broadcast()
         self.reactions = reactions
         self.name = name
+
+        self.external = external
 
     @property
     def domain(self):
@@ -113,6 +119,52 @@ class BaseSubModel:
             other submodels.
         """
         return {}
+
+    def get_external_variables(self):
+        """
+        A public method that returns the variables in a submodel which are
+        supplied by an external source.
+
+        Returns
+        -------
+        list :
+            A list of the external variables in the model.
+        """
+
+        external_variables = []
+        list_of_vars = []
+
+        if self.external is True:
+            # look through all the variables in the submodel and get the
+            # variables which are state vectors
+            submodel_variables = self.get_fundamental_variables()
+            for var in submodel_variables.values():
+                if isinstance(var, pybamm.Variable):
+                    list_of_vars += [var]
+
+                elif isinstance(var, pybamm.Concatenation):
+                    if all(
+                        isinstance(child, pybamm.Variable) for child in var.children
+                    ):
+                        list_of_vars += [var]
+
+            # first add only unique concatenations
+            unique_ids = []
+            for var in list_of_vars:
+                if var.id not in unique_ids and isinstance(var, pybamm.Concatenation):
+                    external_variables += [var]
+                    unique_ids += [var.id]
+                    # also add the ids of the children to unique ids
+                    for child in var.children:
+                        unique_ids += [child.id]
+
+            # now add any unique variables that are not part of a concatentation
+            for var in list_of_vars:
+                if var.id not in unique_ids:
+                    external_variables += [var]
+                    unique_ids += [var.id]
+
+        return external_variables
 
     def get_coupled_variables(self, variables):
         """

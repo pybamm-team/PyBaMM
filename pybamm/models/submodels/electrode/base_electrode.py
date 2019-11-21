@@ -142,9 +142,8 @@ class BaseElectrode(pybamm.BaseSubModel):
             "Negative current collector potential [V]": phi_s_cn * pot_scale,
             "Positive current collector potential": phi_s_cp,
             "Positive current collector potential [V]": phi_s_cp_dim,
-            "Local current collector potential difference": V_cc,
-            "Local current collector potential difference [V]": U_ref
-            + V_cc * pot_scale,
+            "Local voltage": V_cc,
+            "Local voltage [V]": U_ref + V_cc * pot_scale,
             "Terminal voltage": V,
             "Terminal voltage [V]": V_dim,
         }

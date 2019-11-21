@@ -52,6 +52,7 @@ class Discretisation(object):
         self.bcs = {}
         self.y_slices = {}
         self._discretised_symbols = {}
+        self.external_variables = []
 
     @property
     def mesh(self):
@@ -119,11 +120,19 @@ class Discretisation(object):
 
         # Prepare discretisation
         # set variables (we require the full variable not just id)
-        variables = list(model.rhs.keys()) + list(model.algebraic.keys())
+        variables = (
+            list(model.rhs.keys())
+            + list(model.algebraic.keys())
+            + model.external_variables
+        )
 
         # Set the y split for variables
         pybamm.logger.info("Set variable slices for {}".format(model.name))
         self.set_variable_slices(variables)
+
+        # now add extrapolated external variables to the boundary conditions
+        # if required by the spatial method
+        self._preprocess_external_variables(model)
 
         # set boundary conditions (only need key ids for boundary_conditions)
         pybamm.logger.info("Discretise boundary conditions for {}".format(model.name))
@@ -137,17 +146,33 @@ class Discretisation(object):
             # since they point to the same object
             model_disc = model
         else:
-            # create a model of the same class as the original model
-            model_disc = model.__class__(model.options)
-            model_disc.name = model.name
-            model_disc.options = model.options
-            model_disc.use_jacobian = model.use_jacobian
-            model_disc.use_simplify = model.use_simplify
-            model_disc.convert_to_format = model.convert_to_format
+            # create an empty copy of the original model
+            model_disc = model.new_copy()
 
         model_disc.bcs = self.bcs
 
-        # Process initial condtions
+        self.external_variables = model.external_variables
+        # find where external variables begin in state vector
+        # we always append external variables to the end, so
+        # it is sufficient to only know the starting location
+        start_vals = []
+        for var in self.external_variables:
+            if isinstance(var, pybamm.Concatenation):
+                for child in var.children:
+                    start_vals += [self.y_slices[child.id][0].start]
+            elif isinstance(var, pybamm.Variable):
+                start_vals += [self.y_slices[var.id][0].start]
+
+        # attach properties of the state vector so that it
+        # can be divided correctly during the solving stage
+        model_disc.external_variables = model.external_variables
+        model_disc.y_length = self.y_length
+        model_disc.y_slices = self.y_slices
+        if start_vals:
+            model_disc.external_start = min(start_vals)
+        else:
+            model_disc.external_start = self.y_length
+
         pybamm.logger.info("Discretise initial conditions for {}".format(model.name))
         ics, concat_ics = self.process_initial_conditions(model)
         model_disc.initial_conditions = ics
@@ -228,9 +253,32 @@ class Discretisation(object):
                 start = end
 
         self.y_slices = y_slices
+        self.y_length = end
 
         # reset discretised_symbols
         self._discretised_symbols = {}
+
+    def _preprocess_external_variables(self, model):
+        """
+        A method to preprocess external variables so that they are
+        compatible with the spatial method. For example, in finite
+        volume, the user will supply a vector of values valid on the
+        cell centres. However, for model processing, we also require
+        the boundary edge fluxes. Therefore, we extrapolate and add
+        the boundary fluxes to the boundary conditions, which are
+        employed in generating the grad and div matrices.
+        The processing is delegated to spatial methods as
+        the preprocessing required for finite volume and finite
+        element will be different.
+        """
+
+        for var in model.external_variables:
+            if var.domain != []:
+                new_bcs = self.spatial_methods[
+                    var.domain[0]
+                ].preprocess_external_variables(var)
+
+                model.boundary_conditions.update(new_bcs)
 
     def set_internal_boundary_conditions(self, model):
         """
@@ -819,7 +867,14 @@ class Discretisation(object):
         if check_complete:
             # Check keys from the given var_eqn_dict against self.y_slices
             ids = {v.id for v in unpacked_variables}
-            if ids != self.y_slices.keys():
+            external_id = {v.id for v in self.external_variables}
+            for var in self.external_variables:
+                child_ids = {child.id for child in var.children}
+                external_id = external_id.union(child_ids)
+            y_slices_with_external_removed = set(self.y_slices.keys()).difference(
+                external_id
+            )
+            if ids != y_slices_with_external_removed:
                 given_variable_names = [v.name for v in var_eqn_dict.keys()]
                 raise pybamm.ModelError(
                     "Initial conditions are insufficient. Only "

@@ -194,7 +194,11 @@ class CasadiSolver(pybamm.DaeSolver):
         solve_start_time = timer.time()
         pybamm.logger.debug("Calling DAE solver")
         solution = self.integrate_casadi(
-            self.casadi_problem, self.y0, t_eval, mass_matrix=model.mass_matrix.entries
+            self.casadi_rhs,
+            self.casadi_algebraic,
+            self.y0,
+            t_eval,
+            mass_matrix=model.mass_matrix.entries,
         )
         solve_time = timer.time() - solve_start_time
 
@@ -203,7 +207,7 @@ class CasadiSolver(pybamm.DaeSolver):
 
         return solution, solve_time, termination
 
-    def integrate_casadi(self, problem, y0, t_eval, mass_matrix=None):
+    def integrate_casadi(self, rhs, algebraic, y0, t_eval, mass_matrix=None):
         """
         Solve a DAE model defined by residuals with initial conditions y0.
 
@@ -233,11 +237,24 @@ class CasadiSolver(pybamm.DaeSolver):
             options["calc_ic"] = True
 
         # set up and solve
+        t = casadi.MX.sym("t")
+        y_diff = casadi.MX.sym("y_diff", rhs(0, y0).shape[0])
+        if algebraic is None:
+            problem = {"t": t, "x": y_diff, "ode": rhs(t, y_diff)}
+        else:
+            y_alg = casadi.MX.sym("y_alg", algebraic(0, y0).shape[0])
+            y = casadi.vertcat(y_diff, y_alg)
+            problem = {
+                "t": t,
+                "x": y_diff,
+                "z": y_alg,
+                "ode": rhs(t, y),
+                "alg": algebraic(t, y),
+            }
         integrator = casadi.integrator("F", self.method, problem, options)
         try:
             # Try solving
-            len_rhs = problem["x"].size()[0]
-            y0_diff, y0_alg = np.split(y0, [len_rhs])
+            y0_diff, y0_alg = np.split(y0, [y_diff.shape[0]])
             sol = integrator(x0=y0_diff, z0=y0_alg)
             y_values = np.concatenate([sol["xf"].full(), sol["zf"].full()])
             return pybamm.Solution(t_eval, y_values, None, None, "final time")

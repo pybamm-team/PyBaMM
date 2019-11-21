@@ -292,6 +292,9 @@ class SpatialMethod:
 
         raise NotImplementedError
 
+    def preprocess_external_variables(self, var):
+        return {}
+
     def boundary_value_or_flux(self, symbol, discretised_child, bcs=None):
         """
         Returns the boundary value or flux using the approriate expression for the

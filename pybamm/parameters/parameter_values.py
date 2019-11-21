@@ -277,12 +277,7 @@ class ParameterValues(dict):
             model = unprocessed_model
         else:
             # create a blank model of the same class
-            model = unprocessed_model.__class__(unprocessed_model.options)
-            model.name = unprocessed_model.name
-            model.options = unprocessed_model.options
-            model.use_jacobian = unprocessed_model.use_jacobian
-            model.use_simplify = unprocessed_model.use_simplify
-            model.convert_to_format = unprocessed_model.convert_to_format
+            model = unprocessed_model.new_copy()
 
         if len(unprocessed_model.rhs) == 0 and len(unprocessed_model.algebraic) == 0:
             raise pybamm.ModelError("Cannot process parameters for empty model")
