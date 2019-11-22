@@ -235,6 +235,4 @@ class MeshGenerator:
         return self.submesh_type(lims, npts, tabs, **self.submesh_params)
 
     def __repr__(self):
-        return "Generator for {}".format(
-            self.submesh_type.__name__
-        )
+        return "Generator for {}".format(self.submesh_type.__name__)

@@ -18,8 +18,8 @@ else:
 # load models
 options = {"thermal": "isothermal"}
 models = [
-    pybamm.lithium_ion.DFN(options,name = 'standard DFN'),
-    pybamm.lithium_ion.DFN(options,name = 'particle DFN'),
+    pybamm.lithium_ion.DFN(options, name="standard DFN"),
+    pybamm.lithium_ion.DFN(options, name="particle DFN"),
 ]
 
 
@@ -31,10 +31,14 @@ params[0].process_model(models[0])
 
 params[1]["Typical current [A]"] = 1.0
 
+
 def negative_distribution(x):
     return 1 + x
+
+
 def positive_distribution(x):
-    return 1 + (x-(1-models[1].param.l_p))
+    return 1 + (x - (1 - models[1].param.l_p))
+
 
 params[1]["Negative particle distribution"] = negative_distribution
 params[1]["Positive particle distribution"] = positive_distribution
@@ -70,8 +74,9 @@ output_variables = [
     "Positive electrode potential [V]",
     "Terminal voltage [V]",
     "Negative particle distribution",
-    "Positive particle distribution",]
+    "Positive particle distribution",
+]
 
 # plot
-plot = pybamm.QuickPlot(models, mesh, solutions,output_variables=output_variables)
+plot = pybamm.QuickPlot(models, mesh, solutions, output_variables=output_variables)
 plot.dynamic_plot()

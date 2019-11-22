@@ -53,7 +53,6 @@ class SingleParticle(BaseModel):
 
         return variables
 
-
     def set_rhs(self, variables):
 
         c, N, _ = self._unpack(variables)
