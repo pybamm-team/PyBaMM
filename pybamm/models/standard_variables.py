@@ -99,7 +99,7 @@ i_boundary_cc_composite = pybamm.Variable(
 R_cn = pybamm.Variable(
     "Negative current collector resistance", domain="current collector"
 )
-R_cn = pybamm.Variable(
+R_cp = pybamm.Variable(
     "Positive current collector resistance", domain="current collector"
 )
 

@@ -23,3 +23,5 @@ from .set_potential_single_particle import (
     SetPotentialSingleParticle1plus1D,
     SetPotentialSingleParticle2plus1D,
 )
+
+from .current_collector_with_average_current import AverageCurrent

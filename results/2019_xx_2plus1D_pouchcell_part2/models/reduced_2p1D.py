@@ -62,11 +62,6 @@ def solve_reduced_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None, params
         sim.built_model.variables["Local voltage [V]"], t, y, mesh=mesh
     )
 
-    y_dim = sim.built_model.variables["y [m]"].evaluate()
-    z_dim = sim.built_model.variables["z [m]"].evaluate()
-    y = sim.built_model.variables["y"].evaluate()
-    z = sim.built_model.variables["z"].evaluate()
-
     plotting_variables = {
         "Terminal voltage [V]": terminal_voltage,
         "Time [h]": time,

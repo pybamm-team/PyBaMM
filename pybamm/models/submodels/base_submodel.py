@@ -16,6 +16,10 @@ class BaseSubModel:
     ----------
     param: parameter class
         The model parameter symbols
+    domain: str
+        The domain of the submodel.
+    reaction: dict
+        A dictionary of the reactions occuring in the model.
 
     Attributes
     ----------

@@ -47,14 +47,23 @@ class AverageCurrent(BaseModel):
         # average current collector Ohmic losses
         Delta_Phi_cc = -delta * I_app * R_cc
 
-        variables = self._get_standard_negative_potential_variables(self, phi_s_cn)
+        variables = self._get_standard_negative_potential_variables(phi_s_cn)
+
+        ptl_scale = param.potential_scale
+        I_typ = param.I_typ
 
         variables.update(
             {
                 "Negative current collector resistance": R_cn,
                 "Positive current collector resistance": R_cp,
                 "Reduced positive current collector potential": phi_s_cp_red,
+                "Reduced positive current collector potential [V]": phi_s_cp_red
+                * ptl_scale,
                 "Average current collector ohmic losses": Delta_Phi_cc,
+                "Effective current collector resistance": R_cc,
+                "Effective current collector resistance [Ohm]": R_cc
+                * ptl_scale
+                / I_typ,
             }
         )
 
@@ -110,3 +119,30 @@ class AverageCurrent(BaseModel):
             R_cn: pybamm.Scalar(0),
             R_cp: pybamm.Scalar(0),
         }
+
+    @property
+    def default_parameter_values(self):
+        return pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
+
+    @property
+    def default_geometry(self):
+        return pybamm.Geometry("2D current collector")
+
+    @property
+    def default_var_pts(self):
+        var = pybamm.standard_spatial_vars
+        return {var.y: 32, var.z: 32}
+
+    @property
+    def default_submesh_types(self):
+        return {
+            "current collector": pybamm.MeshGenerator(pybamm.ScikitUniform2DSubMesh)
+        }
+
+    @property
+    def default_spatial_methods(self):
+        return {"current collector": pybamm.ScikitFiniteElement()}
+
+    @property
+    def default_solver(self):
+        return pybamm.AlgebraicSolver()

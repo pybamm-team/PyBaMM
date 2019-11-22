@@ -51,35 +51,54 @@ def solve_spmecc(C_rate=1, t_eval=None, var_pts=None, thermal=False, params=None
         sim_spme.built_model.variables["Terminal voltage"], t, y_spme
     )
     I_av = pybamm.ProcessedVariable(
-        sim_spme.built_model.variables["Total current density"], t, y_spme
+        sim_spme.built_model.variables["Current [A]"], t, y_spme
     )
 
     R_cc = param.process_symbol(
         cc.variables["Effective current collector resistance [Ohm]"]
-    ).evaluate(t=cc_solution.t, y=y_cc)[0][0]
+    ).evaluate(t=0.0, y=y_cc)[0][0]
     delta = param.evaluate(pybamm.standard_parameters_lithium_ion.delta)
     cc_ohmic_losses = -delta * current * R_cc
 
-    terminal_voltage = (
-        pybamm.ProcessedVariable(
-            sim_spme.built_model.variables["Terminal voltage [V]"], t, y_spme
-        )(t)
-        + cc_ohmic_losses
+    V_av = pybamm.ProcessedVariable(
+        sim_spme.built_model.variables["Terminal voltage [V]"], t, y_spme
     )
 
-    plotting_variables = cc.get_processed_potentials(
-        cc_solution, cc_mesh, cc_param, V_av, I_av
+    terminal_voltage = V_av(t) + cc_ohmic_losses
+
+    phi_s_n = pybamm.ProcessedVariable(
+        cc.variables["Negative current collector potential [V]"],
+        cc_solution.t,
+        cc_solution.y,
+        mesh=cc_mesh,
     )
 
-    plotting_variables.update(
-        {
-            "Terminal voltage [V]": terminal_voltage,
-            "Time [h]": time,
-            "Discharge capacity [A.h]": discharge_capacity,
-            "Average current collector ohmic losses [Ohm]": cc_ohmic_losses,
-            "L_z": param.process_symbol(pybamm.geometric_parameters.L_z).evaluate(),
-        }
+    phi_s_p_red = pybamm.ProcessedVariable(
+        cc.variables["Reduced positive current collector potential [V]"],
+        cc_solution.t,
+        cc_solution.y,
+        mesh=cc_mesh,
     )
+
+    def phi_s_n_out(t, y, z):
+        return phi_s_n(y=y, z=z)
+
+    def phi_s_p(t, y, z):
+        return phi_s_p_red(y=y, z=z) + V_av(t) - delta * R_cc * I_av(t)
+
+    def V_cc(t, y, z):
+        return phi_s_p(t, y, z) - phi_s_n(y=y, z=z)
+
+    plotting_variables = {
+        "Terminal voltage [V]": terminal_voltage,
+        "Time [h]": time,
+        "Discharge capacity [A.h]": discharge_capacity,
+        "Average current collector ohmic losses [Ohm]": cc_ohmic_losses,
+        "L_z": param.process_symbol(pybamm.geometric_parameters.L_z).evaluate(),
+        "Negative current collector potential [V]": phi_s_n_out,
+        "Positive current collector potential [V]": phi_s_p,
+        "Local voltage [V]": V_cc,
+    }
 
     return plotting_variables
 
@@ -90,15 +109,28 @@ def solve_cc(var_pts, param):
     to the submodel structure.
     """
 
-    model = pybamm.current_collector.EffectiveResistance2D()
+    model = pybamm.BaseModel()
+    model.submodels = {
+        "current collector": pybamm.current_collector.AverageCurrent(
+            pybamm.standard_parameters_lithium_ion
+        )
+    }
+    for sm in model.submodels.values():
+        model.variables.update(sm.get_fundamental_variables())
+        # don't set coupled variables as that doesn't work yet
+        sm.set_algebraic(model.variables)
+        sm.set_boundary_conditions(model.variables)
+        sm.set_initial_conditions(model.variables)
+        model.update(sm)
 
+    param.update({"Typical timescale [s]": 3600})
     param.process_model(model)
-    geometry = model.default_geometry
+    geometry = sm.default_geometry
     param.process_geometry(geometry)
-    mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
-    disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+    mesh = pybamm.Mesh(geometry, sm.default_submesh_types, var_pts)
+    disc = pybamm.Discretisation(mesh, sm.default_spatial_methods)
     disc.process_model(model)
 
-    solution = model.default_solver.solve(model)
+    solution = sm.default_solver.solve(model)
 
     return model, solution, mesh, param

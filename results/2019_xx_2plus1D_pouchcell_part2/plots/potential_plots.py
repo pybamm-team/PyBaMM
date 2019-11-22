@@ -53,10 +53,7 @@ def plot_yz_potential(t, spmecc=None, reduced=None, full=None):
         for i, var_name in enumerate(var_names):
             # just doing this because effective resistance model is
             # inconsistent with other models
-            if var_name == "Local voltage [V]":
-                name = "Local current collector potential difference [V]"
-            else:
-                name = var_name
+            name = var_name
             make_2D_plot(
                 fig,
                 ax[i, model_idx],
@@ -72,8 +69,8 @@ def plot_yz_potential(t, spmecc=None, reduced=None, full=None):
     if reduced:
         y = np.linspace(0, 1.5, 100)
         z = np.linspace(0, 1, 100)
-        y_dim = y * spmecc["L_z"]
-        z_dim = z * spmecc["L_z"]
+        y_dim = y * reduced["L_z"]
+        z_dim = z * reduced["L_z"]
 
         for i, var_name in enumerate(var_names):
             make_2D_plot(
@@ -82,6 +79,25 @@ def plot_yz_potential(t, spmecc=None, reduced=None, full=None):
                 y_dim,
                 z_dim,
                 np.transpose(reduced[var_name](t=t, y=y, z=z)),
+                plot_names[i],
+                color_lim[i],
+            )
+
+        model_idx += 1
+
+    if full:
+        y = np.linspace(0, 1.5, 100)
+        z = np.linspace(0, 1, 100)
+        y_dim = y * full["L_z"]
+        z_dim = z * full["L_z"]
+
+        for i, var_name in enumerate(var_names):
+            make_2D_plot(
+                fig,
+                ax[i, model_idx],
+                y_dim,
+                z_dim,
+                np.transpose(full[var_name](t=t, y=y, z=z)),
                 plot_names[i],
                 color_lim[i],
             )
