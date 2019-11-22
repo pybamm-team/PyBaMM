@@ -113,23 +113,24 @@ class BinaryOperator(pybamm.Symbol):
                 )
             )
 
-        # Do some broadcasting in special cases
+        # Do some broadcasting in special cases, to avoid having to do this manually
         if (
-            left.domain != right.domain
+            not isinstance(self, (Outer, Kron))
             and left.domain != []
             and right.domain != []
-            and "secondary" in right.auxiliary_domains
-            and left.domain == right.auxiliary_domains["secondary"]
         ):
-            left = pybamm.PrimaryBroadcast(left, right.domain)
-        if (
-            right.domain != left.domain
-            and left.domain != []
-            and right.domain != []
-            and "secondary" in left.auxiliary_domains
-            and right.domain == left.auxiliary_domains["secondary"]
-        ):
-            right = pybamm.PrimaryBroadcast(right, left.domain)
+            if (
+                left.domain != right.domain
+                and "secondary" in right.auxiliary_domains
+                and left.domain == right.auxiliary_domains["secondary"]
+            ):
+                left = pybamm.PrimaryBroadcast(left, right.domain)
+            if (
+                right.domain != left.domain
+                and "secondary" in left.auxiliary_domains
+                and right.domain == left.auxiliary_domains["secondary"]
+            ):
+                right = pybamm.PrimaryBroadcast(right, left.domain)
 
         return left, right
 
