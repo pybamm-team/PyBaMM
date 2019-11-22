@@ -48,6 +48,22 @@ class ManyParticles(BaseModel):
         variables.update(self._get_standard_flux_variables(N_s, N_s))
         return variables
 
+
+    def set_rhs(self, variables):
+
+        c, N, _ = self._unpack(variables)
+
+        if self.domain == "Negative":
+            x = pybamm.standard_spatial_vars.x_n
+            R = pybamm.PrimaryBroadcast(1 + x / 10, 'negative particle',)
+            self.rhs = {c: -(1 / (R**2 * self.param.C_n)) * pybamm.div(N)}
+
+        elif self.domain == "Positive":
+            x = pybamm.standard_spatial_vars.x_p
+            R = pybamm.PrimaryBroadcast(1 + x / 10, 'positive particle',)
+            self.rhs = {c: -(1 / (R**2 * self.param.C_p)) * pybamm.div(N)}
+
+
     def _unpack(self, variables):
         c_s = variables[self.domain + " particle concentration"]
         N_s = variables[self.domain + " particle flux"]
