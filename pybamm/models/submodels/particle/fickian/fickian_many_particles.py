@@ -46,6 +46,16 @@ class ManyParticles(BaseModel):
         N_s = self._flux_law(c_s, T_k)
 
         variables.update(self._get_standard_flux_variables(N_s, N_s))
+
+        if self.domain == "Negative":
+            x = pybamm.standard_spatial_vars.x_n
+            R = pybamm.FunctionParameter( 'Negative particle distribution', x)
+            variables.update({"Negative particle distribution":R})
+
+        elif self.domain == "Positive":
+            x = pybamm.standard_spatial_vars.x_p
+            R = pybamm.FunctionParameter( 'Positive particle distribution', x)
+            variables.update({"Positive particle distribution": R})
         return variables
 
 
@@ -54,13 +64,11 @@ class ManyParticles(BaseModel):
         c, N, _ = self._unpack(variables)
 
         if self.domain == "Negative":
-            x = pybamm.standard_spatial_vars.x_n
-            R = pybamm.PrimaryBroadcast(pybamm.FunctionParameter('Negative particle distribution',x), 'negative particle',)
+            R = pybamm.PrimaryBroadcast(variables['Negative particle distribution'], 'negative particle',)
             self.rhs = {c: -(1 / (R**2 * self.param.C_n)) * pybamm.div(N)}
 
         elif self.domain == "Positive":
-            x = pybamm.standard_spatial_vars.x_p
-            R = pybamm.PrimaryBroadcast(pybamm.FunctionParameter('Positive particle distribution', x), 'positive particle',)
+            R = pybamm.PrimaryBroadcast(variables['Positive particle distribution'], 'positive particle',)
             self.rhs = {c: -(1 / (R**2 * self.param.C_p)) * pybamm.div(N)}
 
 

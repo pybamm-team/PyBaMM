@@ -59,6 +59,19 @@ t_eval = np.linspace(0, 0.3, 100)
 for i, model in enumerate(models):
     solutions[i] = model.default_solver.solve(model, t_eval)
 
+
+output_variables = [
+    "Negative particle surface concentration",
+    "Electrolyte concentration",
+    "Positive particle surface concentration",
+    "Current [A]",
+    "Negative electrode potential [V]",
+    "Electrolyte potential [V]",
+    "Positive electrode potential [V]",
+    "Terminal voltage [V]",
+    "Negative particle distribution",
+    "Positive particle distribution",]
+
 # plot
-plot = pybamm.QuickPlot(models, mesh, solutions)
+plot = pybamm.QuickPlot(models, mesh, solutions,output_variables=output_variables)
 plot.dynamic_plot()
