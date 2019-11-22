@@ -75,9 +75,6 @@ class CasadiConverter(object):
                 return casadi.mmax(*converted_children)
             elif symbol.function == np.abs:
                 return casadi.fabs(*converted_children)
-            elif symbol.function == np.ones_like:
-                len_child = converted_children[0].shape[0]
-                return casadi.MX.ones(len_child)
             elif isinstance(symbol.function, (PchipInterpolator, CubicSpline)):
                 return casadi.interpolant("LUT", "bspline", [symbol.x], symbol.y)(
                     *converted_children

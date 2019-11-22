@@ -184,3 +184,16 @@ class FullBroadcast(Broadcast):
         )
 
         return child_eval * vec
+
+
+def ones_like(symbol):
+    """
+    Create a symbol with the same shape as the input symbol and with constant value '1',
+    using `FullBroadcast`.
+
+    Parameters
+    ----------
+    symbol : :class:`Symbol`
+        Symbol whose shape to copy
+    """
+    return FullBroadcast(1, symbol.domain, symbol.auxiliary_domains)
