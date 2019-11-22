@@ -49,13 +49,11 @@ class ManyParticles(BaseModel):
 
         if self.domain == "Negative":
             x = pybamm.standard_spatial_vars.x_n
-            x.auxiliary_domains = {"secondary": "current collector"}
             R = pybamm.FunctionParameter("Negative particle distribution", x)
             variables.update({"Negative particle distribution": R})
 
         elif self.domain == "Positive":
             x = pybamm.standard_spatial_vars.x_p
-            x.auxiliary_domains = {"secondary": "current collector"}
             R = pybamm.FunctionParameter("Positive particle distribution", x)
             variables.update({"Positive particle distribution": R})
         return variables

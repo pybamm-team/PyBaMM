@@ -78,9 +78,17 @@ class BaseHigherOrder(BaseModel):
             chi_av_p = chi_av
 
         # electrolyte current
-        i_e_n = pybamm.outer(i_boundary_cc_0, x_n / l_n)
+        i_e_n = (
+            pybamm.PrimaryBroadcast(i_boundary_cc_0, "negative electrode") * x_n / l_n
+        )
+
         i_e_s = pybamm.PrimaryBroadcast(i_boundary_cc_0, "separator")
-        i_e_p = pybamm.outer(i_boundary_cc_0, (1 - x_p) / l_p)
+        i_e_p = (
+            pybamm.PrimaryBroadcast(i_boundary_cc_0, "positive electrode")
+            * (1 - x_p)
+            / l_p
+        )
+
         i_e = pybamm.Concatenation(i_e_n, i_e_s, i_e_p)
 
         # electrolyte potential
@@ -111,10 +119,12 @@ class BaseHigherOrder(BaseModel):
                     c_e_n / pybamm.PrimaryBroadcast(c_e_av, "negative electrode")
                 )
             )
-            - pybamm.outer(
+            - pybamm.PrimaryBroadcast(
                 i_boundary_cc_0 * (param.C_e / param.gamma_e) / kappa_n_av,
-                (x_n ** 2 - l_n ** 2) / (2 * l_n),
+                "negative electrode",
             )
+            * (x_n ** 2 - l_n ** 2)
+            / (2 * l_n)
             - pybamm.PrimaryBroadcast(
                 i_boundary_cc_0 * l_n * (param.C_e / param.gamma_e) / kappa_s_av,
                 "negative electrode",
@@ -130,9 +140,10 @@ class BaseHigherOrder(BaseModel):
                     c_e_s / pybamm.PrimaryBroadcast(c_e_av, "separator")
                 )
             )
-            - pybamm.outer(
-                i_boundary_cc_0 * param.C_e / param.gamma_e / kappa_s_av, x_s
+            - pybamm.PrimaryBroadcast(
+                i_boundary_cc_0 * param.C_e / param.gamma_e / kappa_s_av, "separator"
             )
+            * x_s
         )
 
         phi_e_p = (
@@ -144,10 +155,12 @@ class BaseHigherOrder(BaseModel):
                     c_e_p / pybamm.PrimaryBroadcast(c_e_av, "positive electrode")
                 )
             )
-            - pybamm.outer(
+            - pybamm.PrimaryBroadcast(
                 i_boundary_cc_0 * (param.C_e / param.gamma_e) / kappa_p_av,
-                (x_p * (2 - x_p) + l_p ** 2 - 1) / (2 * l_p),
+                "positive electrode",
             )
+            * (x_p * (2 - x_p) + l_p ** 2 - 1)
+            / (2 * l_p)
             - pybamm.PrimaryBroadcast(
                 i_boundary_cc_0 * (1 - l_p) * (param.C_e / param.gamma_e) / kappa_s_av,
                 "positive electrode",
