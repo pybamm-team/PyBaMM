@@ -173,8 +173,8 @@ class BaseThermal(pybamm.BaseSubModel):
                 "X-averaged irreversible electrochemical heating [W.m-3]": Q_rxn_av
                 * Q_scale,
                 "Volume-averaged irreversible electrochemical heating": Q_rxn_vol_av,
-                "Volume-averaged irreversible electrochemical heating [W.m-3]": Q_rxn_vol_av
-                * Q_scale,
+                "Volume-averaged irreversible electrochemical heating "
+                + "[W.m-3]": Q_rxn_vol_av * Q_scale,
                 "Reversible heating": Q_rev,
                 "Reversible heating [W.m-3]": Q_rev * Q_scale,
                 "X-averaged reversible heating": Q_rev_av,
