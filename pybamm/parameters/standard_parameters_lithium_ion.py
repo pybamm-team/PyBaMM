@@ -197,10 +197,10 @@ def U_p_dimensional(sto, T):
 
 
 # can maybe improve ref value at some stage
-U_n_ref = U_n_dimensional(pybamm.Scalar(0.7), T_ref)
+U_n_ref = U_n_dimensional(c_n_init_dimensional / c_n_max, T_ref)
 
 # can maybe improve ref value at some stage
-U_p_ref = U_p_dimensional(pybamm.Scalar(0.7), T_ref)
+U_p_ref = U_p_dimensional(c_p_init_dimensional / c_p_max, T_ref)
 
 m_n_ref_dimensional = m_n_dimensional(T_ref)
 m_p_ref_dimensional = m_p_dimensional(T_ref)
