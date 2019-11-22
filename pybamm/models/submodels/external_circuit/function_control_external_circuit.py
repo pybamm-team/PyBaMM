@@ -8,15 +8,9 @@ from .base_external_circuit import BaseModel
 class FunctionControl(BaseModel):
     """External circuit with an arbitrary function. """
 
-    def __init__(self, param):
+    def __init__(self, param, ExternalCircuitClass):
         super().__init__(param)
-
-    def external_circuit_function(self, I, V):
-        """
-        Function that fixes the current, I (in Amps), or voltage, V (in Volts), or a
-        combination of the two
-        """
-        return pybamm.FunctionParameter("External circuit function", I, V)
+        self.external_circuit_class = ExternalCircuitClass()
 
     def get_fundamental_variables(self):
         # Current is a variable
@@ -31,6 +25,11 @@ class FunctionControl(BaseModel):
             "Current [A]": I,
         }
 
+        # Add switches
+        for i in range(self.external_circuit_class.num_switches):
+            s = pybamm.Parameter("Switch {}".format(i + 1))
+            variables["Switch {}".format(i + 1)] = s
+
         return variables
 
     def set_initial_conditions(self, variables):
@@ -43,6 +42,4 @@ class FunctionControl(BaseModel):
         # The external circuit function should fix either the current, or the voltage,
         # or a combination (e.g. I*V for power control)
         i_cell = variables["Total current density"]
-        I = variables["Current [A]"]
-        V = variables["Terminal voltage [V]"]
-        self.algebraic[i_cell] = self.external_circuit_function(I, V)
+        self.algebraic[i_cell] = self.external_circuit_class(variables)

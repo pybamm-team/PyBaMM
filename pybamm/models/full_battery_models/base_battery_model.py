@@ -157,7 +157,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "particle": "Fickian diffusion",
             "thermal": "isothermal",
             "thermal current collector": False,
-            "external submodels": []
+            "external submodels": [],
         }
         options = default_options
         # any extra options overwrite the default options
@@ -169,12 +169,10 @@ class BaseBatteryModel(pybamm.BaseModel):
                     raise pybamm.OptionError("option {} not recognised".format(name))
 
         # Some standard checks to make sure options are compatible
-        if options["operating mode"] not in [
-            "current",
-            "voltage",
-            "power",
-            "custom",
-        ]:
+        if not (
+            options["operating mode"] in ["current", "voltage", "power"]
+            or callable(options["operating mode"])
+        ):
             raise pybamm.OptionError(
                 "operating mode '{}' not recognised".format(options["operating mode"])
             )
@@ -543,10 +541,12 @@ class BaseBatteryModel(pybamm.BaseModel):
             self.submodels["external circuit"] = pybamm.external_circuit.PowerControl(
                 self.param
             )
-        elif self.options["operating mode"] == "custom":
+        elif callable(self.options["operating mode"]):
             self.submodels[
                 "external circuit"
-            ] = pybamm.external_circuit.FunctionControl(self.param)
+            ] = pybamm.external_circuit.FunctionControl(
+                self.param, self.options["operating mode"]
+            )
 
     def set_tortuosity_submodels(self):
         self.submodels["electrolyte tortuosity"] = pybamm.tortuosity.Bruggeman(
