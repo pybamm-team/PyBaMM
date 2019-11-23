@@ -37,6 +37,7 @@ class TestCopy(unittest.TestCase):
             pybamm.NumpyConcatenation(a, b, v_s),
             pybamm.DomainConcatenation([v_n, v_s], mesh),
             pybamm.Parameter("param"),
+            pybamm.InputParameter("param"),
             pybamm.StateVector(slice(0, 56)),
             pybamm.Matrix(np.ones((50, 40))),
             pybamm.SpatialVariable("x", ["negative electrode"]),

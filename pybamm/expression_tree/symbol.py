@@ -459,7 +459,7 @@ class Symbol(anytree.NodeMixin):
             )
         )
 
-    def evaluate(self, t=None, y=None, known_evals=None):
+    def evaluate(self, t=None, y=None, u=None, known_evals=None):
         """Evaluate expression tree (wrapper to allow using dict of known values).
         If the dict 'known_evals' is provided, the dict is searched for self.id; if
         self.id is in the keys, return that value; otherwise, evaluate using

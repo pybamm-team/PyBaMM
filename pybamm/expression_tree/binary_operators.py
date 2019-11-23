@@ -148,21 +148,21 @@ class BinaryOperator(pybamm.Symbol):
         "Default behaviour for new_copy"
         return self.__class__(left, right)
 
-    def evaluate(self, t=None, y=None, known_evals=None):
+    def evaluate(self, t=None, y=None, u=None, known_evals=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         if known_evals is not None:
             id = self.id
             try:
                 return known_evals[id], known_evals
             except KeyError:
-                left, known_evals = self.left.evaluate(t, y, known_evals)
-                right, known_evals = self.right.evaluate(t, y, known_evals)
+                left, known_evals = self.left.evaluate(t, y, u, known_evals)
+                right, known_evals = self.right.evaluate(t, y, u, known_evals)
                 value = self._binary_evaluate(left, right)
                 known_evals[id] = value
                 return value, known_evals
         else:
-            left = self.left.evaluate(t, y)
-            right = self.right.evaluate(t, y)
+            left = self.left.evaluate(t, y, u)
+            right = self.right.evaluate(t, y, u)
             return self._binary_evaluate(left, right)
 
     def evaluate_for_shape(self):
