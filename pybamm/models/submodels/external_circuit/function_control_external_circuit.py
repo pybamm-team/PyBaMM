@@ -8,9 +8,9 @@ from .base_external_circuit import BaseModel
 class FunctionControl(BaseModel):
     """External circuit with an arbitrary function. """
 
-    def __init__(self, param, ExternalCircuitClass):
+    def __init__(self, param, external_circuit_class):
         super().__init__(param)
-        self.external_circuit_class = ExternalCircuitClass()
+        self.external_circuit_class = external_circuit_class
 
     def get_fundamental_variables(self):
         # Current is a variable
@@ -26,6 +26,9 @@ class FunctionControl(BaseModel):
         }
 
         # Add switches
+        # These are not implemented yet but can be used later with the Experiment class
+        # to simulate different external circuit conditions sequentially within a
+        # single model (for example Constant Current - Constant Voltage)
         for i in range(self.external_circuit_class.num_switches):
             s = pybamm.Parameter("Switch {}".format(i + 1))
             variables["Switch {}".format(i + 1)] = s

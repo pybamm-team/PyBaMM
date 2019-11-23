@@ -9,10 +9,14 @@ class PowerControl(FunctionControl):
     """External circuit with power control. """
 
     def __init__(self, param):
-        super().__init__(param)
+        super().__init__(param, ConstantPower())
 
-    def external_circuit_function(self, I, V):
-        return I * V - pybamm.FunctionParameter(
-            "Power function", pybamm.t * self.param.timescale
-        )
+
+class ConstantPower:
+    num_switches = 0
+
+    def __call__(self, variables):
+        I = variables["Current [A]"]
+        V = variables["Terminal voltage [V]"]
+        return I * V - pybamm.FunctionParameter("Power function", pybamm.t)
 
