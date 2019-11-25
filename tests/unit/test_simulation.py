@@ -71,6 +71,13 @@ class TestSimulation(unittest.TestCase):
 
         self.assertEqual(sim._solution, None)
 
+        # test solve without check
+        sim.reset()
+        sim.solve(check_model=False)
+        for val in list(sim.built_model.rhs.values()):
+            self.assertFalse(val.has_symbol_of_classes(pybamm.Parameter))
+            self.assertTrue(val.has_symbol_of_classes(pybamm.Matrix))
+
     def test_reuse_commands(self):
 
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
