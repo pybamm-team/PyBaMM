@@ -20,13 +20,13 @@ class TestSPM(unittest.TestCase):
         model = pybamm.lithium_ion.SPM(options)
         var = pybamm.standard_spatial_vars
         var_pts = {
-            var.x_n: 5,
-            var.x_s: 5,
-            var.x_p: 5,
+            var.x_n: 11,
+            var.x_s: 13,
+            var.x_p: 17,
             var.r_n: 5,
-            var.r_p: 5,
-            var.y: 5,
-            var.z: 5,
+            var.r_p: 7,
+            var.y: 23,
+            var.z: 21,
         }
         modeltest = tests.StandardModelTest(model, var_pts=var_pts)
         modeltest.test_all(skip_output_tests=True)
@@ -36,13 +36,13 @@ class TestSPM(unittest.TestCase):
         model = pybamm.lithium_ion.SPM(options)
         var = pybamm.standard_spatial_vars
         var_pts = {
-            var.x_n: 5,
-            var.x_s: 5,
-            var.x_p: 5,
+            var.x_n: 11,
+            var.x_s: 13,
+            var.x_p: 17,
             var.r_n: 5,
-            var.r_p: 5,
-            var.y: 5,
-            var.z: 5,
+            var.r_p: 7,
+            var.y: 23,
+            var.z: 21,
         }
         modeltest = tests.StandardModelTest(model, var_pts=var_pts)
         modeltest.test_all(skip_output_tests=True)
@@ -107,6 +107,8 @@ class TestSPM(unittest.TestCase):
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys
+
+    sys.setrecursionlimit(300)
 
     if "-v" in sys.argv:
         debug = True

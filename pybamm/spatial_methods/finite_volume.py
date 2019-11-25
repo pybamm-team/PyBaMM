@@ -59,7 +59,8 @@ class FiniteVolume(pybamm.SpatialMethod):
         """
         # for finite volume we use the cell centres
         symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
-        return pybamm.Vector(symbol_mesh[0].nodes, domain=symbol.domain)
+        entries = np.concatenate([mesh.nodes for mesh in symbol_mesh])
+        return pybamm.Vector(entries, domain=symbol.domain)
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the gradient operator.
