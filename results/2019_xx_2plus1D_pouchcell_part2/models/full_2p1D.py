@@ -72,6 +72,18 @@ def solve_full_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None):
     def phi_s_p_reduced(t, y, z):
         return phi_s_p_dim(t=t, y=y, z=z) - V(t)
 
+    I_density = pybamm.ProcessedVariable(
+        sim.built_model.variables["Current collector current density [A.m-2]"],
+        t,
+        y,
+        mesh=sim.mesh,
+    )
+
+    def av_cc_density(t):
+        I = I_density(t=t, y=np.linspace(0, 1.5, 100), z=np.linspace(0, 1, 100))
+        I_av = np.mean(np.mean(I, axis=0), axis=0)
+        return I_av
+
     plotting_variables = {
         "Terminal voltage [V]": terminal_voltage,
         "Time [h]": time,
@@ -81,6 +93,8 @@ def solve_full_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None):
         "Discharge capacity [A.h]": discharge_capacity,
         "Local voltage [V]": V_loc,
         "L_z": param.process_symbol(pybamm.geometric_parameters.L_z).evaluate(),
+        "Local current density [A.m-2]": I_density,
+        "Average local current density [A.m-2]": av_cc_density(t),
     }
 
     return plotting_variables

@@ -7,18 +7,22 @@ import plots
 
 pybamm.set_logging_level("INFO")
 
-
+solve_spm = True
 solve_spmecc = False
 solve_reduced_2p1 = True
 solve_full_2p1 = True
 
 plot_voltage = False
-plot_potentials = True
-reduced_and_full_potential_errors = True
+plot_potentials = False
+reduced_and_full_potential_errors = False
+
+plot_current = False
+plot_av_current = False
+plot_reduced_full_current_errors = False
 
 t_eval = np.linspace(0, 0.17, 100)
 
-C_rate = 3
+C_rate = 1
 
 var_pts = {
     pybamm.standard_spatial_vars.x_n: 5,
@@ -37,6 +41,11 @@ params = {
     # "Negative current collector conductivity [S.m-1]": 5.96,
     # "Positive current collector conductivity [S.m-1]": 3.55,
 }
+
+if solve_spm:
+    spm = models.solve_spm(C_rate=C_rate, t_eval=t_eval, var_pts=var_pts)
+else:
+    spm = None
 
 
 if solve_spmecc:
@@ -72,6 +81,21 @@ if plot_potentials:
 if reduced_and_full_potential_errors:
     for t in times:
         plots.plot_potential_errors(t, reduced=reduced, full=full)
+
+# current
+if plot_current:
+    for t in times:
+        plots.plot_yz_current(t, spmecc=spmecc, reduced=reduced, full=full)
+
+if plot_reduced_full_current_errors:
+    for t in times:
+        plots.plot_current_errors(t, reduced=reduced, full=full)
+
+if plot_av_current:
+    fig, ax = plt.subplots()
+    plots.plot_av_cc_current(ax, spm=spm, spmecc=spmecc, reduced=reduced, full=full)
+
+# temperature
 
 
 plt.show()
