@@ -7,18 +7,24 @@ import plots
 
 pybamm.set_logging_level("INFO")
 
-solve_spm = True
+thermal = False
+
+solve_spm = False
 solve_spmecc = False
 solve_reduced_2p1 = True
 solve_full_2p1 = True
 
-plot_voltage = False
-plot_potentials = False
-reduced_and_full_potential_errors = False
+plot_voltage = True
+plot_potentials = True
+reduced_and_full_potential_errors = True
 
-plot_current = False
-plot_av_current = False
-plot_reduced_full_current_errors = False
+plot_current = True
+plot_av_current = True
+plot_reduced_full_current_errors = True
+
+plot_temperature_profile = False
+plot_temperature_profile_errors_red_full = False
+plot_average_temperature = False
 
 t_eval = np.linspace(0, 0.17, 100)
 
@@ -43,27 +49,31 @@ params = {
 }
 
 if solve_spm:
-    spm = models.solve_spm(C_rate=C_rate, t_eval=t_eval, var_pts=var_pts)
+    spm = models.solve_spm(
+        C_rate=C_rate, t_eval=t_eval, var_pts=var_pts, thermal=thermal
+    )
 else:
     spm = None
 
 
 if solve_spmecc:
     spmecc = models.solve_spmecc(
-        t_eval=t_eval, var_pts=var_pts, params=params, C_rate=C_rate
+        t_eval=t_eval, var_pts=var_pts, params=params, C_rate=C_rate, thermal=thermal
     )
 else:
     spmecc = None
 
 if solve_reduced_2p1:
     reduced = models.solve_reduced_2p1(
-        t_eval=t_eval, var_pts=var_pts, params=params, C_rate=C_rate
+        t_eval=t_eval, var_pts=var_pts, params=params, C_rate=C_rate, thermal=thermal
     )
 else:
     reduced = None
 
 if solve_full_2p1:
-    full = models.solve_full_2p1(t_eval=t_eval, C_rate=C_rate, var_pts=var_pts)
+    full = models.solve_full_2p1(
+        t_eval=t_eval, C_rate=C_rate, var_pts=var_pts, thermal=thermal
+    )
 else:
     full = None
 
@@ -96,7 +106,15 @@ if plot_av_current:
     plots.plot_av_cc_current(ax, spm=spm, spmecc=spmecc, reduced=reduced, full=full)
 
 # temperature
+if plot_temperature_profile:
+    for t in times:
+        plots.plot_temperature_profile(t, spmecc=spmecc, reduced=reduced, full=full)
 
+if plot_average_temperature:
+    fig, ax = plt.subplots()
+    plots.plot_average_temperature(
+        ax, spm=spm, spmecc=spmecc, reduced=reduced, full=full
+    )
 
 plt.show()
 

@@ -44,11 +44,16 @@ def solve_spm(C_rate=1, t_eval=None, var_pts=None, thermal=False):
         sim.built_model.variables["Current collector current density [A.m-2]"], t, y
     )(t)
 
+    T_vol_av = pybamm.ProcessedVariable(
+        sim.built_model.variables["Volume-averaged cell temperature [K]"], t, y
+    )
+
     plotting_variables = {
         "Terminal voltage [V]": terminal_voltage,
         "Time [h]": time,
         "Discharge capacity [A.h]": discharge_capacity,
         "Average local current density [A.m-2]": av_cc_current,
+        "Volume-averaged cell temperature [K]": T_vol_av(t),
     }
 
     return plotting_variables
