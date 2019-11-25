@@ -18,7 +18,7 @@ reduced_and_full_potential_errors = True
 
 t_eval = np.linspace(0, 0.17, 100)
 
-C_rate = 0.5
+C_rate = 3
 
 var_pts = {
     pybamm.standard_spatial_vars.x_n: 5,
@@ -62,13 +62,14 @@ if plot_voltage:
     fig, ax = plt.subplots()
     plots.plot_voltage(ax, spmecc=spmecc, reduced=reduced, full=full)
 
+
+# times = [0, t_eval[30], t_eval[50], t_eval[70]]
+times = [t_eval[50]]
 if plot_potentials:
-    times = [0, t_eval[30], t_eval[50], t_eval[70]]
     for t in times:
         plots.plot_yz_potential(t, spmecc=spmecc, reduced=reduced, full=full)
 
 if reduced_and_full_potential_errors:
-    times = [0, t_eval[30], t_eval[50], t_eval[70]]
     for t in times:
         plots.plot_potential_errors(t, reduced=reduced, full=full)
 

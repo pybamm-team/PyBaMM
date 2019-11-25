@@ -7,7 +7,7 @@ def plot_yz_potential(t, spmecc=None, reduced=None, full=None):
     num_of_models = 0
     var_names = [
         "Negative current collector potential [V]",
-        "Positive current collector potential [V]",
+        "Reduced positive current collector potential [V]",
         "Local voltage [V]",
     ]
 

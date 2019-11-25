@@ -65,11 +65,19 @@ def solve_full_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None):
         sim.built_model.variables["Local voltage [V]"], t, y, mesh=sim.mesh
     )
 
+    V = pybamm.ProcessedVariable(
+        sim.built_model.variables["Terminal voltage [V]"], t, y
+    )
+
+    def phi_s_p_reduced(t, y, z):
+        return phi_s_p_dim(t=t, y=y, z=z) - V(t)
+
     plotting_variables = {
         "Terminal voltage [V]": terminal_voltage,
         "Time [h]": time,
         "Negative current collector potential [V]": phi_s_n_dim,
         "Positive current collector potential [V]": phi_s_p_dim,
+        "Reduced positive current collector potential [V]": phi_s_p_reduced,
         "Discharge capacity [A.h]": discharge_capacity,
         "Local voltage [V]": V_loc,
         "L_z": param.process_symbol(pybamm.geometric_parameters.L_z).evaluate(),
