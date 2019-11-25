@@ -84,7 +84,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Add Neumann conditions, if defined
         if symbol.id in boundary_conditions:
             bcs = boundary_conditions[symbol.id]
-            out = self.add_neumann_values(symbol, out, bcs)
+            out = self.add_neumann_values(symbol, out, bcs, domain)
         return out
 
     def preprocess_external_variables(self, var):
@@ -512,8 +512,10 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         Parameters
         ----------
-        domain : list of strings
-            The domain of the symbol for which to add ghost nodes
+        symbol : :class:`pybamm.SpatialVariable`
+            The variable to be discretised
+        discretised_symbol : :class:`pybamm.Vector`
+            Contains the discretised variable
         bcs : dict of tuples (:class:`pybamm.Scalar`, str)
             Dictionary (with keys "left" and "right") of boundary conditions. Each
             boundary condition consists of a value and a flag indicating its type
@@ -539,6 +541,12 @@ class FiniteVolume(pybamm.SpatialMethod):
         lbc_value, lbc_type = bcs["left"]
         rbc_value, rbc_type = bcs["right"]
 
+        # Add ghost node(s) to domain
+        if lbc_type == "Dirichlet":
+            domain = [domain[0] + "_left ghost cell"] + domain
+        if rbc_type == "Dirichlet":
+            domain = domain + [domain[-1] + "_right ghost cell"]
+
         # Calculate values for ghost nodes for any Dirichlet boundary conditions
         # and adjust the domain name to account for the new ghost nodes
         for i in range(sec_pts):
@@ -554,8 +562,8 @@ class FiniteVolume(pybamm.SpatialMethod):
                 left_ghost_constant = 2 * lbc_i
                 # concatenate left ghost node
                 bcs_vector = pybamm.NumpyConcatenation(bcs_vector, left_ghost_constant)
-                # add ghost node to domain
-                domain = [domain[0] + "_left ghost cell"] + domain
+            elif lbc_type == "Neumann":
+                pass
             else:
                 raise ValueError(
                     "boundary condition must be Dirichlet or Neumann, not '{}'".format(
@@ -568,8 +576,11 @@ class FiniteVolume(pybamm.SpatialMethod):
                 bcs_vector = pybamm.NumpyConcatenation(
                     bcs_vector, pybamm.Vector(np.zeros(n)), right_ghost_constant,
                 )
-                # add ghost node to domain
-                domain = domain + [domain[-1] + "_left ghost cell"]
+            elif rbc_type == "Neumann":
+                # concatenate zeros for internal nodes
+                bcs_vector = pybamm.NumpyConcatenation(
+                    bcs_vector, pybamm.Vector(np.zeros(n))
+                )
             else:
                 raise ValueError(
                     "boundary condition must be Dirichlet or Neumann, not '{}'".format(
@@ -598,9 +609,10 @@ class FiniteVolume(pybamm.SpatialMethod):
         matrix = csr_matrix(kron(eye(sec_pts), sub_matrix))
 
         new_symbol = pybamm.Matrix(matrix) @ discretised_symbol + bcs_vector
+
         return new_symbol, domain
 
-    def add_neumann_values(self, symbol, discretised_gradient, bcs):
+    def add_neumann_values(self, symbol, discretised_gradient, bcs, domain):
         """
         Add the known values of the gradient from Neumann boundary conditions to
         the discretised gradient.
@@ -610,10 +622,16 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         Parameters
         ----------
+        symbol : :class:`pybamm.SpatialVariable`
+            The variable to be discretised
+        discretised_gradient : :class:`pybamm.Vector`
+            Contains the discretised gradient of symbol
         bcs : dict of tuples (:class:`pybamm.Scalar`, str)
             Dictionary (with keys "left" and "right") of boundary conditions. Each
             boundary condition consists of a value and a flag indicating its type
             (e.g. "Dirichlet")
+        domain : list of strings
+            The domain of the gradient of the symbol (may include ghost nodes)
 
         Returns
         -------
@@ -624,11 +642,10 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         """
         # get relevant grid points
-        domain = symbol.domain
         submesh_list = self.mesh.combine_submeshes(*domain)
 
         # Prepare sizes and empty bcs_vector
-        n = submesh_list[0].npts
+        n = submesh_list[0].npts - 1
         sec_pts = len(submesh_list)
 
         bcs_vector = pybamm.Vector(np.array([]))  # starts empty
@@ -647,16 +664,25 @@ class FiniteVolume(pybamm.SpatialMethod):
             else:
                 rbc_i = rbc_value[i]
             if lbc_type == "Neumann":
+                # concatenate known value of gradient
                 bcs_vector = pybamm.NumpyConcatenation(bcs_vector, lbc_i)
+            elif lbc_type == "Dirichlet":
+                pass
             else:
                 raise ValueError(
                     "boundary condition must be Dirichlet or Neumann, not '{}'".format(
                         lbc_type
                     )
                 )
-            if rbc_type == "Dirichlet":
+            if rbc_type == "Neumann":
+                # concatenate known value of gradient
                 bcs_vector = pybamm.NumpyConcatenation(
                     bcs_vector, pybamm.Vector(np.zeros(n)), rbc_i,
+                )
+            elif rbc_type == "Dirichlet":
+                # concatenate zeros for internal nodes
+                bcs_vector = pybamm.NumpyConcatenation(
+                    bcs_vector, pybamm.Vector(np.zeros(n)),
                 )
             else:
                 raise ValueError(
@@ -686,7 +712,11 @@ class FiniteVolume(pybamm.SpatialMethod):
         # issue
         matrix = csr_matrix(kron(eye(sec_pts), sub_matrix))
 
-        new_gradient = pybamm.Matrix(matrix) @ discretised_gradient + bcs_vector
+        try:
+            new_gradient = pybamm.Matrix(matrix) @ discretised_gradient + bcs_vector
+        except:
+            import ipdb; ipdb.set_trace()
+
         return new_gradient
 
     def boundary_value_or_flux(self, symbol, discretised_child, bcs=None):
