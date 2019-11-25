@@ -33,18 +33,35 @@ class ScikitSubMesh2D(SubMesh):
         self.nodes = dict.fromkeys(["y", "z"])
         for var in self.nodes.keys():
             self.nodes[var] = (self.edges[var][1:] + self.edges[var][:-1]) / 2
-        self.npts = len(self.edges["y"]) * len(self.edges["z"])
         self.coord_sys = coord_sys
 
         # create mesh
         self.fem_mesh = skfem.MeshTri.init_tensor(self.edges["y"], self.edges["z"])
 
-        # get coordinates (returns a vector size 2*(Ny*Nz))
-        self.coordinates = self.fem_mesh.p
-
         # create elements and basis
-        self.element = skfem.ElementTriP1()
-        self.basis = skfem.InteriorBasis(self.fem_mesh, self.element)
+        # TODO: pass proper options to the mesh
+        self.element_type = "P1"
+        if self.element_type == "P0":
+            self.element = skfem.ElementTriP0()
+            self.basis = skfem.InteriorBasis(self.fem_mesh, self.element)
+            self.npts = self.basis.nelems
+            # get coordinates (must be a way to get this properly from scikits,
+            # but cant figure it out right now. this gives one point per triangle)
+            yy = self.nodes["y"]
+            z = np.concatenate((self.nodes["z"], self.edges["z"]))
+            z.sort(kind="mergesort")
+            zz = (z[1:] + z[:-1]) / 2
+            yyy, zzz = np.meshgrid(yy, zz)
+            yyy = yyy.flatten()
+            zzz = zzz.flatten()
+            self.coordinates = np.vstack((yyy, zzz))
+        elif self.element_type == "P1":
+            self.element = skfem.ElementTriP1()
+            self.basis = skfem.InteriorBasis(self.fem_mesh, self.element)
+            self.npts = len(self.edges["y"]) * len(self.edges["z"])
+            # get coordinates (returns a vector size 2*(Ny*Nz))
+            self.coordinates = self.fem_mesh.p
+
         self.facet_basis = skfem.FacetBasis(self.fem_mesh, self.element)
 
         # get degrees of freedom and facets which correspond to tabs, and

@@ -415,7 +415,9 @@ class BaseBatteryModel(pybamm.BaseModel):
         # return to it later and try again. If setting coupled variables fails and
         # there are no more submodels to try, raise an error.
         submodels = list(self.submodels.keys())
+        count = 0
         while len(submodels) > 0:
+            count += 1
             for submodel_name, submodel in self.submodels.items():
                 if submodel_name in submodels:
                     pybamm.logger.debug(
@@ -429,7 +431,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                         )
                         submodels.remove(submodel_name)
                     except KeyError as key:
-                        if len(submodels) == 1:
+                        if len(submodels) == 1 or count == 100:
                             # no more submodels to try
                             raise pybamm.ModelError(
                                 """Submodel "{}" requires the variable {}, but it cannot be found.
@@ -490,6 +492,14 @@ class BaseBatteryModel(pybamm.BaseModel):
                 self.variables.update(var)
 
         self._built = True
+
+    def set_tortuosity_submodels(self):
+        self.submodels["electrolyte tortuosity"] = pybamm.tortuosity.Bruggeman(
+            self.param, "Electrolyte"
+        )
+        self.submodels["electrode tortuosity"] = pybamm.tortuosity.Bruggeman(
+            self.param, "Electrode"
+        )
 
     def set_thermal_submodel(self):
 

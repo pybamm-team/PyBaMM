@@ -88,6 +88,7 @@ class DaeSolver(pybamm.BaseSolver):
             events=self.event_funs,
             mass_matrix=model.mass_matrix.entries,
             jacobian=self.jacobian,
+            model=model,
         )
         solve_time = timer.time() - solve_start_time
 
@@ -145,8 +146,7 @@ class DaeSolver(pybamm.BaseSolver):
                 jac_algebraic = pybamm.EvaluatorPython(jac_algebraic)
                 jac = pybamm.EvaluatorPython(jac)
 
-            def jacobian(t, y):
-                return jac.evaluate(t, y, known_evals={})[0]
+            jacobian = Jacobian(jac.evaluate)
 
             def jacobian_alg(t, y):
                 return jac_algebraic.evaluate(t, y, known_evals={})[0]
@@ -166,11 +166,8 @@ class DaeSolver(pybamm.BaseSolver):
             }
 
         # Calculate consistent initial conditions for the algebraic equations
-        def rhs(t, y):
-            return concatenated_rhs.evaluate(t, y, known_evals={})[0][:, 0]
-
-        def algebraic(t, y):
-            return concatenated_algebraic.evaluate(t, y, known_evals={})[0][:, 0]
+        rhs = Rhs(concatenated_rhs.evaluate)
+        algebraic = Algebraic(concatenated_algebraic.evaluate)
 
         if len(model.algebraic) > 0:
             y0 = self.calculate_consistent_initial_conditions(
@@ -183,39 +180,25 @@ class DaeSolver(pybamm.BaseSolver):
             # can use DAE solver to solve ODE model
             y0 = model.concatenated_initial_conditions[:, 0]
 
-        # Create functions to evaluate residuals
-        def residuals(t, y, ydot):
-            pybamm.logger.debug(
-                "Evaluating residuals for {} at t={}".format(model.name, t)
-            )
-            y = y[:, np.newaxis]
-            rhs_eval, known_evals = concatenated_rhs.evaluate(t, y, known_evals={})
-            # reuse known_evals
-            alg_eval = concatenated_algebraic.evaluate(t, y, known_evals=known_evals)[0]
-            # turn into 1D arrays
-            rhs_eval = rhs_eval[:, 0]
-            alg_eval = alg_eval[:, 0]
-            return (
-                np.concatenate((rhs_eval, alg_eval)) - model.mass_matrix.entries @ ydot
-            )
-
         # Create event-dependent function to evaluate events
-        def event_fun(event):
-            def eval_event(t, y):
-                return event.evaluate(t, y)
-
-            return eval_event
-
-        event_funs = [event_fun(event) for event in events.values()]
+        def get_event_class(event):
+            return EvalEvent(event.evaluate)
 
         # Add the solver attributes
+        # Note: these are the (possibly) converted to python versions of rhs,
+        # algebraic etc. The expression tree versions of these are attributes of
+        # the model
         self.y0 = y0
         self.rhs = rhs
         self.algebraic = algebraic
-        self.residuals = residuals
+        self.residuals = Residuals(
+            model, concatenated_rhs.evaluate, concatenated_algebraic.evaluate
+        )
         self.events = events
-        self.event_funs = event_funs
+        self.event_funs = [get_event_class(event) for event in events.values()]
         self.jacobian = jacobian
+
+        pybamm.logger.info("Finish solver set-up")
 
     def set_up_casadi(self, model):
         """Convert model to casadi format and use their inbuilt functionalities.
@@ -268,8 +251,7 @@ class DaeSolver(pybamm.BaseSolver):
                 "jacobian", [t_casadi, y_casadi], [casadi_jac_alg]
             )
 
-            def jacobian(t, y):
-                return casadi_jac_fn(t, y)
+            jacobian = JacobianCasadi(casadi_jac_fn)
 
             def jacobian_alg(t, y):
                 return casadi_jac_alg_fn(t, y)
@@ -279,14 +261,10 @@ class DaeSolver(pybamm.BaseSolver):
             jacobian_alg = None
 
         # Calculate consistent initial conditions for the algebraic equations
-        def rhs(t, y):
-            return concatenated_rhs_fn(t, y).full()[:, 0]
-
-        def algebraic(t, y):
-            return concatenated_algebraic_fn(t, y).full()[:, 0]
+        rhs = RhsCasadi(concatenated_rhs_fn)
+        algebraic = AlgebraicCasadi(concatenated_algebraic_fn)
 
         if len(model.algebraic) > 0:
-
             y0 = self.calculate_consistent_initial_conditions(
                 rhs,
                 algebraic,
@@ -297,45 +275,34 @@ class DaeSolver(pybamm.BaseSolver):
             # can use DAE solver to solve ODE model
             y0 = model.concatenated_initial_conditions[:, 0]
 
-        # Create functions to evaluate residuals
-
-        def residuals(t, y, ydot):
-            pybamm.logger.debug(
-                "Evaluating residuals for {} at t={}".format(model.name, t)
-            )
-            states_eval = all_states_fn(t, y).full()[:, 0]
-            return states_eval - model.mass_matrix.entries @ ydot
-
         # Create event-dependent function to evaluate events
-        def event_fun(event):
+        def get_event_class(event):
             casadi_event_fn = casadi.Function("event", [t_casadi, y_casadi], [event])
-
-            def eval_event(t, y):
-                return casadi_event_fn(t, y)
-
-            return eval_event
-
-        event_funs = [event_fun(event) for event in casadi_events.values()]
+            return EvalEvent(casadi_event_fn)
 
         # Add the solver attributes
-        # Note: these are the (possibly) converted to python version rhs, algebraic
+        # Note: these are the converted to casadi versions of rhs, algebraic
         # etc. The expression tree versions of these are attributes of the model
         self.y0 = y0
         self.rhs = rhs
         self.algebraic = algebraic
-        self.residuals = residuals
+        self.residuals = ResidualsCasadi(model, all_states_fn)
         self.events = model.events
-        self.event_funs = event_funs
+        self.event_funs = [get_event_class(event) for event in casadi_events.values()]
         self.jacobian = jacobian
 
-        # Create CasADi problem for the CasADi solver
-        self.casadi_problem = {
-            "t": t_casadi,
-            "x": y_diff,
-            "z": y_alg,
-            "ode": concatenated_rhs,
-            "alg": concatenated_algebraic,
-        }
+        # Save CasADi functions for the CasADi solver
+        # Note: when we pass to casadi the ode part of the problem must be in explicit
+        # form so we pre-multiply by the inverse of the mass matrix
+        if isinstance(self, pybamm.CasadiSolver):
+            mass_matrix_inv = casadi.MX(model.mass_matrix_inv.entries)
+            explicit_rhs = mass_matrix_inv @ concatenated_rhs
+            self.casadi_rhs = casadi.Function(
+                "rhs", [t_casadi, y_casadi], [explicit_rhs]
+            )
+            self.casadi_algebraic = concatenated_algebraic_fn
+
+        pybamm.logger.info("Finish solver set-up")
 
     def calculate_consistent_initial_conditions(
         self, rhs, algebraic, y0_guess, jac=None
@@ -382,7 +349,7 @@ class DaeSolver(pybamm.BaseSolver):
             )
             return out
 
-        if jac:
+        if jac and self.root_method in ["hybr", "lm"]:
             if issparse(jac(0, y0_guess)):
 
                 def jac_fn(y0_alg):
@@ -455,3 +422,103 @@ class DaeSolver(pybamm.BaseSolver):
             A function that takes in t, y and ydot and returns the Jacobian
         """
         raise NotImplementedError
+
+
+class Rhs:
+    "Returns information about rhs at time t and state y"
+
+    def __init__(self, concatenated_rhs_fn):
+        self.concatenated_rhs_fn = concatenated_rhs_fn
+
+    def __call__(self, t, y):
+        return self.concatenated_rhs_fn(t, y, known_evals={})[0][:, 0]
+
+
+class RhsCasadi(Rhs):
+    "Returns information about rhs at time t and state y, with CasADi"
+
+    def __call__(self, t, y):
+        return self.concatenated_rhs_fn(t, y).full()[:, 0]
+
+
+class Algebraic:
+    "Returns information about algebraic equations at time t and state y"
+
+    def __init__(self, concatenated_algebraic_fn):
+        self.concatenated_algebraic_fn = concatenated_algebraic_fn
+
+    def __call__(self, t, y):
+        return self.concatenated_algebraic_fn(t, y, known_evals={})[0][:, 0]
+
+
+class AlgebraicCasadi(Algebraic):
+    "Returns information about algebraic equations at time t and state y, with CasADi"
+
+    def __call__(self, t, y):
+        return self.concatenated_algebraic_fn(t, y).full()[:, 0]
+
+
+class Residuals:
+    "Returns information about residuals at time t and state y"
+
+    def __init__(self, model, concatenated_rhs_fn, concatenated_algebraic_fn):
+        self.model = model
+        self.concatenated_rhs_fn = concatenated_rhs_fn
+        self.concatenated_algebraic_fn = concatenated_algebraic_fn
+        self.mass_matrix = model.mass_matrix.entries
+
+    def __call__(self, t, y, ydot):
+        pybamm.logger.debug(
+            "Evaluating residuals for {} at t={}".format(self.model.name, t)
+        )
+        y = y[:, np.newaxis]
+        rhs_eval, known_evals = self.concatenated_rhs_fn(t, y, known_evals={})
+        # reuse known_evals
+        alg_eval = self.concatenated_algebraic_fn(t, y, known_evals=known_evals)[0]
+        # turn into 1D arrays
+        rhs_eval = rhs_eval[:, 0]
+        alg_eval = alg_eval[:, 0]
+        return np.concatenate([rhs_eval, alg_eval]) - self.mass_matrix @ ydot
+
+
+class ResidualsCasadi(Residuals):
+    "Returns information about residuals at time t and state y, with CasADi"
+
+    def __init__(self, model, all_states_fn):
+        self.model = model
+        self.all_states_fn = all_states_fn
+        self.mass_matrix = model.mass_matrix.entries
+
+    def __call__(self, t, y, ydot):
+        pybamm.logger.debug(
+            "Evaluating residuals for {} at t={}".format(self.model.name, t)
+        )
+        states_eval = self.all_states_fn(t, y).full()[:, 0]
+        return states_eval - self.mass_matrix @ ydot
+
+
+class EvalEvent:
+    "Returns information about events at time t and state y"
+
+    def __init__(self, event_fn):
+        self.event_fn = event_fn
+
+    def __call__(self, t, y):
+        return self.event_fn(t, y)
+
+
+class Jacobian:
+    "Returns information about the jacobian at time t and state y"
+
+    def __init__(self, jac_fn):
+        self.jac_fn = jac_fn
+
+    def __call__(self, t, y):
+        return self.jac_fn(t, y, known_evals={})[0]
+
+
+class JacobianCasadi(Jacobian):
+    "Returns information about the jacobian at time t and state y, with CasADi"
+
+    def __call__(self, t, y):
+        return self.jac_fn(t, y)

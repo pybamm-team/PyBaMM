@@ -227,14 +227,14 @@ def plot_time_dependent_variables(
                 ax.set_xlabel("Time [h]")
             plots = {}
             for k, var in enumerate(output_vars):
-                plots[(full_model, k)], = ax.plot(
+                (plots[(full_model, k)],) = ax.plot(
                     full_variables["Time [h]"](t_eval),
                     full_variables[var](t_eval),
                     linestyle=linestyles[k],
                     color=colors[0],
                 )
             for k, var in enumerate(output_vars):
-                plots[(model, k)], = ax.plot(
+                (plots[(model, k)],) = ax.plot(
                     variables["Time [h]"](t_eval),
                     variables[var](t_eval),
                     linestyle=linestyles[k],

@@ -29,7 +29,7 @@ class Composite(Full):
 
     def get_coupled_variables(self, variables):
 
-        eps_0 = variables["Leading-order porosity"]
+        tor_0 = variables["Leading-order electrolyte tortuosity"]
         c_e_0_av = variables["Leading-order x-averaged electrolyte concentration"]
         c_e = variables["Electrolyte concentration"]
         # i_e = variables["Electrolyte current density"]
@@ -40,7 +40,7 @@ class Composite(Full):
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         N_e_diffusion = (
-            -(eps_0 ** param.b)
+            -tor_0
             * pybamm.PrimaryBroadcast(param.D_e(c_e_0_av, T_0), whole_cell)
             * pybamm.grad(c_e)
         )

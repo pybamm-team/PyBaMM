@@ -41,8 +41,8 @@ param.process_geometry(geometry)
 
 # create mesh
 var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 101, var.x_s: 101, var.x_p: 101, var.r_n: 101, var.r_p: 101}
-# var_pts = {var.x_n: 45, var.x_s: 11, var.x_p: 56, var.r_n: 51, var.r_p: 51}
+# var_pts = {var.x_n: 101, var.x_s: 101, var.x_p: 101, var.r_n: 101, var.r_p: 101}
+var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.r_n: 15, var.r_p: 15}
 mesh = pybamm.Mesh(geometry, pybamm_model.default_submesh_types, var_pts)
 
 # discretise model
@@ -181,10 +181,10 @@ def time_only_plot(var, plot_times=None, plot_error=None):
 
     # Process variables
     pybamm_var = pybamm.ProcessedVariable(
-        pybamm_model.variables[var], solution.t, solution.y, mesh=mesh,
+        pybamm_model.variables[var], solution.t, solution.y, mesh=mesh
     )(plot_times / tau)
     comsol_var = pybamm.ProcessedVariable(
-        comsol_model.variables[var], solution.t, solution.y, mesh=mesh,
+        comsol_model.variables[var], solution.t, solution.y, mesh=mesh
     )(plot_times / tau)
 
     # Make plot
@@ -654,7 +654,7 @@ whole_cell_by_domain_comparison_plot(
     plot_error=plot_error,
 )
 whole_cell_by_domain_comparison_plot(
-    "Reversible heating [W.m-3]", plot_times=plot_times, plot_error=plot_error,
+    "Reversible heating [W.m-3]", plot_times=plot_times, plot_error=plot_error
 )
 whole_cell_by_domain_comparison_plot(
     "Total heating [W.m-3]", plot_times=plot_times, plot_error=plot_error
@@ -678,7 +678,7 @@ electrode_comparison_plot(
 )
 plt.savefig("thermal1D_i_s.eps", format="eps", dpi=1000)
 whole_cell_by_domain_comparison_plot(
-    "Electrolyte current density [A.m-2]", plot_times=plot_times, plot_error=plot_error,
+    "Electrolyte current density [A.m-2]", plot_times=plot_times, plot_error=plot_error
 )
 plt.savefig("thermal1D_i_e.eps", format="eps", dpi=1000)
 # concentrations
