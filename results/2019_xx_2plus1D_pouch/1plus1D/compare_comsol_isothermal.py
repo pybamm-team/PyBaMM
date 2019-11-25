@@ -50,17 +50,18 @@ else:
     # set npts
     var = pybamm.standard_spatial_vars
     var_pts = {
-        var.x_n: 10,
-        var.x_s: 10,
-        var.x_p: 10,
+        var.x_n: 15,
+        var.x_s: 15,
+        var.x_p: 15,
         var.r_n: 15,
         var.r_p: 15,
-        var.z: 100,
+        var.z: 50,
     }
 
     # solver
-    solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-3, root_method="hybr", mode="fast")
-    # solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
+    solver = pybamm.CasadiSolver(
+        atol=1e-6, rtol=1e-6, root_tol=1e-3, root_method="hybr", mode="fast"
+    )
 
     # simulation object
     simulation = pybamm.Simulation(
@@ -70,8 +71,6 @@ else:
     # build and save simulation
     simulation.build(check_model=False)
     # simulation.save(filename)
-    # model = simulation.built_model
-    # import ipdb; ipdb.set_trace()
 
 "-----------------------------------------------------------------------------"
 "Solve model if not already solved"
@@ -131,6 +130,7 @@ shared.plot_cc_var(
     param,
     plot_times=plot_times,
     plot_error="both",
+    scale=0.0001,  # typical variation in negative potential
 )
 shared.plot_cc_var(
     "Positive current collector potential [V]",
@@ -141,6 +141,7 @@ shared.plot_cc_var(
     param,
     plot_times=plot_times,
     plot_error="both",
+    scale=0.0001,  # typical variation in positive potential
 )
 shared.plot_cc_var(
     "Current collector current density [A.m-2]",
@@ -151,5 +152,6 @@ shared.plot_cc_var(
     param,
     plot_times=plot_times,
     plot_error="both",
+    scale=0.06,  # typical variation in current density
 )
 plt.show()

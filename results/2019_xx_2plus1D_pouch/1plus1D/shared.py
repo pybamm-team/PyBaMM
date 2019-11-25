@@ -167,6 +167,7 @@ def plot_cc_var(
     param,
     plot_times=None,
     plot_error="both",
+    scale=None,
 ):
 
     # Get discharge timescale
@@ -219,12 +220,14 @@ def plot_cc_var(
             error = np.abs(pybamm_var - comsol_var)
             ax[1].plot(z_plot, error, "-", color=color)
         elif plot_error == "rel":
-            scale = np.max(comsol_var) - np.min(comsol_var)
+            if scale is None:
+                scale = comsol_var
             error = np.abs((pybamm_var - comsol_var) / scale)
             ax[1].plot(error, z_plot, "-", color=color)
         elif plot_error == "both":
             abs_error = np.abs(pybamm_var - comsol_var)
-            scale = np.max(comsol_var) - np.min(comsol_var)
+            if scale is None:
+                scale = comsol_var
             rel_error = np.abs((pybamm_var - comsol_var) / scale)
             ax[1].plot(z_plot, abs_error, "-", color=color)
             ax[2].plot(z_plot, rel_error, "-", color=color)
@@ -246,7 +249,14 @@ def plot_cc_var(
 
 
 def plot_tz_var(
-    var, t_plot, comsol_model, output_variables, param, cmap="viridis", error="both"
+    var,
+    t_plot,
+    comsol_model,
+    output_variables,
+    param,
+    cmap="viridis",
+    error="both",
+    scale=None,
 ):
     fig, ax = plt.subplots(figsize=(15, 8))
 
@@ -274,8 +284,6 @@ def plot_tz_var(
     plt.colorbar(pybamm_plot)
 
     # plot comsol solution
-
-    # for pos potential compute relative to voltage
     comsol_var = comsol_model.variables[var](t=t_plot)
 
     if error in ["abs", "rel"]:
@@ -297,14 +305,10 @@ def plot_tz_var(
             error = np.abs(pybamm_var - comsol_var)
             diff_plot = plt.pcolormesh(t_plot, z_plot, error, shading="gouraud")
         elif error == "rel":
-            scale = np.max(comsol_var) - np.min(comsol_var)
+            if scale is None:
+                scale = comsol_var
             error = np.abs((pybamm_var - comsol_var) / scale)
-            # plot relative error up to max 10% (errors 10% and greater all take same
-            # color in plot)
-            vmax = np.min([np.max(error), 0.1])
-            diff_plot = plt.pcolormesh(
-                t_plot, z_plot, error, shading="gouraud", vmin=0, vmax=vmax
-            )
+            diff_plot = plt.pcolormesh(t_plot, z_plot, error, shading="gouraud",)
         plt.axis([0, t_plot[-1], 0, z_plot[-1]])
         plt.xlabel(r"$t$")
         plt.ylabel(r"$z$")
@@ -322,14 +326,10 @@ def plot_tz_var(
         plt.set_cmap(cmap)
         plt.colorbar(abs_diff_plot)
         plt.subplot(224)
-        scale = np.max(comsol_var) - np.min(comsol_var)
+        if scale is None:
+            scale = comsol_var
         rel_error = np.abs((pybamm_var - comsol_var) / scale)
-        # plot relative error up to max 10% (errors 10% and greater all take same
-        # color in plot)
-        vmax = np.min([np.max(rel_error), 0.1])
-        rel_diff_plot = plt.pcolormesh(
-            t_plot, z_plot, rel_error, shading="gouraud", vmin=0, vmax=vmax
-        )
+        rel_diff_plot = plt.pcolormesh(t_plot, z_plot, rel_error, shading="gouraud",)
         plt.axis([0, t_plot[-1], 0, z_plot[-1]])
         plt.xlabel(r"$t$")
         plt.ylabel(r"$z$")

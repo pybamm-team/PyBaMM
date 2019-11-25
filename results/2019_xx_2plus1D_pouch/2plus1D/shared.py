@@ -136,7 +136,8 @@ def plot_t_var(
 
 
 def plot_2D_var(
-    var, t, comsol_model, output_variables, param, cmap="viridis", error="both"
+    var, t, comsol_model, output_variables, param, cmap="viridis", error="both",
+    scale=None,
 ):
     fig, ax = plt.subplots(figsize=(15, 8))
 
@@ -168,8 +169,6 @@ def plot_2D_var(
     plt.colorbar(pybamm_plot)
 
     # plot comsol solution
-
-    # for pos potential compute relative to voltage
     comsol_var = comsol_model.variables[var](t=t)
 
     if error in ["abs", "rel"]:
@@ -191,12 +190,11 @@ def plot_2D_var(
             error = np.abs(pybamm_var - comsol_var)
             diff_plot = plt.pcolormesh(y_plot, z_plot, error, shading="gouraud")
         elif error == "rel":
-            error = np.abs((pybamm_var - comsol_var) / comsol_var)
-            # plot relative error up to max 10% (errors 10% and greater all take same
-            # color in plot)
-            vmax = np.min([np.max(error), 0.1])
+            if scale is None:
+                scale = comsol_var
+            error = np.abs((pybamm_var - comsol_var) / scale)
             diff_plot = plt.pcolormesh(
-                y_plot, z_plot, error, shading="gouraud", vmin=0, vmax=vmax
+                y_plot, z_plot, error, shading="gouraud",
             )
         plt.axis([0, y_plot[-1], 0, z_plot[-1]])
         plt.xlabel(r"$y$")
@@ -215,13 +213,11 @@ def plot_2D_var(
         plt.set_cmap(cmap)
         plt.colorbar(abs_diff_plot)
         plt.subplot(224)
-        scale = np.max(comsol_var) - np.min(comsol_var)
+        if scale is None:
+            scale = comsol_var
         rel_error = np.abs((pybamm_var - comsol_var) / scale)
-        # plot relative error up to max 10% (errors 10% and greater all take same
-        # color in plot)
-        vmax = np.min([np.max(rel_error), 0.1])
         rel_diff_plot = plt.pcolormesh(
-            y_plot, z_plot, rel_error, shading="gouraud", vmin=0, vmax=vmax
+            y_plot, z_plot, rel_error, shading="gouraud",
         )
         plt.axis([0, y_plot[-1], 0, z_plot[-1]])
         plt.xlabel(r"$y$")

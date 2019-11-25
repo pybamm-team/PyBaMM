@@ -26,56 +26,19 @@ param.update({"C-rate": 2, "Heat transfer coefficient [W.m-2.K-1]": 0.1})
 param.process_model(model)
 param.process_geometry(geometry)
 
-# create custom mesh
+# set number of points per domain
 var = pybamm.standard_spatial_vars
-submesh_types = model.default_submesh_types
-
-# cube root sequence in particles
-r_n_edges = np.linspace(0, 1, 5) ** (1 / 3)
-submesh_types["negative particle"] = pybamm.MeshGenerator(
-    pybamm.UserSupplied1DSubMesh, submesh_params={"edges": r_n_edges}
-)
-r_p_edges = np.linspace(0, 1, 5) ** (1 / 3)
-submesh_types["positive particle"] = pybamm.MeshGenerator(
-    pybamm.UserSupplied1DSubMesh, submesh_params={"edges": r_p_edges}
-)
-
-# custom mesh in y to ensure edges align with tab edges
-l_y = param.evaluate(pybamm.geometric_parameters.l_y)
-l_tab_n = param.evaluate(pybamm.geometric_parameters.l_tab_n)
-l_tab_p = param.evaluate(pybamm.geometric_parameters.l_tab_p)
-centre_tab_n = param.evaluate(pybamm.geometric_parameters.centre_y_tab_n)
-centre_tab_p = param.evaluate(pybamm.geometric_parameters.centre_y_tab_p)
-y0 = np.linspace(0, centre_tab_n - l_tab_n / 2, 3)  # mesh up to start of neg tab
-y1 = np.linspace(
-    centre_tab_n - l_tab_n / 2, centre_tab_n + l_tab_n / 2, 3
-)  # mesh neg tab
-y2 = np.linspace(
-    centre_tab_n + l_tab_n / 2, centre_tab_p - l_tab_p / 2, 3
-)  # mesh gap between tabs
-y3 = np.linspace(
-    centre_tab_p - l_tab_p / 2, centre_tab_p + l_tab_p / 2, 3
-)  # mesh pos tab
-y4 = np.linspace(centre_tab_p + l_tab_p / 2, l_y, 3)  # mesh from pos tab to cell edge
-y_edges = np.concatenate((y0, y1[1:], y2[1:], y3[1:], y4[1:]))
-
-# cube root sequence in z direction
-z_edges = np.linspace(0, 1, 5) ** (1 / 3)
-submesh_types["current collector"] = pybamm.MeshGenerator(
-    pybamm.UserSupplied2DSubMesh,
-    submesh_params={"y_edges": y_edges, "z_edges": z_edges},
-)
-
 var_pts = {
     var.x_n: 5,
     var.x_s: 5,
     var.x_p: 5,
-    var.r_n: len(r_n_edges) - 1,  # Finite Volume nodes one less than edges
-    var.r_p: len(r_p_edges) - 1,  # Finite Volume nodes one less than edges
-    var.y: len(y_edges),
-    var.z: len(z_edges),
+    var.r_n: 10,
+    var.r_p: 10,
+    var.y: 10,
+    var.z: 10,
 }
-mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
 
 # discretise model
 disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
