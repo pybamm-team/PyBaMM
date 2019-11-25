@@ -32,7 +32,7 @@ class TestGhostNodes(unittest.TestCase):
         # Test
         sp_meth = pybamm.FiniteVolume()
         sp_meth.build(mesh)
-        sym_ghost = sp_meth.add_ghost_nodes(var, discretised_symbol, bcs)
+        sym_ghost, _ = sp_meth.add_ghost_nodes(var, discretised_symbol, bcs)
         combined_submesh = mesh.combine_submeshes(*whole_cell)
         y_test = np.linspace(0, 1, combined_submesh[0].npts)
         np.testing.assert_array_equal(
@@ -81,7 +81,9 @@ class TestGhostNodes(unittest.TestCase):
         # both
         sp_meth = pybamm.FiniteVolume()
         sp_meth.build(mesh)
-        symbol_plus_ghost_both = sp_meth.add_ghost_nodes(var, discretised_symbol, bcs)
+        symbol_plus_ghost_both, _ = sp_meth.add_ghost_nodes(
+            var, discretised_symbol, bcs
+        )
         np.testing.assert_array_equal(
             symbol_plus_ghost_both.evaluate(None, y_test)[1:-1],
             discretised_symbol.evaluate(None, y_test),
@@ -128,8 +130,8 @@ class TestGhostNodes(unittest.TestCase):
         }
         sp_meth = pybamm.FiniteVolume()
         sp_meth.build(mesh)
-        c_s_n_plus_ghost = sp_meth.add_ghost_nodes(c_s_n, disc_c_s_n, bcs)
-        c_s_p_plus_ghost = sp_meth.add_ghost_nodes(c_s_p, disc_c_s_p, bcs)
+        c_s_n_plus_ghost, _ = sp_meth.add_ghost_nodes(c_s_n, disc_c_s_n, bcs)
+        c_s_p_plus_ghost, _ = sp_meth.add_ghost_nodes(c_s_p, disc_c_s_p, bcs)
 
         mesh_s_n = mesh["negative particle"]
         mesh_s_p = mesh["positive particle"]

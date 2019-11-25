@@ -68,7 +68,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Discretise symbol
         domain = symbol.domain
 
-        # Add boundary conditions, if defined
+        # Add Dirichlet boundary conditions, if defined
         if symbol.id in boundary_conditions:
             bcs = boundary_conditions[symbol.id]
             # add ghost nodes and update domain
@@ -79,12 +79,14 @@ class FiniteVolume(pybamm.SpatialMethod):
         # note in 1D spherical grad and normal grad are the same
         gradient_matrix = self.gradient_matrix(domain)
 
+        # Multiply by gradient matrix
         out = gradient_matrix @ discretised_symbol
 
-        # Add Neumann conditions, if defined
+        # Add Neumann boundary conditions, if defined
         if symbol.id in boundary_conditions:
             bcs = boundary_conditions[symbol.id]
             out = self.add_neumann_values(symbol, out, bcs, domain)
+
         return out
 
     def preprocess_external_variables(self, var):
@@ -712,10 +714,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # issue
         matrix = csr_matrix(kron(eye(sec_pts), sub_matrix))
 
-        try:
-            new_gradient = pybamm.Matrix(matrix) @ discretised_gradient + bcs_vector
-        except:
-            import ipdb; ipdb.set_trace()
+        new_gradient = pybamm.Matrix(matrix) @ discretised_gradient + bcs_vector
 
         return new_gradient
 
