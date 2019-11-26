@@ -47,7 +47,7 @@ class TestUpdateParameters(unittest.TestCase):
         model2 = pybamm.lithium_ion.SPM()
         modeltest2 = tests.StandardModelTest(model2)
         modeltest2.test_all(skip_output_tests=True)
-        self.assertEqual(model2.variables["Current [A]"].evaluate(), 0.68)
+        self.assertEqual(model2.variables["Current [A]"].evaluate(), 0.680616)
         # process and solve with updated parameter values
         parameter_values_update = pybamm.ParameterValues(
             chemistry=pybamm.parameter_sets.Marquis2019
@@ -73,8 +73,6 @@ class TestUpdateParameters(unittest.TestCase):
         modeltest3.test_solving(t_eval=t_eval)
         Y3 = modeltest3.solution.y
 
-        # function.parameters should be pybamm.Scalar(0), but parameters_eval s
-        # should be a float
         self.assertIsInstance(model3.variables["Current [A]"], pybamm.Scalar)
         self.assertEqual(model3.variables["Current [A]"].evaluate(), 0.0)
 
