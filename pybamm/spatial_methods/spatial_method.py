@@ -63,9 +63,12 @@ class SpatialMethod:
         """
         symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
         if symbol.name.endswith("_edge"):
-            return pybamm.Vector(symbol_mesh[0].edges, domain=symbol.domain)
+            entries = np.concatenate([mesh.edges for mesh in symbol_mesh])
         else:
-            return pybamm.Vector(symbol_mesh[0].nodes, domain=symbol.domain)
+            entries = np.concatenate([mesh.nodes for mesh in symbol_mesh])
+        return pybamm.Vector(
+            entries, domain=symbol.domain, auxiliary_domains=symbol.auxiliary_domains
+        )
 
     def broadcast(self, symbol, domain, auxiliary_domains, broadcast_type):
         """
@@ -291,6 +294,9 @@ class SpatialMethod:
         """
 
         raise NotImplementedError
+
+    def preprocess_external_variables(self, var):
+        return {}
 
     def boundary_value_or_flux(self, symbol, discretised_child, bcs=None):
         """

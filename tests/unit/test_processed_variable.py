@@ -151,8 +151,7 @@ class TestProcessedVariable(unittest.TestCase):
 
         processed_var = pybamm.ProcessedVariable(var_sol, t_sol, u_sol, mesh=disc.mesh)
         np.testing.assert_array_equal(
-            processed_var.entries,
-            np.reshape(u_sol, [len(y), len(z), len(t_sol)]),
+            processed_var.entries, np.reshape(u_sol, [len(y), len(z), len(t_sol)])
         )
 
     def test_processed_variable_2Dspace_scikit(self):

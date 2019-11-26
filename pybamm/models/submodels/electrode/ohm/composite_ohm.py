@@ -41,16 +41,10 @@ class Composite(BaseModel):
 
         if self._domain == "Negative":
             sigma_eff_0 = self.param.sigma_n * tor_0
-            phi_s = pybamm.PrimaryBroadcast(
-                phi_s_cn, "negative electrode"
-            ) + pybamm.PrimaryBroadcast(
-                i_boundary_cc_0 / sigma_eff_0, "negative electrode"
-            ) * (
+            phi_s = phi_s_cn + (i_boundary_cc_0 / sigma_eff_0) * (
                 x_n * (x_n - 2 * l_n) / (2 * l_n)
             )
-            i_s = pybamm.PrimaryBroadcast(i_boundary_cc_0, "negative electrode") * (
-                1 - x_n / l_n
-            )
+            i_s = i_boundary_cc_0 * (1 - x_n / l_n)
 
         elif self.domain == "Positive":
             delta_phi_p_av = variables[
@@ -66,16 +60,10 @@ class Composite(BaseModel):
                 + (i_boundary_cc_0 / sigma_eff_0) * (1 - l_p / 3)
             )
 
-            phi_s = pybamm.PrimaryBroadcast(
-                const, ["positive electrode"]
-            ) - pybamm.PrimaryBroadcast(
-                i_boundary_cc_0 / sigma_eff_0, "positive electrode"
-            ) * (
+            phi_s = const - (i_boundary_cc_0 / sigma_eff_0) * (
                 x_p + (x_p - 1) ** 2 / (2 * l_p)
             )
-            i_s = pybamm.PrimaryBroadcast(i_boundary_cc_0, "positive electrode") * (
-                1 - (1 - x_p) / l_p
-            )
+            i_s = i_boundary_cc_0 * (1 - (1 - x_p) / l_p)
 
         variables.update(self._get_standard_potential_variables(phi_s))
         variables.update(self._get_standard_current_variables(i_s))

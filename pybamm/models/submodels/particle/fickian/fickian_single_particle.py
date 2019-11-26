@@ -45,7 +45,6 @@ class SingleParticle(BaseModel):
             variables["X-averaged " + self.domain.lower() + " electrode temperature"],
             [self.domain.lower() + " particle"],
         )
-
         N_s_xav = self._flux_law(c_s_xav, T_k_xav)
         N_s = pybamm.PrimaryBroadcast(N_s_xav, [self._domain.lower() + " electrode"])
 
