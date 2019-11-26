@@ -46,9 +46,9 @@ class LeadingOrder(BaseModel):
         phi_e_p = pybamm.PrimaryBroadcast(phi_e_av, ["positive electrode"])
         phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
 
-        i_e_n = pybamm.outer(i_boundary_cc, x_n / l_n)
+        i_e_n = i_boundary_cc * x_n / l_n
         i_e_s = pybamm.PrimaryBroadcast(i_boundary_cc, ["separator"])
-        i_e_p = pybamm.outer(i_boundary_cc, (1 - x_p) / l_p)
+        i_e_p = i_boundary_cc * (1 - x_p) / l_p
         i_e = pybamm.Concatenation(i_e_n, i_e_s, i_e_p)
 
         variables.update(self._get_standard_potential_variables(phi_e, phi_e_av))

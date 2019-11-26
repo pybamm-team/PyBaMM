@@ -83,7 +83,7 @@ class TestBinaryOperators(unittest.TestCase):
         # failures
         y = pybamm.StateVector(slice(10))
         with self.assertRaisesRegex(
-            TypeError, "right child must only contain SpatialVariable and scalars"
+            TypeError, "right child must only contain Vectors and Scalars"
         ):
             pybamm.Outer(v, y)
         with self.assertRaises(NotImplementedError):
