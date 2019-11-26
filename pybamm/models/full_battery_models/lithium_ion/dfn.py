@@ -83,23 +83,39 @@ class DFN(BaseModel):
 
     def set_solid_submodel(self):
 
-        self.submodels["negative electrode"] = pybamm.electrode.ohm.Full(
-            self.param, "Negative", self.reactions
-        )
-        self.submodels["positive electrode"] = pybamm.electrode.ohm.Full(
-            self.param, "Positive", self.reactions
-        )
+        if self.options["surface form"] is False:
+            submod_n = pybamm.electrode.ohm.Full(self.param, "Negative", self.reactions)
+            submod_p = pybamm.electrode.ohm.Full(self.param, "Positive", self.reactions)
+        else:
+            submod_n = pybamm.electrode.ohm.SurfaceForm(self.param, "Negative")
+            submod_p = pybamm.electrode.ohm.SurfaceForm(self.param, "Positive")
+
+        self.submodels["negative electrode"] = submod_n
+        self.submodels["positive electrode"] = submod_p
 
     def set_electrolyte_submodel(self):
 
         electrolyte = pybamm.electrolyte.stefan_maxwell
+        surf_form = electrolyte.conductivity.surface_potential_form
 
-        self.submodels["electrolyte conductivity"] = electrolyte.conductivity.Full(
-            self.param, self.reactions
-        )
         self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(
             self.param, self.reactions
         )
+
+        if self.options["surface form"] is False:
+            self.submodels["electrolyte conductivity"] = electrolyte.conductivity.Full(
+                self.param, self.reactions
+            )
+        elif self.options["surface form"] == "differential":
+            for domain in ["Negative", "Separator", "Positive"]:
+                self.submodels[
+                    domain.lower() + " electrolyte conductivity"
+                ] = surf_form.FullDifferential(self.param, domain, self.reactions)
+        elif self.options["surface form"] == "algebraic":
+            for domain in ["Negative", "Separator", "Positive"]:
+                self.submodels[
+                    domain.lower() + " electrolyte conductivity"
+                ] = surf_form.FullAlgebraic(self.param, domain, self.reactions)
 
     @property
     def default_geometry(self):

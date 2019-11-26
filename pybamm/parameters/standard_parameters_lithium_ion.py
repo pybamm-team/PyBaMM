@@ -92,7 +92,12 @@ b_s_p = pybamm.geometric_parameters.b_s_p
 # Electrochemical reactions
 ne_n = pybamm.Parameter("Negative electrode electrons in reaction")
 ne_p = pybamm.Parameter("Positive electrode electrons in reaction")
-C_dl_dimensional = pybamm.Parameter("Double-layer capacity [F.m-2]")
+C_dl_n_dimensional = pybamm.Parameter(
+    "Negative electrode double-layer capacity [F.m-2]"
+)
+C_dl_p_dimensional = pybamm.Parameter(
+    "Positive electrode double-layer capacity [F.m-2]"
+)
 
 
 # Initial conditions
@@ -318,10 +323,10 @@ def chi(c_e):
 
 # Electrochemical Reactions
 C_dl_n = (
-    C_dl_dimensional * potential_scale / interfacial_current_scale_n / tau_discharge
+    C_dl_n_dimensional * potential_scale / interfacial_current_scale_n / tau_discharge
 )
 C_dl_p = (
-    C_dl_dimensional * potential_scale / interfacial_current_scale_p / tau_discharge
+    C_dl_p_dimensional * potential_scale / interfacial_current_scale_p / tau_discharge
 )
 
 # Electrical

@@ -156,7 +156,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "particle": "Fickian diffusion",
             "thermal": "isothermal",
             "thermal current collector": False,
-            "external submodels": []
+            "external submodels": [],
         }
         options = default_options
         # any extra options overwrite the default options
@@ -220,10 +220,10 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         # Options that are incompatible with models
         if isinstance(self, pybamm.lithium_ion.BaseModel):
-            if options["surface form"] is not False:
-                raise pybamm.OptionError(
-                    "surface form not implemented for lithium-ion models"
-                )
+            # if options["surface form"] is not False:
+            #     raise pybamm.OptionError(
+            #         "surface form not implemented for lithium-ion models"
+            #     )
             if options["convection"] is True:
                 raise pybamm.OptionError(
                     "convection not implemented for lithium-ion models"
