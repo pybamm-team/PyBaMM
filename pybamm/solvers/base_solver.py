@@ -49,7 +49,7 @@ class BaseSolver(object):
     def atol(self, value):
         self._atol = value
 
-    def solve(self, model, t_eval):
+    def solve(self, model, t_eval, inputs=None):
         """
         Execute the solver setup and calculate the solution of the model at
         specified times.
@@ -61,6 +61,8 @@ class BaseSolver(object):
             initial_conditions
         t_eval : numeric type
             The times at which to compute the solution
+        inputs : dict, optional
+            Any input parameters to pass to the model when solving
 
         Raises
         ------
@@ -77,14 +79,17 @@ class BaseSolver(object):
         # Set up
         timer = pybamm.Timer()
         start_time = timer.time()
+        inputs = inputs or {}
         if model.convert_to_format == "casadi" or isinstance(self, pybamm.CasadiSolver):
-            self.set_up_casadi(model)
+            self.set_up_casadi(model, inputs)
         else:
             self.set_up(model)
         set_up_time = timer.time() - start_time
 
         # Solve
-        solution, solve_time, termination = self.compute_solution(model, t_eval)
+        solution, solve_time, termination = self.compute_solution(
+            model, t_eval, inputs=inputs
+        )
 
         # Assign times
         solution.solve_time = solve_time
@@ -100,7 +105,7 @@ class BaseSolver(object):
         )
         return solution
 
-    def step(self, model, dt, npts=2, log=True, external_variables=None):
+    def step(self, model, dt, npts=2, log=True, external_variables=None, inputs=None):
         """
         Step the solution of the model forward by a given time increment. The
         first time this method is called it executes the necessary setup by
@@ -119,6 +124,9 @@ class BaseSolver(object):
         external_variables : dict
             A dictionary of external variables and their corresponding
             values at the current time
+        inputs : dict, optional
+            Any input parameters to pass to the model when solving
+
 
         Raises
         ------
@@ -132,6 +140,7 @@ class BaseSolver(object):
 
         # Set timer
         timer = pybamm.Timer()
+        inputs = inputs or {}
 
         if not hasattr(self, "y0"):
             # create a y_pad vector of the correct size:
@@ -162,7 +171,7 @@ class BaseSolver(object):
 
         # Step
         t_eval = np.linspace(self.t, self.t + dt, npts)
-        solution, solve_time, termination = self.compute_solution(model, t_eval)
+        solution, solve_time, termination = self.compute_solution(model, t_eval, inputs)
 
         # Set self.t and self.y0 to their values at the final step
         self.t = solution.t[-1]

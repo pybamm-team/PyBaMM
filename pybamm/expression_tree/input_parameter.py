@@ -35,6 +35,13 @@ class InputParameter(pybamm.Symbol):
     def evaluate(self, t=None, y=None, u=None, known_evals=None):
         # u should be a dictionary
         if not isinstance(u, dict):
+            # if the special input "shape test" is passed, just return 1
+            if u == "shape test":
+                return 1
             raise TypeError("inputs u should be a dictionary")
-        return u[self.name]
+        try:
+            return u[self.name]
+        # raise more informative error if can't find name in dict
+        except KeyError:
+            raise KeyError("Input parameter '{}' not found".format(self.name))
 

@@ -67,7 +67,7 @@ class DaeSolver(pybamm.BaseSolver):
     def max_steps(self, max_steps):
         self._max_steps = max_steps
 
-    def compute_solution(self, model, t_eval):
+    def compute_solution(self, model, t_eval, inputs=None):
         """Calculate the solution of the model at specified times.
 
         Parameters
@@ -77,7 +77,8 @@ class DaeSolver(pybamm.BaseSolver):
             initial_conditions
         t_eval : numeric type
             The times at which to compute the solution
-
+        inputs : dict, optional
+            Any input parameters to pass to the model when solving
         """
         timer = pybamm.Timer()
 
@@ -100,6 +101,7 @@ class DaeSolver(pybamm.BaseSolver):
             mass_matrix=model.mass_matrix.entries,
             jacobian=self.jacobian,
             model=model,
+            inputs=inputs,
         )
 
         solve_time = timer.time() - solve_start_time
@@ -439,17 +441,30 @@ class DaeSolver(pybamm.BaseSolver):
         raise NotImplementedError
 
 
-class Rhs:
-    "Returns information about rhs at time t and state y"
-
-    def __init__(self, concatenated_rhs_fn):
-        self.concatenated_rhs_fn = concatenated_rhs_fn
-        self.y_pad = None
-        self.y_ext = None
+class SolverCallable:
+    "A class that will be called by the solver when integrating"
+    y_pad = None
+    y_ext = None
+    _inputs = {}
 
     def set_pad_ext(self, y_pad, y_ext):
         self.y_pad = y_pad
         self.y_ext = y_ext
+
+    @property
+    def inputs(self):
+        return self._inputs
+
+    @inputs.setter
+    def inputs(self, value):
+        self._inputs = value
+
+
+class Rhs(SolverCallable):
+    "Returns information about rhs at time t and state y"
+
+    def __init__(self, concatenated_rhs_fn):
+        self.concatenated_rhs_fn = concatenated_rhs_fn
 
     def __call__(self, t, y):
         y = y[:, np.newaxis]
@@ -466,17 +481,11 @@ class RhsCasadi(Rhs):
         return self.concatenated_rhs_fn(t, y).full()[:, 0]
 
 
-class Algebraic:
+class Algebraic(SolverCallable):
     "Returns information about algebraic equations at time t and state y"
 
     def __init__(self, concatenated_algebraic_fn):
         self.concatenated_algebraic_fn = concatenated_algebraic_fn
-        self.y_pad = None
-        self.y_ext = None
-
-    def set_pad_ext(self, y_pad, y_ext):
-        self.y_pad = y_pad
-        self.y_ext = y_ext
 
     def __call__(self, t, y):
         y = y[:, np.newaxis]
@@ -493,7 +502,7 @@ class AlgebraicCasadi(Algebraic):
         return self.concatenated_algebraic_fn(t, y).full()[:, 0]
 
 
-class Residuals:
+class Residuals(SolverCallable):
     "Returns information about residuals at time t and state y"
 
     def __init__(self, model, concatenated_rhs_fn, concatenated_algebraic_fn):
@@ -501,12 +510,6 @@ class Residuals:
         self.concatenated_rhs_fn = concatenated_rhs_fn
         self.concatenated_algebraic_fn = concatenated_algebraic_fn
         self.mass_matrix = model.mass_matrix.entries
-        self.y_pad = None
-        self.y_ext = None
-
-    def set_pad_ext(self, y_pad, y_ext):
-        self.y_pad = y_pad
-        self.y_ext = y_ext
 
     def __call__(self, t, y, ydot):
         pybamm.logger.debug(
@@ -530,8 +533,6 @@ class ResidualsCasadi(Residuals):
         self.model = model
         self.all_states_fn = all_states_fn
         self.mass_matrix = model.mass_matrix.entries
-        self.y_pad = None
-        self.y_ext = None
 
     def __call__(self, t, y, ydot):
         pybamm.logger.debug(
@@ -548,8 +549,6 @@ class EvalEvent:
 
     def __init__(self, event_fn):
         self.event_fn = event_fn
-        self.y_pad = None
-        self.y_ext = None
 
     def set_pad_ext(self, y_pad, y_ext):
         self.y_pad = y_pad
@@ -566,8 +565,6 @@ class Jacobian:
 
     def __init__(self, jac_fn):
         self.jac_fn = jac_fn
-        self.y_pad = None
-        self.y_ext = None
 
     def set_pad_ext(self, y_pad, y_ext):
         self.y_pad = y_pad

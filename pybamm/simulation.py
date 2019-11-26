@@ -144,7 +144,7 @@ class Simulation:
         self._disc = pybamm.Discretisation(self._mesh, self._spatial_methods)
         self._built_model = self._disc.process_model(self._model, inplace=False)
 
-    def solve(self, t_eval=None, solver=None):
+    def solve(self, t_eval=None, solver=None, inputs=None):
         """
         A method to solve the model. This method will automatically build
         and set the model parameters if not already done so.
@@ -158,6 +158,8 @@ class Simulation:
             non-dimensional time of 1.
         solver : :class:`pybamm.BaseSolver`
             The solver to use to solve the model.
+        inputs : dict, optional
+            Any input parameters to pass to the model when solving
         """
         self.build()
 
@@ -174,7 +176,7 @@ class Simulation:
         if solver is None:
             solver = self.solver
 
-        self._solution = solver.solve(self.built_model, t_eval)
+        self._solution = solver.solve(self.built_model, t_eval, inputs=inputs)
 
     def step(self, dt, solver=None, external_variables=None, save=True):
         """

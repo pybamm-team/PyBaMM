@@ -17,6 +17,13 @@ class TestInputParameter(unittest.TestCase):
         a = pybamm.InputParameter("a")
         self.assertIsInstance(a.evaluate_for_shape(), numbers.Number)
 
+    def test_errors(self):
+        a = pybamm.InputParameter("a")
+        with self.assertRaises(TypeError):
+            a.evaluate(u="not a dictionary")
+        with self.assertRaises(KeyError):
+            a.evaluate(u={"bad param": 5})
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

@@ -498,6 +498,7 @@ class Symbol(anytree.NodeMixin):
 
     def is_constant(self):
         """returns true if evaluating the expression is not dependent on `t` or `y`
+        or `u`
 
         See Also
         --------
@@ -505,8 +506,13 @@ class Symbol(anytree.NodeMixin):
 
         """
         # if any of the nodes are instances of any of these types, then the whole
-        # expression depends on either t or y
-        search_types = (pybamm.Variable, pybamm.StateVector, pybamm.IndependentVariable)
+        # expression depends on either t or y or u
+        search_types = (
+            pybamm.Variable,
+            pybamm.StateVector,
+            pybamm.Time,
+            pybamm.InputParameter,
+        )
 
         # do the search, return true if no relevent nodes are found
         return not any((isinstance(n, search_types)) for n in self.pre_order())
@@ -531,7 +537,10 @@ class Symbol(anytree.NodeMixin):
         except TypeError as error:
             # return false if specific TypeError is raised
             # (there is a e.g. StateVector in the tree)
-            if error.args[0] == "StateVector cannot evaluate input 'y=None'":
+            if error.args[0] in [
+                "StateVector cannot evaluate input 'y=None'",
+                "inputs u should be a dictionary",
+            ]:
                 return None
             else:
                 raise error
@@ -579,12 +588,12 @@ class Symbol(anytree.NodeMixin):
         """ Simplify the expression tree. See :class:`pybamm.Simplification`. """
         return pybamm.Simplification(simplified_symbols).simplify(self)
 
-    def to_casadi(self, t=None, y=None, casadi_symbols=None):
+    def to_casadi(self, t=None, y=None, u=None, casadi_symbols=None):
         """
         Convert the expression tree to a CasADi expression tree.
         See :class:`pybamm.CasadiConverter`.
         """
-        return pybamm.CasadiConverter(casadi_symbols).convert(self, t, y)
+        return pybamm.CasadiConverter(casadi_symbols).convert(self, t, y, u)
 
     def new_copy(self):
         """
@@ -614,7 +623,7 @@ class Symbol(anytree.NodeMixin):
         # Try with some large y, to avoid having to use pre_order (slow)
         try:
             y = np.linspace(0.1, 0.9, int(1e4))
-            evaluated_self = self.evaluate(0, y)
+            evaluated_self = self.evaluate(0, y, u="shape test")
         # If that fails, fall back to calculating how big y should really be
         except ValueError:
             state_vectors_in_node = [
