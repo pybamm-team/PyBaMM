@@ -68,22 +68,27 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Discretise symbol
         domain = symbol.domain
 
-        # Add boundary conditions, if defined
+        # Add Dirichlet boundary conditions, if defined
         if symbol.id in boundary_conditions:
             bcs = boundary_conditions[symbol.id]
-            # add ghost nodes
-            discretised_symbol = self.add_ghost_nodes(symbol, discretised_symbol, bcs)
-            # edit domain
-            domain = (
-                [domain[0] + "_left ghost cell"]
-                + domain
-                + [domain[-1] + "_right ghost cell"]
-            )
+            if any(bc[1] == "Dirichlet" for bc in bcs.values()):
+                # add ghost nodes and update domain
+                discretised_symbol, domain = self.add_ghost_nodes(
+                    symbol, discretised_symbol, bcs
+                )
 
         # note in 1D spherical grad and normal grad are the same
         gradient_matrix = self.gradient_matrix(domain)
 
+        # Multiply by gradient matrix
         out = gradient_matrix @ discretised_symbol
+
+        # Add Neumann boundary conditions, if defined
+        if symbol.id in boundary_conditions:
+            bcs = boundary_conditions[symbol.id]
+            if any(bc[1] == "Neumann" for bc in bcs.values()):
+                out = self.add_neumann_values(symbol, out, bcs, domain)
+
         return out
 
     def preprocess_external_variables(self, var):
@@ -505,20 +510,16 @@ class FiniteVolume(pybamm.SpatialMethod):
         where y1 is the value of the first node.
         Similarly for the right-hand boundary condition.
 
-        For Dirichlet bcs, for a boundary condition "y = a at the left-hand boundary",
-        we concatenate a ghost node to the start of the vector y with value "2*a - y1"
-        where y1 is the value of the first node.
-        Similarly for the right-hand boundary condition.
-
-        For Neumann bcs, for a boundary condition "dy/dx = b at the left-hand boundary",
-        we concatenate a ghost node to the start of the vector y with value "b*h + y1"
-        where y1 is the value of the first node and h is the mesh size.
-        Similarly for the right-hand boundary condition.
+        For Neumann bcs no ghost nodes are added. Instead, the exact value provided
+        by the boundary condition is used at the cell edge when calculating the
+        gradient (see :meth:`pybamm.FiniteVolume.add_neumann_values`).
 
         Parameters
         ----------
-        domain : list of strings
-            The domain of the symbol for which to add ghost nodes
+        symbol : :class:`pybamm.SpatialVariable`
+            The variable to be discretised
+        discretised_symbol : :class:`pybamm.Vector`
+            Contains the discretised variable
         bcs : dict of tuples (:class:`pybamm.Scalar`, str)
             Dictionary (with keys "left" and "right") of boundary conditions. Each
             boundary condition consists of a value and a flag indicating its type
@@ -526,13 +527,14 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         Returns
         -------
-        :class:`pybamm.Symbol` (shape (n+2, n))
+        :class:`pybamm.Symbol`
             `Matrix @ discretised_symbol + bcs_vector`. When evaluated, this gives the
             discretised_symbol, with appropriate ghost nodes concatenated at each end.
 
         """
         # get relevant grid points
-        submesh_list = self.mesh.combine_submeshes(*symbol.domain)
+        domain = symbol.domain
+        submesh_list = self.mesh.combine_submeshes(*domain)
 
         # Prepare sizes and empty bcs_vector
         n = submesh_list[0].npts
@@ -543,6 +545,14 @@ class FiniteVolume(pybamm.SpatialMethod):
         lbc_value, lbc_type = bcs["left"]
         rbc_value, rbc_type = bcs["right"]
 
+        # Add ghost node(s) to domain
+        if lbc_type == "Dirichlet":
+            domain = [domain[0] + "_left ghost cell"] + domain
+        if rbc_type == "Dirichlet":
+            domain = domain + [domain[-1] + "_right ghost cell"]
+
+        # Calculate values for ghost nodes for any Dirichlet boundary conditions
+        # and adjust the domain name to account for the new ghost nodes
         for i in range(sec_pts):
             if lbc_value.evaluates_to_number():
                 lbc_i = lbc_value
@@ -554,9 +564,10 @@ class FiniteVolume(pybamm.SpatialMethod):
                 rbc_i = rbc_value[i]
             if lbc_type == "Dirichlet":
                 left_ghost_constant = 2 * lbc_i
+                # concatenate left ghost node
+                bcs_vector = pybamm.NumpyConcatenation(bcs_vector, left_ghost_constant)
             elif lbc_type == "Neumann":
-                dx = 2 * (submesh_list[0].nodes[0] - submesh_list[0].edges[0])
-                left_ghost_constant = -dx * lbc_i
+                pass
             else:
                 raise ValueError(
                     "boundary condition must be Dirichlet or Neumann, not '{}'".format(
@@ -565,31 +576,33 @@ class FiniteVolume(pybamm.SpatialMethod):
                 )
             if rbc_type == "Dirichlet":
                 right_ghost_constant = 2 * rbc_i
+                # concatenate right ghost node
+                bcs_vector = pybamm.NumpyConcatenation(
+                    bcs_vector, pybamm.Vector(np.zeros(n)), right_ghost_constant,
+                )
             elif rbc_type == "Neumann":
-                dx = 2 * (submesh_list[0].edges[-1] - submesh_list[0].nodes[-1])
-                right_ghost_constant = dx * rbc_i
+                # concatenate zeros for internal nodes
+                bcs_vector = pybamm.NumpyConcatenation(
+                    bcs_vector, pybamm.Vector(np.zeros(n))
+                )
             else:
                 raise ValueError(
                     "boundary condition must be Dirichlet or Neumann, not '{}'".format(
                         rbc_type
                     )
                 )
-            # concatenate
-            bcs_vector = pybamm.NumpyConcatenation(
-                bcs_vector,
-                left_ghost_constant,
-                pybamm.Vector(np.zeros(n)),
-                right_ghost_constant,
-            )
 
         # Make matrix to calculate ghost nodes
-        bc_factors = {"Dirichlet": -1, "Neumann": 1}
-        left_factor = bc_factors[lbc_type]
-        right_factor = bc_factors[rbc_type]
         # coo_matrix takes inputs (data, (row, col)) and puts data[i] at the point
         # (row[i], col[i]) for each index of data.
-        left_ghost_vector = coo_matrix(([left_factor], ([0], [0])), shape=(1, n))
-        right_ghost_vector = coo_matrix(([right_factor], ([0], [n - 1])), shape=(1, n))
+        if lbc_type == "Dirichlet":
+            left_ghost_vector = coo_matrix(([-1], ([0], [0])), shape=(1, n))
+        else:
+            left_ghost_vector = None
+        if rbc_type == "Dirichlet":
+            right_ghost_vector = coo_matrix(([-1], ([0], [n - 1])), shape=(1, n))
+        else:
+            right_ghost_vector = None
         sub_matrix = vstack([left_ghost_vector, eye(n), right_ghost_vector])
 
         # repeat matrix for secondary dimensions
@@ -599,7 +612,113 @@ class FiniteVolume(pybamm.SpatialMethod):
         # issue
         matrix = csr_matrix(kron(eye(sec_pts), sub_matrix))
 
-        return pybamm.Matrix(matrix) @ discretised_symbol + bcs_vector
+        new_symbol = pybamm.Matrix(matrix) @ discretised_symbol + bcs_vector
+
+        return new_symbol, domain
+
+    def add_neumann_values(self, symbol, discretised_gradient, bcs, domain):
+        """
+        Add the known values of the gradient from Neumann boundary conditions to
+        the discretised gradient.
+
+        Dirichlet bcs are implemented using ghost nodes, see
+        :meth:`pybamm.FiniteVolume.add_ghost_nodes`.
+
+        Parameters
+        ----------
+        symbol : :class:`pybamm.SpatialVariable`
+            The variable to be discretised
+        discretised_gradient : :class:`pybamm.Vector`
+            Contains the discretised gradient of symbol
+        bcs : dict of tuples (:class:`pybamm.Scalar`, str)
+            Dictionary (with keys "left" and "right") of boundary conditions. Each
+            boundary condition consists of a value and a flag indicating its type
+            (e.g. "Dirichlet")
+        domain : list of strings
+            The domain of the gradient of the symbol (may include ghost nodes)
+
+        Returns
+        -------
+        :class:`pybamm.Symbol`
+            `Matrix @ discretised_gradient + bcs_vector`. When evaluated, this gives the
+            discretised_gradient, with the values of the Neumann boundary conditions
+            concatenated at each end (if given).
+
+        """
+        # get relevant grid points
+        submesh_list = self.mesh.combine_submeshes(*domain)
+
+        # Prepare sizes and empty bcs_vector
+        n = submesh_list[0].npts - 1
+        sec_pts = len(submesh_list)
+
+        bcs_vector = pybamm.Vector(np.array([]))  # starts empty
+
+        lbc_value, lbc_type = bcs["left"]
+        rbc_value, rbc_type = bcs["right"]
+
+        # Add any values from Neumann boundary conditions to the bcs vector
+        for i in range(sec_pts):
+            if lbc_value.evaluates_to_number():
+                lbc_i = lbc_value
+            else:
+                lbc_i = lbc_value[i]
+            if rbc_value.evaluates_to_number():
+                rbc_i = rbc_value
+            else:
+                rbc_i = rbc_value[i]
+            if lbc_type == "Neumann":
+                # concatenate known value of gradient
+                bcs_vector = pybamm.NumpyConcatenation(bcs_vector, lbc_i)
+            elif lbc_type == "Dirichlet":
+                pass
+            else:
+                raise ValueError(
+                    "boundary condition must be Dirichlet or Neumann, not '{}'".format(
+                        lbc_type
+                    )
+                )
+            if rbc_type == "Neumann":
+                # concatenate known value of gradient
+                bcs_vector = pybamm.NumpyConcatenation(
+                    bcs_vector, pybamm.Vector(np.zeros(n)), rbc_i,
+                )
+            elif rbc_type == "Dirichlet":
+                # concatenate zeros for internal nodes
+                bcs_vector = pybamm.NumpyConcatenation(
+                    bcs_vector, pybamm.Vector(np.zeros(n)),
+                )
+            else:
+                raise ValueError(
+                    "boundary condition must be Dirichlet or Neumann, not '{}'".format(
+                        rbc_type
+                    )
+                )
+
+        # Make matrix which makes "gaps" in the the discretised gradient into
+        # which the known Neumann values will be added. E.g. in 1D if the left
+        # boundary condition is Dirichlet and the right Neumann, this matrix will
+        # act to append a zero to the end of the discretsied gradient
+        if lbc_type == "Neumann":
+            left_vector = csr_matrix((1, n))
+        else:
+            left_vector = None
+        if rbc_type == "Neumann":
+            right_vector = csr_matrix((1, n))
+        else:
+            right_vector = None
+        sub_matrix = vstack([left_vector, eye(n), right_vector])
+
+        # repeat matrix for secondary dimensions
+        # Convert to csr_matrix so that we can take the index (row-slicing), which is
+        # not supported by the default kron format
+        # Note that this makes column-slicing inefficient, but this should not be an
+        # issue
+        matrix = csr_matrix(kron(eye(sec_pts), sub_matrix))
+
+        new_gradient = pybamm.Matrix(matrix) @ discretised_gradient + bcs_vector
+
+        return new_gradient
 
     def boundary_value_or_flux(self, symbol, discretised_child, bcs=None):
         """
@@ -639,9 +758,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # https://github.com/Scottmar93/extrapolation-coefficents/tree/master
         if isinstance(symbol, pybamm.BoundaryValue):
 
-            if use_bcs and pybamm.has_bc_of_form(
-                child, symbol.side, bcs, "Dirichlet"
-            ):
+            if use_bcs and pybamm.has_bc_of_form(child, symbol.side, bcs, "Dirichlet"):
                 # just use the value from the bc: f(x*)
                 sub_matrix = csr_matrix((1, prim_pts))
                 additive = bcs[child.id][symbol.side][0]
@@ -755,9 +872,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         elif isinstance(symbol, pybamm.BoundaryGradient):
 
-            if use_bcs and pybamm.has_bc_of_form(
-                child, symbol.side, bcs, "Neumann"
-            ):
+            if use_bcs and pybamm.has_bc_of_form(child, symbol.side, bcs, "Neumann"):
                 # just use the value from the bc: f'(x*)
                 sub_matrix = csr_matrix((1, prim_pts))
                 additive = bcs[child.id][symbol.side][0]
