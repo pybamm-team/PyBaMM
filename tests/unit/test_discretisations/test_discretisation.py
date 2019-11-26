@@ -790,16 +790,19 @@ class TestDiscretise(unittest.TestCase):
         )
 
     def test_outer(self):
-        var = pybamm.Variable("var", ["current collector"])
-        x = pybamm.SpatialVariable("x_s", ["separator"])
 
         # create discretisation
         disc = get_1p1d_discretisation_for_testing()
         mesh = disc.mesh
 
+        var_z = pybamm.Variable("var_z", ["current collector"])
+        var_x = pybamm.Vector(
+            np.linspace(0, 1, mesh["separator"][0].npts), domain="separator"
+        )
+
         # process Outer variable
-        disc.set_variable_slices([var])
-        outer = pybamm.outer(var, x)
+        disc.set_variable_slices([var_z, var_x])
+        outer = pybamm.outer(var_z, var_x)
         outer_disc = disc.process_symbol(outer)
         self.assertIsInstance(outer_disc, pybamm.Outer)
         self.assertIsInstance(outer_disc.children[0], pybamm.StateVector)

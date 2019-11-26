@@ -93,6 +93,8 @@ class TestProcessedVariable(unittest.TestCase):
         disc.set_variable_slices([var])
         x_sol = disc.process_symbol(x).entries[:, 0]
         r_sol = disc.process_symbol(r).entries[:, 0]
+        # Keep only the first iteration of entries
+        r_sol = r_sol[: len(r_sol) // len(x_sol)]
         var_sol = disc.process_symbol(var)
         t_sol = np.linspace(0, 1)
         y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)
@@ -114,8 +116,10 @@ class TestProcessedVariable(unittest.TestCase):
 
         disc = tests.get_1p1d_discretisation_for_testing()
         disc.set_variable_slices([var])
-        x_sol = disc.process_symbol(x).entries[:, 0]
         z_sol = disc.process_symbol(z).entries[:, 0]
+        x_sol = disc.process_symbol(x).entries[:, 0]
+        # Keep only the first iteration of entries
+        x_sol = x_sol[: len(x_sol) // len(z_sol)]
         var_sol = disc.process_symbol(var)
         t_sol = np.linspace(0, 1)
         y_sol = np.ones(len(x_sol) * len(z_sol))[:, np.newaxis] * np.linspace(0, 5)
@@ -257,6 +261,8 @@ class TestProcessedVariable(unittest.TestCase):
         disc.set_variable_slices([var])
         x_sol = disc.process_symbol(x).entries[:, 0]
         r_sol = disc.process_symbol(r).entries[:, 0]
+        # Keep only the first iteration of entries
+        r_sol = r_sol[: len(r_sol) // len(x_sol)]
         var_sol = disc.process_symbol(var)
         t_sol = np.linspace(0, 1)
         y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)
@@ -293,6 +299,8 @@ class TestProcessedVariable(unittest.TestCase):
         disc.set_variable_slices([var])
         x_sol = disc.process_symbol(x).entries[:, 0]
         r_sol = disc.process_symbol(r).entries[:, 0]
+        # Keep only the first iteration of entries
+        r_sol = r_sol[: len(r_sol) // len(x_sol)]
         var_sol = disc.process_symbol(var)
         t_sol = np.linspace(0, 1)
         y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)

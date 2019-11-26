@@ -667,14 +667,12 @@ class Outer(BinaryOperator):
 
     def __init__(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
-        # cannot have Variable, StateVector or Matrix in the right symbol, as these
+        # cannot have certain types of objects in the right symbol, as these
         # can already be 2D objects (so we can't take an outer product with them)
         if right.has_symbol_of_classes(
-            (pybamm.Variable, pybamm.StateVector, pybamm.Matrix)
+            (pybamm.Variable, pybamm.StateVector, pybamm.Matrix, pybamm.SpatialVariable)
         ):
-            raise TypeError(
-                "right child must only contain SpatialVariable and scalars" ""
-            )
+            raise TypeError("right child must only contain Vectors and Scalars" "")
 
         super().__init__("outer product", left, right)
 
