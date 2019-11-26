@@ -261,4 +261,3 @@ class CasadiSolver(pybamm.DaeSolver):
         except RuntimeError as e:
             # If it doesn't work raise error
             raise pybamm.SolverError(e.args[0])
-

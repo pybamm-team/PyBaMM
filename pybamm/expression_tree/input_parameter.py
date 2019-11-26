@@ -44,4 +44,3 @@ class InputParameter(pybamm.Symbol):
         # raise more informative error if can't find name in dict
         except KeyError:
             raise KeyError("Input parameter '{}' not found".format(self.name))
-

@@ -422,11 +422,13 @@ class ParameterValues(dict):
         if isinstance(symbol, pybamm.Parameter):
             value = self[symbol.name]
             if isinstance(value, numbers.Number):
-                # Scalar inherits name (for updating parameters) and domain (for Broadcast)
+                # Scalar inherits name (for updating parameters) and domain (for
+                # Broadcast)
                 return pybamm.Scalar(value, name=symbol.name, domain=symbol.domain)
             elif isinstance(value, pybamm.InputParameter):
+                value.domain = symbol.domain
                 return value
-                
+
         elif isinstance(symbol, pybamm.FunctionParameter):
             new_children = [self.process_symbol(child) for child in symbol.children]
             function_name = self[symbol.name]

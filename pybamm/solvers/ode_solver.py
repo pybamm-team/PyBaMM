@@ -234,7 +234,7 @@ class OdeSolver(pybamm.BaseSolver):
         ----------
         inputs : dict
             Any input parameters to pass to the model when solving
-            
+
         """
         self.dydt.set_pad_ext(self.y_pad, self.y_ext)
         self.dydt.set_inputs(inputs)

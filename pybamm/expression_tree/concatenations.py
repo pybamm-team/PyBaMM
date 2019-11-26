@@ -59,7 +59,9 @@ class Concatenation(pybamm.Symbol):
             if self.id not in known_evals:
                 children_eval = [None] * len(children)
                 for idx, child in enumerate(children):
-                    children_eval[idx], known_evals = child.evaluate(t, y, u, known_evals)
+                    children_eval[idx], known_evals = child.evaluate(
+                        t, y, u, known_evals
+                    )
                 known_evals[self.id] = self._concatenation_evaluate(children_eval)
             return known_evals[self.id], known_evals
         else:
