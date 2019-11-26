@@ -914,6 +914,23 @@ class TestDiscretise(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.ModelError, "Boundary conditions"):
             disc.check_tab_conditions(b, bcs)
 
+    def test_process_with_no_check(self):
+        # create model
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        c = pybamm.Variable("c", domain=whole_cell)
+        N = pybamm.grad(c)
+        model = pybamm.BaseModel()
+        model.rhs = {c: pybamm.div(N)}
+        model.initial_conditions = {c: pybamm.Scalar(3)}
+        model.boundary_conditions = {
+            c: {"left": (0, "Neumann"), "right": (0, "Neumann")}
+        }
+        model.variables = {"c": c, "N": N}
+
+        # create discretisation
+        disc = get_discretisation_for_testing()
+        disc.process_model(model, check_model=False)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
