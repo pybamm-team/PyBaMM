@@ -103,6 +103,18 @@ class TestSPM(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
+    def test_surface_form_differential(self):
+        options = {"surface form": "differential"}
+        model = pybamm.lithium_ion.SPM(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+    def test_surface_form_algebraic(self):
+        options = {"surface form": "algebraic"}
+        model = pybamm.lithium_ion.SPM(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
