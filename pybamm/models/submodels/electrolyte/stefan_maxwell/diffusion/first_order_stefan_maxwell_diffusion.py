@@ -78,23 +78,15 @@ class FirstOrder(BaseModel):
         D_e_p = tor_p_0 * param.D_e(c_e_0, T_0)
 
         # Fluxes
-        N_e_n_1 = -pybamm.outer(rhs_n, x_n)
-        N_e_s_1 = -(
-            pybamm.outer(rhs_s, (x_s - l_n))
-            + pybamm.PrimaryBroadcast(rhs_n * l_n, "separator")
-        )
-        N_e_p_1 = -pybamm.outer(rhs_p, (x_p - 1))
+        N_e_n_1 = -rhs_n * x_n
+        N_e_s_1 = -(rhs_s * (x_s - l_n) + rhs_n * l_n)
+        N_e_p_1 = -rhs_p * (x_p - 1)
 
         # Concentrations
-        c_e_n_1 = pybamm.outer(rhs_n / (2 * D_e_n), x_n ** 2 - l_n ** 2)
-        c_e_s_1 = pybamm.outer(rhs_s / 2, (x_s - l_n) ** 2) + pybamm.outer(
-            rhs_n * l_n / D_e_s, x_s - l_n
-        )
-        c_e_p_1 = pybamm.outer(
-            rhs_p / (2 * D_e_p), (x_p - 1) ** 2 - l_p ** 2
-        ) + pybamm.PrimaryBroadcast(
-            (rhs_s * l_s ** 2 / (2 * D_e_s)) + (rhs_n * l_n * l_s / D_e_s),
-            "positive electrode",
+        c_e_n_1 = (rhs_n / (2 * D_e_n)) * (x_n ** 2 - l_n ** 2)
+        c_e_s_1 = (rhs_s / 2) * ((x_s - l_n) ** 2) + (rhs_n * l_n / D_e_s) * (x_s - l_n)
+        c_e_p_1 = (rhs_p / (2 * D_e_p)) * ((x_p - 1) ** 2 - l_p ** 2) + (
+            (rhs_s * l_s ** 2 / (2 * D_e_s)) + (rhs_n * l_n * l_s / D_e_s)
         )
 
         # Correct for integral
@@ -108,18 +100,18 @@ class FirstOrder(BaseModel):
         A_e = -(eps_n_0 * c_e_n_1_av + eps_s_0 * c_e_s_1_av + eps_p_0 * c_e_p_1_av) / (
             l_n * eps_n_0 + l_s * eps_s_0 + l_p * eps_p_0
         )
-        c_e_n_1 += pybamm.PrimaryBroadcast(A_e, "negative electrode")
-        c_e_s_1 += pybamm.PrimaryBroadcast(A_e, "separator")
-        c_e_p_1 += pybamm.PrimaryBroadcast(A_e, "positive electrode")
+        c_e_n_1 += A_e
+        c_e_s_1 += A_e
+        c_e_p_1 += A_e
         c_e_n_1_av += A_e
         c_e_s_1_av += A_e
         c_e_p_1_av += A_e
 
         # Update variables
         c_e = pybamm.Concatenation(
-            pybamm.PrimaryBroadcast(c_e_0, "negative electrode") + param.C_e * c_e_n_1,
-            pybamm.PrimaryBroadcast(c_e_0, "separator") + param.C_e * c_e_s_1,
-            pybamm.PrimaryBroadcast(c_e_0, "positive electrode") + param.C_e * c_e_p_1,
+            c_e_0 + param.C_e * c_e_n_1,
+            c_e_0 + param.C_e * c_e_s_1,
+            c_e_0 + param.C_e * c_e_p_1,
         )
         variables.update(self._get_standard_concentration_variables(c_e))
         # Update with analytical expressions for first-order x-averages
