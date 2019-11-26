@@ -162,8 +162,7 @@ class BaseModel(BaseStefanMaxwellConductivity):
         i_e = conductivity * (
             ((1 + param.Theta * T) * param.chi(c_e) / c_e) * pybamm.grad(c_e)
             + pybamm.grad(delta_phi)
-            + pybamm.PrimaryBroadcast(i_boundary_cc, self.domain_for_broadcast)
-            / sigma_eff
+            + i_boundary_cc / sigma_eff
         )
         variables.update(self._get_domain_current_variables(i_e))
 
@@ -193,13 +192,9 @@ class BaseModel(BaseStefanMaxwellConductivity):
         chi_e_s = param.chi(c_e_s)
         kappa_s_eff = param.kappa_e(c_e_s, T) * tor_s
 
-        phi_e_s = pybamm.PrimaryBroadcast(
-            pybamm.boundary_value(phi_e_n, "right"), "separator"
-        ) + pybamm.IndefiniteIntegral(
+        phi_e_s = pybamm.boundary_value(phi_e_n, "right") + pybamm.IndefiniteIntegral(
             (1 + param.Theta * T) * chi_e_s / c_e_s * pybamm.grad(c_e_s)
-            - param.C_e
-            * pybamm.PrimaryBroadcast(i_boundary_cc, self.domain_for_broadcast)
-            / kappa_s_eff,
+            - param.C_e * i_boundary_cc / kappa_s_eff,
             x_s,
         )
 
@@ -227,7 +222,7 @@ class BaseModel(BaseStefanMaxwellConductivity):
         i_boundary_cc = variables["Current collector current density"]
         i_e = variables[self.domain + " electrolyte current density"]
 
-        i_s = pybamm.PrimaryBroadcast(i_boundary_cc, self.domain_for_broadcast) - i_e
+        i_s = i_boundary_cc - i_e
 
         if self.domain == "Negative":
             conductivity = param.sigma_n * tor
@@ -240,12 +235,9 @@ class BaseModel(BaseStefanMaxwellConductivity):
 
             conductivity = param.sigma_p * tor
 
-            phi_s = -pybamm.IndefiniteIntegral(
-                i_s / conductivity, x_p
-            ) + pybamm.PrimaryBroadcast(
+            phi_s = -pybamm.IndefiniteIntegral(i_s / conductivity, x_p) + (
                 pybamm.boundary_value(phi_e_s, "right")
-                + pybamm.boundary_value(delta_phi_p, "left"),
-                "positive electrode",
+                + pybamm.boundary_value(delta_phi_p, "left")
             )
 
         return phi_s
