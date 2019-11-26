@@ -1,10 +1,20 @@
 #
 # Base model class
 #
-import pybamm
-
+import inspect
 import numbers
+import pybamm
 import warnings
+
+
+class ParamClass:
+    """Class for converting a module of parameters into a class. For pickling."""
+
+    def __init__(self, methods):
+        for k, v in methods.__dict__.items():
+            # don't save module attributes (e.g. pybamm, numpy)
+            if not (k.startswith("__") or inspect.ismodule(v)):
+                self.__dict__[k] = v
 
 
 class BaseModel(object):
@@ -99,6 +109,7 @@ class BaseModel(object):
         self._mass_matrix = None
         self._jacobian = None
         self._jacobian_algebraic = None
+        self.external_variables = []
 
         # Default behaviour is to use the jacobian and simplify
         self.use_jacobian = True
@@ -195,6 +206,9 @@ class BaseModel(object):
     def variables(self, variables):
         self._variables = variables
 
+    def variable_names(self):
+        return list(self._variables.keys())
+
     @property
     def events(self):
         return self._events
@@ -260,8 +274,14 @@ class BaseModel(object):
         self._jacobian_algebraic = jacobian_algebraic
 
     @property
-    def set_of_parameters(self):
-        return self._set_of_parameters
+    def param(self):
+        return self._param
+
+    @param.setter
+    def param(self, values):
+        # convert module into a class
+        # (StackOverflow: https://tinyurl.com/yk3euon3)
+        self._param = ParamClass(values)
 
     @property
     def options(self):
@@ -273,6 +293,16 @@ class BaseModel(object):
 
     def __getitem__(self, key):
         return self.rhs[key]
+
+    def new_copy(self, options=None):
+        "Create an empty copy with identical options, or new options if specified"
+        options = options or self.options
+        new_model = self.__class__(options)
+        new_model.name = self.name
+        new_model.use_jacobian = self.use_jacobian
+        new_model.use_simplify = self.use_simplify
+        new_model.convert_to_format = self.convert_to_format
+        return new_model
 
     def update(self, *submodels):
         """
@@ -371,7 +401,17 @@ class BaseModel(object):
         # If any variables in the equations don't appear in the keys then the model is
         # underdetermined
         vars_in_keys = vars_in_rhs_keys.union(vars_in_algebraic_keys)
-        extra_variables = vars_in_eqns.difference(vars_in_keys)
+        extra_variables_in_equations = vars_in_eqns.difference(vars_in_keys)
+
+        # get ids of external variables
+        external_ids = {var.id for var in self.external_variables}
+        for var in self.external_variables:
+            if isinstance(var, pybamm.Concatenation):
+                child_ids = {child.id for child in var.children}
+                external_ids = external_ids.union(child_ids)
+
+        extra_variables = extra_variables_in_equations.difference(external_ids)
+
         if extra_variables:
             raise pybamm.ModelError("model is underdetermined (too many variables)")
 
@@ -462,19 +502,27 @@ class BaseModel(object):
                 {x.id: x for x in eqn.pre_order() if isinstance(x, pybamm.Variable)}
             )
         var_ids_in_keys = set()
-        for var in {**self.rhs, **self.algebraic}.keys():
+
+        model_and_external_variables = (
+            list(self.rhs.keys())
+            + list(self.algebraic.keys())
+            + self.external_variables
+        )
+
+        for var in model_and_external_variables:
             if isinstance(var, pybamm.Variable):
                 var_ids_in_keys.add(var.id)
             # Key can be a concatenation
             elif isinstance(var, pybamm.Concatenation):
                 var_ids_in_keys.update([child.id for child in var.children])
+
         for var_id, var in all_vars.items():
             if var_id not in var_ids_in_keys:
                 raise pybamm.ModelError(
                     """
                     No key set for variable '{}'. Make sure it is included in either
-                    model.rhs or model.algebraic in an unmodified form (e.g. not
-                    Broadcasted)
+                    model.rhs, model.algebraic, or model.external_variables in an
+                    unmodified form (e.g. not Broadcasted)
                     """.format(
                         var
                     )

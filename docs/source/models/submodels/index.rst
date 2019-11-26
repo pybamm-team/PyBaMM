@@ -14,3 +14,4 @@ Submodels
     particle/index
     porosity/index
     thermal/index
+    tortuosity/index

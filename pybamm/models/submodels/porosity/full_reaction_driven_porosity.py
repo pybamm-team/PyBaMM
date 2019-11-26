@@ -52,4 +52,4 @@ class Full(BaseModel):
 
     def set_initial_conditions(self, variables):
         eps = variables["Porosity"]
-        self.initial_conditions = {eps: self.param.eps_init}
+        self.initial_conditions = {eps: self.param.epsilon_init}

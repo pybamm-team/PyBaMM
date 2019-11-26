@@ -23,9 +23,10 @@ for i in range(len(frequencies)):
 # load parameter values and process models
 param = models[0].default_parameter_values
 for i, frequency in enumerate(frequencies):
-    # pass my_fun to UserCurrent class, giving the additonal parameters as
-    # keyword arguments
-    current = pybamm.UserCurrent(my_fun, A=A, omega=frequency)
+
+    def current(t):
+        return my_fun(t, A, frequency)
+
     param.update({"Current function": current})
     param.process_model(models[i])
 

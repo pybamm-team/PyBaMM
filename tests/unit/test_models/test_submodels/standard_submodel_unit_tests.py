@@ -14,9 +14,14 @@ class StandardSubModelTests(object):
             variables = {}
         self.submodel = submodel
         self.variables = variables
+        self.external_variables = []
 
     def test_get_fundamental_variables(self):
         self.variables.update(self.submodel.get_fundamental_variables())
+
+    def test_get_external_variables(self):
+        external_variables = self.submodel.get_external_variables()
+        self.external_variables += external_variables
 
     def test_get_coupled_variables(self):
         self.variables.update(self.submodel.get_coupled_variables(self.variables))
@@ -38,6 +43,7 @@ class StandardSubModelTests(object):
 
     def test_all(self):
         self.test_get_fundamental_variables()
+        self.test_get_external_variables()
         self.test_get_coupled_variables()
         self.test_set_rhs()
         self.test_set_algebraic()

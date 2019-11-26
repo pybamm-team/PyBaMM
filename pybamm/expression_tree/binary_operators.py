@@ -3,7 +3,7 @@
 #
 import pybamm
 
-import autograd.numpy as np
+import numpy as np
 import numbers
 from scipy.sparse import issparse, csr_matrix, kron
 
@@ -77,19 +77,7 @@ class BinaryOperator(pybamm.Symbol):
     """
 
     def __init__(self, name, left, right):
-        assert isinstance(left, (pybamm.Symbol, numbers.Number)) and isinstance(
-            right, (pybamm.Symbol, numbers.Number)
-        ), TypeError(
-            """left and right must both be Symbols or Numbers
-                but they are {} and {}""".format(
-                type(left), type(right)
-            )
-        )
-        # Turn numbers into scalars
-        if isinstance(left, numbers.Number):
-            left = pybamm.Scalar(left)
-        if isinstance(right, numbers.Number):
-            right = pybamm.Scalar(right)
+        left, right = self.format(left, right)
 
         # Check and process domains, except for Outer symbol which takes the outer
         # product of two smbols in different domains, and gives it the domain of the
@@ -108,6 +96,43 @@ class BinaryOperator(pybamm.Symbol):
         )
         self.left = self.children[0]
         self.right = self.children[1]
+
+    def format(self, left, right):
+        "Format children left and right into compatible form"
+        # Turn numbers into scalars
+        if isinstance(left, numbers.Number):
+            left = pybamm.Scalar(left)
+        if isinstance(right, numbers.Number):
+            right = pybamm.Scalar(right)
+
+        # Check both left and right are pybamm Symbols
+        if not (isinstance(left, pybamm.Symbol) and isinstance(right, pybamm.Symbol)):
+            raise NotImplementedError(
+                """'{}' not implemented for symbols of type {} and {}""".format(
+                    self.__class__.__name__, type(left), type(right)
+                )
+            )
+
+        # Do some broadcasting in special cases, to avoid having to do this manually
+        if (
+            not isinstance(self, (Outer, Kron))
+            and left.domain != []
+            and right.domain != []
+        ):
+            if (
+                left.domain != right.domain
+                and "secondary" in right.auxiliary_domains
+                and left.domain == right.auxiliary_domains["secondary"]
+            ):
+                left = pybamm.PrimaryBroadcast(left, right.domain)
+            if (
+                right.domain != left.domain
+                and "secondary" in left.auxiliary_domains
+                and right.domain == left.auxiliary_domains["secondary"]
+            ):
+                right = pybamm.PrimaryBroadcast(right, left.domain)
+
+        return left, right
 
     def __str__(self):
         """ See :meth:`pybamm.Symbol.__str__()`. """
@@ -139,11 +164,15 @@ class BinaryOperator(pybamm.Symbol):
         new_right = self.right.new_copy()
 
         # make new symbol, ensure domain(s) remain the same
-        out = self.__class__(new_left, new_right)
+        out = self._binary_new_copy(new_left, new_right)
         out.domain = self.domain
         out.auxiliary_domains = self.auxiliary_domains
 
         return out
+
+    def _binary_new_copy(self, left, right):
+        "Default behaviour for new_copy"
+        return self.__class__(left, right)
 
     def evaluate(self, t=None, y=None, known_evals=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
@@ -172,9 +201,9 @@ class BinaryOperator(pybamm.Symbol):
         """ Calculate the jacobian of a binary operator. """
         raise NotImplementedError
 
-    def _binary_simplify(self, left, right):
-        """ Simplify a binary operator. """
-        raise NotImplementedError
+    def _binary_simplify(self, new_left, new_right):
+        """ Simplify a binary operator. Default behaviour: unchanged"""
+        return self._binary_new_copy(new_left, new_right)
 
     def _binary_evaluate(self, left, right):
         """ Perform binary operation on nodes 'left' and 'right'. """
@@ -199,10 +228,13 @@ class Power(BinaryOperator):
         """ See :meth:`pybamm.Symbol._diff()`. """
         # apply chain rule and power rule
         base, exponent = self.orphans
-        return base ** (exponent - 1) * (
-            exponent * base.diff(variable)
-            + base * pybamm.log(base) * exponent.diff(variable)
-        )
+        # derivative if variable is in the base
+        diff = exponent * (base ** (exponent - 1)) * base.diff(variable)
+        # derivative if variable is in the exponent (rare, check separately to avoid
+        # unecessarily big tree)
+        if any(variable.id == x.id for x in exponent.pre_order()):
+            diff += (base ** exponent) * pybamm.log(base) * exponent.diff(variable)
+        return diff
 
     def _binary_jac(self, left_jac, right_jac):
         """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
@@ -221,7 +253,9 @@ class Power(BinaryOperator):
 
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
-        return left ** right
+        # don't raise RuntimeWarning for NaNs
+        with np.errstate(invalid="ignore"):
+            return left ** right
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_simplify()`. """
@@ -498,7 +532,9 @@ class Division(BinaryOperator):
             return csr_matrix(left.multiply(1 / right))
         else:
             if isinstance(right, numbers.Number) and right == 0:
-                return left * np.inf
+                # don't raise RuntimeWarning for NaNs
+                with np.errstate(invalid="ignore"):
+                    return left * np.inf
             else:
                 return left / right
 
@@ -631,14 +667,12 @@ class Outer(BinaryOperator):
 
     def __init__(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
-        # cannot have Variable, StateVector or Matrix in the right symbol, as these
+        # cannot have certain types of objects in the right symbol, as these
         # can already be 2D objects (so we can't take an outer product with them)
         if right.has_symbol_of_classes(
-            (pybamm.Variable, pybamm.StateVector, pybamm.Matrix)
+            (pybamm.Variable, pybamm.StateVector, pybamm.Matrix, pybamm.SpatialVariable)
         ):
-            raise TypeError(
-                "right child must only contain SpatialVariable and scalars" ""
-            )
+            raise TypeError("right child must only contain Vectors and Scalars" "")
 
         super().__init__("outer product", left, right)
 
@@ -670,10 +704,6 @@ class Outer(BinaryOperator):
 
         return np.outer(left, right).reshape(-1, 1)
 
-    def _binary_simplify(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator._binary_simplify()`. """
-        return pybamm.Outer(left, right)
-
 
 class Kron(BinaryOperator):
     """A node in the expression tree representing a (sparse) kronecker product operator
@@ -702,9 +732,54 @@ class Kron(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
         return csr_matrix(kron(left, right))
 
-    def _binary_simplify(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator._binary_simplify()`. """
-        return pybamm.Kron(left, right)
+
+class Heaviside(BinaryOperator):
+    """A node in the expression tree representing a heaviside step function.
+
+    **Extends:** :class:`BinaryOperator`
+    """
+
+    def __init__(self, left, right, equal):
+        """ See :meth:`pybamm.BinaryOperator.__init__()`. """
+        # 'equal' determines whether to return 1 or 0 when left = right
+        self.equal = equal
+        if equal is True:
+            name = "<="
+        else:
+            name = "<"
+        super().__init__(name, left, right)
+
+    def __str__(self):
+        """ See :meth:`pybamm.Symbol.__str__()`. """
+        if self.equal is True:
+            return "{!s} <= {!s}".format(self.left, self.right)
+        else:
+            return "{!s} < {!s}".format(self.left, self.right)
+
+    def diff(self, variable):
+        """ See :meth:`pybamm.Symbol.diff()`. """
+        # Heaviside should always be multiplied by something else so hopefully don't
+        # need to worry about shape
+        return pybamm.Scalar(0)
+
+    def _binary_jac(self, left_jac, right_jac):
+        """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
+        # Heaviside should always be multiplied by something else so hopefully don't
+        # need to worry about shape
+        return pybamm.Scalar(0)
+
+    def _binary_evaluate(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        # don't raise RuntimeWarning for NaNs
+        with np.errstate(invalid="ignore"):
+            if self.equal is True:
+                return left <= right
+            else:
+                return left < right
+
+    def _binary_new_copy(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator._binary_new_copy()`. """
+        return Heaviside(left, right, self.equal)
 
 
 def outer(left, right):

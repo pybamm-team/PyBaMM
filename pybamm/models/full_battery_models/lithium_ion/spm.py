@@ -33,6 +33,7 @@ class SPM(BaseModel):
         super().__init__(options, name)
 
         self.set_porosity_submodel()
+        self.set_tortuosity_submodels()
         self.set_convection_submodel()
         self.set_interfacial_submodel()
         self.set_particle_submodel()

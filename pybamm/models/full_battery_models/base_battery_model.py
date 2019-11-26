@@ -57,6 +57,11 @@ class BaseBatteryModel(pybamm.BaseModel):
                 only takes effect if "dimensionality" is 0. If "dimensionality"
                 is 1 or 2 current collector effects are always included. Must be 'False'
                 for lead-acid models.
+            * "external submodels" : list
+                A list of the submodels that you would like to supply an external
+                variable for instead of solving in PyBaMM. The entries of the lists
+                are strings that correspond to the submodel names in the keys
+                of `self.submodels`.
 
 
     **Extends:** :class:`pybamm.BaseModel`
@@ -68,6 +73,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         self.set_standard_output_variables()
         self.submodels = {}
         self._built = False
+        self._built_fundamental_and_external = False
 
     @property
     def default_parameter_values(self):
@@ -121,17 +127,17 @@ class BaseBatteryModel(pybamm.BaseModel):
     @property
     def default_spatial_methods(self):
         base_spatial_methods = {
-            "macroscale": pybamm.FiniteVolume,
-            "negative particle": pybamm.FiniteVolume,
-            "positive particle": pybamm.FiniteVolume,
+            "macroscale": pybamm.FiniteVolume(),
+            "negative particle": pybamm.FiniteVolume(),
+            "positive particle": pybamm.FiniteVolume(),
         }
         if self.options["dimensionality"] == 0:
             # 0D submesh - use base spatial method
-            base_spatial_methods["current collector"] = pybamm.ZeroDimensionalMethod
+            base_spatial_methods["current collector"] = pybamm.ZeroDimensionalMethod()
         elif self.options["dimensionality"] == 1:
-            base_spatial_methods["current collector"] = pybamm.FiniteVolume
+            base_spatial_methods["current collector"] = pybamm.FiniteVolume()
         elif self.options["dimensionality"] == 2:
-            base_spatial_methods["current collector"] = pybamm.ScikitFiniteElement
+            base_spatial_methods["current collector"] = pybamm.ScikitFiniteElement()
         return base_spatial_methods
 
     @property
@@ -150,6 +156,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "particle": "Fickian diffusion",
             "thermal": "isothermal",
             "thermal current collector": False,
+            "external submodels": []
         }
         options = default_options
         # any extra options overwrite the default options
@@ -389,17 +396,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 {"y": var.y, "y [m]": var.y * L_y, "z": var.z, "z [m]": var.z * L_z}
             )
 
-    def build_model(self):
-
-        # Check if already built
-        if self._built:
-            raise pybamm.ModelError(
-                """Model already built. If you are adding a new submodel, try using
-                `model.update` instead."""
-            )
-
-        pybamm.logger.info("Building {}".format(self.name))
-
+    def build_fundamental_and_external(self):
         # Get the fundamental variables
         for submodel_name, submodel in self.submodels.items():
             pybamm.logger.debug(
@@ -409,13 +406,33 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
             self.variables.update(submodel.get_fundamental_variables())
 
-        # Get coupled variables
+        # set the submodels that are external
+        for sub in self.options["external submodels"]:
+            self.submodels[sub].external = True
+
+        # Set any external variables
+        self.external_variables = []
+        for submodel_name, submodel in self.submodels.items():
+            pybamm.logger.debug(
+                "Getting external variables for {} submodel ({})".format(
+                    submodel_name, self.name
+                )
+            )
+            external_variables = submodel.get_external_variables()
+
+            self.external_variables += external_variables
+
+        self._built_fundamental_and_external = True
+
+    def build_coupled_variables(self):
         # Note: pybamm will try to get the coupled variables for the submodels in the
         # order they are set by the user. If this fails for a particular submodel,
         # return to it later and try again. If setting coupled variables fails and
         # there are no more submodels to try, raise an error.
         submodels = list(self.submodels.keys())
+        count = 0
         while len(submodels) > 0:
+            count += 1
             for submodel_name, submodel in self.submodels.items():
                 if submodel_name in submodels:
                     pybamm.logger.debug(
@@ -429,7 +446,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                         )
                         submodels.remove(submodel_name)
                     except KeyError as key:
-                        if len(submodels) == 1:
+                        if len(submodels) == 1 or count == 100:
                             # no more submodels to try
                             raise pybamm.ModelError(
                                 """Submodel "{}" requires the variable {}, but it cannot be found.
@@ -442,35 +459,56 @@ class BaseBatteryModel(pybamm.BaseModel):
                             # try setting coupled variables on next loop through
                             pass
 
+    def build_model_equations(self):
         # Set model equations
         for submodel_name, submodel in self.submodels.items():
-            pybamm.logger.debug(
-                "Setting rhs for {} submodel ({})".format(submodel_name, self.name)
-            )
-            submodel.set_rhs(self.variables)
-            pybamm.logger.debug(
-                "Setting algebraic for {} submodel ({})".format(
-                    submodel_name, self.name
+            if submodel.external is False:
+                pybamm.logger.debug(
+                    "Setting rhs for {} submodel ({})".format(submodel_name, self.name)
                 )
-            )
-            submodel.set_algebraic(self.variables)
-            pybamm.logger.debug(
-                "Setting boundary conditions for {} submodel ({})".format(
-                    submodel_name, self.name
+
+                submodel.set_rhs(self.variables)
+                pybamm.logger.debug(
+                    "Setting algebraic for {} submodel ({})".format(
+                        submodel_name, self.name
+                    )
                 )
-            )
-            submodel.set_boundary_conditions(self.variables)
-            pybamm.logger.debug(
-                "Setting initial conditions for {} submodel ({})".format(
-                    submodel_name, self.name
+                submodel.set_algebraic(self.variables)
+                pybamm.logger.debug(
+                    "Setting boundary conditions for {} submodel ({})".format(
+                        submodel_name, self.name
+                    )
                 )
+                submodel.set_boundary_conditions(self.variables)
+                pybamm.logger.debug(
+                    "Setting initial conditions for {} submodel ({})".format(
+                        submodel_name, self.name
+                    )
+                )
+                submodel.set_initial_conditions(self.variables)
+                submodel.set_events(self.variables)
+                pybamm.logger.debug(
+                    "Updating {} submodel ({})".format(submodel_name, self.name)
+                )
+                self.update(submodel)
+
+    def build_model(self):
+
+        # Check if already built
+        if self._built:
+            raise pybamm.ModelError(
+                """Model already built. If you are adding a new submodel, try using
+                `model.update` instead."""
             )
-            submodel.set_initial_conditions(self.variables)
-            submodel.set_events(self.variables)
-            pybamm.logger.debug(
-                "Updating {} submodel ({})".format(submodel_name, self.name)
-            )
-            self.update(submodel)
+
+        pybamm.logger.info("Building {}".format(self.name))
+
+        if self._built_fundamental_and_external is False:
+            self.build_fundamental_and_external()
+
+        self.build_coupled_variables()
+
+        self.build_model_equations()
 
         pybamm.logger.debug("Setting voltage variables")
         self.set_voltage_variables()
@@ -490,6 +528,14 @@ class BaseBatteryModel(pybamm.BaseModel):
                 self.variables.update(var)
 
         self._built = True
+
+    def set_tortuosity_submodels(self):
+        self.submodels["electrolyte tortuosity"] = pybamm.tortuosity.Bruggeman(
+            self.param, "Electrolyte"
+        )
+        self.submodels["electrode tortuosity"] = pybamm.tortuosity.Bruggeman(
+            self.param, "Electrode"
+        )
 
     def set_thermal_submodel(self):
 
@@ -680,6 +726,11 @@ class BaseBatteryModel(pybamm.BaseModel):
             V = pybamm.BoundaryValue(phi_s_cp, "positive tab")
             V_dim = pybamm.BoundaryValue(phi_s_cp_dim, "positive tab")
 
+        phi_s_cn = self.variables["Negative current collector potential"]
+        phi_s_cn_dim = self.variables["Negative current collector potential [V]"]
+        V_local = phi_s_cp - phi_s_cn
+        V_local_dim = phi_s_cp_dim - phi_s_cn_dim
+
         # TODO: add current collector losses to the voltage in 3D
 
         self.variables.update(
@@ -692,6 +743,8 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "X-averaged reaction overpotential [V]": eta_r_av_dim,
                 "X-averaged solid phase ohmic losses": delta_phi_s_av,
                 "X-averaged solid phase ohmic losses [V]": delta_phi_s_av_dim,
+                "Local voltage": V_local,
+                "Local voltage [V]": V_local_dim,
                 "Terminal voltage": V,
                 "Terminal voltage [V]": V_dim,
             }
