@@ -2,6 +2,7 @@
 
 ## Features
 
+-   Changed finite volume discretisation to use exact values provided by Neumann boundary conditions when computing the gradient ([#748](https://github.com/pybamm-team/PyBaMM/pull/748))
 -   Generalized importing of external variables ([#728](https://github.com/pybamm-team/PyBaMM/pull/728))
 -   Separated active and inactive material volume fractions ([#726](https://github.com/pybamm-team/PyBaMM/pull/726))
 -   Added submodels for tortuosity ([#726](https://github.com/pybamm-team/PyBaMM/pull/726))

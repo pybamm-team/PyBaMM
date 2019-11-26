@@ -71,10 +71,11 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Add Dirichlet boundary conditions, if defined
         if symbol.id in boundary_conditions:
             bcs = boundary_conditions[symbol.id]
-            # add ghost nodes and update domain
-            discretised_symbol, domain = self.add_ghost_nodes(
-                symbol, discretised_symbol, bcs
-            )
+            if any(bc[1] == "Dirichlet" for bc in bcs.values()):
+                # add ghost nodes and update domain
+                discretised_symbol, domain = self.add_ghost_nodes(
+                    symbol, discretised_symbol, bcs
+                )
 
         # note in 1D spherical grad and normal grad are the same
         gradient_matrix = self.gradient_matrix(domain)
@@ -85,7 +86,8 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Add Neumann boundary conditions, if defined
         if symbol.id in boundary_conditions:
             bcs = boundary_conditions[symbol.id]
-            out = self.add_neumann_values(symbol, out, bcs, domain)
+            if any(bc[1] == "Neumann" for bc in bcs.values()):
+                out = self.add_neumann_values(symbol, out, bcs, domain)
 
         return out
 
