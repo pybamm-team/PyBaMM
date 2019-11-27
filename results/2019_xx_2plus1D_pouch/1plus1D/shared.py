@@ -38,7 +38,7 @@ def make_comsol_model(comsol_variables, mesh, param, z_interp=None, thermal=True
                 np.column_stack((comsol_x, comsol_z)),
                 variable[:, i],
                 (grid_x, grid_z),
-                method="linear",
+                method="nearest",
             )
 
         # average in x

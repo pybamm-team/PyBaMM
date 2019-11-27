@@ -31,7 +31,7 @@ phi_s_cp_z = comsol[1].values  # second column z
 phi_s_cp = comsol.values[:, 3:]  # fourth to end columns var data
 
 # current (stored as a (yz_npts, time_npts)  size array)
-comsol = pd.read_csv(path + "I.csv", sep=",", header=None)
+comsol = pd.read_csv(path + "current.csv", sep=",", header=None)
 I_y = comsol[0].values  # first column y
 I_z = comsol[1].values  # second column z
 I = comsol.values[:, 3:]  # fourth to end columns var data
