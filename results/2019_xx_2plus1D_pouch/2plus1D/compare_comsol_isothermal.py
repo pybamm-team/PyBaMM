@@ -55,8 +55,8 @@ else:
         var.x_n: 5,
         var.x_s: 5,
         var.x_p: 5,
-        var.r_n: 10,
-        var.r_p: 10,
+        var.r_n: 15,
+        var.r_p: 15,
         var.y: 10,
         var.z: 10,
     }
@@ -130,6 +130,8 @@ shared.plot_2D_var(
     param,
     cmap="cividis",
     error="both",
+    #  scale=0.0001,  # typical variation in negative potential
+    scale="auto",
 )
 # plt.savefig("phi_s_cn.eps", format="eps", dpi=1000)
 shared.plot_2D_var(
@@ -140,6 +142,8 @@ shared.plot_2D_var(
     param,
     cmap="viridis",
     error="both",
+    #  scale=0.0001,  # typical variation in positive potential
+    scale="auto",
 )
 # plt.savefig("phi_s_cp.eps", format="eps", dpi=1000)
 shared.plot_2D_var(
@@ -150,6 +154,8 @@ shared.plot_2D_var(
     param,
     cmap="plasma",
     error="both",
+    #  scale=0.1,  # typical variation in current density
+    scale="auto",
 )
 # plt.savefig("current.eps", format="eps", dpi=1000)
 plt.show()
