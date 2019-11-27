@@ -91,12 +91,12 @@ def solve_full_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None):
         mesh=sim.mesh,
     )
 
-    # T_vol_av = pybamm.ProcessedVariable(
-    #     sim.built_model.variables["Volume-averaged cell temperature [K]"],
-    #     t,
-    #     y,
-    #     mesh=sim.mesh,
-    # )
+    T_vol_av = pybamm.ProcessedVariable(
+        sim.built_model.variables["Volume-averaged cell temperature [K]"],
+        t,
+        y,
+        mesh=sim.mesh,
+    )
 
     plotting_variables = {
         "Terminal voltage [V]": terminal_voltage,
@@ -110,7 +110,7 @@ def solve_full_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None):
         "Local current density [A.m-2]": I_density,
         "Average local current density [A.m-2]": av_cc_density(t),
         "X-averaged cell temperature [K]": T_av,
-        # "Volume-averaged cell temperature [K]": T_vol_av(t),
+        "Volume-averaged cell temperature [K]": T_vol_av(t),
     }
 
     return plotting_variables

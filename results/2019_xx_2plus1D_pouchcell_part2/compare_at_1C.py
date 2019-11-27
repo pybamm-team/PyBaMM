@@ -12,19 +12,19 @@ thermal = True
 solve_spm = False
 solve_spmecc = False
 solve_reduced_2p1 = True
-solve_full_2p1 = False
+solve_full_2p1 = True
 
-plot_voltage = True
-plot_potentials = True
-reduced_and_full_potential_errors = True
+plot_voltage = False
+plot_potentials = False
+reduced_and_full_potential_errors = False
 
-plot_current = True
-plot_av_current = True
-plot_reduced_full_current_errors = True
+plot_current = False
+plot_av_current = False
+plot_reduced_full_current_errors = False
 
 plot_temperature_profile = True
 plot_temperature_profile_errors_red_full = False
-plot_average_temperature = False
+plot_average_temperature = True
 
 t_eval = np.linspace(0, 0.17, 100)
 
