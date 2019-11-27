@@ -24,12 +24,14 @@ class IndependentVariable(pybamm.Symbol):
     *Extends:* :class:`Symbol`
     """
 
-    def __init__(self, name, domain=[]):
-        super().__init__(name, domain=domain)
+    def __init__(self, name, domain=None, auxiliary_domains=None):
+        super().__init__(name, domain=domain, auxiliary_domains=auxiliary_domains)
 
     def evaluate_for_shape(self):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
-        return pybamm.evaluate_for_shape_using_domain(self.domain)
+        return pybamm.evaluate_for_shape_using_domain(
+            self.domain, self.auxiliary_domains
+        )
 
     def _jac(self, variable):
         """ See :meth:`pybamm.Symbol._jac()`. """
@@ -77,9 +79,9 @@ class SpatialVariable(IndependentVariable):
     *Extends:* :class:`Symbol`
     """
 
-    def __init__(self, name, domain=None, coord_sys=None):
+    def __init__(self, name, domain=None, auxiliary_domains=None, coord_sys=None):
         self.coord_sys = coord_sys
-        super().__init__(name, domain=domain)
+        super().__init__(name, domain=domain, auxiliary_domains=auxiliary_domains)
         domain = self.domain
 
         if name not in KNOWN_SPATIAL_VARS:
@@ -109,7 +111,9 @@ class SpatialVariable(IndependentVariable):
 
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
-        return SpatialVariable(self.name, self.domain, self.coord_sys)
+        return SpatialVariable(
+            self.name, self.domain, self.auxiliary_domains, self.coord_sys
+        )
 
 
 # the independent variable time

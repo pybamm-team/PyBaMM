@@ -34,13 +34,11 @@ class SurfaceForm(BaseModel):
         tor = variables[self.domain + " electrode tortuosity"]
         phi_s_cn = variables["Negative current collector potential"]
 
-        i_s = pybamm.PrimaryBroadcast(i_boundary_cc, self.domain_for_broadcast) - i_e
+        i_s = i_boundary_cc - i_e
 
         if self.domain == "Negative":
             conductivity = param.sigma_n * tor
-            phi_s = pybamm.PrimaryBroadcast(
-                phi_s_cn, "negative electrode"
-            ) - pybamm.IndefiniteIntegral(i_s / conductivity, x_n)
+            phi_s = phi_s_cn - pybamm.IndefiniteIntegral(i_s / conductivity, x_n)
 
         elif self.domain == "Positive":
 
@@ -48,12 +46,9 @@ class SurfaceForm(BaseModel):
             delta_phi_p = variables["Positive electrode surface potential difference"]
 
             conductivity = param.sigma_p * tor
-            phi_s = -pybamm.IndefiniteIntegral(
-                i_s / conductivity, x_p
-            ) + pybamm.PrimaryBroadcast(
+            phi_s = -pybamm.IndefiniteIntegral(i_s / conductivity, x_p) + (
                 pybamm.boundary_value(phi_e_s, "right")
-                + pybamm.boundary_value(delta_phi_p, "left"),
-                "positive electrode",
+                + pybamm.boundary_value(delta_phi_p, "left")
             )
 
         variables.update(self._get_standard_potential_variables(phi_s))
