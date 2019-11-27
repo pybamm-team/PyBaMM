@@ -545,7 +545,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         lbc_value, lbc_type = bcs["left"]
         rbc_value, rbc_type = bcs["right"]
 
-        # Add ghost node(s) to domain
+        # Add ghost node(s) to domain where necessary
         if lbc_type == "Dirichlet":
             domain = [domain[0] + "_left ghost cell"] + domain
         if rbc_type == "Dirichlet":
