@@ -17,7 +17,7 @@ def solve_full_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None):
     model = pybamm.lithium_ion.DFN(options=options)
 
     param = model.default_parameter_values
-    param.update({"C-rate": C_rate, "Heat transfer coefficient [W.m-2.K-1]": 0.1})
+    param.update({"C-rate": C_rate})
 
     # discharge timescale
     if t_eval is None:
@@ -110,7 +110,9 @@ def solve_full_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None):
         "Local current density [A.m-2]": I_density,
         "Average local current density [A.m-2]": av_cc_density(t),
         "X-averaged cell temperature [K]": T_av,
-        "Volume-averaged cell temperature [K]": T_vol_av(t),
     }
+
+    if thermal:
+        plotting_variables.update({"Volume-averaged cell temperature [K]": T_vol_av(t)})
 
     return plotting_variables

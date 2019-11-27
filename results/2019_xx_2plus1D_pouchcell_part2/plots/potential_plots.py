@@ -18,7 +18,7 @@ def plot_yz_potential(t, spmecc=None, reduced=None, full=None):
     ]
 
     # tuple (vmin, vmax) for each variable
-    color_lim = [(0, 0.01), (3.7, 3.9), (3.7, 3.9)]
+    color_lim = [(-0.00025, 0), (0, 0.0005), None]
 
     if spmecc:
         num_of_models += 1
@@ -60,7 +60,7 @@ def plot_yz_potential(t, spmecc=None, reduced=None, full=None):
                 y_dim,
                 z_dim,
                 np.transpose(spmecc[name](t=t, y=y, z=z)),
-                plot_names[i],
+                "SPMeCC " + plot_names[i],
                 color_lim[i],
             )
 
@@ -79,7 +79,7 @@ def plot_yz_potential(t, spmecc=None, reduced=None, full=None):
                 y_dim,
                 z_dim,
                 np.transpose(reduced[var_name](t=t, y=y, z=z)),
-                plot_names[i],
+                "2+1 SPMe " + plot_names[i],
                 color_lim[i],
             )
 
@@ -98,7 +98,7 @@ def plot_yz_potential(t, spmecc=None, reduced=None, full=None):
                 y_dim,
                 z_dim,
                 np.transpose(full[var_name](t=t, y=y, z=z)),
-                plot_names[i],
+                "2+1 DFN " + plot_names[i],
                 color_lim[i],
             )
 
@@ -108,8 +108,13 @@ def plot_yz_potential(t, spmecc=None, reduced=None, full=None):
 
 
 def make_2D_plot(fig, ax, y, z, var, name, color_lim):
-    # im = ax.pcolormesh(y, z, var, vmin=color_lim[0], vmax=color_lim[1])
-    im = ax.pcolormesh(y, z, var, shading="gouraud")
+
+    if color_lim is not None:
+        im = ax.pcolormesh(
+            y, z, var, vmin=color_lim[0], vmax=color_lim[1], shading="gouraud"
+        )
+    else:
+        im = ax.pcolormesh(y, z, var, shading="gouraud")
     ax.set_xlabel(r"$y$")
     ax.set_ylabel(r"$z$")
     ax.set_title(name)

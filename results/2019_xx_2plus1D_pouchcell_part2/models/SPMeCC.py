@@ -64,6 +64,12 @@ def solve_spmecc(C_rate=1, t_eval=None, var_pts=None, thermal=False, params=None
         sim_spme.built_model.variables["Terminal voltage [V]"], t, y_spme
     )
 
+    av_cc_current = pybamm.ProcessedVariable(
+        sim_spme.built_model.variables["Current collector current density [A.m-2]"],
+        t,
+        y_spme,
+    )(t)
+
     terminal_voltage = V_av(t) + cc_ohmic_losses
 
     phi_s_n = pybamm.ProcessedVariable(
@@ -80,11 +86,28 @@ def solve_spmecc(C_rate=1, t_eval=None, var_pts=None, thermal=False, params=None
         mesh=cc_mesh,
     )
 
+    # R_cn = pybamm.ProcessedVariable(
+    #     cc.variables["Negative current collector resistance"],
+    #     cc_solution.t,
+    #     cc_solution.y,
+    #     mesh=cc_mesh,
+    # )
+
+    # R_cp = pybamm.ProcessedVariable(
+    #     cc.variables["Positive current collector resistance"],
+    #     cc_solution.t,
+    #     cc_solution.y,
+    #     mesh=cc_mesh,
+    # )
+
     def phi_s_n_out(t, y, z):
         return phi_s_n(y=y, z=z)
 
     def phi_s_p(t, y, z):
         return phi_s_p_red(y=y, z=z) + V_av(t) - delta * R_cc * I_av(t)
+
+    def phi_s_p_red_fun(t, y, z):
+        return phi_s_p_red(y=y, z=z)
 
     def V_cc(t, y, z):
         return phi_s_p(t, y, z) - phi_s_n(y=y, z=z)
@@ -97,7 +120,9 @@ def solve_spmecc(C_rate=1, t_eval=None, var_pts=None, thermal=False, params=None
         "L_z": param.process_symbol(pybamm.geometric_parameters.L_z).evaluate(),
         "Negative current collector potential [V]": phi_s_n_out,
         "Positive current collector potential [V]": phi_s_p,
+        "Reduced positive current collector potential [V]": phi_s_p_red_fun,
         "Local voltage [V]": V_cc,
+        "Average local current density [A.m-2]": av_cc_current,
     }
 
     return plotting_variables

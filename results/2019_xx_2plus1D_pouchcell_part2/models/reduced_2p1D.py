@@ -104,8 +104,10 @@ def solve_reduced_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None, params
         "Local current density [A.m-2]": I_density,
         "Average local current density [A.m-2]": av_cc_density(t),
         "X-averaged cell temperature [K]": T_av,
-        "Volume-averaged cell temperature [K]": T_vol_av(t),
     }
+
+    if thermal:
+        plotting_variables.update({"Volume-averaged cell temperature [K]": T_vol_av(t)})
 
     return plotting_variables
 

@@ -31,21 +31,21 @@ class AverageCurrent(BaseModel):
 
         I_app = pybamm.electrical_parameters.current_with_time * l_y
 
-        phi_s_cn = R_cn * (I_app / l_y) / (l_cn * sigma_cn_dbl_prime)
+        phi_s_cn = delta * R_cn * (I_app / l_y) / (l_cn * sigma_cn_dbl_prime)
 
         # phi_s_cp_red = phi_s_cp - V (we don't know V yet!)
-        phi_s_cp_red = -R_cp * (I_app / l_y) / (l_cp * sigma_cp_dbl_prime)
+        phi_s_cp_red = -delta * R_cp * I_app / (l_y * l_cp * sigma_cp_dbl_prime)
 
         y = pybamm.standard_spatial_vars.y
         z = pybamm.standard_spatial_vars.z
-        phi_s_cn_av = pybamm.Integral(phi_s_cn, [y, z])
-        phi_s_cp_red_av = pybamm.Integral(phi_s_cp_red, [y, z])
+        phi_s_cn_av = pybamm.Integral(phi_s_cn, [y, z]) / l_y
+        phi_s_cp_red_av = pybamm.Integral(phi_s_cp_red, [y, z]) / l_y
 
         # average current collector resistance:
-        R_cc = -(phi_s_cn_av + phi_s_cp_red_av) / I_app
+        R_cc = -(phi_s_cn_av - phi_s_cp_red_av) / I_app
 
         # average current collector Ohmic losses
-        Delta_Phi_cc = -delta * I_app * R_cc
+        Delta_Phi_cc = -I_app * R_cc  # delta already added to phi
 
         variables = self._get_standard_negative_potential_variables(phi_s_cn)
 
@@ -91,8 +91,8 @@ class AverageCurrent(BaseModel):
         R_cp = variables["Positive current collector resistance"]
 
         self.algebraic = {
-            R_cn: pybamm.Laplacian(R_cn) - 1,
-            R_cp: pybamm.Laplacian(R_cp) - 1,
+            R_cn: pybamm.laplacian(R_cn) - pybamm.source(1, R_cn),
+            R_cp: pybamm.laplacian(R_cp) - pybamm.source(1, R_cp),
         }
 
     def set_boundary_conditions(self, variables):
