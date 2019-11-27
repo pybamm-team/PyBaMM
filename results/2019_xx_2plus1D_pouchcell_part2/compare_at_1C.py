@@ -7,12 +7,12 @@ import plots
 
 pybamm.set_logging_level("INFO")
 
-thermal = False
+thermal = True
 
 solve_spm = False
 solve_spmecc = False
 solve_reduced_2p1 = True
-solve_full_2p1 = True
+solve_full_2p1 = False
 
 plot_voltage = True
 plot_potentials = True
@@ -22,7 +22,7 @@ plot_current = True
 plot_av_current = True
 plot_reduced_full_current_errors = True
 
-plot_temperature_profile = False
+plot_temperature_profile = True
 plot_temperature_profile_errors_red_full = False
 plot_average_temperature = False
 
