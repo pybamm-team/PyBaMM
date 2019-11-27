@@ -30,8 +30,8 @@ class LeadingOrder(BaseModel):
         j_p_av = variables["X-averaged positive electrode interfacial current density"]
 
         # Volume-averaged velocity
-        v_box_n = param.beta_n * pybamm.outer(j_n_av, x_n)
-        v_box_p = param.beta_p * pybamm.outer(j_p_av, x_p - 1)
+        v_box_n = param.beta_n * j_n_av * x_n
+        v_box_p = param.beta_p * j_p_av * (x_p - 1)
 
         v_box_s, dVbox_dz = self._separator_velocity(variables)
         v_box = pybamm.Concatenation(v_box_n, v_box_s, v_box_p)
