@@ -186,6 +186,21 @@ def plot_cc_var(
     comsol_var_fun = pybamm.ProcessedVariable(
         comsol_model.variables[var], solution.t, solution.y, mesh=mesh,
     )
+    # If var is positive current collector potential compute relative to
+    # voltage
+    if var == "Positive current collector potential [V]":
+        pybamm_voltage_fun = pybamm.ProcessedVariable(
+            pybamm_model.variables["Terminal voltage [V]"],
+            solution.t,
+            solution.y,
+            mesh=mesh,
+        )
+        comsol_voltage_fun = pybamm.ProcessedVariable(
+            comsol_model.variables["Terminal voltage [V]"],
+            solution.t,
+            solution.y,
+            mesh=mesh,
+        )
 
     # add extra cols for errors
     if plot_error in ["abs", "rel"]:
@@ -203,6 +218,11 @@ def plot_cc_var(
 
         pybamm_var = pybamm_var_fun(z=z_plot / L_z, t=t / tau)
         comsol_var = comsol_var_fun(z=z_plot / L_z, t=t / tau)
+        # If var is positive current collector potential compute relative to
+        # voltage
+        if var == "Positive current collector potential [V]":
+            pybamm_var = pybamm_var - pybamm_voltage_fun(t=t / tau)
+            comsol_var = comsol_var - comsol_voltage_fun(t=t / tau)
 
         ax[0].plot(
             z_plot,

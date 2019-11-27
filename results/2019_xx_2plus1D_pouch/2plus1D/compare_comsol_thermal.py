@@ -10,7 +10,7 @@ import shared
 os.chdir(pybamm.root_dir())
 
 # increase recursion limit for large expression trees
-sys.setrecursionlimit(10000)
+sys.setrecursionlimit(100000)
 
 pybamm.set_logging_level("INFO")
 
@@ -56,20 +56,22 @@ else:
     var = pybamm.standard_spatial_vars
 
     var_pts = {
-        var.x_n: 5,
-        var.x_s: 5,
-        var.x_p: 5,
-        var.r_n: 10,
-        var.r_p: 10,
-        var.y: 10,
-        var.z: 10,
+        var.x_n: 10,
+        var.x_s: 10,
+        var.x_p: 10,
+        var.r_n: 15,
+        var.r_p: 15,
+        var.y: 15,
+        var.z: 15,
     }
 
     # solver
-    solver = pybamm.CasadiSolver(
-        atol=1e-6, rtol=1e-6, root_tol=1e-3, root_method="hybr", mode="fast"
+    # solver = pybamm.CasadiSolver(
+    #    atol=1e-6, rtol=1e-6, root_tol=1e-3, root_method="hybr", mode="fast"
+    # )
+    solver = pybamm.IDAKLUSolver(
+        atol=1e-6, rtol=1e-6, root_tol=1e-3, root_method="hybr"
     )
-    # solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
 
     # simulation object
     simulation = pybamm.Simulation(
@@ -141,7 +143,8 @@ shared.plot_2D_var(
     output_variables,
     param,
     cmap="cividis",
-    error="rel",
+    error="both",
+    scale=0.0001,  # typical variation in negative potential
 )
 # plt.savefig("phi_s_cn.eps", format="eps", dpi=1000)
 shared.plot_2D_var(
@@ -151,7 +154,8 @@ shared.plot_2D_var(
     output_variables,
     param,
     cmap="viridis",
-    error="rel",
+    error="both",
+    scale=0.0001,  # typical variation in positive potential
 )
 # plt.savefig("phi_s_cp.eps", format="eps", dpi=1000)
 shared.plot_2D_var(
@@ -161,7 +165,8 @@ shared.plot_2D_var(
     output_variables,
     param,
     cmap="inferno",
-    error="rel",
+    error="both",
+    scale=0.1,  # typical variation in current density
 )
 # plt.savefig("temperature.eps", format="eps", dpi=1000)
 shared.plot_2D_var(
@@ -171,7 +176,8 @@ shared.plot_2D_var(
     output_variables,
     param,
     cmap="plasma",
-    error="rel",
+    error="both",
+    scale=0.1,  # typical variation in temperature
 )
 # plt.savefig("current.eps", format="eps", dpi=1000)
 plt.show()

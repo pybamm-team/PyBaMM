@@ -136,7 +136,13 @@ def plot_t_var(
 
 
 def plot_2D_var(
-    var, t, comsol_model, output_variables, param, cmap="viridis", error="both",
+    var,
+    t,
+    comsol_model,
+    output_variables,
+    param,
+    cmap="viridis",
+    error="both",
     scale=None,
 ):
     fig, ax = plt.subplots(figsize=(15, 8))
@@ -155,6 +161,12 @@ def plot_2D_var(
     pybamm_var = np.transpose(
         output_variables[var](y=y_plot_non_dim, z=z_plot_non_dim, t=t_non_dim)
     )
+    # If var is positive current collector potential compute relative to
+    # voltage
+    if var == "Positive current collector potential [V]":
+        pybamm_var = pybamm_var - (
+            output_variables["Terminal voltage [V]"](t=t_non_dim)
+        )
 
     if error in ["abs", "rel"]:
         plt.subplot(131)
@@ -170,6 +182,11 @@ def plot_2D_var(
 
     # plot comsol solution
     comsol_var = comsol_model.variables[var](t=t)
+
+    # If var is positive current collector potential compute relative to
+    # voltage
+    if var == "Positive current collector potential [V]":
+        comsol_var = comsol_var - comsol_model.variables["Terminal voltage [V]"](t=t)
 
     if error in ["abs", "rel"]:
         plt.subplot(132)
@@ -193,9 +210,7 @@ def plot_2D_var(
             if scale is None:
                 scale = comsol_var
             error = np.abs((pybamm_var - comsol_var) / scale)
-            diff_plot = plt.pcolormesh(
-                y_plot, z_plot, error, shading="gouraud",
-            )
+            diff_plot = plt.pcolormesh(y_plot, z_plot, error, shading="gouraud",)
         plt.axis([0, y_plot[-1], 0, z_plot[-1]])
         plt.xlabel(r"$y$")
         plt.ylabel(r"$z$")
@@ -216,9 +231,7 @@ def plot_2D_var(
         if scale is None:
             scale = comsol_var
         rel_error = np.abs((pybamm_var - comsol_var) / scale)
-        rel_diff_plot = plt.pcolormesh(
-            y_plot, z_plot, rel_error, shading="gouraud",
-        )
+        rel_diff_plot = plt.pcolormesh(y_plot, z_plot, rel_error, shading="gouraud",)
         plt.axis([0, y_plot[-1], 0, z_plot[-1]])
         plt.xlabel(r"$y$")
         plt.ylabel(r"$z$")

@@ -600,4 +600,3 @@ class JacobianCasadi(Jacobian):
         y = y[:, np.newaxis]
         y = add_external(y, self.y_pad, self.y_ext)
         return self.jac_fn(t, y)
-
