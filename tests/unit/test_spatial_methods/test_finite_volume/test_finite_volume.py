@@ -89,6 +89,7 @@ class TestFiniteVolume(unittest.TestCase):
             pybamm.div(2 * pybamm.grad(var)),
             pybamm.div(2 * pybamm.grad(var)) + 3 * var,
             -2 * pybamm.div(var * pybamm.grad(var) + 2 * pybamm.grad(var)),
+            pybamm.laplacian(var),
         ]:
             # Check that the equation can be evaluated in each case
             # Dirichlet

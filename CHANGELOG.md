@@ -2,11 +2,15 @@
 
 ## Features
 
+-   Changed finite volume discretisation to use exact values provided by Neumann boundary conditions when computing the gradient ([#748](https://github.com/pybamm-team/PyBaMM/pull/748))
+-   Generalized importing of external variables ([#728](https://github.com/pybamm-team/PyBaMM/pull/728))
 -   Separated active and inactive material volume fractions ([#726](https://github.com/pybamm-team/PyBaMM/pull/726))
 -   Added submodels for tortuosity ([#726](https://github.com/pybamm-team/PyBaMM/pull/726))
 -   Simplified the interface for setting current functions ([#723](https://github.com/pybamm-team/PyBaMM/pull/723))
 -   Added Heaviside operator ([#723](https://github.com/pybamm-team/PyBaMM/pull/723))
+-   New extrapolation methods ([#707](https://github.com/pybamm-team/PyBaMM/pull/707))
 -   Added some "Getting Started" documentation ([#703](https://github.com/pybamm-team/PyBaMM/pull/703))
+-   Allow abs tolerance to be set by variable for IDA KLU solver ([#700](https://github.com/pybamm-team/PyBaMM/pull/700))
 -   Added Simulation class ([#693](https://github.com/pybamm-team/PyBaMM/pull/693)) with load/save functionality ([#732](https://github.com/pybamm-team/PyBaMM/pull/732))
 -   Added interface to CasADi solver ([#687](https://github.com/pybamm-team/PyBaMM/pull/687), [#691](https://github.com/pybamm-team/PyBaMM/pull/691), [#714](https://github.com/pybamm-team/PyBaMM/pull/714)). This makes the SUNDIALS DAE solvers (Scikits and KLU) truly optional (though IDA KLU is recommended for solving the DFN).
 -   Added option to use CasADi's Algorithmic Differentiation framework to calculate Jacobians ([#687](https://github.com/pybamm-team/PyBaMM/pull/687))

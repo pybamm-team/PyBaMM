@@ -42,15 +42,12 @@ param.process_geometry(geometry)
 # create mesh
 var = pybamm.standard_spatial_vars
 # var_pts = {var.x_n: 101, var.x_s: 101, var.x_p: 101, var.r_n: 101, var.r_p: 101}
-var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.r_n: 15, var.r_p: 15}
+var_pts = {var.x_n: 15, var.x_s: 15, var.x_p: 15, var.r_n: 15, var.r_p: 15}
 mesh = pybamm.Mesh(geometry, pybamm_model.default_submesh_types, var_pts)
 
 # discretise model
 spatial_methods = pybamm_model.default_spatial_methods
-method_options = {"extrapolation": {"order": "quadratic", "use bcs": True}}
-spatial_methods["Negative particle"] = pybamm.FiniteVolume(method_options)
-spatial_methods["Positive particle"] = pybamm.FiniteVolume(method_options)
-disc = pybamm.Discretisation(mesh, spatial_methods)
+disc = pybamm.Discretisation(mesh, pybamm_model.default_spatial_methods)
 disc.process_model(pybamm_model)
 
 # discharge timescale

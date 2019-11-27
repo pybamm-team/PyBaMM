@@ -66,6 +66,68 @@ class TestDiscretise(unittest.TestCase):
         for child in c_e.children:
             self.assertTrue(child.id in disc.bcs.keys())
 
+    def test_adding_0D_external_variable(self):
+        model = pybamm.BaseModel()
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+
+        model.rhs = {a: a * b}
+        model.initial_conditions = {a: 0}
+        model.external_variables = [b]
+        model.variables = {"a": a, "b": b, "c": a * b}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        self.assertEqual(len(model.y_slices), 2)
+        self.assertEqual(model.y_slices[b.id][0], slice(1, 2, None))
+
+    def test_adding_1D_external_variable(self):
+        model = pybamm.BaseModel()
+
+        a = pybamm.Variable("a", domain=["test"])
+        b = pybamm.Variable("b", domain=["test"])
+
+        model.rhs = {a: a * b}
+        model.boundary_conditions = {
+            a: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")}
+        }
+        model.initial_conditions = {a: 0}
+        model.external_variables = [b]
+        model.variables = {
+            "a": a,
+            "b": b,
+            "c": a * b,
+            "grad b": pybamm.grad(b),
+            "div grad b": pybamm.div(pybamm.grad(b)),
+        }
+
+        x = pybamm.SpatialVariable("x", domain="test", coord_sys="cartesian")
+        geometry = {
+            "test": {"primary": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
+        }
+
+        submesh_types = {"test": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh)}
+        var_pts = {x: 10}
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        spatial_methods = {"test": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
+
+        self.assertEqual(len(model.y_slices), 2)
+        self.assertEqual(model.y_slices[a.id][0], slice(0, 10, None))
+        self.assertEqual(model.y_slices[b.id][0], slice(10, 20, None))
+
+        # check that b is added to the boundary conditions
+        model.bcs[b.id]["left"]
+        model.bcs[b.id]["right"]
+
+        # check that grad and div(grad ) produce the correct shapes
+        self.assertEqual(model.variables["b"].shape_for_testing, (10, 1))
+        self.assertEqual(model.variables["grad b"].shape_for_testing, (11, 1))
+        self.assertEqual(model.variables["div grad b"].shape_for_testing, (10, 1))
+
     def test_discretise_slicing(self):
         # create discretisation
         mesh = get_mesh_for_testing()
