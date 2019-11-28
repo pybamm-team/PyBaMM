@@ -84,7 +84,6 @@ def install_sundials(sundials_src, sundials_inst, download):
         '-DEXAMPLES_ENABLE:BOOL=OFF',
         '-DKLU_ENABLE=ON',
         '-DCMAKE_INSTALL_PREFIX=' + sundials_inst,
-        build_directory,
     ]
 
     if not os.path.exists(build_temp):
