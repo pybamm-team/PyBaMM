@@ -3,6 +3,7 @@ import sys
 import subprocess
 import tarfile
 import wget
+from shutil import copy
 try:
     from setuptools import setup, find_packages
     from setuptools.command.build_ext import build_ext
@@ -48,17 +49,9 @@ def update_LD_LIBRARY_PATH(install_dir):
                     print("Adding {}/lib to LD_LIBRARY_PATH"
                           " in {}".format(install_dir, script_path))
 
-def install_sundials(sundials_src, sundials_inst):
+def install_sundials(sundials_src, sundials_inst, download):
     pybamm_dir = os.path.abspath(os.path.dirname(__file__))
     build_temp = 'build_sundials'
-
-    # Check that the sundials source dir contains the CMakeLists.txt
-    if sundials_src:
-        must_download_sundials = False
-        CMakeLists=os.path.join(sundials_src,'CMakeLists.txt')
-        assert os.path.exists(CMakeLists), ('Could not find {}.'.format(CMakeLists))
-    else:
-        must_download_sundials = True
 
     try:
         out = subprocess.check_output(['cmake', '--version'])
@@ -70,15 +63,18 @@ def install_sundials(sundials_src, sundials_inst):
     # lib) is self.install_dir
     build_directory = os.path.abspath(build_temp)
 
-    if must_download_sundials:
+    if download:
         question="About to download sundials, proceed?"
         url = 'https://computing.llnl.gov/projects/sundials/download/sundials-4.1.0.tar.gz'
         if yes_or_no(question):
             download_extract_library(url)
-            sundials_src=os.path.join(pybamm_dir,'sundials-4.1.0')
         else:
             print("Exiting setup.")
             sys.exit()
+
+    fixed_cmakelists = os.path.join(pybamm_dir,'scripts','replace-cmake','sundials-4.1.0',
+                                    'CMakeLists.txt')
+    copy(fixed_cmakelists, os.path.join(sundials_src, 'CMakeLists.txt'))
 
     cmake_args = [
         '-DBLAS_ENABLE=ON',
@@ -90,8 +86,6 @@ def install_sundials(sundials_src, sundials_inst):
         '-DCMAKE_INSTALL_PREFIX=' + sundials_inst,
         build_directory,
     ]
-
-    cmake_args.append(sundials_src)
 
     if not os.path.exists(build_temp):
         print('-'*10, 'Creating build dir', '-'*40)
@@ -116,8 +110,9 @@ class BuildKLU(Command):
     description = 'Compiles the SuiteSparse KLU module.'
     user_options = [
         # The format is (long option, short option, description).
-        ('sundials-src=', None, 'Absolute path to sundials source dir'),
-        ('suitesparse-src=', None, 'Absolute path to sundials source dir'),
+        ('sundials-src=', None, 'Path to sundials source dir'),
+        ('sundials-inst=', None, 'Path to sundials install directory'),
+        ('suitesparse-src=', None, 'Path to suitesparse source dir'),
     ]
     pybamm_dir = os.path.abspath(os.path.dirname(__file__))
 
@@ -126,6 +121,7 @@ class BuildKLU(Command):
         # Each user option is listed here with its default value.
         self.suitesparse_src = None
         self.sundials_src = None
+        self.sundials_inst = None
 
     def finalize_options(self):
         """Post-process options"""
@@ -135,7 +131,8 @@ class BuildKLU(Command):
         # with options.
         self.set_undefined_options('install',
                                    ('suitesparse_src', 'suitesparse_src'),
-                                   ('sundials_src', 'sundials_src'))
+                                   ('sundials_src', 'sundials_src'),
+                                   ('sundials_inst', 'sundials_inst'))
         # Check that the sundials source dir contains the CMakeLists.txt
         if self.suitesparse_src:
             self.must_download_suitesparse = False
@@ -143,6 +140,16 @@ class BuildKLU(Command):
             assert os.path.exists(klu_makefile), ('Could not find {}.'.format(klu_makefile))
         else:
             self.must_download_suitesparse = True
+            self.suitesparse_src=os.path.join(self.pybamm_dir,'SuiteSparse-5.6.0')
+
+        # Check that the sundials source dir contains the CMakeLists.txt
+        if self.sundials_src:
+            self.must_download_sundials = False
+            CMakeLists=os.path.join(self.sundials_src,'CMakeLists.txt')
+            assert os.path.exists(CMakeLists), ('Could not find {}.'.format(CMakeLists))
+        else:
+            self.must_download_sundials = True
+            self.sundials_src=os.path.join(self.pybamm_dir,'sundials-4.1.0')
 
     def run(self):
         try:
@@ -156,7 +163,6 @@ class BuildKLU(Command):
             url='https://github.com/DrTimothyAldenDavis/SuiteSparse/archive/v5.6.0.tar.gz'
             if yes_or_no(question):
                 download_extract_library(url)
-                self.suitesparse_src=os.path.join(self.pybamm_dir,'SuiteSparse-5.6.0')
             else:
                 print("Exiting setup.")
                 sys.exit()
@@ -181,7 +187,8 @@ class BuildKLU(Command):
         build_dir = os.path.join(self.suitesparse_src,'KLU')
         subprocess.run(make_cmd, cwd=build_dir)
 
-
+        print(self.sundials_src)
+        install_sundials(self.sundials_src, self.sundials_inst, self.must_download_sundials)
         self.run_command('build_idaklu_solver')
 
 class InstallSundials(Command):
