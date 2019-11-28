@@ -34,6 +34,7 @@ class BuildKLU(Command):
     description = 'Compiles the SuiteSparse KLU module.'
     user_options = [
         # The format is (long option, short option, description).
+        ('sundials-src=', None, 'Absolute path to sundials source dir'),
         ('suitesparse-src=', None, 'Absolute path to sundials source dir'),
     ]
     pybamm_dir = os.path.abspath(os.path.dirname(__file__))
@@ -42,6 +43,7 @@ class BuildKLU(Command):
         """Set default values for option(s)"""
         # Each user option is listed here with its default value.
         self.suitesparse_src = None
+        self.sundials_src = None
 
     def finalize_options(self):
         """Post-process options"""
@@ -50,7 +52,8 @@ class BuildKLU(Command):
         # or a user-specified value if 'build_sundials' is called from 'install'
         # with options.
         self.set_undefined_options('install',
-                                   ('suitesparse_src', 'suitesparse_src'))
+                                   ('suitesparse_src', 'suitesparse_src'),
+                                   ('sundials_src', 'sundials_src'))
         # Check that the sundials source dir contains the CMakeLists.txt
         if self.suitesparse_src:
             self.must_download_suitesparse = False
@@ -95,6 +98,9 @@ class BuildKLU(Command):
         print('-'*10, 'Building SuiteSparse KLU module', '-'*40)
         build_dir = os.path.join(self.suitesparse_src,'KLU')
         subprocess.run(make_cmd, cwd=build_dir)
+
+        #
+        self.run_command('build_idaklu_solver')
 
 class InstallSundials(Command):
     """ A custom command to compile the SUNDIALS library as part of the PyBaMM
@@ -213,6 +219,25 @@ class BuildIDAKLUSolver(build_ext):
     cmake and pybind11.
     """
     description = 'Compile idaklu solver.'
+    user_options = build_ext.user_options + [
+        # The format is (long option, short option, description).
+        ('sundials-src=', None, 'Path to SUNDIALS source dir'),
+        ('suitesparse-src=', None, 'Path to SuiteSparse source dir'),
+    ]
+
+    def initialize_options(self):
+        """Set default values for option(s)"""
+        build_ext.initialize_options(self)
+        # Each user option is listed here with its default value.
+        self.sundials_src = None
+        self.suitesparse_src = None
+
+    def finalize_options(self):
+        """Post-process options"""
+        self.set_undefined_options('build_klu',
+                                   ('sundials_src', 'sundials_src'),
+                                   ('suitesparse_src', 'suitesparse_src'))
+        build_ext.finalize_options(self)
 
     def run(self):
         try:
