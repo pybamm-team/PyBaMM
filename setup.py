@@ -273,12 +273,15 @@ class InstallODES(Command):
     description = 'Installs scikits.odes using pip.'
     user_options = [
         # The format is (long option, short option, description).
-        ('sundials-inst=', None, 'Absolute path to sundials installation directory.')
+        ('sundials-src=', None, 'Path to sundials source dir'),
+        ('sundials-inst=', None, 'Path to sundials install directory'),
     ]
+    pybamm_dir = os.path.abspath(os.path.dirname(__file__))
 
     def initialize_options(self):
         """Set default values for option(s)"""
         # Each user option is listed here with its default value.
+        self.sundials_src = None
         self.sundials_inst = None
 
     def finalize_options(self):
@@ -289,20 +292,21 @@ class InstallODES(Command):
         # with options.
         # If option specified the check dir exists
         self.set_undefined_options('install', \
+                                   ('sundials_src', 'sundials_src'),
                                    ('sundials_inst', 'sundials_inst'))
-        try:
-            assert os.path.exists(self.sundials_inst)
-        except AssertionError:
-            print("Error: Could not find SUNDIALS installation directory"
-                  " {}".format(self.sundials_inst))
-            print("If you downloaded and installed the SUNDIALS library manually,"
-                  "you can specify the directory as\n"
-                  "  python setup.py install_odes --sundials-inst=<path/to/directory>")
-            print("To download and compile the SUNDIALS automatically, run\n"
-                  "  python setup.py install_sundials")
-            sys.exit();
+        # Check that the sundials source dir contains the CMakeLists.txt
+        if self.sundials_src:
+            self.must_download_sundials = False
+            CMakeLists=os.path.join(self.sundials_src,'CMakeLists.txt')
+            assert os.path.exists(CMakeLists), ('Could not find {}.'.format(CMakeLists))
+        else:
+            self.must_download_sundials = True
+            self.sundials_src=os.path.join(self.pybamm_dir,'sundials-4.1.0')
 
     def run(self):
+
+        # Download/build SUNDIALS
+        install_sundials(self.sundials_src, self.sundials_inst, self.must_download_sundials)
         # At the time scikits.odes is pip installed, the path to the sundials
         # library must be contained in an env variable SUNDIALS_INST
         # see https://scikits-odes.readthedocs.io/en/latest/installation.html#id1
