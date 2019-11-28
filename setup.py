@@ -1,4 +1,5 @@
 import os
+import sys
 import subprocess
 import tarfile
 import wget
@@ -227,8 +228,17 @@ class InstallODES(Command):
         # If option specified the check dir exists
         self.set_undefined_options('install', \
                                    ('sundials_inst', 'sundials_inst'))
-        assert os.path.exists(self.sundials_inst), \
-            ("Could not find SUNDIALS directory {}".format(self.sundials_inst))
+        try:
+            assert os.path.exists(self.sundials_inst)
+        except AssertionError:
+            print("Error: Could not find SUNDIALS installation directory"
+                  " {}".format(self.sundials_inst))
+            print("If you downloaded and installed the SUNDIALS library manually,"
+                  "you can specify the directory as\n"
+                  "  python setup.py install_odes --sundials-inst=<path/to/directory>")
+            print("To download and compile the SUNDIALS automatically, run\n"
+                  "  python setup.py install_sundials")
+            sys.exit();
 
     def run(self):
         # At the time scikits.odes is pip installed, the path to the sundials
