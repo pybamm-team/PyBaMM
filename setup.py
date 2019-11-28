@@ -1,5 +1,7 @@
 import os
 import subprocess
+import tarfile
+import wget
 try:
     from setuptools import setup, find_packages
     from setuptools.command.build_ext import build_ext
@@ -66,12 +68,12 @@ class BuildKLU(Command):
         build_dir = os.path.join(self.suitesparse_dir,'KLU')
         subprocess.run(make_cmd, cwd=build_dir)
 
-class BuildSundials(Command):
+class InstallSundials(Command):
     """ A custom command to compile the SUNDIALS library as part of the PyBaMM
         installation process.
     """
 
-    description = 'Compiles the SUNDIALS library.'
+    description = 'Download an compiles the SUNDIALS library.'
     user_options = [
         # The format is (long option, short option, description).
         ('sundials-src=', None, 'Absolute path to sundials source dir'),
@@ -100,8 +102,11 @@ class BuildSundials(Command):
                                    ('klu', 'klu'))
         # Check that the sundials source dir contains the CMakeLists.txt
         if self.sundials_src:
+            self.must_download_sundials = False
             CMakeLists=os.path.join(self.sundials_src,'CMakeLists.txt')
             assert os.path.exists(CMakeLists), ('Could not find {}.'.format(CMakeLists))
+        else:
+            self.must_download_sundials = True
 
     def _update_LD_LIBRARY_PATH(self):
         """ Look for current virtual python env and add export statement for LD_LIBRARY_PATH
@@ -125,6 +130,14 @@ class BuildSundials(Command):
                     print("Adding {}/lib to LD_LIBRARY_PATH"
                           " in {}".format(self.install_dir, script_path))
 
+    def _download_sundials(self):
+        url = 'https://computing.llnl.gov/projects/sundials/download/sundials-4.1.0.tar.gz'
+        sundials_archive=wget.download(url)
+
+        tar = tarfile.open(sundials_archive)
+        tar.extractall()
+        self.sundials_src=os.path.join(self.pybamm_dir,'sundials-4.1.0')
+
     def run(self):
         try:
             out = subprocess.check_output(['cmake', '--version'])
@@ -137,6 +150,9 @@ class BuildSundials(Command):
         # lib) is self.install_dir
         build_directory = os.path.abspath(self.build_temp)
 
+        if self.must_download_sundials:
+            self._download_sundials()
+
         cmake_args = [
             '-DLAPACK_ENABLE=ON',
             '-DSUNDIALS_INDEX_TYPE=int32_t',
@@ -145,13 +161,6 @@ class BuildSundials(Command):
             '-DCMAKE_INSTALL_PREFIX=' + self.install_dir,
             build_directory,
         ]
-
-        if self.klu:
-            self.run_command('build_klu')
-            cmake_args = cmake_args + [
-                '-DBLAS_ENABLE=ON',
-                '-DKLU_ENABLE=ON',
-                ]
 
         cmake_args.append(self.sundials_src)
 
@@ -251,7 +260,7 @@ class InstallPyBaMM(orig.install):
         """Set default values for option(s)"""
         orig.install.initialize_options(self)
         # Each user option is listed here with its default value.
-        self.sundials_src = os.path.join(self.pybamm_dir,'sundials-3.1.1')
+        self.sundials_src = None
         self.sundials_inst = os.path.join(self.pybamm_dir,'sundials')
         self.suitesparse_dir = os.path.join(self.pybamm_dir,'SuiteSparse-5.6.0')
         self.no_sundials = None
@@ -290,7 +299,7 @@ def load_version():
 
 setup(
     cmdclass = {
-        'build_sundials': BuildSundials,
+        'install_sundials': InstallSundials,
         'install_odes': InstallODES,
         'build_klu': BuildKLU,
         'build_idaklu_solver': BuildIDAKLUSolver,
@@ -326,6 +335,9 @@ setup(
         # outside of plot() methods.
         # Should not be imported
         "matplotlib>=2.0",
+        # Wget is not exactly a dependency for PyBaMM itself, but is needed
+        # in order to download extra libraries as part of the installation process.
+        "wget>=3.2",
     ],
     extras_require={
         "docs": ["sphinx>=1.5", "guzzle-sphinx-theme"],  # For doc generation
