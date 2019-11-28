@@ -92,6 +92,19 @@ def solve_reduced_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None, params
         mesh=mesh,
     )
 
+    c_s_n_surf = pybamm.ProcessedVariable(
+        sim.built_model.variables["X-averaged negative particle surface concentration"],
+        t,
+        y,
+        mesh=mesh,
+    )
+    c_s_p_surf = pybamm.ProcessedVariable(
+        sim.built_model.variables["X-averaged positive particle surface concentration"],
+        t,
+        y,
+        mesh=mesh,
+    )
+
     plotting_variables = {
         "Terminal voltage [V]": terminal_voltage,
         "Time [h]": time,
@@ -104,6 +117,8 @@ def solve_reduced_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None, params
         "Local current density [A.m-2]": I_density,
         "Average local current density [A.m-2]": av_cc_density(t),
         "X-averaged cell temperature [K]": T_av,
+        "X-averaged negative particle surface concentration": c_s_n_surf,
+        "X-averaged positive particle surface concentration": c_s_p_surf,
     }
 
     if thermal:

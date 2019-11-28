@@ -9,20 +9,24 @@ pybamm.set_logging_level("INFO")
 
 # which models?
 solve_spm = False
-solve_spmecc = True
-solve_reduced_2p1 = True
+solve_spmecc = False
+solve_reduced_2p1 = False
 solve_full_2p1 = True
 
 # potential and voltage plots?
-plot_voltage = True
-plot_potentials = True
-spmecc_and_reduced_potential_errors = True
+plot_voltage = False
+plot_potentials = False
+spmecc_and_reduced_potential_errors = False
 reduced_and_full_potential_errors = False
 
 # current plots?
 plot_current = False
 plot_av_current = False
 plot_reduced_full_current_errors = False
+
+# concentration plots?
+x_av_particle_surface_concentration = True
+vol_av_particle_surface_concentration = True
 
 # thermal plots?
 thermal = False
@@ -129,6 +133,20 @@ if plot_average_temperature:
     plots.plot_average_temperature(
         ax, spm=spm, spmecc=spmecc, reduced=reduced, full=full
     )
+
+if x_av_particle_surface_concentration:
+    for t in times:
+        plots.plot_x_av_surf_concentration(t, reduced=reduced, full=full)
+
+if vol_av_particle_surface_concentration:
+    var_names = [
+        "YZ-averaged negative particle surface concentration",
+        "YZ-averaged negative particle surface concentration",
+    ]
+    for var_name in var_names:
+        plots.plot_vol_av_particle_concentration(
+            ax, var_name, spmecc=spmecc, reduced=reduced, full=full
+        )
 
 plt.show()
 

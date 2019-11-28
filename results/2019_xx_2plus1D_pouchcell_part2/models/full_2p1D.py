@@ -98,6 +98,63 @@ def solve_full_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None):
         mesh=sim.mesh,
     )
 
+    c_s_n_surf_av = pybamm.ProcessedVariable(
+        sim.built_model.variables["X-averaged negative particle surface concentration"],
+        t,
+        y,
+        mesh=sim.mesh,
+    )
+    c_s_p_surf_av = pybamm.ProcessedVariable(
+        sim.built_model.variables["X-averaged positive particle surface concentration"],
+        t,
+        y,
+        mesh=sim.mesh,
+    )
+
+    c_s_n_surf_yz_av = pybamm.ProcessedVariable(
+        sim.built_model.variables[
+            "YZ-averaged negative particle surface concentration"
+        ],
+        t,
+        y,
+        mesh=sim.mesh,
+    )
+
+    c_s_p_surf_yz_av = pybamm.ProcessedVariable(
+        sim.built_model.variables[
+            "YZ-averaged positive particle surface concentration"
+        ],
+        t,
+        y,
+        mesh=sim.mesh,
+    )
+
+    # def c_s_n_surf_yz_av(t, x):
+    #     y = np.linspace(0, 1.5, 100)
+    #     z = np.linspace(0, 1, 100)
+    #     return np.mean(np.mean(c_s_n_surf(t=t, x=x, y=y, z=z), axis=1), axis=1)
+
+    # def c_s_p_surf_yz_av(t, x):
+    #     y = np.linspace(0, 1.5, 100)
+    #     z = np.linspace(0, 1, 100)
+    #     return np.mean(np.mean(c_s_p_surf(t=t, x=x, y=y, z=z), axis=1), axis=1)
+
+    # def c_s_n_surf_vol_av(t):
+    #     x = np.linspace(0, 1, 100)
+    #     y = np.linspace(0, 1.5, 100)
+    #     z = np.linspace(0, 1, 100)
+    #     return np.mean(
+    #         np.mean(np.mean(c_s_n_surf(t=t, x=x, y=y, z=z), axis=0), axis=0), axis=0
+    #     )
+
+    # def c_s_p_surf_vol_av(t):
+    #     x = np.linspace(0, 1, 100)
+    #     y = np.linspace(0, 1.5, 100)
+    #     z = np.linspace(0, 1, 100)
+    #     return np.mean(
+    #         np.mean(np.mean(c_s_p_surf(t=t, x=x, y=y, z=z), axis=0), axis=0), axis=0
+    #     )
+
     plotting_variables = {
         "Terminal voltage [V]": terminal_voltage,
         "Time [h]": time,
@@ -110,6 +167,10 @@ def solve_full_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None):
         "Local current density [A.m-2]": I_density,
         "Average local current density [A.m-2]": av_cc_density(t),
         "X-averaged cell temperature [K]": T_av,
+        "X-averaged negative particle surface concentration": c_s_n_surf_av,
+        "X-averaged positive particle surface concentration": c_s_p_surf_av,
+        "YZ-averaged negative particle surface concentration": c_s_n_surf_yz_av,
+        "YZ-averaged positive particle surface concentration": c_s_p_surf_yz_av,
     }
 
     if thermal:
