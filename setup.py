@@ -34,14 +34,14 @@ class BuildKLU(Command):
     description = 'Compiles the SuiteSparse KLU module.'
     user_options = [
         # The format is (long option, short option, description).
-        ('suitesparse-dir=', None, 'Absolute path to sundials source dir'),
+        ('suitesparse-src=', None, 'Absolute path to sundials source dir'),
     ]
     pybamm_dir = os.path.abspath(os.path.dirname(__file__))
 
     def initialize_options(self):
         """Set default values for option(s)"""
         # Each user option is listed here with its default value.
-        self.suitesparse_dir = None
+        self.suitesparse_src = None
 
     def finalize_options(self):
         """Post-process options"""
@@ -50,11 +50,14 @@ class BuildKLU(Command):
         # or a user-specified value if 'build_sundials' is called from 'install'
         # with options.
         self.set_undefined_options('install',
-                                   ('suitesparse_dir', 'suitesparse_dir'))
+                                   ('suitesparse_src', 'suitesparse_src'))
         # Check that the sundials source dir contains the CMakeLists.txt
-        if self.suitesparse_dir:
-            klu_makefile=os.path.join(self.suitesparse_dir,'KLU','Makefile')
+        if self.suitesparse_src:
+            self.must_download_suitesparse = False
+            klu_makefile=os.path.join(self.suitesparse_src,'KLU','Makefile')
             assert os.path.exists(klu_makefile), ('Could not find {}.'.format(klu_makefile))
+        else:
+            self.must_download_suitesparse = True
 
     def run(self):
         try:
@@ -62,6 +65,17 @@ class BuildKLU(Command):
         except OSError:
             raise RuntimeError(
                 "Make must be installed to compile the SuiteSparse KLU module.")
+
+        if self.must_download_suitesparse:
+            question="About to download SuiteSparse, proceed?"
+            url='https://github.com/DrTimothyAldenDavis/SuiteSparse/archive/v5.6.0.tar.gz'
+            if yes_or_no(question):
+                download_extract_library(url)
+                self.suitesparse_src=os.path.join(self.pybamm_dir,'SuiteSparse-5.6.0')
+            else:
+                print("Exiting setup.")
+                sys.exit()
+
         # The SuiteSparse KLU module has 4 dependencies:
         # - suitesparseconfig
         # - amd
@@ -69,17 +83,17 @@ class BuildKLU(Command):
         # - btf
         print('-'*10, 'Building SuiteSparse_config', '-'*40)
         make_cmd = ['make']
-        build_dir = os.path.join(self.suitesparse_dir,'SuiteSparse_config')
+        build_dir = os.path.join(self.suitesparse_src,'SuiteSparse_config')
         subprocess.run(make_cmd, cwd=build_dir)
 
         print('-'*10, 'Building SuiteSparse KLU module dependencies', '-'*40)
         make_cmd = ['make', 'library']
         for libdir in ['AMD', 'COLAMD', 'BTF']:
-            build_dir = os.path.join(self.suitesparse_dir,libdir)
+            build_dir = os.path.join(self.suitesparse_src,libdir)
             subprocess.run(make_cmd, cwd=build_dir)
 
         print('-'*10, 'Building SuiteSparse KLU module', '-'*40)
-        build_dir = os.path.join(self.suitesparse_dir,'KLU')
+        build_dir = os.path.join(self.suitesparse_src,'KLU')
         subprocess.run(make_cmd, cwd=build_dir)
 
 class InstallSundials(Command):
@@ -167,10 +181,12 @@ class InstallSundials(Command):
                 sys.exit()
 
         cmake_args = [
+            '-DBLAS_ENABLE=ON',
             '-DLAPACK_ENABLE=ON',
             '-DSUNDIALS_INDEX_TYPE=int32_t',
             '-DBUILD_ARKODE:BOOL=OFF',
             '-DEXAMPLES_ENABLE:BOOL=OFF',
+            '-DKLU_ENABLE=ON',
             '-DCMAKE_INSTALL_PREFIX=' + self.install_dir,
             build_directory,
         ]
@@ -285,7 +301,7 @@ class InstallPyBaMM(orig.install):
         # Each user option is listed here with its default value.
         self.sundials_src = None
         self.sundials_inst = os.path.join(self.pybamm_dir,'sundials')
-        self.suitesparse_dir = os.path.join(self.pybamm_dir,'SuiteSparse-5.6.0')
+        self.suitesparse_src = None
         self.no_sundials = None
         self.klu = None
 
