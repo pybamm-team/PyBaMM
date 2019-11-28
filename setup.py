@@ -13,6 +13,19 @@ except ImportError:
 from distutils.cmd import Command
 from platform import python_version
 
+def download_extract_library(url):
+    archive=wget.download(url)
+    tar = tarfile.open(archive)
+    tar.extractall()
+
+def yes_or_no(question):
+    while "the answer is invalid":
+        reply = str(input(question+' (y/n): ')).lower().strip()
+        if reply[0] == 'y':
+            return True
+        if reply[0] == 'n':
+            return False
+
 class BuildKLU(Command):
     """ A custom command to compile the SuiteSparse KLU library as part of the PyBaMM
         installation process.
@@ -131,14 +144,6 @@ class InstallSundials(Command):
                     print("Adding {}/lib to LD_LIBRARY_PATH"
                           " in {}".format(self.install_dir, script_path))
 
-    def _download_sundials(self):
-        url = 'https://computing.llnl.gov/projects/sundials/download/sundials-4.1.0.tar.gz'
-        sundials_archive=wget.download(url)
-
-        tar = tarfile.open(sundials_archive)
-        tar.extractall()
-        self.sundials_src=os.path.join(self.pybamm_dir,'sundials-4.1.0')
-
     def run(self):
         try:
             out = subprocess.check_output(['cmake', '--version'])
@@ -152,7 +157,14 @@ class InstallSundials(Command):
         build_directory = os.path.abspath(self.build_temp)
 
         if self.must_download_sundials:
-            self._download_sundials()
+            question="About to download sundials, proceed?"
+            url = 'https://computing.llnl.gov/projects/sundials/download/sundials-4.1.0.tar.gz'
+            if yes_or_no(question):
+                download_extract_library(url)
+                self.sundials_src=os.path.join(self.pybamm_dir,'sundials-4.1.0')
+            else:
+                print("Exiting setup.")
+                sys.exit()
 
         cmake_args = [
             '-DLAPACK_ENABLE=ON',
