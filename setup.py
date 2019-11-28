@@ -185,21 +185,22 @@ class BuildIDAKLUSolver(build_ext):
     """
     description = 'Compile idaklu solver.'
 
-    try:
-        out = subprocess.run(['cmake', '--version'])
-    except OSError:
-        raise RuntimeError(
-            "CMake must be installed to build the following extensions: " +
-            ", ".join(e.name for e in self.extensions))
+    def run(self):
+        try:
+            out = subprocess.run(['cmake', '--version'])
+        except OSError:
+            raise RuntimeError(
+                "CMake must be installed to build the following extensions: " +
+                ", ".join(e.name for e in self.extensions))
 
-    py_version = python_version()
-    cmake_args = ['-DPYBIND11_PYTHON_VERSION={}'.format(py_version)]
+        py_version = python_version()
+        cmake_args = ['-DPYBIND11_PYTHON_VERSION={}'.format(py_version)]
 
-    print('-'*10, 'Running CMake for idaklu solver', '-'*40)
-    subprocess.run(['cmake'] + cmake_args)
+        print('-'*10, 'Running CMake for idaklu solver', '-'*40)
+        subprocess.run(['cmake'] + cmake_args)
 
-    print('-'*10, 'Running Make for idaklu solver', '-'*40)
-    subprocess.run(['make'])
+        print('-'*10, 'Running Make for idaklu solver', '-'*40)
+        subprocess.run(['make'])
 
 class InstallODES(Command):
     """ A custom command to install scikits.ode with pip as part of the PyBaMM
