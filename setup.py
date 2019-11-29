@@ -114,6 +114,7 @@ class BuildKLU(Command):
         ('suitesparse-src=', None, 'Path to suitesparse source dir'),
     ]
     pybamm_dir = os.path.abspath(os.path.dirname(__file__))
+    install_sundials = True
 
     def initialize_options(self):
         """Set default values for option(s)"""
@@ -132,6 +133,11 @@ class BuildKLU(Command):
                                    ('suitesparse_src', 'suitesparse_src'),
                                    ('sundials_src', 'sundials_src'),
                                    ('sundials_inst', 'sundials_inst'))
+        if os.path.exists(self.sundials_inst):
+            print("Found SUNDIALS installation directory {}.".format(self.sundials_inst))
+            print("Not installing SUNDIALS.".)
+            self.install_sundials = False
+
         # Check that the sundials source dir contains the CMakeLists.txt
         if self.suitesparse_src:
             self.must_download_suitesparse = False
@@ -186,8 +192,8 @@ class BuildKLU(Command):
         build_dir = os.path.join(self.suitesparse_src,'KLU')
         subprocess.run(make_cmd, cwd=build_dir)
 
-        print(self.sundials_src)
-        install_sundials(self.sundials_src, self.sundials_inst, self.must_download_sundials)
+        if self.install_sundials:
+            install_sundials(self.sundials_src, self.sundials_inst, self.must_download_sundials)
         self.run_command('build_idaklu_solver')
 
 class BuildIDAKLUSolver(build_ext):
@@ -244,6 +250,7 @@ class InstallODES(Command):
         ('sundials-inst=', None, 'Path to sundials install directory'),
     ]
     pybamm_dir = os.path.abspath(os.path.dirname(__file__))
+    install_sundials = True
 
     def initialize_options(self):
         """Set default values for option(s)"""
@@ -261,6 +268,11 @@ class InstallODES(Command):
         self.set_undefined_options('install', \
                                    ('sundials_src', 'sundials_src'),
                                    ('sundials_inst', 'sundials_inst'))
+        if os.path.exists(self.sundials_inst):
+            print("Found SUNDIALS installation directory {}.".format(self.sundials_inst))
+            print("Not installing SUNDIALS.")
+            self.install_sundials = False
+
         # Check that the sundials source dir contains the CMakeLists.txt
         if self.sundials_src:
             self.must_download_sundials = False
@@ -272,17 +284,18 @@ class InstallODES(Command):
 
     def run(self):
 
-        # Download/build SUNDIALS
-        install_sundials(self.sundials_src, self.sundials_inst, self.must_download_sundials)
+        if self.install_sundials:
+            # Download/build SUNDIALS
+            install_sundials(self.sundials_src, self.sundials_inst, self.must_download_sundials)
+
         # At the time scikits.odes is pip installed, the path to the sundials
         # library must be contained in an env variable SUNDIALS_INST
         # see https://scikits-odes.readthedocs.io/en/latest/installation.html#id1
-
         os.environ['SUNDIALS_INST'] = self.sundials_inst
         env = os.environ.copy()
         subprocess.run(['pip', 'install', 'scikits.odes'], env=env)
 
-class InstallPyBaMM(orig.install):
+class InstallAll(orig.install):
     """ Install the PyBaMM package, along with the SUNDIALS and
     scikits.odes package
     """
@@ -343,11 +356,10 @@ def load_version():
 
 setup(
     cmdclass = {
-        'install_sundials': InstallSundials,
         'install_odes': InstallODES,
         'build_klu': BuildKLU,
         'build_idaklu_solver': BuildIDAKLUSolver,
-        'install': InstallPyBaMM,
+        'install': InstallAll,
     },
     name="pybamm",
     version=load_version()+".post4",
