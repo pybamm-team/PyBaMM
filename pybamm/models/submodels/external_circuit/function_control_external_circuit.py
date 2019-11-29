@@ -14,16 +14,8 @@ class FunctionControl(BaseModel):
 
     def get_fundamental_variables(self):
         # Current is a variable
-        param = self.param
         i_cell = pybamm.Variable("Total current density")
-        I = i_cell * abs(param.I_typ)
-        i_cell_dim = I / (param.n_electrodes_parallel * param.A_cc)
-
-        variables = {
-            "Total current density": i_cell,
-            "Total current density [A.m-2]": i_cell_dim,
-            "Current [A]": I,
-        }
+        variables = self._get_current_variables(i_cell)
 
         # Add discharge capacity variable
         variables.update(super().get_fundamental_variables())
@@ -78,7 +70,7 @@ class ConstantVoltage:
 
     def __call__(self, variables):
         V = variables["Terminal voltage [V]"]
-        return V - pybamm.FunctionParameter("Voltage function", pybamm.t)
+        return V - pybamm.FunctionParameter("Voltage function [V]", pybamm.t)
 
 
 class PowerFunctionControl(FunctionControl):
@@ -94,5 +86,5 @@ class ConstantPower:
     def __call__(self, variables):
         I = variables["Current [A]"]
         V = variables["Terminal voltage [V]"]
-        return I * V - pybamm.FunctionParameter("Power function", pybamm.t)
+        return I * V - pybamm.FunctionParameter("Power function [W]", pybamm.t)
 

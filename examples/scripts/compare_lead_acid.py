@@ -28,9 +28,9 @@ models = [
 param = models[0].default_parameter_values
 param.update(
     {
-        "Typical current [A]": 10,
+        "Current function [A]": 10,
         "Initial State of Charge": 1,
-        "Voltage function": 14 / 6,
+        "Voltage function [V]": 14 / 6,
     }
 )
 for model in models:

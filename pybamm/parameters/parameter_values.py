@@ -178,9 +178,6 @@ class ParameterValues(dict):
                         ).to_numpy()
                         # Save name and data
                         super().__setitem__(name, (function_name, data))
-                    # Special case (hacky) for zero current
-                    elif value == "[zero]":
-                        super().__setitem__(name, 0)
                     # Anything else should be a converted to a float
                     else:
                         super().__setitem__(name, float(value))
@@ -190,19 +187,18 @@ class ParameterValues(dict):
         self._processed_symbols = {}
 
     def check_and_update_parameter_values(self, values):
-        # Make sure "C-rate" and current are both non-zero
-        if "C-rate" in values and values["C-rate"] == 0:
-            raise ValueError(
-                """
-                "C-rate" cannot be zero. A possible alternative is to set
-                "Current function" to `0` instead.
-                """
-            )
+        # Make typical current is non-zero
         if "Typical current [A]" in values and values["Typical current [A]"] == 0:
             raise ValueError(
                 """
                 "Typical current [A]" cannot be zero. A possible alternative is to set
-                "Current function" to `0` instead.
+                "Current function [A]" to `0` instead.
+                """
+            )
+        if "C-rate" in values and "Current function [A]" in values:
+            raise ValueError(
+                """
+                Cannot provide both "C-rate" and "Current function [A]" simultaneously
                 """
             )
         # If the capacity of the cell has been provided, make sure "C-rate" and current
@@ -214,30 +210,22 @@ class ParameterValues(dict):
             else:
                 capacity = self["Cell capacity [A.h]"]
             # Make sure they match if both provided
-            if "C-rate" in values and "Typical current [A]" in values:
-                if values["C-rate"] * capacity != values["Typical current [A]"]:
-                    raise ValueError(
-                        """
-                        "C-rate" ({}C) and Typical current ({} A) provided do not match
-                        given capacity ({} Ah). These can be updated individually
-                        instead.
-                        """.format(
-                            values["C-rate"], values["Typical current [A]"], capacity
-                        )
-                    )
             # Update the other if only one provided
-            elif "C-rate" in values:
-                values["Typical current [A]"] = float(values["C-rate"]) * capacity
-            elif "Typical current [A]" in values:
-                values["C-rate"] = float(values["Typical current [A]"]) / capacity
-
-        # Update the current function if it is constant
-        self_and_values = {**self, **values}
-        if "Current function" in self_and_values and (
-            self_and_values["Current function"] == "[constant]"
-            or isinstance(self_and_values["Current function"], numbers.Number)
-        ):
-            values["Current function"] = {**self, **values}["Typical current [A]"]
+            if "C-rate" in values:
+                # Can't provide C-rate as a function
+                if callable(values["C-rate"]):
+                    values["Current function [A]"] = CrateToCurrent(
+                        values["C-rate"], capacity
+                    )
+                else:
+                    values["Current function [A]"] = float(values["C-rate"]) * capacity
+            elif "Current function [A]" in values:
+                if callable(values["Current function [A]"]):
+                    values["C-rate"] = CurrentToCrate(
+                        values["Current function [A]"], capacity
+                    )
+                else:
+                    values["C-rate"] = float(values["Current function [A]"]) / capacity
 
         return values
 
@@ -546,3 +534,23 @@ class ParameterValues(dict):
             return processed_symbol.evaluate()
         else:
             raise ValueError("symbol must evaluate to a constant scalar")
+
+
+class CurrentToCrate:
+    "Convert a current function to a C-rate function"
+    def __init__(self, function, capacity):
+        self.function = function
+        self.capacity = capacity
+
+    def __call__(self, t):
+        return self.function(t) / self.capacity
+
+
+class CrateToCurrent:
+    "Convert a C-rate function to a current function"
+    def __init__(self, function, capacity):
+        self.function = function
+        self.capacity = capacity
+
+    def __call__(self, t):
+        return self.function(t) * self.capacity

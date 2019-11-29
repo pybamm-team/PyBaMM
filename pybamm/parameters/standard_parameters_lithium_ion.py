@@ -443,7 +443,7 @@ def dUdT_p(c_s_p):
 # 6. Input current and voltage
 
 dimensional_current_with_time = pybamm.FunctionParameter(
-    "Current function", pybamm.t * timescale
+    "Current function [A]", pybamm.t * timescale
 )
 dimensional_current_density_with_time = dimensional_current_with_time / (
     n_electrodes_parallel * pybamm.geometric_parameters.A_cc

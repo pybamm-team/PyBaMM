@@ -36,7 +36,7 @@ def model_comparison(models, Crates, t_eval, extra_parameter_values=None):
         all_variables[Crate] = {}
         current = Crate * 17
         pybamm.logger.info("Setting typical current to {} A".format(current))
-        param.update({"Typical current [A]": current})
+        param.update({"Current function [A]": current})
         for model in models:
             param.update_model(model, discs[model])
             solution = model.default_solver.solve(model, t_eval)
@@ -86,7 +86,7 @@ def convergence_study(models, Crates, all_npts, t_eval, extra_parameter_values=N
         for Crate in Crates:
             current = Crate * 17
             pybamm.logger.info("Setting typical current to {} A".format(current))
-            param.update({"Typical current [A]": current})
+            param.update({"Current function [A]": current})
             for model in models:
                 model_disc = models_disc[model.name]
                 disc = discs[model.name]

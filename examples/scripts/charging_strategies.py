@@ -32,13 +32,13 @@ models = [
 params = [model.default_parameter_values for model in models]
 
 # 1. Charge at 1A
-params[0]["Typical current [A]"] = -0.1
+params[0]["Current function [A]"] = -0.1
 
 # # 2. CV: Charge at 4.1V
-params[1]["Voltage function"] = 4.1
+params[1]["Voltage function [V]"] = 4.1
 
 # 3. CP-CV: Charge at 4W
-params[2]["Power function"] = -0.4
+params[2]["Power function [W]"] = -0.4
 
 
 solutions = []

@@ -15,7 +15,7 @@ class VoltageControl(BaseModel):
 
     def get_fundamental_variables(self):
         # Voltage is given as a function of time
-        V_dim = pybamm.FunctionParameter("Voltage function", pybamm.t)
+        V_dim = pybamm.FunctionParameter("Voltage function [V]", pybamm.t)
 
         param = self.param
         V = (V_dim - (param.U_p_ref - param.U_n_ref)) / param.potential_scale
@@ -37,13 +37,6 @@ class VoltageControl(BaseModel):
             param.sigma_p * tor, "right"
         ) * pybamm.BoundaryGradient(phi_s_p, "right")
         i_cell = pybamm.BoundaryValue(i_boundary_cc, "positive tab")
-        I = i_cell * abs(param.I_typ)
-        i_cell_dim = I / (param.n_electrodes_parallel * param.A_cc)
-
-        variables = {
-            "Total current density": i_cell,
-            "Total current density [A.m-2]": i_cell_dim,
-            "Current [A]": I,
-        }
+        variables = self._get_current_variables(i_cell)
 
         return variables

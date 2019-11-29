@@ -63,30 +63,28 @@ class TestParameterValues(unittest.TestCase):
         bad_values = {"Typical current [A]": 0}
         with self.assertRaisesRegex(ValueError, "Typical current"):
             pybamm.ParameterValues(bad_values)
-        # same with C-rate
-        bad_values = {"C-rate": 0}
-        with self.assertRaisesRegex(ValueError, "C-rate"):
-            pybamm.ParameterValues(bad_values)
-        # if both C-rate and current are provided they must match with capacity
-        bad_values = {"C-rate": 1, "Typical current [A]": 5, "Cell capacity [A.h]": 10}
-        with self.assertRaisesRegex(ValueError, "do not match"):
+        # can't provide both C-rate and current function
+        bad_values = {"C-rate": 1, "Current function [A]": 5}
+        with self.assertRaisesRegex(ValueError, "Cannot provide both"):
             pybamm.ParameterValues(bad_values)
         # if only C-rate and capacity provided, update current
         values = {"C-rate": 1, "Cell capacity [A.h]": 10}
         param = pybamm.ParameterValues(values)
-        self.assertEqual(param["Typical current [A]"], 10)
+        self.assertEqual(param["Current function [A]"], 10)
         # if only current and capacity provided, update C-rate
-        values = {"Typical current [A]": 1, "Cell capacity [A.h]": 10}
+        values = {"Current function [A]": 1, "Cell capacity [A.h]": 10}
         param = pybamm.ParameterValues(values)
         self.assertEqual(param["C-rate"], 1 / 10)
 
-        # Test with current function
-        values = {"Typical current [A]": 1, "Current function": "[constant]"}
+        # With functions
+        # if only C-rate and capacity provided, update current
+        values = {"C-rate": pybamm.sin, "Cell capacity [A.h]": 10}
         param = pybamm.ParameterValues(values)
-        self.assertEqual(param["Current function"], 1)
-        values = {"Typical current [A]": 1, "Current function": "[zero]"}
+        self.assertEqual(param["Current function [A]"](2).evaluate(), 10 * np.sin(2))
+        # if only current and capacity provided, update C-rate
+        values = {"Current function [A]": pybamm.exp, "Cell capacity [A.h]": 10}
         param = pybamm.ParameterValues(values)
-        self.assertEqual(param["Current function"], 0)
+        self.assertEqual(param["C-rate"](5).evaluate(), np.exp(5) / 10)
 
     def test_process_symbol(self):
         parameter_values = pybamm.ParameterValues({"a": 1, "b": 2, "c": 3})

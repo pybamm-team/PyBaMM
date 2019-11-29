@@ -57,7 +57,7 @@ for key, C_rate in C_rates.items():
     comsol_voltage = comsol_variables["voltage"]
 
     # update current density
-    param["Typical current [A]"] = 24 * C_rate
+    param["Current function [A]"] = 24 * C_rate
     param.update_model(model, disc)
 
     # discharge timescale

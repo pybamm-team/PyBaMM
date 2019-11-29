@@ -27,7 +27,7 @@ for i, frequency in enumerate(frequencies):
     def current(t):
         return my_fun(t, A, frequency)
 
-    param.update({"Current function": current})
+    param.update({"Current function [A]": current})
     param.process_model(models[i])
 
 # discretise models

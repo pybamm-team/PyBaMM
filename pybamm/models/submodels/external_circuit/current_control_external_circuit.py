@@ -21,6 +21,7 @@ class CurrentControl(BaseModel):
             "Total current density": i_cell,
             "Total current density [A.m-2]": i_cell_dim,
             "Current [A]": I,
+            "C-rate": I / self.param.Q,
         }
 
         # Add discharge capacity variable

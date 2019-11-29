@@ -57,7 +57,7 @@ for l_n in thicknesses:
              "Initial concentration in positive electrode [mol.m-3]": 25000,
              "Negative electrode surface area density [m-1]": 180000.0,
              "Positive electrode surface area density [m-1]": 150000.0,
-             "Typical current [A]": I_app,
+             "Current function [A]": I_app,
              }
         )
         param.process_model(model)

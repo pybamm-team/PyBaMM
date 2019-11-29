@@ -22,7 +22,7 @@ C_rate = 1
 current_1C = 24 * param.evaluate(pybamm.geometric_parameters.A_cc)
 param.update(
     {
-        "Typical current [A]": C_rate * current_1C,
+        "Current function [A]": C_rate * current_1C,
         "Initial temperature [K]": 298.15,
         "Negative current collector conductivity [S.m-1]": 1e5,
         "Positive current collector conductivity [S.m-1]": 1e5,

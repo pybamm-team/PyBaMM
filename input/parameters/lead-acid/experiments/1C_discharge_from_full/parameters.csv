@@ -11,7 +11,6 @@ Number of cells connected in series to make a battery,6,Manufacturer,
 Lower voltage cut-off [V],1.73,,(just under) 10.5V across 6-cell battery
 Upper voltage cut-off [V],2.44,,(just over) 14.5V across 6-cell battery
 C-rate,1,,
-Current function,[constant],,
 ,,,
 # Initial conditions
 Initial State of Charge,1,-,

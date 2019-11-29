@@ -15,7 +15,7 @@ geometry = model.default_geometry
 
 # load parameter values and process model and geometry
 param = model.default_parameter_values
-param["Voltage function"] = 4.1
+param["Voltage function [V]"] = 4.1
 param.process_model(model)
 param.process_geometry(geometry)
 

@@ -40,7 +40,7 @@ geometry = model.default_geometry
 
 # load parameter values and process model and geometry
 param = model.default_parameter_values
-param["Current function"] = car_current
+param["Current function [A]"] = car_current
 param.process_model(model)
 param.process_geometry(geometry)
 
