@@ -27,7 +27,7 @@ solutions = [None] * len(tols)
 voltages = [None] * len(tols)
 voltage_rmse = [None] * len(tols)
 labels = [None] * len(tols)
-t_eval = np.linspace(0, 0.17, 100)
+t_eval = np.linspace(0, 0.25, 100)
 for i, tol in enumerate(tols):
     solver = pybamm.ScikitsDaeSolver(rtol=tol[0], atol=tol[1])
     solutions[i] = solver.solve(model, t_eval)
