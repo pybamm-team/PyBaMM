@@ -1,9 +1,17 @@
 import os
 import sys
 import subprocess
-import tarfile
 import wget
+import tarfile
 from shutil import copy
+from platform import python_version
+try:
+    # wget module is required to download SUNDIALS or SuiteSparse and
+    # is not a core requirement.
+    import wget
+except ImportError:
+    print("ERROR: Could not import wget module. Please install wget module.")
+    print("pip install wget")
 try:
     from setuptools import setup, find_packages
     from setuptools.command.build_ext import build_ext
@@ -12,14 +20,16 @@ except ImportError:
     from distutils.core import setup, find_packages
     from disutils.command.build_ext import build_ext
 from distutils.cmd import Command
-from platform import python_version
 
 def download_extract_library(url):
+    # Download and extract archive at url
     archive=wget.download(url)
     tar = tarfile.open(archive)
     tar.extractall()
 
 def yes_or_no(question):
+    # Prompt the user with a yes or no question.
+    # Only accept 'y' or 'n' characters as a valid answer.
     while "the answer is invalid":
         reply = str(input(question+' (y/n): ')).lower().strip()
         if reply[0] == 'y':
@@ -28,40 +38,49 @@ def yes_or_no(question):
             return False
 
 def update_LD_LIBRARY_PATH(install_dir):
-        """ Look for current virtual python env and add export statement for LD_LIBRARY_PATH
-        in activate script.
-        If no virtual env found, then the current user's .bashrc file is modified instead.
-        """
-        export_statement='export LD_LIBRARY_PATH={}/lib:$LD_LIBRARY_PATH'.format(install_dir)
-        venv_path = os.environ.get('VIRTUAL_ENV')
-        if venv_path:
-            script_path = os.path.join(venv_path, 'bin/activate')
-        else:
-            script_path = os.path.join(os.environ.get('HOME'), '.bashrc')
+    # Look for current python virtual env and add export statement
+    # for LD_LIBRARY_PATH in activate script.  If no virtual env found,
+    # then the current user's .bashrc file is modified instead.
 
-        if '{}/lib'.format(install_dir) in os.environ['LD_LIBRARY_PATH']:
-            print("{}/lib was found in LD_LIBRARY_PATH.".format(install_dir))
-            print("--> Not updating venv activate or .bashrc scripts")
-        else:
-            with open(script_path, 'a+') as fh:
-                if not export_statement in fh.read():
-                    fh.write(export_statement)
-                    print("Adding {}/lib to LD_LIBRARY_PATH"
-                          " in {}".format(install_dir, script_path))
+    export_statement='export LD_LIBRARY_PATH={}/lib:$LD_LIBRARY_PATH'.format(install_dir)
+    venv_path = os.environ.get('VIRTUAL_ENV')
+    if venv_path:
+        script_path = os.path.join(venv_path, 'bin/activate')
+    else:
+        script_path = os.path.join(os.environ.get('HOME'), '.bashrc')
+
+    # if path to the library is not already included in the
+    # LD_LIBRARY_PATH, then add export statement to script_path.
+    if '{}/lib'.format(install_dir) in os.environ['LD_LIBRARY_PATH']:
+        print("{}/lib was found in LD_LIBRARY_PATH.".format(install_dir))
+        print("--> Not updating venv activate or .bashrc scripts")
+    else:
+        with open(script_path, 'a+') as fh:
+            if not export_statement in fh.read():
+                fh.write(export_statement)
+                print("Adding {}/lib to LD_LIBRARY_PATH"
+                      " in {}".format(install_dir, script_path))
 
 def install_sundials(sundials_src, sundials_inst, download, klu=False):
+    # Download the SUNDIALS library and compile it.
+    # Arguments
+    # ----------
+    # sundials_src: str
+    #     Absolute path to SUNDIALS source directory
+    # sundials_inst: str
+    #     Absolute path to SUNDIALS installation directory
+    # download: bool
+    #     Whether or not to download the SUNDIALS archive
+    # klu: bool, optional
+    #     Whether or not to build the SUNDIALS with KLU enabled
+
     pybamm_dir = os.path.abspath(os.path.dirname(__file__))
-    build_temp = 'build_sundials'
 
     try:
         out = subprocess.check_output(['cmake', '--version'])
     except OSError:
         raise RuntimeError(
             "CMake must be installed to build the SUNDIALS library.")
-
-    # Temp build directory, note that final dir (containing the sundials
-    # lib) is self.install_dir
-    build_directory = os.path.abspath(build_temp)
 
     if download:
         question="About to download sundials, proceed?"
@@ -88,25 +107,32 @@ def install_sundials(sundials_src, sundials_inst, download, klu=False):
     if klu:
         cmake_args.append('-DKLU_ENABLE=ON')
 
+    # SUNDIALS are built within directory 'build_sundials' in the PyBaMM root
+    # directory
+    build_directory = os.path.abspath(os.path.join(pybamm_dir),'build_sundials')
     if not os.path.exists(build_temp):
         print('-'*10, 'Creating build dir', '-'*40)
         os.makedirs(build_temp)
 
-    # CMakeLists.txt is in the same directory as this setup.py file
     print('-'*10, 'Running CMake prepare', '-'*40)
     subprocess.run(['cmake', sundials_src] + cmake_args,
-                   cwd=build_temp)
+                   cwd=build_directory)
 
     print('-'*10, 'Building the sundials', '-'*40)
     make_cmd = ['make', 'install']
-    subprocess.run(make_cmd, cwd=build_temp)
+    subprocess.run(make_cmd, cwd=build_directory)
 
-    update_LD_LIBRARY_PATH(sundials_inst)
+def build_idaklu_solver(pybamm_dir):
+    # Build the PyBaMM idaklu solver using cmake and pybind11.
+    # Arguments
+    # ---------
+    # pybamm_dir: str
+    #     Absolute path to PyBaMM root directory
+    #
+    # The CMakeLists.txt is located in the PyBaMM root directory.
+    # For the build to be successful, the SUNDIALS must be installed
+    # with the KLU solver enabled in pybamm_dir/sundials.
 
-def build_idaklu_solver(pybamm_root_dir):
-    """ A function that builds the PyBaMM idaklu solver using
-    cmake and pybind11.
-    """
     try:
         out = subprocess.run(['cmake', '--version'])
     except OSError:
@@ -117,24 +143,25 @@ def build_idaklu_solver(pybamm_root_dir):
     cmake_args = ['-DPYBIND11_PYTHON_VERSION={}'.format(py_version)]
 
     print('-'*10, 'Running CMake for idaklu solver', '-'*40)
-    subprocess.run(['cmake'] + cmake_args, cwd=pybamm_root_dir)
+    subprocess.run(['cmake'] + cmake_args, cwd=pybamm_dir)
 
-    print('-'*10, 'Running Make for idaklu solver', '-'*40)
-    subprocess.run(['cmake', '--build', '.'], cwd=pybamm_root_dir)
+    print('-'*10, 'Building idaklu module', '-'*40)
+    subprocess.run(['cmake', '--build', '.'], cwd=pybamm_dir)
 
 class InstallKLU(Command):
-    """ A custom command to compile the SuiteSparse KLU library as part of the PyBaMM
-        installation process.
+    """ A custom command to download and compile the SuiteSparse KLU library.
     """
 
-    description = 'Compiles the SuiteSparse KLU module.'
+    description = 'Download/Compile the SuiteSparse KLU module.'
     user_options = [
         # The format is (long option, short option, description).
-        ('sundials-src=', None, 'Path to sundials source dir'),
+        ('sundials-src=', None, 'Path to sundials source directory'),
         ('sundials-inst=', None, 'Path to sundials install directory'),
-        ('suitesparse-src=', None, 'Path to suitesparse source dir'),
+        ('suitesparse-src=', None, 'Path to suitesparse source directory'),
     ]
+    # Absolute path to the PyBaMM root directory where setup.py is located.
     pybamm_dir = os.path.abspath(os.path.dirname(__file__))
+    # Boolean flag indicating whether or not to download/install the SUNDIALS library.
     install_sundials = True
 
     def initialize_options(self):
@@ -146,22 +173,25 @@ class InstallKLU(Command):
 
     def finalize_options(self):
         """Post-process options"""
-        # Any unspecified option is set to the value of the 'install' command
-        # This could be the default value if 'build_sundials' is invoked on its own
-        # or a user-specified value if 'build_sundials' is called from 'install'
-        # with options.
+        # Any unspecified option is set to the value of the 'install_all' command
+        # This could be the default value if 'install_klu' is invoked on its own
+        # or a user-specified value if invoked from 'install_all' with options.
         self.set_undefined_options('install_all',
                                    ('suitesparse_src', 'suitesparse_src'),
                                    ('sundials_src', 'sundials_src'),
                                    ('sundials_inst', 'sundials_inst'))
 
+        # If the SUNDIALS is already installed in sundials_inst with the KLU
+        # solver enabled then do not download/install the SUNDIALS library.
         if os.path.isfile(os.path.join(self.sundials_inst,'lib',
                                        'libsundials_sunlinsolklu.so')):
             print("Found SUNDIALS installation in {}.".format(self.sundials_inst))
             print("Not installing SUNDIALS.")
             self.install_sundials = False
 
-        # Check that the SuiteSparse source dir contains the Makefile
+        # If the SuiteSparse source dir was provided as a command line option
+        # then check that it actually contains the Makefile.
+        # Else, SuiteSparse must be downloaded.
         if self.suitesparse_src:
             self.suitesparse_src = os.path.abspath(self.suitesparse_src)
             klu_makefile=os.path.join(self.suitesparse_src,'KLU','Makefile')
@@ -171,7 +201,9 @@ class InstallKLU(Command):
             self.download_suitesparse = True
             self.suitesparse_src=os.path.join(self.pybamm_dir,'SuiteSparse-5.6.0')
 
-        # Check that the sundials source dir contains the CMakeLists.txt
+        # If the SUNDIALS source dir was provided as a command line option
+        # then check that it actually contains the CMakeLists.txt.
+        # Else, the SUNDIALS must be downloaded.
         if self.sundials_src:
             self.sundials_src = os.path.abspath(self.sundials_src)
             CMakeLists=os.path.join(self.sundials_src,'CMakeLists.txt')
@@ -182,6 +214,11 @@ class InstallKLU(Command):
             self.sundials_src=os.path.join(self.pybamm_dir,'sundials-4.1.0')
 
     def run(self):
+        """Functionality for the install_klu command.
+        1. Download/build SuiteSparse
+        2. Download/build SUNDIALS with KLU
+        3. Build python KLU module with pybind11
+        """
         try:
             out = subprocess.check_output(['make', '--version'])
         except OSError:
@@ -223,17 +260,18 @@ class InstallKLU(Command):
         build_idaklu_solver(self.pybamm_dir)
 
 class InstallODES(Command):
-    """ A custom command to install scikits.ode with pip as part of the PyBaMM
-        installation process.
+    """ A custom command to install scikits.ode with pip, as well as its main dependency the
+    SUNDIALS library.
     """
-
     description = 'Installs scikits.odes using pip.'
     user_options = [
         # The format is (long option, short option, description).
         ('sundials-src=', None, 'Path to sundials source dir'),
         ('sundials-inst=', None, 'Path to sundials install directory'),
     ]
+    # Absolute path to the PyBaMM root directory where setup.py is located.
     pybamm_dir = os.path.abspath(os.path.dirname(__file__))
+    # Boolean flag indicating whether or not to download/install the SUNDIALS library.
     install_sundials = True
 
     def initialize_options(self):
@@ -244,20 +282,26 @@ class InstallODES(Command):
 
     def finalize_options(self):
         """Post-process options"""
-        # Any unspecified option is set to the value of the 'install' command
+        # Any unspecified option is set to the value of the 'install_all' command
         # This could be the default value if 'install_odes' is invoked on its own
-        # or a user-specified value if 'install_odes' is called from 'install'
-        # with options.
+        # or a user-specified value if invoked from 'install_all' with options.
+
         # If option specified the check dir exists
         self.set_undefined_options('install_all', \
                                    ('sundials_src', 'sundials_src'),
                                    ('sundials_inst', 'sundials_inst'))
+
+        # If the installation directory sundials_inst already exists, then it is
+        # assumed that the SUNDIALS library is already installed in there and
+        # the library is not installed.
         if os.path.exists(self.sundials_inst):
             print("Found SUNDIALS installation directory {}.".format(self.sundials_inst))
             print("Not installing SUNDIALS.")
             self.install_sundials = False
 
-        # Check that the sundials source dir contains the CMakeLists.txt
+        # If the SUNDIALS source dir was provided as a command line option
+        # then check that it actually contains the CMakeLists.txt.
+        # Else, the SUNDIALS must be downloaded.
         if self.sundials_src:
             self.sundials_src=os.path.abspath(self.sundials_src)
             CMakeLists=os.path.join(self.sundials_src,'CMakeLists.txt')
@@ -268,10 +312,18 @@ class InstallODES(Command):
             self.sundials_src=os.path.join(self.pybamm_dir,'sundials-4.1.0')
 
     def run(self):
+        """Functionality for the install_odes command.
+        1. Download/build SUNDIALS
+        2. Update virtual env activate script or .bashrc
+           to add the SUNDIALS to LD_LIBRARY_PATH.
+        3. Install scikits.odes using pip
+        """
 
         if self.install_sundials:
             # Download/build SUNDIALS
             install_sundials(self.sundials_src, self.sundials_inst, self.download_sundials)
+
+        update_LD_LIBRARY_PATH(sundials_inst)
 
         # At the time scikits.odes is pip installed, the path to the sundials
         # library must be contained in an env variable SUNDIALS_INST
@@ -287,21 +339,17 @@ class InstallAll(Command):
     and
         'install_klu' (InstallKLU)
     """
-    # This custom command is an overloading of the setuptools.command.install command,
-    # which itself overload the distutils.command.install command.
-    # This class is therefore inspired from the setuptools.command.install command
-
     user_options = orig.install.user_options + [
         ('sundials-src=', None, 'Absolute path to sundials source dir'),
         ('sundials-inst=', None, 'Absolute path to sundials install directory'),
         ('suitesparse-src=', None, 'Absolute path to SuiteSparse root directory'),
     ]
 
+    # Absolute path to the PyBaMM root directory where setup.py is located.
     pybamm_dir = os.path.abspath(os.path.dirname(__file__))
 
     def initialize_options(self):
         """Set default values for option(s)"""
-        orig.install.initialize_options(self)
         # Each user option is listed here with its default value.
         self.sundials_src = None
         self.sundials_inst = os.path.join(self.pybamm_dir,'sundials')
@@ -371,9 +419,6 @@ setup(
         # outside of plot() methods.
         # Should not be imported
         "matplotlib>=2.0",
-        # Wget is not exactly a dependency for PyBaMM itself, but is needed
-        # in order to download extra libraries as part of the installation process.
-        "wget>=3.2",
     ],
     extras_require={
         "docs": ["sphinx>=1.5", "guzzle-sphinx-theme"],  # For doc generation
