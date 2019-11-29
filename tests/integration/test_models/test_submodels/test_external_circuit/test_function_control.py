@@ -13,7 +13,7 @@ class TestFunctionControl(unittest.TestCase):
 
             def __call__(self, variables):
                 I = variables["Current [A]"]
-                return I + 1
+                return I - 1
 
         # load models
         models = [
@@ -25,7 +25,7 @@ class TestFunctionControl(unittest.TestCase):
         params = [model.default_parameter_values for model in models]
 
         # First model: 1A charge
-        params[0]["Typical current [A]"] = -1
+        params[0]["Typical current [A]"] = 1
 
         # set parameters and discretise models
         for i, model in enumerate(models):
@@ -50,16 +50,22 @@ class TestFunctionControl(unittest.TestCase):
             solutions[0].t,
             solutions[0].y,
             mesh,
-        ).entries
+        )(solutions[0].t)
         V1 = pybamm.ProcessedVariable(
             models[1].variables["Terminal voltage [V]"],
             solutions[1].t,
             solutions[1].y,
             mesh,
-        ).entries
-        pv0 = pybamm.post_process_variables(models[0].variables, solutions[0].t, solutions[0].y, mesh)
-        pv1 = pybamm.post_process_variables(models[1].variables, solutions[1].t, solutions[1].y, mesh)
-        import ipdb; ipdb.set_trace()
+        )(solutions[1].t)
+        pv0 = pybamm.post_process_variables(
+            models[0].variables, solutions[0].t, solutions[0].y, mesh
+        )
+        pv1 = pybamm.post_process_variables(
+            models[1].variables, solutions[1].t, solutions[1].y, mesh
+        )
+        import ipdb
+
+        ipdb.set_trace()
         np.testing.assert_array_equal(V0, V1)
 
     def test_constant_voltage(self):
@@ -71,9 +77,11 @@ class TestFunctionControl(unittest.TestCase):
                 return V - 4.1
 
         # load models
+        # test the DFN for this one as it has a particular implementation of constant
+        # voltage
         models = [
-            pybamm.lithium_ion.SPM({"operating mode": "voltage"}),
-            pybamm.lithium_ion.SPM({"operating mode": ConstantVoltage()}),
+            pybamm.lithium_ion.DFN({"operating mode": "voltage"}),
+            pybamm.lithium_ion.DFN({"operating mode": ConstantVoltage()}),
         ]
 
         # load parameter values and process models and geometry

@@ -69,7 +69,9 @@ class Full(BaseModel):
     def set_solid_submodel(self):
         if self.options["surface form"] is False:
             submod_n = pybamm.electrode.ohm.Full(self.param, "Negative", self.reactions)
-            submod_p = pybamm.electrode.ohm.Full(self.param, "Positive", self.reactions)
+            submod_p = pybamm.electrode.ohm.Full(
+                self.param, "Positive", self.reactions, self.options["operating mode"]
+            )
         else:
             submod_n = pybamm.electrode.ohm.SurfaceForm(self.param, "Negative")
             submod_p = pybamm.electrode.ohm.SurfaceForm(self.param, "Positive")
@@ -124,3 +126,12 @@ class Full(BaseModel):
             self.submodels[
                 "negative oxygen interface"
             ] = pybamm.interface.lead_acid_oxygen.NoReaction(self.param, "Negative")
+
+    def set_external_circuit_submodel(self):
+        """ See :meth:`BaseBatteryModel.set_external_circuit_submodel` """
+        if self.options["operating mode"] == "voltage":
+            self.submodels["external circuit"] = pybamm.external_circuit.VoltageControl(
+                self.param
+            )
+        else:
+            super().set_external_circuit_submodel()

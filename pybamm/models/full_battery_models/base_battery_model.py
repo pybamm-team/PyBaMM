@@ -534,13 +534,13 @@ class BaseBatteryModel(pybamm.BaseModel):
                 self.param
             )
         elif self.options["operating mode"] == "voltage":
-            self.submodels["external circuit"] = pybamm.external_circuit.VoltageControl(
-                self.param
-            )
+            self.submodels[
+                "external circuit"
+            ] = pybamm.external_circuit.VoltageFunctionControl(self.param)
         elif self.options["operating mode"] == "power":
-            self.submodels["external circuit"] = pybamm.external_circuit.PowerControl(
-                self.param
-            )
+            self.submodels[
+                "external circuit"
+            ] = pybamm.external_circuit.PowerFunctionControl(self.param)
         elif callable(self.options["operating mode"]):
             self.submodels[
                 "external circuit"

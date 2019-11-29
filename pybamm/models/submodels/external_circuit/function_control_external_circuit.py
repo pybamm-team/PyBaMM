@@ -35,6 +35,16 @@ class FunctionControl(BaseModel):
 
         return variables
 
+    def get_coupled_variables(self, variables):
+        # Update terminal voltage
+        phi_s_cp_dim = variables["Positive current collector potential [V]"]
+        phi_s_cp = variables["Positive current collector potential"]
+
+        V = pybamm.boundary_value(phi_s_cp, "positive tab")
+        V_dim = pybamm.boundary_value(phi_s_cp_dim, "positive tab")
+        variables["Terminal voltage"] = V
+        variables["Terminal voltage [V]"] = V_dim
+
     def set_initial_conditions(self, variables):
         # Initial condition as a guess for consistent initial conditions
         i_cell = variables["Total current density"]
@@ -46,3 +56,37 @@ class FunctionControl(BaseModel):
         # or a combination (e.g. I*V for power control)
         i_cell = variables["Total current density"]
         self.algebraic[i_cell] = self.external_circuit_class(variables)
+
+
+class VoltageFunctionControl(FunctionControl):
+    """
+    External circuit with voltage control, implemented as an extra algebraic equation.
+    """
+
+    def __init__(self, param):
+        super().__init__(param, ConstantVoltage())
+
+
+class ConstantVoltage:
+    num_switches = 0
+
+    def __call__(self, variables):
+        V = variables["Terminal voltage [V]"]
+        return V - pybamm.FunctionParameter("Voltage function", pybamm.t)
+
+
+class PowerFunctionControl(FunctionControl):
+    """External circuit with power control. """
+
+    def __init__(self, param):
+        super().__init__(param, ConstantPower())
+
+
+class ConstantPower:
+    num_switches = 0
+
+    def __call__(self, variables):
+        I = variables["Current [A]"]
+        V = variables["Terminal voltage [V]"]
+        return I * V - pybamm.FunctionParameter("Power function", pybamm.t)
+

@@ -88,7 +88,7 @@ class DFN(BaseModel):
             self.param, "Negative", self.reactions
         )
         self.submodels["positive electrode"] = pybamm.electrode.ohm.Full(
-            self.param, "Positive", self.reactions
+            self.param, "Positive", self.reactions, self.options["operating mode"]
         )
 
     def set_electrolyte_submodel(self):
@@ -101,6 +101,15 @@ class DFN(BaseModel):
         self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(
             self.param, self.reactions
         )
+
+    def set_external_circuit_submodel(self):
+        """ See :meth:`BaseBatteryModel.set_external_circuit_submodel` """
+        if self.options["operating mode"] == "voltage":
+            self.submodels["external circuit"] = pybamm.external_circuit.VoltageControl(
+                self.param
+            )
+        else:
+            super().set_external_circuit_submodel()
 
     @property
     def default_geometry(self):

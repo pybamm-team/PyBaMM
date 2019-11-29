@@ -134,8 +134,6 @@ class BaseElectrode(pybamm.BaseSubModel):
         # Voltage is local current collector potential difference at the tabs, in 1D
         # this will be equal to the local current collector potential difference
         phi_s_cp_dim = U_ref + phi_s_cp * pot_scale
-        V = pybamm.boundary_value(phi_s_cp, "positive tab")
-        V_dim = pybamm.boundary_value(phi_s_cp_dim, "positive tab")
 
         variables = {
             "Negative current collector potential": phi_s_cn,
@@ -144,8 +142,6 @@ class BaseElectrode(pybamm.BaseSubModel):
             "Positive current collector potential [V]": phi_s_cp_dim,
             "Local voltage": V_cc,
             "Local voltage [V]": U_ref + V_cc * pot_scale,
-            "Terminal voltage": V,
-            "Terminal voltage [V]": V_dim,
         }
 
         return variables
@@ -191,5 +187,6 @@ class BaseElectrode(pybamm.BaseSubModel):
                     phi_s_cn, phi_s_cp
                 )
             )
+
         return variables
 
