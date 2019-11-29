@@ -9,3 +9,18 @@ class BaseModel(pybamm.BaseSubModel):
 
     def __init__(self, param):
         super().__init__(param)
+
+    def get_fundamental_variables(self):
+        Q = pybamm.Variable("Discharge capacity [A.h]")
+        variables = {"Discharge capacity [A.h]": Q}
+        return variables
+
+    def set_initial_conditions(self, variables):
+        Q = variables["Discharge capacity [A.h]"]
+        self.initial_conditions[Q] = pybamm.Scalar(0)
+
+    def set_rhs(self, variables):
+        # ODE for discharge capacity
+        Q = variables["Discharge capacity [A.h]"]
+        I = variables["Current [A]"]
+        self.rhs[Q] = I * self.param.timescale / 3600

@@ -22,6 +22,9 @@ class VoltageControl(BaseModel):
 
         variables = {"Terminal voltage [V]": V_dim, "Terminal voltage": V}
 
+        # Add discharge capacity variable
+        variables.update(super().get_fundamental_variables())
+
         return variables
 
     def get_coupled_variables(self, variables):
@@ -30,12 +33,10 @@ class VoltageControl(BaseModel):
         tor = variables["Positive electrode tortuosity"]
 
         param = self.param
-        i_boundary_cc = (
-            -param.sigma_p
-            * pybamm.BoundaryValue(tor, "right")
-            * pybamm.BoundaryGradient(phi_s_p, "right")
-        )
-        i_cell = pybamm.BoundaryValue(i_boundary_cc, "right")
+        i_boundary_cc = -pybamm.boundary_value(
+            param.sigma_p * tor, "right"
+        ) * pybamm.BoundaryGradient(phi_s_p, "right")
+        i_cell = pybamm.BoundaryValue(i_boundary_cc, "positive tab")
         I = i_cell * abs(param.I_typ)
         i_cell_dim = I / (param.n_electrodes_parallel * param.A_cc)
 

@@ -21,8 +21,10 @@ class CurrentControl(BaseModel):
             "Total current density": i_cell,
             "Total current density [A.m-2]": i_cell_dim,
             "Current [A]": I,
-            "Discharge capacity [A.h]": I * pybamm.t * self.param.timescale / 3600,
         }
+
+        # Add discharge capacity variable
+        variables.update(super().get_fundamental_variables())
 
         return variables
 

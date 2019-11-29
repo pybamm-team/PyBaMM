@@ -27,7 +27,7 @@ models = [
 # load parameter values and process models and geometry
 param = models[0].default_parameter_values
 param["Typical current [A]"] = 1.0
-param["Power function"] = -1  # voltage
+
 for model in models:
     param.process_model(model)
 
@@ -51,15 +51,5 @@ for i, model in enumerate(models):
     solutions[i] = model.default_solver.solve(model, t_eval)
 
 # plot
-output_variables = [
-    "Negative particle surface concentration",
-    "Electrolyte concentration",
-    "Positive particle surface concentration",
-    "Current [A]",
-    "Negative electrode potential [V]",
-    "Electrolyte potential [V]",
-    "Terminal power [W]",
-    "Terminal voltage [V]",
-]
-plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)
+plot = pybamm.QuickPlot(models, mesh, solutions)
 plot.dynamic_plot()

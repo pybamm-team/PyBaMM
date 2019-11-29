@@ -25,6 +25,9 @@ class FunctionControl(BaseModel):
             "Current [A]": I,
         }
 
+        # Add discharge capacity variable
+        variables.update(super().get_fundamental_variables())
+
         # Add switches
         # These are not implemented yet but can be used later with the Experiment class
         # to simulate different external circuit conditions sequentially within a
@@ -45,7 +48,10 @@ class FunctionControl(BaseModel):
         variables["Terminal voltage"] = V
         variables["Terminal voltage [V]"] = V_dim
 
+        return variables
+
     def set_initial_conditions(self, variables):
+        super().set_initial_conditions(variables)
         # Initial condition as a guess for consistent initial conditions
         i_cell = variables["Total current density"]
         self.initial_conditions[i_cell] = self.param.current_with_time
