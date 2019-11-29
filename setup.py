@@ -101,6 +101,25 @@ def install_sundials(sundials_src, sundials_inst, download):
 
     update_LD_LIBRARY_PATH(sundials_inst)
 
+def build_idaklu_solver(pybamm_root_dir):
+    """ A function that builds the PyBaMM idaklu solver using
+    cmake and pybind11.
+    """
+    try:
+        out = subprocess.run(['cmake', '--version'])
+    except OSError:
+        raise RuntimeError(
+            "CMake must be installed to build the KLU python module.")
+
+    py_version = python_version()
+    cmake_args = ['-DPYBIND11_PYTHON_VERSION={}'.format(py_version)]
+
+    print('-'*10, 'Running CMake for idaklu solver', '-'*40)
+    subprocess.run(['cmake'] + cmake_args, cwd=pybamm_root_dir)
+
+    print('-'*10, 'Running Make for idaklu solver', '-'*40)
+    subprocess.run(['cmake', '--build', '.'], cwd=pybamm_root_dir)
+
 class InstallKLU(Command):
     """ A custom command to compile the SuiteSparse KLU library as part of the PyBaMM
         installation process.
@@ -193,50 +212,9 @@ class InstallKLU(Command):
         subprocess.run(make_cmd, cwd=build_dir)
 
         if self.install_sundials:
-            install_sundials(self.sundials_src, self.sundials_inst, self.must_download_sundials)
-        self.run_command('build_idaklu_solver')
-
-class BuildIDAKLUSolver(build_ext):
-    """ A custom command to build the PyBaMM idaklu solver using
-    cmake and pybind11.
-    """
-    description = 'Compile idaklu solver.'
-    user_options = build_ext.user_options + [
-        # The format is (long option, short option, description).
-        ('sundials-src=', None, 'Path to SUNDIALS source dir'),
-        ('suitesparse-src=', None, 'Path to SuiteSparse source dir'),
-    ]
-
-    def initialize_options(self):
-        """Set default values for option(s)"""
-        build_ext.initialize_options(self)
-        # Each user option is listed here with its default value.
-        self.sundials_src = None
-        self.suitesparse_src = None
-
-    def finalize_options(self):
-        """Post-process options"""
-        self.set_undefined_options('install_klu',
-                                   ('sundials_src', 'sundials_src'),
-                                   ('suitesparse_src', 'suitesparse_src'))
-        build_ext.finalize_options(self)
-
-    def run(self):
-        try:
-            out = subprocess.run(['cmake', '--version'])
-        except OSError:
-            raise RuntimeError(
-                "CMake must be installed to build the following extensions: " +
-                ", ".join(e.name for e in self.extensions))
-
-        py_version = python_version()
-        cmake_args = ['-DPYBIND11_PYTHON_VERSION={}'.format(py_version)]
-
-        print('-'*10, 'Running CMake for idaklu solver', '-'*40)
-        subprocess.run(['cmake'] + cmake_args)
-
-        print('-'*10, 'Running Make for idaklu solver', '-'*40)
-        subprocess.run(['make'])
+            install_sundials(self.sundials_src, self.sundials_inst,
+                             self.download_sundials, klu=True)
+        build_idaklu_solver(self.pybamm_dir)
 
 class InstallODES(Command):
     """ A custom command to install scikits.ode with pip as part of the PyBaMM
@@ -354,7 +332,6 @@ setup(
     cmdclass = {
         'install_odes': InstallODES,
         'install_klu': InstallKLU,
-        'build_idaklu_solver': BuildIDAKLUSolver,
         'install_all': InstallAll,
     },
     name="pybamm",
