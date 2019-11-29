@@ -35,9 +35,7 @@ plot_temperature_profile_errors_red_full = False
 plot_average_temperature = False
 
 t_eval = np.linspace(0, 0.17, 100)
-
 C_rate = 1
-
 var_pts = {
     pybamm.standard_spatial_vars.x_n: 5,
     pybamm.standard_spatial_vars.x_s: 5,

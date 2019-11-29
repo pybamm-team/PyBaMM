@@ -26,7 +26,6 @@ class BaseParticle(pybamm.BaseSubModel):
         c_s_surf = pybamm.surf(c_s, set_domain=True)
 
         c_s_surf_av = pybamm.x_average(c_s_surf)
-        c_s_surf_yz_av = pybamm.yz_average(c_s_surf)
         geo_param = pybamm.geometric_parameters
 
         if self.domain == "Negative":
@@ -60,12 +59,6 @@ class BaseParticle(pybamm.BaseSubModel):
             + " electrode "
             + "volume-averaged concentration [mol.m-3]": c_s_r_av_vol * c_scale,
             self.domain + " electrode average extent of lithiation": c_s_r_av,
-            "YZ-averaged "
-            + self.domain.lower()
-            + " particle surface concentration": c_s_surf_yz_av,
-            "YZ-averaged "
-            + self.domain.lower()
-            + " particle surface concentration [mol.m-3]": c_s_surf_yz_av * c_scale,
         }
 
         return variables
