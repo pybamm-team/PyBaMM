@@ -9,7 +9,10 @@ os.chdir(pybamm.root_dir())
 
 # set filepath for data and name of file to pickle to
 paths = [
+    "input/comsol_results_csv/thermal/05C/",
     "input/comsol_results_csv/thermal/1C/",
+    "input/comsol_results_csv/thermal/2C/",
+    "input/comsol_results_csv/thermal/3C/",
     "input/comsol_results_csv/thermal/extremely_coarse/1C/",
     "input/comsol_results_csv/thermal/extra_coarse/1C/",
     "input/comsol_results_csv/thermal/coarser/1C/",
@@ -21,7 +24,10 @@ paths = [
     "input/comsol_results_csv/thermal/extremely_fine/1C/",
 ]
 savefiles = [
+    "input/comsol_results/comsol_thermal_05C.pickle",
     "input/comsol_results/comsol_thermal_1C.pickle",
+    "input/comsol_results/comsol_thermal_2C.pickle",
+    "input/comsol_results/comsol_thermal_3C.pickle",
     "input/comsol_results/comsol_thermal_1C_extremely_coarse.pickle",
     "input/comsol_results/comsol_thermal_1C_extra_coarse.pickle",
     "input/comsol_results/comsol_thermal_1C_coarser.pickle",
