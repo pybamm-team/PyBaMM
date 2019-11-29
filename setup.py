@@ -101,7 +101,7 @@ def install_sundials(sundials_src, sundials_inst, download):
 
     update_LD_LIBRARY_PATH(sundials_inst)
 
-class BuildKLU(Command):
+class InstallKLU(Command):
     """ A custom command to compile the SuiteSparse KLU library as part of the PyBaMM
         installation process.
     """
@@ -129,13 +129,13 @@ class BuildKLU(Command):
         # This could be the default value if 'build_sundials' is invoked on its own
         # or a user-specified value if 'build_sundials' is called from 'install'
         # with options.
-        self.set_undefined_options('install',
+        self.set_undefined_options('install_all',
                                    ('suitesparse_src', 'suitesparse_src'),
                                    ('sundials_src', 'sundials_src'),
                                    ('sundials_inst', 'sundials_inst'))
         if os.path.exists(self.sundials_inst):
             print("Found SUNDIALS installation directory {}.".format(self.sundials_inst))
-            print("Not installing SUNDIALS.".)
+            print("Not installing SUNDIALS.")
             self.install_sundials = False
 
         # Check that the sundials source dir contains the CMakeLists.txt
@@ -216,7 +216,7 @@ class BuildIDAKLUSolver(build_ext):
 
     def finalize_options(self):
         """Post-process options"""
-        self.set_undefined_options('build_klu',
+        self.set_undefined_options('install_klu',
                                    ('sundials_src', 'sundials_src'),
                                    ('suitesparse_src', 'suitesparse_src'))
         build_ext.finalize_options(self)
@@ -265,7 +265,7 @@ class InstallODES(Command):
         # or a user-specified value if 'install_odes' is called from 'install'
         # with options.
         # If option specified the check dir exists
-        self.set_undefined_options('install', \
+        self.set_undefined_options('install_all', \
                                    ('sundials_src', 'sundials_src'),
                                    ('sundials_inst', 'sundials_inst'))
         if os.path.exists(self.sundials_inst):
@@ -295,20 +295,21 @@ class InstallODES(Command):
         env = os.environ.copy()
         subprocess.run(['pip', 'install', 'scikits.odes'], env=env)
 
-class InstallAll(orig.install):
-    """ Install the PyBaMM package, along with the SUNDIALS and
-    scikits.odes package
+class InstallAll(Command):
+    """ Install both scikits.odes and KLU module.
+        This command is the combination of the two commands
+        'install_odes' (InstallODES)
+    and
+        'install_klu' (InstallKLU)
     """
     # This custom command is an overloading of the setuptools.command.install command,
     # which itself overload the distutils.command.install command.
     # This class is therefore inspired from the setuptools.command.install command
 
     user_options = orig.install.user_options + [
-        ('no-sundials', None, "Do not install the SUNDIALS library. scikits.odes is not installed."),
         ('sundials-src=', None, 'Absolute path to sundials source dir'),
         ('sundials-inst=', None, 'Absolute path to sundials install directory'),
-        ('suitesparse-dir', None, 'Absolute path to SuiteSparse root directory'),
-        ('klu',None, 'Wether or not to build the the sundials with klu on'),
+        ('suitesparse-src=', None, 'Absolute path to SuiteSparse root directory'),
     ]
 
     pybamm_dir = os.path.abspath(os.path.dirname(__file__))
@@ -320,23 +321,18 @@ class InstallAll(orig.install):
         self.sundials_src = None
         self.sundials_inst = os.path.join(self.pybamm_dir,'sundials')
         self.suitesparse_src = None
-        self.no_sundials = None
-        self.klu = None
 
     def finalize_options(self):
         """Post-process options"""
-        orig.install.finalize_options(self)
-        if self.no_sundials:
-            self.build_sundials = False
-        else:
-            self.build_sundials=True
+        if self.sundials_src:
+            print("Using SUNDIALS source directory {}".format(self.sundials_src))
+        if self.suitesparse_src:
+            print("Using SuiteSparse source directory {}".format(self.sundials_src))
 
     def run(self):
-        """Install PyBaMM"""
-        orig.install.run(self)
-        if self.build_sundials:
-            self.run_command('build_sundials')
-            self.run_command('install_odes')
+        """Install scikits.odes and KLU module"""
+        self.run_command('install_odes')
+        self.run_command('install_klu')
 
 # Load text for description and license
 with open("README.md") as f:
@@ -357,9 +353,9 @@ def load_version():
 setup(
     cmdclass = {
         'install_odes': InstallODES,
-        'build_klu': BuildKLU,
+        'install_klu': InstallKLU,
         'build_idaklu_solver': BuildIDAKLUSolver,
-        'install': InstallAll,
+        'install_all': InstallAll,
     },
     name="pybamm",
     version=load_version()+".post4",
