@@ -161,22 +161,24 @@ class InstallKLU(Command):
             print("Not installing SUNDIALS.")
             self.install_sundials = False
 
-        # Check that the sundials source dir contains the CMakeLists.txt
+        # Check that the SuiteSparse source dir contains the Makefile
         if self.suitesparse_src:
-            self.must_download_suitesparse = False
+            self.suitesparse_src = os.path.abspath(self.suitesparse_src)
             klu_makefile=os.path.join(self.suitesparse_src,'KLU','Makefile')
             assert os.path.exists(klu_makefile), ('Could not find {}.'.format(klu_makefile))
+            self.download_suitesparse = False
         else:
-            self.must_download_suitesparse = True
+            self.download_suitesparse = True
             self.suitesparse_src=os.path.join(self.pybamm_dir,'SuiteSparse-5.6.0')
 
         # Check that the sundials source dir contains the CMakeLists.txt
         if self.sundials_src:
-            self.must_download_sundials = False
+            self.sundials_src = os.path.abspath(self.sundials_src)
             CMakeLists=os.path.join(self.sundials_src,'CMakeLists.txt')
             assert os.path.exists(CMakeLists), ('Could not find {}.'.format(CMakeLists))
+            self.download_sundials = False
         else:
-            self.must_download_sundials = True
+            self.download_sundials = True
             self.sundials_src=os.path.join(self.pybamm_dir,'sundials-4.1.0')
 
     def run(self):
@@ -186,7 +188,7 @@ class InstallKLU(Command):
             raise RuntimeError(
                 "Make must be installed to compile the SuiteSparse KLU module.")
 
-        if self.must_download_suitesparse:
+        if self.download_suitesparse:
             question="About to download SuiteSparse, proceed?"
             url='https://github.com/DrTimothyAldenDavis/SuiteSparse/archive/v5.6.0.tar.gz'
             if yes_or_no(question):
@@ -257,18 +259,19 @@ class InstallODES(Command):
 
         # Check that the sundials source dir contains the CMakeLists.txt
         if self.sundials_src:
-            self.must_download_sundials = False
+            self.sundials_src=os.path.abspath(self.sundials_src)
             CMakeLists=os.path.join(self.sundials_src,'CMakeLists.txt')
             assert os.path.exists(CMakeLists), ('Could not find {}.'.format(CMakeLists))
+            self.download_sundials = False
         else:
-            self.must_download_sundials = True
+            self.download_sundials = True
             self.sundials_src=os.path.join(self.pybamm_dir,'sundials-4.1.0')
 
     def run(self):
 
         if self.install_sundials:
             # Download/build SUNDIALS
-            install_sundials(self.sundials_src, self.sundials_inst, self.must_download_sundials)
+            install_sundials(self.sundials_src, self.sundials_inst, self.download_sundials)
 
         # At the time scikits.odes is pip installed, the path to the sundials
         # library must be contained in an env variable SUNDIALS_INST
