@@ -49,7 +49,7 @@ def update_LD_LIBRARY_PATH(install_dir):
                     print("Adding {}/lib to LD_LIBRARY_PATH"
                           " in {}".format(install_dir, script_path))
 
-def install_sundials(sundials_src, sundials_inst, download):
+def install_sundials(sundials_src, sundials_inst, download, klu=False):
     pybamm_dir = os.path.abspath(os.path.dirname(__file__))
     build_temp = 'build_sundials'
 
@@ -79,12 +79,14 @@ def install_sundials(sundials_src, sundials_inst, download):
     cmake_args = [
         '-DBLAS_ENABLE=ON',
         '-DLAPACK_ENABLE=ON',
-        '-DSUNDIALS_INDEX_TYPE=int32_t',
+        '-DSUNDIALS_INDEX_SIZE=32',
         '-DBUILD_ARKODE:BOOL=OFF',
         '-DEXAMPLES_ENABLE:BOOL=OFF',
-        '-DKLU_ENABLE=ON',
         '-DCMAKE_INSTALL_PREFIX=' + sundials_inst,
     ]
+
+    if klu:
+        cmake_args.append('-DKLU_ENABLE=ON')
 
     if not os.path.exists(build_temp):
         print('-'*10, 'Creating build dir', '-'*40)
@@ -152,8 +154,10 @@ class InstallKLU(Command):
                                    ('suitesparse_src', 'suitesparse_src'),
                                    ('sundials_src', 'sundials_src'),
                                    ('sundials_inst', 'sundials_inst'))
-        if os.path.exists(self.sundials_inst):
-            print("Found SUNDIALS installation directory {}.".format(self.sundials_inst))
+
+        if os.path.isfile(os.path.join(self.sundials_inst,'lib',
+                                       'libsundials_sunlinsolklu.so')):
+            print("Found SUNDIALS installation in {}.".format(self.sundials_inst))
             print("Not installing SUNDIALS.")
             self.install_sundials = False
 
@@ -309,8 +313,8 @@ class InstallAll(Command):
 
     def run(self):
         """Install scikits.odes and KLU module"""
-        self.run_command('install_odes')
         self.run_command('install_klu')
+        self.run_command('install_odes')
 
 # Load text for description and license
 with open("README.md") as f:
