@@ -190,38 +190,6 @@ class BuildKLU(Command):
         install_sundials(self.sundials_src, self.sundials_inst, self.must_download_sundials)
         self.run_command('build_idaklu_solver')
 
-class InstallSundials(Command):
-    """ A custom command to compile the SUNDIALS library as part of the PyBaMM
-        installation process.
-    """
-
-    description = 'Download an compiles the SUNDIALS library.'
-    user_options = [
-        # The format is (long option, short option, description).
-        ('sundials-src=', None, 'Absolute path to sundials source dir'),
-        ('install-dir=', None, 'Absolute path to sundials install directory'),
-        ('klu', None, 'Wether or not to build the the sundials with klu on'),
-    ]
-
-    def initialize_options(self):
-        """Set default values for option(s)"""
-        # Each user option is listed here with its default value.
-        self.sundials_src = None
-        self.sundials_inst = None
-
-    def finalize_options(self):
-        """Post-process options"""
-        # Any unspecified option is set to the value of the 'install' command
-        # This could be the default value if 'build_sundials' is invoked on its own
-        # or a user-specified value if 'build_sundials' is called from 'install'
-        # with options.
-        self.set_undefined_options('install',
-                                   ('sundials_src', 'sundials_src'),
-                                   ('sundials_inst', 'sundials_inst'))
-
-    def run(self):
-        install_sundials(self.sundials_src, self.sundials_inst)
-
 class BuildIDAKLUSolver(build_ext):
     """ A custom command to build the PyBaMM idaklu solver using
     cmake and pybind11.
