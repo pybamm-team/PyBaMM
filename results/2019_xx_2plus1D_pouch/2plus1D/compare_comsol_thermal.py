@@ -56,13 +56,13 @@ else:
     var = pybamm.standard_spatial_vars
 
     var_pts = {
-        var.x_n: 10,
-        var.x_s: 10,
-        var.x_p: 10,
+        var.x_n: 5,
+        var.x_s: 5,
+        var.x_p: 5,
         var.r_n: 15,
         var.r_p: 15,
-        var.y: 15,
-        var.z: 15,
+        var.y: 10,
+        var.z: 10,
     }
 
     # solver

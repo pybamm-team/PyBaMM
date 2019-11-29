@@ -23,9 +23,9 @@ current_1C = 24 * param.process_symbol(pybamm.geometric_parameters.A_cc).evaluat
 param.update(
     {
         "Typical current [A]": C_rate * current_1C,
-        "Initial temperature [K]": 298.15,
-        "Negative current collector conductivity [S.m-1]": 1e7,
-        "Positive current collector conductivity [S.m-1]": 1e7,
+        #"Initial temperature [K]": 298.15,
+        #"Negative current collector conductivity [S.m-1]": 1e7,
+        #"Positive current collector conductivity [S.m-1]": 1e7,
         "Heat transfer coefficient [W.m-2.K-1]": 1,
     }
 )
@@ -53,8 +53,8 @@ solution = model.default_solver.solve(model, t_eval)
 output_variables = [
     "X-averaged negative particle surface concentration [mol.m-3]",
     "X-averaged positive particle surface concentration [mol.m-3]",
-    # "X-averaged cell temperature [K]",
-    "Local potenital difference [V]",
+    "X-averaged cell temperature [K]",
+    #"Local potenital difference [V]",
     "Current collector current density [A.m-2]",
     "Terminal voltage [V]",
     "Volume-averaged cell temperature [K]",

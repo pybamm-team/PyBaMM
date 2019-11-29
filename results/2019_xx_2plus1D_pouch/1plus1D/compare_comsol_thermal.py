@@ -19,17 +19,16 @@ pybamm.set_logging_level("INFO")
 
 try:
     comsol_variables = pickle.load(
-        open("input/comsol_results/comsol_isothermal_1plus1D_1C.pickle", "rb")
+        open("input/comsol_results/comsol_thermal_1plus1D_2C.pickle", "rb")
     )
 except FileNotFoundError:
     raise FileNotFoundError("COMSOL data not found. Try running load_comsol_data.py")
-
 
 "-----------------------------------------------------------------------------"
 "Load or set up pybamm simulation"
 
 compute = True
-filename = "results/2019_xx_1plus1D_pouch/pybamm_isothermal_1plus1D_1C.pickle.pickle"
+filename = "results/2019_xx_1plus1D_pouch/pybamm_thermal_1plus1D_2C.pickle.pickle"
 
 if compute is False:
     try:
@@ -40,12 +39,16 @@ if compute is False:
         )
 else:
     # model
-    options = {"current collector": "potential pair", "dimensionality": 1}
+    options = {
+        "current collector": "potential pair",
+        "dimensionality": 1,
+        "thermal": "x-lumped",
+    }
     pybamm_model = pybamm.lithium_ion.DFN(options)
 
     # parameters
     param = pybamm_model.default_parameter_values
-    param.update({"C-rate": 1})
+    param.update({"C-rate": 2})
 
     # set npts
     var = pybamm.standard_spatial_vars
@@ -88,12 +91,11 @@ if force_solve is True:
 elif simulation._solution is None:
     simulation.solve(t_eval=t_eval)
 
-
 "-----------------------------------------------------------------------------"
 "Make Comsol 'model' for comparison"
 
 mesh = simulation._mesh
-comsol_model = shared.make_comsol_model(comsol_variables, mesh, param, thermal=False)
+comsol_model = shared.make_comsol_model(comsol_variables, mesh, param, thermal=True)
 
 
 "-----------------------------------------------------------------------------"
@@ -119,6 +121,15 @@ shared.plot_t_var(
     param,
     plot_error="both",
 )
+shared.plot_t_var(
+    "Volume-averaged cell temperature [K]",
+    pybamm_model,
+    comsol_model,
+    mesh,
+    solution,
+    param,
+    plot_error="both",
+)
 
 plot_times = [600, 1200, 1800, 2400, 3000]  # dimensional in seconds, must be a list
 shared.plot_cc_var(
@@ -130,7 +141,8 @@ shared.plot_cc_var(
     param,
     plot_times=plot_times,
     plot_error="both",
-    scale=0.0001,  # typical variation in negative potential
+    # scale=0.0001,  # typical variation in negative potential
+    scale="auto",
 )
 shared.plot_cc_var(
     "Positive current collector potential [V]",
@@ -141,7 +153,8 @@ shared.plot_cc_var(
     param,
     plot_times=plot_times,
     plot_error="both",
-    scale=0.0001,  # typical variation in positive potential
+    # scale=0.0001,  # typical variation in positive potential
+    scale="auto",
 )
 shared.plot_cc_var(
     "Current collector current density [A.m-2]",
@@ -152,6 +165,19 @@ shared.plot_cc_var(
     param,
     plot_times=plot_times,
     plot_error="both",
-    scale=0.06,  # typical variation in current density
+    # scale=0.06,  # typical variation in current density
+    scale="auto",
+)
+shared.plot_cc_var(
+    "X-averaged cell temperature [K]",
+    pybamm_model,
+    comsol_model,
+    mesh,
+    solution,
+    param,
+    plot_times=plot_times,
+    plot_error="both",
+    # scale=0.1,  # typical variation in current density
+    scale="auto",
 )
 plt.show()
