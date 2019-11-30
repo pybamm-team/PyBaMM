@@ -175,6 +175,9 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
     elif isinstance(symbol, pybamm.Time):
         symbol_str = "t"
 
+    elif isinstance(symbol, pybamm.InputParameter):
+        symbol_str = "u['{}']".format(symbol.name)
+
     else:
         raise NotImplementedError(
             "Not implemented for a symbol of type '{}'".format(type(symbol))
