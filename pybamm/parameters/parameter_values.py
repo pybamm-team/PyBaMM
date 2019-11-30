@@ -137,8 +137,6 @@ class ParameterValues(dict):
         self.update({key: value})
 
     def update(self, values, check_conflict=False, path=""):
-        # check parameter values
-        values = self.check_and_update_parameter_values(values)
         # update
         for name, value in values.items():
             # check for conflicts
@@ -157,9 +155,11 @@ class ParameterValues(dict):
                 # Functions are flagged with the string "[function]"
                 if isinstance(value, str):
                     if value.startswith("[function]"):
-                        self[name] = pybamm.load_function(
+                        loaded_value = pybamm.load_function(
                             os.path.join(path, value[10:] + ".py")
                         )
+                        super().__setitem__(name, loaded_value)
+                        values[name] = loaded_value
                     # Data is flagged with the string "[data]" or "[current data]"
                     elif value.startswith("[current data]") or value.startswith(
                         "[data]"
@@ -178,11 +178,15 @@ class ParameterValues(dict):
                         ).to_numpy()
                         # Save name and data
                         super().__setitem__(name, (function_name, data))
+                        values[name] = (function_name, data)
                     # Anything else should be a converted to a float
                     else:
                         super().__setitem__(name, float(value))
+                        values[name] = float(value)
                 else:
                     super().__setitem__(name, value)
+        # check parameter values
+        self.check_and_update_parameter_values(values)
         # reset processed symbols
         self._processed_symbols = {}
 
@@ -214,18 +218,24 @@ class ParameterValues(dict):
             if "C-rate" in values:
                 # Can't provide C-rate as a function
                 if callable(values["C-rate"]):
-                    values["Current function [A]"] = CrateToCurrent(
-                        values["C-rate"], capacity
-                    )
+                    value = CrateToCurrent(values["C-rate"], capacity)
+                elif isinstance(values["C-rate"], tuple):
+                    data = values["C-rate"][1]
+                    data[:, 1] *= capacity
+                    value = (values["C-rate"][0] + "_toCrate", data)
                 else:
-                    values["Current function [A]"] = float(values["C-rate"]) * capacity
+                    value = values["C-rate"] * capacity
+                super().__setitem__("Current function [A]", value)
             elif "Current function [A]" in values:
                 if callable(values["Current function [A]"]):
-                    values["C-rate"] = CurrentToCrate(
-                        values["Current function [A]"], capacity
-                    )
+                    value = CurrentToCrate(values["Current function [A]"], capacity)
+                elif isinstance(values["Current function [A]"], tuple):
+                    data = values["Current function [A]"][1]
+                    data[:, 1] /= capacity
+                    value = (values["Current function [A]"][0] + "_toCurrent", data)
                 else:
-                    values["C-rate"] = float(values["Current function [A]"]) / capacity
+                    value = values["Current function [A]"] / capacity
+                super().__setitem__("C-rate", value)
 
         return values
 
@@ -538,6 +548,7 @@ class ParameterValues(dict):
 
 class CurrentToCrate:
     "Convert a current function to a C-rate function"
+
     def __init__(self, function, capacity):
         self.function = function
         self.capacity = capacity
@@ -548,6 +559,7 @@ class CurrentToCrate:
 
 class CrateToCurrent:
     "Convert a C-rate function to a current function"
+
     def __init__(self, function, capacity):
         self.function = function
         self.capacity = capacity
