@@ -127,13 +127,19 @@ class Simulation:
         )
         self._parameter_values.process_geometry(self._geometry)
 
-    def build(self):
+    def build(self, check_model=True):
         """
         A method to build the model into a system of matrices and vectors suitable for
         performing numerical computations. If the model has already been built or
         solved then this function will have no effect. If you want to rebuild,
         first use "reset()". This method will automatically set the parameters
         if they have not already been set.
+
+        Parameters
+        ----------
+        check_model : bool, optional
+            If True, model checks are performed after discretisation (see
+            :meth:`pybamm.Discretisation.process_model`). Default is True.
         """
 
         if self.built_model:
@@ -142,9 +148,11 @@ class Simulation:
         self.set_parameters()
         self._mesh = pybamm.Mesh(self._geometry, self._submesh_types, self._var_pts)
         self._disc = pybamm.Discretisation(self._mesh, self._spatial_methods)
-        self._built_model = self._disc.process_model(self._model, inplace=False)
+        self._built_model = self._disc.process_model(
+            self._model, inplace=False, check_model=check_model
+        )
 
-    def solve(self, t_eval=None, solver=None, inputs=None):
+    def solve(self, t_eval=None, solver=None, inputs=None, check_model=True):
         """
         A method to solve the model. This method will automatically build
         and set the model parameters if not already done so.
@@ -160,8 +168,11 @@ class Simulation:
             The solver to use to solve the model.
         inputs : dict, optional
             Any input parameters to pass to the model when solving
+        check_model : bool, optional
+            If True, model checks are performed after discretisation (see
+            :meth:`pybamm.Discretisation.process_model`). Default is True.
         """
-        self.build()
+        self.build(check_model=check_model)
 
         if t_eval is None:
             try:
