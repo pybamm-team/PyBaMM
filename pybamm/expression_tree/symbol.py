@@ -520,8 +520,8 @@ class Symbol(anytree.NodeMixin):
     def evaluate_ignoring_errors(self):
         """
         Evaluates the expression. If a node exists in the tree that cannot be evaluated
-        as a scalar or vectr (e.g. Parameter, Variable, StateVector), then None is
-        returned. Otherwise the result of the evaluation is given
+        as a scalar or vector (e.g. Parameter, Variable, StateVector, InputParameter),
+        then None is returned. Otherwise the result of the evaluation is given
 
         See Also
         --------
@@ -529,22 +529,18 @@ class Symbol(anytree.NodeMixin):
 
         """
         try:
-            result = self.evaluate(t=0)
+            result = self.evaluate(t=0, u="shape test")
         except NotImplementedError:
-            # return false if NotImplementedError is raised
+            # return None if NotImplementedError is raised
             # (there is a e.g. Parameter, Variable, ... in the tree)
             return None
         except TypeError as error:
-            # return false if specific TypeError is raised
+            # return None if specific TypeError is raised
             # (there is a e.g. StateVector in the tree)
-            if error.args[0] in [
-                "StateVector cannot evaluate input 'y=None'",
-                "inputs u should be a dictionary",
-            ]:
+            if error.args[0] == "StateVector cannot evaluate input 'y=None'":
                 return None
             else:
                 raise error
-
         return result
 
     def evaluates_to_number(self):

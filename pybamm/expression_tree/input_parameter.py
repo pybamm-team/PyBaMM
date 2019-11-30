@@ -32,8 +32,15 @@ class InputParameter(pybamm.Symbol):
         """
         return np.nan
 
+    def _jac(self, variable):
+        """ See :meth:`pybamm.Symbol._jac()`. """
+        return pybamm.Scalar(0)
+
     def evaluate(self, t=None, y=None, u=None, known_evals=None):
         # u should be a dictionary
+        # convert 'None' to empty dictionary for more informative error
+        if u is None:
+            u = {}
         if not isinstance(u, dict):
             # if the special input "shape test" is passed, just return 1
             if u == "shape test":
