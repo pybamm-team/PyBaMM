@@ -157,7 +157,7 @@ class BaseSolver(object):
             if model.convert_to_format == "casadi" or isinstance(
                 self, pybamm.CasadiSolver
             ):
-                self.set_up_casadi(model)
+                self.set_up_casadi(model, inputs)
             else:
                 pybamm.logger.debug(
                     "Start stepping {} with {}".format(model.name, self.name)
