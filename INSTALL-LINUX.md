@@ -90,9 +90,17 @@ pip uninstall pybamm
 in your virtual environment.
 
 ## Optional dependencies
+The following instructions assume that you downloaded the PyBaMM source code and that all
+commands are run from the PyBaMM root directory (`PyBaMM/`).
+This can be done using `git`, running
+
+```bash
+git clone https://github.com/pybamm-team/PyBaMM.git
+cd PyBaMM
+```
+Alternatively, you can dowload the source code archive from [the PyBaMM GitHub repo](https://github.com/pybamm-team/PyBaMM.git) and extract it the location of your choice.
 
 ### [scikits.odes](https://github.com/bmcage/odes)
-
 Users can install [scikits.odes](https://github.com/bmcage/odes) in order to use the
 wrapped SUNDIALS ODE and DAE
 [solvers](https://pybamm.readthedocs.io/en/latest/source/solvers/scikits_solvers.html).
@@ -148,6 +156,15 @@ PyBaMM currently offers a direct interface to the sparse KLU solver within Sundi
 
 #### Prerequisites
 The requirements are the same than for the installation of `scikits.odes` (see previous section).
+Additionally, the [pybind11 GitHub repository](https://github.com/pybind/pybind11.git) should be located in `PyBaMM/third-party/`.
+First create a directory `third-party` and clone the repository:
+```bash
+mkdir third-party
+cd third-party
+git clone https://github.com/pybind/pybind11.git
+cd ..
+```
+If you don't have `git` installed, you can download the code source manually from (https://github.com/pybind/pybind11).
 
 #### Install the KLU solver
 The KLU solver is can be installed _via_ the following command:

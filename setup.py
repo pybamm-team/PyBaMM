@@ -144,6 +144,16 @@ def build_idaklu_solver(pybamm_dir):
     except OSError:
         raise RuntimeError("CMake must be installed to build the KLU python module.")
 
+    try:
+        assert os.path.isfile("third-party/pybind11/pybind11/tools/pybind11Tools.cmake")
+    except AssertionError:
+        print(
+            "Error: Could not find "
+            "third-party/pybind11/pybind11/tools/pybind11Tools.cmake"
+        )
+        print("Make sure the pybind11 repository was cloned in ./third-party/")
+        print("See installation instructions for more information.")
+
     py_version = python_version()
     cmake_args = ["-DPYBIND11_PYTHON_VERSION={}".format(py_version)]
 
