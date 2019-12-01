@@ -83,7 +83,7 @@ class BaseSolver(object):
         if model.convert_to_format == "casadi" or isinstance(self, pybamm.CasadiSolver):
             self.set_up_casadi(model, inputs)
         else:
-            self.set_up(model)
+            self.set_up(model, inputs)
         set_up_time = timer.time() - start_time
 
         # Solve
@@ -162,7 +162,7 @@ class BaseSolver(object):
                 pybamm.logger.debug(
                     "Start stepping {} with {}".format(model.name, self.name)
                 )
-                self.set_up(model)
+                self.set_up(model, inputs)
             self.t = 0.0
             set_up_time = timer.time()
 

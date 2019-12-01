@@ -61,7 +61,7 @@ class OdeSolver(pybamm.BaseSolver):
 
         return solution, solve_time, termination
 
-    def set_up(self, model):
+    def set_up(self, model, inputs):
         """Unpack model, perform checks, simplify and calculate jacobian.
 
         Parameters
@@ -69,6 +69,9 @@ class OdeSolver(pybamm.BaseSolver):
         model : :class:`pybamm.BaseModel`
             The model whose solution to calculate. Must have attributes rhs and
             initial_conditions
+        inputs : dict, optional
+            Any input parameters to pass to the model when solving
+
 
         Raises
         ------

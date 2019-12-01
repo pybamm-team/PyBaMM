@@ -104,7 +104,7 @@ class DaeSolver(pybamm.BaseSolver):
 
         return solution, solve_time, termination
 
-    def set_up(self, model):
+    def set_up(self, model, inputs):
         """Unpack model, perform checks, simplify and calculate jacobian.
 
         Parameters
@@ -112,6 +112,9 @@ class DaeSolver(pybamm.BaseSolver):
         model : :class:`pybamm.BaseModel`
             The model whose solution to calculate. Must have attributes rhs and
             initial_conditions
+        inputs : dict
+            Any input parameters to pass to the model when solving
+
         """
         # create simplified rhs, algebraic and event expressions
         concatenated_rhs = model.concatenated_rhs
@@ -155,6 +158,8 @@ class DaeSolver(pybamm.BaseSolver):
 
             jacobian = Jacobian(jac.evaluate)
             jacobian_alg = Jacobian(jac_algebraic.evaluate)
+            jacobian_alg.set_pad_ext(self.y_pad, self.y_ext)
+            jacobian_alg.set_inputs(inputs)
 
         else:
             jacobian = None
@@ -174,6 +179,11 @@ class DaeSolver(pybamm.BaseSolver):
         rhs = Rhs(concatenated_rhs.evaluate)
         algebraic = Algebraic(concatenated_algebraic.evaluate)
 
+        rhs.set_pad_ext(self.y_pad, self.y_ext)
+        rhs.set_inputs(inputs)
+        algebraic.set_pad_ext(self.y_pad, self.y_ext)
+        algebraic.set_inputs(inputs)
+        
         if len(model.algebraic) > 0:
             y0 = self.calculate_consistent_initial_conditions(
                 rhs,
@@ -208,7 +218,7 @@ class DaeSolver(pybamm.BaseSolver):
         model : :class:`pybamm.BaseModel`
             The model whose solution to calculate. Must have attributes rhs and
             initial_conditions
-        inputs : dict, optional
+        inputs : dict
             Any input parameters to pass to the model when solving
 
         """
@@ -217,9 +227,11 @@ class DaeSolver(pybamm.BaseSolver):
         y0 = model.concatenated_initial_conditions
         y0 = add_external(y0, self.y_pad, self.y_ext)
 
-        y_diff = casadi.MX.sym("y_diff", len(model.concatenated_rhs.evaluate(0, y0)))
+        y_diff = casadi.MX.sym(
+            "y_diff", len(model.concatenated_rhs.evaluate(0, y0, inputs))
+        )
         y_alg = casadi.MX.sym(
-            "y_alg", len(model.concatenated_algebraic.evaluate(0, y0))
+            "y_alg", len(model.concatenated_algebraic.evaluate(0, y0, inputs))
         )
         y_casadi = casadi.vertcat(y_diff, y_alg)
         if self.y_pad is not None:
@@ -283,7 +295,9 @@ class DaeSolver(pybamm.BaseSolver):
         algebraic = AlgebraicCasadi(concatenated_algebraic_fn)
 
         rhs.set_pad_ext(self.y_pad, self.y_ext)
+        rhs.set_inputs(inputs)
         algebraic.set_pad_ext(self.y_pad, self.y_ext)
+        algebraic.set_inputs(inputs)
 
         if len(model.algebraic) > 0:
 
