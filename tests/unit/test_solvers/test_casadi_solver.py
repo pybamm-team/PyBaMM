@@ -16,8 +16,9 @@ class TestCasadiSolver(unittest.TestCase):
 
         t = casadi.MX.sym("t")
         y = casadi.MX.sym("y")
+        u = casadi.MX.sym("u")
         constant_growth = casadi.MX(0.5)
-        rhs = casadi.Function("rhs", [t, y], [constant_growth])
+        rhs = casadi.Function("rhs", [t, y, u], [constant_growth])
 
         y0 = np.array([0])
         t_eval = np.linspace(0, 1, 100)
@@ -29,11 +30,23 @@ class TestCasadiSolver(unittest.TestCase):
         solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8, method="cvodes")
 
         exponential_decay = -0.1 * y
-        rhs = casadi.Function("rhs", [t, y], [exponential_decay])
+        rhs = casadi.Function("rhs", [t, y, u], [exponential_decay])
 
         y0 = np.array([1])
         t_eval = np.linspace(0, 1, 100)
         solution = solver.integrate_casadi(rhs, None, y0, t_eval)
+        np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
+        self.assertEqual(solution.termination, "final time")
+
+        # Exponential decay with input
+        solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8, method="cvodes")
+
+        exponential_decay = -u * y
+        rhs = casadi.Function("rhs", [t, y, u], [exponential_decay])
+
+        y0 = np.array([1])
+        t_eval = np.linspace(0, 1, 100)
+        solution = solver.integrate_casadi(rhs, None, y0, t_eval, inputs={"u": 0.1})
         np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
         self.assertEqual(solution.termination, "final time")
 
@@ -43,12 +56,13 @@ class TestCasadiSolver(unittest.TestCase):
 
         t = casadi.MX.sym("t")
         y = casadi.MX.sym("y")
+        u = casadi.MX.sym("u")
         sqrt_decay = -np.sqrt(y)
 
         y0 = np.array([1])
         t_eval = np.linspace(0, 3, 100)
         solver = pybamm.CasadiSolver()
-        rhs = casadi.Function("rhs", [t, y], [sqrt_decay])
+        rhs = casadi.Function("rhs", [t, y, u], [sqrt_decay])
         # Expect solver to fail when y goes negative
         with self.assertRaises(pybamm.SolverError):
             solver.integrate_casadi(rhs, None, y0, t_eval)
