@@ -88,7 +88,7 @@ class ProcessedVariable(object):
 
         if self.known_evals:
             self.base_eval, self.known_evals[t_sol[0]] = base_variable.evaluate(
-                t_sol[0], u_sol[:, 0], self.known_evals[t_sol[0]]
+                t_sol[0], u_sol[:, 0], known_evals=self.known_evals[t_sol[0]]
             )
         else:
             self.base_eval = base_variable.evaluate(t_sol[0], u_sol[:, 0])
@@ -131,7 +131,7 @@ class ProcessedVariable(object):
             t = self.t_sol[idx]
             if self.known_evals:
                 entries[idx], self.known_evals[t] = self.base_variable.evaluate(
-                    t, self.u_sol[:, idx], self.known_evals[t]
+                    t, self.u_sol[:, idx], known_evals=self.known_evals[t]
                 )
             else:
                 entries[idx] = self.base_variable.evaluate(t, self.u_sol[:, idx])
@@ -158,7 +158,7 @@ class ProcessedVariable(object):
             u = self.u_sol[:, idx]
             if self.known_evals:
                 eval_and_known_evals = self.base_variable.evaluate(
-                    t, u, self.known_evals[t]
+                    t, u, known_evals=self.known_evals[t]
                 )
                 entries[:, idx] = eval_and_known_evals[0][:, 0]
                 self.known_evals[t] = eval_and_known_evals[1]
@@ -301,7 +301,7 @@ class ProcessedVariable(object):
             u = self.u_sol[:, idx]
             if self.known_evals:
                 eval_and_known_evals = self.base_variable.evaluate(
-                    t, u, self.known_evals[t]
+                    t, u, known_evals=self.known_evals[t]
                 )
                 entries[:, :, idx] = np.reshape(
                     eval_and_known_evals[0],
@@ -366,7 +366,7 @@ class ProcessedVariable(object):
             u = self.u_sol[:, idx]
             if self.known_evals:
                 eval_and_known_evals = self.base_variable.evaluate(
-                    t, u, self.known_evals[t]
+                    t, u, known_evals=self.known_evals[t]
                 )
                 entries[:, :, idx] = np.reshape(eval_and_known_evals[0], [len_y, len_z])
                 self.known_evals[t] = eval_and_known_evals[1]

@@ -547,6 +547,7 @@ class TestScikitsSolvers(unittest.TestCase):
         np.testing.assert_array_less(solution.y[-1], 2.5)
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
         np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
+
     def test_model_solver_dae_with_jacobian_python(self):
         model = pybamm.BaseModel()
         model.convert_to_format = "python"

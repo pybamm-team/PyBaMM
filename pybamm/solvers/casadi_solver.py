@@ -82,7 +82,7 @@ class CasadiSolver(pybamm.DaeSolver):
             The times at which to compute the solution
         inputs : dict, optional
             Any input parameters to pass to the model when solving
-        
+
         Raises
         ------
         :class:`pybamm.ValueError`
@@ -192,7 +192,7 @@ class CasadiSolver(pybamm.DaeSolver):
             The times at which to compute the solution
         inputs : dict
             Any input parameters to pass to the model when solving
-        
+
         """
         timer = pybamm.Timer()
 
