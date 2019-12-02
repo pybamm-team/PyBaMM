@@ -82,7 +82,7 @@ def install_sundials(sundials_src, sundials_inst, download, klu=False):
     pybamm_dir = os.path.abspath(os.path.dirname(__file__))
 
     try:
-        subprocess.c(["cmake", "--version"])
+        subprocess.run(["cmake", "--version"])
     except OSError:
         raise RuntimeError("CMake must be installed to build the SUNDIALS library.")
 
