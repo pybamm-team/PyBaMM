@@ -43,7 +43,9 @@ for path, savefile in zip(paths, savefiles):
 
     # solution time
     try:
-        sol_time = pd.read_csv(path + "solution_time.csv",sep=",",header=None).values[0][0]
+        sol_time = pd.read_csv(path + "solution_time.csv", sep=",", header=None).values[
+            0
+        ][0]
     except FileNotFoundError:
         sol_time = None
 

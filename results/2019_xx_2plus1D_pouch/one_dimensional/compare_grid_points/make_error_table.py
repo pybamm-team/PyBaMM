@@ -8,6 +8,7 @@ import os
 import pickle
 import scipy.interpolate as interp
 from pprint import pprint
+from scipy.optimize import minimize_scalar
 
 # change working directory to the root of pybamm
 os.chdir(pybamm.root_dir())
@@ -164,8 +165,21 @@ for i, model in enumerate(models):
         ),
     }
 
-    # compute "error"
-    t = comsol_t / tau
+    # compute "error" using times up to voltage cut off
+    # Note: casadi doesnt support events so we find this time after the solve
+    V_cutoff = param.evaluate(pybamm.standard_parameters_lithium_ion.voltage_low_cut_dimensional)
+    voltage = pybamm.ProcessedVariable(
+        model.variables["Terminal voltage [V]"], solution.t, solution.y, mesh=mesh
+    )
+
+    def V_event(t):
+        return voltage(t) - V_cutoff
+
+    sol = minimize_scalar(V_event, bounds=(solution.t[0], solution.t[-1]), method='bounded')
+    t_end = sol.x * tau
+
+    # only use times up to the voltage cutoff
+    t = comsol_t[comsol_t < t_end]
 
     def compute_error(variable_name):
         domain = comsol_model.variables[variable_name].domain
@@ -187,7 +201,7 @@ for i, model in enumerate(models):
             )(x=x, t=t)
 
         # compute RMS error
-        scale = 1  # scales[variable_name]
+        scale = scales[variable_name]
         error = pybamm.rmse(pybamm_var / scale, comsol_var / scale)
         return error
 

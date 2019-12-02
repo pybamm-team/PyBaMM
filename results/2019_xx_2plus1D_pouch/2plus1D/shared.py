@@ -37,7 +37,7 @@ def make_comsol_model(
                 np.column_stack((comsol_y, comsol_z)),
                 variable[:, i],
                 (grid_y, grid_z),
-                method="nearest",
+                method="linear",
             )
 
         def myinterp(t):

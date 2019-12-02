@@ -7,7 +7,7 @@ import numpy as np
 import os
 import pickle
 import scipy.interpolate as interp
-from pprint import pprint
+import matplotlib.pyplot as plt
 
 # change working directory to the root of pybamm
 os.chdir(pybamm.root_dir())
@@ -204,12 +204,38 @@ for i, model in enumerate(models):
 
 
 "-----------------------------------------------------------------------------"
+"Compute errors for comsol models"
+
+comsol_errors = {
+    "Negative electrode potential [V]": [None] * len(savefiles),
+    "Positive electrode potential [V]": [None] * len(savefiles),
+    "Electrolyte potential [V]": [None] * len(savefiles),
+    "Negative particle surface concentration [mol.m-3]": [None] * len(savefiles),
+    "Positive particle surface concentration [mol.m-3]": [None] * len(savefiles),
+    "Electrolyte concentration [mol.m-3]": [None] * len(savefiles),
+    "Terminal voltage [V]": [None] * len(savefiles),
+    "Volume-averaged cell temperature [K]": [None] * len(savefiles),
+}
+exact_voltage = exact_solution["voltage"]
+comsol_sol_times = [None] * len(savefiles)
+for i, file in enumerate(savefiles):
+    comsol_variables = pickle.load(
+        open(file, "rb")
+    )
+    comsol_voltage = comsol_variables["voltage"]
+    comsol_errors["Terminal voltage [V]"][i] = pybamm.rmse(comsol_voltage, exact_voltage)
+    comsol_sol_times[i] = comsol_variables["solution_time"]
+
+
+
+"-----------------------------------------------------------------------------"
 "Print error"
-pprint("Number of points per domain")
-pprint(npts)
-pprint("Solve times:")
-pprint(sol_times)
-pprint("Errors in:")
-for var, error in errors.items():
-    print(var)
-    pprint(error)
+pybamm_v_error_mV = [error*1000 for error in errors["Terminal voltage [V]"]]
+comsol_v_error_mV = [error*1000 for error in comsol_errors["Terminal voltage [V]"]]
+plt.plot(sol_times, pybamm_v_error_mV, label="PyBaMM")
+import ipdb; ipdb.set_trace()
+plt.plot(comsol_sol_times, comsol_v_error_mV, label="COMSOL")
+plt.xlabel("Solution time [s]")
+plt.ylabel("RMS Voltage Error [mV]")
+plt.legend()
+plt.show()
