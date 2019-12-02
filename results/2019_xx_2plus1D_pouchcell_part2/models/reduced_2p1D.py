@@ -1,6 +1,8 @@
 import pybamm
 import numpy as np
 
+import scipy.interpolate as interp
+
 
 def solve_reduced_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None, params=None):
 
@@ -105,6 +107,29 @@ def solve_reduced_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None, params
         mesh=mesh,
     )
 
+    y_pts = var_pts[pybamm.standard_spatial_vars.y]
+    z_pts = var_pts[pybamm.standard_spatial_vars.z]
+
+    c_e_yz_av = get_yz_average(
+        sim.built_model.variables["Electrolyte concentration"],
+        mesh,
+        t,
+        y,
+        "whole cell",
+        y_pts,
+        z_pts,
+    )
+
+    c_e_yz_av_dim = get_yz_average(
+        sim.built_model.variables["Electrolyte concentration [mol.m-3]"],
+        mesh,
+        t,
+        y,
+        "whole cell",
+        y_pts,
+        z_pts,
+    )
+
     plotting_variables = {
         "Terminal voltage [V]": terminal_voltage,
         "Time [h]": time,
@@ -119,6 +144,8 @@ def solve_reduced_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None, params
         "X-averaged cell temperature [K]": T_av,
         "X-averaged negative particle surface concentration": c_s_n_surf,
         "X-averaged positive particle surface concentration": c_s_p_surf,
+        "YZ-averaged electrolyte concentration": c_e_yz_av,
+        "YZ-averaged electrolyte concentration [mol.m-3]": c_e_yz_av_dim,
     }
 
     if thermal:
@@ -126,3 +153,49 @@ def solve_reduced_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None, params
 
     return plotting_variables
 
+
+def get_yz_average(var, mesh, t_nodes, sol, domain, ypts, zpts):
+
+    if domain == "whole cell":
+        x_nodes = np.concatenate(
+            (
+                mesh["negative electrode"][0].nodes,
+                mesh["separator"][0].nodes,
+                mesh["positive electrode"][0].nodes,
+            )
+        )
+    else:
+        x_nodes = mesh[domain][0].nodes
+
+    y_edges = np.linspace(0, 1.5, ypts + 1)
+    y_nodes = (y_edges[:-1] + y_edges[1:]) / 2
+
+    z_edges = np.linspace(0, 1, zpts + 1)
+    z_nodes = (z_edges[:-1] + z_edges[1:]) / 2
+
+    entries = np.zeros((x_nodes.size, t_nodes.size))
+
+    for i, t in enumerate(t_nodes):
+        full_3D = np.reshape(
+            var.evaluate(t, sol[:, i]), (x_nodes.size, y_nodes.size, z_nodes.size)
+        )
+        yz_averaged = np.mean(np.mean(full_3D, axis=1), axis=1)
+        entries[:, i] = yz_averaged
+
+    extrap_space_left = np.array([2 * x_nodes[0] - x_nodes[1]])
+    extrap_space_right = np.array([2 * x_nodes[-1] - x_nodes[-2]])
+    x_nodes = np.concatenate([extrap_space_left, x_nodes, extrap_space_right])
+
+    extrap_entries_left = 2 * entries[0] - entries[1]
+    extrap_entries_right = 2 * entries[-1] - entries[-2]
+
+    entries = np.vstack([extrap_entries_left, entries, extrap_entries_right])
+
+    interpolation_function = interp.RegularGridInterpolator(
+        (x_nodes, t_nodes), entries, method="linear", fill_value=np.nan,
+    )
+
+    def fun(t, x):
+        return interpolation_function([x, t])
+
+    return fun

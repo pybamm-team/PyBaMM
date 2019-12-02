@@ -10,8 +10,8 @@ pybamm.set_logging_level("INFO")
 # which models?
 solve_spm = False
 solve_spmecc = False
-solve_reduced_2p1 = False
-solve_full_2p1 = True
+solve_reduced_2p1 = True
+solve_full_2p1 = False
 
 # potential and voltage plots?
 plot_voltage = False
