@@ -88,15 +88,53 @@ class Full(BaseModel):
         self.boundary_conditions[phi_s] = {"left": lbc, "right": rbc}
 
     def set_initial_conditions(self, variables):
-
+        l_n = self.param.l_n
+        x_n = pybamm.standard_spatial_vars.x_n
+        l_p = self.param.l_p
+        x_p = pybamm.standard_spatial_vars.x_p
         phi_s = variables[self.domain + " electrode potential"]
         T_init = self.param.T_init
+        i_init = pybamm.PrimaryBroadcast(
+            self.param.current_with_time, "current collector"
+        )
+        tor = variables[self.domain + " electrode tortuosity"]
 
         if self.domain == "Negative":
-            phi_s_init = pybamm.Scalar(0)
+            sigma_eff = self.param.sigma_n * tor
+
+            phi_s_init = (i_init / sigma_eff) * (x_n * (x_n - 2 * l_n) / (2 * l_n))
         elif self.domain == "Positive":
-            phi_s_init = self.param.U_p(self.param.c_p_init, T_init) - self.param.U_n(
+
+            U = self.param.U_p(self.param.c_p_init, T_init) - self.param.U_n(
                 self.param.c_n_init, T_init
+            )
+            j0_n = (
+                self.param.m_n(T_init)
+                / self.param.C_r_n
+                * self.param.c_e_init ** (1 / 2)
+                * self.param.c_n_init ** (1 / 2)
+                * (1 - self.param.c_n_init) ** (1 / 2)
+            )
+            j0_p = (
+                self.param.gamma_p
+                * self.param.m_p(T_init)
+                / self.param.C_r_p
+                * self.param.c_e_init ** (1 / 2)
+                * self.param.c_p_init ** (1 / 2)
+                * (1 - self.param.c_p_init) ** (1 / 2)
+            )
+            eta_r = -(
+                2 * (1 + self.param.Theta * T_init) / self.param.ne_p
+            ) * pybamm.arcsinh(i_init / (2 * j0_p * l_p)) - (
+                2 * (1 + self.param.Theta * T_init) / self.param.ne_n
+            ) * pybamm.arcsinh(
+                i_init / (2 * j0_n * l_n)
+            )
+
+            sigma_eff = self.param.sigma_p * tor
+
+            phi_s_init = (
+                U + eta_r - (i_init / sigma_eff) * (x_p + (x_p - 1) ** 2 / (2 * l_p))
             )
 
         self.initial_conditions[phi_s] = phi_s_init

@@ -26,7 +26,7 @@ mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
 # discretise model
 disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
-
+import ipdb; ipdb.set_trace()
 # solve model
 t_eval = np.linspace(0, 0.2, 100)
 solver = model.default_solver

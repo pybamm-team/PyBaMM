@@ -77,19 +77,8 @@ class BinaryOperator(pybamm.Symbol):
     """
 
     def __init__(self, name, left, right):
-        # Turn numbers into scalars
-        if isinstance(left, numbers.Number):
-            left = pybamm.Scalar(left)
-        if isinstance(right, numbers.Number):
-            right = pybamm.Scalar(right)
+        left, right = self.format(left, right)
 
-        # Check both left and right are pybamm Symbols
-        if not (isinstance(left, pybamm.Symbol) and isinstance(right, pybamm.Symbol)):
-            raise NotImplementedError(
-                """'{}' not implemented for symbols of type {} and {}""".format(
-                    self.__class__.__name__, type(left), type(right)
-                )
-            )
         # Check and process domains, except for Outer symbol which takes the outer
         # product of two smbols in different domains, and gives it the domain of the
         # right child.
@@ -107,6 +96,43 @@ class BinaryOperator(pybamm.Symbol):
         )
         self.left = self.children[0]
         self.right = self.children[1]
+
+    def format(self, left, right):
+        "Format children left and right into compatible form"
+        # Turn numbers into scalars
+        if isinstance(left, numbers.Number):
+            left = pybamm.Scalar(left)
+        if isinstance(right, numbers.Number):
+            right = pybamm.Scalar(right)
+
+        # Check both left and right are pybamm Symbols
+        if not (isinstance(left, pybamm.Symbol) and isinstance(right, pybamm.Symbol)):
+            raise NotImplementedError(
+                """'{}' not implemented for symbols of type {} and {}""".format(
+                    self.__class__.__name__, type(left), type(right)
+                )
+            )
+
+        # Do some broadcasting in special cases, to avoid having to do this manually
+        if (
+            not isinstance(self, (Outer, Kron))
+            and left.domain != []
+            and right.domain != []
+        ):
+            if (
+                left.domain != right.domain
+                and "secondary" in right.auxiliary_domains
+                and left.domain == right.auxiliary_domains["secondary"]
+            ):
+                left = pybamm.PrimaryBroadcast(left, right.domain)
+            if (
+                right.domain != left.domain
+                and "secondary" in left.auxiliary_domains
+                and right.domain == left.auxiliary_domains["secondary"]
+            ):
+                right = pybamm.PrimaryBroadcast(right, left.domain)
+
+        return left, right
 
     def __str__(self):
         """ See :meth:`pybamm.Symbol.__str__()`. """
@@ -641,14 +667,12 @@ class Outer(BinaryOperator):
 
     def __init__(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
-        # cannot have Variable, StateVector or Matrix in the right symbol, as these
+        # cannot have certain types of objects in the right symbol, as these
         # can already be 2D objects (so we can't take an outer product with them)
         if right.has_symbol_of_classes(
-            (pybamm.Variable, pybamm.StateVector, pybamm.Matrix)
+            (pybamm.Variable, pybamm.StateVector, pybamm.Matrix, pybamm.SpatialVariable)
         ):
-            raise TypeError(
-                "right child must only contain SpatialVariable and scalars" ""
-            )
+            raise TypeError("right child must only contain Vectors and Scalars" "")
 
         super().__init__("outer product", left, right)
 
