@@ -9,9 +9,10 @@ try:
     # wget module is required to download SUNDIALS or SuiteSparse and
     # is not a core requirement.
     import wget
-except ImportError:
-    print("ERROR: Could not import wget module. Please install wget module.")
-    print("pip install wget")
+
+    NO_WGET = False
+except (ImportError, ModuleNotFoundError):
+    NO_WGET = True
 try:
     from setuptools import setup, find_packages
 except ImportError:
@@ -21,6 +22,11 @@ from distutils.cmd import Command
 
 def download_extract_library(url):
     # Download and extract archive at url
+    if NO_WGET:
+        # The NO_WGET is set to true if the wget could not be
+        # imported.
+        error_msg = "Could not find wget module. Please install wget module."
+        raise ModuleNotFoundError(error_msg)
     archive = wget.download(url)
     tar = tarfile.open(archive)
     tar.extractall()
