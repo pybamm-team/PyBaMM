@@ -112,6 +112,20 @@ def solve_spmecc(C_rate=1, t_eval=None, var_pts=None, thermal=False, params=None
     def V_cc(t, y, z):
         return phi_s_p(t, y, z) - phi_s_n(y=y, z=z)
 
+    c_e = pybamm.ProcessedVariable(
+        sim_spme.built_model.variables["Electrolyte concentration"],
+        t,
+        y_spme,
+        mesh=sim_spme.mesh,
+    )
+
+    c_e_dim = pybamm.ProcessedVariable(
+        sim_spme.built_model.variables["Electrolyte concentration [mol.m-3]"],
+        t,
+        y_spme,
+        mesh=sim_spme.mesh,
+    )
+
     plotting_variables = {
         "Terminal voltage [V]": terminal_voltage,
         "Time [h]": time,
@@ -123,6 +137,8 @@ def solve_spmecc(C_rate=1, t_eval=None, var_pts=None, thermal=False, params=None
         "Reduced positive current collector potential [V]": phi_s_p_red_fun,
         "Local voltage [V]": V_cc,
         "Average local current density [A.m-2]": av_cc_current,
+        "YZ-averaged electrolyte concentration": c_e,
+        "YZ-averaged electrolyte concentration [mol.m-3]": c_e_dim,
     }
 
     return plotting_variables

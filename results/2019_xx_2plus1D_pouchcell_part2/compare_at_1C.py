@@ -9,9 +9,9 @@ pybamm.set_logging_level("INFO")
 
 # which models?
 solve_spm = False
-solve_spmecc = False
+solve_spmecc = True
 solve_reduced_2p1 = True
-solve_full_2p1 = False
+solve_full_2p1 = True
 
 # potential and voltage plots?
 plot_voltage = False
@@ -25,8 +25,11 @@ plot_av_current = False
 plot_reduced_full_current_errors = False
 
 # concentration plots?
-x_av_particle_surface_concentration = True
-vol_av_particle_surface_concentration = True
+x_av_particle_surface_concentration = False
+vol_av_particle_surface_concentration = False
+
+plot_yz_average_electrolyte = True
+
 
 # thermal plots?
 thermal = False
@@ -35,6 +38,10 @@ plot_temperature_profile_errors_red_full = False
 plot_average_temperature = False
 
 t_eval = np.linspace(0, 0.17, 100)
+
+# max 4
+plot_times = [0.0001, 0.001, 0.002, 0.017]
+
 C_rate = 1
 var_pts = {
     pybamm.standard_spatial_vars.x_n: 5,
@@ -94,7 +101,6 @@ if plot_voltage:
     plots.plot_voltage(ax, spmecc=spmecc, reduced=reduced, full=full)
 
 
-# times = [0, t_eval[30], t_eval[50], t_eval[70]]
 times = [t_eval[50]]
 if plot_potentials:
     for t in times:
@@ -145,6 +151,11 @@ if vol_av_particle_surface_concentration:
         plots.plot_vol_av_particle_concentration(
             ax, var_name, spmecc=spmecc, reduced=reduced, full=full
         )
+
+if plot_yz_average_electrolyte:
+    plots.plot_yz_averaged_electrolyte_concentration(
+        plot_times, spmecc=spmecc, reduced=reduced, full=full
+    )
 
 plt.show()
 

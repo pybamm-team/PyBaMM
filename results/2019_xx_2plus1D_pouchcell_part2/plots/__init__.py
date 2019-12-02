@@ -8,3 +8,6 @@ from .temperature_plots import plot_temperature_profile
 from .average_temperature import plot_average_temperature
 from .concentrations import plot_x_av_surf_concentration
 from .vol_av_particle_concentration import plot_vol_av_particle_concentration
+from .yz_average_electrolyte_concentration import (
+    plot_yz_averaged_electrolyte_concentration,
+)

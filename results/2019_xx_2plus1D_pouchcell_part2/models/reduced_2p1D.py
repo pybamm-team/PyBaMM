@@ -176,10 +176,14 @@ def get_yz_average(var, mesh, t_nodes, sol, domain, ypts, zpts):
     entries = np.zeros((x_nodes.size, t_nodes.size))
 
     for i, t in enumerate(t_nodes):
+        # full_3D = np.reshape(
+        #     var.evaluate(t, sol[:, i]), (x_nodes.size, y_nodes.size, z_nodes.size)
+        # )
+        # yz_averaged = np.mean(np.mean(full_3D, axis=1), axis=1)
         full_3D = np.reshape(
-            var.evaluate(t, sol[:, i]), (x_nodes.size, y_nodes.size, z_nodes.size)
+            var.evaluate(t, sol[:, i]), (y_nodes.size, z_nodes.size, x_nodes.size)
         )
-        yz_averaged = np.mean(np.mean(full_3D, axis=1), axis=1)
+        yz_averaged = np.mean(np.mean(full_3D, axis=0), axis=0)
         entries[:, i] = yz_averaged
 
     extrap_space_left = np.array([2 * x_nodes[0] - x_nodes[1]])
@@ -196,6 +200,6 @@ def get_yz_average(var, mesh, t_nodes, sol, domain, ypts, zpts):
     )
 
     def fun(t, x):
-        return interpolation_function([x, t])
+        return interpolation_function((x, t))
 
     return fun
