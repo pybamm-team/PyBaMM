@@ -37,10 +37,12 @@ def yes_or_no(question):
     # Only accept 'y' or 'n' characters as a valid answer.
     while "the answer is invalid":
         reply = str(input(question + " (y/n): ")).lower().strip()
-        if reply[0] == "y":
-            return True
-        if reply[0] == "n":
-            return False
+        if len(reply) >= 1:
+            if reply[0] == "y":
+                return True
+            if reply[0] == "n":
+                return False
+        print("\n")
 
 
 def update_LD_LIBRARY_PATH(install_dir):
@@ -94,8 +96,10 @@ def install_sundials(sundials_src, sundials_inst, download, klu=False):
 
     if download:
         question = "About to download sundials, proceed?"
-        url = """https://computing.llnl.gov/
-        projects/sundials/download/sundials-4.1.0.tar.gz"""
+        url = (
+            "https://computing.llnl.gov/"
+            + "projects/sundials/download/sundials-4.1.0.tar.gz"
+        )
         if yes_or_no(question):
             download_extract_library(url)
         else:
@@ -121,9 +125,9 @@ def install_sundials(sundials_src, sundials_inst, download, klu=False):
 
     # SUNDIALS are built within directory 'build_sundials' in the PyBaMM root
     # directory
-    build_directory = os.path.abspath(os.path.join(pybamm_dir), "build_sundials")
+    build_directory = os.path.abspath(os.path.join(pybamm_dir, "build_sundials"))
     if not os.path.exists(build_directory):
-        print("-" * 10, "Creating build dir", "-" * 40)
+        print("\n-" * 10, "Creating build dir", "-" * 40)
         os.makedirs(build_directory)
 
     print("-" * 10, "Running CMake prepare", "-" * 40)
@@ -255,8 +259,10 @@ class InstallKLU(Command):
 
         if self.download_suitesparse:
             question = "About to download SuiteSparse, proceed?"
-            url = """https://github.com/DrTimothyAldenDavis/
-            SuiteSparse/archive/v5.6.0.tar.gz"""
+            url = (
+                "https://github.com/DrTimothyAldenDavis/"
+                + "SuiteSparse/archive/v5.6.0.tar.gz"
+            )
             if yes_or_no(question):
                 download_extract_library(url)
             else:
