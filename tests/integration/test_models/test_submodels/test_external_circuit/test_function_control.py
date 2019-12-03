@@ -61,7 +61,6 @@ class TestFunctionControl(unittest.TestCase):
             pv1["Terminal voltage [V]"](solutions[0].t),
         )
 
-    @unittest.skip("")
     def test_constant_voltage(self):
         class ConstantVoltage:
             num_switches = 0
@@ -71,11 +70,9 @@ class TestFunctionControl(unittest.TestCase):
                 return V - 4.1
 
         # load models
-        # test the DFN for this one as it has a particular implementation of constant
-        # voltage
         models = [
-            pybamm.lithium_ion.DFN({"operating mode": "voltage"}),
-            pybamm.lithium_ion.DFN({"operating mode": ConstantVoltage()}),
+            pybamm.lithium_ion.SPM({"operating mode": "voltage"}),
+            pybamm.lithium_ion.SPM({"operating mode": ConstantVoltage()}),
         ]
 
         # load parameter values and process models and geometry
@@ -116,16 +113,14 @@ class TestFunctionControl(unittest.TestCase):
         ).entries
         np.testing.assert_array_almost_equal(V0, V1)
 
-        # TODO: improve the following test (better extrapolation?)
         I0 = pybamm.ProcessedVariable(
             models[0].variables["Current [A]"], solutions[0].t, solutions[0].y, mesh
-        ).entries[:10]
+        ).entries
         I1 = pybamm.ProcessedVariable(
             models[1].variables["Current [A]"], solutions[1].t, solutions[1].y, mesh
-        ).entries[:10]
+        ).entries
         np.testing.assert_array_almost_equal(abs((I1 - I0) / I0), 0, decimal=1)
 
-    @unittest.skip("")
     def test_constant_power(self):
         class ConstantPower:
             num_switches = 0

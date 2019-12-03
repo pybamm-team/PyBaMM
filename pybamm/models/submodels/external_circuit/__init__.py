@@ -8,5 +8,4 @@ from .function_control_external_circuit import (
     LeadingOrderVoltageFunctionControl,
     LeadingOrderPowerFunctionControl,
 )
-from .voltage_control_external_circuit import VoltageControl
 

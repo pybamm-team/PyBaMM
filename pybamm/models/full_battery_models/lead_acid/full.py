@@ -127,11 +127,3 @@ class Full(BaseModel):
                 "negative oxygen interface"
             ] = pybamm.interface.lead_acid_oxygen.NoReaction(self.param, "Negative")
 
-    def set_external_circuit_submodel(self):
-        """ See :meth:`BaseBatteryModel.set_external_circuit_submodel` """
-        if self.options["operating mode"] == "voltage":
-            self.submodels["external circuit"] = pybamm.external_circuit.VoltageControl(
-                self.param
-            )
-        else:
-            super().set_external_circuit_submodel()

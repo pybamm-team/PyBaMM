@@ -102,15 +102,6 @@ class DFN(BaseModel):
             self.param, self.reactions
         )
 
-    def set_external_circuit_submodel(self):
-        """ See :meth:`BaseBatteryModel.set_external_circuit_submodel` """
-        if self.options["operating mode"] == "voltage":
-            self.submodels["external circuit"] = pybamm.external_circuit.VoltageControl(
-                self.param
-            )
-        else:
-            super().set_external_circuit_submodel()
-
     @property
     def default_geometry(self):
         dimensionality = self.options["dimensionality"]
