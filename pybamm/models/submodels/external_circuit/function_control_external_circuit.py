@@ -117,7 +117,7 @@ class LeadingOrderFunctionControl(FunctionControl, LeadingOrderBaseModel):
 
 class LeadingOrderVoltageFunctionControl(LeadingOrderFunctionControl):
     """
-    External circuit with voltage control, implemented as an extra algebraic equation, 
+    External circuit with voltage control, implemented as an extra algebraic equation,
     at leading order.
     """
 

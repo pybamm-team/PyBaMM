@@ -457,7 +457,6 @@ class BaseBatteryModel(pybamm.BaseModel):
                                     key
                                 )
                             )
-                            pass
 
     def build_model_equations(self):
         # Set model equations

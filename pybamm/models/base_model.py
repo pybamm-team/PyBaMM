@@ -433,7 +433,7 @@ class BaseModel(object):
         """
         vars_in_bcs = set()
         for var, side_eqn in self.boundary_conditions.items():
-            for side, (eqn, typ) in side_eqn.items():
+            for side, (eqn, _) in side_eqn.items():
                 vars_in_bcs.update(
                     [x.id for x in eqn.pre_order() if isinstance(x, pybamm.Variable)]
                 )
