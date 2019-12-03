@@ -20,7 +20,8 @@ class TestSetPotetetialSPM1plus1DModel(unittest.TestCase):
             "X-averaged negative electrode reaction overpotential": val,
             "X-averaged electrolyte overpotential": val,
             "X-averaged positive electrode ohmic losses": val,
-            "X-averaged negative electrode ohmic losses": val
+            "X-averaged negative electrode ohmic losses": val,
+            "Total current density": 0,
         }
         std_tests = tests.StandardSubModelTests(submodel, variables)
 
@@ -39,7 +40,8 @@ class TestSetPotetetialSPM2plus1DModel(unittest.TestCase):
             "X-averaged negative electrode reaction overpotential": val,
             "X-averaged electrolyte overpotential": val,
             "X-averaged positive electrode ohmic losses": val,
-            "X-averaged negative electrode ohmic losses": val
+            "X-averaged negative electrode ohmic losses": val,
+            "Total current density": 0,
         }
         std_tests = tests.StandardSubModelTests(submodel, variables)
 

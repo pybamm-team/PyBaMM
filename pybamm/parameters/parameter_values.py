@@ -285,13 +285,13 @@ class ParameterValues(dict):
         elif processing == "update":
             processing_function = self.update_scalars
 
-        for variable, equation in unprocessed_model.rhs.items():
+        for variable, equation in model.rhs.items():
             pybamm.logger.debug(
                 "{} parameters for {!r} (rhs)".format(processing.capitalize(), variable)
             )
             model.rhs[variable] = processing_function(equation)
 
-        for variable, equation in unprocessed_model.algebraic.items():
+        for variable, equation in model.algebraic.items():
             pybamm.logger.debug(
                 "{} parameters for {!r} (algebraic)".format(
                     processing.capitalize(), variable
@@ -299,7 +299,7 @@ class ParameterValues(dict):
             )
             model.algebraic[variable] = processing_function(equation)
 
-        for variable, equation in unprocessed_model.initial_conditions.items():
+        for variable, equation in model.initial_conditions.items():
             pybamm.logger.debug(
                 "{} parameters for {!r} (initial conditions)".format(
                     processing.capitalize(), variable
@@ -313,7 +313,7 @@ class ParameterValues(dict):
         # "positive tab": pos. tab bc "no tab": no tab bc}.
         new_boundary_conditions = {}
         sides = ["left", "right", "negative tab", "positive tab", "no tab"]
-        for variable, bcs in unprocessed_model.boundary_conditions.items():
+        for variable, bcs in model.boundary_conditions.items():
             processed_variable = processing_function(variable)
             new_boundary_conditions[processed_variable] = {}
             for side in sides:
@@ -337,14 +337,14 @@ class ParameterValues(dict):
 
         model.boundary_conditions = new_boundary_conditions
 
-        for variable, equation in unprocessed_model.variables.items():
+        for variable, equation in model.variables.items():
             pybamm.logger.debug(
                 "{} parameters for {!r} (variables)".format(
                     processing.capitalize(), variable
                 )
             )
             model.variables[variable] = processing_function(equation)
-        for event, equation in unprocessed_model.events.items():
+        for event, equation in model.events.items():
             pybamm.logger.debug(
                 "{} parameters for event '{}''".format(processing.capitalize(), event)
             )
