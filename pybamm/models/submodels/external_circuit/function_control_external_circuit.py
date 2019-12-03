@@ -2,7 +2,7 @@
 # External circuit with an arbitrary function
 #
 import pybamm
-from .base_external_circuit import BaseModel
+from .base_external_circuit import BaseModel, LeadingOrderBaseModel
 
 
 class FunctionControl(BaseModel):
@@ -87,4 +87,47 @@ class ConstantPower:
         I = variables["Current [A]"]
         V = variables["Terminal voltage [V]"]
         return I * V - pybamm.FunctionParameter("Power function [W]", pybamm.t)
+
+
+class LeadingOrderFunctionControl(FunctionControl, LeadingOrderBaseModel):
+    """External circuit with an arbitrary function, at leading order. """
+
+    def __init__(self, param, external_circuit_class):
+        super().__init__(param)
+        self.external_circuit_class = external_circuit_class
+
+    def get_fundamental_variables(self):
+        # Current is a variable
+        i_cell = pybamm.Variable("Leading-order total current density")
+        variables = self._get_current_variables(i_cell)
+
+        # Add discharge capacity variable
+        variables.update(super().get_fundamental_variables())
+
+        # Add switches
+        # These are not implemented yet but can be used later with the Experiment class
+        # to simulate different external circuit conditions sequentially within a
+        # single model (for example Constant Current - Constant Voltage)
+        for i in range(self.external_circuit_class.num_switches):
+            s = pybamm.Parameter("Switch {}".format(i + 1))
+            variables["Switch {}".format(i + 1)] = s
+
+        return variables
+
+
+class LeadingOrderVoltageFunctionControl(LeadingOrderFunctionControl):
+    """
+    External circuit with voltage control, implemented as an extra algebraic equation, 
+    at leading order.
+    """
+
+    def __init__(self, param):
+        super().__init__(param, ConstantVoltage())
+
+
+class LeadingOrderPowerFunctionControl(LeadingOrderFunctionControl):
+    """External circuit with power control, at leading order. """
+
+    def __init__(self, param):
+        super().__init__(param, ConstantPower())
 

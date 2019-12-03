@@ -452,6 +452,11 @@ class BaseBatteryModel(pybamm.BaseModel):
                             )
                         else:
                             # try setting coupled variables on next loop through
+                            pybamm.logger.debug(
+                                "Can't find {}, trying other submodels first".format(
+                                    key
+                                )
+                            )
                             pass
 
     def build_model_equations(self):

@@ -38,3 +38,16 @@ class BaseModel(pybamm.BaseSubModel):
         Q = variables["Discharge capacity [A.h]"]
         I = variables["Current [A]"]
         self.rhs[Q] = I * self.param.timescale / 3600
+
+
+class LeadingOrderBaseModel(BaseModel):
+    """Model to represent the behaviour of the external circuit, at leading order. """
+
+    def __init__(self, param):
+        super().__init__(param)
+
+    def get_fundamental_variables(self):
+        Q = pybamm.Variable("Leading-order discharge capacity [A.h]")
+        variables = {"Discharge capacity [A.h]": Q}
+        return variables
+

@@ -40,3 +40,7 @@ class VoltageControl(BaseModel):
         variables = self._get_current_variables(i_cell)
 
         return variables
+
+
+# Note: no leading-order voltage control model as this model can only be used with full
+# models (VoltageFunctionControl is used for reduced-order models instead)

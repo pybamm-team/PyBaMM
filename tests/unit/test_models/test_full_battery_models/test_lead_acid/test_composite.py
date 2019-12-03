@@ -23,6 +23,7 @@ class TestLeadAcidComposite(unittest.TestCase):
 
 class TestLeadAcidCompositeMultiDimensional(unittest.TestCase):
     def test_well_posed(self):
+        pybamm.set_logging_level("DEBUG")
         model = pybamm.lead_acid.Composite(
             {"dimensionality": 1, "current collector": "potential pair"}
         )

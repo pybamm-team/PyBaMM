@@ -2,7 +2,7 @@
 # External circuit with current control
 #
 import pybamm
-from .base_external_circuit import BaseModel
+from .base_external_circuit import BaseModel, LeadingOrderBaseModel
 
 
 class CurrentControl(BaseModel):
@@ -40,3 +40,11 @@ class CurrentControl(BaseModel):
         variables["Terminal voltage [V]"] = V_dim
 
         return variables
+
+
+class LeadingOrderCurrentControl(CurrentControl, LeadingOrderBaseModel):
+    """External circuit with current control, for leading order models. """
+
+    def __init__(self, param):
+        super().__init__(param)
+
