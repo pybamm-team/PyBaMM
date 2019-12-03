@@ -108,6 +108,7 @@ c_p_init_dimensional = pybamm.Parameter(
 
 # thermal
 Delta_T = pybamm.thermal_parameters.Delta_T
+thermal_voltage = R * T_ref / F
 
 # Activation energies
 E_r_n = pybamm.thermal_parameters.E_r_n

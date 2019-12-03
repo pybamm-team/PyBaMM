@@ -37,7 +37,7 @@ def make_comsol_model(
                 np.column_stack((comsol_y, comsol_z)),
                 variable[:, i],
                 (grid_y, grid_z),
-                method="nearest",
+                method="linear",
             )
 
         def myinterp(t):
@@ -212,7 +212,10 @@ def plot_2D_var(
             elif scale == "auto":
                 scale = np.abs(np.max(comsol_var) - np.min(comsol_var))
             error = np.abs((pybamm_var - comsol_var) / scale)
-            diff_plot = plt.pcolormesh(y_plot, z_plot, error, shading="gouraud",)
+            vmax = 0.1  # max colorbar
+            diff_plot = plt.pcolormesh(
+                y_plot, z_plot, error, shading="gouraud", vmin=0, vmax=vmax
+            )
         plt.axis([0, y_plot[-1], 0, z_plot[-1]])
         plt.xlabel(r"$y$")
         plt.ylabel(r"$z$")
@@ -235,7 +238,10 @@ def plot_2D_var(
         elif scale == "auto":
             scale = np.abs(np.max(comsol_var) - np.min(comsol_var))
         rel_error = np.abs((pybamm_var - comsol_var) / scale)
-        rel_diff_plot = plt.pcolormesh(y_plot, z_plot, rel_error, shading="gouraud",)
+        vmax = 0.1  # max colorbar
+        rel_diff_plot = plt.pcolormesh(
+            y_plot, z_plot, rel_error, shading="gouraud", vmin=0, vmax=vmax
+        )
         plt.axis([0, y_plot[-1], 0, z_plot[-1]])
         plt.xlabel(r"$y$")
         plt.ylabel(r"$z$")

@@ -51,11 +51,11 @@ else:
     var = pybamm.standard_spatial_vars
     var_pts = {
         var.x_n: 10,
-        var.x_s: 10,
+        var.x_s: 5,
         var.x_p: 10,
         var.r_n: 15,
         var.r_p: 15,
-        var.z: 15,
+        var.z: 25,
     }
 
     # solver
@@ -130,8 +130,10 @@ shared.plot_cc_var(
     param,
     plot_times=plot_times,
     plot_error="both",
-    scale=0.0001,  # typical variation in negative potential
+    #  scale=0.0001,  # typical variation in negative potential
+    scale="auto",
 )
+plt.savefig("1plus1D_phi_s_cn.eps", format="eps", dpi=300)
 shared.plot_cc_var(
     "Positive current collector potential [V]",
     pybamm_model,
@@ -141,8 +143,10 @@ shared.plot_cc_var(
     param,
     plot_times=plot_times,
     plot_error="both",
-    scale=0.0001,  # typical variation in positive potential
+    #  scale=0.0001,  # typical variation in positive potential
+    scale="auto",
 )
+plt.savefig("1plus1D_phi_s_cp.eps", format="eps", dpi=300)
 shared.plot_cc_var(
     "Current collector current density [A.m-2]",
     pybamm_model,
@@ -152,6 +156,9 @@ shared.plot_cc_var(
     param,
     plot_times=plot_times,
     plot_error="both",
-    scale=0.06,  # typical variation in current density
+    # scale=0.06,  # typical variation in current density
+    scale="auto",
+
 )
+plt.savefig("1plus1D_current.eps", format="eps", dpi=300)
 plt.show()

@@ -13,7 +13,7 @@ os.chdir(pybamm.root_dir())
 
 try:
     comsol_variables = pickle.load(
-        open("input/comsol_results/comsol_thermal_1C.pickle", "rb")
+        open("input/comsol_results/comsol_thermal_3C.pickle", "rb")
     )
 except FileNotFoundError:
     raise FileNotFoundError("COMSOL data not found. Try running load_comsol_data.py")
@@ -31,7 +31,7 @@ geometry = pybamm_model.default_geometry
 param = pybamm_model.default_parameter_values
 param.update(
     {
-        "C-rate": 1,
+        "C-rate": 3,
         #    "Negative electrode conductivity [S.m-1]": 1e6,
         #    "Positive electrode conductivity [S.m-1]": 1e6,
     }
@@ -55,8 +55,8 @@ tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
 
 # solve model at comsol times
 time = comsol_variables["time"] / tau
-# solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
-solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6, mode="fast")
+solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
+# solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6, mode="fast")
 solution = solver.solve(pybamm_model, time)
 
 "-----------------------------------------------------------------------------"
@@ -645,17 +645,17 @@ time_only_plot("Terminal voltage [V]", plot_error=plot_error)
 # volume averaged temperature
 time_only_plot("Volume-averaged cell temperature [K]", plot_error=plot_error)
 # heat sources
-whole_cell_by_domain_comparison_plot(
-    "Irreversible electrochemical heating [W.m-3]",
-    plot_times=plot_times,
-    plot_error=plot_error,
-)
-whole_cell_by_domain_comparison_plot(
-    "Reversible heating [W.m-3]", plot_times=plot_times, plot_error=plot_error
-)
-whole_cell_by_domain_comparison_plot(
-    "Total heating [W.m-3]", plot_times=plot_times, plot_error=plot_error
-)
+# whole_cell_by_domain_comparison_plot(
+#     "Irreversible electrochemical heating [W.m-3]",
+#     plot_times=plot_times,
+#     plot_error=plot_error,
+# )
+# whole_cell_by_domain_comparison_plot(
+#     "Reversible heating [W.m-3]", plot_times=plot_times, plot_error=plot_error
+# )
+# whole_cell_by_domain_comparison_plot(
+#     "Total heating [W.m-3]", plot_times=plot_times, plot_error=plot_error
+# )
 # temperature
 # whole_cell_comparison_plot(
 #     "Cell temperature [K]", plot_times=plot_times, plot_error=plot_error

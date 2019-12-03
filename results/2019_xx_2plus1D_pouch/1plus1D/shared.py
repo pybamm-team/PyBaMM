@@ -14,6 +14,7 @@ def make_comsol_model(comsol_variables, mesh, param, z_interp=None, thermal=True
     tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
 
     # interpolate using *dimensional* space
+    L_x = param.evaluate(pybamm.standard_parameters_lithium_ion.L_x)
     L_z = param.evaluate(pybamm.standard_parameters_lithium_ion.L_z)
 
     if z_interp is None:
@@ -29,7 +30,7 @@ def make_comsol_model(comsol_variables, mesh, param, z_interp=None, thermal=True
         comsol_z = comsol_variables[variable_name + "_z"]
         variable = comsol_variables[variable_name]
 
-        grid_x, grid_z = np.meshgrid(comsol_x, z_interp)
+        grid_x, grid_z = np.meshgrid(L_x, z_interp)
 
         # Note order of rows and cols!
         interp_var = np.zeros((len(z_interp), len(comsol_x), variable.shape[1]))
@@ -62,7 +63,9 @@ def make_comsol_model(comsol_variables, mesh, param, z_interp=None, thermal=True
     # Create comsol model with dictionary of Matrix variables
     comsol_model = pybamm.BaseModel()
     comsol_model.variables = {
-        "Terminal voltage [V]": pybamm.Function(comsol_voltage, pybamm.t * tau),
+        "Terminal voltage [V]": pybamm.Function(
+            comsol_voltage, pybamm.t * tau, name="voltage_comsol"
+        ),
         "Negative current collector potential [V]": comsol_phi_s_cn,
         "Positive current collector potential [V]": comsol_phi_s_cp,
         "Current collector current density [A.m-2]": comsol_current,
@@ -80,7 +83,9 @@ def make_comsol_model(comsol_variables, mesh, param, z_interp=None, thermal=True
             {
                 "X-averaged cell temperature [K]": comsol_temperature,
                 "Volume-averaged cell temperature [K]": pybamm.Function(
-                    comsol_vol_av_temperature, pybamm.t * tau
+                    comsol_vol_av_temperature,
+                    pybamm.t * tau,
+                    name="av_temperature_comsol",
                 ),
             }
         )
@@ -242,12 +247,16 @@ def plot_cc_var(
         elif plot_error == "rel":
             if scale is None:
                 scale = comsol_var
+            elif scale == "auto":
+                scale = np.abs(np.max(comsol_var) - np.min(comsol_var))
             error = np.abs((pybamm_var - comsol_var) / scale)
             ax[1].plot(error, z_plot, "-", color=color)
         elif plot_error == "both":
             abs_error = np.abs(pybamm_var - comsol_var)
             if scale is None:
                 scale = comsol_var
+            elif scale == "auto":
+                scale = np.abs(np.max(comsol_var) - np.min(comsol_var))
             rel_error = np.abs((pybamm_var - comsol_var) / scale)
             ax[1].plot(z_plot, abs_error, "-", color=color)
             ax[2].plot(z_plot, rel_error, "-", color=color)
