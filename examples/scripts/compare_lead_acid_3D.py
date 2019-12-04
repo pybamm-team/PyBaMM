@@ -86,7 +86,7 @@ for i, model in enumerate(models):
 
 # plot
 output_variables = [
-    "Local current collector potential difference [V]",
+    "Local voltage [V]",
     "Negative current collector potential [V]",
     "Positive current collector potential [V]",
     "X-averaged electrolyte concentration",

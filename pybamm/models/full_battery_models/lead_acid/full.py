@@ -69,9 +69,7 @@ class Full(BaseModel):
     def set_solid_submodel(self):
         if self.options["surface form"] is False:
             submod_n = pybamm.electrode.ohm.Full(self.param, "Negative", self.reactions)
-            submod_p = pybamm.electrode.ohm.Full(
-                self.param, "Positive", self.reactions, self.options["operating mode"]
-            )
+            submod_p = pybamm.electrode.ohm.Full(self.param, "Positive", self.reactions)
         else:
             submod_n = pybamm.electrode.ohm.SurfaceForm(self.param, "Negative")
             submod_p = pybamm.electrode.ohm.SurfaceForm(self.param, "Positive")

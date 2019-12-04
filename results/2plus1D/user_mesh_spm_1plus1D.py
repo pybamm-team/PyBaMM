@@ -64,7 +64,7 @@ output_variables = [
     "X-averaged negative particle surface concentration [mol.m-3]",
     "X-averaged positive particle surface concentration [mol.m-3]",
     # "X-averaged cell temperature [K]",
-    "Local current collector potential difference [V]",
+    "Local voltage [V]",
     "Current collector current density [A.m-2]",
     "Terminal voltage [V]",
     "Volume-averaged cell temperature [K]",
