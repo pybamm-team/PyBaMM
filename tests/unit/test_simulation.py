@@ -275,17 +275,6 @@ class TestSimulation(unittest.TestCase):
         sim_load = pybamm.load_sim("test.pickle")
         self.assertEqual(sim.model.name, sim_load.model.name)
 
-    @unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
-    def test_save_load_klu(self):
-        model = pybamm.lead_acid.LOQS({"surface form": "algebraic"})
-        model.use_jacobian = True
-        # with KLU solver
-        sim = pybamm.Simulation(model, solver=pybamm.IDAKLUSolver())
-        sim.solve()
-        sim.save("test.pickle")
-        sim_load = pybamm.load_sim("test.pickle")
-        self.assertEqual(sim.model.name, sim_load.model.name)
-
     def test_set_defaults2(self):
         model = pybamm.lithium_ion.SPM()
 

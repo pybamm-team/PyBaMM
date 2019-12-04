@@ -122,10 +122,6 @@ class TestBaseBatteryModel(unittest.TestCase):
             pybamm.BaseBatteryModel({"surface form": "bad surface form"})
         with self.assertRaisesRegex(pybamm.OptionError, "particle model"):
             pybamm.BaseBatteryModel({"particle": "bad particle"})
-        with self.assertRaisesRegex(pybamm.OptionError, "option single"):
-            pybamm.BaseBatteryModel(
-                {"current collector": "single particle potential pair"}
-            )
         with self.assertRaisesRegex(pybamm.OptionError, "option set external"):
             pybamm.BaseBatteryModel({"current collector": "set external potential"})
 

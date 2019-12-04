@@ -8,7 +8,7 @@ import unittest
 import pybamm.models.submodels.current_collector as cc
 
 
-class TestSetPotetetialSPM1plus1DModel(unittest.TestCase):
+class TestSetPotentialSPM1plus1DModel(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.standard_parameters_lithium_ion
         submodel = cc.SetPotentialSingleParticle1plus1D(param)
@@ -22,6 +22,7 @@ class TestSetPotetetialSPM1plus1DModel(unittest.TestCase):
             "X-averaged positive electrode ohmic losses": val,
             "X-averaged negative electrode ohmic losses": val,
             "Total current density": 0,
+            "Local voltage": val,
         }
         std_tests = tests.StandardSubModelTests(submodel, variables)
 
@@ -42,6 +43,7 @@ class TestSetPotetetialSPM2plus1DModel(unittest.TestCase):
             "X-averaged positive electrode ohmic losses": val,
             "X-averaged negative electrode ohmic losses": val,
             "Total current density": 0,
+            "Local voltage": val,
         }
         std_tests = tests.StandardSubModelTests(submodel, variables)
 

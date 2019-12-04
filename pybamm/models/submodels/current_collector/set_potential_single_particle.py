@@ -67,7 +67,7 @@ class BaseSetPotentialSingleParticle(BaseModel):
         delta_phi_s_p_av = variables["X-averaged positive electrode ohmic losses"]
 
         i_boundary_cc = variables["Current collector current density"]
-        v_boundary_cc = variables["Local current collector potential difference"]
+        v_boundary_cc = variables["Local voltage"]
         # The voltage-current expression from the SPM(e)
         local_voltage_expression = (
             ocp_p_av

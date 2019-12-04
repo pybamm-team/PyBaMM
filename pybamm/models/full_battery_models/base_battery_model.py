@@ -37,10 +37,8 @@ class BaseBatteryModel(pybamm.BaseModel):
                 (default) or "varying". Not currently implemented in any of the models.
             * "current collector" : str, optional
                 Sets the current collector model to use. Can be "uniform" (default),
-                "potential pair", "potential pair quite conductive", "single particle
-                potential pair" or "set external potential". The submodel
-                "single particle potential pair" can only be used with lithium-ion
-                single particle models. The submodel "set external potential" can only
+                "potential pair", "potential pair quite conductive", or
+                "set external potential". The submodel "set external potential" can only
                 be used with the SPM.
             * "particle" : str, optional
                 Sets the submodel to use to describe behaviour within the particle.
@@ -196,7 +194,6 @@ class BaseBatteryModel(pybamm.BaseModel):
             "uniform",
             "potential pair",
             "potential pair quite conductive",
-            "single particle potential pair",
             "set external potential",
         ]:
             raise pybamm.OptionError(
@@ -245,16 +242,6 @@ class BaseBatteryModel(pybamm.BaseModel):
                 raise pybamm.OptionError(
                     "thermal effects not implemented for lead-acid models"
                 )
-        if options[
-            "current collector"
-        ] == "single particle potential pair" and not isinstance(
-            self, (pybamm.lithium_ion.SPM, pybamm.lithium_ion.SPMe)
-        ):
-            raise pybamm.OptionError(
-                "option {} only compatible with SPM or SPMe".format(
-                    options["current collector"]
-                )
-            )
         if options["current collector"] == "set external potential" and not isinstance(
             self, pybamm.lithium_ion.SPM
         ):
@@ -662,8 +649,6 @@ class BaseBatteryModel(pybamm.BaseModel):
                 submodel = pybamm.current_collector.PotentialPair1plus1D(self.param)
             elif self.options["dimensionality"] == 2:
                 submodel = pybamm.current_collector.PotentialPair2plus1D(self.param)
-        elif self.options["current collector"] == "single particle potential pair":
-            submodel = pybamm.current_collector.SingleParticlePotentialPair(self.param)
         elif self.options["current collector"] == "set external potential":
             if self.options["dimensionality"] == 1:
                 submodel = pybamm.current_collector.SetPotentialSingleParticle1plus1D(
