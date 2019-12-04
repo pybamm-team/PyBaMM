@@ -187,6 +187,7 @@ class Simulation:
         if solver is None:
             solver = self.solver
 
+        self.t_eval = t_eval
         self._solution = solver.solve(self.built_model, t_eval, inputs=inputs)
 
     def step(self, dt, solver=None, external_variables=None, save=True):
