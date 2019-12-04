@@ -23,6 +23,9 @@ class TestInputParameter(unittest.TestCase):
             a.evaluate(u="not a dictionary")
         with self.assertRaises(KeyError):
             a.evaluate(u={"bad param": 5})
+        # if u is not provided it gets turned into a dictionary and then raises KeyError
+        with self.assertRaises(KeyError):
+            a.evaluate()
 
 
 if __name__ == "__main__":

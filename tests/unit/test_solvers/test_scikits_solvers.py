@@ -568,6 +568,15 @@ class TestScikitsSolvers(unittest.TestCase):
         )
         N = combined_submesh[0].npts
 
+        def jacobian(t, y):
+            return np.block(
+                [
+                    [0.1 * np.eye(N), np.zeros((N, N))],
+                    [2.0 * np.eye(N), -1.0 * np.eye(N)],
+                ]
+            )
+
+        model.jacobian = jacobian
         # Solve
         solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 1, 100)
