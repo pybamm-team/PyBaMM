@@ -159,9 +159,7 @@ class DaeSolver(pybamm.BaseSolver):
                 jac = pybamm.EvaluatorPython(jac)
 
             jacobian = Jacobian(jac.evaluate)
-            jacobian_alg = Jacobian(jac_algebraic.evaluate)
-            jacobian_alg.set_pad_ext(self.y_pad, self.y_ext)
-            jacobian_alg.set_inputs(inputs)
+            jacobian_alg = JacobianAlgebraic(jac_algebraic.evaluate)
 
         else:
             jacobian = None
@@ -185,6 +183,8 @@ class DaeSolver(pybamm.BaseSolver):
         rhs.set_inputs(inputs)
         algebraic.set_pad_ext(self.y_pad, self.y_ext)
         algebraic.set_inputs(inputs)
+        jacobian_alg.set_pad_ext(self.y_pad, self.y_ext)
+        jacobian_alg.set_inputs(inputs)
 
         if len(model.algebraic) > 0:
             y0 = self.calculate_consistent_initial_conditions(
@@ -302,6 +302,8 @@ class DaeSolver(pybamm.BaseSolver):
         rhs.set_inputs(inputs)
         algebraic.set_pad_ext(self.y_pad, self.y_ext)
         algebraic.set_inputs(inputs)
+        jacobian_alg.set_pad_ext(self.y_pad, self.y_ext)
+        jacobian_alg.set_inputs(inputs)
 
         if len(model.algebraic) > 0:
 
