@@ -104,7 +104,7 @@ class DaeSolver(pybamm.BaseSolver):
 
         return solution, solve_time, termination
 
-    def set_up(self, model, inputs):
+    def set_up(self, model, inputs=None):
         """Unpack model, perform checks, simplify and calculate jacobian.
 
         Parameters
@@ -112,10 +112,12 @@ class DaeSolver(pybamm.BaseSolver):
         model : :class:`pybamm.BaseModel`
             The model whose solution to calculate. Must have attributes rhs and
             initial_conditions
-        inputs : dict
+        inputs : dict, optional
             Any input parameters to pass to the model when solving
 
         """
+        inputs = inputs or {}
+
         # create simplified rhs, algebraic and event expressions
         concatenated_rhs = model.concatenated_rhs
         concatenated_algebraic = model.concatenated_algebraic
@@ -210,7 +212,7 @@ class DaeSolver(pybamm.BaseSolver):
         self.event_funs = [get_event_class(event) for event in events.values()]
         self.jacobian = jacobian
 
-    def set_up_casadi(self, model, inputs):
+    def set_up_casadi(self, model, inputs=None):
         """Convert model to casadi format and use their inbuilt functionalities.
 
         Parameters
@@ -218,10 +220,12 @@ class DaeSolver(pybamm.BaseSolver):
         model : :class:`pybamm.BaseModel`
             The model whose solution to calculate. Must have attributes rhs and
             initial_conditions
-        inputs : dict
+        inputs : dict, optional
             Any input parameters to pass to the model when solving
 
         """
+        inputs = inputs or {}
+
         # Convert model attributes to casadi
         t_casadi = casadi.MX.sym("t")
         y0 = model.concatenated_initial_conditions

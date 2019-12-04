@@ -61,7 +61,7 @@ class OdeSolver(pybamm.BaseSolver):
 
         return solution, solve_time, termination
 
-    def set_up(self, model, inputs):
+    def set_up(self, model, inputs=None):
         """Unpack model, perform checks, simplify and calculate jacobian.
 
         Parameters
@@ -85,6 +85,8 @@ class OdeSolver(pybamm.BaseSolver):
             raise pybamm.SolverError(
                 """Cannot use ODE solver to solve model with DAEs"""
             )
+
+        inputs = inputs or {}
 
         # create simplified rhs and event expressions
         concatenated_rhs = model.concatenated_rhs
@@ -149,7 +151,7 @@ class OdeSolver(pybamm.BaseSolver):
         self.event_funs = [get_event_class(event) for event in events.values()]
         self.jacobian = jacobian
 
-    def set_up_casadi(self, model, inputs):
+    def set_up_casadi(self, model, inputs=None):
         """Convert model to casadi format and use their inbuilt functionalities.
 
         Parameters
@@ -177,6 +179,7 @@ class OdeSolver(pybamm.BaseSolver):
 
         t_casadi = casadi.MX.sym("t")
         y_casadi = casadi.MX.sym("y", len(y0))
+        inputs = inputs or {}
         u_casadi = {name: casadi.MX.sym(name) for name in inputs.keys()}
 
         if self.y_pad is not None:
