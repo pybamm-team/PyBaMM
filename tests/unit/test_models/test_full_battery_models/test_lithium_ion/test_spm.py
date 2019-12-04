@@ -178,6 +178,18 @@ class TestSPM(unittest.TestCase):
         model.check_well_posedness()
 
 
+class TestSPMExternalCircuits(unittest.TestCase):
+    def test_well_posed_voltage(self):
+        options = {"operating mode": "voltage"}
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
+
+    def test_well_posed_power(self):
+        options = {"operating mode": "power"}
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
+
+
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys

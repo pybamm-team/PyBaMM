@@ -57,24 +57,11 @@ class LOQS(BaseModel):
         Define how the external circuit defines the boundary conditions for the model,
         e.g. (not necessarily constant-) current, voltage, etc
         """
-        if self.options["operating mode"] == "current":
-            self.submodels[
-                "leading order external circuit"
-            ] = pybamm.external_circuit.LeadingOrderCurrentControl(self.param)
-        elif self.options["operating mode"] == "voltage":
-            self.submodels[
-                "leading order external circuit"
-            ] = pybamm.external_circuit.VoltageFunctionControl(self.param)
-        elif self.options["operating mode"] == "power":
-            self.submodels[
-                "leading order external circuit"
-            ] = pybamm.external_circuit.PowerFunctionControl(self.param)
-        elif callable(self.options["operating mode"]):
-            self.submodels[
-                "leading order external circuit"
-            ] = pybamm.external_circuit.FunctionControl(
-                self.param, self.options["operating mode"]
-            )
+        super().set_external_circuit_submodel()
+        # replace 'external circuit' with 'leading-order external circuit'
+        self.submodels["leading order external circuit"] = self.submodels.pop(
+            "external circuit"
+        )
 
     def set_current_collector_submodel(self):
 

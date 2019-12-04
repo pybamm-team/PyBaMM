@@ -124,6 +124,8 @@ class TestBaseBatteryModel(unittest.TestCase):
             pybamm.BaseBatteryModel({"particle": "bad particle"})
         with self.assertRaisesRegex(pybamm.OptionError, "option set external"):
             pybamm.BaseBatteryModel({"current collector": "set external potential"})
+        with self.assertRaisesRegex(pybamm.OptionError, "operating mode"):
+            pybamm.BaseBatteryModel({"operating mode": "bad operating mode"})
 
     def test_build_twice(self):
         model = pybamm.lithium_ion.SPM()  # need to pick a model to set vars and build

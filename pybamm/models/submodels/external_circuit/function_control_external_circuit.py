@@ -12,9 +12,12 @@ class FunctionControl(BaseModel):
         super().__init__(param)
         self.external_circuit_class = external_circuit_class
 
+    def _get_current_variable(self):
+        return pybamm.Variable("Total current density")
+
     def get_fundamental_variables(self):
         # Current is a variable
-        i_cell = pybamm.Variable("Total current density")
+        i_cell = self._get_current_variable()
         variables = self._get_current_variables(i_cell)
 
         # Add discharge capacity variable
@@ -24,9 +27,9 @@ class FunctionControl(BaseModel):
         # These are not implemented yet but can be used later with the Experiment class
         # to simulate different external circuit conditions sequentially within a
         # single model (for example Constant Current - Constant Voltage)
-        for i in range(self.external_circuit_class.num_switches):
-            s = pybamm.Parameter("Switch {}".format(i + 1))
-            variables["Switch {}".format(i + 1)] = s
+        # for i in range(self.external_circuit_class.num_switches):
+        #     s = pybamm.Parameter("Switch {}".format(i + 1))
+        #     variables["Switch {}".format(i + 1)] = s
 
         return variables
 
@@ -81,26 +84,10 @@ class LeadingOrderFunctionControl(FunctionControl, LeadingOrderBaseModel):
     """External circuit with an arbitrary function, at leading order. """
 
     def __init__(self, param, external_circuit_class):
-        super().__init__(param)
-        self.external_circuit_class = external_circuit_class
+        super().__init__(param, external_circuit_class)
 
-    def get_fundamental_variables(self):
-        # Current is a variable
-        i_cell = pybamm.Variable("Leading-order total current density")
-        variables = self._get_current_variables(i_cell)
-
-        # Add discharge capacity variable
-        variables.update(super().get_fundamental_variables())
-
-        # Add switches
-        # These are not implemented yet but can be used later with the Experiment class
-        # to simulate different external circuit conditions sequentially within a
-        # single model (for example Constant Current - Constant Voltage)
-        for i in range(self.external_circuit_class.num_switches):
-            s = pybamm.Parameter("Switch {}".format(i + 1))
-            variables["Switch {}".format(i + 1)] = s
-
-        return variables
+    def _get_current_variable(self):
+        return pybamm.Variable("Leading-order total current density")
 
 
 class LeadingOrderVoltageFunctionControl(LeadingOrderFunctionControl):

@@ -94,8 +94,14 @@ class TestUpdateParameters(unittest.TestCase):
         # test on simple lead-acid model
         model1 = pybamm.lead_acid.LOQS()
         modeltest1 = tests.StandardModelTest(model1)
+        parameter_values = pybamm.ParameterValues(
+            chemistry=pybamm.parameter_sets.Sulzer2019
+        )
+        parameter_values.update({"C-rate": 0.05})
         t_eval = np.linspace(0, 0.5)
-        modeltest1.test_all(t_eval=t_eval, skip_output_tests=True)
+        modeltest1.test_all(
+            param=parameter_values, t_eval=t_eval, skip_output_tests=True
+        )
 
         T1, Y1 = modeltest1.solution.t, modeltest1.solution.y
 
@@ -105,6 +111,7 @@ class TestUpdateParameters(unittest.TestCase):
         )
         parameter_values_update.update(
             {
+                "C-rate": 0.05,
                 "Negative electrode thickness [m]": 0.0002,
                 "Separator thickness [m]": 0.0003,
                 "Positive electrode thickness [m]": 0.0004,
