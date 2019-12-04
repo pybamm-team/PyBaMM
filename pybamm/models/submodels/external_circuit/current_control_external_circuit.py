@@ -1,7 +1,6 @@
 #
 # External circuit with current control
 #
-import pybamm
 from .base_external_circuit import BaseModel, LeadingOrderBaseModel
 
 
@@ -26,18 +25,6 @@ class CurrentControl(BaseModel):
 
         # Add discharge capacity variable
         variables.update(super().get_fundamental_variables())
-
-        return variables
-
-    def get_coupled_variables(self, variables):
-        # Update terminal voltage
-        phi_s_cp_dim = variables["Positive current collector potential [V]"]
-        phi_s_cp = variables["Positive current collector potential"]
-
-        V = pybamm.boundary_value(phi_s_cp, "positive tab")
-        V_dim = pybamm.boundary_value(phi_s_cp_dim, "positive tab")
-        variables["Terminal voltage"] = V
-        variables["Terminal voltage [V]"] = V_dim
 
         return variables
 

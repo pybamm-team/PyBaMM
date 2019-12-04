@@ -126,14 +126,18 @@ class BaseElectrode(pybamm.BaseSubModel):
 
         pot_scale = self.param.potential_scale
         U_ref = self.param.U_p_ref - self.param.U_n_ref
+        phi_s_cp_dim = U_ref + phi_s_cp * pot_scale
 
         # Local potential difference
         V_cc = phi_s_cp - phi_s_cn
 
-        # terminal voltage (Note: phi_s_cn is zero at the negative tab)
+        # Terminal voltage
+        # Note phi_s_cn is always zero at the negative tab
+        V = pybamm.boundary_value(phi_s_cp, "positive tab")
+        V_dim = pybamm.boundary_value(phi_s_cp_dim, "positive tab")
+
         # Voltage is local current collector potential difference at the tabs, in 1D
         # this will be equal to the local current collector potential difference
-        phi_s_cp_dim = U_ref + phi_s_cp * pot_scale
 
         variables = {
             "Negative current collector potential": phi_s_cn,
@@ -142,6 +146,8 @@ class BaseElectrode(pybamm.BaseSubModel):
             "Positive current collector potential [V]": phi_s_cp_dim,
             "Local voltage": V_cc,
             "Local voltage [V]": U_ref + V_cc * pot_scale,
+            "Terminal voltage": V,
+            "Terminal voltage [V]": V_dim,
         }
 
         return variables
@@ -170,18 +176,13 @@ class BaseElectrode(pybamm.BaseSubModel):
         i_s = pybamm.Concatenation(i_s_n, i_s_s, i_s_p)
 
         variables.update({"Electrode current density": i_s})
+
         if self.set_positive_potential:
-            # don't overwrite current collector potentials
-            try:
-                phi_s_cn = variables["Negative current collector potential"]
-            except KeyError:
-                phi_s_n = variables["Negative electrode potential"]
-                phi_s_cn = pybamm.boundary_value(phi_s_n, "left")
-            try:
-                phi_s_cp = variables["Positive current collector potential"]
-            except KeyError:
-                phi_s_p = variables["Positive electrode potential"]
-                phi_s_cp = pybamm.boundary_value(phi_s_p, "right")
+            # Get phi_s_cn from the current collector submodel and phi_s_p from the
+            # electrode submodel
+            phi_s_cn = variables["Negative current collector potential"]
+            phi_s_p = variables["Positive electrode potential"]
+            phi_s_cp = pybamm.boundary_value(phi_s_p, "right")
             variables.update(
                 self._get_standard_current_collector_potential_variables(
                     phi_s_cn, phi_s_cp

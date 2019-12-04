@@ -32,9 +32,8 @@ class BaseSetPotentialSingleParticle(BaseModel):
     def get_fundamental_variables(self):
 
         phi_s_cn = pybamm.standard_variables.phi_s_cn
-        phi_s_cp = pybamm.standard_variables.phi_s_cp
 
-        variables = self._get_standard_potential_variables(phi_s_cn, phi_s_cp)
+        variables = self._get_standard_negative_potential_variables(phi_s_cn)
 
         # TO DO: grad not implemented for 2D yet
         i_cc = pybamm.Scalar(0)
@@ -53,11 +52,10 @@ class BaseSetPotentialSingleParticle(BaseModel):
 
     def set_rhs(self, variables):
         phi_s_cn = variables["Negative current collector potential"]
-        phi_s_cp = variables["Positive current collector potential"]
 
         # Dummy equations so that PyBaMM doesn't change the potentials during solve
         # i.e. d_phi/d_t = 0. Potentials are set externally between steps.
-        self.rhs = {phi_s_cn: pybamm.Scalar(0), phi_s_cp: pybamm.Scalar(0)}
+        self.rhs = {phi_s_cn: pybamm.Scalar(0)}
 
     def set_algebraic(self, variables):
         ocp_p_av = variables["X-averaged positive electrode open circuit potential"]
@@ -84,17 +82,13 @@ class BaseSetPotentialSingleParticle(BaseModel):
 
     def set_initial_conditions(self, variables):
 
-        param = self.param
         applied_current = variables["Total current density"]
         cc_area = self._get_effective_current_collector_area()
         phi_s_cn = variables["Negative current collector potential"]
-        phi_s_cp = variables["Positive current collector potential"]
         i_boundary_cc = variables["Current collector current density"]
 
         self.initial_conditions = {
             phi_s_cn: pybamm.Scalar(0),
-            phi_s_cp: param.U_p(param.c_p_init, param.T_init)
-            - param.U_n(param.c_n_init, param.T_init),
             i_boundary_cc: applied_current / cc_area,
         }
 
