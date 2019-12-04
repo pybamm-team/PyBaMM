@@ -25,7 +25,7 @@ def download_extract_library(url):
     if NO_WGET:
         # The NO_WGET is set to true if the wget could not be
         # imported.
-        error_msg = "Could not find wget module. Please install wget module."
+        error_msg = "Could not find wget module. Please install wget module (pip install wget)."
         raise ModuleNotFoundError(error_msg)
     archive = wget.download(url)
     tar = tarfile.open(archive)
