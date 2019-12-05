@@ -178,7 +178,7 @@ class CasadiSolver(pybamm.DaeSolver):
             )
             return solution
 
-    def compute_solution(self, model, t_eval, inputs):
+    def compute_solution(self, model, t_eval, inputs=None):
         """Calculate the solution of the model at specified times. In this class, we
         overwrite the behaviour of :class:`pybamm.DaeSolver`, since CasADi requires
         slightly different syntax.
@@ -190,7 +190,7 @@ class CasadiSolver(pybamm.DaeSolver):
             initial_conditions
         t_eval : numeric type
             The times at which to compute the solution
-        inputs : dict
+        inputs : dict, optional
             Any input parameters to pass to the model when solving
 
         """

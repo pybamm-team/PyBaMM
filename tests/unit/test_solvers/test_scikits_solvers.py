@@ -720,9 +720,9 @@ class TestScikitsSolvers(unittest.TestCase):
 
     def test_model_solver_dae_inputs_events(self):
         # Create model
-        for format in ["python", "casadi"]:
+        for form in ["python", "casadi"]:
             model = pybamm.BaseModel()
-            model.convert_to_format = format
+            model.convert_to_format = form
             whole_cell = ["negative electrode", "separator", "positive electrode"]
             var1 = pybamm.Variable("var1", domain=whole_cell)
             var2 = pybamm.Variable("var2", domain=whole_cell)

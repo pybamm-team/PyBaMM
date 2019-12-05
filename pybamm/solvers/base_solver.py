@@ -230,7 +230,7 @@ class BaseSolver(object):
                 )
             self.y_ext[y_slice] = var_vals
 
-    def compute_solution(self, model, t_eval):
+    def compute_solution(self, model, t_eval, inputs=None):
         """Calculate the solution of the model at specified times. Note: this
         does *not* execute the solver setup.
 
@@ -241,11 +241,13 @@ class BaseSolver(object):
             initial_conditions
         t_eval : numeric type
             The times at which to compute the solution
+        inputs : dict, optional
+            Any input parameters to pass to the model when solving
 
         """
         raise NotImplementedError
 
-    def set_up(self, model):
+    def set_up(self, model, inputs=None):
         """Unpack model, perform checks, simplify and calculate jacobian.
 
         Parameters
@@ -253,11 +255,13 @@ class BaseSolver(object):
         model : :class:`pybamm.BaseModel`
             The model whose solution to calculate. Must have attributes rhs and
             initial_conditions
+        inputs : dict, optional
+            Any input parameters to pass to the model when solving
 
         """
         raise NotImplementedError
 
-    def set_up_casadi(self, model):
+    def set_up_casadi(self, model, inputs=None):
         """Convert model to casadi format and use their inbuilt functionalities.
 
         Parameters
@@ -265,6 +269,8 @@ class BaseSolver(object):
         model : :class:`pybamm.BaseModel`
             The model whose solution to calculate. Must have attributes rhs and
             initial_conditions
+        inputs : dict, optional
+            Any input parameters to pass to the model when solving
 
         """
         raise NotImplementedError
