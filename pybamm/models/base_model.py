@@ -538,4 +538,3 @@ class BaseModel(object):
             return pybamm.IDAKLUSolver()
         else:
             return pybamm.CasadiSolver(mode="safe")
-

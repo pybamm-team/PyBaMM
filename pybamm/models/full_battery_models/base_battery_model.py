@@ -156,7 +156,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "particle": "Fickian diffusion",
             "thermal": "isothermal",
             "thermal current collector": False,
-            "external submodels": []
+            "external submodels": [],
         }
         options = default_options
         # any extra options overwrite the default options
