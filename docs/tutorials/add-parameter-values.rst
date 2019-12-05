@@ -154,6 +154,8 @@ or, equivalently in this case (since the only difference from the standard param
         }
     )
 
+See the `"Getting Started" tutorial <https://github.com/pybamm-team/PyBaMM/blob/master/examples/notebooks/Getting%20Started/Tutorial%202%20-%20Setting%20Parameter%20Values.ipynb>`_ for examples of setting parameters in action.
+
 Unit tests for the new class
 ----------------------------
 
