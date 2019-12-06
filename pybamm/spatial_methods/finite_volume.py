@@ -1105,10 +1105,69 @@ class FiniteVolume(pybamm.SpatialMethod):
 
             return pybamm.Matrix(matrix) @ array
 
+        def harmonic_mean(array):
+            """Calculate the harmonic mean of an array using matrix multiplication"""
+            # Create appropriate submesh by combining submeshes in domain
+            submesh_list = self.mesh.combine_submeshes(*array.domain)
+
+            # Can just use 1st entry of list to obtain the point etc
+            submesh = submesh_list[0]
+
+            # Create 1D matrix using submesh
+            n = submesh.npts
+
+            # Second dimension length
+            second_dim_len = len(submesh_list)
+
+            if shift_key == "node to edge":
+                # matrix to computes edge values at exterior edges of domain
+                edges_sub_matrix_left = csr_matrix(
+                    ([1.5, -0.5], ([0, 0], [0, 1])), shape=(1, n)
+                )
+                edges_sub_matrix_center = csr_matrix((n - 1, n))
+                edges_sub_matrix_right = csr_matrix(
+                    ([-0.5, 1.5], ([0, 0], [n - 2, n - 1])), shape=(1, n)
+                )
+                edges_sub_matrix = vstack(
+                    [edges_sub_matrix_left, edges_sub_matrix_center, edges_sub_matrix_right]
+                )
+                edges_matrix = kron(eye(second_dim_len), edges_sub_matrix)
+
+                # matrix to compute internal edges
+                sub_AD1 = hstack([eye(n-1), csr_matrix((n-1, 1))])
+                sub_AD2 = hstack([csr_matrix((n-1, 1)), eye(n-1)])
+                AD1 = csr_matrix(kron(eye(second_dim_len), sub_AD1))
+                AD2 = csr_matrix(kron(eye(second_dim_len), sub_AD2))
+                D1 = pybamm.Matrix(AD1) @ array
+                D2 = pybamm.Matrix(AD2) @ array
+                dx = submesh.d_edges
+                sub_beta = (dx[:-1] / (dx[1:] + dx[:-1]))[:, np.newaxis]
+                beta = pybamm.Array(np.kron(np.ones((second_dim_len, 1)), sub_beta))
+                # Note: add small number to denominator to regularise D_int
+                D_int = D1 * D2 / (D2 * beta + D1 * (1 - beta) + 1E-16)
+                sub_to_full = vstack([csr_matrix((1, n-1)), eye(n-1), csr_matrix((1, n-1))])
+                to_full = kron(eye(second_dim_len), sub_to_full)
+
+                return pybamm.Matrix(edges_matrix) @ array + pybamm.Matrix(to_full) @ D_int
+
+            elif shift_key == "edge to node":
+                sub_matrix = diags([0.5, 0.5], [0, 1], shape=(n, n + 1))
+                # Generate full matrix from the submatrix
+                # Convert to csr_matrix so that we can take the index (row-slicing), which
+                # is not supported by the default kron format
+                # Note that this makes column-slicing inefficient, but this should not be an
+                # issue
+                matrix = csr_matrix(kron(eye(second_dim_len), sub_matrix))
+                return pybamm.Matrix(matrix) @ array
+
+            else:
+                raise ValueError("shift key '{}' not recognised".format(shift_key))
+
         # If discretised_symbol evaluates to number there is no need to average
         if discretised_symbol.evaluates_to_number():
             out = discretised_symbol
         else:
-            out = arithmetic_mean(discretised_symbol)
+            # out = arithmetic_mean(discretised_symbol)
+            out = harmonic_mean(discretised_symbol)
 
         return out

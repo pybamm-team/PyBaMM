@@ -13,7 +13,7 @@ os.chdir(pybamm.root_dir())
 
 try:
     comsol_variables = pickle.load(
-        open("input/comsol_results/comsol_thermal_3C.pickle", "rb")
+        open("input/comsol_results/comsol_thermal_1C.pickle", "rb")
     )
 except FileNotFoundError:
     raise FileNotFoundError("COMSOL data not found. Try running load_comsol_data.py")
@@ -31,7 +31,7 @@ geometry = pybamm_model.default_geometry
 param = pybamm_model.default_parameter_values
 param.update(
     {
-        "C-rate": 3,
+        "C-rate": 1,
         #    "Negative electrode conductivity [S.m-1]": 1e6,
         #    "Positive electrode conductivity [S.m-1]": 1e6,
     }
@@ -41,8 +41,8 @@ param.process_geometry(geometry)
 
 # create mesh
 var = pybamm.standard_spatial_vars
-# var_pts = {var.x_n: 101, var.x_s: 101, var.x_p: 101, var.r_n: 101, var.r_p: 101}
-var_pts = {var.x_n: 15, var.x_s: 15, var.x_p: 15, var.r_n: 15, var.r_p: 15}
+var_pts = {var.x_n: 101, var.x_s: 101, var.x_p: 101, var.r_n: 101, var.r_p: 101}
+#var_pts = {var.x_n: 45, var.x_s: 11, var.x_p: 56, var.r_n: 51, var.r_p: 51}
 mesh = pybamm.Mesh(geometry, pybamm_model.default_submesh_types, var_pts)
 
 # discretise model
@@ -55,8 +55,8 @@ tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
 
 # solve model at comsol times
 time = comsol_variables["time"] / tau
-solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
-# solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6, mode="fast")
+# solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
+solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6, mode="fast")
 solution = solver.solve(pybamm_model, time)
 
 "-----------------------------------------------------------------------------"
@@ -84,10 +84,10 @@ def get_interp_fun(variable_name, domain):
         comsol_x = comsol_variables["x"]
     # Make sure to use dimensional space
     pybamm_x = mesh.combine_submeshes(*domain)[0].nodes * L_x
-    variable = interp.interp1d(comsol_x, variable, axis=0)(pybamm_x)
+    variable = interp.interp1d(comsol_x, variable, axis=0, kind="cubic")(pybamm_x)
 
     def myinterp(t):
-        return interp.interp1d(comsol_t, variable)(t)[:, np.newaxis]
+        return interp.interp1d(comsol_t, variable, kind="cubic")(t)[:, np.newaxis]
 
     # Make sure to use dimensional time
     fun = pybamm.Function(myinterp, pybamm.t * tau, name=variable_name + "_comsol")
@@ -105,10 +105,10 @@ comsol_i_s_n = get_interp_fun("i_s_n", ["negative electrode"])
 comsol_i_s_p = get_interp_fun("i_s_p", ["positive electrode"])
 comsol_i_e_n = get_interp_fun("i_e_n", ["negative electrode"])
 comsol_i_e_p = get_interp_fun("i_e_p", ["positive electrode"])
-comsol_voltage = interp.interp1d(comsol_t, comsol_variables["voltage"])
+comsol_voltage = interp.interp1d(comsol_t, comsol_variables["voltage"], kind="cubic")
 comsol_temperature = get_interp_fun("temperature", whole_cell)
 comsol_temperature_av = interp.interp1d(
-    comsol_t, comsol_variables["average temperature"]
+    comsol_t, comsol_variables["average temperature"], kind="cubic"
 )
 comsol_q_irrev_n = get_interp_fun("Q_irrev_n", ["negative electrode"])
 comsol_q_irrev_p = get_interp_fun("Q_irrev_p", ["positive electrode"])
@@ -637,13 +637,16 @@ def whole_cell_comparison_plot(var, plot_times=None, plot_error=None):
 
 
 # Make plots
-plot_times = comsol_variables["time"][0::10]
+
+plot_times = comsol_variables["time"][1:]
+#plot_times = comsol_variables["time"][0::10]
 plot_error = "both"
-# plot_times = [600, 1200, 1800, 2400, 3000]
 # voltage
-time_only_plot("Terminal voltage [V]", plot_error=plot_error)
+time_only_plot("Terminal voltage [V]", plot_times=plot_times, plot_error=plot_error)
 # volume averaged temperature
-time_only_plot("Volume-averaged cell temperature [K]", plot_error=plot_error)
+time_only_plot("Volume-averaged cell temperature [K]", plot_times=plot_times, plot_error=plot_error)
+
+plot_times = [600, 1200, 1800, 2400, 3000]
 # heat sources
 # whole_cell_by_domain_comparison_plot(
 #     "Irreversible electrochemical heating [W.m-3]",
