@@ -2,6 +2,7 @@
 
 ## Features
 
+-   Added `InputParameter` node for quickly changing parameter values ([#752](https://github.com/pybamm-team/PyBaMM/pull/752))
 -   Added submodels for operating modes other than current-controlled ([#751](https://github.com/pybamm-team/PyBaMM/pull/751))
 -   Generalized importing of external variables ([#728](https://github.com/pybamm-team/PyBaMM/pull/728))
 -   Separated active and inactive material volume fractions ([#726](https://github.com/pybamm-team/PyBaMM/pull/726))

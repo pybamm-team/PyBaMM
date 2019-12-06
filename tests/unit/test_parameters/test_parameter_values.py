@@ -226,6 +226,23 @@ class TestParameterValues(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             parameter_values.process_symbol(sym)
 
+    def test_process_input_parameter(self):
+        parameter_values = pybamm.ParameterValues({"a": "[input]", "b": 3})
+        # process input parameter
+        a = pybamm.Parameter("a")
+        processed_a = parameter_values.process_symbol(a)
+        self.assertIsInstance(processed_a, pybamm.InputParameter)
+        self.assertEqual(processed_a.evaluate(u={"a": 5}), 5)
+
+        # process binary operation
+        b = pybamm.Parameter("b")
+        add = a + b
+        processed_add = parameter_values.process_symbol(add)
+        self.assertIsInstance(processed_add, pybamm.Addition)
+        self.assertIsInstance(processed_add.children[0], pybamm.InputParameter)
+        self.assertIsInstance(processed_add.children[1], pybamm.Scalar)
+        self.assertEqual(processed_add.evaluate(u={"a": 4}), 7)
+
     def test_process_function_parameter(self):
         parameter_values = pybamm.ParameterValues(
             {

@@ -179,6 +179,8 @@ class ParameterValues(dict):
                         # Save name and data
                         super().__setitem__(name, (function_name, data))
                         values[name] = (function_name, data)
+                    elif value == "[input]":
+                        super().__setitem__(name, pybamm.InputParameter(name))
                     # Anything else should be a converted to a float
                     else:
                         super().__setitem__(name, float(value))
@@ -430,8 +432,13 @@ class ParameterValues(dict):
 
         if isinstance(symbol, pybamm.Parameter):
             value = self[symbol.name]
-            # Scalar inherits name (for updating parameters) and domain (for Broadcast)
-            return pybamm.Scalar(value, name=symbol.name, domain=symbol.domain)
+            if isinstance(value, numbers.Number):
+                # Scalar inherits name (for updating parameters) and domain (for
+                # Broadcast)
+                return pybamm.Scalar(value, name=symbol.name, domain=symbol.domain)
+            elif isinstance(value, pybamm.InputParameter):
+                value.domain = symbol.domain
+                return value
 
         elif isinstance(symbol, pybamm.FunctionParameter):
             new_children = [self.process_symbol(child) for child in symbol.children]
