@@ -51,9 +51,6 @@ class TestCasadiSolver(unittest.TestCase):
         self.assertEqual(solution.termination, "final time")
 
     def test_integrate_failure(self):
-        # Turn off warnings to ignore sqrt error
-        warnings.simplefilter("ignore")
-
         t = casadi.MX.sym("t")
         y = casadi.MX.sym("y")
         u = casadi.MX.sym("u")
@@ -61,7 +58,7 @@ class TestCasadiSolver(unittest.TestCase):
 
         y0 = np.array([1])
         t_eval = np.linspace(0, 3, 100)
-        solver = pybamm.CasadiSolver()
+        solver = pybamm.CasadiSolver(regularity_check=False)
         rhs = casadi.Function("rhs", [t, y, u], [sqrt_decay])
         # Expect solver to fail when y goes negative
         with self.assertRaises(pybamm.SolverError):
@@ -84,20 +81,15 @@ class TestCasadiSolver(unittest.TestCase):
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
         # Solve with failure at t=2
-        solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8, method="idas")
         t_eval = np.linspace(0, 20, 100)
         with self.assertRaises(pybamm.SolverError):
             solver.solve(model, t_eval)
         # Solve with failure at t=0
         model.initial_conditions = {var: 0}
         disc.process_model(model)
-        solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8, method="idas")
         t_eval = np.linspace(0, 20, 100)
         with self.assertRaises(pybamm.SolverError):
             solver.solve(model, t_eval)
-
-        # Turn warnings back on
-        warnings.simplefilter("default")
 
     def test_bad_mode(self):
         with self.assertRaisesRegex(ValueError, "invalid mode"):
