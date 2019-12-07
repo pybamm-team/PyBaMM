@@ -223,8 +223,8 @@ class ParameterValues(dict):
                     value = CrateToCurrent(values["C-rate"], capacity)
                 elif isinstance(values["C-rate"], tuple):
                     data = values["C-rate"][1]
-                    data[:, 1] *= capacity
-                    value = (values["C-rate"][0] + "_toCrate", data)
+                    data[:, 1] = data[:, 1] * capacity
+                    value = (values["C-rate"][0] + "_to_Crate", data)
                 else:
                     value = values["C-rate"] * capacity
                 super().__setitem__("Current function [A]", value)
@@ -233,8 +233,8 @@ class ParameterValues(dict):
                     value = CurrentToCrate(values["Current function [A]"], capacity)
                 elif isinstance(values["Current function [A]"], tuple):
                     data = values["Current function [A]"][1]
-                    data[:, 1] /= capacity
-                    value = (values["Current function [A]"][0] + "_toCurrent", data)
+                    data[:, 1] = data[:, 1] / capacity
+                    value = (values["Current function [A]"][0] + "_to_current", data)
                 else:
                     value = values["Current function [A]"] / capacity
                 super().__setitem__("C-rate", value)

@@ -6,7 +6,6 @@ import pybamm
 import unittest
 import numpy as np
 from tests import get_mesh_for_testing, get_discretisation_for_testing
-import warnings
 
 
 class TestCasadiSolver(unittest.TestCase):

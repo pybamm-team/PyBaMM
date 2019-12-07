@@ -199,7 +199,7 @@ class TestSPMExternalCircuits(unittest.TestCase):
                 return V + I - pybamm.FunctionParameter("Function", pybamm.t)
 
         options = {"operating mode": ExternalCircuitFunction()}
-        model = pybamm.lead_acid.LOQS(options)
+        model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
 
