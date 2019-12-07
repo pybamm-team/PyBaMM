@@ -87,7 +87,7 @@ Test on the models
 
 In theory, any existing model can now be discretised using ``MyFastMethod`` instead of their default spatial methods, with no extra work from here.
 To test this, add something like the following test to one of the model test files
-(e.g. `DFN <https://github.com/pybamm-team/PyBaMM/blob/master/tests/unit/test_models/test_lithium_ion/test_lithium_ion_dfn.py>`_):
+(e.g. `DFN <https://github.com/pybamm-team/PyBaMM/blob/master/tests/integration/test_models/test_full_battery_models/test_lithium_ion/test_dfn.py>`_):
 
 .. code-block:: python
 

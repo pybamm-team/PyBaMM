@@ -98,6 +98,7 @@ from .expression_tree.matrix import Matrix
 from .expression_tree.unary_operators import *
 from .expression_tree.functions import *
 from .expression_tree.interpolant import Interpolant
+from .expression_tree.input_parameter import InputParameter
 from .expression_tree.parameter import Parameter, FunctionParameter
 from .expression_tree.broadcasts import (
     Broadcast,

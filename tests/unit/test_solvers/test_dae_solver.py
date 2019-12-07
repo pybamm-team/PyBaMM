@@ -77,6 +77,11 @@ class TestDaeSolver(unittest.TestCase):
         ):
             solver.calculate_consistent_initial_conditions(rhs, algebraic, y0)
 
+    def test_errors(self):
+        solver = pybamm.DaeSolver()
+        with self.assertRaises(NotImplementedError):
+            solver.integrate(None, None, None)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

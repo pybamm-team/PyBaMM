@@ -16,5 +16,6 @@ Expression Tree
   concatenations
   broadcasts
   functions
+  input_parameter
   interpolant
   operations/index
