@@ -60,12 +60,12 @@ else:
 
     # solver
     solver = pybamm.CasadiSolver(
-        atol=1e-6, rtol=1e-6, root_tol=1e-3, root_method="hybr", mode="fast"
+        atol=1e-6, rtol=1e-6, root_tol=1e-6, root_method="hybr", mode="fast"
     )
 
     # simulation object
     simulation = pybamm.Simulation(
-        pybamm_model, parameter_values=param, var_pts=var_pts, solver=solver,
+        pybamm_model, parameter_values=param, var_pts=var_pts, solver=solver
     )
 
     # build and save simulation
@@ -158,7 +158,6 @@ shared.plot_cc_var(
     plot_error="both",
     # scale=0.06,  # typical variation in current density
     scale="auto",
-
 )
 plt.savefig("1plus1D_current.eps", format="eps", dpi=300)
 plt.show()

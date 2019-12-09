@@ -347,7 +347,7 @@ class DaeSolver(pybamm.BaseSolver):
             mass_matrix_inv = casadi.MX(model.mass_matrix_inv.entries)
             explicit_rhs = mass_matrix_inv @ concatenated_rhs
             self.casadi_rhs = casadi.Function(
-                "rhs", [t_casadi, y_casadi], [explicit_rhs]
+                "rhs", [t_casadi, y_casadi_w_ext, u_casadi_stacked], [explicit_rhs]
             )
             self.casadi_algebraic = concatenated_algebraic_fn
 

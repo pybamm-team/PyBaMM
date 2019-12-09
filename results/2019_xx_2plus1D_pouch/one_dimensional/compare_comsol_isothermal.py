@@ -41,8 +41,15 @@ param.process_geometry(geometry)
 
 # create mesh
 var = pybamm.standard_spatial_vars
-# var_pts = {var.x_n: 101, var.x_s: 31, var.x_p: 101, var.r_n: 31, var.r_p: 31}
-var_pts = {var.x_n: 45, var.x_s: 11, var.x_p: 56, var.r_n: 51, var.r_p: 51}
+# var_pts = {var.x_n: 101, var.x_s: 101, var.x_p: 101, var.r_n: 101, var.r_p: 101}
+# var_pts = {var.x_n: 45, var.x_s: 11, var.x_p: 56, var.r_n: 51, var.r_p: 51}
+var_pts = {
+    var.x_n: int(param.evaluate(pybamm.geometric_parameters.L_n / 1e-6)),
+    var.x_s: int(param.evaluate(pybamm.geometric_parameters.L_s / 1e-6)),
+    var.x_p: int(param.evaluate(pybamm.geometric_parameters.L_n / 1e-6)),
+    var.r_n: int(param.evaluate(pybamm.geometric_parameters.R_n / 1e-7)),
+    var.r_p: int(param.evaluate(pybamm.geometric_parameters.R_p / 1e-7)),
+}
 mesh = pybamm.Mesh(geometry, pybamm_model.default_submesh_types, var_pts)
 
 # discretise model
@@ -83,10 +90,10 @@ def get_interp_fun(variable_name, domain):
         comsol_x = comsol_variables["x"]
     # Make sure to use dimensional space
     pybamm_x = mesh.combine_submeshes(*domain)[0].nodes * L_x
-    variable = interp.interp1d(comsol_x, variable, axis=0)(pybamm_x)
+    variable = interp.interp1d(comsol_x, variable, axis=0, kind="cubic")(pybamm_x)
 
     def myinterp(t):
-        return interp.interp1d(comsol_t, variable)(t)[:, np.newaxis]
+        return interp.interp1d(comsol_t, variable, kind="cubic")(t)[:, np.newaxis]
 
     # Make sure to use dimensional time
     fun = pybamm.Function(myinterp, pybamm.t * tau, name=variable_name + "_comsol")
@@ -104,7 +111,7 @@ comsol_i_s_n = get_interp_fun("i_s_n", ["negative electrode"])
 comsol_i_s_p = get_interp_fun("i_s_p", ["positive electrode"])
 comsol_i_e_n = get_interp_fun("i_e_n", ["negative electrode"])
 comsol_i_e_p = get_interp_fun("i_e_p", ["positive electrode"])
-comsol_voltage = interp.interp1d(comsol_t, comsol_variables["voltage"])
+comsol_voltage = interp.interp1d(comsol_t, comsol_variables["voltage"], kind="cubic")
 
 # Create comsol model with dictionary of Matrix variables
 comsol_model = pybamm.BaseModel()
@@ -155,10 +162,10 @@ def time_only_plot(var, plot_times=None, plot_error=None):
 
     # Process variables
     pybamm_var = pybamm.ProcessedVariable(
-        pybamm_model.variables[var], solution.t, solution.y, mesh=mesh,
+        pybamm_model.variables[var], solution.t, solution.y, mesh=mesh
     )(plot_times / tau)
     comsol_var = pybamm.ProcessedVariable(
-        comsol_model.variables[var], solution.t, solution.y, mesh=mesh,
+        comsol_model.variables[var], solution.t, solution.y, mesh=mesh
     )(plot_times / tau)
 
     # Make plot
@@ -208,7 +215,9 @@ x_p = mesh.combine_submeshes(*["positive electrode"])[0].nodes
 x = mesh.combine_submeshes(*whole_cell)[0].nodes
 
 
-def whole_cell_by_domain_comparison_plot(var, plot_times=None, plot_error=None):
+def whole_cell_by_domain_comparison_plot(
+    var, plot_times=None, plot_error=None, scale=None
+):
     """
     Plot pybamm variable (defined over whole cell) against comsol variable
     (defined by component). E.g. if var = "Electrolyte current density [A.m-2]"
@@ -229,6 +238,11 @@ def whole_cell_by_domain_comparison_plot(var, plot_times=None, plot_error=None):
         Whether to plot the error. Can be "rel" (plots the relative error), "abs"
         (plots the abolute error), "both" (plots both the relative and abolsute
         errors) or None (default, plots no errors).
+    scale : str or float, optional
+        The scale to use in relative error plots. Can be None, in which case
+        the error is computed using the nodal value of the variable, "auto", in
+        which case the scale is taken to be the range (max-min) of the variable
+        at the current time, or the scale can be a user specified float.
     """
 
     # Set plot times if not provided
@@ -298,11 +312,19 @@ def whole_cell_by_domain_comparison_plot(var, plot_times=None, plot_error=None):
             error_n = np.abs(pybamm_var_n - comsol_var_n)
             ax[1, 0].plot(x_n * L_x, error_n, "-", color=color)
         elif plot_error == "rel":
-            error_n = np.abs((pybamm_var_n - comsol_var_n) / comsol_var_n)
+            if scale is None:
+                scale = comsol_var_n
+            elif scale == "auto":
+                scale = np.abs(np.max(comsol_var_n) - np.min(comsol_var_n))
+            error_n = np.abs((pybamm_var_n - comsol_var_n) / scale)
             ax[1, 0].plot(x_n * L_x, error_n, "-", color=color)
         elif plot_error == "both":
             abs_error_n = np.abs(pybamm_var_n - comsol_var_n)
-            rel_error_n = np.abs((pybamm_var_n - comsol_var_n) / comsol_var_n)
+            if scale is None:
+                scale = comsol_var_n
+            elif scale == "auto":
+                scale = np.abs(np.max(comsol_var_n) - np.min(comsol_var_n))
+            rel_error_n = np.abs((pybamm_var_n - comsol_var_n) / scale)
             ax[1, 0].plot(x_n * L_x, abs_error_n, "-", color=color)
             ax[2, 0].plot(x_n * L_x, rel_error_n, "-", color=color)
 
@@ -316,11 +338,19 @@ def whole_cell_by_domain_comparison_plot(var, plot_times=None, plot_error=None):
                 error_s = np.abs(pybamm_var_s - comsol_var_s)
                 ax[1, 1].plot(x_s * L_x, error_s, "-", color=color)
             elif plot_error == "rel":
-                error_s = np.abs((pybamm_var_s - comsol_var_s) / comsol_var_s)
+                if scale is None:
+                    scale = comsol_var_s
+                elif scale == "auto":
+                    scale = np.abs(np.max(comsol_var_s) - np.min(comsol_var_s))
+                error_s = np.abs((pybamm_var_s - comsol_var_s) / scale)
                 ax[1, 1].plot(x_s * L_x, error_s, "-", color=color)
             elif plot_error == "both":
                 abs_error_s = np.abs(pybamm_var_s - comsol_var_s)
-                rel_error_s = np.abs((pybamm_var_s - comsol_var_s) / comsol_var_s)
+                if scale is None:
+                    scale = comsol_var_s
+                elif scale == "auto":
+                    scale = np.abs(np.max(comsol_var_s) - np.min(comsol_var_s))
+                rel_error_s = np.abs((pybamm_var_s - comsol_var_s) / scale)
                 ax[1, 1].plot(x_s * L_x, abs_error_s, "-", color=color)
                 ax[2, 1].plot(x_s * L_x, rel_error_s, "-", color=color)
 
@@ -346,11 +376,19 @@ def whole_cell_by_domain_comparison_plot(var, plot_times=None, plot_error=None):
             error_p = np.abs(pybamm_var_p - comsol_var_p)
             ax[1, n_cols - 1].plot(x_p * L_x, error_p, "-", color=color)
         elif plot_error == "rel":
-            error_p = np.abs((pybamm_var_p - comsol_var_p) / comsol_var_p)
+            if scale is None:
+                scale = comsol_var_p
+            elif scale == "auto":
+                scale = np.abs(np.max(comsol_var_p) - np.min(comsol_var_p))
+            error_p = np.abs((pybamm_var_p - comsol_var_p) / scale)
             ax[1, n_cols - 1].plot(x_p * L_x, error_p, "-", color=color)
         elif plot_error == "both":
             abs_error_p = np.abs(pybamm_var_p - comsol_var_p)
-            rel_error_p = np.abs((pybamm_var_p - comsol_var_p) / comsol_var_p)
+            if scale is None:
+                scale = comsol_var_p
+            elif scale == "auto":
+                scale = np.abs(np.max(comsol_var_p) - np.min(comsol_var_p))
+            rel_error_p = np.abs((pybamm_var_p - comsol_var_p) / scale)
             ax[1, n_cols - 1].plot(x_p * L_x, abs_error_p, "-", color=color)
             ax[2, n_cols - 1].plot(x_p * L_x, rel_error_p, "-", color=color)
 
@@ -388,7 +426,7 @@ def whole_cell_by_domain_comparison_plot(var, plot_times=None, plot_error=None):
     plt.tight_layout()
 
 
-def electrode_comparison_plot(var, plot_times=None, plot_error=None):
+def electrode_comparison_plot(var, plot_times=None, plot_error=None, scale=None):
     """
     Plot pybamm variable against comsol variable (both defined separately in the
     negative and positive electrode) E.g. if var = "electrode current density [A.m-2]"
@@ -408,6 +446,11 @@ def electrode_comparison_plot(var, plot_times=None, plot_error=None):
         Whether to plot the error. Can be "rel" (plots the relative error), "abs"
         (plots the abolute error), "both" (plots both the relative and abolsute
         errors) or None (default, plots no errors).
+    scale : str or float, optional
+        The scale to use in relative error plots. Can be None, in which case
+        the error is computed using the nodal value of the variable, "auto", in
+        which case the scale is taken to be the range (max-min) of the variable
+        at the current time, or the scale can be a user specified float.
     """
 
     # Set plot times if not provided
@@ -461,11 +504,19 @@ def electrode_comparison_plot(var, plot_times=None, plot_error=None):
             error_n = np.abs(pybamm_var_n - comsol_var_n)
             ax[1, 0].plot(x_n * L_x, error_n, "-", color=color)
         elif plot_error == "rel":
-            error_n = np.abs((pybamm_var_n - comsol_var_n) / comsol_var_n)
+            if scale is None:
+                scale = comsol_var_n
+            elif scale == "auto":
+                scale = np.abs(np.max(comsol_var_n) - np.min(comsol_var_n))
+            error_n = np.abs((pybamm_var_n - comsol_var_n) / scale)
             ax[1, 0].plot(x_n * L_x, error_n, "-", color=color)
         elif plot_error == "both":
             abs_error_n = np.abs(pybamm_var_n - comsol_var_n)
-            rel_error_n = np.abs((pybamm_var_n - comsol_var_n) / comsol_var_n)
+            if scale is None:
+                scale = comsol_var_n
+            elif scale == "auto":
+                scale = np.abs(np.max(comsol_var_n) - np.min(comsol_var_n))
+            rel_error_n = np.abs((pybamm_var_n - comsol_var_n) / scale)
             ax[1, 0].plot(x_n * L_x, abs_error_n, "-", color=color)
             ax[2, 0].plot(x_n * L_x, rel_error_n, "-", color=color)
 
@@ -491,11 +542,19 @@ def electrode_comparison_plot(var, plot_times=None, plot_error=None):
             error_p = np.abs(pybamm_var_p - comsol_var_p)
             ax[1, 1].plot(x_p * L_x, error_p, "-", color=color)
         elif plot_error == "rel":
-            error_p = np.abs((pybamm_var_p - comsol_var_p) / comsol_var_p)
+            if scale is None:
+                scale = comsol_var_p
+            elif scale == "auto":
+                scale = np.abs(np.max(comsol_var_p) - np.min(comsol_var_p))
+            error_p = np.abs((pybamm_var_p - comsol_var_p) / scale)
             ax[1, 1].plot(x_p * L_x, error_p, "-", color=color)
         elif plot_error == "both":
             abs_error_p = np.abs(pybamm_var_p - comsol_var_p)
-            rel_error_p = np.abs((pybamm_var_p - comsol_var_p) / comsol_var_p)
+            if scale is None:
+                scale = comsol_var_p
+            elif scale == "auto":
+                scale = np.abs(np.max(comsol_var_p) - np.min(comsol_var_p))
+            rel_error_p = np.abs((pybamm_var_p - comsol_var_p) / scale)
             ax[1, 1].plot(x_p * L_x, abs_error_p, "-", color=color)
             ax[2, 1].plot(x_p * L_x, rel_error_p, "-", color=color)
 
@@ -522,7 +581,7 @@ def electrode_comparison_plot(var, plot_times=None, plot_error=None):
     plt.tight_layout()
 
 
-def whole_cell_comparison_plot(var, plot_times=None, plot_error=None):
+def whole_cell_comparison_plot(var, plot_times=None, plot_error=None, scale=None):
     """
     Plot pybamm variable against comsol variable (both defined over whole cell)
 
@@ -538,6 +597,11 @@ def whole_cell_comparison_plot(var, plot_times=None, plot_error=None):
         Whether to plot the error. Can be "rel" (plots the relative error), "abs"
         (plots the abolute error), "both" (plots both the relative and abolsute
         errors) or None (default, plots no errors).
+    scale : str or float, optional
+        The scale to use in relative error plots. Can be None, in which case
+        the error is computed using the nodal value of the variable, "auto", in
+        which case the scale is taken to be the range (max-min) of the variable
+        at the current time, or the scale can be a user specified float.
     """
 
     # Set plot times if not provided
@@ -590,11 +654,19 @@ def whole_cell_comparison_plot(var, plot_times=None, plot_error=None):
             error = np.abs(pybamm_var - comsol_var)
             ax[1].plot(x * L_x, error, "-", color=color)
         elif plot_error == "rel":
-            error = np.abs((pybamm_var - comsol_var) / comsol_var)
+            if scale is None:
+                scale = comsol_var
+            elif scale == "auto":
+                scale = np.abs(np.max(comsol_var) - np.min(comsol_var))
+            error = np.abs((pybamm_var - comsol_var) / scale)
             ax[1].plot(x_n * L_x, error, "-", color=color)
         elif plot_error == "both":
             abs_error = np.abs(pybamm_var - comsol_var)
-            rel_error = np.abs((pybamm_var - comsol_var) / comsol_var)
+            if scale is None:
+                scale = comsol_var
+            elif scale == "auto":
+                scale = np.abs(np.max(comsol_var) - np.min(comsol_var))
+            rel_error = np.abs((pybamm_var - comsol_var) / scale)
             ax[1].plot(x * L_x, abs_error, "-", color=color)
             ax[2].plot(x * L_x, rel_error, "-", color=color)
 
@@ -615,27 +687,39 @@ def whole_cell_comparison_plot(var, plot_times=None, plot_error=None):
 
 # Make plots
 # plot_times = comsol_variables["time"][0::10]
-plot_times = [comsol_variables["time"][0]]
+# plot_times = [comsol_variables["time"][0]]
+plot_times = [600, 1200, 1800, 2400, 3000]
 plot_error = "both"
-# plot_times = [600, 1200, 1800, 2400, 3000]
 # voltage
 time_only_plot("Terminal voltage [V]", plot_error=plot_error)
 # potentials
 electrode_comparison_plot(
-    "electrode potential [V]", plot_times=plot_times, plot_error=plot_error
+    "electrode potential [V]",
+    plot_times=plot_times,
+    plot_error=plot_error,
+    scale="auto",
 )
 plt.savefig("iso1D_phi_s.eps", format="eps", dpi=1000)
 whole_cell_comparison_plot(
-    "Electrolyte potential [V]", plot_times=plot_times, plot_error=plot_error
+    "Electrolyte potential [V]",
+    plot_times=plot_times,
+    plot_error=plot_error,
+    scale="auto",
 )
 plt.savefig("iso1D_phi_e.eps", format="eps", dpi=1000)
 # current
 electrode_comparison_plot(
-    "electrode current density [A.m-2]", plot_times=plot_times, plot_error=plot_error
+    "electrode current density [A.m-2]",
+    plot_times=plot_times,
+    plot_error=plot_error,
+    scale="auto",
 )
 plt.savefig("iso1D_i_s.eps", format="eps", dpi=1000)
 whole_cell_by_domain_comparison_plot(
-    "Electrolyte current density [A.m-2]", plot_times=plot_times, plot_error=plot_error
+    "Electrolyte current density [A.m-2]",
+    plot_times=plot_times,
+    plot_error=plot_error,
+    scale="auto",
 )
 plt.savefig("iso1D_i_e.eps", format="eps", dpi=1000)
 # concentrations
@@ -643,10 +727,14 @@ electrode_comparison_plot(
     "particle surface concentration [mol.m-3]",
     plot_times=plot_times,
     plot_error=plot_error,
+    scale="auto",
 )
 plt.savefig("iso1D_c_surf.eps", format="eps", dpi=1000)
 whole_cell_comparison_plot(
-    "Electrolyte concentration [mol.m-3]", plot_times=plot_times, plot_error=plot_error
+    "Electrolyte concentration [mol.m-3]",
+    plot_times=plot_times,
+    plot_error=plot_error,
+    scale="auto",
 )
 plt.savefig("iso1D_c_e.eps", format="eps", dpi=1000)
 plt.show()

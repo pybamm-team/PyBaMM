@@ -5,6 +5,7 @@ import pickle
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.interpolate as interp
+from scipy.optimize import minimize_scalar
 
 # change working directory to the root of pybamm
 os.chdir(pybamm.root_dir())
@@ -44,8 +45,8 @@ param.process_geometry(geometry)
 
 # create mesh
 var = pybamm.standard_spatial_vars
-# var_pts = {var.x_n: 101, var.x_s: 101, var.x_p: 101, var.r_n: 101, var.r_p: 101}
-var_pts = {var.x_n: 20, var.x_s: 20, var.x_p: 20, var.r_n: 30, var.r_p: 30}
+var_pts = {var.x_n: 101, var.x_s: 101, var.x_p: 101, var.r_n: 101, var.r_p: 101}
+# var_pts = {var.x_n: 20, var.x_s: 20, var.x_p: 20, var.r_n: 30, var.r_p: 30}
 mesh = pybamm.Mesh(geometry, pybamm_model.default_submesh_types, var_pts)
 
 # discretise model
@@ -54,8 +55,8 @@ disc = pybamm.Discretisation(mesh, pybamm_model.default_spatial_methods)
 disc.process_model(pybamm_model, check_model=False)
 
 # solver
-solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
-# solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6, mode="fast")
+# solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
+solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6, mode="fast")
 
 "-----------------------------------------------------------------------------"
 "Solve at different C_rates and plot against COMSOL solution"
@@ -81,7 +82,23 @@ for key, value in C_rates.items():
     tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
     time = comsol_t / tau  # use comsol time
     solution = solver.solve(pybamm_model, time)
-    time = solution.t  # get time up until event is hit
+    time = solution.t
+
+    # plot using times up to voltage cut off
+    # Note: casadi doesnt support events so we find this time after the solve
+    if isinstance(solver, pybamm.CasadiSolver):
+        V_cutoff = param.evaluate(
+            pybamm.standard_parameters_lithium_ion.voltage_low_cut_dimensional
+        )
+        voltage = pybamm.ProcessedVariable(
+            pybamm_model.variables["Terminal voltage [V]"],
+            solution.t,
+            solution.y,
+            mesh=mesh,
+        )(time)
+        # only use times up to the voltage cutoff
+        voltage_OK = voltage[voltage > V_cutoff]
+        time = time[0 : len(voltage_OK)]
 
     # post-process pybamm solution
     pybamm_voltage = pybamm.ProcessedVariable(
@@ -150,7 +167,7 @@ for key, value in C_rates.items():
 
 "-----------------------------------------------------------------------------"
 "Add legend and show plot"
-#ax[0, 0].set_ylim([3.1, 3.9])
+# ax[0, 0].set_ylim([3.1, 3.9])
 
 ax[0, 0].legend(loc="lower left")
 ax[0, 1].legend(loc="upper left")

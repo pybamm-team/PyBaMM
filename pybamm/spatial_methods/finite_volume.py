@@ -1013,7 +1013,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 # Average any children that evaluate on the edges (size n_edges) to
                 # evaluate on nodes instead, so that concatenation works properly
                 if child_size == n_edges:
-                    disc_children[idx] = self.edge_to_node(child)
+                    disc_children[idx] = self.edge_to_node(child, method="arithemtic")
                 else:
                     raise pybamm.ShapeError(
                         """
@@ -1023,23 +1023,23 @@ class FiniteVolume(pybamm.SpatialMethod):
                     )
         return pybamm.DomainConcatenation(disc_children, self.mesh)
 
-    def edge_to_node(self, discretised_symbol):
+    def edge_to_node(self, discretised_symbol, method="harmonic"):
         """
         Convert a discretised symbol evaluated on the cell edges to a discretised symbol
         evaluated on the cell nodes.
         See :meth:`pybamm.FiniteVolume.shift`
         """
-        return self.shift(discretised_symbol, "edge to node")
+        return self.shift(discretised_symbol, "edge to node", method=method)
 
-    def node_to_edge(self, discretised_symbol):
+    def node_to_edge(self, discretised_symbol, method="harmonic"):
         """
         Convert a discretised symbol evaluated on the cell nodes to a discretised symbol
         evaluated on the cell edges.
         See :meth:`pybamm.FiniteVolume.shift`
         """
-        return self.shift(discretised_symbol, "node to edge")
+        return self.shift(discretised_symbol, "node to edge", method=method)
 
-    def shift(self, discretised_symbol, shift_key):
+    def shift(self, discretised_symbol, shift_key, method="harmonic"):
         """
         Convert a discretised symbol evaluated at edges/nodes, to a discretised symbol
         evaluated at nodes/edges.
@@ -1058,6 +1058,8 @@ class FiniteVolume(pybamm.SpatialMethod):
         shift_key : str
             Whether to shift from nodes to edges ("node to edge"), or from edges to
             nodes ("edge to node")
+        method : str, optional
+            Whether to use the "harmonic" or "arithemtic" mean. Default is "harmonic"
 
         Returns
         -------
@@ -1168,7 +1170,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 # definiton of the harmonic mean)
                 sub_matrix_D2 = hstack([csr_matrix((n - 1, 1)), eye(n - 1)])
                 matrix_D2 = csr_matrix(kron(eye(second_dim_len), sub_matrix_D2))
-                D2 = pybamm.Matrix(matirx_D2) @ array
+                D2 = pybamm.Matrix(matrix_D2) @ array
 
                 # Compute weight beta
                 dx = submesh.d_edges
@@ -1197,15 +1199,33 @@ class FiniteVolume(pybamm.SpatialMethod):
                 )
 
             elif shift_key == "edge to node":
-                # TO DO: use harmonic mean to edge to node
+                # Note: we compute the harmonic mean using the relationship
+                # harmonic_mean = geometric_mean ^ 2 / arithemtic_mean
+                # TODO: account for weights (i.e. cell widths)
+
+                # Submatrix for arithemtic mean
                 sub_matrix = diags([0.5, 0.5], [0, 1], shape=(n, n + 1))
-                # Generate full matrix from the submatrix
+                # Submatrices for geometric mean
+                sub_matrix_left = diags([1, 0], [0, 1], shape=(n, n + 1))
+                sub_matrix_right = diags([0, 1], [0, 1], shape=(n, n + 1))
+
+                # Generate full matrices from the submatrices
                 # Convert to csr_matrix so that we can take the index (row-slicing),
                 # which is not supported by the default kron format
                 # Note that this makes column-slicing inefficient, but this should
                 # not be an issue
                 matrix = csr_matrix(kron(eye(second_dim_len), sub_matrix))
-                return pybamm.Matrix(matrix) @ array
+                matrix_left = csr_matrix(kron(eye(second_dim_len), sub_matrix_left))
+                matrix_right = csr_matrix(kron(eye(second_dim_len), sub_matrix_right))
+
+                ari_mean = pybamm.Matrix(matrix) @ array
+                geo_mean = pybamm.sqrt(
+                    pybamm.Matrix(matrix_left)
+                    @ array
+                    * pybamm.Matrix(matrix_right)
+                    @ array
+                )
+                return geo_mean ** 2 / ari_mean
 
             else:
                 raise ValueError("shift key '{}' not recognised".format(shift_key))
@@ -1213,8 +1233,9 @@ class FiniteVolume(pybamm.SpatialMethod):
         # If discretised_symbol evaluates to number there is no need to average
         if discretised_symbol.evaluates_to_number():
             out = discretised_symbol
-        else:
-            # out = arithmetic_mean(discretised_symbol)
+        elif method == "harmonic":
             out = harmonic_mean(discretised_symbol)
+        elif method == "arithemtic":
+            out = arithmetic_mean(discretised_symbol)
 
         return out

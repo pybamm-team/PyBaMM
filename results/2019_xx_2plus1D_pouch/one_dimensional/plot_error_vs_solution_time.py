@@ -7,8 +7,7 @@ import numpy as np
 import os
 import pickle
 import scipy.interpolate as interp
-from pprint import pprint
-from scipy.optimize import minimize_scalar
+import matplotlib.pyplot as plt
 
 # change working directory to the root of pybamm
 os.chdir(pybamm.root_dir())
@@ -19,16 +18,25 @@ npts = [4, 8, 16, 32, 64, 128]  # number of points per domain
 "-----------------------------------------------------------------------------"
 "Load comsol data"
 
-try:
-    comsol_variables = pickle.load(
-        open("input/comsol_results/comsol_thermal_1C_extremely_fine.pickle", "rb")
-    )
-except FileNotFoundError:
-    raise FileNotFoundError(
-        "COMSOL data not found. Try running load_thermal_comsol_data.py"
-    )
+savefiles = [
+    "input/comsol_results/comsol_thermal_1C_extremely_coarse.pickle",
+    "input/comsol_results/comsol_thermal_1C_extra_coarse.pickle",
+    "input/comsol_results/comsol_thermal_1C_coarser.pickle",
+    "input/comsol_results/comsol_thermal_1C_coarse.pickle",
+    "input/comsol_results/comsol_thermal_1C_normal.pickle",
+    "input/comsol_results/comsol_thermal_1C_fine.pickle",
+    "input/comsol_results/comsol_thermal_1C_finer.pickle",
+    "input/comsol_results/comsol_thermal_1C_extra_fine.pickle",
+    "input/comsol_results/comsol_thermal_1C_extremely_fine.pickle",
+]
 
-comsol_t = comsol_variables["time"]
+# "exact" solution in the comsol solution on the finest mesh
+exact_solution = pickle.load(
+    open("input/comsol_results/comsol_thermal_1C.pickle", "rb")
+)
+
+comsol_t = exact_solution["time"]
+
 
 "-----------------------------------------------------------------------------"
 "Create and solve pybamm models for different number of points per domain"
@@ -110,7 +118,6 @@ for i, model in enumerate(models):
 
     # create comsol vars interpolated onto pybamm mesh to compare errors
     whole_cell = ["negative electrode", "separator", "positive electrode"]
-    comsol_t = comsol_variables["time"]
     L_x = param.evaluate(pybamm.standard_parameters_lithium_ion.L_x)
 
     def get_interp_fun(variable_name, domain):
@@ -119,15 +126,15 @@ for i, model in enumerate(models):
         plotting with :class:`'pybamm.QuickPlot'` (interpolate in space to match
         edges, and then create function to interpolate in time)
         """
-        variable = comsol_variables[variable_name]
+        variable = exact_solution[variable_name]
         if domain == ["negative electrode"]:
-            comsol_x = comsol_variables["x_n"]
+            comsol_x = exact_solution["x_n"]
         elif domain == ["separator"]:
-            comsol_x = comsol_variables["x_s"]
+            comsol_x = exact_solution["x_s"]
         elif domain == ["positive electrode"]:
-            comsol_x = comsol_variables["x_p"]
+            comsol_x = exact_solution["x_p"]
         elif domain == whole_cell:
-            comsol_x = comsol_variables["x"]
+            comsol_x = exact_solution["x"]
         # Make sure to use dimensional space
         pybamm_x = mesh.combine_submeshes(*domain)[0].nodes * L_x
         variable = interp.interp1d(comsol_x, variable, axis=0)(pybamm_x)
@@ -147,9 +154,9 @@ for i, model in enumerate(models):
     comsol_c_n_surf = get_interp_fun("c_n_surf", ["negative electrode"])
     comsol_c_p_surf = get_interp_fun("c_p_surf", ["positive electrode"])
     comsol_c_e = get_interp_fun("c_e", whole_cell)
-    comsol_voltage = interp.interp1d(comsol_t, comsol_variables["voltage"])
+    comsol_voltage = interp.interp1d(comsol_t, exact_solution["voltage"])
     comsol_temperature_av = interp.interp1d(
-        comsol_t, comsol_variables["average temperature"]
+        comsol_t, exact_solution["average temperature"]
     )
     comsol_model = pybamm.BaseModel()
     comsol_model.variables = {
@@ -166,20 +173,18 @@ for i, model in enumerate(models):
     }
 
     # compute "error" using times up to voltage cut off
+    t = solution.t
     # Note: casadi doesnt support events so we find this time after the solve
-    V_cutoff = param.evaluate(pybamm.standard_parameters_lithium_ion.voltage_low_cut_dimensional)
-    voltage = pybamm.ProcessedVariable(
-        model.variables["Terminal voltage [V]"], solution.t, solution.y, mesh=mesh
-    )
-
-    def V_event(t):
-        return voltage(t) - V_cutoff
-
-    sol = minimize_scalar(V_event, bounds=(solution.t[0], solution.t[-1]), method='bounded')
-    t_end = sol.x * tau
-
-    # only use times up to the voltage cutoff
-    t = comsol_t[comsol_t < t_end]
+    if isinstance(solver, pybamm.CasadiSolver):
+        V_cutoff = param.evaluate(
+            pybamm.standard_parameters_lithium_ion.voltage_low_cut_dimensional
+        )
+        voltage = pybamm.ProcessedVariable(
+            model.variables["Terminal voltage [V]"], solution.t, solution.y, mesh=mesh
+        )(time)
+        # only use times up to the voltage cutoff
+        voltage_OK = voltage[voltage > V_cutoff]
+        t = t[0 : len(voltage_OK)]
 
     def compute_error(variable_name):
         domain = comsol_model.variables[variable_name].domain
@@ -201,7 +206,8 @@ for i, model in enumerate(models):
             )(x=x, t=t)
 
         # compute RMS error
-        scale = scales[variable_name]
+        # scale = scales[variable_name]
+        scale = 1
         error = pybamm.rmse(pybamm_var / scale, comsol_var / scale)
         return error
 
@@ -210,12 +216,39 @@ for i, model in enumerate(models):
 
 
 "-----------------------------------------------------------------------------"
+"Compute errors for comsol models"
+
+comsol_errors = {
+    "Negative electrode potential [V]": [None] * len(savefiles),
+    "Positive electrode potential [V]": [None] * len(savefiles),
+    "Electrolyte potential [V]": [None] * len(savefiles),
+    "Negative particle surface concentration [mol.m-3]": [None] * len(savefiles),
+    "Positive particle surface concentration [mol.m-3]": [None] * len(savefiles),
+    "Electrolyte concentration [mol.m-3]": [None] * len(savefiles),
+    "Terminal voltage [V]": [None] * len(savefiles),
+    "Volume-averaged cell temperature [K]": [None] * len(savefiles),
+}
+exact_voltage = exact_solution["voltage"]
+comsol_sol_times = [None] * len(savefiles)
+for i, file in enumerate(savefiles):
+    comsol_variables = pickle.load(open(file, "rb"))
+    comsol_voltage = comsol_variables["voltage"]
+    # compute RMS error
+    # scale = scales["Terminal voltage [V]"]
+    scale = 1
+    comsol_errors["Terminal voltage [V]"][i] = pybamm.rmse(
+        comsol_voltage / scale, exact_voltage / scale
+    )
+    comsol_sol_times[i] = comsol_variables["solution_time"]
+
+
+"-----------------------------------------------------------------------------"
 "Print error"
-pprint("Number of points per domain")
-pprint(npts)
-pprint("Solve times:")
-pprint(sol_times)
-pprint("Errors in:")
-for var, error in errors.items():
-    print(var)
-    pprint(error)
+pybamm_v_error_mV = [error * 1000 for error in errors["Terminal voltage [V]"]]
+comsol_v_error_mV = [error * 1000 for error in comsol_errors["Terminal voltage [V]"]]
+plt.plot(sol_times, pybamm_v_error_mV, label="PyBaMM")
+plt.plot(comsol_sol_times, comsol_v_error_mV, label="COMSOL")
+plt.xlabel("Solution time [s]")
+plt.ylabel("RMS Voltage Error [mV]")
+plt.legend()
+plt.show()
