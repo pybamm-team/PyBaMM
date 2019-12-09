@@ -581,7 +581,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 right_ghost_constant = 2 * rbc_i
                 # concatenate right ghost node
                 bcs_vector = pybamm.NumpyConcatenation(
-                    bcs_vector, pybamm.Vector(np.zeros(n)), right_ghost_constant,
+                    bcs_vector, pybamm.Vector(np.zeros(n)), right_ghost_constant
                 )
             elif rbc_type == "Neumann":
                 # concatenate zeros for internal nodes
@@ -684,12 +684,12 @@ class FiniteVolume(pybamm.SpatialMethod):
             if rbc_type == "Neumann":
                 # concatenate known value of gradient
                 bcs_vector = pybamm.NumpyConcatenation(
-                    bcs_vector, pybamm.Vector(np.zeros(n)), rbc_i,
+                    bcs_vector, pybamm.Vector(np.zeros(n)), rbc_i
                 )
             elif rbc_type == "Dirichlet":
                 # concatenate zeros for internal nodes
                 bcs_vector = pybamm.NumpyConcatenation(
-                    bcs_vector, pybamm.Vector(np.zeros(n)),
+                    bcs_vector, pybamm.Vector(np.zeros(n))
                 )
             else:
                 raise ValueError(
@@ -1106,7 +1106,20 @@ class FiniteVolume(pybamm.SpatialMethod):
             return pybamm.Matrix(matrix) @ array
 
         def harmonic_mean(array):
-            """Calculate the harmonic mean of an array using matrix multiplication"""
+            """
+            Calculate the harmonic mean of an array using matrix multiplication.
+            The harmonic mean is computed as
+
+            .. math::
+                D_{eff} = \\frac{D_1  D_2}{\\beta D_2 + (1 - \\beta) D_1},
+
+            where
+
+            .. math::
+                \\beta = \\frac{\\Delta x_1}{\\Delta x_2 + \\Delta x_1}
+
+            accounts for the difference in the control volume widths.
+            """
             # Create appropriate submesh by combining submeshes in domain
             submesh_list = self.mesh.combine_submeshes(*array.domain)
 
@@ -1120,7 +1133,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             second_dim_len = len(submesh_list)
 
             if shift_key == "node to edge":
-                # matrix to computes edge values at exterior edges of domain
+                # Matrix to computes values at exterior edges
                 edges_sub_matrix_left = csr_matrix(
                     ([1.5, -0.5], ([0, 0], [0, 1])), shape=(1, n)
                 )
@@ -1129,34 +1142,68 @@ class FiniteVolume(pybamm.SpatialMethod):
                     ([-0.5, 1.5], ([0, 0], [n - 2, n - 1])), shape=(1, n)
                 )
                 edges_sub_matrix = vstack(
-                    [edges_sub_matrix_left, edges_sub_matrix_center, edges_sub_matrix_right]
+                    [
+                        edges_sub_matrix_left,
+                        edges_sub_matrix_center,
+                        edges_sub_matrix_right,
+                    ]
                 )
-                edges_matrix = kron(eye(second_dim_len), edges_sub_matrix)
 
-                # matrix to compute internal edges
-                sub_AD1 = hstack([eye(n-1), csr_matrix((n-1, 1))])
-                sub_AD2 = hstack([csr_matrix((n-1, 1)), eye(n-1)])
-                AD1 = csr_matrix(kron(eye(second_dim_len), sub_AD1))
-                AD2 = csr_matrix(kron(eye(second_dim_len), sub_AD2))
-                D1 = pybamm.Matrix(AD1) @ array
-                D2 = pybamm.Matrix(AD2) @ array
+                # Generate full matrix from the submatrix
+                # Convert to csr_matrix so that we can take the index (row-slicing),
+                # which is not supported by the default kron format
+                # Note that this makes column-slicing inefficient, but this should
+                # not be an issue
+                edges_matrix = csr_matrix(kron(eye(second_dim_len), edges_sub_matrix))
+
+                # Matrix to extract the node values running from the first node
+                # to the penultimate node in the primary dimension (D_1 in the
+                # definiton of the harmonic mean)
+                sub_matrix_D1 = hstack([eye(n - 1), csr_matrix((n - 1, 1))])
+                matrix_D1 = csr_matrix(kron(eye(second_dim_len), sub_matrix_D1))
+                D1 = pybamm.Matrix(matrix_D1) @ array
+
+                # Matrix to extract the node values running from the second node
+                # to the final node in the primary dimension  (D_2 in the
+                # definiton of the harmonic mean)
+                sub_matrix_D2 = hstack([csr_matrix((n - 1, 1)), eye(n - 1)])
+                matrix_D2 = csr_matrix(kron(eye(second_dim_len), sub_matrix_D2))
+                D2 = pybamm.Matrix(matirx_D2) @ array
+
+                # Compute weight beta
                 dx = submesh.d_edges
                 sub_beta = (dx[:-1] / (dx[1:] + dx[:-1]))[:, np.newaxis]
                 beta = pybamm.Array(np.kron(np.ones((second_dim_len, 1)), sub_beta))
-                # Note: add small number to denominator to regularise D_int
-                D_int = D1 * D2 / (D2 * beta + D1 * (1 - beta) + 1E-16)
-                sub_to_full = vstack([csr_matrix((1, n-1)), eye(n-1), csr_matrix((1, n-1))])
-                to_full = kron(eye(second_dim_len), sub_to_full)
 
-                return pybamm.Matrix(edges_matrix) @ array + pybamm.Matrix(to_full) @ D_int
+                # Compute harmonic mean on internal edges
+                # Note: add small number to denominator to regularise D_int
+                D_eff = D1 * D2 / (D2 * beta + D1 * (1 - beta) + 1e-16)
+
+                # Matrix to pad zeros at the beginning and end of the array where
+                # the exterior edge values will be added
+                sub_matrix = vstack(
+                    [csr_matrix((1, n - 1)), eye(n - 1), csr_matrix((1, n - 1))]
+                )
+
+                # Generate full matrix from the submatrix
+                # Convert to csr_matrix so that we can take the index (row-slicing),
+                # which is not supported by the default kron format
+                # Note that this makes column-slicing inefficient, but this should
+                # not be an issue
+                matrix = csr_matrix(kron(eye(second_dim_len), sub_matrix))
+
+                return (
+                    pybamm.Matrix(edges_matrix) @ array + pybamm.Matrix(matrix) @ D_eff
+                )
 
             elif shift_key == "edge to node":
+                # TO DO: use harmonic mean to edge to node
                 sub_matrix = diags([0.5, 0.5], [0, 1], shape=(n, n + 1))
                 # Generate full matrix from the submatrix
-                # Convert to csr_matrix so that we can take the index (row-slicing), which
-                # is not supported by the default kron format
-                # Note that this makes column-slicing inefficient, but this should not be an
-                # issue
+                # Convert to csr_matrix so that we can take the index (row-slicing),
+                # which is not supported by the default kron format
+                # Note that this makes column-slicing inefficient, but this should
+                # not be an issue
                 matrix = csr_matrix(kron(eye(second_dim_len), sub_matrix))
                 return pybamm.Matrix(matrix) @ array
 
