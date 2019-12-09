@@ -215,4 +215,6 @@ class AlgebraicSolver(object):
             pybamm.logger.info("Converting algebraic to python")
             concatenated_algebraic = pybamm.EvaluatorPython(concatenated_algebraic)
 
+        pybamm.logger.info("Finish solver set-up")
+
         return concatenated_algebraic, jac

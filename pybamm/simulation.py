@@ -152,7 +152,7 @@ class Simulation:
             self._model, inplace=False, check_model=check_model
         )
 
-    def solve(self, t_eval=None, solver=None, check_model=True):
+    def solve(self, t_eval=None, solver=None, inputs=None, check_model=True):
         """
         A method to solve the model. This method will automatically build
         and set the model parameters if not already done so.
@@ -166,6 +166,8 @@ class Simulation:
             non-dimensional time of 1.
         solver : :class:`pybamm.BaseSolver`
             The solver to use to solve the model.
+        inputs : dict, optional
+            Any input parameters to pass to the model when solving
         check_model : bool, optional
             If True, model checks are performed after discretisation (see
             :meth:`pybamm.Discretisation.process_model`). Default is True.
@@ -185,9 +187,10 @@ class Simulation:
         if solver is None:
             solver = self.solver
 
-        self._solution = solver.solve(self.built_model, t_eval)
+        self.t_eval = t_eval
+        self._solution = solver.solve(self.built_model, t_eval, inputs=inputs)
 
-    def step(self, dt, solver=None, external_variables=None, save=True):
+    def step(self, dt, solver=None, external_variables=None, inputs=None, save=True):
         """
         A method to step the model forward one timestep. This method will
         automatically build and set the model parameters if not already done so.
@@ -203,6 +206,8 @@ class Simulation:
             values at the current time. The variables must correspond to
             the variables that would normally be found by solving the
             submodels that have been made external.
+        inputs : dict, optional
+            Any input parameters to pass to the model when solving
         save : bool
             Turn on to store the solution of all previous timesteps
         """
@@ -212,7 +217,7 @@ class Simulation:
             solver = self.solver
 
         solution = solver.step(
-            self.built_model, dt, external_variables=external_variables
+            self.built_model, dt, external_variables=external_variables, inputs=inputs
         )
 
         if save is False or self._made_first_step is False:
