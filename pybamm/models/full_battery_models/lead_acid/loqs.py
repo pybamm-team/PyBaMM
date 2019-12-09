@@ -37,6 +37,7 @@ class LOQS(BaseModel):
         self.set_interfacial_submodel()
         self.set_convection_submodel()
         self.set_porosity_submodel()
+        self.set_tortuosity_submodels()
         self.set_negative_electrode_submodel()
         self.set_electrolyte_submodel()
         self.set_positive_electrode_submodel()
@@ -69,6 +70,14 @@ class LOQS(BaseModel):
         self.submodels["leading-order porosity"] = pybamm.porosity.LeadingOrder(
             self.param
         )
+
+    def set_tortuosity_submodels(self):
+        self.submodels[
+            "leading-order electrolyte tortuosity"
+        ] = pybamm.tortuosity.Bruggeman(self.param, "Electrolyte")
+        self.submodels[
+            "leading-order electrode tortuosity"
+        ] = pybamm.tortuosity.Bruggeman(self.param, "Electrode")
 
     def set_convection_submodel(self):
 
@@ -172,17 +181,3 @@ class LOQS(BaseModel):
         self.reaction_submodels["Positive"].append(
             self.submodels["leading-order positive oxygen interface"]
         )
-
-    @property
-    def default_solver(self):
-        """
-        Create and return the default solver for this model
-        """
-
-        if (
-            self.options["current collector"] != "uniform"
-            or self.options["surface form"] == "algebraic"
-        ):
-            return pybamm.ScikitsDaeSolver()
-        else:
-            return pybamm.ScipySolver()

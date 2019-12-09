@@ -7,7 +7,7 @@ import scipy.sparse as sparse
 import unittest
 
 
-@unittest.skipIf(pybamm.have_idaklu(), "idaklu solver is not installed")
+@unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
 class TestIDAKLUSolver(unittest.TestCase):
     def test_ida_roberts_klu(self):
         # this test implements a python version of the ida Roberts
@@ -58,7 +58,9 @@ class TestIDAKLUSolver(unittest.TestCase):
         solver.rhs = rhs
         solver.algebraic = alg
 
-        solution = solver.integrate(res, y0, t_eval, events, mass_matrix, jac)
+        solution = solver.integrate(
+            res, y0, t_eval, events, mass_matrix, jac, model=None
+        )
 
         # test that final time is time of event
         # y = 0.1 t + y0 so y=0.2 when t=2

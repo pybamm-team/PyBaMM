@@ -135,8 +135,6 @@ class BaseModel(pybamm.BaseSubModel):
                 auxiliary_domains={"secondary": "current collector"},
             ),
         )
-        v_box_s = pybamm.outer(d_vbox_s__dx, (x_s - l_n)) + pybamm.PrimaryBroadcast(
-            v_box_n_right, "separator"
-        )
+        v_box_s = d_vbox_s__dx * (x_s - l_n) + v_box_n_right
 
         return v_box_s, dVbox_dz

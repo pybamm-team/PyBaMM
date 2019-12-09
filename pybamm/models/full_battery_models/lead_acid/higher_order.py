@@ -49,6 +49,7 @@ class BaseHigherOrderModel(BaseModel):
         self.set_full_interface_submodel()
         self.set_full_convection_submodel()
         self.set_full_porosity_submodel()
+        self.set_tortuosity_submodels()
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
 
@@ -165,20 +166,6 @@ class BaseHigherOrderModel(BaseModel):
         interfacial current densities
         """
         self.submodels["full porosity"] = pybamm.porosity.Full(self.param)
-
-    @property
-    def default_solver(self):
-        """
-        Create and return the default solver for this model
-        """
-        # Different solver depending on whether we solve ODEs or DAEs
-        if (
-            self.options["current collector"] != "uniform"
-            or self.options["surface form"] == "algebraic"
-        ):
-            return pybamm.ScikitsDaeSolver()
-        else:
-            return pybamm.ScipySolver()
 
 
 class FOQS(BaseHigherOrderModel):

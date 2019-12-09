@@ -31,6 +31,9 @@ Binary Operators
 .. autoclass:: pybamm.Kron
   :members:
 
+.. autoclass:: pybamm.Heaviside
+  :members:
+
 .. autofunction:: pybamm.outer
 
 .. autofunction:: pybamm.source

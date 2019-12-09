@@ -68,7 +68,7 @@ class CasadiSolver(pybamm.DaeSolver):
         self.extra_options = extra_options
         self.name = "CasADi solver ({}) with '{}' mode".format(method, mode)
 
-    def solve(self, model, t_eval):
+    def solve(self, model, t_eval, inputs=None):
         """
         Execute the solver setup and calculate the solution of the model at
         specified times.
@@ -80,6 +80,8 @@ class CasadiSolver(pybamm.DaeSolver):
             initial_conditions
         t_eval : numeric type
             The times at which to compute the solution
+        inputs : dict, optional
+            Any input parameters to pass to the model when solving
 
         Raises
         ------
@@ -99,7 +101,8 @@ class CasadiSolver(pybamm.DaeSolver):
         elif self.mode == "safe":
             # Step-and-check
             timer = pybamm.Timer()
-            self.set_up_casadi(model)
+            inputs = inputs or {}
+            self.set_up_casadi(model, inputs)
             set_up_time = timer.time()
             init_event_signs = np.sign(
                 np.concatenate([event(0, self.y0) for event in self.event_funs])
@@ -175,7 +178,7 @@ class CasadiSolver(pybamm.DaeSolver):
             )
             return solution
 
-    def compute_solution(self, model, t_eval):
+    def compute_solution(self, model, t_eval, inputs=None):
         """Calculate the solution of the model at specified times. In this class, we
         overwrite the behaviour of :class:`pybamm.DaeSolver`, since CasADi requires
         slightly different syntax.
@@ -187,6 +190,8 @@ class CasadiSolver(pybamm.DaeSolver):
             initial_conditions
         t_eval : numeric type
             The times at which to compute the solution
+        inputs : dict, optional
+            Any input parameters to pass to the model when solving
 
         """
         timer = pybamm.Timer()
@@ -194,7 +199,12 @@ class CasadiSolver(pybamm.DaeSolver):
         solve_start_time = timer.time()
         pybamm.logger.debug("Calling DAE solver")
         solution = self.integrate_casadi(
-            self.casadi_problem, self.y0, t_eval, mass_matrix=model.mass_matrix.entries
+            self.casadi_rhs,
+            self.casadi_algebraic,
+            self.y0,
+            t_eval,
+            inputs,
+            mass_matrix=model.mass_matrix.entries,
         )
         solve_time = timer.time() - solve_start_time
 
@@ -203,7 +213,9 @@ class CasadiSolver(pybamm.DaeSolver):
 
         return solution, solve_time, termination
 
-    def integrate_casadi(self, problem, y0, t_eval, mass_matrix=None):
+    def integrate_casadi(
+        self, rhs, algebraic, y0, t_eval, inputs=None, mass_matrix=None
+    ):
         """
         Solve a DAE model defined by residuals with initial conditions y0.
 
@@ -216,31 +228,43 @@ class CasadiSolver(pybamm.DaeSolver):
             The initial conditions
         t_eval : numeric type
             The times at which to compute the solution
+        inputs : dict, optional
+            Any input parameters to pass to the model when solving
         mass_matrix : array_like, optional
             The (sparse) mass matrix for the chosen spatial method. This is only passed
             to check that the mass matrix is diagonal with 1s for the odes and 0s for
             the algebraic equations, as CasADi does not allow to pass mass matrices.
         """
+        inputs = inputs or {}
         options = {
             "grid": t_eval,
             "reltol": self.rtol,
             "abstol": self.atol,
             "output_t0": True,
+            "max_num_steps": self.max_steps,
         }
         options.update(self.extra_options)
         if self.method == "idas":
             options["calc_ic"] = True
 
         # set up and solve
+        t = casadi.MX.sym("t")
+        u = casadi.vertcat(*[x for x in inputs.values()])
+        y_diff = casadi.MX.sym("y_diff", rhs(0, y0, u).shape[0])
+        problem = {"t": t, "x": y_diff}
+        if algebraic is None:
+            problem.update({"ode": rhs(t, y_diff, u)})
+        else:
+            y_alg = casadi.MX.sym("y_alg", algebraic(0, y0, u).shape[0])
+            y = casadi.vertcat(y_diff, y_alg)
+            problem.update({"z": y_alg, "ode": rhs(t, y, u), "alg": algebraic(t, y, u)})
         integrator = casadi.integrator("F", self.method, problem, options)
         try:
             # Try solving
-            len_rhs = problem["x"].size()[0]
-            y0_diff, y0_alg = np.split(y0, [len_rhs])
+            y0_diff, y0_alg = np.split(y0, [y_diff.shape[0]])
             sol = integrator(x0=y0_diff, z0=y0_alg)
             y_values = np.concatenate([sol["xf"].full(), sol["zf"].full()])
             return pybamm.Solution(t_eval, y_values, None, None, "final time")
         except RuntimeError as e:
             # If it doesn't work raise error
             raise pybamm.SolverError(e.args[0])
-

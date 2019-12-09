@@ -43,24 +43,18 @@ class TestUpdateParameters(unittest.TestCase):
         modeltest1.test_all(t_eval=t_eval, skip_output_tests=True)
         Y1 = modeltest1.solution.y
 
-        # double initial conditions
-        model2 = pybamm.lithium_ion.SPM()
         # process and solve the model a first time
+        model2 = pybamm.lithium_ion.SPM()
         modeltest2 = tests.StandardModelTest(model2)
         modeltest2.test_all(skip_output_tests=True)
-        self.assertEqual(
-            model2.variables["Current [A]"].function.parameters_eval["Current [A]"],
-            0.68,
-        )
+        self.assertEqual(model2.variables["Current [A]"].evaluate(), 0.680616)
         # process and solve with updated parameter values
         parameter_values_update = pybamm.ParameterValues(
             chemistry=pybamm.parameter_sets.Marquis2019
         )
         parameter_values_update.update({"Typical current [A]": 2})
         modeltest2.test_update_parameters(parameter_values_update)
-        self.assertEqual(
-            model2.variables["Current [A]"].function.parameters_eval["Current [A]"], 2
-        )
+        self.assertEqual(model2.variables["Current [A]"].evaluate(), 2)
         modeltest2.test_solving(t_eval=t_eval)
         Y2 = modeltest2.solution.y
 
@@ -74,22 +68,13 @@ class TestUpdateParameters(unittest.TestCase):
         parameter_values_update = pybamm.ParameterValues(
             chemistry=pybamm.parameter_sets.Marquis2019
         )
-        parameter_values_update.update(
-            {"Current function": pybamm.GetConstantCurrent(current=pybamm.Scalar(0))}
-        )
+        parameter_values_update.update({"Current function": "[zero]"})
         modeltest3.test_update_parameters(parameter_values_update)
         modeltest3.test_solving(t_eval=t_eval)
         Y3 = modeltest3.solution.y
 
-        # function.parameters should be pybamm.Scalar(0), but parameters_eval s
-        # should be a float
-        self.assertIsInstance(
-            model3.variables["Current [A]"].function.parameters["Current [A]"],
-            pybamm.Scalar,
-        )
-        self.assertEqual(
-            model3.variables["Current [A]"].function.parameters_eval["Current [A]"], 0.0
-        )
+        self.assertIsInstance(model3.variables["Current [A]"], pybamm.Scalar)
+        self.assertEqual(model3.variables["Current [A]"].evaluate(), 0.0)
 
         # results should be different
         self.assertNotEqual(np.linalg.norm(Y1 - Y3), 0)

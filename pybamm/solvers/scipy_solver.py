@@ -47,6 +47,7 @@ class ScipySolver(pybamm.OdeSolver):
         jacobian : method, optional
             A function that takes in t and y and returns the Jacobian. If
             None, the solver will approximate the Jacobian.
+
         Returns
         -------
         object

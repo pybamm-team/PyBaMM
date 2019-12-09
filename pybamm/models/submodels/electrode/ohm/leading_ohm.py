@@ -41,7 +41,7 @@ class LeadingOrder(BaseModel):
 
         if self.domain == "Negative":
             phi_s = pybamm.PrimaryBroadcast(phi_s_cn, "negative electrode")
-            i_s = pybamm.outer(i_boundary_cc, 1 - x_n / l_n)
+            i_s = i_boundary_cc * (1 - x_n / l_n)
 
         elif self.domain == "Positive":
             # recall delta_phi = phi_s - phi_e
@@ -53,7 +53,7 @@ class LeadingOrder(BaseModel):
             v = delta_phi_p_av + phi_e_p_av
 
             phi_s = pybamm.PrimaryBroadcast(v, ["positive electrode"])
-            i_s = pybamm.outer(i_boundary_cc, 1 - (1 - x_p) / l_p)
+            i_s = i_boundary_cc * (1 - (1 - x_p) / l_p)
 
         variables.update(self._get_standard_potential_variables(phi_s))
         variables.update(self._get_standard_current_variables(i_s))
@@ -71,10 +71,3 @@ class LeadingOrder(BaseModel):
         rbc = (pybamm.Scalar(0), "Neumann")
 
         self.boundary_conditions[phi_s] = {"left": lbc, "right": rbc}
-
-    @property
-    def default_solver(self):
-        """
-        Create and return the default solver for this model
-        """
-        return pybamm.ScikitsOdeSolver()

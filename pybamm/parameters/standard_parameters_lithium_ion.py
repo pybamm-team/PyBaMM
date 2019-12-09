@@ -82,10 +82,12 @@ a_k_dim = pybamm.Concatenation(
 )
 R_n = pybamm.geometric_parameters.R_n
 R_p = pybamm.geometric_parameters.R_p
-b_n = pybamm.geometric_parameters.b_n
-b_s = pybamm.geometric_parameters.b_s
-b_p = pybamm.geometric_parameters.b_p
-b = pybamm.geometric_parameters.b
+b_e_n = pybamm.geometric_parameters.b_e_n
+b_e_s = pybamm.geometric_parameters.b_e_s
+b_e_p = pybamm.geometric_parameters.b_e_p
+b_s_n = pybamm.geometric_parameters.b_s_n
+b_s_s = pybamm.geometric_parameters.b_s_s
+b_s_p = pybamm.geometric_parameters.b_s_p
 
 # Electrochemical reactions
 ne_n = pybamm.Parameter("Negative electrode electrons in reaction")
@@ -277,6 +279,11 @@ epsilon = pybamm.Concatenation(
     pybamm.FullBroadcast(epsilon_s, ["separator"], "current collector"),
     pybamm.FullBroadcast(epsilon_p, ["positive electrode"], "current collector"),
 )
+epsilon_s_n = pybamm.Parameter("Negative electrode active material volume fraction")
+epsilon_s_p = pybamm.Parameter("Positive electrode active material volume fraction")
+epsilon_inactive_n = 1 - epsilon_n - epsilon_s_n
+epsilon_inactive_s = 1 - epsilon_s
+epsilon_inactive_p = 1 - epsilon_p - epsilon_s_p
 a_n = a_n_dim * R_n
 a_p = a_p_dim * R_p
 
@@ -406,13 +413,15 @@ def m_p(T):
 def U_n(c_s_n, T):
     "Dimensionless open-circuit potential in the negative electrode"
     sto = c_s_n
-    return (U_n_dimensional(sto, T) - U_n_ref) / potential_scale
+    T_dim = Delta_T * T + T_ref
+    return (U_n_dimensional(sto, T_dim) - U_n_ref) / potential_scale
 
 
 def U_p(c_s_p, T):
     "Dimensionless open-circuit potential in the positive electrode"
     sto = c_s_p
-    return (U_p_dimensional(sto, T) - U_p_ref) / potential_scale
+    T_dim = Delta_T * T + T_ref
+    return (U_p_dimensional(sto, T_dim) - U_p_ref) / potential_scale
 
 
 def dUdT_n(c_s_n):

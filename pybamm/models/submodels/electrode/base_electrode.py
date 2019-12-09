@@ -54,7 +54,7 @@ class BaseElectrode(pybamm.BaseSubModel):
             )
 
             v = pybamm.boundary_value(phi_s, "right")
-            delta_phi_s = phi_s - pybamm.PrimaryBroadcast(v, ["positive electrode"])
+            delta_phi_s = phi_s - v
         delta_phi_s_av = pybamm.x_average(delta_phi_s)
         delta_phi_s_dim = delta_phi_s * param.potential_scale
         delta_phi_s_av_dim = delta_phi_s_av * param.potential_scale
@@ -142,10 +142,3 @@ class BaseElectrode(pybamm.BaseSubModel):
             variables = {"Electrode current density": i_s}
 
         return variables
-
-    @property
-    def default_solver(self):
-        """
-        Create and return the default solver for this model
-        """
-        return pybamm.ScikitsDaeSolver()

@@ -37,6 +37,7 @@ class Full(BaseModel):
         self.set_reactions()
         self.set_interfacial_submodel()
         self.set_porosity_submodel()
+        self.set_tortuosity_submodels()
         self.set_convection_submodel()
         self.set_electrolyte_submodel()
         self.set_solid_submodel()
@@ -122,17 +123,3 @@ class Full(BaseModel):
             self.submodels[
                 "negative oxygen interface"
             ] = pybamm.interface.lead_acid_oxygen.NoReaction(self.param, "Negative")
-
-    @property
-    def default_solver(self):
-        """
-        Create and return the default solver for this model
-        """
-        # Different solver depending on whether we solve ODEs or DAEs
-        if (
-            self.options["surface form"] == "differential"
-            and self.options["current collector"] == "uniform"
-        ):
-            return pybamm.ScipySolver()
-        else:
-            return pybamm.ScikitsDaeSolver()

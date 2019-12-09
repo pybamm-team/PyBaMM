@@ -88,20 +88,20 @@ class TestBaseBatteryModel(unittest.TestCase):
     def test_default_spatial_methods(self):
         model = pybamm.BaseBatteryModel({"dimensionality": 0})
         self.assertTrue(
-            issubclass(
+            isinstance(
                 model.default_spatial_methods["current collector"],
                 pybamm.ZeroDimensionalMethod,
             )
         )
         model = pybamm.BaseBatteryModel({"dimensionality": 1})
         self.assertTrue(
-            issubclass(
+            isinstance(
                 model.default_spatial_methods["current collector"], pybamm.FiniteVolume
             )
         )
         model = pybamm.BaseBatteryModel({"dimensionality": 2})
         self.assertTrue(
-            issubclass(
+            isinstance(
                 model.default_spatial_methods["current collector"],
                 pybamm.ScikitFiniteElement,
             )

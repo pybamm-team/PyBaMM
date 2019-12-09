@@ -105,7 +105,7 @@ submesh_types = {"SEI layer": pybamm.Uniform1DSubMesh}
 var_pts = {x: 50}
 mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
-spatial_methods = {"SEI layer": pybamm.FiniteVolume}
+spatial_methods = {"SEI layer": pybamm.FiniteVolume()}
 disc = pybamm.Discretisation(mesh, spatial_methods)
 disc.process_model(model)
 

@@ -9,8 +9,10 @@ import unittest
 
 class TestBaseModel(unittest.TestCase):
     def test_public_functions(self):
+        a = pybamm.Scalar(0)
+        variables = {"Negative electrode porosity": a, "Positive electrode porosity": a}
         submodel = pybamm.porosity.BaseModel(None)
-        std_tests = tests.StandardSubModelTests(submodel)
+        std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
 

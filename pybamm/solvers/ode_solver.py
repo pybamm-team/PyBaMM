@@ -5,6 +5,8 @@ import casadi
 import pybamm
 import numpy as np
 
+from .base_solver import add_external
+
 
 class OdeSolver(pybamm.BaseSolver):
     """Solve a discretised model.
@@ -21,7 +23,7 @@ class OdeSolver(pybamm.BaseSolver):
         super().__init__(method, rtol, atol)
         self.name = "Base ODE solver"
 
-    def compute_solution(self, model, t_eval):
+    def compute_solution(self, model, t_eval, inputs=None):
         """Calculate the solution of the model at specified times.
 
         Parameters
@@ -31,10 +33,16 @@ class OdeSolver(pybamm.BaseSolver):
             initial_conditions
         t_eval : numeric type
             The times at which to compute the solution
+        inputs : dict, optional
+            Any input parameters to pass to the model when solving
 
         """
         timer = pybamm.Timer()
 
+        # Set inputs and external
+        self.set_inputs_and_external(inputs)
+
+        # Solve
         solve_start_time = timer.time()
         pybamm.logger.info("Calling ODE solver")
         solution = self.integrate(
@@ -45,6 +53,7 @@ class OdeSolver(pybamm.BaseSolver):
             mass_matrix=model.mass_matrix.entries,
             jacobian=self.jacobian,
         )
+
         solve_time = timer.time() - solve_start_time
 
         # Identify the event that caused termination
@@ -52,7 +61,7 @@ class OdeSolver(pybamm.BaseSolver):
 
         return solution, solve_time, termination
 
-    def set_up(self, model):
+    def set_up(self, model, inputs=None):
         """Unpack model, perform checks, simplify and calculate jacobian.
 
         Parameters
@@ -60,6 +69,9 @@ class OdeSolver(pybamm.BaseSolver):
         model : :class:`pybamm.BaseModel`
             The model whose solution to calculate. Must have attributes rhs and
             initial_conditions
+        inputs : dict, optional
+            Any input parameters to pass to the model when solving
+
 
         Raises
         ------
@@ -73,6 +85,8 @@ class OdeSolver(pybamm.BaseSolver):
             raise pybamm.SolverError(
                 """Cannot use ODE solver to solve model with DAEs"""
             )
+
+        inputs = inputs or {}
 
         # create simplified rhs and event expressions
         concatenated_rhs = model.concatenated_rhs
@@ -118,28 +132,13 @@ class OdeSolver(pybamm.BaseSolver):
                 name: pybamm.EvaluatorPython(event) for name, event in events.items()
             }
 
-        # Create function to evaluate rhs
-        def dydt(t, y):
-            pybamm.logger.debug("Evaluating RHS for {} at t={}".format(model.name, t))
-            y = y[:, np.newaxis]
-            dy = concatenated_rhs.evaluate(t, y, known_evals={})[0]
-            return dy[:, 0]
-
         # Create event-dependent function to evaluate events
-        def event_fun(event):
-            def eval_event(t, y):
-                return event.evaluate(t, y)
-
-            return eval_event
-
-        event_funs = [event_fun(event) for event in events.values()]
+        def get_event_class(event):
+            return EvalEvent(event.evaluate)
 
         # Create function to evaluate jacobian
         if jac_rhs is not None:
-
-            def jacobian(t, y):
-                return jac_rhs.evaluate(t, y, known_evals={})[0]
-
+            jacobian = Jacobian(jac_rhs.evaluate)
         else:
             jacobian = None
 
@@ -147,12 +146,12 @@ class OdeSolver(pybamm.BaseSolver):
         # Note: these are the (possibly) converted to python version rhs, algebraic
         # etc. The expression tree versions of these are attributes of the model
         self.y0 = y0
-        self.dydt = dydt
+        self.dydt = Dydt(model, concatenated_rhs.evaluate)
         self.events = events
-        self.event_funs = event_funs
+        self.event_funs = [get_event_class(event) for event in events.values()]
         self.jacobian = jacobian
 
-    def set_up_casadi(self, model):
+    def set_up_casadi(self, model, inputs=None):
         """Convert model to casadi format and use their inbuilt functionalities.
 
         Parameters
@@ -160,6 +159,8 @@ class OdeSolver(pybamm.BaseSolver):
         model : :class:`pybamm.BaseModel`
             The model whose solution to calculate. Must have attributes rhs and
             initial_conditions
+        inputs : dict, optional
+            Any input parameters to pass to the model when solving
 
         Raises
         ------
@@ -176,57 +177,79 @@ class OdeSolver(pybamm.BaseSolver):
 
         y0 = model.concatenated_initial_conditions[:, 0]
 
-        t_casadi = casadi.SX.sym("t")
-        y_casadi = casadi.SX.sym("y", len(y0))
+        t_casadi = casadi.MX.sym("t")
+        y_casadi = casadi.MX.sym("y", len(y0))
+        inputs = inputs or {}
+        u_casadi = {name: casadi.MX.sym(name) for name in inputs.keys()}
+
+        if self.y_pad is not None:
+            y_ext = casadi.MX.sym("y_ext", len(self.y_pad))
+            y_casadi_w_ext = casadi.vertcat(y_casadi, y_ext)
+        else:
+            y_casadi_w_ext = y_casadi
+
         pybamm.logger.info("Converting RHS to CasADi")
-        concatenated_rhs = model.concatenated_rhs.to_casadi(t_casadi, y_casadi)
+        concatenated_rhs = model.concatenated_rhs.to_casadi(
+            t_casadi, y_casadi_w_ext, u_casadi
+        )
         pybamm.logger.info("Converting events to CasADi")
         casadi_events = {
-            name: event.to_casadi(t_casadi, y_casadi)
+            name: event.to_casadi(t_casadi, y_casadi_w_ext, u_casadi)
             for name, event in model.events.items()
         }
 
         # Create function to evaluate rhs
+        u_casadi_stacked = casadi.vertcat(*[u for u in u_casadi.values()])
         concatenated_rhs_fn = casadi.Function(
-            "rhs", [t_casadi, y_casadi], [concatenated_rhs]
+            "rhs", [t_casadi, y_casadi_w_ext, u_casadi_stacked], [concatenated_rhs]
         )
 
-        def dydt(t, y):
-            pybamm.logger.debug("Evaluating RHS for {} at t={}".format(model.name, t))
-            dy = concatenated_rhs_fn(t, y).full()
-            return dy[:, 0]
-
         # Create event-dependent function to evaluate events
-        def event_fun(event):
-            casadi_event_fn = casadi.Function("event", [t_casadi, y_casadi], [event])
-
-            def eval_event(t, y):
-                return casadi_event_fn(t, y)
-
-            return eval_event
-
-        event_funs = [event_fun(event) for event in casadi_events.values()]
+        def get_event_class(event):
+            casadi_event_fn = casadi.Function(
+                "event", [t_casadi, y_casadi_w_ext, u_casadi_stacked], [event]
+            )
+            return EvalEventCasadi(casadi_event_fn)
 
         # Create function to evaluate jacobian
         if model.use_jacobian:
             pybamm.logger.info("Calculating jacobian")
             casadi_jac = casadi.jacobian(concatenated_rhs, y_casadi)
             casadi_jac_fn = casadi.Function(
-                "jacobian", [t_casadi, y_casadi], [casadi_jac]
+                "jacobian", [t_casadi, y_casadi_w_ext, u_casadi_stacked], [casadi_jac]
             )
 
-            def jacobian(t, y):
-                return casadi_jac_fn(t, y)
+            jacobian = JacobianCasadi(casadi_jac_fn)
 
         else:
             jacobian = None
 
         # Add the solver attributes
         self.y0 = y0
-        self.dydt = dydt
+        self.dydt = DydtCasadi(model, concatenated_rhs_fn)
         self.events = model.events
-        self.event_funs = event_funs
+        self.event_funs = [get_event_class(event) for event in casadi_events.values()]
         self.jacobian = jacobian
+
+    def set_inputs_and_external(self, inputs):
+        """
+        Set values that are controlled externally, such as external variables and input
+        parameters
+
+        Parameters
+        ----------
+        inputs : dict
+            Any input parameters to pass to the model when solving
+
+        """
+        self.dydt.set_pad_ext(self.y_pad, self.y_ext)
+        self.dydt.set_inputs(inputs)
+        for evnt in self.event_funs:
+            evnt.set_pad_ext(self.y_pad, self.y_ext)
+            evnt.set_inputs(inputs)
+        if self.jacobian:
+            self.jacobian.set_pad_ext(self.y_pad, self.y_ext)
+            self.jacobian.set_inputs(inputs)
 
     def integrate(
         self, derivs, y0, t_eval, events=None, mass_matrix=None, jacobian=None
@@ -251,3 +274,91 @@ class OdeSolver(pybamm.BaseSolver):
             A function that takes in t and y and returns the Jacobian
         """
         raise NotImplementedError
+
+
+class SolverCallable:
+    "A class that will be called by the solver when integrating"
+    y_pad = None
+    y_ext = None
+    inputs = {}
+    inputs_casadi = casadi.DM()
+
+    def set_pad_ext(self, y_pad, y_ext):
+        self.y_pad = y_pad
+        self.y_ext = y_ext
+
+    def set_inputs(self, inputs):
+        self.inputs = inputs
+        self.inputs_casadi = casadi.vertcat(*[x for x in inputs.values()])
+
+
+# Set up caller classes outside of the solver object to allow pickling
+class Dydt(SolverCallable):
+    "Returns information about time derivatives at time t and state y"
+
+    def __init__(self, model, concatenated_rhs_fn):
+        self.model = model
+        self.concatenated_rhs_fn = concatenated_rhs_fn
+
+    def __call__(self, t, y):
+        pybamm.logger.debug("Evaluating RHS for {} at t={}".format(self.model.name, t))
+        y = y[:, np.newaxis]
+        y = add_external(y, self.y_pad, self.y_ext)
+        dy = self.concatenated_rhs_fn(t, y, self.inputs, known_evals={})[0]
+        return dy[:, 0]
+
+
+class DydtCasadi(Dydt):
+    "Returns information about time derivatives at time t and state y, with CasADi"
+
+    def __call__(self, t, y):
+        pybamm.logger.debug("Evaluating RHS for {} at t={}".format(self.model.name, t))
+        y = y[:, np.newaxis]
+        y = add_external(y, self.y_pad, self.y_ext)
+        dy = self.concatenated_rhs_fn(t, y, self.inputs_casadi).full()
+        return dy[:, 0]
+
+
+class EvalEvent(SolverCallable):
+    "Returns information about events at time t and state y"
+
+    def __init__(self, event_fn):
+        self.event_fn = event_fn
+
+    def __call__(self, t, y):
+        y = y[:, np.newaxis]
+        y = add_external(y, self.y_pad, self.y_ext)
+        return self.event_fn(t, y, self.inputs)
+
+
+class EvalEventCasadi(EvalEvent):
+    "Returns information about events at time t and state y"
+
+    def __init__(self, event_fn):
+        self.event_fn = event_fn
+
+    def __call__(self, t, y):
+        y = y[:, np.newaxis]
+        y = add_external(y, self.y_pad, self.y_ext)
+        return self.event_fn(t, y, self.inputs_casadi)
+
+
+class Jacobian(SolverCallable):
+    "Returns information about the jacobian at time t and state y"
+
+    def __init__(self, jac_fn):
+        self.jac_fn = jac_fn
+
+    def __call__(self, t, y):
+        y = y[:, np.newaxis]
+        y = add_external(y, self.y_pad, self.y_ext)
+        return self.jac_fn(t, y, self.inputs, known_evals={})[0]
+
+
+class JacobianCasadi(Jacobian):
+    "Returns information about the jacobian at time t and state y, with CasADi"
+
+    def __call__(self, t, y):
+        y = y[:, np.newaxis]
+        y = add_external(y, self.y_pad, self.y_ext)
+        return self.jac_fn(t, y, self.inputs_casadi)

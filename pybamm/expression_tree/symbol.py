@@ -6,7 +6,7 @@ import pybamm
 import anytree
 import numbers
 import copy
-import autograd.numpy as np
+import numpy as np
 from anytree.exporter import DotExporter
 
 
@@ -323,87 +323,67 @@ class Symbol(anytree.NodeMixin):
 
     def __add__(self, other):
         """return an :class:`Addition` object"""
-        if isinstance(other, (Symbol, numbers.Number)):
-            return pybamm.Addition(self, other)
-        else:
-            raise NotImplementedError
+        return pybamm.Addition(self, other)
 
     def __radd__(self, other):
         """return an :class:`Addition` object"""
-        if isinstance(other, (Symbol, numbers.Number)):
-            return pybamm.Addition(other, self)
-        else:
-            raise NotImplementedError
+        return pybamm.Addition(other, self)
 
     def __sub__(self, other):
         """return a :class:`Subtraction` object"""
-        if isinstance(other, (Symbol, numbers.Number)):
-            return pybamm.Subtraction(self, other)
-        else:
-            raise NotImplementedError
+        return pybamm.Subtraction(self, other)
 
     def __rsub__(self, other):
         """return a :class:`Subtraction` object"""
-        if isinstance(other, (Symbol, numbers.Number)):
-            return pybamm.Subtraction(other, self)
-        else:
-            raise NotImplementedError
+        return pybamm.Subtraction(other, self)
 
     def __mul__(self, other):
         """return a :class:`Multiplication` object"""
-        if isinstance(other, (Symbol, numbers.Number)):
-            return pybamm.Multiplication(self, other)
-        else:
-            raise NotImplementedError
+        return pybamm.Multiplication(self, other)
 
     def __rmul__(self, other):
         """return a :class:`Multiplication` object"""
-        if isinstance(other, (Symbol, numbers.Number)):
-            return pybamm.Multiplication(other, self)
-        else:
-            raise NotImplementedError
+        return pybamm.Multiplication(other, self)
 
     def __matmul__(self, other):
         """return a :class:`MatrixMultiplication` object"""
-        if isinstance(other, (Symbol, numbers.Number)):
-            return pybamm.MatrixMultiplication(self, other)
-        else:
-            raise NotImplementedError
+        return pybamm.MatrixMultiplication(self, other)
 
     def __rmatmul__(self, other):
         """return a :class:`MatrixMultiplication` object"""
-        if isinstance(other, (Symbol, numbers.Number)):
-            return pybamm.MatrixMultiplication(other, self)
-        else:
-            raise NotImplementedError
+        return pybamm.MatrixMultiplication(other, self)
 
     def __truediv__(self, other):
         """return a :class:`Division` object"""
-        if isinstance(other, (Symbol, numbers.Number)):
-            return pybamm.Division(self, other)
-        else:
-            raise NotImplementedError
+        return pybamm.Division(self, other)
 
     def __rtruediv__(self, other):
         """return a :class:`Division` object"""
-        if isinstance(other, (Symbol, numbers.Number)):
-            return pybamm.Division(other, self)
-        else:
-            raise NotImplementedError
+        return pybamm.Division(other, self)
 
     def __pow__(self, other):
         """return a :class:`Power` object"""
-        if isinstance(other, (Symbol, numbers.Number)):
-            return pybamm.Power(self, other)
-        else:
-            raise NotImplementedError
+        return pybamm.Power(self, other)
 
     def __rpow__(self, other):
         """return a :class:`Power` object"""
-        if isinstance(other, (Symbol, numbers.Number)):
-            return pybamm.Power(other, self)
-        else:
-            raise NotImplementedError
+        return pybamm.Power(other, self)
+
+    def __lt__(self, other):
+        """return a :class:`Heaviside` object"""
+        return pybamm.Heaviside(self, other, equal=False)
+
+    def __le__(self, other):
+        """return a :class:`Heaviside` object"""
+        return pybamm.Heaviside(self, other, equal=True)
+
+    def __gt__(self, other):
+        """return a :class:`Heaviside` object"""
+        return pybamm.Heaviside(other, self, equal=False)
+
+    def __ge__(self, other):
+        """return a :class:`Heaviside` object"""
+        return pybamm.Heaviside(other, self, equal=True)
 
     def __neg__(self):
         """return a :class:`Negate` object"""
@@ -479,7 +459,7 @@ class Symbol(anytree.NodeMixin):
             )
         )
 
-    def evaluate(self, t=None, y=None, known_evals=None):
+    def evaluate(self, t=None, y=None, u=None, known_evals=None):
         """Evaluate expression tree (wrapper to allow using dict of known values).
         If the dict 'known_evals' is provided, the dict is searched for self.id; if
         self.id is in the keys, return that value; otherwise, evaluate using
@@ -518,6 +498,7 @@ class Symbol(anytree.NodeMixin):
 
     def is_constant(self):
         """returns true if evaluating the expression is not dependent on `t` or `y`
+        or `u`
 
         See Also
         --------
@@ -525,8 +506,13 @@ class Symbol(anytree.NodeMixin):
 
         """
         # if any of the nodes are instances of any of these types, then the whole
-        # expression depends on either t or y
-        search_types = (pybamm.Variable, pybamm.StateVector, pybamm.IndependentVariable)
+        # expression depends on either t or y or u
+        search_types = (
+            pybamm.Variable,
+            pybamm.StateVector,
+            pybamm.Time,
+            pybamm.InputParameter,
+        )
 
         # do the search, return true if no relevent nodes are found
         return not any((isinstance(n, search_types)) for n in self.pre_order())
@@ -534,8 +520,8 @@ class Symbol(anytree.NodeMixin):
     def evaluate_ignoring_errors(self):
         """
         Evaluates the expression. If a node exists in the tree that cannot be evaluated
-        as a scalar or vectr (e.g. Parameter, Variable, StateVector), then None is
-        returned. Otherwise the result of the evaluation is given
+        as a scalar or vector (e.g. Parameter, Variable, StateVector, InputParameter),
+        then None is returned. Otherwise the result of the evaluation is given
 
         See Also
         --------
@@ -543,19 +529,18 @@ class Symbol(anytree.NodeMixin):
 
         """
         try:
-            result = self.evaluate(t=0)
+            result = self.evaluate(t=0, u="shape test")
         except NotImplementedError:
-            # return false if NotImplementedError is raised
+            # return None if NotImplementedError is raised
             # (there is a e.g. Parameter, Variable, ... in the tree)
             return None
         except TypeError as error:
-            # return false if specific TypeError is raised
+            # return None if specific TypeError is raised
             # (there is a e.g. StateVector in the tree)
             if error.args[0] == "StateVector cannot evaluate input 'y=None'":
                 return None
             else:
                 raise error
-
         return result
 
     def evaluates_to_number(self):
@@ -599,12 +584,12 @@ class Symbol(anytree.NodeMixin):
         """ Simplify the expression tree. See :class:`pybamm.Simplification`. """
         return pybamm.Simplification(simplified_symbols).simplify(self)
 
-    def to_casadi(self, t=None, y=None, casadi_symbols=None):
+    def to_casadi(self, t=None, y=None, u=None, casadi_symbols=None):
         """
         Convert the expression tree to a CasADi expression tree.
         See :class:`pybamm.CasadiConverter`.
         """
-        return pybamm.CasadiConverter(casadi_symbols).convert(self, t, y)
+        return pybamm.CasadiConverter(casadi_symbols).convert(self, t, y, u)
 
     def new_copy(self):
         """
@@ -634,7 +619,7 @@ class Symbol(anytree.NodeMixin):
         # Try with some large y, to avoid having to use pre_order (slow)
         try:
             y = np.linspace(0.1, 0.9, int(1e4))
-            evaluated_self = self.evaluate(0, y)
+            evaluated_self = self.evaluate(0, y, u="shape test")
         # If that fails, fall back to calculating how big y should really be
         except ValueError:
             state_vectors_in_node = [

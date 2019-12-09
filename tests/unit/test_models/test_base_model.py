@@ -374,6 +374,17 @@ class TestStandardBatteryBaseModel(unittest.TestCase):
         )
         self.assertIsInstance(solver, pybamm.BaseModel)
 
+        # check that adding algebraic variables gives DAE solver
+        a = pybamm.Variable("a")
+        model.algebraic = {a: a - 1}
+        self.assertIsInstance(
+            model.default_solver, (pybamm.IDAKLUSolver, pybamm.CasadiSolver)
+        )
+
+        # Check that turning off jacobian gives casadi solver
+        model.use_jacobian = False
+        self.assertIsInstance(model.default_solver, pybamm.CasadiSolver)
+
     def test_default_parameters(self):
         # check parameters are read in ok
         model = pybamm.BaseBatteryModel()
