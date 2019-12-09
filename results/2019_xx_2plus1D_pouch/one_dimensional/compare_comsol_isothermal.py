@@ -614,7 +614,8 @@ def whole_cell_comparison_plot(var, plot_times=None, plot_error=None):
 
 
 # Make plots
-plot_times = comsol_variables["time"][0::10]
+# plot_times = comsol_variables["time"][0::10]
+plot_times = [comsol_variables["time"][0]]
 plot_error = "both"
 # plot_times = [600, 1200, 1800, 2400, 3000]
 # voltage

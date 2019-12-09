@@ -32,7 +32,7 @@ savefiles = [
 
 # "exact" solution in the comsol solution on the finest mesh
 exact_solution = pickle.load(
-    open("input/comsol_results/comsol_thermal_1C_extremely_fine.pickle", "rb")
+    open("input/comsol_results/comsol_thermal_1C.pickle", "rb")
 )
 
 comsol_t = exact_solution["time"]
@@ -173,7 +173,7 @@ for i, model in enumerate(models):
     }
 
     # compute "error"
-    t = comsol_t / tau
+    t = np.linspace(0,1800,100) / tau
 
     def compute_error(variable_name):
         domain = comsol_model.variables[variable_name].domain
@@ -233,7 +233,6 @@ for i, file in enumerate(savefiles):
 pybamm_v_error_mV = [error*1000 for error in errors["Terminal voltage [V]"]]
 comsol_v_error_mV = [error*1000 for error in comsol_errors["Terminal voltage [V]"]]
 plt.plot(sol_times, pybamm_v_error_mV, label="PyBaMM")
-import ipdb; ipdb.set_trace()
 plt.plot(comsol_sol_times, comsol_v_error_mV, label="COMSOL")
 plt.xlabel("Solution time [s]")
 plt.ylabel("RMS Voltage Error [mV]")
