@@ -14,7 +14,6 @@ sys.setrecursionlimit(100000)
 
 pybamm.set_logging_level("INFO")
 
-
 "-----------------------------------------------------------------------------"
 "Load comsol data"
 

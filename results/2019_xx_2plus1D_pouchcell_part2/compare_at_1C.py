@@ -44,9 +44,9 @@ plot_times = [0.0001, 0.001, 0.002, 0.017]
 
 C_rate = 1
 var_pts = {
-    pybamm.standard_spatial_vars.x_n: 5,
+    pybamm.standard_spatial_vars.x_n: 15,
     pybamm.standard_spatial_vars.x_s: 5,
-    pybamm.standard_spatial_vars.x_p: 5,
+    pybamm.standard_spatial_vars.x_p: 15,
     pybamm.standard_spatial_vars.y: 5,
     pybamm.standard_spatial_vars.z: 5,
     pybamm.standard_spatial_vars.r_n: 5,
