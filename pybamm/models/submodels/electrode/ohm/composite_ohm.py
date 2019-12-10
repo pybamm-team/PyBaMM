@@ -75,6 +75,7 @@ class Composite(BaseModel):
 
     def set_boundary_conditions(self, variables):
 
+        phi_s_cn = variables["Negative current collector potential"]
         phi_s = variables[self.domain + " electrode potential"]
         tor_0 = variables[
             "Leading-order x-averaged " + self.domain.lower() + " electrode tortuosity"
@@ -82,7 +83,7 @@ class Composite(BaseModel):
         i_boundary_cc_0 = variables["Leading-order current collector current density"]
 
         if self.domain == "Negative":
-            lbc = (pybamm.Scalar(0), "Dirichlet")
+            lbc = (phi_s_cn, "Dirichlet")
             rbc = (pybamm.Scalar(0), "Neumann")
 
         elif self.domain == "Positive":

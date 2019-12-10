@@ -1,3 +1,7 @@
+#
+# Compare thermal models from pybamm and comsol
+#
+
 import pybamm
 import numpy as np
 import os
@@ -42,14 +46,14 @@ param.process_geometry(geometry)
 # create mesh
 var = pybamm.standard_spatial_vars
 # var_pts = {var.x_n: 101, var.x_s: 101, var.x_p: 101, var.r_n: 101, var.r_p: 101}
-# var_pts = {var.x_n: 45, var.x_s: 11, var.x_p: 56, var.r_n: 51, var.r_p: 51}
-var_pts = {
-    var.x_n: int(param.evaluate(pybamm.geometric_parameters.L_n / 1e-6)),
-    var.x_s: int(param.evaluate(pybamm.geometric_parameters.L_s / 1e-6)),
-    var.x_p: int(param.evaluate(pybamm.geometric_parameters.L_n / 1e-6)),
-    var.r_n: int(param.evaluate(pybamm.geometric_parameters.R_n / 1e-7)),
-    var.r_p: int(param.evaluate(pybamm.geometric_parameters.R_p / 1e-7)),
-}
+var_pts = {var.x_n: 45, var.x_s: 11, var.x_p: 56, var.r_n: 51, var.r_p: 51}
+#var_pts = {
+#    var.x_n: int(param.evaluate(pybamm.geometric_parameters.L_n / 1e-6)),
+#    var.x_s: int(param.evaluate(pybamm.geometric_parameters.L_s / 1e-6)),
+#    var.x_p: int(param.evaluate(pybamm.geometric_parameters.L_n / 1e-6)),
+#    var.r_n: int(param.evaluate(pybamm.geometric_parameters.R_n / 1e-7)),
+#    var.r_p: int(param.evaluate(pybamm.geometric_parameters.R_p / 1e-7)),
+#}
 mesh = pybamm.Mesh(geometry, pybamm_model.default_submesh_types, var_pts)
 
 # discretise model
@@ -72,6 +76,7 @@ solution = solver.solve(pybamm_model, time)
 whole_cell = ["negative electrode", "separator", "positive electrode"]
 comsol_t = comsol_variables["time"]
 L_x = param.evaluate(pybamm.standard_parameters_lithium_ion.L_x)
+interp_kind = "linear"
 
 
 def get_interp_fun(variable_name, domain):
@@ -91,10 +96,10 @@ def get_interp_fun(variable_name, domain):
         comsol_x = comsol_variables["x"]
     # Make sure to use dimensional space
     pybamm_x = mesh.combine_submeshes(*domain)[0].nodes * L_x
-    variable = interp.interp1d(comsol_x, variable, axis=0, kind="cubic")(pybamm_x)
+    variable = interp.interp1d(comsol_x, variable, axis=0, kind=interp_kind)(pybamm_x)
 
     def myinterp(t):
-        return interp.interp1d(comsol_t, variable, kind="cubic")(t)[:, np.newaxis]
+        return interp.interp1d(comsol_t, variable, kind=interp_kind)(t)[:, np.newaxis]
 
     # Make sure to use dimensional time
     fun = pybamm.Function(myinterp, pybamm.t * tau, name=variable_name + "_comsol")
@@ -112,10 +117,12 @@ comsol_i_s_n = get_interp_fun("i_s_n", ["negative electrode"])
 comsol_i_s_p = get_interp_fun("i_s_p", ["positive electrode"])
 comsol_i_e_n = get_interp_fun("i_e_n", ["negative electrode"])
 comsol_i_e_p = get_interp_fun("i_e_p", ["positive electrode"])
-comsol_voltage = interp.interp1d(comsol_t, comsol_variables["voltage"], kind="cubic")
+comsol_voltage = interp.interp1d(
+    comsol_t, comsol_variables["voltage"], kind=interp_kind
+)
 comsol_temperature = get_interp_fun("temperature", whole_cell)
 comsol_temperature_av = interp.interp1d(
-    comsol_t, comsol_variables["average temperature"], kind="cubic"
+    comsol_t, comsol_variables["average temperature"], kind=interp_kind
 )
 comsol_q_irrev_n = get_interp_fun("Q_irrev_n", ["negative electrode"])
 comsol_q_irrev_p = get_interp_fun("Q_irrev_p", ["positive electrode"])
@@ -713,77 +720,77 @@ def whole_cell_comparison_plot(var, plot_times=None, plot_error=None, scale=None
 plot_times = comsol_variables["time"]
 plot_error = "both"
 # voltage
-time_only_plot("Terminal voltage [V]", plot_times=plot_times, plot_error=plot_error)
-# volume averaged temperature
-time_only_plot(
-    "Volume-averaged cell temperature [K]", plot_times=plot_times, plot_error=plot_error
-)
+#time_only_plot("Terminal voltage [V]", plot_times=plot_times, plot_error=plot_error)
+## volume averaged temperature
+#time_only_plot(
+#    "Volume-averaged cell temperature [K]", plot_times=plot_times, plot_error=plot_error
+#)
 
 plot_times = [600, 1200, 1800, 2400, 3000]
 plot_error = "both"
-#  # heat sources
-#  whole_cell_by_domain_comparison_plot(
-#      "Irreversible electrochemical heating [W.m-3]",
-#      plot_times=plot_times,
-#      plot_error=plot_error,
-#      scale="auto",
-#  )
-#  whole_cell_by_domain_comparison_plot(
-#      "Reversible heating [W.m-3]",
-#      plot_times=plot_times,
-#      plot_error=plot_error,
-#      scale="auto",
-#  )
-#  whole_cell_by_domain_comparison_plot(
-#      "Total heating [W.m-3]", plot_times=plot_times, plot_error=plot_error, scale="auto"
-#  )
-#  # temperature
-#  whole_cell_comparison_plot(
-#      "Cell temperature [K]", plot_times=plot_times, plot_error=plot_error, scale="auto"
-#  )
-# potentials
-electrode_comparison_plot(
-    "electrode potential [V]",
-    plot_times=plot_times,
-    plot_error=plot_error,
-    scale="auto",
-)
-plt.savefig("thermal1D_phi_s.eps", format="eps", dpi=1000)
-whole_cell_comparison_plot(
-    "Electrolyte potential [V]",
-    plot_times=plot_times,
-    plot_error=plot_error,
-    scale="auto",
-)
-plt.savefig("thermal1D_phi_e.eps", format="eps", dpi=1000)
-# current
-electrode_comparison_plot(
-    "electrode current density [A.m-2]",
-    plot_times=plot_times,
-    plot_error=plot_error,
-    scale="auto",
-)
-plt.savefig("thermal1D_i_s.eps", format="eps", dpi=1000)
+# heat sources
+#whole_cell_by_domain_comparison_plot(
+# "Irreversible electrochemical heating [W.m-3]",
+# plot_times=plot_times,
+# plot_error=plot_error,
+# scale="auto",
+#)
+#whole_cell_by_domain_comparison_plot(
+# "Reversible heating [W.m-3]",
+# plot_times=plot_times,
+# plot_error=plot_error,
+# scale="auto",
+#)
 whole_cell_by_domain_comparison_plot(
-    "Electrolyte current density [A.m-2]",
-    plot_times=plot_times,
-    plot_error=plot_error,
-    scale="auto",
+ "Total heating [W.m-3]", plot_times=plot_times, plot_error=plot_error, scale="auto"
 )
-plt.savefig("thermal1D_i_e.eps", format="eps", dpi=1000)
-# concentrations
-electrode_comparison_plot(
-    "particle surface concentration [mol.m-3]",
-    plot_times=plot_times,
-    plot_error=plot_error,
-    scale="auto",
-)
-plt.savefig("thermal1D_c_surf.eps", format="eps", dpi=1000)
+## temperature
+#whole_cell_comparison_plot(
+# "Cell temperature [K]", plot_times=plot_times, plot_error=plot_error, scale="auto"
+#)
+## potentials
+#electrode_comparison_plot(
+#    "electrode potential [V]",
+#    plot_times=plot_times,
+#    plot_error=plot_error,
+#    scale="auto",
+#)
+#plt.savefig("thermal1D_phi_s.eps", format="eps", dpi=1000)
+#whole_cell_comparison_plot(
+#    "Electrolyte potential [V]",
+#    plot_times=plot_times,
+#    plot_error=plot_error,
+#    scale="auto",
+#)
+#plt.savefig("thermal1D_phi_e.eps", format="eps", dpi=1000)
+## current
+#electrode_comparison_plot(
+#    "electrode current density [A.m-2]",
+#    plot_times=plot_times,
+#    plot_error=plot_error,
+#    scale="auto",
+#)
+#plt.savefig("thermal1D_i_s.eps", format="eps", dpi=1000)
+#whole_cell_by_domain_comparison_plot(
+#    "Electrolyte current density [A.m-2]",
+#    plot_times=plot_times,
+#    plot_error=plot_error,
+#    scale="auto",
+#)
+#plt.savefig("thermal1D_i_e.eps", format="eps", dpi=1000)
+## concentrations
+#electrode_comparison_plot(
+#    "particle surface concentration [mol.m-3]",
+#    plot_times=plot_times,
+#    plot_error=plot_error,
+#    scale="auto",
+#)
+#plt.savefig("thermal1D_c_surf.eps", format="eps", dpi=1000)
 whole_cell_comparison_plot(
     "Electrolyte concentration [mol.m-3]",
     plot_times=plot_times,
     plot_error=plot_error,
     scale="auto",
 )
-plt.savefig("thermal1D_c_e.eps", format="eps", dpi=1000)
+#plt.savefig("thermal1D_c_e.eps", format="eps", dpi=1000)
 plt.show()

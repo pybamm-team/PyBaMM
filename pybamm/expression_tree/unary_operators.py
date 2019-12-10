@@ -763,6 +763,25 @@ class BoundaryGradient(BoundaryOperator):
         super().__init__("boundary flux", child, side)
 
 
+class ToEdge(SpatialOperator):
+    """A node in the expression tree which gets the boundary flux of a variable.
+
+    Parameters
+    ----------
+    child : :class:`pybamm.Symbol`
+        The variable whose boundary flux to take
+
+    **Extends:** :class:`BoundaryOperator`
+    """
+
+    def __init__(self, child):
+        super().__init__("to edge", child)
+
+    def evaluates_on_edges(self):
+        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+        return True
+
+
 #
 # Methods to call Gradient, Divergence, Laplacian and Gradient_Squared
 #

@@ -58,7 +58,7 @@ lambda_eff_dim = (
 h_dim = pybamm.Parameter("Heat transfer coefficient [W.m-2.K-1]")
 
 # Typical temperature rise
-Phi_dim = pybamm.Scalar(1)  # typical scale for voltage drop across cell (order 1V)
+Phi_dim = pybamm.Scalar(0.1)  # typical scale for voltage drop across cell (order 1V)
 Delta_T = (
     pybamm.electrical_parameters.i_typ * Phi_dim / h_dim
 )  # computed from balance of typical cross-cell Ohmic heating with surface heat loss

@@ -111,6 +111,7 @@ for i, model in enumerate(models):
     whole_cell = ["negative electrode", "separator", "positive electrode"]
     comsol_t = comsol_variables["time"]
     L_x = param.evaluate(pybamm.standard_parameters_lithium_ion.L_x)
+    interp_kind = "cubic"
 
     def get_interp_fun(variable_name, domain):
         """
@@ -129,10 +130,14 @@ for i, model in enumerate(models):
             comsol_x = comsol_variables["x"]
         # Make sure to use dimensional space
         pybamm_x = mesh.combine_submeshes(*domain)[0].nodes * L_x
-        variable = interp.interp1d(comsol_x, variable, axis=0)(pybamm_x)
+        variable = interp.interp1d(comsol_x, variable, axis=0, kind=interp_kind)(
+            pybamm_x
+        )
 
         def myinterp(t):
-            return interp.interp1d(comsol_t, variable)(t)[:, np.newaxis]
+            return interp.interp1d(comsol_t, variable, kind=interp_kind)(t)[
+                :, np.newaxis
+            ]
 
         # Make sure to use dimensional time
         fun = pybamm.Function(myinterp, pybamm.t * tau, name=variable_name + "_comsol")
@@ -146,9 +151,11 @@ for i, model in enumerate(models):
     comsol_c_n_surf = get_interp_fun("c_n_surf", ["negative electrode"])
     comsol_c_p_surf = get_interp_fun("c_p_surf", ["positive electrode"])
     comsol_c_e = get_interp_fun("c_e", whole_cell)
-    comsol_voltage = interp.interp1d(comsol_t, comsol_variables["voltage"])
+    comsol_voltage = interp.interp1d(
+        comsol_t, comsol_variables["voltage"], kind=interp_kind
+    )
     comsol_temperature_av = interp.interp1d(
-        comsol_t, comsol_variables["average temperature"]
+        comsol_t, comsol_variables["average temperature"], kind=interp_kind
     )
     comsol_model = pybamm.BaseModel()
     comsol_model.variables = {
@@ -197,7 +204,22 @@ for i, model in enumerate(models):
                 model.variables[variable_name], solution.t, solution.y, mesh=mesh
             )(x=x, t=t)
 
+        # Compute error in positive potential with respect to the voltage
+        if variable_name == "Positive electrode potential [V]":
+            comsol_var = comsol_var - pybamm.ProcessedVariable(
+                comsol_model.variables["Terminal voltage [V]"],
+                solution.t,
+                solution.y,
+                mesh=mesh,
+            )(t=t)
+            pybamm_var = pybamm_var - pybamm.ProcessedVariable(
+                model.variables["Terminal voltage [V]"],
+                solution.t,
+                solution.y,
+                mesh=mesh,
+            )(t=t)
         # compute RMS error
+
         scale = scales[variable_name]
         error = pybamm.rmse(pybamm_var / scale, comsol_var / scale)
         return error

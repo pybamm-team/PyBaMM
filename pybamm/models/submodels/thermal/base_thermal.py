@@ -102,16 +102,39 @@ class BaseThermal(pybamm.BaseSubModel):
         # Ohmic heating in electrolyte
         # TODO: change full stefan-maxwell conductivity so that i_e is always
         # a Concatenation
-        if isinstance(i_e, pybamm.Concatenation):
-            # compute by domain if possible
-            i_e_n, i_e_s, i_e_p = i_e.orphans
-            phi_e_n, phi_e_s, phi_e_p = phi_e.orphans
-            Q_ohm_e_n = -pybamm.inner(i_e_n, pybamm.grad(phi_e_n))
-            Q_ohm_e_s = -pybamm.inner(i_e_s, pybamm.grad(phi_e_s))
-            Q_ohm_e_p = -pybamm.inner(i_e_p, pybamm.grad(phi_e_p))
-            Q_ohm_e = pybamm.Concatenation(Q_ohm_e_n, Q_ohm_e_s, Q_ohm_e_p)
-        else:
-            Q_ohm_e = -pybamm.inner(i_e, pybamm.grad(phi_e))
+        #if isinstance(i_e, pybamm.Concatenation):
+        #    # compute by domain if possible
+        #    i_e_n, i_e_s, i_e_p = i_e.orphans
+        #    phi_e_n, phi_e_s, phi_e_p = phi_e.orphans
+        #    Q_ohm_e_n = -pybamm.inner(i_e_n, pybamm.grad(phi_e_n))
+        #    Q_ohm_e_s = -pybamm.inner(i_e_s, pybamm.grad(phi_e_s))
+        #    Q_ohm_e_p = -pybamm.inner(i_e_p, pybamm.grad(phi_e_p))
+        #    Q_ohm_e = pybamm.Concatenation(Q_ohm_e_n, Q_ohm_e_s, Q_ohm_e_p)
+        #else:
+        #    Q_ohm_e = -pybamm.inner(i_e, pybamm.grad(phi_e))
+        tor = variables["Electrolyte tortuosity"]
+        c_e = variables["Electrolyte concentration"]
+        phi_e_n, phi_e_s, phi_e_p = phi_e.orphans
+        c_e_n, c_e_s, c_e_p = c_e.orphans
+        tor_n, tor_s, tor_p = tor.orphans
+        T_n, T_s, T_p = tor.orphans
+
+        i_e_n = (param.kappa_e(c_e_n, T_n) * tor_n * param.gamma_e / param.C_e) * (
+            param.chi(c_e_n) * (1 + param.Theta * T_n) * pybamm.grad(c_e_n) / c_e_n
+            - pybamm.grad(phi_e_n)
+        )
+        i_e_s = (param.kappa_e(c_e_s, T_s) * tor_s * param.gamma_e / param.C_e) * (
+            param.chi(c_e_s) * (1 + param.Theta * T_s) * pybamm.grad(c_e_s) / c_e_s
+            - pybamm.grad(phi_e_s)
+        )
+        i_e_p = (param.kappa_e(c_e_p, T_p) * tor_p * param.gamma_e / param.C_e) * (
+            param.chi(c_e_p) * (1 + param.Theta * T_p) * pybamm.grad(c_e_p) / c_e_p
+            - pybamm.grad(phi_e_p)
+        )
+        Q_ohm_e_n = -pybamm.inner(i_e_n, pybamm.grad(phi_e_n))
+        Q_ohm_e_s = -pybamm.inner(i_e_s, pybamm.grad(phi_e_s))
+        Q_ohm_e_p = -pybamm.inner(i_e_p, pybamm.grad(phi_e_p))
+        Q_ohm_e = pybamm.Concatenation(Q_ohm_e_n, Q_ohm_e_s, Q_ohm_e_p)
 
         # Total Ohmic heating
         Q_ohm = Q_ohm_s + Q_ohm_e
@@ -139,7 +162,7 @@ class BaseThermal(pybamm.BaseSubModel):
         )
 
         # Total heating
-        Q = Q_ohm + Q_rxn + Q_rev
+        Q = Q_ohm_e # Q_ohm + Q_rxn + Q_rev
 
         # Compute the X-average over the current collectors by default.
         # Note: the method 'self._x_average' is overwritten by models which do

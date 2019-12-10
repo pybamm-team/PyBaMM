@@ -66,6 +66,7 @@ def make_comsol_model(comsol_variables, name):
     whole_cell = ["negative electrode", "separator", "positive electrode"]
     comsol_t = comsol_variables["time"]
     L_x = param.evaluate(pybamm.standard_parameters_lithium_ion.L_x)
+    interp_kind = "quadratic"
 
     def get_interp_fun(variable_name, domain):
         """
@@ -84,10 +85,14 @@ def make_comsol_model(comsol_variables, name):
             comsol_x = comsol_variables["x"]
         # Make sure to use dimensional space
         pybamm_x = mesh.combine_submeshes(*domain)[0].nodes * L_x
-        variable = interp.interp1d(comsol_x, variable, axis=0)(pybamm_x)
+        variable = interp.interp1d(comsol_x, variable, axis=0, kind=interp_kind)(
+            pybamm_x
+        )
 
         def myinterp(t):
-            return interp.interp1d(comsol_t, variable)(t)[:, np.newaxis]
+            return interp.interp1d(comsol_t, variable, kind=interp_kind)(t)[
+                :, np.newaxis
+            ]
 
         # Make sure to use dimensional time
         fun = pybamm.Function(myinterp, pybamm.t * tau, name=variable_name + "_comsol")
@@ -104,10 +109,12 @@ def make_comsol_model(comsol_variables, name):
     comsol_i_s_p = get_interp_fun("i_s_p", ["positive electrode"])
     comsol_i_e_n = get_interp_fun("i_e_n", ["negative electrode"])
     comsol_i_e_p = get_interp_fun("i_e_p", ["positive electrode"])
-    comsol_voltage = interp.interp1d(comsol_t, comsol_variables["voltage"])
+    comsol_voltage = interp.interp1d(
+        comsol_t, comsol_variables["voltage"], kind=interp_kind
+    )
     try:
         comsol_temperature_av = interp.interp1d(
-            comsol_t, comsol_variables["average temperature"]
+            comsol_t, comsol_variables["average temperature"], kind=interp_kind
         )
     except KeyError:
         # isothermal

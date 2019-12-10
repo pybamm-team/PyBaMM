@@ -5,7 +5,6 @@ import pickle
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.interpolate as interp
-from scipy.optimize import minimize_scalar
 
 # change working directory to the root of pybamm
 os.chdir(pybamm.root_dir())
@@ -45,8 +44,15 @@ param.process_geometry(geometry)
 
 # create mesh
 var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 101, var.x_s: 101, var.x_p: 101, var.r_n: 101, var.r_p: 101}
+# var_pts = {var.x_n: 101, var.x_s: 101, var.x_p: 101, var.r_n: 101, var.r_p: 101}
 # var_pts = {var.x_n: 20, var.x_s: 20, var.x_p: 20, var.r_n: 30, var.r_p: 30}
+var_pts = {
+    var.x_n: int(param.evaluate(pybamm.geometric_parameters.L_n / 1e-6)),
+    var.x_s: int(param.evaluate(pybamm.geometric_parameters.L_s / 1e-6)),
+    var.x_p: int(param.evaluate(pybamm.geometric_parameters.L_n / 1e-6)),
+    var.r_n: int(param.evaluate(pybamm.geometric_parameters.R_n / 1e-7)),
+    var.r_p: int(param.evaluate(pybamm.geometric_parameters.R_p / 1e-7)),
+}
 mesh = pybamm.Mesh(geometry, pybamm_model.default_submesh_types, var_pts)
 
 # discretise model
@@ -62,6 +68,7 @@ solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6, mode="fast")
 "Solve at different C_rates and plot against COMSOL solution"
 
 counter = 0
+interp_kind = "cubic"
 
 for key, value in C_rates.items():
     # load comsol_model
@@ -69,9 +76,11 @@ for key, value in C_rates.items():
         open("input/comsol_results/comsol_thermal_{}C.pickle".format(key), "rb")
     )
     comsol_t = comsol_variables["time"]
-    comsol_voltage = interp.interp1d(comsol_t, comsol_variables["voltage"])
+    comsol_voltage = interp.interp1d(
+        comsol_t, comsol_variables["voltage"], kind=interp_kind
+    )
     comsol_temperature = interp.interp1d(
-        comsol_t, comsol_variables["average temperature"]
+        comsol_t, comsol_variables["average temperature"], kind=interp_kind
     )
 
     # update C_rate
@@ -118,8 +127,8 @@ for key, value in C_rates.items():
 
     # add to plot
     ax[0, 0].plot(
-        dis_cap,
-        comsol_voltage(time * tau),
+        dis_cap[0::10],
+        comsol_voltage(time[0::10] * tau),
         "o",
         fillstyle="none",
         color="C{}".format(counter),
@@ -133,8 +142,8 @@ for key, value in C_rates.items():
         label="PyBaMM ({}C)".format(value),
     )
     ax[0, 1].plot(
-        dis_cap,
-        comsol_temperature(time * tau),
+        dis_cap[0::10],
+        comsol_temperature(time[0::10] * tau),
         "o",
         fillstyle="none",
         color="C{}".format(counter),

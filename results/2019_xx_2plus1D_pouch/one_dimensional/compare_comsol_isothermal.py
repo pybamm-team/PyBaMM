@@ -1,3 +1,7 @@
+#
+# Compare isothermal models from pybamm and comsol
+#
+
 import pybamm
 import numpy as np
 import os
@@ -71,6 +75,7 @@ solution = solver.solve(pybamm_model, time)
 whole_cell = ["negative electrode", "separator", "positive electrode"]
 comsol_t = comsol_variables["time"]
 L_x = param.evaluate(pybamm.standard_parameters_lithium_ion.L_x)
+interp_kind = "quadratic"
 
 
 def get_interp_fun(variable_name, domain):
@@ -90,10 +95,10 @@ def get_interp_fun(variable_name, domain):
         comsol_x = comsol_variables["x"]
     # Make sure to use dimensional space
     pybamm_x = mesh.combine_submeshes(*domain)[0].nodes * L_x
-    variable = interp.interp1d(comsol_x, variable, axis=0, kind="cubic")(pybamm_x)
+    variable = interp.interp1d(comsol_x, variable, axis=0, kind=interp_kind)(pybamm_x)
 
     def myinterp(t):
-        return interp.interp1d(comsol_t, variable, kind="cubic")(t)[:, np.newaxis]
+        return interp.interp1d(comsol_t, variable, kind=interp_kind)(t)[:, np.newaxis]
 
     # Make sure to use dimensional time
     fun = pybamm.Function(myinterp, pybamm.t * tau, name=variable_name + "_comsol")
@@ -111,7 +116,9 @@ comsol_i_s_n = get_interp_fun("i_s_n", ["negative electrode"])
 comsol_i_s_p = get_interp_fun("i_s_p", ["positive electrode"])
 comsol_i_e_n = get_interp_fun("i_e_n", ["negative electrode"])
 comsol_i_e_p = get_interp_fun("i_e_p", ["positive electrode"])
-comsol_voltage = interp.interp1d(comsol_t, comsol_variables["voltage"], kind="cubic")
+comsol_voltage = interp.interp1d(
+    comsol_t, comsol_variables["voltage"], kind=interp_kind
+)
 
 # Create comsol model with dictionary of Matrix variables
 comsol_model = pybamm.BaseModel()
