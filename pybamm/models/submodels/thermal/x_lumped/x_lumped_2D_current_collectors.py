@@ -16,6 +16,8 @@ class CurrentCollector2D(BaseModel):
         T_av = variables["X-averaged cell temperature"]
         Q_av = variables["X-averaged total heating"]
 
+        cooling_coeff = self._surface_cooling_coefficient()
+
         # Add boundary source term which accounts for surface cooling around
         # the edge of the domain in the weak formulation.
         # TODO: update to allow different cooling conditions at the tabs
@@ -23,8 +25,7 @@ class CurrentCollector2D(BaseModel):
             T_av: (
                 pybamm.laplacian(T_av)
                 + self.param.B * pybamm.source(Q_av, T_av)
-                - (2 * self.param.h / (self.param.delta ** 2) / self.param.l)
-                * pybamm.source(T_av, T_av)
+                + cooling_coeff * pybamm.source(T_av, T_av)
                 - (self.param.h / self.param.delta)
                 * pybamm.source(T_av, T_av, boundary=True)
             )

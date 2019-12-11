@@ -11,19 +11,18 @@ class Matrix(pybamm.Array):
 
     **Extends:** :class:`Array`
 
-    Parameters
-    ----------
-
-    entries : numpy.array
-        the array associated with the node
-    name : str, optional
-        the name of the node
-
     """
 
-    def __init__(self, entries, name=None, domain=[], entries_string=None):
+    def __init__(
+        self,
+        entries,
+        name=None,
+        domain=None,
+        auxiliary_domains=None,
+        entries_string=None,
+    ):
         if name is None:
             name = "Matrix {!s}".format(entries.shape)
             if issparse(entries):
                 name = "Sparse " + name
-        super().__init__(entries, name, domain, entries_string)
+        super().__init__(entries, name, domain, auxiliary_domains, entries_string)

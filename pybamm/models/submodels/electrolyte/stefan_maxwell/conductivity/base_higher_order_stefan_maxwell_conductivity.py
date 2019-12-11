@@ -30,12 +30,6 @@ class BaseHigherOrder(BaseModel):
         raise NotImplementedError
 
     def get_coupled_variables(self, variables):
-        # NOTE: the heavy use of Broadcast and outer in this method is mainly so
-        # that products are handled correctly when using 1 or 2D current collector
-        # models. In standard 1D battery models outer behaves as a normal multiply.
-        # In the future, multiply will automatically handle switching between
-        # normal multiply and outer products as appropriate.
-
         c_e_av = self.unpack(variables)
 
         i_boundary_cc_0 = variables["Leading-order current collector current density"]
@@ -44,15 +38,14 @@ class BaseHigherOrder(BaseModel):
             "X-averaged negative electrode surface potential difference"
         ]
         phi_s_n_av = variables["X-averaged negative electrode potential"]
-        eps_n_av = variables["Leading-order x-averaged negative electrode porosity"]
-        eps_s_av = variables["Leading-order x-averaged separator porosity"]
-        eps_p_av = variables["Leading-order x-averaged positive electrode porosity"]
+        tor_n_av = variables["Leading-order x-averaged negative electrolyte tortuosity"]
+        tor_s_av = variables["Leading-order x-averaged separator tortuosity"]
+        tor_p_av = variables["Leading-order x-averaged positive electrolyte tortuosity"]
 
-        # Note: here we want the average of the temperature over the negative
-        # electrode, separator and positive electrode (not including the current
-        # collectors)
-        T = variables["Cell temperature"]
-        T_av = pybamm.x_average(T)
+        T_av = variables["X-averaged cell temperature"]
+        T_av_n = pybamm.PrimaryBroadcast(T_av, "negative electrode")
+        T_av_s = pybamm.PrimaryBroadcast(T_av, "separator")
+        T_av_p = pybamm.PrimaryBroadcast(T_av, "positive electrode")
 
         c_e_n, c_e_s, c_e_p = c_e.orphans
 
@@ -64,9 +57,9 @@ class BaseHigherOrder(BaseModel):
         x_p = pybamm.standard_spatial_vars.x_p
 
         # bulk conductivities
-        kappa_n_av = param.kappa_e(c_e_av, T_av) * eps_n_av ** param.b
-        kappa_s_av = param.kappa_e(c_e_av, T_av) * eps_s_av ** param.b
-        kappa_p_av = param.kappa_e(c_e_av, T_av) * eps_p_av ** param.b
+        kappa_n_av = param.kappa_e(c_e_av, T_av) * tor_n_av
+        kappa_s_av = param.kappa_e(c_e_av, T_av) * tor_s_av
+        kappa_p_av = param.kappa_e(c_e_av, T_av) * tor_p_av
 
         chi_av = param.chi(c_e_av)
         if chi_av.domain == ["current collector"]:
@@ -79,9 +72,9 @@ class BaseHigherOrder(BaseModel):
             chi_av_p = chi_av
 
         # electrolyte current
-        i_e_n = pybamm.outer(i_boundary_cc_0, x_n / l_n)
+        i_e_n = i_boundary_cc_0 * x_n / l_n
         i_e_s = pybamm.PrimaryBroadcast(i_boundary_cc_0, "separator")
-        i_e_p = pybamm.outer(i_boundary_cc_0, (1 - x_p) / l_p)
+        i_e_p = i_boundary_cc_0 * (1 - x_p) / l_p
         i_e = pybamm.Concatenation(i_e_n, i_e_s, i_e_p)
 
         # electrolyte potential
@@ -90,11 +83,8 @@ class BaseHigherOrder(BaseModel):
             + phi_s_n_av
             - (
                 chi_av
-                * pybamm.x_average(
-                    self._higher_order_macinnes_function(
-                        c_e_n / pybamm.PrimaryBroadcast(c_e_av, "negative electrode")
-                    )
-                )
+                * (1 + param.Theta * T_av)
+                * pybamm.x_average(self._higher_order_macinnes_function(c_e_n / c_e_av))
             )
             - (
                 (i_boundary_cc_0 * param.C_e * l_n / param.gamma_e)
@@ -103,68 +93,51 @@ class BaseHigherOrder(BaseModel):
         )
 
         phi_e_n = (
-            pybamm.PrimaryBroadcast(phi_e_const, "negative electrode")
+            phi_e_const
             + (
                 chi_av_n
-                * self._higher_order_macinnes_function(
-                    c_e_n / pybamm.PrimaryBroadcast(c_e_av, "negative electrode")
-                )
+                * (1 + param.Theta * T_av_n)
+                * self._higher_order_macinnes_function(c_e_n / c_e_av)
             )
-            - pybamm.outer(
-                i_boundary_cc_0 * (param.C_e / param.gamma_e) / kappa_n_av,
-                (x_n ** 2 - l_n ** 2) / (2 * l_n),
-            )
-            - pybamm.PrimaryBroadcast(
-                i_boundary_cc_0 * l_n * (param.C_e / param.gamma_e) / kappa_s_av,
-                "negative electrode",
-            )
+            - (i_boundary_cc_0 * (param.C_e / param.gamma_e) / kappa_n_av)
+            * (x_n ** 2 - l_n ** 2)
+            / (2 * l_n)
+            - i_boundary_cc_0 * l_n * (param.C_e / param.gamma_e) / kappa_s_av
         )
 
         phi_e_s = (
-            pybamm.PrimaryBroadcast(phi_e_const, "separator")
+            phi_e_const
             + (
                 chi_av_s
-                * self._higher_order_macinnes_function(
-                    c_e_s / pybamm.PrimaryBroadcast(c_e_av, "separator")
-                )
+                * (1 + param.Theta * T_av_s)
+                * self._higher_order_macinnes_function(c_e_s / c_e_av)
             )
-            - pybamm.outer(
-                i_boundary_cc_0 * param.C_e / param.gamma_e / kappa_s_av, x_s
-            )
+            - (i_boundary_cc_0 * param.C_e / param.gamma_e / kappa_s_av) * x_s
         )
 
         phi_e_p = (
-            pybamm.PrimaryBroadcast(phi_e_const, "positive electrode")
+            phi_e_const
             + (
                 chi_av_p
-                * self._higher_order_macinnes_function(
-                    c_e_p / pybamm.PrimaryBroadcast(c_e_av, "positive electrode")
-                )
+                * (1 + param.Theta * T_av_p)
+                * self._higher_order_macinnes_function(c_e_p / c_e_av)
             )
-            - pybamm.outer(
-                i_boundary_cc_0 * (param.C_e / param.gamma_e) / kappa_p_av,
-                (x_p * (2 - x_p) + l_p ** 2 - 1) / (2 * l_p),
-            )
-            - pybamm.PrimaryBroadcast(
-                i_boundary_cc_0 * (1 - l_p) * (param.C_e / param.gamma_e) / kappa_s_av,
-                "positive electrode",
-            )
+            - (i_boundary_cc_0 * (param.C_e / param.gamma_e) / kappa_p_av)
+            * (x_p * (2 - x_p) + l_p ** 2 - 1)
+            / (2 * l_p)
+            - i_boundary_cc_0 * (1 - l_p) * (param.C_e / param.gamma_e) / kappa_s_av
         )
 
         phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
         phi_e_av = pybamm.x_average(phi_e)
 
         # concentration overpotential
-        eta_c_av = chi_av * (
-            pybamm.x_average(
-                self._higher_order_macinnes_function(
-                    c_e_p / pybamm.PrimaryBroadcast(c_e_av, "positive electrode")
-                )
-            )
-            - pybamm.x_average(
-                self._higher_order_macinnes_function(
-                    c_e_n / pybamm.PrimaryBroadcast(c_e_av, "negative electrode")
-                )
+        eta_c_av = (
+            chi_av
+            * (1 + param.Theta * T_av)
+            * (
+                pybamm.x_average(self._higher_order_macinnes_function(c_e_p / c_e_av))
+                - pybamm.x_average(self._higher_order_macinnes_function(c_e_n / c_e_av))
             )
         )
 

@@ -67,14 +67,14 @@ class Full(BaseModel):
 
     def get_coupled_variables(self, variables):
 
-        eps = separator_and_positive_only(variables["Porosity"])
+        tor = separator_and_positive_only(variables["Electrolyte tortuosity"])
         c_ox = variables["Separator and positive electrode oxygen concentration"]
         # TODO: allow charge and convection?
         v_box = pybamm.Scalar(0)
 
         param = self.param
 
-        N_ox_diffusion = -(eps ** param.b) * param.curlyD_ox * pybamm.grad(c_ox)
+        N_ox_diffusion = -tor * param.curlyD_ox * pybamm.grad(c_ox)
 
         N_ox = N_ox_diffusion + param.C_e * c_ox * v_box
         # Flux in the negative electrode is zero

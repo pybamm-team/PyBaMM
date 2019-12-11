@@ -52,11 +52,7 @@ class BaseFirstOrderKinetics(BaseModel):
             + self.reaction_name
             + " interfacial current density"
         ]
-        j_1 = (
-            pybamm.PrimaryBroadcast(dj_dc_0, self.domain_for_broadcast) * c_e_1
-            + pybamm.PrimaryBroadcast(dj_ddeltaphi_0, self.domain_for_broadcast)
-            * delta_phi_1
-        )
+        j_1 = dj_dc_0 * c_e_1 + dj_ddeltaphi_0 * delta_phi_1
         j = j_0 + self.param.C_e * j_1
         # Get exchange-current density
         j0 = self._get_exchange_current_density(variables)

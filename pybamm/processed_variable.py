@@ -7,7 +7,9 @@ import pybamm
 import scipy.interpolate as interp
 
 
-def post_process_variables(variables, t_sol, u_sol, mesh=None, interp_kind="linear"):
+def post_process_variables(
+    variables, t_sol, u_sol, mesh=None, inputs=None, interp_kind="linear"
+):
     """
     Post-process all variables in a model
 
@@ -23,6 +25,8 @@ def post_process_variables(variables, t_sol, u_sol, mesh=None, interp_kind="line
     mesh : :class:`pybamm.Mesh`
         The mesh used to solve, used here to calculate the reference x values for
         interpolation
+    inputs : dict, optional
+        Any input parameters to pass to the model
     interp_kind : str
         The method to use for interpolation
 
@@ -36,7 +40,7 @@ def post_process_variables(variables, t_sol, u_sol, mesh=None, interp_kind="line
     for var, eqn in variables.items():
         pybamm.logger.debug("Post-processing {}".format(var))
         processed_variables[var] = ProcessedVariable(
-            eqn, t_sol, u_sol, mesh, interp_kind, known_evals
+            eqn, t_sol, u_sol, mesh, inputs, interp_kind, known_evals
         )
 
         for t in known_evals:
@@ -64,6 +68,8 @@ class ProcessedVariable(object):
     mesh : :class:`pybamm.Mesh`
         The mesh used to solve, used here to calculate the reference x values for
         interpolation
+    inputs : dict, optional
+            Any input parameters to pass to the model
     interp_kind : str
         The method to use for interpolation
     """
@@ -74,6 +80,7 @@ class ProcessedVariable(object):
         t_sol,
         u_sol,
         mesh=None,
+        inputs=None,
         interp_kind="linear",
         known_evals=None,
     ):
@@ -81,6 +88,7 @@ class ProcessedVariable(object):
         self.t_sol = t_sol
         self.u_sol = u_sol
         self.mesh = mesh
+        self.inputs = inputs or {}
         self.interp_kind = interp_kind
         self.domain = base_variable.domain
         self.auxiliary_domains = base_variable.auxiliary_domains
@@ -88,7 +96,10 @@ class ProcessedVariable(object):
 
         if self.known_evals:
             self.base_eval, self.known_evals[t_sol[0]] = base_variable.evaluate(
-                t_sol[0], u_sol[:, 0], self.known_evals[t_sol[0]]
+                t_sol[0],
+                u_sol[:, 0],
+                self.inputs,
+                known_evals=self.known_evals[t_sol[0]],
             )
         else:
             self.base_eval = base_variable.evaluate(t_sol[0], u_sol[:, 0])
@@ -97,7 +108,7 @@ class ProcessedVariable(object):
         if (
             mesh
             and "current collector" in self.domain
-            and isinstance(self.mesh[self.domain[0]][0], pybamm.Scikit2DSubMesh)
+            and isinstance(self.mesh[self.domain[0]][0], pybamm.ScikitSubMesh2D)
         ):
             if len(self.t_sol) == 1:
                 # space only (steady solution)
@@ -131,10 +142,12 @@ class ProcessedVariable(object):
             t = self.t_sol[idx]
             if self.known_evals:
                 entries[idx], self.known_evals[t] = self.base_variable.evaluate(
-                    t, self.u_sol[:, idx], self.known_evals[t]
+                    t, self.u_sol[:, idx], self.inputs, known_evals=self.known_evals[t]
                 )
             else:
-                entries[idx] = self.base_variable.evaluate(t, self.u_sol[:, idx])
+                entries[idx] = self.base_variable.evaluate(
+                    t, self.u_sol[:, idx], self.inputs
+                )
 
         # No discretisation provided, or variable has no domain (function of t only)
         self._interpolation_function = interp.interp1d(
@@ -158,12 +171,12 @@ class ProcessedVariable(object):
             u = self.u_sol[:, idx]
             if self.known_evals:
                 eval_and_known_evals = self.base_variable.evaluate(
-                    t, u, self.known_evals[t]
+                    t, u, self.inputs, known_evals=self.known_evals[t]
                 )
                 entries[:, idx] = eval_and_known_evals[0][:, 0]
                 self.known_evals[t] = eval_and_known_evals[1]
             else:
-                entries[:, idx] = self.base_variable.evaluate(t, u)[:, 0]
+                entries[:, idx] = self.base_variable.evaluate(t, u, self.inputs)[:, 0]
 
         # Process the discretisation to get x values
         nodes = self.mesh.combine_submeshes(*self.domain)[0].nodes
@@ -306,7 +319,7 @@ class ProcessedVariable(object):
             u = self.u_sol[:, idx]
             if self.known_evals:
                 eval_and_known_evals = self.base_variable.evaluate(
-                    t, u, self.known_evals[t]
+                    t, u, self.inputs, known_evals=self.known_evals[t]
                 )
                 entries[:, :, idx] = np.reshape(
                     eval_and_known_evals[0],
@@ -316,7 +329,7 @@ class ProcessedVariable(object):
                 self.known_evals[t] = eval_and_known_evals[1]
             else:
                 entries[:, :, idx] = np.reshape(
-                    self.base_variable.evaluate(t, u),
+                    self.base_variable.evaluate(t, u, self.inputs),
                     [first_dim_size, second_dim_size],
                     order=order,
                 )
@@ -371,13 +384,13 @@ class ProcessedVariable(object):
             u = self.u_sol[:, idx]
             if self.known_evals:
                 eval_and_known_evals = self.base_variable.evaluate(
-                    t, u, self.known_evals[t]
+                    t, u, self.inputs, known_evals=self.known_evals[t]
                 )
                 entries[:, :, idx] = np.reshape(eval_and_known_evals[0], [len_y, len_z])
                 self.known_evals[t] = eval_and_known_evals[1]
             else:
                 entries[:, :, idx] = np.reshape(
-                    self.base_variable.evaluate(t, u), [len_y, len_z]
+                    self.base_variable.evaluate(t, u, self.inputs), [len_y, len_z]
                 )
 
         # assign attributes for reference
@@ -396,36 +409,34 @@ class ProcessedVariable(object):
             fill_value=np.nan,
         )
 
-    def __call__(self, t=None, x=None, r=None, y=None, z=None):
-        "Evaluate the variable at arbitrary t (and x and/or r), using interpolation"
+    def __call__(self, t=None, x=None, r=None, y=None, z=None, warn=True):
+        """
+        Evaluate the variable at arbitrary t (and x, r, y and/or z), using interpolation
+        """
         if self.dimensions == 1:
-            return self._interpolation_function(t)
+            out = self._interpolation_function(t)
         elif self.dimensions == 2:
             if t is None:
-                return self._interpolation_function(y, z)
+                out = self._interpolation_function(y, z)
             else:
-                return self.call_2D(t, x, r, z)
+                out = self.call_2D(t, x, r, z)
         elif self.dimensions == 3:
-            return self.call_3D(t, x, r, y, z)
+            out = self.call_3D(t, x, r, y, z)
+        if warn is True and np.isnan(out).any():
+            pybamm.logger.warning(
+                "Calling variable outside interpolation range (returns 'nan')"
+            )
+        return out
 
     def call_2D(self, t, x, r, z):
         "Evaluate a 2D variable"
-        spatial_var = eval_dimension_name(self.spatial_var_name, t, x, r, None, z)
-        if spatial_var is not None:
-            return self._interpolation_function(t, spatial_var)
-        else:
-            raise ValueError("input {} cannot be None".format(self.spatial_var_name))
+        spatial_var = eval_dimension_name(self.spatial_var_name, x, r, None, z)
+        return self._interpolation_function(t, spatial_var)
 
     def call_3D(self, t, x, r, y, z):
         "Evaluate a 3D variable"
-        first_dim = eval_dimension_name(self.first_dimension, t, x, r, y, z)
-        second_dim = eval_dimension_name(self.second_dimension, t, x, r, y, z)
-        if first_dim is None or second_dim is None:
-            raise ValueError(
-                "inputs {} and {} cannot be None".format(
-                    self.first_dimension, self.second_dimension
-                )
-            )
+        first_dim = eval_dimension_name(self.first_dimension, x, r, y, z)
+        second_dim = eval_dimension_name(self.second_dimension, x, r, y, z)
         if isinstance(first_dim, np.ndarray):
             if isinstance(second_dim, np.ndarray) and isinstance(t, np.ndarray):
                 first_dim = first_dim[:, np.newaxis, np.newaxis]
@@ -439,14 +450,17 @@ class ProcessedVariable(object):
         return self._interpolation_function((first_dim, second_dim, t))
 
 
-def eval_dimension_name(name, t, x, r, y, z):
-    if name == "t":
-        return t
-    elif name == "x":
-        return x
+def eval_dimension_name(name, x, r, y, z):
+    if name == "x":
+        out = x
     elif name == "r":
-        return r
+        out = r
     elif name == "y":
-        return y
+        out = y
     elif name == "z":
-        return z
+        out = z
+
+    if out is None:
+        raise ValueError("inputs {} cannot be None".format(name))
+    else:
+        return out

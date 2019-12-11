@@ -328,10 +328,8 @@ class TestBaseModel(unittest.TestCase):
         }
 
         # Check warning raised
-        # TODO: getting a strange bug here, related to CPython bug here:
-        #    https://bugs.python.org/issue29620
-        # with self.assertWarns(pybamm.ModelWarning):
-        model.check_well_posedness()
+        with self.assertWarns(pybamm.ModelWarning):
+            model.check_well_posedness()
 
         # Check None entries have been removed from the variables dictionary
         for key, item in model._variables.items():
@@ -373,6 +371,17 @@ class TestStandardBatteryBaseModel(unittest.TestCase):
             model.default_solver, (pybamm.ScipySolver, pybamm.ScikitsOdeSolver)
         )
         self.assertIsInstance(solver, pybamm.BaseModel)
+
+        # check that adding algebraic variables gives DAE solver
+        a = pybamm.Variable("a")
+        model.algebraic = {a: a - 1}
+        self.assertIsInstance(
+            model.default_solver, (pybamm.IDAKLUSolver, pybamm.CasadiSolver)
+        )
+
+        # Check that turning off jacobian gives casadi solver
+        model.use_jacobian = False
+        self.assertIsInstance(model.default_solver, pybamm.CasadiSolver)
 
     def test_default_parameters(self):
         # check parameters are read in ok

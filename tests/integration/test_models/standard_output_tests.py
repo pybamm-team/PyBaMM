@@ -26,9 +26,7 @@ class StandardOutputTests(object):
             self.chemistry = "Lead acid"
 
         # Only for constant current
-        current_sign = np.sign(
-            parameter_values["Current function"].parameters_eval["Current [A]"]
-        )
+        current_sign = np.sign(parameter_values["Current function"])
 
         if current_sign == 1:
             self.operating_condition = "discharge"
@@ -90,8 +88,8 @@ class BaseOutputTest(object):
             self.r_p_edge = disc.mesh["positive particle"][0].edges
 
         # Useful parameters
-        self.l_n = param.process_symbol(pybamm.geometric_parameters.l_n).evaluate()
-        self.l_p = param.process_symbol(pybamm.geometric_parameters.l_p).evaluate()
+        self.l_n = param.evaluate(pybamm.geometric_parameters.l_n)
+        self.l_p = param.evaluate(pybamm.geometric_parameters.l_p)
 
         if isinstance(self.model, pybamm.lithium_ion.BaseModel):
             current_param = pybamm.standard_parameters_lithium_ion.current_with_time
@@ -635,9 +633,9 @@ class VelocityTests(BaseOutputTest):
         t, x_n, x_p = self.t, self.x_n, self.x_p
 
         beta_n = pybamm.standard_parameters_lead_acid.beta_n
-        beta_n = self.param.process_symbol(beta_n).evaluate()
+        beta_n = self.param.evaluate(beta_n)
         beta_p = pybamm.standard_parameters_lead_acid.beta_p
-        beta_p = self.param.process_symbol(beta_p).evaluate()
+        beta_p = self.param.evaluate(beta_p)
 
         np.testing.assert_array_almost_equal(
             self.v_box(t, x_n), beta_n * self.i_e(t, x_n)

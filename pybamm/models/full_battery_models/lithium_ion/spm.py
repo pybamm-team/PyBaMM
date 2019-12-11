@@ -8,6 +8,18 @@ from .base_lithium_ion_model import BaseModel
 class SPM(BaseModel):
     """Single Particle Model (SPM) of a lithium-ion battery, from [1]_.
 
+    Parameters
+    ----------
+    options : dict, optional
+        A dictionary of options to be passed to the model.
+    name : str, optional
+        The name of the model.
+    build :  bool, optional
+        Whether to build the model on instantiation. Default is True. Setting this
+        option to False allows users to change any number of the submodels before
+        building the complete model (submodels cannot be changed after the model is
+        built).
+
     References
     ----------
     .. [1] SG Marquis, V Sulzer, R Timms, CP Please and SJ Chapman. “An asymptotic
@@ -17,10 +29,11 @@ class SPM(BaseModel):
     **Extends:** :class:`pybamm.lithium_ion.BaseModel`
     """
 
-    def __init__(self, options=None, name="Single Particle Model"):
+    def __init__(self, options=None, name="Single Particle Model", build=True):
         super().__init__(options, name)
 
         self.set_porosity_submodel()
+        self.set_tortuosity_submodels()
         self.set_convection_submodel()
         self.set_interfacial_submodel()
         self.set_particle_submodel()
@@ -30,7 +43,8 @@ class SPM(BaseModel):
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
 
-        self.build_model()
+        if build:
+            self.build_model()
 
     def set_porosity_submodel(self):
 
@@ -79,8 +93,14 @@ class SPM(BaseModel):
 
     def set_positive_electrode_submodel(self):
 
+        if self.options["current collector"] == "set external potential":
+            # Potentials are set by external model
+            set_positive_potential = False
+        else:
+            # Potential determined by 1D model
+            set_positive_potential = True
         self.submodels["positive electrode"] = pybamm.electrode.ohm.LeadingOrder(
-            self.param, "Positive"
+            self.param, "Positive", set_positive_potential=set_positive_potential
         )
 
     def set_electrolyte_submodel(self):
@@ -103,15 +123,3 @@ class SPM(BaseModel):
             return pybamm.Geometry("1+1D macro", "(1+0)+1D micro")
         elif dimensionality == 2:
             return pybamm.Geometry("2+1D macro", "(2+0)+1D micro")
-
-    @property
-    def default_solver(self):
-        """
-        Create and return the default solver for this model
-        """
-        # Different solver depending on whether we solve ODEs or DAEs
-        dimensionality = self.options["dimensionality"]
-        if dimensionality == 0:
-            return pybamm.ScipySolver()
-        else:
-            return pybamm.ScikitsDaeSolver()

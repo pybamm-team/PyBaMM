@@ -71,6 +71,10 @@ class StandardModelTest(object):
         # Overwrite solver if given
         if solver is not None:
             self.solver = solver
+        # Use tighter default tolerances for testing
+        self.solver.rtol = 1e-8
+        self.solver.atol = 1e-8
+
         if t_eval is None:
             t_eval = np.linspace(0, 1, 100)
 
@@ -168,6 +172,7 @@ class OptimisationsTest(object):
 
     def set_up_model(self, simplify=False, to_python=False):
         self.model.use_simplify = simplify
-        self.model.use_to_python = to_python
+        if to_python is True:
+            self.model.convert_to_format = "python"
         self.model.default_solver.set_up(self.model)
         return None

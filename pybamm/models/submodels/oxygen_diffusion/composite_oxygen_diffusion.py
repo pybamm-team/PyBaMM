@@ -32,12 +32,14 @@ class Composite(Full):
 
     def get_coupled_variables(self, variables):
 
-        eps_0 = separator_and_positive_only(variables["Leading-order porosity"])
+        tor_0 = separator_and_positive_only(
+            variables["Leading-order electrolyte tortuosity"]
+        )
         c_ox = variables["Separator and positive electrode oxygen concentration"]
 
         param = self.param
 
-        N_ox_diffusion = -(eps_0 ** param.b) * param.curlyD_ox * pybamm.grad(c_ox)
+        N_ox_diffusion = -tor_0 * param.curlyD_ox * pybamm.grad(c_ox)
 
         # Note: no convection because c_ox_0 = 0 (at leading order)
         N_ox = N_ox_diffusion

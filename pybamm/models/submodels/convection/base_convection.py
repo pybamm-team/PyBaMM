@@ -110,3 +110,33 @@ class BaseModel(pybamm.BaseSubModel):
         variables = {"Pressure": p}
 
         return variables
+        # Set up
+        param = self.param
+        l_n = pybamm.geometric_parameters.l_n
+        l_s = pybamm.geometric_parameters.l_s
+        x_s = pybamm.standard_spatial_vars.x_s
+
+        # Difference in negative and positive electrode velocities determines the
+        # velocity in the separator
+        i_boundary_cc = variables["Current collector current density"]
+        v_box_n_right = param.beta_n * i_boundary_cc
+        v_box_p_left = param.beta_p * i_boundary_cc
+        d_vbox_s__dx = (v_box_p_left - v_box_n_right) / l_s
+
+        # Simple formula for velocity in the separator
+        dVbox_dz = pybamm.Concatenation(
+            pybamm.FullBroadcast(
+                0,
+                "negative electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            ),
+            pybamm.PrimaryBroadcast(-d_vbox_s__dx, "separator"),
+            pybamm.FullBroadcast(
+                0,
+                "positive electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            ),
+        )
+        v_box_s = d_vbox_s__dx * (x_s - l_n) + v_box_n_right
+
+        return v_box_s, dVbox_dz

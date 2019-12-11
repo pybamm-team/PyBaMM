@@ -22,11 +22,21 @@ class StateVector(pybamm.Symbol):
         list of domains the parameter is valid over, defaults to empty list
     auxiliary_domains : dict of str, optional
         dictionary of auxiliary domains
+    evaluation_array : list, optional
+        List of boolean arrays representing slices. Default is None, in which case the
+        evaluation_array is computed from y_slices.
 
     *Extends:* :class:`Array`
     """
 
-    def __init__(self, *y_slices, name=None, domain=None, auxiliary_domains=None):
+    def __init__(
+        self,
+        *y_slices,
+        name=None,
+        domain=None,
+        auxiliary_domains=None,
+        evaluation_array=None,
+    ):
         for y_slice in y_slices:
             if not isinstance(y_slice, slice):
                 raise TypeError("all y_slices must be slice objects")
@@ -52,7 +62,7 @@ class StateVector(pybamm.Symbol):
         self._y_slices = y_slices
         self._first_point = y_slices[0].start
         self._last_point = y_slices[-1].stop
-        self.set_evaluation_array(y_slices)
+        self.set_evaluation_array(y_slices, evaluation_array)
         super().__init__(name=name, domain=domain, auxiliary_domains=auxiliary_domains)
 
     @property
@@ -76,12 +86,15 @@ class StateVector(pybamm.Symbol):
     def size(self):
         return self.evaluation_array.count(True)
 
-    def set_evaluation_array(self, y_slices):
+    def set_evaluation_array(self, y_slices, evaluation_array):
         "Set evaluation array using slices"
-        array = np.zeros(y_slices[-1].stop)
-        for y_slice in y_slices:
-            array[y_slice] = True
-        self._evaluation_array = [bool(x) for x in array]
+        if evaluation_array is not None and pybamm.settings.debug_mode is False:
+            self._evaluation_array = evaluation_array
+        else:
+            array = np.zeros(y_slices[-1].stop)
+            for y_slice in y_slices:
+                array[y_slice] = True
+            self._evaluation_array = [bool(x) for x in array]
 
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()` """
@@ -100,11 +113,11 @@ class StateVector(pybamm.Symbol):
             )
         else:
             out = (y[: len(self._evaluation_array)])[self._evaluation_array]
-            if out.ndim == 1:
+            if isinstance(out, np.ndarray) and out.ndim == 1:
                 out = out[:, np.newaxis]
             return out
 
-    def jac(self, variable):
+    def _jac(self, variable):
         """
         Differentiate a slice of a StateVector of size m with respect to another
         slice of a StateVector of size n. This returns a (sparse) matrix of size
@@ -156,7 +169,8 @@ class StateVector(pybamm.Symbol):
             *self.y_slices,
             name=self.name,
             domain=self.domain,
-            auxiliary_domains=self.auxiliary_domains
+            auxiliary_domains=self.auxiliary_domains,
+            evaluation_array=self.evaluation_array,
         )
 
     def evaluate_for_shape(self):

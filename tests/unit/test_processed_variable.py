@@ -93,6 +93,8 @@ class TestProcessedVariable(unittest.TestCase):
         disc.set_variable_slices([var])
         x_sol = disc.process_symbol(x).entries[:, 0]
         r_sol = disc.process_symbol(r).entries[:, 0]
+        # Keep only the first iteration of entries
+        r_sol = r_sol[: len(r_sol) // len(x_sol)]
         var_sol = disc.process_symbol(var)
         t_sol = np.linspace(0, 1)
         y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)
@@ -114,8 +116,10 @@ class TestProcessedVariable(unittest.TestCase):
 
         disc = tests.get_1p1d_discretisation_for_testing()
         disc.set_variable_slices([var])
-        x_sol = disc.process_symbol(x).entries[:, 0]
         z_sol = disc.process_symbol(z).entries[:, 0]
+        x_sol = disc.process_symbol(x).entries[:, 0]
+        # Keep only the first iteration of entries
+        x_sol = x_sol[: len(x_sol) // len(z_sol)]
         var_sol = disc.process_symbol(var)
         t_sol = np.linspace(0, 1)
         y_sol = np.ones(len(x_sol) * len(z_sol))[:, np.newaxis] * np.linspace(0, 5)
@@ -126,42 +130,48 @@ class TestProcessedVariable(unittest.TestCase):
             np.reshape(y_sol, [len(x_sol), len(z_sol), len(t_sol)]),
         )
 
-    @unittest.skipIf(pybamm.have_scikit_fem(), "scikit-fem not installed")
+        # On edges
+        x_s_edge = pybamm.Matrix(
+            np.repeat(disc.mesh["separator"][0].edges, len(z_sol)),
+            domain="separator",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        processed_x_s_edge = pybamm.ProcessedVariable(x_s_edge, t_sol, y_sol, disc.mesh)
+        np.testing.assert_array_equal(
+            x_s_edge.entries[:, 0],
+            processed_x_s_edge.entries[:, :, 0].reshape(-1, 1)[:, 0],
+        )
+
     def test_processed_variable_3D_scikit(self):
         var = pybamm.Variable("var", domain=["current collector"])
-        y = pybamm.SpatialVariable("y", domain=["current collector"])
-        z = pybamm.SpatialVariable("z", domain=["current collector"])
 
         disc = tests.get_2p1d_discretisation_for_testing()
         disc.set_variable_slices([var])
-        y_sol = disc.process_symbol(y).entries[:, 0]
-        z_sol = disc.process_symbol(z).entries[:, 0]
+        y = disc.mesh["current collector"][0].edges["y"]
+        z = disc.mesh["current collector"][0].edges["z"]
         var_sol = disc.process_symbol(var)
         t_sol = np.linspace(0, 1)
         u_sol = np.ones(var_sol.shape[0])[:, np.newaxis] * np.linspace(0, 5)
 
         processed_var = pybamm.ProcessedVariable(var_sol, t_sol, u_sol, mesh=disc.mesh)
         np.testing.assert_array_equal(
-            processed_var.entries,
-            np.reshape(u_sol, [len(y_sol), len(z_sol), len(t_sol)]),
+            processed_var.entries, np.reshape(u_sol, [len(y), len(z), len(t_sol)])
         )
 
     def test_processed_variable_2Dspace_scikit(self):
         var = pybamm.Variable("var", domain=["current collector"])
-        y = pybamm.SpatialVariable("y", domain=["current collector"])
-        z = pybamm.SpatialVariable("z", domain=["current collector"])
 
         disc = tests.get_2p1d_discretisation_for_testing()
         disc.set_variable_slices([var])
-        y_sol = disc.process_symbol(y).entries[:, 0]
-        z_sol = disc.process_symbol(z).entries[:, 0]
+        y = disc.mesh["current collector"][0].edges["y"]
+        z = disc.mesh["current collector"][0].edges["z"]
         var_sol = disc.process_symbol(var)
         t_sol = np.array([0])
         u_sol = np.ones(var_sol.shape[0])[:, np.newaxis]
 
         processed_var = pybamm.ProcessedVariable(var_sol, t_sol, u_sol, mesh=disc.mesh)
         np.testing.assert_array_equal(
-            processed_var.entries, np.reshape(u_sol, [len(y_sol), len(z_sol)])
+            processed_var.entries, np.reshape(u_sol, [len(y), len(z)])
         )
 
     def test_processed_var_1D_interpolation(self):
@@ -183,6 +193,11 @@ class TestProcessedVariable(unittest.TestCase):
         processed_eqn = pybamm.ProcessedVariable(eqn, t_sol, y_sol)
         np.testing.assert_array_equal(processed_eqn(t_sol), t_sol * y_sol[0])
         np.testing.assert_array_almost_equal(processed_eqn(0.5), 0.5 * 2.5)
+
+        # Suppress warning for this test
+        pybamm.set_logging_level("ERROR")
+        np.testing.assert_array_equal(processed_eqn(2), np.nan)
+        pybamm.set_logging_level("WARNING")
 
     def test_processed_var_2D_interpolation(self):
         t = pybamm.t
@@ -246,6 +261,8 @@ class TestProcessedVariable(unittest.TestCase):
         disc.set_variable_slices([var])
         x_sol = disc.process_symbol(x).entries[:, 0]
         r_sol = disc.process_symbol(r).entries[:, 0]
+        # Keep only the first iteration of entries
+        r_sol = r_sol[: len(r_sol) // len(x_sol)]
         var_sol = disc.process_symbol(var)
         t_sol = np.linspace(0, 1)
         y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)
@@ -282,6 +299,8 @@ class TestProcessedVariable(unittest.TestCase):
         disc.set_variable_slices([var])
         x_sol = disc.process_symbol(x).entries[:, 0]
         r_sol = disc.process_symbol(r).entries[:, 0]
+        # Keep only the first iteration of entries
+        r_sol = r_sol[: len(r_sol) // len(x_sol)]
         var_sol = disc.process_symbol(var)
         t_sol = np.linspace(0, 1)
         y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)
@@ -351,13 +370,11 @@ class TestProcessedVariable(unittest.TestCase):
 
     def test_processed_var_3D_scikit_interpolation(self):
         var = pybamm.Variable("var", domain=["current collector"])
-        y = pybamm.SpatialVariable("y", domain=["current collector"])
-        z = pybamm.SpatialVariable("z", domain=["current collector"])
 
         disc = tests.get_2p1d_discretisation_for_testing()
         disc.set_variable_slices([var])
-        y_sol = disc.process_symbol(y).entries[:, 0]
-        z_sol = disc.process_symbol(z).entries[:, 0]
+        y_sol = disc.mesh["current collector"][0].edges["y"]
+        z_sol = disc.mesh["current collector"][0].edges["z"]
         var_sol = disc.process_symbol(var)
         t_sol = np.linspace(0, 1)
         u_sol = np.ones(var_sol.shape[0])[:, np.newaxis] * np.linspace(0, 5)
@@ -390,13 +407,11 @@ class TestProcessedVariable(unittest.TestCase):
 
     def test_processed_var_2Dspace_scikit_interpolation(self):
         var = pybamm.Variable("var", domain=["current collector"])
-        y = pybamm.SpatialVariable("y", domain=["current collector"])
-        z = pybamm.SpatialVariable("z", domain=["current collector"])
 
         disc = tests.get_2p1d_discretisation_for_testing()
         disc.set_variable_slices([var])
-        y_sol = disc.process_symbol(y).entries[:, 0]
-        z_sol = disc.process_symbol(z).entries[:, 0]
+        y_sol = disc.mesh["current collector"][0].edges["y"]
+        z_sol = disc.mesh["current collector"][0].edges["z"]
         var_sol = disc.process_symbol(var)
         t_sol = np.array([0])
         u_sol = np.ones(var_sol.shape[0])[:, np.newaxis]

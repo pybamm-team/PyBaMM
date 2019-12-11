@@ -31,7 +31,7 @@ class Full(BaseModel):
 
     def get_coupled_variables(self, variables):
 
-        eps = variables["Porosity"]
+        tor = variables["Electrolyte tortuosity"]
         c_e = variables["Electrolyte concentration"]
         # i_e = variables["Electrolyte current density"]
         v_box = variables["Volume-averaged velocity"]
@@ -39,7 +39,7 @@ class Full(BaseModel):
 
         param = self.param
 
-        N_e_diffusion = -(eps ** param.b) * param.D_e(c_e, T) * pybamm.grad(c_e)
+        N_e_diffusion = -tor * param.D_e(c_e, T) * pybamm.grad(c_e)
         # N_e_migration = (param.C_e * param.t_plus) / param.gamma_e * i_e
         # N_e_convection = param.C_e * c_e * v_box
 

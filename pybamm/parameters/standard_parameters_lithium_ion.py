@@ -38,7 +38,6 @@ L_z = pybamm.geometric_parameters.L_z
 L = pybamm.geometric_parameters.L
 A_cc = pybamm.geometric_parameters.A_cc
 
-
 # Tab geometry
 L_tab_n = pybamm.geometric_parameters.L_tab_n
 Centre_y_tab_n = pybamm.geometric_parameters.Centre_y_tab_n
@@ -83,7 +82,12 @@ a_k_dim = pybamm.Concatenation(
 )
 R_n = pybamm.geometric_parameters.R_n
 R_p = pybamm.geometric_parameters.R_p
-b = pybamm.geometric_parameters.b
+b_e_n = pybamm.geometric_parameters.b_e_n
+b_e_s = pybamm.geometric_parameters.b_e_s
+b_e_p = pybamm.geometric_parameters.b_e_p
+b_s_n = pybamm.geometric_parameters.b_s_n
+b_s_s = pybamm.geometric_parameters.b_s_s
+b_s_p = pybamm.geometric_parameters.b_s_p
 
 # Electrochemical reactions
 ne_n = pybamm.Parameter("Negative electrode electrons in reaction")
@@ -122,25 +126,29 @@ velocity_scale = pybamm.Scalar(1)
 
 def D_e_dimensional(c_e, T):
     "Dimensional diffusivity in electrolyte"
-    return pybamm.FunctionParameter("Electrolyte diffusivity", c_e, T, T_ref, E_D_e, R)
+    return pybamm.FunctionParameter(
+        "Electrolyte diffusivity [m2.s-1]", c_e, T, T_ref, E_D_e, R
+    )
 
 
 def kappa_e_dimensional(c_e, T):
     "Dimensional electrolyte conductivity"
-    return pybamm.FunctionParameter("Electrolyte conductivity", c_e, T, T_ref, E_k_e, R)
+    return pybamm.FunctionParameter(
+        "Electrolyte conductivity [S.m-1]", c_e, T, T_ref, E_k_e, R
+    )
 
 
 def D_n_dimensional(c_n, T):
     "Dimensional diffusivity in negative particle"
     return pybamm.FunctionParameter(
-        "Negative electrode diffusivity", c_n, T, T_ref, E_D_s_n, R
+        "Negative electrode diffusivity [m2.s-1]", c_n, T, T_ref, E_D_s_n, R
     )
 
 
 def D_p_dimensional(c_p, T):
     "Dimensional diffusivity in positive particle"
     return pybamm.FunctionParameter(
-        "Positive electrode diffusivity", c_p, T, T_ref, E_D_s_p, R
+        "Positive electrode diffusivity [m2.s-1]", c_p, T, T_ref, E_D_s_p, R
     )
 
 
@@ -159,28 +167,32 @@ def m_p_dimensional(T):
 
 
 def dUdT_n_dimensional(sto):
-    "Dimensional entropic change of the negative electrode open circuit voltage [V.K-1]"
+    """
+    Dimensional entropic change of the negative electrode open-circuit potential [V.K-1]
+    """
     return pybamm.FunctionParameter(
-        "Negative electrode OCV entropic change", sto, c_n_max
+        "Negative electrode OCP entropic change [V.K-1]", sto, c_n_max
     )
 
 
 def dUdT_p_dimensional(sto):
-    "Dimensional entropic change of the positive electrode open circuit voltage [V.K-1]"
+    """
+    Dimensional entropic change of the positive electrode open-circuit potential [V.K-1]
+    """
     return pybamm.FunctionParameter(
-        "Positive electrode OCV entropic change", sto, c_p_max
+        "Positive electrode OCP entropic change [V.K-1]", sto, c_p_max
     )
 
 
 def U_n_dimensional(sto, T):
-    "Dimensional open-circuit voltage in the negative electrode [V]"
-    u_ref = pybamm.FunctionParameter("Negative electrode OCV", sto)
+    "Dimensional open-circuit potential in the negative electrode [V]"
+    u_ref = pybamm.FunctionParameter("Negative electrode OCP [V]", sto)
     return u_ref + (T - T_ref) * dUdT_n_dimensional(sto)
 
 
 def U_p_dimensional(sto, T):
-    "Dimensional open-circuit voltage in the positive electrode [V]"
-    u_ref = pybamm.FunctionParameter("Positive electrode OCV", sto)
+    "Dimensional open-circuit potential in the positive electrode [V]"
+    u_ref = pybamm.FunctionParameter("Positive electrode OCP [V]", sto)
     return u_ref + (T - T_ref) * dUdT_p_dimensional(sto)
 
 
@@ -243,8 +255,10 @@ l_n = pybamm.geometric_parameters.l_n
 l_s = pybamm.geometric_parameters.l_s
 l_p = pybamm.geometric_parameters.l_p
 l_cp = pybamm.geometric_parameters.l_cp
+l_x = pybamm.geometric_parameters.l_x
 l_y = pybamm.geometric_parameters.l_y
 l_z = pybamm.geometric_parameters.l_z
+a_cc = pybamm.geometric_parameters.a_cc
 l = pybamm.geometric_parameters.l
 delta = pybamm.geometric_parameters.delta
 
@@ -265,6 +279,11 @@ epsilon = pybamm.Concatenation(
     pybamm.FullBroadcast(epsilon_s, ["separator"], "current collector"),
     pybamm.FullBroadcast(epsilon_p, ["positive electrode"], "current collector"),
 )
+epsilon_s_n = pybamm.Parameter("Negative electrode active material volume fraction")
+epsilon_s_p = pybamm.Parameter("Positive electrode active material volume fraction")
+epsilon_inactive_n = 1 - epsilon_n - epsilon_s_n
+epsilon_inactive_s = 1 - epsilon_s
+epsilon_inactive_p = 1 - epsilon_p - epsilon_s_p
 a_n = a_n_dim * R_n
 a_p = a_p_dim * R_p
 
@@ -280,9 +299,7 @@ sigma_cp_prime = sigma_cp * delta ** 2
 sigma_cn_dbl_prime = sigma_cn_prime * delta
 sigma_cp_dbl_prime = sigma_cp_prime * delta
 # should rename this to avoid confusion with Butler-Volmer
-alpha = 1 / (sigma_cn * delta ** 2 * l_cn) + 1 / (
-    sigma_cp * delta ** 2 * l_cp
-)
+alpha = 1 / (sigma_cn * delta ** 2 * l_cn) + 1 / (sigma_cp * delta ** 2 * l_cp)
 alpha_prime = alpha / delta
 
 # Electrolyte Properties
@@ -396,13 +413,15 @@ def m_p(T):
 def U_n(c_s_n, T):
     "Dimensionless open-circuit potential in the negative electrode"
     sto = c_s_n
-    return (U_n_dimensional(sto, T) - U_n_ref) / potential_scale
+    T_dim = Delta_T * T + T_ref
+    return (U_n_dimensional(sto, T_dim) - U_n_ref) / potential_scale
 
 
 def U_p(c_s_p, T):
     "Dimensionless open-circuit potential in the positive electrode"
     sto = c_s_p
-    return (U_p_dimensional(sto, T) - U_p_ref) / potential_scale
+    T_dim = Delta_T * T + T_ref
+    return (U_p_dimensional(sto, T_dim) - U_p_ref) / potential_scale
 
 
 def dUdT_n(c_s_n):

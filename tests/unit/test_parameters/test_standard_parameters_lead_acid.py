@@ -4,7 +4,6 @@
 import pybamm
 from tests import get_discretisation_for_testing
 
-import os
 import unittest
 
 
@@ -59,7 +58,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
 
         # process parameters and discretise
         parameter_values = pybamm.ParameterValues(
-            "input/parameters/lead-acid/default.csv", {"Typical current [A]": 1}
+            chemistry=pybamm.parameter_sets.Sulzer2019
         )
         disc = get_discretisation_for_testing()
         processed_s = disc.process_symbol(parameter_values.process_symbol(s_param))
@@ -90,7 +89,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
                 "Typical electrolyte concentration [mol.m-3]": 1,
                 "Number of electrodes connected in parallel to make a cell": 8,
                 "Typical current [A]": 2,
-                "Current function": pybamm.GetConstantCurrent(),
+                "Current function": "[constant]",
             }
         )
         dimensional_current_density_eval = parameter_values.process_symbol(
@@ -129,33 +128,11 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
             ),
         }
         # Process
-        input_path = os.path.join(os.getcwd(), "input", "parameters", "lead-acid")
         parameter_values = pybamm.ParameterValues(
-            "input/parameters/lead-acid/default.csv",
-            {
-                "Typical current [A]": 1,
-                "Current function": pybamm.GetConstantCurrent(),
-                "Electrolyte diffusivity": os.path.join(
-                    input_path, "electrolyte_diffusivity_Gu1997.py"
-                ),
-                "Electrolyte conductivity": os.path.join(
-                    input_path, "electrolyte_conductivity_Gu1997.py"
-                ),
-                "Darken thermodynamic factor": os.path.join(
-                    input_path, "darken_thermodynamic_factor_Chapman1968.py"
-                ),
-                "Negative electrode OCV": os.path.join(
-                    input_path, "lead_electrode_ocv_Bode1977.py"
-                ),
-                "Positive electrode OCV": os.path.join(
-                    input_path, "lead_dioxide_electrode_ocv_Bode1977.py"
-                ),
-            },
+            chemistry=pybamm.parameter_sets.Sulzer2019
         )
-        param_eval = {
-            name: parameter_values.process_symbol(parameter).evaluate()
-            for name, parameter in parameters.items()
-        }
+        param_eval = pybamm.print_parameters(parameters, parameter_values)
+        param_eval = {k: v[0] for k, v in param_eval.items()}
 
         # Known values for dimensionless functions
         self.assertEqual(param_eval["D_e_1"], 1)
@@ -180,9 +157,15 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         # Test that relevant parameters have changed as expected
         self.assertLess(param_eval_update["q_init"], param_eval["q_init"])
         self.assertLess(param_eval_update["c_e_init"], param_eval["c_e_init"])
-        self.assertLess(param_eval_update["eps_n_init"], param_eval["eps_n_init"])
-        self.assertEqual(param_eval_update["eps_s_init"], param_eval["eps_s_init"])
-        self.assertLess(param_eval_update["eps_p_init"], param_eval["eps_p_init"])
+        self.assertLess(
+            param_eval_update["epsilon_n_init"], param_eval["epsilon_n_init"]
+        )
+        self.assertEqual(
+            param_eval_update["epsilon_s_init"], param_eval["epsilon_s_init"]
+        )
+        self.assertLess(
+            param_eval_update["epsilon_p_init"], param_eval["epsilon_p_init"]
+        )
         self.assertGreater(
             param_eval_update["curlyU_n_init"], param_eval["curlyU_n_init"]
         )

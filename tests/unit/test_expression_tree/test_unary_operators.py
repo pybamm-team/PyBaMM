@@ -14,6 +14,11 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(un.children[0].name, a.name)
         self.assertEqual(un.domain, a.domain)
 
+        # with number
+        log = pybamm.log(10)
+        self.assertIsInstance(log.children[0], pybamm.Scalar)
+        self.assertEqual(log.evaluate(), np.log(10))
+
     def test_negation(self):
         a = pybamm.Symbol("a")
         nega = pybamm.Negate(a)
@@ -271,6 +276,28 @@ class TestUnaryOperators(unittest.TestCase):
             self.assertIsInstance(av_a, pybamm.Division)
             self.assertIsInstance(av_a.children[0], pybamm.Integral)
             self.assertEqual(av_a.children[0].integration_variable[0].domain, x.domain)
+            # electrode domains go to current collector when averaged
+            self.assertEqual(av_a.domain, [])
+
+        a = pybamm.Symbol("a", domain="bad domain")
+        with self.assertRaises(pybamm.DomainError):
+            pybamm.x_average(a)
+
+    def test_r_average(self):
+        a = pybamm.Scalar(1)
+        average_a = pybamm.r_average(a)
+        self.assertEqual(average_a.id, a.id)
+
+        average_broad_a = pybamm.r_average(pybamm.Broadcast(a, ["negative particle"]))
+        self.assertEqual(average_broad_a.evaluate(), np.array([1]))
+
+        for domain in [["negative particle"], ["positive particle"]]:
+            a = pybamm.Symbol("a", domain=domain)
+            r = pybamm.SpatialVariable("r", domain)
+            av_a = pybamm.r_average(a)
+            self.assertIsInstance(av_a, pybamm.Division)
+            self.assertIsInstance(av_a.children[0], pybamm.Integral)
+            self.assertEqual(av_a.children[0].integration_variable[0].domain, r.domain)
             # electrode domains go to current collector when averaged
             self.assertEqual(av_a.domain, [])
 

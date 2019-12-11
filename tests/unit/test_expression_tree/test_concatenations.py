@@ -40,6 +40,29 @@ class TestConcatenations(unittest.TestCase):
         with self.assertRaises(pybamm.DomainError):
             pybamm.Concatenation(a, b, d)
 
+    def test_concatenation_auxiliary_domains(self):
+        a = pybamm.Symbol(
+            "a",
+            domain=["negative electrode"],
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        b = pybamm.Symbol(
+            "b",
+            domain=["separator", "positive electrode"],
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        conc = pybamm.Concatenation(a, b)
+        self.assertEqual(conc.auxiliary_domains, {"secondary": ["current collector"]})
+
+        # Can't concatenate nodes with overlapping domains
+        c = pybamm.Symbol(
+            "c", domain=["test"], auxiliary_domains={"secondary": "something else"}
+        )
+        with self.assertRaisesRegex(
+            pybamm.DomainError, "children must have same or empty auxiliary domains"
+        ):
+            pybamm.Concatenation(a, b, c)
+
     def test_numpy_concatenation_vectors(self):
         # with entries
         y = np.linspace(0, 1, 15)[:, np.newaxis]

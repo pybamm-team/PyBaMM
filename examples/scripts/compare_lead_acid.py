@@ -17,18 +17,15 @@ else:
 
 # load models
 models = [
-    pybamm.lead_acid.Full({"surface form": "algebraic", "side reactions": ["oxygen"]}),
-    pybamm.lead_acid.LOQS({"surface form": "algebraic", "side reactions": ["oxygen"]}),
-    # pybamm.lead_acid.FOQS({"surface form": "algebraic", "side reactions": ["oxygen"]}),
-    # pybamm.lead_acid.FOQSAverageCorrection({"surface form": "algebraic", "side reactions": ["oxygen"]}),
-    pybamm.lead_acid.CompositeExtended(
-        {"surface form": "algebraic", "side reactions": ["oxygen"]}
-    ),
+    pybamm.lead_acid.LOQS(),
+    pybamm.lead_acid.FOQS(),
+    pybamm.lead_acid.Composite(),
+    pybamm.lead_acid.Full(),
 ]
 
 # load parameter values and process models and geometry
 param = models[0].default_parameter_values
-param.update({"Typical current [A]": -17 * 4, "Initial State of Charge": 0.5})
+param.update({"Typical current [A]": 10, "Initial State of Charge": 1})
 for model in models:
     param.process_model(model)
 
@@ -44,23 +41,18 @@ for model in models:
 
 # solve model
 solutions = [None] * len(models)
-t_eval = np.linspace(0, 2.5, 100)
+t_eval = np.linspace(0, 1, 1000)
 for i, model in enumerate(models):
     solution = model.default_solver.solve(model, t_eval)
     solutions[i] = solution
 
 # plot
 output_variables = [
+    "Interfacial current density [A.m-2]",
+    "Electrolyte concentration [mol.m-3]",
+    "Current [A]",
+    "Porosity",
     "Electrolyte potential [V]",
-    "Electrolyte concentration [Molar]",
-    [
-        "X-averaged negative electrode interfacial current density",
-        "X-averaged positive electrode interfacial current density",
-        "X-averaged negative electrode oxygen interfacial current density",
-        "X-averaged positive electrode oxygen interfacial current density",
-    ],
-    "Negative electrode oxygen interfacial current density",
-    "Oxygen concentration [Molar]",
     "Terminal voltage [V]",
 ]
 plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)

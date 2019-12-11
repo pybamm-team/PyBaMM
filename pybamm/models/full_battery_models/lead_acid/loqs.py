@@ -8,6 +8,18 @@ from .base_lead_acid_model import BaseModel
 class LOQS(BaseModel):
     """Leading-Order Quasi-Static model for lead-acid, from [1]_.
 
+    Parameters
+    ----------
+    options : dict, optional
+        A dictionary of options to be passed to the model.
+    name : str, optional
+        The name of the model.
+    build :  bool, optional
+        Whether to build the model on instantiation. Default is True. Setting this
+        option to False allows users to change any number of the submodels before
+        building the complete model (submodels cannot be changed after the model is
+        built).
+
     References
     ----------
     .. [1] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster lead-acid
@@ -18,13 +30,14 @@ class LOQS(BaseModel):
     **Extends:** :class:`pybamm.lead_acid.BaseModel`
     """
 
-    def __init__(self, options=None, name="LOQS model"):
+    def __init__(self, options=None, name="LOQS model", build=True):
         super().__init__(options, name)
 
         self.set_reactions()
         self.set_interfacial_submodel()
         self.set_convection_submodel()
         self.set_porosity_submodel()
+        self.set_tortuosity_submodels()
         self.set_negative_electrode_submodel()
         self.set_electrolyte_submodel()
         self.set_positive_electrode_submodel()
@@ -32,7 +45,8 @@ class LOQS(BaseModel):
         self.set_side_reaction_submodels()
         self.set_current_collector_submodel()
 
-        self.build_model()
+        if build:
+            self.build_model()
 
         if self.options["dimensionality"] == 0:
             self.use_jacobian = False
@@ -57,6 +71,14 @@ class LOQS(BaseModel):
         self.submodels["leading-order porosity"] = pybamm.porosity.LeadingOrder(
             self.param
         )
+
+    def set_tortuosity_submodels(self):
+        self.submodels[
+            "leading-order electrolyte tortuosity"
+        ] = pybamm.tortuosity.Bruggeman(self.param, "Electrolyte")
+        self.submodels[
+            "leading-order electrode tortuosity"
+        ] = pybamm.tortuosity.Bruggeman(self.param, "Electrode")
 
     def set_convection_submodel(self):
 
@@ -171,18 +193,3 @@ class LOQS(BaseModel):
         self.reaction_submodels["Positive"].append(
             self.submodels["leading-order positive oxygen interface"]
         )
-
-    @property
-    def default_solver(self):
-        """
-        Create and return the default solver for this model
-        """
-
-        if (
-            self.options["current collector"]
-            not in ["uniform", "potential pair quite conductive averaged"]
-            or self.options["surface form"] == "algebraic"
-        ):
-            return pybamm.ScikitsDaeSolver()
-        else:
-            return pybamm.ScipySolver()

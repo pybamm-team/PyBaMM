@@ -3,15 +3,18 @@
 *.tmp
 *.png
 /local/
+*.DS_Store
 
 # don't ignore important .txt files
 !requirements*
 !LICENSE.txt
+!CMakeLists.txt
 
 # running files
 *.pyc
 *.py~
 .~lock*
+*.swp
 
 # Python cache
 *__pycache__/
@@ -54,6 +57,7 @@ pyproject.toml
 # virtual enviroment
 venv/
 venv3.5/
+PyBaMM-env/
 bin/
 etc/
 lib/
@@ -64,3 +68,17 @@ pyvenv.cfg
 
 # sundials
 sundials
+sundials4
+
+# third party
+third-party
+
+# cmakefiles
+CMakeFiles
+Makefile
+cmake_install.cmake
+*.so
+*.json
+
+
+third-party/pybind11

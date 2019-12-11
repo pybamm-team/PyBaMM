@@ -12,7 +12,7 @@ class SpatialMethod:
     operations.
     All spatial methods will follow the general form of SpatialMethod in
     that they contain a method for broadcasting variables onto a mesh,
-    a gradient operator, and a diverence operator.
+    a gradient operator, and a divergence operator.
 
     Parameters
     ----------
@@ -20,7 +20,21 @@ class SpatialMethod:
         Contains all the submeshes for discretisation
     """
 
-    def __init__(self, mesh):
+    def __init__(self, options=None):
+
+        self.options = {"extrapolation": {"order": "linear", "use bcs": False}}
+
+        # update double-layered dict
+        if options:
+            for opt, val in options.items():
+                if isinstance(val, dict):
+                    self.options[opt].update(val)
+                else:
+                    self.options[opt] = val
+
+        self._mesh = None
+
+    def build(self, mesh):
         # add npts_for_broadcast to mesh domains for this particular discretisation
         for dom in mesh.keys():
             for i in range(len(mesh[dom])):
@@ -49,9 +63,12 @@ class SpatialMethod:
         """
         symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
         if symbol.name.endswith("_edge"):
-            return pybamm.Vector(symbol_mesh[0].edges, domain=symbol.domain)
+            entries = np.concatenate([mesh.edges for mesh in symbol_mesh])
         else:
-            return pybamm.Vector(symbol_mesh[0].nodes, domain=symbol.domain)
+            entries = np.concatenate([mesh.nodes for mesh in symbol_mesh])
+        return pybamm.Vector(
+            entries, domain=symbol.domain, auxiliary_domains=symbol.auxiliary_domains
+        )
 
     def broadcast(self, symbol, domain, auxiliary_domains, broadcast_type):
         """
@@ -278,7 +295,10 @@ class SpatialMethod:
 
         raise NotImplementedError
 
-    def boundary_value_or_flux(self, symbol, discretised_child):
+    def preprocess_external_variables(self, var):
+        return {}
+
+    def boundary_value_or_flux(self, symbol, discretised_child, bcs=None):
         """
         Returns the boundary value or flux using the approriate expression for the
         spatial method. To do this, we create a sparse vector 'bv_vector' that extracts
@@ -291,12 +311,19 @@ class SpatialMethod:
             The boundary value or flux symbol
         discretised_child : :class:`pybamm.StateVector`
             The discretised variable from which to calculate the boundary value
+        bcs : dict (optional)
+            The boundary conditions. If these are supplied and "use bcs" is True in
+            the options, then these will be used to improve the accuracy of the
+            extrapolation.
 
         Returns
         -------
         :class:`pybamm.MatrixMultiplication`
             The variable representing the surface value.
         """
+
+        if bcs is None:
+            bcs = {}
         if any(len(self.mesh[dom]) > 1 for dom in discretised_child.domain):
             raise NotImplementedError("Cannot process 2D symbol in base spatial method")
         if isinstance(symbol, pybamm.BoundaryGradient):

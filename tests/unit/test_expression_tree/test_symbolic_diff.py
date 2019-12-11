@@ -1,7 +1,7 @@
 #
 # Tests for the symbolic differentiation methods
 #
-import autograd.numpy as np
+import numpy as np
 import pybamm
 import unittest
 from numpy import testing
@@ -59,6 +59,14 @@ class TestSymbolicDifferentiation(unittest.TestCase):
         func = (a * 2 + 5 * (-a)) / (a * a)
         self.assertEqual(func.diff(b).id, pybamm.Scalar(0).id)
         self.assertNotEqual(func.diff(a).id, pybamm.Scalar(0).id)
+
+    def test_diff_heaviside(self):
+        a = pybamm.Scalar(1)
+        b = pybamm.StateVector(slice(0, 1))
+
+        func = (a < b) * (2 * b)
+        self.assertEqual(func.diff(b).evaluate(y=np.array([2])), 2)
+        self.assertEqual(func.diff(b).evaluate(y=np.array([-2])), 0)
 
     def test_exceptions(self):
         a = pybamm.Symbol("a")

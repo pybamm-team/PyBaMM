@@ -15,6 +15,7 @@ Expression Tree
   unary_operator
   concatenations
   broadcasts
-  simplify
   functions
-  evaluate
+  input_parameter
+  interpolant
+  operations/index

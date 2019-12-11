@@ -13,8 +13,7 @@ models = [
     pybamm.lead_acid.Composite(name="1D composite"),
     pybamm.lead_acid.LOQS(name="1D LOQS"),
     pybamm.lead_acid.Full(
-        {"current collector": "potential pair", "dimensionality": 1},
-        name="1+1D Full",
+        {"current collector": "potential pair", "dimensionality": 1}, name="1+1D Full"
     ),
     pybamm.lead_acid.Composite(
         {"current collector": "potential pair", "dimensionality": 1},

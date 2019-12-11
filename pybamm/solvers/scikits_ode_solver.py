@@ -16,7 +16,7 @@ if scikits_odes_spec is not None:
 
 
 def have_scikits_odes():
-    return scikits_odes_spec is None
+    return scikits_odes_spec is not None
 
 
 class ScikitsOdeSolver(pybamm.OdeSolver):
@@ -26,19 +26,21 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
     ----------
     method : str, optional
         The method to use in solve_ivp (default is "BDF")
-    tolerance : float, optional
-        The tolerance for the solver (default is 1e-8). Set as the both reltol and
-        abstol in solve_ivp.
+    rtol : float, optional
+        The relative tolerance for the solver (default is 1e-6).
+    atol : float, optional
+        The absolute tolerance for the solver (default is 1e-6).
     linsolver : str, optional
             Can be 'dense' (= default), 'lapackdense', 'spgmr', 'spbcgs', 'sptfqmr'
     """
 
-    def __init__(self, method="cvode", tol=1e-8, linsolver="dense"):
+    def __init__(self, method="cvode", rtol=1e-6, atol=1e-6, linsolver="dense"):
         if scikits_odes_spec is None:
             raise ImportError("scikits.odes is not installed")
 
-        super().__init__(method, tol)
+        super().__init__(method, rtol, atol)
         self.linsolver = linsolver
+        self.name = "Scikits ODE solver ({})".format(method)
 
     def integrate(
         self, derivs, y0, t_eval, events=None, mass_matrix=None, jacobian=None
@@ -98,8 +100,8 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
 
         extra_options = {
             "old_api": False,
-            "rtol": self.tol,
-            "atol": self.tol,
+            "rtol": self.rtol,
+            "atol": self.atol,
             "linsolver": self.linsolver,
         }
 
@@ -134,7 +136,7 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
                 np.transpose(sol.values.y),
                 sol.roots.t,
                 np.transpose(sol.roots.y),
-                termination
+                termination,
             )
         else:
             raise pybamm.SolverError(sol.message)

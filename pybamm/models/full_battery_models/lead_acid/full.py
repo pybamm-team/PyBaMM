@@ -9,6 +9,18 @@ class Full(BaseModel):
     """Porous electrode model for lead-acid, from [1]_, based on the Full
     model.
 
+    Parameters
+    ----------
+    options : dict, optional
+        A dictionary of options to be passed to the model.
+    name : str, optional
+        The name of the model.
+    build :  bool, optional
+        Whether to build the model on instantiation. Default is True. Setting this
+        option to False allows users to change any number of the submodels before
+        building the complete model (submodels cannot be changed after the model is
+        built).
+
     References
     ----------
     .. [1] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster lead-acid
@@ -19,12 +31,13 @@ class Full(BaseModel):
     **Extends:** :class:`pybamm.lead_acid.BaseModel`
     """
 
-    def __init__(self, options=None, name="Full model"):
+    def __init__(self, options=None, name="Full model", build=True):
         super().__init__(options, name)
 
         self.set_reactions()
         self.set_interfacial_submodel()
         self.set_porosity_submodel()
+        self.set_tortuosity_submodels()
         self.set_convection_submodel()
         self.set_electrolyte_submodel()
         self.set_solid_submodel()
@@ -32,7 +45,8 @@ class Full(BaseModel):
         self.set_side_reaction_submodels()
         self.set_current_collector_submodel()
 
-        self.build_model()
+        if build:
+            self.build_model()
 
     def set_porosity_submodel(self):
         self.submodels["porosity"] = pybamm.porosity.Full(self.param)
@@ -124,17 +138,3 @@ class Full(BaseModel):
             self.submodels[
                 "negative oxygen interface"
             ] = pybamm.interface.lead_acid_oxygen.NoReaction(self.param, "Negative")
-
-    @property
-    def default_solver(self):
-        """
-        Create and return the default solver for this model
-        """
-        # Different solver depending on whether we solve ODEs or DAEs
-        if (
-            self.options["surface form"] == "differential"
-            and self.options["current collector"] == "uniform"
-        ):
-            return pybamm.ScipySolver()
-        else:
-            return pybamm.ScikitsDaeSolver()
