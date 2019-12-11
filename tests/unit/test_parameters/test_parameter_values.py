@@ -263,7 +263,9 @@ class TestParameterValues(unittest.TestCase):
         # process constant function
         const = pybamm.FunctionParameter("const", a)
         processed_const = parameter_values.process_symbol(const)
-        self.assertIsInstance(processed_const, pybamm.Scalar)
+        self.assertIsInstance(processed_const, pybamm.Multiplication)
+        self.assertIsInstance(processed_const.left, pybamm.Scalar)
+        self.assertIsInstance(processed_const.right, pybamm.Scalar)
         self.assertEqual(processed_const.evaluate(), 254)
 
         # process differentiated function parameter

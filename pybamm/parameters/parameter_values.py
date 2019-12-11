@@ -445,7 +445,7 @@ class ParameterValues(dict):
                 # Also use ones_like so that we get the right shapes
                 function = pybamm.Scalar(
                     function_name, name=symbol.name
-                ) * pybamm.ones_like(new_children)
+                ) * pybamm.ones_like(*new_children)
             else:
                 # otherwise evaluate the function to create a new PyBaMM object
                 function = function_name(*new_children)

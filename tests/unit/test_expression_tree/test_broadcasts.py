@@ -27,6 +27,10 @@ class TestBroadcasts(unittest.TestCase):
             pybamm.Broadcast(a, "electrode")
 
     def test_ones_like(self):
+        a = pybamm.Variable("a")
+        ones_like_a = pybamm.ones_like(a)
+        self.assertEqual(ones_like_a.id, pybamm.Scalar(1).id)
+
         a = pybamm.Variable(
             "a",
             domain="negative electrode",
@@ -38,7 +42,7 @@ class TestBroadcasts(unittest.TestCase):
         self.assertEqual(ones_like_a.domain, a.domain)
         self.assertEqual(ones_like_a.auxiliary_domains, a.auxiliary_domains)
 
-        b = pybamm.Variable("b", domain="negative electrode")
+        b = pybamm.Variable("b", domain="current collector")
         ones_like_ab = pybamm.ones_like(b, a)
         self.assertIsInstance(ones_like_ab, pybamm.FullBroadcast)
         self.assertEqual(ones_like_ab.name, "broadcast")

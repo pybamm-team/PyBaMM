@@ -198,11 +198,12 @@ def ones_like(*symbols):
     """
     # Make a symbol that combines all the children, to get the right domain
     # that takes all the child symbols into account
-    sum_symbol = 0
+    sum_symbol = symbols[0]
     for sym in symbols:
-        import ipdb
-
-        ipdb.set_trace()
         sum_symbol += sym
-    return FullBroadcast(1, sum_symbol.domain, sum_symbol.auxiliary_domains)
 
+    # Just return scalar 1 if symbol has no domain (no broadcasting necessary)
+    if sum_symbol.domain == []:
+        return pybamm.Scalar(1)
+    else:
+        return FullBroadcast(1, sum_symbol.domain, sum_symbol.auxiliary_domains)
