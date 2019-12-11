@@ -196,4 +196,7 @@ def ones_like(symbol):
     symbol : :class:`Symbol`
         Symbol whose shape to copy
     """
+    # Just return scalar 1 if symbol has no domain (no broadcasting necessary)
+    if symbol.domain == []:
+        return 1
     return FullBroadcast(1, symbol.domain, symbol.auxiliary_domains)
