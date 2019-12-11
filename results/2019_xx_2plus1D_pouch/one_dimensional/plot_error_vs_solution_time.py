@@ -32,7 +32,7 @@ savefiles = [
 
 # "exact" solution in the comsol solution on the finest mesh
 exact_solution = pickle.load(
-    open("input/comsol_results/comsol_thermal_1C.pickle", "rb")
+    open("input/comsol_results/comsol_thermal_1C_extremely_fine.pickle", "rb")
 )
 
 comsol_t = exact_solution["time"]

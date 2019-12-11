@@ -829,7 +829,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
                     else:
                         # to find value at x* use formula:
-                        # f(x*) = f_N - (dxN / dxNm1) (f_N - f_Nm1)
+                        # f(x*) = f_N + (dxN / dxNm1) (f_N - f_Nm1)
                         sub_matrix = csr_matrix(
                             (
                                 [-(dxN / dxNm1), 1 + (dxN / dxNm1)],

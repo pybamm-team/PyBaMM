@@ -338,8 +338,8 @@ class Discretisation(object):
 
                 lbc = self.bcs[var.id]["left"]
                 rbc = (
-                    self.process_symbol(pybamm.BoundaryGradient(first_orphan, "right")),
-                    "Neumann",
+                    self.process_symbol(pybamm.BoundaryValue(first_orphan, "right")),
+                    "Dirichlet",
                 )
 
                 if first_child.id not in bc_key_ids:
@@ -355,15 +355,15 @@ class Discretisation(object):
                     # rbc = (boundary_gradient(current_orphan, next_orphan), "Neumann")
                     lbc = (
                         self.process_symbol(
-                            pybamm.BoundaryGradient(current_orphan, "left")
+                            pybamm.BoundaryValue(current_orphan, "left")
                         ),
-                        "Neumann",
+                        "Dirichlet",
                     )
                     rbc = (
                         self.process_symbol(
-                            pybamm.BoundaryGradient(current_orphan, "right")
+                            pybamm.BoundaryValue(current_orphan, "right")
                         ),
-                        "Neumann",
+                        "Dirichlet",
                     )
                     if current_child.id not in bc_key_ids:
                         internal_bcs.update(
@@ -372,8 +372,8 @@ class Discretisation(object):
 
                 final_orphan = children[-1].new_copy()
                 lbc = (
-                    self.process_symbol(pybamm.BoundaryGradient(final_orphan, "left")),
-                    "Neumann",
+                    self.process_symbol(pybamm.BoundaryValue(final_orphan, "left")),
+                    "Dirichlet",
                 )
                 rbc = self.bcs[var.id]["right"]
                 if children[-1].id not in bc_key_ids:

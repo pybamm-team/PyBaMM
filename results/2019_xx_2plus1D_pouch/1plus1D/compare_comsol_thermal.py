@@ -63,7 +63,7 @@ else:
 
     # solver
     solver = pybamm.CasadiSolver(
-        atol=1e-6, rtol=1e-6, root_tol=1e-3, root_method="hybr", mode="fast"
+        atol=1e-6, rtol=1e-6, root_tol=1e-6, root_method="hybr", mode="fast"
     )
 
     # simulation object

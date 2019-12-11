@@ -246,18 +246,22 @@ def plot_cc_var(
             ax[1].plot(z_plot, error, "-", color=color)
         elif plot_error == "rel":
             if scale is None:
-                scale = comsol_var
+                scale_val = comsol_var
             elif scale == "auto":
-                scale = np.abs(np.max(comsol_var) - np.min(comsol_var))
-            error = np.abs((pybamm_var - comsol_var) / scale)
+                scale_val = np.abs(np.max(comsol_var) - np.min(comsol_var))
+            else:
+                scale_val = scale
+            error = np.abs((pybamm_var - comsol_var) / scale_val)
             ax[1].plot(error, z_plot, "-", color=color)
         elif plot_error == "both":
             abs_error = np.abs(pybamm_var - comsol_var)
             if scale is None:
-                scale = comsol_var
+                scale_val = comsol_var
             elif scale == "auto":
-                scale = np.abs(np.max(comsol_var) - np.min(comsol_var))
-            rel_error = np.abs((pybamm_var - comsol_var) / scale)
+                scale_val = np.abs(np.max(comsol_var) - np.min(comsol_var))
+            else:
+                scale_val = scale
+            rel_error = np.abs((pybamm_var - comsol_var) / scale_val)
             ax[1].plot(z_plot, abs_error, "-", color=color)
             ax[2].plot(z_plot, rel_error, "-", color=color)
 
@@ -335,8 +339,8 @@ def plot_tz_var(
             diff_plot = plt.pcolormesh(t_plot, z_plot, error, shading="gouraud")
         elif error == "rel":
             if scale is None:
-                scale = comsol_var
-            error = np.abs((pybamm_var - comsol_var) / scale)
+                scale_val = comsol_var
+            error = np.abs((pybamm_var - comsol_var) / scale_val)
             diff_plot = plt.pcolormesh(t_plot, z_plot, error, shading="gouraud",)
         plt.axis([0, t_plot[-1], 0, z_plot[-1]])
         plt.xlabel(r"$t$")
@@ -356,8 +360,8 @@ def plot_tz_var(
         plt.colorbar(abs_diff_plot)
         plt.subplot(224)
         if scale is None:
-            scale = comsol_var
-        rel_error = np.abs((pybamm_var - comsol_var) / scale)
+            scale_val = comsol_var
+        rel_error = np.abs((pybamm_var - comsol_var) / scale_val)
         rel_diff_plot = plt.pcolormesh(t_plot, z_plot, rel_error, shading="gouraud",)
         plt.axis([0, t_plot[-1], 0, z_plot[-1]])
         plt.xlabel(r"$t$")
