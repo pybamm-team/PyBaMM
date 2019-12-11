@@ -186,14 +186,23 @@ class FullBroadcast(Broadcast):
         return child_eval * vec
 
 
-def ones_like(symbol):
+def ones_like(*symbols):
     """
     Create a symbol with the same shape as the input symbol and with constant value '1',
     using `FullBroadcast`.
 
     Parameters
     ----------
-    symbol : :class:`Symbol`
-        Symbol whose shape to copy
+    symbols : :class:`Symbol`
+        Symbols whose shape to copy
     """
-    return FullBroadcast(1, symbol.domain, symbol.auxiliary_domains)
+    # Make a symbol that combines all the children, to get the right domain
+    # that takes all the child symbols into account
+    sum_symbol = 0
+    for sym in symbols:
+        import ipdb
+
+        ipdb.set_trace()
+        sum_symbol += sym
+    return FullBroadcast(1, sum_symbol.domain, sum_symbol.auxiliary_domains)
+

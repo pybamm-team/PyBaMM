@@ -26,6 +26,25 @@ class TestBroadcasts(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Variables on the current collector"):
             pybamm.Broadcast(a, "electrode")
 
+    def test_ones_like(self):
+        a = pybamm.Variable(
+            "a",
+            domain="negative electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        ones_like_a = pybamm.ones_like(a)
+        self.assertIsInstance(ones_like_a, pybamm.FullBroadcast)
+        self.assertEqual(ones_like_a.name, "broadcast")
+        self.assertEqual(ones_like_a.domain, a.domain)
+        self.assertEqual(ones_like_a.auxiliary_domains, a.auxiliary_domains)
+
+        b = pybamm.Variable("b", domain="negative electrode")
+        ones_like_ab = pybamm.ones_like(b, a)
+        self.assertIsInstance(ones_like_ab, pybamm.FullBroadcast)
+        self.assertEqual(ones_like_ab.name, "broadcast")
+        self.assertEqual(ones_like_ab.domain, a.domain)
+        self.assertEqual(ones_like_ab.auxiliary_domains, a.auxiliary_domains)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
