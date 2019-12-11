@@ -244,6 +244,12 @@ from .solvers.scipy_solver import ScipySolver
 from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
 
 #
+# Experiments
+#
+from .experiments.experiment import Experiment
+from . import experiments
+
+#
 # other
 #
 from .processed_variable import post_process_variables, ProcessedVariable
