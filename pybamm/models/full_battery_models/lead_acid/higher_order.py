@@ -292,11 +292,6 @@ class CompositeExtended(Composite):
         building the complete model (submodels cannot be changed after the model is
         built).
 
-    References
-    ----------
-    .. [2] V Sulzer. Mathematical modelling of lead-acid batteries. PhD thesis,
-           University of Oxford, 2019.
-
 
     **Extends:** :class:`pybamm.lead_acid.BaseHigherOrderModel`
     """
