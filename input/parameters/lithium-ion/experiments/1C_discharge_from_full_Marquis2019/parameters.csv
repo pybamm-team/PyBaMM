@@ -5,10 +5,10 @@ Name [units],Value,Reference,Notes
 Reference temperature [K],298.15,25C,
 Heat transfer coefficient [W.m-2.K-1],10,,
 ,,,
-# Electrical			
+# Electrical
 Number of electrodes connected in parallel to make a cell,1,,
 Number of cells connected in series to make a battery,1,,
-Lower voltage cut-off [V],3.105,,
+Lower voltage cut-off [V],3.2,,
 Upper voltage cut-off [V],4.7,,
 C-rate,1,,
 Current function,[constant],,

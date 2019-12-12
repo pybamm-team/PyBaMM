@@ -60,12 +60,12 @@ else:
 
     # solver
     solver = pybamm.CasadiSolver(
-        atol=1e-6, rtol=1e-6, root_tol=1e-3, root_method="hybr", mode="fast"
+        atol=1e-6, rtol=1e-6, root_tol=1e-6, root_method="hybr", mode="fast"
     )
 
     # simulation object
     simulation = pybamm.Simulation(
-        pybamm_model, parameter_values=param, var_pts=var_pts, solver=solver,
+        pybamm_model, parameter_values=param, var_pts=var_pts, solver=solver
     )
 
     # build and save simulation
@@ -130,8 +130,10 @@ shared.plot_cc_var(
     param,
     plot_times=plot_times,
     plot_error="both",
-    scale=0.0001,  # typical variation in negative potential
+    #  scale=0.0001,  # typical variation in negative potential
+    scale="auto",
 )
+plt.savefig("1plus1D_phi_s_cn.eps", format="eps", dpi=300)
 shared.plot_cc_var(
     "Positive current collector potential [V]",
     pybamm_model,
@@ -141,8 +143,10 @@ shared.plot_cc_var(
     param,
     plot_times=plot_times,
     plot_error="both",
-    scale=0.0001,  # typical variation in positive potential
+    #  scale=0.0001,  # typical variation in positive potential
+    scale="auto",
 )
+plt.savefig("1plus1D_phi_s_cp.eps", format="eps", dpi=300)
 shared.plot_cc_var(
     "Current collector current density [A.m-2]",
     pybamm_model,
@@ -152,6 +156,8 @@ shared.plot_cc_var(
     param,
     plot_times=plot_times,
     plot_error="both",
-    scale=0.06,  # typical variation in current density
+    # scale=0.06,  # typical variation in current density
+    scale="auto",
 )
+plt.savefig("1plus1D_current.eps", format="eps", dpi=300)
 plt.show()

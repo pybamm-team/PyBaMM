@@ -581,7 +581,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 right_ghost_constant = 2 * rbc_i
                 # concatenate right ghost node
                 bcs_vector = pybamm.NumpyConcatenation(
-                    bcs_vector, pybamm.Vector(np.zeros(n)), right_ghost_constant,
+                    bcs_vector, pybamm.Vector(np.zeros(n)), right_ghost_constant
                 )
             elif rbc_type == "Neumann":
                 # concatenate zeros for internal nodes
@@ -684,12 +684,12 @@ class FiniteVolume(pybamm.SpatialMethod):
             if rbc_type == "Neumann":
                 # concatenate known value of gradient
                 bcs_vector = pybamm.NumpyConcatenation(
-                    bcs_vector, pybamm.Vector(np.zeros(n)), rbc_i,
+                    bcs_vector, pybamm.Vector(np.zeros(n)), rbc_i
                 )
             elif rbc_type == "Dirichlet":
                 # concatenate zeros for internal nodes
                 bcs_vector = pybamm.NumpyConcatenation(
-                    bcs_vector, pybamm.Vector(np.zeros(n)),
+                    bcs_vector, pybamm.Vector(np.zeros(n))
                 )
             else:
                 raise ValueError(
@@ -829,7 +829,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
                     else:
                         # to find value at x* use formula:
-                        # f(x*) = f_N - (dxN / dxNm1) (f_N - f_Nm1)
+                        # f(x*) = f_N + (dxN / dxNm1) (f_N - f_Nm1)
                         sub_matrix = csr_matrix(
                             (
                                 [-(dxN / dxNm1), 1 + (dxN / dxNm1)],
@@ -1013,7 +1013,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 # Average any children that evaluate on the edges (size n_edges) to
                 # evaluate on nodes instead, so that concatenation works properly
                 if child_size == n_edges:
-                    disc_children[idx] = self.edge_to_node(child)
+                    disc_children[idx] = self.edge_to_node(child, method="harmonic")
                 else:
                     raise pybamm.ShapeError(
                         """
@@ -1023,23 +1023,23 @@ class FiniteVolume(pybamm.SpatialMethod):
                     )
         return pybamm.DomainConcatenation(disc_children, self.mesh)
 
-    def edge_to_node(self, discretised_symbol):
+    def edge_to_node(self, discretised_symbol, method="harmonic"):
         """
         Convert a discretised symbol evaluated on the cell edges to a discretised symbol
         evaluated on the cell nodes.
         See :meth:`pybamm.FiniteVolume.shift`
         """
-        return self.shift(discretised_symbol, "edge to node")
+        return self.shift(discretised_symbol, "edge to node", method=method)
 
-    def node_to_edge(self, discretised_symbol):
+    def node_to_edge(self, discretised_symbol, method="harmonic"):
         """
         Convert a discretised symbol evaluated on the cell nodes to a discretised symbol
         evaluated on the cell edges.
         See :meth:`pybamm.FiniteVolume.shift`
         """
-        return self.shift(discretised_symbol, "node to edge")
+        return self.shift(discretised_symbol, "node to edge", method=method)
 
-    def shift(self, discretised_symbol, shift_key):
+    def shift(self, discretised_symbol, shift_key, method="harmonic"):
         """
         Convert a discretised symbol evaluated at edges/nodes, to a discretised symbol
         evaluated at nodes/edges.
@@ -1058,6 +1058,8 @@ class FiniteVolume(pybamm.SpatialMethod):
         shift_key : str
             Whether to shift from nodes to edges ("node to edge"), or from edges to
             nodes ("edge to node")
+        method : str, optional
+            Whether to use the "harmonic" or "arithemtic" mean. Default is "harmonic"
 
         Returns
         -------
@@ -1105,10 +1107,135 @@ class FiniteVolume(pybamm.SpatialMethod):
 
             return pybamm.Matrix(matrix) @ array
 
+        def harmonic_mean(array):
+            """
+            Calculate the harmonic mean of an array using matrix multiplication.
+            The harmonic mean is computed as
+
+            .. math::
+                D_{eff} = \\frac{D_1  D_2}{\\beta D_2 + (1 - \\beta) D_1},
+
+            where
+
+            .. math::
+                \\beta = \\frac{\\Delta x_1}{\\Delta x_2 + \\Delta x_1}
+
+            accounts for the difference in the control volume widths.
+            """
+            # Create appropriate submesh by combining submeshes in domain
+            submesh_list = self.mesh.combine_submeshes(*array.domain)
+
+            # Can just use 1st entry of list to obtain the point etc
+            submesh = submesh_list[0]
+
+            # Create 1D matrix using submesh
+            n = submesh.npts
+
+            # Second dimension length
+            second_dim_len = len(submesh_list)
+
+            if shift_key == "node to edge":
+                # Matrix to computes values at exterior edges
+                edges_sub_matrix_left = csr_matrix(
+                    ([1.5, -0.5], ([0, 0], [0, 1])), shape=(1, n)
+                )
+                edges_sub_matrix_center = csr_matrix((n - 1, n))
+                edges_sub_matrix_right = csr_matrix(
+                    ([-0.5, 1.5], ([0, 0], [n - 2, n - 1])), shape=(1, n)
+                )
+                edges_sub_matrix = vstack(
+                    [
+                        edges_sub_matrix_left,
+                        edges_sub_matrix_center,
+                        edges_sub_matrix_right,
+                    ]
+                )
+
+                # Generate full matrix from the submatrix
+                # Convert to csr_matrix so that we can take the index (row-slicing),
+                # which is not supported by the default kron format
+                # Note that this makes column-slicing inefficient, but this should
+                # not be an issue
+                edges_matrix = csr_matrix(kron(eye(second_dim_len), edges_sub_matrix))
+
+                # Matrix to extract the node values running from the first node
+                # to the penultimate node in the primary dimension (D_1 in the
+                # definiton of the harmonic mean)
+                sub_matrix_D1 = hstack([eye(n - 1), csr_matrix((n - 1, 1))])
+                matrix_D1 = csr_matrix(kron(eye(second_dim_len), sub_matrix_D1))
+                D1 = pybamm.Matrix(matrix_D1) @ array
+
+                # Matrix to extract the node values running from the second node
+                # to the final node in the primary dimension  (D_2 in the
+                # definiton of the harmonic mean)
+                sub_matrix_D2 = hstack([csr_matrix((n - 1, 1)), eye(n - 1)])
+                matrix_D2 = csr_matrix(kron(eye(second_dim_len), sub_matrix_D2))
+                D2 = pybamm.Matrix(matrix_D2) @ array
+
+                # Compute weight beta
+                dx = submesh.d_edges
+                sub_beta = (dx[:-1] / (dx[1:] + dx[:-1]))[:, np.newaxis]
+                beta = pybamm.Array(np.kron(np.ones((second_dim_len, 1)), sub_beta))
+
+                # Compute harmonic mean on internal edges
+                # Note: add small number to denominator to regularise D_eff
+                D_eff = D1 * D2 / (D2 * beta + D1 * (1 - beta) + 1e-16)
+
+                # Matrix to pad zeros at the beginning and end of the array where
+                # the exterior edge values will be added
+                sub_matrix = vstack(
+                    [csr_matrix((1, n - 1)), eye(n - 1), csr_matrix((1, n - 1))]
+                )
+
+                # Generate full matrix from the submatrix
+                # Convert to csr_matrix so that we can take the index (row-slicing),
+                # which is not supported by the default kron format
+                # Note that this makes column-slicing inefficient, but this should
+                # not be an issue
+                matrix = csr_matrix(kron(eye(second_dim_len), sub_matrix))
+
+                return (
+                    pybamm.Matrix(edges_matrix) @ array + pybamm.Matrix(matrix) @ D_eff
+                )
+
+            elif shift_key == "edge to node":
+                # Matrix to extract the edge values running from the first edge
+                # to the penultimate edge in the primary dimension (D_1 in the
+                # definiton of the harmonic mean)
+                sub_matrix_D1 = hstack([eye(n), csr_matrix((n, 1))])
+                matrix_D1 = csr_matrix(kron(eye(second_dim_len), sub_matrix_D1))
+                D1 = pybamm.Matrix(matrix_D1) @ array
+
+                # Matrix to extract the edge values running from the second edge
+                # to the final edge in the primary dimension  (D_2 in the
+                # definiton of the harmonic mean)
+                sub_matrix_D2 = hstack([csr_matrix((n, 1)), eye(n)])
+                matrix_D2 = csr_matrix(kron(eye(second_dim_len), sub_matrix_D2))
+                D2 = pybamm.Matrix(matrix_D2) @ array
+
+                # Compute weight beta
+                dx0 = submesh.nodes[0] - submesh.edges[0]  # first edge to node
+                dxN = submesh.edges[-1] - submesh.nodes[-1]  # last node to edge
+                dx = np.concatenate(([dx0], submesh.d_nodes, [dxN]))
+                sub_beta = (dx[:-1] / (dx[1:] + dx[:-1]))[:, np.newaxis]
+                beta = pybamm.Array(np.kron(np.ones((second_dim_len, 1)), sub_beta))
+
+                # Compute harmonic mean on nodes
+                # Note: add small number to denominator to regularise D_eff
+                D_eff = D1 * D2 / (D2 * beta + D1 * (1 - beta) + 1e-16)
+
+                return D_eff
+
+            else:
+                raise ValueError("shift key '{}' not recognised".format(shift_key))
+
         # If discretised_symbol evaluates to number there is no need to average
         if discretised_symbol.evaluates_to_number():
             out = discretised_symbol
-        else:
+        elif method == "harmonic":
+            out = harmonic_mean(discretised_symbol)
+        elif method == "arithemtic":
             out = arithmetic_mean(discretised_symbol)
-
+        else:
+            raise ValueError("method '{}' not recognised".format(method))
         return out

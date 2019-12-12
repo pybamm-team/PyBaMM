@@ -1,3 +1,7 @@
+#
+# Compare thermal models from pybamm and comsol
+#
+
 import pybamm
 import numpy as np
 import os
@@ -42,7 +46,14 @@ param.process_geometry(geometry)
 # create mesh
 var = pybamm.standard_spatial_vars
 # var_pts = {var.x_n: 101, var.x_s: 101, var.x_p: 101, var.r_n: 101, var.r_p: 101}
-var_pts = {var.x_n: 15, var.x_s: 15, var.x_p: 15, var.r_n: 15, var.r_p: 15}
+# var_pts = {var.x_n: 45, var.x_s: 11, var.x_p: 56, var.r_n: 51, var.r_p: 51}
+var_pts = {
+    var.x_n: int(param.evaluate(pybamm.geometric_parameters.L_n / 1e-6)),
+    var.x_s: int(param.evaluate(pybamm.geometric_parameters.L_s / 1e-6)),
+    var.x_p: int(param.evaluate(pybamm.geometric_parameters.L_p / 1e-6)),
+    var.r_n: int(param.evaluate(pybamm.geometric_parameters.R_n / 1e-7)),
+    var.r_p: int(param.evaluate(pybamm.geometric_parameters.R_p / 1e-7)),
+}
 mesh = pybamm.Mesh(geometry, pybamm_model.default_submesh_types, var_pts)
 
 # discretise model
@@ -59,15 +70,19 @@ time = comsol_variables["time"] / tau
 solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6, mode="fast")
 solution = solver.solve(pybamm_model, time)
 
+# plot
+# plot = pybamm.QuickPlot(pybamm_model, mesh, solution, output_variables=["Electrolyte Ohmic heating", "Electrolyte current density", "Electrolyte concentration"])
+# plot.dynamic_plot()
 "-----------------------------------------------------------------------------"
 "Make Comsol 'model' for comparison"
 
 whole_cell = ["negative electrode", "separator", "positive electrode"]
 comsol_t = comsol_variables["time"]
 L_x = param.evaluate(pybamm.standard_parameters_lithium_ion.L_x)
+interp_kind = "cubic"
 
 
-def get_interp_fun(variable_name, domain):
+def get_interp_fun(variable_name, domain, eval_on_edges=False):
     """
     Create a :class:`pybamm.Function` object using the variable, to allow plotting with
     :class:`'pybamm.QuickPlot'` (interpolate in space to match edges, and then create
@@ -83,11 +98,14 @@ def get_interp_fun(variable_name, domain):
     elif domain == whole_cell:
         comsol_x = comsol_variables["x"]
     # Make sure to use dimensional space
-    pybamm_x = mesh.combine_submeshes(*domain)[0].nodes * L_x
-    variable = interp.interp1d(comsol_x, variable, axis=0)(pybamm_x)
+    if eval_on_edges:
+        pybamm_x = mesh.combine_submeshes(*domain)[0].edges * L_x
+    else:
+        pybamm_x = mesh.combine_submeshes(*domain)[0].nodes * L_x
+    variable = interp.interp1d(comsol_x, variable, axis=0, kind="linear")(pybamm_x)
 
     def myinterp(t):
-        return interp.interp1d(comsol_t, variable)(t)[:, np.newaxis]
+        return interp.interp1d(comsol_t, variable, kind=interp_kind)(t)[:, np.newaxis]
 
     # Make sure to use dimensional time
     fun = pybamm.Function(myinterp, pybamm.t * tau, name=variable_name + "_comsol")
@@ -101,14 +119,16 @@ comsol_c_p_surf = get_interp_fun("c_p_surf", ["positive electrode"])
 comsol_phi_n = get_interp_fun("phi_n", ["negative electrode"])
 comsol_phi_e = get_interp_fun("phi_e", whole_cell)
 comsol_phi_p = get_interp_fun("phi_p", ["positive electrode"])
-comsol_i_s_n = get_interp_fun("i_s_n", ["negative electrode"])
-comsol_i_s_p = get_interp_fun("i_s_p", ["positive electrode"])
-comsol_i_e_n = get_interp_fun("i_e_n", ["negative electrode"])
-comsol_i_e_p = get_interp_fun("i_e_p", ["positive electrode"])
-comsol_voltage = interp.interp1d(comsol_t, comsol_variables["voltage"])
+comsol_i_s_n = get_interp_fun("i_s_n", ["negative electrode"], eval_on_edges=True)
+comsol_i_s_p = get_interp_fun("i_s_p", ["positive electrode"], eval_on_edges=True)
+comsol_i_e_n = get_interp_fun("i_e_n", ["negative electrode"], eval_on_edges=True)
+comsol_i_e_p = get_interp_fun("i_e_p", ["positive electrode"], eval_on_edges=True)
+comsol_voltage = interp.interp1d(
+    comsol_t, comsol_variables["voltage"], kind=interp_kind
+)
 comsol_temperature = get_interp_fun("temperature", whole_cell)
 comsol_temperature_av = interp.interp1d(
-    comsol_t, comsol_variables["average temperature"]
+    comsol_t, comsol_variables["average temperature"], kind=interp_kind
 )
 comsol_q_irrev_n = get_interp_fun("Q_irrev_n", ["negative electrode"])
 comsol_q_irrev_p = get_interp_fun("Q_irrev_p", ["positive electrode"])
@@ -130,8 +150,8 @@ comsol_model.variables = {
     "Positive electrode potential [V]": comsol_phi_p,
     "Negative electrode current density [A.m-2]": comsol_i_s_n,
     "Positive electrode current density [A.m-2]": comsol_i_s_p,
-    "Negative electrode electrolyte current density [A.m-2]": comsol_i_e_n,
-    "Positive electrode electrolyte current density [A.m-2]": comsol_i_e_p,
+    "Negative electrolyte current density [A.m-2]": comsol_i_e_n,
+    "Positive electrolyte current density [A.m-2]": comsol_i_e_p,
     "Terminal voltage [V]": pybamm.Function(comsol_voltage, pybamm.t * tau),
     "Cell temperature [K]": comsol_temperature,
     "Volume-averaged cell temperature [K]": pybamm.Function(
@@ -225,13 +245,19 @@ def time_only_plot(var, plot_times=None, plot_error=None):
 
 
 # Get mesh nodes for spatial plots
-x_n = mesh.combine_submeshes(*["negative electrode"])[0].nodes
-x_s = mesh.combine_submeshes(*["separator"])[0].nodes
-x_p = mesh.combine_submeshes(*["positive electrode"])[0].nodes
-x = mesh.combine_submeshes(*whole_cell)[0].nodes
+x_n_nodes = mesh.combine_submeshes(*["negative electrode"])[0].nodes
+x_s_nodes = mesh.combine_submeshes(*["separator"])[0].nodes
+x_p_nodes = mesh.combine_submeshes(*["positive electrode"])[0].nodes
+x_nodes = mesh.combine_submeshes(*whole_cell)[0].nodes
+x_n_edges = mesh.combine_submeshes(*["negative electrode"])[0].edges
+x_s_edges = mesh.combine_submeshes(*["separator"])[0].edges
+x_p_edges = mesh.combine_submeshes(*["positive electrode"])[0].edges
+x_edges = mesh.combine_submeshes(*whole_cell)[0].edges
 
 
-def whole_cell_by_domain_comparison_plot(var, plot_times=None, plot_error=None):
+def whole_cell_by_domain_comparison_plot(
+    var, plot_times=None, plot_error=None, scale=None, eval_on_edges=False
+):
     """
     Plot pybamm variable (defined over whole cell) against comsol variable
     (defined by component). E.g. if var = "Electrolyte current density [A.m-2]"
@@ -252,6 +278,11 @@ def whole_cell_by_domain_comparison_plot(var, plot_times=None, plot_error=None):
         Whether to plot the error. Can be "rel" (plots the relative error), "abs"
         (plots the abolute error), "both" (plots both the relative and abolsute
         errors) or None (default, plots no errors).
+    scale : str or float, optional
+        The scale to use in relative error plots. Can be None, in which case
+        the error is computed using the nodal value of the variable, "auto", in
+        which case the scale is taken to be the range (max-min) of the variable
+        at the current time, or the scale can be a user specified float.
     """
 
     # Set plot times if not provided
@@ -313,6 +344,10 @@ def whole_cell_by_domain_comparison_plot(var, plot_times=None, plot_error=None):
         color = cmap(float(ind) / len(plot_times))
 
         # negative electrode
+        if eval_on_edges:
+            x_n = x_n_edges
+        else:
+            x_n = x_n_nodes
         comsol_var_n = comsol_var_n_fun(x=x_n, t=t / tau)
         pybamm_var_n = pybamm_var_fun(x=x_n, t=t / tau)
         ax[0, 0].plot(x_n * L_x, comsol_var_n, "o", color=color, fillstyle="none")
@@ -321,15 +356,31 @@ def whole_cell_by_domain_comparison_plot(var, plot_times=None, plot_error=None):
             error_n = np.abs(pybamm_var_n - comsol_var_n)
             ax[1, 0].plot(x_n * L_x, error_n, "-", color=color)
         elif plot_error == "rel":
-            error_n = np.abs((pybamm_var_n - comsol_var_n) / comsol_var_n)
+            if scale is None:
+                scale_val = comsol_var_n
+            elif scale == "auto":
+                scale_val = np.abs(np.max(comsol_var_n) - np.min(comsol_var_n))
+            else:
+                scale_val = scale
+            error_n = np.abs((pybamm_var_n - comsol_var_n) / scale_val)
             ax[1, 0].plot(x_n * L_x, error_n, "-", color=color)
         elif plot_error == "both":
             abs_error_n = np.abs(pybamm_var_n - comsol_var_n)
-            rel_error_n = np.abs((pybamm_var_n - comsol_var_n) / comsol_var_n)
+            if scale is None:
+                scale_val = comsol_var_n
+            elif scale == "auto":
+                scale_val = np.abs(np.max(comsol_var_n) - np.min(comsol_var_n))
+            else:
+                scale_val = scale
+            rel_error_n = np.abs((pybamm_var_n - comsol_var_n) / scale_val)
             ax[1, 0].plot(x_n * L_x, abs_error_n, "-", color=color)
             ax[2, 0].plot(x_n * L_x, rel_error_n, "-", color=color)
 
         # separator
+        if eval_on_edges:
+            x_s = x_s_edges
+        else:
+            x_s = x_s_nodes
         if comsol_var_s_fun:
             comsol_var_s = comsol_var_s_fun(x=x_s, t=t / tau)
             pybamm_var_s = pybamm_var_fun(x=x_s, t=t / tau)
@@ -339,15 +390,31 @@ def whole_cell_by_domain_comparison_plot(var, plot_times=None, plot_error=None):
                 error_s = np.abs(pybamm_var_s - comsol_var_s)
                 ax[1, 1].plot(x_s * L_x, error_s, "-", color=color)
             elif plot_error == "rel":
-                error_s = np.abs((pybamm_var_s - comsol_var_s) / comsol_var_s)
+                if scale is None:
+                    scale_val = comsol_var_s
+                elif scale == "auto":
+                    scale_val = np.abs(np.max(comsol_var_s) - np.min(comsol_var_s))
+                else:
+                    scale_val = scale
+                error_s = np.abs((pybamm_var_s - comsol_var_s) / scale_val)
                 ax[1, 1].plot(x_s * L_x, error_s, "-", color=color)
             elif plot_error == "both":
                 abs_error_s = np.abs(pybamm_var_s - comsol_var_s)
-                rel_error_s = np.abs((pybamm_var_s - comsol_var_s) / comsol_var_s)
+                if scale is None:
+                    scale_val = comsol_var_s
+                elif scale == "auto":
+                    scale_val = np.abs(np.max(comsol_var_s) - np.min(comsol_var_s))
+                else:
+                    scale_val = scale
+                rel_error_s = np.abs((pybamm_var_s - comsol_var_s) / scale_val)
                 ax[1, 1].plot(x_s * L_x, abs_error_s, "-", color=color)
                 ax[2, 1].plot(x_s * L_x, rel_error_s, "-", color=color)
 
         # positive electrode
+        if eval_on_edges:
+            x_p = x_p_edges
+        else:
+            x_p = x_p_nodes
         comsol_var_p = comsol_var_p_fun(x=x_p, t=t / tau)
         pybamm_var_p = pybamm_var_fun(x=x_p, t=t / tau)
         ax[0, n_cols - 1].plot(
@@ -369,11 +436,23 @@ def whole_cell_by_domain_comparison_plot(var, plot_times=None, plot_error=None):
             error_p = np.abs(pybamm_var_p - comsol_var_p)
             ax[1, n_cols - 1].plot(x_p * L_x, error_p, "-", color=color)
         elif plot_error == "rel":
-            error_p = np.abs((pybamm_var_p - comsol_var_p) / comsol_var_p)
+            if scale is None:
+                scale_val = comsol_var_p
+            elif scale == "auto":
+                scale_val = np.abs(np.max(comsol_var_p) - np.min(comsol_var_p))
+            else:
+                scale_val = scale
+            error_p = np.abs((pybamm_var_p - comsol_var_p) / scale_val)
             ax[1, n_cols - 1].plot(x_p * L_x, error_p, "-", color=color)
         elif plot_error == "both":
             abs_error_p = np.abs(pybamm_var_p - comsol_var_p)
-            rel_error_p = np.abs((pybamm_var_p - comsol_var_p) / comsol_var_p)
+            if scale is None:
+                scale_val = comsol_var_p
+            elif scale == "auto":
+                scale_val = np.abs(np.max(comsol_var_p) - np.min(comsol_var_p))
+            else:
+                scale_val = scale
+            rel_error_p = np.abs((pybamm_var_p - comsol_var_p) / scale_val)
             ax[1, n_cols - 1].plot(x_p * L_x, abs_error_p, "-", color=color)
             ax[2, n_cols - 1].plot(x_p * L_x, rel_error_p, "-", color=color)
 
@@ -411,7 +490,9 @@ def whole_cell_by_domain_comparison_plot(var, plot_times=None, plot_error=None):
     plt.tight_layout()
 
 
-def electrode_comparison_plot(var, plot_times=None, plot_error=None):
+def electrode_comparison_plot(
+    var, plot_times=None, plot_error=None, scale=None, eval_on_edges=False
+):
     """
     Plot pybamm variable against comsol variable (both defined separately in the
     negative and positive electrode) E.g. if var = "electrode current density [A.m-2]"
@@ -431,6 +512,11 @@ def electrode_comparison_plot(var, plot_times=None, plot_error=None):
         Whether to plot the error. Can be "rel" (plots the relative error), "abs"
         (plots the abolute error), "both" (plots both the relative and abolsute
         errors) or None (default, plots no errors).
+    scale : str or float, optional
+        The scale to use in relative error plots. Can be None, in which case
+        the error is computed using the nodal value of the variable, "auto", in
+        which case the scale is taken to be the range (max-min) of the variable
+        at the current time, or the scale can be a user specified float.
     """
 
     # Set plot times if not provided
@@ -476,6 +562,10 @@ def electrode_comparison_plot(var, plot_times=None, plot_error=None):
         color = cmap(float(ind) / len(plot_times))
 
         # negative electrode
+        if eval_on_edges:
+            x_n = x_n_edges
+        else:
+            x_n = x_n_nodes
         comsol_var_n = comsol_var_n_fun(x=x_n, t=t / tau)
         pybamm_var_n = pybamm_var_n_fun(x=x_n, t=t / tau)
         ax[0, 0].plot(x_n * L_x, comsol_var_n, "o", color=color, fillstyle="none")
@@ -484,15 +574,31 @@ def electrode_comparison_plot(var, plot_times=None, plot_error=None):
             error_n = np.abs(pybamm_var_n - comsol_var_n)
             ax[1, 0].plot(x_n * L_x, error_n, "-", color=color)
         elif plot_error == "rel":
-            error_n = np.abs((pybamm_var_n - comsol_var_n) / comsol_var_n)
+            if scale is None:
+                scale_val = comsol_var_n
+            elif scale == "auto":
+                scale_val = np.abs(np.max(comsol_var_n) - np.min(comsol_var_n))
+            else:
+                scale_val = scale
+            error_n = np.abs((pybamm_var_n - comsol_var_n) / scale_val)
             ax[1, 0].plot(x_n * L_x, error_n, "-", color=color)
         elif plot_error == "both":
             abs_error_n = np.abs(pybamm_var_n - comsol_var_n)
-            rel_error_n = np.abs((pybamm_var_n - comsol_var_n) / comsol_var_n)
+            if scale is None:
+                scale_val = comsol_var_n
+            elif scale == "auto":
+                scale_val = np.abs(np.max(comsol_var_n) - np.min(comsol_var_n))
+            else:
+                scale_val = scale
+            rel_error_n = np.abs((pybamm_var_n - comsol_var_n) / scale_val)
             ax[1, 0].plot(x_n * L_x, abs_error_n, "-", color=color)
             ax[2, 0].plot(x_n * L_x, rel_error_n, "-", color=color)
 
         # positive electrode
+        if eval_on_edges:
+            x_p = x_p_edges
+        else:
+            x_p = x_p_nodes
         comsol_var_p = comsol_var_p_fun(x=x_p, t=t / tau)
         pybamm_var_p = pybamm_var_p_fun(x=x_p, t=t / tau)
         ax[0, 1].plot(
@@ -514,11 +620,23 @@ def electrode_comparison_plot(var, plot_times=None, plot_error=None):
             error_p = np.abs(pybamm_var_p - comsol_var_p)
             ax[1, 1].plot(x_p * L_x, error_p, "-", color=color)
         elif plot_error == "rel":
-            error_p = np.abs((pybamm_var_p - comsol_var_p) / comsol_var_p)
+            if scale is None:
+                scale_val = comsol_var_p
+            elif scale == "auto":
+                scale_val = np.abs(np.max(comsol_var_p) - np.min(comsol_var_p))
+            else:
+                scale_val = scale
+            error_p = np.abs((pybamm_var_p - comsol_var_p) / scale_val)
             ax[1, 1].plot(x_p * L_x, error_p, "-", color=color)
         elif plot_error == "both":
             abs_error_p = np.abs(pybamm_var_p - comsol_var_p)
-            rel_error_p = np.abs((pybamm_var_p - comsol_var_p) / comsol_var_p)
+            if scale is None:
+                scale_val = comsol_var_p
+            elif scale == "auto":
+                scale_val = np.abs(np.max(comsol_var_p) - np.min(comsol_var_p))
+            else:
+                scale_val = scale
+            rel_error_p = np.abs((pybamm_var_p - comsol_var_p) / scale_val)
             ax[1, 1].plot(x_p * L_x, abs_error_p, "-", color=color)
             ax[2, 1].plot(x_p * L_x, rel_error_p, "-", color=color)
 
@@ -545,7 +663,9 @@ def electrode_comparison_plot(var, plot_times=None, plot_error=None):
     plt.tight_layout()
 
 
-def whole_cell_comparison_plot(var, plot_times=None, plot_error=None):
+def whole_cell_comparison_plot(
+    var, plot_times=None, plot_error=None, scale=None, eval_on_edges=False
+):
     """
     Plot pybamm variable against comsol variable (both defined over whole cell)
 
@@ -561,6 +681,11 @@ def whole_cell_comparison_plot(var, plot_times=None, plot_error=None):
         Whether to plot the error. Can be "rel" (plots the relative error), "abs"
         (plots the abolute error), "both" (plots both the relative and abolsute
         errors) or None (default, plots no errors).
+    scale : str or float, optional
+        The scale to use in relative error plots. Can be None, in which case
+        the error is computed using the nodal value of the variable, "auto", in
+        which case the scale is taken to be the range (max-min) of the variable
+        at the current time, or the scale can be a user specified float.
     """
 
     # Set plot times if not provided
@@ -596,6 +721,10 @@ def whole_cell_comparison_plot(var, plot_times=None, plot_error=None):
         color = cmap(float(ind) / len(plot_times))
 
         # whole cell
+        if eval_on_edges:
+            x = x_edges
+        else:
+            x = x_nodes
         comsol_var = comsol_var_fun(x=x, t=t / tau)
         pybamm_var = pybamm_var_fun(x=x, t=t / tau)
         ax[0].plot(
@@ -613,11 +742,23 @@ def whole_cell_comparison_plot(var, plot_times=None, plot_error=None):
             error = np.abs(pybamm_var - comsol_var)
             ax[1].plot(x * L_x, error, "-", color=color)
         elif plot_error == "rel":
-            error = np.abs((pybamm_var - comsol_var) / comsol_var)
-            ax[1].plot(x_n * L_x, error, "-", color=color)
+            if scale is None:
+                scale_val = comsol_var
+            elif scale == "auto":
+                scale_val = np.abs(np.max(comsol_var) - np.min(comsol_var))
+            else:
+                scale_val = scale
+            error = np.abs((pybamm_var - comsol_var) / scale_val)
+            ax[1].plot(x * L_x, error, "-", color=color)
         elif plot_error == "both":
             abs_error = np.abs(pybamm_var - comsol_var)
-            rel_error = np.abs((pybamm_var - comsol_var) / comsol_var)
+            if scale is None:
+                scale_val = comsol_var
+            elif scale == "auto":
+                scale_val = np.abs(np.max(comsol_var) - np.min(comsol_var))
+            else:
+                scale_val = scale
+            rel_error = np.abs((pybamm_var - comsol_var) / scale_val)
             ax[1].plot(x * L_x, abs_error, "-", color=color)
             ax[2].plot(x * L_x, rel_error, "-", color=color)
 
@@ -637,56 +778,89 @@ def whole_cell_comparison_plot(var, plot_times=None, plot_error=None):
 
 
 # Make plots
-plot_times = comsol_variables["time"][0::10]
+
+plot_times = comsol_variables["time"]
 plot_error = "both"
-# plot_times = [600, 1200, 1800, 2400, 3000]
 # voltage
-time_only_plot("Terminal voltage [V]", plot_error=plot_error)
+time_only_plot("Terminal voltage [V]", plot_times=plot_times, plot_error=plot_error)
 # volume averaged temperature
-time_only_plot("Volume-averaged cell temperature [K]", plot_error=plot_error)
+time_only_plot(
+    "Volume-averaged cell temperature [K]", plot_times=plot_times, plot_error=plot_error
+)
+
+plot_times = [60, 600, 1200, 1800, 2400, 3000]
+plot_error = "both"
 # heat sources
-whole_cell_by_domain_comparison_plot(
-    "Irreversible electrochemical heating [W.m-3]",
-    plot_times=plot_times,
-    plot_error=plot_error,
-)
-whole_cell_by_domain_comparison_plot(
-    "Reversible heating [W.m-3]", plot_times=plot_times, plot_error=plot_error
-)
-whole_cell_by_domain_comparison_plot(
-    "Total heating [W.m-3]", plot_times=plot_times, plot_error=plot_error
-)
-# temperature
+# whole_cell_by_domain_comparison_plot(
+# "Irreversible electrochemical heating [W.m-3]",
+# plot_times=plot_times,
+# plot_error=plot_error,
+# scale="auto",
+# )
+# whole_cell_by_domain_comparison_plot(
+# "Reversible heating [W.m-3]",
+# plot_times=plot_times,
+# plot_error=plot_error,
+# scale="auto",
+# )
+# whole_cell_by_domain_comparison_plot(
+# "Total heating [W.m-3]", plot_times=plot_times, plot_error=plot_error, scale="auto"
+# )
+## temperature
 # whole_cell_comparison_plot(
-#     "Cell temperature [K]", plot_times=plot_times, plot_error=plot_error
+# "Cell temperature [K]", plot_times=plot_times, plot_error=plot_error, scale="auto"
 # )
 # potentials
 electrode_comparison_plot(
-    "electrode potential [V]", plot_times=plot_times, plot_error=plot_error
+    "electrode potential [V]",
+    plot_times=plot_times,
+    plot_error=plot_error,
+    # scale="auto",
+    scale=param.evaluate(pybamm.standard_parameters_lithium_ion.thermal_voltage),
 )
 plt.savefig("thermal1D_phi_s.eps", format="eps", dpi=1000)
 whole_cell_comparison_plot(
-    "Electrolyte potential [V]", plot_times=plot_times, plot_error=plot_error
+    "Electrolyte potential [V]",
+    plot_times=plot_times,
+    plot_error=plot_error,
+    # scale="auto",
+    scale=param.evaluate(pybamm.standard_parameters_lithium_ion.thermal_voltage),
 )
 plt.savefig("thermal1D_phi_e.eps", format="eps", dpi=1000)
 # current
 electrode_comparison_plot(
-    "electrode current density [A.m-2]", plot_times=plot_times, plot_error=plot_error
+    "electrode current density [A.m-2]",
+    plot_times=plot_times,
+    plot_error=plot_error,
+    # scale="auto",
+    scale=param.evaluate(pybamm.standard_parameters_lithium_ion.i_typ),
+    eval_on_edges=True,
 )
-plt.savefig("thermal1D_i_s.eps", format="eps", dpi=1000)
-whole_cell_by_domain_comparison_plot(
-    "Electrolyte current density [A.m-2]", plot_times=plot_times, plot_error=plot_error
+# plt.savefig("thermal1D_i_s.eps", format="eps", dpi=1000)
+electrode_comparison_plot(
+    "electrolyte current density [A.m-2]",
+    plot_times=plot_times,
+    plot_error=plot_error,
+    # scale="auto",
+    scale=param.evaluate(pybamm.standard_parameters_lithium_ion.i_typ),
+    eval_on_edges=True,
 )
-plt.savefig("thermal1D_i_e.eps", format="eps", dpi=1000)
+# plt.savefig("thermal1D_i_e.eps", format="eps", dpi=1000)
 # concentrations
 electrode_comparison_plot(
     "particle surface concentration [mol.m-3]",
     plot_times=plot_times,
     plot_error=plot_error,
+    # scale="auto",
+    scale=param.evaluate(pybamm.standard_parameters_lithium_ion.c_n_max),
 )
 plt.savefig("thermal1D_c_surf.eps", format="eps", dpi=1000)
 whole_cell_comparison_plot(
-    "Electrolyte concentration [mol.m-3]", plot_times=plot_times, plot_error=plot_error
+    "Electrolyte concentration [mol.m-3]",
+    plot_times=plot_times,
+    plot_error=plot_error,
+    # scale="auto",
+    scale=param.evaluate(pybamm.standard_parameters_lithium_ion.c_e_typ),
 )
 plt.savefig("thermal1D_c_e.eps", format="eps", dpi=1000)
 plt.show()

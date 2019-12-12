@@ -45,6 +45,28 @@ class Full(BaseModel):
 
         variables.update(self._get_standard_current_variables(i_e))
 
+        # Get neg and pos currents
+        T_n, T_s, T_p = T.orphans
+        tor_n, tor_s, tor_p = tor.orphans
+        c_e_n, c_e_s, c_e_p = c_e.orphans
+        phi_e_n, phi_e_s, phi_e_p = phi_e.orphans
+
+        i_e_n = (param.kappa_e(c_e_n, T_n) * tor_n * param.gamma_e / param.C_e) * (
+            param.chi(c_e_n) * (1 + param.Theta * T_n) * pybamm.grad(c_e_n) / c_e_n
+            - pybamm.grad(phi_e_n)
+        )
+        i_e_p = (param.kappa_e(c_e_p, T_p) * tor_p * param.gamma_e / param.C_e) * (
+            param.chi(c_e_p) * (1 + param.Theta * T_p) * pybamm.grad(c_e_p) / c_e_p
+            - pybamm.grad(phi_e_p)
+        )
+        i_typ = self.param.i_typ
+        variables.update({
+            "Negative electrolyte current density": i_e_n,
+            "Positive electrolyte current density": i_e_p,
+            "Negative electrolyte current density [A.m-2]": i_e_n * i_typ,
+            "Positive electrolyte current density [A.m-2]": i_e_p * i_typ,
+        })
+
         return variables
 
     def set_algebraic(self, variables):

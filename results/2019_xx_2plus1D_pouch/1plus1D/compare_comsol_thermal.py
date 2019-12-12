@@ -19,7 +19,7 @@ pybamm.set_logging_level("INFO")
 
 try:
     comsol_variables = pickle.load(
-        open("input/comsol_results/comsol_thermal_1plus1D_2C.pickle", "rb")
+        open("input/comsol_results/comsol_thermal_1plus1D_1C.pickle", "rb")
     )
 except FileNotFoundError:
     raise FileNotFoundError("COMSOL data not found. Try running load_comsol_data.py")
@@ -28,7 +28,7 @@ except FileNotFoundError:
 "Load or set up pybamm simulation"
 
 compute = True
-filename = "results/2019_xx_1plus1D_pouch/pybamm_thermal_1plus1D_2C.pickle.pickle"
+filename = "results/2019_xx_1plus1D_pouch/pybamm_thermal_1plus1D_1C.pickle.pickle"
 
 if compute is False:
     try:
@@ -48,7 +48,7 @@ else:
 
     # parameters
     param = pybamm_model.default_parameter_values
-    param.update({"C-rate": 2})
+    param.update({"C-rate": 1})
 
     # set npts
     var = pybamm.standard_spatial_vars
@@ -63,12 +63,12 @@ else:
 
     # solver
     solver = pybamm.CasadiSolver(
-        atol=1e-6, rtol=1e-6, root_tol=1e-3, root_method="hybr", mode="fast"
+        atol=1e-6, rtol=1e-6, root_tol=1e-6, root_method="hybr", mode="fast"
     )
 
     # simulation object
     simulation = pybamm.Simulation(
-        pybamm_model, parameter_values=param, var_pts=var_pts, solver=solver,
+        pybamm_model, parameter_values=param, var_pts=var_pts, solver=solver
     )
 
     # build and save simulation

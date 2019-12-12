@@ -63,15 +63,15 @@ class UnaryOperator(pybamm.Symbol):
         """Perform unary operation on a child. """
         raise NotImplementedError
 
-    def evaluate(self, t=None, y=None, known_evals=None):
+    def evaluate(self, t=None, y=None, u=None, known_evals=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         if known_evals is not None:
             if self.id not in known_evals:
-                child, known_evals = self.child.evaluate(t, y, known_evals)
+                child, known_evals = self.child.evaluate(t, y, u, known_evals)
                 known_evals[self.id] = self._unary_evaluate(child)
             return known_evals[self.id], known_evals
         else:
-            child = self.child.evaluate(t, y)
+            child = self.child.evaluate(t, y, u)
             return self._unary_evaluate(child)
 
     def evaluate_for_shape(self):
