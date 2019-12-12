@@ -1,7 +1,6 @@
 #
 # Experiment class
 #
-import numbers
 
 
 class Experiment:
@@ -19,7 +18,7 @@ class Experiment:
     """
 
     def __init__(self, operating_conditions):
-        self.operating_conditions_string = operating_conditions
+        self.operating_conditions_string = str(operating_conditions)
         self.operating_conditions = self.read_operating_conditions(operating_conditions)
 
     def __str__(self):
@@ -42,15 +41,16 @@ class Experiment:
         operating_conditions : list
             Operating conditions in the tuple format
         """
-        for i, cond in enumerate(operating_conditions):
+        converted_operating_conditions = []
+        for cond in operating_conditions:
             if isinstance(cond, str):
-                operating_conditions[i] = self.str_to_tuple(cond)
+                converted_operating_conditions.append(self.str_to_tuple(cond))
             else:
                 raise TypeError(
                     "Conditions should be tuples or strings, not {}".format(type(cond))
                 )
 
-        return operating_conditions
+        return converted_operating_conditions
 
     def str_to_tuple(self, cond):
         """
@@ -66,7 +66,7 @@ class Experiment:
         """
         cond_tuple = cond.split()
         self.check_tuple_condition(cond_tuple)
-        cond_tuple = self.to_seconds(cond_tuple)
+        cond_tuple = self.convert_time_to_seconds(cond_tuple)
         return cond_tuple
 
     def check_tuple_condition(self, cond_tuple):
@@ -79,8 +79,15 @@ class Experiment:
                 )
             )
         # Check inputs
-        if not isinstance(cond_tuple[0], numbers.Number):
-            raise TypeError("First entry in a tuple of conditions should be a number")
+        try:
+            float(cond_tuple[0])
+        except ValueError:
+            raise TypeError(
+                """ First entry in a tuple of conditions should be a number, not {}
+                """.format(
+                    cond_tuple[0]
+                )
+            )
         acceptable_strings = ["A", "C", "V", "W"]
         if cond_tuple[1] not in acceptable_strings:
             raise ValueError(
@@ -95,6 +102,19 @@ class Experiment:
                     cond_tuple[2]
                 )
             )
-        if not isinstance(cond_tuple[3], numbers.Number):
+        try:
+            float(cond_tuple[3])
+        except ValueError:
             raise TypeError("Fourth entry in a tuple of conditions should be a number")
+
+    def convert_time_to_seconds(self, cond_tuple):
+        "Convert a time in seconds, minutes or hours to a time in seconds"
+        time, units = cond_tuple[3:]
+        if units in ["second", "seconds"]:
+            time_in_seconds = float(time)
+        elif units in ["minute", "minutes"]:
+            time_in_seconds = float(time) * 60
+        elif units in ["hour", "hours"]:
+            time_in_seconds = float(time) * 3600
+        return tuple([float(cond_tuple[0]), cond_tuple[1], time_in_seconds])
 
