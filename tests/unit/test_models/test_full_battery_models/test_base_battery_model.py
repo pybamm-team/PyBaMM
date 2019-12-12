@@ -126,11 +126,11 @@ class TestBaseBatteryModel(unittest.TestCase):
             pybamm.BaseBatteryModel({"convection": {"transverse": "full"}})
         with self.assertRaisesRegex(pybamm.OptionError, "particle model"):
             pybamm.BaseBatteryModel({"particle": "bad particle"})
-        with self.assertRaisesRegex(pybamm.OptionError, "option single"):
+        with self.assertRaisesRegex(pybamm.OptionError, "current collector model"):
             pybamm.BaseBatteryModel(
                 {"current collector": "single particle potential pair"}
             )
-        with self.assertRaisesRegex(pybamm.OptionError, "option set external"):
+        with self.assertRaisesRegex(pybamm.OptionError, "current collector model"):
             pybamm.BaseBatteryModel({"current collector": "set external potential"})
 
     def test_build_twice(self):

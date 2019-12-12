@@ -50,10 +50,6 @@ class SPMe(BaseModel):
         if build:
             self.build_model()
 
-    def set_porosity_submodel(self):
-
-        self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
-
     def set_tortuosity_submodels(self):
         self.submodels["electrolyte tortuosity"] = pybamm.tortuosity.Bruggeman(
             self.param, "Electrolyte", True
@@ -61,12 +57,6 @@ class SPMe(BaseModel):
         self.submodels["electrode tortuosity"] = pybamm.tortuosity.Bruggeman(
             self.param, "Electrode", True
         )
-
-    def set_convection_submodel(self):
-
-        self.submodels[
-            "through-cell convection"
-        ] = pybamm.convection.through_cell.NoConvection(self.param)
 
     def set_interfacial_submodel(self):
 

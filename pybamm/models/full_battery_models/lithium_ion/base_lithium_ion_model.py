@@ -68,6 +68,19 @@ class BaseModel(pybamm.BaseBatteryModel):
             }
         )
 
+    def set_porosity_submodel(self):
+
+        self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
+
+    def set_convection_submodel(self):
+
+        self.submodels[
+            "through-cell convection"
+        ] = pybamm.convection.through_cell.NoConvection(self.param)
+        self.submodels[
+            "transverse convection"
+        ] = pybamm.convection.transverse.NoConvection(self.param)
+
     def set_reactions(self):
 
         # Should probably refactor as this is a bit clunky at the moment

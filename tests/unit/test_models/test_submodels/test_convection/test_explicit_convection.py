@@ -7,23 +7,25 @@ import tests
 import unittest
 
 
-class TestComposite(unittest.TestCase):
+class TestExplicit(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.standard_parameters_lead_acid
 
-        a = pybamm.Scalar(0)
+        a = pybamm.PrimaryBroadcast(0, "current collector")
+        a_n = pybamm.PrimaryBroadcast(a, ["negative electrode"])
+        a_s = pybamm.PrimaryBroadcast(a, ["separator"])
+        a_p = pybamm.PrimaryBroadcast(a, ["positive electrode"])
         variables = {
             "Current collector current density": a,
-            "Negative electrode interfacial current density": pybamm.Broadcast(
-                a, ["negative electrode"]
-            ),
+            "Negative electrode interfacial current density": a_n,
             "X-averaged negative electrode interfacial current density": a,
-            "Positive electrode interfacial current density": pybamm.Broadcast(
-                a, ["positive electrode"]
-            ),
+            "Positive electrode interfacial current density": a_p,
             "X-averaged positive electrode interfacial current density": a,
+            "X-averaged separator pressure": a,
+            "X-averaged separator transverse volume-averaged acceleration": a,
+            "Separator pressure": a_s,
         }
-        submodel = pybamm.convection.through_cell.Composite(param)
+        submodel = pybamm.convection.through_cell.Explicit(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
