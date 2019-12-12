@@ -102,7 +102,7 @@ class ProcessedVariable(object):
                 known_evals=self.known_evals[t_sol[0]],
             )
         else:
-            self.base_eval = base_variable.evaluate(t_sol[0], u_sol[:, 0])
+            self.base_eval = base_variable.evaluate(t_sol[0], u_sol[:, 0], self.inputs)
 
         # handle 2D (in space) finite element variables differently
         if (
