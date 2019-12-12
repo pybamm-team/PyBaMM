@@ -30,17 +30,13 @@ class Explicit(BaseThroughCellModel):
         j_n_av = variables["X-averaged negative electrode interfacial current density"]
         j_p_av = variables["X-averaged positive electrode interfacial current density"]
 
-        p_n = param.beta_n * pybamm.outer(
-            j_n_av, (-x_n ** 2 + param.l_n ** 2) / 2
-        ) + pybamm.PrimaryBroadcast(p_s, "negative electrode")
-        p_p = param.beta_n * pybamm.outer(
-            j_n_av, ((x_p - 1) ** 2 - param.l_p ** 2) / 2
-        ) + pybamm.PrimaryBroadcast(p_s, "positive electrode")
+        p_n = param.beta_n * j_n_av * (-x_n ** 2 + param.l_n ** 2) / 2 + p_s
+        p_p = param.beta_n * j_n_av * ((x_p - 1) ** 2 - param.l_p ** 2) / 2 + p_s
         variables.update(self._get_standard_neg_pos_pressure_variables(p_n, p_p))
 
         # Volume-averaged velocity
-        v_box_n = param.beta_n * pybamm.outer(j_n_av, x_n)
-        v_box_p = param.beta_p * pybamm.outer(j_p_av, x_p - 1)
+        v_box_n = param.beta_n * j_n_av * x_n
+        v_box_p = param.beta_p * j_p_av * (x_p - 1)
         variables.update(
             self._get_standard_neg_pos_velocity_variables(v_box_n, v_box_p)
         )

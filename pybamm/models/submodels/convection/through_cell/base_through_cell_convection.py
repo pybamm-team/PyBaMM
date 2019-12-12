@@ -37,7 +37,7 @@ class BaseThroughCellModel(BaseModel):
         div_v_box_s = pybamm.PrimaryBroadcast(div_v_box_s_av, "separator")
 
         # Simple formula for velocity in the separator
-        v_box_s = pybamm.outer(div_v_box_s_av, (x_s - l_n)) + v_box_n_right
+        v_box_s = div_v_box_s_av * (x_s - l_n) + v_box_n_right
 
         variables = self._get_standard_sep_velocity_variables(v_box_s, div_v_box_s)
 

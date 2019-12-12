@@ -54,7 +54,7 @@ class TestSPM(unittest.TestCase):
         model.check_well_posedness()
 
         options = {"current collector": "set external potential", "dimensionality": 0}
-        with self.assertRaises(NotImplementedError):
+        with self.assertRaises(pybamm.OptionError):
             pybamm.lithium_ion.SPM(options)
 
         options = {"current collector": "set external potential", "dimensionality": 1}

@@ -17,6 +17,7 @@ Electrolyte conductivity [S.m-1],[function]conductivity_Gu1997,,
 Darken thermodynamic factor,[function]darken_thermodynamic_factor_Chapman1968,,
 Electrolyte diffusivity [m2.s-1],[function]diffusivity_Gu1997,,
 Electrolyte viscosity [kg.m-1.s-1],[function]viscosity_Chapman1968,,
+MacInnes t_plus function,[function]macinnes_tplus_function,,
 ,,,
 # Other species properties,,,
 Oxygen diffusivity [m2.s-1],2.1e-9,cussler2009diffusion

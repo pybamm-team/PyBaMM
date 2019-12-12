@@ -49,12 +49,11 @@ class TestLeadAcidFullSideReactions(unittest.TestCase):
         model.check_well_posedness()
         self.assertIsInstance(model.default_solver, pybamm.ScipySolver)
 
-    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_well_posed_surface_form_algebraic(self):
         options = {"side reactions": ["oxygen"], "surface form": "algebraic"}
         model = pybamm.lead_acid.Full(options)
         model.check_well_posedness()
-        self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
+        self.assertIsInstance(model.default_solver, pybamm.DaeSolver)
 
 
 if __name__ == "__main__":

@@ -110,6 +110,21 @@ class BaseModel(pybamm.BaseSubModel):
         variables = {"Pressure": p}
 
         return variables
+
+    def _separator_velocity(self, variables):
+        """
+        A private method to calculate x- and z-components of velocity in the separator
+        Parameters
+        ----------
+        variables : dict
+            Dictionary of variables in the whole model.
+        Returns
+        -------
+        v_box_s : :class:`pybamm.Symbol`
+            The x-component of velocity in the separator
+        dVbox_dz : :class:`pybamm.Symbol`
+            The z-component of velocity in the separator
+        """
         # Set up
         param = self.param
         l_n = pybamm.geometric_parameters.l_n
