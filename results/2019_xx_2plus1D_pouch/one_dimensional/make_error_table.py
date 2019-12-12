@@ -78,9 +78,7 @@ scales = {
     "Electrolyte concentration [mol.m-3]": param.evaluate(
         pybamm.standard_parameters_lithium_ion.c_e_typ
     ),
-    "Terminal voltage [V]": param.evaluate(
-        pybamm.standard_parameters_lithium_ion.thermal_voltage
-    ),
+    "Terminal voltage [V]": 1,
     "Volume-averaged cell temperature [K]": param.evaluate(
         pybamm.standard_parameters_lithium_ion.Delta_T
     ),
@@ -103,7 +101,7 @@ for i, model in enumerate(models):
     # solve
     tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
     time = comsol_t / tau
-    solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-3, mode="fast")
+    solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-8, mode="fast")
     solution = solver.solve(model, time)
     sol_times[i] = solution.solve_time
 
@@ -218,8 +216,8 @@ for i, model in enumerate(models):
                 solution.y,
                 mesh=mesh,
             )(t=t)
-        # compute RMS error
 
+        # compute RMS error
         scale = scales[variable_name]
         error = pybamm.rmse(pybamm_var / scale, comsol_var / scale)
         return error

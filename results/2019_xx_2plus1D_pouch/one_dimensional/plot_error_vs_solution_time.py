@@ -112,14 +112,14 @@ for i, model in enumerate(models):
     # solve
     tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
     time = comsol_t / tau
-    solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-3, mode="fast")
+    solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-8, mode="fast")
     solution = solver.solve(model, time)
     sol_times[i] = solution.solve_time
 
     # create comsol vars interpolated onto pybamm mesh to compare errors
     whole_cell = ["negative electrode", "separator", "positive electrode"]
     L_x = param.evaluate(pybamm.standard_parameters_lithium_ion.L_x)
-    interp_kind = "quadratic"
+    interp_kind = "cubic"
 
     def get_interp_fun(variable_name, domain):
         """
@@ -138,7 +138,7 @@ for i, model in enumerate(models):
             comsol_x = exact_solution["x"]
         # Make sure to use dimensional space
         pybamm_x = mesh.combine_submeshes(*domain)[0].nodes * L_x
-        variable = interp.interp1d(comsol_x, variable, axis=0, kind=interp_kind)(
+        variable = interp.interp1d(comsol_x, variable, axis=0, kind="linear")(
             pybamm_x
         )
 
@@ -181,6 +181,7 @@ for i, model in enumerate(models):
 
     # compute "error" using times up to voltage cut off
     t = solution.t
+
     # Note: casadi doesnt support events so we find this time after the solve
     if isinstance(solver, pybamm.CasadiSolver):
         V_cutoff = param.evaluate(

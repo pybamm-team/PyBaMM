@@ -57,7 +57,7 @@ disc.process_model(pybamm_model, check_model=False)
 
 # solver
 # solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
-solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6, mode="fast")
+solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-8, mode="fast")
 
 "-----------------------------------------------------------------------------"
 "Solve at different C_rates and plot against COMSOL solution"

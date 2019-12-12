@@ -67,12 +67,10 @@ tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
 # solve model at comsol times
 time = comsol_variables["time"] / tau
 # solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
-solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6, mode="fast")
+solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-8, mode="fast")
 solution = solver.solve(pybamm_model, time)
 
-# plot
-# plot = pybamm.QuickPlot(pybamm_model, mesh, solution, output_variables=["Electrolyte Ohmic heating", "Electrolyte current density", "Electrolyte concentration"])
-# plot.dynamic_plot()
+
 "-----------------------------------------------------------------------------"
 "Make Comsol 'model' for comparison"
 
@@ -828,23 +826,23 @@ whole_cell_comparison_plot(
 )
 plt.savefig("thermal1D_phi_e.eps", format="eps", dpi=1000)
 # current
-electrode_comparison_plot(
-    "electrode current density [A.m-2]",
-    plot_times=plot_times,
-    plot_error=plot_error,
-    # scale="auto",
-    scale=param.evaluate(pybamm.standard_parameters_lithium_ion.i_typ),
-    eval_on_edges=True,
-)
-# plt.savefig("thermal1D_i_s.eps", format="eps", dpi=1000)
-electrode_comparison_plot(
-    "electrolyte current density [A.m-2]",
-    plot_times=plot_times,
-    plot_error=plot_error,
-    # scale="auto",
-    scale=param.evaluate(pybamm.standard_parameters_lithium_ion.i_typ),
-    eval_on_edges=True,
-)
+#electrode_comparison_plot(
+#    "electrode current density [A.m-2]",
+#    plot_times=plot_times,
+#    plot_error=plot_error,
+#    # scale="auto",
+#    scale=param.evaluate(pybamm.standard_parameters_lithium_ion.i_typ),
+#    eval_on_edges=True,
+#)
+## plt.savefig("thermal1D_i_s.eps", format="eps", dpi=1000)
+#electrode_comparison_plot(
+#    "electrolyte current density [A.m-2]",
+#    plot_times=plot_times,
+#    plot_error=plot_error,
+#    # scale="auto",
+#    scale=param.evaluate(pybamm.standard_parameters_lithium_ion.i_typ),
+#    eval_on_edges=True,
+#)
 # plt.savefig("thermal1D_i_e.eps", format="eps", dpi=1000)
 # concentrations
 electrode_comparison_plot(

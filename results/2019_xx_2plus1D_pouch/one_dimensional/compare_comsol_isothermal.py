@@ -67,7 +67,7 @@ tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
 # solve model at comsol times
 time = comsol_variables["time"] / tau
 #solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
-solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6, mode="fast")
+solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-8, mode="fast")
 solution = solver.solve(pybamm_model, time)
 
 "-----------------------------------------------------------------------------"
