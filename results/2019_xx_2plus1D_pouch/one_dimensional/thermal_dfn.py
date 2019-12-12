@@ -13,7 +13,6 @@ var_pts = {
     pybamm.standard_spatial_vars.r_p: 10,
 }
 
-solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-3, mode="fast")
 sim = pybamm.Simulation(model, var_pts=var_pts)
 
 sim.solve()
