@@ -25,7 +25,9 @@ def download_extract_library(url):
     if NO_WGET:
         # The NO_WGET is set to true if the wget could not be
         # imported.
-        error_msg = "Could not find wget module. Please install wget module (pip install wget)."
+        error_msg = (
+            "Could not find wget module. Please install wget module (pip install wget)."
+        )
         raise ModuleNotFoundError(error_msg)
     archive = wget.download(url)
     tar = tarfile.open(archive)
@@ -74,7 +76,9 @@ def update_LD_LIBRARY_PATH(install_dir):
                 )
 
 
-def install_sundials(sundials_src, sundials_inst, download, klu=False):
+def install_sundials(
+    sundials_src, sundials_inst, download, klu=False, force_download=False
+):
     # Download the SUNDIALS library and compile it.
     # Arguments
     # ----------
@@ -100,7 +104,8 @@ def install_sundials(sundials_src, sundials_inst, download, klu=False):
             "https://computing.llnl.gov/"
             + "projects/sundials/download/sundials-4.1.0.tar.gz"
         )
-        if yes_or_no(question):
+        if force_download or yes_or_no(question):
+            print("Downloading SUNDIALS from " + url)
             download_extract_library(url)
         else:
             print("Exiting setup.")
@@ -184,6 +189,11 @@ class InstallKLU(Command):
         ("sundials-src=", None, "Path to sundials source directory"),
         ("sundials-inst=", None, "Path to sundials install directory"),
         ("suitesparse-src=", None, "Path to suitesparse source directory"),
+        (
+            "force-download",
+            "f",
+            "Whether or not to force download of SuiteSparse and Sundials libraries",
+        ),
     ]
     # Absolute path to the PyBaMM root directory where setup.py is located.
     pybamm_dir = os.path.abspath(os.path.dirname(__file__))
@@ -196,6 +206,7 @@ class InstallKLU(Command):
         self.suitesparse_src = None
         self.sundials_src = None
         self.sundials_inst = None
+        self.force_download = None
 
     def finalize_options(self):
         """Post-process options"""
@@ -207,6 +218,7 @@ class InstallKLU(Command):
             ("suitesparse_src", "suitesparse_src"),
             ("sundials_src", "sundials_src"),
             ("sundials_inst", "sundials_inst"),
+            ("forc_download", "force_download"),
         )
 
         # If the SUNDIALS is already installed in sundials_inst with the KLU
@@ -263,7 +275,8 @@ class InstallKLU(Command):
                 "https://github.com/DrTimothyAldenDavis/"
                 + "SuiteSparse/archive/v5.6.0.tar.gz"
             )
-            if yes_or_no(question):
+            if self.force_download or yes_or_no(question):
+                print("Downloading SuiteSparse from " + url)
                 download_extract_library(url)
             else:
                 print("Exiting setup.")
@@ -291,7 +304,11 @@ class InstallKLU(Command):
 
         if self.install_sundials:
             install_sundials(
-                self.sundials_src, self.sundials_inst, self.download_sundials, klu=True
+                self.sundials_src,
+                self.sundials_inst,
+                self.download_sundials,
+                klu=True,
+                force_download=self.force_download,
             )
         build_idaklu_solver(self.pybamm_dir)
 
@@ -306,6 +323,11 @@ class InstallODES(Command):
         # The format is (long option, short option, description).
         ("sundials-src=", None, "Path to sundials source dir"),
         ("sundials-inst=", None, "Path to sundials install directory"),
+        (
+            "force-download",
+            "f",
+            "Whether or not to force download of SuiteSparse and Sundials libraries",
+        ),
     ]
     # Absolute path to the PyBaMM root directory where setup.py is located.
     pybamm_dir = os.path.abspath(os.path.dirname(__file__))
@@ -317,6 +339,7 @@ class InstallODES(Command):
         # Each user option is listed here with its default value.
         self.sundials_src = None
         self.sundials_inst = None
+        self.force_download = None
 
     def finalize_options(self):
         """Post-process options"""
@@ -329,6 +352,7 @@ class InstallODES(Command):
             "install_all",
             ("sundials_src", "sundials_src"),
             ("sundials_inst", "sundials_inst"),
+            ("force_download", "force_download"),
         )
 
         # If the installation directory sundials_inst already exists, then it is
@@ -364,7 +388,10 @@ class InstallODES(Command):
         if self.install_sundials:
             # Download/build SUNDIALS
             install_sundials(
-                self.sundials_src, self.sundials_inst, self.download_sundials
+                self.sundials_src,
+                self.sundials_inst,
+                self.download_sundials,
+                force_download=self.force_download,
             )
 
         update_LD_LIBRARY_PATH(self.sundials_inst)
@@ -389,6 +416,11 @@ class InstallAll(Command):
         ("sundials-src=", None, "Absolute path to sundials source dir"),
         ("sundials-inst=", None, "Absolute path to sundials install directory"),
         ("suitesparse-src=", None, "Absolute path to SuiteSparse root directory"),
+        (
+            "force-download",
+            "f",
+            "Whether or not to force download of SuiteSparse and Sundials libraries",
+        ),
     ]
 
     # Absolute path to the PyBaMM root directory where setup.py is located.
@@ -400,6 +432,7 @@ class InstallAll(Command):
         self.sundials_src = None
         self.sundials_inst = os.path.join(self.pybamm_dir, "sundials")
         self.suitesparse_src = None
+        self.force_download = None
 
     def finalize_options(self):
         """Post-process options"""
