@@ -73,7 +73,9 @@ class TestUpdateParameters(unittest.TestCase):
         modeltest3.test_solving(t_eval=t_eval)
         Y3 = modeltest3.solution.y
 
-        self.assertIsInstance(model3.variables["Current [A]"], pybamm.Scalar)
+        self.assertIsInstance(model3.variables["Current [A]"], pybamm.Multiplication)
+        self.assertIsInstance(model3.variables["Current [A]"].left, pybamm.Scalar)
+        self.assertIsInstance(model3.variables["Current [A]"].right, pybamm.Scalar)
         self.assertEqual(model3.variables["Current [A]"].evaluate(), 0.0)
 
         # results should be different
