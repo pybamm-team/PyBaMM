@@ -213,38 +213,6 @@ class FOQS(BaseHigherOrderModel):
         pass
 
 
-class FOQSAverageCorrection(FOQS):
-    """First-order quasi-static model for lead-acid, from [1]_.
-    Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
-
-    References
-    ----------
-    .. [1] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster Lead-Acid
-           Battery Simulations from Porous-Electrode Theory: II. Asymptotic Analysis.
-           arXiv preprint arXiv:1902.01774, 2019.
-
-
-    **Extends:** :class:`pybamm.lead_acid.BaseHigherOrderModel`
-    """
-
-    def __init__(self, options=None, name="FOQS model"):
-        super().__init__(options, name)
-
-    def set_electrolyte_diffusion_submodel(self):
-        self.submodels[
-            "electrolyte diffusion"
-        ] = pybamm.electrolyte.stefan_maxwell.diffusion.FirstOrderAverageCorrection(
-            self.param, self.reactions
-        )
-
-    @property
-    def default_solver(self):
-        """
-        Create and return the default solver for this model
-        """
-        return pybamm.ScikitsDaeSolver()
-
-
 class Composite(BaseHigherOrderModel):
     """Composite model for lead-acid, from [1]_.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`

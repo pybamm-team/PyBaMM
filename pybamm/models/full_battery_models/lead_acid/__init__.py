@@ -6,7 +6,6 @@ from .loqs import LOQS
 from .higher_order import (
     BaseHigherOrderModel,
     FOQS,
-    FOQSAverageCorrection,
     Composite,
     CompositeAverageCorrection,
     CompositeExtended,
