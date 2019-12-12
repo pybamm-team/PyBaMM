@@ -208,10 +208,12 @@ def plot_2D_var(
             diff_plot = plt.pcolormesh(y_plot, z_plot, error, shading="gouraud")
         elif error == "rel":
             if scale is None:
-                scale = comsol_var
+                scale_val = comsol_var
             elif scale == "auto":
-                scale = np.abs(np.max(comsol_var) - np.min(comsol_var))
-            error = np.abs((pybamm_var - comsol_var) / scale)
+                scale_val = np.abs(np.max(comsol_var) - np.min(comsol_var))
+            else:
+                scale_val = scale
+            error = np.abs((pybamm_var - comsol_var) / scale_val)
             vmax = 0.1  # max colorbar
             diff_plot = plt.pcolormesh(
                 y_plot, z_plot, error, shading="gouraud", vmin=0, vmax=vmax
@@ -234,10 +236,12 @@ def plot_2D_var(
         plt.colorbar(abs_diff_plot)
         plt.subplot(224)
         if scale is None:
-            scale = comsol_var
+            scale_val = comsol_var
         elif scale == "auto":
-            scale = np.abs(np.max(comsol_var) - np.min(comsol_var))
-        rel_error = np.abs((pybamm_var - comsol_var) / scale)
+            scale_val = np.abs(np.max(comsol_var) - np.min(comsol_var))
+        else:
+            scale_val = scale
+        rel_error = np.abs((pybamm_var - comsol_var) / scale_val)
         vmax = 0.1  # max colorbar
         rel_diff_plot = plt.pcolormesh(
             y_plot, z_plot, rel_error, shading="gouraud", vmin=0, vmax=vmax

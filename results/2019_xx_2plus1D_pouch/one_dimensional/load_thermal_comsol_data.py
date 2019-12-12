@@ -1,3 +1,7 @@
+#
+# Load data from 1D thermal comsol model and pickle
+#
+
 import pybamm
 import os
 import pandas as pd
@@ -7,7 +11,7 @@ import numpy as np
 # change working directory the root of pybamm
 os.chdir(pybamm.root_dir())
 
-# set filepath for data and name of file to pickle to
+# set filepaths for data and names of file to pickle to
 paths = [
     "input/comsol_results_csv/thermal/05C/",
     "input/comsol_results_csv/thermal/1C/",

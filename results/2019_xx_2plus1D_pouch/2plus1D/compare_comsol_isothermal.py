@@ -154,7 +154,7 @@ output_variables = simulation.post_process_variables(
 t_plot = comsol_variables["time"]  # dimensional in seconds
 shared.plot_t_var("Terminal voltage [V]", t_plot, comsol_model, output_variables, param)
 plt.savefig("voltage.eps", format="eps", dpi=300)
-t_plot = 1800  # dimensional in seconds
+t_plot = 2400  # dimensional in seconds
 shared.plot_2D_var(
     "Negative current collector potential [V]",
     t_plot,

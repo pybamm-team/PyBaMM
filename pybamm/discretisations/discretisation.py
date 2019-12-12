@@ -321,6 +321,10 @@ class Discretisation(object):
         # bc_key_ids = [key.id for key in list(model.boundary_conditions.keys())]
         bc_key_ids = list(self.bcs.keys())
 
+        # TODO: I have changed this to use boundary value for now but still need to clean
+        # up the old stuff. I have left this for now as i haven't run unit tests etc on the
+        # rest of the code and I don't know the implications of deleting it.
+
         internal_bcs = {}
         for var in model.boundary_conditions.keys():
             if isinstance(var, pybamm.Concatenation):
@@ -332,7 +336,10 @@ class Discretisation(object):
                 next_orphan = next_child.new_copy()
 
                 lbc = self.bcs[var.id]["left"]
-                rbc = (boundary_gradient(first_orphan, next_orphan), "Neumann")
+                rbc = (
+                    self.process_symbol(pybamm.BoundaryValue(first_orphan, "right")),
+                    "Dirichlet",
+                )
 
                 if first_child.id not in bc_key_ids:
                     internal_bcs.update({first_child.id: {"left": lbc, "right": rbc}})
@@ -343,14 +350,30 @@ class Discretisation(object):
                     next_child = children[i + 2]
                     next_orphan = next_child.new_copy()
 
-                    lbc = rbc
-                    rbc = (boundary_gradient(current_orphan, next_orphan), "Neumann")
+                    # lbc = rbc
+                    # rbc = (boundary_gradient(current_orphan, next_orphan), "Neumann")
+                    lbc = (
+                        self.process_symbol(
+                            pybamm.BoundaryValue(current_orphan, "left")
+                        ),
+                        "Dirichlet",
+                    )
+                    rbc = (
+                        self.process_symbol(
+                            pybamm.BoundaryValue(current_orphan, "right")
+                        ),
+                        "Dirichlet",
+                    )
                     if current_child.id not in bc_key_ids:
                         internal_bcs.update(
                             {current_child.id: {"left": lbc, "right": rbc}}
                         )
 
-                lbc = rbc
+                final_orphan = children[-1].new_copy()
+                lbc = (
+                    self.process_symbol(pybamm.BoundaryValue(final_orphan, "left")),
+                    "Dirichlet",
+                )
                 rbc = self.bcs[var.id]["right"]
                 if children[-1].id not in bc_key_ids:
                     internal_bcs.update({children[-1].id: {"left": lbc, "right": rbc}})

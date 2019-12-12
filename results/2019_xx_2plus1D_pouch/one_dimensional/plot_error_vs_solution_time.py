@@ -32,7 +32,7 @@ savefiles = [
 
 # "exact" solution in the comsol solution on the finest mesh
 exact_solution = pickle.load(
-    open("input/comsol_results/comsol_thermal_1C.pickle", "rb")
+    open("input/comsol_results/comsol_thermal_1C_extremely_fine.pickle", "rb")
 )
 
 comsol_t = exact_solution["time"]
@@ -119,6 +119,7 @@ for i, model in enumerate(models):
     # create comsol vars interpolated onto pybamm mesh to compare errors
     whole_cell = ["negative electrode", "separator", "positive electrode"]
     L_x = param.evaluate(pybamm.standard_parameters_lithium_ion.L_x)
+    interp_kind = "quadratic"
 
     def get_interp_fun(variable_name, domain):
         """
@@ -137,10 +138,14 @@ for i, model in enumerate(models):
             comsol_x = exact_solution["x"]
         # Make sure to use dimensional space
         pybamm_x = mesh.combine_submeshes(*domain)[0].nodes * L_x
-        variable = interp.interp1d(comsol_x, variable, axis=0)(pybamm_x)
+        variable = interp.interp1d(comsol_x, variable, axis=0, kind=interp_kind)(
+            pybamm_x
+        )
 
         def myinterp(t):
-            return interp.interp1d(comsol_t, variable)(t)[:, np.newaxis]
+            return interp.interp1d(comsol_t, variable, kind=interp_kind)(t)[
+                :, np.newaxis
+            ]
 
         # Make sure to use dimensional time
         fun = pybamm.Function(myinterp, pybamm.t * tau, name=variable_name + "_comsol")
@@ -154,9 +159,11 @@ for i, model in enumerate(models):
     comsol_c_n_surf = get_interp_fun("c_n_surf", ["negative electrode"])
     comsol_c_p_surf = get_interp_fun("c_p_surf", ["positive electrode"])
     comsol_c_e = get_interp_fun("c_e", whole_cell)
-    comsol_voltage = interp.interp1d(comsol_t, exact_solution["voltage"])
+    comsol_voltage = interp.interp1d(
+        comsol_t, exact_solution["voltage"], kind=interp_kind
+    )
     comsol_temperature_av = interp.interp1d(
-        comsol_t, exact_solution["average temperature"]
+        comsol_t, exact_solution["average temperature"], kind=interp_kind
     )
     comsol_model = pybamm.BaseModel()
     comsol_model.variables = {
