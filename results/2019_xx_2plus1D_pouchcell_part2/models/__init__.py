@@ -1,4 +1,8 @@
-from .full_2p1D import solve_full_2p1
-from .reduced_2p1D import solve_reduced_2p1
-from .SPMeCC import solve_spmecc
-from .spm import solve_spm
+# from .2p1D_DFN import solve_2p1D_dfn
+# from .2p1D_SPMe import solve_2p1D_spme
+# from .2p1D_SPM import solve_2p1D_spm
+# from .DFNeCC import solve_dfncc
+# from .SPMeCC import solve_spmecc
+from .SPM import SPM
+from .DFN import DFN
+from .DFN_2p1D import DFN_2p1D

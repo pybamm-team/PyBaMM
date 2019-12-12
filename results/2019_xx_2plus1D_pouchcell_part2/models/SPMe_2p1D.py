@@ -1,13 +1,11 @@
 import pybamm
 import numpy as np
-import sys
 
 import scipy.interpolate as interp
 
 
-def solve_full_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None):
+def solve_2p1D_spme(C_rate=1, t_eval=None, thermal=False, var_pts=None, params=None):
 
-    sys.setrecursionlimit(10000)
     options = {
         "current collector": "potential pair",
         "dimensionality": 2,
@@ -16,9 +14,11 @@ def solve_full_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None):
     if thermal is True:
         options.update({"thermal": "x-lumped"})
 
-    model = pybamm.lithium_ion.DFN(options=options)
+    model = pybamm.lithium_ion.SPMe(options=options)
 
     param = model.default_parameter_values
+    if params:
+        param.update(param)
     param.update({"C-rate": C_rate})
 
     # discharge timescale
@@ -27,8 +27,8 @@ def solve_full_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None):
         t_end = 900 / tau
         t_eval = np.linspace(0, t_end, 120)
 
-    solver = pybamm.IDAKLUSolver(atol=1e-3, rtol=1e-3, root_tol=1e-3)
-    # solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6, root_method="krylov")
+    solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
+    # solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
 
     sim = pybamm.Simulation(
         model, parameter_values=param, var_pts=var_pts, solver=solver
@@ -36,10 +36,7 @@ def solve_full_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None):
 
     sim.solve(t_eval=t_eval)
 
-    t = sim.solution.t
-    y = sim.solution.y
-
-    # get variables for plotting
+    mesh = sim.mesh
     t = sim.solution.t
     y = sim.solution.y
 
@@ -55,16 +52,16 @@ def solve_full_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None):
         sim.built_model.variables["Negative current collector potential [V]"],
         t,
         y,
-        mesh=sim.mesh,
+        mesh=mesh,
     )
     phi_s_p_dim = pybamm.ProcessedVariable(
         sim.built_model.variables["Positive current collector potential [V]"],
         t,
         y,
-        mesh=sim.mesh,
+        mesh=mesh,
     )
     V_loc = pybamm.ProcessedVariable(
-        sim.built_model.variables["Local voltage [V]"], t, y, mesh=sim.mesh
+        sim.built_model.variables["Local voltage [V]"], t, y, mesh=mesh
     )
 
     V = pybamm.ProcessedVariable(
@@ -78,7 +75,7 @@ def solve_full_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None):
         sim.built_model.variables["Current collector current density [A.m-2]"],
         t,
         y,
-        mesh=sim.mesh,
+        mesh=mesh,
     )
 
     def av_cc_density(t):
@@ -87,82 +84,35 @@ def solve_full_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None):
         return I_av
 
     T_av = pybamm.ProcessedVariable(
-        sim.built_model.variables["X-averaged cell temperature [K]"],
-        t,
-        y,
-        mesh=sim.mesh,
+        sim.built_model.variables["X-averaged cell temperature [K]"], t, y, mesh=mesh
     )
 
     T_vol_av = pybamm.ProcessedVariable(
         sim.built_model.variables["Volume-averaged cell temperature [K]"],
         t,
         y,
-        mesh=sim.mesh,
+        mesh=mesh,
     )
 
-    c_s_n_surf_av = pybamm.ProcessedVariable(
+    c_s_n_surf = pybamm.ProcessedVariable(
         sim.built_model.variables["X-averaged negative particle surface concentration"],
         t,
         y,
-        mesh=sim.mesh,
+        mesh=mesh,
     )
-    c_s_p_surf_av = pybamm.ProcessedVariable(
+    c_s_p_surf = pybamm.ProcessedVariable(
         sim.built_model.variables["X-averaged positive particle surface concentration"],
         t,
         y,
-        mesh=sim.mesh,
+        mesh=mesh,
     )
-
-    # c_s_n_surf_yz_av = pybamm.ProcessedVariable(
-    #     sim.built_model.variables[
-    #         "YZ-averaged negative particle surface concentration"
-    #     ],
-    #     t,
-    #     y,
-    #     mesh=sim.mesh,
-    # )
-
-    # c_s_p_surf_yz_av = pybamm.ProcessedVariable(
-    #     sim.built_model.variables[
-    #         "YZ-averaged positive particle surface concentration"
-    #     ],
-    #     t,
-    #     y,
-    #     mesh=sim.mesh,
-    # )
-
-    # def c_s_n_surf_yz_av(t, x):
-    #     y = np.linspace(0, 1.5, 100)
-    #     z = np.linspace(0, 1, 100)
-    #     return np.mean(np.mean(c_s_n_surf(t=t, x=x, y=y, z=z), axis=1), axis=1)
-
-    # def c_s_p_surf_yz_av(t, x):
-    #     y = np.linspace(0, 1.5, 100)
-    #     z = np.linspace(0, 1, 100)
-    #     return np.mean(np.mean(c_s_p_surf(t=t, x=x, y=y, z=z), axis=1), axis=1)
-
-    # def c_s_n_surf_vol_av(t):
-    #     x = np.linspace(0, 1, 100)
-    #     y = np.linspace(0, 1.5, 100)
-    #     z = np.linspace(0, 1, 100)
-    #     return np.mean(
-    #         np.mean(np.mean(c_s_n_surf(t=t, x=x, y=y, z=z), axis=0), axis=0), axis=0
-    #     )
-
-    # def c_s_p_surf_vol_av(t):
-    #     x = np.linspace(0, 1, 100)
-    #     y = np.linspace(0, 1.5, 100)
-    #     z = np.linspace(0, 1, 100)
-    #     return np.mean(
-    #         np.mean(np.mean(c_s_p_surf(t=t, x=x, y=y, z=z), axis=0), axis=0), axis=0
-    #     )
 
     y_pts = var_pts[pybamm.standard_spatial_vars.y]
     z_pts = var_pts[pybamm.standard_spatial_vars.z]
 
     c_e_yz_av = get_yz_average(
         sim.built_model.variables["Electrolyte concentration"],
-        sim.mesh,
+        mesh,
         t,
         y,
         "whole cell",
@@ -172,7 +122,7 @@ def solve_full_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None):
 
     c_e_yz_av_dim = get_yz_average(
         sim.built_model.variables["Electrolyte concentration [mol.m-3]"],
-        sim.mesh,
+        mesh,
         t,
         y,
         "whole cell",
@@ -183,17 +133,17 @@ def solve_full_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None):
     plotting_variables = {
         "Terminal voltage [V]": terminal_voltage,
         "Time [h]": time,
+        "Discharge capacity [A.h]": discharge_capacity,
         "Negative current collector potential [V]": phi_s_n_dim,
         "Positive current collector potential [V]": phi_s_p_dim,
         "Reduced positive current collector potential [V]": phi_s_p_reduced,
-        "Discharge capacity [A.h]": discharge_capacity,
         "Local voltage [V]": V_loc,
         "L_z": param.process_symbol(pybamm.geometric_parameters.L_z).evaluate(),
         "Local current density [A.m-2]": I_density,
         "Average local current density [A.m-2]": av_cc_density(t),
         "X-averaged cell temperature [K]": T_av,
-        "X-averaged negative particle surface concentration": c_s_n_surf_av,
-        "X-averaged positive particle surface concentration": c_s_p_surf_av,
+        "X-averaged negative particle surface concentration": c_s_n_surf,
+        "X-averaged positive particle surface concentration": c_s_p_surf,
         "YZ-averaged electrolyte concentration": c_e_yz_av,
         "YZ-averaged electrolyte concentration [mol.m-3]": c_e_yz_av_dim,
     }

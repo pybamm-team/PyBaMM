@@ -4,7 +4,7 @@ import numpy as np
 import scipy.interpolate as interp
 
 
-def solve_reduced_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None, params=None):
+def solve_2p1D_spm(C_rate=1, t_eval=None, thermal=False, var_pts=None, params=None):
 
     options = {
         "current collector": "potential pair",
@@ -12,9 +12,9 @@ def solve_reduced_2p1(C_rate=1, t_eval=None, thermal=False, var_pts=None, params
     }
 
     if thermal is True:
-        options.update({"thermal": "x-lumped"})
+        options.update({"thermal": "xyz-lumped"})
 
-    model = pybamm.lithium_ion.SPMe(options=options)
+    model = pybamm.lithium_ion.SPM(options=options)
 
     param = model.default_parameter_values
     if params:
