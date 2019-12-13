@@ -193,7 +193,7 @@ class ParameterValues(dict):
         self._processed_symbols = {}
 
     def check_and_update_parameter_values(self, values):
-        # Make typical current is non-zero
+        # Make sure typical current is non-zero
         if "Typical current [A]" in values and values["Typical current [A]"] == 0:
             raise ValueError(
                 """
