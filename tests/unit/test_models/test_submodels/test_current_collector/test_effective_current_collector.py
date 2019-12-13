@@ -52,18 +52,8 @@ class TestEffectiveResistance2D(unittest.TestCase):
         solutions[1] = models[1].default_solver.solve(models[1], t_eval)
 
         # Process SPM V and I
-        V = pybamm.ProcessedVariable(
-            models[1].variables["Terminal voltage"],
-            solutions[1].t,
-            solutions[1].y,
-            mesh=meshes[1],
-        )
-        I = pybamm.ProcessedVariable(
-            models[1].variables["Total current density"],
-            solutions[1].t,
-            solutions[1].y,
-            mesh=meshes[1],
-        )
+        V = solutions[1]["Terminal voltage"]
+        I = solutions[1]["Total current density"]
 
         # Test potential can be constructed and evaluated without raising error
         potentials = models[0].get_processed_potentials(

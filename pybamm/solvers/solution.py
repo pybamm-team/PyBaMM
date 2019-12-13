@@ -2,9 +2,11 @@
 # Solution class
 #
 import numpy as np
+import pickle
+import pybamm
 
 
-class Solution(object):
+class Solution(dict):
     """
     Class containing the solution of, and various attributes associated with, a PyBaMM
     model.
@@ -32,6 +34,8 @@ class Solution(object):
         self.t_event = t_event
         self.y_event = y_event
         self.termination = termination
+        # initialize empty inputs, to be populated later
+        self.inputs = {}
 
     @property
     def t(self):
@@ -52,6 +56,27 @@ class Solution(object):
     def y(self, value):
         "Updates the solution values"
         self._y = value
+
+    @property
+    def inputs(self):
+        "Values of the inputs"
+        return self._inputs
+
+    @inputs.setter
+    def inputs(self, value):
+        "Updates the input values"
+        self._inputs = value
+
+    @property
+    def model(self):
+        "Model used for solution"
+        return self._model
+
+    @model.setter
+    def model(self, value):
+        "Updates the model"
+        assert isinstance(value, pybamm.BaseModel)
+        self._model = value
 
     @property
     def t_event(self):
@@ -93,8 +118,28 @@ class Solution(object):
         """
         self.t = np.concatenate((self.t, solution.t[1:]))
         self.y = np.concatenate((self.y, solution.y[:, 1:]), axis=1)
+        self.inputs = {
+            name: np.concatenate((inp, solution.inputs[name][1:]))
+            for name, inp in self.inputs.items()
+        }
         self.solve_time += solution.solve_time
 
     @property
     def total_time(self):
         return self.set_up_time + self.solve_time
+
+    def update(self, variables):
+        """Update dictionary with processed variables"""
+        processed_variables = pybamm.post_process_variables(
+            {var: self.model.variables[var] for var in variables}, self
+        )
+        # Update self.data with raw data
+        self.data = {name: var.entries for name, var in processed_variables.items()}
+        # Update self dictionary with processed variables
+        super().update(processed_variables)
+
+    def save(self, filename):
+        """Save solution data (raw arrays) using pickle"""
+        with open(filename, "wb") as f:
+            pickle.dump(self.data, f, pickle.HIGHEST_PROTOCOL)
+

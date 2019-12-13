@@ -66,26 +66,14 @@ class TestAsymptoticConvergence(unittest.TestCase):
             solution_full = solver_full.solve(full_model, t_eval)
 
             # Post-process variables
-            t_loqs, y_loqs = solution_loqs.t, solution_loqs.y
-            t_comp, y_comp = solution_comp.t, solution_comp.y
-            t_full, y_full = solution_full.t, solution_full.y
-            voltage_loqs = pybamm.ProcessedVariable(
-                leading_order_model.variables["Terminal voltage"],
-                t_loqs,
-                y_loqs,
-                loqs_disc.mesh,
-            )
-            voltage_comp = pybamm.ProcessedVariable(
-                composite_model.variables["Terminal voltage"],
-                t_comp,
-                y_comp,
-                comp_disc.mesh,
-            )
-            voltage_full = pybamm.ProcessedVariable(
-                full_model.variables["Terminal voltage"], t_full, y_full, full_disc.mesh
-            )
+            voltage_loqs = solution_loqs["Terminal voltage"]
+            voltage_comp = solution_comp["Terminal voltage"]
+            voltage_full = solution_full["Terminal voltage"]
 
             # Compare
+            t_loqs = solution_loqs.t
+            t_comp = solution_comp.t
+            t_full = solution_full.t
             t = t_full[: np.min([len(t_loqs), len(t_comp), len(t_full)])]
             loqs_error = np.max(np.abs(voltage_loqs(t) - voltage_full(t)))
             comp_error = np.max(np.abs(voltage_comp(t) - voltage_full(t)))

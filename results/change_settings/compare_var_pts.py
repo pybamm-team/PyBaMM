@@ -46,12 +46,7 @@ voltage_rmse = [None] * len(models)
 t_eval = np.linspace(0, 0.17, 100)
 for i, model in enumerate(models):
     solutions[i] = model.default_solver.solve(model, t_eval)
-    voltages[i] = pybamm.ProcessedVariable(
-        model.variables["Terminal voltage [V]"],
-        solutions[i].t,
-        solutions[i].y,
-        mesh=meshes[i],
-    )(solutions[i].t)
+    voltages[i] = solutions[i]["Terminal voltage [V]"](solutions[i].t)
     voltage_rmse[i] = pybamm.rmse(voltages[0], voltages[i])
     plt.plot(solutions[i].t, voltages[i], label=model.name)
 

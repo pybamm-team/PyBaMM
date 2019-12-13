@@ -58,12 +58,8 @@ for i, model in enumerate(models):
         model.use_simplify = False  # simplifying jacobian slow for large systems
     solution = model.default_solver.solve(model, t_eval)
     solutions[i] = solution
-    times[i] = pybamm.ProcessedVariable(
-        model.variables["Time [h]"], solution.t, solution.y
-    )
-    voltages[i] = pybamm.ProcessedVariable(
-        model.variables["Terminal voltage [V]"], solution.t, solution.y, mesh=meshes[i]
-    )
+    times[i] = solution["Time [h]"]
+    voltages[i] = solution["Terminal voltage [V]"]
 
 # plot terminal voltage
 t = np.linspace(0, solution.t[-1], 100)

@@ -31,13 +31,9 @@ t_eval1 = np.linspace(0, t_end, 120)
 solution1 = model.default_solver.solve(model, t_eval1)
 
 # process variables for later plotting
-time1 = pybamm.ProcessedVariable(model.variables["Time [h]"], solution1.t, solution1.y)
-voltage1 = pybamm.ProcessedVariable(
-    model.variables["Terminal voltage [V]"], solution1.t, solution1.y, mesh=mesh
-)
-current1 = pybamm.ProcessedVariable(
-    model.variables["Current [A]"], solution1.t, solution1.y, mesh=mesh
-)
+time1 = solution1["Time [h]"]
+voltage1 = solution1["Terminal voltage [V]"]
+current1 = solution1["Current [A]"]
 
 # solve again with zero current, using last step of solution1 as initial conditions
 # update the current to be zero
@@ -55,13 +51,9 @@ t_eval2 = np.linspace(t_start, t_end, 120)
 solution2 = model.default_solver.solve(model, t_eval2)
 
 # process variables for later plotting
-time2 = pybamm.ProcessedVariable(model.variables["Time [h]"], solution2.t, solution2.y)
-voltage2 = pybamm.ProcessedVariable(
-    model.variables["Terminal voltage [V]"], solution2.t, solution2.y, mesh=mesh
-)
-current2 = pybamm.ProcessedVariable(
-    model.variables["Current [A]"], solution2.t, solution2.y, mesh=mesh
-)
+time2 = solution2["Time [h]"]
+voltage2 = solution2["Terminal voltage [V]"]
+current2 = solution2["Current [A]"]
 
 # plot
 plt.subplot(121)

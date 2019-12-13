@@ -50,24 +50,9 @@ t_eval = np.linspace(0, t_end, 120)
 solution = model.default_solver.solve(model, t_eval)
 
 # TO DO: 2+1D automated plotting
-phi_s_cn = pybamm.ProcessedVariable(
-    model.variables["Negative current collector potential [V]"],
-    solution.t,
-    solution.y,
-    mesh=mesh,
-)
-phi_s_cp = pybamm.ProcessedVariable(
-    model.variables["Positive current collector potential [V]"],
-    solution.t,
-    solution.y,
-    mesh=mesh,
-)
-T = pybamm.ProcessedVariable(
-    model.variables["X-averaged cell temperature [K]"],
-    solution.t,
-    solution.y,
-    mesh=mesh,
-)
+phi_s_cn = solution["Negative current collector potential [V]"]
+phi_s_cp = solution["Positive current collector potential [V]"]
+T = solution["X-averaged cell temperature [K]"]
 l_y = phi_s_cp.y_sol[-1]
 l_z = phi_s_cp.z_sol[-1]
 y_plot = np.linspace(0, l_y, 21)

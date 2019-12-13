@@ -7,9 +7,7 @@ import pybamm
 import scipy.interpolate as interp
 
 
-def post_process_variables(
-    variables, t_sol, u_sol, mesh=None, inputs=None, interp_kind="linear"
-):
+def post_process_variables(variables, solution, interp_kind="linear"):
     """
     Post-process all variables in a model
 
@@ -17,16 +15,8 @@ def post_process_variables(
     ----------
     variables : dict
         Dictionary of variables
-    t_sol : array_like, size (m,)
-        The time vector returned by the solver
-    u_sol : array_like, size (m, k)
-        The solution vector returned by the solver. Can include solution values that
-        other than those that get read by base_variable.evaluate() (i.e. k>=n)
-    mesh : :class:`pybamm.Mesh`
-        The mesh used to solve, used here to calculate the reference x values for
-        interpolation
-    inputs : dict, optional
-        Any input parameters to pass to the model
+    solution : :class:`pybamm.Solution`
+        The solution object to be used to create the processed variables
     interp_kind : str
         The method to use for interpolation
 
@@ -36,11 +26,11 @@ def post_process_variables(
         Dictionary of processed variables
     """
     processed_variables = {}
-    known_evals = {t: {} for t in t_sol}
+    known_evals = {t: {} for t in solution.t}
     for var, eqn in variables.items():
         pybamm.logger.debug("Post-processing {}".format(var))
         processed_variables[var] = ProcessedVariable(
-            eqn, t_sol, u_sol, mesh, inputs, interp_kind, known_evals
+            eqn, solution, interp_kind, known_evals
         )
 
         for t in known_evals:
@@ -60,57 +50,44 @@ class ProcessedVariable(object):
         variable. Note that this can be any kind of node in the expression tree, not
         just a :class:`pybamm.Variable`.
         When evaluated, returns an array of size (m,n)
-    t_sol : array_like, size (m,)
-        The time vector returned by the solver
-    u_sol : array_like, size (m, k)
-        The solution vector returned by the solver. Can include solution values that
-        other than those that get read by base_variable.evaluate() (i.e. k>=n)
-    mesh : :class:`pybamm.Mesh`
-        The mesh used to solve, used here to calculate the reference x values for
-        interpolation
-    inputs : dict, optional
-            Any input parameters to pass to the model
+    solution : :class:`pybamm.Solution`
+        The solution object to be used to create the processed variables
     interp_kind : str
         The method to use for interpolation
+    known_evals : dict
+        Dictionary of known evaluations, to be used to speed up finding the solution
     """
 
-    def __init__(
-        self,
-        base_variable,
-        t_sol,
-        u_sol,
-        mesh=None,
-        inputs=None,
-        interp_kind="linear",
-        known_evals=None,
-    ):
+    def __init__(self, base_variable, solution, interp_kind="linear", known_evals=None):
         self.base_variable = base_variable
-        self.t_sol = t_sol
-        self.u_sol = u_sol
-        self.mesh = mesh
-        self.inputs = inputs or {}
+        self.t_sol = solution.t
+        self.u_sol = solution.y
+        self.mesh = base_variable.mesh
+        self.inputs = solution.inputs
         self.interp_kind = interp_kind
         self.domain = base_variable.domain
         self.auxiliary_domains = base_variable.auxiliary_domains
         self.known_evals = known_evals
 
         if self.known_evals:
-            self.base_eval, self.known_evals[t_sol[0]] = base_variable.evaluate(
-                t_sol[0],
-                u_sol[:, 0],
-                self.inputs,
-                known_evals=self.known_evals[t_sol[0]],
+            self.base_eval, self.known_evals[solution.t[0]] = base_variable.evaluate(
+                solution.t[0],
+                solution.y[:, 0],
+                solution.inputs,
+                known_evals=self.known_evals[solution.t[0]],
             )
         else:
-            self.base_eval = base_variable.evaluate(t_sol[0], u_sol[:, 0], self.inputs)
+            self.base_eval = base_variable.evaluate(
+                solution.t[0], solution.y[:, 0], solution.inputs
+            )
 
         # handle 2D (in space) finite element variables differently
         if (
-            mesh
+            self.mesh
             and "current collector" in self.domain
-            and isinstance(self.mesh[self.domain[0]][0], pybamm.ScikitSubMesh2D)
+            and isinstance(self.mesh[0], pybamm.ScikitSubMesh2D)
         ):
-            if len(self.t_sol) == 1:
+            if len(self.solution.t) == 1:
                 # space only (steady solution)
                 self.initialise_2Dspace_scikit_fem()
             else:
@@ -124,7 +101,7 @@ class ProcessedVariable(object):
         ):
             self.initialise_1D()
         else:
-            n = self.mesh.combine_submeshes(*self.domain)[0].npts
+            n = self.mesh[0].npts
             base_shape = self.base_eval.shape[0]
             if base_shape in [n, n + 1]:
                 self.initialise_2D()
@@ -179,8 +156,8 @@ class ProcessedVariable(object):
                 entries[:, idx] = self.base_variable.evaluate(t, u, self.inputs)[:, 0]
 
         # Process the discretisation to get x values
-        nodes = self.mesh.combine_submeshes(*self.domain)[0].nodes
-        edges = self.mesh.combine_submeshes(*self.domain)[0].edges
+        nodes = self.mesh[0].nodes
+        edges = self.mesh[0].edges
         if entries.shape[0] == len(nodes):
             space = nodes
         elif entries.shape[0] == len(edges):
@@ -272,8 +249,8 @@ class ProcessedVariable(object):
             "separator",
             "positive electrode",
         ] and self.auxiliary_domains["secondary"] == ["current collector"]:
-            x_nodes = self.mesh.combine_submeshes(*self.domain)[0].nodes
-            x_edges = self.mesh.combine_submeshes(*self.domain)[0].edges
+            x_nodes = self.mesh[0].nodes
+            x_edges = self.mesh[0].edges
             z_sol = self.mesh["current collector"][0].nodes
             r_sol = None
             self.first_dimension = "x"

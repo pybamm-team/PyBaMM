@@ -31,12 +31,7 @@ t_eval = np.linspace(0, 0.17, 100)
 for i, tol in enumerate(tols):
     solver = pybamm.ScikitsDaeSolver(rtol=tol[0], atol=tol[1])
     solutions[i] = solver.solve(model, t_eval)
-    voltages[i] = pybamm.ProcessedVariable(
-        model.variables["Terminal voltage [V]"],
-        solutions[i].t,
-        solutions[i].y,
-        mesh=mesh,
-    )(solutions[i].t)
+    voltages[i] = solutions[i]["Terminal voltage [V]"](solutions[i].t)
     voltage_rmse[i] = pybamm.rmse(voltages[0], voltages[i])
     labels[i] = "rtol = {}, atol = {}".format(tol[0], tol[1])
 

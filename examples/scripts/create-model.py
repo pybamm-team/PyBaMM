@@ -115,9 +115,7 @@ t = np.linspace(0, 1, 100)
 solution = solver.solve(model, t)
 
 # Extract output variables
-L_out = pybamm.ProcessedVariable(
-    model.variables["SEI thickness"], solution.t, solution.y, mesh
-)
+L_out = solution["SEI thickness"]
 
 # plot
 plt.plot(solution.t, L_out(solution.t))

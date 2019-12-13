@@ -55,14 +55,12 @@ for name, model in models.items():
 for name in ["Average SPMe", "2+1D SPMe"]:
     t, y = solutions[name].t, solutions[name].y
     model = models[name]
-    time = pybamm.ProcessedVariable(model.variables["Time [h]"], t, y)(t)
-    voltage = pybamm.ProcessedVariable(
-        model.variables["Terminal voltage [V]"], t, y, mesh=meshes[name]
-    )(t)
+    time = ["Time [h]"](t)
+    voltage = ["Terminal voltage [V]"](t)
 
     # add current collector Ohmic losses to average SPMEe to get SPMeCC voltage
     if model.name == "Average SPMe":
-        current = pybamm.ProcessedVariable(model.variables["Current [A]"], t, y)(t)
+        current = ["Current [A]"](t)
         delta = param.evaluate(pybamm.standard_parameters_lithium_ion.delta)
         R_cc = param.process_symbol(
             cc_model.variables["Effective current collector resistance [Ohm]"]
@@ -86,18 +84,8 @@ plt.legend()
 # plot potentials in current collector
 
 # get processed potentials from SPMeCC
-V_av = pybamm.ProcessedVariable(
-    spme_av.variables["Terminal voltage"],
-    solutions["Average SPMe"].t,
-    solutions["Average SPMe"].y,
-    mesh=meshes["Average SPMe"],
-)
-I_av = pybamm.ProcessedVariable(
-    spme_av.variables["Total current density"],
-    solutions["Average SPMe"].t,
-    solutions["Average SPMe"].y,
-    mesh=meshes["Average SPMe"],
-)
+V_av = solutions["Average SPMe"]["Terminal voltage"]
+I_av = ["Total current density"]
 potentials = cc_model.get_processed_potentials(
     solutions["Current collector"], meshes["Current collector"], param, V_av, I_av
 )
@@ -105,18 +93,8 @@ phi_s_cn_spmecc = potentials["Negative current collector potential [V]"]
 phi_s_cp_spmecc = potentials["Positive current collector potential [V]"]
 
 # get processed potentials from 2+1D SPMe
-phi_s_cn = pybamm.ProcessedVariable(
-    model.variables["Negative current collector potential [V]"],
-    solutions["2+1D SPMe"].t,
-    solutions["2+1D SPMe"].y,
-    mesh=meshes["2+1D SPMe"],
-)
-phi_s_cp = pybamm.ProcessedVariable(
-    model.variables["Positive current collector potential [V]"],
-    solutions["2+1D SPMe"].t,
-    solutions["2+1D SPMe"].y,
-    mesh=meshes["2+1D SPMe"],
-)
+phi_s_cn = solutions["2+1D SPMe"]["Negative current collector potential [V]"]
+phi_s_cp = solutions["2+1D SPMe"]["Positive current collector potential [V]"]
 
 # make plot
 l_y = phi_s_cp.y_sol[-1]

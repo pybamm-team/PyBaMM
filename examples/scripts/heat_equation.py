@@ -61,9 +61,7 @@ t = np.linspace(0, 1, 100)
 solution = solver.solve(model, t)
 
 # Extract output variables
-T_out = pybamm.ProcessedVariable(
-    model.variables["Temperature"], solution.t, solution.y, mesh
-)
+T_out = solution["Temperature"]
 
 # Exact solution -------------------------------------------------------
 N = 100  # number of Fourier modes to sum
@@ -122,11 +120,7 @@ for i, t in enumerate(plot_times):
         label="Numerical" if i == 0 else "",
     )
     plt.plot(
-        xx,
-        T_exact(xx, t),
-        "-",
-        color=color,
-        label="Exact (t={})".format(plot_times[i]),
+        xx, T_exact(xx, t), "-", color=color, label="Exact (t={})".format(plot_times[i])
     )
 plt.xlabel("x", fontsize=16)
 plt.ylabel("T", fontsize=16)

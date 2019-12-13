@@ -99,6 +99,10 @@ class DaeSolver(pybamm.BaseSolver):
 
         solve_time = timer.time() - solve_start_time
 
+        # Add model and inputs to solution
+        solution.model = model
+        solution.inputs = inputs
+
         # Identify the event that caused termination
         termination = self.get_termination_reason(solution, self.events)
 

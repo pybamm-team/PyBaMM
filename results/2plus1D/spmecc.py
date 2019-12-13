@@ -41,10 +41,9 @@ t_eval = np.linspace(0, t_end, 120)
 solution = cell_model.default_solver.solve(cell_model, t_eval)
 
 # plot terminal voltage
-t, y = solution.t, solution.y
-time = pybamm.ProcessedVariable(cell_model.variables["Time [h]"], t, y)(t)
-voltage = pybamm.ProcessedVariable(cell_model.variables["Terminal voltage [V]"], t, y)
-current = pybamm.ProcessedVariable(cell_model.variables["Current [A]"], t, y)(t)
+time = solution["Time [h]"](t)
+voltage = solution["Terminal voltage [V]"]
+current = solution["Current [A]"](t)
 delta = param.evaluate(pybamm.standard_parameters_lithium_ion.delta)
 R_cc = param.process_symbol(
     cc_model.variables["Effective current collector resistance [Ohm]"]
