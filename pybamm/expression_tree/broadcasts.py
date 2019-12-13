@@ -184,3 +184,26 @@ class FullBroadcast(Broadcast):
         )
 
         return child_eval * vec
+
+
+def ones_like(*symbols):
+    """
+    Create a symbol with the same shape as the input symbol and with constant value '1',
+    using `FullBroadcast`.
+
+    Parameters
+    ----------
+    symbols : :class:`Symbol`
+        Symbols whose shape to copy
+    """
+    # Make a symbol that combines all the children, to get the right domain
+    # that takes all the child symbols into account
+    sum_symbol = symbols[0]
+    for sym in symbols:
+        sum_symbol += sym
+
+    # Just return scalar 1 if symbol has no domain (no broadcasting necessary)
+    if sum_symbol.domain == []:
+        return pybamm.Scalar(1)
+    else:
+        return FullBroadcast(1, sum_symbol.domain, sum_symbol.auxiliary_domains)
