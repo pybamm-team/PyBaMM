@@ -40,8 +40,8 @@ def positive_distribution(x):
     return 1 + (x - (1 - models[1].param.l_p))
 
 
-params[1]["Negative particle distribution"] = negative_distribution
-params[1]["Positive particle distribution"] = positive_distribution
+params[1]["Negative particle distribution in x"] = negative_distribution
+params[1]["Positive particle distribution in x"] = positive_distribution
 params[1].process_model(models[1])
 
 # set mesh
@@ -73,8 +73,8 @@ output_variables = [
     "Electrolyte potential [V]",
     "Positive electrode potential [V]",
     "Terminal voltage [V]",
-    "Negative particle distribution",
-    "Positive particle distribution",
+    "Negative particle distribution in x",
+    "Positive particle distribution in x",
 ]
 
 # plot
