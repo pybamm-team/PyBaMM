@@ -600,6 +600,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # on the particle, the gradient has domain particle but the bcs_vector
         # has domain electrode, since it is a function of the macroscopic variables
         bcs_vector.domain = discretised_symbol.domain
+        bcs_vector.auxiliary_domains = discretised_symbol.auxiliary_domains
 
         # Make matrix to calculate ghost nodes
         # coo_matrix takes inputs (data, (row, col)) and puts data[i] at the point
@@ -712,6 +713,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # on the particle, the gradient has domain particle but the bcs_vector
         # has domain electrode, since it is a function of the macroscopic variables
         bcs_vector.domain = discretised_gradient.domain
+        bcs_vector.auxiliary_domains = discretised_gradient.auxiliary_domains
 
         # Make matrix which makes "gaps" in the the discretised gradient into
         # which the known Neumann values will be added. E.g. in 1D if the left
