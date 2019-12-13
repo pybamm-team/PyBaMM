@@ -128,6 +128,12 @@ class TestDiscretise(unittest.TestCase):
         self.assertEqual(model.variables["grad b"].shape_for_testing, (11, 1))
         self.assertEqual(model.variables["div grad b"].shape_for_testing, (10, 1))
 
+        # check meshes
+        self.assertIsInstance(model.variables["a"].mesh[0], pybamm.SubMesh)
+        np.testing.assert_array_equal(
+            model.variables["a"].mesh[0].nodes, mesh["test"][0].nodes
+        )
+
     def test_discretise_slicing(self):
         # create discretisation
         mesh = get_mesh_for_testing()
