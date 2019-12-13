@@ -576,6 +576,7 @@ class TestScikitsSolvers(unittest.TestCase):
                 ]
             )
 
+        model.jacobian = jacobian
         # Solve
         solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 1, 100)
@@ -712,6 +713,33 @@ class TestScikitsSolvers(unittest.TestCase):
             solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
             t_eval = np.linspace(0, 5, 100)
             solution = solver.solve(model, t_eval)
+            np.testing.assert_array_less(solution.y[0], 1.5)
+            np.testing.assert_array_less(solution.y[-1], 2.5)
+            np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
+            np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
+
+    def test_model_solver_dae_inputs_events(self):
+        # Create model
+        for form in ["python", "casadi"]:
+            model = pybamm.BaseModel()
+            model.convert_to_format = form
+            whole_cell = ["negative electrode", "separator", "positive electrode"]
+            var1 = pybamm.Variable("var1", domain=whole_cell)
+            var2 = pybamm.Variable("var2", domain=whole_cell)
+            model.rhs = {var1: pybamm.InputParameter("rate 1") * var1}
+            model.algebraic = {var2: pybamm.InputParameter("rate 2") * var1 - var2}
+            model.initial_conditions = {var1: 1, var2: 2}
+            model.events = {
+                "var1 = 1.5": pybamm.min(var1 - 1.5),
+                "var2 = 2.5": pybamm.min(var2 - 2.5),
+            }
+            disc = get_discretisation_for_testing()
+            disc.process_model(model)
+
+            # Solve
+            solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
+            t_eval = np.linspace(0, 5, 100)
+            solution = solver.solve(model, t_eval, inputs={"rate 1": 0.1, "rate 2": 2})
             np.testing.assert_array_less(solution.y[0], 1.5)
             np.testing.assert_array_less(solution.y[-1], 2.5)
             np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
