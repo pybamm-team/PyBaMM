@@ -687,7 +687,10 @@ class Discretisation(object):
         except KeyError:
             discretised_symbol = self._process_symbol(symbol)
             self._discretised_symbols[symbol.id] = discretised_symbol
-            discretised_symbol.test_shape()
+            try:
+                discretised_symbol.test_shape()
+            except:
+                import ipdb; ipdb.set_trace()    
             return discretised_symbol
 
     def _process_symbol(self, symbol):

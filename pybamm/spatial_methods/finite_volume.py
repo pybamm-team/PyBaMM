@@ -568,7 +568,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 left_ghost_constant = 2 * lbc_value
             lbc_vector = pybamm.Matrix(lbc_matrix) @ left_ghost_constant
         elif lbc_type == "Neumann":
-            lbc_vector = pybamm.Vector(np.zeros(n + n_bcs))
+            lbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * sec_pts))
         else:
             raise ValueError(
                 "boundary condition must be Dirichlet or Neumann, not '{}'".format(
@@ -587,7 +587,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 right_ghost_constant = 2 * rbc_value
             rbc_vector = pybamm.Matrix(rbc_matrix) @ right_ghost_constant
         elif rbc_type == "Neumann":
-            rbc_vector = pybamm.Vector(np.zeros(n + n_bcs))
+            rbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * sec_pts))
         else:
             raise ValueError(
                 "boundary condition must be Dirichlet or Neumann, not '{}'".format(
@@ -682,7 +682,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 left_bc = lbc_value
             lbc_vector = pybamm.Matrix(lbc_matrix) @ left_bc
         elif lbc_type == "Dirichlet":
-            lbc_vector = pybamm.Vector(np.zeros(n + n_bcs))
+            lbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * sec_pts))
         else:
             raise ValueError(
                 "boundary condition must be Dirichlet or Neumann, not '{}'".format(
@@ -700,7 +700,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 right_bc = rbc_value
             rbc_vector = pybamm.Matrix(rbc_matrix) @ right_bc
         elif rbc_type == "Dirichlet":
-            rbc_vector = pybamm.Vector(np.zeros(n + n_bcs))
+            rbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * sec_pts))
         else:
             raise ValueError(
                 "boundary condition must be Dirichlet or Neumann, not '{}'".format(
