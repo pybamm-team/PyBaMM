@@ -664,11 +664,12 @@ class Discretisation(object):
             pybamm.logger.debug("Discretise {!r}".format(eqn_key))
 
             processed_eqn = self.process_symbol(eqn)
-            if eqn.domain != []:
-                # Assign mesh as an attribute to the processed variable
+            # Assign mesh as an attribute to the processed variable
+            if eqn.domain == []:
+                processed_eqn.mesh = None
+            else:
                 processed_eqn.mesh = self.mesh.combine_submeshes(*eqn.domain)
             new_var_eqn_dict[eqn_key] = processed_eqn
-
 
         return new_var_eqn_dict
 

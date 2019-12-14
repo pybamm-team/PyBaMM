@@ -38,8 +38,12 @@ class Solution(object):
         self.inputs = {}
         self.model = pybamm.BaseModel()
 
-        # initiaize empty variables
+        # initiaize empty variables and data
         self._variables = {}
+        self.data = {}
+
+        # initialize empty known evals
+        self.known_evals = {time: {} for time in t}
 
     @property
     def t(self):
@@ -147,13 +151,24 @@ class Solution(object):
             A variable that can be evaluated at any time or spatial point. The
             underlying data for this variable is available in its attribute ".data"
         """
+
         try:
             # Try getting item
             # return it if it exists
             return self._variables[key]
         except KeyError:
-            # otherwise create it and then return it
-            var = 1
+            # otherwise create it, save it and then return it
+
+            pybamm.logger.debug("Post-processing {}".format(key))
+            var = pybamm.ProcessedVariable(
+                self.model.variables[key], self, self.known_evals,
+            )
+
+            # Update known_evals for processing other variables
+            for t in self.known_evals:
+                self.known_evals[t].update(var.known_evals[t])
+
+            # Save variable and data
             self._variables[key] = var
             self.data[key] = var.data
             return var

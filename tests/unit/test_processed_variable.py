@@ -440,9 +440,8 @@ class TestProcessedVariable(unittest.TestCase):
         model.variables = {"c": c}
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
-        t_sol, y_sol = modeltest.solution.t, modeltest.solution.y
-        processed_vars = pybamm.post_process_variables(model.variables, t_sol, y_sol)
-        np.testing.assert_array_almost_equal(processed_vars["c"](t_sol), np.exp(-t_sol))
+        sol = modeltest.solution
+        np.testing.assert_array_almost_equal(sol["c"](sol.t), np.exp(-sol.t))
 
         # with space
         # set up and solve model
@@ -469,17 +468,14 @@ class TestProcessedVariable(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
         # set up testing
-        t_sol, y_sol = modeltest.solution.t, modeltest.solution.y
+        sol = modeltest.solution
         x = pybamm.SpatialVariable("x", domain=whole_cell)
         x_sol = modeltest.disc.process_symbol(x).entries[:, 0]
-        processed_vars = pybamm.post_process_variables(
-            model.variables, t_sol, y_sol, modeltest.disc.mesh
-        )
 
         # test
         np.testing.assert_array_almost_equal(
-            processed_vars["c"](t_sol, x_sol),
-            np.ones_like(x_sol)[:, np.newaxis] * np.exp(-t_sol),
+            sol["c"](sol.t, x_sol),
+            np.ones_like(x_sol)[:, np.newaxis] * np.exp(-sol.t),
         )
 
     def test_call_failure(self):

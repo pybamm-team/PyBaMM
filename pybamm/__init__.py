@@ -251,7 +251,7 @@ from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
 #
 # other
 #
-from .processed_variable import post_process_variables, ProcessedVariable
+from .processed_variable import ProcessedVariable
 from .quick_plot import QuickPlot, ax_min, ax_max
 
 from .simulation import Simulation, load_sim

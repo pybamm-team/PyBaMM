@@ -7,37 +7,6 @@ import pybamm
 import scipy.interpolate as interp
 
 
-def post_process_variables(variables, solution, interp_kind="linear"):
-    """
-    Post-process all variables in a model
-
-    Parameters
-    ----------
-    variables : dict
-        Dictionary of variables
-    solution : :class:`pybamm.Solution`
-        The solution object to be used to create the processed variables
-    interp_kind : str
-        The method to use for interpolation
-
-    Returns
-    -------
-    dict
-        Dictionary of processed variables
-    """
-    processed_variables = {}
-    known_evals = {t: {} for t in solution.t}
-    for var, eqn in variables.items():
-        pybamm.logger.debug("Post-processing {}".format(var))
-        processed_variables[var] = ProcessedVariable(
-            eqn, solution, interp_kind, known_evals
-        )
-
-        for t in known_evals:
-            known_evals[t].update(processed_variables[var].known_evals[t])
-    return processed_variables
-
-
 class ProcessedVariable(object):
     """
     An object that can be evaluated at arbitrary (scalars or vectors) t and x, and
@@ -58,13 +27,12 @@ class ProcessedVariable(object):
         Dictionary of known evaluations, to be used to speed up finding the solution
     """
 
-    def __init__(self, base_variable, solution, interp_kind="linear", known_evals=None):
+    def __init__(self, base_variable, solution, known_evals=None):
         self.base_variable = base_variable
         self.t_sol = solution.t
         self.u_sol = solution.y
         self.mesh = base_variable.mesh
         self.inputs = solution.inputs
-        self.interp_kind = interp_kind
         self.domain = base_variable.domain
         self.auxiliary_domains = base_variable.auxiliary_domains
         self.known_evals = known_evals
@@ -128,11 +96,7 @@ class ProcessedVariable(object):
 
         # No discretisation provided, or variable has no domain (function of t only)
         self._interpolation_function = interp.interp1d(
-            self.t_sol,
-            entries,
-            kind=self.interp_kind,
-            fill_value=np.nan,
-            bounds_error=False,
+            self.t_sol, entries, kind="linear", fill_value=np.nan, bounds_error=False,
         )
 
         self.entries = entries
@@ -195,7 +159,7 @@ class ProcessedVariable(object):
         # note that the order of 't' and 'space' is the reverse of what you'd expect
 
         self._interpolation_function = interp.interp2d(
-            self.t_sol, space, entries, kind=self.interp_kind, fill_value=np.nan
+            self.t_sol, space, entries, kind="linear", fill_value=np.nan
         )
 
     def initialise_3D(self):
@@ -317,7 +281,7 @@ class ProcessedVariable(object):
         self._interpolation_function = interp.RegularGridInterpolator(
             (first_dim_nodes, second_dim_nodes, self.t_sol),
             entries,
-            method=self.interp_kind,
+            method="linear",
             fill_value=np.nan,
         )
 
@@ -340,7 +304,7 @@ class ProcessedVariable(object):
 
         # set up interpolation
         self._interpolation_function = interp.interp2d(
-            y_sol, z_sol, entries, kind=self.interp_kind, fill_value=np.nan
+            y_sol, z_sol, entries, kind="linear", fill_value=np.nan
         )
 
     def initialise_3D_scikit_fem(self):
@@ -375,10 +339,7 @@ class ProcessedVariable(object):
 
         # set up interpolation
         self._interpolation_function = interp.RegularGridInterpolator(
-            (y_sol, z_sol, self.t_sol),
-            entries,
-            method=self.interp_kind,
-            fill_value=np.nan,
+            (y_sol, z_sol, self.t_sol), entries, method="linear", fill_value=np.nan,
         )
 
     def __call__(self, t=None, x=None, r=None, y=None, z=None, warn=True):
@@ -420,6 +381,11 @@ class ProcessedVariable(object):
                 second_dim = second_dim[:, np.newaxis]
 
         return self._interpolation_function((first_dim, second_dim, t))
+
+    @property
+    def data(self):
+        "Same as entries, but different name"
+        return self.entries
 
 
 def eval_dimension_name(name, x, r, y, z):
