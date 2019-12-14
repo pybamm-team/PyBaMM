@@ -100,7 +100,12 @@ from .expression_tree.functions import *
 from .expression_tree.interpolant import Interpolant
 from .expression_tree.input_parameter import InputParameter
 from .expression_tree.parameter import Parameter, FunctionParameter
-from .expression_tree.broadcasts import Broadcast, PrimaryBroadcast, FullBroadcast
+from .expression_tree.broadcasts import (
+    Broadcast,
+    PrimaryBroadcast,
+    FullBroadcast,
+    ones_like,
+)
 from .expression_tree.scalar import Scalar
 from .expression_tree.variable import Variable
 from .expression_tree.independent_variable import (
@@ -161,6 +166,7 @@ from .models.submodels import (
     current_collector,
     electrolyte,
     electrode,
+    external_circuit,
     interface,
     oxygen_diffusion,
     particle,

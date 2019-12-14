@@ -23,6 +23,13 @@ class ZeroDimensionalMethod(pybamm.SpatialMethod):
     def build(self, mesh):
         self._mesh = mesh
 
+    def boundary_value_or_flux(self, symbol, discretised_child, bcs=None):
+        """
+        In 0D, the boundary value is the identity operator.
+        See :meth:`SpatialMethod.boundary_value_or_flux`
+        """
+        return discretised_child
+
     def mass_matrix(self, symbol, boundary_conditions):
         """
         Calculates the mass matrix for a spatial method. Since the spatial method is

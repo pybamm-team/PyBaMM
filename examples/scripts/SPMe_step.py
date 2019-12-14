@@ -47,8 +47,17 @@ while time < end_time:
     time += dt
 
 # plot
+<<<<<<< HEAD
 voltage = solution["Terminal voltage [V]"]
 step_voltage = step_solution["Terminal voltage [V]"]
+=======
+voltage = pybamm.ProcessedVariable(
+    model.variables["Terminal voltage [V]"], solution.t, solution.y, mesh=mesh
+)
+step_voltage = pybamm.ProcessedVariable(
+    model.variables["Terminal voltage [V]"], step_solution.t, step_solution.y, mesh=mesh
+)
+>>>>>>> issue-492-potentiostatic
 plt.plot(solution.t, voltage(solution.t), "b-", label="SPMe (continuous solve)")
 plt.plot(
     step_solution.t, step_voltage(step_solution.t), "ro", label="SPMe (steppped solve)"

@@ -58,7 +58,7 @@ for l_n in thicknesses:
                 "Initial concentration in positive electrode [mol.m-3]": 25000,
                 "Negative electrode surface area density [m-1]": 180000.0,
                 "Positive electrode surface area density [m-1]": 150000.0,
-                "Typical current [A]": I_app,
+                "Current function [A]": I_app,
             }
         )
         param.process_model(model)
@@ -79,14 +79,10 @@ for l_n in thicknesses:
         # solve model
         t_eval = np.linspace(0, 0.2, 100)
         sol = model.default_solver.solve(model, t_eval)
-        var = "Positive electrode average extent of lithiation"
-        xpext = sol[var]
-        var = "Negative electrode average extent of lithiation"
-        xnext = sol[var]
-        var = "X-averaged positive particle surface concentration"
-        xpsurf = sol[var]
-        var = "X-averaged negative particle surface concentration"
-        xnsurf = sol[var]
+        xpext = sol["Positive electrode average extent of lithiation"]
+        xnext = sol["Negative electrode average extent of lithiation"]
+        xpsurf = sol["X-averaged positive particle surface concentration"]
+        xnsurf = sol["X-averaged negative particle surface concentration"]
         time = sol["Time [h]"]
         # Coulomb counting
         time_hours = time(sol.t)
