@@ -166,6 +166,7 @@ from .models.submodels import (
     current_collector,
     electrolyte,
     electrode,
+    external_circuit,
     interface,
     oxygen_diffusion,
     particle,

@@ -24,7 +24,7 @@ class TestElectricalParameters(unittest.TestCase):
                 "Number of electrodes connected in parallel to make a cell": 8,
                 "Typical current [A]": 2,
                 "Typical timescale [s]": 60,
-                "Current function": "[constant]",
+                "Current function [A]": 2,
             }
         )
         dimensional_current_eval = parameter_values.process_symbol(dimensional_current)

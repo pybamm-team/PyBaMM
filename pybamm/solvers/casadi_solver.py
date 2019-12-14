@@ -243,7 +243,6 @@ class CasadiSolver(pybamm.DaeSolver):
             "output_t0": True,
             "max_num_steps": self.max_steps,
         }
-        options.update(self.extra_options)
         if self.method == "idas":
             options["calc_ic"] = True
 
@@ -262,7 +261,7 @@ class CasadiSolver(pybamm.DaeSolver):
         try:
             # Try solving
             y0_diff, y0_alg = np.split(y0, [y_diff.shape[0]])
-            sol = integrator(x0=y0_diff, z0=y0_alg)
+            sol = integrator(x0=y0_diff, z0=y0_alg, **self.extra_options)
             y_values = np.concatenate([sol["xf"].full(), sol["zf"].full()])
             return pybamm.Solution(t_eval, y_values, None, None, "final time")
         except RuntimeError as e:
