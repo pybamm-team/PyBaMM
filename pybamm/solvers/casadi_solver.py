@@ -263,7 +263,7 @@ class CasadiSolver(pybamm.DaeSolver):
             y0_diff, y0_alg = np.split(y0, [y_diff.shape[0]])
             sol = integrator(x0=y0_diff, z0=y0_alg, **self.extra_options)
             y_values = np.concatenate([sol["xf"].full(), sol["zf"].full()])
-            return pybamm.Solution(t_eval, y_values, None, None, "final time")
+            return pybamm.Solution(t_eval, y_values)
         except RuntimeError as e:
             # If it doesn't work raise error
             raise pybamm.SolverError(e.args[0])

@@ -46,19 +46,13 @@ class TestFunctionControl(unittest.TestCase):
         for i, model in enumerate(models):
             solutions[i] = model.default_solver.solve(model, t_eval)
 
-        pv0 = pybamm.post_process_variables(
-            models[0].variables, solutions[0].t, solutions[0].y, mesh
-        )
-        pv1 = pybamm.post_process_variables(
-            models[1].variables, solutions[1].t, solutions[1].y, mesh
+        np.testing.assert_array_almost_equal(
+            solutions[0]["Discharge capacity [A.h]"].entries,
+            solutions[0]["Current [A]"].entries * solutions[0]["Time [h]"].entries,
         )
         np.testing.assert_array_almost_equal(
-            pv0["Discharge capacity [A.h]"].entries,
-            pv0["Current [A]"].entries * pv0["Time [h]"].entries,
-        )
-        np.testing.assert_array_almost_equal(
-            pv0["Terminal voltage [V]"](solutions[0].t),
-            pv1["Terminal voltage [V]"](solutions[0].t),
+            solutions[0]["Terminal voltage [V]"](solutions[0].t),
+            solutions[1]["Terminal voltage [V]"](solutions[0].t),
         )
 
     def test_constant_voltage(self):

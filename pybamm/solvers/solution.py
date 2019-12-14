@@ -6,7 +6,7 @@ import pickle
 import pybamm
 
 
-class Solution(dict):
+class Solution(object):
     """
     Class containing the solution of, and various attributes associated with, a PyBaMM
     model.
@@ -28,14 +28,18 @@ class Solution(dict):
 
     """
 
-    def __init__(self, t, y, t_event, y_event, termination):
+    def __init__(self, t, y, t_event=None, y_event=None, termination="final time"):
         self.t = t
         self.y = y
         self.t_event = t_event
         self.y_event = y_event
         self.termination = termination
-        # initialize empty inputs, to be populated later
+        # initialize empty inputs and model, to be populated later
         self.inputs = {}
+        self.model = pybamm.BaseModel()
+
+        # initiaize empty variables
+        self._variables = {}
 
     @property
     def t(self):
@@ -128,18 +132,39 @@ class Solution(dict):
     def total_time(self):
         return self.set_up_time + self.solve_time
 
-    def update(self, variables):
-        """Update dictionary with processed variables"""
-        processed_variables = pybamm.post_process_variables(
-            {var: self.model.variables[var] for var in variables}, self
-        )
-        # Update self.data with raw data
-        self.data = {name: var.entries for name, var in processed_variables.items()}
-        # Update self dictionary with processed variables
-        super().update(processed_variables)
+    def __getitem__(self, key):
+        """Read a variable from the solution. Variables are created 'just in time', i.e.
+        only when they are called.
+
+        Parameters
+        ----------
+        key : str
+            The name of the variable
+
+        Returns
+        -------
+        :class:`pybamm.ProcessedVariable`
+            A variable that can be evaluated at any time or spatial point. The
+            underlying data for this variable is available in its attribute ".data"
+        """
+        try:
+            # Try getting item
+            # return it if it exists
+            return self._variables[key]
+        except KeyError:
+            # otherwise create it and then return it
+            var = 1
+            self._variables[key] = var
+            self.data[key] = var.data
+            return var
 
     def save(self, filename):
-        """Save solution data (raw arrays) using pickle"""
+        """Save the whole solution using pickle"""
+        with open(filename, "wb") as f:
+            pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
+
+    def save_data(self, filename):
+        """Save solution data only (raw arrays) using pickle"""
         with open(filename, "wb") as f:
             pickle.dump(self.data, f, pickle.HIGHEST_PROTOCOL)
 

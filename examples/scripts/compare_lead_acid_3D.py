@@ -82,7 +82,6 @@ t_eval = np.linspace(0, 3, 1000)
 for i, model in enumerate(models):
     solution = model.default_solver.solve(model, t_eval)
     solutions[i] = solution
-    pybamm.post_process_variables(model.variables, solution.t, solution.y, mesh=mesh)
 
 # plot
 output_variables = [
