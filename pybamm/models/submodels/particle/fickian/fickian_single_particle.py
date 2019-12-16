@@ -52,6 +52,16 @@ class SingleParticle(BaseModel):
 
         return variables
 
+    def set_rhs(self, variables):
+
+        c, N, _ = self._unpack(variables)
+
+        if self.domain == "Negative":
+            self.rhs = {c: -(1 / self.param.C_n) * pybamm.div(N)}
+
+        elif self.domain == "Positive":
+            self.rhs = {c: -(1 / self.param.C_p) * pybamm.div(N)}
+
     def _unpack(self, variables):
         c_s_xav = variables[
             "X-averaged " + self.domain.lower() + " particle concentration"

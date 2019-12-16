@@ -45,7 +45,7 @@ models = [
 param = models[0].default_parameter_values
 param.update(
     {
-        "Typical current [A]": 1,
+        "Current function [A]": 1,
         "Bruggeman  coefficient": 0.001,
         "Initial State of Charge": 1,
         "Typical electrolyte concentration [mol.m-3]": 5600,
@@ -86,7 +86,7 @@ for i, model in enumerate(models):
 
 # plot
 output_variables = [
-    "Local current collector potential difference [V]",
+    "Local voltage [V]",
     "Negative current collector potential [V]",
     "Positive current collector potential [V]",
     "X-averaged electrolyte concentration",

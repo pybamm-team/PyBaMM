@@ -63,30 +63,48 @@ class TestParameterValues(unittest.TestCase):
         bad_values = {"Typical current [A]": 0}
         with self.assertRaisesRegex(ValueError, "Typical current"):
             pybamm.ParameterValues(bad_values)
-        # same with C-rate
-        bad_values = {"C-rate": 0}
-        with self.assertRaisesRegex(ValueError, "C-rate"):
-            pybamm.ParameterValues(bad_values)
-        # if both C-rate and current are provided they must match with capacity
-        bad_values = {"C-rate": 1, "Typical current [A]": 5, "Cell capacity [A.h]": 10}
-        with self.assertRaisesRegex(ValueError, "do not match"):
+        # can't provide both C-rate and current function
+        bad_values = {"C-rate": 1, "Current function [A]": 5}
+        with self.assertRaisesRegex(ValueError, "Cannot provide both"):
             pybamm.ParameterValues(bad_values)
         # if only C-rate and capacity provided, update current
         values = {"C-rate": 1, "Cell capacity [A.h]": 10}
         param = pybamm.ParameterValues(values)
-        self.assertEqual(param["Typical current [A]"], 10)
+        self.assertEqual(param["Current function [A]"], 10)
         # if only current and capacity provided, update C-rate
-        values = {"Typical current [A]": 1, "Cell capacity [A.h]": 10}
+        values = {"Current function [A]": 1, "Cell capacity [A.h]": 10}
         param = pybamm.ParameterValues(values)
         self.assertEqual(param["C-rate"], 1 / 10)
 
-        # Test with current function
-        values = {"Typical current [A]": 1, "Current function": "[constant]"}
+        # With functions
+        # if only C-rate and capacity provided, update current
+        values = {"C-rate": pybamm.sin, "Cell capacity [A.h]": 10}
         param = pybamm.ParameterValues(values)
-        self.assertEqual(param["Current function"], 1)
-        values = {"Typical current [A]": 1, "Current function": "[zero]"}
+        self.assertEqual(param["Current function [A]"](2).evaluate(), 10 * np.sin(2))
+        # if only current and capacity provided, update C-rate
+        values = {"Current function [A]": pybamm.exp, "Cell capacity [A.h]": 10}
         param = pybamm.ParameterValues(values)
-        self.assertEqual(param["Current function"], 0)
+        self.assertEqual(param["C-rate"](5).evaluate(), np.exp(5) / 10)
+
+        # With data
+        # if only C-rate and capacity provided, update current
+        x = np.linspace(0, 10)[:, np.newaxis]
+        linear = np.hstack([x, 2 * x])
+        values = {"C-rate": ("linear", linear), "Cell capacity [A.h]": 10}
+        param = pybamm.ParameterValues(values)
+        self.assertEqual(param["Current function [A]"][0], "linear_to_Crate")
+        np.testing.assert_array_equal(
+            param["Current function [A]"][1], np.hstack([x, 20 * x])
+        )
+        # if only current and capacity provided, update C-rate
+        x = np.linspace(0, 10)[:, np.newaxis]
+        linear = np.hstack([x, 2 * x])
+        values = {"Current function [A]": ("linear", linear), "Cell capacity [A.h]": 10}
+        param = pybamm.ParameterValues(values)
+        self.assertEqual(param["C-rate"][0], "linear_to_current")
+        np.testing.assert_array_almost_equal(
+            param["C-rate"][1], np.hstack([x, 0.2 * x])
+        )
 
     def test_process_symbol(self):
         parameter_values = pybamm.ParameterValues({"a": 1, "b": 2, "c": 3})
@@ -228,6 +246,11 @@ class TestParameterValues(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             parameter_values.process_symbol(sym)
 
+        # not found
+        with self.assertRaises(KeyError):
+            x = pybamm.Parameter("x")
+            parameter_values.process_symbol(x)
+
     def test_process_input_parameter(self):
         parameter_values = pybamm.ParameterValues({"a": "[input]", "b": 3})
         # process input parameter
@@ -263,7 +286,9 @@ class TestParameterValues(unittest.TestCase):
         # process constant function
         const = pybamm.FunctionParameter("const", a)
         processed_const = parameter_values.process_symbol(const)
-        self.assertIsInstance(processed_const, pybamm.Scalar)
+        self.assertIsInstance(processed_const, pybamm.Multiplication)
+        self.assertIsInstance(processed_const.left, pybamm.Scalar)
+        self.assertIsInstance(processed_const.right, pybamm.Scalar)
         self.assertEqual(processed_const.evaluate(), 254)
 
         # process differentiated function parameter
@@ -462,6 +487,14 @@ class TestParameterValues(unittest.TestCase):
         self.assertTrue(
             isinstance(model.variables["d_var1"].children[1], pybamm.Variable)
         )
+
+        # bad boundary conditions
+        model = pybamm.BaseModel()
+        model.algebraic = {var1: var1}
+        x = pybamm.Parameter("x")
+        model.boundary_conditions = {var1: {"left": (x, "Dirichlet")}}
+        with self.assertRaises(KeyError):
+            parameter_values.process_model(model)
 
     def test_process_empty_model(self):
         model = pybamm.BaseModel()

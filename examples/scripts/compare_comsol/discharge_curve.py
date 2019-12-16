@@ -57,7 +57,7 @@ for key, C_rate in C_rates.items():
     comsol_voltage = comsol_variables["voltage"]
 
     # update current density
-    param["Typical current [A]"] = 24 * C_rate
+    param["Current function [A]"] = 24 * C_rate
     param.update_model(model, disc)
 
     # discharge timescale
@@ -67,14 +67,14 @@ for key, C_rate in C_rates.items():
 
     # solve model at comsol times
     t = comsol_time / tau
-    solution = model.default_solver.solve(model, t)
+    solution = pybamm.CasadiSolver(mode="fast").solve(model, t)
 
     # discharge capacity
     discharge_capacity = pybamm.ProcessedVariable(
         model.variables["Discharge capacity [A.h]"], solution.t, solution.y, mesh=mesh
     )
     discharge_capacity_sol = discharge_capacity(solution.t)
-    comsol_discharge_capacity = comsol_time * param["Typical current [A]"] / 3600
+    comsol_discharge_capacity = comsol_time * param["Current function [A]"] / 3600
 
     # extract the voltage
     voltage = pybamm.ProcessedVariable(

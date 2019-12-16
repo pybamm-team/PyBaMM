@@ -50,7 +50,7 @@ class TestIDAKLUSolver(unittest.TestCase):
 
         # Calculate time for each solver and each number of grid points
         var = pybamm.standard_spatial_vars
-        t_eval = np.linspace(0, 0.17, 100)
+        t_eval = np.linspace(0, 0.25, 100)
         for npts in [100, 200]:
             # discretise
             var_pts = {
