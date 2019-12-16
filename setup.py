@@ -55,19 +55,21 @@ def update_LD_LIBRARY_PATH(install_dir):
     export_statement = "export LD_LIBRARY_PATH={}/lib:$LD_LIBRARY_PATH".format(
         install_dir
     )
+
     venv_path = os.environ.get("VIRTUAL_ENV")
     if venv_path:
         script_path = os.path.join(venv_path, "bin/activate")
     else:
         script_path = os.path.join(os.environ.get("HOME"), ".bashrc")
 
-    # if path to the library is not already included in the
-    # LD_LIBRARY_PATH, then add export statement to script_path.
-    if "{}/lib".format(install_dir) in os.environ["LD_LIBRARY_PATH"]:
+    if os.getenv("LD_LIBRARY_PATH") and "{}/lib".format(install_dir) in os.getenv(
+        "LD_LIBRARY_PATH"
+    ):
         print("{}/lib was found in LD_LIBRARY_PATH.".format(install_dir))
         print("--> Not updating venv activate or .bashrc scripts")
     else:
         with open(script_path, "a+") as fh:
+            # Just check that export statement is not already there.
             if export_statement not in fh.read():
                 fh.write(export_statement)
                 print(
