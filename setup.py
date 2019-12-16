@@ -220,7 +220,7 @@ class InstallKLU(Command):
             ("suitesparse_src", "suitesparse_src"),
             ("sundials_src", "sundials_src"),
             ("sundials_inst", "sundials_inst"),
-            ("forc_download", "force_download"),
+            ("force_download", "force_download"),
         )
 
         # If the SUNDIALS is already installed in sundials_inst with the KLU
