@@ -214,6 +214,7 @@ install:
       mkdir -p third-party;
       cd third-party;
       rm -rf pybind11;
+      git clone https://github.com/pybind/pybind11.git;
       cd ../;
       python setup.py install_klu -f;
       export LD_LIBRARY_PATH=sundials/lib:$LD_LIBRARY_PATH
