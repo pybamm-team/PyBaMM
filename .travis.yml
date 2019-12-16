@@ -204,7 +204,11 @@ install:
   - if [[ $PYBAMM_DOCS == true ]]; then pip install -e .[docs]; fi;
   - if [[ $PYBAMM_STYLE == true || $PYBAMM_EXAMPLES ]]; then pip install -e .[dev]; fi;
   - if [[ $PYBAMM_COVER == true ]]; then pip install coverage codecov; fi;
-  - if [[ $PYBAMM_SCIKITS_ODES == true ]]; then python setup.py install_odes -f; fi;
+  - |
+    if [[ $PYBAMM_SCIKITS_ODES == true ]]; then
+      python setup.py install_odes -f;
+      export LD_LIBRARY_PATH=sundials/lib:$LD_LIBRARY_PATH
+    fi;
   - |
     if [[ $PYBAMM_KLU == true ]]; then
       mkdir -p third-party;
@@ -212,6 +216,8 @@ install:
       rm -rf pybind11;
       cd ../;
       python setup.py install_klu -f;
+      export LD_LIBRARY_PATH=sundials/lib:$LD_LIBRARY_PATH
+      export LD_LIBRARY_PATH=SuiteSparse-5.6.0/lib:$LD_LIBRARY_PATH
     fi;
 
 before_script:
