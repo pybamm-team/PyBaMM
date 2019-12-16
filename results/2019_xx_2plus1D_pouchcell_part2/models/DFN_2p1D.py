@@ -6,7 +6,7 @@ import scipy.interpolate as interp
 
 
 class DFN_2p1D:
-    def __init__(self, thermal=False):
+    def __init__(self, thermal=False, param=None):
 
         sys.setrecursionlimit(10000)
         options = {
@@ -18,6 +18,9 @@ class DFN_2p1D:
 
         self.model = pybamm.lithium_ion.DFN(options)
         self.param = self.model.default_parameter_values
+
+        if param:
+            self.param.update(param)
 
     def solve(self, var_pts, C_rate=1, t_eval=None):
 

@@ -60,6 +60,7 @@ class AverageCurrent(BaseModel):
                 "Reduced positive current collector potential [V]": phi_s_cp_red
                 * ptl_scale,
                 "Average current collector ohmic losses": Delta_Phi_cc,
+                "Average current collector ohmic losses [V]": Delta_Phi_cc * ptl_scale,
                 "Effective current collector resistance": R_cc,
                 "Effective current collector resistance [Ohm]": R_cc
                 * ptl_scale

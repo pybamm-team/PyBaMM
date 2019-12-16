@@ -3,13 +3,16 @@ import numpy as np
 
 
 class SPM:
-    def __init__(self, thermal=False):
+    def __init__(self, thermal=False, param=None):
         options = {}
         if thermal is True:
             options.update({"thermal": "x-lumped"})
 
         self.model = pybamm.lithium_ion.SPM(options)
         self.param = self.model.default_parameter_values
+
+        if param:
+            self.param.update(param)
 
     def solve(self, var_pts, C_rate=1, t_eval=None):
 
