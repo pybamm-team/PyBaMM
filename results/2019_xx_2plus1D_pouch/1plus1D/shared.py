@@ -9,6 +9,7 @@ def make_comsol_model(comsol_variables, mesh, param, z_interp=None, thermal=True
 
     # comsol time
     comsol_t = comsol_variables["time"]
+    interp_kind = "cubic"
 
     # discharge timescale
     tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
@@ -46,7 +47,9 @@ def make_comsol_model(comsol_variables, mesh, param, z_interp=None, thermal=True
         interp_var = np.nanmean(interp_var, axis=1)
 
         def myinterp(t):
-            return interp.interp1d(comsol_t, interp_var, axis=1)(t)[:, np.newaxis]
+            return interp.interp1d(comsol_t, interp_var, axis=1, kind=interp_kind)(t)[
+                :, np.newaxis
+            ]
 
         # Make sure to use dimensional time
         fun = pybamm.Function(myinterp, pybamm.t * tau, name=variable_name + "_comsol")
@@ -54,7 +57,9 @@ def make_comsol_model(comsol_variables, mesh, param, z_interp=None, thermal=True
         return fun
 
     # Create interpolating functions to put in comsol_model.variables dict
-    comsol_voltage = interp.interp1d(comsol_t, comsol_variables["voltage"])
+    comsol_voltage = interp.interp1d(
+        comsol_t, comsol_variables["voltage"], kind=interp_kind
+    )
 
     comsol_phi_s_cn = get_interp_fun_curr_coll("phi_s_cn")
     comsol_phi_s_cp = get_interp_fun_curr_coll("phi_s_cp")
@@ -75,7 +80,7 @@ def make_comsol_model(comsol_variables, mesh, param, z_interp=None, thermal=True
     if thermal:
 
         comsol_vol_av_temperature = interp.interp1d(
-            comsol_t, comsol_variables["volume-averaged temperature"]
+            comsol_t, comsol_variables["volume-averaged temperature"], kind=interp_kind
         )
 
         comsol_temperature = get_interp_fun_curr_coll("temperature")
@@ -278,6 +283,206 @@ def plot_cc_var(
         ax[2].set_ylabel("error (rel)")
 
     ax[0].legend(bbox_to_anchor=(1.04, 1), loc="upper left")
+    plt.tight_layout()
+
+
+def plot_cc_potentials(
+    pybamm_model, comsol_model, mesh, solution, param, plot_times=None, sharex=False,
+):
+
+    # Get discharge timescale
+    tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
+
+    # Set plot times if not provided
+    if plot_times is None:
+        plot_times = solution.t * tau
+
+    # Process variables
+    z_plot = comsol_model.z_interp  # dimensional
+    L_z = param.evaluate(pybamm.standard_parameters_lithium_ion.L_z)
+
+    pybamm_phi_s_cn_fun = pybamm.ProcessedVariable(
+        pybamm_model.variables["Negative current collector potential [V]"],
+        solution.t,
+        solution.y,
+        mesh=mesh,
+    )
+    pybamm_phi_s_cp_fun = pybamm.ProcessedVariable(
+        pybamm_model.variables["Positive current collector potential [V]"],
+        solution.t,
+        solution.y,
+        mesh=mesh,
+    )
+    comsol_phi_s_cn_fun = pybamm.ProcessedVariable(
+        comsol_model.variables["Negative current collector potential [V]"],
+        solution.t,
+        solution.y,
+        mesh=mesh,
+    )
+    comsol_phi_s_cp_fun = pybamm.ProcessedVariable(
+        comsol_model.variables["Positive current collector potential [V]"],
+        solution.t,
+        solution.y,
+        mesh=mesh,
+    )
+
+    # Make plot
+    fig, ax = plt.subplots(2, 2, sharex=sharex, figsize=(12, 7.5))
+    cmap = plt.get_cmap("inferno")
+
+    # Loop over plot_times
+    for ind, t in enumerate(plot_times):
+        color = cmap(float(ind) / len(plot_times))
+
+        pybamm_phi_s_cn = pybamm_phi_s_cn_fun(z=z_plot / L_z, t=t / tau)
+        pybamm_phi_s_cp = pybamm_phi_s_cp_fun(z=z_plot / L_z, t=t / tau)
+        comsol_phi_s_cn = comsol_phi_s_cn_fun(z=z_plot / L_z, t=t / tau)
+        comsol_phi_s_cp = comsol_phi_s_cp_fun(z=z_plot / L_z, t=t / tau)
+
+        ax[0, 0].plot(
+            z_plot,
+            comsol_phi_s_cn,
+            "o",
+            color=color,
+            fillstyle="none",
+            label="COMSOL" if ind == 0 else "",
+        )
+        ax[0, 0].plot(
+            z_plot,
+            pybamm_phi_s_cn,
+            "-",
+            color=color,
+            label="PyBaMM (t={:.0f} s)".format(t),
+        )
+        error = np.abs(pybamm_phi_s_cn - comsol_phi_s_cn)
+        ax[1, 0].plot(z_plot, error, "-", color=color)
+        ax[0, 1].plot(
+            z_plot, comsol_phi_s_cp, "o", color=color, fillstyle="none",
+        )
+        ax[0, 1].plot(
+            z_plot, pybamm_phi_s_cp, "-", color=color,
+        )
+        error = np.abs(pybamm_phi_s_cp - comsol_phi_s_cp)
+        ax[1, 1].plot(z_plot, error, "-", color=color)
+
+    # set labels
+    if sharex is False:
+        ax[0, 0].set_xlabel(r"$z$")
+    ax[0, 0].set_ylabel(r"$\phi^*_{\mathrm{s,cn}}$ [V]")
+    if sharex is False:
+        ax[0, 1].set_xlabel(r"$z$")
+    ax[0, 1].set_ylabel(r"$\phi^*_{\mathrm{s,cp}}$ [V]")
+    ax[1, 0].set_xlabel(r"$z$")
+    ax[1, 0].set_ylabel(r"$\phi^*_{\mathrm{s,cn}}$ (difference) [V]")
+    ax[1, 1].set_xlabel(r"$z$")
+    ax[1, 1].set_ylabel(r"$\phi^*_{\mathrm{s,cp}}$ (difference) [V]")
+
+    ax[0, 0].text(-0.1, 1.05, "(a)", transform=ax[0, 0].transAxes)
+    ax[0, 1].text(-0.1, 1.05, "(b)", transform=ax[0, 1].transAxes)
+    ax[1, 0].text(-0.1, 1.05, "(c)", transform=ax[1, 0].transAxes)
+    ax[1, 1].text(-0.1, 1.05, "(d)", transform=ax[1, 1].transAxes)
+
+    ax[0, 0].legend(loc="best")
+    plt.tight_layout()
+
+
+def plot_cc_current_temperature(
+    pybamm_model, comsol_model, mesh, solution, param, plot_times=None, sharex=False,
+):
+
+    # Get discharge timescale
+    tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
+
+    # Set plot times if not provided
+    if plot_times is None:
+        plot_times = solution.t * tau
+
+    # Process variables
+    z_plot = comsol_model.z_interp  # dimensional
+    L_z = param.evaluate(pybamm.standard_parameters_lithium_ion.L_z)
+
+    pybamm_current_fun = pybamm.ProcessedVariable(
+        pybamm_model.variables["Current collector current density [A.m-2]"],
+        solution.t,
+        solution.y,
+        mesh=mesh,
+    )
+    pybamm_temp_fun = pybamm.ProcessedVariable(
+        pybamm_model.variables["X-averaged cell temperature [K]"],
+        solution.t,
+        solution.y,
+        mesh=mesh,
+    )
+    comsol_current_fun = pybamm.ProcessedVariable(
+        comsol_model.variables["Current collector current density [A.m-2]"],
+        solution.t,
+        solution.y,
+        mesh=mesh,
+    )
+    comsol_temp_fun = pybamm.ProcessedVariable(
+        comsol_model.variables["X-averaged cell temperature [K]"],
+        solution.t,
+        solution.y,
+        mesh=mesh,
+    )
+
+    # Make plot
+    fig, ax = plt.subplots(2, 2, sharex=sharex, figsize=(12, 7.5))
+    cmap = plt.get_cmap("inferno")
+
+    # Loop over plot_times
+    for ind, t in enumerate(plot_times):
+        color = cmap(float(ind) / len(plot_times))
+
+        pybamm_current = pybamm_current_fun(z=z_plot / L_z, t=t / tau)
+        pybamm_temp = pybamm_temp_fun(z=z_plot / L_z, t=t / tau)
+        comsol_current = comsol_current_fun(z=z_plot / L_z, t=t / tau)
+        comsol_temp = comsol_temp_fun(z=z_plot / L_z, t=t / tau)
+
+        ax[0, 0].plot(
+            z_plot,
+            comsol_current,
+            "o",
+            color=color,
+            fillstyle="none",
+            label="COMSOL" if ind == 0 else "",
+        )
+        ax[0, 0].plot(
+            z_plot,
+            pybamm_current,
+            "-",
+            color=color,
+            label="PyBaMM (t={:.0f} s)".format(t),
+        )
+        error = np.abs(pybamm_current - comsol_current)
+        ax[1, 0].plot(z_plot, error, "-", color=color)
+        ax[0, 1].plot(
+            z_plot, comsol_temp, "o", color=color, fillstyle="none",
+        )
+        ax[0, 1].plot(
+            z_plot, pybamm_temp, "-", color=color,
+        )
+        error = np.abs(pybamm_temp - comsol_temp)
+        ax[1, 1].plot(z_plot, error, "-", color=color)
+
+    # set labels
+    if sharex is False:
+        ax[0, 0].set_xlabel(r"$z$")
+    ax[0, 0].set_ylabel(r"$\mathcal{I}^*$ [A/m${}^2$]")
+    if sharex is False:
+        ax[0, 1].set_xlabel(r"$z$")
+    ax[0, 1].set_ylabel(r"$\bar{T}^*$ [K]")
+    ax[1, 0].set_xlabel(r"$z$")
+    ax[1, 0].set_ylabel(r"$\mathcal{I}^*$ (difference) [A/m${}^2$]")
+    ax[1, 1].set_xlabel(r"$z$")
+    ax[1, 1].set_ylabel(r"$\bar{T}^*$ (difference) [K]")
+
+    ax[0, 0].text(-0.1, 1.05, "(a)", transform=ax[0, 0].transAxes)
+    ax[0, 1].text(-0.1, 1.05, "(b)", transform=ax[0, 1].transAxes)
+    ax[1, 0].text(-0.1, 1.05, "(c)", transform=ax[1, 0].transAxes)
+    ax[1, 1].text(-0.1, 1.05, "(d)", transform=ax[1, 1].transAxes)
+
+    ax[0, 0].legend(loc="best")
     plt.tight_layout()
 
 

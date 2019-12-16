@@ -10,6 +10,7 @@ def make_comsol_model(
     "Make Comsol 'model' for comparison"
 
     comsol_t = comsol_variables["time"]
+    interp_kind = "cubic"
 
     # interpolate using *dimensional* space. Note that both y and z are scaled with L_z
     L_z = param.evaluate(pybamm.standard_parameters_lithium_ion.L_z)
@@ -41,13 +42,15 @@ def make_comsol_model(
             )
 
         def myinterp(t):
-            return interp.interp1d(comsol_t, interp_var, axis=2)(t)
+            return interp.interp1d(comsol_t, interp_var, axis=2, kind=interp_kind)(t)
 
         return myinterp
 
     # Create interpolating functions to put in comsol_model.variables dict
     def comsol_voltage(t):
-        return interp.interp1d(comsol_t, comsol_variables["voltage"])(t)
+        return interp.interp1d(comsol_t, comsol_variables["voltage"], kind=interp_kind)(
+            t
+        )
 
     comsol_phi_s_cn = get_interp_fun("phi_s_cn")
     comsol_phi_s_cp = get_interp_fun("phi_s_cp")
@@ -67,7 +70,9 @@ def make_comsol_model(
 
         def comsol_vol_av_temperature(t):
             return interp.interp1d(
-                comsol_t, comsol_variables["volume-averaged temperature"]
+                comsol_t,
+                comsol_variables["volume-averaged temperature"],
+                kind=interp_kind,
             )(t)
 
         comsol_temperature = get_interp_fun("temperature")
@@ -252,3 +257,82 @@ def plot_2D_var(
         plt.title(r"Error (rel): " + var)
         plt.set_cmap(cmap)
         plt.colorbar(rel_diff_plot)
+
+
+def plot_cc_potentials(
+    t, comsol_model, output_variables, param,
+):
+
+    # get y and z vals from comsol interp points (will be dimensional)
+    y_plot = comsol_model.y_interp
+    z_plot = comsol_model.z_interp
+
+    # get pybamm potentials
+    L_z = param.evaluate(pybamm.standard_parameters_lithium_ion.L_z)
+    tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
+    y_plot_non_dim = y_plot / L_z  # Note that both y and z are scaled with L_z
+    z_plot_non_dim = z_plot / L_z
+    t_non_dim = t / tau
+
+    pybamm_phi_s_cn = np.transpose(
+        output_variables["Negative current collector potential [V]"](
+            y=y_plot_non_dim, z=z_plot_non_dim, t=t_non_dim
+        )
+    )
+    pybamm_phi_s_cp = np.transpose(
+        output_variables["Positive current collector potential [V]"](
+            y=y_plot_non_dim, z=z_plot_non_dim, t=t_non_dim
+        )
+    )
+
+    # get comsol potentials
+    comsol_phi_s_cn = comsol_model.variables[
+        "Negative current collector potential [V]"
+    ](t=t)
+    comsol_phi_s_cp = comsol_model.variables[
+        "Positive current collector potential [V]"
+    ](t=t)
+
+    # compute difference
+    diff_phi_s_cn = np.abs(pybamm_phi_s_cn - comsol_phi_s_cn)
+    diff_phi_s_cp = np.abs(pybamm_phi_s_cp - comsol_phi_s_cp)
+
+    # Make plot
+    fig, ax = plt.subplots(2, 2, figsize=(12, 7.5))
+    cmap_n = plt.get_cmap("cividis")
+    cmap_p = plt.get_cmap("viridis")
+
+    plot_phi_s_cn = ax[0, 0].pcolormesh(
+        y_plot, z_plot, pybamm_phi_s_cn, shading="gouraud"
+    )
+    plt.set_cmap(cmap_n, ax=ax[0, 0])
+    plt.colorbar(plot_phi_s_cn, ax=ax[0, 0])
+    plot_phi_s_cp = ax[0, 1].pcolormesh(
+        y_plot, z_plot, pybamm_phi_s_cp, shading="gouraud"
+    )
+    plt.set_cmap(cmap_p, ax=ax[0, 1])
+    plt.colorbar(plot_phi_s_cp, ax=ax[0, 1])
+    plot_diff_s_cn = ax[1, 0].pcolormesh(
+        y_plot, z_plot, diff_phi_s_cn, shading="gouraud"
+    )
+    plt.set_cmap(cmap_n, ax=ax[1, 0])
+    plt.colorbar(plot_diff_s_cn, ax=ax[1, 0])
+    plot_diff_s_cp = ax[1, 1].pcolormesh(
+        y_plot, z_plot, diff_phi_s_cp, shading="gouraud"
+    )
+    plt.set_cmap(cmap_p, ax=ax[1, 1])
+    plt.colorbar(plot_diff_s_cp, ax=ax[1, 1])
+
+    # set labels
+    ax[0,0].set_xlabel(r"$y$")
+    ax[0,0].set_ylabel(r"$z$")
+    ax[0,0].set_title(r"$\phi^*_{\mathrm{s,cn}}$ [V]")
+    ax[0,1].set_xlabel(r"$y$")
+    ax[0,1].set_ylabel(r"$z$")
+    ax[0,1].set_title(r"$\phi^*_{\mathrm{s,cp}}$ [V]")
+    ax[1,0].set_xlabel(r"$y$")
+    ax[1,0].set_ylabel(r"$z$")
+    ax[1,0].set_title(r"$\phi^*_{\mathrm{s,cn}}$ (difference) [V]")
+    ax[1,1].set_xlabel(r"$y$")
+    ax[1,1].set_ylabel(r"$z$")
+    ax[1,1].set_title(r"$\phi^*_{\mathrm{s,cp}}$ (difference) [V]")

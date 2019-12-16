@@ -5,10 +5,13 @@ import pickle
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.interpolate as interp
-from scipy.optimize import minimize_scalar
 
 # change working directory to the root of pybamm
 os.chdir(pybamm.root_dir())
+
+# TO DO: sort style
+# import matplotlib
+# matplotlib.rc_file("results/2019_xx_2plus1D_pouch/_matplotlibrc", use_default_template=True)
 
 # increase recursion limit for large expression trees
 sys.setrecursionlimit(100000)
@@ -18,15 +21,24 @@ pybamm.set_logging_level("INFO")
 "-----------------------------------------------------------------------------"
 "Set up figure"
 
-fig, ax = plt.subplots(2, 2, figsize=(15, 8))
-ax[0, 0].set_xlabel("Discharge Capacity [Ah]")
+sharex = False  # set to "col" to have columns share x axes
+fig, ax = plt.subplots(2, 2, sharex=sharex, figsize=(12, 7.5))
+
+ax[0, 0].text(-0.1, 1.05, "(a)", transform=ax[0, 0].transAxes)
+if sharex is False:
+    ax[0, 0].set_xlabel("Discharge Capacity [Ah]")
 ax[0, 0].set_ylabel("Terminal voltage [V]")
-ax[0, 1].set_xlabel("Discharge Capacity [Ah]")
-ax[0, 1].set_ylabel("Average cell temperature [K]")
+ax[0, 1].text(-0.1, 1.05, "(b)", transform=ax[0, 1].transAxes)
+if sharex is False:
+    ax[0, 1].set_xlabel("Discharge Capacity [Ah]")
+ax[0, 1].set_ylabel("Temperature [K]")
+ax[1, 0].text(-0.1, 1.05, "(c)", transform=ax[1, 0].transAxes)
 ax[1, 0].set_xlabel("Discharge Capacity [Ah]")
-ax[1, 0].set_ylabel("Error [mV]")
+ax[1, 0].set_ylabel("Difference [V]")
+ax[1, 0].set_yscale("log")
+ax[1, 1].text(-0.1, 1.05, "(d)", transform=ax[1, 1].transAxes)
 ax[1, 1].set_xlabel("Discharge Capacity [Ah]")
-ax[1, 1].set_ylabel("Error [K]")
+ax[1, 1].set_ylabel("Difference [K]")
 
 
 "-----------------------------------------------------------------------------"
@@ -45,8 +57,15 @@ param.process_geometry(geometry)
 
 # create mesh
 var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 101, var.x_s: 101, var.x_p: 101, var.r_n: 101, var.r_p: 101}
+# var_pts = {var.x_n: 101, var.x_s: 101, var.x_p: 101, var.r_n: 101, var.r_p: 101}
 # var_pts = {var.x_n: 20, var.x_s: 20, var.x_p: 20, var.r_n: 30, var.r_p: 30}
+var_pts = {
+    var.x_n: int(param.evaluate(pybamm.geometric_parameters.L_n / 1e-6)),
+    var.x_s: int(param.evaluate(pybamm.geometric_parameters.L_s / 1e-6)),
+    var.x_p: int(param.evaluate(pybamm.geometric_parameters.L_n / 1e-6)),
+    var.r_n: int(param.evaluate(pybamm.geometric_parameters.R_n / 1e-7)),
+    var.r_p: int(param.evaluate(pybamm.geometric_parameters.R_p / 1e-7)),
+}
 mesh = pybamm.Mesh(geometry, pybamm_model.default_submesh_types, var_pts)
 
 # discretise model
@@ -62,6 +81,7 @@ solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6, mode="fast")
 "Solve at different C_rates and plot against COMSOL solution"
 
 counter = 0
+interp_kind = "cubic"
 
 for key, value in C_rates.items():
     # load comsol_model
@@ -69,9 +89,11 @@ for key, value in C_rates.items():
         open("input/comsol_results/comsol_thermal_{}C.pickle".format(key), "rb")
     )
     comsol_t = comsol_variables["time"]
-    comsol_voltage = interp.interp1d(comsol_t, comsol_variables["voltage"])
+    comsol_voltage = interp.interp1d(
+        comsol_t, comsol_variables["voltage"], kind=interp_kind
+    )
     comsol_temperature = interp.interp1d(
-        comsol_t, comsol_variables["average temperature"]
+        comsol_t, comsol_variables["average temperature"], kind=interp_kind
     )
 
     # update C_rate
@@ -118,8 +140,8 @@ for key, value in C_rates.items():
 
     # add to plot
     ax[0, 0].plot(
-        dis_cap,
-        comsol_voltage(time * tau),
+        dis_cap[0::10],
+        comsol_voltage(time[0::10] * tau),
         "o",
         fillstyle="none",
         color="C{}".format(counter),
@@ -133,8 +155,8 @@ for key, value in C_rates.items():
         label="PyBaMM ({}C)".format(value),
     )
     ax[0, 1].plot(
-        dis_cap,
-        comsol_temperature(time * tau),
+        dis_cap[0::10],
+        comsol_temperature(time[0::10] * tau),
         "o",
         fillstyle="none",
         color="C{}".format(counter),
@@ -149,7 +171,7 @@ for key, value in C_rates.items():
     )
     ax[1, 0].plot(
         dis_cap,
-        np.abs(pybamm_voltage - comsol_voltage(time * tau)) * 1000,
+        np.abs(pybamm_voltage - comsol_voltage(time * tau)),
         "-",
         color="C{}".format(counter),
         label="{}C".format(value),
@@ -167,12 +189,11 @@ for key, value in C_rates.items():
 
 "-----------------------------------------------------------------------------"
 "Add legend and show plot"
-# ax[0, 0].set_ylim([3.1, 3.9])
 
 ax[0, 0].legend(loc="lower left")
-ax[0, 1].legend(loc="upper left")
-ax[1, 0].legend(loc="upper left")
-ax[1, 1].legend(loc="upper left")
+# ax[0, 1].legend(loc="upper left")
+ax[1, 0].legend(loc="best")
+# ax[1, 1].legend(loc="upper left")
 plt.tight_layout()
 plt.savefig("1D_voltage_temperature_C_rate.eps", format="eps", dpi=1000)
 plt.show()

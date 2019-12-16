@@ -1,5 +1,5 @@
 # Set a 2/1 aspect ratio with automatic layout.
-figure.figsize: 6.4, 4.
+figure.figsize: 6, 3.75
 
 # Use LaTeX fonts
 font.family: serif
@@ -10,12 +10,13 @@ text.usetex: true
 pdf.fonttype: 42
 ps.fonttype: 42
 
-# Set large font sizes for paper figures
+# Set font sizes
+font.size: 8
 axes.labelsize: 11
 axes.titlesize: 11
-xtick.labelsize: 11
-ytick.labelsize: 11
-legend.fontsize: 11
+xtick.labelsize: 8
+ytick.labelsize: 8
+legend.fontsize: 8
 legend.numpoints: 1
 legend.scatterpoints: 1
 

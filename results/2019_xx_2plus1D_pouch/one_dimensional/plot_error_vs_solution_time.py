@@ -138,9 +138,7 @@ for i, model in enumerate(models):
             comsol_x = exact_solution["x"]
         # Make sure to use dimensional space
         pybamm_x = mesh.combine_submeshes(*domain)[0].nodes * L_x
-        variable = interp.interp1d(comsol_x, variable, axis=0, kind="linear")(
-            pybamm_x
-        )
+        variable = interp.interp1d(comsol_x, variable, axis=0, kind="linear")(pybamm_x)
 
         def myinterp(t):
             return interp.interp1d(comsol_t, variable, kind=interp_kind)(t)[
@@ -238,9 +236,12 @@ comsol_errors = {
 }
 exact_voltage = exact_solution["voltage"]
 comsol_sol_times = [None] * len(savefiles)
+# plt.figure()
 for i, file in enumerate(savefiles):
     comsol_variables = pickle.load(open(file, "rb"))
+    # comsol_time = comsol_variables["time"]
     comsol_voltage = comsol_variables["voltage"]
+    # plt.plot(comsol_time, comsol_voltage, label=file)
     # compute RMS error
     # scale = scales["Terminal voltage [V]"]
     scale = 1
@@ -248,15 +249,33 @@ for i, file in enumerate(savefiles):
         comsol_voltage / scale, exact_voltage / scale
     )
     comsol_sol_times[i] = comsol_variables["solution_time"]
-
+# plt.legend()
+# plt.show()
 
 "-----------------------------------------------------------------------------"
-"Print error"
-pybamm_v_error_mV = [error * 1000 for error in errors["Terminal voltage [V]"]]
-comsol_v_error_mV = [error * 1000 for error in comsol_errors["Terminal voltage [V]"]]
-plt.plot(sol_times, pybamm_v_error_mV, label="PyBaMM")
-plt.plot(comsol_sol_times, comsol_v_error_mV, label="COMSOL")
-plt.xlabel("Solution time [s]")
-plt.ylabel("RMS Voltage Error [mV]")
-plt.legend()
+"Plot error"
+fig, ax = plt.subplots(1, 2, figsize=(6.0, 3.75))
+ax[0].text(-0.1, 1.05, "(a)", transform=ax[0].transAxes)
+ax[0].set_xlabel("Solution time [s]")
+ax[0].set_ylabel("RMS Voltage difference [V]")
+ax[1].text(-0.1, 1.05, "(b)", transform=ax[1].transAxes)
+ax[1].set_xlabel("Solution time [s]")
+ax[1].set_ylabel("RMS Voltage difference [V]")
+ax[0].set_ylabel("Terminal voltage [V]")
+
+ax[0].set_xscale("log")
+ax[0].set_yscale("log")
+ax[0].plot(sol_times, errors["Terminal voltage [V]"], "ko-", label="PyBaMM")
+ax[1].set_xscale("log")
+ax[1].set_yscale("log")
+ax[1].plot(
+    comsol_sol_times, comsol_errors["Terminal voltage [V]"], "ko-", label="COMSOL"
+)
+
+ax[0].legend()
+ax[1].legend()
+
+plt.tight_layout()
+
+plt.savefig("1D_error_vs_time.eps", format="eps", dpi=1000)
 plt.show()

@@ -45,7 +45,7 @@ param.process_geometry(geometry)
 
 # create mesh
 var = pybamm.standard_spatial_vars
-#var_pts = {var.x_n: 101, var.x_s: 101, var.x_p: 101, var.r_n: 101, var.r_p: 101}
+# var_pts = {var.x_n: 101, var.x_s: 101, var.x_p: 101, var.r_n: 101, var.r_p: 101}
 var_pts = {
     var.x_n: int(param.evaluate(pybamm.geometric_parameters.L_n / 1e-6)),
     var.x_s: int(param.evaluate(pybamm.geometric_parameters.L_s / 1e-6)),
@@ -53,7 +53,7 @@ var_pts = {
     var.r_n: int(param.evaluate(pybamm.geometric_parameters.R_n / 1e-7)),
     var.r_p: int(param.evaluate(pybamm.geometric_parameters.R_p / 1e-7)),
 }
-#var_pts = {var.x_n: 30, var.x_s: 30, var.x_p: 30, var.r_n: 10, var.r_p: 10}
+# var_pts = {var.x_n: 30, var.x_s: 30, var.x_p: 30, var.r_n: 10, var.r_p: 10}
 
 mesh = pybamm.Mesh(geometry, pybamm_model.default_submesh_types, var_pts)
 
@@ -66,7 +66,7 @@ tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
 
 # solve model at comsol times
 time = comsol_variables["time"] / tau
-#solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
+# solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
 solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-8, mode="fast")
 solution = solver.solve(pybamm_model, time)
 
@@ -466,7 +466,9 @@ def whole_cell_by_domain_comparison_plot(
     plt.tight_layout()
 
 
-def electrode_comparison_plot(var, plot_times=None, plot_error=None, scale=None, eval_on_edges=False):
+def electrode_comparison_plot(
+    var, plot_times=None, plot_error=None, scale=None, eval_on_edges=False
+):
     """
     Plot pybamm variable against comsol variable (both defined separately in the
     negative and positive electrode) E.g. if var = "electrode current density [A.m-2]"
@@ -637,7 +639,9 @@ def electrode_comparison_plot(var, plot_times=None, plot_error=None, scale=None,
     plt.tight_layout()
 
 
-def whole_cell_comparison_plot(var, plot_times=None, plot_error=None, scale=None,  eval_on_edges=False):
+def whole_cell_comparison_plot(
+    var, plot_times=None, plot_error=None, scale=None, eval_on_edges=False
+):
     """
     Plot pybamm variable against comsol variable (both defined over whole cell)
 
@@ -783,14 +787,14 @@ electrode_comparison_plot(
     eval_on_edges=True,
 )
 plt.savefig("iso1D_i_s.eps", format="eps", dpi=1000)
-#whole_cell_by_domain_comparison_plot(
+# whole_cell_by_domain_comparison_plot(
 #    "Electrolyte current density [A.m-2]",
 #    plot_times=plot_times,
 #    plot_error=plot_error,
 #    # scale="auto",
 #    scale=param.evaluate(pybamm.standard_parameters_lithium_ion.i_typ),
 #    eval_on_edges=True,
-#)
+# )
 electrode_comparison_plot(
     "electrolyte current density [A.m-2]",
     plot_times=plot_times,

@@ -826,23 +826,23 @@ whole_cell_comparison_plot(
 )
 plt.savefig("thermal1D_phi_e.eps", format="eps", dpi=1000)
 # current
-#electrode_comparison_plot(
+# electrode_comparison_plot(
 #    "electrode current density [A.m-2]",
 #    plot_times=plot_times,
 #    plot_error=plot_error,
 #    # scale="auto",
 #    scale=param.evaluate(pybamm.standard_parameters_lithium_ion.i_typ),
 #    eval_on_edges=True,
-#)
+# )
 ## plt.savefig("thermal1D_i_s.eps", format="eps", dpi=1000)
-#electrode_comparison_plot(
+# electrode_comparison_plot(
 #    "electrolyte current density [A.m-2]",
 #    plot_times=plot_times,
 #    plot_error=plot_error,
 #    # scale="auto",
 #    scale=param.evaluate(pybamm.standard_parameters_lithium_ion.i_typ),
 #    eval_on_edges=True,
-#)
+# )
 # plt.savefig("thermal1D_i_e.eps", format="eps", dpi=1000)
 # concentrations
 electrode_comparison_plot(
