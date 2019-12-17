@@ -113,12 +113,12 @@ solution = simulation._solution
 plot_times = [600, 1200, 1800, 2400, 3000]  # dimensional in seconds, must be a list
 
 shared.plot_cc_potentials(
-    pybamm_model, comsol_model, mesh, solution, param, plot_times=plot_times,
+    pybamm_model, comsol_model, mesh, solution, param, plot_times=plot_times
 )
 plt.savefig("thermal1plus1D_cc_pots.eps", format="eps", dpi=1000)
 
 shared.plot_cc_current_temperature(
-    pybamm_model, comsol_model, mesh, solution, param, plot_times=plot_times,
+    pybamm_model, comsol_model, mesh, solution, param, plot_times=plot_times
 )
 plt.savefig("thermal1plus1D_cc_I_T.eps", format="eps", dpi=1000)
 

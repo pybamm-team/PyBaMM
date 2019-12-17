@@ -31,6 +31,7 @@ def make_comsol_model(comsol_variables, mesh, param, z_interp=None, thermal=True
         comsol_z = comsol_variables[variable_name + "_z"]
         variable = comsol_variables[variable_name]
 
+        # can just use L_x as comsol has already x-averaged
         grid_x, grid_z = np.meshgrid(L_x, z_interp)
 
         # Note order of rows and cols!
@@ -43,7 +44,7 @@ def make_comsol_model(comsol_variables, mesh, param, z_interp=None, thermal=True
                 method=interp_kind,
             )
 
-        # average in x
+        # average in x (to make the array the correct shape)
         interp_var = np.nanmean(interp_var, axis=1)
 
         def myinterp(t):
@@ -122,10 +123,10 @@ def plot_t_var(
 
     # Process variables
     pybamm_var = pybamm.ProcessedVariable(
-        pybamm_model.variables[var], solution.t, solution.y, mesh=mesh,
+        pybamm_model.variables[var], solution.t, solution.y, mesh=mesh
     )(plot_times / tau)
     comsol_var = pybamm.ProcessedVariable(
-        comsol_model.variables[var], solution.t, solution.y, mesh=mesh,
+        comsol_model.variables[var], solution.t, solution.y, mesh=mesh
     )(plot_times / tau)
 
     # Make plot
@@ -191,10 +192,10 @@ def plot_cc_var(
     z_plot = comsol_model.z_interp  # dimensional
     L_z = param.evaluate(pybamm.standard_parameters_lithium_ion.L_z)
     pybamm_var_fun = pybamm.ProcessedVariable(
-        pybamm_model.variables[var], solution.t, solution.y, mesh=mesh,
+        pybamm_model.variables[var], solution.t, solution.y, mesh=mesh
     )
     comsol_var_fun = pybamm.ProcessedVariable(
-        comsol_model.variables[var], solution.t, solution.y, mesh=mesh,
+        comsol_model.variables[var], solution.t, solution.y, mesh=mesh
     )
     # If var is positive current collector potential compute relative to
     # voltage
@@ -287,7 +288,7 @@ def plot_cc_var(
 
 
 def plot_cc_potentials(
-    pybamm_model, comsol_model, mesh, solution, param, plot_times=None, sharex=False,
+    pybamm_model, comsol_model, mesh, solution, param, plot_times=None, sharex=False
 ):
 
     # Get discharge timescale
@@ -360,10 +361,10 @@ def plot_cc_potentials(
         error = np.abs(pybamm_phi_s_cn - comsol_phi_s_cn)
         ax[1, 0].plot(z_plot, error, "-", color=color)
         ax[0, 1].plot(
-            z_plot[0::9], comsol_phi_s_cp[0::9], "o", color=color, fillstyle="none",
+            z_plot[0::9], comsol_phi_s_cp[0::9], "o", color=color, fillstyle="none"
         )
         ax[0, 1].plot(
-            z_plot, pybamm_phi_s_cp, "-", color=color, label="{:.0f} s".format(t),
+            z_plot, pybamm_phi_s_cp, "-", color=color, label="{:.0f} s".format(t)
         )
         error = np.abs(pybamm_phi_s_cp - comsol_phi_s_cp)
         ax[1, 1].plot(z_plot, error, "-", color=color)
@@ -415,7 +416,7 @@ def plot_cc_potentials(
 
 
 def plot_cc_current_temperature(
-    pybamm_model, comsol_model, mesh, solution, param, plot_times=None, sharex=False,
+    pybamm_model, comsol_model, mesh, solution, param, plot_times=None, sharex=False
 ):
 
     # Get discharge timescale
@@ -485,20 +486,14 @@ def plot_cc_current_temperature(
             label="COMSOL" if ind == 0 else "",
         )
         ax[0, 0].plot(
-            z_plot,
-            pybamm_current,
-            "-",
-            color=color,
-            label="PyBaMM" if ind == 0 else "",
+            z_plot, pybamm_current, "-", color=color, label="PyBaMM" if ind == 0 else ""
         )
         error = np.abs(pybamm_current - comsol_current)
         ax[1, 0].plot(z_plot, error, "-", color=color)
         ax[0, 1].plot(
-            z_plot[0::9], comsol_temp[0::9], "o", color=color, fillstyle="none",
+            z_plot[0::9], comsol_temp[0::9], "o", color=color, fillstyle="none"
         )
-        ax[0, 1].plot(
-            z_plot, pybamm_temp, "-", color=color, label="{:.0f} s".format(t),
-        )
+        ax[0, 1].plot(z_plot, pybamm_temp, "-", color=color, label="{:.0f} s".format(t))
         error = np.abs(pybamm_temp - comsol_temp)
         ax[1, 1].plot(z_plot, error, "-", color=color)
 
@@ -608,7 +603,7 @@ def plot_tz_var(
             if scale is None:
                 scale_val = comsol_var
             error = np.abs((pybamm_var - comsol_var) / scale_val)
-            diff_plot = plt.pcolormesh(t_plot, z_plot, error, shading="gouraud",)
+            diff_plot = plt.pcolormesh(t_plot, z_plot, error, shading="gouraud")
         plt.axis([0, t_plot[-1], 0, z_plot[-1]])
         plt.xlabel(r"$t$")
         plt.ylabel(r"$z$")
@@ -629,7 +624,7 @@ def plot_tz_var(
         if scale is None:
             scale_val = comsol_var
         rel_error = np.abs((pybamm_var - comsol_var) / scale_val)
-        rel_diff_plot = plt.pcolormesh(t_plot, z_plot, rel_error, shading="gouraud",)
+        rel_diff_plot = plt.pcolormesh(t_plot, z_plot, rel_error, shading="gouraud")
         plt.axis([0, t_plot[-1], 0, z_plot[-1]])
         plt.xlabel(r"$t$")
         plt.ylabel(r"$z$")
