@@ -63,7 +63,7 @@ L_x = param.evaluate(pybamm.standard_parameters_lithium_ion.L_x)
 def get_interp_fun(variable_name, domain):
     """
     Create a :class:`pybamm.Function` object using the variable, to allow plotting with
-    :class:`'pybamm.QuickPlot'` (interpolate in space to match edges, and then create
+    :class:`'pybamm.QuickPlot'` (interpolate in space to match nodes, and then create
     function to interpolate in time)
     """
     variable = comsol_variables[variable_name]
