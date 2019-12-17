@@ -22,7 +22,7 @@ class SPMe_2p1D:
         if param:
             self.param.update(param)
 
-    def solve(self, var_pts, C_rate=1, t_eval=None):
+    def solve(self, var_pts, C_rate=1, t_eval=None, solver=None):
 
         # discharge timescale
         if t_eval is None:
@@ -33,7 +33,11 @@ class SPMe_2p1D:
             t_eval = np.linspace(0, t_end, 120)
 
         self.sim = pybamm.Simulation(
-            self.model, parameter_values=self.param, var_pts=var_pts, C_rate=C_rate
+            self.model,
+            parameter_values=self.param,
+            var_pts=var_pts,
+            C_rate=C_rate,
+            solver=solver,
         )
         self.sim.solve(t_eval=t_eval)
 

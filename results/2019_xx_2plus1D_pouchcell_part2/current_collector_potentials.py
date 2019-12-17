@@ -2,6 +2,7 @@ import pybamm
 import numpy as np
 import matplotlib.pyplot as plt
 
+import matplotlib
 import matplotlib.ticker as ticker
 
 import models
@@ -15,7 +16,7 @@ pybamm.set_logging_level("INFO")
 load = True
 thermal = True
 c_rate = 1
-t_eval = np.linspace(0, 0.17, 100)
+t_eval = np.linspace(0, 0.1, 100)
 
 
 final_time = 0.16
@@ -27,7 +28,7 @@ var_pts = {
     pybamm.standard_spatial_vars.x_p: 5,
     pybamm.standard_spatial_vars.r_n: 5,
     pybamm.standard_spatial_vars.r_p: 5,
-    pybamm.standard_spatial_vars.y: 5,
+    pybamm.standard_spatial_vars.y: 5,  # can't seem to put this to 10...
     pybamm.standard_spatial_vars.z: 5,
 }
 
@@ -44,7 +45,17 @@ if load is False:
         "2+1D DFN": models.DFN_2p1D(thermal, param),
         "2+1D SPM": models.SPM_2p1D(thermal, param),
         "2+1D SPMe": models.SPMe_2p1D(thermal, param),
+        "DFNCC": models.DFNCC(thermal, param),
+        "SPMeCC": models.SPMeCC(thermal, param),
     }
+
+solvers = {
+    "2+1D DFN": pybamm.CasadiSolver(mode="fast"),
+    "2+1D SPM": pybamm.CasadiSolver(mode="fast"),
+    "2+1D SPMe": pybamm.CasadiSolver(mode="fast"),
+    "DFNCC": pybamm.CasadiSolver(mode="fast"),
+    "SPMeCC": None,
+}
 
 
 linestyles = {
@@ -54,18 +65,16 @@ linestyles = {
 }
 
 if load is False:
-    x_av_surface_concentrations = {}
+    current_collector_potentials = {}
 
     for model_name, model in models.items():
 
-        model.solve(var_pts, c_rate, t_eval)
+        model.solve(var_pts, c_rate, t_eval, solvers[model_name])
         variables = [
             "Discharge capacity [A.h]",
             "Time [h]",
-            "X-averaged negative particle surface concentration",
-            "X-averaged positive particle surface concentration",
-            # "y [m]",
-            # "z [m]",
+            "Negative current collector potential [V]",
+            "Positive current collector potential [V]",
         ]
 
         y = np.linspace(0, 1.5, 100)
@@ -82,54 +91,52 @@ if load is False:
             t_hours = processed_variables["Time [h]"](t)
 
             # negative particle
-            c_s_n_surf_xav = processed_variables[
-                "X-averaged negative particle surface concentration"
-            ](t=t, y=y, z=z)
+            phi_s_cn = processed_variables["Negative current collector potential [V]"](
+                t=t, y=y, z=z
+            )
 
             # positive particle
-            c_s_p_surf_xav = processed_variables[
-                "X-averaged positive particle surface concentration"
-            ](t=t, y=y, z=z)
+            phi_s_cp = processed_variables["Positive current collector potential [V]"](
+                t=t, y=y, z=z
+            )
 
-            x_av_surface_concentrations[model_name] = (
+            current_collector_potentials[model_name] = (
                 t_hours,
                 dc,
                 y_dim,
                 z_dim,
-                np.transpose(c_s_n_surf_xav),
-                np.transpose(c_s_p_surf_xav),
+                np.transpose(phi_s_cn),
+                np.transpose(phi_s_cp),
             )
 
-    pickle.dump(x_av_surface_concentrations, open(path + "x_av_surf_con.p", "wb"))
+    pickle.dump(current_collector_potentials, open(path + "cc_potentials.p", "wb"))
 
 
 else:
-    x_av_surface_concentrations = pickle.load(open(path + "x_av_surf_con.p", "rb"))
+    current_collector_potentials = pickle.load(open(path + "cc_potentials.p", "rb"))
 
 
-fig, axes = plt.subplots(1, len(x_av_surface_concentrations) + 1)
+fig, axes = plt.subplots(1, len(current_collector_potentials))
 
 # for errors
-truth = x_av_surface_concentrations["2+1D DFN"]
-tim, dc, _, _, c_s_n_surf_xav_truth, c_s_p_surf_xav_truth = truth
-vol_av_neg_surf_concentration = np.mean(np.mean(c_s_n_surf_xav_truth))
-vol_av_pos_surf_concentration = np.mean(np.mean(c_s_p_surf_xav_truth))
+truth = current_collector_potentials["2+1D DFN"]
+tim, dc, _, _, phi_s_cn_truth, phi_s_cp_truth = truth
 
 # print("Time [h] = ", tim, " and Discharge capacity [A.h] = ", dc)
 
-for count, (model_name, solution) in enumerate(x_av_surface_concentrations.items()):
+for count, (model_name, solution) in enumerate(current_collector_potentials.items()):
 
-    t_hours, dc, y_dim, z_dim, c_s_n_surf_xav, c_s_p_surf_xav = solution
+    t_hours, dc, y_dim, z_dim, phi_s_cn, phi_s_cp = solution
 
     if model_name == "2+1D DFN":
         im = axes[count].pcolormesh(
-            y_dim, z_dim, c_s_n_surf_xav, vmin=None, vmax=None, shading="gouraud"
+            y_dim, z_dim, phi_s_cn, vmin=None, vmax=None, shading="gouraud"
         )
 
         title = model_name
 
     else:
-        error = np.abs(c_s_n_surf_xav - c_s_n_surf_xav_truth)
+        error = np.abs(phi_s_cn - phi_s_cn_truth)
         title = model_name + " vs. 2+1D DFN"
         im = axes[count].pcolormesh(y_dim, z_dim, error, shading="gouraud")
 
@@ -150,49 +157,30 @@ for count, (model_name, solution) in enumerate(x_av_surface_concentrations.items
     )
     # fig.colorbar(im, ax=axes[count])
 
-
-# volume average
-error = np.abs(vol_av_neg_surf_concentration - c_s_n_surf_xav_truth)
-title = "Volume Average vs. 2+1D DFN"
-count = len(x_av_surface_concentrations)
-im = axes[count].pcolormesh(y_dim, z_dim, error, shading="gouraud")
-axes[count].set_xlabel(r"$y$")
-axes[count].set_ylabel(r"$z$")
-axes[count].set_title(title)
-plt.colorbar(
-    im,
-    ax=axes[count],
-    # format=ticker.FuncFormatter(fmt),
-    orientation="horizontal",
-    # pad=0.2,
-    format=sfmt,
-)
-
 plt.subplots_adjust(
     left=0.05, bottom=0.02, right=0.96, top=0.9, wspace=0.35, hspace=0.4
 )
 
-fig.set_figheight(4)
-fig.set_figwidth(9.5)
+fig.set_figheight(5)
+fig.set_figwidth(13)
 
 plt.show()
 
 
-fig, axes = plt.subplots(1, len(x_av_surface_concentrations) + 1)
+fig, axes = plt.subplots(1, len(current_collector_potentials))
+for count, (model_name, solution) in enumerate(current_collector_potentials.items()):
 
-for count, (model_name, solution) in enumerate(x_av_surface_concentrations.items()):
-
-    t_hours, dc, y_dim, z_dim, c_s_n_surf_xav, c_s_p_surf_xav = solution
+    t_hours, dc, y_dim, z_dim, phi_s_cn, phi_s_cp = solution
 
     if model_name == "2+1D DFN":
         im = axes[count].pcolormesh(
-            y_dim, z_dim, c_s_p_surf_xav, vmin=None, vmax=None, shading="gouraud"
+            y_dim, z_dim, phi_s_cp, vmin=None, vmax=None, shading="gouraud"
         )
 
         title = model_name
 
     else:
-        error = np.abs(c_s_p_surf_xav - c_s_p_surf_xav_truth)
+        error = np.abs(phi_s_cp - phi_s_cp_truth)
         title = model_name + " vs. 2+1D DFN"
         im = axes[count].pcolormesh(y_dim, z_dim, error, shading="gouraud")
 
@@ -213,30 +201,11 @@ for count, (model_name, solution) in enumerate(x_av_surface_concentrations.items
     )
     # fig.colorbar(im, ax=axes[count])
 
-
-# volume average
-error = np.abs(vol_av_pos_surf_concentration - c_s_p_surf_xav_truth)
-title = "Volume Average vs. 2+1D DFN"
-count = len(x_av_surface_concentrations)
-im = axes[count].pcolormesh(y_dim, z_dim, error, shading="gouraud")
-axes[count].set_xlabel(r"$y$")
-axes[count].set_ylabel(r"$z$")
-axes[count].set_title(title)
-plt.colorbar(
-    im,
-    ax=axes[count],
-    # format=ticker.FuncFormatter(fmt),
-    orientation="horizontal",
-    # pad=0.2,
-    format=sfmt,
-)
-
 plt.subplots_adjust(
     left=0.05, bottom=0.02, right=0.96, top=0.9, wspace=0.35, hspace=0.4
 )
 
-fig.set_figheight(4)
-fig.set_figwidth(9.5)
+fig.set_figheight(5)
+fig.set_figwidth(13)
 
 plt.show()
-

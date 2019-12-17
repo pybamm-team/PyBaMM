@@ -14,7 +14,7 @@ class SPMeCC:
         if param:
             self.param.update(param)
 
-    def solve(self, var_pts, C_rate=1, t_eval=None):
+    def solve(self, var_pts, C_rate=1, t_eval=None, solver=None):
 
         # discharge timescale
         if t_eval is None:
@@ -25,7 +25,7 @@ class SPMeCC:
             t_eval = np.linspace(0, t_end, 120)
 
         self.sim = pybamm.Simulation(
-            self.model, parameter_values=self.param, var_pts=var_pts, C_rate=C_rate
+            self.model, parameter_values=self.param, var_pts=var_pts, C_rate=C_rate, solver=solver
         )
         self.sim.solve(t_eval=t_eval)
 
@@ -86,15 +86,50 @@ class SPMeCC:
             self.sim.built_model.variables["Current [A]"], self.t, self.y
         )
 
+        phi_s_cn = pybamm.ProcessedVariable(
+            self.cc_model.variables["Negative current collector potential [V]"],
+            self.cc_solution.t,
+            self.cc_solution.y,
+            mesh=self.cc_mesh,
+        )
+
+        internal_V = pybamm.ProcessedVariable(
+            self.sim.built_model.variables["Terminal voltage [V]"],
+            self.t,
+            self.y,
+            mesh=self.sim.mesh,
+        )
+
+        def terminal_voltage(t):
+            cc_ohmic_losses = -current(t) * R_cc
+            return internal_V(t) + cc_ohmic_losses
+
+        phi_s_cp_red = pybamm.ProcessedVariable(
+            self.cc_model.variables["Reduced positive current collector potential [V]"],
+            self.cc_solution.t,
+            self.cc_solution.y,
+            mesh=self.cc_mesh,
+        )
+
         for var in variables:
             if var == "Terminal voltage [V]":
-                internal_V = processed_vars["Terminal voltage [V]"]
-
-                def terminal_voltage(t):
-                    cc_ohmic_losses = -current(t) * R_cc
-                    return internal_V(t) + cc_ohmic_losses
-
                 processed_vars["Terminal voltage [V]"] = terminal_voltage
+
+            if var == "Negative current collector potential [V]":
+
+                def no_t_phi_s_cn(t, y, z):
+                    return phi_s_cn(y=y, z=z)
+
+                processed_vars[
+                    "Negative current collector potential [V]"
+                ] = no_t_phi_s_cn
+
+            if var == "Positive current collector potential [V]":
+
+                def phi_s_cp(t, y, z):
+                    return phi_s_cp_red(y=y, z=z) + internal_V(t)
+
+                processed_vars["Positive current collector potential [V]"] = phi_s_cp
 
         return processed_vars
 

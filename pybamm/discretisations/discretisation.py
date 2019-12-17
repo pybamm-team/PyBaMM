@@ -84,7 +84,7 @@ class Discretisation(object):
         # reset discretised_symbols
         self._discretised_symbols = {}
 
-    def process_model(self, model, inplace=True, check_model=True):
+    def process_model(self, model, inplace=True, check_model=False):
         """Discretise a model.
         Currently inplace, could be changed to return a new model.
 
