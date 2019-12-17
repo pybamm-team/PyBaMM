@@ -2,11 +2,17 @@ import pybamm
 import os
 import sys
 import pickle
+import matplotlib
 import matplotlib.pyplot as plt
 import shared
 
 # change working directory to the root of pybamm
 os.chdir(pybamm.root_dir())
+
+# set style
+matplotlib.rc_file(
+    "results/2019_xx_2plus1D_pouch/_matplotlibrc", use_default_template=True
+)
 
 # increase recursion limit for large expression trees
 sys.setrecursionlimit(100000)

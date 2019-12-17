@@ -90,8 +90,8 @@ else:
         var.x_n: 5,
         var.x_s: 5,
         var.x_p: 5,
-        var.r_n: 10,
-        var.r_p: 10,
+        var.r_n: 5,
+        var.r_p: 5,
         var.y: len(y_edges),
         var.z: len(z_edges),
     }

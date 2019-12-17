@@ -7,14 +7,16 @@ import numpy as np
 import os
 import pickle
 import scipy.interpolate as interp
+import matplotlib
 import matplotlib.pyplot as plt
 
 # change working directory to the root of pybamm
 os.chdir(pybamm.root_dir())
 
-# TO DO: sort style
-# import matplotlib
-# matplotlib.rc_file("results/2019_xx_2plus1D_pouch/_matplotlibrc", use_default_template=True)
+# set style
+matplotlib.rc_file(
+    "results/2019_xx_2plus1D_pouch/_matplotlibrc", use_default_template=True
+)
 
 "-----------------------------------------------------------------------------"
 "Load comsol data"
@@ -234,7 +236,10 @@ def electrode_comparison_plot(
     )
 
     # Make plot
-    fig, ax = plt.subplots(2, 2, sharex=sharex, figsize=(12, 7.5))
+    fig, ax = plt.subplots(2, 2, sharex=sharex, figsize=(6.4, 4))
+    fig.subplots_adjust(
+        left=0.1, bottom=0.1, right=0.95, top=0.85, wspace=0.3, hspace=0.5
+    )
     cmap = plt.get_cmap("inferno")
 
     # Loop over plot_times
@@ -261,7 +266,7 @@ def electrode_comparison_plot(
             pybamm_var_n,
             "-",
             color=color,
-            label="PyBaMM (t={:.0f} s)".format(t),
+            label="PyBaMM" if ind == 0 else "",
         )
         error_n = np.abs(pybamm_var_n - comsol_var_n)
         ax[1, 0].plot(x_n * L_x, error_n, "-", color=color)
@@ -277,10 +282,24 @@ def electrode_comparison_plot(
             x_p[0::9] * L_x, comsol_var_p[0::9], "o", color=color, fillstyle="none",
         )
         ax[0, 1].plot(
-            x_p * L_x, pybamm_var_p, "-", color=color,
+            x_p * L_x, pybamm_var_p, "-", color=color, label="{:.0f} s".format(t),
         )
         error_p = np.abs(pybamm_var_p - comsol_var_p)
-        ax[1, 1].plot(x_p * L_x, error_p, "-", color=color)
+        ax[1, 1].plot(
+            x_p * L_x, error_p, "-", color=color,
+        )
+
+    # force scientific notation outside 10^{+-2}
+    ax[0, 0].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
+    ax[0, 1].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
+    ax[1, 0].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
+    ax[1, 1].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
+
+    # set ticks
+    ax[0, 0].tick_params(which="both")
+    ax[0, 1].tick_params(which="both")
+    ax[1, 0].tick_params(which="both")
+    ax[1, 1].tick_params(which="both")
 
     # set labels
     if sharex is False:
@@ -294,13 +313,26 @@ def electrode_comparison_plot(
     ax[1, 1].set_xlabel(r"$x_p$")
     ax[1, 1].set_ylabel(labels[3])
 
-    ax[0, 0].text(-0.1, 1.05, "(a)", transform=ax[0, 0].transAxes)
-    ax[0, 1].text(-0.1, 1.05, "(b)", transform=ax[0, 1].transAxes)
-    ax[1, 0].text(-0.1, 1.05, "(c)", transform=ax[1, 0].transAxes)
-    ax[1, 1].text(-0.1, 1.05, "(d)", transform=ax[1, 1].transAxes)
+    ax[0, 0].text(-0.1, 1.1, "(a)", transform=ax[0, 0].transAxes)
+    ax[0, 1].text(-0.1, 1.1, "(b)", transform=ax[0, 1].transAxes)
+    ax[1, 0].text(-0.1, 1.1, "(c)", transform=ax[1, 0].transAxes)
+    ax[1, 1].text(-0.1, 1.1, "(d)", transform=ax[1, 1].transAxes)
 
-    ax[0, 0].legend(loc="best")
-    plt.tight_layout()
+    ax[0, 0].legend(
+        bbox_to_anchor=(0, 1.2, 1.0, 0.102),
+        loc="lower left",
+        borderaxespad=0.0,
+        ncol=2,
+        mode="expand",
+    )
+    ax[0, 1].legend(
+        bbox_to_anchor=(0, 1.2, 1.0, 0.102),
+        loc="lower left",
+        borderaxespad=0.0,
+        ncol=3,
+        mode="expand",
+    )
+    # plt.tight_layout()
 
 
 def whole_cell_comparison_plot(
@@ -343,7 +375,10 @@ def whole_cell_comparison_plot(
     )
 
     # Make plot
-    fig, ax = plt.subplots(1, 2, sharex=sharex, figsize=(12, 4))
+    fig, ax = plt.subplots(1, 2, sharex=sharex, figsize=(6.4, 2))
+    fig.subplots_adjust(
+        left=0.1, bottom=0.2, right=0.95, top=0.7, wspace=0.3,
+    )
     cmap = plt.get_cmap("inferno")
 
     # Loop over plot_times
@@ -366,10 +401,18 @@ def whole_cell_comparison_plot(
             label="COMSOL" if ind == 0 else "",
         )
         ax[0].plot(
-            x * L_x, pybamm_var, "-", color=color, label="PyBaMM (t={:.0f} s)".format(t)
+            x * L_x, pybamm_var, "-", color=color, label="PyBaMM" if ind == 0 else "",
         )
         error = np.abs(pybamm_var - comsol_var)
-        ax[1].plot(x * L_x, error, "-", color=color)
+        ax[1].plot(x * L_x, error, "-", color=color, label="{:.0f} s".format(t))
+
+    # force scientific notation outside 10^{+-2}
+    ax[0].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
+    ax[1].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
+
+    # set ticks
+    ax[0].tick_params(which="both")
+    ax[1].tick_params(which="both")
 
     # set labels
     if sharex is False:
@@ -378,11 +421,24 @@ def whole_cell_comparison_plot(
     ax[1].set_xlabel(r"$x$")
     ax[1].set_ylabel(labels[1])
 
-    ax[0].text(-0.1, 1.05, "(a)", transform=ax[0].transAxes)
-    ax[1].text(-0.1, 1.05, "(b)", transform=ax[1].transAxes)
+    ax[0].text(-0.1, 1.1, "(a)", transform=ax[0].transAxes)
+    ax[1].text(-0.1, 1.1, "(b)", transform=ax[1].transAxes)
 
-    ax[0].legend(loc="best")
-    plt.tight_layout()
+    ax[0].legend(
+        bbox_to_anchor=(0, 1.2, 1.0, 0.102),
+        loc="lower left",
+        borderaxespad=0.0,
+        ncol=2,
+        mode="expand",
+    )
+    ax[1].legend(
+        bbox_to_anchor=(0, 1.2, 1.0, 0.102),
+        loc="lower left",
+        borderaxespad=0.0,
+        ncol=3,
+        mode="expand",
+    )
+    # plt.tight_layout()
 
 
 # Make plots

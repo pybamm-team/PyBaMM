@@ -2,6 +2,7 @@ import pybamm
 import os
 import sys
 import pickle
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.interpolate as interp
@@ -9,9 +10,10 @@ import scipy.interpolate as interp
 # change working directory to the root of pybamm
 os.chdir(pybamm.root_dir())
 
-# TO DO: sort style
-# import matplotlib
-# matplotlib.rc_file("results/2019_xx_2plus1D_pouch/_matplotlibrc", use_default_template=True)
+# set style
+matplotlib.rc_file(
+    "results/2019_xx_2plus1D_pouch/_matplotlibrc", use_default_template=True
+)
 
 # increase recursion limit for large expression trees
 sys.setrecursionlimit(100000)
@@ -22,21 +24,22 @@ pybamm.set_logging_level("INFO")
 "Set up figure"
 
 sharex = False  # set to "col" to have columns share x axes
-fig, ax = plt.subplots(2, 2, sharex=sharex, figsize=(12, 7.5))
+fig, ax = plt.subplots(2, 2, sharex=sharex, figsize=(6.4, 4))
+fig.subplots_adjust(left=0.1, bottom=0.1, right=0.8, top=0.9, wspace=0.5, hspace=0.5)
 
-ax[0, 0].text(-0.1, 1.05, "(a)", transform=ax[0, 0].transAxes)
+ax[0, 0].text(-0.1, 1.1, "(a)", transform=ax[0, 0].transAxes)
 if sharex is False:
     ax[0, 0].set_xlabel("Discharge Capacity [Ah]")
 ax[0, 0].set_ylabel("Terminal voltage [V]")
-ax[0, 1].text(-0.1, 1.05, "(b)", transform=ax[0, 1].transAxes)
+ax[0, 1].text(-0.1, 1.1, "(b)", transform=ax[0, 1].transAxes)
 if sharex is False:
     ax[0, 1].set_xlabel("Discharge Capacity [Ah]")
 ax[0, 1].set_ylabel("Temperature [K]")
-ax[1, 0].text(-0.1, 1.05, "(c)", transform=ax[1, 0].transAxes)
+ax[1, 0].text(-0.1, 1.1, "(c)", transform=ax[1, 0].transAxes)
 ax[1, 0].set_xlabel("Discharge Capacity [Ah]")
 ax[1, 0].set_ylabel("Difference [V]")
 ax[1, 0].set_yscale("log")
-ax[1, 1].text(-0.1, 1.05, "(d)", transform=ax[1, 1].transAxes)
+ax[1, 1].text(-0.1, 1.1, "(d)", transform=ax[1, 1].transAxes)
 ax[1, 1].set_xlabel("Discharge Capacity [Ah]")
 ax[1, 1].set_ylabel("Difference [K]")
 
@@ -140,8 +143,8 @@ for key, value in C_rates.items():
 
     # add to plot
     ax[0, 0].plot(
-        dis_cap[0::10],
-        comsol_voltage(time[0::10] * tau),
+        dis_cap[0::25],
+        comsol_voltage(time[0::25] * tau),
         "o",
         fillstyle="none",
         color="C{}".format(counter),
@@ -155,8 +158,8 @@ for key, value in C_rates.items():
         label="PyBaMM ({}C)".format(value),
     )
     ax[0, 1].plot(
-        dis_cap[0::10],
-        comsol_temperature(time[0::10] * tau),
+        dis_cap[0::25],
+        comsol_temperature(time[0::25] * tau),
         "o",
         fillstyle="none",
         color="C{}".format(counter),
@@ -190,10 +193,10 @@ for key, value in C_rates.items():
 "-----------------------------------------------------------------------------"
 "Add legend and show plot"
 
-ax[0, 0].legend(loc="lower left")
+ax[0, 1].legend(bbox_to_anchor=(1.04, 1), loc="upper left", borderaxespad=0.0)
 # ax[0, 1].legend(loc="upper left")
-ax[1, 0].legend(loc="best")
+ax[1, 1].legend(bbox_to_anchor=(1.04, 1), loc="upper left", borderaxespad=0.0)
 # ax[1, 1].legend(loc="upper left")
-plt.tight_layout()
+# plt.tight_layout()
 plt.savefig("1D_voltage_temperature_C_rate.eps", format="eps", dpi=1000)
 plt.show()

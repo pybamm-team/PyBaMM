@@ -283,7 +283,7 @@ def plot_cc_potentials(
         output_variables["Positive current collector potential [V]"](
             y=y_plot_non_dim, z=z_plot_non_dim, t=t_non_dim
         )
-    )
+    ) - output_variables["Terminal voltage [V]"](t=t_non_dim)
 
     # get comsol potentials
     comsol_phi_s_cn = comsol_model.variables[
@@ -291,48 +291,129 @@ def plot_cc_potentials(
     ](t=t)
     comsol_phi_s_cp = comsol_model.variables[
         "Positive current collector potential [V]"
-    ](t=t)
+    ](t=t) - comsol_model.variables["Terminal voltage [V]"](t=t)
 
     # compute difference
     diff_phi_s_cn = np.abs(pybamm_phi_s_cn - comsol_phi_s_cn)
     diff_phi_s_cp = np.abs(pybamm_phi_s_cp - comsol_phi_s_cp)
 
     # Make plot
-    fig, ax = plt.subplots(2, 2, figsize=(12, 7.5))
+    fig, ax = plt.subplots(2, 2, figsize=(6.4, 6))
+    fig.subplots_adjust(
+        left=0.1, bottom=0.1, right=0.95, top=0.9, wspace=0.3, hspace=0.5
+    )
     cmap_n = plt.get_cmap("cividis")
     cmap_p = plt.get_cmap("viridis")
 
     plot_phi_s_cn = ax[0, 0].pcolormesh(
-        y_plot, z_plot, pybamm_phi_s_cn, shading="gouraud"
+        y_plot, z_plot, pybamm_phi_s_cn, shading="gouraud", cmap=cmap_n
     )
-    plt.set_cmap(cmap_n, ax=ax[0, 0])
-    plt.colorbar(plot_phi_s_cn, ax=ax[0, 0])
+    plt.colorbar(plot_phi_s_cn, ax=ax[0, 0], format='%.0e')
     plot_phi_s_cp = ax[0, 1].pcolormesh(
-        y_plot, z_plot, pybamm_phi_s_cp, shading="gouraud"
+        y_plot, z_plot, pybamm_phi_s_cp, shading="gouraud", cmap=cmap_p
     )
-    plt.set_cmap(cmap_p, ax=ax[0, 1])
-    plt.colorbar(plot_phi_s_cp, ax=ax[0, 1])
+    plt.colorbar(plot_phi_s_cp, ax=ax[0, 1], format='%.0e')
     plot_diff_s_cn = ax[1, 0].pcolormesh(
-        y_plot, z_plot, diff_phi_s_cn, shading="gouraud"
+        y_plot, z_plot, diff_phi_s_cn, shading="gouraud", cmap=cmap_n
     )
-    plt.set_cmap(cmap_n, ax=ax[1, 0])
-    plt.colorbar(plot_diff_s_cn, ax=ax[1, 0])
+    plt.colorbar(plot_diff_s_cn, ax=ax[1, 0], format='%.0e')
     plot_diff_s_cp = ax[1, 1].pcolormesh(
-        y_plot, z_plot, diff_phi_s_cp, shading="gouraud"
+        y_plot, z_plot, diff_phi_s_cp, shading="gouraud", cmap=cmap_p
     )
-    plt.set_cmap(cmap_p, ax=ax[1, 1])
-    plt.colorbar(plot_diff_s_cp, ax=ax[1, 1])
+    plt.colorbar(plot_diff_s_cp, ax=ax[1, 1], format='%.0e')
+
+    # force scientific notation outside 10^{+-2}
+    ax[0, 0].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
+    ax[0, 1].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
+    ax[1, 0].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
+    ax[1, 1].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
+
+    # set ticks
+    ax[0, 0].tick_params(which="both")
+    ax[0, 1].tick_params(which="both")
+    ax[1, 0].tick_params(which="both")
+    ax[1, 1].tick_params(which="both")
 
     # set labels
-    ax[0,0].set_xlabel(r"$y$")
-    ax[0,0].set_ylabel(r"$z$")
-    ax[0,0].set_title(r"$\phi^*_{\mathrm{s,cn}}$ [V]")
-    ax[0,1].set_xlabel(r"$y$")
-    ax[0,1].set_ylabel(r"$z$")
-    ax[0,1].set_title(r"$\phi^*_{\mathrm{s,cp}}$ [V]")
-    ax[1,0].set_xlabel(r"$y$")
-    ax[1,0].set_ylabel(r"$z$")
-    ax[1,0].set_title(r"$\phi^*_{\mathrm{s,cn}}$ (difference) [V]")
-    ax[1,1].set_xlabel(r"$y$")
-    ax[1,1].set_ylabel(r"$z$")
-    ax[1,1].set_title(r"$\phi^*_{\mathrm{s,cp}}$ (difference) [V]")
+    ax[0, 0].set_xlabel(r"$y$")
+    ax[0, 0].set_ylabel(r"$z$")
+    ax[0, 0].set_title(r"$\phi^*_{\mathrm{s,cn}}$ [V]")
+    ax[0, 1].set_xlabel(r"$y$")
+    ax[0, 1].set_ylabel(r"$z$")
+    ax[0, 1].set_title(r"$\phi^*_{\mathrm{s,cp}} - V^*$ [V]")
+    ax[1, 0].set_xlabel(r"$y$")
+    ax[1, 0].set_ylabel(r"$z$")
+    ax[1, 0].set_title(r"$\phi^*_{\mathrm{s,cn}}$ (difference) [V]")
+    ax[1, 1].set_xlabel(r"$y$")
+    ax[1, 1].set_ylabel(r"$z$")
+    ax[1, 1].set_title(r"$\phi^*_{\mathrm{s,cp}}$ (difference) [V]")
+
+    ax[0, 0].text(-0.1, 1.1, "(a)", transform=ax[0, 0].transAxes)
+    ax[0, 1].text(-0.1, 1.1, "(b)", transform=ax[0, 1].transAxes)
+    ax[1, 0].text(-0.1, 1.1, "(c)", transform=ax[1, 0].transAxes)
+    ax[1, 1].text(-0.1, 1.1, "(d)", transform=ax[1, 1].transAxes)
+
+
+def plot_cc_current(
+    t, comsol_model, output_variables, param,
+):
+
+    # get y and z vals from comsol interp points (will be dimensional)
+    y_plot = comsol_model.y_interp
+    z_plot = comsol_model.z_interp
+
+    # get pybamm current
+    L_z = param.evaluate(pybamm.standard_parameters_lithium_ion.L_z)
+    tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
+    y_plot_non_dim = y_plot / L_z  # Note that both y and z are scaled with L_z
+    z_plot_non_dim = z_plot / L_z
+    t_non_dim = t / tau
+
+    pybamm_current = np.transpose(
+        output_variables["Current collector current density [A.m-2]"](
+            y=y_plot_non_dim, z=z_plot_non_dim, t=t_non_dim
+        )
+    )
+
+    # get comsol current
+    comsol_current = comsol_model.variables[
+        "Current collector current density [A.m-2]"
+    ](t=t)
+
+    # compute difference
+    diff_current = np.abs(pybamm_current - comsol_current)
+
+    # Make plot
+    fig, ax = plt.subplots(1, 2, figsize=(6.4, 3))
+    fig.subplots_adjust(
+        left=0.1, bottom=0.2, right=0.95, top=0.8, wspace=0.3,
+    )
+    cmap = plt.get_cmap("plasma")
+
+    plot_current = ax[0].pcolormesh(
+        y_plot, z_plot, pybamm_current, shading="gouraud", cmap=cmap
+    )
+    plt.colorbar(plot_current, ax=ax[0])
+    plot_diff_current = ax[1].pcolormesh(
+        y_plot, z_plot, diff_current, shading="gouraud", cmap=cmap
+    )
+    plt.colorbar(plot_diff_current, ax=ax[1])
+
+    # force scientific notation outside 10^{+-2}
+    ax[0].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
+    ax[1].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
+
+    # set ticks
+    ax[0].tick_params(which="both")
+    ax[1].tick_params(which="both")
+
+    # set labels
+    ax[0].set_xlabel(r"$y$")
+    ax[0].set_ylabel(r"$z$")
+    ax[0].set_title(r"$\mathcal{I}^*$ [A/m${}^2$]")
+    ax[1].set_xlabel(r"$y$")
+    ax[1].set_ylabel(r"$z$")
+    ax[1].set_title(r"$\mathcal{I}^*$ (difference) [A/m${}^2$]")
+
+    ax[0].text(-0.1, 1.1, "(a)", transform=ax[0].transAxes)
+    ax[1].text(-0.1, 1.1, "(b)", transform=ax[1].transAxes)

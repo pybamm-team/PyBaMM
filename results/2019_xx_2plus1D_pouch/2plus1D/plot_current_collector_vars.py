@@ -3,11 +3,17 @@ import numpy as np
 import os
 import sys
 import pickle
+import matplotlib
 import matplotlib.pyplot as plt
 import shared
 
 # change working directory to the root of pybamm
 os.chdir(pybamm.root_dir())
+
+# set style
+matplotlib.rc_file(
+    "results/2019_xx_2plus1D_pouch/_matplotlibrc", use_default_template=True
+)
 
 # increase recursion limit for large expression trees
 sys.setrecursionlimit(100000)
@@ -30,7 +36,7 @@ except FileNotFoundError:
 "Load or set up pybamm simulation"
 
 compute = True
-filename = "results/2019_xx_2plus1D_pouch/pybamm_thermal_2plus1D_1C.pickle.pickle"
+filename = "results/2019_xx_2plus1D_pouch/pybamm_isothermal_2plus1D_1C.pickle.pickle"
 
 if compute is False:
     try:
@@ -44,7 +50,6 @@ else:
     options = {
         "current collector": "potential pair",
         "dimensionality": 2,
-        "thermal": "x-lumped",
     }
     pybamm_model = pybamm.lithium_ion.DFN(options)
 
@@ -78,7 +83,7 @@ else:
     y_edges = np.concatenate((y0, y1[1:], y2[1:], y3[1:], y4[1:]))
 
     # square root sequence in z direction
-    z_edges = np.linspace(0, 1, 5) ** (1 / 2)
+    z_edges = np.linspace(0, 1, 10) ** (1 / 2)
     submesh_types["current collector"] = pybamm.MeshGenerator(
         pybamm.UserSupplied2DSubMesh,
         submesh_params={"y_edges": y_edges, "z_edges": z_edges},
@@ -90,8 +95,8 @@ else:
         var.x_n: 5,
         var.x_s: 5,
         var.x_p: 5,
-        var.r_n: 5,
-        var.r_p: 5,
+        var.r_n: 10,
+        var.r_p: 10,
         var.y: len(y_edges),
         var.z: len(z_edges),
     }
@@ -146,7 +151,7 @@ y_interp = np.linspace(pybamm_y[0], pybamm_y[-1], 100) * L_z
 z_interp = np.linspace(pybamm_z[0], pybamm_z[-1], 100) * L_z
 
 comsol_model = shared.make_comsol_model(
-    comsol_variables, mesh, param, y_interp=y_interp, z_interp=z_interp
+    comsol_variables, mesh, param, y_interp=y_interp, z_interp=z_interp, thermal=False
 )
 
 # Process pybamm variables for which we have corresponding comsol variables
@@ -161,5 +166,9 @@ t_plot = 1800  # dimensional in seconds
 shared.plot_cc_potentials(
     t_plot, comsol_model, output_variables, param,
 )
-# plt.savefig("current.eps", format="eps", dpi=1000)
+plt.savefig("isothermal2plus1D_cc_pots.pdf", format="pdf", dpi=1000)
+shared.plot_cc_current(
+    t_plot, comsol_model, output_variables, param,
+)
+plt.savefig("isothermal2plus1D_cc_current.pdf", format="pdf", dpi=1000)
 plt.show()

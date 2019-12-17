@@ -107,6 +107,7 @@ c_n_init_dimensional = pybamm.Parameter(
 c_p_init_dimensional = pybamm.Parameter(
     "Initial concentration in positive electrode [mol.m-3]"
 )
+T_init_dim = pybamm.thermal_parameters.T_init_dim
 
 # thermal
 Delta_T = pybamm.thermal_parameters.Delta_T

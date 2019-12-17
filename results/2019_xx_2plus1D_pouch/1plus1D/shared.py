@@ -327,7 +327,10 @@ def plot_cc_potentials(
     )
 
     # Make plot
-    fig, ax = plt.subplots(2, 2, sharex=sharex, figsize=(12, 7.5))
+    fig, ax = plt.subplots(2, 2, sharex=sharex, figsize=(6.4, 4))
+    fig.subplots_adjust(
+        left=0.1, bottom=0.1, right=0.95, top=0.85, wspace=0.3, hspace=0.5
+    )
     cmap = plt.get_cmap("inferno")
 
     # Loop over plot_times
@@ -340,8 +343,8 @@ def plot_cc_potentials(
         comsol_phi_s_cp = comsol_phi_s_cp_fun(z=z_plot / L_z, t=t / tau)
 
         ax[0, 0].plot(
-            z_plot[0::9] ,
-            comsol_phi_s_cn[0::9] ,
+            z_plot[0::9],
+            comsol_phi_s_cn[0::9],
             "o",
             color=color,
             fillstyle="none",
@@ -352,18 +355,30 @@ def plot_cc_potentials(
             pybamm_phi_s_cn,
             "-",
             color=color,
-            label="PyBaMM (t={:.0f} s)".format(t),
+            label="PyBaMM" if ind == 0 else "",
         )
         error = np.abs(pybamm_phi_s_cn - comsol_phi_s_cn)
         ax[1, 0].plot(z_plot, error, "-", color=color)
         ax[0, 1].plot(
-            z_plot[0::9] , comsol_phi_s_cp[0::9] , "o", color=color, fillstyle="none",
+            z_plot[0::9], comsol_phi_s_cp[0::9], "o", color=color, fillstyle="none",
         )
         ax[0, 1].plot(
-            z_plot, pybamm_phi_s_cp, "-", color=color,
+            z_plot, pybamm_phi_s_cp, "-", color=color, label="{:.0f} s".format(t),
         )
         error = np.abs(pybamm_phi_s_cp - comsol_phi_s_cp)
         ax[1, 1].plot(z_plot, error, "-", color=color)
+
+    # force scientific notation outside 10^{+-2}
+    ax[0, 0].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
+    ax[0, 1].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
+    ax[1, 0].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
+    ax[1, 1].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
+
+    # set ticks
+    ax[0, 0].tick_params(which="both")
+    ax[0, 1].tick_params(which="both")
+    ax[1, 0].tick_params(which="both")
+    ax[1, 1].tick_params(which="both")
 
     # set labels
     if sharex is False:
@@ -377,13 +392,26 @@ def plot_cc_potentials(
     ax[1, 1].set_xlabel(r"$z$")
     ax[1, 1].set_ylabel(r"$\phi^*_{\mathrm{s,cp}}$ (difference) [V]")
 
-    ax[0, 0].text(-0.1, 1.05, "(a)", transform=ax[0, 0].transAxes)
-    ax[0, 1].text(-0.1, 1.05, "(b)", transform=ax[0, 1].transAxes)
-    ax[1, 0].text(-0.1, 1.05, "(c)", transform=ax[1, 0].transAxes)
-    ax[1, 1].text(-0.1, 1.05, "(d)", transform=ax[1, 1].transAxes)
+    ax[0, 0].text(-0.1, 1.1, "(a)", transform=ax[0, 0].transAxes)
+    ax[0, 1].text(-0.1, 1.1, "(b)", transform=ax[0, 1].transAxes)
+    ax[1, 0].text(-0.1, 1.1, "(c)", transform=ax[1, 0].transAxes)
+    ax[1, 1].text(-0.1, 1.1, "(d)", transform=ax[1, 1].transAxes)
 
-    ax[0, 0].legend(loc="best")
-    plt.tight_layout()
+    ax[0, 0].legend(
+        bbox_to_anchor=(0, 1.2, 1.0, 0.102),
+        loc="lower left",
+        borderaxespad=0.0,
+        ncol=2,
+        mode="expand",
+    )
+    ax[0, 1].legend(
+        bbox_to_anchor=(0, 1.2, 1.0, 0.102),
+        loc="lower left",
+        borderaxespad=0.0,
+        ncol=3,
+        mode="expand",
+    )
+    # plt.tight_layout()
 
 
 def plot_cc_current_temperature(
@@ -427,7 +455,10 @@ def plot_cc_current_temperature(
     )
 
     # Make plot
-    fig, ax = plt.subplots(2, 2, sharex=sharex, figsize=(12, 7.5))
+    fig, ax = plt.subplots(2, 2, sharex=sharex, figsize=(6.4, 4))
+    fig.subplots_adjust(
+        left=0.1, bottom=0.1, right=0.95, top=0.85, wspace=0.3, hspace=0.5
+    )
     cmap = plt.get_cmap("inferno")
 
     # Loop over plot_times
@@ -435,13 +466,19 @@ def plot_cc_current_temperature(
         color = cmap(float(ind) / len(plot_times))
 
         pybamm_current = pybamm_current_fun(z=z_plot / L_z, t=t / tau)
-        pybamm_temp = pybamm_temp_fun(z=z_plot / L_z, t=t / tau)
         comsol_current = comsol_current_fun(z=z_plot / L_z, t=t / tau)
-        comsol_temp = comsol_temp_fun(z=z_plot / L_z, t=t / tau)
+
+        # plot temp wrt T0
+        pybamm_temp = pybamm_temp_fun(z=z_plot / L_z, t=t / tau) - param.evaluate(
+            pybamm.standard_parameters_lithium_ion.T_init_dim
+        )
+        comsol_temp = comsol_temp_fun(z=z_plot / L_z, t=t / tau) - param.evaluate(
+            pybamm.standard_parameters_lithium_ion.T_init_dim
+        )
 
         ax[0, 0].plot(
-            z_plot[0::9] ,
-            comsol_current[0::9] ,
+            z_plot[0::9],
+            comsol_current[0::9],
             "o",
             color=color,
             fillstyle="none",
@@ -452,18 +489,30 @@ def plot_cc_current_temperature(
             pybamm_current,
             "-",
             color=color,
-            label="PyBaMM (t={:.0f} s)".format(t),
+            label="PyBaMM" if ind == 0 else "",
         )
         error = np.abs(pybamm_current - comsol_current)
         ax[1, 0].plot(z_plot, error, "-", color=color)
         ax[0, 1].plot(
-            z_plot[0::9] , comsol_temp[0::9], "o", color=color, fillstyle="none",
+            z_plot[0::9], comsol_temp[0::9], "o", color=color, fillstyle="none",
         )
         ax[0, 1].plot(
-            z_plot, pybamm_temp, "-", color=color,
+            z_plot, pybamm_temp, "-", color=color, label="{:.0f} s".format(t),
         )
         error = np.abs(pybamm_temp - comsol_temp)
         ax[1, 1].plot(z_plot, error, "-", color=color)
+
+    # force scientific notation outside 10^{+-2}
+    ax[0, 0].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
+    ax[0, 1].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
+    ax[1, 0].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
+    ax[1, 1].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
+
+    # set ticks
+    ax[0, 0].tick_params(which="both")
+    ax[0, 1].tick_params(which="both")
+    ax[1, 0].tick_params(which="both")
+    ax[1, 1].tick_params(which="both")
 
     # set labels
     if sharex is False:
@@ -471,19 +520,32 @@ def plot_cc_current_temperature(
     ax[0, 0].set_ylabel(r"$\mathcal{I}^*$ [A/m${}^2$]")
     if sharex is False:
         ax[0, 1].set_xlabel(r"$z$")
-    ax[0, 1].set_ylabel(r"$\bar{T}^*$ [K]")
+    ax[0, 1].set_ylabel(r"$\bar{T}^* - \bar{T}^*_0$ [K]")
     ax[1, 0].set_xlabel(r"$z$")
     ax[1, 0].set_ylabel(r"$\mathcal{I}^*$ (difference) [A/m${}^2$]")
     ax[1, 1].set_xlabel(r"$z$")
     ax[1, 1].set_ylabel(r"$\bar{T}^*$ (difference) [K]")
 
-    ax[0, 0].text(-0.1, 1.05, "(a)", transform=ax[0, 0].transAxes)
-    ax[0, 1].text(-0.1, 1.05, "(b)", transform=ax[0, 1].transAxes)
-    ax[1, 0].text(-0.1, 1.05, "(c)", transform=ax[1, 0].transAxes)
-    ax[1, 1].text(-0.1, 1.05, "(d)", transform=ax[1, 1].transAxes)
+    ax[0, 0].text(-0.1, 1.1, "(a)", transform=ax[0, 0].transAxes)
+    ax[0, 1].text(-0.1, 1.1, "(b)", transform=ax[0, 1].transAxes)
+    ax[1, 0].text(-0.1, 1.1, "(c)", transform=ax[1, 0].transAxes)
+    ax[1, 1].text(-0.1, 1.1, "(d)", transform=ax[1, 1].transAxes)
 
-    ax[0, 0].legend(loc="best")
-    plt.tight_layout()
+    ax[0, 0].legend(
+        bbox_to_anchor=(0, 1.2, 1.0, 0.102),
+        loc="lower left",
+        borderaxespad=0.0,
+        ncol=2,
+        mode="expand",
+    )
+    ax[0, 1].legend(
+        bbox_to_anchor=(0, 1.2, 1.0, 0.102),
+        loc="lower left",
+        borderaxespad=0.0,
+        ncol=3,
+        mode="expand",
+    )
+    # plt.tight_layout()
 
 
 def plot_tz_var(
