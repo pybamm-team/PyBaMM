@@ -40,7 +40,7 @@ def make_comsol_model(comsol_variables, mesh, param, z_interp=None, thermal=True
                 np.column_stack((comsol_x, comsol_z)),
                 variable[:, i],
                 (grid_x, grid_z),
-                method="nearest",
+                method=interp_kind,
             )
 
         # average in x
@@ -340,8 +340,8 @@ def plot_cc_potentials(
         comsol_phi_s_cp = comsol_phi_s_cp_fun(z=z_plot / L_z, t=t / tau)
 
         ax[0, 0].plot(
-            z_plot,
-            comsol_phi_s_cn,
+            z_plot[0::9] ,
+            comsol_phi_s_cn[0::9] ,
             "o",
             color=color,
             fillstyle="none",
@@ -357,7 +357,7 @@ def plot_cc_potentials(
         error = np.abs(pybamm_phi_s_cn - comsol_phi_s_cn)
         ax[1, 0].plot(z_plot, error, "-", color=color)
         ax[0, 1].plot(
-            z_plot, comsol_phi_s_cp, "o", color=color, fillstyle="none",
+            z_plot[0::9] , comsol_phi_s_cp[0::9] , "o", color=color, fillstyle="none",
         )
         ax[0, 1].plot(
             z_plot, pybamm_phi_s_cp, "-", color=color,
@@ -440,8 +440,8 @@ def plot_cc_current_temperature(
         comsol_temp = comsol_temp_fun(z=z_plot / L_z, t=t / tau)
 
         ax[0, 0].plot(
-            z_plot,
-            comsol_current,
+            z_plot[0::9] ,
+            comsol_current[0::9] ,
             "o",
             color=color,
             fillstyle="none",
@@ -457,7 +457,7 @@ def plot_cc_current_temperature(
         error = np.abs(pybamm_current - comsol_current)
         ax[1, 0].plot(z_plot, error, "-", color=color)
         ax[0, 1].plot(
-            z_plot, comsol_temp, "o", color=color, fillstyle="none",
+            z_plot[0::9] , comsol_temp[0::9], "o", color=color, fillstyle="none",
         )
         ax[0, 1].plot(
             z_plot, pybamm_temp, "-", color=color,

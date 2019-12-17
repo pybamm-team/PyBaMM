@@ -78,7 +78,7 @@ else:
     y_edges = np.concatenate((y0, y1[1:], y2[1:], y3[1:], y4[1:]))
 
     # square root sequence in z direction
-    z_edges = np.linspace(0, 1, 10) ** (1 / 2)
+    z_edges = np.linspace(0, 1, 5) ** (1 / 2)
     submesh_types["current collector"] = pybamm.MeshGenerator(
         pybamm.UserSupplied2DSubMesh,
         submesh_params={"y_edges": y_edges, "z_edges": z_edges},
@@ -90,8 +90,8 @@ else:
         var.x_n: 5,
         var.x_s: 5,
         var.x_p: 5,
-        var.r_n: 10,
-        var.r_p: 10,
+        var.r_n: 5,
+        var.r_p: 5,
         var.y: len(y_edges),
         var.z: len(z_edges),
     }

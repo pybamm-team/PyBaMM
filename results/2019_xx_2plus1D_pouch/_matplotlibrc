@@ -17,8 +17,6 @@ axes.titlesize: 11
 xtick.labelsize: 8
 ytick.labelsize: 8
 legend.fontsize: 8
-legend.numpoints: 1
-legend.scatterpoints: 1
 
 # Set lines and ticks according to the `seaborn-paper` style sheet
 grid.linewidth: 0.8

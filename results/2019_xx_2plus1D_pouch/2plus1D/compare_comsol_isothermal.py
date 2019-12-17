@@ -30,7 +30,7 @@ except FileNotFoundError:
 "Load or set up pybamm simulation"
 
 compute = True
-filename = "results/2019_xx_2plus1D_pouch/pybamm_isothermal_2plus1D_1C.pickle.pickle"
+filename = "results/2019_xx_2plus1D_pouch/pybamm_isothermal_2plus1D_1C.pickle"
 
 if compute is False:
     try:

@@ -66,7 +66,7 @@ def make_comsol_model(comsol_variables, name):
     whole_cell = ["negative electrode", "separator", "positive electrode"]
     comsol_t = comsol_variables["time"]
     L_x = param.evaluate(pybamm.standard_parameters_lithium_ion.L_x)
-    interp_kind = "quadratic"
+    interp_kind = "cubic"
 
     def get_interp_fun(variable_name, domain):
         """

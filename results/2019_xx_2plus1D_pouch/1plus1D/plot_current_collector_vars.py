@@ -28,7 +28,7 @@ except FileNotFoundError:
 "Load or set up pybamm simulation"
 
 compute = True
-filename = "results/2019_xx_1plus1D_pouch/pybamm_thermal_1plus1D_1C.pickle.pickle"
+filename = "results/2019_xx_2plus1D_pouch/pybamm_thermal_1plus1D_1C.pickle"
 
 if compute is False:
     try:
@@ -56,14 +56,14 @@ else:
         var.x_n: 15,
         var.x_s: 10,
         var.x_p: 15,
-        var.r_n: 25,
-        var.r_p: 25,
+        var.r_n: 15,
+        var.r_p: 15,
         var.z: 100,
     }
 
     # solver
     solver = pybamm.CasadiSolver(
-        atol=1e-6, rtol=1e-6, root_tol=1e-6, root_method="hybr", mode="fast"
+        atol=1e-6, rtol=1e-6, root_tol=1e-3, root_method="hybr", mode="fast"
     )
 
     # simulation object
@@ -73,7 +73,7 @@ else:
 
     # build and save simulation
     simulation.build(check_model=False)
-    # simulation.save(filename)
+    simulation.save(filename)
 
 "-----------------------------------------------------------------------------"
 "Solve model if not already solved"

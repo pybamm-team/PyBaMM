@@ -99,7 +99,7 @@ def get_interp_fun(variable_name, domain, eval_on_edges=False):
         pybamm_x = mesh.combine_submeshes(*domain)[0].edges * L_x
     else:
         pybamm_x = mesh.combine_submeshes(*domain)[0].nodes * L_x
-    variable = interp.interp1d(comsol_x, variable, axis=0, kind="linear")(pybamm_x)
+    variable = interp.interp1d(comsol_x, variable, axis=0, kind=interp_kind)(pybamm_x)
 
     def myinterp(t):
         return interp.interp1d(comsol_t, variable, kind=interp_kind)(t)[:, np.newaxis]
