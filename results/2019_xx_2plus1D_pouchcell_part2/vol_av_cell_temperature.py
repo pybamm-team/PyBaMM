@@ -130,7 +130,6 @@ for model_name, solutions in temperature_solution.items():
         markersize=5,
     )
 
-plt.legend()
 axes[0].set_xlabel("Discharge capacity [A.h]")
 axes[0].set_ylabel("Volume-Averaged cell temperature [K]")
 
@@ -168,8 +167,6 @@ for model_name, solutions in temperature_solution.items():
         markersize=5,
     )
 
-plt.legend()
-
 axes[2].set_xlabel("Discharge capacity [A.h]")
 axes[2].set_ylabel("Ohmic Heating")
 
@@ -187,8 +184,6 @@ for model_name, solutions in temperature_solution.items():
         marker=None,
         markersize=5,
     )
-
-plt.legend()
 
 axes[3].set_xlabel("Discharge capacity [A.h]")
 axes[3].set_ylabel("Irreversible heating")
