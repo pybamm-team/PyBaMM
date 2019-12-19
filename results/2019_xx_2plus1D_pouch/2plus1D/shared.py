@@ -306,27 +306,21 @@ def plot_cc_potentials(
     cmap_p = plt.get_cmap("viridis")
 
     plot_phi_s_cn = ax[0, 0].pcolormesh(
-        y_plot, z_plot, pybamm_phi_s_cn, shading="gouraud", cmap=cmap_n
+        y_plot * 1e3, z_plot * 1e3, pybamm_phi_s_cn, shading="gouraud", cmap=cmap_n
     )
-    plt.colorbar(plot_phi_s_cn, ax=ax[0, 0], format='%.0e')
+    plt.colorbar(plot_phi_s_cn, ax=ax[0, 0], format="%.0e")
     plot_phi_s_cp = ax[0, 1].pcolormesh(
-        y_plot, z_plot, pybamm_phi_s_cp, shading="gouraud", cmap=cmap_p
+        y_plot * 1e3, z_plot * 1e3, pybamm_phi_s_cp, shading="gouraud", cmap=cmap_p
     )
-    plt.colorbar(plot_phi_s_cp, ax=ax[0, 1], format='%.0e')
+    plt.colorbar(plot_phi_s_cp, ax=ax[0, 1], format="%.0e")
     plot_diff_s_cn = ax[1, 0].pcolormesh(
-        y_plot, z_plot, diff_phi_s_cn, shading="gouraud", cmap=cmap_n
+        y_plot * 1e3, z_plot * 1e3, diff_phi_s_cn, shading="gouraud", cmap=cmap_n
     )
-    plt.colorbar(plot_diff_s_cn, ax=ax[1, 0], format='%.0e')
+    plt.colorbar(plot_diff_s_cn, ax=ax[1, 0], format="%.0e")
     plot_diff_s_cp = ax[1, 1].pcolormesh(
-        y_plot, z_plot, diff_phi_s_cp, shading="gouraud", cmap=cmap_p
+        y_plot * 1e3, z_plot * 1e3, diff_phi_s_cp, shading="gouraud", cmap=cmap_p
     )
-    plt.colorbar(plot_diff_s_cp, ax=ax[1, 1], format='%.0e')
-
-    # force scientific notation outside 10^{+-2}
-    ax[0, 0].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
-    ax[0, 1].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
-    ax[1, 0].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
-    ax[1, 1].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
+    plt.colorbar(plot_diff_s_cp, ax=ax[1, 1], format="%.0e")
 
     # set ticks
     ax[0, 0].tick_params(which="both")
@@ -335,17 +329,17 @@ def plot_cc_potentials(
     ax[1, 1].tick_params(which="both")
 
     # set labels
-    ax[0, 0].set_xlabel(r"$y$")
-    ax[0, 0].set_ylabel(r"$z$")
+    ax[0, 0].set_xlabel(r"$y^* [mm]$")
+    ax[0, 0].set_ylabel(r"$z^* [mm]$")
     ax[0, 0].set_title(r"$\phi^*_{\mathrm{s,cn}}$ [V]")
-    ax[0, 1].set_xlabel(r"$y$")
-    ax[0, 1].set_ylabel(r"$z$")
+    ax[0, 1].set_xlabel(r"$y^* [mm]$")
+    ax[0, 1].set_ylabel(r"$z^* [mm]$")
     ax[0, 1].set_title(r"$\phi^*_{\mathrm{s,cp}} - V^*$ [V]")
-    ax[1, 0].set_xlabel(r"$y$")
-    ax[1, 0].set_ylabel(r"$z$")
+    ax[1, 0].set_xlabel(r"$y^* [mm]$")
+    ax[1, 0].set_ylabel(r"$z^* [mm]$")
     ax[1, 0].set_title(r"$\phi^*_{\mathrm{s,cn}}$ (difference) [V]")
-    ax[1, 1].set_xlabel(r"$y$")
-    ax[1, 1].set_ylabel(r"$z$")
+    ax[1, 1].set_xlabel(r"$y^* [mm]$")
+    ax[1, 1].set_ylabel(r"$z^* [mm]$")
     ax[1, 1].set_title(r"$\phi^*_{\mathrm{s,cp}}$ (difference) [V]")
 
     ax[0, 0].text(-0.1, 1.1, "(a)", transform=ax[0, 0].transAxes)
@@ -391,28 +385,24 @@ def plot_cc_current(
     cmap = plt.get_cmap("plasma")
 
     plot_current = ax[0].pcolormesh(
-        y_plot, z_plot, pybamm_current, shading="gouraud", cmap=cmap
+        y_plot * 1e3, z_plot * 1e3, pybamm_current, shading="gouraud", cmap=cmap
     )
     plt.colorbar(plot_current, ax=ax[0])
     plot_diff_current = ax[1].pcolormesh(
-        y_plot, z_plot, diff_current, shading="gouraud", cmap=cmap
+        y_plot * 1e3, z_plot * 1e3, diff_current, shading="gouraud", cmap=cmap
     )
     plt.colorbar(plot_diff_current, ax=ax[1])
-
-    # force scientific notation outside 10^{+-2}
-    ax[0].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
-    ax[1].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
 
     # set ticks
     ax[0].tick_params(which="both")
     ax[1].tick_params(which="both")
 
     # set labels
-    ax[0].set_xlabel(r"$y$")
-    ax[0].set_ylabel(r"$z$")
+    ax[0].set_xlabel(r"$y^* [mm]$")
+    ax[0].set_ylabel(r"$z^* [mm]$")
     ax[0].set_title(r"$\mathcal{I}^*$ [A/m${}^2$]")
-    ax[1].set_xlabel(r"$y$")
-    ax[1].set_ylabel(r"$z$")
+    ax[1].set_xlabel(r"$y^* [mm]$")
+    ax[1].set_ylabel(r"$z^* [mm]$")
     ax[1].set_title(r"$\mathcal{I}^*$ (difference) [A/m${}^2$]")
 
     ax[0].text(-0.1, 1.1, "(a)", transform=ax[0].transAxes)

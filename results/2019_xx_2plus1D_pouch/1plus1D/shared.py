@@ -344,7 +344,7 @@ def plot_cc_potentials(
         comsol_phi_s_cp = comsol_phi_s_cp_fun(z=z_plot / L_z, t=t / tau)
 
         ax[0, 0].plot(
-            z_plot[0::9],
+            z_plot[0::9] * 1e3,
             comsol_phi_s_cn[0::9],
             "o",
             color=color,
@@ -352,28 +352,32 @@ def plot_cc_potentials(
             label="COMSOL" if ind == 0 else "",
         )
         ax[0, 0].plot(
-            z_plot,
+            z_plot * 1e3,
             pybamm_phi_s_cn,
             "-",
             color=color,
             label="PyBaMM" if ind == 0 else "",
         )
         error = np.abs(pybamm_phi_s_cn - comsol_phi_s_cn)
-        ax[1, 0].plot(z_plot, error, "-", color=color)
+        ax[1, 0].plot(z_plot * 1e3, error, "-", color=color)
         ax[0, 1].plot(
-            z_plot[0::9], comsol_phi_s_cp[0::9], "o", color=color, fillstyle="none"
+            z_plot[0::9] * 1e3,
+            comsol_phi_s_cp[0::9],
+            "o",
+            color=color,
+            fillstyle="none",
         )
         ax[0, 1].plot(
-            z_plot, pybamm_phi_s_cp, "-", color=color, label="{:.0f} s".format(t)
+            z_plot * 1e3, pybamm_phi_s_cp, "-", color=color, label="{:.0f} s".format(t)
         )
         error = np.abs(pybamm_phi_s_cp - comsol_phi_s_cp)
-        ax[1, 1].plot(z_plot, error, "-", color=color)
+        ax[1, 1].plot(z_plot * 1e3, error, "-", color=color)
 
     # force scientific notation outside 10^{+-2}
-    ax[0, 0].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
-    ax[0, 1].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
-    ax[1, 0].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
-    ax[1, 1].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
+    ax[0, 0].ticklabel_format(style="sci", scilimits=(-2, 2), axis="y")
+    ax[0, 1].ticklabel_format(style="sci", scilimits=(-2, 2), axis="y")
+    ax[1, 0].ticklabel_format(style="sci", scilimits=(-2, 2), axis="y")
+    ax[1, 1].ticklabel_format(style="sci", scilimits=(-2, 2), axis="y")
 
     # set ticks
     ax[0, 0].tick_params(which="both")
@@ -383,14 +387,14 @@ def plot_cc_potentials(
 
     # set labels
     if sharex is False:
-        ax[0, 0].set_xlabel(r"$z$")
+        ax[0, 0].set_xlabel(r"$z^* [mm]$")
     ax[0, 0].set_ylabel(r"$\phi^*_{\mathrm{s,cn}}$ [V]")
     if sharex is False:
-        ax[0, 1].set_xlabel(r"$z$")
+        ax[0, 1].set_xlabel(r"$z^* [mm]$")
     ax[0, 1].set_ylabel(r"$\phi^*_{\mathrm{s,cp}}$ [V]")
-    ax[1, 0].set_xlabel(r"$z$")
+    ax[1, 0].set_xlabel(r"$z^* [mm]$")
     ax[1, 0].set_ylabel(r"$\phi^*_{\mathrm{s,cn}}$ (difference) [V]")
-    ax[1, 1].set_xlabel(r"$z$")
+    ax[1, 1].set_xlabel(r"$z^* [mm]$")
     ax[1, 1].set_ylabel(r"$\phi^*_{\mathrm{s,cp}}$ (difference) [V]")
 
     ax[0, 0].text(-0.1, 1.1, "(a)", transform=ax[0, 0].transAxes)
@@ -478,7 +482,7 @@ def plot_cc_current_temperature(
         )
 
         ax[0, 0].plot(
-            z_plot[0::9],
+            z_plot[0::9] * 1e3,
             comsol_current[0::9],
             "o",
             color=color,
@@ -486,22 +490,28 @@ def plot_cc_current_temperature(
             label="COMSOL" if ind == 0 else "",
         )
         ax[0, 0].plot(
-            z_plot, pybamm_current, "-", color=color, label="PyBaMM" if ind == 0 else ""
+            z_plot * 1e3,
+            pybamm_current,
+            "-",
+            color=color,
+            label="PyBaMM" if ind == 0 else "",
         )
         error = np.abs(pybamm_current - comsol_current)
-        ax[1, 0].plot(z_plot, error, "-", color=color)
+        ax[1, 0].plot(z_plot * 1e3, error, "-", color=color)
         ax[0, 1].plot(
-            z_plot[0::9], comsol_temp[0::9], "o", color=color, fillstyle="none"
+            z_plot[0::9] * 1e3, comsol_temp[0::9], "o", color=color, fillstyle="none"
         )
-        ax[0, 1].plot(z_plot, pybamm_temp, "-", color=color, label="{:.0f} s".format(t))
+        ax[0, 1].plot(
+            z_plot * 1e3, pybamm_temp, "-", color=color, label="{:.0f} s".format(t)
+        )
         error = np.abs(pybamm_temp - comsol_temp)
-        ax[1, 1].plot(z_plot, error, "-", color=color)
+        ax[1, 1].plot(z_plot * 1e3, error, "-", color=color)
 
     # force scientific notation outside 10^{+-2}
-    ax[0, 0].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
-    ax[0, 1].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
-    ax[1, 0].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
-    ax[1, 1].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
+    ax[0, 0].ticklabel_format(style="sci", scilimits=(-2, 2), axis="y")
+    ax[0, 1].ticklabel_format(style="sci", scilimits=(-2, 2), axis="y")
+    ax[1, 0].ticklabel_format(style="sci", scilimits=(-2, 2), axis="y")
+    ax[1, 1].ticklabel_format(style="sci", scilimits=(-2, 2), axis="y")
 
     # set ticks
     ax[0, 0].tick_params(which="both")
@@ -511,14 +521,14 @@ def plot_cc_current_temperature(
 
     # set labels
     if sharex is False:
-        ax[0, 0].set_xlabel(r"$z$")
+        ax[0, 0].set_xlabel(r"$z^* [mm]$")
     ax[0, 0].set_ylabel(r"$\mathcal{I}^*$ [A/m${}^2$]")
     if sharex is False:
-        ax[0, 1].set_xlabel(r"$z$")
+        ax[0, 1].set_xlabel(r"$z^* [mm]$")
     ax[0, 1].set_ylabel(r"$\bar{T}^* - \bar{T}^*_0$ [K]")
-    ax[1, 0].set_xlabel(r"$z$")
+    ax[1, 0].set_xlabel(r"$z^* [mm]$")
     ax[1, 0].set_ylabel(r"$\mathcal{I}^*$ (difference) [A/m${}^2$]")
-    ax[1, 1].set_xlabel(r"$z$")
+    ax[1, 1].set_xlabel(r"$z^* [mm]$")
     ax[1, 1].set_ylabel(r"$\bar{T}^*$ (difference) [K]")
 
     ax[0, 0].text(-0.1, 1.1, "(a)", transform=ax[0, 0].transAxes)

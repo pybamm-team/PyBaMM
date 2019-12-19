@@ -254,7 +254,7 @@ def electrode_comparison_plot(
         comsol_var_n = comsol_var_n_fun(x=x_n, t=t / tau)
         pybamm_var_n = pybamm_var_n_fun(x=x_n, t=t / tau)
         ax[0, 0].plot(
-            x_n[0::9] * L_x,
+            x_n[0::9] * L_x * 1e6,
             comsol_var_n[0::9],
             "o",
             color=color,
@@ -262,14 +262,14 @@ def electrode_comparison_plot(
             label="COMSOL" if ind == 0 else "",
         )
         ax[0, 0].plot(
-            x_n * L_x,
+            x_n * L_x * 1e6,
             pybamm_var_n,
             "-",
             color=color,
             label="PyBaMM" if ind == 0 else "",
         )
         error_n = np.abs(pybamm_var_n - comsol_var_n)
-        ax[1, 0].plot(x_n * L_x, error_n, "-", color=color)
+        ax[1, 0].plot(x_n * L_x * 1e6, error_n, "-", color=color)
 
         # positive electrode
         if eval_on_edges:
@@ -279,21 +279,25 @@ def electrode_comparison_plot(
         comsol_var_p = comsol_var_p_fun(x=x_p, t=t / tau)
         pybamm_var_p = pybamm_var_p_fun(x=x_p, t=t / tau)
         ax[0, 1].plot(
-            x_p[0::9] * L_x, comsol_var_p[0::9], "o", color=color, fillstyle="none",
+            x_p[0::9] * L_x * 1e6,
+            comsol_var_p[0::9],
+            "o",
+            color=color,
+            fillstyle="none",
         )
         ax[0, 1].plot(
-            x_p * L_x, pybamm_var_p, "-", color=color, label="{:.0f} s".format(t),
+            x_p * L_x * 1e6, pybamm_var_p, "-", color=color, label="{:.0f} s".format(t),
         )
         error_p = np.abs(pybamm_var_p - comsol_var_p)
         ax[1, 1].plot(
-            x_p * L_x, error_p, "-", color=color,
+            x_p * L_x * 1e6, error_p, "-", color=color,
         )
 
     # force scientific notation outside 10^{+-2}
-    ax[0, 0].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
-    ax[0, 1].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
-    ax[1, 0].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
-    ax[1, 1].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
+    ax[0, 0].ticklabel_format(style="sci", scilimits=(-2, 2), axis="y")
+    ax[0, 1].ticklabel_format(style="sci", scilimits=(-2, 2), axis="y")
+    ax[1, 0].ticklabel_format(style="sci", scilimits=(-2, 2), axis="y")
+    ax[1, 1].ticklabel_format(style="sci", scilimits=(-2, 2), axis="y")
 
     # set ticks
     ax[0, 0].tick_params(which="both")
@@ -303,14 +307,14 @@ def electrode_comparison_plot(
 
     # set labels
     if sharex is False:
-        ax[0, 0].set_xlabel(r"$x_n$")
+        ax[0, 0].set_xlabel(r"$x_n^*$ [$\mu$m]")
     ax[0, 0].set_ylabel(labels[0])
     if sharex is False:
-        ax[0, 1].set_xlabel(r"$x_p$")
+        ax[0, 1].set_xlabel(r"$x_p^*$ [$\mu$m]")
     ax[0, 1].set_ylabel(labels[1])
-    ax[1, 0].set_xlabel(r"$x_n$")
+    ax[1, 0].set_xlabel(r"$x_n^*$ [$\mu$m]")
     ax[1, 0].set_ylabel(labels[2])
-    ax[1, 1].set_xlabel(r"$x_p$")
+    ax[1, 1].set_xlabel(r"$x_p^*$ [$\mu$m]")
     ax[1, 1].set_ylabel(labels[3])
 
     ax[0, 0].text(-0.1, 1.1, "(a)", transform=ax[0, 0].transAxes)
@@ -393,7 +397,7 @@ def whole_cell_comparison_plot(
         comsol_var = comsol_var_fun(x=x, t=t / tau)
         pybamm_var = pybamm_var_fun(x=x, t=t / tau)
         ax[0].plot(
-            x[0::8] * L_x,
+            x[0::8] * L_x * 1e6,
             comsol_var[0::8],
             "o",
             color=color,
@@ -401,14 +405,18 @@ def whole_cell_comparison_plot(
             label="COMSOL" if ind == 0 else "",
         )
         ax[0].plot(
-            x * L_x, pybamm_var, "-", color=color, label="PyBaMM" if ind == 0 else "",
+            x * L_x * 1e6,
+            pybamm_var,
+            "-",
+            color=color,
+            label="PyBaMM" if ind == 0 else "",
         )
         error = np.abs(pybamm_var - comsol_var)
-        ax[1].plot(x * L_x, error, "-", color=color, label="{:.0f} s".format(t))
+        ax[1].plot(x * L_x * 1e6, error, "-", color=color, label="{:.0f} s".format(t))
 
     # force scientific notation outside 10^{+-2}
-    ax[0].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
-    ax[1].ticklabel_format(style="sci", scilimits=(-2, 2), axis="both")
+    ax[0].ticklabel_format(style="sci", scilimits=(-2, 2), axis="y")
+    ax[1].ticklabel_format(style="sci", scilimits=(-2, 2), axis="y")
 
     # set ticks
     ax[0].tick_params(which="both")
@@ -416,9 +424,9 @@ def whole_cell_comparison_plot(
 
     # set labels
     if sharex is False:
-        ax[0].set_xlabel(r"$x$")
+        ax[0].set_xlabel(r"$x^*$ [$\mu$m]")
     ax[0].set_ylabel(labels[0])
-    ax[1].set_xlabel(r"$x$")
+    ax[1].set_xlabel(r"$x^*$ [$\mu$m]")
     ax[1].set_ylabel(labels[1])
 
     ax[0].text(-0.1, 1.1, "(a)", transform=ax[0].transAxes)
