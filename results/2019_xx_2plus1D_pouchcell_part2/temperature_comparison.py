@@ -44,8 +44,17 @@ if load is False:
         "2+1D DFN": models.DFN_2p1D(thermal, param),
         "2+1D SPM": models.SPM_2p1D(thermal, param),
         "2+1D SPMe": models.SPMe_2p1D(thermal, param),
+        "DFNCC": models.DFNCC(thermal, param),
+        "SPMeCC": models.SPMeCC(thermal, param),
     }
 
+solvers = {
+    "2+1D DFN": pybamm.CasadiSolver(mode="fast"),
+    "2+1D SPM": pybamm.CasadiSolver(mode="fast"),
+    "2+1D SPMe": pybamm.CasadiSolver(mode="fast"),
+    "DFNCC": pybamm.CasadiSolver(mode="fast"),
+    "SPMeCC": pybamm.CasadiSolver(mode="fast"),
+}
 
 linestyles = {
     "2+1D DFN": "-",
@@ -58,12 +67,13 @@ if load is False:
 
     for model_name, model in models.items():
 
-        model.solve(var_pts, c_rate, t_eval)
+        model.solve(var_pts, c_rate, t_eval, solvers[model_name])
         variables = [
             "Discharge capacity [A.h]",
             "Time [h]",
             "X-averaged cell temperature [K]",
             "X-averaged total heating [W.m-3]",
+            "X-averaged Ohmic heating [W.m-3]",
         ]
 
         y = np.linspace(0, 1.5, 100)
@@ -87,6 +97,10 @@ if load is False:
                 t=t, y=y, z=z
             )
 
+            Q_ohm = processed_variables["X-averaged Ohmic heating [W.m-3]"](
+                t=t, y=y, z=z
+            )
+
             temperature_solution[model_name] = (
                 t_hours,
                 dc,
@@ -94,6 +108,7 @@ if load is False:
                 z_dim,
                 np.transpose(T),
                 np.transpose(Q_tot),
+                np.transpose(Q_ohm),
             )
 
     pickle.dump(temperature_solution, open(path + "x_av_temperature.p", "wb"))
@@ -107,15 +122,15 @@ fig, axes = plt.subplots(1, len(temperature_solution))
 
 # for errors
 truth = temperature_solution["2+1D DFN"]
-tim, dc, _, _, T_truth, Q_tot_truth = truth
+tim, dc, _, _, T_truth, Q_tot_truth, Q_ohm_truth = truth
 
 for count, (model_name, solution) in enumerate(temperature_solution.items()):
 
-    t_hours, dc, y_dim, z_dim, T, Q_tot = solution
+    t_hours, dc, y_dim, z_dim, T, Q_tot, Q_ohm = solution
 
     if model_name == "2+1D DFN":
         im = axes[count].pcolormesh(
-            y_dim, z_dim, T, vmin=None, vmax=None, shading="gouraud"
+            y_dim, z_dim, T, vmin=None, vmax=None, shading="gouraud", cmap="plasma"
         )
 
         title = model_name
@@ -164,8 +179,8 @@ plt.subplots_adjust(
     left=0.08, bottom=0.02, right=0.96, top=0.9, wspace=0.35, hspace=0.4
 )
 
-fig.set_figheight(4)
-fig.set_figwidth(8)
+fig.set_figheight(5)
+fig.set_figwidth(13)
 
 plt.show()
 
@@ -173,11 +188,11 @@ fig, axes = plt.subplots(1, len(temperature_solution))
 
 for count, (model_name, solution) in enumerate(temperature_solution.items()):
 
-    t_hours, dc, y_dim, z_dim, T, Q_tot = solution
+    t_hours, dc, y_dim, z_dim, T, Q_tot, Q_ohm = solution
 
     if model_name == "2+1D DFN":
         im = axes[count].pcolormesh(
-            y_dim, z_dim, Q_tot, vmin=None, vmax=None, shading="gouraud"
+            y_dim, z_dim, Q_ohm, vmin=None, vmax=None, shading="gouraud", cmap="plasma"
         )
 
         title = model_name
@@ -228,7 +243,7 @@ plt.subplots_adjust(
     left=0.08, bottom=0.02, right=0.96, top=0.9, wspace=0.35, hspace=0.4
 )
 
-fig.set_figheight(4)
-fig.set_figwidth(8)
+fig.set_figheight(5)
+fig.set_figwidth(13)
 
 plt.show()

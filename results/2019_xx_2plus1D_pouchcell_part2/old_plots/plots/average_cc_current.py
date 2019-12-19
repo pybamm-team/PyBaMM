@@ -1,4 +1,4 @@
-# average current densisty plots
+# average current density plots
 
 
 def plot_av_cc_current(

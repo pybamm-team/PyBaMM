@@ -132,11 +132,11 @@ class BaseElectrode(pybamm.BaseSubModel):
         i_s = pybamm.Concatenation(i_s_n, i_s_s, i_s_p)
 
         if self.set_positive_potential:
-            phi_s_p = variables["Positive electrode potential"]
-            phi_s_cp = pybamm.boundary_value(phi_s_p, "right")
+            # phi_s_p = variables["Positive electrode potential"]
+            # phi_s_cp = pybamm.boundary_value(phi_s_p, "right")
             variables = {
                 "Electrode current density": i_s,
-                "Positive current collector potential": phi_s_cp,
+                # "Positive current collector potential": phi_s_cp,
             }
         else:
             variables = {"Electrode current density": i_s}

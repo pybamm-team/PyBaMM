@@ -41,3 +41,13 @@ class Uniform(BaseModel):
             "Current collector current density"
         ]
         return variables
+
+    def get_coupled_variables(self, variables):
+        phi_s_cn = variables["Negative current collector potential"]
+        phi_s_p = variables["Positive electrode potential"]
+        phi_s_cp = pybamm.boundary_value(phi_s_p, "right")
+        variables = {
+            "Positive current collector potential": phi_s_cp,
+        }
+        variables.update(self._get_standard_potential_variables(phi_s_cn, phi_s_cp))
+        return variables

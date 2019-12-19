@@ -54,7 +54,7 @@ solvers = {
     "2+1D SPM": pybamm.CasadiSolver(mode="fast"),
     "2+1D SPMe": pybamm.CasadiSolver(mode="fast"),
     "DFNCC": pybamm.CasadiSolver(mode="fast"),
-    "SPMeCC": None,
+    "SPMeCC": pybamm.CasadiSolver(mode="fast"),
 }
 
 

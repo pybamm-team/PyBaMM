@@ -49,6 +49,13 @@ class AverageCurrent(BaseModel):
 
         variables = self._get_standard_negative_potential_variables(phi_s_cn)
 
+        # add in current collector current densities
+        i_cc = pybamm.Scalar(0)
+        i_boundary_cc = pybamm.PrimaryBroadcast(
+            self.param.current_with_time, "current collector"
+        )
+        variables.update(self._get_standard_current_variables(i_cc, i_boundary_cc))
+
         ptl_scale = param.potential_scale
         I_typ = param.I_typ
 
@@ -68,6 +75,14 @@ class AverageCurrent(BaseModel):
             }
         )
 
+        # Hack to get the leading-order current collector current density
+        # Note that this should be different from the actual (composite) current
+        # collector current density for 2+1D models, but not sure how to implement this
+        # using current structure of lithium-ion models
+        variables["Leading-order current collector current density"] = variables[
+            "Current collector current density"
+        ]
+
         return variables
 
     def get_coupled_variables(self, variables):
@@ -86,6 +101,8 @@ class AverageCurrent(BaseModel):
         phi_s_cp = phi_s_cp_red + V
 
         variables.update(self._get_standard_potential_variables(phi_s_cn, phi_s_cp))
+
+        return variables
 
     def set_algebraic(self, variables):
         R_cn = variables["Negative current collector resistance"]
@@ -111,6 +128,38 @@ class AverageCurrent(BaseModel):
             },
         }
 
+        # add on boundary conditions for phi as well for use in the
+        # temperature equations. Should be able to remove the need
+        # to do this at some stage
+        phi_s_cn = variables["Negative current collector potential"]
+        phi_s_cp = variables["Positive current collector potential"]
+        V = pybamm.BoundaryValue(phi_s_cp, "positive tab")
+
+        param = pybamm.standard_parameters_lithium_ion
+        applied_current = param.current_with_time
+        cc_area = self._get_effective_current_collector_area()
+
+        pos_tab_bc = (
+            -applied_current
+            * cc_area
+            / (param.sigma_cp * param.delta ** 2 * param.l_cp)
+        )
+
+        # Boundary condition needs to be on the variables that go into the Laplacian,
+        # even though phi_s_cp isn't a pybamm.Variable object
+        self.boundary_conditions.update(
+            {
+                phi_s_cn: {
+                    "negative tab": (pybamm.Scalar(0), "Dirichlet"),
+                    "positive tab": (pybamm.Scalar(0), "Neumann"),
+                },
+                phi_s_cp: {
+                    "negative tab": (pybamm.Scalar(0), "Neumann"),
+                    "positive tab": (pos_tab_bc, "Neumann"),
+                },
+            }
+        )
+
     def set_initial_conditions(self, variables):
         # initial guess for solver
         R_cn = variables["Negative current collector resistance"]
@@ -120,6 +169,10 @@ class AverageCurrent(BaseModel):
             R_cn: pybamm.Scalar(0),
             R_cp: pybamm.Scalar(0),
         }
+
+    def _get_effective_current_collector_area(self):
+        "Return the area of the current collector"
+        return self.param.l_y * self.param.l_z
 
     @property
     def default_parameter_values(self):

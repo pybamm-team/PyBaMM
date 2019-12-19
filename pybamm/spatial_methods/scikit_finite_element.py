@@ -186,7 +186,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         def stiffness_form(u, du, v, dv, w):
             return sum(du * dv)
 
-        # assemble the stifnness matrix
+        # assemble the stiffness matrix
         stiffness = skfem.asm(stiffness_form, mesh.basis)
 
         # get boundary conditions and type
