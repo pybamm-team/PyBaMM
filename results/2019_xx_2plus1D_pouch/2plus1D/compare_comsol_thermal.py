@@ -62,23 +62,23 @@ else:
     l_tab_p = param.evaluate(pybamm.geometric_parameters.l_tab_p)
     centre_tab_n = param.evaluate(pybamm.geometric_parameters.centre_y_tab_n)
     centre_tab_p = param.evaluate(pybamm.geometric_parameters.centre_y_tab_p)
-    y0 = np.linspace(0, centre_tab_n - l_tab_n / 2, 3)  # mesh up to start of neg tab
+    y0 = np.linspace(0, centre_tab_n - l_tab_n / 2, 2)  # mesh up to start of neg tab
     y1 = np.linspace(
-        centre_tab_n - l_tab_n / 2, centre_tab_n + l_tab_n / 2, 4
+        centre_tab_n - l_tab_n / 2, centre_tab_n + l_tab_n / 2, 2
     )  # mesh neg tab
     y2 = np.linspace(
-        centre_tab_n + l_tab_n / 2, centre_tab_p - l_tab_p / 2, 4
+        centre_tab_n + l_tab_n / 2, centre_tab_p - l_tab_p / 2, 2
     )  # mesh gap between tabs
     y3 = np.linspace(
-        centre_tab_p - l_tab_p / 2, centre_tab_p + l_tab_p / 2, 4
+        centre_tab_p - l_tab_p / 2, centre_tab_p + l_tab_p / 2, 2
     )  # mesh pos tab
     y4 = np.linspace(
-        centre_tab_p + l_tab_p / 2, l_y, 3
+        centre_tab_p + l_tab_p / 2, l_y, 2
     )  # mesh from pos tab to cell edge
     y_edges = np.concatenate((y0, y1[1:], y2[1:], y3[1:], y4[1:]))
 
     # square root sequence in z direction
-    z_edges = np.linspace(0, 1, 10) ** (1 / 2)
+    z_edges = np.linspace(0, 1, 5) ** (1 / 2)
     submesh_types["current collector"] = pybamm.MeshGenerator(
         pybamm.UserSupplied2DSubMesh,
         submesh_params={"y_edges": y_edges, "z_edges": z_edges},
@@ -98,7 +98,7 @@ else:
 
     # solver
     solver = pybamm.CasadiSolver(
-        atol=1e-6, rtol=1e-6, root_tol=1e-3, root_method="krylov", mode="fast"
+        atol=1e-6, rtol=1e-6, root_tol=1e-3, root_method="hybr", mode="fast"
     )
     # solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
 
