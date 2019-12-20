@@ -70,7 +70,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the gradient operator. The
         gradient w of the function u is approximated by the finite element method
-        using the same function space as w, i.e. we solve w = grad(u), which
+        using the same function space as u, i.e. we solve w = grad(u), which
         corresponds to the weak form w*v*dx = grad(u)*v*dx, where v is a suitable
         test function.
 
@@ -111,8 +111,8 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         mass_inv = pybamm.Matrix(inv(csc_matrix(mass)))
 
         # compute gradient
-        grad_y = mass_inv @ grad_y_matrix @ discretised_symbol
-        grad_z = mass_inv @ grad_z_matrix @ discretised_symbol
+        grad_y = mass_inv @ (grad_y_matrix @ discretised_symbol)
+        grad_z = mass_inv @ (grad_z_matrix @ discretised_symbol)
 
         # create concatenation
         grad = pybamm.Concatenation(
@@ -156,7 +156,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         def gradient_dy(u, du, v, dv, w):
             return du[0] * v[0]
 
-        # make form for the gradient in the \ direction
+        # make form for the gradient in the z direction
         @skfem.bilinear_form
         def gradient_dz(u, du, v, dv, w):
             return du[1] * v[1]
