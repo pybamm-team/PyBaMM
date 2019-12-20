@@ -86,15 +86,17 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
         Returns
         -------
-        :class: `pybamm.Array`
-            Contains the result of acting the discretised gradient on
-            the child discretised_symbol
+        :class: `pybamm.Concatenation`
+            A concatenation that contains the result of acting the discretised
+            gradient on the child discretised_symbol. The first column corresponds
+            to the y-component of the gradient and the second column corresponds
+            to the z component of the gradient.
         """
         domain = symbol.domain[0]
         mesh = self.mesh[domain][0]
 
         # get gradient matrix
-        grad_x_matrix, grad_y_matrix = self.gradient_matrix(symbol, boundary_conditions)
+        grad_y_matrix, grad_z_matrix = self.gradient_matrix(symbol, boundary_conditions)
 
         # assemble mass matrix (there is no need to zero out entries here, since
         # boundary conditions are already accounted for in the governing pde
@@ -109,10 +111,16 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         mass_inv = pybamm.Matrix(inv(csc_matrix(mass)))
 
         # compute gradient
-        grad_x = mass_inv @ grad_x_matrix @ discretised_symbol
         grad_y = mass_inv @ grad_y_matrix @ discretised_symbol
+        grad_z = mass_inv @ grad_z_matrix @ discretised_symbol
 
-        return grad_x, grad_y
+        # create concatenation
+        grad = pybamm.Concatenation(
+            grad_y, grad_z, check_domain=False, concat_fun=np.hstack
+        )
+        grad.domain = domain
+
+        return grad
 
     def gradient_matrix(self, symbol, boundary_conditions):
         """
@@ -146,10 +154,10 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             return du[1] * v[1]
 
         # assemble the matrices
-        grad_x = skfem.asm(gradient_dx, mesh.basis)
-        grad_y = skfem.asm(gradient_dy, mesh.basis)
+        grad_y = skfem.asm(gradient_dx, mesh.basis)
+        grad_z = skfem.asm(gradient_dy, mesh.basis)
 
-        return pybamm.Matrix(grad_x), pybamm.Matrix(grad_y)
+        return pybamm.Matrix(grad_y), pybamm.Matrix(grad_z)
 
     def divergence(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the divergence operator.

@@ -122,6 +122,28 @@ class TestScikitFiniteElement(unittest.TestCase):
         with self.assertRaises(pybamm.GeometryError):
             disc.process_symbol(x)
 
+    def test_gradient(self):
+        mesh = get_unit_2p1D_mesh_for_testing(ypts=32, zpts=32)
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume(),
+            "current collector": pybamm.ScikitFiniteElement(),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        # test gradient of 5*y + 6*z
+        var = pybamm.Variable("var", domain="current collector")
+        disc.set_variable_slices([var])
+
+        y = mesh["current collector"][0].coordinates[0, :]
+        z = mesh["current collector"][0].coordinates[1, :]
+
+        gradient = pybamm.grad(var)
+        grad_disc = disc.process_symbol(gradient)
+        grad_disc_y, grad_disc_z = grad_disc.children
+
+        np.testing.assert_array_almost_equal(grad_disc_y.evaluate(None, 5*y + 6*z), 5*np.ones_like(y)[:, np.newaxis])
+        np.testing.assert_array_almost_equal(grad_disc_z.evaluate(None, 5*y + 6*z), 6*np.ones_like(z)[:, np.newaxis])
+
     def test_manufactured_solution(self):
         mesh = get_unit_2p1D_mesh_for_testing(ypts=32, zpts=32)
         spatial_methods = {
