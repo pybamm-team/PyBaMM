@@ -473,6 +473,4 @@ class Simulation:
 
 def load_sim(filename):
     """Load a saved simulation"""
-    with open(filename, "rb") as f:
-        sim = pickle.load(f)
-    return sim
+    return pybamm.load(filename)

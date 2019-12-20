@@ -136,6 +136,26 @@ class Solution(object):
     def total_time(self):
         return self.set_up_time + self.solve_time
 
+    def update(self, variables):
+        """Add ProcessedVariables to the dictionary of variables in the solution"""
+        # Convert single entry to list
+        if isinstance(variables, str):
+            variables = [variables]
+        # Process
+        for key in variables:
+            pybamm.logger.debug("Post-processing {}".format(key))
+            var = pybamm.ProcessedVariable(
+                self.model.variables[key], self, self.known_evals,
+            )
+
+            # Update known_evals in order to process any other variables faster
+            for t in self.known_evals:
+                self.known_evals[t].update(var.known_evals[t])
+
+            # Save variable and data
+            self._variables[key] = var
+            self.data[key] = var.data
+
     def __getitem__(self, key):
         """Read a variable from the solution. Variables are created 'just in time', i.e.
         only when they are called.
@@ -158,28 +178,25 @@ class Solution(object):
             return self._variables[key]
         except KeyError:
             # otherwise create it, save it and then return it
-
-            pybamm.logger.debug("Post-processing {}".format(key))
-            var = pybamm.ProcessedVariable(
-                self.model.variables[key], self, self.known_evals,
-            )
-
-            # Update known_evals for processing other variables
-            for t in self.known_evals:
-                self.known_evals[t].update(var.known_evals[t])
-
-            # Save variable and data
-            self._variables[key] = var
-            self.data[key] = var.data
-            return var
+            self.update(key)
+            return self._variables[key]
 
     def save(self, filename):
         """Save the whole solution using pickle"""
+        # No warning here if len(self.data)==0 as solution can be loaded
+        # and used to process new variables
         with open(filename, "wb") as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 
     def save_data(self, filename):
         """Save solution data only (raw arrays) using pickle"""
+        if len(self.data) == 0:
+            raise ValueError(
+                """Solution does not have any data. Add variables by calling
+                'solution.update', e.g. 
+                'solution.update(["Terminal voltage [V]", "Current [A]"])' 
+                and then save"""
+            )
         with open(filename, "wb") as f:
             pickle.dump(self.data, f, pickle.HIGHEST_PROTOCOL)
 
