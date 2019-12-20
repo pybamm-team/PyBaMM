@@ -20,8 +20,6 @@ class TestSpatialMethod(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             spatial_method.laplacian(None, None, None)
         with self.assertRaises(NotImplementedError):
-            spatial_method.gradient_squared(None, None, None)
-        with self.assertRaises(NotImplementedError):
             spatial_method.integral(None, None)
         with self.assertRaises(NotImplementedError):
             spatial_method.indefinite_integral(None, None)

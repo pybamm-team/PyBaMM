@@ -3,7 +3,8 @@
 #
 import pybamm
 
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, csc_matrix
+from scipy.sparse.linalg import inv
 import numpy as np
 import skfem
 
@@ -67,10 +68,88 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         return vector
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
-        """Matrix-vector multiplication to implement the gradient operator.
-        See :meth:`pybamm.SpatialMethod.gradient`
+        """Matrix-vector multiplication to implement the gradient operator. The
+        gradient w of the function u is approximated by the finite element method
+        using the same function space as w, i.e. we solve w = grad(u), which
+        corresponds to the weak form w*v*dx = grad(u)*v*dx, where v is a suitable
+        test function.
+
+        Parameters
+        ----------
+        symbol: :class:`pybamm.Symbol`
+            The symbol that we will take the laplacian of.
+        discretised_symbol: :class:`pybamm.Symbol`
+            The discretised symbol of the correct size
+        boundary_conditions : dict
+            The boundary conditions of the model
+            ({symbol.id: {"negative tab": neg. tab bc, "positive tab": pos. tab bc}})
+
+        Returns
+        -------
+        :class: `pybamm.Array`
+            Contains the result of acting the discretised gradient on
+            the child discretised_symbol
         """
-        raise NotImplementedError
+        domain = symbol.domain[0]
+        mesh = self.mesh[domain][0]
+
+        # get gradient matrix
+        grad_x_matrix, grad_y_matrix = self.gradient_matrix(symbol, boundary_conditions)
+
+        # assemble mass matrix (there is no need to zero out entries here, since
+        # boundary conditions are already accounted for in the governing pde
+        # for the symbol we are taking the gradient of. we just want to get the
+        # correct weights)
+        @skfem.bilinear_form
+        def mass_form(u, du, v, dv, w):
+            return u * v
+
+        mass = skfem.asm(mass_form, mesh.basis)
+        # we need the inverse
+        mass_inv = pybamm.Matrix(inv(csc_matrix(mass)))
+
+        # compute gradient
+        grad_x = mass_inv @ grad_x_matrix @ discretised_symbol
+        grad_y = mass_inv @ grad_y_matrix @ discretised_symbol
+
+        return grad_x, grad_y
+
+    def gradient_matrix(self, symbol, boundary_conditions):
+        """
+        Gradient matrix for finite elements in the appropriate domain.
+
+        Parameters
+        ----------
+        symbol: :class:`pybamm.Symbol`
+            The symbol for which we want to calculate the gradient matrix
+        boundary_conditions : dict
+            The boundary conditions of the model
+            ({symbol.id: {"negative tab": neg. tab bc, "positive tab": pos. tab bc}})
+
+        Returns
+        -------
+        :class:`pybamm.Matrix`
+            The (sparse) finite element gradient matrix for the domain
+        """
+        # get primary domain mesh
+        domain = symbol.domain[0]
+        mesh = self.mesh[domain][0]
+
+        # make form for the gradient in the x direction
+        @skfem.bilinear_form
+        def gradient_dx(u, du, v, dv, w):
+            return du[0] * v[0]
+
+        # make form for the gradient in the y direction
+        @skfem.bilinear_form
+        def gradient_dy(u, du, v, dv, w):
+            return du[1] * v[1]
+
+        # assemble the matrices
+        grad_x = skfem.asm(gradient_dx, mesh.basis)
+        grad_y = skfem.asm(gradient_dy, mesh.basis)
+
+        return pybamm.Matrix(grad_x), pybamm.Matrix(grad_y)
 
     def divergence(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the divergence operator.
@@ -150,16 +229,6 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             )
 
         return -stiffness_matrix @ discretised_symbol + boundary_load
-
-    def gradient_squared(self, symbol, discretised_symbol, boundary_conditions):
-        """Matrix-vector multiplication to implement the inner product of the
-        gradient operator with itself.
-        See :meth:`pybamm.SpatialMethod.gradient_squared`
-        """
-        # NOTE: this is incorrect (see issue #765)
-        # stiffness_matrix = self.stiffness_matrix(symbol, boundary_conditions)
-        # return stiffness_matrix @ (discretised_symbol ** 2)
-        raise NotImplementedError
 
     def stiffness_matrix(self, symbol, boundary_conditions):
         """

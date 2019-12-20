@@ -14,8 +14,6 @@ class TestScikitFiniteElement(unittest.TestCase):
         spatial_method.build(mesh)
         self.assertEqual(spatial_method.mesh, mesh)
         with self.assertRaises(NotImplementedError):
-            spatial_method.gradient(None, None, None)
-        with self.assertRaises(NotImplementedError):
             spatial_method.divergence(None, None, None)
         with self.assertRaises(NotImplementedError):
             spatial_method.indefinite_integral(None, None)
@@ -123,19 +121,6 @@ class TestScikitFiniteElement(unittest.TestCase):
         x = pybamm.SpatialVariable("x", ["current collector"])
         with self.assertRaises(pybamm.GeometryError):
             disc.process_symbol(x)
-
-        # Grad-squared is incorrect, so for now should raise a NotImplementedError
-        # until it is fixed (see #765)
-        eqn = pybamm.grad_squared(var)
-        disc.set_variable_slices([var])
-        disc.bcs = {
-            var.id: {
-                "negative tab": (pybamm.Scalar(0), "Dirichlet"),
-                "positive tab": (pybamm.Scalar(1), "Dirichlet"),
-            }
-        }
-        with self.assertRaises(NotImplementedError):
-            disc.process_symbol(eqn)
 
     def test_manufactured_solution(self):
         mesh = get_unit_2p1D_mesh_for_testing(ypts=32, zpts=32)
