@@ -156,9 +156,10 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         gradient operator with itself.
         See :meth:`pybamm.SpatialMethod.gradient_squared`
         """
-        stiffness_matrix = self.stiffness_matrix(symbol, boundary_conditions)
-
-        return stiffness_matrix @ (discretised_symbol ** 2)
+        # NOTE: this is incorrect (see issue #765)
+        # stiffness_matrix = self.stiffness_matrix(symbol, boundary_conditions)
+        # return stiffness_matrix @ (discretised_symbol ** 2)
+        raise NotImplementedError
 
     def stiffness_matrix(self, symbol, boundary_conditions):
         """

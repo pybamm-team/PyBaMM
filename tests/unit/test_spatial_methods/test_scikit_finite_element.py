@@ -54,7 +54,6 @@ class TestScikitFiniteElement(unittest.TestCase):
             pybamm.laplacian(var) - pybamm.source(unit_source, var, boundary=True),
             pybamm.laplacian(var)
             - pybamm.source(unit_source ** 2 + 1 / var, var, boundary=True),
-            pybamm.grad_squared(var),
         ]:
             # Check that equation can be evaluated in each case
             # Dirichlet
@@ -124,6 +123,19 @@ class TestScikitFiniteElement(unittest.TestCase):
         x = pybamm.SpatialVariable("x", ["current collector"])
         with self.assertRaises(pybamm.GeometryError):
             disc.process_symbol(x)
+
+        # Grad-squared is incorrect, so for now should raise a NotImplementedError
+        # until it is fixed (see #765)
+        eqn = pybamm.grad_squared(var)
+        disc.set_variable_slices([var])
+        disc.bcs = {
+            var.id: {
+                "negative tab": (pybamm.Scalar(0), "Dirichlet"),
+                "positive tab": (pybamm.Scalar(1), "Dirichlet"),
+            }
+        }
+        with self.assertRaises(NotImplementedError):
+            disc.process_symbol(eqn)
 
     def test_manufactured_solution(self):
         mesh = get_unit_2p1D_mesh_for_testing(ypts=32, zpts=32)
