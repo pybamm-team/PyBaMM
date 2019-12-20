@@ -151,19 +151,19 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         domain = symbol.domain[0]
         mesh = self.mesh[domain][0]
 
-        # make form for the gradient in the x direction
-        @skfem.bilinear_form
-        def gradient_dx(u, du, v, dv, w):
-            return du[0] * v[0]
-
         # make form for the gradient in the y direction
         @skfem.bilinear_form
         def gradient_dy(u, du, v, dv, w):
+            return du[0] * v[0]
+
+        # make form for the gradient in the \ direction
+        @skfem.bilinear_form
+        def gradient_dz(u, du, v, dv, w):
             return du[1] * v[1]
 
         # assemble the matrices
-        grad_y = skfem.asm(gradient_dx, mesh.basis)
-        grad_z = skfem.asm(gradient_dy, mesh.basis)
+        grad_y = skfem.asm(gradient_dy, mesh.basis)
+        grad_z = skfem.asm(gradient_dz, mesh.basis)
 
         return pybamm.Matrix(grad_y), pybamm.Matrix(grad_z)
 
