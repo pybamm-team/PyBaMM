@@ -730,6 +730,11 @@ class Discretisation(object):
             elif isinstance(symbol, pybamm.Laplacian):
                 return child_spatial_method.laplacian(child, disc_child, self.bcs)
 
+            elif isinstance(symbol, pybamm.Gradient_Squared):
+                return child_spatial_method.gradient_squared(
+                    child, disc_child, self.bcs
+                )
+
             elif isinstance(symbol, pybamm.Mass):
                 return child_spatial_method.mass_matrix(child, self.bcs)
 

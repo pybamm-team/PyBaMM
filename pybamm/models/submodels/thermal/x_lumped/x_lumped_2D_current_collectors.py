@@ -47,11 +47,11 @@ class CurrentCollector2D(BaseModel):
 
     def _current_collector_heating(self, variables):
         """Returns the heat source terms in the 2D current collector"""
-        # For now we use the approximation that current collector heating
-        # is uniform (see issue #765)
-        i_boundary_cc = variables["Current collector current density"]
-        Q_s_cn = i_boundary_cc / self.param.sigma_cn
-        Q_s_cp = i_boundary_cc / self.param.sigma_cp
+        phi_s_cn = variables["Negative current collector potential"]
+        phi_s_cp = variables["Positive current collector potential"]
+
+        Q_s_cn = self.param.sigma_cn_prime * pybamm.grad_squared(phi_s_cn)
+        Q_s_cp = self.param.sigma_cp_prime * pybamm.grad_squared(phi_s_cp)
         return Q_s_cn, Q_s_cp
 
     def _yz_average(self, var):

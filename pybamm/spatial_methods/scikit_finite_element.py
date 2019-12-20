@@ -122,6 +122,14 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
         return grad
 
+    def gradient_squared(self, symbol, discretised_symbol, boundary_conditions):
+        """Multiplication to implement the inner product of the gradient operator
+        with itself. See :meth:`pybamm.SpatialMethod.gradient_squared`
+        """
+        grad = self.gradient(symbol, discretised_symbol, boundary_conditions)
+        grad_y, grad_z = grad.orphans
+        return grad_y ** 2 + grad_z ** 2
+
     def gradient_matrix(self, symbol, boundary_conditions):
         """
         Gradient matrix for finite elements in the appropriate domain.
