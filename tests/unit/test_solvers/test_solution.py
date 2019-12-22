@@ -1,5 +1,5 @@
 #
-# Tests for the Scipy Solver class
+# Tests for the Solution class
 #
 import pybamm
 import unittest
@@ -39,7 +39,7 @@ class TestSolution(unittest.TestCase):
         np.testing.assert_array_equal(sol1.y, np.concatenate([y1, y2[:, 1:]], axis=1))
 
     def test_total_time(self):
-        sol = pybamm.Solution(None, None)
+        sol = pybamm.Solution([], None)
         sol.set_up_time = 0.5
         sol.solve_time = 1.2
         self.assertEqual(sol.total_time, 1.7)

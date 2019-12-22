@@ -435,7 +435,7 @@ class Symbol(anytree.NodeMixin):
         """
         raise NotImplementedError
 
-    def _base_evaluate(self, t=None, y=None):
+    def _base_evaluate(self, t=None, y=None, u=None):
         """evaluate expression tree
 
         will raise a ``NotImplementedError`` if this member function has not
@@ -471,6 +471,8 @@ class Symbol(anytree.NodeMixin):
             time at which to evaluate (default None)
         y : numpy.array, optional
             array to evaluate when solving (default None)
+        u : dict, optional
+            dictionary of inputs to use when solving (default None)
         known_evals : dict, optional
             dictionary containing known values (default None)
 
@@ -483,10 +485,10 @@ class Symbol(anytree.NodeMixin):
         """
         if known_evals is not None:
             if self.id not in known_evals:
-                known_evals[self.id] = self._base_evaluate(t, y)
+                known_evals[self.id] = self._base_evaluate(t, y, u)
             return known_evals[self.id], known_evals
         else:
-            return self._base_evaluate(t, y)
+            return self._base_evaluate(t, y, u)
 
     def evaluate_for_shape(self):
         """Evaluate expression tree to find its shape. For symbols that cannot be

@@ -4,6 +4,7 @@
 import numpy as np
 import pickle
 import pybamm
+from collections import defaultdict
 
 
 class Solution(object):
@@ -43,7 +44,7 @@ class Solution(object):
         self.data = {}
 
         # initialize empty known evals
-        self.known_evals = {time: {} for time in t}
+        self.known_evals = defaultdict(float)
 
     @property
     def t(self):
@@ -124,12 +125,14 @@ class Solution(object):
         and self.y[:, -1] is equal to solution.y[:, 0]).
 
         """
+        # Update t, y and inputs
         self.t = np.concatenate((self.t, solution.t[1:]))
         self.y = np.concatenate((self.y, solution.y[:, 1:]), axis=1)
         self.inputs = {
             name: np.concatenate((inp, solution.inputs[name][1:]))
             for name, inp in self.inputs.items()
         }
+        # Update solution time
         self.solve_time += solution.solve_time
 
     @property
@@ -149,7 +152,7 @@ class Solution(object):
             )
 
             # Update known_evals in order to process any other variables faster
-            for t in self.known_evals:
+            for t in var.known_evals:
                 self.known_evals[t].update(var.known_evals[t])
 
             # Save variable and data
@@ -193,8 +196,8 @@ class Solution(object):
         if len(self.data) == 0:
             raise ValueError(
                 """Solution does not have any data. Add variables by calling
-                'solution.update', e.g. 
-                'solution.update(["Terminal voltage [V]", "Current [A]"])' 
+                'solution.update', e.g.
+                'solution.update(["Terminal voltage [V]", "Current [A]"])'
                 and then save"""
             )
         with open(filename, "wb") as f:

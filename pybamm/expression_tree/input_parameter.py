@@ -36,7 +36,7 @@ class InputParameter(pybamm.Symbol):
         """ See :meth:`pybamm.Symbol._jac()`. """
         return pybamm.Scalar(0)
 
-    def evaluate(self, t=None, y=None, u=None, known_evals=None):
+    def _base_evaluate(self, t=None, y=None, u=None):
         # u should be a dictionary
         # convert 'None' to empty dictionary for more informative error
         if u is None:
