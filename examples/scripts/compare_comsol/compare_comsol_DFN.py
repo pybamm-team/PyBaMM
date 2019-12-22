@@ -63,7 +63,7 @@ L_x = param.evaluate(pybamm.standard_parameters_lithium_ion.L_x)
 def get_interp_fun(variable_name, domain):
     """
     Create a :class:`pybamm.Function` object using the variable, to allow plotting with
-    :class:`'pybamm.QuickPlot'` (interpolate in space to match edges, and then create
+    :class:`pybamm.QuickPlot` (interpolate in space to match edges, and then create
     function to interpolate in time)
     """
     variable = comsol_variables[variable_name]
@@ -78,7 +78,17 @@ def get_interp_fun(variable_name, domain):
     variable = interp.interp1d(comsol_x, variable, axis=0)(pybamm_x)
 
     def myinterp(t):
-        return interp.interp1d(comsol_t, variable)(t)[:, np.newaxis]
+        try:
+            return interp.interp1d(comsol_t, variable, fill_value="extrapolate")(t)[
+                :, np.newaxis
+            ]
+        except ValueError as err:
+            raise ValueError(
+                """Failed to interpolate '{}' with time range [{}, {}] at time {}.
+                Original error: {}""".format(
+                    variable_name, comsol_t[0], comsol_t[-1], t, err
+                )
+            )
 
     # Make sure to use dimensional time
     fun = pybamm.Function(myinterp, pybamm.t * tau, name=variable_name + "_comsol")
