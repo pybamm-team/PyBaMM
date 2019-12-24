@@ -93,26 +93,12 @@ class TestFunctionControl(unittest.TestCase):
         for i, model in enumerate(models):
             solutions[i] = model.default_solver.solve(model, t_eval)
 
-        V0 = pybamm.ProcessedVariable(
-            models[0].variables["Terminal voltage [V]"],
-            solutions[0].t,
-            solutions[0].y,
-            mesh,
-        ).entries
-        V1 = pybamm.ProcessedVariable(
-            models[1].variables["Terminal voltage [V]"],
-            solutions[1].t,
-            solutions[1].y,
-            mesh,
-        ).entries
+        V0 = solutions[0]["Terminal voltage [V]"].entries
+        V1 = solutions[1]["Terminal voltage [V]"].entries
         np.testing.assert_array_almost_equal(V0, V1)
 
-        I0 = pybamm.ProcessedVariable(
-            models[0].variables["Current [A]"], solutions[0].t, solutions[0].y, mesh
-        ).entries
-        I1 = pybamm.ProcessedVariable(
-            models[1].variables["Current [A]"], solutions[1].t, solutions[1].y, mesh
-        ).entries
+        I0 = solutions[0]["Current [A]"].entries
+        I1 = solutions[1]["Current [A]"].entries
         np.testing.assert_array_almost_equal(abs((I1 - I0) / I0), 0, decimal=1)
 
     def test_constant_power(self):
@@ -154,26 +140,12 @@ class TestFunctionControl(unittest.TestCase):
         for i, model in enumerate(models):
             solutions[i] = model.default_solver.solve(model, t_eval)
 
-        V0 = pybamm.ProcessedVariable(
-            models[0].variables["Terminal voltage [V]"],
-            solutions[0].t,
-            solutions[0].y,
-            mesh,
-        ).entries
-        V1 = pybamm.ProcessedVariable(
-            models[1].variables["Terminal voltage [V]"],
-            solutions[1].t,
-            solutions[1].y,
-            mesh,
-        ).entries
+        V0 = solutions[0]["Terminal voltage [V]"].entries
+        V1 = solutions[1]["Terminal voltage [V]"].entries
         np.testing.assert_array_equal(V0, V1)
 
-        I0 = pybamm.ProcessedVariable(
-            models[0].variables["Current [A]"], solutions[0].t, solutions[0].y, mesh
-        ).entries
-        I1 = pybamm.ProcessedVariable(
-            models[1].variables["Current [A]"], solutions[1].t, solutions[1].y, mesh
-        ).entries
+        I0 = solutions[0]["Current [A]"].entries
+        I1 = solutions[1]["Current [A]"].entries
         np.testing.assert_array_equal(I0, I1)
 
 
