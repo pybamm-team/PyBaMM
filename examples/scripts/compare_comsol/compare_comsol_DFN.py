@@ -79,9 +79,9 @@ def get_interp_fun(variable_name, domain):
 
     def myinterp(t):
         try:
-            return interp.interp1d(comsol_t, variable, fill_value="extrapolate")(t)[
-                :, np.newaxis
-            ]
+            return interp.interp1d(
+                comsol_t, variable, fill_value="extrapolate", bounds_error=False,
+            )(t)[:, np.newaxis]
         except ValueError as err:
             raise ValueError(
                 """Failed to interpolate '{}' with time range [{}, {}] at time {}.
