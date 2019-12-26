@@ -665,10 +665,18 @@ class Discretisation(object):
 
             processed_eqn = self.process_symbol(eqn)
             # Assign mesh as an attribute to the processed variable
-            if eqn.domain == []:
-                processed_eqn.mesh = None
-            else:
+            if eqn.domain != []:
                 processed_eqn.mesh = self.mesh.combine_submeshes(*eqn.domain)
+            else:
+                processed_eqn.mesh = None
+            # Assign secondary mesh
+            if "secondary" in eqn.auxiliary_domains:
+                processed_eqn.secondary_mesh = self.mesh.combine_submeshes(
+                    *eqn.auxiliary_domains["secondary"]
+                )
+            else:
+                processed_eqn.secondary_mesh = None
+
             new_var_eqn_dict[eqn_key] = processed_eqn
 
         return new_var_eqn_dict

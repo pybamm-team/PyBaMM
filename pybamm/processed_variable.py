@@ -55,7 +55,7 @@ class ProcessedVariable(object):
             and "current collector" in self.domain
             and isinstance(self.mesh[0], pybamm.ScikitSubMesh2D)
         ):
-            if len(self.solution.t) == 1:
+            if len(solution.t) == 1:
                 # space only (steady solution)
                 self.initialise_2Dspace_scikit_fem()
             else:
@@ -133,7 +133,9 @@ class ProcessedVariable(object):
         space = np.concatenate([extrap_space_left, space, extrap_space_right])
         extrap_entries_left = 2 * entries[0] - entries[1]
         extrap_entries_right = 2 * entries[-1] - entries[-2]
-        entries = np.vstack([extrap_entries_left, entries, extrap_entries_right])
+        entries_for_interp = np.vstack(
+            [extrap_entries_left, entries, extrap_entries_right]
+        )
 
         # assign attributes for reference (either x_sol or r_sol)
         self.entries = entries
@@ -159,7 +161,7 @@ class ProcessedVariable(object):
         # note that the order of 't' and 'space' is the reverse of what you'd expect
 
         self._interpolation_function = interp.interp2d(
-            self.t_sol, space, entries, kind="linear", fill_value=np.nan
+            self.t_sol, space, entries_for_interp, kind="linear", fill_value=np.nan
         )
 
     def initialise_3D(self):
@@ -197,16 +199,16 @@ class ProcessedVariable(object):
         if self.domain == ["negative particle"] and self.auxiliary_domains[
             "secondary"
         ] == ["negative electrode"]:
-            x_sol = self.mesh["negative electrode"][0].nodes
-            r_nodes = self.mesh["negative particle"][0].nodes
-            r_edges = self.mesh["negative particle"][0].edges
+            x_sol = self.mesh[0].nodes
+            r_nodes = self.secondary_mesh[0].nodes
+            r_edges = self.secondary_mesh[0].edges
             set_up_r = True
         elif self.domain == ["positive particle"] and self.auxiliary_domains[
             "secondary"
         ] == ["positive electrode"]:
-            x_sol = self.mesh["positive electrode"][0].nodes
-            r_nodes = self.mesh["positive particle"][0].nodes
-            r_edges = self.mesh["positive particle"][0].edges
+            x_sol = self.mesh[0].nodes
+            r_nodes = self.secondary_mesh[0].nodes
+            r_edges = self.secondary_mesh[0].edges
             set_up_r = True
         elif self.domain[0] in [
             "negative electrode",
@@ -286,9 +288,9 @@ class ProcessedVariable(object):
         )
 
     def initialise_2Dspace_scikit_fem(self):
-        y_sol = self.mesh[self.domain[0]][0].edges["y"]
+        y_sol = self.mesh[0].edges["y"]
         len_y = len(y_sol)
-        z_sol = self.mesh[self.domain[0]][0].edges["z"]
+        z_sol = self.mesh[0].edges["z"]
         len_z = len(z_sol)
 
         # Evaluate the base_variable
@@ -308,9 +310,9 @@ class ProcessedVariable(object):
         )
 
     def initialise_3D_scikit_fem(self):
-        y_sol = self.mesh[self.domain[0]][0].edges["y"]
+        y_sol = self.mesh[0].edges["y"]
         len_y = len(y_sol)
-        z_sol = self.mesh[self.domain[0]][0].edges["z"]
+        z_sol = self.mesh[0].edges["z"]
         len_z = len(z_sol)
         entries = np.empty((len_y, len_z, len(self.t_sol)))
 
