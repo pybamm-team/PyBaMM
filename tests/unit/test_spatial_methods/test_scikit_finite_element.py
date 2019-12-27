@@ -154,7 +154,7 @@ class TestScikitFiniteElement(unittest.TestCase):
         eqn = pybamm.grad_squared(var)
         eqn_disc = disc.process_symbol(eqn)
         ans = eqn_disc.evaluate(None, 3 * y ** 2)
-        self.assertTrue(all(ans > 0))
+        np.testing.assert_array_less(0, ans)
 
     def test_manufactured_solution(self):
         mesh = get_unit_2p1D_mesh_for_testing(ypts=32, zpts=32)
