@@ -327,7 +327,6 @@ class Gradient_Squared(SpatialOperator):
     operator with itself. In particular, this is useful in the finite element
     formualtion where we only require the (sclar valued) square of the gradient,
     and  not the gradient itself.
-
     **Extends:** :class:`SpatialOperator`
     """
 

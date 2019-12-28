@@ -185,7 +185,6 @@ class SpatialMethod:
             The symbol that we will take the gradient of.
         discretised_symbol: :class:`pybamm.Symbol`
             The discretised symbol of the correct size
-
         boundary_conditions : dict
             The boundary conditions of the model
             ({symbol.id: {"left": left bc, "right": right bc}})
