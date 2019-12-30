@@ -60,6 +60,9 @@ class BaseModel(object):
     mass_matrix : :class:`pybamm.Matrix`
         After discretisation, contains the mass matrix for the model. This is computed
         automatically
+    mass_matrix_inv : :class:`pybamm.Matrix`
+        After discretisation, contains the inverse mass matrix for the differential
+        (rhs) part of model. This is computed automatically
     jacobian : :class:`pybamm.Concatenation`
         Contains the Jacobian for the model. If model.use_jacobian is True, the
         Jacobian is computed automatically during solver set up
@@ -88,7 +91,7 @@ class BaseModel(object):
         - "casadi": convert into CasADi expression tree, which then uses CasADi's \
         algorithm to calculate the Jacobian.
 
-        Default is "python".
+        Default is "casadi".
 
     """
 

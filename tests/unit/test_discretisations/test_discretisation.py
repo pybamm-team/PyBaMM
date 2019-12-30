@@ -9,6 +9,7 @@ from tests import (
     get_mesh_for_testing,
     get_discretisation_for_testing,
     get_1p1d_discretisation_for_testing,
+    get_2p1d_mesh_for_testing,
 )
 from tests.shared import SpatialMethodForTesting
 
@@ -933,6 +934,29 @@ class TestDiscretise(unittest.TestCase):
         # create discretisation
         disc = get_discretisation_for_testing()
         disc.process_model(model, check_model=False)
+
+    def test_mass_matirx_inverse(self):
+        # get mesh
+        mesh = get_2p1d_mesh_for_testing()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume(),
+            "current collector": pybamm.ScikitFiniteElement(),
+        }
+        # create model
+        a = pybamm.Variable("a", domain="negative electrode")
+        b = pybamm.Variable("b", domain="current collector")
+        model = pybamm.BaseModel()
+        model.rhs = {a: pybamm.Laplacian(a), b: 4 * pybamm.Laplacian(b)}
+        model.initial_conditions = {a: pybamm.Scalar(3), b: pybamm.Scalar(10)}
+        model.boundary_conditions = {
+            a: {"left": (0, "Neumann"), "right": (0, "Neumann")},
+            b: {"negative tab": (0, "Neumann"), "positive tab": (0, "Neumann")},
+        }
+        model.variables = {"a": a, "b": b}
+
+        # create discretisation
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
 
 
 if __name__ == "__main__":
