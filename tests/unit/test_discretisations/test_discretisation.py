@@ -13,7 +13,8 @@ from tests import (
 )
 from tests.shared import SpatialMethodForTesting
 
-from scipy.sparse import block_diag
+from scipy.sparse import block_diag, csc_matrix
+from scipy.sparse.linalg import inv
 
 
 class TestDiscretise(unittest.TestCase):
@@ -937,7 +938,7 @@ class TestDiscretise(unittest.TestCase):
 
     def test_mass_matirx_inverse(self):
         # get mesh
-        mesh = get_2p1d_mesh_for_testing()
+        mesh = get_2p1d_mesh_for_testing(ypts=5, zpts=5)
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume(),
             "current collector": pybamm.ScikitFiniteElement(),
@@ -957,6 +958,14 @@ class TestDiscretise(unittest.TestCase):
         # create discretisation
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
+
+        # test that computing mass matrix block-by-block (as is done during
+        # discretisation) gives the correct result
+        # Note: inverse is more efficient in csc format
+        mass_inv = inv(csc_matrix(model.mass_matrix.entries))
+        np.testing.assert_equal(
+            model.mass_matrix_inv.entries.toarray(), mass_inv.toarray()
+        )
 
 
 if __name__ == "__main__":

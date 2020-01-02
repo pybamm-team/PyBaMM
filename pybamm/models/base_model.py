@@ -110,6 +110,7 @@ class BaseModel(object):
         self._concatenated_algebraic = None
         self._concatenated_initial_conditions = None
         self._mass_matrix = None
+        self._mass_matrix_inv = None
         self._jacobian = None
         self._jacobian_algebraic = None
         self.external_variables = []
@@ -251,6 +252,14 @@ class BaseModel(object):
     @mass_matrix.setter
     def mass_matrix(self, mass_matrix):
         self._mass_matrix = mass_matrix
+
+    @property
+    def mass_matrix_inv(self):
+        return self._mass_matrix_inv
+
+    @mass_matrix_inv.setter
+    def mass_matrix_inv(self, mass_matrix_inv):
+        self._mass_matrix_inv = mass_matrix_inv
 
     @property
     def jacobian(self):

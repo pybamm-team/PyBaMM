@@ -584,7 +584,7 @@ class Discretisation(object):
                     # compute the inverse
                     mass_inv_list.append(mass)
                 else:
-                    # inverse is faster in csc format
+                    # inverse is more efficient in csc format
                     mass_inv = inv(csc_matrix(mass))
                     mass_inv_list.append(mass_inv)
 
