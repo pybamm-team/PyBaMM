@@ -823,7 +823,7 @@ def source(left, right, boundary=False):
     """
     # Broadcast if left is number
     if isinstance(left, numbers.Number):
-        left = pybamm.Broadcast(left, "current collector")
+        left = pybamm.PrimaryBroadcast(left, "current collector")
 
     if left.domain != ["current collector"] or right.domain != ["current collector"]:
         raise pybamm.DomainError(

@@ -101,7 +101,12 @@ class SpatialMethod:
             out = pybamm.Outer(
                 symbol, pybamm.Vector(np.ones(primary_pts_for_broadcast), domain=domain)
             )
-
+        elif broadcast_type == "secondary":
+            # Make copies of the child stacked on top of each other
+            # Repeat for secondary points
+            out = pybamm.Outer(
+                pybamm.Vector(np.ones(primary_pts_for_broadcast), domain=domain), symbol
+            )
         elif broadcast_type == "full":
             out = symbol * pybamm.Vector(np.ones(full_pts_for_broadcast), domain=domain)
 

@@ -168,6 +168,11 @@ class Symbol(anytree.NodeMixin):
             # Update id since domain has changed
             self.set_id()
 
+    @property
+    def secondary_domain(self):
+        "Helper function to get the secondary domain of a symbol"
+        return self.auxiliary_domains["secondary"]
+
     def get_children_auxiliary_domains(self, children):
         "Combine auxiliary domains from children, at all levels"
         aux_domains = {}

@@ -9,22 +9,22 @@ import unittest
 class TestBroadcasts(unittest.TestCase):
     def test_broadcast(self):
         a = pybamm.Symbol("a")
-        broad_a = pybamm.Broadcast(a, ["negative electrode"])
+        broad_a = pybamm.FullBroadcast(a, ["negative electrode"], None)
         self.assertEqual(broad_a.name, "broadcast")
         self.assertEqual(broad_a.children[0].name, a.name)
         self.assertEqual(broad_a.domain, ["negative electrode"])
 
     def test_broadcast_number(self):
-        broad_a = pybamm.Broadcast(1, ["negative electrode"])
+        broad_a = pybamm.FullBroadcast(1, ["negative electrode"], None)
         self.assertEqual(broad_a.name, "broadcast")
         self.assertIsInstance(broad_a.children[0], pybamm.Symbol)
         self.assertEqual(broad_a.children[0].evaluate(), np.array([1]))
         self.assertEqual(broad_a.domain, ["negative electrode"])
 
-    def test_broadcast_type(self):
+    def test_broadcast_errors(self):
         a = pybamm.Symbol("a", domain="current collector")
-        with self.assertRaisesRegex(ValueError, "Variables on the current collector"):
-            pybamm.Broadcast(a, "electrode")
+        with self.assertRaisesRegex(pybamm.DomainError, "Cannot do full broadcast"):
+            pybamm.FullBroadcast(a, "electrode", None)
 
     def test_ones_like(self):
         a = pybamm.Variable("a")
