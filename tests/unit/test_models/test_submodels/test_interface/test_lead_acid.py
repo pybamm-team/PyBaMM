@@ -12,8 +12,8 @@ class TestLeadAcid(unittest.TestCase):
         param = pybamm.standard_parameters_lead_acid
 
         a = pybamm.Scalar(0)
-        a_n = pybamm.Broadcast(pybamm.Scalar(0), ["negative electrode"])
-        a_p = pybamm.Broadcast(pybamm.Scalar(0), ["positive electrode"])
+        a_n = pybamm.PrimaryBroadcast(pybamm.Scalar(0), ["negative electrode"])
+        a_p = pybamm.PrimaryBroadcast(pybamm.Scalar(0), ["positive electrode"])
         variables = {
             "Current collector current density": a,
             "Negative electrode potential": a_n,

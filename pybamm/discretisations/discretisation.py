@@ -660,7 +660,7 @@ class Discretisation(object):
                 eqn = pybamm.FullBroadcast(
                     eqn,
                     eqn_key.domain,
-                    broadcast_auxiliary_domains=eqn_key.auxiliary_domains,
+                    eqn_key.auxiliary_domains,
                 )
 
             # note we are sending in the key.id here so we don't have to

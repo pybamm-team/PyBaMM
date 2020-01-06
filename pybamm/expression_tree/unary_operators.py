@@ -1031,7 +1031,7 @@ def boundary_value(symbol, side):
         # Read child (making copy)
         child = symbol.orphans[0]
         # Take boundary value
-        boundary_child = BoundaryValue(child, side)
+        boundary_child = boundary_value(child, side)
         # Broadcast back to the original symbol's secondary domain
         return pybamm.PrimaryBroadcast(boundary_child, symbol.secondary_domain)
     # Otherwise, calculate boundary value

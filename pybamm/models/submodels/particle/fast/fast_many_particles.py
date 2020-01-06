@@ -36,7 +36,7 @@ class ManyParticles(BaseModel):
             N_s = pybamm.FullBroadcast(
                 0,
                 ["negative particle"],
-                broadcast_auxiliary_domains={
+                auxiliary_domains={
                     "secondary": "negative electrode",
                     "tertiary": "current collector",
                 },
@@ -51,7 +51,7 @@ class ManyParticles(BaseModel):
             N_s = pybamm.FullBroadcast(
                 0,
                 ["positive particle"],
-                broadcast_auxiliary_domains={
+                auxiliary_domains={
                     "secondary": "positive electrode",
                     "tertiary": "current collector",
                 },
