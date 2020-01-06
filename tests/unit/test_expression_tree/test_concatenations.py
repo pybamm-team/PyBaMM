@@ -254,9 +254,13 @@ class TestConcatenations(unittest.TestCase):
         )
 
         # Piecewise constant state vectors
-        a_sv = pybamm.PrimaryBroadcast(pybamm.StateVector(slice(0, 1)), ["negative electrode"])
+        a_sv = pybamm.PrimaryBroadcast(
+            pybamm.StateVector(slice(0, 1)), ["negative electrode"]
+        )
         b_sv = pybamm.PrimaryBroadcast(pybamm.StateVector(slice(1, 2)), ["separator"])
-        c_sv = pybamm.PrimaryBroadcast(pybamm.StateVector(slice(2, 3)), ["positive electrode"])
+        c_sv = pybamm.PrimaryBroadcast(
+            pybamm.StateVector(slice(2, 3)), ["positive electrode"]
+        )
         conc = pybamm.Concatenation(a_sv, b_sv, c_sv)
 
         self.assertEqual(

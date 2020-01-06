@@ -38,8 +38,6 @@ def post_process_variables(
     processed_variables = {}
     known_evals = {t: {} for t in t_sol}
     for var, eqn in variables.items():
-        if var in ["Negative particle flux", "Negative particle concentration"]:
-            n = 1
         pybamm.logger.debug("Post-processing {}".format(var))
         processed_variables[var] = ProcessedVariable(
             eqn, t_sol, u_sol, mesh, inputs, interp_kind, known_evals

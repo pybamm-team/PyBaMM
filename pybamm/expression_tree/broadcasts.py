@@ -17,9 +17,8 @@ class Broadcast(pybamm.SpatialOperator):
         child node
     broadcast_domain : iterable of str
         Primary domain for broadcast. This will become the domain of the symbol
-    auxiliary_domain : iterable of str
-        Secondary domain for broadcast. Currently, this is only used for testing that
-        symbols have the right shape.
+    broadcast_auxiliary_domains : dict of str
+        Auxiliary domains for broadcast.
     broadcast_type : str, optional
         Whether to broadcast to the full domain (primary and secondary) or only in the
         primary direction. Default is "full".
@@ -55,41 +54,9 @@ class Broadcast(pybamm.SpatialOperator):
         self.broadcast_domain = broadcast_domain
         super().__init__(name, child, domain, auxiliary_domains)
 
-    def check_and_set_domains(
-        self, child, broadcast_type, broadcast_domain, broadcast_auxiliary_domains
-    ):
-        """
-        Set broadcast domain and broadcast type, performing basic checks to make sure
-        it is compatible with the child
-        """
-        raise NotImplementedError
-
-    def _unary_simplify(self, child):
+    def _unary_simplify(self, simplified_child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
-
-        return Broadcast(
-            child, self.broadcast_domain, self.auxiliary_domains, self.broadcast_type
-        )
-
-    def _unary_new_copy(self, child):
-        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
-
-        return Broadcast(
-            child, self.broadcast_domain, self.auxiliary_domains, self.broadcast_type
-        )
-
-    def evaluate_for_shape(self):
-        """
-        Returns a vector of NaNs to represent the shape of a Broadcast.
-        See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`
-        """
-        child_eval = self.children[0].evaluate_for_shape()
-        vec = pybamm.evaluate_for_shape_using_domain(self.domain)
-
-        if self.broadcast_type == "primary":
-            return np.outer(child_eval, vec).reshape(-1, 1)
-        elif self.broadcast_type == "full":
-            return child_eval * vec
+        return self._unary_new_copy(simplified_child)
 
 
 class PrimaryBroadcast(Broadcast):
@@ -132,19 +99,13 @@ class PrimaryBroadcast(Broadcast):
             raise pybamm.DomainError("Cannot do primary broadcast from particle domain")
 
         domain = broadcast_domain
-        if broadcast_auxiliary_domains is None:
-            if child.domain != []:
-                auxiliary_domains = {"secondary": child.domain}
-            else:
-                auxiliary_domains = {}
-        else:
-            auxiliary_domains = broadcast_auxiliary_domains
+        auxiliary_domains = {}
+        if child.domain != []:
+            auxiliary_domains["secondary"] = child.domain
+        if "secondary" in child.auxiliary_domains:
+            auxiliary_domains["tertiary"] = child.auxiliary_domains["secondary"]
 
         return domain, auxiliary_domains
-
-    def _unary_simplify(self, child):
-        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
-        return PrimaryBroadcast(child, self.broadcast_domain)
 
     def _unary_new_copy(self, child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
@@ -221,10 +182,6 @@ class SecondaryBroadcast(Broadcast):
 
         return domain, auxiliary_domains
 
-    def _unary_simplify(self, child):
-        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
-        return SecondaryBroadcast(child, self.broadcast_domain)
-
     def _unary_new_copy(self, child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
         return SecondaryBroadcast(child, self.broadcast_domain)
@@ -273,10 +230,6 @@ class FullBroadcast(Broadcast):
             auxiliary_domains = broadcast_auxiliary_domains
 
         return domain, auxiliary_domains
-
-    def _unary_simplify(self, child):
-        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
-        return FullBroadcast(child, self.broadcast_domain, self.auxiliary_domains)
 
     def _unary_new_copy(self, child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """

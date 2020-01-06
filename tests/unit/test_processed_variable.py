@@ -132,14 +132,14 @@ class TestProcessedVariable(unittest.TestCase):
 
         # On edges
         x_s_edge = pybamm.Matrix(
-            np.repeat(disc.mesh["separator"][0].edges, len(z_sol)),
+            np.tile(disc.mesh["separator"][0].edges, len(z_sol)),
             domain="separator",
             auxiliary_domains={"secondary": "current collector"},
         )
         processed_x_s_edge = pybamm.ProcessedVariable(x_s_edge, t_sol, y_sol, disc.mesh)
         np.testing.assert_array_equal(
-            x_s_edge.entries[:, 0],
-            processed_x_s_edge.entries[:, :, 0].reshape(-1, 1)[:, 0],
+            x_s_edge.entries.flatten(),
+            processed_x_s_edge.entries[:, :, 0].T.flatten(),
         )
 
     def test_processed_variable_3D_scikit(self):
