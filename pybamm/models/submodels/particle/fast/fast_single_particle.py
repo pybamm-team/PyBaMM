@@ -33,12 +33,12 @@ class SingleParticle(BaseModel):
         if self.domain == "Negative":
             c_s_surf_xav = pybamm.standard_variables.c_s_n_surf_xav
             c_s_xav = pybamm.PrimaryBroadcast(c_s_surf_xav, ["negative particle"])
-            c_s = pybamm.PrimaryBroadcast(c_s_xav, ["negative electrode"])
+            c_s = pybamm.SecondaryBroadcast(c_s_xav, ["negative electrode"])
 
             N_s = pybamm.FullBroadcast(
                 0,
                 ["negative particle"],
-                auxiliary_domains={
+                broadcast_auxiliary_domains={
                     "secondary": "negative electrode",
                     "tertiary": "current collector",
                 },
@@ -48,12 +48,12 @@ class SingleParticle(BaseModel):
         elif self.domain == "Positive":
             c_s_surf_xav = pybamm.standard_variables.c_s_p_surf_xav
             c_s_xav = pybamm.PrimaryBroadcast(c_s_surf_xav, ["positive particle"])
-            c_s = pybamm.PrimaryBroadcast(c_s_xav, ["positive electrode"])
+            c_s = pybamm.SecondaryBroadcast(c_s_xav, ["positive electrode"])
 
             N_s = pybamm.FullBroadcast(
                 0,
                 ["positive particle"],
-                auxiliary_domains={
+                broadcast_auxiliary_domains={
                     "secondary": "positive electrode",
                     "tertiary": "current collector",
                 },

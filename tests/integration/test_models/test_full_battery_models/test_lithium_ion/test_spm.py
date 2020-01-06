@@ -14,38 +14,38 @@ class TestSPM(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-    def test_basic_processing_1plus1D(self):
-        options = {"current collector": "potential pair", "dimensionality": 1}
+    # def test_basic_processing_1plus1D(self):
+    #     options = {"current collector": "potential pair", "dimensionality": 1}
 
-        model = pybamm.lithium_ion.SPM(options)
-        var = pybamm.standard_spatial_vars
-        var_pts = {
-            var.x_n: 5,
-            var.x_s: 5,
-            var.x_p: 5,
-            var.r_n: 5,
-            var.r_p: 5,
-            var.y: 5,
-            var.z: 5,
-        }
-        modeltest = tests.StandardModelTest(model, var_pts=var_pts)
-        modeltest.test_all(skip_output_tests=True)
+    #     model = pybamm.lithium_ion.SPM(options)
+    #     var = pybamm.standard_spatial_vars
+    #     var_pts = {
+    #         var.x_n: 5,
+    #         var.x_s: 5,
+    #         var.x_p: 5,
+    #         var.r_n: 5,
+    #         var.r_p: 5,
+    #         var.y: 5,
+    #         var.z: 5,
+    #     }
+    #     modeltest = tests.StandardModelTest(model, var_pts=var_pts)
+    #     modeltest.test_all(skip_output_tests=True)
 
-    def test_basic_processing_2plus1D(self):
-        options = {"current collector": "potential pair", "dimensionality": 2}
-        model = pybamm.lithium_ion.SPM(options)
-        var = pybamm.standard_spatial_vars
-        var_pts = {
-            var.x_n: 5,
-            var.x_s: 5,
-            var.x_p: 5,
-            var.r_n: 5,
-            var.r_p: 5,
-            var.y: 5,
-            var.z: 5,
-        }
-        modeltest = tests.StandardModelTest(model, var_pts=var_pts)
-        modeltest.test_all(skip_output_tests=True)
+    # def test_basic_processing_2plus1D(self):
+    #     options = {"current collector": "potential pair", "dimensionality": 2}
+    #     model = pybamm.lithium_ion.SPM(options)
+    #     var = pybamm.standard_spatial_vars
+    #     var_pts = {
+    #         var.x_n: 5,
+    #         var.x_s: 5,
+    #         var.x_p: 5,
+    #         var.r_n: 5,
+    #         var.r_p: 5,
+    #         var.y: 5,
+    #         var.z: 5,
+    #     }
+    #     modeltest = tests.StandardModelTest(model, var_pts=var_pts)
+    #     modeltest.test_all(skip_output_tests=True)
 
     def test_optimisations(self):
         options = {"thermal": "isothermal"}

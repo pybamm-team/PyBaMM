@@ -224,16 +224,6 @@ class ProcessedVariable(object):
     def initialise_3D(self):
         """
         Initialise a 3D object that depends on x and r, or x and z.
-        Needs to be generalised to deal with other domains.
-
-        Notes
-        -----
-        There is different behaviour between a variable on an electrode domain
-        broadcast to a particle (such as temperature) and a variable on a particle
-        domain broadcast to an electrode (such as particle concentration). We deal with
-        this by reshaping the former with the Fortran order ("F") and the latter with
-        the C order ("C"). These are transposes of each other, so this approach simply
-        avoids having to transpose later.
         """
         first_dim_nodes = self.mesh.combine_submeshes(*self.domain)[0].nodes
         first_dim_edges = self.mesh.combine_submeshes(*self.domain)[0].edges
