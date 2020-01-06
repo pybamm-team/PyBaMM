@@ -1032,7 +1032,7 @@ def boundary_value(symbol, side):
         child = symbol.orphans[0]
         # Take boundary value
         boundary_child = BoundaryValue(child, side)
-        # Broadcast back to the original symbol's secondary domain 
+        # Broadcast back to the original symbol's secondary domain
         return pybamm.PrimaryBroadcast(boundary_child, symbol.secondary_domain)
     # Otherwise, calculate boundary value
     else:
@@ -1062,5 +1062,7 @@ def r_average(symbol):
         return symbol.orphans[0]
     else:
         r = pybamm.SpatialVariable("r", symbol.domain)
-        v = pybamm.PrimaryBroadcast(pybamm.Scalar(1), symbol.domain)
+        v = pybamm.FullBroadcast(
+            pybamm.Scalar(1), symbol.domain, symbol.auxiliary_domains
+        )
         return Integral(symbol, r) / Integral(v, r)

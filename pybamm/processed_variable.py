@@ -38,6 +38,8 @@ def post_process_variables(
     processed_variables = {}
     known_evals = {t: {} for t in t_sol}
     for var, eqn in variables.items():
+        if var in ["Negative particle flux", "Negative particle concentration"]:
+            n = 1
         pybamm.logger.debug("Post-processing {}".format(var))
         processed_variables[var] = ProcessedVariable(
             eqn, t_sol, u_sol, mesh, inputs, interp_kind, known_evals
@@ -279,14 +281,14 @@ class ProcessedVariable(object):
                 entries[:, :, idx] = np.reshape(
                     eval_and_known_evals[0],
                     [first_dim_size, second_dim_size],
-                    order="C",
+                    order="F",
                 )
                 self.known_evals[t] = eval_and_known_evals[1]
             else:
                 entries[:, :, idx] = np.reshape(
                     self.base_variable.evaluate(t, u, self.inputs),
                     [first_dim_size, second_dim_size],
-                    order="C",
+                    order="F",
                 )
 
         # assign attributes for reference
