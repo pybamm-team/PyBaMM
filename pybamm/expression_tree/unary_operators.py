@@ -327,7 +327,6 @@ class Gradient_Squared(SpatialOperator):
     operator with itself. In particular, this is useful in the finite element
     formualtion where we only require the (sclar valued) square of the gradient,
     and  not the gradient itself.
-
     **Extends:** :class:`SpatialOperator`
     """
 
@@ -694,7 +693,7 @@ class BoundaryOperator(SpatialOperator):
         # boundary value of a child takes the domain from auxiliary domain of the child
         if child.auxiliary_domains != {}:
             domain = child.auxiliary_domains["secondary"]
-        # if child has no auxiliary domain, integral removes domain
+        # if child has no auxiliary domain, boundary operator removes domain
         else:
             domain = []
         # tertiary auxiliary domain shift down to secondary
@@ -850,7 +849,7 @@ def grad_squared(expression):
 #
 
 
-def surf(symbol, set_domain=False):
+def surf(symbol):
     """convenience function for creating a right :class:`BoundaryValue`, usually in the
     spherical geometry
 
@@ -865,19 +864,7 @@ def surf(symbol, set_domain=False):
     :class:`pybamm.BoundaryValue`
         the surface value of ``symbol``
     """
-    if symbol.domain in [["negative electrode"], ["positive electrode"]] and isinstance(
-        symbol, pybamm.PrimaryBroadcast
-    ):
-        child_surf = boundary_value(symbol.orphans[0], "right")
-        out = pybamm.PrimaryBroadcast(child_surf, symbol.domain)
-    else:
-        out = boundary_value(symbol, "right")
-        if set_domain:
-            if symbol.domain == ["negative particle"]:
-                out.domain = ["negative electrode"]
-            elif symbol.domain == ["positive particle"]:
-                out.domain = ["positive electrode"]
-    return out
+    return boundary_value(symbol, "right")
 
 
 def x_average(symbol):
@@ -1035,9 +1022,18 @@ def boundary_value(symbol, side):
         new_symbol = symbol.new_copy()
         new_symbol.parent = None
         return new_symbol
-    # If symbol is a Broadcast, its boundary value is its child
-    if isinstance(symbol, pybamm.Broadcast):
+    # If symbol is a primary or full broadcast, its boundary value is its child
+    if isinstance(symbol, (pybamm.PrimaryBroadcast, pybamm.FullBroadcast)):
         return symbol.orphans[0]
+    # If symbol is a secondary broadcast, its boundary value is a primary broadcast of
+    # the boundary value of its child
+    if isinstance(symbol, pybamm.SecondaryBroadcast):
+        # Read child (making copy)
+        child = symbol.orphans[0]
+        # Take boundary value
+        boundary_child = boundary_value(child, side)
+        # Broadcast back to the original symbol's secondary domain
+        return pybamm.PrimaryBroadcast(boundary_child, symbol.secondary_domain)
     # Otherwise, calculate boundary value
     else:
         return BoundaryValue(symbol, side)
@@ -1066,5 +1062,7 @@ def r_average(symbol):
         return symbol.orphans[0]
     else:
         r = pybamm.SpatialVariable("r", symbol.domain)
-        v = pybamm.Broadcast(pybamm.Scalar(1), symbol.domain)
+        v = pybamm.FullBroadcast(
+            pybamm.Scalar(1), symbol.domain, symbol.auxiliary_domains
+        )
         return Integral(symbol, r) / Integral(v, r)

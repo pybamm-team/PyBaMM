@@ -110,7 +110,7 @@ class TestProcessedVariable(unittest.TestCase):
         processed_var = pybamm.ProcessedVariable(var_sol, pybamm.Solution(t_sol, y_sol))
         np.testing.assert_array_equal(
             processed_var.entries,
-            np.reshape(y_sol, [len(x_sol), len(r_sol), len(t_sol)]),
+            np.reshape(y_sol, [len(r_sol), len(x_sol), len(t_sol)]),
         )
 
     def test_processed_variable_3D_x_z(self):
@@ -289,14 +289,14 @@ class TestProcessedVariable(unittest.TestCase):
         processed_var = pybamm.ProcessedVariable(var_sol, pybamm.Solution(t_sol, y_sol))
         # 3 vectors
         np.testing.assert_array_equal(
-            processed_var(t_sol, x_sol, r_sol).shape, (40, 10, 50)
+            processed_var(t_sol, x_sol, r_sol).shape, (10, 40, 50)
         )
         np.testing.assert_array_equal(
             processed_var(t_sol, x_sol, r_sol),
-            np.reshape(y_sol, [len(x_sol), len(r_sol), len(t_sol)]),
+            np.reshape(y_sol, [len(r_sol), len(x_sol), len(t_sol)]),
         )
         # 2 vectors, 1 scalar
-        np.testing.assert_array_equal(processed_var(0.5, x_sol, r_sol).shape, (40, 10))
+        np.testing.assert_array_equal(processed_var(0.5, x_sol, r_sol).shape, (10, 40))
         np.testing.assert_array_equal(processed_var(t_sol, 0.2, r_sol).shape, (10, 50))
         np.testing.assert_array_equal(processed_var(t_sol, x_sol, 0.5).shape, (40, 50))
         # 1 vectors, 2 scalar
@@ -328,16 +328,15 @@ class TestProcessedVariable(unittest.TestCase):
         processed_var = pybamm.ProcessedVariable(var_sol, pybamm.Solution(t_sol, y_sol))
         # 3 vectors
         np.testing.assert_array_equal(
-            processed_var(t_sol, x_sol, r_sol).shape, (35, 10, 50)
+            processed_var(t_sol, x_sol, r_sol).shape, (10, 35, 50)
         )
 
-    def test_processed_var_3D_r_first_dimension(self):
+    def test_processed_var_3D_secondary_broadcast(self):
         var = pybamm.Variable(
             "var",
             domain=["negative particle"],
-            auxiliary_domains={"secondary": ["negative electrode"]},
         )
-        broad_var = pybamm.PrimaryBroadcast(var, "negative electrode")
+        broad_var = pybamm.SecondaryBroadcast(var, "negative electrode")
         x = pybamm.SpatialVariable("x", domain=["negative electrode"])
         r = pybamm.SpatialVariable("r", domain=["negative particle"])
 
@@ -352,14 +351,14 @@ class TestProcessedVariable(unittest.TestCase):
         processed_var = pybamm.ProcessedVariable(var_sol, pybamm.Solution(t_sol, y_sol))
         # 3 vectors
         np.testing.assert_array_equal(
-            processed_var(t_sol, x_sol, r_sol).shape, (40, 10, 50)
+            processed_var(t_sol, x_sol, r_sol).shape, (10, 40, 50)
         )
         np.testing.assert_array_equal(
             processed_var(t_sol, x_sol, r_sol),
-            np.reshape(y_sol, [len(x_sol), len(r_sol), len(t_sol)]),
+            np.reshape(y_sol, [len(r_sol), len(x_sol), len(t_sol)]),
         )
         # 2 vectors, 1 scalar
-        np.testing.assert_array_equal(processed_var(0.5, x_sol, r_sol).shape, (40, 10))
+        np.testing.assert_array_equal(processed_var(0.5, x_sol, r_sol).shape, (10, 40))
         np.testing.assert_array_equal(processed_var(t_sol, 0.2, r_sol).shape, (10, 50))
         np.testing.assert_array_equal(processed_var(t_sol, x_sol, 0.5).shape, (40, 50))
         # 1 vectors, 2 scalar
@@ -371,7 +370,7 @@ class TestProcessedVariable(unittest.TestCase):
 
         # positive particle
         var = pybamm.Variable("var", domain=["positive particle"])
-        broad_var = pybamm.PrimaryBroadcast(var, "positive electrode")
+        broad_var = pybamm.SecondaryBroadcast(var, "positive electrode")
         x = pybamm.SpatialVariable("x", domain=["positive electrode"])
         r = pybamm.SpatialVariable("r", domain=["positive particle"])
 
@@ -385,7 +384,7 @@ class TestProcessedVariable(unittest.TestCase):
         processed_var = pybamm.ProcessedVariable(var_sol, pybamm.Solution(t_sol, y_sol))
         # 3 vectors
         np.testing.assert_array_equal(
-            processed_var(t_sol, x_sol, r_sol).shape, (35, 10, 50)
+            processed_var(t_sol, x_sol, r_sol).shape, (10, 35, 50)
         )
 
     def test_processed_var_3D_scikit_interpolation(self):

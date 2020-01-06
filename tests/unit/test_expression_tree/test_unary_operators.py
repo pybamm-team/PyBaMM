@@ -213,7 +213,7 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(boundary_a.id, a.id)
 
         boundary_broad_a = pybamm.boundary_value(
-            pybamm.Broadcast(a, ["negative electrode"]), "left"
+            pybamm.PrimaryBroadcast(a, ["negative electrode"]), "left"
         )
         self.assertEqual(boundary_broad_a.evaluate(), np.array([1]))
 
@@ -253,13 +253,13 @@ class TestUnaryOperators(unittest.TestCase):
         average_a = pybamm.x_average(a)
         self.assertEqual(average_a.id, a.id)
 
-        average_broad_a = pybamm.x_average(pybamm.Broadcast(a, ["negative electrode"]))
+        average_broad_a = pybamm.x_average(pybamm.PrimaryBroadcast(a, ["negative electrode"]))
         self.assertEqual(average_broad_a.evaluate(), np.array([1]))
 
         conc_broad = pybamm.Concatenation(
-            pybamm.Broadcast(1, ["negative electrode"]),
-            pybamm.Broadcast(2, ["separator"]),
-            pybamm.Broadcast(3, ["positive electrode"]),
+            pybamm.PrimaryBroadcast(1, ["negative electrode"]),
+            pybamm.PrimaryBroadcast(2, ["separator"]),
+            pybamm.PrimaryBroadcast(3, ["positive electrode"]),
         )
         average_conc_broad = pybamm.x_average(conc_broad)
         self.assertIsInstance(average_conc_broad, pybamm.Division)
@@ -288,7 +288,7 @@ class TestUnaryOperators(unittest.TestCase):
         average_a = pybamm.r_average(a)
         self.assertEqual(average_a.id, a.id)
 
-        average_broad_a = pybamm.r_average(pybamm.Broadcast(a, ["negative particle"]))
+        average_broad_a = pybamm.r_average(pybamm.PrimaryBroadcast(a, ["negative particle"]))
         self.assertEqual(average_broad_a.evaluate(), np.array([1]))
 
         for domain in [["negative particle"], ["positive particle"]]:
@@ -312,9 +312,9 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(z_average_a.id, a.id)
         self.assertEqual(yz_average_a.id, a.id)
 
-        z_average_broad_a = pybamm.z_average(pybamm.Broadcast(a, ["current collector"]))
+        z_average_broad_a = pybamm.z_average(pybamm.PrimaryBroadcast(a, ["current collector"]))
         yz_average_broad_a = pybamm.yz_average(
-            pybamm.Broadcast(a, ["current collector"])
+            pybamm.PrimaryBroadcast(a, ["current collector"])
         )
         self.assertEqual(z_average_broad_a.evaluate(), np.array([1]))
         self.assertEqual(yz_average_broad_a.evaluate(), np.array([1]))

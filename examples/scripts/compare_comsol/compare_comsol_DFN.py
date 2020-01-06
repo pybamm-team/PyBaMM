@@ -79,9 +79,9 @@ def get_interp_fun(variable_name, domain):
 
     def myinterp(t):
         try:
-            return interp.interp1d(comsol_t, variable, fill_value="extrapolate")(t)[
-                :, np.newaxis
-            ]
+            return interp.interp1d(
+                comsol_t, variable, fill_value="extrapolate", bounds_error=False,
+            )(t)[:, np.newaxis]
         except ValueError as err:
             raise ValueError(
                 """Failed to interpolate '{}' with time range [{}, {}] at time {}.
@@ -102,7 +102,9 @@ comsol_c_p_surf = get_interp_fun("c_p_surf", ["positive electrode"])
 comsol_phi_n = get_interp_fun("phi_n", ["negative electrode"])
 comsol_phi_e = get_interp_fun("phi_e", whole_cell)
 comsol_phi_p = get_interp_fun("phi_p", ["positive electrode"])
-comsol_voltage = interp.interp1d(comsol_t, comsol_variables["voltage"])
+comsol_voltage = interp.interp1d(
+    comsol_t, comsol_variables["voltage"], fill_value="extrapolate", bounds_error=False
+)
 
 # Create comsol model with dictionary of Matrix variables
 comsol_model = pybamm.BaseModel()
