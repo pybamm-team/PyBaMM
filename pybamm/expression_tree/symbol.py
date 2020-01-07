@@ -195,6 +195,16 @@ class Symbol(anytree.NodeMixin):
         "Helper function to get the secondary domain of a symbol"
         return self.auxiliary_domains["secondary"]
 
+    def copy_domains(self, symbol):
+        "Copy the domains from a given symbol, bypassing checks"
+        self._domain = symbol.domain
+        self._auxiliary_domains = symbol.auxiliary_domains
+
+    def clear_domains(self):
+        "Clear domains, bypassing checks"
+        self._domain = []
+        self._auxiliary_domains = {}
+
     def get_children_auxiliary_domains(self, children):
         "Combine auxiliary domains from children, at all levels"
         aux_domains = {}

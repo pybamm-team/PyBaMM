@@ -360,7 +360,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         )
 
         out = integration_vector @ discretised_child
-        out.domain = []
+        out.clear_domains()
         return out
 
     def boundary_integral_vector(self, domain, region):

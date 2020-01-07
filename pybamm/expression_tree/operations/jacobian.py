@@ -83,6 +83,5 @@ class Jacobian(object):
                 )
 
         # jacobian removes the domain(s)
-        jac.domain = []
-        jac.auxiliary_domains = {}
+        jac.clear_domains()
         return jac

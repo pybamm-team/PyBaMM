@@ -750,8 +750,7 @@ class Discretisation(object):
 
             elif isinstance(symbol, pybamm.Integral):
                 out = child_spatial_method.integral(child, disc_child)
-                out.domain = symbol.domain
-                out.auxiliary_domains = symbol.auxiliary_domains
+                out.copy_domains(symbol)
                 return out
 
             elif isinstance(symbol, pybamm.DefiniteIntegralVector):

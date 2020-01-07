@@ -355,7 +355,7 @@ class SpatialMethod:
 
         out = bv_vector @ discretised_child
         # boundary value removes domain
-        out.domain = []
+        out.clear_domains()
         return out
 
     def mass_matrix(self, symbol, boundary_conditions):

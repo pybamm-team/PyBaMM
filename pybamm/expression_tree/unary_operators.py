@@ -191,8 +191,7 @@ class Index(UnaryOperator):
 
         # no domain for integer value key
         if isinstance(index, int):
-            self.auxiliary_domains = {}
-            self.domain = []
+            self.clear_domains()
 
     def _unary_jac(self, child_jac):
         """ See :meth:`pybamm.UnaryOperator._unary_jac()`. """
@@ -494,8 +493,7 @@ class IndefiniteIntegral(Integral):
                 integration_variable = integration_variable[0]
         super().__init__(child, integration_variable)
         # overwrite domains with child domains
-        self.auxiliary_domains = child.auxiliary_domains
-        self.domain = child.domain
+        self.copy_domains(child)
         # Overwrite the name
         self.name = "{} integrated w.r.t {}".format(
             child.name, integration_variable.name
@@ -532,7 +530,7 @@ class DefiniteIntegralVector(SpatialOperator):
         self.vector_type = vector_type
         super().__init__(name, child)
         # integrating removes the domain
-        self.domain = []
+        self.clear_domains()
 
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()` """
@@ -637,6 +635,8 @@ class DeltaFunction(SpatialOperator):
 
     def __init__(self, child, side, domain):
         self.side = side
+        if domain is None:
+            raise pybamm.DomainError("Delta function domain cannot be None")
         if child.domain != []:
             auxiliary_domains = {"secondary": child.domain}
         else:
