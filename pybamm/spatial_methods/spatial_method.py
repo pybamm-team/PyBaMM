@@ -107,6 +107,7 @@ class SpatialMethod:
                 for dom in auxiliary_domains["secondary"]
             )
             kron_size = full_domain_size // primary_domain_size
+            # Symbol may be on edges so need to calculate size carefully
             symbol_primary_size = symbol.shape[0] // kron_size
             # Make copies of the child stacked on top of each other
             identity = eye(symbol_primary_size)
