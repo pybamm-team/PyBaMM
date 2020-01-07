@@ -43,6 +43,16 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual(a.domain, ["t", "e", "s"])
         with self.assertRaises(TypeError):
             a = pybamm.Symbol("a", domain=1)
+        with self.assertRaisesRegex(
+            pybamm.DomainError,
+            "Domain cannot be empty if auxiliary domains are not empty",
+        ):
+            b = pybamm.Symbol("b", auxiliary_domains={"sec": ["test sec"]})
+        b = pybamm.Symbol("b", domain="test", auxiliary_domains={"sec": ["test sec"]})
+        with self.assertRaisesRegex(
+            pybamm.DomainError, "Domain cannot be the same as an auxiliary domain"
+        ):
+            b.domain = "test sec"
 
     def test_symbol_auxiliary_domains(self):
         a = pybamm.Symbol(
@@ -58,6 +68,19 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual(a.domain, ["t", "e", "s"])
         with self.assertRaises(TypeError):
             a = pybamm.Symbol("a", domain=1)
+        b = pybamm.Symbol("b", domain="test sec")
+        with self.assertRaisesRegex(
+            pybamm.DomainError, "Domain cannot be the same as an auxiliary domain"
+        ):
+            b.auxiliary_domains = {"sec": "test sec"}
+        with self.assertRaisesRegex(
+            pybamm.DomainError, "All auxiliary domains must be different"
+        ):
+            b = pybamm.Symbol(
+                "b",
+                domain="test",
+                auxiliary_domains={"sec": ["test sec"], "tert": ["test sec"]},
+            )
 
     def test_symbol_methods(self):
         a = pybamm.Symbol("a")

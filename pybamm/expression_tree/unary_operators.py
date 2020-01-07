@@ -189,8 +189,9 @@ class Index(UnaryOperator):
 
         super().__init__(name, child)
 
-        # no domain for integer value
+        # no domain for integer value key
         if isinstance(index, int):
+            self.auxiliary_domains = {}
             self.domain = []
 
     def _unary_jac(self, child_jac):
