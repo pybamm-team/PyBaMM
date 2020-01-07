@@ -410,7 +410,10 @@ class Multiplication(BinaryOperator):
         elif right.evaluates_to_number():
             return right * left_jac
         else:
-            return right * left_jac + left * right_jac
+            try:
+                return right * left_jac + left * right_jac
+            except:
+                self.orphans
 
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """

@@ -957,11 +957,9 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # Return boundary value with domain given by symbol
         boundary_value = pybamm.Matrix(matrix) @ discretised_child
-        boundary_value.auxiliary_domains = symbol.auxiliary_domains
-        boundary_value.domain = symbol.domain
+        boundary_value.copy_domains(symbol)
 
-        additive.auxiliary_domains = symbol.auxiliary_domains
-        additive.domain = symbol.domain
+        additive.copy_domains(symbol)
         boundary_value += additive
 
         return boundary_value
