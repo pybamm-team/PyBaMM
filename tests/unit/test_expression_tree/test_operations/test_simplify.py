@@ -569,7 +569,7 @@ class TestSimplify(unittest.TestCase):
         broad = pybamm.PrimaryBroadcast(v, "test")
         broad_simp = broad.simplify()
         self.assertEqual(broad_simp.id, broad.id)
-        
+
     def test_simplify_heaviside(self):
         a = pybamm.Scalar(1)
         b = pybamm.Scalar(2)

@@ -168,11 +168,9 @@ class ProcessedVariable(object):
         """
         Initialise a 3D object that depends on x and r, or x and z.
         """
-        first_dim_nodes = self.mesh.combine_submeshes(*self.domain)[0].nodes
-        first_dim_edges = self.mesh.combine_submeshes(*self.domain)[0].edges
-        second_dim_pts = self.mesh.combine_submeshes(
-            *self.auxiliary_domains["secondary"]
-        )[0].nodes
+        first_dim_nodes = self.mesh[0].nodes
+        first_dim_edges = self.mesh[0].edges
+        second_dim_pts = self.base_variable.secondary_mesh[0].nodes
         if self.base_eval.size // len(second_dim_pts) == len(first_dim_nodes):
             first_dim_pts = first_dim_nodes
         elif self.base_eval.size // len(second_dim_pts) == len(first_dim_edges):

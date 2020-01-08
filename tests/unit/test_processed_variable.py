@@ -31,7 +31,6 @@ class TestProcessedVariable(unittest.TestCase):
         disc.set_variable_slices([var])
         x_sol = disc.process_symbol(x).entries[:, 0]
         var_sol = disc.process_symbol(var)
-        var_sol.mesh = disc.mesh.combine_submeshes(*var.domain)
         eqn_sol = disc.process_symbol(eqn)
         eqn_sol.mesh = disc.mesh.combine_submeshes(*eqn.domain)
         t_sol = np.linspace(0, 1)
@@ -103,7 +102,6 @@ class TestProcessedVariable(unittest.TestCase):
         # Keep only the first iteration of entries
         r_sol = r_sol[: len(r_sol) // len(x_sol)]
         var_sol = disc.process_symbol(var)
-        var_sol.mesh = disc.mesh.combine_submeshes(*var.domain)
         t_sol = np.linspace(0, 1)
         y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)
 
@@ -129,7 +127,6 @@ class TestProcessedVariable(unittest.TestCase):
         # Keep only the first iteration of entries
         x_sol = x_sol[: len(x_sol) // len(z_sol)]
         var_sol = disc.process_symbol(var)
-        var_sol.mesh = disc.mesh.combine_submeshes(*var.domain)
         t_sol = np.linspace(0, 1)
         y_sol = np.ones(len(x_sol) * len(z_sol))[:, np.newaxis] * np.linspace(0, 5)
 
@@ -145,6 +142,8 @@ class TestProcessedVariable(unittest.TestCase):
             domain="separator",
             auxiliary_domains={"secondary": "current collector"},
         )
+        x_s_edge.mesh = disc.mesh["separator"]
+        x_s_edge.secondary_mesh = disc.mesh["current collector"]
         processed_x_s_edge = pybamm.ProcessedVariable(
             x_s_edge, pybamm.Solution(t_sol, y_sol)
         )
@@ -224,7 +223,6 @@ class TestProcessedVariable(unittest.TestCase):
         disc.set_variable_slices([var])
         x_sol = disc.process_symbol(x).entries[:, 0]
         var_sol = disc.process_symbol(var)
-        var_sol.mesh = disc.mesh.combine_submeshes(*var.domain)
         eqn_sol = disc.process_symbol(eqn)
         eqn_sol.mesh = disc.mesh.combine_submeshes(*eqn.domain)
         t_sol = np.linspace(0, 1)
@@ -282,7 +280,6 @@ class TestProcessedVariable(unittest.TestCase):
         # Keep only the first iteration of entries
         r_sol = r_sol[: len(r_sol) // len(x_sol)]
         var_sol = disc.process_symbol(var)
-        var_sol.mesh = disc.mesh.combine_submeshes(*var.domain)
         t_sol = np.linspace(0, 1)
         y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)
 
@@ -321,7 +318,6 @@ class TestProcessedVariable(unittest.TestCase):
         # Keep only the first iteration of entries
         r_sol = r_sol[: len(r_sol) // len(x_sol)]
         var_sol = disc.process_symbol(var)
-        var_sol.mesh = disc.mesh.combine_submeshes(*var.domain)
         t_sol = np.linspace(0, 1)
         y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)
 
@@ -506,7 +502,6 @@ class TestProcessedVariable(unittest.TestCase):
         disc.set_variable_slices([var])
         x_sol = disc.process_symbol(x).entries[:, 0]
         var_sol = disc.process_symbol(var)
-        var_sol.mesh = disc.mesh.combine_submeshes(*var.domain)
         t_sol = np.linspace(0, 1)
         y_sol = x_sol[:, np.newaxis] * np.linspace(0, 5)
 
@@ -521,7 +516,6 @@ class TestProcessedVariable(unittest.TestCase):
         disc.set_variable_slices([var])
         r_sol = disc.process_symbol(r).entries[:, 0]
         var_sol = disc.process_symbol(var)
-        var_sol.mesh = disc.mesh.combine_submeshes(*var.domain)
         y_sol = r_sol[:, np.newaxis] * np.linspace(0, 5)
 
         processed_var = pybamm.ProcessedVariable(var_sol, pybamm.Solution(t_sol, y_sol))

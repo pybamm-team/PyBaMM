@@ -668,18 +668,6 @@ class Discretisation(object):
             pybamm.logger.debug("Discretise {!r}".format(eqn_key))
 
             processed_eqn = self.process_symbol(eqn)
-            # Assign mesh as an attribute to the processed variable
-            if eqn.domain != []:
-                processed_eqn.mesh = self.mesh.combine_submeshes(*eqn.domain)
-            else:
-                processed_eqn.mesh = None
-            # Assign secondary mesh
-            if "secondary" in eqn.auxiliary_domains:
-                processed_eqn.secondary_mesh = self.mesh.combine_submeshes(
-                    *eqn.auxiliary_domains["secondary"]
-                )
-            else:
-                processed_eqn.secondary_mesh = None
 
             new_var_eqn_dict[eqn_key] = processed_eqn
 
@@ -706,6 +694,18 @@ class Discretisation(object):
             discretised_symbol = self._process_symbol(symbol)
             self._discretised_symbols[symbol.id] = discretised_symbol
             discretised_symbol.test_shape()
+            # Assign mesh as an attribute to the processed variable
+            if symbol.domain != []:
+                discretised_symbol.mesh = self.mesh.combine_submeshes(*symbol.domain)
+            else:
+                discretised_symbol.mesh = None
+            # Assign secondary mesh
+            if "secondary" in symbol.auxiliary_domains:
+                discretised_symbol.secondary_mesh = self.mesh.combine_submeshes(
+                    *symbol.auxiliary_domains["secondary"]
+                )
+            else:
+                discretised_symbol.secondary_mesh = None
             return discretised_symbol
 
     def _process_symbol(self, symbol):
