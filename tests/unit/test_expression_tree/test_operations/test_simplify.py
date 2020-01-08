@@ -564,6 +564,12 @@ class TestSimplify(unittest.TestCase):
         self.assertEqual(conc_simp.y_slices[0].stop, len(y))
         np.testing.assert_array_equal(conc_disc.evaluate(y=y), conc_simp.evaluate(y=y))
 
+    def test_simplify_broadcast(self):
+        v = pybamm.StateVector(slice(0, 1))
+        broad = pybamm.PrimaryBroadcast(v, "test")
+        broad_simp = broad.simplify()
+        self.assertEqual(broad_simp.id, broad.id)
+        
     def test_simplify_heaviside(self):
         a = pybamm.Scalar(1)
         b = pybamm.Scalar(2)

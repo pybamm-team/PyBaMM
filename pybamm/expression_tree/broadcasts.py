@@ -221,13 +221,7 @@ class FullBroadcast(Broadcast):
                 "Cannot do full broadcast from current collector domain"
             )
         domain = broadcast_domain
-        if broadcast_auxiliary_domains is None:
-            if child.domain != []:
-                auxiliary_domains = {"secondary": child.domain}
-            else:
-                auxiliary_domains = {}
-        else:
-            auxiliary_domains = broadcast_auxiliary_domains
+        auxiliary_domains = broadcast_auxiliary_domains or {}
 
         return domain, auxiliary_domains
 
