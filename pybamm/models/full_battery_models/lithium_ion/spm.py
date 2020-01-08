@@ -32,7 +32,9 @@ class SPM(BaseModel):
     def __init__(self, options=None, name="Single Particle Model", build=True):
         super().__init__(options, name)
 
+        self.set_external_circuit_submodel()
         self.set_porosity_submodel()
+        self.set_tortuosity_submodels()
         self.set_convection_submodel()
         self.set_interfacial_submodel()
         self.set_particle_submodel()
@@ -111,15 +113,3 @@ class SPM(BaseModel):
             return pybamm.Geometry("1+1D macro", "(1+0)+1D micro")
         elif dimensionality == 2:
             return pybamm.Geometry("2+1D macro", "(2+0)+1D micro")
-
-    @property
-    def default_solver(self):
-        """
-        Create and return the default solver for this model
-        """
-        # Different solver depending on whether we solve ODEs or DAEs
-        dimensionality = self.options["dimensionality"]
-        if dimensionality == 0:
-            return pybamm.ScipySolver()
-        else:
-            return pybamm.ScikitsDaeSolver()

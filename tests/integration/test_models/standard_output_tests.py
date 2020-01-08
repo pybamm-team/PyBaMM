@@ -26,9 +26,7 @@ class StandardOutputTests(object):
             self.chemistry = "Lead acid"
 
         # Only for constant current
-        current_sign = np.sign(
-            parameter_values["Current function"].parameters_eval["Current [A]"]
-        )
+        current_sign = np.sign(parameter_values["Current function [A]"])
 
         if current_sign == 1:
             self.operating_condition = "discharge"

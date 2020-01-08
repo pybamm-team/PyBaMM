@@ -33,21 +33,30 @@ class BaseModel(pybamm.BaseSubModel):
             "X-averaged positive electrode porosity": pybamm.x_average(eps_p),
         }
 
+        # activate material volume fractions
+        eps_solid_n = 1 - eps_n - self.param.epsilon_inactive_n
+        eps_solid_s = 1 - eps_s - self.param.epsilon_inactive_s
+        eps_solid_p = 1 - eps_p - self.param.epsilon_inactive_p
+        eps_solid = pybamm.Concatenation(eps_solid_n, eps_solid_s, eps_solid_p)
+
+        am = "active material volume fraction"
+        variables.update(
+            {
+                am.capitalize(): eps_solid,
+                "Negative electrode " + am: eps_solid_n,
+                "Separator " + am: eps_solid,
+                "Positive electrode " + am: eps_solid_p,
+                "X-averaged negative electrode " + am: pybamm.x_average(eps_solid_n),
+                "X-averaged separator " + am: pybamm.x_average(eps_solid),
+                "X-averaged positive electrode " + am: pybamm.x_average(eps_solid_p),
+            }
+        )
+
         if set_leading_order is True:
-            variables.update(
-                {
-                    "Leading-order negative electrode porosity": eps_n,
-                    "Leading-order separator porosity": eps_s,
-                    "Leading-order positive electrode porosity": eps_p,
-                    "Leading-order x-averaged "
-                    + "negative electrode porosity": pybamm.x_average(eps_n),
-                    "Leading-order x-averaged separator porosity": pybamm.x_average(
-                        eps_s
-                    ),
-                    "Leading-order x-averaged "
-                    + "positive electrode porosity": pybamm.x_average(eps_p),
-                }
-            )
+            leading_order_variables = {
+                "Leading-order " + name.lower(): var for name, var in variables.items()
+            }
+            variables.update(leading_order_variables)
 
         return variables
 
@@ -83,3 +92,11 @@ class BaseModel(pybamm.BaseSubModel):
             )
 
         return variables
+
+    def set_events(self, variables):
+        eps_n = variables["Negative electrode porosity"]
+        eps_p = variables["Positive electrode porosity"]
+        self.events["Zero negative electrode porosity cut-off"] = pybamm.min(eps_n)
+        self.events["Max negative electrode porosity cut-off"] = pybamm.max(eps_n) - 1
+        self.events["Zero positive electrode porosity cut-off"] = pybamm.min(eps_p)
+        self.events["Max positive electrode porosity cut-off"] = pybamm.max(eps_p) - 1

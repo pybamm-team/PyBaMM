@@ -45,13 +45,22 @@ class SingleParticle(BaseModel):
             variables["X-averaged " + self.domain.lower() + " electrode temperature"],
             [self.domain.lower() + " particle"],
         )
-
         N_s_xav = self._flux_law(c_s_xav, T_k_xav)
         N_s = pybamm.PrimaryBroadcast(N_s_xav, [self._domain.lower() + " electrode"])
 
         variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
 
         return variables
+
+    def set_rhs(self, variables):
+
+        c, N, _ = self._unpack(variables)
+
+        if self.domain == "Negative":
+            self.rhs = {c: -(1 / self.param.C_n) * pybamm.div(N)}
+
+        elif self.domain == "Positive":
+            self.rhs = {c: -(1 / self.param.C_p) * pybamm.div(N)}
 
     def _unpack(self, variables):
         c_s_xav = variables[

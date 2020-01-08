@@ -4,7 +4,7 @@
 import pybamm
 import pandas as pd
 import os
-import numpy as np
+import numbers
 
 
 class ParameterValues(dict):
@@ -74,6 +74,12 @@ class ParameterValues(dict):
         # Initialise empty _processed_symbols dict (for caching)
         self._processed_symbols = {}
 
+    def __getitem__(self, key):
+        try:
+            return super().__getitem__(key)
+        except KeyError as err:
+            raise KeyError("Parameter '{}' not recognised".format(err.args[0]))
+
     def update_from_chemistry(self, chemistry):
         """
         Load standard set of components from a 'chemistry' dictionary
@@ -126,9 +132,11 @@ class ParameterValues(dict):
         df.dropna(how="all", inplace=True)
         return {k: v for (k, v) in zip(df["Name [units]"], df["Value"])}
 
+    def __setitem__(self, key, value):
+        "Call the update functionality when doing a setitem"
+        self.update({key: value})
+
     def update(self, values, check_conflict=False, path=""):
-        # check parameter values
-        values = self.check_and_update_parameter_values(values)
         # update
         for name, value in values.items():
             # check for conflicts
@@ -147,41 +155,56 @@ class ParameterValues(dict):
                 # Functions are flagged with the string "[function]"
                 if isinstance(value, str):
                     if value.startswith("[function]"):
-                        self[name] = pybamm.load_function(
+                        loaded_value = pybamm.load_function(
                             os.path.join(path, value[10:] + ".py")
                         )
-                    # Inbuilt functions are flagged with the string "[inbuilt]"
-                    elif value.startswith("[inbuilt class]"):
-                        # Extra set of brackets at the end makes an instance of the
-                        # class
-                        self[name] = getattr(pybamm, value[15:])()
-                    # Data is flagged with the string "[data]"
-                    elif value.startswith("[data]"):
-                        data = np.loadtxt(os.path.join(path, value[6:] + ".csv"))
+                        super().__setitem__(name, loaded_value)
+                        values[name] = loaded_value
+                    # Data is flagged with the string "[data]" or "[current data]"
+                    elif value.startswith("[current data]") or value.startswith(
+                        "[data]"
+                    ):
+                        if value.startswith("[current data]"):
+                            data_path = os.path.join(
+                                pybamm.root_dir(), "input", "drive_cycles"
+                            )
+                            filename = os.path.join(data_path, value[14:] + ".csv")
+                            function_name = value[14:]
+                        else:
+                            filename = os.path.join(path, value[6:] + ".csv")
+                            function_name = value[6:]
+                        data = pd.read_csv(
+                            filename, comment="#", skip_blank_lines=True
+                        ).to_numpy()
                         # Save name and data
-                        self[name] = (value[6:], data)
+                        super().__setitem__(name, (function_name, data))
+                        values[name] = (function_name, data)
+                    elif value == "[input]":
+                        super().__setitem__(name, pybamm.InputParameter(name))
                     # Anything else should be a converted to a float
                     else:
-                        self[name] = float(value)
+                        super().__setitem__(name, float(value))
+                        values[name] = float(value)
                 else:
-                    self[name] = value
+                    super().__setitem__(name, value)
+        # check parameter values
+        self.check_and_update_parameter_values(values)
         # reset processed symbols
         self._processed_symbols = {}
 
     def check_and_update_parameter_values(self, values):
-        # Make sure "C-rate" and current are both non-zero
-        if "C-rate" in values and values["C-rate"] == 0:
-            raise ValueError(
-                """
-                "C-rate" cannot be zero. A possible alternative is to set
-                "Current function" to `pybamm.GetConstantCurrent(current=0)` instead.
-                """
-            )
+        # Make sure typical current is non-zero
         if "Typical current [A]" in values and values["Typical current [A]"] == 0:
             raise ValueError(
                 """
                 "Typical current [A]" cannot be zero. A possible alternative is to set
-                "Current function" to `pybamm.GetConstantCurrent(current=0)` instead.
+                "Current function [A]" to `0` instead.
+                """
+            )
+        if "C-rate" in values and "Current function [A]" in values:
+            raise ValueError(
+                """
+                Cannot provide both "C-rate" and "Current function [A]" simultaneously
                 """
             )
         # If the capacity of the cell has been provided, make sure "C-rate" and current
@@ -193,31 +216,38 @@ class ParameterValues(dict):
             else:
                 capacity = self["Cell capacity [A.h]"]
             # Make sure they match if both provided
-            if "C-rate" in values and "Typical current [A]" in values:
-                if values["C-rate"] * capacity != values["Typical current [A]"]:
-                    raise ValueError(
-                        """
-                        "C-rate" ({}C) and Typical current ({} A) provided do not match
-                        given capacity ({} Ah). These can be updated individually
-                        instead.
-                        """.format(
-                            values["C-rate"], values["Typical current [A]"], capacity
-                        )
-                    )
             # Update the other if only one provided
-            elif "C-rate" in values:
-                values["Typical current [A]"] = float(values["C-rate"]) * capacity
-            elif "Typical current [A]" in values:
-                values["C-rate"] = float(values["Typical current [A]"]) / capacity
+            if "C-rate" in values:
+                # Can't provide C-rate as a function
+                if callable(values["C-rate"]):
+                    value = CrateToCurrent(values["C-rate"], capacity)
+                elif isinstance(values["C-rate"], tuple):
+                    data = values["C-rate"][1]
+                    data[:, 1] = data[:, 1] * capacity
+                    value = (values["C-rate"][0] + "_to_Crate", data)
+                else:
+                    value = values["C-rate"] * capacity
+                super().__setitem__("Current function [A]", value)
+            elif "Current function [A]" in values:
+                if callable(values["Current function [A]"]):
+                    value = CurrentToCrate(values["Current function [A]"], capacity)
+                elif isinstance(values["Current function [A]"], tuple):
+                    data = values["Current function [A]"][1]
+                    data[:, 1] = data[:, 1] / capacity
+                    value = (values["Current function [A]"][0] + "_to_current", data)
+                else:
+                    value = values["Current function [A]"] / capacity
+                super().__setitem__("C-rate", value)
+
         return values
 
-    def process_model(self, model, processing="process"):
+    def process_model(self, unprocessed_model, processing="process", inplace=True):
         """Assign parameter values to a model.
         Currently inplace, could be changed to return a new model.
 
         Parameters
         ----------
-        model : :class:`pybamm.BaseModel`
+        unprocessed_model : :class:`pybamm.BaseModel`
             Model to assign parameter values for
         processing : str, optional
             Flag to indicate how to process model (default 'process')
@@ -226,6 +256,9 @@ class ParameterValues(dict):
             and replace any Parameter with a Value)
             * 'update': Calls :meth:`update_scalars()` for use on already-processed \
             model (update the value of any Scalars in the expression tree.)
+        inplace: bool, optional
+            If True, replace the parameters in the model in place. Otherwise, return a
+            new model with parameter values set. Default is True.
 
         Raises
         ------
@@ -233,9 +266,20 @@ class ParameterValues(dict):
             If an empty model is passed (`model.rhs = {}` and `model.algebraic={}`)
 
         """
-        pybamm.logger.info("Start setting parameters for {}".format(model.name))
+        pybamm.logger.info(
+            "Start setting parameters for {}".format(unprocessed_model.name)
+        )
 
-        if len(model.rhs) == 0 and len(model.algebraic) == 0:
+        # set up inplace vs not inplace
+        if inplace:
+            # any changes to model_disc attributes will change model attributes
+            # since they point to the same object
+            model = unprocessed_model
+        else:
+            # create a blank model of the same class
+            model = unprocessed_model.new_copy()
+
+        if len(unprocessed_model.rhs) == 0 and len(unprocessed_model.algebraic) == 0:
             raise pybamm.ModelError("Cannot process parameters for empty model")
 
         if processing == "process":
@@ -270,10 +314,11 @@ class ParameterValues(dict):
         # small number of variables, e.g. {"negative tab": neg. tab bc,
         # "positive tab": pos. tab bc "no tab": no tab bc}.
         new_boundary_conditions = {}
+        sides = ["left", "right", "negative tab", "positive tab", "no tab"]
         for variable, bcs in model.boundary_conditions.items():
             processed_variable = processing_function(variable)
             new_boundary_conditions[processed_variable] = {}
-            for side in ["left", "right", "negative tab", "positive tab", "no tab"]:
+            for side in sides:
                 try:
                     bc, typ = bcs[side]
                     pybamm.logger.debug(
@@ -283,8 +328,14 @@ class ParameterValues(dict):
                     )
                     processed_bc = (processing_function(bc), typ)
                     new_boundary_conditions[processed_variable][side] = processed_bc
-                except KeyError:
-                    pass
+                except KeyError as err:
+                    # don't raise error if the key error comes from the side not being
+                    # found
+                    if err.args[0] in side:
+                        pass
+                    # do raise error otherwise (e.g. can't process symbol)
+                    else:
+                        raise KeyError(err)
 
         model.boundary_conditions = new_boundary_conditions
 
@@ -302,6 +353,8 @@ class ParameterValues(dict):
             model.events[event] = processing_function(equation)
 
         pybamm.logger.info("Finish setting parameters for {}".format(model.name))
+
+        return model
 
     def update_model(self, model, disc):
         """Process a discretised model.
@@ -379,49 +432,50 @@ class ParameterValues(dict):
 
         if isinstance(symbol, pybamm.Parameter):
             value = self[symbol.name]
-            # Scalar inherits name (for updating parameters) and domain (for Broadcast)
-            return pybamm.Scalar(value, name=symbol.name, domain=symbol.domain)
+            if isinstance(value, numbers.Number):
+                # Scalar inherits name (for updating parameters) and domain (for
+                # Broadcast)
+                return pybamm.Scalar(value, name=symbol.name, domain=symbol.domain)
+            elif isinstance(value, pybamm.InputParameter):
+                value.domain = symbol.domain
+                return value
 
         elif isinstance(symbol, pybamm.FunctionParameter):
             new_children = [self.process_symbol(child) for child in symbol.children]
             function_name = self[symbol.name]
 
-            # if current setter, process any parameters that are symbols and
-            # store the evaluated symbol in the parameters_eval dict
-            if isinstance(function_name, pybamm.GetCurrent):
-                for param, sym in function_name.parameters.items():
-                    if isinstance(sym, pybamm.Symbol):
-                        new_sym = self.process_symbol(sym)
-                        function_name.parameters[param] = new_sym
-                        function_name.parameters_eval[param] = new_sym.evaluate()
-                # If loading data, need to update interpolant with
-                # evaluated parameters
-                if isinstance(function_name, pybamm.GetCurrentData):
-                    function_name.interpolate()
-
-            # Create Function or Interpolant objec
+            # Create Function or Interpolant or Scalar object
             if isinstance(function_name, tuple):
                 # If function_name is a tuple then it should be (name, data) and we need
                 # to create an Interpolant
                 name, data = function_name
                 function = pybamm.Interpolant(data, *new_children, name=name)
+            elif isinstance(function_name, numbers.Number):
+                # If the "function" is provided is actually a scalar, return a Scalar
+                # object instead of throwing an error.
+                # Also use ones_like so that we get the right shapes
+                function = pybamm.Scalar(
+                    function_name, name=symbol.name
+                ) * pybamm.ones_like(*new_children)
             else:
-                # otherwise create standard function
-                function = pybamm.Function(function_name, *new_children)
+                # otherwise evaluate the function to create a new PyBaMM object
+                function = function_name(*new_children)
             # Differentiate if necessary
             if symbol.diff_variable is None:
-                return function
+                function_out = function
             else:
                 # return differentiated function
                 new_diff_variable = self.process_symbol(symbol.diff_variable)
-                return function.diff(new_diff_variable)
+                function_out = function.diff(new_diff_variable)
+            # Process again just to be sure
+            return self.process_symbol(function_out)
 
         elif isinstance(symbol, pybamm.BinaryOperator):
             # process children
             new_left = self.process_symbol(symbol.left)
             new_right = self.process_symbol(symbol.right)
             # make new symbol, ensure domain remains the same
-            new_symbol = symbol.__class__(new_left, new_right)
+            new_symbol = symbol._binary_new_copy(new_left, new_right)
             new_symbol.domain = symbol.domain
             return new_symbol
 
@@ -478,28 +532,6 @@ class ParameterValues(dict):
                 except KeyError:
                     # KeyError -> name not in parameter dict, don't update
                     continue
-            elif isinstance(x, pybamm.Function):
-                if isinstance(x.function, pybamm.GetCurrent):
-                    # Need to update parameters dict to be that of the new current
-                    # function and make new parameters_eval dict to be processed
-                    x.function.parameters = self["Current function"].parameters
-                    x.function.parameters_eval = x.function.parameters.copy()
-                    for param, sym in x.function.parameters.items():
-                        # Need to process again as new symbols may be passed
-                        # e.g. may explicitly pass pybamm.Scalar(1) instead of
-                        # pybamm.electrical_parameters.I_typ
-                        if isinstance(sym, pybamm.Symbol):
-                            new_sym = self.process_symbol(sym)
-                            x.function.parameters[param] = new_sym
-                            try:
-                                x.function.parameters_eval[param] = self[new_sym.name]
-                            except KeyError:
-                                # KeyError -> name not in parameter dict, evaluate
-                                # unnamed Scalar
-                                x.function.parameters_eval[param] = new_sym.evaluate()
-                    if isinstance(x.function, pybamm.GetCurrentData):
-                        # update interpolant
-                        x.function.interpolate()
 
         return symbol
 
@@ -522,3 +554,25 @@ class ParameterValues(dict):
             return processed_symbol.evaluate()
         else:
             raise ValueError("symbol must evaluate to a constant scalar")
+
+
+class CurrentToCrate:
+    "Convert a current function to a C-rate function"
+
+    def __init__(self, function, capacity):
+        self.function = function
+        self.capacity = capacity
+
+    def __call__(self, t):
+        return self.function(t) / self.capacity
+
+
+class CrateToCurrent:
+    "Convert a C-rate function to a current function"
+
+    def __init__(self, function, capacity):
+        self.function = function
+        self.capacity = capacity
+
+    def __call__(self, t):
+        return self.function(t) * self.capacity

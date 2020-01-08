@@ -93,7 +93,7 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
         """
 
         param = self.param
-        D_e_typ = param.D_e(param.c_e_typ, param.T_ref)
+        D_e_typ = param.D_e(param.c_e_typ, param.T_init)
         flux_scale = D_e_typ * param.c_e_typ / param.L_x
 
         variables = {

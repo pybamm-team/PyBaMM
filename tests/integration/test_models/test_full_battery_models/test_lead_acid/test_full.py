@@ -9,14 +9,12 @@ import numpy as np
 
 
 class TestLeadAcidFull(unittest.TestCase):
-    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing(self):
         options = {"thermal": "isothermal"}
         model = pybamm.lead_acid.Full(options)
         modeltest = tests.StandardModelTest(model)
-        modeltest.test_all(t_eval=np.linspace(0, 0.6))
+        modeltest.test_all(t_eval=np.linspace(0, 0.6), solver=pybamm.CasadiSolver())
 
-    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing_with_convection(self):
         options = {"thermal": "isothermal", "convection": True}
         model = pybamm.lead_acid.Full(options)
@@ -40,7 +38,6 @@ class TestLeadAcidFull(unittest.TestCase):
         np.testing.assert_array_almost_equal(original, simp_and_known)
         np.testing.assert_array_almost_equal(original, simp_and_python)
 
-    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_set_up(self):
         options = {"thermal": "isothermal"}
         model = pybamm.lead_acid.Full(options)
@@ -58,7 +55,6 @@ class TestLeadAcidFullSurfaceForm(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing_algebraic(self):
         options = {"surface form": "algebraic"}
         model = pybamm.lead_acid.Full(options)
@@ -78,7 +74,6 @@ class TestLeadAcidFullSurfaceForm(unittest.TestCase):
         np.testing.assert_array_almost_equal(original, using_known_evals)
         np.testing.assert_array_almost_equal(original, simp_and_known, decimal=5)
 
-    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_set_up(self):
         options = {"surface form": "differential"}
         model = pybamm.lead_acid.Full(options)
@@ -91,6 +86,7 @@ class TestLeadAcidFullSurfaceForm(unittest.TestCase):
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
+    # pybamm.set_logging_level("DEBUG")
     import sys
 
     if "-v" in sys.argv:

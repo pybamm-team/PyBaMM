@@ -72,6 +72,15 @@ class TestInterpolant(unittest.TestCase):
                 decimal=3,
             )
 
+    def test_processing(self):
+        x = np.linspace(0, 1)[:, np.newaxis]
+        y = pybamm.StateVector(slice(0, 2))
+        linear = np.hstack([x, 2 * x])
+        interp = pybamm.Interpolant(linear, y)
+
+        self.assertEqual(interp.id, interp.new_copy().id)
+        self.assertEqual(interp.id, interp.simplify().id)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

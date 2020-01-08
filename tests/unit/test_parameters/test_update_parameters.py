@@ -43,24 +43,18 @@ class TestUpdateParameters(unittest.TestCase):
         modeltest1.test_all(t_eval=t_eval, skip_output_tests=True)
         Y1 = modeltest1.solution.y
 
-        # double initial conditions
-        model2 = pybamm.lithium_ion.SPM()
         # process and solve the model a first time
+        model2 = pybamm.lithium_ion.SPM()
         modeltest2 = tests.StandardModelTest(model2)
         modeltest2.test_all(skip_output_tests=True)
-        self.assertEqual(
-            model2.variables["Current [A]"].function.parameters_eval["Current [A]"],
-            0.68,
-        )
+        self.assertEqual(model2.variables["Current [A]"].evaluate(), 0.680616)
         # process and solve with updated parameter values
         parameter_values_update = pybamm.ParameterValues(
             chemistry=pybamm.parameter_sets.Marquis2019
         )
-        parameter_values_update.update({"Typical current [A]": 2})
+        parameter_values_update.update({"Current function [A]": 1})
         modeltest2.test_update_parameters(parameter_values_update)
-        self.assertEqual(
-            model2.variables["Current [A]"].function.parameters_eval["Current [A]"], 2
-        )
+        self.assertEqual(model2.variables["Current [A]"].evaluate(), 1)
         modeltest2.test_solving(t_eval=t_eval)
         Y2 = modeltest2.solution.y
 
@@ -74,32 +68,42 @@ class TestUpdateParameters(unittest.TestCase):
         parameter_values_update = pybamm.ParameterValues(
             chemistry=pybamm.parameter_sets.Marquis2019
         )
-        parameter_values_update.update(
-            {"Current function": pybamm.GetConstantCurrent(current=pybamm.Scalar(0))}
-        )
+        parameter_values_update.update({"Current function [A]": 0})
         modeltest3.test_update_parameters(parameter_values_update)
         modeltest3.test_solving(t_eval=t_eval)
         Y3 = modeltest3.solution.y
 
-        # function.parameters should be pybamm.Scalar(0), but parameters_eval s
-        # should be a float
-        self.assertIsInstance(
-            model3.variables["Current [A]"].function.parameters["Current [A]"],
-            pybamm.Scalar,
-        )
-        self.assertEqual(
-            model3.variables["Current [A]"].function.parameters_eval["Current [A]"], 0.0
-        )
+        self.assertIsInstance(model3.variables["Current [A]"], pybamm.Multiplication)
+        self.assertIsInstance(model3.variables["Current [A]"].left, pybamm.Scalar)
+        self.assertIsInstance(model3.variables["Current [A]"].right, pybamm.Scalar)
+        self.assertEqual(model3.variables["Current [A]"].evaluate(), 0.0)
 
         # results should be different
         self.assertNotEqual(np.linalg.norm(Y1 - Y3), 0)
+
+    def test_inplace(self):
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        new_model = param.process_model(model, inplace=False)
+
+        for val in list(model.rhs.values()):
+            self.assertTrue(val.has_symbol_of_classes(pybamm.Parameter))
+
+        for val in list(new_model.rhs.values()):
+            self.assertFalse(val.has_symbol_of_classes(pybamm.Parameter))
 
     def test_update_geometry(self):
         # test on simple lead-acid model
         model1 = pybamm.lead_acid.LOQS()
         modeltest1 = tests.StandardModelTest(model1)
+        parameter_values = pybamm.ParameterValues(
+            chemistry=pybamm.parameter_sets.Sulzer2019
+        )
+        parameter_values.update({"C-rate": 0.05})
         t_eval = np.linspace(0, 0.5)
-        modeltest1.test_all(t_eval=t_eval, skip_output_tests=True)
+        modeltest1.test_all(
+            param=parameter_values, t_eval=t_eval, skip_output_tests=True
+        )
 
         T1, Y1 = modeltest1.solution.t, modeltest1.solution.y
 
@@ -109,6 +113,7 @@ class TestUpdateParameters(unittest.TestCase):
         )
         parameter_values_update.update(
             {
+                "C-rate": 0.05,
                 "Negative electrode thickness [m]": 0.0002,
                 "Separator thickness [m]": 0.0003,
                 "Positive electrode thickness [m]": 0.0004,

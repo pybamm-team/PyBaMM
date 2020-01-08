@@ -36,16 +36,14 @@ class Full(BaseModel):
     def get_coupled_variables(self, variables):
 
         phi_s = variables[self.domain + " electrode potential"]
-        eps = variables[self.domain + " electrode porosity"]
+        tor = variables[self.domain + " electrode tortuosity"]
 
         if self.domain == "Negative":
             sigma = self.param.sigma_n
-            b = self.param.b_n
         elif self.domain == "Positive":
             sigma = self.param.sigma_p
-            b = self.param.b_p
 
-        sigma_eff = sigma * (1 - eps) ** b
+        sigma_eff = sigma * tor
         i_s = -sigma_eff * pybamm.grad(phi_s)
 
         variables.update({self.domain + " electrode effective conductivity": sigma_eff})
@@ -72,8 +70,7 @@ class Full(BaseModel):
 
         phi_s = variables[self.domain + " electrode potential"]
         phi_s_cn = variables["Negative current collector potential"]
-        eps = variables[self.domain + " electrode porosity"]
-        i_boundary_cc = variables["Current collector current density"]
+        tor = variables[self.domain + " electrode tortuosity"]
 
         if self.domain == "Negative":
             lbc = (phi_s_cn, "Dirichlet")
@@ -81,7 +78,8 @@ class Full(BaseModel):
 
         elif self.domain == "Positive":
             lbc = (pybamm.Scalar(0), "Neumann")
-            sigma_eff = self.param.sigma_p * (1 - eps) ** self.param.b_p
+            sigma_eff = self.param.sigma_p * tor
+            i_boundary_cc = variables["Current collector current density"]
             rbc = (
                 i_boundary_cc / pybamm.boundary_value(-sigma_eff, "right"),
                 "Neumann",
@@ -92,20 +90,13 @@ class Full(BaseModel):
     def set_initial_conditions(self, variables):
 
         phi_s = variables[self.domain + " electrode potential"]
-        T_ref = self.param.T_ref
+        T_init = self.param.T_init
 
         if self.domain == "Negative":
             phi_s_init = pybamm.Scalar(0)
         elif self.domain == "Positive":
-            phi_s_init = self.param.U_p(self.param.c_p_init, T_ref) - self.param.U_n(
-                self.param.c_n_init, T_ref
+            phi_s_init = self.param.U_p(self.param.c_p_init, T_init) - self.param.U_n(
+                self.param.c_n_init, T_init
             )
 
         self.initial_conditions[phi_s] = phi_s_init
-
-    @property
-    def default_solver(self):
-        """
-        Create and return the default solver for this model
-        """
-        return pybamm.ScikitsDaeSolver()

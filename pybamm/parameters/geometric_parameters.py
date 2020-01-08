@@ -36,14 +36,12 @@ a_n_dim = pybamm.Parameter("Negative electrode surface area density [m-1]")
 a_p_dim = pybamm.Parameter("Positive electrode surface area density [m-1]")
 R_n = pybamm.Parameter("Negative particle radius [m]")
 R_p = pybamm.Parameter("Positive particle radius [m]")
-b_n = pybamm.Parameter("Negative electrode Bruggeman coefficient")
-b_s = pybamm.Parameter("Separator Bruggeman coefficient")
-b_p = pybamm.Parameter("Positive electrode Bruggeman coefficient")
-b = pybamm.Concatenation(
-    pybamm.FullBroadcast(b_n, ["negative electrode"], "current collector"),
-    pybamm.FullBroadcast(b_s, ["separator"], "current collector"),
-    pybamm.FullBroadcast(b_p, ["positive electrode"], "current collector"),
-)
+b_e_n = pybamm.Parameter("Negative electrode Bruggeman coefficient (electrolyte)")
+b_e_s = pybamm.Parameter("Separator Bruggeman coefficient (electrolyte)")
+b_e_p = pybamm.Parameter("Positive electrode Bruggeman coefficient (electrolyte)")
+b_s_n = pybamm.Parameter("Negative electrode Bruggeman coefficient (electrode)")
+b_s_s = pybamm.Parameter("Separator Bruggeman coefficient (electrode)")
+b_s_p = pybamm.Parameter("Positive electrode Bruggeman coefficient (electrode)")
 
 # --------------------------------------------------------------------------------------
 "Dimensionless Parameters"
@@ -53,11 +51,13 @@ l_n = L_n / L_x
 l_s = L_s / L_x
 l_p = L_p / L_x
 l_cp = L_cp / L_x
+l_x = L_x / L_x
 l_y = L_y / L_z
 l_z = L_z / L_z
+a_cc = l_y * l_z
 
 l = L / L_x
-delta = L_x / L_z
+delta = L_x / L_z  # Aspect ratio
 
 # Tab geometry
 l_tab_n = L_tab_n / L_z

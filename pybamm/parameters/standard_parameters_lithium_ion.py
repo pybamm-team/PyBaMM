@@ -38,7 +38,6 @@ L_z = pybamm.geometric_parameters.L_z
 L = pybamm.geometric_parameters.L
 A_cc = pybamm.geometric_parameters.A_cc
 
-
 # Tab geometry
 L_tab_n = pybamm.geometric_parameters.L_tab_n
 Centre_y_tab_n = pybamm.geometric_parameters.Centre_y_tab_n
@@ -83,10 +82,12 @@ a_k_dim = pybamm.Concatenation(
 )
 R_n = pybamm.geometric_parameters.R_n
 R_p = pybamm.geometric_parameters.R_p
-b_n = pybamm.geometric_parameters.b_n
-b_s = pybamm.geometric_parameters.b_s
-b_p = pybamm.geometric_parameters.b_p
-b = pybamm.geometric_parameters.b
+b_e_n = pybamm.geometric_parameters.b_e_n
+b_e_s = pybamm.geometric_parameters.b_e_s
+b_e_p = pybamm.geometric_parameters.b_e_p
+b_s_n = pybamm.geometric_parameters.b_s_n
+b_s_s = pybamm.geometric_parameters.b_s_s
+b_s_p = pybamm.geometric_parameters.b_s_p
 
 # Electrochemical reactions
 ne_n = pybamm.Parameter("Negative electrode electrons in reaction")
@@ -234,6 +235,9 @@ tau_diffusion_p = R_p ** 2 / D_p_dimensional(c_p_max, T_ref)
 # Thermal diffusion timescale
 tau_th_yz = pybamm.thermal_parameters.tau_th_yz
 
+# Choose discharge timescale
+timescale = tau_discharge
+
 # --------------------------------------------------------------------------------------
 "4. Dimensionless Parameters"
 # Timescale ratios
@@ -254,8 +258,10 @@ l_n = pybamm.geometric_parameters.l_n
 l_s = pybamm.geometric_parameters.l_s
 l_p = pybamm.geometric_parameters.l_p
 l_cp = pybamm.geometric_parameters.l_cp
+l_x = pybamm.geometric_parameters.l_x
 l_y = pybamm.geometric_parameters.l_y
 l_z = pybamm.geometric_parameters.l_z
+a_cc = pybamm.geometric_parameters.a_cc
 l = pybamm.geometric_parameters.l
 delta = pybamm.geometric_parameters.delta
 
@@ -276,6 +282,11 @@ epsilon = pybamm.Concatenation(
     pybamm.FullBroadcast(epsilon_s, ["separator"], "current collector"),
     pybamm.FullBroadcast(epsilon_p, ["positive electrode"], "current collector"),
 )
+epsilon_s_n = pybamm.Parameter("Negative electrode active material volume fraction")
+epsilon_s_p = pybamm.Parameter("Positive electrode active material volume fraction")
+epsilon_inactive_n = 1 - epsilon_n - epsilon_s_n
+epsilon_inactive_s = 1 - epsilon_s
+epsilon_inactive_p = 1 - epsilon_p - epsilon_s_p
 a_n = a_n_dim * R_n
 a_p = a_p_dim * R_p
 
@@ -405,13 +416,15 @@ def m_p(T):
 def U_n(c_s_n, T):
     "Dimensionless open-circuit potential in the negative electrode"
     sto = c_s_n
-    return (U_n_dimensional(sto, T) - U_n_ref) / potential_scale
+    T_dim = Delta_T * T + T_ref
+    return (U_n_dimensional(sto, T_dim) - U_n_ref) / potential_scale
 
 
 def U_p(c_s_p, T):
     "Dimensionless open-circuit potential in the positive electrode"
     sto = c_s_p
-    return (U_p_dimensional(sto, T) - U_p_ref) / potential_scale
+    T_dim = Delta_T * T + T_ref
+    return (U_p_dimensional(sto, T_dim) - U_p_ref) / potential_scale
 
 
 def dUdT_n(c_s_n):
@@ -427,14 +440,15 @@ def dUdT_p(c_s_p):
 
 
 # --------------------------------------------------------------------------------------
-"6. Input current"
+# 6. Input current and voltage
+
 dimensional_current_with_time = pybamm.FunctionParameter(
-    "Current function", pybamm.t * tau_discharge
+    "Current function [A]", pybamm.t * timescale
 )
 dimensional_current_density_with_time = dimensional_current_with_time / (
     n_electrodes_parallel * pybamm.geometric_parameters.A_cc
 )
-
 current_with_time = (
     dimensional_current_with_time / I_typ * pybamm.Function(np.sign, I_typ)
 )
+

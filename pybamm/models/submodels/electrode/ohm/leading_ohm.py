@@ -16,13 +16,15 @@ class LeadingOrder(BaseModel):
         The parameters to use for this submodel
     domain : str
         Either 'Negative' or 'Positive'
-
+    set_positive_potential :  bool, optional
+        If True the battery model sets the positve potential based on the current.
+        If False, the potential is specified by the user. Default is True.
 
     **Extends:** :class:`pybamm.electrode.ohm.BaseModel`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, set_positive_potential=True):
+        super().__init__(param, domain, set_positive_potential=set_positive_potential)
 
     def get_coupled_variables(self, variables):
         """
@@ -39,7 +41,7 @@ class LeadingOrder(BaseModel):
 
         if self.domain == "Negative":
             phi_s = pybamm.PrimaryBroadcast(phi_s_cn, "negative electrode")
-            i_s = pybamm.outer(i_boundary_cc, 1 - x_n / l_n)
+            i_s = i_boundary_cc * (1 - x_n / l_n)
 
         elif self.domain == "Positive":
             # recall delta_phi = phi_s - phi_e
@@ -51,7 +53,7 @@ class LeadingOrder(BaseModel):
             v = delta_phi_p_av + phi_e_p_av
 
             phi_s = pybamm.PrimaryBroadcast(v, ["positive electrode"])
-            i_s = pybamm.outer(i_boundary_cc, 1 - (1 - x_p) / l_p)
+            i_s = i_boundary_cc * (1 - (1 - x_p) / l_p)
 
         variables.update(self._get_standard_potential_variables(phi_s))
         variables.update(self._get_standard_current_variables(i_s))
@@ -69,10 +71,3 @@ class LeadingOrder(BaseModel):
         rbc = (pybamm.Scalar(0), "Neumann")
 
         self.boundary_conditions[phi_s] = {"left": lbc, "right": rbc}
-
-    @property
-    def default_solver(self):
-        """
-        Create and return the default solver for this model
-        """
-        return pybamm.ScikitsOdeSolver()

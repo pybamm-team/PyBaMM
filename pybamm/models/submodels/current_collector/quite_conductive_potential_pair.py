@@ -1,5 +1,6 @@
 #
-# Class for two-dimensional current collectors
+# Class for one- and two-dimensional potential pair "quite conductive"
+# current collector models
 #
 import pybamm
 from .potential_pair import (
@@ -46,7 +47,7 @@ class BaseQuiteConductivePotentialPair(BasePotentialPair):
     def set_algebraic(self, variables):
 
         param = self.param
-        applied_current = param.current_with_time
+        applied_current = variables["Total current density"]
         cc_area = self._get_effective_current_collector_area()
         z = pybamm.standard_spatial_vars.z
 

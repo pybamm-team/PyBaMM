@@ -50,8 +50,10 @@ class NoCurrentCollector(BaseModel):
         return Q_s_cn, Q_s_cp
 
     def _yz_average(self, var):
-        """Computes the y-z average by integration over y and z
-            In this case this is just equal to the input variable"""
+        """
+        Computes the y-z average by integration over y and z
+        In this case this is just equal to the input variable
+        """
         return var
 
     def _x_average(self, var, var_cn, var_cp):

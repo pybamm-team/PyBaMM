@@ -14,10 +14,10 @@ if idaklu_spec is not None:
 
 
 def have_idaklu():
-    return idaklu_spec is None
+    return idaklu_spec is not None
 
 
-class IDAKLU(pybamm.DaeSolver):
+class IDAKLUSolver(pybamm.DaeSolver):
     """Solve a discretised model, using sundials with the KLU sparse linear solver.
 
      Parameters
@@ -43,8 +43,96 @@ class IDAKLU(pybamm.DaeSolver):
             raise ImportError("KLU is not installed")
 
         super().__init__("ida", rtol, atol, root_method, root_tol, max_steps)
+        self.name = "IDA KLU solver"
 
-    def integrate(self, residuals, y0, t_eval, events, mass_matrix, jacobian):
+    def set_atol_by_variable(self, variables_with_tols, model):
+        """
+        A method to set the absolute tolerances in the solver by state variable.
+        This method attaches a vector of tolerance to the model. (i.e. model.atol)
+
+        Parameters
+        ----------
+        variables_with_tols : dict
+            A dictionary with keys that are strings indicating the variable you
+            wish to set the tolerance of and values that are the tolerances.
+
+        model : :class:`pybamm.BaseModel`
+            The model that is going to be solved.
+        """
+
+        size = model.concatenated_initial_conditions.size
+        atol = self._check_atol_type(self._atol, size)
+        for var, tol in variables_with_tols.items():
+            variable = model.variables[var]
+            if isinstance(variable, pybamm.StateVector):
+                atol = self.set_state_vec_tol(atol, variable, tol)
+            elif isinstance(variable, pybamm.Concatenation):
+                for child in variable.children:
+                    if isinstance(child, pybamm.StateVector):
+                        atol = self.set_state_vec_tol(atol, child, tol)
+                    else:
+                        raise pybamm.SolverError(
+                            """Can only set tolerances for state variables
+                            or concatenations of state variables"""
+                        )
+            else:
+                raise pybamm.SolverError(
+                    """Can only set tolerances for state variables or
+                    concatenations of state variables"""
+                )
+
+        model.atol = atol
+
+    def set_state_vec_tol(self, atol, state_vec, tol):
+        """
+        A method to set the tolerances in the atol vector of a specific
+        state variable. This method modifies self._atol
+
+        Parameters
+        ----------
+        state_vec : :class:`pybamm.StateVector`
+            The state vector to apply to the tolerance to
+        tol: float
+            The tolerance value
+        """
+        slices = state_vec.y_slices[0]
+        atol[slices] = tol
+        return atol
+
+    def _check_atol_type(self, atol, size):
+        """
+        This method checks that the atol vector is of the right shape and
+        type.
+
+        Parameters
+        ----------
+        atol: double or np.array or list
+            Absolute tolerances. If this is a vector then each entry corresponds to
+            the absolute tolerance of one entry in the state vector.
+        size: int
+            The length of the atol vector
+        """
+
+        if isinstance(atol, float):
+            atol = atol * np.ones(size)
+        elif isinstance(atol, list):
+            atol = np.array(atol)
+        elif isinstance(atol, np.ndarray):
+            pass
+        else:
+            raise pybamm.SolverError(
+                "Absolute tolerances must be a numpy array, float, or list"
+            )
+
+        if atol.size != size:
+            raise pybamm.SolverError(
+                """Absolute tolerances must be either a scalar or a numpy arrray
+                of the same shape at y0"""
+            )
+
+        return atol
+
+    def integrate(self, residuals, y0, t_eval, events, mass_matrix, jacobian, model):
         """
         Solve a DAE model defined by residuals with initial conditions y0.
 
@@ -66,6 +154,8 @@ class IDAKLU(pybamm.DaeSolver):
             A function that takes in t and y and returns the Jacobian. If
             None, the solver will approximate the Jacobian.
             (see `SUNDIALS docs. <https://computation.llnl.gov/projects/sundials>`).
+        model : :class:`pybamm.BaseModel`
+            The model whose solution to calculate.
         """
 
         if jacobian is None:
@@ -74,8 +164,13 @@ class IDAKLU(pybamm.DaeSolver):
         if events is None:
             pybamm.SolverError("KLU requires events to be provided")
 
+        try:
+            atol = model.atol
+        except AttributeError:
+            atol = self._atol
+
         rtol = self._rtol
-        atol = self._atol
+        atol = self._check_atol_type(atol, y0.size)
 
         if jacobian:
             jac_y0_t0 = jacobian(t_eval[0], y0)
@@ -130,7 +225,7 @@ class IDAKLU(pybamm.DaeSolver):
 
         # get ids of rhs and algebraic variables
         rhs_ids = np.ones(self.rhs(0, y0).shape)
-        alg_ids = np.zeros(self.algebraic(0, y0).shape)
+        alg_ids = np.zeros(len(y0) - len(rhs_ids))
         ids = np.concatenate((rhs_ids, alg_ids))
 
         # solve
@@ -148,8 +243,8 @@ class IDAKLU(pybamm.DaeSolver):
             num_of_events,
             use_jac,
             ids,
-            rtol,
             atol,
+            rtol,
         )
 
         t = sol.t
@@ -165,8 +260,13 @@ class IDAKLU(pybamm.DaeSolver):
             # 2 = found root(s)
             elif sol.flag == 2:
                 termination = "event"
+
             return pybamm.Solution(
-                sol.t, np.transpose(y_out), t[-1], np.transpose(y_out[-1]), termination
+                sol.t,
+                np.transpose(y_out),
+                t[-1],
+                np.transpose(y_out[-1])[:, np.newaxis],
+                termination,
             )
         else:
             raise pybamm.SolverError(sol.message)

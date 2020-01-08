@@ -1,5 +1,5 @@
 #
-# Class for two-dimensional current collectors
+# Class for one- and two-dimensional potential pair current collector models
 #
 import pybamm
 from .base_current_collector import BaseModel
@@ -60,8 +60,7 @@ class BasePotentialPair(BaseModel):
 
     def set_initial_conditions(self, variables):
 
-        param = self.param
-        applied_current = param.current_with_time
+        applied_current = variables["Total current density"]
         cc_area = self._get_effective_current_collector_area()
         phi_s_cn = variables["Negative current collector potential"]
         i_boundary_cc = variables["Current collector current density"]
@@ -73,7 +72,7 @@ class BasePotentialPair(BaseModel):
 
 
 class PotentialPair1plus1D(BasePotentialPair):
-    "Base class for a 1+1D potential pair model"
+    "Base class for a 1+1D potential pair model."
 
     def __init__(self, param):
         super().__init__(param)
@@ -84,7 +83,7 @@ class PotentialPair1plus1D(BasePotentialPair):
         phi_s_cp = variables["Positive current collector potential"]
 
         param = self.param
-        applied_current = param.current_with_time
+        applied_current = variables["Total current density"]
         cc_area = self._get_effective_current_collector_area()
 
         # cc_area appears here due to choice of non-dimensionalisation
@@ -124,7 +123,7 @@ class PotentialPair2plus1D(BasePotentialPair):
         phi_s_cp = variables["Positive current collector potential"]
 
         param = self.param
-        applied_current = param.current_with_time
+        applied_current = variables["Total current density"]
         cc_area = self._get_effective_current_collector_area()
 
         # Note: we divide by the *numerical* tab area so that the correct total
@@ -154,7 +153,7 @@ class PotentialPair2plus1D(BasePotentialPair):
         # giving the zero Dirichlet condition on phi_s_cn. Elsewhere, the boundary
         # is insulated, giving no flux conditions on phi_s_cn. This is automatically
         # applied everywhere, apart from the region corresponding to the projection
-        # of the positive tab, so we need to explititly apply a zero-flux boundary
+        # of the positive tab, so we need to explitly apply a zero-flux boundary
         # condition on the region "positive tab" for phi_s_cn.
         # A current is drawn from the positive tab, giving the non-zero Neumann
         # boundary condition on phi_s_cp at "positive tab". Elsewhere, the boundary is

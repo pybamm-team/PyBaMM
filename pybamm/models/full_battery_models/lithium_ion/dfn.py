@@ -33,8 +33,10 @@ class DFN(BaseModel):
     def __init__(self, options=None, name="Doyle-Fuller-Newman model", build=True):
         super().__init__(options, name)
 
+        self.set_external_circuit_submodel()
         self.set_reactions()
         self.set_porosity_submodel()
+        self.set_tortuosity_submodels()
         self.set_convection_submodel()
         self.set_interfacial_submodel()
         self.set_particle_submodel()
@@ -109,12 +111,3 @@ class DFN(BaseModel):
             return pybamm.Geometry("1+1D macro", "(1+1)+1D micro")
         elif dimensionality == 2:
             return pybamm.Geometry("2+1D macro", "(2+1)+1D micro")
-
-    @property
-    def default_solver(self):
-        """
-        Create and return the default solver for this model
-        """
-
-        # Default solver to DAE
-        return pybamm.ScikitsDaeSolver()

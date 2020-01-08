@@ -10,10 +10,9 @@ import unittest
 class TestScikitFiniteElement(unittest.TestCase):
     def test_not_implemented(self):
         mesh = get_2p1d_mesh_for_testing()
-        spatial_method = pybamm.ScikitFiniteElement(mesh)
+        spatial_method = pybamm.ScikitFiniteElement()
+        spatial_method.build(mesh)
         self.assertEqual(spatial_method.mesh, mesh)
-        with self.assertRaises(NotImplementedError):
-            spatial_method.gradient(None, None, None)
         with self.assertRaises(NotImplementedError):
             spatial_method.divergence(None, None, None)
         with self.assertRaises(NotImplementedError):
@@ -23,8 +22,8 @@ class TestScikitFiniteElement(unittest.TestCase):
         # get mesh
         mesh = get_2p1d_mesh_for_testing()
         spatial_methods = {
-            "macroscale": pybamm.FiniteVolume,
-            "current collector": pybamm.ScikitFiniteElement,
+            "macroscale": pybamm.FiniteVolume(),
+            "current collector": pybamm.ScikitFiniteElement(),
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
         # discretise some equations
@@ -53,7 +52,6 @@ class TestScikitFiniteElement(unittest.TestCase):
             pybamm.laplacian(var) - pybamm.source(unit_source, var, boundary=True),
             pybamm.laplacian(var)
             - pybamm.source(unit_source ** 2 + 1 / var, var, boundary=True),
-            pybamm.grad_squared(var),
         ]:
             # Check that equation can be evaluated in each case
             # Dirichlet
@@ -124,11 +122,45 @@ class TestScikitFiniteElement(unittest.TestCase):
         with self.assertRaises(pybamm.GeometryError):
             disc.process_symbol(x)
 
+    def test_gradient(self):
+        mesh = get_unit_2p1D_mesh_for_testing(ypts=32, zpts=32)
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume(),
+            "current collector": pybamm.ScikitFiniteElement(),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        # test gradient of 5*y + 6*z
+        var = pybamm.Variable("var", domain="current collector")
+        disc.set_variable_slices([var])
+
+        y = mesh["current collector"][0].coordinates[0, :]
+        z = mesh["current collector"][0].coordinates[1, :]
+
+        gradient = pybamm.grad(var)
+        grad_disc = disc.process_symbol(gradient)
+        grad_disc_y, grad_disc_z = grad_disc.children
+
+        np.testing.assert_array_almost_equal(
+            grad_disc_y.evaluate(None, 5 * y + 6 * z),
+            5 * np.ones_like(y)[:, np.newaxis],
+        )
+        np.testing.assert_array_almost_equal(
+            grad_disc_z.evaluate(None, 5 * y + 6 * z),
+            6 * np.ones_like(z)[:, np.newaxis],
+        )
+
+        # check grad_squared positive
+        eqn = pybamm.grad_squared(var)
+        eqn_disc = disc.process_symbol(eqn)
+        ans = eqn_disc.evaluate(None, 3 * y ** 2)
+        np.testing.assert_array_less(0, ans)
+
     def test_manufactured_solution(self):
         mesh = get_unit_2p1D_mesh_for_testing(ypts=32, zpts=32)
         spatial_methods = {
-            "macroscale": pybamm.FiniteVolume,
-            "current collector": pybamm.ScikitFiniteElement,
+            "macroscale": pybamm.FiniteVolume(),
+            "current collector": pybamm.ScikitFiniteElement(),
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
@@ -230,8 +262,8 @@ class TestScikitFiniteElement(unittest.TestCase):
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
         spatial_methods = {
-            "macroscale": pybamm.FiniteVolume,
-            "current collector": pybamm.ScikitFiniteElement,
+            "macroscale": pybamm.FiniteVolume(),
+            "current collector": pybamm.ScikitFiniteElement(),
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
@@ -292,8 +324,8 @@ class TestScikitFiniteElement(unittest.TestCase):
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
         spatial_methods = {
-            "macroscale": pybamm.FiniteVolume,
-            "current collector": pybamm.ScikitFiniteElement,
+            "macroscale": pybamm.FiniteVolume(),
+            "current collector": pybamm.ScikitFiniteElement(),
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
@@ -323,8 +355,8 @@ class TestScikitFiniteElement(unittest.TestCase):
     def test_definite_integral(self):
         mesh = get_2p1d_mesh_for_testing()
         spatial_methods = {
-            "macroscale": pybamm.FiniteVolume,
-            "current collector": pybamm.ScikitFiniteElement,
+            "macroscale": pybamm.FiniteVolume(),
+            "current collector": pybamm.ScikitFiniteElement(),
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
         var = pybamm.Variable("var", domain="current collector")
@@ -344,8 +376,8 @@ class TestScikitFiniteElement(unittest.TestCase):
     def test_definite_integral_vector(self):
         mesh = get_2p1d_mesh_for_testing()
         spatial_methods = {
-            "macroscale": pybamm.FiniteVolume,
-            "current collector": pybamm.ScikitFiniteElement,
+            "macroscale": pybamm.FiniteVolume(),
+            "current collector": pybamm.ScikitFiniteElement(),
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
         var = pybamm.Variable("var", domain="current collector")
@@ -366,8 +398,8 @@ class TestScikitFiniteElement(unittest.TestCase):
     def test_neg_pos(self):
         mesh = get_2p1d_mesh_for_testing()
         spatial_methods = {
-            "macroscale": pybamm.FiniteVolume,
-            "current collector": pybamm.ScikitFiniteElement,
+            "macroscale": pybamm.FiniteVolume(),
+            "current collector": pybamm.ScikitFiniteElement(),
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
         var = pybamm.Variable("var", domain="current collector")
@@ -389,8 +421,8 @@ class TestScikitFiniteElement(unittest.TestCase):
     def test_boundary_integral(self):
         mesh = get_2p1d_mesh_for_testing()
         spatial_methods = {
-            "macroscale": pybamm.FiniteVolume,
-            "current collector": pybamm.ScikitFiniteElement,
+            "macroscale": pybamm.FiniteVolume(),
+            "current collector": pybamm.ScikitFiniteElement(),
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
         var = pybamm.Variable("var", domain="current collector")
@@ -447,8 +479,8 @@ class TestScikitFiniteElement(unittest.TestCase):
         # create discretisation
         mesh = get_unit_2p1D_mesh_for_testing(ypts=32, zpts=32)
         spatial_methods = {
-            "macroscale": pybamm.FiniteVolume,
-            "current collector": pybamm.ScikitFiniteElement,
+            "macroscale": pybamm.FiniteVolume(),
+            "current collector": pybamm.ScikitFiniteElement(),
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
@@ -460,6 +492,68 @@ class TestScikitFiniteElement(unittest.TestCase):
         z = mesh["current collector"][0].coordinates[1, :][:, np.newaxis]
         u_exact = z ** 2 / 2 - 1 / 6
         np.testing.assert_array_almost_equal(solution.y[:-1], u_exact, decimal=1)
+
+    def test_dirichlet_bcs(self):
+        # manufactured solution u = a*z^2 + b*z + c
+        model = pybamm.BaseModel()
+        a = 3
+        b = 4
+        c = 5
+        u = pybamm.Variable("variable", domain="current collector")
+        model.algebraic = {u: -pybamm.laplacian(u) + pybamm.source(2 * a, u)}
+        # set boundary conditions ("negative tab" = bottom of unit square,
+        # "positive tab" = top of unit square, elsewhere normal derivative is zero)
+        model.boundary_conditions = {
+            u: {
+                "negative tab": (pybamm.Scalar(c), "Dirichlet"),
+                "positive tab": (pybamm.Scalar(a + b + c), "Dirichlet"),
+            }
+        }
+        # bad initial guess (on purpose)
+        model.initial_conditions = {u: pybamm.Scalar(1)}
+        model.variables = {"u": u}
+        # create discretisation
+        mesh = get_unit_2p1D_mesh_for_testing(ypts=8, zpts=32)
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume(),
+            "current collector": pybamm.ScikitFiniteElement(),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
+
+        # solve model
+        solver = pybamm.AlgebraicSolver()
+        solution = solver.solve(model)
+
+        # indepedent of y, so just check values for one y
+        z = mesh["current collector"][0].edges["z"][:, np.newaxis]
+        u_exact = a * z ** 2 + b * z + c
+        np.testing.assert_array_almost_equal(solution.y[0 : len(z)], u_exact)
+
+    def test_disc_spatial_var(self):
+        mesh = get_unit_2p1D_mesh_for_testing(ypts=4, zpts=5)
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume(),
+            "current collector": pybamm.ScikitFiniteElement(),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        # discretise y and z
+        y = pybamm.SpatialVariable("y", ["current collector"])
+        z = pybamm.SpatialVariable("z", ["current collector"])
+        y_disc = disc.process_symbol(y)
+        z_disc = disc.process_symbol(z)
+
+        # create expected meshgrid
+        y_vec = np.linspace(0, 1, 4)
+        z_vec = np.linspace(0, 1, 5)
+        Y, Z = np.meshgrid(y_vec, z_vec)
+        y_actual = np.transpose(Y).flatten()[:, np.newaxis]
+        z_actual = np.transpose(Z).flatten()[:, np.newaxis]
+
+        # spatial vars should discretise to the flattend meshgrid
+        np.testing.assert_array_equal(y_disc.evaluate(), y_actual)
+        np.testing.assert_array_equal(z_disc.evaluate(), z_actual)
 
 
 if __name__ == "__main__":

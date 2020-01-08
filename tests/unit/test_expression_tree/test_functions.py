@@ -5,7 +5,6 @@ import pybamm
 
 import unittest
 import numpy as np
-import autograd.numpy as auto_np
 from scipy.interpolate import interp1d
 
 
@@ -13,19 +12,25 @@ def test_function(arg):
     return arg + arg
 
 
-def test_const_function():
-    return 1
-
-
 def test_multi_var_function(arg1, arg2):
     return arg1 + arg2
 
 
+def test_multi_var_function_cube(arg1, arg2):
+    return arg1 + arg2 ** 3
+
+
 class TestFunction(unittest.TestCase):
-    def test_constant_functions(self):
-        d = pybamm.Scalar(6)
-        funcd = pybamm.Function(test_const_function, d)
-        self.assertEqual(funcd.evaluate(), 1)
+    def test_number_input(self):
+        # with numbers
+        log = pybamm.log(10)
+        self.assertIsInstance(log.children[0], pybamm.Scalar)
+        self.assertEqual(log.evaluate(), np.log(10))
+
+        summ = pybamm.Function(test_multi_var_function, 1, 2)
+        self.assertIsInstance(summ.children[0], pybamm.Scalar)
+        self.assertIsInstance(summ.children[1], pybamm.Scalar)
+        self.assertEqual(summ.evaluate(), 3)
 
     def test_function_of_one_variable(self):
         a = pybamm.Symbol("a")
@@ -52,22 +57,38 @@ class TestFunction(unittest.TestCase):
             logvar.evaluate(y=y, known_evals={})[0], np.log1p(y)
         )
 
-    def test_with_autograd(self):
+    def test_diff(self):
         a = pybamm.StateVector(slice(0, 1))
+        b = pybamm.StateVector(slice(1, 2))
         y = np.array([5])
         func = pybamm.Function(test_function, a)
         self.assertEqual(func.diff(a).evaluate(y=y), 2)
         self.assertEqual(func.diff(func).evaluate(), 1)
-        func = pybamm.Function(auto_np.sin, a)
+        func = pybamm.sin(a)
         self.assertEqual(func.evaluate(y=y), np.sin(a.evaluate(y=y)))
         self.assertEqual(func.diff(a).evaluate(y=y), np.cos(a.evaluate(y=y)))
-        func = pybamm.Function(auto_np.exp, a)
+        func = pybamm.exp(a)
         self.assertEqual(func.evaluate(y=y), np.exp(a.evaluate(y=y)))
         self.assertEqual(func.diff(a).evaluate(y=y), np.exp(a.evaluate(y=y)))
 
         # multiple variables
         func = pybamm.Function(test_multi_var_function, 4 * a, 3 * a)
         self.assertEqual(func.diff(a).evaluate(y=y), 7)
+        func = pybamm.Function(test_multi_var_function, 4 * a, 3 * b)
+        self.assertEqual(func.diff(a).evaluate(y=np.array([5, 6])), 4)
+        self.assertEqual(func.diff(b).evaluate(y=np.array([5, 6])), 3)
+        func = pybamm.Function(test_multi_var_function_cube, 4 * a, 3 * b)
+        self.assertEqual(func.diff(a).evaluate(y=np.array([5, 6])), 4)
+        self.assertEqual(
+            func.diff(b).evaluate(y=np.array([5, 6])), 3 * 3 * (3 * 6) ** 2
+        )
+
+        # exceptions
+        func = pybamm.Function(
+            test_multi_var_function_cube, 4 * a, 3 * b, derivative="derivative"
+        )
+        with self.assertRaises(ValueError):
+            func.diff(a)
 
     def test_function_of_multiple_variables(self):
         a = pybamm.Variable("a")
@@ -105,13 +126,30 @@ class TestFunction(unittest.TestCase):
 
 
 class TestSpecificFunctions(unittest.TestCase):
+    def test_arcsinh(self):
+        a = pybamm.Scalar(3)
+        fun = pybamm.arcsinh(a)
+        self.assertIsInstance(fun, pybamm.Arcsinh)
+        self.assertEqual(fun.evaluate(), np.arcsinh(3))
+        h = 0.0000001
+        self.assertAlmostEqual(
+            fun.diff(a).evaluate(),
+            (pybamm.arcsinh(pybamm.Scalar(3 + h)).evaluate() - fun.evaluate()) / h,
+            places=5,
+        )
+
     def test_cos(self):
         a = pybamm.Scalar(3)
         fun = pybamm.cos(a)
         self.assertIsInstance(fun, pybamm.Cos)
         self.assertEqual(fun.children[0].id, a.id)
         self.assertEqual(fun.evaluate(), np.cos(3))
-        self.assertEqual(fun.diff(a).evaluate(), -np.sin(3))
+        h = 0.0000001
+        self.assertAlmostEqual(
+            fun.diff(a).evaluate(),
+            (pybamm.cos(pybamm.Scalar(3 + h)).evaluate() - fun.evaluate()) / h,
+            places=5,
+        )
 
         # test simplify
         y = pybamm.StateVector(slice(0, 1))
@@ -124,7 +162,12 @@ class TestSpecificFunctions(unittest.TestCase):
         self.assertIsInstance(fun, pybamm.Cosh)
         self.assertEqual(fun.children[0].id, a.id)
         self.assertEqual(fun.evaluate(), np.cosh(3))
-        self.assertEqual(fun.diff(a).evaluate(), np.sinh(3))
+        h = 0.0000001
+        self.assertAlmostEqual(
+            fun.diff(a).evaluate(),
+            (pybamm.cosh(pybamm.Scalar(3 + h)).evaluate() - fun.evaluate()) / h,
+            places=5,
+        )
 
     def test_exp(self):
         a = pybamm.Scalar(3)
@@ -132,15 +175,33 @@ class TestSpecificFunctions(unittest.TestCase):
         self.assertIsInstance(fun, pybamm.Exponential)
         self.assertEqual(fun.children[0].id, a.id)
         self.assertEqual(fun.evaluate(), np.exp(3))
-        self.assertEqual(fun.diff(a).evaluate(), np.exp(3))
+        h = 0.0000001
+        self.assertAlmostEqual(
+            fun.diff(a).evaluate(),
+            (pybamm.exp(pybamm.Scalar(3 + h)).evaluate() - fun.evaluate()) / h,
+            places=5,
+        )
 
     def test_log(self):
         a = pybamm.Scalar(3)
         fun = pybamm.log(a)
-        self.assertIsInstance(fun, pybamm.Log)
-        self.assertEqual(fun.children[0].id, a.id)
         self.assertEqual(fun.evaluate(), np.log(3))
-        self.assertEqual(fun.diff(a).evaluate(), 1 / 3)
+        h = 0.0000001
+        self.assertAlmostEqual(
+            fun.diff(a).evaluate(),
+            (pybamm.log(pybamm.Scalar(3 + h)).evaluate() - fun.evaluate()) / h,
+            places=5,
+        )
+
+        # Base 10
+        fun = pybamm.log10(a)
+        self.assertEqual(fun.evaluate(), np.log10(3))
+        h = 0.0000001
+        self.assertAlmostEqual(
+            fun.diff(a).evaluate(),
+            (pybamm.log10(pybamm.Scalar(3 + h)).evaluate() - fun.evaluate()) / h,
+            places=5,
+        )
 
     def test_max(self):
         a = pybamm.Vector(np.array([1, 2, 3]))
@@ -160,7 +221,12 @@ class TestSpecificFunctions(unittest.TestCase):
         self.assertIsInstance(fun, pybamm.Sin)
         self.assertEqual(fun.children[0].id, a.id)
         self.assertEqual(fun.evaluate(), np.sin(3))
-        self.assertEqual(fun.diff(a).evaluate(), np.cos(3))
+        h = 0.0000001
+        self.assertAlmostEqual(
+            fun.diff(a).evaluate(),
+            (pybamm.sin(pybamm.Scalar(3 + h)).evaluate() - fun.evaluate()) / h,
+            places=5,
+        )
 
     def test_sinh(self):
         a = pybamm.Scalar(3)
@@ -168,7 +234,35 @@ class TestSpecificFunctions(unittest.TestCase):
         self.assertIsInstance(fun, pybamm.Sinh)
         self.assertEqual(fun.children[0].id, a.id)
         self.assertEqual(fun.evaluate(), np.sinh(3))
-        self.assertEqual(fun.diff(a).evaluate(), np.cosh(3))
+        h = 0.0000001
+        self.assertAlmostEqual(
+            fun.diff(a).evaluate(),
+            (pybamm.sinh(pybamm.Scalar(3 + h)).evaluate() - fun.evaluate()) / h,
+            places=5,
+        )
+
+    def test_sqrt(self):
+        a = pybamm.Scalar(3)
+        fun = pybamm.sqrt(a)
+        self.assertIsInstance(fun, pybamm.Sqrt)
+        self.assertEqual(fun.evaluate(), np.sqrt(3))
+        h = 0.0000001
+        self.assertAlmostEqual(
+            fun.diff(a).evaluate(),
+            (pybamm.sqrt(pybamm.Scalar(3 + h)).evaluate() - fun.evaluate()) / h,
+            places=5,
+        )
+
+    def test_tanh(self):
+        a = pybamm.Scalar(3)
+        fun = pybamm.tanh(a)
+        self.assertEqual(fun.evaluate(), np.tanh(3))
+        h = 0.0000001
+        self.assertAlmostEqual(
+            fun.diff(a).evaluate(),
+            (pybamm.tanh(pybamm.Scalar(3 + h)).evaluate() - fun.evaluate()) / h,
+            places=5,
+        )
 
 
 if __name__ == "__main__":

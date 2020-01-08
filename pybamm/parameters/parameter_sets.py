@@ -46,4 +46,3 @@ Sulzer2019 = {
     "electrolyte": "sulfuric_acid_Sulzer2019",
     "experiment": "1C_discharge_from_full",
 }
-

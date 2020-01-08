@@ -10,14 +10,14 @@ import unittest
 class TestBaseModel(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.standard_parameters_lithium_ion
-        submodel = pybamm.current_collector.PotentialPair1plus1D(param)
         variables = {
             "Positive current collector potential": pybamm.PrimaryBroadcast(
                 0, "current collector"
-            )
+            ),
+            "Total current density": 0,
         }
+        submodel = pybamm.current_collector.PotentialPair1plus1D(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)
-
         std_tests.test_all()
         submodel = pybamm.current_collector.PotentialPair2plus1D(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)

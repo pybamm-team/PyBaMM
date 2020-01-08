@@ -16,6 +16,8 @@ class CurrentCollector2D(BaseModel):
         T_av = variables["X-averaged cell temperature"]
         Q_av = variables["X-averaged total heating"]
 
+        cooling_coeff = self._surface_cooling_coefficient()
+
         # Add boundary source term which accounts for surface cooling around
         # the edge of the domain in the weak formulation.
         # TODO: update to allow different cooling conditions at the tabs
@@ -23,8 +25,7 @@ class CurrentCollector2D(BaseModel):
             T_av: (
                 pybamm.laplacian(T_av)
                 + self.param.B * pybamm.source(Q_av, T_av)
-                - (2 * self.param.h / (self.param.delta ** 2) / self.param.l)
-                * pybamm.source(T_av, T_av)
+                + cooling_coeff * pybamm.source(T_av, T_av)
                 - (self.param.h / self.param.delta)
                 * pybamm.source(T_av, T_av, boundary=True)
             )
@@ -48,8 +49,7 @@ class CurrentCollector2D(BaseModel):
         """Returns the heat source terms in the 2D current collector"""
         phi_s_cn = variables["Negative current collector potential"]
         phi_s_cp = variables["Positive current collector potential"]
-        # Note: grad not implemented in 2D weak form, but can compute grad squared
-        # directly
+
         Q_s_cn = self.param.sigma_cn_prime * pybamm.grad_squared(phi_s_cn)
         Q_s_cp = self.param.sigma_cp_prime * pybamm.grad_squared(phi_s_cp)
         return Q_s_cn, Q_s_cp

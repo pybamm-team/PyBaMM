@@ -39,16 +39,14 @@ class TestLOQS(unittest.TestCase):
     def test_charge(self):
         model = pybamm.lead_acid.LOQS()
         parameter_values = model.default_parameter_values
-        parameter_values.update({"Typical current [A]": -1})
+        parameter_values.update({"Current function [A]": -1})
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 
     def test_zero_current(self):
         model = pybamm.lead_acid.LOQS()
         parameter_values = model.default_parameter_values
-        parameter_values.update(
-            {"Current function": pybamm.GetConstantCurrent(current=0)}
-        )
+        parameter_values.update({"Current function [A]": 0})
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 

@@ -50,7 +50,7 @@ class TestLeadAcidLOQS(unittest.TestCase):
         self.assertIsInstance(model.default_spatial_methods, dict)
         self.assertNotIn("negative particle", model.default_geometry)
         self.assertTrue(
-            issubclass(
+            isinstance(
                 model.default_spatial_methods["current collector"],
                 pybamm.ZeroDimensionalMethod,
             )
@@ -69,7 +69,7 @@ class TestLeadAcidLOQS(unittest.TestCase):
             }
         )
         self.assertTrue(
-            issubclass(
+            isinstance(
                 model.default_spatial_methods["current collector"], pybamm.FiniteVolume
             )
         )
@@ -87,7 +87,7 @@ class TestLeadAcidLOQS(unittest.TestCase):
             }
         )
         self.assertTrue(
-            issubclass(
+            isinstance(
                 model.default_spatial_methods["current collector"],
                 pybamm.ScikitFiniteElement,
             )
@@ -146,22 +146,6 @@ class TestLeadAcidLOQSSurfaceForm(unittest.TestCase):
         model = pybamm.lead_acid.LOQS(options)
         model.check_well_posedness()
 
-    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
-    def test_default_solver(self):
-        options = {"surface form": "differential"}
-        model = pybamm.lead_acid.LOQS(options)
-        self.assertIsInstance(model.default_solver, pybamm.ScipySolver)
-        options = {
-            "surface form": "differential",
-            "current collector": "potential pair",
-            "dimensionality": 1,
-        }
-        model = pybamm.lead_acid.LOQS(options)
-        self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
-        options = {"surface form": "algebraic"}
-        model = pybamm.lead_acid.LOQS(options)
-        self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
-
     def test_default_geometry(self):
         options = {"surface form": "differential"}
         model = pybamm.lead_acid.LOQS(options)
@@ -169,6 +153,31 @@ class TestLeadAcidLOQSSurfaceForm(unittest.TestCase):
         options.update({"current collector": "potential pair", "dimensionality": 1})
         model = pybamm.lead_acid.LOQS(options)
         self.assertIn("current collector", model.default_geometry)
+
+
+class TestLeadAcidLOQSExternalCircuits(unittest.TestCase):
+    def test_well_posed_voltage(self):
+        options = {"operating mode": "voltage"}
+        model = pybamm.lead_acid.LOQS(options)
+        model.check_well_posedness()
+
+    def test_well_posed_power(self):
+        options = {"operating mode": "power"}
+        model = pybamm.lead_acid.LOQS(options)
+        model.check_well_posedness()
+
+    def test_well_posed_function(self):
+        class ExternalCircuitFunction:
+            num_switches = 0
+
+            def __call__(self, variables):
+                I = variables["Current [A]"]
+                V = variables["Terminal voltage [V]"]
+                return V + I - pybamm.FunctionParameter("Function", pybamm.t)
+
+        options = {"operating mode": ExternalCircuitFunction()}
+        model = pybamm.lead_acid.LOQS(options)
+        model.check_well_posedness()
 
 
 if __name__ == "__main__":

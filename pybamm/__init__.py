@@ -83,6 +83,7 @@ from .expression_tree.binary_operators import (
     inner,
     Outer,
     Kron,
+    Heaviside,
     outer,
     source,
 )
@@ -94,41 +95,17 @@ from .expression_tree.concatenations import (
 )
 from .expression_tree.array import Array
 from .expression_tree.matrix import Matrix
-from .expression_tree.unary_operators import (
-    UnaryOperator,
-    Negate,
-    AbsoluteValue,
-    Index,
-    SpatialOperator,
-    Gradient,
-    Divergence,
-    Laplacian,
-    Gradient_Squared,
-    Mass,
-    BoundaryMass,
-    BoundaryOperator,
-    BoundaryValue,
-    BoundaryGradient,
-    Integral,
-    IndefiniteIntegral,
-    DefiniteIntegralVector,
-    BoundaryIntegral,
-    DeltaFunction,
-    grad,
-    div,
-    laplacian,
-    grad_squared,
-    surf,
-    x_average,
-    z_average,
-    yz_average,
-    boundary_value,
-    r_average,
-)
+from .expression_tree.unary_operators import *
 from .expression_tree.functions import *
 from .expression_tree.interpolant import Interpolant
+from .expression_tree.input_parameter import InputParameter
 from .expression_tree.parameter import Parameter, FunctionParameter
-from .expression_tree.broadcasts import Broadcast, PrimaryBroadcast, FullBroadcast
+from .expression_tree.broadcasts import (
+    Broadcast,
+    PrimaryBroadcast,
+    FullBroadcast,
+    ones_like,
+)
 from .expression_tree.scalar import Scalar
 from .expression_tree.variable import Variable
 from .expression_tree.independent_variable import (
@@ -149,20 +126,24 @@ from .expression_tree.exceptions import (
     ModelWarning,
     UndefinedOperationError,
     GeometryError,
+    InputError,
 )
-from .expression_tree.simplify import (
+
+# Operations
+from .expression_tree.operations.simplify import (
     Simplification,
     simplify_if_constant,
     simplify_addition_subtraction,
     simplify_multiplication_division,
 )
-from .expression_tree.jacobian import Jacobian
-from .expression_tree.evaluate import (
+from .expression_tree.operations.evaluate import (
     find_symbols,
     id_to_python_variable,
     to_python,
     EvaluatorPython,
 )
+from .expression_tree.operations.jacobian import Jacobian
+from .expression_tree.operations.convert_to_casadi import CasadiConverter
 
 #
 # Model classes
@@ -185,18 +166,19 @@ from .models.submodels import (
     current_collector,
     electrolyte,
     electrode,
+    external_circuit,
     interface,
     oxygen_diffusion,
     particle,
     porosity,
     thermal,
+    tortuosity,
 )
 
 #
 # Parameters class and methods
 #
 from .parameters.parameter_values import ParameterValues
-from .parameters import standard_current_functions
 from .parameters import geometric_parameters
 from .parameters import electrical_parameters
 from .parameters import thermal_parameters
@@ -226,6 +208,7 @@ from .geometry import standard_spatial_vars
 # Mesh and Discretisation classes
 #
 from .discretisations.discretisation import Discretisation
+from .discretisations.discretisation import has_bc_of_form
 from .meshes.meshes import Mesh, SubMesh, MeshGenerator
 from .meshes.zero_dimensional_submesh import SubMesh0D
 from .meshes.one_dimensional_submeshes import (
@@ -258,29 +241,20 @@ from .solvers.solution import Solution
 from .solvers.base_solver import BaseSolver
 from .solvers.ode_solver import OdeSolver
 from .solvers.dae_solver import DaeSolver
-from .solvers.scipy_solver import ScipySolver
-from .solvers.scikits_dae_solver import ScikitsDaeSolver
-from .solvers.scikits_ode_solver import ScikitsOdeSolver
-from .solvers.scikits_ode_solver import have_scikits_odes
 from .solvers.algebraic_solver import AlgebraicSolver
-from .solvers.idaklu_solver import IDAKLU, have_idaklu
-
-
-#
-# Current profiles
-#
-from .parameters.standard_current_functions.base_current import GetCurrent
-from .parameters.standard_current_functions.get_constant_current import (
-    GetConstantCurrent,
-)
-from .parameters.standard_current_functions.get_user_current import GetUserCurrent
-from .parameters.standard_current_functions.get_current_data import GetCurrentData
+from .solvers.casadi_solver import CasadiSolver
+from .solvers.scikits_dae_solver import ScikitsDaeSolver
+from .solvers.scikits_ode_solver import ScikitsOdeSolver, have_scikits_odes
+from .solvers.scipy_solver import ScipySolver
+from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
 
 #
 # other
 #
 from .processed_variable import post_process_variables, ProcessedVariable
 from .quick_plot import QuickPlot, ax_min, ax_max
+
+from .simulation import Simulation, load_sim
 
 #
 # Remove any imported modules, so we don't expose them as part of pybamm

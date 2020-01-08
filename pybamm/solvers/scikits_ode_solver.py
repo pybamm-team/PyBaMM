@@ -16,7 +16,7 @@ if scikits_odes_spec is not None:
 
 
 def have_scikits_odes():
-    return scikits_odes_spec is None
+    return scikits_odes_spec is not None
 
 
 class ScikitsOdeSolver(pybamm.OdeSolver):
@@ -40,6 +40,7 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
 
         super().__init__(method, rtol, atol)
         self.linsolver = linsolver
+        self.name = "Scikits ODE solver ({})".format(method)
 
     def integrate(
         self, derivs, y0, t_eval, events=None, mass_matrix=None, jacobian=None

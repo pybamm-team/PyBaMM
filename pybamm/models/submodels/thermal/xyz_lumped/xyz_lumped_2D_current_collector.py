@@ -25,14 +25,14 @@ class CurrentCollector2D(BaseModel):
         """Returns the heat source terms in the 2D current collector"""
         phi_s_cn = variables["Negative current collector potential"]
         phi_s_cp = variables["Positive current collector potential"]
-        # Note: grad not implemented in 2D weak form, but can compute grad squared
-        # directly
+
         Q_s_cn = self.param.sigma_cn_prime * pybamm.grad_squared(phi_s_cn)
         Q_s_cp = self.param.sigma_cp_prime * pybamm.grad_squared(phi_s_cp)
         return Q_s_cn, Q_s_cp
 
     def _surface_cooling_coefficient(self):
         """Returns the surface cooling coefficient in 2+1D"""
+        # Note: assumes pouch cell geometry
         return (
             -2 * self.param.h / (self.param.delta ** 2) / self.param.l
             - 2 * (self.param.l_y + self.param.l_z) * self.param.h / self.param.delta

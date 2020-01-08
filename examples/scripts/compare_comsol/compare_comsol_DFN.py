@@ -33,7 +33,7 @@ geometry = pybamm_model.default_geometry
 param = pybamm_model.default_parameter_values
 param["Electrode width [m]"] = 1
 param["Electrode height [m]"] = 1
-param["Typical current [A]"] = 24 * C_rates[C_rate]
+param["Current function [A]"] = 24 * C_rates[C_rate]
 param.process_model(pybamm_model)
 param.process_geometry(geometry)
 
@@ -51,7 +51,7 @@ tau = param.process_symbol(pybamm.standard_parameters_lithium_ion.tau_discharge)
 
 # solve model at comsol times
 time = comsol_variables["time"] / tau.evaluate(0)
-solution = pybamm_model.default_solver.solve(pybamm_model, time)
+solution = pybamm.CasadiSolver(mode="fast").solve(pybamm_model, time)
 
 
 # Make Comsol 'model' for comparison
@@ -60,12 +60,13 @@ comsol_t = comsol_variables["time"]
 L_x = param.evaluate(pybamm.standard_parameters_lithium_ion.L_x)
 
 
-def get_interp_fun(variable, domain):
+def get_interp_fun(variable_name, domain):
     """
     Create a :class:`pybamm.Function` object using the variable, to allow plotting with
-    :class:`'pybamm.QuickPlot'` (interpolate in space to match edges, and then create
+    :class:`pybamm.QuickPlot` (interpolate in space to match edges, and then create
     function to interpolate in time)
     """
+    variable = comsol_variables[variable_name]
     if domain == ["negative electrode"]:
         comsol_x = comsol_variables["x_n"]
     elif domain == ["positive electrode"]:
@@ -77,21 +78,33 @@ def get_interp_fun(variable, domain):
     variable = interp.interp1d(comsol_x, variable, axis=0)(pybamm_x)
 
     def myinterp(t):
-        return interp.interp1d(comsol_t, variable)(t)[:, np.newaxis]
+        try:
+            return interp.interp1d(
+                comsol_t, variable, fill_value="extrapolate", bounds_error=False,
+            )(t)[:, np.newaxis]
+        except ValueError as err:
+            raise ValueError(
+                """Failed to interpolate '{}' with time range [{}, {}] at time {}.
+                Original error: {}""".format(
+                    variable_name, comsol_t[0], comsol_t[-1], t, err
+                )
+            )
 
     # Make sure to use dimensional time
-    fun = pybamm.Function(myinterp, pybamm.t * tau)
+    fun = pybamm.Function(myinterp, pybamm.t * tau, name=variable_name + "_comsol")
     fun.domain = domain
     return fun
 
 
-comsol_c_n_surf = get_interp_fun(comsol_variables["c_n_surf"], ["negative electrode"])
-comsol_c_e = get_interp_fun(comsol_variables["c_e"], whole_cell)
-comsol_c_p_surf = get_interp_fun(comsol_variables["c_p_surf"], ["positive electrode"])
-comsol_phi_n = get_interp_fun(comsol_variables["phi_n"], ["negative electrode"])
-comsol_phi_e = get_interp_fun(comsol_variables["phi_e"], whole_cell)
-comsol_phi_p = get_interp_fun(comsol_variables["phi_p"], ["positive electrode"])
-comsol_voltage = interp.interp1d(comsol_t, comsol_variables["voltage"])
+comsol_c_n_surf = get_interp_fun("c_n_surf", ["negative electrode"])
+comsol_c_e = get_interp_fun("c_e", whole_cell)
+comsol_c_p_surf = get_interp_fun("c_p_surf", ["positive electrode"])
+comsol_phi_n = get_interp_fun("phi_n", ["negative electrode"])
+comsol_phi_e = get_interp_fun("phi_e", whole_cell)
+comsol_phi_p = get_interp_fun("phi_p", ["positive electrode"])
+comsol_voltage = interp.interp1d(
+    comsol_t, comsol_variables["voltage"], fill_value="extrapolate", bounds_error=False
+)
 
 # Create comsol model with dictionary of Matrix variables
 comsol_model = pybamm.BaseModel()

@@ -8,7 +8,6 @@ import numpy as np
 import unittest
 
 
-@unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
 class TestDFN(unittest.TestCase):
     def test_basic_processing(self):
         options = {"thermal": "isothermal"}
@@ -18,7 +17,6 @@ class TestDFN(unittest.TestCase):
         modeltest = tests.StandardModelTest(model, var_pts=var_pts)
         modeltest.test_all()
 
-    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing_1plus1D(self):
         options = {"current collector": "potential pair", "dimensionality": 1}
         model = pybamm.lithium_ion.DFN(options)
@@ -35,7 +33,6 @@ class TestDFN(unittest.TestCase):
         modeltest = tests.StandardModelTest(model, var_pts=var_pts)
         modeltest.test_all(skip_output_tests=True)
 
-    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing_2plus1D(self):
         options = {"current collector": "potential pair", "dimensionality": 2}
         model = pybamm.lithium_ion.DFN(options)
@@ -96,6 +93,21 @@ class TestDFN(unittest.TestCase):
         options = {"particle": "fast diffusion"}
         model = pybamm.lithium_ion.DFN(options)
         modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+    def test_particle_distribution_in_x(self):
+        model = pybamm.lithium_ion.DFN()
+        param = model.default_parameter_values
+
+        def negative_distribution(x):
+            return 1 + x
+
+        def positive_distribution(x):
+            return 1 + (x - (1 - model.param.l_p))
+
+        param["Negative particle distribution in x"] = negative_distribution
+        param["Positive particle distribution in x"] = positive_distribution
+        modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_all()
 
 

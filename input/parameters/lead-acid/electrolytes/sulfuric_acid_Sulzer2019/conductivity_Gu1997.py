@@ -1,7 +1,7 @@
 #
 # Sulfuric acid conductivity
 #
-import autograd.numpy as np
+from pybamm import exp
 
 
 def conductivity_Gu1997(c_e):
@@ -23,4 +23,4 @@ def conductivity_Gu1997(c_e):
            California Univ., Berkeley. Lawrence Radiation Lab., 1968.
 
     """
-    return c_e * np.exp(6.23 - 1.34e-4 * c_e - 1.61e-8 * c_e ** 2) * 1e-4
+    return c_e * exp(6.23 - 1.34e-4 * c_e - 1.61e-8 * c_e ** 2) * 1e-4

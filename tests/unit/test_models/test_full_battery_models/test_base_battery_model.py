@@ -88,20 +88,20 @@ class TestBaseBatteryModel(unittest.TestCase):
     def test_default_spatial_methods(self):
         model = pybamm.BaseBatteryModel({"dimensionality": 0})
         self.assertTrue(
-            issubclass(
+            isinstance(
                 model.default_spatial_methods["current collector"],
                 pybamm.ZeroDimensionalMethod,
             )
         )
         model = pybamm.BaseBatteryModel({"dimensionality": 1})
         self.assertTrue(
-            issubclass(
+            isinstance(
                 model.default_spatial_methods["current collector"], pybamm.FiniteVolume
             )
         )
         model = pybamm.BaseBatteryModel({"dimensionality": 2})
         self.assertTrue(
-            issubclass(
+            isinstance(
                 model.default_spatial_methods["current collector"],
                 pybamm.ScikitFiniteElement,
             )
@@ -122,6 +122,10 @@ class TestBaseBatteryModel(unittest.TestCase):
             pybamm.BaseBatteryModel({"surface form": "bad surface form"})
         with self.assertRaisesRegex(pybamm.OptionError, "particle model"):
             pybamm.BaseBatteryModel({"particle": "bad particle"})
+        with self.assertRaisesRegex(pybamm.OptionError, "option set external"):
+            pybamm.BaseBatteryModel({"current collector": "set external potential"})
+        with self.assertRaisesRegex(pybamm.OptionError, "operating mode"):
+            pybamm.BaseBatteryModel({"operating mode": "bad operating mode"})
 
     def test_build_twice(self):
         model = pybamm.lithium_ion.SPM()  # need to pick a model to set vars and build

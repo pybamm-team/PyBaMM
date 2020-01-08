@@ -12,7 +12,7 @@ class TestFull(unittest.TestCase):
         param = pybamm.standard_parameters_lithium_ion
         a = pybamm.Scalar(0)
         variables = {
-            "Porosity": a,
+            "Electrolyte tortuosity": a,
             "Electrolyte concentration": a,
             "Negative electrode interfacial current density": pybamm.FullBroadcast(
                 a, "negative electrode", "current collector"

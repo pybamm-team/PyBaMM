@@ -51,7 +51,7 @@ param.process_geometry(geometry)
 submesh_types = {"rod": pybamm.Uniform1DSubMesh}
 var_pts = {x: 30}
 mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
-spatial_methods = {"rod": pybamm.FiniteVolume}
+spatial_methods = {"rod": pybamm.FiniteVolume()}
 disc = pybamm.Discretisation(mesh, spatial_methods)
 disc.process_model(model)
 
@@ -122,11 +122,7 @@ for i, t in enumerate(plot_times):
         label="Numerical" if i == 0 else "",
     )
     plt.plot(
-        xx,
-        T_exact(xx, t),
-        "-",
-        color=color,
-        label="Exact (t={})".format(plot_times[i]),
+        xx, T_exact(xx, t), "-", color=color, label="Exact (t={})".format(plot_times[i])
     )
 plt.xlabel("x", fontsize=16)
 plt.ylabel("T", fontsize=16)

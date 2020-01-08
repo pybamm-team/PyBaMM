@@ -9,10 +9,12 @@ from tests import (
     get_mesh_for_testing,
     get_discretisation_for_testing,
     get_1p1d_discretisation_for_testing,
+    get_2p1d_mesh_for_testing,
 )
 from tests.shared import SpatialMethodForTesting
 
-from scipy.sparse import block_diag
+from scipy.sparse import block_diag, csc_matrix
+from scipy.sparse.linalg import inv
 
 
 class TestDiscretise(unittest.TestCase):
@@ -57,7 +59,7 @@ class TestDiscretise(unittest.TestCase):
         model.boundary_conditions = {c_e: {"left": lbc, "right": rbc}}
 
         mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": SpatialMethodForTesting}
+        spatial_methods = {"macroscale": SpatialMethodForTesting()}
 
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.bcs = disc.process_boundary_conditions(model)
@@ -66,10 +68,72 @@ class TestDiscretise(unittest.TestCase):
         for child in c_e.children:
             self.assertTrue(child.id in disc.bcs.keys())
 
+    def test_adding_0D_external_variable(self):
+        model = pybamm.BaseModel()
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+
+        model.rhs = {a: a * b}
+        model.initial_conditions = {a: 0}
+        model.external_variables = [b]
+        model.variables = {"a": a, "b": b, "c": a * b}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        self.assertEqual(len(model.y_slices), 2)
+        self.assertEqual(model.y_slices[b.id][0], slice(1, 2, None))
+
+    def test_adding_1D_external_variable(self):
+        model = pybamm.BaseModel()
+
+        a = pybamm.Variable("a", domain=["test"])
+        b = pybamm.Variable("b", domain=["test"])
+
+        model.rhs = {a: a * b}
+        model.boundary_conditions = {
+            a: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")}
+        }
+        model.initial_conditions = {a: 0}
+        model.external_variables = [b]
+        model.variables = {
+            "a": a,
+            "b": b,
+            "c": a * b,
+            "grad b": pybamm.grad(b),
+            "div grad b": pybamm.div(pybamm.grad(b)),
+        }
+
+        x = pybamm.SpatialVariable("x", domain="test", coord_sys="cartesian")
+        geometry = {
+            "test": {"primary": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
+        }
+
+        submesh_types = {"test": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh)}
+        var_pts = {x: 10}
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        spatial_methods = {"test": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
+
+        self.assertEqual(len(model.y_slices), 2)
+        self.assertEqual(model.y_slices[a.id][0], slice(0, 10, None))
+        self.assertEqual(model.y_slices[b.id][0], slice(10, 20, None))
+
+        # check that b is added to the boundary conditions
+        model.bcs[b.id]["left"]
+        model.bcs[b.id]["right"]
+
+        # check that grad and div(grad ) produce the correct shapes
+        self.assertEqual(model.variables["b"].shape_for_testing, (10, 1))
+        self.assertEqual(model.variables["grad b"].shape_for_testing, (11, 1))
+        self.assertEqual(model.variables["div grad b"].shape_for_testing, (10, 1))
+
     def test_discretise_slicing(self):
         # create discretisation
         mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.FiniteVolume}
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
@@ -132,10 +196,10 @@ class TestDiscretise(unittest.TestCase):
         # create discretisation
         mesh = get_mesh_for_testing()
         spatial_methods = {
-            "macroscale": pybamm.SpatialMethod,
-            "negative particle": pybamm.SpatialMethod,
-            "positive particle": pybamm.SpatialMethod,
-            "current collector": pybamm.SpatialMethod,
+            "macroscale": pybamm.SpatialMethod(),
+            "negative particle": pybamm.SpatialMethod(),
+            "positive particle": pybamm.SpatialMethod(),
+            "current collector": pybamm.SpatialMethod(),
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
@@ -728,16 +792,19 @@ class TestDiscretise(unittest.TestCase):
         )
 
     def test_outer(self):
-        var = pybamm.Variable("var", ["current collector"])
-        x = pybamm.SpatialVariable("x_s", ["separator"])
 
         # create discretisation
         disc = get_1p1d_discretisation_for_testing()
         mesh = disc.mesh
 
+        var_z = pybamm.Variable("var_z", ["current collector"])
+        var_x = pybamm.Vector(
+            np.linspace(0, 1, mesh["separator"][0].npts), domain="separator"
+        )
+
         # process Outer variable
-        disc.set_variable_slices([var])
-        outer = pybamm.outer(var, x)
+        disc.set_variable_slices([var_z, var_x])
+        outer = pybamm.outer(var_z, var_x)
         outer_disc = disc.process_symbol(outer)
         self.assertIsInstance(outer_disc, pybamm.Outer)
         self.assertIsInstance(outer_disc.children[0], pybamm.StateVector)
@@ -851,6 +918,54 @@ class TestDiscretise(unittest.TestCase):
         # error if domain not "current collector"
         with self.assertRaisesRegex(pybamm.ModelError, "Boundary conditions"):
             disc.check_tab_conditions(b, bcs)
+
+    def test_process_with_no_check(self):
+        # create model
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        c = pybamm.Variable("c", domain=whole_cell)
+        N = pybamm.grad(c)
+        model = pybamm.BaseModel()
+        model.rhs = {c: pybamm.div(N)}
+        model.initial_conditions = {c: pybamm.Scalar(3)}
+        model.boundary_conditions = {
+            c: {"left": (0, "Neumann"), "right": (0, "Neumann")}
+        }
+        model.variables = {"c": c, "N": N}
+
+        # create discretisation
+        disc = get_discretisation_for_testing()
+        disc.process_model(model, check_model=False)
+
+    def test_mass_matirx_inverse(self):
+        # get mesh
+        mesh = get_2p1d_mesh_for_testing(ypts=5, zpts=5)
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume(),
+            "current collector": pybamm.ScikitFiniteElement(),
+        }
+        # create model
+        a = pybamm.Variable("a", domain="negative electrode")
+        b = pybamm.Variable("b", domain="current collector")
+        model = pybamm.BaseModel()
+        model.rhs = {a: pybamm.Laplacian(a), b: 4 * pybamm.Laplacian(b)}
+        model.initial_conditions = {a: pybamm.Scalar(3), b: pybamm.Scalar(10)}
+        model.boundary_conditions = {
+            a: {"left": (0, "Neumann"), "right": (0, "Neumann")},
+            b: {"negative tab": (0, "Neumann"), "positive tab": (0, "Neumann")},
+        }
+        model.variables = {"a": a, "b": b}
+
+        # create discretisation
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
+
+        # test that computing mass matrix block-by-block (as is done during
+        # discretisation) gives the correct result
+        # Note: inverse is more efficient in csc format
+        mass_inv = inv(csc_matrix(model.mass_matrix.entries))
+        np.testing.assert_equal(
+            model.mass_matrix_inv.entries.toarray(), mass_inv.toarray()
+        )
 
 
 if __name__ == "__main__":

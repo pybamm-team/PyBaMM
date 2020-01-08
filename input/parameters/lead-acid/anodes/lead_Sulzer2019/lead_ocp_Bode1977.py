@@ -1,7 +1,7 @@
 #
 # Open-circuit voltage in the negative (lead) electrode
 #
-import autograd.numpy as np
+from pybamm import log10
 
 
 def lead_ocp_Bode1977(m):
@@ -16,9 +16,9 @@ def lead_ocp_Bode1977(m):
     """
     U = (
         -0.294
-        - 0.074 * np.log10(m)
-        - 0.030 * np.log10(m) ** 2
-        - 0.031 * np.log10(m) ** 3
-        - 0.012 * np.log10(m) ** 4
+        - 0.074 * log10(m)
+        - 0.030 * log10(m) ** 2
+        - 0.031 * log10(m) ** 3
+        - 0.012 * log10(m) ** 4
     )
     return U

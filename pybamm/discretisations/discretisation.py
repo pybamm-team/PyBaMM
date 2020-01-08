@@ -4,7 +4,20 @@
 import pybamm
 import numpy as np
 from collections import defaultdict, OrderedDict
-from scipy.sparse import block_diag, csr_matrix
+from scipy.sparse import block_diag, csc_matrix, csr_matrix
+from scipy.sparse.linalg import inv
+
+
+def has_bc_of_form(symbol, side, bcs, form):
+
+    if symbol.id in bcs:
+        if bcs[symbol.id][side][1] == form:
+            return True
+        else:
+            return False
+
+    else:
+        return False
 
 
 class Discretisation(object):
@@ -16,8 +29,9 @@ class Discretisation(object):
     mesh : pybamm.Mesh
             contains all submeshes to be used on each domain
     spatial_methods : dict
-            a dictionary of the spatial method to be used on each
-            domain. The keys correspond to the keys in a pybamm.Model
+            a dictionary of the spatial methods to be used on each
+            domain. The keys correspond to the model domains and the
+            values to the spatial method.
     """
 
     def __init__(self, mesh=None, spatial_methods=None):
@@ -31,12 +45,15 @@ class Discretisation(object):
                 spatial_methods["negative electrode"] = method
                 spatial_methods["separator"] = method
                 spatial_methods["positive electrode"] = method
-            self._spatial_methods = {
-                dom: method(mesh) for dom, method in spatial_methods.items()
-            }
+
+            self._spatial_methods = spatial_methods
+            for method in self._spatial_methods.values():
+                method.build(mesh)
+
         self.bcs = {}
         self.y_slices = {}
         self._discretised_symbols = {}
+        self.external_variables = []
 
     @property
     def mesh(self):
@@ -67,7 +84,7 @@ class Discretisation(object):
         # reset discretised_symbols
         self._discretised_symbols = {}
 
-    def process_model(self, model, inplace=True):
+    def process_model(self, model, inplace=True, check_model=True):
         """Discretise a model.
         Currently inplace, could be changed to return a new model.
 
@@ -76,9 +93,15 @@ class Discretisation(object):
         model : :class:`pybamm.BaseModel`
             Model to dicretise. Must have attributes rhs, initial_conditions and
             boundary_conditions (all dicts of {variable: equation})
-        inplace: bool, optional
+        inplace : bool, optional
             If True, discretise the model in place. Otherwise, return a new
             discretised model. Default is True.
+        check_model : bool, optional
+            If True, model checks are performed after discretisation. For large
+            systems these checks can be slow, so can be skipped by setting this
+            option to False. When developing, testing or debugging it is recommened
+            to leave this option as True as it may help to identify any errors.
+            Default is True.
 
         Returns
         -------
@@ -104,11 +127,19 @@ class Discretisation(object):
 
         # Prepare discretisation
         # set variables (we require the full variable not just id)
-        variables = list(model.rhs.keys()) + list(model.algebraic.keys())
+        variables = (
+            list(model.rhs.keys())
+            + list(model.algebraic.keys())
+            + model.external_variables
+        )
 
         # Set the y split for variables
         pybamm.logger.info("Set variable slices for {}".format(model.name))
         self.set_variable_slices(variables)
+
+        # now add extrapolated external variables to the boundary conditions
+        # if required by the spatial method
+        self._preprocess_external_variables(model)
 
         # set boundary conditions (only need key ids for boundary_conditions)
         pybamm.logger.info("Discretise boundary conditions for {}".format(model.name))
@@ -122,17 +153,33 @@ class Discretisation(object):
             # since they point to the same object
             model_disc = model
         else:
-            # create a blank model so that original model is unchanged
-            model_disc = pybamm.BaseModel()
-            model_disc.name = model.name
-            model_disc.options = model.options
-            model_disc.use_jacobian = model.use_jacobian
-            model_disc.use_simplify = model.use_simplify
-            model_disc.use_to_python = model.use_to_python
+            # create an empty copy of the original model
+            model_disc = model.new_copy()
 
         model_disc.bcs = self.bcs
 
-        # Process initial condtions
+        self.external_variables = model.external_variables
+        # find where external variables begin in state vector
+        # we always append external variables to the end, so
+        # it is sufficient to only know the starting location
+        start_vals = []
+        for var in self.external_variables:
+            if isinstance(var, pybamm.Concatenation):
+                for child in var.children:
+                    start_vals += [self.y_slices[child.id][0].start]
+            elif isinstance(var, pybamm.Variable):
+                start_vals += [self.y_slices[var.id][0].start]
+
+        # attach properties of the state vector so that it
+        # can be divided correctly during the solving stage
+        model_disc.external_variables = model.external_variables
+        model_disc.y_length = self.y_length
+        model_disc.y_slices = self.y_slices
+        if start_vals:
+            model_disc.external_start = min(start_vals)
+        else:
+            model_disc.external_start = self.y_length
+
         pybamm.logger.info("Discretise initial conditions for {}".format(model.name))
         ics, concat_ics = self.process_initial_conditions(model)
         model_disc.initial_conditions = ics
@@ -160,10 +207,14 @@ class Discretisation(object):
 
         # Create mass matrix
         pybamm.logger.info("Create mass matrix for {}".format(model.name))
-        model_disc.mass_matrix = self.create_mass_matrix(model_disc)
+        model_disc.mass_matrix, model_disc.mass_matrix_inv = self.create_mass_matrix(
+            model_disc
+        )
 
         # Check that resulting model makes sense
-        self.check_model(model_disc)
+        if check_model:
+            pybamm.logger.info("Performing model checks for {}".format(model.name))
+            self.check_model(model_disc)
 
         pybamm.logger.info("Finish discretising {}".format(model.name))
 
@@ -213,9 +264,32 @@ class Discretisation(object):
                 start = end
 
         self.y_slices = y_slices
+        self.y_length = end
 
         # reset discretised_symbols
         self._discretised_symbols = {}
+
+    def _preprocess_external_variables(self, model):
+        """
+        A method to preprocess external variables so that they are
+        compatible with the spatial method. For example, in finite
+        volume, the user will supply a vector of values valid on the
+        cell centres. However, for model processing, we also require
+        the boundary edge fluxes. Therefore, we extrapolate and add
+        the boundary fluxes to the boundary conditions, which are
+        employed in generating the grad and div matrices.
+        The processing is delegated to spatial methods as
+        the preprocessing required for finite volume and finite
+        element will be different.
+        """
+
+        for var in model.external_variables:
+            if var.domain != []:
+                new_bcs = self.spatial_methods[
+                    var.domain[0]
+                ].preprocess_external_variables(var)
+
+                model.boundary_conditions.update(new_bcs)
 
     def set_internal_boundary_conditions(self, model):
         """
@@ -381,19 +455,26 @@ class Discretisation(object):
                     symbol, domain
                 )
             )
-
         # Replace keys with "left" and "right" as appropriate for 1D meshes
         if isinstance(mesh, pybamm.SubMesh1D):
-            # replace negative and/or positive tab
+            # send boundary conditions applied on the tabs to "left" or "right"
+            # depending on the tab location stored in the mesh
             for tab in ["negative tab", "positive tab"]:
                 if any(tab in side for side in list(bcs.keys())):
                     bcs[mesh.tabs[tab]] = bcs.pop(tab)
-            # replace no tab
-            if any("no tab" in side for side in list(bcs.keys())):
-                if "left" in list(bcs.keys()):
-                    bcs["right"] = bcs.pop("no tab")  # tab at bottom
-                else:
-                    bcs["left"] = bcs.pop("no tab")  # tab at top
+            # if there was a tab at either end, then the boundary conditions
+            # have now been set on "left" and "right" as required by the spatial
+            # method, so there is no need to further modify the bcs dict
+            if all(side in list(bcs.keys()) for side in ["left", "right"]):
+                pass
+            # if both tabs are located at z=0 then the "right" boundary condition
+            # (at z=1) is the condition for "no tab"
+            elif "left" in list(bcs.keys()):
+                bcs["right"] = bcs.pop("no tab")
+            # else if both tabs are located at z=1, the "left" boundary condition
+            # (at z=0) is the condition for "no tab"
+            else:
+                bcs["left"] = bcs.pop("no tab")
 
         return bcs
 
@@ -454,10 +535,14 @@ class Discretisation(object):
         -------
         :class:`pybamm.Matrix`
             The mass matrix
+        :class:`pybamm.Matrix`
+            The inverse of the ode part of the mass matrix (required by solvers
+            which only accept the ODEs in explicit form)
         """
         # Create list of mass matrices for each equation to be put into block
         # diagonal mass matrix for the model
         mass_list = []
+        mass_inv_list = []
 
         # get a list of model rhs variables that are sorted according to
         # where they are in the state vector
@@ -482,12 +567,26 @@ class Discretisation(object):
             if var.domain == []:
                 # If variable domain empty then mass matrix is just 1
                 mass_list.append(1.0)
+                mass_inv_list.append(1.0)
             else:
-                mass_list.append(
+                mass = (
                     self.spatial_methods[var.domain[0]]
                     .mass_matrix(var, self.bcs)
                     .entries
                 )
+                mass_list.append(mass)
+                if isinstance(
+                    self.spatial_methods[var.domain[0]],
+                    (pybamm.ZeroDimensionalMethod, pybamm.FiniteVolume),
+                ):
+                    # for 0D methods the mass matrix is just a scalar 1 and for
+                    # finite volumes the mass matrix is identity, so no need to
+                    # compute the inverse
+                    mass_inv_list.append(mass)
+                else:
+                    # inverse is more efficient in csc format
+                    mass_inv = inv(csc_matrix(mass))
+                    mass_inv_list.append(mass_inv)
 
         # Create lumped mass matrix (of zeros) of the correct shape for the
         # discretised algebraic equations
@@ -496,10 +595,14 @@ class Discretisation(object):
             mass_algebraic = csr_matrix((mass_algebraic_size, mass_algebraic_size))
             mass_list.append(mass_algebraic)
 
-        # Create block diagonal (sparse) mass matrix
-        mass_matrix = block_diag(mass_list, format="csr")
+        # Create block diagonal (sparse) mass matrix and inverse (if model has odes)
+        mass_matrix = pybamm.Matrix(block_diag(mass_list, format="csr"))
+        if model.rhs.keys():
+            mass_matrix_inv = pybamm.Matrix(block_diag(mass_inv_list, format="csr"))
+        else:
+            mass_matrix_inv = None
 
-        return pybamm.Matrix(mass_matrix)
+        return mass_matrix, mass_matrix_inv
 
     def create_jacobian(self, model):
         """Creates Jacobian of the discretised model.
@@ -631,7 +734,7 @@ class Discretisation(object):
             disc_left = self.process_symbol(left)
             disc_right = self.process_symbol(right)
             if symbol.domain == []:
-                return symbol.__class__(disc_left, disc_right)
+                return symbol._binary_new_copy(disc_left, disc_right)
             else:
                 return spatial_method.process_binary_operators(
                     symbol, left, right, disc_left, disc_right
@@ -707,7 +810,9 @@ class Discretisation(object):
                     mesh = self.mesh[symbol.children[0].domain[0]][0]
                     if isinstance(mesh, pybamm.SubMesh1D):
                         symbol.side = mesh.tabs[symbol.side]
-                return child_spatial_method.boundary_value_or_flux(symbol, disc_child)
+                return child_spatial_method.boundary_value_or_flux(
+                    symbol, disc_child, self.bcs
+                )
 
             else:
                 return symbol._unary_new_copy(disc_child)
@@ -795,7 +900,14 @@ class Discretisation(object):
         if check_complete:
             # Check keys from the given var_eqn_dict against self.y_slices
             ids = {v.id for v in unpacked_variables}
-            if ids != self.y_slices.keys():
+            external_id = {v.id for v in self.external_variables}
+            for var in self.external_variables:
+                child_ids = {child.id for child in var.children}
+                external_id = external_id.union(child_ids)
+            y_slices_with_external_removed = set(self.y_slices.keys()).difference(
+                external_id
+            )
+            if ids != y_slices_with_external_removed:
                 given_variable_names = [v.name for v in var_eqn_dict.keys()]
                 raise pybamm.ModelError(
                     "Initial conditions are insufficient. Only "

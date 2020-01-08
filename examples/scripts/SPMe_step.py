@@ -49,7 +49,6 @@ while time < end_time:
 # plot
 voltage = pybamm.ProcessedVariable(
     model.variables["Terminal voltage [V]"], solution.t, solution.y, mesh=mesh
-
 )
 step_voltage = pybamm.ProcessedVariable(
     model.variables["Terminal voltage [V]"], step_solution.t, step_solution.y, mesh=mesh

@@ -34,24 +34,25 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     @property
     def default_var_pts(self):
+        # Choose points that give uniform grid for the standard parameter values
         var = pybamm.standard_spatial_vars
-        return {var.x_n: 30, var.x_s: 30, var.x_p: 30, var.y: 10, var.z: 10}
+        return {var.x_n: 25, var.x_s: 41, var.x_p: 34, var.y: 10, var.z: 10}
+
+    @property
+    def default_solver(self):
+        """
+        Return default solver based on whether model is ODE model or DAE model.
+        There are bugs with KLU on the lead-acid models.
+        """
+        if len(self.algebraic) == 0:
+            return pybamm.ScipySolver()
+        elif pybamm.have_scikits_odes():
+            return pybamm.ScikitsDaeSolver()
+        else:  # pragma: no cover
+            return pybamm.CasadiSolver(mode="safe")
 
     def set_standard_output_variables(self):
         super().set_standard_output_variables()
-        # Current
-        i_cell = pybamm.standard_parameters_lead_acid.current_with_time
-        i_cell_dim = (
-            pybamm.standard_parameters_lead_acid.dimensional_current_density_with_time
-        )
-        I = pybamm.standard_parameters_lead_acid.dimensional_current_with_time
-        self.variables.update(
-            {
-                "Total current density": i_cell,
-                "Total current density [A.m-2]": i_cell_dim,
-                "Current [A]": I,
-            }
-        )
 
         # Time
         time_scale = pybamm.standard_parameters_lead_acid.tau_discharge
@@ -60,7 +61,6 @@ class BaseModel(pybamm.BaseBatteryModel):
                 "Time [s]": pybamm.t * time_scale,
                 "Time [min]": pybamm.t * time_scale / 60,
                 "Time [h]": pybamm.t * time_scale / 3600,
-                "Discharge capacity [A.h]": I * pybamm.t * time_scale / 3600,
             }
         )
 
@@ -102,5 +102,5 @@ class BaseModel(pybamm.BaseBatteryModel):
         if "Fractional Charge Input" not in self.variables:
             fci = pybamm.Variable("Fractional Charge Input", domain="current collector")
             self.variables["Fractional Charge Input"] = fci
-            self.rhs[fci] = -self.param.current_with_time * 100
+            self.rhs[fci] = -self.variables["Total current density"] * 100
             self.initial_conditions[fci] = self.param.q_init * 100

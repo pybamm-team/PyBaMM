@@ -16,7 +16,6 @@ Expression Tree
   concatenations
   broadcasts
   functions
+  input_parameter
   interpolant
-  evaluate
-  simplify
-  jacobian
+  operations/index

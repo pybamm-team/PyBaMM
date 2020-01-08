@@ -3,8 +3,9 @@
 #
 import pybamm
 
-from scipy.sparse import csr_matrix
-import autograd.numpy as np
+from scipy.sparse import csr_matrix, csc_matrix
+from scipy.sparse.linalg import inv
+import numpy as np
 import skfem
 
 
@@ -12,7 +13,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
     """
     A class which implements the steps specific to the finite element method during
     discretisation. The class uses scikit-fem to discretise the problem to obtain
-    the mass and stifnness matrices. At present, this class is only used for
+    the mass and stiffness matrices. At present, this class is only used for
     solving the Poisson problem -grad^2 u = f in the y-z plane (i.e. not the
     through-cell direction).
 
@@ -26,8 +27,11 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
     **Extends:"": :class:`pybamm.SpatialMethod`
     """
 
-    def __init__(self, mesh):
-        super().__init__(mesh)
+    def __init__(self, options=None):
+        super().__init__(options)
+
+    def build(self, mesh):
+        super().build(mesh)
         # add npts_for_broadcast to mesh domains for this particular discretisation
         for dom in mesh.keys():
             for i in range(len(mesh[dom])):
@@ -51,11 +55,11 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         symbol_mesh = self.mesh
         if symbol.name == "y":
             vector = pybamm.Vector(
-                symbol_mesh["current collector"][0].edges["y"], domain=symbol.domain
+                symbol_mesh["current collector"][0].coordinates[0, :][:, np.newaxis]
             )
         elif symbol.name == "z":
             vector = pybamm.Vector(
-                symbol_mesh["current collector"][0].edges["z"], domain=symbol.domain
+                symbol_mesh["current collector"][0].coordinates[1, :][:, np.newaxis]
             )
         else:
             raise pybamm.GeometryError(
@@ -64,10 +68,104 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         return vector
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
-        """Matrix-vector multiplication to implement the gradient operator.
-        See :meth:`pybamm.SpatialMethod.gradient`
+        """Matrix-vector multiplication to implement the gradient operator. The
+        gradient w of the function u is approximated by the finite element method
+        using the same function space as u, i.e. we solve w = grad(u), which
+        corresponds to the weak form w*v*dx = grad(u)*v*dx, where v is a suitable
+        test function.
+
+        Parameters
+        ----------
+        symbol: :class:`pybamm.Symbol`
+            The symbol that we will take the laplacian of.
+        discretised_symbol: :class:`pybamm.Symbol`
+            The discretised symbol of the correct size
+        boundary_conditions : dict
+            The boundary conditions of the model
+            ({symbol.id: {"negative tab": neg. tab bc, "positive tab": pos. tab bc}})
+
+        Returns
+        -------
+        :class: `pybamm.Concatenation`
+            A concatenation that contains the result of acting the discretised
+            gradient on the child discretised_symbol. The first column corresponds
+            to the y-component of the gradient and the second column corresponds
+            to the z component of the gradient.
         """
-        raise NotImplementedError
+        domain = symbol.domain[0]
+        mesh = self.mesh[domain][0]
+
+        # get gradient matrix
+        grad_y_matrix, grad_z_matrix = self.gradient_matrix(symbol, boundary_conditions)
+
+        # assemble mass matrix (there is no need to zero out entries here, since
+        # boundary conditions are already accounted for in the governing pde
+        # for the symbol we are taking the gradient of. we just want to get the
+        # correct weights)
+        @skfem.bilinear_form
+        def mass_form(u, du, v, dv, w):
+            return u * v
+
+        mass = skfem.asm(mass_form, mesh.basis)
+        # we need the inverse
+        mass_inv = pybamm.Matrix(inv(csc_matrix(mass)))
+
+        # compute gradient
+        grad_y = mass_inv @ (grad_y_matrix @ discretised_symbol)
+        grad_z = mass_inv @ (grad_z_matrix @ discretised_symbol)
+
+        # create concatenation
+        grad = pybamm.Concatenation(
+            grad_y, grad_z, check_domain=False, concat_fun=np.hstack
+        )
+        grad.domain = domain
+
+        return grad
+
+    def gradient_squared(self, symbol, discretised_symbol, boundary_conditions):
+        """Multiplication to implement the inner product of the gradient operator
+        with itself. See :meth:`pybamm.SpatialMethod.gradient_squared`
+        """
+        grad = self.gradient(symbol, discretised_symbol, boundary_conditions)
+        grad_y, grad_z = grad.orphans
+        return grad_y ** 2 + grad_z ** 2
+
+    def gradient_matrix(self, symbol, boundary_conditions):
+        """
+        Gradient matrix for finite elements in the appropriate domain.
+
+        Parameters
+        ----------
+        symbol: :class:`pybamm.Symbol`
+            The symbol for which we want to calculate the gradient matrix
+        boundary_conditions : dict
+            The boundary conditions of the model
+            ({symbol.id: {"negative tab": neg. tab bc, "positive tab": pos. tab bc}})
+
+        Returns
+        -------
+        :class:`pybamm.Matrix`
+            The (sparse) finite element gradient matrix for the domain
+        """
+        # get primary domain mesh
+        domain = symbol.domain[0]
+        mesh = self.mesh[domain][0]
+
+        # make form for the gradient in the y direction
+        @skfem.bilinear_form
+        def gradient_dy(u, du, v, dv, w):
+            return du[0] * v[0]
+
+        # make form for the gradient in the z direction
+        @skfem.bilinear_form
+        def gradient_dz(u, du, v, dv, w):
+            return du[1] * v[1]
+
+        # assemble the matrices
+        grad_y = skfem.asm(gradient_dy, mesh.basis)
+        grad_z = skfem.asm(gradient_dz, mesh.basis)
+
+        return pybamm.Matrix(grad_y), pybamm.Matrix(grad_z)
 
     def divergence(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the divergence operator.
@@ -121,7 +219,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             # set Dirichlet value at facets corresponding to tab
             neg_bc_load = np.zeros(mesh.npts)
             neg_bc_load[mesh.negative_tab_dofs] = 1
-            boundary_load = boundary_load - neg_bc_value * pybamm.Vector(neg_bc_load)
+            boundary_load = boundary_load + neg_bc_value * pybamm.Vector(neg_bc_load)
         else:
             raise ValueError(
                 "boundary condition must be Dirichlet or Neumann, not '{}'".format(
@@ -138,7 +236,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             # set Dirichlet value at facets corresponding to tab
             pos_bc_load = np.zeros(mesh.npts)
             pos_bc_load[mesh.positive_tab_dofs] = 1
-            boundary_load = boundary_load - pos_bc_value * pybamm.Vector(pos_bc_load)
+            boundary_load = boundary_load + pos_bc_value * pybamm.Vector(pos_bc_load)
         else:
             raise ValueError(
                 "boundary condition must be Dirichlet or Neumann, not '{}'".format(
@@ -147,15 +245,6 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             )
 
         return -stiffness_matrix @ discretised_symbol + boundary_load
-
-    def gradient_squared(self, symbol, discretised_symbol, boundary_conditions):
-        """Matrix-vector multiplication to implement the inner product of the
-        gradient operator with itself.
-        See :meth:`pybamm.SpatialMethod.gradient_squared`
-        """
-        stiffness_matrix = self.stiffness_matrix(symbol, boundary_conditions)
-
-        return stiffness_matrix @ (discretised_symbol ** 2)
 
     def stiffness_matrix(self, symbol, boundary_conditions):
         """
@@ -322,7 +411,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
         return pybamm.Matrix(integration_vector[np.newaxis, :])
 
-    def boundary_value_or_flux(self, symbol, discretised_child):
+    def boundary_value_or_flux(self, symbol, discretised_child, bcs=None):
         """
         Returns the average value of the symbol over the negative tab ("negative tab")
         or the positive tab ("positive tab") in the Finite Element Method.

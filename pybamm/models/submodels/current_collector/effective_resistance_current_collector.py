@@ -197,8 +197,8 @@ class EffectiveResistance2D(pybamm.BaseModel):
             "Negative current collector potential [V]": phi_s_cn_dim,
             "Positive current collector potential": phi_s_cp,
             "Positive current collector potential [V]": phi_s_cp_dim,
-            "Local current collector potential difference": V_cc,
-            "Local current collector potential difference [V]": V_cc_dim,
+            "Local voltage": V_cc,
+            "Local voltage [V]": V_cc_dim,
         }
         return potentials
 
@@ -223,7 +223,7 @@ class EffectiveResistance2D(pybamm.BaseModel):
 
     @property
     def default_spatial_methods(self):
-        return {"current collector": pybamm.ScikitFiniteElement}
+        return {"current collector": pybamm.ScikitFiniteElement()}
 
     @property
     def default_solver(self):

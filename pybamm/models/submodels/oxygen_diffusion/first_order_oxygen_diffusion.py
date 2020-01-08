@@ -37,12 +37,14 @@ class FirstOrder(BaseModel):
         x_p = pybamm.standard_spatial_vars.x_p
 
         # Unpack
-        eps_s_0_av = variables["Leading-order x-averaged separator porosity"]
-        eps_p_0_av = variables["Leading-order x-averaged positive electrode porosity"]
+        tor_s_0_av = variables["Leading-order x-averaged separator tortuosity"]
+        tor_p_0_av = variables[
+            "Leading-order x-averaged positive electrolyte tortuosity"
+        ]
 
         # Diffusivities
-        D_ox_s = (eps_s_0_av ** param.b_s) * param.curlyD_ox
-        D_ox_p = (eps_p_0_av ** param.b_p) * param.curlyD_ox
+        D_ox_s = tor_s_0_av * param.curlyD_ox
+        D_ox_p = tor_p_0_av * param.curlyD_ox
 
         # Reactions
         sj_ox_p = sum(
@@ -56,14 +58,15 @@ class FirstOrder(BaseModel):
         # Fluxes
         N_ox_n_1 = pybamm.FullBroadcast(0, "negative electrode", "current collector")
         N_ox_s_1 = -pybamm.PrimaryBroadcast(sj_ox_p * l_p, "separator")
-        N_ox_p_1 = pybamm.outer(sj_ox_p, x_p - 1)
+        N_ox_p_1 = sj_ox_p * (x_p - 1)
 
         # Concentrations
         c_ox_n_1 = pybamm.FullBroadcast(0, "negative electrode", "current collector")
-        c_ox_s_1 = pybamm.outer(sj_ox_p * l_p / D_ox_s, x_s - l_n)
-        c_ox_p_1 = pybamm.outer(
-            -sj_ox_p / (2 * D_ox_p), (x_p - 1) ** 2 - l_p ** 2
-        ) + pybamm.PrimaryBroadcast(sj_ox_p * l_p * l_s / D_ox_s, "positive electrode")
+        c_ox_s_1 = sj_ox_p * l_p / D_ox_s * (x_s - l_n)
+        c_ox_p_1 = (
+            -sj_ox_p / (2 * D_ox_p) * ((x_p - 1) ** 2 - l_p ** 2)
+            + sj_ox_p * l_p * l_s / D_ox_s
+        )
 
         # Update variables
         c_ox = pybamm.Concatenation(
