@@ -3,7 +3,7 @@
 #
 import pybamm
 
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, diags
 import numpy as np
 import skfem
 
@@ -158,7 +158,9 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         """
         stiffness_matrix = self.stiffness_matrix(symbol, boundary_conditions)
 
-        return stiffness_matrix @ (discretised_symbol ** 2)
+        # u = diags()gcc
+
+        return discretised_symbol @ stiffness_matrix @ discretised_symbol
 
     def stiffness_matrix(self, symbol, boundary_conditions):
         """

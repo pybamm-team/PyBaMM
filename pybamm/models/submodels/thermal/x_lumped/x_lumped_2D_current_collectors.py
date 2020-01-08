@@ -53,6 +53,9 @@ class CurrentCollector2D(BaseModel):
         # directly
         Q_s_cn = self.param.sigma_cn_prime * pybamm.grad_squared(phi_s_cn)
         Q_s_cp = self.param.sigma_cp_prime * pybamm.grad_squared(phi_s_cp)
+        # Q_s_cn = self.param.current_with_time ** 2 / self.param.sigma_cn
+        # Q_s_cp = self.param.current_with_time ** 2 / self.param.sigma_cp
+
         return Q_s_cn, Q_s_cp
 
     def _yz_average(self, var):

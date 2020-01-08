@@ -8,10 +8,21 @@ import models
 path = "/home/scott/Projects/PyBaMM/results/2019_xx_2plus1D_pouchcell_part2/"
 pybamm.set_logging_level("INFO")
 
-load = True
+load = False
 thermal = True
 c_rate = 1
-t_eval = np.linspace(0, 0.17, 100)
+t_eval = np.linspace(0, 0.16, 100)
+
+solvers = {
+    "2+1D DFN": pybamm.CasadiSolver(mode="fast"),
+    # "2+1D SPM": pybamm.CasadiSolver(mode="fast"),
+    # "2+1D SPMe": pybamm.CasadiSolver(mode="fast"),
+    # "1D DFN": pybamm.CasadiSolver(mode="fast"),
+    # "SPM": pybamm.CasadiSolver(mode="fast"),
+    # "DFNCC": pybamm.CasadiSolver(mode="fast"),
+    "SPMeCC": pybamm.CasadiSolver(mode="fast"),
+}
+
 
 var_pts = {
     pybamm.standard_spatial_vars.x_n: 5,
@@ -38,7 +49,7 @@ if load is False:
         "2+1D SPMe": models.SPMe_2p1D(thermal, param),
         "1D DFN": models.DFN(thermal, param),
         "DFNCC": models.DFNCC(thermal, param),
-        "SPM": models.SPM(thermal, param),
+        # "SPM": models.SPM(thermal, param),
         "SPMeCC": models.SPMeCC(thermal, param),
     }
 
@@ -78,7 +89,7 @@ if load is False:
     temperature_solution = {}
 
     for model_name, model in models.items():
-        model.solve(var_pts, c_rate, t_eval)
+        model.solve(var_pts, c_rate, t_eval, solver=solvers[model_name])
 
         variables = [
             "Time [h]",
