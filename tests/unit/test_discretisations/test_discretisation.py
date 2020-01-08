@@ -785,12 +785,17 @@ class TestDiscretise(unittest.TestCase):
 
         disc.set_variable_slices([var])
         broad_disc = disc.process_symbol(broad)
-        self.assertIsInstance(broad_disc, pybamm.Outer)
-        self.assertIsInstance(broad_disc.children[0], pybamm.StateVector)
-        self.assertIsInstance(broad_disc.children[1], pybamm.Vector)
+        self.assertIsInstance(broad_disc, pybamm.MatrixMultiplication)
+        self.assertIsInstance(broad_disc.children[0], pybamm.Matrix)
+        self.assertIsInstance(broad_disc.children[1], pybamm.StateVector)
         self.assertEqual(
             broad_disc.shape,
             (mesh["separator"][0].npts * mesh["current collector"][0].npts, 1),
+        )
+        y_test = np.linspace(0, 1, mesh["current collector"][0].npts)
+        np.testing.assert_array_equal(
+            broad_disc.evaluate(y=y_test),
+            np.outer(y_test, np.ones(mesh["separator"][0].npts)).reshape(-1, 1),
         )
 
     def test_secondary_broadcast_2D(self):
@@ -810,29 +815,6 @@ class TestDiscretise(unittest.TestCase):
         self.assertEqual(
             broad_disc.shape,
             (mesh["negative particle"][0].npts * mesh["negative electrode"][0].npts, 1),
-        )
-
-    def test_outer(self):
-
-        # create discretisation
-        disc = get_1p1d_discretisation_for_testing()
-        mesh = disc.mesh
-
-        var_z = pybamm.Variable("var_z", ["current collector"])
-        var_x = pybamm.Vector(
-            np.linspace(0, 1, mesh["separator"][0].npts), domain="separator"
-        )
-
-        # process Outer variable
-        disc.set_variable_slices([var_z, var_x])
-        outer = pybamm.outer(var_z, var_x)
-        outer_disc = disc.process_symbol(outer)
-        self.assertIsInstance(outer_disc, pybamm.Outer)
-        self.assertIsInstance(outer_disc.children[0], pybamm.StateVector)
-        self.assertIsInstance(outer_disc.children[1], pybamm.Vector)
-        self.assertEqual(
-            outer_disc.shape,
-            (mesh["separator"][0].npts * mesh["current collector"][0].npts, 1),
         )
 
     def test_concatenation(self):

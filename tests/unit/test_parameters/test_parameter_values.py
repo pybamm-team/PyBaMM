@@ -235,12 +235,6 @@ class TestParameterValues(unittest.TestCase):
             processed_g.evaluate(y=np.ones(10)), np.ones((10, 1))
         )
 
-        # process outer
-        c = pybamm.Parameter("c", domain="current collector")
-        outer = pybamm.Outer(c, b)
-        processed_outer = parameter_values.process_symbol(outer)
-        self.assertIsInstance(processed_outer, pybamm.Outer)
-
         # not implemented
         sym = pybamm.Symbol("sym")
         with self.assertRaises(NotImplementedError):

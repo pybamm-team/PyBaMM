@@ -87,7 +87,7 @@ class Concatenation(pybamm.Symbol):
     def _concatenation_simplify(self, children):
         """ See :meth:`pybamm.Symbol.simplify()`. """
         new_symbol = self.__class__(*children)
-        new_symbol.domain = []
+        new_symbol.clear_domains()
         return new_symbol
 
     def evaluate_for_shape(self):
@@ -152,7 +152,7 @@ class NumpyConcatenation(Concatenation):
             else:
                 new_children.append(child)
         new_symbol = NumpyConcatenation(*new_children)
-        new_symbol.domain = []
+        new_symbol.clear_domains()
         return new_symbol
 
 
@@ -303,7 +303,7 @@ class DomainConcatenation(Concatenation):
 
         # TODO: this should not be needed, but somehow we are still getting domains in
         # the simplified children
-        new_symbol.domain = []
+        new_symbol.clear_domains()
 
         return new_symbol
 

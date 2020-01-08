@@ -308,8 +308,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # only change the diveregence (childs here have grad and no div)
         out = integration_matrix @ discretised_child
 
-        out.domain = child.domain
-        out.auxiliary_domains = child.auxiliary_domains
+        out.copy_domains(child)
 
         return out
 
@@ -411,8 +410,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # Return delta function, keep domains
         delta_fn = pybamm.Matrix(domain_width / dx * matrix) * discretised_symbol
-        delta_fn.domain = symbol.domain
-        delta_fn.auxiliary_domains = symbol.auxiliary_domains
+        delta_fn.copy_domains(symbol)
 
         return delta_fn
 
@@ -456,8 +454,10 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Remove domains to avoid clash
         left_domain = left_symbol_disc.domain
         right_domain = right_symbol_disc.domain
-        left_symbol_disc.domain = []
-        right_symbol_disc.domain = []
+        left_auxiliary_domains = left_symbol_disc.auxiliary_domains
+        right_auxiliary_domains = right_symbol_disc.auxiliary_domains
+        left_symbol_disc.clear_domains()
+        right_symbol_disc.clear_domains()
 
         # Finite volume derivative
         dy = right_matrix @ right_symbol_disc - left_matrix @ left_symbol_disc
@@ -466,6 +466,8 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Change domains back
         left_symbol_disc.domain = left_domain
         right_symbol_disc.domain = right_domain
+        left_symbol_disc.auxiliary_domains = left_auxiliary_domains
+        right_symbol_disc.auxiliary_domains = right_auxiliary_domains
 
         return dy / dx
 
@@ -599,8 +601,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Need to match the domain. E.g. in the case of the boundary condition
         # on the particle, the gradient has domain particle but the bcs_vector
         # has domain electrode, since it is a function of the macroscopic variables
-        bcs_vector.domain = discretised_symbol.domain
-        bcs_vector.auxiliary_domains = discretised_symbol.auxiliary_domains
+        bcs_vector.copy_domains(discretised_symbol)
 
         # Make matrix to calculate ghost nodes
         # coo_matrix takes inputs (data, (row, col)) and puts data[i] at the point
@@ -956,11 +957,9 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # Return boundary value with domain given by symbol
         boundary_value = pybamm.Matrix(matrix) @ discretised_child
-        boundary_value.domain = symbol.domain
-        boundary_value.auxiliary_domains = symbol.auxiliary_domains
+        boundary_value.copy_domains(symbol)
 
-        additive.domain = symbol.domain
-        additive.auxiliary_domains = symbol.auxiliary_domains
+        additive.copy_domains(symbol)
         boundary_value += additive
 
         return boundary_value

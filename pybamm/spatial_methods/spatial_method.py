@@ -98,9 +98,15 @@ class SpatialMethod:
         )
 
         if broadcast_type == "primary":
-            out = pybamm.Outer(
-                symbol, pybamm.Vector(np.ones(primary_domain_size), domain=domain)
-            )
+            # Make copies of the child stacked on top of each other
+            sub_vector = np.ones((primary_domain_size, 1))
+            if symbol.shape_for_testing == ():
+                out = symbol * pybamm.Vector(sub_vector)
+            else:
+                # Repeat for secondary points
+                matrix = csr_matrix(kron(eye(symbol.shape_for_testing[0]), sub_vector))
+                out = pybamm.Matrix(matrix) @ symbol
+            out.domain = domain
         elif broadcast_type == "secondary":
             secondary_domain_size = sum(
                 self.mesh[dom][0].npts_for_broadcast
@@ -355,7 +361,7 @@ class SpatialMethod:
 
         out = bv_vector @ discretised_child
         # boundary value removes domain
-        out.domain = []
+        out.clear_domains()
         return out
 
     def mass_matrix(self, symbol, boundary_conditions):

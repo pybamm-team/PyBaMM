@@ -69,8 +69,8 @@ class TestDFN(unittest.TestCase):
         model = pybamm.lithium_ion.DFN()
         optimtest = tests.OptimisationsTest(model)
         optimtest.set_up_model(simplify=False, to_python=True)
-        optimtest.set_up_model(simplify=True, to_python=True)
         optimtest.set_up_model(simplify=False, to_python=False)
+        optimtest.set_up_model(simplify=True, to_python=True)
         optimtest.set_up_model(simplify=True, to_python=False)
 
     def test_full_thermal(self):

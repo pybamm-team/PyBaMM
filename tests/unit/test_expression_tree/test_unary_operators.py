@@ -195,6 +195,10 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(delta_a.side, "right")
         self.assertEqual(delta_a.child.id, a.id)
         self.assertFalse(delta_a.evaluates_on_edges())
+        with self.assertRaisesRegex(
+            pybamm.DomainError, "Delta function domain cannot be None"
+        ):
+            delta_a = pybamm.DeltaFunction(a, "right", None)
 
     def test_boundary_operators(self):
         a = pybamm.Symbol("a", domain="some domain")
