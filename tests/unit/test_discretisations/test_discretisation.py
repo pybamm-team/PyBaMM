@@ -779,12 +779,17 @@ class TestDiscretise(unittest.TestCase):
 
         disc.set_variable_slices([var])
         broad_disc = disc.process_symbol(broad)
-        self.assertIsInstance(broad_disc, pybamm.Outer)
-        self.assertIsInstance(broad_disc.children[0], pybamm.StateVector)
-        self.assertIsInstance(broad_disc.children[1], pybamm.Vector)
+        self.assertIsInstance(broad_disc, pybamm.MatrixMultiplication)
+        self.assertIsInstance(broad_disc.children[0], pybamm.Matrix)
+        self.assertIsInstance(broad_disc.children[1], pybamm.StateVector)
         self.assertEqual(
             broad_disc.shape,
             (mesh["separator"][0].npts * mesh["current collector"][0].npts, 1),
+        )
+        y_test = np.linspace(0, 1, mesh["current collector"][0].npts)
+        np.testing.assert_array_equal(
+            broad_disc.evaluate(y=y_test),
+            np.outer(y_test, np.ones(mesh["separator"][0].npts)).reshape(-1, 1),
         )
 
     def test_secondary_broadcast_2D(self):
