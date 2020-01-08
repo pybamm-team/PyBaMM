@@ -36,6 +36,7 @@
 
 ## Bug fixes
 
+-   Improved implementation of broadcasts ([#776](https://github.com/pybamm-team/PyBaMM/pull/776))
 -   Fixed a bug which meant that the Ohmic heating in the current collectors was incorrect if using the Finite Element Method ([#767](https://github.com/pybamm-team/PyBaMM/pull/767))
 -   Improved automatic broadcasting ([#747](https://github.com/pybamm-team/PyBaMM/pull/747))
 -   Fixed bug with wrong temperature in initial conditions ([#737](https://github.com/pybamm-team/PyBaMM/pull/737))

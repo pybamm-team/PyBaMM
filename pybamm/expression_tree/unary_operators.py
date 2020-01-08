@@ -265,7 +265,7 @@ class SpatialOperator(UnaryOperator):
         # We shouldn't need this
         raise NotImplementedError
 
-    def _unary_simplify(self, child):
+    def _unary_simplify(self, simplified_child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
 
         # if there are none of these nodes in the child tree, then this expression
@@ -276,7 +276,7 @@ class SpatialOperator(UnaryOperator):
         if all([not (isinstance(n, search_types)) for n in self.pre_order()]):
             return pybamm.Scalar(0)
         else:
-            return self.__class__(child)
+            return self.__class__(simplified_child)
 
 
 class Gradient(SpatialOperator):
