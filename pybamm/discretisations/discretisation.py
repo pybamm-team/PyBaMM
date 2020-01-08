@@ -964,7 +964,7 @@ class Discretisation(object):
         """
         Check variables in variable list against rhs
         Be lenient with size check if the variable in model.variables is broadcasted, or
-        a concatenation, or an outer product
+        a concatenation
         (if broadcasted, variable is a multiplication with a vector of ones)
         """
         for rhs_var in model.rhs.keys():
@@ -976,7 +976,6 @@ class Discretisation(object):
                 )
 
                 not_concatenation = not isinstance(var, pybamm.Concatenation)
-                not_outer = not isinstance(var, pybamm.Outer)
 
                 not_mult_by_one_vec = not (
                     isinstance(var, pybamm.Multiplication)
@@ -987,7 +986,6 @@ class Discretisation(object):
                 if (
                     different_shapes
                     and not_concatenation
-                    and not_outer
                     and not_mult_by_one_vec
                 ):
                     raise pybamm.ModelError(

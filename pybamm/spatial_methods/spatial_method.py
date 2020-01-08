@@ -100,7 +100,7 @@ class SpatialMethod:
         if broadcast_type == "primary":
             # Make copies of the child stacked on top of each other
             sub_vector = np.ones((primary_domain_size, 1))
-            if isinstance(symbol, pybamm.Scalar):
+            if symbol.evaluates_to_number():
                 out = symbol * pybamm.Vector(sub_vector)
             else:
                 # Repeat for secondary points

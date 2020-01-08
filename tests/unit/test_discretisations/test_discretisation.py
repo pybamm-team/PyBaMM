@@ -811,29 +811,6 @@ class TestDiscretise(unittest.TestCase):
             (mesh["negative particle"][0].npts * mesh["negative electrode"][0].npts, 1),
         )
 
-    def test_outer(self):
-
-        # create discretisation
-        disc = get_1p1d_discretisation_for_testing()
-        mesh = disc.mesh
-
-        var_z = pybamm.Variable("var_z", ["current collector"])
-        var_x = pybamm.Vector(
-            np.linspace(0, 1, mesh["separator"][0].npts), domain="separator"
-        )
-
-        # process Outer variable
-        disc.set_variable_slices([var_z, var_x])
-        outer = pybamm.outer(var_z, var_x)
-        outer_disc = disc.process_symbol(outer)
-        self.assertIsInstance(outer_disc, pybamm.Outer)
-        self.assertIsInstance(outer_disc.children[0], pybamm.StateVector)
-        self.assertIsInstance(outer_disc.children[1], pybamm.Vector)
-        self.assertEqual(
-            outer_disc.shape,
-            (mesh["separator"][0].npts * mesh["current collector"][0].npts, 1),
-        )
-
     def test_concatenation(self):
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")
