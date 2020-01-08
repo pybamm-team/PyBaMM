@@ -93,5 +93,5 @@ output_variables = [
     "Current collector current density",
     "Terminal voltage [V]",
 ]
-plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)
+plot = pybamm.QuickPlot(solutions, output_variables)
 plot.dynamic_plot()

@@ -68,5 +68,5 @@ solver = pybamm.ScipySolver()
 solution = solver.solve(model, t_eval)
 
 # plot
-plot = pybamm.QuickPlot(model, mesh, solution)
+plot = pybamm.QuickPlot(solution)
 plot.dynamic_plot()

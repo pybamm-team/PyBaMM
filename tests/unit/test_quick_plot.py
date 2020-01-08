@@ -142,7 +142,7 @@ class TestQuickPlot(unittest.TestCase):
             mesh = pybamm.Mesh(
                 geometry, model.default_submesh_types, model.default_var_pts
             )
-            pybamm.QuickPlot(model, mesh, 1)
+            pybamm.QuickPlot(1)
 
 
 if __name__ == "__main__":
