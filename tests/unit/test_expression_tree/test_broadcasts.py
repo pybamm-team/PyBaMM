@@ -26,6 +26,11 @@ class TestBroadcasts(unittest.TestCase):
             {"secondary": ["negative electrode"], "tertiary": ["current collector"]},
         )
 
+        a = pybamm.Symbol("a", domain="current collector")
+        with self.assertRaisesRegex(
+            pybamm.DomainError, "Primary broadcast from current collector"
+        ):
+            pybamm.PrimaryBroadcast(a, "bad domain")
         a = pybamm.Symbol("a", domain="negative electrode")
         with self.assertRaisesRegex(
             pybamm.DomainError, "Primary broadcast from electrode"
