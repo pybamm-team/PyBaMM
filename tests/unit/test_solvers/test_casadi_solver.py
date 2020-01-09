@@ -6,6 +6,7 @@ import pybamm
 import unittest
 import numpy as np
 from tests import get_mesh_for_testing, get_discretisation_for_testing
+from scipy.sparse import eye
 
 
 class TestCasadiSolver(unittest.TestCase):
@@ -206,12 +207,41 @@ class TestCasadiSolver(unittest.TestCase):
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
         # Solve
-        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
+        solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 10, 100)
         solution = solver.solve(model, t_eval, inputs={"rate": 0.1})
         self.assertLess(len(solution.t), len(t_eval))
         np.testing.assert_array_equal(solution.t, t_eval[: len(solution.t)])
-        np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
+        np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t), rtol=1e-06)
+
+    def test_model_solver_with_non_identity_mass(self):
+        model = pybamm.BaseModel()
+        var1 = pybamm.Variable("var1", domain="negative electrode")
+        var2 = pybamm.Variable("var2", domain="negative electrode")
+        model.rhs = {var1: var1}
+        model.algebraic = {var2: 2 * var1 - var2}
+        model.initial_conditions = {var1: 1, var2: 2}
+        disc = get_discretisation_for_testing()
+        disc.process_model(model)
+
+        # FV discretisation has identity mass. Manually set the mass matrix to
+        # be a diag of 10s here for testing. Note that the algebraic part is all
+        # zeros
+        mass_matrix = 10 * model.mass_matrix.entries
+        model.mass_matrix = pybamm.Matrix(mass_matrix)
+
+        # Note that mass_matrix_inv is just the inverse of the ode block of the
+        # mass matrix
+        mass_matrix_inv = 0.1 * eye(int(mass_matrix.shape[0] / 2))
+        model.mass_matrix_inv = pybamm.Matrix(mass_matrix_inv)
+
+        # Solve
+        solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8, method="idas")
+        t_eval = np.linspace(0, 1, 100)
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_array_equal(solution.t, t_eval)
+        np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
+        np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
 
 
 if __name__ == "__main__":
