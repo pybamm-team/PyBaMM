@@ -90,18 +90,20 @@ class PrimaryBroadcast(Broadcast):
         self, child, broadcast_type, broadcast_domain, broadcast_auxiliary_domains
     ):
         "See :meth:`Broadcast.check_and_set_domains`"
-        # Can only do primary broadcast from current collector to electrode or from
-        # electrode to particle
+        # Can only do primary broadcast from current collector to electrode or particle
+        # or from electrode to particle. Note current collector to particle *is* allowed
         if child.domain == []:
             pass
         elif child.domain == ["current collector"] and broadcast_domain[0] not in [
             "negative electrode",
             "separator",
             "positive electrode",
+            "negative particle",
+            "positive particle",
         ]:
             raise pybamm.DomainError(
                 """Primary broadcast from current collector domain must be to electrode
-                or separator"""
+                or separator or particle domains"""
             )
         elif child.domain[0] in [
             "negative electrode",
