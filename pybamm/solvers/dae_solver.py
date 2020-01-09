@@ -216,6 +216,8 @@ class DaeSolver(pybamm.BaseSolver):
         self.event_funs = [get_event_class(event) for event in events.values()]
         self.jacobian = jacobian
 
+        pybamm.logger.info("Finish solver set-up")
+
     def set_up_casadi(self, model, inputs=None):
         """Convert model to casadi format and use their inbuilt functionalities.
 
@@ -340,8 +342,17 @@ class DaeSolver(pybamm.BaseSolver):
         self.jacobian = jacobian
 
         # Save CasADi functions for the CasADi solver
-        self.casadi_rhs = concatenated_rhs_fn
-        self.casadi_algebraic = concatenated_algebraic_fn
+        # Note: when we pass to casadi the ode part of the problem must be in explicit
+        # form so we pre-multiply by the inverse of the mass matrix
+        if isinstance(self, pybamm.CasadiSolver):
+            mass_matrix_inv = casadi.MX(model.mass_matrix_inv.entries)
+            explicit_rhs = mass_matrix_inv @ concatenated_rhs
+            self.casadi_rhs = casadi.Function(
+                "rhs", [t_casadi, y_casadi_w_ext, u_casadi_stacked], [explicit_rhs]
+            )
+            self.casadi_algebraic = concatenated_algebraic_fn
+
+        pybamm.logger.info("Finish solver set-up")
 
     def set_inputs_and_external(self, inputs):
         """

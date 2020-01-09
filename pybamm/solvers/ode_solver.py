@@ -155,6 +155,8 @@ class OdeSolver(pybamm.BaseSolver):
         self.event_funs = [get_event_class(event) for event in events.values()]
         self.jacobian = jacobian
 
+        pybamm.logger.info("Finish solver set-up")
+
     def set_up_casadi(self, model, inputs=None):
         """Convert model to casadi format and use their inbuilt functionalities.
 

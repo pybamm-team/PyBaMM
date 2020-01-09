@@ -11,6 +11,10 @@ class Broadcast(pybamm.SpatialOperator):
     Broadcasts a child to a specified domain. After discretisation, this will evaluate
     to an array of the right shape for the specified domain.
 
+    For an example of broadcasts in action, see
+    `this example notebook
+    <https://github.com/pybamm-team/PyBaMM/blob/master/examples/notebooks/expression_tree/broadcasts.ipynb>`_
+
     Parameters
     ----------
     child : :class:`Symbol`
@@ -61,7 +65,11 @@ class Broadcast(pybamm.SpatialOperator):
 
 class PrimaryBroadcast(Broadcast):
     """A node in the expression tree representing a primary broadcasting operator.
-    Broadcasts in a `primary` dimension only. That is, makes explicit copies
+    Broadcasts in a `primary` dimension only. That is, makes explicit copies of the
+    symbol in the domain specified by `broadcast_domain`. This should be used for
+    broadcasting from a "larger" scale to a "smaller" scale, for example broadcasting
+    temperature T(x) from the electrode to the particles, or broadcasting current
+    collector current i(y, z) from the current collector to the electrodes.
 
     Parameters
     ----------
@@ -86,6 +94,15 @@ class PrimaryBroadcast(Broadcast):
         # electrode to particle
         if child.domain == []:
             pass
+        elif child.domain == ["current collector"] and broadcast_domain[0] not in [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+        ]:
+            raise pybamm.DomainError(
+                """Primary broadcast from current collector domain must be to electrode
+                or separator"""
+            )
         elif child.domain[0] in [
             "negative electrode",
             "separator",
@@ -123,7 +140,12 @@ class PrimaryBroadcast(Broadcast):
 
 class SecondaryBroadcast(Broadcast):
     """A node in the expression tree representing a primary broadcasting operator.
-    Broadcasts in a `primary` dimension only. That is, makes explicit copies
+    Broadcasts in a `secondary` dimension only. That is, makes explicit copies of the
+    symbol in the domain specified by `broadcast_domain`. This should be used for
+    broadcasting from a "smaller" scale to a "larger" scale, for example broadcasting
+    SPM particle concentrations c_s(r) from the particles to the electrodes. Note that
+    this wouldn't be used to broadcast particle concentrations in the DFN, since these
+    already depend on both x and r.
 
     Parameters
     ----------
@@ -146,7 +168,7 @@ class SecondaryBroadcast(Broadcast):
         "See :meth:`Broadcast.check_and_set_domains`"
 
         # Can only do secondary broadcast from particle to electrode or from
-        # current collector to electrode
+        # electrode to current collector
         if child.domain[0] in [
             "negative particle",
             "positive particle",
