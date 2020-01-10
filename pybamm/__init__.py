@@ -81,10 +81,7 @@ from .expression_tree.binary_operators import (
     Division,
     Inner,
     inner,
-    Outer,
-    Kron,
     Heaviside,
-    outer,
     source,
 )
 from .expression_tree.concatenations import (
