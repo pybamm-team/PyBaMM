@@ -494,6 +494,14 @@ class Symbol(anytree.NodeMixin):
         shape is returned instead, using the symbol's domain.
         See :meth:`pybamm.Symbol.evaluate()`
         """
+        try:
+            return self._saved_evaluate_for_shape
+        except AttributeError:
+            self._saved_evaluate_for_shape = self._evaluate_for_shape()
+            return self._saved_evaluate_for_shape
+
+    def _evaluate_for_shape(self):
+        "See :meth:`Symbol.evaluate_for_shape`"
         return self.evaluate()
 
     def is_constant(self):
