@@ -1,6 +1,7 @@
 #
 # Solution class
 #
+import numbers
 import numpy as np
 import pickle
 import pybamm
@@ -37,7 +38,7 @@ class Solution(object):
         self.termination = termination
         # initialize empty inputs and model, to be populated later
         self.inputs = {}
-        self.model = pybamm.BaseModel()
+        self._model = None
 
         # initiaize empty variables and data
         self._variables = {}
@@ -72,9 +73,13 @@ class Solution(object):
         return self._inputs
 
     @inputs.setter
-    def inputs(self, value):
+    def inputs(self, inputs):
         "Updates the input values"
-        self._inputs = value
+        self._inputs = {}
+        for name, inp in inputs.items():
+            if isinstance(inp, numbers.Number):
+                inp = inp * np.ones_like(self.t)
+            self._inputs[name] = inp
 
     @property
     def model(self):
@@ -128,10 +133,11 @@ class Solution(object):
         # Update t, y and inputs
         self.t = np.concatenate((self.t, solution.t[1:]))
         self.y = np.concatenate((self.y, solution.y[:, 1:]), axis=1)
-        self.inputs = {
-            name: np.concatenate((inp, solution.inputs[name][1:]))
-            for name, inp in self.inputs.items()
-        }
+        for name, inp in self.inputs.items():
+            solution_inp = solution.inputs[name]
+            if isinstance(solution_inp, numbers.Number):
+                solution_inp = solution_inp * np.ones_like(solution.t)
+            self.inputs[name] = np.concatenate((inp, solution_inp[1:]))
         # Update solution time
         self.solve_time += solution.solve_time
 
@@ -148,7 +154,7 @@ class Solution(object):
         for key in variables:
             pybamm.logger.debug("Post-processing {}".format(key))
             var = pybamm.ProcessedVariable(
-                self.model.variables[key], self, self.known_evals,
+                self.model.variables[key], self, self.known_evals
             )
 
             # Update known_evals in order to process any other variables faster

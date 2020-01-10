@@ -85,6 +85,7 @@ class AlgebraicSolver(object):
         solve_start_time = timer.time()
         pybamm.logger.info("Calling root finding algorithm")
         solution = self.root(algebraic, y0_guess, jacobian=jacobian)
+        solution.model = model
 
         # Assign times
         solution.solve_time = timer.time() - solve_start_time

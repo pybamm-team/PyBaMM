@@ -56,9 +56,7 @@ class TestEffectiveResistance2D(unittest.TestCase):
         I = solutions[1]["Total current density"]
 
         # Test potential can be constructed and evaluated without raising error
-        potentials = models[0].get_processed_potentials(
-            solutions[0], meshes[0], param, V, I
-        )
+        potentials = models[0].get_processed_potentials(solutions[0], param, V, I)
         for var, processed_var in potentials.items():
             processed_var(0.05, 0.5, 0.5)
 

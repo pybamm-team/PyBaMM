@@ -203,6 +203,10 @@ class CasadiSolver(pybamm.DaeSolver):
         )
         solve_time = timer.time() - solve_start_time
 
+        # Add model and inputs to solution
+        solution.model = model
+        solution.inputs = inputs
+
         # Events not implemented, termination is always 'final time'
         termination = "final time"
 

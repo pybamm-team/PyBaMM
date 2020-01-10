@@ -113,7 +113,7 @@ class EffectiveResistance2D(pybamm.BaseModel):
             }
         )
 
-    def get_processed_potentials(self, solution, mesh, param_values, V_av, I_av):
+    def get_processed_potentials(self, solution, param_values, V_av, I_av):
         """
         Calculates the potentials in the current collector given
         the average voltage and current.
