@@ -130,7 +130,7 @@ class PrimaryBroadcast(Broadcast):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
         return PrimaryBroadcast(child, self.broadcast_domain)
 
-    def evaluate_for_shape(self):
+    def _evaluate_for_shape(self):
         """
         Returns a vector of NaNs to represent the shape of a Broadcast.
         See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`
@@ -210,7 +210,7 @@ class SecondaryBroadcast(Broadcast):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
         return SecondaryBroadcast(child, self.broadcast_domain)
 
-    def evaluate_for_shape(self):
+    def _evaluate_for_shape(self):
         """
         Returns a vector of NaNs to represent the shape of a Broadcast.
         See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`
@@ -253,7 +253,7 @@ class FullBroadcast(Broadcast):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
         return FullBroadcast(child, self.broadcast_domain, self.auxiliary_domains)
 
-    def evaluate_for_shape(self):
+    def _evaluate_for_shape(self):
         """
         Returns a vector of NaNs to represent the shape of a Broadcast.
         See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`

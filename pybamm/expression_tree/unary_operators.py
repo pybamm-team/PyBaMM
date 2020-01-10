@@ -74,7 +74,7 @@ class UnaryOperator(pybamm.Symbol):
             child = self.child.evaluate(t, y, u)
             return self._unary_evaluate(child)
 
-    def evaluate_for_shape(self):
+    def _evaluate_for_shape(self):
         """
         Default behaviour: unary operator has same shape as child
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
@@ -228,7 +228,7 @@ class Index(UnaryOperator):
 
         return self.__class__(child, self.index, check_size=False)
 
-    def evaluate_for_shape(self):
+    def _evaluate_for_shape(self):
         return self._unary_evaluate(self.children[0].evaluate_for_shape())
 
     def evaluates_on_edges(self):
@@ -347,7 +347,7 @@ class Mass(SpatialOperator):
     def __init__(self, child):
         super().__init__("mass", child)
 
-    def evaluate_for_shape(self):
+    def _evaluate_for_shape(self):
         return pybamm.evaluate_for_shape_using_domain(self.domain, typ="matrix")
 
 
@@ -361,7 +361,7 @@ class BoundaryMass(SpatialOperator):
     def __init__(self, child):
         super().__init__("boundary mass", child)
 
-    def evaluate_for_shape(self):
+    def _evaluate_for_shape(self):
         return pybamm.evaluate_for_shape_using_domain(self.domain, typ="matrix")
 
 
@@ -455,7 +455,7 @@ class Integral(SpatialOperator):
 
         return self.__class__(child, self.integration_variable)
 
-    def evaluate_for_shape(self):
+    def _evaluate_for_shape(self):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
         return pybamm.evaluate_for_shape_using_domain(self.domain)
 
@@ -501,7 +501,7 @@ class IndefiniteIntegral(Integral):
         if isinstance(integration_variable, pybamm.SpatialVariable):
             self.name += " on {}".format(integration_variable.domain)
 
-    def evaluate_for_shape(self):
+    def _evaluate_for_shape(self):
         return self.children[0].evaluate_for_shape()
 
 
@@ -550,7 +550,7 @@ class DefiniteIntegralVector(SpatialOperator):
 
         return self.__class__(child, vector_type=self.vector_type)
 
-    def evaluate_for_shape(self):
+    def _evaluate_for_shape(self):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
         return pybamm.evaluate_for_shape_using_domain(self.domain)
 
@@ -611,7 +611,7 @@ class BoundaryIntegral(SpatialOperator):
 
         return self.__class__(child, region=self.region)
 
-    def evaluate_for_shape(self):
+    def _evaluate_for_shape(self):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
         return pybamm.evaluate_for_shape_using_domain(self.domain)
 
@@ -722,7 +722,7 @@ class BoundaryOperator(SpatialOperator):
         """ See :meth:`UnaryOperator._unary_new_copy()`. """
         return self.__class__(child, self.side)
 
-    def evaluate_for_shape(self):
+    def _evaluate_for_shape(self):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
         return pybamm.evaluate_for_shape_using_domain(
             self.domain, self.auxiliary_domains

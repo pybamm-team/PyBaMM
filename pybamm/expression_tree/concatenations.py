@@ -90,7 +90,7 @@ class Concatenation(pybamm.Symbol):
         new_symbol.clear_domains()
         return new_symbol
 
-    def evaluate_for_shape(self):
+    def _evaluate_for_shape(self):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape` """
         if len(self.children) == 0:
             return np.array([])

@@ -25,7 +25,7 @@ class InputParameter(pybamm.Symbol):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
         return InputParameter(self.name)
 
-    def evaluate_for_shape(self):
+    def _evaluate_for_shape(self):
         """
         Returns the scalar 'NaN' to represent the shape of a parameter.
         See :meth:`pybamm.Symbol.evaluate_for_shape()`

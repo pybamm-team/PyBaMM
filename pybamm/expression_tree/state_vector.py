@@ -173,7 +173,7 @@ class StateVector(pybamm.Symbol):
             evaluation_array=self.evaluation_array,
         )
 
-    def evaluate_for_shape(self):
+    def _evaluate_for_shape(self):
         """
         Returns a vector of NaNs to represent the shape of a StateVector.
         The size of a StateVector is the number of True elements in its evaluation_array
