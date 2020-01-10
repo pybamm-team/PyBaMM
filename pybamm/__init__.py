@@ -103,6 +103,7 @@ from .expression_tree.parameter import Parameter, FunctionParameter
 from .expression_tree.broadcasts import (
     Broadcast,
     PrimaryBroadcast,
+    SecondaryBroadcast,
     FullBroadcast,
     ones_like,
 )

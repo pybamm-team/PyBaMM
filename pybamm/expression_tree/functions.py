@@ -144,7 +144,7 @@ class Function(pybamm.Symbol):
             for i, child in enumerate(children):
                 if not child.evaluates_to_number():
                     jac_fun = self._function_diff(children, i) * children_jacs[i]
-                    jac_fun.domain = []
+                    jac_fun.clear_domains()
                     if jacobian is None:
                         jacobian = jac_fun
                     else:

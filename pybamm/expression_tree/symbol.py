@@ -91,15 +91,6 @@ class Symbol(anytree.NodeMixin):
 
         if children is None:
             children = []
-        if domain is None:
-            domain = []
-        elif isinstance(domain, str):
-            domain = [domain]
-        if auxiliary_domains is None:
-            auxiliary_domains = {}
-        for level, dom in auxiliary_domains.items():
-            if isinstance(dom, str):
-                auxiliary_domains[level] = [dom]
 
         for child in children:
             # copy child before adding
@@ -110,6 +101,7 @@ class Symbol(anytree.NodeMixin):
         self.cached_children = super(Symbol, self).children
 
         # Set auxiliary domains
+        self._domain = None
         self.auxiliary_domains = auxiliary_domains
         # Set domain (and hence id)
         self.domain = domain
@@ -157,8 +149,16 @@ class Symbol(anytree.NodeMixin):
 
     @domain.setter
     def domain(self, domain):
-        if isinstance(domain, str):
+        if domain is None:
+            domain = []
+        elif isinstance(domain, str):
             domain = [domain]
+        if domain == [] and self.auxiliary_domains != {}:
+            raise pybamm.DomainError(
+                "Domain cannot be empty if auxiliary domains are not empty"
+            )
+        if domain in self.auxiliary_domains.values():
+            raise pybamm.DomainError("Domain cannot be the same as an auxiliary domain")
         try:
             iter(domain)
         except TypeError:
@@ -167,6 +167,43 @@ class Symbol(anytree.NodeMixin):
             self._domain = domain
             # Update id since domain has changed
             self.set_id()
+
+    @property
+    def auxiliary_domains(self):
+        return self._auxiliary_domains
+
+    @auxiliary_domains.setter
+    def auxiliary_domains(self, auxiliary_domains):
+        # Turn dictionary into appropriate form
+        if auxiliary_domains is None:
+            auxiliary_domains = {}
+        for level, dom in auxiliary_domains.items():
+            if isinstance(dom, str):
+                auxiliary_domains[level] = [dom]
+
+        # Check domains don't clash
+        if self.domain in auxiliary_domains.values():
+            raise pybamm.DomainError("Domain cannot be the same as an auxiliary domain")
+        values = [tuple(val) for val in auxiliary_domains.values()]
+        if len(set(values)) != len(values):
+            raise pybamm.DomainError("All auxiliary domains must be different")
+
+        self._auxiliary_domains = auxiliary_domains
+
+    @property
+    def secondary_domain(self):
+        "Helper function to get the secondary domain of a symbol"
+        return self.auxiliary_domains["secondary"]
+
+    def copy_domains(self, symbol):
+        "Copy the domains from a given symbol, bypassing checks"
+        self._domain = symbol.domain
+        self._auxiliary_domains = symbol.auxiliary_domains
+
+    def clear_domains(self):
+        "Clear domains, bypassing checks"
+        self._domain = []
+        self._auxiliary_domains = {}
 
     def get_children_auxiliary_domains(self, children):
         "Combine auxiliary domains from children, at all levels"

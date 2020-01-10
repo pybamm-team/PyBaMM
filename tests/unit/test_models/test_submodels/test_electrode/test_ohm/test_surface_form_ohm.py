@@ -14,10 +14,10 @@ class TestSurfaceForm(unittest.TestCase):
         a = pybamm.Scalar(0)
         variables = {
             "Current collector current density": a,
-            "Negative electrolyte current density": pybamm.Broadcast(
+            "Negative electrolyte current density": pybamm.PrimaryBroadcast(
                 a, ["negative electrode"]
             ),
-            "Positive electrolyte current density": pybamm.Broadcast(
+            "Positive electrolyte current density": pybamm.PrimaryBroadcast(
                 a, ["positive electrode"]
             ),
             "Negative electrode porosity": a,

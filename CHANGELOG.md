@@ -2,6 +2,7 @@
 
 ## Features
 
+-   Added notebook to explain broadcasts ([#776](https://github.com/pybamm-team/PyBaMM/pull/776))
 -   Added a step to discretisation that automatically compute the inverse of the mass matrix of the differential part of the problem so that the underlying DAEs can be provided in semi-explicit form, as required by the CasADi solver ([#769](https://github.com/pybamm-team/PyBaMM/pull/769))
 -   Added the gradient operation for the Finite Element Method ([#767](https://github.com/pybamm-team/PyBaMM/pull/767))
 -   Added `InputParameter` node for quickly changing parameter values ([#752](https://github.com/pybamm-team/PyBaMM/pull/752))
@@ -37,6 +38,7 @@
 
 ## Bug fixes
 
+-   Improved implementation of broadcasts ([#776](https://github.com/pybamm-team/PyBaMM/pull/776))
 -   Fixed a bug which meant that the Ohmic heating in the current collectors was incorrect if using the Finite Element Method ([#767](https://github.com/pybamm-team/PyBaMM/pull/767))
 -   Improved automatic broadcasting ([#747](https://github.com/pybamm-team/PyBaMM/pull/747))
 -   Fixed bug with wrong temperature in initial conditions ([#737](https://github.com/pybamm-team/PyBaMM/pull/737))

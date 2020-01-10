@@ -174,7 +174,7 @@ class TestParameterValues(unittest.TestCase):
 
         # process broadcast
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-        broad = pybamm.Broadcast(a, whole_cell)
+        broad = pybamm.PrimaryBroadcast(a, whole_cell)
         processed_broad = parameter_values.process_symbol(broad)
         self.assertIsInstance(processed_broad, pybamm.Broadcast)
         self.assertEqual(processed_broad.domain, whole_cell)

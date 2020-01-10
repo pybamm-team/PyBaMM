@@ -50,9 +50,9 @@ class TestDiscretise(unittest.TestCase):
 
     def test_add_internal_boundary_conditions(self):
         model = pybamm.BaseModel()
-        c_e_n = pybamm.Broadcast(0, ["negative electrode"])
-        c_e_s = pybamm.Broadcast(0, ["separator"])
-        c_e_p = pybamm.Broadcast(0, ["positive electrode"])
+        c_e_n = pybamm.PrimaryBroadcast(0, ["negative electrode"])
+        c_e_s = pybamm.PrimaryBroadcast(0, ["separator"])
+        c_e_p = pybamm.PrimaryBroadcast(0, ["positive electrode"])
         c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
         lbc = (pybamm.Scalar(0), "Neumann")
         rbc = (pybamm.Scalar(0), "Neumann")
@@ -753,9 +753,7 @@ class TestDiscretise(unittest.TestCase):
         combined_submesh = mesh.combine_submeshes(*whole_cell)
 
         # scalar
-        broad = disc._spatial_methods[whole_cell[0]].broadcast(
-            a, whole_cell, {}, broadcast_type="full"
-        )
+        broad = disc.process_symbol(pybamm.FullBroadcast(a, whole_cell, {}))
         np.testing.assert_array_equal(
             broad.evaluate(), 7 * np.ones_like(combined_submesh[0].nodes[:, np.newaxis])
         )
@@ -768,7 +766,7 @@ class TestDiscretise(unittest.TestCase):
 
         # process Broadcast variable
         disc.y_slices = {var.id: [slice(1)]}
-        broad1 = pybamm.Broadcast(var, ["negative electrode"])
+        broad1 = pybamm.FullBroadcast(var, ["negative electrode"], None)
         broad1_disc = disc.process_symbol(broad1)
         self.assertIsInstance(broad1_disc, pybamm.Multiplication)
         self.assertIsInstance(broad1_disc.children[0], pybamm.StateVector)
@@ -779,7 +777,7 @@ class TestDiscretise(unittest.TestCase):
         var = pybamm.Variable("var", ["current collector"])
         disc = get_1p1d_discretisation_for_testing()
         mesh = disc.mesh
-        broad = pybamm.Broadcast(var, "separator", broadcast_type="primary")
+        broad = pybamm.PrimaryBroadcast(var, "separator")
 
         disc.set_variable_slices([var])
         broad_disc = disc.process_symbol(broad)
@@ -789,6 +787,25 @@ class TestDiscretise(unittest.TestCase):
         self.assertEqual(
             broad_disc.shape,
             (mesh["separator"][0].npts * mesh["current collector"][0].npts, 1),
+        )
+
+    def test_secondary_broadcast_2D(self):
+        # secondary broadcast in 2D --> Matrix multiplication
+        disc = get_discretisation_for_testing()
+        mesh = disc.mesh
+        var = pybamm.Vector(
+            mesh["negative particle"][0].nodes, domain=["negative particle"]
+        )
+        broad = pybamm.SecondaryBroadcast(var, "negative electrode")
+
+        disc.set_variable_slices([var])
+        broad_disc = disc.process_symbol(broad)
+        self.assertIsInstance(broad_disc, pybamm.MatrixMultiplication)
+        self.assertIsInstance(broad_disc.children[0], pybamm.Matrix)
+        self.assertIsInstance(broad_disc.children[1], pybamm.Vector)
+        self.assertEqual(
+            broad_disc.shape,
+            (mesh["negative particle"][0].npts * mesh["negative electrode"][0].npts, 1),
         )
 
     def test_outer(self):
@@ -827,8 +844,8 @@ class TestDiscretise(unittest.TestCase):
 
     def test_concatenation_of_scalars(self):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-        a = pybamm.Broadcast(5, ["negative electrode"])
-        b = pybamm.Broadcast(4, ["positive electrode"])
+        a = pybamm.PrimaryBroadcast(5, ["negative electrode"])
+        b = pybamm.PrimaryBroadcast(4, ["positive electrode"])
 
         # create discretisation
         disc = get_discretisation_for_testing()
@@ -900,7 +917,7 @@ class TestDiscretise(unittest.TestCase):
 
         # check doesn't raise if broadcast
         model.variables = {
-            c_n.name: pybamm.Broadcast(pybamm.Scalar(2), ["negative electrode"])
+            c_n.name: pybamm.PrimaryBroadcast(pybamm.Scalar(2), ["negative electrode"])
         }
         disc.process_model(model)
 
