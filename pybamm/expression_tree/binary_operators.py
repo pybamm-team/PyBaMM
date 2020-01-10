@@ -84,7 +84,9 @@ class BinaryOperator(pybamm.Symbol):
         # right child.
         if isinstance(self, (pybamm.Outer, pybamm.Kron)):
             domain = right.domain
-            auxiliary_domains = {"secondary": left.domain}
+            auxiliary_domains = {}
+            if domain != []:
+                auxiliary_domains["secondary"] = left.domain
         else:
             domain = self.get_children_domains(left.domain, right.domain)
             auxiliary_domains = self.get_children_auxiliary_domains([left, right])
@@ -165,8 +167,7 @@ class BinaryOperator(pybamm.Symbol):
 
         # make new symbol, ensure domain(s) remain the same
         out = self._binary_new_copy(new_left, new_right)
-        out.domain = self.domain
-        out.auxiliary_domains = self.auxiliary_domains
+        out.copy_domains(self)
 
         return out
 
@@ -823,7 +824,7 @@ def source(left, right, boundary=False):
     """
     # Broadcast if left is number
     if isinstance(left, numbers.Number):
-        left = pybamm.Broadcast(left, "current collector")
+        left = pybamm.PrimaryBroadcast(left, "current collector")
 
     if left.domain != ["current collector"] or right.domain != ["current collector"]:
         raise pybamm.DomainError(

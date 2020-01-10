@@ -11,15 +11,18 @@ class Broadcast(pybamm.SpatialOperator):
     Broadcasts a child to a specified domain. After discretisation, this will evaluate
     to an array of the right shape for the specified domain.
 
+    For an example of broadcasts in action, see
+    `this example notebook
+    <https://github.com/pybamm-team/PyBaMM/blob/master/examples/notebooks/expression_tree/broadcasts.ipynb>`_
+
     Parameters
     ----------
     child : :class:`Symbol`
         child node
     broadcast_domain : iterable of str
         Primary domain for broadcast. This will become the domain of the symbol
-    auxiliary_domain : iterable of str
-        Secondary domain for broadcast. Currently, this is only used for testing that
-        symbols have the right shape.
+    broadcast_auxiliary_domains : dict of str
+        Auxiliary domains for broadcast.
     broadcast_type : str, optional
         Whether to broadcast to the full domain (primary and secondary) or only in the
         primary direction. Default is "full".
@@ -33,90 +36,40 @@ class Broadcast(pybamm.SpatialOperator):
         self,
         child,
         broadcast_domain,
-        auxiliary_domains=None,
+        broadcast_auxiliary_domains=None,
         broadcast_type="full",
         name=None,
     ):
         # Convert child to scalar if it is a number
         if isinstance(child, numbers.Number):
             child = pybamm.Scalar(child)
+        # Convert domain to list if it's a string
+        if isinstance(broadcast_domain, str):
+            broadcast_domain = [broadcast_domain]
 
         if name is None:
             name = "broadcast"
 
         # perform some basic checks and set attributes
-        domain = self.check_and_set_domain_and_broadcast_type(
-            child, broadcast_domain, broadcast_type
+        domain, auxiliary_domains = self.check_and_set_domains(
+            child, broadcast_type, broadcast_domain, broadcast_auxiliary_domains
         )
         self.broadcast_type = broadcast_type
         self.broadcast_domain = broadcast_domain
-        if auxiliary_domains is None:
-            if child.domain != []:
-                auxiliary_domains = {"secondary": child.domain}
-            else:
-                auxiliary_domains = {}
         super().__init__(name, child, domain, auxiliary_domains)
 
-    def check_and_set_domain_and_broadcast_type(
-        self, child, broadcast_domain, broadcast_type
-    ):
-        """
-        Set broadcast domain and broadcast type, performing basic checks to make sure
-        it is compatible with the child
-        """
-        # Acceptable broadcast types
-        if broadcast_type not in ["primary", "secondary", "full"]:
-            raise KeyError(
-                """Broadcast type must be either: 'primary', 'secondary', or 'full' and
-                not {}""".format(
-                    broadcast_type
-                )
-            )
-
-        domain = broadcast_domain
-
-        # Variables on the current collector can only be broadcast to 'primary'
-        if broadcast_type == "full":
-            if child.domain == ["current collector"]:
-                raise ValueError(
-                    """
-                    Variables on the current collector must be broadcast to 'primary'
-                    only
-                    """
-                )
-        return domain
-
-    def _unary_simplify(self, child):
+    def _unary_simplify(self, simplified_child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
-
-        return Broadcast(
-            child, self.broadcast_domain, self.auxiliary_domains, self.broadcast_type
-        )
-
-    def _unary_new_copy(self, child):
-        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
-
-        return Broadcast(
-            child, self.broadcast_domain, self.auxiliary_domains, self.broadcast_type
-        )
-
-    def evaluate_for_shape(self):
-        """
-        Returns a vector of NaNs to represent the shape of a Broadcast.
-        See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`
-        """
-        child_eval = self.children[0].evaluate_for_shape()
-        vec = pybamm.evaluate_for_shape_using_domain(self.domain)
-
-        if self.broadcast_type == "primary":
-            return np.outer(child_eval, vec).reshape(-1, 1)
-        elif self.broadcast_type == "full":
-            return child_eval * vec
+        return self._unary_new_copy(simplified_child)
 
 
 class PrimaryBroadcast(Broadcast):
     """A node in the expression tree representing a primary broadcasting operator.
-    Broadcasts in a `primary` dimension only. That is, makes explicit copies
+    Broadcasts in a `primary` dimension only. That is, makes explicit copies of the
+    symbol in the domain specified by `broadcast_domain`. This should be used for
+    broadcasting from a "larger" scale to a "smaller" scale, for example broadcasting
+    temperature T(x) from the electrode to the particles, or broadcasting current
+    collector current i(y, z) from the current collector to the electrodes.
 
     Parameters
     ----------
@@ -133,9 +86,45 @@ class PrimaryBroadcast(Broadcast):
     def __init__(self, child, broadcast_domain, name=None):
         super().__init__(child, broadcast_domain, broadcast_type="primary", name=name)
 
-    def _unary_simplify(self, child):
-        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
-        return PrimaryBroadcast(child, self.broadcast_domain)
+    def check_and_set_domains(
+        self, child, broadcast_type, broadcast_domain, broadcast_auxiliary_domains
+    ):
+        "See :meth:`Broadcast.check_and_set_domains`"
+        # Can only do primary broadcast from current collector to electrode or particle
+        # or from electrode to particle. Note current collector to particle *is* allowed
+        if child.domain == []:
+            pass
+        elif child.domain == ["current collector"] and broadcast_domain[0] not in [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+            "negative particle",
+            "positive particle",
+        ]:
+            raise pybamm.DomainError(
+                """Primary broadcast from current collector domain must be to electrode
+                or separator or particle domains"""
+            )
+        elif child.domain[0] in [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+        ] and broadcast_domain[0] not in ["negative particle", "positive particle"]:
+            raise pybamm.DomainError(
+                """Primary broadcast from electrode or separator must be to particle
+                domains"""
+            )
+        elif child.domain[0] in ["negative particle", "positive particle"]:
+            raise pybamm.DomainError("Cannot do primary broadcast from particle domain")
+
+        domain = broadcast_domain
+        auxiliary_domains = {}
+        if child.domain != []:
+            auxiliary_domains["secondary"] = child.domain
+        if "secondary" in child.auxiliary_domains:
+            auxiliary_domains["tertiary"] = child.auxiliary_domains["secondary"]
+
+        return domain, auxiliary_domains
 
     def _unary_new_copy(self, child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
@@ -151,6 +140,86 @@ class PrimaryBroadcast(Broadcast):
         return np.outer(child_eval, vec).reshape(-1, 1)
 
 
+class SecondaryBroadcast(Broadcast):
+    """A node in the expression tree representing a primary broadcasting operator.
+    Broadcasts in a `secondary` dimension only. That is, makes explicit copies of the
+    symbol in the domain specified by `broadcast_domain`. This should be used for
+    broadcasting from a "smaller" scale to a "larger" scale, for example broadcasting
+    SPM particle concentrations c_s(r) from the particles to the electrodes. Note that
+    this wouldn't be used to broadcast particle concentrations in the DFN, since these
+    already depend on both x and r.
+
+    Parameters
+    ----------
+    child : :class:`Symbol`
+        child node
+    broadcast_domain : iterable of str
+        Primary domain for broadcast. This will become the domain of the symbol
+    name : str
+        name of the node
+
+    **Extends:** :class:`SpatialOperator`
+    """
+
+    def __init__(self, child, broadcast_domain, name=None):
+        super().__init__(child, broadcast_domain, broadcast_type="secondary", name=name)
+
+    def check_and_set_domains(
+        self, child, broadcast_type, broadcast_domain, broadcast_auxiliary_domains
+    ):
+        "See :meth:`Broadcast.check_and_set_domains`"
+
+        # Can only do secondary broadcast from particle to electrode or from
+        # electrode to current collector
+        if child.domain[0] in [
+            "negative particle",
+            "positive particle",
+        ] and broadcast_domain[0] not in [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+        ]:
+            raise pybamm.DomainError(
+                """Secondary broadcast from particle domain must be to electrode or
+                separator domains"""
+            )
+        elif child.domain[0] in [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+        ] and broadcast_domain != ["current collector"]:
+            raise pybamm.DomainError(
+                """Secondary broadcast from electrode or separator must be to
+                current collector domains"""
+            )
+        elif child.domain == ["current collector"]:
+            raise pybamm.DomainError(
+                "Cannot do secondary broadcast from current collector domain"
+            )
+        # Domain stays the same as child domain and broadcast domain is secondary
+        # domain
+        domain = child.domain
+        auxiliary_domains = {"secondary": broadcast_domain}
+        # Child's secondary domain becomes tertiary domain
+        if "secondary" in child.auxiliary_domains:
+            auxiliary_domains["tertiary"] = child.auxiliary_domains["secondary"]
+
+        return domain, auxiliary_domains
+
+    def _unary_new_copy(self, child):
+        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
+        return SecondaryBroadcast(child, self.broadcast_domain)
+
+    def evaluate_for_shape(self):
+        """
+        Returns a vector of NaNs to represent the shape of a Broadcast.
+        See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`
+        """
+        child_eval = self.children[0].evaluate_for_shape()
+        vec = pybamm.evaluate_for_shape_using_domain(self.domain)
+        return np.outer(vec, child_eval).reshape(-1, 1)
+
+
 class FullBroadcast(Broadcast):
     "A class for full broadcasts"
 
@@ -160,14 +229,25 @@ class FullBroadcast(Broadcast):
         super().__init__(
             child,
             broadcast_domain,
-            auxiliary_domains=auxiliary_domains,
+            broadcast_auxiliary_domains=auxiliary_domains,
             broadcast_type="full",
             name=name,
         )
 
-    def _unary_simplify(self, child):
-        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
-        return FullBroadcast(child, self.broadcast_domain, self.auxiliary_domains)
+    def check_and_set_domains(
+        self, child, broadcast_type, broadcast_domain, broadcast_auxiliary_domains
+    ):
+        "See :meth:`Broadcast.check_and_set_domains`"
+
+        # Variables on the current collector can only be broadcast to 'primary'
+        if child.domain == ["current collector"]:
+            raise pybamm.DomainError(
+                "Cannot do full broadcast from current collector domain"
+            )
+        domain = broadcast_domain
+        auxiliary_domains = broadcast_auxiliary_domains or {}
+
+        return domain, auxiliary_domains
 
     def _unary_new_copy(self, child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """

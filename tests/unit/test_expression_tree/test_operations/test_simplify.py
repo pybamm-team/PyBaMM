@@ -78,7 +78,7 @@ class TestSimplify(unittest.TestCase):
 
         # Delta function
         self.assertIsInstance(
-            (pybamm.DeltaFunction(v_neg, "right", None)).simplify(),
+            (pybamm.DeltaFunction(v_neg, "right", "domain")).simplify(),
             pybamm.DeltaFunction,
         )
 
@@ -563,6 +563,12 @@ class TestSimplify(unittest.TestCase):
         self.assertEqual(conc_simp.y_slices[0].start, 0)
         self.assertEqual(conc_simp.y_slices[0].stop, len(y))
         np.testing.assert_array_equal(conc_disc.evaluate(y=y), conc_simp.evaluate(y=y))
+
+    def test_simplify_broadcast(self):
+        v = pybamm.StateVector(slice(0, 1))
+        broad = pybamm.PrimaryBroadcast(v, "test")
+        broad_simp = broad.simplify()
+        self.assertEqual(broad_simp.id, broad.id)
 
     def test_simplify_outer(self):
         v = pybamm.Vector(np.ones(5), domain="current collector")

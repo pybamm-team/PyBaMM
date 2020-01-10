@@ -94,7 +94,7 @@ class TestButlerVolmer(unittest.TestCase):
         j_p = model_p.get_coupled_variables(self.variables)[
             "Positive electrode interfacial current density"
         ]
-        j = pybamm.Concatenation(j_n, pybamm.Broadcast(0, ["separator"]), j_p)
+        j = pybamm.Concatenation(j_n, pybamm.PrimaryBroadcast(0, ["separator"]), j_p)
 
         # Process parameters and discretise
         parameter_values = pybamm.lithium_ion.BaseModel().default_parameter_values

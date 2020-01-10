@@ -32,7 +32,7 @@ class TestScikitFiniteElement(unittest.TestCase):
         z = pybamm.SpatialVariable("z", ["current collector"])
         disc.set_variable_slices([var])
         y_test = np.ones(mesh["current collector"][0].npts)
-        unit_source = pybamm.Broadcast(1, "current collector")
+        unit_source = pybamm.PrimaryBroadcast(1, "current collector")
         disc.bcs = {
             var.id: {
                 "negative tab": (pybamm.Scalar(0), "Neumann"),
