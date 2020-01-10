@@ -70,7 +70,7 @@ class TestQuickPlot(unittest.TestCase):
         quick_plot.plot(0)
 
         quick_plot = pybamm.QuickPlot(
-            solution, [["a", "a"], ["b broadcasted", "b broadcasted"], "c broadcasted"],
+            solution, [["a", "a"], ["b broadcasted", "b broadcasted"], "c broadcasted"]
         )
         self.assertEqual(len(quick_plot.axis), 3)
         quick_plot.plot(0)
@@ -133,15 +133,7 @@ class TestQuickPlot(unittest.TestCase):
                 pybamm.QuickPlot(solution, output_variables)
 
     def test_failure(self):
-        model = pybamm.lithium_ion.SPM()
         with self.assertRaisesRegex(TypeError, "'solutions' must be"):
-            geometry = model.default_geometry
-            param = model.default_parameter_values
-            param.process_model(model)
-            param.process_geometry(geometry)
-            mesh = pybamm.Mesh(
-                geometry, model.default_submesh_types, model.default_var_pts
-            )
             pybamm.QuickPlot(1)
 
 

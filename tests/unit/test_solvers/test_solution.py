@@ -18,6 +18,10 @@ class TestSolution(unittest.TestCase):
         self.assertEqual(sol.termination, "final time")
         self.assertEqual(sol.inputs, {})
         self.assertEqual(sol.model, None)
+        with self.assertRaisesRegex(
+            pybamm.SolverError, "Solution time vector must have length > 1"
+        ):
+            pybamm.Solution(np.array([1]), np.array([[1, 2]]))
 
     def test_append(self):
         # Set up first solution
