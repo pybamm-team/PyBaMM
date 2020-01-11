@@ -148,8 +148,7 @@ class TestProcessedVariable(unittest.TestCase):
             x_s_edge, pybamm.Solution(t_sol, y_sol)
         )
         np.testing.assert_array_equal(
-            x_s_edge.entries.flatten(),
-            processed_x_s_edge.entries[:, :, 0].T.flatten(),
+            x_s_edge.entries.flatten(), processed_x_s_edge.entries[:, :, 0].T.flatten()
         )
 
     def test_processed_variable_3D_scikit(self):
@@ -328,10 +327,7 @@ class TestProcessedVariable(unittest.TestCase):
         )
 
     def test_processed_var_3D_secondary_broadcast(self):
-        var = pybamm.Variable(
-            "var",
-            domain=["negative particle"],
-        )
+        var = pybamm.Variable("var", domain=["negative particle"])
         broad_var = pybamm.SecondaryBroadcast(var, "negative electrode")
         x = pybamm.SpatialVariable("x", domain=["negative electrode"])
         r = pybamm.SpatialVariable("r", domain=["negative particle"])
@@ -491,7 +487,7 @@ class TestProcessedVariable(unittest.TestCase):
 
         # test
         np.testing.assert_array_almost_equal(
-            sol["c"](sol.t, x_sol), np.ones_like(x_sol)[:, np.newaxis] * np.exp(-sol.t),
+            sol["c"](sol.t, x_sol), np.ones_like(x_sol)[:, np.newaxis] * np.exp(-sol.t)
         )
 
     def test_call_failure(self):
@@ -523,6 +519,18 @@ class TestProcessedVariable(unittest.TestCase):
             processed_var(0)
         with self.assertRaisesRegex(ValueError, "r cannot be None"):
             processed_var(0, 1)
+
+    def test_solution_too_short(self):
+        t = pybamm.t
+        y = pybamm.StateVector(slice(0, 1))
+        var = t * y
+        var.mesh = None
+        t_sol = np.array([1])
+        y_sol = np.array([np.linspace(0, 5)])
+        with self.assertRaisesRegex(
+            pybamm.SolverError, "Solution time vector must have length > 1"
+        ):
+            pybamm.ProcessedVariable(var, pybamm.Solution(t_sol, y_sol))
 
 
 if __name__ == "__main__":

@@ -62,22 +62,27 @@ class ProcessedVariable(object):
                 self.initialise_3D_scikit_fem()
 
         # check variable shape
-        elif (
-            isinstance(self.base_eval, numbers.Number)
-            or len(self.base_eval.shape) == 0
-            or self.base_eval.shape[0] == 1
-        ):
-            self.initialise_1D()
         else:
-            n = self.mesh[0].npts
-            base_shape = self.base_eval.shape[0]
-            if base_shape in [n, n + 1]:
-                self.initialise_2D()
+            if len(solution.t) == 1:
+                raise pybamm.SolverError(
+                    f"""
+                    Solution time vector must have length > 1. Check whether simulation
+                    terminated too early.
+                    """
+                )
+            elif (
+                isinstance(self.base_eval, numbers.Number)
+                or len(self.base_eval.shape) == 0
+                or self.base_eval.shape[0] == 1
+            ):
+                self.initialise_1D()
             else:
-                self.initialise_3D()
-
-        # Remove base_variable attribute to allow pickling
-        del self.base_variable
+                n = self.mesh[0].npts
+                base_shape = self.base_eval.shape[0]
+                if base_shape in [n, n + 1]:
+                    self.initialise_2D()
+                else:
+                    self.initialise_3D()
 
     def initialise_1D(self):
         # initialise empty array of the correct size
@@ -96,7 +101,7 @@ class ProcessedVariable(object):
 
         # No discretisation provided, or variable has no domain (function of t only)
         self._interpolation_function = interp.interp1d(
-            self.t_sol, entries, kind="linear", fill_value=np.nan, bounds_error=False,
+            self.t_sol, entries, kind="linear", fill_value=np.nan, bounds_error=False
         )
 
         self.entries = entries
@@ -296,7 +301,7 @@ class ProcessedVariable(object):
 
         # set up interpolation
         self._interpolation_function = interp.RegularGridInterpolator(
-            (y_sol, z_sol, self.t_sol), entries, method="linear", fill_value=np.nan,
+            (y_sol, z_sol, self.t_sol), entries, method="linear", fill_value=np.nan
         )
 
     def __call__(self, t=None, x=None, r=None, y=None, z=None, warn=True):

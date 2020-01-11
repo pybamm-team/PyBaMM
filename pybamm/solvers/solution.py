@@ -31,13 +31,6 @@ class Solution(object):
     """
 
     def __init__(self, t, y, t_event=None, y_event=None, termination="final time"):
-        if len(t) == 1:
-            raise pybamm.SolverError(
-                f"""
-                Solution time vector must have length > 1. Check whether simulation
-                terminated too early (termination reason: {termination})
-                """
-            )
         self.t = t
         self.y = y
         self.t_event = t_event
@@ -53,6 +46,8 @@ class Solution(object):
 
         # initialize empty known evals
         self.known_evals = defaultdict(float)
+        for time in t:
+            self.known_evals[time] = {}
 
     @property
     def t(self):
