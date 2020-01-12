@@ -45,9 +45,7 @@ class Solution(object):
         self.data = {}
 
         # initialize empty known evals
-        self.known_evals = defaultdict(float)
-        for time in t:
-            self.known_evals[time] = {}
+        self.known_evals = defaultdict(dict)
 
     @property
     def t(self):

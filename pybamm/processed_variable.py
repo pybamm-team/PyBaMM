@@ -65,7 +65,7 @@ class ProcessedVariable(object):
         else:
             if len(solution.t) == 1:
                 raise pybamm.SolverError(
-                    f"""
+                    """
                     Solution time vector must have length > 1. Check whether simulation
                     terminated too early.
                     """
