@@ -967,7 +967,7 @@ class FiniteVolume(pybamm.SpatialMethod):
     def process_binary_operators(self, bin_op, left, right, disc_left, disc_right):
         """Discretise binary operators in model equations.  Performs appropriate
         averaging of diffusivities if one of the children is a gradient operator, so
-        that discretised sizes match up. For this avergaing we use the harmonic
+        that discretised sizes match up. For this averaging we use the harmonic
         mean [1].
 
         [1] Recktenwald, Gerald. "The control-volume finite-difference approximation to
@@ -1152,18 +1152,16 @@ class FiniteVolume(pybamm.SpatialMethod):
             """
             # Create appropriate submesh by combining submeshes in domain
             submesh_list = self.mesh.combine_submeshes(*array.domain)
-
-            # Can just use 1st entry of list to obtain the point etc
             submesh = submesh_list[0]
+
+            # Get second dimension length for use later
+            second_dim_len = len(submesh_list)
 
             # Create 1D matrix using submesh
             n = submesh.npts
 
-            # Second dimension length
-            second_dim_len = len(submesh_list)
-
             if shift_key == "node to edge":
-                # Matrix to computes values at exterior edges
+                # Matrix to compute values at the exterior edges
                 edges_sub_matrix_left = csr_matrix(
                     ([1.5, -0.5], ([0, 0], [0, 1])), shape=(1, n)
                 )
