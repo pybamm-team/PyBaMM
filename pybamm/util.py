@@ -10,6 +10,7 @@ import os
 import sys
 import timeit
 import pathlib
+import pickle
 import pybamm
 from collections import defaultdict
 
@@ -186,3 +187,10 @@ def get_infinite_nested_dict():
     True
     """
     return defaultdict(get_infinite_nested_dict)
+
+
+def load(filename):
+    "Load a saved object"
+    with open(filename, "rb") as f:
+        obj = pickle.load(f)
+    return obj

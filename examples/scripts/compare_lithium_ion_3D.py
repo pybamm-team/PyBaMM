@@ -58,5 +58,5 @@ for i, model in enumerate(models):
 # plot
 # TO DO: plotting 3D variables
 output_variables = ["Terminal voltage [V]"]
-plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)
+plot = pybamm.QuickPlot(solutions, output_variables)
 plot.dynamic_plot()
