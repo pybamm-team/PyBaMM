@@ -102,7 +102,7 @@ class ProcessedVariable(object):
                 known_evals=self.known_evals[t_sol[0]],
             )
         else:
-            self.base_eval = base_variable.evaluate(t_sol[0], u_sol[:, 0])
+            self.base_eval = base_variable.evaluate(t_sol[0], u_sol[:, 0], self.inputs)
 
         # handle 2D (in space) finite element variables differently
         if (
@@ -224,68 +224,38 @@ class ProcessedVariable(object):
     def initialise_3D(self):
         """
         Initialise a 3D object that depends on x and r, or x and z.
-        Needs to be generalised to deal with other domains.
-
-        Notes
-        -----
-        There is different behaviour between a variable on an electrode domain
-        broadcast to a particle (such as temperature) and a variable on a particle
-        domain broadcast to an electrode (such as particle concentration). We deal with
-        this by reshaping the former with the Fortran order ("F") and the latter with
-        the C order ("C"). These are transposes of each other, so this approach simply
-        avoids having to transpose later.
         """
-        # Dealt with weird particle/electrode case
-        if self.domain in [
-            ["negative electrode"],
-            ["positive electrode"],
-        ] and self.auxiliary_domains["secondary"] in [
-            ["negative particle"],
-            ["positive particle"],
-        ]:
-            # Switch domain and auxiliary domains and set order to Fortran order ("F")
-            dom = self.domain
-            self.domain = self.auxiliary_domains["secondary"]
-            self.auxiliary_domains["secondary"] = dom
-            order = "F"
-        else:
-            # Set order to C order ("C")
-            order = "C"
+        first_dim_nodes = self.mesh.combine_submeshes(*self.domain)[0].nodes
+        first_dim_edges = self.mesh.combine_submeshes(*self.domain)[0].edges
+        second_dim_pts = self.mesh.combine_submeshes(
+            *self.auxiliary_domains["secondary"]
+        )[0].nodes
+        if self.base_eval.size // len(second_dim_pts) == len(first_dim_nodes):
+            first_dim_pts = first_dim_nodes
+        elif self.base_eval.size // len(second_dim_pts) == len(first_dim_edges):
+            first_dim_pts = first_dim_edges
 
-        # Process x-r or x-z
-        if self.domain == ["negative particle"] and self.auxiliary_domains[
-            "secondary"
-        ] == ["negative electrode"]:
-            x_sol = self.mesh["negative electrode"][0].nodes
-            r_nodes = self.mesh["negative particle"][0].nodes
-            r_edges = self.mesh["negative particle"][0].edges
-            set_up_r = True
-        elif self.domain == ["positive particle"] and self.auxiliary_domains[
-            "secondary"
-        ] == ["positive electrode"]:
-            x_sol = self.mesh["positive electrode"][0].nodes
-            r_nodes = self.mesh["positive particle"][0].nodes
-            r_edges = self.mesh["positive particle"][0].edges
-            set_up_r = True
+        # Process r-x or x-z
+        if self.domain[0] in [
+            "negative particle",
+            "positive particle",
+        ] and self.auxiliary_domains["secondary"][0] in [
+            "negative electrode",
+            "positive electrode",
+        ]:
+            self.first_dimension = "r"
+            self.second_dimension = "x"
+            self.r_sol = first_dim_pts
+            self.x_sol = second_dim_pts
         elif self.domain[0] in [
             "negative electrode",
             "separator",
             "positive electrode",
         ] and self.auxiliary_domains["secondary"] == ["current collector"]:
-            x_nodes = self.mesh.combine_submeshes(*self.domain)[0].nodes
-            x_edges = self.mesh.combine_submeshes(*self.domain)[0].edges
-            z_sol = self.mesh["current collector"][0].nodes
-            r_sol = None
             self.first_dimension = "x"
             self.second_dimension = "z"
-
-            if self.base_eval.size // len(z_sol) == len(x_nodes):
-                x_sol = x_nodes
-            elif self.base_eval.size // len(z_sol) == len(x_edges):
-                x_sol = x_edges
-            first_dim_nodes = x_sol
-            second_dim_nodes = z_sol
-            set_up_r = False
+            self.x_sol = first_dim_pts
+            self.z_sol = second_dim_pts
         else:
             raise pybamm.DomainError(
                 """ Cannot process 3D object with domain '{}'
@@ -293,19 +263,9 @@ class ProcessedVariable(object):
                     self.domain, self.auxiliary_domains
                 )
             )
-        if set_up_r:
-            z_sol = None
-            self.first_dimension = "x"
-            self.second_dimension = "r"
-            if self.base_eval.size // len(x_sol) == len(r_nodes):
-                r_sol = r_nodes
-            elif self.base_eval.size // len(x_sol) == len(r_edges):
-                r_sol = r_edges
-            first_dim_nodes = x_sol
-            second_dim_nodes = r_sol
 
-        first_dim_size = len(first_dim_nodes)
-        second_dim_size = len(second_dim_nodes)
+        first_dim_size = len(first_dim_pts)
+        second_dim_size = len(second_dim_pts)
         entries = np.empty((first_dim_size, second_dim_size, len(self.t_sol)))
 
         # Evaluate the base_variable index-by-index
@@ -319,26 +279,23 @@ class ProcessedVariable(object):
                 entries[:, :, idx] = np.reshape(
                     eval_and_known_evals[0],
                     [first_dim_size, second_dim_size],
-                    order=order,
+                    order="F",
                 )
                 self.known_evals[t] = eval_and_known_evals[1]
             else:
                 entries[:, :, idx] = np.reshape(
                     self.base_variable.evaluate(t, u, self.inputs),
                     [first_dim_size, second_dim_size],
-                    order=order,
+                    order="F",
                 )
 
         # assign attributes for reference
         self.entries = entries
         self.dimensions = 3
-        self.x_sol = x_sol
-        self.r_sol = r_sol
-        self.z_sol = z_sol
 
         # set up interpolation
         self._interpolation_function = interp.RegularGridInterpolator(
-            (first_dim_nodes, second_dim_nodes, self.t_sol),
+            (first_dim_pts, second_dim_pts, self.t_sol),
             entries,
             method=self.interp_kind,
             fill_value=np.nan,

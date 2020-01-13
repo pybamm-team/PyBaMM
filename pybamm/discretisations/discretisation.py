@@ -4,7 +4,8 @@
 import pybamm
 import numpy as np
 from collections import defaultdict, OrderedDict
-from scipy.sparse import block_diag, csr_matrix
+from scipy.sparse import block_diag, csc_matrix, csr_matrix
+from scipy.sparse.linalg import inv
 
 
 def has_bc_of_form(symbol, side, bcs, form):
@@ -206,7 +207,9 @@ class Discretisation(object):
 
         # Create mass matrix
         pybamm.logger.info("Create mass matrix for {}".format(model.name))
-        model_disc.mass_matrix = self.create_mass_matrix(model_disc)
+        model_disc.mass_matrix, model_disc.mass_matrix_inv = self.create_mass_matrix(
+            model_disc
+        )
 
         # Check that resulting model makes sense
         if check_model:
@@ -532,10 +535,14 @@ class Discretisation(object):
         -------
         :class:`pybamm.Matrix`
             The mass matrix
+        :class:`pybamm.Matrix`
+            The inverse of the ode part of the mass matrix (required by solvers
+            which only accept the ODEs in explicit form)
         """
         # Create list of mass matrices for each equation to be put into block
         # diagonal mass matrix for the model
         mass_list = []
+        mass_inv_list = []
 
         # get a list of model rhs variables that are sorted according to
         # where they are in the state vector
@@ -560,12 +567,26 @@ class Discretisation(object):
             if var.domain == []:
                 # If variable domain empty then mass matrix is just 1
                 mass_list.append(1.0)
+                mass_inv_list.append(1.0)
             else:
-                mass_list.append(
+                mass = (
                     self.spatial_methods[var.domain[0]]
                     .mass_matrix(var, self.bcs)
                     .entries
                 )
+                mass_list.append(mass)
+                if isinstance(
+                    self.spatial_methods[var.domain[0]],
+                    (pybamm.ZeroDimensionalMethod, pybamm.FiniteVolume),
+                ):
+                    # for 0D methods the mass matrix is just a scalar 1 and for
+                    # finite volumes the mass matrix is identity, so no need to
+                    # compute the inverse
+                    mass_inv_list.append(mass)
+                else:
+                    # inverse is more efficient in csc format
+                    mass_inv = inv(csc_matrix(mass))
+                    mass_inv_list.append(mass_inv)
 
         # Create lumped mass matrix (of zeros) of the correct shape for the
         # discretised algebraic equations
@@ -574,10 +595,14 @@ class Discretisation(object):
             mass_algebraic = csr_matrix((mass_algebraic_size, mass_algebraic_size))
             mass_list.append(mass_algebraic)
 
-        # Create block diagonal (sparse) mass matrix
-        mass_matrix = block_diag(mass_list, format="csr")
+        # Create block diagonal (sparse) mass matrix and inverse (if model has odes)
+        mass_matrix = pybamm.Matrix(block_diag(mass_list, format="csr"))
+        if model.rhs.keys():
+            mass_matrix_inv = pybamm.Matrix(block_diag(mass_inv_list, format="csr"))
+        else:
+            mass_matrix_inv = None
 
-        return pybamm.Matrix(mass_matrix)
+        return mass_matrix, mass_matrix_inv
 
     def create_jacobian(self, model):
         """Creates Jacobian of the discretised model.
@@ -657,7 +682,11 @@ class Discretisation(object):
         for eqn_key, eqn in var_eqn_dict.items():
             # Broadcast if the equation evaluates to a number(e.g. Scalar)
             if eqn.evaluates_to_number() and not isinstance(eqn_key, str):
-                eqn = pybamm.Broadcast(eqn, eqn_key.domain)
+                eqn = pybamm.FullBroadcast(
+                    eqn,
+                    eqn_key.domain,
+                    eqn_key.auxiliary_domains,
+                )
 
             # note we are sending in the key.id here so we don't have to
             # keep calling .id
@@ -746,8 +775,7 @@ class Discretisation(object):
 
             elif isinstance(symbol, pybamm.Integral):
                 out = child_spatial_method.integral(child, disc_child)
-                out.domain = symbol.domain
-                out.auxiliary_domains = symbol.auxiliary_domains
+                out.copy_domains(symbol)
                 return out
 
             elif isinstance(symbol, pybamm.DefiniteIntegralVector):
@@ -961,7 +989,7 @@ class Discretisation(object):
         """
         Check variables in variable list against rhs
         Be lenient with size check if the variable in model.variables is broadcasted, or
-        a concatenation, or an outer product
+        a concatenation
         (if broadcasted, variable is a multiplication with a vector of ones)
         """
         for rhs_var in model.rhs.keys():
@@ -973,7 +1001,6 @@ class Discretisation(object):
                 )
 
                 not_concatenation = not isinstance(var, pybamm.Concatenation)
-                not_outer = not isinstance(var, pybamm.Outer)
 
                 not_mult_by_one_vec = not (
                     isinstance(var, pybamm.Multiplication)
@@ -984,7 +1011,6 @@ class Discretisation(object):
                 if (
                     different_shapes
                     and not_concatenation
-                    and not_outer
                     and not_mult_by_one_vec
                 ):
                     raise pybamm.ModelError(

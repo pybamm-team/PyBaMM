@@ -39,7 +39,7 @@ class Variable(pybamm.Symbol):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
         return Variable(self.name, self.domain, self.auxiliary_domains)
 
-    def evaluate_for_shape(self):
+    def _evaluate_for_shape(self):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
         return pybamm.evaluate_for_shape_using_domain(
             self.domain, self.auxiliary_domains

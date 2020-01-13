@@ -52,9 +52,9 @@ class TestUpdateParameters(unittest.TestCase):
         parameter_values_update = pybamm.ParameterValues(
             chemistry=pybamm.parameter_sets.Marquis2019
         )
-        parameter_values_update.update({"Current function [A]": 2})
+        parameter_values_update.update({"Current function [A]": 1})
         modeltest2.test_update_parameters(parameter_values_update)
-        self.assertEqual(model2.variables["Current [A]"].evaluate(), 2)
+        self.assertEqual(model2.variables["Current [A]"].evaluate(), 1)
         modeltest2.test_solving(t_eval=t_eval)
         Y2 = modeltest2.solution.y
 
@@ -73,7 +73,9 @@ class TestUpdateParameters(unittest.TestCase):
         modeltest3.test_solving(t_eval=t_eval)
         Y3 = modeltest3.solution.y
 
-        self.assertIsInstance(model3.variables["Current [A]"], pybamm.Scalar)
+        self.assertIsInstance(model3.variables["Current [A]"], pybamm.Multiplication)
+        self.assertIsInstance(model3.variables["Current [A]"].left, pybamm.Scalar)
+        self.assertIsInstance(model3.variables["Current [A]"].right, pybamm.Scalar)
         self.assertEqual(model3.variables["Current [A]"].evaluate(), 0.0)
 
         # results should be different

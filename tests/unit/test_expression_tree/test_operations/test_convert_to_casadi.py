@@ -71,12 +71,6 @@ class TestCasadiConverter(unittest.TestCase):
         # State Vector
         self.assert_casadi_equal(pybamm_y.to_casadi(casadi_t, casadi_y), casadi_y)
 
-        # outer product
-        outer = pybamm.Outer(pybamm_a, pybamm_a)
-        self.assert_casadi_equal(
-            outer.to_casadi(), casadi.MX(outer.evaluate()), evalf=True
-        )
-
     def test_special_functions(self):
         a = pybamm.Array(np.array([1, 2, 3, 4, 5]))
         self.assert_casadi_equal(pybamm.max(a).to_casadi(), casadi.MX(5), evalf=True)

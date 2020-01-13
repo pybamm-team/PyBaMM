@@ -144,7 +144,7 @@ class Function(pybamm.Symbol):
             for i, child in enumerate(children):
                 if not child.evaluates_to_number():
                     jac_fun = self._function_diff(children, i) * children_jacs[i]
-                    jac_fun.domain = []
+                    jac_fun.clear_domains()
                     if jacobian is None:
                         jacobian = jac_fun
                     else:
@@ -167,7 +167,7 @@ class Function(pybamm.Symbol):
             evaluated_children = [child.evaluate(t, y, u) for child in self.children]
             return self._function_evaluate(evaluated_children)
 
-    def evaluate_for_shape(self):
+    def _evaluate_for_shape(self):
         """
         Default behaviour: has same shape as all child
         See :meth:`pybamm.Symbol.evaluate_for_shape()`

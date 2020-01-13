@@ -193,7 +193,7 @@ class ParameterValues(dict):
         self._processed_symbols = {}
 
     def check_and_update_parameter_values(self, values):
-        # Make typical current is non-zero
+        # Make sure typical current is non-zero
         if "Typical current [A]" in values and values["Typical current [A]"] == 0:
             raise ValueError(
                 """
@@ -452,8 +452,11 @@ class ParameterValues(dict):
                 function = pybamm.Interpolant(data, *new_children, name=name)
             elif isinstance(function_name, numbers.Number):
                 # If the "function" is provided is actually a scalar, return a Scalar
-                # object instead of throwing an error
-                function = pybamm.Scalar(function_name, name=symbol.name)
+                # object instead of throwing an error.
+                # Also use ones_like so that we get the right shapes
+                function = pybamm.Scalar(
+                    function_name, name=symbol.name
+                ) * pybamm.ones_like(*new_children)
             else:
                 # otherwise evaluate the function to create a new PyBaMM object
                 function = function_name(*new_children)

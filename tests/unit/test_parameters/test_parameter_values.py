@@ -174,7 +174,7 @@ class TestParameterValues(unittest.TestCase):
 
         # process broadcast
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-        broad = pybamm.Broadcast(a, whole_cell)
+        broad = pybamm.PrimaryBroadcast(a, whole_cell)
         processed_broad = parameter_values.process_symbol(broad)
         self.assertIsInstance(processed_broad, pybamm.Broadcast)
         self.assertEqual(processed_broad.domain, whole_cell)
@@ -235,12 +235,6 @@ class TestParameterValues(unittest.TestCase):
             processed_g.evaluate(y=np.ones(10)), np.ones((10, 1))
         )
 
-        # process outer
-        c = pybamm.Parameter("c", domain="current collector")
-        outer = pybamm.Outer(c, b)
-        processed_outer = parameter_values.process_symbol(outer)
-        self.assertIsInstance(processed_outer, pybamm.Outer)
-
         # not implemented
         sym = pybamm.Symbol("sym")
         with self.assertRaises(NotImplementedError):
@@ -286,7 +280,9 @@ class TestParameterValues(unittest.TestCase):
         # process constant function
         const = pybamm.FunctionParameter("const", a)
         processed_const = parameter_values.process_symbol(const)
-        self.assertIsInstance(processed_const, pybamm.Scalar)
+        self.assertIsInstance(processed_const, pybamm.Multiplication)
+        self.assertIsInstance(processed_const.left, pybamm.Scalar)
+        self.assertIsInstance(processed_const.right, pybamm.Scalar)
         self.assertEqual(processed_const.evaluate(), 254)
 
         # process differentiated function parameter
