@@ -1007,13 +1007,23 @@ class FiniteVolume(pybamm.SpatialMethod):
         elif left_evaluates_on_edges == right_evaluates_on_edges:
             pass
         # If only left child evaluates on edges, map right child onto edges
-        # using the harmonic mean
+        # using the harmonic mean if the left child is a gradient (i.e. this
+        # binary operator represents a flux)
         elif left_evaluates_on_edges and not right_evaluates_on_edges:
-            disc_right = self.node_to_edge(disc_right, method="harmonic")
+            if isinstance(left, pybamm.Gradient):
+                method = "harmonic"
+            else:
+                method = "arithmetic"
+            disc_right = self.node_to_edge(disc_right, method=method)
         # If only right child evaluates on edges, map left child onto edges
-        # using the harmonic mean
+        # using the harmonic mean if the right child is a gradient (i.e. this
+        # binary operator represents a flux)
         elif right_evaluates_on_edges and not left_evaluates_on_edges:
-            disc_left = self.node_to_edge(disc_left, method="harmonic")
+            if isinstance(right, pybamm.Gradient):
+                method = "harmonic"
+            else:
+                method = "arithmetic"
+            disc_left = self.node_to_edge(disc_left, method=method)
         # Return new binary operator with appropriate class
         out = bin_op.__class__(disc_left, disc_right)
         return out
