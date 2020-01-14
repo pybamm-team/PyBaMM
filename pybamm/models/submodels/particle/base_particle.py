@@ -80,10 +80,16 @@ class BaseParticle(pybamm.BaseSubModel):
         c, _, _ = self._unpack(variables)
 
         if self.domain == "Negative":
-            c_init = self.param.c_n_init
+            x_n = pybamm.PrimaryBroadcast(
+                pybamm.standard_spatial_vars.x_n, "negative particle"
+            )
+            c_init = self.param.c_n_init(x_n)
 
         elif self.domain == "Positive":
-            c_init = self.param.c_p_init
+            x_p = pybamm.PrimaryBroadcast(
+                pybamm.standard_spatial_vars.x_p, "positive particle"
+            )
+            c_init = self.param.c_p_init(x_p)
 
         self.initial_conditions = {c: c_init}
 

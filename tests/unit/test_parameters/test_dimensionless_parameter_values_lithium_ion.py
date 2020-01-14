@@ -63,7 +63,7 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         "particle dynamics"
         # neg diffusion coefficient
         np.testing.assert_almost_equal(
-            values.evaluate(param.D_n_dimensional(param.c_n_init, param.T_ref)),
+            values.evaluate(param.D_n_dimensional(param.c_n_init(0), param.T_ref)),
             3.9 * 10 ** (-14),
             2,
         )
@@ -78,7 +78,7 @@ class TestDimensionlessParameterValues(unittest.TestCase):
 
         # pos diffusion coefficient
         np.testing.assert_almost_equal(
-            values.evaluate(param.D_p_dimensional(param.c_p_init, param.T_ref)),
+            values.evaluate(param.D_p_dimensional(param.c_p_init(1), param.T_ref)),
             1 * 10 ** (-13),
             2,
         )
