@@ -13,7 +13,7 @@ path = "/home/scott/Projects/PyBaMM/results/2019_xx_2plus1D_pouchcell_part2/"
 pybamm.set_logging_level("INFO")
 
 
-load = False
+load = True
 thermal = True
 c_rate = 1
 t_eval = np.linspace(0, 0.1, 100)
@@ -130,7 +130,13 @@ for count, (model_name, solution) in enumerate(current_collector_potentials.item
 
     if model_name == "2+1D DFN":
         im = axes[count].pcolormesh(
-            y_dim, z_dim, phi_s_cn, vmin=None, vmax=None, shading="gouraud"
+            y_dim,
+            z_dim,
+            phi_s_cn,
+            vmin=None,
+            vmax=None,
+            shading="gouraud",
+            cmap="plasma",
         )
 
         title = model_name
@@ -174,7 +180,13 @@ for count, (model_name, solution) in enumerate(current_collector_potentials.item
 
     if model_name == "2+1D DFN":
         im = axes[count].pcolormesh(
-            y_dim, z_dim, phi_s_cp, vmin=None, vmax=None, shading="gouraud"
+            y_dim,
+            z_dim,
+            phi_s_cp,
+            vmin=None,
+            vmax=None,
+            shading="gouraud",
+            cmap="plasma",
         )
 
         title = model_name

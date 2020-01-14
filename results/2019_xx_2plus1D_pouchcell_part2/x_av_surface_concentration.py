@@ -123,7 +123,13 @@ for count, (model_name, solution) in enumerate(x_av_surface_concentrations.items
 
     if model_name == "2+1D DFN":
         im = axes[count].pcolormesh(
-            y_dim, z_dim, c_s_n_surf_xav, vmin=None, vmax=None, shading="gouraud"
+            y_dim,
+            z_dim,
+            c_s_n_surf_xav,
+            vmin=None,
+            vmax=None,
+            shading="gouraud",
+            cmap="plasma",
         )
 
         title = model_name
@@ -186,7 +192,13 @@ for count, (model_name, solution) in enumerate(x_av_surface_concentrations.items
 
     if model_name == "2+1D DFN":
         im = axes[count].pcolormesh(
-            y_dim, z_dim, c_s_p_surf_xav, vmin=None, vmax=None, shading="gouraud"
+            y_dim,
+            z_dim,
+            c_s_p_surf_xav,
+            vmin=None,
+            vmax=None,
+            shading="gouraud",
+            cmap="plasma",
         )
 
         title = model_name
