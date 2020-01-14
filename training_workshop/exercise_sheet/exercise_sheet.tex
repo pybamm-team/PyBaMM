@@ -1,0 +1,356 @@
+%%% Template originaly created by Karol Kozioł (mail@karol-koziol.net) and modified for ShareLaTeX use
+
+\documentclass[a4paper,11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{xcolor}
+
+\renewcommand\familydefault{\sfdefault}
+\usepackage{sansmath}
+\sansmath
+\usepackage{tgheros}
+\usepackage[defaultmono]{droidmono}
+
+\usepackage{amsmath,amssymb,amsthm,booktabs,physics,siunitx,textcomp}
+\usepackage{enumerate}
+\usepackage{multicol}
+\usepackage{tikz}
+
+\usepackage{geometry}
+\geometry{total={210mm,297mm},
+left=25mm,right=25mm,%
+bindingoffset=0mm, top=20mm,bottom=20mm}
+
+\setlength\parindent{0ex}
+\setlength{\parskip}{1ex}
+\usepackage{setspace}
+\onehalfspacing
+
+\newcommand{\linia}{\rule{\linewidth}{0.5pt}}
+
+% my own titles
+\makeatletter
+\renewcommand{\maketitle}{
+\begin{center}
+\vspace{2ex}
+{\huge \textsc{\@title}}
+\vspace{1ex}
+\\
+\linia\\
+\@author \hfill \@date
+\vspace{4ex}
+\end{center}
+}
+\makeatother
+%%%
+
+% custom footers and headers
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\lhead{}
+\chead{}
+\rhead{}
+\lfoot{PyBaMM Training Workshop}
+\cfoot{}
+\rfoot{Page \thepage}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+%
+
+% code listing settings
+\usepackage{listings}
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    aboveskip={1.0\baselineskip},
+    belowskip={1.0\baselineskip},
+    columns=fixed,
+    extendedchars=true,
+    breaklines=true,
+    tabsize=4,
+    prebreak=\raisebox{0ex}[0ex][0ex]{\ensuremath{\hookleftarrow}},
+    frame=lines,
+    showtabs=false,
+    showspaces=false,
+    showstringspaces=false,
+    keywordstyle=\color[rgb]{0.627,0.126,0.941},
+    commentstyle=\color[rgb]{0.133,0.545,0.133},
+    stringstyle=\color[rgb]{01,0,0},
+    numbers=left,
+    numberstyle=\small,
+    stepnumber=1,
+    numbersep=10pt,
+    captionpos=t,
+    escapeinside={\%*}{*)}
+}
+
+%%%----------%%%----------%%%----------%%%----------%%%
+
+\begin{document}
+
+\title{\textbf{P}ython \textbf{Ba}ttery \textbf{M}athematical \textbf{M}odelling Training Workshop}
+
+\author{Oxford University}
+
+\date{31st July - 1st August 2019}
+
+\maketitle
+
+\section*{Exercise 1 -- solving ODEs in PyBaMM}
+
+Using the examples available in the PyBaMM repository, write a script which solves the following system of ODEs:
+\begin{align*}
+  \dv{x}{t} &= 4x - 2y, \quad x(0) = 1, \\
+  \dv{y}{t} &= 3x - y, \quad y(0) = 2.
+\end{align*}
+You can try to write the script from scratch, or copy the code in Listing~\ref{Ex1} and fill in the blanks.
+
+
+\begin{lstlisting}[label={Ex1},caption=Solving ODEs script]
+import pybamm
+import numpy as np
+import matplotlib.pyplot as plt
+
+"Setting up the model"
+
+# 1. Initialise an empty model
+model = pybamm.BaseModel()
+
+# 2. Define variables
+## DEFINE YOUR VARIABLES HERE ##
+
+# 3. State governing equations
+## WRITE THE EQUATIONS HERE ##
+model.rhs = {}
+
+# 4. State initial conditions
+## ADD INITIAL CONDITIONS HERE ##
+model.initial_conditions = {}
+
+# 6. State output variables
+## STATE OUTPUT VARIABLES HERE ##
+model.variables = {}
+
+"Using the model"
+
+# use default discretisation
+disc = pybamm.Discretisation()
+## PROCESS MODEL USING THE GIVEN DISCRETISTAION ##
+
+# solve
+solver = pybamm.ScipySolver()
+## SOLVE MODEL USING THE GIVEN SOLVER ##
+
+# post-process
+## PROCESS THE SOLUTION FOR PLOTTING ##
+
+# plot
+## PLOT SOLUTION ##
+\end{lstlisting}
+
+\pagebreak
+\section*{Exercise 2 -- solving PDEs in PyBaMM}
+Write a script to solve the problem of linear diffusion on a unit sphere,
+\begin{equation*}
+  \pdv{c}{t} = \nabla \cdot (\nabla c),
+\end{equation*}
+with the following boundary and initial conditions:
+\begin{equation*}
+  \left.\pdv{c}{r}\right\vert_{r=0} = 0, \quad \left.\pdv{c}{r}\right\vert_{r=1} = 2, \quad \left.c\right\vert_{t=0} = 1.
+\end{equation*}
+
+To get started, try looking at the create-model notebook, or fill in the template script below.
+
+\begin{lstlisting}[label={Ex2},caption=Solving PDEs script]
+import pybamm
+import numpy as np
+import matplotlib.pyplot as plt
+
+"Setting up the model"
+
+# 1. Initialise an empty model
+model = pybamm.BaseModel()
+
+# 2. Define variables
+## DEFINE YOUR VARIABLES HERE ##
+
+# 3. State governing equations
+## WRITE THE EQUATIONS HERE ##
+model.rhs = {}
+
+# 4. State boundary conditions
+## ADD BOUNDARY CONDITIONS HERE ##
+model.boundary_conditions = {}
+
+# 5. State initial conditions
+## ADD INITIAL CONDITIONS HERE ##
+model.initial_conditions = {}
+
+# 6. State output variables
+## STATE OUTPUT VARIABLES HERE ##
+model.variables = {}
+
+"Using the model"
+
+# define geometry
+r = pybamm.SpatialVariable(
+    "r", domain=["negative particle"], coord_sys="spherical polar"
+)
+geometry = {
+    "negative particle": {
+        "primary": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
+    }
+}
+
+# mesh and discretise
+submesh_types = {"negative particle": pybamm.Uniform1DSubMesh}
+var_pts = {r: 20}
+mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+spatial_methods = {"negative particle": pybamm.FiniteVolume}
+disc = pybamm.Discretisation(mesh, spatial_methods)
+disc.process_model(model)
+
+# solve
+solver = pybamm.ScipySolver()
+## SOLVE MODEL USING THE GIVEN SOLVER ##
+
+# post-process
+## PROCESS THE SOLUTION FOR PLOTTING ##
+
+# plot
+## PLOT SOLUTION ##
+\end{lstlisting}
+
+Try solving the model again with different boundary or initial conditions.
+
+\pagebreak
+\section*{Exercise 3 -- extending the PDE model}
+In PyBaMM, parameter objects can be used to define parameters whose value is set during processing of the model. In practice, parameter values can be read in from an external source, such as a .csv file, but they can also be set in a dictionary before model processing. Try to extend your model to include a diffusion coefficient $D$, i.e. solve
+\begin{equation*}
+  \pdv{c}{t} = \nabla \cdot (D \nabla c),
+\end{equation*}
+
+\begin{lstlisting}[label={Ex3_parameter},caption=Adding a parameter and setting its value]
+D = pybamm.Parameter("Diffusion coefficient")
+param = pybamm.ParameterValues({"Diffusion coefficient": 0.5})
+\end{lstlisting}
+
+Try adding more parameters to your model, or changing the parameter values.
+
+You can also add additional output variables to your model which can be accessed after the solve. For instance, you may interested in the flux as well as the concentration. Extra output variables are easily added to the model.variables dictionary in PyBaMM.
+
+\begin{lstlisting}[label={Ex3_extra_vars},caption=Adding extra output variables]
+# define the flux
+N = -D * pybamm.grad(c)
+model.variables = {"Concentration": c, "Flux": N}
+\end{lstlisting}
+
+\pagebreak
+\section*{Exercise 4 -- the negative particle problem}
+Now it is time to solve a real-life battery problem! Adapt your linear diffusion model to solve the problem of diffusion in the negative electrode particle within the single particle model. That is,
+\begin{equation*}
+  \pdv{c}{t} = \nabla \cdot (D \nabla c),
+\end{equation*}
+with the following boundary and initial conditions:
+\begin{equation*}
+  \left.\pdv{c}{r}\right\vert_{r=0} = 0, \quad \left.\pdv{c}{r}\right\vert_{r=R} = -\frac{j}{FD}, \quad \left.c\right\vert_{t=0} = c_0,
+\end{equation*}
+where $c$ is the concentration, $r$ the radial coordinate, $t$ time, $R$ the particle radius, $D$ the diffusion coefficient, $j$ the interfacial current density, $F$ Faraday's constant, and $c_0$ the initial concentration. Use the parameters from Table~\ref{Table:Ex4}. You will need to add the parameter values to the the \texttt{pybamm.ParameterValues} dictionary, as in Exercise 3.
+
+\begin{table}[htb]
+	\centering
+	\begin{tabular}{c c c}
+	\toprule
+     Symbol & Units & Value \\
+    \midrule
+    $R$ & \si{m} & $10 \times 10^{-6}$\\
+    $D$ & \si{m^2.s^{-1}} & $3.9 \times 10^{-14}$ \\
+    $j$ & \si{A.m^{-2}} & $1.4$ \\
+    $F$ & \si{C.mol^{-1}} & $96485$ \\
+    $c_0$ & \si{mol.m^{-3}} & $2.5 \times 10^4$ \\
+    \bottomrule
+    \end{tabular}
+    \caption{Parameter values for use in Exercise 4.}
+    \label{Table:Ex4}
+\end{table}
+
+\pagebreak
+\section*{Exercise 5 -- making a model class}
+Now that you have created a script which solves the negative particle problem you have all of the ingredients you need to create a model. PyBaMM is designed to be used in a modular fashion: users create their own models or submodels which may be combined to capture different physical phenomena. Within this framework, it is easy to add new physics to an existing model, without the need to write a new code from scratch. As well as being able to include different models, users can also quickly change between different spatial discretisations and solvers, so that solution strategies may be easily compared within the same modelling framework. \\
+
+Create a new file called \texttt{my\_spherical\_diffusion.py} and save it in \texttt{pybamm/models}. Before starting work on you model, you will need to add it to the file \texttt{PyBaMM/\_\_init\_\_.py} so that it is imported as part of pybamm (see line 178 of Listing~\ref{Ex5_init}).
+
+\begin{lstlisting}[label={Ex5_init},caption=Adding you new model to the init file., firstnumber=172]
+# Battery models
+from .models.full_battery_models.base_battery_model import BaseBatteryModel
+from .models.full_battery_models import lead_acid
+from .models.full_battery_models import lithium_ion
+
+# User models
+from .models.my_spherical_diffusion import MySphericalDiffusion
+\end{lstlisting}
+
+Models in PyBaMM are classes, which can inherit features from a number of base classes. The simplest is \texttt{pybamm.BaseModel}. Create a new class called \texttt{MySphericalDiffusion} which is an instance of \texttt{pybamm.BaseModel}, and takes an argument \texttt{param} so that different parameters can be passed to the model. To get started take a look at the code in Listing~\ref{Ex5_model}. You can then add the variables, equations, initial and boundary conditions from your script into the class file.
+
+
+\begin{lstlisting}[label={Ex5_model},caption=Creating you new model.]
+import pybamm
+
+
+class MySphericalDiffusion(pybamm.BaseModel):
+    """A model for diffusion in a sphere.
+
+    **Extends:** :class:`pybamm.BaseModel`
+    """
+    def __init__(self, param, name="Spherical Diffusion"):
+        # Initialise base class
+        super().__init__(name)
+
+        # Add parameters as an attribute of the model
+        self.param = param
+
+        ## ADD THE DETAILS OF THE MODEL HERE ##
+\end{lstlisting}
+
+You will often want to reuse the same parameters across a number of models, so it can be useful to store them in a standard parameters file instead of redefining them each time you would like to use them. Create a file \texttt{my\_parameters.py} and save it in \texttt{pybamm/parameters}. Here you can add the definitions the parameters you used in Exercise 4. Add your parameters file to \texttt{PyBaMM/\_\_init\_\_.py} so that it is imported as part of pybamm (see line 207 of Listing~\ref{Ex5_params}).
+
+\begin{lstlisting}[label={Ex5_params},caption=Adding your parameters to the init file., firstnumber=197]
+#
+# Parameters class and methods
+#
+from .parameters.parameter_values import ParameterValues
+from .parameters import standard_current_functions
+from .parameters import geometric_parameters
+from .parameters import electrical_parameters
+from .parameters import thermal_parameters
+from .parameters import standard_parameters_lithium_ion, standard_parameters_lead_acid
+from .parameters.print_parameters import print_parameters, print_evaluated_parameters
+from .parameters import parameter_sets, my_parameters
+\end{lstlisting}
+
+Now that you have defined your parameters and created your model, they can be easily call up for use in a script (see Listing~\ref{Ex5_usemodel}). Once the model is loaded, you can define the geometry, mesh and discretisation, and solve as before.
+
+\begin{lstlisting}[label={Ex5_usemodel},caption=Using your model.]
+import pybamm
+import numpy as np
+import matplotlib.pyplot as plt
+
+"Setting up the model"
+
+# 1. Initialise model
+param = pybamm.my_parameters
+model = pybamm.MySphericalDiffusion(param)
+
+"Using the model"
+
+## DEFINE GEOMETRY, MESH, ETC. HERE, AND SOLVE
+\end{lstlisting}
+
+Congratulations, you have now created your first PyBaMM model!
+
+Try extending the model to include default settings for the geometry, parameters, mesh and solver. You can also pass more arguments to the model. For instance, you may want to pass the domain (``negative" or ``positive") so that the model can alter the boundary conditions depending on which electrode you are solving in.
+
+\end{document}

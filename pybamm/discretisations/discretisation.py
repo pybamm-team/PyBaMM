@@ -683,9 +683,7 @@ class Discretisation(object):
             # Broadcast if the equation evaluates to a number(e.g. Scalar)
             if eqn.evaluates_to_number() and not isinstance(eqn_key, str):
                 eqn = pybamm.FullBroadcast(
-                    eqn,
-                    eqn_key.domain,
-                    eqn_key.auxiliary_domains,
+                    eqn, eqn_key.domain, eqn_key.auxiliary_domains
                 )
 
             # note we are sending in the key.id here so we don't have to
@@ -1008,11 +1006,7 @@ class Discretisation(object):
                     and np.all(var.right.entries == 1)
                 )
 
-                if (
-                    different_shapes
-                    and not_concatenation
-                    and not_mult_by_one_vec
-                ):
+                if different_shapes and not_concatenation and not_mult_by_one_vec:
                     raise pybamm.ModelError(
                         """
                     variable and its eqn must have the same shape after discretisation
