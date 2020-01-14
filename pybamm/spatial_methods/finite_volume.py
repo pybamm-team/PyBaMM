@@ -1154,11 +1154,14 @@ class FiniteVolume(pybamm.SpatialMethod):
                 \\beta = \\frac{\\Delta x_1}{\\Delta x_2 + \\Delta x_1}
 
             accounts for the difference in the control volume widths. This is the
-            definiton from [1].
+            definiton from [1], which is the same as that in [2] but with slightly
+            different notation.
 
             [1] Torchio, M et al. "LIONSIMBA: A Matlab Framework Based on a Finite
             Volume Model Suitable for Li-Ion Battery Design, Simulation, and Control."
             (2016).
+            [2] Recktenwald, Gerald. "The control-volume finite-difference
+            approximation to the diffusion equation." (2012).
             """
             # Create appropriate submesh by combining submeshes in domain
             submesh_list = self.mesh.combine_submeshes(*array.domain)
