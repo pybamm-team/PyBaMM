@@ -34,7 +34,7 @@ class DFNCC:
             C_rate=C_rate,
             solver=solver,
         )
-        self.sim.solve(t_eval=t_eval)
+        self.sim.solve(t_eval=t_eval, check_model=True)
 
         self.t = self.sim.solution.t
         self.y = self.sim.solution.y

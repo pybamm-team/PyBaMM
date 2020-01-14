@@ -2,13 +2,13 @@ import pybamm
 import numpy as np
 
 
-class SPM:
+class SPMe:
     def __init__(self, thermal=False, param=None):
         options = {}
         if thermal is True:
             options.update({"thermal": "x-lumped", "thermal current collector": True})
 
-        self.model = pybamm.lithium_ion.SPM(options)
+        self.model = pybamm.lithium_ion.SPMe(options)
         self.param = self.model.default_parameter_values
 
         if param:

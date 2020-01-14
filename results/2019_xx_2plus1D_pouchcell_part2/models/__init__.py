@@ -5,3 +5,4 @@ from .SPM_2p1D import SPM_2p1D
 from .SPMe_2p1D import SPMe_2p1D
 from .DFNCC import DFNCC
 from .SPMeCC import SPMeCC
+from .SPMe import SPMe

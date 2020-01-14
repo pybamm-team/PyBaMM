@@ -981,6 +981,8 @@ class Discretisation(object):
         y0 = model.concatenated_initial_conditions
         # Individual
         for var in model.rhs.keys():
+            print(var)
+
             assert (
                 model.rhs[var].shape == model.initial_conditions[var].shape
             ), pybamm.ModelError(
