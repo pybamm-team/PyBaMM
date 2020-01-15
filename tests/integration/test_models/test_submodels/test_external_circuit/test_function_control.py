@@ -46,19 +46,13 @@ class TestFunctionControl(unittest.TestCase):
         for i, model in enumerate(models):
             solutions[i] = model.default_solver.solve(model, t_eval)
 
-        pv0 = pybamm.post_process_variables(
-            models[0].variables, solutions[0].t, solutions[0].y, mesh
-        )
-        pv1 = pybamm.post_process_variables(
-            models[1].variables, solutions[1].t, solutions[1].y, mesh
+        np.testing.assert_array_almost_equal(
+            solutions[0]["Discharge capacity [A.h]"].entries,
+            solutions[0]["Current [A]"].entries * solutions[0]["Time [h]"].entries,
         )
         np.testing.assert_array_almost_equal(
-            pv0["Discharge capacity [A.h]"].entries,
-            pv0["Current [A]"].entries * pv0["Time [h]"].entries,
-        )
-        np.testing.assert_array_almost_equal(
-            pv0["Terminal voltage [V]"](solutions[0].t),
-            pv1["Terminal voltage [V]"](solutions[0].t),
+            solutions[0]["Terminal voltage [V]"](solutions[0].t),
+            solutions[1]["Terminal voltage [V]"](solutions[0].t),
         )
 
     def test_constant_voltage(self):
@@ -99,26 +93,12 @@ class TestFunctionControl(unittest.TestCase):
         for i, model in enumerate(models):
             solutions[i] = model.default_solver.solve(model, t_eval)
 
-        V0 = pybamm.ProcessedVariable(
-            models[0].variables["Terminal voltage [V]"],
-            solutions[0].t,
-            solutions[0].y,
-            mesh,
-        ).entries
-        V1 = pybamm.ProcessedVariable(
-            models[1].variables["Terminal voltage [V]"],
-            solutions[1].t,
-            solutions[1].y,
-            mesh,
-        ).entries
+        V0 = solutions[0]["Terminal voltage [V]"].entries
+        V1 = solutions[1]["Terminal voltage [V]"].entries
         np.testing.assert_array_almost_equal(V0, V1)
 
-        I0 = pybamm.ProcessedVariable(
-            models[0].variables["Current [A]"], solutions[0].t, solutions[0].y, mesh
-        ).entries
-        I1 = pybamm.ProcessedVariable(
-            models[1].variables["Current [A]"], solutions[1].t, solutions[1].y, mesh
-        ).entries
+        I0 = solutions[0]["Current [A]"].entries
+        I1 = solutions[1]["Current [A]"].entries
         np.testing.assert_array_almost_equal(abs((I1 - I0) / I0), 0, decimal=1)
 
     def test_constant_power(self):
@@ -160,26 +140,12 @@ class TestFunctionControl(unittest.TestCase):
         for i, model in enumerate(models):
             solutions[i] = model.default_solver.solve(model, t_eval)
 
-        V0 = pybamm.ProcessedVariable(
-            models[0].variables["Terminal voltage [V]"],
-            solutions[0].t,
-            solutions[0].y,
-            mesh,
-        ).entries
-        V1 = pybamm.ProcessedVariable(
-            models[1].variables["Terminal voltage [V]"],
-            solutions[1].t,
-            solutions[1].y,
-            mesh,
-        ).entries
+        V0 = solutions[0]["Terminal voltage [V]"].entries
+        V1 = solutions[1]["Terminal voltage [V]"].entries
         np.testing.assert_array_equal(V0, V1)
 
-        I0 = pybamm.ProcessedVariable(
-            models[0].variables["Current [A]"], solutions[0].t, solutions[0].y, mesh
-        ).entries
-        I1 = pybamm.ProcessedVariable(
-            models[1].variables["Current [A]"], solutions[1].t, solutions[1].y, mesh
-        ).entries
+        I0 = solutions[0]["Current [A]"].entries
+        I1 = solutions[1]["Current [A]"].entries
         np.testing.assert_array_equal(I0, I1)
 
 

@@ -159,6 +159,11 @@ class Mesh(dict):
                     "trying to combine two meshes in different coordinate systems"
                 )
         submeshes = [None] * len(self[submeshnames[0]])
+        # Hack for the special case of current collector
+        if submeshnames == ("current collector",) and isinstance(
+            self[submeshnames[0]][0].edges, dict
+        ):
+            return self[submeshnames[0]]
         for i in range(len(self[submeshnames[0]])):
             combined_submesh_edges = np.concatenate(
                 [self[submeshnames[0]][i].edges]

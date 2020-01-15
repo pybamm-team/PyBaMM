@@ -290,12 +290,7 @@ class Simulation:
         if quick_plot_vars is None:
             quick_plot_vars = self.quick_plot_vars
 
-        plot = pybamm.QuickPlot(
-            self.built_model,
-            self._mesh,
-            self._solution,
-            output_variables=quick_plot_vars,
-        )
+        plot = pybamm.QuickPlot(self._solution, output_variables=quick_plot_vars,)
 
         if isnotebook():
             import ipywidgets as widgets
@@ -473,6 +468,4 @@ class Simulation:
 
 def load_sim(filename):
     """Load a saved simulation"""
-    with open(filename, "rb") as f:
-        sim = pickle.load(f)
-    return sim
+    return pybamm.load(filename)
