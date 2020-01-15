@@ -14,9 +14,10 @@ class TestProcessedVariable(unittest.TestCase):
         t = pybamm.t
         y = pybamm.StateVector(slice(0, 1))
         var = t * y
+        var.mesh = None
         t_sol = np.linspace(0, 1)
         y_sol = np.array([np.linspace(0, 5)])
-        processed_var = pybamm.ProcessedVariable(var, t_sol, y_sol)
+        processed_var = pybamm.ProcessedVariable(var, pybamm.Solution(t_sol, y_sol))
         np.testing.assert_array_equal(processed_var.entries, t_sol * y_sol[0])
 
     def test_processed_variable_2D(self):
@@ -31,13 +32,14 @@ class TestProcessedVariable(unittest.TestCase):
         x_sol = disc.process_symbol(x).entries[:, 0]
         var_sol = disc.process_symbol(var)
         eqn_sol = disc.process_symbol(eqn)
+        eqn_sol.mesh = disc.mesh.combine_submeshes(*eqn.domain)
         t_sol = np.linspace(0, 1)
         y_sol = np.ones_like(x_sol)[:, np.newaxis] * np.linspace(0, 5)
 
-        processed_var = pybamm.ProcessedVariable(var_sol, t_sol, y_sol, mesh=disc.mesh)
-        np.testing.assert_array_equal(processed_var.entries[1:-1], y_sol)
+        processed_var = pybamm.ProcessedVariable(var_sol, pybamm.Solution(t_sol, y_sol))
+        np.testing.assert_array_equal(processed_var.entries, y_sol)
         np.testing.assert_array_equal(processed_var(t_sol, x_sol), y_sol)
-        processed_eqn = pybamm.ProcessedVariable(eqn_sol, t_sol, y_sol, mesh=disc.mesh)
+        processed_eqn = pybamm.ProcessedVariable(eqn_sol, pybamm.Solution(t_sol, y_sol))
         np.testing.assert_array_equal(
             processed_eqn(t_sol, x_sol), t_sol * y_sol + x_sol[:, np.newaxis]
         )
@@ -50,9 +52,12 @@ class TestProcessedVariable(unittest.TestCase):
 
         # On edges
         x_s_edge = pybamm.Matrix(disc.mesh["separator"][0].edges, domain="separator")
-        processed_x_s_edge = pybamm.ProcessedVariable(x_s_edge, t_sol, y_sol, disc.mesh)
+        x_s_edge.mesh = disc.mesh["separator"]
+        processed_x_s_edge = pybamm.ProcessedVariable(
+            x_s_edge, pybamm.Solution(t_sol, y_sol)
+        )
         np.testing.assert_array_equal(
-            x_s_edge.entries[:, 0], processed_x_s_edge.entries[1:-1, 0]
+            x_s_edge.entries[:, 0], processed_x_s_edge.entries[:, 0]
         )
 
     def test_processed_variable_2D_unknown_domain(self):
@@ -78,7 +83,8 @@ class TestProcessedVariable(unittest.TestCase):
         )
 
         c = pybamm.StateVector(slice(0, var_pts[x]), domain=["SEI layer"])
-        pybamm.ProcessedVariable(c, solution.t, solution.y, mesh)
+        c.mesh = mesh["SEI layer"]
+        pybamm.ProcessedVariable(c, solution)
 
     def test_processed_variable_3D_x_r(self):
         var = pybamm.Variable(
@@ -99,7 +105,7 @@ class TestProcessedVariable(unittest.TestCase):
         t_sol = np.linspace(0, 1)
         y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)
 
-        processed_var = pybamm.ProcessedVariable(var_sol, t_sol, y_sol, mesh=disc.mesh)
+        processed_var = pybamm.ProcessedVariable(var_sol, pybamm.Solution(t_sol, y_sol))
         np.testing.assert_array_equal(
             processed_var.entries,
             np.reshape(y_sol, [len(r_sol), len(x_sol), len(t_sol)]),
@@ -124,7 +130,7 @@ class TestProcessedVariable(unittest.TestCase):
         t_sol = np.linspace(0, 1)
         y_sol = np.ones(len(x_sol) * len(z_sol))[:, np.newaxis] * np.linspace(0, 5)
 
-        processed_var = pybamm.ProcessedVariable(var_sol, t_sol, y_sol, mesh=disc.mesh)
+        processed_var = pybamm.ProcessedVariable(var_sol, pybamm.Solution(t_sol, y_sol))
         np.testing.assert_array_equal(
             processed_var.entries,
             np.reshape(y_sol, [len(x_sol), len(z_sol), len(t_sol)]),
@@ -136,10 +142,13 @@ class TestProcessedVariable(unittest.TestCase):
             domain="separator",
             auxiliary_domains={"secondary": "current collector"},
         )
-        processed_x_s_edge = pybamm.ProcessedVariable(x_s_edge, t_sol, y_sol, disc.mesh)
+        x_s_edge.mesh = disc.mesh["separator"]
+        x_s_edge.secondary_mesh = disc.mesh["current collector"]
+        processed_x_s_edge = pybamm.ProcessedVariable(
+            x_s_edge, pybamm.Solution(t_sol, y_sol)
+        )
         np.testing.assert_array_equal(
-            x_s_edge.entries.flatten(),
-            processed_x_s_edge.entries[:, :, 0].T.flatten(),
+            x_s_edge.entries.flatten(), processed_x_s_edge.entries[:, :, 0].T.flatten()
         )
 
     def test_processed_variable_3D_scikit(self):
@@ -150,10 +159,11 @@ class TestProcessedVariable(unittest.TestCase):
         y = disc.mesh["current collector"][0].edges["y"]
         z = disc.mesh["current collector"][0].edges["z"]
         var_sol = disc.process_symbol(var)
+        var_sol.mesh = disc.mesh["current collector"]
         t_sol = np.linspace(0, 1)
         u_sol = np.ones(var_sol.shape[0])[:, np.newaxis] * np.linspace(0, 5)
 
-        processed_var = pybamm.ProcessedVariable(var_sol, t_sol, u_sol, mesh=disc.mesh)
+        processed_var = pybamm.ProcessedVariable(var_sol, pybamm.Solution(t_sol, u_sol))
         np.testing.assert_array_equal(
             processed_var.entries, np.reshape(u_sol, [len(y), len(z), len(t_sol)])
         )
@@ -166,10 +176,11 @@ class TestProcessedVariable(unittest.TestCase):
         y = disc.mesh["current collector"][0].edges["y"]
         z = disc.mesh["current collector"][0].edges["z"]
         var_sol = disc.process_symbol(var)
+        var_sol.mesh = disc.mesh["current collector"]
         t_sol = np.array([0])
         u_sol = np.ones(var_sol.shape[0])[:, np.newaxis]
 
-        processed_var = pybamm.ProcessedVariable(var_sol, t_sol, u_sol, mesh=disc.mesh)
+        processed_var = pybamm.ProcessedVariable(var_sol, pybamm.Solution(t_sol, u_sol))
         np.testing.assert_array_equal(
             processed_var.entries, np.reshape(u_sol, [len(y), len(z)])
         )
@@ -180,17 +191,19 @@ class TestProcessedVariable(unittest.TestCase):
         y = pybamm.StateVector(slice(0, 1))
         var = y
         eqn = t * y
+        var.mesh = None
+        eqn.mesh = None
 
         t_sol = np.linspace(0, 1, 1000)
         y_sol = np.array([np.linspace(0, 5, 1000)])
-        processed_var = pybamm.ProcessedVariable(var, t_sol, y_sol)
+        processed_var = pybamm.ProcessedVariable(var, pybamm.Solution(t_sol, y_sol))
         # vector
         np.testing.assert_array_equal(processed_var(t_sol), y_sol[0])
         # scalar
         np.testing.assert_array_equal(processed_var(0.5), 2.5)
         np.testing.assert_array_equal(processed_var(0.7), 3.5)
 
-        processed_eqn = pybamm.ProcessedVariable(eqn, t_sol, y_sol)
+        processed_eqn = pybamm.ProcessedVariable(eqn, pybamm.Solution(t_sol, y_sol))
         np.testing.assert_array_equal(processed_eqn(t_sol), t_sol * y_sol[0])
         np.testing.assert_array_almost_equal(processed_eqn(0.5), 0.5 * 2.5)
 
@@ -210,10 +223,11 @@ class TestProcessedVariable(unittest.TestCase):
         x_sol = disc.process_symbol(x).entries[:, 0]
         var_sol = disc.process_symbol(var)
         eqn_sol = disc.process_symbol(eqn)
+        eqn_sol.mesh = disc.mesh.combine_submeshes(*eqn.domain)
         t_sol = np.linspace(0, 1)
         y_sol = x_sol[:, np.newaxis] * np.linspace(0, 5)
 
-        processed_var = pybamm.ProcessedVariable(var_sol, t_sol, y_sol, mesh=disc.mesh)
+        processed_var = pybamm.ProcessedVariable(var_sol, pybamm.Solution(t_sol, y_sol))
         # 2 vectors
         np.testing.assert_array_almost_equal(processed_var(t_sol, x_sol), y_sol)
         # 1 vector, 1 scalar
@@ -227,7 +241,7 @@ class TestProcessedVariable(unittest.TestCase):
         np.testing.assert_array_almost_equal(
             processed_var(0.5, x_sol[-1]), 2.5 * x_sol[-1]
         )
-        processed_eqn = pybamm.ProcessedVariable(eqn_sol, t_sol, y_sol, mesh=disc.mesh)
+        processed_eqn = pybamm.ProcessedVariable(eqn_sol, pybamm.Solution(t_sol, y_sol))
         # 2 vectors
         np.testing.assert_array_almost_equal(
             processed_eqn(t_sol, x_sol), t_sol * y_sol + x_sol[:, np.newaxis]
@@ -242,8 +256,9 @@ class TestProcessedVariable(unittest.TestCase):
         r_n = pybamm.Matrix(
             disc.mesh["negative particle"][0].nodes, domain="negative particle"
         )
-        processed_r_n = pybamm.ProcessedVariable(r_n, t_sol, y_sol, disc.mesh)
-        np.testing.assert_array_equal(r_n.entries[:, 0], processed_r_n.entries[1:-1, 0])
+        r_n.mesh = disc.mesh["negative particle"]
+        processed_r_n = pybamm.ProcessedVariable(r_n, pybamm.Solution(t_sol, y_sol))
+        np.testing.assert_array_equal(r_n.entries[:, 0], processed_r_n.entries[:, 0])
         np.testing.assert_array_almost_equal(
             processed_r_n(0, r=np.linspace(0, 1))[:, 0], np.linspace(0, 1)
         )
@@ -267,7 +282,7 @@ class TestProcessedVariable(unittest.TestCase):
         t_sol = np.linspace(0, 1)
         y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)
 
-        processed_var = pybamm.ProcessedVariable(var_sol, t_sol, y_sol, mesh=disc.mesh)
+        processed_var = pybamm.ProcessedVariable(var_sol, pybamm.Solution(t_sol, y_sol))
         # 3 vectors
         np.testing.assert_array_equal(
             processed_var(t_sol, x_sol, r_sol).shape, (10, 40, 50)
@@ -305,17 +320,14 @@ class TestProcessedVariable(unittest.TestCase):
         t_sol = np.linspace(0, 1)
         y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)
 
-        processed_var = pybamm.ProcessedVariable(var_sol, t_sol, y_sol, mesh=disc.mesh)
+        processed_var = pybamm.ProcessedVariable(var_sol, pybamm.Solution(t_sol, y_sol))
         # 3 vectors
         np.testing.assert_array_equal(
             processed_var(t_sol, x_sol, r_sol).shape, (10, 35, 50)
         )
 
     def test_processed_var_3D_secondary_broadcast(self):
-        var = pybamm.Variable(
-            "var",
-            domain=["negative particle"],
-        )
+        var = pybamm.Variable("var", domain=["negative particle"])
         broad_var = pybamm.SecondaryBroadcast(var, "negative electrode")
         x = pybamm.SpatialVariable("x", domain=["negative electrode"])
         r = pybamm.SpatialVariable("r", domain=["negative particle"])
@@ -328,7 +340,7 @@ class TestProcessedVariable(unittest.TestCase):
         t_sol = np.linspace(0, 1)
         y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)
 
-        processed_var = pybamm.ProcessedVariable(var_sol, t_sol, y_sol, mesh=disc.mesh)
+        processed_var = pybamm.ProcessedVariable(var_sol, pybamm.Solution(t_sol, y_sol))
         # 3 vectors
         np.testing.assert_array_equal(
             processed_var(t_sol, x_sol, r_sol).shape, (10, 40, 50)
@@ -361,7 +373,7 @@ class TestProcessedVariable(unittest.TestCase):
         t_sol = np.linspace(0, 1)
         y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)
 
-        processed_var = pybamm.ProcessedVariable(var_sol, t_sol, y_sol, mesh=disc.mesh)
+        processed_var = pybamm.ProcessedVariable(var_sol, pybamm.Solution(t_sol, y_sol))
         # 3 vectors
         np.testing.assert_array_equal(
             processed_var(t_sol, x_sol, r_sol).shape, (10, 35, 50)
@@ -375,10 +387,11 @@ class TestProcessedVariable(unittest.TestCase):
         y_sol = disc.mesh["current collector"][0].edges["y"]
         z_sol = disc.mesh["current collector"][0].edges["z"]
         var_sol = disc.process_symbol(var)
+        var_sol.mesh = disc.mesh["current collector"]
         t_sol = np.linspace(0, 1)
         u_sol = np.ones(var_sol.shape[0])[:, np.newaxis] * np.linspace(0, 5)
 
-        processed_var = pybamm.ProcessedVariable(var_sol, t_sol, u_sol, mesh=disc.mesh)
+        processed_var = pybamm.ProcessedVariable(var_sol, pybamm.Solution(t_sol, u_sol))
         # 3 vectors
         np.testing.assert_array_equal(
             processed_var(t_sol, y=y_sol, z=z_sol).shape, (15, 15, 50)
@@ -412,10 +425,11 @@ class TestProcessedVariable(unittest.TestCase):
         y_sol = disc.mesh["current collector"][0].edges["y"]
         z_sol = disc.mesh["current collector"][0].edges["z"]
         var_sol = disc.process_symbol(var)
+        var_sol.mesh = disc.mesh["current collector"]
         t_sol = np.array([0])
         u_sol = np.ones(var_sol.shape[0])[:, np.newaxis]
 
-        processed_var = pybamm.ProcessedVariable(var_sol, t_sol, u_sol, mesh=disc.mesh)
+        processed_var = pybamm.ProcessedVariable(var_sol, pybamm.Solution(t_sol, u_sol))
         # 2 vectors
         np.testing.assert_array_equal(
             processed_var(t=None, y=y_sol, z=z_sol).shape, (15, 15)
@@ -439,9 +453,8 @@ class TestProcessedVariable(unittest.TestCase):
         model.variables = {"c": c}
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
-        t_sol, y_sol = modeltest.solution.t, modeltest.solution.y
-        processed_vars = pybamm.post_process_variables(model.variables, t_sol, y_sol)
-        np.testing.assert_array_almost_equal(processed_vars["c"](t_sol), np.exp(-t_sol))
+        sol = modeltest.solution
+        np.testing.assert_array_almost_equal(sol["c"](sol.t), np.exp(-sol.t))
 
         # with space
         # set up and solve model
@@ -468,17 +481,13 @@ class TestProcessedVariable(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
         # set up testing
-        t_sol, y_sol = modeltest.solution.t, modeltest.solution.y
+        sol = modeltest.solution
         x = pybamm.SpatialVariable("x", domain=whole_cell)
         x_sol = modeltest.disc.process_symbol(x).entries[:, 0]
-        processed_vars = pybamm.post_process_variables(
-            model.variables, t_sol, y_sol, modeltest.disc.mesh
-        )
 
         # test
         np.testing.assert_array_almost_equal(
-            processed_vars["c"](t_sol, x_sol),
-            np.ones_like(x_sol)[:, np.newaxis] * np.exp(-t_sol),
+            sol["c"](sol.t, x_sol), np.ones_like(x_sol)[:, np.newaxis] * np.exp(-sol.t)
         )
 
     def test_call_failure(self):
@@ -492,7 +501,7 @@ class TestProcessedVariable(unittest.TestCase):
         t_sol = np.linspace(0, 1)
         y_sol = x_sol[:, np.newaxis] * np.linspace(0, 5)
 
-        processed_var = pybamm.ProcessedVariable(var_sol, t_sol, y_sol, mesh=disc.mesh)
+        processed_var = pybamm.ProcessedVariable(var_sol, pybamm.Solution(t_sol, y_sol))
         with self.assertRaisesRegex(ValueError, "x cannot be None"):
             processed_var(0)
 
@@ -505,11 +514,23 @@ class TestProcessedVariable(unittest.TestCase):
         var_sol = disc.process_symbol(var)
         y_sol = r_sol[:, np.newaxis] * np.linspace(0, 5)
 
-        processed_var = pybamm.ProcessedVariable(var_sol, t_sol, y_sol, mesh=disc.mesh)
+        processed_var = pybamm.ProcessedVariable(var_sol, pybamm.Solution(t_sol, y_sol))
         with self.assertRaisesRegex(ValueError, "r cannot be None"):
             processed_var(0)
         with self.assertRaisesRegex(ValueError, "r cannot be None"):
             processed_var(0, 1)
+
+    def test_solution_too_short(self):
+        t = pybamm.t
+        y = pybamm.StateVector(slice(0, 1))
+        var = t * y
+        var.mesh = None
+        t_sol = np.array([1])
+        y_sol = np.array([np.linspace(0, 5)])
+        with self.assertRaisesRegex(
+            pybamm.SolverError, "Solution time vector must have length > 1"
+        ):
+            pybamm.ProcessedVariable(var, pybamm.Solution(t_sol, y_sol))
 
 
 if __name__ == "__main__":

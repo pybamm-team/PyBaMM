@@ -51,7 +51,7 @@ tau = param.process_symbol(pybamm.standard_parameters_lithium_ion.tau_discharge)
 
 # solve model at comsol times
 time = comsol_variables["time"] / tau.evaluate(0)
-solution = pybamm.CasadiSolver(mode="fast").solve(pybamm_model, time)
+pybamm_solution = pybamm.CasadiSolver(mode="fast").solve(pybamm_model, time)
 
 
 # Make Comsol 'model' for comparison
@@ -80,7 +80,7 @@ def get_interp_fun(variable_name, domain):
     def myinterp(t):
         try:
             return interp.interp1d(
-                comsol_t, variable, fill_value="extrapolate", bounds_error=False,
+                comsol_t, variable, fill_value="extrapolate", bounds_error=False
             )(t)[:, np.newaxis]
         except ValueError as err:
             raise ValueError(
@@ -93,6 +93,8 @@ def get_interp_fun(variable_name, domain):
     # Make sure to use dimensional time
     fun = pybamm.Function(myinterp, pybamm.t * tau, name=variable_name + "_comsol")
     fun.domain = domain
+    fun.mesh = mesh.combine_submeshes(*domain)
+    fun.secondary_mesh = None
     return fun
 
 
@@ -102,9 +104,17 @@ comsol_c_p_surf = get_interp_fun("c_p_surf", ["positive electrode"])
 comsol_phi_n = get_interp_fun("phi_n", ["negative electrode"])
 comsol_phi_e = get_interp_fun("phi_e", whole_cell)
 comsol_phi_p = get_interp_fun("phi_p", ["positive electrode"])
-comsol_voltage = interp.interp1d(
-    comsol_t, comsol_variables["voltage"], fill_value="extrapolate", bounds_error=False
+comsol_voltage = pybamm.Function(
+    interp.interp1d(
+        comsol_t,
+        comsol_variables["voltage"],
+        fill_value="extrapolate",
+        bounds_error=False,
+    ),
+    pybamm.t * tau,
 )
+comsol_voltage.mesh = None
+comsol_voltage.secondary_mesh = None
 
 # Create comsol model with dictionary of Matrix variables
 comsol_model = pybamm.BaseModel()
@@ -116,14 +126,13 @@ comsol_model.variables = {
     "Negative electrode potential [V]": comsol_phi_n,
     "Electrolyte potential [V]": comsol_phi_e,
     "Positive electrode potential [V]": comsol_phi_p,
-    "Terminal voltage [V]": pybamm.Function(comsol_voltage, pybamm.t * tau),
+    "Terminal voltage [V]": comsol_voltage,
 }
-
+comsol_solution = pybamm.CasadiSolver(mode="fast").solve(pybamm_model, time)
+comsol_solution.model = comsol_model
 # plot
 plot = pybamm.QuickPlot(
-    [pybamm_model, comsol_model],
-    mesh,
-    [solution, solution],
+    [pybamm_solution, comsol_solution],
     output_variables=comsol_model.variables.keys(),
     labels=["PyBaMM", "Comsol"],
 )

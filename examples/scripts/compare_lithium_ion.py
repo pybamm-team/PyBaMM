@@ -51,5 +51,5 @@ for i, model in enumerate(models):
     solutions[i] = model.default_solver.solve(model, t_eval)
 
 # plot
-plot = pybamm.QuickPlot(models, mesh, solutions)
+plot = pybamm.QuickPlot(solutions)
 plot.dynamic_plot()

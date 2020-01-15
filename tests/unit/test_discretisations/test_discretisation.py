@@ -130,6 +130,12 @@ class TestDiscretise(unittest.TestCase):
         self.assertEqual(model.variables["grad b"].shape_for_testing, (11, 1))
         self.assertEqual(model.variables["div grad b"].shape_for_testing, (10, 1))
 
+        # check meshes
+        self.assertIsInstance(model.variables["a"].mesh[0], pybamm.SubMesh)
+        np.testing.assert_array_equal(
+            model.variables["a"].mesh[0].nodes, mesh["test"][0].nodes
+        )
+
     def test_discretise_slicing(self):
         # create discretisation
         mesh = get_mesh_for_testing()
@@ -827,7 +833,7 @@ class TestDiscretise(unittest.TestCase):
     def test_concatenation_of_scalars(self):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         a = pybamm.PrimaryBroadcast(5, ["negative electrode"])
-        b = pybamm.PrimaryBroadcast(4, ["positive electrode"])
+        b = pybamm.PrimaryBroadcast(4, ["separator"])
 
         # create discretisation
         disc = get_discretisation_for_testing()
@@ -841,7 +847,7 @@ class TestDiscretise(unittest.TestCase):
         expected_vector = np.concatenate(
             [
                 5 * np.ones_like(mesh["negative electrode"][0].nodes),
-                4 * np.ones_like(mesh["positive electrode"][0].nodes),
+                4 * np.ones_like(mesh["separator"][0].nodes),
             ]
         )[:, np.newaxis]
         np.testing.assert_allclose(eqn_disc.evaluate(), expected_vector)

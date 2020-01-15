@@ -244,7 +244,7 @@ class TestEvaluate(unittest.TestCase):
         disc = get_1p1d_discretisation_for_testing()
 
         a_dom = ["negative electrode"]
-        b_dom = ["positive electrode"]
+        b_dom = ["separator"]
         a = pybamm.Variable("a", domain=a_dom)
         b = pybamm.Variable("b", domain=b_dom)
         conc = pybamm.Concatenation(a, b)

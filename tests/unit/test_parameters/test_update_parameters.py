@@ -105,8 +105,6 @@ class TestUpdateParameters(unittest.TestCase):
             param=parameter_values, t_eval=t_eval, skip_output_tests=True
         )
 
-        T1, Y1 = modeltest1.solution.t, modeltest1.solution.y
-
         # trying to update the geometry fails
         parameter_values_update = pybamm.ParameterValues(
             chemistry=pybamm.parameter_sets.Sulzer2019
@@ -129,22 +127,13 @@ class TestUpdateParameters(unittest.TestCase):
         modeltest2.test_all(
             param=parameter_values_update, t_eval=t_eval, skip_output_tests=True
         )
-        T2, Y2 = modeltest2.solution.t, modeltest2.solution.y
         # results should be different
-        c1 = pybamm.ProcessedVariable(
-            modeltest1.model.variables["Electrolyte concentration"],
-            T1,
-            Y1,
-            mesh=modeltest1.disc.mesh,
-        ).entries
-        c2 = pybamm.ProcessedVariable(
-            modeltest2.model.variables["Electrolyte concentration"],
-            T2,
-            Y2,
-            mesh=modeltest2.disc.mesh,
-        ).entries
+        c1 = modeltest1.solution["Electrolyte concentration"].entries
+        c2 = modeltest2.solution["Electrolyte concentration"].entries
         self.assertNotEqual(np.linalg.norm(c1 - c2), 0)
-        self.assertNotEqual(np.linalg.norm(Y1 - Y2), 0)
+        self.assertNotEqual(
+            np.linalg.norm(modeltest1.solution.y - modeltest2.solution.y), 0
+        )
 
 
 if __name__ == "__main__":

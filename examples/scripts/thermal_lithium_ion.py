@@ -51,5 +51,5 @@ output_variables = [
     "Cell temperature [K]",
 ]
 labels = ["Full thermal model", "Lumped thermal model"]
-plot = pybamm.QuickPlot(models, mesh, solutions, output_variables, labels)
+plot = pybamm.QuickPlot(solutions, output_variables, labels)
 plot.dynamic_plot()
