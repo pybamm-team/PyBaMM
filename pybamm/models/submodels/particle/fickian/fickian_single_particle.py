@@ -74,3 +74,19 @@ class SingleParticle(BaseModel):
         ]
 
         return c_s_xav, N_s_xav, j_av
+
+    def set_initial_conditions(self, variables):
+        """
+        For single particle models, initial conditions can't depend on x so we
+        arbitrarily evaluate them at x=0 in the negative electrode and x=1 in the
+        positive electrode (they will usually be constant)
+        """
+        c, _, _ = self._unpack(variables)
+
+        if self.domain == "Negative":
+            c_init = self.param.c_n_init(0)
+
+        elif self.domain == "Positive":
+            c_init = self.param.c_p_init(1)
+
+        self.initial_conditions = {c: c_init}

@@ -2,7 +2,7 @@
 # Base class for particles each with uniform concentration (i.e. infinitely fast
 # diffusion in r)
 #
-
+import pybamm
 from ..base_particle import BaseParticle
 
 
