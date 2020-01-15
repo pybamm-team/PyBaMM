@@ -15,7 +15,7 @@ if scikits_odes_spec is not None:
         scikits_odes_spec.loader.exec_module(scikits_odes)
 
 
-class ScikitsDaeSolver(pybamm.DaeSolver):
+class ScikitsDaeSolver(pybamm.BaseSolver):
     """Solve a discretised model, using scikits.odes.
 
     Parameters

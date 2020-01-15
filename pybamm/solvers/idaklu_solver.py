@@ -17,7 +17,7 @@ def have_idaklu():
     return idaklu_spec is not None
 
 
-class IDAKLUSolver(pybamm.DaeSolver):
+class IDAKLUSolver(pybamm.BaseSolver):
     """Solve a discretised model, using sundials with the KLU sparse linear solver.
 
      Parameters

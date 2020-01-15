@@ -6,10 +6,10 @@ import pybamm
 import numpy as np
 
 
-class CasadiSolver(pybamm.DaeSolver):
+class CasadiSolver(pybamm.BaseSolver):
     """Solve a discretised model, using CasADi.
 
-    **Extends**: :class:`pybamm.DaeSolver`
+    **Extends**: :class:`pybamm.BaseSolver`
 
     Parameters
     ----------
@@ -180,7 +180,7 @@ class CasadiSolver(pybamm.DaeSolver):
 
     def compute_solution(self, model, t_eval, inputs=None):
         """Calculate the solution of the model at specified times. In this class, we
-        overwrite the behaviour of :class:`pybamm.DaeSolver`, since CasADi requires
+        overwrite the behaviour of :class:`pybamm.BaseSolver`, since CasADi requires
         slightly different syntax.
 
         Parameters
