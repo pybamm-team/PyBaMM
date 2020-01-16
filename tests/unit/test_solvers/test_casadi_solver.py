@@ -110,7 +110,7 @@ class TestCasadiSolver(unittest.TestCase):
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
         # Solve
-        solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8, method="idas")
+        solver = pybamm.CasadiSolver(mode="fast", rtol=1e-8, atol=1e-8, method="idas")
         t_eval = np.linspace(0, 1, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
