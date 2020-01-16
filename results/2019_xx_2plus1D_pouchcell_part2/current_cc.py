@@ -13,7 +13,7 @@ path = "/home/scott/Projects/PyBaMM/results/2019_xx_2plus1D_pouchcell_part2/"
 pybamm.set_logging_level("INFO")
 
 
-load = True
+load = False
 thermal = True
 c_rate = 1
 t_eval = np.linspace(0, 0.1, 100)
@@ -109,7 +109,7 @@ else:
     current_collector_current = pickle.load(open(path + "cc_current.p", "rb"))
 
 
-fig, axes = plt.subplots(1, len(current_collector_current))
+fig, axes = plt.subplots(1, len(current_collector_current) - 1)
 
 # for errors
 truth = current_collector_current["2+1D DFN"]
@@ -128,27 +128,36 @@ for count, (model_name, solution) in enumerate(current_collector_current.items()
 
         title = model_name
 
+    elif model_name == "SPMeCC":
+        pass
+
+    elif model_name == "DFNCC":
+        error = np.abs(i_cc - i_cc_truth)
+        title = r"$y$-$z$ averaged vs. 2+1D DFN"
+        im = axes[count].pcolormesh(y_dim, z_dim, error, shading="gouraud")
+
     else:
         error = np.abs(i_cc - i_cc_truth)
         title = model_name + " vs. 2+1D DFN"
         im = axes[count].pcolormesh(y_dim, z_dim, error, shading="gouraud")
 
-    axes[count].set_xlabel(r"$y$")
-    axes[count].set_ylabel(r"$z$")
-    axes[count].set_title(title)
+    if count < len(current_collector_current) - 1:
+        axes[count].set_xlabel(r"$y$")
+        axes[count].set_ylabel(r"$z$")
+        axes[count].set_title(title)
 
-    sfmt = ticker.ScalarFormatter(useMathText=False)
-    sfmt.set_powerlimits((0, 0))
+        sfmt = ticker.ScalarFormatter(useMathText=False)
+        sfmt.set_powerlimits((0, 0))
 
-    plt.colorbar(
-        im,
-        ax=axes[count],
-        # format=ticker.FuncFormatter(fmt),
-        orientation="horizontal",
-        # pad=0.2,
-        format=sfmt,
-    )
-    # fig.colorbar(im, ax=axes[count])
+        plt.colorbar(
+            im,
+            ax=axes[count],
+            # format=ticker.FuncFormatter(fmt),
+            orientation="horizontal",
+            # pad=0.2,
+            format=sfmt,
+        )
+        # fig.colorbar(im, ax=axes[count])
 
 plt.subplots_adjust(
     left=0.05, bottom=0.02, right=0.96, top=0.9, wspace=0.35, hspace=0.4
