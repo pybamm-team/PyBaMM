@@ -232,6 +232,8 @@ class OdeSolver(pybamm.BaseSolver):
 
         # Add the solver attributes
         self.y0 = y0
+        self.y_diff = y_casadi
+        self.y_casadi_w_ext = y_casadi_w_ext
         self.dydt = DydtCasadi(model, concatenated_rhs_fn)
         self.events = model.events
         self.event_funs = [get_event_class(event) for event in casadi_events.values()]

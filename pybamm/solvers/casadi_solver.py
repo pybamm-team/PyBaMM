@@ -242,14 +242,23 @@ class CasadiSolver(pybamm.DaeSolver):
         # set up and solve
         t = casadi.MX.sym("t")
         u = casadi.vertcat(*[x for x in inputs.values()])
-        y_diff = casadi.MX.sym("y_diff", rhs(0, y0, u).shape[0])
+        y_diff = self.y_diff
         problem = {"t": t, "x": y_diff}
         if algebraic is None:
-            problem.update({"ode": rhs(t, y_diff, u)})
+            y_casadi_w_ext = casadi.vertcat(y_diff, self.y_ext[y_diff.shape[0] :])
+            problem.update({"ode": rhs(t, y_casadi_w_ext, u)})
         else:
-            y_alg = casadi.MX.sym("y_alg", algebraic(0, y0, u).shape[0])
-            y = casadi.vertcat(y_diff, y_alg)
-            problem.update({"z": y_alg, "ode": rhs(t, y, u), "alg": algebraic(t, y, u)})
+            y_alg = self.y_alg
+            y_casadi_w_ext = casadi.vertcat(
+                y_diff, y_alg, self.y_ext[y_diff.shape[0] + y_alg.shape[0] :]
+            )
+            problem.update(
+                {
+                    "z": y_alg,
+                    "ode": rhs(t, y_casadi_w_ext, u),
+                    "alg": algebraic(t, y_casadi_w_ext, u),
+                }
+            )
         integrator = casadi.integrator("F", self.method, problem, options)
         try:
             # Try solving
