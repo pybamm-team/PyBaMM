@@ -340,8 +340,6 @@ class DaeSolver(pybamm.BaseSolver):
         self.events = model.events
         self.event_funs = [get_event_class(event) for event in casadi_events.values()]
         self.jacobian = jacobian
-        self.y_diff = y_diff
-        self.y_alg = y_alg
 
         # Save CasADi functions for the CasADi solver
         # Note: when we pass to casadi the ode part of the problem must be in explicit

@@ -266,7 +266,7 @@ class CasadiSolver(pybamm.DaeSolver):
             y_casadi_w_ext = casadi.vertcat(y_diff, y_ext[len(y0) :])
             problem.update({"ode": rhs(t, y_casadi_w_ext, u)})
         else:
-            y_alg = self.y_alg
+            y_alg = casadi.MX.sym("y_alg", algebraic(0, y0_w_ext, u).shape[0])
             y_casadi_w_ext = casadi.vertcat(y_diff, y_alg, y_ext[len(y0) :])
             problem.update(
                 {
