@@ -110,72 +110,25 @@ class BaseSolver(object):
 
         """
         inputs = inputs or {}
-
-        # create simplified rhs, algebraic and event expressions
-        concatenated_rhs = model.concatenated_rhs
-        concatenated_algebraic = model.concatenated_algebraic
-        events = model.events
         y0 = model.concatenated_initial_conditions
         y0 = add_external(y0, self.y_pad, self.y_ext)
 
         if model.convert_to_format != "casadi":
-            if model.use_simplify:
-                # set up simplification object, for re-use of dict
-                simp = pybamm.Simplification()
-                pybamm.logger.info("Simplifying RHS")
-                concatenated_rhs = simp.simplify(concatenated_rhs)
-                pybamm.logger.info("Simplifying algebraic")
-                concatenated_algebraic = simp.simplify(concatenated_algebraic)
-                pybamm.logger.info("Simplifying events")
-                events = {name: simp.simplify(event) for name, event in events.items()}
-
-            if model.use_jacobian:
-                # Create Jacobian from concatenated rhs and algebraic
-                y = pybamm.StateVector(
-                    slice(0, np.size(model.concatenated_initial_conditions))
-                )
-                # set up Jacobian object, for re-use of dict
-                jacobian = pybamm.Jacobian()
-                pybamm.logger.info("Calculating jacobian")
-                jac_rhs = jacobian.jac(concatenated_rhs, y)
-                jac_algebraic = jacobian.jac(concatenated_algebraic, y)
-                jac = pybamm.SparseStack(jac_rhs, jac_algebraic)
-                model.jacobian = jac
-                model.jacobian_rhs = jac_rhs
-                model.jacobian_algebraic = jac_algebraic
-
-                if model.use_simplify:
-                    pybamm.logger.info("Simplifying jacobian")
-                    jac_algebraic = simp.simplify(jac_algebraic)
-                    jac = simp.simplify(jac)
-
-                if model.convert_to_format == "python":
-                    pybamm.logger.info("Converting jacobian to python")
-                    jac_algebraic = pybamm.EvaluatorPython(jac_algebraic)
-                    jac = pybamm.EvaluatorPython(jac)
-
-            if model.convert_to_format == "python":
-                pybamm.logger.info("Converting RHS to python")
-                concatenated_rhs = pybamm.EvaluatorPython(concatenated_rhs)
-                pybamm.logger.info("Converting algebraic to python")
-                concatenated_algebraic = pybamm.EvaluatorPython(concatenated_algebraic)
-                pybamm.logger.info("Converting events to python")
-                events = {
-                    name: pybamm.EvaluatorPython(event) for name, event in events.items()
-                }
-            
-            concatenated_rhs_fn = concatenated_rhs.evaluate
-            concatenated_algebraic_fn = concatenated_algebraic.evaluate
-
-        elif model.convert_to_format == "casadi":
+            simp = pybamm.Simplification()
+            # Create Jacobian from concatenated rhs and algebraic
+            y = pybamm.StateVector(
+                slice(0, np.size(model.concatenated_initial_conditions))
+            )
+            # set up Jacobian object, for re-use of dict
+            jacobian = pybamm.Jacobian()
+        else:
             # Convert model attributes to casadi
             t_casadi = casadi.MX.sym("t")
-
             y_diff = casadi.MX.sym(
-                "y_diff", len(concatenated_rhs.evaluate(0, y0, inputs))
+                "y_diff", len(model.concatenated_rhs.evaluate(0, y0, inputs))
             )
             y_alg = casadi.MX.sym(
-                "y_alg", len(concatenated_algebraic.evaluate(0, y0, inputs))
+                "y_alg", len(model.concatenated_algebraic.evaluate(0, y0, inputs))
             )
             y_casadi = casadi.vertcat(y_diff, y_alg)
             if self.y_pad is not None:
@@ -184,75 +137,64 @@ class BaseSolver(object):
             else:
                 y_casadi_w_ext = y_casadi
             u_casadi = {name: casadi.MX.sym(name) for name in inputs.keys()}
-
-            pybamm.logger.info("Converting RHS to CasADi")
-            concatenated_rhs = model.concatenated_rhs.to_casadi(
-                t_casadi, y_casadi_w_ext, u_casadi
-            )
-            pybamm.logger.info("Converting algebraic to CasADi")
-            concatenated_algebraic = model.concatenated_algebraic.to_casadi(
-                t_casadi, y_casadi_w_ext, u_casadi
-            )
-            all_states = casadi.vertcat(concatenated_rhs, concatenated_algebraic)
-            pybamm.logger.info("Converting events to CasADi")
-            events_fn = {
-                name: event.to_casadi(t_casadi, y_casadi_w_ext, u_casadi)
-                for name, event in model.events.items()
-            }
-
-            # Create functions to evaluate rhs and algebraic
             u_casadi_stacked = casadi.vertcat(*[u for u in u_casadi.values()])
-            concatenated_rhs_fn = casadi.Function(
-                "rhs", [t_casadi, y_casadi_w_ext, u_casadi_stacked], [concatenated_rhs]
-            )
-            concatenated_algebraic_fn = casadi.Function(
-                "algebraic",
-                [t_casadi, y_casadi_w_ext, u_casadi_stacked],
-                [concatenated_algebraic],
-            )
-            all_states_fn = casadi.Function(
-                "all", [t_casadi, y_casadi_w_ext, u_casadi_stacked], [all_states]
-            )
 
-            if model.use_jacobian:
-
-                pybamm.logger.info("Calculating jacobian")
-                casadi_jac = casadi.jacobian(all_states, y_casadi)
-                casadi_jac_fn = casadi.Function(
-                    "jacobian", [t_casadi, y_casadi_w_ext, u_casadi_stacked], [casadi_jac]
+        def process(func, name):
+            if model.convert_to_format != "casadi":
+                # Process with pybamm functions
+                if model.use_simplify:
+                    pybamm.logger.info(f"Simplifying {name}")
+                    func = simp.simplify(func)
+                if model.use_jacobian:
+                    pybamm.logger.info(f"Calculating jacobian for {name}")
+                    jac = jacobian.jac(func, y)
+                else:
+                    jac = None
+                if model.use_simplify:
+                    pybamm.logger.info(f"Simplifying jacobian for {name}")
+                    jac = simp.simplify(jac)
+                if model.convert_to_format == "python":
+                    pybamm.logger.info(f"Converting {name} to python")
+                    func = pybamm.EvaluatorPython(func)
+                    pybamm.logger.info(f"Converting jacobian for {name} to python")
+                    jac = pybamm.EvaluatorPython(jac)
+                func_eval = func.evaluate
+                jac_eval = jac.evaluate
+            else:
+                # Process with CasADi
+                pybamm.logger.info(f"Converting {name} to CasADi")
+                func = func.to_casadi(t_casadi, y_casadi_w_ext, u_casadi)
+                pybamm.logger.info(f"Converting jacobian for {name}")
+                jac = casadi.jacobian(func, y)
+                func_eval = casadi.Function(
+                    name, [t_casadi, y_casadi_w_ext, u_casadi_stacked], [func]
                 )
-                casadi_jac_alg = casadi.jacobian(concatenated_algebraic, y_casadi)
-                casadi_jac_alg_fn = casadi.Function(
-                    "jacobian",
-                    [t_casadi, y_casadi_w_ext, u_casadi_stacked],
-                    [casadi_jac_alg],
+                jac_eval = casadi.Function(
+                    name, [t_casadi, y_casadi_w_ext, u_casadi_stacked], [jac]
                 )
+            func_call = SolverCallable(func_eval, name, model)
+            func_call.set_pad_ext(self.y_pad, self.y_ext)
+            func_call.set_inputs(inputs)
+            return func_call, jac_eval
 
-        if model.use_jacobian:
-            jacobian = Jacobian(casadi_jac_fn, form="casadi")
-            jacobian_alg = Jacobian(casadi_jac_alg_fn, form="casadi")
-            jacobian_alg.set_pad_ext(self.y_pad, self.y_ext)
-            jacobian_alg.set_inputs(inputs)
+        # Process rhs, algebraic and event expressions
+        rhs, jac_rhs = process(model.concatenated_rhs, "RHS")
+        algebraic, jac_algebraic = process(model.concatenated_algebraic, "algebraic")
+        jacobian = pybamm.SparseStack(jac_rhs, jac_algebraic)
+        event_funs = {
+            name: process(event, name)[0] for name, event in model.events.items()
+        }
 
-        else:
-            jacobian = None
-            jacobian_alg = None
+        jac_algebraic.set_pad_ext(self.y_pad, self.y_ext)
+        jac_algebraic.set_inputs(inputs)
 
         # Calculate consistent initial conditions for the algebraic equations
-        rhs = Rhs(concatenated_rhs.evaluate)
-        algebraic = Algebraic(concatenated_algebraic.evaluate)
-
-        rhs.set_pad_ext(self.y_pad, self.y_ext)
-        rhs.set_inputs(inputs)
-        algebraic.set_pad_ext(self.y_pad, self.y_ext)
-        algebraic.set_inputs(inputs)
-
         if len(model.algebraic) > 0:
             y0 = self.calculate_consistent_initial_conditions(
                 rhs,
                 algebraic,
                 model.concatenated_initial_conditions[:, 0],
-                jacobian_alg,
+                jac_algebraic,
             )
         else:
             # can use DAE solver to solve ODE model
@@ -266,159 +208,23 @@ class BaseSolver(object):
         self.y0 = y0
         self.rhs = rhs
         self.algebraic = algebraic
-        self.residuals = Residuals(
-            model, concatenated_rhs.evaluate, concatenated_algebraic.evaluate
-        )
-        self.events = events
-        self.event_funs = [get_event_class(event) for event in events.values()]
-        self.jacobian = jacobian
-
-        # Save CasADi functions for the CasADi solver
-        # Note: when we pass to casadi the ode part of the problem must be in explicit
-        # form so we pre-multiply by the inverse of the mass matrix
-        if model.convert_to_format == "casadi" and isinstance(self, pybamm.CasadiSolver):
-            mass_matrix_inv = casadi.MX(model.mass_matrix_inv.entries)
-            explicit_rhs = mass_matrix_inv @ concatenated_rhs
-            self.casadi_rhs = casadi.Function(
-                "rhs", [t_casadi, y_casadi_w_ext, u_casadi_stacked], [explicit_rhs]
-            )
-            self.casadi_algebraic = concatenated_algebraic_fn
-
-        pybamm.logger.info("Finish solver set-up")
-
-    def set_up_casadi(self, model, inputs=None):
-        """Convert model to casadi format and use their inbuilt functionalities.
-
-        Parameters
-        ----------
-        model : :class:`pybamm.BaseModel`
-            The model whose solution to calculate. Must have attributes rhs and
-            initial_conditions
-        inputs : dict, optional
-            Any input parameters to pass to the model when solving
-
-        """
-        inputs = inputs or {}
-
-        # Convert model attributes to casadi
-        t_casadi = casadi.MX.sym("t")
-        y0 = model.concatenated_initial_conditions
-        y0 = add_external(y0, self.y_pad, self.y_ext)
-
-        y_diff = casadi.MX.sym(
-            "y_diff", len(model.concatenated_rhs.evaluate(0, y0, inputs))
-        )
-        y_alg = casadi.MX.sym(
-            "y_alg", len(model.concatenated_algebraic.evaluate(0, y0, inputs))
-        )
-        y_casadi = casadi.vertcat(y_diff, y_alg)
-        if self.y_pad is not None:
-            y_ext = casadi.MX.sym("y_ext", len(self.y_pad))
-            y_casadi_w_ext = casadi.vertcat(y_casadi, y_ext)
-        else:
-            y_casadi_w_ext = y_casadi
-        u_casadi = {name: casadi.MX.sym(name) for name in inputs.keys()}
-
-        pybamm.logger.info("Converting RHS to CasADi")
-        concatenated_rhs = model.concatenated_rhs.to_casadi(
-            t_casadi, y_casadi_w_ext, u_casadi
-        )
-        pybamm.logger.info("Converting algebraic to CasADi")
-        concatenated_algebraic = model.concatenated_algebraic.to_casadi(
-            t_casadi, y_casadi_w_ext, u_casadi
-        )
-        all_states = casadi.vertcat(concatenated_rhs, concatenated_algebraic)
-        pybamm.logger.info("Converting events to CasADi")
-        casadi_events = {
-            name: event.to_casadi(t_casadi, y_casadi_w_ext, u_casadi)
-            for name, event in model.events.items()
-        }
-
-        # Create functions to evaluate rhs and algebraic
-        u_casadi_stacked = casadi.vertcat(*[u for u in u_casadi.values()])
-        concatenated_rhs_fn = casadi.Function(
-            "rhs", [t_casadi, y_casadi_w_ext, u_casadi_stacked], [concatenated_rhs]
-        )
-        concatenated_algebraic_fn = casadi.Function(
-            "algebraic",
-            [t_casadi, y_casadi_w_ext, u_casadi_stacked],
-            [concatenated_algebraic],
-        )
-        all_states_fn = casadi.Function(
-            "all", [t_casadi, y_casadi_w_ext, u_casadi_stacked], [all_states]
-        )
-
-        if model.use_jacobian:
-
-            pybamm.logger.info("Calculating jacobian")
-            casadi_jac = casadi.jacobian(all_states, y_casadi)
-            casadi_jac_fn = casadi.Function(
-                "jacobian", [t_casadi, y_casadi_w_ext, u_casadi_stacked], [casadi_jac]
-            )
-            casadi_jac_alg = casadi.jacobian(concatenated_algebraic, y_casadi)
-            casadi_jac_alg_fn = casadi.Function(
-                "jacobian",
-                [t_casadi, y_casadi_w_ext, u_casadi_stacked],
-                [casadi_jac_alg],
-            )
-
-            jacobian = Jacobian(casadi_jac_fn, form="casadi")
-            jacobian_alg = Jacobian(casadi_jac_alg_fn, form="casadi")
-            jacobian_alg.set_pad_ext(self.y_pad, self.y_ext)
-            jacobian_alg.set_inputs(inputs)
-
-        else:
-            jacobian = None
-            jacobian_alg = None
-
-        rhs = Rhs(concatenated_rhs_fn, form="casadi")
-        algebraic = Algebraic(concatenated_algebraic_fn, form="casadi")
-
-        rhs.set_pad_ext(self.y_pad, self.y_ext)
-        rhs.set_inputs(inputs)
-        algebraic.set_pad_ext(self.y_pad, self.y_ext)
-        algebraic.set_inputs(inputs)
-
-        if len(model.algebraic) > 0:
-
-            y0 = self.calculate_consistent_initial_conditions(
-                rhs,
-                algebraic,
-                model.concatenated_initial_conditions[:, 0],
-                jacobian_alg,
-            )
-        else:
-            # can use DAE solver to solve ODE model
-            y0 = model.concatenated_initial_conditions[:, 0]
-
-        # Create event-dependent function to evaluate events
-        def get_event_class(event):
-            casadi_event_fn = casadi.Function(
-                "event", [t_casadi, y_casadi_w_ext, u_casadi_stacked], [event]
-            )
-            return EvalEvent(casadi_event_fn, form="casadi")
-
-        # Add the solver attributes
-        # Note: these are the (possibly) converted to python version rhs, algebraic
-        # etc. The expression tree versions of these are attributes of the model
-        self.y0 = y0
-        self.rhs = rhs
-        self.algebraic = algebraic
-        self.residuals = Residuals(model, all_states_fn, form="casadi")
+        self.residuals = Residuals(model, rhs, algebraic)
         self.events = model.events
-        self.event_funs = [get_event_class(event) for event in casadi_events.values()]
+        self.event_funs = event_funs
         self.jacobian = jacobian
 
         # Save CasADi functions for the CasADi solver
         # Note: when we pass to casadi the ode part of the problem must be in explicit
         # form so we pre-multiply by the inverse of the mass matrix
-        if isinstance(self, pybamm.CasadiSolver):
+        if model.convert_to_format == "casadi" and isinstance(
+            self, pybamm.CasadiSolver
+        ):
             mass_matrix_inv = casadi.MX(model.mass_matrix_inv.entries)
-            explicit_rhs = mass_matrix_inv @ concatenated_rhs
+            explicit_rhs = mass_matrix_inv @ rhs
             self.casadi_rhs = casadi.Function(
                 "rhs", [t_casadi, y_casadi_w_ext, u_casadi_stacked], [explicit_rhs]
             )
-            self.casadi_algebraic = concatenated_algebraic_fn
+            self.casadi_algebraic = algebraic
 
         pybamm.logger.info("Finish solver set-up")
 
@@ -540,7 +346,7 @@ class BaseSolver(object):
                 )
             )
 
-    def solve(self, model, t_eval, inputs=None):
+    def solve(self, model, t_eval, external_variables=None, inputs=None):
         """
         Execute the solver setup and calculate the solution of the model at
         specified times.
@@ -552,6 +358,9 @@ class BaseSolver(object):
             initial_conditions
         t_eval : numeric type
             The times at which to compute the solution
+        external_variables : dict
+            A dictionary of external variables and their corresponding
+            values at the current time
         inputs : dict, optional
             Any input parameters to pass to the model when solving
 
@@ -571,6 +380,8 @@ class BaseSolver(object):
         timer = pybamm.Timer()
         start_time = timer.time()
         inputs = inputs or {}
+        self.y_pad = np.zeros((model.y_length - model.external_start, 1))
+        self.set_external_variables(model, external_variables)
         if model.convert_to_format == "casadi" or isinstance(self, pybamm.CasadiSolver):
             self.set_up_casadi(model, inputs)
         else:
@@ -782,22 +593,27 @@ def add_external(y, y_pad, y_ext):
 class SolverCallable:
     "A class that will be called by the solver when integrating"
 
-    def __init__(self, function, form="python"):
+    def __init__(self, function, name, model):
         self.function = function
-        self.form = form
+        if isinstance(function, casadi.Function):
+            self.form = "casadi"
+            self.inputs_casadi = casadi.DM()
+        else:
+            self.form = "python"
+            self.inputs = {}
+        self.name = name
+        self.model = model
 
         self.y_pad = None
         self.y_ext = None
-        self.inputs = {}
-        self.inputs_casadi = casadi.DM()
 
-    def set_pad_ext(self, y_pad, y_ext):
+    def set_pad_ext_inputs(self, y_pad, y_ext, inputs):
         self.y_pad = y_pad
         self.y_ext = y_ext
-
-    def set_inputs(self, inputs):
-        self.inputs = inputs
-        self.inputs_casadi = casadi.vertcat(*[x for x in inputs.values()])
+        if self.form == "python":
+            self.inputs = inputs
+        elif self.form == "casadi":
+            self.inputs = casadi.vertcat(*[x for x in inputs.values()])
 
     def __call__(self, t, y):
         y = y[:, np.newaxis]
@@ -805,11 +621,18 @@ class SolverCallable:
         return self.function(t, y)
 
     def function(self, t, y):
-        if self.form == "python":
-            return self.function(t, y, self.inputs, known_evals={})[0][:, 0]
-        elif self.form == "casadi":
-            return self.function(t, y, self.inputs_casadi).full()[:, 0]
-
+        if self.name in ["RHS", "algebraic"]:
+            if self.form == "casadi":
+                return self.function(t, y, self.inputs).full()[:, 0]
+            else:
+                return self.function(t, y, self.inputs, known_evals={})[0][:, 0]
+        elif self.name == "jacobian":
+            if self.form == "casadi":
+                return self.function(t, y, self.inputs)
+            else:
+                return self.function(t, y, self.inputs, known_evals={})[0]
+        else:
+            return self.function(t, y, self.inputs)
 
 class Residuals(SolverCallable):
     "Returns information about residuals at time t and state y"
@@ -855,24 +678,3 @@ class ResidualsCasadi(Residuals):
         y = add_external(y, self.y_pad, self.y_ext)
         states_eval = self.all_states_fn(t, y, self.inputs_casadi).full()[:, 0]
         return states_eval - self.mass_matrix @ ydot
-
-
-class EvalEvent(SolverCallable):
-    "Returns information about events at time t and state y"
-
-    def function(self, t, y):
-        if self.form == "python":
-            return self.event_fn(t, y, self.inputs)
-        elif self.form == "casadi":
-            return self.event_fn(t, y, self.inputs_casadi)
-
-
-class Jacobian(SolverCallable):
-    "Returns information about the jacobian at time t and state y"
-
-    def function(self, t, y):
-        if self.form == "python":
-            return self.function(t, y, self.inputs, known_evals={})[0]
-        elif self.form == "casadi":
-            return self.function(t, y, self.inputs_casadi)
-
