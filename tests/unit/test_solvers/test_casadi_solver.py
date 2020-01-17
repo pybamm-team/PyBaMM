@@ -110,7 +110,7 @@ class TestCasadiSolver(unittest.TestCase):
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
         # Solve
-        solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8, method="idas")
+        solver = pybamm.CasadiSolver(mode="fast", rtol=1e-8, atol=1e-8, method="idas")
         t_eval = np.linspace(0, 1, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
@@ -213,6 +213,30 @@ class TestCasadiSolver(unittest.TestCase):
         self.assertLess(len(solution.t), len(t_eval))
         np.testing.assert_array_equal(solution.t, t_eval[: len(solution.t)])
         np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t), rtol=1e-06)
+
+    def test_model_solver_with_external(self):
+        # Create model
+        model = pybamm.BaseModel()
+        domain = ["negative electrode", "separator", "positive electrode"]
+        var1 = pybamm.Variable("var1", domain=domain)
+        var2 = pybamm.Variable("var2", domain=domain)
+        model.rhs = {var1: -var2}
+        model.initial_conditions = {var1: 1}
+        model.external_variables = [var2]
+        model.variables = {"var1": var1, "var2": var2}
+        # No need to set parameters; can use base discretisation (no spatial
+        # operators)
+
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
+        # Solve
+        solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
+        t_eval = np.linspace(0, 10, 100)
+        solution = solver.solve(model, t_eval, external_variables={"var2": 0.5})
+        np.testing.assert_allclose(solution.y[0], 1 - 0.5 * solution.t, rtol=1e-06)
 
     def test_model_solver_with_non_identity_mass(self):
         model = pybamm.BaseModel()

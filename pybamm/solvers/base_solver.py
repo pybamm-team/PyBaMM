@@ -49,7 +49,7 @@ class BaseSolver(object):
     def atol(self, value):
         self._atol = value
 
-    def solve(self, model, t_eval, inputs=None):
+    def solve(self, model, t_eval, external_variables=None, inputs=None):
         """
         Execute the solver setup and calculate the solution of the model at
         specified times.
@@ -61,6 +61,9 @@ class BaseSolver(object):
             initial_conditions
         t_eval : numeric type
             The times at which to compute the solution
+        external_variables : dict
+            A dictionary of external variables and their corresponding
+            values at the current time
         inputs : dict, optional
             Any input parameters to pass to the model when solving
 
@@ -80,6 +83,8 @@ class BaseSolver(object):
         timer = pybamm.Timer()
         start_time = timer.time()
         inputs = inputs or {}
+        self.y_pad = np.zeros((model.y_length - model.external_start, 1))
+        self.set_external_variables(model, external_variables)
         if model.convert_to_format == "casadi" or isinstance(self, pybamm.CasadiSolver):
             self.set_up_casadi(model, inputs)
         else:
