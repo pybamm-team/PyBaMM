@@ -7,7 +7,7 @@ import scipy.integrate as it
 import numpy as np
 
 
-class ScipySolver(pybamm.OdeSolver):
+class ScipySolver(pybamm.BaseSolver):
     """Solve a discretised model, using scipy.integrate.solve_ivp.
 
     Parameters
@@ -25,7 +25,14 @@ class ScipySolver(pybamm.OdeSolver):
         self.name = "Scipy solver ({})".format(method)
 
     def integrate(
-        self, derivs, y0, t_eval, events=None, mass_matrix=None, jacobian=None
+        self,
+        derivs,
+        y0,
+        t_eval,
+        events=None,
+        mass_matrix=None,
+        jacobian=None,
+        model=None,
     ):
         """
         Solve a model defined by dydt with initial conditions y0.
@@ -47,6 +54,8 @@ class ScipySolver(pybamm.OdeSolver):
         jacobian : method, optional
             A function that takes in t and y and returns the Jacobian. If
             None, the solver will approximate the Jacobian.
+        model : :class:`pybamm.BaseModel`
+            The model whose solution to calculate.
 
         Returns
         -------

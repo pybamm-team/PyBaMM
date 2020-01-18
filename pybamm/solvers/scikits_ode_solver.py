@@ -19,7 +19,7 @@ def have_scikits_odes():
     return scikits_odes_spec is not None
 
 
-class ScikitsOdeSolver(pybamm.OdeSolver):
+class ScikitsOdeSolver(pybamm.BaseSolver):
     """Solve a discretised model, using scikits.odes.
 
     Parameters

@@ -81,8 +81,6 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
             A function that takes in t and y and returns the Jacobian. If
             None, the solver will approximate the Jacobian.
             (see `SUNDIALS docs. <https://computation.llnl.gov/projects/sundials>`).
-        model : :class:`pybamm.BaseModel`
-            The model whose solution to calculate.
         """
 
         def eqsres(t, y, ydot, return_residuals):
