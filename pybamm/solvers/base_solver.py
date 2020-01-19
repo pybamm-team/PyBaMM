@@ -197,9 +197,11 @@ class BaseSolver(object):
             return func_call, jac_call
 
         # Process rhs, algebraic and event expressions
-        rhs, jac_rhs = process(model.concatenated_rhs, "RHS")
-        algebraic, jac_algebraic = process(model.concatenated_algebraic, "algebraic")
-        event_funs = [
+        rhs_eval, jac_rhs = process(model.concatenated_rhs, "RHS")
+        algebraic_eval, jac_algebraic = process(
+            model.concatenated_algebraic, "algebraic"
+        )
+        events_eval = [
             process(event, "event", use_jacobian=False)[0]
             for event in model.events.values()
         ]
@@ -209,27 +211,25 @@ class BaseSolver(object):
             all_states = pybamm.NumpyConcatenation(
                 model.concatenated_rhs, model.concatenated_algebraic
             )
-            residuals, jacobian = process(all_states, "residuals",)
-            self.integration_function = residuals
-            self.jacobian = jacobian
+            residuals_eval, jacobian_eval = process(all_states, "residuals",)
+            model.residuals_eval = residuals_eval
+            model.jacobian_eval = jacobian_eval
             y0 = self.calculate_consistent_initial_conditions(
-                rhs,
-                algebraic,
+                rhs_eval,
+                algebraic_eval,
                 model.concatenated_initial_conditions[:, 0],
                 jac_algebraic,
             )
         else:
             # can use DAE solver to solve ODE model
             y0 = model.concatenated_initial_conditions[:, 0]
-            self.integration_function = rhs
-            self.jacobian = jac_rhs
+            model.jacobian_eval = jac_rhs
 
         # Add the solver attributes
-        self.y0 = y0
-        self.rhs = rhs
-        self.algebraic = algebraic
-        self.events = model.events
-        self.event_funs = event_funs
+        model.y0 = y0
+        model.rhs_eval = rhs_eval
+        model.algebraic_eval = algebraic_eval
+        model.events_eval = events_eval
 
         # Save CasADi functions for the CasADi solver
         # Note: when we pass to casadi the ode part of the problem must be in explicit
@@ -238,15 +238,16 @@ class BaseSolver(object):
             self, pybamm.CasadiSolver
         ):
             mass_matrix_inv = casadi.MX(model.mass_matrix_inv.entries)
-            explicit_rhs = mass_matrix_inv @ rhs
-            self.casadi_rhs = casadi.Function(
+            explicit_rhs = mass_matrix_inv @ rhs_eval
+            model.casadi_rhs = casadi.Function(
                 "rhs", [t_casadi, y_casadi_w_ext, u_casadi_stacked], [explicit_rhs]
             )
-            self.casadi_algebraic = algebraic
+            model.casadi_algebraic = algebraic_eval
 
+        model.set_up = True
         pybamm.logger.info("Finish solver set-up")
 
-    def set_inputs_and_external(self, inputs):
+    def set_inputs_and_external(self, model, inputs):
         """
         Set values that are controlled externally, such as external variables and input
         parameters
@@ -257,13 +258,14 @@ class BaseSolver(object):
             Any input parameters to pass to the model when solving
 
         """
-        self.rhs.set_pad_ext_inputs(self.y_pad, self.y_ext, inputs)
-        self.algebraic.set_pad_ext_inputs(self.y_pad, self.y_ext, inputs)
-        self.integration_function.set_pad_ext_inputs(self.y_pad, self.y_ext, inputs)
-        for evnt in self.event_funs:
+        model.rhs_eval.set_pad_ext_inputs(self.y_pad, self.y_ext, inputs)
+        model.algebraic_eval.set_pad_ext_inputs(self.y_pad, self.y_ext, inputs)
+        if hasattr(model, "residuals"):
+            model.residuals.set_pad_ext_inputs(self.y_pad, self.y_ext, inputs)
+        for evnt in model.events_eval:
             evnt.set_pad_ext_inputs(self.y_pad, self.y_ext, inputs)
-        if self.jacobian:
-            self.jacobian.set_pad_ext_inputs(self.y_pad, self.y_ext, inputs)
+        if model.jacobian_eval:
+            model.jacobian_eval.set_pad_ext_inputs(self.y_pad, self.y_ext, inputs)
 
     def calculate_consistent_initial_conditions(
         self, rhs, algebraic, y0_guess, jac=None
@@ -359,47 +361,6 @@ class BaseSolver(object):
                 )
             )
 
-    def compute_solution(self, model, t_eval, inputs=None):
-        """Calculate the solution of the model at specified times.
-
-        Parameters
-        ----------
-        model : :class:`pybamm.BaseModel`
-            The model whose solution to calculate. Must have attributes rhs and
-            initial_conditions
-        t_eval : numeric type
-            The times at which to compute the solution
-        inputs : dict, optional
-            Any input parameters to pass to the model when solving
-        """
-        timer = pybamm.Timer()
-
-        # Set inputs and external
-        self.set_inputs_and_external(inputs)
-
-        solve_start_time = timer.time()
-        pybamm.logger.info("Calling solver")
-        solution = self.integrate(
-            self.integration_function,
-            self.y0,
-            t_eval,
-            events=self.event_funs,
-            mass_matrix=model.mass_matrix.entries,
-            jacobian=self.jacobian,
-            model=model,
-        )
-
-        solve_time = timer.time() - solve_start_time
-
-        # Add model and inputs to solution
-        solution.model = model
-        solution.inputs = inputs
-
-        # Identify the event that caused termination
-        termination = self.get_termination_reason(solution, self.events)
-
-        return solution, solve_time, termination
-
     def solve(self, model, t_eval, external_variables=None, inputs=None):
         """
         Execute the solver setup and calculate the solution of the model at
@@ -432,21 +393,30 @@ class BaseSolver(object):
 
         # Set up
         timer = pybamm.Timer()
-        start_time = timer.time()
         inputs = inputs or {}
         self.y_pad = np.zeros((model.y_length - model.external_start, 1))
         self.set_external_variables(model, external_variables)
         self.set_up(model, inputs)
-        set_up_time = timer.time() - start_time
+        set_up_time = timer.time()
 
         # Solve
-        solution, solve_time, termination = self.compute_solution(
-            model, t_eval, inputs=inputs
-        )
+        # Set inputs and external
+        self.set_inputs_and_external(model, inputs)
+
+        timer.reset()
+        pybamm.logger.info("Calling solver")
+        solution = self.integrate(model, t_eval)
 
         # Assign times
-        solution.solve_time = solve_time
         solution.set_up_time = set_up_time
+        solution.solve_time = timer.time()
+
+        # Add model and inputs to solution
+        solution.model = model
+        solution.inputs = inputs
+
+        # Identify the event that caused termination
+        termination = self.get_termination_reason(solution, model.events)
 
         pybamm.logger.info("Finish solving {} ({})".format(model.name, termination))
         pybamm.logger.info(
@@ -458,7 +428,7 @@ class BaseSolver(object):
         )
         return solution
 
-    def step(self, model, dt, npts=2, log=True, external_variables=None, inputs=None):
+    def step(self, model, dt, npts=2, external_variables=None, inputs=None):
         """
         Step the solution of the model forward by a given time increment. The
         first time this method is called it executes the necessary setup by
@@ -495,31 +465,47 @@ class BaseSolver(object):
         timer = pybamm.Timer()
         inputs = inputs or {}
 
-        if not hasattr(self, "y0"):
+        if not hasattr(model, "y0"):
             # create a y_pad vector of the correct size:
             self.y_pad = np.zeros((model.y_length - model.external_start, 1))
 
         self.set_external_variables(model, external_variables)
 
         # Run set up on first step
-        if not hasattr(self, "y0"):
+        if not hasattr(model, "y0"):
             pybamm.logger.info(
                 "Start stepping {} with {}".format(model.name, self.name)
             )
             self.set_up(model, inputs)
-            self.t = 0.0
+            model.t = 0.0
             set_up_time = timer.time()
 
         else:
             set_up_time = 0
 
         # Step
-        t_eval = np.linspace(self.t, self.t + dt, npts)
-        solution, solve_time, termination = self.compute_solution(model, t_eval, inputs)
+        t_eval = np.linspace(model.t, model.t + dt, npts)
+        # Set inputs and external
+        self.set_inputs_and_external(model, inputs)
+
+        pybamm.logger.info("Calling solver")
+        timer.reset()
+        solution = self.integrate(model, t_eval)
+
+        # Assign times
+        solution.set_up_time = set_up_time
+        solution.solve_time = timer.time()
+
+        # Add model and inputs to solution
+        solution.model = model
+        solution.inputs = inputs
+
+        # Identify the event that caused termination
+        termination = self.get_termination_reason(solution, model.events)
 
         # Set self.t and self.y0 to their values at the final step
-        self.t = solution.t[-1]
-        self.y0 = solution.y[:, -1]
+        model.t = solution.t[-1]
+        model.y0 = solution.y[:, -1]
 
         # add the external points onto the solution
         full_y = np.zeros((model.y_length, solution.y.shape[1]))
@@ -528,10 +514,6 @@ class BaseSolver(object):
             sol_y = sol_y[:, np.newaxis]
             full_y[:, i] = add_external(sol_y, self.y_pad, self.y_ext)[:, 0]
         solution.y = full_y
-
-        # Assign times
-        solution.solve_time = solve_time
-        solution.set_up_time = set_up_time
 
         pybamm.logger.debug("Finish stepping {} ({})".format(model.name, termination))
         if set_up_time:

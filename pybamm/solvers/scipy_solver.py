@@ -24,38 +24,16 @@ class ScipySolver(pybamm.BaseSolver):
         super().__init__(method, rtol, atol)
         self.name = "Scipy solver ({})".format(method)
 
-    def integrate(
-        self,
-        derivs,
-        y0,
-        t_eval,
-        events=None,
-        mass_matrix=None,
-        jacobian=None,
-        model=None,
-    ):
+    def integrate(self, model, t_eval):
         """
         Solve a model defined by dydt with initial conditions y0.
 
         Parameters
         ----------
-        derivs : method
-            A function that takes in t (size (1,)), y (size (n,))
-            and returns the time-derivative dydt (size (n,))
-        y0 : :class:`numpy.array`, size (n,)
-            The initial conditions
-        t_eval : :class:`numpy.array`, size (k,)
-            The times at which to compute the solution
-        events : method, optional
-            A function that takes in t and y and returns conditions for the solver to
-            stop
-        mass_matrix : array_like, optional
-            The (sparse) mass matrix for the chosen spatial method.
-        jacobian : method, optional
-            A function that takes in t and y and returns the Jacobian. If
-            None, the solver will approximate the Jacobian.
         model : :class:`pybamm.BaseModel`
             The model whose solution to calculate.
+        t_eval : :class:`numpy.array`, size (k,)
+            The times at which to compute the solution
 
         Returns
         -------
@@ -69,19 +47,19 @@ class ScipySolver(pybamm.BaseSolver):
         # check for user-supplied Jacobian
         implicit_methods = ["Radau", "BDF", "LSODA"]
         if np.any([self.method in implicit_methods]):
-            if jacobian:
-                extra_options.update({"jac": jacobian})
+            if model.jacobian_eval:
+                extra_options.update({"jac": model.jacobian_eval})
 
         # make events terminal so that the solver stops when they are reached
-        if events:
-            for event in events:
+        if model.events_eval:
+            for event in model.events_eval:
                 event.terminal = True
-            extra_options.update({"events": events})
+            extra_options.update({"events": model.events_eval})
 
         sol = it.solve_ivp(
-            derivs,
+            model.rhs_eval,
             (t_eval[0], t_eval[-1]),
-            y0,
+            model.y0,
             t_eval=t_eval,
             method=self.method,
             dense_output=True,
