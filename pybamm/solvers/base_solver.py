@@ -274,7 +274,7 @@ class BaseSolver(object):
         ----------
         model : :class:`pybamm.BaseModel`
             The model for which to calculate initial conditions.
-        
+
         Returns
         -------
         y0_consistent : array-like, same shape as y0_guess
@@ -285,7 +285,7 @@ class BaseSolver(object):
         rhs = model.rhs_eval
         algebraic = model.algebraic_eval
         y0_guess = model.concatenated_initial_conditions.flatten()
-        jac = model.jacobian_eval
+        jac = model.jac_algebraic_eval
 
         # Split y0_guess into differential and algebraic
         len_rhs = rhs(0, y0_guess).shape[0]

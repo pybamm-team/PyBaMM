@@ -54,7 +54,7 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
             The times at which to compute the solution
         inputs : dict, optional
             Any input parameters to pass to the model when solving
-        
+
         """
         derivs = model.rhs_eval
         y0 = model.y0
