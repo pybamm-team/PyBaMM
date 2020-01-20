@@ -109,16 +109,16 @@ class CasadiSolver(pybamm.BaseSolver):
             # Step-and-check
             timer = pybamm.Timer()
             inputs = inputs or {}
-            self.set_up_casadi(model, inputs)
+            self.set_up(model, inputs)
             set_up_time = timer.time()
             init_event_signs = np.sign(
-                np.concatenate([event(0, self.y0) for event in self.event_funs])
+                np.concatenate([event(0, model.y0) for event in model.events_eval])
             )
             solution = None
             pybamm.logger.info(
                 "Start solving {} with {} in 'safe' mode".format(model.name, self.name)
             )
-            self.t = 0.0
+            model.t = 0.0
             for dt in np.diff(t_eval):
                 # Step
                 solved = False
@@ -157,7 +157,7 @@ class CasadiSolver(pybamm.BaseSolver):
                     np.concatenate(
                         [
                             event(0, current_step_sol.y[:, -1])
-                            for event in self.event_funs
+                            for event in model.events_eval
                         ]
                     )
                 )
@@ -177,7 +177,7 @@ class CasadiSolver(pybamm.BaseSolver):
                         solution.append(current_step_sol)
 
             # Calculate more exact termination reason
-            solution.termination = self.get_termination_reason(solution, self.events)
+            solution.termination = self.get_termination_reason(solution, model.events)
             pybamm.logger.info(
                 "Finish solving {} ({})".format(model.name, solution.termination)
             )
@@ -190,51 +190,14 @@ class CasadiSolver(pybamm.BaseSolver):
             )
             return solution
 
-    def compute_solution(self, model, t_eval, inputs=None):
-        """Calculate the solution of the model at specified times. In this class, we
-        overwrite the behaviour of :class:`pybamm.BaseSolver`, since CasADi requires
-        slightly different syntax.
-
-        Parameters
-        ----------
-        model : :class:`pybamm.BaseModel`
-            The model whose solution to calculate. Must have attributes rhs and
-            initial_conditions
-        t_eval : numeric type
-            The times at which to compute the solution
-        inputs : dict, optional
-            Any input parameters to pass to the model when solving
-
-        """
-        timer = pybamm.Timer()
-
-        solve_start_time = timer.time()
-        pybamm.logger.debug("Calling DAE solver")
-        solution = self.integrate_casadi(
-            self.casadi_rhs, self.casadi_algebraic, self.y0, t_eval, inputs
-        )
-        solve_time = timer.time() - solve_start_time
-
-        # Add model and inputs to solution
-        solution.model = model
-        solution.inputs = inputs
-
-        # Events not implemented, termination is always 'final time'
-        termination = "final time"
-
-        return solution, solve_time, termination
-
-    def integrate_casadi(self, rhs, algebraic, y0, t_eval, inputs=None):
+    def integrate(self, model, t_eval, inputs=None):
         """
         Solve a DAE model defined by residuals with initial conditions y0.
 
         Parameters
         ----------
-        residuals : method
-            A function that takes in t, y and ydot and returns the residuals of the
-            equations
-        y0 : numeric type
-            The initial conditions
+        model : :class:`pybamm.BaseModel`
+            The model whose solution to calculate.
         t_eval : numeric type
             The times at which to compute the solution
         inputs : dict, optional
@@ -245,6 +208,10 @@ class CasadiSolver(pybamm.BaseSolver):
             y_ext = np.array([])
         else:
             y_ext = self.y_ext
+
+        y0 = model.y0
+        rhs = model.casadi_rhs
+        algebraic = model.casadi_algebraic
 
         options = {
             "grid": t_eval,

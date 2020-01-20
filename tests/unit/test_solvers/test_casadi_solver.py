@@ -18,11 +18,14 @@ class TestCasadiSolver(unittest.TestCase):
         y = casadi.MX.sym("y")
         u = casadi.MX.sym("u")
         constant_growth = casadi.MX(0.5)
-        rhs = casadi.Function("rhs", [t, y, u], [constant_growth])
 
-        y0 = np.array([0])
+        class ConstantGrowthModel:
+            casadi_rhs = casadi.Function("rhs", [t, y, u], [constant_growth])
+            casadi_algebraic = None
+            y0 = np.array([0])
+
         t_eval = np.linspace(0, 1, 100)
-        solution = solver.integrate_casadi(rhs, None, y0, t_eval)
+        solution = solver.integrate(ConstantGrowthModel(), t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_allclose(0.5 * solution.t, solution.y[0])
 
@@ -30,11 +33,14 @@ class TestCasadiSolver(unittest.TestCase):
         solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8, method="cvodes")
 
         exponential_decay = -0.1 * y
-        rhs = casadi.Function("rhs", [t, y, u], [exponential_decay])
 
-        y0 = np.array([1])
+        class ExponentialDecayModel:
+            casadi_rhs = casadi.Function("rhs", [t, y, u], [exponential_decay])
+            casadi_algebraic = None
+            y0 = np.array([1])
+
         t_eval = np.linspace(0, 1, 100)
-        solution = solver.integrate_casadi(rhs, None, y0, t_eval)
+        solution = solver.integrate(ExponentialDecayModel(), t_eval)
         np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
         self.assertEqual(solution.termination, "final time")
 
@@ -42,11 +48,16 @@ class TestCasadiSolver(unittest.TestCase):
         solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8, method="cvodes")
 
         exponential_decay = -u * y
-        rhs = casadi.Function("rhs", [t, y, u], [exponential_decay])
 
-        y0 = np.array([1])
+        class ExponentialDecayModelWithInputs:
+            casadi_rhs = casadi.Function("rhs", [t, y, u], [exponential_decay])
+            casadi_algebraic = None
+            y0 = np.array([1])
+
         t_eval = np.linspace(0, 1, 100)
-        solution = solver.integrate_casadi(rhs, None, y0, t_eval, inputs={"u": 0.1})
+        solution = solver.integrate(
+            ExponentialDecayModelWithInputs(), t_eval, inputs={"u": 0.1}
+        )
         np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
         self.assertEqual(solution.termination, "final time")
 
@@ -56,13 +67,17 @@ class TestCasadiSolver(unittest.TestCase):
         u = casadi.MX.sym("u")
         sqrt_decay = -np.sqrt(y)
 
-        y0 = np.array([1])
         t_eval = np.linspace(0, 3, 100)
         solver = pybamm.CasadiSolver(regularity_check=False)
-        rhs = casadi.Function("rhs", [t, y, u], [sqrt_decay])
+
+        class SqrtDecayModel:
+            casadi_rhs = casadi.Function("rhs", [t, y, u], [sqrt_decay])
+            casadi_algebraic = None
+            y0 = np.array([1])
+
         # Expect solver to fail when y goes negative
         with self.assertRaises(pybamm.SolverError):
-            solver.integrate_casadi(rhs, None, y0, t_eval)
+            solver.integrate(SqrtDecayModel, t_eval)
 
         # Set up as a model and solve
         # Create model

@@ -24,7 +24,7 @@ class ScipySolver(pybamm.BaseSolver):
         super().__init__(method, rtol, atol)
         self.name = "Scipy solver ({})".format(method)
 
-    def integrate(self, model, t_eval):
+    def integrate(self, model, t_eval, inputs=None):
         """
         Solve a model defined by dydt with initial conditions y0.
 
@@ -34,7 +34,9 @@ class ScipySolver(pybamm.BaseSolver):
             The model whose solution to calculate.
         t_eval : :class:`numpy.array`, size (k,)
             The times at which to compute the solution
-
+        inputs : dict, optional
+            Any input parameters to pass to the model when solving
+        
         Returns
         -------
         object
