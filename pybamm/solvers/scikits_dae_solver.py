@@ -50,38 +50,25 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
         super().__init__(method, rtol, atol, root_method, root_tol, max_steps)
         self.name = "Scikits DAE solver ({})".format(method)
 
-    def integrate(
-        self,
-        residuals,
-        y0,
-        t_eval,
-        events=None,
-        mass_matrix=None,
-        jacobian=None,
-        model=None,
-    ):
+    def integrate(self, model, t_eval, inputs=None):
         """
-        Solve a DAE model defined by residuals with initial conditions y0.
+        Solve a model defined by dydt with initial conditions y0.
 
         Parameters
         ----------
-        residuals : method
-            A function that takes in t, y and ydot and returns the residuals of the
-            equations
-        y0 : numeric type
-            The initial conditions
+        model : :class:`pybamm.BaseModel`
+            The model whose solution to calculate.
         t_eval : numeric type
             The times at which to compute the solution
-        events : method, optional
-            A function that takes in t and y and returns conditions for the solver to
-            stop
-        mass_matrix : array_like, optional
-            The (sparse) mass matrix for the chosen spatial method.
-        jacobian : method, optional
-            A function that takes in t and y and returns the Jacobian. If
-            None, the solver will approximate the Jacobian.
-            (see `SUNDIALS docs. <https://computation.llnl.gov/projects/sundials>`).
+        inputs : dict, optional
+            Any input parameters to pass to the model when solving
+        
         """
+        residuals = model.residuals_eval
+        y0 = model.y0
+        events = model.events_eval
+        jacobian = model.jacobian_eval
+        mass_matrix = model.mass_matrix.entries
 
         def eqsres(t, y, ydot, return_residuals):
             return_residuals[:] = residuals(t, y, ydot)
