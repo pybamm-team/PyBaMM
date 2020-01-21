@@ -42,7 +42,7 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
         self.linsolver = linsolver
         self.name = "Scikits ODE solver ({})".format(method)
 
-    def integrate(self, model, t_eval, inputs=None):
+    def _integrate(self, model, t_eval, inputs=None):
         """
         Solve a model defined by dydt with initial conditions y0.
 

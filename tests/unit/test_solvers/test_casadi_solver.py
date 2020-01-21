@@ -25,7 +25,7 @@ class TestCasadiSolver(unittest.TestCase):
             y0 = np.array([0])
 
         t_eval = np.linspace(0, 1, 100)
-        solution = solver.integrate(ConstantGrowthModel(), t_eval)
+        solution = solver._integrate(ConstantGrowthModel(), t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_allclose(0.5 * solution.t, solution.y[0])
 
@@ -40,7 +40,7 @@ class TestCasadiSolver(unittest.TestCase):
             y0 = np.array([1])
 
         t_eval = np.linspace(0, 1, 100)
-        solution = solver.integrate(ExponentialDecayModel(), t_eval)
+        solution = solver._integrate(ExponentialDecayModel(), t_eval)
         np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
         self.assertEqual(solution.termination, "final time")
 
@@ -55,7 +55,7 @@ class TestCasadiSolver(unittest.TestCase):
             y0 = np.array([1])
 
         t_eval = np.linspace(0, 1, 100)
-        solution = solver.integrate(
+        solution = solver._integrate(
             ExponentialDecayModelWithInputs(), t_eval, inputs={"u": 0.1}
         )
         np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
@@ -77,7 +77,7 @@ class TestCasadiSolver(unittest.TestCase):
 
         # Expect solver to fail when y goes negative
         with self.assertRaises(pybamm.SolverError):
-            solver.integrate(SqrtDecayModel, t_eval)
+            solver._integrate(SqrtDecayModel, t_eval)
 
         # Set up as a model and solve
         # Create model

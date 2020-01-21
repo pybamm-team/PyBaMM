@@ -8,7 +8,7 @@ import numpy as np
 
 
 class ScipySolver(pybamm.BaseSolver):
-    """Solve a discretised model, using scipy.integrate.solve_ivp.
+    """Solve a discretised model, using scipy._integrate.solve_ivp.
 
     Parameters
     ----------
@@ -24,7 +24,7 @@ class ScipySolver(pybamm.BaseSolver):
         super().__init__(method, rtol, atol)
         self.name = "Scipy solver ({})".format(method)
 
-    def integrate(self, model, t_eval, inputs=None):
+    def _integrate(self, model, t_eval, inputs=None):
         """
         Solve a model defined by dydt with initial conditions y0.
 

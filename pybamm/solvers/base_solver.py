@@ -395,7 +395,7 @@ class BaseSolver(object):
 
         timer.reset()
         pybamm.logger.info("Calling solver")
-        solution = self.integrate(model, t_eval, inputs)
+        solution = self._integrate(model, t_eval, inputs)
 
         # Assign times
         solution.set_up_time = set_up_time
@@ -480,7 +480,7 @@ class BaseSolver(object):
 
         pybamm.logger.info("Calling solver")
         timer.reset()
-        solution = self.integrate(model, t_eval, inputs)
+        solution = self._integrate(model, t_eval, inputs)
 
         # Assign times
         solution.set_up_time = set_up_time

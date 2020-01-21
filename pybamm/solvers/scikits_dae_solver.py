@@ -50,7 +50,7 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
         super().__init__(method, rtol, atol, root_method, root_tol, max_steps)
         self.name = "Scikits DAE solver ({})".format(method)
 
-    def integrate(self, model, t_eval, inputs=None):
+    def _integrate(self, model, t_eval, inputs=None):
         """
         Solve a model defined by dydt with initial conditions y0.
 

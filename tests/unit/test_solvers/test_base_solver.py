@@ -42,7 +42,7 @@ class TestBaseSolver(unittest.TestCase):
         # Simple system: a single algebraic equation
         class ScalarModel:
             concatenated_initial_conditions = np.array([[2]])
-            jacobian_eval = None
+            jac_algebraic_eval = None
 
             def rhs_eval(self, t, y):
                 return np.array([])
@@ -59,7 +59,7 @@ class TestBaseSolver(unittest.TestCase):
 
         class VectorModel:
             concatenated_initial_conditions = np.zeros_like(vec)
-            jacobian_eval = None
+            jac_algebraic_eval = None
 
             def rhs_eval(self, t, y):
                 return y[0:1]
@@ -75,7 +75,7 @@ class TestBaseSolver(unittest.TestCase):
         def jac_dense(t, y):
             return 2 * np.hstack([np.zeros((3, 1)), np.diag(y[1:] - vec[1:])])
 
-        model.jacobian_eval = jac_dense
+        model.jac_algebraic_eval = jac_dense
         init_cond = solver.calculate_consistent_initial_conditions(model)
         np.testing.assert_array_almost_equal(init_cond, vec)
 
@@ -85,14 +85,14 @@ class TestBaseSolver(unittest.TestCase):
                 np.hstack([np.zeros((3, 1)), np.diag(y[1:] - vec[1:])])
             )
 
-        model.jacobian_eval = jac_sparse
+        model.jac_algebraic_eval = jac_sparse
         init_cond = solver.calculate_consistent_initial_conditions(model)
         np.testing.assert_array_almost_equal(init_cond, vec)
 
     def test_fail_consistent_initial_conditions(self):
         class Model:
             concatenated_initial_conditions = np.array([2])
-            jacobian_eval = None
+            jac_algebraic_eval = None
 
             def rhs_eval(self, t, y):
                 return np.array([])

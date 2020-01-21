@@ -9,149 +9,6 @@ import warnings
 
 
 class TestScipySolver(unittest.TestCase):
-    def test_integrate(self):
-        # Constant
-        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
-
-        model = pybamm.BaseModel()
-
-        def constant_growth(t, y):
-            return 0.5 * np.ones_like(y)
-
-        model.rhs_eval = constant_growth
-        model.y0 = np.array([0])
-        model.events_eval = []
-        model.jacobian_eval = None
-        t_eval = np.linspace(0, 1, 100)
-        solution = solver.integrate(model, t_eval)
-        np.testing.assert_array_equal(solution.t, t_eval)
-        np.testing.assert_allclose(0.5 * solution.t, solution.y[0])
-
-        # Exponential decay
-        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="BDF")
-
-        def exponential_decay(t, y):
-            return -0.1 * y
-
-        model.rhs_eval = exponential_decay
-        model.y0 = np.array([1])
-        t_eval = np.linspace(0, 1, 100)
-        solution = solver.integrate(model, t_eval)
-        np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
-        self.assertEqual(solution.termination, "final time")
-
-    def test_integrate_failure(self):
-        # Turn off warnings to ignore sqrt error
-        warnings.simplefilter("ignore")
-        model = pybamm.BaseModel()
-
-        def sqrt_decay(t, y):
-            return -np.sqrt(y)
-
-        model.rhs_eval = sqrt_decay
-        model.y0 = np.array([1])
-        model.events_eval = []
-        t_eval = np.linspace(0, 3, 100)
-        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
-        # Expect solver to fail when y goes negative
-        with self.assertRaises(pybamm.SolverError):
-            solver.integrate(model, t_eval)
-
-        # Turn warnings back on
-        warnings.simplefilter("default")
-
-    def test_integrate_with_event(self):
-        # Constant
-        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
-        model = pybamm.BaseModel()
-
-        def constant_growth(t, y):
-            return 0.5 * np.ones_like(y)
-
-        def y_eq_2(t, y):
-            return y - 2
-
-        model.rhs_eval = constant_growth
-        model.y0 = np.array([0])
-        model.events_eval = [y_eq_2]
-        model.jacobian_eval = None
-        t_eval = np.linspace(0, 10, 100)
-        solution = solver.integrate(model, t_eval)
-        self.assertLess(len(solution.t), len(t_eval))
-        np.testing.assert_allclose(0.5 * solution.t, solution.y[0])
-        np.testing.assert_allclose(solution.t_event, 4)
-        np.testing.assert_allclose(solution.y_event, 2)
-        self.assertEqual(solution.termination, "event")
-
-        # Exponential decay
-        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="BDF")
-
-        def exponential_growth(t, y):
-            return y
-
-        def y_eq_5(t, y):
-            return np.max(y - 5)
-
-        def t_eq_6(t, y):
-            return t - 6
-
-        model.rhs_eval = exponential_growth
-        model.y0 = np.array([1, 2])
-        t_eval = np.linspace(0, 7, 100)
-        model.events_eval = [y_eq_5, t_eq_6]
-        solution = solver.integrate(model, t_eval)
-        np.testing.assert_allclose(solution.y[0], np.exp(solution.t), rtol=1e-6)
-        np.testing.assert_allclose(solution.y[1], 2 * np.exp(solution.t), rtol=1e-6)
-        np.testing.assert_array_less(solution.t, 6)
-        np.testing.assert_array_less(solution.y, 5)
-        np.testing.assert_allclose(solution.t_event, np.log(5 / 2), rtol=1e-6)
-        np.testing.assert_allclose(solution.y_event[0], 5 / 2, rtol=1e-6)
-        np.testing.assert_allclose(solution.y_event[1], 5, rtol=1e-6)
-
-    def test_ode_integrate_with_jacobian(self):
-        # Linear
-        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="BDF")
-        model = pybamm.BaseModel()
-
-        def linear_ode(t, y):
-            return np.array([0.5 * np.ones_like(y[0]), 2.0 - y[0]])
-
-        def jacobian(t, y):
-            return np.array([[0.0, 0.0], [-1.0, 0.0]])
-
-        model.rhs_eval = linear_ode
-        model.y0 = np.array([0.0, 0.0])
-        model.events_eval = []
-        model.jacobian_eval = jacobian
-        t_eval = np.linspace(0, 1, 100)
-
-        solution = solver.integrate(model, t_eval)
-        np.testing.assert_array_equal(solution.t, t_eval)
-        np.testing.assert_allclose(0.5 * solution.t, solution.y[0])
-        np.testing.assert_allclose(
-            2.0 * solution.t - 0.25 * solution.t ** 2, solution.y[1], rtol=1e-4
-        )
-
-        # Nonlinear exponential grwoth
-        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="BDF")
-
-        def exponential_growth(t, y):
-            return np.array([y[0], (1.0 - y[0]) * y[1]])
-
-        def jacobian(t, y):
-            return np.array([[1.0, 0.0], [-y[1], 1 - y[0]]])
-
-        model.rhs_eval = exponential_growth
-        model.y0 = np.array([1.0, 1.0])
-        model.jacobian_eval = jacobian
-        t_eval = np.linspace(0, 1, 100)
-        solution = solver.integrate(model, t_eval)
-        np.testing.assert_array_equal(solution.t, t_eval)
-        np.testing.assert_allclose(np.exp(solution.t), solution.y[0], rtol=1e-4)
-        np.testing.assert_allclose(
-            np.exp(1 + solution.t - np.exp(solution.t)), solution.y[1], rtol=1e-4
-        )
-
     def test_model_solver_python(self):
         # Create model
         model = pybamm.BaseModel()
@@ -178,6 +35,30 @@ class TestScipySolver(unittest.TestCase):
         self.assertEqual(
             solution.total_time, solution.solve_time + solution.set_up_time
         )
+        self.assertEqual(solution.termination, "final time")
+
+    def test_model_solver_failure(self):
+        # Turn off warnings to ignore sqrt error
+        warnings.simplefilter("ignore")
+        model = pybamm.BaseModel()
+        model.convert_to_format = "python"
+        var = pybamm.Variable("var")
+        model.rhs = {var: -pybamm.sqrt(var)}
+        model.initial_conditions = {var: 1}
+        # No need to set parameters; can use base discretisation (no spatial operators)
+
+        # create discretisation
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        t_eval = np.linspace(0, 3, 100)
+        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
+        # Expect solver to fail when y goes negative
+        with self.assertRaises(pybamm.SolverError):
+            solver.solve(model, t_eval)
+
+        # Turn warnings back on
+        warnings.simplefilter("default")
 
     def test_model_solver_with_event_python(self):
         # Create model

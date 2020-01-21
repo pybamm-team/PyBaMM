@@ -132,7 +132,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         return atol
 
-    def integrate(self, model, t_eval, inputs=None):
+    def _integrate(self, model, t_eval, inputs=None):
         """
         Solve a DAE model defined by residuals with initial conditions y0.
 

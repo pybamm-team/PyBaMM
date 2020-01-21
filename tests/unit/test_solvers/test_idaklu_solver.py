@@ -61,7 +61,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         model.algebraic_eval = alg
         model.jacobian_eval = jac
 
-        solution = solver.integrate(model, t_eval)
+        solution = solver._integrate(model, t_eval)
 
         # test that final time is time of event
         # y = 0.1 t + y0 so y=0.2 when t=2
