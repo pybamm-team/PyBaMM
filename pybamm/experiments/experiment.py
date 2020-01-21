@@ -31,11 +31,19 @@ class Experiment:
     >>> experiment = pybamm.Experiment(["1C for 0.5 hours", "0.5C for 45 minutes"])
     """
 
-    def __init__(self, operating_conditions):
+    def __init__(self, operating_conditions, parameters, frequency=None):
         self.operating_conditions_string = str(operating_conditions)
         self.operating_conditions, self.events = self.read_operating_conditions(
             operating_conditions
         )
+        if isinstance(parameters, dict):
+            self.parameters = parameters
+        else:
+            raise TypeError("experimental parameters should be a dictionary")
+        # Default frequency is every second
+        if frequency is None:
+            frequency = "1 second"
+        self.frequency = self.convert_time_to_seconds(frequency.split())
 
     def __str__(self):
         return self.operating_conditions_string
