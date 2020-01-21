@@ -143,6 +143,13 @@ class Solution(object):
         # Update solution time
         self.solve_time += solution.solve_time
 
+        # Update known_evals
+        for t, evals in solution.known_evals.items():
+            self.known_evals[t].update(evals)
+        # Recompute existing variables
+        for var in self._variables.keys():
+            self.update(var)
+
     @property
     def total_time(self):
         return self.set_up_time + self.solve_time
