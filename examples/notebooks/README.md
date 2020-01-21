@@ -72,10 +72,9 @@ See [here](https://pybamm.readthedocs.io/en/latest/tutorials/add-spatial-method.
 
 ### Solvers
 
-The following solvers are implemented
-- Scipy ODE solver
-- [Scikits ODE solver](./solvers/scikits-ode-solver.ipynb)
-- [Scikits DAE solver](./solvers/scikits-dae-solver.ipynb)
-- CasADi DAE solver
+The following notebooks show examples for generic ODE and DAE solvers. Several solvers are implemented in PyBaMM and we encourage users to try different ones to find the most appropriate one for their models.
+
+- [ODE solver](./solvers/ode-solver.ipynb)
+- [DAE solver](./solvers/dae-solver.ipynb)
 
 See [here](https://pybamm.readthedocs.io/en/latest/tutorials/add-solver.html) for instructions on adding new solvers.
