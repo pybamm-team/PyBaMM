@@ -30,23 +30,30 @@ class TestScikitsSolvers(unittest.TestCase):
         # Turn warnings back on
         warnings.simplefilter("default")
 
-    def test_model_dae_integrate_failure(self):
+    def test_model_dae_integrate_failure_bad_ics(self):
+        # Force model to fail by providing bad ics
         solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
 
-        model = pybamm.BaseModel()
-        var = pybamm.Variable("var")
-        var2 = pybamm.Variable("var2")
-        model.rhs = {var: 0.5}
-        model.algebraic = {var2: 2 * var - var2}
-        model.initial_conditions = {var: 0, var2: 1}
-        disc = pybamm.Discretisation()
-        disc.process_model(model)
+        # Create custom model so that custom ics
+        class Model:
+            mass_matrix = pybamm.Matrix(np.array([[1.0, 0.0], [0.0, 0.0]]))
+            y0 = np.array([0.0, 1.0])
+            events_eval = []
 
+            def residuals_eval(self, t, y, ydot):
+                return np.array([0.5 * np.ones_like(y[0]) - ydot[0], 2 * y[0] - y[1]])
+
+            def jacobian_eval(self, t, y):
+                return np.array([[0.0, 0.0], [2.0, -1.0]])
+
+        model = Model()
         t_eval = np.linspace(0, 1, 100)
+
         with self.assertRaises(pybamm.SolverError):
-            solver.solve(model, t_eval)
+            solver._integrate(model, t_eval)
 
     def test_dae_integrate_bad_ics(self):
+        # Make sure that dae solver can fix bad ics automatically
         # Constant
         solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
 
@@ -73,19 +80,23 @@ class TestScikitsSolvers(unittest.TestCase):
         # Constant
         solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
 
-        def constant_growth_dae(t, y, ydot):
-            return np.array([0.5 * np.ones_like(y[0]) - 4 * ydot[0], 2.0 * y[0] - y[1]])
+        # Create custom model so that custom mass matrix can be used
+        class Model:
+            mass_matrix = pybamm.Matrix(np.array([[4.0, 0.0], [0.0, 0.0]]))
+            y0 = np.array([0.0, 0.0])
+            events_eval = []
 
-        mass_matrix = np.array([[4.0, 0.0], [0.0, 0.0]])
+            def residuals_eval(self, t, y, ydot):
+                return np.array(
+                    [0.5 * np.ones_like(y[0]) - 4 * ydot[0], 2.0 * y[0] - y[1]]
+                )
 
-        def jacobian(t, y):
-            return np.array([[0.0, 0.0], [2.0, -1.0]])
+            def jacobian_eval(self, t, y):
+                return np.array([[0.0, 0.0], [2.0, -1.0]])
 
-        y0 = np.array([0.0, 0.0])
+        model = Model()
         t_eval = np.linspace(0, 1, 100)
-        solution = solver._integrate(
-            constant_growth_dae, y0, t_eval, mass_matrix=mass_matrix, jacobian=jacobian
-        )
+        solution = solver._integrate(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_allclose(0.125 * solution.t, solution.y[0])
         np.testing.assert_allclose(0.25 * solution.t, solution.y[1])
