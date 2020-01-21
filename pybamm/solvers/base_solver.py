@@ -48,6 +48,7 @@ class BaseSolver(object):
 
         self.y_pad = None
         self.y_ext = None
+        self.model_step_times = {}
 
     @property
     def method(self):
@@ -187,7 +188,10 @@ class BaseSolver(object):
                 func = casadi.Function(
                     name, [t_casadi, y_casadi_w_ext, u_casadi_stacked], [func]
                 )
-            func_call = SolverCallable(func, name, model)
+            if name == "residuals":
+                func_call = Residuals(func, name, model)
+            else:
+                func_call = SolverCallable(func, name, model)
             func_call.set_pad_ext_inputs(self.y_pad, self.y_ext, inputs)
             if jac is not None:
                 jac_call = SolverCallable(jac, name + "_jac", model)
@@ -224,8 +228,9 @@ class BaseSolver(object):
             model.y0 = self.calculate_consistent_initial_conditions(model)
         else:
             # can use DAE solver to solve ODE model
-            model.y0 = model.concatenated_initial_conditions[:, 0]
+            model.residuals_eval = Residuals(rhs, "residuals", model)
             model.jacobian_eval = jac_rhs
+            model.y0 = model.concatenated_initial_conditions[:, 0]
 
         # Save CasADi functions for the CasADi solver
         # Note: when we pass to casadi the ode part of the problem must be in explicit
@@ -242,7 +247,6 @@ class BaseSolver(object):
             )
             model.casadi_algebraic = algebraic
 
-        model.set_up = True
         pybamm.logger.info("Finish solver set-up")
 
     def set_inputs_and_external(self, model, inputs):
@@ -258,8 +262,7 @@ class BaseSolver(object):
         """
         model.rhs_eval.set_pad_ext_inputs(self.y_pad, self.y_ext, inputs)
         model.algebraic_eval.set_pad_ext_inputs(self.y_pad, self.y_ext, inputs)
-        if hasattr(model, "residuals"):
-            model.residuals.set_pad_ext_inputs(self.y_pad, self.y_ext, inputs)
+        model.residuals_eval.set_pad_ext_inputs(self.y_pad, self.y_ext, inputs)
         for evnt in model.events_eval:
             evnt.set_pad_ext_inputs(self.y_pad, self.y_ext, inputs)
         if model.jacobian_eval:
@@ -462,19 +465,19 @@ class BaseSolver(object):
         self.set_external_variables(model, external_variables)
 
         # Run set up on first step
-        if not hasattr(model, "y0"):
+        if model not in self.model_step_times:
             pybamm.logger.info(
                 "Start stepping {} with {}".format(model.name, self.name)
             )
             self.set_up(model, inputs)
-            model.t = 0.0
+            self.model_step_times[model] = 0.0
             set_up_time = timer.time()
-
         else:
             set_up_time = 0
 
         # Step
-        t_eval = np.linspace(model.t, model.t + dt, npts)
+        t = self.model_step_times[model]
+        t_eval = np.linspace(t, t + dt, npts)
         # Set inputs and external
         self.set_inputs_and_external(model, inputs)
 
@@ -494,7 +497,7 @@ class BaseSolver(object):
         termination = self.get_termination_reason(solution, model.events)
 
         # Set self.t and self.y0 to their values at the final step
-        model.t = solution.t[-1]
+        self.model_step_times[model] = solution.t[-1]
         model.y0 = solution.y[:, -1]
 
         # add the external points onto the solution

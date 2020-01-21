@@ -1,7 +1,6 @@
 #
 # Tests for the Casadi Solver class
 #
-import casadi
 import pybamm
 import unittest
 import numpy as np
@@ -10,102 +9,6 @@ from scipy.sparse import eye
 
 
 class TestCasadiSolver(unittest.TestCase):
-    def test_integrate(self):
-        # Constant
-        solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8, method="idas")
-
-        t = casadi.MX.sym("t")
-        y = casadi.MX.sym("y")
-        u = casadi.MX.sym("u")
-        constant_growth = casadi.MX(0.5)
-
-        class ConstantGrowthModel:
-            casadi_rhs = casadi.Function("rhs", [t, y, u], [constant_growth])
-            casadi_algebraic = None
-            y0 = np.array([0])
-
-        t_eval = np.linspace(0, 1, 100)
-        solution = solver._integrate(ConstantGrowthModel(), t_eval)
-        np.testing.assert_array_equal(solution.t, t_eval)
-        np.testing.assert_allclose(0.5 * solution.t, solution.y[0])
-
-        # Exponential decay
-        solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8, method="cvodes")
-
-        exponential_decay = -0.1 * y
-
-        class ExponentialDecayModel:
-            casadi_rhs = casadi.Function("rhs", [t, y, u], [exponential_decay])
-            casadi_algebraic = None
-            y0 = np.array([1])
-
-        t_eval = np.linspace(0, 1, 100)
-        solution = solver._integrate(ExponentialDecayModel(), t_eval)
-        np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
-        self.assertEqual(solution.termination, "final time")
-
-        # Exponential decay with input
-        solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8, method="cvodes")
-
-        exponential_decay = -u * y
-
-        class ExponentialDecayModelWithInputs:
-            casadi_rhs = casadi.Function("rhs", [t, y, u], [exponential_decay])
-            casadi_algebraic = None
-            y0 = np.array([1])
-
-        t_eval = np.linspace(0, 1, 100)
-        solution = solver._integrate(
-            ExponentialDecayModelWithInputs(), t_eval, inputs={"u": 0.1}
-        )
-        np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
-        self.assertEqual(solution.termination, "final time")
-
-    def test_integrate_failure(self):
-        t = casadi.MX.sym("t")
-        y = casadi.MX.sym("y")
-        u = casadi.MX.sym("u")
-        sqrt_decay = -np.sqrt(y)
-
-        t_eval = np.linspace(0, 3, 100)
-        solver = pybamm.CasadiSolver(regularity_check=False)
-
-        class SqrtDecayModel:
-            casadi_rhs = casadi.Function("rhs", [t, y, u], [sqrt_decay])
-            casadi_algebraic = None
-            y0 = np.array([1])
-
-        # Expect solver to fail when y goes negative
-        with self.assertRaises(pybamm.SolverError):
-            solver._integrate(SqrtDecayModel, t_eval)
-
-        # Set up as a model and solve
-        # Create model
-        model = pybamm.BaseModel()
-        domain = ["negative electrode", "separator", "positive electrode"]
-        var = pybamm.Variable("var", domain=domain)
-        model.rhs = {var: -pybamm.Function(np.sqrt, var)}
-        model.initial_conditions = {var: 1}
-        # add events so that safe mode is used (won't be triggered)
-        model.events = {"10": var - 10}
-        # No need to set parameters; can use base discretisation (no spatial operators)
-
-        # create discretisation
-        mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
-        disc = pybamm.Discretisation(mesh, spatial_methods)
-        disc.process_model(model)
-        # Solve with failure at t=2
-        t_eval = np.linspace(0, 20, 100)
-        with self.assertRaises(pybamm.SolverError):
-            solver.solve(model, t_eval)
-        # Solve with failure at t=0
-        model.initial_conditions = {var: 0}
-        disc.process_model(model)
-        t_eval = np.linspace(0, 20, 100)
-        with self.assertRaises(pybamm.SolverError):
-            solver.solve(model, t_eval)
-
     def test_bad_mode(self):
         with self.assertRaisesRegex(ValueError, "invalid mode"):
             pybamm.CasadiSolver(mode="bad mode")
@@ -113,16 +16,13 @@ class TestCasadiSolver(unittest.TestCase):
     def test_model_solver(self):
         # Create model
         model = pybamm.BaseModel()
-        domain = ["negative electrode", "separator", "positive electrode"]
-        var = pybamm.Variable("var", domain=domain)
+        var = pybamm.Variable("var")
         model.rhs = {var: 0.1 * var}
         model.initial_conditions = {var: 1}
         # No need to set parameters; can use base discretisation (no spatial operators)
 
         # create discretisation
-        mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
-        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc = pybamm.Discretisation()
         disc.process_model(model)
         # Solve
         solver = pybamm.CasadiSolver(mode="fast", rtol=1e-8, atol=1e-8, method="idas")
@@ -139,6 +39,33 @@ class TestCasadiSolver(unittest.TestCase):
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
+
+    def test_model_solver_failure(self):
+        # Create model
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        model.rhs = {var: -pybamm.sqrt(var)}
+        model.initial_conditions = {var: 1}
+        # add events so that safe mode is used (won't be triggered)
+        model.events = {"10": var - 10}
+        # No need to set parameters; can use base discretisation (no spatial operators)
+
+        # create discretisation
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.CasadiSolver(regularity_check=False)
+
+        # Solve with failure at t=2
+        t_eval = np.linspace(0, 20, 100)
+        with self.assertRaises(pybamm.SolverError):
+            solver.solve(model, t_eval)
+        # Solve with failure at t=0
+        model.initial_conditions = {var: 0}
+        disc.process_model(model)
+        t_eval = np.linspace(0, 20, 100)
+        with self.assertRaises(pybamm.SolverError):
+            solver.solve(model, t_eval)
 
     def test_model_solver_events(self):
         # Create model
