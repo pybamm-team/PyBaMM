@@ -2,6 +2,20 @@
 # Experiment class
 #
 
+examples = """
+
+    Discharge at 1 C for 0.5 hours,
+    Charge at 0.5 C for 45 minutes,
+    Discharge at 1 A for 0.5 hours,
+    Charge at 200 mA for 45 minutes,
+    Discharge at 1 W for 0.5 hours,
+    Charge at 200 mW for 45 minutes,
+    Rest for 10 minutes,
+    Hold at 1 V for 20 seconds,
+    Charge at 1 C until 4.1 V,
+    Hold at 4.1 V until 50 mA,
+    """
+
 
 class Experiment:
     """
@@ -19,7 +33,9 @@ class Experiment:
 
     def __init__(self, operating_conditions):
         self.operating_conditions_string = str(operating_conditions)
-        self.operating_conditions = self.read_operating_conditions(operating_conditions)
+        self.operating_conditions, self.events = self.read_operating_conditions(
+            operating_conditions
+        )
 
     def __str__(self):
         return self.operating_conditions_string
@@ -42,79 +58,123 @@ class Experiment:
             Operating conditions in the tuple format
         """
         converted_operating_conditions = []
+        events = []
         for cond in operating_conditions:
             if isinstance(cond, str):
-                converted_operating_conditions.append(self.str_to_tuple(cond))
+                next_op, next_event = self.read_string(cond)
+                converted_operating_conditions.append(next_op)
+                events.append(next_event)
             else:
                 raise TypeError(
-                    "Conditions should be tuples or strings, not {}".format(type(cond))
+                    """Operating conditions should be strings, not {}. For example: {}
+                    """.format(
+                        type(cond), examples
+                    )
                 )
 
-        return converted_operating_conditions
+        return converted_operating_conditions, events
 
-    def str_to_tuple(self, cond):
+    def read_string(self, cond):
         """
         Convert a string to a tuple of the right format
 
         Parameters
         ----------
         cond : str
-            String of appropriate form for example "x C for y hours". x and y must be
-            numbers, 'C' denotes the unit of the external circuit (can be A for current, 
-            C for C-rate, V for voltage or W for power), and 'hours' denotes the unit of
-            time (can be second(s), minute(s) or hour(s))
+            String of appropriate form for example "Charge at x C for y hours". x and y
+            must be numbers, 'C' denotes the unit of the external circuit (can be A for
+            current, C for C-rate, V for voltage or W for power), and 'hours' denotes
+            the unit of time (can be second(s), minute(s) or hour(s))
         """
-        cond_tuple = cond.split()
-        self.check_tuple_condition(cond_tuple)
-        cond_tuple = self.convert_time_to_seconds(cond_tuple)
-        return cond_tuple
+        cond_list = cond.split()
+        if "for" in cond_list:
+            idx = cond_list.index("for")
+            electric = self.convert_electric(cond_list[:idx])
+            time = self.convert_time_to_seconds(cond_list[idx + 1 :])
+            events = None
+        elif "until" in cond_list:
+            idx = cond_list.index("until")
+            electric = self.convert_electric(cond_list[:idx])
+            time = None
+            events = self.convert_electric(cond_list[idx + 1 :])
+        else:
+            raise ValueError(
+                """Operating conditions must contain keyword 'for' or 'until'.
+                For example: {}""".format(
+                    examples
+                )
+            )
+        return electric + (time,), events
 
-    def check_tuple_condition(self, cond_tuple):
-        "Check tuple of conditions has the right form"
-        # Check length
-        if len(cond_tuple) != 5:
-            raise ValueError(
-                "Tuple operating conditions should have length 5, but is {}".format(
-                    cond_tuple
+    def convert_electric(self, electric):
+        "Convert electrical instructions to consistent output"
+        # Rest == zero current
+        if electric[0].lower() == "rest":
+            return (0, "A")
+        else:
+            if len(electric) == 4:
+                instruction, _, value, unit = electric
+                # Read instruction
+                if instruction.lower() in ["discharge", "hold"]:
+                    sign = 1
+                elif instruction.lower() == "charge":
+                    sign = -1
+                else:
+                    raise ValueError(
+                        """instruction must be 'discharge', 'charge', 'rest' or 'hold'.
+                        For example: {}""".format(
+                            examples
+                        )
+                    )
+            elif len(electric) == 2:
+                value, unit = electric
+                sign = 1
+            else:
+                raise ValueError(
+                    """instructions not recognized. Some acceptable examples are: {}
+                    """.format(
+                        examples
+                    )
                 )
-            )
-        # Check inputs
-        try:
-            float(cond_tuple[0])
-        except ValueError:
-            raise TypeError(
-                """ First entry in a tuple of conditions should be a number, not {}
-                """.format(
-                    cond_tuple[0]
+            # Read value and units
+            if unit == "C":
+                return (sign * float(value), "C")
+            elif unit == "A":
+                return (sign * float(value), "A")
+            elif unit == "mA":
+                return (sign * float(value) / 1000, "A")
+            elif unit == "V":
+                return (float(value), "V")
+            elif unit == "W":
+                return (sign * float(value), "W")
+            elif unit == "mW":
+                return (sign * float(value) / 1000, "W")
+            else:
+                raise ValueError(
+                    """units must be 'C', 'A', 'mA', 'V', 'W' or 'mW'. For example: {}
+                    """.format(
+                        examples
+                    )
                 )
-            )
-        acceptable_strings = ["A", "C", "V", "W"]
-        if cond_tuple[1] not in acceptable_strings:
-            raise ValueError(
-                """Second entry in a tuple of conditions should be one of {} but is {}
-                """.format(
-                    acceptable_strings, cond_tuple[1]
-                )
-            )
-        if cond_tuple[2] != "for":
-            raise ValueError(
-                "Third entry in a tuple of conditions should be 'for', not {}".format(
-                    cond_tuple[2]
-                )
-            )
-        try:
-            float(cond_tuple[3])
-        except ValueError:
-            raise TypeError("Fourth entry in a tuple of conditions should be a number")
 
-    def convert_time_to_seconds(self, cond_tuple):
+    def convert_time_to_seconds(self, time_and_units):
         "Convert a time in seconds, minutes or hours to a time in seconds"
-        time, units = cond_tuple[3:]
-        if units in ["second", "seconds"]:
+        time, units = time_and_units
+        if units in ["second", "seconds", "s", "sec"]:
             time_in_seconds = float(time)
-        elif units in ["minute", "minutes"]:
+        elif units in ["minute", "minutes", "m", "min"]:
             time_in_seconds = float(time) * 60
-        elif units in ["hour", "hours"]:
+        elif units in ["hour", "hours", "h", "hr"]:
             time_in_seconds = float(time) * 3600
-        return tuple([float(cond_tuple[0]), cond_tuple[1], time_in_seconds])
+        else:
+            raise ValueError(
+                """time units must be 'seconds', 'minutes' or 'hours'. For example: {}
+                """.format(
+                    examples
+                )
+            )
+        return time_in_seconds
 
+
+if __name__ == "__main__":
+    Experiment(["Rest for 10 bla"])

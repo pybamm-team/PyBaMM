@@ -11,12 +11,34 @@ class TestExperiment(unittest.TestCase):
             [
                 "Discharge at 1 C for 0.5 hours",
                 "Charge at 0.5 C for 45 minutes",
+                "Discharge at 1 A for 0.5 hours",
+                "Charge at 200 mA for 45 minutes",
+                "Discharge at 1 W for 0.5 hours",
+                "Charge at 200 mW for 45 minutes",
+                "Rest for 10 minutes",
                 "Hold at 1 V for 20 seconds",
+                "Charge at 1 C until 4.1 V",
+                "Hold at 4.1 V until 50 mA",
             ]
         )
         self.assertEqual(
             experiment.operating_conditions,
-            [(1, "C", 1800.0), (-0.5, "C", 2700.0), (1, "V", 20.0)],
+            [
+                (1, "C", 1800.0),
+                (-0.5, "C", 2700.0),
+                (1, "A", 1800.0),
+                (-0.2, "A", 2700.0),
+                (1, "W", 1800.0),
+                (-0.2, "W", 2700.0),
+                (0, "A", 600.0),
+                (1, "V", 20.0),
+                (-1, "C", None),
+                (4.1, "V", None),
+            ],
+        )
+        self.assertEqual(
+            experiment.events,
+            [None, None, None, None, None, None, None, None, (4.1, "V"), (0.05, "A")],
         )
 
     def test_read_strings_repeat(self):
@@ -27,7 +49,7 @@ class TestExperiment(unittest.TestCase):
         self.assertEqual(
             experiment.operating_conditions,
             [
-                (1, "C", 1800.0),
+                (0.01, "A", 1800.0),
                 (-0.5, "C", 2700.0),
                 (1, "V", 20.0),
                 (-0.5, "C", 2700.0),
@@ -46,16 +68,20 @@ class TestExperiment(unittest.TestCase):
         )
 
     def test_bad_strings(self):
-        with self.assertRaisesRegex(ValueError, "length"):
-            pybamm.Experiment(["three word string"])
-        with self.assertRaisesRegex(TypeError, "First entry"):
-            pybamm.Experiment(["Discharge at r C for 2 hours"])
-        with self.assertRaisesRegex(ValueError, "Second entry"):
+        with self.assertRaisesRegex(
+            TypeError, "Operating conditions should be strings"
+        ):
+            pybamm.Experiment([1, 2, 3])
+        with self.assertRaisesRegex(ValueError, "Operating conditions must contain"):
+            pybamm.Experiment(["Discharge at 1 A at 2 hours"])
+        with self.assertRaisesRegex(ValueError, "instruction must be"):
+            pybamm.Experiment(["Run at 1 A for 2 hours"])
+        with self.assertRaisesRegex(ValueError, "instructions not recognized"):
+            pybamm.Experiment(["Run 1 A for 2 hours"])
+        with self.assertRaisesRegex(ValueError, "units must be"):
             pybamm.Experiment(["Discharge at 1 B for 2 hours"])
-        with self.assertRaisesRegex(ValueError, "Third entry"):
-            pybamm.Experiment(["Discharge at 1 C at 2 hours"])
-        with self.assertRaisesRegex(TypeError, "Fourth entry"):
-            pybamm.Experiment(["Discharge at 1 C for x hours"])
+        with self.assertRaisesRegex(ValueError, "time units must be"):
+            pybamm.Experiment(["Discharge at 1 A for 2 years"])
 
 
 if __name__ == "__main__":
