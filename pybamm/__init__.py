@@ -105,7 +105,7 @@ from .expression_tree.broadcasts import (
     ones_like,
 )
 from .expression_tree.scalar import Scalar
-from .expression_tree.variable import Variable
+from .expression_tree.variable import Variable, ExternalVariable
 from .expression_tree.independent_variable import (
     IndependentVariable,
     Time,

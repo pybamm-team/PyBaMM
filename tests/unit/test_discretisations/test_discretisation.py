@@ -81,8 +81,8 @@ class TestDiscretise(unittest.TestCase):
         disc = pybamm.Discretisation()
         disc.process_model(model)
 
-        self.assertEqual(len(model.y_slices), 2)
-        self.assertEqual(model.y_slices[b.id][0], slice(1, 2, None))
+        self.assertIsInstance(model.variables["b"], pybamm.ExternalVariable)
+        self.assertEqual(model.variables["b"].evaluate(u={"b": np.array([1])}), 1)
 
     def test_adding_1D_external_variable(self):
         model = pybamm.BaseModel()
@@ -117,9 +117,10 @@ class TestDiscretise(unittest.TestCase):
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
 
-        self.assertEqual(len(model.y_slices), 2)
-        self.assertEqual(model.y_slices[a.id][0], slice(0, 10, None))
-        self.assertEqual(model.y_slices[b.id][0], slice(10, 20, None))
+        self.assertEqual(disc.y_slices[a.id][0], slice(0, 10, None))
+
+        b_test = np.ones((10, 1))
+        np.testing.assert_array_equal(model.variables["b"].evaluate(u={"b": b_test}), b_test)
 
         # check that b is added to the boundary conditions
         model.bcs[b.id]["left"]
