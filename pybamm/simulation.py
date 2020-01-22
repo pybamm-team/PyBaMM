@@ -52,6 +52,7 @@ class Simulation:
     def __init__(
         self,
         model,
+        experiment=None,
         geometry=None,
         parameter_values=None,
         submesh_types=None,
@@ -78,6 +79,37 @@ class Simulation:
         self._made_first_step = False
 
         self.reset(update_model=False)
+
+        if experiment is not None:
+            if not isinstance(experiment, pybamm.Experiment):
+                raise TypeError("experiment must be a pybamm `Experiment` instance")
+            # Save the experiment
+            self.experiment = experiment
+            # Update parameter values with experiment parameters
+            self._parameter_values.update(experiment.parameters)
+            # Create a new submodel for each set of operating conditions and update
+            # parameters and events accordingly
+            self.op_models = []
+            for i, op in enumerate(experiment.operating_conditions):
+                if op[1] in ["A", "C"]:
+                    op_model = model.new_copy(
+                        options={**model.options, "operating conditions": "current"}
+                    )
+                    # Update parameters
+                    # Update events
+                elif op[1] == "V":
+                    op_model = model.new_copy(
+                        options={**model.options, "operating conditions": "voltage"}
+                    )
+                    # Update parameters
+                    # Update events
+                elif op[1] == "W":
+                    op_model = model.new_copy(
+                        options={**model.options, "operating conditions": "power"}
+                    )
+                    # Update parameters
+                    # Update events
+                self.op_models.append(op_model)
 
         # ignore runtime warnings in notebooks
         if isnotebook():
@@ -455,7 +487,7 @@ class Simulation:
     def save(self, filename):
         """Save simulation using pickle"""
         if self.model.convert_to_format == "python":
-            # We currently cannot save models in the 'python'
+            # We currently cannot save models in the 'python' format
             raise NotImplementedError(
                 """
                 Cannot save simulation if model format is python.
