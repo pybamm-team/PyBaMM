@@ -68,49 +68,36 @@ class CasadiSolver(pybamm.BaseSolver):
         self.extra_options = extra_options
         self.name = "CasADi solver ({}) with '{}' mode".format(method, mode)
 
-    def solve(self, model, t_eval, external_variables=None, inputs=None):
+    def _integrate(self, model, t_eval, inputs=None):
         """
-        Execute the solver setup and calculate the solution of the model at
-        specified times.
+        Solve a DAE model defined by residuals with initial conditions y0.
 
         Parameters
         ----------
         model : :class:`pybamm.BaseModel`
-            The model whose solution to calculate. Must have attributes rhs and
-            initial_conditions
+            The model whose solution to calculate.
         t_eval : numeric type
             The times at which to compute the solution
-        external_variables : dict
-            A dictionary of external variables and their corresponding
-            values at the current time
         inputs : dict, optional
-            Any input parameters to pass to the model when solving
-
-        Raises
-        ------
-        :class:`pybamm.ValueError`
-            If an invalid mode is passed.
-        :class:`pybamm.ModelError`
-            If an empty model is passed (`model.rhs = {}` and `model.algebraic={}`)
-
+            Any external variables or input parameters to pass to the model when solving
         """
+
+        rhs_size = model.rhs_eval(0, model.y0).shape[0]
         if self.mode == "fast":
-            # Solve model normally by calling the solve method from parent class
-            return super().solve(
-                model, t_eval, external_variables=external_variables, inputs=inputs
-            )
+            integrator = self.get_integrator(model, t_eval, inputs)
+            y0_diff, y0_alg = np.split(model.y0, [rhs_size])
+            solution = self._run_integrator(integrator, y0_diff, y0_alg, t_eval)
+            solution.termination = "final time"
+            return solution
         elif model.events == {}:
             pybamm.logger.info("No events found, running fast mode")
-            # Solve model normally by calling the solve method from parent class
-            return super().solve(
-                model, t_eval, external_variables=external_variables, inputs=inputs
-            )
+            integrator = self.get_integrator(model, t_eval, inputs)
+            y0_diff, y0_alg = np.split(model.y0, [rhs_size])
+            solution = self._run_integrator(integrator, y0_diff, y0_alg, t_eval)
+            solution.termination = "final time"
+            return solution
         elif self.mode == "safe":
             # Step-and-check
-            timer = pybamm.Timer()
-            inputs = inputs or {}
-            self.set_up(model, inputs)
-            set_up_time = timer.time()
             init_event_signs = np.sign(
                 np.concatenate([event(0, model.y0) for event in model.events_eval])
             )
@@ -118,32 +105,30 @@ class CasadiSolver(pybamm.BaseSolver):
             pybamm.logger.info(
                 "Start solving {} with {} in 'safe' mode".format(model.name, self.name)
             )
-            model.t = 0.0
+            t = t_eval[0]
+            y0 = model.y0
             for dt in np.diff(t_eval):
                 # Step
                 solved = False
                 count = 0
                 while not solved:
+                    integrator = self.get_integrator(
+                        model, np.array([t, t + dt]), inputs
+                    )
                     # Try to solve with the current step, if it fails then halve the
                     # step size and try again. This will make solution.t slightly
                     # different to t_eval, but shouldn't matter too much as it should
                     # only happen near events.
                     try:
-                        current_step_sol = self.step(
-                            model,
-                            dt,
-                            external_variables=external_variables,
-                            inputs=inputs,
+                        y0_diff, y0_alg = np.split(y0, [rhs_size])
+                        current_step_sol = self._run_integrator(
+                            integrator, y0_diff, y0_alg, np.array([t, t + dt])
                         )
                         solved = True
                     except pybamm.SolverError:
                         dt /= 2
                     count += 1
                     if count >= self.max_step_decrease_count:
-                        if solution is None:
-                            t = 0
-                        else:
-                            t = solution.t[-1]
                         raise pybamm.SolverError(
                             """
                             Maximum number of decreased steps occurred at t={}. Try
@@ -168,41 +153,20 @@ class CasadiSolver(pybamm.BaseSolver):
                     solution.y_event = solution.y[:, -1]
                     break
                 else:
+                    # assign temporary solve time
+                    current_step_sol.solve_time = np.nan
                     if not solution:
                         # create solution object on first step
                         solution = current_step_sol
-                        solution.set_up_time = set_up_time
                     else:
                         # append solution from the current step to solution
                         solution.append(current_step_sol)
+                    t = solution.t[-1]
+                    y0 = solution.y[:, -1]
 
-            # Calculate more exact termination reason
-            solution.termination = self.get_termination_reason(solution, model.events)
-            pybamm.logger.info(
-                "Finish solving {} ({})".format(model.name, solution.termination)
-            )
-            pybamm.logger.info(
-                "Set-up time: {}, Solve time: {}, Total time: {}".format(
-                    timer.format(solution.set_up_time),
-                    timer.format(solution.solve_time),
-                    timer.format(solution.total_time),
-                )
-            )
             return solution
 
-    def _integrate(self, model, t_eval, inputs=None):
-        """
-        Solve a DAE model defined by residuals with initial conditions y0.
-
-        Parameters
-        ----------
-        model : :class:`pybamm.BaseModel`
-            The model whose solution to calculate.
-        t_eval : numeric type
-            The times at which to compute the solution
-        inputs : dict, optional
-            Any external variables or input parameters to pass to the model when solving
-        """
+    def get_integrator(self, model, t_eval, inputs):
         inputs = inputs or {}
 
         y0 = model.y0
@@ -232,10 +196,11 @@ class CasadiSolver(pybamm.BaseSolver):
             problem.update(
                 {"z": y_alg, "ode": rhs(t, y_full, u), "alg": algebraic(t, y_full, u)}
             )
-        integrator = casadi.integrator("F", self.method, problem, options)
+        return casadi.integrator("F", self.method, problem, options)
+
+    def _run_integrator(self, integrator, y0_diff, y0_alg, t_eval):
         try:
             # Try solving
-            y0_diff, y0_alg = np.split(y0, [y_diff.shape[0]])
             sol = integrator(x0=y0_diff, z0=y0_alg, **self.extra_options)
             y_values = np.concatenate([sol["xf"].full(), sol["zf"].full()])
             return pybamm.Solution(t_eval, y_values)

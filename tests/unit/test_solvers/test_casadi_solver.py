@@ -132,6 +132,46 @@ class TestCasadiSolver(unittest.TestCase):
         solution = solver.solve(model, t_eval)
         np.testing.assert_allclose(solution.y[0], step_sol.y[0])
 
+    def test_model_step_events(self):
+        # Create model
+        model = pybamm.BaseModel()
+        var1 = pybamm.Variable("var1")
+        var2 = pybamm.Variable("var2")
+        model.rhs = {var1: 0.1 * var1}
+        model.algebraic = {var2: 2 * var1 - var2}
+        model.initial_conditions = {var1: 1, var2: 2}
+        model.events = {
+            "var1 = 1.5": pybamm.min(var1 - 1.5),
+            "var2 = 2.5": pybamm.min(var2 - 2.5),
+        }
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        # Solve
+        step_solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
+        dt = 0.05
+        time = 0
+        end_time = 5
+        step_solver = model.default_solver
+        step_solution = None
+        while time < end_time:
+            current_step_sol = step_solver.step(model, dt=dt, npts=10)
+            if not step_solution:
+                # create solution object on first step
+                step_solution = current_step_sol
+            else:
+                # append solution from the current step to step_solution
+                step_solution.append(current_step_sol)
+            time += dt
+        np.testing.assert_array_less(step_solution.y[0], 1.5)
+        np.testing.assert_array_less(step_solution.y[-1], 2.5)
+        np.testing.assert_array_almost_equal(
+            step_solution.y[0], np.exp(0.1 * step_solution.t), decimal=5
+        )
+        np.testing.assert_array_almost_equal(
+            step_solution.y[-1], 2 * np.exp(0.1 * step_solution.t), decimal=5
+        )
+
     def test_model_solver_with_inputs(self):
         # Create model
         model = pybamm.BaseModel()
