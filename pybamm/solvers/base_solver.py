@@ -3,6 +3,7 @@
 #
 import casadi
 import pybamm
+import numbers
 import numpy as np
 from scipy import optimize
 from scipy.sparse import issparse
@@ -46,8 +47,6 @@ class BaseSolver(object):
 
         self.name = "Base solver"
 
-        self.y_pad = None
-        self.y_ext = None
         self.model_step_times = {}
 
     @property
@@ -112,7 +111,6 @@ class BaseSolver(object):
         """
         inputs = inputs or {}
         y0 = model.concatenated_initial_conditions
-        y0 = add_external(y0, self.y_pad, self.y_ext)
 
         if (
             isinstance(self, pybamm.CasadiSolver)
@@ -141,12 +139,12 @@ class BaseSolver(object):
                 "y_alg", len(model.concatenated_algebraic.evaluate(0, y0, inputs))
             )
             y_casadi = casadi.vertcat(y_diff, y_alg)
-            if self.y_pad is not None:
-                y_ext = casadi.MX.sym("y_ext", len(self.y_pad))
-                y_casadi_w_ext = casadi.vertcat(y_casadi, y_ext)
-            else:
-                y_casadi_w_ext = y_casadi
-            u_casadi = {name: casadi.MX.sym(name) for name in inputs.keys()}
+            u_casadi = {}
+            for name, value in inputs.items():
+                if isinstance(value, numbers.Number):
+                    u_casadi[name] = casadi.MX.sym(name)
+                else:
+                    u_casadi[name] = casadi.MX.sym(name, value.shape[0])
             u_casadi_stacked = casadi.vertcat(*[u for u in u_casadi.values()])
 
         def process(func, name, use_jacobian=None):
@@ -176,26 +174,26 @@ class BaseSolver(object):
             else:
                 # Process with CasADi
                 pybamm.logger.info(f"Converting {name} to CasADi")
-                func = func.to_casadi(t_casadi, y_casadi_w_ext, u_casadi)
+                func = func.to_casadi(t_casadi, y_casadi, u_casadi)
                 pybamm.logger.info(f"Converting jacobian for {name}")
                 if use_jacobian:
                     jac_casadi = casadi.jacobian(func, y_casadi)
                     jac = casadi.Function(
-                        name, [t_casadi, y_casadi_w_ext, u_casadi_stacked], [jac_casadi]
+                        name, [t_casadi, y_casadi, u_casadi_stacked], [jac_casadi]
                     )
                 else:
                     jac = None
                 func = casadi.Function(
-                    name, [t_casadi, y_casadi_w_ext, u_casadi_stacked], [func]
+                    name, [t_casadi, y_casadi, u_casadi_stacked], [func]
                 )
             if name == "residuals":
                 func_call = Residuals(func, name, model)
             else:
                 func_call = SolverCallable(func, name, model)
-            func_call.set_pad_ext_inputs(self.y_pad, self.y_ext, inputs)
+            func_call.set_inputs(inputs)
             if jac is not None:
                 jac_call = SolverCallable(jac, name + "_jac", model)
-                jac_call.set_pad_ext_inputs(self.y_pad, self.y_ext, inputs)
+                jac_call.set_inputs(inputs)
             else:
                 jac_call = None
             return func, func_call, jac_call
@@ -239,34 +237,32 @@ class BaseSolver(object):
             self, pybamm.CasadiSolver
         ):
             mass_matrix_inv = casadi.MX(model.mass_matrix_inv.entries)
-            explicit_rhs = mass_matrix_inv @ rhs(
-                t_casadi, y_casadi_w_ext, u_casadi_stacked
-            )
+            explicit_rhs = mass_matrix_inv @ rhs(t_casadi, y_casadi, u_casadi_stacked)
             model.casadi_rhs = casadi.Function(
-                "rhs", [t_casadi, y_casadi_w_ext, u_casadi_stacked], [explicit_rhs]
+                "rhs", [t_casadi, y_casadi, u_casadi_stacked], [explicit_rhs]
             )
             model.casadi_algebraic = algebraic
 
         pybamm.logger.info("Finish solver set-up")
 
-    def set_inputs_and_external(self, model, inputs):
+    def set_inputs(self, model, ext_and_inputs):
         """
         Set values that are controlled externally, such as external variables and input
         parameters
 
         Parameters
         ----------
-        inputs : dict
-            Any input parameters to pass to the model when solving
+        ext_and_inputs : dict
+            Any external variables or input parameters to pass to the model when solving
 
         """
-        model.rhs_eval.set_pad_ext_inputs(self.y_pad, self.y_ext, inputs)
-        model.algebraic_eval.set_pad_ext_inputs(self.y_pad, self.y_ext, inputs)
-        model.residuals_eval.set_pad_ext_inputs(self.y_pad, self.y_ext, inputs)
+        model.rhs_eval.set_inputs(ext_and_inputs)
+        model.algebraic_eval.set_inputs(ext_and_inputs)
+        model.residuals_eval.set_inputs(ext_and_inputs)
         for evnt in model.events_eval:
-            evnt.set_pad_ext_inputs(self.y_pad, self.y_ext, inputs)
+            evnt.set_inputs(ext_and_inputs)
         if model.jacobian_eval:
-            model.jacobian_eval.set_pad_ext_inputs(self.y_pad, self.y_ext, inputs)
+            model.jacobian_eval.set_inputs(ext_and_inputs)
 
     def calculate_consistent_initial_conditions(self, model):
         """
@@ -386,19 +382,22 @@ class BaseSolver(object):
 
         # Set up
         timer = pybamm.Timer()
+
+        # Set up external variables and inputs
+        external_variables = external_variables or {}
         inputs = inputs or {}
-        self.y_pad = np.zeros((model.y_length - model.external_start, 1))
-        self.set_external_variables(model, external_variables)
-        self.set_up(model, inputs)
+        ext_and_inputs = {**external_variables, **inputs}
+
+        self.set_up(model, ext_and_inputs)
         set_up_time = timer.time()
 
         # Solve
         # Set inputs and external
-        self.set_inputs_and_external(model, inputs)
+        self.set_inputs(model, ext_and_inputs)
 
         timer.reset()
         pybamm.logger.info("Calling solver")
-        solution = self._integrate(model, t_eval, inputs)
+        solution = self._integrate(model, t_eval, ext_and_inputs)
 
         # Assign times
         solution.set_up_time = set_up_time
@@ -456,20 +455,18 @@ class BaseSolver(object):
 
         # Set timer
         timer = pybamm.Timer()
+
+        # Set up external variables and inputs
+        external_variables = external_variables or {}
         inputs = inputs or {}
-
-        if not hasattr(model, "y0"):
-            # create a y_pad vector of the correct size:
-            self.y_pad = np.zeros((model.y_length - model.external_start, 1))
-
-        self.set_external_variables(model, external_variables)
+        ext_and_inputs = {**external_variables, **inputs}
 
         # Run set up on first step
         if model not in self.model_step_times:
             pybamm.logger.info(
                 "Start stepping {} with {}".format(model.name, self.name)
             )
-            self.set_up(model, inputs)
+            self.set_up(model, ext_and_inputs)
             self.model_step_times[model] = 0.0
             set_up_time = timer.time()
         else:
@@ -479,11 +476,11 @@ class BaseSolver(object):
         t = self.model_step_times[model]
         t_eval = np.linspace(t, t + dt, npts)
         # Set inputs and external
-        self.set_inputs_and_external(model, inputs)
+        self.set_inputs(model, ext_and_inputs)
 
         pybamm.logger.info("Calling solver")
         timer.reset()
-        solution = self._integrate(model, t_eval, inputs)
+        solution = self._integrate(model, t_eval, ext_and_inputs)
 
         # Assign times
         solution.set_up_time = set_up_time
@@ -500,14 +497,6 @@ class BaseSolver(object):
         self.model_step_times[model] = solution.t[-1]
         model.y0 = solution.y[:, -1]
 
-        # add the external points onto the solution
-        full_y = np.zeros((model.y_length, solution.y.shape[1]))
-        for i in np.arange(solution.y.shape[1]):
-            sol_y = solution.y[:, i]
-            sol_y = sol_y[:, np.newaxis]
-            full_y[:, i] = add_external(sol_y, self.y_pad, self.y_ext)[:, 0]
-        solution.y = full_y
-
         pybamm.logger.debug("Finish stepping {} ({})".format(model.name, termination))
         if set_up_time:
             pybamm.logger.debug(
@@ -522,32 +511,6 @@ class BaseSolver(object):
                 "Step time: {}".format(timer.format(solution.solve_time))
             )
         return solution
-
-    def set_external_variables(self, model, external_variables):
-        if external_variables is None:
-            external_variables = {}
-
-        # load external variables into a state vector
-        self.y_ext = np.zeros((model.y_length, 1))
-        for var_name, var_vals in external_variables.items():
-            var = model.variables[var_name]
-            if isinstance(var, pybamm.Concatenation):
-                start = var.children[0].y_slices[0].start
-                stop = var.children[-1].y_slices[-1].stop
-                y_slice = slice(start, stop)
-
-            elif isinstance(var, pybamm.StateVector):
-                start = var.y_slices[0].start
-                stop = var.y_slices[-1].stop
-                y_slice = slice(start, stop)
-            else:
-                raise pybamm.InputError(
-                    """The variable you have inputted is not a StateVector or Concatenation
-            of StateVectors. Please check the submodel you have made "external" and
-            ensure that the variable you
-            are passing in is the variable that is solved for in that submodel"""
-                )
-            self.y_ext[y_slice] = var_vals
 
     def get_termination_reason(self, solution, events):
         """
@@ -570,24 +533,13 @@ class BaseSolver(object):
             # Get final event value
             final_event_values = {}
             for name, event in events.items():
-                y_event = add_external(solution.y_event, self.y_pad, self.y_ext)
                 final_event_values[name] = abs(
-                    event.evaluate(solution.t_event, y_event)
+                    event.evaluate(solution.t_event, solution.y_event)
                 )
             termination_event = min(final_event_values, key=final_event_values.get)
             # Add the event to the solution object
             solution.termination = "event: {}".format(termination_event)
             return "the termination event '{}' occurred".format(termination_event)
-
-
-def add_external(y, y_pad, y_ext):
-    """
-    Pad the state vector and then add the external variables so that
-    it is of the correct shape for evaluate
-    """
-    if y_pad is not None and y_ext is not None:
-        y = np.concatenate([y, y_pad]) + y_ext
-    return y
 
 
 class SolverCallable:
@@ -604,13 +556,8 @@ class SolverCallable:
         self.name = name
         self.model = model
 
-        self.y_pad = None
-        self.y_ext = None
-
-    def set_pad_ext_inputs(self, y_pad, y_ext, inputs):
-        "Set padding, external variables and inputs"
-        self.y_pad = y_pad
-        self.y_ext = y_ext
+    def set_inputs(self, inputs):
+        "Set inputs"
         if self.form == "python":
             self.inputs = inputs
         elif self.form == "casadi":
@@ -618,7 +565,6 @@ class SolverCallable:
 
     def __call__(self, t, y):
         y = y[:, np.newaxis]
-        y = add_external(y, self.y_pad, self.y_ext)
         if self.name in ["RHS", "algebraic", "residuals"]:
             return self.function(t, y)[:, 0]
         else:

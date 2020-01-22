@@ -207,7 +207,6 @@ class TestScipySolver(unittest.TestCase):
         model.rhs = {var1: -var2}
         model.initial_conditions = {var1: 1}
         model.external_variables = [var2]
-        model.variables = {"var1": var1, "var2": var2}
         # No need to set parameters; can use base discretisation (no spatial
         # operators)
 
@@ -219,7 +218,9 @@ class TestScipySolver(unittest.TestCase):
         # Solve
         solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 10, 100)
-        solution = solver.solve(model, t_eval, external_variables={"var2": 0.5})
+        solution = solver.solve(
+            model, t_eval, external_variables={"var2": 0.5 * np.ones(100)}
+        )
         np.testing.assert_allclose(solution.y[0], 1 - 0.5 * solution.t, rtol=1e-06)
 
     def test_model_solver_with_event_with_casadi(self):

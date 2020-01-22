@@ -120,7 +120,9 @@ class TestDiscretise(unittest.TestCase):
         self.assertEqual(disc.y_slices[a.id][0], slice(0, 10, None))
 
         b_test = np.ones((10, 1))
-        np.testing.assert_array_equal(model.variables["b"].evaluate(u={"b": b_test}), b_test)
+        np.testing.assert_array_equal(
+            model.variables["b"].evaluate(u={"b": b_test}), b_test
+        )
 
         # check that b is added to the boundary conditions
         model.bcs[b.id]["left"]

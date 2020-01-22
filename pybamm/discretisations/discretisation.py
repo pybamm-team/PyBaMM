@@ -155,7 +155,6 @@ class Discretisation(object):
 
         model_disc.bcs = self.bcs
 
-
         pybamm.logger.info("Discretise initial conditions for {}".format(model.name))
         ics, concat_ics = self.process_initial_conditions(model)
         model_disc.initial_conditions = ics
@@ -248,7 +247,7 @@ class Discretisation(object):
                 for submesh in self.spatial_methods[dom].mesh[dom]:
                     size += submesh.npts_for_broadcast
             return size
-        
+
     def _preprocess_external_variables(self, model):
         """
         A method to preprocess external variables so that they are

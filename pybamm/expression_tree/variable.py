@@ -95,7 +95,7 @@ class ExternalVariable(Variable):
             raise TypeError("inputs u should be a dictionary")
         try:
             out = u[self.name]
-            if out.size != self.size:
+            if out.shape[0] != self.size:
                 raise ValueError(
                     "External variable input has size {} but should be {}".format(
                         out.size, self.size

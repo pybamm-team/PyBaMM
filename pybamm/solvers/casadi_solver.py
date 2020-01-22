@@ -201,13 +201,9 @@ class CasadiSolver(pybamm.BaseSolver):
         t_eval : numeric type
             The times at which to compute the solution
         inputs : dict, optional
-            Any input parameters to pass to the model when solving
+            Any external variables or input parameters to pass to the model when solving
         """
         inputs = inputs or {}
-        if self.y_ext is None:
-            y_ext = np.array([])
-        else:
-            y_ext = self.y_ext
 
         y0 = model.y0
         rhs = model.casadi_rhs
@@ -226,21 +222,15 @@ class CasadiSolver(pybamm.BaseSolver):
         # set up and solve
         t = casadi.MX.sym("t")
         u = casadi.vertcat(*[x for x in inputs.values()])
-        y0_w_ext = casadi.vertcat(y0, y_ext[len(y0) :])
-        y_diff = casadi.MX.sym("y_diff", rhs(0, y0_w_ext, u).shape[0])
+        y_diff = casadi.MX.sym("y_diff", rhs(0, y0, u).shape[0])
         problem = {"t": t, "x": y_diff}
         if algebraic is None:
-            y_casadi_w_ext = casadi.vertcat(y_diff, y_ext[len(y0) :])
-            problem.update({"ode": rhs(t, y_casadi_w_ext, u)})
+            problem.update({"ode": rhs(t, y_diff, u)})
         else:
-            y_alg = casadi.MX.sym("y_alg", algebraic(0, y0_w_ext, u).shape[0])
-            y_casadi_w_ext = casadi.vertcat(y_diff, y_alg, y_ext[len(y0) :])
+            y_alg = casadi.MX.sym("y_alg", algebraic(0, y0, u).shape[0])
+            y_full = casadi.vertcat(y_diff, y_alg)
             problem.update(
-                {
-                    "z": y_alg,
-                    "ode": rhs(t, y_casadi_w_ext, u),
-                    "alg": algebraic(t, y_casadi_w_ext, u),
-                }
+                {"z": y_alg, "ode": rhs(t, y_full, u), "alg": algebraic(t, y_full, u)}
             )
         integrator = casadi.integrator("F", self.method, problem, options)
         try:
