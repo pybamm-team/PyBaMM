@@ -17,16 +17,13 @@ class TestCompareBasicModels(unittest.TestCase):
         )
 
         # Solve basic DFN
-        var = pybamm.standard_spatial_vars
-        var_pts = {var.x_n: 3, var.x_s: 3, var.x_p: 3, var.r_n: 3, var.r_p: 3}
-
-        basic_sim = pybamm.Simulation(basic_dfn, var_pts=var_pts)
+        basic_sim = pybamm.Simulation(basic_dfn)
         t_eval = np.linspace(0, 1)
         basic_sim.solve(t_eval)
         basic_sol = basic_sim.solution
 
         # Solve main DFN
-        sim = pybamm.Simulation(dfn, var_pts=var_pts)
+        sim = pybamm.Simulation(dfn)
         t_eval = np.linspace(0, 1)
         sim.solve(t_eval)
         sol = sim.solution
@@ -49,16 +46,13 @@ class TestCompareBasicModels(unittest.TestCase):
         )
 
         # Solve basic SPM
-        var = pybamm.standard_spatial_vars
-        var_pts = {var.x_n: 3, var.x_s: 3, var.x_p: 3, var.r_n: 3, var.r_p: 3}
-
-        basic_sim = pybamm.Simulation(basic_spm, var_pts=var_pts)
+        basic_sim = pybamm.Simulation(basic_spm)
         t_eval = np.linspace(0, 1)
         basic_sim.solve(t_eval)
         basic_sol = basic_sim.solution
 
         # Solve main SPM
-        sim = pybamm.Simulation(spm, var_pts=var_pts)
+        sim = pybamm.Simulation(spm)
         t_eval = np.linspace(0, 1)
         sim.solve(t_eval)
         sol = sim.solution

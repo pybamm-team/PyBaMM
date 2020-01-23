@@ -29,6 +29,9 @@ class BasicDFN(BaseModel):
 
     def __init__(self, name="Doyle-Fuller-Newman model"):
         super().__init__({}, name)
+        # `param` is a class containing all the relevant parameters and functions for
+        # this model. These are purely symbolic at this stage, and will be set by the
+        # `ParameterValues` class when the model is processed.
         param = self.param
 
         ######################
@@ -91,7 +94,7 @@ class BasicDFN(BaseModel):
         ######################
 
         # Current density
-        i_cell = self.param.current_with_time
+        i_cell = param.current_with_time
 
         # Porosity
         # Primary broadcasts are used to broadcast scalar quantities across a domain
@@ -158,6 +161,8 @@ class BasicDFN(BaseModel):
         # Particles
         ######################
 
+        # The div and grad operators will be converted to the appropriate matrix
+        # multiplication at the discretisation stage
         N_s_n = -param.D_n(c_s_n, T) * pybamm.grad(c_s_n)
         N_s_p = -param.D_p(c_s_p, T) * pybamm.grad(c_s_p)
         self.rhs[c_s_n] = -(1 / param.C_n) * pybamm.div(N_s_n)
@@ -169,7 +174,7 @@ class BasicDFN(BaseModel):
         }
         self.boundary_conditions[c_s_p] = {
             "left": (pybamm.Scalar(0), "Neumann"),
-            "right": (-param.C_p * j_p / param.a_p / self.param.gamma_p, "Neumann"),
+            "right": (-param.C_p * j_p / param.a_p / param.gamma_p, "Neumann"),
         }
         self.initial_conditions[c_s_n] = param.c_n_init
         self.initial_conditions[c_s_p] = param.c_p_init
