@@ -124,6 +124,8 @@ tim, dc, _, _, phi_s_cn_truth, phi_s_cp_truth = truth
 
 # print("Time [h] = ", tim, " and Discharge capacity [A.h] = ", dc)
 
+model_lims = {"2+1D SPM": 6e-6, "2+1D SPMe": 6e-6, "DFNCC": 6e-6, "SPMeCC": 6e-6}
+
 for count, (model_name, solution) in enumerate(current_collector_potentials.items()):
 
     t_hours, dc, y_dim, z_dim, phi_s_cn, phi_s_cp = solution
@@ -133,8 +135,8 @@ for count, (model_name, solution) in enumerate(current_collector_potentials.item
             y_dim,
             z_dim,
             phi_s_cn,
-            vmin=None,
-            vmax=None,
+            # vmin=-0.003,
+            # vmax=0,
             shading="gouraud",
             cmap="plasma",
         )
@@ -144,7 +146,15 @@ for count, (model_name, solution) in enumerate(current_collector_potentials.item
     else:
         error = np.abs(phi_s_cn - phi_s_cn_truth)
         title = model_name + " vs. 2+1D DFN"
-        im = axes[count].pcolormesh(y_dim, z_dim, error, shading="gouraud")
+        im = axes[count].pcolormesh(
+            y_dim,
+            z_dim,
+            error,
+            # vmin=0,
+            # vmax=model_lims[model_name],
+            shading="gouraud",
+            # cmap="CMRmap",  # CMRmap
+        )
 
     axes[count].set_xlabel(r"$y$")
     axes[count].set_ylabel(r"$z$")
@@ -172,6 +182,8 @@ fig.set_figwidth(13)
 
 plt.show()
 
+model_lower = {"2+1D SPM": 1e-2, "2+1D SPMe": 1e-4, "DFNCC": 1e-4, "SPMeCC": 1e-4}
+model_lims = {"2+1D SPM": 2e-2, "2+1D SPMe": 1e-3, "DFNCC": 1e-3, "SPMeCC": 1e-3}
 
 fig, axes = plt.subplots(1, len(current_collector_potentials))
 for count, (model_name, solution) in enumerate(current_collector_potentials.items()):
@@ -183,8 +195,8 @@ for count, (model_name, solution) in enumerate(current_collector_potentials.item
             y_dim,
             z_dim,
             phi_s_cp,
-            vmin=None,
-            vmax=None,
+            # vmin=3.606,
+            # vmax=3.612,
             shading="gouraud",
             cmap="plasma",
         )
@@ -194,7 +206,15 @@ for count, (model_name, solution) in enumerate(current_collector_potentials.item
     else:
         error = np.abs(phi_s_cp - phi_s_cp_truth)
         title = model_name + " vs. 2+1D DFN"
-        im = axes[count].pcolormesh(y_dim, z_dim, error, shading="gouraud")
+        im = axes[count].pcolormesh(
+            y_dim,
+            z_dim,
+            error,
+            # vmin=model_lower[model_name],
+            # vmax=model_lims[model_name],
+            shading="gouraud",
+            # cmap="CMRmap",
+        )
 
     axes[count].set_xlabel(r"$y$")
     axes[count].set_ylabel(r"$z$")
