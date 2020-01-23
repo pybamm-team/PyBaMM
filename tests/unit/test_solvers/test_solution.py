@@ -99,11 +99,7 @@ class TestSolution(unittest.TestCase):
         model = pybamm.lithium_ion.SPM()
         geometry = model.default_geometry
         param = model.default_parameter_values
-        param.update(
-            {
-                "Electrode height [m]": "[input]",
-            }
-        )
+        param.update({"Electrode height [m]": "[input]"})
         param.process_model(model)
         param.process_geometry(geometry)
         var = pybamm.standard_spatial_vars
@@ -118,11 +114,9 @@ class TestSolution(unittest.TestCase):
             spatial_methods=spatial_methods,
             solver=solver,
         )
-        inputs = {
-                'Electrode height [m]': 0.1
-                }
+        inputs = {"Electrode height [m]": 0.1}
         sim.solve(t_eval=np.linspace(0, 0.01, 10), inputs=inputs)
-        time = sim.solution['Time [h]'](sim.solution.t)
+        time = sim.solution["Time [h]"](sim.solution.t)
         self.assertEqual(len(time), 10)
 
 
