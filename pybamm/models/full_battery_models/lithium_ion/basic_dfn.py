@@ -97,7 +97,6 @@ class BasicDFN(BaseModel):
         )
 
         # Interfacial reactions
-        ne = 2
         c_s_surf_n = pybamm.surf(c_s_n)
         j0_n = (
             param.m_n(T)
@@ -109,7 +108,9 @@ class BasicDFN(BaseModel):
         j_n = (
             2
             * j0_n
-            * pybamm.sinh(ne / 2 * (phi_s_n - phi_e_n - param.U_n(c_s_surf_n, T)))
+            * pybamm.sinh(
+                param.ne_n / 2 * (phi_s_n - phi_e_n - param.U_n(c_s_surf_n, T))
+            )
         )
         c_s_surf_p = pybamm.surf(c_s_p)
         j0_p = (
@@ -124,7 +125,9 @@ class BasicDFN(BaseModel):
         j_p = (
             2
             * j0_p
-            * pybamm.sinh(ne / 2 * (phi_s_p - phi_e_p - param.U_p(c_s_surf_p, T)))
+            * pybamm.sinh(
+                param.ne_p / 2 * (phi_s_p - phi_e_p - param.U_p(c_s_surf_p, T))
+            )
         )
         j = pybamm.Concatenation(j_n, j_s, j_p)
 
@@ -207,7 +210,7 @@ class BasicDFN(BaseModel):
         ######################
         N_e = -tor * param.D_e(c_e, T) * pybamm.grad(c_e)
         self.rhs[c_e] = (1 / eps) * (
-            -pybamm.div(N_e) / param.C_e + (1 - param.t_plus) * j
+            -pybamm.div(N_e) / param.C_e + (1 - param.t_plus) * j / param.gamma_e
         )
         self.boundary_conditions[c_e] = {
             "left": (pybamm.Scalar(0), "Neumann"),
@@ -219,8 +222,17 @@ class BasicDFN(BaseModel):
         ######################
         # (Some) variables
         ######################
-        self.variables = {}
         voltage = pybamm.boundary_value(phi_s_p, "right")
+        self.variables = {
+            "Negative particle surface concentration": c_s_surf_n,
+            "Electrolyte concentration": c_e,
+            "Positive particle surface concentration": c_s_surf_p,
+            "Current [A]": I,
+            "Negative electrode potential": phi_s_n,
+            "Electrolyte potential": phi_e,
+            "Positive electrode potential": phi_s_p,
+            "Terminal voltage": voltage,
+        }
         self.events["Minimum voltage"] = voltage - param.voltage_low_cut
         self.events["Maximum voltage"] = voltage - param.voltage_high_cut
 

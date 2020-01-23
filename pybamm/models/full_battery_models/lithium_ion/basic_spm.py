@@ -50,26 +50,6 @@ class BasicSPM(BaseModel):
 
         # Current density
         i_cell = self.param.current_with_time
-
-        # Interfacial reactions
-        ne = 2
-        c_s_surf_n = pybamm.surf(c_s_n)
-        j0_n = (
-            param.m_n(T)
-            / param.C_r_n
-            * 1 ** (1 / 2)
-            * c_s_surf_n ** (1 / 2)
-            * (1 - c_s_surf_n) ** (1 / 2)
-        )
-        c_s_surf_p = pybamm.surf(c_s_p)
-        j0_p = (
-            param.gamma_p
-            * param.m_p(T)
-            / param.C_r_p
-            * 1 ** (1 / 2)
-            * c_s_surf_p ** (1 / 2)
-            * (1 - c_s_surf_p) ** (1 / 2)
-        )
         j_n = i_cell / param.l_n
         j_p = -i_cell / param.l_p
 
@@ -99,6 +79,8 @@ class BasicSPM(BaseModel):
         }
         self.initial_conditions[c_s_n] = param.c_n_init
         self.initial_conditions[c_s_p] = param.c_p_init
+        c_s_surf_n = pybamm.surf(c_s_n)
+        c_s_surf_p = pybamm.surf(c_s_p)
         self.events.update(
             {
                 "Minimum negative particle surface concentration": (
@@ -117,10 +99,50 @@ class BasicSPM(BaseModel):
         ######################
         # (Some) variables
         ######################
-        self.variables = {}
-        # voltage = pybamm.boundary_value(phi_s_p, "right")
-        # self.events["Minimum voltage"] = voltage - param.voltage_low_cut
-        # self.events["Maximum voltage"] = voltage - param.voltage_high_cut
+        # Interfacial reactions
+        j0_n = (
+            param.m_n(T)
+            / param.C_r_n
+            * 1 ** (1 / 2)
+            * c_s_surf_n ** (1 / 2)
+            * (1 - c_s_surf_n) ** (1 / 2)
+        )
+        j0_p = (
+            param.gamma_p
+            * param.m_p(T)
+            / param.C_r_p
+            * 1 ** (1 / 2)
+            * c_s_surf_p ** (1 / 2)
+            * (1 - c_s_surf_p) ** (1 / 2)
+        )
+        eta_n = (2 / param.ne_n) * pybamm.arcsinh(j_n / (2 * j0_n))
+        eta_p = (2 / param.ne_p) * pybamm.arcsinh(j_p / (2 * j0_p))
+        phi_s_n = 0
+        phi_e = -eta_n - param.U_n(c_s_surf_n, T)
+        phi_s_p = eta_p + phi_e + param.U_p(c_s_surf_p, T)
+        V = phi_s_p
+
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        self.variables = {
+            "Negative particle surface concentration": pybamm.PrimaryBroadcast(
+                c_s_surf_n, "negative electrode"
+            ),
+            "Electrolyte concentration": pybamm.PrimaryBroadcast(1, whole_cell),
+            "Positive particle surface concentration": pybamm.PrimaryBroadcast(
+                c_s_surf_p, "positive electrode"
+            ),
+            "Current [A]": I,
+            "Negative electrode potential": pybamm.PrimaryBroadcast(
+                phi_s_n, "negative electrode"
+            ),
+            "Electrolyte potential": pybamm.PrimaryBroadcast(phi_e, whole_cell),
+            "Positive electrode potential": pybamm.PrimaryBroadcast(
+                phi_s_p, "positive electrode"
+            ),
+            "Terminal voltage": V,
+        }
+        self.events["Minimum voltage"] = V - param.voltage_low_cut
+        self.events["Maximum voltage"] = V - param.voltage_high_cut
 
     @property
     def default_geometry(self):
