@@ -34,6 +34,9 @@ class BasicSPM(BaseModel):
         ######################
         # Variables
         ######################
+        # Variables that depend on time only are created without a domain
+        Q = pybamm.Variable("Discharge capacity [A.h]")
+        # Variables that vary spatially are created with a domain
         c_s_n = pybamm.Variable(
             "X-averaged negative particle concentration", domain="negative particle",
         )
@@ -56,9 +59,11 @@ class BasicSPM(BaseModel):
         ######################
         # State of Charge
         ######################
-        Q = pybamm.Variable("Discharge capacity [A.h]")
         I = param.dimensional_current_with_time
+        # The `rhs` dictionary contains differential equations, with the key being the
+        # variable in the d/dt
         self.rhs[Q] = I * param.timescale / 3600
+        # Initial conditions must be provided for the ODEs
         self.initial_conditions[Q] = pybamm.Scalar(0)
 
         ######################
@@ -69,6 +74,7 @@ class BasicSPM(BaseModel):
         N_s_p = -param.D_p(c_s_p, T) * pybamm.grad(c_s_p)
         self.rhs[c_s_n] = -(1 / param.C_n) * pybamm.div(N_s_n)
         self.rhs[c_s_p] = -(1 / param.C_p) * pybamm.div(N_s_p)
+        # Boundary conditions must be provided for equations with spatial derivatives
         self.boundary_conditions[c_s_n] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (-param.C_n * j_n / param.a_n, "Neumann"),
@@ -79,8 +85,12 @@ class BasicSPM(BaseModel):
         }
         self.initial_conditions[c_s_n] = param.c_n_init
         self.initial_conditions[c_s_p] = param.c_p_init
+        # Surf takes the surface value of a variable, i.e. its boundary value on the
+        # right side. This is also accessible via `boundary_value(x, "right")`, with
+        # "left" providing the boundary value of the left side
         c_s_surf_n = pybamm.surf(c_s_n)
         c_s_surf_p = pybamm.surf(c_s_p)
+        # Events specify points at which a solution should terminate
         self.events.update(
             {
                 "Minimum negative particle surface concentration": (
@@ -95,6 +105,9 @@ class BasicSPM(BaseModel):
                 - pybamm.max(c_s_surf_p),
             }
         )
+
+        # Note that the SPM does not have any algebraic equations, so the `algebraic`
+        # dictionary remains empty
 
         ######################
         # (Some) variables
@@ -123,6 +136,8 @@ class BasicSPM(BaseModel):
         V = phi_s_p
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
+        # The `variables` dictionary contains all variables that might be useful for
+        # visualising the solution of the model
         self.variables = {
             "Negative particle surface concentration": pybamm.PrimaryBroadcast(
                 c_s_surf_n, "negative electrode"

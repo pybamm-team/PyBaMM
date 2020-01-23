@@ -34,6 +34,9 @@ class BasicDFN(BaseModel):
         ######################
         # Variables
         ######################
+        # Variables that depend on time only are created without a domain
+        Q = pybamm.Variable("Discharge capacity [A.h]")
+        # Variables that vary spatially are created with a domain
         c_e_n = pybamm.Variable(
             "Negative electrolyte concentration", domain="negative electrode",
         )
@@ -43,6 +46,8 @@ class BasicDFN(BaseModel):
         c_e_p = pybamm.Variable(
             "Positive electrolyte concentration", domain="positive electrode",
         )
+        # Concatenations combine several variables into a single variable, to simplify
+        # implementing equations that hold over several domains
         c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
 
         # Electrolyte potential
@@ -64,6 +69,9 @@ class BasicDFN(BaseModel):
         phi_s_p = pybamm.Variable(
             "Positive electrode potential", domain="positive electrode",
         )
+        # Particle concentrations are variables on the particle domain, but also vary in
+        # the x-direction (electrode domain) and so must be provided with auxiliary
+        # domains
         c_s_n = pybamm.Variable(
             "Negative particle concentration",
             domain="negative particle",
@@ -86,6 +94,8 @@ class BasicDFN(BaseModel):
         i_cell = self.param.current_with_time
 
         # Porosity
+        # Primary broadcasts are used to broadcast scalar quantities across a domain
+        # into a vector of the right shape, for multiplying with other vectors
         eps_n = pybamm.PrimaryBroadcast(param.epsilon_n, "negative electrode")
         eps_s = pybamm.PrimaryBroadcast(param.epsilon_s, "separator")
         eps_p = pybamm.PrimaryBroadcast(param.epsilon_p, "positive electrode")
@@ -97,6 +107,9 @@ class BasicDFN(BaseModel):
         )
 
         # Interfacial reactions
+        # Surf takes the surface value of a variable, i.e. its boundary value on the
+        # right side. This is also accessible via `boundary_value(x, "right")`, with
+        # "left" providing the boundary value of the left side
         c_s_surf_n = pybamm.surf(c_s_n)
         j0_n = (
             param.m_n(T)
@@ -134,9 +147,11 @@ class BasicDFN(BaseModel):
         ######################
         # State of Charge
         ######################
-        Q = pybamm.Variable("Discharge capacity [A.h]")
         I = param.dimensional_current_with_time
+        # The `rhs` dictionary contains differential equations, with the key being the
+        # variable in the d/dt
         self.rhs[Q] = I * param.timescale / 3600
+        # Initial conditions must be provided for the ODEs
         self.initial_conditions[Q] = pybamm.Scalar(0)
 
         ######################
@@ -147,6 +162,7 @@ class BasicDFN(BaseModel):
         N_s_p = -param.D_p(c_s_p, T) * pybamm.grad(c_s_p)
         self.rhs[c_s_n] = -(1 / param.C_n) * pybamm.div(N_s_n)
         self.rhs[c_s_p] = -(1 / param.C_p) * pybamm.div(N_s_p)
+        # Boundary conditions must be provided for equations with spatial derivatives
         self.boundary_conditions[c_s_n] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (-param.C_n * j_n / param.a_n, "Neumann"),
@@ -157,6 +173,7 @@ class BasicDFN(BaseModel):
         }
         self.initial_conditions[c_s_n] = param.c_n_init
         self.initial_conditions[c_s_p] = param.c_p_init
+        # Events specify points at which a solution should terminate
         self.events.update(
             {
                 "Minimum negative particle surface concentration": (
@@ -177,6 +194,8 @@ class BasicDFN(BaseModel):
         i_s_n = -param.sigma_n * (1 - eps_n) ** param.b_s_n * pybamm.grad(phi_s_n)
         sigma_eff_p = param.sigma_p * (1 - eps_p) ** param.b_s_p
         i_s_p = -sigma_eff_p * pybamm.grad(phi_s_p)
+        # The `algebraic` dictionary contains differential equations, with the key being
+        # the main scalar variable of interest in the equation
         self.algebraic[phi_s_n] = pybamm.div(i_s_n) + j_n
         self.algebraic[phi_s_p] = pybamm.div(i_s_p) + j_p
         self.boundary_conditions[phi_s_n] = {
@@ -187,6 +206,9 @@ class BasicDFN(BaseModel):
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (i_cell / pybamm.boundary_value(-sigma_eff_p, "right"), "Neumann"),
         }
+        # Initial conditions must also be provided for algebraic equations, as an
+        # initial guess for a root-finding algorithm which calculates consistent initial
+        # conditions
         self.initial_conditions[phi_s_n] = pybamm.Scalar(0)
         self.initial_conditions[phi_s_p] = param.U_p(
             param.c_p_init, param.T_init
@@ -223,6 +245,8 @@ class BasicDFN(BaseModel):
         # (Some) variables
         ######################
         voltage = pybamm.boundary_value(phi_s_p, "right")
+        # The `variables` dictionary contains all variables that might be useful for
+        # visualising the solution of the model
         self.variables = {
             "Negative particle surface concentration": c_s_surf_n,
             "Electrolyte concentration": c_e,
