@@ -165,50 +165,50 @@ class ParameterValues:
                     )
                 )
             # check parameter already exists (for updating parameters)
-            if check_already_exists is True and name not in self.items.keys():
-                raise KeyError(
-                    """cannot update parameter '{}' as it does not have a default value
-                    """.format(
-                        name
-                    )
-                )
-            # if no conflicts, update, loading functions and data if they are specified
-            else:
-                # Functions are flagged with the string "[function]"
-                if isinstance(value, str):
-                    if value.startswith("[function]"):
-                        loaded_value = pybamm.load_function(
-                            os.path.join(path, value[10:] + ".py")
+            if check_already_exists is True:
+                try:
+                    self.items[name]
+                except KeyError as err:
+                    raise KeyError(
+                        "cannot update parameter '{}' ".format(name)
+                        + "as it does not have a default value. ({})".format(
+                            err.args[0]
                         )
-                        self.items[name] = loaded_value
-                        values[name] = loaded_value
-                    # Data is flagged with the string "[data]" or "[current data]"
-                    elif value.startswith("[current data]") or value.startswith(
-                        "[data]"
-                    ):
-                        if value.startswith("[current data]"):
-                            data_path = os.path.join(
-                                pybamm.root_dir(), "input", "drive_cycles"
-                            )
-                            filename = os.path.join(data_path, value[14:] + ".csv")
-                            function_name = value[14:]
-                        else:
-                            filename = os.path.join(path, value[6:] + ".csv")
-                            function_name = value[6:]
-                        data = pd.read_csv(
-                            filename, comment="#", skip_blank_lines=True
-                        ).to_numpy()
-                        # Save name and data
-                        self.items[name] = (function_name, data)
-                        values[name] = (function_name, data)
-                    elif value == "[input]":
-                        self.items[name] = pybamm.InputParameter(name)
-                    # Anything else should be a converted to a float
+                    )
+            # if no conflicts, update, loading functions and data if they are specified
+            # Functions are flagged with the string "[function]"
+            if isinstance(value, str):
+                if value.startswith("[function]"):
+                    loaded_value = pybamm.load_function(
+                        os.path.join(path, value[10:] + ".py")
+                    )
+                    self.items[name] = loaded_value
+                    values[name] = loaded_value
+                # Data is flagged with the string "[data]" or "[current data]"
+                elif value.startswith("[current data]") or value.startswith("[data]"):
+                    if value.startswith("[current data]"):
+                        data_path = os.path.join(
+                            pybamm.root_dir(), "input", "drive_cycles"
+                        )
+                        filename = os.path.join(data_path, value[14:] + ".csv")
+                        function_name = value[14:]
                     else:
-                        self.items[name] = float(value)
-                        values[name] = float(value)
+                        filename = os.path.join(path, value[6:] + ".csv")
+                        function_name = value[6:]
+                    data = pd.read_csv(
+                        filename, comment="#", skip_blank_lines=True
+                    ).to_numpy()
+                    # Save name and data
+                    self.items[name] = (function_name, data)
+                    values[name] = (function_name, data)
+                elif value == "[input]":
+                    self.items[name] = pybamm.InputParameter(name)
+                # Anything else should be a converted to a float
                 else:
-                    self.items[name] = value
+                    self.items[name] = float(value)
+                    values[name] = float(value)
+            else:
+                self.items[name] = value
         # check parameter values
         self.check_and_update_parameter_values(values)
         # reset processed symbols
