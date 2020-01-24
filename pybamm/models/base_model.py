@@ -208,7 +208,7 @@ class BaseModel(object):
 
     @variables.setter
     def variables(self, variables):
-        self._variables.update(variables)
+        self._variables = pybamm.FuzzyDict(variables)
 
     def variable_names(self):
         return list(self._variables.keys())

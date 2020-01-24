@@ -9,7 +9,7 @@ import numbers
 
 class ParameterValues:
     """
-    The parameter values for a simulation. 
+    The parameter values for a simulation.
 
     Note that this class does not inherit directly from the python dictionary class as
     this causes issues with saving and loading simulations.
@@ -52,7 +52,7 @@ class ParameterValues:
     """
 
     def __init__(self, values=None, chemistry=None):
-        self.items = pybamm.FuzzyDict()
+        self._dict_items = pybamm.FuzzyDict()
         # Must provide either values or chemistry, not both (nor neither)
         if values is not None and chemistry is not None:
             raise ValueError(
@@ -80,18 +80,26 @@ class ParameterValues:
         self._processed_symbols = {}
 
     def __getitem__(self, key):
-        return self.items[key]
+        return self._dict_items[key]
 
     def __setitem__(self, key, value):
         "Call the update functionality when doing a setitem"
         self.update({key: value})
 
     def __delitem__(self, key):
-        del self.items[key]
+        del self._dict_items[key]
 
     def keys(self):
         "Get the keys of the dictionary"
-        return self.items.keys()
+        return self._dict_items.keys()
+
+    def values(self):
+        "Get the values of the dictionary"
+        return self._dict_items.values()
+
+    def items(self):
+        "Get the items of the dictionary"
+        return self._dict_items.items()
 
     def update_from_chemistry(self, chemistry):
         """
@@ -167,12 +175,15 @@ class ParameterValues:
             # check parameter already exists (for updating parameters)
             if check_already_exists is True:
                 try:
-                    self.items[name]
+                    self._dict_items[name]
                 except KeyError as err:
                     raise KeyError(
-                        "cannot update parameter '{}' ".format(name)
-                        + "as it does not have a default value. ({})".format(
-                            err.args[0]
+                        """
+                        Cannot update parameter '{}' as it does not have a default
+                        value. ({}). If you are sure you want to update this parameter,
+                        use param.update({{name: value}}, check_already_exists=False)
+                        """.format(
+                            name, err.args[0]
                         )
                     )
             # if no conflicts, update, loading functions and data if they are specified
@@ -182,7 +193,7 @@ class ParameterValues:
                     loaded_value = pybamm.load_function(
                         os.path.join(path, value[10:] + ".py")
                     )
-                    self.items[name] = loaded_value
+                    self._dict_items[name] = loaded_value
                     values[name] = loaded_value
                 # Data is flagged with the string "[data]" or "[current data]"
                 elif value.startswith("[current data]") or value.startswith("[data]"):
@@ -199,16 +210,16 @@ class ParameterValues:
                         filename, comment="#", skip_blank_lines=True
                     ).to_numpy()
                     # Save name and data
-                    self.items[name] = (function_name, data)
+                    self._dict_items[name] = (function_name, data)
                     values[name] = (function_name, data)
                 elif value == "[input]":
-                    self.items[name] = pybamm.InputParameter(name)
+                    self._dict_items[name] = pybamm.InputParameter(name)
                 # Anything else should be a converted to a float
                 else:
-                    self.items[name] = float(value)
+                    self._dict_items[name] = float(value)
                     values[name] = float(value)
             else:
-                self.items[name] = value
+                self._dict_items[name] = value
         # check parameter values
         self.check_and_update_parameter_values(values)
         # reset processed symbols
@@ -231,12 +242,12 @@ class ParameterValues:
             )
         # If the capacity of the cell has been provided, make sure "C-rate" and current
         # match with the stated capacity
-        if "Cell capacity [A.h]" in values or "Cell capacity [A.h]" in self.items:
+        if "Cell capacity [A.h]" in values or "Cell capacity [A.h]" in self._dict_items:
             # Capacity from values takes precedence
             if "Cell capacity [A.h]" in values:
                 capacity = values["Cell capacity [A.h]"]
             else:
-                capacity = self.items["Cell capacity [A.h]"]
+                capacity = self._dict_items["Cell capacity [A.h]"]
             # Make sure they match if both provided
             # Update the other if only one provided
             if "C-rate" in values:
@@ -249,7 +260,7 @@ class ParameterValues:
                     value = (values["C-rate"][0] + "_to_Crate", data)
                 else:
                     value = values["C-rate"] * capacity
-                self.items["Current function [A]"] = value
+                self._dict_items["Current function [A]"] = value
             elif "Current function [A]" in values:
                 if callable(values["Current function [A]"]):
                     value = CurrentToCrate(values["Current function [A]"], capacity)
@@ -259,7 +270,7 @@ class ParameterValues:
                     value = (values["Current function [A]"][0] + "_to_current", data)
                 else:
                     value = values["Current function [A]"] / capacity
-                self.items["C-rate"] = value
+                self._dict_items["C-rate"] = value
 
         return values
 
@@ -547,8 +558,8 @@ class ParameterValues:
         for x in symbol.pre_order():
             if isinstance(x, pybamm.Scalar):
                 # update any Scalar nodes if their name is in the parameter dict
-                if x.name in self.items.keys():
-                    x.value = self.items[x.name]
+                if x.name in self._dict_items.keys():
+                    x.value = self._dict_items[x.name]
                     # update id
                     x.set_id()
 

@@ -20,6 +20,10 @@ class TestParameterValues(unittest.TestCase):
         # from dict
         param = pybamm.ParameterValues({"a": 1})
         self.assertEqual(param["a"], 1)
+        self.assertEqual(list(param.keys())[0], "a")
+        self.assertEqual(list(param.values())[0], 1)
+        self.assertEqual(list(param.items())[0], ("a", 1))
+        
         # from file
         param = pybamm.ParameterValues(
             values="input/parameters/lithium-ion/cathodes/lico2_Marquis2019/"
@@ -58,7 +62,7 @@ class TestParameterValues(unittest.TestCase):
         ):
             param.update({"a": 4}, check_conflict=True)
         # with parameter not existing yet
-        with self.assertRaisesRegex(KeyError, "cannot update parameter"):
+        with self.assertRaisesRegex(KeyError, "Cannot update parameter"):
             param.update({"b": 1})
 
     def test_check_and_update_parameter_values(self):
