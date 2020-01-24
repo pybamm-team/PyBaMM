@@ -148,35 +148,40 @@ class BaseSolver(object):
             u_casadi_stacked = casadi.vertcat(*[u for u in u_casadi.values()])
 
         def process(func, name, use_jacobian=None):
+            def report(string):
+                # don't log event conversion
+                if "event" not in string:
+                    pybamm.logger.info(string)
+
             if use_jacobian is None:
                 use_jacobian = model.use_jacobian
             if model.convert_to_format != "casadi":
                 # Process with pybamm functions
                 if model.use_simplify:
-                    pybamm.logger.info(f"Simplifying {name}")
+                    report(f"Simplifying {name}")
                     func = simp.simplify(func)
                 if use_jacobian:
-                    pybamm.logger.info(f"Calculating jacobian for {name}")
+                    report(f"Calculating jacobian for {name}")
                     jac = jacobian.jac(func, y)
                     if model.use_simplify:
-                        pybamm.logger.info(f"Simplifying jacobian for {name}")
+                        report(f"Simplifying jacobian for {name}")
                         jac = simp.simplify(jac)
                     if model.convert_to_format == "python":
-                        pybamm.logger.info(f"Converting jacobian for {name} to python")
+                        report(f"Converting jacobian for {name} to python")
                         jac = pybamm.EvaluatorPython(jac)
                     jac = jac.evaluate
                 else:
                     jac = None
                 if model.convert_to_format == "python":
-                    pybamm.logger.info(f"Converting {name} to python")
+                    report(f"Converting {name} to python")
                     func = pybamm.EvaluatorPython(func)
                 func = func.evaluate
             else:
                 # Process with CasADi
-                pybamm.logger.info(f"Converting {name} to CasADi")
+                report(f"Converting {name} to CasADi")
                 func = func.to_casadi(t_casadi, y_casadi, u_casadi)
-                pybamm.logger.info(f"Converting jacobian for {name}")
                 if use_jacobian:
+                    report(f"Calculating jacobian for {name} using CasADi")
                     jac_casadi = casadi.jacobian(func, y_casadi)
                     jac = casadi.Function(
                         name, [t_casadi, y_casadi, u_casadi_stacked], [jac_casadi]

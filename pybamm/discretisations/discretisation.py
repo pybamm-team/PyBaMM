@@ -53,7 +53,7 @@ class Discretisation(object):
         self.bcs = {}
         self.y_slices = {}
         self._discretised_symbols = {}
-        self.external_variables = []
+        self.external_variables = {}
 
     @property
     def mesh(self):
@@ -136,7 +136,7 @@ class Discretisation(object):
         # now add extrapolated external variables to the boundary conditions
         # if required by the spatial method
         self._preprocess_external_variables(model)
-        self.external_variables = model.external_variables
+        self.set_external_variables(model)
 
         # set boundary conditions (only need key ids for boundary_conditions)
         pybamm.logger.info("Discretise boundary conditions for {}".format(model.name))
@@ -269,6 +269,31 @@ class Discretisation(object):
                 ].preprocess_external_variables(var)
 
                 model.boundary_conditions.update(new_bcs)
+
+    def set_external_variables(self, model):
+        """
+        Add external variables to the list of variables to account for, being careful
+        about concatenations
+        """
+        for var in model.external_variables:
+            # Find the name in the model variables
+            # Look up dictionary key based on value
+            idx = [x.id for x in model.variables.values()].index(var.id)
+            name = list(model.variables.keys())[idx]
+            if isinstance(var, pybamm.Variable):
+                # No need to keep track of the parent
+                self.external_variables[(name, None)] = var
+            elif isinstance(var, pybamm.Concatenation):
+                start = 0
+                end = 0
+                for child in var.children:
+                    dom = child.domain[0]
+                    if len(self.spatial_methods[dom].mesh[dom]) > 1:
+                        raise ValueError
+                    end += self._get_variable_size(child)
+                    # Keep a record of the parent
+                    self.external_variables[(name, (var, start, end))] = child
+                    start = end
 
     def set_internal_boundary_conditions(self, model):
         """
@@ -817,13 +842,31 @@ class Discretisation(object):
 
         elif isinstance(symbol, pybamm.Variable):
             # Check if variable is a standard variable or an external variable
-            if any(symbol.id == var.id for var in self.external_variables):
-                return pybamm.ExternalVariable(
-                    symbol.name,
-                    size=self._get_variable_size(symbol),
-                    domain=symbol.domain,
-                    auxiliary_domains=symbol.auxiliary_domains,
-                )
+            if any(symbol.id == var.id for var in self.external_variables.values()):
+                # Look up dictionary key based on value
+                idx = [x.id for x in self.external_variables.values()].index(symbol.id)
+                name, parent_and_slice = list(self.external_variables.keys())[idx]
+                if parent_and_slice is None:
+                    # Variable didn't come from a concatenation so we can just create a
+                    # normal external variable
+                    return pybamm.ExternalVariable(
+                        name,
+                        size=self._get_variable_size(symbol),
+                        domain=symbol.domain,
+                        auxiliary_domains=symbol.auxiliary_domains,
+                    )
+                else:
+                    parent, start, end = parent_and_slice
+                    ext = pybamm.ExternalVariable(
+                        name,
+                        size=self._get_variable_size(parent),
+                        domain=parent.domain,
+                        auxiliary_domains=parent.auxiliary_domains,
+                    )
+                    out = ext[slice(start, end)]
+                    out.domain = symbol.domain
+                    return out
+
             else:
                 return pybamm.StateVector(
                     *self.y_slices[symbol.id],
@@ -903,8 +946,8 @@ class Discretisation(object):
         if check_complete:
             # Check keys from the given var_eqn_dict against self.y_slices
             ids = {v.id for v in unpacked_variables}
-            external_id = {v.id for v in self.external_variables}
-            for var in self.external_variables:
+            external_id = {v.id for v in self.external_variables.values()}
+            for var in self.external_variables.values():
                 child_ids = {child.id for child in var.children}
                 external_id = external_id.union(child_ids)
             y_slices_with_external_removed = set(self.y_slices.keys()).difference(

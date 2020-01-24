@@ -2,6 +2,7 @@
 # Variable class
 #
 import pybamm
+import numbers
 import numpy as np
 
 
@@ -95,13 +96,16 @@ class ExternalVariable(Variable):
             raise TypeError("inputs u should be a dictionary")
         try:
             out = u[self.name]
-            if out.shape[0] != self.size:
+            if isinstance(out, numbers.Number):
+                return out * np.ones((self.size, 1))
+            elif out.shape[0] != self.size:
                 raise ValueError(
                     "External variable input has size {} but should be {}".format(
                         out.size, self.size
                     )
                 )
-            return out
+            else:
+                return out
         # raise more informative error if can't find name in dict
         except KeyError:
             raise KeyError("External variable '{}' not found".format(self.name))

@@ -27,17 +27,6 @@ class TestBaseSolver(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.ModelError, "Cannot solve empty model"):
             solver.solve(model, None)
 
-    def test_set_external_variables(self):
-        options = {"thermal": "x-full", "external submodels": ["thermal"]}
-        model = pybamm.lithium_ion.SPM(options)
-        sim = pybamm.Simulation(model)
-        sim.build()
-        solver = pybamm.BaseSolver()
-
-        T = np.ones((60, 1))
-        external_variables = {"Cell temperature": T}
-        solver.set_external_variables(sim.built_model, external_variables)
-
     def test_find_consistent_initial_conditions(self):
         # Simple system: a single algebraic equation
         class ScalarModel:

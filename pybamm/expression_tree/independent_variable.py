@@ -85,9 +85,7 @@ class SpatialVariable(IndependentVariable):
         domain = self.domain
 
         if name not in KNOWN_SPATIAL_VARS:
-            raise ValueError(
-                "name must be KNOWN_SPATIAL_VARS  but is '{}'".format(name)
-            )
+            raise ValueError(f"name must be in {KNOWN_SPATIAL_VARS}  but is '{name}'")
         if domain == []:
             raise ValueError("domain must be provided")
 

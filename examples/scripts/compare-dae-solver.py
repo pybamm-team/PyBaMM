@@ -27,12 +27,10 @@ disc.process_model(model)
 t_eval = np.linspace(0, 0.25, 100)
 
 casadi_sol = pybamm.CasadiSolver(atol=1e-8, rtol=1e-8).solve(model, t_eval)
-models = [model]
 solutions = [casadi_sol]
 
 if pybamm.have_idaklu():
     klu_sol = pybamm.IDAKLUSolver(atol=1e-8, rtol=1e-8).solve(model, t_eval)
-    models.append(model)
     solutions.append(klu_sol)
 else:
     pybamm.logger.error(
@@ -43,7 +41,6 @@ else:
     )
 if pybamm.have_scikits_odes():
     scikits_sol = pybamm.ScikitsDaeSolver(atol=1e-8, rtol=1e-8).solve(model, t_eval)
-    models.append(model)
     solutions.append(scikits_sol)
 else:
     pybamm.logger.error(
@@ -54,6 +51,5 @@ else:
     )
 
 # plot
-solutions = [casadi_sol, klu_sol, casadi_sol]
 plot = pybamm.QuickPlot(solutions)
 plot.dynamic_plot()
