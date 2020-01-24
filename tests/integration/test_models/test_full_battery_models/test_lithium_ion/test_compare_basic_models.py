@@ -11,9 +11,11 @@ class TestCompareBasicModels(unittest.TestCase):
     def test_compare_dfns(self):
         basic_dfn = pybamm.lithium_ion.BasicDFN()
         dfn = pybamm.lithium_ion.DFN()
+        basic_dfn_eqns = {**basic_dfn.rhs, **basic_dfn.algebraic}
+        dfn_eqns = {**dfn.rhs, **dfn.algebraic}
         self.assertEqual(
-            [var.name for var in {**dfn.rhs, **dfn.algebraic}.keys()],
-            [var.name for var in {**basic_dfn.rhs, **basic_dfn.algebraic}.keys()],
+            [var.name for var in dfn_eqns.keys()],
+            [var.name for var in basic_dfn_eqns.keys()],
         )
 
         # Solve basic DFN
@@ -40,9 +42,11 @@ class TestCompareBasicModels(unittest.TestCase):
     def test_compare_spms(self):
         basic_spm = pybamm.lithium_ion.BasicSPM()
         spm = pybamm.lithium_ion.SPM()
+        basic_spm_eqns = {**basic_spm.rhs, **basic_spm.algebraic}
+        spm_eqns = {**spm.rhs, **spm.algebraic}
         self.assertEqual(
-            [var.name for var in {**spm.rhs, **spm.algebraic}.keys()],
-            [var.name for var in {**basic_spm.rhs, **basic_spm.algebraic}.keys()],
+            [var.name for var in spm_eqns.keys()],
+            [var.name for var in basic_spm_eqns.keys()],
         )
 
         # Solve basic SPM
