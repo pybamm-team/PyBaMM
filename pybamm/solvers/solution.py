@@ -142,6 +142,10 @@ class Solution(object):
             self.inputs[name] = np.concatenate((inp, solution_inp[1:]))
         # Update solution time
         self.solve_time += solution.solve_time
+        # Update events
+        self.termination = solution.termination
+        self.t_event = solution.t_event
+        self.y_event = solution.y_event
 
         # Update known_evals
         for t, evals in solution.known_evals.items():
