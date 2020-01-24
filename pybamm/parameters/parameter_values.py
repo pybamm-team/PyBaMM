@@ -547,13 +547,10 @@ class ParameterValues:
         for x in symbol.pre_order():
             if isinstance(x, pybamm.Scalar):
                 # update any Scalar nodes if their name is in the parameter dict
-                try:
-                    x.value = self[x.name]
+                if x.name in self.items.keys():
+                    x.value = self.items[x.name]
                     # update id
                     x.set_id()
-                except KeyError:
-                    # KeyError -> name not in parameter dict, don't update
-                    continue
 
         return symbol
 
