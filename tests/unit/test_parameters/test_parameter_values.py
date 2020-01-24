@@ -56,9 +56,11 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(param["a"], 2)
         # with conflict
         param.update({"a": 3})
-        self.assertEqual(param["a"], 3)
+        # via __setitem__
+        param["a"] = 2
+        self.assertEqual(param["a"], 2)
         with self.assertRaisesRegex(
-            ValueError, "parameter 'a' already defined with value '3'"
+            ValueError, "parameter 'a' already defined with value '2'"
         ):
             param.update({"a": 4}, check_conflict=True)
         # with parameter not existing yet
