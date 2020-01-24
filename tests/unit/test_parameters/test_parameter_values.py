@@ -23,7 +23,7 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(list(param.keys())[0], "a")
         self.assertEqual(list(param.values())[0], 1)
         self.assertEqual(list(param.items())[0], ("a", 1))
-        
+
         # from file
         param = pybamm.ParameterValues(
             values="input/parameters/lithium-ion/cathodes/lico2_Marquis2019/"
