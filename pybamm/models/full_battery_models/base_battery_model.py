@@ -341,7 +341,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             }
         )
 
-        self.variables = {}
+        self._variables = pybamm.FuzzyDict()
 
         # Time
         time_scale = pybamm.electrical_parameters.timescale

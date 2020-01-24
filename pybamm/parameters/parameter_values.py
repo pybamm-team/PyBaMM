@@ -7,9 +7,12 @@ import os
 import numbers
 
 
-class ParameterValues(dict):
+class ParameterValues:
     """
-    The parameter values for a simulation.
+    The parameter values for a simulation. 
+
+    Note that this class does not inherit directly from the python dictionary class as
+    this causes issues with saving and loading simulations.
 
     Parameters
     ----------
@@ -49,6 +52,7 @@ class ParameterValues(dict):
     """
 
     def __init__(self, values=None, chemistry=None):
+        self.items = pybamm.FuzzyDict()
         # Must provide either values or chemistry, not both (nor neither)
         if values is not None and chemistry is not None:
             raise ValueError(
@@ -66,19 +70,28 @@ class ParameterValues(dict):
             self.update_from_chemistry(chemistry)
         # Then update with values dictionary or file
         if values is not None:
+            # If base_parameters is a filename, load from that filename
             if isinstance(values, str):
                 values = self.read_parameters_csv(values)
-            # If base_parameters is a filename, load from that filename
-            self.update(values)
+            # Don't check parameter already exists when first creating it
+            self.update(values, check_already_exists=False)
 
         # Initialise empty _processed_symbols dict (for caching)
         self._processed_symbols = {}
 
     def __getitem__(self, key):
-        try:
-            return super().__getitem__(key)
-        except KeyError as err:
-            raise KeyError("Parameter '{}' not recognised".format(err.args[0]))
+        return self.items[key]
+
+    def __setitem__(self, key, value):
+        "Call the update functionality when doing a setitem"
+        self.update({key: value})
+
+    def __delitem__(self, key):
+        del self.items[key]
+
+    def keys(self):
+        "Get the keys of the dictionary"
+        return self.items.keys()
 
     def update_from_chemistry(self, chemistry):
         """
@@ -111,7 +124,12 @@ class ParameterValues(dict):
                 os.path.join(component_path, "parameters.csv")
             )
             # Update parameters, making sure to check any conflicts
-            self.update(component_params, check_conflict=True, path=component_path)
+            self.update(
+                component_params,
+                check_conflict=True,
+                check_already_exists=False,
+                path=component_path,
+            )
 
     def read_parameters_csv(self, filename):
         """Reads parameters from csv file into dict.
@@ -132,11 +150,7 @@ class ParameterValues(dict):
         df.dropna(how="all", inplace=True)
         return {k: v for (k, v) in zip(df["Name [units]"], df["Value"])}
 
-    def __setitem__(self, key, value):
-        "Call the update functionality when doing a setitem"
-        self.update({key: value})
-
-    def update(self, values, check_conflict=False, path=""):
+    def update(self, values, check_conflict=False, check_already_exists=True, path=""):
         # update
         for name, value in values.items():
             # check for conflicts
@@ -150,6 +164,14 @@ class ParameterValues(dict):
                         name, self[name]
                     )
                 )
+            # check parameter already exists (for updating parameters)
+            if check_already_exists is True and name not in self.items.keys():
+                raise KeyError(
+                    """cannot update parameter '{}' as it does not have a default value
+                    """.format(
+                        name
+                    )
+                )
             # if no conflicts, update, loading functions and data if they are specified
             else:
                 # Functions are flagged with the string "[function]"
@@ -158,7 +180,7 @@ class ParameterValues(dict):
                         loaded_value = pybamm.load_function(
                             os.path.join(path, value[10:] + ".py")
                         )
-                        super().__setitem__(name, loaded_value)
+                        self.items[name] = loaded_value
                         values[name] = loaded_value
                     # Data is flagged with the string "[data]" or "[current data]"
                     elif value.startswith("[current data]") or value.startswith(
@@ -177,16 +199,16 @@ class ParameterValues(dict):
                             filename, comment="#", skip_blank_lines=True
                         ).to_numpy()
                         # Save name and data
-                        super().__setitem__(name, (function_name, data))
+                        self.items[name] = (function_name, data)
                         values[name] = (function_name, data)
                     elif value == "[input]":
-                        super().__setitem__(name, pybamm.InputParameter(name))
+                        self.items[name] = pybamm.InputParameter(name)
                     # Anything else should be a converted to a float
                     else:
-                        super().__setitem__(name, float(value))
+                        self.items[name] = float(value)
                         values[name] = float(value)
                 else:
-                    super().__setitem__(name, value)
+                    self.items[name] = value
         # check parameter values
         self.check_and_update_parameter_values(values)
         # reset processed symbols
@@ -209,12 +231,12 @@ class ParameterValues(dict):
             )
         # If the capacity of the cell has been provided, make sure "C-rate" and current
         # match with the stated capacity
-        if "Cell capacity [A.h]" in values or "Cell capacity [A.h]" in self:
+        if "Cell capacity [A.h]" in values or "Cell capacity [A.h]" in self.items:
             # Capacity from values takes precedence
             if "Cell capacity [A.h]" in values:
                 capacity = values["Cell capacity [A.h]"]
             else:
-                capacity = self["Cell capacity [A.h]"]
+                capacity = self.items["Cell capacity [A.h]"]
             # Make sure they match if both provided
             # Update the other if only one provided
             if "C-rate" in values:
@@ -227,7 +249,7 @@ class ParameterValues(dict):
                     value = (values["C-rate"][0] + "_to_Crate", data)
                 else:
                     value = values["C-rate"] * capacity
-                super().__setitem__("Current function [A]", value)
+                self.items["Current function [A]"] = value
             elif "Current function [A]" in values:
                 if callable(values["Current function [A]"]):
                     value = CurrentToCrate(values["Current function [A]"], capacity)
@@ -237,7 +259,7 @@ class ParameterValues(dict):
                     value = (values["Current function [A]"][0] + "_to_current", data)
                 else:
                     value = values["Current function [A]"] / capacity
-                super().__setitem__("C-rate", value)
+                self.items["C-rate"] = value
 
         return values
 

@@ -13,11 +13,22 @@ import pathlib
 import pickle
 import pybamm
 from collections import defaultdict
+from fuzzywuzzy import process
 
 
 def root_dir():
     """ return the root directory of the PyBaMM install directory """
     return str(pathlib.Path(pybamm.__path__[0]).parent)
+
+
+class FuzzyDict(dict):
+    def __getitem__(self, key):
+        try:
+            return super().__getitem__(key)
+        except KeyError:
+            best_matches = process.extract(key, self.keys(), limit=3)
+            best_matches = [match[0] for match in best_matches]
+            raise KeyError(f"'{key}' not found. Best matches are {best_matches}")
 
 
 class Timer(object):

@@ -57,6 +57,9 @@ class TestParameterValues(unittest.TestCase):
             ValueError, "parameter 'a' already defined with value '3'"
         ):
             param.update({"a": 4}, check_conflict=True)
+        # with parameter not existing yet
+        with self.assertRaisesRegex(KeyError, "cannot update parameter"):
+            param.update({"b": 1})
 
     def test_check_and_update_parameter_values(self):
         # Can't provide a current density of 0, as this will cause a ZeroDivision error
@@ -367,6 +370,7 @@ class TestParameterValues(unittest.TestCase):
                 "cathodes",
                 "lico2_Marquis2019",
             ),
+            check_already_exists=False,
         )
 
         a = pybamm.Parameter("a")

@@ -294,7 +294,9 @@ class TestSimulation(unittest.TestCase):
         sim.set_defaults()
         # Not sure of best way to test nested dicts?
         # self.geometry = model.default_geometry
-        self.assertEqual(sim._parameter_values, model.default_parameter_values)
+        self.assertEqual(
+            sim._parameter_values.items, model.default_parameter_values.items
+        )
         for domain, submesh in model.default_submesh_types.items():
             self.assertEqual(
                 sim._submesh_types[domain].submesh_type, submesh.submesh_type
