@@ -84,6 +84,19 @@ class TestDiscretise(unittest.TestCase):
         self.assertIsInstance(model.variables["b"], pybamm.ExternalVariable)
         self.assertEqual(model.variables["b"].evaluate(u={"b": np.array([1])}), 1)
 
+    def test_adding_0D_external_variable_fail(self):
+        model = pybamm.BaseModel()
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+
+        model.rhs = {a: a * b}
+        model.initial_conditions = {a: 0}
+        model.external_variables = [b]
+
+        disc = pybamm.Discretisation()
+        with self.assertRaisesRegex(ValueError, "Variable b must be in the model"):
+            disc.process_model(model)
+
     def test_adding_1D_external_variable(self):
         model = pybamm.BaseModel()
 

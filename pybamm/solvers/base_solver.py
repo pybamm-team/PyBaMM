@@ -425,7 +425,9 @@ class BaseSolver(object):
         )
         return solution
 
-    def step(self, model, dt, npts=2, external_variables=None, inputs=None):
+    def step(
+        self, old_solution, model, dt, npts=2, external_variables=None, inputs=None
+    ):
         """
         Step the solution of the model forward by a given time increment. The
         first time this method is called it executes the necessary setup by
@@ -433,6 +435,8 @@ class BaseSolver(object):
 
         Parameters
         ----------
+        old_solution : :class:`pybamm.Solution` or None
+            The previous solution to be added to. If `None`, a new solution is created.
         model : :class:`pybamm.BaseModel`
             The model whose solution to calculate. Must have attributes rhs and
             initial_conditions
@@ -454,6 +458,10 @@ class BaseSolver(object):
             If an empty model is passed (`model.rhs = {}` and `model.algebraic={}`)
 
         """
+        if old_solution is not None and old_solution.termination != "final time":
+            # Return same solution as an event has already been triggered
+            return old_solution
+
         # Make sure model isn't empty
         if len(model.rhs) == 0 and len(model.algebraic) == 0:
             raise pybamm.ModelError("Cannot step empty model")
@@ -515,7 +523,10 @@ class BaseSolver(object):
             pybamm.logger.debug(
                 "Step time: {}".format(timer.format(solution.solve_time))
             )
-        return solution
+        if old_solution is None:
+            return solution
+        else:
+            return old_solution + solution
 
     def get_termination_reason(self, solution, events):
         """

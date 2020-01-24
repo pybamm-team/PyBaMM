@@ -75,8 +75,6 @@ class Simulation:
         if self.C_rate:
             self._parameter_values.update({"C-rate": self.C_rate})
 
-        self._made_first_step = False
-
         self.reset(update_model=False)
 
         # ignore runtime warnings in notebooks
@@ -110,7 +108,6 @@ class Simulation:
         self._mesh = None
         self._disc = None
         self._solution = None
-        self._made_first_step = False
 
     def set_parameters(self):
         """
@@ -216,30 +213,23 @@ class Simulation:
         if solver is None:
             solver = self.solver
 
-        solution = solver.step(
-            self.built_model, dt, external_variables=external_variables, inputs=inputs
-        )
-
-        if save is False or self._made_first_step is False:
-            self._solution = solution
-        elif self._solution.t[-1] == solution.t[-1]:
-            pass
+        if save is False:
+            # Don't pass previous solution
+            self._solution = solver.step(
+                None,
+                self.built_model,
+                dt,
+                external_variables=external_variables,
+                inputs=inputs,
+            )
         else:
-            self._update_solution(solution)
-
-        self._made_first_step = True
-
-    def _update_solution(self, solution):
-
-        self._solution.set_up_time += solution.set_up_time
-        self._solution.solve_time += solution.solve_time
-        self._solution.t = np.append(self._solution.t, solution.t[-1])
-        self._solution.t_event = solution.t_event
-        self._solution.termination = solution.termination
-        self._solution.y = np.concatenate(
-            [self._solution.y, solution.y[:, -1][:, np.newaxis]], axis=1
-        )
-        self._solution.y_event = solution.y_event
+            self._solution = solver.step(
+                self._solution,
+                self.built_model,
+                dt,
+                external_variables=external_variables,
+                inputs=inputs,
+            )
 
     def get_variable_array(self, *variables):
         """

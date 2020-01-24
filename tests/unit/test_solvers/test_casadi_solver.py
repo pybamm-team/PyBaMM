@@ -115,17 +115,16 @@ class TestCasadiSolver(unittest.TestCase):
 
         # Step once
         dt = 0.1
-        step_sol = solver.step(model, dt)
+        step_sol = solver.step(None, model, dt)
         np.testing.assert_array_equal(step_sol.t, [0, dt])
         np.testing.assert_allclose(step_sol.y[0], np.exp(0.1 * step_sol.t))
 
         # Step again (return 5 points)
-        step_sol_2 = solver.step(model, dt, npts=5)
-        np.testing.assert_array_equal(step_sol_2.t, np.linspace(dt, 2 * dt, 5))
+        step_sol_2 = solver.step(step_sol, model, dt, npts=5)
+        np.testing.assert_array_equal(
+            step_sol_2.t, np.concatenate([np.array([0]), np.linspace(dt, 2 * dt, 5)])
+        )
         np.testing.assert_allclose(step_sol_2.y[0], np.exp(0.1 * step_sol_2.t))
-
-        # append solutions
-        step_sol.append(step_sol_2)
 
         # Check steps give same solution as solve
         t_eval = step_sol.t
@@ -155,13 +154,7 @@ class TestCasadiSolver(unittest.TestCase):
         step_solver = model.default_solver
         step_solution = None
         while time < end_time:
-            current_step_sol = step_solver.step(model, dt=dt, npts=10)
-            if not step_solution:
-                # create solution object on first step
-                step_solution = current_step_sol
-            else:
-                # append solution from the current step to step_solution
-                step_solution.append(current_step_sol)
+            step_solution = step_solver.step(step_solution, model, dt=dt, npts=10)
             time += dt
         np.testing.assert_array_less(step_solution.y[0], 1.5)
         np.testing.assert_array_less(step_solution.y[-1], 2.5)

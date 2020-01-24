@@ -278,7 +278,15 @@ class Discretisation(object):
         for var in model.external_variables:
             # Find the name in the model variables
             # Look up dictionary key based on value
-            idx = [x.id for x in model.variables.values()].index(var.id)
+            try:
+                idx = [x.id for x in model.variables.values()].index(var.id)
+            except ValueError:
+                raise ValueError(
+                    """
+                    Variable {} must be in the model.variables dictionary to be set
+                    as an external variable
+                    """.format(var)
+                )
             name = list(model.variables.keys())[idx]
             if isinstance(var, pybamm.Variable):
                 # No need to keep track of the parent

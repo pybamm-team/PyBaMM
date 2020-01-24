@@ -37,13 +37,7 @@ end_time = solution.t[-1]
 step_solver = model.default_solver
 step_solution = None
 while time < end_time:
-    current_step_sol = step_solver.step(model, dt=dt, npts=10)
-    if not step_solution:
-        # create solution object on first step
-        step_solution = current_step_sol
-    else:
-        # append solution from the current step to step_solution
-        step_solution.append(current_step_sol)
+    step_solution = step_solver.step(step_solution, model, dt=dt, npts=10)
     time += dt
 
 # plot

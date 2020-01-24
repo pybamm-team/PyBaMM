@@ -23,7 +23,7 @@ class TestBaseSolver(unittest.TestCase):
         model = pybamm.BaseModel()
         solver = pybamm.BaseSolver()
         with self.assertRaisesRegex(pybamm.ModelError, "Cannot step empty model"):
-            solver.step(model, None)
+            solver.step(None, model, None)
         with self.assertRaisesRegex(pybamm.ModelError, "Cannot solve empty model"):
             solver.solve(model, None)
 
