@@ -81,8 +81,21 @@ class TestDiscretise(unittest.TestCase):
         disc = pybamm.Discretisation()
         disc.process_model(model)
 
-        self.assertEqual(len(model.y_slices), 2)
-        self.assertEqual(model.y_slices[b.id][0], slice(1, 2, None))
+        self.assertIsInstance(model.variables["b"], pybamm.ExternalVariable)
+        self.assertEqual(model.variables["b"].evaluate(u={"b": np.array([1])}), 1)
+
+    def test_adding_0D_external_variable_fail(self):
+        model = pybamm.BaseModel()
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+
+        model.rhs = {a: a * b}
+        model.initial_conditions = {a: 0}
+        model.external_variables = [b]
+
+        disc = pybamm.Discretisation()
+        with self.assertRaisesRegex(ValueError, "Variable b must be in the model"):
+            disc.process_model(model)
 
     def test_adding_1D_external_variable(self):
         model = pybamm.BaseModel()
@@ -117,9 +130,12 @@ class TestDiscretise(unittest.TestCase):
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
 
-        self.assertEqual(len(model.y_slices), 2)
-        self.assertEqual(model.y_slices[a.id][0], slice(0, 10, None))
-        self.assertEqual(model.y_slices[b.id][0], slice(10, 20, None))
+        self.assertEqual(disc.y_slices[a.id][0], slice(0, 10, None))
+
+        b_test = np.ones((10, 1))
+        np.testing.assert_array_equal(
+            model.variables["b"].evaluate(u={"b": b_test}), b_test
+        )
 
         # check that b is added to the boundary conditions
         model.bcs[b.id]["left"]
@@ -130,11 +146,78 @@ class TestDiscretise(unittest.TestCase):
         self.assertEqual(model.variables["grad b"].shape_for_testing, (11, 1))
         self.assertEqual(model.variables["div grad b"].shape_for_testing, (10, 1))
 
-        # check meshes
-        self.assertIsInstance(model.variables["a"].mesh[0], pybamm.SubMesh)
+    def test_concatenation_external_variables(self):
+        model = pybamm.BaseModel()
+
+        a = pybamm.Variable("a", domain=["test", "test1"])
+        b1 = pybamm.Variable("b", domain=["test"])
+        b2 = pybamm.Variable("c", domain=["test1"])
+        b = pybamm.Concatenation(b1, b2)
+
+        model.rhs = {a: a * b}
+        model.boundary_conditions = {
+            a: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")}
+        }
+        model.initial_conditions = {a: 0}
+        model.external_variables = [b]
+        model.variables = {
+            "a": a,
+            "b": b,
+            "b1": b1,
+            "b2": b2,
+            "c": a * b,
+            "grad b": pybamm.grad(b),
+            "div grad b": pybamm.div(pybamm.grad(b)),
+        }
+
+        x = pybamm.SpatialVariable("x", domain="test", coord_sys="cartesian")
+        y = pybamm.SpatialVariable("y", domain="test1", coord_sys="cartesian")
+        geometry = {
+            "test": {
+                "primary": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
+            },
+            "test1": {
+                "primary": {y: {"min": pybamm.Scalar(1), "max": pybamm.Scalar(2)}}
+            },
+        }
+
+        submesh_types = {
+            "test": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "test1": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+        }
+        var_pts = {x: 10, y: 5}
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        spatial_methods = {
+            "test": pybamm.FiniteVolume(),
+            "test1": pybamm.FiniteVolume(),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
+
+        self.assertEqual(disc.y_slices[a.id][0], slice(0, 15, None))
+
+        b_test = np.linspace(0, 1, 15)[:, np.newaxis]
         np.testing.assert_array_equal(
-            model.variables["a"].mesh[0].nodes, mesh["test"][0].nodes
+            model.variables["b"].evaluate(u={"b": b_test}), b_test
         )
+        np.testing.assert_array_equal(
+            model.variables["b1"].evaluate(u={"b": b_test}), b_test[:10]
+        )
+        np.testing.assert_array_equal(
+            model.variables["b2"].evaluate(u={"b": b_test}), b_test[10:]
+        )
+
+        # check that b is added to the boundary conditions
+        model.bcs[b.id]["left"]
+        model.bcs[b.id]["right"]
+
+        # check that grad and div(grad ) produce the correct shapes
+        self.assertEqual(model.variables["b"].shape_for_testing, (15, 1))
+        self.assertEqual(model.variables["grad b"].shape_for_testing, (16, 1))
+        self.assertEqual(model.variables["div grad b"].shape_for_testing, (15, 1))
+        self.assertEqual(model.variables["b1"].shape_for_testing, (10, 1))
+        self.assertEqual(model.variables["b2"].shape_for_testing, (5, 1))
 
     def test_discretise_slicing(self):
         # create discretisation

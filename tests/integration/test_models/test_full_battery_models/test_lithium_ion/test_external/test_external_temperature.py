@@ -25,7 +25,6 @@ class TestExternalThermalModels(unittest.TestCase):
             T_av += 1
             sim.step(dt, external_variables=external_variables)
 
-    @unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
     def test_external_temperature(self):
 
         model_options = {
@@ -61,7 +60,6 @@ class TestExternalThermalModels(unittest.TestCase):
             external_variables = {"Cell temperature": T}
             sim.step(dt, external_variables=external_variables)
 
-    @unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
     def test_dae_external_temperature(self):
 
         model_options = {

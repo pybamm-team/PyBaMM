@@ -3,7 +3,6 @@
 #
 import pybamm
 import numpy as np
-import scipy.sparse as sparse
 import unittest
 
 
@@ -13,54 +12,21 @@ class TestIDAKLUSolver(unittest.TestCase):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
         # see sundials ida examples pdf
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        model.rhs = {u: 0.1 * v}
+        model.algebraic = {v: 1 - v}
+        model.initial_conditions = {u: 0, v: 1}
+        model.events = {"1": u - 0.2, "2": v}
 
-        # times and initial conditions
-        t_eval = np.linspace(0, 3, 100)
-        y0 = np.array([0.0, 1.0])
-
-        # Standard pybamm functions
-        def jac(t, y):
-            J = np.zeros((2, 2))
-            J[0][0] = 0.0
-            J[0][1] = 1.0
-            J[1][0] = 0.0
-            J[1][1] = -1.0
-            return sparse.csr_matrix(J)
-
-        def event_1(t, y):
-            return y[0] - 0.2
-
-        def event_2(t, y):
-            return y[1] - 0.0
-
-        events = np.array([event_1, event_2])
-
-        def res(t, y, yp):
-            # must be of form r = f(t, y) - y'
-            r = np.zeros((y.size,))
-            r[0] = 0.1 * y[1]
-            r[1] = 1 - y[1]
-            r[0] += -yp[0]
-            return r
-
-        mass_matrix_dense = np.zeros((2, 2))
-        mass_matrix_dense[0][0] = 1
-        mass_matrix = sparse.csr_matrix(mass_matrix_dense)
-
-        def rhs(t, y):
-            return np.array([0.1 * y[1]])
-
-        def alg(t, y):
-            return np.array([1 - y[1]])
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
 
         solver = pybamm.IDAKLUSolver()
-        solver.residuals = res
-        solver.rhs = rhs
-        solver.algebraic = alg
 
-        solution = solver.integrate(
-            res, y0, t_eval, events, mass_matrix, jac, model=None
-        )
+        t_eval = np.linspace(0, 3, 100)
+        solution = solver.solve(model, t_eval)
 
         # test that final time is time of event
         # y = 0.1 t + y0 so y=0.2 when t=2
@@ -91,6 +57,39 @@ class TestIDAKLUSolver(unittest.TestCase):
 
         variable_tols = {"Electrolyte concentration": 1e-3}
         solver.set_atol_by_variable(variable_tols, model)
+
+    def test_model_step_events(self):
+        # Create model
+        model = pybamm.BaseModel()
+        var1 = pybamm.Variable("var1")
+        var2 = pybamm.Variable("var2")
+        model.rhs = {var1: 0.1 * var1}
+        model.algebraic = {var2: 2 * var1 - var2}
+        model.initial_conditions = {var1: 1, var2: 2}
+        model.events = {
+            "var1 = 1.5": pybamm.min(var1 - 1.5),
+            "var2 = 2.5": pybamm.min(var2 - 2.5),
+        }
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        # Solve
+        step_solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8)
+        dt = 0.05
+        time = 0
+        end_time = 5
+        step_solution = None
+        while time < end_time:
+            step_solution = step_solver.step(step_solution, model, dt=dt, npts=10)
+            time += dt
+        np.testing.assert_array_less(step_solution.y[0], 1.5)
+        np.testing.assert_array_less(step_solution.y[-1], 2.5001)
+        np.testing.assert_array_almost_equal(
+            step_solution.y[0], np.exp(0.1 * step_solution.t), decimal=5
+        )
+        np.testing.assert_array_almost_equal(
+            step_solution.y[-1], 2 * np.exp(0.1 * step_solution.t), decimal=5
+        )
 
 
 if __name__ == "__main__":

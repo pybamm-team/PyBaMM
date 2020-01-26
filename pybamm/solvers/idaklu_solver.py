@@ -17,7 +17,7 @@ def have_idaklu():
     return idaklu_spec is not None
 
 
-class IDAKLUSolver(pybamm.DaeSolver):
+class IDAKLUSolver(pybamm.BaseSolver):
     """Solve a discretised model, using sundials with the KLU sparse linear solver.
 
      Parameters
@@ -132,37 +132,20 @@ class IDAKLUSolver(pybamm.DaeSolver):
 
         return atol
 
-    def integrate(self, residuals, y0, t_eval, events, mass_matrix, jacobian, model):
+    def _integrate(self, model, t_eval, inputs=None):
         """
         Solve a DAE model defined by residuals with initial conditions y0.
 
         Parameters
         ----------
-        residuals : method
-            A function that takes in t, y and ydot and returns the residuals of the
-            equations
-        y0 : numeric type
-            The initial conditions
-        t_eval : numeric type
-            The times at which to compute the solution
-        events : method,
-            A function that takes in t and y and returns conditions for the solver to
-            stop
-        mass_matrix : array_like,
-            The (sparse) mass matrix for the chosen spatial method.
-        jacobian : method,
-            A function that takes in t and y and returns the Jacobian. If
-            None, the solver will approximate the Jacobian.
-            (see `SUNDIALS docs. <https://computation.llnl.gov/projects/sundials>`).
         model : :class:`pybamm.BaseModel`
             The model whose solution to calculate.
+        t_eval : numeric type
+            The times at which to compute the solution
         """
 
-        if jacobian is None:
+        if model.jacobian_eval is None:
             pybamm.SolverError("KLU requires the Jacobian to be provided")
-
-        if events is None:
-            pybamm.SolverError("KLU requires events to be provided")
 
         try:
             atol = model.atol
@@ -170,20 +153,22 @@ class IDAKLUSolver(pybamm.DaeSolver):
             atol = self._atol
 
         rtol = self._rtol
-        atol = self._check_atol_type(atol, y0.size)
+        atol = self._check_atol_type(atol, model.y0.size)
+        y0 = model.y0
+        mass_matrix = model.mass_matrix.entries
 
-        if jacobian:
-            jac_y0_t0 = jacobian(t_eval[0], y0)
+        if model.jacobian_eval:
+            jac_y0_t0 = model.jacobian_eval(t_eval[0], y0)
             if sparse.issparse(jac_y0_t0):
 
                 def jacfn(t, y, cj):
-                    j = jacobian(t, y) - cj * mass_matrix
+                    j = model.jacobian_eval(t, y) - cj * mass_matrix
                     return j
 
             else:
 
                 def jacfn(t, y, cj):
-                    jac_eval = jacobian(t, y) - cj * mass_matrix
+                    jac_eval = model.jacobian_eval(t, y) - cj * mass_matrix
                     return sparse.csr_matrix(jac_eval)
 
         class SundialsJacobian:
@@ -214,17 +199,17 @@ class IDAKLUSolver(pybamm.DaeSolver):
 
         jac_class = SundialsJacobian()
 
-        num_of_events = len(events)
+        num_of_events = len(model.events_eval)
         use_jac = 1
 
         def rootfn(t, y):
             return_root = np.ones((num_of_events,))
-            return_root[:] = [event(t, y) for event in events]
+            return_root[:] = [event(t, y) for event in model.events_eval]
 
             return return_root
 
         # get ids of rhs and algebraic variables
-        rhs_ids = np.ones(self.rhs(0, y0).shape)
+        rhs_ids = np.ones(model.rhs_eval(0, y0).shape)
         alg_ids = np.zeros(len(y0) - len(rhs_ids))
         ids = np.concatenate((rhs_ids, alg_ids))
 
@@ -233,7 +218,7 @@ class IDAKLUSolver(pybamm.DaeSolver):
             t_eval,
             y0,
             ydot0,
-            self.residuals,
+            model.residuals_eval,
             jac_class.jac_res,
             jac_class.get_jac_data,
             jac_class.get_jac_row_vals,
@@ -249,7 +234,7 @@ class IDAKLUSolver(pybamm.DaeSolver):
 
         t = sol.t
         number_of_timesteps = t.size
-        number_of_states = y0.size
+        number_of_states = model.y0.size
         y_out = sol.y.reshape((number_of_timesteps, number_of_states))
 
         # return solution, we need to tranpose y to match scipy's interface

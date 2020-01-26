@@ -105,7 +105,7 @@ from .expression_tree.broadcasts import (
     ones_like,
 )
 from .expression_tree.scalar import Scalar
-from .expression_tree.variable import Variable
+from .expression_tree.variable import Variable, ExternalVariable
 from .expression_tree.independent_variable import (
     IndependentVariable,
     Time,
@@ -237,8 +237,6 @@ from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 #
 from .solvers.solution import Solution
 from .solvers.base_solver import BaseSolver
-from .solvers.ode_solver import OdeSolver
-from .solvers.dae_solver import DaeSolver
 from .solvers.algebraic_solver import AlgebraicSolver
 from .solvers.casadi_solver import CasadiSolver
 from .solvers.scikits_dae_solver import ScikitsDaeSolver
