@@ -20,6 +20,19 @@ def isnotebook():
         return False  # Probably standard Python interpreter
 
 
+def constant_current_constant_voltage_constant_power(variables):
+    I = variables["Current [A]"]
+    V = variables["Terminal voltage [V]"]
+    s_I = pybamm.InputParameter("Current switch")
+    s_V = pybamm.InputParameter("Voltage switch")
+    s_P = pybamm.InputParameter("Power switch")
+    return (
+        s_I * (I - pybamm.InputParameter("Current input [A]"))
+        + s_V * (V - pybamm.InputParameter("Voltage input [V]"))
+        + s_P * (V * I - pybamm.InputParameter("Power input [W]"))
+    )
+
+
 class Simulation:
     """A Simulation class for easy building and running of PyBaMM simulations.
 
@@ -27,6 +40,8 @@ class Simulation:
     ----------
     model : :class:`pybamm.BaseModel`
         The model to be simulated
+    experiment : : class:`pybamm.Experiment`
+        The experimental conditions under which to solve the model
     geometry: :class:`pybamm.Geometry` (optional)
         The geometry upon which to solve the model
     parameter_values: dict (optional)
@@ -62,23 +77,33 @@ class Simulation:
         quick_plot_vars=None,
         C_rate=None,
     ):
-        self.model = model
-
         self.geometry = geometry or model.default_geometry
         self._parameter_values = parameter_values or model.default_parameter_values
         self._submesh_types = submesh_types or model.default_submesh_types
         self._var_pts = var_pts or model.default_var_pts
         self._spatial_methods = spatial_methods or model.default_spatial_methods
-        self._solver = solver or self._model.default_solver
+        self._solver = solver or model.default_solver
         self._quick_plot_vars = quick_plot_vars
-
-        self.C_rate = C_rate
-        if self.C_rate:
-            self._parameter_values.update({"C-rate": self.C_rate})
 
         self.reset(update_model=False)
 
-        if experiment is not None:
+        if experiment is None:
+            self.operating_mode = "without experiment"
+            self.C_rate = C_rate
+            if self.C_rate:
+                self._parameter_values.update({"C-rate": self.C_rate})
+            self.model = model
+        else:
+            ##################
+            # Setting up experiment
+            ##################
+            self.operating_mode = "with experiment"
+            self.model = model.new_copy(
+                options={
+                    **model.options,
+                    "operating mode": constant_current_constant_voltage_constant_power,
+                }
+            )
             if not isinstance(experiment, pybamm.Experiment):
                 raise TypeError("experiment must be a pybamm `Experiment` instance")
             # Save the experiment
@@ -87,27 +112,59 @@ class Simulation:
             self._parameter_values.update(experiment.parameters)
             # Create a new submodel for each set of operating conditions and update
             # parameters and events accordingly
-            self.op_models = []
+            self._experiment_inputs = []
+            self._experiment_times = []
             for i, op in enumerate(experiment.operating_conditions):
                 if op[1] in ["A", "C"]:
-                    op_model = model.new_copy(
-                        options={**model.options, "operating conditions": "current"}
-                    )
-                    # Update parameters
+                    # Update inputs for constant current
+                    if op[1] == "A":
+                        I = op[0]
+                    else:
+                        # Scale C-rate with capacity to obtain current
+                        capacity = self._parameter_values["Cell capacity [A.h]"]
+                        I = op[0] / capacity
+                    operating_inputs = {
+                        "Current switch": 1,
+                        "Voltage switch": 0,
+                        "Power switch": 0,
+                        "Current input [A]": I,
+                        "Voltage input [V]": 0,  # doesn't matter
+                        "Power input [W]": 0,  # doesn't matter
+                    }
                     # Update events
                 elif op[1] == "V":
-                    op_model = model.new_copy(
-                        options={**model.options, "operating conditions": "voltage"}
-                    )
-                    # Update parameters
+                    # Update inputs for constant voltage
+                    V = op[0]
+                    operating_inputs = {
+                        "Current switch": 0,
+                        "Voltage switch": 1,
+                        "Power switch": 0,
+                        "Current input [A]": 0,  # doesn't matter
+                        "Voltage input [V]": V,
+                        "Power input [W]": 0,  # doesn't matter
+                    }
                     # Update events
                 elif op[1] == "W":
-                    op_model = model.new_copy(
-                        options={**model.options, "operating conditions": "power"}
-                    )
-                    # Update parameters
+                    # Update inputs for constant power
+                    P = op[0]
+                    operating_inputs = {
+                        "Current switch": 0,
+                        "Voltage switch": 0,
+                        "Power switch": 1,
+                        "Current input [A]": 0,  # doesn't matter
+                        "Voltage input [V]": 0,  # doesn't matter
+                        "Power input [W]": P,
+                    }
                     # Update events
-                self.op_models.append(op_model)
+                self._experiment_inputs.append(operating_inputs)
+                # Convert time to dimensionless
+                dt_dimensional = op[2]
+                if dt_dimensional is None:
+                    # max simulation time: 1 week
+                    dt_dimensional = 7 * 24 * 3600
+                tau = self._parameter_values.evaluate(self.model.timescale)
+                dt_dimensionless = dt_dimensional / tau
+                self._experiment_times.append(dt_dimensionless)
 
         # ignore runtime warnings in notebooks
         if isnotebook():
@@ -201,25 +258,46 @@ class Simulation:
             If True, model checks are performed after discretisation (see
             :meth:`pybamm.Discretisation.process_model`). Default is True.
         """
+        # Setup
         self.build(check_model=check_model)
-
-        if t_eval is None:
-            try:
-                # Try to compute discharge time
-                tau = self._parameter_values.evaluate(self.model.param.tau_discharge)
-                C_rate = self._parameter_values["C-rate"]
-                t_end = 3600 / tau / C_rate
-                t_eval = np.linspace(0, t_end, 100)
-            except AttributeError:
-                t_eval = np.linspace(0, 1, 100)
-
         if solver is None:
             solver = self.solver
 
-        self.t_eval = t_eval
-        self._solution = solver.solve(self.built_model, t_eval, inputs=inputs)
+        if self.operating_mode == "without experiment":
+            # Solve the old way, with a single solve
+            if t_eval is None:
+                try:
+                    # Try to compute discharge time
+                    tau = self._parameter_values.evaluate(self.model.param.timescale)
+                    C_rate = self._parameter_values["C-rate"]
+                    t_end = 3600 / tau / C_rate
+                    t_eval = np.linspace(0, t_end, 100)
+                except AttributeError:
+                    t_eval = np.linspace(0, 1, 100)
 
-    def step(self, dt, solver=None, external_variables=None, inputs=None, save=True):
+            self.t_eval = t_eval
+            self._solution = solver.solve(self.built_model, t_eval, inputs=inputs)
+        elif self.operating_mode == "with experiment":
+            if t_eval is not None:
+                pybamm.logger.warning(
+                    "Ignoring t_eval as solution times are specified by the experiment"
+                )
+            # Step through all experimental conditions
+            inputs = inputs or {}
+            for exp_inputs, dt in zip(self._experiment_inputs, self._experiment_times):
+                inputs.update(exp_inputs)
+                # Non-dimensionalise frequency
+                tau = self._parameter_values.evaluate(self.model.timescale)
+                freq = self.experiment.frequency / tau
+                # Make sure we take at least 2 timesteps
+                npts = max(dt // freq, 2)
+                self.step(
+                    dt, npts=npts, external_variables=external_variables, inputs=inputs
+                )
+
+    def step(
+        self, dt, solver=None, npts=2, external_variables=None, inputs=None, save=True
+    ):
         """
         A method to step the model forward one timestep. This method will
         automatically build and set the model parameters if not already done so.
@@ -230,6 +308,9 @@ class Simulation:
             The timestep over which to step the solution
         solver : :class:`pybamm.BaseSolver`
             The solver to use to solve the model.
+        npts : int, optional
+            The number of points at which the solution will be returned during
+            the step dt. default is 2 (returns the solution at t0 and t0 + dt).
         external_variables : dict
             A dictionary of external variables and their corresponding
             values at the current time. The variables must correspond to
@@ -251,6 +332,7 @@ class Simulation:
                 None,
                 self.built_model,
                 dt,
+                npts=npts,
                 external_variables=external_variables,
                 inputs=inputs,
             )
@@ -259,6 +341,7 @@ class Simulation:
                 self._solution,
                 self.built_model,
                 dt,
+                npts=npts,
                 external_variables=external_variables,
                 inputs=inputs,
             )

@@ -23,14 +23,6 @@ class FunctionControl(BaseModel):
         # Add discharge capacity variable
         variables.update(super().get_fundamental_variables())
 
-        # Add switches
-        # These are not implemented yet but can be used later with the Experiment class
-        # to simulate different external circuit conditions sequentially within a
-        # single model (for example Constant Current - Constant Voltage)
-        # for i in range(self.external_circuit_class.num_switches):
-        #     s = pybamm.Parameter("Switch {}".format(i + 1))
-        #     variables["Switch {}".format(i + 1)] = s
-
         return variables
 
     def set_initial_conditions(self, variables):
@@ -53,31 +45,25 @@ class VoltageFunctionControl(FunctionControl):
     """
 
     def __init__(self, param):
-        super().__init__(param, ConstantVoltage())
+        super().__init__(param, constant_voltage)
 
 
-class ConstantVoltage:
-    num_switches = 0
-
-    def __call__(self, variables):
-        V = variables["Terminal voltage [V]"]
-        return V - pybamm.FunctionParameter("Voltage function [V]", pybamm.t)
+def constant_voltage(variables):
+    V = variables["Terminal voltage [V]"]
+    return V - pybamm.FunctionParameter("Voltage function [V]", pybamm.t)
 
 
 class PowerFunctionControl(FunctionControl):
     """External circuit with power control. """
 
     def __init__(self, param):
-        super().__init__(param, ConstantPower())
+        super().__init__(param, constant_power)
 
 
-class ConstantPower:
-    num_switches = 0
-
-    def __call__(self, variables):
-        I = variables["Current [A]"]
-        V = variables["Terminal voltage [V]"]
-        return I * V - pybamm.FunctionParameter("Power function [W]", pybamm.t)
+def constant_power(variables):
+    I = variables["Current [A]"]
+    V = variables["Terminal voltage [V]"]
+    return I * V - pybamm.FunctionParameter("Power function [W]", pybamm.t)
 
 
 class LeadingOrderFunctionControl(FunctionControl, LeadingOrderBaseModel):
@@ -97,12 +83,12 @@ class LeadingOrderVoltageFunctionControl(LeadingOrderFunctionControl):
     """
 
     def __init__(self, param):
-        super().__init__(param, ConstantVoltage())
+        super().__init__(param, constant_voltage)
 
 
 class LeadingOrderPowerFunctionControl(LeadingOrderFunctionControl):
     """External circuit with power control, at leading order. """
 
     def __init__(self, param):
-        super().__init__(param, ConstantPower())
+        super().__init__(param, constant_power)
 

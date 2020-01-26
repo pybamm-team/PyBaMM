@@ -303,6 +303,11 @@ class BaseModel(object):
     def options(self, options):
         self._options = options
 
+    @property
+    def timescale(self):
+        "Default timescale for a model is 1 second"
+        return pybamm.Scalar(1)
+
     def __getitem__(self, key):
         return self.rhs[key]
 

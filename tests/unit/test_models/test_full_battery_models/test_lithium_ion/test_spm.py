@@ -190,15 +190,12 @@ class TestSPMExternalCircuits(unittest.TestCase):
         model.check_well_posedness()
 
     def test_well_posed_function(self):
-        class ExternalCircuitFunction:
-            num_switches = 0
+        def external_circuit_function(variables):
+            I = variables["Current [A]"]
+            V = variables["Terminal voltage [V]"]
+            return V + I - pybamm.FunctionParameter("Function", pybamm.t)
 
-            def __call__(self, variables):
-                I = variables["Current [A]"]
-                V = variables["Terminal voltage [V]"]
-                return V + I - pybamm.FunctionParameter("Function", pybamm.t)
-
-        options = {"operating mode": ExternalCircuitFunction()}
+        options = {"operating mode": external_circuit_function}
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
