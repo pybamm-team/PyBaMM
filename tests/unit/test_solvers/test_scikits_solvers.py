@@ -513,6 +513,7 @@ class TestScikitsSolvers(unittest.TestCase):
             step_solution.y[-1], 2 * np.exp(0.1 * step_solution.t), decimal=5
         )
 
+
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys

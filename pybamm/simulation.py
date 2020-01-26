@@ -149,7 +149,14 @@ class Simulation:
             self._model, inplace=False, check_model=check_model
         )
 
-    def solve(self, t_eval=None, solver=None, inputs=None, check_model=True):
+    def solve(
+        self,
+        t_eval=None,
+        solver=None,
+        external_variables=None,
+        inputs=None,
+        check_model=True,
+    ):
         """
         A method to solve the model. This method will automatically build
         and set the model parameters if not already done so.
@@ -163,6 +170,11 @@ class Simulation:
             non-dimensional time of 1.
         solver : :class:`pybamm.BaseSolver`
             The solver to use to solve the model.
+        external_variables : dict
+            A dictionary of external variables and their corresponding
+            values at the current time. The variables must correspond to
+            the variables that would normally be found by solving the
+            submodels that have been made external.
         inputs : dict, optional
             Any input parameters to pass to the model when solving
         check_model : bool, optional
@@ -185,9 +197,16 @@ class Simulation:
             solver = self.solver
 
         self.t_eval = t_eval
-        self._solution = solver.solve(self.built_model, t_eval, inputs=inputs)
+        self._solution = solver.solve(
+            self.built_model,
+            t_eval,
+            external_variables=external_variables,
+            inputs=inputs,
+        )
 
-    def step(self, dt, solver=None, external_variables=None, inputs=None, save=True):
+    def step(
+        self, dt, solver=None, npts=2, external_variables=None, inputs=None, save=True
+    ):
         """
         A method to step the model forward one timestep. This method will
         automatically build and set the model parameters if not already done so.
@@ -198,6 +217,9 @@ class Simulation:
             The timestep over which to step the solution
         solver : :class:`pybamm.BaseSolver`
             The solver to use to solve the model.
+        npts : int, optional
+            The number of points at which the solution will be returned during
+            the step dt. default is 2 (returns the solution at t0 and t0 + dt).
         external_variables : dict
             A dictionary of external variables and their corresponding
             values at the current time. The variables must correspond to
@@ -219,6 +241,7 @@ class Simulation:
                 None,
                 self.built_model,
                 dt,
+                npts=npts,
                 external_variables=external_variables,
                 inputs=inputs,
             )
@@ -227,6 +250,7 @@ class Simulation:
                 self._solution,
                 self.built_model,
                 dt,
+                npts=npts,
                 external_variables=external_variables,
                 inputs=inputs,
             )
