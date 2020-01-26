@@ -58,6 +58,39 @@ class TestIDAKLUSolver(unittest.TestCase):
         variable_tols = {"Electrolyte concentration": 1e-3}
         solver.set_atol_by_variable(variable_tols, model)
 
+    def test_model_step_events(self):
+        # Create model
+        model = pybamm.BaseModel()
+        var1 = pybamm.Variable("var1")
+        var2 = pybamm.Variable("var2")
+        model.rhs = {var1: 0.1 * var1}
+        model.algebraic = {var2: 2 * var1 - var2}
+        model.initial_conditions = {var1: 1, var2: 2}
+        model.events = {
+            "var1 = 1.5": pybamm.min(var1 - 1.5),
+            "var2 = 2.5": pybamm.min(var2 - 2.5),
+        }
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        # Solve
+        step_solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8)
+        dt = 0.05
+        time = 0
+        end_time = 5
+        step_solution = None
+        while time < end_time:
+            step_solution = step_solver.step(step_solution, model, dt=dt, npts=10)
+            time += dt
+        np.testing.assert_array_less(step_solution.y[0], 1.5)
+        np.testing.assert_array_less(step_solution.y[-1], 2.5001)
+        np.testing.assert_array_almost_equal(
+            step_solution.y[0], np.exp(0.1 * step_solution.t), decimal=5
+        )
+        np.testing.assert_array_almost_equal(
+            step_solution.y[-1], 2 * np.exp(0.1 * step_solution.t), decimal=5
+        )
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

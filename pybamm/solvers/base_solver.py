@@ -523,6 +523,8 @@ class BaseSolver(object):
             pybamm.logger.debug(
                 "Step time: {}".format(timer.format(solution.solve_time))
             )
+        if (solution.y > 2.5).any():
+            n - 1
         if old_solution is None:
             return solution
         else:
