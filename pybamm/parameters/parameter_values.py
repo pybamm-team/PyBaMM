@@ -346,11 +346,11 @@ class ParameterValues(dict):
                 )
             )
             model.variables[variable] = processing_function(equation)
-        for event, equation in model.events.items():
+        for event in model.events:
             pybamm.logger.debug(
                 "{} parameters for event '{}''".format(processing.capitalize(), event)
             )
-            model.events[event] = processing_function(equation)
+            event.expression = processing_function(event.expression)
 
         pybamm.logger.info("Finish setting parameters for {}".format(model.name))
 

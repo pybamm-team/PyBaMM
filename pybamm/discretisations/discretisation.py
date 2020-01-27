@@ -198,11 +198,16 @@ class Discretisation(object):
         model_disc.algebraic, model_disc.concatenated_algebraic = alg, concat_alg
 
         # Process events
-        processed_events = {}
+        processed_events = []
         pybamm.logger.info("Discretise events for {}".format(model.name))
-        for event, equation in model.events.items():
+        for event in model.events:
             pybamm.logger.debug("Discretise event '{}'".format(event))
-            processed_events[event] = self.process_symbol(equation)
+            processed_event = pybamm.Event(
+                    event.name,
+                    self.process_symbol(event.expression),
+                    event.event_type
+            )
+            processed_events.append(processed_event)
         model_disc.events = processed_events
 
         # Create mass matrix
