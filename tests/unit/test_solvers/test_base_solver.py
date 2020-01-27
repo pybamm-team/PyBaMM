@@ -34,9 +34,6 @@ class TestBaseSolver(unittest.TestCase):
         solver = pybamm.ScipySolver()
         with self.assertRaisesRegex(pybamm.SolverError, "Cannot use ODE solver"):
             solver.set_up(model)
-        solver = pybamm.ScikitsOdeSolver()
-        with self.assertRaisesRegex(pybamm.SolverError, "Cannot use ODE solver"):
-            solver.set_up(model)
 
     def test_find_consistent_initial_conditions(self):
         # Simple system: a single algebraic equation
