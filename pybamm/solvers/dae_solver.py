@@ -91,7 +91,7 @@ class DaeSolver(pybamm.BaseSolver):
             self.residuals,
             self.y0,
             t_eval,
-            events=self.event_funs,
+            events=self.termination_funs,
             mass_matrix=model.mass_matrix.entries,
             jacobian=self.jacobian,
             model=model,
@@ -213,10 +213,10 @@ class DaeSolver(pybamm.BaseSolver):
             model, concatenated_rhs.evaluate, concatenated_algebraic.evaluate
         )
         self.termination_events = [
-            events for event in events
+            event for event in events
             if event.event_type == pybamm.EventType.TERMINATION
         ]
-        self.termination_funs = [get_event_class(event) for event in termination_events]
+        self.termination_funs = [get_event_class(event) for event in self.termination_events]
         self.jacobian = jacobian
 
         pybamm.logger.info("Finish solver set-up")

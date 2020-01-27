@@ -72,7 +72,7 @@ class TestCasadiSolver(unittest.TestCase):
         model.rhs = {var: -pybamm.Function(np.sqrt, var)}
         model.initial_conditions = {var: 1}
         # add events so that safe mode is used (won't be triggered)
-        model.events = {"10": var - 10}
+        model.events = [pybamm.Event("10", var - 10)]
         # No need to set parameters; can use base discretisation (no spatial operators)
 
         # create discretisation
@@ -117,7 +117,7 @@ class TestCasadiSolver(unittest.TestCase):
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
 
         # Safe mode (enforce events that won't be triggered)
-        model.events = {"an event": var + 1}
+        model.events = [pybamm.Event("an event", var + 1)]
         disc.process_model(model)
         solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8, method="idas")
         t_eval = np.linspace(0, 1, 100)
@@ -134,10 +134,10 @@ class TestCasadiSolver(unittest.TestCase):
         model.rhs = {var1: 0.1 * var1}
         model.algebraic = {var2: 2 * var1 - var2}
         model.initial_conditions = {var1: 1, var2: 2}
-        model.events = {
-            "var1 = 1.5": pybamm.min(var1 - 1.5),
-            "var2 = 2.5": pybamm.min(var2 - 2.5),
-        }
+        model.events = [
+            pybamm.Event("var1 = 1.5", pybamm.min(var1 - 1.5)),
+            pybamm.Event("var2 = 2.5", pybamm.min(var2 - 2.5)),
+        ]
         disc = get_discretisation_for_testing()
         disc.process_model(model)
 
@@ -197,7 +197,7 @@ class TestCasadiSolver(unittest.TestCase):
         var = pybamm.Variable("var", domain=domain)
         model.rhs = {var: -pybamm.InputParameter("rate") * var}
         model.initial_conditions = {var: 1}
-        model.events = {"var=0.5": pybamm.min(var - 0.5)}
+        model.events = [pybamm.Event("var=0.5", pybamm.min(var - 0.5))]
         # No need to set parameters; can use base discretisation (no spatial
         # operators)
 

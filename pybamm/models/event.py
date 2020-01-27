@@ -36,7 +36,7 @@ class Event:
         """
         Acts as a drop-in replacement for :func:`pybamm.Symbol.evaluate`
         """
-        return self._expression(t, y, u, known_evals)
+        return self._expression.evaluate(t, y, u, known_evals)
 
     def __str__(self):
         return self._name
@@ -55,4 +55,4 @@ class Event:
 
     @property
     def event_type(self):
-        return event_type
+        return self._event_type

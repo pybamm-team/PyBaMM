@@ -99,7 +99,7 @@ class CasadiSolver(pybamm.DaeSolver):
             return super().solve(
                 model, t_eval, external_variables=external_variables, inputs=inputs
             )
-        elif model.events == {}:
+        elif not model.events:
             pybamm.logger.info("No events found, running fast mode")
             # Solve model normally by calling the solve method from parent class
             return super().solve(
@@ -112,7 +112,7 @@ class CasadiSolver(pybamm.DaeSolver):
             self.set_up_casadi(model, inputs)
             set_up_time = timer.time()
             init_event_signs = np.sign(
-                np.concatenate([event(0, self.y0) for event in self.event_funs])
+                np.concatenate([event(0, self.y0) for event in self.termination_funs])
             )
             solution = None
             pybamm.logger.info(
@@ -157,7 +157,7 @@ class CasadiSolver(pybamm.DaeSolver):
                     np.concatenate(
                         [
                             event(0, current_step_sol.y[:, -1])
-                            for event in self.event_funs
+                            for event in self.termination_funs
                         ]
                     )
                 )
@@ -177,7 +177,8 @@ class CasadiSolver(pybamm.DaeSolver):
                         solution.append(current_step_sol)
 
             # Calculate more exact termination reason
-            solution.termination = self.get_termination_reason(solution, self.events)
+            solution.termination = self.get_termination_reason(solution,
+                    self.termination_events)
             pybamm.logger.info(
                 "Finish solving {} ({})".format(model.name, solution.termination)
             )

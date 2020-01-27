@@ -42,7 +42,7 @@ setup(
     install_requires=[
         "numpy>=1.16",
         "scipy>=1.0",
-        "pandas>=0.23",
+        "pandas>=0.24",
         "anytree>=2.4.3",
         "autograd>=1.2",
         "scikit-fem>=0.2.0",
