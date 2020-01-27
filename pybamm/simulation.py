@@ -114,7 +114,7 @@ class Simulation:
             # parameters and events accordingly
             self._experiment_inputs = []
             self._experiment_times = []
-            for i, op in enumerate(experiment.operating_conditions):
+            for op, events in zip(experiment.operating_conditions, experiment.events):
                 if op[1] in ["A", "C"]:
                     # Update inputs for constant current
                     if op[1] == "A":
@@ -131,7 +131,6 @@ class Simulation:
                         "Voltage input [V]": 0,  # doesn't matter
                         "Power input [W]": 0,  # doesn't matter
                     }
-                    # Update events
                 elif op[1] == "V":
                     # Update inputs for constant voltage
                     V = op[0]
@@ -143,7 +142,6 @@ class Simulation:
                         "Voltage input [V]": V,
                         "Power input [W]": 0,  # doesn't matter
                     }
-                    # Update events
                 elif op[1] == "W":
                     # Update inputs for constant power
                     P = op[0]
@@ -155,7 +153,13 @@ class Simulation:
                         "Voltage input [V]": 0,  # doesn't matter
                         "Power input [W]": P,
                     }
-                    # Update events
+                # Update events
+                if events is None:
+                    pass
+                elif events[1] in ["A", "C"]:
+                    operating_inputs.update({"Current cut-off [A]": I})
+                elif events[1] == "V":
+                    operating_inputs.update({"Voltage cut-off [V]": V})
                 self._experiment_inputs.append(operating_inputs)
                 # Convert time to dimensionless
                 dt_dimensional = op[2]
@@ -302,7 +306,7 @@ class Simulation:
                 tau = self._parameter_values.evaluate(self.model.timescale)
                 freq = self.experiment.frequency / tau
                 # Make sure we take at least 2 timesteps
-                npts = max(dt // freq, 2)
+                npts = max(int(dt / freq), 2)
                 self.step(
                     dt, npts=npts, external_variables=external_variables, inputs=inputs
                 )

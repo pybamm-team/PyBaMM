@@ -8,7 +8,12 @@ import unittest
 class TestSimulationExperiment(unittest.TestCase):
     def test_set_up(self):
         experiment = pybamm.Experiment(
-            ["Charge at 1 C for 0.05 hours", "Hold at 4.1 V for 1 hours"],
+            [
+                "Discharge at 1 C for 0.3 hours",
+                "Charge at 0.1 A for 0.5 hours",
+                "Hold at 4.1 V for 1 hour",
+                "Discharge at 4 W for 90 minutes",
+            ],
             {}
             # {
             #     "Reference temperature [K]": 298.15,
@@ -24,7 +29,6 @@ class TestSimulationExperiment(unittest.TestCase):
             #     "Initial temperature [K]": 298.15,
             # },
         )
-        print(experiment.operating_conditions)
         model = pybamm.lithium_ion.DFN()
         sim = pybamm.Simulation(
             model, experiment=experiment, solver=pybamm.CasadiSolver()

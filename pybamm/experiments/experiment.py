@@ -25,13 +25,18 @@ class Experiment:
     ----------
     operating_conditions : list
         List of operating conditions
+    parameters : dict
+        Dictionary of parameters to use for this experiment, replacing default
+        parameters as appropriate
+    frequency : string, optional
+        Frequency at which to record outputs. Default is 1 minute.
 
     Examples
     --------
     >>> experiment = pybamm.Experiment(["1C for 0.5 hours", "0.5C for 45 minutes"])
     """
 
-    def __init__(self, operating_conditions, parameters, frequency=None):
+    def __init__(self, operating_conditions, parameters, frequency="1 minute"):
         self.operating_conditions_string = str(operating_conditions)
         self.operating_conditions, self.events = self.read_operating_conditions(
             operating_conditions
@@ -40,9 +45,6 @@ class Experiment:
             self.parameters = parameters
         else:
             raise TypeError("experimental parameters should be a dictionary")
-        # Default frequency is every second
-        if frequency is None:
-            frequency = "1 second"
         self.frequency = self.convert_time_to_seconds(frequency.split())
 
     def __str__(self):
