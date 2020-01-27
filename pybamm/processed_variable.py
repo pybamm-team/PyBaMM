@@ -93,7 +93,7 @@ class ProcessedVariable(object):
         for idx in range(len(self.t_sol)):
             t = self.t_sol[idx]
             u = self.u_sol[:, idx]
-            inputs = {name: inp[0] for name, inp in self.inputs.items()}
+            inputs = {name: inp[idx] for name, inp in self.inputs.items()}
             if self.known_evals:
                 entries[idx], self.known_evals[t] = self.base_variable.evaluate(
                     t, u, inputs, known_evals=self.known_evals[t]
@@ -117,7 +117,7 @@ class ProcessedVariable(object):
         for idx in range(len(self.t_sol)):
             t = self.t_sol[idx]
             u = self.u_sol[:, idx]
-            inputs = {name: inp[0] for name, inp in self.inputs.items()}
+            inputs = {name: inp[idx] for name, inp in self.inputs.items()}
             if self.known_evals:
                 eval_and_known_evals = self.base_variable.evaluate(
                     t, u, inputs, known_evals=self.known_evals[t]
@@ -221,7 +221,7 @@ class ProcessedVariable(object):
         for idx in range(len(self.t_sol)):
             t = self.t_sol[idx]
             u = self.u_sol[:, idx]
-            inputs = {name: inp[0] for name, inp in self.inputs.items()}
+            inputs = {name: inp[idx] for name, inp in self.inputs.items()}
             if self.known_evals:
                 eval_and_known_evals = self.base_variable.evaluate(
                     t, u, inputs, known_evals=self.known_evals[t]
@@ -258,7 +258,11 @@ class ProcessedVariable(object):
         len_z = len(z_sol)
 
         # Evaluate the base_variable
-        entries = np.reshape(self.base_variable.evaluate(0, self.u_sol), [len_y, len_z])
+        inputs = {name: inp[0] for name, inp in self.inputs.items()}
+
+        entries = np.reshape(
+            self.base_variable.evaluate(0, self.u_sol, inputs), [len_y, len_z]
+        )
 
         # assign attributes for reference
         self.entries = entries
@@ -284,15 +288,17 @@ class ProcessedVariable(object):
         for idx in range(len(self.t_sol)):
             t = self.t_sol[idx]
             u = self.u_sol[:, idx]
+            inputs = {name: inp[idx] for name, inp in self.inputs.items()}
+
             if self.known_evals:
                 eval_and_known_evals = self.base_variable.evaluate(
-                    t, u, self.inputs, known_evals=self.known_evals[t]
+                    t, u, inputs, known_evals=self.known_evals[t]
                 )
                 entries[:, :, idx] = np.reshape(eval_and_known_evals[0], [len_y, len_z])
                 self.known_evals[t] = eval_and_known_evals[1]
             else:
                 entries[:, :, idx] = np.reshape(
-                    self.base_variable.evaluate(t, u, self.inputs), [len_y, len_z]
+                    self.base_variable.evaluate(t, u, inputs), [len_y, len_z]
                 )
 
         # assign attributes for reference
