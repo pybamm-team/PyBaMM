@@ -45,9 +45,11 @@ class BaseSolver(object):
         self.root_tol = root_tol
         self.max_steps = max_steps
 
-        self.name = "Base solver"
-
         self.model_step_times = {}
+
+        # Defaults, can be overwritten by specific solver
+        self.name = "Base solver"
+        self.ode_solver = False
 
     @property
     def method(self):
@@ -111,6 +113,12 @@ class BaseSolver(object):
         """
         inputs = inputs or {}
         y0 = model.concatenated_initial_conditions
+
+        # Check model.algebraic for ode solvers
+        if self.ode_solver is True and len(model.algebraic) > 0:
+            raise pybamm.SolverError(
+                "Cannot use ODE solver '{}' to solve DAE model".format(self.name)
+            )
 
         if (
             isinstance(self, pybamm.CasadiSolver)

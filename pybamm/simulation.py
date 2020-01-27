@@ -238,7 +238,14 @@ class Simulation:
             self._model, inplace=False, check_model=check_model
         )
 
-    def solve(self, t_eval=None, solver=None, inputs=None, check_model=True):
+    def solve(
+        self,
+        t_eval=None,
+        solver=None,
+        external_variables=None,
+        inputs=None,
+        check_model=True,
+    ):
         """
         A method to solve the model. This method will automatically build
         and set the model parameters if not already done so.
@@ -252,6 +259,11 @@ class Simulation:
             non-dimensional time of 1.
         solver : :class:`pybamm.BaseSolver`
             The solver to use to solve the model.
+        external_variables : dict
+            A dictionary of external variables and their corresponding
+            values at the current time. The variables must correspond to
+            the variables that would normally be found by solving the
+            submodels that have been made external.
         inputs : dict, optional
             Any input parameters to pass to the model when solving
         check_model : bool, optional

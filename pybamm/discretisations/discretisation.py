@@ -856,14 +856,16 @@ class Discretisation(object):
                 name, parent_and_slice = list(self.external_variables.keys())[idx]
                 if parent_and_slice is None:
                     # Variable didn't come from a concatenation so we can just create a
-                    # normal external variable
+                    # normal external variable using the symbol's name
                     return pybamm.ExternalVariable(
-                        name,
+                        symbol.name,
                         size=self._get_variable_size(symbol),
                         domain=symbol.domain,
                         auxiliary_domains=symbol.auxiliary_domains,
                     )
                 else:
+                    # We have to use a special name since the concatenation doesn't have
+                    # a very informative name. Needs improving
                     parent, start, end = parent_and_slice
                     ext = pybamm.ExternalVariable(
                         name,

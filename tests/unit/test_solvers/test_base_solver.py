@@ -27,6 +27,14 @@ class TestBaseSolver(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.ModelError, "Cannot solve empty model"):
             solver.solve(model, None)
 
+    def test_ode_solver_fail_with_dae(self):
+        model = pybamm.BaseModel()
+        a = pybamm.Scalar(1)
+        model.algebraic = {a: a}
+        solver = pybamm.ScipySolver()
+        with self.assertRaisesRegex(pybamm.SolverError, "Cannot use ODE solver"):
+            solver.set_up(model)
+
     def test_find_consistent_initial_conditions(self):
         # Simple system: a single algebraic equation
         class ScalarModel:

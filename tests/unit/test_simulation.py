@@ -244,7 +244,9 @@ class TestSimulation(unittest.TestCase):
         self.assertEqual(sim.solution.t[0], 0)
         self.assertEqual(sim.solution.t[1], dt)
         self.assertEqual(sim.solution.t[2], 2 * dt)
-        np.testing.assert_array_equal(sim.solution.inputs["Current"], np.array([1,1,2]))
+        np.testing.assert_array_equal(
+            sim.solution.inputs["Current"], np.array([1, 1, 2])
+        )
 
     def test_save_load(self):
         model = pybamm.lead_acid.LOQS()

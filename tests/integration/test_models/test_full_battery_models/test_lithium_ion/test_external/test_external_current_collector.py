@@ -7,6 +7,7 @@ import numpy as np
 
 
 class TestExternalCC(unittest.TestCase):
+    @unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
     def test_2p1d(self):
         model_options = {
             "current collector": "potential pair",

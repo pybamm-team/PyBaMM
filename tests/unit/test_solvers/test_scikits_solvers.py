@@ -513,6 +513,15 @@ class TestScikitsSolvers(unittest.TestCase):
             step_solution.y[-1], 2 * np.exp(0.1 * step_solution.t), decimal=5
         )
 
+    def test_ode_solver_fail_with_dae(self):
+        model = pybamm.BaseModel()
+        a = pybamm.Scalar(1)
+        model.algebraic = {a: a}
+        solver = pybamm.ScikitsOdeSolver()
+        with self.assertRaisesRegex(pybamm.SolverError, "Cannot use ODE solver"):
+            solver.set_up(model)
+
+
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys
