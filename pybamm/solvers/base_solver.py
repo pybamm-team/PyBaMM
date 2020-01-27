@@ -300,9 +300,9 @@ class BaseSolver(object):
         elif solution.termination == "event":
             # Get final event value
             final_event_values = {}
-            for name, event in events.items():
+            for event in events:
                 y_event = add_external(solution.y_event, self.y_pad, self.y_ext)
-                final_event_values[name] = abs(
+                final_event_values[event.name] = abs(
                     event.evaluate(solution.t_event, y_event)
                 )
             termination_event = min(final_event_values, key=final_event_values.get)

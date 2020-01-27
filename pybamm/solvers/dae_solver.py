@@ -104,7 +104,7 @@ class DaeSolver(pybamm.BaseSolver):
         solution.inputs = inputs
 
         # Identify the event that caused termination
-        termination = self.get_termination_reason(solution, self.events)
+        termination = self.get_termination_reason(solution, self.termination_events)
 
         return solution, solve_time, termination
 
@@ -135,7 +135,8 @@ class DaeSolver(pybamm.BaseSolver):
             pybamm.logger.info("Simplifying algebraic")
             concatenated_algebraic = simp.simplify(concatenated_algebraic)
             pybamm.logger.info("Simplifying events")
-            events = {name: simp.simplify(event) for name, event in events.items()}
+            for event in events:
+                event.expression = simp.simplify(event.expression)
 
         if model.use_jacobian:
             # Create Jacobian from concatenated rhs and algebraic
@@ -177,9 +178,8 @@ class DaeSolver(pybamm.BaseSolver):
             pybamm.logger.info("Converting algebraic to python")
             concatenated_algebraic = pybamm.EvaluatorPython(concatenated_algebraic)
             pybamm.logger.info("Converting events to python")
-            events = {
-                name: pybamm.EvaluatorPython(event) for name, event in events.items()
-            }
+            for event in events:
+                event.expression = pybamm.EvaluatorPython(event.expression)
 
         # Calculate consistent initial conditions for the algebraic equations
         rhs = Rhs(concatenated_rhs.evaluate)
@@ -212,8 +212,11 @@ class DaeSolver(pybamm.BaseSolver):
         self.residuals = Residuals(
             model, concatenated_rhs.evaluate, concatenated_algebraic.evaluate
         )
-        self.events = events
-        self.event_funs = [get_event_class(event) for event in events.values()]
+        self.termination_events = [
+            events for event in events
+            if event.event_type == pybamm.EventType.TERMINATION
+        ]
+        self.termination_funs = [get_event_class(event) for event in termination_events]
         self.jacobian = jacobian
 
         pybamm.logger.info("Finish solver set-up")
@@ -261,10 +264,11 @@ class DaeSolver(pybamm.BaseSolver):
         )
         all_states = casadi.vertcat(concatenated_rhs, concatenated_algebraic)
         pybamm.logger.info("Converting events to CasADi")
-        casadi_events = {
-            name: event.to_casadi(t_casadi, y_casadi_w_ext, u_casadi)
-            for name, event in model.events.items()
-        }
+        casadi_termination_events = [
+            event.expression.to_casadi(t_casadi, y_casadi_w_ext, u_casadi)
+            for event in model.events
+            if event.event_type == pybamm.EventType.TERMINATION
+        ]
 
         # Create functions to evaluate rhs and algebraic
         u_casadi_stacked = casadi.vertcat(*[u for u in u_casadi.values()])
@@ -337,8 +341,14 @@ class DaeSolver(pybamm.BaseSolver):
         self.rhs = rhs
         self.algebraic = algebraic
         self.residuals = ResidualsCasadi(model, all_states_fn)
-        self.events = model.events
-        self.event_funs = [get_event_class(event) for event in casadi_events.values()]
+        self.termination_events = [
+            event for event in model.events
+            if event.event_type == pybamm.EventType.TERMINATION
+        ]
+
+        self.termination_funs = [
+            get_event_class(event) for event in casadi_termination_events
+        ]
         self.jacobian = jacobian
 
         # Save CasADi functions for the CasADi solver
@@ -371,7 +381,7 @@ class DaeSolver(pybamm.BaseSolver):
         self.algebraic.set_inputs(inputs)
         self.residuals.set_pad_ext(self.y_pad, self.y_ext)
         self.residuals.set_inputs(inputs)
-        for evnt in self.event_funs:
+        for evnt in self.termination_funs:
             evnt.set_pad_ext(self.y_pad, self.y_ext)
             evnt.set_inputs(inputs)
         if self.jacobian:

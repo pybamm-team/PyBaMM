@@ -49,7 +49,7 @@ class OdeSolver(pybamm.BaseSolver):
             self.dydt,
             self.y0,
             t_eval,
-            events=self.event_funs,
+            events=self.termination_funs,
             mass_matrix=model.mass_matrix.entries,
             jacobian=self.jacobian,
         )
@@ -61,7 +61,7 @@ class OdeSolver(pybamm.BaseSolver):
         solution.inputs = inputs
 
         # Identify the event that caused termination
-        termination = self.get_termination_reason(solution, self.events)
+        termination = self.get_termination_reason(solution, self.termination_events)
 
         return solution, solve_time, termination
 
@@ -104,7 +104,8 @@ class OdeSolver(pybamm.BaseSolver):
             concatenated_rhs = simp.simplify(concatenated_rhs)
 
             pybamm.logger.info("Simplifying events")
-            events = {name: simp.simplify(event) for name, event in events.items()}
+            for event in events:
+                event.expression = simp.simplify(event.expression)
 
         y0 = model.concatenated_initial_conditions[:, 0]
 
@@ -132,9 +133,8 @@ class OdeSolver(pybamm.BaseSolver):
             pybamm.logger.info("Converting RHS to python")
             concatenated_rhs = pybamm.EvaluatorPython(concatenated_rhs)
             pybamm.logger.info("Converting events to python")
-            events = {
-                name: pybamm.EvaluatorPython(event) for name, event in events.items()
-            }
+            for event in events:
+                event.expression = pybamm.EvaluatorPython(event.expression)
 
         # Create event-dependent function to evaluate events
         def get_event_class(event):
@@ -151,8 +151,13 @@ class OdeSolver(pybamm.BaseSolver):
         # etc. The expression tree versions of these are attributes of the model
         self.y0 = y0
         self.dydt = Dydt(model, concatenated_rhs.evaluate)
-        self.events = events
-        self.event_funs = [get_event_class(event) for event in events.values()]
+        self.termination_events = [
+            event for event in events
+            if event.event_type == pybamm.EventType.TERMINATION
+        ]
+        self.termination_funs = [
+            get_event_class(event) for event in self.termination_events
+        ]
         self.jacobian = jacobian
 
         pybamm.logger.info("Finish solver set-up")
@@ -195,11 +200,12 @@ class OdeSolver(pybamm.BaseSolver):
         concatenated_rhs = model.concatenated_rhs.to_casadi(
             t_casadi, y_casadi_w_ext, u_casadi
         )
-        pybamm.logger.info("Converting events to CasADi")
-        casadi_events = {
-            name: event.to_casadi(t_casadi, y_casadi_w_ext, u_casadi)
-            for name, event in model.events.items()
-        }
+        pybamm.logger.info("Converting termination events to CasADi")
+        casadi_termination_events = [
+            event.expression.to_casadi(t_casadi, y_casadi_w_ext, u_casadi)
+            for event in model.events
+            if event.event_type == pybamm.EventType.TERMINATION
+        ]
 
         # Create function to evaluate rhs
         u_casadi_stacked = casadi.vertcat(*[u for u in u_casadi.values()])
@@ -230,8 +236,13 @@ class OdeSolver(pybamm.BaseSolver):
         # Add the solver attributes
         self.y0 = y0
         self.dydt = DydtCasadi(model, concatenated_rhs_fn)
-        self.events = model.events
-        self.event_funs = [get_event_class(event) for event in casadi_events.values()]
+        self.termination_events = [
+            event for event in model.events
+            if event.event_type == pybamm.EventType.TERMINATION
+        ]
+        self.termination_funs = [
+            get_event_class(event) for event in casadi_termination_events
+        ]
         self.jacobian = jacobian
 
     def set_inputs_and_external(self, inputs):
@@ -247,7 +258,7 @@ class OdeSolver(pybamm.BaseSolver):
         """
         self.dydt.set_pad_ext(self.y_pad, self.y_ext)
         self.dydt.set_inputs(inputs)
-        for evnt in self.event_funs:
+        for evnt in self.termination_funs:
             evnt.set_pad_ext(self.y_pad, self.y_ext)
             evnt.set_inputs(inputs)
         if self.jacobian:
