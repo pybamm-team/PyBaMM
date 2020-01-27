@@ -50,7 +50,7 @@ The following notebooks are specific to different stages of the PyBaMM pipeline,
 
 Several battery models are implemented and can easily be used or [compared](./models/lead-acid.ipynb). The notebooks below show the solution of each individual model. We always welcome [new models](https://pybamm.readthedocs.io/en/latest/tutorials/add-model.html)!
 
-Once you are comfortable with the expression tree structure, a good starting point to understand the models in PyBaMM is to take a look at the [basic SPM](https://github.com/pybamm-team/PyBaMM/blob/master/pybamm/models/full_battery_models/lithium_ion/basic_spm.py) and [basic DFN](https://github.com/pybamm-team/PyBaMM/blob/master/pybamm/models/full_battery_models/lithium_ion/basic_dfn.py), since these show the entire model in one place and so are easier to understand. However, we recommend that you subsequently use the full models as they offer much greater flexibility for coupling different physical effects and visualising a greater range of variables.
+Once you are comfortable with the expression tree structure, a good starting point to understand the models in PyBaMM is to take a look at the [basic SPM](https://github.com/pybamm-team/PyBaMM/blob/master/pybamm/models/full_battery_models/lithium_ion/basic_spm.py) and [basic DFN](https://github.com/pybamm-team/PyBaMM/blob/master/pybamm/models/full_battery_models/lithium_ion/basic_dfn.py), since these define the entire model (variables, equations, initial and boundary conditions, events) in a single class and so are easier to understand. However, we recommend that you subsequently use the full models as they offer much greater flexibility for coupling different physical effects and visualising a greater range of variables.
 
 #### Lithium-ion models
 

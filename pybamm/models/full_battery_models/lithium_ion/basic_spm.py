@@ -9,8 +9,9 @@ class BasicSPM(BaseModel):
     """Single Particle Model (SPM) model of a lithium-ion battery, from [2]_.
 
     This class differs from the :class:`pybamm.lithium_ion.SPM` model class in that it
-    shows the whole model in a single class. This comes at the cost of flexibility, and
-    in general the main SPM class should be used instead.
+    shows the whole model in a single class. This comes at the cost of flexibility in
+    combining different physical effects, and in general the main SPM class should be
+    used instead.
 
     Parameters
     ----------
@@ -27,7 +28,7 @@ class BasicSPM(BaseModel):
     **Extends:** :class:`pybamm.lithium_ion.BaseModel`
     """
 
-    def __init__(self, name="Doyle-Fuller-Newman model"):
+    def __init__(self, name="Single Particle Model"):
         super().__init__({}, name)
         # `param` is a class containing all the relevant parameters and functions for
         # this model. These are purely symbolic at this stage, and will be set by the

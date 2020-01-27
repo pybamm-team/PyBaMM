@@ -9,8 +9,9 @@ class BasicDFN(BaseModel):
     """Doyle-Fuller-Newman (DFN) model of a lithium-ion battery, from [2]_.
 
     This class differs from the :class:`pybamm.lithium_ion.DFN` model class in that it
-    shows the whole model in a single class. This comes at the cost of flexibility, and
-    in general the main DFN class should be used instead.
+    shows the whole model in a single class. This comes at the cost of flexibility in
+    comparing different physical effects, and in general the main DFN class should be
+    used instead.
 
     Parameters
     ----------
