@@ -103,7 +103,7 @@ class StateVector(pybamm.Symbol):
             + tuple(self.domain)
         )
 
-    def _base_evaluate(self, t=None, y=None):
+    def _base_evaluate(self, t=None, y=None, u=None):
         """ See :meth:`pybamm.Symbol._base_evaluate()`. """
         if y is None:
             raise TypeError("StateVector cannot evaluate input 'y=None'")
@@ -173,7 +173,7 @@ class StateVector(pybamm.Symbol):
             evaluation_array=self.evaluation_array,
         )
 
-    def evaluate_for_shape(self):
+    def _evaluate_for_shape(self):
         """
         Returns a vector of NaNs to represent the shape of a StateVector.
         The size of a StateVector is the number of True elements in its evaluation_array

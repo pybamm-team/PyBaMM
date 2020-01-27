@@ -78,5 +78,5 @@ output_variables = [
 ]
 
 # plot
-plot = pybamm.QuickPlot(models, mesh, solutions, output_variables=output_variables)
+plot = pybamm.QuickPlot(solutions, output_variables=output_variables)
 plot.dynamic_plot()

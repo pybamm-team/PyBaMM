@@ -11,9 +11,9 @@ class TestLeadingOrderModel(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.standard_parameters_lithium_ion
         a = pybamm.Scalar(0)
-        a_n = pybamm.Broadcast(pybamm.Scalar(0), ["negative electrode"])
-        a_s = pybamm.Broadcast(pybamm.Scalar(0), ["separator"])
-        a_p = pybamm.Broadcast(pybamm.Scalar(0), ["positive electrode"])
+        a_n = pybamm.PrimaryBroadcast(pybamm.Scalar(0), ["negative electrode"])
+        a_s = pybamm.PrimaryBroadcast(pybamm.Scalar(0), ["separator"])
+        a_p = pybamm.PrimaryBroadcast(pybamm.Scalar(0), ["positive electrode"])
         variables = {
             "Current collector current density": a,
             "Negative electrode porosity": a_n,

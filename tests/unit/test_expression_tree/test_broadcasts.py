@@ -7,24 +7,87 @@ import unittest
 
 
 class TestBroadcasts(unittest.TestCase):
-    def test_broadcast(self):
+    def test_primary_broadcast(self):
         a = pybamm.Symbol("a")
-        broad_a = pybamm.Broadcast(a, ["negative electrode"])
+        broad_a = pybamm.PrimaryBroadcast(a, ["negative electrode"])
         self.assertEqual(broad_a.name, "broadcast")
         self.assertEqual(broad_a.children[0].name, a.name)
         self.assertEqual(broad_a.domain, ["negative electrode"])
 
-    def test_broadcast_number(self):
-        broad_a = pybamm.Broadcast(1, ["negative electrode"])
+        a = pybamm.Symbol(
+            "a",
+            domain="negative electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        broad_a = pybamm.PrimaryBroadcast(a, ["negative particle"])
+        self.assertEqual(broad_a.domain, ["negative particle"])
+        self.assertEqual(
+            broad_a.auxiliary_domains,
+            {"secondary": ["negative electrode"], "tertiary": ["current collector"]},
+        )
+
+        a = pybamm.Symbol("a", domain="current collector")
+        with self.assertRaisesRegex(
+            pybamm.DomainError, "Primary broadcast from current collector"
+        ):
+            pybamm.PrimaryBroadcast(a, "bad domain")
+        a = pybamm.Symbol("a", domain="negative electrode")
+        with self.assertRaisesRegex(
+            pybamm.DomainError, "Primary broadcast from electrode"
+        ):
+            pybamm.PrimaryBroadcast(a, "current collector")
+        a = pybamm.Symbol("a", domain="negative particle")
+        with self.assertRaisesRegex(
+            pybamm.DomainError, "Cannot do primary broadcast from particle domain"
+        ):
+            pybamm.PrimaryBroadcast(a, "current collector")
+
+    def test_secondary_broadcast(self):
+        a = pybamm.Symbol(
+            "a",
+            domain=["negative particle"],
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        broad_a = pybamm.SecondaryBroadcast(a, ["negative electrode"])
+        self.assertEqual(broad_a.domain, ["negative particle"])
+        self.assertEqual(
+            broad_a.auxiliary_domains,
+            {"secondary": ["negative electrode"], "tertiary": ["current collector"]},
+        )
+
+        a = pybamm.Symbol("a", domain="negative particle")
+        with self.assertRaisesRegex(
+            pybamm.DomainError, "Secondary broadcast from particle"
+        ):
+            pybamm.SecondaryBroadcast(a, "current collector")
+        a = pybamm.Symbol("a", domain="negative electrode")
+        with self.assertRaisesRegex(
+            pybamm.DomainError, "Secondary broadcast from electrode"
+        ):
+            pybamm.SecondaryBroadcast(a, "negative particle")
+
+        a = pybamm.Symbol("a", domain="current collector")
+        with self.assertRaisesRegex(
+            pybamm.DomainError, "Cannot do secondary broadcast"
+        ):
+            pybamm.SecondaryBroadcast(a, "electrode")
+
+    def test_full_broadcast(self):
+        a = pybamm.Symbol("a")
+        broad_a = pybamm.FullBroadcast(a, ["negative electrode"], "current collector")
+        self.assertEqual(broad_a.domain, ["negative electrode"])
+        self.assertEqual(broad_a.auxiliary_domains["secondary"], ["current collector"])
+
+    def test_full_broadcast_number(self):
+        broad_a = pybamm.FullBroadcast(1, ["negative electrode"], None)
         self.assertEqual(broad_a.name, "broadcast")
         self.assertIsInstance(broad_a.children[0], pybamm.Symbol)
         self.assertEqual(broad_a.children[0].evaluate(), np.array([1]))
         self.assertEqual(broad_a.domain, ["negative electrode"])
 
-    def test_broadcast_type(self):
         a = pybamm.Symbol("a", domain="current collector")
-        with self.assertRaisesRegex(ValueError, "Variables on the current collector"):
-            pybamm.Broadcast(a, "electrode")
+        with self.assertRaisesRegex(pybamm.DomainError, "Cannot do full broadcast"):
+            pybamm.FullBroadcast(a, "electrode", None)
 
     def test_ones_like(self):
         a = pybamm.Variable("a")

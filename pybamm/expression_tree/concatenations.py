@@ -87,10 +87,10 @@ class Concatenation(pybamm.Symbol):
     def _concatenation_simplify(self, children):
         """ See :meth:`pybamm.Symbol.simplify()`. """
         new_symbol = self.__class__(*children)
-        new_symbol.domain = []
+        new_symbol.clear_domains()
         return new_symbol
 
-    def evaluate_for_shape(self):
+    def _evaluate_for_shape(self):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape` """
         if len(self.children) == 0:
             return np.array([])
@@ -152,7 +152,7 @@ class NumpyConcatenation(Concatenation):
             else:
                 new_children.append(child)
         new_symbol = NumpyConcatenation(*new_children)
-        new_symbol.domain = []
+        new_symbol.clear_domains()
         return new_symbol
 
 
@@ -171,7 +171,7 @@ class DomainConcatenation(Concatenation):
     children : iterable of :class:`pybamm.Symbol`
         The symbols to concatenate
 
-    mesh : :class:`pybamm.BaseMesh`
+    full_mesh : :class:`pybamm.BaseMesh`
         The underlying mesh for discretisation, used to obtain the number of mesh points
         in each domain.
 
@@ -181,7 +181,7 @@ class DomainConcatenation(Concatenation):
 
     """
 
-    def __init__(self, children, mesh, copy_this=None):
+    def __init__(self, children, full_mesh, copy_this=None):
         # Convert any constant symbols in children to a Vector of the right size for
         # concatenation
         children = list(children)
@@ -190,12 +190,12 @@ class DomainConcatenation(Concatenation):
         super().__init__(*children, name="domain concatenation")
 
         # ensure domain is sorted according to mesh keys
-        domain_dict = {d: mesh.domain_order.index(d) for d in self.domain}
+        domain_dict = {d: full_mesh.domain_order.index(d) for d in self.domain}
         self.domain = sorted(domain_dict, key=domain_dict.__getitem__)
 
         if copy_this is None:
             # store mesh
-            self._mesh = mesh
+            self._full_mesh = full_mesh
 
             # Check that there is a domain, otherwise the functionality won't work
             # and we should raise a DomainError
@@ -208,7 +208,7 @@ class DomainConcatenation(Concatenation):
                 )
 
             # create dict of domain => slice of final vector
-            self.secondary_dimensions_npts = len(self.mesh[self.domain[0]])
+            self.secondary_dimensions_npts = len(self.full_mesh[self.domain[0]])
             self._slices = self.create_slices(self)
 
             # store size of final vector
@@ -219,21 +219,21 @@ class DomainConcatenation(Concatenation):
                 self.create_slices(child) for child in self.cached_children
             ]
         else:
-            self._mesh = copy.copy(copy_this._mesh)
+            self._full_mesh = copy.copy(copy_this._full_mesh)
             self._slices = copy.copy(copy_this._slices)
             self._size = copy.copy(copy_this._size)
             self._children_slices = copy.copy(copy_this._children_slices)
             self.secondary_dimensions_npts = copy_this.secondary_dimensions_npts
 
     @property
-    def mesh(self):
-        return self._mesh
+    def full_mesh(self):
+        return self._full_mesh
 
     def create_slices(self, node):
         slices = defaultdict(list)
         start = 0
         end = 0
-        second_pts = len(self.mesh[node.domain[0]])
+        second_pts = len(self.full_mesh[node.domain[0]])
         if second_pts != self.secondary_dimensions_npts:
             raise ValueError(
                 """Concatenation and children must have the same number of
@@ -241,7 +241,7 @@ class DomainConcatenation(Concatenation):
             )
         for i in range(second_pts):
             for dom in node.domain:
-                end += self.mesh[dom][i].npts
+                end += self.full_mesh[dom][i].npts
                 slices[dom].append(slice(start, end))
                 start = end
         return slices
@@ -277,7 +277,7 @@ class DomainConcatenation(Concatenation):
 
     def _concatenation_new_copy(self, children):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
-        new_symbol = self.__class__(children, self.mesh, self)
+        new_symbol = self.__class__(children, self.full_mesh, self)
         return new_symbol
 
     def _concatenation_simplify(self, children):
@@ -299,11 +299,11 @@ class DomainConcatenation(Concatenation):
                     slice(children[0].y_slices[0].start, children[-1].y_slices[-1].stop)
                 )
 
-        new_symbol = self.__class__(children, self.mesh, self)
+        new_symbol = self.__class__(children, self.full_mesh, self)
 
         # TODO: this should not be needed, but somehow we are still getting domains in
         # the simplified children
-        new_symbol.domain = []
+        new_symbol.clear_domains()
 
         return new_symbol
 

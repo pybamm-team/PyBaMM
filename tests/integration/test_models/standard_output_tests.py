@@ -9,11 +9,6 @@ class StandardOutputTests(object):
     "Calls all the tests on the standard output variables."
 
     def __init__(self, model, parameter_values, disc, solution):
-        # Process variables
-        model.variables = pybamm.post_process_variables(
-            model.variables, solution.t, solution.y, disc.mesh
-        )
-
         # Assign attributes
         self.model = model
         self.parameter_values = parameter_values
@@ -104,29 +99,28 @@ class BaseOutputTest(object):
 class VoltageTests(BaseOutputTest):
     def __init__(self, model, param, disc, solution, operating_condition):
         super().__init__(model, param, disc, solution, operating_condition)
-        variables = self.model.variables
 
-        self.eta_r_n = variables["Negative electrode reaction overpotential [V]"]
-        self.eta_r_p = variables["Positive electrode reaction overpotential [V]"]
-        self.eta_r_n_av = variables[
+        self.eta_r_n = solution["Negative electrode reaction overpotential [V]"]
+        self.eta_r_p = solution["Positive electrode reaction overpotential [V]"]
+        self.eta_r_n_av = solution[
             "X-averaged negative electrode reaction overpotential [V]"
         ]
-        self.eta_r_p_av = variables[
+        self.eta_r_p_av = solution[
             "X-averaged positive electrode reaction overpotential [V]"
         ]
-        self.eta_r_av = variables["X-averaged reaction overpotential [V]"]
+        self.eta_r_av = solution["X-averaged reaction overpotential [V]"]
 
-        self.eta_e_av = variables["X-averaged electrolyte overpotential [V]"]
-        self.delta_phi_s_av = variables["X-averaged solid phase ohmic losses [V]"]
+        self.eta_e_av = solution["X-averaged electrolyte overpotential [V]"]
+        self.delta_phi_s_av = solution["X-averaged solid phase ohmic losses [V]"]
 
-        self.ocp_n_av = variables[
+        self.ocp_n_av = solution[
             "X-averaged negative electrode open circuit potential [V]"
         ]
-        self.ocp_p_av = variables[
+        self.ocp_p_av = solution[
             "X-averaged positive electrode open circuit potential [V]"
         ]
-        self.ocv_av = variables["X-averaged open circuit voltage [V]"]
-        self.voltage = variables["Terminal voltage [V]"]
+        self.ocv_av = solution["X-averaged open circuit voltage [V]"]
+        self.voltage = solution["Terminal voltage [V]"]
 
     def test_each_reaction_overpotential(self):
         """Testing that:
@@ -251,16 +245,15 @@ class VoltageTests(BaseOutputTest):
 class ParticleConcentrationTests(BaseOutputTest):
     def __init__(self, model, param, disc, solution, operating_condition):
         super().__init__(model, param, disc, solution, operating_condition)
-        variables = self.model.variables
 
-        self.c_s_n = variables["Negative particle concentration"]
-        self.c_s_p = variables["Positive particle concentration"]
+        self.c_s_n = solution["Negative particle concentration"]
+        self.c_s_p = solution["Positive particle concentration"]
 
-        self.c_s_n_surf = variables["Negative particle surface concentration"]
-        self.c_s_p_surf = variables["Positive particle surface concentration"]
+        self.c_s_n_surf = solution["Negative particle surface concentration"]
+        self.c_s_p_surf = solution["Positive particle surface concentration"]
 
-        self.N_s_n = variables["Negative particle flux"]
-        self.N_s_p = variables["Positive particle flux"]
+        self.N_s_n = solution["Negative particle flux"]
+        self.N_s_p = solution["Positive particle flux"]
 
     def test_concentration_increase_decrease(self):
         """Test all concentrations in negative particles decrease and all
@@ -347,22 +340,21 @@ class ParticleConcentrationTests(BaseOutputTest):
 class ElectrolyteConcentrationTests(BaseOutputTest):
     def __init__(self, model, param, disc, solution, operating_condition):
         super().__init__(model, param, disc, solution, operating_condition)
-        variables = self.model.variables
 
-        self.c_e = variables["Electrolyte concentration"]
+        self.c_e = solution["Electrolyte concentration"]
 
-        self.c_e_n = variables["Negative electrolyte concentration"]
-        self.c_e_s = variables["Separator electrolyte concentration"]
-        self.c_e_p = variables["Positive electrolyte concentration"]
+        self.c_e_n = solution["Negative electrolyte concentration"]
+        self.c_e_s = solution["Separator electrolyte concentration"]
+        self.c_e_p = solution["Positive electrolyte concentration"]
 
         # TODO: output average electrolyte concentration
-        # self.c_e_av = variables["X-averaged electrolyte concentration"]
-        # self.c_e_n_av = variables["X-averaged negative electrolyte concentration"]
-        # self.c_e_s_av = variables["X-averaged separator electrolyte concentration"]
-        # self.c_e_p_av = variables["X-averaged positive electrolyte concentration"]
+        # self.c_e_av = solution["X-averaged electrolyte concentration"]
+        # self.c_e_n_av = solution["X-averaged negative electrolyte concentration"]
+        # self.c_e_s_av = solution["X-averaged separator electrolyte concentration"]
+        # self.c_e_p_av = solution["X-averaged positive electrolyte concentration"]
 
-        self.N_e_hat = variables["Electrolyte flux"]
-        # self.N_e_hat = variables["Reduced cation flux"]
+        self.N_e_hat = solution["Electrolyte flux"]
+        # self.N_e_hat = solution["Reduced cation flux"]
 
     def test_concentration_limit(self):
         "Test that the electrolyte concentration is always greater than zero."
@@ -433,37 +425,36 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
 class PotentialTests(BaseOutputTest):
     def __init__(self, model, param, disc, solution, operating_condition):
         super().__init__(model, param, disc, solution, operating_condition)
-        variables = self.model.variables
 
-        self.phi_s_n = variables["Negative electrode potential [V]"]
-        self.phi_s_p = variables["Positive electrode potential [V]"]
-        self.phi_s_n_av = variables["X-averaged negative electrode potential [V]"]
-        self.phi_s_p_av = variables["X-averaged positive electrode potential [V]"]
+        self.phi_s_n = solution["Negative electrode potential [V]"]
+        self.phi_s_p = solution["Positive electrode potential [V]"]
+        self.phi_s_n_av = solution["X-averaged negative electrode potential [V]"]
+        self.phi_s_p_av = solution["X-averaged positive electrode potential [V]"]
 
-        self.phi_e = variables["Electrolyte potential [V]"]
-        self.phi_e_n = variables["Negative electrolyte potential [V]"]
-        self.phi_e_s = variables["Separator electrolyte potential [V]"]
-        self.phi_e_p = variables["Positive electrolyte potential [V]"]
-        self.phi_e_n_av = variables["X-averaged negative electrolyte potential [V]"]
-        self.phi_e_p_av = variables["X-averaged positive electrolyte potential [V]"]
+        self.phi_e = solution["Electrolyte potential [V]"]
+        self.phi_e_n = solution["Negative electrolyte potential [V]"]
+        self.phi_e_s = solution["Separator electrolyte potential [V]"]
+        self.phi_e_p = solution["Positive electrolyte potential [V]"]
+        self.phi_e_n_av = solution["X-averaged negative electrolyte potential [V]"]
+        self.phi_e_p_av = solution["X-averaged positive electrolyte potential [V]"]
 
-        self.delta_phi_n = variables[
+        self.delta_phi_n = solution[
             "Negative electrode surface potential difference [V]"
         ]
-        self.delta_phi_p = variables[
+        self.delta_phi_p = solution[
             "Positive electrode surface potential difference [V]"
         ]
-        self.delta_phi_n_av = variables[
+        self.delta_phi_n_av = solution[
             "X-averaged negative electrode surface potential difference [V]"
         ]
-        self.delta_phi_p_av = variables[
+        self.delta_phi_p_av = solution[
             "X-averaged positive electrode surface potential difference [V]"
         ]
 
-        self.grad_phi_e = variables["Gradient of electrolyte potential"]
-        self.grad_phi_e_n = variables["Gradient of negative electrolyte potential"]
-        self.grad_phi_e_s = variables["Gradient of separator electrolyte potential"]
-        self.grad_phi_e_p = variables["Gradient of positive electrolyte potential"]
+        self.grad_phi_e = solution["Gradient of electrolyte potential"]
+        self.grad_phi_e_n = solution["Gradient of negative electrolyte potential"]
+        self.grad_phi_e_s = solution["Gradient of separator electrolyte potential"]
+        self.grad_phi_e_p = solution["Gradient of positive electrolyte potential"]
 
     def test_negative_electrode_potential_profile(self):
         """Test that negative electrode potential is zero on left boundary. Test
@@ -526,27 +517,26 @@ class PotentialTests(BaseOutputTest):
 class CurrentTests(BaseOutputTest):
     def __init__(self, model, param, disc, solution, operating_condition):
         super().__init__(model, param, disc, solution, operating_condition)
-        variables = self.model.variables
 
-        self.j = variables["Interfacial current density"]
-        self.j0 = variables["Exchange current density"]
+        self.j = solution["Interfacial current density"]
+        self.j0 = solution["Exchange current density"]
 
-        self.j_n = variables["Negative electrode interfacial current density"]
-        self.j_p = variables["Positive electrode interfacial current density"]
-        self.j_n_av = variables[
+        self.j_n = solution["Negative electrode interfacial current density"]
+        self.j_p = solution["Positive electrode interfacial current density"]
+        self.j_n_av = solution[
             "X-averaged negative electrode interfacial current density"
         ]
-        self.j_p_av = variables[
+        self.j_p_av = solution[
             "X-averaged positive electrode interfacial current density"
         ]
 
-        self.j0_n = variables["Negative electrode exchange current density"]
-        self.j0_p = variables["Positive electrode exchange current density"]
+        self.j0_n = solution["Negative electrode exchange current density"]
+        self.j0_p = solution["Positive electrode exchange current density"]
 
-        self.i_s_n = variables["Negative electrode current density"]
-        self.i_s_p = variables["Positive electrode current density"]
-        self.i_s = variables["Electrode current density"]
-        self.i_e = variables["Electrolyte current density"]
+        self.i_s_n = solution["Negative electrode current density"]
+        self.i_s_p = solution["Positive electrode current density"]
+        self.i_s = solution["Electrode current density"]
+        self.i_e = solution["Electrolyte current density"]
 
     def test_interfacial_current_average(self):
         """Test that average of the interfacial current density is equal to the true
@@ -611,11 +601,10 @@ class CurrentTests(BaseOutputTest):
 class VelocityTests(BaseOutputTest):
     def __init__(self, model, param, disc, solution, operating_condition):
         super().__init__(model, param, disc, solution, operating_condition)
-        variables = self.model.variables
 
-        self.v_box = variables["Volume-averaged velocity"]
-        self.i_e = variables["Electrolyte current density"]
-        self.dVbox_dz = variables["Vertical volume-averaged acceleration"]
+        self.v_box = solution["Volume-averaged velocity"]
+        self.i_e = solution["Electrolyte current density"]
+        self.dVbox_dz = solution["Vertical volume-averaged acceleration"]
 
     def test_velocity_boundaries(self):
         """Test the boundary values of the current densities"""

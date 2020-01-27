@@ -308,8 +308,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # only change the diveregence (childs here have grad and no div)
         out = integration_matrix @ discretised_child
 
-        out.domain = child.domain
-        out.auxiliary_domains = child.auxiliary_domains
+        out.copy_domains(child)
 
         return out
 
@@ -411,8 +410,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # Return delta function, keep domains
         delta_fn = pybamm.Matrix(domain_width / dx * matrix) * discretised_symbol
-        delta_fn.domain = symbol.domain
-        delta_fn.auxiliary_domains = symbol.auxiliary_domains
+        delta_fn.copy_domains(symbol)
 
         return delta_fn
 
@@ -456,8 +454,10 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Remove domains to avoid clash
         left_domain = left_symbol_disc.domain
         right_domain = right_symbol_disc.domain
-        left_symbol_disc.domain = []
-        right_symbol_disc.domain = []
+        left_auxiliary_domains = left_symbol_disc.auxiliary_domains
+        right_auxiliary_domains = right_symbol_disc.auxiliary_domains
+        left_symbol_disc.clear_domains()
+        right_symbol_disc.clear_domains()
 
         # Finite volume derivative
         dy = right_matrix @ right_symbol_disc - left_matrix @ left_symbol_disc
@@ -466,6 +466,8 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Change domains back
         left_symbol_disc.domain = left_domain
         right_symbol_disc.domain = right_domain
+        left_symbol_disc.auxiliary_domains = left_auxiliary_domains
+        right_symbol_disc.auxiliary_domains = right_auxiliary_domains
 
         return dy / dx
 
@@ -599,8 +601,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Need to match the domain. E.g. in the case of the boundary condition
         # on the particle, the gradient has domain particle but the bcs_vector
         # has domain electrode, since it is a function of the macroscopic variables
-        bcs_vector.domain = discretised_symbol.domain
-        bcs_vector.auxiliary_domains = discretised_symbol.auxiliary_domains
+        bcs_vector.copy_domains(discretised_symbol)
 
         # Make matrix to calculate ghost nodes
         # coo_matrix takes inputs (data, (row, col)) and puts data[i] at the point
@@ -956,11 +957,9 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # Return boundary value with domain given by symbol
         boundary_value = pybamm.Matrix(matrix) @ discretised_child
-        boundary_value.domain = symbol.domain
-        boundary_value.auxiliary_domains = symbol.auxiliary_domains
+        boundary_value.copy_domains(symbol)
 
-        additive.domain = symbol.domain
-        additive.auxiliary_domains = symbol.auxiliary_domains
+        additive.copy_domains(symbol)
         boundary_value += additive
 
         return boundary_value
@@ -968,7 +967,11 @@ class FiniteVolume(pybamm.SpatialMethod):
     def process_binary_operators(self, bin_op, left, right, disc_left, disc_right):
         """Discretise binary operators in model equations.  Performs appropriate
         averaging of diffusivities if one of the children is a gradient operator, so
-        that discretised sizes match up.
+        that discretised sizes match up. For this averaging we use the harmonic
+        mean [1].
+
+        [1] Recktenwald, Gerald. "The control-volume finite-difference approximation to
+        the diffusion equation." (2012).
 
         Parameters
         ----------
@@ -1004,11 +1007,23 @@ class FiniteVolume(pybamm.SpatialMethod):
         elif left_evaluates_on_edges == right_evaluates_on_edges:
             pass
         # If only left child evaluates on edges, map right child onto edges
+        # using the harmonic mean if the left child is a gradient (i.e. this
+        # binary operator represents a flux)
         elif left_evaluates_on_edges and not right_evaluates_on_edges:
-            disc_right = self.node_to_edge(disc_right)
+            if isinstance(left, pybamm.Gradient):
+                method = "harmonic"
+            else:
+                method = "arithmetic"
+            disc_right = self.node_to_edge(disc_right, method=method)
         # If only right child evaluates on edges, map left child onto edges
+        # using the harmonic mean if the right child is a gradient (i.e. this
+        # binary operator represents a flux)
         elif right_evaluates_on_edges and not left_evaluates_on_edges:
-            disc_left = self.node_to_edge(disc_left)
+            if isinstance(right, pybamm.Gradient):
+                method = "harmonic"
+            else:
+                method = "arithmetic"
+            disc_left = self.node_to_edge(disc_left, method=method)
         # Return new binary operator with appropriate class
         out = bin_op.__class__(disc_left, disc_right)
         return out
@@ -1040,27 +1055,28 @@ class FiniteVolume(pybamm.SpatialMethod):
                     )
         return pybamm.DomainConcatenation(disc_children, self.mesh)
 
-    def edge_to_node(self, discretised_symbol):
+    def edge_to_node(self, discretised_symbol, method="arithmetic"):
         """
         Convert a discretised symbol evaluated on the cell edges to a discretised symbol
         evaluated on the cell nodes.
         See :meth:`pybamm.FiniteVolume.shift`
         """
-        return self.shift(discretised_symbol, "edge to node")
+        return self.shift(discretised_symbol, "edge to node", method)
 
-    def node_to_edge(self, discretised_symbol):
+    def node_to_edge(self, discretised_symbol, method="arithmetic"):
         """
         Convert a discretised symbol evaluated on the cell nodes to a discretised symbol
         evaluated on the cell edges.
         See :meth:`pybamm.FiniteVolume.shift`
         """
-        return self.shift(discretised_symbol, "node to edge")
+        return self.shift(discretised_symbol, "node to edge", method)
 
-    def shift(self, discretised_symbol, shift_key):
+    def shift(self, discretised_symbol, shift_key, method):
         """
         Convert a discretised symbol evaluated at edges/nodes, to a discretised symbol
-        evaluated at nodes/edges.
-        For now we just take the arithemtic mean, though it may be better to take the
+        evaluated at nodes/edges. Can be the arithmetic mean or the harmonic mean.
+
+        Note: when computing fluxes at cell edges it is better to take the
         harmonic mean based on [1].
 
         [1] Recktenwald, Gerald. "The control-volume finite-difference approximation to
@@ -1075,6 +1091,8 @@ class FiniteVolume(pybamm.SpatialMethod):
         shift_key : str
             Whether to shift from nodes to edges ("node to edge"), or from edges to
             nodes ("edge to node")
+        method : str
+            Whether to use the "arithmetic" or "harmonic" mean
 
         Returns
         -------
@@ -1122,10 +1140,141 @@ class FiniteVolume(pybamm.SpatialMethod):
 
             return pybamm.Matrix(matrix) @ array
 
+        def harmonic_mean(array):
+            """
+            Calculate the harmonic mean of an array using matrix multiplication.
+            The harmonic mean is computed as
+
+            .. math::
+                D_{eff} = \\frac{D_1  D_2}{\\beta D_2 + (1 - \\beta) D_1},
+
+            where
+
+            .. math::
+                \\beta = \\frac{\\Delta x_1}{\\Delta x_2 + \\Delta x_1}
+
+            accounts for the difference in the control volume widths. This is the
+            definiton from [1], which is the same as that in [2] but with slightly
+            different notation.
+
+            [1] Torchio, M et al. "LIONSIMBA: A Matlab Framework Based on a Finite
+            Volume Model Suitable for Li-Ion Battery Design, Simulation, and Control."
+            (2016).
+            [2] Recktenwald, Gerald. "The control-volume finite-difference
+            approximation to the diffusion equation." (2012).
+            """
+            # Create appropriate submesh by combining submeshes in domain
+            submesh_list = self.mesh.combine_submeshes(*array.domain)
+            submesh = submesh_list[0]
+
+            # Get second dimension length for use later
+            second_dim_len = len(submesh_list)
+
+            # Create 1D matrix using submesh
+            n = submesh.npts
+
+            if shift_key == "node to edge":
+                # Matrix to compute values at the exterior edges
+                edges_sub_matrix_left = csr_matrix(
+                    ([1.5, -0.5], ([0, 0], [0, 1])), shape=(1, n)
+                )
+                edges_sub_matrix_center = csr_matrix((n - 1, n))
+                edges_sub_matrix_right = csr_matrix(
+                    ([-0.5, 1.5], ([0, 0], [n - 2, n - 1])), shape=(1, n)
+                )
+                edges_sub_matrix = vstack(
+                    [
+                        edges_sub_matrix_left,
+                        edges_sub_matrix_center,
+                        edges_sub_matrix_right,
+                    ]
+                )
+
+                # Generate full matrix from the submatrix
+                # Convert to csr_matrix so that we can take the index (row-slicing),
+                # which is not supported by the default kron format
+                # Note that this makes column-slicing inefficient, but this should
+                # not be an issue
+                edges_matrix = csr_matrix(kron(eye(second_dim_len), edges_sub_matrix))
+
+                # Matrix to extract the node values running from the first node
+                # to the penultimate node in the primary dimension (D_1 in the
+                # definiton of the harmonic mean)
+                sub_matrix_D1 = hstack([eye(n - 1), csr_matrix((n - 1, 1))])
+                matrix_D1 = csr_matrix(kron(eye(second_dim_len), sub_matrix_D1))
+                D1 = pybamm.Matrix(matrix_D1) @ array
+
+                # Matrix to extract the node values running from the second node
+                # to the final node in the primary dimension  (D_2 in the
+                # definiton of the harmonic mean)
+                sub_matrix_D2 = hstack([csr_matrix((n - 1, 1)), eye(n - 1)])
+                matrix_D2 = csr_matrix(kron(eye(second_dim_len), sub_matrix_D2))
+                D2 = pybamm.Matrix(matrix_D2) @ array
+
+                # Compute weight beta
+                dx = submesh.d_edges
+                sub_beta = (dx[:-1] / (dx[1:] + dx[:-1]))[:, np.newaxis]
+                beta = pybamm.Array(np.kron(np.ones((second_dim_len, 1)), sub_beta))
+
+                # Compute harmonic mean on internal edges
+                # Note: add small number to denominator to regularise D_eff
+                D_eff = D1 * D2 / (D2 * beta + D1 * (1 - beta) + 1e-16)
+
+                # Matrix to pad zeros at the beginning and end of the array where
+                # the exterior edge values will be added
+                sub_matrix = vstack(
+                    [csr_matrix((1, n - 1)), eye(n - 1), csr_matrix((1, n - 1))]
+                )
+
+                # Generate full matrix from the submatrix
+                # Convert to csr_matrix so that we can take the index (row-slicing),
+                # which is not supported by the default kron format
+                # Note that this makes column-slicing inefficient, but this should
+                # not be an issue
+                matrix = csr_matrix(kron(eye(second_dim_len), sub_matrix))
+
+                return (
+                    pybamm.Matrix(edges_matrix) @ array + pybamm.Matrix(matrix) @ D_eff
+                )
+
+            elif shift_key == "edge to node":
+                # Matrix to extract the edge values running from the first edge
+                # to the penultimate edge in the primary dimension (D_1 in the
+                # definiton of the harmonic mean)
+                sub_matrix_D1 = hstack([eye(n), csr_matrix((n, 1))])
+                matrix_D1 = csr_matrix(kron(eye(second_dim_len), sub_matrix_D1))
+                D1 = pybamm.Matrix(matrix_D1) @ array
+
+                # Matrix to extract the edge values running from the second edge
+                # to the final edge in the primary dimension  (D_2 in the
+                # definiton of the harmonic mean)
+                sub_matrix_D2 = hstack([csr_matrix((n, 1)), eye(n)])
+                matrix_D2 = csr_matrix(kron(eye(second_dim_len), sub_matrix_D2))
+                D2 = pybamm.Matrix(matrix_D2) @ array
+
+                # Compute weight beta
+                dx0 = submesh.nodes[0] - submesh.edges[0]  # first edge to node
+                dxN = submesh.edges[-1] - submesh.nodes[-1]  # last node to edge
+                dx = np.concatenate(([dx0], submesh.d_nodes, [dxN]))
+                sub_beta = (dx[:-1] / (dx[1:] + dx[:-1]))[:, np.newaxis]
+                beta = pybamm.Array(np.kron(np.ones((second_dim_len, 1)), sub_beta))
+
+                # Compute harmonic mean on nodes
+                # Note: add small number to denominator to regularise D_eff
+                D_eff = D1 * D2 / (D2 * beta + D1 * (1 - beta) + 1e-16)
+
+                return D_eff
+
+            else:
+                raise ValueError("shift key '{}' not recognised".format(shift_key))
+
         # If discretised_symbol evaluates to number there is no need to average
         if discretised_symbol.evaluates_to_number():
             out = discretised_symbol
-        else:
+        elif method == "arithmetic":
             out = arithmetic_mean(discretised_symbol)
-
+        elif method == "harmonic":
+            out = harmonic_mean(discretised_symbol)
+        else:
+            raise ValueError("method '{}' not recognised".format(method))
         return out

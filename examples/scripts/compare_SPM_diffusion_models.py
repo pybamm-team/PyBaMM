@@ -52,5 +52,5 @@ variables = [
     "X-averaged positive particle surface concentration [mol.m-3]",
     "Terminal voltage [V]",
 ]
-plot = pybamm.QuickPlot(models, mesh, solutions, variables)
+plot = pybamm.QuickPlot(solutions, variables)
 plot.dynamic_plot()

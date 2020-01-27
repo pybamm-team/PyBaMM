@@ -14,11 +14,11 @@ class TestComposite(unittest.TestCase):
         a = pybamm.Scalar(0)
         variables = {
             "Current collector current density": a,
-            "Negative electrode interfacial current density": pybamm.Broadcast(
+            "Negative electrode interfacial current density": pybamm.PrimaryBroadcast(
                 a, ["negative electrode"]
             ),
             "X-averaged negative electrode interfacial current density": a,
-            "Positive electrode interfacial current density": pybamm.Broadcast(
+            "Positive electrode interfacial current density": pybamm.PrimaryBroadcast(
                 a, ["positive electrode"]
             ),
             "X-averaged positive electrode interfacial current density": a,

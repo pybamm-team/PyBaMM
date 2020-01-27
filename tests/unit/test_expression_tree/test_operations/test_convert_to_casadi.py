@@ -71,12 +71,6 @@ class TestCasadiConverter(unittest.TestCase):
         # State Vector
         self.assert_casadi_equal(pybamm_y.to_casadi(casadi_t, casadi_y), casadi_y)
 
-        # outer product
-        outer = pybamm.Outer(pybamm_a, pybamm_a)
-        self.assert_casadi_equal(
-            outer.to_casadi(), casadi.MX(outer.evaluate()), evalf=True
-        )
-
     def test_special_functions(self):
         a = pybamm.Array(np.array([1, 2, 3, 4, 5]))
         self.assert_casadi_equal(pybamm.max(a).to_casadi(), casadi.MX(5), evalf=True)
@@ -124,7 +118,7 @@ class TestCasadiConverter(unittest.TestCase):
         # Domain concatenation
         mesh = get_mesh_for_testing()
         a_dom = ["negative electrode"]
-        b_dom = ["positive electrode"]
+        b_dom = ["separator"]
         a = 2 * pybamm.Vector(np.ones_like(mesh[a_dom[0]][0].nodes), domain=a_dom)
         b = pybamm.Vector(np.ones_like(mesh[b_dom[0]][0].nodes), domain=b_dom)
         conc = pybamm.DomainConcatenation([b, a], mesh)

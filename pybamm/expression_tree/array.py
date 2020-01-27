@@ -98,6 +98,6 @@ class Array(pybamm.Symbol):
             self.entries_string,
         )
 
-    def _base_evaluate(self, t=None, y=None):
+    def _base_evaluate(self, t=None, y=None, u=None):
         """ See :meth:`pybamm.Symbol._base_evaluate()`. """
         return self._entries

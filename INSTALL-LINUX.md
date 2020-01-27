@@ -129,7 +129,6 @@ You can install these on Ubuntu or Debian using APT:
 sudo apt update
 sudo apt install python3-dev gfortran gcc cmake libopenblas-dev
 ```
-
 To install scikits.odes, simply run
 ```bash
 python setup.py install_odes
