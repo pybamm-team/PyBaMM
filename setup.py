@@ -104,7 +104,7 @@ def install_sundials(
         question = "About to download sundials, proceed?"
         url = (
             "https://computing.llnl.gov/"
-            + "projects/sundials/download/sundials-4.1.0.tar.gz"
+            + "projects/sundials/download/sundials-5.0.0.tar.gz"
         )
         if force_download or yes_or_no(question):
             print("Downloading SUNDIALS from " + url)
@@ -114,12 +114,11 @@ def install_sundials(
             sys.exit()
 
     fixed_cmakelists = os.path.join(
-        pybamm_dir, "scripts", "replace-cmake", "sundials-4.1.0", "CMakeLists.txt"
+        pybamm_dir, "scripts", "replace-cmake", "sundials-5.0.0", "CMakeLists.txt"
     )
     copy(fixed_cmakelists, os.path.join(sundials_src, "CMakeLists.txt"))
 
     cmake_args = [
-        "-DBLAS_ENABLE=ON",
         "-DLAPACK_ENABLE=ON",
         "-DSUNDIALS_INDEX_SIZE=32",
         "-DBUILD_ARKODE:BOOL=OFF",
@@ -256,7 +255,7 @@ class InstallKLU(Command):
             self.download_sundials = False
         else:
             self.download_sundials = True
-            self.sundials_src = os.path.join(self.pybamm_dir, "sundials-4.1.0")
+            self.sundials_src = os.path.join(self.pybamm_dir, "sundials-5.0.0")
 
     def run(self):
         """Functionality for the install_klu command.
@@ -377,7 +376,7 @@ class InstallODES(Command):
             self.download_sundials = False
         else:
             self.download_sundials = True
-            self.sundials_src = os.path.join(self.pybamm_dir, "sundials-4.1.0")
+            self.sundials_src = os.path.join(self.pybamm_dir, "sundials-5.0.0")
 
     def run(self):
         """Functionality for the install_odes command.
