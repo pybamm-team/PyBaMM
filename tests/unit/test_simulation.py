@@ -223,6 +223,31 @@ class TestSimulation(unittest.TestCase):
         self.assertEqual(sim.solution.t[0], 2 * dt)
         self.assertEqual(sim.solution.t[1], 3 * dt)
 
+    def test_step_with_inputs(self):
+        def current_function(t):
+            return pybamm.InputParameter("Current")
+
+        dt = 0.001
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        param.update({"Current function [A]": current_function, "Current": "[input]"})
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sim.step(dt, inputs={"Current": 1})  # 1 step stores first two points
+        self.assertEqual(sim.solution.t.size, 2)
+        self.assertEqual(sim.solution.y[0, :].size, 2)
+        self.assertEqual(sim.solution.t[0], 0)
+        self.assertEqual(sim.solution.t[1], dt)
+        np.testing.assert_array_equal(sim.solution.inputs["Current"], 1)
+        sim.step(dt, inputs={"Current": 2})  # automatically append the next step
+        self.assertEqual(sim.solution.t.size, 3)
+        self.assertEqual(sim.solution.y[0, :].size, 3)
+        self.assertEqual(sim.solution.t[0], 0)
+        self.assertEqual(sim.solution.t[1], dt)
+        self.assertEqual(sim.solution.t[2], 2 * dt)
+        np.testing.assert_array_equal(
+            sim.solution.inputs["Current"], np.array([1, 1, 2])
+        )
+
     def test_save_load(self):
         model = pybamm.lead_acid.LOQS()
         model.use_jacobian = True
