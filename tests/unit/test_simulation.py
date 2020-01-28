@@ -230,7 +230,7 @@ class TestSimulation(unittest.TestCase):
         dt = 0.001
         model = pybamm.lithium_ion.SPM()
         param = model.default_parameter_values
-        param.update({"Current function [A]": current_function, "Current": "[input]"})
+        param.update({"Current function [A]": current_function})
         sim = pybamm.Simulation(model, parameter_values=param)
         sim.step(dt, inputs={"Current": 1})  # 1 step stores first two points
         self.assertEqual(sim.solution.t.size, 2)
@@ -319,7 +319,10 @@ class TestSimulation(unittest.TestCase):
         sim.set_defaults()
         # Not sure of best way to test nested dicts?
         # self.geometry = model.default_geometry
-        self.assertEqual(sim._parameter_values, model.default_parameter_values)
+        self.assertEqual(
+            sim._parameter_values._dict_items,
+            model.default_parameter_values._dict_items,
+        )
         for domain, submesh in model.default_submesh_types.items():
             self.assertEqual(
                 sim._submesh_types[domain].submesh_type, submesh.submesh_type

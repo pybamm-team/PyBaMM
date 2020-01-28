@@ -12,12 +12,47 @@ import timeit
 import pathlib
 import pickle
 import pybamm
+import Levenshtein
 from collections import defaultdict
 
 
 def root_dir():
     """ return the root directory of the PyBaMM install directory """
     return str(pathlib.Path(pybamm.__path__[0]).parent)
+
+
+class FuzzyDict(dict):
+    def get_best_matches(self, key):
+        "Get best matches from keys"
+        key = key.lower()
+        best_three = []
+        lowest_score = 0
+        for k in self.keys():
+            score = Levenshtein.ratio(k.lower(), key)
+            # Start filling out the list
+            if len(best_three) < 3:
+                best_three.append((k, score))
+                # Sort once the list has three elements, using scores
+                if len(best_three) == 3:
+                    best_three.sort(key=lambda x: x[1], reverse=True)
+                    lowest_score = best_three[-1][1]
+            # Once list is full, start checking new entries
+            else:
+                if score > lowest_score:
+                    # Replace last element with new entry
+                    best_three[-1] = (k, score)
+                    # Sort and update lowest score
+                    best_three.sort(key=lambda x: x[1], reverse=True)
+                    lowest_score = best_three[-1][1]
+
+        return [x[0] for x in best_three]
+
+    def __getitem__(self, key):
+        try:
+            return super().__getitem__(key)
+        except KeyError:
+            best_matches = self.get_best_matches(key)
+            raise KeyError(f"'{key}' not found. Best matches are {best_matches}")
 
 
 class Timer(object):
@@ -194,3 +229,4 @@ def load(filename):
     with open(filename, "rb") as f:
         obj = pickle.load(f)
     return obj
+
