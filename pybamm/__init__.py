@@ -55,7 +55,7 @@ ABSOLUTE_PATH = os.path.join(os.path.split(script_path)[0], "..")
 #
 # Utility classes and methods
 #
-from .util import Timer
+from .util import Timer, FuzzyDict
 from .util import root_dir, load_function, rmse, get_infinite_nested_dict, load
 from .logger import logger, set_logging_level
 from .settings import settings
