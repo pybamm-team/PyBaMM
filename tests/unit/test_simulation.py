@@ -230,7 +230,7 @@ class TestSimulation(unittest.TestCase):
         dt = 0.001
         model = pybamm.lithium_ion.SPM()
         param = model.default_parameter_values
-        param.update({"Current function [A]": current_function, "Current": "[input]"})
+        param.update({"Current function [A]": current_function})
         sim = pybamm.Simulation(model, parameter_values=param)
         sim.step(dt, inputs={"Current": 1})  # 1 step stores first two points
         self.assertEqual(sim.solution.t.size, 2)

@@ -159,6 +159,26 @@ class ParameterValues:
         return {k: v for (k, v) in zip(df["Name [units]"], df["Value"])}
 
     def update(self, values, check_conflict=False, check_already_exists=True, path=""):
+        """
+        Update parameter dictionary, while also performing some basic checks.
+
+        Parameters
+        ----------
+        values : dict
+            Dictionary of parameter values to update parameter dictionary with
+        check_conflict : bool, optional
+            Whether to check that a parameter in `values` has not already been defined
+            in the parameter class when updating it, and if so that its value does not
+            change. This is set to True during initialisation, when parameters are
+            combined from different sources, and is False by default otherwise
+        check_already_exists : bool, optional
+            Whether to check that a parameter in `values` already exists when trying to
+            update it. This is to avoid cases where an intended change in the parameters
+            is ignored due a typo in the parameter name, and is True by default but can
+            be manually overridden.
+        path : string, optional
+            Path from which to load functions
+        """
         # update
         for name, value in values.items():
             # check for conflicts
