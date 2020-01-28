@@ -113,7 +113,7 @@ class EffectiveResistance2D(pybamm.BaseModel):
             }
         )
 
-    def get_processed_potentials(self, solution, mesh, param_values, V_av, I_av):
+    def get_processed_potentials(self, solution, param_values, V_av, I_av):
         """
         Calculates the potentials in the current collector given
         the average voltage and current.
@@ -134,18 +134,8 @@ class EffectiveResistance2D(pybamm.BaseModel):
         U_ref = param_values.evaluate(param.U_p_ref - param.U_n_ref)
 
         # Process psi and W, and their (average) values at the negative tab
-        psi = pybamm.ProcessedVariable(
-            self.variables["Current collector potential weighted sum"],
-            solution.t,
-            solution.y,
-            mesh,
-        )
-        W = pybamm.ProcessedVariable(
-            self.variables["Perturbation to current collector potential difference"],
-            solution.t,
-            solution.y,
-            mesh,
-        )
+        psi = solution["Current collector potential weighted sum"]
+        W = solution["Perturbation to current collector potential difference"]
         psi_neg_tab = self.variables[
             "Current collector potential weighted sum (negative tab)"
         ].evaluate(y=solution.y[:, 0])[0][0]

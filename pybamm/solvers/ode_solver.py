@@ -56,6 +56,10 @@ class OdeSolver(pybamm.BaseSolver):
 
         solve_time = timer.time() - solve_start_time
 
+        # Add model and inputs to solution
+        solution.model = model
+        solution.inputs = inputs
+
         # Identify the event that caused termination
         termination = self.get_termination_reason(solution, self.events)
 
@@ -184,11 +188,8 @@ class OdeSolver(pybamm.BaseSolver):
         inputs = inputs or {}
         u_casadi = {name: casadi.MX.sym(name) for name in inputs.keys()}
 
-        if self.y_pad is not None:
-            y_ext = casadi.MX.sym("y_ext", len(self.y_pad))
-            y_casadi_w_ext = casadi.vertcat(y_casadi, y_ext)
-        else:
-            y_casadi_w_ext = y_casadi
+        y_ext = casadi.MX.sym("y_ext", len(self.y_pad))
+        y_casadi_w_ext = casadi.vertcat(y_casadi, y_ext)
 
         pybamm.logger.info("Converting RHS to CasADi")
         concatenated_rhs = model.concatenated_rhs.to_casadi(

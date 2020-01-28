@@ -225,21 +225,9 @@ class Simulation:
         elif self._solution.t[-1] == solution.t[-1]:
             pass
         else:
-            self._update_solution(solution)
+            self._solution.append(solution)
 
         self._made_first_step = True
-
-    def _update_solution(self, solution):
-
-        self._solution.set_up_time += solution.set_up_time
-        self._solution.solve_time += solution.solve_time
-        self._solution.t = np.append(self._solution.t, solution.t[-1])
-        self._solution.t_event = solution.t_event
-        self._solution.termination = solution.termination
-        self._solution.y = np.concatenate(
-            [self._solution.y, solution.y[:, -1][:, np.newaxis]], axis=1
-        )
-        self._solution.y_event = solution.y_event
 
     def get_variable_array(self, *variables):
         """
@@ -290,12 +278,7 @@ class Simulation:
         if quick_plot_vars is None:
             quick_plot_vars = self.quick_plot_vars
 
-        plot = pybamm.QuickPlot(
-            self.built_model,
-            self._mesh,
-            self._solution,
-            output_variables=quick_plot_vars,
-        )
+        plot = pybamm.QuickPlot(self._solution, output_variables=quick_plot_vars,)
 
         if isnotebook():
             import ipywidgets as widgets
@@ -473,6 +456,4 @@ class Simulation:
 
 def load_sim(filename):
     """Load a saved simulation"""
-    with open(filename, "rb") as f:
-        sim = pickle.load(f)
-    return sim
+    return pybamm.load(filename)

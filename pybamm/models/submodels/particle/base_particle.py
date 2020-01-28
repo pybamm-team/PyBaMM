@@ -81,7 +81,7 @@ class BaseParticle(pybamm.BaseSubModel):
         tol = 0.01
 
         self.events[
-            "Minumum " + self.domain.lower() + " particle surface concentration"
+            "Minimum " + self.domain.lower() + " particle surface concentration"
         ] = (pybamm.min(c_s_surf) - tol)
 
         self.events[
