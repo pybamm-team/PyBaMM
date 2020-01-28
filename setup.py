@@ -48,7 +48,6 @@ setup(
         "scikit-fem>=0.2.0",
         "casadi>=3.5.0",
         "jupyter",  # For example notebooks
-        "fuzzywuzzy>=0.17.0",
         "python-Levenshtein>=0.12.0",
         # Note: Matplotlib is loaded for debug plots, but to ensure pybamm runs
         # on systems without an attached display, it should never be imported
