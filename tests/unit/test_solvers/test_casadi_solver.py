@@ -209,9 +209,7 @@ class TestCasadiSolver(unittest.TestCase):
         # Solve
         solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 10, 100)
-        solution = solver.solve(
-            model, t_eval, external_variables={"var2": 0.5 * np.ones(100)}
-        )
+        solution = solver.solve(model, t_eval, external_variables={"var2": 0.5})
         np.testing.assert_allclose(solution.y[0], 1 - 0.5 * solution.t, rtol=1e-06)
 
     def test_model_solver_with_non_identity_mass(self):

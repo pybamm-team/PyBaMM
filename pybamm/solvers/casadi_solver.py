@@ -101,12 +101,14 @@ class CasadiSolver(pybamm.BaseSolver):
             init_event_signs = np.sign(
                 np.concatenate([event(0, model.y0) for event in model.events_eval])
             )
-            solution = None
             pybamm.logger.info(
                 "Start solving {} with {} in 'safe' mode".format(model.name, self.name)
             )
             t = t_eval[0]
             y0 = model.y0
+            # Initialize solution
+            solution = pybamm.Solution(np.array([t]), y0[:, np.newaxis])
+            solution.solve_time = 0
             for dt in np.diff(t_eval):
                 # Step
                 solved = False
@@ -155,12 +157,8 @@ class CasadiSolver(pybamm.BaseSolver):
                 else:
                     # assign temporary solve time
                     current_step_sol.solve_time = np.nan
-                    if not solution:
-                        # create solution object on first step
-                        solution = current_step_sol
-                    else:
-                        # append solution from the current step to solution
-                        solution.append(current_step_sol)
+                    # append solution from the current step to solution
+                    solution.append(current_step_sol)
                     t = solution.t[-1]
                     y0 = solution.y[:, -1]
 

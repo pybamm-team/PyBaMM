@@ -233,7 +233,7 @@ class BaseSolver(object):
                 model.concatenated_rhs, model.concatenated_algebraic
             )
             # Process again, uses caching so should be quick
-            residuals, residuals_eval, jacobian_eval = process(all_states, "residuals",)
+            residuals, residuals_eval, jacobian_eval = process(all_states, "residuals")
             model.residuals_eval = residuals_eval
             model.jacobian_eval = jacobian_eval
             model.y0 = self.calculate_consistent_initial_conditions(model)
@@ -392,6 +392,10 @@ class BaseSolver(object):
         # Make sure model isn't empty
         if len(model.rhs) == 0 and len(model.algebraic) == 0:
             raise pybamm.ModelError("Cannot solve empty model")
+
+        # Make sure t_eval is monotonic
+        if (np.diff(t_eval) < 0).any():
+            raise pybamm.SolverError("t_eval must increase monotonically")
 
         # Set up
         timer = pybamm.Timer()
