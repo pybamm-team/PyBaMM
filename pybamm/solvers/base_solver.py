@@ -593,14 +593,18 @@ class SolverCallable:
 
     def __call__(self, t, y):
         y = y[:, np.newaxis]
-        if self.name in ["RHS", "algebraic", "residuals"]:
-            return self.function(t, y)[:, 0]
+        if self.name in ["RHS", "algebraic", "residuals", "event"]:
+            return self.function(t, y).flatten()
         else:
             return self.function(t, y)
 
     def function(self, t, y):
         if self.form == "casadi":
-            return self._function(t, y, self.inputs).full()
+            if self.name in ["RHS", "algebraic", "residuals", "event"]:
+                return self._function(t, y, self.inputs).full()
+            else:
+                # keep jacobians sparse
+                return self._function(t, y, self.inputs)
         else:
             return self._function(t, y, self.inputs, known_evals={})[0]
 

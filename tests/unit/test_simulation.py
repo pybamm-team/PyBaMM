@@ -294,6 +294,7 @@ class TestSimulation(unittest.TestCase):
         sim.save("test.pickle")
 
         # with Casadi solver
+        model.convert_to_format = "casadi"
         sim = pybamm.Simulation(model, solver=pybamm.CasadiSolver())
         sim.solve()
         sim.save("test.pickle")

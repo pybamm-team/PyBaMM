@@ -33,6 +33,11 @@ class TestExternalVariable(unittest.TestCase):
 
         self.assertEqual(a.evaluate(u={"a": 3}), 3)
 
+        with self.assertRaisesRegex(KeyError, "External variable"):
+            a.evaluate(u={"b": 1})
+        with self.assertRaisesRegex(TypeError, "inputs u"):
+            a.evaluate(u="not a dictionary")
+
     def test_external_variable_vector(self):
         a = pybamm.ExternalVariable("a", 10)
         self.assertEqual(a.size, 10)

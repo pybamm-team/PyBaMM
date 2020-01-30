@@ -219,6 +219,36 @@ class TestDiscretise(unittest.TestCase):
         self.assertEqual(model.variables["b1"].shape_for_testing, (10, 1))
         self.assertEqual(model.variables["b2"].shape_for_testing, (5, 1))
 
+    def test_adding_2D_external_variable_fail(self):
+        model = pybamm.BaseModel()
+        a = pybamm.Variable(
+            "a",
+            domain=["negative electrode", "separator"],
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        b1 = pybamm.Variable(
+            "b",
+            domain="negative electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        b2 = pybamm.Variable(
+            "b",
+            domain="separator",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        b = pybamm.Concatenation(b1, b2)
+
+        model.rhs = {a: a * b}
+        model.initial_conditions = {a: 0}
+        model.external_variables = [b]
+        model.variables = {"b": b}
+
+        disc = get_1p1d_discretisation_for_testing()
+        with self.assertRaisesRegex(
+            NotImplementedError, "Cannot create 2D external variable"
+        ):
+            disc.process_model(model)
+
     def test_discretise_slicing(self):
         # create discretisation
         mesh = get_mesh_for_testing()
