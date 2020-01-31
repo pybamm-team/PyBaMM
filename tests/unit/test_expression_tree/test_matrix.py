@@ -24,7 +24,9 @@ class TestMatrix(unittest.TestCase):
 
     def test_matrix_operations(self):
         np.testing.assert_array_equal((self.mat + self.mat).evaluate(), 2 * self.A)
-        np.testing.assert_array_equal((self.mat - self.mat).evaluate(), 0 * self.A)
+        np.testing.assert_array_equal(
+            (self.mat - self.mat).evaluate().toarray(), 0 * self.A
+        )
         np.testing.assert_array_equal(
             (self.mat @ self.vect).evaluate(), np.array([[5], [2], [3]])
         )

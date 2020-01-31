@@ -16,7 +16,6 @@ class TestUnaryOperators(unittest.TestCase):
 
         # with number
         log = pybamm.log(10)
-        self.assertIsInstance(log.children[0], pybamm.Scalar)
         self.assertEqual(log.evaluate(), np.log(10))
 
     def test_negation(self):
