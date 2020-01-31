@@ -5,7 +5,7 @@ import pybamm
 
 import numpy as np
 import numbers
-from scipy.sparse import issparse
+from scipy.sparse import issparse, csr_matrix
 
 
 def simplify_if_constant(symbol, keep_domains=False):
@@ -32,6 +32,9 @@ def simplify_if_constant(symbol, keep_domains=False):
                         result, domain=domain, auxiliary_domains=auxiliary_domains
                     )
                 else:
+                    # Turn matrix of zeros into sparse matrix
+                    if isinstance(result, np.ndarray) and np.all(result == 0):
+                        result = csr_matrix(result)
                     return pybamm.Matrix(
                         result, domain=domain, auxiliary_domains=auxiliary_domains
                     )

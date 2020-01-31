@@ -29,13 +29,6 @@ class TestMatrix(unittest.TestCase):
             (self.mat @ self.vect).evaluate(), np.array([[5], [2], [3]])
         )
 
-    def test_matrix_modification(self):
-        exp = self.mat @ self.mat + self.mat
-        self.A[0, 0] = -1
-        self.assertTrue(exp.children[1]._entries[0, 0], -1)
-        self.assertTrue(exp.children[0].children[0]._entries[0, 0], -1)
-        self.assertTrue(exp.children[0].children[1]._entries[0, 0], -1)
-
 
 class TestArray(unittest.TestCase):
     def test_name(self):
