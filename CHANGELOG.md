@@ -36,6 +36,7 @@
 
 ## Optimizations
 
+-   Simplified solver interface ([#800](https://github.com/pybamm-team/PyBaMM/pull/800))
 -   Added caching for shape evaluation, used during discretisation ([#780](https://github.com/pybamm-team/PyBaMM/pull/780))
 -   Added an option to skip model checks during discretisation, which could be slow for large models ([#739](https://github.com/pybamm-team/PyBaMM/pull/739))
 -   Use CasADi's automatic differentation algorithms by default when solving a model ([#714](https://github.com/pybamm-team/PyBaMM/pull/714))
@@ -44,6 +45,8 @@
 
 ## Bug fixes
 
+-   Fixed examples to run with basic pip installation ([#800](https://github.com/pybamm-team/PyBaMM/pull/800))
+-   Added events for CasADi solver when stepping ([#800](https://github.com/pybamm-team/PyBaMM/pull/800))
 -   Improved implementation of broadcasts ([#776](https://github.com/pybamm-team/PyBaMM/pull/776))
 -   Fixed a bug which meant that the Ohmic heating in the current collectors was incorrect if using the Finite Element Method ([#767](https://github.com/pybamm-team/PyBaMM/pull/767))
 -   Improved automatic broadcasting ([#747](https://github.com/pybamm-team/PyBaMM/pull/747))

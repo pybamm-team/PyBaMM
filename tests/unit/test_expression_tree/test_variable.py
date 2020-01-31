@@ -34,7 +34,7 @@ class TestExternalVariable(unittest.TestCase):
         self.assertEqual(a.evaluate(u={"a": 3}), 3)
 
         with self.assertRaisesRegex(KeyError, "External variable"):
-            a.evaluate(u={"b": 1})
+            a.evaluate()
         with self.assertRaisesRegex(TypeError, "inputs u"):
             a.evaluate(u="not a dictionary")
 
