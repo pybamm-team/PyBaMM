@@ -128,7 +128,8 @@ comsol_model.variables = {
     "Positive electrode potential [V]": comsol_phi_p,
     "Terminal voltage [V]": comsol_voltage,
 }
-comsol_solution = pybamm.CasadiSolver(mode="fast").solve(pybamm_model, time)
+# Make new solution with same t and y
+comsol_solution = pybamm.Solution(pybamm_solution.t, pybamm_solution.y)
 comsol_solution.model = comsol_model
 # plot
 plot = pybamm.QuickPlot(

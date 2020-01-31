@@ -294,7 +294,7 @@ class ParameterValues:
 
         return values
 
-    def process_model(self, unprocessed_model, processing="process", inplace=True):
+    def process_model(self, unprocessed_model, inplace=True):
         """Assign parameter values to a model.
         Currently inplace, could be changed to return a new model.
 
@@ -302,13 +302,6 @@ class ParameterValues:
         ----------
         unprocessed_model : :class:`pybamm.BaseModel`
             Model to assign parameter values for
-        processing : str, optional
-            Flag to indicate how to process model (default 'process')
-
-            * 'process': Calls :meth:`process_symbol()` (walk through the symbol \
-            and replace any Parameter with a Value)
-            * 'update': Calls :meth:`update_scalars()` for use on already-processed \
-            model (update the value of any Scalars in the expression tree.)
         inplace: bool, optional
             If True, replace the parameters in the model in place. Otherwise, return a
             new model with parameter values set. Default is True.
@@ -335,32 +328,21 @@ class ParameterValues:
         if len(unprocessed_model.rhs) == 0 and len(unprocessed_model.algebraic) == 0:
             raise pybamm.ModelError("Cannot process parameters for empty model")
 
-        if processing == "process":
-            processing_function = self.process_symbol
-        elif processing == "update":
-            processing_function = self.update_scalars
-
         for variable, equation in model.rhs.items():
-            pybamm.logger.debug(
-                "{} parameters for {!r} (rhs)".format(processing.capitalize(), variable)
-            )
-            model.rhs[variable] = processing_function(equation)
+            pybamm.logger.debug("Processing parameters for {!r} (rhs)".format(variable))
+            model.rhs[variable] = self.process_symbol(equation)
 
         for variable, equation in model.algebraic.items():
             pybamm.logger.debug(
-                "{} parameters for {!r} (algebraic)".format(
-                    processing.capitalize(), variable
-                )
+                "Processing parameters for {!r} (algebraic)".format(variable)
             )
-            model.algebraic[variable] = processing_function(equation)
+            model.algebraic[variable] = self.process_symbol(equation)
 
         for variable, equation in model.initial_conditions.items():
             pybamm.logger.debug(
-                "{} parameters for {!r} (initial conditions)".format(
-                    processing.capitalize(), variable
-                )
+                "Processing parameters for {!r} (initial conditions)".format(variable)
             )
-            model.initial_conditions[variable] = processing_function(equation)
+            model.initial_conditions[variable] = self.process_symbol(equation)
 
         # Boundary conditions are dictionaries {"left": left bc, "right": right bc}
         # in general, but may be imposed on the tabs (or *not* on the tab) for a
@@ -369,17 +351,15 @@ class ParameterValues:
         new_boundary_conditions = {}
         sides = ["left", "right", "negative tab", "positive tab", "no tab"]
         for variable, bcs in model.boundary_conditions.items():
-            processed_variable = processing_function(variable)
+            processed_variable = self.process_symbol(variable)
             new_boundary_conditions[processed_variable] = {}
             for side in sides:
                 try:
                     bc, typ = bcs[side]
                     pybamm.logger.debug(
-                        "{} parameters for {!r} ({} bc)".format(
-                            processing.capitalize(), variable, side
-                        )
+                        "Processing parameters for {!r} ({} bc)".format(variable, side)
                     )
-                    processed_bc = (processing_function(bc), typ)
+                    processed_bc = (self.process_symbol(bc), typ)
                     new_boundary_conditions[processed_variable][side] = processed_bc
                 except KeyError as err:
                     # don't raise error if the key error comes from the side not being
@@ -394,42 +374,24 @@ class ParameterValues:
 
         for variable, equation in model.variables.items():
             pybamm.logger.debug(
-                "{} parameters for {!r} (variables)".format(
-                    processing.capitalize(), variable
-                )
+                "Processing parameters for {!r} (variables)".format(variable)
             )
-            model.variables[variable] = processing_function(equation)
+            model.variables[variable] = self.process_symbol(equation)
         for event, equation in model.events.items():
-            pybamm.logger.debug(
-                "{} parameters for event '{}''".format(processing.capitalize(), event)
-            )
-            model.events[event] = processing_function(equation)
+            pybamm.logger.debug("Processing parameters for event '{}''".format(event))
+            model.events[event] = self.process_symbol(equation)
 
         pybamm.logger.info("Finish setting parameters for {}".format(model.name))
 
         return model
 
     def update_model(self, model, disc):
-        """Process a discretised model.
-        Currently inplace, could be changed to return a new model.
-
-        Parameters
-        ----------
-        model : :class:`pybamm.BaseModel`
-            Model to assign parameter values for
-        disc : :class:`pybamm.Discretisation`
-            The class that was used to discretise
-
-        """
-        # process parameter values for the model
-        self.process_model(model, processing="update")
-
-        # update discretised quantities using disc
-        model.concatenated_rhs = disc._concatenate_in_order(model.rhs)
-        model.concatenated_algebraic = disc._concatenate_in_order(model.algebraic)
-        model.concatenated_initial_conditions = disc._concatenate_in_order(
-            model.initial_conditions
-        ).evaluate(0, None)
+        raise NotImplementedError(
+            """
+            update_model functionality has been deprecated. 
+            Use pybamm.InputParameter to quickly change a parameter value instead
+            """
+        )
 
     def process_geometry(self, geometry):
         """
@@ -560,30 +522,6 @@ class ParameterValues:
                         type(symbol)
                     )
                 )
-
-    def update_scalars(self, symbol):
-        """Update the value of any Scalars in the expression tree.
-
-        Parameters
-        ----------
-        symbol : :class:`pybamm.Symbol`
-            Symbol or Expression tree to update
-
-        Returns
-        -------
-        symbol : :class:`pybamm.Symbol`
-            Symbol with Scalars updated
-
-        """
-        for x in symbol.pre_order():
-            if isinstance(x, pybamm.Scalar):
-                # update any Scalar nodes if their name is in the parameter dict
-                if x.name in self._dict_items.keys():
-                    x.value = self._dict_items[x.name]
-                    # update id
-                    x.set_id()
-
-        return symbol
 
     def evaluate(self, symbol):
         """

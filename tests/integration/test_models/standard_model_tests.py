@@ -103,28 +103,6 @@ class StandardModelTest(object):
         ):
             self.test_outputs()
 
-    def test_update_parameters(self, param):
-        # check if geometry has changed, throw error if so (need to re-discretise)
-        if any(
-            [
-                length in param.keys()
-                and param[length] != self.parameter_values[length]
-                for length in [
-                    "Negative electrode thickness [m]",
-                    "Separator thickness [m]",
-                    "Positive electrode thickness [m]",
-                ]
-            ]
-        ):
-            raise ValueError(
-                "geometry has changed, the orginal model needs to be re-discretised"
-            )
-        # otherwise update self.param and change the parameters in the discretised model
-        self.param = param
-        param.update_model(self.model, self.disc)
-        # Model should still be well-posed after processing
-        self.model.check_well_posedness(post_discretisation=True)
-
 
 class OptimisationsTest(object):
     """ Test that the optimised models give the same result as the original model. """

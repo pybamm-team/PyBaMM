@@ -14,10 +14,16 @@ C_rates = {"01": 0.1, "05": 0.5, "1": 1, "2": 2, "3": 3}
 model = pybamm.lithium_ion.DFN()
 geometry = model.default_geometry
 
+
 # load parameters and process model and geometry
+def current_function(t):
+    return pybamm.InputParameter("current")
+
+
 param = model.default_parameter_values
 param["Electrode width [m]"] = 1
 param["Electrode height [m]"] = 1
+param["Current function [A]"] = current_function
 param.process_model(model)
 param.process_geometry(geometry)
 
@@ -48,7 +54,7 @@ plt.xlabel(r"Discharge Capacity (Ah)", fontsize=20)
 plt.ylabel(r"$\vert V - V_{comsol} \vert$", fontsize=20)
 
 for key, C_rate in C_rates.items():
-
+    current = 24 * C_rate
     # load the comsol results
     comsol_variables = pickle.load(
         open("input/comsol_results/comsol_{}C.pickle".format(key), "rb")
@@ -57,8 +63,6 @@ for key, C_rate in C_rates.items():
     comsol_voltage = comsol_variables["voltage"]
 
     # update current density
-    param["Current function [A]"] = 24 * C_rate
-    param.update_model(model, disc)
 
     # discharge timescale
     tau = param.process_symbol(
@@ -67,12 +71,14 @@ for key, C_rate in C_rates.items():
 
     # solve model at comsol times
     t = comsol_time / tau
-    solution = pybamm.CasadiSolver(mode="fast").solve(model, t)
+    solution = pybamm.CasadiSolver(mode="fast").solve(
+        model, t, inputs={"current": current}
+    )
 
     # discharge capacity
     discharge_capacity = solution["Discharge capacity [A.h]"]
     discharge_capacity_sol = discharge_capacity(solution.t)
-    comsol_discharge_capacity = comsol_time * param["Current function [A]"] / 3600
+    comsol_discharge_capacity = comsol_time * current / 3600
 
     # extract the voltage
     voltage = solution["Terminal voltage [V]"]
