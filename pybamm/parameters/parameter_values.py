@@ -388,7 +388,7 @@ class ParameterValues:
     def update_model(self, model, disc):
         raise NotImplementedError(
             """
-            update_model functionality has been deprecated. 
+            update_model functionality has been deprecated.
             Use pybamm.InputParameter to quickly change a parameter value instead
             """
         )

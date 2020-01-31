@@ -502,6 +502,11 @@ class TestParameterValues(unittest.TestCase):
         with self.assertRaises(KeyError):
             parameter_values.process_model(model)
 
+    def test_update_model(self):
+        param = pybamm.ParameterValues({})
+        with self.assertRaises(NotImplementedError):
+            param.update_model(None, None)
+
     def test_inplace(self):
         model = pybamm.lithium_ion.SPM()
         param = model.default_parameter_values
