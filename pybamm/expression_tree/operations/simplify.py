@@ -8,11 +8,17 @@ import numbers
 from scipy.sparse import issparse
 
 
-def simplify_if_constant(symbol):
+def simplify_if_constant(symbol, keep_domains=False):
     """
     Utility function to simplify an expression tree if it evalutes to a constant
     scalar, vector or matrix
     """
+    if keep_domains is True:
+        domain = symbol.domain
+        auxiliary_domains = symbol.auxiliary_domains
+    else:
+        domain = None
+        auxiliary_domains = None
     if symbol.is_constant():
         result = symbol.evaluate_ignoring_errors()
         if result is not None:
@@ -22,9 +28,13 @@ def simplify_if_constant(symbol):
                 return pybamm.Scalar(result)
             elif isinstance(result, np.ndarray) or issparse(result):
                 if result.ndim == 1 or result.shape[1] == 1:
-                    return pybamm.Vector(result)
+                    return pybamm.Vector(
+                        result, domain=domain, auxiliary_domains=auxiliary_domains
+                    )
                 else:
-                    return pybamm.Matrix(result)
+                    return pybamm.Matrix(
+                        result, domain=domain, auxiliary_domains=auxiliary_domains
+                    )
 
     return symbol
 
