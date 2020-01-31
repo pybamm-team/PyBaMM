@@ -124,6 +124,11 @@ class Solution(object):
         "Updates the reason for termination"
         self._termination = value
 
+    def __add__(self, other):
+        "See :meth:`Solution.append`"
+        self.append(other)
+        return self
+
     def append(self, solution):
         """
         Appends solution.t and solution.y onto self.t and self.y.
@@ -142,7 +147,7 @@ class Solution(object):
             self.inputs[name] = np.concatenate((inp, solution_inp[1:]))
         # Update solution time
         self.solve_time += solution.solve_time
-        # Update events
+        # Update termination
         self.termination = solution.termination
         self.t_event = solution.t_event
         self.y_event = solution.y_event

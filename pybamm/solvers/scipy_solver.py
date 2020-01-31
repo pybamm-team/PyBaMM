@@ -7,8 +7,8 @@ import scipy.integrate as it
 import numpy as np
 
 
-class ScipySolver(pybamm.OdeSolver):
-    """Solve a discretised model, using scipy.integrate.solve_ivp.
+class ScipySolver(pybamm.BaseSolver):
+    """Solve a discretised model, using scipy._integrate.solve_ivp.
 
     Parameters
     ----------
@@ -22,31 +22,21 @@ class ScipySolver(pybamm.OdeSolver):
 
     def __init__(self, method="BDF", rtol=1e-6, atol=1e-6):
         super().__init__(method, rtol, atol)
+        self.ode_solver = True
         self.name = "Scipy solver ({})".format(method)
 
-    def integrate(
-        self, derivs, y0, t_eval, events=None, mass_matrix=None, jacobian=None
-    ):
+    def _integrate(self, model, t_eval, inputs=None):
         """
         Solve a model defined by dydt with initial conditions y0.
 
         Parameters
         ----------
-        derivs : method
-            A function that takes in t (size (1,)), y (size (n,))
-            and returns the time-derivative dydt (size (n,))
-        y0 : :class:`numpy.array`, size (n,)
-            The initial conditions
+        model : :class:`pybamm.BaseModel`
+            The model whose solution to calculate.
         t_eval : :class:`numpy.array`, size (k,)
             The times at which to compute the solution
-        events : method, optional
-            A function that takes in t and y and returns conditions for the solver to
-            stop
-        mass_matrix : array_like, optional
-            The (sparse) mass matrix for the chosen spatial method.
-        jacobian : method, optional
-            A function that takes in t and y and returns the Jacobian. If
-            None, the solver will approximate the Jacobian.
+        inputs : dict, optional
+            Any input parameters to pass to the model when solving
 
         Returns
         -------
@@ -60,19 +50,19 @@ class ScipySolver(pybamm.OdeSolver):
         # check for user-supplied Jacobian
         implicit_methods = ["Radau", "BDF", "LSODA"]
         if np.any([self.method in implicit_methods]):
-            if jacobian:
-                extra_options.update({"jac": jacobian})
+            if model.jacobian_eval:
+                extra_options.update({"jac": model.jacobian_eval})
 
         # make events terminal so that the solver stops when they are reached
-        if events:
-            for event in events:
+        if model.events_eval:
+            for event in model.events_eval:
                 event.terminal = True
-            extra_options.update({"events": events})
+            extra_options.update({"events": model.events_eval})
 
         sol = it.solve_ivp(
-            derivs,
+            model.rhs_eval,
             (t_eval[0], t_eval[-1]),
-            y0,
+            model.y0,
             t_eval=t_eval,
             method=self.method,
             dense_output=True,
