@@ -5,3 +5,4 @@ from .base_lead_acid_model import BaseModel
 from .loqs import LOQS
 from .higher_order import BaseHigherOrderModel, FOQS, Composite, CompositeExtended
 from .full import Full
+from .basic_full import BasicFull

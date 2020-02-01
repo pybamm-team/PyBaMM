@@ -91,16 +91,3 @@ class BaseModel(pybamm.BaseBatteryModel):
             }
             self.reactions["main"]["Negative"]["s_ox"] = 0
             self.reactions["main"]["Positive"]["s_ox"] = 0
-
-    def set_soc_variables(self):
-        "Set variables relating to the state of charge."
-        # State of Charge defined as function of dimensionless electrolyte concentration
-        soc = self.variables["X-averaged electrolyte concentration"] * 100
-        self.variables.update({"State of Charge": soc, "Depth of Discharge": 100 - soc})
-
-        # Fractional charge input
-        if "Fractional Charge Input" not in self.variables:
-            fci = pybamm.Variable("Fractional Charge Input", domain="current collector")
-            self.variables["Fractional Charge Input"] = fci
-            self.rhs[fci] = -self.variables["Total current density"] * 100
-            self.initial_conditions[fci] = self.param.q_init * 100
