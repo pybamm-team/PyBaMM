@@ -558,7 +558,7 @@ class BaseSolver(object):
             final_event_values = {}
             for name, event in events.items():
                 final_event_values[name] = abs(
-                    event.evaluate(solution.t_event, solution.y_event)
+                    event.evaluate(solution.t_event, solution.y_event, solution.inputs)
                 )
             termination_event = min(final_event_values, key=final_event_values.get)
             # Add the event to the solution object
