@@ -285,7 +285,9 @@ class Discretisation(object):
                     """
                     Variable {} must be in the model.variables dictionary to be set
                     as an external variable
-                    """.format(var)
+                    """.format(
+                        var
+                    )
                 )
             name = list(model.variables.keys())[idx]
             if isinstance(var, pybamm.Variable):
@@ -297,7 +299,9 @@ class Discretisation(object):
                 for child in var.children:
                     dom = child.domain[0]
                     if len(self.spatial_methods[dom].mesh[dom]) > 1:
-                        raise ValueError
+                        raise NotImplementedError(
+                            "Cannot create 2D external variable with concatenations"
+                        )
                     end += self._get_variable_size(child)
                     # Keep a record of the parent
                     self.external_variables[(name, (var, start, end))] = child
@@ -695,7 +699,7 @@ class Discretisation(object):
             # Broadcast if the equation evaluates to a number(e.g. Scalar)
             if eqn.evaluates_to_number() and not isinstance(eqn_key, str):
                 eqn = pybamm.FullBroadcast(
-                    eqn, eqn_key.domain, eqn_key.auxiliary_domains,
+                    eqn, eqn_key.domain, eqn_key.auxiliary_domains
                 )
 
             # note we are sending in the key.id here so we don't have to

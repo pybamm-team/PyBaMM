@@ -44,7 +44,6 @@ class CasadiSolver(pybamm.BaseSolver):
 
     def __init__(
         self,
-        method="idas",
         mode="safe",
         rtol=1e-6,
         atol=1e-6,
@@ -53,7 +52,7 @@ class CasadiSolver(pybamm.BaseSolver):
         max_step_decrease_count=5,
         **extra_options,
     ):
-        super().__init__(method, rtol, atol, root_method, root_tol)
+        super().__init__("problem dependent", rtol, atol, root_method, root_tol)
         if mode in ["safe", "fast"]:
             self.mode = mode
         else:
@@ -66,7 +65,12 @@ class CasadiSolver(pybamm.BaseSolver):
             )
         self.max_step_decrease_count = max_step_decrease_count
         self.extra_options = extra_options
-        self.name = "CasADi solver ({}) with '{}' mode".format(method, mode)
+        self.name = "CasADi solver with '{}' mode".format(mode)
+
+        # Initialize
+        self.problems = {}
+        self.options = {}
+        self.methods = {}
 
     def _integrate(self, model, t_eval, inputs=None):
         """
@@ -101,12 +105,14 @@ class CasadiSolver(pybamm.BaseSolver):
             init_event_signs = np.sign(
                 np.concatenate([event(0, model.y0) for event in model.events_eval])
             )
-            solution = None
             pybamm.logger.info(
                 "Start solving {} with {} in 'safe' mode".format(model.name, self.name)
             )
             t = t_eval[0]
             y0 = model.y0
+            # Initialize solution
+            solution = pybamm.Solution(np.array([t]), y0[:, np.newaxis])
+            solution.solve_time = 0
             for dt in np.diff(t_eval):
                 # Step
                 solved = False
@@ -155,48 +161,60 @@ class CasadiSolver(pybamm.BaseSolver):
                 else:
                     # assign temporary solve time
                     current_step_sol.solve_time = np.nan
-                    if not solution:
-                        # create solution object on first step
-                        solution = current_step_sol
-                    else:
-                        # append solution from the current step to solution
-                        solution.append(current_step_sol)
+                    # append solution from the current step to solution
+                    solution.append(current_step_sol)
                     t = solution.t[-1]
                     y0 = solution.y[:, -1]
 
             return solution
 
     def get_integrator(self, model, t_eval, inputs):
-        inputs = inputs or {}
+        # Only set up problem once
+        if model not in self.problems:
+            inputs = inputs or {}
 
-        y0 = model.y0
-        rhs = model.casadi_rhs
-        algebraic = model.casadi_algebraic
+            y0 = model.y0
+            rhs = model.casadi_rhs
+            algebraic = model.casadi_algebraic
 
-        options = {
-            "grid": t_eval,
-            "reltol": self.rtol,
-            "abstol": self.atol,
-            "output_t0": True,
-            "max_num_steps": self.max_steps,
-        }
-        if self.method == "idas":
-            options["calc_ic"] = True
+            options = {
+                "grid": t_eval,
+                "reltol": self.rtol,
+                "abstol": self.atol,
+                "output_t0": True,
+                "max_num_steps": self.max_steps,
+            }
 
-        # set up and solve
-        t = casadi.MX.sym("t")
-        u = casadi.vertcat(*[x for x in inputs.values()])
-        y_diff = casadi.MX.sym("y_diff", rhs(0, y0, u).shape[0])
-        problem = {"t": t, "x": y_diff}
-        if algebraic is None:
-            problem.update({"ode": rhs(t, y_diff, u)})
+            # set up and solve
+            t = casadi.MX.sym("t")
+            u = casadi.vertcat(*[x for x in inputs.values()])
+            y_diff = casadi.MX.sym("y_diff", rhs(0, y0, u).shape[0])
+            problem = {"t": t, "x": y_diff}
+            if algebraic(0, y0, u).is_empty():
+                method = "cvodes"
+                problem.update({"ode": rhs(t, y_diff, u)})
+            else:
+                options["calc_ic"] = True
+                method = "idas"
+                y_alg = casadi.MX.sym("y_alg", algebraic(0, y0, u).shape[0])
+                y_full = casadi.vertcat(y_diff, y_alg)
+                problem.update(
+                    {
+                        "z": y_alg,
+                        "ode": rhs(t, y_full, u),
+                        "alg": algebraic(t, y_full, u),
+                    }
+                )
+            self.problems[model] = problem
+            self.options[model] = options
+            self.methods[model] = method
         else:
-            y_alg = casadi.MX.sym("y_alg", algebraic(0, y0, u).shape[0])
-            y_full = casadi.vertcat(y_diff, y_alg)
-            problem.update(
-                {"z": y_alg, "ode": rhs(t, y_full, u), "alg": algebraic(t, y_full, u)}
-            )
-        return casadi.integrator("F", self.method, problem, options)
+            # problem stays the same
+            # just update options
+            self.options[model]["grid"] = t_eval
+        return casadi.integrator(
+            "F", self.methods[model], self.problems[model], self.options[model]
+        )
 
     def _run_integrator(self, integrator, y0_diff, y0_alg, t_eval):
         try:

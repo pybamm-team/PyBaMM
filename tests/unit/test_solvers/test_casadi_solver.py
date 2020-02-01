@@ -25,20 +25,47 @@ class TestCasadiSolver(unittest.TestCase):
         disc = pybamm.Discretisation()
         disc.process_model(model)
         # Solve
-        solver = pybamm.CasadiSolver(mode="fast", rtol=1e-8, atol=1e-8, method="idas")
+        solver = pybamm.CasadiSolver(mode="fast", rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 1, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
-        np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
+        np.testing.assert_array_almost_equal(
+            solution.y[0], np.exp(0.1 * solution.t), decimal=5
+        )
 
         # Safe mode (enforce events that won't be triggered)
         model.events = {"an event": var + 1}
         disc.process_model(model)
-        solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8, method="idas")
+        solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 1, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
-        np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
+        np.testing.assert_array_almost_equal(
+            solution.y[0], np.exp(0.1 * solution.t), decimal=5
+        )
+
+    def test_model_solver_python(self):
+        # Create model
+        pybamm.set_logging_level("ERROR")
+        model = pybamm.BaseModel()
+        model.convert_to_format = "python"
+        var = pybamm.Variable("var")
+        model.rhs = {var: 0.1 * var}
+        model.initial_conditions = {var: 1}
+        # No need to set parameters; can use base discretisation (no spatial operators)
+
+        # create discretisation
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+        # Solve
+        solver = pybamm.CasadiSolver(mode="fast", rtol=1e-8, atol=1e-8)
+        t_eval = np.linspace(0, 1, 100)
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_array_equal(solution.t, t_eval)
+        np.testing.assert_array_almost_equal(
+            solution.y[0], np.exp(0.1 * solution.t), decimal=5
+        )
+        pybamm.set_logging_level("WARNING")
 
     def test_model_solver_failure(self):
         # Create model
@@ -111,7 +138,7 @@ class TestCasadiSolver(unittest.TestCase):
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
 
-        solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8, method="idas")
+        solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
 
         # Step once
         dt = 0.1
@@ -209,9 +236,7 @@ class TestCasadiSolver(unittest.TestCase):
         # Solve
         solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 10, 100)
-        solution = solver.solve(
-            model, t_eval, external_variables={"var2": 0.5 * np.ones(100)}
-        )
+        solution = solver.solve(model, t_eval, external_variables={"var2": 0.5})
         np.testing.assert_allclose(solution.y[0], 1 - 0.5 * solution.t, rtol=1e-06)
 
     def test_model_solver_with_non_identity_mass(self):
@@ -236,7 +261,7 @@ class TestCasadiSolver(unittest.TestCase):
         model.mass_matrix_inv = pybamm.Matrix(mass_matrix_inv)
 
         # Solve
-        solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8, method="idas")
+        solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 1, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)

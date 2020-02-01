@@ -61,7 +61,7 @@ def print_parameters(parameters, parameter_values, output_file=None):
     # Calculate parameters for each C-rate
     for Crate in [1, 10]:
         # Update Crate
-        parameter_values.update({"C-rate": Crate})
+        parameter_values.update({"C-rate": Crate}, check_already_exists=False)
         for name, symbol in parameters.items():
             if not callable(symbol):
                 proc_symbol = parameter_values.process_symbol(symbol)

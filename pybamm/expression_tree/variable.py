@@ -96,12 +96,12 @@ class ExternalVariable(Variable):
             raise TypeError("inputs u should be a dictionary")
         try:
             out = u[self.name]
-            if isinstance(out, numbers.Number):
+            if isinstance(out, numbers.Number) or out.shape[0] == 1:
                 return out * np.ones((self.size, 1))
             elif out.shape[0] != self.size:
                 raise ValueError(
                     "External variable input has size {} but should be {}".format(
-                        out.size, self.size
+                        out.shape[0], self.size
                     )
                 )
             else:

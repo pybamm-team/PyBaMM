@@ -27,6 +27,16 @@ class TestBaseSolver(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.ModelError, "Cannot solve empty model"):
             solver.solve(model, None)
 
+    def test_nonmonotonic_teval(self):
+        solver = pybamm.BaseSolver(rtol=1e-2, atol=1e-4)
+        model = pybamm.BaseModel()
+        a = pybamm.Scalar(0)
+        model.rhs = {a: a}
+        with self.assertRaisesRegex(
+            pybamm.SolverError, "t_eval must increase monotonically"
+        ):
+            solver.solve(model, np.array([1, 2, 3, 2]))
+
     def test_ode_solver_fail_with_dae(self):
         model = pybamm.BaseModel()
         a = pybamm.Scalar(1)
