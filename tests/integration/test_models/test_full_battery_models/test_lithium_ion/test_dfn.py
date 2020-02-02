@@ -69,8 +69,8 @@ class TestDFN(unittest.TestCase):
         model = pybamm.lithium_ion.DFN()
         optimtest = tests.OptimisationsTest(model)
         optimtest.set_up_model(simplify=False, to_python=True)
-        optimtest.set_up_model(simplify=True, to_python=True)
         optimtest.set_up_model(simplify=False, to_python=False)
+        optimtest.set_up_model(simplify=True, to_python=True)
         optimtest.set_up_model(simplify=True, to_python=False)
 
     def test_full_thermal(self):
@@ -93,6 +93,21 @@ class TestDFN(unittest.TestCase):
         options = {"particle": "fast diffusion"}
         model = pybamm.lithium_ion.DFN(options)
         modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+    def test_particle_distribution_in_x(self):
+        model = pybamm.lithium_ion.DFN()
+        param = model.default_parameter_values
+
+        def negative_distribution(x):
+            return 1 + x
+
+        def positive_distribution(x):
+            return 1 + (x - (1 - model.param.l_p))
+
+        param["Negative particle distribution in x"] = negative_distribution
+        param["Positive particle distribution in x"] = positive_distribution
+        modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_all()
 
 

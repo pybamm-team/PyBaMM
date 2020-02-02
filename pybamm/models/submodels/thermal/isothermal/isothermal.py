@@ -23,7 +23,7 @@ class Isothermal(BaseThermal):
 
     def get_fundamental_variables(self):
 
-        T_x_av = pybamm.PrimaryBroadcast(0, "current collector")
+        T_x_av = pybamm.PrimaryBroadcast(self.param.T_init, "current collector")
         T_n = pybamm.PrimaryBroadcast(T_x_av, "negative electrode")
         T_s = pybamm.PrimaryBroadcast(T_x_av, "separator")
         T_p = pybamm.PrimaryBroadcast(T_x_av, "positive electrode")

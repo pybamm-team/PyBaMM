@@ -11,6 +11,9 @@ pybamm.set_logging_level("INFO")
 model = pybamm.lithium_ion.BaseModel(name="my li-ion model")
 
 # set choice of submodels
+model.submodels["external circuit"] = pybamm.external_circuit.CurrentControl(
+    model.param
+)
 model.submodels["current collector"] = pybamm.current_collector.Uniform(model.param)
 model.submodels["thermal"] = pybamm.thermal.isothermal.Isothermal(model.param)
 model.submodels["negative electrode"] = pybamm.electrode.ohm.LeadingOrder(
@@ -65,5 +68,5 @@ solver = pybamm.ScipySolver()
 solution = solver.solve(model, t_eval)
 
 # plot
-plot = pybamm.QuickPlot(model, mesh, solution)
+plot = pybamm.QuickPlot(solution)
 plot.dynamic_plot()

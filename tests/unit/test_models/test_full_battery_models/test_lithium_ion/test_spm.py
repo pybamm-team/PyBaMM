@@ -39,20 +39,6 @@ class TestSPM(unittest.TestCase):
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
-        options = {
-            "current collector": "single particle potential pair",
-            "dimensionality": 1,
-        }
-        model = pybamm.lithium_ion.SPM(options)
-        model.check_well_posedness()
-
-        options = {
-            "current collector": "single particle potential pair",
-            "dimensionality": 2,
-        }
-        model = pybamm.lithium_ion.SPM(options)
-        model.check_well_posedness()
-
         options = {"current collector": "set external potential", "dimensionality": 0}
         with self.assertRaises(NotImplementedError):
             pybamm.lithium_ion.SPM(options)
@@ -188,6 +174,31 @@ class TestSPM(unittest.TestCase):
 
     def test_particle_fast_diffusion(self):
         options = {"particle": "fast diffusion"}
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
+
+
+class TestSPMExternalCircuits(unittest.TestCase):
+    def test_well_posed_voltage(self):
+        options = {"operating mode": "voltage"}
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
+
+    def test_well_posed_power(self):
+        options = {"operating mode": "power"}
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
+
+    def test_well_posed_function(self):
+        class ExternalCircuitFunction:
+            num_switches = 0
+
+            def __call__(self, variables):
+                I = variables["Current [A]"]
+                V = variables["Terminal voltage [V]"]
+                return V + I - pybamm.FunctionParameter("Function", pybamm.t)
+
+        options = {"operating mode": ExternalCircuitFunction()}
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 

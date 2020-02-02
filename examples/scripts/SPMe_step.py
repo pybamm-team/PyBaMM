@@ -47,16 +47,11 @@ while time < end_time:
     time += dt
 
 # plot
-voltage = pybamm.ProcessedVariable(
-    model.variables["Terminal voltage [V]"], solution.t, solution.y, mesh=mesh
-
-)
-step_voltage = pybamm.ProcessedVariable(
-    model.variables["Terminal voltage [V]"], step_solution.t, step_solution.y, mesh=mesh
-)
+voltage = solution["Terminal voltage [V]"]
+step_voltage = step_solution["Terminal voltage [V]"]
 plt.plot(solution.t, voltage(solution.t), "b-", label="SPMe (continuous solve)")
 plt.plot(
-    step_solution.t, step_voltage(step_solution.t), "ro", label="SPMe (steppped solve)"
+    step_solution.t, step_voltage(step_solution.t), "ro", label="SPMe (stepped solve)"
 )
 plt.xlabel(r"$t$")
 plt.ylabel("Terminal voltage [V]")

@@ -10,8 +10,8 @@ import unittest
 class TestFull(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.standard_parameters_lead_acid
-        a_n = pybamm.Broadcast(pybamm.Scalar(0), ["negative electrode"])
-        a_p = pybamm.Broadcast(pybamm.Scalar(0), ["positive electrode"])
+        a_n = pybamm.PrimaryBroadcast(pybamm.Scalar(0), ["negative electrode"])
+        a_p = pybamm.PrimaryBroadcast(pybamm.Scalar(0), ["positive electrode"])
         variables = {
             "Negative electrode interfacial current density": a_n,
             "Positive electrode interfacial current density": a_p,

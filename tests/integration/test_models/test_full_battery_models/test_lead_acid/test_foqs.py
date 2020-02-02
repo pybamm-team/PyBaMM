@@ -14,7 +14,7 @@ class TestLeadAcidFOQS(unittest.TestCase):
         options = {"thermal": "isothermal", "convection": False}
         model = pybamm.lead_acid.FOQS(options)
         param = model.default_parameter_values
-        param.update({"Typical current [A]": 1})
+        param.update({"Current function [A]": 1})
         modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_all()
 
@@ -22,7 +22,7 @@ class TestLeadAcidFOQS(unittest.TestCase):
         options = {"thermal": "isothermal", "convection": True}
         model = pybamm.lead_acid.FOQS(options)
         param = model.default_parameter_values
-        param.update({"Typical current [A]": 1})
+        param.update({"Current function [A]": 1})
         modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_all()
 
@@ -60,7 +60,7 @@ class TestLeadAcidFOQSSurfaceForm(unittest.TestCase):
         }
         model = pybamm.lead_acid.FOQS(options)
         param = model.default_parameter_values
-        param.update({"Typical current [A]": 1})
+        param.update({"Current function [A]": 1})
         modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_all()
 
@@ -72,7 +72,7 @@ class TestLeadAcidFOQSSurfaceForm(unittest.TestCase):
         }
         model = pybamm.lead_acid.FOQS(options)
         param = model.default_parameter_values
-        param.update({"Typical current [A]": 1})
+        param.update({"Current function [A]": 1})
         modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_all()
 

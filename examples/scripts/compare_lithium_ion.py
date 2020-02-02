@@ -26,7 +26,8 @@ models = [
 
 # load parameter values and process models and geometry
 param = models[0].default_parameter_values
-param["Typical current [A]"] = 1.0
+param["Current function [A]"] = 1.0
+
 for model in models:
     param.process_model(model)
 
@@ -50,5 +51,5 @@ for i, model in enumerate(models):
     solutions[i] = model.default_solver.solve(model, t_eval)
 
 # plot
-plot = pybamm.QuickPlot(models, mesh, solutions)
+plot = pybamm.QuickPlot(solutions)
 plot.dynamic_plot()

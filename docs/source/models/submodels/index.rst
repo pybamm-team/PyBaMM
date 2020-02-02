@@ -9,6 +9,7 @@ Submodels
     convection/index
     electrode/index
     electrolyte/index
+    external_circuit/index
     interface/index
     oxygen_diffusion/index
     particle/index

@@ -35,16 +35,6 @@ class BaseModel(BaseParticle):
     def _unpack(self, variables):
         raise NotImplementedError
 
-    def set_rhs(self, variables):
-
-        c, N, _ = self._unpack(variables)
-
-        if self.domain == "Negative":
-            self.rhs = {c: -(1 / self.param.C_n) * pybamm.div(N)}
-
-        elif self.domain == "Positive":
-            self.rhs = {c: -(1 / self.param.C_p) * pybamm.div(N)}
-
     def set_boundary_conditions(self, variables):
 
         c, _, j = self._unpack(variables)

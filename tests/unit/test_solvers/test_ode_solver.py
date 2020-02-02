@@ -14,9 +14,13 @@ class TestOdeSolver(unittest.TestCase):
     def test_wrong_solver(self):
         # Create model
         model = pybamm.BaseModel()
-        var = pybamm.Variable("var")
-        model.rhs = {var: var}
-        model.algebraic = {var: var - 1}
+        var1 = pybamm.Variable("var1")
+        var2 = pybamm.Variable("var2")
+        model.rhs = {var1: var1}
+        model.algebraic = {var2: var2 - 1}
+        model.initial_conditions = {var1: 0, var2: 1}
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
 
         # test errors
         solver = pybamm.OdeSolver()
