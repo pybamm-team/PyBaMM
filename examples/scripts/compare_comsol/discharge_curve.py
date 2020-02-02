@@ -16,14 +16,10 @@ geometry = model.default_geometry
 
 
 # load parameters and process model and geometry
-def current_function(t):
-    return pybamm.InputParameter("current")
-
-
 param = model.default_parameter_values
 param["Electrode width [m]"] = 1
 param["Electrode height [m]"] = 1
-param["Current function [A]"] = current_function
+param["Current function [A]"] = "[input]"
 param.process_model(model)
 param.process_geometry(geometry)
 
@@ -72,7 +68,7 @@ for key, C_rate in C_rates.items():
     # solve model at comsol times
     t = comsol_time / tau
     solution = pybamm.CasadiSolver(mode="fast").solve(
-        model, t, inputs={"current": current}
+        model, t, inputs={"Current function [A]": current}
     )
 
     # discharge capacity
