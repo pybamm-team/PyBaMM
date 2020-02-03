@@ -278,6 +278,8 @@ class ParameterValues:
                     data = values["C-rate"][1]
                     data[:, 1] = data[:, 1] * capacity
                     value = (values["C-rate"][0] + "_to_Crate", data)
+                elif values["C-rate"] == "[input]":
+                    value = CrateToCurrent(values["C-rate"], capacity, typ="input")
                 else:
                     value = values["C-rate"] * capacity
                 self._dict_items["Current function [A]"] = value
@@ -288,6 +290,10 @@ class ParameterValues:
                     data = values["Current function [A]"][1]
                     data[:, 1] = data[:, 1] / capacity
                     value = (values["Current function [A]"][0] + "_to_current", data)
+                elif values["Current function [A]"] == "[input]":
+                    value = CurrentToCrate(
+                        values["Current function [A]"], capacity, typ="input"
+                    )
                 else:
                     value = values["Current function [A]"] / capacity
                 self._dict_items["C-rate"] = value
@@ -472,6 +478,9 @@ class ParameterValues:
                 function = pybamm.Scalar(
                     function_name, name=symbol.name
                 ) * pybamm.ones_like(*new_children)
+            elif isinstance(function_name, pybamm.InputParameter):
+                # Replace the function with an input parameter
+                function = function_name
             else:
                 # otherwise evaluate the function to create a new PyBaMM object
                 function = function_name(*new_children)
@@ -547,20 +556,28 @@ class ParameterValues:
 class CurrentToCrate:
     "Convert a current function to a C-rate function"
 
-    def __init__(self, function, capacity):
-        self.function = function
+    def __init__(self, current, capacity, typ="function"):
+        self.current = current
         self.capacity = capacity
+        self.type = typ
 
     def __call__(self, t):
-        return self.function(t) / self.capacity
+        if self.type == "function":
+            return self.current(t) / self.capacity
+        elif self.type == "input":
+            return pybamm.InputParameter("Current function [A]") / self.capacity
 
 
 class CrateToCurrent:
     "Convert a C-rate function to a current function"
 
-    def __init__(self, function, capacity):
-        self.function = function
+    def __init__(self, Crate, capacity, typ="function"):
+        self.Crate = Crate
         self.capacity = capacity
+        self.type = typ
 
     def __call__(self, t):
-        return self.function(t) * self.capacity
+        if self.type == "function":
+            return self.Crate(t) * self.capacity
+        elif self.type == "input":
+            return pybamm.InputParameter("C-rate") * self.capacity

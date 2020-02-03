@@ -115,6 +115,18 @@ class TestParameterValues(unittest.TestCase):
             param["C-rate"][1], np.hstack([x, 0.2 * x])
         )
 
+        # With input parameters
+        # if only C-rate and capacity provided, update current
+        values = {"C-rate": "[input]", "Cell capacity [A.h]": 10}
+        param = pybamm.ParameterValues(values)
+        self.assertEqual(param["Current function [A]"](2).evaluate(u={"C-rate": 1}), 10)
+        # if only current and capacity provided, update C-rate
+        values = {"Current function [A]": "[input]", "Cell capacity [A.h]": 10}
+        param = pybamm.ParameterValues(values)
+        self.assertEqual(
+            param["C-rate"](5).evaluate(u={"Current function [A]": 5}), 0.5
+        )
+
     def test_process_symbol(self):
         parameter_values = pybamm.ParameterValues({"a": 1, "b": 2, "c": 3})
         # process parameter
@@ -296,6 +308,13 @@ class TestParameterValues(unittest.TestCase):
         diff_func = func.diff(a)
         processed_diff_func = parameter_values.process_symbol(diff_func)
         self.assertEqual(processed_diff_func.evaluate(u={"a": 3}), 123)
+
+        # function itself as input (different to the variable being an input)
+        parameter_values = pybamm.ParameterValues({"func": "[input]"})
+        a = pybamm.Scalar(3)
+        func = pybamm.FunctionParameter("func", a)
+        processed_func = parameter_values.process_symbol(func)
+        self.assertEqual(processed_func.evaluate(u={"func": 13}), 13)
 
     def test_process_inline_function_parameters(self):
         def D(c):
