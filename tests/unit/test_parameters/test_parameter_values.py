@@ -316,9 +316,6 @@ class TestParameterValues(unittest.TestCase):
         processed_func = parameter_values.process_symbol(func)
         self.assertEqual(processed_func.evaluate(u={"func": 13}), 13)
 
-        
-
-
     def test_process_inline_function_parameters(self):
         def D(c):
             return c ** 2
