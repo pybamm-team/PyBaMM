@@ -145,7 +145,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         """
 
         if model.jacobian_eval is None:
-            pybamm.SolverError("KLU requires the Jacobian to be provided")
+            raise pybamm.SolverError("KLU requires the Jacobian to be provided")
 
         try:
             atol = model.atol

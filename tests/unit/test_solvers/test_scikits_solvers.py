@@ -300,7 +300,7 @@ class TestScikitsSolvers(unittest.TestCase):
         model.convert_to_format = "python"
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         var = pybamm.Variable("var", domain=whole_cell)
-        model.rhs = {var: 0.1 * var}
+        model.rhs = {var: -0.1 * var}
         model.initial_conditions = {var: 1}
         disc = get_discretisation_for_testing()
         disc.process_model(model)
@@ -311,20 +311,19 @@ class TestScikitsSolvers(unittest.TestCase):
         dt = 0.1
         step_sol = solver.step(None, model, dt)
         np.testing.assert_array_equal(step_sol.t, [0, dt])
-        np.testing.assert_allclose(step_sol.y[0], np.exp(0.1 * step_sol.t))
+        np.testing.assert_allclose(step_sol.y[0], np.exp(-0.1 * step_sol.t))
 
         # Step again (return 5 points)
         step_sol_2 = solver.step(step_sol, model, dt, npts=5)
         np.testing.assert_array_equal(
             step_sol_2.t, np.concatenate([np.array([0]), np.linspace(dt, 2 * dt, 5)])
         )
-        np.testing.assert_allclose(step_sol_2.y[0], np.exp(0.1 * step_sol_2.t))
+        np.testing.assert_allclose(step_sol_2.y[0], np.exp(-0.1 * step_sol_2.t))
 
         # Check steps give same solution as solve
-        t_eval = np.concatenate((step_sol.t, step_sol_2.t[1:]))
+        t_eval = step_sol.t
         solution = solver.solve(model, t_eval)
-        concatenated_steps = np.concatenate((step_sol.y[0], step_sol_2.y[0, 1:]))
-        np.testing.assert_allclose(solution.y[0], concatenated_steps)
+        np.testing.assert_allclose(solution.y[0], step_sol.y[0])
 
     def test_model_step_dae_python(self):
         model = pybamm.BaseModel()

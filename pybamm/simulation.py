@@ -411,7 +411,7 @@ class Simulation:
         if quick_plot_vars is None:
             quick_plot_vars = self.quick_plot_vars
 
-        plot = pybamm.QuickPlot(self._solution, output_variables=quick_plot_vars,)
+        plot = pybamm.QuickPlot(self._solution, output_variables=quick_plot_vars)
 
         if isnotebook():
             import ipywidgets as widgets
@@ -583,6 +583,12 @@ class Simulation:
                 Set model.convert_to_format = 'casadi' instead.
                 """
             )
+        # Clear solver problem (not pickle-able, will automatically be recomputed)
+        if (
+            isinstance(self._solver, pybamm.CasadiSolver)
+            and self._solver.problems != {}
+        ):
+            self._solver.problems = {}
         with open(filename, "wb") as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 

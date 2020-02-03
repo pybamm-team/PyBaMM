@@ -219,6 +219,36 @@ class TestDiscretise(unittest.TestCase):
         self.assertEqual(model.variables["b1"].shape_for_testing, (10, 1))
         self.assertEqual(model.variables["b2"].shape_for_testing, (5, 1))
 
+    def test_adding_2D_external_variable_fail(self):
+        model = pybamm.BaseModel()
+        a = pybamm.Variable(
+            "a",
+            domain=["negative electrode", "separator"],
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        b1 = pybamm.Variable(
+            "b",
+            domain="negative electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        b2 = pybamm.Variable(
+            "b",
+            domain="separator",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        b = pybamm.Concatenation(b1, b2)
+
+        model.rhs = {a: a * b}
+        model.initial_conditions = {a: 0}
+        model.external_variables = [b]
+        model.variables = {"b": b}
+
+        disc = get_1p1d_discretisation_for_testing()
+        with self.assertRaisesRegex(
+            NotImplementedError, "Cannot create 2D external variable"
+        ):
+            disc.process_model(model)
+
     def test_discretise_slicing(self):
         # create discretisation
         mesh = get_mesh_for_testing()
@@ -334,10 +364,10 @@ class TestDiscretise(unittest.TestCase):
         self.assertIsInstance(un1_disc, pybamm.Negate)
         self.assertIsInstance(un1_disc.children[0], pybamm.StateVector)
 
-        un2 = abs(scal)
+        un2 = abs(var)
         un2_disc = disc.process_symbol(un2)
         self.assertIsInstance(un2_disc, pybamm.AbsoluteValue)
-        self.assertIsInstance(un2_disc.children[0], pybamm.Scalar)
+        self.assertIsInstance(un2_disc.children[0], pybamm.StateVector)
 
         # function of one variable
         def myfun(x):
@@ -832,7 +862,7 @@ class TestDiscretise(unittest.TestCase):
     def test_broadcast(self):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
 
-        a = pybamm.Scalar(7)
+        a = pybamm.InputParameter("a")
         var = pybamm.Variable("var")
 
         # create discretisation
@@ -844,13 +874,14 @@ class TestDiscretise(unittest.TestCase):
         # scalar
         broad = disc.process_symbol(pybamm.FullBroadcast(a, whole_cell, {}))
         np.testing.assert_array_equal(
-            broad.evaluate(), 7 * np.ones_like(combined_submesh[0].nodes[:, np.newaxis])
+            broad.evaluate(u={"a": 7}),
+            7 * np.ones_like(combined_submesh[0].nodes[:, np.newaxis]),
         )
         self.assertEqual(broad.domain, whole_cell)
 
         broad_disc = disc.process_symbol(broad)
         self.assertIsInstance(broad_disc, pybamm.Multiplication)
-        self.assertIsInstance(broad_disc.children[0], pybamm.Scalar)
+        self.assertIsInstance(broad_disc.children[0], pybamm.InputParameter)
         self.assertIsInstance(broad_disc.children[1], pybamm.Vector)
 
         # process Broadcast variable
@@ -887,16 +918,14 @@ class TestDiscretise(unittest.TestCase):
         # secondary broadcast in 2D --> Matrix multiplication
         disc = get_discretisation_for_testing()
         mesh = disc.mesh
-        var = pybamm.Vector(
-            mesh["negative particle"][0].nodes, domain=["negative particle"]
-        )
+        var = pybamm.Variable("var", domain=["negative particle"])
         broad = pybamm.SecondaryBroadcast(var, "negative electrode")
 
         disc.set_variable_slices([var])
         broad_disc = disc.process_symbol(broad)
         self.assertIsInstance(broad_disc, pybamm.MatrixMultiplication)
         self.assertIsInstance(broad_disc.children[0], pybamm.Matrix)
-        self.assertIsInstance(broad_disc.children[1], pybamm.Vector)
+        self.assertIsInstance(broad_disc.children[1], pybamm.StateVector)
         self.assertEqual(
             broad_disc.shape,
             (mesh["negative particle"][0].npts * mesh["negative electrode"][0].npts, 1),
@@ -988,7 +1017,9 @@ class TestDiscretise(unittest.TestCase):
 
         # check doesn't raise if broadcast
         model.variables = {
-            c_n.name: pybamm.PrimaryBroadcast(pybamm.Scalar(2), ["negative electrode"])
+            c_n.name: pybamm.PrimaryBroadcast(
+                pybamm.InputParameter("a"), ["negative electrode"]
+            )
         }
         disc.process_model(model)
 

@@ -8,3 +8,4 @@ scikit-fem>=0.2.0
 casadi>=3.5.0
 guzzle-sphinx-theme
 sphinx>=1.5
+python-Levenshtein>=0.12.0
