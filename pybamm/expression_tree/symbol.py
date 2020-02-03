@@ -618,6 +618,8 @@ class Symbol(anytree.NodeMixin):
                 return None
             else:
                 raise error
+        except ValueError as e:
+            raise pybamm.ShapeError("Cannot find shape (original error: {})".format(e))
         return result
 
     def evaluates_to_number(self):
