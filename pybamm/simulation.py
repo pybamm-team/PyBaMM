@@ -114,6 +114,8 @@ class Simulation:
             # parameters and events accordingly
             self._experiment_inputs = []
             self._experiment_times = []
+            current_event = False
+            voltage_event = False
             for op, events in zip(experiment.operating_conditions, experiment.events):
                 if op[1] in ["A", "C"]:
                     # Update inputs for constant current
@@ -157,9 +159,17 @@ class Simulation:
                 if events is None:
                     pass
                 elif events[1] in ["A", "C"]:
-                    operating_inputs.update({"Current cut-off [A]": I})
+                    # update current cut-off, make voltage a value that won't be hit
+                    operating_inputs.update(
+                        {"Current cut-off [A]": I, "Voltage cut-off [V]": -1e10}
+                    )
+                    current_event = True
                 elif events[1] == "V":
-                    operating_inputs.update({"Voltage cut-off [V]": V})
+                    # update voltage cut-off, make current a value that won't be hit
+                    operating_inputs.update(
+                        {"Current cut-off [A]": -1e10, "Voltage cut-off [V]": V}
+                    )
+                    voltage_event = True
                 self._experiment_inputs.append(operating_inputs)
                 # Convert time to dimensionless
                 dt_dimensional = op[2]
@@ -170,6 +180,21 @@ class Simulation:
                 dt_dimensionless = dt_dimensional / tau
                 self._experiment_times.append(dt_dimensionless)
 
+        # add current and/or voltage events to the model
+        if current_event:
+            self.model.events.update(
+                {
+                    "Current cut-off [A]": self.model.variables["Current [A]"]
+                    - pybamm.InputParameter("Current cut-off [A]")
+                }
+            )
+        if voltage_event:
+            self.model.events.update(
+                {
+                    "Voltage cut-off [V]": self.model.variables["Terminal voltage [V]"]
+                    - pybamm.InputParameter("Voltage cut-off [V]")
+                }
+            )
         # ignore runtime warnings in notebooks
         if isnotebook():
             import warnings

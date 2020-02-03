@@ -21,7 +21,7 @@ class TestExperiment(unittest.TestCase):
                 "Hold at 4.1 V until 50 mA",
             ],
             {"test": "test"},
-            frequency="1 minute",
+            frequency="20 seconds",
         )
         self.assertEqual(
             experiment.operating_conditions,
@@ -43,7 +43,7 @@ class TestExperiment(unittest.TestCase):
             [None, None, None, None, None, None, None, None, (4.1, "V"), (0.05, "A")],
         )
         self.assertEqual(experiment.parameters, {"test": "test"})
-        self.assertEqual(experiment.frequency, 60)
+        self.assertEqual(experiment.frequency, 20)
 
     def test_read_strings_repeat(self):
         experiment = pybamm.Experiment(
@@ -61,7 +61,7 @@ class TestExperiment(unittest.TestCase):
                 (1, "V", 20.0),
             ],
         )
-        self.assertEqual(experiment.frequency, 1)
+        self.assertEqual(experiment.frequency, 60)
 
     def test_str_repr(self):
         conds = ["Discharge at 1 C for 20 seconds", "Charge at 0.5 W for 10 minutes"]
