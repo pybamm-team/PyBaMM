@@ -158,6 +158,45 @@ class TestCasadiSolver(unittest.TestCase):
         solution = solver.solve(model, t_eval)
         np.testing.assert_allclose(solution.y[0], step_sol.y[0])
 
+    def test_model_step_with_input(self):
+        # Create model
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        a = pybamm.InputParameter("a")
+        model.rhs = {var: a * var}
+        model.initial_conditions = {var: 1}
+        model.variables = {"a": a}
+        # No need to set parameters; can use base discretisation (no spatial operators)
+
+        # create discretisation
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
+
+        # Step with an input
+        dt = 0.1
+        step_sol = solver.step(None, model, dt, npts=5, inputs={"a": 0.1})
+        np.testing.assert_array_equal(step_sol.t, np.linspace(0, dt, 5))
+        np.testing.assert_allclose(step_sol.y[0], np.exp(0.1 * step_sol.t))
+
+        # Step again with different inputs
+        step_sol_2 = solver.step(step_sol, model, dt, npts=5, inputs={"a": -1})
+        np.testing.assert_array_equal(step_sol_2.t, np.linspace(0, 2 * dt, 9))
+        np.testing.assert_array_equal(
+            step_sol_2["a"].entries,
+            np.array([0.1, 0.1, 0.1, 0.1, 0.1, -1, -1, -1, -1]),
+        )
+        np.testing.assert_allclose(
+            step_sol_2.y[0],
+            np.concatenate(
+                [
+                    np.exp(0.1 * step_sol.t[:5]),
+                    np.exp(0.1 * step_sol.t[4]) * np.exp(-(step_sol.t[5:] - dt)),
+                ]
+            ),
+        )
+
     def test_model_step_events(self):
         # Create model
         model = pybamm.BaseModel()
