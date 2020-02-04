@@ -106,6 +106,7 @@ class BaseModel(object):
         self._initial_conditions = {}
         self._boundary_conditions = {}
         self._variables = {}
+        self._variables = pybamm.FuzzyDict()
         self._events = []
         self._concatenated_rhs = None
         self._concatenated_algebraic = None
@@ -209,7 +210,7 @@ class BaseModel(object):
 
     @variables.setter
     def variables(self, variables):
-        self._variables = variables
+        self._variables = pybamm.FuzzyDict(variables)
 
     def variable_names(self):
         return list(self._variables.keys())

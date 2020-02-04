@@ -102,3 +102,4 @@ class BaseParticle(pybamm.BaseSubModel):
             (1 - tol) - pybamm.max(c_s_surf),
             pybamm.EventType.TERMINATION
         ))
+

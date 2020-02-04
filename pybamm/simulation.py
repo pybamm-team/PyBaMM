@@ -75,8 +75,6 @@ class Simulation:
         if self.C_rate:
             self._parameter_values.update({"C-rate": self.C_rate})
 
-        self._made_first_step = False
-
         self.reset(update_model=False)
 
         # ignore runtime warnings in notebooks
@@ -110,7 +108,6 @@ class Simulation:
         self._mesh = None
         self._disc = None
         self._solution = None
-        self._made_first_step = False
 
     def set_parameters(self):
         """
@@ -152,7 +149,14 @@ class Simulation:
             self._model, inplace=False, check_model=check_model
         )
 
-    def solve(self, t_eval=None, solver=None, inputs=None, check_model=True):
+    def solve(
+        self,
+        t_eval=None,
+        solver=None,
+        external_variables=None,
+        inputs=None,
+        check_model=True,
+    ):
         """
         A method to solve the model. This method will automatically build
         and set the model parameters if not already done so.
@@ -166,6 +170,11 @@ class Simulation:
             non-dimensional time of 1.
         solver : :class:`pybamm.BaseSolver`
             The solver to use to solve the model.
+        external_variables : dict
+            A dictionary of external variables and their corresponding
+            values at the current time. The variables must correspond to
+            the variables that would normally be found by solving the
+            submodels that have been made external.
         inputs : dict, optional
             Any input parameters to pass to the model when solving
         check_model : bool, optional
@@ -188,9 +197,16 @@ class Simulation:
             solver = self.solver
 
         self.t_eval = t_eval
-        self._solution = solver.solve(self.built_model, t_eval, inputs=inputs)
+        self._solution = solver.solve(
+            self.built_model,
+            t_eval,
+            external_variables=external_variables,
+            inputs=inputs,
+        )
 
-    def step(self, dt, solver=None, external_variables=None, inputs=None, save=True):
+    def step(
+        self, dt, solver=None, npts=2, external_variables=None, inputs=None, save=True
+    ):
         """
         A method to step the model forward one timestep. This method will
         automatically build and set the model parameters if not already done so.
@@ -201,6 +217,9 @@ class Simulation:
             The timestep over which to step the solution
         solver : :class:`pybamm.BaseSolver`
             The solver to use to solve the model.
+        npts : int, optional
+            The number of points at which the solution will be returned during
+            the step dt. default is 2 (returns the solution at t0 and t0 + dt).
         external_variables : dict
             A dictionary of external variables and their corresponding
             values at the current time. The variables must correspond to
@@ -216,30 +235,25 @@ class Simulation:
         if solver is None:
             solver = self.solver
 
-        solution = solver.step(
-            self.built_model, dt, external_variables=external_variables, inputs=inputs
-        )
-
-        if save is False or self._made_first_step is False:
-            self._solution = solution
-        elif self._solution.t[-1] == solution.t[-1]:
-            pass
+        if save is False:
+            # Don't pass previous solution
+            self._solution = solver.step(
+                None,
+                self.built_model,
+                dt,
+                npts=npts,
+                external_variables=external_variables,
+                inputs=inputs,
+            )
         else:
-            self._update_solution(solution)
-
-        self._made_first_step = True
-
-    def _update_solution(self, solution):
-
-        self._solution.set_up_time += solution.set_up_time
-        self._solution.solve_time += solution.solve_time
-        self._solution.t = np.append(self._solution.t, solution.t[-1])
-        self._solution.t_event = solution.t_event
-        self._solution.termination = solution.termination
-        self._solution.y = np.concatenate(
-            [self._solution.y, solution.y[:, -1][:, np.newaxis]], axis=1
-        )
-        self._solution.y_event = solution.y_event
+            self._solution = solver.step(
+                self._solution,
+                self.built_model,
+                dt,
+                npts=npts,
+                external_variables=external_variables,
+                inputs=inputs,
+            )
 
     def get_variable_array(self, *variables):
         """
@@ -290,7 +304,7 @@ class Simulation:
         if quick_plot_vars is None:
             quick_plot_vars = self.quick_plot_vars
 
-        plot = pybamm.QuickPlot(self._solution, output_variables=quick_plot_vars,)
+        plot = pybamm.QuickPlot(self._solution, output_variables=quick_plot_vars)
 
         if isnotebook():
             import ipywidgets as widgets
@@ -462,6 +476,12 @@ class Simulation:
                 Set model.convert_to_format = 'casadi' instead.
                 """
             )
+        # Clear solver problem (not pickle-able, will automatically be recomputed)
+        if (
+            isinstance(self._solver, pybamm.CasadiSolver)
+            and self._solver.problems != {}
+        ):
+            self._solver.problems = {}
         with open(filename, "wb") as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 
