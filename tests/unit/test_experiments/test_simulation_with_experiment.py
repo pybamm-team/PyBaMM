@@ -9,10 +9,10 @@ class TestSimulationExperiment(unittest.TestCase):
     def test_set_up(self):
         experiment = pybamm.Experiment(
             [
-                "Discharge at 1 C for 0.1 hours",
+                "Discharge at 2 C for 0.1 hours",
                 "Charge at 0.1 A for 0.1 hours",
-                "Hold at 4.1 V for 1 hour",
-                "Discharge at 4 W for 90 minutes",
+                # "Hold at 4.1 V for 1 hour",
+                # "Discharge at 4 W for 90 minutes",
             ],
             {}
             # {

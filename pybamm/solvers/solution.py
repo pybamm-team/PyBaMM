@@ -37,12 +37,12 @@ class Solution(object):
         self.y_event = y_event
         self.termination = termination
         # initialize empty inputs and model, to be populated later
-        self.inputs = {}
+        self.inputs = pybamm.FuzzyDict()
         self._model = None
 
         # initiaize empty variables and data
-        self._variables = {}
-        self.data = {}
+        self._variables = pybamm.FuzzyDict()
+        self.data = pybamm.FuzzyDict()
 
         # initialize empty known evals
         self.known_evals = defaultdict(dict)
