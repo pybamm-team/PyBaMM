@@ -5,8 +5,9 @@
 examples = """
 
     Discharge at 1 C for 0.5 hours,
+    Discharge at C/20 for 0.5 hours,
     Charge at 0.5 C for 45 minutes,
-    Discharge at 1 A for 0.5 hours,
+    Discharge at 1 A for 90 seconds,
     Charge at 200 mA for 45 minutes,
     Discharge at 1 W for 0.5 hours,
     Charge at 200 mW for 45 minutes,
@@ -36,11 +37,12 @@ class Experiment:
     >>> experiment = pybamm.Experiment(["1C for 0.5 hours", "0.5C for 45 minutes"])
     """
 
-    def __init__(self, operating_conditions, parameters, frequency="1 minute"):
-        self.operating_conditions_string = str(operating_conditions)
+    def __init__(self, operating_conditions, parameters=None, frequency="1 minute"):
+        self.operating_conditions_string = operating_conditions
         self.operating_conditions, self.events = self.read_operating_conditions(
             operating_conditions
         )
+        parameters = parameters or {}
         if isinstance(parameters, dict):
             self.parameters = parameters
         else:
@@ -122,8 +124,13 @@ class Experiment:
         if electric[0].lower() == "rest":
             return (0, "A")
         else:
-            if len(electric) == 4:
-                instruction, _, value, unit = electric
+            if len(electric) in [3, 4]:
+                if len(electric) == 4:
+                    instruction, _, value, unit = electric
+                elif len(electric) == 3:
+                    instruction, _, value_unit = electric
+                    unit = value_unit[0]
+                    value = 1 / float(value_unit[2:])
                 # Read instruction
                 if instruction.lower() in ["discharge", "hold"]:
                     sign = 1
@@ -141,9 +148,9 @@ class Experiment:
                 sign = 1
             else:
                 raise ValueError(
-                    """instructions not recognized. Some acceptable examples are: {}
+                    """Instruction '{}' not recognized. Some acceptable examples are: {}
                     """.format(
-                        examples
+                        " ".join(electric), examples
                     )
                 )
             # Read value and units

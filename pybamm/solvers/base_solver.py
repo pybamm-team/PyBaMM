@@ -470,8 +470,13 @@ class BaseSolver(object):
             If an empty model is passed (`model.rhs = {}` and `model.algebraic={}`)
 
         """
-        if old_solution is not None and old_solution.termination != "final time":
+
+        if old_solution is not None and not (
+            old_solution.termination == "final time"
+            or "[experiment]" in old_solution.termination
+        ):
             # Return same solution as an event has already been triggered
+            # With hack to allow stepping past experiment current / voltage cut-off
             return old_solution
 
         # Make sure model isn't empty

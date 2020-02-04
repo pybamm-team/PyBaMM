@@ -114,8 +114,6 @@ class Simulation:
             # parameters and events accordingly
             self._experiment_inputs = []
             self._experiment_times = []
-            current_event = False
-            voltage_event = False
             for op, events in zip(experiment.operating_conditions, experiment.events):
                 if op[1] in ["A", "C"]:
                     # Update inputs for constant current
@@ -157,19 +155,27 @@ class Simulation:
                     }
                 # Update events
                 if events is None:
-                    pass
+                    # make current and voltage values that won't be hit
+                    operating_inputs.update(
+                        {"Current cut-off [A]": 1e10, "Voltage cut-off [V]": -1e10}
+                    )
                 elif events[1] in ["A", "C"]:
                     # update current cut-off, make voltage a value that won't be hit
+                    if events[1] == "A":
+                        I = events[0]
+                    else:
+                        # Scale C-rate with capacity to obtain current
+                        capacity = self._parameter_values["Cell capacity [A.h]"]
+                        I = events[0] / capacity
                     operating_inputs.update(
                         {"Current cut-off [A]": I, "Voltage cut-off [V]": -1e10}
                     )
-                    current_event = True
                 elif events[1] == "V":
                     # update voltage cut-off, make current a value that won't be hit
+                    V = events[0]
                     operating_inputs.update(
-                        {"Current cut-off [A]": -1e10, "Voltage cut-off [V]": V}
+                        {"Current cut-off [A]": 1e10, "Voltage cut-off [V]": V}
                     )
-                    voltage_event = True
                 self._experiment_inputs.append(operating_inputs)
                 # Convert time to dimensionless
                 dt_dimensional = op[2]
@@ -180,21 +186,24 @@ class Simulation:
                 dt_dimensionless = dt_dimensional / tau
                 self._experiment_times.append(dt_dimensionless)
 
-        # add current and/or voltage events to the model
-        if current_event:
-            self.model.events.update(
-                {
-                    "Current cut-off [A]": self.model.variables["Current [A]"]
-                    - pybamm.InputParameter("Current cut-off [A]")
-                }
-            )
-        if voltage_event:
-            self.model.events.update(
-                {
-                    "Voltage cut-off [V]": self.model.variables["Terminal voltage [V]"]
-                    - pybamm.InputParameter("Voltage cut-off [V]")
-                }
-            )
+        # add current and voltage events to the model
+        # current events both negative and positive to catch specification
+        self.model.events.update(
+            {
+                "Current cut-off (positive) [A] [experiment]": self.model.variables[
+                    "Current [A]"
+                ]
+                - abs(pybamm.InputParameter("Current cut-off [A]")),
+                "Current cut-off (negative) [A] [experiment]": self.model.variables[
+                    "Current [A]"
+                ]
+                + abs(pybamm.InputParameter("Current cut-off [A]")),
+                "Voltage cut-off [V] [experiment]": self.model.variables[
+                    "Terminal voltage [V]"
+                ]
+                - pybamm.InputParameter("Voltage cut-off [V]"),
+            }
+        )
         # ignore runtime warnings in notebooks
         if isnotebook():
             import warnings
@@ -325,7 +334,12 @@ class Simulation:
                 )
             # Step through all experimental conditions
             inputs = inputs or {}
-            for exp_inputs, dt in zip(self._experiment_inputs, self._experiment_times):
+            pybamm.logger.info("Start running experiment")
+            timer = pybamm.Timer()
+            for idx, (exp_inputs, dt) in enumerate(
+                zip(self._experiment_inputs, self._experiment_times)
+            ):
+                pybamm.logger.info(self.experiment.operating_conditions_string[idx])
                 inputs.update(exp_inputs)
                 # Non-dimensionalise frequency
                 tau = self._parameter_values.evaluate(self.model.timescale)
@@ -335,6 +349,24 @@ class Simulation:
                 self.step(
                     dt, npts=npts, external_variables=external_variables, inputs=inputs
                 )
+                # Only allow events specified by experiment
+                if not (
+                    self._solution.termination == "final time"
+                    or "[experiment]" in self._solution.termination
+                ):
+                    pybamm.logger.warning(
+                        """
+                        Experiment is infeasible: '{}' was triggered during '{}'. Try
+                        reducing current or shortening the time interval.
+                        """.format(
+                            self._solution.termination,
+                            self.experiment.operating_conditions_string[idx],
+                        )
+                    )
+                    break
+        pybamm.logger.info(
+            "Finish experiment simulation, took {}".format(timer.format(timer.time()))
+        )
 
     def step(
         self, dt, solver=None, npts=2, external_variables=None, inputs=None, save=True

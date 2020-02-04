@@ -6,15 +6,16 @@ import unittest
 
 
 class TestSimulationExperiment(unittest.TestCase):
-    def test_set_up(self):
+    def test_set_up_currents(self):
+        pybamm.set_logging_level("DEBUG")
         experiment = pybamm.Experiment(
             [
-                "Discharge at 2 C for 0.1 hours",
-                "Charge at 0.1 A for 0.1 hours",
-                # "Hold at 4.1 V for 1 hour",
+                "Discharge at 1 C until 3.5 V",
+                "Charge at 1 A until 4.1 V",
+                "Hold at 4.1 V until -50 mA",
                 # "Discharge at 4 W for 90 minutes",
             ],
-            {}
+            {},
             # {
             #     "Reference temperature [K]": 298.15,
             #     "Heat transfer coefficient [W.m-2.K-1]": 10,
