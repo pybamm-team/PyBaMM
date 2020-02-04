@@ -8,6 +8,9 @@ import unittest
 import warnings
 from tests import get_mesh_for_testing, get_discretisation_for_testing
 
+# TODO: remove this
+import matplotlib.pylab as plt
+
 
 @unittest.skipIf(not pybamm.have_scikits_odes(), "scikits.odes not installed")
 class TestScikitsSolvers(unittest.TestCase):
@@ -547,6 +550,42 @@ class TestScikitsSolvers(unittest.TestCase):
         np.testing.assert_array_less(solution.y[-1], 2.5)
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
         np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
+
+    def test_model_solver_dae_nonsmooth_python(self):
+        model = pybamm.BaseModel()
+        model.convert_to_format = "python"
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var1 = pybamm.Variable("var1", domain=whole_cell)
+        var2 = pybamm.Variable("var2", domain=whole_cell)
+
+        def nonsmooth_rate(t):
+            return 0.1 * int(t < 2.5) + 0.1
+        rate = pybamm.Function(nonsmooth_rate, pybamm.t)
+        model.rhs = {var1: rate * var1}
+        model.algebraic = {var2: 2 * var1 - var2}
+        model.initial_conditions = {var1: 1, var2: 2}
+        model.events = [
+            pybamm.Event("var1 = 1.5", pybamm.min(var1 - 1.5)),
+            pybamm.Event("var2 = 2.5", pybamm.min(var2 - 2.5)),
+            pybamm.Event("nonsmooth rate",
+                         pybamm.Scalar(2.5),
+                         pybamm.EventType.DISCONTINUITY
+                         )
+        ]
+        disc = get_discretisation_for_testing()
+        disc.process_model(model)
+
+        # Solve
+        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
+        t_eval = np.linspace(0, 5, 100)
+        solution = solver.solve(model, t_eval)
+        plt.plot(solution.y[0])
+        plt.plot(solution.y[1])
+        plt.show()
+        #np.testing.assert_array_less(solution.y[0], 1.5)
+        #np.testing.assert_array_less(solution.y[-1], 2.5)
+        #np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
+        #np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
 
     def test_model_solver_dae_with_jacobian_python(self):
         model = pybamm.BaseModel()
