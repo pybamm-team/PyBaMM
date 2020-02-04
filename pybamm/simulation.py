@@ -94,97 +94,103 @@ class Simulation:
                 self._parameter_values.update({"C-rate": self.C_rate})
             self.model = model
         else:
-            ##################
-            # Setting up experiment
-            ##################
-            self.operating_mode = "with experiment"
-            self.model = model.new_copy(
-                options={
-                    **model.options,
-                    "operating mode": constant_current_constant_voltage_constant_power,
+            self.set_up_experiment(model, experiment)
+        # ignore runtime warnings in notebooks
+        if isnotebook():
+            import warnings
+
+            warnings.filterwarnings("ignore")
+
+    def set_up_experiment(self, model, experiment):
+        "Set up a simulation to run with an experiment"
+        self.operating_mode = "with experiment"
+        self.model = model.new_copy(
+            options={
+                **model.options,
+                "operating mode": constant_current_constant_voltage_constant_power,
+            }
+        )
+        if not isinstance(experiment, pybamm.Experiment):
+            raise TypeError("experiment must be a pybamm `Experiment` instance")
+        # Save the experiment
+        self.experiment = experiment
+        # Update parameter values with experiment parameters
+        self._parameter_values.update(experiment.parameters)
+        # Create a new submodel for each set of operating conditions and update
+        # parameters and events accordingly
+        self._experiment_inputs = []
+        self._experiment_times = []
+        for op, events in zip(experiment.operating_conditions, experiment.events):
+            if op[1] in ["A", "C"]:
+                # Update inputs for constant current
+                if op[1] == "A":
+                    I = op[0]
+                else:
+                    # Scale C-rate with capacity to obtain current
+                    capacity = self._parameter_values["Cell capacity [A.h]"]
+                    I = op[0] * capacity
+                operating_inputs = {
+                    "Current switch": 1,
+                    "Voltage switch": 0,
+                    "Power switch": 0,
+                    "Current input [A]": I,
+                    "Voltage input [V]": 0,  # doesn't matter
+                    "Power input [W]": 0,  # doesn't matter
                 }
-            )
-            if not isinstance(experiment, pybamm.Experiment):
-                raise TypeError("experiment must be a pybamm `Experiment` instance")
-            # Save the experiment
-            self.experiment = experiment
-            # Update parameter values with experiment parameters
-            self._parameter_values.update(experiment.parameters)
-            # Create a new submodel for each set of operating conditions and update
-            # parameters and events accordingly
-            self._experiment_inputs = []
-            self._experiment_times = []
-            for op, events in zip(experiment.operating_conditions, experiment.events):
-                if op[1] in ["A", "C"]:
-                    # Update inputs for constant current
-                    if op[1] == "A":
-                        I = op[0]
-                    else:
-                        # Scale C-rate with capacity to obtain current
-                        capacity = self._parameter_values["Cell capacity [A.h]"]
-                        I = op[0] / capacity
-                    operating_inputs = {
-                        "Current switch": 1,
-                        "Voltage switch": 0,
-                        "Power switch": 0,
-                        "Current input [A]": I,
-                        "Voltage input [V]": 0,  # doesn't matter
-                        "Power input [W]": 0,  # doesn't matter
-                    }
-                elif op[1] == "V":
-                    # Update inputs for constant voltage
-                    V = op[0]
-                    operating_inputs = {
-                        "Current switch": 0,
-                        "Voltage switch": 1,
-                        "Power switch": 0,
-                        "Current input [A]": 0,  # doesn't matter
-                        "Voltage input [V]": V,
-                        "Power input [W]": 0,  # doesn't matter
-                    }
-                elif op[1] == "W":
-                    # Update inputs for constant power
-                    P = op[0]
-                    operating_inputs = {
-                        "Current switch": 0,
-                        "Voltage switch": 0,
-                        "Power switch": 1,
-                        "Current input [A]": 0,  # doesn't matter
-                        "Voltage input [V]": 0,  # doesn't matter
-                        "Power input [W]": P,
-                    }
-                # Update events
-                if events is None:
-                    # make current and voltage values that won't be hit
-                    operating_inputs.update(
-                        {"Current cut-off [A]": 1e10, "Voltage cut-off [V]": -1e10}
-                    )
-                elif events[1] in ["A", "C"]:
-                    # update current cut-off, make voltage a value that won't be hit
-                    if events[1] == "A":
-                        I = events[0]
-                    else:
-                        # Scale C-rate with capacity to obtain current
-                        capacity = self._parameter_values["Cell capacity [A.h]"]
-                        I = events[0] / capacity
-                    operating_inputs.update(
-                        {"Current cut-off [A]": I, "Voltage cut-off [V]": -1e10}
-                    )
-                elif events[1] == "V":
-                    # update voltage cut-off, make current a value that won't be hit
-                    V = events[0]
-                    operating_inputs.update(
-                        {"Current cut-off [A]": 1e10, "Voltage cut-off [V]": V}
-                    )
-                self._experiment_inputs.append(operating_inputs)
-                # Convert time to dimensionless
-                dt_dimensional = op[2]
-                if dt_dimensional is None:
-                    # max simulation time: 1 week
-                    dt_dimensional = 7 * 24 * 3600
-                tau = self._parameter_values.evaluate(self.model.timescale)
-                dt_dimensionless = dt_dimensional / tau
-                self._experiment_times.append(dt_dimensionless)
+            elif op[1] == "V":
+                # Update inputs for constant voltage
+                V = op[0]
+                operating_inputs = {
+                    "Current switch": 0,
+                    "Voltage switch": 1,
+                    "Power switch": 0,
+                    "Current input [A]": 0,  # doesn't matter
+                    "Voltage input [V]": V,
+                    "Power input [W]": 0,  # doesn't matter
+                }
+            elif op[1] == "W":
+                # Update inputs for constant power
+                P = op[0]
+                operating_inputs = {
+                    "Current switch": 0,
+                    "Voltage switch": 0,
+                    "Power switch": 1,
+                    "Current input [A]": 0,  # doesn't matter
+                    "Voltage input [V]": 0,  # doesn't matter
+                    "Power input [W]": P,
+                }
+            # Update events
+            if events is None:
+                # make current and voltage values that won't be hit
+                operating_inputs.update(
+                    {"Current cut-off [A]": -1e10, "Voltage cut-off [V]": -1e10}
+                )
+            elif events[1] in ["A", "C"]:
+                # update current cut-off, make voltage a value that won't be hit
+                if events[1] == "A":
+                    I = events[0]
+                else:
+                    # Scale C-rate with capacity to obtain current
+                    capacity = self._parameter_values["Cell capacity [A.h]"]
+                    I = events[0] * capacity
+                operating_inputs.update(
+                    {"Current cut-off [A]": I, "Voltage cut-off [V]": -1e10}
+                )
+            elif events[1] == "V":
+                # update voltage cut-off, make current a value that won't be hit
+                V = events[0]
+                operating_inputs.update(
+                    {"Current cut-off [A]": -1e10, "Voltage cut-off [V]": V}
+                )
+            self._experiment_inputs.append(operating_inputs)
+            # Convert time to dimensionless
+            dt_dimensional = op[2]
+            if dt_dimensional is None:
+                # max simulation time: 1 week
+                dt_dimensional = 7 * 24 * 3600
+            tau = self._parameter_values.evaluate(self.model.timescale)
+            dt_dimensionless = dt_dimensional / tau
+            self._experiment_times.append(dt_dimensionless)
 
         # add current and voltage events to the model
         # current events both negative and positive to catch specification
@@ -204,11 +210,6 @@ class Simulation:
                 - pybamm.InputParameter("Voltage cut-off [V]"),
             }
         )
-        # ignore runtime warnings in notebooks
-        if isnotebook():
-            import warnings
-
-            warnings.filterwarnings("ignore")
 
     def set_defaults(self):
         """
@@ -364,9 +365,11 @@ class Simulation:
                         )
                     )
                     break
-        pybamm.logger.info(
-            "Finish experiment simulation, took {}".format(timer.format(timer.time()))
-        )
+            pybamm.logger.info(
+                "Finish experiment simulation, took {}".format(
+                    timer.format(timer.time())
+                )
+            )
 
     def step(
         self, dt, solver=None, npts=2, external_variables=None, inputs=None, save=True

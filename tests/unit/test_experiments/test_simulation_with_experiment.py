@@ -6,36 +6,82 @@ import unittest
 
 
 class TestSimulationExperiment(unittest.TestCase):
-    def test_set_up_currents(self):
-        pybamm.set_logging_level("DEBUG")
+    def test_set_up(self):
         experiment = pybamm.Experiment(
             [
-                "Discharge at 1 C until 3.5 V",
+                "Discharge at C/20 for 1 hour",
                 "Charge at 1 A until 4.1 V",
-                "Hold at 4.1 V until -50 mA",
-                # "Discharge at 4 W for 90 minutes",
+                "Hold at 4.1 V until 50 mA",
+                "Discharge at 2 W for 1 hour",
             ],
-            {},
-            # {
-            #     "Reference temperature [K]": 298.15,
-            #     "Heat transfer coefficient [W.m-2.K-1]": 10,
-            #     "Number of electrodes connected in parallel to make a cell": 1,
-            #     "Number of cells connected in series to make a battery": 1,
-            #     "Lower voltage cut-off [V]": 3.105,
-            #     "Upper voltage cut-off [V]": 4.7,
-            #     "C-rate": 1,
-            #     "Initial concentration in negative electrode [mol.m-3]": 19986,
-            #     "Initial concentration in positive electrode [mol.m-3]": 30730,
-            #     "Initial concentration in electrolyte [mol.m-3]": 1000,
-            #     "Initial temperature [K]": 298.15,
-            # },
         )
         model = pybamm.lithium_ion.DFN()
-        sim = pybamm.Simulation(
-            model, experiment=experiment, solver=pybamm.CasadiSolver()
+        sim = pybamm.Simulation(model, experiment=experiment)
+
+        self.assertEqual(sim.experiment, experiment)
+        self.assertEqual(
+            sim._experiment_inputs[0]["Current input [A]"],
+            1 / 20 * model.default_parameter_values["Cell capacity [A.h]"],
         )
+        self.assertEqual(sim._experiment_inputs[0]["Current switch"], 1)
+        self.assertEqual(sim._experiment_inputs[0]["Voltage switch"], 0)
+        self.assertEqual(sim._experiment_inputs[0]["Power switch"], 0)
+        self.assertEqual(sim._experiment_inputs[0]["Current cut-off [A]"], -1e10)
+        self.assertEqual(sim._experiment_inputs[0]["Voltage cut-off [V]"], -1e10)
+        self.assertEqual(sim._experiment_inputs[1]["Current input [A]"], -1)
+        self.assertEqual(sim._experiment_inputs[1]["Current switch"], 1)
+        self.assertEqual(sim._experiment_inputs[1]["Voltage switch"], 0)
+        self.assertEqual(sim._experiment_inputs[1]["Power switch"], 0)
+        self.assertEqual(sim._experiment_inputs[1]["Current cut-off [A]"], -1e10)
+        self.assertEqual(sim._experiment_inputs[1]["Voltage cut-off [V]"], 4.1)
+        self.assertEqual(sim._experiment_inputs[2]["Current switch"], 0)
+        self.assertEqual(sim._experiment_inputs[2]["Voltage switch"], 1)
+        self.assertEqual(sim._experiment_inputs[2]["Power switch"], 0)
+        self.assertEqual(sim._experiment_inputs[2]["Voltage input [V]"], 4.1)
+        self.assertEqual(sim._experiment_inputs[2]["Current cut-off [A]"], 0.05)
+        self.assertEqual(sim._experiment_inputs[2]["Voltage cut-off [V]"], -1e10)
+        self.assertEqual(sim._experiment_inputs[3]["Current switch"], 0)
+        self.assertEqual(sim._experiment_inputs[3]["Voltage switch"], 0)
+        self.assertEqual(sim._experiment_inputs[3]["Power switch"], 1)
+        self.assertEqual(sim._experiment_inputs[3]["Power input [W]"], 2)
+        self.assertEqual(sim._experiment_inputs[3]["Current cut-off [A]"], -1e10)
+        self.assertEqual(sim._experiment_inputs[3]["Voltage cut-off [V]"], -1e10)
+
+        tau = sim._parameter_values.evaluate(model.timescale)
+        self.assertEqual(
+            sim._experiment_times,
+            [t / tau for t in [3600, 7 * 24 * 3600, 7 * 24 * 3600, 3600]],
+        )
+
+        self.assertIn("Current cut-off (positive) [A] [experiment]", sim.model.events)
+        self.assertIn("Current cut-off (negative) [A] [experiment]", sim.model.events)
+        self.assertIn("Voltage cut-off [V] [experiment]", sim.model.events)
+
+    def test_run_experiment(self):
+        experiment = pybamm.Experiment(
+            [
+                "Discharge at C/20 for 1 hour",
+                "Charge at 1 A until 4.1 V",
+                "Hold at 4.1 V until 50 mA",
+                "Discharge at 2 W for 1 hour",
+            ],
+        )
+        model = pybamm.lithium_ion.DFN()
+        sim = pybamm.Simulation(model, experiment=experiment)
         sim.solve()
-        sim.plot()
+
+    def test_run_experiment_breaks_early(self):
+        experiment = pybamm.Experiment(
+            [
+                "Discharge at C/20 for 1 hour",
+                "Charge at 1 A until 4.1 V",
+                "Hold at 4.1 V until 50 mA",
+                "Discharge at 2 W for 1 hour",
+            ],
+        )
+        model = pybamm.lithium_ion.DFN()
+        sim = pybamm.Simulation(model, experiment=experiment)
+        sim.solve()
 
 
 if __name__ == "__main__":
