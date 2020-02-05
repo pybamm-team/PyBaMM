@@ -41,13 +41,6 @@ class TestQuickPlot(unittest.TestCase):
 
         quick_plot.update(0.01)
 
-        # Update parameters, solve, plot again
-        param.update({"Current function [A]": 0})
-        param.update_model(spm, disc_spm)
-        solution_spm = spm.default_solver.solve(spm, t_eval)
-        quick_plot = pybamm.QuickPlot(solution_spm)
-        quick_plot.plot(0)
-
         # Test with different output variables
         output_vars = [
             "Negative particle surface concentration",
