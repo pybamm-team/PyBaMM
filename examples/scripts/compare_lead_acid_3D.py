@@ -55,7 +55,7 @@ models = [
 param = models[0].default_parameter_values
 param.update(
     {
-        "Typical current [A]": 170,
+        "Current function [A]": 1,
         "Initial State of Charge": 1,
         "Positive electrode conductivity [S.m-1]": 8000,
     }
@@ -90,18 +90,13 @@ for i, model in enumerate(models):
 # plot
 
 output_variables = [
-    # "Local current collector potential difference [V]",
-    # "Negative current collector potential [V]",
-    # "Positive current collector potential [V]",
-    # "X-averaged electrolyte concentration",
-    # # "Leading-order current collector current density",
-    # "Average open circuit voltage [V]",
-    # "Average concentration overpotential [V]",
-    # "Average electrolyte ohmic losses [V]",
-    # "Average reaction overpotential [V]",
-    # "Battery current collector overpotential [V]",
-    # "Current collector current density",
-    "Terminal voltage [V]"
+    "Local voltage [V]",
+    "Negative current collector potential [V]",
+    "Positive current collector potential [V]",
+    "X-averaged electrolyte concentration",
+    # "Leading-order current collector current density",
+    "Current collector current density",
+    "Terminal voltage [V]",
 ]
-plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)
+plot = pybamm.QuickPlot(solutions, output_variables)
 plot.dynamic_plot()

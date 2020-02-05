@@ -53,19 +53,6 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     def set_standard_output_variables(self):
         super().set_standard_output_variables()
-        # Current
-        i_cell = pybamm.standard_parameters_lead_acid.current_with_time
-        i_cell_dim = (
-            pybamm.standard_parameters_lead_acid.dimensional_current_density_with_time
-        )
-        I = pybamm.standard_parameters_lead_acid.dimensional_current_with_time
-        self.variables.update(
-            {
-                "Total current density": i_cell,
-                "Total current density [A.m-2]": i_cell_dim,
-                "Current [A]": I,
-            }
-        )
 
         # Time
         time_scale = pybamm.standard_parameters_lead_acid.tau_discharge
@@ -74,7 +61,6 @@ class BaseModel(pybamm.BaseBatteryModel):
                 "Time [s]": pybamm.t * time_scale,
                 "Time [min]": pybamm.t * time_scale / 60,
                 "Time [h]": pybamm.t * time_scale / 3600,
-                "Discharge capacity [A.h]": I * pybamm.t * time_scale / 3600,
             }
         )
 
@@ -120,5 +106,5 @@ class BaseModel(pybamm.BaseBatteryModel):
         if "Fractional Charge Input" not in self.variables:
             fci = pybamm.Variable("Fractional Charge Input", domain="current collector")
             self.variables["Fractional Charge Input"] = fci
-            self.rhs[fci] = -self.param.current_with_time * 100
+            self.rhs[fci] = -self.variables["Total current density"] * 100
             self.initial_conditions[fci] = self.param.q_init * 100

@@ -17,8 +17,13 @@ class TestAsymptoticConvergence(unittest.TestCase):
         leading_order_model = pybamm.lead_acid.LOQS()
         composite_model = pybamm.lead_acid.Composite()
         full_model = pybamm.lead_acid.Full()
+
+        def current_function(t):
+            return pybamm.InputParameter("Current")
+
         # Same parameters, same geometry
         parameter_values = full_model.default_parameter_values
+        parameter_values["Current function [A]"] = current_function
         parameter_values.process_model(leading_order_model)
         parameter_values.process_model(composite_model)
         parameter_values.process_model(full_model)
@@ -44,48 +49,36 @@ class TestAsymptoticConvergence(unittest.TestCase):
 
         def get_max_error(current):
             pybamm.logger.info("current = {}".format(current))
-            # Update current (and hence C_e) in the parameters
-            param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Sulzer2019)
-            param.update({"Typical current [A]": current})
-            param.update_model(leading_order_model, loqs_disc)
-            param.update_model(composite_model, comp_disc)
-            param.update_model(full_model, full_disc)
             # Solve, make sure times are the same and use tight tolerances
             t_eval = np.linspace(0, 0.6)
             solver_loqs = leading_order_model.default_solver
             solver_loqs.rtol = 1e-8
             solver_loqs.atol = 1e-8
-            solution_loqs = solver_loqs.solve(leading_order_model, t_eval)
+            solution_loqs = solver_loqs.solve(
+                leading_order_model, t_eval, inputs={"Current": current}
+            )
             solver_comp = composite_model.default_solver
             solver_comp.rtol = 1e-8
             solver_comp.atol = 1e-8
-            solution_comp = solver_comp.solve(composite_model, t_eval)
+            solution_comp = solver_comp.solve(
+                composite_model, t_eval, inputs={"Current": current}
+            )
             solver_full = full_model.default_solver
             solver_full.rtol = 1e-8
             solver_full.atol = 1e-8
-            solution_full = solver_full.solve(full_model, t_eval)
+            solution_full = solver_full.solve(
+                full_model, t_eval, inputs={"Current": current}
+            )
 
             # Post-process variables
-            t_loqs, y_loqs = solution_loqs.t, solution_loqs.y
-            t_comp, y_comp = solution_comp.t, solution_comp.y
-            t_full, y_full = solution_full.t, solution_full.y
-            voltage_loqs = pybamm.ProcessedVariable(
-                leading_order_model.variables["Terminal voltage"],
-                t_loqs,
-                y_loqs,
-                loqs_disc.mesh,
-            )
-            voltage_comp = pybamm.ProcessedVariable(
-                composite_model.variables["Terminal voltage"],
-                t_comp,
-                y_comp,
-                comp_disc.mesh,
-            )
-            voltage_full = pybamm.ProcessedVariable(
-                full_model.variables["Terminal voltage"], t_full, y_full, full_disc.mesh
-            )
+            voltage_loqs = solution_loqs["Terminal voltage"]
+            voltage_comp = solution_comp["Terminal voltage"]
+            voltage_full = solution_full["Terminal voltage"]
 
             # Compare
+            t_loqs = solution_loqs.t
+            t_comp = solution_comp.t
+            t_full = solution_full.t
             t = t_full[: np.min([len(t_loqs), len(t_comp), len(t_full)])]
             loqs_error = np.max(np.abs(voltage_loqs(t) - voltage_full(t)))
             comp_error = np.max(np.abs(voltage_comp(t) - voltage_full(t)))
@@ -112,4 +105,5 @@ if __name__ == "__main__":
 
     if "-v" in sys.argv:
         debug = True
+    pybamm.set_logging_level("DEBUG")
     unittest.main()

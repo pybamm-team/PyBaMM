@@ -65,33 +65,18 @@ class QuickPlot(object):
 
     def __init__(
         self,
-        models,
-        meshes,
         solutions,
         output_variables=None,
         labels=None,
         colors=None,
         linestyles=None,
     ):
-        # Pre-process models and solutions
-        if isinstance(models, pybamm.BaseModel):
-            models = [models]
-        elif not isinstance(models, list):
-            raise TypeError("'models' must be 'pybamm.BaseModel' or list")
-        if isinstance(meshes, pybamm.Mesh):
-            # If only one mesh is passed but there are multiple models, try to use
-            # the same mesh for all of them
-            meshes = [meshes] * len(models)
-        elif not isinstance(meshes, list):
-            raise TypeError("'meshes' must be 'pybamm.Mesh' or list")
         if isinstance(solutions, pybamm.Solution):
             solutions = [solutions]
         elif not isinstance(solutions, list):
             raise TypeError("'solutions' must be 'pybamm.Solution' or list")
-        if len(models) == len(solutions):
-            self.num_models = len(models)
-        else:
-            raise ValueError("must provide the same number of models and solutions")
+
+        models = [solution.model for solution in solutions]
 
         # Set labels
         self.labels = labels or [model.name for model in models]
@@ -158,10 +143,10 @@ class QuickPlot(object):
             else:
                 output_variables = models[0].variables
 
-        self.set_output_variables(output_variables, solutions, models, meshes)
+        self.set_output_variables(output_variables, solutions)
         self.reset_axis()
 
-    def set_output_variables(self, output_variables, solutions, models, meshes):
+    def set_output_variables(self, output_variables, solutions):
         # Set up output variables
         self.variables = {}
         self.spatial_variable = {}
@@ -173,19 +158,16 @@ class QuickPlot(object):
 
         # Process output variables into a form that can be plotted
         processed_variables = {}
-        for i, model in enumerate(models):
-            variables_to_process = {}
+        for solution in solutions:
+            processed_variables[solution] = {}
             for variable_list in output_variables:
                 # Make sure we always have a list of lists of variables
                 if isinstance(variable_list, str):
                     variable_list = [variable_list]
                 # Add all variables to the list of variables that should be processed
-                variables_to_process.update(
-                    {var: model.variables[var] for var in variable_list}
+                processed_variables[solution].update(
+                    {var: solution[var] for var in variable_list}
                 )
-            processed_variables[model] = pybamm.post_process_variables(
-                variables_to_process, solutions[i].t, solutions[i].y, meshes[i]
-            )
 
         # Prepare dictionary of variables
         for k, variable_list in enumerate(output_variables):
@@ -195,26 +177,30 @@ class QuickPlot(object):
 
             # Prepare list of variables
             key = tuple(variable_list)
-            self.variables[key] = [None] * len(models)
+            self.variables[key] = [None] * len(solutions)
 
             # process each variable in variable_list for each model
-            for i, model in enumerate(models):
+            for i, solution in enumerate(solutions):
                 # self.variables is a dictionary of lists of lists
                 self.variables[key][i] = [
-                    processed_variables[model][var] for var in variable_list
+                    processed_variables[solution][var] for var in variable_list
                 ]
 
             # Make sure variables have the same dimensions and domain
-            domain = self.variables[key][0][0].domain
+            first_variable = self.variables[key][0][0]
+            domain = first_variable.domain
             for variable in self.variables[key][0]:
                 if variable.domain != domain:
                     raise ValueError("mismatching variable domains")
 
             # Set the x variable for any two-dimensional variables
-            if self.variables[key][0][0].dimensions == 2:
-                variable_key = self.variables[key][0][0].spatial_var_name
-                variable_value = meshes[0].combine_submeshes(*domain)[0].edges
-                self.spatial_variable[key] = (variable_key, variable_value)
+            if first_variable.dimensions == 2:
+                spatial_variable_key = first_variable.spatial_var_name
+                spatial_variable_value = first_variable.mesh[0].edges
+                self.spatial_variable[key] = (
+                    spatial_variable_key,
+                    spatial_variable_value,
+                )
 
             # Don't allow 3D variables
             elif any(var.dimensions == 3 for var in self.variables[key][0]):
@@ -330,7 +316,7 @@ class QuickPlot(object):
                                 spatial_scale = self.spatial_scales["r_p"]
                         else:
                             spatial_scale = self.spatial_scales[spatial_var_name]
-                        self.plots[key][i][j], = ax.plot(
+                        (self.plots[key][i][j],) = ax.plot(
                             spatial_var_value * spatial_scale,
                             variable(
                                 t, **{spatial_var_name: spatial_var_value}, warn=False
@@ -345,7 +331,7 @@ class QuickPlot(object):
                 for i, variable_list in enumerate(variable_lists):
                     for j, variable in enumerate(variable_list):
                         full_t = self.ts[i]
-                        self.plots[key][i][j], = ax.plot(
+                        (self.plots[key][i][j],) = ax.plot(
                             full_t * self.time_scale,
                             variable(full_t, warn=False),
                             lw=2,
@@ -353,7 +339,7 @@ class QuickPlot(object):
                             linestyle=linestyles[j],
                         )
                 y_min, y_max = self.axis[key][2:]
-                self.time_lines[key], = ax.plot(
+                (self.time_lines[key],) = ax.plot(
                     [t * self.time_scale, t * self.time_scale], [y_min, y_max], "k--"
                 )
             # Set either y label or legend entries

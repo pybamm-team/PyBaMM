@@ -25,8 +25,6 @@ sim_quad.solve()
 
 
 # plot the two sols
-models = [sim_lin.built_model, sim_quad.built_model]
 solutions = [sim_lin.solution, sim_quad.solution]
-plot = pybamm.QuickPlot(models, sim_lin.mesh, solutions)
+plot = pybamm.QuickPlot(solutions)
 plot.dynamic_plot()
-

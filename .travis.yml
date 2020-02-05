@@ -79,7 +79,8 @@ matrix:
           env:
             - PYBAMM_UNIT=true
             - PYBAMM_SCIKITS_ODES=true
-        # Unit testing on Python3.7 on Ubuntu without scikit odes
+            - PYBAMM_KLU=true
+        # Unit and example testing on Python3.7 on Ubuntu without optional dependencies
         - python: "3.7"
           addons:
             apt:
@@ -95,6 +96,7 @@ matrix:
                 - libsuitesparse-dev
           env:
             - PYBAMM_UNIT=true
+            - PYBAMM_EXAMPLES=true
           if: type != cron
         # Cover, docs and style checking, latest Python version only
         - python: "3.7"

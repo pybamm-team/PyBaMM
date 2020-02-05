@@ -7,9 +7,12 @@ import os
 import numbers
 
 
-class ParameterValues(dict):
+class ParameterValues:
     """
     The parameter values for a simulation.
+
+    Note that this class does not inherit directly from the python dictionary class as
+    this causes issues with saving and loading simulations.
 
     Parameters
     ----------
@@ -49,6 +52,7 @@ class ParameterValues(dict):
     """
 
     def __init__(self, values=None, chemistry=None):
+        self._dict_items = pybamm.FuzzyDict()
         # Must provide either values or chemistry, not both (nor neither)
         if values is not None and chemistry is not None:
             raise ValueError(
@@ -66,13 +70,36 @@ class ParameterValues(dict):
             self.update_from_chemistry(chemistry)
         # Then update with values dictionary or file
         if values is not None:
+            # If base_parameters is a filename, load from that filename
             if isinstance(values, str):
                 values = self.read_parameters_csv(values)
-            # If base_parameters is a filename, load from that filename
-            self.update(values)
+            # Don't check parameter already exists when first creating it
+            self.update(values, check_already_exists=False)
 
         # Initialise empty _processed_symbols dict (for caching)
         self._processed_symbols = {}
+
+    def __getitem__(self, key):
+        return self._dict_items[key]
+
+    def __setitem__(self, key, value):
+        "Call the update functionality when doing a setitem"
+        self.update({key: value})
+
+    def __delitem__(self, key):
+        del self._dict_items[key]
+
+    def keys(self):
+        "Get the keys of the dictionary"
+        return self._dict_items.keys()
+
+    def values(self):
+        "Get the values of the dictionary"
+        return self._dict_items.values()
+
+    def items(self):
+        "Get the items of the dictionary"
+        return self._dict_items.items()
 
     def update_from_chemistry(self, chemistry):
         """
@@ -105,7 +132,12 @@ class ParameterValues(dict):
                 os.path.join(component_path, "parameters.csv")
             )
             # Update parameters, making sure to check any conflicts
-            self.update(component_params, check_conflict=True, path=component_path)
+            self.update(
+                component_params,
+                check_conflict=True,
+                check_already_exists=False,
+                path=component_path,
+            )
 
     def read_parameters_csv(self, filename):
         """Reads parameters from csv file into dict.
@@ -126,13 +158,27 @@ class ParameterValues(dict):
         df.dropna(how="all", inplace=True)
         return {k: v for (k, v) in zip(df["Name [units]"], df["Value"])}
 
-    def __setitem__(self, key, value):
-        "Call the update functionality when doing a setitem"
-        self.update({key: value})
+    def update(self, values, check_conflict=False, check_already_exists=True, path=""):
+        """
+        Update parameter dictionary, while also performing some basic checks.
 
-    def update(self, values, check_conflict=False, path=""):
-        # check parameter values
-        values = self.check_and_update_parameter_values(values)
+        Parameters
+        ----------
+        values : dict
+            Dictionary of parameter values to update parameter dictionary with
+        check_conflict : bool, optional
+            Whether to check that a parameter in `values` has not already been defined
+            in the parameter class when updating it, and if so that its value does not
+            change. This is set to True during initialisation, when parameters are
+            combined from different sources, and is False by default otherwise
+        check_already_exists : bool, optional
+            Whether to check that a parameter in `values` already exists when trying to
+            update it. This is to avoid cases where an intended change in the parameters
+            is ignored due a typo in the parameter name, and is True by default but can
+            be manually overridden.
+        path : string, optional
+            Path from which to load functions
+        """
         # update
         for name, value in values.items():
             # check for conflicts
@@ -146,94 +192,105 @@ class ParameterValues(dict):
                         name, self[name]
                     )
                 )
-            # if no conflicts, update, loading functions and data if they are specified
-            else:
-                # Functions are flagged with the string "[function]"
-                if isinstance(value, str):
-                    if value.startswith("[function]"):
-                        self[name] = pybamm.load_function(
-                            os.path.join(path, value[10:] + ".py")
+            # check parameter already exists (for updating parameters)
+            if check_already_exists is True:
+                try:
+                    self._dict_items[name]
+                except KeyError as err:
+                    raise KeyError(
+                        """
+                        Cannot update parameter '{}' as it does not have a default
+                        value. ({}). If you are sure you want to update this parameter,
+                        use param.update({{name: value}}, check_already_exists=False)
+                        """.format(
+                            name, err.args[0]
                         )
-                    # Data is flagged with the string "[data]" or "[current data]"
-                    elif value.startswith("[current data]") or value.startswith(
-                        "[data]"
-                    ):
-                        if value.startswith("[current data]"):
-                            data_path = os.path.join(
-                                pybamm.root_dir(), "input", "drive_cycles"
-                            )
-                            filename = os.path.join(data_path, value[14:] + ".csv")
-                            function_name = value[14:]
-                        else:
-                            filename = os.path.join(path, value[6:] + ".csv")
-                            function_name = value[6:]
-                        data = pd.read_csv(
-                            filename, comment="#", skip_blank_lines=True
-                        ).to_numpy()
-                        # Save name and data
-                        super().__setitem__(name, (function_name, data))
-                    # Special case (hacky) for zero current
-                    elif value == "[zero]":
-                        super().__setitem__(name, 0)
-                    elif value == "[input]":
-                        super().__setitem__(name, pybamm.InputParameter(name))
-                    # Anything else should be a converted to a float
+                    )
+            # if no conflicts, update, loading functions and data if they are specified
+            # Functions are flagged with the string "[function]"
+            if isinstance(value, str):
+                if value.startswith("[function]"):
+                    loaded_value = pybamm.load_function(
+                        os.path.join(path, value[10:] + ".py")
+                    )
+                    self._dict_items[name] = loaded_value
+                    values[name] = loaded_value
+                # Data is flagged with the string "[data]" or "[current data]"
+                elif value.startswith("[current data]") or value.startswith("[data]"):
+                    if value.startswith("[current data]"):
+                        data_path = os.path.join(
+                            pybamm.root_dir(), "input", "drive_cycles"
+                        )
+                        filename = os.path.join(data_path, value[14:] + ".csv")
+                        function_name = value[14:]
                     else:
-                        super().__setitem__(name, float(value))
+                        filename = os.path.join(path, value[6:] + ".csv")
+                        function_name = value[6:]
+                    data = pd.read_csv(
+                        filename, comment="#", skip_blank_lines=True
+                    ).to_numpy()
+                    # Save name and data
+                    self._dict_items[name] = (function_name, data)
+                    values[name] = (function_name, data)
+                elif value == "[input]":
+                    self._dict_items[name] = pybamm.InputParameter(name)
+                # Anything else should be a converted to a float
                 else:
-                    super().__setitem__(name, value)
+                    self._dict_items[name] = float(value)
+                    values[name] = float(value)
+            else:
+                self._dict_items[name] = value
+        # check parameter values
+        self.check_and_update_parameter_values(values)
         # reset processed symbols
         self._processed_symbols = {}
 
     def check_and_update_parameter_values(self, values):
-        # Make sure "C-rate" and current are both non-zero
-        if "C-rate" in values and values["C-rate"] == 0:
-            raise ValueError(
-                """
-                "C-rate" cannot be zero. A possible alternative is to set
-                "Current function" to `0` instead.
-                """
-            )
+        # Make sure typical current is non-zero
         if "Typical current [A]" in values and values["Typical current [A]"] == 0:
             raise ValueError(
                 """
                 "Typical current [A]" cannot be zero. A possible alternative is to set
-                "Current function" to `0` instead.
+                "Current function [A]" to `0` instead.
+                """
+            )
+        if "C-rate" in values and "Current function [A]" in values:
+            raise ValueError(
+                """
+                Cannot provide both "C-rate" and "Current function [A]" simultaneously
                 """
             )
         # If the capacity of the cell has been provided, make sure "C-rate" and current
         # match with the stated capacity
-        if "Cell capacity [A.h]" in values or "Cell capacity [A.h]" in self:
+        if "Cell capacity [A.h]" in values or "Cell capacity [A.h]" in self._dict_items:
             # Capacity from values takes precedence
             if "Cell capacity [A.h]" in values:
                 capacity = values["Cell capacity [A.h]"]
             else:
-                capacity = self["Cell capacity [A.h]"]
+                capacity = self._dict_items["Cell capacity [A.h]"]
             # Make sure they match if both provided
-            if "C-rate" in values and "Typical current [A]" in values:
-                if values["C-rate"] * capacity != values["Typical current [A]"]:
-                    raise ValueError(
-                        """
-                        "C-rate" ({}C) and Typical current ({} A) provided do not match
-                        given capacity ({} Ah). These can be updated individually
-                        instead.
-                        """.format(
-                            values["C-rate"], values["Typical current [A]"], capacity
-                        )
-                    )
             # Update the other if only one provided
-            elif "C-rate" in values:
-                values["Typical current [A]"] = float(values["C-rate"]) * capacity
-            elif "Typical current [A]" in values:
-                values["C-rate"] = float(values["Typical current [A]"]) / capacity
-
-        # Update the current function if it is constant
-        self_and_values = {**self, **values}
-        if "Current function" in self_and_values and (
-            self_and_values["Current function"] == "[constant]"
-            or isinstance(self_and_values["Current function"], numbers.Number)
-        ):
-            values["Current function"] = {**self, **values}["Typical current [A]"]
+            if "C-rate" in values:
+                # Can't provide C-rate as a function
+                if callable(values["C-rate"]):
+                    value = CrateToCurrent(values["C-rate"], capacity)
+                elif isinstance(values["C-rate"], tuple):
+                    data = values["C-rate"][1]
+                    data[:, 1] = data[:, 1] * capacity
+                    value = (values["C-rate"][0] + "_to_Crate", data)
+                else:
+                    value = values["C-rate"] * capacity
+                self._dict_items["Current function [A]"] = value
+            elif "Current function [A]" in values:
+                if callable(values["Current function [A]"]):
+                    value = CurrentToCrate(values["Current function [A]"], capacity)
+                elif isinstance(values["Current function [A]"], tuple):
+                    data = values["Current function [A]"][1]
+                    data[:, 1] = data[:, 1] / capacity
+                    value = (values["Current function [A]"][0] + "_to_current", data)
+                else:
+                    value = values["Current function [A]"] / capacity
+                self._dict_items["C-rate"] = value
 
         return values
 
@@ -283,13 +340,13 @@ class ParameterValues(dict):
         elif processing == "update":
             processing_function = self.update_scalars
 
-        for variable, equation in unprocessed_model.rhs.items():
+        for variable, equation in model.rhs.items():
             pybamm.logger.debug(
                 "{} parameters for {!r} (rhs)".format(processing.capitalize(), variable)
             )
             model.rhs[variable] = processing_function(equation)
 
-        for variable, equation in unprocessed_model.algebraic.items():
+        for variable, equation in model.algebraic.items():
             pybamm.logger.debug(
                 "{} parameters for {!r} (algebraic)".format(
                     processing.capitalize(), variable
@@ -297,7 +354,7 @@ class ParameterValues(dict):
             )
             model.algebraic[variable] = processing_function(equation)
 
-        for variable, equation in unprocessed_model.initial_conditions.items():
+        for variable, equation in model.initial_conditions.items():
             pybamm.logger.debug(
                 "{} parameters for {!r} (initial conditions)".format(
                     processing.capitalize(), variable
@@ -310,10 +367,11 @@ class ParameterValues(dict):
         # small number of variables, e.g. {"negative tab": neg. tab bc,
         # "positive tab": pos. tab bc "no tab": no tab bc}.
         new_boundary_conditions = {}
-        for variable, bcs in unprocessed_model.boundary_conditions.items():
+        sides = ["left", "right", "negative tab", "positive tab", "no tab"]
+        for variable, bcs in model.boundary_conditions.items():
             processed_variable = processing_function(variable)
             new_boundary_conditions[processed_variable] = {}
-            for side in ["left", "right", "negative tab", "positive tab", "no tab"]:
+            for side in sides:
                 try:
                     bc, typ = bcs[side]
                     pybamm.logger.debug(
@@ -323,19 +381,25 @@ class ParameterValues(dict):
                     )
                     processed_bc = (processing_function(bc), typ)
                     new_boundary_conditions[processed_variable][side] = processed_bc
-                except KeyError:
-                    pass
+                except KeyError as err:
+                    # don't raise error if the key error comes from the side not being
+                    # found
+                    if err.args[0] in side:
+                        pass
+                    # do raise error otherwise (e.g. can't process symbol)
+                    else:
+                        raise KeyError(err)
 
         model.boundary_conditions = new_boundary_conditions
 
-        for variable, equation in unprocessed_model.variables.items():
+        for variable, equation in model.variables.items():
             pybamm.logger.debug(
                 "{} parameters for {!r} (variables)".format(
                     processing.capitalize(), variable
                 )
             )
             model.variables[variable] = processing_function(equation)
-        for event, equation in unprocessed_model.events.items():
+        for event, equation in model.events.items():
             pybamm.logger.debug(
                 "{} parameters for event '{}''".format(processing.capitalize(), event)
             )
@@ -441,8 +505,11 @@ class ParameterValues(dict):
                 function = pybamm.Interpolant(data, *new_children, name=name)
             elif isinstance(function_name, numbers.Number):
                 # If the "function" is provided is actually a scalar, return a Scalar
-                # object instead of throwing an error
-                function = pybamm.Scalar(function_name, name=symbol.name)
+                # object instead of throwing an error.
+                # Also use ones_like so that we get the right shapes
+                function = pybamm.Scalar(
+                    function_name, name=symbol.name
+                ) * pybamm.ones_like(*new_children)
             else:
                 # otherwise evaluate the function to create a new PyBaMM object
                 function = function_name(*new_children)
@@ -511,13 +578,10 @@ class ParameterValues(dict):
         for x in symbol.pre_order():
             if isinstance(x, pybamm.Scalar):
                 # update any Scalar nodes if their name is in the parameter dict
-                try:
-                    x.value = self[x.name]
+                if x.name in self._dict_items.keys():
+                    x.value = self._dict_items[x.name]
                     # update id
                     x.set_id()
-                except KeyError:
-                    # KeyError -> name not in parameter dict, don't update
-                    continue
 
         return symbol
 
@@ -540,3 +604,25 @@ class ParameterValues(dict):
             return processed_symbol.evaluate()
         else:
             raise ValueError("symbol must evaluate to a constant scalar")
+
+
+class CurrentToCrate:
+    "Convert a current function to a C-rate function"
+
+    def __init__(self, function, capacity):
+        self.function = function
+        self.capacity = capacity
+
+    def __call__(self, t):
+        return self.function(t) / self.capacity
+
+
+class CrateToCurrent:
+    "Convert a C-rate function to a current function"
+
+    def __init__(self, function, capacity):
+        self.function = function
+        self.capacity = capacity
+
+    def __call__(self, t):
+        return self.function(t) * self.capacity

@@ -38,7 +38,7 @@ for model in models:
 
 # solve model
 solutions = [None] * len(models)
-t_eval = np.linspace(0, 0.17, 100)
+t_eval = np.linspace(0, 0.25, 100)
 for i, model in enumerate(models):
     solver = pybamm.ScipySolver(atol=1e-8, rtol=1e-8)
     solution = solver.solve(model, t_eval)
@@ -51,5 +51,5 @@ output_variables = [
     "Cell temperature [K]",
 ]
 labels = ["Full thermal model", "Lumped thermal model"]
-plot = pybamm.QuickPlot(models, mesh, solutions, output_variables, labels)
+plot = pybamm.QuickPlot(solutions, output_variables, labels)
 plot.dynamic_plot()

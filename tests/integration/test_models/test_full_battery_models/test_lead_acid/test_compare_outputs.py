@@ -21,7 +21,7 @@ class TestCompareOutputs(unittest.TestCase):
 
         # load parameter values (same for all models)
         param = models[0].default_parameter_values
-        param.update({"Typical current [A]": 1})
+        param.update({"Current function [A]": 1})
         for model in models:
             param.process_model(model)
 
@@ -30,24 +30,22 @@ class TestCompareOutputs(unittest.TestCase):
         var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10}
 
         # discretise models
-        discs = {}
         for model in models:
             geometry = model.default_geometry
             param.process_geometry(geometry)
             mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
             disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
             disc.process_model(model)
-            discs[model] = disc
 
         # solve model
-        solutions = {}
+        solutions = []
         t_eval = np.linspace(0, 1, 100)
-        for i, model in enumerate(models):
+        for model in models:
             solution = model.default_solver.solve(model, t_eval)
-            solutions[model] = solution
+            solutions.append(solution)
 
         # test averages
-        comparison = StandardOutputComparison(models, discs, solutions)
+        comparison = StandardOutputComparison(solutions)
         comparison.test_averages()
 
     def test_compare_outputs_capacitance(self):
@@ -67,7 +65,7 @@ class TestCompareOutputs(unittest.TestCase):
         for models in model_combos:
             # load parameter values (same for all models)
             param = models[0].default_parameter_values
-            param.update({"Typical current [A]": 1})
+            param.update({"Current function [A]": 1})
             for model in models:
                 param.process_model(model)
 
@@ -86,14 +84,14 @@ class TestCompareOutputs(unittest.TestCase):
                 discs[model] = disc
 
             # solve model
-            solutions = {}
+            solutions = []
             t_eval = np.linspace(0, 1, 100)
-            for i, model in enumerate(models):
+            for model in models:
                 solution = model.default_solver.solve(model, t_eval)
-                solutions[model] = solution
+                solutions.append(solution)
 
             # compare outputs
-            comparison = StandardOutputComparison(models, discs, solutions)
+            comparison = StandardOutputComparison(solutions)
             comparison.test_all(skip_first_timestep=True)
 
 

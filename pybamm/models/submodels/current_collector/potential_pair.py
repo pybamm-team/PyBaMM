@@ -60,8 +60,7 @@ class BasePotentialPair(BaseModel):
 
     def set_initial_conditions(self, variables):
 
-        param = self.param
-        applied_current = param.current_with_time
+        applied_current = variables["Total current density"]
         cc_area = self._get_effective_current_collector_area()
         phi_s_cn = variables["Negative current collector potential"]
         i_boundary_cc = variables["Current collector current density"]
@@ -84,7 +83,7 @@ class PotentialPair1plus1D(BasePotentialPair):
         phi_s_cp = variables["Positive current collector potential"]
 
         param = self.param
-        applied_current = param.current_with_time
+        applied_current = variables["Total current density"]
         cc_area = self._get_effective_current_collector_area()
 
         # cc_area appears here due to choice of non-dimensionalisation
@@ -124,7 +123,7 @@ class PotentialPair2plus1D(BasePotentialPair):
         phi_s_cp = variables["Positive current collector potential"]
 
         param = self.param
-        applied_current = param.current_with_time
+        applied_current = variables["Total current density"]
         cc_area = self._get_effective_current_collector_area()
 
         # Note: we divide by the *numerical* tab area so that the correct total

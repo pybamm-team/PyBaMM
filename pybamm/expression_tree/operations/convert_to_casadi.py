@@ -45,7 +45,14 @@ class CasadiConverter(object):
     def _convert(self, symbol, t=None, y=None, u=None):
         """ See :meth:`CasadiConverter.convert()`. """
         if isinstance(
-            symbol, (pybamm.Scalar, pybamm.Array, pybamm.Time, pybamm.InputParameter)
+            symbol,
+            (
+                pybamm.Scalar,
+                pybamm.Array,
+                pybamm.Time,
+                pybamm.InputParameter,
+                pybamm.ExternalVariable,
+            ),
         ):
             return casadi.MX(symbol.evaluate(t, y, u))
 
@@ -59,11 +66,8 @@ class CasadiConverter(object):
             # process children
             converted_left = self.convert(left, t, y, u)
             converted_right = self.convert(right, t, y, u)
-            if isinstance(symbol, pybamm.Outer):
-                return casadi.kron(converted_left, converted_right)
-            else:
-                # _binary_evaluate defined in derived classes for specific rules
-                return symbol._binary_evaluate(converted_left, converted_right)
+            # _binary_evaluate defined in derived classes for specific rules
+            return symbol._binary_evaluate(converted_left, converted_right)
 
         elif isinstance(symbol, pybamm.UnaryOperator):
             converted_child = self.convert(symbol.child, t, y, u)

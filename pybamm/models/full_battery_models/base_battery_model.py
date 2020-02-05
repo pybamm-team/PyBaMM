@@ -37,10 +37,8 @@ class BaseBatteryModel(pybamm.BaseModel):
                 (default) or "varying". Not currently implemented in any of the models.
             * "current collector" : str, optional
                 Sets the current collector model to use. Can be "uniform" (default),
-                "potential pair", "potential pair quite conductive", "single particle
-                potential pair" or "set external potential". The submodel
-                "single particle potential pair" can only be used with lithium-ion
-                single particle models. The submodel "set external potential" can only
+                "potential pair", "potential pair quite conductive", or
+                "set external potential". The submodel "set external potential" can only
                 be used with the SPM.
             * "particle" : str, optional
                 Sets the submodel to use to describe behaviour within the particle.
@@ -147,6 +145,7 @@ class BaseBatteryModel(pybamm.BaseModel):
     @options.setter
     def options(self, extra_options):
         default_options = {
+            "operating mode": "current",
             "dimensionality": 0,
             "surface form": False,
             "convection": False,
@@ -168,6 +167,13 @@ class BaseBatteryModel(pybamm.BaseModel):
                     raise pybamm.OptionError("option {} not recognised".format(name))
 
         # Some standard checks to make sure options are compatible
+        if not (
+            options["operating mode"] in ["current", "voltage", "power"]
+            or callable(options["operating mode"])
+        ):
+            raise pybamm.OptionError(
+                "operating mode '{}' not recognised".format(options["operating mode"])
+            )
         if (
             isinstance(self, (pybamm.lead_acid.LOQS, pybamm.lead_acid.Composite))
             and options["surface form"] is False
@@ -189,7 +195,6 @@ class BaseBatteryModel(pybamm.BaseModel):
             "potential pair",
             "potential pair quite conductive",
             "potential pair quite conductive averaged",
-            "single particle potential pair",
             "set external potential",
         ]:
             raise pybamm.OptionError(
@@ -260,16 +265,6 @@ class BaseBatteryModel(pybamm.BaseModel):
                 raise pybamm.OptionError(
                     "thermal effects not implemented for lead-acid models"
                 )
-        if options[
-            "current collector"
-        ] == "single particle potential pair" and not isinstance(
-            self, (pybamm.lithium_ion.SPM, pybamm.lithium_ion.SPMe)
-        ):
-            raise pybamm.OptionError(
-                "option {} only compatible with SPM or SPMe".format(
-                    options["current collector"]
-                )
-            )
         if options["current collector"] == "set external potential" and not isinstance(
             self, pybamm.lithium_ion.SPM
         ):
@@ -371,18 +366,6 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         self.variables = {}
 
-        # Current
-        i_cell = pybamm.electrical_parameters.current_with_time
-        i_cell_dim = pybamm.electrical_parameters.dimensional_current_density_with_time
-        I = pybamm.electrical_parameters.dimensional_current_with_time
-        self.variables.update(
-            {
-                "Total current density": i_cell,
-                "Total current density [A.m-2]": i_cell_dim,
-                "Current [A]": I,
-            }
-        )
-
         # Time
         time_scale = pybamm.electrical_parameters.timescale
         self.variables.update(
@@ -391,7 +374,6 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "Time [s]": pybamm.t * time_scale,
                 "Time [min]": pybamm.t * time_scale / 60,
                 "Time [h]": pybamm.t * time_scale / 3600,
-                "Discharge capacity [A.h]": I * pybamm.t * time_scale / 3600,
             }
         )
 
@@ -479,7 +461,11 @@ class BaseBatteryModel(pybamm.BaseModel):
                             )
                         else:
                             # try setting coupled variables on next loop through
-                            pass
+                            pybamm.logger.debug(
+                                "Can't find {}, trying other submodels first".format(
+                                    key
+                                )
+                            )
 
     def build_model_equations(self):
         # Set model equations
@@ -532,10 +518,10 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         self.build_model_equations()
 
-        pybamm.logger.debug("Setting voltage variables")
+        pybamm.logger.debug("Setting voltage variables ({})".format(self.name))
         self.set_voltage_variables()
 
-        pybamm.logger.debug("Setting SoC variables")
+        pybamm.logger.debug("Setting SoC variables ({})".format(self.name))
         self.set_soc_variables()
 
         # Massive hack for consistent delta_phi = phi_s - phi_e with SPMe
@@ -550,6 +536,30 @@ class BaseBatteryModel(pybamm.BaseModel):
                 self.variables.update(var)
 
         self._built = True
+
+    def set_external_circuit_submodel(self):
+        """
+        Define how the external circuit defines the boundary conditions for the model,
+        e.g. (not necessarily constant-) current, voltage, etc
+        """
+        if self.options["operating mode"] == "current":
+            self.submodels["external circuit"] = pybamm.external_circuit.CurrentControl(
+                self.param
+            )
+        elif self.options["operating mode"] == "voltage":
+            self.submodels[
+                "external circuit"
+            ] = pybamm.external_circuit.VoltageFunctionControl(self.param)
+        elif self.options["operating mode"] == "power":
+            self.submodels[
+                "external circuit"
+            ] = pybamm.external_circuit.PowerFunctionControl(self.param)
+        elif callable(self.options["operating mode"]):
+            self.submodels[
+                "external circuit"
+            ] = pybamm.external_circuit.FunctionControl(
+                self.param, self.options["operating mode"]
+            )
 
     def set_tortuosity_submodels(self):
         self.submodels["electrolyte tortuosity"] = pybamm.tortuosity.Bruggeman(
@@ -664,8 +674,6 @@ class BaseBatteryModel(pybamm.BaseModel):
                 submodel = pybamm.current_collector.PotentialPair1plus1D(self.param)
             elif self.options["dimensionality"] == 2:
                 submodel = pybamm.current_collector.PotentialPair2plus1D(self.param)
-        elif self.options["current collector"] == "single particle potential pair":
-            submodel = pybamm.current_collector.SingleParticlePotentialPair(self.param)
         elif self.options["current collector"] == "set external potential":
             if self.options["dimensionality"] == 1:
                 submodel = pybamm.current_collector.SetPotentialSingleParticle1plus1D(
@@ -741,64 +749,6 @@ class BaseBatteryModel(pybamm.BaseModel):
         eta_r_av = eta_r_p_av - eta_r_n_av
         eta_r_av_dim = eta_r_p_av_dim - eta_r_n_av_dim
 
-        # terminal voltage (Note: phi_s_cn is zero at the negative tab)
-        phi_s_cp = self.variables["Positive current collector potential"]
-        phi_s_cp_dim = self.variables["Positive current collector potential [V]"]
-
-        vars = pybamm.standard_spatial_vars
-
-        if self.options["dimensionality"] == 0:
-            V = phi_s_cp
-            V_dim = phi_s_cp_dim
-
-            def cc_integral(var):
-                return var
-
-        elif self.options["dimensionality"] in [1, 2]:
-            V = pybamm.BoundaryValue(phi_s_cp, "positive tab")
-            V_dim = pybamm.BoundaryValue(phi_s_cp_dim, "positive tab")
-
-            def cc_integral(var):
-                return pybamm.Integral(var, [vars.y, vars.z])
-
-        # Add current collector losses in 2D
-        param = self.param
-        i_av = param.current_with_time
-        if (
-            isinstance(self, pybamm.lead_acid.BaseHigherOrderModel)
-            and self.options["current collector"]
-            == "potential pair quite conductive averaged"
-        ):
-
-            cc_overpotential = (
-                -i_av
-                / 3
-                * (
-                    1 / (param.sigma_cn * param.delta ** 2 * param.l_cn)
-                    + 1 / (param.sigma_cp * param.delta ** 2 * param.l_cp)
-                )
-            )
-            cc_overpotential_dim = param.potential_scale * cc_overpotential
-
-            self.variables.update(
-                {
-                    "Current collector overpotential": cc_overpotential,
-                    "Current collector overpotential [V]": cc_overpotential_dim,
-                    "Battery current collector overpotential [V]": cc_overpotential_dim
-                    * pybamm.Parameter(
-                        "Number of cells connected in series to make a battery"
-                    ),
-                    "Voltage minus cc overpotential": V,
-                    "Voltage minus cc overpotential [V]": V_dim,
-                }
-            )
-            V = V + cc_overpotential
-            V_dim = V_dim + cc_overpotential_dim
-        phi_s_cn = self.variables["Negative current collector potential"]
-        phi_s_cn_dim = self.variables["Negative current collector potential [V]"]
-        V_local = phi_s_cp - phi_s_cn
-        V_local_dim = phi_s_cp_dim - phi_s_cn_dim
-
         # TODO: add current collector losses to the voltage in 3D
 
         eta_e_av = self.variables.get(
@@ -840,15 +790,15 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "X-averaged solid phase ohmic losses": delta_phi_s_av,
                 "Average solid phase ohmic losses": cc_integral(delta_phi_s_av),
                 "X-averaged solid phase ohmic losses [V]": delta_phi_s_av_dim,
-                "Average solid phase ohmic losses [V]": cc_integral(delta_phi_s_av_dim),
-                "Local voltage": V_local,
-                "Local voltage [V]": V_local_dim,
-                "Terminal voltage": V,
-                "Terminal voltage [V]": V_dim,
             }
         )
 
         # Battery-wide variables
+        V_dim = self.variables["Terminal voltage [V]"]
+        eta_e_av_dim = self.variables.get("X-averaged electrolyte ohmic losses [V]", 0)
+        eta_c_av_dim = self.variables.get(
+            "X-averaged concentration overpotential [V]", 0
+        )
         num_cells = pybamm.Parameter(
             "Number of cells connected in series to make a battery"
         )
@@ -881,6 +831,10 @@ class BaseBatteryModel(pybamm.BaseModel):
         voltage = self.variables["Terminal voltage"]
         self.events["Minimum voltage"] = voltage - self.param.voltage_low_cut
         self.events["Maximum voltage"] = voltage - self.param.voltage_high_cut
+
+        # Power
+        I_dim = self.variables["Current [A]"]
+        self.variables.update({"Terminal power [W]": I_dim * V_dim})
 
     def set_soc_variables(self):
         """

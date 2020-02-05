@@ -100,7 +100,7 @@ i_boundary_cc_composite = pybamm.Variable(
 # Particle concentration
 c_s_n = pybamm.Variable(
     "Negative particle concentration",
-    "negative particle",
+    domain="negative particle",
     auxiliary_domains={
         "secondary": "negative electrode",
         "tertiary": "current collector",
@@ -108,7 +108,7 @@ c_s_n = pybamm.Variable(
 )
 c_s_p = pybamm.Variable(
     "Positive particle concentration",
-    "positive particle",
+    domain="positive particle",
     auxiliary_domains={
         "secondary": "positive electrode",
         "tertiary": "current collector",
@@ -116,29 +116,29 @@ c_s_p = pybamm.Variable(
 )
 c_s_n_xav = pybamm.Variable(
     "X-averaged negative particle concentration",
-    "negative particle",
+    domain="negative particle",
     auxiliary_domains={"secondary": "current collector"},
 )
 c_s_p_xav = pybamm.Variable(
     "X-averaged positive particle concentration",
-    "positive particle",
+    domain="positive particle",
     auxiliary_domains={"secondary": "current collector"},
 )
 c_s_n_surf = pybamm.Variable(
     "Negative particle surface concentration",
-    "negative electrode",
+    domain="negative electrode",
     auxiliary_domains={"secondary": "current collector"},
 )
 c_s_p_surf = pybamm.Variable(
     "Positive particle surface concentration",
-    "positive electrode",
+    domain="positive electrode",
     auxiliary_domains={"secondary": "current collector"},
 )
 c_s_n_surf_xav = pybamm.Variable(
-    "X-averaged negative particle surface concentration", "current collector"
+    "X-averaged negative particle surface concentration", domain="current collector"
 )
 c_s_p_surf_xav = pybamm.Variable(
-    "X-averaged positive particle surface concentration", "current collector"
+    "X-averaged positive particle surface concentration", domain="current collector"
 )
 
 

@@ -94,7 +94,7 @@ Before installing scikits.odes, you need to have installed:
 - Fortran compiler (e.g. gfortran)
 - BLAS/LAPACK install (OpenBLAS is recommended by the scikits.odes developers)
 - CMake (for building Sundials)
-- Sundials 4.1.0
+- Sundials 5.0.0
 
 You can install these on Ubuntu or Debian using apt-get:
 
@@ -102,17 +102,17 @@ You can install these on Ubuntu or Debian using apt-get:
 sudo apt-get install python3-dev gfortran gcc cmake libopenblas-dev
 ```
 
-To install Sundials 4.1.0, on the command-line type:
+To install Sundials 5.0.0, on the command-line type:
 
 ```bash
 INSTALL_DIR=`pwd`/sundials
-wget https://computation.llnl.gov/projects/sundials/download/sundials-4.1.0.tar.gz
-tar -xvf sundials-4.1.0.tar.gz
-mkdir build-sundials-4.1.0
-cd build-sundials-4.1.0/
-cmake -DLAPACK_ENABLE=ON -DSUNDIALS_INDEX_TYPE=int32_t -DBUILD_ARKODE:BOOL=OFF -DEXAMPLES_ENABLE:BOOL=OFF -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR ../sundials-4.1.0/
+wget https://computation.llnl.gov/projects/sundials/download/sundials-5.0.0.tar.gz
+tar -xvf sundials-5.0.0.tar.gz
+mkdir build-sundials-5.0.0
+cd build-sundials-5.0.0/
+cmake -DLAPACK_ENABLE=ON -DSUNDIALS_INDEX_TYPE=int32_t -DBUILD_ARKODE:BOOL=OFF -DEXAMPLES_ENABLE:BOOL=OFF -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR ../sundials-5.0.0/
 make install
-rm -r ../sundials-4.1.0
+rm -r ../sundials-5.0.0
 ```
 
 Then install [scikits.odes](https://github.com/bmcage/odes), letting it know the sundials install location:

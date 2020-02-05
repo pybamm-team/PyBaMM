@@ -12,14 +12,14 @@ class TestLeadAcidComposite(unittest.TestCase):
     def test_basic_processing(self):
         model = pybamm.lead_acid.Composite()
         param = model.default_parameter_values
-        param.update({"Typical current [A]": 1})
+        param.update({"Current function [A]": 1})
         modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_all()
 
     def test_basic_processing_with_convection(self):
         model = pybamm.lead_acid.Composite()
         param = model.default_parameter_values
-        param.update({"Typical current [A]": 1})
+        param.update({"Current function [A]": 1})
         modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_all()
 
@@ -51,7 +51,7 @@ class TestLeadAcidCompositeSurfaceForm(unittest.TestCase):
         options = {"surface form": "differential"}
         model = pybamm.lead_acid.Composite(options)
         param = model.default_parameter_values
-        param.update({"Typical current [A]": 1})
+        param.update({"Current function [A]": 1})
         modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_all()
 
@@ -59,7 +59,7 @@ class TestLeadAcidCompositeSurfaceForm(unittest.TestCase):
         options = {"surface form": "algebraic"}
         model = pybamm.lead_acid.Composite(options)
         param = model.default_parameter_values
-        param.update({"Typical current [A]": 1})
+        param.update({"Current function [A]": 1})
         modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_all()  # solver=pybamm.CasadiSolver())
 
@@ -68,7 +68,7 @@ class TestLeadAcidCompositeExtended(unittest.TestCase):
     def test_basic_processing(self):
         model = pybamm.lead_acid.CompositeExtended()
         param = model.default_parameter_values
-        param.update({"Typical current [A]": 1})
+        param.update({"Current function [A]": 1})
         modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_all()
 
