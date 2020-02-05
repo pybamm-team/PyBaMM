@@ -87,8 +87,12 @@ for model_name in models.keys():
 # solve all models for all numbers of points
 solved_models = {}
 final_time = 100  # just some big number
+terminal_voltage = {}
+
+t = t_eval
 for model_name in models.keys():
     solved_models[model_name] = {}
+    terminal_voltage[model_name] = {}
 for pt in pts:
     var_pts = set_var_pts(pt)
     for model_name, model in models.items():
@@ -96,7 +100,8 @@ for pt in pts:
         solved_models[model_name][str(pt) + " points"] = model
         final_time = min(model.t[-1], final_time)
 
-t = np.linspace(0, final_time, time_pts)
+        variables = model.processed_variables(["Terminal voltage [V]"])
+        terminal_voltage[model_name][str(pt) + " points"] = variables["Terminal voltage [V]"](t)
 
 # find truth
 truth_pts = max(pts)
@@ -106,8 +111,7 @@ truth_voltage = truth_variables["Terminal voltage [V]"](t)
 
 for pt in pts:
     for model_name, model in models.items():
-        variables = model.processed_variables(["Terminal voltage [V]"])
-        voltage = variables["Terminal voltage [V]"](t)
+        voltage = terminal_voltage[model_name][str(pt) + " points"]
         abs_errors[model_name][str(pt) + " points"] = mean_abs_error(
             voltage, truth_voltage
         )
