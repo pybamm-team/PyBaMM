@@ -92,14 +92,6 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
                 "if scipy.sparse.issparse({1}) else "
                 "{0} * {1}".format(children_vars[0], children_vars[1])
             )
-        elif isinstance(symbol, pybamm.Outer):
-            symbol_str = "np.outer({}, {}).reshape(-1, 1)".format(
-                children_vars[0], children_vars[1]
-            )
-        elif isinstance(symbol, pybamm.Kron):
-            symbol_str = "scipy.sparse.csr_matrix(scipy.sparse.kron({}, {}))".format(
-                children_vars[0], children_vars[1]
-            )
         else:
             symbol_str = children_vars[0] + " " + symbol.name + " " + children_vars[1]
 
@@ -174,6 +166,9 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
 
     elif isinstance(symbol, pybamm.Time):
         symbol_str = "t"
+
+    elif isinstance(symbol, pybamm.InputParameter):
+        symbol_str = "u['{}']".format(symbol.name)
 
     else:
         raise NotImplementedError(
@@ -270,7 +265,7 @@ class EvaluatorPython:
             self._result_var, "return" + self._result_var, "eval"
         )
 
-    def evaluate(self, t=None, y=None, known_evals=None):
+    def evaluate(self, t=None, y=None, u=None, known_evals=None):
         """
         Acts as a drop-in replacement for :func:`pybamm.Symbol.evaluate`
         """

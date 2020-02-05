@@ -27,7 +27,7 @@ class IndependentVariable(pybamm.Symbol):
     def __init__(self, name, domain=None, auxiliary_domains=None):
         super().__init__(name, domain=domain, auxiliary_domains=auxiliary_domains)
 
-    def evaluate_for_shape(self):
+    def _evaluate_for_shape(self):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
         return pybamm.evaluate_for_shape_using_domain(
             self.domain, self.auxiliary_domains
@@ -51,13 +51,13 @@ class Time(IndependentVariable):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
         return Time()
 
-    def _base_evaluate(self, t, y=None):
+    def _base_evaluate(self, t, y=None, u=None):
         """ See :meth:`pybamm.Symbol._base_evaluate()`. """
         if t is None:
             raise ValueError("t must be provided")
         return t
 
-    def evaluate_for_shape(self):
+    def _evaluate_for_shape(self):
         """
         Return the scalar '0' to represent the shape of the independent variable `Time`.
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
@@ -85,9 +85,7 @@ class SpatialVariable(IndependentVariable):
         domain = self.domain
 
         if name not in KNOWN_SPATIAL_VARS:
-            raise ValueError(
-                "name must be KNOWN_SPATIAL_VARS  but is '{}'".format(name)
-            )
+            raise ValueError(f"name must be in {KNOWN_SPATIAL_VARS}  but is '{name}'")
         if domain == []:
             raise ValueError("domain must be provided")
 

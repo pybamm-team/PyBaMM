@@ -33,6 +33,7 @@ class SPM(BaseModel):
         super().__init__(options, name)
 
         self.set_reactions()
+        self.set_external_circuit_submodel()
         self.set_porosity_submodel()
         self.set_tortuosity_submodels()
         self.set_convection_submodel()
@@ -98,14 +99,8 @@ class SPM(BaseModel):
 
     def set_positive_electrode_submodel(self):
 
-        if self.options["current collector"] == "set external potential":
-            # Potentials are set by external model
-            set_positive_potential = False
-        else:
-            # Potential determined by 1D model
-            set_positive_potential = True
         self.submodels["positive electrode"] = pybamm.electrode.ohm.LeadingOrder(
-            self.param, "Positive", set_positive_potential=set_positive_potential
+            self.param, "Positive"
         )
 
     def set_electrolyte_submodel(self):

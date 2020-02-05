@@ -244,7 +244,7 @@ class TestEvaluate(unittest.TestCase):
         disc = get_1p1d_discretisation_for_testing()
 
         a_dom = ["negative electrode"]
-        b_dom = ["positive electrode"]
+        b_dom = ["separator"]
         a = pybamm.Variable("a", domain=a_dom)
         b = pybamm.Variable("b", domain=b_dom)
         conc = pybamm.Concatenation(a, b)
@@ -390,14 +390,6 @@ class TestEvaluate(unittest.TestCase):
         for t, y in zip(t_tests, y_tests):
             result = evaluator.evaluate(t=t, y=y).toarray()
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y).toarray())
-
-        # test Outer
-        v = pybamm.Vector(np.ones(5), domain="current collector")
-        w = pybamm.Vector(2 * np.ones(3), domain="test")
-        expr = pybamm.Outer(v, w)
-        evaluator = pybamm.EvaluatorPython(expr)
-        result = evaluator.evaluate()
-        np.testing.assert_allclose(result, expr.evaluate())
 
         # test Inner
         v = pybamm.Vector(np.ones(5), domain="test")

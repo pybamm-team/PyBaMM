@@ -20,6 +20,10 @@ class TestParameterValues(unittest.TestCase):
         # from dict
         param = pybamm.ParameterValues({"a": 1})
         self.assertEqual(param["a"], 1)
+        self.assertEqual(list(param.keys())[0], "a")
+        self.assertEqual(list(param.values())[0], 1)
+        self.assertEqual(list(param.items())[0], ("a", 1))
+
         # from file
         param = pybamm.ParameterValues(
             values="input/parameters/lithium-ion/cathodes/lico2_Marquis2019/"
@@ -52,41 +56,64 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(param["a"], 2)
         # with conflict
         param.update({"a": 3})
-        self.assertEqual(param["a"], 3)
+        # via __setitem__
+        param["a"] = 2
+        self.assertEqual(param["a"], 2)
         with self.assertRaisesRegex(
-            ValueError, "parameter 'a' already defined with value '3'"
+            ValueError, "parameter 'a' already defined with value '2'"
         ):
             param.update({"a": 4}, check_conflict=True)
+        # with parameter not existing yet
+        with self.assertRaisesRegex(KeyError, "Cannot update parameter"):
+            param.update({"b": 1})
 
     def test_check_and_update_parameter_values(self):
         # Can't provide a current density of 0, as this will cause a ZeroDivision error
         bad_values = {"Typical current [A]": 0}
         with self.assertRaisesRegex(ValueError, "Typical current"):
             pybamm.ParameterValues(bad_values)
-        # same with C-rate
-        bad_values = {"C-rate": 0}
-        with self.assertRaisesRegex(ValueError, "C-rate"):
-            pybamm.ParameterValues(bad_values)
-        # if both C-rate and current are provided they must match with capacity
-        bad_values = {"C-rate": 1, "Typical current [A]": 5, "Cell capacity [A.h]": 10}
-        with self.assertRaisesRegex(ValueError, "do not match"):
+        # can't provide both C-rate and current function
+        bad_values = {"C-rate": 1, "Current function [A]": 5}
+        with self.assertRaisesRegex(ValueError, "Cannot provide both"):
             pybamm.ParameterValues(bad_values)
         # if only C-rate and capacity provided, update current
         values = {"C-rate": 1, "Cell capacity [A.h]": 10}
         param = pybamm.ParameterValues(values)
-        self.assertEqual(param["Typical current [A]"], 10)
+        self.assertEqual(param["Current function [A]"], 10)
         # if only current and capacity provided, update C-rate
-        values = {"Typical current [A]": 1, "Cell capacity [A.h]": 10}
+        values = {"Current function [A]": 1, "Cell capacity [A.h]": 10}
         param = pybamm.ParameterValues(values)
         self.assertEqual(param["C-rate"], 1 / 10)
 
-        # Test with current function
-        values = {"Typical current [A]": 1, "Current function": "[constant]"}
+        # With functions
+        # if only C-rate and capacity provided, update current
+        values = {"C-rate": pybamm.sin, "Cell capacity [A.h]": 10}
         param = pybamm.ParameterValues(values)
-        self.assertEqual(param["Current function"], 1)
-        values = {"Typical current [A]": 1, "Current function": "[zero]"}
+        self.assertEqual(param["Current function [A]"](2).evaluate(), 10 * np.sin(2))
+        # if only current and capacity provided, update C-rate
+        values = {"Current function [A]": pybamm.exp, "Cell capacity [A.h]": 10}
         param = pybamm.ParameterValues(values)
-        self.assertEqual(param["Current function"], 0)
+        self.assertEqual(param["C-rate"](5).evaluate(), np.exp(5) / 10)
+
+        # With data
+        # if only C-rate and capacity provided, update current
+        x = np.linspace(0, 10)[:, np.newaxis]
+        linear = np.hstack([x, 2 * x])
+        values = {"C-rate": ("linear", linear), "Cell capacity [A.h]": 10}
+        param = pybamm.ParameterValues(values)
+        self.assertEqual(param["Current function [A]"][0], "linear_to_Crate")
+        np.testing.assert_array_equal(
+            param["Current function [A]"][1], np.hstack([x, 20 * x])
+        )
+        # if only current and capacity provided, update C-rate
+        x = np.linspace(0, 10)[:, np.newaxis]
+        linear = np.hstack([x, 2 * x])
+        values = {"Current function [A]": ("linear", linear), "Cell capacity [A.h]": 10}
+        param = pybamm.ParameterValues(values)
+        self.assertEqual(param["C-rate"][0], "linear_to_current")
+        np.testing.assert_array_almost_equal(
+            param["C-rate"][1], np.hstack([x, 0.2 * x])
+        )
 
     def test_process_symbol(self):
         parameter_values = pybamm.ParameterValues({"a": 1, "b": 2, "c": 3})
@@ -156,7 +183,7 @@ class TestParameterValues(unittest.TestCase):
 
         # process broadcast
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-        broad = pybamm.Broadcast(a, whole_cell)
+        broad = pybamm.PrimaryBroadcast(a, whole_cell)
         processed_broad = parameter_values.process_symbol(broad)
         self.assertIsInstance(processed_broad, pybamm.Broadcast)
         self.assertEqual(processed_broad.domain, whole_cell)
@@ -217,16 +244,32 @@ class TestParameterValues(unittest.TestCase):
             processed_g.evaluate(y=np.ones(10)), np.ones((10, 1))
         )
 
-        # process outer
-        c = pybamm.Parameter("c", domain="current collector")
-        outer = pybamm.Outer(c, b)
-        processed_outer = parameter_values.process_symbol(outer)
-        self.assertIsInstance(processed_outer, pybamm.Outer)
-
         # not implemented
         sym = pybamm.Symbol("sym")
         with self.assertRaises(NotImplementedError):
             parameter_values.process_symbol(sym)
+
+        # not found
+        with self.assertRaises(KeyError):
+            x = pybamm.Parameter("x")
+            parameter_values.process_symbol(x)
+
+    def test_process_input_parameter(self):
+        parameter_values = pybamm.ParameterValues({"a": "[input]", "b": 3})
+        # process input parameter
+        a = pybamm.Parameter("a")
+        processed_a = parameter_values.process_symbol(a)
+        self.assertIsInstance(processed_a, pybamm.InputParameter)
+        self.assertEqual(processed_a.evaluate(u={"a": 5}), 5)
+
+        # process binary operation
+        b = pybamm.Parameter("b")
+        add = a + b
+        processed_add = parameter_values.process_symbol(add)
+        self.assertIsInstance(processed_add, pybamm.Addition)
+        self.assertIsInstance(processed_add.children[0], pybamm.InputParameter)
+        self.assertIsInstance(processed_add.children[1], pybamm.Scalar)
+        self.assertEqual(processed_add.evaluate(u={"a": 4}), 7)
 
     def test_process_function_parameter(self):
         parameter_values = pybamm.ParameterValues(
@@ -246,7 +289,9 @@ class TestParameterValues(unittest.TestCase):
         # process constant function
         const = pybamm.FunctionParameter("const", a)
         processed_const = parameter_values.process_symbol(const)
-        self.assertIsInstance(processed_const, pybamm.Scalar)
+        self.assertIsInstance(processed_const, pybamm.Multiplication)
+        self.assertIsInstance(processed_const.left, pybamm.Scalar)
+        self.assertIsInstance(processed_const.right, pybamm.Scalar)
         self.assertEqual(processed_const.evaluate(), 254)
 
         # process differentiated function parameter
@@ -331,6 +376,7 @@ class TestParameterValues(unittest.TestCase):
                 "cathodes",
                 "lico2_Marquis2019",
             ),
+            check_already_exists=False,
         )
 
         a = pybamm.Parameter("a")
@@ -445,6 +491,14 @@ class TestParameterValues(unittest.TestCase):
         self.assertTrue(
             isinstance(model.variables["d_var1"].children[1], pybamm.Variable)
         )
+
+        # bad boundary conditions
+        model = pybamm.BaseModel()
+        model.algebraic = {var1: var1}
+        x = pybamm.Parameter("x")
+        model.boundary_conditions = {var1: {"left": (x, "Dirichlet")}}
+        with self.assertRaises(KeyError):
+            parameter_values.process_model(model)
 
     def test_process_empty_model(self):
         model = pybamm.BaseModel()

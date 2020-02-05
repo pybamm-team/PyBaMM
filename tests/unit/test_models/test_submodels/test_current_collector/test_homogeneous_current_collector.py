@@ -15,7 +15,8 @@ class TestUniformModel(unittest.TestCase):
         variables = {
             "Positive current collector potential": pybamm.PrimaryBroadcast(
                 0, "current collector"
-            )
+            ),
+            "Total current density": 0,
         }
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()

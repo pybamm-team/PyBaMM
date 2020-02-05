@@ -240,6 +240,9 @@ tau_diffusion_p = R_p ** 2 / D_p_dimensional(c_p_max, T_ref)
 # Thermal diffusion timescale
 tau_th_yz = pybamm.thermal_parameters.tau_th_yz
 
+# Choose discharge timescale
+timescale = tau_discharge
+
 # --------------------------------------------------------------------------------------
 "4. Dimensionless Parameters"
 # Timescale ratios
@@ -442,14 +445,15 @@ def dUdT_p(c_s_p):
 
 
 # --------------------------------------------------------------------------------------
-"6. Input current"
+# 6. Input current and voltage
+
 dimensional_current_with_time = pybamm.FunctionParameter(
-    "Current function", pybamm.t * tau_discharge
+    "Current function [A]", pybamm.t * timescale
 )
 dimensional_current_density_with_time = dimensional_current_with_time / (
     n_electrodes_parallel * pybamm.geometric_parameters.A_cc
 )
-
 current_with_time = (
     dimensional_current_with_time / I_typ * pybamm.Function(np.sign, I_typ)
 )
+

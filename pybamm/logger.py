@@ -18,4 +18,3 @@ logging.Formatter(datefmt="%Y-%m-%d %H:%M:%S", fmt="%(asctime)s.%(msecs)03d")
 # Create a custom logger
 logger = logging.getLogger(__name__)
 set_logging_level("WARNING")
-

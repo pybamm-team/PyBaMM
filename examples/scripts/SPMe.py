@@ -30,5 +30,5 @@ t_eval = np.linspace(0, 0.17, 100)
 solution = pybamm.CasadiSolver(method="cvodes", mode="fast").solve(model, t_eval)
 
 # plot
-plot = pybamm.QuickPlot(model, mesh, solution)
+plot = pybamm.QuickPlot(solution)
 plot.dynamic_plot()

@@ -74,7 +74,7 @@ class TestSPM(unittest.TestCase):
         options = {"thermal": "isothermal"}
         model = pybamm.lithium_ion.SPM(options)
         parameter_values = model.default_parameter_values
-        parameter_values.update({"Typical current [A]": -1})
+        parameter_values.update({"Current function [A]": -1})
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 
@@ -82,7 +82,7 @@ class TestSPM(unittest.TestCase):
         options = {"thermal": "isothermal"}
         model = pybamm.lithium_ion.SPM(options)
         parameter_values = model.default_parameter_values
-        parameter_values.update({"Current function": "[zero]"})
+        parameter_values.update({"Current function [A]": 0})
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 

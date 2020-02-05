@@ -91,15 +91,6 @@ class Symbol(anytree.NodeMixin):
 
         if children is None:
             children = []
-        if domain is None:
-            domain = []
-        elif isinstance(domain, str):
-            domain = [domain]
-        if auxiliary_domains is None:
-            auxiliary_domains = {}
-        for level, dom in auxiliary_domains.items():
-            if isinstance(dom, str):
-                auxiliary_domains[level] = [dom]
 
         for child in children:
             # copy child before adding
@@ -110,6 +101,7 @@ class Symbol(anytree.NodeMixin):
         self.cached_children = super(Symbol, self).children
 
         # Set auxiliary domains
+        self._domain = None
         self.auxiliary_domains = auxiliary_domains
         # Set domain (and hence id)
         self.domain = domain
@@ -157,8 +149,16 @@ class Symbol(anytree.NodeMixin):
 
     @domain.setter
     def domain(self, domain):
-        if isinstance(domain, str):
+        if domain is None:
+            domain = []
+        elif isinstance(domain, str):
             domain = [domain]
+        if domain == [] and self.auxiliary_domains != {}:
+            raise pybamm.DomainError(
+                "Domain cannot be empty if auxiliary domains are not empty"
+            )
+        if domain in self.auxiliary_domains.values():
+            raise pybamm.DomainError("Domain cannot be the same as an auxiliary domain")
         try:
             iter(domain)
         except TypeError:
@@ -167,6 +167,43 @@ class Symbol(anytree.NodeMixin):
             self._domain = domain
             # Update id since domain has changed
             self.set_id()
+
+    @property
+    def auxiliary_domains(self):
+        return self._auxiliary_domains
+
+    @auxiliary_domains.setter
+    def auxiliary_domains(self, auxiliary_domains):
+        # Turn dictionary into appropriate form
+        if auxiliary_domains is None:
+            auxiliary_domains = {}
+        for level, dom in auxiliary_domains.items():
+            if isinstance(dom, str):
+                auxiliary_domains[level] = [dom]
+
+        # Check domains don't clash
+        if self.domain in auxiliary_domains.values():
+            raise pybamm.DomainError("Domain cannot be the same as an auxiliary domain")
+        values = [tuple(val) for val in auxiliary_domains.values()]
+        if len(set(values)) != len(values):
+            raise pybamm.DomainError("All auxiliary domains must be different")
+
+        self._auxiliary_domains = auxiliary_domains
+
+    @property
+    def secondary_domain(self):
+        "Helper function to get the secondary domain of a symbol"
+        return self.auxiliary_domains["secondary"]
+
+    def copy_domains(self, symbol):
+        "Copy the domains from a given symbol, bypassing checks"
+        self._domain = symbol.domain
+        self._auxiliary_domains = symbol.auxiliary_domains
+
+    def clear_domains(self):
+        "Clear domains, bypassing checks"
+        self._domain = []
+        self._auxiliary_domains = {}
 
     def get_children_auxiliary_domains(self, children):
         "Combine auxiliary domains from children, at all levels"
@@ -435,7 +472,7 @@ class Symbol(anytree.NodeMixin):
         """
         raise NotImplementedError
 
-    def _base_evaluate(self, t=None, y=None):
+    def _base_evaluate(self, t=None, y=None, u=None):
         """evaluate expression tree
 
         will raise a ``NotImplementedError`` if this member function has not
@@ -459,7 +496,7 @@ class Symbol(anytree.NodeMixin):
             )
         )
 
-    def evaluate(self, t=None, y=None, known_evals=None):
+    def evaluate(self, t=None, y=None, u=None, known_evals=None):
         """Evaluate expression tree (wrapper to allow using dict of known values).
         If the dict 'known_evals' is provided, the dict is searched for self.id; if
         self.id is in the keys, return that value; otherwise, evaluate using
@@ -471,6 +508,8 @@ class Symbol(anytree.NodeMixin):
             time at which to evaluate (default None)
         y : numpy.array, optional
             array to evaluate when solving (default None)
+        u : dict, optional
+            dictionary of inputs to use when solving (default None)
         known_evals : dict, optional
             dictionary containing known values (default None)
 
@@ -483,10 +522,10 @@ class Symbol(anytree.NodeMixin):
         """
         if known_evals is not None:
             if self.id not in known_evals:
-                known_evals[self.id] = self._base_evaluate(t, y)
+                known_evals[self.id] = self._base_evaluate(t, y, u)
             return known_evals[self.id], known_evals
         else:
-            return self._base_evaluate(t, y)
+            return self._base_evaluate(t, y, u)
 
     def evaluate_for_shape(self):
         """Evaluate expression tree to find its shape. For symbols that cannot be
@@ -494,10 +533,19 @@ class Symbol(anytree.NodeMixin):
         shape is returned instead, using the symbol's domain.
         See :meth:`pybamm.Symbol.evaluate()`
         """
+        try:
+            return self._saved_evaluate_for_shape
+        except AttributeError:
+            self._saved_evaluate_for_shape = self._evaluate_for_shape()
+            return self._saved_evaluate_for_shape
+
+    def _evaluate_for_shape(self):
+        "See :meth:`Symbol.evaluate_for_shape`"
         return self.evaluate()
 
     def is_constant(self):
         """returns true if evaluating the expression is not dependent on `t` or `y`
+        or `u`
 
         See Also
         --------
@@ -505,8 +553,13 @@ class Symbol(anytree.NodeMixin):
 
         """
         # if any of the nodes are instances of any of these types, then the whole
-        # expression depends on either t or y
-        search_types = (pybamm.Variable, pybamm.StateVector, pybamm.IndependentVariable)
+        # expression depends on either t or y or u
+        search_types = (
+            pybamm.Variable,
+            pybamm.StateVector,
+            pybamm.Time,
+            pybamm.InputParameter,
+        )
 
         # do the search, return true if no relevent nodes are found
         return not any((isinstance(n, search_types)) for n in self.pre_order())
@@ -514,8 +567,8 @@ class Symbol(anytree.NodeMixin):
     def evaluate_ignoring_errors(self):
         """
         Evaluates the expression. If a node exists in the tree that cannot be evaluated
-        as a scalar or vectr (e.g. Parameter, Variable, StateVector), then None is
-        returned. Otherwise the result of the evaluation is given
+        as a scalar or vector (e.g. Parameter, Variable, StateVector, InputParameter),
+        then None is returned. Otherwise the result of the evaluation is given
 
         See Also
         --------
@@ -523,19 +576,18 @@ class Symbol(anytree.NodeMixin):
 
         """
         try:
-            result = self.evaluate(t=0)
+            result = self.evaluate(t=0, u="shape test")
         except NotImplementedError:
-            # return false if NotImplementedError is raised
+            # return None if NotImplementedError is raised
             # (there is a e.g. Parameter, Variable, ... in the tree)
             return None
         except TypeError as error:
-            # return false if specific TypeError is raised
+            # return None if specific TypeError is raised
             # (there is a e.g. StateVector in the tree)
             if error.args[0] == "StateVector cannot evaluate input 'y=None'":
                 return None
             else:
                 raise error
-
         return result
 
     def evaluates_to_number(self):
@@ -579,12 +631,12 @@ class Symbol(anytree.NodeMixin):
         """ Simplify the expression tree. See :class:`pybamm.Simplification`. """
         return pybamm.Simplification(simplified_symbols).simplify(self)
 
-    def to_casadi(self, t=None, y=None, casadi_symbols=None):
+    def to_casadi(self, t=None, y=None, u=None, casadi_symbols=None):
         """
         Convert the expression tree to a CasADi expression tree.
         See :class:`pybamm.CasadiConverter`.
         """
-        return pybamm.CasadiConverter(casadi_symbols).convert(self, t, y)
+        return pybamm.CasadiConverter(casadi_symbols).convert(self, t, y, u)
 
     def new_copy(self):
         """
@@ -614,7 +666,7 @@ class Symbol(anytree.NodeMixin):
         # Try with some large y, to avoid having to use pre_order (slow)
         try:
             y = np.linspace(0.1, 0.9, int(1e4))
-            evaluated_self = self.evaluate(0, y)
+            evaluated_self = self.evaluate(0, y, u="shape test")
         # If that fails, fall back to calculating how big y should really be
         except ValueError:
             state_vectors_in_node = [

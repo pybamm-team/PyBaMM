@@ -11,8 +11,8 @@ class TestLithiumIon(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.standard_parameters_lithium_ion
 
-        a_n = pybamm.Broadcast(pybamm.Scalar(0), ["negative electrode"])
-        a_p = pybamm.Broadcast(pybamm.Scalar(0), ["positive electrode"])
+        a_n = pybamm.PrimaryBroadcast(pybamm.Scalar(0), ["negative electrode"])
+        a_p = pybamm.PrimaryBroadcast(pybamm.Scalar(0), ["positive electrode"])
         a = pybamm.Scalar(0)
         variables = {
             "Current collector current density": a,

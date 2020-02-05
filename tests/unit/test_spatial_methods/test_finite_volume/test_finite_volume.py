@@ -23,20 +23,33 @@ class TestFiniteVolume(unittest.TestCase):
 
         # node to edge
         c = pybamm.Vector(np.ones(n), domain=["negative electrode"])
-        diffusivity_c = fin_vol.node_to_edge(c)
-        np.testing.assert_array_equal(diffusivity_c.evaluate(), np.ones((n + 1, 1)))
+        diffusivity_c_ari = fin_vol.node_to_edge(c, method="arithmetic")
+        np.testing.assert_array_equal(diffusivity_c_ari.evaluate(), np.ones((n + 1, 1)))
+        diffusivity_c_har = fin_vol.node_to_edge(c, method="harmonic")
+        np.testing.assert_array_equal(diffusivity_c_har.evaluate(), np.ones((n + 1, 1)))
 
         # edge to node
         d = pybamm.StateVector(slice(0, n + 1), domain=["negative electrode"])
         y_test = np.ones(n + 1)
-        diffusivity_d = fin_vol.edge_to_node(d)
+        diffusivity_d_ari = fin_vol.edge_to_node(d, method="arithmetic")
         np.testing.assert_array_equal(
-            diffusivity_d.evaluate(None, y_test), np.ones((n, 1))
+            diffusivity_d_ari.evaluate(None, y_test), np.ones((n, 1))
+        )
+        diffusivity_d_har = fin_vol.edge_to_node(d, method="harmonic")
+        np.testing.assert_array_equal(
+            diffusivity_d_har.evaluate(None, y_test), np.ones((n, 1))
         )
 
         # bad shift key
         with self.assertRaisesRegex(ValueError, "shift key"):
-            fin_vol.shift(c, "bad shift key")
+            fin_vol.shift(c, "bad shift key", "arithmetic")
+
+        with self.assertRaisesRegex(ValueError, "shift key"):
+            fin_vol.shift(c, "bad shift key", "harmonic")
+
+        # bad method
+        with self.assertRaisesRegex(ValueError, "method"):
+            fin_vol.shift(c, "shift key", "bad method")
 
     def test_concatenation(self):
         mesh = get_mesh_for_testing()
@@ -89,6 +102,7 @@ class TestFiniteVolume(unittest.TestCase):
             pybamm.div(2 * pybamm.grad(var)),
             pybamm.div(2 * pybamm.grad(var)) + 3 * var,
             -2 * pybamm.div(var * pybamm.grad(var) + 2 * pybamm.grad(var)),
+            pybamm.laplacian(var),
         ]:
             # Check that the equation can be evaluated in each case
             # Dirichlet

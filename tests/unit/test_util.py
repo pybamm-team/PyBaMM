@@ -77,6 +77,12 @@ class TestUtil(unittest.TestCase):
         d[4][5] = "y"
         self.assertEqual(d[4][5], "y")
 
+    def test_fuzzy_dict(self):
+        d = pybamm.FuzzyDict({"test": 1, "test2": 2})
+        self.assertEqual(d["test"], 1)
+        with self.assertRaisesRegex(KeyError, "'test3' not found. Best matches are "):
+            d["test3"]
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

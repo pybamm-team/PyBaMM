@@ -5,7 +5,7 @@ import pybamm
 
 import numpy as np
 import numbers
-from scipy.sparse import issparse, csr_matrix, kron
+from scipy.sparse import issparse, csr_matrix
 
 
 def is_scalar_zero(expr):
@@ -79,15 +79,8 @@ class BinaryOperator(pybamm.Symbol):
     def __init__(self, name, left, right):
         left, right = self.format(left, right)
 
-        # Check and process domains, except for Outer symbol which takes the outer
-        # product of two smbols in different domains, and gives it the domain of the
-        # right child.
-        if isinstance(self, (pybamm.Outer, pybamm.Kron)):
-            domain = right.domain
-            auxiliary_domains = {"secondary": left.domain}
-        else:
-            domain = self.get_children_domains(left.domain, right.domain)
-            auxiliary_domains = self.get_children_auxiliary_domains([left, right])
+        domain = self.get_children_domains(left.domain, right.domain)
+        auxiliary_domains = self.get_children_auxiliary_domains([left, right])
         super().__init__(
             name,
             children=[left, right],
@@ -114,11 +107,7 @@ class BinaryOperator(pybamm.Symbol):
             )
 
         # Do some broadcasting in special cases, to avoid having to do this manually
-        if (
-            not isinstance(self, (Outer, Kron))
-            and left.domain != []
-            and right.domain != []
-        ):
+        if left.domain != [] and right.domain != []:
             if (
                 left.domain != right.domain
                 and "secondary" in right.auxiliary_domains
@@ -165,8 +154,7 @@ class BinaryOperator(pybamm.Symbol):
 
         # make new symbol, ensure domain(s) remain the same
         out = self._binary_new_copy(new_left, new_right)
-        out.domain = self.domain
-        out.auxiliary_domains = self.auxiliary_domains
+        out.copy_domains(self)
 
         return out
 
@@ -174,24 +162,24 @@ class BinaryOperator(pybamm.Symbol):
         "Default behaviour for new_copy"
         return self.__class__(left, right)
 
-    def evaluate(self, t=None, y=None, known_evals=None):
+    def evaluate(self, t=None, y=None, u=None, known_evals=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         if known_evals is not None:
             id = self.id
             try:
                 return known_evals[id], known_evals
             except KeyError:
-                left, known_evals = self.left.evaluate(t, y, known_evals)
-                right, known_evals = self.right.evaluate(t, y, known_evals)
+                left, known_evals = self.left.evaluate(t, y, u, known_evals)
+                right, known_evals = self.right.evaluate(t, y, u, known_evals)
                 value = self._binary_evaluate(left, right)
                 known_evals[id] = value
                 return value, known_evals
         else:
-            left = self.left.evaluate(t, y)
-            right = self.right.evaluate(t, y)
+            left = self.left.evaluate(t, y, u)
+            right = self.right.evaluate(t, y, u)
             return self._binary_evaluate(left, right)
 
-    def evaluate_for_shape(self):
+    def _evaluate_for_shape(self):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape()`. """
         left = self.children[0].evaluate_for_shape()
         right = self.children[1].evaluate_for_shape()
@@ -653,86 +641,6 @@ def inner(left, right):
     return pybamm.Inner(left, right)
 
 
-class Outer(BinaryOperator):
-    """A node in the expression tree representing an outer product.
-    This takes a 1D vector in the current collector domain of size (n,1) and a 1D
-    variable of size (m,1), takes their outer product, and reshapes this into a vector
-    of size (nm,1). It can also take in a vector in a single particle and a vector
-    of the electrolyte domain to repeat that particle.
-    Note: this class might be a bit dangerous, so at the moment it is very restrictive
-    in what symbols can be passed to it
-
-    **Extends:** :class:`BinaryOperator`
-    """
-
-    def __init__(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator.__init__()`. """
-        # cannot have certain types of objects in the right symbol, as these
-        # can already be 2D objects (so we can't take an outer product with them)
-        if right.has_symbol_of_classes(
-            (pybamm.Variable, pybamm.StateVector, pybamm.Matrix, pybamm.SpatialVariable)
-        ):
-            raise TypeError("right child must only contain Vectors and Scalars" "")
-
-        super().__init__("outer product", left, right)
-
-    def __str__(self):
-        """ See :meth:`pybamm.Symbol.__str__()`. """
-        return "outer({!s}, {!s})".format(self.left, self.right)
-
-    def diff(self, variable):
-        """ See :meth:`pybamm.Symbol.diff()`. """
-        raise NotImplementedError("diff not implemented for symbol of type 'Outer'")
-
-    def _outer_jac(self, left_jac, right_jac, variable):
-        """
-        Calculate jacobian of outer product.
-        See :meth:`pybamm.Jacobian._jac()`.
-        """
-        # right cannot be a StateVector, so no need for product rule
-        left, right = self.orphans
-        if left.evaluates_to_number():
-            # Return zeros of correct size
-            return pybamm.Matrix(
-                csr_matrix((self.size, variable.evaluation_array.count(True)))
-            )
-        else:
-            return pybamm.Kron(left_jac, right)
-
-    def _binary_evaluate(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
-
-        return np.outer(left, right).reshape(-1, 1)
-
-
-class Kron(BinaryOperator):
-    """A node in the expression tree representing a (sparse) kronecker product operator
-
-    **Extends:** :class:`BinaryOperator`
-    """
-
-    def __init__(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator.__init__()`. """
-
-        super().__init__("kronecker product", left, right)
-
-    def __str__(self):
-        """ See :meth:`pybamm.Symbol.__str__()`. """
-        return "kron({!s}, {!s})".format(self.left, self.right)
-
-    def diff(self, variable):
-        """ See :meth:`pybamm.Symbol.diff()`. """
-        raise NotImplementedError("diff not implemented for symbol of type 'Kron'")
-
-    def _binary_jac(self, left_jac, right_jac):
-        """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
-        raise NotImplementedError("jac not implemented for symbol of type 'Kron'")
-
-    def _binary_evaluate(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
-        return csr_matrix(kron(left, right))
-
-
 class Heaviside(BinaryOperator):
     """A node in the expression tree representing a heaviside step function.
 
@@ -782,18 +690,6 @@ class Heaviside(BinaryOperator):
         return Heaviside(left, right, self.equal)
 
 
-def outer(left, right):
-    """
-    Return outer product of two symbols. If the symbols have the same domain, the outer
-    product is just a multiplication. If they have different domains, make a copy of the
-    left child with same domain as right child, and then take outer product.
-    """
-    try:
-        return left * right
-    except pybamm.DomainError:
-        return pybamm.Outer(left, right)
-
-
 def source(left, right, boundary=False):
     """A convinience function for creating (part of) an expression tree representing
     a source term. This is necessary for spatial methods where the mass matrix
@@ -823,7 +719,7 @@ def source(left, right, boundary=False):
     """
     # Broadcast if left is number
     if isinstance(left, numbers.Number):
-        left = pybamm.Broadcast(left, "current collector")
+        left = pybamm.PrimaryBroadcast(left, "current collector")
 
     if left.domain != ["current collector"] or right.domain != ["current collector"]:
         raise pybamm.DomainError(

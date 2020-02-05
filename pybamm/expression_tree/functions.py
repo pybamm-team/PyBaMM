@@ -14,8 +14,8 @@ class Function(pybamm.Symbol):
     ----------
     function : method
         A function can have 0 or many inputs. If no inputs are given, self.evaluate()
-        simply returns func(). Otherwise, self.evaluate(t, y) returns
-        func(child0.evaluate(t, y), child1.evaluate(t, y), etc).
+        simply returns func(). Otherwise, self.evaluate(t, y, u) returns
+        func(child0.evaluate(t, y, u), child1.evaluate(t, y, u), etc).
     children : :class:`pybamm.Symbol`
         The children nodes to apply the function to
     derivative : str, optional
@@ -144,7 +144,7 @@ class Function(pybamm.Symbol):
             for i, child in enumerate(children):
                 if not child.evaluates_to_number():
                     jac_fun = self._function_diff(children, i) * children_jacs[i]
-                    jac_fun.domain = []
+                    jac_fun.clear_domains()
                     if jacobian is None:
                         jacobian = jac_fun
                     else:
@@ -152,22 +152,22 @@ class Function(pybamm.Symbol):
 
         return jacobian
 
-    def evaluate(self, t=None, y=None, known_evals=None):
+    def evaluate(self, t=None, y=None, u=None, known_evals=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         if known_evals is not None:
             if self.id not in known_evals:
                 evaluated_children = [None] * len(self.children)
                 for i, child in enumerate(self.children):
                     evaluated_children[i], known_evals = child.evaluate(
-                        t, y, known_evals
+                        t, y, u, known_evals=known_evals
                     )
                 known_evals[self.id] = self._function_evaluate(evaluated_children)
             return known_evals[self.id], known_evals
         else:
-            evaluated_children = [child.evaluate(t, y) for child in self.children]
+            evaluated_children = [child.evaluate(t, y, u) for child in self.children]
             return self._function_evaluate(evaluated_children)
 
-    def evaluate_for_shape(self):
+    def _evaluate_for_shape(self):
         """
         Default behaviour: has same shape as all child
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
