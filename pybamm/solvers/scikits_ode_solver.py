@@ -59,7 +59,7 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
         """
         derivs = model.rhs_eval
         y0 = model.y0
-        events = model.events_eval
+        events = model.terminate_events_eval
         jacobian = model.jacobian_eval
 
         def eqsydot(t, y, return_ydot):

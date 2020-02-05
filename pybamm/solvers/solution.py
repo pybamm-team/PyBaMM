@@ -129,22 +129,25 @@ class Solution(object):
         self.append(other)
         return self
 
-    def append(self, solution):
+    def append(self, solution, start_index=1):
         """
+
         Appends solution.t and solution.y onto self.t and self.y.
-        Note: this process removes the initial time and state of solution to avoid
-        duplicate times and states being stored (self.t[-1] is equal to solution.t[0],
-        and self.y[:, -1] is equal to solution.y[:, 0]).
+
+        Note: by default this process removes the initial time and state of solution to
+        avoid duplicate times and states being stored (self.t[-1] is equal to
+        solution.t[0], and self.y[:, -1] is equal to solution.y[:, 0]). Set the optional
+        argument ``start_index`` to override this behavior
 
         """
         # Update t, y and inputs
-        self.t = np.concatenate((self.t, solution.t[1:]))
-        self.y = np.concatenate((self.y, solution.y[:, 1:]), axis=1)
+        self.t = np.concatenate((self.t, solution.t[start_index:]))
+        self.y = np.concatenate((self.y, solution.y[:, start_index:]), axis=1)
         for name, inp in self.inputs.items():
             solution_inp = solution.inputs[name]
             if isinstance(solution_inp, numbers.Number):
                 solution_inp = solution_inp * np.ones_like(solution.t)
-            self.inputs[name] = np.concatenate((inp, solution_inp[1:]))
+            self.inputs[name] = np.concatenate((inp, solution_inp[start_index:]))
         # Update solution time
         self.solve_time += solution.solve_time
         # Update termination

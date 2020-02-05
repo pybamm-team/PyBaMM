@@ -7,9 +7,6 @@ import unittest
 import warnings
 from tests import get_mesh_for_testing, get_discretisation_for_testing
 
-# TODO: remove this
-import matplotlib.pylab as plt
-
 
 @unittest.skipIf(not pybamm.have_scikits_odes(), "scikits.odes not installed")
 class TestScikitsSolvers(unittest.TestCase):
@@ -41,7 +38,7 @@ class TestScikitsSolvers(unittest.TestCase):
         class Model:
             mass_matrix = pybamm.Matrix(np.array([[1.0, 0.0], [0.0, 0.0]]))
             y0 = np.array([0.0, 1.0])
-            events_eval = []
+            terminate_events_eval = []
 
             def residuals_eval(self, t, y, ydot):
                 return np.array([0.5 * np.ones_like(y[0]) - ydot[0], 2 * y[0] - y[1]])
@@ -87,7 +84,7 @@ class TestScikitsSolvers(unittest.TestCase):
         class Model:
             mass_matrix = pybamm.Matrix(np.array([[4.0, 0.0], [0.0, 0.0]]))
             y0 = np.array([0.0, 0.0])
-            events_eval = []
+            terminate_events_eval = []
 
             def residuals_eval(self, t, y, ydot):
                 return np.array(
@@ -251,18 +248,27 @@ class TestScikitsSolvers(unittest.TestCase):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         var1 = pybamm.Variable("var1", domain=whole_cell)
         var2 = pybamm.Variable("var2", domain=whole_cell)
+        discontinuity = 0.6
 
         def nonsmooth_rate(t):
-            return 0.1 * int(t < 2.5) + 0.1
+            return 0.1 * int(t < discontinuity) + 0.1
+
+        def nonsmooth_mult(t):
+            return int(t < discontinuity) + 1.0
         rate = pybamm.Function(nonsmooth_rate, pybamm.t)
+        mult = pybamm.Function(nonsmooth_mult, pybamm.t)
         model.rhs = {var1: rate * var1}
-        model.algebraic = {var2: 2 * var1 - var2}
+        model.algebraic = {var2: mult * var1 - var2}
         model.initial_conditions = {var1: 1, var2: 2}
         model.events = [
             pybamm.Event("var1 = 1.5", pybamm.min(var1 - 1.5)),
             pybamm.Event("var2 = 2.5", pybamm.min(var2 - 2.5)),
             pybamm.Event("nonsmooth rate",
-                         pybamm.Scalar(2.5),
+                         pybamm.Scalar(discontinuity),
+                         pybamm.EventType.DISCONTINUITY
+                         ),
+            pybamm.Event("nonsmooth mult",
+                         pybamm.Scalar(discontinuity),
                          pybamm.EventType.DISCONTINUITY
                          )
         ]
@@ -271,15 +277,43 @@ class TestScikitsSolvers(unittest.TestCase):
 
         # Solve
         solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
-        t_eval = np.linspace(0, 5, 100)
-        solution = solver.solve(model, t_eval)
-        plt.plot(solution.y[0])
-        plt.plot(solution.y[1])
-        plt.show()
-        #np.testing.assert_array_less(solution.y[0], 1.5)
-        #np.testing.assert_array_less(solution.y[-1], 2.5)
-        #np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
-        #np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
+
+        # create two time series, one without a time point on the discontinuity,
+        # and one with
+        t_eval1 = np.linspace(0, 5, 10)
+        t_eval2 = np.insert(t_eval1,
+                            np.searchsorted(t_eval1, discontinuity),
+                            discontinuity)
+        solution1 = solver.solve(model, t_eval1)
+        solution2 = solver.solve(model, t_eval2)
+
+        # check time vectors
+        for solution in [solution1, solution2]:
+            # time vectors are ordered
+            self.assertTrue(np.all(solution.t[:-1] <= solution.t[1:]))
+
+            # time value before and after discontinuity is an epsilon away
+            dindex = np.searchsorted(solution.t, discontinuity)
+            value_before = solution.t[dindex-1]
+            value_after = solution.t[dindex]
+            self.assertEqual(value_before+sys.float_info.epsilon, discontinuity)
+            self.assertEqual(value_after-sys.float_info.epsilon, discontinuity)
+
+        # both solution time vectors should have same number of points
+        self.assertEqual(len(solution1.t), len(solution2.t))
+
+        # check solution
+        for solution in [solution1, solution2]:
+            np.testing.assert_array_less(solution.y[0], 1.5)
+            np.testing.assert_array_less(solution.y[-1], 2.5)
+            var1_soln = np.exp(0.2 * solution.t)
+            y0 = np.exp(0.2 * discontinuity)
+            var1_soln[solution.t > discontinuity] = \
+                y0*np.exp(0.1 * (solution.t[solution.t > discontinuity]-discontinuity))
+            var2_soln = 2*var1_soln
+            var2_soln[solution.t > discontinuity] = var1_soln[solution.t > discontinuity]
+            np.testing.assert_allclose(solution.y[0], var1_soln, rtol=1e-06)
+            np.testing.assert_allclose(solution.y[-1], var2_soln, rtol=1e-06)
 
     def test_model_solver_dae_with_jacobian_python(self):
         model = pybamm.BaseModel()
@@ -526,10 +560,10 @@ class TestScikitsSolvers(unittest.TestCase):
         model.rhs = {var1: 0.1 * var1}
         model.algebraic = {var2: 2 * var1 - var2}
         model.initial_conditions = {var1: 1, var2: 2}
-        model.events = {
-            "var1 = 1.5": pybamm.min(var1 - 1.5),
-            "var2 = 2.5": pybamm.min(var2 - 2.5),
-        }
+        model.events = [
+            pybamm.Event("var1 = 1.5", pybamm.min(var1 - 1.5)),
+            pybamm.Event("var2 = 2.5", pybamm.min(var2 - 2.5)),
+        ]
         disc = pybamm.Discretisation()
         disc.process_model(model)
 
@@ -566,5 +600,6 @@ if __name__ == "__main__":
 
     if "-v" in sys.argv:
         debug = True
+        pybamm.set_logging_level("DEBUG")
     pybamm.settings.debug_mode = True
     unittest.main()
