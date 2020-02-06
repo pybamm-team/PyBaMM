@@ -207,6 +207,8 @@ class TestBinaryOperators(unittest.TestCase):
             (pybammS1 * pybammS2).test_shape()
         with self.assertRaisesRegex(pybamm.ShapeError, "inconsistent shapes"):
             (pybammS2 * pybammS1).test_shape()
+        with self.assertRaisesRegex(pybamm.ShapeError, "inconsistent shapes"):
+            (pybammS2 * pybammS1).evaluate_ignoring_errors()
 
         # Matrix multiplication is normal matrix multiplication
         np.testing.assert_array_equal(

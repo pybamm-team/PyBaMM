@@ -1,40 +1,31 @@
 ## Prerequisites
 
-You'll need the following requirements:
-
-- Python 3.6+
-- Git (`git` package on Ubuntu distributions)
-- Python libraries: `venv` (`python3-venv` package on Ubuntu distributions)
-
-You can get these on a Debian based distribution using `apt-get`
-
+To use and/or contribute to PyBaMM, you must have Python 3.6 or above installed.
+To install Python 3 on Debian-based distribution (Debian, Ubuntu, Linux mint), open a terminal and run
 ```bash
-sudo apt-get install python3 git-core python3-venv
+sudo apt update
+sudo apt install python3
+```
+On Fedora or CentOS, you can use DNF or Yum. For example
+```bash
+sudo dnf install python3
 ```
 
 ## Install PyBaMM
 
-The first step is to get the code by cloning this repository
-
-```bash
-git clone https://github.com/pybamm-team/PyBaMM.git
-cd PyBaMM
-```
-
-The safest way to install PyBaMM is to do so within a virtual environment ([introduction
-to virtual environments](https://realpython.com/python-virtual-environments-a-primer/)).
+### User install
+We recommend to install PyBaMM within a virtual environment, in order not
+to alter any distribution python files.
 To create a virtual environment `env` within your current directory type:
 
 ```bash
 python3 -m venv env
 ```
-
 You can then "activate" the environment using:
 
 ```bash
 source env/bin/activate
 ```
-
 Now all the calls to pip described below will install PyBaMM and its dependencies into
 the environment `env`. When you are ready to exit the environment and go back to your
 original system, just type:
@@ -43,24 +34,43 @@ original system, just type:
 deactivate
 ```
 
+PyBaMM can be installed via pip:
+```bash
+pip install pybamm
+```
+
+
 PyBaMM has the following python libraries as dependencies: `numpy`, `scipy`, `pandas`,
 `matplotlib`. These will be installed automatically when you install PyBaMM using `pip`,
 following the instructions below. First, make sure you have activated your virtual
 environment as above, and that you have the latest version of pip installed:
-
-```bash
-pip install --upgrade pip
-```
 
 Then navigate to the path where you downloaded PyBaMM to (you will already be in the
 correct location if you followed the instructions above), and install both PyBaMM and
 its dependencies by typing:
 
 ```bash
-pip install .
+pip install pybamm
 ```
+For an introduction to virtual environments, see (https://realpython.com/python-virtual-environments-a-primer/).
 
-Or, if you want to install PyBaMM as a [developer](CONTRIBUTING.md), use
+### developer install
+
+If you wish to contribute to PyBaMM, you should get the latest version from the GitHub repository.
+To do so, you must have Git installed.
+For instance run
+```bash
+sudo apt install git
+```
+on Debian-based distributions.
+
+To install PyBaMM, the first step is to get the code by cloning this repository
+
+```bash
+git clone https://github.com/pybamm-team/PyBaMM.git
+cd PyBaMM
+```
+Then, install PyBaMM as a develop per with [developer](CONTRIBUTING.md), use
 
 ```bash
 pip install -e .[dev,docs]
@@ -72,16 +82,34 @@ To check whether PyBaMM has installed properly, you can run the tests:
 python3 run-tests.py --unit
 ```
 
-To uninstall PyBaMM, type
+Before you start contributing to PyBaMM, please read the [contributing guidelines](CONTRIBUTING.md).
 
+## Uninstall PyBaMM
+PyBaMM can be uninstalled by running
 ```bash
 pip uninstall pybamm
 ```
+in your virtual environment.
 
 ## Optional dependencies
+The following instructions assume that you downloaded the PyBaMM source code and that all
+commands are run from the PyBaMM root directory (`PyBaMM/`).
+This can be done using `git`, running
+
+```bash
+git clone https://github.com/pybamm-team/PyBaMM.git
+cd PyBaMM
+```
+Alternatively, you can dowload the source code archive from [the PyBaMM GitHub repo](https://github.com/pybamm-team/PyBaMM.git) and extract it the location of your choice.
+
+Ideally you should have the python package `wget` installed.
+This allows for the automatic download of some of the dependencies has part of the installation process.
+You can install it using (within your virtual environment)
+```bash
+pip install wget
+```
 
 ### [scikits.odes](https://github.com/bmcage/odes)
-
 Users can install [scikits.odes](https://github.com/bmcage/odes) in order to use the
 wrapped SUNDIALS ODE and DAE
 [solvers](https://pybamm.readthedocs.io/en/latest/source/solvers/scikits_solvers.html).
@@ -89,145 +117,103 @@ The Sundials DAE solver is required to solve the DFN battery model in PyBaMM.
 
 Before installing scikits.odes, you need to have installed:
 
-- Python header files (`python-dev/python3-dev` on Debian/Ubuntu-based distributions)
-- C compiler
-- Fortran compiler (e.g. gfortran)
+- Python 3 header files (`python3-dev` on Debian/Ubuntu-based distributions)
+- C compiler (e.g. `gcc`)
+- Fortran compiler (e.g. `gfortran`)
 - BLAS/LAPACK install (OpenBLAS is recommended by the scikits.odes developers)
 - CMake (for building Sundials)
-- Sundials 5.0.0
 
-You can install these on Ubuntu or Debian using apt-get:
-
-```bash
-sudo apt-get install python3-dev gfortran gcc cmake libopenblas-dev
-```
-
-To install Sundials 5.0.0, on the command-line type:
+You can install these on Ubuntu or Debian using APT:
 
 ```bash
-INSTALL_DIR=`pwd`/sundials
-wget https://computation.llnl.gov/projects/sundials/download/sundials-5.0.0.tar.gz
-tar -xvf sundials-5.0.0.tar.gz
-mkdir build-sundials-5.0.0
-cd build-sundials-5.0.0/
-cmake -DLAPACK_ENABLE=ON -DSUNDIALS_INDEX_TYPE=int32_t -DBUILD_ARKODE:BOOL=OFF -DEXAMPLES_ENABLE:BOOL=OFF -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR ../sundials-5.0.0/
-make install
-rm -r ../sundials-5.0.0
+sudo apt update
+sudo apt install python3-dev gfortran gcc cmake libopenblas-dev
 ```
-
-Then install [scikits.odes](https://github.com/bmcage/odes), letting it know the sundials install location:
-
+To install scikits.odes, simply run
 ```bash
-SUNDIALS_INST=$INSTALL_DIR pip install scikits.odes
+python setup.py install_odes
 ```
-
-After this, you will need to set your `LD_LIBRARY_PATH` to point to the sundials
-library:
-
+This commands will first download and build the SUNDIALS library, required to install and use `scikits.odes`.
+This will download approximately 16MB of data and should only take a few minutes to compile.
+Alternatively, you can specify a directory containing the source code of the Sundials library
 ```bash
-export LD_LIBRARY_PATH=$INSTALL_DIR/lib:$LD_LIBRARY_PATH
+python setup.py install_odes --sundials-src=<path/to/sundials/source>
 ```
+By default, the sundials are installed in a `sundials` directory located at the root of the PyBaMM package.
+You can provide another location by using the `--sundials-inst=<path/to/other/location>` option.
 
-You may wish to put this last line in your `.bashrc` or virtualenv `activate` script,
-which will save you needing to set your `LD_LIBRARY_PATH` every time you log in. For
-example, to add this line to your `.bashrc` you can type:
+If you are installing `scikits.odes` within a virtual environment, the `activate` script will be automatically
+updated to add the sundials installation directory to your `LD_LIBRARY_PATH`.
+This is required in order to use `scikits.odes`.
+As a consequence, after installation you should restart your virtual environment.
 
+If you wish to install the scikits.odes outside of a virtual environment, your `.bashrc` will be modified instead.
+After installation you should therefore run
 ```bash
-echo "export LD_LIBRARY_PATH=$INSTALL_DIR/lib:\$LD_LIBRARY_PATH" >> ~/.bashrc
+source ~/.bashrc
 ```
-
 Please see the [scikits.odes
 documentation](https://scikits-odes.readthedocs.io/en/latest/installation.html) for more
 detailed installation instructions.
 
+Finally, you can check your install by running
+```bash
+python -c "import pybamm; print(pybamm.have_scikits_odes())
+```
 ### Sundials with KLU sparse solver
 If you wish so simulate large systems such as the 2+1D models, we recommend employing a
-sparse solver. PyBaMM currently offers a direct interface to the sparse KLU solver within Sundials.
-If you are on a linux based distribution, a bash script has been provided which should
-install everything for you correctly. Please note you will require the python header files, openblas,
-a c compiler (e.g. gcc), cmake, and suitesparse all of which you should be able to install on ubuntu using
+sparse solver.
+PyBaMM currently offers a direct interface to the sparse KLU solver within Sundials.
+
+#### Prerequisites
+The requirements are the same than for the installation of `scikits.odes` (see previous section).
+Additionally, the [pybind11 GitHub repository](https://github.com/pybind/pybind11.git) should be located in `PyBaMM/third-party/`.
+First create a directory `third-party` and clone the repository:
 ```bash
-apt install python3-dev libopenblas-dev cmake gcc libsuitesparse-dev
-```
-You will likely need to prepend `sudo` to the above command.
-
-To install sundials with KLU, from within the main PyBaMM directory type
-```bash
-./scripts/install_sundials_4.1.0.sh
-```
-Note that this script has only been tested on Ubuntu 18.04.3 LTS. If this script does not work for you, you can try following the step-by-step instructions below:
-
-#### Download and build Sundials 4.1.0
-The KLU solver is interfaced using an updated version of Sundials so even if you have installed Sundials for use with Scikits.odes, you still need to install sundials here. If you want more information on the sundials installation please refer to the the ida_guide.pdf available at on the [sundials site](https://computing.llnl.gov/projects/sundials/sundials-software)
-
-First, download Sundials 4.1.0 using
-```bash
-wget https://computing.llnl.gov/projects/sundials/download/sundials-4.1.0.tar.gz -O sundials-4.1.0.tar.gz
-tar -xvf sundials-4.1.0.tar.gz
-rm sundials-4.1.0.tar.gz
-```
-The cmake instructions provided with Sundials have trouble linking the required libraries related to the KLU solver, therefore we have provided a modified `CMakeLists.txt` file which fixes this. Copy this across into the sundials-4.1.0 folder, overwriting the old file, using
-```
-cp scripts/replace-cmake/CMakeLists.txt sundials-4.1.0/CMakeLists.txt
-```
-Now create a directory to build sundials in and set the install directory for sundials:
-```
-mkdir build-sundials-4.1.0
-INSTALL_DIR=`pwd`/sundials4
-```
-Now enter the build directory, use cmake to generate the appropriate make files, and then build sundials and install sundials into the install directory using make:
-```
-cd build-sundials-4.1.0
-cmake -DBLAS_ENABLE=ON\
-      -DLAPACK_ENABLE=ON\
-      -DSUNDIALS_INDEX_SIZE=32\
-      -DBUILD_ARKODE=OFF\
-      -DBUILD_CVODE=OFF\
-      -DBUILD_CVODES=OFF\
-      -DBUILD_IDAS=OFF\
-      -DBUILD_KINSOL=OFF\
-      -DEXAMPLES_ENABLE:BOOL=OFF\
-      -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR\
-      -DKLU_ENABLE=ON\
-      ../sundials-4.1.0
-make install
-```
-Now return to your PyBaMM home directory and remove the build-sundials-4.1.0 folder and the download folder:
-```
-cd ..
-rm -rf build-sundials-4.1.0
-rm -rf sundials-4.1.0
-```
-
-#### Install pybind11
-To interface with Sundials which is written in C, we require pybind11. Clone the pybind11 repository whilst within a folder the third-party folder:
-```
 mkdir third-party
 cd third-party
 git clone https://github.com/pybind/pybind11.git
 cd ..
 ```
-You will also require pybind11 to be pip installed so from within your virtual enviroment (if you are using one) type:
+If you don't have `git` installed, you can download the code source manually from (https://github.com/pybind/pybind11).
+
+#### Install the KLU solver
+The KLU solver is can be installed _via_ the following command:
+```bash
+python setup.py install_klu
 ```
-pip install pybind11
+The previous command will download and install both the [SuiteSparse](http://faculty.cse.tamu.edu/davis/suitesparse.html) and [SUNDIALS](https://computing.llnl.gov/projects/sundials) libraries.
+This will download approximately 70MB of data and the compilation should only take a couple of minutes.
+If the source for a library is already present on your system, you can specify its location using options `--suitesparse-src` or `--sundials-src`.
+Example:
+```bash
+python setup.py install_klu --suitesparse-src=<path/to/suitesparse/source>
+```
+This will not download the SuiteSparse library and compile the source code located in `path/to/suitesparse/source`.
+The sundials library will be downloaded.
+
+Finally, you can check your install by running
+```bash
+python -c "import pybamm; print(pybamm.have_idaklu())
 ```
 
-#### Build the KLU wrapper
-We now have all the tools to build a shared library to interface to the KLU solver. Within your PyBaMM home directory build the required Makefile using
+### Install everything
+It is possible to install both `scikits.odes` and KLU solver using the command
+```bash
+python setup.py install_all
 ```
-cmake .
-```
-This will automatically find the headers for the latest version of python installed on your machine. If you are using an older version (e.g python3.6) within your virtual environment, then you instead can use `cmake -DPYBIND11_PYTHON_VERSION=3.6 .`.
+Note that options `--sundials-src`, `--sundials-inst` and  `suitesparse-src` are still usable
+here.
 
-You can now simply run make to build the library (you can just run this command if you make some changes to klu.cpp)
+You can make sure the install was successful by runing
+Finally, you can check your install by running
+```bash
+python -c "import pybamm; print(pybamm.have_scikits_odes())
 ```
-make
-```
-To clean up you directory you can now remove the automatically generated cmake files:
-```
-rm -rf CMakeFiles
-rm CMakeCache.txt
-rm cmake_install.cmake
+and
+
+```bash
+python -c "import pybamm; print(pybamm.have_idaklu())
 ```
 
 ## Troubleshooting
@@ -248,7 +234,7 @@ PyBaMM, i.e. `pip install -e .[dev,docs]`
 exsist`, or `ValueError: Integrator name cvode does not exsist`.
 
 **Solution:** This could mean that you have not installed `scikits.odes` correctly,
-check the instrutions given above and make sure each command was successful.
+check the instructions given above and make sure each command was successful.
 
 One possibility is that you have not set your `LD_LIBRARY_PATH` to point to the sundials
 library, type `echo $LD_LIBRARY_PATH` and make sure one of the directories printed out
