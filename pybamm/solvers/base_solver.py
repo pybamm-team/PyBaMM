@@ -459,6 +459,9 @@ class BaseSolver(object):
                                     dtime + sys.float_info.epsilon])
         end_indices.append(len(t_eval))
 
+        # integrate separatly over each time segment and accumulate into the solution
+        # object, restarting the solver at each discontinuity (and recalculating a
+        # consistent state afterwards if a dae)
         old_y0 = model.y0
         solution = None
         for start_index, end_index in zip(start_indices, end_indices):
