@@ -3,7 +3,7 @@ from enum import Enum
 
 class EventType(Enum):
     """
-    Defines the type of event, see Event
+    Defines the type of event, see :class:`pybamm.Event`
 
     TERMINATION indicates an event that will terminate the solver, the expression should
     return 0 when the event is triggered
@@ -27,9 +27,9 @@ class Event:
 
     name: str
         A string giving the name of the event
-    event_type: EventType
+    event_type: :class:`pybamm.EventType`
         An enum defining the type of event
-    expression: pybamm.Symbol
+    expression: :class:`pybamm.Symbol`
         An expression that defines when the event occurs
 
 

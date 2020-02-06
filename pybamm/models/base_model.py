@@ -46,7 +46,7 @@ class BaseModel(object):
     variables: dict
         A dictionary that maps strings to expressions that represent
         the useful variables
-    events: list of pybamm.Event
+    events: list of :class:`pybamm.Event`
         A list of events. Each event can either cause the solver to terminate
         (e.g. concentration goes negative), or be used to inform the solver of the
         existance of a discontinuity (e.g. discontinuity in the input current)
