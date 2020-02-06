@@ -66,22 +66,19 @@ class TestSimulationExperiment(unittest.TestCase):
                 "Discharge at 2 W for 1 hour",
             ],
         )
-        model = pybamm.lithium_ion.DFN()
+        model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model, experiment=experiment)
         sim.solve()
+        self.assertEqual(sim._solution.termination, "final time")
 
     def test_run_experiment_breaks_early(self):
-        experiment = pybamm.Experiment(
-            [
-                "Discharge at C/20 for 1 hour",
-                "Charge at 1 A until 4.1 V",
-                "Hold at 4.1 V until 50 mA",
-                "Discharge at 2 W for 1 hour",
-            ],
-        )
-        model = pybamm.lithium_ion.DFN()
+        experiment = pybamm.Experiment(["Discharge at 2 C for 1 hour"])
+        model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model, experiment=experiment)
+        pybamm.set_logging_level("ERROR")
         sim.solve()
+        pybamm.set_logging_level("WARNING")
+        self.assertEqual(sim._solution.termination, "event: Minimum voltage")
 
 
 if __name__ == "__main__":

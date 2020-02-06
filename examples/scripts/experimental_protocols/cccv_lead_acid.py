@@ -6,16 +6,14 @@ import pybamm
 pybamm.set_logging_level("INFO")
 experiment = pybamm.Experiment(
     [
-        "Discharge at C/10 for 10 hours or until 3.3 V",
+        "Discharge at C/2 until 11 V",
         "Rest for 1 hour",
-        "Charge at 1 A until 4.1 V",
-        "Hold at 4.1 V until 50 mA",
+        "Charge at C/2 until 14.5 V",
+        "Hold at 14.5 V until 200 mA",
         "Rest for 1 hour",
     ]
-    * 3,
-    period="2 minutes",
 )
-model = pybamm.lithium_ion.DFN()
+model = pybamm.lead_acid.Full()
 sim = pybamm.Simulation(model, experiment=experiment, solver=pybamm.CasadiSolver())
 sim.solve()
 sim.plot()

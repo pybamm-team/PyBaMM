@@ -15,6 +15,7 @@ examples = """
     Hold at 1 V for 20 seconds,
     Charge at 1 C until 4.1 V,
     Hold at 4.1 V until 50 mA,
+    Hold at 3 V until C/50,
     """
 
 
@@ -29,16 +30,16 @@ class Experiment:
     parameters : dict
         Dictionary of parameters to use for this experiment, replacing default
         parameters as appropriate
-    frequency : string, optional
-        Frequency at which to record outputs. Default is 1 minute.
+    period : string, optional
+        Period (1/frequency) at which to record outputs. Default is 1 minute.
 
     Examples
     --------
     >>> experiment = pybamm.Experiment(["1C for 0.5 hours", "0.5C for 45 minutes"])
     """
 
-    def __init__(self, operating_conditions, parameters=None, frequency="1 minute"):
-        self.operating_conditions_string = operating_conditions
+    def __init__(self, operating_conditions, parameters=None, period="1 minute"):
+        self.operating_conditions_strings = operating_conditions
         self.operating_conditions, self.events = self.read_operating_conditions(
             operating_conditions
         )
@@ -47,13 +48,13 @@ class Experiment:
             self.parameters = parameters
         else:
             raise TypeError("experimental parameters should be a dictionary")
-        self.frequency = self.convert_time_to_seconds(frequency.split())
+        self.period = self.convert_time_to_seconds(period.split())
 
     def __str__(self):
-        return self.operating_conditions_string
+        return str(self.operating_conditions_strings)
 
     def __repr__(self):
-        return "pybamm.Experiment({})".format(self.operating_conditions_string)
+        return "pybamm.Experiment({!s})".format(self)
 
     def read_operating_conditions(self, operating_conditions):
         """
@@ -98,13 +99,24 @@ class Experiment:
             current, C for C-rate, V for voltage or W for power), and 'hours' denotes
             the unit of time (can be second(s), minute(s) or hour(s))
         """
-        cond_list = cond.split()
-        if "for" in cond_list:
+        if "for" in cond and "or until" in cond:
+            # e.g. for 3 hours or until 4.2 V
+            cond_list = cond.split()
+            idx_for = cond_list.index("for")
+            idx_until = cond_list.index("or")
+            electric = self.convert_electric(cond_list[:idx_for])
+            time = self.convert_time_to_seconds(cond_list[idx_for + 1 : idx_until])
+            events = self.convert_electric(cond_list[idx_until + 2 :])
+        elif "for" in cond:
+            # e.g. for 3 hours
+            cond_list = cond.split()
             idx = cond_list.index("for")
             electric = self.convert_electric(cond_list[:idx])
             time = self.convert_time_to_seconds(cond_list[idx + 1 :])
             events = None
-        elif "until" in cond_list:
+        elif "until" in cond:
+            # e.g. until 4.2 V
+            cond_list = cond.split()
             idx = cond_list.index("until")
             electric = self.convert_electric(cond_list[:idx])
             time = None
@@ -126,8 +138,10 @@ class Experiment:
         else:
             if len(electric) in [3, 4]:
                 if len(electric) == 4:
+                    # e.g. Charge at 4 A, Hold at 3 V
                     instruction, _, value, unit = electric
                 elif len(electric) == 3:
+                    # e.g. Discharge at C/2
                     instruction, _, value_unit = electric
                     unit = value_unit[0]
                     value = 1 / float(value_unit[2:])
@@ -144,7 +158,14 @@ class Experiment:
                         )
                     )
             elif len(electric) == 2:
+                # e.g. 3 A, 4.1 V
                 value, unit = electric
+                sign = 1
+            elif len(electric) == 1:
+                # e.g. C/2
+                value_unit = electric[0]
+                unit = value_unit[0]
+                value = 1 / float(value_unit[2:])
                 sign = 1
             else:
                 raise ValueError(

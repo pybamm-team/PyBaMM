@@ -26,10 +26,17 @@ def constant_current_constant_voltage_constant_power(variables):
     s_I = pybamm.InputParameter("Current switch")
     s_V = pybamm.InputParameter("Voltage switch")
     s_P = pybamm.InputParameter("Power switch")
+    n_electrodes_parallel = pybamm.electrical_parameters.n_electrodes_parallel
+    n_cells = pybamm.electrical_parameters.n_cells
     return (
-        s_I * (I - pybamm.InputParameter("Current input [A]"))
-        + s_V * (V - pybamm.InputParameter("Voltage input [V]"))
-        + s_P * (V * I - pybamm.InputParameter("Power input [W]"))
+        s_I * (I - pybamm.InputParameter("Current input [A]") / n_electrodes_parallel)
+        + s_V * (V - pybamm.InputParameter("Voltage input [V]") / n_cells)
+        + s_P
+        * (
+            V * I
+            - pybamm.InputParameter("Power input [W]")
+            / (n_cells * n_electrodes_parallel)
+        )
     )
 
 
@@ -77,15 +84,7 @@ class Simulation:
         quick_plot_vars=None,
         C_rate=None,
     ):
-        self.geometry = geometry or model.default_geometry
         self._parameter_values = parameter_values or model.default_parameter_values
-        self._submesh_types = submesh_types or model.default_submesh_types
-        self._var_pts = var_pts or model.default_var_pts
-        self._spatial_methods = spatial_methods or model.default_spatial_methods
-        self._solver = solver or model.default_solver
-        self._quick_plot_vars = quick_plot_vars
-
-        self.reset(update_model=False)
 
         if experiment is None:
             self.operating_mode = "without experiment"
@@ -95,6 +94,16 @@ class Simulation:
             self.model = model
         else:
             self.set_up_experiment(model, experiment)
+
+        self.geometry = geometry or self.model.default_geometry
+        self._submesh_types = submesh_types or self.model.default_submesh_types
+        self._var_pts = var_pts or self.model.default_var_pts
+        self._spatial_methods = spatial_methods or self.model.default_spatial_methods
+        self._solver = solver or self.model.default_solver
+        self._quick_plot_vars = quick_plot_vars
+
+        self.reset(update_model=False)
+
         # ignore runtime warnings in notebooks
         if isnotebook():
             import warnings
@@ -194,20 +203,24 @@ class Simulation:
 
         # add current and voltage events to the model
         # current events both negative and positive to catch specification
+        n_electrodes_parallel = pybamm.electrical_parameters.n_electrodes_parallel
+        n_cells = pybamm.electrical_parameters.n_cells
         self.model.events.update(
             {
                 "Current cut-off (positive) [A] [experiment]": self.model.variables[
                     "Current [A]"
                 ]
-                - abs(pybamm.InputParameter("Current cut-off [A]")),
+                - abs(pybamm.InputParameter("Current cut-off [A]"))
+                / n_electrodes_parallel,
                 "Current cut-off (negative) [A] [experiment]": self.model.variables[
                     "Current [A]"
                 ]
-                + abs(pybamm.InputParameter("Current cut-off [A]")),
+                + abs(pybamm.InputParameter("Current cut-off [A]"))
+                / n_electrodes_parallel,
                 "Voltage cut-off [V] [experiment]": self.model.variables[
                     "Terminal voltage [V]"
                 ]
-                - pybamm.InputParameter("Voltage cut-off [V]"),
+                - pybamm.InputParameter("Voltage cut-off [V]") / n_cells,
             }
         )
 
@@ -340,13 +353,13 @@ class Simulation:
             for idx, (exp_inputs, dt) in enumerate(
                 zip(self._experiment_inputs, self._experiment_times)
             ):
-                pybamm.logger.info(self.experiment.operating_conditions_string[idx])
+                pybamm.logger.info(self.experiment.operating_conditions_strings[idx])
                 inputs.update(exp_inputs)
-                # Non-dimensionalise frequency
+                # Non-dimensionalise period
                 tau = self._parameter_values.evaluate(self.model.timescale)
-                freq = self.experiment.frequency / tau
+                freq = self.experiment.period / tau
                 # Make sure we take at least 2 timesteps
-                npts = max(int(dt / freq), 2)
+                npts = max(int(round(dt / freq)) + 1, 2)
                 self.step(
                     dt, npts=npts, external_variables=external_variables, inputs=inputs
                 )
@@ -361,7 +374,7 @@ class Simulation:
                         reducing current or shortening the time interval.
                         """.format(
                             self._solution.termination,
-                            self.experiment.operating_conditions_string[idx],
+                            self.experiment.operating_conditions_strings[idx],
                         )
                     )
                     break
