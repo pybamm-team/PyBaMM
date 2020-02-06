@@ -8,10 +8,10 @@ examples = """
     Discharge at C/20 for 0.5 hours,
     Charge at 0.5 C for 45 minutes,
     Discharge at 1 A for 90 seconds,
-    Charge at 200 mA for 45 minutes,
+    Charge at 200 mA for 45 minutes (1 minute period),
     Discharge at 1 W for 0.5 hours,
     Charge at 200 mW for 45 minutes,
-    Rest for 10 minutes,
+    Rest for 10 minutes (5 minute period),
     Hold at 1 V for 20 seconds,
     Charge at 1 C until 4.1 V,
     Hold at 4.1 V until 50 mA,
@@ -31,7 +31,8 @@ class Experiment:
         Dictionary of parameters to use for this experiment, replacing default
         parameters as appropriate
     period : string, optional
-        Period (1/frequency) at which to record outputs. Default is 1 minute.
+        Period (1/frequency) at which to record outputs. Default is 1 minute. Can be
+        overwritten by individual operating conditions.
 
     Examples
     --------
@@ -39,6 +40,7 @@ class Experiment:
     """
 
     def __init__(self, operating_conditions, parameters=None, period="1 minute"):
+        self.period = self.convert_time_to_seconds(period.split())
         self.operating_conditions_strings = operating_conditions
         self.operating_conditions, self.events = self.read_operating_conditions(
             operating_conditions
@@ -48,7 +50,6 @@ class Experiment:
             self.parameters = parameters
         else:
             raise TypeError("experimental parameters should be a dictionary")
-        self.period = self.convert_time_to_seconds(period.split())
 
     def __str__(self):
         return str(self.operating_conditions_strings)
@@ -99,6 +100,14 @@ class Experiment:
             current, C for C-rate, V for voltage or W for power), and 'hours' denotes
             the unit of time (can be second(s), minute(s) or hour(s))
         """
+        # Read period
+        if " period)" in cond:
+            cond, time_period = cond.split("(")
+            time, _ = time_period.split(" period)")
+            period = self.convert_time_to_seconds(time.split())
+        else:
+            period = self.period
+        # Read instructions
         if "for" in cond and "or until" in cond:
             # e.g. for 3 hours or until 4.2 V
             cond_list = cond.split()
@@ -128,7 +137,7 @@ class Experiment:
                     examples
                 )
             )
-        return electric + (time,), events
+        return electric + (time,) + (period,), events
 
     def convert_electric(self, electric):
         "Convert electrical instructions to consistent output"

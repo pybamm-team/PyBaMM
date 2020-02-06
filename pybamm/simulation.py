@@ -168,6 +168,8 @@ class Simulation:
                     "Voltage input [V]": 0,  # doesn't matter
                     "Power input [W]": P,
                 }
+            # Update period
+            operating_inputs["period"] = op[3]
             # Update events
             if events is None:
                 # make current and voltage values that won't be hit
@@ -191,6 +193,7 @@ class Simulation:
                 operating_inputs.update(
                     {"Current cut-off [A]": -1e10, "Voltage cut-off [V]": V}
                 )
+
             self._experiment_inputs.append(operating_inputs)
             # Convert time to dimensionless
             dt_dimensional = op[2]
@@ -357,7 +360,7 @@ class Simulation:
                 inputs.update(exp_inputs)
                 # Non-dimensionalise period
                 tau = self._parameter_values.evaluate(self.model.timescale)
-                freq = self.experiment.period / tau
+                freq = exp_inputs["period"] / tau
                 # Make sure we take at least 2 timesteps
                 npts = max(int(round(dt / freq)) + 1, 2)
                 self.step(

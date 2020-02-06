@@ -78,7 +78,7 @@ class TestSimulationExperiment(unittest.TestCase):
         pybamm.set_logging_level("ERROR")
         sim.solve()
         pybamm.set_logging_level("WARNING")
-        self.assertEqual(sim._solution.termination, "event: Minimum voltage")
+        self.assertIn("event", sim._solution.termination)
 
 
 if __name__ == "__main__":

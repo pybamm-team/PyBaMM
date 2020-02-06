@@ -235,7 +235,7 @@ from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 #
 # Solver classes
 #
-from .solvers.solution import Solution
+from .solvers.solution import Solution, _BaseSolution
 from .solvers.base_solver import BaseSolver
 from .solvers.algebraic_solver import AlgebraicSolver
 from .solvers.casadi_solver import CasadiSolver
