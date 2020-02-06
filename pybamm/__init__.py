@@ -174,17 +174,6 @@ from .models.submodels import (
 )
 
 #
-# Parameters class and methods
-#
-from .parameters.parameter_values import ParameterValues
-from .parameters import geometric_parameters
-from .parameters import electrical_parameters
-from .parameters import thermal_parameters
-from .parameters import standard_parameters_lithium_ion, standard_parameters_lead_acid
-from .parameters.print_parameters import print_parameters, print_evaluated_parameters
-from .parameters import parameter_sets
-
-#
 # Geometry
 #
 from .geometry.geometry import (
@@ -201,6 +190,18 @@ from .geometry.geometry import (
 
 from .expression_tree.independent_variable import KNOWN_SPATIAL_VARS, KNOWN_COORD_SYS
 from .geometry import standard_spatial_vars
+
+#
+# Parameters class and methods
+#
+from .parameters.parameter_values import ParameterValues
+from .parameters import geometric_parameters
+from .parameters import electrical_parameters
+from .parameters import thermal_parameters
+from .parameters import standard_parameters_lithium_ion, standard_parameters_lead_acid
+from .parameters.print_parameters import print_parameters, print_evaluated_parameters
+from .parameters import parameter_sets
+
 
 #
 # Mesh and Discretisation classes
