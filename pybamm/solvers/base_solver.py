@@ -426,7 +426,8 @@ class BaseSolver(object):
 
         # Calculate discontinuities
         discontinuities = [
-            event.expression.evaluate(u=inputs) for event in model.discontinuity_events_eval
+            event.expression.evaluate(u=inputs)
+            for event in model.discontinuity_events_eval
         ]
 
         # make sure they are increasing in time
@@ -436,9 +437,10 @@ class BaseSolver(object):
         )
         # remove any identical discontinuities
         discontinuities = [
-                v for i, v in enumerate(discontinuities)
-                    if i==len(discontinuities)-1 or discontinuities[i] < discontinuities[i+1]
-                    ]
+            v for i, v in enumerate(discontinuities)
+            if i == len(discontinuities) - 1
+            or discontinuities[i] < discontinuities[i + 1]
+        ]
 
         # insert time points around discontinuities in t_eval
         # keep track of sub sections to integrate by storing start and end indices
@@ -446,21 +448,22 @@ class BaseSolver(object):
         end_indices = []
         for dtime in discontinuities:
             dindex = np.searchsorted(t_eval, dtime, side='left')
-            end_indices.append(dindex+1)
-            start_indices.append(dindex+1)
+            end_indices.append(dindex + 1)
+            start_indices.append(dindex + 1)
             if t_eval[dindex] == dtime:
                 t_eval[dindex] += sys.float_info.epsilon
                 t_eval = np.insert(t_eval, dindex, dtime - sys.float_info.epsilon)
             else:
                 t_eval = np.insert(t_eval, dindex,
-                                   [dtime - sys.float_info.epsilon, dtime + sys.float_info.epsilon])
+                                   [dtime - sys.float_info.epsilon,
+                                    dtime + sys.float_info.epsilon])
         end_indices.append(len(t_eval))
 
         old_y0 = model.y0
         solution = None
         for start_index, end_index in zip(start_indices, end_indices):
             pybamm.logger.info("Calling solver for {} < t < {}"
-                               .format(t_eval[start_index], t_eval[end_index-1]))
+                               .format(t_eval[start_index], t_eval[end_index - 1]))
             timer.reset()
             if solution is None:
                 solution = self._integrate(
@@ -479,14 +482,15 @@ class BaseSolver(object):
                 # setup for next integration subsection
                 y0_guess = solution.y[:, -1]
                 if model.algebraic:
-                    model.y0 = self.calculate_consistent_state(model, t_eval[end_index], y0_guess)
+                    model.y0 = self.calculate_consistent_state(
+                        model, t_eval[end_index], y0_guess)
                 else:
                     model.y0 = y0_guess
 
                 last_state = solution.y[:, -1]
                 if len(model.algebraic) > 0:
                     model.y0 = self.calculate_consistent_state(
-                            model, t_eval[end_index], last_state)
+                        model, t_eval[end_index], last_state)
                 else:
                     model.y0 = last_state
 

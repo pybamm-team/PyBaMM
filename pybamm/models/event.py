@@ -1,10 +1,18 @@
-import pybamm
-
 from enum import Enum
 
 
 class EventType(Enum):
-    """Defines the type of event, see Event"""
+    """
+    Defines the type of event, see Event
+
+    TERMINATION indicates an event that will terminate the solver, the expression should
+    return 0 when the event is triggered
+
+    DISCONTINUITY indicates an expected discontinuity in the solution, the expression
+    should return the time that the discontinuity occurs. The solver will integrate up
+    to the discontinuity and then restart just after the discontinuity.
+
+    """
     TERMINATION = 0
     DISCONTINUITY = 1
 
@@ -20,7 +28,7 @@ class Event:
     name: str
         A string giving the name of the event
     event_type: EventType
-        An enum defining the type of event, see EventType
+        An enum defining the type of event
     expression: pybamm.Symbol
         An expression that defines when the event occurs
 

@@ -6,6 +6,7 @@ import numpy as np
 import unittest
 import warnings
 from tests import get_mesh_for_testing, get_discretisation_for_testing
+import sys
 
 
 @unittest.skipIf(not pybamm.have_scikits_odes(), "scikits.odes not installed")

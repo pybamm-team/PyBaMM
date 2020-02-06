@@ -104,7 +104,8 @@ class CasadiSolver(pybamm.BaseSolver):
         elif self.mode == "safe":
             # Step-and-check
             init_event_signs = np.sign(
-                np.concatenate([event(0, model.y0) for event in model.terminate_events_eval])
+                np.concatenate([event(0, model.y0)
+                                for event in model.terminate_events_eval])
             )
             pybamm.logger.info(
                 "Start solving {} with {} in 'safe' mode".format(model.name, self.name)
