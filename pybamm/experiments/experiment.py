@@ -221,7 +221,3 @@ class Experiment:
                 )
             )
         return time_in_seconds
-
-
-if __name__ == "__main__":
-    Experiment(["Rest for 10 bla"])

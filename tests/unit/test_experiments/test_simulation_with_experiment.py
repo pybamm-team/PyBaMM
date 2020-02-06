@@ -57,12 +57,16 @@ class TestSimulationExperiment(unittest.TestCase):
         self.assertIn("Current cut-off (negative) [A] [experiment]", sim.model.events)
         self.assertIn("Voltage cut-off [V] [experiment]", sim.model.events)
 
+        # fails if trying to set up with something that isn't an experiment
+        with self.assertRaisesRegex(TypeError, "experiment must be"):
+            pybamm.Simulation(model, experiment=0)
+
     def test_run_experiment(self):
         experiment = pybamm.Experiment(
             [
                 "Discharge at C/20 for 1 hour",
                 "Charge at 1 A until 4.1 V",
-                "Hold at 4.1 V until 50 mA",
+                "Hold at 4.1 V until C/2",
                 "Discharge at 2 W for 1 hour",
             ],
         )
@@ -76,7 +80,9 @@ class TestSimulationExperiment(unittest.TestCase):
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model, experiment=experiment)
         pybamm.set_logging_level("ERROR")
-        sim.solve()
+        # giving the time, should get ignored
+        t_eval = [0, 1]
+        sim.solve(t_eval)
         pybamm.set_logging_level("WARNING")
         self.assertIn("event", sim._solution.termination)
 

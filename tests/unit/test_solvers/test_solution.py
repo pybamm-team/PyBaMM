@@ -20,7 +20,7 @@ class TestSolution(unittest.TestCase):
         self.assertEqual(sol.model, None)
 
         with self.assertRaisesRegex(AttributeError, "sub solutions"):
-            sol.sub_solutions
+            print(sol.sub_solutions)
 
     def test_append(self):
         # Set up first solution
@@ -37,7 +37,7 @@ class TestSolution(unittest.TestCase):
         sol2 = pybamm.Solution(t2, y2)
         sol2.solve_time = 1
         sol2.inputs = {"a": 2}
-        sol1.append(sol2)
+        sol1.append(sol2, create_sub_solutions=True)
 
         # Test
         self.assertEqual(sol1.solve_time, 2.5)
