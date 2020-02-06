@@ -16,7 +16,6 @@ class TestUnaryOperators(unittest.TestCase):
 
         # with number
         log = pybamm.log(10)
-        self.assertIsInstance(log.children[0], pybamm.Scalar)
         self.assertEqual(log.evaluate(), np.log(10))
 
     def test_negation(self):
@@ -124,22 +123,23 @@ class TestUnaryOperators(unittest.TestCase):
             pybamm.Integral(a, y)
 
     def test_index(self):
-        vec = pybamm.Vector(np.array([1, 2, 3, 4, 5]))
+        vec = pybamm.StateVector(slice(0, 5))
+        y_test = np.array([1, 2, 3, 4, 5])
         # with integer
         ind = vec[3]
         self.assertIsInstance(ind, pybamm.Index)
         self.assertEqual(ind.slice, slice(3, 4))
-        self.assertEqual(ind.evaluate(), 4)
+        self.assertEqual(ind.evaluate(y=y_test), 4)
         # with slice
         ind = vec[1:3]
         self.assertIsInstance(ind, pybamm.Index)
         self.assertEqual(ind.slice, slice(1, 3))
-        np.testing.assert_array_equal(ind.evaluate(), np.array([[2], [3]]))
+        np.testing.assert_array_equal(ind.evaluate(y=y_test), np.array([[2], [3]]))
         # with only stop slice
         ind = vec[:3]
         self.assertIsInstance(ind, pybamm.Index)
         self.assertEqual(ind.slice, slice(3))
-        np.testing.assert_array_equal(ind.evaluate(), np.array([[1], [2], [3]]))
+        np.testing.assert_array_equal(ind.evaluate(y=y_test), np.array([[1], [2], [3]]))
 
         # errors
         with self.assertRaisesRegex(TypeError, "index must be integer or slice"):

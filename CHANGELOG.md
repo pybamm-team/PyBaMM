@@ -36,6 +36,7 @@
 
 ## Optimizations
 
+-   Now simplifying objects that are constant as soon as they are created ([#801](https://github.com/pybamm-team/PyBaMM/pull/801))
 -   Simplified solver interface ([#800](https://github.com/pybamm-team/PyBaMM/pull/800))
 -   Added caching for shape evaluation, used during discretisation ([#780](https://github.com/pybamm-team/PyBaMM/pull/780))
 -   Added an option to skip model checks during discretisation, which could be slow for large models ([#739](https://github.com/pybamm-team/PyBaMM/pull/739))

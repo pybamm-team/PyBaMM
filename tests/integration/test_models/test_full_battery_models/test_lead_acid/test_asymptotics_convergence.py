@@ -18,12 +18,9 @@ class TestAsymptoticConvergence(unittest.TestCase):
         composite_model = pybamm.lead_acid.Composite()
         full_model = pybamm.lead_acid.Full()
 
-        def current_function(t):
-            return pybamm.InputParameter("Current")
-
         # Same parameters, same geometry
         parameter_values = full_model.default_parameter_values
-        parameter_values["Current function [A]"] = current_function
+        parameter_values["Current function [A]"] = "[input]"
         parameter_values.process_model(leading_order_model)
         parameter_values.process_model(composite_model)
         parameter_values.process_model(full_model)
@@ -51,23 +48,17 @@ class TestAsymptoticConvergence(unittest.TestCase):
             pybamm.logger.info("current = {}".format(current))
             # Solve, make sure times are the same and use tight tolerances
             t_eval = np.linspace(0, 0.6)
-            solver_loqs = leading_order_model.default_solver
-            solver_loqs.rtol = 1e-8
-            solver_loqs.atol = 1e-8
-            solution_loqs = solver_loqs.solve(
-                leading_order_model, t_eval, inputs={"Current": current}
+            solver = pybamm.CasadiSolver()
+            solver.rtol = 1e-8
+            solver.atol = 1e-8
+            solution_loqs = solver.solve(
+                leading_order_model, t_eval, inputs={"Current function [A]": current}
             )
-            solver_comp = composite_model.default_solver
-            solver_comp.rtol = 1e-8
-            solver_comp.atol = 1e-8
-            solution_comp = solver_comp.solve(
-                composite_model, t_eval, inputs={"Current": current}
+            solution_comp = solver.solve(
+                composite_model, t_eval, inputs={"Current function [A]": current}
             )
-            solver_full = full_model.default_solver
-            solver_full.rtol = 1e-8
-            solver_full.atol = 1e-8
-            solution_full = solver_full.solve(
-                full_model, t_eval, inputs={"Current": current}
+            solution_full = solver.solve(
+                full_model, t_eval, inputs={"Current function [A]": current}
             )
 
             # Post-process variables
@@ -105,5 +96,4 @@ if __name__ == "__main__":
 
     if "-v" in sys.argv:
         debug = True
-    pybamm.set_logging_level("DEBUG")
     unittest.main()
