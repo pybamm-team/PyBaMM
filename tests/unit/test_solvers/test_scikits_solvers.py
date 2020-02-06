@@ -295,10 +295,10 @@ class TestScikitsSolvers(unittest.TestCase):
 
             # time value before and after discontinuity is an epsilon away
             dindex = np.searchsorted(solution.t, discontinuity)
-            value_before = solution.t[dindex-1]
+            value_before = solution.t[dindex - 1]
             value_after = solution.t[dindex]
-            self.assertEqual(value_before+sys.float_info.epsilon, discontinuity)
-            self.assertEqual(value_after-sys.float_info.epsilon, discontinuity)
+            self.assertEqual(value_before + sys.float_info.epsilon, discontinuity)
+            self.assertEqual(value_after - sys.float_info.epsilon, discontinuity)
 
         # both solution time vectors should have same number of points
         self.assertEqual(len(solution1.t), len(solution2.t))
@@ -310,9 +310,12 @@ class TestScikitsSolvers(unittest.TestCase):
             var1_soln = np.exp(0.2 * solution.t)
             y0 = np.exp(0.2 * discontinuity)
             var1_soln[solution.t > discontinuity] = \
-                y0*np.exp(0.1 * (solution.t[solution.t > discontinuity]-discontinuity))
-            var2_soln = 2*var1_soln
-            var2_soln[solution.t > discontinuity] = var1_soln[solution.t > discontinuity]
+                y0 * np.exp(
+                0.1 * (solution.t[solution.t > discontinuity] - discontinuity)
+            )
+            var2_soln = 2 * var1_soln
+            var2_soln[solution.t > discontinuity] = \
+                var1_soln[solution.t > discontinuity]
             np.testing.assert_allclose(solution.y[0], var1_soln, rtol=1e-06)
             np.testing.assert_allclose(solution.y[-1], var2_soln, rtol=1e-06)
 
@@ -597,7 +600,6 @@ class TestScikitsSolvers(unittest.TestCase):
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
-    import sys
 
     if "-v" in sys.argv:
         debug = True
