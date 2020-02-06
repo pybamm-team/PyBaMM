@@ -374,7 +374,8 @@ class Simulation:
                     pybamm.logger.warning(
                         """
                         Experiment is infeasible: '{}' was triggered during '{}'. Try
-                        reducing current or shortening the time interval.
+                        reducing current, shortening the time interval, or reducing
+                        the period.
                         """.format(
                             self._solution.termination,
                             self.experiment.operating_conditions_strings[idx],

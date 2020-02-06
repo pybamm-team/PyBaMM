@@ -229,10 +229,10 @@ class Solution(_BaseSolution):
 
     def __add__(self, other):
         "See :meth:`Solution.append`"
-        self.append(other)
+        self.append(other, create_sub_solutions=True)
         return self
 
-    def append(self, solution):
+    def append(self, solution, create_sub_solutions=False):
         """
         Appends solution.t and solution.y onto self.t and self.y.
         Note: this process removes the initial time and state of solution to avoid
@@ -243,7 +243,7 @@ class Solution(_BaseSolution):
         # Create sub-solutions if necessary
         # sub-solutions are 'BaseSolution' objects, which have slightly reduced
         # functionality compared to normal solutions (can't append other solutions)
-        if not hasattr(self, "_sub_solutions"):
+        if create_sub_solutions and not hasattr(self, "_sub_solutions"):
             self._sub_solutions = [
                 _BaseSolution(
                     self.t,
@@ -279,14 +279,15 @@ class Solution(_BaseSolution):
             self.update(var)
 
         # Append sub_solutions
-        self._sub_solutions.append(
-            _BaseSolution(
-                solution.t,
-                solution.y,
-                solution.t_event,
-                solution.y_event,
-                solution.termination,
-                copy_this=solution,
+        if create_sub_solutions:
+            self._sub_solutions.append(
+                _BaseSolution(
+                    solution.t,
+                    solution.y,
+                    solution.t_event,
+                    solution.y_event,
+                    solution.termination,
+                    copy_this=solution,
+                )
             )
-        )
 

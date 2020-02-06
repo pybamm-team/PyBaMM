@@ -45,6 +45,7 @@ class BaseSolver(object):
         self.root_tol = root_tol
         self.max_steps = max_steps
 
+        self.models_set_up = set()
         self.model_step_times = {}
 
         # Defaults, can be overwritten by specific solver
@@ -405,9 +406,13 @@ class BaseSolver(object):
         inputs = inputs or {}
         ext_and_inputs = {**external_variables, **inputs}
 
-        self.set_up(model, ext_and_inputs)
-        set_up_time = timer.time()
-
+        # Set up (if not done already)
+        if model not in self.models_set_up:
+            self.set_up(model, ext_and_inputs)
+            set_up_time = timer.time()
+            self.models_set_up.add(model)
+        else:
+            set_up_time = 0
         # Solve
         # Set inputs and external
         self.set_inputs(model, ext_and_inputs)
