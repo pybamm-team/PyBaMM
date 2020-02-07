@@ -217,7 +217,9 @@ class _BaseSolution(object):
             data = self.data
         else:
             # otherwise, save only the variables specified
-            data = {name: var for name, var in self.data.items() if name in variables}
+            data = {}
+            for name in variables:
+                data[name] = self[name].data
         if len(data) == 0:
             raise ValueError(
                 """
@@ -231,8 +233,13 @@ class _BaseSolution(object):
         elif to_format == "matlab":
             savemat(filename, data)
         elif to_format == "csv":
-            if any(var.ndim == 2 for var in data.values()):
-                raise ValueError("only 1D variables can be saved to csv")
+            for name, var in data.items():
+                if var.ndim == 2:
+                    raise ValueError(
+                        "only 1D variables can be saved to csv, but '{}' is 2D".format(
+                            name
+                        )
+                    )
             df = pd.DataFrame(data)
             df.to_csv(filename, index=False)
 

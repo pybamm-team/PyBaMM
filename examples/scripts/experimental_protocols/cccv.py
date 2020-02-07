@@ -16,7 +16,7 @@ experiment = pybamm.Experiment(
     * 3,
     period="2 minutes",
 )
-model = pybamm.lithium_ion.DFN()
+model = pybamm.lithium_ion.DFN()  # use {"thermal": "x-lumped"} for thermal effects
 sim = pybamm.Simulation(model, experiment=experiment, solver=pybamm.CasadiSolver())
 sim.solve()
 
@@ -34,6 +34,31 @@ for i in range(3):
     ax.set_ylabel("Voltage [V]")
     ax.set_xlim([0, 13])
 ax.legend()
+
+# Save time, voltage, current, discharge capacity and temperature to csv and matlab
+# formats
+sim.solution.save_data(
+    "output.mat",
+    [
+        "Time [h]",
+        "Current [A]",
+        "Terminal voltage [V]",
+        "Discharge capacity [A.h]",
+        "X-averaged cell temperature [K]",
+    ],
+    to_format="matlab",
+)
+sim.solution.save_data(
+    "output.csv",
+    [
+        "Time [h]",
+        "Current [A]",
+        "Terminal voltage [V]",
+        "Discharge capacity [A.h]",
+        "X-averaged cell temperature [K]",
+    ],
+    to_format="csv",
+)
 
 # Show all plots
 sim.plot()
