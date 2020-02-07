@@ -5,6 +5,7 @@
 /local/
 *.DS_Store
 *.mat
+*.csv
 
 # don't ignore important .txt files
 !requirements*
