@@ -34,10 +34,6 @@ class Experiment:
         Period (1/frequency) at which to record outputs. Default is 1 minute. Can be
         overwritten by individual operating conditions.
 
-    Examples
-    --------
-    >>> import pybamm
-    >>> experiment = pybamm.Experiment(["1C for 0.5 hours", "0.5C for 45 minutes"])
     """
 
     def __init__(self, operating_conditions, parameters=None, period="1 minute"):
