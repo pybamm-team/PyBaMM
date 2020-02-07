@@ -100,9 +100,15 @@ class BasicDFN(BaseModel):
         # Porosity
         # Primary broadcasts are used to broadcast scalar quantities across a domain
         # into a vector of the right shape, for multiplying with other vectors
-        eps_n = pybamm.PrimaryBroadcast(param.epsilon_n, "negative electrode")
-        eps_s = pybamm.PrimaryBroadcast(param.epsilon_s, "separator")
-        eps_p = pybamm.PrimaryBroadcast(param.epsilon_p, "positive electrode")
+        eps_n = pybamm.PrimaryBroadcast(
+            pybamm.Parameter("Negative electrode porosity"), "negative electrode"
+        )
+        eps_s = pybamm.PrimaryBroadcast(
+            pybamm.Parameter("Separator porosity"), "separator"
+        )
+        eps_p = pybamm.PrimaryBroadcast(
+            pybamm.Parameter("Positive electrode porosity"), "positive electrode"
+        )
         eps = pybamm.Concatenation(eps_n, eps_s, eps_p)
 
         # Tortuosity
