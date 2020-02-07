@@ -234,7 +234,7 @@ class _BaseSolution(object):
             if any(var.ndim == 2 for var in data.values()):
                 raise ValueError("only 1D variables can be saved to csv")
             df = pd.DataFrame(data)
-            df.to_csv(filename)
+            df.to_csv(filename, index=False)
 
 
 class Solution(_BaseSolution):
