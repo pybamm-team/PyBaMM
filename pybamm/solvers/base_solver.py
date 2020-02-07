@@ -8,6 +8,7 @@ import numpy as np
 from scipy import optimize
 from scipy.sparse import issparse
 import sys
+import itertools
 
 
 class BaseSolver(object):
@@ -215,7 +216,8 @@ class BaseSolver(object):
         # Check for heaviside functions in rhs and algebraic and add discontinuity
         # events if these exist.
         # Note: only checks for the case of t < X, t <= X, X < t, or X <= t
-        for symbol in model.concatenated_rhs.pre_order():
+        for symbol in itertools.chain(model.concatenated_rhs.pre_order(),
+                                      model.concatenated_algebraic.pre_order()):
             if isinstance(symbol, pybamm.Heaviside):
                 if symbol.right.id == pybamm.t.id:
                     expr = symbol.left
