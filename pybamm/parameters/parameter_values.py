@@ -384,7 +384,7 @@ class ParameterValues:
             )
             model.variables[variable] = self.process_symbol(equation)
 
-        for i, event in enumerate(model.events):
+        for event in model.events:
             pybamm.logger.debug("Processing parameters for event'{}''"
                                 .format(event.name))
             event.expression = self.process_symbol(event.expression)
