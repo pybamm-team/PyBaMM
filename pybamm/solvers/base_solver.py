@@ -212,6 +212,19 @@ class BaseSolver(object):
                 jac_call = None
             return func, func_call, jac_call
 
+        # Check for heaviside functions in rhs and algebraic and add discontinuity
+        # events if these exist.
+        # Note: only checks for the case of t < X, t <= X, X < t, or X <= t
+        for symbol in model.concatenated_rhs.pre_order():
+            if isinstance(symbol, pybamm.Heaviside):
+                if symbol.right.id == pybamm.t.id:
+                    expr = symbol.left
+                elif symbol.left.id == pybamm.t.id:
+                    expr = symbol.right
+
+                model.events.append(pybamm.Event(str(symbol), expr.new_copy(),
+                                                 pybamm.EventType.DISCONTINUITY))
+
         # Process rhs, algebraic and event expressions
         rhs, rhs_eval, jac_rhs = process(model.concatenated_rhs, "RHS")
         algebraic, algebraic_eval, jac_algebraic = process(
