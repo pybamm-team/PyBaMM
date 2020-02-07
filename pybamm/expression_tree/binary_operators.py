@@ -651,9 +651,8 @@ class Heaviside(BinaryOperator):
     :class:`EventType` DISCONTINUITY to the model's list of events.
 
     In the case where the Heaviside function is of the form `pybamm.t < x`, `pybamm.t <=
-    x`, `x < pybamm.t`, or `x <= pybamm.t`, this DISCONTINUITY event will automatically
-    be added by the solver.
-
+    x`, `x < pybamm.t`, or `x <= pybamm.t`, where `x` is any constant equation, this
+    DISCONTINUITY event will automatically be added by the solver.
 
     **Extends:** :class:`BinaryOperator`
     """
