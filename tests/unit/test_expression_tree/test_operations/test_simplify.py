@@ -518,7 +518,7 @@ class TestSimplify(unittest.TestCase):
         expr3 = (m / a).simplify()
         self.assertIsInstance(expr3, pybamm.Matrix)
         self.assertEqual(expr3.shape, m.shape)
-        np.testing.assert_array_equal(expr3.evaluate(), np.zeros((10, 10)))
+        np.testing.assert_array_equal(expr3.evaluate().toarray(), np.zeros((10, 10)))
 
     def test_domain_concatenation_simplify(self):
         # create discretisation
