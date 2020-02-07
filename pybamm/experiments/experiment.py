@@ -36,6 +36,7 @@ class Experiment:
 
     Examples
     --------
+    >>> import pybamm
     >>> experiment = pybamm.Experiment(["1C for 0.5 hours", "0.5C for 45 minutes"])
     """
 
