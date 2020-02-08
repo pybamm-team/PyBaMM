@@ -126,16 +126,12 @@ velocity_scale = pybamm.Scalar(1)
 
 def D_e_dimensional(c_e, T):
     "Dimensional diffusivity in electrolyte"
-    return pybamm.FunctionParameter(
-        "Electrolyte diffusivity [m2.s-1]", c_e, T, T_ref, E_D_e, R
-    )
+    return pybamm.FunctionParameter("Electrolyte diffusivity [m2.s-1]", c_e, T)
 
 
 def kappa_e_dimensional(c_e, T):
     "Dimensional electrolyte conductivity"
-    return pybamm.FunctionParameter(
-        "Electrolyte conductivity [S.m-1]", c_e, T, T_ref, E_k_e, R
-    )
+    return pybamm.FunctionParameter("Electrolyte conductivity [S.m-1]", c_e, T)
 
 
 def D_n_dimensional(c_n, T):
