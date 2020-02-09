@@ -644,6 +644,16 @@ def inner(left, right):
 class Heaviside(BinaryOperator):
     """A node in the expression tree representing a heaviside step function.
 
+    Adding this operation to the rhs or algebraic equations in a model can often cause a
+    discontinuity in the solution. For the specific cases listed below, this will be
+    automatically handled by the solver. In the general case, you can explicitly tell
+    the solver of discontinuities by adding a :class:`Event` object with
+    :class:`EventType` DISCONTINUITY to the model's list of events.
+
+    In the case where the Heaviside function is of the form `pybamm.t < x`, `pybamm.t <=
+    x`, `x < pybamm.t`, or `x <= pybamm.t`, where `x` is any constant equation, this
+    DISCONTINUITY event will automatically be added by the solver.
+
     **Extends:** :class:`BinaryOperator`
     """
 

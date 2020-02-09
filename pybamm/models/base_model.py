@@ -46,9 +46,10 @@ class BaseModel(object):
     variables: dict
         A dictionary that maps strings to expressions that represent
         the useful variables
-    events: list
-        A list of events that should cause the solver to terminate (e.g. concentration
-        goes negative)
+    events: list of :class:`pybamm.Event`
+        A list of events. Each event can either cause the solver to terminate
+        (e.g. concentration goes negative), or be used to inform the solver of the
+        existance of a discontinuity (e.g. discontinuity in the input current)
     concatenated_rhs : :class:`pybamm.Concatenation`
         After discretisation, contains the expressions representing the rhs equations
         concatenated into a single expression
@@ -105,7 +106,7 @@ class BaseModel(object):
         self._initial_conditions = {}
         self._boundary_conditions = {}
         self._variables = pybamm.FuzzyDict()
-        self._events = {}
+        self._events = []
         self._concatenated_rhs = None
         self._concatenated_algebraic = None
         self._concatenated_initial_conditions = None
@@ -342,7 +343,7 @@ class BaseModel(object):
                 self._boundary_conditions, submodel.boundary_conditions
             )
             self.variables.update(submodel.variables)  # keys are strings so no check
-            self._events.update(submodel.events)
+            self._events += submodel.events
 
     def check_and_combine_dict(self, dict1, dict2):
         # check that the key ids are distinct

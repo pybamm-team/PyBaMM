@@ -232,13 +232,14 @@ class Solution(_BaseSolution):
         self.append(other, create_sub_solutions=True)
         return self
 
-    def append(self, solution, create_sub_solutions=False):
+    def append(self, solution, start_index=1, create_sub_solutions=False):
         """
         Appends solution.t and solution.y onto self.t and self.y.
-        Note: this process removes the initial time and state of solution to avoid
-        duplicate times and states being stored (self.t[-1] is equal to solution.t[0],
-        and self.y[:, -1] is equal to solution.y[:, 0]).
 
+        Note: by default this process removes the initial time and state of solution to
+        avoid duplicate times and states being stored (self.t[-1] is equal to
+        solution.t[0], and self.y[:, -1] is equal to solution.y[:, 0]). Set the optional
+        argument ``start_index`` to override this behavior
         """
         # Create sub-solutions if necessary
         # sub-solutions are 'BaseSolution' objects, which have slightly reduced
@@ -259,11 +260,11 @@ class Solution(_BaseSolution):
         # Create a list of sub-solutions, which are simpler BaseSolution classes
 
         # Update t, y and inputs
-        self._t = np.concatenate((self._t, solution.t[1:]))
-        self._y = np.concatenate((self._y, solution.y[:, 1:]), axis=1)
+        self._t = np.concatenate((self._t, solution.t[start_index:]))
+        self._y = np.concatenate((self._y, solution.y[:, start_index:]), axis=1)
         for name, inp in self.inputs.items():
             solution_inp = solution.inputs[name]
-            self.inputs[name] = np.concatenate((inp, solution_inp[1:]))
+            self.inputs[name] = np.concatenate((inp, solution_inp[start_index:]))
         # Update solution time
         self.solve_time += solution.solve_time
         # Update termination

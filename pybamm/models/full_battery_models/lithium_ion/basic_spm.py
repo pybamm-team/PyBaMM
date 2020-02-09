@@ -97,20 +97,16 @@ class BasicSPM(BaseModel):
         c_s_surf_n = pybamm.surf(c_s_n)
         c_s_surf_p = pybamm.surf(c_s_p)
         # Events specify points at which a solution should terminate
-        self.events.update(
-            {
-                "Minimum negative particle surface concentration": (
-                    pybamm.min(c_s_surf_n) - 0.01
-                ),
-                "Maximum negative particle surface concentration": (1 - 0.01)
-                - pybamm.max(c_s_surf_n),
-                "Minimum positive particle surface concentration": (
-                    pybamm.min(c_s_surf_p) - 0.01
-                ),
-                "Maximum positive particle surface concentration": (1 - 0.01)
-                - pybamm.max(c_s_surf_p),
-            }
-        )
+        self.events += [
+            pybamm.Event("Minimum negative particle surface concentration",
+                         pybamm.min(c_s_surf_n) - 0.01),
+            pybamm.Event("Maximum negative particle surface concentration",
+                         (1 - 0.01) - pybamm.max(c_s_surf_n)),
+            pybamm.Event("Minimum positive particle surface concentration",
+                         pybamm.min(c_s_surf_p) - 0.01),
+            pybamm.Event("Maximum positive particle surface concentration",
+                         (1 - 0.01) - pybamm.max(c_s_surf_p)),
+        ]
 
         # Note that the SPM does not have any algebraic equations, so the `algebraic`
         # dictionary remains empty
@@ -164,8 +160,10 @@ class BasicSPM(BaseModel):
             ),
             "Terminal voltage": V,
         }
-        self.events["Minimum voltage"] = V - param.voltage_low_cut
-        self.events["Maximum voltage"] = V - param.voltage_high_cut
+        self.events += [
+            pybamm.Event("Minimum voltage", V - param.voltage_low_cut),
+            pybamm.Event("Maximum voltage", V - param.voltage_high_cut),
+        ]
 
     @property
     def default_geometry(self):

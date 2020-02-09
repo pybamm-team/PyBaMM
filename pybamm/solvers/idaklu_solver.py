@@ -199,12 +199,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         jac_class = SundialsJacobian()
 
-        num_of_events = len(model.events_eval)
+        num_of_events = len(model.terminate_events_eval)
         use_jac = 1
 
         def rootfn(t, y):
             return_root = np.ones((num_of_events,))
-            return_root[:] = [event(t, y) for event in model.events_eval]
+            return_root[:] = [event(t, y) for event in model.terminate_events_eval]
 
             return return_root
 

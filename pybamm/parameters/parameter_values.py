@@ -383,9 +383,11 @@ class ParameterValues:
                 "Processing parameters for {!r} (variables)".format(variable)
             )
             model.variables[variable] = self.process_symbol(equation)
-        for event, equation in model.events.items():
-            pybamm.logger.debug("Processing parameters for event '{}''".format(event))
-            model.events[event] = self.process_symbol(equation)
+
+        for event in model.events:
+            pybamm.logger.debug("Processing parameters for event'{}''"
+                                .format(event.name))
+            event.expression = self.process_symbol(event.expression)
 
         pybamm.logger.info("Finish setting parameters for {}".format(model.name))
 
