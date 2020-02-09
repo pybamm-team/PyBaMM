@@ -180,20 +180,16 @@ class BasicDFN(BaseModel):
         self.initial_conditions[c_s_n] = param.c_n_init
         self.initial_conditions[c_s_p] = param.c_p_init
         # Events specify points at which a solution should terminate
-        self.events.update(
-            {
-                "Minimum negative particle surface concentration": (
-                    pybamm.min(c_s_surf_n) - 0.01
-                ),
-                "Maximum negative particle surface concentration": (1 - 0.01)
-                - pybamm.max(c_s_surf_n),
-                "Minimum positive particle surface concentration": (
-                    pybamm.min(c_s_surf_p) - 0.01
-                ),
-                "Maximum positive particle surface concentration": (1 - 0.01)
-                - pybamm.max(c_s_surf_p),
-            }
-        )
+        self.events += [
+            pybamm.Event("Minimum negative particle surface concentration",
+                         pybamm.min(c_s_surf_n) - 0.01),
+            pybamm.Event("Maximum negative particle surface concentration",
+                         (1 - 0.01) - pybamm.max(c_s_surf_n)),
+            pybamm.Event("Minimum positive particle surface concentration",
+                         pybamm.min(c_s_surf_p) - 0.01),
+            pybamm.Event("Maximum positive particle surface concentration",
+                         (1 - 0.01) - pybamm.max(c_s_surf_p)),
+        ]
         ######################
         # Current in the solid
         ######################
@@ -245,7 +241,8 @@ class BasicDFN(BaseModel):
             "right": (pybamm.Scalar(0), "Neumann"),
         }
         self.initial_conditions[c_e] = param.c_e_init
-        self.events["Zero electrolyte concentration cut-off"] = pybamm.min(c_e) - 0.002
+        self.events.append(pybamm.Event("Zero electrolyte concentration cut-off",
+                                        pybamm.min(c_e) - 0.002))
 
         ######################
         # (Some) variables
@@ -263,8 +260,10 @@ class BasicDFN(BaseModel):
             "Positive electrode potential": phi_s_p,
             "Terminal voltage": voltage,
         }
-        self.events["Minimum voltage"] = voltage - param.voltage_low_cut
-        self.events["Maximum voltage"] = voltage - param.voltage_high_cut
+        self.events += [
+            pybamm.Event("Minimum voltage", voltage - param.voltage_low_cut),
+            pybamm.Event("Maximum voltage", voltage - param.voltage_high_cut),
+        ]
 
     @property
     def default_geometry(self):

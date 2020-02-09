@@ -148,6 +148,8 @@ from .expression_tree.operations.convert_to_casadi import CasadiConverter
 #
 from .models.base_model import BaseModel
 from .models import standard_variables
+from .models.event import Event
+from .models.event import EventType
 
 # Battery models
 from .models.full_battery_models.base_battery_model import BaseBatteryModel

@@ -767,8 +767,16 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         # Cut-off voltage
         voltage = self.variables["Terminal voltage"]
-        self.events["Minimum voltage"] = voltage - self.param.voltage_low_cut
-        self.events["Maximum voltage"] = voltage - self.param.voltage_high_cut
+        self.events.append(pybamm.Event(
+            "Minimum voltage",
+            voltage - self.param.voltage_low_cut,
+            pybamm.EventType.TERMINATION
+        ))
+        self.events.append(pybamm.Event(
+            "Maximum voltage",
+            voltage - self.param.voltage_high_cut,
+            pybamm.EventType.TERMINATION
+        ))
 
         # Power
         I_dim = self.variables["Current [A]"]
