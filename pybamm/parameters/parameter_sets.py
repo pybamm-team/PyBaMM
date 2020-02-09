@@ -17,6 +17,10 @@ NCA_Kim2011
     multi-physics in varied length scales. Journal of The Electrochemical
     Society, 158(8), A955-A969.
 
+Chen2020
+    Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W. Dhammika Widanage, and Emma Kendrick. "The development of accurate experimental techniques for parameterization of multi-scale lithium-ion battery models." In preparation (2020).
+
+
 Lead-acid
 ---------
 Sulzer2019
@@ -49,6 +53,15 @@ NCA_Kim2011 = {
     "experiment": "1C_discharge_from_full_Kim2011",
 }
 
+Chen2020 = {
+    "chemistry": "lithium-ion",
+    "cell": "LGM50_Chen2020",
+    "anode": "graphite_Chen2020",
+    "separator": "separator_Chen2020",
+    "cathode": "nmc_Chen2020",
+    "electrolyte": "lipf6_Nyman2008",
+    "experiment": "1C_discharge_from_full_Chen2020",
+}
 #
 # Lead-acid
 #
