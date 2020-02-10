@@ -136,29 +136,25 @@ def kappa_e_dimensional(c_e, T):
 
 def D_n_dimensional(c_n, T):
     "Dimensional diffusivity in negative particle"
-    return pybamm.FunctionParameter(
-        "Negative electrode diffusivity [m2.s-1]", c_n, T, T_ref, E_D_s_n, R
-    )
+    return pybamm.FunctionParameter("Negative electrode diffusivity [m2.s-1]", c_n, T)
 
 
 def D_p_dimensional(c_p, T):
     "Dimensional diffusivity in positive particle"
-    return pybamm.FunctionParameter(
-        "Positive electrode diffusivity [m2.s-1]", c_p, T, T_ref, E_D_s_p, R
-    )
+    return pybamm.FunctionParameter("Positive electrode diffusivity [m2.s-1]", c_p, T)
 
 
 def m_n_dimensional(T):
     "Dimensional negative reaction rate"
     return pybamm.FunctionParameter(
-        "Negative electrode reaction rate", T, T_ref, E_r_n, R
+        "Negative electrode reaction rate [(A.m-2)(m3.mol-1)^1.5]", T
     )
 
 
 def m_p_dimensional(T):
     "Dimensional negative reaction rate"
     return pybamm.FunctionParameter(
-        "Positive electrode reaction rate", T, T_ref, E_r_p, R
+        "Positive electrode reaction rate [(A.m-2)(m3.mol-1)^1.5]", T
     )
 
 

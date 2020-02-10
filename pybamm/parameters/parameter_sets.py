@@ -34,6 +34,16 @@ Marquis2019 = {
     "experiment": "1C_discharge_from_full_Marquis2019",
 }
 
+Xu2019 = {
+    "chemistry": "lithium-ion",
+    "cell": "li_metal_Xu2019",
+    "anode": "li_metal_Xu2019",
+    "separator": "separator_Xu2019",
+    "cathode": "NMC532_Xu2019",
+    "electrolyte": "lipf6_Valoen2005",
+    "experiment": "1C_discharge_from_full_Xu2019",
+}
+
 #
 # Lead-acid
 #

@@ -1,7 +1,7 @@
-from pybamm import exp
+from pybamm import exp, standard_parameters_lithium_ion
 
 
-def graphite_electrolyte_reaction_rate_Dualfoil1998(T, T_inf, E_r, R_g):
+def graphite_electrolyte_reaction_rate_Dualfoil1998(T):
     """
     Reaction rate for Butler-Volmer reactions between graphite and LiPF6 in EC:DMC.
 
@@ -11,21 +11,16 @@ def graphite_electrolyte_reaction_rate_Dualfoil1998(T, T_inf, E_r, R_g):
 
     Parameters
     ----------
-    T: :class: `numpy.Array`
-        Dimensional temperature
-    T_inf: double
-        Reference temperature
-    E_r: double
-        Reaction activation energy
-    R_g: double
-        The ideal gas constant
+    T: :class:`pybamm.Symbol`
+        Dimensional temperature [K]
 
     Returns
     -------
-    :`numpy.Array`
-        Reaction rate
+    :class:`pybamm.Symbol`
+        Dimensional reaction rate [(A.m-2)(m3.mol-1)^1.5]
     """
+    param = standard_parameters_lithium_ion
     m_ref = 2 * 10 ** (-5)
-    arrhenius = exp(E_r / R_g * (1 / T_inf - 1 / T))
+    arrhenius = exp(param.E_r_n / param.R * (1 / param.T_ref - 1 / T))
 
     return m_ref * arrhenius
