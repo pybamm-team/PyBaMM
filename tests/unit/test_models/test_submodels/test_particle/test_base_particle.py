@@ -9,15 +9,17 @@ import unittest
 
 class TestBaseParticle(unittest.TestCase):
     def test_public_functions(self):
+        variables = {
+            "Negative particle surface concentration": 0,
+            "Positive particle surface concentration": 0,
+        }
         submodel = pybamm.particle.BaseParticle(None, "Negative")
-        std_tests = tests.StandardSubModelTests(submodel)
-        with self.assertRaises(NotImplementedError):
-            std_tests.test_all()
+        std_tests = tests.StandardSubModelTests(submodel, variables)
+        std_tests.test_all()
 
         submodel = pybamm.particle.BaseParticle(None, "Positive")
-        std_tests = tests.StandardSubModelTests(submodel)
-        with self.assertRaises(NotImplementedError):
-            std_tests.test_all()
+        std_tests = tests.StandardSubModelTests(submodel, variables)
+        std_tests.test_all()
 
 
 if __name__ == "__main__":

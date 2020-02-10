@@ -76,17 +76,6 @@ class BaseParticle(pybamm.BaseSubModel):
     def _unpack(self, variables):
         raise NotImplementedError
 
-    def set_initial_conditions(self, variables):
-        c, _, _ = self._unpack(variables)
-
-        if self.domain == "Negative":
-            c_init = self.param.c_n_init
-
-        elif self.domain == "Positive":
-            c_init = self.param.c_p_init
-
-        self.initial_conditions = {c: c_init}
-
     def set_events(self, variables):
         c_s_surf = variables[self.domain + " particle surface concentration"]
         tol = 0.01
