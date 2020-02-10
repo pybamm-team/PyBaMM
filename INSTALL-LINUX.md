@@ -39,26 +39,15 @@ PyBaMM can be installed via pip:
 pip install pybamm
 ```
 
-
 PyBaMM has the following python libraries as dependencies: `numpy`, `scipy`, `pandas`,
-`matplotlib`. These will be installed automatically when you install PyBaMM using `pip`,
-following the instructions below. First, make sure you have activated your virtual
-environment as above, and that you have the latest version of pip installed:
+`matplotlib`. These will be installed automatically when you install PyBaMM using `pip`.
 
-Then navigate to the path where you downloaded PyBaMM to (you will already be in the
-correct location if you followed the instructions above), and install both PyBaMM and
-its dependencies by typing:
-
-```bash
-pip install pybamm
-```
 For an introduction to virtual environments, see (https://realpython.com/python-virtual-environments-a-primer/).
 
-### developer install
+### Developer install
 
 If you wish to contribute to PyBaMM, you should get the latest version from the GitHub repository.
-To do so, you must have Git installed.
-For instance run
+To do so, you must have Git installed. For instance run
 ```bash
 sudo apt install git
 ```
@@ -70,7 +59,7 @@ To install PyBaMM, the first step is to get the code by cloning this repository
 git clone https://github.com/pybamm-team/PyBaMM.git
 cd PyBaMM
 ```
-Then, install PyBaMM as a develop per with [developer](CONTRIBUTING.md), use
+Then, to install PyBaMM as a [developer](CONTRIBUTING.md), type
 
 ```bash
 pip install -e .[dev,docs]
@@ -100,10 +89,10 @@ This can be done using `git`, running
 git clone https://github.com/pybamm-team/PyBaMM.git
 cd PyBaMM
 ```
-Alternatively, you can dowload the source code archive from [the PyBaMM GitHub repo](https://github.com/pybamm-team/PyBaMM.git) and extract it the location of your choice.
+Alternatively, you can download the source code archive from [the PyBaMM GitHub repo](https://github.com/pybamm-team/PyBaMM.git) and extract it to the location of your choice.
 
 Ideally you should have the python package `wget` installed.
-This allows for the automatic download of some of the dependencies has part of the installation process.
+This allows for the automatic download of some of the dependencies that are part of the installation process.
 You can install it using (within your virtual environment)
 ```bash
 pip install wget
@@ -113,7 +102,6 @@ pip install wget
 Users can install [scikits.odes](https://github.com/bmcage/odes) in order to use the
 wrapped SUNDIALS ODE and DAE
 [solvers](https://pybamm.readthedocs.io/en/latest/source/solvers/scikits_solvers.html).
-The Sundials DAE solver is required to solve the DFN battery model in PyBaMM.
 
 Before installing scikits.odes, you need to have installed:
 
@@ -139,7 +127,7 @@ Alternatively, you can specify a directory containing the source code of the Sun
 ```bash
 python setup.py install_odes --sundials-src=<path/to/sundials/source>
 ```
-By default, the sundials are installed in a `sundials` directory located at the root of the PyBaMM package.
+By default, sundials is installed in a `sundials` directory located at the root of the PyBaMM package.
 You can provide another location by using the `--sundials-inst=<path/to/other/location>` option.
 
 If you are installing `scikits.odes` within a virtual environment, the `activate` script will be automatically
@@ -147,7 +135,7 @@ updated to add the sundials installation directory to your `LD_LIBRARY_PATH`.
 This is required in order to use `scikits.odes`.
 As a consequence, after installation you should restart your virtual environment.
 
-If you wish to install the scikits.odes outside of a virtual environment, your `.bashrc` will be modified instead.
+If you wish to install `scikits.odes` outside of a virtual environment, your `.bashrc` will be modified instead.
 After installation you should therefore run
 ```bash
 source ~/.bashrc
@@ -166,7 +154,7 @@ sparse solver.
 PyBaMM currently offers a direct interface to the sparse KLU solver within Sundials.
 
 #### Prerequisites
-The requirements are the same than for the installation of `scikits.odes` (see previous section).
+The requirements are the same as for the installation of `scikits.odes` (see previous section).
 Additionally, the [pybind11 GitHub repository](https://github.com/pybind/pybind11.git) should be located in `PyBaMM/third-party/`.
 First create a directory `third-party` and clone the repository:
 ```bash
@@ -198,14 +186,13 @@ python -c "import pybamm; print(pybamm.have_idaklu())
 ```
 
 ### Install everything
-It is possible to install both `scikits.odes` and KLU solver using the command
+It is possible to install both `scikits.odes` and the KLU solver using the command
 ```bash
 python setup.py install_all
 ```
 Note that options `--sundials-src`, `--sundials-inst` and  `suitesparse-src` are still usable
 here.
 
-You can make sure the install was successful by runing
 Finally, you can check your install by running
 ```bash
 python -c "import pybamm; print(pybamm.have_scikits_odes())
