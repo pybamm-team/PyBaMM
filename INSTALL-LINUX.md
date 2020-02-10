@@ -39,8 +39,7 @@ PyBaMM can be installed via pip:
 pip install pybamm
 ```
 
-PyBaMM has the following python libraries as dependencies: `numpy`, `scipy`, `pandas`,
-`matplotlib`. These will be installed automatically when you install PyBaMM using `pip`.
+PyBaMM's dependencies (such as `numpy`, `scipy`, etc) will be installed automatically when you install PyBaMM using `pip`.
 
 For an introduction to virtual environments, see (https://realpython.com/python-virtual-environments-a-primer/).
 
