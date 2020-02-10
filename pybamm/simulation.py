@@ -47,7 +47,7 @@ class Simulation:
     ----------
     model : :class:`pybamm.BaseModel`
         The model to be simulated
-    experiment : : class:`pybamm.Experiment`
+    experiment : : class:`pybamm.Experiment` (optional)
         The experimental conditions under which to solve the model
     geometry: :class:`pybamm.Geometry` (optional)
         The geometry upon which to solve the model
@@ -111,7 +111,13 @@ class Simulation:
             warnings.filterwarnings("ignore")
 
     def set_up_experiment(self, model, experiment):
-        "Set up a simulation to run with an experiment"
+        """
+        Set up a simulation to run with an experiment. This creates a dictionary of
+        inputs (current/voltage/power, running time, stopping condition) for each
+        operating condition in the experiment. The model will then be solved by
+        integrating the model successively with each group of inputs, one group at a
+        time.
+        """
         self.operating_mode = "with experiment"
         self.model = model.new_copy(
             options={
@@ -334,7 +340,7 @@ class Simulation:
             solver = self.solver
 
         if self.operating_mode == "without experiment":
-            # Solve the old way, with a single solve
+            # Solve the normal way, with a single solve
             if t_eval is None:
                 try:
                     # Try to compute discharge time

@@ -219,7 +219,7 @@ class Solution(_BaseSolution):
 
     @property
     def sub_solutions(self):
-        "Model used for solution"
+        "List of sub solutions that have been concatenated to form the full solution"
         try:
             return self._sub_solutions
         except AttributeError:
