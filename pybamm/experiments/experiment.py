@@ -225,7 +225,7 @@ class Experiment:
                 return (sign * float(value) / 1000, "W")
             else:
                 raise ValueError(
-                    """units must be 'C', 'A', 'mA', 'V', 'W' or 'mW', not '{}'. 
+                    """units must be 'C', 'A', 'mA', 'V', 'W' or 'mW', not '{}'.
                     For example: {}
                     """.format(
                         unit, examples
