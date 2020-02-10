@@ -3,6 +3,7 @@ Name [units],Value,Reference,Notes
 ,,,
 # Temperature
 Reference temperature [K],298.15,25C,
+Heat transfer coefficient [W.m-2.K-1],10,,
 ,,,
 # Electrical			
 Number of electrodes connected in parallel to make a cell,1,,
@@ -12,7 +13,7 @@ Upper voltage cut-off [V],4.25,,just above 4.25
 C-rate,1,,
 ,,,
 # Initial conditions
-Initial concentration in negative electrode [mol.m-3],19986.609595075,,
-Initial concentration in positive electrode [mol.m-3],30730.7554385565,,
+Initial concentration in negative electrode [mol.m-3],,,
+Initial concentration in positive electrode [mol.m-3],,,
 Initial concentration in electrolyte [mol.m-3],1000,,
 Initial temperature [K],298.15,,

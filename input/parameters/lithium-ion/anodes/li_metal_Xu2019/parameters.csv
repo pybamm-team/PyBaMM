@@ -3,18 +3,21 @@ Name [units],Value,Reference,Notes
 ,,,
 # Electrode properties,,,
 Negative electrode conductivity [S.m-1],100,,lithium metal
-Maximum concentration in negative electrode [mol.m-3],24983.2619938437,,
-Negative electrode diffusivity [m2.s-1],[function]graphite_mcmb2528_diffusivity_Dualfoil1998,,
-Negative electrode OCP [V],[function]graphite_mcmb2528_ocp_Dualfoil1998,
+Maximum concentration in negative electrode [mol.m-3],,,
+Negative electrode diffusivity [m2.s-1],,,
+Negative electrode OCP [V],,,
 ,,,
 # Microstructure,,,
-Negative electrode porosity,0.3,,electrolyte volume fraction
-Negative electrode active material volume fraction,0.7,,assuming zero binder volume fraction
+Negative electrode porosity,,,electrolyte volume fraction
+Negative electrode active material volume fraction,,,
 Negative particle radius [m],1E-05,,
 Negative particle distribution in x,1,,
-Negative electrode surface area density [m-1],180000,,
+Negative electrode surface area density [m-1],,,
 Negative electrode Bruggeman coefficient (electrolyte),1.5,,
 Negative electrode Bruggeman coefficient (electrode),1.5,,
+,,,
+# Thermal parameters,,,
+Negative electrode OCP entropic change [V.K-1],0,,
 ,,,
 # Interfacial reactions,,,
 Negative electrode cation signed stoichiometry,-1,,

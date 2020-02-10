@@ -1,6 +1,3 @@
-from pybamm import exp
-
-
 def electrolyte_diffusivity_Valoen2005(c_e, T):
     """
     Diffusivity of LiPF6 in EC:DMC as a function of ion concentration, from [1]
@@ -23,10 +20,13 @@ def electrolyte_diffusivity_Valoen2005(c_e, T):
     :class:`pybamm.Symbol`
         Dimensional diffusivity [m2.s-1]
     """
+    # mol/m3 to molar
     c_e = c_e / 1000
 
     T_g = 229 + 5 * c_e
     D_0 = -4.43 - 54 / (T - T_g)
     D_1 = -0.22
 
-    return exp(D_0 + D_1 * c_e) * 1e-4
+    # cm2/s to m2/s
+    # note, in the Valoen paper, ln means log10 ...
+    return (10 ** (D_0 + D_1 * c_e)) * 1e-4
