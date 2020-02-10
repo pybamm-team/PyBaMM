@@ -45,6 +45,10 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(summ.children[0].name, a.name)
         self.assertEqual(summ.children[1].name, b.name)
 
+        # test simplifying
+        summ2 = pybamm.Scalar(1) + pybamm.Scalar(3)
+        self.assertEqual(summ2.id, pybamm.Scalar(4).id)
+
     def test_power(self):
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")
@@ -58,73 +62,31 @@ class TestBinaryOperators(unittest.TestCase):
         pow2 = pybamm.Power(a, b)
         self.assertEqual(pow2.evaluate(), 16)
 
-    def test_outer(self):
-        # Outer class
-        v = pybamm.Vector(np.ones(5), domain="current collector")
-        w = pybamm.Vector(2 * np.ones(3), domain="test")
-        outer = pybamm.Outer(v, w)
-        np.testing.assert_array_equal(outer.evaluate(), 2 * np.ones((15, 1)))
-        self.assertEqual(outer.domain, w.domain)
-        self.assertEqual(
-            str(outer), "outer(Column vector of length 5, Column vector of length 3)"
-        )
-
-        # outer function
-        # if there is no domain clash, normal multiplication is retured
-        u = pybamm.Vector(np.linspace(0, 1, 5))
-        outer = pybamm.outer(u, v)
-        self.assertIsInstance(outer, pybamm.Multiplication)
-        np.testing.assert_array_equal(outer.evaluate(), u.evaluate())
-        # otherwise, Outer class is returned
-        outer_fun = pybamm.outer(v, w)
-        outer_class = pybamm.Outer(v, w)
-        self.assertEqual(outer_fun.id, outer_class.id)
-
-        # failures
-        y = pybamm.StateVector(slice(10))
-        with self.assertRaisesRegex(
-            TypeError, "right child must only contain Vectors and Scalars"
-        ):
-            pybamm.Outer(v, y)
-        with self.assertRaises(NotImplementedError):
-            outer_fun.diff(None)
-
-    def test_kron(self):
-        # Kron class
-        A = pybamm.Matrix(np.eye(2))
-        b = pybamm.Vector(np.array([[4], [5]]))
-        kron = pybamm.Kron(A, b)
-        np.testing.assert_array_equal(
-            kron.evaluate().toarray(), np.kron(A.entries, b.entries)
-        )
-
-        # failures
-        with self.assertRaises(NotImplementedError):
-            kron.diff(None)
-
-        y = pybamm.StateVector(slice(0, 2))
-        with self.assertRaises(NotImplementedError):
-            kron.jac(y)
-
     def test_known_eval(self):
         # Scalars
         a = pybamm.Scalar(4)
-        b = pybamm.Scalar(2)
+        b = pybamm.StateVector(slice(0, 1))
         expr = (a + b) - (a + b) * (a + b)
-        value = expr.evaluate()
-        self.assertEqual(expr.evaluate(known_evals={})[0], value)
-        self.assertIn((a + b).id, expr.evaluate(known_evals={})[1])
-        self.assertEqual(expr.evaluate(known_evals={})[1][(a + b).id], 6)
+        value = expr.evaluate(y=np.array([2]))
+        self.assertEqual(expr.evaluate(y=np.array([2]), known_evals={})[0], value)
+        self.assertIn((a + b).id, expr.evaluate(y=np.array([2]), known_evals={})[1])
+        self.assertEqual(
+            expr.evaluate(y=np.array([2]), known_evals={})[1][(a + b).id], 6
+        )
 
         # Matrices
         a = pybamm.Matrix(np.random.rand(5, 5))
-        b = pybamm.Matrix(np.random.rand(5, 5))
+        b = pybamm.StateVector(slice(0, 5))
         expr2 = (a @ b) - (a @ b) * (a @ b) + (a @ b)
-        value = expr2.evaluate()
-        np.testing.assert_array_equal(expr2.evaluate(known_evals={})[0], value)
-        self.assertIn((a @ b).id, expr2.evaluate(known_evals={})[1])
+        y_test = np.linspace(0, 1, 5)
+        value = expr2.evaluate(y=y_test)
         np.testing.assert_array_equal(
-            expr2.evaluate(known_evals={})[1][(a @ b).id], (a @ b).evaluate()
+            expr2.evaluate(y=y_test, known_evals={})[0], value
+        )
+        self.assertIn((a @ b).id, expr2.evaluate(y=y_test, known_evals={})[1])
+        np.testing.assert_array_equal(
+            expr2.evaluate(y=y_test, known_evals={})[1][(a @ b).id],
+            (a @ b).evaluate(y=y_test),
         )
 
     def test_diff(self):
@@ -206,7 +168,7 @@ class TestBinaryOperators(unittest.TestCase):
     def test_number_overloading(self):
         a = pybamm.Scalar(4)
         prod = a * 3
-        self.assertIsInstance(prod.children[1], pybamm.Scalar)
+        self.assertIsInstance(prod, pybamm.Scalar)
         self.assertEqual(prod.evaluate(), 12)
 
     def test_sparse_multiply(self):
@@ -245,6 +207,8 @@ class TestBinaryOperators(unittest.TestCase):
             (pybammS1 * pybammS2).test_shape()
         with self.assertRaisesRegex(pybamm.ShapeError, "inconsistent shapes"):
             (pybammS2 * pybammS1).test_shape()
+        with self.assertRaisesRegex(pybamm.ShapeError, "inconsistent shapes"):
+            (pybammS2 * pybammS1).evaluate_ignoring_errors()
 
         # Matrix multiplication is normal matrix multiplication
         np.testing.assert_array_equal(

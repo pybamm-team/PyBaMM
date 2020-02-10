@@ -14,8 +14,8 @@ class Function(pybamm.Symbol):
     ----------
     function : method
         A function can have 0 or many inputs. If no inputs are given, self.evaluate()
-        simply returns func(). Otherwise, self.evaluate(t, y) returns
-        func(child0.evaluate(t, y), child1.evaluate(t, y), etc).
+        simply returns func(). Otherwise, self.evaluate(t, y, u) returns
+        func(child0.evaluate(t, y, u), child1.evaluate(t, y, u), etc).
     children : :class:`pybamm.Symbol`
         The children nodes to apply the function to
     derivative : str, optional
@@ -144,7 +144,7 @@ class Function(pybamm.Symbol):
             for i, child in enumerate(children):
                 if not child.evaluates_to_number():
                     jac_fun = self._function_diff(children, i) * children_jacs[i]
-                    jac_fun.domain = []
+                    jac_fun.clear_domains()
                     if jacobian is None:
                         jacobian = jac_fun
                     else:
@@ -152,22 +152,22 @@ class Function(pybamm.Symbol):
 
         return jacobian
 
-    def evaluate(self, t=None, y=None, known_evals=None):
+    def evaluate(self, t=None, y=None, u=None, known_evals=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         if known_evals is not None:
             if self.id not in known_evals:
                 evaluated_children = [None] * len(self.children)
                 for i, child in enumerate(self.children):
                     evaluated_children[i], known_evals = child.evaluate(
-                        t, y, known_evals
+                        t, y, u, known_evals=known_evals
                     )
                 known_evals[self.id] = self._function_evaluate(evaluated_children)
             return known_evals[self.id], known_evals
         else:
-            evaluated_children = [child.evaluate(t, y) for child in self.children]
+            evaluated_children = [child.evaluate(t, y, u) for child in self.children]
             return self._function_evaluate(evaluated_children)
 
-    def evaluate_for_shape(self):
+    def _evaluate_for_shape(self):
         """
         Default behaviour: has same shape as all child
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
@@ -260,7 +260,7 @@ class Arcsinh(SpecificFunction):
 
 def arcsinh(child):
     " Returns arcsinh function of child. "
-    return Arcsinh(child)
+    return pybamm.simplify_if_constant(Arcsinh(child), keep_domains=True)
 
 
 class Cos(SpecificFunction):
@@ -276,7 +276,7 @@ class Cos(SpecificFunction):
 
 def cos(child):
     " Returns cosine function of child. "
-    return Cos(child)
+    return pybamm.simplify_if_constant(Cos(child), keep_domains=True)
 
 
 class Cosh(SpecificFunction):
@@ -292,7 +292,7 @@ class Cosh(SpecificFunction):
 
 def cosh(child):
     " Returns hyperbolic cosine function of child. "
-    return Cosh(child)
+    return pybamm.simplify_if_constant(Cosh(child), keep_domains=True)
 
 
 class Exponential(SpecificFunction):
@@ -308,7 +308,7 @@ class Exponential(SpecificFunction):
 
 def exp(child):
     " Returns exponential function of child. "
-    return Exponential(child)
+    return pybamm.simplify_if_constant(Exponential(child), keep_domains=True)
 
 
 class Log(SpecificFunction):
@@ -330,7 +330,7 @@ class Log(SpecificFunction):
 def log(child, base="e"):
     " Returns logarithmic function of child (any base, default 'e'). "
     if base == "e":
-        return Log(child)
+        return pybamm.simplify_if_constant(Log(child), keep_domains=True)
     else:
         return Log(child) / np.log(base)
 
@@ -342,17 +342,17 @@ def log10(child):
 
 def max(child):
     " Returns max function of child. "
-    return Function(np.max, child)
+    return pybamm.simplify_if_constant(Function(np.max, child), keep_domains=True)
 
 
 def min(child):
     " Returns min function of child. "
-    return Function(np.min, child)
+    return pybamm.simplify_if_constant(Function(np.min, child), keep_domains=True)
 
 
 def sech(child):
     " Returns hyperbolic sec function of child. "
-    return 1 / Cosh(child)
+    return pybamm.simplify_if_constant(1 / Cosh(child), keep_domains=True)
 
 
 class Sin(SpecificFunction):
@@ -368,7 +368,7 @@ class Sin(SpecificFunction):
 
 def sin(child):
     " Returns sine function of child. "
-    return Sin(child)
+    return pybamm.simplify_if_constant(Sin(child), keep_domains=True)
 
 
 class Sinh(SpecificFunction):
@@ -384,7 +384,7 @@ class Sinh(SpecificFunction):
 
 def sinh(child):
     " Returns hyperbolic sine function of child. "
-    return Sinh(child)
+    return pybamm.simplify_if_constant(Sinh(child), keep_domains=True)
 
 
 class Sqrt(SpecificFunction):
@@ -405,7 +405,7 @@ class Sqrt(SpecificFunction):
 
 def sqrt(child):
     " Returns square root function of child. "
-    return Sqrt(child)
+    return pybamm.simplify_if_constant(Sqrt(child), keep_domains=True)
 
 
 class Tanh(SpecificFunction):
@@ -421,4 +421,4 @@ class Tanh(SpecificFunction):
 
 def tanh(child):
     " Returns hyperbolic tan function of child. "
-    return Tanh(child)
+    return pybamm.simplify_if_constant(Tanh(child), keep_domains=True)

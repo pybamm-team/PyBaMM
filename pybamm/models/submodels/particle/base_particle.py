@@ -23,7 +23,7 @@ class BaseParticle(pybamm.BaseSubModel):
 
     def _get_standard_concentration_variables(self, c_s, c_s_xav):
 
-        c_s_surf = pybamm.surf(c_s, set_domain=True)
+        c_s_surf = pybamm.surf(c_s)
 
         c_s_surf_av = pybamm.x_average(c_s_surf)
         geo_param = pybamm.geometric_parameters
@@ -91,10 +91,15 @@ class BaseParticle(pybamm.BaseSubModel):
         c_s_surf = variables[self.domain + " particle surface concentration"]
         tol = 0.01
 
-        self.events[
-            "Minumum " + self.domain.lower() + " particle surface concentration"
-        ] = (pybamm.min(c_s_surf) - tol)
+        self.events.append(pybamm.Event(
+            "Minumum " + self.domain.lower() + " particle surface concentration",
+            pybamm.min(c_s_surf) - tol,
+            pybamm.EventType.TERMINATION
+        ))
 
-        self.events[
-            "Maximum " + self.domain.lower() + " particle surface concentration"
-        ] = (1 - tol) - pybamm.max(c_s_surf)
+        self.events.append(pybamm.Event(
+            "Maximum " + self.domain.lower() + " particle surface concentration",
+            (1 - tol) - pybamm.max(c_s_surf),
+            pybamm.EventType.TERMINATION
+        ))
+

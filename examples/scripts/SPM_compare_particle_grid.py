@@ -49,25 +49,15 @@ for i, model in enumerate(models):
 
 # solve model
 solutions = [None] * len(models)
-t_eval = np.linspace(0, 0.17, 100)
+t_eval = np.linspace(0, 0.25, 100)
 for i, model in enumerate(models):
     solutions[i] = model.default_solver.solve(model, t_eval)
 
 # process particle concentration variables
 processed_variables = [None] * len(models)
 for i, solution in enumerate(solutions):
-    c_n = pybamm.ProcessedVariable(
-        models[i].variables["X-averaged negative particle concentration [mol.m-3]"],
-        solution.t,
-        solution.y,
-        mesh=meshes[i],
-    )
-    c_p = pybamm.ProcessedVariable(
-        models[i].variables["X-averaged positive particle concentration [mol.m-3]"],
-        solution.t,
-        solution.y,
-        mesh=meshes[i],
-    )
+    c_n = solution["X-averaged negative particle concentration [mol.m-3]"]
+    c_p = solution["X-averaged positive particle concentration [mol.m-3]"]
     processed_variables[i] = {"c_n": c_n, "c_p": c_p}
 
 

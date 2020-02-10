@@ -86,40 +86,6 @@ class TestJacobian(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             u.jac(v)
 
-        # test Jacobian of Outer (must set domain to be 'current collector')
-        u.domain = ["current collector"]
-        func = pybamm.Outer(u, pybamm.Scalar(4))
-        jacobian = np.array(
-            [
-                [4, 0, 0, 0, 0, 0, 0, 0],
-                [0, 4, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 4, 0, 0, 0],
-                [0, 0, 0, 0, 0, 4, 0, 0],
-            ]
-        )
-        dfunc_dy = func.jac(y).evaluate(y=y0)
-        np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
-
-        func = pybamm.Outer(u, pybamm.Vector(np.array([1, 2, 3])))
-        jacobian = np.array(
-            [
-                [1, 0, 0, 0, 0, 0, 0, 0],
-                [2, 0, 0, 0, 0, 0, 0, 0],
-                [3, 0, 0, 0, 0, 0, 0, 0],
-                [0, 1, 0, 0, 0, 0, 0, 0],
-                [0, 2, 0, 0, 0, 0, 0, 0],
-                [0, 3, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 1, 0, 0, 0],
-                [0, 0, 0, 0, 2, 0, 0, 0],
-                [0, 0, 0, 0, 3, 0, 0, 0],
-                [0, 0, 0, 0, 0, 1, 0, 0],
-                [0, 0, 0, 0, 0, 2, 0, 0],
-                [0, 0, 0, 0, 0, 3, 0, 0],
-            ]
-        )
-        dfunc_dy = func.jac(y).evaluate(y=y0)
-        np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
-
     def test_nonlinear(self):
         y = pybamm.StateVector(slice(0, 8))
         u = pybamm.StateVector(slice(0, 2), slice(4, 6))
@@ -251,21 +217,16 @@ class TestJacobian(unittest.TestCase):
         a_dom = ["negative electrode"]
         b_dom = ["separator"]
         c_dom = ["positive electrode"]
-        a_npts = mesh[a_dom[0]][0].npts
-        b_npts = mesh[b_dom[0]][0].npts
-        c_npts = mesh[c_dom[0]][0].npts
         cc_npts = mesh["current collector"][0].npts
         curr_coll_vector = pybamm.Vector(np.ones(cc_npts), domain="current collector")
-        a = 2 * pybamm.Outer(
-            curr_coll_vector, pybamm.Vector(np.ones(a_npts), domain=a_dom)
-        )
-        b = pybamm.Outer(curr_coll_vector, pybamm.Vector(np.ones(b_npts), domain=b_dom))
-        c = 3 * pybamm.Outer(
-            curr_coll_vector, pybamm.Vector(np.ones(c_npts), domain=c_dom)
-        )
+        a = 2 * pybamm.PrimaryBroadcast(curr_coll_vector, a_dom)
+        b = pybamm.PrimaryBroadcast(curr_coll_vector, b_dom)
+        c = 3 * pybamm.PrimaryBroadcast(curr_coll_vector, c_dom)
 
-        conc = pybamm.DomainConcatenation([a, b, c], mesh)
-        jac = conc.jac(y).evaluate().toarray()
+        conc = pybamm.Concatenation(a, b, c)
+        disc.set_variable_slices([conc])
+        conc_disc = disc.process_symbol(conc)
+        jac = conc_disc.jac(y).evaluate().toarray()
         np.testing.assert_array_equal(jac, np.zeros((1500, 1500)))
 
         # Jacobian of a DomainConcatenation of StateVectors

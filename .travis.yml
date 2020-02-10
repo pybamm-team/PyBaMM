@@ -82,7 +82,7 @@ matrix:
             - PYBAMM_UNIT=true
             - PYBAMM_SCIKITS_ODES=true
             - PYBAMM_KLU=true
-        # Unit testing on Python3.7 on Ubuntu without scikit odes
+        # Unit and example testing on Python3.7 on Ubuntu without optional dependencies
         - python: "3.7"
           addons:
             apt:
@@ -98,6 +98,7 @@ matrix:
                 - libsuitesparse-dev
           env:
             - PYBAMM_UNIT=true
+            - PYBAMM_EXAMPLES=true
           if: type != cron
         # Cover, docs and style checking, latest Python version only
         - python: "3.7"
@@ -203,12 +204,28 @@ before_install: |
 #       without the packages from -dev and -doc!
 install:
   - pip install --upgrade pip
+  # In order to download SUNDIALS and SuiteSparse
+  - pip install wget
   - pip install .
   - if [[ $PYBAMM_DOCS == true ]]; then pip install -e .[docs]; fi;
   - if [[ $PYBAMM_STYLE == true || $PYBAMM_EXAMPLES ]]; then pip install -e .[dev]; fi;
   - if [[ $PYBAMM_COVER == true ]]; then pip install coverage codecov; fi;
-  - if [[ $PYBAMM_SCIKITS_ODES == true ]]; then source scripts/install_scikits_odes.sh; fi;
-  - if [[ $PYBAMM_KLU == true ]]; then source scripts/install_sundials_4.1.0.sh; fi;
+  - |
+    if [[ $PYBAMM_SCIKITS_ODES == true ]]; then
+      python setup.py install_odes -f;
+      export LD_LIBRARY_PATH=sundials/lib:$LD_LIBRARY_PATH
+    fi;
+  - |
+    if [[ $PYBAMM_KLU == true ]]; then
+      mkdir -p third-party;
+      cd third-party;
+      rm -rf pybind11;
+      git clone https://github.com/pybind/pybind11.git;
+      cd ../;
+      python setup.py install_klu -f;
+      export LD_LIBRARY_PATH=sundials/lib:$LD_LIBRARY_PATH
+      export LD_LIBRARY_PATH=SuiteSparse-5.6.0/lib:$LD_LIBRARY_PATH
+    fi;
 
 before_script:
 - python --version

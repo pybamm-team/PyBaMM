@@ -26,7 +26,7 @@ class TestLeadAcidCompositeSideReactions(unittest.TestCase):
         model = pybamm.lead_acid.Composite(options)
         parameter_values = model.default_parameter_values
         parameter_values.update(
-            {"Typical current [A]": -1, "Initial State of Charge": 0.5}
+            {"Current function [A]": -1, "Initial State of Charge": 0.5}
         )
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all(skip_output_tests=True)
@@ -35,7 +35,7 @@ class TestLeadAcidCompositeSideReactions(unittest.TestCase):
         options = {"side reactions": ["oxygen"], "surface form": "differential"}
         model = pybamm.lead_acid.Composite(options)
         parameter_values = model.default_parameter_values
-        parameter_values.update({"Current function": "[zero]"})
+        parameter_values.update({"Current function [A]": 0})
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all(skip_output_tests=True)
 

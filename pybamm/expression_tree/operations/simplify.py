@@ -5,14 +5,20 @@ import pybamm
 
 import numpy as np
 import numbers
-from scipy.sparse import issparse
+from scipy.sparse import issparse, csr_matrix
 
 
-def simplify_if_constant(symbol):
+def simplify_if_constant(symbol, keep_domains=False):
     """
     Utility function to simplify an expression tree if it evalutes to a constant
     scalar, vector or matrix
     """
+    if keep_domains is True:
+        domain = symbol.domain
+        auxiliary_domains = symbol.auxiliary_domains
+    else:
+        domain = None
+        auxiliary_domains = None
     if symbol.is_constant():
         result = symbol.evaluate_ignoring_errors()
         if result is not None:
@@ -22,9 +28,16 @@ def simplify_if_constant(symbol):
                 return pybamm.Scalar(result)
             elif isinstance(result, np.ndarray) or issparse(result):
                 if result.ndim == 1 or result.shape[1] == 1:
-                    return pybamm.Vector(result)
+                    return pybamm.Vector(
+                        result, domain=domain, auxiliary_domains=auxiliary_domains
+                    )
                 else:
-                    return pybamm.Matrix(result)
+                    # Turn matrix of zeros into sparse matrix
+                    if isinstance(result, np.ndarray) and np.all(result == 0):
+                        result = csr_matrix(result)
+                    return pybamm.Matrix(
+                        result, domain=domain, auxiliary_domains=auxiliary_domains
+                    )
 
     return symbol
 
@@ -83,8 +96,8 @@ def simplify_addition_subtraction(myclass, left, right):
         (1 + 2) - (2 + 3) -> [1, 2, 2, 3] and [None, Addition, Subtraction, Subtraction]
         """
 
-        left_child.domain = []
-        right_child.domain = []
+        left_child.clear_domains()
+        right_child.clear_domains()
         for side, child in [("left", left_child), ("right", right_child)]:
             if isinstance(child, (pybamm.Addition, pybamm.Subtraction)):
                 left, right = child.orphans
@@ -284,8 +297,8 @@ def simplify_multiplication_division(myclass, left, right):
         1 / (c / 2) ->  [1, 2]       [c]       [None, Multiplication]
         """
 
-        left_child.domain = []
-        right_child.domain = []
+        left_child.clear_domains()
+        right_child.clear_domains()
         for side, child in [("left", left_child), ("right", right_child)]:
 
             if side == "left":
@@ -581,8 +594,7 @@ class Simplification(object):
 
     def _simplify(self, symbol):
         """ See :meth:`Simplification.simplify()`. """
-        symbol.domain = []
-        symbol.auxiliary_domains = {}
+        symbol.clear_domains()
 
         if isinstance(symbol, pybamm.BinaryOperator):
             left, right = symbol.children

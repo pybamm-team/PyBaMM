@@ -40,13 +40,20 @@ class BaseSubModel:
     variables: dict
         A dictionary that maps strings to expressions that represent
         the useful variables
-    events: dict
-        A dictionary of events that should cause the solver to terminate (e.g.
-        concentration goes negative). The keys are strings and the values are
-        symbols.
+    events: list
+        A list of events. Each event can either cause the solver to terminate
+        (e.g. concentration goes negative), or be used to inform the solver of the
+        existance of a discontinuity (e.g. discontinuity in the input current)
     """
 
-    def __init__(self, param, domain=None, reactions=None, external=False):
+    def __init__(
+        self,
+        param,
+        domain=None,
+        reactions=None,
+        name="Unnamed submodel",
+        external=False,
+    ):
         super().__init__()
         self.param = param
         # Initialise empty variables (to avoid overwriting with 'None')
@@ -56,11 +63,12 @@ class BaseSubModel:
         self.boundary_conditions = {}
         self.initial_conditions = {}
         self.variables = {}
-        self.events = {}
+        self.events = []
 
         self.domain = domain
         self.set_domain_for_broadcast()
         self.reactions = reactions
+        self.name = name
 
         self.external = external
 

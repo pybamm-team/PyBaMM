@@ -29,6 +29,8 @@ hosted on [Read The Docs](readthedocs.io). A set of slides giving an overview of
 can be found
 [here](https://github.com/pybamm-team/pybamm_summary_slides/blob/master/pybamm.pdf).
 
+For further examples, see the list of repositories that use PyBaMM [here](https://github.com/pybamm-team/pybamm-example-results)
+
 ## How can I obtain & install PyBaMM?
 
 ### Linux

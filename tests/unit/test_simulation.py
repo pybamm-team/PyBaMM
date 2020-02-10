@@ -31,7 +31,9 @@ class TestSimulation(unittest.TestCase):
         self.assertFalse(sim._disc is None)
         for val in list(sim.built_model.rhs.values()):
             self.assertFalse(val.has_symbol_of_classes(pybamm.Parameter))
-            self.assertTrue(val.has_symbol_of_classes(pybamm.Matrix))
+            # skip test for scalar variables (e.g. discharge capacity)
+            if val.size > 1:
+                self.assertTrue(val.has_symbol_of_classes(pybamm.Matrix))
 
         sim.reset()
         sim.set_parameters()
@@ -60,7 +62,9 @@ class TestSimulation(unittest.TestCase):
         self.assertFalse(sim._solution is None)
         for val in list(sim.built_model.rhs.values()):
             self.assertFalse(val.has_symbol_of_classes(pybamm.Parameter))
-            self.assertTrue(val.has_symbol_of_classes(pybamm.Matrix))
+            # skip test for scalar variables (e.g. discharge capacity)
+            if val.size > 1:
+                self.assertTrue(val.has_symbol_of_classes(pybamm.Matrix))
 
         sim.reset()
         self.assertEqual(sim.model_with_set_params, None)
@@ -76,7 +80,9 @@ class TestSimulation(unittest.TestCase):
         sim.solve(check_model=False)
         for val in list(sim.built_model.rhs.values()):
             self.assertFalse(val.has_symbol_of_classes(pybamm.Parameter))
-            self.assertTrue(val.has_symbol_of_classes(pybamm.Matrix))
+            # skip test for scalar variables (e.g. discharge capacity)
+            if val.size > 1:
+                self.assertTrue(val.has_symbol_of_classes(pybamm.Matrix))
 
     def test_reuse_commands(self):
 
@@ -185,10 +191,7 @@ class TestSimulation(unittest.TestCase):
         self.assertIsInstance(c_e, np.ndarray)
 
     def test_set_external_variable(self):
-        model_options = {
-            "thermal": "x-lumped",
-            "external submodels": ["thermal"],
-        }
+        model_options = {"thermal": "x-lumped", "external submodels": ["thermal"]}
         model = pybamm.lithium_ion.SPMe(model_options)
         sim = pybamm.Simulation(model)
 
@@ -219,6 +222,32 @@ class TestSimulation(unittest.TestCase):
         self.assertEqual(sim.solution.y[0, :].size, 2)
         self.assertEqual(sim.solution.t[0], 2 * dt)
         self.assertEqual(sim.solution.t[1], 3 * dt)
+
+    def test_step_with_inputs(self):
+        dt = 0.001
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        param.update({"Current function [A]": "[input]"})
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sim.step(
+            dt, inputs={"Current function [A]": 1}
+        )  # 1 step stores first two points
+        self.assertEqual(sim.solution.t.size, 2)
+        self.assertEqual(sim.solution.y[0, :].size, 2)
+        self.assertEqual(sim.solution.t[0], 0)
+        self.assertEqual(sim.solution.t[1], dt)
+        np.testing.assert_array_equal(sim.solution.inputs["Current function [A]"], 1)
+        sim.step(
+            dt, inputs={"Current function [A]": 2}
+        )  # automatically append the next step
+        self.assertEqual(sim.solution.t.size, 3)
+        self.assertEqual(sim.solution.y[0, :].size, 3)
+        self.assertEqual(sim.solution.t[0], 0)
+        self.assertEqual(sim.solution.t[1], dt)
+        self.assertEqual(sim.solution.t[2], 2 * dt)
+        np.testing.assert_array_equal(
+            sim.solution.inputs["Current function [A]"], np.array([1, 1, 2])
+        )
 
     def test_save_load(self):
         model = pybamm.lead_acid.LOQS()
@@ -266,18 +295,8 @@ class TestSimulation(unittest.TestCase):
         sim.save("test.pickle")
 
         # with Casadi solver
+        model.convert_to_format = "casadi"
         sim = pybamm.Simulation(model, solver=pybamm.CasadiSolver())
-        sim.solve()
-        sim.save("test.pickle")
-        sim_load = pybamm.load_sim("test.pickle")
-        self.assertEqual(sim.model.name, sim_load.model.name)
-
-    @unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
-    def test_save_load_klu(self):
-        model = pybamm.lead_acid.LOQS({"surface form": "algebraic"})
-        model.use_jacobian = True
-        # with KLU solver
-        sim = pybamm.Simulation(model, solver=pybamm.IDAKLUSolver())
         sim.solve()
         sim.save("test.pickle")
         sim_load = pybamm.load_sim("test.pickle")
@@ -302,7 +321,10 @@ class TestSimulation(unittest.TestCase):
         sim.set_defaults()
         # Not sure of best way to test nested dicts?
         # self.geometry = model.default_geometry
-        self.assertEqual(sim._parameter_values, model.default_parameter_values)
+        self.assertEqual(
+            sim._parameter_values._dict_items,
+            model.default_parameter_values._dict_items,
+        )
         for domain, submesh in model.default_submesh_types.items():
             self.assertEqual(
                 sim._submesh_types[domain].submesh_type, submesh.submesh_type

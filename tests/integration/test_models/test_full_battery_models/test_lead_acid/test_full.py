@@ -13,7 +13,7 @@ class TestLeadAcidFull(unittest.TestCase):
         options = {"thermal": "isothermal"}
         model = pybamm.lead_acid.Full(options)
         modeltest = tests.StandardModelTest(model)
-        modeltest.test_all(t_eval=np.linspace(0, 0.6))
+        modeltest.test_all(t_eval=np.linspace(0, 0.6), solver=pybamm.CasadiSolver())
 
     def test_basic_processing_with_convection(self):
         options = {"thermal": "isothermal", "convection": True}

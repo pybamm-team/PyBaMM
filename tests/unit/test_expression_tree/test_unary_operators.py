@@ -16,7 +16,6 @@ class TestUnaryOperators(unittest.TestCase):
 
         # with number
         log = pybamm.log(10)
-        self.assertIsInstance(log.children[0], pybamm.Scalar)
         self.assertEqual(log.evaluate(), np.log(10))
 
     def test_negation(self):
@@ -124,22 +123,23 @@ class TestUnaryOperators(unittest.TestCase):
             pybamm.Integral(a, y)
 
     def test_index(self):
-        vec = pybamm.Vector(np.array([1, 2, 3, 4, 5]))
+        vec = pybamm.StateVector(slice(0, 5))
+        y_test = np.array([1, 2, 3, 4, 5])
         # with integer
         ind = vec[3]
         self.assertIsInstance(ind, pybamm.Index)
         self.assertEqual(ind.slice, slice(3, 4))
-        self.assertEqual(ind.evaluate(), 4)
+        self.assertEqual(ind.evaluate(y=y_test), 4)
         # with slice
         ind = vec[1:3]
         self.assertIsInstance(ind, pybamm.Index)
         self.assertEqual(ind.slice, slice(1, 3))
-        np.testing.assert_array_equal(ind.evaluate(), np.array([[2], [3]]))
+        np.testing.assert_array_equal(ind.evaluate(y=y_test), np.array([[2], [3]]))
         # with only stop slice
         ind = vec[:3]
         self.assertIsInstance(ind, pybamm.Index)
         self.assertEqual(ind.slice, slice(3))
-        np.testing.assert_array_equal(ind.evaluate(), np.array([[1], [2], [3]]))
+        np.testing.assert_array_equal(ind.evaluate(y=y_test), np.array([[1], [2], [3]]))
 
         # errors
         with self.assertRaisesRegex(TypeError, "index must be integer or slice"):
@@ -195,6 +195,10 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(delta_a.side, "right")
         self.assertEqual(delta_a.child.id, a.id)
         self.assertFalse(delta_a.evaluates_on_edges())
+        with self.assertRaisesRegex(
+            pybamm.DomainError, "Delta function domain cannot be None"
+        ):
+            delta_a = pybamm.DeltaFunction(a, "right", None)
 
     def test_boundary_operators(self):
         a = pybamm.Symbol("a", domain="some domain")
@@ -213,7 +217,7 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(boundary_a.id, a.id)
 
         boundary_broad_a = pybamm.boundary_value(
-            pybamm.Broadcast(a, ["negative electrode"]), "left"
+            pybamm.PrimaryBroadcast(a, ["negative electrode"]), "left"
         )
         self.assertEqual(boundary_broad_a.evaluate(), np.array([1]))
 
@@ -253,13 +257,15 @@ class TestUnaryOperators(unittest.TestCase):
         average_a = pybamm.x_average(a)
         self.assertEqual(average_a.id, a.id)
 
-        average_broad_a = pybamm.x_average(pybamm.Broadcast(a, ["negative electrode"]))
+        average_broad_a = pybamm.x_average(
+            pybamm.PrimaryBroadcast(a, ["negative electrode"])
+        )
         self.assertEqual(average_broad_a.evaluate(), np.array([1]))
 
         conc_broad = pybamm.Concatenation(
-            pybamm.Broadcast(1, ["negative electrode"]),
-            pybamm.Broadcast(2, ["separator"]),
-            pybamm.Broadcast(3, ["positive electrode"]),
+            pybamm.PrimaryBroadcast(1, ["negative electrode"]),
+            pybamm.PrimaryBroadcast(2, ["separator"]),
+            pybamm.PrimaryBroadcast(3, ["positive electrode"]),
         )
         average_conc_broad = pybamm.x_average(conc_broad)
         self.assertIsInstance(average_conc_broad, pybamm.Division)
@@ -288,7 +294,9 @@ class TestUnaryOperators(unittest.TestCase):
         average_a = pybamm.r_average(a)
         self.assertEqual(average_a.id, a.id)
 
-        average_broad_a = pybamm.r_average(pybamm.Broadcast(a, ["negative particle"]))
+        average_broad_a = pybamm.r_average(
+            pybamm.PrimaryBroadcast(a, ["negative particle"])
+        )
         self.assertEqual(average_broad_a.evaluate(), np.array([1]))
 
         for domain in [["negative particle"], ["positive particle"]]:
@@ -312,9 +320,11 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(z_average_a.id, a.id)
         self.assertEqual(yz_average_a.id, a.id)
 
-        z_average_broad_a = pybamm.z_average(pybamm.Broadcast(a, ["current collector"]))
+        z_average_broad_a = pybamm.z_average(
+            pybamm.PrimaryBroadcast(a, ["current collector"])
+        )
         yz_average_broad_a = pybamm.yz_average(
-            pybamm.Broadcast(a, ["current collector"])
+            pybamm.PrimaryBroadcast(a, ["current collector"])
         )
         self.assertEqual(z_average_broad_a.evaluate(), np.array([1]))
         self.assertEqual(yz_average_broad_a.evaluate(), np.array([1]))

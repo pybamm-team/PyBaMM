@@ -46,9 +46,10 @@ class BaseModel(object):
     variables: dict
         A dictionary that maps strings to expressions that represent
         the useful variables
-    events: list
-        A list of events that should cause the solver to terminate (e.g. concentration
-        goes negative)
+    events: list of :class:`pybamm.Event`
+        A list of events. Each event can either cause the solver to terminate
+        (e.g. concentration goes negative), or be used to inform the solver of the
+        existance of a discontinuity (e.g. discontinuity in the input current)
     concatenated_rhs : :class:`pybamm.Concatenation`
         After discretisation, contains the expressions representing the rhs equations
         concatenated into a single expression
@@ -60,6 +61,9 @@ class BaseModel(object):
     mass_matrix : :class:`pybamm.Matrix`
         After discretisation, contains the mass matrix for the model. This is computed
         automatically
+    mass_matrix_inv : :class:`pybamm.Matrix`
+        After discretisation, contains the inverse mass matrix for the differential
+        (rhs) part of model. This is computed automatically
     jacobian : :class:`pybamm.Concatenation`
         Contains the Jacobian for the model. If model.use_jacobian is True, the
         Jacobian is computed automatically during solver set up
@@ -88,7 +92,7 @@ class BaseModel(object):
         - "casadi": convert into CasADi expression tree, which then uses CasADi's \
         algorithm to calculate the Jacobian.
 
-        Default is "python".
+        Default is "casadi".
 
     """
 
@@ -101,12 +105,13 @@ class BaseModel(object):
         self._algebraic = {}
         self._initial_conditions = {}
         self._boundary_conditions = {}
-        self._variables = {}
-        self._events = {}
+        self._variables = pybamm.FuzzyDict()
+        self._events = []
         self._concatenated_rhs = None
         self._concatenated_algebraic = None
         self._concatenated_initial_conditions = None
         self._mass_matrix = None
+        self._mass_matrix_inv = None
         self._jacobian = None
         self._jacobian_algebraic = None
         self.external_variables = []
@@ -204,7 +209,7 @@ class BaseModel(object):
 
     @variables.setter
     def variables(self, variables):
-        self._variables = variables
+        self._variables = pybamm.FuzzyDict(variables)
 
     def variable_names(self):
         return list(self._variables.keys())
@@ -248,6 +253,14 @@ class BaseModel(object):
     @mass_matrix.setter
     def mass_matrix(self, mass_matrix):
         self._mass_matrix = mass_matrix
+
+    @property
+    def mass_matrix_inv(self):
+        return self._mass_matrix_inv
+
+    @mass_matrix_inv.setter
+    def mass_matrix_inv(self, mass_matrix_inv):
+        self._mass_matrix_inv = mass_matrix_inv
 
     @property
     def jacobian(self):
@@ -325,14 +338,17 @@ class BaseModel(object):
                 self._boundary_conditions, submodel.boundary_conditions
             )
             self.variables.update(submodel.variables)  # keys are strings so no check
-            self._events.update(submodel.events)
+            self._events += submodel.events
 
     def check_and_combine_dict(self, dict1, dict2):
         # check that the key ids are distinct
         ids1 = set(x.id for x in dict1.keys())
         ids2 = set(x.id for x in dict2.keys())
         if len(ids1.intersection(ids2)) != 0:
-            raise pybamm.ModelError("Submodel incompatible: duplicate variables")
+            variables = [x for x in dict1.keys() if x.id in ids1.intersection(ids2)]
+            raise pybamm.ModelError(
+                "Submodel incompatible: duplicate variables '{}'".format(variables)
+            )
         dict1.update(dict2)
 
     def check_well_posedness(self, post_discretisation=False):
@@ -368,7 +384,8 @@ class BaseModel(object):
         vars_in_rhs_keys = set()
         vars_in_algebraic_keys = set()
         vars_in_eqns = set()
-        # Get all variables ids from rhs and algebraic keys and equations
+        # Get all variables ids from rhs and algebraic keys and equations, and
+        # from boundary conditions
         # For equations we look through the whole expression tree.
         # "Variables" can be Concatenations so we also have to look in the whole
         # expression tree
@@ -386,11 +403,16 @@ class BaseModel(object):
             vars_in_eqns.update(
                 [x.id for x in eqn.pre_order() if isinstance(x, pybamm.Variable)]
             )
+        for var, side_eqn in self.boundary_conditions.items():
+            for side, (eqn, typ) in side_eqn.items():
+                vars_in_eqns.update(
+                    [x.id for x in eqn.pre_order() if isinstance(x, pybamm.Variable)]
+                )
         # If any keys are repeated between rhs and algebraic then the model is
         # overdetermined
         if not set(vars_in_rhs_keys).isdisjoint(vars_in_algebraic_keys):
             raise pybamm.ModelError("model is overdetermined (repeated keys)")
-        # If any algebraic keys don't appear in the eqns then the model is
+        # If any algebraic keys don't appear in the eqns (or bcs) then the model is
         # overdetermined (but rhs keys can be absent from the eqns, e.g. dcdt = -1 is
         # fine)
         # Skip this step after discretisation, as any variables in the equations will
@@ -422,13 +444,21 @@ class BaseModel(object):
         After discretisation, there must be at least one StateVector in each algebraic
         equation
         """
+        vars_in_bcs = set()
+        for var, side_eqn in self.boundary_conditions.items():
+            for eqn, _ in side_eqn.values():
+                vars_in_bcs.update(
+                    [x.id for x in eqn.pre_order() if isinstance(x, pybamm.Variable)]
+                )
         if not post_discretisation:
             # After the model has been defined, each algebraic equation key should
-            # appear in that algebraic equation
+            # appear in that algebraic equation, or in the boundary conditions
             # this has been relaxed for concatenations for now
             for var, eqn in self.algebraic.items():
-                if not any(x.id == var.id for x in eqn.pre_order()) and not isinstance(
-                    var, pybamm.Concatenation
+                if not (
+                    any(x.id == var.id for x in eqn.pre_order())
+                    or var.id in vars_in_bcs
+                    or isinstance(var, pybamm.Concatenation)
                 ):
                     raise pybamm.ModelError(
                         "each variable in the algebraic eqn keys must appear in the eqn"
@@ -538,4 +568,3 @@ class BaseModel(object):
             return pybamm.IDAKLUSolver()
         else:
             return pybamm.CasadiSolver(mode="safe")
-

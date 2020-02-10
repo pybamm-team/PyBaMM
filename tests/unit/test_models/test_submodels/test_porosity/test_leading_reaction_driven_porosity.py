@@ -10,7 +10,7 @@ import unittest
 class TestLeadingOrder(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.standard_parameters_lead_acid
-        a = pybamm.Broadcast(pybamm.Scalar(0), "current collector")
+        a = pybamm.PrimaryBroadcast(pybamm.Scalar(0), "current collector")
         variables = {
             "X-averaged negative electrode interfacial current density": a,
             "X-averaged positive electrode interfacial current density": a,

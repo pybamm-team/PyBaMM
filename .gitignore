@@ -4,6 +4,7 @@
 *.png
 /local/
 *.DS_Store
+*.mat
 
 # don't ignore important .txt files
 !requirements*
@@ -69,6 +70,12 @@ pyvenv.cfg
 # sundials
 sundials
 sundials4
+sundials-*
+SuiteSparse-*
+build_sundials
+
+# downloads
+*.gz
 
 # third party
 third-party

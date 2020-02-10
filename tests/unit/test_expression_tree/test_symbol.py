@@ -43,6 +43,16 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual(a.domain, ["t", "e", "s"])
         with self.assertRaises(TypeError):
             a = pybamm.Symbol("a", domain=1)
+        with self.assertRaisesRegex(
+            pybamm.DomainError,
+            "Domain cannot be empty if auxiliary domains are not empty",
+        ):
+            b = pybamm.Symbol("b", auxiliary_domains={"sec": ["test sec"]})
+        b = pybamm.Symbol("b", domain="test", auxiliary_domains={"sec": ["test sec"]})
+        with self.assertRaisesRegex(
+            pybamm.DomainError, "Domain cannot be the same as an auxiliary domain"
+        ):
+            b.domain = "test sec"
 
     def test_symbol_auxiliary_domains(self):
         a = pybamm.Symbol(
@@ -58,6 +68,19 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual(a.domain, ["t", "e", "s"])
         with self.assertRaises(TypeError):
             a = pybamm.Symbol("a", domain=1)
+        b = pybamm.Symbol("b", domain="test sec")
+        with self.assertRaisesRegex(
+            pybamm.DomainError, "Domain cannot be the same as an auxiliary domain"
+        ):
+            b.auxiliary_domains = {"sec": "test sec"}
+        with self.assertRaisesRegex(
+            pybamm.DomainError, "All auxiliary domains must be different"
+        ):
+            b = pybamm.Symbol(
+                "b",
+                domain="test",
+                auxiliary_domains={"sec": ["test sec"], "tert": ["test sec"]},
+            )
 
     def test_symbol_methods(self):
         a = pybamm.Symbol("a")
@@ -171,7 +194,7 @@ class TestSymbol(unittest.TestCase):
         a = pybamm.Parameter("a")
         self.assertFalse(a.evaluates_to_number())
 
-        a = pybamm.Scalar(3) * pybamm.Scalar(2)
+        a = pybamm.Scalar(3) * pybamm.Time()
         self.assertTrue(a.evaluates_to_number())
         # highlight difference between this function and isinstance(a, Scalar)
         self.assertNotIsInstance(a, pybamm.Scalar)
@@ -316,10 +339,10 @@ class TestSymbol(unittest.TestCase):
 
     def test_orphans(self):
         a = pybamm.Scalar(1)
-        b = pybamm.Scalar(2)
-        sum = a + b
+        b = pybamm.Parameter("b")
+        summ = a + b
 
-        a_orp, b_orp = sum.orphans
+        a_orp, b_orp = summ.orphans
         self.assertIsNone(a_orp.parent)
         self.assertIsNone(b_orp.parent)
         self.assertEqual(a.id, a_orp.id)
@@ -361,14 +384,14 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual(concat.size_for_testing, 30)
 
         var = pybamm.Variable("var", domain="negative electrode")
-        broadcast = pybamm.Broadcast(0, "negative electrode")
+        broadcast = pybamm.PrimaryBroadcast(0, "negative electrode")
         self.assertEqual(var.shape_for_testing, broadcast.shape_for_testing)
         self.assertEqual(
             (var + broadcast).shape_for_testing, broadcast.shape_for_testing
         )
 
         var = pybamm.Variable("var", domain=["random domain", "other domain"])
-        broadcast = pybamm.Broadcast(0, ["random domain", "other domain"])
+        broadcast = pybamm.PrimaryBroadcast(0, ["random domain", "other domain"])
         self.assertEqual(var.shape_for_testing, broadcast.shape_for_testing)
         self.assertEqual(
             (var + broadcast).shape_for_testing, broadcast.shape_for_testing

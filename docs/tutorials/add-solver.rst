@@ -27,21 +27,21 @@ The role of solvers is to solve a model at a given set of time points, returning
 Base solver classes vs specific solver classes
 ----------------------------------------------
 
-There is one general base solver class, :class:`pybamm.BaseSolver`, and two specialised base classes, :class:`pybamm.OdeSolver` and :class:`pybamm.DaeSolver`. The general base class simply sets up some useful solver properties such as tolerances. The specialised base classes implement a method :meth:`self.solve()` that solves a model at a given set of time points.
+There is one general base solver class, :class:`pybamm.BaseSolver`, which sets up some useful solver properties such as tolerances and implement a method :meth:`self.solve()` that solves a model at a given set of time points.
 
 The ``solve`` method unpacks the model, simplifies it by removing extraneous operations, (optionally) creates or calls the mass matrix and/or jacobian, and passes the appropriate attributes to another method, called ``integrate``, which does the time-stepping. The role of specific solver classes is simply to implement this ``integrate`` method for an arbitrary set of derivative function, initial conditions etc.
 
-The base DAE solver class also computes a consistent set of initial conditions for the algebraic equations, using ``model.concatenated_initial_conditions`` as an initial guess.
+The base solver class also computes a consistent set of initial conditions for the algebraic equations, using ``model.concatenated_initial_conditions`` as an initial guess.
 
 Implementing a new solver
 -------------------------
 
 To add a new solver (e.g. My Fast DAE Solver), first create a new file (``my_fast_dae_solver.py``) in ``pybamm/solvers/``,
-with a single class that inherits from either :class:`pybamm.OdeSolver` or :class:`pybamm.DaeSolver`, depending on whether the new solver can solve DAE systems. For example:
+with a single class that inherits from :class:`pybamm.BaseSolver`. For example:
 
 .. code-block:: python
 
-    def MyFastDaeSolver(pybamm.DaeSolver):
+    def MyFastDaeSolver(pybamm.BaseSolver):
 
 Also add the class to ``pybamm/__init__.py``:
 
@@ -49,7 +49,7 @@ Also add the class to ``pybamm/__init__.py``:
 
     from .solvers.my_fast_dae_solver import MyFastDaeSolver
 
-You can then start implementing the solver by adding the ``integrate`` function to the class (the interfaces are slightly different for an ODE Solver and a DAE Solver, see :meth:`pybamm.OdeSolver.integrate` vs :meth:`pybamm.DaeSolver.integrate`)
+You can then start implementing the solver by adding the ``integrate`` function to the class.
 
 For an example of an existing solver implementation, see the Scikits DAE solver
 `API docs <https://pybamm.readthedocs.io/en/latest/source/solvers/scikits_solvers.html>`_
@@ -74,7 +74,7 @@ Test on the models
 
 In theory, any existing model can now be solved using `MyFastDaeSolver` instead of their default solvers, with no extra work from here.
 To test this, add something like the following test to one of the model test files
-(e.g. `DFN <https://github.com/pybamm-team/PyBaMM/blob/master/tests/unit/test_models/test_lithium_ion/test_lithium_ion_dfn.py>`_):
+(e.g. `DFN <https://github.com/pybamm-team/PyBaMM/blob/master/tests/integration/test_models/test_full_battery_models/test_lithium_ion/test_dfn.py>`_):
 
 .. code-block:: python
 

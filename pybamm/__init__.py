@@ -55,8 +55,8 @@ ABSOLUTE_PATH = os.path.join(os.path.split(script_path)[0], "..")
 #
 # Utility classes and methods
 #
-from .util import Timer
-from .util import root_dir, load_function, rmse, get_infinite_nested_dict
+from .util import Timer, FuzzyDict
+from .util import root_dir, load_function, rmse, get_infinite_nested_dict, load
 from .logger import logger, set_logging_level
 from .settings import settings
 
@@ -81,10 +81,7 @@ from .expression_tree.binary_operators import (
     Division,
     Inner,
     inner,
-    Outer,
-    Kron,
     Heaviside,
-    outer,
     source,
 )
 from .expression_tree.concatenations import (
@@ -98,10 +95,17 @@ from .expression_tree.matrix import Matrix
 from .expression_tree.unary_operators import *
 from .expression_tree.functions import *
 from .expression_tree.interpolant import Interpolant
+from .expression_tree.input_parameter import InputParameter
 from .expression_tree.parameter import Parameter, FunctionParameter
-from .expression_tree.broadcasts import Broadcast, PrimaryBroadcast, FullBroadcast
+from .expression_tree.broadcasts import (
+    Broadcast,
+    PrimaryBroadcast,
+    SecondaryBroadcast,
+    FullBroadcast,
+    ones_like,
+)
 from .expression_tree.scalar import Scalar
-from .expression_tree.variable import Variable
+from .expression_tree.variable import Variable, ExternalVariable
 from .expression_tree.independent_variable import (
     IndependentVariable,
     Time,
@@ -144,6 +148,8 @@ from .expression_tree.operations.convert_to_casadi import CasadiConverter
 #
 from .models.base_model import BaseModel
 from .models import standard_variables
+from .models.event import Event
+from .models.event import EventType
 
 # Battery models
 from .models.full_battery_models.base_battery_model import BaseBatteryModel
@@ -160,6 +166,7 @@ from .models.submodels import (
     current_collector,
     electrolyte,
     electrode,
+    external_circuit,
     interface,
     oxygen_diffusion,
     particle,
@@ -232,8 +239,6 @@ from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 #
 from .solvers.solution import Solution
 from .solvers.base_solver import BaseSolver
-from .solvers.ode_solver import OdeSolver
-from .solvers.dae_solver import DaeSolver
 from .solvers.algebraic_solver import AlgebraicSolver
 from .solvers.casadi_solver import CasadiSolver
 from .solvers.scikits_dae_solver import ScikitsDaeSolver
@@ -244,7 +249,7 @@ from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
 #
 # other
 #
-from .processed_variable import post_process_variables, ProcessedVariable
+from .processed_variable import ProcessedVariable
 from .quick_plot import QuickPlot, ax_min, ax_max
 
 from .simulation import Simulation, load_sim

@@ -27,11 +27,11 @@ class SingleParticle(BaseModel):
     def get_fundamental_variables(self):
         if self.domain == "Negative":
             c_s_xav = pybamm.standard_variables.c_s_n_xav
-            c_s = pybamm.PrimaryBroadcast(c_s_xav, ["negative electrode"])
+            c_s = pybamm.SecondaryBroadcast(c_s_xav, ["negative electrode"])
 
         elif self.domain == "Positive":
             c_s_xav = pybamm.standard_variables.c_s_p_xav
-            c_s = pybamm.PrimaryBroadcast(c_s_xav, ["positive electrode"])
+            c_s = pybamm.SecondaryBroadcast(c_s_xav, ["positive electrode"])
 
         variables = self._get_standard_concentration_variables(c_s, c_s_xav)
 
@@ -46,11 +46,21 @@ class SingleParticle(BaseModel):
             [self.domain.lower() + " particle"],
         )
         N_s_xav = self._flux_law(c_s_xav, T_k_xav)
-        N_s = pybamm.PrimaryBroadcast(N_s_xav, [self._domain.lower() + " electrode"])
+        N_s = pybamm.SecondaryBroadcast(N_s_xav, [self._domain.lower() + " electrode"])
 
         variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
 
         return variables
+
+    def set_rhs(self, variables):
+
+        c, N, _ = self._unpack(variables)
+
+        if self.domain == "Negative":
+            self.rhs = {c: -(1 / self.param.C_n) * pybamm.div(N)}
+
+        elif self.domain == "Positive":
+            self.rhs = {c: -(1 / self.param.C_p) * pybamm.div(N)}
 
     def _unpack(self, variables):
         c_s_xav = variables[

@@ -15,7 +15,7 @@ class TestCurrentFunctions(unittest.TestCase):
             {
                 "Typical current [A]": 2,
                 "Typical timescale [s]": 1,
-                "Current function": "[constant]",
+                "Current function [A]": 2,
             }
         )
         processed_current = parameter_values.process_symbol(current)
@@ -28,7 +28,7 @@ class TestCurrentFunctions(unittest.TestCase):
             {
                 "Typical current [A]": 2,
                 "Typical timescale [s]": 1,
-                "Current function": "[current data]car_current",
+                "Current function [A]": "[current data]car_current",
             }
         )
         dimensional_current_eval = parameter_values.process_symbol(dimensional_current)
@@ -57,7 +57,7 @@ class TestCurrentFunctions(unittest.TestCase):
                 "Typical current [A]": 2,
                 "Typical timescale [s]": 1,
                 "omega": 3,
-                "Current function": current,
+                "Current function [A]": current,
             }
         )
         dimensional_current = pybamm.electrical_parameters.dimensional_current_with_time
