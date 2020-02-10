@@ -208,23 +208,26 @@ class Simulation:
         # current events both negative and positive to catch specification
         n_electrodes_parallel = pybamm.electrical_parameters.n_electrodes_parallel
         n_cells = pybamm.electrical_parameters.n_cells
-        self.model.events.update(
-            {
-                "Current cut-off (positive) [A] [experiment]": self.model.variables[
-                    "Current [A]"
-                ]
-                - abs(pybamm.InputParameter("Current cut-off [A]"))
-                / n_electrodes_parallel,
-                "Current cut-off (negative) [A] [experiment]": self.model.variables[
-                    "Current [A]"
-                ]
-                + abs(pybamm.InputParameter("Current cut-off [A]"))
-                / n_electrodes_parallel,
-                "Voltage cut-off [V] [experiment]": self.model.variables[
-                    "Terminal voltage [V]"
-                ]
-                - pybamm.InputParameter("Voltage cut-off [V]") / n_cells,
-            }
+        self.model.events.extend(
+            [
+                pybamm.Event(
+                    "Current cut-off (positive) [A] [experiment]",
+                    self.model.variables["Current [A]"]
+                    - abs(pybamm.InputParameter("Current cut-off [A]"))
+                    / n_electrodes_parallel,
+                ),
+                pybamm.Event(
+                    "Current cut-off (negative) [A] [experiment]",
+                    self.model.variables["Current [A]"]
+                    + abs(pybamm.InputParameter("Current cut-off [A]"))
+                    / n_electrodes_parallel,
+                ),
+                pybamm.Event(
+                    "Voltage cut-off [V] [experiment]",
+                    self.model.variables["Terminal voltage [V]"]
+                    - pybamm.InputParameter("Voltage cut-off [V]") / n_cells,
+                ),
+            ]
         )
 
     def set_defaults(self):
