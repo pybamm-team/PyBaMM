@@ -6,3 +6,4 @@ Base Models
 
   base_model
   base_battery_model
+  event

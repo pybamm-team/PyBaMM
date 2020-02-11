@@ -105,7 +105,7 @@ from .expression_tree.broadcasts import (
     ones_like,
 )
 from .expression_tree.scalar import Scalar
-from .expression_tree.variable import Variable
+from .expression_tree.variable import Variable, ExternalVariable
 from .expression_tree.independent_variable import (
     IndependentVariable,
     Time,
@@ -148,6 +148,8 @@ from .expression_tree.operations.convert_to_casadi import CasadiConverter
 #
 from .models.base_model import BaseModel
 from .models import standard_variables
+from .models.event import Event
+from .models.event import EventType
 
 # Battery models
 from .models.full_battery_models.base_battery_model import BaseBatteryModel
@@ -235,16 +237,20 @@ from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 #
 # Solver classes
 #
-from .solvers.solution import Solution
+from .solvers.solution import Solution, _BaseSolution
 from .solvers.base_solver import BaseSolver
-from .solvers.ode_solver import OdeSolver
-from .solvers.dae_solver import DaeSolver
 from .solvers.algebraic_solver import AlgebraicSolver
 from .solvers.casadi_solver import CasadiSolver
 from .solvers.scikits_dae_solver import ScikitsDaeSolver
 from .solvers.scikits_ode_solver import ScikitsOdeSolver, have_scikits_odes
 from .solvers.scipy_solver import ScipySolver
 from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
+
+#
+# Experiments
+#
+from .experiments.experiment import Experiment
+from . import experiments
 
 #
 # other

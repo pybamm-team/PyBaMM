@@ -253,6 +253,11 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         self._options = options
 
+    @property
+    def timescale(self):
+        "Default timescale for a battery model is the discharge timescale"
+        return self.param.tau_discharge
+
     def set_standard_output_variables(self):
         # Standard output variables
 
@@ -767,8 +772,16 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         # Cut-off voltage
         voltage = self.variables["Terminal voltage"]
-        self.events["Minimum voltage"] = voltage - self.param.voltage_low_cut
-        self.events["Maximum voltage"] = voltage - self.param.voltage_high_cut
+        self.events.append(pybamm.Event(
+            "Minimum voltage",
+            voltage - self.param.voltage_low_cut,
+            pybamm.EventType.TERMINATION
+        ))
+        self.events.append(pybamm.Event(
+            "Maximum voltage",
+            voltage - self.param.voltage_high_cut,
+            pybamm.EventType.TERMINATION
+        ))
 
         # Power
         I_dim = self.variables["Current [A]"]

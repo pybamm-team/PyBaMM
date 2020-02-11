@@ -70,6 +70,12 @@ pyvenv.cfg
 # sundials
 sundials
 sundials4
+sundials-*
+SuiteSparse-*
+build_sundials
+
+# downloads
+*.gz
 
 # third party
 third-party
