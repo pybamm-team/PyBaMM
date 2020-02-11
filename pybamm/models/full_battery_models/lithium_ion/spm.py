@@ -47,6 +47,8 @@ class SPM(BaseModel):
         if build:
             self.build_model()
 
+        pybamm.citations.register("marquis2019asymptotic")
+
     def set_porosity_submodel(self):
 
         self.submodels["porosity"] = pybamm.porosity.Constant(self.param)

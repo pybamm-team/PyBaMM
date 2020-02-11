@@ -139,6 +139,11 @@ class ParameterValues:
                 path=component_path,
             )
 
+        # register citations
+        if "citation" in chemistry:
+            citation = chemistry["citation"]
+            pybamm.citations.register(citation)
+
     def read_parameters_csv(self, filename):
         """Reads parameters from csv file into dict.
 
@@ -385,8 +390,9 @@ class ParameterValues:
             model.variables[variable] = self.process_symbol(equation)
 
         for event in model.events:
-            pybamm.logger.debug("Processing parameters for event'{}''"
-                                .format(event.name))
+            pybamm.logger.debug(
+                "Processing parameters for event'{}''".format(event.name)
+            )
             event.expression = self.process_symbol(event.expression)
 
         pybamm.logger.info("Finish setting parameters for {}".format(model.name))

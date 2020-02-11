@@ -10,6 +10,7 @@
 !requirements*
 !LICENSE.txt
 !CMakeLists.txt
+!CITATIONS.txt
 
 # running files
 *.pyc

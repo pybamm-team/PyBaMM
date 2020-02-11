@@ -49,6 +49,8 @@ class Full(BaseModel):
         if build:
             self.build_model()
 
+        pybamm.citations.register("sulzer2019physical")
+
     def set_porosity_submodel(self):
         self.submodels["porosity"] = pybamm.porosity.Full(self.param)
 
