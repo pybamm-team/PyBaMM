@@ -5,6 +5,7 @@ import pickle
 import pybamm
 import numpy as np
 import copy
+import warnings
 
 
 def isnotebook():
@@ -317,10 +318,13 @@ class Simulation:
         Parameters
         ----------
         t_eval : numeric type, optional
-            The times at which to compute the solution. If None the model will
+            The times at which to compute the solution. If None and the parameter
+            "Current function [A]" is not read from data the model will
             be solved for a full discharge (1 hour / C_rate) if the discharge
-            timescale is provided. Otherwise the model will be solved up to a
-            non-dimensional time of 1.
+            timescale is provided. If None and the parameter "Current function [A]"
+            is read from data the model will be solved at the times provided in
+            the data. Otherwise the model will be solved up to a non-dimensional
+            time of 1.
         solver : :class:`pybamm.BaseSolver`
             The solver to use to solve the model.
         external_variables : dict
@@ -340,19 +344,60 @@ class Simulation:
             solver = self.solver
 
         if self.operating_mode == "without experiment":
-            # Solve the normal way, with a single solve
-            if t_eval is None:
-                try:
-                    # Try to compute discharge time
-                    tau = self._parameter_values.evaluate(self.model.param.timescale)
-                    C_rate = self._parameter_values["C-rate"]
-                    t_end = 3600 / tau / C_rate
-                    t_eval = np.linspace(0, t_end, 100)
-                except AttributeError:
-                    t_eval = np.linspace(0, 1, 100)
+            # For drive cycles (current provided as data) we perform additional tests
+            # on t_eval (if provided) to ensure the returned solution captures the
+            # input. If the current is provided as data then the "Current function [A]"
+            # is the tuple (filename, data).
+            if isinstance(self._parameter_values["Current function [A]"], tuple):
+                filename = self._parameter_values["Current function [A]"][0]
+                tau = self._parameter_values.evaluate(self.model.param.timescale)
+                time_data = (
+                    self._parameter_values["Current function [A]"][1][:, 0] / tau
+                )
+                # If no t_eval is provided, we use the times provided in the data.
+                if t_eval is None:
+                    pybamm.logger.info(
+                        "Setting t_eval as specified by the data '{}'".format(
+                            filename
+                        )
+                    )
+                    t_eval = time_data
+                else:
+                    # If t_eval is provided we check that it at least contains all
+                    # of the data points. We only raise a warning here, as users
+                    # may genuinely only want the solution returned at some
+                    # specified points.
+                    if set(time_data).issubset(set(t_eval)) is False:
+                        warnings.warn(
+                            """
+                            t_eval does not contain all of the time points in the data
+                            '{}'. The output may not contain enough data points to
+                            accurately represent the solution. Try refining the number
+                            of points in t_eval. Alternatively, passing t_eval = None
+                            automatically sets t_eval to be the points in the data.
+                            """.format(
+                                filename
+                            ),
+                            pybamm.SolverWarning
+                        )
+            # If not using a drive cycle and t_eval is not provided, set t_eval
+            # to correspond to a single discharge
+            else:
+                if t_eval is None:
+                    try:
+                        # Try to compute discharge time
+                        tau = self._parameter_values.evaluate(
+                            self.model.param.timescale
+                        )
+                        C_rate = self._parameter_values["C-rate"]
+                        t_end = 3600 / tau / C_rate
+                        t_eval = np.linspace(0, t_end, 100)
+                    except AttributeError:
+                        t_eval = np.linspace(0, 1, 100)
 
             self.t_eval = t_eval
             self._solution = solver.solve(self.built_model, t_eval, inputs=inputs)
+
         elif self.operating_mode == "with experiment":
             if t_eval is not None:
                 pybamm.logger.warning(
