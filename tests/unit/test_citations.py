@@ -79,20 +79,22 @@ class TestCitations(unittest.TestCase):
         pybamm.ScipySolver()
         self.assertIn("scipy", citations._papers_to_cite)
 
-        citations._reset()
-        self.assertNotIn("scikits-odes", citations._papers_to_cite)
-        pybamm.ScikitsOdeSolver()
-        self.assertIn("scikits-odes", citations._papers_to_cite)
+        if pybamm.have_scikits_odes():
+            citations._reset()
+            self.assertNotIn("scikits-odes", citations._papers_to_cite)
+            pybamm.ScikitsOdeSolver()
+            self.assertIn("scikits-odes", citations._papers_to_cite)
 
-        citations._reset()
-        self.assertNotIn("scikits-odes", citations._papers_to_cite)
-        pybamm.ScikitsDaeSolver()
-        self.assertIn("scikits-odes", citations._papers_to_cite)
+            citations._reset()
+            self.assertNotIn("scikits-odes", citations._papers_to_cite)
+            pybamm.ScikitsDaeSolver()
+            self.assertIn("scikits-odes", citations._papers_to_cite)
 
-        citations._reset()
-        self.assertNotIn("hindmarsh2005sundials", citations._papers_to_cite)
-        pybamm.IDAKLUSolver()
-        self.assertIn("hindmarsh2005sundials", citations._papers_to_cite)
+        if pybamm.have_idaklu():
+            citations._reset()
+            self.assertNotIn("hindmarsh2005sundials", citations._papers_to_cite)
+            pybamm.IDAKLUSolver()
+            self.assertIn("hindmarsh2005sundials", citations._papers_to_cite)
 
 
 if __name__ == "__main__":

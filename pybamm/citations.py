@@ -14,11 +14,6 @@ class Citations:
     a particular citation is relevant for a particular simulation. For a list of all
     possible citations, see `pybamm/CITATIONS.txt`
 
-    Examples
-    --------
-    >>> import pybamm
-    >>> pybamm.citations.register("key")
-    >>> pybamm.print_citations("citations.txt")
     """
 
     def __init__(self):
@@ -75,7 +70,7 @@ class Citations:
         self._papers_to_cite.add(key)
 
     def print(self, filename=None):
-        """Print citations.
+        """Print all citations that were used for running simulations.
 
         Parameters
         ----------
@@ -94,7 +89,7 @@ class Citations:
 
 
 def print_citations(filename=None):
-    "Print citations"
+    "See :meth:`Citations.print`"
     pybamm.citations.print(filename)
 
 
