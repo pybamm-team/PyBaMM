@@ -93,4 +93,4 @@ cmake_install.cmake
 third-party/pybind11
 
 # LGM50 results
-results/LGM50/
+results/LGM50/data
