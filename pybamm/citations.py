@@ -14,6 +14,11 @@ class Citations:
     a particular citation is relevant for a particular simulation. For a list of all
     possible citations, see `pybamm/CITATIONS.txt`
 
+    Examples
+    --------
+    >>> import pybamm
+    >>> pybamm.citations.register("sulzer2020python")
+    >>> pybamm.print_citations("citations.txt")
     """
 
     def __init__(self):

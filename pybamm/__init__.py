@@ -59,7 +59,7 @@ from .util import Timer, FuzzyDict
 from .util import root_dir, load_function, rmse, get_infinite_nested_dict, load
 from .logger import logger, set_logging_level
 from .settings import settings
-from .citations import citations, print_citations
+from .citations import Citations, citations, print_citations
 
 #
 # Classes for the Expression Tree

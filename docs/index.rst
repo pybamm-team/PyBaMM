@@ -33,6 +33,7 @@ Contents
     source/processed_variable
     source/util
     source/simulation
+    source/citations
 
 Examples
 ========
