@@ -67,3 +67,4 @@ class InputError(Exception):
     """
 
     pass
+

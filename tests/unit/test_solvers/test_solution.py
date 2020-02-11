@@ -19,25 +19,47 @@ class TestSolution(unittest.TestCase):
         self.assertEqual(sol.inputs, {})
         self.assertEqual(sol.model, None)
 
+        with self.assertRaisesRegex(AttributeError, "sub solutions"):
+            print(sol.sub_solutions)
+
     def test_append(self):
         # Set up first solution
         t1 = np.linspace(0, 1)
         y1 = np.tile(t1, (20, 1))
         sol1 = pybamm.Solution(t1, y1)
         sol1.solve_time = 1.5
-        sol1.inputs = {}
+        sol1.model = pybamm.BaseModel()
+        sol1.inputs = {"a": 1}
 
         # Set up second solution
         t2 = np.linspace(1, 2)
         y2 = np.tile(t2, (20, 1))
         sol2 = pybamm.Solution(t2, y2)
         sol2.solve_time = 1
-        sol1.append(sol2)
+        sol2.inputs = {"a": 2}
+        sol1.append(sol2, create_sub_solutions=True)
 
         # Test
         self.assertEqual(sol1.solve_time, 2.5)
         np.testing.assert_array_equal(sol1.t, np.concatenate([t1, t2[1:]]))
         np.testing.assert_array_equal(sol1.y, np.concatenate([y1, y2[:, 1:]], axis=1))
+        np.testing.assert_array_equal(
+            sol1.inputs["a"],
+            np.concatenate([1 * np.ones_like(t1), 2 * np.ones_like(t2[1:])]),
+        )
+
+        # Test sub-solutions
+        self.assertEqual(len(sol1.sub_solutions), 2)
+        np.testing.assert_array_equal(sol1.sub_solutions[0].t, t1)
+        np.testing.assert_array_equal(sol1.sub_solutions[1].t, t2)
+        self.assertEqual(sol1.sub_solutions[0].model, sol1.model)
+        np.testing.assert_array_equal(
+            sol1.sub_solutions[0].inputs["a"], 1 * np.ones_like(t1)
+        )
+        self.assertEqual(sol1.sub_solutions[1].model, sol2.model)
+        np.testing.assert_array_equal(
+            sol1.sub_solutions[1].inputs["a"], 2 * np.ones_like(t2)
+        )
 
     def test_total_time(self):
         sol = pybamm.Solution([], None)

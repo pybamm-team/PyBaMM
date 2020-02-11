@@ -64,4 +64,6 @@ class Full(BaseModel):
     def set_initial_conditions(self, variables):
         phi_e = variables["Electrolyte potential"]
         T_init = self.param.T_init
-        self.initial_conditions = {phi_e: -self.param.U_n(self.param.c_n_init, T_init)}
+        self.initial_conditions = {
+            phi_e: -self.param.U_n(self.param.c_n_init(0), T_init)
+        }
