@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 pybamm.set_logging_level("INFO")
 experiment = pybamm.Experiment(
     [
-        "Discharge at C/2 until 3.2 V",
+        "Discharge at 1.5C until 2.5 V",
         "Rest for 2 hours",
     ],
     period="10 seconds",
@@ -31,7 +31,7 @@ param = pybamm.ParameterValues(
 )
 
 cspmax = 50483 * 1.25  #1.25
-csnmax = 29583 * 1.12  #1.13
+csnmax = 29583 * 1.13  #1.13
 
 param["Initial concentration in negative electrode [mol.m-3]"] = 0.90 * csnmax
 param["Initial concentration in positive electrode [mol.m-3]"] = 0.26 * cspmax
@@ -42,6 +42,8 @@ param["Maximum concentration in positive electrode [mol.m-3]"] = cspmax
 param["Negative electrode Bruggeman coefficient (electrolyte)"] = 1.5
 param["Positive electrode Bruggeman coefficient (electrolyte)"] = 1.5
 param["Separator Bruggeman coefficient (electrolyte)"] = 1.5
+param["Positive electrode diffusivity [m2.s-1]"] = 4E-15
+param["Negative electrode diffusivity [m2.s-1]"] = 3.3E-14
 
 # param["Positive electrode conductivity [S.m-1]"] = 10 # Inf detected
 # param["Maximum concentration in positive electrode [mol.m-3]"] = 51217.9257309275   # Inf detected
@@ -53,26 +55,6 @@ param["Separator Bruggeman coefficient (electrolyte)"] = 1.5
 # param["Positive electrode surface area density [m-1]"] = 150000 # Convergence fail
 
 # param["Negative electrode OCP [V]"] = "[function]graphite_mcmb2528_ocp_Dualfoil1998"
-
-plt.figure(num=1, figsize=(6, 4))
-plt.plot(
-    param["Positive electrode OCP [V]"][1][:, 0],
-    param["Positive electrode OCP [V]"][1][:, 1]
-)
-plt.xlabel("Stoichiometry")
-plt.ylabel("OCV cathode [V]")
-plt.tight_layout()
-
-plt.figure(num=2, figsize=(6, 4))
-plt.plot(
-    param["Negative electrode OCP [V]"][1][:, 0],
-    param["Negative electrode OCP [V]"][1][:, 1]
-)
-plt.xlabel("Stoichiometry")
-plt.ylabel("OCV anode [V]")
-plt.tight_layout()
-
-plt.show()
 
 sim = pybamm.Simulation(
     model,
