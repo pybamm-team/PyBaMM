@@ -99,12 +99,21 @@ C_dl_dimensional = pybamm.Parameter("Double-layer capacity [F.m-2]")
 c_e_init_dimensional = pybamm.Parameter(
     "Initial concentration in electrolyte [mol.m-3]"
 )
-c_n_init_dimensional = pybamm.Parameter(
-    "Initial concentration in negative electrode [mol.m-3]"
-)
-c_p_init_dimensional = pybamm.Parameter(
-    "Initial concentration in positive electrode [mol.m-3]"
-)
+
+
+def c_n_init_dimensional(x):
+    "Initial concentration as a function of dimensionless position x"
+    return pybamm.FunctionParameter(
+        "Initial concentration in negative electrode [mol.m-3]", x
+    )
+
+
+def c_p_init_dimensional(x):
+    "Initial concentration as a function of dimensionless position x"
+    return pybamm.FunctionParameter(
+        "Initial concentration in positive electrode [mol.m-3]", x
+    )
+
 
 # thermal
 Delta_T = pybamm.thermal_parameters.Delta_T
@@ -362,10 +371,18 @@ B = (
 )
 
 # Initial conditions
-c_e_init = c_e_init_dimensional / c_e_typ
-c_n_init = c_n_init_dimensional / c_n_max
-c_p_init = c_p_init_dimensional / c_p_max
 T_init = pybamm.thermal_parameters.T_init
+c_e_init = c_e_init_dimensional / c_e_typ
+
+
+def c_n_init(x):
+    "Dimensionless initial concentration as a function of dimensionless position x"
+    return c_n_init_dimensional(x) / c_n_max
+
+
+def c_p_init(x):
+    "Dimensionless initial concentration as a function of dimensionless position x"
+    return c_p_init_dimensional(x) / c_p_max
 
 
 # --------------------------------------------------------------------------------------

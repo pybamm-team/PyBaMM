@@ -53,9 +53,18 @@ class TestSimulationExperiment(unittest.TestCase):
             [t / tau for t in [3600, 7 * 24 * 3600, 7 * 24 * 3600, 3600]],
         )
 
-        self.assertIn("Current cut-off (positive) [A] [experiment]", sim.model.events)
-        self.assertIn("Current cut-off (negative) [A] [experiment]", sim.model.events)
-        self.assertIn("Voltage cut-off [V] [experiment]", sim.model.events)
+        self.assertIn(
+            "Current cut-off (positive) [A] [experiment]",
+            [event.name for event in sim.model.events],
+        )
+        self.assertIn(
+            "Current cut-off (negative) [A] [experiment]",
+            [event.name for event in sim.model.events],
+        )
+        self.assertIn(
+            "Voltage cut-off [V] [experiment]",
+            [event.name for event in sim.model.events],
+        )
 
         # fails if trying to set up with something that isn't an experiment
         with self.assertRaisesRegex(TypeError, "experiment must be"):

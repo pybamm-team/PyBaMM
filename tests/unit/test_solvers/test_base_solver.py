@@ -58,7 +58,8 @@ class TestBaseSolver(unittest.TestCase):
                 return y + 2
 
         solver = pybamm.BaseSolver()
-        init_cond = solver.calculate_consistent_initial_conditions(ScalarModel())
+        model = ScalarModel()
+        init_cond = solver.calculate_consistent_state(model)
         np.testing.assert_array_equal(init_cond, -2)
 
         # More complicated system
@@ -75,7 +76,7 @@ class TestBaseSolver(unittest.TestCase):
                 return (y[1:] - vec[1:]) ** 2
 
         model = VectorModel()
-        init_cond = solver.calculate_consistent_initial_conditions(model)
+        init_cond = solver.calculate_consistent_state(model)
         np.testing.assert_array_almost_equal(init_cond, vec)
 
         # With jacobian
@@ -83,7 +84,7 @@ class TestBaseSolver(unittest.TestCase):
             return 2 * np.hstack([np.zeros((3, 1)), np.diag(y[1:] - vec[1:])])
 
         model.jac_algebraic_eval = jac_dense
-        init_cond = solver.calculate_consistent_initial_conditions(model)
+        init_cond = solver.calculate_consistent_state(model)
         np.testing.assert_array_almost_equal(init_cond, vec)
 
         # With sparse jacobian
@@ -93,7 +94,7 @@ class TestBaseSolver(unittest.TestCase):
             )
 
         model.jac_algebraic_eval = jac_sparse
-        init_cond = solver.calculate_consistent_initial_conditions(model)
+        init_cond = solver.calculate_consistent_state(model)
         np.testing.assert_array_almost_equal(init_cond, vec)
 
     def test_fail_consistent_initial_conditions(self):
@@ -114,13 +115,13 @@ class TestBaseSolver(unittest.TestCase):
             pybamm.SolverError,
             "Could not find consistent initial conditions: The iteration is not making",
         ):
-            solver.calculate_consistent_initial_conditions(Model())
+            solver.calculate_consistent_state(Model())
         solver = pybamm.BaseSolver()
         with self.assertRaisesRegex(
             pybamm.SolverError,
             "Could not find consistent initial conditions: solver terminated",
         ):
-            solver.calculate_consistent_initial_conditions(Model())
+            solver.calculate_consistent_state(Model())
 
 
 if __name__ == "__main__":

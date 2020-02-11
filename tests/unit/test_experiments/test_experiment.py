@@ -9,18 +9,18 @@ class TestExperiment(unittest.TestCase):
     def test_read_strings(self):
         experiment = pybamm.Experiment(
             [
-                "Discharge at 1 C for 0.5 hours",
+                "Discharge at 1C for 0.5 hours",
                 "Discharge at C/20 for 0.5 hours",
                 "Charge at 0.5 C for 45 minutes",
                 "Discharge at 1 A for 0.5 hours",
                 "Charge at 200 mA for 45 minutes (1 minute period)",
-                "Discharge at 1 W for 0.5 hours",
+                "Discharge at 1W for 0.5 hours",
                 "Charge at 200 mW for 45 minutes",
                 "Rest for 10 minutes (5 minute period)",
-                "Hold at 1 V for 20 seconds",
-                "Charge at 1 C until 4.1 V",
-                "Hold at 4.1 V until 50 mA",
-                "Hold at 3 V until C/50",
+                "Hold at 1V for 20 seconds",
+                "Charge at 1 C until 4.1V",
+                "Hold at 4.1 V until 50mA",
+                "Hold at 3V until C/50",
                 "Discharge at C/3 for 2 hours or until 2.5 V",
             ],
             {"test": "test"},
@@ -123,17 +123,3 @@ if __name__ == "__main__":
         debug = True
     pybamm.settings.debug_mode = True
     unittest.main()
-
-# {
-#     "Reference temperature [K]": 298.15,
-#     "Heat transfer coefficient [W.m-2.K-1]": 10,
-#     "Number of electrodes connected in parallel to make a cell": 1,
-#     "Number of cells connected in series to make a battery": 1,
-#     "Lower voltage cut-off [V]": 3.105,
-#     "Upper voltage cut-off [V]": 4.7,
-#     "C-rate": 1,
-#     "Initial concentration in negative electrode [mol.m-3]": 19986,
-#     "Initial concentration in positive electrode [mol.m-3]": 30730,
-#     "Initial concentration in electrolyte [mol.m-3]": 1000,
-#     "Initial temperature [K]": 298.15,
-# }

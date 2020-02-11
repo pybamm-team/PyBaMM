@@ -19,7 +19,6 @@ Negative electrode Bruggeman coefficient (electrode),1.5,Scott Moura FastDFN,
 # Interfacial reactions,,,
 Negative electrode cation signed stoichiometry,-1,,
 Negative electrode electrons in reaction,1,,
-Negative electrode reference exchange-current density [A.m-2(m3.mol)1.5],2E-05,Scott Moura FastDFN,Be careful how we implement BV
 Reference OCP vs SHE in the negative electrode [V],,,
 Negative electrode charge transfer coefficient,0.5,Scott Moura FastDFN,
 Negative electrode double-layer capacity [F.m-2],0.2,,

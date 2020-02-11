@@ -54,10 +54,10 @@ class ScipySolver(pybamm.BaseSolver):
                 extra_options.update({"jac": model.jacobian_eval})
 
         # make events terminal so that the solver stops when they are reached
-        if model.events_eval:
-            for event in model.events_eval:
+        if model.terminate_events_eval:
+            for event in model.terminate_events_eval:
                 event.terminal = True
-            extra_options.update({"events": model.events_eval})
+            extra_options.update({"events": model.terminate_events_eval})
 
         sol = it.solve_ivp(
             model.rhs_eval,

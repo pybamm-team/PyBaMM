@@ -4,24 +4,31 @@
 
 examples = """
 
-    Discharge at 1 C for 0.5 hours,
+    Discharge at 1C for 0.5 hours,
     Discharge at C/20 for 0.5 hours,
     Charge at 0.5 C for 45 minutes,
     Discharge at 1 A for 90 seconds,
-    Charge at 200 mA for 45 minutes (1 minute period),
+    Charge at 200mA for 45 minutes (1 minute period),
     Discharge at 1 W for 0.5 hours,
     Charge at 200 mW for 45 minutes,
     Rest for 10 minutes (5 minute period),
     Hold at 1 V for 20 seconds,
-    Charge at 1 C until 4.1 V,
+    Charge at 1 C until 4.1V,
     Hold at 4.1 V until 50 mA,
-    Hold at 3 V until C/50,
+    Hold at 3V until C/50,
     """
 
 
 class Experiment:
     """
-    Base class for experimental conditions under which to run the model
+    Base class for experimental conditions under which to run the model. In general, a
+    list of operating conditions should be passed in. Each operating condition should
+    be of the form "Do this for this long" or "Do this until this happens". For example,
+    "Charge at 1 C for 1 hour", or "Charge at 1 C until 4.2 V", or "Charge at 1 C for 1
+    hour or until 4.2 V". The instructions can be of the form "(Dis)charge at x A/C/W",
+    "Rest", or "Hold at x V". The running time should be a time in seconds, minutes or
+    hours, e.g. "10 seconds", "3 minutes" or "1 hour". The stopping conditions should be
+    a circuit state, e.g. "1 A", "C/50" or "3 V".
 
     Parameters
     ----------
@@ -147,10 +154,22 @@ class Experiment:
                     # e.g. Charge at 4 A, Hold at 3 V
                     instruction, _, value, unit = electric
                 elif len(electric) == 3:
-                    # e.g. Discharge at C/2
+                    # e.g. Discharge at C/2, Charge at 1A
                     instruction, _, value_unit = electric
-                    unit = value_unit[0]
-                    value = 1 / float(value_unit[2:])
+                    if value_unit[0] == "C":
+                        # e.g. C/2
+                        unit = value_unit[0]
+                        value = 1 / float(value_unit[2:])
+                    else:
+                        # e.g. 1A
+                        if "m" in value_unit:
+                            # e.g. 1mA
+                            unit = value_unit[-2:]
+                            value = float(value_unit[:-2])
+                        else:
+                            # e.g. 1A
+                            unit = value_unit[-1]
+                            value = float(value_unit[:-1])
                 # Read instruction
                 if instruction.lower() in ["discharge", "hold"]:
                     sign = 1
@@ -168,10 +187,21 @@ class Experiment:
                 value, unit = electric
                 sign = 1
             elif len(electric) == 1:
-                # e.g. C/2
+                # e.g. C/2, 1A
                 value_unit = electric[0]
-                unit = value_unit[0]
-                value = 1 / float(value_unit[2:])
+                if value_unit[0] == "C":
+                    # e.g. C/2
+                    unit = value_unit[0]
+                    value = 1 / float(value_unit[2:])
+                else:
+                    if "m" in value_unit:
+                        # e.g. 1mA
+                        unit = value_unit[-2:]
+                        value = float(value_unit[:-2])
+                    else:
+                        # e.g. 1A
+                        unit = value_unit[-1]
+                        value = float(value_unit[:-1])
                 sign = 1
             else:
                 raise ValueError(
@@ -195,9 +225,10 @@ class Experiment:
                 return (sign * float(value) / 1000, "W")
             else:
                 raise ValueError(
-                    """units must be 'C', 'A', 'mA', 'V', 'W' or 'mW'. For example: {}
+                    """units must be 'C', 'A', 'mA', 'V', 'W' or 'mW', not '{}'.
+                    For example: {}
                     """.format(
-                        examples
+                        unit, examples
                     )
                 )
 

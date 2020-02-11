@@ -76,3 +76,20 @@ class ManyParticles(BaseModel):
         j = variables[self.domain + " electrode interfacial current density"]
 
         return c_s, N_s, j
+
+    def set_initial_conditions(self, variables):
+        c, _, _ = self._unpack(variables)
+
+        if self.domain == "Negative":
+            x_n = pybamm.PrimaryBroadcast(
+                pybamm.standard_spatial_vars.x_n, "negative particle"
+            )
+            c_init = self.param.c_n_init(x_n)
+
+        elif self.domain == "Positive":
+            x_p = pybamm.PrimaryBroadcast(
+                pybamm.standard_spatial_vars.x_p, "positive particle"
+            )
+            c_init = self.param.c_p_init(x_p)
+
+        self.initial_conditions = {c: c_init}
