@@ -7,10 +7,11 @@
 *.mat
 *.csv
 
-# don't ignore important .txt files
+# don't ignore important .txt and .csv files
 !requirements*
 !LICENSE.txt
 !CMakeLists.txt
+!input/**/*.csv
 
 # running files
 *.pyc
