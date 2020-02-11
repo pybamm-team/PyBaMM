@@ -75,9 +75,9 @@ class TestCitations(unittest.TestCase):
         citations = pybamm.citations
 
         citations._reset()
-        self.assertNotIn("scipy", citations._papers_to_cite)
+        self.assertNotIn("virtanen2020scipy", citations._papers_to_cite)
         pybamm.ScipySolver()
-        self.assertIn("scipy", citations._papers_to_cite)
+        self.assertIn("virtanen2020scipy", citations._papers_to_cite)
 
         if pybamm.have_scikits_odes():
             citations._reset()

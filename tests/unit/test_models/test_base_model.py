@@ -401,6 +401,10 @@ class TestStandardBatteryBaseModel(unittest.TestCase):
         )
         os.chdir(cwd)
 
+    def test_timescale(self):
+        model = pybamm.BaseModel()
+        self.assertEqual(model.timescale.evaluate(), 1)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

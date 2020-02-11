@@ -55,11 +55,13 @@ publisher={The Electrochemical Society}
   note = {\href{ http://dx.doi.org/10.21105/joss.00165}{doi: 10.21105/joss.00165}},
 }
 
-@Misc{scipy,
-author =    {Jones, E and Oliphant, T and Peterson, P and others},
-title =     {{SciPy}: Open source scientific tools for {Python}},
-year =      {2001--},
-note = {\url{http://www.scipy.org/}},
+@article{virtanen2020scipy,
+  title={SciPy 1.0: fundamental algorithms for scientific computing in Python},
+  author={Virtanen, Pauli and Gommers, Ralf and Oliphant, Travis E and Haberland, Matt and Reddy, Tyler and Cournapeau, David and Burovski, Evgeni and Peterson, Pearu and Weckesser, Warren and Bright, Jonathan and others},
+  journal={Nature Methods},
+  pages={1--12},
+  year={2020},
+  publisher={Nature Publishing Group}
 }
 
 @article{sulzer2019physical,
