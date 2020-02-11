@@ -371,6 +371,8 @@ class BaseSolver(object):
             method=self.root_method,
             tol=self.root_tol,
         )
+        pybamm.citations.register("virtanen2020scipy")
+
         # Return full set of consistent initial conditions (y0_diff unchanged)
         y0_consistent = np.concatenate([y0_diff, sol.x])
 

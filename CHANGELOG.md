@@ -2,6 +2,8 @@
 
 ## Features
 
+-   Added `Citations` object to print references when specific functionality is used ([#818](https://github.com/pybamm-team/PyBaMM/pull/818))
+-   Updated `Solution` to allow exporting to matlab and csv formats ([#811](https://github.com/pybamm-team/PyBaMM/pull/811))
 -   Added functionality to solve DAE models with non-smooth current inputs ([#808](https://github.com/pybamm-team/PyBaMM/pull/808))
 -   Added functionality to simulate experiments and testing protocols ([#807](https://github.com/pybamm-team/PyBaMM/pull/807))
 -   Added fuzzy string matching for parameters and variables ([#796](https://github.com/pybamm-team/PyBaMM/pull/796))
