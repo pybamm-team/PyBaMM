@@ -50,8 +50,6 @@ t_eval = np.linspace(0, 0.3, 100)
 for i, model in enumerate(models):
     solutions[i] = model.default_solver.solve(model, t_eval)
 
-pybamm.print_citations("test_citations.txt")
-
 # plot
 plot = pybamm.QuickPlot(solutions)
 plot.dynamic_plot()
