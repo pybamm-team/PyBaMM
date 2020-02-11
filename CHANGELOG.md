@@ -2,6 +2,7 @@
 
 ## Features
 
+-   Added discontinuity event and ability for solvers to integrate over discontinuities. For models using heavyside functions in certain patterns, the discretisation class  automatically adds in discontinuity events required ([#759](https://github.com/pybamm-team/PyBaMM/issues/759)
 -   Added fuzzy string matching for parameters and variables ([#796](https://github.com/pybamm-team/PyBaMM/pull/796))
 -   Changed ParameterValues to raise an error when a parameter that wasn't previously defined is updated ([#796](https://github.com/pybamm-team/PyBaMM/pull/796))
 -   Added some basic models (BasicSPM and BasicDFN) in order to clearly demonstrate the PyBaMM model structure for battery models ([#795](https://github.com/pybamm-team/PyBaMM/pull/795))
@@ -63,6 +64,7 @@
 
 ## Breaking changes
 
+-   Model events are now represented as a list of `pybamm.Event` ([#759](https://github.com/pybamm-team/PyBaMM/issues/759)
 -   Removed `Outer` and `Kron` nodes as no longer used ([#777](https://github.com/pybamm-team/PyBaMM/pull/777))
 -   Moved `results` to separate repositories ([#761](https://github.com/pybamm-team/PyBaMM/pull/761))
 -   The parameters "Bruggeman coefficient" must now be specified separately as "Bruggeman coefficient (electrolyte)" and "Bruggeman coefficient (electrode)"
