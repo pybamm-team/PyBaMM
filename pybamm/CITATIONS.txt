@@ -12,6 +12,18 @@
   doi = {10.1007/s12532-018-0139-4}
 }
 
+@article{doyle1993modeling,
+  title={Modeling of galvanostatic charge and discharge of the lithium/polymer/insertion cell},
+  author={Doyle, M and Fuller, TF and Newman, J},
+  journal={Journal of the Electrochemical society},
+  volume={140},
+  number={6},
+  pages={1526--1533},
+  year={1993},
+  publisher={The Electrochemical Society},
+  note = {\href{ http://dx.doi.org/10.1149/1.2221597}{doi: 10.1149/1.2221597}},
+}
+
 @techreport{hindmarsh2000pvode,
   title={The {PVODE} and {IDA} algorithms},
   author={Hindmarsh, AC},

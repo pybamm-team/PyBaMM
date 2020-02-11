@@ -29,9 +29,8 @@ class Citations:
         "Reset citations to default only (only for testing purposes)"
         # Initialize empty papers to cite
         self._papers_to_cite = set()
-        # Register the PyBaMM and CasADi papers
+        # Register the PyBaMM paper
         self.register("sulzer2020python")
-        self.register("Andersson2019")
 
     def read_citations(self):
         "Read the citations text file"

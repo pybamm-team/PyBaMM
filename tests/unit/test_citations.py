@@ -10,8 +10,6 @@ class TestCitations(unittest.TestCase):
         citations = pybamm.citations
         citations._reset()
         # Default papers should be in both _all_citations dict and in the papers to cite
-        self.assertIn("Andersson2019", citations._all_citations.keys())
-        self.assertIn("Andersson2019", citations._papers_to_cite)
         self.assertIn("sulzer2020python", citations._all_citations.keys())
         self.assertIn("sulzer2020python", citations._papers_to_cite)
         # Non-default papers should only be in the _all_citations dict
@@ -27,6 +25,13 @@ class TestCitations(unittest.TestCase):
         pybamm.print_citations("test_citations.txt")
         pybamm.citations._papers_to_cite = set()
         pybamm.print_citations()
+
+    def test_Andersson_2019(self):
+        citations = pybamm.citations
+        citations._reset()
+        self.assertNotIn("Andersson2019", citations._papers_to_cite)
+        pybamm.CasadiConverter()
+        self.assertIn("Andersson2019", citations._papers_to_cite)
 
     def test_marquis_2019(self):
         # Test that calling relevant bits of code adds the right paper to citations
@@ -44,6 +49,13 @@ class TestCitations(unittest.TestCase):
         citations._reset()
         pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
         self.assertIn("marquis2019asymptotic", citations._papers_to_cite)
+
+    def test_doyle_1993(self):
+        citations = pybamm.citations
+        citations._reset()
+        self.assertNotIn("doyle1993modeling", citations._papers_to_cite)
+        pybamm.lithium_ion.DFN(build=False)
+        self.assertIn("doyle1993modeling", citations._papers_to_cite)
 
     def test_sulzer_2019(self):
         # Test that calling relevant bits of code adds the right paper to citations
