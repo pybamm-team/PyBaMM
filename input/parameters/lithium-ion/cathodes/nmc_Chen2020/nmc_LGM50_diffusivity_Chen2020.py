@@ -1,4 +1,4 @@
-import autograd.numpy as np
+from pybamm import exp
 
 
 def nmc_LGM50_diffusivity_Chen2020(sto, T, T_inf, E_D_s, R_g):
@@ -26,9 +26,7 @@ def nmc_LGM50_diffusivity_Chen2020(sto, T, T_inf, E_D_s, R_g):
           Solid diffusivity
     """
 
-    D_ref = 1e-15 * 4
-    arrhenius = np.exp(E_D_s / R_g * (1 / T_inf - 1 / T))
+    D_ref = 4e-15
+    arrhenius = exp(E_D_s / R_g * (1 / T_inf - 1 / T))
 
-    correct_shape = 0 * sto
-
-    return D_ref * arrhenius + correct_shape
+    return D_ref * arrhenius
