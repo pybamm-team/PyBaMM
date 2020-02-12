@@ -1,6 +1,7 @@
 ## Prerequisites
 
-To use and/or contribute to PyBaMM, you must have Python 3.6 or above installed.
+To use and/or contribute to PyBaMM, you must have Python 3.6 or 3.7 installed (note that 3.8 is not yet supported).
+
 To install Python 3 on Debian-based distribution (Debian, Ubuntu, Linux mint), open a terminal and run
 ```bash
 sudo apt update
@@ -9,6 +10,18 @@ sudo apt install python3
 On Fedora or CentOS, you can use DNF or Yum. For example
 ```bash
 sudo dnf install python3
+```
+On Mac OS distributions, you can use `homebrew`. 
+First [install `brew`](https://docs.python-guide.org/starting/install3/osx/):
+
+```bash
+ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+```
+
+then follow instructions in link on adding brew to path, and run
+
+```bash
+brew install python3
 ```
 
 ## Install PyBaMM
@@ -46,11 +59,19 @@ For an introduction to virtual environments, see (https://realpython.com/python-
 ### Developer install
 
 If you wish to contribute to PyBaMM, you should get the latest version from the GitHub repository.
-To do so, you must have Git installed. For instance run
+To do so, you must have Git and graphviz installed. For instance run
+
 ```bash
-sudo apt install git
+sudo apt install git graphviz
 ```
-on Debian-based distributions.
+
+on Debian-based distributions, or
+
+```bash
+brew install git graphviz
+```
+
+on Mac OS.
 
 To install PyBaMM, the first step is to get the code by cloning this repository
 
