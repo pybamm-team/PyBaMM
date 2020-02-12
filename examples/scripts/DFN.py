@@ -7,15 +7,15 @@ import numpy as np
 
 pybamm.set_logging_level("INFO")
 
+
 # load model
-model = pybamm.lithium_ion.DFN({"operating mode": "voltage"})
+model = pybamm.lithium_ion.DFN()
 
 # create geometry
 geometry = model.default_geometry
 
 # load parameter values and process model and geometry
 param = model.default_parameter_values
-param.update({"Voltage function [V]": 4.1}, check_already_exists=False)
 param.process_model(model)
 param.process_geometry(geometry)
 

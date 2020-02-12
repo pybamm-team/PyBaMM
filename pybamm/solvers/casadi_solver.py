@@ -107,9 +107,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 np.concatenate([event(0, model.y0)
                                 for event in model.terminate_events_eval])
             )
-            pybamm.logger.info(
-                "Start solving {} with {} in 'safe' mode".format(model.name, self.name)
-            )
+            pybamm.logger.info("Start solving {} with {}".format(model.name, self.name))
             t = t_eval[0]
             y0 = model.y0
             # Initialize solution
