@@ -4,7 +4,7 @@ Name [units],Value,Reference,Notes
 # Electrode properties,,,
 Negative electrode conductivity [S.m-1],100,,
 Maximum concentration in negative electrode [mol.m-3],2.87E4,,
-Negative electrode diffusivity [m2.s-1],[function]graphite_mcmb2528_diffusivity_Kim2011,,
+Negative electrode diffusivity [m2.s-1],[function]graphite_diffusivity_Kim2011,,
 Negative electrode OCP [V],[function]graphite_ocp_Kim2011,
 ,,,
 # Microstructure,,,

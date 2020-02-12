@@ -32,7 +32,7 @@ def electrolyte_conductivity_Kim2011(c_e, T, T_inf, E_k_e, R_g):
     """
 
     sigma_e = (
-        3.45 * exp(-798 / T)(c_e / 1000) ** 3
+        3.45 * exp(-798 / T) * (c_e / 1000) ** 3
         - 48.5 * exp(-1080 / T) * (c_e / 1000) ** 2
         + 244 * exp(-1440 / T) * (c_e / 1000)
     )

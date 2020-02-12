@@ -9,4 +9,4 @@ def nca_entropic_change_NULL(sto, c_p_max):
 
     """
 
-    return 0
+    return 0 * sto

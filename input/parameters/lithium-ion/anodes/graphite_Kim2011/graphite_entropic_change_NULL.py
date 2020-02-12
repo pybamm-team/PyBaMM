@@ -8,4 +8,4 @@ def graphite_entropic_change_NULL(sto, c_n_max):
             Stochiometry of material (li-fraction)
 
     """
-    return 0
+    return 0 * sto

@@ -5,7 +5,7 @@ Name [units],Value,Reference,Notes
 Positive electrode conductivity [S.m-1],10,,
 Maximum concentration in positive electrode [mol.m-3],4.9E4,,
 Positive electrode diffusivity [m2.s-1],[function]nca_diffusivity_Kim2011,,
-Positive electrode OCP [V],[function]nca_ocp_Kim2011,
+Positive electrode OCP [V],[data]nca_ocp_Kim2011_data,
 ,,,
 # Microstructure,,,
 Positive electrode porosity,0.4,,

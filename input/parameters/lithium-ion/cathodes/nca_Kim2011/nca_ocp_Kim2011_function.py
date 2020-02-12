@@ -1,9 +1,10 @@
 from pybamm import exp
 
 
-def nca_ocp_Kim2011(sto):
+def nca_ocp_Kim2011_function(sto):
     """
-    NCA open-circuit potential (OCP) [1].
+    NCA open-circuit potential (OCP) [1]. Fit in paper seems wrong to using
+    nca_ocp_Kim2011_data.csv instead.
     References
     ----------
     .. [1] Kim, G. H., Smith, K., Lee, K. J., Santhanagopalan, S., & Pesaran, A.
