@@ -320,11 +320,9 @@ class Simulation:
         t_eval : numeric type, optional
             The times at which to compute the solution. If None and the parameter
             "Current function [A]" is not read from data the model will
-            be solved for a full discharge (1 hour / C_rate) if the discharge
-            timescale is provided. If None and the parameter "Current function [A]"
-            is read from data the model will be solved at the times provided in
-            the data. Otherwise the model will be solved up to a non-dimensional
-            time of 1.
+            be solved for a full discharge (1 hour / C_rate). If None and the
+            parameter "Current function [A]" is read from data the model will be
+            solved at the times provided in the data.
         solver : :class:`pybamm.BaseSolver`
             The solver to use to solve the model.
         external_variables : dict
@@ -357,9 +355,7 @@ class Simulation:
                 # If no t_eval is provided, we use the times provided in the data.
                 if t_eval is None:
                     pybamm.logger.info(
-                        "Setting t_eval as specified by the data '{}'".format(
-                            filename
-                        )
+                        "Setting t_eval as specified by the data '{}'".format(filename)
                     )
                     t_eval = time_data
                 else:
@@ -378,22 +374,15 @@ class Simulation:
                             """.format(
                                 filename
                             ),
-                            pybamm.SolverWarning
+                            pybamm.SolverWarning,
                         )
             # If not using a drive cycle and t_eval is not provided, set t_eval
             # to correspond to a single discharge
-            else:
-                if t_eval is None:
-                    try:
-                        # Try to compute discharge time
-                        tau = self._parameter_values.evaluate(
-                            self.model.param.timescale
-                        )
-                        C_rate = self._parameter_values["C-rate"]
-                        t_end = 3600 / tau / C_rate
-                        t_eval = np.linspace(0, t_end, 100)
-                    except AttributeError:
-                        t_eval = np.linspace(0, 1, 100)
+            elif t_eval is None:
+                tau = self._parameter_values.evaluate(self.model.param.timescale)
+                C_rate = self._parameter_values["C-rate"]
+                t_end = 3600 / tau / C_rate
+                t_eval = np.linspace(0, t_end, 100)
 
             self.t_eval = t_eval
             self._solution = solver.solve(self.built_model, t_eval, inputs=inputs)
