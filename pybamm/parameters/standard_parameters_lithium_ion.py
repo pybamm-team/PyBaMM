@@ -283,14 +283,11 @@ centre_y_tab_p = pybamm.geometric_parameters.centre_y_tab_p
 centre_z_tab_p = pybamm.geometric_parameters.centre_z_tab_p
 
 # Microscale geometry
-epsilon_n = pybamm.Parameter("Negative electrode porosity")
-epsilon_s = pybamm.Parameter("Separator porosity")
-epsilon_p = pybamm.Parameter("Positive electrode porosity")
-epsilon = pybamm.Concatenation(
-    pybamm.FullBroadcast(epsilon_n, ["negative electrode"], "current collector"),
-    pybamm.FullBroadcast(epsilon_s, ["separator"], "current collector"),
-    pybamm.FullBroadcast(epsilon_p, ["positive electrode"], "current collector"),
-)
+var = pybamm.standard_spatial_vars
+epsilon_n = pybamm.FunctionParameter("Negative electrode porosity", var.x_n)
+epsilon_s = pybamm.FunctionParameter("Separator porosity", var.x_s)
+epsilon_p = pybamm.FunctionParameter("Positive electrode porosity", var.x_p)
+epsilon = pybamm.Concatenation(epsilon_n, epsilon_s, epsilon_p)
 epsilon_s_n = pybamm.Parameter("Negative electrode active material volume fraction")
 epsilon_s_p = pybamm.Parameter("Positive electrode active material volume fraction")
 epsilon_inactive_n = 1 - epsilon_n - epsilon_s_n
