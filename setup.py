@@ -514,4 +514,9 @@ setup(
             "black",  # For code style auto-formatting
         ],
     },
+    entry_points={
+        'console_scripts': [
+            'pybamm_add_param = pybamm.add_parameters:main'
+        ]
+    },
 )
