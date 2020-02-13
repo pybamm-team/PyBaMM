@@ -41,7 +41,7 @@ for model in models:
 
 # solve model
 solutions = [None] * len(models)
-t_eval = np.linspace(0, 1, 1000)
+t_eval = np.linspace(0, 3600 * 2, 1000)
 for i, model in enumerate(models):
     solution = model.default_solver.solve(model, t_eval)
     solutions[i] = solution

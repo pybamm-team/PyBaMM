@@ -5,10 +5,11 @@
 import pybamm
 import numpy as np
 
-pybamm.set_logging_level("INFO")
+pybamm.set_logging_level("DEBUG")
 
 # load model
 model = pybamm.lithium_ion.SPMe()
+model.convert_to_format = "python"
 
 # create geometry
 geometry = model.default_geometry

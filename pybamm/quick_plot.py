@@ -88,7 +88,6 @@ class QuickPlot(object):
         # Scales (default to 1 if information not in model)
         variables = models[0].variables
         self.spatial_scales = {"x": 1, "y": 1, "z": 1}
-        self.time_scale = 1
         if "x [m]" and "x" in variables:
             self.spatial_scales["x"] = (variables["x [m]"] / variables["x"]).evaluate()[
                 -1
@@ -109,13 +108,11 @@ class QuickPlot(object):
             self.spatial_scales["r_p"] = (
                 variables["r_p [m]"] / variables["r_p"]
             ).evaluate()[-1]
-        if "Time [h]" and "Time" in variables:
-            self.time_scale = (variables["Time [h]"] / variables["Time"]).evaluate(t=1)
 
         # Time parameters
         self.ts = [solution.t for solution in solutions]
-        self.min_t = np.min([t[0] for t in self.ts]) * self.time_scale
-        self.max_t = np.max([t[-1] for t in self.ts]) * self.time_scale
+        self.min_t = np.min([t[0] for t in self.ts]) * 3600
+        self.max_t = np.max([t[-1] for t in self.ts]) * 3600
 
         # Default output variables for lead-acid and lithium-ion
         if output_variables is None:
@@ -282,7 +279,7 @@ class QuickPlot(object):
 
         import matplotlib.pyplot as plt
 
-        t /= self.time_scale
+        t /= 3600
         self.fig, self.ax = plt.subplots(self.n_rows, self.n_cols, figsize=(15, 8))
         plt.tight_layout()
         plt.subplots_adjust(left=-0.1)
@@ -332,7 +329,7 @@ class QuickPlot(object):
                     for j, variable in enumerate(variable_list):
                         full_t = self.ts[i]
                         (self.plots[key][i][j],) = ax.plot(
-                            full_t * self.time_scale,
+                            full_t * 3600,
                             variable(full_t, warn=False),
                             lw=2,
                             color=colors[i],
@@ -340,7 +337,7 @@ class QuickPlot(object):
                         )
                 y_min, y_max = self.axis[key][2:]
                 (self.time_lines[key],) = ax.plot(
-                    [t * self.time_scale, t * self.time_scale], [y_min, y_max], "k--"
+                    [t * 3600, t * 3600], [y_min, y_max], "k--"
                 )
             # Set either y label or legend entries
             if len(key) == 1:
@@ -386,7 +383,7 @@ class QuickPlot(object):
         Update the plot in self.plot() with values at new time
         """
         t = self.sfreq.val
-        t_dimensionless = t / self.time_scale
+        t_dimensionless = t / 3600
         for key, plot in self.plots.items():
             if self.variables[key][0][0].dimensions == 2:
                 spatial_var_name, spatial_var_value = self.spatial_variable[key]

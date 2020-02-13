@@ -71,18 +71,21 @@ class ScipySolver(pybamm.BaseSolver):
 
         if sol.success:
             # Set the reason for termination
+            timescale = model.timescale_eval
             if sol.message == "A termination event occurred.":
                 termination = "event"
                 t_event = []
                 for time in sol.t_events:
                     if time.size > 0:
                         t_event = np.append(t_event, np.max(time))
-                t_event = np.array([np.max(t_event)])
+                t_event = np.array([np.max(t_event)]) * timescale
                 y_event = sol.sol(t_event)
             elif sol.message.startswith("The solver successfully reached the end"):
                 termination = "final time"
                 t_event = None
                 y_event = np.array(None)
-            return pybamm.Solution(sol.t, sol.y, t_event, y_event, termination)
+            return pybamm.Solution(
+                sol.t * timescale, sol.y, t_event, y_event, termination
+            )
         else:
             raise pybamm.SolverError(sol.message)

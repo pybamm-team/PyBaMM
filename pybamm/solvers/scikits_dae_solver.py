@@ -118,9 +118,9 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
             elif sol.flag == 2:
                 termination = "event"
             return pybamm.Solution(
-                sol.values.t,
+                sol.values.t * model.timescale_eval,
                 np.transpose(sol.values.y),
-                sol.roots.t,
+                sol.roots.t * model.timescale_eval,
                 np.transpose(sol.roots.y),
                 termination,
             )
