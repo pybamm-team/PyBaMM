@@ -4,6 +4,9 @@
 import pybamm
 import unittest
 import numpy as np
+import pandas as pd
+from scipy.io import loadmat
+from tests import get_discretisation_for_testing
 
 
 class TestSolution(unittest.TestCase):
@@ -93,12 +96,14 @@ class TestSolution(unittest.TestCase):
 
     def test_save(self):
         model = pybamm.BaseModel()
+        # create both 1D and 2D variables
         c = pybamm.Variable("c")
-        model.rhs = {c: -c}
-        model.initial_conditions = {c: 1}
-        model.variables["c"] = c
+        d = pybamm.Variable("d", domain="negative electrode")
+        model.rhs = {c: -c, d: 1}
+        model.initial_conditions = {c: 1, d: 2}
+        model.variables = {"c": c, "d": d, "2c": 2 * c}
 
-        disc = pybamm.Discretisation()
+        disc = get_discretisation_for_testing()
         disc.process_model(model)
         solution = pybamm.ScipySolver().solve(model, np.linspace(0, 1))
 
@@ -106,16 +111,36 @@ class TestSolution(unittest.TestCase):
         with self.assertRaises(ValueError):
             solution.save_data("test.pickle")
         # set variables first then save
-        solution.update(["c"])
+        solution.update(["c", "d"])
         solution.save_data("test.pickle")
         data_load = pybamm.load("test.pickle")
         np.testing.assert_array_equal(solution.data["c"], data_load["c"])
+        np.testing.assert_array_equal(solution.data["d"], data_load["d"])
 
-        # test save
+        # to matlab
+        solution.save_data("test.mat", to_format="matlab")
+        data_load = loadmat("test.mat")
+        np.testing.assert_array_equal(solution.data["c"], data_load["c"].flatten())
+        np.testing.assert_array_equal(solution.data["d"], data_load["d"])
+
+        # to csv
+        with self.assertRaisesRegex(
+            ValueError, "only 1D variables can be saved to csv"
+        ):
+            solution.save_data("test.csv", to_format="csv")
+        # only save "c" and "2c"
+        solution.save_data("test.csv", ["c", "2c"], to_format="csv")
+        # read csv
+        df = pd.read_csv("test.csv")
+        np.testing.assert_array_almost_equal(df["c"], solution.data["c"])
+        np.testing.assert_array_almost_equal(df["2c"], solution.data["2c"])
+
+        # test save whole solution
         solution.save("test.pickle")
         solution_load = pybamm.load("test.pickle")
         self.assertEqual(solution.model.name, solution_load.model.name)
         np.testing.assert_array_equal(solution["c"].entries, solution_load["c"].entries)
+        np.testing.assert_array_equal(solution["d"].entries, solution_load["d"].entries)
 
     def test_solution_evals_with_inputs(self):
         model = pybamm.lithium_ion.SPM()
