@@ -89,13 +89,13 @@ class CasadiSolver(pybamm.BaseSolver):
 
         if self.mode == "fast":
             integrator = self.get_integrator(model, t_eval, inputs)
-            solution = self._run_integrator(integrator, model, inputs, t_eval)
+            solution = self._run_integrator(integrator, model, model.y0, inputs, t_eval)
             solution.termination = "final time"
             return solution
         elif not model.events:
             pybamm.logger.info("No events found, running fast mode")
             integrator = self.get_integrator(model, t_eval, inputs)
-            solution = self._run_integrator(integrator, model, inputs, t_eval)
+            solution = self._run_integrator(integrator, model, model.y0, inputs, t_eval)
             solution.termination = "final time"
             return solution
         elif self.mode == "safe":
@@ -127,7 +127,7 @@ class CasadiSolver(pybamm.BaseSolver):
                     # only happen near events.
                     try:
                         current_step_sol = self._run_integrator(
-                            integrator, model, inputs, np.array([t, t + dt])
+                            integrator, model, y0, inputs, np.array([t, t + dt])
                         )
                         solved = True
                     except pybamm.SolverError:
@@ -214,9 +214,9 @@ class CasadiSolver(pybamm.BaseSolver):
             "F", self.methods[model], self.problems[model], self.options[model]
         )
 
-    def _run_integrator(self, integrator, model, inputs, t_eval):
-        rhs_size = model.rhs_eval(0, model.y0).shape[0]
-        y0_diff, y0_alg = np.split(model.y0, [rhs_size])
+    def _run_integrator(self, integrator, model, y0, inputs, t_eval):
+        rhs_size = model.rhs_eval(0, y0).shape[0]
+        y0_diff, y0_alg = np.split(y0, [rhs_size])
         try:
             # Try solving
             u_stacked = casadi.vertcat(*[x for x in inputs.values()])

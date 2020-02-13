@@ -300,7 +300,7 @@ class Simulation:
         self._mesh = pybamm.Mesh(self._geometry, self._submesh_types, self._var_pts)
         self._disc = pybamm.Discretisation(self._mesh, self._spatial_methods)
         self._built_model = self._disc.process_model(
-            self._model, inplace=False, check_model=check_model
+            self._model_with_set_params, inplace=False, check_model=check_model
         )
 
     def solve(
@@ -350,16 +350,11 @@ class Simulation:
             # is the tuple (filename, data).
             if isinstance(self._parameter_values["Current function [A]"], tuple):
                 filename = self._parameter_values["Current function [A]"][0]
-                tau = self._parameter_values.evaluate(self.model.param.timescale)
-                time_data = (
-                    self._parameter_values["Current function [A]"][1][:, 0] / tau
-                )
+                time_data = self._parameter_values["Current function [A]"][1][:, 0]
                 # If no t_eval is provided, we use the times provided in the data.
                 if t_eval is None:
                     pybamm.logger.info(
-                        "Setting t_eval as specified by the data '{}'".format(
-                            filename
-                        )
+                        "Setting t_eval as specified by the data '{}'".format(filename)
                     )
                     t_eval = time_data
                 else:
@@ -378,22 +373,13 @@ class Simulation:
                             """.format(
                                 filename
                             ),
-                            pybamm.SolverWarning
+                            pybamm.SolverWarning,
                         )
             # If not using a drive cycle and t_eval is not provided, set t_eval
             # to correspond to a single discharge
             else:
                 if t_eval is None:
-                    try:
-                        # Try to compute discharge time
-                        tau = self._parameter_values.evaluate(
-                            self.model.param.timescale
-                        )
-                        C_rate = self._parameter_values["C-rate"]
-                        t_end = 3600 / tau / C_rate
-                        t_eval = np.linspace(0, t_end, 100)
-                    except AttributeError:
-                        t_eval = np.linspace(0, 1, 100)
+                    t_eval = np.linspace(0, 3600, 100)
 
             self.t_eval = t_eval
             self._solution = solver.solve(self.built_model, t_eval, inputs=inputs)

@@ -111,8 +111,8 @@ class QuickPlot(object):
 
         # Time parameters
         self.ts = [solution.t for solution in solutions]
-        self.min_t = np.min([t[0] for t in self.ts]) * 3600
-        self.max_t = np.max([t[-1] for t in self.ts]) * 3600
+        self.min_t = np.min([t[0] for t in self.ts]) / 3600
+        self.max_t = np.max([t[-1] for t in self.ts]) / 3600
 
         # Default output variables for lead-acid and lithium-ion
         if output_variables is None:
@@ -329,7 +329,7 @@ class QuickPlot(object):
                     for j, variable in enumerate(variable_list):
                         full_t = self.ts[i]
                         (self.plots[key][i][j],) = ax.plot(
-                            full_t * 3600,
+                            full_t / 3600,
                             variable(full_t, warn=False),
                             lw=2,
                             color=colors[i],
@@ -337,7 +337,7 @@ class QuickPlot(object):
                         )
                 y_min, y_max = self.axis[key][2:]
                 (self.time_lines[key],) = ax.plot(
-                    [t * 3600, t * 3600], [y_min, y_max], "k--"
+                    [t / 3600, t / 3600], [y_min, y_max], "k--"
                 )
             # Set either y label or legend entries
             if len(key) == 1:
@@ -350,8 +350,7 @@ class QuickPlot(object):
                     fontsize=8,
                     loc="lower center",
                 )
-            if k == len(self.variables) - 1:
-                ax.legend(self.labels, loc="upper right", bbox_to_anchor=(1, -0.2))
+        self.fig.legend(self.labels, loc="lower right")
 
     def dynamic_plot(self, testing=False):
         """
@@ -383,7 +382,7 @@ class QuickPlot(object):
         Update the plot in self.plot() with values at new time
         """
         t = self.sfreq.val
-        t_dimensionless = t / 3600
+        t_seconds = t * 3600
         for key, plot in self.plots.items():
             if self.variables[key][0][0].dimensions == 2:
                 spatial_var_name, spatial_var_value = self.spatial_variable[key]
@@ -391,7 +390,7 @@ class QuickPlot(object):
                     for j, variable in enumerate(variable_lists):
                         plot[i][j].set_ydata(
                             variable(
-                                t_dimensionless,
+                                t_seconds,
                                 **{spatial_var_name: spatial_var_value},
                                 warn=False
                             )

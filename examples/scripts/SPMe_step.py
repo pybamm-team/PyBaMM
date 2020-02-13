@@ -31,7 +31,7 @@ solver = model.default_solver
 solution = solver.solve(model, t_eval)
 
 # step model
-dt = 300
+dt = 500
 time = 0
 end_time = solution.t[-1]
 step_solver = model.default_solver

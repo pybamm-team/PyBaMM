@@ -125,10 +125,14 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
             # 2 = found root(s)
             elif sol.flag == 2:
                 termination = "event"
+            if sol.roots.t is None:
+                t_root = None
+            else:
+                t_root = sol.roots.t * model.timescale_eval
             return pybamm.Solution(
                 sol.values.t * model.timescale_eval,
                 np.transpose(sol.values.y),
-                sol.roots.t * model.timescale_eval,
+                t_root,
                 np.transpose(sol.roots.y),
                 termination,
             )

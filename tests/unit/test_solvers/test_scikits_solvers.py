@@ -40,6 +40,7 @@ class TestScikitsSolvers(unittest.TestCase):
             mass_matrix = pybamm.Matrix(np.array([[1.0, 0.0], [0.0, 0.0]]))
             y0 = np.array([0.0, 1.0])
             terminate_events_eval = []
+            timescale_eval = 1
 
             def residuals_eval(self, t, y, ydot):
                 return np.array([0.5 * np.ones_like(y[0]) - ydot[0], 2 * y[0] - y[1]])
@@ -59,6 +60,7 @@ class TestScikitsSolvers(unittest.TestCase):
         solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
 
         model = pybamm.BaseModel()
+        model.timescale_eval = 1
         var = pybamm.Variable("var")
         var2 = pybamm.Variable("var2")
         model.rhs = {var: 0.5}
@@ -86,6 +88,7 @@ class TestScikitsSolvers(unittest.TestCase):
             mass_matrix = pybamm.Matrix(np.array([[4.0, 0.0], [0.0, 0.0]]))
             y0 = np.array([0.0, 0.0])
             terminate_events_eval = []
+            timescale_eval = 1
 
             def residuals_eval(self, t, y, ydot):
                 return np.array(

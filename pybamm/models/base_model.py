@@ -328,6 +328,7 @@ class BaseModel(object):
         new_model.use_jacobian = self.use_jacobian
         new_model.use_simplify = self.use_simplify
         new_model.convert_to_format = self.convert_to_format
+        new_model.timescale = self.timescale
         return new_model
 
     def update(self, *submodels):

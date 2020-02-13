@@ -76,7 +76,7 @@ class StandardModelTest(object):
         self.solver.atol = 1e-8
 
         if t_eval is None:
-            t_eval = np.linspace(0, 1, 100)
+            t_eval = np.linspace(0, 3600, 100)
 
         self.solution = self.solver.solve(self.model, t_eval)
 
