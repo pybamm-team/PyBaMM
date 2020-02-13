@@ -17,6 +17,9 @@ class BaseModel(pybamm.BaseBatteryModel):
         super().__init__(options, name)
         self.param = pybamm.standard_parameters_lithium_ion
 
+        # Default timescale is discharge timescale
+        self.timescale = self.param.tau_discharge
+
     def set_standard_output_variables(self):
         super().set_standard_output_variables()
 

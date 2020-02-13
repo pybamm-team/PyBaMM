@@ -19,6 +19,9 @@ class BaseModel(pybamm.BaseBatteryModel):
         super().__init__(options, name)
         self.param = pybamm.standard_parameters_lead_acid
 
+        # Default timescale is discharge timescale
+        self.timescale = self.param.tau_discharge
+
     @property
     def default_parameter_values(self):
         return pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Sulzer2019)

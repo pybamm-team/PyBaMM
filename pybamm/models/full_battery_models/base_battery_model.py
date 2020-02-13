@@ -253,11 +253,6 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         self._options = options
 
-    @property
-    def timescale(self):
-        "Default timescale for a battery model is the discharge timescale"
-        return self.param.tau_discharge
-
     def set_standard_output_variables(self):
         # Standard output variables
 
