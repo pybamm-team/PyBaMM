@@ -376,6 +376,13 @@ class TestSimulation(unittest.TestCase):
         with self.assertWarns(pybamm.SolverWarning):
             sim.solve(t_eval=np.linspace(0, 1, 100))
 
+        # check warning raised if t_eval doesnt conatin time_data , but has a finer
+        # resolution (can still solve, but good for users to know they dont have
+        # the solution returned at the data points)
+        sim.reset()
+        with self.assertWarns(pybamm.SolverWarning):
+            sim.solve(t_eval=np.linspace(0, time_data[-1] / tau, 800))
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
