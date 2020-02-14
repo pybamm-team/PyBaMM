@@ -6,6 +6,7 @@ import pybamm
 import numpy as np
 import copy
 import warnings
+import sys
 
 
 def isnotebook():
@@ -359,20 +360,24 @@ class Simulation:
                     )
                     t_eval = time_data
                 else:
-                    # If t_eval is provided we check that it at least contains all
-                    # of the data points. We only raise a warning here, as users
-                    # may genuinely only want the solution returned at some
-                    # specified points.
-                    if set(time_data).issubset(set(t_eval)) is False:
+                    # If t_eval is provided we check that the largest gap in t_eval
+                    # is smaller than the smallest gap in the time data (up to machine
+                    # precision, to allow for the case t_eval=time_data). We only raise
+                    # a warning here as users may genuinely only want the solution
+                    # returned at some specified points.
+                    dt_data_min = np.min(np.diff(time_data))
+                    dt_eval_max = np.max(np.diff(t_eval))
+                    if dt_eval_max > dt_data_min + sys.float_info.epsilon:
                         warnings.warn(
                             """
-                            t_eval does not contain all of the time points in the data
-                            '{}'. The output may not contain enough data points to
-                            accurately represent the solution. Try refining the number
-                            of points in t_eval. Alternatively, passing t_eval = None
-                            automatically sets t_eval to be the points in the data.
+                            The largest timestep in t_eval ({}) is larger than the
+                            smallest timestep in the data ({}). The returned solution
+                            may not have the correct resolution to accurately capture
+                            the input. Try refining t_eval. Alternatively, passing
+                            t_eval = None automatically sets t_eval to be the points in
+                            the data.
                             """.format(
-                                filename
+                                dt_eval_max, dt_data_min
                             ),
                             pybamm.SolverWarning,
                         )
