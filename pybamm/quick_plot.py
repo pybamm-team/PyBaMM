@@ -3,6 +3,7 @@
 #
 import numpy as np
 import pybamm
+import warnings
 from collections import defaultdict
 
 
@@ -372,7 +373,10 @@ class QuickPlot(object):
         # plt.subplots_adjust(
         #     top=0.92, bottom=0.15, left=0.10, right=0.9, hspace=0.5, wspace=0.5
         # )
+        # ignore the warning about tight layout
+        warnings.simplefilter("ignore")
         self.fig.tight_layout()
+        warnings.simplefilter("always")
 
         if not testing:  # pragma: no cover
             plt.show()

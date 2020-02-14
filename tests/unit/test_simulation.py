@@ -345,7 +345,7 @@ class TestSimulation(unittest.TestCase):
             sim.plot()
 
         # now solve and plot
-        t_eval = np.linspace(0, 0.01, 5)
+        t_eval = np.linspace(0, 100, 5)
         sim.solve(t_eval=t_eval)
         sim.plot(testing=True)
 
@@ -361,14 +361,12 @@ class TestSimulation(unittest.TestCase):
             header=None,
         )
         time_data = drive_cycle.values[:, 0]
-        tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
 
         sim = pybamm.Simulation(model, parameter_values=param)
 
-        # check solution is returned at the times in the data (only almost equal due
-        # to multiplication by tau)
+        # check solution is returned at the times in the data
         sim.solve()
-        np.testing.assert_array_almost_equal(sim.solution.t * tau, time_data)
+        np.testing.assert_array_almost_equal(sim.solution.t, time_data)
 
         # check warning raised if t_eval doesn't contain all the data points
         sim.reset()

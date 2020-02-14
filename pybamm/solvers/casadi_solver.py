@@ -162,7 +162,9 @@ class CasadiSolver(pybamm.BaseSolver):
                     current_step_sol.solve_time = np.nan
                     # append solution from the current step to solution
                     solution.append(current_step_sol)
-                    t = solution.t[-1]
+                    # update time
+                    t += dt
+                    # update y0
                     y0 = solution.y[:, -1]
 
             return solution

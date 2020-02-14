@@ -202,14 +202,12 @@ class Simulation:
                 )
 
             self._experiment_inputs.append(operating_inputs)
-            # Convert time to dimensionless
-            dt_dimensional = op[2]
-            if dt_dimensional is None:
+            # Add time to the experiment times
+            dt = op[2]
+            if dt is None:
                 # max simulation time: 1 week
-                dt_dimensional = 7 * 24 * 3600
-            tau = self._parameter_values.evaluate(self.model.timescale)
-            dt_dimensionless = dt_dimensional / tau
-            self._experiment_times.append(dt_dimensionless)
+                dt = 7 * 24 * 3600
+            self._experiment_times.append(dt)
 
         # add current and voltage events to the model
         # current events both negative and positive to catch specification
@@ -398,11 +396,8 @@ class Simulation:
             ):
                 pybamm.logger.info(self.experiment.operating_conditions_strings[idx])
                 inputs.update(exp_inputs)
-                # Non-dimensionalise period
-                tau = self._parameter_values.evaluate(self.model.timescale)
-                freq = exp_inputs["period"] / tau
                 # Make sure we take at least 2 timesteps
-                npts = max(int(round(dt / freq)) + 1, 2)
+                npts = max(int(round(dt / exp_inputs["period"])) + 1, 2)
                 self.step(
                     dt, npts=npts, external_variables=external_variables, inputs=inputs
                 )

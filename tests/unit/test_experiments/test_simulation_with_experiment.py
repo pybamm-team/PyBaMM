@@ -47,10 +47,8 @@ class TestSimulationExperiment(unittest.TestCase):
         self.assertEqual(sim._experiment_inputs[3]["Current cut-off [A]"], -1e10)
         self.assertEqual(sim._experiment_inputs[3]["Voltage cut-off [V]"], -1e10)
 
-        tau = sim._parameter_values.evaluate(model.timescale)
         self.assertEqual(
-            sim._experiment_times,
-            [t / tau for t in [3600, 7 * 24 * 3600, 7 * 24 * 3600, 3600]],
+            sim._experiment_times, [3600, 7 * 24 * 3600, 7 * 24 * 3600, 3600],
         )
 
         self.assertIn(

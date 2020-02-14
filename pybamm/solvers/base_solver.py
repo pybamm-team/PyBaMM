@@ -117,6 +117,10 @@ class BaseSolver(object):
         inputs = inputs or {}
         y0 = model.concatenated_initial_conditions
 
+        # Set model timescale
+        # to be safe, model.timescale shouldn't depend on inputs
+        model.timescale_eval = model.timescale.evaluate()
+
         # Check model.algebraic for ode solvers
         if self.ode_solver is True and len(model.algebraic) > 0:
             raise pybamm.SolverError(
@@ -447,10 +451,6 @@ class BaseSolver(object):
                 """It looks like t_eval might be dimensionless.
                 t_eval should now be provided in seconds"""
             )
-        # Non-dimensionalise
-        # to be safe, model.timescale shouldn't depend on inputs
-        model.timescale_eval = model.timescale.evaluate()
-        t_eval_dimensionless = t_eval / model.timescale_eval
 
         # Set up (if not done already)
         if model not in self.models_set_up:
@@ -459,6 +459,8 @@ class BaseSolver(object):
             self.models_set_up.add(model)
         else:
             set_up_time = 0
+        # Non-dimensionalise time
+        t_eval_dimensionless = t_eval / model.timescale_eval
         # Solve
         # Set inputs and external
         self.set_inputs(model, ext_and_inputs)
@@ -630,11 +632,6 @@ class BaseSolver(object):
         inputs = inputs or {}
         ext_and_inputs = {**external_variables, **inputs}
 
-        # Non-dimensionalise dt
-        # to be safe, model.timescale shouldn't depend on inputs
-        model.timescale_eval = model.timescale.evaluate()
-        dt_dimensionless = dt / model.timescale_eval
-
         # Run set up on first step
         if model not in self.model_step_times:
             pybamm.logger.info(
@@ -646,6 +643,8 @@ class BaseSolver(object):
         else:
             set_up_time = 0
 
+        # Non-dimensionalise dt
+        dt_dimensionless = dt / model.timescale_eval
         # Step
         t = self.model_step_times[model] / model.timescale_eval
         t_eval = np.linspace(t, t + dt_dimensionless, npts)

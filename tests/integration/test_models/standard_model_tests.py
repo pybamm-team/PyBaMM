@@ -75,8 +75,12 @@ class StandardModelTest(object):
         self.solver.rtol = 1e-8
         self.solver.atol = 1e-8
 
+        Crate = abs(self.parameter_values["C-rate"])
+        # don't allow zero C-rate
+        if Crate == 0:
+            Crate = 1
         if t_eval is None:
-            t_eval = np.linspace(0, 3600, 100)
+            t_eval = np.linspace(0, 3600 / Crate, 100)
 
         self.solution = self.solver.solve(self.model, t_eval)
 
