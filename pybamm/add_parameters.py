@@ -7,6 +7,15 @@ import shutil
 from pathlib import Path
 
 
+def yes_or_no(question):
+    while "Please answer yes(y) or no(n).":
+        reply = str(input(question + " (y/n): ")).lower().strip()
+        if reply[:1] == "y":
+            return True
+        if reply[:1] == "n":
+            return False
+
+
 def main(arguments=None):
     parser = argparse.ArgumentParser(description="Add a new parameter set")
     parser.add_argument(
@@ -22,7 +31,7 @@ def main(arguments=None):
             "cathodes",
             "cells",
             "electrolytes",
-            "experiements",
+            "experiments",
             "separators",
         ],
     )
@@ -46,4 +55,10 @@ def main(arguments=None):
     destination_dir = os.path.join(
         parameters_root_dir, args.battery_type, args.component, parameter_dir_name
     )
-    dest = shutil.copytree(args.parameter_dir, destination_dir)
+
+    try:
+        shutil.copytree(args.parameter_dir, destination_dir)
+    except FileExistsError:
+        if yes_or_no("Parameter set already defined, erase?"):
+            shutil.rmtree(destination_dir)
+            shutil.copytree(args.parameter_dir, destination_dir)
