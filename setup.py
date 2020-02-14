@@ -466,11 +466,12 @@ def load_version():
     except Exception as e:
         raise RuntimeError("Unable to read version number (" + str(e) + ").")
 
+
 # Build the list of package data files to be included in the PyBaMM package.
 # These are mainly the parameter files located in the input/parameters/ subdirectories.
 pybamm_data = []
 for file_ext in ["*.csv", "*.py", "*.md"]:
-    pybamm_data.extend(glob.glob("input/**/"+file_ext, recursive=True))
+    pybamm_data.extend(glob.glob("input/**/" + file_ext, recursive=True))
 pybamm_data.append("./version")
 
 setup(
@@ -487,9 +488,7 @@ setup(
     url="https://github.com/pybamm-team/PyBaMM",
     include_package_data=True,
     packages=find_packages(include=("pybamm", "pybamm.*")),
-    package_data={
-        "pybamm": pybamm_data,
-    },
+    package_data={"pybamm": pybamm_data},
     # List of dependencies
     install_requires=[
         "numpy>=1.16",
@@ -514,9 +513,5 @@ setup(
             "black",  # For code style auto-formatting
         ],
     },
-    entry_points={
-        'console_scripts': [
-            'pybamm_add_param = pybamm.add_parameters:main'
-        ]
-    },
+    entry_points={"console_scripts": ["pybamm_add_param = pybamm.add_parameters:main"]},
 )
