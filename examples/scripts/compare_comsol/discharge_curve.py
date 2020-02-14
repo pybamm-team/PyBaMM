@@ -3,6 +3,7 @@ import numpy as np
 import os
 import pickle
 import matplotlib.pyplot as plt
+import pkg_resources
 
 # change working directory to the root of pybamm
 os.chdir(pybamm.root_dir())
@@ -52,9 +53,10 @@ plt.ylabel(r"$\vert V - V_{comsol} \vert$", fontsize=20)
 for key, C_rate in C_rates.items():
     current = 24 * C_rate
     # load the comsol results
-    comsol_variables = pickle.load(
-        open("input/comsol_results/comsol_{}C.pickle".format(key), "rb")
+    comsol_results_path = pkg_resources.resource_filename(
+        "pybamm", "input/comsol_results/comsol_{}C.pickle".format(key)
     )
+    comsol_variables = pickle.load(open(comsol_results_path, "rb"))
     comsol_time = comsol_variables["time"]
     comsol_voltage = comsol_variables["voltage"]
 

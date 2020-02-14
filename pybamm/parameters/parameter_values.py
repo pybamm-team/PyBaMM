@@ -38,12 +38,14 @@ class ParameterValues:
     Examples
     --------
     >>> import pybamm
+    >>> import pkg_resources
     >>> values = {"some parameter": 1, "another parameter": 2}
     >>> param = pybamm.ParameterValues(values)
     >>> param["some parameter"]
     1
-    >>> file = "/input/parameters/lithium-ion/cells/kokam_Marquis2019/parameters.csv"
-    >>> param = pybamm.ParameterValues(values=pybamm.root_dir() + file)
+    >>> file = "input/parameters/lithium-ion/cells/kokam_Marquis2019/parameters.csv"
+    >>> values_path = pkg_resources.resource_filename("pybamm", file)
+    >>> param = pybamm.ParameterValues(values=values_path)
     >>> param["Negative current collector thickness [m]"]
     2.5e-05
     >>> param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
