@@ -5,6 +5,7 @@ import pybamm
 import pandas as pd
 import os
 import numbers
+import pkg_resources
 
 
 class ParameterValues:
@@ -107,7 +108,7 @@ class ParameterValues:
         """
         base_chemistry = chemistry["chemistry"]
         # Create path to file
-        path = os.path.join(pybamm.root_dir(), "input", "parameters", base_chemistry)
+        path = os.path.join("input", "parameters", base_chemistry)
         # Load each component name
         for component_group in [
             "cell",
@@ -129,7 +130,9 @@ class ParameterValues:
             # Create path to component and load values
             component_path = os.path.join(path, component_group + "s", component)
             component_params = self.read_parameters_csv(
-                os.path.join(component_path, "parameters.csv")
+                pkg_resources.resource_filename(
+                    "pybamm", os.path.join(component_path, "parameters.csv")
+                )
             )
             # Update parameters, making sure to check any conflicts
             self.update(
@@ -218,16 +221,17 @@ class ParameterValues:
                 # Data is flagged with the string "[data]" or "[current data]"
                 elif value.startswith("[current data]") or value.startswith("[data]"):
                     if value.startswith("[current data]"):
-                        data_path = os.path.join(
-                            pybamm.root_dir(), "input", "drive_cycles"
-                        )
+                        data_path = os.path.join("input", "drive_cycles")
                         filename = os.path.join(data_path, value[14:] + ".csv")
                         function_name = value[14:]
                     else:
                         filename = os.path.join(path, value[6:] + ".csv")
                         function_name = value[6:]
+                    resource_filename = pkg_resources.resource_filename(
+                        "pybamm", filename
+                    )
                     data = pd.read_csv(
-                        filename, comment="#", skip_blank_lines=True
+                        resource_filename, comment="#", skip_blank_lines=True
                     ).to_numpy()
                     # Save name and data
                     self._dict_items[name] = (function_name, data)
@@ -385,8 +389,9 @@ class ParameterValues:
             model.variables[variable] = self.process_symbol(equation)
 
         for event in model.events:
-            pybamm.logger.debug("Processing parameters for event'{}''"
-                                .format(event.name))
+            pybamm.logger.debug(
+                "Processing parameters for event'{}''".format(event.name)
+            )
             event.expression = self.process_symbol(event.expression)
 
         pybamm.logger.info("Finish setting parameters for {}".format(model.name))
