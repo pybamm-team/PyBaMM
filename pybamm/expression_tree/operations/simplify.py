@@ -22,8 +22,10 @@ def simplify_if_constant(symbol, keep_domains=False):
     if symbol.is_constant():
         result = symbol.evaluate_ignoring_errors()
         if result is not None:
-            if isinstance(result, numbers.Number) or (
-                isinstance(result, np.ndarray) and result.ndim == 0
+            if (
+                isinstance(result, numbers.Number)
+                or (isinstance(result, np.ndarray) and result.ndim == 0)
+                or isinstance(result, np.bool_)
             ):
                 return pybamm.Scalar(result)
             elif isinstance(result, np.ndarray) or issparse(result):
