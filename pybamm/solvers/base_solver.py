@@ -217,16 +217,20 @@ class BaseSolver(object):
         # Check for heaviside functions in rhs and algebraic and add discontinuity
         # events if these exist.
         # Note: only checks for the case of t < X, t <= X, X < t, or X <= t
-        for symbol in itertools.chain(model.concatenated_rhs.pre_order(),
-                                      model.concatenated_algebraic.pre_order()):
+        for symbol in itertools.chain(
+            model.concatenated_rhs.pre_order(), model.concatenated_algebraic.pre_order()
+        ):
             if isinstance(symbol, pybamm.Heaviside):
                 if symbol.right.id == pybamm.t.id:
                     expr = symbol.left
                 elif symbol.left.id == pybamm.t.id:
                     expr = symbol.right
 
-                model.events.append(pybamm.Event(str(symbol), expr.new_copy(),
-                                                 pybamm.EventType.DISCONTINUITY))
+                model.events.append(
+                    pybamm.Event(
+                        str(symbol), expr.new_copy(), pybamm.EventType.DISCONTINUITY
+                    )
+                )
 
         # Process rhs, algebraic and event expressions
         rhs, rhs_eval, jac_rhs = process(model.concatenated_rhs, "RHS")
@@ -242,7 +246,8 @@ class BaseSolver(object):
         # discontinuity events are evaluated before the solver is called, so don't need
         # to process them
         discontinuity_events_eval = [
-            event for event in model.events
+            event
+            for event in model.events
             if event.event_type == pybamm.EventType.DISCONTINUITY
         ]
 
@@ -452,12 +457,17 @@ class BaseSolver(object):
 
         # make sure they are increasing in time
         discontinuities = sorted(discontinuities)
-        pybamm.logger.info(
-            'Discontinuity events found at t = {}'.format(discontinuities)
-        )
+        if len(discontinuities) > 0:
+            pybamm.logger.info(
+                "Discontinuity events found at t = {}".format(discontinuities)
+            )
+        else:
+            pybamm.logger.info("No discontinuity events found")
+
         # remove any identical discontinuities
         discontinuities = [
-            v for i, v in enumerate(discontinuities)
+            v
+            for i, v in enumerate(discontinuities)
             if i == len(discontinuities) - 1
             or discontinuities[i] < discontinuities[i + 1]
         ]
@@ -467,16 +477,18 @@ class BaseSolver(object):
         start_indices = [0]
         end_indices = []
         for dtime in discontinuities:
-            dindex = np.searchsorted(t_eval, dtime, side='left')
+            dindex = np.searchsorted(t_eval, dtime, side="left")
             end_indices.append(dindex + 1)
             start_indices.append(dindex + 1)
             if t_eval[dindex] == dtime:
                 t_eval[dindex] += sys.float_info.epsilon
                 t_eval = np.insert(t_eval, dindex, dtime - sys.float_info.epsilon)
             else:
-                t_eval = np.insert(t_eval, dindex,
-                                   [dtime - sys.float_info.epsilon,
-                                    dtime + sys.float_info.epsilon])
+                t_eval = np.insert(
+                    t_eval,
+                    dindex,
+                    [dtime - sys.float_info.epsilon, dtime + sys.float_info.epsilon],
+                )
         end_indices.append(len(t_eval))
 
         # integrate separatly over each time segment and accumulate into the solution
@@ -485,16 +497,21 @@ class BaseSolver(object):
         old_y0 = model.y0
         solution = None
         for start_index, end_index in zip(start_indices, end_indices):
-            pybamm.logger.info("Calling solver for {} < t < {}"
-                               .format(t_eval[start_index], t_eval[end_index - 1]))
+            pybamm.logger.info(
+                "Calling solver for {} < t < {}".format(
+                    t_eval[start_index], t_eval[end_index - 1]
+                )
+            )
             timer.reset()
             if solution is None:
                 solution = self._integrate(
-                    model, t_eval[start_index:end_index], ext_and_inputs)
+                    model, t_eval[start_index:end_index], ext_and_inputs
+                )
                 solution.solve_time = timer.time()
             else:
                 new_solution = self._integrate(
-                    model, t_eval[start_index:end_index], ext_and_inputs)
+                    model, t_eval[start_index:end_index], ext_and_inputs
+                )
                 new_solution.solve_time = timer.time()
                 solution.append(new_solution, start_index=0)
 
@@ -506,14 +523,16 @@ class BaseSolver(object):
                 y0_guess = solution.y[:, -1]
                 if model.algebraic:
                     model.y0 = self.calculate_consistent_state(
-                        model, t_eval[end_index], y0_guess)
+                        model, t_eval[end_index], y0_guess
+                    )
                 else:
                     model.y0 = y0_guess
 
                 last_state = solution.y[:, -1]
                 if len(model.algebraic) > 0:
                     model.y0 = self.calculate_consistent_state(
-                        model, t_eval[end_index], last_state)
+                        model, t_eval[end_index], last_state
+                    )
                 else:
                     model.y0 = last_state
 
