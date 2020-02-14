@@ -11,6 +11,11 @@ Marquis2019
     Chapman. "An asymptotic derivation of a single particle model with electrolyte."
     `arXiv preprint arXiv:1905.12553 <https://arxiv.org/abs/1905.12553>`_ (2019).
 
+NCA_Kim2011
+    Kim, G. H., Smith, K., Lee, K. J., Santhanagopalan, S., & Pesaran, A.
+    (2011). Multi-domain modeling of lithium-ion batteries encompassing
+    multi-physics in varied length scales. Journal of The Electrochemical
+    Society, 158(8), A955-A969.
 
 Lead-acid
 ---------
@@ -32,6 +37,16 @@ Marquis2019 = {
     "cathode": "lico2_Marquis2019",
     "electrolyte": "lipf6_Marquis2019",
     "experiment": "1C_discharge_from_full_Marquis2019",
+}
+
+NCA_Kim2011 = {
+    "chemistry": "lithium-ion",
+    "cell": "Kim2011",
+    "anode": "graphite_Kim2011",
+    "separator": "separator_Kim2011",
+    "cathode": "nca_Kim2011",
+    "electrolyte": "lipf6_Kim2011",
+    "experiment": "1C_discharge_from_full_Kim2011",
 }
 
 #
