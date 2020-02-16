@@ -772,16 +772,20 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         # Cut-off voltage
         voltage = self.variables["Terminal voltage"]
-        self.events.append(pybamm.Event(
-            "Minimum voltage",
-            voltage - self.param.voltage_low_cut,
-            pybamm.EventType.TERMINATION
-        ))
-        self.events.append(pybamm.Event(
-            "Maximum voltage",
-            voltage - self.param.voltage_high_cut,
-            pybamm.EventType.TERMINATION
-        ))
+        self.events.append(
+            pybamm.Event(
+                "Minimum voltage",
+                voltage - self.param.voltage_low_cut,
+                pybamm.EventType.TERMINATION,
+            )
+        )
+        self.events.append(
+            pybamm.Event(
+                "Maximum voltage",
+                voltage - self.param.voltage_high_cut,
+                pybamm.EventType.TERMINATION,
+            )
+        )
 
         # Power
         I_dim = self.variables["Current [A]"]
@@ -821,8 +825,11 @@ class BaseBatteryModel(pybamm.BaseModel):
             variables = list(self.rhs.keys()) + list(self.algebraic.keys())
             disc.set_variable_slices(variables)
 
-        # Set boundary condtions
+        # Set boundary condtions (also requires setting parameter values)
         if disc.bcs == {}:
+            self.boundary_conditions = parameter_values.process_boundary_conditions(
+                self
+            )
             disc.bcs = disc.process_boundary_conditions(self)
 
         # Process
