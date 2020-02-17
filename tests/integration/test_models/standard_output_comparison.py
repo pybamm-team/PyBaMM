@@ -81,12 +81,9 @@ class BaseOutputComparison(object):
         # Check outputs are close to each other
         for model_var in model_variables[1:]:
             np.testing.assert_equal(var0.dimensions, model_var.dimensions)
-            try:
-                np.testing.assert_array_almost_equal(
-                    model_var(self.t, x), var0(self.t, x), decimal
-                )
-            except:
-                n - 1
+            np.testing.assert_array_almost_equal(
+                model_var(self.t, x), var0(self.t, x), decimal
+            )
 
 
 class AveragesComparison(BaseOutputComparison):
