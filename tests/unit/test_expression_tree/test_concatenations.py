@@ -25,6 +25,10 @@ class TestConcatenations(unittest.TestCase):
         with self.assertRaises(TypeError):
             conc2.evaluate()
 
+        # trying to concatenate non-pybamm symbols
+        with self.assertRaises(TypeError):
+            pybamm.Concatenation(1, 2)
+
     def test_concatenation_domains(self):
         a = pybamm.Symbol("a", domain=["negative electrode"])
         b = pybamm.Symbol("b", domain=["separator", "positive electrode"])
