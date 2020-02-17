@@ -285,9 +285,13 @@ class Symbol(anytree.NodeMixin):
 
         new_node, counter = self.relabel_tree(self, 0)
 
-        DotExporter(
-            new_node, nodeattrfunc=lambda node: 'label="{}"'.format(node.label)
-        ).to_picture(filename)
+        try:
+            DotExporter(
+                new_node, nodeattrfunc=lambda node: 'label="{}"'.format(node.label)
+            ).to_picture(filename)
+        except FileNotFoundError:
+            # raise error but only through logger so that test passes
+            pybamm.logger.error("Please install graphviz>=2.42.2 to use dot exporter")
 
     def relabel_tree(self, symbol, counter):
         """ Finds all children of a symbol and assigns them a new id so that they can be
@@ -360,79 +364,109 @@ class Symbol(anytree.NodeMixin):
 
     def __add__(self, other):
         """return an :class:`Addition` object"""
-        return pybamm.Addition(self, other)
+        return pybamm.simplify_if_constant(
+            pybamm.Addition(self, other), keep_domains=True
+        )
 
     def __radd__(self, other):
         """return an :class:`Addition` object"""
-        return pybamm.Addition(other, self)
+        return pybamm.simplify_if_constant(
+            pybamm.Addition(other, self), keep_domains=True
+        )
 
     def __sub__(self, other):
         """return a :class:`Subtraction` object"""
-        return pybamm.Subtraction(self, other)
+        return pybamm.simplify_if_constant(
+            pybamm.Subtraction(self, other), keep_domains=True
+        )
 
     def __rsub__(self, other):
         """return a :class:`Subtraction` object"""
-        return pybamm.Subtraction(other, self)
+        return pybamm.simplify_if_constant(
+            pybamm.Subtraction(other, self), keep_domains=True
+        )
 
     def __mul__(self, other):
         """return a :class:`Multiplication` object"""
-        return pybamm.Multiplication(self, other)
+        return pybamm.simplify_if_constant(
+            pybamm.Multiplication(self, other), keep_domains=True
+        )
 
     def __rmul__(self, other):
         """return a :class:`Multiplication` object"""
-        return pybamm.Multiplication(other, self)
+        return pybamm.simplify_if_constant(
+            pybamm.Multiplication(other, self), keep_domains=True
+        )
 
     def __matmul__(self, other):
         """return a :class:`MatrixMultiplication` object"""
-        return pybamm.MatrixMultiplication(self, other)
+        return pybamm.simplify_if_constant(
+            pybamm.MatrixMultiplication(self, other), keep_domains=True
+        )
 
     def __rmatmul__(self, other):
         """return a :class:`MatrixMultiplication` object"""
-        return pybamm.MatrixMultiplication(other, self)
+        return pybamm.simplify_if_constant(
+            pybamm.MatrixMultiplication(other, self), keep_domains=True
+        )
 
     def __truediv__(self, other):
         """return a :class:`Division` object"""
-        return pybamm.Division(self, other)
+        return pybamm.simplify_if_constant(
+            pybamm.Division(self, other), keep_domains=True
+        )
 
     def __rtruediv__(self, other):
         """return a :class:`Division` object"""
-        return pybamm.Division(other, self)
+        return pybamm.simplify_if_constant(
+            pybamm.Division(other, self), keep_domains=True
+        )
 
     def __pow__(self, other):
         """return a :class:`Power` object"""
-        return pybamm.Power(self, other)
+        return pybamm.simplify_if_constant(pybamm.Power(self, other), keep_domains=True)
 
     def __rpow__(self, other):
         """return a :class:`Power` object"""
-        return pybamm.Power(other, self)
+        return pybamm.simplify_if_constant(pybamm.Power(other, self), keep_domains=True)
 
     def __lt__(self, other):
         """return a :class:`Heaviside` object"""
-        return pybamm.Heaviside(self, other, equal=False)
+        return pybamm.simplify_if_constant(
+            pybamm.Heaviside(self, other, equal=False), keep_domains=True
+        )
 
     def __le__(self, other):
         """return a :class:`Heaviside` object"""
-        return pybamm.Heaviside(self, other, equal=True)
+        return pybamm.simplify_if_constant(
+            pybamm.Heaviside(self, other, equal=True), keep_domains=True
+        )
 
     def __gt__(self, other):
         """return a :class:`Heaviside` object"""
-        return pybamm.Heaviside(other, self, equal=False)
+        return pybamm.simplify_if_constant(
+            pybamm.Heaviside(other, self, equal=False), keep_domains=True
+        )
 
     def __ge__(self, other):
         """return a :class:`Heaviside` object"""
-        return pybamm.Heaviside(other, self, equal=True)
+        return pybamm.simplify_if_constant(
+            pybamm.Heaviside(other, self, equal=True), keep_domains=True
+        )
 
     def __neg__(self):
         """return a :class:`Negate` object"""
-        return pybamm.Negate(self)
+        return pybamm.simplify_if_constant(pybamm.Negate(self), keep_domains=True)
 
     def __abs__(self):
         """return an :class:`AbsoluteValue` object"""
-        return pybamm.AbsoluteValue(self)
+        return pybamm.simplify_if_constant(
+            pybamm.AbsoluteValue(self), keep_domains=True
+        )
 
     def __getitem__(self, key):
         """return a :class:`Index` object"""
-        return pybamm.Index(self, key)
+        return pybamm.simplify_if_constant(pybamm.Index(self, key), keep_domains=True)
 
     def diff(self, variable):
         """
@@ -472,7 +506,7 @@ class Symbol(anytree.NodeMixin):
         """
         raise NotImplementedError
 
-    def _base_evaluate(self, t=None, y=None):
+    def _base_evaluate(self, t=None, y=None, u=None):
         """evaluate expression tree
 
         will raise a ``NotImplementedError`` if this member function has not
@@ -508,6 +542,8 @@ class Symbol(anytree.NodeMixin):
             time at which to evaluate (default None)
         y : numpy.array, optional
             array to evaluate when solving (default None)
+        u : dict, optional
+            dictionary of inputs to use when solving (default None)
         known_evals : dict, optional
             dictionary containing known values (default None)
 
@@ -520,10 +556,10 @@ class Symbol(anytree.NodeMixin):
         """
         if known_evals is not None:
             if self.id not in known_evals:
-                known_evals[self.id] = self._base_evaluate(t, y)
+                known_evals[self.id] = self._base_evaluate(t, y, u)
             return known_evals[self.id], known_evals
         else:
-            return self._base_evaluate(t, y)
+            return self._base_evaluate(t, y, u)
 
     def evaluate_for_shape(self):
         """Evaluate expression tree to find its shape. For symbols that cannot be
@@ -586,6 +622,8 @@ class Symbol(anytree.NodeMixin):
                 return None
             else:
                 raise error
+        except ValueError as e:
+            raise pybamm.ShapeError("Cannot find shape (original error: {})".format(e))
         return result
 
     def evaluates_to_number(self):

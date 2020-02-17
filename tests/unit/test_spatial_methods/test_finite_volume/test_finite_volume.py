@@ -917,7 +917,7 @@ class TestFiniteVolume(unittest.TestCase):
 
         r = 3 * pybamm.SpatialVariable("r", ["negative particle"])
         r_disc = disc.process_symbol(r)
-        self.assertIsInstance(r_disc.children[1], pybamm.Vector)
+        self.assertIsInstance(r_disc, pybamm.Vector)
         np.testing.assert_array_equal(
             r_disc.evaluate(),
             3 * disc.mesh["negative particle"][0].nodes[:, np.newaxis],

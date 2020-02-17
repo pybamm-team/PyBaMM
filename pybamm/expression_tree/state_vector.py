@@ -103,7 +103,7 @@ class StateVector(pybamm.Symbol):
             + tuple(self.domain)
         )
 
-    def _base_evaluate(self, t=None, y=None):
+    def _base_evaluate(self, t=None, y=None, u=None):
         """ See :meth:`pybamm.Symbol._base_evaluate()`. """
         if y is None:
             raise TypeError("StateVector cannot evaluate input 'y=None'")

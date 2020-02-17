@@ -2,6 +2,7 @@
 # Scalar class
 #
 import pybamm
+import numpy as np
 
 
 class Scalar(pybamm.Symbol):
@@ -40,7 +41,7 @@ class Scalar(pybamm.Symbol):
 
     @value.setter
     def value(self, value):
-        self._value = float(value)
+        self._value = np.float64(value)
 
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()`. """
@@ -50,7 +51,7 @@ class Scalar(pybamm.Symbol):
             (self.__class__, self.name) + tuple(self.domain) + tuple(str(self._value))
         )
 
-    def _base_evaluate(self, t=None, y=None):
+    def _base_evaluate(self, t=None, y=None, u=None):
         """ See :meth:`pybamm.Symbol._base_evaluate()`. """
         return self._value
 

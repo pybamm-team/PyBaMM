@@ -37,25 +37,15 @@ end_time = solution.t[-1]
 step_solver = model.default_solver
 step_solution = None
 while time < end_time:
-    current_step_sol = step_solver.step(model, dt=dt, npts=10)
-    if not step_solution:
-        # create solution object on first step
-        step_solution = current_step_sol
-    else:
-        # append solution from the current step to step_solution
-        step_solution.append(current_step_sol)
+    step_solution = step_solver.step(step_solution, model, dt=dt, npts=10)
     time += dt
 
 # plot
-voltage = pybamm.ProcessedVariable(
-    model.variables["Terminal voltage [V]"], solution.t, solution.y, mesh=mesh
-)
-step_voltage = pybamm.ProcessedVariable(
-    model.variables["Terminal voltage [V]"], step_solution.t, step_solution.y, mesh=mesh
-)
+voltage = solution["Terminal voltage [V]"]
+step_voltage = step_solution["Terminal voltage [V]"]
 plt.plot(solution.t, voltage(solution.t), "b-", label="SPMe (continuous solve)")
 plt.plot(
-    step_solution.t, step_voltage(step_solution.t), "ro", label="SPMe (steppped solve)"
+    step_solution.t, step_voltage(step_solution.t), "ro", label="SPMe (stepped solve)"
 )
 plt.xlabel(r"$t$")
 plt.ylabel("Terminal voltage [V]")

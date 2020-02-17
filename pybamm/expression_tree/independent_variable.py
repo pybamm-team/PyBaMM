@@ -51,7 +51,7 @@ class Time(IndependentVariable):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
         return Time()
 
-    def _base_evaluate(self, t, y=None):
+    def _base_evaluate(self, t, y=None, u=None):
         """ See :meth:`pybamm.Symbol._base_evaluate()`. """
         if t is None:
             raise ValueError("t must be provided")
@@ -85,9 +85,7 @@ class SpatialVariable(IndependentVariable):
         domain = self.domain
 
         if name not in KNOWN_SPATIAL_VARS:
-            raise ValueError(
-                "name must be KNOWN_SPATIAL_VARS  but is '{}'".format(name)
-            )
+            raise ValueError(f"name must be in {KNOWN_SPATIAL_VARS}  but is '{name}'")
         if domain == []:
             raise ValueError("domain must be provided")
 

@@ -79,17 +79,11 @@ for l_n in thicknesses:
         # solve model
         t_eval = np.linspace(0, 0.2, 100)
         sol = model.default_solver.solve(model, t_eval)
-        var = "Positive electrode average extent of lithiation"
-        xpext = pybamm.ProcessedVariable(model.variables[var], sol.t, sol.y, mesh=mesh)
-        var = "Negative electrode average extent of lithiation"
-        xnext = pybamm.ProcessedVariable(model.variables[var], sol.t, sol.y, mesh=mesh)
-        var = "X-averaged positive particle surface concentration"
-        xpsurf = pybamm.ProcessedVariable(model.variables[var], sol.t, sol.y, mesh=mesh)
-        var = "X-averaged negative particle surface concentration"
-        xnsurf = pybamm.ProcessedVariable(model.variables[var], sol.t, sol.y, mesh=mesh)
-        time = pybamm.ProcessedVariable(
-            model.variables["Time [h]"], sol.t, sol.y, mesh=mesh
-        )
+        xpext = sol["Positive electrode average extent of lithiation"]
+        xnext = sol["Negative electrode average extent of lithiation"]
+        xpsurf = sol["X-averaged positive particle surface concentration"]
+        xnsurf = sol["X-averaged negative particle surface concentration"]
+        time = sol["Time [h]"]
         # Coulomb counting
         time_hours = time(sol.t)
         dc_time = np.around(time_hours[-1], 3)

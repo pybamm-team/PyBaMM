@@ -99,12 +99,21 @@ C_dl_dimensional = pybamm.Parameter("Double-layer capacity [F.m-2]")
 c_e_init_dimensional = pybamm.Parameter(
     "Initial concentration in electrolyte [mol.m-3]"
 )
-c_n_init_dimensional = pybamm.Parameter(
-    "Initial concentration in negative electrode [mol.m-3]"
-)
-c_p_init_dimensional = pybamm.Parameter(
-    "Initial concentration in positive electrode [mol.m-3]"
-)
+
+
+def c_n_init_dimensional(x):
+    "Initial concentration as a function of dimensionless position x"
+    return pybamm.FunctionParameter(
+        "Initial concentration in negative electrode [mol.m-3]", x
+    )
+
+
+def c_p_init_dimensional(x):
+    "Initial concentration as a function of dimensionless position x"
+    return pybamm.FunctionParameter(
+        "Initial concentration in positive electrode [mol.m-3]", x
+    )
+
 
 # thermal
 Delta_T = pybamm.thermal_parameters.Delta_T
@@ -274,14 +283,11 @@ centre_y_tab_p = pybamm.geometric_parameters.centre_y_tab_p
 centre_z_tab_p = pybamm.geometric_parameters.centre_z_tab_p
 
 # Microscale geometry
-epsilon_n = pybamm.Parameter("Negative electrode porosity")
-epsilon_s = pybamm.Parameter("Separator porosity")
-epsilon_p = pybamm.Parameter("Positive electrode porosity")
-epsilon = pybamm.Concatenation(
-    pybamm.FullBroadcast(epsilon_n, ["negative electrode"], "current collector"),
-    pybamm.FullBroadcast(epsilon_s, ["separator"], "current collector"),
-    pybamm.FullBroadcast(epsilon_p, ["positive electrode"], "current collector"),
-)
+var = pybamm.standard_spatial_vars
+epsilon_n = pybamm.FunctionParameter("Negative electrode porosity", var.x_n)
+epsilon_s = pybamm.FunctionParameter("Separator porosity", var.x_s)
+epsilon_p = pybamm.FunctionParameter("Positive electrode porosity", var.x_p)
+epsilon = pybamm.Concatenation(epsilon_n, epsilon_s, epsilon_p)
 epsilon_s_n = pybamm.Parameter("Negative electrode active material volume fraction")
 epsilon_s_p = pybamm.Parameter("Positive electrode active material volume fraction")
 epsilon_inactive_n = 1 - epsilon_n - epsilon_s_n
@@ -362,10 +368,18 @@ B = (
 )
 
 # Initial conditions
-c_e_init = c_e_init_dimensional / c_e_typ
-c_n_init = c_n_init_dimensional / c_n_max
-c_p_init = c_p_init_dimensional / c_p_max
 T_init = pybamm.thermal_parameters.T_init
+c_e_init = c_e_init_dimensional / c_e_typ
+
+
+def c_n_init(x):
+    "Dimensionless initial concentration as a function of dimensionless position x"
+    return c_n_init_dimensional(x) / c_n_max
+
+
+def c_p_init(x):
+    "Dimensionless initial concentration as a function of dimensionless position x"
+    return c_p_init_dimensional(x) / c_p_max
 
 
 # --------------------------------------------------------------------------------------

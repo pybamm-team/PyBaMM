@@ -194,7 +194,7 @@ class TestSymbol(unittest.TestCase):
         a = pybamm.Parameter("a")
         self.assertFalse(a.evaluates_to_number())
 
-        a = pybamm.Scalar(3) * pybamm.Scalar(2)
+        a = pybamm.Scalar(3) * pybamm.Time()
         self.assertTrue(a.evaluates_to_number())
         # highlight difference between this function and isinstance(a, Scalar)
         self.assertNotIsInstance(a, pybamm.Scalar)
@@ -339,10 +339,10 @@ class TestSymbol(unittest.TestCase):
 
     def test_orphans(self):
         a = pybamm.Scalar(1)
-        b = pybamm.Scalar(2)
-        sum = a + b
+        b = pybamm.Parameter("b")
+        summ = a + b
 
-        a_orp, b_orp = sum.orphans
+        a_orp, b_orp = summ.orphans
         self.assertIsNone(a_orp.parent)
         self.assertIsNone(b_orp.parent)
         self.assertEqual(a.id, a_orp.id)
