@@ -156,10 +156,11 @@ class TestScipySolver(unittest.TestCase):
         model1.initial_conditions = {var1: 1}
         model1.events = [
             pybamm.Event("var1 = 1.5", pybamm.min(var1 - 1.5)),
-            pybamm.Event("nonsmooth rate",
-                         pybamm.Scalar(discontinuity),
-                         pybamm.EventType.DISCONTINUITY
-                         ),
+            pybamm.Event(
+                "nonsmooth rate",
+                pybamm.Scalar(discontinuity),
+                pybamm.EventType.DISCONTINUITY,
+            ),
         ]
 
         # second model implicitly adds a discontinuity event via a heaviside function
@@ -190,9 +191,9 @@ class TestScipySolver(unittest.TestCase):
             # create two time series, one without a time point on the discontinuity,
             # and one with
             t_eval1 = np.linspace(0, 5, 10)
-            t_eval2 = np.insert(t_eval1,
-                                np.searchsorted(t_eval1, discontinuity),
-                                discontinuity)
+            t_eval2 = np.insert(
+                t_eval1, np.searchsorted(t_eval1, discontinuity), discontinuity
+            )
             solution1 = solver.solve(model, t_eval1)
             solution2 = solver.solve(model, t_eval2)
 
@@ -217,8 +218,7 @@ class TestScipySolver(unittest.TestCase):
                 np.testing.assert_array_less(solution.y[-1], 2.5)
                 var1_soln = np.exp(0.2 * solution.t)
                 y0 = np.exp(0.2 * discontinuity)
-                var1_soln[solution.t > discontinuity] = \
-                    y0 * np.exp(
+                var1_soln[solution.t > discontinuity] = y0 * np.exp(
                     0.1 * (solution.t[solution.t > discontinuity] - discontinuity)
                 )
                 np.testing.assert_allclose(solution.y[0], var1_soln, rtol=1e-06)
@@ -242,22 +242,24 @@ class TestScipySolver(unittest.TestCase):
         solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
 
         # Step once
-        dt = 0.1
+        dt = 1
         step_sol = solver.step(None, model, dt)
         np.testing.assert_array_equal(step_sol.t, [0, dt])
-        np.testing.assert_allclose(step_sol.y[0], np.exp(0.1 * step_sol.t))
+        np.testing.assert_array_almost_equal(step_sol.y[0], np.exp(0.1 * step_sol.t))
 
         # Step again (return 5 points)
         step_sol_2 = solver.step(step_sol, model, dt, npts=5)
         np.testing.assert_array_equal(
             step_sol_2.t, np.concatenate([np.array([0]), np.linspace(dt, 2 * dt, 5)])
         )
-        np.testing.assert_allclose(step_sol_2.y[0], np.exp(0.1 * step_sol_2.t))
+        np.testing.assert_array_almost_equal(
+            step_sol_2.y[0], np.exp(0.1 * step_sol_2.t)
+        )
 
         # Check steps give same solution as solve
         t_eval = step_sol.t
         solution = solver.solve(model, t_eval)
-        np.testing.assert_allclose(solution.y[0], step_sol.y[0])
+        np.testing.assert_array_almost_equal(solution.y[0], step_sol.y[0])
 
     def test_model_solver_with_inputs(self):
         # Create model

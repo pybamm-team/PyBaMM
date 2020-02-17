@@ -107,7 +107,7 @@ class TestQuickPlot(unittest.TestCase):
             pybamm.QuickPlot(solution, ["3D variable"])
 
     def test_loqs_spm_base(self):
-        t_eval = np.linspace(0, 0.01, 2)
+        t_eval = np.linspace(0, 10, 2)
 
         # SPM
         for model in [pybamm.lithium_ion.SPM(), pybamm.lead_acid.LOQS()]:

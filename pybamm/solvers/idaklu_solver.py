@@ -247,9 +247,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 termination = "event"
 
             return pybamm.Solution(
-                sol.t * model.timescale_eval,
+                sol.t,
                 np.transpose(y_out),
-                t[-1] * model.timescale_eval,
+                t[-1],
                 np.transpose(y_out[-1])[:, np.newaxis],
                 termination,
             )

@@ -120,9 +120,9 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
             if sol.roots.t is None:
                 t_root = None
             else:
-                t_root = sol.roots.t * model.timescale_eval
+                t_root = sol.roots.t
             return pybamm.Solution(
-                sol.values.t * model.timescale_eval,
+                sol.values.t,
                 np.transpose(sol.values.y),
                 t_root,
                 np.transpose(sol.roots.y),

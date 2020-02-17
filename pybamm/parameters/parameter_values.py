@@ -364,6 +364,9 @@ class ParameterValues:
             )
             event.expression = self.process_symbol(event.expression)
 
+        # Process timescale
+        model.timescale = self.process_symbol(model.timescale)
+
         pybamm.logger.info("Finish setting parameters for {}".format(model.name))
 
         return model

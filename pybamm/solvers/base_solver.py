@@ -646,7 +646,7 @@ class BaseSolver(object):
         # Non-dimensionalise dt
         dt_dimensionless = dt / model.timescale_eval
         # Step
-        t = self.model_step_times[model] / model.timescale_eval
+        t = self.model_step_times[model]
         t_eval = np.linspace(t, t + dt_dimensionless, npts)
         # Set inputs and external
         self.set_inputs(model, ext_and_inputs)

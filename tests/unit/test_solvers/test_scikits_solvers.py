@@ -388,7 +388,7 @@ class TestScikitsSolvers(unittest.TestCase):
         solver = pybamm.ScikitsOdeSolver(rtol=1e-9, atol=1e-9)
 
         # Step once
-        dt = 0.1
+        dt = 1
         step_sol = solver.step(None, model, dt)
         np.testing.assert_array_equal(step_sol.t, [0, dt])
         np.testing.assert_allclose(step_sol.y[0], np.exp(-0.1 * step_sol.t))
@@ -421,7 +421,7 @@ class TestScikitsSolvers(unittest.TestCase):
         solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
 
         # Step once
-        dt = 0.1
+        dt = 1
         step_sol = solver.step(None, model, dt)
         np.testing.assert_array_equal(step_sol.t, [0, dt])
         np.testing.assert_allclose(step_sol.y[0], np.exp(0.1 * step_sol.t))

@@ -109,9 +109,7 @@ class CasadiSolver(pybamm.BaseSolver):
             t = t_eval[0]
             y0 = model.y0
             # Initialize solution
-            solution = pybamm.Solution(
-                np.array([t * model.timescale_eval]), y0[:, np.newaxis]
-            )
+            solution = pybamm.Solution(np.array([t]), y0[:, np.newaxis])
             solution.solve_time = 0
             for dt in np.diff(t_eval):
                 # Step
@@ -224,7 +222,7 @@ class CasadiSolver(pybamm.BaseSolver):
             u_stacked = casadi.vertcat(*[x for x in inputs.values()])
             sol = integrator(x0=y0_diff, z0=y0_alg, p=u_stacked, **self.extra_options)
             y_values = np.concatenate([sol["xf"].full(), sol["zf"].full()])
-            return pybamm.Solution(t_eval * model.timescale_eval, y_values)
+            return pybamm.Solution(t_eval, y_values)
         except RuntimeError as e:
             # If it doesn't work raise error
             raise pybamm.SolverError(e.args[0])

@@ -21,6 +21,7 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         # Default timescale is discharge timescale
         self.timescale = self.param.tau_discharge
+        self.set_standard_output_variables()
 
     @property
     def default_parameter_values(self):
@@ -53,19 +54,6 @@ class BaseModel(pybamm.BaseBatteryModel):
             return pybamm.ScikitsDaeSolver()
         else:  # pragma: no cover
             return pybamm.CasadiSolver(mode="safe")
-
-    def set_standard_output_variables(self):
-        super().set_standard_output_variables()
-
-        # Time
-        time_scale = pybamm.standard_parameters_lead_acid.tau_discharge
-        self.variables.update(
-            {
-                "Time [s]": pybamm.t * time_scale,
-                "Time [min]": pybamm.t * time_scale / 60,
-                "Time [h]": pybamm.t * time_scale / 3600,
-            }
-        )
 
     def set_reactions(self):
 
