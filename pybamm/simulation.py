@@ -6,6 +6,7 @@ import pybamm
 import numpy as np
 import copy
 import warnings
+import sys
 
 
 def isnotebook():
@@ -318,11 +319,9 @@ class Simulation:
         t_eval : numeric type, optional
             The times at which to compute the solution. If None and the parameter
             "Current function [A]" is not read from data the model will
-            be solved for a full discharge (1 hour / C_rate) if the discharge
-            timescale is provided. If None and the parameter "Current function [A]"
-            is read from data the model will be solved at the times provided in
-            the data. Otherwise the model will be solved up to a non-dimensional
-            time of 1.
+            be solved for a full discharge (1 hour / C_rate). If None and the
+            parameter "Current function [A]" is read from data the model will be
+            solved at the times provided in the data.
         solver : :class:`pybamm.BaseSolver`
             The solver to use to solve the model.
         external_variables : dict
@@ -355,29 +354,47 @@ class Simulation:
                         "Setting t_eval as specified by the data '{}'".format(filename)
                     )
                     t_eval = time_data
-                else:
-                    # If t_eval is provided we check that it at least contains all
-                    # of the data points. We only raise a warning here, as users
-                    # may genuinely only want the solution returned at some
-                    # specified points.
-                    if set(time_data).issubset(set(t_eval)) is False:
+                # If t_eval is provided we first check if it contains all of the times
+                # in the data to within 10-12. If it doesn't, we then check
+                # that the largest gap in t_eval is smaller than the smallest gap in the
+                # time data (to ensure the resolution of t_eval is fine enough).
+                # We only raise a warning here as users may genuinely only want
+                # the solution returned at some specified points.
+                elif (
+                    set(np.round(time_data, 12)).issubset(set(np.round(t_eval, 12)))
+                ) is False:
+                    warnings.warn(
+                        """
+                        t_eval does not contain all of the time points in the data
+                        '{}'. Note: passing t_eval = None automatically sets t_eval
+                        to be the points in the data.
+                        """.format(
+                            filename
+                        ),
+                        pybamm.SolverWarning,
+                    )
+                    dt_data_min = np.min(np.diff(time_data))
+                    dt_eval_max = np.max(np.diff(t_eval))
+                    if dt_eval_max > dt_data_min + sys.float_info.epsilon:
                         warnings.warn(
                             """
-                            t_eval does not contain all of the time points in the data
-                            '{}'. The output may not contain enough data points to
-                            accurately represent the solution. Try refining the number
-                            of points in t_eval. Alternatively, passing t_eval = None
-                            automatically sets t_eval to be the points in the data.
+                            The largest timestep in t_eval ({}) is larger than
+                            the smallest timestep in the data ({}). The returned
+                            solution may not have the correct resolution to accurately
+                            capture the input. Try refining t_eval. Alternatively,
+                            passing t_eval = None automatically sets t_eval to be the
+                            points in the data.
                             """.format(
-                                filename
+                                dt_eval_max, dt_data_min
                             ),
                             pybamm.SolverWarning,
                         )
             # If not using a drive cycle and t_eval is not provided, set t_eval
             # to correspond to a single discharge
-            else:
-                if t_eval is None:
-                    t_eval = np.linspace(0, 3600, 100)
+            elif t_eval is None:
+                C_rate = self._parameter_values["C-rate"]
+                t_end = 3600 / C_rate
+                t_eval = np.linspace(0, t_end, 100)
 
             self.t_eval = t_eval
             self._solution = solver.solve(self.built_model, t_eval, inputs=inputs)

@@ -3,6 +3,7 @@
 ## Features
 
 -   Added NCA parameter set ([#824](https://github.com/pybamm-team/PyBaMM/pull/824))
+-   Added functionality to `Solution` that automatically gets `t_eval` from the data when simulating drive cycles and performs checks to ensure the output has the required resolution to accurately capture the input current ([#819](https://github.com/pybamm-team/PyBaMM/pull/819))
 -   Added options to export a solution to matlab or csv ([#811](https://github.com/pybamm-team/PyBaMM/pull/811))
 -   Allow porosity to vary in space ([#809](https://github.com/pybamm-team/PyBaMM/pull/809))
 -   Added functionality to solve DAE models with non-smooth current inputs ([#808](https://github.com/pybamm-team/PyBaMM/pull/808))
@@ -52,6 +53,7 @@
 
 ## Bug fixes
 
+-   Fixed a bug where the first line of the data wasn't loaded when parameters are loaded from data ([#819](https://github.com/pybamm-team/PyBaMM/pull/819))
 -   Made `graphviz` an optional dependency ([#810](https://github.com/pybamm-team/PyBaMM/pull/810))
 -   Fixed examples to run with basic pip installation ([#800](https://github.com/pybamm-team/PyBaMM/pull/800))
 -   Added events for CasADi solver when stepping ([#800](https://github.com/pybamm-team/PyBaMM/pull/800))

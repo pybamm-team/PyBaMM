@@ -368,10 +368,18 @@ class TestSimulation(unittest.TestCase):
         sim.solve()
         np.testing.assert_array_almost_equal(sim.solution.t, time_data)
 
-        # check warning raised if t_eval doesn't contain all the data points
+        # check warning raised if the largest gap in t_eval is bigger than the
+        # smallest gap in the data
         sim.reset()
         with self.assertWarns(pybamm.SolverWarning):
             sim.solve(t_eval=np.linspace(0, 1, 100))
+
+        # check warning raised if t_eval doesnt conatin time_data , but has a finer
+        # resolution (can still solve, but good for users to know they dont have
+        # the solution returned at the data points)
+        sim.reset()
+        with self.assertWarns(pybamm.SolverWarning):
+            sim.solve(t_eval=np.linspace(0, time_data[-1] / tau, 800))
 
 
 if __name__ == "__main__":
