@@ -118,8 +118,7 @@ class BaseSolver(object):
         y0 = model.concatenated_initial_conditions
 
         # Set model timescale
-        # to be safe, model.timescale shouldn't depend on inputs
-        model.timescale_eval = model.timescale.evaluate()
+        model.timescale_eval = model.timescale.evaluate(u=inputs)
 
         # Check model.algebraic for ode solvers
         if self.ode_solver is True and len(model.algebraic) > 0:

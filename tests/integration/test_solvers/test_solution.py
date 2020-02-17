@@ -25,7 +25,7 @@ class TestSolution(unittest.TestCase):
         disc.process_model(model)
 
         # solve model
-        t_eval = np.linspace(0, 3000, 100)
+        t_eval = np.linspace(0, 3600, 100)
         solver = model.default_solver
         solution = solver.solve(model, t_eval)
 
@@ -33,10 +33,12 @@ class TestSolution(unittest.TestCase):
         old_t = 0
         step_solver = model.default_solver
         step_solution = None
-        for t in solution.t[1:]:
+        # dt should be dimensional
+        solution_times_dimensional = solution.t * model.timescale_eval
+        for t in solution_times_dimensional[1:]:
             dt = t - old_t
             step_solution = step_solver.step(step_solution, model, dt=dt, npts=10)
-            if t == solution.t[1]:
+            if t == solution_times_dimensional[1]:
                 # Create voltage variable
                 step_solution.update("Terminal voltage")
             old_t = t
@@ -52,8 +54,8 @@ class TestSolution(unittest.TestCase):
         self.assertLess(step_sol_time, sol_time)
         # Check both give the same answer
         np.testing.assert_array_almost_equal(
-            solution["Terminal voltage"](solution.t),
-            step_solution["Terminal voltage"](solution.t),
+            solution["Terminal voltage"](solution.t[:-1]),
+            step_solution["Terminal voltage"](solution.t[:-1]),
             decimal=4,
         )
 

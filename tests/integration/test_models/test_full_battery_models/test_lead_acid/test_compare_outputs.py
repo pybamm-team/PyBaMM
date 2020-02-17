@@ -41,7 +41,7 @@ class TestCompareOutputs(unittest.TestCase):
         solutions = []
         t_eval = np.linspace(0, 3600 * 17, 100)
         for model in models:
-            solution = model.default_solver.solve(model, t_eval)
+            solution = pybamm.CasadiSolver().solve(model, t_eval)
             solutions.append(solution)
 
         # test averages
@@ -87,7 +87,7 @@ class TestCompareOutputs(unittest.TestCase):
             solutions = []
             t_eval = np.linspace(0, 3600 * 17, 100)
             for model in models:
-                solution = model.default_solver.solve(model, t_eval)
+                solution = pybamm.CasadiSolver().solve(model, t_eval)
                 solutions.append(solution)
 
             # compare outputs

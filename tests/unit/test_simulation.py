@@ -207,23 +207,25 @@ class TestSimulation(unittest.TestCase):
     def test_step(self):
 
         dt = 0.001
-        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model)
         sim.step(dt)  # 1 step stores first two points
+        tau = model.timescale.evaluate()
         self.assertEqual(sim.solution.t.size, 2)
         self.assertEqual(sim.solution.y[0, :].size, 2)
         self.assertEqual(sim.solution.t[0], 0)
-        self.assertEqual(sim.solution.t[1], dt)
+        self.assertEqual(sim.solution.t[1], dt / tau)
         sim.step(dt)  # automatically append the next step
         self.assertEqual(sim.solution.t.size, 3)
         self.assertEqual(sim.solution.y[0, :].size, 3)
         self.assertEqual(sim.solution.t[0], 0)
-        self.assertEqual(sim.solution.t[1], dt)
-        self.assertEqual(sim.solution.t[2], 2 * dt)
+        self.assertEqual(sim.solution.t[1], dt / tau)
+        self.assertEqual(sim.solution.t[2], 2 * dt / tau)
         sim.step(dt, save=False)  # now only store the two end step points
         self.assertEqual(sim.solution.t.size, 2)
         self.assertEqual(sim.solution.y[0, :].size, 2)
-        self.assertEqual(sim.solution.t[0], 2 * dt)
-        self.assertEqual(sim.solution.t[1], 3 * dt)
+        self.assertEqual(sim.solution.t[0], 2 * dt / tau)
+        self.assertEqual(sim.solution.t[1], 3 * dt / tau)
 
     def test_step_with_inputs(self):
         dt = 0.001
@@ -234,10 +236,11 @@ class TestSimulation(unittest.TestCase):
         sim.step(
             dt, inputs={"Current function [A]": 1}
         )  # 1 step stores first two points
+        tau = model.timescale.evaluate()
         self.assertEqual(sim.solution.t.size, 2)
         self.assertEqual(sim.solution.y[0, :].size, 2)
         self.assertEqual(sim.solution.t[0], 0)
-        self.assertEqual(sim.solution.t[1], dt)
+        self.assertEqual(sim.solution.t[1], dt / tau)
         np.testing.assert_array_equal(sim.solution.inputs["Current function [A]"], 1)
         sim.step(
             dt, inputs={"Current function [A]": 2}
@@ -245,8 +248,8 @@ class TestSimulation(unittest.TestCase):
         self.assertEqual(sim.solution.t.size, 3)
         self.assertEqual(sim.solution.y[0, :].size, 3)
         self.assertEqual(sim.solution.t[0], 0)
-        self.assertEqual(sim.solution.t[1], dt)
-        self.assertEqual(sim.solution.t[2], 2 * dt)
+        self.assertEqual(sim.solution.t[1], dt / tau)
+        self.assertEqual(sim.solution.t[2], 2 * dt / tau)
         np.testing.assert_array_equal(
             sim.solution.inputs["Current function [A]"], np.array([1, 1, 2])
         )
@@ -366,7 +369,8 @@ class TestSimulation(unittest.TestCase):
 
         # check solution is returned at the times in the data
         sim.solve()
-        np.testing.assert_array_almost_equal(sim.solution.t, time_data)
+        tau = model.timescale.evaluate()
+        np.testing.assert_array_almost_equal(sim.solution.t, time_data / tau)
 
         # check warning raised if the largest gap in t_eval is bigger than the
         # smallest gap in the data
@@ -374,12 +378,12 @@ class TestSimulation(unittest.TestCase):
         with self.assertWarns(pybamm.SolverWarning):
             sim.solve(t_eval=np.linspace(0, 1, 100))
 
-        # check warning raised if t_eval doesnt conatin time_data , but has a finer
+        # check warning raised if t_eval doesnt contain time_data , but has a finer
         # resolution (can still solve, but good for users to know they dont have
         # the solution returned at the data points)
         sim.reset()
         with self.assertWarns(pybamm.SolverWarning):
-            sim.solve(t_eval=np.linspace(0, time_data[-1] / tau, 800))
+            sim.solve(t_eval=np.linspace(0, time_data[-1], 800))
 
 
 if __name__ == "__main__":

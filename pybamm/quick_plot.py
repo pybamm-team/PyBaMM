@@ -3,7 +3,6 @@
 #
 import numpy as np
 import pybamm
-import warnings
 from collections import defaultdict
 
 
@@ -86,7 +85,9 @@ class QuickPlot(object):
         self.colors = colors
         self.linestyles = linestyles
 
-        # Scales (default to 1 if information not in model)
+        # Time scale in hours
+        self.time_scale = models[0].timescale_eval / 3600
+        # Spatial scales (default to 1 if information not in model)
         variables = models[0].variables
         self.spatial_scales = {"x": 1, "y": 1, "z": 1}
         if "x [m]" and "x" in variables:
@@ -112,8 +113,8 @@ class QuickPlot(object):
 
         # Time parameters
         self.ts = [solution.t for solution in solutions]
-        self.min_t = np.min([t[0] for t in self.ts]) / 3600
-        self.max_t = np.max([t[-1] for t in self.ts]) / 3600
+        self.min_t = np.min([t[0] for t in self.ts]) * self.time_scale
+        self.max_t = np.max([t[-1] for t in self.ts]) * self.time_scale
 
         # Default output variables for lead-acid and lithium-ion
         if output_variables is None:
@@ -280,7 +281,7 @@ class QuickPlot(object):
 
         import matplotlib.pyplot as plt
 
-        t /= 3600
+        t /= self.time_scale
         self.fig, self.ax = plt.subplots(self.n_rows, self.n_cols, figsize=(15, 8))
         plt.tight_layout()
         plt.subplots_adjust(left=-0.1)
@@ -330,7 +331,7 @@ class QuickPlot(object):
                     for j, variable in enumerate(variable_list):
                         full_t = self.ts[i]
                         (self.plots[key][i][j],) = ax.plot(
-                            full_t / 3600,
+                            full_t * self.time_scale,
                             variable(full_t, warn=False),
                             lw=2,
                             color=colors[i],
@@ -338,7 +339,7 @@ class QuickPlot(object):
                         )
                 y_min, y_max = self.axis[key][2:]
                 (self.time_lines[key],) = ax.plot(
-                    [t / 3600, t / 3600], [y_min, y_max], "k--"
+                    [t * self.time_scale, t * self.time_scale], [y_min, y_max], "k--"
                 )
             # Set either y label or legend entries
             if len(key) == 1:
@@ -351,7 +352,8 @@ class QuickPlot(object):
                     fontsize=8,
                     loc="lower center",
                 )
-        self.fig.legend(self.labels, loc="lower right")
+            if k == len(self.variables) - 1:
+                ax.legend(self.labels, loc="upper right", bbox_to_anchor=(1, -0.2))
 
     def dynamic_plot(self, testing=False):
         """
@@ -373,10 +375,7 @@ class QuickPlot(object):
         # plt.subplots_adjust(
         #     top=0.92, bottom=0.15, left=0.10, right=0.9, hspace=0.5, wspace=0.5
         # )
-        # ignore the warning about tight layout
-        warnings.simplefilter("ignore")
         self.fig.tight_layout()
-        warnings.simplefilter("always")
 
         if not testing:  # pragma: no cover
             plt.show()
@@ -386,7 +385,7 @@ class QuickPlot(object):
         Update the plot in self.plot() with values at new time
         """
         t = self.sfreq.val
-        t_seconds = t * 3600
+        t_dimensionless = t / self.time_scale
         for key, plot in self.plots.items():
             if self.variables[key][0][0].dimensions == 2:
                 spatial_var_name, spatial_var_value = self.spatial_variable[key]
@@ -394,7 +393,7 @@ class QuickPlot(object):
                     for j, variable in enumerate(variable_lists):
                         plot[i][j].set_ydata(
                             variable(
-                                t_seconds,
+                                t_dimensionless,
                                 **{spatial_var_name: spatial_var_value},
                                 warn=False
                             )
