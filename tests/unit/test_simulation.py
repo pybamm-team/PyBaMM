@@ -1,5 +1,7 @@
 import pybamm
 import numpy as np
+import pandas as pd
+import os
 import unittest
 
 
@@ -346,6 +348,40 @@ class TestSimulation(unittest.TestCase):
         t_eval = np.linspace(0, 0.01, 5)
         sim.solve(t_eval=t_eval)
         sim.plot(testing=True)
+
+    def test_drive_cycle_data(self):
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        param["Current function [A]"] = "[current data]US06"
+
+        drive_cycle = pd.read_csv(
+            os.path.join(pybamm.root_dir(), "input", "drive_cycles", "US06.csv"),
+            comment="#",
+            skip_blank_lines=True,
+            header=None,
+        )
+        time_data = drive_cycle.values[:, 0]
+        tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
+
+        sim = pybamm.Simulation(model, parameter_values=param)
+
+        # check solution is returned at the times in the data (only almost equal due
+        # to multiplication by tau)
+        sim.solve()
+        np.testing.assert_array_almost_equal(sim.solution.t * tau, time_data)
+
+        # check warning raised if the largest gap in t_eval is bigger than the
+        # smallest gap in the data
+        sim.reset()
+        with self.assertWarns(pybamm.SolverWarning):
+            sim.solve(t_eval=np.linspace(0, 1, 100))
+
+        # check warning raised if t_eval doesnt conatin time_data , but has a finer
+        # resolution (can still solve, but good for users to know they dont have
+        # the solution returned at the data points)
+        sim.reset()
+        with self.assertWarns(pybamm.SolverWarning):
+            sim.solve(t_eval=np.linspace(0, time_data[-1] / tau, 800))
 
 
 if __name__ == "__main__":

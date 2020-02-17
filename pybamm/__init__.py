@@ -120,6 +120,7 @@ from .expression_tree.exceptions import (
     OptionError,
     ModelError,
     SolverError,
+    SolverWarning,
     ShapeError,
     ModelWarning,
     UndefinedOperationError,

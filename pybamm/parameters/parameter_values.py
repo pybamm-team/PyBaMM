@@ -227,7 +227,7 @@ class ParameterValues:
                         filename = os.path.join(path, value[6:] + ".csv")
                         function_name = value[6:]
                     data = pd.read_csv(
-                        filename, comment="#", skip_blank_lines=True
+                        filename, comment="#", skip_blank_lines=True, header=None
                     ).to_numpy()
                     # Save name and data
                     self._dict_items[name] = (function_name, data)
