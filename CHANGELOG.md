@@ -53,6 +53,7 @@
 
 ## Bug fixes
 
+-   Time for solver should now be given in seconds ([#832](https://github.com/pybamm-team/PyBaMM/pull/832))
 -   Fixed a bug where the first line of the data wasn't loaded when parameters are loaded from data ([#819](https://github.com/pybamm-team/PyBaMM/pull/819))
 -   Made `graphviz` an optional dependency ([#810](https://github.com/pybamm-team/PyBaMM/pull/810))
 -   Fixed examples to run with basic pip installation ([#800](https://github.com/pybamm-team/PyBaMM/pull/800))
