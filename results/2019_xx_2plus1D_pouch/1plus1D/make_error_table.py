@@ -8,6 +8,7 @@ import sys
 import pickle
 from pprint import pprint
 import shared
+import numpy as np
 
 # change working directory to the root of pybamm
 os.chdir(pybamm.root_dir())
@@ -62,23 +63,6 @@ errors = {
     "Current collector current density [A.m-2]": [None] * len(npts),
     "X-averaged cell temperature [K]": [None] * len(npts),
     "Terminal voltage [V]": [None] * len(npts),
-}
-scales = {
-    "Negative current collector potential [V]": param.evaluate(
-        pybamm.standard_parameters_lithium_ion.thermal_voltage
-    ),
-    "Positive current collector potential [V]": param.evaluate(
-        pybamm.standard_parameters_lithium_ion.thermal_voltage
-    ),
-    "Current collector current density [A.m-2]": param.evaluate(
-        pybamm.standard_parameters_lithium_ion.i_typ
-    ),
-    "X-averaged cell temperature [K]": param.evaluate(
-        pybamm.standard_parameters_lithium_ion.Delta_T
-    ),
-    "Terminal voltage [V]": param.evaluate(
-        pybamm.standard_parameters_lithium_ion.thermal_voltage
-    ),
 }
 sol_times = [None] * len(npts)
 for i, model in enumerate(models):
@@ -156,10 +140,10 @@ for i, model in enumerate(models):
                 mesh=mesh,
             )(t=t)
 
-        # compute RMS error
-        scale = scales[variable_name]
-        error = pybamm.rmse(pybamm_var / scale, comsol_var / scale)
-        return error
+        # compute RMS difference divided by RMS of comsol_var
+        error = np.sqrt(np.nanmean((pybamm_var - comsol_var) ** 2)) / np.sqrt(
+            np.nanmean((comsol_var) ** 2)
+        )
 
     for variable in errors.keys():
         errors[variable][i] = compute_error(variable)

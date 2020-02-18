@@ -59,6 +59,30 @@ errors = {
     "Terminal voltage [V]": [None] * len(npts),
     "Volume-averaged cell temperature [K]": [None] * len(npts),
 }
+scales = {
+    "Negative electrode potential [V]": param.evaluate(
+        pybamm.standard_parameters_lithium_ion.thermal_voltage
+    ),
+    "Positive electrode potential [V]": param.evaluate(
+        pybamm.standard_parameters_lithium_ion.thermal_voltage
+    ),
+    "Electrolyte potential [V]": param.evaluate(
+        pybamm.standard_parameters_lithium_ion.thermal_voltage
+    ),
+    "Negative particle surface concentration [mol.m-3]": param.evaluate(
+        pybamm.standard_parameters_lithium_ion.c_n_max
+    ),
+    "Positive particle surface concentration [mol.m-3]": param.evaluate(
+        pybamm.standard_parameters_lithium_ion.c_p_max
+    ),
+    "Electrolyte concentration [mol.m-3]": param.evaluate(
+        pybamm.standard_parameters_lithium_ion.c_e_typ
+    ),
+    "Terminal voltage [V]": pybamm.standard_parameters_lithium_ion.thermal_voltage,
+    "Volume-averaged cell temperature [K]": param.evaluate(
+        pybamm.standard_parameters_lithium_ion.Delta_T
+    ),
+}
 sol_times = [None] * len(npts)
 for i, model in enumerate(models):
     # process
@@ -193,11 +217,9 @@ for i, model in enumerate(models):
                 mesh=mesh,
             )(t=t)
 
-        # compute RMS difference divided by RMS of comsol_var
-        error = np.sqrt(np.nanmean((pybamm_var - comsol_var) ** 2)) / np.sqrt(
-            np.nanmean((comsol_var) ** 2)
-        )
-
+        # compute RMS error
+        scale = scales[variable_name]
+        error = pybamm.rmse(pybamm_var / scale, comsol_var / scale)
         return error
 
     for variable in errors.keys():
