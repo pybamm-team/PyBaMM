@@ -387,14 +387,14 @@ def plot_cc_potentials(
 
     # set labels
     if sharex is False:
-        ax[0, 0].set_xlabel(r"$z^* [mm]$")
+        ax[0, 0].set_xlabel(r"$z^*$ [mm]")
     ax[0, 0].set_ylabel(r"$\phi^*_{\mathrm{s,cn}}$ [V]")
     if sharex is False:
-        ax[0, 1].set_xlabel(r"$z^* [mm]$")
+        ax[0, 1].set_xlabel(r"$z^*$ [mm]")
     ax[0, 1].set_ylabel(r"$\phi^*_{\mathrm{s,cp}}$ [V]")
-    ax[1, 0].set_xlabel(r"$z^* [mm]$")
+    ax[1, 0].set_xlabel(r"$z^*$ [mm]")
     ax[1, 0].set_ylabel(r"$\phi^*_{\mathrm{s,cn}}$ (difference) [V]")
-    ax[1, 1].set_xlabel(r"$z^* [mm]$")
+    ax[1, 1].set_xlabel(r"$z^*$ [mm]")
     ax[1, 1].set_ylabel(r"$\phi^*_{\mathrm{s,cp}}$ (difference) [V]")
 
     ax[0, 0].text(-0.1, 1.1, "(a)", transform=ax[0, 0].transAxes)
@@ -521,14 +521,14 @@ def plot_cc_current_temperature(
 
     # set labels
     if sharex is False:
-        ax[0, 0].set_xlabel(r"$z^* [mm]$")
+        ax[0, 0].set_xlabel(r"$z^*$ [mm]")
     ax[0, 0].set_ylabel(r"$\mathcal{I}^*$ [A/m${}^2$]")
     if sharex is False:
-        ax[0, 1].set_xlabel(r"$z^* [mm]$")
+        ax[0, 1].set_xlabel(r"$z^*$ [mm]")
     ax[0, 1].set_ylabel(r"$\bar{T}^* - \bar{T}^*_0$ [K]")
-    ax[1, 0].set_xlabel(r"$z^* [mm]$")
+    ax[1, 0].set_xlabel(r"$z^*$ [mm]")
     ax[1, 0].set_ylabel(r"$\mathcal{I}^*$ (difference) [A/m${}^2$]")
-    ax[1, 1].set_xlabel(r"$z^* [mm]$")
+    ax[1, 1].set_xlabel(r"$z^*$ [mm]")
     ax[1, 1].set_ylabel(r"$\bar{T}^*$ (difference) [K]")
 
     ax[0, 0].text(-0.1, 1.1, "(a)", transform=ax[0, 0].transAxes)

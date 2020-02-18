@@ -259,9 +259,7 @@ def plot_2D_var(
         plt.colorbar(rel_diff_plot)
 
 
-def plot_cc_potentials(
-    t, comsol_model, output_variables, param,
-):
+def plot_cc_potentials(t, comsol_model, output_variables, param):
 
     # get y and z vals from comsol interp points (will be dimensional)
     y_plot = comsol_model.y_interp
@@ -329,17 +327,17 @@ def plot_cc_potentials(
     ax[1, 1].tick_params(which="both")
 
     # set labels
-    ax[0, 0].set_xlabel(r"$y^* [mm]$")
-    ax[0, 0].set_ylabel(r"$z^* [mm]$")
+    ax[0, 0].set_xlabel(r"$y^*$ [mm]")
+    ax[0, 0].set_ylabel(r"$z^*$ [mm]")
     ax[0, 0].set_title(r"$\phi^*_{\mathrm{s,cn}}$ [V]")
-    ax[0, 1].set_xlabel(r"$y^* [mm]$")
-    ax[0, 1].set_ylabel(r"$z^* [mm]$")
+    ax[0, 1].set_xlabel(r"$y^*$ [mm]")
+    ax[0, 1].set_ylabel(r"$z^*$ [mm]")
     ax[0, 1].set_title(r"$\phi^*_{\mathrm{s,cp}} - V^*$ [V]")
-    ax[1, 0].set_xlabel(r"$y^* [mm]$")
-    ax[1, 0].set_ylabel(r"$z^* [mm]$")
+    ax[1, 0].set_xlabel(r"$y^*$ [mm]")
+    ax[1, 0].set_ylabel(r"$z^*$ [mm]")
     ax[1, 0].set_title(r"$\phi^*_{\mathrm{s,cn}}$ (difference) [V]")
-    ax[1, 1].set_xlabel(r"$y^* [mm]$")
-    ax[1, 1].set_ylabel(r"$z^* [mm]$")
+    ax[1, 1].set_xlabel(r"$y^*$ [mm]")
+    ax[1, 1].set_ylabel(r"$z^*$ [mm]")
     ax[1, 1].set_title(r"$\phi^*_{\mathrm{s,cp}}$ (difference) [V]")
 
     ax[0, 0].text(-0.1, 1.1, "(a)", transform=ax[0, 0].transAxes)
@@ -348,9 +346,7 @@ def plot_cc_potentials(
     ax[1, 1].text(-0.1, 1.1, "(d)", transform=ax[1, 1].transAxes)
 
 
-def plot_cc_current(
-    t, comsol_model, output_variables, param,
-):
+def plot_cc_current(t, comsol_model, output_variables, param):
 
     # get y and z vals from comsol interp points (will be dimensional)
     y_plot = comsol_model.y_interp
@@ -379,9 +375,7 @@ def plot_cc_current(
 
     # Make plot
     fig, ax = plt.subplots(1, 2, figsize=(6.4, 3))
-    fig.subplots_adjust(
-        left=0.1, bottom=0.2, right=0.95, top=0.8, wspace=0.3,
-    )
+    fig.subplots_adjust(left=0.1, bottom=0.2, right=0.95, top=0.8, wspace=0.3)
     cmap = plt.get_cmap("plasma")
 
     plot_current = ax[0].pcolormesh(
@@ -398,11 +392,11 @@ def plot_cc_current(
     ax[1].tick_params(which="both")
 
     # set labels
-    ax[0].set_xlabel(r"$y^* [mm]$")
-    ax[0].set_ylabel(r"$z^* [mm]$")
+    ax[0].set_xlabel(r"$y^*$ [mm]")
+    ax[0].set_ylabel(r"$z^*$ [mm]")
     ax[0].set_title(r"$\mathcal{I}^*$ [A/m${}^2$]")
-    ax[1].set_xlabel(r"$y^* [mm]$")
-    ax[1].set_ylabel(r"$z^* [mm]$")
+    ax[1].set_xlabel(r"$y^*$ [mm]")
+    ax[1].set_ylabel(r"$z^*$ [mm]")
     ax[1].set_title(r"$\mathcal{I}^*$ (difference) [A/m${}^2$]")
 
     ax[0].text(-0.1, 1.1, "(a)", transform=ax[0].transAxes)

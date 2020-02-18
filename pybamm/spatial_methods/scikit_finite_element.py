@@ -70,10 +70,16 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the gradient operator. The
         gradient w of the function u is approximated by the finite element method
+<<<<<<< HEAD
         using the same function space as w, i.e. we solve w = grad(u), which
         corresponds to the weak form w*v*dx = grad(u)*v*dx, where v is a suitable
         test function.
 
+=======
+        using the same function space as u, i.e. we solve w = grad(u), which
+        corresponds to the weak form w*v*dx = grad(u)*v*dx, where v is a suitable
+        test function.
+>>>>>>> 84e7e9d099d089ee46183a09ad832faf7c6b3fed
         Parameters
         ----------
         symbol: :class:`pybamm.Symbol`
@@ -83,7 +89,10 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         boundary_conditions : dict
             The boundary conditions of the model
             ({symbol.id: {"negative tab": neg. tab bc, "positive tab": pos. tab bc}})
+<<<<<<< HEAD
 
+=======
+>>>>>>> 84e7e9d099d089ee46183a09ad832faf7c6b3fed
         Returns
         -------
         :class: `pybamm.Concatenation`
@@ -111,8 +120,13 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         mass_inv = pybamm.Matrix(inv(csc_matrix(mass)))
 
         # compute gradient
+<<<<<<< HEAD
         grad_y = mass_inv @ grad_y_matrix @ discretised_symbol
         grad_z = mass_inv @ grad_z_matrix @ discretised_symbol
+=======
+        grad_y = mass_inv @ (grad_y_matrix @ discretised_symbol)
+        grad_z = mass_inv @ (grad_z_matrix @ discretised_symbol)
+>>>>>>> 84e7e9d099d089ee46183a09ad832faf7c6b3fed
 
         # create concatenation
         grad = pybamm.Concatenation(
@@ -133,7 +147,10 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
     def gradient_matrix(self, symbol, boundary_conditions):
         """
         Gradient matrix for finite elements in the appropriate domain.
+<<<<<<< HEAD
 
+=======
+>>>>>>> 84e7e9d099d089ee46183a09ad832faf7c6b3fed
         Parameters
         ----------
         symbol: :class:`pybamm.Symbol`
@@ -141,7 +158,10 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         boundary_conditions : dict
             The boundary conditions of the model
             ({symbol.id: {"negative tab": neg. tab bc, "positive tab": pos. tab bc}})
+<<<<<<< HEAD
 
+=======
+>>>>>>> 84e7e9d099d089ee46183a09ad832faf7c6b3fed
         Returns
         -------
         :class:`pybamm.Matrix`
@@ -156,7 +176,11 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         def gradient_dy(u, du, v, dv, w):
             return du[0] * v[0]
 
+<<<<<<< HEAD
         # make form for the gradient in the \ direction
+=======
+        # make form for the gradient in the z direction
+>>>>>>> 84e7e9d099d089ee46183a09ad832faf7c6b3fed
         @skfem.bilinear_form
         def gradient_dz(u, du, v, dv, w):
             return du[1] * v[1]
