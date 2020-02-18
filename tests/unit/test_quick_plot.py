@@ -31,6 +31,12 @@ class TestQuickPlot(unittest.TestCase):
             "c broadcasted": pybamm.FullBroadcast(
                 c, ["negative electrode", "separator"], "current collector"
             ),
+            "b broadcasted negative electrode": pybamm.PrimaryBroadcast(
+                b, "negative particle"
+            ),
+            "c broadcasted positive electrode": pybamm.PrimaryBroadcast(
+                c, "positive particle"
+            ),
         }
 
         # ODEs only (don't use jacobian)
@@ -70,9 +76,16 @@ class TestQuickPlot(unittest.TestCase):
         quick_plot.plot(0)
 
         quick_plot = pybamm.QuickPlot(
-            solution, [["a", "a"], ["b broadcasted", "b broadcasted"], "c broadcasted"]
+            solution,
+            [
+                ["a", "a"],
+                ["b broadcasted", "b broadcasted"],
+                "c broadcasted",
+                "b broadcasted negative electrode",
+                "c broadcasted positive electrode",
+            ],
         )
-        self.assertEqual(len(quick_plot.axis), 3)
+        self.assertEqual(len(quick_plot.axis), 5)
         quick_plot.plot(0)
 
         # update the axis

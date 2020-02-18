@@ -3,6 +3,7 @@
 #
 import numpy as np
 import pybamm
+import warnings
 from collections import defaultdict
 
 
@@ -89,7 +90,7 @@ class QuickPlot(object):
         self.time_scale = models[0].timescale_eval / 3600
         # Spatial scales (default to 1 if information not in model)
         variables = models[0].variables
-        self.spatial_scales = {"x": 1, "y": 1, "z": 1}
+        self.spatial_scales = {"x": 1, "y": 1, "z": 1, "r_n": 1, "r_p": 1}
         if "x [m]" and "x" in variables:
             self.spatial_scales["x"] = (variables["x [m]"] / variables["x"]).evaluate()[
                 -1
@@ -372,10 +373,10 @@ class QuickPlot(object):
         self.sfreq = Slider(axfreq, "Time", 0, self.max_t, valinit=0)
         self.sfreq.on_changed(self.update)
 
-        # plt.subplots_adjust(
-        #     top=0.92, bottom=0.15, left=0.10, right=0.9, hspace=0.5, wspace=0.5
-        # )
+        # ignore the warning about tight layout
+        warnings.simplefilter("ignore")
         self.fig.tight_layout()
+        warnings.simplefilter("always")
 
         if not testing:  # pragma: no cover
             plt.show()
