@@ -9,7 +9,7 @@ pybamm.set_logging_level("INFO")
 
 
 # load model
-model = pybamm.lithium_ion.DFN()
+model = pybamm.lithium_ion.SPM()
 
 # create geometry
 geometry = model.default_geometry
@@ -34,6 +34,11 @@ solver = model.default_solver
 solver.rtol = 1e-3
 solver.atol = 1e-6
 solution = solver.solve(model, t_eval)
+c_s_n = solution['Negative particle concentration']
+c_s_p = solution['Positive particle concentration']
+r = np.linspace(0.2,0.6,100)
+t = solution.t
+import ipdb; ipdb.set_trace()
 
 # plot
 plot = pybamm.QuickPlot(solution)
