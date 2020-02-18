@@ -52,6 +52,46 @@ class SingleParticle(BaseModel):
 
         return variables
 
+    def set_boundary_conditions(self, variables):
+            c_s_xav = variables[
+                "X-averaged " + self.domain.lower() + " particle concentration"
+            ]
+
+            c_s_surf_xav = variables[
+                "X-averaged " + self.domain.lower() + " particle surface concentration"
+            ]
+
+            T_k_xav = variables[
+                "X-averaged " + self.domain.lower() + " electrode temperature"
+            ]
+
+            j_xav = variables[
+                "X-averaged "
+                + self.domain.lower()
+                + " electrode interfacial current density"
+            ]
+
+            if self.domain == "Negative":
+                rbc = (
+                    -self.param.C_n
+                    * j_xav
+                    / self.param.a_n
+                    / self.param.D_n(c_s_surf_xav, T_k_xav)
+                )
+
+            elif self.domain == "Positive":
+                rbc = (
+                    -self.param.C_p
+                    * j_xav
+                    / self.param.a_p
+                    / self.param.gamma_p
+                    / self.param.D_p(c_s_surf_xav, T_k_xav)
+                )
+
+            self.boundary_conditions = {
+                c_s_xav: {"left": (pybamm.Scalar(0), "Neumann"), "right": (rbc, "Neumann")}
+            }
+
     def _unpack(self, variables):
         c_s_xav = variables[
             "X-averaged " + self.domain.lower() + " particle concentration"
