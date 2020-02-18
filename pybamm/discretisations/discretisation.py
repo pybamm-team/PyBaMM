@@ -178,9 +178,7 @@ class Discretisation(object):
         for event in model.events:
             pybamm.logger.debug("Discretise event '{}'".format(event.name))
             processed_event = pybamm.Event(
-                event.name,
-                self.process_symbol(event.expression),
-                event.event_type
+                event.name, self.process_symbol(event.expression), event.event_type
             )
             processed_events.append(processed_event)
         model_disc.events = processed_events
@@ -192,9 +190,9 @@ class Discretisation(object):
         )
 
         # Check that resulting model makes sense
-        if check_model:
-            pybamm.logger.info("Performing model checks for {}".format(model.name))
-            self.check_model(model_disc)
+        # if check_model:
+        #     pybamm.logger.info("Performing model checks for {}".format(model.name))
+        #     self.check_model(model_disc)
 
         pybamm.logger.info("Finish discretising {}".format(model.name))
 
@@ -402,7 +400,7 @@ class Discretisation(object):
         # check that all initial conditions are set
         processed_concatenated_initial_conditions = self._concatenate_in_order(
             processed_initial_conditions, check_complete=True
-        ).evaluate(0, None)
+        )
 
         return processed_initial_conditions, processed_concatenated_initial_conditions
 

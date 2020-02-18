@@ -110,7 +110,9 @@ class QuickPlot(object):
                 variables["r_p [m]"] / variables["r_p"]
             ).evaluate()[-1]
         if "Time [h]" and "Time" in variables:
-            self.time_scale = (variables["Time [h]"] / variables["Time"]).evaluate(t=1)
+            self.time_scale = (variables["Time [h]"] / variables["Time"]).evaluate(
+                t=1, u={k: v[0] for k, v in solutions[0].inputs.items()}
+            )
 
         # Time parameters
         self.ts = [solution.t for solution in solutions]

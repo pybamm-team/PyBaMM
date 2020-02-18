@@ -115,7 +115,7 @@ class BaseSolver(object):
 
         """
         inputs = inputs or {}
-        y0 = model.concatenated_initial_conditions
+        y0 = model.concatenated_initial_conditions.evaluate(0, None, inputs)
 
         # Check model.algebraic for ode solvers
         if self.ode_solver is True and len(model.algebraic) > 0:
@@ -135,9 +135,7 @@ class BaseSolver(object):
         if model.convert_to_format != "casadi":
             simp = pybamm.Simplification()
             # Create Jacobian from concatenated rhs and algebraic
-            y = pybamm.StateVector(
-                slice(0, np.size(model.concatenated_initial_conditions))
-            )
+            y = pybamm.StateVector(slice(0, np.size(y0)))
             # set up Jacobian object, for re-use of dict
             jacobian = pybamm.Jacobian()
         else:
@@ -267,13 +265,13 @@ class BaseSolver(object):
             residuals, residuals_eval, jacobian_eval = process(all_states, "residuals")
             model.residuals_eval = residuals_eval
             model.jacobian_eval = jacobian_eval
-            y0_guess = model.concatenated_initial_conditions.flatten()
+            y0_guess = y0.flatten()
             model.y0 = self.calculate_consistent_state(model, 0, y0_guess)
         else:
             # can use DAE solver to solve ODE model
             model.residuals_eval = Residuals(rhs, "residuals", model)
             model.jacobian_eval = jac_rhs
-            model.y0 = model.concatenated_initial_conditions[:, 0]
+            model.y0 = y0.flatten()
 
         # Save CasADi functions for the CasADi solver
         # Note: when we pass to casadi the ode part of the problem must be in explicit
