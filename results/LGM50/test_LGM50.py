@@ -10,7 +10,7 @@ experiment = pybamm.Experiment(
         "Discharge at 1C until 2.5 V",
         "Rest for 2 hours",
     ],
-    period="10 seconds",
+    period="1 seconds",
 )
 model = pybamm.lithium_ion.DFN()
 param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Chen2020)
@@ -45,7 +45,7 @@ tau = param.process_symbol(pybamm.standard_parameters_lithium_ion.tau_discharge)
 filename = "1C"
 
 data_experiments = pd.read_csv(
-    pybamm.root_dir() + "/results/LGM50/data/data" + filename + "_rest.csv"
+    "~/LGM50/data/data" + filename + "_rest.csv"
 ).to_numpy()
 
 voltage = sim.solution["Terminal voltage [V]"]
@@ -93,8 +93,28 @@ axes10[1].set_ylabel("Voltage error [V]")
 plt.tight_layout()
 
 # plt.savefig(
-#     pybamm.root_dir() + "/results/LGM50/figures/fig" + filename + ".png",
+#     "~/LGM50/figures/fig" + filename + ".png",
 #     dpi=300
 # )
+
+plt.figure(num=1, figsize=(6, 4))
+plt.fill_between(
+    data_experiments[:, 0] / 3600,
+    data_experiments[:, 1] + data_experiments[:, 2],
+    data_experiments[:, 1] - data_experiments[:, 2],
+    color="#808080",
+    label="experiments"
+)
+plt.plot(
+    np.array([data_experiments[0, 0] / 3600, 0]),
+    Ueq(sim.solution.t[0]) * np.ones(2),
+    color="C1"
+)
+plt.plot(time(sim.solution.t), voltage(sim.solution.t), color="C1", label="model")
+plt.xlabel("t [h]")
+plt.ylabel("Voltage [V]")
+plt.legend()
+
+plt.tight_layout()
 
 plt.show()
