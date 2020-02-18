@@ -38,6 +38,8 @@ class Concatenation(pybamm.Symbol):
         # combine domains from children
         domain = []
         for child in children:
+            if not isinstance(child, pybamm.Symbol):
+                raise TypeError("{} is not a pybamm symbol".format(child))
             child_domain = child.domain
             if set(domain).isdisjoint(child_domain):
                 domain += child_domain

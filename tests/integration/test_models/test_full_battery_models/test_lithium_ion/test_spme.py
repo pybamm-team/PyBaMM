@@ -15,6 +15,13 @@ class TestSPMe(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
+    def test_basic_processing_python(self):
+        options = {"thermal": "isothermal"}
+        model = pybamm.lithium_ion.SPMe(options)
+        model.convert_to_format = "python"
+        modeltest = tests.StandardModelTest(model, solver=pybamm.ScipySolver())
+        modeltest.test_all()
+
     def test_basic_processing_1plus1D(self):
         options = {"current collector": "potential pair", "dimensionality": 1}
         model = pybamm.lithium_ion.SPMe(options)

@@ -5,11 +5,13 @@
 /local/
 *.DS_Store
 *.mat
+*.csv
 
-# don't ignore important .txt files
+# don't ignore important .txt and .csv files
 !requirements*
 !LICENSE.txt
 !CMakeLists.txt
+!input/**/*.csv
 
 # running files
 *.pyc
@@ -70,6 +72,12 @@ pyvenv.cfg
 # sundials
 sundials
 sundials4
+sundials-*
+SuiteSparse-*
+build_sundials
+
+# downloads
+*.gz
 
 # third party
 third-party

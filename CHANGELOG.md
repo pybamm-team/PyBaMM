@@ -3,9 +3,16 @@
 ## Features
 
 -   Added capacitance effects to lithium-ion models ()
+-   Added NCA parameter set ([#824](https://github.com/pybamm-team/PyBaMM/pull/824))
+-   Added functionality to `Solution` that automatically gets `t_eval` from the data when simulating drive cycles and performs checks to ensure the output has the required resolution to accurately capture the input current ([#819](https://github.com/pybamm-team/PyBaMM/pull/819))
+-   Added options to export a solution to matlab or csv ([#811](https://github.com/pybamm-team/PyBaMM/pull/811))
+-   Allow porosity to vary in space ([#809](https://github.com/pybamm-team/PyBaMM/pull/809))
+-   Added functionality to solve DAE models with non-smooth current inputs ([#808](https://github.com/pybamm-team/PyBaMM/pull/808))
+-   Added functionality to simulate experiments and testing protocols ([#807](https://github.com/pybamm-team/PyBaMM/pull/807))
 -   Added fuzzy string matching for parameters and variables ([#796](https://github.com/pybamm-team/PyBaMM/pull/796))
 -   Changed ParameterValues to raise an error when a parameter that wasn't previously defined is updated ([#796](https://github.com/pybamm-team/PyBaMM/pull/796))
 -   Added some basic models (BasicSPM and BasicDFN) in order to clearly demonstrate the PyBaMM model structure for battery models ([#795](https://github.com/pybamm-team/PyBaMM/pull/795))
+-   Allow initial conditions in the particle to depend on x ([#786](https://github.com/pybamm-team/PyBaMM/pull/786))
 -   Added the harmonic mean to the Finite Volume method, which is now used when computing fluxes ([#783](https://github.com/pybamm-team/PyBaMM/pull/783))
 -   Refactored `Solution` to make it a dictionary that contains all of the solution variables. This automatically creates `ProcessedVariable` objects when required, so that the solution can be obtained much more easily. ([#781](https://github.com/pybamm-team/PyBaMM/pull/781))
 -   Added notebook to explain broadcasts ([#776](https://github.com/pybamm-team/PyBaMM/pull/776))
@@ -47,6 +54,8 @@
 
 ## Bug fixes
 
+-   Fixed a bug where the first line of the data wasn't loaded when parameters are loaded from data ([#819](https://github.com/pybamm-team/PyBaMM/pull/819))
+-   Made `graphviz` an optional dependency ([#810](https://github.com/pybamm-team/PyBaMM/pull/810))
 -   Fixed examples to run with basic pip installation ([#800](https://github.com/pybamm-team/PyBaMM/pull/800))
 -   Added events for CasADi solver when stepping ([#800](https://github.com/pybamm-team/PyBaMM/pull/800))
 -   Improved implementation of broadcasts ([#776](https://github.com/pybamm-team/PyBaMM/pull/776))
@@ -60,10 +69,13 @@
 -   Added missing temperature dependence in electrolyte and interface submodels ([#698](https://github.com/pybamm-team/PyBaMM/pull/698))
 -   Fixed differentiation of functions that have more than one argument ([#687](https://github.com/pybamm-team/PyBaMM/pull/687))
 -   Added warning if `ProcessedVariable` is called outside its interpolation range ([#681](https://github.com/pybamm-team/PyBaMM/pull/681))
+-   Updated installation instructions for Mac OS ([#680](https://github.com/pybamm-team/PyBaMM/pull/680))
 -   Improved the way `ProcessedVariable` objects are created in higher dimensions ([#581](https://github.com/pybamm-team/PyBaMM/pull/581))
 
 ## Breaking changes
 
+-   Model events are now represented as a list of `pybamm.Event` ([#759](https://github.com/pybamm-team/PyBaMM/issues/759)
+-   Removed `ParameterValues.update_model`, whose functionality is now replaced by `InputParameter` ([#801](https://github.com/pybamm-team/PyBaMM/pull/801))
 -   Removed `Outer` and `Kron` nodes as no longer used ([#777](https://github.com/pybamm-team/PyBaMM/pull/777))
 -   Moved `results` to separate repositories ([#761](https://github.com/pybamm-team/PyBaMM/pull/761))
 -   The parameters "Bruggeman coefficient" must now be specified separately as "Bruggeman coefficient (electrolyte)" and "Bruggeman coefficient (electrode)"

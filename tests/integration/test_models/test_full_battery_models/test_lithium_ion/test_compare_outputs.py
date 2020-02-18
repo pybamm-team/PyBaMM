@@ -14,14 +14,15 @@ class TestCompareOutputs(unittest.TestCase):
             {"surface form": cap} for cap in [False, "differential", "algebraic"]
         ]
         model_combos = [
-            # ([pybamm.lithium_ion.SPM(opt) for opt in options]),
-            ([pybamm.lithium_ion.DFN(opt) for opt in options])
+            ([pybamm.lithium_ion.SPM(opt) for opt in options]),
+            ([pybamm.lithium_ion.SPMe(opt) for opt in options]),
+            ([pybamm.lithium_ion.DFN(opt) for opt in options]),
         ]
 
         for models in model_combos:
             # load parameter values (same for all models)
             param = models[0].default_parameter_values
-            param.update({"Typical current [A]": 1})
+            param.update({"Current function [A]": 1})
             for model in models:
                 param.process_model(model)
 
@@ -40,14 +41,14 @@ class TestCompareOutputs(unittest.TestCase):
                 discs[model] = disc
 
             # solve model
-            solutions = {}
+            solutions = []
             t_eval = np.linspace(0, 0.2, 100)
             for i, model in enumerate(models):
-                solution = model.default_solver.solve(model, t_eval)
-                solutions[model] = solution
+                solution = pybamm.CasadiSolver().solve(model, t_eval)
+                solutions.append(solution)
 
             # compare outputs
-            comparison = StandardOutputComparison(models, discs, solutions)
+            comparison = StandardOutputComparison(solutions)
             comparison.test_all(skip_first_timestep=True)
 
 

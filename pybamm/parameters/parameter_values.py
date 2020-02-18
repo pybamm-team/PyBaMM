@@ -227,7 +227,7 @@ class ParameterValues:
                         filename = os.path.join(path, value[6:] + ".csv")
                         function_name = value[6:]
                     data = pd.read_csv(
-                        filename, comment="#", skip_blank_lines=True
+                        filename, comment="#", skip_blank_lines=True, header=None
                     ).to_numpy()
                     # Save name and data
                     self._dict_items[name] = (function_name, data)
@@ -350,10 +350,32 @@ class ParameterValues:
             )
             model.initial_conditions[variable] = self.process_symbol(equation)
 
-        # Boundary conditions are dictionaries {"left": left bc, "right": right bc}
-        # in general, but may be imposed on the tabs (or *not* on the tab) for a
-        # small number of variables, e.g. {"negative tab": neg. tab bc,
-        # "positive tab": pos. tab bc "no tab": no tab bc}.
+        model.boundary_conditions = self.process_boundary_conditions(model)
+
+        for variable, equation in model.variables.items():
+            pybamm.logger.debug(
+                "Processing parameters for {!r} (variables)".format(variable)
+            )
+            model.variables[variable] = self.process_symbol(equation)
+
+        for event in model.events:
+            pybamm.logger.debug(
+                "Processing parameters for event'{}''".format(event.name)
+            )
+            event.expression = self.process_symbol(event.expression)
+
+        pybamm.logger.info("Finish setting parameters for {}".format(model.name))
+
+        return model
+
+    def process_boundary_conditions(self, model):
+        """
+        Process boundary conditions for a model
+        Boundary conditions are dictionaries {"left": left bc, "right": right bc}
+        in general, but may be imposed on the tabs (or *not* on the tab) for a
+        small number of variables, e.g. {"negative tab": neg. tab bc,
+        "positive tab": pos. tab bc "no tab": no tab bc}.
+        """
         new_boundary_conditions = {}
         sides = ["left", "right", "negative tab", "positive tab", "no tab"]
         for variable, bcs in model.boundary_conditions.items():
@@ -376,20 +398,7 @@ class ParameterValues:
                     else:
                         raise KeyError(err)
 
-        model.boundary_conditions = new_boundary_conditions
-
-        for variable, equation in model.variables.items():
-            pybamm.logger.debug(
-                "Processing parameters for {!r} (variables)".format(variable)
-            )
-            model.variables[variable] = self.process_symbol(equation)
-        for event, equation in model.events.items():
-            pybamm.logger.debug("Processing parameters for event '{}''".format(event))
-            model.events[event] = self.process_symbol(equation)
-
-        pybamm.logger.info("Finish setting parameters for {}".format(model.name))
-
-        return model
+        return new_boundary_conditions
 
     def update_model(self, model, disc):
         raise NotImplementedError(

@@ -420,9 +420,13 @@ curlyU_p_init = Q_e_max * (1.2 - q_init) / (Q_p_max * l_p)
 
 
 # hack to make consistent ic with lithium-ion
-# find a way to not have to do this
-c_n_init = c_e_init
-c_p_init = c_e_init
+def c_n_init(x):
+    return c_e_init
+
+
+def c_p_init(x):
+    return c_e_init
+
 
 # Thermal effects not implemented for lead-acid, but parameters needed for consistency
 T_init = pybamm.Scalar(0)
