@@ -3,6 +3,7 @@
 #
 import numpy as np
 import pybamm
+import warnings
 from collections import defaultdict
 
 
@@ -85,10 +86,11 @@ class QuickPlot(object):
         self.colors = colors
         self.linestyles = linestyles
 
-        # Scales (default to 1 if information not in model)
+        # Time scale in hours
+        self.time_scale = models[0].timescale_eval / 3600
+        # Spatial scales (default to 1 if information not in model)
         variables = models[0].variables
-        self.spatial_scales = {"x": 1, "y": 1, "z": 1}
-        self.time_scale = 1
+        self.spatial_scales = {"x": 1, "y": 1, "z": 1, "r_n": 1, "r_p": 1}
         if "x [m]" and "x" in variables:
             self.spatial_scales["x"] = (variables["x [m]"] / variables["x"]).evaluate()[
                 -1
@@ -109,8 +111,6 @@ class QuickPlot(object):
             self.spatial_scales["r_p"] = (
                 variables["r_p [m]"] / variables["r_p"]
             ).evaluate()[-1]
-        if "Time [h]" and "Time" in variables:
-            self.time_scale = (variables["Time [h]"] / variables["Time"]).evaluate(t=1)
 
         # Time parameters
         self.ts = [solution.t for solution in solutions]
@@ -373,10 +373,10 @@ class QuickPlot(object):
         self.sfreq = Slider(axfreq, "Time", 0, self.max_t, valinit=0)
         self.sfreq.on_changed(self.update)
 
-        # plt.subplots_adjust(
-        #     top=0.92, bottom=0.15, left=0.10, right=0.9, hspace=0.5, wspace=0.5
-        # )
+        # ignore the warning about tight layout
+        warnings.simplefilter("ignore")
         self.fig.tight_layout()
+        warnings.simplefilter("always")
 
         if not testing:  # pragma: no cover
             plt.show()

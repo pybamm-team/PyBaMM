@@ -117,6 +117,9 @@ class BaseSolver(object):
         inputs = inputs or {}
         y0 = model.concatenated_initial_conditions
 
+        # Set model timescale
+        model.timescale_eval = model.timescale.evaluate(u=inputs)
+
         # Check model.algebraic for ode solvers
         if self.ode_solver is True and len(model.algebraic) > 0:
             raise pybamm.SolverError(
@@ -430,6 +433,8 @@ class BaseSolver(object):
         if (np.diff(t_eval) < 0).any():
             raise pybamm.SolverError("t_eval must increase monotonically")
 
+        # Non-dimensionalise t_eval
+
         # Set up
         timer = pybamm.Timer()
 
@@ -438,6 +443,14 @@ class BaseSolver(object):
         inputs = inputs or {}
         ext_and_inputs = {**external_variables, **inputs}
 
+        # Raise warning if t_eval looks like it was supposed to be dimensionless
+        # already
+        if t_eval[-1] < 0.5:
+            raise pybamm.SolverError(
+                """It looks like t_eval might be dimensionless.
+                t_eval should now be provided in seconds"""
+            )
+
         # Set up (if not done already)
         if model not in self.models_set_up:
             self.set_up(model, ext_and_inputs)
@@ -445,6 +458,8 @@ class BaseSolver(object):
             self.models_set_up.add(model)
         else:
             set_up_time = 0
+        # Non-dimensionalise time
+        t_eval_dimensionless = t_eval / model.timescale_eval
         # Solve
         # Set inputs and external
         self.set_inputs(model, ext_and_inputs)
@@ -477,19 +492,21 @@ class BaseSolver(object):
         start_indices = [0]
         end_indices = []
         for dtime in discontinuities:
-            dindex = np.searchsorted(t_eval, dtime, side="left")
+            dindex = np.searchsorted(t_eval_dimensionless, dtime, side="left")
             end_indices.append(dindex + 1)
             start_indices.append(dindex + 1)
-            if t_eval[dindex] == dtime:
-                t_eval[dindex] += sys.float_info.epsilon
-                t_eval = np.insert(t_eval, dindex, dtime - sys.float_info.epsilon)
+            if t_eval_dimensionless[dindex] == dtime:
+                t_eval_dimensionless[dindex] += sys.float_info.epsilon
+                t_eval_dimensionless = np.insert(
+                    t_eval_dimensionless, dindex, dtime - sys.float_info.epsilon
+                )
             else:
-                t_eval = np.insert(
-                    t_eval,
+                t_eval_dimensionless = np.insert(
+                    t_eval_dimensionless,
                     dindex,
                     [dtime - sys.float_info.epsilon, dtime + sys.float_info.epsilon],
                 )
-        end_indices.append(len(t_eval))
+        end_indices.append(len(t_eval_dimensionless))
 
         # integrate separatly over each time segment and accumulate into the solution
         # object, restarting the solver at each discontinuity (and recalculating a
@@ -499,18 +516,19 @@ class BaseSolver(object):
         for start_index, end_index in zip(start_indices, end_indices):
             pybamm.logger.info(
                 "Calling solver for {} < t < {}".format(
-                    t_eval[start_index], t_eval[end_index - 1]
+                    t_eval_dimensionless[start_index] * model.timescale_eval,
+                    t_eval_dimensionless[end_index - 1] * model.timescale_eval,
                 )
             )
             timer.reset()
             if solution is None:
                 solution = self._integrate(
-                    model, t_eval[start_index:end_index], ext_and_inputs
+                    model, t_eval_dimensionless[start_index:end_index], ext_and_inputs
                 )
                 solution.solve_time = timer.time()
             else:
                 new_solution = self._integrate(
-                    model, t_eval[start_index:end_index], ext_and_inputs
+                    model, t_eval_dimensionless[start_index:end_index], ext_and_inputs
                 )
                 new_solution.solve_time = timer.time()
                 solution.append(new_solution, start_index=0)
@@ -518,12 +536,12 @@ class BaseSolver(object):
             if solution.termination != "final time":
                 break
 
-            if end_index != len(t_eval):
+            if end_index != len(t_eval_dimensionless):
                 # setup for next integration subsection
                 y0_guess = solution.y[:, -1]
                 if model.algebraic:
                     model.y0 = self.calculate_consistent_state(
-                        model, t_eval[end_index], y0_guess
+                        model, t_eval_dimensionless[end_index], y0_guess
                     )
                 else:
                     model.y0 = y0_guess
@@ -531,7 +549,7 @@ class BaseSolver(object):
                 last_state = solution.y[:, -1]
                 if len(model.algebraic) > 0:
                     model.y0 = self.calculate_consistent_state(
-                        model, t_eval[end_index], last_state
+                        model, t_eval_dimensionless[end_index], last_state
                     )
                 else:
                     model.y0 = last_state
@@ -624,9 +642,11 @@ class BaseSolver(object):
         else:
             set_up_time = 0
 
+        # Non-dimensionalise dt
+        dt_dimensionless = dt / model.timescale_eval
         # Step
         t = self.model_step_times[model]
-        t_eval = np.linspace(t, t + dt, npts)
+        t_eval = np.linspace(t, t + dt_dimensionless, npts)
         # Set inputs and external
         self.set_inputs(model, ext_and_inputs)
 
@@ -723,10 +743,16 @@ class SolverCallable:
             self.inputs = inputs
         elif self.form == "casadi":
             self.inputs = casadi.vertcat(*[x for x in inputs.values()])
+        self.timescale = self.model.timescale_eval
 
     def __call__(self, t, y):
         y = y[:, np.newaxis]
         if self.name in ["RHS", "algebraic", "residuals", "event"]:
+            pybamm.logger.debug(
+                "Evaluating {} for {} at t={}".format(
+                    self.name, self.model.name, t * self.timescale
+                )
+            )
             return self.function(t, y).flatten()
         else:
             return self.function(t, y)
@@ -750,8 +776,5 @@ class Residuals(SolverCallable):
         self.mass_matrix = model.mass_matrix.entries
 
     def __call__(self, t, y, ydot):
-        pybamm.logger.debug(
-            "Evaluating residuals for {} at t={}".format(self.model.name, t)
-        )
         states_eval = super().__call__(t, y)
         return states_eval - self.mass_matrix @ ydot

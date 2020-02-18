@@ -31,6 +31,12 @@ class TestQuickPlot(unittest.TestCase):
             "c broadcasted": pybamm.FullBroadcast(
                 c, ["negative electrode", "separator"], "current collector"
             ),
+            "b broadcasted negative electrode": pybamm.PrimaryBroadcast(
+                b, "negative particle"
+            ),
+            "c broadcasted positive electrode": pybamm.PrimaryBroadcast(
+                c, "positive particle"
+            ),
         }
 
         # ODEs only (don't use jacobian)
@@ -70,9 +76,16 @@ class TestQuickPlot(unittest.TestCase):
         quick_plot.plot(0)
 
         quick_plot = pybamm.QuickPlot(
-            solution, [["a", "a"], ["b broadcasted", "b broadcasted"], "c broadcasted"]
+            solution,
+            [
+                ["a", "a"],
+                ["b broadcasted", "b broadcasted"],
+                "c broadcasted",
+                "b broadcasted negative electrode",
+                "c broadcasted positive electrode",
+            ],
         )
-        self.assertEqual(len(quick_plot.axis), 3)
+        self.assertEqual(len(quick_plot.axis), 5)
         quick_plot.plot(0)
 
         # update the axis
@@ -107,7 +120,7 @@ class TestQuickPlot(unittest.TestCase):
             pybamm.QuickPlot(solution, ["3D variable"])
 
     def test_loqs_spm_base(self):
-        t_eval = np.linspace(0, 0.01, 2)
+        t_eval = np.linspace(0, 10, 2)
 
         # SPM
         for model in [pybamm.lithium_ion.SPM(), pybamm.lead_acid.LOQS()]:
