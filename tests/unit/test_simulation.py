@@ -385,6 +385,20 @@ class TestSimulation(unittest.TestCase):
         with self.assertWarns(pybamm.SolverWarning):
             sim.solve(t_eval=np.linspace(0, time_data[-1], 800))
 
+    def test_discontinuous_current(self):
+        def car_current(t):
+            current = (
+                1 * (t >= 0) * (t <= 50) - 0.5 * (t > 50) * (t <= 60) + 0.5 * (t > 60)
+            )
+            return current
+
+        model = pybamm.lithium_ion.DFN()
+        param = model.default_parameter_values
+        param["Current function [A]"] = car_current
+
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sim.solve()
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
