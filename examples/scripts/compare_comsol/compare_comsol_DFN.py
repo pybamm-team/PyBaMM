@@ -46,11 +46,8 @@ mesh = pybamm.Mesh(geometry, pybamm_model.default_submesh_types, var_pts)
 disc = pybamm.Discretisation(mesh, pybamm_model.default_spatial_methods)
 disc.process_model(pybamm_model)
 
-# discharge timescale
-tau = param.process_symbol(pybamm.standard_parameters_lithium_ion.tau_discharge)
-
 # solve model at comsol times
-time = comsol_variables["time"] / tau.evaluate(0)
+time = comsol_variables["time"]
 pybamm_solution = pybamm.CasadiSolver(mode="fast").solve(pybamm_model, time)
 
 
@@ -91,7 +88,7 @@ def get_interp_fun(variable_name, domain):
             )
 
     # Make sure to use dimensional time
-    fun = pybamm.Function(myinterp, pybamm.t * tau, name=variable_name + "_comsol")
+    fun = pybamm.Function(myinterp, pybamm.t, name=variable_name + "_comsol")
     fun.domain = domain
     fun.mesh = mesh.combine_submeshes(*domain)
     fun.secondary_mesh = None
@@ -111,7 +108,7 @@ comsol_voltage = pybamm.Function(
         fill_value="extrapolate",
         bounds_error=False,
     ),
-    pybamm.t * tau,
+    pybamm.t,
 )
 comsol_voltage.mesh = None
 comsol_voltage.secondary_mesh = None

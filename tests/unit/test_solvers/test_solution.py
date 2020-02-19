@@ -4,6 +4,9 @@
 import pybamm
 import unittest
 import numpy as np
+import pandas as pd
+from scipy.io import loadmat
+from tests import get_discretisation_for_testing
 
 
 class TestSolution(unittest.TestCase):
@@ -19,25 +22,47 @@ class TestSolution(unittest.TestCase):
         self.assertEqual(sol.inputs, {})
         self.assertEqual(sol.model, None)
 
+        with self.assertRaisesRegex(AttributeError, "sub solutions"):
+            print(sol.sub_solutions)
+
     def test_append(self):
         # Set up first solution
         t1 = np.linspace(0, 1)
         y1 = np.tile(t1, (20, 1))
         sol1 = pybamm.Solution(t1, y1)
         sol1.solve_time = 1.5
-        sol1.inputs = {}
+        sol1.model = pybamm.BaseModel()
+        sol1.inputs = {"a": 1}
 
         # Set up second solution
         t2 = np.linspace(1, 2)
         y2 = np.tile(t2, (20, 1))
         sol2 = pybamm.Solution(t2, y2)
         sol2.solve_time = 1
-        sol1.append(sol2)
+        sol2.inputs = {"a": 2}
+        sol1.append(sol2, create_sub_solutions=True)
 
         # Test
         self.assertEqual(sol1.solve_time, 2.5)
         np.testing.assert_array_equal(sol1.t, np.concatenate([t1, t2[1:]]))
         np.testing.assert_array_equal(sol1.y, np.concatenate([y1, y2[:, 1:]], axis=1))
+        np.testing.assert_array_equal(
+            sol1.inputs["a"],
+            np.concatenate([1 * np.ones_like(t1), 2 * np.ones_like(t2[1:])]),
+        )
+
+        # Test sub-solutions
+        self.assertEqual(len(sol1.sub_solutions), 2)
+        np.testing.assert_array_equal(sol1.sub_solutions[0].t, t1)
+        np.testing.assert_array_equal(sol1.sub_solutions[1].t, t2)
+        self.assertEqual(sol1.sub_solutions[0].model, sol1.model)
+        np.testing.assert_array_equal(
+            sol1.sub_solutions[0].inputs["a"], 1 * np.ones_like(t1)
+        )
+        self.assertEqual(sol1.sub_solutions[1].model, sol2.model)
+        np.testing.assert_array_equal(
+            sol1.sub_solutions[1].inputs["a"], 2 * np.ones_like(t2)
+        )
 
     def test_total_time(self):
         sol = pybamm.Solution([], None)
@@ -71,12 +96,14 @@ class TestSolution(unittest.TestCase):
 
     def test_save(self):
         model = pybamm.BaseModel()
+        # create both 1D and 2D variables
         c = pybamm.Variable("c")
-        model.rhs = {c: -c}
-        model.initial_conditions = {c: 1}
-        model.variables["c"] = c
+        d = pybamm.Variable("d", domain="negative electrode")
+        model.rhs = {c: -c, d: 1}
+        model.initial_conditions = {c: 1, d: 2}
+        model.variables = {"c": c, "d": d, "2c": 2 * c}
 
-        disc = pybamm.Discretisation()
+        disc = get_discretisation_for_testing()
         disc.process_model(model)
         solution = pybamm.ScipySolver().solve(model, np.linspace(0, 1))
 
@@ -84,16 +111,36 @@ class TestSolution(unittest.TestCase):
         with self.assertRaises(ValueError):
             solution.save_data("test.pickle")
         # set variables first then save
-        solution.update(["c"])
+        solution.update(["c", "d"])
         solution.save_data("test.pickle")
         data_load = pybamm.load("test.pickle")
         np.testing.assert_array_equal(solution.data["c"], data_load["c"])
+        np.testing.assert_array_equal(solution.data["d"], data_load["d"])
 
-        # test save
+        # to matlab
+        solution.save_data("test.mat", to_format="matlab")
+        data_load = loadmat("test.mat")
+        np.testing.assert_array_equal(solution.data["c"], data_load["c"].flatten())
+        np.testing.assert_array_equal(solution.data["d"], data_load["d"])
+
+        # to csv
+        with self.assertRaisesRegex(
+            ValueError, "only 1D variables can be saved to csv"
+        ):
+            solution.save_data("test.csv", to_format="csv")
+        # only save "c" and "2c"
+        solution.save_data("test.csv", ["c", "2c"], to_format="csv")
+        # read csv
+        df = pd.read_csv("test.csv")
+        np.testing.assert_array_almost_equal(df["c"], solution.data["c"])
+        np.testing.assert_array_almost_equal(df["2c"], solution.data["2c"])
+
+        # test save whole solution
         solution.save("test.pickle")
         solution_load = pybamm.load("test.pickle")
         self.assertEqual(solution.model.name, solution_load.model.name)
         np.testing.assert_array_equal(solution["c"].entries, solution_load["c"].entries)
+        np.testing.assert_array_equal(solution["d"].entries, solution_load["d"].entries)
 
     def test_solution_evals_with_inputs(self):
         model = pybamm.lithium_ion.SPM()
@@ -115,7 +162,7 @@ class TestSolution(unittest.TestCase):
             solver=solver,
         )
         inputs = {"Electrode height [m]": 0.1}
-        sim.solve(t_eval=np.linspace(0, 0.01, 10), inputs=inputs)
+        sim.solve(t_eval=np.linspace(0, 10, 10), inputs=inputs)
         time = sim.solution["Time [h]"](sim.solution.t)
         self.assertEqual(len(time), 10)
 

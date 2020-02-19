@@ -12,9 +12,9 @@ def lico2_diffusivity_Dualfoil1998(sto, T):
 
     Parameters
     ----------
-    sto: :class:`pybamm.Symbol`
+    sto : :class:`pybamm.Symbol`
         Electrode stochiometry
-    T: :class:`pybamm.Symbol`
+    T : :class:`pybamm.Symbol`
         Dimensional temperature [K]
 
     Returns

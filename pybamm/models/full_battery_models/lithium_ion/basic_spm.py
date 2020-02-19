@@ -89,8 +89,10 @@ class BasicSPM(BaseModel):
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (-param.C_p * j_p / param.a_p / param.gamma_p, "Neumann"),
         }
-        self.initial_conditions[c_s_n] = param.c_n_init
-        self.initial_conditions[c_s_p] = param.c_p_init
+        # c_n_init and c_p_init are functions, but for the SPM we evaluate them at x=0
+        # and x=1 since there is no x-dependence in the particles
+        self.initial_conditions[c_s_n] = param.c_n_init(0)
+        self.initial_conditions[c_s_p] = param.c_p_init(1)
         # Surf takes the surface value of a variable, i.e. its boundary value on the
         # right side. This is also accessible via `boundary_value(x, "right")`, with
         # "left" providing the boundary value of the left side

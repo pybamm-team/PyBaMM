@@ -178,9 +178,7 @@ class Discretisation(object):
         for event in model.events:
             pybamm.logger.debug("Discretise event '{}'".format(event.name))
             processed_event = pybamm.Event(
-                event.name,
-                self.process_symbol(event.expression),
-                event.event_type
+                event.name, self.process_symbol(event.expression), event.event_type
             )
             processed_events.append(processed_event)
         model_disc.events = processed_events
@@ -402,7 +400,7 @@ class Discretisation(object):
         # check that all initial conditions are set
         processed_concatenated_initial_conditions = self._concatenate_in_order(
             processed_initial_conditions, check_complete=True
-        ).evaluate(0, None)
+        )
 
         return processed_initial_conditions, processed_concatenated_initial_conditions
 
@@ -996,17 +994,20 @@ class Discretisation(object):
         """Check initial conditions are a numpy array"""
         # Individual
         for var, eqn in model.initial_conditions.items():
-            assert type(eqn.evaluate(0, None)) is np.ndarray, pybamm.ModelError(
+            assert isinstance(
+                eqn.evaluate(t=0, u="shape test"), np.ndarray
+            ), pybamm.ModelError(
                 """
                 initial_conditions must be numpy array after discretisation but they are
                 {} for variable '{}'.
                 """.format(
-                    type(eqn.evaluate(0, None)), var
+                    type(eqn.evaluate(t=0, u="shape test")), var
                 )
             )
         # Concatenated
         assert (
-            type(model.concatenated_initial_conditions) is np.ndarray
+            type(model.concatenated_initial_conditions.evaluate(t=0, u="shape test"))
+            is np.ndarray
         ), pybamm.ModelError(
             """
             Concatenated initial_conditions must be numpy array after discretisation but
