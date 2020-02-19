@@ -56,8 +56,8 @@ class BaseModel(pybamm.BaseSubModel):
         Q_sei = n_SEI_av * self.param.L_n * self.param.L_y * self.param.L_z
 
         L_scale = sp.L_sei_0_dim
-        n_scale = sp.L_sei_0 * sp.a_n / sp.V_bar_inner_dimensional
-        n_outer_scale = sp.L_sei_0 * sp.a_n / sp.V_bar_outer_dimensional
+        n_scale = sp.L_sei_0_dim * sp.a_n / sp.V_bar_inner_dimensional
+        n_outer_scale = sp.L_sei_0_dim * sp.a_n / sp.V_bar_outer_dimensional
 
         variables = {
             "Inner SEI thickness": L_inner,
@@ -108,7 +108,7 @@ class BaseModel(pybamm.BaseSubModel):
         j_sei_av = pybamm.x_average(j_sei)
 
         sp = pybamm.sei_parameters
-        j_scale = sp.F * sp.L_sei_0 / sp.V_bar_inner_dimensional / sp.tau_discharge
+        j_scale = sp.F * sp.L_sei_0_dim / sp.V_bar_inner_dimensional / sp.tau_discharge
 
         variables = {
             "Inner SEI reaction interfacial current density": j_inner,

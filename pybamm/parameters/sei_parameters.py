@@ -62,7 +62,7 @@ C_sei_reaction = (
     F * L_sei_0_dim / (m_sei_dimensional * tau_discharge * V_bar_inner_dimensional)
 ) * pybamm.exp(-(F * U_n_ref / (2 * R * T_ref)))
 
-R_sei = F * I_typ * R_sei_dimensional / (a_n * L_x)
+R_sei = F * I_typ * R_sei_dimensional * L_sei_0_dim / (a_n * L_x)
 
 v_bar = V_bar_outer_dimensional / V_bar_inner_dimensional
 
