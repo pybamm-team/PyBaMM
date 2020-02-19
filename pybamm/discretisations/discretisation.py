@@ -994,12 +994,12 @@ class Discretisation(object):
         """Check initial conditions are a numpy array"""
         # Individual
         for var, eqn in model.initial_conditions.items():
-            assert type(eqn.evaluate(0, None)) is np.ndarray, pybamm.ModelError(
+            assert type(eqn.evaluate(t=0, u="shape test")) is np.ndarray, pybamm.ModelError(
                 """
                 initial_conditions must be numpy array after discretisation but they are
                 {} for variable '{}'.
                 """.format(
-                    type(eqn.evaluate(0, None)), var
+                    type(eqn.evaluate(t=0, u="shape test")), var
                 )
             )
         # Concatenated

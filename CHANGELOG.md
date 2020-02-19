@@ -53,7 +53,7 @@
 
 ## Bug fixes
 
--   Time for solver should now be given in seconds ([#832](https://github.com/pybamm-team/PyBaMM/pull/832))
+-   Moved evaluation of initial conditions to solver ([#839](https://github.com/pybamm-team/PyBaMM/pull/839))
 -   Fixed a bug where the first line of the data wasn't loaded when parameters are loaded from data ([#819](https://github.com/pybamm-team/PyBaMM/pull/819))
 -   Made `graphviz` an optional dependency ([#810](https://github.com/pybamm-team/PyBaMM/pull/810))
 -   Fixed examples to run with basic pip installation ([#800](https://github.com/pybamm-team/PyBaMM/pull/800))
@@ -74,6 +74,7 @@
 
 ## Breaking changes
 
+-   Time for solver should now be given in seconds ([#832](https://github.com/pybamm-team/PyBaMM/pull/832))
 -   Model events are now represented as a list of `pybamm.Event` ([#759](https://github.com/pybamm-team/PyBaMM/issues/759)
 -   Removed `ParameterValues.update_model`, whose functionality is now replaced by `InputParameter` ([#801](https://github.com/pybamm-team/PyBaMM/pull/801))
 -   Removed `Outer` and `Kron` nodes as no longer used ([#777](https://github.com/pybamm-team/PyBaMM/pull/777))
