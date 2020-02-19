@@ -26,32 +26,46 @@ class ReactionLimited(BaseModel):
         L_inner = pybamm.standard_variables.L_inner
         L_outer = pybamm.standard_variables.L_outer
 
-        variables = self.get_standard_thickness_variables(L_inner, L_outer)
+        variables = self._get_standard_thickness_variables(L_inner, L_outer)
 
         return variables
 
     def get_coupled_variables(self, variables):
-        c_s = variables[self.domain + " particle concentration"]
-        T_k = pybamm.PrimaryBroadcast(
-            variables[self.domain + " electrode temperature"],
-            [self.domain.lower() + " particle"],
-        )
+        phi_s_n = variables["Negative electrode potential"]
+        phi_e_n = variables["Negative electrolyte potential"]
+        j_n = variables["Negative electrode interfacial current density"]
+        L_sei = variables["Total SEI thickness"]
 
-        if self.domain == "Negative":
-            N_s = -self.param.D_n(c_s, T_k) * pybamm.grad(c_s)
-        elif self.domain == "Positive":
-            N_s = -self.param.D_p(c_s, T_k) * pybamm.grad(c_s)
+        C_sei = pybamm.sei_parameters.C_sei_reaction
+        R_sei = pybamm.sei_parameters.R_sei
+        alpha = 0.5
+        # alpha = pybamm.sei_parameters.alpha
 
-        variables.update(self._get_standard_flux_variables(N_s, N_s))
+        # need to revise for thermal case
+        j_sei = (1 / C_sei) * pybamm.exp(-(phi_s_n - phi_e_n - j_n * L_sei * R_sei))
 
-        if self.domain == "Negative":
-            x = pybamm.standard_spatial_vars.x_n
-            R = pybamm.FunctionParameter("Negative particle distribution in x", x)
-            variables.update({"Negative particle distribution in x": R})
+        j_inner = alpha * j_sei
+        j_outer = (1 - alpha) * j_sei
 
-        elif self.domain == "Positive":
-            x = pybamm.standard_spatial_vars.x_p
-            R = pybamm.FunctionParameter("Positive particle distribution in x", x)
-            variables.update({"Positive particle distribution in x": R})
+        variables.update(self._get_standard_reaction_variables(j_inner, j_outer))
 
         return variables
+
+    def set_rhs(self, variables):
+        L_inner = variables["Inner SEI thickness"]
+        L_outer = variables["Outer SEI thickness"]
+        j_inner = variables["Inner SEI reaction interfacial current density"]
+        j_outer = variables["Outer SEI reaction interfacial current density"]
+
+        v_bar = pybamm.sei_parameters.v_bar
+
+        self.rhs = {L_inner: j_inner, L_outer: v_bar * j_outer}
+
+    def set_initial_conditions(self, variables):
+        L_inner = variables["Inner SEI thickness"]
+        L_outer = variables["Outer SEI thickness"]
+
+        L_inner_0 = pybamm.sei_parameters.L_inner_0
+        L_outer_0 = pybamm.sei_parameters.L_outer_0
+
+        self.initial_conditions = {L_inner: L_inner_0, L_outer: L_outer_0}

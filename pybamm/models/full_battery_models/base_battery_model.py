@@ -60,6 +60,11 @@ class BaseBatteryModel(pybamm.BaseModel):
                 variable for instead of solving in PyBaMM. The entries of the lists
                 are strings that correspond to the submodel names in the keys
                 of `self.submodels`.
+            * "sei" : str
+                Set the sei submodel to be used. If None, no SEI model is use. Options
+                are "reaction limited", "solvent diffusion limited",
+                "electron migration limited", or "lithium interstitial
+                diffusion limited".
 
 
     **Extends:** :class:`pybamm.BaseModel`
@@ -155,6 +160,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "thermal": "isothermal",
             "thermal current collector": False,
             "external submodels": [],
+            "sei": None,
         }
         options = default_options
         # any extra options overwrite the default options

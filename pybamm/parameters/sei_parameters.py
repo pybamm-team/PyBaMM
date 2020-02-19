@@ -39,8 +39,32 @@ c_li_0_dimensional = pybamm.Parameter(
     "Lithium interstitial reference concentration [mol.m-3]"
 )
 
+L_inner_0_dim = pybamm.Parameter("Initial inner SEI thickness [m]")
+L_outer_0_dim = pybamm.Parameter("Initial outer SEI thickness [m]")
+
+L_sei_0_dim = L_inner_0_dim + L_outer_0_dim
+
 # --------------------------------------------------------------------------------------
 # Dimensionless parameters
 
-# write as C_SEI_reaction etc ...
+U_n_ref = pybamm.standard_parameters_lithium_ion.U_n_ref
+F = pybamm.standard_parameters_lithium_ion.F
+R = pybamm.standard_parameters_lithium_ion.R
+tau_discharge = pybamm.standard_parameters_lithium_ion.tau_discharge
+T_ref = pybamm.standard_parameters_lithium_ion.T_ref
 
+a_n = pybamm.standard_parameters_lithium_ion.a_n_dim
+L_x = pybamm.standard_parameters_lithium_ion.L_x
+
+I_typ = pybamm.electrical_parameters.I_typ
+
+C_sei_reaction = (
+    F * L_sei_0_dim / (m_sei_dimensional * tau_discharge * V_bar_inner_dimensional)
+) * pybamm.exp(-(F * U_n_ref / (2 * R * T_ref)))
+
+R_sei = F * I_typ * R_sei_dimensional / (a_n * L_x)
+
+v_bar = V_bar_outer_dimensional / V_bar_inner_dimensional
+
+L_inner_0 = L_inner_0_dim / L_sei_0_dim
+L_outer_0 = L_outer_0_dim / L_sei_0_dim

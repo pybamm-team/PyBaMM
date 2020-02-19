@@ -174,6 +174,7 @@ from .models.submodels import (
     porosity,
     thermal,
     tortuosity,
+    sei,
 )
 
 #
@@ -202,6 +203,7 @@ from .parameters import geometric_parameters
 from .parameters import electrical_parameters
 from .parameters import thermal_parameters
 from .parameters import standard_parameters_lithium_ion, standard_parameters_lead_acid
+from .parameters import sei_parameters
 from .parameters.print_parameters import print_parameters, print_evaluated_parameters
 from .parameters import parameter_sets
 

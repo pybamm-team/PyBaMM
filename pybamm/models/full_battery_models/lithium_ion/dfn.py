@@ -44,6 +44,7 @@ class DFN(BaseModel):
         self.set_electrolyte_submodel()
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
+        self.set_sei_submodel()
 
         if build:
             self.build_model()
@@ -101,6 +102,10 @@ class DFN(BaseModel):
         self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(
             self.param, self.reactions
         )
+
+    def set_sei_submodel(self):
+        if self.options["sei"] == "reaction limited":
+            self.submodels["sei"] = pybamm.sei.ReactionLimited(self.param)
 
     @property
     def default_geometry(self):

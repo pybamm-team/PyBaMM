@@ -37,6 +37,7 @@ Marquis2019 = {
     "cathode": "lico2_Marquis2019",
     "electrolyte": "lipf6_Marquis2019",
     "experiment": "1C_discharge_from_full_Marquis2019",
+    "sei": "Example",
 }
 
 NCA_Kim2011 = {
@@ -47,6 +48,7 @@ NCA_Kim2011 = {
     "cathode": "nca_Kim2011",
     "electrolyte": "lipf6_Kim2011",
     "experiment": "1C_discharge_from_full_Kim2011",
+    "sei": "Example",
 }
 
 #
