@@ -471,25 +471,15 @@ class Simulation:
         if solver is None:
             solver = self.solver
 
-        if save is False:
-            # Don't pass previous solution
-            self._solution = solver.step(
-                None,
-                self.built_model,
-                dt,
-                npts=npts,
-                external_variables=external_variables,
-                inputs=inputs,
-            )
-        else:
-            self._solution = solver.step(
-                self._solution,
-                self.built_model,
-                dt,
-                npts=npts,
-                external_variables=external_variables,
-                inputs=inputs,
-            )
+        self._solution = solver.step(
+            self._solution,
+            self.built_model,
+            dt,
+            npts=npts,
+            external_variables=external_variables,
+            inputs=inputs,
+            save=save,
+        )
 
     def get_variable_array(self, *variables):
         """

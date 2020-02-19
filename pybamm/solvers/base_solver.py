@@ -575,7 +575,14 @@ class BaseSolver(object):
         return solution
 
     def step(
-        self, old_solution, model, dt, npts=2, external_variables=None, inputs=None
+        self,
+        old_solution,
+        model,
+        dt,
+        npts=2,
+        external_variables=None,
+        inputs=None,
+        save=True,
     ):
         """
         Step the solution of the model forward by a given time increment. The
@@ -599,7 +606,8 @@ class BaseSolver(object):
             values at the current time
         inputs : dict, optional
             Any input parameters to pass to the model when solving
-
+        save : bool
+            Turn on to store the solution of all previous timesteps
 
         Raises
         ------
@@ -677,7 +685,7 @@ class BaseSolver(object):
             pybamm.logger.debug(
                 "Step time: {}".format(timer.format(solution.solve_time))
             )
-        if old_solution is None:
+        if save is False or old_solution is None:
             return solution
         else:
             return old_solution + solution
