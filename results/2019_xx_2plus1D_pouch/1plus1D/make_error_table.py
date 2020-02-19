@@ -60,6 +60,8 @@ var = pybamm.standard_spatial_vars
 errors = {
     "Negative current collector potential [V]": [None] * len(npts),
     "Positive current collector potential [V]": [None] * len(npts),
+    "X-averaged negative particle surface concentration [mol.m-3]": [None] * len(npts),
+    "X-averaged positive particle surface concentration [mol.m-3]": [None] * len(npts),
     "Current collector current density [A.m-2]": [None] * len(npts),
     "X-averaged cell temperature [K]": [None] * len(npts),
     "Terminal voltage [V]": [None] * len(npts),
@@ -144,9 +146,13 @@ for i, model in enumerate(models):
         error = np.sqrt(np.nanmean((pybamm_var - comsol_var) ** 2)) / np.sqrt(
             np.nanmean((comsol_var) ** 2)
         )
+        return error
 
     for variable in errors.keys():
-        errors[variable][i] = compute_error(variable)
+        try:
+            errors[variable][i] = compute_error(variable)
+        except KeyError:
+            pass
 
 
 "-----------------------------------------------------------------------------"

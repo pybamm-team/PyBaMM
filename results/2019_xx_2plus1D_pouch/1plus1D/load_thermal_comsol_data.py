@@ -92,5 +92,30 @@ for path, savefile in zip(paths, savefiles):
         "solution_time": sol_time,
     }
 
+    # add concentrations if provided
+    try:
+        # c_s_n_surf_av (stored as a (xz_npts, time_npts)  size array)
+        comsol = pd.read_csv(path + "c_s_n.csv", sep=",", header=None)
+        c_s_n_x = comsol[0].values  # first column x
+        c_s_n_z = comsol[1].values  # second column z
+        c_s_n = comsol.values[:, 2:]  # third to end columns var data
+
+        # c_s_p_surf_av (stored as a (xz_npts, time_npts)  size array)
+        comsol = pd.read_csv(path + "c_s_p.csv", sep=",", header=None)
+        c_s_p_x = comsol[0].values  # first column x
+        c_s_p_z = comsol[1].values  # second column z
+        c_s_p = comsol.values[:, 2:]  # third to end columns var data
+
+        comsol_variables.update({
+            "c_s_n_x": c_s_n_x,
+            "c_s_n_z": c_s_n_z,
+            "c_s_n": c_s_n,
+            "c_s_p_x": c_s_p_x,
+            "c_s_p_z": c_s_p_z,
+            "c_s_p": c_s_p,
+        })
+    except FileNotFoundError:
+        print("no concentration data for {}".format(path))
+
     with open(savefile, "wb") as f:
         pickle.dump(comsol_variables, f, pickle.HIGHEST_PROTOCOL)

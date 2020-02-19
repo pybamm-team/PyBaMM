@@ -96,6 +96,18 @@ def make_comsol_model(comsol_variables, mesh, param, z_interp=None, thermal=True
             }
         )
 
+    # Add concentrations if provided
+    if "c_s_n" in comsol_variables.keys():
+        comsol_c_s_n = get_interp_fun_curr_coll("c_s_n")
+        comsol_model.variables.update(
+            {"X-averaged negative particle surface concentration [mol.m-3]": comsol_c_s_n}
+        )
+    if "c_s_p" in comsol_variables.keys():
+        comsol_c_s_p = get_interp_fun_curr_coll("c_s_p")
+        comsol_model.variables.update(
+            {"X-averaged positive particle surface concentration [mol.m-3]": comsol_c_s_p}
+        )
+
     comsol_model.z_interp = z_interp
 
     return comsol_model
