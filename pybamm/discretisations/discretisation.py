@@ -994,8 +994,8 @@ class Discretisation(object):
         """Check initial conditions are a numpy array"""
         # Individual
         for var, eqn in model.initial_conditions.items():
-            assert (
-                type(eqn.evaluate(t=0, u="shape test")) is np.ndarray
+            assert isinstance(
+                eqn.evaluate(t=0, u="shape test"), np.ndarray
             ), pybamm.ModelError(
                 """
                 initial_conditions must be numpy array after discretisation but they are
