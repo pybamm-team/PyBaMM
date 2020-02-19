@@ -50,6 +50,7 @@ class TestBaseSolver(unittest.TestCase):
         class ScalarModel:
             concatenated_initial_conditions = np.array([[2]])
             jac_algebraic_eval = None
+            timescale = 1
 
             def rhs_eval(self, t, y):
                 return np.array([])
@@ -68,6 +69,7 @@ class TestBaseSolver(unittest.TestCase):
         class VectorModel:
             concatenated_initial_conditions = np.zeros_like(vec)
             jac_algebraic_eval = None
+            timescale = 1
 
             def rhs_eval(self, t, y):
                 return y[0:1]
@@ -101,6 +103,7 @@ class TestBaseSolver(unittest.TestCase):
         class Model:
             concatenated_initial_conditions = np.array([2])
             jac_algebraic_eval = None
+            timescale = 1
 
             def rhs_eval(self, t, y):
                 return np.array([])
