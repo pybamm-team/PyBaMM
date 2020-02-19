@@ -48,7 +48,6 @@ class BaseSolver(object):
         self.max_steps = max_steps
 
         self.models_set_up = set()
-        self.model_step_times = {}
 
         # Defaults, can be overwritten by specific solver
         self.name = "Base solver"
@@ -115,7 +114,7 @@ class BaseSolver(object):
 
         """
         inputs = inputs or {}
-        y0 = model.concatenated_initial_conditions
+        y0 = model.concatenated_initial_conditions.evaluate(0, None, inputs)
 
         # Set model timescale
         model.timescale_eval = model.timescale.evaluate(u=inputs)
@@ -138,9 +137,7 @@ class BaseSolver(object):
         if model.convert_to_format != "casadi":
             simp = pybamm.Simplification()
             # Create Jacobian from concatenated rhs and algebraic
-            y = pybamm.StateVector(
-                slice(0, np.size(model.concatenated_initial_conditions))
-            )
+            y = pybamm.StateVector(slice(0, np.size(y0)))
             # set up Jacobian object, for re-use of dict
             jacobian = pybamm.Jacobian()
         else:
@@ -280,13 +277,13 @@ class BaseSolver(object):
             residuals, residuals_eval, jacobian_eval = process(all_states, "residuals")
             model.residuals_eval = residuals_eval
             model.jacobian_eval = jacobian_eval
-            y0_guess = model.concatenated_initial_conditions.flatten()
+            y0_guess = y0.flatten()
             model.y0 = self.calculate_consistent_state(model, 0, y0_guess)
         else:
             # can use DAE solver to solve ODE model
             model.residuals_eval = Residuals(rhs, "residuals", model)
             model.jacobian_eval = jac_rhs
-            model.y0 = model.concatenated_initial_conditions[:, 0]
+            model.y0 = y0.flatten()
 
         # Save CasADi functions for the CasADi solver
         # Note: when we pass to casadi the ode part of the problem must be in explicit
@@ -564,7 +561,7 @@ class BaseSolver(object):
 
         # Add model and inputs to solution
         solution.model = model
-        solution.inputs = inputs
+        solution.inputs = ext_and_inputs
 
         # Identify the event that caused termination
         termination = self.get_termination_reason(solution, model.events)
@@ -580,7 +577,14 @@ class BaseSolver(object):
         return solution
 
     def step(
-        self, old_solution, model, dt, npts=2, external_variables=None, inputs=None
+        self,
+        old_solution,
+        model,
+        dt,
+        npts=2,
+        external_variables=None,
+        inputs=None,
+        save=True,
     ):
         """
         Step the solution of the model forward by a given time increment. The
@@ -604,7 +608,8 @@ class BaseSolver(object):
             values at the current time
         inputs : dict, optional
             Any input parameters to pass to the model when solving
-
+        save : bool
+            Turn on to store the solution of all previous timesteps
 
         Raises
         ------
@@ -634,20 +639,22 @@ class BaseSolver(object):
         ext_and_inputs = {**external_variables, **inputs}
 
         # Run set up on first step
-        if model not in self.model_step_times:
+        if old_solution is None:
             pybamm.logger.info(
                 "Start stepping {} with {}".format(model.name, self.name)
             )
             self.set_up(model, ext_and_inputs)
-            self.model_step_times[model] = 0.0
+            t = 0.0
             set_up_time = timer.time()
         else:
+            # initialize with old solution
+            t = old_solution.t[-1]
+            model.y0 = old_solution.y[:, -1]
             set_up_time = 0
 
         # Non-dimensionalise dt
         dt_dimensionless = dt / model.timescale_eval
         # Step
-        t = self.model_step_times[model]
         t_eval = np.linspace(t, t + dt_dimensionless, npts)
         # Set inputs and external
         self.set_inputs(model, ext_and_inputs)
@@ -662,14 +669,10 @@ class BaseSolver(object):
 
         # Add model and inputs to solution
         solution.model = model
-        solution.inputs = inputs
+        solution.inputs = ext_and_inputs
 
         # Identify the event that caused termination
         termination = self.get_termination_reason(solution, model.events)
-
-        # Set self.t and self.y0 to their values at the final step
-        self.model_step_times[model] = solution.t[-1]
-        model.y0 = solution.y[:, -1]
 
         pybamm.logger.debug("Finish stepping {} ({})".format(model.name, termination))
         if set_up_time:
@@ -684,7 +687,7 @@ class BaseSolver(object):
             pybamm.logger.debug(
                 "Step time: {}".format(timer.format(solution.solve_time))
             )
-        if old_solution is None:
+        if save is False or old_solution is None:
             return solution
         else:
             return old_solution + solution

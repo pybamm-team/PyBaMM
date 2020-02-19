@@ -41,6 +41,7 @@ class TestBaseSolver(unittest.TestCase):
         model = pybamm.BaseModel()
         a = pybamm.Scalar(1)
         model.algebraic = {a: a}
+        model.concatenated_initial_conditions = pybamm.Scalar(0)
         solver = pybamm.ScipySolver()
         with self.assertRaisesRegex(pybamm.SolverError, "Cannot use ODE solver"):
             solver.set_up(model)

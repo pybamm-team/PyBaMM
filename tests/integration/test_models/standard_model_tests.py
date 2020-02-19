@@ -136,7 +136,7 @@ class OptimisationsTest(object):
             if simplify:
                 eqn = eqn.simplify()
 
-            y = self.model.concatenated_initial_conditions
+            y = self.model.concatenated_initial_conditions.evaluate(t=0)
             if use_known_evals:
                 eqn_eval, known_evals = eqn.evaluate(0, y, known_evals={})
             elif to_python:
