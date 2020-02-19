@@ -393,7 +393,10 @@ class Simulation:
             # to correspond to a single discharge
             elif t_eval is None:
                 C_rate = self._parameter_values["C-rate"]
-                t_end = 3600 / C_rate
+                try:
+                    t_end = 3600 / C_rate
+                except TypeError:
+                    t_end = 3600
                 t_eval = np.linspace(0, t_end, 100)
 
             self.t_eval = t_eval

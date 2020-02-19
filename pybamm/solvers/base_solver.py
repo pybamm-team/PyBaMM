@@ -216,21 +216,31 @@ class BaseSolver(object):
 
         # Check for heaviside functions in rhs and algebraic and add discontinuity
         # events if these exist.
-        # Note: only checks for the case of t < X, t <= X, X < t, or X <= t
-        for symbol in itertools.chain(
-            model.concatenated_rhs.pre_order(), model.concatenated_algebraic.pre_order()
-        ):
-            if isinstance(symbol, pybamm.Heaviside):
-                if symbol.right.id == pybamm.t.id:
-                    expr = symbol.left
-                elif symbol.left.id == pybamm.t.id:
-                    expr = symbol.right
+        # Note: only checks for the case of t < X, t <= X, X < t, or X <= t, but also
+        # accounts for the fact that t might be dimensional
+        # Only do this for DAE models as ODE models can deal with discontinuities fine
+        if len(model.algebraic) > 0:
+            for symbol in itertools.chain(
+                model.concatenated_rhs.pre_order(),
+                model.concatenated_algebraic.pre_order(),
+            ):
+                if isinstance(symbol, pybamm.Heaviside):
+                    # Dimensionless
+                    if symbol.right.id == pybamm.t.id:
+                        expr = symbol.left
+                    elif symbol.left.id == pybamm.t.id:
+                        expr = symbol.right
+                    # Dimensional
+                    elif symbol.right.id == (pybamm.t * model.timescale).id:
+                        expr = symbol.left.new_copy() / symbol.right.right.new_copy()
+                    elif symbol.left.id == (pybamm.t * model.timescale).id:
+                        expr = symbol.right.new_copy() / symbol.left.right.new_copy()
 
-                model.events.append(
-                    pybamm.Event(
-                        str(symbol), expr.new_copy(), pybamm.EventType.DISCONTINUITY
+                    model.events.append(
+                        pybamm.Event(
+                            str(symbol), expr.new_copy(), pybamm.EventType.DISCONTINUITY
+                        )
                     )
-                )
 
         # Process rhs, algebraic and event expressions
         rhs, rhs_eval, jac_rhs = process(model.concatenated_rhs, "RHS")
@@ -325,7 +335,7 @@ class BaseSolver(object):
             Initial conditions that are consistent with the algebraic equations (roots
             of the algebraic equations)
         """
-        pybamm.logger.info("Start calculating consistent initial conditions")
+        pybamm.logger.info("Start calculating consistent states")
         rhs = model.rhs_eval
         algebraic = model.algebraic_eval
         jac = model.jac_algebraic_eval
@@ -333,7 +343,7 @@ class BaseSolver(object):
             y0_guess = model.concatenated_initial_conditions.flatten()
 
         # Split y0_guess into differential and algebraic
-        len_rhs = rhs(0, y0_guess).shape[0]
+        len_rhs = rhs(time, y0_guess).shape[0]
         y0_diff, y0_alg_guess = np.split(y0_guess, [len_rhs])
 
         def root_fun(y0_alg):
@@ -341,8 +351,8 @@ class BaseSolver(object):
             y0 = np.concatenate([y0_diff, y0_alg])
             out = algebraic(time, y0)
             pybamm.logger.debug(
-                "Evaluating algebraic equations at t=0, L2-norm is {}".format(
-                    np.linalg.norm(out)
+                "Evaluating algebraic equations at t={}, L2-norm is {}".format(
+                    time * model.timescale, np.linalg.norm(out)
                 )
             )
             return out
@@ -469,6 +479,18 @@ class BaseSolver(object):
 
         # make sure they are increasing in time
         discontinuities = sorted(discontinuities)
+
+        # remove any identical discontinuities
+        discontinuities = [
+            v
+            for i, v in enumerate(discontinuities)
+            if (
+                i == len(discontinuities) - 1
+                or discontinuities[i] < discontinuities[i + 1]
+            )
+            and v > 0
+        ]
+
         if len(discontinuities) > 0:
             pybamm.logger.info(
                 "Discontinuity events found at t = {}".format(discontinuities)
@@ -476,36 +498,27 @@ class BaseSolver(object):
         else:
             pybamm.logger.info("No discontinuity events found")
 
-        # remove any identical discontinuities
-        discontinuities = [
-            v
-            for i, v in enumerate(discontinuities)
-            if i == len(discontinuities) - 1
-            or discontinuities[i] < discontinuities[i + 1]
-        ]
-
         # insert time points around discontinuities in t_eval
         # keep track of sub sections to integrate by storing start and end indices
         start_indices = [0]
         end_indices = []
+        eps = sys.float_info.epsilon
         for dtime in discontinuities:
             dindex = np.searchsorted(t_eval_dimensionless, dtime, side="left")
             end_indices.append(dindex + 1)
             start_indices.append(dindex + 1)
-            if t_eval_dimensionless[dindex] == dtime:
-                t_eval_dimensionless[dindex] += sys.float_info.epsilon
+            if dtime - eps < t_eval_dimensionless[dindex] < dtime + eps:
+                t_eval_dimensionless[dindex] += eps
                 t_eval_dimensionless = np.insert(
-                    t_eval_dimensionless, dindex, dtime - sys.float_info.epsilon
+                    t_eval_dimensionless, dindex, dtime - eps
                 )
             else:
                 t_eval_dimensionless = np.insert(
-                    t_eval_dimensionless,
-                    dindex,
-                    [dtime - sys.float_info.epsilon, dtime + sys.float_info.epsilon],
+                    t_eval_dimensionless, dindex, [dtime - eps, dtime + eps],
                 )
         end_indices.append(len(t_eval_dimensionless))
 
-        # integrate separatly over each time segment and accumulate into the solution
+        # integrate separately over each time segment and accumulate into the solution
         # object, restarting the solver at each discontinuity (and recalculating a
         # consistent state afterwards if a dae)
         old_y0 = model.y0
@@ -518,16 +531,13 @@ class BaseSolver(object):
                 )
             )
             timer.reset()
+            new_solution = self._integrate(
+                model, t_eval_dimensionless[start_index:end_index], ext_and_inputs
+            )
+            new_solution.solve_time = timer.time()
             if solution is None:
-                solution = self._integrate(
-                    model, t_eval_dimensionless[start_index:end_index], ext_and_inputs
-                )
-                solution.solve_time = timer.time()
+                solution = new_solution
             else:
-                new_solution = self._integrate(
-                    model, t_eval_dimensionless[start_index:end_index], ext_and_inputs
-                )
-                new_solution.solve_time = timer.time()
                 solution.append(new_solution, start_index=0)
 
             if solution.termination != "final time":
@@ -535,14 +545,6 @@ class BaseSolver(object):
 
             if end_index != len(t_eval_dimensionless):
                 # setup for next integration subsection
-                y0_guess = solution.y[:, -1]
-                if model.algebraic:
-                    model.y0 = self.calculate_consistent_state(
-                        model, t_eval_dimensionless[end_index], y0_guess
-                    )
-                else:
-                    model.y0 = y0_guess
-
                 last_state = solution.y[:, -1]
                 if len(model.algebraic) > 0:
                     model.y0 = self.calculate_consistent_state(

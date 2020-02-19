@@ -100,13 +100,13 @@ class CasadiSolver(pybamm.BaseSolver):
             return solution
         elif self.mode == "safe":
             # Step-and-check
+            t = t_eval[0]
             init_event_signs = np.sign(
                 np.concatenate(
-                    [event(0, model.y0) for event in model.terminate_events_eval]
+                    [event(t, model.y0) for event in model.terminate_events_eval]
                 )
             )
             pybamm.logger.info("Start solving {} with {}".format(model.name, self.name))
-            t = t_eval[0]
             y0 = model.y0
             # Initialize solution
             solution = pybamm.Solution(np.array([t]), y0[:, np.newaxis])
@@ -144,7 +144,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 new_event_signs = np.sign(
                     np.concatenate(
                         [
-                            event(0, current_step_sol.y[:, -1])
+                            event(t, current_step_sol.y[:, -1])
                             for event in model.terminate_events_eval
                         ]
                     )
@@ -186,15 +186,15 @@ class CasadiSolver(pybamm.BaseSolver):
             # set up and solve
             t = casadi.MX.sym("t")
             u = casadi.MX.sym("u", u_stacked.shape[0])
-            y_diff = casadi.MX.sym("y_diff", rhs(0, y0, u).shape[0])
+            y_diff = casadi.MX.sym("y_diff", rhs(t_eval[0], y0, u).shape[0])
             problem = {"t": t, "x": y_diff, "p": u}
-            if algebraic(0, y0, u).is_empty():
+            if algebraic(t_eval[0], y0, u).is_empty():
                 method = "cvodes"
                 problem.update({"ode": rhs(t, y_diff, u)})
             else:
                 options["calc_ic"] = True
                 method = "idas"
-                y_alg = casadi.MX.sym("y_alg", algebraic(0, y0, u).shape[0])
+                y_alg = casadi.MX.sym("y_alg", algebraic(t_eval[0], y0, u).shape[0])
                 y_full = casadi.vertcat(y_diff, y_alg)
                 problem.update(
                     {
@@ -215,7 +215,7 @@ class CasadiSolver(pybamm.BaseSolver):
         )
 
     def _run_integrator(self, integrator, model, y0, inputs, t_eval):
-        rhs_size = model.rhs_eval(0, y0).shape[0]
+        rhs_size = model.rhs_eval(t_eval[0], y0).shape[0]
         y0_diff, y0_alg = np.split(y0, [rhs_size])
         try:
             # Try solving
