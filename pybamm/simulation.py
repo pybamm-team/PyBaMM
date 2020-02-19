@@ -203,14 +203,12 @@ class Simulation:
                 )
 
             self._experiment_inputs.append(operating_inputs)
-            # Convert time to dimensionless
-            dt_dimensional = op[2]
-            if dt_dimensional is None:
+            # Add time to the experiment times
+            dt = op[2]
+            if dt is None:
                 # max simulation time: 1 week
-                dt_dimensional = 7 * 24 * 3600
-            tau = self._parameter_values.evaluate(self.model.timescale)
-            dt_dimensionless = dt_dimensional / tau
-            self._experiment_times.append(dt_dimensionless)
+                dt = 7 * 24 * 3600
+            self._experiment_times.append(dt)
 
         # add current and voltage events to the model
         # current events both negative and positive to catch specification
@@ -301,7 +299,7 @@ class Simulation:
         self._mesh = pybamm.Mesh(self._geometry, self._submesh_types, self._var_pts)
         self._disc = pybamm.Discretisation(self._mesh, self._spatial_methods)
         self._built_model = self._disc.process_model(
-            self._model, inplace=False, check_model=check_model
+            self._model_with_set_params, inplace=False, check_model=check_model
         )
 
     def solve(
@@ -349,10 +347,7 @@ class Simulation:
             # is the tuple (filename, data).
             if isinstance(self._parameter_values["Current function [A]"], tuple):
                 filename = self._parameter_values["Current function [A]"][0]
-                tau = self._parameter_values.evaluate(self.model.param.timescale)
-                time_data = (
-                    self._parameter_values["Current function [A]"][1][:, 0] / tau
-                )
+                time_data = self._parameter_values["Current function [A]"][1][:, 0]
                 # If no t_eval is provided, we use the times provided in the data.
                 if t_eval is None:
                     pybamm.logger.info(
@@ -397,9 +392,11 @@ class Simulation:
             # If not using a drive cycle and t_eval is not provided, set t_eval
             # to correspond to a single discharge
             elif t_eval is None:
-                tau = self._parameter_values.evaluate(self.model.param.timescale)
                 C_rate = self._parameter_values["C-rate"]
-                t_end = 3600 / tau / C_rate
+                try:
+                    t_end = 3600 / C_rate
+                except TypeError:
+                    t_end = 3600
                 t_eval = np.linspace(0, t_end, 100)
 
             self.t_eval = t_eval
@@ -419,11 +416,8 @@ class Simulation:
             ):
                 pybamm.logger.info(self.experiment.operating_conditions_strings[idx])
                 inputs.update(exp_inputs)
-                # Non-dimensionalise period
-                tau = self._parameter_values.evaluate(self.model.timescale)
-                freq = exp_inputs["period"] / tau
                 # Make sure we take at least 2 timesteps
-                npts = max(int(round(dt / freq)) + 1, 2)
+                npts = max(int(round(dt / exp_inputs["period"])) + 1, 2)
                 self.step(
                     dt, npts=npts, external_variables=external_variables, inputs=inputs
                 )
@@ -480,25 +474,15 @@ class Simulation:
         if solver is None:
             solver = self.solver
 
-        if save is False:
-            # Don't pass previous solution
-            self._solution = solver.step(
-                None,
-                self.built_model,
-                dt,
-                npts=npts,
-                external_variables=external_variables,
-                inputs=inputs,
-            )
-        else:
-            self._solution = solver.step(
-                self._solution,
-                self.built_model,
-                dt,
-                npts=npts,
-                external_variables=external_variables,
-                inputs=inputs,
-            )
+        self._solution = solver.step(
+            self._solution,
+            self.built_model,
+            dt,
+            npts=npts,
+            external_variables=external_variables,
+            inputs=inputs,
+            save=save,
+        )
 
     def get_variable_array(self, *variables):
         """

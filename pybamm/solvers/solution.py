@@ -50,8 +50,8 @@ class _BaseSolution(object):
         self._t_event = t_event
         self._y_event = y_event
         self._termination = termination
-        # initialize empty inputs and model, to be populated later
         if copy_this is None:
+            # initialize empty inputs and model, to be populated later
             self._inputs = pybamm.FuzzyDict()
             self._model = None
             self.set_up_time = None

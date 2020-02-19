@@ -68,7 +68,6 @@ class BaseBatteryModel(pybamm.BaseModel):
     def __init__(self, options=None, name="Unnamed battery model"):
         super().__init__(name)
         self.options = options
-        self.set_standard_output_variables()
         self.submodels = {}
         self._built = False
         self._built_fundamental_and_external = False
@@ -253,109 +252,14 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         self._options = options
 
-    @property
-    def timescale(self):
-        "Default timescale for a battery model is the discharge timescale"
-        return self.param.tau_discharge
-
     def set_standard_output_variables(self):
-        # Standard output variables
-
-        # Interfacial current
-        self.variables.update(
-            {
-                "Negative electrode current density": None,
-                "Positive electrode current density": None,
-                "Electrolyte current density": None,
-                "Interfacial current density": None,
-                "Exchange current density": None,
-            }
-        )
-        self.variables.update(
-            {
-                "Negative electrode current density [A.m-2]": None,
-                "Positive electrode current density [A.m-2]": None,
-                "Electrolyte current density [A.m-2]": None,
-                "Interfacial current density [A.m-2]": None,
-                "Exchange current density [A.m-2]": None,
-            }
-        )
-
-        # Voltage
-        self.variables.update(
-            {
-                "Negative electrode open circuit potential": None,
-                "Positive electrode open circuit potential": None,
-                "X-averaged negative electrode open circuit potential": None,
-                "X-averaged positive electrode open circuit potential": None,
-                "X-averaged open circuit voltage": None,
-                "Measured open circuit voltage": None,
-                "Terminal voltage": None,
-            }
-        )
-        self.variables.update(
-            {
-                "Negative electrode open circuit potential [V]": None,
-                "Positive electrode open circuit potential [V]": None,
-                "X-averaged negative electrode open circuit potential [V]": None,
-                "X-averaged positive electrode open circuit potential [V]": None,
-                "X-averaged open circuit voltage [V]": None,
-                "Measured open circuit voltage [V]": None,
-                "Terminal voltage [V]": None,
-            }
-        )
-
-        # Overpotentials
-        self.variables.update(
-            {
-                "Negative reaction overpotential": None,
-                "Positive reaction overpotential": None,
-                "X-averaged negative reaction overpotential": None,
-                "X-averaged positive reaction overpotential": None,
-                "X-averaged reaction overpotential": None,
-                "X-averaged electrolyte overpotential": None,
-                "X-averaged solid phase ohmic losses": None,
-            }
-        )
-        self.variables.update(
-            {
-                "Negative reaction overpotential [V]": None,
-                "Positive reaction overpotential [V]": None,
-                "X-averaged negative reaction overpotential [V]": None,
-                "X-averaged positive reaction overpotential [V]": None,
-                "X-averaged reaction overpotential [V]": None,
-                "X-averaged electrolyte overpotential [V]": None,
-                "X-averaged solid phase ohmic losses [V]": None,
-            }
-        )
-
-        # Concentration
-        self.variables.update(
-            {
-                "Electrolyte concentration": None,
-                "Electrolyte concentration [mol.m-3]": None,
-            }
-        )
-
-        # Potential
-        self.variables.update(
-            {
-                "Negative electrode potential": None,
-                "Positive electrode potential": None,
-                "Electrolyte potential": None,
-            }
-        )
-
-        self.variables = {}
-
         # Time
-        time_scale = pybamm.electrical_parameters.timescale
         self.variables.update(
             {
                 "Time": pybamm.t,
-                "Time [s]": pybamm.t * time_scale,
-                "Time [min]": pybamm.t * time_scale / 60,
-                "Time [h]": pybamm.t * time_scale / 3600,
+                "Time [s]": pybamm.t * self.timescale,
+                "Time [min]": pybamm.t * self.timescale / 60,
+                "Time [h]": pybamm.t * self.timescale / 3600,
             }
         )
 
