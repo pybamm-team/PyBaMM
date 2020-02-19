@@ -42,7 +42,7 @@ class TestCompareOutputs(unittest.TestCase):
 
             # solve model
             solutions = []
-            t_eval = np.linspace(0, 0.2, 100)
+            t_eval = np.linspace(0, 3600, 100)
             for i, model in enumerate(models):
                 solution = pybamm.CasadiSolver().solve(model, t_eval)
                 solutions.append(solution)
@@ -58,5 +58,4 @@ if __name__ == "__main__":
 
     if "-v" in sys.argv:
         debug = True
-    pybamm.set_logging_level("DEBUG")
     unittest.main()
