@@ -190,9 +190,9 @@ class Discretisation(object):
         )
 
         # Check that resulting model makes sense
-        # if check_model:
-        #     pybamm.logger.info("Performing model checks for {}".format(model.name))
-        #     self.check_model(model_disc)
+        if check_model:
+            pybamm.logger.info("Performing model checks for {}".format(model.name))
+            self.check_model(model_disc)
 
         pybamm.logger.info("Finish discretising {}".format(model.name))
 
@@ -1004,7 +1004,8 @@ class Discretisation(object):
             )
         # Concatenated
         assert (
-            type(model.concatenated_initial_conditions) is np.ndarray
+            type(model.concatenated_initial_conditions.evaluate(t=0, u="shape test"))
+            is np.ndarray
         ), pybamm.ModelError(
             """
             Concatenated initial_conditions must be numpy array after discretisation but

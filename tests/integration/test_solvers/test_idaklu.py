@@ -15,7 +15,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
         disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
         disc.process_model(model)
-        t_eval = np.linspace(0, 0.2, 100)
+        t_eval = np.linspace(0, 3600, 100)
         solution = pybamm.IDAKLUSolver().solve(model, t_eval)
         np.testing.assert_array_less(1, solution.t.size)
 
@@ -28,7 +28,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
         disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
         disc.process_model(model)
-        t_eval = np.linspace(0, 0.2, 100)
+        t_eval = np.linspace(0, 3600, 100)
         solver = pybamm.IDAKLUSolver()
 
         variable_tols = {"Electrolyte concentration": 1e-3}
@@ -50,7 +50,7 @@ class TestIDAKLUSolver(unittest.TestCase):
 
         # Calculate time for each solver and each number of grid points
         var = pybamm.standard_spatial_vars
-        t_eval = np.linspace(0, 0.25, 100)
+        t_eval = np.linspace(0, 3600, 100)
         for npts in [100, 200]:
             # discretise
             var_pts = {

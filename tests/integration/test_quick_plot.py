@@ -21,7 +21,7 @@ class TestQuickPlot(unittest.TestCase):
         disc_spme = pybamm.Discretisation(mesh, spme.default_spatial_methods)
         disc_spm.process_model(spm)
         disc_spme.process_model(spme)
-        t_eval = np.linspace(0, 2, 100)
+        t_eval = np.linspace(0, 3600, 100)
         solution_spm = spm.default_solver.solve(spm, t_eval)
         solution_spme = spme.default_solver.solve(spme, t_eval)
         quick_plot = pybamm.QuickPlot([solution_spm, solution_spme])
@@ -74,7 +74,7 @@ class TestQuickPlot(unittest.TestCase):
         mesh = pybamm.Mesh(geometry, loqs.default_submesh_types, loqs.default_var_pts)
         disc_loqs = pybamm.Discretisation(mesh, loqs.default_spatial_methods)
         disc_loqs.process_model(loqs)
-        t_eval = np.linspace(0, 1, 100)
+        t_eval = np.linspace(0, 3600, 100)
         solution_loqs = loqs.default_solver.solve(loqs, t_eval)
 
         pybamm.QuickPlot(solution_loqs)

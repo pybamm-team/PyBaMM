@@ -28,7 +28,8 @@ class TestExternalCC(unittest.TestCase):
         solver = pybamm.IDAKLUSolver()
         sim = pybamm.Simulation(model, var_pts=var_pts, solver=solver)
 
-        t_eval = np.linspace(0, 0.08, 3)
+        # Simulate 100 seconds
+        t_eval = np.linspace(0, 100, 3)
 
         for i in np.arange(1, len(t_eval) - 1):
             dt = t_eval[i + 1] - t_eval[i]
