@@ -388,7 +388,9 @@ class TestSimulation(unittest.TestCase):
     def test_discontinuous_current(self):
         def car_current(t):
             current = (
-                1 * (t >= 0) * (t <= 50) - 0.5 * (t > 50) * (t <= 60) + 0.5 * (t > 60)
+                1 * (t >= 0) * (t <= 1000)
+                - 0.5 * (1000 < t) * (t <= 2000)
+                + 0.5 * (2000 < t)
             )
             return current
 
@@ -396,8 +398,15 @@ class TestSimulation(unittest.TestCase):
         param = model.default_parameter_values
         param["Current function [A]"] = car_current
 
-        sim = pybamm.Simulation(model, parameter_values=param)
+        sim = pybamm.Simulation(
+            model, parameter_values=param, solver=pybamm.CasadiSolver(mode="fast")
+        )
         sim.solve()
+        current = sim.solution["Current [A]"]
+        tau = model.timescale.evaluate()
+        self.assertEqual(current(0), 1)
+        self.assertEqual(current(1500 / tau), -0.5)
+        self.assertEqual(current(3000 / tau), 0.5)
 
 
 if __name__ == "__main__":
