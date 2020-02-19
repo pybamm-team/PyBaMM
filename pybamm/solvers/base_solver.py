@@ -48,7 +48,6 @@ class BaseSolver(object):
         self.max_steps = max_steps
 
         self.models_set_up = set()
-        self.model_step_times = {}
 
         # Defaults, can be overwritten by specific solver
         self.name = "Base solver"
@@ -630,20 +629,22 @@ class BaseSolver(object):
         ext_and_inputs = {**external_variables, **inputs}
 
         # Run set up on first step
-        if model not in self.model_step_times:
+        if old_solution is None:
             pybamm.logger.info(
                 "Start stepping {} with {}".format(model.name, self.name)
             )
             self.set_up(model, ext_and_inputs)
-            self.model_step_times[model] = 0.0
+            t = 0.0
             set_up_time = timer.time()
         else:
+            # initialize with old solution
+            t = old_solution.t[-1]
+            model.y0 = old_solution.y[:, -1]
             set_up_time = 0
 
         # Non-dimensionalise dt
         dt_dimensionless = dt / model.timescale_eval
         # Step
-        t = self.model_step_times[model]
         t_eval = np.linspace(t, t + dt_dimensionless, npts)
         # Set inputs and external
         self.set_inputs(model, ext_and_inputs)
@@ -662,10 +663,6 @@ class BaseSolver(object):
 
         # Identify the event that caused termination
         termination = self.get_termination_reason(solution, model.events)
-
-        # Set self.t and self.y0 to their values at the final step
-        self.model_step_times[model] = solution.t[-1]
-        model.y0 = solution.y[:, -1]
 
         pybamm.logger.debug("Finish stepping {} ({})".format(model.name, termination))
         if set_up_time:
