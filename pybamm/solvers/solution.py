@@ -6,7 +6,9 @@ import numbers
 import numpy as np
 import pickle
 import pybamm
+import pandas as pd
 from collections import defaultdict
+from scipy.io import savemat
 
 
 class _BaseSolution(object):
@@ -48,8 +50,8 @@ class _BaseSolution(object):
         self._t_event = t_event
         self._y_event = y_event
         self._termination = termination
-        # initialize empty inputs and model, to be populated later
         if copy_this is None:
+            # initialize empty inputs and model, to be populated later
             self._inputs = pybamm.FuzzyDict()
             self._model = None
             self.set_up_time = None
@@ -190,17 +192,56 @@ class _BaseSolution(object):
         with open(filename, "wb") as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 
-    def save_data(self, filename):
-        """Save solution data only (raw arrays) using pickle"""
-        if len(self.data) == 0:
+    def save_data(self, filename, variables=None, to_format="pickle"):
+        """
+        Save solution data only (raw arrays)
+
+        Parameters
+        ----------
+        filename : str
+            The name of the file to save data to
+        variables : list, optional
+            List of variables to save. If None, saves all of the variables that have
+            been created so far
+        to_format : str, optional
+            The format to save to. Options are:
+
+            - 'pickle' (default): creates a pickle file with the data dictionary
+            - 'matlab': creates a .mat file, for loading in matlab
+            - 'csv': creates a csv file (1D variables only)
+
+        """
+        if variables is None:
+            # variables not explicitly provided -> save all variables that have been
+            # computed
+            data = self.data
+        else:
+            # otherwise, save only the variables specified
+            data = {}
+            for name in variables:
+                data[name] = self[name].data
+        if len(data) == 0:
             raise ValueError(
-                """Solution does not have any data. Add variables by calling
-                'solution.update', e.g.
-                'solution.update(["Terminal voltage [V]", "Current [A]"])'
-                and then save"""
+                """
+                Solution does not have any data. Please provide a list of variables
+                to save.
+                """
             )
-        with open(filename, "wb") as f:
-            pickle.dump(self.data, f, pickle.HIGHEST_PROTOCOL)
+        if to_format == "pickle":
+            with open(filename, "wb") as f:
+                pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+        elif to_format == "matlab":
+            savemat(filename, data)
+        elif to_format == "csv":
+            for name, var in data.items():
+                if var.ndim == 2:
+                    raise ValueError(
+                        "only 1D variables can be saved to csv, but '{}' is 2D".format(
+                            name
+                        )
+                    )
+            df = pd.DataFrame(data)
+            df.to_csv(filename, index=False)
 
 
 class Solution(_BaseSolution):

@@ -70,25 +70,23 @@ class BaseParticle(pybamm.BaseSubModel):
 
         return variables
 
-    def _flux_law(self, c, T):
-        raise NotImplementedError
-
-    def _unpack(self, variables):
-        raise NotImplementedError
-
     def set_events(self, variables):
         c_s_surf = variables[self.domain + " particle surface concentration"]
         tol = 0.01
 
-        self.events.append(pybamm.Event(
-            "Minumum " + self.domain.lower() + " particle surface concentration",
-            pybamm.min(c_s_surf) - tol,
-            pybamm.EventType.TERMINATION
-        ))
+        self.events.append(
+            pybamm.Event(
+                "Minumum " + self.domain.lower() + " particle surface concentration",
+                pybamm.min(c_s_surf) - tol,
+                pybamm.EventType.TERMINATION,
+            )
+        )
 
-        self.events.append(pybamm.Event(
-            "Maximum " + self.domain.lower() + " particle surface concentration",
-            (1 - tol) - pybamm.max(c_s_surf),
-            pybamm.EventType.TERMINATION
-        ))
+        self.events.append(
+            pybamm.Event(
+                "Maximum " + self.domain.lower() + " particle surface concentration",
+                (1 - tol) - pybamm.max(c_s_surf),
+                pybamm.EventType.TERMINATION,
+            )
+        )
 

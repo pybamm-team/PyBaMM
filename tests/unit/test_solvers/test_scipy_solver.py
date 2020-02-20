@@ -6,7 +6,6 @@ import unittest
 import numpy as np
 from tests import get_mesh_for_testing
 import warnings
-from tests import get_discretisation_for_testing
 import sys
 
 
@@ -138,91 +137,6 @@ class TestScipySolver(unittest.TestCase):
             np.ones((N, T.size)) * (T[np.newaxis, :] - np.exp(T[np.newaxis, :])),
         )
 
-    def test_model_solver_ode_nonsmooth(self):
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
-        var1 = pybamm.Variable("var1", domain=whole_cell)
-        discontinuity = 0.6
-
-        # Create three different models with the same solution, each expressing the
-        # discontinuity in a different way
-
-        # first model explicitly adds a discontinuity event
-        def nonsmooth_rate(t):
-            return 0.1 * (t < discontinuity) + 0.1
-
-        rate = pybamm.Function(nonsmooth_rate, pybamm.t)
-        model1 = pybamm.BaseModel()
-        model1.rhs = {var1: rate * var1}
-        model1.initial_conditions = {var1: 1}
-        model1.events = [
-            pybamm.Event("var1 = 1.5", pybamm.min(var1 - 1.5)),
-            pybamm.Event("nonsmooth rate",
-                         pybamm.Scalar(discontinuity),
-                         pybamm.EventType.DISCONTINUITY
-                         ),
-        ]
-
-        # second model implicitly adds a discontinuity event via a heaviside function
-        model2 = pybamm.BaseModel()
-        model2.rhs = {var1: (0.1 * (pybamm.t < discontinuity) + 0.1) * var1}
-        model2.initial_conditions = {var1: 1}
-        model2.events = [
-            pybamm.Event("var1 = 1.5", pybamm.min(var1 - 1.5)),
-        ]
-
-        # third model implicitly adds a discontinuity event via another heaviside
-        # function
-        model3 = pybamm.BaseModel()
-        model3.rhs = {var1: (-0.1 * (discontinuity < pybamm.t) + 0.2) * var1}
-        model3.initial_conditions = {var1: 1}
-        model3.events = [
-            pybamm.Event("var1 = 1.5", pybamm.min(var1 - 1.5)),
-        ]
-
-        for model in [model1, model2, model3]:
-
-            disc = get_discretisation_for_testing()
-            disc.process_model(model)
-
-            # Solve
-            solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8)
-
-            # create two time series, one without a time point on the discontinuity,
-            # and one with
-            t_eval1 = np.linspace(0, 5, 10)
-            t_eval2 = np.insert(t_eval1,
-                                np.searchsorted(t_eval1, discontinuity),
-                                discontinuity)
-            solution1 = solver.solve(model, t_eval1)
-            solution2 = solver.solve(model, t_eval2)
-
-            # check time vectors
-            for solution in [solution1, solution2]:
-                # time vectors are ordered
-                self.assertTrue(np.all(solution.t[:-1] <= solution.t[1:]))
-
-                # time value before and after discontinuity is an epsilon away
-                dindex = np.searchsorted(solution.t, discontinuity)
-                value_before = solution.t[dindex - 1]
-                value_after = solution.t[dindex]
-                self.assertEqual(value_before + sys.float_info.epsilon, discontinuity)
-                self.assertEqual(value_after - sys.float_info.epsilon, discontinuity)
-
-            # both solution time vectors should have same number of points
-            self.assertEqual(len(solution1.t), len(solution2.t))
-
-            # check solution
-            for solution in [solution1, solution2]:
-                np.testing.assert_array_less(solution.y[0], 1.5)
-                np.testing.assert_array_less(solution.y[-1], 2.5)
-                var1_soln = np.exp(0.2 * solution.t)
-                y0 = np.exp(0.2 * discontinuity)
-                var1_soln[solution.t > discontinuity] = \
-                    y0 * np.exp(
-                    0.1 * (solution.t[solution.t > discontinuity] - discontinuity)
-                )
-                np.testing.assert_allclose(solution.y[0], var1_soln, rtol=1e-06)
-
     def test_model_step_python(self):
         # Create model
         model = pybamm.BaseModel()
@@ -242,22 +156,24 @@ class TestScipySolver(unittest.TestCase):
         solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
 
         # Step once
-        dt = 0.1
+        dt = 1
         step_sol = solver.step(None, model, dt)
         np.testing.assert_array_equal(step_sol.t, [0, dt])
-        np.testing.assert_allclose(step_sol.y[0], np.exp(0.1 * step_sol.t))
+        np.testing.assert_array_almost_equal(step_sol.y[0], np.exp(0.1 * step_sol.t))
 
         # Step again (return 5 points)
         step_sol_2 = solver.step(step_sol, model, dt, npts=5)
         np.testing.assert_array_equal(
             step_sol_2.t, np.concatenate([np.array([0]), np.linspace(dt, 2 * dt, 5)])
         )
-        np.testing.assert_allclose(step_sol_2.y[0], np.exp(0.1 * step_sol_2.t))
+        np.testing.assert_array_almost_equal(
+            step_sol_2.y[0], np.exp(0.1 * step_sol_2.t)
+        )
 
         # Check steps give same solution as solve
         t_eval = step_sol.t
         solution = solver.solve(model, t_eval)
-        np.testing.assert_allclose(solution.y[0], step_sol.y[0])
+        np.testing.assert_array_almost_equal(solution.y[0], step_sol.y[0])
 
     def test_model_solver_with_inputs(self):
         # Create model
