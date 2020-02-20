@@ -23,7 +23,10 @@ class BaseSolver(object):
     atol : float, optional
         The absolute tolerance for the solver (default is 1e-6).
     root_method : str, optional
-        The method to use to find initial conditions (default is "lm")
+        The method to use to find initial conditions (default is "casadi"). If "casadi",
+        the solver uses casadi's Newton rootfinding algorithm to find initial
+        conditions. Otherwise, the solver uses 'scipy.optimize.root' with method
+        specified by 'root_method' (e.g. "lm", "hybr", ...)
     root_tol : float, optional
         The tolerance for the initial-condition solver (default is 1e-6).
     max_steps: int, optional
@@ -125,8 +128,11 @@ class BaseSolver(object):
                 "Cannot use ODE solver '{}' to solve DAE model".format(self.name)
             )
 
+        if self.ode_solver is True:
+            self.root_method = None
         if (
-            isinstance(self, pybamm.CasadiSolver) or self.root_method == "casadi"
+            isinstance(self, pybamm.CasadiSolver)
+            or self.root_method == "casadi"
         ) and model.convert_to_format != "casadi":
             pybamm.logger.warning(
                 f"Converting {model.name} to CasADi for solving with CasADi solver"
@@ -349,17 +355,32 @@ class BaseSolver(object):
         # Solve using casadi or scipy
         if self.root_method == "casadi":
             # Set up
-            print("yp")
             u_stacked = casadi.vertcat(*[x for x in inputs.values()])
             u = casadi.MX.sym("u", u_stacked.shape[0])
-            alg = model.casadi_algebraic
             y_alg = casadi.MX.sym("y_alg", y0_alg_guess.shape[0])
             y = casadi.vertcat(y0_diff, y_alg)
-            alg_root = alg(time, y, u)
+            alg_root = model.casadi_algebraic(time, y, u)
             # Solve
-            roots = casadi.rootfinder("roots", "newton", dict(x=y_alg, p=u, g=alg_root))
-            y0_alg = roots(y0_alg_guess, u_stacked).full().flatten()
-            return np.concatenate([y0_diff, y0_alg])
+            try:
+                # set error_on_fail to False and just check the final output is small
+                # enough
+                roots = casadi.rootfinder(
+                    "roots",
+                    "newton",
+                    dict(x=y_alg, p=u, g=alg_root),
+                    {"error_on_fail": False},
+                )
+                y0_alg = roots(y0_alg_guess, u_stacked).full().flatten()
+                success = True
+                message = None
+                # Check final output
+                fun = model.casadi_algebraic(
+                    time, casadi.vertcat(y0_diff, y0_alg), u_stacked
+                )
+            except RuntimeError as err:
+                success = False
+                message = err.args[0]
+                fun = None
         else:
             algebraic = model.algebraic_eval
             jac = model.jac_algebraic_eval
@@ -404,27 +425,30 @@ class BaseSolver(object):
                 method=self.root_method,
                 tol=self.root_tol,
             )
-            # Return full set of consistent initial conditions (y0_diff unchanged)
-            y0_consistent = np.concatenate([y0_diff, sol.x])
+            # Set outputs
+            y0_alg = sol.x
+            success = sol.success
+            fun = sol.fun
+            message = sol.message
 
-            if sol.success and np.all(sol.fun < self.root_tol * len(sol.x)):
-                pybamm.logger.info("Finish calculating consistent initial conditions")
-                return y0_consistent
-            elif not sol.success:
-                raise pybamm.SolverError(
-                    "Could not find consistent initial conditions: {}".format(
-                        sol.message
-                    )
+        if success and np.all(fun < self.root_tol * len(y0_alg)):
+            # Return full set of consistent initial conditions (y0_diff unchanged)
+            y0_consistent = np.concatenate([y0_diff, y0_alg])
+            pybamm.logger.info("Finish calculating consistent initial conditions")
+            return y0_consistent
+        elif not success:
+            raise pybamm.SolverError(
+                "Could not find consistent initial conditions: {}".format(message)
+            )
+        else:
+            raise pybamm.SolverError(
+                """
+                Could not find consistent initial conditions: solver terminated
+                successfully, but maximum solution error ({}) above tolerance ({})
+                """.format(
+                    np.max(fun), self.root_tol * len(y0_alg)
                 )
-            else:
-                raise pybamm.SolverError(
-                    """
-                    Could not find consistent initial conditions: solver terminated
-                    successfully, but maximum solution error ({}) above tolerance ({})
-                    """.format(
-                        np.max(sol.fun), self.root_tol * len(sol.x)
-                    )
-                )
+            )
 
     def solve(self, model, t_eval, external_variables=None, inputs=None):
         """
