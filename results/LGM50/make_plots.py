@@ -122,7 +122,7 @@ plt.ylabel("Electrode potential")
 plt.xlim([0, 4])
 plt.xticks([])
 plt.yticks([])
-plt.legend()
+plt.legend(loc='upper right')
 
 plt.tight_layout()
 
@@ -257,22 +257,22 @@ fig11, axes11 = plt.subplots(2, 2, num=11, figsize=(6, 4.5))
 axes11[0, 0].plot(
     cathode_dQdE_delithiation.to_numpy()[:, 0],
     cathode_dQdE_delithiation.to_numpy()[:, 1],
-    color="blue",
-    linewidth=1,
+    color="blue", marker=".", linestyle="None", markersize=2,
+    # linewidth=1,
     label="delithiation GITT-OCV"
 )
 axes11[0, 0].plot(
     cathode_dQdE_lithiation.to_numpy()[:, 0],
     cathode_dQdE_lithiation.to_numpy()[:, 1],
-    color="red",
-    linewidth=1,
+    color="red", marker=".", linestyle="None", markersize=2,
+    # linewidth=1,
     label="lithiation GITT-OCV"
 )
 axes11[0, 0].plot(
     cathode_dQdE_pseudo_delithiation.to_numpy()[:, 0],
     cathode_dQdE_pseudo_delithiation.to_numpy()[:, 1],
     color="blue",
-    linestyle="--",
+    # linestyle="--",
     linewidth=1,
     label="delithiation pseudo-OCV"
 )
@@ -280,7 +280,7 @@ axes11[0, 0].plot(
     cathode_dQdE_pseudo_lithiation.to_numpy()[:, 0],
     cathode_dQdE_pseudo_lithiation.to_numpy()[:, 1],
     color="red",
-    linestyle="--",
+    # linestyle="--",
     linewidth=1,
     label="lithiation pseudo-OCV"
 )
@@ -294,22 +294,22 @@ axes11[0, 0].set_title("(a)")
 axes11[0, 1].plot(
     anode_dQdE_delithiation.to_numpy()[:, 0],
     anode_dQdE_delithiation.to_numpy()[:, 1],
-    color="blue",
-    linewidth=1,
+    color="blue", marker=".", linestyle="None", markersize=2,
+    # linewidth=1,
     label="delithiation GITT-OCV"
 )
 axes11[0, 1].plot(
     anode_dQdE_lithiation.to_numpy()[:, 0],
     anode_dQdE_lithiation.to_numpy()[:, 1],
-    color="red",
-    linewidth=1,
+    color="red", marker=".", linestyle="None", markersize=2,
+    # linewidth=1,
     label="lithiation GITT-OCV"
 )
 axes11[0, 1].plot(
     anode_dQdE_pseudo_delithiation.to_numpy()[:, 0],
     anode_dQdE_pseudo_delithiation.to_numpy()[:, 1],
     color="blue",
-    linestyle="--",
+    # linestyle="--",
     linewidth=1,
     label="delithiation pseudo-OCV"
 )
@@ -317,7 +317,7 @@ axes11[0, 1].plot(
     anode_dQdE_pseudo_lithiation.to_numpy()[:, 0],
     anode_dQdE_pseudo_lithiation.to_numpy()[:, 1],
     color="red",
-    linestyle="--",
+    # linestyle="--",
     linewidth=1,
     label="lithiation pseudo-OCV"
 )
@@ -331,14 +331,14 @@ axes11[0, 1].legend()
 axes11[1, 0].plot(
     cathode_dQdE_delithiation.to_numpy()[:, 0],
     cathode_dQdE_delithiation.to_numpy()[:, 1],
-    color="blue",
+    color="blue", marker=".", linestyle="None", markersize=2,
     linewidth=1,
     label="delithiation GITT-OCV"
 )
 axes11[1, 0].plot(
     cathode_dQdE_lithiation.to_numpy()[:, 0],
     cathode_dQdE_lithiation.to_numpy()[:, 1],
-    color="red",
+    color="red", marker=".", linestyle="None", markersize=2,
     linewidth=1,
     label="lithiation GITT-OCV"
 )
@@ -346,7 +346,7 @@ axes11[1, 0].plot(
     cathode_dQdE_pseudo_delithiation.to_numpy()[:, 0],
     cathode_dQdE_pseudo_delithiation.to_numpy()[:, 1],
     color="blue",
-    linestyle="--",
+    # linestyle="--",
     linewidth=1,
     label="delithiation pseudo-OCV"
 )
@@ -354,7 +354,7 @@ axes11[1, 0].plot(
     cathode_dQdE_pseudo_lithiation.to_numpy()[:, 0],
     cathode_dQdE_pseudo_lithiation.to_numpy()[:, 1],
     color="red",
-    linestyle="--",
+    # linestyle="--",
     linewidth=1,
     label="lithiation pseudo-OCV"
 )
@@ -370,22 +370,22 @@ axes11[1, 0].set_title("(c)")
 axes11[1, 1].plot(
     anode_dQdE_delithiation.to_numpy()[:, 0],
     anode_dQdE_delithiation.to_numpy()[:, 1],
-    color="blue",
-    linewidth=1,
+    color="blue", marker=".", linestyle="None", markersize=2,
+    # linewidth=1,
     label="delithiation GITT-OCV"
 )
 axes11[1, 1].plot(
     anode_dQdE_lithiation.to_numpy()[:, 0],
     anode_dQdE_lithiation.to_numpy()[:, 1],
-    color="red",
-    linewidth=1,
+    color="red", marker=".", linestyle="None", markersize=2,
+    # linewidth=1,
     label="lithiation GITT-OCV"
 )
 axes11[1, 1].plot(
     anode_dQdE_pseudo_delithiation.to_numpy()[:, 0],
     anode_dQdE_pseudo_delithiation.to_numpy()[:, 1],
     color="blue",
-    linestyle="--",
+    # linestyle="--",
     linewidth=1,
     label="delithiation pseudo-OCV"
 )
@@ -393,7 +393,7 @@ axes11[1, 1].plot(
     anode_dQdE_pseudo_lithiation.to_numpy()[:, 0],
     anode_dQdE_pseudo_lithiation.to_numpy()[:, 1],
     color="red",
-    linestyle="--",
+    # linestyle="--",
     linewidth=1,
     label="lithiation pseudo-OCV"
 )
@@ -542,12 +542,12 @@ fig13, axes13 = plt.subplots(3, 2, num=13, figsize=(6, 6.5))
 axes13[0, 0].semilogy(
     cathode_diffusivity_delithiation.to_numpy()[:, 0],
     cathode_diffusivity_delithiation.to_numpy()[:, 1],
-    color="blue", linestyle="None", marker="o", markersize=3, label="delithiation"
+    color="blue", linestyle="None", marker=".", markersize=2, label="delithiation"
 )
 axes13[0, 0].semilogy(
     cathode_diffusivity_lithiation.to_numpy()[:, 0],
     cathode_diffusivity_lithiation.to_numpy()[:, 1],
-    color="red", linestyle="None", marker="o", markersize=3, label="lithiation"
+    color="red", linestyle="None", marker=".", markersize=2, label="lithiation"
 )
 axes13[0, 0].set_xlim(left = -1)
 axes13[0, 0].set_xlabel("Capacity (mAh $\mathrm{cm}^{-2}$)")
@@ -558,12 +558,12 @@ axes13[0, 0].set_title("(a)")
 axes13[0, 1].semilogy(
     np.abs(anode_diffusivity_delithiation.to_numpy()[:, 0]),
     anode_diffusivity_delithiation.to_numpy()[:, 1],
-    color="blue", linestyle="None", marker="o", markersize=3, label="delithiation"
+    color="blue", linestyle="None", marker=".", markersize=2, label="delithiation"
 )
 axes13[0, 1].semilogy(
     np.abs(anode_diffusivity_lithiation.to_numpy()[:, 0]),
     anode_diffusivity_lithiation.to_numpy()[:, 1],
-    color="red", linestyle="None", marker="o", markersize=3, label="lithiation"
+    color="red", linestyle="None", marker=".", markersize=2, label="lithiation"
 )
 axes13[0, 1].set_ylim(bottom=1E-18)
 axes13[0, 1].set_xlabel("Capacity (mAh $\mathrm{cm}^{-2}$)")
