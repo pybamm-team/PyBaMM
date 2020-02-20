@@ -10,62 +10,39 @@ options = {"thermal": "isothermal"}
 model = pybamm.lithium_ion.DFN()
 
 # solve model
-
-sim = pybamm.Simulation(
-    model,
-    experiment=experiment,
-    solver=pybamm.CasadiSolver()
-)
-sim.solve()
-
-# solve model
-t_eval = np.linspace(0, 1.2, 2)
-C_rates = np.linspace(0.01, 50, 100)
-capacities = np.zeros((len(models), C_rates.size))
-times = np.zeros_like(capacities)
+C_rates = np.linspace(0.05, 5, 20)
+capacities = np.zeros_like(C_rates)
+currents = np.zeros_like(C_rates)
+voltage_av = np.zeros_like(C_rates)
 
 for i, C_rate in enumerate(C_rates):
-    for j, model in enumerate(models):
-        param.update(
-                {
-                    "C-rate": C_rate,
-                    "Current function": "[constant]",
-                }
-            )
-        param.update_model(model, discs[j])
+    experiment = pybamm.Experiment(
+        ["Discharge at {:.4f}C until 3.2V".format(C_rate)],
+        period="{:.4f} seconds".format(10 / C_rate)
+    )
+    sim = pybamm.Simulation(
+        model,
+        experiment=experiment,
+        solver=pybamm.CasadiSolver()
+    )
+    sim.solve()
 
-        # solver = pybamm.ScikitsDaeSolver()
-        solver = solvers[j]
-        solver.rtol = 1e-6
-        solver.atol = 1e-6
-        solution = solver.solve(model, t_eval)
-        current = model.variables["Current [A]"].evaluate(solution.t)
-        tau = param.process_symbol(pybamm.standard_parameters_lithium_ion.tau_discharge).evaluate()
-        time =  solution.t_event * tau
+    capacity = sim.solution["Discharge capacity [A.h]"]
+    current = sim.solution["Current [A]"]
+    voltage = sim.solution["Terminal voltage [V]"]
 
-        capacities[j, i] = time * current
-        times[j, i] = time
+    capacities[i] = capacity(sim.solution.t[-1])
+    currents[i] = current(sim.solution.t[-1])
+    voltage_av[i] = np.mean(voltage(sim.solution.t))
 
 plt.figure(1)
-for i, model in enumerate(models):
-    plt.plot(
-        C_rates, capacities[i, :],
-        label=labels[i],
-        color="C{}".format(i)
-    )
+plt.scatter(C_rates, capacities)
 plt.xlabel('C-rate')
-plt.ylabel('Capacity [C]')
-plt.legend()
+plt.ylabel('Capacity [Ah]')
 
 plt.figure(2)
-for i, model in enumerate(models):
-    plt.plot(
-        C_rates, times[i, :],
-        label=labels[i],
-        color="C{}".format(i)
-    )
-plt.xlabel('C-rate')
-plt.ylabel('Discharge time [s]')
-plt.legend()
+plt.scatter(currents * voltage_av, capacities * voltage_av)
+plt.xlabel('Power [W]')
+plt.ylabel('Energy [Wh]')
 
 plt.show()
