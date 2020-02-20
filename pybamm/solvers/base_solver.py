@@ -131,8 +131,7 @@ class BaseSolver(object):
         if self.ode_solver is True:
             self.root_method = None
         if (
-            isinstance(self, pybamm.CasadiSolver)
-            or self.root_method == "casadi"
+            isinstance(self, pybamm.CasadiSolver) or self.root_method == "casadi"
         ) and model.convert_to_format != "casadi":
             pybamm.logger.warning(
                 f"Converting {model.name} to CasADi for solving with CasADi solver"
@@ -367,15 +366,20 @@ class BaseSolver(object):
                 "roots",
                 "newton",
                 dict(x=y_alg, p=u, g=alg_root),
-                {"error_on_fail": False},
+                {"abstol": self.root_tol},
             )
-            y0_alg = roots(y0_alg_guess, u_stacked).full().flatten()
-            success = True
-            message = None
-            # Check final output
-            fun = model.casadi_algebraic(
-                time, casadi.vertcat(y0_diff, y0_alg), u_stacked
-            )
+            try:
+                y0_alg = roots(y0_alg_guess, u_stacked).full().flatten()
+                success = True
+                message = None
+                # Check final output
+                fun = model.casadi_algebraic(
+                    time, casadi.vertcat(y0_diff, y0_alg), u_stacked
+                )
+            except RuntimeError as err:
+                success = False
+                message = err.args[0]
+                fun = None
         else:
             algebraic = model.algebraic_eval
             jac = model.jac_algebraic_eval
@@ -553,7 +557,7 @@ class BaseSolver(object):
                 )
             else:
                 t_eval_dimensionless = np.insert(
-                    t_eval_dimensionless, dindex, [dtime - eps, dtime + eps],
+                    t_eval_dimensionless, dindex, [dtime - eps, dtime + eps]
                 )
         end_indices.append(len(t_eval_dimensionless))
 

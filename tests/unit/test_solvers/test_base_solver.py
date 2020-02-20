@@ -72,7 +72,7 @@ class TestBaseSolver(unittest.TestCase):
         init_cond = solver.calculate_consistent_state(model)
         np.testing.assert_array_equal(init_cond, -2)
         # with casadi
-        solver_with_casadi = pybamm.BaseSolver(root_method="casadi")
+        solver_with_casadi = pybamm.BaseSolver(root_method="casadi", root_tol=1e-12)
         model = ScalarModel()
         init_cond = solver_with_casadi.calculate_consistent_state(model)
         np.testing.assert_array_equal(init_cond, -2)
@@ -160,7 +160,7 @@ class TestBaseSolver(unittest.TestCase):
         solver = pybamm.BaseSolver(root_method="casadi")
         with self.assertRaisesRegex(
             pybamm.SolverError,
-            "Could not find consistent initial conditions: solver terminated",
+            "Could not find consistent initial conditions: .../casadi",
         ):
             solver.calculate_consistent_state(Model())
 
