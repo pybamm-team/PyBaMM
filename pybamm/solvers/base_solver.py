@@ -361,26 +361,21 @@ class BaseSolver(object):
             y = casadi.vertcat(y0_diff, y_alg)
             alg_root = model.casadi_algebraic(time, y, u)
             # Solve
-            try:
-                # set error_on_fail to False and just check the final output is small
-                # enough
-                roots = casadi.rootfinder(
-                    "roots",
-                    "newton",
-                    dict(x=y_alg, p=u, g=alg_root),
-                    {"error_on_fail": False},
-                )
-                y0_alg = roots(y0_alg_guess, u_stacked).full().flatten()
-                success = True
-                message = None
-                # Check final output
-                fun = model.casadi_algebraic(
-                    time, casadi.vertcat(y0_diff, y0_alg), u_stacked
-                )
-            except RuntimeError as err:
-                success = False
-                message = err.args[0]
-                fun = None
+            # set error_on_fail to False and just check the final output is small
+            # enough
+            roots = casadi.rootfinder(
+                "roots",
+                "newton",
+                dict(x=y_alg, p=u, g=alg_root),
+                {"error_on_fail": False},
+            )
+            y0_alg = roots(y0_alg_guess, u_stacked).full().flatten()
+            success = True
+            message = None
+            # Check final output
+            fun = model.casadi_algebraic(
+                time, casadi.vertcat(y0_diff, y0_alg), u_stacked
+            )
         else:
             algebraic = model.algebraic_eval
             jac = model.jac_algebraic_eval
