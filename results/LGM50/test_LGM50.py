@@ -12,7 +12,7 @@ experiment = pybamm.Experiment(
         "Discharge at 1C until 2.5 V",
         "Rest for 2 hours",
     ],
-    period="1 seconds",
+    period="10 seconds",
 )
 filename = "1C"
 model = pybamm.lithium_ion.DFN()
