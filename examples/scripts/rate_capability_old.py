@@ -7,16 +7,40 @@ pybamm.set_logging_level("INFO")
 # load model
 options = {"thermal": "isothermal"}
 
-model = pybamm.lithium_ion.DFN()
+models = [
+    pybamm.lithium_ion.SPM(options),
+    pybamm.lithium_ion.SPMe(options),
+    pybamm.lithium_ion.DFN(options),
+]
+solvers = [
+    pybamm.ScikitsOdeSolver(),
+    pybamm.ScikitsOdeSolver(),
+    pybamm.ScikitsDaeSolver()
+]
 
-# solve model
+labels = ["SPM", "SPMe", "DFN"]
 
-sim = pybamm.Simulation(
-    model,
-    experiment=experiment,
-    solver=pybamm.CasadiSolver()
-)
-sim.solve()
+# load parameter values and process model and geometry
+param = models[0].default_parameter_values
+for model in models:
+    param.process_model(model)
+    model.events.pop("Zero electrolyte concentration cut-off")
+
+# set mesh
+var = pybamm.standard_spatial_vars
+var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.r_n: 10, var.r_p: 10}
+
+# discretise model
+discs = [None] * len(models)
+for i, model in enumerate(models):
+    # create geometry
+    geometry = model.default_geometry
+    param.process_geometry(geometry)
+    mesh = pybamm.Mesh(geometry, models[-1].default_submesh_types, var_pts)
+    disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+    disc.process_model(model)
+    discs[i] = disc
+
 
 # solve model
 t_eval = np.linspace(0, 1.2, 2)
