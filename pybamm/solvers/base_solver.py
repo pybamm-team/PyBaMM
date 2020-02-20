@@ -36,7 +36,7 @@ class BaseSolver(object):
         method=None,
         rtol=1e-6,
         atol=1e-6,
-        root_method="lm",
+        root_method="casadi",
         root_tol=1e-6,
         max_steps=1000,
     ):
@@ -126,9 +126,8 @@ class BaseSolver(object):
             )
 
         if (
-            isinstance(self, pybamm.CasadiSolver)
-            and model.convert_to_format != "casadi"
-        ):
+            isinstance(self, pybamm.CasadiSolver) or self.root_method == "casadi"
+        ) and model.convert_to_format != "casadi":
             pybamm.logger.warning(
                 f"Converting {model.name} to CasADi for solving with CasADi solver"
             )
@@ -268,6 +267,16 @@ class BaseSolver(object):
         model.terminate_events_eval = terminate_events_eval
         model.discontinuity_events_eval = discontinuity_events_eval
 
+        # Save CasADi functions for the CasADi solver
+        # Note: when we pass to casadi the ode part of the problem must be in explicit
+        # form so we pre-multiply by the inverse of the mass matrix
+        if self.root_method == "casadi" or isinstance(self, pybamm.CasadiSolver):
+            mass_matrix_inv = casadi.MX(model.mass_matrix_inv.entries)
+            explicit_rhs = mass_matrix_inv @ rhs(t_casadi, y_casadi, u_casadi_stacked)
+            model.casadi_rhs = casadi.Function(
+                "rhs", [t_casadi, y_casadi, u_casadi_stacked], [explicit_rhs]
+            )
+            model.casadi_algebraic = algebraic
         # Calculate consistent initial conditions for the algebraic equations
         if len(model.algebraic) > 0:
             all_states = pybamm.NumpyConcatenation(
@@ -278,25 +287,12 @@ class BaseSolver(object):
             model.residuals_eval = residuals_eval
             model.jacobian_eval = jacobian_eval
             y0_guess = y0.flatten()
-            model.y0 = self.calculate_consistent_state(model, 0, y0_guess)
+            model.y0 = self.calculate_consistent_state(model, 0, y0_guess, inputs)
         else:
             # can use DAE solver to solve ODE model
             model.residuals_eval = Residuals(rhs, "residuals", model)
             model.jacobian_eval = jac_rhs
             model.y0 = y0.flatten()
-
-        # Save CasADi functions for the CasADi solver
-        # Note: when we pass to casadi the ode part of the problem must be in explicit
-        # form so we pre-multiply by the inverse of the mass matrix
-        if model.convert_to_format == "casadi" and isinstance(
-            self, pybamm.CasadiSolver
-        ):
-            mass_matrix_inv = casadi.MX(model.mass_matrix_inv.entries)
-            explicit_rhs = mass_matrix_inv @ rhs(t_casadi, y_casadi, u_casadi_stacked)
-            model.casadi_rhs = casadi.Function(
-                "rhs", [t_casadi, y_casadi, u_casadi_stacked], [explicit_rhs]
-            )
-            model.casadi_algebraic = algebraic
 
         pybamm.logger.info("Finish solver set-up")
 
@@ -319,7 +315,7 @@ class BaseSolver(object):
         if model.jacobian_eval:
             model.jacobian_eval.set_inputs(ext_and_inputs)
 
-    def calculate_consistent_state(self, model, time=0, y0_guess=None):
+    def calculate_consistent_state(self, model, time=0, y0_guess=None, inputs=None):
         """
         Calculate consistent state for the algebraic equations through
         root-finding
@@ -328,6 +324,12 @@ class BaseSolver(object):
         ----------
         model : :class:`pybamm.BaseModel`
             The model for which to calculate initial conditions.
+        time : float
+            The time at which to calculate the states
+        y0_guess : :class:`np.array`
+            Guess for the rootfinding
+        inputs : dict, optional
+            Any input parameters to pass to the model when solving
 
         Returns
         -------
@@ -336,75 +338,93 @@ class BaseSolver(object):
             of the algebraic equations)
         """
         pybamm.logger.info("Start calculating consistent states")
-        rhs = model.rhs_eval
-        algebraic = model.algebraic_eval
-        jac = model.jac_algebraic_eval
         if y0_guess is None:
             y0_guess = model.concatenated_initial_conditions.flatten()
 
         # Split y0_guess into differential and algebraic
-        len_rhs = rhs(time, y0_guess).shape[0]
+        len_rhs = model.rhs_eval(time, y0_guess).shape[0]
         y0_diff, y0_alg_guess = np.split(y0_guess, [len_rhs])
+        inputs = inputs or {}
 
-        def root_fun(y0_alg):
-            "Evaluates algebraic using y0_diff (fixed) and y0_alg (changed by algo)"
-            y0 = np.concatenate([y0_diff, y0_alg])
-            out = algebraic(time, y0)
-            pybamm.logger.debug(
-                "Evaluating algebraic equations at t={}, L2-norm is {}".format(
-                    time * model.timescale, np.linalg.norm(out)
+        # Solve using casadi or scipy
+        if self.root_method == "casadi":
+            # Set up
+            print("yp")
+            u_stacked = casadi.vertcat(*[x for x in inputs.values()])
+            u = casadi.MX.sym("u", u_stacked.shape[0])
+            alg = model.casadi_algebraic
+            y_alg = casadi.MX.sym("y_alg", y0_alg_guess.shape[0])
+            y = casadi.vertcat(y0_diff, y_alg)
+            alg_root = alg(time, y, u)
+            # Solve
+            roots = casadi.rootfinder("roots", "newton", dict(x=y_alg, p=u, g=alg_root))
+            y0_alg = roots(y0_alg_guess, u_stacked).full().flatten()
+            return np.concatenate([y0_diff, y0_alg])
+        else:
+            algebraic = model.algebraic_eval
+            jac = model.jac_algebraic_eval
+
+            def root_fun(y0_alg):
+                "Evaluates algebraic using y0_diff (fixed) and y0_alg (changed by algo)"
+                y0 = np.concatenate([y0_diff, y0_alg])
+                out = algebraic(time, y0)
+                pybamm.logger.debug(
+                    "Evaluating algebraic equations at t={}, L2-norm is {}".format(
+                        time * model.timescale, np.linalg.norm(out)
+                    )
                 )
-            )
-            return out
+                return out
 
-        if jac:
-            if issparse(jac(0, y0_guess)):
+            if jac:
+                if issparse(jac(0, y0_guess)):
 
-                def jac_fn(y0_alg):
-                    """
-                    Evaluates jacobian using y0_diff (fixed) and y0_alg (varying)
-                    """
-                    y0 = np.concatenate([y0_diff, y0_alg])
-                    return jac(0, y0)[:, len_rhs:].toarray()
+                    def jac_fn(y0_alg):
+                        """
+                        Evaluates jacobian using y0_diff (fixed) and y0_alg (varying)
+                        """
+                        y0 = np.concatenate([y0_diff, y0_alg])
+                        return jac(0, y0)[:, len_rhs:].toarray()
+
+                else:
+
+                    def jac_fn(y0_alg):
+                        """
+                        Evaluates jacobian using y0_diff (fixed) and y0_alg (varying)
+                        """
+                        y0 = np.concatenate([y0_diff, y0_alg])
+                        return jac(0, y0)[:, len_rhs:]
 
             else:
-
-                def jac_fn(y0_alg):
-                    """
-                    Evaluates jacobian using y0_diff (fixed) and y0_alg (varying)
-                    """
-                    y0 = np.concatenate([y0_diff, y0_alg])
-                    return jac(0, y0)[:, len_rhs:]
-
-        else:
-            jac_fn = None
-        # Find the values of y0_alg that are roots of the algebraic equations
-        sol = optimize.root(
-            root_fun,
-            y0_alg_guess,
-            jac=jac_fn,
-            method=self.root_method,
-            tol=self.root_tol,
-        )
-        # Return full set of consistent initial conditions (y0_diff unchanged)
-        y0_consistent = np.concatenate([y0_diff, sol.x])
-
-        if sol.success and np.all(sol.fun < self.root_tol * len(sol.x)):
-            pybamm.logger.info("Finish calculating consistent initial conditions")
-            return y0_consistent
-        elif not sol.success:
-            raise pybamm.SolverError(
-                "Could not find consistent initial conditions: {}".format(sol.message)
+                jac_fn = None
+            # Find the values of y0_alg that are roots of the algebraic equations
+            sol = optimize.root(
+                root_fun,
+                y0_alg_guess,
+                jac=jac_fn,
+                method=self.root_method,
+                tol=self.root_tol,
             )
-        else:
-            raise pybamm.SolverError(
-                """
-                Could not find consistent initial conditions: solver terminated
-                successfully, but maximum solution error ({}) above tolerance ({})
-                """.format(
-                    np.max(sol.fun), self.root_tol * len(sol.x)
+            # Return full set of consistent initial conditions (y0_diff unchanged)
+            y0_consistent = np.concatenate([y0_diff, sol.x])
+
+            if sol.success and np.all(sol.fun < self.root_tol * len(sol.x)):
+                pybamm.logger.info("Finish calculating consistent initial conditions")
+                return y0_consistent
+            elif not sol.success:
+                raise pybamm.SolverError(
+                    "Could not find consistent initial conditions: {}".format(
+                        sol.message
+                    )
                 )
-            )
+            else:
+                raise pybamm.SolverError(
+                    """
+                    Could not find consistent initial conditions: solver terminated
+                    successfully, but maximum solution error ({}) above tolerance ({})
+                    """.format(
+                        np.max(sol.fun), self.root_tol * len(sol.x)
+                    )
+                )
 
     def solve(self, model, t_eval, external_variables=None, inputs=None):
         """
@@ -548,7 +568,10 @@ class BaseSolver(object):
                 last_state = solution.y[:, -1]
                 if len(model.algebraic) > 0:
                     model.y0 = self.calculate_consistent_state(
-                        model, t_eval_dimensionless[end_index], last_state
+                        model,
+                        t_eval_dimensionless[end_index],
+                        last_state,
+                        ext_and_inputs,
                     )
                 else:
                     model.y0 = last_state
