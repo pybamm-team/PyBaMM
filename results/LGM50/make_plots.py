@@ -427,14 +427,14 @@ axes12[0].plot(
     ElCell_OCP.to_numpy()[:, 1],
     color="blue",
     linewidth=1,
-    label="3-electrode"
+    label="3-electrode full cell"
 )
 axes12[0].plot(
     cathode_OCP_half.to_numpy()[:, 0] - 0.3397,
     cathode_OCP_half.to_numpy()[:, 1],
     color="red",
     linewidth=1,
-    label="2-electrode"
+    label="half cell"
 )
 axes12[0].set_xlabel("Capacity (mAh $\mathrm{cm}^{-2}$)")
 axes12[0].set_ylabel("Potential (V)")
@@ -461,14 +461,14 @@ axes12[1].plot(
     ElCell_OCP.to_numpy()[:, 2],
     color="blue",
     linewidth=1,
-    label="3-electrode"
+    label="3-electrode full cell"
 )
 axes12[1].plot(
     anode_OCP_half.to_numpy()[:, 0] - 0.1391,
     anode_OCP_half.to_numpy()[:, 1],
     color="red",
     linewidth=1,
-    label="2-electrode"
+    label="half cell"
 )
 axes12[1].set_xlabel("Capacity (mAh $\mathrm{cm}^{-2}$)")
 axes12[1].set_ylabel("Potential (V)")
