@@ -4,14 +4,17 @@ import pandas as pd
 from scipy import interpolate
 import matplotlib.pyplot as plt
 
+plt.rcParams.update({'font.size': 8})
+
 pybamm.set_logging_level("INFO")
 experiment = pybamm.Experiment(
     [
         "Discharge at 1C until 2.5 V",
         "Rest for 2 hours",
     ],
-    period="1 seconds",
+    period="10 seconds",
 )
+filename = "1C"
 model = pybamm.lithium_ion.DFN()
 param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Chen2020)
 
@@ -26,7 +29,9 @@ param["Negative electrode Bruggeman coefficient (electrolyte)"] = 1.5
 param["Positive electrode Bruggeman coefficient (electrolyte)"] = 1.5
 param["Separator Bruggeman coefficient (electrolyte)"] = 1.5
 param["Positive electrode diffusivity [m2.s-1]"] = 4E-15
-param["Negative electrode diffusivity [m2.s-1]"] = 3.3E-14
+param["Negative electrode diffusivity [m2.s-1]"] = 3.3E-14  # 1C
+# param["Negative electrode diffusivity [m2.s-1]"] = 6.3E-14  # 1.5C
+# param["Negative electrode diffusivity [m2.s-1]"] = 1.3E-14  # C/2
 
 sim = pybamm.Simulation(
     model,
@@ -41,8 +46,6 @@ sim.plot()
 
 # Compare with experiments
 tau = param.process_symbol(pybamm.standard_parameters_lithium_ion.tau_discharge)
-
-filename = "1C"
 
 data_experiments = pd.read_csv(
     "~/LGM50/data/data" + filename + "_rest.csv"
@@ -92,10 +95,10 @@ axes10[1].set_ylabel("Voltage error [V]")
 
 plt.tight_layout()
 
-# plt.savefig(
-#     "~/LGM50/figures/fig" + filename + ".png",
-#     dpi=300
-# )
+plt.savefig(
+    "/home/ferranbrosa/LGM50/figures/fig" + filename + ".png",
+    dpi=300
+)
 
 plt.figure(num=1, figsize=(6, 4))
 plt.fill_between(
