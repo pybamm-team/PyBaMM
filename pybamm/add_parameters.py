@@ -1,5 +1,4 @@
 import os
-import sys
 import pybamm
 import argparse
 import shutil
