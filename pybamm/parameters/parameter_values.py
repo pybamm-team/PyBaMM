@@ -72,9 +72,12 @@ class ParameterValues:
         if values is not None:
             # If base_parameters is a filename, load from that filename
             if isinstance(values, str):
+                path = os.path.split(values)[0]
                 values = self.read_parameters_csv(values)
+            else:
+                path = None
             # Don't check parameter already exists when first creating it
-            self.update(values, check_already_exists=False)
+            self.update(values, check_already_exists=False, path=path)
 
         # Initialise empty _processed_symbols dict (for caching)
         self._processed_symbols = {}

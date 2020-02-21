@@ -370,7 +370,7 @@ class QuickPlot(object):
 
         axcolor = "lightgoldenrodyellow"
         axfreq = plt.axes([0.315, 0.02, 0.37, 0.03], facecolor=axcolor)
-        self.sfreq = Slider(axfreq, "Time", 0, self.max_t, valinit=0)
+        self.sfreq = Slider(axfreq, "Time [h]", 0, self.max_t, valinit=0)
         self.sfreq.on_changed(self.update)
 
         # ignore the warning about tight layout

@@ -292,14 +292,12 @@ class TestBinaryOperators(unittest.TestCase):
         a = pybamm.Scalar(1)
         b = pybamm.StateVector(slice(0, 1))
         heav = a < b
-        self.assertFalse(heav.equal)
         self.assertEqual(heav.evaluate(y=np.array([2])), 1)
         self.assertEqual(heav.evaluate(y=np.array([1])), 0)
         self.assertEqual(heav.evaluate(y=np.array([0])), 0)
         self.assertEqual(str(heav), "1.0 < y[0:1]")
 
         heav = a >= b
-        self.assertTrue(heav.equal)
         self.assertEqual(heav.evaluate(y=np.array([2])), 0)
         self.assertEqual(heav.evaluate(y=np.array([1])), 1)
         self.assertEqual(heav.evaluate(y=np.array([0])), 1)

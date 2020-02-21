@@ -657,22 +657,9 @@ class Heaviside(BinaryOperator):
     **Extends:** :class:`BinaryOperator`
     """
 
-    def __init__(self, left, right, equal):
+    def __init__(self, name, left, right):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
-        # 'equal' determines whether to return 1 or 0 when left = right
-        self.equal = equal
-        if equal is True:
-            name = "<="
-        else:
-            name = "<"
         super().__init__(name, left, right)
-
-    def __str__(self):
-        """ See :meth:`pybamm.Symbol.__str__()`. """
-        if self.equal is True:
-            return "{!s} <= {!s}".format(self.left, self.right)
-        else:
-            return "{!s} < {!s}".format(self.left, self.right)
 
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
@@ -686,18 +673,40 @@ class Heaviside(BinaryOperator):
         # need to worry about shape
         return pybamm.Scalar(0)
 
+
+class EqualHeaviside(Heaviside):
+    "A heaviside function with equality (return 1 when left = right)"
+
+    def __init__(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator.__init__()`. """
+        super().__init__("<=", left, right)
+
+    def __str__(self):
+        """ See :meth:`pybamm.Symbol.__str__()`. """
+        return "{!s} <= {!s}".format(self.left, self.right)
+
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
         # don't raise RuntimeWarning for NaNs
         with np.errstate(invalid="ignore"):
-            if self.equal is True:
-                return left <= right
-            else:
-                return left < right
+            return left <= right
 
-    def _binary_new_copy(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator._binary_new_copy()`. """
-        return Heaviside(left, right, self.equal)
+
+class NotEqualHeaviside(Heaviside):
+    "A heaviside function without equality (return 0 when left = right)"
+
+    def __init__(self, left, right):
+        super().__init__("<", left, right)
+
+    def __str__(self):
+        """ See :meth:`pybamm.Symbol.__str__()`. """
+        return "{!s} < {!s}".format(self.left, self.right)
+
+    def _binary_evaluate(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        # don't raise RuntimeWarning for NaNs
+        with np.errstate(invalid="ignore"):
+            return left < right
 
 
 def source(left, right, boundary=False):

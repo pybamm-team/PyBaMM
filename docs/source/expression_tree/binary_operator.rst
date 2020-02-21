@@ -28,4 +28,10 @@ Binary Operators
 .. autoclass:: pybamm.Heaviside
   :members:
 
+.. autoclass:: pybamm.EqualHeaviside
+  :members:
+
+.. autoclass:: pybamm.NotEqualHeaviside
+  :members:
+
 .. autofunction:: pybamm.source
