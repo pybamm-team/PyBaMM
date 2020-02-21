@@ -13,6 +13,7 @@ import pathlib
 import pickle
 import pybamm
 import Levenshtein
+import pkg_resources
 from collections import defaultdict
 
 
@@ -165,7 +166,8 @@ def load_function(filename):
             )
         elif len(matching_files) > 1:
             raise ValueError(
-                "{} found multiple times in the PyBaMM directory".format(filename)
+                "{} found multiple times in the PyBaMM directory."
+                "Consider using absolute file path.".format(filename)
             )
 
         valid_filename = matching_files[0]
@@ -230,3 +232,11 @@ def load(filename):
         obj = pickle.load(f)
     return obj
 
+
+def get_parameters_filepath(path):
+    """Returns path if it exists in current working dir,
+    otherwise get it from pkg_resources"""
+    if os.path.exists(path):
+        return path
+    else:
+        return pkg_resources.resource_filename("pybamm", path)

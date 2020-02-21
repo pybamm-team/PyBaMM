@@ -5,7 +5,6 @@ import pybamm
 import pandas as pd
 import os
 import numbers
-import pkg_resources
 
 
 class ParameterValues:
@@ -38,13 +37,12 @@ class ParameterValues:
     Examples
     --------
     >>> import pybamm
-    >>> import pkg_resources
     >>> values = {"some parameter": 1, "another parameter": 2}
     >>> param = pybamm.ParameterValues(values)
     >>> param["some parameter"]
     1
     >>> file = "input/parameters/lithium-ion/cells/kokam_Marquis2019/parameters.csv"
-    >>> values_path = pkg_resources.resource_filename("pybamm", file)
+    >>> values_path = pybamm.get_parameters_filepath(file)
     >>> param = pybamm.ParameterValues(values=values_path)
     >>> param["Negative current collector thickness [m]"]
     2.5e-05
@@ -132,8 +130,8 @@ class ParameterValues:
             # Create path to component and load values
             component_path = os.path.join(path, component_group + "s", component)
             component_params = self.read_parameters_csv(
-                pkg_resources.resource_filename(
-                    "pybamm", os.path.join(component_path, "parameters.csv")
+                pybamm.get_parameters_filepath(
+                    os.path.join(component_path, "parameters.csv")
                 )
             )
             # Update parameters, making sure to check any conflicts
@@ -229,9 +227,7 @@ class ParameterValues:
                     else:
                         filename = os.path.join(path, value[6:] + ".csv")
                         function_name = value[6:]
-                    resource_filename = pkg_resources.resource_filename(
-                        "pybamm", filename
-                    )
+                    resource_filename = pybamm.get_parameters_filepath(filename)
                     data = pd.read_csv(
                         resource_filename, comment="#", skip_blank_lines=True
                     ).to_numpy()
