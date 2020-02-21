@@ -693,6 +693,23 @@ class TestDiscretise(unittest.TestCase):
         with self.assertRaises(pybamm.ModelError):
             disc.process_model(model)
 
+    def test_process_model_fail(self):
+        # one equation
+        c = pybamm.Variable("c")
+        d = pybamm.Variable("d")
+        model = pybamm.BaseModel()
+        model.rhs = {c: -c}
+        model.initial_conditions = {c: pybamm.Scalar(3)}
+        model.variables = {"c": c, "d": d}
+
+        disc = pybamm.Discretisation()
+        # turn debug mode off to not check well posedness
+        debug_mode = pybamm.settings.debug_mode
+        pybamm.settings.debug_mode = False
+        with self.assertRaisesRegex(pybamm.ModelError, "No key set for variable"):
+            disc.process_model(model)
+        pybamm.settings.debug_mode = debug_mode
+
     def test_process_model_dae(self):
         # one rhs equation and one algebraic
         whole_cell = ["negative electrode", "separator", "positive electrode"]
