@@ -58,3 +58,41 @@ def add_parameter(arguments=None):
             shutil.copytree(args.parameter_dir, destination_dir)
         else:
             print("Doing nothing.")
+
+
+def list_parameters(arguments=None):
+    parser = argparse.ArgumentParser(
+        description="List available parameter sets for a given chemistry and component."
+    )
+    parser.add_argument("battery_type", choices=["lithium-ion", "lead-acid"])
+    parser.add_argument(
+        "component",
+        choices=[
+            "anodes",
+            "cathodes",
+            "cells",
+            "electrolytes",
+            "experiments",
+            "separators",
+        ],
+    )
+
+    args = parser.parse_args(arguments)
+
+    package_dir = os.path.join(
+        pybamm.__path__[0], "input", "parameters", args.battery_type, args.component
+    )
+    root, dirs, files = next(os.walk(package_dir))
+
+    print("Available package parameters:")
+    for dirname in dirs:
+        print("  * {}".format(dirname))
+
+    local_dir = os.path.join("input", "parameters", args.battery_type, args.component)
+    if os.path.isdir(local_dir):
+        root, dirs, files = next(os.walk(local_dir))
+    else:
+        dirs = []
+    print("Available local parameters:")
+    for dirname in dirs:
+        print("  * {}".format(dirname))
