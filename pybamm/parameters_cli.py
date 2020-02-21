@@ -15,7 +15,7 @@ def yes_or_no(question):
             return False
 
 
-def main(arguments=None):
+def add_parameter(arguments=None):
     parser = argparse.ArgumentParser(description="Add a new parameter set")
     parser.add_argument(
         "parameter_dir",
@@ -40,7 +40,7 @@ def main(arguments=None):
 
     open(os.path.join(args.parameter_dir, "parameters.csv"))
 
-    parameters_root_dir = os.path.join(pybamm.__path__[0], "input/parameters")
+    parameters_root_dir = os.path.join(pybamm.__path__[0], "input", "parameters")
 
     parameter_dir_name = Path(args.parameter_dir).name
     destination_dir = os.path.join(
