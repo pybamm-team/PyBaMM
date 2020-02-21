@@ -68,6 +68,20 @@ class TestSymbolicDifferentiation(unittest.TestCase):
         self.assertEqual(func.diff(b).evaluate(y=np.array([2])), 2)
         self.assertEqual(func.diff(b).evaluate(y=np.array([-2])), 0)
 
+    def test_diff_maximum_minimum(self):
+        a = pybamm.Scalar(1)
+        b = pybamm.StateVector(slice(0, 1))
+
+        func = pybamm.minimum(a, b ** 3)
+        self.assertEqual(func.diff(b).evaluate(y=np.array([10])), 0)
+        self.assertEqual(func.diff(b).evaluate(y=np.array([2])), 0)
+        self.assertEqual(func.diff(b).evaluate(y=np.array([-2])), 3 * (-2) ** 2)
+
+        func = pybamm.maximum(a, b ** 3)
+        self.assertEqual(func.diff(b).evaluate(y=np.array([10])), 3 * 10 ** 2)
+        self.assertEqual(func.diff(b).evaluate(y=np.array([2])), 3 * 2 ** 2)
+        self.assertEqual(func.diff(b).evaluate(y=np.array([-2])), 0)
+
     def test_exceptions(self):
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")

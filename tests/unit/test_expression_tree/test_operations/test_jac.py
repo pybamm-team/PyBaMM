@@ -105,10 +105,6 @@ class TestJacobian(unittest.TestCase):
         dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
 
-        func = pybamm.AbsoluteValue(v)
-        with self.assertRaises(pybamm.UndefinedOperationError):
-            func.jac(y)
-
     def test_functions(self):
         y = pybamm.StateVector(slice(0, 4))
         u = pybamm.StateVector(slice(0, 2))
@@ -259,6 +255,22 @@ class TestJacobian(unittest.TestCase):
             np.diag(pybamm.maximum(1, y ** 2).jac(y).evaluate(y=y_test)),
             2 * y_test * (y_test > 1),
         )
+
+    def test_jac_of_abs(self):
+        y = pybamm.StateVector(slice(0, 10))
+        absy = abs(y)
+        jac = absy.jac(y)
+        y_test = np.linspace(-2, 2, 10)
+        np.testing.assert_array_equal(
+            np.diag(jac.evaluate(y=y_test).toarray()), np.sign(y_test)
+        )
+
+    def test_jac_of_sign(self):
+        y = pybamm.StateVector(slice(0, 10))
+        func = pybamm.sign(y) * y
+        jac = func.jac(y)
+        y_test = np.linspace(-2, 2, 10)
+        np.testing.assert_array_equal(np.diag(jac.evaluate(y=y_test)), np.sign(y_test))
 
     def test_jac_of_domain_concatenation(self):
         # create mesh

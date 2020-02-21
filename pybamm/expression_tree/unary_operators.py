@@ -3,7 +3,7 @@
 #
 import numpy as np
 import pybamm
-from scipy.sparse import csr_matrix
+from scipy.sparse import issparse, csr_matrix
 
 
 class UnaryOperator(pybamm.Symbol):
@@ -125,21 +125,43 @@ class AbsoluteValue(UnaryOperator):
 
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
-        # Derivative is not well-defined
-        raise pybamm.UndefinedOperationError(
-            "Derivative of absolute function is not defined"
-        )
+        child = self.child.new_copy()
+        return Sign(child) * child.diff(variable)
 
     def _unary_jac(self, child_jac):
         """ See :meth:`pybamm.UnaryOperator._unary_jac()`. """
-        # Derivative is not well-defined
-        raise pybamm.UndefinedOperationError(
-            "Derivative of absolute function is not defined"
-        )
+        child = self.child.new_copy()
+        return Sign(child) * child_jac
 
     def _unary_evaluate(self, child):
         """ See :meth:`UnaryOperator._unary_evaluate()`. """
         return np.abs(child)
+
+
+class Sign(UnaryOperator):
+    """A node in the expression tree representing a `sign` operator
+
+    **Extends:** :class:`UnaryOperator`
+    """
+
+    def __init__(self, child):
+        """ See :meth:`pybamm.UnaryOperator.__init__()`. """
+        super().__init__("sign", child)
+
+    def diff(self, variable):
+        """ See :meth:`pybamm.Symbol.diff()`. """
+        return pybamm.Scalar(0)
+
+    def _unary_jac(self, child_jac):
+        """ See :meth:`pybamm.UnaryOperator._unary_jac()`. """
+        return pybamm.Scalar(0)
+
+    def _unary_evaluate(self, child):
+        """ See :meth:`UnaryOperator._unary_evaluate()`. """
+        if issparse(child):
+            return csr_matrix.sign(child)
+        else:
+            return np.sign(child)
 
 
 class Index(UnaryOperator):
@@ -1067,3 +1089,8 @@ def r_average(symbol):
             pybamm.Scalar(1), symbol.domain, symbol.auxiliary_domains
         )
         return Integral(symbol, r) / Integral(v, r)
+
+
+def sign(symbol):
+    " Returns a :class:`Sign` object. "
+    return Sign(symbol)

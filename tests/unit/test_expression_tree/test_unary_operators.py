@@ -38,6 +38,11 @@ class TestUnaryOperators(unittest.TestCase):
         absb = pybamm.AbsoluteValue(b)
         self.assertEqual(absb.evaluate(), 4)
 
+    def test_sign(self):
+        b = pybamm.Scalar(-4)
+        signb = pybamm.sign(b)
+        self.assertEqual(signb.evaluate(), -1)
+
     def test_gradient(self):
         a = pybamm.Symbol("a")
         grad = pybamm.Gradient(a)
@@ -158,10 +163,14 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual((-a).diff(a).evaluate(y=y), -1)
         self.assertEqual((-a).diff(-a).evaluate(), 1)
 
-        # absolute value (not implemented)
-        absa = abs(a)
-        with self.assertRaises(pybamm.UndefinedOperationError):
-            absa.diff(a)
+        # absolute value
+        self.assertEqual((a ** 3).diff(a).evaluate(y=y), 3 * 5 ** 2)
+        self.assertEqual((abs(a ** 3)).diff(a).evaluate(y=y), 3 * 5 ** 2)
+        self.assertEqual((a ** 3).diff(a).evaluate(y=-y), 3 * 5 ** 2)
+        self.assertEqual((abs(a ** 3)).diff(a).evaluate(y=-y), -3 * 5 ** 2)
+
+        # sign
+        self.assertEqual((pybamm.sign(a)).diff(a).evaluate(y=y), 0)
 
         # spatial operator (not implemented)
         spatial_a = pybamm.SpatialOperator("name", a)
