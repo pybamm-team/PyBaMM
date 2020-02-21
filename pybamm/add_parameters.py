@@ -34,19 +34,11 @@ def main(arguments=None):
             "separators",
         ],
     )
+    parser.add_argument("-f", "--force", action="store_true")
 
     args = parser.parse_args(arguments)
 
-    # Check that parameter dir actually exists and contains parameter.csv file
-    try:
-        open(os.path.join(args.parameter_dir, "parameters.csv"))
-    except FileNotFoundError:
-        print(
-            "Error: Could not find parameter file {}/parameters.csv".format(
-                args.parameter_dir
-            )
-        )
-        sys.exit()
+    open(os.path.join(args.parameter_dir, "parameters.csv"))
 
     parameters_root_dir = os.path.join(pybamm.__path__[0], "input/parameters")
 
@@ -58,6 +50,11 @@ def main(arguments=None):
     try:
         shutil.copytree(args.parameter_dir, destination_dir)
     except FileExistsError:
-        if yes_or_no("Parameter set already defined, erase?"):
+        if args.force:
             shutil.rmtree(destination_dir)
             shutil.copytree(args.parameter_dir, destination_dir)
+        elif yes_or_no("Parameter set already defined, erase?"):
+            shutil.rmtree(destination_dir)
+            shutil.copytree(args.parameter_dir, destination_dir)
+        else:
+            print("Doing nothing.")
