@@ -28,7 +28,7 @@ class TestIDAKLUSolver(unittest.TestCase):
             disc = pybamm.Discretisation()
             disc.process_model(model)
 
-            solver = pybamm.IDAKLUSolver()
+            solver = pybamm.IDAKLUSolver(root_method="lm")
 
             t_eval = np.linspace(0, 3, 100)
             solution = solver.solve(model, t_eval)
@@ -58,7 +58,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
         disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
         disc.process_model(model)
-        solver = pybamm.IDAKLUSolver()
+        solver = pybamm.IDAKLUSolver(root_method="lm")
 
         variable_tols = {"Electrolyte concentration": 1e-3}
         solver.set_atol_by_variable(variable_tols, model)
@@ -76,7 +76,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         disc = pybamm.Discretisation()
         disc.process_model(model)
 
-        solver = pybamm.IDAKLUSolver()
+        solver = pybamm.IDAKLUSolver(root_method="lm")
 
         t_eval = np.linspace(0, 3, 100)
         with self.assertRaisesRegex(pybamm.SolverError, "KLU requires the Jacobian"):

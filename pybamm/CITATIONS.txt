@@ -43,6 +43,17 @@
   publisher={ACM New York, NY, USA}
 }
 
+@article{kim2011multi,
+  title={Multi-domain modeling of lithium-ion batteries encompassing multi-physics in varied length scales},
+  author={Kim, Gi-Heon and Smith, Kandler and Lee, Kyu-Jin and Santhanagopalan, Shriram and Pesaran, Ahmad},
+  journal={Journal of the electrochemical society},
+  volume={158},
+  number={8},
+  pages={A955--A969},
+  year={2011},
+  publisher={The Electrochemical Society}
+}
+
 @article{marquis2019asymptotic,
 title={An asymptotic derivation of a single particle model with electrolyte},
 author={Marquis, Scott G and Sulzer, Valentin and Timms, Robert and Please, Colin P and Chapman, S Jon},

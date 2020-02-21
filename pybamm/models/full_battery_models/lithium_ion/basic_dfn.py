@@ -100,9 +100,15 @@ class BasicDFN(BaseModel):
         # Porosity
         # Primary broadcasts are used to broadcast scalar quantities across a domain
         # into a vector of the right shape, for multiplying with other vectors
-        eps_n = pybamm.PrimaryBroadcast(param.epsilon_n, "negative electrode")
-        eps_s = pybamm.PrimaryBroadcast(param.epsilon_s, "separator")
-        eps_p = pybamm.PrimaryBroadcast(param.epsilon_p, "positive electrode")
+        eps_n = pybamm.PrimaryBroadcast(
+            pybamm.Parameter("Negative electrode porosity"), "negative electrode"
+        )
+        eps_s = pybamm.PrimaryBroadcast(
+            pybamm.Parameter("Separator porosity"), "separator"
+        )
+        eps_p = pybamm.PrimaryBroadcast(
+            pybamm.Parameter("Positive electrode porosity"), "positive electrode"
+        )
         eps = pybamm.Concatenation(eps_n, eps_s, eps_p)
 
         # Tortuosity
@@ -171,11 +177,17 @@ class BasicDFN(BaseModel):
         # Boundary conditions must be provided for equations with spatial derivatives
         self.boundary_conditions[c_s_n] = {
             "left": (pybamm.Scalar(0), "Neumann"),
-            "right": (-param.C_n * j_n / param.a_n, "Neumann"),
+            "right": (
+                -param.C_n * j_n / param.a_n / param.D_n(c_s_surf_n, T),
+                "Neumann",
+            ),
         }
         self.boundary_conditions[c_s_p] = {
             "left": (pybamm.Scalar(0), "Neumann"),
-            "right": (-param.C_p * j_p / param.a_p / param.gamma_p, "Neumann"),
+            "right": (
+                -param.C_p * j_p / param.a_p / param.gamma_p / param.D_p(c_s_surf_p, T),
+                "Neumann",
+            ),
         }
         # c_n_init and c_p_init can in general be functions of x
         # Note the broadcasting, for domains
@@ -189,14 +201,22 @@ class BasicDFN(BaseModel):
         self.initial_conditions[c_s_p] = param.c_p_init(x_p)
         # Events specify points at which a solution should terminate
         self.events += [
-            pybamm.Event("Minimum negative particle surface concentration",
-                         pybamm.min(c_s_surf_n) - 0.01),
-            pybamm.Event("Maximum negative particle surface concentration",
-                         (1 - 0.01) - pybamm.max(c_s_surf_n)),
-            pybamm.Event("Minimum positive particle surface concentration",
-                         pybamm.min(c_s_surf_p) - 0.01),
-            pybamm.Event("Maximum positive particle surface concentration",
-                         (1 - 0.01) - pybamm.max(c_s_surf_p)),
+            pybamm.Event(
+                "Minimum negative particle surface concentration",
+                pybamm.min(c_s_surf_n) - 0.01,
+            ),
+            pybamm.Event(
+                "Maximum negative particle surface concentration",
+                (1 - 0.01) - pybamm.max(c_s_surf_n),
+            ),
+            pybamm.Event(
+                "Minimum positive particle surface concentration",
+                pybamm.min(c_s_surf_p) - 0.01,
+            ),
+            pybamm.Event(
+                "Maximum positive particle surface concentration",
+                (1 - 0.01) - pybamm.max(c_s_surf_p),
+            ),
         ]
         ######################
         # Current in the solid
@@ -251,8 +271,11 @@ class BasicDFN(BaseModel):
             "right": (pybamm.Scalar(0), "Neumann"),
         }
         self.initial_conditions[c_e] = param.c_e_init
-        self.events.append(pybamm.Event("Zero electrolyte concentration cut-off",
-                                        pybamm.min(c_e) - 0.002))
+        self.events.append(
+            pybamm.Event(
+                "Zero electrolyte concentration cut-off", pybamm.min(c_e) - 0.002
+            )
+        )
 
         ######################
         # (Some) variables

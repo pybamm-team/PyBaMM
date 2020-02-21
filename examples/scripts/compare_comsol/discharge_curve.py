@@ -58,15 +58,8 @@ for key, C_rate in C_rates.items():
     comsol_time = comsol_variables["time"]
     comsol_voltage = comsol_variables["voltage"]
 
-    # update current density
-
-    # discharge timescale
-    tau = param.process_symbol(
-        pybamm.standard_parameters_lithium_ion.tau_discharge
-    ).evaluate(0, 0)
-
     # solve model at comsol times
-    t = comsol_time / tau
+    t = comsol_time
     solution = pybamm.CasadiSolver(mode="fast").solve(
         model, t, inputs={"Current function [A]": current}
     )

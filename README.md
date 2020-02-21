@@ -35,7 +35,11 @@ For further examples, see the list of repositories that use PyBaMM [here](https:
 
 ### Linux
 
-For instructions on installing PyBaMM on Debian-based distributions, please see [here](INSTALL-LINUX.md)
+For instructions on installing PyBaMM on Debian-based distributions, please see [here](INSTALL-LINUX-MAC.md)
+
+### Mac OS
+
+For instructions on installing PyBaMM on Mac OS distributions, please see [here](INSTALL-LINUX-MAC.md)
 
 ### Windows
 

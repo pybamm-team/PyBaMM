@@ -36,7 +36,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
     """
 
     def __init__(
-        self, rtol=1e-6, atol=1e-6, root_method="lm", root_tol=1e-6, max_steps=1000
+        self, rtol=1e-6, atol=1e-6, root_method="casadi", root_tol=1e-6, max_steps=1000
     ):
 
         if idaklu_spec is None:

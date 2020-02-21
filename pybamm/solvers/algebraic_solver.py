@@ -79,7 +79,7 @@ class AlgebraicSolver(object):
             jacobian = None
 
         # Use "initial conditions" set in model as initial guess
-        y0_guess = model.concatenated_initial_conditions
+        y0_guess = model.concatenated_initial_conditions.evaluate(t=0)
 
         # Solve
         solve_start_time = timer.time()

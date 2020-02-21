@@ -47,7 +47,7 @@ class TestAsymptoticConvergence(unittest.TestCase):
         def get_max_error(current):
             pybamm.logger.info("current = {}".format(current))
             # Solve, make sure times are the same and use tight tolerances
-            t_eval = np.linspace(0, 0.6)
+            t_eval = np.linspace(0, 3600 * 17 / current)
             solver = pybamm.CasadiSolver()
             solver.rtol = 1e-8
             solver.atol = 1e-8
