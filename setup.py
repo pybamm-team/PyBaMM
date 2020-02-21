@@ -515,7 +515,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "pybamm_add_param = pybamm.parameters_cli:main",
+            "pybamm_add_param = pybamm.parameters_cli:add_parameter",
             "pybamm_list_params = pybamm.parameters_cli:list_parameters"
         ],
     },
