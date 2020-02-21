@@ -82,17 +82,17 @@ def list_parameters(arguments=None):
     package_dir = os.path.join(
         pybamm.__path__[0], "input", "parameters", args.battery_type, args.component
     )
-    root, dirs, files = next(os.walk(package_dir))
+    root, package_dirs, files = next(os.walk(package_dir))
 
     print("Available package parameters:")
-    for dirname in dirs:
+    for dirname in package_dirs:
         print("  * {}".format(dirname))
 
     local_dir = os.path.join("input", "parameters", args.battery_type, args.component)
     if os.path.isdir(local_dir):
-        root, dirs, files = next(os.walk(local_dir))
+        root, local_dirs, files = next(os.walk(local_dir))
     else:
-        dirs = []
+        local_dirs = []
     print("Available local parameters:")
-    for dirname in dirs:
+    for dirname in local_dirs:
         print("  * {}".format(dirname))
