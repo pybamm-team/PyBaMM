@@ -341,12 +341,18 @@ def log10(child):
 
 
 def max(child):
-    " Returns max function of child. "
+    """
+    Returns max function of child. Not to be confused with :meth:`pybamm.maximum`, which
+    returns the larger of two objects.
+    """
     return pybamm.simplify_if_constant(Function(np.max, child), keep_domains=True)
 
 
 def min(child):
-    " Returns min function of child. "
+    """
+    Returns min function of child. Not to be confused with :meth:`pybamm.minimum`, which
+    returns the smaller of two objects.
+    """
     return pybamm.simplify_if_constant(Function(np.min, child), keep_domains=True)
 
 

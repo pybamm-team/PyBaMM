@@ -303,6 +303,21 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(heav.evaluate(y=np.array([0])), 1)
         self.assertEqual(str(heav), "y[0:1] <= 1.0")
 
+    def test_minimum_maximum(self):
+        a = pybamm.Scalar(1)
+        b = pybamm.StateVector(slice(0, 1))
+        minimum = pybamm.minimum(a, b)
+        self.assertEqual(minimum.evaluate(y=np.array([2])), 1)
+        self.assertEqual(minimum.evaluate(y=np.array([1])), 1)
+        self.assertEqual(minimum.evaluate(y=np.array([0])), 0)
+        self.assertEqual(str(minimum), "minimum(1.0, y[0:1])")
+
+        maximum = pybamm.maximum(a, b)
+        self.assertEqual(maximum.evaluate(y=np.array([2])), 2)
+        self.assertEqual(maximum.evaluate(y=np.array([1])), 1)
+        self.assertEqual(maximum.evaluate(y=np.array([0])), 1)
+        self.assertEqual(str(maximum), "maximum(1.0, y[0:1])")
+
 
 class TestIsZero(unittest.TestCase):
     def test_is_scalar_zero(self):

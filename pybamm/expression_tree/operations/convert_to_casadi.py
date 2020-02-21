@@ -66,6 +66,10 @@ class CasadiConverter(object):
             # process children
             converted_left = self.convert(left, t, y, u)
             converted_right = self.convert(right, t, y, u)
+            if isinstance(symbol, pybamm.Minimum):
+                return casadi.fmin(converted_left, converted_right)
+            if isinstance(symbol, pybamm.Maximum):
+                return casadi.fmax(converted_left, converted_right)
             # _binary_evaluate defined in derived classes for specific rules
             return symbol._binary_evaluate(converted_left, converted_right)
 

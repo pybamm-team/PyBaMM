@@ -42,16 +42,21 @@ class TestCasadiConverter(unittest.TestCase):
         f = pybamm.Function(myfunction, b, d)
         self.assertEqual(f.to_casadi(), casadi.MX(3))
 
+        # use classes to avoid simplification
         # addition
-        self.assertEqual((a + b).to_casadi(), casadi.MX(1))
+        self.assertEqual((pybamm.Addition(a, b)).to_casadi(), casadi.MX(1))
         # subtraction
-        self.assertEqual((c - d).to_casadi(), casadi.MX(-3))
+        self.assertEqual(pybamm.Subtraction(c, d).to_casadi(), casadi.MX(-3))
         # multiplication
-        self.assertEqual((c * d).to_casadi(), casadi.MX(-2))
+        self.assertEqual(pybamm.Multiplication(c, d).to_casadi(), casadi.MX(-2))
         # power
-        self.assertEqual((c ** d).to_casadi(), casadi.MX(1))
+        self.assertEqual(pybamm.Power(c, d).to_casadi(), casadi.MX(1))
         # division
-        self.assertEqual((b / d).to_casadi(), casadi.MX(1 / 2))
+        self.assertEqual(pybamm.Division(b, d).to_casadi(), casadi.MX(1 / 2))
+
+        # minimum and maximum
+        self.assertEqual(pybamm.Minimum(a, b).to_casadi(), casadi.MX(0))
+        self.assertEqual(pybamm.Maximum(a, b).to_casadi(), casadi.MX(1))
 
     def test_convert_array_symbols(self):
         # Arrays

@@ -248,6 +248,18 @@ class TestJacobian(unittest.TestCase):
             ((a < y) * y ** 2).jac(y).evaluate(y=-5 * np.ones(5)), 0
         )
 
+    def test_jac_of_minimum_maximum(self):
+        y = pybamm.StateVector(slice(0, 10))
+        y_test = np.linspace(0, 2, 10)
+        np.testing.assert_array_equal(
+            np.diag(pybamm.minimum(1, y ** 2).jac(y).evaluate(y=y_test)),
+            2 * y_test * (y_test < 1),
+        )
+        np.testing.assert_array_equal(
+            np.diag(pybamm.maximum(1, y ** 2).jac(y).evaluate(y=y_test)),
+            2 * y_test * (y_test > 1),
+        )
+
     def test_jac_of_domain_concatenation(self):
         # create mesh
         mesh = get_mesh_for_testing()

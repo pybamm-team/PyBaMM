@@ -84,6 +84,10 @@ from .expression_tree.binary_operators import (
     Heaviside,
     EqualHeaviside,
     NotEqualHeaviside,
+    Minimum,
+    minimum,
+    Maximum,
+    maximum,
     source,
 )
 from .expression_tree.concatenations import (

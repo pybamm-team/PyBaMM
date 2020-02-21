@@ -709,6 +709,78 @@ class NotEqualHeaviside(Heaviside):
             return left < right
 
 
+class Minimum(BinaryOperator):
+    " Returns the smaller of two objects "
+
+    def __init__(self, left, right):
+        super().__init__("minimum", left, right)
+
+    def __str__(self):
+        """ See :meth:`pybamm.Symbol.__str__()`. """
+        return "minimum({!s}, {!s})".format(self.left, self.right)
+
+    def _diff(self, variable):
+        """ See :meth:`pybamm.Symbol._diff()`. """
+        left, right = self.orphans
+        return (left <= right) * left.diff(variable) + (left > right) * right.diff(
+            variable
+        )
+
+    def _binary_jac(self, left_jac, right_jac):
+        """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
+        left, right = self.orphans
+        return (left <= right) * left_jac + (left > right) * right_jac
+
+    def _binary_evaluate(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        # don't raise RuntimeWarning for NaNs
+        return np.minimum(left, right)
+
+
+class Maximum(BinaryOperator):
+    " Returns the smaller of two objects "
+
+    def __init__(self, left, right):
+        super().__init__("maximum", left, right)
+
+    def __str__(self):
+        """ See :meth:`pybamm.Symbol.__str__()`. """
+        return "maximum({!s}, {!s})".format(self.left, self.right)
+
+    def _diff(self, variable):
+        """ See :meth:`pybamm.Symbol._diff()`. """
+        left, right = self.orphans
+        return (left >= right) * left.diff(variable) + (left < right) * right.diff(
+            variable
+        )
+
+    def _binary_jac(self, left_jac, right_jac):
+        """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
+        left, right = self.orphans
+        return (left >= right) * left_jac + (left < right) * right_jac
+
+    def _binary_evaluate(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        # don't raise RuntimeWarning for NaNs
+        return np.maximum(left, right)
+
+
+def minimum(left, right):
+    """
+    Returns the smaller of two objects. Not to be confused with :meth:`pybamm.min`,
+    which returns min function of child.
+    """
+    return pybamm.simplify_if_constant(Minimum(left, right), keep_domains=True)
+
+
+def maximum(left, right):
+    """
+    Returns the larger of two objects. Not to be confused with :meth:`pybamm.max`,
+    which returns max function of child.
+    """
+    return pybamm.simplify_if_constant(Maximum(left, right), keep_domains=True)
+
+
 def source(left, right, boundary=False):
     """A convinience function for creating (part of) an expression tree representing
     a source term. This is necessary for spatial methods where the mass matrix

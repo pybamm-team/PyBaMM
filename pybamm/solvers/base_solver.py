@@ -131,10 +131,19 @@ class BaseSolver(object):
         if self.ode_solver is True:
             self.root_method = None
         if (
-            isinstance(self, pybamm.CasadiSolver) or self.root_method == "casadi"
+            isinstance(self, pybamm.CasadiSolver)
         ) and model.convert_to_format != "casadi":
             pybamm.logger.warning(
-                f"Converting {model.name} to CasADi for solving with CasADi solver"
+                "Converting {} to CasADi for solving with CasADi solver".format(
+                    model.name
+                )
+            )
+            model.convert_to_format = "casadi"
+        if self.root_method == "casadi" and model.convert_to_format != "casadi":
+            pybamm.logger.warning(
+                "Converting {} to CasADi for calculating ICs with CasADi".format(
+                    model.name
+                )
             )
             model.convert_to_format = "casadi"
 

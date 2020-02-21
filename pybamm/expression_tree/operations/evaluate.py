@@ -92,6 +92,10 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
                 "if scipy.sparse.issparse({1}) else "
                 "{0} * {1}".format(children_vars[0], children_vars[1])
             )
+        elif isinstance(symbol, pybamm.Minimum):
+            symbol_str = "np.minimum({},{})".format(children_vars[0], children_vars[1])
+        elif isinstance(symbol, pybamm.Maximum):
+            symbol_str = "np.maximum({},{})".format(children_vars[0], children_vars[1])
         else:
             symbol_str = children_vars[0] + " " + symbol.name + " " + children_vars[1]
 
