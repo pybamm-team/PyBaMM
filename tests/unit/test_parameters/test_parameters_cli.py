@@ -8,7 +8,6 @@ import subprocess
 import pybamm
 import csv
 import tempfile
-import pkg_resources
 import unittest
 
 from sys import version_info as python_version
@@ -17,8 +16,7 @@ from sys import version_info as python_version
 class TestParametersCLI(unittest.TestCase):
     def test_add_param(self):
         # Read a parameter file thta is shipped with PyBaMM
-        param_filename = pkg_resources.resource_filename(
-            "pybamm",
+        param_filename = pybamm.get_parameters_filepath(
             "input/parameters/lithium-ion/anodes/"
             "graphite_mcmb2528_Marquis2019/parameters.csv",
         )
@@ -43,8 +41,7 @@ class TestParametersCLI(unittest.TestCase):
         print("TEMPDIR.NAME = {}".format(tempdir.name))
         # Check that the new parameters can be accessed from the package
         # and that content is correct
-        new_parameter_filename = pkg_resources.resource_filename(
-            "pybamm",
+        new_parameter_filename = pybamm.get_parameters_filepath(
             os.path.join(
                 "input",
                 "parameters",

@@ -148,8 +148,8 @@ def list_parameters(arguments=None):
     >>> from pybamm.parameters_cli import list_parameters
     >>> list_parameters(["lithium-ion", "anodes"])
     Available package parameters:
-      * graphite_Kim2011
       * graphite_mcmb2528_Marquis2019
+      * graphite_Kim2011
     Available local parameters:
     """
     parser = argparse.ArgumentParser(

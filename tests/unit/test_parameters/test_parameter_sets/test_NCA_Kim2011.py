@@ -3,38 +3,34 @@
 #
 import pybamm
 import unittest
-import pkg_resources
 
 
 class TestKim(unittest.TestCase):
     def test_load_params(self):
         anode = pybamm.ParameterValues({}).read_parameters_csv(
-            pkg_resources.resource_filename(
-                "pybamm",
+            pybamm.get_parameters_filepath(
                 "input/parameters/lithium-ion/anodes/graphite_Kim2011/parameters.csv",
             )
         )
         self.assertEqual(anode["Reference temperature [K]"], "298.15")
 
         cathode = pybamm.ParameterValues({}).read_parameters_csv(
-            pkg_resources.resource_filename(
-                "pybamm",
+            pybamm.get_parameters_filepath(
                 "input/parameters/lithium-ion/cathodes/nca_Kim2011/parameters.csv",
             )
         )
         self.assertEqual(cathode["Reference temperature [K]"], "298.15")
 
         electrolyte = pybamm.ParameterValues({}).read_parameters_csv(
-            pkg_resources.resource_filename(
-                "pybamm",
+            pybamm.get_parameters_filepath(
                 "input/parameters/lithium-ion/electrolytes/lipf6_Kim2011/parameters.csv"
             )
         )
         self.assertEqual(electrolyte["Reference temperature [K]"], "298.15")
 
         cell = pybamm.ParameterValues({}).read_parameters_csv(
-            pkg_resources.resource_filename(
-                "pybamm", "input/parameters/lithium-ion/cells/Kim2011/parameters.csv"
+            pybamm.get_parameters_filepath(
+                "input/parameters/lithium-ion/cells/Kim2011/parameters.csv"
             )
         )
         self.assertAlmostEqual(

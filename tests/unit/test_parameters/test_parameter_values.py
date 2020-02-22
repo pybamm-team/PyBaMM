@@ -4,7 +4,6 @@
 import pybamm
 import os
 import numpy as np
-import pkg_resources
 
 import unittest
 import tests.shared as shared
@@ -13,9 +12,12 @@ import tests.shared as shared
 class TestParameterValues(unittest.TestCase):
     def test_read_parameters_csv(self):
         data = pybamm.ParameterValues({}).read_parameters_csv(
-            pkg_resources.resource_filename(
-                "pybamm",
-                "input/parameters/lithium-ion/cathodes/lico2_Marquis2019/parameters.csv"
+            pybamm.get_parameters_filepath(
+                os.path.join(
+                    "input", "parameters",
+                    "lithium-ion", "cathodes",
+                    "lico2_Marquis2019", "parameters.csv"
+                )
             )
         )
         self.assertEqual(data["Reference temperature [K]"], "298.15")
@@ -30,8 +32,7 @@ class TestParameterValues(unittest.TestCase):
 
         # from file
         param = pybamm.ParameterValues(
-            values=pkg_resources.resource_filename(
-                "pybamm",
+            values=pybamm.get_parameters_filepath(
                 "input/parameters/lithium-ion/cathodes/lico2_Marquis2019/"
                 + "parameters.csv",
             )

@@ -3,7 +3,6 @@ import numpy as np
 import os
 import pickle
 import scipy.interpolate as interp
-import pkg_resources
 
 # change working directory to the root of pybamm
 os.chdir(pybamm.root_dir())
@@ -18,8 +17,8 @@ C_rates = {"01": 0.1, "05": 0.5, "1": 1, "2": 2, "3": 3}
 C_rate = "1"  # choose the key from the above dictionary of available results
 
 # load the comsol results
-comsol_results_path = pkg_resources.resource_filename(
-    "pybamm", "input/comsol_results/comsol_{}C.pickle".format(C_rate)
+comsol_results_path = pybamm.get_parameters_filepath(
+    "input/comsol_results/comsol_{}C.pickle".format(C_rate)
 )
 comsol_variables = pickle.load(open(comsol_results_path, "rb"))
 

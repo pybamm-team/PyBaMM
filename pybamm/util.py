@@ -13,7 +13,6 @@ import pathlib
 import pickle
 import pybamm
 import Levenshtein
-import pkg_resources
 from collections import defaultdict
 
 
@@ -235,8 +234,8 @@ def load(filename):
 
 def get_parameters_filepath(path):
     """Returns path if it exists in current working dir,
-    otherwise get it from pkg_resources"""
+    otherwise get it from package dir"""
     if os.path.exists(path):
         return path
     else:
-        return pkg_resources.resource_filename("pybamm", path)
+        return os.path.join(pybamm.__path__[0], path)
