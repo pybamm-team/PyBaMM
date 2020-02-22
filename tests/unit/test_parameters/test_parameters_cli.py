@@ -35,7 +35,7 @@ class TestParametersCLI(unittest.TestCase):
 
         # Use pybamm command line to add new parameters under
         # test_parameters_dir directory
-        cmd = ["pybamm_add_param", "-f", tempdir.name, "lithium-ion", "anodes"]
+        cmd = ["pybamm_add_parameter", "-f", tempdir.name, "lithium-ion", "anodes"]
         subprocess.run(cmd, check=True)
 
         # Check that the new parameters can be accessed from the package
@@ -59,9 +59,46 @@ class TestParametersCLI(unittest.TestCase):
         os.remove(new_parameter_filename)  # Remove parameters.csv file
         os.rmdir(os.path.dirname(new_parameter_filename))  # Remove (now empty) dir
 
+    def test_edit_param(self):
+        anodes_dir = os.path.join("input", "parameters", "lithium-ion", "anodes")
+        # Write dummy parameters.csv file in temporary directory
+        # in package input dir
+        tempdir = tempfile.TemporaryDirectory(
+            dir=os.path.join(pybamm.__path__[0], anodes_dir)
+        )
+        with open(os.path.join(tempdir.name, "parameters.csv"), "w") as f:
+            f.write("hello")
+
+        # Create a temporary directory to perform this test in isolation
+        sandbox_dir = tempfile.TemporaryDirectory()
+
+        # Copy temporary dir in package to current working directory
+        cmd = [
+            "pybamm_edit_parameter",
+            "-f",
+            os.path.basename(tempdir.name),
+            "lithium-ion",
+            "anodes",
+        ]
+        subprocess.run(cmd, cwd=sandbox_dir.name)
+
+        # Read and compare copied parameters.csv file
+        copied_path_parameters_file = os.path.join(
+            sandbox_dir.name,
+            anodes_dir,
+            os.path.basename(tempdir.name),
+            "parameters.csv",
+        )
+        with open(copied_path_parameters_file, "r") as f:
+            content = f.read()
+            self.assertTrue(content == "hello")
+
+        # Clean up temporaty dicts
+        sandbox_dir.cleanup()
+        tempdir.cleanup()
 
     def test_list_params(self):
-        cmd = ["pybamm_list_params", "lithium-ion", "cathodes"]
+        cmd = ["pybamm_list_parameters", "lithium-ion", "cathodes"]
         output = subprocess.run(cmd, check=True, capture_output=True)
         # First check that available package parameters are listed
         # correctly
