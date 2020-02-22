@@ -11,6 +11,8 @@ import tempfile
 import pkg_resources
 import unittest
 
+from sys import version_info as python_version
+
 
 class TestParametersCLI(unittest.TestCase):
     def test_add_param(self):
@@ -38,12 +40,14 @@ class TestParametersCLI(unittest.TestCase):
         cmd = ["pybamm_add_parameter", "-f", tempdir.name, "lithium-ion", "anodes"]
         subprocess.run(cmd, check=True)
 
+        print("TEMPDIR.NAME = {}".format(tempdir.name))
         # Check that the new parameters can be accessed from the package
         # and that content is correct
         new_parameter_filename = pkg_resources.resource_filename(
             "pybamm",
             os.path.join(
-                "input/parameters/lithium-ion/anodes/",
+                "input","parameters",
+                "lithium-ion","anodes",
                 os.path.basename(tempdir.name),
                 "parameters.csv",
             ),
@@ -99,7 +103,10 @@ class TestParametersCLI(unittest.TestCase):
 
     def test_list_params(self):
         cmd = ["pybamm_list_parameters", "lithium-ion", "cathodes"]
-        output = subprocess.run(cmd, check=True, capture_output=True)
+        if python_version >= (3, 7):
+            output = subprocess.run(cmd, check=True, capture_output=True)
+        else:
+            output = subprocess.run(cmd, check=True, stdout=subprocess.PIPE)
         # First check that available package parameters are listed
         # correctly
         self.assertTrue("lico2_Marquis2019" in str(output.stdout))

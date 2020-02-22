@@ -111,6 +111,7 @@ def add_parameter(arguments=None):
     )
 
     copy_directory(args.parameter_dir, destination_dir, args.force)
+    print("Copied {} to {}".format(args.parameter_dir, destination_dir)
 
 
 def edit_parameter(arguments=None):
@@ -144,13 +145,12 @@ def list_parameters(arguments=None):
     The list is divided into package parameter serts and local parameter sets,
     located in the current working directory.
 
-
+    >>> from pybamm.parameters_cli import list_parameters
     >>> list_parameters(["lithium-ion", "anodes"])
     Available package parameters:
-    * graphite_Kim2011
-    * graphite_mcmb2528_Marquis2019
+      * graphite_Kim2011
+      * graphite_mcmb2528_Marquis2019
     Available local parameters:
-    * graphite_Kim2011_modified
     """
     parser = argparse.ArgumentParser(
         description="List available parameter sets for a given chemistry and component."
