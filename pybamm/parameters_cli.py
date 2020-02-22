@@ -119,7 +119,7 @@ def edit_parameter(arguments=None):
     for editing. The copy preserves the directory structure within the "input"
     directory, i.e
 
-    >> edit_param(["graphite_Kim2011","lithium-ion","anodes"])
+    ``edit_param(["graphite_Kim2011","lithium-ion","anodes"])``
 
     will create the directory structure
     "input/parameters/lithium-ion/anodes/graphite_Kim2011"
@@ -140,12 +140,11 @@ def edit_parameter(arguments=None):
 
 def list_parameters(arguments=None):
     """
-    Outputs a list of available parameter sets for a given chemistry and component.
+    Output a list of available parameter sets for a given chemistry and component.
     The list is divided into package parameter serts and local parameter sets,
     located in the current working directory.
 
-    Example:
-    --------
+
     >>> list_parameters(["lithium-ion", "anodes"])
     Available package parameters:
     * graphite_Kim2011
