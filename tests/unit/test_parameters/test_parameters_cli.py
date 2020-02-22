@@ -46,8 +46,10 @@ class TestParametersCLI(unittest.TestCase):
         new_parameter_filename = pkg_resources.resource_filename(
             "pybamm",
             os.path.join(
-                "input","parameters",
-                "lithium-ion","anodes",
+                "input",
+                "parameters",
+                "lithium-ion",
+                "anodes",
                 os.path.basename(tempdir.name),
                 "parameters.csv",
             ),

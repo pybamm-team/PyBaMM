@@ -111,7 +111,7 @@ def add_parameter(arguments=None):
     )
 
     copy_directory(args.parameter_dir, destination_dir, args.force)
-    print("Copied {} to {}".format(args.parameter_dir, destination_dir)
+    print("Copied {} to {}".format(args.parameter_dir, destination_dir))
 
 
 def edit_parameter(arguments=None):
