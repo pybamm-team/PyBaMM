@@ -1,5 +1,6 @@
 from pybamm import exp
 
+
 def graphite_LGM50_diffusivity_Chen2020(sto, T, T_inf, E_D_s, R_g):
     """
       LG M50 Graphite diffusivity as a function of stochiometry, in this case the
