@@ -54,6 +54,7 @@
 
 ## Bug fixes
 
+-   Fixed a bug where current loaded from data was incorrectly scaled with the cell capacity ([#852](https://github.com/pybamm-team/PyBaMM/pull/852))
 -   Moved evaluation of initial conditions to solver ([#839](https://github.com/pybamm-team/PyBaMM/pull/839))
 -   Fixed a bug where the first line of the data wasn't loaded when parameters are loaded from data ([#819](https://github.com/pybamm-team/PyBaMM/pull/819))
 -   Made `graphviz` an optional dependency ([#810](https://github.com/pybamm-team/PyBaMM/pull/810))
