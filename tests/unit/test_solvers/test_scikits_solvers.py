@@ -194,7 +194,7 @@ class TestScikitsSolvers(unittest.TestCase):
         disc.process_model(model)
 
         # Solve
-        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
+        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8, root_method="lm")
         t_eval = np.linspace(0, 1, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
@@ -214,7 +214,7 @@ class TestScikitsSolvers(unittest.TestCase):
         disc.process_model(model)
 
         # Solve
-        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
+        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8, root_method="lm")
         t_eval = np.linspace(0, 1, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
@@ -238,7 +238,7 @@ class TestScikitsSolvers(unittest.TestCase):
         disc.process_model(model)
 
         # Solve
-        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
+        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8, root_method="lm")
         t_eval = np.linspace(0, 5, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_less(solution.y[0], 1.5)
@@ -283,7 +283,7 @@ class TestScikitsSolvers(unittest.TestCase):
         disc.process_model(model)
 
         # Solve
-        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
+        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8, root_method="lm")
 
         # create two time series, one without a time point on the discontinuity,
         # and one with
@@ -355,7 +355,7 @@ class TestScikitsSolvers(unittest.TestCase):
 
         model.jacobian = jacobian
         # Solve
-        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
+        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8, root_method="lm")
         t_eval = np.linspace(0, 1, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
@@ -372,7 +372,7 @@ class TestScikitsSolvers(unittest.TestCase):
         disc.process_model(model)
 
         # Solve
-        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
+        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8, root_method="lm")
         t_eval = np.linspace(0, 1, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
@@ -421,7 +421,7 @@ class TestScikitsSolvers(unittest.TestCase):
         disc = get_discretisation_for_testing()
         disc.process_model(model)
 
-        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
+        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8, root_method="lm")
 
         # Step once
         dt = 1
@@ -514,7 +514,10 @@ class TestScikitsSolvers(unittest.TestCase):
             disc.process_model(model)
 
             # Solve
-            solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
+            if form == "python":
+                solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8, root_method="lm")
+            else:
+                solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
             t_eval = np.linspace(0, 5, 100)
             solution = solver.solve(model, t_eval, inputs={"rate 1": 0.1, "rate 2": 2})
             np.testing.assert_array_less(solution.y[0], 1.5)
