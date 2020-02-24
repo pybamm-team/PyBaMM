@@ -9,11 +9,13 @@ import pybamm
 import csv
 import tempfile
 import unittest
+import platform
 
 from sys import version_info as python_version
 
 
 class TestParametersCLI(unittest.TestCase):
+    @unittest.skipUnless(platform.system() == "Windows", "Skipped for Windows")
     def test_add_param(self):
         # Read a parameter file thta is shipped with PyBaMM
         param_filename = pybamm.get_parameters_filepath(
@@ -38,7 +40,6 @@ class TestParametersCLI(unittest.TestCase):
         cmd = ["pybamm_add_parameter", "-f", tempdir.name, "lithium-ion", "anodes"]
         subprocess.run(cmd, check=True)
 
-        print("TEMPDIR.NAME = {}".format(tempdir.name))
         # Check that the new parameters can be accessed from the package
         # and that content is correct
         new_parameter_filename = pybamm.get_parameters_filepath(
@@ -62,6 +63,7 @@ class TestParametersCLI(unittest.TestCase):
         os.remove(new_parameter_filename)  # Remove parameters.csv file
         os.rmdir(os.path.dirname(new_parameter_filename))  # Remove (now empty) dir
 
+    @unittest.skipUnless(platform.system() == "Windows", "Skipped for Windows")
     def test_edit_param(self):
         anodes_dir = os.path.join("input", "parameters", "lithium-ion", "anodes")
         # Write dummy parameters.csv file in temporary directory
@@ -100,6 +102,7 @@ class TestParametersCLI(unittest.TestCase):
         sandbox_dir.cleanup()
         tempdir.cleanup()
 
+    @unittest.skipUnless(platform.system() == "Windows", "Skipped for Windows")
     def test_list_params(self):
         cmd = ["pybamm_list_parameters", "lithium-ion", "cathodes"]
         if python_version >= (3, 7):
