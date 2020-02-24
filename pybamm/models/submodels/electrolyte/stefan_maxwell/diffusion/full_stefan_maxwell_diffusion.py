@@ -45,7 +45,7 @@ class Full(BaseModel):
 
         # N_e = N_e_diffusion + N_e_migration + N_e_convection
 
-        N_e = N_e_diffusion + v_box
+        N_e = N_e_diffusion + c_e * v_box
 
         variables.update(self._get_standard_flux_variables(N_e))
 
