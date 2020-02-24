@@ -40,7 +40,7 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
         method="ida",
         rtol=1e-6,
         atol=1e-6,
-        root_method="lm",
+        root_method="casadi",
         root_tol=1e-6,
         max_steps=1000,
     ):
@@ -117,10 +117,14 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
             # 2 = found root(s)
             elif sol.flag == 2:
                 termination = "event"
+            if sol.roots.t is None:
+                t_root = None
+            else:
+                t_root = sol.roots.t
             return pybamm.Solution(
                 sol.values.t,
                 np.transpose(sol.values.y),
-                sol.roots.t,
+                t_root,
                 np.transpose(sol.roots.y),
                 termination,
             )

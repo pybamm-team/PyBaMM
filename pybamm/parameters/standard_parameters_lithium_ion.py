@@ -147,17 +147,19 @@ def kappa_e_dimensional(c_e, T):
     )
 
 
-def D_n_dimensional(c_n, T):
-    "Dimensional diffusivity in negative particle"
+def D_n_dimensional(sto, T):
+    """Dimensional diffusivity in negative particle. Note this is defined as a
+    function of stochiometry"""
     return pybamm.FunctionParameter(
-        "Negative electrode diffusivity [m2.s-1]", c_n, T, T_ref, E_D_s_n, R
+        "Negative electrode diffusivity [m2.s-1]", sto, T, T_ref, E_D_s_n, R
     )
 
 
-def D_p_dimensional(c_p, T):
-    "Dimensional diffusivity in positive particle"
+def D_p_dimensional(sto, T):
+    """Dimensional diffusivity in positive particle. Note this is defined as a
+    function of stochiometry"""
     return pybamm.FunctionParameter(
-        "Positive electrode diffusivity [m2.s-1]", c_p, T, T_ref, E_D_s_p, R
+        "Positive electrode diffusivity [m2.s-1]", sto, T, T_ref, E_D_s_p, R
     )
 
 
@@ -238,8 +240,8 @@ tau_r_p = F / (m_p_ref_dimensional * a_p_dim * c_e_typ ** 0.5)
 tau_diffusion_e = L_x ** 2 / D_e_dimensional(c_e_typ, T_ref)
 
 # Particle diffusion timescales
-tau_diffusion_n = R_n ** 2 / D_n_dimensional(c_n_max, T_ref)
-tau_diffusion_p = R_p ** 2 / D_p_dimensional(c_p_max, T_ref)
+tau_diffusion_n = R_n ** 2 / D_n_dimensional(pybamm.Scalar(1), T_ref)
+tau_diffusion_p = R_p ** 2 / D_p_dimensional(pybamm.Scalar(1), T_ref)
 
 # Thermal diffusion timescale
 tau_th_yz = pybamm.thermal_parameters.tau_th_yz
@@ -403,16 +405,16 @@ def kappa_e(c_e, T):
 
 def D_n(c_s_n, T):
     "Dimensionless negative particle diffusivity"
-    c_s_n_dimensional = c_s_n * c_n_max
+    sto = c_s_n
     T_dim = Delta_T * T + T_ref
-    return D_n_dimensional(c_s_n_dimensional, T_dim) / D_n_dimensional(c_n_max, T_ref)
+    return D_n_dimensional(sto, T_dim) / D_n_dimensional(pybamm.Scalar(1), T_ref)
 
 
 def D_p(c_s_p, T):
     "Dimensionless positive particle diffusivity"
-    c_s_p_dimensional = c_s_p * c_p_max
+    sto = c_s_p
     T_dim = Delta_T * T + T_ref
-    return D_p_dimensional(c_s_p_dimensional, T_dim) / D_p_dimensional(c_p_max, T_ref)
+    return D_p_dimensional(sto, T_dim) / D_p_dimensional(pybamm.Scalar(1), T_ref)
 
 
 def m_n(T):
@@ -465,4 +467,3 @@ dimensional_current_density_with_time = dimensional_current_with_time / (
 current_with_time = (
     dimensional_current_with_time / I_typ * pybamm.Function(np.sign, I_typ)
 )
-

@@ -75,8 +75,12 @@ class StandardModelTest(object):
         self.solver.rtol = 1e-8
         self.solver.atol = 1e-8
 
+        Crate = abs(self.parameter_values["C-rate"])
+        # don't allow zero C-rate
+        if Crate == 0:
+            Crate = 1
         if t_eval is None:
-            t_eval = np.linspace(0, 1, 100)
+            t_eval = np.linspace(0, 3600 / Crate, 100)
 
         self.solution = self.solver.solve(self.model, t_eval)
 
@@ -132,7 +136,7 @@ class OptimisationsTest(object):
             if simplify:
                 eqn = eqn.simplify()
 
-            y = self.model.concatenated_initial_conditions
+            y = self.model.concatenated_initial_conditions.evaluate(t=0)
             if use_known_evals:
                 eqn_eval, known_evals = eqn.evaluate(0, y, known_evals={})
             elif to_python:

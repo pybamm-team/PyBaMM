@@ -492,7 +492,7 @@ setup(
     # List of dependencies
     install_requires=[
         "numpy>=1.16",
-        "scipy>=1.0",
+        "scipy>=1.3",
         "pandas>=0.24",
         "anytree>=2.4.3",
         "autograd>=1.2",

@@ -13,7 +13,7 @@ class TestLeadAcidFullSideReactions(unittest.TestCase):
         options = {"side reactions": ["oxygen"]}
         model = pybamm.lead_acid.Full(options)
         modeltest = tests.StandardModelTest(model)
-        modeltest.test_all(skip_output_tests=True, t_eval=np.linspace(0, 0.6))
+        modeltest.test_all(skip_output_tests=True, t_eval=np.linspace(0, 3600 * 17))
 
     def test_basic_processing_differential(self):
         options = {"side reactions": ["oxygen"], "surface form": "differential"}

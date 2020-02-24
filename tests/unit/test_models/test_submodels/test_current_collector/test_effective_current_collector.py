@@ -47,7 +47,7 @@ class TestEffectiveResistance2D(unittest.TestCase):
             disc = pybamm.Discretisation(meshes[i], model.default_spatial_methods)
             disc.process_model(model)
         solutions = [None] * len(models)
-        t_eval = np.linspace(0, 0.1, 10)
+        t_eval = np.linspace(0, 100, 10)
         solutions[0] = models[0].default_solver.solve(models[0])
         solutions[1] = models[1].default_solver.solve(models[1], t_eval)
 

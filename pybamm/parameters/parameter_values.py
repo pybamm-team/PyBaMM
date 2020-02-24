@@ -5,6 +5,7 @@ import pybamm
 import pandas as pd
 import os
 import numbers
+import numpy as np
 
 
 class ParameterValues:
@@ -227,9 +228,9 @@ class ParameterValues:
                     else:
                         filename = os.path.join(path, value[6:] + ".csv")
                         function_name = value[6:]
-                    resource_filename = pybamm.get_parameters_filepath(filename)
+                    filename = pybamm.get_parameters_filepath(filename)
                     data = pd.read_csv(
-                        resource_filename, comment="#", skip_blank_lines=True
+                        filename, comment="#", skip_blank_lines=True, header=None
                     ).to_numpy()
                     # Save name and data
                     self._dict_items[name] = (function_name, data)
@@ -278,8 +279,8 @@ class ParameterValues:
                     value = CrateToCurrent(values["C-rate"], capacity)
                 elif isinstance(values["C-rate"], tuple):
                     data = values["C-rate"][1]
-                    data[:, 1] = data[:, 1] * capacity
-                    value = (values["C-rate"][0] + "_to_Crate", data)
+                    current_data = np.stack([data[:, 0], data[:, 1] * capacity], axis=1)
+                    value = (values["C-rate"][0] + "_to_current", current_data)
                 elif values["C-rate"] == "[input]":
                     value = CrateToCurrent(values["C-rate"], capacity, typ="input")
                 else:
@@ -290,8 +291,11 @@ class ParameterValues:
                     value = CurrentToCrate(values["Current function [A]"], capacity)
                 elif isinstance(values["Current function [A]"], tuple):
                     data = values["Current function [A]"][1]
-                    data[:, 1] = data[:, 1] / capacity
-                    value = (values["Current function [A]"][0] + "_to_current", data)
+                    c_rate_data = np.stack([data[:, 0], data[:, 1] / capacity], axis=1)
+                    value = (
+                        values["Current function [A]"][0] + "_to_Crate",
+                        c_rate_data,
+                    )
                 elif values["Current function [A]"] == "[input]":
                     value = CurrentToCrate(
                         values["Current function [A]"], capacity, typ="input"
@@ -352,10 +356,35 @@ class ParameterValues:
             )
             model.initial_conditions[variable] = self.process_symbol(equation)
 
-        # Boundary conditions are dictionaries {"left": left bc, "right": right bc}
-        # in general, but may be imposed on the tabs (or *not* on the tab) for a
-        # small number of variables, e.g. {"negative tab": neg. tab bc,
-        # "positive tab": pos. tab bc "no tab": no tab bc}.
+        model.boundary_conditions = self.process_boundary_conditions(model)
+
+        for variable, equation in model.variables.items():
+            pybamm.logger.debug(
+                "Processing parameters for {!r} (variables)".format(variable)
+            )
+            model.variables[variable] = self.process_symbol(equation)
+
+        for event in model.events:
+            pybamm.logger.debug(
+                "Processing parameters for event'{}''".format(event.name)
+            )
+            event.expression = self.process_symbol(event.expression)
+
+        # Process timescale
+        model.timescale = self.process_symbol(model.timescale)
+
+        pybamm.logger.info("Finish setting parameters for {}".format(model.name))
+
+        return model
+
+    def process_boundary_conditions(self, model):
+        """
+        Process boundary conditions for a model
+        Boundary conditions are dictionaries {"left": left bc, "right": right bc}
+        in general, but may be imposed on the tabs (or *not* on the tab) for a
+        small number of variables, e.g. {"negative tab": neg. tab bc,
+        "positive tab": pos. tab bc "no tab": no tab bc}.
+        """
         new_boundary_conditions = {}
         sides = ["left", "right", "negative tab", "positive tab", "no tab"]
         for variable, bcs in model.boundary_conditions.items():
@@ -378,23 +407,7 @@ class ParameterValues:
                     else:
                         raise KeyError(err)
 
-        model.boundary_conditions = new_boundary_conditions
-
-        for variable, equation in model.variables.items():
-            pybamm.logger.debug(
-                "Processing parameters for {!r} (variables)".format(variable)
-            )
-            model.variables[variable] = self.process_symbol(equation)
-
-        for event in model.events:
-            pybamm.logger.debug(
-                "Processing parameters for event'{}''".format(event.name)
-            )
-            event.expression = self.process_symbol(event.expression)
-
-        pybamm.logger.info("Finish setting parameters for {}".format(model.name))
-
-        return model
+        return new_boundary_conditions
 
     def update_model(self, model, disc):
         raise NotImplementedError(
