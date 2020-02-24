@@ -5,8 +5,6 @@ import matplotlib.pyplot as plt
 pybamm.set_logging_level("INFO")
 
 # load model
-options = {"thermal": "isothermal"}
-
 model = pybamm.lithium_ion.DFN()
 
 # solve model
