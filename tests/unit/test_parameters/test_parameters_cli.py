@@ -13,6 +13,7 @@ import platform
 
 from sys import version_info as python_version
 
+
 @unittest.skipUnless(platform.system() != "Windows", "Skipped for Windows")
 class TestParametersCLI(unittest.TestCase):
     def test_add_param(self):
