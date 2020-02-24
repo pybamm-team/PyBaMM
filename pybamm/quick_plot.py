@@ -195,8 +195,8 @@ class QuickPlot(object):
 
             # Set the x variable for any two-dimensional variables
             if first_variable.dimensions == 2:
-                spatial_variable_key = first_variable.spatial_var_name
-                spatial_variable_value = first_variable.mesh[0].edges
+                spatial_variable_key = first_variable.first_dimension
+                spatial_variable_value = first_variable.first_dim_pts
                 self.spatial_variable[key] = (
                     spatial_variable_key,
                     spatial_variable_value,

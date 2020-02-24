@@ -3,6 +3,7 @@
 ## Features
 
 -   Changed rootfinding algorithm to CasADi, scipy.optimize.root still accessible as an option ([#844](https://github.com/pybamm-team/PyBaMM/pull/844))
+-   Added capacitance effects to lithium-ion models ([#842](https://github.com/pybamm-team/PyBaMM/pull/842))
 -   Added NCA parameter set ([#824](https://github.com/pybamm-team/PyBaMM/pull/824))
 -   Added functionality to `Solution` that automatically gets `t_eval` from the data when simulating drive cycles and performs checks to ensure the output has the required resolution to accurately capture the input current ([#819](https://github.com/pybamm-team/PyBaMM/pull/819))
 -   Added options to export a solution to matlab or csv ([#811](https://github.com/pybamm-team/PyBaMM/pull/811))

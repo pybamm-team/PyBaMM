@@ -92,7 +92,12 @@ b_s_p = pybamm.geometric_parameters.b_s_p
 # Electrochemical reactions
 ne_n = pybamm.Parameter("Negative electrode electrons in reaction")
 ne_p = pybamm.Parameter("Positive electrode electrons in reaction")
-C_dl_dimensional = pybamm.Parameter("Double-layer capacity [F.m-2]")
+C_dl_n_dimensional = pybamm.Parameter(
+    "Negative electrode double-layer capacity [F.m-2]"
+)
+C_dl_p_dimensional = pybamm.Parameter(
+    "Positive electrode double-layer capacity [F.m-2]"
+)
 
 
 # Initial conditions
@@ -285,10 +290,15 @@ centre_y_tab_p = pybamm.geometric_parameters.centre_y_tab_p
 centre_z_tab_p = pybamm.geometric_parameters.centre_z_tab_p
 
 # Microscale geometry
-var = pybamm.standard_spatial_vars
-epsilon_n = pybamm.FunctionParameter("Negative electrode porosity", var.x_n)
-epsilon_s = pybamm.FunctionParameter("Separator porosity", var.x_s)
-epsilon_p = pybamm.FunctionParameter("Positive electrode porosity", var.x_p)
+epsilon_n = pybamm.FunctionParameter(
+    "Negative electrode porosity", pybamm.standard_spatial_vars.x_n
+)
+epsilon_s = pybamm.FunctionParameter(
+    "Separator porosity", pybamm.standard_spatial_vars.x_s
+)
+epsilon_p = pybamm.FunctionParameter(
+    "Positive electrode porosity", pybamm.standard_spatial_vars.x_p
+)
 epsilon = pybamm.Concatenation(epsilon_n, epsilon_s, epsilon_p)
 epsilon_s_n = pybamm.Parameter("Negative electrode active material volume fraction")
 epsilon_s_p = pybamm.Parameter("Positive electrode active material volume fraction")
@@ -315,7 +325,7 @@ alpha_prime = alpha / delta
 
 # Electrolyte Properties
 t_plus = pybamm.Parameter("Cation transference number")
-beta_surf = 0
+beta_surf = pybamm.Scalar(0)
 s = 1 - t_plus
 
 
@@ -329,10 +339,10 @@ def chi(c_e):
 
 # Electrochemical Reactions
 C_dl_n = (
-    C_dl_dimensional * potential_scale / interfacial_current_scale_n / tau_discharge
+    C_dl_n_dimensional * potential_scale / interfacial_current_scale_n / tau_discharge
 )
 C_dl_p = (
-    C_dl_dimensional * potential_scale / interfacial_current_scale_p / tau_discharge
+    C_dl_p_dimensional * potential_scale / interfacial_current_scale_p / tau_discharge
 )
 
 # Electrical
