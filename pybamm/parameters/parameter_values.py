@@ -5,6 +5,7 @@ import pybamm
 import pandas as pd
 import os
 import numbers
+import numpy as np
 
 
 class ParameterValues:
@@ -276,8 +277,8 @@ class ParameterValues:
                     value = CrateToCurrent(values["C-rate"], capacity)
                 elif isinstance(values["C-rate"], tuple):
                     data = values["C-rate"][1]
-                    data[:, 1] = data[:, 1] * capacity
-                    value = (values["C-rate"][0] + "_to_Crate", data)
+                    current_data = np.stack([data[:, 0], data[:, 1] * capacity], axis=1)
+                    value = (values["C-rate"][0] + "_to_current", current_data)
                 elif values["C-rate"] == "[input]":
                     value = CrateToCurrent(values["C-rate"], capacity, typ="input")
                 else:
@@ -288,8 +289,11 @@ class ParameterValues:
                     value = CurrentToCrate(values["Current function [A]"], capacity)
                 elif isinstance(values["Current function [A]"], tuple):
                     data = values["Current function [A]"][1]
-                    data[:, 1] = data[:, 1] / capacity
-                    value = (values["Current function [A]"][0] + "_to_current", data)
+                    c_rate_data = np.stack([data[:, 0], data[:, 1] / capacity], axis=1)
+                    value = (
+                        values["Current function [A]"][0] + "_to_Crate",
+                        c_rate_data,
+                    )
                 elif values["Current function [A]"] == "[input]":
                     value = CurrentToCrate(
                         values["Current function [A]"], capacity, typ="input"

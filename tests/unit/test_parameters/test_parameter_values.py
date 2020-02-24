@@ -101,7 +101,7 @@ class TestParameterValues(unittest.TestCase):
         linear = np.hstack([x, 2 * x])
         values = {"C-rate": ("linear", linear), "Cell capacity [A.h]": 10}
         param = pybamm.ParameterValues(values)
-        self.assertEqual(param["Current function [A]"][0], "linear_to_Crate")
+        self.assertEqual(param["Current function [A]"][0], "linear_to_current")
         np.testing.assert_array_equal(
             param["Current function [A]"][1], np.hstack([x, 20 * x])
         )
@@ -110,7 +110,7 @@ class TestParameterValues(unittest.TestCase):
         linear = np.hstack([x, 2 * x])
         values = {"Current function [A]": ("linear", linear), "Cell capacity [A.h]": 10}
         param = pybamm.ParameterValues(values)
-        self.assertEqual(param["C-rate"][0], "linear_to_current")
+        self.assertEqual(param["C-rate"][0], "linear_to_Crate")
         np.testing.assert_array_almost_equal(
             param["C-rate"][1], np.hstack([x, 0.2 * x])
         )
