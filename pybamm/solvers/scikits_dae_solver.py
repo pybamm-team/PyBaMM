@@ -40,7 +40,7 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
         method="ida",
         rtol=1e-6,
         atol=1e-6,
-        root_method="lm",
+        root_method="casadi",
         root_tol=1e-6,
         max_steps=1000,
     ):

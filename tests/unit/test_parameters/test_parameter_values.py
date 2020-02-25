@@ -12,7 +12,13 @@ import tests.shared as shared
 class TestParameterValues(unittest.TestCase):
     def test_read_parameters_csv(self):
         data = pybamm.ParameterValues({}).read_parameters_csv(
-            "input/parameters/lithium-ion/cathodes/lico2_Marquis2019/parameters.csv"
+            pybamm.get_parameters_filepath(
+                os.path.join(
+                    "input", "parameters",
+                    "lithium-ion", "cathodes",
+                    "lico2_Marquis2019", "parameters.csv"
+                )
+            )
         )
         self.assertEqual(data["Reference temperature [K]"], "298.15")
 
@@ -26,8 +32,10 @@ class TestParameterValues(unittest.TestCase):
 
         # from file
         param = pybamm.ParameterValues(
-            values="input/parameters/lithium-ion/cathodes/lico2_Marquis2019/"
-            + "parameters.csv"
+            values=pybamm.get_parameters_filepath(
+                "input/parameters/lithium-ion/cathodes/lico2_Marquis2019/"
+                + "parameters.csv",
+            )
         )
         self.assertEqual(param["Reference temperature [K]"], 298.15)
 
@@ -101,7 +109,7 @@ class TestParameterValues(unittest.TestCase):
         linear = np.hstack([x, 2 * x])
         values = {"C-rate": ("linear", linear), "Cell capacity [A.h]": 10}
         param = pybamm.ParameterValues(values)
-        self.assertEqual(param["Current function [A]"][0], "linear_to_Crate")
+        self.assertEqual(param["Current function [A]"][0], "linear_to_current")
         np.testing.assert_array_equal(
             param["Current function [A]"][1], np.hstack([x, 20 * x])
         )
@@ -110,7 +118,7 @@ class TestParameterValues(unittest.TestCase):
         linear = np.hstack([x, 2 * x])
         values = {"Current function [A]": ("linear", linear), "Cell capacity [A.h]": 10}
         param = pybamm.ParameterValues(values)
-        self.assertEqual(param["C-rate"][0], "linear_to_current")
+        self.assertEqual(param["C-rate"][0], "linear_to_Crate")
         np.testing.assert_array_almost_equal(
             param["C-rate"][1], np.hstack([x, 0.2 * x])
         )
@@ -386,12 +394,7 @@ class TestParameterValues(unittest.TestCase):
                 "interpolation": "[data]lico2_data_example",
             },
             path=os.path.join(
-                pybamm.root_dir(),
-                "input",
-                "parameters",
-                "lithium-ion",
-                "cathodes",
-                "lico2_Marquis2019",
+                "input", "parameters", "lithium-ion", "cathodes", "lico2_Marquis2019",
             ),
             check_already_exists=False,
         )
