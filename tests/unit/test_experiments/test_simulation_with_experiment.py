@@ -13,7 +13,7 @@ class TestSimulationExperiment(unittest.TestCase):
                 "Charge at 1 A until 4.1 V",
                 "Hold at 4.1 V until 50 mA",
                 "Discharge at 2 W for 1 hour",
-            ],
+            ]
         )
         model = pybamm.lithium_ion.DFN()
         sim = pybamm.Simulation(model, experiment=experiment)
@@ -48,7 +48,7 @@ class TestSimulationExperiment(unittest.TestCase):
         self.assertEqual(sim._experiment_inputs[3]["Voltage cut-off [V]"], -1e10)
 
         self.assertEqual(
-            sim._experiment_times, [3600, 7 * 24 * 3600, 7 * 24 * 3600, 3600],
+            sim._experiment_times, [3600, 7 * 24 * 3600, 7 * 24 * 3600, 3600]
         )
 
         self.assertIn(
@@ -75,11 +75,11 @@ class TestSimulationExperiment(unittest.TestCase):
                 "Charge at 1 A until 4.1 V",
                 "Hold at 4.1 V until C/2",
                 "Discharge at 2 W for 1 hour",
-            ],
+            ]
         )
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model, experiment=experiment)
-        sim.solve()
+        sim.solve(solver=pybamm.CasadiSolver())
         self.assertEqual(sim._solution.termination, "final time")
 
     def test_run_experiment_breaks_early(self):
@@ -89,7 +89,7 @@ class TestSimulationExperiment(unittest.TestCase):
         pybamm.set_logging_level("ERROR")
         # giving the time, should get ignored
         t_eval = [0, 1]
-        sim.solve(t_eval)
+        sim.solve(t_eval, solver=pybamm.CasadiSolver())
         pybamm.set_logging_level("WARNING")
         self.assertIn("event", sim._solution.termination)
 

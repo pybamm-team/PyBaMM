@@ -12,7 +12,13 @@ import tests.shared as shared
 class TestParameterValues(unittest.TestCase):
     def test_read_parameters_csv(self):
         data = pybamm.ParameterValues({}).read_parameters_csv(
-            "input/parameters/lithium-ion/cathodes/lico2_Marquis2019/parameters.csv"
+            pybamm.get_parameters_filepath(
+                os.path.join(
+                    "input", "parameters",
+                    "lithium-ion", "cathodes",
+                    "lico2_Marquis2019", "parameters.csv"
+                )
+            )
         )
         self.assertEqual(data["Reference temperature [K]"], "298.15")
 
@@ -26,8 +32,10 @@ class TestParameterValues(unittest.TestCase):
 
         # from file
         param = pybamm.ParameterValues(
-            values="input/parameters/lithium-ion/cathodes/lico2_Marquis2019/"
-            + "parameters.csv"
+            values=pybamm.get_parameters_filepath(
+                "input/parameters/lithium-ion/cathodes/lico2_Marquis2019/"
+                + "parameters.csv",
+            )
         )
         self.assertEqual(param["Reference temperature [K]"], 298.15)
 
@@ -386,12 +394,7 @@ class TestParameterValues(unittest.TestCase):
                 "interpolation": "[data]lico2_data_example",
             },
             path=os.path.join(
-                pybamm.root_dir(),
-                "input",
-                "parameters",
-                "lithium-ion",
-                "cathodes",
-                "lico2_Marquis2019",
+                "input", "parameters", "lithium-ion", "cathodes", "lico2_Marquis2019",
             ),
             check_already_exists=False,
         )
