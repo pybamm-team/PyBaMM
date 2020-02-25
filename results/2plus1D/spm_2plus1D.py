@@ -2,9 +2,17 @@ import pybamm
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
+import matplotlib
+import os
 
 # set logging level
 pybamm.set_logging_level("INFO")
+
+# change working directory to the root of pybamm
+os.chdir(pybamm.root_dir())
+
+# set style
+matplotlib.rc_file("results/2plus1D/_matplotlibrc", use_default_template=True)
 
 # load (2+1D) SPM model
 options = {
@@ -21,7 +29,13 @@ geometry = model.default_geometry
 # load parameter values and process model and geometry
 param = model.default_parameter_values
 C_rate = 1
-param.update({"C-rate": C_rate})
+param.update(
+    {
+        "C-rate": C_rate,
+        "Negative current collector conductivity [S.m-1]": 0.5 * 1e7,
+        "Positive current collector conductivity [S.m-1]": 1e7,
+    }
+)
 
 param.process_model(model)
 param.process_geometry(geometry)
@@ -34,8 +48,8 @@ var_pts = {
     var.x_p: 5,
     var.r_n: 5,
     var.r_p: 5,
-    var.y: 5,
-    var.z: 5,
+    var.y: 10,
+    var.z: 10,
 }
 # depending on number of points in y-z plane may need to increase recursion depth...
 sys.setrecursionlimit(10000)
@@ -65,6 +79,12 @@ phi_s_cp = pybamm.ProcessedVariable(
     solution.y,
     mesh=mesh,
 )
+I = pybamm.ProcessedVariable(
+    model.variables["Current collector current density [A.m-2]"],
+    solution.t,
+    solution.y,
+    mesh=mesh,
+)
 T = pybamm.ProcessedVariable(
     model.variables["X-averaged cell temperature [K]"],
     solution.t,
@@ -86,7 +106,7 @@ def plot(t):
     ind = (np.abs(solution.t - t)).argmin()
 
     # negative current collector potential
-    plt.subplot(131)
+    plt.subplot(221)
     phi_s_cn_plot = plt.pcolormesh(
         y_plot,
         z_plot,
@@ -101,7 +121,7 @@ def plot(t):
     plt.colorbar(phi_s_cn_plot)
 
     # positive current collector potential
-    plt.subplot(132)
+    plt.subplot(222)
     phi_s_cp_plot = plt.pcolormesh(
         y_plot,
         z_plot,
@@ -116,8 +136,24 @@ def plot(t):
     plt.set_cmap("viridis")
     plt.colorbar(phi_s_cp_plot)
 
+    # current
+    plt.subplot(223)
+    I_plot = plt.pcolormesh(
+        y_plot,
+        z_plot,
+        np.transpose(I(y=y_plot, z=z_plot, t=solution.t[ind])),
+        shading="gouraud",
+    )
+
+    plt.axis([0, l_y, 0, l_z])
+    plt.xlabel(r"$y$")
+    plt.ylabel(r"$z$")
+    plt.title(r"$I$ [A.m-2]")
+    plt.set_cmap("plasma")
+    plt.colorbar(I_plot)
+
     # temperature
-    plt.subplot(133)
+    plt.subplot(224)
     T_plot = plt.pcolormesh(
         y_plot,
         z_plot,
@@ -135,7 +171,9 @@ def plot(t):
     plt.subplots_adjust(
         top=0.92, bottom=0.15, left=0.10, right=0.9, hspace=0.5, wspace=0.5
     )
+    plt.savefig("2plus1D_example.pdf", format="pdf", dpi=1000)
+
     plt.show()
 
 
-plot(1800 / tau.evaluate())
+plot(1800 / tau)
