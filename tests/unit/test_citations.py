@@ -46,10 +46,6 @@ class TestCitations(unittest.TestCase):
         pybamm.lithium_ion.SPMe(build=False)
         self.assertIn("marquis2019asymptotic", citations._papers_to_cite)
 
-        citations._reset()
-        pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
-        self.assertIn("marquis2019asymptotic", citations._papers_to_cite)
-
     def test_doyle_1993(self):
         citations = pybamm.citations
         citations._reset()
@@ -77,6 +73,21 @@ class TestCitations(unittest.TestCase):
         citations._reset()
         pybamm.lead_acid.Full(build=False)
         self.assertIn("sulzer2019physical", citations._papers_to_cite)
+
+    def test_parameter_citations(self):
+        citations = pybamm.citations
+
+        citations._reset()
+        pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Chen2020)
+        self.assertIn("Chen2020", citations._papers_to_cite)
+
+        citations._reset()
+        pybamm.ParameterValues(chemistry=pybamm.parameter_sets.NCA_Kim2011)
+        self.assertIn("kim2011multi", citations._papers_to_cite)
+
+        citations._reset()
+        pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
+        self.assertIn("marquis2019asymptotic", citations._papers_to_cite)
 
         citations._reset()
         pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Sulzer2019)

@@ -12,6 +12,13 @@
   doi = {10.1007/s12532-018-0139-4}
 }
 
+@article{Chen2020,
+author = {Chen, Chang-Hui and Brosa Planella, Ferran and O'Regan, Kieran and Gastol, Dominika and Widanage, W. Dhammika and Kendrick, Emma},
+title = {{Development of Experimental Techniques for Parameterization of Multi-scale Lithium-ion Battery Models}},
+journal = {Submitted for publication},
+year = {2020}
+}
+
 @article{doyle1993modeling,
   title={Modeling of galvanostatic charge and discharge of the lithium/polymer/insertion cell},
   author={Doyle, M and Fuller, TF and Newman, J},

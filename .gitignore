@@ -12,7 +12,7 @@
 !LICENSE.txt
 !CMakeLists.txt
 !pybamm/CITATIONS.txt
-!input/**/*.csv
+!pybamm/input/**/*.csv
 
 # running files
 *.pyc

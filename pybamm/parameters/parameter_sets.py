@@ -32,6 +32,16 @@ NCA_Kim2011 = {
     "citation": "kim2011multi",
 }
 
+Chen2020 = {
+    "chemistry": "lithium-ion",
+    "cell": "LGM50_Chen2020",
+    "anode": "graphite_Chen2020",
+    "separator": "separator_Chen2020",
+    "cathode": "nmc_Chen2020",
+    "electrolyte": "lipf6_Nyman2008",
+    "experiment": "1C_discharge_from_full_Chen2020",
+    "citation": "Chen2020",
+}
 #
 # Lead-acid
 #
