@@ -26,8 +26,14 @@ class TestParameterValues(unittest.TestCase):
 
         # from file
         param = pybamm.ParameterValues(
-            values="input/parameters/lithium-ion/cathodes/lico2_Marquis2019/"
-            + "parameters.csv"
+            values=os.path.join(
+                "input",
+                "parameters",
+                "lithium-ion",
+                "cathodes",
+                "lico2_Marquis2019",
+                "parameters.csv",
+            )
         )
         self.assertEqual(param["Reference temperature [K]"], 298.15)
 
