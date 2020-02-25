@@ -453,8 +453,6 @@ class Integral(SpatialOperator):
 
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()` """
-        if not isinstance(self.integration_variable, list):
-            self.integration_variable = [self.integration_variable]
         self._id = hash(
             (self.__class__, self.name)
             + tuple(
@@ -946,8 +944,9 @@ def x_average(symbol):
             x = pybamm.standard_spatial_vars.x_p
             l = pybamm.geometric_parameters.l_p
         else:
-            raise pybamm.DomainError("domain '{}' not recognised".format(symbol.domain))
-
+            x = pybamm.SpatialVariable("x", domain=symbol.domain)
+            v = pybamm.ones_like(symbol)
+            l = pybamm.Integral(v, x)
         return Integral(symbol, x) / l
 
 

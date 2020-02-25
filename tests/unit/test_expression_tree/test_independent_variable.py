@@ -45,8 +45,6 @@ class TestIndependentVariable(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             x.evaluate()
 
-        with self.assertRaisesRegex(ValueError, "name must be"):
-            pybamm.SpatialVariable("not a variable", ["negative electrode"])
         with self.assertRaisesRegex(ValueError, "domain must be"):
             pybamm.SpatialVariable("x", [])
         with self.assertRaises(pybamm.DomainError):

@@ -146,7 +146,7 @@ from .geometry.geometry import (
     Geometry2DCurrentCollector,
 )
 
-from .expression_tree.independent_variable import KNOWN_SPATIAL_VARS, KNOWN_COORD_SYS
+from .expression_tree.independent_variable import KNOWN_COORD_SYS
 from .geometry import standard_spatial_vars
 
 #
