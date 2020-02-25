@@ -143,6 +143,11 @@ class ParameterValues:
                 path=component_path,
             )
 
+        # register citations
+        if "citation" in chemistry:
+            citation = chemistry["citation"]
+            pybamm.citations.register(citation)
+
     def read_parameters_csv(self, filename):
         """Reads parameters from csv file into dict.
 

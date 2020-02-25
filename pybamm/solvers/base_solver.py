@@ -424,6 +424,8 @@ class BaseSolver(object):
                 method=self.root_method,
                 tol=self.root_tol,
             )
+            pybamm.citations.register("virtanen2020scipy")
+
             # Set outputs
             y0_alg = sol.x
             success = sol.success

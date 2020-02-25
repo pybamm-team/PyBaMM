@@ -1,0 +1,125 @@
+@Article{Andersson2019,
+  author = {Joel A E Andersson and Joris Gillis and Greg Horn
+            and James B Rawlings and Moritz Diehl},
+  title = {{CasADi} -- {A} software framework for nonlinear optimization
+           and optimal control},
+  journal = {Mathematical Programming Computation},
+  volume = {11},
+  number = {1},
+  pages = {1--36},
+  year = {2019},
+  publisher = {Springer},
+  doi = {10.1007/s12532-018-0139-4}
+}
+
+@article{Chen2020,
+author = {Chen, Chang-Hui and Brosa Planella, Ferran and O'Regan, Kieran and Gastol, Dominika and Widanage, W. Dhammika and Kendrick, Emma},
+title = {{Development of Experimental Techniques for Parameterization of Multi-scale Lithium-ion Battery Models}},
+journal = {Submitted for publication},
+year = {2020}
+}
+
+@article{doyle1993modeling,
+  title={Modeling of galvanostatic charge and discharge of the lithium/polymer/insertion cell},
+  author={Doyle, M and Fuller, TF and Newman, J},
+  journal={Journal of the Electrochemical society},
+  volume={140},
+  number={6},
+  pages={1526--1533},
+  year={1993},
+  publisher={The Electrochemical Society},
+  note = {\href{ http://dx.doi.org/10.1149/1.2221597}{doi: 10.1149/1.2221597}},
+}
+
+@techreport{hindmarsh2000pvode,
+  title={The {PVODE} and {IDA} algorithms},
+  author={Hindmarsh, AC},
+  year={2000},
+  institution={Lawrence Livermore National Lab., CA (US)},
+  note = {\href{ https://www.osti.gov/biblio/802599}{doi:10.2172/802599}},
+}
+
+@article{hindmarsh2005sundials,
+  title={SUNDIALS: Suite of nonlinear and differential/algebraic equation solvers},
+  author={Hindmarsh, Alan C and Brown, Peter N and Grant, Keith E and Lee, Steven L and Serban, Radu and Shumaker, Dan E and Woodward, Carol S},
+  journal={ACM Transactions on Mathematical Software (TOMS)},
+  volume={31},
+  number={3},
+  pages={363--396},
+  year={2005},
+  publisher={ACM New York, NY, USA}
+}
+
+@article{kim2011multi,
+  title={Multi-domain modeling of lithium-ion batteries encompassing multi-physics in varied length scales},
+  author={Kim, Gi-Heon and Smith, Kandler and Lee, Kyu-Jin and Santhanagopalan, Shriram and Pesaran, Ahmad},
+  journal={Journal of the electrochemical society},
+  volume={158},
+  number={8},
+  pages={A955--A969},
+  year={2011},
+  publisher={The Electrochemical Society}
+}
+
+@article{marquis2019asymptotic,
+title={An asymptotic derivation of a single particle model with electrolyte},
+author={Marquis, Scott G and Sulzer, Valentin and Timms, Robert and Please, Colin P and Chapman, S Jon},
+journal={Journal of The Electrochemical Society},
+volume={166},
+number={15},
+pages={A3693--A3706},
+year={2019},
+publisher={The Electrochemical Society}
+}
+
+@article{scikits-odes,
+  year  = {2018},
+  month = {feb},
+  publisher = {The Open Journal},
+  volume = {3},
+  number = {22},
+  pages = {165},
+  author = {Malengier, B and Ki{\v{s}}on, P and Tocknell, J and Abert, C and Bruckner, F and Bisotti, M-A},
+  title = {{ODES}: a high level interface to {ODE} and {DAE} solvers},
+  journal = {The Journal of Open Source Software},
+  note = {\href{ http://dx.doi.org/10.21105/joss.00165}{doi: 10.21105/joss.00165}},
+}
+
+@article{virtanen2020scipy,
+  title={SciPy 1.0: fundamental algorithms for scientific computing in Python},
+  author={Virtanen, Pauli and Gommers, Ralf and Oliphant, Travis E and Haberland, Matt and Reddy, Tyler and Cournapeau, David and Burovski, Evgeni and Peterson, Pearu and Weckesser, Warren and Bright, Jonathan and others},
+  journal={Nature Methods},
+  pages={1--12},
+  year={2020},
+  publisher={Nature Publishing Group}
+}
+
+@article{sulzer2019physical,
+  title={Faster Lead-Acid Battery Simulations from Porous-Electrode Theory: Part I. Physical Model},
+  author={Sulzer, Valentin and Chapman, S Jon and Please, Colin P and Howey, David A and Monroe, Charles W},
+  journal={Journal of The Electrochemical Society},
+  volume={166},
+  number={12},
+  pages={A2363--A2371},
+  year={2019},
+  publisher={The Electrochemical Society}
+}
+
+@article{sulzer2019asymptotic,
+  title={Faster Lead-Acid Battery Simulations from Porous-Electrode Theory: Part II. Asymptotic Analysis},
+  author={Sulzer, Valentin and Chapman, S Jon and Please, Colin P and Howey, David A and Monroe, Charles W},
+  journal={Journal of The Electrochemical Society},
+  volume={166},
+  number={12},
+  pages={A2372--A2382},
+  year={2019},
+  publisher={The Electrochemical Society}
+}
+
+@article{sulzer2020python,
+title={Python Battery Mathematical Modelling (PyBaMM)},
+author={Sulzer, Valentin and Marquis, Scott G and Timms, Robert and Robinson, Martin and Chapman, S Jon},
+journal={ECSarXiv. February},
+volume={7},
+year={2020}
+}
