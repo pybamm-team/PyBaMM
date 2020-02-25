@@ -1,4 +1,6 @@
-# [Unreleased](https://github.com/pybamm-team/PyBaMM)
+# [v0.2.0](https://github.com/pybamm-team/PyBaMM/tree/v0.2.0) - 2020-02-26
+
+This release introduces many new features and optimizations. All models can now be solved using the pip installation - in particular, the DFN can be solved in around 0.1s. Other highlights include an improved user interface, simulations of experimental protocols (GITT, CCCV, etc), new parameter sets for NCA and LGM50, drive cycles, "input parameters" and "external variables" for quickly solving models with different parameter values and coupling with external software, and general bug fixes and optimizations.
 
 ## Features
 
