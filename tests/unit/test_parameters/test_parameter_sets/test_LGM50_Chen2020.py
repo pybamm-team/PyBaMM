@@ -5,7 +5,7 @@ import pybamm
 import unittest
 
 
-class TestKim(unittest.TestCase):
+class TestChen(unittest.TestCase):
     def test_load_params(self):
         anode = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
