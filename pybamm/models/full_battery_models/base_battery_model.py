@@ -322,6 +322,9 @@ class BaseBatteryModel(pybamm.BaseModel):
         # there are no more submodels to try, raise an error.
         submodels = list(self.submodels.keys())
         count = 0
+        # For this part the FuzzyDict of variables is briefly converted back into a
+        # normal dictionary for speed with KeyErrors
+        self._variables = dict(self._variables)
         while len(submodels) > 0:
             count += 1
             for submodel_name, submodel in self.submodels.items():
@@ -353,6 +356,8 @@ class BaseBatteryModel(pybamm.BaseModel):
                                     key
                                 )
                             )
+        # Convert variables back into FuzzyDict
+        self._variables = pybamm.FuzzyDict(self._variables)
 
     def build_model_equations(self):
         # Set model equations
