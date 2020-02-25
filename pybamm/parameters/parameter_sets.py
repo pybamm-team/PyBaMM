@@ -16,7 +16,7 @@ NCA_Kim2011
     (2011). Multi-domain modeling of lithium-ion batteries encompassing
     multi-physics in varied length scales. Journal of The Electrochemical
     Society, 158(8), A955-A969.
-    
+
 Chen2020
     Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W. Dhammika
     Widanage, and Emma Kendrick. "Development of Experimental Techniques for
