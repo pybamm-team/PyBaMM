@@ -11,7 +11,7 @@
 !requirements*
 !LICENSE.txt
 !CMakeLists.txt
-!input/**/*.csv
+!pybamm/input/**/*.csv
 
 # running files
 *.pyc
