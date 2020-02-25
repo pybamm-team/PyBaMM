@@ -111,6 +111,7 @@ class TestParametersCLI(unittest.TestCase):
         # correctly
         self.assertTrue("lico2_Marquis2019" in str(output.stdout))
         self.assertTrue("nca_Kim2011" in str(output.stdout))
+        self.assertTrue("nmc_Chen2020" in str(output.stdout))
 
         # Then create temporary directory in current working dir
         # and verify it is listed
