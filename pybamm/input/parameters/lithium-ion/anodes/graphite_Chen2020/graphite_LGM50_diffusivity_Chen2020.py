@@ -7,7 +7,10 @@ def graphite_LGM50_diffusivity_Chen2020(sto, T, T_inf, E_D_s, R_g):
       diffusivity is taken to be a constant. The value is taken from [1].
       References
       ----------
-      .. [1] Work in progress
+      .. [1] Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
+      Dhammika Widanage, and Emma Kendrick. "Development of Experimental Techniques for
+      Parameterization of Multi-scale Lithium-ion Battery Models." Submitted for
+      publication (2020).
       Parameters
       ----------
       sto: :class: `numpy.Array`
