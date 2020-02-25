@@ -18,10 +18,6 @@ NCA_Kim2011
     Society, 158(8), A955-A969.
     
 Chen2020
-    Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W. Dhammika Widanage, and Emma Kendrick. "The development of accurate experimental techniques for parameterization of multi-scale lithium-ion battery models." In preparation (2020).
-
-
-Chen2020
     Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W. Dhammika
     Widanage, and Emma Kendrick. "Development of Experimental Techniques for
     Parameterization of Multi-scale Lithium-ion Battery Models." Submitted for
