@@ -35,6 +35,7 @@ Contents
     source/util
     source/simulation
     source/citations
+    source/parameters_cli
 
 Examples
 ========

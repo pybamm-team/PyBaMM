@@ -4,6 +4,7 @@
 import numpy as np
 import os
 import pybamm
+import tempfile
 import unittest
 
 
@@ -44,7 +45,7 @@ class TestUtil(unittest.TestCase):
 
         # Test function load with absolute path
         abs_test_path = os.path.join(
-            os.getcwd(),
+            pybamm.root_dir(),
             "tests",
             "unit",
             "test_parameters",
@@ -82,6 +83,18 @@ class TestUtil(unittest.TestCase):
         self.assertEqual(d["test"], 1)
         with self.assertRaisesRegex(KeyError, "'test3' not found. Best matches are "):
             d["test3"]
+
+    def test_get_parameters_filepath(self):
+        tempfile_obj = tempfile.NamedTemporaryFile("w", dir=".")
+        self.assertTrue(
+            pybamm.get_parameters_filepath(tempfile_obj.name) == tempfile_obj.name
+        )
+        tempfile_obj.close()
+
+        package_dir = os.path.join(pybamm.root_dir(), "pybamm")
+        tempfile_obj = tempfile.NamedTemporaryFile("w", dir=package_dir)
+        path = os.path.join(package_dir, tempfile_obj.name)
+        self.assertTrue(pybamm.get_parameters_filepath(tempfile_obj.name) == path)
 
 
 if __name__ == "__main__":
