@@ -57,6 +57,8 @@ class BaseHigherOrderModel(BaseModel):
         if build:
             self.build_model()
 
+        pybamm.citations.register("sulzer2019asymptotic")
+
     def set_current_collector_submodel(self):
         cc = pybamm.current_collector
 

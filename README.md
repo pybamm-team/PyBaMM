@@ -46,6 +46,32 @@ For instructions on installing PyBaMM on Mac OS distributions, please see [here]
 We recommend using Windows Subsystem for Linux to install PyBaMM on a Windows OS, for
 instructions please see [here](INSTALL-WINDOWS.md)
 
+## Citing PyBaMM
+
+If you use PyBaMM in your work, please cite our paper
+
+"Sulzer, V., Marquis, S. G., Timms, R., Robinson, M., & Chapman, S. J. (2020). Python Battery Mathematical Modelling (PyBaMM). _ECSarXiv. February, 7_."
+
+You can use the bibtex
+
+```
+@article{sulzer2020python,
+  title={Python Battery Mathematical Modelling (PyBaMM)},
+  author={Sulzer, Valentin and Marquis, Scott G and Timms, Robert and Robinson, Martin and Chapman, S Jon},
+  journal={ECSarXiv. February},
+  volume={7},
+  year={2020}
+}
+```
+
+We would be grateful if you could also cite the relevant papers. These will change depending on what models and solvers you use. To find out which papers you should cite, add the line
+
+```python3
+pybamm.print_citations()
+```
+
+to the end of your script. This will print bibtex information to the terminal; passing a filename to `print_citations` will print the bibtex information to the specified file instead. A list of all citations can also be found in the [citations file](pybamm/CITATIONS.txt). In particular, PyBaMM relies heavily on [CasADi](https://web.casadi.org/publications/).
+
 ## How can I contribute to PyBaMM?
 
 If you'd like to help us develop PyBaMM by adding new methods, writing documentation, or fixing embarrassing bugs, please have a look at these [guidelines](CONTRIBUTING.md) first.

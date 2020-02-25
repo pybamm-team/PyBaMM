@@ -72,6 +72,8 @@ class CasadiSolver(pybamm.BaseSolver):
         self.options = {}
         self.methods = {}
 
+        pybamm.citations.register("Andersson2019")
+
     def _integrate(self, model, t_eval, inputs=None):
         """
         Solve a DAE model defined by residuals with initial conditions y0.
