@@ -176,11 +176,10 @@ class _BaseSolution(object):
             underlying data for this variable is available in its attribute ".data"
         """
 
-        try:
-            # Try getting item
-            # return it if it exists
+        # return it if it exists
+        if key in self._variables:
             return self._variables[key]
-        except KeyError:
+        else:
             # otherwise create it, save it and then return it
             self.update(key)
             return self._variables[key]

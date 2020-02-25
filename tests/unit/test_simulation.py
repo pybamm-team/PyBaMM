@@ -358,7 +358,9 @@ class TestSimulation(unittest.TestCase):
         param["Current function [A]"] = "[current data]US06"
 
         drive_cycle = pd.read_csv(
-            os.path.join(pybamm.root_dir(), "input", "drive_cycles", "US06.csv"),
+            pybamm.get_parameters_filepath(
+                os.path.join("input", "drive_cycles", "US06.csv")
+            ),
             comment="#",
             skip_blank_lines=True,
             header=None,

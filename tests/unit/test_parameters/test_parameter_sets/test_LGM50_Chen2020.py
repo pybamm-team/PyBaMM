@@ -1,45 +1,46 @@
 #
-# Tests for NCA parameter set loads
+# Tests for LG M50 parameter set loads
 #
 import pybamm
 import unittest
 
 
-class TestKim(unittest.TestCase):
+class TestChen(unittest.TestCase):
     def test_load_params(self):
         anode = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/anodes/graphite_Kim2011/parameters.csv",
+                "input/parameters/lithium-ion/anodes/graphite_Chen2020/parameters.csv",
             )
         )
         self.assertEqual(anode["Reference temperature [K]"], "298.15")
 
         cathode = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/cathodes/nca_Kim2011/parameters.csv",
+                "input/parameters/lithium-ion/cathodes/nmc_Chen2020/parameters.csv",
             )
         )
         self.assertEqual(cathode["Reference temperature [K]"], "298.15")
 
         electrolyte = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/electrolytes/lipf6_Kim2011/parameters.csv"
+                "input/parameters/lithium-ion/electrolytes/lipf6_Nyman2008/" +
+                "parameters.csv",
             )
         )
         self.assertEqual(electrolyte["Reference temperature [K]"], "298.15")
 
         cell = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/cells/Kim2011/parameters.csv"
+                "input/parameters/lithium-ion/cells/LGM50_Chen2020/parameters.csv",
             )
         )
         self.assertAlmostEqual(
-            cell["Negative current collector thickness [m]"], 10 ** (-5)
+            cell["Negative current collector thickness [m]"], 12E-6
         )
 
     def test_standard_lithium_parameters(self):
 
-        chemistry = pybamm.parameter_sets.NCA_Kim2011
+        chemistry = pybamm.parameter_sets.Chen2020
         parameter_values = pybamm.ParameterValues(chemistry=chemistry)
 
         model = pybamm.lithium_ion.DFN()
