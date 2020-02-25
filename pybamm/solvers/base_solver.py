@@ -238,22 +238,31 @@ class BaseSolver(object):
                 model.concatenated_algebraic.pre_order(),
             ):
                 if isinstance(symbol, pybamm.Heaviside):
+                    found_t = False
                     # Dimensionless
                     if symbol.right.id == pybamm.t.id:
                         expr = symbol.left
+                        found_t = True
                     elif symbol.left.id == pybamm.t.id:
                         expr = symbol.right
+                        found_t = True
                     # Dimensional
                     elif symbol.right.id == (pybamm.t * model.timescale).id:
                         expr = symbol.left.new_copy() / symbol.right.right.new_copy()
+                        found_t = True
                     elif symbol.left.id == (pybamm.t * model.timescale).id:
                         expr = symbol.right.new_copy() / symbol.left.right.new_copy()
+                        found_t = True
 
-                    model.events.append(
-                        pybamm.Event(
-                            str(symbol), expr.new_copy(), pybamm.EventType.DISCONTINUITY
+                    # Update the events if the heaviside function depended on t
+                    if found_t:
+                        model.events.append(
+                            pybamm.Event(
+                                str(symbol),
+                                expr.new_copy(),
+                                pybamm.EventType.DISCONTINUITY,
+                            )
                         )
-                    )
 
         # Process rhs, algebraic and event expressions
         rhs, rhs_eval, jac_rhs = process(model.concatenated_rhs, "RHS")
