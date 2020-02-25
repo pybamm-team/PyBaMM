@@ -205,7 +205,7 @@ install:
   - pip install --upgrade pip
   # In order to download SUNDIALS and SuiteSparse
   - pip install wget
-  - pip install .
+  - pip install -e .
   - if [[ $PYBAMM_DOCS == true ]]; then pip install -e .[docs]; fi;
   - if [[ $PYBAMM_STYLE == true || $PYBAMM_EXAMPLES ]]; then pip install -e .[dev]; fi;
   - if [[ $PYBAMM_COVER == true ]]; then pip install coverage codecov; fi;

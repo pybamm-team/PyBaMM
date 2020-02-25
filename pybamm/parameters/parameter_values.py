@@ -42,8 +42,9 @@ class ParameterValues:
     >>> param = pybamm.ParameterValues(values)
     >>> param["some parameter"]
     1
-    >>> file = "/input/parameters/lithium-ion/cells/kokam_Marquis2019/parameters.csv"
-    >>> param = pybamm.ParameterValues(values=pybamm.root_dir() + file)
+    >>> file = "input/parameters/lithium-ion/cells/kokam_Marquis2019/parameters.csv"
+    >>> values_path = pybamm.get_parameters_filepath(file)
+    >>> param = pybamm.ParameterValues(values=values_path)
     >>> param["Negative current collector thickness [m]"]
     2.5e-05
     >>> param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
@@ -108,7 +109,7 @@ class ParameterValues:
         """
         base_chemistry = chemistry["chemistry"]
         # Create path to file
-        path = os.path.join(pybamm.root_dir(), "input", "parameters", base_chemistry)
+        path = os.path.join("input", "parameters", base_chemistry)
         # Load each component name
         for component_group in [
             "cell",
@@ -130,7 +131,9 @@ class ParameterValues:
             # Create path to component and load values
             component_path = os.path.join(path, component_group + "s", component)
             component_params = self.read_parameters_csv(
-                os.path.join(component_path, "parameters.csv")
+                pybamm.get_parameters_filepath(
+                    os.path.join(component_path, "parameters.csv")
+                )
             )
             # Update parameters, making sure to check any conflicts
             self.update(
@@ -219,14 +222,13 @@ class ParameterValues:
                 # Data is flagged with the string "[data]" or "[current data]"
                 elif value.startswith("[current data]") or value.startswith("[data]"):
                     if value.startswith("[current data]"):
-                        data_path = os.path.join(
-                            pybamm.root_dir(), "input", "drive_cycles"
-                        )
+                        data_path = os.path.join("input", "drive_cycles")
                         filename = os.path.join(data_path, value[14:] + ".csv")
                         function_name = value[14:]
                     else:
                         filename = os.path.join(path, value[6:] + ".csv")
                         function_name = value[6:]
+                    filename = pybamm.get_parameters_filepath(filename)
                     data = pd.read_csv(
                         filename, comment="#", skip_blank_lines=True, header=None
                     ).to_numpy()

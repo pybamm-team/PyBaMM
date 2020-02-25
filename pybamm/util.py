@@ -165,7 +165,8 @@ def load_function(filename):
             )
         elif len(matching_files) > 1:
             raise ValueError(
-                "{} found multiple times in the PyBaMM directory".format(filename)
+                "{} found multiple times in the PyBaMM directory."
+                "Consider using absolute file path.".format(filename)
             )
 
         valid_filename = matching_files[0]
@@ -230,3 +231,11 @@ def load(filename):
         obj = pickle.load(f)
     return obj
 
+
+def get_parameters_filepath(path):
+    """Returns path if it exists in current working dir,
+    otherwise get it from package dir"""
+    if os.path.exists(path):
+        return path
+    else:
+        return os.path.join(pybamm.__path__[0], path)
