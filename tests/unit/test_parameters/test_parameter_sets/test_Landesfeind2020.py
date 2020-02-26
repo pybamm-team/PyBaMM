@@ -34,7 +34,6 @@ class TestLandesfeind(unittest.TestCase):
         sim.set_parameters()
         sim.build()
 
-
     def test_electrolyte_diffusivity(self):
         root = pybamm.root_dir()
         p = "pybamm/input/parameters/lithium-ion/electrolytes/lipf6_Landesfeind2019"
@@ -51,7 +50,7 @@ class TestLandesfeind(unittest.TestCase):
         T += 20
         D = [np.around(f(c, T, np.nan, np.nan, np.nan).value, 12) for f in funcs]
         self.assertEqual(D, [8.5992e-06, 7.752815e-06, 7.907549e-06])
-        
+
         chemistry = pybamm.parameter_sets.Chen2020
         param = pybamm.ParameterValues(chemistry=chemistry)
         param['Electrolyte diffusivity [m2.s-1]'] = funcs[0]
@@ -59,6 +58,7 @@ class TestLandesfeind(unittest.TestCase):
         sim = pybamm.Simulation(model, parameter_values=param)
         sim.set_parameters()
         sim.build()
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

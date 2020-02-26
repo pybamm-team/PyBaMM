@@ -22,8 +22,8 @@ def electrolyte_diffusivity_Landesfeind2019_base(c_e, T, coeffs):
     :`numpy.Array`
         Electrolyte diffusivity
     """
-    c = c_e/1000 # mol.m-3 -> mol.l
-    p1, p2, p3, p4  = coeffs
+    c = c_e / 1000  # mol.m-3 -> mol.l
+    p1, p2, p3, p4 = coeffs
     A = p1 * exp(p2 * c)
     B = exp(p3 / T)
     C = exp(p4 * c / T)
