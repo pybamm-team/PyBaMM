@@ -123,3 +123,15 @@ journal={ECSarXiv. February},
 volume={7},
 year={2020}
 }
+
+@software{scikit-fem,
+  author       = {Tom Gustafsson and
+                  Geordie McBain},
+  title        = {kinnala/scikit-fem 0.4.0},
+  month        = jan,
+  year         = 2020,
+  publisher    = {Zenodo},
+  version      = {0.4.0},
+  doi          = {10.5281/zenodo.3597656},
+  url          = {https://doi.org/10.5281/zenodo.3597656}
+}

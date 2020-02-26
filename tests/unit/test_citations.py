@@ -74,6 +74,14 @@ class TestCitations(unittest.TestCase):
         pybamm.lead_acid.Full(build=False)
         self.assertIn("sulzer2019physical", citations._papers_to_cite)
 
+    def test_scikit_fem(self):
+        citations = pybamm.citations
+
+        citations._reset()
+        self.assertNotIn("scikit-fem", citations._papers_to_cite)
+        pybamm.ScikitFiniteElement()
+        self.assertIn("scikit-fem", citations._papers_to_cite)
+
     def test_parameter_citations(self):
         citations = pybamm.citations
 

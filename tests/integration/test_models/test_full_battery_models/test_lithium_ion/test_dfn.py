@@ -34,6 +34,7 @@ class TestDFN(unittest.TestCase):
         modeltest.test_all(skip_output_tests=True)
 
     def test_basic_processing_2plus1D(self):
+        pybamm.set_logging_level("DEBUG")
         options = {"current collector": "potential pair", "dimensionality": 2}
         model = pybamm.lithium_ion.DFN(options)
         var = pybamm.standard_spatial_vars
@@ -48,6 +49,7 @@ class TestDFN(unittest.TestCase):
         }
         modeltest = tests.StandardModelTest(model, var_pts=var_pts)
         modeltest.test_all(skip_output_tests=True)
+        pybamm.set_logging_level("WARNING")
 
     def test_optimisations(self):
         options = {"thermal": "isothermal"}
