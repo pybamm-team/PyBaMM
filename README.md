@@ -68,7 +68,7 @@ instructions please see [here](INSTALL-WINDOWS.md)
 
 If you use PyBaMM in your work, please cite our paper
 
-"Sulzer, V., Marquis, S. G., Timms, R., Robinson, M., & Chapman, S. J. (2020). Python Battery Mathematical Modelling (PyBaMM). _ECSarXiv. February, 7_."
+> Sulzer, V., Marquis, S. G., Timms, R., Robinson, M., & Chapman, S. J. (2020). Python Battery Mathematical Modelling (PyBaMM). _ECSarXiv. February, 7_.
 
 You can use the bibtex
 
