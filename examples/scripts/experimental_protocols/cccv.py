@@ -18,7 +18,6 @@ experiment = pybamm.Experiment(
 model = pybamm.lithium_ion.DFN()
 sim = pybamm.Simulation(model, experiment=experiment, solver=pybamm.CasadiSolver())
 sim.solve()
-sim.plot()
 
 # Plot voltages from the discharge segments only
 fig, ax = plt.subplots()
