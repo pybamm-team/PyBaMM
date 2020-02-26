@@ -60,6 +60,7 @@ from .util import root_dir, load_function, rmse, get_infinite_nested_dict, load
 from .util import get_parameters_filepath
 from .logger import logger, set_logging_level
 from .settings import settings
+from .citations import Citations, citations, print_citations
 
 #
 # Classes for the Expression Tree

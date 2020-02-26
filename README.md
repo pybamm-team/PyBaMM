@@ -7,7 +7,7 @@
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/pybamm-team/PyBaMM/master?filepath=examples%2Fnotebooks)
 [![black_code_style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
-Python Battery Mathematical Modelling solves continuum models for batteries, using both numerical methods and asymptotic analysis.
+PyBaMM (Python Battery Mathematical Modelling) solves physics-based electrochemical DAE models by using state-of-the-art automatic differentiation and numerical solvers. The Doyle-Fuller-Newman model can be solved in under 0.1 seconds, while the reduced-order Single Particle Model and Single Particle Model with electrolyte can be solved in just a few milliseconds. Additional physics can easily be included such as thermal effects, fast particle diffusion, 3D effects, and more. All models are implemented in a flexible manner, and a wide range of models and parameter sets (NCA, NMC, LiCoO2, ...) are available. There is also functionality to simulate any set of experimental instructions, such as CCCV or GITT, or specify drive cycles.
 
 ## How do I use PyBaMM?
 
@@ -16,6 +16,24 @@ The easiest way to use PyBaMM is to run a 1C constant-current discharge with a m
 import pybamm
 model = pybamm.lithium_ion.DFN() # Doyle-Fuller-Newman model
 sim = pybamm.Simulation(model)
+sim.solve()
+sim.plot()
+```
+or simulate an experiment such as CCCV:
+```python3
+import pybamm
+experiment = pybamm.Experiment(
+    [
+        "Discharge at C/10 for 10 hours or until 3.3 V",
+        "Rest for 1 hour",
+        "Charge at 1 A until 4.1 V",
+        "Hold at 4.1 V until 50 mA",
+        "Rest for 1 hour",
+    ]
+    * 3,
+)
+model = pybamm.lithium_ion.DFN()
+sim = pybamm.Simulation(model, experiment=experiment, solver=pybamm.CasadiSolver())
 sim.solve()
 sim.plot()
 ```
@@ -45,6 +63,32 @@ For instructions on installing PyBaMM on Mac OS distributions, please see [here]
 
 We recommend using Windows Subsystem for Linux to install PyBaMM on a Windows OS, for
 instructions please see [here](INSTALL-WINDOWS.md)
+
+## Citing PyBaMM
+
+If you use PyBaMM in your work, please cite our paper
+
+> Sulzer, V., Marquis, S. G., Timms, R., Robinson, M., & Chapman, S. J. (2020). Python Battery Mathematical Modelling (PyBaMM). _ECSarXiv. February, 7_.
+
+You can use the bibtex
+
+```
+@article{sulzer2020python,
+  title={Python Battery Mathematical Modelling (PyBaMM)},
+  author={Sulzer, Valentin and Marquis, Scott G and Timms, Robert and Robinson, Martin and Chapman, S Jon},
+  journal={ECSarXiv. February},
+  volume={7},
+  year={2020}
+}
+```
+
+We would be grateful if you could also cite the relevant papers. These will change depending on what models and solvers you use. To find out which papers you should cite, add the line
+
+```python3
+pybamm.print_citations()
+```
+
+to the end of your script. This will print bibtex information to the terminal; passing a filename to `print_citations` will print the bibtex information to the specified file instead. A list of all citations can also be found in the [citations file](pybamm/CITATIONS.txt). In particular, PyBaMM relies heavily on [CasADi](https://web.casadi.org/publications/).
 
 ## How can I contribute to PyBaMM?
 

@@ -52,6 +52,8 @@ class LOQS(BaseModel):
         if self.options["dimensionality"] == 0:
             self.use_jacobian = False
 
+        pybamm.citations.register("sulzer2019asymptotic")
+
     def set_external_circuit_submodel(self):
         """
         Define how the external circuit defines the boundary conditions for the model,

@@ -419,7 +419,11 @@ class Simulation:
                 # Make sure we take at least 2 timesteps
                 npts = max(int(round(dt / exp_inputs["period"])) + 1, 2)
                 self.step(
-                    dt, npts=npts, external_variables=external_variables, inputs=inputs
+                    dt,
+                    solver=solver,
+                    npts=npts,
+                    external_variables=external_variables,
+                    inputs=inputs,
                 )
                 # Only allow events specified by experiment
                 if not (
