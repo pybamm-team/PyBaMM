@@ -22,13 +22,13 @@ sys.path.insert(0, os.path.abspath("../"))
 # -- Project information -----------------------------------------------------
 
 project = "PyBaMM"
-copyright = "2018, Valentin Sulzer"
-author = "Valentin Sulzer"
+copyright = "2020, Valentin Sulzer"
+author = "The PyBaMM Team"
 
 # The short X.Y version
-version = ""
+version = "0.2"
 # The full version, including alpha/beta/rc tags
-release = ""
+release = "0.2.0"
 
 
 # -- General configuration ---------------------------------------------------
