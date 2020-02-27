@@ -39,18 +39,6 @@ class TestSPM(unittest.TestCase):
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
-        options = {"current collector": "set external potential", "dimensionality": 0}
-        with self.assertRaises(NotImplementedError):
-            pybamm.lithium_ion.SPM(options)
-
-        options = {"current collector": "set external potential", "dimensionality": 1}
-        model = pybamm.lithium_ion.SPM(options)
-        model.check_well_posedness()
-
-        options = {"current collector": "set external potential", "dimensionality": 2}
-        model = pybamm.lithium_ion.SPM(options)
-        model.check_well_posedness()
-
     def test_x_full_thermal_model_no_current_collector(self):
         options = {"thermal": "x-full"}
         model = pybamm.lithium_ion.SPM(options)
@@ -154,23 +142,6 @@ class TestSPM(unittest.TestCase):
         }
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
-
-    def test_x_lumped_thermal_set_temperature_1D(self):
-        options = {
-            "current collector": "potential pair",
-            "dimensionality": 1,
-            "thermal": "set external temperature",
-        }
-        model = pybamm.lithium_ion.SPM(options)
-        model.check_well_posedness()
-
-        options = {
-            "current collector": "potential pair",
-            "dimensionality": 2,
-            "thermal": "set external temperature",
-        }
-        with self.assertRaises(NotImplementedError):
-            model = pybamm.lithium_ion.SPM(options)
 
     def test_particle_fast_diffusion(self):
         options = {"particle": "fast diffusion"}
