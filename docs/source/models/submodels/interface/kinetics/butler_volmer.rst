@@ -1,5 +1,5 @@
 Butler-Volmer
 =============
 
-.. autoclass:: pybamm.interface.kinetics.ButlerVolmer
+.. autoclass:: pybamm.interface.ButlerVolmer
     :members:
