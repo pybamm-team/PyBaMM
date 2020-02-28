@@ -16,6 +16,7 @@ class TestLandesfeind(unittest.TestCase):
         files = [f for f in os.listdir(k_path) if '.py' in f
                  and '_base' not in f
                  and 'conductivity' in f]
+        files.sort()
         funcs = [pybamm.load_function(os.path.join(k_path, f)) for f in files]
         T_ref = 298.15
         T = T_ref + 30.0
@@ -41,6 +42,7 @@ class TestLandesfeind(unittest.TestCase):
         files = [f for f in os.listdir(d_path) if '.py' in f
                  and '_base' not in f
                  and 'diffusivity' in f]
+        files.sort()
         funcs = [pybamm.load_function(os.path.join(d_path, f)) for f in files]
         T_ref = 298.15
         T = T_ref + 30.0
