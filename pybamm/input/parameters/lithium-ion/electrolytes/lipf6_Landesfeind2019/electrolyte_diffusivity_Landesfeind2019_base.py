@@ -27,6 +27,6 @@ def electrolyte_diffusivity_Landesfeind2019_base(c_e, T, coeffs):
     A = p1 * exp(p2 * c)
     B = exp(p3 / T)
     C = exp(p4 * c / T)
-    D_e = A * B * C * 1e-6  # m2/s
+    D_e = A * B * C * 1e-10  # m2/s
 
     return D_e

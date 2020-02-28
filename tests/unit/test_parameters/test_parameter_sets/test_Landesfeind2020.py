@@ -45,11 +45,11 @@ class TestLandesfeind(unittest.TestCase):
         T_ref = 298.15
         T = T_ref + 30.0
         c = 1000.0
-        D = [np.around(f(c, T, np.nan, np.nan, np.nan).value, 12) for f in funcs]
-        self.assertEqual(D, [5.796505e-06, 5.417881e-06, 5.608856e-06])
+        D = [np.around(f(c, T, np.nan, np.nan, np.nan).value, 16) for f in funcs]
+        self.assertEqual(D, [5.796505e-10, 5.417881e-10, 5.608856e-10])
         T += 20
-        D = [np.around(f(c, T, np.nan, np.nan, np.nan).value, 12) for f in funcs]
-        self.assertEqual(D, [8.5992e-06, 7.752815e-06, 7.907549e-06])
+        D = [np.around(f(c, T, np.nan, np.nan, np.nan).value, 16) for f in funcs]
+        self.assertEqual(D, [8.5992e-10, 7.752815e-10, 7.907549e-10])
 
         chemistry = pybamm.parameter_sets.Chen2020
         param = pybamm.ParameterValues(chemistry=chemistry)

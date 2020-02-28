@@ -29,4 +29,4 @@ def electrolyte_conductivity_Landesfeind2019_base(c_e, T, coeffs):
     C = 1 + c**4 * (p6 * exp(1000 / T))
     sigma_e = A * c * B / C  # mS.cm-1
 
-    return sigma_e/10
+    return sigma_e / 10
