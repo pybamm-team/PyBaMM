@@ -47,20 +47,20 @@ class BaseInterface(pybamm.BaseSubModel):
             The exchange current density.
         """
         c_e = variables[self.domain + " electrolyte concentration"]
-        c_s_surf = variables.get(self.domain + " particle surface concentration")
-        T = variables.get(self.domain + " electrode temperature")
-
-        # If variable was broadcast, take only the orphan
-        if (
-            isinstance(c_s_surf, pybamm.Broadcast)
-            and isinstance(c_e, pybamm.Broadcast)
-            and isinstance(T, pybamm.Broadcast)
-        ):
-            c_s_surf = c_s_surf.orphans[0]
-            c_e = c_e.orphans[0]
-            T = T.orphans[0]
 
         if self.reaction == "lithium-ion main":
+            c_s_surf = variables[self.domain + " particle surface concentration"]
+            T = variables[self.domain + " electrode temperature"]
+
+            # If variable was broadcast, take only the orphan
+            if (
+                isinstance(c_s_surf, pybamm.Broadcast)
+                and isinstance(c_e, pybamm.Broadcast)
+                and isinstance(T, pybamm.Broadcast)
+            ):
+                c_s_surf = c_s_surf.orphans[0]
+                c_e = c_e.orphans[0]
+                T = T.orphans[0]
             if self.domain == "Negative":
                 prefactor = self.param.m_n(T) / self.param.C_r_n
             elif self.domain == "Positive":
@@ -68,13 +68,21 @@ class BaseInterface(pybamm.BaseSubModel):
             j0 = prefactor * (
                 c_e ** (1 / 2) * c_s_surf ** (1 / 2) * (1 - c_s_surf) ** (1 / 2)
             )
+
         elif self.reaction == "lead-acid main":
+            # If variable was broadcast, take only the orphan
+            if isinstance(c_e, pybamm.Broadcast):
+                c_e = c_e.orphans[0]
             if self.domain == "Negative":
                 j0 = self.param.j0_n_S_ref * c_e
             elif self.domain == "Positive":
                 c_w = self.param.c_w(c_e)
                 j0 = self.param.j0_p_S_ref * c_e ** 2 * c_w
+
         elif self.reaction == "lead-acid oxygen":
+            # If variable was broadcast, take only the orphan
+            if isinstance(c_e, pybamm.Broadcast):
+                c_e = c_e.orphans[0]
             if self.domain == "Negative":
                 j0 = pybamm.Scalar(0)
             elif self.domain == "Positive":
