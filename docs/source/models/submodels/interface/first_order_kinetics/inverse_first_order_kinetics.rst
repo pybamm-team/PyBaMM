@@ -1,5 +1,5 @@
 Base Inverse First-order Kinetics
 =================================
 
-.. autoclass:: pybamm.interface.inverse_kinetics.BaseInverseFirstOrderKinetics
+.. autoclass:: pybamm.interface.first_order_kinetics.InverseFirstOrderKinetics
     :members:

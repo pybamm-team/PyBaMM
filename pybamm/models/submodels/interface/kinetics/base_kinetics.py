@@ -6,7 +6,7 @@ import pybamm
 from ..base_interface import BaseInterface
 
 
-class BaseModel(BaseInterface):
+class BaseKinetics(BaseInterface):
     """
     Base submodel for kinetics
 
@@ -16,13 +16,14 @@ class BaseModel(BaseInterface):
         model parameters
     domain : str
         The domain to implement the model, either: 'Negative' or 'Positive'.
-
+    reaction : str
+        The name of the reaction being implemented
 
     **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, reaction):
+        super().__init__(param, domain, reaction)
 
     def get_coupled_variables(self, variables):
         # Calculate delta_phi from phi_s and phi_e if it isn't already known
@@ -74,15 +75,6 @@ class BaseModel(BaseInterface):
             )
 
         return variables
-
-    def _get_exchange_current_density(self, variables):
-        raise NotImplementedError
-
-    def _get_kinetics(self, j0, ne, eta_r, T):
-        raise NotImplementedError
-
-    def _get_open_circuit_potential(self, variables):
-        raise NotImplementedError
 
     def _get_dj_dc(self, variables):
         """
