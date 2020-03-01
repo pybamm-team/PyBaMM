@@ -111,6 +111,7 @@ class TestParametersCLI(unittest.TestCase):
         # correctly
         self.assertTrue("lico2_Marquis2019" in str(output.stdout))
         self.assertTrue("nca_Kim2011" in str(output.stdout))
+        self.assertTrue("nmc_Chen2020" in str(output.stdout))
 
         # Then create temporary directory in current working dir
         # and verify it is listed
@@ -118,3 +119,13 @@ class TestParametersCLI(unittest.TestCase):
         # ./input/parameters/lithium-ion/cathodes/tmp_dir
         # but must not intefere with existing input dir if it exists
         # in the current dir...
+
+
+if __name__ == "__main__":
+    print("Add -v for more debug output")
+    import sys
+
+    if "-v" in sys.argv:
+        debug = True
+    pybamm.settings.debug_mode = True
+    unittest.main()

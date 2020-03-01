@@ -48,6 +48,8 @@ class DFN(BaseModel):
         if build:
             self.build_model()
 
+        pybamm.citations.register("doyle1993modeling")
+
     def set_porosity_submodel(self):
 
         self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
