@@ -150,6 +150,7 @@ def list_parameters(arguments=None):
     Available package parameters:
       * graphite_Chen2020
       * graphite_mcmb2528_Marquis2019
+      * li_metal_Xu2019
       * graphite_Kim2011
     Available local parameters:
     """
