@@ -88,7 +88,13 @@ class CasadiSolver(pybamm.BaseSolver):
             Any external variables or input parameters to pass to the model when solving
         """
         inputs = inputs or {}
-
+        if len(model.rhs) == 0:
+            # casadi solver won't allow solving algebraic model so we have to raise an
+            # error here
+            raise pybamm.SolverError(
+                "Cannot use CasadiSolver to solve algebraic model,"
+                "use CasadiAlgebraicSolver instead"
+            )
         if self.mode == "fast":
             integrator = self.get_integrator(model, t_eval, inputs)
             solution = self._run_integrator(integrator, model, model.y0, inputs, t_eval)

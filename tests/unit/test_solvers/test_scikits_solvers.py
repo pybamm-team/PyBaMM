@@ -696,6 +696,20 @@ class TestScikitsSolvers(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.SolverError, "Cannot use ODE solver"):
             solver.set_up(model)
 
+    def test_dae_solver_algebraic_model(self):
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        model.algebraic = {var: var + 1}
+        model.initial_conditions = {var: 0}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.ScikitsDaeSolver()
+        t_eval = np.linspace(0, 1)
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_array_equal(solution.y, -1)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

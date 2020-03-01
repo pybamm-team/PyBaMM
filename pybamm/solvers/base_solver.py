@@ -138,7 +138,8 @@ class BaseSolver(object):
         if self.ode_solver is True:
             self.root_method = None
         if (
-            isinstance(self, pybamm.CasadiSolver) or self.root_method == "casadi"
+            isinstance(self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver))
+            or self.root_method == "casadi"
         ) and model.convert_to_format != "casadi":
             pybamm.logger.warning(
                 f"Converting {model.name} to CasADi for solving with CasADi solver"
@@ -293,30 +294,35 @@ class BaseSolver(object):
                     "rhs", [t_casadi, y_casadi, u_casadi_stacked], [explicit_rhs]
                 )
             model.casadi_algebraic = algebraic
-        # Calculate consistent initial conditions for the algebraic equations
-        if len(model.algebraic) > 0 and len(model.rhs) > 0:
-            # case where the model truly is a DAE system
-            all_states = pybamm.NumpyConcatenation(
-                model.concatenated_rhs, model.concatenated_algebraic
-            )
-            # Process again, uses caching so should be quick
-            residuals, residuals_eval, jacobian_eval = process(all_states, "residuals")
-            model.residuals_eval = residuals_eval
-            model.jacobian_eval = jacobian_eval
-            y0_guess = y0.flatten()
-            model.y0 = self.calculate_consistent_state(model, 0, y0_guess, inputs)
-        elif len(model.rhs) > 0:
-            # can use DAE solver to solve ODE model
-            model.residuals_eval = Residuals(rhs, "residuals", model)
-            model.jacobian_eval = jac_rhs
-            model.y0 = y0.flatten()
-        elif len(model.algebraic) > 0:
-            # can use DAE solver to solve algebraic model
-            # we don't calculate consistent initial conditions in this case as this will
-            # be the job of the algebraic solver
+        if self.algebraic_solver is True:
+            # we don't calculate consistent initial conditions
+            # for an algebraic solver as this will be the job of the algebraic solver
             model.residuals_eval = Residuals(algebraic, "residuals", model)
             model.jacobian_eval = jac_algebraic
             model.y0 = y0.flatten()
+        elif len(model.algebraic) == 0:
+            # can use DAE solver to solve ODE model
+            # - no initial condition initialization needed
+            model.residuals_eval = Residuals(rhs, "residuals", model)
+            model.jacobian_eval = jac_rhs
+            model.y0 = y0.flatten()
+        # Calculate consistent initial conditions for the algebraic equations
+        else:
+            if len(model.rhs) > 0:
+                all_states = pybamm.NumpyConcatenation(
+                    model.concatenated_rhs, model.concatenated_algebraic
+                )
+                # Process again, uses caching so should be quick
+                residuals, residuals_eval, jacobian_eval = process(
+                    all_states, "residuals"
+                )
+                model.residuals_eval = residuals_eval
+                model.jacobian_eval = jacobian_eval
+            else:
+                model.residuals_eval = Residuals(algebraic, "residuals", model)
+                model.jacobian_eval = jac_algebraic
+            y0_guess = y0.flatten()
+            model.y0 = self.calculate_consistent_state(model, 0, y0_guess, inputs)
 
         pybamm.logger.info("Finish solver set-up")
 
