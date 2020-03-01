@@ -12,21 +12,21 @@ def graphite_LGM50_electrolyte_reaction_rate_Chen2020(T, T_inf, E_r, R_g):
     publication (2020).
     Parameters
     ----------
-    T: :class: `numpy.Array`
-        Dimensional temperature
-    T_inf: double
-        Reference temperature
-    E_r: double
+    T : :class:`pybamm.Symbol`
+        Dimensional temperature [K]
+    T_inf: :class:`pybamm.Symbol`
+        Reference temperature [K]
+    E_r: :class:`pybamm.Symbol`
         Reaction activation energy
-    R_g: double
-        The ideal gas constant
+    R_g: :class:`pybamm.Symbol`
+        The ideal gas constant [J.mol-1.K-1]
     Returns
     -------
-    :`numpy.Array`
+    :class:`pybamm.Symbol`
         Reaction rate
     """
 
-    m_ref = 6.48E-7
+    m_ref = 6.48e-7
     arrhenius = exp(E_r / R_g * (1 / T_inf - 1 / T))
 
     return m_ref * arrhenius

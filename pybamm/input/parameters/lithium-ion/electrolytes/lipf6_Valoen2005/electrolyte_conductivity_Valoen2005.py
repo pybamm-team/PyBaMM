@@ -1,7 +1,7 @@
 from pybamm import exp
 
 
-def electrolyte_conductivity_Valoen2005(c_e, T):
+def electrolyte_conductivity_Valoen2005(c_e, T, T_inf, E_k_e, R_g):
     """
     Conductivity of LiPF6 in EC:DMC as a function of ion concentration, from [1]
 
@@ -13,15 +13,21 @@ def electrolyte_conductivity_Valoen2005(c_e, T):
 
     Parameters
     ----------
-    c_e: :class:`pybamm.Symbol`
+    c_e : :class:`pybamm.Symbol`
         Dimensional electrolyte concentration [mol.m-3]
-    T: :class:`pybamm.Symbol`
+    T : :class:`pybamm.Symbol`
         Dimensional temperature [K]
+    T_inf: :class:`pybamm.Symbol`
+        Reference temperature [K]
+    E_k_e: :class:`pybamm.Symbol`
+        Electrolyte diffusion activation energy [J.mol-1]
+    R_g: :class:`pybamm.Symbol`
+        The ideal gas constant [J.mol-1.K-1]
 
     Returns
     -------
     :class:`pybamm.Symbol`
-        Dimensional conductivity [S.m-1]
+        Dimensional electrolyte conductivity [S.m-1]
     """
     # mol/m3 to molar
     c_e = c_e / 1000

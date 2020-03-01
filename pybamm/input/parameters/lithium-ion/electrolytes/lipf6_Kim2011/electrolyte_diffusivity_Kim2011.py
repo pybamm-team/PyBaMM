@@ -14,20 +14,20 @@ def electrolyte_diffusivity_Kim2011(c_e, T, T_inf, E_D_e, R_g):
 
     Parameters
     ----------
-    c_e: :class: `numpy.Array`
-        Dimensional electrolyte concentration
-    T: :class: `numpy.Array`
-        Dimensional temperature
-    T_inf: double
-        Reference temperature
-    E_D_e: double
+    c_e : :class:`pybamm.Symbol`
+        Dimensional electrolyte concentration [mol.m-3]
+    T : :class:`pybamm.Symbol`
+        Dimensional temperature [K]
+    T_inf: :class:`pybamm.Symbol`
+        Reference temperature [K]
+    E_D_e: :class:`pybamm.Symbol`
         Electrolyte diffusion activation energy
-    R_g: double
-        The ideal gas constant
+    R_g: :class:`pybamm.Symbol`
+        The ideal gas constant [J.mol-1.K-1]
 
     Returns
     -------
-    :`numpy.Array`
+    :class:`pybamm.Symbol`
         Solid diffusivity
     """
 

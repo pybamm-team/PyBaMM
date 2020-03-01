@@ -13,19 +13,19 @@ def nmc_LGM50_diffusivity_Chen2020(sto, T, T_inf, E_D_s, R_g):
        publication (2020).
        Parameters
        ----------
-       sto: :class: `numpy.Array`
+       sto : :class:`pybamm.Symbol`
          Electrode stochiometry
-       T: :class: `numpy.Array`
-          Dimensional temperature
-       T_inf: double
+       T : :class:`pybamm.Symbol`
+          Dimensional temperature [K]
+       T_inf: :class:`pybamm.Symbol`
           Reference temperature
-       E_D_s: double
+       E_D_s: :class:`pybamm.Symbol`
           Solid diffusion activation energy
-       R_g: double
-          The ideal gas constant
+       R_g: :class:`pybamm.Symbol`
+          The ideal gas constant [J.mol-1.K-1]
        Returns
        -------
-       : double
+       : :class:`pybamm.Symbol`
           Solid diffusivity
     """
 

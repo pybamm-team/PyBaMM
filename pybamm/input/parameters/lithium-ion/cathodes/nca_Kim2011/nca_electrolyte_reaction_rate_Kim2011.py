@@ -15,18 +15,18 @@ def nca_electrolyte_reaction_rate_Kim2011(T, T_inf, E_r, R_g):
 
     Parameters
     ----------
-    T: :class: `numpy.Array`
-        Dimensional temperature
-    T_inf: double
-        Reference temperature
-    E_r: double
+    T : :class:`pybamm.Symbol`
+        Dimensional temperature [K]
+    T_inf: :class:`pybamm.Symbol`
+        Reference temperature [K]
+    E_r: :class:`pybamm.Symbol`
         Reaction activation energy
-    R_g: double
-        The ideal gas constant
+    R_g: :class:`pybamm.Symbol`
+        The ideal gas constant [J.mol-1.K-1]
 
     Returns
     -------
-    : double
+    : :class:`pybamm.Symbol`
         Reaction rate
     """
     i0_ref = 4  # reference exchange current density at 100% SOC
