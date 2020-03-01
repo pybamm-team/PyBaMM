@@ -55,6 +55,7 @@ class BaseSolver(object):
         # Defaults, can be overwritten by specific solver
         self.name = "Base solver"
         self.ode_solver = False
+        self.algebraic_solver = False
 
     @property
     def method(self):
@@ -116,17 +117,23 @@ class BaseSolver(object):
             Any input parameters to pass to the model when solving
 
         """
-        inputs = inputs or {}
-        y0 = model.concatenated_initial_conditions.evaluate(0, None, inputs)
-
-        # Set model timescale
-        model.timescale_eval = model.timescale.evaluate(u=inputs)
 
         # Check model.algebraic for ode solvers
         if self.ode_solver is True and len(model.algebraic) > 0:
             raise pybamm.SolverError(
                 "Cannot use ODE solver '{}' to solve DAE model".format(self.name)
             )
+        # Check model.rhs for algebraic solvers
+        if self.algebraic_solver is True and len(model.rhs) > 0:
+            raise pybamm.SolverError(
+                """Cannot use algebraic solver to solve model with time derivatives"""
+            )
+
+        inputs = inputs or {}
+        y0 = model.concatenated_initial_conditions.evaluate(0, None, inputs)
+
+        # Set model timescale
+        model.timescale_eval = model.timescale.evaluate(u=inputs)
 
         if self.ode_solver is True:
             self.root_method = None
@@ -276,14 +283,19 @@ class BaseSolver(object):
         # Note: when we pass to casadi the ode part of the problem must be in explicit
         # form so we pre-multiply by the inverse of the mass matrix
         if self.root_method == "casadi" or isinstance(self, pybamm.CasadiSolver):
-            mass_matrix_inv = casadi.MX(model.mass_matrix_inv.entries)
-            explicit_rhs = mass_matrix_inv @ rhs(t_casadi, y_casadi, u_casadi_stacked)
-            model.casadi_rhs = casadi.Function(
-                "rhs", [t_casadi, y_casadi, u_casadi_stacked], [explicit_rhs]
-            )
+            # can use DAE solver to solve model with algebraic equations only
+            if len(model.rhs) > 0:
+                mass_matrix_inv = casadi.MX(model.mass_matrix_inv.entries)
+                explicit_rhs = mass_matrix_inv @ rhs(
+                    t_casadi, y_casadi, u_casadi_stacked
+                )
+                model.casadi_rhs = casadi.Function(
+                    "rhs", [t_casadi, y_casadi, u_casadi_stacked], [explicit_rhs]
+                )
             model.casadi_algebraic = algebraic
         # Calculate consistent initial conditions for the algebraic equations
-        if len(model.algebraic) > 0:
+        if len(model.algebraic) > 0 and len(model.rhs) > 0:
+            # case where the model truly is a DAE system
             all_states = pybamm.NumpyConcatenation(
                 model.concatenated_rhs, model.concatenated_algebraic
             )
@@ -293,10 +305,17 @@ class BaseSolver(object):
             model.jacobian_eval = jacobian_eval
             y0_guess = y0.flatten()
             model.y0 = self.calculate_consistent_state(model, 0, y0_guess, inputs)
-        else:
+        elif len(model.rhs) > 0:
             # can use DAE solver to solve ODE model
             model.residuals_eval = Residuals(rhs, "residuals", model)
             model.jacobian_eval = jac_rhs
+            model.y0 = y0.flatten()
+        elif len(model.algebraic) > 0:
+            # can use DAE solver to solve algebraic model
+            # we don't calculate consistent initial conditions in this case as this will
+            # be the job of the algebraic solver
+            model.residuals_eval = Residuals(algebraic, "residuals", model)
+            model.jacobian_eval = jac_algebraic
             model.y0 = y0.flatten()
 
         pybamm.logger.info("Finish solver set-up")
@@ -451,7 +470,7 @@ class BaseSolver(object):
                 )
             )
 
-    def solve(self, model, t_eval, external_variables=None, inputs=None):
+    def solve(self, model, t_eval=None, external_variables=None, inputs=None):
         """
         Execute the solver setup and calculate the solution of the model at
         specified times.
@@ -481,6 +500,11 @@ class BaseSolver(object):
         if len(model.rhs) == 0 and len(model.algebraic) == 0:
             raise pybamm.ModelError("Cannot solve empty model")
 
+        # t_eval can only be None if the solver is an algebraic solver. In that case
+        # set it to 0
+        if self.algebraic_solver is True and t_eval is None:
+            t_eval = np.array([0])
+
         # Make sure t_eval is monotonic
         if (np.diff(t_eval) < 0).any():
             raise pybamm.SolverError("t_eval must increase monotonically")
@@ -494,14 +518,6 @@ class BaseSolver(object):
         external_variables = external_variables or {}
         inputs = inputs or {}
         ext_and_inputs = {**external_variables, **inputs}
-
-        # Raise warning if t_eval looks like it was supposed to be dimensionless
-        # already
-        if t_eval[-1] < 0.5:
-            raise pybamm.SolverError(
-                """It looks like t_eval might be dimensionless.
-                t_eval should now be provided in seconds"""
-            )
 
         # Set up (if not done already)
         if model not in self.models_set_up:
