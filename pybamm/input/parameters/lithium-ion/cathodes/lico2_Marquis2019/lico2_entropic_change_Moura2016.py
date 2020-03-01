@@ -3,18 +3,18 @@ from pybamm import cosh
 
 def lico2_entropic_change_Moura2016(sto, c_p_max):
     """
-        Lithium Cobalt Oxide (LiCO2) entropic change in open circuit potential (OCP) at
-        a temperature of 298.15K as a function of the stochiometry. The fit is taken
-        from Scott Moura's FastDFN code [1].
+    Lithium Cobalt Oxide (LiCO2) entropic change in open circuit potential (OCP) at
+    a temperature of 298.15K as a function of the stochiometry. The fit is taken
+    from Scott Moura's FastDFN code [1].
 
-        References
-        ----------
-        .. [1] https://github.com/scott-moura/fastDFN
+    References
+    ----------
+    .. [1] https://github.com/scott-moura/fastDFN
 
-          Parameters
-          ----------
-          sto: :class:`pybamm.Symbol`
-               Stochiometry of material (li-fraction)
+    Parameters
+    ----------
+    sto: :class:`pybamm.Symbol`
+        Stochiometry of material (li-fraction)
 
     """
 

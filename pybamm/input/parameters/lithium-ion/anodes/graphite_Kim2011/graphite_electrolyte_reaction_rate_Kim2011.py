@@ -20,14 +20,14 @@ def graphite_electrolyte_reaction_rate_Kim2011(T, T_inf, E_r, R_g):
     T_inf: :class:`pybamm.Symbol`
         Reference temperature [K]
     E_r: :class:`pybamm.Symbol`
-        Reaction activation energy
+        Reaction activation energy [J.mol-1]
     R_g: :class:`pybamm.Symbol`
         The ideal gas constant [J.mol-1.K-1]
 
     Returns
     -------
     :class:`pybamm.Symbol`
-        Reaction rate
+        Reaction rate [(A.m-2)(m3.mol-1)^1.5]
     """
 
     i0_ref = 36  # reference exchange current density at 100% SOC
