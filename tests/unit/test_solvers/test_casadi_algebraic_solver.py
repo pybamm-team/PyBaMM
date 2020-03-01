@@ -51,7 +51,7 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
         ):
             solver._integrate(model, np.array([0]), {})
 
-    def test_model_solver_time_varying_input(self):
+    def test_model_solver_with_time(self):
         # Create model
         model = pybamm.BaseModel()
         var1 = pybamm.Variable("var1")
@@ -78,6 +78,22 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
             model.variables["var2"].evaluate(t=t_eval, y=solution.y).flatten(),
             sol[1, :],
         )
+
+    def test_solve_with_input(self):
+        # Simple system: a single algebraic equation
+        var = pybamm.Variable("var")
+        model = pybamm.BaseModel()
+        model.algebraic = {var: var + pybamm.InputParameter("value")}
+        model.initial_conditions = {var: 2}
+
+        # create discretisation
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        # Solve
+        solver = pybamm.CasadiAlgebraicSolver()
+        solution = solver.solve(model, np.linspace(0, 1, 10), inputs={"value": 7})
+        np.testing.assert_array_equal(solution.y, -7)
 
 
 if __name__ == "__main__":
