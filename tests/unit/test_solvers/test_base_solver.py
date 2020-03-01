@@ -164,16 +164,6 @@ class TestBaseSolver(unittest.TestCase):
         ):
             solver.calculate_consistent_state(Model())
 
-    def test_time_too_short(self):
-        solver = pybamm.BaseSolver()
-        model = pybamm.BaseModel()
-        v = pybamm.StateVector(slice(0, 1))
-        model.rhs = {v: v}
-        with self.assertRaisesRegex(
-            pybamm.SolverError, "It looks like t_eval might be dimensionless"
-        ):
-            solver.solve(model, np.linspace(0, 0.1))
-
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
