@@ -379,8 +379,6 @@ class BaseSolver(object):
             y = casadi.vertcat(y0_diff, y_alg)
             alg_root = model.casadi_algebraic(time, y, u)
             # Solve
-            # set error_on_fail to False and just check the final output is small
-            # enough
             roots = casadi.rootfinder(
                 "roots",
                 "newton",
@@ -395,10 +393,13 @@ class BaseSolver(object):
                 fun = model.casadi_algebraic(
                     time, casadi.vertcat(y0_diff, y0_alg), u_stacked
                 )
+                abs_fun = casadi.fabs(fun)
+                max_fun = casadi.mmax(fun)
             except RuntimeError as err:
                 success = False
                 message = err.args[0]
-                fun = None
+                abs_fun = None
+                max_fun = None
         else:
             algebraic = model.algebraic_eval
             jac = model.jac_algebraic_eval
@@ -449,9 +450,11 @@ class BaseSolver(object):
             y0_alg = sol.x
             success = sol.success
             fun = sol.fun
+            abs_fun = np.abs(fun)
+            max_fun = np.max(fun)
             message = sol.message
 
-        if success and np.all(fun < self.root_tol * len(y0_alg)):
+        if success and np.all(abs_fun < self.root_tol):
             # Return full set of consistent initial conditions (y0_diff unchanged)
             y0_consistent = np.concatenate([y0_diff, y0_alg])
             pybamm.logger.info("Finish calculating consistent initial conditions")
@@ -466,7 +469,7 @@ class BaseSolver(object):
                 Could not find consistent initial conditions: solver terminated
                 successfully, but maximum solution error ({}) above tolerance ({})
                 """.format(
-                    np.max(fun), self.root_tol * len(y0_alg)
+                    max_fun, self.root_tol
                 )
             )
 
