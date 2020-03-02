@@ -50,7 +50,6 @@ class AlgebraicSolver(pybamm.BaseSolver):
             Any input parameters to pass to the model when solving
         """
         algebraic = model.algebraic_eval
-        jac = model.jacobian_eval
         y0 = model.y0
 
         y = np.empty((len(y0), len(t_eval)))
