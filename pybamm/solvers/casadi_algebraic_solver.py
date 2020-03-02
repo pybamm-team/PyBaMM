@@ -62,13 +62,15 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
 
         # Set up rootfinder
         roots = casadi.rootfinder(
-            "roots", "newton", dict(x=y_sym, p=t_u_sym, g=alg), {"abstol": self.tol},
+            "roots", "newton", dict(x=y_sym, p=t_u_sym, g=alg), {"abstol": self.tol}
         )
         for idx, t in enumerate(t_eval):
             # Evaluate algebraic with new t and previous y0, if it's already close
             # enough then keep it
             if np.all(abs(model.algebraic_eval(t, y0)) < self.tol):
-                pybamm.logger.debug("Keeping same solution at t={}".format(t))
+                pybamm.logger.debug(
+                    "Keeping same solution at t={}".format(t * model.timescale_eval)
+                )
                 y[:, idx] = y0
             # Otherwise calculate new y0
             else:
