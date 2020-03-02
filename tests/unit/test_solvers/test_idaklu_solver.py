@@ -82,6 +82,20 @@ class TestIDAKLUSolver(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.SolverError, "KLU requires the Jacobian"):
             solver.solve(model, t_eval)
 
+    def test_dae_solver_algebraic_model(self):
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        model.algebraic = {var: var + 1}
+        model.initial_conditions = {var: 0}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.IDAKLUSolver()
+        t_eval = np.linspace(0, 1)
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_array_equal(solution.y, -1)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

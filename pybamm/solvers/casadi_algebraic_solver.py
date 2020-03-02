@@ -1,32 +1,30 @@
 #
-# Algebraic solver class
+# Casadi algebraic solver class
 #
+import casadi
 import pybamm
 import numpy as np
-from scipy import optimize
 
 
-class AlgebraicSolver(pybamm.BaseSolver):
+class CasadiAlgebraicSolver(pybamm.BaseSolver):
     """Solve a discretised model which contains only (time independent) algebraic
-    equations using a root finding algorithm.
+    equations using CasADi's root finding algorithm.
     Note: this solver could be extended for quasi-static models, or models in
     which the time derivative is manually discretised and results in a (possibly
     nonlinear) algebaric system at each time level.
 
     Parameters
     ----------
-    method : str, optional
-        The method to use to solve the system (default is "lm")
     tol : float, optional
         The tolerance for the solver (default is 1e-6).
     """
 
     def __init__(self, method="lm", tol=1e-6):
-        super().__init__(method=method)
+        super().__init__()
         self.tol = tol
-        self.name = "Algebraic solver ({})".format(method)
+        self.name = "CasADi algebraic solver"
         self.algebraic_solver = True
-        pybamm.citations.register("virtanen2020scipy")
+        pybamm.citations.register("Andersson2019")
 
     @property
     def tol(self):
@@ -49,50 +47,52 @@ class AlgebraicSolver(pybamm.BaseSolver):
         inputs : dict, optional
             Any input parameters to pass to the model when solving
         """
-        algebraic = model.algebraic_eval
         y0 = model.y0
 
         y = np.empty((len(y0), len(t_eval)))
 
+        # Set up
+        u_stacked = casadi.vertcat(*[x for x in inputs.values()])
+        t_sym = casadi.MX.sym("t")
+        y_sym = casadi.MX.sym("y_alg", y0.shape[0])
+        u_sym = casadi.MX.sym("u", u_stacked.shape[0])
+
+        t_u_sym = casadi.vertcat(t_sym, u_sym)
+        alg = model.casadi_algebraic(t_sym, y_sym, u_sym)
+
+        # Set up rootfinder
+        roots = casadi.rootfinder(
+            "roots", "newton", dict(x=y_sym, p=t_u_sym, g=alg), {"abstol": self.tol},
+        )
         for idx, t in enumerate(t_eval):
-
-            def root_fun(y):
-                "Evaluates algebraic using y"
-                out = algebraic(t, y)
-                pybamm.logger.debug(
-                    "Evaluating algebraic equations at t={}, L2-norm is {}".format(
-                        t, np.linalg.norm(out)
-                    )
-                )
-                return out
-
-            if model.jacobian_eval is not None:
-
-                def jac(y):
-                    return model.jacobian_eval(t, y)
-
-            else:
-                jac = None
-
             # Evaluate algebraic with new t and previous y0, if it's already close
             # enough then keep it
-            if np.all(abs(algebraic(t, y0)) < self.tol):
+            if np.all(abs(model.algebraic_eval(t, y0)) < self.tol):
                 pybamm.logger.debug("Keeping same solution at t={}".format(t))
                 y[:, idx] = y0
             # Otherwise calculate new y0
             else:
-                sol = optimize.root(
-                    root_fun, y0, method=self.method, tol=self.tol, jac=jac,
-                )
+                t_u_stacked = casadi.vertcat(t, u_stacked)
+                # Solve
+                try:
+                    y_sol = roots(y0, t_u_stacked).full().flatten()
+                    success = True
+                    message = None
+                    # Check final output
+                    fun = model.casadi_algebraic(t, y_sol, u_stacked)
+                except RuntimeError as err:
+                    success = False
+                    message = err.args[0]
+                    fun = None
 
-                if sol.success and np.all(abs(sol.fun) < self.tol):
+                if success and np.all(casadi.fabs(fun) < self.tol):
                     # update initial guess for the next iteration
-                    y0 = sol.x
+                    y0 = y_sol
                     # update solution array
-                    y[:, idx] = y0
-                elif not sol.success:
+                    y[:, idx] = y_sol
+                elif not success:
                     raise pybamm.SolverError(
-                        "Could not find acceptable solution: {}".format(sol.message)
+                        "Could not find acceptable solution: {}".format(message)
                     )
                 else:
                     raise pybamm.SolverError(
@@ -101,7 +101,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
                         successfully, but maximum solution error ({})
                         above tolerance ({})
                         """.format(
-                            np.max(sol.fun), self.tol
+                            casadi.mmax(fun), self.tol
                         )
                     )
 
