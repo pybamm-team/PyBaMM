@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM)
 
+## Features
+
+-   Added `CasadiAlgebraicSolver` for solving algebraic systems with casadi ([#868](https://github.com/pybamm-team/PyBaMM/pull/868))
+
 ## Breaking changes
 
 -   Removed "set external temperature" and "set external potential" options. Use "external submodels" option instead ([#862](https://github.com/pybamm-team/PyBaMM/pull/862))
