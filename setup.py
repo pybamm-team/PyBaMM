@@ -41,11 +41,12 @@ class CMakeBuild(build_ext):
         if not os.path.exists(self.build_temp):
             os.makedirs(self.build_temp)
 
+        cmake_list_dir = os.path.abspath(os.path.dirname(__file__))
         print("-" * 10, "Running CMake for idaklu solver", "-" * 40)
         subprocess.run(["cmake", cmake_list_dir] + cmake_args, cwd=self.build_temp)
 
         print("-" * 10, "Building idaklu module", "-" * 40)
-        subprocess.run(["cmake", "--build", pybamm_dir], cwd=self.build_temp)
+        subprocess.run(["cmake", "--build", "."], cwd=self.build_temp)
 
         # Move from build temp to final position
         for ext in self.extensions:
