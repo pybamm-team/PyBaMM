@@ -36,13 +36,13 @@ class CMakeBuild(build_ext):
             print("See installation instructions for more information.")
 
         py_version = python_version()
-        cmake_args = [pybamm_dir]
+        cmake_args = ["-DPYTHON_EXECUTABLE={}".format(sys.executable)]
 
         if not os.path.exists(self.build_temp):
             os.makedirs(self.build_temp)
 
         print("-" * 10, "Running CMake for idaklu solver", "-" * 40)
-        subprocess.run(["cmake"] + cmake_args, cwd=self.build_temp)
+        subprocess.run(["cmake", cmake_list_dir] + cmake_args, cwd=self.build_temp)
 
         print("-" * 10, "Building idaklu module", "-" * 40)
         subprocess.run(["cmake", "--build", pybamm_dir], cwd=self.build_temp)
