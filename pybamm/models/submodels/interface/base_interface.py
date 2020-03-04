@@ -33,8 +33,7 @@ class BaseInterface(pybamm.BaseSubModel):
 
     def _get_exchange_current_density(self, variables):
         """
-        A private function to obtain the exchange current density for a lead acid
-        deposition reaction.
+        A private function to obtain the exchange current density
 
         Parameters
         ----------
