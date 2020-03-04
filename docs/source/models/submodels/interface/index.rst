@@ -5,8 +5,7 @@ Interface
   :maxdepth: 1
 
   base_interface
-  diffusion_limited/index
-  inverse_kinetics/index
   kinetics/index
-  lead_acid
-  lithium_ion
+  inverse_kinetics/index
+  first_order_kinetics/index
+  diffusion_limited

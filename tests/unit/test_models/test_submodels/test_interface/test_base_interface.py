@@ -9,11 +9,11 @@ import unittest
 
 class TestBaseInterface(unittest.TestCase):
     def test_public_functions(self):
-        submodel = pybamm.interface.BaseInterface(None, "Negative")
+        submodel = pybamm.interface.BaseInterface(None, "Negative", None)
         std_tests = tests.StandardSubModelTests(submodel)
         std_tests.test_all()
 
-        submodel = pybamm.interface.BaseInterface(None, "Positive")
+        submodel = pybamm.interface.BaseInterface(None, "Positive", None)
         std_tests = tests.StandardSubModelTests(submodel)
         std_tests.test_all()
 

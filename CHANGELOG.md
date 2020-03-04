@@ -1,5 +1,10 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM)
 
+## Bug fixes
+
+-   Reformatted interface submodels to be more readable ([#866](https://github.com/pybamm-team/PyBaMM/pull/866))
+-   Removed double-counted "number of electrodes connected in parallel" from simulation ([#864](https://github.com/pybamm-team/PyBaMM/pull/864))
+
 ## Breaking changes
 
 -   Removed "set external temperature" and "set external potential" options. Use "external submodels" option instead ([#862](https://github.com/pybamm-team/PyBaMM/pull/862))
