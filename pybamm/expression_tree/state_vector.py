@@ -118,6 +118,11 @@ class StateVector(pybamm.Symbol):
             return out
 
     def _jac(self, variable):
+        if isinstance(variable, pybamm.StateVector):
+            return _jac_same_vector(variable)
+        else if isinstance(variable, pybamm.StateVector):
+
+    def _jac_same_vector(self, variable):
         """
         Differentiate a slice of a StateVector of size m with respect to another
         slice of a StateVector of size n. This returns a (sparse) matrix of size
