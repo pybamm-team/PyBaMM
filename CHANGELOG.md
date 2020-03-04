@@ -2,6 +2,7 @@
 
 ## Breaking changes
 
+-   Removed double-counted "number of electrodes connected in parallel" from simulation ([#864](https://github.com/pybamm-team/PyBaMM/pull/864))
 -   Removed "set external temperature" and "set external potential" options. Use "external submodels" option instead ([#862](https://github.com/pybamm-team/PyBaMM/pull/862))
 
 # [v0.2.0](https://github.com/pybamm-team/PyBaMM/tree/v0.2.0) - 2020-02-26
