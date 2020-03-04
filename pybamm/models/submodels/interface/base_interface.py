@@ -13,13 +13,146 @@ class BaseInterface(pybamm.BaseSubModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
-
+    domain : str
+        The domain to implement the model, either: 'Negative' or 'Positive'.
+    reaction : str
+        The name of the reaction being implemented
 
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param, domain):
+    def __init__(self, param, domain, reaction):
         super().__init__(param, domain)
+        self.reaction = reaction
+        if reaction == "lithium-ion main":
+            self.reaction_name = ""  # empty reaction name for the main reaction
+        elif reaction == "lead-acid main":
+            self.reaction_name = ""  # empty reaction name for the main reaction
+        elif reaction == "lead-acid oxygen":
+            self.reaction_name = " oxygen"
+
+    def _get_exchange_current_density(self, variables):
+        """
+        A private function to obtain the exchange current density
+
+        Parameters
+        ----------
+        variables: dict
+            The variables in the full model.
+
+        Returns
+        -------
+        j0 : :class: `pybamm.Symbol`
+            The exchange current density.
+        """
+        c_e = variables[self.domain + " electrolyte concentration"]
+
+        if self.reaction == "lithium-ion main":
+            c_s_surf = variables[self.domain + " particle surface concentration"]
+            T = variables[self.domain + " electrode temperature"]
+
+            # If variable was broadcast, take only the orphan
+            if (
+                isinstance(c_s_surf, pybamm.Broadcast)
+                and isinstance(c_e, pybamm.Broadcast)
+                and isinstance(T, pybamm.Broadcast)
+            ):
+                c_s_surf = c_s_surf.orphans[0]
+                c_e = c_e.orphans[0]
+                T = T.orphans[0]
+            if self.domain == "Negative":
+                prefactor = self.param.m_n(T) / self.param.C_r_n
+            elif self.domain == "Positive":
+                prefactor = self.param.gamma_p * self.param.m_p(T) / self.param.C_r_p
+            j0 = prefactor * (
+                c_e ** (1 / 2) * c_s_surf ** (1 / 2) * (1 - c_s_surf) ** (1 / 2)
+            )
+
+        elif self.reaction == "lead-acid main":
+            # If variable was broadcast, take only the orphan
+            if isinstance(c_e, pybamm.Broadcast):
+                c_e = c_e.orphans[0]
+            if self.domain == "Negative":
+                j0 = self.param.j0_n_S_ref * c_e
+            elif self.domain == "Positive":
+                c_w = self.param.c_w(c_e)
+                j0 = self.param.j0_p_S_ref * c_e ** 2 * c_w
+
+        elif self.reaction == "lead-acid oxygen":
+            # If variable was broadcast, take only the orphan
+            if isinstance(c_e, pybamm.Broadcast):
+                c_e = c_e.orphans[0]
+            if self.domain == "Negative":
+                j0 = pybamm.Scalar(0)
+            elif self.domain == "Positive":
+                j0 = self.param.j0_p_Ox_ref * c_e  # ** self.param.exponent_e_Ox
+
+        return j0
+
+    def _get_open_circuit_potential(self, variables):
+        """
+        A private function to obtain the open circuit potential and entropic change
+
+        Parameters
+        ----------
+        variables: dict
+            The variables in the full model.
+
+        Returns
+        -------
+        ocp : :class:`pybamm.Symbol`
+            The open-circuit potential
+        dUdT : :class:`pybamm.Symbol`
+            The entropic change in open-circuit potential due to temperature
+
+        """
+
+        if self.reaction == "lithium-ion main":
+            c_s_surf = variables[self.domain + " particle surface concentration"]
+            T = variables[self.domain + " electrode temperature"]
+
+            # If variable was broadcast, take only the orphan
+            if isinstance(c_s_surf, pybamm.Broadcast) and isinstance(
+                T, pybamm.Broadcast
+            ):
+                c_s_surf = c_s_surf.orphans[0]
+                T = T.orphans[0]
+
+            if self.domain == "Negative":
+                ocp = self.param.U_n(c_s_surf, T)
+                dUdT = self.param.dUdT_n(c_s_surf)
+            elif self.domain == "Positive":
+                ocp = self.param.U_p(c_s_surf, T)
+                dUdT = self.param.dUdT_p(c_s_surf)
+        elif self.reaction == "lead-acid main":
+            c_e = variables[self.domain + " electrolyte concentration"]
+            # If c_e was broadcast, take only the orphan
+            if isinstance(c_e, pybamm.Broadcast):
+                c_e = c_e.orphans[0]
+            if self.domain == "Negative":
+                ocp = self.param.U_n(c_e, self.param.T_init)
+            elif self.domain == "Positive":
+                ocp = self.param.U_p(c_e, self.param.T_init)
+            dUdT = pybamm.Scalar(0)
+
+        elif self.reaction == "lead-acid oxygen":
+            if self.domain == "Negative":
+                ocp = self.param.U_n_Ox
+            elif self.domain == "Positive":
+                ocp = self.param.U_p_Ox
+            dUdT = pybamm.Scalar(0)
+
+        return ocp, dUdT
+
+    def _get_number_of_electrons_in_reaction(self):
+        "Returns the number of electrons in the reaction"
+        if self.reaction in ["lead-acid main", "lithium-ion main"]:
+            if self.domain == "Negative":
+                return self.param.ne_n
+            elif self.domain == "Positive":
+                return self.param.ne_p
+        elif self.reaction == "lead-acid oxygen":
+            return self.param.ne_Ox
 
     def _get_delta_phi(self, variables):
         "Calculate delta_phi, and derived variables, using phi_s and phi_e"

@@ -1,13 +1,14 @@
 #
 # First-order Butler-Volmer kinetics
 #
+from ..base_interface import BaseInterface
 
-from ..kinetics.base_first_order_kinetics import BaseFirstOrderKinetics
 
-
-class BaseInverseFirstOrderKinetics(BaseFirstOrderKinetics):
+class InverseFirstOrderKinetics(BaseInterface):
     """
-    Base inverse first-order kinetics
+    Base inverse first-order kinetics. This class needs to consider *all* of the
+    leading-order submodels simultaneously in order to find the first-order correction
+    to the potentials
 
     Parameters
     ----------
@@ -15,13 +16,15 @@ class BaseInverseFirstOrderKinetics(BaseFirstOrderKinetics):
         model parameters
     domain : str
         The domain to implement the model, either: 'Negative' or 'Positive'.
+    leading_order_models : :class:`pybamm.interface.kinetics.BaseKinetics`
+        The leading-order models with respect to which this is first-order
 
-
-    **Extends:** :class:`pybamm.interface.kinetics.BaseFirstOrderKinetics`
+    **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, leading_order_models):
+        super().__init__(param, domain, "inverse")
+        self.leading_order_models = leading_order_models
 
     def _get_die1dx(self, variables):
         i_boundary_cc = variables["Current collector current density"]
@@ -51,16 +54,15 @@ class BaseInverseFirstOrderKinetics(BaseFirstOrderKinetics):
 
         # Get derivatives of leading-order terms
         sum_dj_dc_0 = sum(
-            reaction_submodel._get_dj_dc(variables)
-            for reaction_submodel in self.reaction_submodels
+            submodel._get_dj_dc(variables) for submodel in self.leading_order_models
         )
         sum_dj_ddeltaphi_0 = sum(
-            reaction_submodel._get_dj_ddeltaphi(variables)
-            for reaction_submodel in self.reaction_submodels
+            submodel._get_dj_ddeltaphi(variables)
+            for submodel in self.leading_order_models
         )
         sum_j_diffusion_limited_first_order = sum(
-            reaction_submodel._get_j_diffusion_limited_first_order(variables)
-            for reaction_submodel in self.reaction_submodels
+            submodel._get_j_diffusion_limited_first_order(variables)
+            for submodel in self.leading_order_models
         )
 
         delta_phi_1_av = (

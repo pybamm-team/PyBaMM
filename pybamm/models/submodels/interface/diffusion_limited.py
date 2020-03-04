@@ -3,10 +3,10 @@
 #
 
 import pybamm
-from ..base_interface import BaseInterface
+from .base_interface import BaseInterface
 
 
-class BaseModel(BaseInterface):
+class DiffusionLimited(BaseInterface):
     """
     Leading-order submodel for diffusion-limited kinetics
 
@@ -16,13 +16,17 @@ class BaseModel(BaseInterface):
         model parameters
     domain : str
         The domain to implement the model, either: 'Negative' or 'Positive'.
-
+    reaction : str
+        The name of the reaction being implemented
+    order : str
+        The order of the model ("leading" or "full")
 
     **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, reaction, order):
+        super().__init__(param, domain, reaction)
+        self.order = order
 
     def get_coupled_variables(self, variables):
         # Calculate delta_phi_s from phi_s and phi_e if it isn't already known
@@ -68,17 +72,57 @@ class BaseModel(BaseInterface):
 
         return variables
 
-    def _get_exchange_current_density(self, variables):
-        raise NotImplementedError
-
-    def _get_open_circuit_potential(self, variables):
-        raise NotImplementedError
-
     def _get_diffusion_limited_current_density(self, variables):
-        raise NotImplementedError
+        param = self.param
+        if self.domain == "Negative":
+            if self.order == "leading":
+                j_p = variables[
+                    "X-averaged positive electrode"
+                    + self.reaction_name
+                    + " interfacial current density"
+                ]
+                j = -self.param.l_p * j_p / self.param.l_n
+            elif self.order == "full":
+                tor_s = variables["Separator tortuosity"]
+                c_ox_s = variables["Separator oxygen concentration"]
+                N_ox_neg_sep_interface = (
+                    -pybamm.boundary_value(tor_s, "left")
+                    * param.curlyD_ox
+                    * pybamm.BoundaryGradient(c_ox_s, "left")
+                )
+                N_ox_neg_sep_interface.domain = ["current collector"]
+
+                j = -N_ox_neg_sep_interface / param.C_e / param.s_ox_Ox / param.l_n
+
+        return j
 
     def _get_dj_dc(self, variables):
         return pybamm.Scalar(0)
 
     def _get_dj_ddeltaphi(self, variables):
         return pybamm.Scalar(0)
+
+    def _get_j_diffusion_limited_first_order(self, variables):
+        """
+        First-order correction to the interfacial current density due to
+        diffusion-limited effects. For a general model the correction term is zero,
+        since the reaction is not diffusion-limited
+        """
+        if self.order == "leading":
+            j_leading_order = variables[
+                "Leading-order x-averaged "
+                + self.domain.lower()
+                + " electrode"
+                + self.reaction_name
+                + " interfacial current density"
+            ]
+            param = self.param
+            if self.domain == "Negative":
+                N_ox_s_p = variables["Oxygen flux"].orphans[1]
+                N_ox_neg_sep_interface = N_ox_s_p[0]
+
+                j = -N_ox_neg_sep_interface / param.C_e / param.s_ox_Ox / param.l_n
+
+            return (j - j_leading_order) / param.C_e
+        else:
+            return pybamm.Scalar(0)
