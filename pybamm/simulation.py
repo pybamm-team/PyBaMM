@@ -28,17 +28,11 @@ def constant_current_constant_voltage_constant_power(variables):
     s_I = pybamm.InputParameter("Current switch")
     s_V = pybamm.InputParameter("Voltage switch")
     s_P = pybamm.InputParameter("Power switch")
-    n_electrodes_parallel = pybamm.electrical_parameters.n_electrodes_parallel
     n_cells = pybamm.electrical_parameters.n_cells
     return (
-        s_I * (I - pybamm.InputParameter("Current input [A]") / n_electrodes_parallel)
+        s_I * (I - pybamm.InputParameter("Current input [A]"))
         + s_V * (V - pybamm.InputParameter("Voltage input [V]") / n_cells)
-        + s_P
-        * (
-            V * I
-            - pybamm.InputParameter("Power input [W]")
-            / (n_cells * n_electrodes_parallel)
-        )
+        + s_P * (V * I - pybamm.InputParameter("Power input [W]") / n_cells)
     )
 
 
@@ -212,21 +206,18 @@ class Simulation:
 
         # add current and voltage events to the model
         # current events both negative and positive to catch specification
-        n_electrodes_parallel = pybamm.electrical_parameters.n_electrodes_parallel
         n_cells = pybamm.electrical_parameters.n_cells
         self.model.events.extend(
             [
                 pybamm.Event(
                     "Current cut-off (positive) [A] [experiment]",
                     self.model.variables["Current [A]"]
-                    - abs(pybamm.InputParameter("Current cut-off [A]"))
-                    / n_electrodes_parallel,
+                    - abs(pybamm.InputParameter("Current cut-off [A]")),
                 ),
                 pybamm.Event(
                     "Current cut-off (negative) [A] [experiment]",
                     self.model.variables["Current [A]"]
-                    + abs(pybamm.InputParameter("Current cut-off [A]"))
-                    / n_electrodes_parallel,
+                    + abs(pybamm.InputParameter("Current cut-off [A]")),
                 ),
                 pybamm.Event(
                     "Voltage cut-off [V] [experiment]",
