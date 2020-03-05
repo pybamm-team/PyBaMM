@@ -379,6 +379,9 @@ B = (
     / (pybamm.thermal_parameters.rho_eff_dim * F * Delta_T * L_x)
 )
 
+T_amb_dim = pybamm.thermal_parameters.T_amb_dim
+T_amb = pybamm.thermal_parameters.T_amb
+
 # Initial conditions
 T_init = pybamm.thermal_parameters.T_init
 c_e_init = c_e_init_dimensional / c_e_typ
@@ -477,14 +480,3 @@ dimensional_current_density_with_time = dimensional_current_with_time / (
 current_with_time = (
     dimensional_current_with_time / I_typ * pybamm.Function(np.sign, I_typ)
 )
-
-# --------------------------------------------------------------------------------------
-# 7. Ambient temperature
-
-
-def T_amb_dim(t):
-    return pybamm.FunctionParameter("Ambient temperature [K]", t)
-
-
-def T_amb(t):
-    return (T_amb_dim(t) - T_ref) / Delta_T  # dimensionless T_amb
