@@ -7,18 +7,13 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 add_subdirectory(third-party/pybind11)
 pybind11_add_module(idaklu pybamm/solvers/c_solvers/idaklu.cpp)
 
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 # Sundials
-set(SUNDIALS_INCLUDE "sundials5/include")
-TARGET_INCLUDE_DIRECTORIES(idaklu PRIVATE ${SUNDIALS_INCLUDE})
-
-find_library(SUNMATSPARSE sundials_sunmatrixsparse PATHS "sundials5/lib" NO_DEFAULT_PATH)
-find_library(IDA sundials_ida PATHS "sundials5/lib" NO_DEFAULT_PATH)
-find_library(NVECTOR sundials_nvecserial PATHS "sundials5/lib" NO_DEFAULT_PATH)
-find_library(SUNKLU sundials_sunlinsolklu PATHS "sundials5/lib" NO_DEFAULT_PATH)
-TARGET_LINK_LIBRARIES(idaklu PRIVATE ${SUNMATSPARSE} ${IDA} ${NVECTOR} ${SUNKLU})
+find_package(SUNDIALS)
+target_include_directories(idaklu PRIVATE ${SUNDIALS_INCLUDE_DIR})
+target_link_libraries(idaklu PRIVATE ${SUNDIALS_LIBRARIES})
 
 # link suitesparse
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 find_package(SuiteSparse OPTIONAL_COMPONENTS KLU AMD COLAMD BTF)
 include_directories(${SuiteSparse_INCLUDE_DIRS})
 target_link_libraries(idaklu PRIVATE ${SuiteSparse_LIBRARIES})
