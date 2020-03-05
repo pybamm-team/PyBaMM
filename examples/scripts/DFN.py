@@ -36,5 +36,17 @@ solver.atol = 1e-6
 solution = solver.solve(model, t_eval)
 
 # plot
-plot = pybamm.QuickPlot(solution)
+plot = pybamm.QuickPlot(
+    solution,
+    output_variables=[
+        "Negative particle surface concentration [mol.m-3]",
+        "Electrolyte concentration [mol.m-3]",
+        "Positive particle surface concentration [mol.m-3]",
+        "Current [A]",
+        "Negative electrode potential [V]",
+        "Electrolyte potential [V]",
+        "Positive electrode potential [V]",
+        "Terminal voltage [V]",
+    ],
+)
 plot.dynamic_plot()

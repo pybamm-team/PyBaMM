@@ -31,5 +31,5 @@ t_eval = np.linspace(0, 3600, 100)
 solution = model.default_solver.solve(model, t_eval)
 
 # plot
-plot = pybamm.QuickPlot(solution)
+plot = pybamm.QuickPlot(solution, ["Negative particle concentration"])
 plot.dynamic_plot()

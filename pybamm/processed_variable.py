@@ -107,7 +107,7 @@ class ProcessedVariable(object):
         )
 
         self.entries = entries
-        self.dimensions = 1
+        self.dimensions = 0
 
     def initialise_2D(self):
         len_space = self.base_eval.shape[0]
@@ -147,7 +147,7 @@ class ProcessedVariable(object):
 
         # assign attributes for reference (either x_sol or r_sol)
         self.entries = entries
-        self.dimensions = 2
+        self.dimensions = 1
         if self.domain[0] in ["negative particle", "positive particle"]:
             self.first_dimension = "r"
             self.r_sol = space
@@ -243,7 +243,7 @@ class ProcessedVariable(object):
 
         # assign attributes for reference
         self.entries = entries
-        self.dimensions = 3
+        self.dimensions = 2
         self.first_dim_pts = first_dim_pts
         self.second_dim_pts = second_dim_pts
 
@@ -307,7 +307,7 @@ class ProcessedVariable(object):
 
         # assign attributes for reference
         self.entries = entries
-        self.dimensions = 3
+        self.dimensions = 2
         self.y_sol = y_sol
         self.z_sol = z_sol
         self.first_dimension = "y"
@@ -322,15 +322,15 @@ class ProcessedVariable(object):
         """
         Evaluate the variable at arbitrary t (and x, r, y and/or z), using interpolation
         """
-        if self.dimensions == 1:
+        if self.dimensions == 0:
             out = self._interpolation_function(t)
+        elif self.dimensions == 1:
+            out = self.call_2D(t, x, r, z)
         elif self.dimensions == 2:
             if t is None:
                 out = self._interpolation_function(y, z)
             else:
-                out = self.call_2D(t, x, r, z)
-        elif self.dimensions == 3:
-            out = self.call_3D(t, x, r, y, z)
+                out = self.call_3D(t, x, r, y, z)
         if warn is True and np.isnan(out).any():
             pybamm.logger.warning(
                 "Calling variable outside interpolation range (returns 'nan')"

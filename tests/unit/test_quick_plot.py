@@ -108,16 +108,56 @@ class TestQuickPlot(unittest.TestCase):
         quick_plot = pybamm.QuickPlot(solution)
         quick_plot.plot(0)
 
+        # Test different inputs
+        quick_plot = pybamm.QuickPlot(
+            [solution, solution],
+            colors=["r", "g", "b"],
+            linestyles=["-", "--"],
+            figsize=(1, 2),
+            labels=["sol 1", "sol 2"],
+        )
+        self.assertEqual(quick_plot.colors, ["r", "g", "b"])
+        self.assertEqual(quick_plot.linestyles, ["-", "--"])
+        self.assertEqual(quick_plot.figsize, (1, 2))
+        self.assertEqual(quick_plot.labels, ["sol 1", "sol 2"])
+
+        # Test different time formats
+        quick_plot = pybamm.QuickPlot(solution)
+        self.assertEqual(quick_plot.time_scale, 1)
+        quick_plot = pybamm.QuickPlot(solution, time_format="seconds")
+        self.assertEqual(quick_plot.time_scale, 1)
+        quick_plot = pybamm.QuickPlot(solution, time_format="minutes")
+        self.assertEqual(quick_plot.time_scale, 1 / 60)
+        quick_plot = pybamm.QuickPlot(solution, time_format="hours")
+        self.assertEqual(quick_plot.time_scale, 1 / 3600)
+        with self.assertRaisesRegex(ValueError, "time format"):
+            pybamm.QuickPlot(solution, time_format="bad format")
+        # long solution defaults to hours instead of seconds
+        solution_long = solver.solve(model, np.linspace(0, 1e5))
+        quick_plot = pybamm.QuickPlot(solution_long)
+        self.assertEqual(quick_plot.time_scale, 1 / 3600)
+
         # Test errors
-        with self.assertRaisesRegex(ValueError, "mismatching variable domains"):
+        with self.assertRaisesRegex(ValueError, "Mismatching variable domains"):
             pybamm.QuickPlot(solution, [["a", "b broadcasted"]])
         model.variables["3D variable"] = disc.process_symbol(
             pybamm.FullBroadcast(
                 1, "negative particle", {"secondary": "negative electrode"}
             )
         )
-        with self.assertRaisesRegex(NotImplementedError, "cannot plot 3D variables"):
-            pybamm.QuickPlot(solution, ["3D variable"])
+        with self.assertRaisesRegex(NotImplementedError, "Cannot plot 3D variables"):
+            pybamm.QuickPlot([solution, solution], ["3D variable"])
+        with self.assertRaisesRegex(ValueError, "labels"):
+            quick_plot = pybamm.QuickPlot(
+                [solution, solution], labels=["sol 1", "sol 2", "sol 3"]
+            )
+
+        # No variable can be NaN
+        model.variables["NaN variable"] = disc.process_symbol(pybamm.Scalar(np.nan))
+        with self.assertRaisesRegex(
+            ValueError, "All-NaN variable 'NaN variable' provided"
+        ):
+            pybamm.QuickPlot(solution, ["NaN variable"])
 
     def test_loqs_spm_base(self):
         t_eval = np.linspace(0, 10, 2)

@@ -29,12 +29,16 @@ class TestQuickPlot(unittest.TestCase):
 
         # update the axis
         new_axis = [0, 0.5, 0, 1]
-        quick_plot.axis.update({("Electrolyte concentration",): new_axis})
-        self.assertEqual(quick_plot.axis[("Electrolyte concentration",)], new_axis)
+        quick_plot.axis.update({("Electrolyte concentration [mol.m-3]",): new_axis})
+        self.assertEqual(
+            quick_plot.axis[("Electrolyte concentration [mol.m-3]",)], new_axis
+        )
 
         # and now reset them
         quick_plot.reset_axis()
-        self.assertNotEqual(quick_plot.axis[("Electrolyte concentration",)], new_axis)
+        self.assertNotEqual(
+            quick_plot.axis[("Electrolyte concentration [mol.m-3]",)], new_axis
+        )
 
         # check dynamic plot loads
         quick_plot.dynamic_plot(testing=True)
@@ -43,9 +47,9 @@ class TestQuickPlot(unittest.TestCase):
 
         # Test with different output variables
         output_vars = [
-            "Negative particle surface concentration",
-            "Electrolyte concentration",
-            "Positive particle surface concentration",
+            "Negative particle surface concentration [mol.m-3]",
+            "Electrolyte concentration [mol.m-3]",
+            "Positive particle surface concentration [mol.m-3]",
         ]
         quick_plot = pybamm.QuickPlot(solution_spm, output_vars)
         self.assertEqual(len(quick_plot.axis), 3)
@@ -53,12 +57,16 @@ class TestQuickPlot(unittest.TestCase):
 
         # update the axis
         new_axis = [0, 0.5, 0, 1]
-        quick_plot.axis.update({("Electrolyte concentration",): new_axis})
-        self.assertEqual(quick_plot.axis[("Electrolyte concentration",)], new_axis)
+        quick_plot.axis.update({("Electrolyte concentration [mol.m-3]",): new_axis})
+        self.assertEqual(
+            quick_plot.axis[("Electrolyte concentration [mol.m-3]",)], new_axis
+        )
 
         # and now reset them
         quick_plot.reset_axis()
-        self.assertNotEqual(quick_plot.axis[("Electrolyte concentration",)], new_axis)
+        self.assertNotEqual(
+            quick_plot.axis[("Electrolyte concentration [mol.m-3]",)], new_axis
+        )
 
         # check dynamic plot loads
         quick_plot.dynamic_plot(testing=True)
