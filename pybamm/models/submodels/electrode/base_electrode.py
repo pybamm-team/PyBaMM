@@ -190,4 +190,3 @@ class BaseElectrode(pybamm.BaseSubModel):
             )
 
         return variables
-

@@ -477,3 +477,14 @@ dimensional_current_density_with_time = dimensional_current_with_time / (
 current_with_time = (
     dimensional_current_with_time / I_typ * pybamm.Function(np.sign, I_typ)
 )
+
+# --------------------------------------------------------------------------------------
+# 7. Ambient temperature
+
+
+def T_amb_dim(t):
+    return pybamm.FunctionParameter("Ambient temperature [K]", t)
+
+
+def T_amb(t):
+    return (T_amb_dim(t) - T_ref) / Delta_T  # dimensionless T_amb

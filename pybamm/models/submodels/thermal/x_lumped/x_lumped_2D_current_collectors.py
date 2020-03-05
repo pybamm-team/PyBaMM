@@ -15,6 +15,7 @@ class CurrentCollector2D(BaseModel):
     def set_rhs(self, variables):
         T_av = variables["X-averaged cell temperature"]
         Q_av = variables["X-averaged total heating"]
+        T_amb = variables["Ambient temperature"]
 
         cooling_coeff = self._surface_cooling_coefficient()
 
@@ -23,11 +24,11 @@ class CurrentCollector2D(BaseModel):
         # TODO: update to allow different cooling conditions at the tabs
         self.rhs = {
             T_av: (
-                pybamm.laplacian(T_av)
-                + self.param.B * pybamm.source(Q_av, T_av)
-                + cooling_coeff * pybamm.source(T_av, T_av)
+                pybamm.laplacian(T_av - T_amb)
+                + self.param.B * pybamm.source(Q_av, T_av - T_amb)
+                + cooling_coeff * pybamm.source(T_av, T_av - T_amb)
                 - (self.param.h / self.param.delta)
-                * pybamm.source(T_av, T_av, boundary=True)
+                * pybamm.source(T_av - T_amb, T_av - T_amb, boundary=True)
             )
             / self.param.C_th
         }

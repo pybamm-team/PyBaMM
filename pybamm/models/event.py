@@ -13,6 +13,7 @@ class EventType(Enum):
     to the discontinuity and then restart just after the discontinuity.
 
     """
+
     TERMINATION = 0
     DISCONTINUITY = 1
 

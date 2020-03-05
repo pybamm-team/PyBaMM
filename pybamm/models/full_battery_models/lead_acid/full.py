@@ -126,4 +126,3 @@ class Full(BaseModel):
             self.submodels[
                 "negative oxygen interface"
             ] = pybamm.interface.lead_acid_oxygen.NoReaction(self.param, "Negative")
-
