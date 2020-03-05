@@ -81,7 +81,7 @@ class BaseHigherOrderModel(BaseModel):
             self.options, name="LOQS model (for composite model)"
         )
         self.update(leading_order_model)
-        self.reaction_submodels = leading_order_model.reaction_submodels
+        self.leading_order_reaction_submodels = leading_order_model.reaction_submodels
 
         # Leading-order variables
         leading_order_variables = {}
@@ -99,16 +99,14 @@ class BaseHigherOrderModel(BaseModel):
     def set_average_interfacial_submodel(self):
         self.submodels[
             "x-averaged negative interface"
-        ] = pybamm.interface.lead_acid.InverseFirstOrderKinetics(self.param, "Negative")
-        self.submodels[
-            "x-averaged negative interface"
-        ].reaction_submodels = self.reaction_submodels["Negative"]
-        self.submodels[
-            "x-averaged positive interface"
-        ] = pybamm.interface.lead_acid.InverseFirstOrderKinetics(self.param, "Positive")
+        ] = pybamm.interface.InverseFirstOrderKinetics(
+            self.param, "Negative", self.leading_order_reaction_submodels["Negative"]
+        )
         self.submodels[
             "x-averaged positive interface"
-        ].reaction_submodels = self.reaction_submodels["Positive"]
+        ] = pybamm.interface.InverseFirstOrderKinetics(
+            self.param, "Positive", self.leading_order_reaction_submodels["Positive"]
+        )
 
     def set_electrolyte_conductivity_submodel(self):
         self.submodels[
@@ -131,24 +129,32 @@ class BaseHigherOrderModel(BaseModel):
         densities
         """
         # Main reaction
-        self.submodels[
-            "negative interface"
-        ] = pybamm.interface.lead_acid.FirstOrderButlerVolmer(self.param, "Negative")
-        self.submodels[
-            "positive interface"
-        ] = pybamm.interface.lead_acid.FirstOrderButlerVolmer(self.param, "Positive")
+        self.submodels["negative interface"] = pybamm.interface.FirstOrderKinetics(
+            self.param,
+            "Negative",
+            pybamm.interface.ButlerVolmer(self.param, "Negative", "lead-acid main"),
+        )
+        self.submodels["positive interface"] = pybamm.interface.FirstOrderKinetics(
+            self.param,
+            "Positive",
+            pybamm.interface.ButlerVolmer(self.param, "Positive", "lead-acid main"),
+        )
 
         # Oxygen
         if "oxygen" in self.options["side reactions"]:
             self.submodels[
                 "positive oxygen interface"
-            ] = pybamm.interface.lead_acid_oxygen.FirstOrderForwardTafel(
-                self.param, "Positive"
+            ] = pybamm.interface.FirstOrderKinetics(
+                self.param,
+                "Positive",
+                pybamm.interface.ForwardTafel(
+                    self.param, "Positive", "lead-acid oxygen"
+                ),
             )
             self.submodels[
                 "negative oxygen interface"
-            ] = pybamm.interface.lead_acid_oxygen.FullDiffusionLimited(
-                self.param, "Negative"
+            ] = pybamm.interface.DiffusionLimited(
+                self.param, "Negative", "lead-acid oxygen", order="full"
             )
 
     def set_full_convection_submodel(self):
