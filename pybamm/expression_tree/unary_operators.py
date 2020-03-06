@@ -763,6 +763,32 @@ class BoundaryGradient(BoundaryOperator):
         super().__init__("boundary flux", child, side)
 
 
+
+def d_dt(expression):
+    """
+    convenience function for taking the time derivative of an expression
+
+    Note that this operator is different to the other unary operators in that it is
+    *not* lazily evaluated, it instead returns the expression tree that is the time
+    derivative of the input
+
+    Parameters
+    ----------
+
+    expression : :class:`Symbol`
+        the time derivative will be performed on this sub-expression
+
+    Returns
+    -------
+
+    :class:`Symbol`
+        the time derivative of ``expression``
+    """
+
+    return expression.jac(pybamm.t, clear_domain=False)
+
+
+
 #
 # Methods to call Gradient, Divergence, Laplacian and Gradient_Squared
 #

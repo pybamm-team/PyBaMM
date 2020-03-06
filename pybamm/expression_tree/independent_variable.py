@@ -35,8 +35,10 @@ class IndependentVariable(pybamm.Symbol):
 
     def _jac(self, variable):
         """ See :meth:`pybamm.Symbol._jac()`. """
-        return pybamm.Scalar(0)
-
+        if variable.id == self.id:
+            return pybamm.Scalar(1)
+        else:
+            return pybamm.Scalar(0)
 
 class Time(IndependentVariable):
     """A node in the expression tree representing time

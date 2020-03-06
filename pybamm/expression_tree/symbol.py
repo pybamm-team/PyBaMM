@@ -492,12 +492,13 @@ class Symbol(anytree.NodeMixin):
         "Default behaviour for differentiation, overriden by Binary and Unary Operators"
         raise NotImplementedError
 
-    def jac(self, variable, known_jacs=None):
+    def jac(self, variable, known_jacs=None, clear_domain=True):
         """
         Differentiate a symbol with respect to a (slice of) a State Vector.
         See :class:`pybamm.Jacobian`.
         """
-        return pybamm.Jacobian(known_jacs).jac(self, variable)
+        jac = pybamm.Jacobian(known_jacs, clear_domain=clear_domain)
+        return jac.jac(self, variable)
 
     def _jac(self, variable):
         """
@@ -606,7 +607,7 @@ class Symbol(anytree.NodeMixin):
     def evaluate_ignoring_errors(self):
         """
         Evaluates the expression. If a node exists in the tree that cannot be evaluated
-        as a scalar or vector (e.g. Parameter, Variable, StateVector, InputParameter),
+        as a scalar or vector (e.g. Time, Parameter, Variable, StateVector, InputParameter),
         then None is returned. Otherwise the result of the evaluation is given
 
         See Also
@@ -615,7 +616,7 @@ class Symbol(anytree.NodeMixin):
 
         """
         try:
-            result = self.evaluate(t=0, u="shape test")
+            result = self.evaluate(u="shape test")
         except NotImplementedError:
             # return None if NotImplementedError is raised
             # (there is a e.g. Parameter, Variable, ... in the tree)
@@ -628,6 +629,10 @@ class Symbol(anytree.NodeMixin):
             else:
                 raise error
         except ValueError as e:
+            # return None if specific ValueError is raised
+            # (there is a e.g. Time in the tree)
+            if e.args[0] == "t must be provided":
+                return None
             raise pybamm.ShapeError("Cannot find shape (original error: {})".format(e))
         return result
 
@@ -762,3 +767,5 @@ class Symbol(anytree.NodeMixin):
             self.shape_for_testing
         except ValueError as e:
             raise pybamm.ShapeError("Cannot find shape (original error: {})".format(e))
+
+

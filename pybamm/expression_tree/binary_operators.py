@@ -32,7 +32,7 @@ def is_matrix_zero(expr):
         return False
 
 
-def is_one(expr):
+def is_scalar_one(expr):
     """
     Utility function to test if an expression evaluates to a constant scalar one
     """
@@ -253,7 +253,7 @@ class Power(BinaryOperator):
             return pybamm.Scalar(1)
 
         # anything to the power of one is itself
-        if is_scalar_zero(left):
+        if is_scalar_one(right):
             return left
 
         return self.__class__(left, right)
@@ -425,9 +425,9 @@ class Multiplication(BinaryOperator):
             return zeros_of_shape(shape)
 
         # anything multiplied by a scalar one returns itself
-        if is_one(left):
+        if is_scalar_one(left):
             return right
-        if is_one(right):
+        if is_scalar_one(right):
             return left
 
         return pybamm.simplify_multiplication_division(self.__class__, left, right)
@@ -549,7 +549,7 @@ class Division(BinaryOperator):
                 return pybamm.Array(np.inf * np.ones(left.shape_for_testing))
 
         # anything divided by one is itself
-        if is_one(right):
+        if is_scalar_one(right):
             return left
 
         return pybamm.simplify_multiplication_division(self.__class__, left, right)
@@ -622,9 +622,9 @@ class Inner(BinaryOperator):
             return zeros_of_shape(shape)
 
         # anything multiplied by a scalar one returns itself
-        if is_one(left):
+        if is_scalar_one(left):
             return right
-        if is_one(right):
+        if is_scalar_one(right):
             return left
 
         return pybamm.simplify_multiplication_division(self.__class__, left, right)

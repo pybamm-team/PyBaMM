@@ -47,6 +47,16 @@ class Variable(pybamm.Symbol):
             self.domain, self.auxiliary_domains
         )
 
+    def _jac(self, variable):
+        if variable == self:
+            return pybamm.Scalar(1)
+        elif variable == pybamm.t:
+            return pybamm.VariableDot(self.name+"'",
+                                      domain=self.domain,
+                                      auxiliary_domains=self.auxiliary_domains)
+        else:
+            return pybamm.Scalar(0)
+
 
 class VariableDot(Variable):
     """
