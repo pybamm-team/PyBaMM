@@ -506,7 +506,7 @@ class Symbol(anytree.NodeMixin):
         """
         raise NotImplementedError
 
-    def _base_evaluate(self, t=None, y=None, u=None):
+    def _base_evaluate(self, t=None, y=None, y_dot=None, u=None):
         """evaluate expression tree
 
         will raise a ``NotImplementedError`` if this member function has not
@@ -520,7 +520,10 @@ class Symbol(anytree.NodeMixin):
             time at which to evaluate (default None)
 
         y : numpy.array, optional
-            array to evaluate when solving (default None)
+            array with state values to evaluate when solving (default None)
+
+        y_dot : numpy.array, optional
+            array with time derivatives of state values to evaluate when solving (default None)
 
         """
         raise NotImplementedError(
@@ -530,7 +533,7 @@ class Symbol(anytree.NodeMixin):
             )
         )
 
-    def evaluate(self, t=None, y=None, u=None, known_evals=None):
+    def evaluate(self, t=None, y=None, y_dot=None, u=None, known_evals=None):
         """Evaluate expression tree (wrapper to allow using dict of known values).
         If the dict 'known_evals' is provided, the dict is searched for self.id; if
         self.id is in the keys, return that value; otherwise, evaluate using
@@ -541,7 +544,9 @@ class Symbol(anytree.NodeMixin):
         t : float or numeric type, optional
             time at which to evaluate (default None)
         y : numpy.array, optional
-            array to evaluate when solving (default None)
+            array with state values to evaluate when solving (default None)
+        y_dot : numpy.array, optional
+            array with time derivatives of state values to evaluate when solving (default None)
         u : dict, optional
             dictionary of inputs to use when solving (default None)
         known_evals : dict, optional
@@ -556,10 +561,10 @@ class Symbol(anytree.NodeMixin):
         """
         if known_evals is not None:
             if self.id not in known_evals:
-                known_evals[self.id] = self._base_evaluate(t, y, u)
+                known_evals[self.id] = self._base_evaluate(t, y, y_dot, u)
             return known_evals[self.id], known_evals
         else:
-            return self._base_evaluate(t, y, u)
+            return self._base_evaluate(t, y, y_dot, u)
 
     def evaluate_for_shape(self):
         """Evaluate expression tree to find its shape. For symbols that cannot be

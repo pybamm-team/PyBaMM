@@ -241,7 +241,7 @@ class StateVector(StateVectorBase):
                          auxiliary_domains=auxiliary_domains,
                          evaluation_array=evaluation_array)
 
-    def _base_evaluate(self, t=None, y=None, u=None):
+    def _base_evaluate(self, t=None, y=None, y_dot=None, u=None):
         """ See :meth:`pybamm.Symbol._base_evaluate()`. """
         if y is None:
             raise TypeError("StateVector cannot evaluate input 'y=None'")

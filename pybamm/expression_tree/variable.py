@@ -84,7 +84,7 @@ class ExternalVariable(Variable):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
         return np.nan * np.ones((self.size, 1))
 
-    def _base_evaluate(self, t=None, y=None, u=None):
+    def _base_evaluate(self, t=None, y=None, y_dot=None, u=None):
         # u should be a dictionary
         # convert 'None' to empty dictionary for more informative error
         if u is None:
