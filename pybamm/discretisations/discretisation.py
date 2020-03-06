@@ -855,6 +855,13 @@ class Discretisation(object):
             disc_children = [self.process_symbol(child) for child in symbol.children]
             return symbol._function_new_copy(disc_children)
 
+        elif isinstance(symbol, pybamm.VariableDot):
+            return pybamm.StateVectorDot(
+                *self.y_slices[symbol.get_variable().id],
+                domain=symbol.domain,
+                auxiliary_domains=symbol.auxiliary_domains
+            )
+
         elif isinstance(symbol, pybamm.Variable):
             # Check if variable is a standard variable or an external variable
             if any(symbol.id == var.id for var in self.external_variables.values()):

@@ -87,6 +87,18 @@ class VariableDot(Variable):
     def __init__(self, name, domain=None, auxiliary_domains=None):
         super().__init__(name, domain=domain, auxiliary_domains=auxiliary_domains)
 
+    def get_variable(self):
+        """
+        return a :class:`.Variable` corresponding to this VariableDot
+
+        Note: Variable._jac adds a dash to the name of the corresponding VariableDot, so
+        we remove this here
+
+        """
+        return Variable(self.name[:-1],
+                        domain=self._domain,
+                        auxiliary_domains=self._auxiliary_domains)
+
 
 class ExternalVariable(Variable):
     """A node in the expression tree representing an external variable variable

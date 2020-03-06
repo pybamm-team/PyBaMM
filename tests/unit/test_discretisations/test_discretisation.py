@@ -329,6 +329,14 @@ class TestDiscretise(unittest.TestCase):
         var_disc = disc.process_symbol(var)
         self.assertIsInstance(var_disc, pybamm.StateVector)
         self.assertEqual(var_disc.y_slices[0], disc.y_slices[var.id][0])
+
+        # variable dot
+        var_dot = pybamm.VariableDot("var'")
+        var_vec_dot = pybamm.VariableDot("var vec'", domain=["negative electrode"])
+        var_dot_disc = disc.process_symbol(var_dot)
+        self.assertIsInstance(var_dot_disc, pybamm.StateVectorDot)
+        self.assertEqual(var_dot_disc.y_slices[0], disc.y_slices[var.id][0])
+
         # scalar
         scal = pybamm.Scalar(5)
         scal_disc = disc.process_symbol(scal)
@@ -1085,7 +1093,6 @@ class TestDiscretise(unittest.TestCase):
         np.testing.assert_equal(
             model.mass_matrix_inv.entries.toarray(), mass_inv.toarray()
         )
-
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
