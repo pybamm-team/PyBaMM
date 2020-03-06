@@ -48,9 +48,9 @@ class Variable(pybamm.Symbol):
         )
 
     def _jac(self, variable):
-        if variable == self:
+        if variable.id == self.id:
             return pybamm.Scalar(1)
-        elif variable == pybamm.t:
+        elif variable.id == pybamm.t.id:
             return pybamm.VariableDot(self.name+"'",
                                       domain=self.domain,
                                       auxiliary_domains=self.auxiliary_domains)
@@ -98,6 +98,14 @@ class VariableDot(Variable):
         return Variable(self.name[:-1],
                         domain=self._domain,
                         auxiliary_domains=self._auxiliary_domains)
+
+    def _jac(self, variable):
+        if variable.id == self.id:
+            return pybamm.Scalar(1)
+        elif variable.id == pybamm.t.id:
+            raise pybamm.ModelError("cannot take second time derivative of a Variable")
+        else:
+            return pybamm.Scalar(0)
 
 
 class ExternalVariable(Variable):
@@ -161,3 +169,13 @@ class ExternalVariable(Variable):
         # raise more informative error if can't find name in dict
         except KeyError:
             raise KeyError("External variable '{}' not found".format(self.name))
+
+    def _jac(self, variable):
+        if variable.id == self.id:
+            return pybamm.Scalar(1)
+        elif variable.id == pybamm.t.id:
+            raise pybamm.ModelError("cannot take time derivative of an external variable")
+        else:
+            return pybamm.Scalar(0)
+
+
