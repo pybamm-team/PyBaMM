@@ -6,7 +6,7 @@ import numbers
 import numpy as np
 
 
-class Variable(pybamm.Symbol):
+class VariableBase(pybamm.Symbol):
     """A node in the expression tree represending a dependent variable
 
     This node will be discretised by :class:`.Discretisation` and converted
@@ -47,6 +47,32 @@ class Variable(pybamm.Symbol):
             self.domain, self.auxiliary_domains
         )
 
+class Variable(VariableBase):
+    """A node in the expression tree represending a dependent variable
+
+    This node will be discretised by :class:`.Discretisation` and converted
+    to a :class:`pybamm.StateVector` node.
+
+    Parameters
+    ----------
+
+    name : str
+        name of the node
+    domain : iterable of str
+        list of domains that this variable is valid over
+    auxiliary_domains : dict
+        dictionary of auxiliary domains ({'secondary': ..., 'tertiary': ...}). For
+        example, for the single particle model, the particle concentration would be a
+        Variable with domain 'negative particle' and secondary auxiliary domain 'current
+        collector'. For the DFN, the particle concentration would be a Variable with
+        domain 'negative particle', secondary domain 'negative electrode' and tertiary
+        domain 'current collector'
+
+    *Extends:* :class:`Symbol`
+    """
+    def __init__(self, name, domain=None, auxiliary_domains=None):
+        super().__init__(name, domain=domain, auxiliary_domains=auxiliary_domains)
+
     def _jac(self, variable):
         if variable.id == self.id:
             return pybamm.Scalar(1)
@@ -57,8 +83,7 @@ class Variable(pybamm.Symbol):
         else:
             return pybamm.Scalar(0)
 
-
-class VariableDot(Variable):
+class VariableDot(VariableBase):
     """
     A node in the expression tree represending the time derviative of a dependent
     variable

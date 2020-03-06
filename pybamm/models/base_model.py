@@ -410,6 +410,9 @@ class BaseModel(object):
             vars_in_eqns.update(
                 [x.id for x in eqn.pre_order() if isinstance(x, pybamm.Variable)]
             )
+            vars_in_eqns.update(
+                [x.get_variable().id for x in eqn.pre_order() if isinstance(x, pybamm.VariableDot)]
+            )
         for var, eqn in self.algebraic.items():
             vars_in_algebraic_keys.update(
                 [x.id for x in var.pre_order() if isinstance(x, pybamm.Variable)]
@@ -417,10 +420,16 @@ class BaseModel(object):
             vars_in_eqns.update(
                 [x.id for x in eqn.pre_order() if isinstance(x, pybamm.Variable)]
             )
+            vars_in_eqns.update(
+                [x.get_variable().id for x in eqn.pre_order() if isinstance(x, pybamm.VariableDot)]
+            )
         for var, side_eqn in self.boundary_conditions.items():
             for side, (eqn, typ) in side_eqn.items():
                 vars_in_eqns.update(
                     [x.id for x in eqn.pre_order() if isinstance(x, pybamm.Variable)]
+                )
+                vars_in_eqns.update(
+                    [x.get_variable().id for x in eqn.pre_order() if isinstance(x, pybamm.VariableDot)]
                 )
         # If any keys are repeated between rhs and algebraic then the model is
         # overdetermined

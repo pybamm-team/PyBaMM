@@ -148,10 +148,10 @@ class BaseSolver(object):
             # Convert model attributes to casadi
             t_casadi = casadi.MX.sym("t")
             y_diff = casadi.MX.sym(
-                "y_diff", len(model.concatenated_rhs.evaluate(0, y0, inputs))
+                "y_diff", len(model.concatenated_rhs.evaluate(0, y0, u=inputs))
             )
             y_alg = casadi.MX.sym(
-                "y_alg", len(model.concatenated_algebraic.evaluate(0, y0, inputs))
+                "y_alg", len(model.concatenated_algebraic.evaluate(0, y0, u=inputs))
             )
             y_casadi = casadi.vertcat(y_diff, y_alg)
             u_casadi = {}
@@ -292,7 +292,7 @@ class BaseSolver(object):
             model.residuals_eval = residuals_eval
             model.jacobian_eval = jacobian_eval
             y0_guess = y0.flatten()
-            model.y0 = self.calculate_consistent_state(model, 0, y0_guess, inputs)
+            model.y0 = self.calculate_consistent_state(model, 0, y0_guess,inputs)
         else:
             # can use DAE solver to solve ODE model
             model.residuals_eval = Residuals(rhs, "residuals", model)
@@ -812,11 +812,12 @@ class SolverCallable:
 
     def function(self, t, y):
         if self.form == "casadi":
+            states_eval = self._function(t, y, self.inputs)
             if self.name in ["RHS", "algebraic", "residuals", "event"]:
-                return self._function(t, y, self.inputs).full()
+                return states_eval.full()
             else:
                 # keep jacobians sparse
-                return self._function(t, y, self.inputs)
+                return states_eval
         else:
             return self._function(t, y, self.inputs, known_evals={})[0]
 

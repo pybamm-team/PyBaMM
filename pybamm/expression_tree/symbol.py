@@ -677,12 +677,12 @@ class Symbol(anytree.NodeMixin):
         """ Simplify the expression tree. See :class:`pybamm.Simplification`. """
         return pybamm.Simplification(simplified_symbols).simplify(self)
 
-    def to_casadi(self, t=None, y=None, u=None, casadi_symbols=None):
+    def to_casadi(self, t=None, y=None, ydot=None, u=None, casadi_symbols=None):
         """
         Convert the expression tree to a CasADi expression tree.
         See :class:`pybamm.CasadiConverter`.
         """
-        return pybamm.CasadiConverter(casadi_symbols).convert(self, t, y, u)
+        return pybamm.CasadiConverter(casadi_symbols).convert(self, t, y, ydot, u)
 
     def new_copy(self):
         """
@@ -712,7 +712,7 @@ class Symbol(anytree.NodeMixin):
         # Try with some large y, to avoid having to use pre_order (slow)
         try:
             y = np.linspace(0.1, 0.9, int(1e4))
-            evaluated_self = self.evaluate(0, y, u="shape test")
+            evaluated_self = self.evaluate(0, y, y, u="shape test")
         # If that fails, fall back to calculating how big y should really be
         except ValueError:
             state_vectors_in_node = [

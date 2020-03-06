@@ -701,7 +701,7 @@ class TestDiscretise(unittest.TestCase):
         with self.assertRaises(pybamm.ModelError):
             disc.process_model(model)
 
-        # test that ill possed model with time derivatives of variables in rhs raises an
+        # test that any time derivatives of variables in rhs raises an
         # error
         model = pybamm.BaseModel()
         model.rhs = {c: pybamm.div(N) + pybamm.d_dt(c), T: pybamm.div(q), S: pybamm.div(p)}
@@ -718,6 +718,7 @@ class TestDiscretise(unittest.TestCase):
         model.variables = {"ST": S * T}
         with self.assertRaises(pybamm.ModelError):
             disc.process_model(model)
+
 
     def test_process_model_dae(self):
         # one rhs equation and one algebraic
@@ -815,6 +816,22 @@ class TestDiscretise(unittest.TestCase):
         np.testing.assert_array_equal(jacobian_actual, jacobian.toarray())
         jacobian = expr.evaluate(0, y0, known_evals=known_evals)[0]
         np.testing.assert_array_equal(jacobian_actual, jacobian.toarray())
+
+        # check that any time derivatives of variables in algebraic raises an
+        # error
+        model = pybamm.BaseModel()
+        model.rhs = {c: pybamm.div(N)}
+        model.algebraic = {d: d - 2 * pybamm.d_dt(c)}
+        model.initial_conditions = {d: pybamm.Scalar(6), c: pybamm.Scalar(3)}
+        model.boundary_conditions = {
+            c: {"left": (0, "Neumann"), "right": (0, "Neumann")}
+        }
+        model.variables = {"c": c, "N": N, "d": d}
+
+        with self.assertRaises(pybamm.ModelError):
+            disc.process_model(model)
+
+
 
     def test_process_model_concatenation(self):
         # concatenation of variables as the key
