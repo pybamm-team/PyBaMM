@@ -25,6 +25,24 @@ class TestVariable(unittest.TestCase):
         self.assertNotEqual(a1.id, a3.id)
         self.assertNotEqual(a1.id, a4.id)
 
+class TestVariableDot(unittest.TestCase):
+    def test_variable_init(self):
+        a = pybamm.VariableDot("a'")
+        self.assertEqual(a.name, "a'")
+        self.assertEqual(a.domain, [])
+        a = pybamm.VariableDot("a", domain=["test"])
+        self.assertEqual(a.domain[0], "test")
+        self.assertRaises(TypeError, pybamm.Variable("a", domain="test"))
+
+    def test_variable_id(self):
+        a1 = pybamm.VariableDot("a", domain=["negative electrode"])
+        a2 = pybamm.VariableDot("a", domain=["negative electrode"])
+        self.assertEqual(a1.id, a2.id)
+        a3 = pybamm.VariableDot("b", domain=["negative electrode"])
+        a4 = pybamm.VariableDot("a", domain=["positive electrode"])
+        self.assertNotEqual(a1.id, a3.id)
+        self.assertNotEqual(a1.id, a4.id)
+
 
 class TestExternalVariable(unittest.TestCase):
     def test_external_variable_scalar(self):

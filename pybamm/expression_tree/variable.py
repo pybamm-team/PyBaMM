@@ -48,8 +48,38 @@ class Variable(pybamm.Symbol):
         )
 
 
+class VariableDot(Variable):
+    """
+    A node in the expression tree represending the time derviative of a dependent
+    variable
+
+    This node will be discretised by :class:`.Discretisation` and converted
+    to a :class:`pybamm.StateVectorDot` node.
+
+    Parameters
+    ----------
+
+    name : str
+        name of the node
+    domain : iterable of str
+        list of domains that this variable is valid over
+    auxiliary_domains : dict
+        dictionary of auxiliary domains ({'secondary': ..., 'tertiary': ...}). For
+        example, for the single particle model, the particle concentration would be a
+        Variable with domain 'negative particle' and secondary auxiliary domain 'current
+        collector'. For the DFN, the particle concentration would be a Variable with
+        domain 'negative particle', secondary domain 'negative electrode' and tertiary
+        domain 'current collector'
+
+    *Extends:* :class:`Symbol`
+    """
+
+    def __init__(self, name, domain=None, auxiliary_domains=None):
+        super().__init__(name, domain=domain, auxiliary_domains=auxiliary_domains)
+
+
 class ExternalVariable(Variable):
-    """A node in the expression tree represending an external variable variable
+    """A node in the expression tree representing an external variable variable
 
     This node will be discretised by :class:`.Discretisation` and converted
     to a :class:`.Vector` node.
