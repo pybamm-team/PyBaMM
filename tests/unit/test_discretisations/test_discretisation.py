@@ -701,6 +701,24 @@ class TestDiscretise(unittest.TestCase):
         with self.assertRaises(pybamm.ModelError):
             disc.process_model(model)
 
+        # test that ill possed model with time derivatives of variables in rhs raises an
+        # error
+        model = pybamm.BaseModel()
+        model.rhs = {c: pybamm.div(N) + pybamm.d_dt(c), T: pybamm.div(q), S: pybamm.div(p)}
+        model.initial_conditions = {
+            c: pybamm.Scalar(2),
+            T: pybamm.Scalar(5),
+            S: pybamm.Scalar(8),
+        }
+        model.boundary_conditions = {
+            c: {"left": (0, "Neumann"), "right": (0, "Neumann")},
+            T: {"left": (0, "Neumann"), "right": (0, "Neumann")},
+            S: {"left": (0, "Neumann"), "right": (0, "Neumann")},
+        }
+        model.variables = {"ST": S * T}
+        with self.assertRaises(pybamm.ModelError):
+            disc.process_model(model)
+
     def test_process_model_dae(self):
         # one rhs equation and one algebraic
         whole_cell = ["negative electrode", "separator", "positive electrode"]

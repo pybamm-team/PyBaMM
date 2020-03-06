@@ -514,6 +514,7 @@ class Discretisation(object):
             equations) and processed_concatenated_algebraic
 
         """
+
         # Discretise right-hand sides, passing domain from variable
         processed_rhs = self.process_dict(model.rhs)
 
@@ -996,6 +997,16 @@ class Discretisation(object):
         self.check_initial_conditions(model)
         self.check_initial_conditions_rhs(model)
         self.check_variables(model)
+        self.check_for_time_derivatives_in_rhs(model)
+
+    def check_for_time_derivatives_in_rhs(self, model):
+        # Check that no variable time derivatives exist in the rhs equations
+        for eq in model.rhs.values():
+            for node in eq.pre_order():
+                if isinstance(node, pybamm.VariableDot):
+                    raise pybamm.ModelError(
+                        "time derivative of variable found ({}) in rhs equation"
+                    )
 
     def check_initial_conditions(self, model):
         """Check initial conditions are a numpy array"""
