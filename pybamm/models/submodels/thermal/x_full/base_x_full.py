@@ -25,14 +25,8 @@ class BaseModel(BaseThermal):
         T = pybamm.standard_variables.T
         T_cn = pybamm.BoundaryValue(T, "left")
         T_cp = pybamm.BoundaryValue(T, "right")
+
         variables = self._get_standard_fundamental_variables(T, T_cn, T_cp)
-
-        T_amb_dim = self.param.T_amb_dim(pybamm.t * self.param.timescale)
-        T_amb = self.param.T_amb(pybamm.t * self.param.timescale)
-        variables.update(
-            {"Ambient temperature [K]": T_amb_dim, "Ambient temperature": T_amb}
-        )
-
         return variables
 
     def get_coupled_variables(self, variables):

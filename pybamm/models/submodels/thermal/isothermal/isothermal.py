@@ -22,9 +22,7 @@ class Isothermal(BaseThermal):
         super().__init__(param)
 
     def get_fundamental_variables(self):
-        T_amb_dim = self.param.T_amb_dim(pybamm.t * self.param.timescale)
         T_amb = self.param.T_amb(pybamm.t * self.param.timescale)
-
         T_x_av = pybamm.PrimaryBroadcast(T_amb, "current collector")
         T_n = pybamm.PrimaryBroadcast(T_x_av, "negative electrode")
         T_s = pybamm.PrimaryBroadcast(T_x_av, "separator")
@@ -35,9 +33,6 @@ class Isothermal(BaseThermal):
         T_cp = T_x_av
 
         variables = self._get_standard_fundamental_variables(T, T_cn, T_cp)
-        variables.update(
-            {"Ambient temperature [K]": T_amb_dim, "Ambient temperature": T_amb}
-        )
 
         return variables
 
