@@ -173,7 +173,6 @@ class CasadiSolver(pybamm.BaseSolver):
         # Only set up problem once
         if model not in self.problems:
             y0 = model.y0
-            ydot0 = model.ydot0
             rhs = model.casadi_rhs
             algebraic = model.casadi_algebraic
             u_stacked = casadi.vertcat(*[x for x in inputs.values()])
@@ -191,22 +190,21 @@ class CasadiSolver(pybamm.BaseSolver):
             u = casadi.MX.sym("u", u_stacked.shape[0])
             y_diff = casadi.MX.sym("y_diff", rhs(t_eval[0], y0, u).shape[0])
             problem = {"t": t, "x": y_diff, "p": u}
-            if algebraic(t_eval[0], y0, ydot0, u).is_empty():
+            if algebraic(t_eval[0], y0, u).is_empty():
                 method = "cvodes"
                 problem.update({"ode": rhs(t, y_diff, u)})
             else:
                 options["calc_ic"] = True
                 method = "idas"
-                y_alg = casadi.MX.sym("y_alg", algebraic(t_eval[0], y0, ydot0, u).shape[0])
+                y_alg = casadi.MX.sym("y_alg", algebraic(t_eval[0], y0, u).shape[0])
                 y_full = casadi.vertcat(y_diff, y_alg)
                 problem.update(
                     {
                         "z": y_alg,
                         "ode": rhs(t, y_full, u),
-                        "alg": algebraic(t, y_full, ydot0, u),
+                        "alg": algebraic(t, y_full, u),
                     }
                 )
-            print('using method' ,method)
             self.problems[model] = problem
             self.options[model] = options
             self.methods[model] = method

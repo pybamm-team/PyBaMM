@@ -316,17 +316,7 @@ class TestCasadiSolver(unittest.TestCase):
         model.rhs = {var1: -2 * var1 * pybamm.t}
         model.algebraic = {var2: var2 - pybamm.d_dt(var1)}
         model.initial_conditions = {var1: 1, var2: 0}
-        print('before semi explicit')
-        for key,value in model.rhs.items():
-            print('{}: {}'.format(key, value))
-        for key,value in model.algebraic.items():
-            print('{}: {}'.format(key, value))
         pybamm.make_semi_explicit(model)
-        print('after semi explicit')
-        for key,value in model.rhs.items():
-            print('{}: {}'.format(key, value))
-        for key,value in model.algebraic.items():
-            print('{}: {}'.format(key, value))
         disc = get_discretisation_for_testing()
         disc.process_model(model)
 
@@ -335,13 +325,9 @@ class TestCasadiSolver(unittest.TestCase):
         t_eval = np.linspace(0, 1, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
-        import matplotlib.pyplot as plt
-        plt.plot(solution.y[0])
-        plt.plot(np.exp(-solution.t**2))
-        plt.show()
-        np.testing.assert_allclose(solution.y[0], np.exp(-solution.t ** 2), rtol=1e-06)
+        np.testing.assert_allclose(solution.y[0], np.exp(-solution.t**2), rtol=1e-06)
         np.testing.assert_allclose(solution.y[-1],
-                                -2 * solution.t * np.exp(-solution.t**2))
+                                -2 * solution.t * np.exp(-solution.t**2), rtol=1e-06)
 
 
 if __name__ == "__main__":
