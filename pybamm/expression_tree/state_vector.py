@@ -121,9 +121,9 @@ class StateVectorBase(pybamm.Symbol):
 
     def _jac_diff_vector(self, variable):
         """
-        Differentiate a slice of a StateVector of size m with respect to another
-        slice of a different StateVector of size n. This returns a (sparse) zero matrix of size
-        m x n
+        Differentiate a slice of a StateVector of size m with respect to another slice
+        of a different StateVector of size n. This returns a (sparse) zero matrix of
+        size m x n
 
         Parameters
         ----------
@@ -255,13 +255,19 @@ class StateVector(StateVectorBase):
             out = out[:, np.newaxis]
         return out
 
-    def _jac(self, variable):
-        if variable.id == pybamm.t.id:
+    def diff(self, variable):
+        if variable.id == self.id:
+            return pybamm.Scalar(1)
+        elif variable.id == pybamm.t.id:
             return StateVectorDot(*self._y_slices, name=self.name + "'",
                                   domain=self.domain,
                                   auxiliary_domains=self.auxiliary_domains,
                                   evaluation_array=self.evaluation_array)
-        elif isinstance(variable, pybamm.StateVector):
+        else:
+            return pybamm.Scalar(0)
+
+    def _jac(self, variable):
+        if isinstance(variable, pybamm.StateVector):
             return self._jac_same_vector(variable)
         elif isinstance(variable, pybamm.StateVectorDot):
             return self._jac_diff_vector(variable)
@@ -316,11 +322,17 @@ class StateVectorDot(StateVectorBase):
             out = out[:, np.newaxis]
         return out
 
-    def _jac(self, variable):
-        if variable.id == pybamm.t.id:
+    def diff(self, variable):
+        if variable.id == self.id:
+            return pybamm.Scalar(1)
+        elif variable.id == pybamm.t.id:
             raise pybamm.ModelError(
                 "cannot take second time derivative of a state vector"
             )
+        else:
+            return pybamm.Scalar(0)
+
+    def _jac(self, variable):
         if isinstance(variable, pybamm.StateVectorDot):
             return self._jac_same_vector(variable)
         elif isinstance(variable, pybamm.StateVector):

@@ -314,7 +314,7 @@ class TestCasadiSolver(unittest.TestCase):
         var1 = pybamm.Variable("var1", domain="negative electrode")
         var2 = pybamm.Variable("var2", domain="negative electrode")
         model.rhs = {var1: -2 * var1 * pybamm.t}
-        model.algebraic = {var2: var2 - pybamm.d_dt(var1)}
+        model.algebraic = {var2: var2 - var1.diff(pybamm.t)}
         model.initial_conditions = {var1: 1, var2: 0}
         pybamm.make_semi_explicit(model)
         disc = get_discretisation_for_testing()

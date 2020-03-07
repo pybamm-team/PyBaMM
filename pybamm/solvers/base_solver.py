@@ -292,7 +292,7 @@ class BaseSolver(object):
             model.residuals_eval = residuals_eval
             model.jacobian_eval = jacobian_eval
             y0_guess = y0.flatten()
-            model.y0 = self.calculate_consistent_state(model, 0, y0_guess,inputs)
+            model.y0 = self.calculate_consistent_state(model, 0, y0_guess, inputs)
         else:
             # can use DAE solver to solve ODE model
             model.residuals_eval = Residuals(rhs, "residuals", model)

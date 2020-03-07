@@ -47,6 +47,7 @@ class VariableBase(pybamm.Symbol):
             self.domain, self.auxiliary_domains
         )
 
+
 class Variable(VariableBase):
     """A node in the expression tree represending a dependent variable
 
@@ -70,18 +71,20 @@ class Variable(VariableBase):
 
     *Extends:* :class:`Symbol`
     """
+
     def __init__(self, name, domain=None, auxiliary_domains=None):
         super().__init__(name, domain=domain, auxiliary_domains=auxiliary_domains)
 
-    def _jac(self, variable):
+    def diff(self, variable):
         if variable.id == self.id:
             return pybamm.Scalar(1)
         elif variable.id == pybamm.t.id:
-            return pybamm.VariableDot(self.name+"'",
+            return pybamm.VariableDot(self.name + "'",
                                       domain=self.domain,
                                       auxiliary_domains=self.auxiliary_domains)
         else:
             return pybamm.Scalar(0)
+
 
 class VariableDot(VariableBase):
     """
@@ -124,7 +127,7 @@ class VariableDot(VariableBase):
                         domain=self._domain,
                         auxiliary_domains=self._auxiliary_domains)
 
-    def _jac(self, variable):
+    def diff(self, variable):
         if variable.id == self.id:
             return pybamm.Scalar(1)
         elif variable.id == pybamm.t.id:
@@ -195,12 +198,11 @@ class ExternalVariable(Variable):
         except KeyError:
             raise KeyError("External variable '{}' not found".format(self.name))
 
-    def _jac(self, variable):
+    def diff(self, variable):
         if variable.id == self.id:
             return pybamm.Scalar(1)
         elif variable.id == pybamm.t.id:
-            raise pybamm.ModelError("cannot take time derivative of an external variable")
+            raise pybamm.ModelError(
+                "cannot take time derivative of an external variable")
         else:
             return pybamm.Scalar(0)
-
-

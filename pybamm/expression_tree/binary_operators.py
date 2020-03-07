@@ -13,7 +13,7 @@ def is_scalar_zero(expr):
     Utility function to test if an expression evaluates to a constant scalar zero
     """
     if expr.is_constant():
-        result = expr.evaluate_ignoring_errors()
+        result = expr.evaluate_ignoring_errors(t=None)
         return isinstance(result, numbers.Number) and result == 0
     else:
         return False
@@ -24,7 +24,7 @@ def is_matrix_zero(expr):
     Utility function to test if an expression evaluates to a constant matrix zero
     """
     if expr.is_constant():
-        result = expr.evaluate_ignoring_errors()
+        result = expr.evaluate_ignoring_errors(t=None)
         return (issparse(result) and result.count_nonzero() == 0) or (
             isinstance(result, np.ndarray) and np.all(result == 0)
         )
@@ -37,7 +37,7 @@ def is_scalar_one(expr):
     Utility function to test if an expression evaluates to a constant scalar one
     """
     if expr.is_constant():
-        result = expr.evaluate_ignoring_errors()
+        result = expr.evaluate_ignoring_errors(t=None)
         return isinstance(result, numbers.Number) and result == 1
     else:
         return False

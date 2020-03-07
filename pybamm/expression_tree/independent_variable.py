@@ -40,6 +40,7 @@ class IndependentVariable(pybamm.Symbol):
         else:
             return pybamm.Scalar(0)
 
+
 class Time(IndependentVariable):
     """A node in the expression tree representing time
 

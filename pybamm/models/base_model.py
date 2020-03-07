@@ -412,8 +412,8 @@ class BaseModel(object):
             for node in eq.pre_order():
                 if isinstance(node, pybamm.VariableDot):
                     raise pybamm.ModelError(
-                        "time derivative of variable found ({}) in algebraic equation {}"
-                        .format(node, key)
+                        "time derivative of variable found ({}) in algebraic"
+                        "equation {}".format(node, key)
                     )
                 if isinstance(node, pybamm.StateVectorDot):
                     raise pybamm.ModelError(

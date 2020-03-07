@@ -704,7 +704,7 @@ class TestDiscretise(unittest.TestCase):
         # test that any time derivatives of variables in rhs raises an
         # error
         model = pybamm.BaseModel()
-        model.rhs = {c: pybamm.div(N) + pybamm.d_dt(c), T: pybamm.div(q), S: pybamm.div(p)}
+        model.rhs = {c: pybamm.div(N) + c.diff(pybamm.t), T: pybamm.div(q), S: pybamm.div(p)}
         model.initial_conditions = {
             c: pybamm.Scalar(2),
             T: pybamm.Scalar(5),
@@ -821,7 +821,7 @@ class TestDiscretise(unittest.TestCase):
         # error
         model = pybamm.BaseModel()
         model.rhs = {c: pybamm.div(N)}
-        model.algebraic = {d: d - 2 * pybamm.d_dt(c)}
+        model.algebraic = {d: d - 2 * c.diff(pybamm.t)}
         model.initial_conditions = {d: pybamm.Scalar(6), c: pybamm.Scalar(3)}
         model.boundary_conditions = {
             c: {"left": (0, "Neumann"), "right": (0, "Neumann")}

@@ -524,7 +524,8 @@ class Symbol(anytree.NodeMixin):
             array with state values to evaluate when solving (default None)
 
         y_dot : numpy.array, optional
-            array with time derivatives of state values to evaluate when solving (default None)
+            array with time derivatives of state values to evaluate when solving
+            (default None)
 
         """
         raise NotImplementedError(
@@ -547,7 +548,8 @@ class Symbol(anytree.NodeMixin):
         y : numpy.array, optional
             array with state values to evaluate when solving (default None)
         y_dot : numpy.array, optional
-            array with time derivatives of state values to evaluate when solving (default None)
+            array with time derivatives of state values to evaluate when solving
+            (default None)
         u : dict, optional
             dictionary of inputs to use when solving (default None)
         known_evals : dict, optional
@@ -604,11 +606,12 @@ class Symbol(anytree.NodeMixin):
         # do the search, return true if no relevent nodes are found
         return not any((isinstance(n, search_types)) for n in self.pre_order())
 
-    def evaluate_ignoring_errors(self):
+    def evaluate_ignoring_errors(self, t=0):
         """
         Evaluates the expression. If a node exists in the tree that cannot be evaluated
-        as a scalar or vector (e.g. Time, Parameter, Variable, StateVector, InputParameter),
-        then None is returned. Otherwise the result of the evaluation is given
+        as a scalar or vector (e.g. Time, Parameter, Variable, StateVector,
+        InputParameter), then None is returned. Otherwise the result of the evaluation
+        is given
 
         See Also
         --------
@@ -616,7 +619,7 @@ class Symbol(anytree.NodeMixin):
 
         """
         try:
-            result = self.evaluate(u="shape test")
+            result = self.evaluate(t=t, u="shape test")
         except NotImplementedError:
             # return None if NotImplementedError is raised
             # (there is a e.g. Parameter, Variable, ... in the tree)
@@ -713,7 +716,6 @@ class Symbol(anytree.NodeMixin):
         try:
             y = np.linspace(0.1, 0.9, int(1e4))
             evaluated_self = self.evaluate(0, y, y, u="shape test")
-            print('evaluated self is ',evaluated_self)
         # If that fails, fall back to calculating how big y should really be
         except ValueError:
             state_vectors_in_node = [
