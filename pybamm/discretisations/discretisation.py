@@ -997,24 +997,6 @@ class Discretisation(object):
         self.check_initial_conditions(model)
         self.check_initial_conditions_rhs(model)
         self.check_variables(model)
-        self.check_for_time_derivatives(model)
-
-    def check_for_time_derivatives(self, model):
-        # Check that no variable time derivatives exist in the rhs equations
-        for eq in model.rhs.values():
-            for node in eq.pre_order():
-                if isinstance(node, pybamm.VariableDot):
-                    raise pybamm.ModelError(
-                        "time derivative of variable found ({}) in rhs equation"
-                    )
-
-        # Check that no variable time derivatives exist in the algebraic equations
-        for eq in model.algebraic.values():
-            for node in eq.pre_order():
-                if isinstance(node, pybamm.VariableDot):
-                    raise pybamm.ModelError(
-                        "time derivative of variable found ({}) in algebraic equation"
-                    )
 
     def check_initial_conditions(self, model):
         """Check initial conditions are a numpy array"""

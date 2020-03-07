@@ -385,11 +385,41 @@ class BaseModel(object):
         self.check_algebraic_equations(post_discretisation)
         self.check_ics_bcs()
         self.check_default_variables_dictionaries()
+        self.check_for_time_derivatives()
         # Can't check variables after discretising, since Variable objects get replaced
         # by StateVector objects
         # Checking variables is slow, so only do it in debug mode
         if pybamm.settings.debug_mode is True and post_discretisation is False:
             self.check_variables()
+
+    def check_for_time_derivatives(self):
+        # Check that no variable time derivatives exist in the rhs equations
+        for key, eq in self.rhs.items():
+            for node in eq.pre_order():
+                if isinstance(node, pybamm.VariableDot):
+                    raise pybamm.ModelError(
+                        "time derivative of variable found ({}) in rhs equation {}"
+                        .format(node, key)
+                    )
+                if isinstance(node, pybamm.StateVectorDot):
+                    raise pybamm.ModelError(
+                        "time derivative of state vector found ({}) in rhs equation {}"
+                        .format(node, key)
+                    )
+
+        # Check that no variable time derivatives exist in the algebraic equations
+        for key, eq in self.algebraic.items():
+            for node in eq.pre_order():
+                if isinstance(node, pybamm.VariableDot):
+                    raise pybamm.ModelError(
+                        "time derivative of variable found ({}) in algebraic equation {}"
+                        .format(node, key)
+                    )
+                if isinstance(node, pybamm.StateVectorDot):
+                    raise pybamm.ModelError(
+                        "time derivative of state vector found ({}) in algebraic"
+                        "equation {}".format(node, key)
+                    )
 
     def check_well_determined(self, post_discretisation):
         """ Check that the model is not under- or over-determined. """
@@ -411,7 +441,8 @@ class BaseModel(object):
                 [x.id for x in eqn.pre_order() if isinstance(x, pybamm.Variable)]
             )
             vars_in_eqns.update(
-                [x.get_variable().id for x in eqn.pre_order() if isinstance(x, pybamm.VariableDot)]
+                [x.get_variable().id for x in eqn.pre_order()
+                 if isinstance(x, pybamm.VariableDot)]
             )
         for var, eqn in self.algebraic.items():
             vars_in_algebraic_keys.update(
@@ -421,7 +452,8 @@ class BaseModel(object):
                 [x.id for x in eqn.pre_order() if isinstance(x, pybamm.Variable)]
             )
             vars_in_eqns.update(
-                [x.get_variable().id for x in eqn.pre_order() if isinstance(x, pybamm.VariableDot)]
+                [x.get_variable().id for x in eqn.pre_order()
+                 if isinstance(x, pybamm.VariableDot)]
             )
         for var, side_eqn in self.boundary_conditions.items():
             for side, (eqn, typ) in side_eqn.items():
@@ -429,7 +461,8 @@ class BaseModel(object):
                     [x.id for x in eqn.pre_order() if isinstance(x, pybamm.Variable)]
                 )
                 vars_in_eqns.update(
-                    [x.get_variable().id for x in eqn.pre_order() if isinstance(x, pybamm.VariableDot)]
+                    [x.get_variable().id for x in eqn.pre_order()
+                     if isinstance(x, pybamm.VariableDot)]
                 )
         # If any keys are repeated between rhs and algebraic then the model is
         # overdetermined
