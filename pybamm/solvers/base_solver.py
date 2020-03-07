@@ -194,7 +194,6 @@ class BaseSolver(object):
             else:
                 # Process with CasADi
                 report(f"Converting {name} to CasADi")
-                print(u_casadi)
                 func = func.to_casadi(t_casadi, y_casadi, u=u_casadi)
                 if use_jacobian:
                     report(f"Calculating jacobian for {name} using CasADi")

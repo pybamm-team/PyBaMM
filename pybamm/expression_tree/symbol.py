@@ -713,6 +713,7 @@ class Symbol(anytree.NodeMixin):
         try:
             y = np.linspace(0.1, 0.9, int(1e4))
             evaluated_self = self.evaluate(0, y, y, u="shape test")
+            print('evaluated self is ',evaluated_self)
         # If that fails, fall back to calculating how big y should really be
         except ValueError:
             state_vectors_in_node = [
@@ -726,7 +727,7 @@ class Symbol(anytree.NodeMixin):
                 )
                 # Pick a y that won't cause RuntimeWarnings
                 y = np.linspace(0.1, 0.9, min_y_size)
-            evaluated_self = self.evaluate(0, y)
+            evaluated_self = self.evaluate(0, y, y)
 
         # Return shape of evaluated object
         if isinstance(evaluated_self, numbers.Number):
