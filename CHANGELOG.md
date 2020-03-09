@@ -1,16 +1,14 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM)
+
 ## Features 
 
-- Add ambient temperature as a function of time ([#872](https://github.com/pybamm-team/PyBaMM/pull/872))
+-   Add ambient temperature as a function of time ([#872](https://github.com/pybamm-team/PyBaMM/pull/872))
+-   Added `CasadiAlgebraicSolver` for solving algebraic systems with casadi ([#868](https://github.com/pybamm-team/PyBaMM/pull/868))
 
 ## Bug fixes
 
 -   Reformatted interface submodels to be more readable ([#866](https://github.com/pybamm-team/PyBaMM/pull/866))
 -   Removed double-counted "number of electrodes connected in parallel" from simulation ([#864](https://github.com/pybamm-team/PyBaMM/pull/864))
-
-## Features
-
--   Added `CasadiAlgebraicSolver` for solving algebraic systems with casadi ([#868](https://github.com/pybamm-team/PyBaMM/pull/868))
 
 ## Breaking changes
 

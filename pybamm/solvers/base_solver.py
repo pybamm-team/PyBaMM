@@ -509,8 +509,11 @@ class BaseSolver(object):
 
         # t_eval can only be None if the solver is an algebraic solver. In that case
         # set it to 0
-        if self.algebraic_solver is True and t_eval is None:
-            t_eval = np.array([0])
+        if t_eval is None:
+            if self.algebraic_solver is True:
+                t_eval = np.array([0])
+            else:
+                raise ValueError("t_eval cannot be None")
 
         # Make sure t_eval is monotonic
         if (np.diff(t_eval) < 0).any():

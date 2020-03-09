@@ -28,6 +28,18 @@ class TestBaseSolver(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.ModelError, "Cannot solve empty model"):
             solver.solve(model, None)
 
+    def test_t_eval_none(self):
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        model.rhs = {v: 1}
+        model.initial_conditions = {v: 1}
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.BaseSolver()
+        with self.assertRaisesRegex(ValueError, "t_eval cannot be None"):
+            solver.solve(model, None)
+
     def test_nonmonotonic_teval(self):
         solver = pybamm.BaseSolver(rtol=1e-2, atol=1e-4)
         model = pybamm.BaseModel()
