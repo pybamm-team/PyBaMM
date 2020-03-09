@@ -1,7 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM)
+
 ## Features 
 
-- Add ambient temperature as a function of time ([#872](https://github.com/pybamm-team/PyBaMM/pull/872))
+-   Add ambient temperature as a function of time ([#872](https://github.com/pybamm-team/PyBaMM/pull/872))
+-   Added `CasadiAlgebraicSolver` for solving algebraic systems with casadi ([#868](https://github.com/pybamm-team/PyBaMM/pull/868))
 
 ## Bug fixes
 
