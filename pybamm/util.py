@@ -91,6 +91,34 @@ class FuzzyDict(dict):
             best_matches = self.get_best_matches(key)
             raise KeyError(f"'{key}' not found. Best matches are {best_matches}")
 
+    def search(self, key, print_values=False):
+        "Search keys for key"
+        # Make sure key is in lowercase
+        key = key.lower()
+
+        # Sort the keys so results are stored in alphabetical order
+        keys = list(self.keys())
+        keys.sort()
+        results = {}
+
+        # Check if any of the dict keys contain the key we are searching for
+        for k in keys:
+            if key in k.lower():
+                results[k] = self[k]
+
+        if results == {}:
+            # If no results, return best matches
+            best_matches = self.get_best_matches(key)
+            print(
+                f"No results for search using '{key}'. Best matches are {best_matches}"
+            )
+        elif print_values:
+            # Else print results, including dict items
+            print("\n".join("{}\t{}".format(k, v) for k, v in results.items()))
+        else:
+            # Just print keys
+            print("\n".join("{}".format(k) for k in results.keys()))
+
 
 class Timer(object):
     """
@@ -129,7 +157,7 @@ class Timer(object):
             return str(round(time, 2)) + " seconds"
         output = []
         time = int(round(time))
-        units = [(604800, "week"), (86400, "day"), (3600, "hour"), (60, "minute")]
+        units = [(604_800, "week"), (86400, "day"), (3600, "hour"), (60, "minute")]
         for k, name in units:
             f = time // k
             if f > 0 or output:
