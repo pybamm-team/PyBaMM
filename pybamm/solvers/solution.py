@@ -331,4 +331,3 @@ class Solution(_BaseSolution):
                     copy_this=solution,
                 )
             )
-

@@ -59,6 +59,7 @@ htmlcov/
 pyproject.toml
 
 # virtual enviroment
+env/
 venv/
 venv3.5/
 PyBaMM-env/
