@@ -6,16 +6,17 @@ pb.set_logging_level("INFO")
 options = {"sei": "reaction limited"}
 model = pb.lithium_ion.DFN(options)
 
-experiment = pb.Experiment(
-    [
-        "Discharge at C/10 for 13 hours or until 3.3 V",
-        "Rest for 1 hour",
-        "Charge at 1 A until 4.1 V",
-        "Hold at 4.1 V until 50 mA",
-        "Rest for 1 hour",
-    ]
-    * 10
-)
+# experiment = pb.Experiment(
+#     [
+#         "Discharge at C/10 for 13 hours or until 3.3 V",
+#         "Rest for 1 hour",
+#         "Charge at 1 A until 4.1 V",
+#         "Hold at 4.1 V until 50 mA",
+#         "Rest for 1 hour",
+#     ]
+#     * 10
+# )
+experiment = pb.Experiment(["Rest for 100 hours"])
 
 parameter_values = model.default_parameter_values
 
@@ -43,7 +44,7 @@ parameter_values.update(
         "Inner SEI reaction proportion": 0.5,
         "Inner SEI partial molar volume [m3.mol-1]": 1,
         "Outer SEI partial molar volume [m3.mol-1]": 1,
-        "SEI reaction exchange current density [A.m-2]": 0.1,
+        "SEI reaction exchange current density [A.m-2]": 1.5e-6,
         "SEI resistance per unit thickness [Ohm.m-1]": 0,
         "Outer SEI solvent diffusivity [m2.s-1]": 1,
         "Bulk solvent concentration [mol.m-3]": 1,
