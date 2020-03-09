@@ -3,6 +3,7 @@ Name [units],Value,Reference,Notes
 ,,,
 # Temperature
 Reference temperature [K],298.15,25C,
+Ambient temperature [K], 298.15,,
 Heat transfer coefficient [W.m-2.K-1],10,,
 ,,,
 # Electrical			

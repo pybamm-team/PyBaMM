@@ -1,4 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM)
+## Features 
+
+- Add ambient temperature as a function of time ([#872](https://github.com/pybamm-team/PyBaMM/pull/872))
 
 ## Bug fixes
 

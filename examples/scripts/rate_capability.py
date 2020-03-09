@@ -16,13 +16,9 @@ voltage_av = np.zeros_like(C_rates)
 for i, C_rate in enumerate(C_rates):
     experiment = pybamm.Experiment(
         ["Discharge at {:.4f}C until 3.2V".format(C_rate)],
-        period="{:.4f} seconds".format(10 / C_rate)
+        period="{:.4f} seconds".format(10 / C_rate),
     )
-    sim = pybamm.Simulation(
-        model,
-        experiment=experiment,
-        solver=pybamm.CasadiSolver()
-    )
+    sim = pybamm.Simulation(model, experiment=experiment, solver=pybamm.CasadiSolver())
     sim.solve()
 
     capacity = sim.solution["Discharge capacity [A.h]"]
@@ -35,12 +31,12 @@ for i, C_rate in enumerate(C_rates):
 
 plt.figure(1)
 plt.scatter(C_rates, capacities)
-plt.xlabel('C-rate')
-plt.ylabel('Capacity [Ah]')
+plt.xlabel("C-rate")
+plt.ylabel("Capacity [Ah]")
 
 plt.figure(2)
 plt.scatter(currents * voltage_av, capacities * voltage_av)
-plt.xlabel('Power [W]')
-plt.ylabel('Energy [Wh]')
+plt.xlabel("Power [W]")
+plt.ylabel("Energy [Wh]")
 
 plt.show()

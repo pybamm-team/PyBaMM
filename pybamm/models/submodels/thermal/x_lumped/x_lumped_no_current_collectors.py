@@ -27,13 +27,14 @@ class NoCurrentCollector(BaseModel):
     def set_rhs(self, variables):
         T_av = variables["X-averaged cell temperature"]
         Q_av = variables["X-averaged total heating"]
+        T_amb = variables["Ambient temperature"]
 
         # Get effective properties
         rho_eff, _ = self._effective_properties()
         cooling_coeff = self._surface_cooling_coefficient()
 
         self.rhs = {
-            T_av: (self.param.B * Q_av + cooling_coeff * T_av)
+            T_av: (self.param.B * Q_av + cooling_coeff * (T_av - T_amb))
             / (self.param.C_th * rho_eff)
         }
 

@@ -50,4 +50,3 @@ class LeadingOrderBaseModel(BaseModel):
         Q = pybamm.Variable("Leading-order discharge capacity [A.h]")
         variables = {"Discharge capacity [A.h]": Q}
         return variables
-

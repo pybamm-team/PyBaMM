@@ -91,4 +91,3 @@ class LeadingOrderPowerFunctionControl(LeadingOrderFunctionControl):
 
     def __init__(self, param):
         super().__init__(param, constant_power)
-
