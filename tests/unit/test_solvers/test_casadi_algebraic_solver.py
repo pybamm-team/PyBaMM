@@ -50,6 +50,11 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
             pybamm.SolverError, "Could not find acceptable solution: .../casadi",
         ):
             solver._integrate(model, np.array([0]), {})
+        solver = pybamm.CasadiAlgebraicSolver(error_on_fail=False)
+        with self.assertRaisesRegex(
+            pybamm.SolverError, "Could not find acceptable solution: solver terminated",
+        ):
+            solver._integrate(model, np.array([0]), {})
 
     def test_model_solver_with_time(self):
         # Create model

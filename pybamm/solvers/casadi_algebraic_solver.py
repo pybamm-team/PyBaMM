@@ -19,11 +19,12 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         The tolerance for the solver (default is 1e-6).
     """
 
-    def __init__(self, method="lm", tol=1e-6):
+    def __init__(self, method="lm", tol=1e-6, **extra_options):
         super().__init__()
         self.tol = tol
         self.name = "CasADi algebraic solver"
         self.algebraic_solver = True
+        self.extra_options = extra_options
         pybamm.citations.register("Andersson2019")
 
     @property
@@ -62,7 +63,10 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
 
         # Set up rootfinder
         roots = casadi.rootfinder(
-            "roots", "newton", dict(x=y_sym, p=t_u_sym, g=alg), {"abstol": self.tol}
+            "roots",
+            "newton",
+            dict(x=y_sym, p=t_u_sym, g=alg),
+            {**self.extra_options, "abstol": self.tol},
         )
         for idx, t in enumerate(t_eval):
             # Evaluate algebraic with new t and previous y0, if it's already close
