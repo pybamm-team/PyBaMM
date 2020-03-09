@@ -92,7 +92,11 @@ class FuzzyDict(dict):
             raise KeyError(f"'{key}' not found. Best matches are {best_matches}")
 
     def search(self, key, print_values=False):
-        "Search keys for key"
+        """
+        Search dictionary for keys containing 'key'. If print_values is True, then
+        both the keys and values will be printed. Otherwise just the values will
+        be printed. If no results are found, the best matches are printed.
+        """"
         # Make sure key is in lowercase
         key = key.lower()
 
