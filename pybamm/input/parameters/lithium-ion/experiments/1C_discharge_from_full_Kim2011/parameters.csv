@@ -4,6 +4,8 @@ Name [units],Value,Reference,Notes
 # Temperature
 Reference temperature [K],298.15,25C,
 Heat transfer coefficient [W.m-2.K-1],25,,
+Ambient temperature [K], 298.15,,
+
 ,,,
 # Electrical
 Number of electrodes connected in parallel to make a cell,1,,

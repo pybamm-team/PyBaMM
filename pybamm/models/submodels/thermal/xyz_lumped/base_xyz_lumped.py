@@ -45,11 +45,12 @@ class BaseModel(BaseThermal):
     def set_rhs(self, variables):
         T_vol_av = variables["Volume-averaged cell temperature"]
         Q_vol_av = variables["Volume-averaged total heating"]
+        T_amb = variables["Ambient temperature"]
 
         cooling_coeff = self._surface_cooling_coefficient()
 
         self.rhs = {
-            T_vol_av: (self.param.B * Q_vol_av + cooling_coeff * T_vol_av)
+            T_vol_av: (self.param.B * Q_vol_av + cooling_coeff * (T_vol_av - T_amb))
             / self.param.C_th
         }
 

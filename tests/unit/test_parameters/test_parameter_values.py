@@ -14,9 +14,12 @@ class TestParameterValues(unittest.TestCase):
         data = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
                 os.path.join(
-                    "input", "parameters",
-                    "lithium-ion", "cathodes",
-                    "lico2_Marquis2019", "parameters.csv"
+                    "input",
+                    "parameters",
+                    "lithium-ion",
+                    "cathodes",
+                    "lico2_Marquis2019",
+                    "parameters.csv",
                 )
             )
         )

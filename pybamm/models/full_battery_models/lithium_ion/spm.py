@@ -61,20 +61,20 @@ class SPM(BaseModel):
     def set_interfacial_submodel(self):
 
         if self.options["surface form"] is False:
-            self.submodels[
-                "negative interface"
-            ] = pybamm.interface.lithium_ion.InverseButlerVolmer(self.param, "Negative")
-            self.submodels[
-                "positive interface"
-            ] = pybamm.interface.lithium_ion.InverseButlerVolmer(self.param, "Positive")
+            self.submodels["negative interface"] = pybamm.interface.InverseButlerVolmer(
+                self.param, "Negative", "lithium-ion main"
+            )
+            self.submodels["positive interface"] = pybamm.interface.InverseButlerVolmer(
+                self.param, "Positive", "lithium-ion main"
+            )
         else:
-            self.submodels[
-                "negative interface"
-            ] = pybamm.interface.lithium_ion.ButlerVolmer(self.param, "Negative")
+            self.submodels["negative interface"] = pybamm.interface.ButlerVolmer(
+                self.param, "Negative", "lithium-ion main"
+            )
 
-            self.submodels[
-                "positive interface"
-            ] = pybamm.interface.lithium_ion.ButlerVolmer(self.param, "Positive")
+            self.submodels["positive interface"] = pybamm.interface.ButlerVolmer(
+                self.param, "Positive", "lithium-ion main"
+            )
 
     def set_particle_submodel(self):
 

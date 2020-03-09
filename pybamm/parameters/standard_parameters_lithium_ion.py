@@ -379,6 +379,9 @@ B = (
     / (pybamm.thermal_parameters.rho_eff_dim * F * Delta_T * L_x)
 )
 
+T_amb_dim = pybamm.thermal_parameters.T_amb_dim
+T_amb = pybamm.thermal_parameters.T_amb
+
 # Initial conditions
 T_init = pybamm.thermal_parameters.T_init
 c_e_init = c_e_init_dimensional / c_e_typ
