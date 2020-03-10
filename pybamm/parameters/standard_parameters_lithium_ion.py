@@ -212,11 +212,13 @@ def U_p_dimensional(sto, T):
     return u_ref + (T - T_ref) * dUdT_p_dimensional(sto)
 
 
-# can maybe improve ref value at some stage
-U_n_ref = U_n_dimensional(pybamm.Scalar(0.2), T_ref)
+# Reference OCP based on initial concentration at current collector/electrode interface
+sto_n_init = c_n_init_dimensional(0) / c_n_max
+U_n_ref = U_n_dimensional(sto_n_init, T_ref)
 
-# can maybe improve ref value at some stage
-U_p_ref = U_p_dimensional(pybamm.Scalar(0.7), T_ref)
+# Reference OCP based on initial concentration at current collector/electrode interface
+sto_p_init = c_p_init_dimensional(0) / c_p_max
+U_p_ref = U_p_dimensional(sto_p_init, T_ref)
 
 m_n_ref_dimensional = m_n_dimensional(T_ref)
 m_p_ref_dimensional = m_p_dimensional(T_ref)
