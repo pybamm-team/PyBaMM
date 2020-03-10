@@ -217,7 +217,7 @@ sto_n_init = c_n_init_dimensional(0) / c_n_max
 U_n_ref = U_n_dimensional(sto_n_init, T_ref)
 
 # Reference OCP based on initial concentration at current collector/electrode interface
-sto_p_init = c_p_init_dimensional(0) / c_p_max
+sto_p_init = c_p_init_dimensional(1) / c_p_max
 U_p_ref = U_p_dimensional(sto_p_init, T_ref)
 
 m_n_ref_dimensional = m_n_dimensional(T_ref)
