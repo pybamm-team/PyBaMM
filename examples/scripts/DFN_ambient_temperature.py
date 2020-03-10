@@ -1,5 +1,5 @@
 #
-# Example showing how to load and solve the DFN
+# Example showing how to solve the DFN with a varying ambient temperature
 #
 
 import pybamm
