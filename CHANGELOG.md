@@ -3,6 +3,7 @@
 ## Features
 
 -   Added additional notebooks showing how to create and compare models ([#877](https://github.com/pybamm-team/PyBaMM/pull/877))
+-   Added a search feature to `FuzzyDict` ([#875](https://github.com/pybamm-team/PyBaMM/pull/875))
 -   Add ambient temperature as a function of time ([#872](https://github.com/pybamm-team/PyBaMM/pull/872))
 -   Added `CasadiAlgebraicSolver` for solving algebraic systems with casadi ([#868](https://github.com/pybamm-team/PyBaMM/pull/868))
 

@@ -103,6 +103,14 @@ class ParameterValues:
         "Get the items of the dictionary"
         return self._dict_items.items()
 
+    def search(self, key, print_values=True):
+        """
+        Search dictionary for keys containing 'key'.
+
+        See :meth:`pybamm.FuzzyDict.search()`.
+        """
+        return self._dict_items.search(key, print_values)
+
     def update_from_chemistry(self, chemistry):
         """
         Load standard set of components from a 'chemistry' dictionary
