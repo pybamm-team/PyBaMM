@@ -1,10 +1,11 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM)
 
-## Features 
+## Features
 
 -   Added `Minimum`, `Maximum` and `Sign` operators ([#876](https://github.com/pybamm-team/PyBaMM/pull/876))
--   Added `CasadiAlgebraicSolver` for solving algebraic systems with CasADi ([#868](https://github.com/pybamm-team/PyBaMM/pull/868))
+-   Added a search feature to `FuzzyDict` ([#875](https://github.com/pybamm-team/PyBaMM/pull/875))
 -   Add ambient temperature as a function of time ([#872](https://github.com/pybamm-team/PyBaMM/pull/872))
+-   Added `CasadiAlgebraicSolver` for solving algebraic systems with CasADi ([#868](https://github.com/pybamm-team/PyBaMM/pull/868))
 
 ## Bug fixes
 
