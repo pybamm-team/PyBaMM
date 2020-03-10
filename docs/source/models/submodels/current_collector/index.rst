@@ -10,4 +10,3 @@ Current Collector
   homogeneous_current_collector
   potential_pair
   quite_conductive_potential_pair
-  set_potential_single_particle

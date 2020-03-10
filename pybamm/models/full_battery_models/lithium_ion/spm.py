@@ -32,6 +32,7 @@ class SPM(BaseModel):
     def __init__(self, options=None, name="Single Particle Model", build=True):
         super().__init__(options, name)
 
+        self.set_reactions()
         self.set_external_circuit_submodel()
         self.set_porosity_submodel()
         self.set_tortuosity_submodels()
@@ -47,6 +48,8 @@ class SPM(BaseModel):
         if build:
             self.build_model()
 
+        pybamm.citations.register("marquis2019asymptotic")
+
     def set_porosity_submodel(self):
 
         self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
@@ -57,12 +60,21 @@ class SPM(BaseModel):
 
     def set_interfacial_submodel(self):
 
-        self.submodels[
-            "negative interface"
-        ] = pybamm.interface.lithium_ion.InverseButlerVolmer(self.param, "Negative")
-        self.submodels[
-            "positive interface"
-        ] = pybamm.interface.lithium_ion.InverseButlerVolmer(self.param, "Positive")
+        if self.options["surface form"] is False:
+            self.submodels["negative interface"] = pybamm.interface.InverseButlerVolmer(
+                self.param, "Negative", "lithium-ion main"
+            )
+            self.submodels["positive interface"] = pybamm.interface.InverseButlerVolmer(
+                self.param, "Positive", "lithium-ion main"
+            )
+        else:
+            self.submodels["negative interface"] = pybamm.interface.ButlerVolmer(
+                self.param, "Negative", "lithium-ion main"
+            )
+
+            self.submodels["positive interface"] = pybamm.interface.ButlerVolmer(
+                self.param, "Positive", "lithium-ion main"
+            )
 
     def set_particle_submodel(self):
 
@@ -96,10 +108,26 @@ class SPM(BaseModel):
     def set_electrolyte_submodel(self):
 
         electrolyte = pybamm.electrolyte.stefan_maxwell
+        surf_form = electrolyte.conductivity.surface_potential_form
 
-        self.submodels[
-            "electrolyte conductivity"
-        ] = electrolyte.conductivity.LeadingOrder(self.param)
+        if self.options["surface form"] is False:
+            self.submodels[
+                "leading-order electrolyte conductivity"
+            ] = electrolyte.conductivity.LeadingOrder(self.param)
+
+        elif self.options["surface form"] == "differential":
+            for domain in ["Negative", "Separator", "Positive"]:
+                self.submodels[
+                    "leading-order " + domain.lower() + " electrolyte conductivity"
+                ] = surf_form.LeadingOrderDifferential(
+                    self.param, domain, self.reactions
+                )
+
+        elif self.options["surface form"] == "algebraic":
+            for domain in ["Negative", "Separator", "Positive"]:
+                self.submodels[
+                    "leading-order " + domain.lower() + " electrolyte conductivity"
+                ] = surf_form.LeadingOrderAlgebraic(self.param, domain, self.reactions)
         self.submodels[
             "electrolyte diffusion"
         ] = electrolyte.diffusion.ConstantConcentration(self.param)

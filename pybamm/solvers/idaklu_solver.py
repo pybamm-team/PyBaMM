@@ -36,7 +36,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
     """
 
     def __init__(
-        self, rtol=1e-6, atol=1e-6, root_method="lm", root_tol=1e-6, max_steps=1000
+        self, rtol=1e-6, atol=1e-6, root_method="casadi", root_tol=1e-6, max_steps=1000
     ):
 
         if idaklu_spec is None:
@@ -44,6 +44,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         super().__init__("ida", rtol, atol, root_method, root_tol, max_steps)
         self.name = "IDA KLU solver"
+
+        pybamm.citations.register("hindmarsh2000pvode")
+        pybamm.citations.register("hindmarsh2005sundials")
 
     def set_atol_by_variable(self, variables_with_tols, model):
         """

@@ -142,25 +142,18 @@ class TestDFN(unittest.TestCase):
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()
 
-    def test_x_lumped_thermal_set_temperature_1D(self):
-        options = {
-            "current collector": "potential pair",
-            "dimensionality": 1,
-            "thermal": "set external temperature",
-        }
+    def test_particle_fast_diffusion(self):
+        options = {"particle": "fast diffusion"}
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()
 
-        options = {
-            "current collector": "potential pair",
-            "dimensionality": 2,
-            "thermal": "set external temperature",
-        }
-        with self.assertRaises(NotImplementedError):
-            model = pybamm.lithium_ion.DFN(options)
+    def test_surface_form_differential(self):
+        options = {"surface form": "differential"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
 
-    def test_particle_fast_diffusion(self):
-        options = {"particle": "fast diffusion"}
+    def test_surface_form_algebraic(self):
+        options = {"surface form": "algebraic"}
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()
 

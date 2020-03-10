@@ -26,12 +26,12 @@ disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
 
 # solve model
-t_eval = np.linspace(0, 0.2, 100)
+t_eval = np.linspace(0, 3600, 100)
 solver = model.default_solver
 solution = solver.solve(model, t_eval)
 
 # step model
-dt = 0.05
+dt = 500
 time = 0
 end_time = solution.t[-1]
 step_solver = model.default_solver

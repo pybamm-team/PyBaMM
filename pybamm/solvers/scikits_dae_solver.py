@@ -40,7 +40,7 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
         method="ida",
         rtol=1e-6,
         atol=1e-6,
-        root_method="lm",
+        root_method="casadi",
         root_tol=1e-6,
         max_steps=1000,
     ):
@@ -49,6 +49,10 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
 
         super().__init__(method, rtol, atol, root_method, root_tol, max_steps)
         self.name = "Scikits DAE solver ({})".format(method)
+
+        pybamm.citations.register("scikits-odes")
+        pybamm.citations.register("hindmarsh2000pvode")
+        pybamm.citations.register("hindmarsh2005sundials")
 
     def _integrate(self, model, t_eval, inputs=None):
         """
@@ -117,10 +121,14 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
             # 2 = found root(s)
             elif sol.flag == 2:
                 termination = "event"
+            if sol.roots.t is None:
+                t_root = None
+            else:
+                t_root = sol.roots.t
             return pybamm.Solution(
                 sol.values.t,
                 np.transpose(sol.values.y),
-                sol.roots.t,
+                t_root,
                 np.transpose(sol.roots.y),
                 termination,
             )

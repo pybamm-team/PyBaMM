@@ -57,8 +57,10 @@ ABSOLUTE_PATH = os.path.join(os.path.split(script_path)[0], "..")
 #
 from .util import Timer, FuzzyDict
 from .util import root_dir, load_function, rmse, get_infinite_nested_dict, load
+from .util import get_parameters_filepath
 from .logger import logger, set_logging_level
 from .settings import settings
+from .citations import Citations, citations, print_citations
 
 #
 # Classes for the Expression Tree
@@ -120,6 +122,7 @@ from .expression_tree.exceptions import (
     OptionError,
     ModelError,
     SolverError,
+    SolverWarning,
     ShapeError,
     ModelWarning,
     UndefinedOperationError,
@@ -242,6 +245,7 @@ from .solvers.solution import Solution, _BaseSolution
 from .solvers.base_solver import BaseSolver
 from .solvers.algebraic_solver import AlgebraicSolver
 from .solvers.casadi_solver import CasadiSolver
+from .solvers.casadi_algebraic_solver import CasadiAlgebraicSolver
 from .solvers.scikits_dae_solver import ScikitsDaeSolver
 from .solvers.scikits_ode_solver import ScikitsOdeSolver, have_scikits_odes
 from .solvers.scipy_solver import ScipySolver

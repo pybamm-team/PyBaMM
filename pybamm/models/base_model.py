@@ -121,6 +121,9 @@ class BaseModel(object):
         self.use_simplify = True
         self.convert_to_format = "casadi"
 
+        # Default timescale is 1 second
+        self.timescale = pybamm.Scalar(1)
+
     def _set_dictionary(self, dict, name):
         """
         Convert any scalar equations in dict to 'pybamm.Scalar'
@@ -306,8 +309,13 @@ class BaseModel(object):
 
     @property
     def timescale(self):
-        "Default timescale for a model is 1 second"
-        return pybamm.Scalar(1)
+        "Timescale of model, to be used for non-dimensionalising time when solving"
+        return self._timescale
+
+    @timescale.setter
+    def timescale(self, value):
+        "Set the timescale"
+        self._timescale = value
 
     def __getitem__(self, key):
         return self.rhs[key]
@@ -320,6 +328,7 @@ class BaseModel(object):
         new_model.use_jacobian = self.use_jacobian
         new_model.use_simplify = self.use_simplify
         new_model.convert_to_format = self.convert_to_format
+        new_model.timescale = self.timescale
         return new_model
 
     def update(self, *submodels):

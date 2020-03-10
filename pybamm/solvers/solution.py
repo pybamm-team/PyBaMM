@@ -50,8 +50,8 @@ class _BaseSolution(object):
         self._t_event = t_event
         self._y_event = y_event
         self._termination = termination
-        # initialize empty inputs and model, to be populated later
         if copy_this is None:
+            # initialize empty inputs and model, to be populated later
             self._inputs = pybamm.FuzzyDict()
             self._model = None
             self.set_up_time = None
@@ -176,11 +176,10 @@ class _BaseSolution(object):
             underlying data for this variable is available in its attribute ".data"
         """
 
-        try:
-            # Try getting item
-            # return it if it exists
+        # return it if it exists
+        if key in self._variables:
             return self._variables[key]
-        except KeyError:
+        else:
             # otherwise create it, save it and then return it
             self.update(key)
             return self._variables[key]
@@ -332,4 +331,3 @@ class Solution(_BaseSolution):
                     copy_this=solution,
                 )
             )
-

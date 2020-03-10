@@ -37,6 +37,14 @@ class SolverError(Exception):
     pass
 
 
+class SolverWarning(UserWarning):
+    """
+    Solver warning: the chosen solver settings may not give the desired output
+    """
+
+    pass
+
+
 class ShapeError(Exception):
     """
     Shape error: cannot evaluate an object to find its shape
@@ -67,4 +75,3 @@ class InputError(Exception):
     """
 
     pass
-

@@ -28,12 +28,12 @@ model.submodels["negative particle"] = pybamm.particle.fast.SingleParticle(
 model.submodels["positive particle"] = pybamm.particle.fast.SingleParticle(
     model.param, "Positive"
 )
-model.submodels[
-    "negative interface"
-] = pybamm.interface.lithium_ion.InverseButlerVolmer(model.param, "Negative")
-model.submodels[
-    "positive interface"
-] = pybamm.interface.lithium_ion.InverseButlerVolmer(model.param, "Positive")
+model.submodels["negative interface"] = pybamm.interface.InverseButlerVolmer(
+    model.param, "Negative", "lithium-ion main"
+)
+model.submodels["positive interface"] = pybamm.interface.InverseButlerVolmer(
+    model.param, "Positive", "lithium-ion main"
+)
 electrolyte = pybamm.electrolyte.stefan_maxwell
 model.submodels["electrolyte diffusion"] = electrolyte.diffusion.ConstantConcentration(
     model.param
@@ -63,7 +63,7 @@ disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
 
 # solve model
-t_eval = np.linspace(0, 0.2, 100)
+t_eval = np.linspace(0, 3600, 100)
 solver = pybamm.ScipySolver()
 solution = solver.solve(model, t_eval)
 

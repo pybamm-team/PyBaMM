@@ -39,7 +39,7 @@ class TestFunctionControl(unittest.TestCase):
 
         # solve model
         solutions = [None] * len(models)
-        t_eval = np.linspace(0, 1, 100)
+        t_eval = np.linspace(0, 3600, 100)
         for i, model in enumerate(models):
             solutions[i] = model.default_solver.solve(model, t_eval)
 
@@ -83,7 +83,7 @@ class TestFunctionControl(unittest.TestCase):
 
         # solve model
         solutions = [None] * len(models)
-        t_eval = np.linspace(0, 1, 100)
+        t_eval = np.linspace(0, 3600, 100)
         for i, model in enumerate(models):
             solutions[i] = model.default_solver.solve(model, t_eval)
 
@@ -127,7 +127,7 @@ class TestFunctionControl(unittest.TestCase):
 
         # solve model
         solutions = [None] * len(models)
-        t_eval = np.linspace(0, 1, 100)
+        t_eval = np.linspace(0, 3600, 100)
         for i, model in enumerate(models):
             solutions[i] = model.default_solver.solve(model, t_eval)
 

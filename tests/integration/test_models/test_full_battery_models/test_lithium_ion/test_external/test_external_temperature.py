@@ -15,7 +15,7 @@ class TestExternalThermalModels(unittest.TestCase):
         model = pybamm.lithium_ion.SPMe(model_options)
         sim = pybamm.Simulation(model)
 
-        t_eval = np.linspace(0, 0.01, 3)
+        t_eval = np.linspace(0, 100, 3)
 
         T_av = 0
 
@@ -49,7 +49,7 @@ class TestExternalThermalModels(unittest.TestCase):
 
         sim = pybamm.Simulation(model, var_pts=var_pts)
 
-        t_eval = np.linspace(0, 0.01, 3)
+        t_eval = np.linspace(0, 100, 3)
         x = np.linspace(0, 1, tot_pts)
 
         for i in np.arange(1, len(t_eval) - 1):
@@ -87,7 +87,7 @@ class TestExternalThermalModels(unittest.TestCase):
         sim = pybamm.Simulation(model, var_pts=var_pts, solver=solver)
         sim.build()
 
-        t_eval = np.linspace(0, 0.01, 3)
+        t_eval = np.linspace(0, 100, 3)
         x = np.linspace(0, 1, tot_pts)
 
         for i in np.arange(1, len(t_eval) - 1):

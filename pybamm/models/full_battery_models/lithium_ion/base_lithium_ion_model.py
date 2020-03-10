@@ -17,32 +17,14 @@ class BaseModel(pybamm.BaseBatteryModel):
         super().__init__(options, name)
         self.param = pybamm.standard_parameters_lithium_ion
 
+        # Default timescale is discharge timescale
+        self.timescale = self.param.tau_discharge
+        self.set_standard_output_variables()
+
     def set_standard_output_variables(self):
         super().set_standard_output_variables()
 
-        # Time
-        time_scale = pybamm.standard_parameters_lithium_ion.tau_discharge
-        self.variables.update(
-            {
-                "Time [s]": pybamm.t * time_scale,
-                "Time [min]": pybamm.t * time_scale / 60,
-                "Time [h]": pybamm.t * time_scale / 3600,
-            }
-        )
-
-        # Particle concentration and position
-        self.variables.update(
-            {
-                "Negative particle concentration": None,
-                "Positive particle concentration": None,
-                "Negative particle surface concentration": None,
-                "Positive particle surface concentration": None,
-                "Negative particle concentration [mol.m-3]": None,
-                "Positive particle concentration [mol.m-3]": None,
-                "Negative particle surface concentration [mol.m-3]": None,
-                "Positive particle surface concentration [mol.m-3]": None,
-            }
-        )
+        # Particle concentration position
         var = pybamm.standard_spatial_vars
         param = pybamm.geometric_parameters
         self.variables.update(

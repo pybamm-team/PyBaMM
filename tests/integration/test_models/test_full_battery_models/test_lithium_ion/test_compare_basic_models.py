@@ -14,13 +14,13 @@ class TestCompareBasicModels(unittest.TestCase):
 
         # Solve basic DFN
         basic_sim = pybamm.Simulation(basic_dfn)
-        t_eval = np.linspace(0, 1)
+        t_eval = np.linspace(0, 3600)
         basic_sim.solve(t_eval)
         basic_sol = basic_sim.solution
 
         # Solve main DFN
         sim = pybamm.Simulation(dfn)
-        t_eval = np.linspace(0, 1)
+        t_eval = np.linspace(0, 3600)
         sim.solve(t_eval)
         sol = sim.solution
 
@@ -39,13 +39,13 @@ class TestCompareBasicModels(unittest.TestCase):
 
         # Solve basic SPM
         basic_sim = pybamm.Simulation(basic_spm)
-        t_eval = np.linspace(0, 1)
+        t_eval = np.linspace(0, 3600)
         basic_sim.solve(t_eval)
         basic_sol = basic_sim.solution
 
         # Solve main SPM
         sim = pybamm.Simulation(spm)
-        t_eval = np.linspace(0, 1)
+        t_eval = np.linspace(0, 3600)
         sim.solve(t_eval)
         sol = sim.solution
 

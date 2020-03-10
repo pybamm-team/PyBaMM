@@ -5,7 +5,7 @@
 import pybamm
 import numpy as np
 
-pybamm.set_logging_level("INFO")
+pybamm.set_logging_level("DEBUG")
 
 # load model
 model = pybamm.lithium_ion.SPMe()
@@ -26,8 +26,8 @@ mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
 disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
 
-# solve model
-t_eval = np.linspace(0, 0.2, 100)
+# solve model for 1 hour
+t_eval = np.linspace(0, 3600, 100)
 solution = model.default_solver.solve(model, t_eval)
 
 # plot

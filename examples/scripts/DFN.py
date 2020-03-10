@@ -5,7 +5,7 @@
 import pybamm
 import numpy as np
 
-pybamm.set_logging_level("INFO")
+pybamm.set_logging_level("DEBUG")
 
 
 # load model
@@ -29,8 +29,8 @@ disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
 
 # solve model
-t_eval = np.linspace(0, 0.2, 100)
-solver = model.default_solver
+t_eval = np.linspace(0, 3600, 100)
+solver = pybamm.CasadiSolver()
 solver.rtol = 1e-3
 solver.atol = 1e-6
 solution = solver.solve(model, t_eval)

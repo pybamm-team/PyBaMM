@@ -162,7 +162,7 @@ class TestSolution(unittest.TestCase):
             solver=solver,
         )
         inputs = {"Electrode height [m]": 0.1}
-        sim.solve(t_eval=np.linspace(0, 0.01, 10), inputs=inputs)
+        sim.solve(t_eval=np.linspace(0, 10, 10), inputs=inputs)
         time = sim.solution["Time [h]"](sim.solution.t)
         self.assertEqual(len(time), 10)
 

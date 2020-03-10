@@ -593,7 +593,7 @@ class TestDiscretise(unittest.TestCase):
         combined_submesh = mesh.combine_submeshes(*whole_cell)
         disc.process_model(model)
 
-        y0 = model.concatenated_initial_conditions
+        y0 = model.concatenated_initial_conditions.evaluate()
         np.testing.assert_array_equal(
             y0, 3 * np.ones_like(combined_submesh[0].nodes[:, np.newaxis])
         )
@@ -638,7 +638,7 @@ class TestDiscretise(unittest.TestCase):
         model.variables = {"ST": S * T}
 
         disc.process_model(model)
-        y0 = model.concatenated_initial_conditions
+        y0 = model.concatenated_initial_conditions.evaluate()
         y0_expect = np.empty((0, 1))
         for var_id, _ in sorted(disc.y_slices.items(), key=lambda kv: kv[1]):
             if var_id == c.id:
@@ -716,7 +716,7 @@ class TestDiscretise(unittest.TestCase):
         disc.process_model(model)
         combined_submesh = mesh.combine_submeshes(*whole_cell)
 
-        y0 = model.concatenated_initial_conditions
+        y0 = model.concatenated_initial_conditions.evaluate()
         np.testing.assert_array_equal(
             y0,
             np.concatenate(
@@ -815,7 +815,7 @@ class TestDiscretise(unittest.TestCase):
         )
 
         disc.process_model(model)
-        y0 = model.concatenated_initial_conditions
+        y0 = model.concatenated_initial_conditions.evaluate()
         np.testing.assert_array_equal(
             y0, 3 * np.ones_like(combined_submesh[0].nodes[:, np.newaxis])
         )
@@ -842,7 +842,7 @@ class TestDiscretise(unittest.TestCase):
         submesh = mesh["negative electrode"]
 
         discretised_model = disc.process_model(model, inplace=False)
-        y0 = discretised_model.concatenated_initial_conditions
+        y0 = discretised_model.concatenated_initial_conditions.evaluate()
         np.testing.assert_array_equal(
             y0, 3 * np.ones_like(submesh[0].nodes[:, np.newaxis])
         )
