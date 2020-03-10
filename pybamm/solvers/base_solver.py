@@ -139,7 +139,6 @@ class BaseSolver(object):
             self.root_method = None
         if (
             isinstance(self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver))
-            or self.root_method == "casadi"
         ) and model.convert_to_format != "casadi":
             pybamm.logger.warning(
                 "Converting {} to CasADi for solving with CasADi solver".format(

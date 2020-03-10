@@ -5,6 +5,7 @@ import pybamm
 
 import unittest
 import numpy as np
+from scipy.sparse import diags
 
 
 class TestUnaryOperators(unittest.TestCase):
@@ -42,6 +43,13 @@ class TestUnaryOperators(unittest.TestCase):
         b = pybamm.Scalar(-4)
         signb = pybamm.sign(b)
         self.assertEqual(signb.evaluate(), -1)
+
+        A = diags(np.linspace(-1, 1, 5))
+        b = pybamm.Matrix(A)
+        signb = pybamm.sign(b)
+        np.testing.assert_array_equal(
+            np.diag(signb.evaluate().toarray()), [-1, -1, 0, 1, 1]
+        )
 
     def test_gradient(self):
         a = pybamm.Symbol("a")
