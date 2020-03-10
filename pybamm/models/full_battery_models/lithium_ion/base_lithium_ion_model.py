@@ -53,3 +53,7 @@ class BaseModel(pybamm.BaseBatteryModel):
                 },
             }
         }
+
+    def set_sei_submodel(self):
+        if self.options["sei"] == "reaction limited":
+            self.submodels["sei"] = pybamm.sei.ReactionLimited(self.param)

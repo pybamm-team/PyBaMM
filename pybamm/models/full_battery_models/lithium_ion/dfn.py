@@ -103,10 +103,6 @@ class DFN(BaseModel):
             self.param, self.reactions
         )
 
-    def set_sei_submodel(self):
-        if self.options["sei"] == "reaction limited":
-            self.submodels["sei"] = pybamm.sei.ReactionLimited(self.param)
-
     @property
     def default_geometry(self):
         dimensionality = self.options["dimensionality"]
