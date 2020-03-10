@@ -96,8 +96,7 @@ class FuzzyDict(dict):
         Search dictionary for keys containing 'key'. If print_values is True, then
         both the keys and values will be printed. Otherwise just the values will
         be printed. If no results are found, the best matches are printed.
-        """"
-        # Make sure key is in lowercase
+        """
         key = key.lower()
 
         # Sort the keys so results are stored in alphabetical order
