@@ -176,6 +176,23 @@ class TestBaseSolver(unittest.TestCase):
         ):
             solver.calculate_consistent_state(Model())
 
+    def test_convert_to_casadi_format(self):
+        # Make sure model is converted to casadi format
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        model.rhs = {v: -1}
+        model.initial_conditions = {v: 1}
+        model.convert_to_format = "python"
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.BaseSolver()
+        pybamm.set_logging_level("ERROR")
+        solver.set_up(model, {})
+        self.assertEqual(model.convert_to_format, "casadi")
+        pybamm.set_logging_level("WARNING")
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

@@ -72,7 +72,9 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
             # Evaluate algebraic with new t and previous y0, if it's already close
             # enough then keep it
             if np.all(abs(model.algebraic_eval(t, y0)) < self.tol):
-                pybamm.logger.debug("Keeping same solution at t={}".format(t))
+                pybamm.logger.debug(
+                    "Keeping same solution at t={}".format(t * model.timescale_eval)
+                )
                 y[:, idx] = y0
             # Otherwise calculate new y0
             else:
