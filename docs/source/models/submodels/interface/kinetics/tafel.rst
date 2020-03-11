@@ -1,11 +1,8 @@
 Tafel
 =====
 
-.. autoclass:: pybamm.interface.kinetics.ForwardTafel
-    :members:
-    
-.. autoclass:: pybamm.interface.kinetics.FirstOrderForwardTafel
+.. autoclass:: pybamm.interface.ForwardTafel
     :members:
 
-.. autoclass:: pybamm.interface.kinetics.BackwardTafel
+.. autoclass:: pybamm.interface.BackwardTafel
     :members:

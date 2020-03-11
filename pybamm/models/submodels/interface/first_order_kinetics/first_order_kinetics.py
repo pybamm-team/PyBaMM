@@ -1,12 +1,12 @@
 #
 # First-order Butler-Volmer kinetics
 #
-from .base_kinetics import BaseModel
+from ..base_interface import BaseInterface
 
 
-class BaseFirstOrderKinetics(BaseModel):
+class FirstOrderKinetics(BaseInterface):
     """
-    Base first-order kinetics
+    First-order kinetics
 
     Parameters
     ----------
@@ -14,13 +14,15 @@ class BaseFirstOrderKinetics(BaseModel):
         model parameters
     domain : str
         The domain to implement the model, either: 'Negative' or 'Positive'.
-
+    leading_order_model : :class:`pybamm.interface.kinetics.BaseKinetics`
+        The leading-order model with respect to which this is first-order
 
     **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, leading_order_model):
+        super().__init__(param, domain, leading_order_model.reaction)
+        self.leading_order_model = leading_order_model
 
     def get_coupled_variables(self, variables):
         # Unpack
@@ -30,8 +32,8 @@ class BaseFirstOrderKinetics(BaseModel):
         c_e = variables[self.domain + " electrolyte concentration"]
         c_e_1 = (c_e - c_e_0) / self.param.C_e
 
-        dj_dc_0 = self._get_dj_dc(variables)
-        dj_ddeltaphi_0 = self._get_dj_ddeltaphi(variables)
+        dj_dc_0 = self.leading_order_model._get_dj_dc(variables)
+        dj_ddeltaphi_0 = self.leading_order_model._get_dj_ddeltaphi(variables)
 
         # Update delta_phi with new phi_e and phi_s
         variables = self._get_delta_phi(variables)

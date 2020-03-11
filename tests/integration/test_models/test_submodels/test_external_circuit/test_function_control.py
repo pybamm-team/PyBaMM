@@ -67,7 +67,7 @@ class TestFunctionControl(unittest.TestCase):
         params = [model.default_parameter_values for model in models]
 
         # First model: 4.1V charge
-        params[0]["Voltage function [V]"] = 4.1
+        params[0].update({"Voltage function [V]": 4.1}, check_already_exists=False)
 
         # set parameters and discretise models
         var = pybamm.standard_spatial_vars
@@ -111,7 +111,7 @@ class TestFunctionControl(unittest.TestCase):
         params = [model.default_parameter_values for model in models]
 
         # First model: 4W charge
-        params[0]["Power function [W]"] = 4
+        params[0].update({"Power function [W]": 4}, check_already_exists=False)
 
         # set parameters and discretise models
         for i, model in enumerate(models):

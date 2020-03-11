@@ -165,7 +165,7 @@ Q_p_max_dimensional = pybamm.Parameter("Positive electrode volumetric capacity [
 
 
 # Fake thermal
-Delta_T = pybamm.Scalar(0)
+Delta_T = pybamm.thermal_parameters.Delta_T
 
 
 # --------------------------------------------------------------------------------------
@@ -455,7 +455,8 @@ def c_p_init(x):
 # Thermal effects not implemented for lead-acid, but parameters needed for consistency
 T_init = pybamm.Scalar(0)
 Theta = pybamm.Scalar(0)  # ratio of typical temperature change to ambient temperature
-
+T_amb_dim = pybamm.thermal_parameters.T_amb_dim
+T_amb = pybamm.thermal_parameters.T_amb
 
 # --------------------------------------------------------------------------------------
 "5. Dimensionless Functions"
@@ -523,4 +524,3 @@ dimensional_current_density_with_time = dimensional_current_with_time / (
 current_with_time = (
     dimensional_current_with_time / I_typ * pybamm.Function(np.sign, I_typ)
 )
-

@@ -15,15 +15,21 @@ class CurrentCollector1D(BaseModel):
     def set_rhs(self, variables):
         T_av = variables["X-averaged cell temperature"]
         Q_av = variables["X-averaged total heating"]
+        T_amb = variables["Ambient temperature"]
 
         cooling_coeff = self._surface_cooling_coefficient()
 
         self.rhs = {
-            T_av: (pybamm.laplacian(T_av) + self.param.B * Q_av + cooling_coeff * T_av)
+            T_av: (
+                pybamm.laplacian(T_av)
+                + self.param.B * Q_av
+                + cooling_coeff * (T_av - T_amb)
+            )
             / self.param.C_th
         }
 
     def set_boundary_conditions(self, variables):
+        T_amb = variables["Ambient temperature"]
         T_av = variables["X-averaged cell temperature"]
         T_av_left = pybamm.boundary_value(T_av, "negative tab")
         T_av_right = pybamm.boundary_value(T_av, "positive tab")
@@ -35,11 +41,11 @@ class CurrentCollector1D(BaseModel):
         self.boundary_conditions = {
             T_av: {
                 "negative tab": (
-                    self.param.h * T_av_left / self.param.delta,
+                    self.param.h * (T_av_left - T_amb) / self.param.delta,
                     "Neumann",
                 ),
                 "positive tab": (
-                    -self.param.h * T_av_right / self.param.delta,
+                    -self.param.h * (T_av_right - T_amb) / self.param.delta,
                     "Neumann",
                 ),
                 "no tab": (pybamm.Scalar(0), "Neumann"),

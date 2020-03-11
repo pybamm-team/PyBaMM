@@ -2,11 +2,10 @@
 # Tafel classes
 #
 import pybamm
-from .base_kinetics import BaseModel
-from .base_first_order_kinetics import BaseFirstOrderKinetics
+from .base_kinetics import BaseKinetics
 
 
-class ForwardTafel(BaseModel):
+class ForwardTafel(BaseKinetics):
     """
     Base submodel which implements the forward Tafel equation:
 
@@ -19,13 +18,14 @@ class ForwardTafel(BaseModel):
         model parameters
     domain : str
         The domain to implement the model, either: 'Negative' or 'Positive'.
+    reaction : str
+        The name of the reaction being implemented
 
-
-    **Extends:** :class:`pybamm.interface.kinetics.BaseModel`
+    **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, reaction):
+        super().__init__(param, domain, reaction)
 
     def _get_kinetics(self, j0, ne, eta_r, T):
         return j0 * pybamm.exp((ne / (2 * (1 + self.param.Theta * T))) * eta_r)
@@ -56,12 +56,7 @@ class ForwardTafel(BaseModel):
         )
 
 
-class FirstOrderForwardTafel(ForwardTafel, BaseFirstOrderKinetics):
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
-
-
-class BackwardTafel(BaseModel):
+class BackwardTafel(BaseKinetics):
     """
     Base submodel which implements the backward Tafel equation:
 
@@ -76,7 +71,7 @@ class BackwardTafel(BaseModel):
         The domain to implement the model, either: 'Negative' or 'Positive'.
 
 
-    **Extends:** :class:`pybamm.interface.kinetics.BaseModel`
+    **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
     """
 
     def __init__(self, param, domain):

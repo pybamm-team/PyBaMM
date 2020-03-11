@@ -28,6 +28,18 @@ class TestBaseSolver(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.ModelError, "Cannot solve empty model"):
             solver.solve(model, None)
 
+    def test_t_eval_none(self):
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        model.rhs = {v: 1}
+        model.initial_conditions = {v: 1}
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.BaseSolver()
+        with self.assertRaisesRegex(ValueError, "t_eval cannot be None"):
+            solver.solve(model, None)
+
     def test_nonmonotonic_teval(self):
         solver = pybamm.BaseSolver(rtol=1e-2, atol=1e-4)
         model = pybamm.BaseModel()
@@ -164,15 +176,22 @@ class TestBaseSolver(unittest.TestCase):
         ):
             solver.calculate_consistent_state(Model())
 
-    def test_time_too_short(self):
-        solver = pybamm.BaseSolver()
+    def test_convert_to_casadi_format(self):
+        # Make sure model is converted to casadi format
         model = pybamm.BaseModel()
-        v = pybamm.StateVector(slice(0, 1))
-        model.rhs = {v: v}
-        with self.assertRaisesRegex(
-            pybamm.SolverError, "It looks like t_eval might be dimensionless"
-        ):
-            solver.solve(model, np.linspace(0, 0.1))
+        v = pybamm.Variable("v")
+        model.rhs = {v: -1}
+        model.initial_conditions = {v: 1}
+        model.convert_to_format = "python"
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.BaseSolver()
+        pybamm.set_logging_level("ERROR")
+        solver.set_up(model, {})
+        self.assertEqual(model.convert_to_format, "casadi")
+        pybamm.set_logging_level("WARNING")
 
 
 if __name__ == "__main__":

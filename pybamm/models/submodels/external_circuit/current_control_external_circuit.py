@@ -34,4 +34,3 @@ class LeadingOrderCurrentControl(CurrentControl, LeadingOrderBaseModel):
 
     def __init__(self, param):
         super().__init__(param)
-
