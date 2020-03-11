@@ -137,16 +137,38 @@ class TestQuickPlot(unittest.TestCase):
         quick_plot = pybamm.QuickPlot(solution_long)
         self.assertEqual(quick_plot.time_scale, 1 / 3600)
 
-        # Test errors
-        with self.assertRaisesRegex(ValueError, "Mismatching variable domains"):
-            pybamm.QuickPlot(solution, [["a", "b broadcasted"]])
-        model.variables["3D variable"] = disc.process_symbol(
+        # Test different spatial formats
+        quick_plot = pybamm.QuickPlot(solution)
+        self.assertEqual(quick_plot.spatial_format, "m")
+        quick_plot = pybamm.QuickPlot(solution, spatial_format="m")
+        self.assertEqual(quick_plot.spatial_format, "m")
+        quick_plot = pybamm.QuickPlot(solution, spatial_format="mm")
+        self.assertEqual(quick_plot.spatial_format, "mm")
+        quick_plot = pybamm.QuickPlot(solution, spatial_format="um")
+        self.assertEqual(quick_plot.spatial_format, "um")
+        with self.assertRaisesRegex(ValueError, "spatial format"):
+            pybamm.QuickPlot(solution, spatial_format="bad format")
+
+        # Test 2D variables
+        model.variables["2D variable"] = disc.process_symbol(
             pybamm.FullBroadcast(
                 1, "negative particle", {"secondary": "negative electrode"}
             )
         )
-        with self.assertRaisesRegex(NotImplementedError, "Cannot plot 3D variables"):
-            pybamm.QuickPlot([solution, solution], ["3D variable"])
+        model.variables["Negative 2D variable"] = model.variables["2D variable"]
+        quick_plot = pybamm.QuickPlot(solution, ["Negative 2D variable"])
+        quick_plot.plot(0)
+
+        with self.assertRaisesRegex(NotImplementedError, "Cannot plot 2D variables"):
+            pybamm.QuickPlot([solution, solution], ["2D variable"])
+        with self.assertRaisesRegex(
+            NotImplementedError, "Cannot determine the spatial scale"
+        ):
+            pybamm.QuickPlot(solution, ["2D variable"])
+
+        # Test errors
+        with self.assertRaisesRegex(ValueError, "Mismatching variable domains"):
+            pybamm.QuickPlot(solution, [["a", "b broadcasted"]])
         with self.assertRaisesRegex(ValueError, "labels"):
             quick_plot = pybamm.QuickPlot(
                 [solution, solution], labels=["sol 1", "sol 2", "sol 3"]
@@ -159,35 +181,37 @@ class TestQuickPlot(unittest.TestCase):
         ):
             pybamm.QuickPlot(solution, ["NaN variable"])
 
-    def test_loqs_spm_base(self):
-        t_eval = np.linspace(0, 10, 2)
+    # def test_loqs_spm_base(self):
+    #     t_eval = np.linspace(0, 10, 2)
 
-        # SPM
-        for model in [pybamm.lithium_ion.SPM(), pybamm.lead_acid.LOQS()]:
-            geometry = model.default_geometry
-            param = model.default_parameter_values
-            param.process_model(model)
-            param.process_geometry(geometry)
-            mesh = pybamm.Mesh(
-                geometry, model.default_submesh_types, model.default_var_pts
-            )
-            disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-            disc.process_model(model)
-            solver = model.default_solver
-            solution = solver.solve(model, t_eval)
-            pybamm.QuickPlot(solution)
+    #     # SPM
+    #     for model in [pybamm.lithium_ion.SPM(), pybamm.lead_acid.LOQS()]:
+    #         geometry = model.default_geometry
+    #         param = model.default_parameter_values
+    #         param.process_model(model)
+    #         param.process_geometry(geometry)
+    #         mesh = pybamm.Mesh(
+    #             geometry, model.default_submesh_types, model.default_var_pts
+    #         )
+    #         disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+    #         disc.process_model(model)
+    #         solver = model.default_solver
+    #         solution = solver.solve(model, t_eval)
+    #         pybamm.QuickPlot(solution)
 
-            # test quick plot of particle for spm
-            if model.name == "Single Particle Model":
-                output_variables = [
-                    "X-averaged negative particle concentration [mol.m-3]",
-                    "X-averaged positive particle concentration [mol.m-3]",
-                ]
-                pybamm.QuickPlot(solution, output_variables)
+    #         # test quick plot of particle for spm
+    #         if model.name == "Single Particle Model":
+    #             output_variables = [
+    #                 "X-averaged negative particle concentration [mol.m-3]",
+    #                 "X-averaged positive particle concentration [mol.m-3]",
+    #                 "Negative particle concentration [mol.m-3]",
+    #                 "Positive particle concentration [mol.m-3]",
+    #             ]
+    #             pybamm.QuickPlot(solution, output_variables)
 
-    def test_failure(self):
-        with self.assertRaisesRegex(TypeError, "'solutions' must be"):
-            pybamm.QuickPlot(1)
+    # def test_failure(self):
+    #     with self.assertRaisesRegex(TypeError, "'solutions' must be"):
+    #         pybamm.QuickPlot(1)
 
 
 if __name__ == "__main__":
