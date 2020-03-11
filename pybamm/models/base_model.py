@@ -589,9 +589,10 @@ class BaseModel(object):
 
         print(div)
         print(symbol_name, "\n")
-        print(type(symbol), "\n")
+        print(type(symbol))
 
         if isinstance(symbol, pybamm.FunctionParameter):
+            print("")
             print("Inputs:")
             symbol.inputs
 

@@ -136,7 +136,9 @@ class FunctionParameter(pybamm.Symbol):
         """ See :meth:`pybamm.Symbol.diff()`. """
         # return a new FunctionParameter, that knows it will need to be differentiated
         # when the parameters are set
-        return FunctionParameter(self.name, *self.orphans, diff_variable=variable)
+        return FunctionParameter(
+            self.name, *self.orphans, diff_variable=variable, inputs=self._inputs
+        )
 
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
@@ -155,7 +157,7 @@ class FunctionParameter(pybamm.Symbol):
             : :pybamm.FunctionParameter
             A new copy of the function parameter
         """
-        return FunctionParameter(self.name, *children, diff_variable=self.diff_variable)
+        return FunctionParameter(self.name, *children, diff_variable=self.diff_variable, inputs=self._inputs)
 
     def _evaluate_for_shape(self):
         """
