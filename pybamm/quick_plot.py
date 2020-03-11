@@ -7,6 +7,14 @@ import warnings
 from collections import defaultdict
 
 
+class LoopList(list):
+    "A list which loops over itself when accessing an index so that it never runs out."
+
+    def __getitem__(self, i):
+        # implement looping by calling "(i) modulo (length of list)"
+        return super().__getitem__(i % len(self))
+
+
 def ax_min(data):
     "Calculate appropriate minimum axis value for plotting"
     data_min = np.nanmin(data)
@@ -111,8 +119,9 @@ class QuickPlot(object):
             self.labels = labels
 
         # Set colors, linestyles, figsize
-        self.colors = colors or ["r", "b", "k", "g", "m", "c"]
-        self.linestyles = linestyles or ["-", ":", "--", "-."]
+        # call LoopList to make sure list index never runs out
+        self.colors = LoopList(colors or ["r", "b", "k", "g", "m", "c"])
+        self.linestyles = LoopList(linestyles or ["-", ":", "--", "-."])
         self.figsize = figsize or (15, 8)
 
         # Spatial scales (default to 1 if information not in model)
@@ -424,13 +433,20 @@ class QuickPlot(object):
                 ax.set_xlabel("Time [h]", fontsize=fontsize)
                 for i, variable_list in enumerate(variable_lists):
                     for j, variable in enumerate(variable_list):
+                        if len(variable_list) == 1:
+                            # single variable -> use linestyle to differentiate model
+                            linestyle = self.linestyles[i]
+                        else:
+                            # multiple variables -> use linestyle to differentiate
+                            # variables (color differentiates models)
+                            linestyle = self.linestyles[j]
                         full_t = self.ts[i]
                         (self.plots[key][i][j],) = ax.plot(
                             full_t * self.time_scale,
                             variable(full_t, warn=False),
                             lw=2,
                             color=self.colors[i],
-                            linestyle=self.linestyles[j],
+                            linestyle=linestyle,
                         )
                 y_min, y_max = self.axis[key][2:]
                 (self.time_lines[key],) = ax.plot(
@@ -447,12 +463,19 @@ class QuickPlot(object):
                 )
                 for i, variable_list in enumerate(variable_lists):
                     for j, variable in enumerate(variable_list):
+                        if len(variable_list) == 1:
+                            # single variable -> use linestyle to differentiate model
+                            linestyle = self.linestyles[i]
+                        else:
+                            # multiple variables -> use linestyle to differentiate
+                            # variables (color differentiates models)
+                            linestyle = self.linestyles[j]
                         (self.plots[key][i][j],) = ax.plot(
                             self.first_dimensional_spatial_variable[key],
                             variable(t, **spatial_vars, warn=False),
                             lw=2,
                             color=self.colors[i],
-                            linestyle=self.linestyles[j],
+                            linestyle=linestyle,
                         )
             elif variable_lists[0][0].dimensions == 2:
                 # 2D plot: plot as a function of x and y at time t
@@ -469,9 +492,10 @@ class QuickPlot(object):
                 # there can only be one entry in the variable list
                 variable = variable_lists[0][0]
                 self.plots[key][0][0] = ax.contourf(
-                    self.second_dimensional_spatial_variable[key],
                     self.first_dimensional_spatial_variable[key],
-                    variable(t, **spatial_vars, warn=False),
+                    self.second_dimensional_spatial_variable[key],
+                    variable(t, **spatial_vars, warn=False).T,
+                    levels=100,
                 )
 
             # Set either y label or legend entries
@@ -537,10 +561,10 @@ class QuickPlot(object):
         """
         t = self.sfreq.val
         t_dimensionless = t / self.time_scale
-        for key, plot in self.plots.items():
+        for k, (key, plot) in enumerate(self.plots.items()):
             if self.variables[key][0][0].dimensions == 0:
                 self.time_lines[key].set_xdata([t])
-            if self.variables[key][0][0].dimensions == 1:
+            elif self.variables[key][0][0].dimensions == 1:
                 for i, variable_lists in enumerate(self.variables[key]):
                     for j, variable in enumerate(variable_lists):
                         plot[i][j].set_ydata(
@@ -550,5 +574,21 @@ class QuickPlot(object):
                                 warn=False
                             )
                         )
+            elif self.variables[key][0][0].dimensions == 2:
+                if len(self.variables) == 1:
+                    ax = self.ax
+                else:
+                    ax = self.ax.flat[k]
+                # 2D plot: plot as a function of x and y at time t
+                # Read dictionary of spatial variables
+                spatial_vars = self.spatial_variable_dict[key]
+                # there can only be one entry in the variable list
+                variable = self.variables[key][0][0]
+                self.plots[key][0][0] = ax.contourf(
+                    self.first_dimensional_spatial_variable[key],
+                    self.second_dimensional_spatial_variable[key],
+                    variable(t_dimensionless, **spatial_vars, warn=False).T,
+                    levels=100,
+                )
 
         self.fig.canvas.draw_idle()

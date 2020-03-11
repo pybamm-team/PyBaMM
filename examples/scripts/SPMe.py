@@ -8,7 +8,7 @@ import numpy as np
 pybamm.set_logging_level("DEBUG")
 
 # load model
-model = pybamm.lithium_ion.SPMe()
+model = pybamm.lithium_ion.DFN()
 model.convert_to_format = "python"
 
 # create geometry
@@ -32,6 +32,18 @@ solution = model.default_solver.solve(model, t_eval)
 
 # plot
 plot = pybamm.QuickPlot(
-    solution, ["Negative particle concentration"], spatial_format="um"
+    solution,
+    [
+        "Negative particle concentration",
+        "Negative particle surface concentration [mol.m-3]",
+        "Electrolyte concentration [mol.m-3]",
+        "Positive particle surface concentration [mol.m-3]",
+        "Current [A]",
+        "Negative electrode potential [V]",
+        "Electrolyte potential [V]",
+        "Positive electrode potential [V]",
+        "Terminal voltage [V]",
+    ],
+    spatial_format="um",
 )
 plot.dynamic_plot()
