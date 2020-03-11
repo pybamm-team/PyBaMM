@@ -5,6 +5,7 @@ import pybamm
 
 import unittest
 import numpy as np
+from scipy.sparse import diags
 
 
 class TestUnaryOperators(unittest.TestCase):
@@ -37,6 +38,18 @@ class TestUnaryOperators(unittest.TestCase):
         b = pybamm.Scalar(-4)
         absb = pybamm.AbsoluteValue(b)
         self.assertEqual(absb.evaluate(), 4)
+
+    def test_sign(self):
+        b = pybamm.Scalar(-4)
+        signb = pybamm.sign(b)
+        self.assertEqual(signb.evaluate(), -1)
+
+        A = diags(np.linspace(-1, 1, 5))
+        b = pybamm.Matrix(A)
+        signb = pybamm.sign(b)
+        np.testing.assert_array_equal(
+            np.diag(signb.evaluate().toarray()), [-1, -1, 0, 1, 1]
+        )
 
     def test_gradient(self):
         a = pybamm.Symbol("a")
@@ -158,10 +171,14 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual((-a).diff(a).evaluate(y=y), -1)
         self.assertEqual((-a).diff(-a).evaluate(), 1)
 
-        # absolute value (not implemented)
-        absa = abs(a)
-        with self.assertRaises(pybamm.UndefinedOperationError):
-            absa.diff(a)
+        # absolute value
+        self.assertEqual((a ** 3).diff(a).evaluate(y=y), 3 * 5 ** 2)
+        self.assertEqual((abs(a ** 3)).diff(a).evaluate(y=y), 3 * 5 ** 2)
+        self.assertEqual((a ** 3).diff(a).evaluate(y=-y), 3 * 5 ** 2)
+        self.assertEqual((abs(a ** 3)).diff(a).evaluate(y=-y), -3 * 5 ** 2)
+
+        # sign
+        self.assertEqual((pybamm.sign(a)).diff(a).evaluate(y=y), 0)
 
         # spatial operator (not implemented)
         spatial_a = pybamm.SpatialOperator("name", a)
@@ -282,12 +299,17 @@ class TestUnaryOperators(unittest.TestCase):
             self.assertIsInstance(av_a, pybamm.Division)
             self.assertIsInstance(av_a.children[0], pybamm.Integral)
             self.assertEqual(av_a.children[0].integration_variable[0].domain, x.domain)
-            # electrode domains go to current collector when averaged
             self.assertEqual(av_a.domain, [])
 
-        a = pybamm.Symbol("a", domain="bad domain")
-        with self.assertRaises(pybamm.DomainError):
-            pybamm.x_average(a)
+        a = pybamm.Symbol("a", domain="new domain")
+        av_a = pybamm.x_average(a)
+        self.assertEqual(av_a.domain, [])
+        self.assertIsInstance(av_a, pybamm.Division)
+        self.assertIsInstance(av_a.children[0], pybamm.Integral)
+        self.assertEqual(av_a.children[0].integration_variable[0].domain, a.domain)
+        self.assertIsInstance(av_a.children[1], pybamm.Integral)
+        self.assertEqual(av_a.children[1].integration_variable[0].domain, a.domain)
+        self.assertEqual(av_a.children[1].children[0].id, pybamm.ones_like(a).id)
 
     def test_r_average(self):
         a = pybamm.Scalar(1)
@@ -308,10 +330,6 @@ class TestUnaryOperators(unittest.TestCase):
             self.assertEqual(av_a.children[0].integration_variable[0].domain, r.domain)
             # electrode domains go to current collector when averaged
             self.assertEqual(av_a.domain, [])
-
-        a = pybamm.Symbol("a", domain="bad domain")
-        with self.assertRaises(pybamm.DomainError):
-            pybamm.x_average(a)
 
     def test_yz_average(self):
         a = pybamm.Scalar(1)
