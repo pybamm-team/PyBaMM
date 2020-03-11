@@ -54,10 +54,17 @@ class FunctionParameter(pybamm.Symbol):
         if diff_variable is specified, the FunctionParameter node will be replaced by a
         :class:`pybamm.Function` and then differentiated with respect to diff_variable.
         Default is None.
-
+    description: str
+        A description of the function.
+    inputs: list
+        A list of strings describing the inputs.
+    outputs: list
+        A list of string describing the outputs.
     """
 
-    def __init__(self, name, *children, diff_variable=None):
+    def __init__(
+        self, name, *children, diff_variable=None, inputs=None,
+    ):
         # assign diff variable
         self.diff_variable = diff_variable
         children_list = list(children)
@@ -75,6 +82,28 @@ class FunctionParameter(pybamm.Symbol):
             domain=domain,
             auxiliary_domains=auxiliary_domains,
         )
+
+        self.inputs = inputs
+
+    @property
+    def inputs(self):
+        if self._inputs:
+            for inp in self._inputs:
+                print(inp)
+
+    @inputs.setter
+    def inputs(self, inp=None):
+        if inp:
+            if inp.__class__ is list:
+                for i in inp:
+                    if i.__class__ is not str:
+                        raise TypeError(
+                            "Inputs must be a provided as a list of strings"
+                        )
+            else:
+                raise TypeError("Inputs must be a provided as a list of strings")
+
+        self._inputs = inp
 
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id` """

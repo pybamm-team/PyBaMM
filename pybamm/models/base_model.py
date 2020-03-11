@@ -572,6 +572,31 @@ class BaseModel(object):
                     )
                 )
 
+    def info(self, symbol_name):
+        """
+        Provides helpful summary information for a symbol.
+
+        Parameters
+        ----------
+        parameter_name : str
+        """
+
+        div = "-----------------------------------------"
+        symbol = find_symbol_in_model(self, symbol_name)
+
+        if not symbol:
+            return None
+
+        print(div)
+        print(symbol_name, "\n")
+        print(type(symbol), "\n")
+
+        if isinstance(symbol, pybamm.FunctionParameter):
+            print("Inputs:")
+            symbol.inputs
+
+        print(div)
+
     @property
     def default_solver(self):
         "Return default solver based on whether model is ODE model or DAE model"
@@ -582,3 +607,38 @@ class BaseModel(object):
             return pybamm.IDAKLUSolver()
         else:
             return pybamm.CasadiSolver(mode="safe")
+
+
+# helper functions for finding symbols
+def find_symbol_in_tree(tree, name):
+    if name == tree.name:
+        return tree
+    elif len(tree.children) > 0:
+        for child in tree.children:
+            child_return = find_symbol_in_tree(child, name)
+            if child_return:
+                return child_return
+    else:
+        return None
+
+
+def find_symbol_in_dict(dic, name):
+    for tree in dic.values():
+        tree_return = find_symbol_in_tree(tree, name)
+        if tree_return:
+            return tree_return
+    return None
+
+
+def find_symbol_in_model(model, name):
+    dics = [
+        model.rhs,
+        model.algebraic,
+        model.variables,
+    ]
+    for dic in dics:
+        dic_return = find_symbol_in_dict(dic, name)
+        if dic_return:
+            return dic_return
+    print(name + " not found")
+    return None

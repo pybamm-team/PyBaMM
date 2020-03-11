@@ -50,7 +50,9 @@ class VoltageFunctionControl(FunctionControl):
 
 def constant_voltage(variables):
     V = variables["Terminal voltage [V]"]
-    return V - pybamm.FunctionParameter("Voltage function [V]", pybamm.t)
+    return V - pybamm.FunctionParameter(
+        "Voltage function [V]", pybamm.t, inputs=["Time [s]"]
+    )
 
 
 class PowerFunctionControl(FunctionControl):
@@ -63,7 +65,9 @@ class PowerFunctionControl(FunctionControl):
 def constant_power(variables):
     I = variables["Current [A]"]
     V = variables["Terminal voltage [V]"]
-    return I * V - pybamm.FunctionParameter("Power function [W]", pybamm.t)
+    return I * V - pybamm.FunctionParameter(
+        "Power function [W]", pybamm.t, inputs=["Time [s]"]
+    )
 
 
 class LeadingOrderFunctionControl(FunctionControl, LeadingOrderBaseModel):
