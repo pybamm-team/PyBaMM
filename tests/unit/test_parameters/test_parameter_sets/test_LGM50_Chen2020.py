@@ -23,8 +23,8 @@ class TestChen(unittest.TestCase):
 
         electrolyte = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/electrolytes/lipf6_Nyman2008/" +
-                "parameters.csv",
+                "input/parameters/lithium-ion/electrolytes/lipf6_Nyman2008/"
+                + "parameters.csv",
             )
         )
         self.assertEqual(electrolyte["Reference temperature [K]"], "298.15")
@@ -34,9 +34,7 @@ class TestChen(unittest.TestCase):
                 "input/parameters/lithium-ion/cells/LGM50_Chen2020/parameters.csv",
             )
         )
-        self.assertAlmostEqual(
-            cell["Negative current collector thickness [m]"], 12E-6
-        )
+        self.assertAlmostEqual(cell["Negative current collector thickness [m]"], 12e-6)
 
     def test_standard_lithium_parameters(self):
 

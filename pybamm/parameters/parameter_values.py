@@ -74,9 +74,12 @@ class ParameterValues:
         if values is not None:
             # If base_parameters is a filename, load from that filename
             if isinstance(values, str):
+                path = os.path.split(values)[0]
                 values = self.read_parameters_csv(values)
+            else:
+                path = None
             # Don't check parameter already exists when first creating it
-            self.update(values, check_already_exists=False)
+            self.update(values, check_already_exists=False, path=path)
 
         # Initialise empty _processed_symbols dict (for caching)
         self._processed_symbols = {}
@@ -102,6 +105,14 @@ class ParameterValues:
     def items(self):
         "Get the items of the dictionary"
         return self._dict_items.items()
+
+    def search(self, key, print_values=True):
+        """
+        Search dictionary for keys containing 'key'.
+
+        See :meth:`pybamm.FuzzyDict.search()`.
+        """
+        return self._dict_items.search(key, print_values)
 
     def update_from_chemistry(self, chemistry):
         """

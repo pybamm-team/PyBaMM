@@ -110,6 +110,11 @@ class TestCitations(unittest.TestCase):
         pybamm.ScipySolver()
         self.assertIn("virtanen2020scipy", citations._papers_to_cite)
 
+        citations._reset()
+        self.assertNotIn("virtanen2020scipy", citations._papers_to_cite)
+        pybamm.AlgebraicSolver()
+        self.assertIn("virtanen2020scipy", citations._papers_to_cite)
+
         if pybamm.have_scikits_odes():
             citations._reset()
             self.assertNotIn("scikits-odes", citations._papers_to_cite)
