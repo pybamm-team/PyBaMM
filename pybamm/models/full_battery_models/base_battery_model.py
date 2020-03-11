@@ -226,15 +226,15 @@ class BaseBatteryModel(pybamm.BaseModel):
                 raise pybamm.OptionError(
                     "convection not implemented for lithium-ion models"
                 )
-        if isinstance(self, pybamm.lead_acid.BaseModel):
-            if options["thermal"] != "isothermal":
-                raise pybamm.OptionError(
-                    "thermal effects not implemented for lead-acid models"
-                )
-            if options["thermal current collector"] is True:
-                raise pybamm.OptionError(
-                    "thermal effects not implemented for lead-acid models"
-                )
+        # if isinstance(self, pybamm.lead_acid.BaseModel):
+        # if options["thermal"] != "isothermal":
+        #     raise pybamm.OptionError(
+        #         "thermal effects not implemented for lead-acid models"
+        #     )
+        # if options["thermal current collector"] is True:
+        #     raise pybamm.OptionError(
+        #         "thermal effects not implemented for lead-acid models"
+        #     )
 
         self._options = options
 
