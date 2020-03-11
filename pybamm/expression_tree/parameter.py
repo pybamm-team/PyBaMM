@@ -157,7 +157,9 @@ class FunctionParameter(pybamm.Symbol):
             : :pybamm.FunctionParameter
             A new copy of the function parameter
         """
-        return FunctionParameter(self.name, *children, diff_variable=self.diff_variable, inputs=self._inputs)
+        return FunctionParameter(
+            self.name, *children, diff_variable=self.diff_variable, inputs=self._inputs
+        )
 
     def _evaluate_for_shape(self):
         """
