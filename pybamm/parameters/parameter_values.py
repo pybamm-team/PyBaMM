@@ -58,12 +58,10 @@ class ParameterValues:
         # Must provide either values or chemistry, not both (nor neither)
         if values is not None and chemistry is not None:
             raise ValueError(
-                """
-                Only one of values and chemistry can be provided. To change parameters
-                slightly from a chemistry, first load parameters with the chemistry
-                (param = pybamm.ParameterValues(chemistry=...)) and then update with
-                param.update({dict of values}).
-                """
+                "Only one of values and chemistry can be provided. To change parameters"
+                " slightly from a chemistry, first load parameters with the chemistry"
+                " (param = pybamm.ParameterValues(chemistry=...)) and then update with"
+                " param.update({dict of values})."
             )
         if values is None and chemistry is None:
             raise ValueError("values and chemistry cannot both be None")
@@ -218,13 +216,10 @@ class ParameterValues:
                     self._dict_items[name]
                 except KeyError as err:
                     raise KeyError(
-                        """
-                        Cannot update parameter '{}' as it does not have a default
-                        value. ({}). If you are sure you want to update this parameter,
-                        use param.update({{name: value}}, check_already_exists=False)
-                        """.format(
-                            name, err.args[0]
-                        )
+                        "Cannot update parameter '{}' as it does not ".format(name)
+                        + "have a default value. ({}). If you are ".format(err.args[0])
+                        + "sure you want to update this parameter, use "
+                        + "param.update({{name: value}}, check_already_exists=False)"
                     )
             # if no conflicts, update, loading functions and data if they are specified
             # Functions are flagged with the string "[function]"
@@ -268,16 +263,12 @@ class ParameterValues:
         # Make sure typical current is non-zero
         if "Typical current [A]" in values and values["Typical current [A]"] == 0:
             raise ValueError(
-                """
-                "Typical current [A]" cannot be zero. A possible alternative is to set
-                "Current function [A]" to `0` instead.
-                """
+                "'Typical current [A]' cannot be zero. A possible alternative is to "
+                "set 'Current function [A]' to `0` instead."
             )
         if "C-rate" in values and "Current function [A]" in values:
             raise ValueError(
-                """
-                Cannot provide both "C-rate" and "Current function [A]" simultaneously
-                """
+                "Cannot provide both 'C-rate' and 'Current function [A]' simultaneously"
             )
         # If the capacity of the cell has been provided, make sure "C-rate" and current
         # match with the stated capacity

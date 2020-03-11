@@ -6,9 +6,11 @@
 -   Added a search feature to `FuzzyDict` ([#875](https://github.com/pybamm-team/PyBaMM/pull/875))
 -   Add ambient temperature as a function of time ([#872](https://github.com/pybamm-team/PyBaMM/pull/872))
 -   Added `CasadiAlgebraicSolver` for solving algebraic systems with CasADi ([#868](https://github.com/pybamm-team/PyBaMM/pull/868))
+-   Added electrolyte functions from Landesfeind ([#860](https://github.com/pybamm-team/PyBaMM/pull/860))
 
 ## Bug fixes
 
+-   Reformatted external circuit submodels ([#879](https://github.com/pybamm-team/PyBaMM/pull/879))
 -   Some bug fixes to generalize specifying models that aren't battery models, see [#846](https://github.com/pybamm-team/PyBaMM/issues/846)
 -   Reformatted interface submodels to be more readable ([#866](https://github.com/pybamm-team/PyBaMM/pull/866))
 -   Removed double-counted "number of electrodes connected in parallel" from simulation ([#864](https://github.com/pybamm-team/PyBaMM/pull/864))
