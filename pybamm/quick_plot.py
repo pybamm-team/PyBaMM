@@ -82,10 +82,19 @@ class QuickPlot(object):
         time_format=None,
         spatial_format="m",
     ):
-        if isinstance(solutions, pybamm.Solution):
+        if isinstance(solutions, (pybamm.Solution, pybamm.Simulation)):
             solutions = [solutions]
         elif not isinstance(solutions, list):
-            raise TypeError("'solutions' must be 'pybamm.Solution' or list")
+            raise TypeError(
+                "solutions must be 'pybamm.Solution' or 'pybamm.Simulation' or list"
+            )
+
+        # Extract solution from any simulations
+        for idx, sol in enumerate(solutions):
+            if isinstance(sol, pybamm.Simulation):
+                # 'sol' is actually a 'Simulation' object here so it has a 'Solution'
+                # attribute
+                solutions[idx] = sol.solution
 
         models = [solution.model for solution in solutions]
 
@@ -480,30 +489,47 @@ class QuickPlot(object):
         # Set global legend
         # self.fig.legend(self.labels, loc="lower right")
 
-    def dynamic_plot(self, testing=False):
+    def dynamic_plot(self, testing=False, step=None):
         """
-        Generate a dynamic plot with a slider to control the time. We recommend using
-        ipywidgets instead of this function if you are using jupyter notebooks
+        Generate a dynamic plot with a slider to control the time.
+
+        Parameters
+        ----------
+        step : float
+            For notebook mode, size of steps to allow in the slider. Defaults to 1/100th
+            of the total time.
+        testing : bool
+            Whether to actually make the plot (turned off for unit tests)
+
         """
+        if pybamm.is_notebook():  # pragma: no cover
+            import ipywidgets as widgets
 
-        import matplotlib.pyplot as plt
-        from matplotlib.widgets import Slider
+            step = step or self.max_t / 100
+            widgets.interact(
+                self.plot,
+                t=widgets.FloatSlider(min=0, max=self.max_t, step=step, value=0),
+                continuous_update=False,
+            )
+        else:
+            import matplotlib.pyplot as plt
+            from matplotlib.widgets import Slider
 
-        # create an initial plot at time 0
-        self.plot(0)
+            # create an initial plot at time 0
+            self.plot(0)
 
-        axcolor = "lightgoldenrodyellow"
-        axfreq = plt.axes([0.315, 0.02, 0.37, 0.03], facecolor=axcolor)
-        self.sfreq = Slider(axfreq, "Time [h]", 0, self.max_t, valinit=0)
-        self.sfreq.on_changed(self.update)
+            axcolor = "lightgoldenrodyellow"
+            axfreq = plt.axes([0.315, 0.02, 0.37, 0.03], facecolor=axcolor)
+            self.sfreq = Slider(axfreq, "Time [h]", 0, self.max_t, valinit=0)
+            self.sfreq.on_changed(self.update)
 
-        # ignore the warning about tight layout
-        warnings.simplefilter("ignore")
-        self.fig.tight_layout()
-        warnings.simplefilter("always")
+            # ignore the warning about tight layout
+            warnings.simplefilter("ignore")
+            self.fig.tight_layout()
+            warnings.simplefilter("always")
 
-        if not testing:  # pragma: no cover
-            plt.show()
+            if not testing:  # pragma: no cover
+                plt.show()
 
     def update(self, val):
         """

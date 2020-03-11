@@ -181,6 +181,19 @@ class TestQuickPlot(unittest.TestCase):
         ):
             pybamm.QuickPlot(solution, ["NaN variable"])
 
+    def test_spm_simulation(self):
+        # SPM
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model)
+
+        t_eval = np.linspace(0, 10, 2)
+        sim.solve(t_eval)
+
+        # mixed simulation and solution input
+        # solution should be extracted from the simulation
+        quick_plot = pybamm.QuickPlot([sim, sim.solution])
+        quick_plot.plot(0)
+
     # def test_loqs_spm_base(self):
     #     t_eval = np.linspace(0, 10, 2)
 
