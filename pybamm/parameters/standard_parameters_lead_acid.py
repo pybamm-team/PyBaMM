@@ -167,14 +167,6 @@ Q_p_max_dimensional = pybamm.Parameter("Positive electrode volumetric capacity [
 # thermal
 Delta_T = pybamm.thermal_parameters.Delta_T
 
-# Activation energies
-E_r_n = pybamm.thermal_parameters.E_r_n
-E_r_p = pybamm.thermal_parameters.E_r_p
-E_D_s_n = pybamm.thermal_parameters.E_D_s_n
-E_D_s_p = pybamm.thermal_parameters.E_D_s_p
-E_D_e = pybamm.thermal_parameters.E_D_e
-E_k_e = pybamm.thermal_parameters.E_k_e
-
 # --------------------------------------------------------------------------------------
 "2. Dimensional Functions"
 
