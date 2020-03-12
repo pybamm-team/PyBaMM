@@ -5,10 +5,10 @@
 import pybamm
 import numpy as np
 
-pybamm.set_logging_level("DEBUG")
+pybamm.set_logging_level("INFO")
 
 # load model
-model = pybamm.lithium_ion.DFN()
+model = pybamm.lithium_ion.SPMe()
 model.convert_to_format = "python"
 
 # create geometry
@@ -34,16 +34,16 @@ solution = model.default_solver.solve(model, t_eval)
 plot = pybamm.QuickPlot(
     solution,
     [
-        "Negative particle concentration",
-        "Negative particle surface concentration [mol.m-3]",
+        "Negative particle concentration [mol.m-3]",
         "Electrolyte concentration [mol.m-3]",
-        "Positive particle surface concentration [mol.m-3]",
+        "Positive particle concentration [mol.m-3]",
         "Current [A]",
         "Negative electrode potential [V]",
         "Electrolyte potential [V]",
         "Positive electrode potential [V]",
         "Terminal voltage [V]",
     ],
-    spatial_format="um",
+    time_unit="seconds",
+    spatial_unit="um",
 )
 plot.dynamic_plot()

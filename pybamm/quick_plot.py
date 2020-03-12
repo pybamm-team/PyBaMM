@@ -72,9 +72,9 @@ class QuickPlot(object):
         The linestyles to loop over when plotting. Defaults to ["-", ":", "--", "-."]
     figsize : tuple of floats
         The size of the figure to make
-    time_format : str
+    time_unit : str
         Format for the time output ("hours", "minutes" or "seconds")
-    spatial_format : str
+    spatial_unit : str
         Format for the spatial axes ("m", "mm" or "um")
 
     """
@@ -87,8 +87,8 @@ class QuickPlot(object):
         colors=None,
         linestyles=None,
         figsize=None,
-        time_format=None,
-        spatial_format="m",
+        time_unit=None,
+        spatial_unit="um",
     ):
         if isinstance(solutions, (pybamm.Solution, pybamm.Simulation)):
             solutions = [solutions]
@@ -125,18 +125,17 @@ class QuickPlot(object):
         self.figsize = figsize or (15, 8)
 
         # Spatial scales (default to 1 if information not in model)
-        if spatial_format == "m":
+        if spatial_unit == "m":
             spatial_factor = 1
-        elif spatial_format == "mm":
+            self.spatial_unit = "m"
+        elif spatial_unit == "mm":
             spatial_factor = 1e3
-        elif spatial_format == "um":  # micrometers
+            self.spatial_unit = "mm"
+        elif spatial_unit == "um":  # micrometers
             spatial_factor = 1e6
+            self.spatial_unit = "$\mu m$"
         else:
-            raise ValueError(
-                "spatial format '{}' not recognized".format(spatial_format)
-            )
-
-        self.spatial_format = spatial_format
+            raise ValueError("spatial unit '{}' not recognized".format(spatial_unit))
 
         variables = models[0].variables
         self.spatial_scales = {"x": 1, "y": 1, "z": 1, "r_n": 1, "r_p": 1}
@@ -164,24 +163,32 @@ class QuickPlot(object):
         # Time parameters
         model_timescale_in_seconds = models[0].timescale_eval
         self.ts = [solution.t for solution in solutions]
-        self.min_t = np.min([t[0] for t in self.ts]) * model_timescale_in_seconds
-        self.max_t = np.max([t[-1] for t in self.ts]) * model_timescale_in_seconds
+        min_t = np.min([t[0] for t in self.ts]) * model_timescale_in_seconds
+        max_t = np.max([t[-1] for t in self.ts]) * model_timescale_in_seconds
 
         # Set timescale
-        if time_format is None:
+        if time_unit is None:
             # defaults depend on how long the simulation is
             if self.max_t >= 3600:
-                self.time_scale = model_timescale_in_seconds / 3600  # time in hours
+                time_scaling_factor = 3600  # time in hours
+                self.time_unit = "h"
             else:
-                self.time_scale = model_timescale_in_seconds  # time in seconds
-        elif time_format == "seconds":
-            self.time_scale = model_timescale_in_seconds
-        elif time_format == "minutes":
-            self.time_scale = model_timescale_in_seconds / 60
-        elif time_format == "hours":
-            self.time_scale = model_timescale_in_seconds / 3600
+                time_scaling_factor = 1  # time in seconds
+                self.time_unit = "s"
+        elif time_unit == "seconds":
+            time_scaling_factor = 1
+            self.time_unit = "s"
+        elif time_unit == "minutes":
+            time_scaling_factor = 60
+            self.time_unit = "min"
+        elif time_unit == "hours":
+            time_scaling_factor = 3600
+            self.time_unit = "h"
         else:
-            raise ValueError("time format '{}' not recognized".format(time_format))
+            raise ValueError("time unit '{}' not recognized".format(time_unit))
+        self.time_scale = model_timescale_in_seconds / time_scaling_factor
+        self.min_t = min_t / time_scaling_factor
+        self.max_t = max_t / time_scaling_factor
 
         # Default output variables for lead-acid and lithium-ion
         if output_variables is None:
@@ -218,6 +225,8 @@ class QuickPlot(object):
         self.spatial_variable_dict = {}
         self.first_dimensional_spatial_variable = {}
         self.second_dimensional_spatial_variable = {}
+        self.first_spatial_scale = {}
+        self.second_spatial_scale = {}
 
         # Calculate subplot positions based on number of variables supplied
         self.subplot_positions = {}
@@ -273,19 +282,18 @@ class QuickPlot(object):
                 (
                     spatial_var_name,
                     spatial_var_value,
-                    spatial_var_value_dimensional,
+                    spatial_scale,
                 ) = self.get_spatial_var(key, first_variable, "first")
                 self.spatial_variable_dict[key] = {spatial_var_name: spatial_var_value}
-                self.first_dimensional_spatial_variable[
-                    key
-                ] = spatial_var_value_dimensional
+                self.first_dimensional_spatial_variable[key] = spatial_var_value * spatial_scale
+                self.first_spatial_scale[key] = spatial_scale
 
             elif first_variable.dimensions == 2:
                 # Don't allow 2D variables if there are multiple solutions
                 if len(variables) > 1:
                     raise NotImplementedError(
                         "Cannot plot 2D variables when comparing multiple solutions, "
-                        "but {} is 2D".format(key[0])
+                        "but '{}' is 2D".format(key[0])
                     )
                 # But do allow if just a single solution
                 else:
@@ -293,23 +301,19 @@ class QuickPlot(object):
                     (
                         first_spatial_var_name,
                         first_spatial_var_value,
-                        first_spatial_var_value_dimensional,
+                        first_spatial_scale,
                     ) = self.get_spatial_var(key, first_variable, "first")
                     (
                         second_spatial_var_name,
                         second_spatial_var_value,
-                        second_spatial_var_value_dimensional,
+                        second_spatial_scale,
                     ) = self.get_spatial_var(key, first_variable, "second")
                     self.spatial_variable_dict[key] = {
                         first_spatial_var_name: first_spatial_var_value,
                         second_spatial_var_name: second_spatial_var_value,
                     }
-                    self.first_dimensional_spatial_variable[
-                        key
-                    ] = first_spatial_var_value_dimensional
-                    self.second_dimensional_spatial_variable[
-                        key
-                    ] = second_spatial_var_value_dimensional
+                    self.first_dimensional_spatial_variable[key] = first_spatial_var_value * first_spatial_scale
+                    self.second_dimensional_spatial_variable[key] = second_spatial_var_value * second_spatial_scale
 
             # Store variables and subplot position
             self.variables[key] = variables
@@ -339,10 +343,7 @@ class QuickPlot(object):
         else:
             spatial_scale = self.spatial_scales[spatial_var_name]
 
-        # Get dimensional variable
-        spatial_var_value_dim = spatial_var_value * spatial_scale
-
-        return spatial_var_name, spatial_var_value, spatial_var_value_dim
+        return spatial_var_name, spatial_var_value, spatial_scale
 
     def reset_axis(self):
         """
@@ -351,6 +352,7 @@ class QuickPlot(object):
         variables in each subplot
         """
         self.axis = {}
+        self.var_limits = {}
         for key, variable_lists in self.variables.items():
             if variable_lists[0][0].dimensions == 0:
                 x_min = self.min_t
@@ -363,10 +365,10 @@ class QuickPlot(object):
                 spatial_vars = self.spatial_variable_dict[key]
             elif variable_lists[0][0].dimensions == 2:
                 # First spatial variable
-                x_min = self.first_dimensional_spatial_variable[key][0]
-                x_max = self.first_dimensional_spatial_variable[key][-1]
-                y_min = self.second_dimensional_spatial_variable[key][0]
-                y_max = self.second_dimensional_spatial_variable[key][-1]
+                x_min = self.second_dimensional_spatial_variable[key][0]
+                x_max = self.second_dimensional_spatial_variable[key][-1]
+                y_min = self.first_dimensional_spatial_variable[key][0]
+                y_max = self.first_dimensional_spatial_variable[key][-1]
 
                 # Read dictionary of spatial variables
                 spatial_vars = self.spatial_variable_dict[key]
@@ -394,6 +396,8 @@ class QuickPlot(object):
                 var_max += 1
             if variable_lists[0][0].dimensions in [0, 1]:
                 self.axis[key] = [x_min, x_max, var_min, var_max]
+            else:
+                self.var_limits[key] = (var_min, var_max)
 
     def plot(self, t):
         """Produces a quick plot with the internal states at time t.
@@ -405,13 +409,19 @@ class QuickPlot(object):
         """
 
         import matplotlib.pyplot as plt
+        import matplotlib.gridspec as gridspec
+        from matplotlib import cm, colors
 
         t /= self.time_scale
-        self.fig, self.ax = plt.subplots(self.n_rows, self.n_cols, figsize=self.figsize)
-        plt.tight_layout()
-        plt.subplots_adjust(left=-0.1)
+        self.fig = plt.figure(figsize=self.figsize)
+
+        self.gridspec = gridspec.GridSpec(self.n_rows, self.n_cols)
         self.plots = {}
         self.time_lines = {}
+        self.axes = []
+
+        # initialize empty handles, to be created only if the appropriate plots are made
+        handles = []
 
         if self.n_cols == 1:
             fontsize = 30
@@ -419,10 +429,8 @@ class QuickPlot(object):
             fontsize = 42 // self.n_cols
 
         for k, (key, variable_lists) in enumerate(self.variables.items()):
-            if len(self.variables) == 1:
-                ax = self.ax
-            else:
-                ax = self.ax.flat[k]
+            ax = self.fig.add_subplot(self.gridspec[k])
+            self.axes.append(ax)
             ax.set_xlim(self.axis[key][:2])
             ax.set_ylim(self.axis[key][2:])
             ax.xaxis.set_major_locator(plt.MaxNLocator(3))
@@ -430,7 +438,7 @@ class QuickPlot(object):
             # Set labels for the first subplot only (avoid repetition)
             if variable_lists[0][0].dimensions == 0:
                 # 0D plot: plot as a function of time, indicating time t with a line
-                ax.set_xlabel("Time [h]", fontsize=fontsize)
+                ax.set_xlabel("Time [{}]".format(self.time_unit), fontsize=fontsize)
                 for i, variable_list in enumerate(variable_lists):
                     for j, variable in enumerate(variable_list):
                         if len(variable_list) == 1:
@@ -448,6 +456,7 @@ class QuickPlot(object):
                             color=self.colors[i],
                             linestyle=linestyle,
                         )
+                    handles.append(self.plots[key][i][0])
                 y_min, y_max = self.axis[key][2:]
                 (self.time_lines[key],) = ax.plot(
                     [t * self.time_scale, t * self.time_scale], [y_min, y_max], "k--"
@@ -458,9 +467,14 @@ class QuickPlot(object):
                 spatial_vars = self.spatial_variable_dict[key]
                 spatial_var_name = list(spatial_vars.keys())[0]
                 ax.set_xlabel(
-                    "{} [{}]".format(spatial_var_name, self.spatial_format),
+                    "{} [{}]".format(spatial_var_name, self.spatial_unit),
                     fontsize=fontsize,
                 )
+                # add dashed lines for boundaries between subdomains
+                for bnd in variable_lists[0][0].internal_boundaries:
+                    bnd_dim = bnd * self.first_spatial_scale[key]
+                    y_min, y_max = self.axis[key][2:]
+                    ax.plot([bnd_dim, bnd_dim], [y_min, y_max], "k--", lw=1.5)
                 for i, variable_list in enumerate(variable_lists):
                     for j, variable in enumerate(variable_list):
                         if len(variable_list) == 1:
@@ -477,25 +491,35 @@ class QuickPlot(object):
                             color=self.colors[i],
                             linestyle=linestyle,
                         )
+                    handles.append(self.plots[key][i][0])
             elif variable_lists[0][0].dimensions == 2:
                 # 2D plot: plot as a function of x and y at time t
                 # Read dictionary of spatial variables
+                # note "first" and "second" variables are not in the 'right' order so
+                # that, in the particle case, x is on x-axis and r is on y-axis
+                # TODO: make an if statement for this
                 spatial_vars = self.spatial_variable_dict[key]
-                x_name = list(spatial_vars.keys())[0][0]
-                y_name = list(spatial_vars.keys())[1][0]
+                x_name = list(spatial_vars.keys())[1][0]
+                y_name = list(spatial_vars.keys())[0][0]
                 ax.set_xlabel(
-                    "{} [{}]".format(x_name, self.spatial_format), fontsize=fontsize
+                    "{} [{}]".format(x_name, self.spatial_unit), fontsize=fontsize
                 )
                 ax.set_ylabel(
-                    "{} [{}]".format(y_name, self.spatial_format), fontsize=fontsize
+                    "{} [{}]".format(y_name, self.spatial_unit), fontsize=fontsize
                 )
                 # there can only be one entry in the variable list
                 variable = variable_lists[0][0]
-                self.plots[key][0][0] = ax.contourf(
-                    self.first_dimensional_spatial_variable[key],
+                vmin, vmax = self.var_limits[key]
+                ax.contourf(
                     self.second_dimensional_spatial_variable[key],
-                    variable(t, **spatial_vars, warn=False).T,
+                    self.first_dimensional_spatial_variable[key],
+                    variable(t, **spatial_vars, warn=False),
                     levels=100,
+                    vmin=vmin,
+                    vmax=vmax,
+                )
+                self.fig.colorbar(
+                    cm.ScalarMappable(colors.Normalize(vmin=vmin, vmax=vmax)), ax=ax
                 )
 
             # Set either y label or legend entries
@@ -511,7 +535,8 @@ class QuickPlot(object):
                 )
 
         # Set global legend
-        # self.fig.legend(self.labels, loc="lower right")
+        if len(handles) > 0:
+            self.fig.legend(handles, self.labels, loc="lower right")
 
     def dynamic_plot(self, testing=False, step=None):
         """
@@ -543,23 +568,26 @@ class QuickPlot(object):
             self.plot(0)
 
             axcolor = "lightgoldenrodyellow"
-            axfreq = plt.axes([0.315, 0.02, 0.37, 0.03], facecolor=axcolor)
-            self.sfreq = Slider(axfreq, "Time [h]", 0, self.max_t, valinit=0)
-            self.sfreq.on_changed(self.update)
+            ax_slider = plt.axes([0.315, 0.02, 0.37, 0.03], facecolor=axcolor)
+            self.slider = Slider(
+                ax_slider, "Time [{}]".format(self.time_unit), 0, self.max_t, valinit=0
+            )
+            self.slider.on_changed(self.slider_update)
 
             # ignore the warning about tight layout
             warnings.simplefilter("ignore")
-            self.fig.tight_layout()
+            bottom = 0.05 + 0.03 * max((len(self.labels) - 2), 0)
+            self.gridspec.tight_layout(self.fig, rect=[0, bottom, 1, 1])
             warnings.simplefilter("always")
 
             if not testing:  # pragma: no cover
                 plt.show()
 
-    def update(self, val):
+    def slider_update(self, val):
         """
         Update the plot in self.plot() with values at new time
         """
-        t = self.sfreq.val
+        t = self.slider.val
         t_dimensionless = t / self.time_scale
         for k, (key, plot) in enumerate(self.plots.items()):
             if self.variables[key][0][0].dimensions == 0:
@@ -575,20 +603,20 @@ class QuickPlot(object):
                             )
                         )
             elif self.variables[key][0][0].dimensions == 2:
-                if len(self.variables) == 1:
-                    ax = self.ax
-                else:
-                    ax = self.ax.flat[k]
+                ax = self.axes[k]
                 # 2D plot: plot as a function of x and y at time t
                 # Read dictionary of spatial variables
                 spatial_vars = self.spatial_variable_dict[key]
                 # there can only be one entry in the variable list
                 variable = self.variables[key][0][0]
-                self.plots[key][0][0] = ax.contourf(
-                    self.first_dimensional_spatial_variable[key],
+                vmin, vmax = self.var_limits[key]
+                ax.contourf(
                     self.second_dimensional_spatial_variable[key],
-                    variable(t_dimensionless, **spatial_vars, warn=False).T,
+                    self.first_dimensional_spatial_variable[key],
+                    variable(t_dimensionless, **spatial_vars, warn=False),
                     levels=100,
+                    vmin=vmin,
+                    vmax=vmax,
                 )
 
         self.fig.canvas.draw_idle()

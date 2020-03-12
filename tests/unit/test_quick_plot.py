@@ -68,7 +68,7 @@ class TestQuickPlot(unittest.TestCase):
         # check dynamic plot loads
         quick_plot.dynamic_plot(testing=True)
 
-        quick_plot.update(0.01)
+        quick_plot.slider_update(0.01)
 
         # Test with different output variables
         quick_plot = pybamm.QuickPlot(solution, ["b broadcasted"])
@@ -101,7 +101,7 @@ class TestQuickPlot(unittest.TestCase):
         # check dynamic plot loads
         quick_plot.dynamic_plot(testing=True)
 
-        quick_plot.update(0.01)
+        quick_plot.slider_update(0.01)
 
         # Test longer name
         model.variables["Variable with a very long name"] = model.variables["a"]
@@ -121,33 +121,33 @@ class TestQuickPlot(unittest.TestCase):
         self.assertEqual(quick_plot.figsize, (1, 2))
         self.assertEqual(quick_plot.labels, ["sol 1", "sol 2"])
 
-        # Test different time formats
+        # Test different time units
         quick_plot = pybamm.QuickPlot(solution)
         self.assertEqual(quick_plot.time_scale, 1)
-        quick_plot = pybamm.QuickPlot(solution, time_format="seconds")
+        quick_plot = pybamm.QuickPlot(solution, time_unit="seconds")
         self.assertEqual(quick_plot.time_scale, 1)
-        quick_plot = pybamm.QuickPlot(solution, time_format="minutes")
+        quick_plot = pybamm.QuickPlot(solution, time_unit="minutes")
         self.assertEqual(quick_plot.time_scale, 1 / 60)
-        quick_plot = pybamm.QuickPlot(solution, time_format="hours")
+        quick_plot = pybamm.QuickPlot(solution, time_unit="hours")
         self.assertEqual(quick_plot.time_scale, 1 / 3600)
-        with self.assertRaisesRegex(ValueError, "time format"):
-            pybamm.QuickPlot(solution, time_format="bad format")
+        with self.assertRaisesRegex(ValueError, "time unit"):
+            pybamm.QuickPlot(solution, time_unit="bad unit")
         # long solution defaults to hours instead of seconds
         solution_long = solver.solve(model, np.linspace(0, 1e5))
         quick_plot = pybamm.QuickPlot(solution_long)
         self.assertEqual(quick_plot.time_scale, 1 / 3600)
 
-        # Test different spatial formats
+        # Test different spatial units
         quick_plot = pybamm.QuickPlot(solution)
-        self.assertEqual(quick_plot.spatial_format, "m")
-        quick_plot = pybamm.QuickPlot(solution, spatial_format="m")
-        self.assertEqual(quick_plot.spatial_format, "m")
-        quick_plot = pybamm.QuickPlot(solution, spatial_format="mm")
-        self.assertEqual(quick_plot.spatial_format, "mm")
-        quick_plot = pybamm.QuickPlot(solution, spatial_format="um")
-        self.assertEqual(quick_plot.spatial_format, "um")
-        with self.assertRaisesRegex(ValueError, "spatial format"):
-            pybamm.QuickPlot(solution, spatial_format="bad format")
+        self.assertEqual(quick_plot.spatial_unit, "$\mu m$")
+        quick_plot = pybamm.QuickPlot(solution, spatial_unit="m")
+        self.assertEqual(quick_plot.spatial_unit, "m")
+        quick_plot = pybamm.QuickPlot(solution, spatial_unit="mm")
+        self.assertEqual(quick_plot.spatial_unit, "mm")
+        quick_plot = pybamm.QuickPlot(solution, spatial_unit="um")
+        self.assertEqual(quick_plot.spatial_unit, "$\mu m$")
+        with self.assertRaisesRegex(ValueError, "spatial unit"):
+            pybamm.QuickPlot(solution, spatial_unit="bad unit")
 
         # Test 2D variables
         model.variables["2D variable"] = disc.process_symbol(
