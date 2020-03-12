@@ -29,9 +29,7 @@ def electrolyte_conductivity_Nyman2008(c_e, T, T_inf, E_k_e, R_g):
     """
 
     sigma_e = (
-        0.1297 * (c_e / 1000) ** 3
-        - 2.51 * (c_e / 1000) ** 1.5
-        + 3.329 * (c_e / 1000)
+        0.1297 * (c_e / 1000) ** 3 - 2.51 * (c_e / 1000) ** 1.5 + 3.329 * (c_e / 1000)
     )
 
     arrhenius = exp(E_k_e / R_g * (1 / T_inf - 1 / T))

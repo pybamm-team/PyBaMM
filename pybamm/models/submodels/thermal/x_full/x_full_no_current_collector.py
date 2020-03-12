@@ -35,11 +35,18 @@ class NoCurrentCollector(BaseModel):
         T = variables["Cell temperature"]
         T_n_left = pybamm.boundary_value(T, "left")
         T_p_right = pybamm.boundary_value(T, "right")
+        T_amb = variables["Ambient temperature"]
 
         self.boundary_conditions = {
             T: {
-                "left": (self.param.h * T_n_left / self.param.lambda_n, "Neumann"),
-                "right": (-self.param.h * T_p_right / self.param.lambda_p, "Neumann"),
+                "left": (
+                    self.param.h * (T_n_left - T_amb) / self.param.lambda_n,
+                    "Neumann",
+                ),
+                "right": (
+                    -self.param.h * (T_p_right - T_amb) / self.param.lambda_p,
+                    "Neumann",
+                ),
             }
         }
 

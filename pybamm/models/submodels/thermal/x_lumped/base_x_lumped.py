@@ -33,6 +33,7 @@ class BaseModel(BaseThermal):
         T_cp = T_x_av
 
         variables = self._get_standard_fundamental_variables(T, T_cn, T_cp)
+
         return variables
 
     def get_coupled_variables(self, variables):

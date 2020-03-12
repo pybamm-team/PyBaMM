@@ -4,9 +4,6 @@
 import pybamm
 
 KNOWN_COORD_SYS = ["cartesian", "spherical polar"]
-KNOWN_SPATIAL_VARS = ["x", "y", "z", "r", "x_n", "x_s", "x_p", "r_n", "r_p"]
-KNOWN_SPATIAL_VARS_EXTENDED = [v + "_edge" for v in KNOWN_SPATIAL_VARS]
-KNOWN_SPATIAL_VARS.extend(KNOWN_SPATIAL_VARS_EXTENDED)
 
 
 class IndependentVariable(pybamm.Symbol):
@@ -84,8 +81,6 @@ class SpatialVariable(IndependentVariable):
         super().__init__(name, domain=domain, auxiliary_domains=auxiliary_domains)
         domain = self.domain
 
-        if name not in KNOWN_SPATIAL_VARS:
-            raise ValueError(f"name must be in {KNOWN_SPATIAL_VARS}  but is '{name}'")
         if domain == []:
             raise ValueError("domain must be provided")
 
