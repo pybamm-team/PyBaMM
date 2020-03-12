@@ -138,25 +138,33 @@ class QuickPlot(object):
             raise ValueError("spatial unit '{}' not recognized".format(spatial_unit))
 
         variables = models[0].variables
-        self.spatial_scales = {"x": 1, "y": 1, "z": 1, "r_n": 1, "r_p": 1}
+        # empty spatial scales, will raise error later if can't find a particular one
+        self.spatial_scales = {}
         if "x [m]" and "x" in variables:
-            self.spatial_scales["x"] = (variables["x [m]"] / variables["x"]).evaluate()[
+            x_scale = (variables["x [m]"] / variables["x"]).evaluate()[
                 -1
             ] * spatial_factor
+            self.spatial_scales.update(
+                {
+                    "negative electrode": x_scale,
+                    "separator": x_scale,
+                    "positive electrode": x_scale,
+                }
+            )
         if "y [m]" and "y" in variables:
-            self.spatial_scales["y"] = (variables["y [m]"] / variables["y"]).evaluate()[
-                -1
-            ] * spatial_factor
+            self.spatial_scales["current collector y"] = (
+                variables["y [m]"] / variables["y"]
+            ).evaluate()[-1] * spatial_factor
         if "z [m]" and "z" in variables:
-            self.spatial_scales["z"] = (variables["z [m]"] / variables["z"]).evaluate()[
-                -1
-            ] * spatial_factor
+            self.spatial_scales["current collector z"] = (
+                variables["z [m]"] / variables["z"]
+            ).evaluate()[-1] * spatial_factor
         if "r_n [m]" and "r_n" in variables:
-            self.spatial_scales["r_n"] = (
+            self.spatial_scales["negative particle"] = (
                 variables["r_n [m]"] / variables["r_n"]
             ).evaluate()[-1] * spatial_factor
         if "r_p [m]" and "r_p" in variables:
-            self.spatial_scales["r_p"] = (
+            self.spatial_scales["positive particle"] = (
                 variables["r_p [m]"] / variables["r_p"]
             ).evaluate()[-1] * spatial_factor
 
@@ -169,7 +177,7 @@ class QuickPlot(object):
         # Set timescale
         if time_unit is None:
             # defaults depend on how long the simulation is
-            if self.max_t >= 3600:
+            if max_t >= 3600:
                 time_scaling_factor = 3600  # time in hours
                 self.time_unit = "h"
             else:
@@ -212,9 +220,6 @@ class QuickPlot(object):
                     "Electrolyte potential [V]",
                     "Terminal voltage [V]",
                 ]
-            # else plot all variables in first model
-            else:
-                output_variables = models[0].variables
 
         self.set_output_variables(output_variables, solutions)
         self.reset_axis()
@@ -285,7 +290,9 @@ class QuickPlot(object):
                     spatial_scale,
                 ) = self.get_spatial_var(key, first_variable, "first")
                 self.spatial_variable_dict[key] = {spatial_var_name: spatial_var_value}
-                self.first_dimensional_spatial_variable[key] = spatial_var_value * spatial_scale
+                self.first_dimensional_spatial_variable[key] = (
+                    spatial_var_value * spatial_scale
+                )
                 self.first_spatial_scale[key] = spatial_scale
 
             elif first_variable.dimensions == 2:
@@ -312,8 +319,12 @@ class QuickPlot(object):
                         first_spatial_var_name: first_spatial_var_value,
                         second_spatial_var_name: second_spatial_var_value,
                     }
-                    self.first_dimensional_spatial_variable[key] = first_spatial_var_value * first_spatial_scale
-                    self.second_dimensional_spatial_variable[key] = second_spatial_var_value * second_spatial_scale
+                    self.first_dimensional_spatial_variable[key] = (
+                        first_spatial_var_value * first_spatial_scale
+                    )
+                    self.second_dimensional_spatial_variable[key] = (
+                        second_spatial_var_value * second_spatial_scale
+                    )
 
             # Store variables and subplot position
             self.variables[key] = variables
@@ -323,25 +334,33 @@ class QuickPlot(object):
         "Return the appropriate spatial variable(s)"
 
         # Extract name and dimensionless value
+        # Special case for current collector, which is 2D but in a weird way (both
+        # first and second variables are in the same domain, not auxiliary domain)
         if dimension == "first":
             spatial_var_name = variable.first_dimension
             spatial_var_value = variable.first_dim_pts
+            domain = variable.domain[0]
         elif dimension == "second":
             spatial_var_name = variable.second_dimension
             spatial_var_value = variable.second_dim_pts
+            if variable.domain[0] == "current collector":
+                domain = "current collector"
+            else:
+                domain = variable.auxiliary_domains["secondary"][0]
+
+        if domain == "current collector":
+            domain += " {}".format(spatial_var_name)
 
         # Get scale
-        if spatial_var_name == "r":
-            if "negative" in key[0].lower():
-                spatial_scale = self.spatial_scales["r_n"]
-            elif "positive" in key[0].lower():
-                spatial_scale = self.spatial_scales["r_p"]
-            else:
-                raise NotImplementedError(
-                    "Cannot determine the spatial scale for '{}'".format(key[0])
-                )
-        else:
-            spatial_scale = self.spatial_scales[spatial_var_name]
+        try:
+            spatial_scale = self.spatial_scales[domain]
+        except KeyError:
+            raise KeyError(
+                (
+                    "Can't find spatial scale for '{}', make sure both '{} [m]' "
+                    + "and '{}' are defined in the model variables"
+                ).format(domain, *[spatial_var_name] * 2)
+            )
 
         return spatial_var_name, spatial_var_value, spatial_scale
 

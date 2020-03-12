@@ -276,6 +276,8 @@ class ProcessedVariable(object):
         self.z_sol = z_sol
         self.first_dimension = "y"
         self.second_dimension = "z"
+        self.first_dim_pts = y_sol
+        self.second_dim_pts = z_sol
 
         # set up interpolation
         self._interpolation_function = interp.interp2d(
@@ -313,6 +315,8 @@ class ProcessedVariable(object):
         self.z_sol = z_sol
         self.first_dimension = "y"
         self.second_dimension = "z"
+        self.first_dim_pts = y_sol
+        self.second_dim_pts = z_sol
 
         # set up interpolation
         self._interpolation_function = interp.RegularGridInterpolator(
