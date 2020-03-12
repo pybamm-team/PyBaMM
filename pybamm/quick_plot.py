@@ -49,7 +49,11 @@ class QuickPlot(object):
     """
     Generates a quick plot of a subset of key outputs of the model so that the model
     outputs can be easily assessed. The axis limits can be set using:
+
+    .. code-block:: python
+
         self.axis["Variable name"] = [x_min, x_max, y_min, y_max]
+
     They can be reset to the default values by using self.reset_axis.
 
     Parameters
@@ -144,13 +148,7 @@ class QuickPlot(object):
             x_scale = (variables["x [m]"] / variables["x"]).evaluate()[
                 -1
             ] * spatial_factor
-            self.spatial_scales.update(
-                {
-                    "negative electrode": x_scale,
-                    "separator": x_scale,
-                    "positive electrode": x_scale,
-                }
-            )
+            self.spatial_scales.update({dom: x_scale for dom in variables["x"].domain})
         if "y [m]" and "y" in variables:
             self.spatial_scales["current collector y"] = (
                 variables["y [m]"] / variables["y"]
@@ -440,7 +438,7 @@ class QuickPlot(object):
         self.axes = []
 
         # initialize empty handles, to be created only if the appropriate plots are made
-        handles = []
+        solution_handles = []
 
         if self.n_cols == 1:
             fontsize = 30
@@ -454,6 +452,7 @@ class QuickPlot(object):
             ax.set_ylim(self.axis[key][2:])
             ax.xaxis.set_major_locator(plt.MaxNLocator(3))
             self.plots[key] = defaultdict(dict)
+            variable_handles = []
             # Set labels for the first subplot only (avoid repetition)
             if variable_lists[0][0].dimensions == 0:
                 # 0D plot: plot as a function of time, indicating time t with a line
@@ -475,7 +474,8 @@ class QuickPlot(object):
                             color=self.colors[i],
                             linestyle=linestyle,
                         )
-                    handles.append(self.plots[key][i][0])
+                        variable_handles.append(self.plots[key][0][j])
+                    solution_handles.append(self.plots[key][i][0])
                 y_min, y_max = self.axis[key][2:]
                 (self.time_lines[key],) = ax.plot(
                     [t * self.time_scale, t * self.time_scale], [y_min, y_max], "k--"
@@ -493,7 +493,7 @@ class QuickPlot(object):
                 for bnd in variable_lists[0][0].internal_boundaries:
                     bnd_dim = bnd * self.first_spatial_scale[key]
                     y_min, y_max = self.axis[key][2:]
-                    ax.plot([bnd_dim, bnd_dim], [y_min, y_max], "k--", lw=1.5)
+                    ax.plot([bnd_dim, bnd_dim], [y_min, y_max], color="0.5", lw=1)
                 for i, variable_list in enumerate(variable_lists):
                     for j, variable in enumerate(variable_list):
                         if len(variable_list) == 1:
@@ -510,7 +510,8 @@ class QuickPlot(object):
                             color=self.colors[i],
                             linestyle=linestyle,
                         )
-                    handles.append(self.plots[key][i][0])
+                        variable_handles.append(self.plots[key][0][j])
+                    solution_handles.append(self.plots[key][i][0])
             elif variable_lists[0][0].dimensions == 2:
                 # 2D plot: plot as a function of x and y at time t
                 # Read dictionary of spatial variables
@@ -547,6 +548,7 @@ class QuickPlot(object):
                 ax.set_title(title, fontsize=fontsize)
             else:
                 ax.legend(
+                    variable_handles,
                     [split_long_string(s, 6) for s in key],
                     bbox_to_anchor=(0.5, 1),
                     fontsize=8,
@@ -554,8 +556,8 @@ class QuickPlot(object):
                 )
 
         # Set global legend
-        if len(handles) > 0:
-            self.fig.legend(handles, self.labels, loc="lower right")
+        if len(solution_handles) > 0:
+            self.fig.legend(solution_handles, self.labels, loc="lower right")
 
     def dynamic_plot(self, testing=False, step=None):
         """
