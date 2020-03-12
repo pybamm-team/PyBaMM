@@ -43,7 +43,7 @@ class TestQuickPlot(unittest.TestCase):
         # check dynamic plot loads
         quick_plot.dynamic_plot(testing=True)
 
-        quick_plot.update(0.01)
+        quick_plot.slider_update(0.01)
 
         # Test with different output variables
         output_vars = [
@@ -71,7 +71,7 @@ class TestQuickPlot(unittest.TestCase):
         # check dynamic plot loads
         quick_plot.dynamic_plot(testing=True)
 
-        quick_plot.update(0.01)
+        quick_plot.slider_update(0.01)
 
     def test_plot_lead_acid(self):
         loqs = pybamm.lead_acid.LOQS()
@@ -86,6 +86,39 @@ class TestQuickPlot(unittest.TestCase):
         solution_loqs = loqs.default_solver.solve(loqs, t_eval)
 
         pybamm.QuickPlot(solution_loqs)
+
+    def test_plot_2plus1D_spm(self):
+        spm = pybamm.lithium_ion.SPM(
+            {"current collector": "potential pair", "dimensionality": 2}
+        )
+        geometry = spm.default_geometry
+        param = spm.default_parameter_values
+        param.process_model(spm)
+        param.process_geometry(geometry)
+        var = pybamm.standard_spatial_vars
+        var_pts = {
+            var.x_n: 5,
+            var.x_s: 5,
+            var.x_p: 5,
+            var.r_n: 5,
+            var.r_p: 5,
+            var.y: 5,
+            var.z: 5,
+        }
+        mesh = pybamm.Mesh(geometry, spm.default_submesh_types, var_pts)
+        disc_spm = pybamm.Discretisation(mesh, spm.default_spatial_methods)
+        disc_spm.process_model(spm)
+        t_eval = np.linspace(0, 3600, 100)
+        solution_spm = spm.default_solver.solve(spm, t_eval)
+
+        pybamm.QuickPlot(
+            solution_spm,
+            [
+                "Negative current collector potential [V]",
+                "Positive current collector potential [V]",
+                "Terminal voltage [V]",
+            ],
+        )
 
 
 if __name__ == "__main__":

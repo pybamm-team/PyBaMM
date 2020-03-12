@@ -9,7 +9,7 @@ import warnings
 import sys
 
 
-def isnotebook():
+def is_notebook():
     try:
         shell = get_ipython().__class__.__name__
         if shell == "ZMQInteractiveShell":
@@ -101,7 +101,7 @@ class Simulation:
         self.reset(update_model=False)
 
         # ignore runtime warnings in notebooks
-        if isnotebook():
+        if is_notebook():
             import warnings
 
             warnings.filterwarnings("ignore")
@@ -530,15 +530,7 @@ class Simulation:
 
         plot = pybamm.QuickPlot(self._solution, output_variables=quick_plot_vars)
 
-        if isnotebook():
-            import ipywidgets as widgets
-
-            widgets.interact(
-                plot.plot,
-                t=widgets.FloatSlider(min=0, max=plot.max_t, step=0.05, value=0),
-            )
-        else:
-            plot.dynamic_plot(testing=testing)
+        plot.dynamic_plot(testing=testing)
 
     @property
     def model(self):
