@@ -8,14 +8,15 @@ import numpy as np
 
 
 class TestLandesfeind(unittest.TestCase):
-
     def test_electrolyte_conductivity(self):
         root = pybamm.root_dir()
         p = "pybamm/input/parameters/lithium-ion/electrolytes/lipf6_Landesfeind2019"
         k_path = os.path.join(root, p)
-        files = [f for f in os.listdir(k_path) if '.py' in f
-                 and '_base' not in f
-                 and 'conductivity' in f]
+        files = [
+            f
+            for f in os.listdir(k_path)
+            if ".py" in f and "_base" not in f and "conductivity" in f
+        ]
         files.sort()
         funcs = [pybamm.load_function(os.path.join(k_path, f)) for f in files]
         T_ref = 298.15
@@ -29,7 +30,7 @@ class TestLandesfeind(unittest.TestCase):
 
         chemistry = pybamm.parameter_sets.Chen2020
         param = pybamm.ParameterValues(chemistry=chemistry)
-        param['Electrolyte conductivity [S.m-1]'] = funcs[0]
+        param["Electrolyte conductivity [S.m-1]"] = funcs[0]
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model, parameter_values=param)
         sim.set_parameters()
@@ -39,9 +40,11 @@ class TestLandesfeind(unittest.TestCase):
         root = pybamm.root_dir()
         p = "pybamm/input/parameters/lithium-ion/electrolytes/lipf6_Landesfeind2019"
         d_path = os.path.join(root, p)
-        files = [f for f in os.listdir(d_path) if '.py' in f
-                 and '_base' not in f
-                 and 'diffusivity' in f]
+        files = [
+            f
+            for f in os.listdir(d_path)
+            if ".py" in f and "_base" not in f and "diffusivity" in f
+        ]
         files.sort()
         funcs = [pybamm.load_function(os.path.join(d_path, f)) for f in files]
         T_ref = 298.15
@@ -55,7 +58,7 @@ class TestLandesfeind(unittest.TestCase):
 
         chemistry = pybamm.parameter_sets.Chen2020
         param = pybamm.ParameterValues(chemistry=chemistry)
-        param['Electrolyte diffusivity [m2.s-1]'] = funcs[0]
+        param["Electrolyte diffusivity [m2.s-1]"] = funcs[0]
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model, parameter_values=param)
         sim.set_parameters()
