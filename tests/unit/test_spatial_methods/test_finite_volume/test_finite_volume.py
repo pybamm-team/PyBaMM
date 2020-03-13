@@ -853,20 +853,38 @@ class TestFiniteVolume(unittest.TestCase):
             left_boundary_value_disc.evaluate(y=c_exact), 0
         )
 
-    def test_indefinite_integral_on_nodes(self):
+    def test_indefinite_integral_of_broadcasted_to_cell_edges(self):
+        # create discretisation
         mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume(),
+            "negative particle": pybamm.FiniteVolume(),
+            "positive particle": pybamm.FiniteVolume(),
+            "current collector": pybamm.ZeroDimensionalMethod(),
+        }
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
         # input a phi, take grad, then integrate to recover phi approximation
         # (need to test this way as check evaluated on edges using if has grad
         # and no div)
         phi = pybamm.Variable("phi", domain=["negative electrode", "separator"])
+        i = pybamm.PrimaryBroadcastToEdges(1, phi.domain)
 
         x = pybamm.SpatialVariable("x", ["negative electrode", "separator"])
+        int_phi_av = pybamm.x_average(pybamm.IndefiniteIntegral(i / phi ** 2, x))
+        disc.set_variable_slices([phi])
+        int_phi_disc = disc.process_symbol(int_phi_av)
+
+    def test_indefinite_integral_on_nodes(self):
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        phi = pybamm.Variable("phi", domain=["negative electrode", "separator"])
+        x = pybamm.SpatialVariable("x", ["negative electrode", "separator"])
+
         int_phi = pybamm.IndefiniteIntegral(phi, x)
         disc.set_variable_slices([phi])
-        # Set boundary conditions (required for shape but don't matter)
         int_phi_disc = disc.process_symbol(int_phi)
 
         combined_submesh = mesh.combine_submeshes("negative electrode", "separator")
