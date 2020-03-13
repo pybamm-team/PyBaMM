@@ -21,44 +21,44 @@ model = pb.lithium_ion.DFN(options)
 
 parameter_values = model.default_parameter_values
 
-parameter_values.update(
-    {
-        "Inner SEI reaction proportion": 0.5,
-        "Inner SEI partial molar volume [m3.mol-1]": 95.86e-18,
-        "Outer SEI partial molar volume [m3.mol-1]": 95.86e-18,
-        "SEI reaction exchange current density [A.m-2]": 1.5e-6,
-        "SEI resistance per unit thickness [Ohm.m-1]": 1,
-        "Outer SEI solvent diffusivity [m2.s-1]": 2.5e-22,
-        "Bulk solvent concentration [mol.m-3]": 2.636e3,
-        "Ratio of inner and outer SEI exchange current densities": 1,
-        "Inner SEI open-circuit potential [V]": 0.1,
-        "Outer SEI open-circuit potential [V]": 0.8,
-        "Inner SEI electron conducticity [S.m-1]": 8.95e-14,
-        "Inner SEI lithium interstitial diffusivity [m2.s-1]": 1e-15,
-        "Lithium interstitial reference concentration [mol.m-3]": 15,
-        "Initial inner SEI thickness [m]": 7.5e-14,
-    }
-)
+# parameter_values.update(
+#     {
+#         "Inner SEI reaction proportion": 0.5,
+#         "Inner SEI partial molar volume [m3.mol-1]": 95.86e-18,
+#         "Outer SEI partial molar volume [m3.mol-1]": 95.86e-18,
+#         "SEI reaction exchange current density [A.m-2]": 1.5e-6,
+#         "SEI resistance per unit thickness [Ohm.m-1]": 1,
+#         "Outer SEI solvent diffusivity [m2.s-1]": 2.5e-22,
+#         "Bulk solvent concentration [mol.m-3]": 2.636e3,
+#         "Ratio of inner and outer SEI exchange current densities": 1,
+#         "Inner SEI open-circuit potential [V]": 0.1,
+#         "Outer SEI open-circuit potential [V]": 0.8,
+#         "Inner SEI electron conducticity [S.m-1]": 8.95e-14,
+#         "Inner SEI lithium interstitial diffusivity [m2.s-1]": 1e-15,
+#         "Lithium interstitial reference concentration [mol.m-3]": 15,
+#         "Initial inner SEI thickness [m]": 7.5e-14,
+#     }
+# )
 
-parameter_values.update(
-    {
-        "Inner SEI reaction proportion": 0.5,
-        "Inner SEI partial molar volume [m3.mol-1]": 34.76e-6,
-        "Outer SEI partial molar volume [m3.mol-1]": 34.76e-6,
-        "SEI reaction exchange current density [A.m-2]": 1.5e-6,
-        "SEI resistance per unit thickness [Ohm.m-1]": 1,
-        "Outer SEI solvent diffusivity [m2.s-1]": 2.5e-22,
-        "Bulk solvent concentration [mol.m-3]": 2.636e3,
-        "Ratio of inner and outer SEI exchange current densities": 1,
-        "Inner SEI open-circuit potential [V]": 0.1,
-        "Outer SEI open-circuit potential [V]": 0.8,
-        "Inner SEI electron conducticity [S.m-1]": 8.95e-14,
-        "Inner SEI lithium interstitial diffusivity [m2.s-1]": 1e-15,
-        "Lithium interstitial reference concentration [mol.m-3]": 15,
-        "Initial inner SEI thickness [m]": 7.5e-9,
-        "Initial outer SEI thickness [m]": 7.5e-9,
-    }
-)
+# parameter_values.update(
+#     {
+#         "Inner SEI reaction proportion": 0.5,
+#         "Inner SEI partial molar volume [m3.mol-1]": 34.76e-7,
+#         "Outer SEI partial molar volume [m3.mol-1]": 34.76e-7,
+#         "SEI reaction exchange current density [A.m-2]": 1.5e-7,
+#         "SEI resistance per unit thickness [Ohm.m-1]": 1,
+#         "Outer SEI solvent diffusivity [m2.s-1]": 2.5e-22,
+#         "Bulk solvent concentration [mol.m-3]": 2.636e3,
+#         "Ratio of inner and outer SEI exchange current densities": 1,
+#         "Inner SEI open-circuit potential [V]": 0.1,
+#         "Outer SEI open-circuit potential [V]": 0.8,
+#         "Inner SEI electron conducticity [S.m-1]": 8.95e-14,
+#         "Inner SEI lithium interstitial diffusivity [m2.s-1]": 1e-15,
+#         "Lithium interstitial reference concentration [mol.m-3]": 15,
+#         "Initial inner SEI thickness [m]": 7.5e-9,
+#         "Initial outer SEI thickness [m]": 7.5e-9,
+#     }
+# )
 
 # parameter_values.update({"Current function [A]": 0})
 parameter_values["Current function [A]"] = "[current data]US06"
