@@ -67,6 +67,18 @@ C_sei_solvent = L_sei_0_dim ** 2 / (
     c_sol_dimensional * V_bar_inner_dimensional * D_sol_dimensional * tau_discharge
 )
 
+C_sei_electron = (
+    F ** 2
+    * L_sei_0_dim ** 2
+    / (kappa_inner_dimensional * V_bar_inner_dimensional * R * T_ref * tau_discharge)
+)
+
+C_sei_inter = L_sei_0_dim ** 2 / (
+    D_li_dimensional * c_li_0_dimensional * V_bar_inner_dimensional * tau_discharge
+)
+
+U_inner_electron = F * U_inner_dimensional / R / T_ref
+
 R_sei = F * i_typ * R_sei_dimensional * L_sei_0_dim / (a_n * L_x)
 
 v_bar = V_bar_outer_dimensional / V_bar_inner_dimensional

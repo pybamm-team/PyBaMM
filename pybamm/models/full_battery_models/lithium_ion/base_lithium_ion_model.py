@@ -85,6 +85,16 @@ class BaseModel(pybamm.BaseBatteryModel):
                 self.param, "Negative electrode"
             )
 
+        elif self.options["sei"] == "electron-migration limited":
+            self.submodels["negative sei"] = pybamm.sei.ElectronMigrationLimited(
+                self.param, "Negative electrode"
+            )
+
+        elif self.options["sei"] == "interstitial-diffusion limited":
+            self.submodels["negative sei"] = pybamm.sei.InterstitialDiffusionLimited(
+                self.param, "Negative electrode"
+            )
+
         # positive electrode
         self.submodels["positive sei"] = pybamm.sei.NoSEI(
             self.param, "Positive electrode"

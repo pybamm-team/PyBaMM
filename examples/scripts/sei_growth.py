@@ -6,6 +6,8 @@ pb.set_logging_level("INFO")
 
 options = {"sei": "reaction limited"}
 options = {"sei": "solvent-diffusion limited"}
+options = {"sei": "electron-migration limited"}
+options = {"sei": "interstitial-diffusion limited"}
 # options = {"sei": None}
 model = pb.lithium_ion.DFN(options)
 
@@ -54,8 +56,8 @@ parameter_values = model.default_parameter_values
 #         "Ratio of inner and outer SEI exchange current densities": 1,
 #         "Inner SEI open-circuit potential [V]": 0.1,
 #         "Outer SEI open-circuit potential [V]": 0.8,
-#         "Inner SEI electron conducticity [S.m-1]": 8.95e-14,
-#         "Inner SEI lithium interstitial diffusivity [m2.s-1]": 1e-15,
+#         "Inner SEI electron conductivity [S.m-1]": 8.95e-13,
+#         "Inner SEI lithium interstitial diffusivity [m2.s-1]": 1e-20,
 #         "Lithium interstitial reference concentration [mol.m-3]": 15,
 #         "Initial inner SEI thickness [m]": 7.5e-9,
 #         "Initial outer SEI thickness [m]": 7.5e-9,

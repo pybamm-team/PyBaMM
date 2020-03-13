@@ -1,12 +1,12 @@
 #
-# Class for electron-migration limited SEI growth
+# Class for interstitial-diffusion limited SEI growth
 #
 import pybamm
 from .base_sei import BaseModel
 
 
-class ElectronMigrationLimited(BaseModel):
-    """Base class for electron-migration limited SEI growth.
+class InterstitialDiffusionLimited(BaseModel):
+    """Base class for interstitial-diffusion limited SEI growth.
 
     Parameters
     ----------
@@ -33,11 +33,11 @@ class ElectronMigrationLimited(BaseModel):
     def get_coupled_variables(self, variables):
         L_sei_inner = variables["Inner negative electrode sei thickness"]
         phi_s_n = variables["Negative electrode potential"]
+        phi_e_n = variables["Negative electrolyte potential"]
 
-        C_sei = pybamm.sei_parameters.C_sei_electron
-        U_inner = pybamm.sei_parameters.U_inner_electron
+        C_sei = pybamm.sei_parameters.C_sei_inter
 
-        j_sei = (phi_s_n - U_inner) / (C_sei * L_sei_inner)
+        j_sei = -pybamm.exp(-(phi_s_n - phi_e_n)) / (C_sei * L_sei_inner)
 
         alpha = 0.5
         j_inner = alpha * j_sei
