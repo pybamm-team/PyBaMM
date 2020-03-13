@@ -17,7 +17,8 @@ class BaseModel(pybamm.BaseSubModel):
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param):
+    def __init__(self, param, domain):
+        self.domain = domain
         super().__init__(param)
 
     def _get_standard_thickness_variables(self, L_inner, L_outer):
@@ -60,25 +61,43 @@ class BaseModel(pybamm.BaseSubModel):
         n_outer_scale = sp.L_sei_0_dim * sp.a_n / sp.V_bar_outer_dimensional
 
         variables = {
-            "Inner SEI thickness": L_inner,
-            "Inner SEI thickness [m]": L_inner * L_scale,
-            "X-averaged inner SEI thickness": L_inner_av,
-            "X-averaged inner SEI thickness [m]": L_inner_av * L_scale,
-            "Outer SEI thickness": L_outer,
-            "Outer SEI thickness [m]": L_outer * L_scale,
-            "X-averaged outer SEI thickness": L_outer_av,
-            "X-averaged outer SEI thickness [m]": L_outer_av * L_scale,
-            "Total SEI thickness": L_sei,
-            "Total SEI thickness [m]": L_sei * L_scale,
-            "X-averaged total SEI thickness": L_sei_av,
-            "X-averaged total SEI thickness [m]": L_sei_av * L_scale,
-            "Inner SEI concentration [mol.m-3]": n_inner * n_scale,
-            "X-averaged inner SEI concentration [mol.m-3]": n_inner_av * n_scale,
-            "Outer SEI concentration [mol.m-3]": n_outer * n_outer_scale,
-            "X-averaged outer SEI concentration [mol.m-3]": n_outer_av * n_outer_scale,
-            "SEI concentration [mol.m-3]": n_SEI * n_scale,
-            "X-averaged SEI concentration [mol.m-3]": n_SEI_av * n_scale,
-            "Loss of lithium to SEI [mols]": Q_sei * n_scale,
+            "Inner " + self.domain.lower() + " sei thickness": L_inner,
+            "Inner " + self.domain.lower() + " sei thickness [m]": L_inner * L_scale,
+            "X-averaged inner " + self.domain.lower() + " sei thickness": L_inner_av,
+            "X-averaged inner "
+            + self.domain.lower()
+            + " sei thickness [m]": L_inner_av * L_scale,
+            "Outer " + self.domain.lower() + " sei thickness": L_outer,
+            "Outer " + self.domain.lower() + " sei thickness [m]": L_outer * L_scale,
+            "X-averaged outer " + self.domain.lower() + " sei thickness": L_outer_av,
+            "X-averaged outer "
+            + self.domain.lower()
+            + " sei thickness [m]": L_outer_av * L_scale,
+            "Total " + self.domain.lower() + " sei thickness": L_sei,
+            "Total " + self.domain.lower() + " sei thickness [m]": L_sei * L_scale,
+            "X-averaged total " + self.domain.lower() + " sei thickness": L_sei_av,
+            "X-averaged total "
+            + self.domain.lower()
+            + " sei thickness [m]": L_sei_av * L_scale,
+            "Inner "
+            + self.domain.lower()
+            + " sei concentration [mol.m-3]": n_inner * n_scale,
+            "X-averaged inner "
+            + self.domain.lower()
+            + " sei concentration [mol.m-3]": n_inner_av * n_scale,
+            "Outer "
+            + self.domain.lower()
+            + " sei concentration [mol.m-3]": n_outer * n_outer_scale,
+            "X-averaged outer "
+            + self.domain.lower()
+            + " sei concentration [mol.m-3]": n_outer_av * n_outer_scale,
+            self.domain + " sei concentration [mol.m-3]": n_SEI * n_scale,
+            "X-averaged "
+            + self.domain.lower()
+            + " sei concentration [mol.m-3]": n_SEI_av * n_scale,
+            "Loss of lithium to "
+            + self.domain.lower()
+            + " sei [mols]": Q_sei * n_scale,
         }
 
         return variables
@@ -111,21 +130,41 @@ class BaseModel(pybamm.BaseSubModel):
         j_scale = sp.F * sp.L_sei_0_dim / sp.V_bar_inner_dimensional / sp.tau_discharge
 
         variables = {
-            "Inner SEI reaction interfacial current density": j_inner,
-            "Inner SEI reaction interfacial current density [A.m-2]": j_inner * j_scale,
-            "X-averaged inner SEI reaction interfacial current density": j_i_av,
-            "X-averaged inner SEI reaction interfacial current density [A.m-2]": j_i_av
-            * j_scale,
-            "Outer SEI reaction interfacial current density": j_outer,
-            "Outer SEI reaction interfacial current density [A.m-2]": j_outer * j_scale,
-            "X-averaged outer SEI reaction interfacial current density": j_o_av,
-            "X-averaged outer SEI reaction interfacial current density [A.m-2]": j_o_av
-            * j_scale,
-            "SEI reaction interfacial current density": j_sei,
-            "SEI reaction interfacial current density [A.m-2]": j_sei * j_scale,
-            "X-averaged SEI reaction interfacial current density": j_sei_av,
-            "X-averaged SEI reaction interfacial current density [A.m-2]": j_sei_av
-            * j_scale,
+            "Inner "
+            + self.domain.lower()
+            + " sei interfacial current density": j_inner,
+            "Inner "
+            + self.domain.lower()
+            + " sei interfacial current density [A.m-2]": j_inner * j_scale,
+            "X-averaged inner "
+            + self.domain.lower()
+            + " sei interfacial current density": j_i_av,
+            "X-averaged inner "
+            + self.domain.lower()
+            + " sei interfacial current density [A.m-2]": j_i_av * j_scale,
+            "Outer "
+            + self.domain.lower()
+            + " sei interfacial current density": j_outer,
+            "Outer "
+            + self.domain.lower()
+            + " sei interfacial current density [A.m-2]": j_outer * j_scale,
+            "X-averaged outer "
+            + self.domain.lower()
+            + " sei interfacial current density": j_o_av,
+            "X-averaged outer "
+            + self.domain.lower()
+            + " sei interfacial current density [A.m-2]": j_o_av * j_scale,
+            self.domain + " sei interfacial current density": j_sei,
+            self.domain + " sei interfacial current density [A.m-2]": j_sei * j_scale,
+            "X-averaged "
+            + self.domain.lower()
+            + " sei interfacial current density": j_sei_av,
+            "X-averaged "
+            + self.domain.lower()
+            + " sei interfacial current density [A.m-2]": j_sei_av * j_scale,
+            "Scaled "
+            + self.domain.lower()
+            + " sei interfacial current density": j_sei * sp.Gamma_SEI_n,
         }
 
         return variables

@@ -54,6 +54,7 @@ tau_discharge = pybamm.standard_parameters_lithium_ion.tau_discharge
 T_ref = pybamm.standard_parameters_lithium_ion.T_ref
 
 a_n = pybamm.standard_parameters_lithium_ion.a_n_dim
+a_p = pybamm.standard_parameters_lithium_ion.a_p_dim
 L_x = pybamm.standard_parameters_lithium_ion.L_x
 
 I_typ = pybamm.electrical_parameters.I_typ
@@ -68,3 +69,12 @@ v_bar = V_bar_outer_dimensional / V_bar_inner_dimensional
 
 L_inner_0 = L_inner_0_dim / L_sei_0_dim
 L_outer_0 = L_outer_0_dim / L_sei_0_dim
+
+# ratio of SEI reaction scale to intercalation reaction
+Gamma_SEI_n = (F * L_sei_0_dim * a_n * L_x) / (
+    V_bar_inner_dimensional * I_typ * tau_discharge
+)
+
+Gamma_SEI_p = (F * L_sei_0_dim * a_p * L_x) / (
+    V_bar_inner_dimensional * I_typ * tau_discharge
+)
