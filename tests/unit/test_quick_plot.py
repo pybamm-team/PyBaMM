@@ -174,6 +174,8 @@ class TestQuickPlot(unittest.TestCase):
         model.variables["Negative 2D variable"] = model.variables["2D variable"]
         quick_plot = pybamm.QuickPlot(solution, ["Negative 2D variable"])
         quick_plot.plot(0)
+        quick_plot.dynamic_plot(testing=True)
+        quick_plot.slider_update(0.01)
 
         with self.assertRaisesRegex(NotImplementedError, "Cannot plot 2D variables"):
             pybamm.QuickPlot([solution, solution], ["2D variable"])
@@ -182,7 +184,7 @@ class TestQuickPlot(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Mismatching variable domains"):
             pybamm.QuickPlot(solution, [["a", "b broadcasted"]])
         with self.assertRaisesRegex(ValueError, "labels"):
-            quick_plot = pybamm.QuickPlot(
+            pybamm.QuickPlot(
                 [solution, solution], ["a"], labels=["sol 1", "sol 2", "sol 3"]
             )
 
@@ -233,6 +235,39 @@ class TestQuickPlot(unittest.TestCase):
                     "Positive particle concentration [mol.m-3]",
                 ]
                 pybamm.QuickPlot(solution, output_variables)
+
+    def test_plot_2plus1D_spm(self):
+        spm = pybamm.lithium_ion.SPM(
+            {"current collector": "potential pair", "dimensionality": 2}
+        )
+        geometry = spm.default_geometry
+        param = spm.default_parameter_values
+        param.process_model(spm)
+        param.process_geometry(geometry)
+        var = pybamm.standard_spatial_vars
+        var_pts = {
+            var.x_n: 5,
+            var.x_s: 5,
+            var.x_p: 5,
+            var.r_n: 5,
+            var.r_p: 5,
+            var.y: 5,
+            var.z: 5,
+        }
+        mesh = pybamm.Mesh(geometry, spm.default_submesh_types, var_pts)
+        disc_spm = pybamm.Discretisation(mesh, spm.default_spatial_methods)
+        disc_spm.process_model(spm)
+        t_eval = np.linspace(0, 3600, 100)
+        solution_spm = spm.default_solver.solve(spm, t_eval)
+
+        pybamm.QuickPlot(
+            solution_spm,
+            [
+                "Negative current collector potential [V]",
+                "Positive current collector potential [V]",
+                "Terminal voltage [V]",
+            ],
+        )
 
     def test_failure(self):
         with self.assertRaisesRegex(TypeError, "solutions must be"):
