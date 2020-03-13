@@ -43,8 +43,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 Can be "Fickian diffusion" (default) or "fast diffusion".
             * "thermal" : str, optional
                 Sets the thermal model to use. Can be "isothermal" (default),
-                "x-full", "x-lumped", "xyz-lumped" or "lumped". Must be "isothermal" for
-                lead-acid models.
+                "x-full", "x-lumped", "xyz-lumped" or "lumped".
             * "thermal current collector" : bool, optional
                 Whether to include thermal effects in the current collector in
                 one-dimensional models (default is False). Note that this option
@@ -218,22 +217,21 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         # Options that are incompatible with models
         if isinstance(self, pybamm.lithium_ion.BaseModel):
-            # if options["surface form"] is not False:
-            #     raise pybamm.OptionError(
-            #         "surface form not implemented for lithium-ion models"
-            #     )
             if options["convection"] is True:
                 raise pybamm.OptionError(
                     "convection not implemented for lithium-ion models"
                 )
         if isinstance(self, pybamm.lead_acid.BaseModel):
-            if options["thermal"] != "isothermal":
+            if options["thermal"] != "isothermal" and options["dimensionality"] != 0:
                 raise pybamm.OptionError(
-                    "thermal effects not implemented for lead-acid models"
+                    "Lead-acid models can only have thermal "
+                    "effects if dimensionality is 0."
                 )
+
             if options["thermal current collector"] is True:
                 raise pybamm.OptionError(
-                    "thermal effects not implemented for lead-acid models"
+                    "Thermal current collector effects are not implemented "
+                    "for lead-acid models."
                 )
 
         self._options = options
