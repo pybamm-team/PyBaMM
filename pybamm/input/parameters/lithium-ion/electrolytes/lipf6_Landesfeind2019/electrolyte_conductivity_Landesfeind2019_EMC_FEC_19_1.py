@@ -21,10 +21,5 @@ def electrolyte_conductivity_Landesfeind2019_EMC_FEC_19_1(c_e, T, T_inf, E_k_e, 
     :`numpy.Array`
         Electrolyte diffusivity
     """
-    coeffs = np.array([2.51e-2,
-                       1.75e2,
-                       1.23,
-                       2.05e-1,
-                       -8.81e-2,
-                       2.83e-3])
+    coeffs = np.array([2.51e-2, 1.75e2, 1.23, 2.05e-1, -8.81e-2, 2.83e-3])
     return base.electrolyte_conductivity_Landesfeind2019_base(c_e, T, coeffs)

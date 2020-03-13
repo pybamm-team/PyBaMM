@@ -107,4 +107,3 @@ class AlgebraicSolver(pybamm.BaseSolver):
 
         # Return solution object (no events, so pass None to t_event, y_event)
         return pybamm.Solution(t_eval, y, termination="success")
-

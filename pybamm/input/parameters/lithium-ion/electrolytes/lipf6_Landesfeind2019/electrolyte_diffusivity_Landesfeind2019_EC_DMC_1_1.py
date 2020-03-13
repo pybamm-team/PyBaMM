@@ -21,9 +21,6 @@ def electrolyte_diffusivity_Landesfeind2019_EC_DMC_1_1(c_e, T, T_inf, E_k_e, R_g
     :`numpy.Array`
         Electrolyte diffusivity
     """
-    coeffs = np.array([1.47e3,
-                       1.33,
-                       -1.69e3,
-                       -5.63e2])
+    coeffs = np.array([1.47e3, 1.33, -1.69e3, -5.63e2])
 
     return base.electrolyte_diffusivity_Landesfeind2019_base(c_e, T, coeffs)
