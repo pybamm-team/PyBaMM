@@ -1117,6 +1117,22 @@ class TestFiniteVolume(unittest.TestCase):
             np.sum(delta_fn_int_disc.evaluate(y=y)),
         )
 
+    def test_heaviside(self):
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        var = pybamm.Variable("var", domain="negative electrode")
+        heav = var > 1
+
+        disc.set_variable_slices([var])
+        # process_binary_operators should work with heaviside
+        disc_heav = disc.process_symbol(heav * var)
+        nodes = mesh["negative electrode"][0].nodes
+        self.assertEqual(disc_heav.size, nodes.size)
+        np.testing.assert_array_equal(disc_heav.evaluate(y=2 * np.ones_like(nodes)), 2)
+        np.testing.assert_array_equal(disc_heav.evaluate(y=-2 * np.ones_like(nodes)), 0)
+
     def test_grad_div_with_bcs_on_tab(self):
         # 2d macroscale
         mesh = get_1p1d_mesh_for_testing()

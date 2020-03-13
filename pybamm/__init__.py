@@ -57,39 +57,17 @@ ABSOLUTE_PATH = os.path.join(os.path.split(script_path)[0], "..")
 #
 from .util import Timer, FuzzyDict
 from .util import root_dir, load_function, rmse, get_infinite_nested_dict, load
+from .util import get_parameters_filepath
 from .logger import logger, set_logging_level
 from .settings import settings
+from .citations import Citations, citations, print_citations
 
 #
 # Classes for the Expression Tree
 #
-from .expression_tree.symbol import (
-    Symbol,
-    domain_size,
-    create_object_of_size,
-    evaluate_for_shape_using_domain,
-)
-from .expression_tree.binary_operators import (
-    is_scalar_zero,
-    is_matrix_zero,
-    BinaryOperator,
-    Addition,
-    Power,
-    Subtraction,
-    Multiplication,
-    MatrixMultiplication,
-    Division,
-    Inner,
-    inner,
-    Heaviside,
-    source,
-)
-from .expression_tree.concatenations import (
-    Concatenation,
-    NumpyConcatenation,
-    DomainConcatenation,
-    SparseStack,
-)
+from .expression_tree.symbol import *
+from .expression_tree.binary_operators import *
+from .expression_tree.concatenations import *
 from .expression_tree.array import Array
 from .expression_tree.matrix import Matrix
 from .expression_tree.unary_operators import *
@@ -97,36 +75,15 @@ from .expression_tree.functions import *
 from .expression_tree.interpolant import Interpolant
 from .expression_tree.input_parameter import InputParameter
 from .expression_tree.parameter import Parameter, FunctionParameter
-from .expression_tree.broadcasts import (
-    Broadcast,
-    PrimaryBroadcast,
-    SecondaryBroadcast,
-    FullBroadcast,
-    ones_like,
-)
+from .expression_tree.broadcasts import *
 from .expression_tree.scalar import Scalar
 from .expression_tree.variable import Variable, ExternalVariable
-from .expression_tree.independent_variable import (
-    IndependentVariable,
-    Time,
-    SpatialVariable,
-)
+from .expression_tree.independent_variable import *
 from .expression_tree.independent_variable import t
 from .expression_tree.vector import Vector
 from .expression_tree.state_vector import StateVector
 
-from .expression_tree.exceptions import (
-    DomainError,
-    OptionError,
-    ModelError,
-    SolverError,
-    SolverWarning,
-    ShapeError,
-    ModelWarning,
-    UndefinedOperationError,
-    GeometryError,
-    InputError,
-)
+from .expression_tree.exceptions import *
 
 # Operations
 from .expression_tree.operations.simplify import (
@@ -192,7 +149,7 @@ from .geometry.geometry import (
     Geometry2DCurrentCollector,
 )
 
-from .expression_tree.independent_variable import KNOWN_SPATIAL_VARS, KNOWN_COORD_SYS
+from .expression_tree.independent_variable import KNOWN_COORD_SYS
 from .geometry import standard_spatial_vars
 
 #
@@ -245,6 +202,7 @@ from .solvers.solution import Solution, _BaseSolution
 from .solvers.base_solver import BaseSolver
 from .solvers.algebraic_solver import AlgebraicSolver
 from .solvers.casadi_solver import CasadiSolver
+from .solvers.casadi_algebraic_solver import CasadiAlgebraicSolver
 from .solvers.scikits_dae_solver import ScikitsDaeSolver
 from .solvers.scikits_ode_solver import ScikitsOdeSolver, have_scikits_odes
 from .solvers.scipy_solver import ScipySolver

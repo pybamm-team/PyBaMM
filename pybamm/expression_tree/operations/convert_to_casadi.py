@@ -11,6 +11,8 @@ class CasadiConverter(object):
     def __init__(self, casadi_symbols=None):
         self._casadi_symbols = casadi_symbols or {}
 
+        pybamm.citations.register("Andersson2019")
+
     def convert(self, symbol, t=None, y=None, u=None):
         """
         This function recurses down the tree, converting the PyBaMM expression tree to
@@ -66,6 +68,10 @@ class CasadiConverter(object):
             # process children
             converted_left = self.convert(left, t, y, u)
             converted_right = self.convert(right, t, y, u)
+            if isinstance(symbol, pybamm.Minimum):
+                return casadi.fmin(converted_left, converted_right)
+            if isinstance(symbol, pybamm.Maximum):
+                return casadi.fmax(converted_left, converted_right)
             # _binary_evaluate defined in derived classes for specific rules
             return symbol._binary_evaluate(converted_left, converted_right)
 

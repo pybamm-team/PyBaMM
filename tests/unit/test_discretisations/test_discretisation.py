@@ -593,7 +593,7 @@ class TestDiscretise(unittest.TestCase):
         combined_submesh = mesh.combine_submeshes(*whole_cell)
         disc.process_model(model)
 
-        y0 = model.concatenated_initial_conditions
+        y0 = model.concatenated_initial_conditions.evaluate()
         np.testing.assert_array_equal(
             y0, 3 * np.ones_like(combined_submesh[0].nodes[:, np.newaxis])
         )
@@ -638,7 +638,7 @@ class TestDiscretise(unittest.TestCase):
         model.variables = {"ST": S * T}
 
         disc.process_model(model)
-        y0 = model.concatenated_initial_conditions
+        y0 = model.concatenated_initial_conditions.evaluate()
         y0_expect = np.empty((0, 1))
         for var_id, _ in sorted(disc.y_slices.items(), key=lambda kv: kv[1]):
             if var_id == c.id:
@@ -693,6 +693,23 @@ class TestDiscretise(unittest.TestCase):
         with self.assertRaises(pybamm.ModelError):
             disc.process_model(model)
 
+    def test_process_model_fail(self):
+        # one equation
+        c = pybamm.Variable("c")
+        d = pybamm.Variable("d")
+        model = pybamm.BaseModel()
+        model.rhs = {c: -c}
+        model.initial_conditions = {c: pybamm.Scalar(3)}
+        model.variables = {"c": c, "d": d}
+
+        disc = pybamm.Discretisation()
+        # turn debug mode off to not check well posedness
+        debug_mode = pybamm.settings.debug_mode
+        pybamm.settings.debug_mode = False
+        with self.assertRaisesRegex(pybamm.ModelError, "No key set for variable"):
+            disc.process_model(model)
+        pybamm.settings.debug_mode = debug_mode
+
     def test_process_model_dae(self):
         # one rhs equation and one algebraic
         whole_cell = ["negative electrode", "separator", "positive electrode"]
@@ -716,7 +733,7 @@ class TestDiscretise(unittest.TestCase):
         disc.process_model(model)
         combined_submesh = mesh.combine_submeshes(*whole_cell)
 
-        y0 = model.concatenated_initial_conditions
+        y0 = model.concatenated_initial_conditions.evaluate()
         np.testing.assert_array_equal(
             y0,
             np.concatenate(
@@ -815,7 +832,7 @@ class TestDiscretise(unittest.TestCase):
         )
 
         disc.process_model(model)
-        y0 = model.concatenated_initial_conditions
+        y0 = model.concatenated_initial_conditions.evaluate()
         np.testing.assert_array_equal(
             y0, 3 * np.ones_like(combined_submesh[0].nodes[:, np.newaxis])
         )
@@ -842,7 +859,7 @@ class TestDiscretise(unittest.TestCase):
         submesh = mesh["negative electrode"]
 
         discretised_model = disc.process_model(model, inplace=False)
-        y0 = discretised_model.concatenated_initial_conditions
+        y0 = discretised_model.concatenated_initial_conditions.evaluate()
         np.testing.assert_array_equal(
             y0, 3 * np.ones_like(submesh[0].nodes[:, np.newaxis])
         )

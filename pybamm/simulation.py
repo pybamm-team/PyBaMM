@@ -28,17 +28,11 @@ def constant_current_constant_voltage_constant_power(variables):
     s_I = pybamm.InputParameter("Current switch")
     s_V = pybamm.InputParameter("Voltage switch")
     s_P = pybamm.InputParameter("Power switch")
-    n_electrodes_parallel = pybamm.electrical_parameters.n_electrodes_parallel
     n_cells = pybamm.electrical_parameters.n_cells
     return (
-        s_I * (I - pybamm.InputParameter("Current input [A]") / n_electrodes_parallel)
+        s_I * (I - pybamm.InputParameter("Current input [A]"))
         + s_V * (V - pybamm.InputParameter("Voltage input [V]") / n_cells)
-        + s_P
-        * (
-            V * I
-            - pybamm.InputParameter("Power input [W]")
-            / (n_cells * n_electrodes_parallel)
-        )
+        + s_P * (V * I - pybamm.InputParameter("Power input [W]") / n_cells)
     )
 
 
@@ -212,21 +206,18 @@ class Simulation:
 
         # add current and voltage events to the model
         # current events both negative and positive to catch specification
-        n_electrodes_parallel = pybamm.electrical_parameters.n_electrodes_parallel
         n_cells = pybamm.electrical_parameters.n_cells
         self.model.events.extend(
             [
                 pybamm.Event(
                     "Current cut-off (positive) [A] [experiment]",
                     self.model.variables["Current [A]"]
-                    - abs(pybamm.InputParameter("Current cut-off [A]"))
-                    / n_electrodes_parallel,
+                    - abs(pybamm.InputParameter("Current cut-off [A]")),
                 ),
                 pybamm.Event(
                     "Current cut-off (negative) [A] [experiment]",
                     self.model.variables["Current [A]"]
-                    + abs(pybamm.InputParameter("Current cut-off [A]"))
-                    / n_electrodes_parallel,
+                    + abs(pybamm.InputParameter("Current cut-off [A]")),
                 ),
                 pybamm.Event(
                     "Voltage cut-off [V] [experiment]",
@@ -393,7 +384,10 @@ class Simulation:
             # to correspond to a single discharge
             elif t_eval is None:
                 C_rate = self._parameter_values["C-rate"]
-                t_end = 3600 / C_rate
+                try:
+                    t_end = 3600 / C_rate
+                except TypeError:
+                    t_end = 3600
                 t_eval = np.linspace(0, t_end, 100)
 
             self.t_eval = t_eval
@@ -416,7 +410,11 @@ class Simulation:
                 # Make sure we take at least 2 timesteps
                 npts = max(int(round(dt / exp_inputs["period"])) + 1, 2)
                 self.step(
-                    dt, npts=npts, external_variables=external_variables, inputs=inputs
+                    dt,
+                    solver=solver,
+                    npts=npts,
+                    external_variables=external_variables,
+                    inputs=inputs,
                 )
                 # Only allow events specified by experiment
                 if not (
@@ -471,25 +469,15 @@ class Simulation:
         if solver is None:
             solver = self.solver
 
-        if save is False:
-            # Don't pass previous solution
-            self._solution = solver.step(
-                None,
-                self.built_model,
-                dt,
-                npts=npts,
-                external_variables=external_variables,
-                inputs=inputs,
-            )
-        else:
-            self._solution = solver.step(
-                self._solution,
-                self.built_model,
-                dt,
-                npts=npts,
-                external_variables=external_variables,
-                inputs=inputs,
-            )
+        self._solution = solver.step(
+            self._solution,
+            self.built_model,
+            dt,
+            npts=npts,
+            external_variables=external_variables,
+            inputs=inputs,
+            save=save,
+        )
 
     def get_variable_array(self, *variables):
         """

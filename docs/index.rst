@@ -34,6 +34,8 @@ Contents
     source/processed_variable
     source/util
     source/simulation
+    source/citations
+    source/parameters_cli
 
 Examples
 ========

@@ -149,21 +149,23 @@ class ProcessedVariable(object):
         self.entries = entries
         self.dimensions = 2
         if self.domain[0] in ["negative particle", "positive particle"]:
-            self.spatial_var_name = "r"
+            self.first_dimension = "r"
             self.r_sol = space
         elif self.domain[0] in [
             "negative electrode",
             "separator",
             "positive electrode",
         ]:
-            self.spatial_var_name = "x"
+            self.first_dimension = "x"
             self.x_sol = space
         elif self.domain == ["current collector"]:
-            self.spatial_var_name = "z"
+            self.first_dimension = "z"
             self.z_sol = space
         else:
-            self.spatial_var_name = "x"
+            self.first_dimension = "x"
             self.x_sol = space
+
+        self.first_dim_pts = space
 
         # set up interpolation
         # note that the order of 't' and 'space' is the reverse of what you'd expect
@@ -242,6 +244,8 @@ class ProcessedVariable(object):
         # assign attributes for reference
         self.entries = entries
         self.dimensions = 3
+        self.first_dim_pts = first_dim_pts
+        self.second_dim_pts = second_dim_pts
 
         # set up interpolation
         self._interpolation_function = interp.RegularGridInterpolator(
@@ -335,7 +339,7 @@ class ProcessedVariable(object):
 
     def call_2D(self, t, x, r, z):
         "Evaluate a 2D variable"
-        spatial_var = eval_dimension_name(self.spatial_var_name, x, r, None, z)
+        spatial_var = eval_dimension_name(self.first_dimension, x, r, None, z)
         return self._interpolation_function(t, spatial_var)
 
     def call_3D(self, t, x, r, y, z):

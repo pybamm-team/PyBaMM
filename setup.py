@@ -3,6 +3,7 @@ import sys
 import subprocess
 import tarfile
 from shutil import copy
+import glob
 from platform import python_version
 
 try:
@@ -466,6 +467,13 @@ def load_version():
         raise RuntimeError("Unable to read version number (" + str(e) + ").")
 
 
+# Build the list of package data files to be included in the PyBaMM package.
+# These are mainly the parameter files located in the input/parameters/ subdirectories.
+pybamm_data = []
+for file_ext in ["*.csv", "*.py", "*.md"]:
+    pybamm_data.extend(glob.glob("input/**/" + file_ext, recursive=True))
+pybamm_data.append("./version")
+
 setup(
     cmdclass={
         "install_odes": InstallODES,
@@ -480,26 +488,17 @@ setup(
     url="https://github.com/pybamm-team/PyBaMM",
     include_package_data=True,
     packages=find_packages(include=("pybamm", "pybamm.*")),
-    package_data={
-        "pybamm": [
-            "./version",
-            "../input/parameters/lithium-ion/*.csv",
-            "../input/parameters/lithium-ion/*.py",
-            "../input/parameters/lead-acid/*.csv",
-            "../input/parameters/lead-acid/*.py",
-        ]
-    },
+    package_data={"pybamm": pybamm_data},
     # List of dependencies
     install_requires=[
         "numpy>=1.16",
-        "scipy>=1.0",
+        "scipy>=1.3",
         "pandas>=0.24",
         "anytree>=2.4.3",
         "autograd>=1.2",
         "scikit-fem>=0.2.0",
         "casadi>=3.5.0",
         "jupyter",  # For example notebooks
-        "python-Levenshtein>=0.12.0",
         # Note: Matplotlib is loaded for debug plots, but to ensure pybamm runs
         # on systems without an attached display, it should never be imported
         # outside of plot() methods.
@@ -511,6 +510,13 @@ setup(
         "dev": [
             "flake8>=3",  # For code style checking
             "black",  # For code style auto-formatting
+        ],
+    },
+    entry_points={
+        "console_scripts": [
+            "pybamm_edit_parameter = pybamm.parameters_cli:edit_parameter",
+            "pybamm_add_parameter = pybamm.parameters_cli:add_parameter",
+            "pybamm_list_parameters = pybamm.parameters_cli:list_parameters",
         ],
     },
 )

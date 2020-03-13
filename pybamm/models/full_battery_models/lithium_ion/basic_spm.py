@@ -80,34 +80,48 @@ class BasicSPM(BaseModel):
         N_s_p = -param.D_p(c_s_p, T) * pybamm.grad(c_s_p)
         self.rhs[c_s_n] = -(1 / param.C_n) * pybamm.div(N_s_n)
         self.rhs[c_s_p] = -(1 / param.C_p) * pybamm.div(N_s_p)
-        # Boundary conditions must be provided for equations with spatial derivatives
-        self.boundary_conditions[c_s_n] = {
-            "left": (pybamm.Scalar(0), "Neumann"),
-            "right": (-param.C_n * j_n / param.a_n, "Neumann"),
-        }
-        self.boundary_conditions[c_s_p] = {
-            "left": (pybamm.Scalar(0), "Neumann"),
-            "right": (-param.C_p * j_p / param.a_p / param.gamma_p, "Neumann"),
-        }
-        # c_n_init and c_p_init are functions, but for the SPM we evaluate them at x=0
-        # and x=1 since there is no x-dependence in the particles
-        self.initial_conditions[c_s_n] = param.c_n_init(0)
-        self.initial_conditions[c_s_p] = param.c_p_init(1)
         # Surf takes the surface value of a variable, i.e. its boundary value on the
         # right side. This is also accessible via `boundary_value(x, "right")`, with
         # "left" providing the boundary value of the left side
         c_s_surf_n = pybamm.surf(c_s_n)
         c_s_surf_p = pybamm.surf(c_s_p)
+        # Boundary conditions must be provided for equations with spatial derivatives
+        self.boundary_conditions[c_s_n] = {
+            "left": (pybamm.Scalar(0), "Neumann"),
+            "right": (
+                -param.C_n * j_n / param.a_n / param.D_n(c_s_surf_n, T),
+                "Neumann",
+            ),
+        }
+        self.boundary_conditions[c_s_p] = {
+            "left": (pybamm.Scalar(0), "Neumann"),
+            "right": (
+                -param.C_p * j_p / param.a_p / param.gamma_p / param.D_p(c_s_surf_p, T),
+                "Neumann",
+            ),
+        }
+        # c_n_init and c_p_init are functions, but for the SPM we evaluate them at x=0
+        # and x=1 since there is no x-dependence in the particles
+        self.initial_conditions[c_s_n] = param.c_n_init(0)
+        self.initial_conditions[c_s_p] = param.c_p_init(1)
         # Events specify points at which a solution should terminate
         self.events += [
-            pybamm.Event("Minimum negative particle surface concentration",
-                         pybamm.min(c_s_surf_n) - 0.01),
-            pybamm.Event("Maximum negative particle surface concentration",
-                         (1 - 0.01) - pybamm.max(c_s_surf_n)),
-            pybamm.Event("Minimum positive particle surface concentration",
-                         pybamm.min(c_s_surf_p) - 0.01),
-            pybamm.Event("Maximum positive particle surface concentration",
-                         (1 - 0.01) - pybamm.max(c_s_surf_p)),
+            pybamm.Event(
+                "Minimum negative particle surface concentration",
+                pybamm.min(c_s_surf_n) - 0.01,
+            ),
+            pybamm.Event(
+                "Maximum negative particle surface concentration",
+                (1 - 0.01) - pybamm.max(c_s_surf_n),
+            ),
+            pybamm.Event(
+                "Minimum positive particle surface concentration",
+                pybamm.min(c_s_surf_p) - 0.01,
+            ),
+            pybamm.Event(
+                "Maximum positive particle surface concentration",
+                (1 - 0.01) - pybamm.max(c_s_surf_p),
+            ),
         ]
 
         # Note that the SPM does not have any algebraic equations, so the `algebraic`

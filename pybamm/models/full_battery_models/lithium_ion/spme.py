@@ -24,8 +24,8 @@ class SPMe(BaseModel):
     References
     ----------
     .. [1] SG Marquis, V Sulzer, R Timms, CP Please and SJ Chapman. “An asymptotic
-           derivation of a single particle model with electrolyte”. In: arXiv preprint
-           arXiv:1905.12553 (2019).
+           derivation of a single particle model with electrolyte”. Journal of The
+           Electrochemical Society, 166(15):A3693–A3706, 2019
 
     **Extends:** :class:`pybamm.lithium_ion.BaseModel`
     """
@@ -52,6 +52,8 @@ class SPMe(BaseModel):
         if build:
             self.build_model()
 
+        pybamm.citations.register("marquis2019asymptotic")
+
     def set_porosity_submodel(self):
 
         self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
@@ -70,12 +72,12 @@ class SPMe(BaseModel):
 
     def set_interfacial_submodel(self):
 
-        self.submodels[
-            "negative interface"
-        ] = pybamm.interface.lithium_ion.InverseButlerVolmer(self.param, "Negative")
-        self.submodels[
-            "positive interface"
-        ] = pybamm.interface.lithium_ion.InverseButlerVolmer(self.param, "Positive")
+        self.submodels["negative interface"] = pybamm.interface.InverseButlerVolmer(
+            self.param, "Negative", "lithium-ion main"
+        )
+        self.submodels["positive interface"] = pybamm.interface.InverseButlerVolmer(
+            self.param, "Positive", "lithium-ion main"
+        )
 
     def set_particle_submodel(self):
 

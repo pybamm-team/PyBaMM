@@ -51,9 +51,9 @@ class StandardOutputComparison(object):
         self.run_test_class(VariablesComparison, skip_first_timestep)
 
         if self.chemistry == "Lithium-ion":
-            self.run_test_class(ParticleConcentrationComparison)
+            self.run_test_class(ParticleConcentrationComparison, skip_first_timestep)
         elif self.chemistry == "Lead-acid":
-            self.run_test_class(PorosityComparison)
+            self.run_test_class(PorosityComparison, skip_first_timestep)
 
 
 class BaseOutputComparison(object):
@@ -67,13 +67,14 @@ class BaseOutputComparison(object):
         model_variables = [solution[var] for solution in self.solutions]
         var0 = model_variables[0]
 
-        if var0.mesh is None:
-            x = None
-        else:
-            x = var0.mesh[0].nodes
+        spatial_pts = {}
+        if var0.dimensions >= 2:
+            spatial_pts[var0.first_dimension] = var0.first_dim_pts
+        if var0.dimensions >= 3:
+            spatial_pts[var0.second_dimension] = var0.second_dim_pts
 
         # Calculate tolerance based on the value of var0
-        maxvar0 = np.max(abs(var0(self.t, x)))
+        maxvar0 = np.max(abs(var0(self.t, **spatial_pts)))
         if maxvar0 < 1e-14:
             decimal = -int(np.log10(tol))
         else:
@@ -82,7 +83,7 @@ class BaseOutputComparison(object):
         for model_var in model_variables[1:]:
             np.testing.assert_equal(var0.dimensions, model_var.dimensions)
             np.testing.assert_array_almost_equal(
-                model_var(self.t, x), var0(self.t, x), decimal
+                model_var(self.t, **spatial_pts), var0(self.t, **spatial_pts), decimal
             )
 
 
@@ -123,7 +124,6 @@ class VariablesComparison(BaseOutputComparison):
         self.compare("X-averaged negative electrode open circuit potential")
         self.compare("X-averaged positive electrode open circuit potential")
         self.compare("Terminal voltage")
-        self.compare("X-averaged electrolyte overpotential")
         self.compare("X-averaged solid phase ohmic losses")
         self.compare("Negative electrode reaction overpotential")
         self.compare("Positive electrode reaction overpotential")

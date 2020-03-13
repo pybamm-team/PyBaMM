@@ -358,7 +358,9 @@ class TestSimulation(unittest.TestCase):
         param["Current function [A]"] = "[current data]US06"
 
         drive_cycle = pd.read_csv(
-            os.path.join(pybamm.root_dir(), "input", "drive_cycles", "US06.csv"),
+            pybamm.get_parameters_filepath(
+                os.path.join("input", "drive_cycles", "US06.csv")
+            ),
             comment="#",
             skip_blank_lines=True,
             header=None,
@@ -384,6 +386,29 @@ class TestSimulation(unittest.TestCase):
         sim.reset()
         with self.assertWarns(pybamm.SolverWarning):
             sim.solve(t_eval=np.linspace(0, time_data[-1], 800))
+
+    def test_discontinuous_current(self):
+        def car_current(t):
+            current = (
+                1 * (t >= 0) * (t <= 1000)
+                - 0.5 * (1000 < t) * (t <= 2000)
+                + 0.5 * (2000 < t)
+            )
+            return current
+
+        model = pybamm.lithium_ion.DFN()
+        param = model.default_parameter_values
+        param["Current function [A]"] = car_current
+
+        sim = pybamm.Simulation(
+            model, parameter_values=param, solver=pybamm.CasadiSolver(mode="fast")
+        )
+        sim.solve()
+        current = sim.solution["Current [A]"]
+        tau = model.timescale.evaluate()
+        self.assertEqual(current(0), 1)
+        self.assertEqual(current(1500 / tau), -0.5)
+        self.assertEqual(current(3000 / tau), 0.5)
 
 
 if __name__ == "__main__":

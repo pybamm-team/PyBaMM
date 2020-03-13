@@ -52,9 +52,10 @@ plt.ylabel(r"$\vert V - V_{comsol} \vert$", fontsize=20)
 for key, C_rate in C_rates.items():
     current = 24 * C_rate
     # load the comsol results
-    comsol_variables = pickle.load(
-        open("input/comsol_results/comsol_{}C.pickle".format(key), "rb")
+    comsol_results_path = pybamm.get_parameters_filepath(
+        "input/comsol_results/comsol_{}C.pickle".format(key)
     )
+    comsol_variables = pickle.load(open(comsol_results_path, "rb"))
     comsol_time = comsol_variables["time"]
     comsol_voltage = comsol_variables["voltage"]
 

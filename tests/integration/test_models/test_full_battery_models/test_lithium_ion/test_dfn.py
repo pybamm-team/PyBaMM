@@ -95,6 +95,18 @@ class TestDFN(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
+    def test_surface_form_differential(self):
+        options = {"surface form": "differential"}
+        model = pybamm.lithium_ion.DFN(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+    def test_surface_form_algebraic(self):
+        options = {"surface form": "algebraic"}
+        model = pybamm.lithium_ion.DFN(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
     def test_particle_distribution_in_x(self):
         model = pybamm.lithium_ion.DFN()
         param = model.default_parameter_values

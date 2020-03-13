@@ -23,7 +23,10 @@ class BaseSolver(object):
     atol : float, optional
         The absolute tolerance for the solver (default is 1e-6).
     root_method : str, optional
-        The method to use to find initial conditions (default is "lm")
+        The method to use to find initial conditions (default is "casadi"). If "casadi",
+        the solver uses casadi's Newton rootfinding algorithm to find initial
+        conditions. Otherwise, the solver uses 'scipy.optimize.root' with method
+        specified by 'root_method' (e.g. "lm", "hybr", ...)
     root_tol : float, optional
         The tolerance for the initial-condition solver (default is 1e-6).
     max_steps: int, optional
@@ -36,7 +39,7 @@ class BaseSolver(object):
         method=None,
         rtol=1e-6,
         atol=1e-6,
-        root_method="lm",
+        root_method="casadi",
         root_tol=1e-6,
         max_steps=1000,
     ):
@@ -48,11 +51,11 @@ class BaseSolver(object):
         self.max_steps = max_steps
 
         self.models_set_up = set()
-        self.model_step_times = {}
 
         # Defaults, can be overwritten by specific solver
         self.name = "Base solver"
         self.ode_solver = False
+        self.algebraic_solver = False
 
     @property
     def method(self):
@@ -114,33 +117,47 @@ class BaseSolver(object):
             Any input parameters to pass to the model when solving
 
         """
-        inputs = inputs or {}
-        y0 = model.concatenated_initial_conditions
-
-        # Set model timescale
-        model.timescale_eval = model.timescale.evaluate(u=inputs)
 
         # Check model.algebraic for ode solvers
         if self.ode_solver is True and len(model.algebraic) > 0:
             raise pybamm.SolverError(
                 "Cannot use ODE solver '{}' to solve DAE model".format(self.name)
             )
+        # Check model.rhs for algebraic solvers
+        if self.algebraic_solver is True and len(model.rhs) > 0:
+            raise pybamm.SolverError(
+                """Cannot use algebraic solver to solve model with time derivatives"""
+            )
 
+        inputs = inputs or {}
+        y0 = model.concatenated_initial_conditions.evaluate(0, None, inputs)
+
+        # Set model timescale
+        model.timescale_eval = model.timescale.evaluate(u=inputs)
+
+        if self.ode_solver is True:
+            self.root_method = None
         if (
-            isinstance(self, pybamm.CasadiSolver)
-            and model.convert_to_format != "casadi"
-        ):
+            isinstance(self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver))
+        ) and model.convert_to_format != "casadi":
             pybamm.logger.warning(
-                f"Converting {model.name} to CasADi for solving with CasADi solver"
+                "Converting {} to CasADi for solving with CasADi solver".format(
+                    model.name
+                )
+            )
+            model.convert_to_format = "casadi"
+        if self.root_method == "casadi" and model.convert_to_format != "casadi":
+            pybamm.logger.warning(
+                "Converting {} to CasADi for calculating ICs with CasADi".format(
+                    model.name
+                )
             )
             model.convert_to_format = "casadi"
 
         if model.convert_to_format != "casadi":
             simp = pybamm.Simplification()
             # Create Jacobian from concatenated rhs and algebraic
-            y = pybamm.StateVector(
-                slice(0, np.size(model.concatenated_initial_conditions))
-            )
+            y = pybamm.StateVector(slice(0, np.size(y0)))
             # set up Jacobian object, for re-use of dict
             jacobian = pybamm.Jacobian()
         else:
@@ -219,21 +236,40 @@ class BaseSolver(object):
 
         # Check for heaviside functions in rhs and algebraic and add discontinuity
         # events if these exist.
-        # Note: only checks for the case of t < X, t <= X, X < t, or X <= t
-        for symbol in itertools.chain(
-            model.concatenated_rhs.pre_order(), model.concatenated_algebraic.pre_order()
-        ):
-            if isinstance(symbol, pybamm.Heaviside):
-                if symbol.right.id == pybamm.t.id:
-                    expr = symbol.left
-                elif symbol.left.id == pybamm.t.id:
-                    expr = symbol.right
+        # Note: only checks for the case of t < X, t <= X, X < t, or X <= t, but also
+        # accounts for the fact that t might be dimensional
+        # Only do this for DAE models as ODE models can deal with discontinuities fine
+        if len(model.algebraic) > 0:
+            for symbol in itertools.chain(
+                model.concatenated_rhs.pre_order(),
+                model.concatenated_algebraic.pre_order(),
+            ):
+                if isinstance(symbol, pybamm.Heaviside):
+                    found_t = False
+                    # Dimensionless
+                    if symbol.right.id == pybamm.t.id:
+                        expr = symbol.left
+                        found_t = True
+                    elif symbol.left.id == pybamm.t.id:
+                        expr = symbol.right
+                        found_t = True
+                    # Dimensional
+                    elif symbol.right.id == (pybamm.t * model.timescale).id:
+                        expr = symbol.left.new_copy() / symbol.right.right.new_copy()
+                        found_t = True
+                    elif symbol.left.id == (pybamm.t * model.timescale).id:
+                        expr = symbol.right.new_copy() / symbol.left.right.new_copy()
+                        found_t = True
 
-                model.events.append(
-                    pybamm.Event(
-                        str(symbol), expr.new_copy(), pybamm.EventType.DISCONTINUITY
-                    )
-                )
+                    # Update the events if the heaviside function depended on t
+                    if found_t:
+                        model.events.append(
+                            pybamm.Event(
+                                str(symbol),
+                                expr.new_copy(),
+                                pybamm.EventType.DISCONTINUITY,
+                            )
+                        )
 
         # Process rhs, algebraic and event expressions
         rhs, rhs_eval, jac_rhs = process(model.concatenated_rhs, "RHS")
@@ -261,35 +297,47 @@ class BaseSolver(object):
         model.terminate_events_eval = terminate_events_eval
         model.discontinuity_events_eval = discontinuity_events_eval
 
-        # Calculate consistent initial conditions for the algebraic equations
-        if len(model.algebraic) > 0:
-            all_states = pybamm.NumpyConcatenation(
-                model.concatenated_rhs, model.concatenated_algebraic
-            )
-            # Process again, uses caching so should be quick
-            residuals, residuals_eval, jacobian_eval = process(all_states, "residuals")
-            model.residuals_eval = residuals_eval
-            model.jacobian_eval = jacobian_eval
-            y0_guess = model.concatenated_initial_conditions.flatten()
-            model.y0 = self.calculate_consistent_state(model, 0, y0_guess)
-        else:
-            # can use DAE solver to solve ODE model
-            model.residuals_eval = Residuals(rhs, "residuals", model)
-            model.jacobian_eval = jac_rhs
-            model.y0 = model.concatenated_initial_conditions[:, 0]
-
         # Save CasADi functions for the CasADi solver
         # Note: when we pass to casadi the ode part of the problem must be in explicit
         # form so we pre-multiply by the inverse of the mass matrix
-        if model.convert_to_format == "casadi" and isinstance(
-            self, pybamm.CasadiSolver
-        ):
-            mass_matrix_inv = casadi.MX(model.mass_matrix_inv.entries)
-            explicit_rhs = mass_matrix_inv @ rhs(t_casadi, y_casadi, u_casadi_stacked)
-            model.casadi_rhs = casadi.Function(
-                "rhs", [t_casadi, y_casadi, u_casadi_stacked], [explicit_rhs]
-            )
+        if self.root_method == "casadi" or isinstance(self, pybamm.CasadiSolver):
+            # can use DAE solver to solve model with algebraic equations only
+            if len(model.rhs) > 0:
+                mass_matrix_inv = casadi.MX(model.mass_matrix_inv.entries)
+                explicit_rhs = mass_matrix_inv @ rhs(
+                    t_casadi, y_casadi, u_casadi_stacked
+                )
+                model.casadi_rhs = casadi.Function(
+                    "rhs", [t_casadi, y_casadi, u_casadi_stacked], [explicit_rhs]
+                )
             model.casadi_algebraic = algebraic
+        if self.algebraic_solver is True:
+            # we don't calculate consistent initial conditions
+            # for an algebraic solver as this will be the job of the algebraic solver
+            model.residuals_eval = Residuals(algebraic, "residuals", model)
+            model.jacobian_eval = jac_algebraic
+            model.y0 = y0.flatten()
+        elif len(model.algebraic) == 0:
+            # can use DAE solver to solve ODE model
+            # - no initial condition initialization needed
+            model.residuals_eval = Residuals(rhs, "residuals", model)
+            model.jacobian_eval = jac_rhs
+            model.y0 = y0.flatten()
+        # Calculate consistent initial conditions for the algebraic equations
+        else:
+            if len(model.rhs) > 0:
+                all_states = pybamm.NumpyConcatenation(
+                    model.concatenated_rhs, model.concatenated_algebraic
+                )
+                # Process again, uses caching so should be quick
+                residuals_eval, jacobian_eval = process(all_states, "residuals")[1:]
+                model.residuals_eval = residuals_eval
+                model.jacobian_eval = jacobian_eval
+            else:
+                model.residuals_eval = Residuals(algebraic, "residuals", model)
+                model.jacobian_eval = jac_algebraic
+            y0_guess = y0.flatten()
+            model.y0 = self.calculate_consistent_state(model, 0, y0_guess, inputs)
 
         pybamm.logger.info("Finish solver set-up")
 
@@ -312,7 +360,7 @@ class BaseSolver(object):
         if model.jacobian_eval:
             model.jacobian_eval.set_inputs(ext_and_inputs)
 
-    def calculate_consistent_state(self, model, time=0, y0_guess=None):
+    def calculate_consistent_state(self, model, time=0, y0_guess=None, inputs=None):
         """
         Calculate consistent state for the algebraic equations through
         root-finding
@@ -321,6 +369,12 @@ class BaseSolver(object):
         ----------
         model : :class:`pybamm.BaseModel`
             The model for which to calculate initial conditions.
+        time : float
+            The time at which to calculate the states
+        y0_guess : :class:`np.array`
+            Guess for the rootfinding
+        inputs : dict, optional
+            Any input parameters to pass to the model when solving
 
         Returns
         -------
@@ -328,66 +382,107 @@ class BaseSolver(object):
             Initial conditions that are consistent with the algebraic equations (roots
             of the algebraic equations)
         """
-        pybamm.logger.info("Start calculating consistent initial conditions")
-        rhs = model.rhs_eval
-        algebraic = model.algebraic_eval
-        jac = model.jac_algebraic_eval
+        pybamm.logger.info("Start calculating consistent states")
         if y0_guess is None:
             y0_guess = model.concatenated_initial_conditions.flatten()
 
         # Split y0_guess into differential and algebraic
-        len_rhs = rhs(0, y0_guess).shape[0]
+        len_rhs = model.rhs_eval(time, y0_guess).shape[0]
         y0_diff, y0_alg_guess = np.split(y0_guess, [len_rhs])
+        inputs = inputs or {}
 
-        def root_fun(y0_alg):
-            "Evaluates algebraic using y0_diff (fixed) and y0_alg (changed by algo)"
-            y0 = np.concatenate([y0_diff, y0_alg])
-            out = algebraic(time, y0)
-            pybamm.logger.debug(
-                "Evaluating algebraic equations at t=0, L2-norm is {}".format(
-                    np.linalg.norm(out)
-                )
+        # Solve using casadi or scipy
+        if self.root_method == "casadi":
+            # Set up
+            u_stacked = casadi.vertcat(*[x for x in inputs.values()])
+            u = casadi.MX.sym("u", u_stacked.shape[0])
+            y_alg = casadi.MX.sym("y_alg", y0_alg_guess.shape[0])
+            y = casadi.vertcat(y0_diff, y_alg)
+            alg_root = model.casadi_algebraic(time, y, u)
+            # Solve
+            roots = casadi.rootfinder(
+                "roots",
+                "newton",
+                dict(x=y_alg, p=u, g=alg_root),
+                {"abstol": self.root_tol},
             )
-            return out
+            try:
+                y0_alg = roots(y0_alg_guess, u_stacked).full().flatten()
+                success = True
+                message = None
+                # Check final output
+                fun = model.casadi_algebraic(
+                    time, casadi.vertcat(y0_diff, y0_alg), u_stacked
+                )
+                abs_fun = casadi.fabs(fun)
+                max_fun = casadi.mmax(fun)
+            except RuntimeError as err:
+                success = False
+                message = err.args[0]
+                abs_fun = None
+                max_fun = None
+        else:
+            algebraic = model.algebraic_eval
+            jac = model.jac_algebraic_eval
 
-        if jac:
-            if issparse(jac(0, y0_guess)):
+            def root_fun(y0_alg):
+                "Evaluates algebraic using y0_diff (fixed) and y0_alg (changed by algo)"
+                y0 = np.concatenate([y0_diff, y0_alg])
+                out = algebraic(time, y0)
+                pybamm.logger.debug(
+                    "Evaluating algebraic equations at t={}, L2-norm is {}".format(
+                        time * model.timescale, np.linalg.norm(out)
+                    )
+                )
+                return out
 
-                def jac_fn(y0_alg):
-                    """
-                    Evaluates jacobian using y0_diff (fixed) and y0_alg (varying)
-                    """
-                    y0 = np.concatenate([y0_diff, y0_alg])
-                    return jac(0, y0)[:, len_rhs:].toarray()
+            if jac:
+                if issparse(jac(0, y0_guess)):
+
+                    def jac_fn(y0_alg):
+                        """
+                        Evaluates jacobian using y0_diff (fixed) and y0_alg (varying)
+                        """
+                        y0 = np.concatenate([y0_diff, y0_alg])
+                        return jac(0, y0)[:, len_rhs:].toarray()
+
+                else:
+
+                    def jac_fn(y0_alg):
+                        """
+                        Evaluates jacobian using y0_diff (fixed) and y0_alg (varying)
+                        """
+                        y0 = np.concatenate([y0_diff, y0_alg])
+                        return jac(0, y0)[:, len_rhs:]
 
             else:
+                jac_fn = None
+            # Find the values of y0_alg that are roots of the algebraic equations
+            sol = optimize.root(
+                root_fun,
+                y0_alg_guess,
+                jac=jac_fn,
+                method=self.root_method,
+                tol=self.root_tol,
+            )
+            pybamm.citations.register("virtanen2020scipy")
 
-                def jac_fn(y0_alg):
-                    """
-                    Evaluates jacobian using y0_diff (fixed) and y0_alg (varying)
-                    """
-                    y0 = np.concatenate([y0_diff, y0_alg])
-                    return jac(0, y0)[:, len_rhs:]
+            # Set outputs
+            y0_alg = sol.x
+            success = sol.success
+            fun = sol.fun
+            abs_fun = np.abs(fun)
+            max_fun = np.max(fun)
+            message = sol.message
 
-        else:
-            jac_fn = None
-        # Find the values of y0_alg that are roots of the algebraic equations
-        sol = optimize.root(
-            root_fun,
-            y0_alg_guess,
-            jac=jac_fn,
-            method=self.root_method,
-            tol=self.root_tol,
-        )
-        # Return full set of consistent initial conditions (y0_diff unchanged)
-        y0_consistent = np.concatenate([y0_diff, sol.x])
-
-        if sol.success and np.all(sol.fun < self.root_tol * len(sol.x)):
+        if success and np.all(abs_fun < self.root_tol):
+            # Return full set of consistent initial conditions (y0_diff unchanged)
+            y0_consistent = np.concatenate([y0_diff, y0_alg])
             pybamm.logger.info("Finish calculating consistent initial conditions")
             return y0_consistent
-        elif not sol.success:
+        elif not success:
             raise pybamm.SolverError(
-                "Could not find consistent initial conditions: {}".format(sol.message)
+                "Could not find consistent initial conditions: {}".format(message)
             )
         else:
             raise pybamm.SolverError(
@@ -395,11 +490,11 @@ class BaseSolver(object):
                 Could not find consistent initial conditions: solver terminated
                 successfully, but maximum solution error ({}) above tolerance ({})
                 """.format(
-                    np.max(sol.fun), self.root_tol * len(sol.x)
+                    max_fun, self.root_tol
                 )
             )
 
-    def solve(self, model, t_eval, external_variables=None, inputs=None):
+    def solve(self, model, t_eval=None, external_variables=None, inputs=None):
         """
         Execute the solver setup and calculate the solution of the model at
         specified times.
@@ -429,6 +524,14 @@ class BaseSolver(object):
         if len(model.rhs) == 0 and len(model.algebraic) == 0:
             raise pybamm.ModelError("Cannot solve empty model")
 
+        # t_eval can only be None if the solver is an algebraic solver. In that case
+        # set it to 0
+        if t_eval is None:
+            if self.algebraic_solver is True:
+                t_eval = np.array([0])
+            else:
+                raise ValueError("t_eval cannot be None")
+
         # Make sure t_eval is monotonic
         if (np.diff(t_eval) < 0).any():
             raise pybamm.SolverError("t_eval must increase monotonically")
@@ -442,14 +545,6 @@ class BaseSolver(object):
         external_variables = external_variables or {}
         inputs = inputs or {}
         ext_and_inputs = {**external_variables, **inputs}
-
-        # Raise warning if t_eval looks like it was supposed to be dimensionless
-        # already
-        if t_eval[-1] < 0.5:
-            raise pybamm.SolverError(
-                """It looks like t_eval might be dimensionless.
-                t_eval should now be provided in seconds"""
-            )
 
         # Set up (if not done already)
         if model not in self.models_set_up:
@@ -472,6 +567,18 @@ class BaseSolver(object):
 
         # make sure they are increasing in time
         discontinuities = sorted(discontinuities)
+
+        # remove any identical discontinuities
+        discontinuities = [
+            v
+            for i, v in enumerate(discontinuities)
+            if (
+                i == len(discontinuities) - 1
+                or discontinuities[i] < discontinuities[i + 1]
+            )
+            and v > 0
+        ]
+
         if len(discontinuities) > 0:
             pybamm.logger.info(
                 "Discontinuity events found at t = {}".format(discontinuities)
@@ -479,36 +586,27 @@ class BaseSolver(object):
         else:
             pybamm.logger.info("No discontinuity events found")
 
-        # remove any identical discontinuities
-        discontinuities = [
-            v
-            for i, v in enumerate(discontinuities)
-            if i == len(discontinuities) - 1
-            or discontinuities[i] < discontinuities[i + 1]
-        ]
-
         # insert time points around discontinuities in t_eval
         # keep track of sub sections to integrate by storing start and end indices
         start_indices = [0]
         end_indices = []
+        eps = sys.float_info.epsilon
         for dtime in discontinuities:
             dindex = np.searchsorted(t_eval_dimensionless, dtime, side="left")
             end_indices.append(dindex + 1)
             start_indices.append(dindex + 1)
-            if t_eval_dimensionless[dindex] == dtime:
-                t_eval_dimensionless[dindex] += sys.float_info.epsilon
+            if dtime - eps < t_eval_dimensionless[dindex] < dtime + eps:
+                t_eval_dimensionless[dindex] += eps
                 t_eval_dimensionless = np.insert(
-                    t_eval_dimensionless, dindex, dtime - sys.float_info.epsilon
+                    t_eval_dimensionless, dindex, dtime - eps
                 )
             else:
                 t_eval_dimensionless = np.insert(
-                    t_eval_dimensionless,
-                    dindex,
-                    [dtime - sys.float_info.epsilon, dtime + sys.float_info.epsilon],
+                    t_eval_dimensionless, dindex, [dtime - eps, dtime + eps]
                 )
         end_indices.append(len(t_eval_dimensionless))
 
-        # integrate separatly over each time segment and accumulate into the solution
+        # integrate separately over each time segment and accumulate into the solution
         # object, restarting the solver at each discontinuity (and recalculating a
         # consistent state afterwards if a dae)
         old_y0 = model.y0
@@ -521,16 +619,13 @@ class BaseSolver(object):
                 )
             )
             timer.reset()
+            new_solution = self._integrate(
+                model, t_eval_dimensionless[start_index:end_index], ext_and_inputs
+            )
+            new_solution.solve_time = timer.time()
             if solution is None:
-                solution = self._integrate(
-                    model, t_eval_dimensionless[start_index:end_index], ext_and_inputs
-                )
-                solution.solve_time = timer.time()
+                solution = new_solution
             else:
-                new_solution = self._integrate(
-                    model, t_eval_dimensionless[start_index:end_index], ext_and_inputs
-                )
-                new_solution.solve_time = timer.time()
                 solution.append(new_solution, start_index=0)
 
             if solution.termination != "final time":
@@ -538,18 +633,13 @@ class BaseSolver(object):
 
             if end_index != len(t_eval_dimensionless):
                 # setup for next integration subsection
-                y0_guess = solution.y[:, -1]
-                if model.algebraic:
-                    model.y0 = self.calculate_consistent_state(
-                        model, t_eval_dimensionless[end_index], y0_guess
-                    )
-                else:
-                    model.y0 = y0_guess
-
                 last_state = solution.y[:, -1]
                 if len(model.algebraic) > 0:
                     model.y0 = self.calculate_consistent_state(
-                        model, t_eval_dimensionless[end_index], last_state
+                        model,
+                        t_eval_dimensionless[end_index],
+                        last_state,
+                        ext_and_inputs,
                     )
                 else:
                     model.y0 = last_state
@@ -562,7 +652,7 @@ class BaseSolver(object):
 
         # Add model and inputs to solution
         solution.model = model
-        solution.inputs = inputs
+        solution.inputs = ext_and_inputs
 
         # Identify the event that caused termination
         termination = self.get_termination_reason(solution, model.events)
@@ -578,7 +668,14 @@ class BaseSolver(object):
         return solution
 
     def step(
-        self, old_solution, model, dt, npts=2, external_variables=None, inputs=None
+        self,
+        old_solution,
+        model,
+        dt,
+        npts=2,
+        external_variables=None,
+        inputs=None,
+        save=True,
     ):
         """
         Step the solution of the model forward by a given time increment. The
@@ -602,7 +699,8 @@ class BaseSolver(object):
             values at the current time
         inputs : dict, optional
             Any input parameters to pass to the model when solving
-
+        save : bool
+            Turn on to store the solution of all previous timesteps
 
         Raises
         ------
@@ -632,20 +730,22 @@ class BaseSolver(object):
         ext_and_inputs = {**external_variables, **inputs}
 
         # Run set up on first step
-        if model not in self.model_step_times:
+        if old_solution is None:
             pybamm.logger.info(
                 "Start stepping {} with {}".format(model.name, self.name)
             )
             self.set_up(model, ext_and_inputs)
-            self.model_step_times[model] = 0.0
+            t = 0.0
             set_up_time = timer.time()
         else:
+            # initialize with old solution
+            t = old_solution.t[-1]
+            model.y0 = old_solution.y[:, -1]
             set_up_time = 0
 
         # Non-dimensionalise dt
         dt_dimensionless = dt / model.timescale_eval
         # Step
-        t = self.model_step_times[model]
         t_eval = np.linspace(t, t + dt_dimensionless, npts)
         # Set inputs and external
         self.set_inputs(model, ext_and_inputs)
@@ -660,14 +760,10 @@ class BaseSolver(object):
 
         # Add model and inputs to solution
         solution.model = model
-        solution.inputs = inputs
+        solution.inputs = ext_and_inputs
 
         # Identify the event that caused termination
         termination = self.get_termination_reason(solution, model.events)
-
-        # Set self.t and self.y0 to their values at the final step
-        self.model_step_times[model] = solution.t[-1]
-        model.y0 = solution.y[:, -1]
 
         pybamm.logger.debug("Finish stepping {} ({})".format(model.name, termination))
         if set_up_time:
@@ -682,7 +778,7 @@ class BaseSolver(object):
             pybamm.logger.debug(
                 "Step time: {}".format(timer.format(solution.solve_time))
             )
-        if old_solution is None:
+        if save is False or old_solution is None:
             return solution
         else:
             return old_solution + solution

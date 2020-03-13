@@ -5,6 +5,7 @@ import pybamm
 import pandas as pd
 import os
 import numbers
+import numpy as np
 
 
 class ParameterValues:
@@ -41,8 +42,9 @@ class ParameterValues:
     >>> param = pybamm.ParameterValues(values)
     >>> param["some parameter"]
     1
-    >>> file = "/input/parameters/lithium-ion/cells/kokam_Marquis2019/parameters.csv"
-    >>> param = pybamm.ParameterValues(values=pybamm.root_dir() + file)
+    >>> file = "input/parameters/lithium-ion/cells/kokam_Marquis2019/parameters.csv"
+    >>> values_path = pybamm.get_parameters_filepath(file)
+    >>> param = pybamm.ParameterValues(values=values_path)
     >>> param["Negative current collector thickness [m]"]
     2.5e-05
     >>> param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
@@ -56,12 +58,10 @@ class ParameterValues:
         # Must provide either values or chemistry, not both (nor neither)
         if values is not None and chemistry is not None:
             raise ValueError(
-                """
-                Only one of values and chemistry can be provided. To change parameters
-                slightly from a chemistry, first load parameters with the chemistry
-                (param = pybamm.ParameterValues(chemistry=...)) and then update with
-                param.update({dict of values}).
-                """
+                "Only one of values and chemistry can be provided. To change parameters"
+                " slightly from a chemistry, first load parameters with the chemistry"
+                " (param = pybamm.ParameterValues(chemistry=...)) and then update with"
+                " param.update({dict of values})."
             )
         if values is None and chemistry is None:
             raise ValueError("values and chemistry cannot both be None")
@@ -72,9 +72,12 @@ class ParameterValues:
         if values is not None:
             # If base_parameters is a filename, load from that filename
             if isinstance(values, str):
+                path = os.path.split(values)[0]
                 values = self.read_parameters_csv(values)
+            else:
+                path = None
             # Don't check parameter already exists when first creating it
-            self.update(values, check_already_exists=False)
+            self.update(values, check_already_exists=False, path=path)
 
         # Initialise empty _processed_symbols dict (for caching)
         self._processed_symbols = {}
@@ -101,13 +104,21 @@ class ParameterValues:
         "Get the items of the dictionary"
         return self._dict_items.items()
 
+    def search(self, key, print_values=True):
+        """
+        Search dictionary for keys containing 'key'.
+
+        See :meth:`pybamm.FuzzyDict.search()`.
+        """
+        return self._dict_items.search(key, print_values)
+
     def update_from_chemistry(self, chemistry):
         """
         Load standard set of components from a 'chemistry' dictionary
         """
         base_chemistry = chemistry["chemistry"]
         # Create path to file
-        path = os.path.join(pybamm.root_dir(), "input", "parameters", base_chemistry)
+        path = os.path.join("input", "parameters", base_chemistry)
         # Load each component name
 
         component_groups = [
@@ -136,7 +147,9 @@ class ParameterValues:
             # Create path to component and load values
             component_path = os.path.join(path, component_group + "s", component)
             component_params = self.read_parameters_csv(
-                os.path.join(component_path, "parameters.csv")
+                pybamm.get_parameters_filepath(
+                    os.path.join(component_path, "parameters.csv")
+                )
             )
             # Update parameters, making sure to check any conflicts
             self.update(
@@ -145,6 +158,11 @@ class ParameterValues:
                 check_already_exists=False,
                 path=component_path,
             )
+
+        # register citations
+        if "citation" in chemistry:
+            citation = chemistry["citation"]
+            pybamm.citations.register(citation)
 
     def read_parameters_csv(self, filename):
         """Reads parameters from csv file into dict.
@@ -205,13 +223,10 @@ class ParameterValues:
                     self._dict_items[name]
                 except KeyError as err:
                     raise KeyError(
-                        """
-                        Cannot update parameter '{}' as it does not have a default
-                        value. ({}). If you are sure you want to update this parameter,
-                        use param.update({{name: value}}, check_already_exists=False)
-                        """.format(
-                            name, err.args[0]
-                        )
+                        "Cannot update parameter '{}' as it does not ".format(name)
+                        + "have a default value. ({}). If you are ".format(err.args[0])
+                        + "sure you want to update this parameter, use "
+                        + "param.update({{name: value}}, check_already_exists=False)"
                     )
             # if no conflicts, update, loading functions and data if they are specified
             # Functions are flagged with the string "[function]"
@@ -225,14 +240,13 @@ class ParameterValues:
                 # Data is flagged with the string "[data]" or "[current data]"
                 elif value.startswith("[current data]") or value.startswith("[data]"):
                     if value.startswith("[current data]"):
-                        data_path = os.path.join(
-                            pybamm.root_dir(), "input", "drive_cycles"
-                        )
+                        data_path = os.path.join("input", "drive_cycles")
                         filename = os.path.join(data_path, value[14:] + ".csv")
                         function_name = value[14:]
                     else:
                         filename = os.path.join(path, value[6:] + ".csv")
                         function_name = value[6:]
+                    filename = pybamm.get_parameters_filepath(filename)
                     data = pd.read_csv(
                         filename, comment="#", skip_blank_lines=True, header=None
                     ).to_numpy()
@@ -256,16 +270,12 @@ class ParameterValues:
         # Make sure typical current is non-zero
         if "Typical current [A]" in values and values["Typical current [A]"] == 0:
             raise ValueError(
-                """
-                "Typical current [A]" cannot be zero. A possible alternative is to set
-                "Current function [A]" to `0` instead.
-                """
+                "'Typical current [A]' cannot be zero. A possible alternative is to "
+                "set 'Current function [A]' to `0` instead."
             )
         if "C-rate" in values and "Current function [A]" in values:
             raise ValueError(
-                """
-                Cannot provide both "C-rate" and "Current function [A]" simultaneously
-                """
+                "Cannot provide both 'C-rate' and 'Current function [A]' simultaneously"
             )
         # If the capacity of the cell has been provided, make sure "C-rate" and current
         # match with the stated capacity
@@ -283,8 +293,8 @@ class ParameterValues:
                     value = CrateToCurrent(values["C-rate"], capacity)
                 elif isinstance(values["C-rate"], tuple):
                     data = values["C-rate"][1]
-                    data[:, 1] = data[:, 1] * capacity
-                    value = (values["C-rate"][0] + "_to_Crate", data)
+                    current_data = np.stack([data[:, 0], data[:, 1] * capacity], axis=1)
+                    value = (values["C-rate"][0] + "_to_current", current_data)
                 elif values["C-rate"] == "[input]":
                     value = CrateToCurrent(values["C-rate"], capacity, typ="input")
                 else:
@@ -295,8 +305,11 @@ class ParameterValues:
                     value = CurrentToCrate(values["Current function [A]"], capacity)
                 elif isinstance(values["Current function [A]"], tuple):
                     data = values["Current function [A]"][1]
-                    data[:, 1] = data[:, 1] / capacity
-                    value = (values["Current function [A]"][0] + "_to_current", data)
+                    c_rate_data = np.stack([data[:, 0], data[:, 1] / capacity], axis=1)
+                    value = (
+                        values["Current function [A]"][0] + "_to_Crate",
+                        c_rate_data,
+                    )
                 elif values["Current function [A]"] == "[input]":
                     value = CurrentToCrate(
                         values["Current function [A]"], capacity, typ="input"
