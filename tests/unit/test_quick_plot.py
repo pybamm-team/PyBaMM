@@ -267,7 +267,7 @@ class TestQuickPlot(unittest.TestCase):
         t_eval = np.linspace(0, 3600, 100)
         solution_spm = spm.default_solver.solve(spm, t_eval)
 
-        pybamm.QuickPlot(
+        quick_plot = pybamm.QuickPlot(
             solution_spm,
             [
                 "Negative current collector potential [V]",
@@ -275,6 +275,8 @@ class TestQuickPlot(unittest.TestCase):
                 "Terminal voltage [V]",
             ],
         )
+        quick_plot.dynamic_plot(testing=True)
+        quick_plot.slider_update(1)
 
     def test_failure(self):
         with self.assertRaisesRegex(TypeError, "solutions must be"):
