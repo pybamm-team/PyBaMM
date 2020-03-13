@@ -188,6 +188,13 @@ class TestQuickPlot(unittest.TestCase):
                 [solution, solution], ["a"], labels=["sol 1", "sol 2", "sol 3"]
             )
 
+        # Remove 'x [m]' from the variables and make sure a key error is raise
+        del solution.model.variables["x [m]"]
+        with self.assertRaisesRegex(
+            KeyError, "Can't find spatial scale for 'negative electrode'",
+        ):
+            pybamm.QuickPlot(solution, ["b broadcasted"])
+
         # No variable can be NaN
         model.variables["NaN variable"] = disc.process_symbol(pybamm.Scalar(np.nan))
         with self.assertRaisesRegex(

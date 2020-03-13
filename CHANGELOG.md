@@ -2,6 +2,8 @@
 
 ## Features
 
+-   Reformatted and cleaned up `QuickPlot` ([#886](https://github.com/pybamm-team/PyBaMM/pull/886))
+-   Added thermal effects to lead-acid models ([#885](https://github.com/pybamm-team/PyBaMM/pull/885))
 -   Added additional notebooks showing how to create and compare models ([#877](https://github.com/pybamm-team/PyBaMM/pull/877))
 -   Added `Minimum`, `Maximum` and `Sign` operators ([#876](https://github.com/pybamm-team/PyBaMM/pull/876))
 -   Added a search feature to `FuzzyDict` ([#875](https://github.com/pybamm-team/PyBaMM/pull/875))

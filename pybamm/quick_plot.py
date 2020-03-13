@@ -144,24 +144,24 @@ class QuickPlot(object):
         variables = models[0].variables
         # empty spatial scales, will raise error later if can't find a particular one
         self.spatial_scales = {}
-        if "x [m]" and "x" in variables:
+        if "x [m]" in variables and "x" in variables:
             x_scale = (variables["x [m]"] / variables["x"]).evaluate()[
                 -1
             ] * spatial_factor
             self.spatial_scales.update({dom: x_scale for dom in variables["x"].domain})
-        if "y [m]" and "y" in variables:
+        if "y [m]" in variables and "y" in variables:
             self.spatial_scales["current collector y"] = (
                 variables["y [m]"] / variables["y"]
             ).evaluate()[-1] * spatial_factor
-        if "z [m]" and "z" in variables:
+        if "z [m]" in variables and "z" in variables:
             self.spatial_scales["current collector z"] = (
                 variables["z [m]"] / variables["z"]
             ).evaluate()[-1] * spatial_factor
-        if "r_n [m]" and "r_n" in variables:
+        if "r_n [m]" in variables and "r_n" in variables:
             self.spatial_scales["negative particle"] = (
                 variables["r_n [m]"] / variables["r_n"]
             ).evaluate()[-1] * spatial_factor
-        if "r_p [m]" and "r_p" in variables:
+        if "r_p [m]" in variables and "r_p" in variables:
             self.spatial_scales["positive particle"] = (
                 variables["r_p [m]"] / variables["r_p"]
             ).evaluate()[-1] * spatial_factor
@@ -230,6 +230,7 @@ class QuickPlot(object):
         self.second_dimensional_spatial_variable = {}
         self.first_spatial_scale = {}
         self.second_spatial_scale = {}
+        self.is_x_r = {}
 
         # Calculate subplot positions based on number of variables supplied
         self.subplot_positions = {}
@@ -279,6 +280,7 @@ class QuickPlot(object):
                             key[0], domain, key[idx], variable.domain
                         )
                     )
+                self.spatial_variable_dict[key] = {}
 
             # Set the x variable (i.e. "x" or "r" for any one-dimensional variables)
             if first_variable.dimensions == 1:
@@ -323,6 +325,10 @@ class QuickPlot(object):
                     self.second_dimensional_spatial_variable[key] = (
                         second_spatial_var_value * second_spatial_scale
                     )
+                    if first_spatial_var_name == "r" and second_spatial_var_name == "x":
+                        self.is_x_r[key] = True
+                    else:
+                        self.is_x_r[key] = False
 
             # Store variables and subplot position
             self.variables[key] = variables
@@ -374,26 +380,27 @@ class QuickPlot(object):
             if variable_lists[0][0].dimensions == 0:
                 x_min = self.min_t
                 x_max = self.max_t
-                spatial_vars = {}
             elif variable_lists[0][0].dimensions == 1:
                 x_min = self.first_dimensional_spatial_variable[key][0]
                 x_max = self.first_dimensional_spatial_variable[key][-1]
-                # Read dictionary of spatial variables
-                spatial_vars = self.spatial_variable_dict[key]
             elif variable_lists[0][0].dimensions == 2:
-                # First spatial variable
-                x_min = self.second_dimensional_spatial_variable[key][0]
-                x_max = self.second_dimensional_spatial_variable[key][-1]
-                y_min = self.first_dimensional_spatial_variable[key][0]
-                y_max = self.first_dimensional_spatial_variable[key][-1]
-
-                # Read dictionary of spatial variables
-                spatial_vars = self.spatial_variable_dict[key]
+                # different order based on whether the domains are x-r, x-z or y-z
+                if self.is_x_r[key] is True:
+                    x_min = self.second_dimensional_spatial_variable[key][0]
+                    x_max = self.second_dimensional_spatial_variable[key][-1]
+                    y_min = self.first_dimensional_spatial_variable[key][0]
+                    y_max = self.first_dimensional_spatial_variable[key][-1]
+                else:
+                    x_min = self.first_dimensional_spatial_variable[key][0]
+                    x_max = self.first_dimensional_spatial_variable[key][-1]
+                    y_min = self.second_dimensional_spatial_variable[key][0]
+                    y_max = self.second_dimensional_spatial_variable[key][-1]
 
                 # Create axis for contour plot
                 self.axis[key] = [x_min, x_max, y_min, y_max]
 
             # Get min and max variable values
+            spatial_vars = self.spatial_variable_dict[key]
             var_min = np.min(
                 [
                     ax_min(var(self.ts[i], **spatial_vars, warn=False))
@@ -513,31 +520,31 @@ class QuickPlot(object):
                         variable_handles.append(self.plots[key][0][j])
                     solution_handles.append(self.plots[key][i][0])
             elif variable_lists[0][0].dimensions == 2:
-                # 2D plot: plot as a function of x and y at time t
                 # Read dictionary of spatial variables
-                # note "first" and "second" variables are not in the 'right' order so
-                # that, in the particle case, x is on x-axis and r is on y-axis
-                # TODO: make an if statement for this
                 spatial_vars = self.spatial_variable_dict[key]
-                x_name = list(spatial_vars.keys())[1][0]
-                y_name = list(spatial_vars.keys())[0][0]
+                # there can only be one entry in the variable list
+                variable = variable_lists[0][0]
+                # different order based on whether the domains are x-r, x-z or y-z
+                if self.is_x_r[key] is True:
+                    x_name = list(spatial_vars.keys())[1][0]
+                    y_name = list(spatial_vars.keys())[0][0]
+                    x = self.second_dimensional_spatial_variable[key]
+                    y = self.first_dimensional_spatial_variable[key]
+                    var = variable(t, **spatial_vars, warn=False)
+                else:
+                    x_name = list(spatial_vars.keys())[0][0]
+                    y_name = list(spatial_vars.keys())[1][0]
+                    x = self.first_dimensional_spatial_variable[key]
+                    y = self.second_dimensional_spatial_variable[key]
+                    var = variable(t, **spatial_vars, warn=False).T
                 ax.set_xlabel(
                     "{} [{}]".format(x_name, self.spatial_unit), fontsize=fontsize
                 )
                 ax.set_ylabel(
                     "{} [{}]".format(y_name, self.spatial_unit), fontsize=fontsize
                 )
-                # there can only be one entry in the variable list
-                variable = variable_lists[0][0]
                 vmin, vmax = self.var_limits[key]
-                ax.contourf(
-                    self.second_dimensional_spatial_variable[key],
-                    self.first_dimensional_spatial_variable[key],
-                    variable(t, **spatial_vars, warn=False),
-                    levels=100,
-                    vmin=vmin,
-                    vmax=vmax,
-                )
+                ax.contourf(x, y, var, levels=100, vmin=vmin, vmax=vmax)
                 self.fig.colorbar(
                     cm.ScalarMappable(colors.Normalize(vmin=vmin, vmax=vmax)), ax=ax
                 )
@@ -604,11 +611,10 @@ class QuickPlot(object):
             if not testing:  # pragma: no cover
                 plt.show()
 
-    def slider_update(self, val):
+    def slider_update(self, t):
         """
         Update the plot in self.plot() with values at new time
         """
-        t = self.slider.val
         t_dimensionless = t / self.time_scale
         for k, (key, plot) in enumerate(self.plots.items()):
             if self.variables[key][0][0].dimensions == 0:
@@ -631,13 +637,14 @@ class QuickPlot(object):
                 # there can only be one entry in the variable list
                 variable = self.variables[key][0][0]
                 vmin, vmax = self.var_limits[key]
-                ax.contourf(
-                    self.second_dimensional_spatial_variable[key],
-                    self.first_dimensional_spatial_variable[key],
-                    variable(t_dimensionless, **spatial_vars, warn=False),
-                    levels=100,
-                    vmin=vmin,
-                    vmax=vmax,
-                )
+                if self.is_x_r[key] is True:
+                    x = self.second_dimensional_spatial_variable[key]
+                    y = self.first_dimensional_spatial_variable[key]
+                    var = variable(t_dimensionless, **spatial_vars, warn=False)
+                else:
+                    x = self.first_dimensional_spatial_variable[key]
+                    y = self.second_dimensional_spatial_variable[key]
+                    var = variable(t_dimensionless, **spatial_vars, warn=False).T
+                ax.contourf(x, y, var, levels=100, vmin=vmin, vmax=vmax)
 
         self.fig.canvas.draw_idle()

@@ -21,8 +21,6 @@ class ProcessedVariable(object):
         When evaluated, returns an array of size (m,n)
     solution : :class:`pybamm.Solution`
         The solution object to be used to create the processed variables
-    interp_kind : str
-        The method to use for interpolation
     known_evals : dict
         Dictionary of known evaluations, to be used to speed up finding the solution
     """
@@ -67,10 +65,8 @@ class ProcessedVariable(object):
         else:
             if len(solution.t) == 1:
                 raise pybamm.SolverError(
-                    """
-                    Solution time vector must have length > 1. Check whether simulation
-                    terminated too early.
-                    """
+                    "Solution time vector must have length > 1. Check whether "
+                    "simulation terminated too early."
                 )
             elif (
                 isinstance(self.base_eval, numbers.Number)
@@ -210,10 +206,8 @@ class ProcessedVariable(object):
             self.z_sol = second_dim_pts
         else:
             raise pybamm.DomainError(
-                """ Cannot process 3D object with domain '{}'
-                and auxiliary_domains '{}'""".format(
-                    self.domain, self.auxiliary_domains
-                )
+                "Cannot process 3D object with domain '{}' "
+                "and auxiliary_domains '{}'".format(self.domain, self.auxiliary_domains)
             )
 
         first_dim_size = len(first_dim_pts)
@@ -330,25 +324,25 @@ class ProcessedVariable(object):
         if self.dimensions == 0:
             out = self._interpolation_function(t)
         elif self.dimensions == 1:
-            out = self.call_2D(t, x, r, z)
+            out = self.call_1D(t, x, r, z)
         elif self.dimensions == 2:
             if t is None:
                 out = self._interpolation_function(y, z)
             else:
-                out = self.call_3D(t, x, r, y, z)
+                out = self.call_2D(t, x, r, y, z)
         if warn is True and np.isnan(out).any():
             pybamm.logger.warning(
                 "Calling variable outside interpolation range (returns 'nan')"
             )
         return out
 
-    def call_2D(self, t, x, r, z):
-        "Evaluate a 2D variable"
+    def call_1D(self, t, x, r, z):
+        "Evaluate a 1D variable"
         spatial_var = eval_dimension_name(self.first_dimension, x, r, None, z)
         return self._interpolation_function(t, spatial_var)
 
-    def call_3D(self, t, x, r, y, z):
-        "Evaluate a 3D variable"
+    def call_2D(self, t, x, r, y, z):
+        "Evaluate a 2D variable"
         first_dim = eval_dimension_name(self.first_dimension, x, r, y, z)
         second_dim = eval_dimension_name(self.second_dimension, x, r, y, z)
         if isinstance(first_dim, np.ndarray):
