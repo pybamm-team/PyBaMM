@@ -486,10 +486,10 @@ class Symbol(anytree.NodeMixin):
         elif any(variable.id == x.id for x in self.pre_order()):
             return self._diff(variable)
         elif variable.id == pybamm.t.id and \
-            any(
-                isinstance(x, (pybamm.VariableBase, pybamm.StateVectorBase))
-                for x in self.pre_order()
-            ):
+                any(
+                    isinstance(x, (pybamm.VariableBase, pybamm.StateVectorBase))
+                    for x in self.pre_order()
+                ):
             return self._diff(variable)
         else:
             return pybamm.Scalar(0)
