@@ -57,9 +57,11 @@ class FiniteVolume(pybamm.SpatialMethod):
         :class:`pybamm.Vector`
             Contains the discretised spatial variable
         """
-        # for finite volume we use the cell centres
         symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
-        entries = np.concatenate([mesh.nodes for mesh in symbol_mesh])
+        if symbol.evaluates_on_edges():
+            entries = np.concatenate([mesh.edges for mesh in symbol_mesh])
+        else:
+            entries = np.concatenate([mesh.nodes for mesh in symbol_mesh])
         return pybamm.Vector(
             entries, domain=symbol.domain, auxiliary_domains=symbol.auxiliary_domains
         )

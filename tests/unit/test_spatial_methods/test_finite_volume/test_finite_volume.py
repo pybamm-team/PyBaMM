@@ -812,6 +812,25 @@ class TestFiniteVolume(unittest.TestCase):
         )
 
         # --------------------------------------------------------------------
+        # indefinite integral of a spatial variable
+        x = pybamm.SpatialVariable("x", ["negative electrode", "separator"])
+        x_edge = pybamm.SpatialVariableEdge("x", ["negative electrode", "separator"])
+        int_x = pybamm.IndefiniteIntegral(x, x)
+        int_x_edge = pybamm.IndefiniteIntegral(x_edge, x)
+
+        x_disc = disc.process_symbol(x)
+        x_edge_disc = disc.process_symbol(x_edge)
+        int_x_disc = disc.process_symbol(int_x)
+        int_x_edge_disc = disc.process_symbol(int_x_edge)
+
+        np.testing.assert_almost_equal(
+            int_x_disc.evaluate(), x_edge_disc.evaluate() ** 2 / 2
+        )
+        np.testing.assert_almost_equal(
+            int_x_edge_disc.evaluate(), x_disc.evaluate() ** 2 / 2, decimal=4
+        )
+
+        # --------------------------------------------------------------------
         # micrsoscale case
         c = pybamm.Variable("c", domain=["negative particle"])
         N = pybamm.grad(c)  # create test current (variable on edges)

@@ -62,7 +62,7 @@ class SpatialMethod:
             Contains the discretised spatial variable
         """
         symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
-        if symbol.name.endswith("_edge"):
+        if symbol.evaluates_on_edges():
             entries = np.concatenate([mesh.edges for mesh in symbol_mesh])
         else:
             entries = np.concatenate([mesh.nodes for mesh in symbol_mesh])
