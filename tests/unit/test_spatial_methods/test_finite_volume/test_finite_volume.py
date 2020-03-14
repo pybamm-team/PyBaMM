@@ -864,16 +864,30 @@ class TestFiniteVolume(unittest.TestCase):
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
-        # input a phi, take grad, then integrate to recover phi approximation
-        # (need to test this way as check evaluated on edges using if has grad
-        # and no div)
+        # make a variable 'phi' and a vector 'i' which is broadcast onto edges
+        # the integral of this should then be put onto the nodes
         phi = pybamm.Variable("phi", domain=["negative electrode", "separator"])
         i = pybamm.PrimaryBroadcastToEdges(1, phi.domain)
-
-        x = pybamm.SpatialVariable("x", ["negative electrode", "separator"])
-        int_phi_av = pybamm.x_average(pybamm.IndefiniteIntegral(i / phi ** 2, x))
+        x = pybamm.SpatialVariable("x", phi.domain)
         disc.set_variable_slices([phi])
-        int_phi_disc = disc.process_symbol(int_phi_av)
+        combined_submesh = mesh.combine_submeshes("negative electrode", "separator")
+        x_end = combined_submesh[0].edges[-1]
+
+        # take indefinite integral
+        int_phi = pybamm.IndefiniteIntegral(i * phi, x)
+        # take integral again
+        int_int_phi = pybamm.Integral(int_phi, x)
+        int_int_phi_disc = disc.process_symbol(int_int_phi)
+
+        # constant case
+        phi_exact = np.ones_like(combined_submesh[0].nodes)
+        phi_approx = int_int_phi_disc.evaluate(None, phi_exact)
+        np.testing.assert_array_equal(x_end ** 2 / 2, phi_approx)
+
+        # linear case
+        phi_exact = combined_submesh[0].nodes[:, np.newaxis]
+        phi_approx = int_int_phi_disc.evaluate(None, phi_exact)
+        np.testing.assert_array_almost_equal(x_end ** 3 / 6, phi_approx, decimal=4)
 
     def test_indefinite_integral_on_nodes(self):
         mesh = get_mesh_for_testing()
