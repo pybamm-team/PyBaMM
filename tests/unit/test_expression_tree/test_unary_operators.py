@@ -269,7 +269,7 @@ class TestUnaryOperators(unittest.TestCase):
             pybamm.boundary_value(var, "negative tab")
             pybamm.boundary_value(var, "positive tab")
 
-    def test_average(self):
+    def test_x_average(self):
         a = pybamm.Scalar(1)
         average_a = pybamm.x_average(a)
         self.assertEqual(average_a.id, a.id)
@@ -311,6 +311,13 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(av_a.children[1].integration_variable[0].domain, a.domain)
         self.assertEqual(av_a.children[1].children[0].id, pybamm.ones_like(a).id)
 
+        # x-average of symbol that evaluates on edges raises error
+        symbol_on_edges = pybamm.PrimaryBroadcastToEdges(1, "domain")
+        with self.assertRaisesRegex(
+            ValueError, "Can't take the x-average of a symbol that evaluates on edges"
+        ):
+            pybamm.x_average(symbol_on_edges)
+
     def test_r_average(self):
         a = pybamm.Scalar(1)
         average_a = pybamm.r_average(a)
@@ -330,6 +337,13 @@ class TestUnaryOperators(unittest.TestCase):
             self.assertEqual(av_a.children[0].integration_variable[0].domain, r.domain)
             # electrode domains go to current collector when averaged
             self.assertEqual(av_a.domain, [])
+
+        # r-average of symbol that evaluates on edges raises error
+        symbol_on_edges = pybamm.PrimaryBroadcastToEdges(1, "domain")
+        with self.assertRaisesRegex(
+            ValueError, "Can't take the r-average of a symbol that evaluates on edges"
+        ):
+            pybamm.r_average(symbol_on_edges)
 
     def test_yz_average(self):
         a = pybamm.Scalar(1)
@@ -368,6 +382,13 @@ class TestUnaryOperators(unittest.TestCase):
             pybamm.z_average(a)
         with self.assertRaises(pybamm.DomainError):
             pybamm.yz_average(a)
+
+        # average of symbol that evaluates on edges raises error
+        symbol_on_edges = pybamm.PrimaryBroadcastToEdges(1, "domain")
+        with self.assertRaisesRegex(
+            ValueError, "Can't take the z-average of a symbol that evaluates on edges"
+        ):
+            pybamm.z_average(symbol_on_edges)
 
 
 if __name__ == "__main__":
