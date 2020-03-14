@@ -8,7 +8,7 @@ import numbers
 import numpy as np
 
 
-class ParameterValues:
+class ParameterValues(dict):
     """
     The parameter values for a simulation.
 
