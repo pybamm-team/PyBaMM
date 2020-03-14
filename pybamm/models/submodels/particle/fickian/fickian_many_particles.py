@@ -54,8 +54,7 @@ class ManyParticles(BaseParticle):
             x = pybamm.standard_spatial_vars.x_n
             R = pybamm.FunctionParameter(
                 "Negative particle distribution in x",
-                x,
-                inputs=["Dimensionless through-cell position (x_n)"],
+                {"Dimensionless through-cell position (x_n)": x},
             )
             variables.update({"Negative particle distribution in x": R})
 
@@ -63,8 +62,7 @@ class ManyParticles(BaseParticle):
             x = pybamm.standard_spatial_vars.x_p
             R = pybamm.FunctionParameter(
                 "Positive particle distribution in x",
-                x,
-                inputs=["Dimensionless through-cell position (x_p)"],
+                {"Dimensionless through-cell position (x_p)": x},
             )
             variables.update({"Positive particle distribution in x": R})
 

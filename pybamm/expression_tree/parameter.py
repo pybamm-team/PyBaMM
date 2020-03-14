@@ -82,12 +82,12 @@ class FunctionParameter(pybamm.Symbol):
 
     @property
     def input_names(self):
-        if self._inputs:
+        if self._input_names:
             for inp in self._input_names:
                 print(inp)
 
     @input_names.setter
-    def inputs_names(self, inp=None):
+    def input_names(self, inp=None):
         if inp:
             if inp.__class__ is list:
                 for i in inp:
@@ -140,7 +140,7 @@ class FunctionParameter(pybamm.Symbol):
 
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
-        return self._function_parameter_new_copy(self.input_names, self.orphans)
+        return self._function_parameter_new_copy(self._input_names, self.orphans)
 
     def _function_parameter_new_copy(self, input_names, children):
         """Returns a new copy of the function parameter.
