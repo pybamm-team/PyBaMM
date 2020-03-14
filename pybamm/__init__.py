@@ -154,7 +154,6 @@ from .models.base_model import BaseModel
 from .models import standard_variables
 from .models.event import Event
 from .models.event import EventType
-from .models.make_semi_explicit import make_semi_explicit
 
 # Battery models
 from .models.full_battery_models.base_battery_model import BaseBatteryModel
