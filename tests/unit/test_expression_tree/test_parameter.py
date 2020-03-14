@@ -22,7 +22,7 @@ class TestParameter(unittest.TestCase):
 class TestFunctionParameter(unittest.TestCase):
     def test_function_parameter_init(self):
         var = pybamm.Variable("var")
-        func = pybamm.FunctionParameter("func", var)
+        func = pybamm.FunctionParameter("func", {"var": var})
         self.assertEqual(func.name, "func")
         self.assertEqual(func.children[0].id, var.id)
         self.assertEqual(func.domain, [])
@@ -30,12 +30,12 @@ class TestFunctionParameter(unittest.TestCase):
 
     def test_function_parameter_diff(self):
         var = pybamm.Variable("var")
-        func = pybamm.FunctionParameter("a", var).diff(var)
+        func = pybamm.FunctionParameter("a", {"var": var}).diff(var)
         self.assertEqual(func.diff_variable, var)
 
     def test_evaluate_for_shape(self):
         a = pybamm.Parameter("a")
-        func = pybamm.FunctionParameter("func", 2 * a)
+        func = pybamm.FunctionParameter("func", {"2a": 2 * a})
         self.assertIsInstance(func.evaluate_for_shape(), numbers.Number)
 
 
