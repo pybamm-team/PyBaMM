@@ -4,10 +4,10 @@
 #
 import pybamm
 
-from .base_fast_particle import BaseModel
+from .base_particle import BaseParticle
 
 
-class ManyParticles(BaseModel):
+class FastManyParticles(BaseParticle):
     """Base class for molar conservation in many particles with
     uniform concentration in r (i.e. infinitely fast diffusion within particles).
 
@@ -19,7 +19,7 @@ class ManyParticles(BaseModel):
         The domain of the model either 'Negative' or 'Positive'
 
 
-    **Extends:** :class:`pybamm.particle.fast.BaseModel`
+    **Extends:** :class:`pybamm.particle.BaseParticle`
     """
 
     def __init__(self, param, domain):
@@ -63,16 +63,17 @@ class ManyParticles(BaseModel):
 
         return variables
 
-    def _unpack(self, variables):
+    def set_rhs(self, variables):
         c_s_surf = variables[self.domain + " particle surface concentration"]
-        N_s = variables[self.domain + " particle flux"]
         j = variables[self.domain + " electrode interfacial current density"]
+        if self.domain == "Negative":
+            self.rhs = {c_s_surf: -3 * j / self.param.a_n}
 
-        return c_s_surf, N_s, j
+        elif self.domain == "Positive":
+            self.rhs = {c_s_surf: -3 * j / self.param.a_p / self.param.gamma_p}
 
     def set_initial_conditions(self, variables):
-        c, _, _ = self._unpack(variables)
-
+        c_s_surf = variables[self.domain + " particle surface concentration"]
         if self.domain == "Negative":
             x_n = pybamm.standard_spatial_vars.x_n
             c_init = self.param.c_n_init(x_n)
@@ -81,4 +82,4 @@ class ManyParticles(BaseModel):
             x_p = pybamm.standard_spatial_vars.x_p
             c_init = self.param.c_p_init(x_p)
 
-        self.initial_conditions = {c: c_init}
+        self.initial_conditions = {c_s_surf: c_init}
