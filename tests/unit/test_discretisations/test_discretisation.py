@@ -332,7 +332,6 @@ class TestDiscretise(unittest.TestCase):
 
         # variable dot
         var_dot = pybamm.VariableDot("var'")
-        var_vec_dot = pybamm.VariableDot("var vec'", domain=["negative electrode"])
         var_dot_disc = disc.process_symbol(var_dot)
         self.assertIsInstance(var_dot_disc, pybamm.StateVectorDot)
         self.assertEqual(var_dot_disc.y_slices[0], disc.y_slices[var.id][0])
