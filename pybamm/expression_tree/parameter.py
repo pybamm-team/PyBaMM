@@ -48,26 +48,21 @@ class FunctionParameter(pybamm.Symbol):
 
     name : str
         name of the node
-    child : :class:`Symbol`
-        child node
+    inputs : dict
+        A dictionary with string keys and :class:`pybamm.Symbol` values representing
+        the function inputs.
     diff_variable : :class:`pybamm.Symbol`, optional
         if diff_variable is specified, the FunctionParameter node will be replaced by a
         :class:`pybamm.Function` and then differentiated with respect to diff_variable.
         Default is None.
-    description: str
-        A description of the function.
-    inputs: list
-        A list of strings describing the inputs.
-    outputs: list
-        A list of string describing the outputs.
     """
 
     def __init__(
-        self, name, *children, diff_variable=None, inputs=None,
+        self, name, inputs, diff_variable=None,
     ):
         # assign diff variable
         self.diff_variable = diff_variable
-        children_list = list(children)
+        children_list = list(inputs.values())
 
         # Turn numbers into scalars
         for idx, child in enumerate(children_list):
@@ -83,16 +78,16 @@ class FunctionParameter(pybamm.Symbol):
             auxiliary_domains=auxiliary_domains,
         )
 
-        self.inputs = inputs
+        self.input_names = list(inputs.keys())
 
     @property
-    def inputs(self):
+    def input_names(self):
         if self._inputs:
-            for inp in self._inputs:
+            for inp in self._input_names:
                 print(inp)
 
-    @inputs.setter
-    def inputs(self, inp=None):
+    @input_names.setter
+    def inputs_names(self, inp=None):
         if inp:
             if inp.__class__ is list:
                 for i in inp:
@@ -103,7 +98,7 @@ class FunctionParameter(pybamm.Symbol):
             else:
                 raise TypeError("Inputs must be a provided as a list of strings")
 
-        self._inputs = inp
+        self._input_names = inp
 
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id` """
@@ -136,19 +131,24 @@ class FunctionParameter(pybamm.Symbol):
         """ See :meth:`pybamm.Symbol.diff()`. """
         # return a new FunctionParameter, that knows it will need to be differentiated
         # when the parameters are set
-        return FunctionParameter(
-            self.name, *self.orphans, diff_variable=variable, inputs=self._inputs
-        )
+        children_list = self.orphans
+        input_names = self._input_names
+
+        input_dict = {input_names[i]: children_list[i] for i in range(len(input_names))}
+
+        return FunctionParameter(self.name, input_dict, diff_variable=variable)
 
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
-        return self._function_parameter_new_copy(self.orphans)
+        return self._function_parameter_new_copy(self.input_names, self.orphans)
 
-    def _function_parameter_new_copy(self, children):
+    def _function_parameter_new_copy(self, input_names, children):
         """Returns a new copy of the function parameter.
 
         Inputs
         ------
+        input_names : : list
+            A list of str of the names of the children/function inputs
         children : : list
             A list of the children of the function
 
@@ -157,8 +157,11 @@ class FunctionParameter(pybamm.Symbol):
             : :pybamm.FunctionParameter
             A new copy of the function parameter
         """
+
+        input_dict = {input_names[i]: children[i] for i in range(len(input_names))}
+
         return FunctionParameter(
-            self.name, *children, diff_variable=self.diff_variable, inputs=self._inputs
+            self.name, input_dict, diff_variable=self.diff_variable
         )
 
     def _evaluate_for_shape(self):

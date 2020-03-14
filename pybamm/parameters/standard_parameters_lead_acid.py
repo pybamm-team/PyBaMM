@@ -174,28 +174,19 @@ Delta_T = pybamm.thermal_parameters.Delta_T
 
 def D_e_dimensional(c_e, T):
     "Dimensional diffusivity in electrolyte"
-    return pybamm.FunctionParameter(
-        "Electrolyte diffusivity [m2.s-1]",
-        c_e,
-        inputs=["Electrolyte concentration [mol.m-3"],
-    )
+    inputs = {"Electrolyte concentration [mol.m-3": c_e}
+    return pybamm.FunctionParameter("Electrolyte diffusivity [m2.s-1]", inputs)
 
 
 def kappa_e_dimensional(c_e, T):
     "Dimensional electrolyte conductivity"
-    return pybamm.FunctionParameter(
-        "Electrolyte conductivity [S.m-1]",
-        c_e,
-        inputs=["Electrolyte concentration [mol.m-3]"],
-    )
+    inputs = {"Electrolyte concentration [mol.m-3]": c_e}
+    return pybamm.FunctionParameter("Electrolyte conductivity [S.m-1]", inputs)
 
 
 def chi_dimensional(c_e):
-    return pybamm.FunctionParameter(
-        "Darken thermodynamic factor",
-        c_e,
-        inputs=["Electrolyte concentration [mol.m-3]"],
-    )
+    inputs = {"Electrolyte concentration [mol.m-3]": c_e}
+    return pybamm.FunctionParameter("Darken thermodynamic factor", inputs)
 
 
 def c_w_dimensional(c_e, c_ox=0, c_hy=0):
@@ -236,43 +227,37 @@ def mu_dimensional(c_e):
     """
     Dimensional viscosity of electrolyte [kg.m-1.s-1].
     """
-    return pybamm.FunctionParameter(
-        "Electrolyte viscosity [kg.m-1.s-1]",
-        c_e,
-        inputs=["Electrolyte concentration [mol.m-3]"],
-    )
+    inputs = {"Electrolyte concentration [mol.m-3]": c_e}
+    return pybamm.FunctionParameter("Electrolyte viscosity [kg.m-1.s-1]", inputs)
 
 
 def U_n_dimensional(c_e, T):
     "Dimensional open-circuit voltage in the negative electrode [V]"
+    inputs = {"Electrolyte molar mass [mol.kg-1]": m_dimensional(c_e)}
     return pybamm.FunctionParameter(
-        "Negative electrode open-circuit potential [V]",
-        m_dimensional(c_e),
-        inputs=["Electrolyte concentration [mol.m-3]"],
+        "Negative electrode open-circuit potential [V]", inputs
     )
 
 
 def U_p_dimensional(c_e, T):
     "Dimensional open-circuit voltage in the positive electrode [V]"
+    inputs = {"Electrolyte molar mass [mol.kg-1]": m_dimensional(c_e)}
     return pybamm.FunctionParameter(
-        "Positive electrode open-circuit potential [V]",
-        m_dimensional(c_e),
-        inputs=["Electrolyte concentration [mol.m-3]"],
+        "Positive electrode open-circuit potential [V]", inputs
     )
 
 
 D_e_typ = D_e_dimensional(c_e_typ, T_ref)
 rho_typ = rho_dimensional(c_e_typ)
 mu_typ = mu_dimensional(c_e_typ)
+
+inputs = {"Electrolyte concentration [mol.m-3]": pybamm.Scalar(1)}
 U_n_ref = pybamm.FunctionParameter(
-    "Negative electrode open-circuit potential [V]",
-    pybamm.Scalar(1),
-    inputs=["Electrolyte concentration [mol.m-3]"],
+    "Negative electrode open-circuit potential [V]", inputs
 )
+inputs = {"Electrolyte concentration [mol.m-3]": pybamm.Scalar(1)}
 U_p_ref = pybamm.FunctionParameter(
-    "Positive electrode open-circuit potential [V]",
-    pybamm.Scalar(1),
-    inputs=["Electrolyte concentration [mol.m-3]"],
+    "Positive electrode open-circuit potential [V]", inputs
 )
 
 
@@ -516,7 +501,7 @@ def U_p(c_e_p, T):
 # 6. Input current and voltage
 
 dimensional_current_with_time = pybamm.FunctionParameter(
-    "Current function [A]", pybamm.t * timescale, inputs=["Time [s]"]
+    "Current function [A]", {"Time [s]": pybamm.t * timescale}
 )
 dimensional_current_density_with_time = dimensional_current_with_time / (
     n_electrodes_parallel * pybamm.geometric_parameters.A_cc
