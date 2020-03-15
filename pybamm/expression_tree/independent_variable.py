@@ -35,10 +35,7 @@ class IndependentVariable(pybamm.Symbol):
 
     def _jac(self, variable):
         """ See :meth:`pybamm.Symbol._jac()`. """
-        if variable.id == self.id:
-            return pybamm.Scalar(1)
-        else:
-            return pybamm.Scalar(0)
+        return pybamm.Scalar(0)
 
 
 class Time(IndependentVariable):

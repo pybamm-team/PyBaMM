@@ -105,20 +105,6 @@ class StateVectorBase(pybamm.Symbol):
             + tuple(self.domain)
         )
 
-    def _base_evaluate(self, t=None, y=None, y_dot=None, u=None):
-        """ See :meth:`pybamm.Symbol._base_evaluate()`. """
-        if y is None:
-            raise TypeError("StateVector cannot evaluate input 'y=None'")
-        if y.shape[0] < len(self.evaluation_array):
-            raise ValueError(
-                "y is too short, so value with slice is smaller than expected"
-            )
-        else:
-            out = (y[: len(self._evaluation_array)])[self._evaluation_array]
-            if isinstance(out, np.ndarray) and out.ndim == 1:
-                out = out[:, np.newaxis]
-            return out
-
     def _jac_diff_vector(self, variable):
         """
         Differentiate a slice of a StateVector of size m with respect to another slice
@@ -139,7 +125,7 @@ class StateVectorBase(pybamm.Symbol):
         variable_size = variable.last_point - variable.first_point
 
         # Return zeros of correct size since no entries match
-        return csr_matrix(slices_size, variable_size)
+        return pybamm.Matrix(csr_matrix((slices_size, variable_size)))
 
     def _jac_same_vector(self, variable):
         """

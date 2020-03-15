@@ -212,6 +212,11 @@ class TestCasadiConverter(unittest.TestCase):
             ValueError, "Must provide a 'y' for converting state vectors"
         ):
             y.to_casadi()
+        y_dot = pybamm.StateVectorDot(slice(0, 10))
+        with self.assertRaisesRegex(
+            ValueError, "Must provide a 'y_dot' for converting state vectors"
+        ):
+            y_dot.to_casadi()
         var = pybamm.Variable("var")
         with self.assertRaisesRegex(TypeError, "Cannot convert symbol of type"):
             var.to_casadi()
