@@ -130,7 +130,7 @@ class BaseSolver(object):
             )
 
         inputs = inputs or {}
-        y0 = model.concatenated_initial_conditions.evaluate(0, None, inputs)
+        y0 = model.concatenated_initial_conditions.evaluate(0, None, u=inputs)
 
         # Set model timescale
         model.timescale_eval = model.timescale.evaluate(u=inputs)
