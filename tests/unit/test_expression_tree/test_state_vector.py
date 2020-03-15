@@ -35,14 +35,6 @@ class TestStateVector(unittest.TestCase):
         y = np.linspace(0, 3, 31)
         np.testing.assert_array_almost_equal(sv.evaluate(y=y), y[:, np.newaxis])
 
-    def test_diff(self):
-        a = pybamm.StateVector(slice(0, 10))
-        with self.assertRaises(NotImplementedError):
-            a.diff(a)
-        b = pybamm.StateVectorDot(slice(0, 10))
-        with self.assertRaises(NotImplementedError):
-            a.diff(b)
-
     def test_name(self):
         sv = pybamm.StateVector(slice(0, 10))
         self.assertEqual(sv.name, "y[0:10]")
