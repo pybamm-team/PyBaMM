@@ -1,0 +1,2 @@
+from .first_order_kinetics import FirstOrderKinetics
+from .inverse_first_order_kinetics import InverseFirstOrderKinetics

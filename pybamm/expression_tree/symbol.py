@@ -431,27 +431,27 @@ class Symbol(anytree.NodeMixin):
         return pybamm.simplify_if_constant(pybamm.Power(other, self), keep_domains=True)
 
     def __lt__(self, other):
-        """return a :class:`Heaviside` object"""
+        """return a :class:`NotEqualHeaviside` object"""
         return pybamm.simplify_if_constant(
-            pybamm.Heaviside(self, other, equal=False), keep_domains=True
+            pybamm.NotEqualHeaviside(self, other), keep_domains=True
         )
 
     def __le__(self, other):
-        """return a :class:`Heaviside` object"""
+        """return a :class:`EqualHeaviside` object"""
         return pybamm.simplify_if_constant(
-            pybamm.Heaviside(self, other, equal=True), keep_domains=True
+            pybamm.EqualHeaviside(self, other), keep_domains=True
         )
 
     def __gt__(self, other):
-        """return a :class:`Heaviside` object"""
+        """return a :class:`NotEqualHeaviside` object"""
         return pybamm.simplify_if_constant(
-            pybamm.Heaviside(other, self, equal=False), keep_domains=True
+            pybamm.NotEqualHeaviside(other, self), keep_domains=True
         )
 
     def __ge__(self, other):
-        """return a :class:`Heaviside` object"""
+        """return a :class:`EqualHeaviside` object"""
         return pybamm.simplify_if_constant(
-            pybamm.Heaviside(other, self, equal=True), keep_domains=True
+            pybamm.EqualHeaviside(other, self), keep_domains=True
         )
 
     def __neg__(self):

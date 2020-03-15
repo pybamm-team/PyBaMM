@@ -309,6 +309,22 @@ class TestCasadiSolver(unittest.TestCase):
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
         np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
 
+    def test_dae_solver_algebraic_model(self):
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        model.algebraic = {var: var + 1}
+        model.initial_conditions = {var: 0}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.CasadiSolver()
+        t_eval = np.linspace(0, 1)
+        with self.assertRaisesRegex(
+            pybamm.SolverError, "Cannot use CasadiSolver to solve algebraic model"
+        ):
+            solver.solve(model, t_eval)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
