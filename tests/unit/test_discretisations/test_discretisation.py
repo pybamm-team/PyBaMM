@@ -703,7 +703,8 @@ class TestDiscretise(unittest.TestCase):
         # test that any time derivatives of variables in rhs raises an
         # error
         model = pybamm.BaseModel()
-        model.rhs = {c: pybamm.div(N) + c.diff(pybamm.t), T: pybamm.div(q), S: pybamm.div(p)}
+        model.rhs = {c: pybamm.div(N) + c.diff(pybamm.t),
+                     T: pybamm.div(q), S: pybamm.div(p)}
         model.initial_conditions = {
             c: pybamm.Scalar(2),
             T: pybamm.Scalar(5),
@@ -845,8 +846,6 @@ class TestDiscretise(unittest.TestCase):
 
         with self.assertRaises(pybamm.ModelError):
             disc.process_model(model)
-
-
 
     def test_process_model_concatenation(self):
         # concatenation of variables as the key
@@ -1143,6 +1142,7 @@ class TestDiscretise(unittest.TestCase):
         np.testing.assert_equal(
             model.mass_matrix_inv.entries.toarray(), mass_inv.toarray()
         )
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

@@ -242,15 +242,13 @@ class StateVector(StateVectorBase):
         return out
 
     def diff(self, variable):
-        if variable.id == self.id:
-            return pybamm.Scalar(1)
-        elif variable.id == pybamm.t.id:
+        if variable.id == pybamm.t.id:
             return StateVectorDot(*self._y_slices, name=self.name + "'",
                                   domain=self.domain,
                                   auxiliary_domains=self.auxiliary_domains,
                                   evaluation_array=self.evaluation_array)
         else:
-            return pybamm.Scalar(0)
+            raise NotImplementedError
 
     def _jac(self, variable):
         if isinstance(variable, pybamm.StateVector):
@@ -309,14 +307,12 @@ class StateVectorDot(StateVectorBase):
         return out
 
     def diff(self, variable):
-        if variable.id == self.id:
-            return pybamm.Scalar(1)
-        elif variable.id == pybamm.t.id:
+        if variable.id == pybamm.t.id:
             raise pybamm.ModelError(
                 "cannot take second time derivative of a state vector"
             )
         else:
-            return pybamm.Scalar(0)
+            raise NotImplementedError
 
     def _jac(self, variable):
         if isinstance(variable, pybamm.StateVectorDot):

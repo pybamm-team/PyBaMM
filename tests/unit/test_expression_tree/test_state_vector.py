@@ -35,6 +35,14 @@ class TestStateVector(unittest.TestCase):
         y = np.linspace(0, 3, 31)
         np.testing.assert_array_almost_equal(sv.evaluate(y=y), y[:, np.newaxis])
 
+    def test_diff(self):
+        a = pybamm.StateVector(slice(0, 10))
+        with self.assertRaises(NotImplementedError):
+            a.diff(a)
+        b = pybamm.StateVectorDot(slice(0, 10))
+        with self.assertRaises(NotImplementedError):
+            a.diff(b)
+
     def test_name(self):
         sv = pybamm.StateVector(slice(0, 10))
         self.assertEqual(sv.name, "y[0:10]")
@@ -61,6 +69,7 @@ class TestStateVector(unittest.TestCase):
         with self.assertRaisesRegex(TypeError, "all y_slices must be slice objects"):
             pybamm.StateVector(slice(0, 10), 1)
 
+
 class TestStateVectorDot(unittest.TestCase):
     def test_evaluate(self):
         sv = pybamm.StateVectorDot(slice(0, 10))
@@ -72,13 +81,15 @@ class TestStateVectorDot(unittest.TestCase):
         # Try evaluating with a y that is too short
         y_dot2 = np.ones(5)
         with self.assertRaisesRegex(
-            ValueError, "y_dot is too short, so value with slice is smaller than expected"
+            ValueError,
+            "y_dot is too short, so value with slice is smaller than expected"
         ):
             sv.evaluate(y_dot=y_dot2)
 
     def test_name(self):
         sv = pybamm.StateVectorDot(slice(0, 10))
         self.assertEqual(sv.name, "y_dot[0:10]")
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

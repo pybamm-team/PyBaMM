@@ -120,6 +120,7 @@ class TestParametersCLI(unittest.TestCase):
         # but must not intefere with existing input dir if it exists
         # in the current dir...
 
+
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys
