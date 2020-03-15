@@ -635,6 +635,8 @@ class Symbol(anytree.NodeMixin):
             # (there is a e.g. StateVector in the tree)
             if error.args[0] == "StateVector cannot evaluate input 'y=None'":
                 return None
+            elif error.args[0] == "StateVectorDot cannot evaluate input 'y_dot=None'":
+                return None
             else:
                 raise error
         except ValueError as e:

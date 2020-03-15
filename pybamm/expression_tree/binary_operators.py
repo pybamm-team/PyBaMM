@@ -252,6 +252,10 @@ class Power(BinaryOperator):
         if is_scalar_zero(right):
             return pybamm.Scalar(1)
 
+        # zero to the power of anything is zero
+        if is_scalar_zero(left):
+            return pybamm.Scalar(0)
+
         # anything to the power of one is itself
         if is_scalar_one(right):
             return left
