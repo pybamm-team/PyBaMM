@@ -105,6 +105,14 @@ class TestJacobian(unittest.TestCase):
         dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
 
+    def test_multislice_raises(self):
+        y1 = pybamm.StateVector(slice(0, 4), slice(7, 8))
+        y2 = pybamm.StateVector(slice(4, 7))
+        with self.assertRaises(NotImplementedError):
+            y1.jac(y1)
+        with self.assertRaises(NotImplementedError):
+            y2.jac(y1)
+
     def test_linear_ydot(self):
         y = pybamm.StateVector(slice(0, 4))
         y_dot = pybamm.StateVectorDot(slice(0, 4))
