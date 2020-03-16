@@ -17,7 +17,7 @@ class TestSingleParticle(unittest.TestCase):
             "X-averaged negative electrode temperature": a,
         }
 
-        submodel = pybamm.particle.fickian.SingleParticle(param, "Negative")
+        submodel = pybamm.particle.FickianSingleParticle(param, "Negative")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
@@ -25,7 +25,7 @@ class TestSingleParticle(unittest.TestCase):
             "X-averaged positive electrode interfacial current density": a,
             "X-averaged positive electrode temperature": a,
         }
-        submodel = pybamm.particle.fickian.SingleParticle(param, "Positive")
+        submodel = pybamm.particle.FickianSingleParticle(param, "Positive")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

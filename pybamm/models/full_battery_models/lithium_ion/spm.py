@@ -79,17 +79,17 @@ class SPM(BaseModel):
     def set_particle_submodel(self):
 
         if self.options["particle"] == "Fickian diffusion":
-            self.submodels[
-                "negative particle"
-            ] = pybamm.particle.fickian.SingleParticle(self.param, "Negative")
-            self.submodels[
-                "positive particle"
-            ] = pybamm.particle.fickian.SingleParticle(self.param, "Positive")
-        elif self.options["particle"] == "fast diffusion":
-            self.submodels["negative particle"] = pybamm.particle.fast.SingleParticle(
+            self.submodels["negative particle"] = pybamm.particle.FickianSingleParticle(
                 self.param, "Negative"
             )
-            self.submodels["positive particle"] = pybamm.particle.fast.SingleParticle(
+            self.submodels["positive particle"] = pybamm.particle.FickianSingleParticle(
+                self.param, "Positive"
+            )
+        elif self.options["particle"] == "fast diffusion":
+            self.submodels["negative particle"] = pybamm.particle.FastSingleParticle(
+                self.param, "Negative"
+            )
+            self.submodels["positive particle"] = pybamm.particle.FastSingleParticle(
                 self.param, "Positive"
             )
 
