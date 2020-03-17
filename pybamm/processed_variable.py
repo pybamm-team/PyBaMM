@@ -57,9 +57,9 @@ class ProcessedVariable(object):
         ):
             if len(solution.t) == 1:
                 # space only (steady solution)
-                self.initialise_2Dspace_scikit_fem()
+                self.initialise_2D_fixed_t_scikit_fem()
             else:
-                self.initialise_3D_scikit_fem()
+                self.initialise_2D_scikit_fem()
 
         # check variable shape
         else:
@@ -77,10 +77,25 @@ class ProcessedVariable(object):
             else:
                 n = self.mesh[0].npts
                 base_shape = self.base_eval.shape[0]
+                # Try some shapes that could make the variable a 1D variable
                 if base_shape in [n, n + 1]:
                     self.initialise_1D()
                 else:
-                    self.initialise_2D()
+                    # Try some shapes that could make the variable a 2D variable
+                    first_dim_nodes = self.mesh[0].nodes
+                    first_dim_edges = self.mesh[0].edges
+                    second_dim_pts = self.base_variable.secondary_mesh[0].nodes
+                    if self.base_eval.size // len(second_dim_pts) in [
+                        len(first_dim_nodes),
+                        len(first_dim_edges),
+                    ]:
+                        self.initialise_2D()
+                    else:
+                        # Raise error for 3D variable
+                        raise NotImplementedError(
+                            "Shape not recognized for {} ".format(base_variable)
+                            + "(note processing of 3D variables is not yet implemented)"
+                        )
 
     def initialise_0D(self):
         # initialise empty array of the correct size
@@ -250,7 +265,7 @@ class ProcessedVariable(object):
             fill_value=np.nan,
         )
 
-    def initialise_2Dspace_scikit_fem(self):
+    def initialise_2D_fixed_t_scikit_fem(self):
         y_sol = self.mesh[0].edges["y"]
         len_y = len(y_sol)
         z_sol = self.mesh[0].edges["z"]
@@ -278,7 +293,7 @@ class ProcessedVariable(object):
             y_sol, z_sol, entries, kind="linear", fill_value=np.nan
         )
 
-    def initialise_3D_scikit_fem(self):
+    def initialise_2D_scikit_fem(self):
         y_sol = self.mesh[0].edges["y"]
         len_y = len(y_sol)
         z_sol = self.mesh[0].edges["z"]

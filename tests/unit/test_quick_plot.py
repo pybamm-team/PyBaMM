@@ -171,8 +171,7 @@ class TestQuickPlot(unittest.TestCase):
                 1, "negative particle", {"secondary": "negative electrode"}
             )
         )
-        model.variables["Negative 2D variable"] = model.variables["2D variable"]
-        quick_plot = pybamm.QuickPlot(solution, ["Negative 2D variable"])
+        quick_plot = pybamm.QuickPlot(solution, ["2D variable"])
         quick_plot.plot(0)
         quick_plot.dynamic_plot(testing=True)
         quick_plot.slider_update(0.01)
@@ -277,6 +276,11 @@ class TestQuickPlot(unittest.TestCase):
         )
         quick_plot.dynamic_plot(testing=True)
         quick_plot.slider_update(1)
+
+        with self.assertRaisesRegex(NotImplementedError, "Shape not recognized for"):
+            pybamm.QuickPlot(
+                solution_spm, ["Negative particle concentration [mol.m-3]"],
+            )
 
     def test_failure(self):
         with self.assertRaisesRegex(TypeError, "solutions must be"):
