@@ -1,11 +1,9 @@
 import os
 import sys
 import subprocess
-import tarfile
 from pathlib import Path
-from shutil import copy
-import glob
-from platform import python_version
+
+import wheel.bdist_wheel as orig
 
 try:
     from setuptools import setup, find_packages, Extension
@@ -15,9 +13,46 @@ except ImportError:
     from distutils.command.build_ext import build_ext
 
 
-class CMakeBuild(build_ext):
+class bdist_wheel(orig.bdist_wheel):
+    """A custom install command to add 2 build options"""
+
+    user_options = orig.bdist_wheel.user_options + [
+        ("suitesparse-root=", None, "suitesparse source location"),
+        ("sundials-root=", None, "sundials source location"),
+    ]
+
+    def initialize_options(self):
+        orig.bdist_wheel.initialize_options(self)
+        self.suitesparse_root = None
+        self.sundials_root = None
+
+    def finalize_options(self):
+        orig.bdist_wheel.finalize_options(self)
+
     def run(self):
-        pybamm_dir = os.path.abspath(os.path.dirname(__file__))
+        orig.bdist_wheel.run(self)
+
+
+class CMakeBuild(build_ext):
+    user_options = build_ext.user_options + [
+        ("suitesparse-root=", None, "suitesparse source location"),
+        ("sundials-root=", None, "sundials source location"),
+    ]
+
+    def initialize_options(self):
+        build_ext.initialize_options(self)
+        self.suitesparse_root = None
+        self.sundials_root = None
+
+    def finalize_options(self):
+        build_ext.finalize_options(self)
+        self.set_undefined_options(
+            "bdist_wheel",
+            ("suitesparse_root", "suitesparse_root"),
+            ("sundials_root", "sundials_root"),
+        )
+
+    def run(self):
         try:
             subprocess.run(["cmake", "--version"])
         except OSError:
@@ -35,8 +70,15 @@ class CMakeBuild(build_ext):
             print("Make sure the pybind11 repository was cloned in ./third-party/")
             print("See installation instructions for more information.")
 
-        py_version = python_version()
         cmake_args = ["-DPYTHON_EXECUTABLE={}".format(sys.executable)]
+        if self.suitesparse_root:
+            cmake_args.append(
+                "-DSuiteSparse_ROOT={}".format(os.path.abspath(self.suitesparse_root))
+            )
+        if self.sundials_root:
+            cmake_args.append(
+                "-DSUNDIALS_ROOT={}".format(os.path.abspath(self.sundials_root))
+            )
 
         if not os.path.exists(self.build_temp):
             os.makedirs(self.build_temp)
@@ -71,7 +113,7 @@ setup(
     include_package_data=True,
     packages=find_packages(include=("pybamm", "pybamm.*")),
     ext_modules=[Extension("idaklu", ["pybamm/solvers/c_solvers/idaklu.cpp"])],
-    cmdclass={"build_ext": CMakeBuild},
+    cmdclass={"build_ext": CMakeBuild, "bdist_wheel": bdist_wheel},
     # List of dependencies
     install_requires=[
         "numpy>=1.16",
