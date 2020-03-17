@@ -509,3 +509,7 @@ dimensional_current_density_with_time = dimensional_current_with_time / (
 current_with_time = (
     dimensional_current_with_time / I_typ * pybamm.Function(np.sign, I_typ)
 )
+
+
+"Remove any temporary variables"
+del inputs
