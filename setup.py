@@ -1,7 +1,15 @@
 import os
 import sys
 import subprocess
+<<<<<<< HEAD
 from pathlib import Path
+=======
+import tarfile
+import glob
+import pathlib
+from shutil import copy
+from platform import python_version
+>>>>>>> parent of 65a670cd... Remove package_data dict from setup.py
 
 import wheel.bdist_wheel as orig
 
@@ -103,6 +111,30 @@ class CMakeBuild(build_ext):
         self.copy_file(source_path, dest_path)
 
 
+# Build the list of package data files to be included in the PyBaMM package.
+# These are mainly the parameter files located in the input/parameters/ subdirectories.
+pybamm_data = []
+for file_ext in ["*.csv", "*.py", "*.md"]:
+    # Get all the files ending in file_ext in pybamm/input dir.
+    # list_of_files = [
+    #    'pybamm/input/drive_cycles/car_current.csv',
+    #    'pybamm/input/drive_cycles/US06.csv',
+    # ...
+    list_of_files = glob.glob("pybamm/input/**/" + file_ext, recursive=True)
+
+    # Add these files to pybamm_data.
+    # The path must be relative to the package dir (pybamm/), so
+    # must process the content of list_of_files to take out the top
+    # pybamm/ dir, i.e.:
+    # ['input/drive_cycles/car_current.csv',
+    #  'input/drive_cycles/US06.csv',
+    # ...
+    pybamm_data.extend(
+        [os.path.join(*pathlib.Path(filename).parts[1:]) for filename in list_of_files]
+    )
+pybamm_data.append("./version")
+pybamm_data.append("./CITATIONS.txt")
+
 setup(
     name="pybamm",
     version="1.0",
@@ -110,10 +142,11 @@ setup(
     long_description="description",
     long_description_content_type="text/markdown",
     url="https://github.com/pybamm-team/PyBaMM",
-    include_package_data=True,
+    # include_package_data=True,
     packages=find_packages(include=("pybamm", "pybamm.*")),
     ext_modules=[Extension("idaklu", ["pybamm/solvers/c_solvers/idaklu.cpp"])],
     cmdclass={"build_ext": CMakeBuild, "bdist_wheel": bdist_wheel},
+    package_data={"pybamm": pybamm_data},
     # List of dependencies
     install_requires=[
         "numpy>=1.16",
