@@ -5,7 +5,11 @@ project(idaklu)
 set (CMAKE_CXX_STANDARD 11)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-add_subdirectory(third-party/pybind11)
+if(NOT PYBIND11_DIR)
+  set(PYBIND11_DIR third-party/pybind11)
+endif()
+
+add_subdirectory(${PYBIND11_DIR})
 pybind11_add_module(idaklu pybamm/solvers/c_solvers/idaklu.cpp)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
