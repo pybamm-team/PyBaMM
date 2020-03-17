@@ -901,6 +901,9 @@ def x_average(symbol):
     :class:`Symbol`
         the new averaged symbol
     """
+    # Can't take average if the symbol evaluates on edges
+    if symbol.evaluates_on_edges():
+        raise ValueError("Can't take the x-average of a symbol that evaluates on edges")
     # If symbol doesn't have a domain, its average value is itself
     if symbol.domain in [[], ["current collector"]]:
         new_symbol = symbol.new_copy()
@@ -963,6 +966,9 @@ def z_average(symbol):
     :class:`Symbol`
         the new averaged symbol
     """
+    # Can't take average if the symbol evaluates on edges
+    if symbol.evaluates_on_edges():
+        raise ValueError("Can't take the z-average of a symbol that evaluates on edges")
     # Symbol must have domain [] or ["current collector"]
     if symbol.domain not in [[], ["current collector"]]:
         raise pybamm.DomainError(
@@ -1024,6 +1030,38 @@ def yz_average(symbol):
         return Integral(symbol, [y, z]) / (l_y * l_z)
 
 
+def r_average(symbol):
+    """convenience function for creating an average in the r-direction
+
+    Parameters
+    ----------
+    symbol : :class:`pybamm.Symbol`
+        The function to be averaged
+
+    Returns
+    -------
+    :class:`Symbol`
+        the new averaged symbol
+    """
+    # Can't take average if the symbol evaluates on edges
+    if symbol.evaluates_on_edges():
+        raise ValueError("Can't take the r-average of a symbol that evaluates on edges")
+    # If symbol doesn't have a particle domain, its r-averaged value is itself
+    if symbol.domain not in [["positive particle"], ["negative particle"]]:
+        new_symbol = symbol.new_copy()
+        new_symbol.parent = None
+        return new_symbol
+    # If symbol is a Broadcast, its average value is its child
+    elif isinstance(symbol, pybamm.Broadcast):
+        return symbol.orphans[0]
+    else:
+        r = pybamm.SpatialVariable("r", symbol.domain)
+        v = pybamm.FullBroadcast(
+            pybamm.Scalar(1), symbol.domain, symbol.auxiliary_domains
+        )
+        return Integral(symbol, r) / Integral(v, r)
+
+
 def boundary_value(symbol, side):
     """convenience function for creating a :class:`pybamm.BoundaryValue`
 
@@ -1059,35 +1097,6 @@ def boundary_value(symbol, side):
     # Otherwise, calculate boundary value
     else:
         return BoundaryValue(symbol, side)
-
-
-def r_average(symbol):
-    """convenience function for creating an average in the r-direction
-
-    Parameters
-    ----------
-    symbol : :class:`pybamm.Symbol`
-        The function to be averaged
-
-    Returns
-    -------
-    :class:`Symbol`
-        the new averaged symbol
-    """
-    # If symbol doesn't have a particle domain, its r-averaged value is itself
-    if symbol.domain not in [["positive particle"], ["negative particle"]]:
-        new_symbol = symbol.new_copy()
-        new_symbol.parent = None
-        return new_symbol
-    # If symbol is a Broadcast, its average value is its child
-    elif isinstance(symbol, pybamm.Broadcast):
-        return symbol.orphans[0]
-    else:
-        r = pybamm.SpatialVariable("r", symbol.domain)
-        v = pybamm.FullBroadcast(
-            pybamm.Scalar(1), symbol.domain, symbol.auxiliary_domains
-        )
-        return Integral(symbol, r) / Integral(v, r)
 
 
 def sign(symbol):

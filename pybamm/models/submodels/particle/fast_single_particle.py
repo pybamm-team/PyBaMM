@@ -4,10 +4,10 @@
 #
 import pybamm
 
-from .base_fast_particle import BaseModel
+from .base_particle import BaseParticle
 
 
-class SingleParticle(BaseModel):
+class FastSingleParticle(BaseParticle):
     """Base class for molar conservation in a single x-averaged particle with
     uniform concentration in r (i.e. infinitely fast diffusion within particles).
 
@@ -19,7 +19,7 @@ class SingleParticle(BaseModel):
         The domain of the model either 'Negative' or 'Positive'
 
 
-    **Extends:** :class:`pybamm.particle.fast.BaseModel`
+    **Extends:** :class:`pybamm.particle.BaseParticle`
     """
 
     def __init__(self, param, domain):
@@ -35,7 +35,7 @@ class SingleParticle(BaseModel):
             c_s_xav = pybamm.PrimaryBroadcast(c_s_surf_xav, ["negative particle"])
             c_s = pybamm.SecondaryBroadcast(c_s_xav, ["negative electrode"])
 
-            N_s = pybamm.FullBroadcast(
+            N_s = pybamm.FullBroadcastToEdges(
                 0,
                 ["negative particle"],
                 auxiliary_domains={
@@ -43,14 +43,14 @@ class SingleParticle(BaseModel):
                     "tertiary": "current collector",
                 },
             )
-            N_s_xav = pybamm.x_average(N_s)
+            N_s_xav = pybamm.FullBroadcast(0, "negative electrode", "current collector")
 
         elif self.domain == "Positive":
             c_s_surf_xav = pybamm.standard_variables.c_s_p_surf_xav
             c_s_xav = pybamm.PrimaryBroadcast(c_s_surf_xav, ["positive particle"])
             c_s = pybamm.SecondaryBroadcast(c_s_xav, ["positive electrode"])
 
-            N_s = pybamm.FullBroadcast(
+            N_s = pybamm.FullBroadcastToEdges(
                 0,
                 ["positive particle"],
                 auxiliary_domains={
@@ -58,25 +58,29 @@ class SingleParticle(BaseModel):
                     "tertiary": "current collector",
                 },
             )
-            N_s_xav = pybamm.x_average(N_s)
+            N_s_xav = pybamm.FullBroadcast(0, "positive electrode", "current collector")
 
         variables = self._get_standard_concentration_variables(c_s, c_s_xav)
         variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
 
         return variables
 
-    def _unpack(self, variables):
+    def set_rhs(self, variables):
+
         c_s_surf_xav = variables[
             "X-averaged " + self.domain.lower() + " particle surface concentration"
         ]
-        N_s_xav = variables["X-averaged " + self.domain.lower() + " particle flux"]
-        j_av = variables[
+        j_xav = variables[
             "X-averaged "
             + self.domain.lower()
             + " electrode interfacial current density"
         ]
 
-        return c_s_surf_xav, N_s_xav, j_av
+        if self.domain == "Negative":
+            self.rhs = {c_s_surf_xav: -3 * j_xav / self.param.a_n}
+
+        elif self.domain == "Positive":
+            self.rhs = {c_s_surf_xav: -3 * j_xav / self.param.a_p / self.param.gamma_p}
 
     def set_initial_conditions(self, variables):
         """
@@ -84,7 +88,9 @@ class SingleParticle(BaseModel):
         arbitrarily evaluate them at x=0 in the negative electrode and x=1 in the
         positive electrode (they will usually be constant)
         """
-        c, _, _ = self._unpack(variables)
+        c_s_surf_xav = variables[
+            "X-averaged " + self.domain.lower() + " particle surface concentration"
+        ]
 
         if self.domain == "Negative":
             c_init = self.param.c_n_init(0)
@@ -92,4 +98,4 @@ class SingleParticle(BaseModel):
         elif self.domain == "Positive":
             c_init = self.param.c_p_init(1)
 
-        self.initial_conditions = {c: c_init}
+        self.initial_conditions = {c_s_surf_xav: c_init}

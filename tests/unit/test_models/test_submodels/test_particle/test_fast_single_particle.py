@@ -14,12 +14,12 @@ class TestSingleParticle(unittest.TestCase):
         a = pybamm.PrimaryBroadcast(pybamm.Scalar(0), "current collector")
         variables = {"X-averaged negative electrode interfacial current density": a}
 
-        submodel = pybamm.particle.fast.SingleParticle(param, "Negative")
+        submodel = pybamm.particle.FastSingleParticle(param, "Negative")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
         variables = {"X-averaged positive electrode interfacial current density": a}
-        submodel = pybamm.particle.fast.SingleParticle(param, "Positive")
+        submodel = pybamm.particle.FastSingleParticle(param, "Positive")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

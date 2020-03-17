@@ -2,10 +2,10 @@
 # Class for many particles with Fickian diffusion
 #
 import pybamm
-from ..base_particle import BaseParticle
+from .base_particle import BaseParticle
 
 
-class ManyParticles(BaseParticle):
+class FickianManyParticles(BaseParticle):
     """Base class for molar conservation in many particles which employs
     Fick's law.
 

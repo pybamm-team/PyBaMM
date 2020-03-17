@@ -909,8 +909,16 @@ class TestDiscretise(unittest.TestCase):
         self.assertIsInstance(broad1_disc.children[0], pybamm.StateVector)
         self.assertIsInstance(broad1_disc.children[1], pybamm.Vector)
 
+        # broadcast to edges
+        broad_to_edges = pybamm.FullBroadcastToEdges(a, ["negative electrode"], None)
+        broad_to_edges_disc = disc.process_symbol(broad_to_edges)
+        np.testing.assert_array_equal(
+            broad_to_edges_disc.evaluate(u={"a": 7}),
+            7 * np.ones_like(mesh["negative electrode"][0].edges[:, np.newaxis]),
+        )
+
     def test_broadcast_2D(self):
-        # broadcast in 2D --> Outer symbol
+        # broadcast in 2D --> MatrixMultiplication
         var = pybamm.Variable("var", ["current collector"])
         disc = get_1p1d_discretisation_for_testing()
         mesh = disc.mesh
@@ -931,6 +939,22 @@ class TestDiscretise(unittest.TestCase):
             np.outer(y_test, np.ones(mesh["separator"][0].npts)).reshape(-1, 1),
         )
 
+        # test broadcast to edges
+        broad_to_edges = pybamm.PrimaryBroadcastToEdges(var, "separator")
+        broad_to_edges_disc = disc.process_symbol(broad_to_edges)
+        self.assertIsInstance(broad_to_edges_disc, pybamm.MatrixMultiplication)
+        self.assertIsInstance(broad_to_edges_disc.children[0], pybamm.Matrix)
+        self.assertIsInstance(broad_to_edges_disc.children[1], pybamm.StateVector)
+        self.assertEqual(
+            broad_to_edges_disc.shape,
+            ((mesh["separator"][0].npts + 1) * mesh["current collector"][0].npts, 1),
+        )
+        y_test = np.linspace(0, 1, mesh["current collector"][0].npts)
+        np.testing.assert_array_equal(
+            broad_to_edges_disc.evaluate(y=y_test),
+            np.outer(y_test, np.ones(mesh["separator"][0].npts + 1)).reshape(-1, 1),
+        )
+
     def test_secondary_broadcast_2D(self):
         # secondary broadcast in 2D --> Matrix multiplication
         disc = get_discretisation_for_testing()
@@ -946,6 +970,22 @@ class TestDiscretise(unittest.TestCase):
         self.assertEqual(
             broad_disc.shape,
             (mesh["negative particle"][0].npts * mesh["negative electrode"][0].npts, 1),
+        )
+
+        # test broadcast to edges
+        broad_to_edges = pybamm.SecondaryBroadcastToEdges(var, "negative electrode")
+        disc.set_variable_slices([var])
+        broad_to_edges_disc = disc.process_symbol(broad_to_edges)
+        self.assertIsInstance(broad_to_edges_disc, pybamm.MatrixMultiplication)
+        self.assertIsInstance(broad_to_edges_disc.children[0], pybamm.Matrix)
+        self.assertIsInstance(broad_to_edges_disc.children[1], pybamm.StateVector)
+        self.assertEqual(
+            broad_to_edges_disc.shape,
+            (
+                mesh["negative particle"][0].npts
+                * (mesh["negative electrode"][0].npts + 1),
+                1,
+            ),
         )
 
     def test_concatenation(self):
