@@ -35,7 +35,7 @@ class LeadingOrder(BaseModel):
 
     def get_coupled_variables(self, variables):
 
-        N_e = pybamm.FullBroadcast(
+        N_e = pybamm.FullBroadcastToEdges(
             0,
             ["negative electrode", "separator", "positive electrode"],
             "current collector",

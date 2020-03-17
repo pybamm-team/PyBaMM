@@ -38,7 +38,7 @@ class SpatialMethod:
         # add npts_for_broadcast to mesh domains for this particular discretisation
         for dom in mesh.keys():
             for i in range(len(mesh[dom])):
-                mesh[dom][i].npts_for_broadcast = mesh[dom][i].npts
+                mesh[dom][i].npts_for_broadcast_to_nodes = mesh[dom][i].npts
         self._mesh = mesh
 
     @property
@@ -62,7 +62,7 @@ class SpatialMethod:
             Contains the discretised spatial variable
         """
         symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
-        if symbol.name.endswith("_edge"):
+        if symbol.evaluates_on_edges():
             entries = np.concatenate([mesh.edges for mesh in symbol_mesh])
         else:
             entries = np.concatenate([mesh.nodes for mesh in symbol_mesh])
@@ -81,7 +81,8 @@ class SpatialMethod:
         domain : iterable of strings
             The domain to broadcast to
         broadcast_type : str
-            The type of broadcast, either: 'primary' or 'full'
+            The type of broadcast: 'primary to node', 'primary to edges', 'secondary to
+            nodes', 'secondary to edges', 'full to nodes' or 'full to edges'
 
         Returns
         -------
@@ -90,14 +91,24 @@ class SpatialMethod:
         """
 
         primary_domain_size = sum(
-            self.mesh[dom][0].npts_for_broadcast for dom in domain
+            self.mesh[dom][0].npts_for_broadcast_to_nodes for dom in domain
         )
-
+        secondary_domain_size = sum(
+            self.mesh[dom][0].npts_for_broadcast_to_nodes
+            for dom in auxiliary_domains.get("secondary", [])
+        )  # returns empty list if auxiliary_domains doesn't have "secondary" key
         full_domain_size = sum(
-            subdom.npts_for_broadcast for dom in domain for subdom in self.mesh[dom]
+            subdom.npts_for_broadcast_to_nodes
+            for dom in domain
+            for subdom in self.mesh[dom]
         )
+        if broadcast_type.endswith("to edges"):
+            # add one point to each domain for broadcasting to edges
+            primary_domain_size += 1
+            secondary_domain_size += 1
+            full_domain_size += 1
 
-        if broadcast_type == "primary":
+        if broadcast_type.startswith("primary"):
             # Make copies of the child stacked on top of each other
             sub_vector = np.ones((primary_domain_size, 1))
             if symbol.shape_for_testing == ():
@@ -107,11 +118,7 @@ class SpatialMethod:
                 matrix = csr_matrix(kron(eye(symbol.shape_for_testing[0]), sub_vector))
                 out = pybamm.Matrix(matrix) @ symbol
             out.domain = domain
-        elif broadcast_type == "secondary":
-            secondary_domain_size = sum(
-                self.mesh[dom][0].npts_for_broadcast
-                for dom in auxiliary_domains["secondary"]
-            )
+        elif broadcast_type.startswith("secondary"):
             kron_size = full_domain_size // primary_domain_size
             # Symbol may be on edges so need to calculate size carefully
             symbol_primary_size = symbol.shape[0] // kron_size
@@ -121,7 +128,7 @@ class SpatialMethod:
             # Repeat for secondary points
             matrix = csr_matrix(kron(eye(kron_size), sub_matrix))
             out = pybamm.Matrix(matrix) @ symbol
-        elif broadcast_type == "full":
+        elif broadcast_type.startswith("full"):
             out = symbol * pybamm.Vector(np.ones(full_domain_size), domain=domain)
 
         out.auxiliary_domains = auxiliary_domains

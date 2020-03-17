@@ -2,6 +2,7 @@
 
 ## Features
 
+-   Added functionality to broadcast to edges ([#891](https://github.com/pybamm-team/PyBaMM/pull/891))
 -   Added a helper function for info on function parameters ([#881](https://github.com/pybamm-team/PyBaMM/pull/881))
 -   Added additional notebooks showing how to create and compare models ([#877](https://github.com/pybamm-team/PyBaMM/pull/877))
 -   Added `Minimum`, `Maximum` and `Sign` operators ([#876](https://github.com/pybamm-team/PyBaMM/pull/876))
