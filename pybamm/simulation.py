@@ -13,7 +13,10 @@ def is_notebook():
     try:
         shell = get_ipython().__class__.__name__
         if shell == "ZMQInteractiveShell":
-            return True  # Jupyter notebook or qtconsole
+            # Jupyter notebook or qtconsole
+            cfg = get_ipython().config
+            nb = len(cfg['InteractiveShell'].keys()) == 0
+            return nb
         elif shell == "TerminalInteractiveShell":
             return False  # Terminal running IPython
         else:
