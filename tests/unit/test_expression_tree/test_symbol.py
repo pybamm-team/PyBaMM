@@ -172,7 +172,7 @@ class TestSymbol(unittest.TestCase):
         self.assertIsNone(pybamm.t.evaluate_ignoring_errors(t=None))
         self.assertEqual(pybamm.t.evaluate_ignoring_errors(t=0), 0)
         self.assertIsNone(pybamm.Parameter("a").evaluate_ignoring_errors())
-        self.assertIsNone(pybamm.StateVector(slice(0,1)).evaluate_ignoring_errors())
+        self.assertIsNone(pybamm.StateVector(slice(0, 1)).evaluate_ignoring_errors())
         self.assertEqual(pybamm.InputParameter("a").evaluate_ignoring_errors(), 1)
 
     def test_symbol_is_constant(self):
