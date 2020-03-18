@@ -3,10 +3,10 @@
 #
 import pybamm
 
-from ..base_particle import BaseParticle
+from .base_particle import BaseParticle
 
 
-class SingleParticle(BaseParticle):
+class FickianSingleParticle(BaseParticle):
     """Base class for molar conservation in a single x-averaged particle which employs
     Fick's law.
 

@@ -5,5 +5,7 @@ Particle
   :maxdepth: 1
 
   base_particle
-  fickian/index
-  fast/index
+  fickian_single_particle
+  fickian_many_particles
+  fast_single_particle
+  fast_many_particles

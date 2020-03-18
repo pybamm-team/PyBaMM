@@ -70,17 +70,17 @@ class DFN(BaseModel):
     def set_particle_submodel(self):
 
         if self.options["particle"] == "Fickian diffusion":
-            self.submodels["negative particle"] = pybamm.particle.fickian.ManyParticles(
+            self.submodels["negative particle"] = pybamm.particle.FickianManyParticles(
                 self.param, "Negative"
             )
-            self.submodels["positive particle"] = pybamm.particle.fickian.ManyParticles(
+            self.submodels["positive particle"] = pybamm.particle.FickianManyParticles(
                 self.param, "Positive"
             )
         elif self.options["particle"] == "fast diffusion":
-            self.submodels["negative particle"] = pybamm.particle.fast.ManyParticles(
+            self.submodels["negative particle"] = pybamm.particle.FastManyParticles(
                 self.param, "Negative"
             )
-            self.submodels["positive particle"] = pybamm.particle.fast.ManyParticles(
+            self.submodels["positive particle"] = pybamm.particle.FastManyParticles(
                 self.param, "Positive"
             )
 

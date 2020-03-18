@@ -226,7 +226,7 @@ class Discretisation(object):
                     for child, mesh in meshes.items():
                         for domain_mesh in mesh:
                             submesh = domain_mesh[i]
-                            end += submesh.npts_for_broadcast
+                            end += submesh.npts_for_broadcast_to_nodes
                         y_slices[child.id].append(slice(start, end))
                         start = end
             else:
@@ -249,7 +249,7 @@ class Discretisation(object):
             size = 0
             for dom in variable.domain:
                 for submesh in self.spatial_methods[dom].mesh[dom]:
-                    size += submesh.npts_for_broadcast
+                    size += submesh.npts_for_broadcast_to_nodes
             return size
 
     def _preprocess_external_variables(self, model):
