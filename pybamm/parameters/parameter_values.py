@@ -8,7 +8,7 @@ import numbers
 import numpy as np
 
 
-class ParameterValues(dict):
+class ParameterValues:
     """
     The parameter values for a simulation.
 
@@ -576,6 +576,9 @@ class ParameterValues(dict):
             return processed_symbol.evaluate()
         else:
             raise ValueError("symbol must evaluate to a constant scalar")
+
+    def _ipython_key_completions_(self):
+        return list(self._dict_items.keys())
 
 
 class CurrentToCrate:
