@@ -130,7 +130,7 @@ class BaseSolver(object):
             )
 
         inputs = inputs or {}
-        y0 = model.concatenated_initial_conditions.evaluate(0, None, inputs)
+        y0 = model.concatenated_initial_conditions.evaluate(0, None, u=inputs)
 
         # Set model timescale
         model.timescale_eval = model.timescale.evaluate(u=inputs)
@@ -164,10 +164,10 @@ class BaseSolver(object):
             # Convert model attributes to casadi
             t_casadi = casadi.MX.sym("t")
             y_diff = casadi.MX.sym(
-                "y_diff", len(model.concatenated_rhs.evaluate(0, y0, inputs))
+                "y_diff", len(model.concatenated_rhs.evaluate(0, y0, u=inputs))
             )
             y_alg = casadi.MX.sym(
-                "y_alg", len(model.concatenated_algebraic.evaluate(0, y0, inputs))
+                "y_alg", len(model.concatenated_algebraic.evaluate(0, y0, u=inputs))
             )
             y_casadi = casadi.vertcat(y_diff, y_alg)
             u_casadi = {}
@@ -210,7 +210,7 @@ class BaseSolver(object):
             else:
                 # Process with CasADi
                 report(f"Converting {name} to CasADi")
-                func = func.to_casadi(t_casadi, y_casadi, u_casadi)
+                func = func.to_casadi(t_casadi, y_casadi, u=u_casadi)
                 if use_jacobian:
                     report(f"Calculating jacobian for {name} using CasADi")
                     jac_casadi = casadi.jacobian(func, y_casadi)
@@ -810,7 +810,7 @@ class BaseSolver(object):
                         event.expression.evaluate(
                             solution.t_event,
                             solution.y_event,
-                            {k: v[-1] for k, v in solution.inputs.items()},
+                            u={k: v[-1] for k, v in solution.inputs.items()},
                         )
                     )
             termination_event = min(final_event_values, key=final_event_values.get)
@@ -855,11 +855,12 @@ class SolverCallable:
 
     def function(self, t, y):
         if self.form == "casadi":
+            states_eval = self._function(t, y, self.inputs)
             if self.name in ["RHS", "algebraic", "residuals", "event"]:
-                return self._function(t, y, self.inputs).full()
+                return states_eval.full()
             else:
                 # keep jacobians sparse
-                return self._function(t, y, self.inputs)
+                return states_eval
         else:
             return self._function(t, y, self.inputs, known_evals={})[0]
 

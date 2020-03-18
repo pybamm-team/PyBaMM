@@ -329,6 +329,13 @@ class TestDiscretise(unittest.TestCase):
         var_disc = disc.process_symbol(var)
         self.assertIsInstance(var_disc, pybamm.StateVector)
         self.assertEqual(var_disc.y_slices[0], disc.y_slices[var.id][0])
+
+        # variable dot
+        var_dot = pybamm.VariableDot("var'")
+        var_dot_disc = disc.process_symbol(var_dot)
+        self.assertIsInstance(var_dot_disc, pybamm.StateVectorDot)
+        self.assertEqual(var_dot_disc.y_slices[0], disc.y_slices[var.id][0])
+
         # scalar
         scal = pybamm.Scalar(5)
         scal_disc = disc.process_symbol(scal)
@@ -693,6 +700,25 @@ class TestDiscretise(unittest.TestCase):
         with self.assertRaises(pybamm.ModelError):
             disc.process_model(model)
 
+        # test that any time derivatives of variables in rhs raises an
+        # error
+        model = pybamm.BaseModel()
+        model.rhs = {c: pybamm.div(N) + c.diff(pybamm.t),
+                     T: pybamm.div(q), S: pybamm.div(p)}
+        model.initial_conditions = {
+            c: pybamm.Scalar(2),
+            T: pybamm.Scalar(5),
+            S: pybamm.Scalar(8),
+        }
+        model.boundary_conditions = {
+            c: {"left": (0, "Neumann"), "right": (0, "Neumann")},
+            T: {"left": (0, "Neumann"), "right": (0, "Neumann")},
+            S: {"left": (0, "Neumann"), "right": (0, "Neumann")},
+        }
+        model.variables = {"ST": S * T}
+        with self.assertRaises(pybamm.ModelError):
+            disc.process_model(model)
+
     def test_process_model_fail(self):
         # one equation
         c = pybamm.Variable("c")
@@ -806,6 +832,20 @@ class TestDiscretise(unittest.TestCase):
         np.testing.assert_array_equal(jacobian_actual, jacobian.toarray())
         jacobian = expr.evaluate(0, y0, known_evals=known_evals)[0]
         np.testing.assert_array_equal(jacobian_actual, jacobian.toarray())
+
+        # check that any time derivatives of variables in algebraic raises an
+        # error
+        model = pybamm.BaseModel()
+        model.rhs = {c: pybamm.div(N)}
+        model.algebraic = {d: d - 2 * c.diff(pybamm.t)}
+        model.initial_conditions = {d: pybamm.Scalar(6), c: pybamm.Scalar(3)}
+        model.boundary_conditions = {
+            c: {"left": (0, "Neumann"), "right": (0, "Neumann")}
+        }
+        model.variables = {"c": c, "N": N, "d": d}
+
+        with self.assertRaises(pybamm.ModelError):
+            disc.process_model(model)
 
     def test_process_model_concatenation(self):
         # concatenation of variables as the key

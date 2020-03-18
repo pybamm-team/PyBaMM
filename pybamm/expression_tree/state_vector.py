@@ -7,7 +7,7 @@ import numpy as np
 from scipy.sparse import csr_matrix, vstack
 
 
-class StateVector(pybamm.Symbol):
+class StateVectorBase(pybamm.Symbol):
     """
     node in the expression tree that holds a slice to read from an external vector type
 
@@ -32,6 +32,7 @@ class StateVector(pybamm.Symbol):
     def __init__(
         self,
         *y_slices,
+        base_name="y",
         name=None,
         domain=None,
         auxiliary_domains=None,
@@ -42,9 +43,10 @@ class StateVector(pybamm.Symbol):
                 raise TypeError("all y_slices must be slice objects")
         if name is None:
             if y_slices[0].start is None:
-                name = "y[:{:d}]".format(y_slice.stop)
+                name = base_name + "[:{:d}]".format(y_slice.stop)
             else:
-                name = "y[{:d}:{:d}".format(y_slices[0].start, y_slices[0].stop)
+                name = base_name + \
+                    "[{:d}:{:d}".format(y_slices[0].start, y_slices[0].stop)
             if len(y_slices) > 1:
                 name += ",{:d}:{:d}".format(y_slices[1].start, y_slices[1].stop)
                 if len(y_slices) > 2:
@@ -103,21 +105,29 @@ class StateVector(pybamm.Symbol):
             + tuple(self.domain)
         )
 
-    def _base_evaluate(self, t=None, y=None, u=None):
-        """ See :meth:`pybamm.Symbol._base_evaluate()`. """
-        if y is None:
-            raise TypeError("StateVector cannot evaluate input 'y=None'")
-        if y.shape[0] < len(self.evaluation_array):
-            raise ValueError(
-                "y is too short, so value with slice is smaller than expected"
-            )
-        else:
-            out = (y[: len(self._evaluation_array)])[self._evaluation_array]
-            if isinstance(out, np.ndarray) and out.ndim == 1:
-                out = out[:, np.newaxis]
-            return out
+    def _jac_diff_vector(self, variable):
+        """
+        Differentiate a slice of a StateVector of size m with respect to another slice
+        of a different StateVector of size n. This returns a (sparse) zero matrix of
+        size m x n
 
-    def _jac(self, variable):
+        Parameters
+        ----------
+        variable : :class:`pybamm.Symbol`
+            The variable with respect to which to differentiate
+
+        """
+        if len(variable.y_slices) > 1:
+            raise NotImplementedError(
+                "Jacobian only implemented for a single-slice StateVector"
+            )
+        slices_size = self.y_slices[0].stop - self.y_slices[0].start
+        variable_size = variable.last_point - variable.first_point
+
+        # Return zeros of correct size since no entries match
+        return pybamm.Matrix(csr_matrix((slices_size, variable_size)))
+
+    def _jac_same_vector(self, variable):
         """
         Differentiate a slice of a StateVector of size m with respect to another
         slice of a StateVector of size n. This returns a (sparse) matrix of size
@@ -180,3 +190,136 @@ class StateVector(pybamm.Symbol):
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
         """
         return np.nan * np.ones((self.size, 1))
+
+
+class StateVector(StateVectorBase):
+    """
+    node in the expression tree that holds a slice to read from an external vector type
+
+    Parameters
+    ----------
+
+    y_slice: slice
+        the slice of an external y to read
+    name: str, optional
+        the name of the node
+    domain : iterable of str, optional
+        list of domains the parameter is valid over, defaults to empty list
+    auxiliary_domains : dict of str, optional
+        dictionary of auxiliary domains
+    evaluation_array : list, optional
+        List of boolean arrays representing slices. Default is None, in which case the
+        evaluation_array is computed from y_slices.
+
+    *Extends:* :class:`Array`
+    """
+
+    def __init__(
+        self,
+        *y_slices,
+        name=None,
+        domain=None,
+        auxiliary_domains=None,
+        evaluation_array=None,
+    ):
+        super().__init__(*y_slices,
+                         base_name="y", name=name, domain=domain,
+                         auxiliary_domains=auxiliary_domains,
+                         evaluation_array=evaluation_array)
+
+    def _base_evaluate(self, t=None, y=None, y_dot=None, u=None):
+        """ See :meth:`pybamm.Symbol._base_evaluate()`. """
+        if y is None:
+            raise TypeError("StateVector cannot evaluate input 'y=None'")
+        if y.shape[0] < len(self.evaluation_array):
+            raise ValueError(
+                "y is too short, so value with slice is smaller than expected"
+            )
+
+        out = (y[: len(self._evaluation_array)])[self._evaluation_array]
+        if isinstance(out, np.ndarray) and out.ndim == 1:
+            out = out[:, np.newaxis]
+        return out
+
+    def diff(self, variable):
+        if variable.id == self.id:
+            return pybamm.Scalar(1)
+        if variable.id == pybamm.t.id:
+            return StateVectorDot(*self._y_slices, name=self.name + "'",
+                                  domain=self.domain,
+                                  auxiliary_domains=self.auxiliary_domains,
+                                  evaluation_array=self.evaluation_array)
+        else:
+            return pybamm.Scalar(0)
+
+    def _jac(self, variable):
+        if isinstance(variable, pybamm.StateVector):
+            return self._jac_same_vector(variable)
+        elif isinstance(variable, pybamm.StateVectorDot):
+            return self._jac_diff_vector(variable)
+
+
+class StateVectorDot(StateVectorBase):
+    """
+    node in the expression tree that holds a slice to read from the ydot
+
+    Parameters
+    ----------
+
+    y_slice: slice
+        the slice of an external ydot to read
+    name: str, optional
+        the name of the node
+    domain : iterable of str, optional
+        list of domains the parameter is valid over, defaults to empty list
+    auxiliary_domains : dict of str, optional
+        dictionary of auxiliary domains
+    evaluation_array : list, optional
+        List of boolean arrays representing slices. Default is None, in which case the
+        evaluation_array is computed from y_slices.
+
+    *Extends:* :class:`Array`
+    """
+
+    def __init__(
+        self,
+        *y_slices,
+        name=None,
+        domain=None,
+        auxiliary_domains=None,
+        evaluation_array=None,
+    ):
+        super().__init__(*y_slices,
+                         base_name="y_dot", name=name, domain=domain,
+                         auxiliary_domains=auxiliary_domains,
+                         evaluation_array=evaluation_array)
+
+    def _base_evaluate(self, t=None, y=None, y_dot=None, u=None):
+        """ See :meth:`pybamm.Symbol._base_evaluate()`. """
+        if y_dot is None:
+            raise TypeError("StateVectorDot cannot evaluate input 'y_dot=None'")
+        if y_dot.shape[0] < len(self.evaluation_array):
+            raise ValueError(
+                "y_dot is too short, so value with slice is smaller than expected"
+            )
+
+        out = (y_dot[: len(self._evaluation_array)])[self._evaluation_array]
+        if isinstance(out, np.ndarray) and out.ndim == 1:
+            out = out[:, np.newaxis]
+        return out
+
+    def diff(self, variable):
+        if variable.id == self.id:
+            return pybamm.Scalar(1)
+        elif variable.id == pybamm.t.id:
+            raise pybamm.ModelError(
+                "cannot take second time derivative of a state vector"
+            )
+        else:
+            return pybamm.Scalar(0)
+
+    def _jac(self, variable):
+        if isinstance(variable, pybamm.StateVectorDot):
+            return self._jac_same_vector(variable)
+        elif isinstance(variable, pybamm.StateVector):
+            return self._jac_diff_vector(variable)
