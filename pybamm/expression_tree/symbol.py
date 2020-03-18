@@ -615,9 +615,10 @@ class Symbol(anytree.NodeMixin):
     def evaluate_ignoring_errors(self, t=0):
         """
         Evaluates the expression. If a node exists in the tree that cannot be evaluated
-        as a scalar or vector (e.g. Time, Parameter, Variable, StateVector,
-        InputParameter), then None is returned. Otherwise the result of the evaluation
-        is given
+        as a scalar or vector (e.g. Time, Parameter, Variable, StateVector), then None
+        is returned. If there is an InputParameter in the tree then a 1 is returned.
+        Otherwise the result of the evaluation is given.
+
 
         See Also
         --------
