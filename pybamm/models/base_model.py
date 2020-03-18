@@ -381,11 +381,11 @@ class BaseModel(object):
         post_discretisation : boolean
             A flag indicating tests to be skipped after discretisation
         """
+        self.check_for_time_derivatives()
         self.check_well_determined(post_discretisation)
         self.check_algebraic_equations(post_discretisation)
         self.check_ics_bcs()
         self.check_default_variables_dictionaries()
-        self.check_for_time_derivatives()
         # Can't check variables after discretising, since Variable objects get replaced
         # by StateVector objects
         # Checking variables is slow, so only do it in debug mode
