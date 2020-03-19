@@ -156,7 +156,7 @@ pybamm_data.append("./CITATIONS.txt")
 
 setup(
     name="pybamm",
-    version="2.0",
+    version=load_version()+".post1",
     description="Python Battery Mathematical Modelling.",
     long_description="description",
     long_description_content_type="text/markdown",
