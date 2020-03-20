@@ -70,13 +70,14 @@ class TestBaseSolver(unittest.TestCase):
                 y = casadi.MX.sym("y")
                 p = casadi.MX.sym("p")
                 self.casadi_algebraic = casadi.Function(
-                    "alg", [t, y, p], [self.algebraic_eval(t, y)]
+                    "alg", [t, y, p], [self.algebraic_eval(t, y, p)]
                 )
+                self.convert_to_format = "casadi"
 
-            def rhs_eval(self, t, y):
+            def rhs_eval(self, t, y, inputs):
                 return np.array([])
 
-            def algebraic_eval(self, t, y):
+            def algebraic_eval(self, t, y, inputs):
                 return y + 2
 
         solver = pybamm.BaseSolver(root_method="lm")
@@ -101,13 +102,14 @@ class TestBaseSolver(unittest.TestCase):
                 y = casadi.MX.sym("y", vec.size)
                 p = casadi.MX.sym("p")
                 self.casadi_algebraic = casadi.Function(
-                    "alg", [t, y, p], [self.algebraic_eval(t, y)]
+                    "alg", [t, y, p], [self.algebraic_eval(t, y, p)]
                 )
+                self.convert_to_format = "casadi"
 
-            def rhs_eval(self, t, y):
+            def rhs_eval(self, t, y, inputs):
                 return y[0:1]
 
-            def algebraic_eval(self, t, y):
+            def algebraic_eval(self, t, y, inputs):
                 return (y[1:] - vec[1:]) ** 2
 
         model = VectorModel()
@@ -118,7 +120,7 @@ class TestBaseSolver(unittest.TestCase):
         np.testing.assert_array_almost_equal(init_cond, vec)
 
         # With jacobian
-        def jac_dense(t, y):
+        def jac_dense(t, y, inputs):
             return 2 * np.hstack([np.zeros((3, 1)), np.diag(y[1:] - vec[1:])])
 
         model.jac_algebraic_eval = jac_dense
@@ -126,7 +128,7 @@ class TestBaseSolver(unittest.TestCase):
         np.testing.assert_array_almost_equal(init_cond, vec)
 
         # With sparse jacobian
-        def jac_sparse(t, y):
+        def jac_sparse(t, y, inputs):
             return 2 * csr_matrix(
                 np.hstack([np.zeros((3, 1)), np.diag(y[1:] - vec[1:])])
             )
@@ -145,13 +147,14 @@ class TestBaseSolver(unittest.TestCase):
                 y = casadi.MX.sym("y")
                 p = casadi.MX.sym("p")
                 self.casadi_algebraic = casadi.Function(
-                    "alg", [t, y, p], [self.algebraic_eval(t, y)]
+                    "alg", [t, y, p], [self.algebraic_eval(t, y, p)]
                 )
+                self.convert_to_format = "casadi"
 
-            def rhs_eval(self, t, y):
+            def rhs_eval(self, t, y, inputs):
                 return np.array([])
 
-            def algebraic_eval(self, t, y):
+            def algebraic_eval(self, t, y, inputs):
                 # algebraic equation has no root
                 return y ** 2 + 1
 

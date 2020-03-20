@@ -713,8 +713,6 @@ class TestScikitsSolvers(unittest.TestCase):
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
-    import warnings
-    warnings.simplefilter("error")
     if "-v" in sys.argv:
         debug = True
         pybamm.set_logging_level("DEBUG")

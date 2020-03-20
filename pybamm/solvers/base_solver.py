@@ -367,7 +367,7 @@ class BaseSolver(object):
             y0_guess = model.concatenated_initial_conditions.flatten()
 
         inputs = inputs or {}
-        if model.rhs_eval.form == "casadi":
+        if model.convert_to_format == "casadi":
             inputs = casadi.vertcat(*[x for x in inputs.values()])
 
         # Split y0_guess into differential and algebraic
@@ -834,7 +834,7 @@ class SolverCallable:
                 # keep jacobians sparse
                 return states_eval
         else:
-            return self._function(t, y, inputs, known_evals={})[0]
+            return self._function(t, y, params=inputs, known_evals={})[0]
 
 
 class Residuals(SolverCallable):

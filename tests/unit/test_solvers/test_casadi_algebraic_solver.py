@@ -39,7 +39,7 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
             p = casadi.MX.sym("p")
             casadi_algebraic = casadi.Function("alg", [t, y, p], [y ** 2 + 1])
 
-            def algebraic_eval(self, t, y):
+            def algebraic_eval(self, t, y, inputs):
                 # algebraic equation has no real root
                 return y ** 2 + 1
 
