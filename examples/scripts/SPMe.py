@@ -45,6 +45,5 @@ plot = pybamm.QuickPlot(
     ],
     time_unit="seconds",
     spatial_unit="um",
-    # axis_limits="tight",
 )
 plot.dynamic_plot()
