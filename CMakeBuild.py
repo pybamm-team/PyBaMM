@@ -1,7 +1,6 @@
 import os
 import sys
 import subprocess
-import warnings
 from pathlib import Path
 
 try:
@@ -43,23 +42,6 @@ class CMakeBuild(build_ext):
             self.sundials_root = "KLU_module_deps/sundials5"
 
     def run(self):
-        try:
-            subprocess.run(["cmake", "--version"])
-        except OSError:
-            raise RuntimeError(
-                "CMake must be installed to build the KLU python module."
-            )
-
-        try:
-            assert os.path.isfile("third-party/pybind11/tools/pybind11Tools.cmake")
-        except AssertionError:
-            print(
-                "Error: Could not find "
-                "third-party/pybind11/pybind11/tools/pybind11Tools.cmake"
-            )
-            print("Make sure the pybind11 repository was cloned in ./third-party/")
-            print("See installation instructions for more information.")
-
         cmake_args = ["-DPYTHON_EXECUTABLE={}".format(sys.executable)]
         if self.suitesparse_root:
             print(self.suitesparse_root)
@@ -89,13 +71,12 @@ class CMakeBuild(build_ext):
         if os.path.isfile(os.path.join(self.build_temp, "CMakeError.log")):
             msg = (
                 "cmake configuration steps encountered errors, and the idaklu module"
-                " will not be built.\nIgnore this warning if you don't plan to use the "
-                "idaklu module.\nIf you plan to use the idaklu module, make sure the "
-                "dependencies are correctly installed.\nSee "
+                " could not be built. Make sure dependencies are correctly "
+                "installed. See "
                 "https://github.com/pybamm-team/PyBaMM/blob/develop/"
                 "INSTALL-LINUX-MAC.md"
             )
-            warnings.warn(msg)
+            raise RuntimeError(msg)
         else:
             print("-" * 10, "Building idaklu module", "-" * 40)
             subprocess.run(["cmake", "--build", "."], cwd=self.build_temp)
