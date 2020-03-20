@@ -50,7 +50,9 @@ class FunctionParameter(pybamm.Symbol):
         name of the node
     inputs : dict
         A dictionary with string keys and :class:`pybamm.Symbol` values representing
-        the function inputs.
+        the function inputs. The string keys should provide a reasonable description
+        of what the input to the function is
+        (e.g. "Electrolyte concentration [mol.m-3]")
     diff_variable : :class:`pybamm.Symbol`, optional
         if diff_variable is specified, the FunctionParameter node will be replaced by a
         :class:`pybamm.Function` and then differentiated with respect to diff_variable.
@@ -93,7 +95,9 @@ class FunctionParameter(pybamm.Symbol):
                 for i in inp:
                     if i.__class__ is not str:
                         raise TypeError(
-                            "Inputs must be a provided as a list of strings"
+                            "Inputs must be a provided as" +
+                            "a dictionary of the form:" +
+                            "{{str: :class:`pybamm.Symbol`}}"
                         )
             else:
                 raise TypeError("Inputs must be a provided as a list of strings")

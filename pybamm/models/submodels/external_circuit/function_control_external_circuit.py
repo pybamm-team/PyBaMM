@@ -58,7 +58,7 @@ class VoltageFunctionControl(FunctionControl):
 
 def constant_voltage(variables):
     V = variables["Terminal voltage [V]"]
-    return V - pybamm.FunctionParameter("Voltage function [V]", {"Times [s]": pybamm.t})
+    return V - pybamm.FunctionParameter("Voltage function [V]", {"Time [s]": pybamm.t})
 
 
 class PowerFunctionControl(FunctionControl):
