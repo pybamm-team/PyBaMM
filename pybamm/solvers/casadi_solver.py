@@ -181,7 +181,7 @@ class CasadiSolver(pybamm.BaseSolver):
             y0 = model.y0
             rhs = model.casadi_rhs
             algebraic = model.casadi_algebraic
-            u_stacked = casadi.vertcat(*[x for x in inputs.values()])
+            p_stacked = casadi.vertcat(*[x for x in inputs.values()])
 
             options = {
                 "grid": t_eval,
@@ -193,22 +193,22 @@ class CasadiSolver(pybamm.BaseSolver):
 
             # set up and solve
             t = casadi.MX.sym("t")
-            u = casadi.MX.sym("u", u_stacked.shape[0])
-            y_diff = casadi.MX.sym("y_diff", rhs(t_eval[0], y0, u).shape[0])
-            problem = {"t": t, "x": y_diff, "p": u}
-            if algebraic(t_eval[0], y0, u).is_empty():
+            p = casadi.MX.sym("p", p_stacked.shape[0])
+            y_diff = casadi.MX.sym("y_diff", rhs(t_eval[0], y0, p).shape[0])
+            problem = {"t": t, "x": y_diff, "p": p}
+            if algebraic(t_eval[0], y0, p).is_empty():
                 method = "cvodes"
-                problem.update({"ode": rhs(t, y_diff, u)})
+                problem.update({"ode": rhs(t, y_diff, p)})
             else:
                 options["calc_ic"] = True
                 method = "idas"
-                y_alg = casadi.MX.sym("y_alg", algebraic(t_eval[0], y0, u).shape[0])
+                y_alg = casadi.MX.sym("y_alg", algebraic(t_eval[0], y0, p).shape[0])
                 y_full = casadi.vertcat(y_diff, y_alg)
                 problem.update(
                     {
                         "z": y_alg,
-                        "ode": rhs(t, y_full, u),
-                        "alg": algebraic(t, y_full, u),
+                        "ode": rhs(t, y_full, p),
+                        "alg": algebraic(t, y_full, p),
                     }
                 )
             self.problems[model] = problem
@@ -227,8 +227,8 @@ class CasadiSolver(pybamm.BaseSolver):
         y0_diff, y0_alg = np.split(y0, [rhs_size])
         try:
             # Try solving
-            u_stacked = casadi.vertcat(*[x for x in inputs.values()])
-            sol = integrator(x0=y0_diff, z0=y0_alg, p=u_stacked, **self.extra_options)
+            p_stacked = casadi.vertcat(*[x for x in inputs.values()])
+            sol = integrator(x0=y0_diff, z0=y0_alg, p=p_stacked, **self.extra_options)
             y_values = np.concatenate([sol["xf"].full(), sol["zf"].full()])
             return pybamm.Solution(t_eval, y_values)
         except RuntimeError as e:

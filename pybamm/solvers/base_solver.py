@@ -130,10 +130,10 @@ class BaseSolver(object):
             )
 
         inputs = inputs or {}
-        y0 = model.concatenated_initial_conditions.evaluate(0, None, u=inputs)
+        y0 = model.concatenated_initial_conditions.evaluate(0, None, params=inputs)
 
         # Set model timescale
-        model.timescale_eval = model.timescale.evaluate(u=inputs)
+        model.timescale_eval = model.timescale.evaluate(params=inputs)
 
         if self.ode_solver is True:
             self.root_method = None
@@ -164,19 +164,20 @@ class BaseSolver(object):
             # Convert model attributes to casadi
             t_casadi = casadi.MX.sym("t")
             y_diff = casadi.MX.sym(
-                "y_diff", len(model.concatenated_rhs.evaluate(0, y0, u=inputs))
+                "y_diff", len(model.concatenated_rhs.evaluate(0, y0, params=inputs))
             )
             y_alg = casadi.MX.sym(
-                "y_alg", len(model.concatenated_algebraic.evaluate(0, y0, u=inputs))
+                "y_alg",
+                len(model.concatenated_algebraic.evaluate(0, y0, params=inputs)),
             )
             y_casadi = casadi.vertcat(y_diff, y_alg)
-            u_casadi = {}
+            p_casadi = {}
             for name, value in inputs.items():
                 if isinstance(value, numbers.Number):
-                    u_casadi[name] = casadi.MX.sym(name)
+                    p_casadi[name] = casadi.MX.sym(name)
                 else:
-                    u_casadi[name] = casadi.MX.sym(name, value.shape[0])
-            u_casadi_stacked = casadi.vertcat(*[u for u in u_casadi.values()])
+                    p_casadi[name] = casadi.MX.sym(name, value.shape[0])
+            p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
 
         def process(func, name, use_jacobian=None):
             def report(string):
@@ -210,17 +211,17 @@ class BaseSolver(object):
             else:
                 # Process with CasADi
                 report(f"Converting {name} to CasADi")
-                func = func.to_casadi(t_casadi, y_casadi, u=u_casadi)
+                func = func.to_casadi(t_casadi, y_casadi, params=p_casadi)
                 if use_jacobian:
                     report(f"Calculating jacobian for {name} using CasADi")
                     jac_casadi = casadi.jacobian(func, y_casadi)
                     jac = casadi.Function(
-                        name, [t_casadi, y_casadi, u_casadi_stacked], [jac_casadi]
+                        name, [t_casadi, y_casadi, p_casadi_stacked], [jac_casadi]
                     )
                 else:
                     jac = None
                 func = casadi.Function(
-                    name, [t_casadi, y_casadi, u_casadi_stacked], [func]
+                    name, [t_casadi, y_casadi, p_casadi_stacked], [func]
                 )
             if name == "residuals":
                 func_call = Residuals(func, name, model)
@@ -305,10 +306,10 @@ class BaseSolver(object):
             if len(model.rhs) > 0:
                 mass_matrix_inv = casadi.MX(model.mass_matrix_inv.entries)
                 explicit_rhs = mass_matrix_inv @ rhs(
-                    t_casadi, y_casadi, u_casadi_stacked
+                    t_casadi, y_casadi, p_casadi_stacked
                 )
                 model.casadi_rhs = casadi.Function(
-                    "rhs", [t_casadi, y_casadi, u_casadi_stacked], [explicit_rhs]
+                    "rhs", [t_casadi, y_casadi, p_casadi_stacked], [explicit_rhs]
                 )
             model.casadi_algebraic = algebraic
         if self.algebraic_solver is True:
@@ -394,25 +395,25 @@ class BaseSolver(object):
         # Solve using casadi or scipy
         if self.root_method == "casadi":
             # Set up
-            u_stacked = casadi.vertcat(*[x for x in inputs.values()])
-            u = casadi.MX.sym("u", u_stacked.shape[0])
+            p_stacked = casadi.vertcat(*[x for x in inputs.values()])
+            p = casadi.MX.sym("p", p_stacked.shape[0])
             y_alg = casadi.MX.sym("y_alg", y0_alg_guess.shape[0])
             y = casadi.vertcat(y0_diff, y_alg)
-            alg_root = model.casadi_algebraic(time, y, u)
+            alg_root = model.casadi_algebraic(time, y, p)
             # Solve
             roots = casadi.rootfinder(
                 "roots",
                 "newton",
-                dict(x=y_alg, p=u, g=alg_root),
+                dict(x=y_alg, p=p, g=alg_root),
                 {"abstol": self.root_tol},
             )
             try:
-                y0_alg = roots(y0_alg_guess, u_stacked).full().flatten()
+                y0_alg = roots(y0_alg_guess, p_stacked).full().flatten()
                 success = True
                 message = None
                 # Check final output
                 fun = model.casadi_algebraic(
-                    time, casadi.vertcat(y0_diff, y0_alg), u_stacked
+                    time, casadi.vertcat(y0_diff, y0_alg), p_stacked
                 )
                 abs_fun = casadi.fabs(fun)
                 max_fun = casadi.mmax(fun)
@@ -561,7 +562,7 @@ class BaseSolver(object):
 
         # Calculate discontinuities
         discontinuities = [
-            event.expression.evaluate(u=inputs)
+            event.expression.evaluate(params=inputs)
             for event in model.discontinuity_events_eval
         ]
 
@@ -810,7 +811,7 @@ class BaseSolver(object):
                         event.expression.evaluate(
                             solution.t_event,
                             solution.y_event,
-                            u={k: v[-1] for k, v in solution.inputs.items()},
+                            params={k: v[-1] for k, v in solution.inputs.items()},
                         )
                     )
             termination_event = min(final_event_values, key=final_event_values.get)

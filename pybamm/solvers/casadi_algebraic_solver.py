@@ -53,19 +53,19 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         y = np.empty((len(y0), len(t_eval)))
 
         # Set up
-        u_stacked = casadi.vertcat(*[x for x in inputs.values()])
+        p_stacked = casadi.vertcat(*[x for x in inputs.values()])
         t_sym = casadi.MX.sym("t")
         y_sym = casadi.MX.sym("y_alg", y0.shape[0])
-        u_sym = casadi.MX.sym("u", u_stacked.shape[0])
+        p_sym = casadi.MX.sym("p", p_stacked.shape[0])
 
-        t_u_sym = casadi.vertcat(t_sym, u_sym)
-        alg = model.casadi_algebraic(t_sym, y_sym, u_sym)
+        t_p_sym = casadi.vertcat(t_sym, p_sym)
+        alg = model.casadi_algebraic(t_sym, y_sym, p_sym)
 
         # Set up rootfinder
         roots = casadi.rootfinder(
             "roots",
             "newton",
-            dict(x=y_sym, p=t_u_sym, g=alg),
+            dict(x=y_sym, p=t_p_sym, g=alg),
             {**self.extra_options, "abstol": self.tol},
         )
         for idx, t in enumerate(t_eval):
@@ -78,14 +78,14 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                 y[:, idx] = y0
             # Otherwise calculate new y0
             else:
-                t_u_stacked = casadi.vertcat(t, u_stacked)
+                t_p_stacked = casadi.vertcat(t, p_stacked)
                 # Solve
                 try:
-                    y_sol = roots(y0, t_u_stacked).full().flatten()
+                    y_sol = roots(y0, t_p_stacked).full().flatten()
                     success = True
                     message = None
                     # Check final output
-                    fun = model.casadi_algebraic(t, y_sol, u_stacked)
+                    fun = model.casadi_algebraic(t, y_sol, p_stacked)
                 except RuntimeError as err:
                     success = False
                     message = err.args[0]

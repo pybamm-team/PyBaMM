@@ -36,8 +36,8 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
             y0 = np.array([2])
             t = casadi.MX.sym("t")
             y = casadi.MX.sym("y")
-            u = casadi.MX.sym("u")
-            casadi_algebraic = casadi.Function("alg", [t, y, u], [y ** 2 + 1])
+            p = casadi.MX.sym("p")
+            casadi_algebraic = casadi.Function("alg", [t, y, p], [y ** 2 + 1])
 
             def algebraic_eval(self, t, y):
                 # algebraic equation has no real root

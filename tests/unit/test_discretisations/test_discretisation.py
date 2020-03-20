@@ -82,7 +82,7 @@ class TestDiscretise(unittest.TestCase):
         disc.process_model(model)
 
         self.assertIsInstance(model.variables["b"], pybamm.ExternalVariable)
-        self.assertEqual(model.variables["b"].evaluate(u={"b": np.array([1])}), 1)
+        self.assertEqual(model.variables["b"].evaluate(params={"b": np.array([1])}), 1)
 
     def test_adding_0D_external_variable_fail(self):
         model = pybamm.BaseModel()
@@ -134,7 +134,7 @@ class TestDiscretise(unittest.TestCase):
 
         b_test = np.ones((10, 1))
         np.testing.assert_array_equal(
-            model.variables["b"].evaluate(u={"b": b_test}), b_test
+            model.variables["b"].evaluate(params={"b": b_test}), b_test
         )
 
         # check that b is added to the boundary conditions
@@ -199,13 +199,13 @@ class TestDiscretise(unittest.TestCase):
 
         b_test = np.linspace(0, 1, 15)[:, np.newaxis]
         np.testing.assert_array_equal(
-            model.variables["b"].evaluate(u={"b": b_test}), b_test
+            model.variables["b"].evaluate(params={"b": b_test}), b_test
         )
         np.testing.assert_array_equal(
-            model.variables["b1"].evaluate(u={"b": b_test}), b_test[:10]
+            model.variables["b1"].evaluate(params={"b": b_test}), b_test[:10]
         )
         np.testing.assert_array_equal(
-            model.variables["b2"].evaluate(u={"b": b_test}), b_test[10:]
+            model.variables["b2"].evaluate(params={"b": b_test}), b_test[10:]
         )
 
         # check that b is added to the boundary conditions
@@ -931,7 +931,7 @@ class TestDiscretise(unittest.TestCase):
         # scalar
         broad = disc.process_symbol(pybamm.FullBroadcast(a, whole_cell, {}))
         np.testing.assert_array_equal(
-            broad.evaluate(u={"a": 7}),
+            broad.evaluate(params={"a": 7}),
             7 * np.ones_like(combined_submesh[0].nodes[:, np.newaxis]),
         )
         self.assertEqual(broad.domain, whole_cell)
@@ -953,7 +953,7 @@ class TestDiscretise(unittest.TestCase):
         broad_to_edges = pybamm.FullBroadcastToEdges(a, ["negative electrode"], None)
         broad_to_edges_disc = disc.process_symbol(broad_to_edges)
         np.testing.assert_array_equal(
-            broad_to_edges_disc.evaluate(u={"a": 7}),
+            broad_to_edges_disc.evaluate(params={"a": 7}),
             7 * np.ones_like(mesh["negative electrode"][0].edges[:, np.newaxis]),
         )
 

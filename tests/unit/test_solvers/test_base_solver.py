@@ -68,9 +68,9 @@ class TestBaseSolver(unittest.TestCase):
                 self.timescale = 1
                 t = casadi.MX.sym("t")
                 y = casadi.MX.sym("y")
-                u = casadi.MX.sym("u")
+                p = casadi.MX.sym("p")
                 self.casadi_algebraic = casadi.Function(
-                    "alg", [t, y, u], [self.algebraic_eval(t, y)]
+                    "alg", [t, y, p], [self.algebraic_eval(t, y)]
                 )
 
             def rhs_eval(self, t, y):
@@ -99,9 +99,9 @@ class TestBaseSolver(unittest.TestCase):
                 self.timescale = 1
                 t = casadi.MX.sym("t")
                 y = casadi.MX.sym("y", vec.size)
-                u = casadi.MX.sym("u")
+                p = casadi.MX.sym("p")
                 self.casadi_algebraic = casadi.Function(
-                    "alg", [t, y, u], [self.algebraic_eval(t, y)]
+                    "alg", [t, y, p], [self.algebraic_eval(t, y)]
                 )
 
             def rhs_eval(self, t, y):
@@ -143,9 +143,9 @@ class TestBaseSolver(unittest.TestCase):
                 self.timescale = 1
                 t = casadi.MX.sym("t")
                 y = casadi.MX.sym("y")
-                u = casadi.MX.sym("u")
+                p = casadi.MX.sym("p")
                 self.casadi_algebraic = casadi.Function(
-                    "alg", [t, y, u], [self.algebraic_eval(t, y)]
+                    "alg", [t, y, p], [self.algebraic_eval(t, y)]
                 )
 
             def rhs_eval(self, t, y):
