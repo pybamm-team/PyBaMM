@@ -105,6 +105,58 @@ class TestJacobian(unittest.TestCase):
         dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
 
+    def test_multislice_raises(self):
+        y1 = pybamm.StateVector(slice(0, 4), slice(7, 8))
+        y_dot1 = pybamm.StateVectorDot(slice(0, 4), slice(7, 8))
+        y2 = pybamm.StateVector(slice(4, 7))
+        with self.assertRaises(NotImplementedError):
+            y1.jac(y1)
+        with self.assertRaises(NotImplementedError):
+            y2.jac(y1)
+        with self.assertRaises(NotImplementedError):
+            y_dot1.jac(y1)
+
+    def test_linear_ydot(self):
+        y = pybamm.StateVector(slice(0, 4))
+        y_dot = pybamm.StateVectorDot(slice(0, 4))
+        u = pybamm.StateVector(slice(0, 2))
+        v = pybamm.StateVector(slice(2, 4))
+        u_dot = pybamm.StateVectorDot(slice(0, 2))
+        v_dot = pybamm.StateVectorDot(slice(2, 4))
+
+        y0 = np.ones(4)
+        y_dot0 = np.ones(4)
+
+        func = u_dot
+        jacobian = np.array([[1, 0, 0, 0], [0, 1, 0, 0]])
+        dfunc_dy = func.jac(y_dot).evaluate(y=y0, y_dot=y_dot0)
+        np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
+
+        func = -v_dot
+        jacobian = np.array([[0, 0, -1, 0], [0, 0, 0, -1]])
+        dfunc_dy = func.jac(y_dot).evaluate(y=y0, y_dot=y_dot0)
+        np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
+
+        func = u_dot
+        jacobian = np.array([[0, 0, 0, 0], [0, 0, 0, 0]])
+        dfunc_dy = func.jac(y).evaluate(y=y0, y_dot=y_dot0)
+        np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
+
+        func = -v_dot
+        jacobian = np.array([[0, 0, 0, 0], [0, 0, 0, 0]])
+        dfunc_dy = func.jac(y).evaluate(y=y0, y_dot=y_dot0)
+        np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
+
+        func = u
+        jacobian = np.array([[0, 0, 0, 0], [0, 0, 0, 0]])
+        dfunc_dy = func.jac(y_dot).evaluate(y=y0, y_dot=y_dot0)
+        np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
+
+        func = -v
+        jacobian = np.array([[0, 0, 0, 0], [0, 0, 0, 0]])
+        dfunc_dy = func.jac(y_dot).evaluate(y=y0, y_dot=y_dot0)
+        np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
+
     def test_functions(self):
         y = pybamm.StateVector(slice(0, 4))
         u = pybamm.StateVector(slice(0, 2))
