@@ -1,6 +1,9 @@
 import os
 import glob
+import logging
+import subprocess
 from pathlib import Path
+from platform import system
 import wheel.bdist_wheel as orig
 
 try:
@@ -11,6 +14,21 @@ except ImportError:
     from distutils.command.install import install
 
 import CMakeBuild
+
+log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+logger = logging.getLogger("PyBaMM setup")
+
+# To override the default severity of logging
+logger.setLevel("INFO")
+
+# Use FileHandler() to log to a file
+file_handler = logging.FileHandler("setup.log")
+formatter = logging.Formatter(log_format)
+file_handler.setFormatter(formatter)
+
+# Add the file handler
+logger.addHandler(file_handler)
+logger.info("Starting PyBaMM setup")
 
 
 class CustomInstall(install):
@@ -72,6 +90,44 @@ def load_version():
         raise RuntimeError("Unable to read version number (" + str(e) + ").")
 
 
+def compile_KLU():
+    # Return whether or not the KLU extension should be compiled.
+    # Return True if:
+    # - Not running on Windows AND
+    # - CMake is found AND
+    # - The pybind11 directory is found in the PyBaMM project directory
+    CMakeFound = True
+    PyBind11Found = True
+    windows = (not system()) or system() == "Windows"
+
+    msg = "Running on Windows" if windows else "Not running on windows"
+    logger.info(msg)
+
+    try:
+        subprocess.run(["cmake", "--version"])
+        logger.info("Found CMake.")
+    except OSError:
+        CMakeFound = False
+        logger.info("Could not find CMake. Skipping compilation of KLU module.")
+
+    pybamm_project_dir = os.path.dirname(os.path.abspath(__file__))
+    pybind11_dir = os.path.join(pybamm_project_dir, "pybind11")
+    try:
+        assert os.path.isfile(
+            os.path.join(pybind11_dir, "tools", "pybind11Tools.cmake")
+        )
+        logger.info("Found pybind11 directory ({})".format(pybind11_dir))
+    except AssertionError:
+        PyBind11Found = False
+        msg = (
+            "Could not find PyBind11 directory ({})."
+            " Skipping compilation of KLU module.".format(pybind11_dir)
+        )
+        logger.info(msg)
+
+    return CMakeFound and PyBind11Found and (not windows)
+
+
 # Build the list of package data files to be included in the PyBaMM package.
 # These are mainly the parameter files located in the input/parameters/ subdirectories.
 pybamm_data = []
@@ -96,6 +152,10 @@ for file_ext in ["*.csv", "*.py", "*.md"]:
 pybamm_data.append("./version")
 pybamm_data.append("./CITATIONS.txt")
 
+# ext_modules = []
+idaklu_ext = Extension("idaklu", ["pybamm/solvers/c_solvers/idaklu.cpp"])
+ext_modules = [idaklu_ext] if compile_KLU() else []
+
 setup(
     name="pybamm",
     version=load_version() + ".post1",
@@ -104,7 +164,7 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/pybamm-team/PyBaMM",
     packages=find_packages(include=("pybamm", "pybamm.*")),
-    ext_modules=[Extension("idaklu", ["pybamm/solvers/c_solvers/idaklu.cpp"])],
+    ext_modules=ext_modules,
     cmdclass={
         "build_ext": CMakeBuild.CMakeBuild,
         "bdist_wheel": bdist_wheel,
