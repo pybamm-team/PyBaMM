@@ -227,10 +227,8 @@ class BaseSolver(object):
                 func_call = Residuals(func, name, model)
             else:
                 func_call = SolverCallable(func, name, model)
-            func_call.set_inputs(inputs)
             if jac is not None:
                 jac_call = SolverCallable(jac, name + "_jac", model)
-                jac_call.set_inputs(inputs)
             else:
                 jac_call = None
             return func, func_call, jac_call
@@ -342,25 +340,6 @@ class BaseSolver(object):
 
         pybamm.logger.info("Finish solver set-up")
 
-    def set_inputs(self, model, ext_and_inputs):
-        """
-        Set values that are controlled externally, such as external variables and input
-        parameters
-
-        Parameters
-        ----------
-        ext_and_inputs : dict
-            Any external variables or input parameters to pass to the model when solving
-
-        """
-        model.rhs_eval.set_inputs(ext_and_inputs)
-        model.algebraic_eval.set_inputs(ext_and_inputs)
-        model.residuals_eval.set_inputs(ext_and_inputs)
-        for evnt in model.terminate_events_eval:
-            evnt.set_inputs(ext_and_inputs)
-        if model.jacobian_eval:
-            model.jacobian_eval.set_inputs(ext_and_inputs)
-
     def calculate_consistent_state(self, model, time=0, y0_guess=None, inputs=None):
         """
         Calculate consistent state for the algebraic equations through
@@ -387,16 +366,18 @@ class BaseSolver(object):
         if y0_guess is None:
             y0_guess = model.concatenated_initial_conditions.flatten()
 
-        # Split y0_guess into differential and algebraic
-        len_rhs = model.rhs_eval(time, y0_guess).shape[0]
-        y0_diff, y0_alg_guess = np.split(y0_guess, [len_rhs])
         inputs = inputs or {}
+        if model.rhs_eval.form == "casadi":
+            inputs = casadi.vertcat(*[x for x in inputs.values()])
+
+        # Split y0_guess into differential and algebraic
+        len_rhs = model.rhs_eval(time, y0_guess, inputs).shape[0]
+        y0_diff, y0_alg_guess = np.split(y0_guess, [len_rhs])
 
         # Solve using casadi or scipy
         if self.root_method == "casadi":
             # Set up
-            p_stacked = casadi.vertcat(*[x for x in inputs.values()])
-            p = casadi.MX.sym("p", p_stacked.shape[0])
+            p = casadi.MX.sym("p", inputs.shape[0])
             y_alg = casadi.MX.sym("y_alg", y0_alg_guess.shape[0])
             y = casadi.vertcat(y0_diff, y_alg)
             alg_root = model.casadi_algebraic(time, y, p)
@@ -408,12 +389,12 @@ class BaseSolver(object):
                 {"abstol": self.root_tol},
             )
             try:
-                y0_alg = roots(y0_alg_guess, p_stacked).full().flatten()
+                y0_alg = roots(y0_alg_guess, inputs).full().flatten()
                 success = True
                 message = None
                 # Check final output
                 fun = model.casadi_algebraic(
-                    time, casadi.vertcat(y0_diff, y0_alg), p_stacked
+                    time, casadi.vertcat(y0_diff, y0_alg), inputs
                 )
                 abs_fun = casadi.fabs(fun)
                 max_fun = casadi.mmax(fun)
@@ -429,7 +410,7 @@ class BaseSolver(object):
             def root_fun(y0_alg):
                 "Evaluates algebraic using y0_diff (fixed) and y0_alg (changed by algo)"
                 y0 = np.concatenate([y0_diff, y0_alg])
-                out = algebraic(time, y0)
+                out = algebraic(time, y0, inputs)
                 pybamm.logger.debug(
                     "Evaluating algebraic equations at t={}, L2-norm is {}".format(
                         time * model.timescale, np.linalg.norm(out)
@@ -438,14 +419,14 @@ class BaseSolver(object):
                 return out
 
             if jac:
-                if issparse(jac(0, y0_guess)):
+                if issparse(jac(0, y0_guess, inputs)):
 
                     def jac_fn(y0_alg):
                         """
                         Evaluates jacobian using y0_diff (fixed) and y0_alg (varying)
                         """
                         y0 = np.concatenate([y0_diff, y0_alg])
-                        return jac(0, y0)[:, len_rhs:].toarray()
+                        return jac(0, y0, inputs)[:, len_rhs:].toarray()
 
                 else:
 
@@ -454,7 +435,7 @@ class BaseSolver(object):
                         Evaluates jacobian using y0_diff (fixed) and y0_alg (varying)
                         """
                         y0 = np.concatenate([y0_diff, y0_alg])
-                        return jac(0, y0)[:, len_rhs:]
+                        return jac(0, y0, inputs)[:, len_rhs:]
 
             else:
                 jac_fn = None
@@ -557,8 +538,6 @@ class BaseSolver(object):
         # Non-dimensionalise time
         t_eval_dimensionless = t_eval / model.timescale_eval
         # Solve
-        # Set inputs and external
-        self.set_inputs(model, ext_and_inputs)
 
         # Calculate discontinuities
         discontinuities = [
@@ -749,7 +728,6 @@ class BaseSolver(object):
         # Step
         t_eval = np.linspace(t, t + dt_dimensionless, npts)
         # Set inputs and external
-        self.set_inputs(model, ext_and_inputs)
 
         pybamm.logger.info("Calling solver")
         timer.reset()
@@ -827,22 +805,15 @@ class SolverCallable:
         self._function = function
         if isinstance(function, casadi.Function):
             self.form = "casadi"
-            self.inputs = casadi.DM()
+            # self.inputs = casadi.DM()
         else:
             self.form = "python"
-            self.inputs = {}
+            # self.inputs = {}
         self.name = name
         self.model = model
-
-    def set_inputs(self, inputs):
-        "Set inputs"
-        if self.form == "python":
-            self.inputs = inputs
-        elif self.form == "casadi":
-            self.inputs = casadi.vertcat(*[x for x in inputs.values()])
         self.timescale = self.model.timescale_eval
 
-    def __call__(self, t, y):
+    def __call__(self, t, y, inputs):
         y = y[:, np.newaxis]
         if self.name in ["RHS", "algebraic", "residuals", "event"]:
             pybamm.logger.debug(
@@ -850,20 +821,20 @@ class SolverCallable:
                     self.name, self.model.name, t * self.timescale
                 )
             )
-            return self.function(t, y).flatten()
+            return self.function(t, y, inputs).flatten()
         else:
-            return self.function(t, y)
+            return self.function(t, y, inputs)
 
-    def function(self, t, y):
+    def function(self, t, y, inputs):
         if self.form == "casadi":
-            states_eval = self._function(t, y, self.inputs)
+            states_eval = self._function(t, y, inputs)
             if self.name in ["RHS", "algebraic", "residuals", "event"]:
                 return states_eval.full()
             else:
                 # keep jacobians sparse
                 return states_eval
         else:
-            return self._function(t, y, self.inputs, known_evals={})[0]
+            return self._function(t, y, inputs, known_evals={})[0]
 
 
 class Residuals(SolverCallable):
@@ -873,6 +844,6 @@ class Residuals(SolverCallable):
         super().__init__(function, name, model)
         self.mass_matrix = model.mass_matrix.entries
 
-    def __call__(self, t, y, ydot):
-        states_eval = super().__call__(t, y)
+    def __call__(self, t, y, ydot, inputs):
+        states_eval = super().__call__(t, y, inputs)
         return states_eval - self.mass_matrix @ ydot

@@ -1,6 +1,7 @@
 #
 # Solver class using Scipy's adaptive time stepper
 #
+import casadi
 import pybamm
 
 import scipy.integrate as it
@@ -46,22 +47,31 @@ class ScipySolver(pybamm.BaseSolver):
             various diagnostic messages.
 
         """
+        if model.rhs_eval.form == "casadi":
+            inputs = casadi.vertcat(*[x for x in inputs.values()])
+
         extra_options = {"rtol": self.rtol, "atol": self.atol}
 
         # check for user-supplied Jacobian
         implicit_methods = ["Radau", "BDF", "LSODA"]
         if np.any([self.method in implicit_methods]):
             if model.jacobian_eval:
-                extra_options.update({"jac": model.jacobian_eval})
+                extra_options.update(
+                    {"jac": lambda t, y: model.jacobian_eval(t, y, inputs)}
+                )
 
         # make events terminal so that the solver stops when they are reached
         if model.terminate_events_eval:
-            for event in model.terminate_events_eval:
+            events = [
+                lambda t, y: event(t, y, inputs)
+                for event in model.terminate_events_eval
+            ]
+            for event in events:
                 event.terminal = True
-            extra_options.update({"events": model.terminate_events_eval})
+            extra_options.update({"events": events})
 
         sol = it.solve_ivp(
-            model.rhs_eval,
+            lambda t, y: model.rhs_eval(t, y, inputs),
             (t_eval[0], t_eval[-1]),
             model.y0,
             t_eval=t_eval,
