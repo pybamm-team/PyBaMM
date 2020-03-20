@@ -419,69 +419,31 @@ class QuickPlot(object):
                     y_max = self.second_dimensional_spatial_variable[key][-1]
 
                 # Create axis for contour plot
-                def ax_fun(_):
-                    "Not actually a function but written like this for consistency"
-                    return [x_min, x_max, y_min, y_max]
-
-                self.axis[key] = ax_fun
+                self.axis[key] = [x_min, x_max, y_min, y_max]
 
             # Get min and max variable values
             spatial_vars = self.spatial_variable_dict[key]
-
-            def get_varmin_varmax(t):
-                var_min = np.min(
-                    [
-                        ax_min(var(t, **spatial_vars, warn=False))
-                        for i, variable_list in enumerate(variable_lists)
-                        for var in variable_list
-                    ]
-                )
-                var_max = np.max(
-                    [
-                        ax_max(var(t, **spatial_vars, warn=False))
-                        for i, variable_list in enumerate(variable_lists)
-                        for var in variable_list
-                    ]
-                )
-                if var_min == var_max:
-                    var_min -= 1
-                    var_max += 1
-                return var_min, var_max
-
-            if self.axis_limits[key] == "fixed":
-
-                def var_min(_):
-                    "Not actually a function but written like this for consistency"
-                    return np.nanmin(
-                        np.hstack([get_varmin_varmax(t)[0] for t in self.ts])
-                    )
-
-                def var_max(_):
-                    "Not actually a function but written like this for consistency"
-                    return np.nanmax(
-                        np.hstack([get_varmin_varmax(t)[1] for t in self.ts])
-                    )
-
-            elif self.axis_limits[key] == "tight":
-
-                def var_min(t):
-                    return get_varmin_varmax(t)[0]
-
-                def var_max(t):
-                    return get_varmin_varmax(t)[1]
-
+            var_min = np.min(
+                [
+                    ax_min(var(self.ts[i], **spatial_vars, warn=False))
+                    for i, variable_list in enumerate(variable_lists)
+                    for var in variable_list
+                ]
+            )
+            var_max = np.max(
+                [
+                    ax_max(var(self.ts[i], **spatial_vars, warn=False))
+                    for i, variable_list in enumerate(variable_lists)
+                    for var in variable_list
+                ]
+            )
+            if var_min == var_max:
+                var_min -= 1
+                var_max += 1
             if variable_lists[0][0].dimensions in [0, 1]:
-
-                def ax_fun(t):
-                    return [x_min, x_max, var_min(t), var_max(t)]
-
-                self.axis[key] = ax_fun
+                self.axis[key] = [x_min, x_max, var_min, var_max]
             else:
-
-                def var_lim_fun(t):
-                    return (var_min(t), var_max(t))
-
-                self.var_limits[key] = var_lim_fun
+                self.var_limits[key] = (var_min, var_max)
 
     def plot(self, t):
         """Produces a quick plot with the internal states at time t.
@@ -515,10 +477,8 @@ class QuickPlot(object):
         for k, (key, variable_lists) in enumerate(self.variables.items()):
             ax = self.fig.add_subplot(self.gridspec[k])
             self.axes.append(ax)
-            axis_limits = self.axis[key](0)
-            ax.set_xlim(axis_limits[:2])
-            if axis_limits[2:] != [None, None]:
-                ax.set_ylim(axis_limits[2:])
+            ax.set_xlim(self.axis[key][:2])
+            ax.set_ylim(self.axis[key][2:])
             ax.xaxis.set_major_locator(plt.MaxNLocator(3))
             self.plots[key] = defaultdict(dict)
             variable_handles = []
@@ -545,7 +505,7 @@ class QuickPlot(object):
                         )
                         variable_handles.append(self.plots[key][0][j])
                     solution_handles.append(self.plots[key][i][0])
-                y_min, y_max = axis_limits[2:]
+                y_min, y_max = self.axis[key][2:]
                 (self.time_lines[key],) = ax.plot(
                     [t * self.time_scale, t * self.time_scale], [y_min, y_max], "k--"
                 )
@@ -561,7 +521,7 @@ class QuickPlot(object):
                 # add dashed lines for boundaries between subdomains
                 for bnd in variable_lists[0][0].internal_boundaries:
                     bnd_dim = bnd * self.first_spatial_scale[key]
-                    y_min, y_max = axis_limits[2:]
+                    y_min, y_max = self.axis[key][2:]
                     ax.plot([bnd_dim, bnd_dim], [y_min, y_max], color="0.5", lw=1)
                 for i, variable_list in enumerate(variable_lists):
                     for j, variable in enumerate(variable_list):
@@ -605,8 +565,8 @@ class QuickPlot(object):
                 ax.set_ylabel(
                     "{} [{}]".format(y_name, self.spatial_unit), fontsize=fontsize
                 )
-                vmin, vmax = self.var_limits[key](0)
-                self.plots[key][0][0] = ax.imshow(var, vmin=vmin, vmax=vmax, extent=[x[0], x[-1], y[0], y[-1]])
+                vmin, vmax = self.var_limits[key]
+                ax.contourf(x, y, var, levels=100, vmin=vmin, vmax=vmax)
                 self.fig.colorbar(
                     cm.ScalarMappable(colors.Normalize(vmin=vmin, vmax=vmax)), ax=ax
                 )
@@ -677,18 +637,11 @@ class QuickPlot(object):
         """
         Update the plot in self.plot() with values at new time
         """
-        from matplotlib import cm, colors
-
         t_dimensionless = t / self.time_scale
-
         for k, (key, plot) in enumerate(self.plots.items()):
-            ax = self.axes[k]
-            axis_limits = self.axis[key](t_dimensionless)
             if self.variables[key][0][0].dimensions == 0:
                 self.time_lines[key].set_xdata([t])
             elif self.variables[key][0][0].dimensions == 1:
-                y_min, y_max = axis_limits[2:]
-                ax.set_ylim([y_min, y_max])
                 for i, variable_lists in enumerate(self.variables[key]):
                     for j, variable in enumerate(variable_lists):
                         plot[i][j].set_ydata(
@@ -699,19 +652,21 @@ class QuickPlot(object):
                             )
                         )
             elif self.variables[key][0][0].dimensions == 2:
+                ax = self.axes[k]
                 # 2D plot: plot as a function of x and y at time t
                 # Read dictionary of spatial variables
                 spatial_vars = self.spatial_variable_dict[key]
                 # there can only be one entry in the variable list
                 variable = self.variables[key][0][0]
+                vmin, vmax = self.var_limits[key]
                 if self.is_x_r[key] is True:
+                    x = self.second_dimensional_spatial_variable[key]
+                    y = self.first_dimensional_spatial_variable[key]
                     var = variable(t_dimensionless, **spatial_vars, warn=False)
                 else:
+                    x = self.first_dimensional_spatial_variable[key]
+                    y = self.second_dimensional_spatial_variable[key]
                     var = variable(t_dimensionless, **spatial_vars, warn=False).T
-                plot[0][0].set_data(var)
-                # vmin, vmax = self.var_limits[key](t_dimensionless)
-                # self.fig.colorbar(
-                #     cm.ScalarMappable(colors.Normalize(vmin=vmin, vmax=vmax)), ax=ax
-                # )
+                ax.contourf(x, y, var, levels=100, vmin=vmin, vmax=vmax)
 
         self.fig.canvas.draw_idle()

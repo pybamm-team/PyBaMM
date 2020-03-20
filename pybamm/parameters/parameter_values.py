@@ -581,6 +581,9 @@ class ParameterValues:
         else:
             raise ValueError("symbol must evaluate to a constant scalar")
 
+    def _ipython_key_completions_(self):
+        return list(self._dict_items.keys())
+
 
 class CurrentToCrate:
     "Convert a current function to a C-rate function"

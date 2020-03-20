@@ -56,6 +56,6 @@ for i, model in enumerate(models):
     solutions[i] = solution
 
 # plot
-output_variables = ["Terminal voltage [V]", "Positive current collector potential"]
+output_variables = ["Terminal voltage [V]", "Negative current collector potential [V]"]
 plot = pybamm.QuickPlot(solutions, output_variables)
 plot.dynamic_plot()

@@ -515,6 +515,7 @@ class Discretisation(object):
             equations) and processed_concatenated_algebraic
 
         """
+
         # Discretise right-hand sides, passing domain from variable
         processed_rhs = self.process_dict(model.rhs)
 
@@ -855,6 +856,13 @@ class Discretisation(object):
         elif isinstance(symbol, pybamm.Function):
             disc_children = [self.process_symbol(child) for child in symbol.children]
             return symbol._function_new_copy(disc_children)
+
+        elif isinstance(symbol, pybamm.VariableDot):
+            return pybamm.StateVectorDot(
+                *self.y_slices[symbol.get_variable().id],
+                domain=symbol.domain,
+                auxiliary_domains=symbol.auxiliary_domains
+            )
 
         elif isinstance(symbol, pybamm.Variable):
             # Check if variable is a standard variable or an external variable
