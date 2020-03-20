@@ -73,12 +73,12 @@ class TestQuickPlot(unittest.TestCase):
 
         # update the axis
         new_axis = [0, 0.5, 0, 1]
-        quick_plot.axis.update({("a",): new_axis})
-        self.assertEqual(quick_plot.axis[("a",)], new_axis)
+        quick_plot.axis_limits.update({("a",): new_axis})
+        self.assertEqual(quick_plot.axis_limits[("a",)], new_axis)
 
         # and now reset them
         quick_plot.reset_axis()
-        self.assertNotEqual(quick_plot.axis[("a",)], new_axis)
+        self.assertNotEqual(quick_plot.axis_limits[("a",)], new_axis)
 
         # check dynamic plot loads
         quick_plot.dynamic_plot(testing=True)
@@ -87,7 +87,7 @@ class TestQuickPlot(unittest.TestCase):
 
         # Test with different output variables
         quick_plot = pybamm.QuickPlot(solution, ["b broadcasted"])
-        self.assertEqual(len(quick_plot.axis), 1)
+        self.assertEqual(len(quick_plot.axis_limits), 1)
         quick_plot.plot(0)
 
         quick_plot = pybamm.QuickPlot(
@@ -100,18 +100,18 @@ class TestQuickPlot(unittest.TestCase):
                 "c broadcasted positive electrode",
             ],
         )
-        self.assertEqual(len(quick_plot.axis), 5)
+        self.assertEqual(len(quick_plot.axis_limits), 5)
         quick_plot.plot(0)
 
         # update the axis
         new_axis = [0, 0.5, 0, 1]
         var_key = ("c broadcasted",)
-        quick_plot.axis.update({var_key: new_axis})
-        self.assertEqual(quick_plot.axis[var_key], new_axis)
+        quick_plot.axis_limits.update({var_key: new_axis})
+        self.assertEqual(quick_plot.axis_limits[var_key], new_axis)
 
         # and now reset them
         quick_plot.reset_axis()
-        self.assertNotEqual(quick_plot.axis[var_key], new_axis)
+        self.assertNotEqual(quick_plot.axis_limits[var_key], new_axis)
 
         # check dynamic plot loads
         quick_plot.dynamic_plot(testing=True)
@@ -178,6 +178,34 @@ class TestQuickPlot(unittest.TestCase):
 
         with self.assertRaisesRegex(NotImplementedError, "Cannot plot 2D variables"):
             pybamm.QuickPlot([solution, solution], ["2D variable"])
+
+        # Test different variable limits
+        quick_plot = pybamm.QuickPlot(solution, ["a"], variable_limits="tight")
+        self.assertEqual(quick_plot.axis_limits[("a",)][2:], [None, None])
+        quick_plot.plot(0)
+        quick_plot.slider_update(1)
+
+        quick_plot = pybamm.QuickPlot(
+            solution, ["2D variable"], variable_limits="tight"
+        )
+        self.assertEqual(quick_plot.variable_limits[("2D variable",)], (None, None))
+        quick_plot.plot(0)
+        quick_plot.slider_update(1)
+
+        quick_plot = pybamm.QuickPlot(solution, ["a"], variable_limits={"a": [1, 2]})
+        self.assertEqual(quick_plot.axis_limits[("a",)][2:], [1, 2])
+        quick_plot.plot(0)
+        quick_plot.slider_update(1)
+
+        quick_plot = pybamm.QuickPlot(
+            solution, ["a", "b broadcasted"], variable_limits={"a": "tight"}
+        )
+        self.assertEqual(quick_plot.axis_limits[("a",)][2:], [None, None])
+        self.assertNotEqual(
+            quick_plot.axis_limits[("b broadcasted",)][2:], [None, None]
+        )
+        quick_plot.plot(0)
+        quick_plot.slider_update(1)
 
         # Test errors
         with self.assertRaisesRegex(ValueError, "Mismatching variable domains"):
