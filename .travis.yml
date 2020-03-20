@@ -33,7 +33,6 @@ matrix:
           env:
             - PYBAMM_UNIT=true
             - PYBAMM_EXAMPLES=true
-            - PYBAMM_SCIKITS_ODES=true
             - PYBAMM_KLU=true
         - python: "3.7"
           addons:
@@ -50,7 +49,6 @@ matrix:
           env:
             - PYBAMM_UNIT=true
             - PYBAMM_EXAMPLES=true
-            - PYBAMM_SCIKITS_ODES=true
             - PYBAMM_KLU=true
           if: type != cron
         # Unit testing on Python3.7 on OS/X and Ubuntu
@@ -75,7 +73,6 @@ matrix:
                 - python3.7-dev
           env:
             - PYBAMM_UNIT=true
-            - PYBAMM_SCIKITS_ODES=true
             - PYBAMM_KLU=true
         # Unit and example testing on Python3.7 on Ubuntu without optional dependencies
         - python: "3.7"
@@ -109,7 +106,6 @@ matrix:
                 - python3.7-dev
           env:
             - PYBAMM_COVER=true
-            - PYBAMM_SCIKITS_ODES=true
             - PYBAMM_KLU=true
           if: type != cron
         - python: "3.7"
@@ -158,7 +154,6 @@ matrix:
           env:
             - PYBAMM_UNIT=true
             - PYBAMM_EXAMPLES=true
-            - PYBAMM_SCIKITS_ODES=true
             - PYBAMM_KLU=true
           if: type == cron
 
