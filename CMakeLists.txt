@@ -6,7 +6,7 @@ set (CMAKE_CXX_STANDARD 11)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 if(NOT PYBIND11_DIR)
-  set(PYBIND11_DIR third-party/pybind11)
+  set(PYBIND11_DIR pybind11)
 endif()
 
 add_subdirectory(${PYBIND11_DIR})
