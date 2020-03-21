@@ -12,12 +12,12 @@ import sys
 def is_notebook():
     try:
         shell = get_ipython().__class__.__name__
-        if shell == "ZMQInteractiveShell":
+        if shell == "ZMQInteractiveShell":  # pragma: no cover
             # Jupyter notebook or qtconsole
             cfg = get_ipython().config
-            nb = len(cfg['InteractiveShell'].keys()) == 0
+            nb = len(cfg["InteractiveShell"].keys()) == 0
             return nb
-        elif shell == "TerminalInteractiveShell":
+        elif shell == "TerminalInteractiveShell":  # pragma: no cover
             return False  # Terminal running IPython
         else:
             return False  # Other type (?)
@@ -104,7 +104,7 @@ class Simulation:
         self.reset(update_model=False)
 
         # ignore runtime warnings in notebooks
-        if is_notebook():
+        if is_notebook():  # pragma: no cover
             import warnings
 
             warnings.filterwarnings("ignore")

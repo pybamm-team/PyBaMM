@@ -241,7 +241,7 @@ class QuickPlot(object):
                 if len(variable_tuple) == 1:
                     variable = variable_tuple[0]
                 else:
-                    variable = list(variable_tuple)
+                    variable = variable_tuple
                 try:
                     self.variable_limits[variable_tuple] = variable_limits[variable]
                 except KeyError:
@@ -684,7 +684,7 @@ class QuickPlot(object):
                         plot[i][j].set_ydata(var)
                         var_min = min(var_min, np.nanmin(var))
                         var_max = max(var_max, np.nanmax(var))
-                # add dashed lines for boundaries between subdomains
+                # update boundaries between subdomains
                 y_min, y_max = self.axis_limits[key][2:]
                 if y_min is None and y_max is None:
                     y_min, y_max = ax_min(var_min), ax_max(var_max)

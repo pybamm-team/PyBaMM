@@ -180,8 +180,13 @@ class TestQuickPlot(unittest.TestCase):
             pybamm.QuickPlot([solution, solution], ["2D variable"])
 
         # Test different variable limits
-        quick_plot = pybamm.QuickPlot(solution, ["a"], variable_limits="tight")
+        quick_plot = pybamm.QuickPlot(
+            solution, ["a", ["c broadcasted", "c broadcasted"]], variable_limits="tight"
+        )
         self.assertEqual(quick_plot.axis_limits[("a",)][2:], [None, None])
+        self.assertEqual(
+            quick_plot.axis_limits[("c broadcasted", "c broadcasted")][2:], [None, None]
+        )
         quick_plot.plot(0)
         quick_plot.slider_update(1)
 
@@ -192,8 +197,15 @@ class TestQuickPlot(unittest.TestCase):
         quick_plot.plot(0)
         quick_plot.slider_update(1)
 
-        quick_plot = pybamm.QuickPlot(solution, ["a"], variable_limits={"a": [1, 2]})
+        quick_plot = pybamm.QuickPlot(
+            solution,
+            ["a", ["c broadcasted", "c broadcasted"]],
+            variable_limits={"a": [1, 2], ("c broadcasted", "c broadcasted"): [3, 4]},
+        )
         self.assertEqual(quick_plot.axis_limits[("a",)][2:], [1, 2])
+        self.assertEqual(
+            quick_plot.axis_limits[("c broadcasted", "c broadcasted")][2:], [3, 4]
+        )
         quick_plot.plot(0)
         quick_plot.slider_update(1)
 
@@ -206,6 +218,13 @@ class TestQuickPlot(unittest.TestCase):
         )
         quick_plot.plot(0)
         quick_plot.slider_update(1)
+
+        with self.assertRaisesRegex(
+            TypeError, "variable_limits must be 'fixed', 'tight', or a dict"
+        ):
+            pybamm.QuickPlot(
+                solution, ["a", "b broadcasted"], variable_limits="bad variable limits"
+            )
 
         # Test errors
         with self.assertRaisesRegex(ValueError, "Mismatching variable domains"):
