@@ -1,5 +1,27 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM)
 
+## Features
+
+-   Add new symbols `VariableDot`, representing the derivative of a variable wrt time, 
+    and `StateVectorDot`, representing the derivative of a state vector wrt time 
+    ([#858](https://github.com/pybamm-team/PyBaMM/issues/858))
+-   Added functionality to broadcast to edges 
+    ([#891](https://github.com/pybamm-team/PyBaMM/pull/891))
+-   Added additional notebooks showing how to create and compare models ([#877](https://github.com/pybamm-team/PyBaMM/pull/877))
+-   Added `Minimum`, `Maximum` and `Sign` operators 
+    ([#876](https://github.com/pybamm-team/PyBaMM/pull/876))
+-   Added a search feature to `FuzzyDict` ([#875](https://github.com/pybamm-team/PyBaMM/pull/875))
+-   Add ambient temperature as a function of time ([#872](https://github.com/pybamm-team/PyBaMM/pull/872))
+-   Added `CasadiAlgebraicSolver` for solving algebraic systems with CasADi ([#868](https://github.com/pybamm-team/PyBaMM/pull/868))
+-   Added electrolyte functions from Landesfeind ([#860](https://github.com/pybamm-team/PyBaMM/pull/860))
+
+## Bug fixes
+
+-   Reformatted external circuit submodels ([#879](https://github.com/pybamm-team/PyBaMM/pull/879))
+-   Some bug fixes to generalize specifying models that aren't battery models, see [#846](https://github.com/pybamm-team/PyBaMM/issues/846)
+-   Reformatted interface submodels to be more readable ([#866](https://github.com/pybamm-team/PyBaMM/pull/866))
+-   Removed double-counted "number of electrodes connected in parallel" from simulation ([#864](https://github.com/pybamm-team/PyBaMM/pull/864))
+
 ## Breaking changes
 
 -   Removed "set external temperature" and "set external potential" options. Use "external submodels" option instead ([#862](https://github.com/pybamm-team/PyBaMM/pull/862))

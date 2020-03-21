@@ -164,9 +164,8 @@ Q_n_max_dimensional = pybamm.Parameter("Negative electrode volumetric capacity [
 Q_p_max_dimensional = pybamm.Parameter("Positive electrode volumetric capacity [C.m-3]")
 
 
-# Fake thermal
-Delta_T = pybamm.Scalar(0)
-
+# thermal
+Delta_T = pybamm.thermal_parameters.Delta_T
 
 # --------------------------------------------------------------------------------------
 "2. Dimensional Functions"
@@ -277,18 +276,27 @@ tau_r_p = 1 / (j0_p_S_ref_dimensional * a_p_dim * c_e_typ ** 0.5)
 # Electrolyte diffusion timescale
 tau_diffusion_e = L_x ** 2 / D_e_typ
 
+# Thermal diffusion timescale
+tau_th_yz = pybamm.thermal_parameters.tau_th_yz
+
 # Choose discharge timescale
 timescale = tau_discharge
 
 # --------------------------------------------------------------------------------------
 "4. Dimensionless Parameters"
+# Timescale ratios
+C_th = tau_th_yz / tau_discharge
 
 # Macroscale Geometry
 l_n = pybamm.geometric_parameters.l_n
 l_s = pybamm.geometric_parameters.l_s
 l_p = pybamm.geometric_parameters.l_p
+l_x = pybamm.geometric_parameters.l_x
 l_y = pybamm.geometric_parameters.l_y
 l_z = pybamm.geometric_parameters.l_z
+a_cc = pybamm.geometric_parameters.a_cc
+l = pybamm.geometric_parameters.l
+delta = pybamm.geometric_parameters.delta
 # In lead-acid the current collector and electrodes are the same (same thickness)
 l_cn = l_n
 l_cp = l_p
@@ -403,7 +411,39 @@ Q_e_max = (l_n * eps_n_max + l_s * eps_s_max + l_p * eps_p_max) / (s_p - s_n)
 Q_e_max_dimensional = Q_e_max * c_e_typ * F
 capacity = Q_e_max_dimensional * n_electrodes_parallel * A_cs * L_x
 
+# Thermal
+rho_cn = pybamm.thermal_parameters.rho_cn
+rho_n = pybamm.thermal_parameters.rho_n
+rho_s = pybamm.thermal_parameters.rho_s
+rho_p = pybamm.thermal_parameters.rho_p
+rho_cp = pybamm.thermal_parameters.rho_cp
+
+rho_k = pybamm.thermal_parameters.rho_k
+rho = rho_n * l_n + rho_s * l_s + rho_p * l_p
+
+lambda_cn = pybamm.thermal_parameters.lambda_cn
+lambda_n = pybamm.thermal_parameters.lambda_n
+lambda_s = pybamm.thermal_parameters.lambda_s
+lambda_p = pybamm.thermal_parameters.lambda_p
+lambda_cp = pybamm.thermal_parameters.lambda_cp
+
+lambda_k = pybamm.thermal_parameters.lambda_k
+
+Theta = pybamm.thermal_parameters.Theta
+h = pybamm.thermal_parameters.h
+B = (
+    i_typ
+    * R
+    * T_ref
+    * tau_th_yz
+    / (pybamm.thermal_parameters.rho_eff_dim * F * Delta_T * L_x)
+)
+
+T_amb_dim = pybamm.thermal_parameters.T_amb_dim
+T_amb = pybamm.thermal_parameters.T_amb
+
 # Initial conditions
+T_init = pybamm.thermal_parameters.T_init
 q_init = pybamm.Parameter("Initial State of Charge")
 c_e_init = q_init
 c_ox_init = c_ox_init_dim / c_ox_typ
@@ -426,11 +466,6 @@ def c_n_init(x):
 
 def c_p_init(x):
     return c_e_init
-
-
-# Thermal effects not implemented for lead-acid, but parameters needed for consistency
-T_init = pybamm.Scalar(0)
-Theta = pybamm.Scalar(0)  # ratio of typical temperature change to ambient temperature
 
 
 # --------------------------------------------------------------------------------------
@@ -499,4 +534,3 @@ dimensional_current_density_with_time = dimensional_current_with_time / (
 current_with_time = (
     dimensional_current_with_time / I_typ * pybamm.Function(np.sign, I_typ)
 )
-

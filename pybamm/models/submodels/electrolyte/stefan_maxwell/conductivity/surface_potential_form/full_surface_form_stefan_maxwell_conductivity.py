@@ -172,7 +172,7 @@ class BaseModel(BaseStefanMaxwellConductivity):
         phi_e = phi_s - delta_phi
 
         variables.update(self._get_domain_potential_variables(phi_e))
-
+        variables.update({"test": pybamm.x_average(phi_s)})
         return variables
 
     def _get_sep_coupled_variables(self, variables):

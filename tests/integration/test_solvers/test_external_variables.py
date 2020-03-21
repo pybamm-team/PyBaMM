@@ -50,7 +50,7 @@ class TestExternalVariables(unittest.TestCase):
         t = sim.solution.t[-1]
         y = sim.solution.y[:, -1]
         u = external_variables
-        sim.built_model.variables[var].evaluate(t, y, u)
+        sim.built_model.variables[var].evaluate(t, y, u=u)
         sim.solution[var](t)
 
 

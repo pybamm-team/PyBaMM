@@ -85,6 +85,17 @@ class TestLeadAcidFullSurfaceForm(unittest.TestCase):
         optimtest.set_up_model(simplify=False, to_python=False)
         optimtest.set_up_model(simplify=True, to_python=False)
 
+    def test_thermal(self):
+        options = {"thermal": "x-lumped"}
+        model = pybamm.lead_acid.Full(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+        options = {"thermal": "x-full"}
+        model = pybamm.lead_acid.Full(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

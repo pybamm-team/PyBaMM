@@ -226,7 +226,7 @@ class Discretisation(object):
                     for child, mesh in meshes.items():
                         for domain_mesh in mesh:
                             submesh = domain_mesh[i]
-                            end += submesh.npts_for_broadcast
+                            end += submesh.npts_for_broadcast_to_nodes
                         y_slices[child.id].append(slice(start, end))
                         start = end
             else:
@@ -234,7 +234,8 @@ class Discretisation(object):
                 y_slices[variable.id].append(slice(start, end))
                 start = end
 
-        self.y_slices = y_slices
+        # Convert y_slices back to normal dictionary
+        self.y_slices = dict(y_slices)
 
         # reset discretised_symbols
         self._discretised_symbols = {}
@@ -248,7 +249,7 @@ class Discretisation(object):
             size = 0
             for dom in variable.domain:
                 for submesh in self.spatial_methods[dom].mesh[dom]:
-                    size += submesh.npts_for_broadcast
+                    size += submesh.npts_for_broadcast_to_nodes
             return size
 
     def _preprocess_external_variables(self, model):
@@ -514,6 +515,7 @@ class Discretisation(object):
             equations) and processed_concatenated_algebraic
 
         """
+
         # Discretise right-hand sides, passing domain from variable
         processed_rhs = self.process_dict(model.rhs)
 
@@ -855,6 +857,13 @@ class Discretisation(object):
             disc_children = [self.process_symbol(child) for child in symbol.children]
             return symbol._function_new_copy(disc_children)
 
+        elif isinstance(symbol, pybamm.VariableDot):
+            return pybamm.StateVectorDot(
+                *self.y_slices[symbol.get_variable().id],
+                domain=symbol.domain,
+                auxiliary_domains=symbol.auxiliary_domains
+            )
+
         elif isinstance(symbol, pybamm.Variable):
             # Check if variable is a standard variable or an external variable
             if any(symbol.id == var.id for var in self.external_variables.values()):
@@ -885,8 +894,23 @@ class Discretisation(object):
                     return out
 
             else:
+                # add a try except block for a more informative error if a variable
+                # can't be found. This should usually be caught earlier by
+                # model.check_well_posedness, but won't be if debug_mode is False
+                try:
+                    y_slices = self.y_slices[symbol.id]
+                except KeyError:
+                    raise pybamm.ModelError(
+                        """
+                        No key set for variable '{}'. Make sure it is included in either
+                        model.rhs, model.algebraic, or model.external_variables in an
+                        unmodified form (e.g. not Broadcasted)
+                        """.format(
+                            symbol.name
+                        )
+                    )
                 return pybamm.StateVector(
-                    *self.y_slices[symbol.id],
+                    *y_slices,
                     domain=symbol.domain,
                     auxiliary_domains=symbol.auxiliary_domains
                 )

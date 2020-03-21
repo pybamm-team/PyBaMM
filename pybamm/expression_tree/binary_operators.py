@@ -13,7 +13,7 @@ def is_scalar_zero(expr):
     Utility function to test if an expression evaluates to a constant scalar zero
     """
     if expr.is_constant():
-        result = expr.evaluate_ignoring_errors()
+        result = expr.evaluate_ignoring_errors(t=None)
         return isinstance(result, numbers.Number) and result == 0
     else:
         return False
@@ -24,7 +24,7 @@ def is_matrix_zero(expr):
     Utility function to test if an expression evaluates to a constant matrix zero
     """
     if expr.is_constant():
-        result = expr.evaluate_ignoring_errors()
+        result = expr.evaluate_ignoring_errors(t=None)
         return (issparse(result) and result.count_nonzero() == 0) or (
             isinstance(result, np.ndarray) and np.all(result == 0)
         )
@@ -32,12 +32,12 @@ def is_matrix_zero(expr):
         return False
 
 
-def is_one(expr):
+def is_scalar_one(expr):
     """
     Utility function to test if an expression evaluates to a constant scalar one
     """
     if expr.is_constant():
-        result = expr.evaluate_ignoring_errors()
+        result = expr.evaluate_ignoring_errors(t=None)
         return isinstance(result, numbers.Number) and result == 1
     else:
         return False
@@ -162,21 +162,21 @@ class BinaryOperator(pybamm.Symbol):
         "Default behaviour for new_copy"
         return self.__class__(left, right)
 
-    def evaluate(self, t=None, y=None, u=None, known_evals=None):
+    def evaluate(self, t=None, y=None, y_dot=None, u=None, known_evals=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         if known_evals is not None:
             id = self.id
             try:
                 return known_evals[id], known_evals
             except KeyError:
-                left, known_evals = self.left.evaluate(t, y, u, known_evals)
-                right, known_evals = self.right.evaluate(t, y, u, known_evals)
+                left, known_evals = self.left.evaluate(t, y, y_dot, u, known_evals)
+                right, known_evals = self.right.evaluate(t, y, y_dot, u, known_evals)
                 value = self._binary_evaluate(left, right)
                 known_evals[id] = value
                 return value, known_evals
         else:
-            left = self.left.evaluate(t, y, u)
-            right = self.right.evaluate(t, y, u)
+            left = self.left.evaluate(t, y, y_dot, u)
+            right = self.right.evaluate(t, y, y_dot, u)
             return self._binary_evaluate(left, right)
 
     def _evaluate_for_shape(self):
@@ -252,8 +252,12 @@ class Power(BinaryOperator):
         if is_scalar_zero(right):
             return pybamm.Scalar(1)
 
-        # anything to the power of one is itself
+        # zero to the power of anything is zero
         if is_scalar_zero(left):
+            return pybamm.Scalar(0)
+
+        # anything to the power of one is itself
+        if is_scalar_one(right):
             return left
 
         return self.__class__(left, right)
@@ -425,9 +429,9 @@ class Multiplication(BinaryOperator):
             return zeros_of_shape(shape)
 
         # anything multiplied by a scalar one returns itself
-        if is_one(left):
+        if is_scalar_one(left):
             return right
-        if is_one(right):
+        if is_scalar_one(right):
             return left
 
         return pybamm.simplify_multiplication_division(self.__class__, left, right)
@@ -549,7 +553,7 @@ class Division(BinaryOperator):
                 return pybamm.Array(np.inf * np.ones(left.shape_for_testing))
 
         # anything divided by one is itself
-        if is_one(right):
+        if is_scalar_one(right):
             return left
 
         return pybamm.simplify_multiplication_division(self.__class__, left, right)
@@ -622,9 +626,9 @@ class Inner(BinaryOperator):
             return zeros_of_shape(shape)
 
         # anything multiplied by a scalar one returns itself
-        if is_one(left):
+        if is_scalar_one(left):
             return right
-        if is_one(right):
+        if is_scalar_one(right):
             return left
 
         return pybamm.simplify_multiplication_division(self.__class__, left, right)
@@ -657,22 +661,9 @@ class Heaviside(BinaryOperator):
     **Extends:** :class:`BinaryOperator`
     """
 
-    def __init__(self, left, right, equal):
+    def __init__(self, name, left, right):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
-        # 'equal' determines whether to return 1 or 0 when left = right
-        self.equal = equal
-        if equal is True:
-            name = "<="
-        else:
-            name = "<"
         super().__init__(name, left, right)
-
-    def __str__(self):
-        """ See :meth:`pybamm.Symbol.__str__()`. """
-        if self.equal is True:
-            return "{!s} <= {!s}".format(self.left, self.right)
-        else:
-            return "{!s} < {!s}".format(self.left, self.right)
 
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
@@ -686,18 +677,112 @@ class Heaviside(BinaryOperator):
         # need to worry about shape
         return pybamm.Scalar(0)
 
+
+class EqualHeaviside(Heaviside):
+    "A heaviside function with equality (return 1 when left = right)"
+
+    def __init__(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator.__init__()`. """
+        super().__init__("<=", left, right)
+
+    def __str__(self):
+        """ See :meth:`pybamm.Symbol.__str__()`. """
+        return "{!s} <= {!s}".format(self.left, self.right)
+
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
         # don't raise RuntimeWarning for NaNs
         with np.errstate(invalid="ignore"):
-            if self.equal is True:
-                return left <= right
-            else:
-                return left < right
+            return left <= right
 
-    def _binary_new_copy(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator._binary_new_copy()`. """
-        return Heaviside(left, right, self.equal)
+
+class NotEqualHeaviside(Heaviside):
+    "A heaviside function without equality (return 0 when left = right)"
+
+    def __init__(self, left, right):
+        super().__init__("<", left, right)
+
+    def __str__(self):
+        """ See :meth:`pybamm.Symbol.__str__()`. """
+        return "{!s} < {!s}".format(self.left, self.right)
+
+    def _binary_evaluate(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        # don't raise RuntimeWarning for NaNs
+        with np.errstate(invalid="ignore"):
+            return left < right
+
+
+class Minimum(BinaryOperator):
+    " Returns the smaller of two objects "
+
+    def __init__(self, left, right):
+        super().__init__("minimum", left, right)
+
+    def __str__(self):
+        """ See :meth:`pybamm.Symbol.__str__()`. """
+        return "minimum({!s}, {!s})".format(self.left, self.right)
+
+    def _diff(self, variable):
+        """ See :meth:`pybamm.Symbol._diff()`. """
+        left, right = self.orphans
+        return (left <= right) * left.diff(variable) + (left > right) * right.diff(
+            variable
+        )
+
+    def _binary_jac(self, left_jac, right_jac):
+        """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
+        left, right = self.orphans
+        return (left <= right) * left_jac + (left > right) * right_jac
+
+    def _binary_evaluate(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        # don't raise RuntimeWarning for NaNs
+        return np.minimum(left, right)
+
+
+class Maximum(BinaryOperator):
+    " Returns the smaller of two objects "
+
+    def __init__(self, left, right):
+        super().__init__("maximum", left, right)
+
+    def __str__(self):
+        """ See :meth:`pybamm.Symbol.__str__()`. """
+        return "maximum({!s}, {!s})".format(self.left, self.right)
+
+    def _diff(self, variable):
+        """ See :meth:`pybamm.Symbol._diff()`. """
+        left, right = self.orphans
+        return (left >= right) * left.diff(variable) + (left < right) * right.diff(
+            variable
+        )
+
+    def _binary_jac(self, left_jac, right_jac):
+        """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
+        left, right = self.orphans
+        return (left >= right) * left_jac + (left < right) * right_jac
+
+    def _binary_evaluate(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        # don't raise RuntimeWarning for NaNs
+        return np.maximum(left, right)
+
+
+def minimum(left, right):
+    """
+    Returns the smaller of two objects. Not to be confused with :meth:`pybamm.min`,
+    which returns min function of child.
+    """
+    return pybamm.simplify_if_constant(Minimum(left, right), keep_domains=True)
+
+
+def maximum(left, right):
+    """
+    Returns the larger of two objects. Not to be confused with :meth:`pybamm.max`,
+    which returns max function of child.
+    """
+    return pybamm.simplify_if_constant(Maximum(left, right), keep_domains=True)
 
 
 def source(left, right, boundary=False):

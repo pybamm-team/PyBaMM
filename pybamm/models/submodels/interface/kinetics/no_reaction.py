@@ -3,10 +3,10 @@
 #
 
 import pybamm
-from .base_kinetics import BaseModel
+from .base_kinetics import BaseKinetics
 
 
-class NoReaction(BaseModel):
+class NoReaction(BaseKinetics):
     """
     Base submodel for when no reaction occurs
 
@@ -16,13 +16,14 @@ class NoReaction(BaseModel):
         model parameters
     domain : str
         The domain to implement the model, either: 'Negative' or 'Positive'.
+    reaction : str
+        The name of the reaction being implemented
 
-
-    **Extends:** :class:`pybamm.interface.kinetics.BaseModel`
+    **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, reaction):
+        super().__init__(param, domain, reaction)
 
     def _get_kinetics(self, j0, ne, eta_r, T):
         return pybamm.Scalar(0)

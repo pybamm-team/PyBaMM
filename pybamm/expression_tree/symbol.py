@@ -431,27 +431,27 @@ class Symbol(anytree.NodeMixin):
         return pybamm.simplify_if_constant(pybamm.Power(other, self), keep_domains=True)
 
     def __lt__(self, other):
-        """return a :class:`Heaviside` object"""
+        """return a :class:`NotEqualHeaviside` object"""
         return pybamm.simplify_if_constant(
-            pybamm.Heaviside(self, other, equal=False), keep_domains=True
+            pybamm.NotEqualHeaviside(self, other), keep_domains=True
         )
 
     def __le__(self, other):
-        """return a :class:`Heaviside` object"""
+        """return a :class:`EqualHeaviside` object"""
         return pybamm.simplify_if_constant(
-            pybamm.Heaviside(self, other, equal=True), keep_domains=True
+            pybamm.EqualHeaviside(self, other), keep_domains=True
         )
 
     def __gt__(self, other):
-        """return a :class:`Heaviside` object"""
+        """return a :class:`NotEqualHeaviside` object"""
         return pybamm.simplify_if_constant(
-            pybamm.Heaviside(other, self, equal=False), keep_domains=True
+            pybamm.NotEqualHeaviside(other, self), keep_domains=True
         )
 
     def __ge__(self, other):
-        """return a :class:`Heaviside` object"""
+        """return a :class:`EqualHeaviside` object"""
         return pybamm.simplify_if_constant(
-            pybamm.Heaviside(other, self, equal=True), keep_domains=True
+            pybamm.EqualHeaviside(other, self), keep_domains=True
         )
 
     def __neg__(self):
@@ -485,6 +485,12 @@ class Symbol(anytree.NodeMixin):
             return pybamm.Scalar(1)
         elif any(variable.id == x.id for x in self.pre_order()):
             return self._diff(variable)
+        elif variable.id == pybamm.t.id and \
+                any(
+                    isinstance(x, (pybamm.VariableBase, pybamm.StateVectorBase))
+                    for x in self.pre_order()
+                ):
+            return self._diff(variable)
         else:
             return pybamm.Scalar(0)
 
@@ -492,12 +498,13 @@ class Symbol(anytree.NodeMixin):
         "Default behaviour for differentiation, overriden by Binary and Unary Operators"
         raise NotImplementedError
 
-    def jac(self, variable, known_jacs=None):
+    def jac(self, variable, known_jacs=None, clear_domain=True):
         """
         Differentiate a symbol with respect to a (slice of) a State Vector.
         See :class:`pybamm.Jacobian`.
         """
-        return pybamm.Jacobian(known_jacs).jac(self, variable)
+        jac = pybamm.Jacobian(known_jacs, clear_domain=clear_domain)
+        return jac.jac(self, variable)
 
     def _jac(self, variable):
         """
@@ -506,7 +513,7 @@ class Symbol(anytree.NodeMixin):
         """
         raise NotImplementedError
 
-    def _base_evaluate(self, t=None, y=None, u=None):
+    def _base_evaluate(self, t=None, y=None, y_dot=None, u=None):
         """evaluate expression tree
 
         will raise a ``NotImplementedError`` if this member function has not
@@ -520,7 +527,11 @@ class Symbol(anytree.NodeMixin):
             time at which to evaluate (default None)
 
         y : numpy.array, optional
-            array to evaluate when solving (default None)
+            array with state values to evaluate when solving (default None)
+
+        y_dot : numpy.array, optional
+            array with time derivatives of state values to evaluate when solving
+            (default None)
 
         """
         raise NotImplementedError(
@@ -530,7 +541,7 @@ class Symbol(anytree.NodeMixin):
             )
         )
 
-    def evaluate(self, t=None, y=None, u=None, known_evals=None):
+    def evaluate(self, t=None, y=None, y_dot=None, u=None, known_evals=None):
         """Evaluate expression tree (wrapper to allow using dict of known values).
         If the dict 'known_evals' is provided, the dict is searched for self.id; if
         self.id is in the keys, return that value; otherwise, evaluate using
@@ -541,7 +552,10 @@ class Symbol(anytree.NodeMixin):
         t : float or numeric type, optional
             time at which to evaluate (default None)
         y : numpy.array, optional
-            array to evaluate when solving (default None)
+            array with state values to evaluate when solving (default None)
+        y_dot : numpy.array, optional
+            array with time derivatives of state values to evaluate when solving
+            (default None)
         u : dict, optional
             dictionary of inputs to use when solving (default None)
         known_evals : dict, optional
@@ -556,10 +570,10 @@ class Symbol(anytree.NodeMixin):
         """
         if known_evals is not None:
             if self.id not in known_evals:
-                known_evals[self.id] = self._base_evaluate(t, y, u)
+                known_evals[self.id] = self._base_evaluate(t, y, y_dot, u)
             return known_evals[self.id], known_evals
         else:
-            return self._base_evaluate(t, y, u)
+            return self._base_evaluate(t, y, y_dot, u)
 
     def evaluate_for_shape(self):
         """Evaluate expression tree to find its shape. For symbols that cannot be
@@ -598,11 +612,13 @@ class Symbol(anytree.NodeMixin):
         # do the search, return true if no relevent nodes are found
         return not any((isinstance(n, search_types)) for n in self.pre_order())
 
-    def evaluate_ignoring_errors(self):
+    def evaluate_ignoring_errors(self, t=0):
         """
         Evaluates the expression. If a node exists in the tree that cannot be evaluated
-        as a scalar or vector (e.g. Parameter, Variable, StateVector, InputParameter),
-        then None is returned. Otherwise the result of the evaluation is given
+        as a scalar or vector (e.g. Time, Parameter, Variable, StateVector), then None
+        is returned. If there is an InputParameter in the tree then a 1 is returned.
+        Otherwise the result of the evaluation is given.
+
 
         See Also
         --------
@@ -610,7 +626,7 @@ class Symbol(anytree.NodeMixin):
 
         """
         try:
-            result = self.evaluate(t=0, u="shape test")
+            result = self.evaluate(t=t, u="shape test")
         except NotImplementedError:
             # return None if NotImplementedError is raised
             # (there is a e.g. Parameter, Variable, ... in the tree)
@@ -620,9 +636,15 @@ class Symbol(anytree.NodeMixin):
             # (there is a e.g. StateVector in the tree)
             if error.args[0] == "StateVector cannot evaluate input 'y=None'":
                 return None
+            elif error.args[0] == "StateVectorDot cannot evaluate input 'y_dot=None'":
+                return None
             else:
                 raise error
         except ValueError as e:
+            # return None if specific ValueError is raised
+            # (there is a e.g. Time in the tree)
+            if e.args[0] == "t must be provided":
+                return None
             raise pybamm.ShapeError("Cannot find shape (original error: {})".format(e))
         return result
 
@@ -667,12 +689,12 @@ class Symbol(anytree.NodeMixin):
         """ Simplify the expression tree. See :class:`pybamm.Simplification`. """
         return pybamm.Simplification(simplified_symbols).simplify(self)
 
-    def to_casadi(self, t=None, y=None, u=None, casadi_symbols=None):
+    def to_casadi(self, t=None, y=None, ydot=None, u=None, casadi_symbols=None):
         """
         Convert the expression tree to a CasADi expression tree.
         See :class:`pybamm.CasadiConverter`.
         """
-        return pybamm.CasadiConverter(casadi_symbols).convert(self, t, y, u)
+        return pybamm.CasadiConverter(casadi_symbols).convert(self, t, y, ydot, u)
 
     def new_copy(self):
         """
@@ -702,7 +724,7 @@ class Symbol(anytree.NodeMixin):
         # Try with some large y, to avoid having to use pre_order (slow)
         try:
             y = np.linspace(0.1, 0.9, int(1e4))
-            evaluated_self = self.evaluate(0, y, u="shape test")
+            evaluated_self = self.evaluate(0, y, y, u="shape test")
         # If that fails, fall back to calculating how big y should really be
         except ValueError:
             state_vectors_in_node = [
@@ -716,7 +738,7 @@ class Symbol(anytree.NodeMixin):
                 )
                 # Pick a y that won't cause RuntimeWarnings
                 y = np.linspace(0.1, 0.9, min_y_size)
-            evaluated_self = self.evaluate(0, y)
+            evaluated_self = self.evaluate(0, y, y)
 
         # Return shape of evaluated object
         if isinstance(evaluated_self, numbers.Number):

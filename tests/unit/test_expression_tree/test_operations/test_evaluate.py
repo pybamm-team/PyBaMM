@@ -19,7 +19,7 @@ class TestEvaluate(unittest.TestCase):
         a = pybamm.StateVector(slice(0, 1))
         b = pybamm.StateVector(slice(1, 2))
 
-        # test a * b
+        # test a + b
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
         expr = a + b
@@ -351,6 +351,20 @@ class TestEvaluate(unittest.TestCase):
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         expr = a > pybamm.StateVector(slice(0, 2))
+        evaluator = pybamm.EvaluatorPython(expr)
+        for t, y in zip(t_tests, y_tests):
+            result = evaluator.evaluate(t=t, y=y)
+            np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
+
+        # test something with a minimum or maximum
+        a = pybamm.Vector(np.array([1, 2]))
+        expr = pybamm.minimum(a, pybamm.StateVector(slice(0, 2)))
+        evaluator = pybamm.EvaluatorPython(expr)
+        for t, y in zip(t_tests, y_tests):
+            result = evaluator.evaluate(t=t, y=y)
+            np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
+
+        expr = pybamm.maximum(a, pybamm.StateVector(slice(0, 2)))
         evaluator = pybamm.EvaluatorPython(expr)
         for t, y in zip(t_tests, y_tests):
             result = evaluator.evaluate(t=t, y=y)

@@ -61,14 +61,6 @@ class ModelWarning(UserWarning):
     pass
 
 
-class UndefinedOperationError(Exception):
-    """
-    Undefined operation: Raised when a mathematical operation is not well-defined
-    """
-
-    pass
-
-
 class InputError(Exception):
     """
     An external variable has been input incorrectly into PyBaMM

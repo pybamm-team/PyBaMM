@@ -12,13 +12,21 @@ class FunctionControl(BaseModel):
         super().__init__(param)
         self.external_circuit_function = external_circuit_function
 
-    def _get_current_variable(self):
-        return pybamm.Variable("Total current density")
-
     def get_fundamental_variables(self):
+        param = self.param
         # Current is a variable
-        i_cell = self._get_current_variable()
-        variables = self._get_current_variables(i_cell)
+        i_cell = pybamm.Variable("Total current density")
+
+        # Update derived variables
+        I = i_cell * abs(param.I_typ)
+        i_cell_dim = I / (param.n_electrodes_parallel * param.A_cc)
+
+        variables = {
+            "Total current density": i_cell,
+            "Total current density [A.m-2]": i_cell_dim,
+            "Current [A]": I,
+            "C-rate": I / param.Q,
+        }
 
         # Add discharge capacity variable
         variables.update(super().get_fundamental_variables())
@@ -91,4 +99,3 @@ class LeadingOrderPowerFunctionControl(LeadingOrderFunctionControl):
 
     def __init__(self, param):
         super().__init__(param, constant_power)
-

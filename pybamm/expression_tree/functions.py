@@ -152,19 +152,20 @@ class Function(pybamm.Symbol):
 
         return jacobian
 
-    def evaluate(self, t=None, y=None, u=None, known_evals=None):
+    def evaluate(self, t=None, y=None, y_dot=None, u=None, known_evals=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         if known_evals is not None:
             if self.id not in known_evals:
                 evaluated_children = [None] * len(self.children)
                 for i, child in enumerate(self.children):
                     evaluated_children[i], known_evals = child.evaluate(
-                        t, y, u, known_evals=known_evals
+                        t, y, y_dot, u, known_evals=known_evals
                     )
                 known_evals[self.id] = self._function_evaluate(evaluated_children)
             return known_evals[self.id], known_evals
         else:
-            evaluated_children = [child.evaluate(t, y, u) for child in self.children]
+            evaluated_children = [child.evaluate(t, y, y_dot, u)
+                                  for child in self.children]
             return self._function_evaluate(evaluated_children)
 
     def _evaluate_for_shape(self):
@@ -341,12 +342,18 @@ def log10(child):
 
 
 def max(child):
-    " Returns max function of child. "
+    """
+    Returns max function of child. Not to be confused with :meth:`pybamm.maximum`, which
+    returns the larger of two objects.
+    """
     return pybamm.simplify_if_constant(Function(np.max, child), keep_domains=True)
 
 
 def min(child):
-    " Returns min function of child. "
+    """
+    Returns min function of child. Not to be confused with :meth:`pybamm.minimum`, which
+    returns the smaller of two objects.
+    """
     return pybamm.simplify_if_constant(Function(np.min, child), keep_domains=True)
 
 
