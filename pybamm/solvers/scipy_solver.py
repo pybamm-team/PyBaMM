@@ -47,7 +47,7 @@ class ScipySolver(pybamm.BaseSolver):
             various diagnostic messages.
 
         """
-        if model.rhs_eval.form == "casadi":
+        if model.convert_to_format == "casadi":
             inputs = casadi.vertcat(*[x for x in inputs.values()])
 
         extra_options = {"rtol": self.rtol, "atol": self.atol}
@@ -62,12 +62,15 @@ class ScipySolver(pybamm.BaseSolver):
 
         # make events terminal so that the solver stops when they are reached
         if model.terminate_events_eval:
-            events = [
-                lambda t, y: event(t, y, inputs)
-                for event in model.terminate_events_eval
-            ]
-            for event in events:
-                event.terminal = True
+
+            def event_wrapper(event):
+                def event_fn(t, y):
+                    return event(t, y, inputs)
+
+                event_fn.terminal = True
+                return event_fn
+
+            events = [event_wrapper(event) for event in model.terminate_events_eval]
             extra_options.update({"events": events})
 
         sol = it.solve_ivp(
