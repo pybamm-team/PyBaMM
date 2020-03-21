@@ -76,8 +76,9 @@ class QuickPlot(object):
 
         - "fixed" (default): keep all axes fixes so that all data is visible
         - "tight": make axes tight to plot at each time
-        - dictionary: fine-grain control for each variable, can be either "fixed" or
+        - dictionary: fine-grain control for each variable, can be either "fixed" or \
         "tight" or a specific tuple (lower, upper).
+
     """
 
     def __init__(
