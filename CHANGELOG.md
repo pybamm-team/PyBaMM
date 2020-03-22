@@ -2,20 +2,12 @@
 
 ## Features
 
-<<<<<<< HEAD
 -   Added functionality to broadcast to edges ([#891](https://github.com/pybamm-team/PyBaMM/pull/891))
 -   Reformatted and cleaned up `QuickPlot` ([#886](https://github.com/pybamm-team/PyBaMM/pull/886))
 -   Added thermal effects to lead-acid models ([#885](https://github.com/pybamm-team/PyBaMM/pull/885))
 -   Add new symbols `VariableDot`, representing the derivative of a variable wrt time, 
     and `StateVectorDot`, representing the derivative of a state vector wrt time 
     ([#858](https://github.com/pybamm-team/PyBaMM/issues/858))
-=======
--   Add new symbols `VariableDot`, representing the derivative of a variable wrt time,
-    and `StateVectorDot`, representing the derivative of a state vector wrt time
-    ([#858](https://github.com/pybamm-team/PyBaMM/issues/858))
--   Added functionality to broadcast to edges
-    ([#891](https://github.com/pybamm-team/PyBaMM/pull/891))
->>>>>>> 1b0e0c59154736ed48c92f45e042a9f006f33162
 -   Added additional notebooks showing how to create and compare models ([#877](https://github.com/pybamm-team/PyBaMM/pull/877))
 -   Added `Minimum`, `Maximum` and `Sign` operators
     ([#876](https://github.com/pybamm-team/PyBaMM/pull/876))
@@ -26,6 +18,8 @@
 
 ## Bug fixes
 
+-   Fixed event handling in `ScipySolver` ([#905](https://github.com/pybamm-team/PyBaMM/pull/905))
+-   Made input handling clearer in solvers ([#905](https://github.com/pybamm-team/PyBaMM/pull/905))
 -   Updated Getting started notebook 2 ([#903](https://github.com/pybamm-team/PyBaMM/pull/903))
 -   Reformatted external circuit submodels ([#879](https://github.com/pybamm-team/PyBaMM/pull/879))
 -   Some bug fixes to generalize specifying models that aren't battery models, see [#846](https://github.com/pybamm-team/PyBaMM/issues/846)
@@ -34,7 +28,7 @@
 
 ## Breaking changes
 
--   Changed keyword argument `u` for inputs (when evaluating an object) to `params` 
+-   Changed keyword argument `u` for inputs (when evaluating an object) to `params` ([#905](https://github.com/pybamm-team/PyBaMM/pull/905))
 -   Removed "set external temperature" and "set external potential" options. Use "external submodels" option instead ([#862](https://github.com/pybamm-team/PyBaMM/pull/862))
 
 # [v0.2.0](https://github.com/pybamm-team/PyBaMM/tree/v0.2.0) - 2020-02-26
