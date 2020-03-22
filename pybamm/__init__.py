@@ -219,7 +219,7 @@ from . import experiments
 from .processed_variable import ProcessedVariable
 from .quick_plot import QuickPlot, ax_min, ax_max
 
-from .simulation import Simulation, load_sim
+from .simulation import Simulation, load_sim, is_notebook
 
 #
 # Remove any imported modules, so we don't expose them as part of pybamm

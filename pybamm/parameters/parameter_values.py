@@ -6,6 +6,7 @@ import pandas as pd
 import os
 import numbers
 import numpy as np
+from pprint import pformat
 
 
 class ParameterValues:
@@ -92,6 +93,9 @@ class ParameterValues:
     def __delitem__(self, key):
         del self._dict_items[key]
 
+    def __repr__(self):
+        return pformat(self._dict_items, width=1)
+
     def keys(self):
         "Get the keys of the dictionary"
         return self._dict_items.keys()
@@ -118,7 +122,9 @@ class ParameterValues:
         """
         base_chemistry = chemistry["chemistry"]
         # Create path to file
-        path = os.path.join("input", "parameters", base_chemistry)
+        path = os.path.join(
+            pybamm.root_dir(), "pybamm", "input", "parameters", base_chemistry
+        )
         # Load each component name
         for component_group in [
             "cell",
@@ -233,7 +239,9 @@ class ParameterValues:
                 # Data is flagged with the string "[data]" or "[current data]"
                 elif value.startswith("[current data]") or value.startswith("[data]"):
                     if value.startswith("[current data]"):
-                        data_path = os.path.join("input", "drive_cycles")
+                        data_path = os.path.join(
+                            pybamm.root_dir(), "pybamm", "input", "drive_cycles"
+                        )
                         filename = os.path.join(data_path, value[14:] + ".csv")
                         function_name = value[14:]
                     else:

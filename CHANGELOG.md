@@ -2,13 +2,22 @@
 
 ## Features
 
+<<<<<<< HEAD
+-   Added functionality to broadcast to edges ([#891](https://github.com/pybamm-team/PyBaMM/pull/891))
+-   Reformatted and cleaned up `QuickPlot` ([#886](https://github.com/pybamm-team/PyBaMM/pull/886))
+-   Added thermal effects to lead-acid models ([#885](https://github.com/pybamm-team/PyBaMM/pull/885))
 -   Add new symbols `VariableDot`, representing the derivative of a variable wrt time, 
     and `StateVectorDot`, representing the derivative of a state vector wrt time 
     ([#858](https://github.com/pybamm-team/PyBaMM/issues/858))
--   Added functionality to broadcast to edges 
+=======
+-   Add new symbols `VariableDot`, representing the derivative of a variable wrt time,
+    and `StateVectorDot`, representing the derivative of a state vector wrt time
+    ([#858](https://github.com/pybamm-team/PyBaMM/issues/858))
+-   Added functionality to broadcast to edges
     ([#891](https://github.com/pybamm-team/PyBaMM/pull/891))
+>>>>>>> 1b0e0c59154736ed48c92f45e042a9f006f33162
 -   Added additional notebooks showing how to create and compare models ([#877](https://github.com/pybamm-team/PyBaMM/pull/877))
--   Added `Minimum`, `Maximum` and `Sign` operators 
+-   Added `Minimum`, `Maximum` and `Sign` operators
     ([#876](https://github.com/pybamm-team/PyBaMM/pull/876))
 -   Added a search feature to `FuzzyDict` ([#875](https://github.com/pybamm-team/PyBaMM/pull/875))
 -   Add ambient temperature as a function of time ([#872](https://github.com/pybamm-team/PyBaMM/pull/872))
@@ -17,6 +26,7 @@
 
 ## Bug fixes
 
+-   Updated Getting started notebook 2 ([#903](https://github.com/pybamm-team/PyBaMM/pull/903))
 -   Reformatted external circuit submodels ([#879](https://github.com/pybamm-team/PyBaMM/pull/879))
 -   Some bug fixes to generalize specifying models that aren't battery models, see [#846](https://github.com/pybamm-team/PyBaMM/issues/846)
 -   Reformatted interface submodels to be more readable ([#866](https://github.com/pybamm-team/PyBaMM/pull/866))

@@ -151,14 +151,18 @@ class BaseBatteryModel(pybamm.BaseModel):
             "thermal current collector": False,
             "external submodels": [],
         }
-        options = default_options
+        options = pybamm.FuzzyDict(default_options)
         # any extra options overwrite the default options
         if extra_options is not None:
             for name, opt in extra_options.items():
                 if name in default_options:
                     options[name] = opt
                 else:
-                    raise pybamm.OptionError("option {} not recognised".format(name))
+                    raise pybamm.OptionError(
+                        "Option '{}' not recognised. Best matches are {}".format(
+                            name, options.get_best_matches(name)
+                        )
+                    )
 
         # Some standard checks to make sure options are compatible
         if not (

@@ -31,9 +31,10 @@ Contents
     source/spatial_methods/index
     source/solvers/index
     source/experiments/index
+    source/simulation
+    source/quick_plot
     source/processed_variable
     source/util
-    source/simulation
     source/citations
     source/parameters_cli
 
