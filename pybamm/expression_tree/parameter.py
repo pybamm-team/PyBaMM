@@ -95,12 +95,16 @@ class FunctionParameter(pybamm.Symbol):
                 for i in inp:
                     if i.__class__ is not str:
                         raise TypeError(
-                            "Inputs must be a provided as" +
-                            "a dictionary of the form:" +
-                            "{{str: :class:`pybamm.Symbol`}}"
+                            "Inputs must be a provided as"
+                            + "a dictionary of the form:"
+                            + "{{str: :class:`pybamm.Symbol`}}"
                         )
             else:
-                raise TypeError("Inputs must be a provided as a list of strings")
+                raise TypeError(
+                    "Inputs must be a provided as"
+                    + " a dictionary of the form:"
+                    + "{{str: :class:`pybamm.Symbol`}}"
+                )
 
         self._input_names = inp
 

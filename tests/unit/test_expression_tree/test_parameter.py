@@ -38,6 +38,29 @@ class TestFunctionParameter(unittest.TestCase):
         func = pybamm.FunctionParameter("func", {"2a": 2 * a})
         self.assertIsInstance(func.evaluate_for_shape(), numbers.Number)
 
+    def test_print_input_names(self):
+        var = pybamm.Variable("var")
+        func = pybamm.FunctionParameter("a", {"var": var})
+        func.input_names
+
+    def test_set_input_names(self):
+
+        var = pybamm.Variable("var")
+        func = pybamm.FunctionParameter("a", {"var": var})
+
+        new_input_names = ["first", "second"]
+        func.input_names = new_input_names
+
+        self.assertEqual(func._input_names, new_input_names)
+
+        with self.assertRaises(TypeError):
+            new_input_names = {"wrong": "input type"}
+            func.input_names = new_input_names
+
+        with self.assertRaises(TypeError):
+            new_input_names = [var]
+            func.input_names = new_input_names
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
