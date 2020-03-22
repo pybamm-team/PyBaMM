@@ -55,5 +55,5 @@ output_variables = [
     "Electrolyte potential [V]",
     "Terminal voltage [V]",
 ]
-plot = pybamm.QuickPlot(solutions, output_variables)
+plot = pybamm.QuickPlot(solutions, output_variables, linestyles=[":", "--", "-"])
 plot.dynamic_plot()
