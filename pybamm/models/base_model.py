@@ -399,12 +399,12 @@ class BaseModel(object):
                 if isinstance(node, pybamm.VariableDot):
                     raise pybamm.ModelError(
                         "time derivative of variable"
-                        + "found ({}) in rhs equation {}".format(node, key)
+                        + " found ({}) in rhs equation {}".format(node, key)
                     )
                 if isinstance(node, pybamm.StateVectorDot):
                     raise pybamm.ModelError(
                         "time derivative of state vector"
-                        + "found ({}) in rhs equation {}".format(node, key)
+                        + " found ({}) in rhs equation {}".format(node, key)
                     )
 
         # Check that no variable time derivatives exist in the algebraic equations

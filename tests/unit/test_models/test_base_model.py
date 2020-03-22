@@ -92,7 +92,7 @@ class TestBaseModel(unittest.TestCase):
         variables = {"c": "alpha", "d": "beta"}
         model.variables = variables
         self.assertEqual(variables, model.variables)
-        self.assertEqual(model.variable_names, list(variables.keys()))
+        self.assertEqual(model.variable_names(), list(variables.keys()))
 
     def test_jac_set_get(self):
         model = pybamm.BaseModel()
