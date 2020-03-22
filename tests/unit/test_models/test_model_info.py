@@ -14,6 +14,8 @@ class TestModelInfo(unittest.TestCase):
         model = pybamm.lithium_ion.DFN()
         model.info("Negative electrode diffusivity [m2.s-1]")
 
+        model.info("Not a parameter")
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

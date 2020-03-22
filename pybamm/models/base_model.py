@@ -672,8 +672,6 @@ def find_symbol_in_tree(tree, name):
             child_return = find_symbol_in_tree(child, name)
             if child_return:
                 return child_return
-    else:
-        return None
 
 
 def find_symbol_in_dict(dic, name):
@@ -681,7 +679,6 @@ def find_symbol_in_dict(dic, name):
         tree_return = find_symbol_in_tree(tree, name)
         if tree_return:
             return tree_return
-    return None
 
 
 def find_symbol_in_model(model, name):
@@ -694,4 +691,3 @@ def find_symbol_in_model(model, name):
         dic_return = find_symbol_in_dict(dic, name)
         if dic_return:
             return dic_return
-    return None

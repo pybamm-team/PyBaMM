@@ -38,10 +38,23 @@ class TestFunctionParameter(unittest.TestCase):
         func = pybamm.FunctionParameter("func", {"2a": 2 * a})
         self.assertIsInstance(func.evaluate_for_shape(), numbers.Number)
 
+    def test_copy(self):
+        a = pybamm.Parameter("a")
+        func = pybamm.FunctionParameter("func", {"2a": 2 * a})
+
+        new_func = func.new_copy()
+        self.assertEqual(func._input_names, new_func._input_names)
+
     def test_print_input_names(self):
         var = pybamm.Variable("var")
         func = pybamm.FunctionParameter("a", {"var": var})
         func.input_names
+
+    def test_get_children_domains(self):
+        var = pybamm.Variable("var", domain=["negative electrode"])
+        var_2 = pybamm.Variable("var", domain=["positive electrode"])
+        with self.assertRaises(pybamm.DomainError):
+            pybamm.FunctionParameter("a", {"var": var, "var 2": var_2})
 
     def test_set_input_names(self):
 

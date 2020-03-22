@@ -92,6 +92,7 @@ class TestBaseModel(unittest.TestCase):
         variables = {"c": "alpha", "d": "beta"}
         model.variables = variables
         self.assertEqual(variables, model.variables)
+        self.assertEqual(model.variable_names, list(variables.keys()))
 
     def test_jac_set_get(self):
         model = pybamm.BaseModel()
@@ -253,8 +254,7 @@ class TestBaseModel(unittest.TestCase):
         model.rhs = {c: d.diff(pybamm.t), d: -1}
         model.initial_conditions = {c: 1, d: 1}
         with self.assertRaisesRegex(
-            pybamm.ModelError,
-            "time derivative of variable found",
+            pybamm.ModelError, "time derivative of variable found",
         ):
             model.check_well_posedness()
 
@@ -266,8 +266,7 @@ class TestBaseModel(unittest.TestCase):
         }
         model.initial_conditions = {c: 1, d: 1}
         with self.assertRaisesRegex(
-            pybamm.ModelError,
-            "time derivative of variable found",
+            pybamm.ModelError, "time derivative of variable found",
         ):
             model.check_well_posedness()
 
@@ -276,8 +275,7 @@ class TestBaseModel(unittest.TestCase):
         model.rhs = {c: d.diff(pybamm.t), d: -1}
         model.initial_conditions = {c: 1, d: 1}
         with self.assertRaisesRegex(
-            pybamm.ModelError,
-            "time derivative of variable found",
+            pybamm.ModelError, "time derivative of variable found",
         ):
             model.check_well_posedness()
 
@@ -285,11 +283,10 @@ class TestBaseModel(unittest.TestCase):
         model = pybamm.BaseModel()
         model.algebraic = {
             d: 5 * pybamm.StateVector(slice(0, 15)) - 1,
-            c: 5 * pybamm.StateVectorDot(slice(0, 15)) - 1
+            c: 5 * pybamm.StateVectorDot(slice(0, 15)) - 1,
         }
         with self.assertRaisesRegex(
-            pybamm.ModelError,
-            "time derivative of state vector found",
+            pybamm.ModelError, "time derivative of state vector found",
         ):
             model.check_well_posedness(post_discretisation=True)
 
@@ -298,8 +295,7 @@ class TestBaseModel(unittest.TestCase):
         model.rhs = {c: 5 * pybamm.StateVectorDot(slice(0, 15)) - 1}
         model.initial_conditions = {c: 1}
         with self.assertRaisesRegex(
-            pybamm.ModelError,
-            "time derivative of state vector found",
+            pybamm.ModelError, "time derivative of state vector found",
         ):
             model.check_well_posedness(post_discretisation=True)
 
