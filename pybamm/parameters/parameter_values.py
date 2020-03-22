@@ -6,6 +6,7 @@ import pandas as pd
 import os
 import numbers
 import numpy as np
+from pprint import pformat
 
 
 class ParameterValues:
@@ -91,6 +92,9 @@ class ParameterValues:
 
     def __delitem__(self, key):
         del self._dict_items[key]
+
+    def __repr__(self):
+        return pformat(self._dict_items, width=1)
 
     def keys(self):
         "Get the keys of the dictionary"
