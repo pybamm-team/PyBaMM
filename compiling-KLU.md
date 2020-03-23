@@ -54,7 +54,7 @@ For instance on Fedora
 ```
 yum install libsuitesparse-dev
 ```
-The PyBaMM KLU solver depends on the version of sundials being *at least* 4.0.0, and unfortunately such requirement is *not available though most distribution's package managers*.
+The PyBaMM KLU solver depends on the version of sundials being _at least_ 4.0.0, and unfortunately such requirement is _not available though most distribution's package managers_.
 As a result the sundials library must be compiled manually.
 Come back! It's not that difficult.
 
