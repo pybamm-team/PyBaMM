@@ -1,11 +1,24 @@
 import os
 import subprocess
 import tarfile
-import wget
+
+try:
+    # wget module is required to download SUNDIALS or SuiteSparse.
+    import wget
+
+    NO_WGET = False
+except ModuleNotFoundError:
+    NO_WGET = True
 
 
 def download_extract_library(url, directory):
     # Download and extract archive at url
+    if NO_WGET:
+        error_msg = (
+            "Could not find wget module."
+            " Please install wget module (pip install wget)."
+        )
+        raise ModuleNotFoundError(error_msg)
     archive = wget.download(url, out=directory)
     tar = tarfile.open(archive)
     tar.extractall(directory)
