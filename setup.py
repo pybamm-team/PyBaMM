@@ -22,7 +22,10 @@ logger = logging.getLogger("PyBaMM setup")
 logger.setLevel("INFO")
 
 # Use FileHandler() to log to a file
-file_handler = logging.FileHandler("setup.log")
+logfile = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "scikits_odes_setup.log"
+)
+file_handler = logging.FileHandler(logfile)
 formatter = logging.Formatter(log_format)
 file_handler.setFormatter(formatter)
 
