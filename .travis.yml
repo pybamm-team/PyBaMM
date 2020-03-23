@@ -201,7 +201,8 @@ install:
   - if [[ $PYBAMM_COVER == true ]]; then pip install coverage codecov; fi;
   - |
     if [[ $PYBAMM_SCIKITS_ODES == true ]]; then
-      pybamm_install_odes;
+      pip install wget;
+      pybamm_install_odes --install-sundials;
       export LD_LIBRARY_PATH=scikits.odes/sundials5/lib:$LD_LIBRARY_PATH;
     fi;
   - |
