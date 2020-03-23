@@ -189,9 +189,11 @@ class TestMesh(unittest.TestCase):
             ),
             0,
         )
+        np.testing.assert_almost_equal(submesh[0].internal_boundaries, [0.1 / 0.6])
         with self.assertRaises(pybamm.DomainError):
             mesh.combine_submeshes("negative electrode", "positive electrode")
 
+        # test errors
         geometry = {
             "negative electrode": {
                 "primary": {
@@ -206,7 +208,6 @@ class TestMesh(unittest.TestCase):
         }
         param.process_geometry(geometry)
 
-        # create mesh
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
         with self.assertRaisesRegex(pybamm.DomainError, "trying"):

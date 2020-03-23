@@ -9,7 +9,7 @@ import unittest
 
 
 class TestProcessedVariable(unittest.TestCase):
-    def test_processed_variable_1D(self):
+    def test_processed_variable_0D(self):
         # without space
         t = pybamm.t
         y = pybamm.StateVector(slice(0, 1))
@@ -20,7 +20,7 @@ class TestProcessedVariable(unittest.TestCase):
         processed_var = pybamm.ProcessedVariable(var, pybamm.Solution(t_sol, y_sol))
         np.testing.assert_array_equal(processed_var.entries, t_sol * y_sol[0])
 
-    def test_processed_variable_2D(self):
+    def test_processed_variable_1D(self):
         t = pybamm.t
         var = pybamm.Variable("var", domain=["negative electrode", "separator"])
         x = pybamm.SpatialVariable("x", domain=["negative electrode", "separator"])
@@ -60,7 +60,7 @@ class TestProcessedVariable(unittest.TestCase):
             x_s_edge.entries[:, 0], processed_x_s_edge.entries[:, 0]
         )
 
-    def test_processed_variable_2D_unknown_domain(self):
+    def test_processed_variable_1D_unknown_domain(self):
         x = pybamm.SpatialVariable("x", domain="SEI layer", coord_sys="cartesian")
         geometry = pybamm.Geometry()
         geometry.add_domain(
@@ -86,7 +86,7 @@ class TestProcessedVariable(unittest.TestCase):
         c.mesh = mesh["SEI layer"]
         pybamm.ProcessedVariable(c, solution)
 
-    def test_processed_variable_3D_x_r(self):
+    def test_processed_variable_2D_x_r(self):
         var = pybamm.Variable(
             "var",
             domain=["negative particle"],
@@ -111,7 +111,7 @@ class TestProcessedVariable(unittest.TestCase):
             np.reshape(y_sol, [len(r_sol), len(x_sol), len(t_sol)]),
         )
 
-    def test_processed_variable_3D_x_z(self):
+    def test_processed_variable_2D_x_z(self):
         var = pybamm.Variable(
             "var",
             domain=["negative electrode", "separator"],
@@ -151,7 +151,7 @@ class TestProcessedVariable(unittest.TestCase):
             x_s_edge.entries.flatten(), processed_x_s_edge.entries[:, :, 0].T.flatten()
         )
 
-    def test_processed_variable_3D_scikit(self):
+    def test_processed_variable_2D_scikit(self):
         var = pybamm.Variable("var", domain=["current collector"])
 
         disc = tests.get_2p1d_discretisation_for_testing()
@@ -159,7 +159,6 @@ class TestProcessedVariable(unittest.TestCase):
         y = disc.mesh["current collector"][0].edges["y"]
         z = disc.mesh["current collector"][0].edges["z"]
         var_sol = disc.process_symbol(var)
-        var_sol.mesh = disc.mesh["current collector"]
         t_sol = np.linspace(0, 1)
         u_sol = np.ones(var_sol.shape[0])[:, np.newaxis] * np.linspace(0, 5)
 
@@ -168,7 +167,7 @@ class TestProcessedVariable(unittest.TestCase):
             processed_var.entries, np.reshape(u_sol, [len(y), len(z), len(t_sol)])
         )
 
-    def test_processed_variable_2Dspace_scikit(self):
+    def test_processed_variable_2D_fixed_t_scikit(self):
         var = pybamm.Variable("var", domain=["current collector"])
 
         disc = tests.get_2p1d_discretisation_for_testing()
@@ -176,7 +175,6 @@ class TestProcessedVariable(unittest.TestCase):
         y = disc.mesh["current collector"][0].edges["y"]
         z = disc.mesh["current collector"][0].edges["z"]
         var_sol = disc.process_symbol(var)
-        var_sol.mesh = disc.mesh["current collector"]
         t_sol = np.array([0])
         u_sol = np.ones(var_sol.shape[0])[:, np.newaxis]
 
@@ -185,7 +183,7 @@ class TestProcessedVariable(unittest.TestCase):
             processed_var.entries, np.reshape(u_sol, [len(y), len(z)])
         )
 
-    def test_processed_var_1D_interpolation(self):
+    def test_processed_var_0D_interpolation(self):
         # without spatial dependence
         t = pybamm.t
         y = pybamm.StateVector(slice(0, 1))
@@ -212,7 +210,7 @@ class TestProcessedVariable(unittest.TestCase):
         np.testing.assert_array_equal(processed_eqn(2), np.nan)
         pybamm.set_logging_level("WARNING")
 
-    def test_processed_var_2D_interpolation(self):
+    def test_processed_var_1D_interpolation(self):
         t = pybamm.t
         var = pybamm.Variable("var", domain=["negative electrode", "separator"])
         x = pybamm.SpatialVariable("x", domain=["negative electrode", "separator"])
@@ -263,7 +261,7 @@ class TestProcessedVariable(unittest.TestCase):
             processed_r_n(0, r=np.linspace(0, 1))[:, 0], np.linspace(0, 1)
         )
 
-    def test_processed_var_3D_interpolation(self):
+    def test_processed_var_2D_interpolation(self):
         var = pybamm.Variable(
             "var",
             domain=["negative particle"],
@@ -326,7 +324,7 @@ class TestProcessedVariable(unittest.TestCase):
             processed_var(t_sol, x_sol, r_sol).shape, (10, 35, 50)
         )
 
-    def test_processed_var_3D_secondary_broadcast(self):
+    def test_processed_var_2D_secondary_broadcast(self):
         var = pybamm.Variable("var", domain=["negative particle"])
         broad_var = pybamm.SecondaryBroadcast(var, "negative electrode")
         x = pybamm.SpatialVariable("x", domain=["negative electrode"])
@@ -379,7 +377,7 @@ class TestProcessedVariable(unittest.TestCase):
             processed_var(t_sol, x_sol, r_sol).shape, (10, 35, 50)
         )
 
-    def test_processed_var_3D_scikit_interpolation(self):
+    def test_processed_var_2D_scikit_interpolation(self):
         var = pybamm.Variable("var", domain=["current collector"])
 
         disc = tests.get_2p1d_discretisation_for_testing()
@@ -387,7 +385,6 @@ class TestProcessedVariable(unittest.TestCase):
         y_sol = disc.mesh["current collector"][0].edges["y"]
         z_sol = disc.mesh["current collector"][0].edges["z"]
         var_sol = disc.process_symbol(var)
-        var_sol.mesh = disc.mesh["current collector"]
         t_sol = np.linspace(0, 1)
         u_sol = np.ones(var_sol.shape[0])[:, np.newaxis] * np.linspace(0, 5)
 
@@ -417,7 +414,7 @@ class TestProcessedVariable(unittest.TestCase):
         # 3 scalars
         np.testing.assert_array_equal(processed_var(0.2, y=0.2, z=0.2).shape, ())
 
-    def test_processed_var_2Dspace_scikit_interpolation(self):
+    def test_processed_var_2D_fixed_t_scikit_interpolation(self):
         var = pybamm.Variable("var", domain=["current collector"])
 
         disc = tests.get_2p1d_discretisation_for_testing()
@@ -425,7 +422,6 @@ class TestProcessedVariable(unittest.TestCase):
         y_sol = disc.mesh["current collector"][0].edges["y"]
         z_sol = disc.mesh["current collector"][0].edges["z"]
         var_sol = disc.process_symbol(var)
-        var_sol.mesh = disc.mesh["current collector"]
         t_sol = np.array([0])
         u_sol = np.ones(var_sol.shape[0])[:, np.newaxis]
 
@@ -531,6 +527,22 @@ class TestProcessedVariable(unittest.TestCase):
             pybamm.SolverError, "Solution time vector must have length > 1"
         ):
             pybamm.ProcessedVariable(var, pybamm.Solution(t_sol, y_sol))
+
+    def test_3D_raises_error(self):
+        var = pybamm.Variable(
+            "var",
+            domain=["negative electrode"],
+            auxiliary_domains={"secondary": ["current collector"]},
+        )
+
+        disc = tests.get_2p1d_discretisation_for_testing()
+        disc.set_variable_slices([var])
+        var_sol = disc.process_symbol(var)
+        t_sol = np.array([0, 1, 2])
+        u_sol = np.ones(var_sol.shape[0] * 3)[:, np.newaxis]
+
+        with self.assertRaisesRegex(NotImplementedError, "Shape not recognized"):
+            pybamm.ProcessedVariable(var_sol, pybamm.Solution(t_sol, u_sol))
 
 
 if __name__ == "__main__":

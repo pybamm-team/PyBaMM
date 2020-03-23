@@ -2,6 +2,9 @@
 
 ## Features
 
+-   Added functionality to broadcast to edges ([#891](https://github.com/pybamm-team/PyBaMM/pull/891))
+-   Reformatted and cleaned up `QuickPlot` ([#886](https://github.com/pybamm-team/PyBaMM/pull/886))
+-   Added thermal effects to lead-acid models ([#885](https://github.com/pybamm-team/PyBaMM/pull/885))
 -   Add new symbols `VariableDot`, representing the derivative of a variable wrt time,
     and `StateVectorDot`, representing the derivative of a state vector wrt time
     ([#858](https://github.com/pybamm-team/PyBaMM/issues/858))
@@ -18,6 +21,7 @@
 
 ## Bug fixes
 
+-   Updated Getting started notebook 2 ([#903](https://github.com/pybamm-team/PyBaMM/pull/903))
 -   Reformatted external circuit submodels ([#879](https://github.com/pybamm-team/PyBaMM/pull/879))
 -   Some bug fixes to generalize specifying models that aren't battery models, see [#846](https://github.com/pybamm-team/PyBaMM/issues/846)
 -   Reformatted interface submodels to be more readable ([#866](https://github.com/pybamm-team/PyBaMM/pull/866))
