@@ -113,11 +113,9 @@ def compile_KLU():
     pybamm_project_dir = os.path.dirname(os.path.abspath(__file__))
     pybind11_dir = os.path.join(pybamm_project_dir, "pybind11")
     try:
-        assert os.path.isfile(
-            os.path.join(pybind11_dir, "tools", "pybind11Tools.cmake")
-        )
+        open(os.path.join(pybind11_dir, "tools", "pybind11Tools.cmake"))
         logger.info("Found pybind11 directory ({})".format(pybind11_dir))
-    except AssertionError:
+    except FileNotFoundError:
         PyBind11Found = False
         msg = (
             "Could not find PyBind11 directory ({})."
