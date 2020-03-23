@@ -201,7 +201,8 @@ install:
   - |
     if [[ $PYBAMM_SCIKITS_ODES == true ]]; then
       pybamm_install_odes;
-      export LD_LIBRARY_PATH=scikits.odes/sundials5/lib:$LD_LIBRARY_PATH
+      export LD_LIBRARY_PATH=scikits.odes/sundials5/lib:$LD_LIBRARY_PATH;
+    fi;
   - |
     if [[ $PYBAMM_KLU == true ]]; then
       pip install wget
