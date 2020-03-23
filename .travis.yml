@@ -199,6 +199,10 @@ install:
   - if [[ $PYBAMM_STYLE == true || $PYBAMM_EXAMPLES ]]; then pip install -e .[dev]; fi;
   - if [[ $PYBAMM_COVER == true ]]; then pip install coverage codecov; fi;
   - |
+    if [[ $PYBAMM_SCIKITS_ODES == true ]]; then
+      pybamm_install_odes;
+      export LD_LIBRARY_PATH=scikits.odes/sundials5/lib:$LD_LIBRARY_PATH
+  - |
     if [[ $PYBAMM_KLU == true ]]; then
       pip install wget
       python scripts/setup_KLU_module_build.py
