@@ -35,7 +35,7 @@ done
 
 # And repair them
 for whl in dist/*.whl; do
-    auditwheel repair whl -w /io/wheelhouse/
+    auditwheel repair $whl -w /io/wheelhouse/
 done
 
 echo "** --- All good ! --- **"
