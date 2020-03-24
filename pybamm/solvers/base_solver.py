@@ -521,7 +521,11 @@ class BaseSolver(object):
         pybamm.logger.info("Start solving {} with {}".format(model.name, self.name))
 
         # Make sure model isn't empty
-        if len(model.rhs) == 0 and len(model.algebraic) == 0:
+        if (
+            len(model.rhs) == 0
+            and len(model.algebraic) == 0
+            and len(model.variables) == 0
+        ):
             raise pybamm.ModelError("Cannot solve empty model")
 
         # t_eval can only be None if the solver is an algebraic solver. In that case
@@ -705,7 +709,8 @@ class BaseSolver(object):
         Raises
         ------
         :class:`pybamm.ModelError`
-            If an empty model is passed (`model.rhs = {}` and `model.algebraic={}`)
+            If an empty model is passed (`model.rhs = {}` and `model.algebraic = {}` and
+            `model.variables = {}`)
 
         """
 
@@ -718,7 +723,11 @@ class BaseSolver(object):
             return old_solution
 
         # Make sure model isn't empty
-        if len(model.rhs) == 0 and len(model.algebraic) == 0:
+        if (
+            len(model.rhs) == 0
+            and len(model.algebraic) == 0
+            and len(model.variables) == 0
+        ):
             raise pybamm.ModelError("Cannot step empty model")
 
         # Set timer
