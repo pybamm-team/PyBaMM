@@ -23,7 +23,7 @@ logger.setLevel("INFO")
 
 # Use FileHandler() to log to a file
 logfile = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "scikits_odes_setup.log"
+    os.path.dirname(os.path.abspath(__file__)), "setup.log"
 )
 file_handler = logging.FileHandler(logfile)
 formatter = logging.Formatter(log_format)
