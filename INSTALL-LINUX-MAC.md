@@ -11,7 +11,7 @@ On Fedora or CentOS, you can use DNF or Yum. For example
 ```bash
 sudo dnf install python3
 ```
-On Mac OS distributions, you can use `homebrew`. 
+On Mac OS distributions, you can use `homebrew`.
 First [install `brew`](https://docs.python-guide.org/starting/install3/osx/):
 
 ```bash
@@ -56,6 +56,23 @@ PyBaMM's dependencies (such as `numpy`, `scipy`, etc) will be installed automati
 
 For an introduction to virtual environments, see (https://realpython.com/python-virtual-environments-a-primer/).
 
+#### Optional - scikits.odes solver
+Users can install [scikits.odes](https://github.com/bmcage/odes) in order to use the
+wrapped SUNDIALS ODE and DAE
+[solvers](https://pybamm.readthedocs.io/en/latest/source/solvers/scikits_solvers.html).
+
+**A pre-requisite** is the installation of a BLAS library (such as [openblas](https://www.openblas.net/)).
+On Ubuntu/debian
+```
+sudo apt install libopenblas-dev
+```
+After installing PyBaMM, the following command can be used to automatically install `scikits.odes`
+and its dependencies
+```
+$ pybamm_install_odes --install-sundials
+```
+The  `--install-sundials` option is used to activate automatic downloads and installation of the sundials library, which is required by `scikits.odes`.
+
 ### Developer install
 
 If you wish to contribute to PyBaMM, you should get the latest version from the GitHub repository.
@@ -85,13 +102,9 @@ Then, to install PyBaMM as a [developer](CONTRIBUTING.md), type
 pip install -e .[dev,docs]
 ```
 
-PyBaMM comes with a sparse KLU solver, using the Sundials library.
-The `pip install` command will automatically try to compile the corresponding
-C++ extension.
-Should the required dependencies not be present on your system, the compilation will
-not take place.
-However the rest of PyBaMM will be installed, should no errors be raised.
-For more information, see [compiling the KLU sparse solver](compiling_KLU.md)
+**KLU sparse solver** If you wish so simulate large systems such as the 2+1D models, we recommend employing a sparse solver.
+PyBaMM currently offers a direct interface to the sparse KLU solver within Sundials, but it is
+unlikely to be installed as you may not have all the dependencies available. If you wish to install the KLU from the PyBaMM sources, see [compiling the KLU sparse solver](compiling_KLU.md).
 
 To check whether PyBaMM has installed properly, you can run the tests:
 
