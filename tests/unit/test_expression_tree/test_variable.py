@@ -66,24 +66,24 @@ class TestExternalVariable(unittest.TestCase):
         a = pybamm.ExternalVariable("a", 1)
         self.assertEqual(a.size, 1)
 
-        self.assertEqual(a.evaluate(u={"a": 3}), 3)
+        self.assertEqual(a.evaluate(params={"a": 3}), 3)
 
         with self.assertRaisesRegex(KeyError, "External variable"):
             a.evaluate()
         with self.assertRaisesRegex(TypeError, "inputs u"):
-            a.evaluate(u="not a dictionary")
+            a.evaluate(params="not a dictionary")
 
     def test_external_variable_vector(self):
         a = pybamm.ExternalVariable("a", 10)
         self.assertEqual(a.size, 10)
 
         a_test = 2 * np.ones((10, 1))
-        np.testing.assert_array_equal(a.evaluate(u={"a": a_test}), a_test)
+        np.testing.assert_array_equal(a.evaluate(params={"a": a_test}), a_test)
 
-        np.testing.assert_array_equal(a.evaluate(u={"a": 2}), a_test)
+        np.testing.assert_array_equal(a.evaluate(params={"a": 2}), a_test)
 
         with self.assertRaisesRegex(ValueError, "External variable"):
-            a.evaluate(u={"a": np.ones((5, 1))})
+            a.evaluate(params={"a": np.ones((5, 1))})
 
     def test_external_variable_diff(self):
         a = pybamm.ExternalVariable("a", 10)

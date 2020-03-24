@@ -80,8 +80,7 @@ class TestCasadiConverter(unittest.TestCase):
 
         # State Vector Dot
         self.assert_casadi_equal(
-            pybamm_y_dot.to_casadi(casadi_t, casadi_y, casadi_y_dot),
-            casadi_y_dot
+            pybamm_y_dot.to_casadi(casadi_t, casadi_y, casadi_y_dot), casadi_y_dot
         )
 
     def test_special_functions(self):
@@ -180,7 +179,7 @@ class TestCasadiConverter(unittest.TestCase):
         # Input only
         self.assert_casadi_equal(
             pybamm_u1.to_casadi(casadi_t, casadi_y, casadi_ydot, casadi_us),
-            casadi_us["Input 1"]
+            casadi_us["Input 1"],
         )
 
         # More complex
@@ -209,14 +208,14 @@ class TestCasadiConverter(unittest.TestCase):
 
         # External only
         self.assert_casadi_equal(
-            pybamm_u1.to_casadi(casadi_t, casadi_y, u=casadi_us),
-            casadi_us["External 1"]
+            pybamm_u1.to_casadi(casadi_t, casadi_y, params=casadi_us),
+            casadi_us["External 1"],
         )
 
         # More complex
         expr = pybamm_u2 + pybamm_y
         self.assert_casadi_equal(
-            expr.to_casadi(casadi_t, casadi_y, u=casadi_us),
+            expr.to_casadi(casadi_t, casadi_y, params=casadi_us),
             casadi_us["External 2"] + casadi_y,
         )
 
