@@ -18,8 +18,8 @@ param.update({"C-rate": C_rate})
 # make current collectors not so conductive, just for illustrative purposes
 param.update(
     {
-        "Negative current collector conductivity [S.m-1]": 5.96e6,
-        "Positive current collector conductivity [S.m-1]": 3.55e6,
+        "Negative current collector conductivity [S.m-1]": 5.96e9,
+        "Positive current collector conductivity [S.m-1]": 3.55e9,
     }
 )
 
@@ -51,7 +51,7 @@ delta = param.evaluate(pybamm.standard_parameters_lithium_ion.delta)
 R_cc = param.process_symbol(
     cc_model.variables["Effective current collector resistance [Ohm]"]
 ).evaluate(t=cc_solution.t, y=cc_solution.y)[0][0]
-cc_ohmic_losses = -delta * current * R_cc
+cc_ohmic_losses = -current * R_cc
 
 plt.plot(time, voltage(t), label="SPMe")
 plt.plot(time, voltage(t) + cc_ohmic_losses, label="SPMeCC")
