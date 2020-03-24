@@ -19,6 +19,14 @@ ln -s /opt/python/cp37-cp37m/bin/cmake /usr/bin/cmake
 # https://pypi.org/project/wget/
 /opt/python/cp37-cp37m/bin/pip install wget
 
+# Clone the pybind11 git repo next to the setup.py
+# Required to build the idaklu extension module.
+if [ ! -d "pybind11" ]
+then
+  git clone https://github.com/pybind/pybind11.git
+fi
+
+
 # Download and build SuiteSparse/Sundials
 # in KLU_module_deps/
 /opt/python/cp37-cp37m/bin/python scripts/setup_KLU_module_build.py
