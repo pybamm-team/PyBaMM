@@ -95,7 +95,7 @@ class CasadiSolver(pybamm.BaseSolver):
             # casadi solver won't allow solving algebraic model so we have to raise an
             # error here
             raise pybamm.SolverError(
-                "Cannot use CasadiSolver to solve algebraic model,"
+                "Cannot use CasadiSolver to solve algebraic model, "
                 "use CasadiAlgebraicSolver instead"
             )
         if self.mode == "fast":

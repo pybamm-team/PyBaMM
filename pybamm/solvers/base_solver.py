@@ -497,18 +497,18 @@ class BaseSolver(object):
         Raises
         ------
         :class:`pybamm.ModelError`
-            If an empty model is passed (`model.rhs = {}` and `model.algebraic={}`)
+            If an empty model is passed (`model.rhs = {}` and `model.algebraic={}` and
+            `model.variables = {}`)
 
         """
         pybamm.logger.info("Start solving {} with {}".format(model.name, self.name))
 
         # Make sure model isn't empty
-        if (
-            len(model.rhs) == 0
-            and len(model.algebraic) == 0
-            and len(model.variables) == 0
-        ):
-            raise pybamm.ModelError("Cannot solve empty model")
+        if len(model.rhs) == 0 and len(model.algebraic) == 0:
+            if not isinstance(self, pybamm.DummySolver):
+                raise pybamm.ModelError(
+                    "Cannot solve empty model, use `pybamm.DummySolver` instead"
+                )
 
         # t_eval can only be None if the solver is an algebraic solver. In that case
         # set it to 0
@@ -703,12 +703,11 @@ class BaseSolver(object):
             return old_solution
 
         # Make sure model isn't empty
-        if (
-            len(model.rhs) == 0
-            and len(model.algebraic) == 0
-            and len(model.variables) == 0
-        ):
-            raise pybamm.ModelError("Cannot step empty model")
+        if len(model.rhs) == 0 and len(model.algebraic) == 0:
+            if not isinstance(self, pybamm.DummySolver):
+                raise pybamm.ModelError(
+                    "Cannot step empty model, use `pybamm.DummySolver` instead"
+                )
 
         # Set timer
         timer = pybamm.Timer()
@@ -851,7 +850,8 @@ class Residuals(SolverCallable):
 
     def __init__(self, function, name, model):
         super().__init__(function, name, model)
-        self.mass_matrix = model.mass_matrix.entries
+        if model.mass_matrix is not None:
+            self.mass_matrix = model.mass_matrix.entries
 
     def __call__(self, t, y, ydot, inputs):
         states_eval = super().__call__(t, y, inputs)
