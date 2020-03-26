@@ -36,18 +36,18 @@ class InputParameter(pybamm.Symbol):
         """ See :meth:`pybamm.Symbol._jac()`. """
         return pybamm.Scalar(0)
 
-    def _base_evaluate(self, t=None, y=None, y_dot=None, params=None):
-        # u should be a dictionary
+    def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
+        # inputs should be a dictionary
         # convert 'None' to empty dictionary for more informative error
-        if params is None:
-            params = {}
-        if not isinstance(params, dict):
+        if inputs is None:
+            inputs = {}
+        if not isinstance(inputs, dict):
             # if the special input "shape test" is passed, just return 1
-            if params == "shape test":
+            if inputs == "shape test":
                 return 1
-            raise TypeError("inputs u should be a dictionary")
+            raise TypeError("inputs should be a dictionary")
         try:
-            return params[self.name]
+            return inputs[self.name]
         # raise more informative error if can't find name in dict
         except KeyError:
             raise KeyError("Input parameter '{}' not found".format(self.name))

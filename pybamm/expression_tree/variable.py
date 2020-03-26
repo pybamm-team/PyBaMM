@@ -176,18 +176,18 @@ class ExternalVariable(Variable):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
         return np.nan * np.ones((self.size, 1))
 
-    def _base_evaluate(self, t=None, y=None, y_dot=None, params=None):
-        # u should be a dictionary
+    def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
+        # inputs should be a dictionary
         # convert 'None' to empty dictionary for more informative error
-        if params is None:
-            params = {}
-        if not isinstance(params, dict):
+        if inputs is None:
+            inputs = {}
+        if not isinstance(inputs, dict):
             # if the special input "shape test" is passed, just return 1
-            if params == "shape test":
+            if inputs == "shape test":
                 return self.evaluate_for_shape()
-            raise TypeError("inputs u should be a dictionary")
+            raise TypeError("inputs should be a dictionary")
         try:
-            out = params[self.name]
+            out = inputs[self.name]
             if isinstance(out, numbers.Number) or out.shape[0] == 1:
                 return out * np.ones((self.size, 1))
             elif out.shape[0] != self.size:

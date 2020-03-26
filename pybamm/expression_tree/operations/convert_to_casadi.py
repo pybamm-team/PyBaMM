@@ -13,7 +13,7 @@ class CasadiConverter(object):
 
         pybamm.citations.register("Andersson2019")
 
-    def convert(self, symbol, t, y, y_dot, params):
+    def convert(self, symbol, t, y, y_dot, inputs):
         """
         This function recurses down the tree, converting the PyBaMM expression tree to
         a CasADi expression tree
@@ -28,8 +28,8 @@ class CasadiConverter(object):
             A casadi symbol representing state vectors
         y_dot : :class:`casadi.MX`
             A casadi symbol representing time derivatives of state vectors
-        params : dict
-            A dictionary of casadi symbols representing inputs
+        inputs : dict
+            A dictionary of casadi symbols representing parameters
 
         Returns
         -------
@@ -39,14 +39,14 @@ class CasadiConverter(object):
         try:
             return self._casadi_symbols[symbol.id]
         except KeyError:
-            # Change u to empty dictionary if it's None
-            params = params or {}
-            casadi_symbol = self._convert(symbol, t, y, y_dot, params)
+            # Change inputs to empty dictionary if it's None
+            inputs = inputs or {}
+            casadi_symbol = self._convert(symbol, t, y, y_dot, inputs)
             self._casadi_symbols[symbol.id] = casadi_symbol
 
             return casadi_symbol
 
-    def _convert(self, symbol, t, y, y_dot, params):
+    def _convert(self, symbol, t, y, y_dot, inputs):
         """ See :meth:`CasadiConverter.convert()`. """
         if isinstance(
             symbol,
@@ -58,7 +58,7 @@ class CasadiConverter(object):
                 pybamm.ExternalVariable,
             ),
         ):
-            return casadi.MX(symbol.evaluate(t, y, y_dot, params))
+            return casadi.MX(symbol.evaluate(t, y, y_dot, inputs))
 
         elif isinstance(symbol, pybamm.StateVector):
             if y is None:
@@ -73,8 +73,8 @@ class CasadiConverter(object):
         elif isinstance(symbol, pybamm.BinaryOperator):
             left, right = symbol.children
             # process children
-            converted_left = self.convert(left, t, y, y_dot, params)
-            converted_right = self.convert(right, t, y, y_dot, params)
+            converted_left = self.convert(left, t, y, y_dot, inputs)
+            converted_right = self.convert(right, t, y, y_dot, inputs)
 
             if isinstance(symbol, pybamm.Minimum):
                 return casadi.fmin(converted_left, converted_right)
@@ -85,14 +85,14 @@ class CasadiConverter(object):
             return symbol._binary_evaluate(converted_left, converted_right)
 
         elif isinstance(symbol, pybamm.UnaryOperator):
-            converted_child = self.convert(symbol.child, t, y, y_dot, params)
+            converted_child = self.convert(symbol.child, t, y, y_dot, inputs)
             if isinstance(symbol, pybamm.AbsoluteValue):
                 return casadi.fabs(converted_child)
             return symbol._unary_evaluate(converted_child)
 
         elif isinstance(symbol, pybamm.Function):
             converted_children = [
-                self.convert(child, t, y, y_dot, params) for child in symbol.children
+                self.convert(child, t, y, y_dot, inputs) for child in symbol.children
             ]
             # Special functions
             if symbol.function == np.min:
@@ -123,7 +123,7 @@ class CasadiConverter(object):
                 return symbol._function_evaluate(converted_children)
         elif isinstance(symbol, pybamm.Concatenation):
             converted_children = [
-                self.convert(child, t, y, y_dot, params) for child in symbol.children
+                self.convert(child, t, y, y_dot, inputs) for child in symbol.children
             ]
             if isinstance(symbol, (pybamm.NumpyConcatenation, pybamm.SparseStack)):
                 return casadi.vertcat(*converted_children)

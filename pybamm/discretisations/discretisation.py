@@ -1019,19 +1019,19 @@ class Discretisation(object):
         # Individual
         for var, eqn in model.initial_conditions.items():
             assert isinstance(
-                eqn.evaluate(t=0, params="shape test"), np.ndarray
+                eqn.evaluate(t=0, inputs="shape test"), np.ndarray
             ), pybamm.ModelError(
                 """
                 initial_conditions must be numpy array after discretisation but they are
                 {} for variable '{}'.
                 """.format(
-                    type(eqn.evaluate(t=0, params="shape test")), var
+                    type(eqn.evaluate(t=0, inputs="shape test")), var
                 )
             )
         # Concatenated
         assert (
             type(
-                model.concatenated_initial_conditions.evaluate(t=0, params="shape test")
+                model.concatenated_initial_conditions.evaluate(t=0, inputs="shape test")
             )
             is np.ndarray
         ), pybamm.ModelError(

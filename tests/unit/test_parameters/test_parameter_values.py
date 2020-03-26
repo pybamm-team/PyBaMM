@@ -131,13 +131,13 @@ class TestParameterValues(unittest.TestCase):
         values = {"C-rate": "[input]", "Cell capacity [A.h]": 10}
         param = pybamm.ParameterValues(values)
         self.assertEqual(
-            param["Current function [A]"](2).evaluate(params={"C-rate": 1}), 10
+            param["Current function [A]"](2).evaluate(inputs={"C-rate": 1}), 10
         )
         # if only current and capacity provided, update C-rate
         values = {"Current function [A]": "[input]", "Cell capacity [A.h]": 10}
         param = pybamm.ParameterValues(values)
         self.assertEqual(
-            param["C-rate"](5).evaluate(params={"Current function [A]": 5}), 0.5
+            param["C-rate"](5).evaluate(inputs={"Current function [A]": 5}), 0.5
         )
 
     def test_process_symbol(self):
@@ -285,7 +285,7 @@ class TestParameterValues(unittest.TestCase):
         a = pybamm.Parameter("a")
         processed_a = parameter_values.process_symbol(a)
         self.assertIsInstance(processed_a, pybamm.InputParameter)
-        self.assertEqual(processed_a.evaluate(params={"a": 5}), 5)
+        self.assertEqual(processed_a.evaluate(inputs={"a": 5}), 5)
 
         # process binary operation
         b = pybamm.Parameter("b")
@@ -294,7 +294,7 @@ class TestParameterValues(unittest.TestCase):
         self.assertIsInstance(processed_add, pybamm.Addition)
         self.assertIsInstance(processed_add.children[0], pybamm.InputParameter)
         self.assertIsInstance(processed_add.children[1], pybamm.Scalar)
-        self.assertEqual(processed_add.evaluate(params={"a": 4}), 7)
+        self.assertEqual(processed_add.evaluate(inputs={"a": 4}), 7)
 
     def test_process_function_parameter(self):
         parameter_values = pybamm.ParameterValues(
@@ -302,6 +302,7 @@ class TestParameterValues(unittest.TestCase):
                 "a": 3,
                 "func": pybamm.load_function("process_symbol_test_function.py"),
                 "const": 254,
+                "float_func": lambda x: 42,
             }
         )
         a = pybamm.InputParameter("a")
@@ -309,7 +310,7 @@ class TestParameterValues(unittest.TestCase):
         # process function
         func = pybamm.FunctionParameter("func", a)
         processed_func = parameter_values.process_symbol(func)
-        self.assertEqual(processed_func.evaluate(params={"a": 3}), 369)
+        self.assertEqual(processed_func.evaluate(inputs={"a": 3}), 369)
 
         # process constant function
         const = pybamm.FunctionParameter("const", a)
@@ -320,14 +321,19 @@ class TestParameterValues(unittest.TestCase):
         # process differentiated function parameter
         diff_func = func.diff(a)
         processed_diff_func = parameter_values.process_symbol(diff_func)
-        self.assertEqual(processed_diff_func.evaluate(params={"a": 3}), 123)
+        self.assertEqual(processed_diff_func.evaluate(inputs={"a": 3}), 123)
+
+        # function parameter that returns a python float
+        func = pybamm.FunctionParameter("float_func", a)
+        processed_func = parameter_values.process_symbol(func)
+        self.assertEqual(processed_func.evaluate(), 42)
 
         # function itself as input (different to the variable being an input)
         parameter_values = pybamm.ParameterValues({"func": "[input]"})
         a = pybamm.Scalar(3)
         func = pybamm.FunctionParameter("func", a)
         processed_func = parameter_values.process_symbol(func)
-        self.assertEqual(processed_func.evaluate(params={"func": 13}), 13)
+        self.assertEqual(processed_func.evaluate(inputs={"func": 13}), 13)
 
     def test_process_inline_function_parameters(self):
         def D(c):
@@ -339,12 +345,12 @@ class TestParameterValues(unittest.TestCase):
         func = pybamm.FunctionParameter("Diffusivity", a)
 
         processed_func = parameter_values.process_symbol(func)
-        self.assertEqual(processed_func.evaluate(params={"a": 3}), 9)
+        self.assertEqual(processed_func.evaluate(inputs={"a": 3}), 9)
 
         # process differentiated function parameter
         diff_func = func.diff(a)
         processed_diff_func = parameter_values.process_symbol(diff_func)
-        self.assertEqual(processed_diff_func.evaluate(params={"a": 3}), 6)
+        self.assertEqual(processed_diff_func.evaluate(inputs={"a": 3}), 6)
 
     def test_multi_var_function_with_parameters(self):
         def D(a, b):
@@ -411,8 +417,8 @@ class TestParameterValues(unittest.TestCase):
         processed_func = parameter_values.process_symbol(func)
         processed_interp = parameter_values.process_symbol(interp)
         np.testing.assert_array_almost_equal(
-            processed_func.evaluate(params={"a": 0.6}),
-            processed_interp.evaluate(params={"a": 0.6}),
+            processed_func.evaluate(inputs={"a": 0.6}),
+            processed_interp.evaluate(inputs={"a": 0.6}),
             decimal=4,
         )
 
@@ -422,8 +428,8 @@ class TestParameterValues(unittest.TestCase):
         processed_diff_func = parameter_values.process_symbol(diff_func)
         processed_diff_interp = parameter_values.process_symbol(diff_interp)
         np.testing.assert_array_almost_equal(
-            processed_diff_func.evaluate(params={"a": 0.6}),
-            processed_diff_interp.evaluate(params={"a": 0.6}),
+            processed_diff_func.evaluate(inputs={"a": 0.6}),
+            processed_diff_interp.evaluate(inputs={"a": 0.6}),
             decimal=2,
         )
 
