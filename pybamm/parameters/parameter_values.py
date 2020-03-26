@@ -336,7 +336,8 @@ class ParameterValues:
         Raises
         ------
         :class:`pybamm.ModelError`
-            If an empty model is passed (`model.rhs = {}` and `model.algebraic={}`)
+            If an empty model is passed (`model.rhs = {}` and `model.algebraic = {}` and
+            `model.variables = {}`)
 
         """
         pybamm.logger.info(
@@ -352,7 +353,11 @@ class ParameterValues:
             # create a blank model of the same class
             model = unprocessed_model.new_copy()
 
-        if len(unprocessed_model.rhs) == 0 and len(unprocessed_model.algebraic) == 0:
+        if (
+            len(unprocessed_model.rhs) == 0
+            and len(unprocessed_model.algebraic) == 0
+            and len(unprocessed_model.variables) == 0
+        ):
             raise pybamm.ModelError("Cannot process parameters for empty model")
 
         for variable, equation in model.rhs.items():
@@ -524,6 +529,9 @@ class ParameterValues:
                 # return differentiated function
                 new_diff_variable = self.process_symbol(symbol.diff_variable)
                 function_out = function.diff(new_diff_variable)
+            # Convert possible float output to a pybamm scalar
+            if isinstance(function_out, numbers.Number):
+                return pybamm.Scalar(function_out)
             # Process again just to be sure
             return self.process_symbol(function_out)
 

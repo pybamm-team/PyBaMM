@@ -41,11 +41,12 @@ class TestScikitsSolvers(unittest.TestCase):
             y0 = np.array([0.0, 1.0])
             terminate_events_eval = []
             timescale_eval = 1
+            convert_to_format = "python"
 
-            def residuals_eval(self, t, y, ydot):
+            def residuals_eval(self, t, y, ydot, inputs):
                 return np.array([0.5 * np.ones_like(y[0]) - ydot[0], 2 * y[0] - y[1]])
 
-            def jacobian_eval(self, t, y):
+            def jacobian_eval(self, t, y, inputs):
                 return np.array([[0.0, 0.0], [2.0, -1.0]])
 
         model = Model()
@@ -89,13 +90,14 @@ class TestScikitsSolvers(unittest.TestCase):
             y0 = np.array([0.0, 0.0])
             terminate_events_eval = []
             timescale_eval = 1
+            convert_to_format = "python"
 
-            def residuals_eval(self, t, y, ydot):
+            def residuals_eval(self, t, y, ydot, inputs):
                 return np.array(
                     [0.5 * np.ones_like(y[0]) - 4 * ydot[0], 2.0 * y[0] - y[1]]
                 )
 
-            def jacobian_eval(self, t, y):
+            def jacobian_eval(self, t, y, inputs):
                 return np.array([[0.0, 0.0], [2.0, -1.0]])
 
         model = Model()
@@ -711,7 +713,6 @@ class TestScikitsSolvers(unittest.TestCase):
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
-
     if "-v" in sys.argv:
         debug = True
         pybamm.set_logging_level("DEBUG")

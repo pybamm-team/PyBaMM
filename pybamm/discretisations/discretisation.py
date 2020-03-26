@@ -113,14 +113,19 @@ class Discretisation(object):
         Raises
         ------
         :class:`pybamm.ModelError`
-            If an empty model is passed (`model.rhs = {}` and `model.algebraic={}`)
+            If an empty model is passed (`model.rhs = {}` and `model.algebraic = {}` and
+            `model.variables = {}`)
 
         """
 
         pybamm.logger.info("Start discretising {}".format(model.name))
 
         # Make sure model isn't empty
-        if len(model.rhs) == 0 and len(model.algebraic) == 0:
+        if (
+            len(model.rhs) == 0
+            and len(model.algebraic) == 0
+            and len(model.variables) == 0
+        ):
             raise pybamm.ModelError("Cannot discretise empty model")
         # Check well-posedness to avoid obscure errors
         model.check_well_posedness()
@@ -616,12 +621,16 @@ class Discretisation(object):
             mass_algebraic = csr_matrix((mass_algebraic_size, mass_algebraic_size))
             mass_list.append(mass_algebraic)
 
-        # Create block diagonal (sparse) mass matrix and inverse (if model has odes)
-        mass_matrix = pybamm.Matrix(block_diag(mass_list, format="csr"))
-        if model.rhs.keys():
-            mass_matrix_inv = pybamm.Matrix(block_diag(mass_inv_list, format="csr"))
+        # Create block diagonal (sparse) mass matrix (if model is not empty)
+        # and inverse (if model has odes)
+        if len(model.rhs) + len(model.algebraic) > 0:
+            mass_matrix = pybamm.Matrix(block_diag(mass_list, format="csr"))
+            if len(model.rhs) > 0:
+                mass_matrix_inv = pybamm.Matrix(block_diag(mass_inv_list, format="csr"))
+            else:
+                mass_matrix_inv = None
         else:
-            mass_matrix_inv = None
+            mass_matrix, mass_matrix_inv = None, None
 
         return mass_matrix, mass_matrix_inv
 
@@ -1019,18 +1028,20 @@ class Discretisation(object):
         # Individual
         for var, eqn in model.initial_conditions.items():
             assert isinstance(
-                eqn.evaluate(t=0, u="shape test"), np.ndarray
+                eqn.evaluate(t=0, inputs="shape test"), np.ndarray
             ), pybamm.ModelError(
                 """
                 initial_conditions must be numpy array after discretisation but they are
                 {} for variable '{}'.
                 """.format(
-                    type(eqn.evaluate(t=0, u="shape test")), var
+                    type(eqn.evaluate(t=0, inputs="shape test")), var
                 )
             )
         # Concatenated
         assert (
-            type(model.concatenated_initial_conditions.evaluate(t=0, u="shape test"))
+            type(
+                model.concatenated_initial_conditions.evaluate(t=0, inputs="shape test")
+            )
             is np.ndarray
         ), pybamm.ModelError(
             """

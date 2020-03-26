@@ -172,7 +172,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
         symbol_str = "t"
 
     elif isinstance(symbol, pybamm.InputParameter):
-        symbol_str = "u['{}']".format(symbol.name)
+        symbol_str = "inputs['{}']".format(symbol.name)
 
     else:
         raise NotImplementedError(
@@ -269,7 +269,7 @@ class EvaluatorPython:
             self._result_var, "return" + self._result_var, "eval"
         )
 
-    def evaluate(self, t=None, y=None, u=None, known_evals=None):
+    def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
         """
         Acts as a drop-in replacement for :func:`pybamm.Symbol.evaluate`
         """
