@@ -130,10 +130,10 @@ class BaseSolver(object):
             )
 
         inputs = inputs or {}
-        y0 = model.concatenated_initial_conditions.evaluate(0, None, params=inputs)
+        y0 = model.concatenated_initial_conditions.evaluate(0, None, inputs=inputs)
 
         # Set model timescale
-        model.timescale_eval = model.timescale.evaluate(params=inputs)
+        model.timescale_eval = model.timescale.evaluate(inputs=inputs)
 
         if self.ode_solver is True:
             self.root_method = None
@@ -164,11 +164,11 @@ class BaseSolver(object):
             # Convert model attributes to casadi
             t_casadi = casadi.MX.sym("t")
             y_diff = casadi.MX.sym(
-                "y_diff", len(model.concatenated_rhs.evaluate(0, y0, params=inputs))
+                "y_diff", len(model.concatenated_rhs.evaluate(0, y0, inputs=inputs))
             )
             y_alg = casadi.MX.sym(
                 "y_alg",
-                len(model.concatenated_algebraic.evaluate(0, y0, params=inputs)),
+                len(model.concatenated_algebraic.evaluate(0, y0, inputs=inputs)),
             )
             y_casadi = casadi.vertcat(y_diff, y_alg)
             p_casadi = {}
@@ -211,7 +211,7 @@ class BaseSolver(object):
             else:
                 # Process with CasADi
                 report(f"Converting {name} to CasADi")
-                func = func.to_casadi(t_casadi, y_casadi, params=p_casadi)
+                func = func.to_casadi(t_casadi, y_casadi, inputs=p_casadi)
                 if use_jacobian:
                     report(f"Calculating jacobian for {name} using CasADi")
                     jac_casadi = casadi.jacobian(func, y_casadi)
@@ -545,7 +545,7 @@ class BaseSolver(object):
 
         # Calculate discontinuities
         discontinuities = [
-            event.expression.evaluate(params=inputs)
+            event.expression.evaluate(inputs=inputs)
             for event in model.discontinuity_events_eval
         ]
 
@@ -797,7 +797,7 @@ class BaseSolver(object):
                         event.expression.evaluate(
                             solution.t_event,
                             solution.y_event,
-                            params={k: v[-1] for k, v in solution.inputs.items()},
+                            inputs={k: v[-1] for k, v in solution.inputs.items()},
                         )
                     )
             termination_event = min(final_event_values, key=final_event_values.get)
@@ -813,10 +813,8 @@ class SolverCallable:
         self._function = function
         if isinstance(function, casadi.Function):
             self.form = "casadi"
-            # self.inputs = casadi.DM()
         else:
             self.form = "python"
-            # self.inputs = {}
         self.name = name
         self.model = model
         self.timescale = self.model.timescale_eval
@@ -842,7 +840,7 @@ class SolverCallable:
                 # keep jacobians sparse
                 return states_eval
         else:
-            return self._function(t, y, params=inputs, known_evals={})[0]
+            return self._function(t, y, inputs=inputs, known_evals={})[0]
 
 
 class Residuals(SolverCallable):

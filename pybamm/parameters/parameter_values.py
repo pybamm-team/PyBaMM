@@ -529,6 +529,9 @@ class ParameterValues:
                 # return differentiated function
                 new_diff_variable = self.process_symbol(symbol.diff_variable)
                 function_out = function.diff(new_diff_variable)
+            # Convert possible float output to a pybamm scalar
+            if isinstance(function_out, numbers.Number):
+                return pybamm.Scalar(function_out)
             # Process again just to be sure
             return self.process_symbol(function_out)
 

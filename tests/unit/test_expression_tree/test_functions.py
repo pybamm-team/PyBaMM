@@ -130,13 +130,13 @@ class TestSpecificFunctions(unittest.TestCase):
         a = pybamm.InputParameter("a")
         fun = pybamm.arcsinh(a)
         self.assertIsInstance(fun, pybamm.Arcsinh)
-        self.assertEqual(fun.evaluate(params={"a": 3}), np.arcsinh(3))
+        self.assertEqual(fun.evaluate(inputs={"a": 3}), np.arcsinh(3))
         h = 0.0000001
         self.assertAlmostEqual(
-            fun.diff(a).evaluate(params={"a": 3}),
+            fun.diff(a).evaluate(inputs={"a": 3}),
             (
                 pybamm.arcsinh(pybamm.Scalar(3 + h)).evaluate()
-                - fun.evaluate(params={"a": 3})
+                - fun.evaluate(inputs={"a": 3})
             )
             / h,
             places=5,
@@ -147,13 +147,13 @@ class TestSpecificFunctions(unittest.TestCase):
         fun = pybamm.cos(a)
         self.assertIsInstance(fun, pybamm.Cos)
         self.assertEqual(fun.children[0].id, a.id)
-        self.assertEqual(fun.evaluate(params={"a": 3}), np.cos(3))
+        self.assertEqual(fun.evaluate(inputs={"a": 3}), np.cos(3))
         h = 0.0000001
         self.assertAlmostEqual(
-            fun.diff(a).evaluate(params={"a": 3}),
+            fun.diff(a).evaluate(inputs={"a": 3}),
             (
                 pybamm.cos(pybamm.Scalar(3 + h)).evaluate()
-                - fun.evaluate(params={"a": 3})
+                - fun.evaluate(inputs={"a": 3})
             )
             / h,
             places=5,
@@ -169,13 +169,13 @@ class TestSpecificFunctions(unittest.TestCase):
         fun = pybamm.cosh(a)
         self.assertIsInstance(fun, pybamm.Cosh)
         self.assertEqual(fun.children[0].id, a.id)
-        self.assertEqual(fun.evaluate(params={"a": 3}), np.cosh(3))
+        self.assertEqual(fun.evaluate(inputs={"a": 3}), np.cosh(3))
         h = 0.0000001
         self.assertAlmostEqual(
-            fun.diff(a).evaluate(params={"a": 3}),
+            fun.diff(a).evaluate(inputs={"a": 3}),
             (
                 pybamm.cosh(pybamm.Scalar(3 + h)).evaluate()
-                - fun.evaluate(params={"a": 3})
+                - fun.evaluate(inputs={"a": 3})
             )
             / h,
             places=5,
@@ -186,13 +186,13 @@ class TestSpecificFunctions(unittest.TestCase):
         fun = pybamm.exp(a)
         self.assertIsInstance(fun, pybamm.Exponential)
         self.assertEqual(fun.children[0].id, a.id)
-        self.assertEqual(fun.evaluate(params={"a": 3}), np.exp(3))
+        self.assertEqual(fun.evaluate(inputs={"a": 3}), np.exp(3))
         h = 0.0000001
         self.assertAlmostEqual(
-            fun.diff(a).evaluate(params={"a": 3}),
+            fun.diff(a).evaluate(inputs={"a": 3}),
             (
                 pybamm.exp(pybamm.Scalar(3 + h)).evaluate()
-                - fun.evaluate(params={"a": 3})
+                - fun.evaluate(inputs={"a": 3})
             )
             / h,
             places=5,
@@ -201,13 +201,13 @@ class TestSpecificFunctions(unittest.TestCase):
     def test_log(self):
         a = pybamm.InputParameter("a")
         fun = pybamm.log(a)
-        self.assertEqual(fun.evaluate(params={"a": 3}), np.log(3))
+        self.assertEqual(fun.evaluate(inputs={"a": 3}), np.log(3))
         h = 0.0000001
         self.assertAlmostEqual(
-            fun.diff(a).evaluate(params={"a": 3}),
+            fun.diff(a).evaluate(inputs={"a": 3}),
             (
                 pybamm.log(pybamm.Scalar(3 + h)).evaluate()
-                - fun.evaluate(params={"a": 3})
+                - fun.evaluate(inputs={"a": 3})
             )
             / h,
             places=5,
@@ -215,13 +215,13 @@ class TestSpecificFunctions(unittest.TestCase):
 
         # Base 10
         fun = pybamm.log10(a)
-        self.assertEqual(fun.evaluate(params={"a": 3}), np.log10(3))
+        self.assertEqual(fun.evaluate(inputs={"a": 3}), np.log10(3))
         h = 0.0000001
         self.assertAlmostEqual(
-            fun.diff(a).evaluate(params={"a": 3}),
+            fun.diff(a).evaluate(inputs={"a": 3}),
             (
                 pybamm.log10(pybamm.Scalar(3 + h)).evaluate()
-                - fun.evaluate(params={"a": 3})
+                - fun.evaluate(inputs={"a": 3})
             )
             / h,
             places=5,
@@ -246,13 +246,13 @@ class TestSpecificFunctions(unittest.TestCase):
         fun = pybamm.sin(a)
         self.assertIsInstance(fun, pybamm.Sin)
         self.assertEqual(fun.children[0].id, a.id)
-        self.assertEqual(fun.evaluate(params={"a": 3}), np.sin(3))
+        self.assertEqual(fun.evaluate(inputs={"a": 3}), np.sin(3))
         h = 0.0000001
         self.assertAlmostEqual(
-            fun.diff(a).evaluate(params={"a": 3}),
+            fun.diff(a).evaluate(inputs={"a": 3}),
             (
                 pybamm.sin(pybamm.Scalar(3 + h)).evaluate()
-                - fun.evaluate(params={"a": 3})
+                - fun.evaluate(inputs={"a": 3})
             )
             / h,
             places=5,
@@ -263,13 +263,13 @@ class TestSpecificFunctions(unittest.TestCase):
         fun = pybamm.sinh(a)
         self.assertIsInstance(fun, pybamm.Sinh)
         self.assertEqual(fun.children[0].id, a.id)
-        self.assertEqual(fun.evaluate(params={"a": 3}), np.sinh(3))
+        self.assertEqual(fun.evaluate(inputs={"a": 3}), np.sinh(3))
         h = 0.0000001
         self.assertAlmostEqual(
-            fun.diff(a).evaluate(params={"a": 3}),
+            fun.diff(a).evaluate(inputs={"a": 3}),
             (
                 pybamm.sinh(pybamm.Scalar(3 + h)).evaluate()
-                - fun.evaluate(params={"a": 3})
+                - fun.evaluate(inputs={"a": 3})
             )
             / h,
             places=5,
@@ -279,13 +279,13 @@ class TestSpecificFunctions(unittest.TestCase):
         a = pybamm.InputParameter("a")
         fun = pybamm.sqrt(a)
         self.assertIsInstance(fun, pybamm.Sqrt)
-        self.assertEqual(fun.evaluate(params={"a": 3}), np.sqrt(3))
+        self.assertEqual(fun.evaluate(inputs={"a": 3}), np.sqrt(3))
         h = 0.0000001
         self.assertAlmostEqual(
-            fun.diff(a).evaluate(params={"a": 3}),
+            fun.diff(a).evaluate(inputs={"a": 3}),
             (
                 pybamm.sqrt(pybamm.Scalar(3 + h)).evaluate()
-                - fun.evaluate(params={"a": 3})
+                - fun.evaluate(inputs={"a": 3})
             )
             / h,
             places=5,
@@ -294,13 +294,13 @@ class TestSpecificFunctions(unittest.TestCase):
     def test_tanh(self):
         a = pybamm.InputParameter("a")
         fun = pybamm.tanh(a)
-        self.assertEqual(fun.evaluate(params={"a": 3}), np.tanh(3))
+        self.assertEqual(fun.evaluate(inputs={"a": 3}), np.tanh(3))
         h = 0.0000001
         self.assertAlmostEqual(
-            fun.diff(a).evaluate(params={"a": 3}),
+            fun.diff(a).evaluate(inputs={"a": 3}),
             (
                 pybamm.tanh(pybamm.Scalar(3 + h)).evaluate()
-                - fun.evaluate(params={"a": 3})
+                - fun.evaluate(inputs={"a": 3})
             )
             / h,
             places=5,
