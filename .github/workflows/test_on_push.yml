@@ -32,6 +32,7 @@ jobs:
 
     env:
       LD_LIBRARY_PATH: 'SuiteSparse-5.6.0/lib:sundials/lib'
+      DYLD_LIBRARY_PATH: 'SuiteSparse-5.6.0/lib:sundials/lib'
       
     steps:
     - uses: actions/checkout@v2
