@@ -19,6 +19,8 @@
 ## Bug fixes
 
 -   Fixed bug raised if function returns a scalar ([#919](https://github.com/pybamm-team/PyBaMM/pull/919))
+-   Fixed event handling in `ScipySolver` ([#905](https://github.com/pybamm-team/PyBaMM/pull/905))
+-   Made input handling clearer in solvers ([#905](https://github.com/pybamm-team/PyBaMM/pull/905))
 -   Updated Getting started notebook 2 ([#903](https://github.com/pybamm-team/PyBaMM/pull/903))
 -   Reformatted external circuit submodels ([#879](https://github.com/pybamm-team/PyBaMM/pull/879))
 -   Some bug fixes to generalize specifying models that aren't battery models, see [#846](https://github.com/pybamm-team/PyBaMM/issues/846)
@@ -27,6 +29,7 @@
 
 ## Breaking changes
 
+-   Changed keyword argument `u` for inputs (when evaluating an object) to `inputs` ([#905](https://github.com/pybamm-team/PyBaMM/pull/905))
 -   Removed "set external temperature" and "set external potential" options. Use "external submodels" option instead ([#862](https://github.com/pybamm-team/PyBaMM/pull/862))
 
 # [v0.2.0](https://github.com/pybamm-team/PyBaMM/tree/v0.2.0) - 2020-02-26

@@ -79,9 +79,11 @@ class Variable(VariableBase):
         if variable.id == self.id:
             return pybamm.Scalar(1)
         elif variable.id == pybamm.t.id:
-            return pybamm.VariableDot(self.name + "'",
-                                      domain=self.domain,
-                                      auxiliary_domains=self.auxiliary_domains)
+            return pybamm.VariableDot(
+                self.name + "'",
+                domain=self.domain,
+                auxiliary_domains=self.auxiliary_domains,
+            )
         else:
             return pybamm.Scalar(0)
 
@@ -123,9 +125,11 @@ class VariableDot(VariableBase):
         we remove this here
 
         """
-        return Variable(self.name[:-1],
-                        domain=self._domain,
-                        auxiliary_domains=self._auxiliary_domains)
+        return Variable(
+            self.name[:-1],
+            domain=self._domain,
+            auxiliary_domains=self._auxiliary_domains,
+        )
 
     def diff(self, variable):
         if variable.id == self.id:
@@ -172,18 +176,18 @@ class ExternalVariable(Variable):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
         return np.nan * np.ones((self.size, 1))
 
-    def _base_evaluate(self, t=None, y=None, y_dot=None, u=None):
-        # u should be a dictionary
+    def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
+        # inputs should be a dictionary
         # convert 'None' to empty dictionary for more informative error
-        if u is None:
-            u = {}
-        if not isinstance(u, dict):
+        if inputs is None:
+            inputs = {}
+        if not isinstance(inputs, dict):
             # if the special input "shape test" is passed, just return 1
-            if u == "shape test":
+            if inputs == "shape test":
                 return self.evaluate_for_shape()
-            raise TypeError("inputs u should be a dictionary")
+            raise TypeError("inputs should be a dictionary")
         try:
-            out = u[self.name]
+            out = inputs[self.name]
             if isinstance(out, numbers.Number) or out.shape[0] == 1:
                 return out * np.ones((self.size, 1))
             elif out.shape[0] != self.size:
@@ -203,6 +207,7 @@ class ExternalVariable(Variable):
             return pybamm.Scalar(1)
         elif variable.id == pybamm.t.id:
             raise pybamm.ModelError(
-                "cannot take time derivative of an external variable")
+                "cannot take time derivative of an external variable"
+            )
         else:
             return pybamm.Scalar(0)

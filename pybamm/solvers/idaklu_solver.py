@@ -1,6 +1,7 @@
 #
 # Solver class using sundials with the KLU sparse linear solver
 #
+import casadi
 import pybamm
 import numpy as np
 import scipy.sparse as sparse
@@ -146,6 +147,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
         t_eval : numeric type
             The times at which to compute the solution
         """
+        if model.rhs_eval.form == "casadi":
+            inputs = casadi.vertcat(*[x for x in inputs.values()])
 
         if model.jacobian_eval is None:
             raise pybamm.SolverError("KLU requires the Jacobian to be provided")
@@ -161,17 +164,17 @@ class IDAKLUSolver(pybamm.BaseSolver):
         mass_matrix = model.mass_matrix.entries
 
         if model.jacobian_eval:
-            jac_y0_t0 = model.jacobian_eval(t_eval[0], y0)
+            jac_y0_t0 = model.jacobian_eval(t_eval[0], y0, inputs)
             if sparse.issparse(jac_y0_t0):
 
                 def jacfn(t, y, cj):
-                    j = model.jacobian_eval(t, y) - cj * mass_matrix
+                    j = model.jacobian_eval(t, y, inputs) - cj * mass_matrix
                     return j
 
             else:
 
                 def jacfn(t, y, cj):
-                    jac_eval = model.jacobian_eval(t, y) - cj * mass_matrix
+                    jac_eval = model.jacobian_eval(t, y, inputs) - cj * mass_matrix
                     return sparse.csr_matrix(jac_eval)
 
         class SundialsJacobian:
@@ -207,12 +210,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         def rootfn(t, y):
             return_root = np.ones((num_of_events,))
-            return_root[:] = [event(t, y) for event in model.terminate_events_eval]
+            return_root[:] = [
+                event(t, y, inputs) for event in model.terminate_events_eval
+            ]
 
             return return_root
 
         # get ids of rhs and algebraic variables
-        rhs_ids = np.ones(model.rhs_eval(0, y0).shape)
+        rhs_ids = np.ones(model.rhs_eval(0, y0, inputs).shape)
         alg_ids = np.zeros(len(y0) - len(rhs_ids))
         ids = np.concatenate((rhs_ids, alg_ids))
 
@@ -221,7 +226,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             t_eval,
             y0,
             ydot0,
-            model.residuals_eval,
+            lambda t, y, ydot: model.residuals_eval(t, y, ydot, inputs),
             jac_class.jac_res,
             jac_class.get_jac_data,
             jac_class.get_jac_row_vals,
