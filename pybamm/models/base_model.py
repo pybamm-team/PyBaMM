@@ -399,12 +399,16 @@ class BaseModel(object):
                 if isinstance(node, pybamm.VariableDot):
                     raise pybamm.ModelError(
                         "time derivative of variable found ({}) in rhs equation {}"
-                        .format(node, key)
+                        .format(
+                            node, key
+                        )
                     )
                 if isinstance(node, pybamm.StateVectorDot):
                     raise pybamm.ModelError(
                         "time derivative of state vector found ({}) in rhs equation {}"
-                        .format(node, key)
+                        .format(
+                            node, key
+                        )
                     )
 
         # Check that no variable time derivatives exist in the algebraic equations
@@ -441,8 +445,11 @@ class BaseModel(object):
                 [x.id for x in eqn.pre_order() if isinstance(x, pybamm.Variable)]
             )
             vars_in_eqns.update(
-                [x.get_variable().id for x in eqn.pre_order()
-                 if isinstance(x, pybamm.VariableDot)]
+                [
+                    x.get_variable().id
+                    for x in eqn.pre_order()
+                    if isinstance(x, pybamm.VariableDot)
+                ]
             )
         for var, eqn in self.algebraic.items():
             vars_in_algebraic_keys.update(
@@ -452,8 +459,11 @@ class BaseModel(object):
                 [x.id for x in eqn.pre_order() if isinstance(x, pybamm.Variable)]
             )
             vars_in_eqns.update(
-                [x.get_variable().id for x in eqn.pre_order()
-                 if isinstance(x, pybamm.VariableDot)]
+                [
+                    x.get_variable().id
+                    for x in eqn.pre_order()
+                    if isinstance(x, pybamm.VariableDot)
+                ]
             )
         for var, side_eqn in self.boundary_conditions.items():
             for side, (eqn, typ) in side_eqn.items():
@@ -461,8 +471,11 @@ class BaseModel(object):
                     [x.id for x in eqn.pre_order() if isinstance(x, pybamm.Variable)]
                 )
                 vars_in_eqns.update(
-                    [x.get_variable().id for x in eqn.pre_order()
-                     if isinstance(x, pybamm.VariableDot)]
+                    [
+                        x.get_variable().id
+                        for x in eqn.pre_order()
+                        if isinstance(x, pybamm.VariableDot)
+                    ]
                 )
         # If any keys are repeated between rhs and algebraic then the model is
         # overdetermined

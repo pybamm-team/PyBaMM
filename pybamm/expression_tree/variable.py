@@ -79,9 +79,11 @@ class Variable(VariableBase):
         if variable.id == self.id:
             return pybamm.Scalar(1)
         elif variable.id == pybamm.t.id:
-            return pybamm.VariableDot(self.name + "'",
-                                      domain=self.domain,
-                                      auxiliary_domains=self.auxiliary_domains)
+            return pybamm.VariableDot(
+                self.name + "'",
+                domain=self.domain,
+                auxiliary_domains=self.auxiliary_domains,
+            )
         else:
             return pybamm.Scalar(0)
 
@@ -123,9 +125,11 @@ class VariableDot(VariableBase):
         we remove this here
 
         """
-        return Variable(self.name[:-1],
-                        domain=self._domain,
-                        auxiliary_domains=self._auxiliary_domains)
+        return Variable(
+            self.name[:-1],
+            domain=self._domain,
+            auxiliary_domains=self._auxiliary_domains,
+        )
 
     def diff(self, variable):
         if variable.id == self.id:
@@ -203,6 +207,7 @@ class ExternalVariable(Variable):
             return pybamm.Scalar(1)
         elif variable.id == pybamm.t.id:
             raise pybamm.ModelError(
-                "cannot take time derivative of an external variable")
+                "cannot take time derivative of an external variable"
+            )
         else:
             return pybamm.Scalar(0)

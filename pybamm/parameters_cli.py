@@ -33,7 +33,7 @@ def get_parser(description):
     """
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument(
-        "parameter_dir", type=str, help="Name of the parameter directory",
+        "parameter_dir", type=str, help="Name of the parameter directory"
     )
     parser.add_argument("battery_type", choices=["lithium-ion", "lead-acid"])
     parser.add_argument(

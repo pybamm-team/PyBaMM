@@ -164,8 +164,9 @@ class Function(pybamm.Symbol):
                 known_evals[self.id] = self._function_evaluate(evaluated_children)
             return known_evals[self.id], known_evals
         else:
-            evaluated_children = [child.evaluate(t, y, y_dot, u)
-                                  for child in self.children]
+            evaluated_children = [
+                child.evaluate(t, y, y_dot, u) for child in self.children
+            ]
             return self._function_evaluate(evaluated_children)
 
     def _evaluate_for_shape(self):

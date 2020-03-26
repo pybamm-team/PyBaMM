@@ -4,7 +4,7 @@ import pybamm
 def graphite_electrolyte_reaction_rate_PeymanMPM(T, T_inf, E_r, R_g):
     """
     Reaction rate for Butler-Volmer reactions between graphite and LiPF6 in EC:DMC.
-    Check the unit of Reaction rate constant k0 is from Peyman MPM 
+    Check the unit of Reaction rate constant k0 is from Peyman MPM.
 
     References
     ----------

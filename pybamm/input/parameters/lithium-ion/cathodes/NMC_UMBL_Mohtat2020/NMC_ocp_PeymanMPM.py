@@ -3,8 +3,8 @@ import pybamm
 
 def NMC_ocp_PeymanMPM(sto):
     """
-    Nickel Managanese Cobalt Oxide (NMC) Open Circuit Potential (OCP) as a a function of the
-    stochiometry. The fit is taken from Peyman MPM.  
+    Nickel Managanese Cobalt Oxide (NMC) Open Circuit Potential (OCP) as a
+    function of the stochiometry. The fit is taken from Peyman MPM.
 
     References
     ----------
@@ -30,9 +30,9 @@ def NMC_ocp_PeymanMPM(sto):
     return u_eq
 
 
-if __name__ == "__main__":
-    import matplotlib.pyplot as plt
+# if __name__ == "__main__":
+#     import matplotlib.pyplot as plt
 
-    x = np.linspace(0, 1)
-    plt.plot(x, NMC_ocp_PeymanMPM(x))
-    plt.show()
+#     x = np.linspace(0, 1)
+#     plt.plot(x, NMC_ocp_PeymanMPM(x))
+#     plt.show()

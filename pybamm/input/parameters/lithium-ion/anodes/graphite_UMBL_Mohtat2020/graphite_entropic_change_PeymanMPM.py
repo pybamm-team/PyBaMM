@@ -1,6 +1,3 @@
-import autograd.numpy as np
-
-
 def graphite_entropic_change_PeymanMPM(sto, c_n_max):
     """
         Graphite entropic change in open circuit potential (OCP) at a temperature of
@@ -19,13 +16,13 @@ def graphite_entropic_change_PeymanMPM(sto, c_n_max):
     """
 
     du_dT = 10 ** (-3) * (
-        0.28 
-        - 1.56  * sto 
-        - 8.92  * sto ** (2)
+        0.28
+        - 1.56 * sto
+        - 8.92 * sto ** (2)
         + 57.21 * sto ** (3)
         - 110.7 * sto ** (4)
         + 90.71 * sto ** (5)
         - 27.14 * sto ** (6)
-    ) 
+    )
 
     return du_dT

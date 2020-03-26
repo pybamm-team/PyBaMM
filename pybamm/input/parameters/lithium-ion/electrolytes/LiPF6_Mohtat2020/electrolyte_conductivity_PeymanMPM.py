@@ -31,9 +31,7 @@ def electrolyte_conductivity_PeymanMPM(c_e, T, T_inf, E_k_e, R_g):
         Electrolyte conductivity
     """
 
-    sigma_e = (
-        1.3
-    )
+    sigma_e = 1.3
 
     arrhenius = pybamm.exp(E_k_e / R_g * (1 / T_inf - 1 / T))
 
