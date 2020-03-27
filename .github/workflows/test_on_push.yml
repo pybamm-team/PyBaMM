@@ -30,7 +30,11 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: [3.6, 3.7]
-      
+
+    env:
+      LD_LIBRARY_PATH: 'SuiteSparse-5.6.0/lib:sundials/lib'
+      DYLD_LIBRARY_PATH: 'SuiteSparse-5.6.0/lib:sundials/lib'
+
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
@@ -48,8 +52,8 @@ jobs:
       if: matrix.os == 'macos-latest'
       run: |
         brew update
-        brew install graphviz openssl readline
-        brew install gcc cmake openblas suitesparse
+        brew install graphviz
+        brew install openblas suitesparse
         
     - name: Install Windows system dependencies
       if: matrix.os == 'windows-latest'
@@ -70,26 +74,17 @@ jobs:
         python setup.py install_klu -f
       
     - name: Run unit tests
-      env:
-        LD_LIBRARY_PATH: 'SuiteSparse-5.6.0/lib:sundials/lib'
-        DYLD_LIBRARY_PATH: 'SuiteSparse-5.6.0/lib:sundials/lib'
       run: |
         python run-tests.py --unit --folder all
 
     - name: Install docs dependencies and run doctests
       if: matrix.os != 'windows-latest'
-      env:
-        LD_LIBRARY_PATH: 'SuiteSparse-5.6.0/lib:sundials/lib'
-        DYLD_LIBRARY_PATH: 'SuiteSparse-5.6.0/lib:sundials/lib'
       run: |
         pip install -e .[docs]
         python run-tests.py --doctest
     
     - name: Install dev python dependencies and run style and example tests
       if: matrix.os != 'windows-latest'
-      env:
-        LD_LIBRARY_PATH: 'SuiteSparse-5.6.0/lib:sundials/lib'
-        DYLD_LIBRARY_PATH: 'SuiteSparse-5.6.0/lib:sundials/lib'
       run: |
         pip install -e .[dev]
         python run-tests.py --examples
