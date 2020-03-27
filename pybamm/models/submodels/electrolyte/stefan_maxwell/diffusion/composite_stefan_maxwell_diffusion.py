@@ -73,12 +73,16 @@ class Composite(Full):
         }
 
     def _get_source_terms_leading_order(self, variables):
+        param = self.param
+        c_e_n = variables["Negative electrolyte concentration"]
+        c_e_p = variables["Positive electrolyte concentration"]
+
         return sum(
             pybamm.Concatenation(
-                reaction["Negative"]["s"]
+                (reaction["Negative"]["s"] - param.t_plus(c_e_n))
                 * variables["Leading-order " + reaction["Negative"]["aj"].lower()],
                 pybamm.FullBroadcast(0, "separator", "current collector"),
-                reaction["Positive"]["s"]
+                (reaction["Positive"]["s"] - param.t_plus(c_e_p))
                 * variables["Leading-order " + reaction["Positive"]["aj"].lower()],
             )
             / self.param.gamma_e
