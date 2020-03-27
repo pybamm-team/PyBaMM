@@ -269,7 +269,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             }
         )
         if self.options["dimensionality"] == 1:
-            self.variables.update({"y": var.y, "y [m]": var.y * L_y})
+            self.variables.update({"z": var.z, "z [m]": var.z * L_z})
         elif self.options["dimensionality"] == 2:
             self.variables.update(
                 {"y": var.y, "y [m]": var.y * L_y, "z": var.z, "z [m]": var.z * L_z}
