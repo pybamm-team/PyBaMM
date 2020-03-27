@@ -1,5 +1,5 @@
 #
-# Tests for LG M50 parameter set loads
+# Tests for Ecker parameter set
 #
 import pybamm
 import unittest
