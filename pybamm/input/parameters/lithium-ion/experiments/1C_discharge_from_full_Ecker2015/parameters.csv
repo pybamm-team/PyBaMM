@@ -3,7 +3,9 @@ Name [units],Value,Reference,Notes
 ,,,
 # Temperature
 Reference temperature [K],296.15,23C,
-Heat transfer coefficient [W.m-2.K-1],1, dummy value,
+Heat transfer coefficient [W.m-2.K-1],10, The paper does not consider thermal effects so a typical value is chosen,
+Ambient temperature [K], 298.15,,
+
 ,,,
 # Electrical
 Number of electrodes connected in parallel to make a cell,1,,
