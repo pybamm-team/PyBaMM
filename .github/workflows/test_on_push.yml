@@ -3,6 +3,10 @@ name: PyBaMM
 on:
   push:
 
+  # everyday at 3 am UTC
+  schedule:
+    - cron:  '* 3 * * *'
+
 jobs:
   
   style:
@@ -68,10 +72,10 @@ jobs:
       if: matrix.os != 'windows-latest'
       run: |
         pip install wget
-        python setup.py install_odes -f
         mkdir -p third-party/pybind11
         git clone https://github.com/pybind/pybind11.git third-party/pybind11
-        python setup.py install_klu -f
+        python setup.py install_all -f
+        source ~/.bashrc
       
     - name: Run unit tests
       run: |
