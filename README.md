@@ -61,8 +61,7 @@ For instructions on installing PyBaMM on Mac OS distributions, please see [here]
 
 ### Windows
 
-We recommend using Windows Subsystem for Linux to install PyBaMM on a Windows OS, for
-instructions please see [here](INSTALL-WINDOWS.md)
+For instructions on installing PyBaMM on Windows distributions, please see [here](INSTALL-WINDOWS.md)
 
 ## Citing PyBaMM
 
