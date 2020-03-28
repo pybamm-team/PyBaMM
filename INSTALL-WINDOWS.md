@@ -48,5 +48,5 @@ pip uninstall pybamm
 in your virtual environment.
 
 ## Installation using WSL
-Alternatively, even though it is not necessary, you may want to use the Windows Subsystem for Linux (WSL). You can find
+If you want to install the optional PyBaMM solvers, you have to use the Windows Subsystem for Linux (WSL). You can find
 the installation instructions [here](INSTALL-WINDOWS-WSL.md).
