@@ -398,13 +398,13 @@ class BaseModel(object):
             for node in eq.pre_order():
                 if isinstance(node, pybamm.VariableDot):
                     raise pybamm.ModelError(
-                        "time derivative of variable found ({}) in rhs equation {}"
-                        .format(node, key)
+                        "time derivative of variable found "
+                        "({}) in rhs equation {}".format(node, key)
                     )
                 if isinstance(node, pybamm.StateVectorDot):
                     raise pybamm.ModelError(
-                        "time derivative of state vector found ({}) in rhs equation {}"
-                        .format(node, key)
+                        "time derivative of state vector found "
+                        "({}) in rhs equation {}".format(node, key)
                     )
 
         # Check that no variable time derivatives exist in the algebraic equations
@@ -433,37 +433,43 @@ class BaseModel(object):
         # For equations we look through the whole expression tree.
         # "Variables" can be Concatenations so we also have to look in the whole
         # expression tree
+        unpacker = pybamm.SymbolUnpacker((pybamm.Variable, pybamm.VariableDot))
+
         for var, eqn in self.rhs.items():
+            # Find all variables and variabledot objects
+            vars_in_rhs_keys_dict = unpacker.unpack_symbol(var)
+            vars_in_eqns_dict = unpacker.unpack_symbol(eqn)
+
+            # Store ids only
+            # Look only for Variable (not VariableDot) in rhs keys
             vars_in_rhs_keys.update(
-                [x.id for x in var.pre_order() if isinstance(x, pybamm.Variable)]
+                [
+                    var_id
+                    for var_id, var in vars_in_rhs_keys_dict.items()
+                    if isinstance(var, pybamm.Variable)
+                ]
             )
-            vars_in_eqns.update(
-                [x.id for x in eqn.pre_order() if isinstance(x, pybamm.Variable)]
-            )
-            vars_in_eqns.update(
-                [x.get_variable().id for x in eqn.pre_order()
-                 if isinstance(x, pybamm.VariableDot)]
-            )
+            vars_in_eqns.update(vars_in_eqns_dict.keys())
         for var, eqn in self.algebraic.items():
+            # Find all variables and variabledot objects
+            vars_in_algebraic_keys_dict = unpacker.unpack_symbol(var)
+            vars_in_eqns_dict = unpacker.unpack_symbol(eqn)
+
+            # Store ids only
+            # Look only for Variable (not VariableDot) in algebraic keys
             vars_in_algebraic_keys.update(
-                [x.id for x in var.pre_order() if isinstance(x, pybamm.Variable)]
+                [
+                    var_id
+                    for var_id, var in vars_in_algebraic_keys_dict.items()
+                    if isinstance(var, pybamm.Variable)
+                ]
             )
-            vars_in_eqns.update(
-                [x.id for x in eqn.pre_order() if isinstance(x, pybamm.Variable)]
-            )
-            vars_in_eqns.update(
-                [x.get_variable().id for x in eqn.pre_order()
-                 if isinstance(x, pybamm.VariableDot)]
-            )
+            vars_in_eqns.update(vars_in_eqns_dict.keys())
         for var, side_eqn in self.boundary_conditions.items():
             for side, (eqn, typ) in side_eqn.items():
-                vars_in_eqns.update(
-                    [x.id for x in eqn.pre_order() if isinstance(x, pybamm.Variable)]
-                )
-                vars_in_eqns.update(
-                    [x.get_variable().id for x in eqn.pre_order()
-                     if isinstance(x, pybamm.VariableDot)]
-                )
+                vars_in_eqns_dict = unpacker.unpack_symbol(eqn)
+                vars_in_eqns.update(vars_in_eqns_dict.keys())
+
         # If any keys are repeated between rhs and algebraic then the model is
         # overdetermined
         if not set(vars_in_rhs_keys).isdisjoint(vars_in_algebraic_keys):
@@ -501,11 +507,12 @@ class BaseModel(object):
         equation
         """
         vars_in_bcs = set()
-        for var, side_eqn in self.boundary_conditions.items():
-            for eqn, _ in side_eqn.values():
-                vars_in_bcs.update(
-                    [x.id for x in eqn.pre_order() if isinstance(x, pybamm.Variable)]
-                )
+        unpacker = pybamm.SymbolUnpacker(pybamm.Variable)
+        for side_eqn in self.boundary_conditions.values():
+            all_vars = unpacker.unpack_list_of_symbols(
+                [eqn for eqn, _ in side_eqn.values()]
+            )
+            vars_in_bcs.update(all_vars.keys())
         if not post_discretisation:
             # After the model has been defined, each algebraic equation key should
             # appear in that algebraic equation, or in the boundary conditions
@@ -524,7 +531,7 @@ class BaseModel(object):
             # with the state vectors in the algebraic equations. Instead, we check
             # that each algebraic equation contains some StateVector
             for eqn in self.algebraic.values():
-                if not any(isinstance(x, pybamm.StateVector) for x in eqn.pre_order()):
+                if not eqn.has_symbol_of_classes(pybamm.StateVector):
                     raise pybamm.ModelError(
                         "each algebraic equation must contain at least one StateVector"
                     )
@@ -553,12 +560,8 @@ class BaseModel(object):
                     for x in symbol.pre_order()
                 ):
                     raise pybamm.ModelError(
-                        """
-                        no boundary condition given for
-                        variable '{}' with equation '{}'.
-                        """.format(
-                            var, eqn
-                        )
+                        "no boundary condition given for "
+                        "variable '{}' with equation '{}'.".format(var, eqn)
                     )
 
     def check_default_variables_dictionaries(self):
@@ -581,12 +584,9 @@ class BaseModel(object):
 
     def check_variables(self):
         # Create list of all Variable nodes that appear in the model's list of variables
-        all_vars = {}
-        for eqn in self.variables.values():
-            # Add all variables in the equation to the list of variables
-            all_vars.update(
-                {x.id: x for x in eqn.pre_order() if isinstance(x, pybamm.Variable)}
-            )
+        unpacker = pybamm.SymbolUnpacker(pybamm.Variable)
+        all_vars = unpacker.unpack_list_of_symbols(self.variables.values())
+
         var_ids_in_keys = set()
 
         model_and_external_variables = (

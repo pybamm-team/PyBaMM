@@ -101,6 +101,7 @@ from .expression_tree.operations.evaluate import (
 )
 from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
+from .expression_tree.operations.unpack_symbols import SymbolUnpacker
 
 #
 # Model classes

@@ -24,17 +24,19 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         super().__init__(param, domain)
         self.reactions = reactions
 
-    def _get_standard_potential_variables(self, phi_e, phi_e_av):
+    def _get_standard_potential_variables(self, phi_e_n, phi_e_s, phi_e_p):
         """
         A private function to obtain the standard variables which
         can be derived from the potential in the electrolyte.
 
         Parameters
         ----------
-        phi_e : :class:`pybamm.Symbol`
-            The potential in the electrolyte.
-        phi_e_av : :class:`pybamm.Symbol`
-            The cell-averaged potential in the electrolyte.
+        phi_e_n : :class:`pybamm.Symbol`
+            The electrolyte potential in the negative electrode.
+        phi_e_s : :class:`pybamm.Symbol`
+            The electrolyte potential in the separator.
+        phi_e_p : :class:`pybamm.Symbol`
+            The electrolyte potential in the positive electrode.
 
         Returns
         -------
@@ -45,8 +47,8 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
 
         param = self.param
         pot_scale = param.potential_scale
-        phi_e_n, phi_e_s, phi_e_p = phi_e.orphans
 
+        phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
         phi_e_n_av = pybamm.x_average(phi_e_n)
         phi_e_s_av = pybamm.x_average(phi_e_s)
         phi_e_p_av = pybamm.x_average(phi_e_p)
@@ -277,15 +279,15 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         phi_e_n = variables["Negative electrolyte potential"]
         phi_e_s = variables["Separator electrolyte potential"]
         phi_e_p = variables["Positive electrolyte potential"]
-        phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
-        phi_e_av = pybamm.x_average(phi_e)
 
         i_e_n = variables["Negative electrolyte current density"]
         i_e_s = variables["Separator electrolyte current density"]
         i_e_p = variables["Positive electrolyte current density"]
         i_e = pybamm.Concatenation(i_e_n, i_e_s, i_e_p)
 
-        variables.update(self._get_standard_potential_variables(phi_e, phi_e_av))
+        variables.update(
+            self._get_standard_potential_variables(phi_e_n, phi_e_s, phi_e_p)
+        )
         variables.update(self._get_standard_current_variables(i_e))
 
         return variables

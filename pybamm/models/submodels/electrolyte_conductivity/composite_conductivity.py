@@ -39,7 +39,10 @@ class Composite(BaseElectrolyteConductivity):
             c_e_av = variables["Leading-order x-averaged electrolyte concentration"]
 
         i_boundary_cc_0 = variables["Leading-order current collector current density"]
-        c_e = variables["Electrolyte concentration"]
+        c_e_n = variables["Negative electrolyte concentration"]
+        c_e_s = variables["Separator electrolyte concentration"]
+        c_e_p = variables["Positive electrolyte concentration"]
+
         delta_phi_n_av = variables[
             "X-averaged negative electrode surface potential difference"
         ]
@@ -52,8 +55,6 @@ class Composite(BaseElectrolyteConductivity):
         T_av_n = pybamm.PrimaryBroadcast(T_av, "negative electrode")
         T_av_s = pybamm.PrimaryBroadcast(T_av, "separator")
         T_av_p = pybamm.PrimaryBroadcast(T_av, "positive electrode")
-
-        c_e_n, c_e_s, c_e_p = c_e.orphans
 
         param = self.param
         l_n = param.l_n
@@ -129,9 +130,6 @@ class Composite(BaseElectrolyteConductivity):
             - i_boundary_cc_0 * (1 - l_p) * (param.C_e / param.gamma_e) / kappa_s_av
         )
 
-        phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
-        phi_e_av = pybamm.x_average(phi_e)
-
         # concentration overpotential
         eta_c_av = (
             chi_av
@@ -149,7 +147,9 @@ class Composite(BaseElectrolyteConductivity):
             + param.l_p / (3 * kappa_p_av)
         )
 
-        variables.update(self._get_standard_potential_variables(phi_e, phi_e_av))
+        variables.update(
+            self._get_standard_potential_variables(phi_e_n, phi_e_s, phi_e_p)
+        )
         variables.update(self._get_standard_current_variables(i_e))
         variables.update(self._get_split_overpotential(eta_c_av, delta_phi_e_av))
 

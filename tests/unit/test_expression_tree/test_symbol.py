@@ -322,8 +322,7 @@ class TestSymbol(unittest.TestCase):
 
         model.set_rhs(variables)
 
-        c_e = pybamm.standard_variables.c_e
-        rhs = model.rhs[c_e]
+        rhs = list(model.rhs.values())[0]
         rhs.visualise("StefanMaxwell_test.png")
         self.assertTrue(os.path.exists("StefanMaxwell_test.png"))
         with self.assertRaises(ValueError):

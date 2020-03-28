@@ -22,11 +22,13 @@ class BaseModel(BaseThermal):
         super().__init__(param)
 
     def get_fundamental_variables(self):
-        T = pybamm.standard_variables.T
-        T_cn = pybamm.BoundaryValue(T, "left")
-        T_cp = pybamm.BoundaryValue(T, "right")
+        T_n = pybamm.standard_variables.T_n
+        T_s = pybamm.standard_variables.T_s
+        T_p = pybamm.standard_variables.T_p
+        T_cn = pybamm.BoundaryValue(T_n, "left")
+        T_cp = pybamm.BoundaryValue(T_p, "right")
 
-        variables = self._get_standard_fundamental_variables(T, T_cn, T_cp)
+        variables = self._get_standard_fundamental_variables(T_cn, T_n, T_s, T_p, T_cp)
         return variables
 
     def get_coupled_variables(self, variables):

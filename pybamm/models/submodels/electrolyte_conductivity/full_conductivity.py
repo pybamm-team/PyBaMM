@@ -25,10 +25,11 @@ class Full(BaseElectrolyteConductivity):
         super().__init__(param, reactions=reactions)
 
     def get_fundamental_variables(self):
-        phi_e = pybamm.standard_variables.phi_e
-        phi_e_av = pybamm.x_average(phi_e)
+        phi_e_n = pybamm.standard_variables.phi_e_n
+        phi_e_s = pybamm.standard_variables.phi_e_s
+        phi_e_p = pybamm.standard_variables.phi_e_p
 
-        variables = self._get_standard_potential_variables(phi_e, phi_e_av)
+        variables = self._get_standard_potential_variables(phi_e_n, phi_e_s, phi_e_p)
         return variables
 
     def get_coupled_variables(self, variables):

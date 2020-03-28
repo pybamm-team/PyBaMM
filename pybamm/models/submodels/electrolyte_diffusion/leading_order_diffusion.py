@@ -29,9 +29,8 @@ class LeadingOrder(BaseElectrolyteDiffusion):
         c_e_n = pybamm.PrimaryBroadcast(c_e_av, ["negative electrode"])
         c_e_s = pybamm.PrimaryBroadcast(c_e_av, ["separator"])
         c_e_p = pybamm.PrimaryBroadcast(c_e_av, ["positive electrode"])
-        c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
 
-        return self._get_standard_concentration_variables(c_e)
+        return self._get_standard_concentration_variables(c_e_n, c_e_s, c_e_p)
 
     def get_coupled_variables(self, variables):
 

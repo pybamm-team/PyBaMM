@@ -108,12 +108,12 @@ class FirstOrder(BaseElectrolyteDiffusion):
         c_e_p_1_av += A_e
 
         # Update variables
-        c_e = pybamm.Concatenation(
-            c_e_0 + param.C_e * c_e_n_1,
-            c_e_0 + param.C_e * c_e_s_1,
-            c_e_0 + param.C_e * c_e_p_1,
+        c_e_n = c_e_0 + param.C_e * c_e_n_1
+        c_e_s = c_e_0 + param.C_e * c_e_s_1
+        c_e_p = c_e_0 + param.C_e * c_e_p_1
+        variables.update(
+            self._get_standard_concentration_variables(c_e_n, c_e_s, c_e_p)
         )
-        variables.update(self._get_standard_concentration_variables(c_e))
         # Update with analytical expressions for first-order x-averages
         variables.update(
             {

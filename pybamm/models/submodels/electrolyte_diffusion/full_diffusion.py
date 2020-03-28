@@ -25,9 +25,11 @@ class Full(BaseElectrolyteDiffusion):
         super().__init__(param, reactions)
 
     def get_fundamental_variables(self):
-        c_e = pybamm.standard_variables.c_e
+        c_e_n = pybamm.standard_variables.c_e_n
+        c_e_s = pybamm.standard_variables.c_e_s
+        c_e_p = pybamm.standard_variables.c_e_p
 
-        return self._get_standard_concentration_variables(c_e)
+        return self._get_standard_concentration_variables(c_e_n, c_e_s, c_e_p)
 
     def get_coupled_variables(self, variables):
 
