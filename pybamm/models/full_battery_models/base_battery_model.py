@@ -37,18 +37,13 @@ class BaseBatteryModel(pybamm.BaseModel):
                 (default) or "varying". Not currently implemented in any of the models.
             * "current collector" : str, optional
                 Sets the current collector model to use. Can be "uniform" (default),
-                "potential pair", "potential pair quite conductive", or
-                "set external potential". The submodel "set external potential" can only
-                be used with the SPM.
+                "potential pair" or "potential pair quite conductive".
             * "particle" : str, optional
                 Sets the submodel to use to describe behaviour within the particle.
                 Can be "Fickian diffusion" (default) or "fast diffusion".
             * "thermal" : str, optional
                 Sets the thermal model to use. Can be "isothermal" (default),
-                "x-full", "x-lumped", "xyz-lumped", "lumped" or "set external
-                temperature". Must be "isothermal" for lead-acid models. If the
-                option "set external temperature" is selected then "dimensionality"
-                must be 1.
+                "x-full", "x-lumped", "xyz-lumped" or "lumped".
             * "thermal current collector" : bool, optional
                 Whether to include thermal effects in the current collector in
                 one-dimensional models (default is False). Note that this option
@@ -68,7 +63,6 @@ class BaseBatteryModel(pybamm.BaseModel):
     def __init__(self, options=None, name="Unnamed battery model"):
         super().__init__(name)
         self.options = options
-        self.set_standard_output_variables()
         self.submodels = {}
         self._built = False
         self._built_fundamental_and_external = False
@@ -157,14 +151,18 @@ class BaseBatteryModel(pybamm.BaseModel):
             "thermal current collector": False,
             "external submodels": [],
         }
-        options = default_options
+        options = pybamm.FuzzyDict(default_options)
         # any extra options overwrite the default options
         if extra_options is not None:
             for name, opt in extra_options.items():
                 if name in default_options:
                     options[name] = opt
                 else:
-                    raise pybamm.OptionError("option {} not recognised".format(name))
+                    raise pybamm.OptionError(
+                        "Option '{}' not recognised. Best matches are {}".format(
+                            name, options.get_best_matches(name)
+                        )
+                    )
 
         # Some standard checks to make sure options are compatible
         if not (
@@ -194,8 +192,6 @@ class BaseBatteryModel(pybamm.BaseModel):
             "uniform",
             "potential pair",
             "potential pair quite conductive",
-            "potential pair quite conductive averaged",
-            "set external potential",
         ]:
             raise pybamm.OptionError(
                 "current collector model '{}' not recognised".format(
@@ -214,7 +210,6 @@ class BaseBatteryModel(pybamm.BaseModel):
             "x-lumped",
             "xyz-lumped",
             "lumped",
-            "set external temperature",
         ]:
             raise pybamm.OptionError(
                 "Unknown thermal model '{}'".format(options["thermal"])
@@ -248,132 +243,33 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         # Options that are incompatible with models
         if isinstance(self, pybamm.lithium_ion.BaseModel):
-            if options["surface form"] is not False:
-                raise pybamm.OptionError(
-                    "surface form not implemented for lithium-ion models"
-                )
             if options["convection"] is True:
                 raise pybamm.OptionError(
                     "convection not implemented for lithium-ion models"
                 )
         if isinstance(self, pybamm.lead_acid.BaseModel):
-            if options["thermal"] != "isothermal":
+            if options["thermal"] != "isothermal" and options["dimensionality"] != 0:
                 raise pybamm.OptionError(
-                    "thermal effects not implemented for lead-acid models"
+                    "Lead-acid models can only have thermal "
+                    "effects if dimensionality is 0."
                 )
+
             if options["thermal current collector"] is True:
                 raise pybamm.OptionError(
-                    "thermal effects not implemented for lead-acid models"
+                    "Thermal current collector effects are not implemented "
+                    "for lead-acid models."
                 )
-        if options["current collector"] == "set external potential" and not isinstance(
-            self, pybamm.lithium_ion.SPM
-        ):
-            raise pybamm.OptionError(
-                "option {} only compatible with SPM".format(
-                    options["current collector"]
-                )
-            )
 
         self._options = options
 
     def set_standard_output_variables(self):
-        # Standard output variables
-
-        # Interfacial current
-        self.variables.update(
-            {
-                "Negative electrode current density": None,
-                "Positive electrode current density": None,
-                "Electrolyte current density": None,
-                "Interfacial current density": None,
-                "Exchange current density": None,
-            }
-        )
-        self.variables.update(
-            {
-                "Negative electrode current density [A.m-2]": None,
-                "Positive electrode current density [A.m-2]": None,
-                "Electrolyte current density [A.m-2]": None,
-                "Interfacial current density [A.m-2]": None,
-                "Exchange current density [A.m-2]": None,
-            }
-        )
-
-        # Voltage
-        self.variables.update(
-            {
-                "Negative electrode open circuit potential": None,
-                "Positive electrode open circuit potential": None,
-                "X-averaged negative electrode open circuit potential": None,
-                "X-averaged positive electrode open circuit potential": None,
-                "X-averaged open circuit voltage": None,
-                "Measured open circuit voltage": None,
-                "Terminal voltage": None,
-            }
-        )
-        self.variables.update(
-            {
-                "Negative electrode open circuit potential [V]": None,
-                "Positive electrode open circuit potential [V]": None,
-                "X-averaged negative electrode open circuit potential [V]": None,
-                "X-averaged positive electrode open circuit potential [V]": None,
-                "X-averaged open circuit voltage [V]": None,
-                "Measured open circuit voltage [V]": None,
-                "Terminal voltage [V]": None,
-            }
-        )
-
-        # Overpotentials
-        self.variables.update(
-            {
-                "Negative reaction overpotential": None,
-                "Positive reaction overpotential": None,
-                "X-averaged negative reaction overpotential": None,
-                "X-averaged positive reaction overpotential": None,
-                "X-averaged reaction overpotential": None,
-                "X-averaged electrolyte overpotential": None,
-                "X-averaged solid phase ohmic losses": None,
-            }
-        )
-        self.variables.update(
-            {
-                "Negative reaction overpotential [V]": None,
-                "Positive reaction overpotential [V]": None,
-                "X-averaged negative reaction overpotential [V]": None,
-                "X-averaged positive reaction overpotential [V]": None,
-                "X-averaged reaction overpotential [V]": None,
-                "X-averaged electrolyte overpotential [V]": None,
-                "X-averaged solid phase ohmic losses [V]": None,
-            }
-        )
-
-        # Concentration
-        self.variables.update(
-            {
-                "Electrolyte concentration": None,
-                "Electrolyte concentration [mol.m-3]": None,
-            }
-        )
-
-        # Potential
-        self.variables.update(
-            {
-                "Negative electrode potential": None,
-                "Positive electrode potential": None,
-                "Electrolyte potential": None,
-            }
-        )
-
-        self.variables = {}
-
         # Time
-        time_scale = pybamm.electrical_parameters.timescale
         self.variables.update(
             {
                 "Time": pybamm.t,
-                "Time [s]": pybamm.t * time_scale,
-                "Time [min]": pybamm.t * time_scale / 60,
-                "Time [h]": pybamm.t * time_scale / 3600,
+                "Time [s]": pybamm.t * self.timescale,
+                "Time [min]": pybamm.t * self.timescale / 60,
+                "Time [h]": pybamm.t * self.timescale / 3600,
             }
         )
 
@@ -394,11 +290,12 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "x_p [m]": var.x_p * L_x,
             }
         )
-
-        if self.options["dimensionality"] >= 1:
+        if self.options["dimensionality"] == 1:
             self.variables.update({"z": var.z, "z [m]": var.z * L_z})
-        if self.options["dimensionality"] == 2:
-            self.variables.update({"y": var.y, "y [m]": var.y * L_y})
+        elif self.options["dimensionality"] == 2:
+            self.variables.update(
+                {"y": var.y, "y [m]": var.y * L_y, "z": var.z, "z [m]": var.z * L_z}
+            )
 
     def build_fundamental_and_external(self):
         # Get the fundamental variables
@@ -435,6 +332,9 @@ class BaseBatteryModel(pybamm.BaseModel):
         # there are no more submodels to try, raise an error.
         submodels = list(self.submodels.keys())
         count = 0
+        # For this part the FuzzyDict of variables is briefly converted back into a
+        # normal dictionary for speed with KeyErrors
+        self._variables = dict(self._variables)
         while len(submodels) > 0:
             count += 1
             for submodel_name, submodel in self.submodels.items():
@@ -466,6 +366,8 @@ class BaseBatteryModel(pybamm.BaseModel):
                                     key
                                 )
                             )
+        # Convert variables back into FuzzyDict
+        self._variables = pybamm.FuzzyDict(self._variables)
 
     def build_model_equations(self):
         # Set model equations
@@ -652,14 +554,6 @@ class BaseBatteryModel(pybamm.BaseModel):
                     self.param
                 )
 
-        elif self.options["thermal"] == "set external temperature":
-            if self.options["dimensionality"] == 1:
-                thermal_submodel = pybamm.thermal.x_lumped.SetTemperature1D(self.param)
-            elif self.options["dimensionality"] in [0, 2]:
-                raise NotImplementedError(
-                    """Set temperature model only implemented for 1D current
-                    collectors"""
-                )
         self.submodels["thermal"] = thermal_submodel
 
     def set_current_collector_submodel(self):
@@ -674,20 +568,6 @@ class BaseBatteryModel(pybamm.BaseModel):
                 submodel = pybamm.current_collector.PotentialPair1plus1D(self.param)
             elif self.options["dimensionality"] == 2:
                 submodel = pybamm.current_collector.PotentialPair2plus1D(self.param)
-        elif self.options["current collector"] == "set external potential":
-            if self.options["dimensionality"] == 1:
-                submodel = pybamm.current_collector.SetPotentialSingleParticle1plus1D(
-                    self.param
-                )
-            elif self.options["dimensionality"] == 2:
-                submodel = pybamm.current_collector.SetPotentialSingleParticle2plus1D(
-                    self.param
-                )
-            elif self.options["dimensionality"] == 0:
-                raise NotImplementedError(
-                    """Set potential model only implemented for 1D or 2D current
-                    collectors"""
-                )
         self.submodels["current collector"] = submodel
 
     def set_voltage_variables(self):
@@ -829,8 +709,24 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         # Cut-off voltage
         voltage = self.variables["Terminal voltage"]
-        self.events["Minimum voltage"] = voltage - self.param.voltage_low_cut
-        self.events["Maximum voltage"] = voltage - self.param.voltage_high_cut
+        self.events.append(
+            pybamm.Event(
+                "Minimum voltage",
+                voltage - self.param.voltage_low_cut,
+                pybamm.EventType.TERMINATION,
+            )
+        )
+        self.events.append(
+            pybamm.Event(
+                "Maximum voltage",
+                voltage - self.param.voltage_high_cut,
+                pybamm.EventType.TERMINATION,
+            )
+        )
+
+        # Power
+        I_dim = self.variables["Current [A]"]
+        self.variables.update({"Terminal power [W]": I_dim * V_dim})
 
         # Power
         I_dim = self.variables["Current [A]"]
@@ -870,8 +766,11 @@ class BaseBatteryModel(pybamm.BaseModel):
             variables = list(self.rhs.keys()) + list(self.algebraic.keys())
             disc.set_variable_slices(variables)
 
-        # Set boundary condtions
+        # Set boundary condtions (also requires setting parameter values)
         if disc.bcs == {}:
+            self.boundary_conditions = parameter_values.process_boundary_conditions(
+                self
+            )
             disc.bcs = disc.process_boundary_conditions(self)
 
         # Process

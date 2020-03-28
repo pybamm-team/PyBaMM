@@ -6,22 +6,17 @@ import tests
 import unittest
 
 
-class ExternalCircuitFunction:
-    num_switches = 0
-
-    def __call__(self, variables):
-        I = variables["Current [A]"]
-        V = variables["Terminal voltage [V]"]
-        return (
-            V + I - pybamm.FunctionParameter("Current plus voltage function", pybamm.t)
-        )
+def external_circuit_function(variables):
+    I = variables["Current [A]"]
+    V = variables["Terminal voltage [V]"]
+    return V + I - pybamm.FunctionParameter("Current plus voltage function", pybamm.t)
 
 
 class TestFunctionControl(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.standard_parameters_lithium_ion
         submodel = pybamm.external_circuit.FunctionControl(
-            param, ExternalCircuitFunction()
+            param, external_circuit_function
         )
         variables = {"Terminal voltage [V]": pybamm.Scalar(0)}
         std_tests = tests.StandardSubModelTests(submodel, variables)

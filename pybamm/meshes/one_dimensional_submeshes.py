@@ -33,6 +33,7 @@ class SubMesh1D(SubMesh):
         self.d_nodes = np.diff(self.nodes)
         self.npts = self.nodes.size
         self.coord_sys = coord_sys
+        self.internal_boundaries = []
 
         # Add tab locations in terms of "left" and "right"
         if tabs:

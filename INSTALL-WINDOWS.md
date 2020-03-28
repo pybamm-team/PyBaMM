@@ -18,7 +18,7 @@ To download the PyBaMM source code, you first need to install git, which you can
 typing
 
 ```bash 
-$ sudo apt install git-core
+sudo apt install git-core
 ```
 
 For easier integration with WSL, we recommend that you install PyBaMM in your *Windows* 
@@ -31,21 +31,21 @@ $ cd /mnt/c/Users/USER_NAME/Documents
 where USER_NAME is your username. Exact path to Windows documents may vary. Now use git to clone the PyBaMM repository:
 
 ```bash
-$ git clone https://github.com/pybamm-team/PyBaMM.git
+git clone https://github.com/pybamm-team/PyBaMM.git
 ```
 
 This will create a new directly called `PyBaMM`, you can move to this directory in bash
 using the `cd` command:
 
 ```bash 
-$ cd PyBaMM 
+cd PyBaMM 
 ```
 
 If you are unfamiliar with the linux command line, you might find it useful to work through this
 [tutorial](https://tutorials.ubuntu.com/tutorial/command-line-for-beginners) provided by Ubuntu.
 
 Now head over and follow the installation instructions for PyBaMM for linux
-[here](INSTALL-LINUX.md).
+[here](INSTALL-LINUX-MAC.md).
 
 ## Use Visual Studio Code to run PyBaMM 
 

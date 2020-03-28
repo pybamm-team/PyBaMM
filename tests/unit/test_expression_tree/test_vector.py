@@ -31,13 +31,6 @@ class TestVector(unittest.TestCase):
             (self.vect * self.vect).evaluate(), np.array([[1], [4], [9]])
         )
 
-    def test_vector_modification(self):
-        exp = self.vect * self.vect + self.vect
-        self.x[0] = -1
-        self.assertTrue(exp.children[1]._entries[0], -1)
-        self.assertTrue(exp.children[0].children[0]._entries[0], -1)
-        self.assertTrue(exp.children[0].children[1]._entries[0], -1)
-
     def test_wrong_size_entries(self):
         with self.assertRaisesRegex(
             ValueError, "Entries must have 1 dimension or be column vector"

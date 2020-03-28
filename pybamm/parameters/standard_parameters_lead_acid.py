@@ -49,7 +49,6 @@ voltage_high_cut_dimensional = pybamm.electrical_parameters.voltage_high_cut_dim
 
 # Electrolyte properties
 c_e_typ = pybamm.Parameter("Typical electrolyte concentration [mol.m-3]")
-t_plus = pybamm.Parameter("Cation transference number")
 V_w = pybamm.Parameter("Partial molar volume of water [m3.mol-1]")
 V_plus = pybamm.Parameter("Partial molar volume of cations [m3.mol-1]")
 V_minus = pybamm.Parameter("Partial molar volume of anions [m3.mol-1]")
@@ -176,12 +175,16 @@ Q_n_max_dimensional = pybamm.Parameter("Negative electrode volumetric capacity [
 Q_p_max_dimensional = pybamm.Parameter("Positive electrode volumetric capacity [C.m-3]")
 
 
-# Fake thermal
-Delta_T = pybamm.Scalar(0)
-
+# thermal
+Delta_T = pybamm.thermal_parameters.Delta_T
 
 # --------------------------------------------------------------------------------------
 "2. Dimensional Functions"
+
+
+def t_plus(c_e):
+    "Dimensionless transference number (i.e. c_e is dimensional)"
+    return pybamm.FunctionParameter("Cation transference number", c_e * c_e_typ)
 
 
 def D_e_dimensional(c_e, T):
@@ -289,18 +292,27 @@ tau_r_p = 1 / (j0_p_S_ref_dimensional * a_p_dim * c_e_typ ** 0.5)
 # Electrolyte diffusion timescale
 tau_diffusion_e = L_x ** 2 / D_e_typ
 
+# Thermal diffusion timescale
+tau_th_yz = pybamm.thermal_parameters.tau_th_yz
+
 # Choose discharge timescale
 timescale = tau_discharge
 
 # --------------------------------------------------------------------------------------
 "4. Dimensionless Parameters"
+# Timescale ratios
+C_th = tau_th_yz / tau_discharge
 
 # Macroscale Geometry
 l_n = pybamm.geometric_parameters.l_n
 l_s = pybamm.geometric_parameters.l_s
 l_p = pybamm.geometric_parameters.l_p
+l_x = pybamm.geometric_parameters.l_x
 l_y = pybamm.geometric_parameters.l_y
 l_z = pybamm.geometric_parameters.l_z
+a_cc = pybamm.geometric_parameters.a_cc
+l = pybamm.geometric_parameters.l
+delta = pybamm.geometric_parameters.delta
 # In lead-acid the current collector and electrodes are the same (same thickness)
 l_cn = l_n
 l_cp = l_p
@@ -314,7 +326,7 @@ centre_y_tab_p = pybamm.geometric_parameters.centre_y_tab_p
 centre_z_tab_p = pybamm.geometric_parameters.centre_z_tab_p
 
 # Diffusive kinematic relationship coefficient
-omega_i = c_e_typ * M_e / rho_typ * (t_plus + M_minus / M_e)
+omega_i = c_e_typ * M_e / rho_typ * (t_plus(1) + M_minus / M_e)
 # Migrative kinematic relationship coefficient (electrolyte)
 omega_c_e = c_e_typ * M_e / rho_typ * (1 - M_w * V_e / V_w * M_e)
 C_e = tau_diffusion_e / tau_discharge
@@ -353,12 +365,10 @@ beta_U_p = -1 / Q_p_max
 # Main
 s_plus_n_S = s_plus_n_S_dim / ne_n_S
 s_plus_p_S = s_plus_p_S_dim / ne_p_S
-s_n = -(s_plus_n_S + t_plus)  # Dimensionless rection rate (neg)
-s_p = -(s_plus_p_S + t_plus)  # Dimensionless rection rate (pos)
-s = pybamm.Concatenation(
-    pybamm.FullBroadcast(s_n, ["negative electrode"], "current collector"),
+s_plus_S = pybamm.Concatenation(
+    pybamm.FullBroadcast(s_plus_n_S, ["negative electrode"], "current collector"),
     pybamm.FullBroadcast(0, ["separator"], "current collector"),
-    pybamm.FullBroadcast(s_p, ["positive electrode"], "current collector"),
+    pybamm.FullBroadcast(s_plus_p_S, ["positive electrode"], "current collector"),
 )
 j0_n_S_ref = j0_n_S_ref_dimensional / interfacial_current_scale_n
 j0_p_S_ref = j0_p_S_ref_dimensional / interfacial_current_scale_p
@@ -413,11 +423,45 @@ voltage_high_cut = (
 ) / potential_scale
 
 # Electrolyte volumetric capacity
-Q_e_max = (l_n * eps_n_max + l_s * eps_s_max + l_p * eps_p_max) / (s_p - s_n)
+Q_e_max = (l_n * eps_n_max + l_s * eps_s_max + l_p * eps_p_max) / (
+    s_plus_n_S - s_plus_p_S
+)
 Q_e_max_dimensional = Q_e_max * c_e_typ * F
 capacity = Q_e_max_dimensional * n_electrodes_parallel * A_cs * L_x
 
+# Thermal
+rho_cn = pybamm.thermal_parameters.rho_cn
+rho_n = pybamm.thermal_parameters.rho_n
+rho_s = pybamm.thermal_parameters.rho_s
+rho_p = pybamm.thermal_parameters.rho_p
+rho_cp = pybamm.thermal_parameters.rho_cp
+
+rho_k = pybamm.thermal_parameters.rho_k
+rho = rho_n * l_n + rho_s * l_s + rho_p * l_p
+
+lambda_cn = pybamm.thermal_parameters.lambda_cn
+lambda_n = pybamm.thermal_parameters.lambda_n
+lambda_s = pybamm.thermal_parameters.lambda_s
+lambda_p = pybamm.thermal_parameters.lambda_p
+lambda_cp = pybamm.thermal_parameters.lambda_cp
+
+lambda_k = pybamm.thermal_parameters.lambda_k
+
+Theta = pybamm.thermal_parameters.Theta
+h = pybamm.thermal_parameters.h
+B = (
+    i_typ
+    * R
+    * T_ref
+    * tau_th_yz
+    / (pybamm.thermal_parameters.rho_eff_dim * F * Delta_T * L_x)
+)
+
+T_amb_dim = pybamm.thermal_parameters.T_amb_dim
+T_amb = pybamm.thermal_parameters.T_amb
+
 # Initial conditions
+T_init = pybamm.thermal_parameters.T_init
 q_init = pybamm.Parameter("Initial State of Charge")
 c_e_init = q_init
 c_ox_init = c_ox_init_dim / c_ox_typ
@@ -434,13 +478,12 @@ curlyU_p_init = Q_e_max * (1.2 - q_init) / (Q_p_max * l_p)
 
 
 # hack to make consistent ic with lithium-ion
-# find a way to not have to do this
-c_n_init = c_e_init
-c_p_init = c_e_init
+def c_n_init(x):
+    return c_e_init
 
-# Thermal effects not implemented for lead-acid, but parameters needed for consistency
-T_init = pybamm.Scalar(0)
-Theta = pybamm.Scalar(0)  # ratio of typical temperature change to ambient temperature
+
+def c_p_init(x):
+    return c_e_init
 
 
 # --------------------------------------------------------------------------------------
@@ -470,8 +513,8 @@ def t_plus_function(t_plus):
 def chi(c_e, c_ox=0, c_hy=0):
     return (
         chi_dimensional(c_e_typ * c_e)
-        * t_plus_function(t_plus)
-        # / (V_w * c_T(c_e_typ * c_e, c_e_typ * c_ox, c_e_typ * c_hy))
+        * (2 * (1 - t_plus(c_e)))
+        / (V_w * c_T(c_e_typ * c_e, c_e_typ * c_ox, c_e_typ * c_hy))
     )
 
 

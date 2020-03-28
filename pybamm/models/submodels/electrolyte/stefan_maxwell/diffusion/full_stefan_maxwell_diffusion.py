@@ -59,16 +59,16 @@ class Full(BaseModel):
         deps_dt = variables["Porosity change"]
         c_e = variables["Electrolyte concentration"]
         N_e = variables["Electrolyte flux"]
-        # i_e = variables["Electrolyte current density"]
-        div_Vbox_s = variables["Transverse volume-averaged acceleration"]
+        c_e_n = variables["Negative electrolyte concentration"]
+        c_e_p = variables["Positive electrolyte concentration"]
 
-        # source_term = ((param.s - param.t_plus) / param.gamma_e) * pybamm.div(i_e)
-        # source_term = pybamm.div(i_e) / param.gamma_e  # lithium-ion
         source_terms = sum(
             pybamm.Concatenation(
-                reaction["Negative"]["s"] * variables[reaction["Negative"]["aj"]],
+                (reaction["Negative"]["s"] - param.t_plus(c_e_n))
+                * variables[reaction["Negative"]["aj"]],
                 pybamm.FullBroadcast(0, "separator", "current collector"),
-                reaction["Positive"]["s"] * variables[reaction["Positive"]["aj"]],
+                (reaction["Positive"]["s"] - param.t_plus(c_e_p))
+                * variables[reaction["Positive"]["aj"]],
             )
             / param.gamma_e
             for reaction in self.reactions.values()

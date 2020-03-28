@@ -10,6 +10,9 @@ Unary Operators
 .. autoclass:: pybamm.AbsoluteValue
   :members:
 
+.. autoclass:: pybamm.Sign
+  :members:
+
 .. autoclass:: pybamm.Index
   :members:
 
@@ -67,4 +70,12 @@ Unary Operators
 
 .. autofunction:: pybamm.x_average
 
+.. autofunction:: pybamm.r_average
+
+.. autofunction:: pybamm.z_average
+
+.. autofunction:: pybamm.yz_average
+
 .. autofunction:: pybamm.boundary_value
+
+.. autofunction:: pybamm.sign

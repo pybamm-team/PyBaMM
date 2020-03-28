@@ -9,4 +9,3 @@ X-lumped
   x_lumped_0D_current_collector
   x_lumped_1D_current_collector
   x_lumped_2D_current_collector
-  x_lumped_1D_set_temperature

@@ -5,6 +5,7 @@ import pybamm
 
 import unittest
 import numpy as np
+from scipy.sparse import diags
 
 
 class TestUnaryOperators(unittest.TestCase):
@@ -16,7 +17,6 @@ class TestUnaryOperators(unittest.TestCase):
 
         # with number
         log = pybamm.log(10)
-        self.assertIsInstance(log.children[0], pybamm.Scalar)
         self.assertEqual(log.evaluate(), np.log(10))
 
     def test_negation(self):
@@ -38,6 +38,18 @@ class TestUnaryOperators(unittest.TestCase):
         b = pybamm.Scalar(-4)
         absb = pybamm.AbsoluteValue(b)
         self.assertEqual(absb.evaluate(), 4)
+
+    def test_sign(self):
+        b = pybamm.Scalar(-4)
+        signb = pybamm.sign(b)
+        self.assertEqual(signb.evaluate(), -1)
+
+        A = diags(np.linspace(-1, 1, 5))
+        b = pybamm.Matrix(A)
+        signb = pybamm.sign(b)
+        np.testing.assert_array_equal(
+            np.diag(signb.evaluate().toarray()), [-1, -1, 0, 1, 1]
+        )
 
     def test_gradient(self):
         a = pybamm.Symbol("a")
@@ -124,22 +136,23 @@ class TestUnaryOperators(unittest.TestCase):
             pybamm.Integral(a, y)
 
     def test_index(self):
-        vec = pybamm.Vector(np.array([1, 2, 3, 4, 5]))
+        vec = pybamm.StateVector(slice(0, 5))
+        y_test = np.array([1, 2, 3, 4, 5])
         # with integer
         ind = vec[3]
         self.assertIsInstance(ind, pybamm.Index)
         self.assertEqual(ind.slice, slice(3, 4))
-        self.assertEqual(ind.evaluate(), 4)
+        self.assertEqual(ind.evaluate(y=y_test), 4)
         # with slice
         ind = vec[1:3]
         self.assertIsInstance(ind, pybamm.Index)
         self.assertEqual(ind.slice, slice(1, 3))
-        np.testing.assert_array_equal(ind.evaluate(), np.array([[2], [3]]))
+        np.testing.assert_array_equal(ind.evaluate(y=y_test), np.array([[2], [3]]))
         # with only stop slice
         ind = vec[:3]
         self.assertIsInstance(ind, pybamm.Index)
         self.assertEqual(ind.slice, slice(3))
-        np.testing.assert_array_equal(ind.evaluate(), np.array([[1], [2], [3]]))
+        np.testing.assert_array_equal(ind.evaluate(y=y_test), np.array([[1], [2], [3]]))
 
         # errors
         with self.assertRaisesRegex(TypeError, "index must be integer or slice"):
@@ -158,10 +171,14 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual((-a).diff(a).evaluate(y=y), -1)
         self.assertEqual((-a).diff(-a).evaluate(), 1)
 
-        # absolute value (not implemented)
-        absa = abs(a)
-        with self.assertRaises(pybamm.UndefinedOperationError):
-            absa.diff(a)
+        # absolute value
+        self.assertEqual((a ** 3).diff(a).evaluate(y=y), 3 * 5 ** 2)
+        self.assertEqual((abs(a ** 3)).diff(a).evaluate(y=y), 3 * 5 ** 2)
+        self.assertEqual((a ** 3).diff(a).evaluate(y=-y), 3 * 5 ** 2)
+        self.assertEqual((abs(a ** 3)).diff(a).evaluate(y=-y), -3 * 5 ** 2)
+
+        # sign
+        self.assertEqual((pybamm.sign(a)).diff(a).evaluate(y=y), 0)
 
         # spatial operator (not implemented)
         spatial_a = pybamm.SpatialOperator("name", a)
@@ -252,7 +269,7 @@ class TestUnaryOperators(unittest.TestCase):
             pybamm.boundary_value(var, "negative tab")
             pybamm.boundary_value(var, "positive tab")
 
-    def test_average(self):
+    def test_x_average(self):
         a = pybamm.Scalar(1)
         average_a = pybamm.x_average(a)
         self.assertEqual(average_a.id, a.id)
@@ -282,12 +299,24 @@ class TestUnaryOperators(unittest.TestCase):
             self.assertIsInstance(av_a, pybamm.Division)
             self.assertIsInstance(av_a.children[0], pybamm.Integral)
             self.assertEqual(av_a.children[0].integration_variable[0].domain, x.domain)
-            # electrode domains go to current collector when averaged
             self.assertEqual(av_a.domain, [])
 
-        a = pybamm.Symbol("a", domain="bad domain")
-        with self.assertRaises(pybamm.DomainError):
-            pybamm.x_average(a)
+        a = pybamm.Symbol("a", domain="new domain")
+        av_a = pybamm.x_average(a)
+        self.assertEqual(av_a.domain, [])
+        self.assertIsInstance(av_a, pybamm.Division)
+        self.assertIsInstance(av_a.children[0], pybamm.Integral)
+        self.assertEqual(av_a.children[0].integration_variable[0].domain, a.domain)
+        self.assertIsInstance(av_a.children[1], pybamm.Integral)
+        self.assertEqual(av_a.children[1].integration_variable[0].domain, a.domain)
+        self.assertEqual(av_a.children[1].children[0].id, pybamm.ones_like(a).id)
+
+        # x-average of symbol that evaluates on edges raises error
+        symbol_on_edges = pybamm.PrimaryBroadcastToEdges(1, "domain")
+        with self.assertRaisesRegex(
+            ValueError, "Can't take the x-average of a symbol that evaluates on edges"
+        ):
+            pybamm.x_average(symbol_on_edges)
 
     def test_r_average(self):
         a = pybamm.Scalar(1)
@@ -309,9 +338,12 @@ class TestUnaryOperators(unittest.TestCase):
             # electrode domains go to current collector when averaged
             self.assertEqual(av_a.domain, [])
 
-        a = pybamm.Symbol("a", domain="bad domain")
-        with self.assertRaises(pybamm.DomainError):
-            pybamm.x_average(a)
+        # r-average of symbol that evaluates on edges raises error
+        symbol_on_edges = pybamm.PrimaryBroadcastToEdges(1, "domain")
+        with self.assertRaisesRegex(
+            ValueError, "Can't take the r-average of a symbol that evaluates on edges"
+        ):
+            pybamm.r_average(symbol_on_edges)
 
     def test_yz_average(self):
         a = pybamm.Scalar(1)
@@ -350,6 +382,13 @@ class TestUnaryOperators(unittest.TestCase):
             pybamm.z_average(a)
         with self.assertRaises(pybamm.DomainError):
             pybamm.yz_average(a)
+
+        # average of symbol that evaluates on edges raises error
+        symbol_on_edges = pybamm.PrimaryBroadcastToEdges(1, "domain")
+        with self.assertRaisesRegex(
+            ValueError, "Can't take the z-average of a symbol that evaluates on edges"
+        ):
+            pybamm.z_average(symbol_on_edges)
 
 
 if __name__ == "__main__":

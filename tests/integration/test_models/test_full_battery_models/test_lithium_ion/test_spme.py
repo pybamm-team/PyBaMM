@@ -15,6 +15,13 @@ class TestSPMe(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
+    def test_basic_processing_python(self):
+        options = {"thermal": "isothermal"}
+        model = pybamm.lithium_ion.SPMe(options)
+        model.convert_to_format = "python"
+        modeltest = tests.StandardModelTest(model, solver=pybamm.ScipySolver())
+        modeltest.test_all()
+
     def test_basic_processing_1plus1D(self):
         options = {"current collector": "potential pair", "dimensionality": 1}
         model = pybamm.lithium_ion.SPMe(options)
@@ -84,6 +91,18 @@ class TestSPMe(unittest.TestCase):
 
     def test_particle_fast_diffusion(self):
         options = {"particle": "fast diffusion"}
+        model = pybamm.lithium_ion.SPMe(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+    def test_surface_form_differential(self):
+        options = {"surface form": "differential"}
+        model = pybamm.lithium_ion.SPMe(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+    def test_surface_form_algebraic(self):
+        options = {"surface form": "algebraic"}
         model = pybamm.lithium_ion.SPMe(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()

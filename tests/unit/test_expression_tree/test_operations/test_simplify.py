@@ -16,6 +16,7 @@ class TestSimplify(unittest.TestCase):
         d = pybamm.Scalar(-1)
         e = pybamm.Scalar(2)
         g = pybamm.Variable("g")
+        gdot = pybamm.VariableDot("g'")
 
         # negate
         self.assertIsInstance((-a).simplify(), pybamm.Scalar)
@@ -174,6 +175,18 @@ class TestSimplify(unittest.TestCase):
         self.assertEqual(expr.children[0].evaluate(), 4.0)
         self.assertIsInstance(expr.children[1], pybamm.Negate)
         self.assertIsInstance(expr.children[1].children[0], pybamm.Parameter)
+
+        expr = (e * g * b).simplify()
+        self.assertIsInstance(expr, pybamm.Multiplication)
+        self.assertIsInstance(expr.children[0], pybamm.Scalar)
+        self.assertEqual(expr.children[0].evaluate(), 2.0)
+        self.assertIsInstance(expr.children[1], pybamm.Variable)
+
+        expr = (e * gdot * b).simplify()
+        self.assertIsInstance(expr, pybamm.Multiplication)
+        self.assertIsInstance(expr.children[0], pybamm.Scalar)
+        self.assertEqual(expr.children[0].evaluate(), 2.0)
+        self.assertIsInstance(expr.children[1], pybamm.VariableDot)
 
         expr = (e + (g - c)).simplify()
         self.assertIsInstance(expr, pybamm.Addition)
@@ -518,7 +531,7 @@ class TestSimplify(unittest.TestCase):
         expr3 = (m / a).simplify()
         self.assertIsInstance(expr3, pybamm.Matrix)
         self.assertEqual(expr3.shape, m.shape)
-        np.testing.assert_array_equal(expr3.evaluate(), np.zeros((10, 10)))
+        np.testing.assert_array_equal(expr3.evaluate().toarray(), np.zeros((10, 10)))
 
     def test_domain_concatenation_simplify(self):
         # create discretisation

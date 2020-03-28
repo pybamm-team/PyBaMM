@@ -75,8 +75,12 @@ class StandardModelTest(object):
         self.solver.rtol = 1e-8
         self.solver.atol = 1e-8
 
+        Crate = abs(self.parameter_values["C-rate"])
+        # don't allow zero C-rate
+        if Crate == 0:
+            Crate = 1
         if t_eval is None:
-            t_eval = np.linspace(0, 1, 100)
+            t_eval = np.linspace(0, 3600 / Crate, 100)
 
         self.solution = self.solver.solve(self.model, t_eval)
 
@@ -102,28 +106,6 @@ class StandardModelTest(object):
             and not skip_output_tests
         ):
             self.test_outputs()
-
-    def test_update_parameters(self, param):
-        # check if geometry has changed, throw error if so (need to re-discretise)
-        if any(
-            [
-                length in param.keys()
-                and param[length] != self.parameter_values[length]
-                for length in [
-                    "Negative electrode thickness [m]",
-                    "Separator thickness [m]",
-                    "Positive electrode thickness [m]",
-                ]
-            ]
-        ):
-            raise ValueError(
-                "geometry has changed, the orginal model needs to be re-discretised"
-            )
-        # otherwise update self.param and change the parameters in the discretised model
-        self.param = param
-        param.update_model(self.model, self.disc)
-        # Model should still be well-posed after processing
-        self.model.check_well_posedness(post_discretisation=True)
 
 
 class OptimisationsTest(object):
@@ -154,7 +136,7 @@ class OptimisationsTest(object):
             if simplify:
                 eqn = eqn.simplify()
 
-            y = self.model.concatenated_initial_conditions
+            y = self.model.concatenated_initial_conditions.evaluate(t=0)
             if use_known_evals:
                 eqn_eval, known_evals = eqn.evaluate(0, y, known_evals={})
             elif to_python:

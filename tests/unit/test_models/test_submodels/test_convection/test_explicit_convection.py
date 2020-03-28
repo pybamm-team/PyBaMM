@@ -17,9 +17,13 @@ class TestExplicit(unittest.TestCase):
         a_p = pybamm.PrimaryBroadcast(a, ["positive electrode"])
         variables = {
             "Current collector current density": a,
-            "Negative electrode interfacial current density": a_n,
+            "Negative electrode interfacial current density": pybamm.PrimaryBroadcast(
+                a, ["negative electrode"]
+            ),
             "X-averaged negative electrode interfacial current density": a,
-            "Positive electrode interfacial current density": a_p,
+            "Positive electrode interfacial current density": pybamm.PrimaryBroadcast(
+                a, ["positive electrode"]
+            ),
             "X-averaged positive electrode interfacial current density": a,
             "X-averaged separator pressure": a,
             "X-averaged separator transverse volume-averaged acceleration": a,

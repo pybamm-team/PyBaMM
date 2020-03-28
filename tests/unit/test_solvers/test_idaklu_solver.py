@@ -20,12 +20,15 @@ class TestIDAKLUSolver(unittest.TestCase):
             model.rhs = {u: 0.1 * v}
             model.algebraic = {v: 1 - v}
             model.initial_conditions = {u: 0, v: 1}
-            model.events = {"1": u - 0.2, "2": v}
+            model.events = [
+                pybamm.Event("1", u - 0.2),
+                pybamm.Event("2", v),
+            ]
 
             disc = pybamm.Discretisation()
             disc.process_model(model)
 
-            solver = pybamm.IDAKLUSolver()
+            solver = pybamm.IDAKLUSolver(root_method="lm")
 
             t_eval = np.linspace(0, 3, 100)
             solution = solver.solve(model, t_eval)
@@ -55,7 +58,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
         disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
         disc.process_model(model)
-        solver = pybamm.IDAKLUSolver()
+        solver = pybamm.IDAKLUSolver(root_method="lm")
 
         variable_tols = {"Electrolyte concentration": 1e-3}
         solver.set_atol_by_variable(variable_tols, model)
@@ -73,11 +76,25 @@ class TestIDAKLUSolver(unittest.TestCase):
         disc = pybamm.Discretisation()
         disc.process_model(model)
 
-        solver = pybamm.IDAKLUSolver()
+        solver = pybamm.IDAKLUSolver(root_method="lm")
 
         t_eval = np.linspace(0, 3, 100)
         with self.assertRaisesRegex(pybamm.SolverError, "KLU requires the Jacobian"):
             solver.solve(model, t_eval)
+
+    def test_dae_solver_algebraic_model(self):
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        model.algebraic = {var: var + 1}
+        model.initial_conditions = {var: 0}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.IDAKLUSolver()
+        t_eval = np.linspace(0, 1)
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_array_equal(solution.y, -1)
 
 
 if __name__ == "__main__":

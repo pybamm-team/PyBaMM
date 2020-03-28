@@ -1,6 +1,7 @@
 #
 # Parameter classes
 #
+import numbers
 import numpy as np
 import pybamm
 
@@ -60,10 +61,19 @@ class FunctionParameter(pybamm.Symbol):
         # assign diff variable
         self.diff_variable = diff_variable
         children_list = list(children)
+
+        # Turn numbers into scalars
+        for idx, child in enumerate(children_list):
+            if isinstance(child, numbers.Number):
+                children_list[idx] = pybamm.Scalar(child)
+
         domain = self.get_children_domains(children_list)
-        auxiliary_domains = self.get_children_auxiliary_domains(children)
+        auxiliary_domains = self.get_children_auxiliary_domains(children_list)
         super().__init__(
-            name, children=children, domain=domain, auxiliary_domains=auxiliary_domains
+            name,
+            children=children_list,
+            domain=domain,
+            auxiliary_domains=auxiliary_domains,
         )
 
     def set_id(self):

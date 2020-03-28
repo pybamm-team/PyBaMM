@@ -34,7 +34,7 @@ class TestCasadiSolver(unittest.TestCase):
         )
 
         # Safe mode (enforce events that won't be triggered)
-        model.events = {"an event": var + 1}
+        model.events = [pybamm.Event("an event", var + 1)]
         disc.process_model(model)
         solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 1, 100)
@@ -74,7 +74,7 @@ class TestCasadiSolver(unittest.TestCase):
         model.rhs = {var: -pybamm.sqrt(var)}
         model.initial_conditions = {var: 1}
         # add events so that safe mode is used (won't be triggered)
-        model.events = {"10": var - 10}
+        model.events = [pybamm.Event("10", var - 10)]
         # No need to set parameters; can use base discretisation (no spatial operators)
 
         # create discretisation
@@ -103,10 +103,10 @@ class TestCasadiSolver(unittest.TestCase):
         model.rhs = {var1: 0.1 * var1}
         model.algebraic = {var2: 2 * var1 - var2}
         model.initial_conditions = {var1: 1, var2: 2}
-        model.events = {
-            "var1 = 1.5": pybamm.min(var1 - 1.5),
-            "var2 = 2.5": pybamm.min(var2 - 2.5),
-        }
+        model.events = [
+            pybamm.Event("var1 = 1.5", pybamm.min(var1 - 1.5)),
+            pybamm.Event("var2 = 2.5", pybamm.min(var2 - 2.5)),
+        ]
         disc = get_discretisation_for_testing()
         disc.process_model(model)
 
@@ -141,22 +141,24 @@ class TestCasadiSolver(unittest.TestCase):
         solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
 
         # Step once
-        dt = 0.1
+        dt = 1
         step_sol = solver.step(None, model, dt)
         np.testing.assert_array_equal(step_sol.t, [0, dt])
-        np.testing.assert_allclose(step_sol.y[0], np.exp(0.1 * step_sol.t))
+        np.testing.assert_array_almost_equal(step_sol.y[0], np.exp(0.1 * step_sol.t))
 
         # Step again (return 5 points)
         step_sol_2 = solver.step(step_sol, model, dt, npts=5)
         np.testing.assert_array_equal(
             step_sol_2.t, np.concatenate([np.array([0]), np.linspace(dt, 2 * dt, 5)])
         )
-        np.testing.assert_allclose(step_sol_2.y[0], np.exp(0.1 * step_sol_2.t))
+        np.testing.assert_array_almost_equal(
+            step_sol_2.y[0], np.exp(0.1 * step_sol_2.t)
+        )
 
         # Check steps give same solution as solve
         t_eval = step_sol.t
         solution = solver.solve(model, t_eval)
-        np.testing.assert_allclose(solution.y[0], step_sol.y[0])
+        np.testing.assert_array_almost_equal(solution.y[0], step_sol.y[0])
 
     def test_model_step_with_input(self):
         # Create model
@@ -205,10 +207,10 @@ class TestCasadiSolver(unittest.TestCase):
         model.rhs = {var1: 0.1 * var1}
         model.algebraic = {var2: 2 * var1 - var2}
         model.initial_conditions = {var1: 1, var2: 2}
-        model.events = {
-            "var1 = 1.5": pybamm.min(var1 - 1.5),
-            "var2 = 2.5": pybamm.min(var2 - 2.5),
-        }
+        model.events = [
+            pybamm.Event("var1 = 1.5", pybamm.min(var1 - 1.5)),
+            pybamm.Event("var2 = 2.5", pybamm.min(var2 - 2.5)),
+        ]
         disc = pybamm.Discretisation()
         disc.process_model(model)
 
@@ -237,7 +239,7 @@ class TestCasadiSolver(unittest.TestCase):
         var = pybamm.Variable("var", domain=domain)
         model.rhs = {var: -pybamm.InputParameter("rate") * var}
         model.initial_conditions = {var: 1}
-        model.events = {"var=0.5": pybamm.min(var - 0.5)}
+        model.events = [pybamm.Event("var=0.5", pybamm.min(var - 0.5))]
         # No need to set parameters; can use base discretisation (no spatial
         # operators)
 
@@ -306,6 +308,22 @@ class TestCasadiSolver(unittest.TestCase):
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
         np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
+
+    def test_dae_solver_algebraic_model(self):
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        model.algebraic = {var: var + 1}
+        model.initial_conditions = {var: 0}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.CasadiSolver()
+        t_eval = np.linspace(0, 1)
+        with self.assertRaisesRegex(
+            pybamm.SolverError, "Cannot use CasadiSolver to solve algebraic model"
+        ):
+            solver.solve(model, t_eval)
 
 
 if __name__ == "__main__":
