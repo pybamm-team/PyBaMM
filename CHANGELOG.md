@@ -19,8 +19,14 @@
 -   Added `CasadiAlgebraicSolver` for solving algebraic systems with CasADi ([#868](https://github.com/pybamm-team/PyBaMM/pull/868))
 -   Added electrolyte functions from Landesfeind ([#860](https://github.com/pybamm-team/PyBaMM/pull/860))
 
+## Optimizations
+
+-   Sped up model building ([#927](https://github.com/pybamm-team/PyBaMM/pull/927))
+-   Changed default solver for lead-acid to `CasadiSolver` ([#927](https://github.com/pybamm-team/PyBaMM/pull/927))
+
 ## Bug fixes
 
+-   Reformatted electrolyte submodels ([#927](https://github.com/pybamm-team/PyBaMM/pull/927))
 -   Fixed bug raised if function returns a scalar ([#919](https://github.com/pybamm-team/PyBaMM/pull/919))
 -   Fixed event handling in `ScipySolver` ([#905](https://github.com/pybamm-team/PyBaMM/pull/905))
 -   Made input handling clearer in solvers ([#905](https://github.com/pybamm-team/PyBaMM/pull/905))

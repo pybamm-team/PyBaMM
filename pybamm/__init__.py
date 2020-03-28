@@ -101,6 +101,7 @@ from .expression_tree.operations.evaluate import (
 )
 from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
+from .expression_tree.operations.unpack_symbols import SymbolUnpacker
 
 #
 # Model classes
@@ -123,7 +124,8 @@ from .models.submodels.base_submodel import BaseSubModel
 from .models.submodels import (
     convection,
     current_collector,
-    electrolyte,
+    electrolyte_conductivity,
+    electrolyte_diffusion,
     electrode,
     external_circuit,
     interface,

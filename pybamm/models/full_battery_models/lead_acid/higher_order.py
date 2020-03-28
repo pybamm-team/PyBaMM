@@ -114,7 +114,9 @@ class BaseHigherOrderModel(BaseModel):
     def set_electrolyte_conductivity_submodel(self):
         self.submodels[
             "electrolyte conductivity"
-        ] = pybamm.electrolyte.stefan_maxwell.conductivity.FirstOrder(self.param)
+        ] = pybamm.electrolyte_conductivity.Composite(
+            self.param, higher_order_terms="first-order"
+        )
 
     def set_negative_electrode_submodel(self):
         self.submodels["negative electrode"] = pybamm.electrode.ohm.Composite(
@@ -203,9 +205,7 @@ class FOQS(BaseHigherOrderModel):
     def set_electrolyte_diffusion_submodel(self):
         self.submodels[
             "electrolyte diffusion"
-        ] = pybamm.electrolyte.stefan_maxwell.diffusion.FirstOrder(
-            self.param, self.reactions
-        )
+        ] = pybamm.electrolyte_diffusion.FirstOrder(self.param, self.reactions)
 
     def set_other_species_diffusion_submodels(self):
         if "oxygen" in self.options["side reactions"]:
@@ -235,9 +235,7 @@ class Composite(BaseHigherOrderModel):
     def set_electrolyte_diffusion_submodel(self):
         self.submodels[
             "electrolyte diffusion"
-        ] = pybamm.electrolyte.stefan_maxwell.diffusion.Composite(
-            self.param, self.reactions
-        )
+        ] = pybamm.electrolyte_diffusion.Composite(self.param, self.reactions)
 
     def set_other_species_diffusion_submodels(self):
         if "oxygen" in self.options["side reactions"]:
@@ -281,7 +279,7 @@ class CompositeExtended(Composite):
     def set_electrolyte_diffusion_submodel(self):
         self.submodels[
             "electrolyte diffusion"
-        ] = pybamm.electrolyte.stefan_maxwell.diffusion.Composite(
+        ] = pybamm.electrolyte_diffusion.Composite(
             self.param, self.reactions, extended="distributed"
         )
 

@@ -50,9 +50,7 @@ class BaseModel(pybamm.BaseBatteryModel):
         """
         if len(self.algebraic) == 0:
             return pybamm.ScipySolver()
-        elif pybamm.have_scikits_odes():
-            return pybamm.ScikitsDaeSolver()
-        else:  # pragma: no cover
+        else:
             return pybamm.CasadiSolver(mode="safe")
 
     def set_reactions(self):
