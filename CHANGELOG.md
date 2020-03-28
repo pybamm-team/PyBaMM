@@ -2,6 +2,8 @@
 
 ## Features
 
+-   Store variable slices in model for inspection ([#925](https://github.com/pybamm-team/PyBaMM/pull/925))
+-   Made t_plus (optionally) a function of electrolyte concentration, and added (1 + dlnf/dlnc) to models ([#921](https://github.com/pybamm-team/PyBaMM/pull/921))
 -   Added `DummySolver` for empty models ([#915](https://github.com/pybamm-team/PyBaMM/pull/915))
 -   Added functionality to broadcast to edges ([#891](https://github.com/pybamm-team/PyBaMM/pull/891))
 -   Reformatted and cleaned up `QuickPlot` ([#886](https://github.com/pybamm-team/PyBaMM/pull/886))
