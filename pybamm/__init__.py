@@ -123,7 +123,8 @@ from .models.submodels.base_submodel import BaseSubModel
 from .models.submodels import (
     convection,
     current_collector,
-    electrolyte,
+    electrolyte_conductivity,
+    electrolyte_diffusion,
     electrode,
     external_circuit,
     interface,

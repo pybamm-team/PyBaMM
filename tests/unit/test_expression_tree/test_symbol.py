@@ -316,7 +316,7 @@ class TestSymbol(unittest.TestCase):
                 "Positive": {"s": 1, "aj": "Positive electrode" + icd},
             }
         }
-        model = pybamm.electrolyte.stefan_maxwell.diffusion.Full(param, reactions)
+        model = pybamm.electrolyte_diffusion.Full(param, reactions)
         variables.update(model.get_fundamental_variables())
         variables.update(model.get_coupled_variables(variables))
 
