@@ -123,7 +123,7 @@ class TestBaseBatteryModel(unittest.TestCase):
         with self.assertRaisesRegex(
             pybamm.OptionError, "cannot have transverse convection in 0D model"
         ):
-            pybamm.BaseBatteryModel({"convection": {"transverse": "full"}})
+            pybamm.BaseBatteryModel({"convection": "full transverse"})
         with self.assertRaisesRegex(pybamm.OptionError, "particle model"):
             pybamm.BaseBatteryModel({"particle": "bad particle"})
         with self.assertRaisesRegex(pybamm.OptionError, "operating mode"):

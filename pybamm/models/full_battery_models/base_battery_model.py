@@ -241,10 +241,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 raise pybamm.OptionError(
                     "current collector model must be uniform in 0D model"
                 )
-            if (
-                options["convection"] is not False
-                and options["convection"]["transverse"] == "full"
-            ):
+            if options["convection"] == "full transverse":
                 raise pybamm.OptionError(
                     "cannot have transverse convection in 0D model"
                 )

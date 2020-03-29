@@ -37,11 +37,11 @@ class TestLeadAcidLOQS(unittest.TestCase):
         )
 
     def test_well_posed_with_convection(self):
-        options = {"convection": {"transverse": "uniform"}}
+        options = {"convection": "uniform transverse"}
         model = pybamm.lead_acid.LOQS(options)
         model.check_well_posedness()
 
-        options = {"dimensionality": 1, "convection": {"transverse": "full"}}
+        options = {"dimensionality": 1, "convection": "full transverse"}
         model = pybamm.lead_acid.LOQS(options)
         model.check_well_posedness()
 

@@ -11,11 +11,11 @@ class TestLeadAcidFull(unittest.TestCase):
         model.check_well_posedness()
 
     def test_well_posed_with_convection(self):
-        options = {"convection": {"transverse": "uniform"}}
+        options = {"convection": "uniform transverse"}
         model = pybamm.lead_acid.Full(options)
         model.check_well_posedness()
 
-        options = {"dimensionality": 1, "convection": {"transverse": "full"}}
+        options = {"dimensionality": 1, "convection": "full transverse"}
         model = pybamm.lead_acid.Full(options)
         model.check_well_posedness()
 

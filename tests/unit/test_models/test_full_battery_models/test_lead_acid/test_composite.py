@@ -13,11 +13,11 @@ class TestLeadAcidComposite(unittest.TestCase):
     def test_well_posed_with_convection(self):
         # this test is very slow with debug mode set to true
         pybamm.settings.debug_mode = False
-        options = {"convection": {"transverse": "uniform"}}
+        options = {"convection": "uniform transverse"}
         model = pybamm.lead_acid.Composite(options)
         model.check_well_posedness()
 
-        options = {"dimensionality": 1, "convection": {"transverse": "full"}}
+        options = {"dimensionality": 1, "convection": "full transverse"}
         model = pybamm.lead_acid.Composite(options)
         model.check_well_posedness()
         pybamm.settings.debug_mode = True

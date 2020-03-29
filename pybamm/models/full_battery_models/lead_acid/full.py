@@ -63,11 +63,11 @@ class Full(BaseModel):
                 "through-cell convection"
             ] = pybamm.convection.through_cell.NoConvection(self.param)
         else:
-            if self.options["convection"]["transverse"] == "uniform":
+            if self.options["convection"] == "uniform transverse":
                 self.submodels[
                     "transverse convection"
                 ] = pybamm.convection.transverse.Uniform(self.param)
-            elif self.options["convection"]["transverse"] == "full":
+            elif self.options["convection"] == "full transverse":
                 self.submodels[
                     "transverse convection"
                 ] = pybamm.convection.transverse.Full(self.param)
