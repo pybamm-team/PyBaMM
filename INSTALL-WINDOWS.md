@@ -2,7 +2,9 @@
 
 To use and/or contribute to PyBaMM, you must have Python 3.6 or 3.7 installed (note that 3.8 is not yet supported).
 
-To install Python 3 download the installation files from [Python's website](https://www.python.org/downloads/windows/).
+To install Python 3 download the installation files from [Python's website](https://www.python.org/downloads/windows/). Make sure
+to tick the box on `Add Python 3.X to PATH`. For more detailed instructions please see the 
+[official Python on Windows guide](https://docs.python.org/3.7/using/windows.html).
 
 ## Install PyBaMM
 
