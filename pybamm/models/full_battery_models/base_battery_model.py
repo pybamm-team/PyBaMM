@@ -164,6 +164,25 @@ class BaseBatteryModel(pybamm.BaseModel):
                         )
                     )
 
+        # Options that are incompatible with models
+        if isinstance(self, pybamm.lithium_ion.BaseModel):
+            if options["convection"] is True:
+                raise pybamm.OptionError(
+                    "convection not implemented for lithium-ion models"
+                )
+        if isinstance(self, pybamm.lead_acid.BaseModel):
+            if options["thermal"] != "isothermal" and options["dimensionality"] != 0:
+                raise pybamm.OptionError(
+                    "Lead-acid models can only have thermal "
+                    "effects if dimensionality is 0."
+                )
+
+            if options["thermal current collector"] is True:
+                raise pybamm.OptionError(
+                    "Thermal current collector effects are not implemented "
+                    "for lead-acid models."
+                )
+
         # Some standard checks to make sure options are compatible
         if not (
             options["operating mode"] in ["current", "voltage", "power"]
@@ -240,25 +259,6 @@ class BaseBatteryModel(pybamm.BaseModel):
             raise pybamm.OptionError(
                 "particle model '{}' not recognised".format(options["particle"])
             )
-
-        # Options that are incompatible with models
-        if isinstance(self, pybamm.lithium_ion.BaseModel):
-            if options["convection"] is True:
-                raise pybamm.OptionError(
-                    "convection not implemented for lithium-ion models"
-                )
-        if isinstance(self, pybamm.lead_acid.BaseModel):
-            if options["thermal"] != "isothermal" and options["dimensionality"] != 0:
-                raise pybamm.OptionError(
-                    "Lead-acid models can only have thermal "
-                    "effects if dimensionality is 0."
-                )
-
-            if options["thermal current collector"] is True:
-                raise pybamm.OptionError(
-                    "Thermal current collector effects are not implemented "
-                    "for lead-acid models."
-                )
 
         self._options = options
 
@@ -631,44 +631,15 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         # TODO: add current collector losses to the voltage in 3D
 
-        eta_e_av = self.variables.get(
-            "X-averaged electrolyte ohmic losses",
-            pybamm.PrimaryBroadcast(0, "current collector"),
-        )
-        eta_c_av = self.variables.get(
-            "X-averaged concentration overpotential",
-            pybamm.PrimaryBroadcast(0, "current collector"),
-        )
-        eta_e_av_dim = self.variables.get(
-            "X-averaged electrolyte ohmic losses [V]",
-            pybamm.PrimaryBroadcast(0, "current collector"),
-        )
-        eta_c_av_dim = self.variables.get(
-            "X-averaged concentration overpotential [V]",
-            pybamm.PrimaryBroadcast(0, "current collector"),
-        )
         self.variables.update(
             {
                 "X-averaged open circuit voltage": ocv_av,
-                "Average open circuit voltage": cc_integral(ocv_av),
                 "Measured open circuit voltage": ocv,
                 "X-averaged open circuit voltage [V]": ocv_av_dim,
-                "Average open circuit voltage [V]": cc_integral(ocv_av_dim),
                 "Measured open circuit voltage [V]": ocv_dim,
                 "X-averaged reaction overpotential": eta_r_av,
-                "Average reaction overpotential": cc_integral(eta_r_av),
                 "X-averaged reaction overpotential [V]": eta_r_av_dim,
-                "Average reaction overpotential [V]": cc_integral(eta_r_av_dim),
-                "X-averaged concentration overpotential": eta_e_av,
-                "Average concentration overpotential": cc_integral(eta_e_av),
-                "X-averaged concentration overpotential [V]": eta_e_av_dim,
-                "Average concentration overpotential [V]": cc_integral(eta_e_av_dim),
-                "X-averaged electrolyte ohmic losses": eta_c_av,
-                "Average electrolyte ohmic losses": cc_integral(eta_c_av),
-                "X-averaged electrolyte ohmic losses [V]": eta_c_av_dim,
-                "Average electrolyte ohmic losses [V]": cc_integral(eta_c_av_dim),
                 "X-averaged solid phase ohmic losses": delta_phi_s_av,
-                "Average solid phase ohmic losses": cc_integral(delta_phi_s_av),
                 "X-averaged solid phase ohmic losses [V]": delta_phi_s_av_dim,
             }
         )
@@ -685,23 +656,15 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         self.variables.update(
             {
-                "Average battery open circuit voltage [V]": cc_integral(ocv_av_dim)
+                "X-averaged battery open circuit voltage [V]": ocv_av_dim * num_cells,
+                "Measured battery open circuit voltage [V]": ocv_dim * num_cells,
+                "X-averaged battery reaction overpotential [V]": eta_r_av_dim
                 * num_cells,
-                "Measured battery open circuit voltage [V]": cc_integral(ocv_dim)
+                "X-averaged battery solid phase ohmic losses [V]": delta_phi_s_av_dim
                 * num_cells,
-                "Average battery reaction overpotential [V]": cc_integral(eta_r_av_dim)
+                "X-averaged battery electrolyte ohmic losses [V]": eta_e_av_dim
                 * num_cells,
-                "Average battery solid phase ohmic losses [V]": cc_integral(
-                    delta_phi_s_av_dim
-                )
-                * num_cells,
-                "Average battery electrolyte ohmic losses [V]": cc_integral(
-                    eta_e_av_dim
-                )
-                * num_cells,
-                "Average battery concentration overpotential [V]": cc_integral(
-                    eta_c_av_dim
-                )
+                "X-averaged battery concentration overpotential [V]": eta_c_av_dim
                 * num_cells,
                 "Battery voltage [V]": V_dim * num_cells,
             }
@@ -723,10 +686,6 @@ class BaseBatteryModel(pybamm.BaseModel):
                 pybamm.EventType.TERMINATION,
             )
         )
-
-        # Power
-        I_dim = self.variables["Current [A]"]
-        self.variables.update({"Terminal power [W]": I_dim * V_dim})
 
         # Power
         I_dim = self.variables["Current [A]"]

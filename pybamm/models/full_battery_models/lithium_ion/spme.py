@@ -57,6 +57,15 @@ class SPMe(BaseModel):
 
         self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
 
+    def set_convection_submodel(self):
+
+        self.submodels[
+            "through-cell convection"
+        ] = pybamm.convection.through_cell.NoConvection(self.param)
+        self.submodels[
+            "transverse convection"
+        ] = pybamm.convection.transverse.NoConvection(self.param)
+
     def set_tortuosity_submodels(self):
         self.submodels["electrolyte tortuosity"] = pybamm.tortuosity.Bruggeman(
             self.param, "Electrolyte", True

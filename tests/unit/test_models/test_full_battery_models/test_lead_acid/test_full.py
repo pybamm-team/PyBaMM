@@ -53,7 +53,7 @@ class TestLeadAcidFullSideReactions(unittest.TestCase):
         options = {"side reactions": ["oxygen"], "surface form": "algebraic"}
         model = pybamm.lead_acid.Full(options)
         model.check_well_posedness()
-        self.assertIsInstance(model.default_solver, pybamm.DaeSolver)
+        self.assertIsInstance(model.default_solver, pybamm.CasadiSolver)
 
 
 if __name__ == "__main__":

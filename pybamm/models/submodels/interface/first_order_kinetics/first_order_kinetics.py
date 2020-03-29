@@ -1,6 +1,7 @@
 #
 # First-order Butler-Volmer kinetics
 #
+import pybamm
 from ..base_interface import BaseInterface
 
 

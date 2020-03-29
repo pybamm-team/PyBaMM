@@ -159,7 +159,7 @@ class BaseHigherOrderModel(BaseModel):
             self.submodels[
                 "negative oxygen interface"
             ] = pybamm.interface.DiffusionLimited(
-                self.param, "Negative", "lead-acid oxygen", order="full"
+                self.param, "Negative", "lead-acid oxygen", order="composite"
             )
 
     def set_full_convection_submodel(self):
