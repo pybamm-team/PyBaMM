@@ -24,7 +24,7 @@ Positive electrode electrons in reaction,1,,
 
 ,,,
 # Thermal parameters,,,
-Positive electrode OCP entropic change [V.K-1],[function]nco_entropic_change_NULL,,
+Positive electrode OCP entropic change [V.K-1],0,,
 ,,,
 # Activation energies,,,
 Reference temperature [K],296.15,23C,
