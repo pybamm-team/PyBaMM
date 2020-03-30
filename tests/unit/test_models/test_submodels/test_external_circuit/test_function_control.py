@@ -9,7 +9,13 @@ import unittest
 def external_circuit_function(variables):
     I = variables["Current [A]"]
     V = variables["Terminal voltage [V]"]
-    return V + I - pybamm.FunctionParameter("Current plus voltage function", pybamm.t)
+    return (
+        V
+        + I
+        - pybamm.FunctionParameter(
+            "Current plus voltage function", {"Time [s]": pybamm.t}
+        )
+    )
 
 
 class TestFunctionControl(unittest.TestCase):

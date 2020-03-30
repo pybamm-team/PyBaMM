@@ -8,9 +8,7 @@
 -   Added functionality to broadcast to edges ([#891](https://github.com/pybamm-team/PyBaMM/pull/891))
 -   Reformatted and cleaned up `QuickPlot` ([#886](https://github.com/pybamm-team/PyBaMM/pull/886))
 -   Added thermal effects to lead-acid models ([#885](https://github.com/pybamm-team/PyBaMM/pull/885))
--   Add new symbols `VariableDot`, representing the derivative of a variable wrt time, 
-    and `StateVectorDot`, representing the derivative of a state vector wrt time 
-    ([#858](https://github.com/pybamm-team/PyBaMM/issues/858))
+-   Added a helper function for info on function parameters ([#881](https://github.com/pybamm-team/PyBaMM/pull/881))
 -   Added additional notebooks showing how to create and compare models ([#877](https://github.com/pybamm-team/PyBaMM/pull/877))
 -   Added `Minimum`, `Maximum` and `Sign` operators
     ([#876](https://github.com/pybamm-team/PyBaMM/pull/876))
@@ -18,6 +16,9 @@
 -   Add ambient temperature as a function of time ([#872](https://github.com/pybamm-team/PyBaMM/pull/872))
 -   Added `CasadiAlgebraicSolver` for solving algebraic systems with CasADi ([#868](https://github.com/pybamm-team/PyBaMM/pull/868))
 -   Added electrolyte functions from Landesfeind ([#860](https://github.com/pybamm-team/PyBaMM/pull/860))
+-   Add new symbols `VariableDot`, representing the derivative of a variable wrt time,
+    and `StateVectorDot`, representing the derivative of a state vector wrt time
+    ([#858](https://github.com/pybamm-team/PyBaMM/issues/858))
 
 ## Optimizations
 
