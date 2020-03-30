@@ -39,9 +39,14 @@ def electrolyte_diffusivity_Ecker2015(c_e, T, T_inf, E_D_e, R_g):
 
     # The diffusivity epends on the electrolyte conductivity
     E_k_e = pybamm.Parameter("Electrolyte conductivity activation energy [J.mol-1]")
-    sigma_e = pybamm.FunctionParameter(
-        "Electrolyte conductivity [S.m-1]", c_e, T, T_inf, E_k_e, R_g
-    )
+    inputs = {
+        "Electrolyte concentration [mol.m-3]": c_e,
+        "Temperature [K]": T,
+        "Reference temperature [K]": T_inf,
+        "Activation energy [J.mol-1]": E_k_e,
+        "Ideal gas constant [J.mol-1.K-1]": R_g,
+    }
+    sigma_e = pybamm.FunctionParameter("Electrolyte conductivity [S.m-1]", inputs)
 
     # constants
     k_b = constants.physical_constants["Boltzmann constant"][0]
