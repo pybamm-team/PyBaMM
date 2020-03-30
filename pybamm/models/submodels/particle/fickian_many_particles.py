@@ -52,12 +52,18 @@ class FickianManyParticles(BaseParticle):
 
         if self.domain == "Negative":
             x = pybamm.standard_spatial_vars.x_n
-            R = pybamm.FunctionParameter("Negative particle distribution in x", x)
+            R = pybamm.FunctionParameter(
+                "Negative particle distribution in x",
+                {"Dimensionless through-cell position (x_n)": x},
+            )
             variables.update({"Negative particle distribution in x": R})
 
         elif self.domain == "Positive":
             x = pybamm.standard_spatial_vars.x_p
-            R = pybamm.FunctionParameter("Positive particle distribution in x", x)
+            R = pybamm.FunctionParameter(
+                "Positive particle distribution in x",
+                {"Dimensionless through-cell position (x_p)": x},
+            )
             variables.update({"Positive particle distribution in x": R})
 
         return variables

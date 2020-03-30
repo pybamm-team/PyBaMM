@@ -18,7 +18,7 @@ c_inf_dim = pybamm.Parameter("Bulk electrolyte solvent concentration")
 
 
 def D_dim(cc):
-    return pybamm.FunctionParameter("Diffusivity", cc)
+    return pybamm.FunctionParameter("Diffusivity", {"Concentration [mol.m-3]": cc})
 
 
 # dimensionless parameters
