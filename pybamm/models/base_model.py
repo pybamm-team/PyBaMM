@@ -645,7 +645,7 @@ class BaseModel(object):
         if isinstance(symbol, pybamm.FunctionParameter):
             print("")
             print("Inputs:")
-            symbol.input_names
+            symbol.print_input_names()
 
         print(div)
 

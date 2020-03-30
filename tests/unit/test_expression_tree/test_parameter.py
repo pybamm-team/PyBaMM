@@ -43,12 +43,12 @@ class TestFunctionParameter(unittest.TestCase):
         func = pybamm.FunctionParameter("func", {"2a": 2 * a})
 
         new_func = func.new_copy()
-        self.assertEqual(func._input_names, new_func._input_names)
+        self.assertEqual(func.input_names, new_func.input_names)
 
     def test_print_input_names(self):
         var = pybamm.Variable("var")
         func = pybamm.FunctionParameter("a", {"var": var})
-        func.input_names
+        func.print_input_names()
 
     def test_get_children_domains(self):
         var = pybamm.Variable("var", domain=["negative electrode"])
@@ -64,7 +64,7 @@ class TestFunctionParameter(unittest.TestCase):
         new_input_names = ["first", "second"]
         func.input_names = new_input_names
 
-        self.assertEqual(func._input_names, new_input_names)
+        self.assertEqual(func.input_names, new_input_names)
 
         with self.assertRaises(TypeError):
             new_input_names = {"wrong": "input type"}

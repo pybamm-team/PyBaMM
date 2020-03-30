@@ -84,6 +84,9 @@ class FunctionParameter(pybamm.Symbol):
 
     @property
     def input_names(self):
+        return self._input_names
+
+    def print_input_names(self):
         if self._input_names:
             for inp in self._input_names:
                 print(inp)
