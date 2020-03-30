@@ -80,8 +80,7 @@ class TestCasadiConverter(unittest.TestCase):
 
         # State Vector Dot
         self.assert_casadi_equal(
-            pybamm_y_dot.to_casadi(casadi_t, casadi_y, casadi_y_dot),
-            casadi_y_dot
+            pybamm_y_dot.to_casadi(casadi_t, casadi_y, casadi_y_dot), casadi_y_dot
         )
 
     def test_special_functions(self):
@@ -168,7 +167,7 @@ class TestCasadiConverter(unittest.TestCase):
         casadi_t = casadi.MX.sym("t")
         casadi_y = casadi.MX.sym("y", 10)
         casadi_ydot = casadi.MX.sym("ydot", 10)
-        casadi_us = {
+        casadi_inputs = {
             "Input 1": casadi.MX.sym("Input 1"),
             "Input 2": casadi.MX.sym("Input 2"),
         }
@@ -179,26 +178,26 @@ class TestCasadiConverter(unittest.TestCase):
 
         # Input only
         self.assert_casadi_equal(
-            pybamm_u1.to_casadi(casadi_t, casadi_y, casadi_ydot, casadi_us),
-            casadi_us["Input 1"]
+            pybamm_u1.to_casadi(casadi_t, casadi_y, casadi_ydot, casadi_inputs),
+            casadi_inputs["Input 1"],
         )
 
         # More complex
         expr = pybamm_u1 + pybamm_y
         self.assert_casadi_equal(
-            expr.to_casadi(casadi_t, casadi_y, casadi_ydot, casadi_us),
-            casadi_us["Input 1"] + casadi_y,
+            expr.to_casadi(casadi_t, casadi_y, casadi_ydot, casadi_inputs),
+            casadi_inputs["Input 1"] + casadi_y,
         )
         expr = pybamm_u2 * pybamm_y
         self.assert_casadi_equal(
-            expr.to_casadi(casadi_t, casadi_y, casadi_ydot, casadi_us),
-            casadi_us["Input 2"] * casadi_y,
+            expr.to_casadi(casadi_t, casadi_y, casadi_ydot, casadi_inputs),
+            casadi_inputs["Input 2"] * casadi_y,
         )
 
     def test_convert_external_variable(self):
         casadi_t = casadi.MX.sym("t")
         casadi_y = casadi.MX.sym("y", 10)
-        casadi_us = {
+        casadi_inputs = {
             "External 1": casadi.MX.sym("External 1", 3),
             "External 2": casadi.MX.sym("External 2", 10),
         }
@@ -209,15 +208,15 @@ class TestCasadiConverter(unittest.TestCase):
 
         # External only
         self.assert_casadi_equal(
-            pybamm_u1.to_casadi(casadi_t, casadi_y, u=casadi_us),
-            casadi_us["External 1"]
+            pybamm_u1.to_casadi(casadi_t, casadi_y, inputs=casadi_inputs),
+            casadi_inputs["External 1"],
         )
 
         # More complex
         expr = pybamm_u2 + pybamm_y
         self.assert_casadi_equal(
-            expr.to_casadi(casadi_t, casadi_y, u=casadi_us),
-            casadi_us["External 2"] + casadi_y,
+            expr.to_casadi(casadi_t, casadi_y, inputs=casadi_inputs),
+            casadi_inputs["External 2"] + casadi_y,
         )
 
     def test_errors(self):

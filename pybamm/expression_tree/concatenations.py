@@ -54,7 +54,7 @@ class Concatenation(pybamm.Symbol):
         else:
             return self.concatenation_function(children_eval)
 
-    def evaluate(self, t=None, y=None, y_dot=None, u=None, known_evals=None):
+    def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         children = self.cached_children
         if known_evals is not None:
@@ -62,14 +62,14 @@ class Concatenation(pybamm.Symbol):
                 children_eval = [None] * len(children)
                 for idx, child in enumerate(children):
                     children_eval[idx], known_evals = child.evaluate(
-                        t, y, y_dot, u, known_evals
+                        t, y, y_dot, inputs, known_evals
                     )
                 known_evals[self.id] = self._concatenation_evaluate(children_eval)
             return known_evals[self.id], known_evals
         else:
             children_eval = [None] * len(children)
             for idx, child in enumerate(children):
-                children_eval[idx] = child.evaluate(t, y, y_dot, u)
+                children_eval[idx] = child.evaluate(t, y, y_dot, inputs)
             return self._concatenation_evaluate(children_eval)
 
     def new_copy(self):

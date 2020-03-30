@@ -10,8 +10,8 @@ class TestInputParameter(unittest.TestCase):
     def test_input_parameter_init(self):
         a = pybamm.InputParameter("a")
         self.assertEqual(a.name, "a")
-        self.assertEqual(a.evaluate(u={"a": 1}), 1)
-        self.assertEqual(a.evaluate(u={"a": 5}), 5)
+        self.assertEqual(a.evaluate(inputs={"a": 1}), 1)
+        self.assertEqual(a.evaluate(inputs={"a": 5}), 5)
 
     def test_evaluate_for_shape(self):
         a = pybamm.InputParameter("a")
@@ -20,9 +20,9 @@ class TestInputParameter(unittest.TestCase):
     def test_errors(self):
         a = pybamm.InputParameter("a")
         with self.assertRaises(TypeError):
-            a.evaluate(u="not a dictionary")
+            a.evaluate(inputs="not a dictionary")
         with self.assertRaises(KeyError):
-            a.evaluate(u={"bad param": 5})
+            a.evaluate(inputs={"bad param": 5})
         # if u is not provided it gets turned into a dictionary and then raises KeyError
         with self.assertRaises(KeyError):
             a.evaluate()

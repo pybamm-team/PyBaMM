@@ -370,17 +370,24 @@ alpha = 1 / (sigma_cn * delta ** 2 * l_cn) + 1 / (sigma_cp * delta ** 2 * l_cp)
 alpha_prime = alpha / delta
 
 # Electrolyte Properties
-t_plus = pybamm.Parameter("Cation transference number")
+
+
+def t_plus(c_e):
+    return pybamm.FunctionParameter("Cation transference number", c_e)
+
+
+def one_plus_dlnf_dlnc(c_e):
+    return pybamm.FunctionParameter("1 + dlnf/dlnc", c_e)
+
+
 beta_surf = pybamm.Scalar(0)
-s = 1 - t_plus
 
 
 # (1-2*t_plus) is for Nernst-Planck
 # 2*(1-t_plus) for Stefan-Maxwell
 # Bizeray et al (2016) "Resolving a discrepancy ..."
-# note: this is a function for consistancy with lead-acid
 def chi(c_e):
-    return 2 * (1 - t_plus)
+    return (2 * (1 - t_plus(c_e))) * (one_plus_dlnf_dlnc(c_e))
 
 
 # Electrochemical Reactions

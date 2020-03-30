@@ -1,6 +1,7 @@
 #
 # Solver class using Scipy's adaptive time stepper
 #
+import casadi
 import pybamm
 
 import numpy as np
@@ -68,6 +69,9 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
             Any input parameters to pass to the model when solving
 
         """
+        if model.convert_to_format == "casadi":
+            inputs = casadi.vertcat(*[x for x in inputs.values()])
+
         residuals = model.residuals_eval
         y0 = model.y0
         events = model.terminate_events_eval
@@ -75,10 +79,10 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
         mass_matrix = model.mass_matrix.entries
 
         def eqsres(t, y, ydot, return_residuals):
-            return_residuals[:] = residuals(t, y, ydot)
+            return_residuals[:] = residuals(t, y, ydot, inputs)
 
         def rootfn(t, y, ydot, return_root):
-            return_root[:] = [event(t, y) for event in events]
+            return_root[:] = [event(t, y, inputs) for event in events]
 
         extra_options = {
             "old_api": False,
@@ -88,17 +92,17 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
         }
 
         if jacobian:
-            jac_y0_t0 = jacobian(t_eval[0], y0)
+            jac_y0_t0 = jacobian(t_eval[0], y0, inputs)
             if sparse.issparse(jac_y0_t0):
 
                 def jacfn(t, y, ydot, residuals, cj, J):
-                    jac_eval = jacobian(t, y) - cj * mass_matrix
+                    jac_eval = jacobian(t, y, inputs) - cj * mass_matrix
                     J[:][:] = jac_eval.toarray()
 
             else:
 
                 def jacfn(t, y, ydot, residuals, cj, J):
-                    jac_eval = jacobian(t, y) - cj * mass_matrix
+                    jac_eval = jacobian(t, y, inputs) - cj * mass_matrix
                     J[:][:] = jac_eval
 
             extra_options.update({"jacfn": jacfn})

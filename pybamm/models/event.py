@@ -41,11 +41,11 @@ class Event:
         self._expression = expression
         self._event_type = event_type
 
-    def evaluate(self, t=None, y=None, u=None, known_evals=None):
+    def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
         """
         Acts as a drop-in replacement for :func:`pybamm.Symbol.evaluate`
         """
-        return self._expression.evaluate(t, y, u, known_evals)
+        return self._expression.evaluate(t, y, y_dot, inputs, known_evals)
 
     def __str__(self):
         return self._name
