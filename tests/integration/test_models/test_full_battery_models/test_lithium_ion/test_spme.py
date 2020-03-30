@@ -8,10 +8,6 @@ import numpy as np
 import unittest
 
 
-pybamm.set_logging_level("DEBUG")
-pybamm.settings.debug_mode = True
-
-
 class TestSPMe(unittest.TestCase):
     def test_basic_processing(self):
         options = {"thermal": "isothermal"}

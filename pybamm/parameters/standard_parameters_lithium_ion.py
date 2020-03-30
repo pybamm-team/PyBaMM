@@ -373,11 +373,14 @@ alpha_prime = alpha / delta
 
 
 def t_plus(c_e):
-    return pybamm.FunctionParameter("Cation transference number", c_e)
+    "Dimensionless transference number (i.e. c_e is dimensionless)"
+    inputs = {"Electrolyte concentration [mol.m-3]": c_e * c_e_typ}
+    return pybamm.FunctionParameter("Cation transference number", inputs)
 
 
 def one_plus_dlnf_dlnc(c_e):
-    return pybamm.FunctionParameter("1 + dlnf/dlnc", c_e)
+    inputs = {"Electrolyte concentration [mol.m-3]": c_e * c_e_typ}
+    return pybamm.FunctionParameter("1 + dlnf/dlnc", inputs)
 
 
 beta_surf = pybamm.Scalar(0)

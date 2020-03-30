@@ -171,13 +171,14 @@ Delta_T = pybamm.thermal_parameters.Delta_T
 
 
 def t_plus(c_e):
-    "Dimensionless transference number (i.e. c_e is dimensional)"
-    return pybamm.FunctionParameter("Cation transference number", c_e * c_e_typ)
+    "Dimensionless transference number (i.e. c_e is dimensionless)"
+    inputs = {"Electrolyte concentration [mol.m-3]": c_e * c_e_typ}
+    return pybamm.FunctionParameter("Cation transference number", inputs)
 
 
 def D_e_dimensional(c_e, T):
     "Dimensional diffusivity in electrolyte"
-    inputs = {"Electrolyte concentration [mol.m-3": c_e}
+    inputs = {"Electrolyte concentration [mol.m-3]": c_e}
     return pybamm.FunctionParameter("Electrolyte diffusivity [m2.s-1]", inputs)
 
 
