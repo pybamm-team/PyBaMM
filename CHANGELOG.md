@@ -1,4 +1,6 @@
-# [Unreleased](https://github.com/pybamm-team/PyBaMM)
+# [v0.2.1](https://github.com/pybamm-team/PyBaMM/tree/v0.2.1) - 2020-03-31
+
+New expression tree node types, models, parameter sets and solvers, as well as general bug fixes and new examples.
 
 ## Features
 

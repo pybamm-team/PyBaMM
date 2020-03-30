@@ -46,13 +46,12 @@ class Simulation:
     ----------
     model : :class:`pybamm.BaseModel`
         The model to be simulated
-    experiment : : class:`pybamm.Experiment` (optional)
+    experiment : :class:`pybamm.Experiment` (optional)
         The experimental conditions under which to solve the model
     geometry: :class:`pybamm.Geometry` (optional)
         The geometry upon which to solve the model
-    parameter_values: dict (optional)
-        A dictionary of parameters and their corresponding numerical
-        values
+    parameter_values: :class:`pybamm.ParameterValues` (optional)
+        Parameters and their corresponding numerical values.
     submesh_types: dict (optional)
         A dictionary of the types of submesh to use on each subdomain
     var_pts: dict (optional)
