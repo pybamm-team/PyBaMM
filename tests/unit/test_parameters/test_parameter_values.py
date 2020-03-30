@@ -300,6 +300,7 @@ class TestParameterValues(unittest.TestCase):
                 "a": 3,
                 "func": pybamm.load_function("process_symbol_test_function.py"),
                 "const": 254,
+                "float_func": lambda x: 42,
             }
         )
         a = pybamm.InputParameter("a")
@@ -319,6 +320,11 @@ class TestParameterValues(unittest.TestCase):
         diff_func = func.diff(a)
         processed_diff_func = parameter_values.process_symbol(diff_func)
         self.assertEqual(processed_diff_func.evaluate(u={"a": 3}), 123)
+
+        # function parameter that returns a python float
+        func = pybamm.FunctionParameter("float_func", a)
+        processed_func = parameter_values.process_symbol(func)
+        self.assertEqual(processed_func.evaluate(), 42)
 
         # function itself as input (different to the variable being an input)
         parameter_values = pybamm.ParameterValues({"func": "[input]"})
