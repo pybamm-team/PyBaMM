@@ -62,14 +62,9 @@ class BaseHigherOrder(BaseModel):
         kappa_p_av = param.kappa_e(c_e_av, T_av) * tor_p_av
 
         chi_av = param.chi(c_e_av)
-        if chi_av.domain == ["current collector"]:
-            chi_av_n = pybamm.PrimaryBroadcast(chi_av, "negative electrode")
-            chi_av_s = pybamm.PrimaryBroadcast(chi_av, "separator")
-            chi_av_p = pybamm.PrimaryBroadcast(chi_av, "positive electrode")
-        else:
-            chi_av_n = chi_av
-            chi_av_s = chi_av
-            chi_av_p = chi_av
+        chi_av_n = pybamm.PrimaryBroadcast(chi_av, "negative electrode")
+        chi_av_s = pybamm.PrimaryBroadcast(chi_av, "separator")
+        chi_av_p = pybamm.PrimaryBroadcast(chi_av, "positive electrode")
 
         # electrolyte current
         i_e_n = i_boundary_cc_0 * x_n / l_n

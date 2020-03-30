@@ -137,6 +137,8 @@ class Discretisation(object):
         # Set the y split for variables
         pybamm.logger.info("Set variable slices for {}".format(model.name))
         self.set_variable_slices(variables)
+        # Keep a record of y_slices in the model
+        model.y_slices = self.y_slices_explicit
 
         # now add extrapolated external variables to the boundary conditions
         # if required by the spatial method
@@ -214,6 +216,7 @@ class Discretisation(object):
         """
         # Set up y_slices
         y_slices = defaultdict(list)
+        y_slices_explicit = defaultdict(list)
         start = 0
         end = 0
         # Iterate through unpacked variables, adding appropriate slices to y_slices
@@ -233,14 +236,18 @@ class Discretisation(object):
                             submesh = domain_mesh[i]
                             end += submesh.npts_for_broadcast_to_nodes
                         y_slices[child.id].append(slice(start, end))
+                        y_slices_explicit[child].append(slice(start, end))
                         start = end
             else:
                 end += self._get_variable_size(variable)
                 y_slices[variable.id].append(slice(start, end))
+                y_slices_explicit[variable].append(slice(start, end))
                 start = end
 
         # Convert y_slices back to normal dictionary
         self.y_slices = dict(y_slices)
+        # Also keep a record of what the y_slices are, to be stored in the model
+        self.y_slices_explicit = dict(y_slices_explicit)
 
         # reset discretised_symbols
         self._discretised_symbols = {}
