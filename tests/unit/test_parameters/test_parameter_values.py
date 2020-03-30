@@ -322,7 +322,7 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(processed_diff_func.evaluate(u={"a": 3}), 123)
 
         # function parameter that returns a python float
-        func = pybamm.FunctionParameter("float_func", a)
+        func = pybamm.FunctionParameter("float_func", {"a": a})
         processed_func = parameter_values.process_symbol(func)
         self.assertEqual(processed_func.evaluate(), 42)
 
