@@ -308,12 +308,12 @@ class TestParameterValues(unittest.TestCase):
         a = pybamm.InputParameter("a")
 
         # process function
-        func = pybamm.FunctionParameter("func", a)
+        func = pybamm.FunctionParameter("func", {"a": a})
         processed_func = parameter_values.process_symbol(func)
         self.assertEqual(processed_func.evaluate(inputs={"a": 3}), 369)
 
         # process constant function
-        const = pybamm.FunctionParameter("const", a)
+        const = pybamm.FunctionParameter("const", {"a": a})
         processed_const = parameter_values.process_symbol(const)
         self.assertIsInstance(processed_const, pybamm.Scalar)
         self.assertEqual(processed_const.evaluate(), 254)
@@ -324,14 +324,14 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(processed_diff_func.evaluate(inputs={"a": 3}), 123)
 
         # function parameter that returns a python float
-        func = pybamm.FunctionParameter("float_func", a)
+        func = pybamm.FunctionParameter("float_func", {"a": a})
         processed_func = parameter_values.process_symbol(func)
         self.assertEqual(processed_func.evaluate(), 42)
 
         # function itself as input (different to the variable being an input)
         parameter_values = pybamm.ParameterValues({"func": "[input]"})
         a = pybamm.Scalar(3)
-        func = pybamm.FunctionParameter("func", a)
+        func = pybamm.FunctionParameter("func", {"a": a})
         processed_func = parameter_values.process_symbol(func)
         self.assertEqual(processed_func.evaluate(inputs={"func": 13}), 13)
 
@@ -342,7 +342,7 @@ class TestParameterValues(unittest.TestCase):
         parameter_values = pybamm.ParameterValues({"Diffusivity": D})
 
         a = pybamm.InputParameter("a")
-        func = pybamm.FunctionParameter("Diffusivity", a)
+        func = pybamm.FunctionParameter("Diffusivity", {"a": a})
 
         processed_func = parameter_values.process_symbol(func)
         self.assertEqual(processed_func.evaluate(inputs={"a": 3}), 9)
@@ -373,7 +373,7 @@ class TestParameterValues(unittest.TestCase):
 
         a = pybamm.Parameter("a")
         b = pybamm.Parameter("b")
-        func = pybamm.FunctionParameter("Diffusivity", a, b)
+        func = pybamm.FunctionParameter("Diffusivity", {"a": a, "b": b})
 
         processed_func = parameter_values.process_symbol(func)
         self.assertEqual(processed_func.evaluate(), 3)
@@ -386,7 +386,7 @@ class TestParameterValues(unittest.TestCase):
         )
 
         a = pybamm.Parameter("a")
-        func = pybamm.FunctionParameter("Diffusivity", a)
+        func = pybamm.FunctionParameter("Diffusivity", {"a": a})
 
         processed_func = parameter_values.process_symbol(func)
         self.assertIsInstance(processed_func, pybamm.Interpolant)
@@ -411,8 +411,8 @@ class TestParameterValues(unittest.TestCase):
         )
 
         a = pybamm.InputParameter("a")
-        func = pybamm.FunctionParameter("function", a)
-        interp = pybamm.FunctionParameter("interpolation", a)
+        func = pybamm.FunctionParameter("function", {"a": a})
+        interp = pybamm.FunctionParameter("interpolation", {"a": a})
 
         processed_func = parameter_values.process_symbol(func)
         processed_interp = parameter_values.process_symbol(interp)
