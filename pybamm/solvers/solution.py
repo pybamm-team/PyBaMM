@@ -227,10 +227,10 @@ class _BaseSolution(object):
             savemat(filename, data)
         elif to_format == "csv":
             for name, var in data.items():
-                if var.ndim == 2:
+                if var.ndim >= 2:
                     raise ValueError(
-                        "only 1D variables can be saved to csv, but '{}' is 2D".format(
-                            name
+                        "only 0D variables can be saved to csv, but '{}' is {}D".format(
+                            name, var.ndim - 1
                         )
                     )
             df = pd.DataFrame(data)

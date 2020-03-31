@@ -13,11 +13,11 @@ class TestLeadingOrder(unittest.TestCase):
         reactions = {
             "main": {
                 "Negative": {
-                    "s": param.s_n,
+                    "s": -param.s_plus_n_S,
                     "aj": "Negative electrode interfacial current density",
                 },
                 "Positive": {
-                    "s": param.s_p,
+                    "s": -param.s_plus_p_S,
                     "aj": "Positive electrode interfacial current density",
                 },
             }

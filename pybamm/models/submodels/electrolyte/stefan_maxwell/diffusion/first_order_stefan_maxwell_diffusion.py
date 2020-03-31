@@ -57,7 +57,7 @@ class FirstOrder(BaseModel):
 
         # Right-hand sides
         rhs_n = d_epsc_n_0_dt - sum(
-            reaction["Negative"]["s"]
+            (reaction["Negative"]["s"] - param.t_plus(c_e_0))
             * variables[
                 "Leading-order x-averaged " + reaction["Negative"]["aj"].lower()
             ]
@@ -65,7 +65,7 @@ class FirstOrder(BaseModel):
         )
         rhs_s = d_epsc_s_0_dt
         rhs_p = d_epsc_p_0_dt - sum(
-            reaction["Positive"]["s"]
+            (reaction["Positive"]["s"] - param.t_plus(c_e_0))
             * variables[
                 "Leading-order x-averaged " + reaction["Positive"]["aj"].lower()
             ]

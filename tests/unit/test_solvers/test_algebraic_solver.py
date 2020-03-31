@@ -38,8 +38,9 @@ class TestAlgebraicSolver(unittest.TestCase):
         class Model:
             y0 = np.array([2])
             jacobian_eval = None
+            convert_to_format = "python"
 
-            def algebraic_eval(self, t, y):
+            def algebraic_eval(self, t, y, inputs):
                 return y + 2
 
         solver = pybamm.AlgebraicSolver()
@@ -51,8 +52,9 @@ class TestAlgebraicSolver(unittest.TestCase):
         class Model:
             y0 = np.array([2])
             jacobian_eval = None
+            convert_to_format = "casadi"
 
-            def algebraic_eval(self, t, y):
+            def algebraic_eval(self, t, y, inputs):
                 # algebraic equation has no real root
                 return y ** 2 + 1
 
@@ -77,11 +79,12 @@ class TestAlgebraicSolver(unittest.TestCase):
 
         class Model:
             y0 = np.zeros(2)
+            convert_to_format = "python"
 
-            def algebraic_eval(self, t, y):
+            def algebraic_eval(self, t, y, inputs):
                 return A @ y - b
 
-            def jacobian_eval(self, t, y):
+            def jacobian_eval(self, t, y, inputs):
                 return A
 
         model = Model()

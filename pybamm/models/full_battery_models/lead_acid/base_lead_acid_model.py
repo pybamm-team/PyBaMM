@@ -63,19 +63,19 @@ class BaseModel(pybamm.BaseBatteryModel):
         icd = " interfacial current density"
         self.reactions = {
             "main": {
-                "Negative": {"s": param.s_n, "aj": "Negative electrode" + icd},
-                "Positive": {"s": param.s_p, "aj": "Positive electrode" + icd},
+                "Negative": {"s": -param.s_plus_n_S, "aj": "Negative electrode" + icd},
+                "Positive": {"s": -param.s_plus_p_S, "aj": "Positive electrode" + icd},
             }
         }
         if "oxygen" in self.options["side reactions"]:
             self.reactions["oxygen"] = {
                 "Negative": {
-                    "s": -(param.s_plus_Ox + param.t_plus),
+                    "s": -param.s_plus_Ox,
                     "s_ox": -param.s_ox_Ox,
                     "aj": "Negative electrode oxygen" + icd,
                 },
                 "Positive": {
-                    "s": -(param.s_plus_Ox + param.t_plus),
+                    "s": -param.s_plus_Ox,
                     "s_ox": -param.s_ox_Ox,
                     "aj": "Positive electrode oxygen" + icd,
                 },

@@ -152,20 +152,20 @@ class Function(pybamm.Symbol):
 
         return jacobian
 
-    def evaluate(self, t=None, y=None, y_dot=None, u=None, known_evals=None):
+    def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         if known_evals is not None:
             if self.id not in known_evals:
                 evaluated_children = [None] * len(self.children)
                 for i, child in enumerate(self.children):
                     evaluated_children[i], known_evals = child.evaluate(
-                        t, y, y_dot, u, known_evals=known_evals
+                        t, y, y_dot, inputs, known_evals=known_evals
                     )
                 known_evals[self.id] = self._function_evaluate(evaluated_children)
             return known_evals[self.id], known_evals
         else:
             evaluated_children = [
-                child.evaluate(t, y, y_dot, u) for child in self.children
+                child.evaluate(t, y, y_dot, inputs) for child in self.children
             ]
             return self._function_evaluate(evaluated_children)
 

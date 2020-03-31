@@ -1,6 +1,7 @@
 #
 # Algebraic solver class
 #
+import casadi
 import pybamm
 import numpy as np
 from scipy import optimize
@@ -49,6 +50,10 @@ class AlgebraicSolver(pybamm.BaseSolver):
         inputs : dict, optional
             Any input parameters to pass to the model when solving
         """
+        inputs = inputs or {}
+        if model.convert_to_format == "casadi":
+            inputs = casadi.vertcat(*[x for x in inputs.values()])
+
         algebraic = model.algebraic_eval
         y0 = model.y0
 
@@ -58,7 +63,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
 
             def root_fun(y):
                 "Evaluates algebraic using y"
-                out = algebraic(t, y)
+                out = algebraic(t, y, inputs)
                 pybamm.logger.debug(
                     "Evaluating algebraic equations at t={}, L2-norm is {}".format(
                         t, np.linalg.norm(out)
@@ -69,14 +74,14 @@ class AlgebraicSolver(pybamm.BaseSolver):
             if model.jacobian_eval is not None:
 
                 def jac(y):
-                    return model.jacobian_eval(t, y)
+                    return model.jacobian_eval(t, y, inputs)
 
             else:
                 jac = None
 
             # Evaluate algebraic with new t and previous y0, if it's already close
             # enough then keep it
-            if np.all(abs(algebraic(t, y0)) < self.tol):
+            if np.all(abs(algebraic(t, y0, inputs)) < self.tol):
                 pybamm.logger.debug("Keeping same solution at t={}".format(t))
                 y[:, idx] = y0
             # Otherwise calculate new y0

@@ -53,25 +53,27 @@ class VoltageFunctionControl(FunctionControl):
     """
 
     def __init__(self, param):
-        super().__init__(param, constant_voltage)
+        super().__init__(param, self.constant_voltage)
 
-
-def constant_voltage(variables):
-    V = variables["Terminal voltage [V]"]
-    return V - pybamm.FunctionParameter("Voltage function [V]", pybamm.t)
+    def constant_voltage(self, variables):
+        V = variables["Terminal voltage [V]"]
+        return V - pybamm.FunctionParameter(
+            "Voltage function [V]", {"Time [s]": pybamm.t * self.param.timescale}
+        )
 
 
 class PowerFunctionControl(FunctionControl):
     """External circuit with power control. """
 
     def __init__(self, param):
-        super().__init__(param, constant_power)
+        super().__init__(param, self.constant_power)
 
-
-def constant_power(variables):
-    I = variables["Current [A]"]
-    V = variables["Terminal voltage [V]"]
-    return I * V - pybamm.FunctionParameter("Power function [W]", pybamm.t)
+    def constant_power(self, variables):
+        I = variables["Current [A]"]
+        V = variables["Terminal voltage [V]"]
+        return I * V - pybamm.FunctionParameter(
+            "Power function [W]", {"Time [s]": pybamm.t * self.param.timescale}
+        )
 
 
 class LeadingOrderFunctionControl(FunctionControl, LeadingOrderBaseModel):
@@ -91,11 +93,24 @@ class LeadingOrderVoltageFunctionControl(LeadingOrderFunctionControl):
     """
 
     def __init__(self, param):
-        super().__init__(param, constant_voltage)
+        super().__init__(param, self.constant_voltage)
+
+    def constant_voltage(self, variables):
+        V = variables["Terminal voltage [V]"]
+        return V - pybamm.FunctionParameter(
+            "Voltage function [V]", {"Time [s]": pybamm.t * self.param.timescale}
+        )
 
 
 class LeadingOrderPowerFunctionControl(LeadingOrderFunctionControl):
     """External circuit with power control, at leading order. """
 
     def __init__(self, param):
-        super().__init__(param, constant_power)
+        super().__init__(param, self.constant_power)
+
+    def constant_power(self, variables):
+        I = variables["Current [A]"]
+        V = variables["Terminal voltage [V]"]
+        return I * V - pybamm.FunctionParameter(
+            "Power function [W]", {"Time [s]": pybamm.t * self.param.timescale}
+        )
