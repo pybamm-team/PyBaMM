@@ -58,7 +58,7 @@ def dynamic_plot(*args, **kwargs):
     """
     kwargs_for_class = {k: v for k, v in kwargs.items() if k != "testing"}
     plot = pybamm.QuickPlot(*args, **kwargs_for_class)
-    plot.dynamic_plot(kwargs["testing"])
+    plot.dynamic_plot(kwargs.get("testing", False))
     return plot
 
 
