@@ -387,6 +387,8 @@ class Simulation:
             # to correspond to a single discharge
             elif t_eval is None:
                 C_rate = self._parameter_values["C-rate"]
+                if isinstance(C_rate, pybamm.InputParameter):
+                    C_rate = inputs["C-rate"]
                 try:
                     t_end = 3600 / C_rate
                 except TypeError:

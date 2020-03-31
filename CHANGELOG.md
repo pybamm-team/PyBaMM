@@ -3,11 +3,15 @@
 ## Features
 
 -   Store variable slices in model for inspection ([#925](https://github.com/pybamm-team/PyBaMM/pull/925))
+-   Added LiNiCoO2 parameter set from Ecker et. al. ([#922](https://github.com/pybamm-team/PyBaMM/pull/922))
 -   Made t_plus (optionally) a function of electrolyte concentration, and added (1 + dlnf/dlnc) to models ([#921](https://github.com/pybamm-team/PyBaMM/pull/921))
 -   Added `DummySolver` for empty models ([#915](https://github.com/pybamm-team/PyBaMM/pull/915))
 -   Added functionality to broadcast to edges ([#891](https://github.com/pybamm-team/PyBaMM/pull/891))
 -   Reformatted and cleaned up `QuickPlot` ([#886](https://github.com/pybamm-team/PyBaMM/pull/886))
 -   Added thermal effects to lead-acid models ([#885](https://github.com/pybamm-team/PyBaMM/pull/885))
+-   Add new symbols `VariableDot`, representing the derivative of a variable wrt time,
+    and `StateVectorDot`, representing the derivative of a state vector wrt time
+    ([#858](https://github.com/pybamm-team/PyBaMM/issues/858))
 -   Added a helper function for info on function parameters ([#881](https://github.com/pybamm-team/PyBaMM/pull/881))
 -   Added additional notebooks showing how to create and compare models ([#877](https://github.com/pybamm-team/PyBaMM/pull/877))
 -   Added `Minimum`, `Maximum` and `Sign` operators
