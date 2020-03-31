@@ -8,7 +8,7 @@ pybamm.set_logging_level("INFO")
 # load model and update parameters so the input current is the US06 drive cycle
 model = pybamm.lithium_ion.SPMe({"thermal": "x-lumped"})
 param = model.default_parameter_values
-param["Current function [A]"] = "[current data]US06"
+param["Current function [A]"] = "[current data]Cell27_cycle"
 
 # create and run simulation using the CasadiSolver in "fast" mode, remembering to
 # pass in the updated parameters
