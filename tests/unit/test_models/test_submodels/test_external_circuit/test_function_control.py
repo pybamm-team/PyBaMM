@@ -13,7 +13,8 @@ def external_circuit_function(variables):
         V
         + I
         - pybamm.FunctionParameter(
-            "Current plus voltage function", {"Time [s]": pybamm.t}
+            "Current plus voltage function",
+            {"Time [s]": pybamm.t * pybamm.standard_parameters_lithium_ion.timescale},
         )
     )
 
