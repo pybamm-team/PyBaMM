@@ -5,10 +5,19 @@ import pybamm
 
 pybamm.set_logging_level("INFO")
 
+# experiment
+# experiment = pybamm.Experiment(
+#     [
+#         "Charge at 1.5C until 4.2V",
+#         "Hold at 4.2V until 100 mA",
+#         "Discharge at 1.5C until 3.6V",
+#     ]
+# )
+
 # load model and update parameters so the input current is the US06 drive cycle
 model = pybamm.lithium_ion.DFN()
 param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Mohtat2020)
-param["Current function [A]"] = "[current data]Cell32_cycle"
+param["Current function [A]"] = "[current data]Cell29_cycle"
 param["Electrolyte conductivity [S.m-1]"] = 2.108e-1
 param["Electrolyte diffusivity [m2.s-1]"] = 9.118e-9
 param["Negative electrode reaction rate"] = 3.471e-6
@@ -22,15 +31,15 @@ sim = pybamm.Simulation(
 sim.solve()
 sim.plot(
     [
-        # "Negative particle surface concentration [mol.m-3]",
-        # "Electrolyte concentration [mol.m-3]",
-        # "Positive particle surface concentration [mol.m-3]",
+        "Negative particle surface concentration [mol.m-3]",
+        "Electrolyte concentration [mol.m-3]",
+        "Positive particle surface concentration [mol.m-3]",
         "Current [A]",
-        # "Negative electrode potential [V]",
-        # "Electrolyte potential [V]",
-        # "Positive electrode potential [V]",
+        "Negative electrode potential [V]",
+        "Electrolyte potential [V]",
+        "Positive electrode potential [V]",
         "Terminal voltage [V]",
-        # "X-averaged cell temperature",
+        "X-averaged cell temperature",
     ]
 )
 

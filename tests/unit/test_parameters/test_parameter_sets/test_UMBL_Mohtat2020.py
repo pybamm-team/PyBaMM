@@ -9,14 +9,16 @@ class TestMohtat(unittest.TestCase):
     def test_load_params(self):
         anode = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/anodes/graphite_UMBL_Mohtat2020/parameters.csv"
+                "input/parameters/lithium-ion/" +
+                "anodes/graphite_UMBL_Mohtat2020/parameters.csv"
             )
         )
         self.assertEqual(anode["Reference temperature [K]"], "298.15")
 
         cathode = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/cathodes/NMC_UMBL_Mohtat2020/parameters.csv"
+                "input/parameters/lithium-ion/" +
+                "cathodes/NMC_UMBL_Mohtat2020/parameters.csv"
             )
         )
         self.assertEqual(cathode["Reference temperature [K]"], "298.15")
