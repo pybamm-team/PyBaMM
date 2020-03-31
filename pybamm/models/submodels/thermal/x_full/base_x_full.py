@@ -25,6 +25,7 @@ class BaseModel(BaseThermal):
         T = pybamm.standard_variables.T
         T_cn = pybamm.BoundaryValue(T, "left")
         T_cp = pybamm.BoundaryValue(T, "right")
+
         variables = self._get_standard_fundamental_variables(T, T_cn, T_cp)
         return variables
 

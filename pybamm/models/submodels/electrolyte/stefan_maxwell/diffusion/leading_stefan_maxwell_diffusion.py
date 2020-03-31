@@ -35,7 +35,7 @@ class LeadingOrder(BaseModel):
 
     def get_coupled_variables(self, variables):
 
-        N_e = pybamm.FullBroadcast(
+        N_e = pybamm.FullBroadcastToEdges(
             0,
             ["negative electrode", "separator", "positive electrode"],
             "current collector",
@@ -60,10 +60,10 @@ class LeadingOrder(BaseModel):
 
         source_terms = sum(
             param.l_n
-            * rxn["Negative"]["s"]
+            * (rxn["Negative"]["s"] - param.t_plus(c_e_av))
             * variables["X-averaged " + rxn["Negative"]["aj"].lower()]
             + param.l_p
-            * rxn["Positive"]["s"]
+            * (rxn["Positive"]["s"] - param.t_plus(c_e_av))
             * variables["X-averaged " + rxn["Positive"]["aj"].lower()]
             for rxn in self.reactions.values()
         )

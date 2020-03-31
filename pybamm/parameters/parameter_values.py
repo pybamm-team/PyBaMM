@@ -6,6 +6,7 @@ import pandas as pd
 import os
 import numbers
 import numpy as np
+from pprint import pformat
 
 
 class ParameterValues:
@@ -58,12 +59,10 @@ class ParameterValues:
         # Must provide either values or chemistry, not both (nor neither)
         if values is not None and chemistry is not None:
             raise ValueError(
-                """
-                Only one of values and chemistry can be provided. To change parameters
-                slightly from a chemistry, first load parameters with the chemistry
-                (param = pybamm.ParameterValues(chemistry=...)) and then update with
-                param.update({dict of values}).
-                """
+                "Only one of values and chemistry can be provided. To change parameters"
+                " slightly from a chemistry, first load parameters with the chemistry"
+                " (param = pybamm.ParameterValues(chemistry=...)) and then update with"
+                " param.update({dict of values})."
             )
         if values is None and chemistry is None:
             raise ValueError("values and chemistry cannot both be None")
@@ -74,9 +73,12 @@ class ParameterValues:
         if values is not None:
             # If base_parameters is a filename, load from that filename
             if isinstance(values, str):
+                path = os.path.split(values)[0]
                 values = self.read_parameters_csv(values)
+            else:
+                path = None
             # Don't check parameter already exists when first creating it
-            self.update(values, check_already_exists=False)
+            self.update(values, check_already_exists=False, path=path)
 
         # Initialise empty _processed_symbols dict (for caching)
         self._processed_symbols = {}
@@ -91,6 +93,9 @@ class ParameterValues:
     def __delitem__(self, key):
         del self._dict_items[key]
 
+    def __repr__(self):
+        return pformat(self._dict_items, width=1)
+
     def keys(self):
         "Get the keys of the dictionary"
         return self._dict_items.keys()
@@ -103,13 +108,23 @@ class ParameterValues:
         "Get the items of the dictionary"
         return self._dict_items.items()
 
+    def search(self, key, print_values=True):
+        """
+        Search dictionary for keys containing 'key'.
+
+        See :meth:`pybamm.FuzzyDict.search()`.
+        """
+        return self._dict_items.search(key, print_values)
+
     def update_from_chemistry(self, chemistry):
         """
         Load standard set of components from a 'chemistry' dictionary
         """
         base_chemistry = chemistry["chemistry"]
         # Create path to file
-        path = os.path.join("input", "parameters", base_chemistry)
+        path = os.path.join(
+            pybamm.root_dir(), "pybamm", "input", "parameters", base_chemistry
+        )
         # Load each component name
         for component_group in [
             "cell",
@@ -143,10 +158,13 @@ class ParameterValues:
                 path=component_path,
             )
 
-        # register citations
+        # register (list of) citations
         if "citation" in chemistry:
-            citation = chemistry["citation"]
-            pybamm.citations.register(citation)
+            citations = chemistry["citation"]
+            if not isinstance(citations, list):
+                citations = [citations]
+            for citation in citations:
+                pybamm.citations.register(citation)
 
     def read_parameters_csv(self, filename):
         """Reads parameters from csv file into dict.
@@ -207,13 +225,10 @@ class ParameterValues:
                     self._dict_items[name]
                 except KeyError as err:
                     raise KeyError(
-                        """
-                        Cannot update parameter '{}' as it does not have a default
-                        value. ({}). If you are sure you want to update this parameter,
-                        use param.update({{name: value}}, check_already_exists=False)
-                        """.format(
-                            name, err.args[0]
-                        )
+                        "Cannot update parameter '{}' as it does not ".format(name)
+                        + "have a default value. ({}). If you are ".format(err.args[0])
+                        + "sure you want to update this parameter, use "
+                        + "param.update({{name: value}}, check_already_exists=False)"
                     )
             # if no conflicts, update, loading functions and data if they are specified
             # Functions are flagged with the string "[function]"
@@ -227,7 +242,9 @@ class ParameterValues:
                 # Data is flagged with the string "[data]" or "[current data]"
                 elif value.startswith("[current data]") or value.startswith("[data]"):
                     if value.startswith("[current data]"):
-                        data_path = os.path.join("input", "drive_cycles")
+                        data_path = os.path.join(
+                            pybamm.root_dir(), "pybamm", "input", "drive_cycles"
+                        )
                         filename = os.path.join(data_path, value[14:] + ".csv")
                         function_name = value[14:]
                     else:
@@ -257,16 +274,12 @@ class ParameterValues:
         # Make sure typical current is non-zero
         if "Typical current [A]" in values and values["Typical current [A]"] == 0:
             raise ValueError(
-                """
-                "Typical current [A]" cannot be zero. A possible alternative is to set
-                "Current function [A]" to `0` instead.
-                """
+                "'Typical current [A]' cannot be zero. A possible alternative is to "
+                "set 'Current function [A]' to `0` instead."
             )
         if "C-rate" in values and "Current function [A]" in values:
             raise ValueError(
-                """
-                Cannot provide both "C-rate" and "Current function [A]" simultaneously
-                """
+                "Cannot provide both 'C-rate' and 'Current function [A]' simultaneously"
             )
         # If the capacity of the cell has been provided, make sure "C-rate" and current
         # match with the stated capacity
@@ -326,7 +339,8 @@ class ParameterValues:
         Raises
         ------
         :class:`pybamm.ModelError`
-            If an empty model is passed (`model.rhs = {}` and `model.algebraic={}`)
+            If an empty model is passed (`model.rhs = {}` and `model.algebraic = {}` and
+            `model.variables = {}`)
 
         """
         pybamm.logger.info(
@@ -342,7 +356,11 @@ class ParameterValues:
             # create a blank model of the same class
             model = unprocessed_model.new_copy()
 
-        if len(unprocessed_model.rhs) == 0 and len(unprocessed_model.algebraic) == 0:
+        if (
+            len(unprocessed_model.rhs) == 0
+            and len(unprocessed_model.algebraic) == 0
+            and len(unprocessed_model.variables) == 0
+        ):
             raise pybamm.ModelError("Cannot process parameters for empty model")
 
         for variable, equation in model.rhs.items():
@@ -514,6 +532,9 @@ class ParameterValues:
                 # return differentiated function
                 new_diff_variable = self.process_symbol(symbol.diff_variable)
                 function_out = function.diff(new_diff_variable)
+            # Convert possible float output to a pybamm scalar
+            if isinstance(function_out, numbers.Number):
+                return pybamm.Scalar(function_out)
             # Process again just to be sure
             return self.process_symbol(function_out)
 
@@ -574,6 +595,9 @@ class ParameterValues:
             return processed_symbol.evaluate()
         else:
             raise ValueError("symbol must evaluate to a constant scalar")
+
+    def _ipython_key_completions_(self):
+        return list(self._dict_items.keys())
 
 
 class CurrentToCrate:

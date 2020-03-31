@@ -41,11 +41,12 @@ class TestScikitsSolvers(unittest.TestCase):
             y0 = np.array([0.0, 1.0])
             terminate_events_eval = []
             timescale_eval = 1
+            convert_to_format = "python"
 
-            def residuals_eval(self, t, y, ydot):
+            def residuals_eval(self, t, y, ydot, inputs):
                 return np.array([0.5 * np.ones_like(y[0]) - ydot[0], 2 * y[0] - y[1]])
 
-            def jacobian_eval(self, t, y):
+            def jacobian_eval(self, t, y, inputs):
                 return np.array([[0.0, 0.0], [2.0, -1.0]])
 
         model = Model()
@@ -89,13 +90,14 @@ class TestScikitsSolvers(unittest.TestCase):
             y0 = np.array([0.0, 0.0])
             terminate_events_eval = []
             timescale_eval = 1
+            convert_to_format = "python"
 
-            def residuals_eval(self, t, y, ydot):
+            def residuals_eval(self, t, y, ydot, inputs):
                 return np.array(
                     [0.5 * np.ones_like(y[0]) - 4 * ydot[0], 2.0 * y[0] - y[1]]
                 )
 
-            def jacobian_eval(self, t, y):
+            def jacobian_eval(self, t, y, inputs):
                 return np.array([[0.0, 0.0], [2.0, -1.0]])
 
         model = Model()
@@ -262,7 +264,9 @@ class TestScikitsSolvers(unittest.TestCase):
 
         rate = pybamm.Function(nonsmooth_rate, pybamm.t)
         mult = pybamm.Function(nonsmooth_mult, pybamm.t)
-        model.rhs = {var1: rate * var1}
+        # put in an extra heaviside with no time dependence, this should be ignored by
+        # the solver i.e. no extra discontinuities added
+        model.rhs = {var1: rate * var1 + (var1 < 0)}
         model.algebraic = {var2: mult * var1 - var2}
         model.initial_conditions = {var1: 1, var2: 2}
         model.events = [
@@ -630,9 +634,7 @@ class TestScikitsSolvers(unittest.TestCase):
         model2.rhs = {var1: (0.1 * (pybamm.t < discontinuity) + 0.1) * var1}
         model2.algebraic = {var2: var2}
         model2.initial_conditions = {var1: 1, var2: 0}
-        model2.events = [
-            pybamm.Event("var1 = 1.5", pybamm.min(var1 - 1.5)),
-        ]
+        model2.events = [pybamm.Event("var1 = 1.5", pybamm.min(var1 - 1.5))]
 
         # third model implicitly adds a discontinuity event via another heaviside
         # function
@@ -640,9 +642,7 @@ class TestScikitsSolvers(unittest.TestCase):
         model3.rhs = {var1: (-0.1 * (discontinuity < pybamm.t) + 0.2) * var1}
         model3.algebraic = {var2: var2}
         model3.initial_conditions = {var1: 1, var2: 0}
-        model3.events = [
-            pybamm.Event("var1 = 1.5", pybamm.min(var1 - 1.5)),
-        ]
+        model3.events = [pybamm.Event("var1 = 1.5", pybamm.min(var1 - 1.5))]
 
         for model in [model1, model2, model3]:
 
@@ -696,10 +696,23 @@ class TestScikitsSolvers(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.SolverError, "Cannot use ODE solver"):
             solver.set_up(model)
 
+    def test_dae_solver_algebraic_model(self):
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        model.algebraic = {var: var + 1}
+        model.initial_conditions = {var: 0}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.ScikitsDaeSolver()
+        t_eval = np.linspace(0, 1)
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_array_equal(solution.y, -1)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
-
     if "-v" in sys.argv:
         debug = True
         pybamm.set_logging_level("DEBUG")

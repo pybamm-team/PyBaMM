@@ -49,8 +49,8 @@ class TestExternalVariables(unittest.TestCase):
         var = "Terminal voltage [V]"
         t = sim.solution.t[-1]
         y = sim.solution.y[:, -1]
-        u = external_variables
-        sim.built_model.variables[var].evaluate(t, y, u)
+        inputs = external_variables
+        sim.built_model.variables[var].evaluate(t, y, inputs=inputs)
         sim.solution[var](t)
 
 

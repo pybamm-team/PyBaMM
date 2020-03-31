@@ -22,18 +22,18 @@ model.submodels["negative electrode"] = pybamm.electrode.ohm.LeadingOrder(
 model.submodels["positive electrode"] = pybamm.electrode.ohm.LeadingOrder(
     model.param, "Positive"
 )
-model.submodels["negative particle"] = pybamm.particle.fast.SingleParticle(
+model.submodels["negative particle"] = pybamm.particle.FastSingleParticle(
     model.param, "Negative"
 )
-model.submodels["positive particle"] = pybamm.particle.fast.SingleParticle(
+model.submodels["positive particle"] = pybamm.particle.FastSingleParticle(
     model.param, "Positive"
 )
-model.submodels[
-    "negative interface"
-] = pybamm.interface.lithium_ion.InverseButlerVolmer(model.param, "Negative")
-model.submodels[
-    "positive interface"
-] = pybamm.interface.lithium_ion.InverseButlerVolmer(model.param, "Positive")
+model.submodels["negative interface"] = pybamm.interface.InverseButlerVolmer(
+    model.param, "Negative", "lithium-ion main"
+)
+model.submodels["positive interface"] = pybamm.interface.InverseButlerVolmer(
+    model.param, "Positive", "lithium-ion main"
+)
 electrolyte = pybamm.electrolyte.stefan_maxwell
 model.submodels["electrolyte diffusion"] = electrolyte.diffusion.ConstantConcentration(
     model.param

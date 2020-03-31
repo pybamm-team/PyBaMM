@@ -16,6 +16,7 @@ class TestSimplify(unittest.TestCase):
         d = pybamm.Scalar(-1)
         e = pybamm.Scalar(2)
         g = pybamm.Variable("g")
+        gdot = pybamm.VariableDot("g'")
 
         # negate
         self.assertIsInstance((-a).simplify(), pybamm.Scalar)
@@ -45,11 +46,11 @@ class TestSimplify(unittest.TestCase):
         self.assertEqual((f).simplify().evaluate(), 0)
 
         # FunctionParameter
-        f = pybamm.FunctionParameter("function", b)
+        f = pybamm.FunctionParameter("function", {"b": b})
         self.assertIsInstance((f).simplify(), pybamm.FunctionParameter)
         self.assertEqual((f).simplify().children[0].id, b.id)
 
-        f = pybamm.FunctionParameter("function", a, b)
+        f = pybamm.FunctionParameter("function", {"a": a, "b": b})
         self.assertIsInstance((f).simplify(), pybamm.FunctionParameter)
         self.assertEqual((f).simplify().children[0].id, a.id)
         self.assertEqual((f).simplify().children[1].id, b.id)
@@ -174,6 +175,18 @@ class TestSimplify(unittest.TestCase):
         self.assertEqual(expr.children[0].evaluate(), 4.0)
         self.assertIsInstance(expr.children[1], pybamm.Negate)
         self.assertIsInstance(expr.children[1].children[0], pybamm.Parameter)
+
+        expr = (e * g * b).simplify()
+        self.assertIsInstance(expr, pybamm.Multiplication)
+        self.assertIsInstance(expr.children[0], pybamm.Scalar)
+        self.assertEqual(expr.children[0].evaluate(), 2.0)
+        self.assertIsInstance(expr.children[1], pybamm.Variable)
+
+        expr = (e * gdot * b).simplify()
+        self.assertIsInstance(expr, pybamm.Multiplication)
+        self.assertIsInstance(expr.children[0], pybamm.Scalar)
+        self.assertEqual(expr.children[0].evaluate(), 2.0)
+        self.assertIsInstance(expr.children[1], pybamm.VariableDot)
 
         expr = (e + (g - c)).simplify()
         self.assertIsInstance(expr, pybamm.Addition)

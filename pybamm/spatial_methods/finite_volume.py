@@ -40,7 +40,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # add npts_for_broadcast to mesh domains for this particular discretisation
         for dom in mesh.keys():
             for i in range(len(mesh[dom])):
-                mesh[dom][i].npts_for_broadcast = mesh[dom][i].npts
+                mesh[dom][i].npts_for_broadcast_to_nodes = mesh[dom][i].npts
 
     def spatial_variable(self, symbol):
         """
@@ -57,9 +57,11 @@ class FiniteVolume(pybamm.SpatialMethod):
         :class:`pybamm.Vector`
             Contains the discretised spatial variable
         """
-        # for finite volume we use the cell centres
         symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
-        entries = np.concatenate([mesh.nodes for mesh in symbol_mesh])
+        if symbol.evaluates_on_edges():
+            entries = np.concatenate([mesh.edges for mesh in symbol_mesh])
+        else:
+            entries = np.concatenate([mesh.nodes for mesh in symbol_mesh])
         return pybamm.Vector(
             entries, domain=symbol.domain, auxiliary_domains=symbol.auxiliary_domains
         )

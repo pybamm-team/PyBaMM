@@ -89,4 +89,3 @@ class BaseParticle(pybamm.BaseSubModel):
                 pybamm.EventType.TERMINATION,
             )
         )
-

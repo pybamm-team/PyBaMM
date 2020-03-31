@@ -28,11 +28,7 @@ def electrolyte_diffusivity_Nyman2008(c_e, T, T_inf, E_D_e, R_g):
         Solid diffusivity
     """
 
-    D_c_e = (
-        8.794E-11 * (c_e / 1000) ** 2
-        - 3.972E-10 * (c_e / 1000)
-        + 4.862E-10
-    )
+    D_c_e = 8.794e-11 * (c_e / 1000) ** 2 - 3.972e-10 * (c_e / 1000) + 4.862e-10
     arrhenius = exp(E_D_e / R_g * (1 / T_inf - 1 / T))
 
     return D_c_e * arrhenius

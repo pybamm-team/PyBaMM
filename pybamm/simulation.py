@@ -9,12 +9,15 @@ import warnings
 import sys
 
 
-def isnotebook():
+def is_notebook():
     try:
         shell = get_ipython().__class__.__name__
-        if shell == "ZMQInteractiveShell":
-            return True  # Jupyter notebook or qtconsole
-        elif shell == "TerminalInteractiveShell":
+        if shell == "ZMQInteractiveShell":  # pragma: no cover
+            # Jupyter notebook or qtconsole
+            cfg = get_ipython().config
+            nb = len(cfg["InteractiveShell"].keys()) == 0
+            return nb
+        elif shell == "TerminalInteractiveShell":  # pragma: no cover
             return False  # Terminal running IPython
         else:
             return False  # Other type (?)
@@ -28,17 +31,11 @@ def constant_current_constant_voltage_constant_power(variables):
     s_I = pybamm.InputParameter("Current switch")
     s_V = pybamm.InputParameter("Voltage switch")
     s_P = pybamm.InputParameter("Power switch")
-    n_electrodes_parallel = pybamm.electrical_parameters.n_electrodes_parallel
     n_cells = pybamm.electrical_parameters.n_cells
     return (
-        s_I * (I - pybamm.InputParameter("Current input [A]") / n_electrodes_parallel)
+        s_I * (I - pybamm.InputParameter("Current input [A]"))
         + s_V * (V - pybamm.InputParameter("Voltage input [V]") / n_cells)
-        + s_P
-        * (
-            V * I
-            - pybamm.InputParameter("Power input [W]")
-            / (n_cells * n_electrodes_parallel)
-        )
+        + s_P * (V * I - pybamm.InputParameter("Power input [W]") / n_cells)
     )
 
 
@@ -49,13 +46,12 @@ class Simulation:
     ----------
     model : :class:`pybamm.BaseModel`
         The model to be simulated
-    experiment : : class:`pybamm.Experiment` (optional)
+    experiment : :class:`pybamm.Experiment` (optional)
         The experimental conditions under which to solve the model
     geometry: :class:`pybamm.Geometry` (optional)
         The geometry upon which to solve the model
-    parameter_values: dict (optional)
-        A dictionary of parameters and their corresponding numerical
-        values
+    parameter_values: :class:`pybamm.ParameterValues` (optional)
+        Parameters and their corresponding numerical values.
     submesh_types: dict (optional)
         A dictionary of the types of submesh to use on each subdomain
     var_pts: dict (optional)
@@ -107,7 +103,7 @@ class Simulation:
         self.reset(update_model=False)
 
         # ignore runtime warnings in notebooks
-        if isnotebook():
+        if is_notebook():  # pragma: no cover
             import warnings
 
             warnings.filterwarnings("ignore")
@@ -212,21 +208,18 @@ class Simulation:
 
         # add current and voltage events to the model
         # current events both negative and positive to catch specification
-        n_electrodes_parallel = pybamm.electrical_parameters.n_electrodes_parallel
         n_cells = pybamm.electrical_parameters.n_cells
         self.model.events.extend(
             [
                 pybamm.Event(
                     "Current cut-off (positive) [A] [experiment]",
                     self.model.variables["Current [A]"]
-                    - abs(pybamm.InputParameter("Current cut-off [A]"))
-                    / n_electrodes_parallel,
+                    - abs(pybamm.InputParameter("Current cut-off [A]")),
                 ),
                 pybamm.Event(
                     "Current cut-off (negative) [A] [experiment]",
                     self.model.variables["Current [A]"]
-                    + abs(pybamm.InputParameter("Current cut-off [A]"))
-                    / n_electrodes_parallel,
+                    + abs(pybamm.InputParameter("Current cut-off [A]")),
                 ),
                 pybamm.Event(
                     "Voltage cut-off [V] [experiment]",
@@ -393,6 +386,8 @@ class Simulation:
             # to correspond to a single discharge
             elif t_eval is None:
                 C_rate = self._parameter_values["C-rate"]
+                if isinstance(C_rate, pybamm.InputParameter):
+                    C_rate = inputs["C-rate"]
                 try:
                     t_end = 3600 / C_rate
                 except TypeError:
@@ -537,17 +532,9 @@ class Simulation:
         if quick_plot_vars is None:
             quick_plot_vars = self.quick_plot_vars
 
-        plot = pybamm.QuickPlot(self._solution, output_variables=quick_plot_vars)
-
-        if isnotebook():
-            import ipywidgets as widgets
-
-            widgets.interact(
-                plot.plot,
-                t=widgets.FloatSlider(min=0, max=plot.max_t, step=0.05, value=0),
-            )
-        else:
-            plot.dynamic_plot(testing=testing)
+        self.quick_plot = pybamm.dynamic_plot(
+            self._solution, output_variables=quick_plot_vars, testing=testing
+        )
 
     @property
     def model(self):

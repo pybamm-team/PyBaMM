@@ -101,6 +101,12 @@ class TestCitations(unittest.TestCase):
         pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Sulzer2019)
         self.assertIn("sulzer2019physical", citations._papers_to_cite)
 
+        citations._reset()
+        pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Ecker2015)
+        self.assertIn("ecker2015i", citations._papers_to_cite)
+        self.assertIn("ecker2015ii", citations._papers_to_cite)
+        self.assertIn("richardson2020", citations._papers_to_cite)
+
     def test_solver_citations(self):
         # Test that solving each solver adds the right citations
         citations = pybamm.citations
@@ -108,6 +114,11 @@ class TestCitations(unittest.TestCase):
         citations._reset()
         self.assertNotIn("virtanen2020scipy", citations._papers_to_cite)
         pybamm.ScipySolver()
+        self.assertIn("virtanen2020scipy", citations._papers_to_cite)
+
+        citations._reset()
+        self.assertNotIn("virtanen2020scipy", citations._papers_to_cite)
+        pybamm.AlgebraicSolver()
         self.assertIn("virtanen2020scipy", citations._papers_to_cite)
 
         if pybamm.have_scikits_odes():

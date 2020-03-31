@@ -168,6 +168,13 @@ class TestSymbol(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             a.evaluate()
 
+    def test_evaluate_ignoring_errors(self):
+        self.assertIsNone(pybamm.t.evaluate_ignoring_errors(t=None))
+        self.assertEqual(pybamm.t.evaluate_ignoring_errors(t=0), 0)
+        self.assertIsNone(pybamm.Parameter("a").evaluate_ignoring_errors())
+        self.assertIsNone(pybamm.StateVector(slice(0, 1)).evaluate_ignoring_errors())
+        self.assertEqual(pybamm.InputParameter("a").evaluate_ignoring_errors(), 1)
+
     def test_symbol_is_constant(self):
         a = pybamm.Variable("a")
         self.assertFalse(a.is_constant())
@@ -374,7 +381,7 @@ class TestSymbol(unittest.TestCase):
         param = pybamm.Parameter("a")
         self.assertEqual(param.shape_for_testing, ())
 
-        func = pybamm.FunctionParameter("func", state)
+        func = pybamm.FunctionParameter("func", {"state": state})
         self.assertEqual(func.shape_for_testing, state.shape_for_testing)
 
         concat = pybamm.Concatenation()

@@ -33,6 +33,7 @@ class BaseModel(BaseThermal):
         T_cp = T_x_av
 
         variables = self._get_standard_fundamental_variables(T, T_cn, T_cp)
+
         return variables
 
     def get_coupled_variables(self, variables):
@@ -41,7 +42,7 @@ class BaseModel(BaseThermal):
 
     def _flux_law(self, T):
         """Fast heat diffusion (temperature has no spatial dependence)"""
-        q = pybamm.FullBroadcast(
+        q = pybamm.FullBroadcastToEdges(
             pybamm.Scalar(0),
             ["negative electrode", "separator", "positive electrode"],
             "current collector",

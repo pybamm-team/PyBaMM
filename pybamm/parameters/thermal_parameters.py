@@ -110,3 +110,14 @@ Theta = Delta_T / T_ref
 h = h_dim * pybamm.geometric_parameters.L_x / lambda_eff_dim
 
 T_init = (T_init_dim - T_ref) / Delta_T
+
+# --------------------------------------------------------------------------------------
+# Ambient temperature
+
+
+def T_amb_dim(t):
+    return pybamm.FunctionParameter("Ambient temperature [K]", {"Times [s]": t})
+
+
+def T_amb(t):
+    return (T_amb_dim(t) - T_ref) / Delta_T  # dimensionless T_amb
