@@ -3,7 +3,6 @@
 #
 import numpy as np
 import pybamm
-import warnings
 from collections import defaultdict
 
 
@@ -615,6 +614,10 @@ class QuickPlot(object):
         if len(solution_handles) > 0:
             self.fig.legend(solution_handles, self.labels, loc="lower right")
 
+        # Fix layout
+        bottom = 0.05 + 0.03 * max((len(self.labels) - 2), 0)
+        self.gridspec.tight_layout(self.fig, rect=[0, bottom, 1, 1])
+
     def dynamic_plot(self, testing=False, step=None):
         """
         Generate a dynamic plot with a slider to control the time.
@@ -650,12 +653,6 @@ class QuickPlot(object):
                 ax_slider, "Time [{}]".format(self.time_unit), 0, self.max_t, valinit=0
             )
             self.slider.on_changed(self.slider_update)
-
-            # ignore the warning about tight layout
-            warnings.simplefilter("ignore")
-            bottom = 0.05 + 0.03 * max((len(self.labels) - 2), 0)
-            self.gridspec.tight_layout(self.fig, rect=[0, bottom, 1, 1])
-            warnings.simplefilter("always")
 
             if not testing:  # pragma: no cover
                 plt.show()
