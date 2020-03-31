@@ -735,7 +735,7 @@ class Symbol(anytree.NodeMixin):
                 )
                 # Pick a y that won't cause RuntimeWarnings
                 y = np.linspace(0.1, 0.9, min_y_size)
-            evaluated_self = self.evaluate(0, y, y)
+            evaluated_self = self.evaluate(0, y, y, inputs="shape test")
 
         # Return shape of evaluated object
         if isinstance(evaluated_self, numbers.Number):
