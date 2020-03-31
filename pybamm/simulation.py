@@ -532,11 +532,9 @@ class Simulation:
         if quick_plot_vars is None:
             quick_plot_vars = self.quick_plot_vars
 
-        self.quick_plot = pybamm.QuickPlot(
-            self._solution, output_variables=quick_plot_vars
+        self.quick_plot = pybamm.dynamic_plot(
+            self._solution, output_variables=quick_plot_vars, testing=testing
         )
-
-        self.quick_plot.dynamic_plot(testing=testing)
 
     @property
     def model(self):

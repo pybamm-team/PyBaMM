@@ -44,6 +44,24 @@ def split_long_string(title, max_words=4):
         return first_line + "\n" + second_line
 
 
+def dynamic_plot(*args, **kwargs):
+    """
+    Creates a :class:`pybamm.QuickPlot` object (with arguments 'args' and keyword
+    arguments 'kwargs') and then calls :meth:`pybamm.QuickPlot.dynamic_plot`.
+    The key-word argument 'testing' is passed to the 'dynamic_plot' method, not the
+    `QuickPlot' class.
+
+    Returns
+    -------
+    plot : :class:`pybamm.QuickPlot`
+        The 'QuickPlot' object that was created
+    """
+    kwargs_for_class = {k: v for k, v in kwargs.items() if k != "testing"}
+    plot = pybamm.QuickPlot(*args, **kwargs_for_class)
+    plot.dynamic_plot(kwargs["testing"])
+    return plot
+
+
 class QuickPlot(object):
     """
     Generates a quick plot of a subset of key outputs of the model so that the model
