@@ -28,6 +28,7 @@ New expression tree node types, models, parameter sets and solvers, as well as g
 
 ## Bug fixes
 
+-   Fixed tight layout for QuickPlot in jupyter notebooks ([#930](https://github.com/pybamm-team/PyBaMM/pull/930))
 -   Fixed bug raised if function returns a scalar ([#919](https://github.com/pybamm-team/PyBaMM/pull/919))
 -   Fixed event handling in `ScipySolver` ([#905](https://github.com/pybamm-team/PyBaMM/pull/905))
 -   Made input handling clearer in solvers ([#905](https://github.com/pybamm-team/PyBaMM/pull/905))
