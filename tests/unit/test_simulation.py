@@ -193,7 +193,7 @@ class TestSimulation(unittest.TestCase):
         self.assertIsInstance(c_e, np.ndarray)
 
     def test_set_external_variable(self):
-        model_options = {"thermal": "x-lumped", "external submodels": ["thermal"]}
+        model_options = {"thermal": "lumped", "external submodels": ["thermal"]}
         model = pybamm.lithium_ion.SPMe(model_options)
         sim = pybamm.Simulation(model)
 

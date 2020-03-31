@@ -138,6 +138,12 @@ class TestBaseBatteryModel(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.ModelError, "Submodel"):
             model.build_model()
 
+    def test_thermal_future_warning(self):
+        with self.assertWarns(FutureWarning):
+            pybamm.BaseBatteryModel({"thermal": "x-lumped"})
+        with self.assertWarns(FutureWarning):
+            pybamm.BaseBatteryModel({"thermal": "xyz-lumped"})
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

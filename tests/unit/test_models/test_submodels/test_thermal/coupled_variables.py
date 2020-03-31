@@ -1,5 +1,6 @@
 import pybamm
 
+i_cell = pybamm.PrimaryBroadcast(pybamm.Scalar(1), "current collector")
 a_n = pybamm.FullBroadcast(
     pybamm.Scalar(0), ["negative electrode"], "current collector"
 )
@@ -20,4 +21,5 @@ coupled_variables = {
     "Negative electrode current density": a_n,
     "Positive electrode potential": a_p,
     "Positive electrode current density": a_p,
+    "Current collector current density": i_cell,
 }

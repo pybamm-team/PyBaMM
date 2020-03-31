@@ -19,9 +19,18 @@ class BaseThermal(pybamm.BaseSubModel):
     def __init__(self, param):
         super().__init__(param)
 
-    def _get_standard_fundamental_variables(self, T, T_cn, T_cp):
+    def _get_standard_fundamental_variables(self, T_cn, T_n, T_s, T_p, T_cp):
         param = self.param
-        T_n, T_s, T_p = T.orphans
+
+        # The variable T is the concatenation of the temperature in the negative
+        # electrode, separator and positive electrode, for use the electrochemical
+        # models
+        T = pybamm.Concatenation(T_n, T_s, T_p)
+
+        # Compute averaged temperatures by domain
+        T_n_av = pybamm.x_average(T_n)
+        T_s_av = pybamm.x_average(T_s)
+        T_p_av = pybamm.x_average(T_p)
 
         # Compute the X-average over the current collectors by default.
         # Note: the method 'self._x_average' is overwritten by models which do
@@ -30,29 +39,25 @@ class BaseThermal(pybamm.BaseSubModel):
         T_x_av = self._x_average(T, T_cn, T_cp)
         T_vol_av = self._yz_average(T_x_av)
 
+        # Get the ambient temperature, which can be specified as a function of time
         T_amb_dim = param.T_amb_dim(pybamm.t * param.timescale)
         T_amb = param.T_amb(pybamm.t * param.timescale)
-
-        q = self._flux_law(T)
 
         variables = {
             "Negative current collector temperature": T_cn,
             "Negative current collector temperature [K]": param.Delta_T * T_cn,
-            "X-averaged negative electrode temperature": pybamm.x_average(T_n),
-            "X-averaged negative electrode temperature [K]": param.Delta_T
-            * pybamm.x_average(T_n)
+            "X-averaged negative electrode temperature": T_n_av,
+            "X-averaged negative electrode temperature [K]": param.Delta_T * T_n_av
             + param.T_ref,
             "Negative electrode temperature": T_n,
             "Negative electrode temperature [K]": param.Delta_T * T_n + param.T_ref,
-            "X-averaged separator temperature": pybamm.x_average(T_s),
-            "X-averaged separator temperature [K]": param.Delta_T
-            * pybamm.x_average(T_s)
+            "X-averaged separator temperature": T_s_av,
+            "X-averaged separator temperature [K]": param.Delta_T * T_s_av
             + param.T_ref,
             "Separator temperature": T_s,
             "Separator temperature [K]": param.Delta_T * T_s + param.T_ref,
-            "X-averaged positive electrode temperature": pybamm.x_average(T_p),
-            "X-averaged positive electrode temperature [K]": param.Delta_T
-            * pybamm.x_average(T_p)
+            "X-averaged positive electrode temperature": T_p_av,
+            "X-averaged positive electrode temperature [K]": param.Delta_T * T_p_av
             + param.T_ref,
             "Positive electrode temperature": T_p,
             "Positive electrode temperature [K]": param.Delta_T * T_p + param.T_ref,
@@ -65,8 +70,6 @@ class BaseThermal(pybamm.BaseSubModel):
             "Volume-averaged cell temperature": T_vol_av,
             "Volume-averaged cell temperature [K]": param.Delta_T * T_vol_av
             + param.T_ref,
-            "Heat flux": q,
-            "Heat flux [W.m-2]": q,
             "Ambient temperature [K]": T_amb_dim,
             "Ambient temperature": T_amb,
         }
@@ -196,16 +199,7 @@ class BaseThermal(pybamm.BaseSubModel):
         )
         return variables
 
-    def _flux_law(self, T):
-        raise NotImplementedError
-
-    def _unpack(self, variables):
-        raise NotImplementedError
-
     def _current_collector_heating(self, variables):
-        raise NotImplementedError
-
-    def _yz_average(self, var):
         raise NotImplementedError
 
     def _x_average(self, var, var_cn, var_cp):
@@ -222,8 +216,8 @@ class BaseThermal(pybamm.BaseSubModel):
         assumed independent of x, so we do not make the distinction between negative
         and positive current collectors in the geometry).
         """
-        # When averging the temperature for x-lumped or xyz-lumped models, var
-        # is a concatenation of broadcasts of the X- or Volume- averaged temperature.
+        # When averging the temperature for lumped models, var is a concatenation
+        # of broadcasts of the X- or Volume- averaged temperature.
         # In this instance we return the (unmodified) variable corresponding to
         # the correct average to avoid a ModelError (the unmodified variables must
         # be the key in model.rhs)
@@ -245,15 +239,7 @@ class BaseThermal(pybamm.BaseSubModel):
             ) / self.param.l
         return out
 
-    def _effective_properties(self):
-        """
-        Computes the effective effective product of density and specific heat, and
-        effective thermal conductivity, respectively. These are computed differently
-        depending upon whether current collectors are included or not. Defualt
-        behaviour is to assume the presence of current collectors. Due to the choice
-        of non-dimensionalisation, the dimensionless effective properties are equal
-        to 1 in the case where current collectors are accounted for.
-        """
-        rho_eff = pybamm.Scalar(1)
-        lambda_eff = pybamm.Scalar(1)
-        return rho_eff, lambda_eff
+    def _yz_average(self, var):
+        """Computes the y-z average. Is implemented differently by specific classes
+        depending on the geometry"""
+        raise NotImplementedError
