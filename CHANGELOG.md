@@ -1,4 +1,6 @@
-# [Unreleased](https://github.com/pybamm-team/PyBaMM)
+# [v0.2.1](https://github.com/pybamm-team/PyBaMM/tree/v0.2.1) - 2020-03-31
+
+New expression tree node types, models, parameter sets and solvers, as well as general bug fixes and new examples.
 
 ## Features
 
@@ -26,6 +28,7 @@
 
 ## Bug fixes
 
+-   Fixed tight layout for QuickPlot in jupyter notebooks ([#930](https://github.com/pybamm-team/PyBaMM/pull/930))
 -   Fixed bug raised if function returns a scalar ([#919](https://github.com/pybamm-team/PyBaMM/pull/919))
 -   Fixed event handling in `ScipySolver` ([#905](https://github.com/pybamm-team/PyBaMM/pull/905))
 -   Made input handling clearer in solvers ([#905](https://github.com/pybamm-team/PyBaMM/pull/905))
