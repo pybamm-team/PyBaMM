@@ -27,10 +27,10 @@ def graphite_ocp_PeymanMPM(sto):
     return u_eq
 
 
-if __name__ == "__main__":
-    import matplotlib.pyplot as plt
-    import numpy as np
+# if __name__ == "__main__": # pragma: no cover
+#     import matplotlib.pyplot as plt
+#     import numpy as np
 
-    x = np.linspace(0, 1)
-    plt.plot(x, graphite_ocp_PeymanMPM(x))
-    plt.show()
+#     x = np.linspace(0, 1)
+#     plt.plot(x, graphite_ocp_PeymanMPM(x))
+#     plt.show()
