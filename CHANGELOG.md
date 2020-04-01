@@ -1,4 +1,17 @@
-# [Unreleased](https://github.com/pybamm-team/PyBaMM)
+# [Unreleased](https://github.com/pybamm-team/PyBaMM/)
+
+## Optimizations
+
+-   Sped up model building ([#927](https://github.com/pybamm-team/PyBaMM/pull/927))
+-   Changed default solver for lead-acid to `CasadiSolver` ([#927](https://github.com/pybamm-team/PyBaMM/pull/927))
+
+## Bug fixes
+
+-   Reformatted electrolyte submodels ([#927](https://github.com/pybamm-team/PyBaMM/pull/927))
+
+# [v0.2.1](https://github.com/pybamm-team/PyBaMM/tree/v0.2.1) - 2020-03-31
+
+New expression tree node types, models, parameter sets and solvers, as well as general bug fixes and new examples.
 
 ## Features
 
@@ -9,9 +22,6 @@
 -   Added functionality to broadcast to edges ([#891](https://github.com/pybamm-team/PyBaMM/pull/891))
 -   Reformatted and cleaned up `QuickPlot` ([#886](https://github.com/pybamm-team/PyBaMM/pull/886))
 -   Added thermal effects to lead-acid models ([#885](https://github.com/pybamm-team/PyBaMM/pull/885))
--   Add new symbols `VariableDot`, representing the derivative of a variable wrt time,
-    and `StateVectorDot`, representing the derivative of a state vector wrt time
-    ([#858](https://github.com/pybamm-team/PyBaMM/issues/858))
 -   Added a helper function for info on function parameters ([#881](https://github.com/pybamm-team/PyBaMM/pull/881))
 -   Added additional notebooks showing how to create and compare models ([#877](https://github.com/pybamm-team/PyBaMM/pull/877))
 -   Added `Minimum`, `Maximum` and `Sign` operators
@@ -24,14 +34,9 @@
     and `StateVectorDot`, representing the derivative of a state vector wrt time
     ([#858](https://github.com/pybamm-team/PyBaMM/issues/858))
 
-## Optimizations
-
--   Sped up model building ([#927](https://github.com/pybamm-team/PyBaMM/pull/927))
--   Changed default solver for lead-acid to `CasadiSolver` ([#927](https://github.com/pybamm-team/PyBaMM/pull/927))
-
 ## Bug fixes
 
--   Reformatted electrolyte submodels ([#927](https://github.com/pybamm-team/PyBaMM/pull/927))
+-   Fixed tight layout for QuickPlot in jupyter notebooks ([#930](https://github.com/pybamm-team/PyBaMM/pull/930))
 -   Fixed bug raised if function returns a scalar ([#919](https://github.com/pybamm-team/PyBaMM/pull/919))
 -   Fixed event handling in `ScipySolver` ([#905](https://github.com/pybamm-team/PyBaMM/pull/905))
 -   Made input handling clearer in solvers ([#905](https://github.com/pybamm-team/PyBaMM/pull/905))

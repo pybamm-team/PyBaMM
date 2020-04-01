@@ -3,7 +3,6 @@
 #
 import numpy as np
 import pybamm
-import warnings
 from collections import defaultdict
 
 
@@ -43,6 +42,24 @@ def split_long_string(title, max_words=4):
         first_line = (" ").join(words[:max_words])
         second_line = (" ").join(words[max_words:])
         return first_line + "\n" + second_line
+
+
+def dynamic_plot(*args, **kwargs):
+    """
+    Creates a :class:`pybamm.QuickPlot` object (with arguments 'args' and keyword
+    arguments 'kwargs') and then calls :meth:`pybamm.QuickPlot.dynamic_plot`.
+    The key-word argument 'testing' is passed to the 'dynamic_plot' method, not the
+    `QuickPlot' class.
+
+    Returns
+    -------
+    plot : :class:`pybamm.QuickPlot`
+        The 'QuickPlot' object that was created
+    """
+    kwargs_for_class = {k: v for k, v in kwargs.items() if k != "testing"}
+    plot = pybamm.QuickPlot(*args, **kwargs_for_class)
+    plot.dynamic_plot(kwargs.get("testing", False))
+    return plot
 
 
 class QuickPlot(object):
@@ -615,6 +632,10 @@ class QuickPlot(object):
         if len(solution_handles) > 0:
             self.fig.legend(solution_handles, self.labels, loc="lower right")
 
+        # Fix layout
+        bottom = 0.05 + 0.03 * max((len(self.labels) - 2), 0)
+        self.gridspec.tight_layout(self.fig, rect=[0, bottom, 1, 1])
+
     def dynamic_plot(self, testing=False, step=None):
         """
         Generate a dynamic plot with a slider to control the time.
@@ -650,12 +671,6 @@ class QuickPlot(object):
                 ax_slider, "Time [{}]".format(self.time_unit), 0, self.max_t, valinit=0
             )
             self.slider.on_changed(self.slider_update)
-
-            # ignore the warning about tight layout
-            warnings.simplefilter("ignore")
-            bottom = 0.05 + 0.03 * max((len(self.labels) - 2), 0)
-            self.gridspec.tight_layout(self.fig, rect=[0, bottom, 1, 1])
-            warnings.simplefilter("always")
 
             if not testing:  # pragma: no cover
                 plt.show()
