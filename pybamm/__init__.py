@@ -218,7 +218,7 @@ from . import experiments
 # other
 #
 from .processed_variable import ProcessedVariable
-from .quick_plot import QuickPlot, ax_min, ax_max
+from .quick_plot import QuickPlot, dynamic_plot, ax_min, ax_max
 
 from .simulation import Simulation, load_sim, is_notebook
 
