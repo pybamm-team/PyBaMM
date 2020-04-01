@@ -398,13 +398,13 @@ class BaseModel(object):
             for node in eq.pre_order():
                 if isinstance(node, pybamm.VariableDot):
                     raise pybamm.ModelError(
-                        "time derivative of variable found ({}) in rhs equation {}"
-                        .format(node, key)
+                        "time derivative of variable"
+                        + " found ({}) in rhs equation {}".format(node, key)
                     )
                 if isinstance(node, pybamm.StateVectorDot):
                     raise pybamm.ModelError(
-                        "time derivative of state vector found ({}) in rhs equation {}"
-                        .format(node, key)
+                        "time derivative of state vector"
+                        + " found ({}) in rhs equation {}".format(node, key)
                     )
 
         # Check that no variable time derivatives exist in the algebraic equations
@@ -441,8 +441,11 @@ class BaseModel(object):
                 [x.id for x in eqn.pre_order() if isinstance(x, pybamm.Variable)]
             )
             vars_in_eqns.update(
-                [x.get_variable().id for x in eqn.pre_order()
-                 if isinstance(x, pybamm.VariableDot)]
+                [
+                    x.get_variable().id
+                    for x in eqn.pre_order()
+                    if isinstance(x, pybamm.VariableDot)
+                ]
             )
         for var, eqn in self.algebraic.items():
             vars_in_algebraic_keys.update(
@@ -452,8 +455,11 @@ class BaseModel(object):
                 [x.id for x in eqn.pre_order() if isinstance(x, pybamm.Variable)]
             )
             vars_in_eqns.update(
-                [x.get_variable().id for x in eqn.pre_order()
-                 if isinstance(x, pybamm.VariableDot)]
+                [
+                    x.get_variable().id
+                    for x in eqn.pre_order()
+                    if isinstance(x, pybamm.VariableDot)
+                ]
             )
         for var, side_eqn in self.boundary_conditions.items():
             for side, (eqn, typ) in side_eqn.items():
@@ -461,8 +467,11 @@ class BaseModel(object):
                     [x.id for x in eqn.pre_order() if isinstance(x, pybamm.Variable)]
                 )
                 vars_in_eqns.update(
-                    [x.get_variable().id for x in eqn.pre_order()
-                     if isinstance(x, pybamm.VariableDot)]
+                    [
+                        x.get_variable().id
+                        for x in eqn.pre_order()
+                        if isinstance(x, pybamm.VariableDot)
+                    ]
                 )
         # If any keys are repeated between rhs and algebraic then the model is
         # overdetermined
@@ -614,6 +623,32 @@ class BaseModel(object):
                     )
                 )
 
+    def info(self, symbol_name):
+        """
+        Provides helpful summary information for a symbol.
+
+        Parameters
+        ----------
+        parameter_name : str
+        """
+
+        div = "-----------------------------------------"
+        symbol = find_symbol_in_model(self, symbol_name)
+
+        if not symbol:
+            return None
+
+        print(div)
+        print(symbol_name, "\n")
+        print(type(symbol))
+
+        if isinstance(symbol, pybamm.FunctionParameter):
+            print("")
+            print("Inputs:")
+            symbol.print_input_names()
+
+        print(div)
+
     @property
     def default_solver(self):
         "Return default solver based on whether model is ODE model or DAE model"
@@ -624,3 +659,33 @@ class BaseModel(object):
             return pybamm.IDAKLUSolver()
         else:
             return pybamm.CasadiSolver(mode="safe")
+
+
+# helper functions for finding symbols
+def find_symbol_in_tree(tree, name):
+    if name == tree.name:
+        return tree
+    elif len(tree.children) > 0:
+        for child in tree.children:
+            child_return = find_symbol_in_tree(child, name)
+            if child_return:
+                return child_return
+
+
+def find_symbol_in_dict(dic, name):
+    for tree in dic.values():
+        tree_return = find_symbol_in_tree(tree, name)
+        if tree_return:
+            return tree_return
+
+
+def find_symbol_in_model(model, name):
+    dics = [
+        model.rhs,
+        model.algebraic,
+        model.variables,
+    ]
+    for dic in dics:
+        dic_return = find_symbol_in_dict(dic, name)
+        if dic_return:
+            return dic_return

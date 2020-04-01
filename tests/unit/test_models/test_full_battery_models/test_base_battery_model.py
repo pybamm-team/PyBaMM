@@ -108,7 +108,7 @@ class TestBaseBatteryModel(unittest.TestCase):
         )
 
     def test_bad_options(self):
-        with self.assertRaisesRegex(pybamm.OptionError, "option"):
+        with self.assertRaisesRegex(pybamm.OptionError, "Option"):
             pybamm.BaseBatteryModel({"bad option": "bad option"})
         with self.assertRaisesRegex(pybamm.OptionError, "current collector model"):
             pybamm.BaseBatteryModel({"current collector": "bad current collector"})

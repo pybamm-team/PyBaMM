@@ -116,7 +116,7 @@ T_init = (T_init_dim - T_ref) / Delta_T
 
 
 def T_amb_dim(t):
-    return pybamm.FunctionParameter("Ambient temperature [K]", t)
+    return pybamm.FunctionParameter("Ambient temperature [K]", {"Times [s]": t})
 
 
 def T_amb(t):

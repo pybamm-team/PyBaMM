@@ -48,7 +48,7 @@ class Time(IndependentVariable):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
         return Time()
 
-    def _base_evaluate(self, t=None, y=None, y_dot=None, u=None):
+    def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
         """ See :meth:`pybamm.Symbol._base_evaluate()`. """
         if t is None:
             raise ValueError("t must be provided")

@@ -25,7 +25,7 @@ class TestCopy(unittest.TestCase):
             -a,
             abs(a),
             pybamm.Function(np.sin, a),
-            pybamm.FunctionParameter("function", a),
+            pybamm.FunctionParameter("function", {"a": a}),
             pybamm.grad(a),
             pybamm.div(a),
             pybamm.Integral(a, pybamm.t),

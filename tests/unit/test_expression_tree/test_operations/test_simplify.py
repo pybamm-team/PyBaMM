@@ -46,11 +46,11 @@ class TestSimplify(unittest.TestCase):
         self.assertEqual((f).simplify().evaluate(), 0)
 
         # FunctionParameter
-        f = pybamm.FunctionParameter("function", b)
+        f = pybamm.FunctionParameter("function", {"b": b})
         self.assertIsInstance((f).simplify(), pybamm.FunctionParameter)
         self.assertEqual((f).simplify().children[0].id, b.id)
 
-        f = pybamm.FunctionParameter("function", a, b)
+        f = pybamm.FunctionParameter("function", {"a": a, "b": b})
         self.assertIsInstance((f).simplify(), pybamm.FunctionParameter)
         self.assertEqual((f).simplify().children[0].id, a.id)
         self.assertEqual((f).simplify().children[1].id, b.id)

@@ -108,15 +108,17 @@ c_e_init_dimensional = pybamm.Parameter(
 
 def c_n_init_dimensional(x):
     "Initial concentration as a function of dimensionless position x"
+    inputs = {"Dimensionless through-cell position (x_n)": x}
     return pybamm.FunctionParameter(
-        "Initial concentration in negative electrode [mol.m-3]", x
+        "Initial concentration in negative electrode [mol.m-3]", inputs
     )
 
 
 def c_p_init_dimensional(x):
     "Initial concentration as a function of dimensionless position x"
+    inputs = {"Dimensionless through-cell position (x_p)": x}
     return pybamm.FunctionParameter(
-        "Initial concentration in positive electrode [mol.m-3]", x
+        "Initial concentration in positive electrode [mol.m-3]", inputs
     )
 
 
@@ -140,50 +142,88 @@ velocity_scale = pybamm.Scalar(1)
 
 def D_e_dimensional(c_e, T):
     "Dimensional diffusivity in electrolyte"
-    return pybamm.FunctionParameter("Electrolyte diffusivity [m2.s-1]", c_e, T)
+    inputs = {
+        "Electrolyte concentration [mol.m-3]": c_e,
+        "Temperature [K]": T,
+        "Reference temperature [K]": T_ref,
+        "Activation energy [J.mol-1]": E_D_e,
+        "Ideal gas constant [J.mol-1.K-1]": R,
+    }
+    return pybamm.FunctionParameter("Electrolyte diffusivity [m2.s-1]", inputs)
 
 
 def kappa_e_dimensional(c_e, T):
     "Dimensional electrolyte conductivity"
-    return pybamm.FunctionParameter("Electrolyte conductivity [S.m-1]", c_e, T)
+    inputs = {
+        "Electrolyte concentration [mol.m-3]": c_e,
+        "Temperature [K]": T,
+        "Reference temperature [K]": T_ref,
+        "Activation energy [J.mol-1]": E_k_e,
+        "Ideal gas constant [J.mol-1.K-1]": R,
+    }
+    return pybamm.FunctionParameter("Electrolyte conductivity [S.m-1]", inputs)
 
 
 def D_n_dimensional(sto, T):
     """Dimensional diffusivity in negative particle. Note this is defined as a
     function of stochiometry"""
-    return pybamm.FunctionParameter(
-        "Negative electrode diffusivity [m2.s-1]", sto, T, T_ref, E_D_s_n, R
-    )
+
+    inputs = {
+        "Negative particle stoichiometry": sto,
+        "Temperature [K]": T,
+        "Reference temperature [K]": T_ref,
+        "Activation energy [J.mol-1]": E_D_s_n,
+        "Ideal gas constant [J.mol-1.K-1]": R,
+    }
+
+    return pybamm.FunctionParameter("Negative electrode diffusivity [m2.s-1]", inputs)
 
 
 def D_p_dimensional(sto, T):
     """Dimensional diffusivity in positive particle. Note this is defined as a
     function of stochiometry"""
-    return pybamm.FunctionParameter(
-        "Positive electrode diffusivity [m2.s-1]", sto, T, T_ref, E_D_s_p, R
-    )
+    inputs = {
+        "Positive particle stoichiometry": sto,
+        "Temperature [K]": T,
+        "Reference temperature [K]": T_ref,
+        "Activation energy [J.mol-1]": E_D_s_p,
+        "Ideal gas constant [J.mol-1.K-1]": R,
+    }
+    return pybamm.FunctionParameter("Positive electrode diffusivity [m2.s-1]", inputs)
 
 
 def m_n_dimensional(T):
     "Dimensional negative reaction rate"
-    return pybamm.FunctionParameter(
-        "Negative electrode reaction rate [(A.m-2)(m3.mol-1)^1.5]", T
-    )
+    inputs = {
+        "Temperature [K]": T,
+        "Reference temperature [K]": T_ref,
+        "Activation energy [J.mol-1]": E_r_n,
+        "Ideal gas constant [J.mol-1.K-1]": R,
+    }
+    return pybamm.FunctionParameter("Negative electrode reaction rate", inputs)
 
 
 def m_p_dimensional(T):
     "Dimensional negative reaction rate"
-    return pybamm.FunctionParameter(
-        "Positive electrode reaction rate [(A.m-2)(m3.mol-1)^1.5]", T
-    )
+    inputs = {
+        "Temperature [K]": T,
+        "Reference temperature [K]": T_ref,
+        "Activation energy [J.mol-1]": E_r_p,
+        "Ideal gas constant [J.mol-1.K-1]": R,
+    }
+    return pybamm.FunctionParameter("Positive electrode reaction rate", inputs)
 
 
 def dUdT_n_dimensional(sto):
     """
     Dimensional entropic change of the negative electrode open-circuit potential [V.K-1]
     """
+    inputs = {
+        "Negative particle stoichiometry": sto,
+        "Max negative particle concentration [mol.m-3]": c_n_max,
+    }
     return pybamm.FunctionParameter(
-        "Negative electrode OCP entropic change [V.K-1]", sto, c_n_max
+        "Negative electrode OCP entropic change [V.K-1]", inputs
     )
 
 
@@ -191,20 +231,26 @@ def dUdT_p_dimensional(sto):
     """
     Dimensional entropic change of the positive electrode open-circuit potential [V.K-1]
     """
+    inputs = {
+        "Positive particle stoichiometry": sto,
+        "Max positive particle concentration [mol.m-3]": c_p_max,
+    }
     return pybamm.FunctionParameter(
-        "Positive electrode OCP entropic change [V.K-1]", sto, c_p_max
+        "Positive electrode OCP entropic change [V.K-1]", inputs
     )
 
 
 def U_n_dimensional(sto, T):
     "Dimensional open-circuit potential in the negative electrode [V]"
-    u_ref = pybamm.FunctionParameter("Negative electrode OCP [V]", sto)
+    inputs = {"Negative particle stoichiometry": sto}
+    u_ref = pybamm.FunctionParameter("Negative electrode OCP [V]", inputs)
     return u_ref + (T - T_ref) * dUdT_n_dimensional(sto)
 
 
 def U_p_dimensional(sto, T):
     "Dimensional open-circuit potential in the positive electrode [V]"
-    u_ref = pybamm.FunctionParameter("Positive electrode OCP [V]", sto)
+    inputs = {"Positive particle stoichiometry": sto}
+    u_ref = pybamm.FunctionParameter("Positive electrode OCP [V]", inputs)
     return u_ref + (T - T_ref) * dUdT_p_dimensional(sto)
 
 
@@ -288,16 +334,18 @@ centre_y_tab_p = pybamm.geometric_parameters.centre_y_tab_p
 centre_z_tab_p = pybamm.geometric_parameters.centre_z_tab_p
 
 # Microscale geometry
-epsilon_n = pybamm.FunctionParameter(
-    "Negative electrode porosity", pybamm.standard_spatial_vars.x_n
-)
-epsilon_s = pybamm.FunctionParameter(
-    "Separator porosity", pybamm.standard_spatial_vars.x_s
-)
-epsilon_p = pybamm.FunctionParameter(
-    "Positive electrode porosity", pybamm.standard_spatial_vars.x_p
-)
+
+inputs = {"Through-cell distance (x_n) [m]": pybamm.standard_spatial_vars.x_n}
+epsilon_n = pybamm.FunctionParameter("Negative electrode porosity", inputs)
+
+inputs = {"Through-cell distance (x_s) [m]": pybamm.standard_spatial_vars.x_s}
+epsilon_s = pybamm.FunctionParameter("Separator porosity", inputs)
+
+inputs = {"Through-cell distance (x_p) [m]": pybamm.standard_spatial_vars.x_p}
+epsilon_p = pybamm.FunctionParameter("Positive electrode porosity", inputs)
+
 epsilon = pybamm.Concatenation(epsilon_n, epsilon_s, epsilon_p)
+
 epsilon_s_n = pybamm.Parameter("Negative electrode active material volume fraction")
 epsilon_s_p = pybamm.Parameter("Positive electrode active material volume fraction")
 epsilon_inactive_n = 1 - epsilon_n - epsilon_s_n
@@ -322,17 +370,27 @@ alpha = 1 / (sigma_cn * delta ** 2 * l_cn) + 1 / (sigma_cp * delta ** 2 * l_cp)
 alpha_prime = alpha / delta
 
 # Electrolyte Properties
-t_plus = pybamm.Parameter("Cation transference number")
+
+
+def t_plus(c_e):
+    "Dimensionless transference number (i.e. c_e is dimensionless)"
+    inputs = {"Electrolyte concentration [mol.m-3]": c_e * c_e_typ}
+    return pybamm.FunctionParameter("Cation transference number", inputs)
+
+
+def one_plus_dlnf_dlnc(c_e):
+    inputs = {"Electrolyte concentration [mol.m-3]": c_e * c_e_typ}
+    return pybamm.FunctionParameter("1 + dlnf/dlnc", inputs)
+
+
 beta_surf = pybamm.Scalar(0)
-s = 1 - t_plus
 
 
 # (1-2*t_plus) is for Nernst-Planck
 # 2*(1-t_plus) for Stefan-Maxwell
 # Bizeray et al (2016) "Resolving a discrepancy ..."
-# note: this is a function for consistancy with lead-acid
 def chi(c_e):
-    return 2 * (1 - t_plus)
+    return (2 * (1 - t_plus(c_e))) * (one_plus_dlnf_dlnc(c_e))
 
 
 # Electrochemical Reactions
@@ -470,7 +528,7 @@ def dUdT_p(c_s_p):
 # 6. Input current and voltage
 
 dimensional_current_with_time = pybamm.FunctionParameter(
-    "Current function [A]", pybamm.t * timescale
+    "Current function [A]", {"Time [s]": pybamm.t * timescale}
 )
 dimensional_current_density_with_time = dimensional_current_with_time / (
     n_electrodes_parallel * pybamm.geometric_parameters.A_cc
@@ -478,3 +536,7 @@ dimensional_current_density_with_time = dimensional_current_with_time / (
 current_with_time = (
     dimensional_current_with_time / I_typ * pybamm.Function(np.sign, I_typ)
 )
+
+
+"Remove any temporary variables"
+del inputs

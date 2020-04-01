@@ -6,6 +6,7 @@ import pandas as pd
 import os
 import numbers
 import numpy as np
+from pprint import pformat
 
 
 class ParameterValues:
@@ -92,6 +93,9 @@ class ParameterValues:
     def __delitem__(self, key):
         del self._dict_items[key]
 
+    def __repr__(self):
+        return pformat(self._dict_items, width=1)
+
     def keys(self):
         "Get the keys of the dictionary"
         return self._dict_items.keys()
@@ -118,7 +122,9 @@ class ParameterValues:
         """
         base_chemistry = chemistry["chemistry"]
         # Create path to file
-        path = os.path.join("input", "parameters", base_chemistry)
+        path = os.path.join(
+            pybamm.root_dir(), "pybamm", "input", "parameters", base_chemistry
+        )
         # Load each component name
         for component_group in [
             "cell",
@@ -152,10 +158,13 @@ class ParameterValues:
                 path=component_path,
             )
 
-        # register citations
+        # register (list of) citations
         if "citation" in chemistry:
-            citation = chemistry["citation"]
-            pybamm.citations.register(citation)
+            citations = chemistry["citation"]
+            if not isinstance(citations, list):
+                citations = [citations]
+            for citation in citations:
+                pybamm.citations.register(citation)
 
     def read_parameters_csv(self, filename):
         """Reads parameters from csv file into dict.
@@ -233,7 +242,9 @@ class ParameterValues:
                 # Data is flagged with the string "[data]" or "[current data]"
                 elif value.startswith("[current data]") or value.startswith("[data]"):
                     if value.startswith("[current data]"):
-                        data_path = os.path.join("input", "drive_cycles")
+                        data_path = os.path.join(
+                            pybamm.root_dir(), "pybamm", "input", "drive_cycles"
+                        )
                         filename = os.path.join(data_path, value[14:] + ".csv")
                         function_name = value[14:]
                     else:
@@ -328,7 +339,8 @@ class ParameterValues:
         Raises
         ------
         :class:`pybamm.ModelError`
-            If an empty model is passed (`model.rhs = {}` and `model.algebraic={}`)
+            If an empty model is passed (`model.rhs = {}` and `model.algebraic = {}` and
+            `model.variables = {}`)
 
         """
         pybamm.logger.info(
@@ -344,7 +356,11 @@ class ParameterValues:
             # create a blank model of the same class
             model = unprocessed_model.new_copy()
 
-        if len(unprocessed_model.rhs) == 0 and len(unprocessed_model.algebraic) == 0:
+        if (
+            len(unprocessed_model.rhs) == 0
+            and len(unprocessed_model.algebraic) == 0
+            and len(unprocessed_model.variables) == 0
+        ):
             raise pybamm.ModelError("Cannot process parameters for empty model")
 
         for variable, equation in model.rhs.items():
@@ -516,6 +532,9 @@ class ParameterValues:
                 # return differentiated function
                 new_diff_variable = self.process_symbol(symbol.diff_variable)
                 function_out = function.diff(new_diff_variable)
+            # Convert possible float output to a pybamm scalar
+            if isinstance(function_out, numbers.Number):
+                return pybamm.Scalar(function_out)
             # Process again just to be sure
             return self.process_symbol(function_out)
 

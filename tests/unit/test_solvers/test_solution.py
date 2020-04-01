@@ -125,7 +125,7 @@ class TestSolution(unittest.TestCase):
 
         # to csv
         with self.assertRaisesRegex(
-            ValueError, "only 1D variables can be saved to csv"
+            ValueError, "only 0D variables can be saved to csv"
         ):
             solution.save_data("test.csv", to_format="csv")
         # only save "c" and "2c"

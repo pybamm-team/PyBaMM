@@ -171,6 +171,11 @@ class Mesh(dict):
             )
             coord_sys = self[submeshnames[0]][i].coord_sys
             submeshes[i] = pybamm.SubMesh1D(combined_submesh_edges, coord_sys)
+            # add in internal boundaries
+            submeshes[i].internal_boundaries = [
+                self[submeshname][i].edges[0] for submeshname in submeshnames[1:]
+            ]
+
         return submeshes
 
     def add_ghost_meshes(self):
