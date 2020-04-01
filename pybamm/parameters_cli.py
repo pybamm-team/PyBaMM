@@ -152,6 +152,7 @@ def list_parameters(arguments=None):
       * graphite_Chen2020
       * graphite_mcmb2528_Marquis2019
       * graphite_Kim2011
+      * graphite_UMBL_Mohtat2020
     Available local parameters:
     """
     parser = argparse.ArgumentParser(
