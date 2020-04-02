@@ -42,13 +42,13 @@ class BasicDFN(BaseModel):
         Q = pybamm.Variable("Discharge capacity [A.h]")
         # Variables that vary spatially are created with a domain
         c_e_n = pybamm.Variable(
-            "Negative electrolyte concentration", domain="negative electrode",
+            "Negative electrolyte concentration", domain="negative electrode"
         )
         c_e_s = pybamm.Variable(
-            "Separator electrolyte concentration", domain="separator",
+            "Separator electrolyte concentration", domain="separator"
         )
         c_e_p = pybamm.Variable(
-            "Positive electrolyte concentration", domain="positive electrode",
+            "Positive electrolyte concentration", domain="positive electrode"
         )
         # Concatenations combine several variables into a single variable, to simplify
         # implementing equations that hold over several domains
@@ -56,22 +56,20 @@ class BasicDFN(BaseModel):
 
         # Electrolyte potential
         phi_e_n = pybamm.Variable(
-            "Negative electrolyte potential", domain="negative electrode",
+            "Negative electrolyte potential", domain="negative electrode"
         )
-        phi_e_s = pybamm.Variable(
-            "Separator electrolyte potential", domain="separator",
-        )
+        phi_e_s = pybamm.Variable("Separator electrolyte potential", domain="separator")
         phi_e_p = pybamm.Variable(
-            "Positive electrolyte potential", domain="positive electrode",
+            "Positive electrolyte potential", domain="positive electrode"
         )
         phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
 
         # Electrode potential
         phi_s_n = pybamm.Variable(
-            "Negative electrode potential", domain="negative electrode",
+            "Negative electrode potential", domain="negative electrode"
         )
         phi_s_p = pybamm.Variable(
-            "Positive electrode potential", domain="positive electrode",
+            "Positive electrode potential", domain="positive electrode"
         )
         # Particle concentrations are variables on the particle domain, but also vary in
         # the x-direction (electrode domain) and so must be provided with auxiliary
@@ -100,9 +98,15 @@ class BasicDFN(BaseModel):
         # Porosity
         # Primary broadcasts are used to broadcast scalar quantities across a domain
         # into a vector of the right shape, for multiplying with other vectors
-        eps_n = pybamm.PrimaryBroadcast(param.epsilon_n, "negative electrode")
-        eps_s = pybamm.PrimaryBroadcast(param.epsilon_s, "separator")
-        eps_p = pybamm.PrimaryBroadcast(param.epsilon_p, "positive electrode")
+        eps_n = pybamm.PrimaryBroadcast(
+            pybamm.Parameter("Negative electrode porosity"), "negative electrode"
+        )
+        eps_s = pybamm.PrimaryBroadcast(
+            pybamm.Parameter("Separator porosity"), "separator"
+        )
+        eps_p = pybamm.PrimaryBroadcast(
+            pybamm.Parameter("Positive electrode porosity"), "positive electrode"
+        )
         eps = pybamm.Concatenation(eps_n, eps_s, eps_p)
 
         # Tortuosity
@@ -171,29 +175,47 @@ class BasicDFN(BaseModel):
         # Boundary conditions must be provided for equations with spatial derivatives
         self.boundary_conditions[c_s_n] = {
             "left": (pybamm.Scalar(0), "Neumann"),
-            "right": (-param.C_n * j_n / param.a_n, "Neumann"),
+            "right": (
+                -param.C_n * j_n / param.a_n / param.D_n(c_s_surf_n, T),
+                "Neumann",
+            ),
         }
         self.boundary_conditions[c_s_p] = {
             "left": (pybamm.Scalar(0), "Neumann"),
-            "right": (-param.C_p * j_p / param.a_p / param.gamma_p, "Neumann"),
+            "right": (
+                -param.C_p * j_p / param.a_p / param.gamma_p / param.D_p(c_s_surf_p, T),
+                "Neumann",
+            ),
         }
-        self.initial_conditions[c_s_n] = param.c_n_init
-        self.initial_conditions[c_s_p] = param.c_p_init
-        # Events specify points at which a solution should terminate
-        self.events.update(
-            {
-                "Minimum negative particle surface concentration": (
-                    pybamm.min(c_s_surf_n) - 0.01
-                ),
-                "Maximum negative particle surface concentration": (1 - 0.01)
-                - pybamm.max(c_s_surf_n),
-                "Minimum positive particle surface concentration": (
-                    pybamm.min(c_s_surf_p) - 0.01
-                ),
-                "Maximum positive particle surface concentration": (1 - 0.01)
-                - pybamm.max(c_s_surf_p),
-            }
+        # c_n_init and c_p_init can in general be functions of x
+        # Note the broadcasting, for domains
+        x_n = pybamm.PrimaryBroadcast(
+            pybamm.standard_spatial_vars.x_n, "negative particle"
         )
+        self.initial_conditions[c_s_n] = param.c_n_init(x_n)
+        x_p = pybamm.PrimaryBroadcast(
+            pybamm.standard_spatial_vars.x_p, "positive particle"
+        )
+        self.initial_conditions[c_s_p] = param.c_p_init(x_p)
+        # Events specify points at which a solution should terminate
+        self.events += [
+            pybamm.Event(
+                "Minimum negative particle surface concentration",
+                pybamm.min(c_s_surf_n) - 0.01,
+            ),
+            pybamm.Event(
+                "Maximum negative particle surface concentration",
+                (1 - 0.01) - pybamm.max(c_s_surf_n),
+            ),
+            pybamm.Event(
+                "Minimum positive particle surface concentration",
+                pybamm.min(c_s_surf_p) - 0.01,
+            ),
+            pybamm.Event(
+                "Maximum positive particle surface concentration",
+                (1 - 0.01) - pybamm.max(c_s_surf_p),
+            ),
+        ]
         ######################
         # Current in the solid
         ######################
@@ -215,10 +237,12 @@ class BasicDFN(BaseModel):
         # Initial conditions must also be provided for algebraic equations, as an
         # initial guess for a root-finding algorithm which calculates consistent initial
         # conditions
+        # We evaluate c_n_init at x=0 and c_p_init at x=1 (this is just an initial
+        # guess so actual value is not too important)
         self.initial_conditions[phi_s_n] = pybamm.Scalar(0)
         self.initial_conditions[phi_s_p] = param.U_p(
-            param.c_p_init, param.T_init
-        ) - param.U_n(param.c_n_init, param.T_init)
+            param.c_p_init(1), param.T_init
+        ) - param.U_n(param.c_n_init(0), param.T_init)
 
         ######################
         # Current in the electrolyte
@@ -231,21 +255,25 @@ class BasicDFN(BaseModel):
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (pybamm.Scalar(0), "Neumann"),
         }
-        self.initial_conditions[phi_e] = -param.U_n(param.c_n_init, param.T_init)
+        self.initial_conditions[phi_e] = -param.U_n(param.c_n_init(0), param.T_init)
 
         ######################
         # Electrolyte concentration
         ######################
         N_e = -tor * param.D_e(c_e, T) * pybamm.grad(c_e)
         self.rhs[c_e] = (1 / eps) * (
-            -pybamm.div(N_e) / param.C_e + (1 - param.t_plus) * j / param.gamma_e
+            -pybamm.div(N_e) / param.C_e + (1 - param.t_plus(c_e)) * j / param.gamma_e
         )
         self.boundary_conditions[c_e] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (pybamm.Scalar(0), "Neumann"),
         }
         self.initial_conditions[c_e] = param.c_e_init
-        self.events["Zero electrolyte concentration cut-off"] = pybamm.min(c_e) - 0.002
+        self.events.append(
+            pybamm.Event(
+                "Zero electrolyte concentration cut-off", pybamm.min(c_e) - 0.002
+            )
+        )
 
         ######################
         # (Some) variables
@@ -263,8 +291,10 @@ class BasicDFN(BaseModel):
             "Positive electrode potential": phi_s_p,
             "Terminal voltage": voltage,
         }
-        self.events["Minimum voltage"] = voltage - param.voltage_low_cut
-        self.events["Maximum voltage"] = voltage - param.voltage_high_cut
+        self.events += [
+            pybamm.Event("Minimum voltage", voltage - param.voltage_low_cut),
+            pybamm.Event("Maximum voltage", voltage - param.voltage_high_cut),
+        ]
 
     @property
     def default_geometry(self):

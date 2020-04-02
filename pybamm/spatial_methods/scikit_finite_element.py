@@ -29,13 +29,14 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
     def __init__(self, options=None):
         super().__init__(options)
+        pybamm.citations.register("scikit-fem")
 
     def build(self, mesh):
         super().build(mesh)
         # add npts_for_broadcast to mesh domains for this particular discretisation
         for dom in mesh.keys():
             for i in range(len(mesh[dom])):
-                mesh[dom][i].npts_for_broadcast = mesh[dom][i].npts
+                mesh[dom][i].npts_for_broadcast_to_nodes = mesh[dom][i].npts
 
     def spatial_variable(self, symbol):
         """

@@ -39,19 +39,18 @@ class TestCompareOutputs(unittest.TestCase):
 
         # solve model
         solutions = []
-        t_eval = np.linspace(0, 1, 100)
+        t_eval = np.linspace(0, 3600 * 17, 100)
         for model in models:
-            solution = model.default_solver.solve(model, t_eval)
+            solution = pybamm.CasadiSolver().solve(model, t_eval)
             solutions.append(solution)
 
         # test averages
         comparison = StandardOutputComparison(solutions)
         comparison.test_averages()
 
-    def test_compare_outputs_capacitance(self):
+    def test_compare_outputs_surface_form(self):
         """
-        Check that the leading-order model solution converges linearly in C_e to the
-        full model solution
+        Check that the models agree with the different surface forms
         """
         # load models
         options = [
@@ -59,6 +58,7 @@ class TestCompareOutputs(unittest.TestCase):
         ]
         model_combos = [
             ([pybamm.lead_acid.LOQS(opt) for opt in options]),
+            ([pybamm.lead_acid.Composite(opt) for opt in options]),
             ([pybamm.lead_acid.Full(opt) for opt in options]),
         ]
 
@@ -85,9 +85,9 @@ class TestCompareOutputs(unittest.TestCase):
 
             # solve model
             solutions = []
-            t_eval = np.linspace(0, 1, 100)
+            t_eval = np.linspace(0, 3600 * 20, 100)
             for model in models:
-                solution = model.default_solver.solve(model, t_eval)
+                solution = pybamm.CasadiSolver().solve(model, t_eval)
                 solutions.append(solution)
 
             # compare outputs

@@ -8,14 +8,11 @@ import numpy as np
 
 class TestExternalThermalModels(unittest.TestCase):
     def test_external_lumped_temperature(self):
-        model_options = {
-            "thermal": "x-lumped",
-            "external submodels": ["thermal"],
-        }
+        model_options = {"thermal": "x-lumped", "external submodels": ["thermal"]}
         model = pybamm.lithium_ion.SPMe(model_options)
         sim = pybamm.Simulation(model)
 
-        t_eval = np.linspace(0, 0.01, 3)
+        t_eval = np.linspace(0, 100, 3)
 
         T_av = 0
 
@@ -25,13 +22,9 @@ class TestExternalThermalModels(unittest.TestCase):
             T_av += 1
             sim.step(dt, external_variables=external_variables)
 
-    @unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
     def test_external_temperature(self):
 
-        model_options = {
-            "thermal": "x-full",
-            "external submodels": ["thermal"],
-        }
+        model_options = {"thermal": "x-full", "external submodels": ["thermal"]}
 
         model = pybamm.lithium_ion.SPM(model_options)
 
@@ -50,7 +43,7 @@ class TestExternalThermalModels(unittest.TestCase):
 
         sim = pybamm.Simulation(model, var_pts=var_pts)
 
-        t_eval = np.linspace(0, 0.01, 3)
+        t_eval = np.linspace(0, 100, 3)
         x = np.linspace(0, 1, tot_pts)
 
         for i in np.arange(1, len(t_eval) - 1):
@@ -64,10 +57,7 @@ class TestExternalThermalModels(unittest.TestCase):
     @unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
     def test_dae_external_temperature(self):
 
-        model_options = {
-            "thermal": "x-full",
-            "external submodels": ["thermal"],
-        }
+        model_options = {"thermal": "x-full", "external submodels": ["thermal"]}
 
         model = pybamm.lithium_ion.DFN(model_options)
 
@@ -88,7 +78,7 @@ class TestExternalThermalModels(unittest.TestCase):
         sim = pybamm.Simulation(model, var_pts=var_pts, solver=solver)
         sim.build()
 
-        t_eval = np.linspace(0, 0.01, 3)
+        t_eval = np.linspace(0, 100, 3)
         x = np.linspace(0, 1, tot_pts)
 
         for i in np.arange(1, len(t_eval) - 1):

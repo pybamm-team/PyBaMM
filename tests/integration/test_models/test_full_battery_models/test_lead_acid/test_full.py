@@ -13,7 +13,9 @@ class TestLeadAcidFull(unittest.TestCase):
         options = {"thermal": "isothermal"}
         model = pybamm.lead_acid.Full(options)
         modeltest = tests.StandardModelTest(model)
-        modeltest.test_all(t_eval=np.linspace(0, 0.6), solver=pybamm.CasadiSolver())
+        modeltest.test_all(
+            t_eval=np.linspace(0, 3600 * 17), solver=pybamm.CasadiSolver()
+        )
 
     def test_basic_processing_with_convection(self):
         options = {"thermal": "isothermal", "convection": True}
@@ -21,7 +23,7 @@ class TestLeadAcidFull(unittest.TestCase):
         var = pybamm.standard_spatial_vars
         var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10}
         modeltest = tests.StandardModelTest(model, var_pts=var_pts)
-        modeltest.test_all(t_eval=np.linspace(0, 0.6))
+        modeltest.test_all(t_eval=np.linspace(0, 3600 * 10))
 
     def test_optimisations(self):
         options = {"thermal": "isothermal"}
@@ -82,6 +84,17 @@ class TestLeadAcidFullSurfaceForm(unittest.TestCase):
         optimtest.set_up_model(simplify=True, to_python=True)
         optimtest.set_up_model(simplify=False, to_python=False)
         optimtest.set_up_model(simplify=True, to_python=False)
+
+    def test_thermal(self):
+        options = {"thermal": "x-lumped"}
+        model = pybamm.lead_acid.Full(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+        options = {"thermal": "x-full"}
+        model = pybamm.lead_acid.Full(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
 
 
 if __name__ == "__main__":

@@ -8,17 +8,14 @@ import unittest
 
 class TestFunctionControl(unittest.TestCase):
     def test_constant_current(self):
-        class ConstantCurrent:
-            num_switches = 0
-
-            def __call__(self, variables):
-                I = variables["Current [A]"]
-                return I + 1
+        def constant_current(variables):
+            I = variables["Current [A]"]
+            return I + 1
 
         # load models
         models = [
             pybamm.lithium_ion.SPM(),
-            pybamm.lithium_ion.SPM({"operating mode": ConstantCurrent()}),
+            pybamm.lithium_ion.SPM({"operating mode": constant_current}),
         ]
 
         # load parameter values and process models and geometry
@@ -42,7 +39,7 @@ class TestFunctionControl(unittest.TestCase):
 
         # solve model
         solutions = [None] * len(models)
-        t_eval = np.linspace(0, 1, 100)
+        t_eval = np.linspace(0, 3600, 100)
         for i, model in enumerate(models):
             solutions[i] = model.default_solver.solve(model, t_eval)
 
@@ -56,24 +53,21 @@ class TestFunctionControl(unittest.TestCase):
         )
 
     def test_constant_voltage(self):
-        class ConstantVoltage:
-            num_switches = 0
-
-            def __call__(self, variables):
-                V = variables["Terminal voltage [V]"]
-                return V - 4.1
+        def constant_voltage(variables):
+            V = variables["Terminal voltage [V]"]
+            return V - 4.1
 
         # load models
         models = [
             pybamm.lithium_ion.SPM({"operating mode": "voltage"}),
-            pybamm.lithium_ion.SPM({"operating mode": ConstantVoltage()}),
+            pybamm.lithium_ion.SPM({"operating mode": constant_voltage}),
         ]
 
         # load parameter values and process models and geometry
         params = [model.default_parameter_values for model in models]
 
         # First model: 4.1V charge
-        params[0]["Voltage function [V]"] = 4.1
+        params[0].update({"Voltage function [V]": 4.1}, check_already_exists=False)
 
         # set parameters and discretise models
         var = pybamm.standard_spatial_vars
@@ -89,7 +83,7 @@ class TestFunctionControl(unittest.TestCase):
 
         # solve model
         solutions = [None] * len(models)
-        t_eval = np.linspace(0, 1, 100)
+        t_eval = np.linspace(0, 3600, 100)
         for i, model in enumerate(models):
             solutions[i] = model.default_solver.solve(model, t_eval)
 
@@ -102,25 +96,22 @@ class TestFunctionControl(unittest.TestCase):
         np.testing.assert_array_almost_equal(abs((I1 - I0) / I0), 0, decimal=1)
 
     def test_constant_power(self):
-        class ConstantPower:
-            num_switches = 0
-
-            def __call__(self, variables):
-                I = variables["Current [A]"]
-                V = variables["Terminal voltage [V]"]
-                return I * V - 4
+        def constant_power(variables):
+            I = variables["Current [A]"]
+            V = variables["Terminal voltage [V]"]
+            return I * V - 4
 
         # load models
         models = [
             pybamm.lithium_ion.SPM({"operating mode": "power"}),
-            pybamm.lithium_ion.SPM({"operating mode": ConstantPower()}),
+            pybamm.lithium_ion.SPM({"operating mode": constant_power}),
         ]
 
         # load parameter values and process models and geometry
         params = [model.default_parameter_values for model in models]
 
         # First model: 4W charge
-        params[0]["Power function [W]"] = 4
+        params[0].update({"Power function [W]": 4}, check_already_exists=False)
 
         # set parameters and discretise models
         for i, model in enumerate(models):
@@ -136,7 +127,7 @@ class TestFunctionControl(unittest.TestCase):
 
         # solve model
         solutions = [None] * len(models)
-        t_eval = np.linspace(0, 1, 100)
+        t_eval = np.linspace(0, 3600, 100)
         for i, model in enumerate(models):
             solutions[i] = model.default_solver.solve(model, t_eval)
 

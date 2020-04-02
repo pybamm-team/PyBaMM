@@ -1,6 +1,7 @@
 #
 # Solver class using Scipy's adaptive time stepper
 #
+import casadi
 import pybamm
 
 import numpy as np
@@ -19,7 +20,7 @@ def have_scikits_odes():
     return scikits_odes_spec is not None
 
 
-class ScikitsOdeSolver(pybamm.OdeSolver):
+class ScikitsOdeSolver(pybamm.BaseSolver):
     """Solve a discretised model, using scikits.odes.
 
     Parameters
@@ -40,46 +41,47 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
 
         super().__init__(method, rtol, atol)
         self.linsolver = linsolver
+        self.ode_solver = True
         self.name = "Scikits ODE solver ({})".format(method)
 
-    def integrate(
-        self, derivs, y0, t_eval, events=None, mass_matrix=None, jacobian=None
-    ):
+        pybamm.citations.register("scikits-odes")
+        pybamm.citations.register("hindmarsh2000pvode")
+        pybamm.citations.register("hindmarsh2005sundials")
+
+    def _integrate(self, model, t_eval, inputs=None):
         """
         Solve a model defined by dydt with initial conditions y0.
 
         Parameters
         ----------
-        derivs : method
-            A function that takes in t and y and returns the time-derivative dydt
-        y0 : numeric type
-            The initial conditions
+        model : :class:`pybamm.BaseModel`
+            The model whose solution to calculate.
         t_eval : numeric type
             The times at which to compute the solution
-        events : method, optional
-            A function that takes in t and y and returns conditions for the solver to
-            stop
-        mass_matrix : array_like, optional
-            The (sparse) mass matrix for the chosen spatial method.
-        jacobian : method, optional
-            A function that takes in t and y and returns the Jacobian. If
-            None, the solver will approximate the Jacobian.
-            (see `SUNDIALS docs. <https://computation.llnl.gov/projects/sundials>`).
+        inputs : dict, optional
+            Any input parameters to pass to the model when solving
 
         """
+        if model.rhs_eval.form == "casadi":
+            inputs = casadi.vertcat(*[x for x in inputs.values()])
+
+        derivs = model.rhs_eval
+        y0 = model.y0
+        events = model.terminate_events_eval
+        jacobian = model.jacobian_eval
 
         def eqsydot(t, y, return_ydot):
-            return_ydot[:] = derivs(t, y)
+            return_ydot[:] = derivs(t, y, inputs)
 
         def rootfn(t, y, return_root):
-            return_root[:] = [event(t, y) for event in events]
+            return_root[:] = [event(t, y, inputs) for event in events]
 
         if jacobian:
-            jac_y0_t0 = jacobian(t_eval[0], y0)
+            jac_y0_t0 = jacobian(t_eval[0], y0, inputs)
             if sparse.issparse(jac_y0_t0):
 
                 def jacfn(t, y, fy, J):
-                    J[:][:] = jacobian(t, y).toarray()
+                    J[:][:] = jacobian(t, y, inputs).toarray()
 
                 def jac_times_vecfn(v, Jv, t, y, userdata):
                     Jv[:] = userdata._jac_eval * v
@@ -88,14 +90,14 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
             else:
 
                 def jacfn(t, y, fy, J):
-                    J[:][:] = jacobian(t, y)
+                    J[:][:] = jacobian(t, y, inputs)
 
                 def jac_times_vecfn(v, Jv, t, y, userdata):
                     Jv[:] = np.matmul(userdata._jac_eval, v)
                     return 0
 
             def jac_times_setupfn(t, y, fy, userdata):
-                userdata._jac_eval = jacobian(t, y)
+                userdata._jac_eval = jacobian(t, y, inputs)
                 return 0
 
         extra_options = {
@@ -131,10 +133,14 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
             # 2 = found root(s)
             elif sol.flag == 2:
                 termination = "event"
+            if sol.roots.t is None:
+                t_root = None
+            else:
+                t_root = sol.roots.t
             return pybamm.Solution(
                 sol.values.t,
                 np.transpose(sol.values.y),
-                sol.roots.t,
+                t_root,
                 np.transpose(sol.roots.y),
                 termination,
             )

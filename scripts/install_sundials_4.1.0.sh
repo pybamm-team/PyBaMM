@@ -32,14 +32,20 @@ cmake -DBLAS_ENABLE=ON\
       -DKLU_ENABLE=ON\
       ../sundials-4.1.0
 
-
-NUM_OF_CORES=$(cat /proc/cpuinfo | grep processor | wc -l)
+if [ "$(uname)" == "Darwin" ]; then
+    # Mac OS X platform        
+    NUM_OF_CORES=$(sysctl -n hw.cpu)
+elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
+    # GNU/Linux platform
+    NUM_OF_CORES=$(cat /proc/cpuinfo | grep processor | wc -l)
+fi
 make clean
 make -j$NUM_OF_CORES install
 cd $CURRENT_DIR
 rm -rf build-sundials-4.1.0
 rm -rf sundials-4.1.0
-export LD_LIBRARY_PATH=$INSTALL_DIR/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$INSTALL_DIR/lib:$LD_LIBRARY_PATH # For Linux
+export DYLD_LIBRARY_PATH=$INSTALL_DIR/lib:$DYLD_LIBRARY_PATH # For Mac
 export SUNDIALS_INST=$INSTALL_DIR
 
 # get pybind11

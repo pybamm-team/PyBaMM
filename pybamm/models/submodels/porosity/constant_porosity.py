@@ -20,17 +20,10 @@ class Constant(BaseModel):
 
     def get_fundamental_variables(self):
 
-        eps_n_av = self.param.epsilon_n
-        eps_s_av = self.param.epsilon_s
-        eps_p_av = self.param.epsilon_p
+        eps_n = self.param.epsilon_n
+        eps_s = self.param.epsilon_s
+        eps_p = self.param.epsilon_p
 
-        eps_n = pybamm.FullBroadcast(
-            eps_n_av, "negative electrode", "current collector"
-        )
-        eps_s = pybamm.FullBroadcast(eps_s_av, "separator", "current collector")
-        eps_p = pybamm.FullBroadcast(
-            eps_p_av, "positive electrode", "current collector"
-        )
         eps = pybamm.Concatenation(eps_n, eps_s, eps_p)
 
         deps_n_dt = pybamm.FullBroadcast(0, "negative electrode", "current collector")

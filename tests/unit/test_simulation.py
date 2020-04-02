@@ -1,5 +1,7 @@
 import pybamm
 import numpy as np
+import pandas as pd
+import os
 import unittest
 
 
@@ -205,47 +207,51 @@ class TestSimulation(unittest.TestCase):
     def test_step(self):
 
         dt = 0.001
-        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model)
         sim.step(dt)  # 1 step stores first two points
+        tau = model.timescale.evaluate()
         self.assertEqual(sim.solution.t.size, 2)
         self.assertEqual(sim.solution.y[0, :].size, 2)
         self.assertEqual(sim.solution.t[0], 0)
-        self.assertEqual(sim.solution.t[1], dt)
+        self.assertEqual(sim.solution.t[1], dt / tau)
         sim.step(dt)  # automatically append the next step
         self.assertEqual(sim.solution.t.size, 3)
         self.assertEqual(sim.solution.y[0, :].size, 3)
         self.assertEqual(sim.solution.t[0], 0)
-        self.assertEqual(sim.solution.t[1], dt)
-        self.assertEqual(sim.solution.t[2], 2 * dt)
+        self.assertEqual(sim.solution.t[1], dt / tau)
+        self.assertEqual(sim.solution.t[2], 2 * dt / tau)
         sim.step(dt, save=False)  # now only store the two end step points
         self.assertEqual(sim.solution.t.size, 2)
         self.assertEqual(sim.solution.y[0, :].size, 2)
-        self.assertEqual(sim.solution.t[0], 2 * dt)
-        self.assertEqual(sim.solution.t[1], 3 * dt)
+        self.assertEqual(sim.solution.t[0], 2 * dt / tau)
+        self.assertEqual(sim.solution.t[1], 3 * dt / tau)
 
     def test_step_with_inputs(self):
-        def current_function(t):
-            return pybamm.InputParameter("Current")
-
         dt = 0.001
         model = pybamm.lithium_ion.SPM()
         param = model.default_parameter_values
-        param.update({"Current function [A]": current_function})
+        param.update({"Current function [A]": "[input]"})
         sim = pybamm.Simulation(model, parameter_values=param)
-        sim.step(dt, inputs={"Current": 1})  # 1 step stores first two points
+        sim.step(
+            dt, inputs={"Current function [A]": 1}
+        )  # 1 step stores first two points
+        tau = model.timescale.evaluate()
         self.assertEqual(sim.solution.t.size, 2)
         self.assertEqual(sim.solution.y[0, :].size, 2)
         self.assertEqual(sim.solution.t[0], 0)
-        self.assertEqual(sim.solution.t[1], dt)
-        np.testing.assert_array_equal(sim.solution.inputs["Current"], 1)
-        sim.step(dt, inputs={"Current": 2})  # automatically append the next step
+        self.assertEqual(sim.solution.t[1], dt / tau)
+        np.testing.assert_array_equal(sim.solution.inputs["Current function [A]"], 1)
+        sim.step(
+            dt, inputs={"Current function [A]": 2}
+        )  # automatically append the next step
         self.assertEqual(sim.solution.t.size, 3)
         self.assertEqual(sim.solution.y[0, :].size, 3)
         self.assertEqual(sim.solution.t[0], 0)
-        self.assertEqual(sim.solution.t[1], dt)
-        self.assertEqual(sim.solution.t[2], 2 * dt)
+        self.assertEqual(sim.solution.t[1], dt / tau)
+        self.assertEqual(sim.solution.t[2], 2 * dt / tau)
         np.testing.assert_array_equal(
-            sim.solution.inputs["Current"], np.array([1, 1, 2])
+            sim.solution.inputs["Current function [A]"], np.array([1, 1, 2])
         )
 
     def test_save_load(self):
@@ -294,6 +300,7 @@ class TestSimulation(unittest.TestCase):
         sim.save("test.pickle")
 
         # with Casadi solver
+        model.convert_to_format = "casadi"
         sim = pybamm.Simulation(model, solver=pybamm.CasadiSolver())
         sim.solve()
         sim.save("test.pickle")
@@ -341,9 +348,67 @@ class TestSimulation(unittest.TestCase):
             sim.plot()
 
         # now solve and plot
-        t_eval = np.linspace(0, 0.01, 5)
+        t_eval = np.linspace(0, 100, 5)
         sim.solve(t_eval=t_eval)
         sim.plot(testing=True)
+
+    def test_drive_cycle_data(self):
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        param["Current function [A]"] = "[current data]US06"
+
+        drive_cycle = pd.read_csv(
+            pybamm.get_parameters_filepath(
+                os.path.join("input", "drive_cycles", "US06.csv")
+            ),
+            comment="#",
+            skip_blank_lines=True,
+            header=None,
+        )
+        time_data = drive_cycle.values[:, 0]
+
+        sim = pybamm.Simulation(model, parameter_values=param)
+
+        # check solution is returned at the times in the data
+        sim.solve()
+        tau = model.timescale.evaluate()
+        np.testing.assert_array_almost_equal(sim.solution.t, time_data / tau)
+
+        # check warning raised if the largest gap in t_eval is bigger than the
+        # smallest gap in the data
+        sim.reset()
+        with self.assertWarns(pybamm.SolverWarning):
+            sim.solve(t_eval=np.linspace(0, 1, 100))
+
+        # check warning raised if t_eval doesnt contain time_data , but has a finer
+        # resolution (can still solve, but good for users to know they dont have
+        # the solution returned at the data points)
+        sim.reset()
+        with self.assertWarns(pybamm.SolverWarning):
+            sim.solve(t_eval=np.linspace(0, time_data[-1], 800))
+
+    def test_discontinuous_current(self):
+        def car_current(t):
+            current = (
+                1 * (t >= 0) * (t <= 1000)
+                - 0.5 * (1000 < t) * (t <= 2000)
+                + 0.5 * (2000 < t)
+            )
+            return current
+
+        model = pybamm.lithium_ion.DFN()
+        param = model.default_parameter_values
+        param["Current function [A]"] = car_current
+
+        sim = pybamm.Simulation(
+            model, parameter_values=param, solver=pybamm.CasadiSolver(mode="fast")
+        )
+        sim.solve()
+        current = sim.solution["Current [A]"]
+        tau = model.timescale.evaluate()
+        self.assertEqual(current(0), 1)
+        self.assertEqual(current(1500 / tau), -0.5)
+        self.assertEqual(current(3000 / tau), 0.5)
 
 
 if __name__ == "__main__":

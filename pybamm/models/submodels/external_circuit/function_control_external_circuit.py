@@ -8,28 +8,28 @@ from .base_external_circuit import BaseModel, LeadingOrderBaseModel
 class FunctionControl(BaseModel):
     """External circuit with an arbitrary function. """
 
-    def __init__(self, param, external_circuit_class):
+    def __init__(self, param, external_circuit_function):
         super().__init__(param)
-        self.external_circuit_class = external_circuit_class
-
-    def _get_current_variable(self):
-        return pybamm.Variable("Total current density")
+        self.external_circuit_function = external_circuit_function
 
     def get_fundamental_variables(self):
+        param = self.param
         # Current is a variable
-        i_cell = self._get_current_variable()
-        variables = self._get_current_variables(i_cell)
+        i_cell = pybamm.Variable("Total current density")
+
+        # Update derived variables
+        I = i_cell * abs(param.I_typ)
+        i_cell_dim = I / (param.n_electrodes_parallel * param.A_cc)
+
+        variables = {
+            "Total current density": i_cell,
+            "Total current density [A.m-2]": i_cell_dim,
+            "Current [A]": I,
+            "C-rate": I / param.Q,
+        }
 
         # Add discharge capacity variable
         variables.update(super().get_fundamental_variables())
-
-        # Add switches
-        # These are not implemented yet but can be used later with the Experiment class
-        # to simulate different external circuit conditions sequentially within a
-        # single model (for example Constant Current - Constant Voltage)
-        # for i in range(self.external_circuit_class.num_switches):
-        #     s = pybamm.Parameter("Switch {}".format(i + 1))
-        #     variables["Switch {}".format(i + 1)] = s
 
         return variables
 
@@ -44,7 +44,7 @@ class FunctionControl(BaseModel):
         # The external circuit function should fix either the current, or the voltage,
         # or a combination (e.g. I*V for power control)
         i_cell = variables["Total current density"]
-        self.algebraic[i_cell] = self.external_circuit_class(variables)
+        self.algebraic[i_cell] = self.external_circuit_function(variables)
 
 
 class VoltageFunctionControl(FunctionControl):
@@ -53,31 +53,27 @@ class VoltageFunctionControl(FunctionControl):
     """
 
     def __init__(self, param):
-        super().__init__(param, ConstantVoltage())
+        super().__init__(param, self.constant_voltage)
 
-
-class ConstantVoltage:
-    num_switches = 0
-
-    def __call__(self, variables):
+    def constant_voltage(self, variables):
         V = variables["Terminal voltage [V]"]
-        return V - pybamm.FunctionParameter("Voltage function [V]", pybamm.t)
+        return V - pybamm.FunctionParameter(
+            "Voltage function [V]", {"Time [s]": pybamm.t * self.param.timescale}
+        )
 
 
 class PowerFunctionControl(FunctionControl):
     """External circuit with power control. """
 
     def __init__(self, param):
-        super().__init__(param, ConstantPower())
+        super().__init__(param, self.constant_power)
 
-
-class ConstantPower:
-    num_switches = 0
-
-    def __call__(self, variables):
+    def constant_power(self, variables):
         I = variables["Current [A]"]
         V = variables["Terminal voltage [V]"]
-        return I * V - pybamm.FunctionParameter("Power function [W]", pybamm.t)
+        return I * V - pybamm.FunctionParameter(
+            "Power function [W]", {"Time [s]": pybamm.t * self.param.timescale}
+        )
 
 
 class LeadingOrderFunctionControl(FunctionControl, LeadingOrderBaseModel):
@@ -97,12 +93,24 @@ class LeadingOrderVoltageFunctionControl(LeadingOrderFunctionControl):
     """
 
     def __init__(self, param):
-        super().__init__(param, ConstantVoltage())
+        super().__init__(param, self.constant_voltage)
+
+    def constant_voltage(self, variables):
+        V = variables["Terminal voltage [V]"]
+        return V - pybamm.FunctionParameter(
+            "Voltage function [V]", {"Time [s]": pybamm.t * self.param.timescale}
+        )
 
 
 class LeadingOrderPowerFunctionControl(LeadingOrderFunctionControl):
     """External circuit with power control, at leading order. """
 
     def __init__(self, param):
-        super().__init__(param, ConstantPower())
+        super().__init__(param, self.constant_power)
 
+    def constant_power(self, variables):
+        I = variables["Current [A]"]
+        V = variables["Terminal voltage [V]"]
+        return I * V - pybamm.FunctionParameter(
+            "Power function [W]", {"Time [s]": pybamm.t * self.param.timescale}
+        )

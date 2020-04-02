@@ -30,6 +30,9 @@ class BaseThermal(pybamm.BaseSubModel):
         T_x_av = self._x_average(T, T_cn, T_cp)
         T_vol_av = self._yz_average(T_x_av)
 
+        T_amb_dim = param.T_amb_dim(pybamm.t * param.timescale)
+        T_amb = param.T_amb(pybamm.t * param.timescale)
+
         q = self._flux_law(T)
 
         variables = {
@@ -64,6 +67,8 @@ class BaseThermal(pybamm.BaseSubModel):
             + param.T_ref,
             "Heat flux": q,
             "Heat flux [W.m-2]": q,
+            "Ambient temperature [K]": T_amb_dim,
+            "Ambient temperature": T_amb,
         }
 
         return variables

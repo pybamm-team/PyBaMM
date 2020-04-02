@@ -1,6 +1,7 @@
 #
 # Solver class using sundials with the KLU sparse linear solver
 #
+import casadi
 import pybamm
 import numpy as np
 import scipy.sparse as sparse
@@ -17,7 +18,7 @@ def have_idaklu():
     return idaklu_spec is not None
 
 
-class IDAKLUSolver(pybamm.DaeSolver):
+class IDAKLUSolver(pybamm.BaseSolver):
     """Solve a discretised model, using sundials with the KLU sparse linear solver.
 
      Parameters
@@ -36,7 +37,7 @@ class IDAKLUSolver(pybamm.DaeSolver):
     """
 
     def __init__(
-        self, rtol=1e-6, atol=1e-6, root_method="lm", root_tol=1e-6, max_steps=1000
+        self, rtol=1e-6, atol=1e-6, root_method="casadi", root_tol=1e-6, max_steps=1000
     ):
 
         if idaklu_spec is None:
@@ -44,6 +45,9 @@ class IDAKLUSolver(pybamm.DaeSolver):
 
         super().__init__("ida", rtol, atol, root_method, root_tol, max_steps)
         self.name = "IDA KLU solver"
+
+        pybamm.citations.register("hindmarsh2000pvode")
+        pybamm.citations.register("hindmarsh2005sundials")
 
     def set_atol_by_variable(self, variables_with_tols, model):
         """
@@ -132,37 +136,22 @@ class IDAKLUSolver(pybamm.DaeSolver):
 
         return atol
 
-    def integrate(self, residuals, y0, t_eval, events, mass_matrix, jacobian, model):
+    def _integrate(self, model, t_eval, inputs=None):
         """
         Solve a DAE model defined by residuals with initial conditions y0.
 
         Parameters
         ----------
-        residuals : method
-            A function that takes in t, y and ydot and returns the residuals of the
-            equations
-        y0 : numeric type
-            The initial conditions
-        t_eval : numeric type
-            The times at which to compute the solution
-        events : method,
-            A function that takes in t and y and returns conditions for the solver to
-            stop
-        mass_matrix : array_like,
-            The (sparse) mass matrix for the chosen spatial method.
-        jacobian : method,
-            A function that takes in t and y and returns the Jacobian. If
-            None, the solver will approximate the Jacobian.
-            (see `SUNDIALS docs. <https://computation.llnl.gov/projects/sundials>`).
         model : :class:`pybamm.BaseModel`
             The model whose solution to calculate.
+        t_eval : numeric type
+            The times at which to compute the solution
         """
+        if model.rhs_eval.form == "casadi":
+            inputs = casadi.vertcat(*[x for x in inputs.values()])
 
-        if jacobian is None:
-            pybamm.SolverError("KLU requires the Jacobian to be provided")
-
-        if events is None:
-            pybamm.SolverError("KLU requires events to be provided")
+        if model.jacobian_eval is None:
+            raise pybamm.SolverError("KLU requires the Jacobian to be provided")
 
         try:
             atol = model.atol
@@ -170,20 +159,22 @@ class IDAKLUSolver(pybamm.DaeSolver):
             atol = self._atol
 
         rtol = self._rtol
-        atol = self._check_atol_type(atol, y0.size)
+        atol = self._check_atol_type(atol, model.y0.size)
+        y0 = model.y0
+        mass_matrix = model.mass_matrix.entries
 
-        if jacobian:
-            jac_y0_t0 = jacobian(t_eval[0], y0)
+        if model.jacobian_eval:
+            jac_y0_t0 = model.jacobian_eval(t_eval[0], y0, inputs)
             if sparse.issparse(jac_y0_t0):
 
                 def jacfn(t, y, cj):
-                    j = jacobian(t, y) - cj * mass_matrix
+                    j = model.jacobian_eval(t, y, inputs) - cj * mass_matrix
                     return j
 
             else:
 
                 def jacfn(t, y, cj):
-                    jac_eval = jacobian(t, y) - cj * mass_matrix
+                    jac_eval = model.jacobian_eval(t, y, inputs) - cj * mass_matrix
                     return sparse.csr_matrix(jac_eval)
 
         class SundialsJacobian:
@@ -214,17 +205,19 @@ class IDAKLUSolver(pybamm.DaeSolver):
 
         jac_class = SundialsJacobian()
 
-        num_of_events = len(events)
+        num_of_events = len(model.terminate_events_eval)
         use_jac = 1
 
         def rootfn(t, y):
             return_root = np.ones((num_of_events,))
-            return_root[:] = [event(t, y) for event in events]
+            return_root[:] = [
+                event(t, y, inputs) for event in model.terminate_events_eval
+            ]
 
             return return_root
 
         # get ids of rhs and algebraic variables
-        rhs_ids = np.ones(self.rhs(0, y0).shape)
+        rhs_ids = np.ones(model.rhs_eval(0, y0, inputs).shape)
         alg_ids = np.zeros(len(y0) - len(rhs_ids))
         ids = np.concatenate((rhs_ids, alg_ids))
 
@@ -233,7 +226,7 @@ class IDAKLUSolver(pybamm.DaeSolver):
             t_eval,
             y0,
             ydot0,
-            self.residuals,
+            lambda t, y, ydot: model.residuals_eval(t, y, ydot, inputs),
             jac_class.jac_res,
             jac_class.get_jac_data,
             jac_class.get_jac_row_vals,
@@ -249,7 +242,7 @@ class IDAKLUSolver(pybamm.DaeSolver):
 
         t = sol.t
         number_of_timesteps = t.size
-        number_of_states = y0.size
+        number_of_states = model.y0.size
         y_out = sol.y.reshape((number_of_timesteps, number_of_states))
 
         # return solution, we need to tranpose y to match scipy's interface

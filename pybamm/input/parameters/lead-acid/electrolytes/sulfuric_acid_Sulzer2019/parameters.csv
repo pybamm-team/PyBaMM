@@ -1,0 +1,29 @@
+Name [units],Value,Reference,Notes
+# Empty rows and rows starting with ‘#’ will be ignored,,,
+,,,
+# Electrolyte properties,,,
+Typical electrolyte concentration [mol.m-3],5650,,
+Cation transference number,0.7,,
+1 + dlnf/dlnc,1,,
+Partial molar volume of water [m3.mol-1],1.75E-05,,
+Partial molar volume of anions [m3.mol-1],3.15E-05,,
+Partial molar volume of cations [m3.mol-1],1.35E-05,,
+Cation stoichiometry,1,,Hydrogen cations
+Anion stoichiometry,1,,Hydrogen sulfate anions
+Molar mass of water [kg.mol-1],0.01801,,
+Molar mass of cations [kg.mol-1],0.001,lide1992crc,Hydrogen cations
+Molar mass of anions [kg.mol-1],0.097,lide1992crc,Hydrogen sulfate anions
+Volume change factor,1,,factor to artificially control how much big the volume changes are
+Electrolyte conductivity [S.m-1],[function]conductivity_Gu1997,,
+Darken thermodynamic factor,[function]darken_thermodynamic_factor_Chapman1968,,
+Electrolyte diffusivity [m2.s-1],[function]diffusivity_Gu1997,,
+Electrolyte viscosity [kg.m-1.s-1],[function]viscosity_Chapman1968,,
+,,,
+# Other species properties,,,
+Oxygen diffusivity [m2.s-1],2.1e-9,cussler2009diffusion
+Typical oxygen concentration [mol.m-3],1000,,
+Hydrogen diffusivity [m2.s-1],4.5e-9,cussler2009diffusion
+Partial molar volume of oxygen molecules [m3.mol-1],3.21E-5,zhou2001partial,
+Partial molar volume of hydrogen molecules [m3.mol-1],2.31E-5,zhou2001partial,
+Molar mass of oxygen molecules [kg.mol-1],0.032,lide1992crc,
+Molar mass of hydrogen molecules [kg.mol-1],0.002,lide1992crc,

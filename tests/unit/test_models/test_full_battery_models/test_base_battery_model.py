@@ -108,7 +108,7 @@ class TestBaseBatteryModel(unittest.TestCase):
         )
 
     def test_bad_options(self):
-        with self.assertRaisesRegex(pybamm.OptionError, "option"):
+        with self.assertRaisesRegex(pybamm.OptionError, "Option"):
             pybamm.BaseBatteryModel({"bad option": "bad option"})
         with self.assertRaisesRegex(pybamm.OptionError, "current collector model"):
             pybamm.BaseBatteryModel({"current collector": "bad current collector"})
@@ -122,8 +122,6 @@ class TestBaseBatteryModel(unittest.TestCase):
             pybamm.BaseBatteryModel({"surface form": "bad surface form"})
         with self.assertRaisesRegex(pybamm.OptionError, "particle model"):
             pybamm.BaseBatteryModel({"particle": "bad particle"})
-        with self.assertRaisesRegex(pybamm.OptionError, "option set external"):
-            pybamm.BaseBatteryModel({"current collector": "set external potential"})
         with self.assertRaisesRegex(pybamm.OptionError, "operating mode"):
             pybamm.BaseBatteryModel({"operating mode": "bad operating mode"})
 

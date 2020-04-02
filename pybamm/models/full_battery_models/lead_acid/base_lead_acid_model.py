@@ -19,6 +19,10 @@ class BaseModel(pybamm.BaseBatteryModel):
         super().__init__(options, name)
         self.param = pybamm.standard_parameters_lead_acid
 
+        # Default timescale is discharge timescale
+        self.timescale = self.param.tau_discharge
+        self.set_standard_output_variables()
+
     @property
     def default_parameter_values(self):
         return pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Sulzer2019)
@@ -51,19 +55,6 @@ class BaseModel(pybamm.BaseBatteryModel):
         else:  # pragma: no cover
             return pybamm.CasadiSolver(mode="safe")
 
-    def set_standard_output_variables(self):
-        super().set_standard_output_variables()
-
-        # Time
-        time_scale = pybamm.standard_parameters_lead_acid.tau_discharge
-        self.variables.update(
-            {
-                "Time [s]": pybamm.t * time_scale,
-                "Time [min]": pybamm.t * time_scale / 60,
-                "Time [h]": pybamm.t * time_scale / 3600,
-            }
-        )
-
     def set_reactions(self):
 
         # Should probably refactor as this is a bit clunky at the moment
@@ -72,19 +63,19 @@ class BaseModel(pybamm.BaseBatteryModel):
         icd = " interfacial current density"
         self.reactions = {
             "main": {
-                "Negative": {"s": param.s_n, "aj": "Negative electrode" + icd},
-                "Positive": {"s": param.s_p, "aj": "Positive electrode" + icd},
+                "Negative": {"s": -param.s_plus_n_S, "aj": "Negative electrode" + icd},
+                "Positive": {"s": -param.s_plus_p_S, "aj": "Positive electrode" + icd},
             }
         }
         if "oxygen" in self.options["side reactions"]:
             self.reactions["oxygen"] = {
                 "Negative": {
-                    "s": -(param.s_plus_Ox + param.t_plus),
+                    "s": -param.s_plus_Ox,
                     "s_ox": -param.s_ox_Ox,
                     "aj": "Negative electrode oxygen" + icd,
                 },
                 "Positive": {
-                    "s": -(param.s_plus_Ox + param.t_plus),
+                    "s": -param.s_plus_Ox,
                     "s_ox": -param.s_ox_Ox,
                     "aj": "Positive electrode oxygen" + icd,
                 },

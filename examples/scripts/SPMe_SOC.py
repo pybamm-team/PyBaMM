@@ -77,7 +77,7 @@ for l_n in thicknesses:
         disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
         disc.process_model(model)
         # solve model
-        t_eval = np.linspace(0, 0.2, 100)
+        t_eval = np.linspace(0, 3600, 100)
         sol = model.default_solver.solve(model, t_eval)
         xpext = sol["Positive electrode average extent of lithiation"]
         xnext = sol["Negative electrode average extent of lithiation"]

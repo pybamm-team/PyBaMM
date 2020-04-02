@@ -37,6 +37,14 @@ class SolverError(Exception):
     pass
 
 
+class SolverWarning(UserWarning):
+    """
+    Solver warning: the chosen solver settings may not give the desired output
+    """
+
+    pass
+
+
 class ShapeError(Exception):
     """
     Shape error: cannot evaluate an object to find its shape
@@ -48,14 +56,6 @@ class ShapeError(Exception):
 class ModelWarning(UserWarning):
     """
     Model warning: the model does not contain all of the standard output variables
-    """
-
-    pass
-
-
-class UndefinedOperationError(Exception):
-    """
-    Undefined operation: Raised when a mathematical operation is not well-defined
     """
 
     pass

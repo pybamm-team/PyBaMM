@@ -31,7 +31,6 @@ class TestGeometricParameters(unittest.TestCase):
         self.assertEqual(
             (L_n_eval + L_s_eval + L_p_eval).evaluate(), L_x_eval.evaluate()
         )
-        self.assertEqual((L_n_eval + L_s_eval + L_p_eval).id, L_x_eval.id)
         l_n_eval = parameter_values.process_symbol(l_n)
         l_s_eval = parameter_values.process_symbol(l_s)
         l_p_eval = parameter_values.process_symbol(l_p)

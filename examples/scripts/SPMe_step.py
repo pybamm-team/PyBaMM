@@ -26,24 +26,18 @@ disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
 
 # solve model
-t_eval = np.linspace(0, 0.2, 100)
+t_eval = np.linspace(0, 3600, 100)
 solver = model.default_solver
 solution = solver.solve(model, t_eval)
 
 # step model
-dt = 0.05
+dt = 500
 time = 0
 end_time = solution.t[-1]
 step_solver = model.default_solver
 step_solution = None
 while time < end_time:
-    current_step_sol = step_solver.step(model, dt=dt, npts=10)
-    if not step_solution:
-        # create solution object on first step
-        step_solution = current_step_sol
-    else:
-        # append solution from the current step to step_solution
-        step_solution.append(current_step_sol)
+    step_solution = step_solver.step(step_solution, model, dt=dt, npts=10)
     time += dt
 
 # plot

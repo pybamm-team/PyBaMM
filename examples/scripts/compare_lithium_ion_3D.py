@@ -20,9 +20,9 @@ models = [
     pybamm.lithium_ion.SPM(
         {"current collector": "potential pair", "dimensionality": 2}, name="2+1D SPM"
     ),
-    pybamm.lithium_ion.SPMe(
-        {"current collector": "potential pair", "dimensionality": 2}, name="2+1D SPMe"
-    ),
+    # pybamm.lithium_ion.SPMe(
+    #     {"current collector": "potential pair", "dimensionality": 2}, name="2+1D SPMe"
+    # ),
 ]
 
 # load parameter values and process models
@@ -50,13 +50,12 @@ for model in models:
 
 # solve model
 solutions = [None] * len(models)
-t_eval = np.linspace(0, 1, 1000)
+t_eval = np.linspace(0, 3600, 1000)
 for i, model in enumerate(models):
     solution = model.default_solver.solve(model, t_eval)
     solutions[i] = solution
 
 # plot
-# TO DO: plotting 3D variables
-output_variables = ["Terminal voltage [V]"]
+output_variables = ["Terminal voltage [V]", "Negative current collector potential [V]"]
 plot = pybamm.QuickPlot(solutions, output_variables)
 plot.dynamic_plot()

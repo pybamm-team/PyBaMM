@@ -12,3 +12,14 @@ Broadcasting Operators
 
 .. autoclass:: pybamm.SecondaryBroadcast
   :members:
+
+.. autoclass:: pybamm.FullBroadcastToEdges
+  :members:
+
+.. autoclass:: pybamm.PrimaryBroadcastToEdges
+  :members:
+
+.. autoclass:: pybamm.SecondaryBroadcastToEdges
+  :members:
+
+.. autofunction:: pybamm.ones_like
