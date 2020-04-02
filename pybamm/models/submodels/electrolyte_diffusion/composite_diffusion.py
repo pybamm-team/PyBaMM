@@ -45,10 +45,6 @@ class Composite(BaseElectrolyteDiffusion):
         param = self.param
 
         N_e_diffusion = -tor_0 * param.D_e(c_e_0_av, T_0) * pybamm.grad(c_e)
-        # N_e_migration = (param.C_e * param.t_plus) / param.gamma_e * i_e
-        # N_e_convection = c_e * v_box_0
-
-        # N_e = N_e_diffusion + N_e_migration + N_e_convection
 
         if v_box_0.id == pybamm.Scalar(0).id:
             N_e = N_e_diffusion
@@ -111,3 +107,14 @@ class Composite(BaseElectrolyteDiffusion):
         c_e = variables["Electrolyte concentration"]
 
         self.initial_conditions = {c_e: self.param.c_e_init}
+
+    def set_boundary_conditions(self, variables):
+
+        c_e = variables["Electrolyte concentration"]
+
+        self.boundary_conditions = {
+            c_e: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
