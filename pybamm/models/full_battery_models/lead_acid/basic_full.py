@@ -213,24 +213,45 @@ class BasicFull(BaseModel):
         deps_dt = -param.beta_surf * j
         self.rhs[eps] = deps_dt
         self.initial_conditions[eps] = param.epsilon_init
-        self.events["Zero negative electrode porosity cut-off"] = pybamm.min(eps_n)
-        self.events["Max negative electrode porosity cut-off"] = pybamm.max(eps_n) - 1
-        self.events["Zero positive electrode porosity cut-off"] = pybamm.min(eps_p)
-        self.events["Max positive electrode porosity cut-off"] = pybamm.max(eps_p) - 1
+        self.events.extend(
+            [
+                pybamm.Event(
+                    "Zero negative electrode porosity cut-off", pybamm.min(eps_n)
+                ),
+                pybamm.Event(
+                    "Max negative electrode porosity cut-off", pybamm.max(eps_n) - 1
+                ),
+                pybamm.Event(
+                    "Zero positive electrode porosity cut-off", pybamm.min(eps_p)
+                ),
+                pybamm.Event(
+                    "Max positive electrode porosity cut-off", pybamm.max(eps_p) - 1
+                ),
+            ]
+        )
 
         ######################
         # Electrolyte concentration
         ######################
         N_e = -tor * param.D_e(c_e, T) * pybamm.grad(c_e) + c_e * v
+        s = pybamm.Concatenation(
+            pybamm.PrimaryBroadcast(param.s_plus_n_S, "negative electrode"),
+            pybamm.PrimaryBroadcast(0, "separator"),
+            pybamm.PrimaryBroadcast(param.s_plus_p_S, "positive electrode"),
+        )
         self.rhs[c_e] = (1 / eps) * (
-            -pybamm.div(N_e) / param.C_e + param.s * j / param.gamma_e - c_e * deps_dt
+            -pybamm.div(N_e) / param.C_e + s * j / param.gamma_e - c_e * deps_dt
         )
         self.boundary_conditions[c_e] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (pybamm.Scalar(0), "Neumann"),
         }
         self.initial_conditions[c_e] = param.c_e_init
-        self.events["Zero electrolyte concentration cut-off"] = pybamm.min(c_e) - 0.002
+        self.events.append(
+            pybamm.Event(
+                "Zero electrolyte concentration cut-off", pybamm.min(c_e) - 0.002
+            )
+        )
 
         ######################
         # (Some) variables
@@ -238,17 +259,26 @@ class BasicFull(BaseModel):
         voltage = pybamm.boundary_value(phi_s_p, "right")
         # The `variables` dictionary contains all variables that might be useful for
         # visualising the solution of the model
+        pot = param.potential_scale
+
         self.variables = {
             "Electrolyte concentration": c_e,
             "Current [A]": I,
-            "Negative electrode potential": phi_s_n,
-            "Electrolyte potential": phi_e,
-            "Positive electrode potential": phi_s_p,
-            "Terminal voltage": voltage,
+            "Negative electrode potential [V]": pot * phi_s_n,
+            "Electrolyte potential [V]": -param.U_n_ref + pot * phi_e,
+            "Positive electrode potential [V]": param.U_p_ref
+            - param.U_n_ref
+            + pot * phi_s_p,
+            "Terminal voltage [V]": param.U_p_ref - param.U_n_ref + pot * voltage,
         }
-        self.events["Minimum voltage"] = voltage - param.voltage_low_cut
-        self.events["Maximum voltage"] = voltage - param.voltage_high_cut
+        self.events.extend(
+            [
+                pybamm.Event("Minimum voltage", voltage - param.voltage_low_cut),
+                pybamm.Event("Maximum voltage", voltage - param.voltage_high_cut),
+            ]
+        )
 
     @property
     def default_geometry(self):
         return pybamm.Geometry("1D macro")
+
