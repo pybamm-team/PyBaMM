@@ -64,6 +64,17 @@ Xu2019 = {
     "electrolyte": "lipf6_Valoen2005",
     "experiment": "1C_discharge_from_full_Xu2019",
 }
+
+Mohtat2020 = {
+    "chemistry": "lithium-ion",
+    "cell": "UMBL_Mohtat2020",
+    "anode": "graphite_UMBL_Mohtat2020",
+    "separator": "separator_Mohtat2020",
+    "cathode": "NMC_UMBL_Mohtat2020",
+    "electrolyte": "LiPF6_Mohtat2020",
+    "experiment": "1C_charge_from_empty_Mohtat2020",
+    "citation": "Mohtat2020",
+}
 #
 # Lead-acid
 #
