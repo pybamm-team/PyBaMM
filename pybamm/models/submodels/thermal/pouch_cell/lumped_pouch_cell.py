@@ -7,21 +7,13 @@ from ..base_thermal import BaseThermal
 
 
 class LumpedPouchCell(BaseThermal):
-    """Base class for lumped thermal submodels for use in the
-    "N+1D" pouch cell models [1, 2]
+    """Base class for lumped thermal submodels for use in the "N+1D" pouch cell
+    models.
 
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
-
-    References
-    ----------
-    .. [1] R Timms, SG Marquis, V Sulzer, CP Please and SJ Chapman. “Asymptotic
-           Reduction of a Lithium-ion Pouch Cell Model”. In preparation, 2020.
-    .. [2] SG Marquis, R Timms, V Sulzer, CP Please and SJ Chapman. “A Suite of
-           Reduced-Order Models of a Single-Layer Lithium-ion Pouch Cell”. In
-           preparation, 2020.
 
     **Extends:** :class:`pybamm.thermal.BaseModel`
     """

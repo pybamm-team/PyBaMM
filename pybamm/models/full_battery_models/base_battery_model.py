@@ -220,6 +220,11 @@ class BaseBatteryModel(pybamm.BaseModel):
                 FutureWarning,
             )
             options["thermal"] = "lumped"
+        # For "pouch cell" thermal models, dimensionality must be 1 or 2
+        if options["thermal"] == "pouch" and options["dimensionality"] == 0:
+            raise pybamm.OptionError(
+                "dimensionality is 0, but must be 1 or 2 for thermal model 'pouch cell'"
+            )
         if options["particle"] not in ["Fickian diffusion", "fast diffusion"]:
             raise pybamm.OptionError(
                 "particle model '{}' not recognised".format(options["particle"])

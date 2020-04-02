@@ -9,6 +9,3 @@ Thermal
   lumped
   one_dimensional_x
   pouch_cell/index
-
-    x_lumped/index
-  xyz_lumped/index

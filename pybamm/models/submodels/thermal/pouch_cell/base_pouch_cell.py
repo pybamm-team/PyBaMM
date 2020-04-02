@@ -9,7 +9,7 @@ from ..base_thermal import BaseThermal
 
 class BasePouchCell(BaseThermal):
     """Base class for  one- and two-dimensional thermal submodels for use in the
-    "N+1D" pouch cell models [1, 2]
+    "N+1D" pouch cell models. For more information see [1]_ and [2]_.
 
     Parameters
     ----------
