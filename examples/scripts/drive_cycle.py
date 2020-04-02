@@ -13,7 +13,7 @@ param["Current function [A]"] = "[current data]US06"
 # create and run simulation using the CasadiSolver in "fast" mode, remembering to
 # pass in the updated parameters
 sim = pybamm.Simulation(
-    model, parameter_values=param, solver=pybamm.CasadiSolver(mode="fast"),
+    model, parameter_values=param, solver=pybamm.CasadiSolver(mode="fast")
 )
 sim.solve()
 sim.plot(

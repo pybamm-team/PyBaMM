@@ -37,13 +37,7 @@ class _BaseSolution(object):
     """
 
     def __init__(
-        self,
-        t,
-        y,
-        t_event=None,
-        y_event=None,
-        termination="final time",
-        copy_this=None,
+        self, t, y, t_event=None, y_event=None, termination="final time", copy_this=None
     ):
         self._t = t
         self._y = y
@@ -252,9 +246,7 @@ class Solution(_BaseSolution):
 
     """
 
-    def __init__(
-        self, t, y, t_event=None, y_event=None, termination="final time",
-    ):
+    def __init__(self, t, y, t_event=None, y_event=None, termination="final time"):
         super().__init__(t, y, t_event, y_event, termination)
 
     @property

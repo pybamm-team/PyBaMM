@@ -237,7 +237,7 @@ class TestQuickPlot(unittest.TestCase):
         # Remove 'x [m]' from the variables and make sure a key error is raise
         del solution.model.variables["x [m]"]
         with self.assertRaisesRegex(
-            KeyError, "Can't find spatial scale for 'negative electrode'",
+            KeyError, "Can't find spatial scale for 'negative electrode'"
         ):
             pybamm.QuickPlot(solution, ["b broadcasted"])
 
@@ -326,7 +326,7 @@ class TestQuickPlot(unittest.TestCase):
 
         with self.assertRaisesRegex(NotImplementedError, "Shape not recognized for"):
             pybamm.QuickPlot(
-                solution_spm, ["Negative particle concentration [mol.m-3]"],
+                solution_spm, ["Negative particle concentration [mol.m-3]"]
             )
 
     def test_failure(self):

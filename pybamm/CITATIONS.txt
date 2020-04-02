@@ -72,6 +72,14 @@ year={2019},
 publisher={The Electrochemical Society}
 }
 
+@article{Mohtat2020,
+author = {Mohtat, Peyman and Siegel, Jason B and Stefanopoulou, Anna G},
+title = {{High C-rate Differential Expansion and Voltage Model for Li-ion Batteries}},
+journal = {Submitted for publication},
+year = {2019},
+publisher={ECSarXiv}
+}
+
 @article{scikits-odes,
   year  = {2018},
   month = {feb},

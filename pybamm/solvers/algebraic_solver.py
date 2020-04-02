@@ -87,7 +87,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
             # Otherwise calculate new y0
             else:
                 sol = optimize.root(
-                    root_fun, y0, method=self.method, tol=self.tol, jac=jac,
+                    root_fun, y0, method=self.method, tol=self.tol, jac=jac
                 )
 
                 if sol.success and np.all(abs(sol.fun) < self.tol):

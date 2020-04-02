@@ -32,8 +32,7 @@ class TestExperiments(unittest.TestCase):
 
     def test_gitt(self):
         experiment = pybamm.Experiment(
-            ["Discharge at C/20 for 1 hour", "Rest for 1 hour"] * 10,
-            period="6 minutes",
+            ["Discharge at C/20 for 1 hour", "Rest for 1 hour"] * 10, period="6 minutes"
         )
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(

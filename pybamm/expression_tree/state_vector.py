@@ -45,8 +45,9 @@ class StateVectorBase(pybamm.Symbol):
             if y_slices[0].start is None:
                 name = base_name + "[:{:d}]".format(y_slice.stop)
             else:
-                name = base_name + \
-                    "[{:d}:{:d}".format(y_slices[0].start, y_slices[0].stop)
+                name = base_name + "[{:d}:{:d}".format(
+                    y_slices[0].start, y_slices[0].stop
+                )
             if len(y_slices) > 1:
                 name += ",{:d}:{:d}".format(y_slices[1].start, y_slices[1].stop)
                 if len(y_slices) > 2:
@@ -222,10 +223,14 @@ class StateVector(StateVectorBase):
         auxiliary_domains=None,
         evaluation_array=None,
     ):
-        super().__init__(*y_slices,
-                         base_name="y", name=name, domain=domain,
-                         auxiliary_domains=auxiliary_domains,
-                         evaluation_array=evaluation_array)
+        super().__init__(
+            *y_slices,
+            base_name="y",
+            name=name,
+            domain=domain,
+            auxiliary_domains=auxiliary_domains,
+            evaluation_array=evaluation_array,
+        )
 
     def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
         """ See :meth:`pybamm.Symbol._base_evaluate()`. """
@@ -245,10 +250,13 @@ class StateVector(StateVectorBase):
         if variable.id == self.id:
             return pybamm.Scalar(1)
         if variable.id == pybamm.t.id:
-            return StateVectorDot(*self._y_slices, name=self.name + "'",
-                                  domain=self.domain,
-                                  auxiliary_domains=self.auxiliary_domains,
-                                  evaluation_array=self.evaluation_array)
+            return StateVectorDot(
+                *self._y_slices,
+                name=self.name + "'",
+                domain=self.domain,
+                auxiliary_domains=self.auxiliary_domains,
+                evaluation_array=self.evaluation_array,
+            )
         else:
             return pybamm.Scalar(0)
 
@@ -289,10 +297,14 @@ class StateVectorDot(StateVectorBase):
         auxiliary_domains=None,
         evaluation_array=None,
     ):
-        super().__init__(*y_slices,
-                         base_name="y_dot", name=name, domain=domain,
-                         auxiliary_domains=auxiliary_domains,
-                         evaluation_array=evaluation_array)
+        super().__init__(
+            *y_slices,
+            base_name="y_dot",
+            name=name,
+            domain=domain,
+            auxiliary_domains=auxiliary_domains,
+            evaluation_array=evaluation_array,
+        )
 
     def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
         """ See :meth:`pybamm.Symbol._base_evaluate()`. """

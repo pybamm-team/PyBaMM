@@ -33,10 +33,7 @@ class TestExternalVariables(unittest.TestCase):
         sim.solve(t_eval=np.linspace(0, 3600, 100), inputs=inputs)
 
     def test_external_variables_SPMe(self):
-        model_options = {
-            "thermal": "x-lumped",
-            "external submodels": ["thermal"],
-        }
+        model_options = {"thermal": "x-lumped", "external submodels": ["thermal"]}
         model = pybamm.lithium_ion.SPMe(model_options)
         sim = pybamm.Simulation(model)
         t_eval = np.linspace(0, 100, 3)
