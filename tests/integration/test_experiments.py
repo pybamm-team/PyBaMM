@@ -30,6 +30,24 @@ class TestExperiments(unittest.TestCase):
             [cap / 2] * 5 + [0] * 4 + [-cap / 2] * 4,
         )
 
+    def test_rest_discharge_rest(self):
+        # An experiment which requires recomputing consistent states
+        experiment = pybamm.Experiment(
+            ["Rest for 5 minutes", "Discharge at 0.1C until 3V", "Rest for 30 minutes"],
+            period="10 seconds",
+        )
+        parameter_values = pybamm.ParameterValues(
+            chemistry=pybamm.parameter_sets.Chen2020
+        )
+        model = pybamm.lithium_ion.DFN()
+        sim = pybamm.Simulation(
+            model,
+            parameter_values=parameter_values,
+            experiment=experiment,
+            solver=pybamm.CasadiSolver(),
+        )
+        sim.solve()
+
     def test_gitt(self):
         experiment = pybamm.Experiment(
             ["Discharge at C/20 for 1 hour", "Rest for 1 hour"] * 10, period="6 minutes"
