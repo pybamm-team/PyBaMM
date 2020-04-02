@@ -74,7 +74,7 @@ class TestStateVectorDot(unittest.TestCase):
         y_dot2 = np.ones(5)
         with self.assertRaisesRegex(
             ValueError,
-            "y_dot is too short, so value with slice is smaller than expected"
+            "y_dot is too short, so value with slice is smaller than expected",
         ):
             sv.evaluate(y_dot=y_dot2)
 

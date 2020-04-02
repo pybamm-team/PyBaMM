@@ -260,10 +260,7 @@ class TestBaseModel(unittest.TestCase):
 
         # model must be in semi-explicit form
         model = pybamm.BaseModel()
-        model.algebraic = {
-            c: 2 * d - c,
-            d: c * d.diff(pybamm.t) - d,
-        }
+        model.algebraic = {c: 2 * d - c, d: c * d.diff(pybamm.t) - d}
         model.initial_conditions = {c: 1, d: 1}
         with self.assertRaisesRegex(
             pybamm.ModelError, "time derivative of variable found",
