@@ -86,19 +86,13 @@ class BasicFull(BaseModel):
 
         # Pressure (for convection)
         pressure_n = pybamm.Variable(
-            "Negative electrolyte pressure",
-            domain="negative electrode",
-            auxiliary_domains={"secondary": "current collector"},
+            "Negative electrolyte pressure", domain="negative electrode",
         )
         pressure_s = pybamm.Variable(
-            "Separator electrolyte pressure",
-            domain="separator",
-            auxiliary_domains={"secondary": "current collector"},
+            "Separator electrolyte pressure", domain="separator",
         )
         pressure_p = pybamm.Variable(
-            "Positive electrolyte pressure",
-            domain="positive electrode",
-            auxiliary_domains={"secondary": "current collector"},
+            "Positive electrolyte pressure", domain="positive electrode",
         )
         pressure = pybamm.Concatenation(pressure_n, pressure_s, pressure_p)
 
@@ -161,7 +155,12 @@ class BasicFull(BaseModel):
             pybamm.PrimaryBroadcast(-d_vbox_s__dx, "separator"),
             pybamm.PrimaryBroadcast(0, "positive electrode"),
         )
-        self.algebraic[pressure] = pybamm.div(v) + dVbox_dz - param.beta * j
+        beta = pybamm.Concatenation(
+            pybamm.PrimaryBroadcast(param.beta_n, "negative electrode"),
+            pybamm.PrimaryBroadcast(0, "separator"),
+            pybamm.PrimaryBroadcast(param.beta_p, "positive electrode"),
+        )
+        self.algebraic[pressure] = pybamm.div(v) + dVbox_dz - beta * j
         self.boundary_conditions[pressure] = {
             "left": (pybamm.Scalar(0), "Dirichlet"),
             "right": (pybamm.Scalar(0), "Neumann"),
@@ -210,7 +209,12 @@ class BasicFull(BaseModel):
         ######################
         # Porosity
         ######################
-        deps_dt = -param.beta_surf * j
+        beta_surf = pybamm.Concatenation(
+            pybamm.PrimaryBroadcast(param.beta_surf_n, "negative electrode"),
+            pybamm.PrimaryBroadcast(0, "separator"),
+            pybamm.PrimaryBroadcast(param.beta_surf_p, "positive electrode"),
+        )
+        deps_dt = -beta_surf * j
         self.rhs[eps] = deps_dt
         self.initial_conditions[eps] = param.epsilon_init
         self.events.extend(
@@ -279,8 +283,4 @@ class BasicFull(BaseModel):
                 pybamm.Event("Maximum voltage", voltage - param.voltage_high_cut),
             ]
         )
-
-    @property
-    def default_geometry(self):
-        return pybamm.Geometry("1D macro")
 
