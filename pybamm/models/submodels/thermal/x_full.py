@@ -31,7 +31,13 @@ class OneDimensionalX(BaseThermal):
         T_cn = pybamm.BoundaryValue(T_n, "left")
         T_cp = pybamm.BoundaryValue(T_p, "right")
 
-        variables = self._get_standard_fundamental_variables(T_cn, T_n, T_s, T_p, T_cp)
+        T = pybamm.Concatenation(T_n, T_s, T_p)
+        T_x_av = self._x_average(T, T_cn, T_cp)
+        T_vol_av = self._yz_average(T_x_av)
+
+        variables = self._get_standard_fundamental_variables(
+            T_cn, T_n, T_s, T_p, T_cp, T_x_av, T_vol_av
+        )
         return variables
 
     def get_coupled_variables(self, variables):

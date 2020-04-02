@@ -24,7 +24,7 @@ class TestPouchCell1D(unittest.TestCase):
             }
         )
 
-        submodel = pybamm.thermal.pouch_cell.PouchCell1D(param)
+        submodel = pybamm.thermal.pouch_cell.CurrentCollector1D(param)
         std_tests = tests.StandardSubModelTests(submodel, coupled_variables)
         std_tests.test_all()
 

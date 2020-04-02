@@ -39,7 +39,7 @@ class TestDFN(unittest.TestCase):
             model = pybamm.lithium_ion.DFN(options)
 
     def test_lumped_thermal_model_1D(self):
-        options = {"thermal": "lumped"}
+        options = {"thermal": "x-lumped"}
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()
 
@@ -88,7 +88,7 @@ class TestDFN(unittest.TestCase):
         options = {
             "current collector": "potential pair",
             "dimensionality": 1,
-            "thermal": "pouch cell",
+            "thermal": "x-lumped",
         }
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()
@@ -97,7 +97,7 @@ class TestDFN(unittest.TestCase):
         options = {
             "current collector": "potential pair",
             "dimensionality": 2,
-            "thermal": "pouch cell",
+            "thermal": "x-lumped",
         }
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()

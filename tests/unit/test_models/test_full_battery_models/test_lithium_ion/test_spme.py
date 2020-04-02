@@ -88,7 +88,7 @@ class TestSPMe(unittest.TestCase):
         options = {
             "current collector": "potential pair",
             "dimensionality": 1,
-            "thermal": "pouch cell",
+            "thermal": "x-lumped",
         }
         model = pybamm.lithium_ion.SPMe(options)
         model.check_well_posedness()
@@ -97,7 +97,7 @@ class TestSPMe(unittest.TestCase):
         options = {
             "current collector": "potential pair",
             "dimensionality": 2,
-            "thermal": "pouch cell",
+            "thermal": "x-lumped",
         }
         model = pybamm.lithium_ion.SPMe(options)
         model.check_well_posedness()

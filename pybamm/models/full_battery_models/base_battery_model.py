@@ -3,7 +3,6 @@
 #
 
 import pybamm
-import warnings
 
 
 class BaseBatteryModel(pybamm.BaseModel):
@@ -44,8 +43,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 Can be "Fickian diffusion" (default) or "fast diffusion".
             * "thermal" : str, optional
                 Sets the thermal model to use. Can be "isothermal" (default), "lumped",
-                "x-full", or "pouch cell". In the future the following options will be
-                removed: "x-lumped", "xyz-lumped".
+                "x-lumpd", or "x-full".
             * "external submodels" : list
                 A list of the submodels that you would like to supply an external
                 variable for instead of solving in PyBaMM. The entries of the lists
@@ -199,31 +197,9 @@ class BaseBatteryModel(pybamm.BaseModel):
                     options["dimensionality"]
                 )
             )
-        if options["thermal"] not in [
-            "isothermal",
-            "lumped",
-            "pouch cell",
-            "x-full",
-            "x-lumped",
-            "xyz-lumped",
-        ]:
+        if options["thermal"] not in ["isothermal", "lumped", "x-lumped", "x-full"]:
             raise pybamm.OptionError(
                 "Unknown thermal model '{}'".format(options["thermal"])
-            )
-        # Raise FutureWarning for "x-lumped" and "xyz-lumped"
-        if options["thermal"] in ["x-lumped", "xyz-lumped"]:
-            warnings.warn(
-                """Option '{}' is now selected using 'lumped', and will be
-                removed in the future.""".format(
-                    options["thermal"]
-                ),
-                FutureWarning,
-            )
-            options["thermal"] = "lumped"
-        # For "pouch cell" thermal models, dimensionality must be 1 or 2
-        if options["thermal"] == "pouch" and options["dimensionality"] == 0:
-            raise pybamm.OptionError(
-                "dimensionality is 0, but must be 1 or 2 for thermal model 'pouch cell'"
             )
         if options["particle"] not in ["Fickian diffusion", "fast diffusion"]:
             raise pybamm.OptionError(
@@ -460,14 +436,21 @@ class BaseBatteryModel(pybamm.BaseModel):
             thermal_submodel = pybamm.thermal.isothermal.Isothermal(self.param)
 
         elif self.options["thermal"] == "lumped":
+            thermal_submodel = pybamm.thermal.Lumped(
+                self.param, self.options["dimensionality"]
+            )
+
+        elif self.options["thermal"] == "x-lumped":
             if self.options["dimensionality"] == 0:
-                thermal_submodel = pybamm.thermal.Lumped(self.param)
+                thermal_submodel = pybamm.thermal.Lumped(
+                    self.param, self.options["dimensionality"]
+                )
             elif self.options["dimensionality"] == 1:
-                thermal_submodel = pybamm.thermal.pouch_cell.LumpedPouchCell1D(
+                thermal_submodel = pybamm.thermal.pouch_cell.CurrentCollector1D(
                     self.param
                 )
             elif self.options["dimensionality"] == 2:
-                thermal_submodel = pybamm.thermal.pouch_cell.LumpedPouchCell2D(
+                thermal_submodel = pybamm.thermal.pouch_cell.CurrentCollector2D(
                     self.param
                 )
 
@@ -484,12 +467,6 @@ class BaseBatteryModel(pybamm.BaseModel):
                     """X-full thermal submodels do
                     not yet support 2D current collectors"""
                 )
-
-        elif self.options["thermal"] == "pouch cell":
-            if self.options["dimensionality"] == 1:
-                thermal_submodel = pybamm.thermal.pouch_cell.PouchCell1D(self.param)
-            elif self.options["dimensionality"] == 2:
-                thermal_submodel = pybamm.thermal.pouch_cell.PouchCell2D(self.param)
 
         self.submodels["thermal"] = thermal_submodel
 

@@ -31,7 +31,7 @@ models = [
         {
             "current collector": "potential pair",
             "dimensionality": 2,
-            "thermal": "pouch cell",
+            "thermal": "x-lumped",
         },
         name="2+1D full",
     ),
@@ -47,7 +47,7 @@ models = [
         {
             "current collector": "potential pair",
             "dimensionality": 1,
-            "thermal": "pouch cell",
+            "thermal": "x-lumped",
         },
         name="1+1D full",
     ),

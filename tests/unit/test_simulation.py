@@ -201,7 +201,7 @@ class TestSimulation(unittest.TestCase):
 
         dt = 0.001
 
-        external_variables = {"X-averaged cell temperature": T_av}
+        external_variables = {"Volume-averaged cell temperature": T_av}
         sim.step(dt, external_variables=external_variables)
 
     def test_step(self):

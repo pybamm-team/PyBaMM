@@ -124,8 +124,6 @@ class TestBaseBatteryModel(unittest.TestCase):
             pybamm.BaseBatteryModel({"particle": "bad particle"})
         with self.assertRaisesRegex(pybamm.OptionError, "operating mode"):
             pybamm.BaseBatteryModel({"operating mode": "bad operating mode"})
-        with self.assertRaisesRegex(pybamm.OptionError, "dimensionality"):
-            pybamm.BaseBatteryModel({"thermal": "pouch cell"})
 
     def test_build_twice(self):
         model = pybamm.lithium_ion.SPM()  # need to pick a model to set vars and build
@@ -139,12 +137,6 @@ class TestBaseBatteryModel(unittest.TestCase):
         )
         with self.assertRaisesRegex(pybamm.ModelError, "Submodel"):
             model.build_model()
-
-    def test_thermal_future_warning(self):
-        with self.assertWarns(FutureWarning):
-            pybamm.BaseBatteryModel({"thermal": "x-lumped"})
-        with self.assertWarns(FutureWarning):
-            pybamm.BaseBatteryModel({"thermal": "xyz-lumped"})
 
 
 if __name__ == "__main__":

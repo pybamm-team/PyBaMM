@@ -6,7 +6,7 @@ import pybamm
 from .base_pouch_cell import BasePouchCell
 
 
-class PouchCell2D(BasePouchCell):
+class CurrentCollector2D(BasePouchCell):
     """Class for 2D thermal model for use in 2+1D pouch cell models
 
     Parameters
@@ -60,8 +60,8 @@ class PouchCell2D(BasePouchCell):
         }
 
     def set_initial_conditions(self, variables):
-        T = variables["X-averaged cell temperature"]
-        self.initial_conditions = {T: self.param.T_init}
+        T_av = variables["X-averaged cell temperature"]
+        self.initial_conditions = {T_av: self.param.T_init}
 
     def _current_collector_heating(self, variables):
         """Returns the heat source terms in the 2D current collector"""

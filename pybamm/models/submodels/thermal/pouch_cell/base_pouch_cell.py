@@ -9,7 +9,8 @@ from ..base_thermal import BaseThermal
 
 class BasePouchCell(BaseThermal):
     """Base class for  one- and two-dimensional thermal submodels for use in the
-    "N+1D" pouch cell models. For more information see [1]_ and [2]_.
+    "N+1D" pouch cell models. The models are averaged in the x-direction and
+    are therefore referred to as 'x-lumped'. For more information see [1]_ and [2]_.
 
     Parameters
     ----------
@@ -33,6 +34,7 @@ class BasePouchCell(BaseThermal):
     def get_fundamental_variables(self):
 
         T_x_av = pybamm.standard_variables.T_av
+        T_vol_av = self._yz_average(T_x_av)
 
         T_cn = T_x_av
         T_n = pybamm.PrimaryBroadcast(T_x_av, "negative electrode")
@@ -40,7 +42,9 @@ class BasePouchCell(BaseThermal):
         T_p = pybamm.PrimaryBroadcast(T_x_av, "positive electrode")
         T_cp = T_x_av
 
-        variables = self._get_standard_fundamental_variables(T_cn, T_n, T_s, T_p, T_cp)
+        variables = self._get_standard_fundamental_variables(
+            T_cn, T_n, T_s, T_p, T_cp, T_x_av, T_vol_av
+        )
 
         return variables
 

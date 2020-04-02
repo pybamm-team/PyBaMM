@@ -19,7 +19,9 @@ class BaseThermal(pybamm.BaseSubModel):
     def __init__(self, param):
         super().__init__(param)
 
-    def _get_standard_fundamental_variables(self, T_cn, T_n, T_s, T_p, T_cp):
+    def _get_standard_fundamental_variables(
+        self, T_cn, T_n, T_s, T_p, T_cp, T_x_av, T_vol_av
+    ):
         param = self.param
 
         # The variable T is the concatenation of the temperature in the negative
@@ -31,13 +33,6 @@ class BaseThermal(pybamm.BaseSubModel):
         T_n_av = pybamm.x_average(T_n)
         T_s_av = pybamm.x_average(T_s)
         T_p_av = pybamm.x_average(T_p)
-
-        # Compute the X-average over the current collectors by default.
-        # Note: the method 'self._x_average' is overwritten by models which do
-        # not include current collector effects, so that the average is just taken
-        # over the negative electrode, separator and positive electrode.
-        T_x_av = self._x_average(T, T_cn, T_cp)
-        T_vol_av = self._yz_average(T_x_av)
 
         # Get the ambient temperature, which can be specified as a function of time
         T_amb_dim = param.T_amb_dim(pybamm.t * param.timescale)
@@ -149,10 +144,7 @@ class BaseThermal(pybamm.BaseSubModel):
         # Total heating
         Q = Q_ohm + Q_rxn + Q_rev
 
-        # Compute the X-average over the current collectors by default.
-        # Note: the method 'self._x_average' is overwritten by models which do
-        # not include current collector effects, so that the average is just taken
-        # over the negative electrode, separator and positive electrode.
+        # Compute the X-average over the entire cell, including current collectors
         Q_ohm_av = self._x_average(Q_ohm, Q_ohm_s_cn, Q_ohm_s_cp)
         Q_rxn_av = self._x_average(Q_rxn, 0, 0)
         Q_rev_av = self._x_average(Q_rev, 0, 0)
@@ -200,6 +192,7 @@ class BaseThermal(pybamm.BaseSubModel):
         return variables
 
     def _current_collector_heating(self, variables):
+        "Compute Ohmic heating in current collectors"
         raise NotImplementedError
 
     def _x_average(self, var, var_cn, var_cp):
@@ -207,36 +200,18 @@ class BaseThermal(pybamm.BaseSubModel):
         Computes the X-average over the whole cell (including current collectors)
         from the variable in the cell (negative electrode, separator,
         positive electrode), negative current collector, and positive current
-        collector. This method is overwritten by models which do not include
-        current collector effects, so that the average is just taken over the
-        negative electrode, separator and positive electrode.
+        collector.
         Note: we do this as we cannot create a single variable which is
         the concatenation [var_cn, var, var_cp] since var_cn and var_cp share the
         same domian. (In the N+1D formulation the current collector variables are
         assumed independent of x, so we do not make the distinction between negative
         and positive current collectors in the geometry).
         """
-        # When averging the temperature for lumped models, var is a concatenation
-        # of broadcasts of the X- or Volume- averaged temperature.
-        # In this instance we return the (unmodified) variable corresponding to
-        # the correct average to avoid a ModelError (the unmodified variables must
-        # be the key in model.rhs)
-        if isinstance(var, pybamm.Concatenation) and all(
-            isinstance(child, pybamm.Broadcast) for child in var.children
-        ):
-            # Create list of var.ids
-            var_ids = [child.children[0].id for child in var.children]
-            var_ids.extend([var_cn.id, var_cp.id])
-            # If all var.ids the same, then the variable is uniform in x so can
-            # just return one the values (arbitrarily var_cn here)
-            if len(set(var_ids)) == 1:
-                out = var_cn
-        else:
-            out = (
-                self.param.l_cn * var_cn
-                + pybamm.x_average(var)
-                + self.param.l_cp * var_cp
-            ) / self.param.l
+        out = (
+            self.param.l_cn * var_cn
+            + self.param.l_x * pybamm.x_average(var)
+            + self.param.l_cp * var_cp
+        ) / self.param.l
         return out
 
     def _yz_average(self, var):
