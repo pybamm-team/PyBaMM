@@ -235,12 +235,14 @@ class BasicFull(BaseModel):
         ######################
         N_e = -tor * param.D_e(c_e, T) * pybamm.grad(c_e) + c_e * v
         s = pybamm.Concatenation(
-            pybamm.PrimaryBroadcast(param.s_plus_n_S, "negative electrode"),
+            -pybamm.PrimaryBroadcast(param.s_plus_n_S, "negative electrode"),
             pybamm.PrimaryBroadcast(0, "separator"),
-            pybamm.PrimaryBroadcast(param.s_plus_p_S, "positive electrode"),
+            -pybamm.PrimaryBroadcast(param.s_plus_p_S, "positive electrode"),
         )
         self.rhs[c_e] = (1 / eps) * (
-            -pybamm.div(N_e) / param.C_e + s * j / param.gamma_e - c_e * deps_dt
+            -pybamm.div(N_e) / param.C_e
+            + (s - param.t_plus(c_e)) * j / param.gamma_e
+            - c_e * deps_dt
         )
         self.boundary_conditions[c_e] = {
             "left": (pybamm.Scalar(0), "Neumann"),
