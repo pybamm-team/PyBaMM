@@ -16,6 +16,8 @@ class BasePouchCell(BaseThermal):
     ----------
     param : parameter class
         The parameters to use for this submodel
+    cc_dimension: int
+        The dimension of the current collectors. Can be 1 or 2.
 
     References
     ----------
@@ -28,8 +30,8 @@ class BasePouchCell(BaseThermal):
     **Extends:** :class:`pybamm.thermal.BaseModel`
     """
 
-    def __init__(self, param):
-        super().__init__(param)
+    def __init__(self, param, cc_dimension):
+        super().__init__(param, cc_dimension=cc_dimension)
 
     def get_fundamental_variables(self):
 

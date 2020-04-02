@@ -78,19 +78,3 @@ class OneDimensionalX(BaseThermal):
     def set_initial_conditions(self, variables):
         T = variables["Cell temperature"]
         self.initial_conditions = {T: self.param.T_init}
-
-    def _current_collector_heating(self, variables):
-        """
-        In the limit of infinitely large current collector conductivity, the
-        Ohmic heating in the current collectors in zero
-        """
-        Q_s_cn = pybamm.Scalar(0)
-        Q_s_cp = pybamm.Scalar(0)
-        return Q_s_cn, Q_s_cp
-
-    def _yz_average(self, var):
-        """
-        Computes the y-z average by integration over y and z
-        In the 1D case this is just equal to the input variable
-        """
-        return var

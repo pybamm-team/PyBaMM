@@ -18,7 +18,7 @@ class CurrentCollector2D(BasePouchCell):
     """
 
     def __init__(self, param):
-        super().__init__(param)
+        super().__init__(param, cc_dimension=2)
 
     def set_rhs(self, variables):
         T_av = variables["X-averaged cell temperature"]
@@ -62,16 +62,3 @@ class CurrentCollector2D(BasePouchCell):
     def set_initial_conditions(self, variables):
         T_av = variables["X-averaged cell temperature"]
         self.initial_conditions = {T_av: self.param.T_init}
-
-    def _current_collector_heating(self, variables):
-        """Returns the heat source terms in the 2D current collector"""
-        phi_s_cn = variables["Negative current collector potential"]
-        phi_s_cp = variables["Positive current collector potential"]
-
-        Q_s_cn = self.param.sigma_cn_prime * pybamm.grad_squared(phi_s_cn)
-        Q_s_cp = self.param.sigma_cp_prime * pybamm.grad_squared(phi_s_cp)
-        return Q_s_cn, Q_s_cp
-
-    def _yz_average(self, var):
-        """Computes the y-z average by integration over y and z"""
-        return pybamm.yz_average(var)

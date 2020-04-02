@@ -10,7 +10,13 @@ import unittest
 class TestBaseModel(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.standard_parameters_lithium_ion
-        submodel = pybamm.thermal.pouch_cell.BasePouchCell(param)
+
+        submodel = pybamm.thermal.pouch_cell.BasePouchCell(param, cc_dimension=1)
+        std_tests = tests.StandardSubModelTests(submodel)
+        with self.assertRaises(NotImplementedError):
+            std_tests.test_all()
+
+        submodel = pybamm.thermal.pouch_cell.BasePouchCell(param, cc_dimension=2)
         std_tests = tests.StandardSubModelTests(submodel)
         with self.assertRaises(NotImplementedError):
             std_tests.test_all()
