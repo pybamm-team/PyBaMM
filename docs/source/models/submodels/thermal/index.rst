@@ -7,5 +7,5 @@ Thermal
   base_thermal
   isothermal
   lumped
-  one_dimensional_x
+  x_full
   pouch_cell/index

@@ -53,6 +53,7 @@ class Lumped(BaseThermal):
         # Note: assumes pouch cell geometry. The factor 1/delta^2 comes from
         # the choice of non-dimensionalisation.
         # TODO: allow for arbitrary surface area to volume ratio in order to model
+        # different cell geometries (see #718)
         A = self.param.l_y * self.param.l_z
         V = self.param.l * self.param.l_y * self.param.l_z
         cooling_coeff = -2 * self.param.h * A / V / (self.param.delta ** 2)

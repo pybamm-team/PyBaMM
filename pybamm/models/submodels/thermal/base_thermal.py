@@ -25,13 +25,13 @@ class BaseThermal(pybamm.BaseSubModel):
         self, T_cn, T_n, T_s, T_p, T_cp, T_x_av, T_vol_av
     ):
         """
-        Here we explicitly pass in the averages for the temperature as they are
-        computed differently in different models. Computing the average temperature
-        using `self._x_average` requires a messy hack to avoid raising a
-        `ModelError` (as the key in the equation gets modified).
+        Note: here we explicitly pass in the averages for the temperature as computing
+        the average temperature in `BaseThermal` using `self._x_average` requires a
+        messy hack to avoid raising a `ModelError` (as the key in the equation
+        dict gets modified).
 
-        For more information about this method in general see
-        :meth:`pybamm.base_submodel._get_standard_fundamental_variables`
+        For more information about this method in general,
+        see :meth:`pybamm.base_submodel._get_standard_fundamental_variables`
         """
         param = self.param
 

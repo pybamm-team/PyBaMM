@@ -14,16 +14,6 @@ from tests.unit.test_models.test_submodels.test_thermal.coupled_variables import
 class TestPouchCell1D(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.standard_parameters_lithium_ion
-        phi_s_cn = pybamm.PrimaryBroadcast(pybamm.Scalar(0), ["current collector"])
-        phi_s_cp = pybamm.PrimaryBroadcast(pybamm.Scalar(3), ["current collector"])
-
-        coupled_variables.update(
-            {
-                "Negative current collector potential": phi_s_cn,
-                "Positive current collector potential": phi_s_cp,
-            }
-        )
-
         submodel = pybamm.thermal.pouch_cell.CurrentCollector1D(param)
         std_tests = tests.StandardSubModelTests(submodel, coupled_variables)
         std_tests.test_all()
