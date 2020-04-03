@@ -534,6 +534,10 @@ class BaseSolver(object):
         if (np.diff(t_eval) < 0).any():
             raise pybamm.SolverError("t_eval must increase monotonically")
 
+        # Set up external variables and inputs
+        external_variables = external_variables or {}
+        inputs = inputs or {}
+        ext_and_inputs = {**external_variables, **inputs}
         # Only allow symbolic inputs for CasadiAlgebraicSolver
         if not isinstance(self, pybamm.CasadiAlgebraicSolver) and any(
             v == "[sym]" for v in inputs.values()
@@ -544,12 +548,7 @@ class BaseSolver(object):
 
         # Set up
         timer = pybamm.Timer()
-
-        # Set up external variables and inputs
-        external_variables = external_variables or {}
-        inputs = inputs or {}
-        ext_and_inputs = {**external_variables, **inputs}
-
+        
         # Set up (if not done already)
         if model not in self.models_set_up:
             self.set_up(model, ext_and_inputs)

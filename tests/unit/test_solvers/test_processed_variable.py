@@ -32,7 +32,6 @@ class TestProcessedVariable(unittest.TestCase):
         x_sol = disc.process_symbol(x).entries[:, 0]
         var_sol = disc.process_symbol(var)
         eqn_sol = disc.process_symbol(eqn)
-        eqn_sol.mesh = disc.mesh.combine_submeshes(*eqn.domain)
         t_sol = np.linspace(0, 1)
         y_sol = np.ones_like(x_sol)[:, np.newaxis] * np.linspace(0, 5)
 
@@ -221,7 +220,6 @@ class TestProcessedVariable(unittest.TestCase):
         x_sol = disc.process_symbol(x).entries[:, 0]
         var_sol = disc.process_symbol(var)
         eqn_sol = disc.process_symbol(eqn)
-        eqn_sol.mesh = disc.mesh.combine_submeshes(*eqn.domain)
         t_sol = np.linspace(0, 1)
         y_sol = x_sol[:, np.newaxis] * np.linspace(0, 5)
 

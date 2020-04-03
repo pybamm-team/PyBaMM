@@ -119,7 +119,7 @@ class ProcessedCasadiVariable(object):
         for idx in range(len(self.t_sol)):
             t = self.t_sol[idx]
             u = self.u_sol[:, idx]
-            next_entries = self.base_variable(t, u, self.inputs).flatten()
+            next_entries = self.base_variable(t, u, self.inputs)
             if idx == 0:
                 entries = next_entries
             else:
