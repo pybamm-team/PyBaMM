@@ -51,7 +51,8 @@ class BaseThermal(pybamm.BaseSubModel):
 
         variables = {
             "Negative current collector temperature": T_cn,
-            "Negative current collector temperature [K]": param.Delta_T * T_cn,
+            "Negative current collector temperature [K]": param.Delta_T * T_cn
+            + param.T_ref,
             "X-averaged negative electrode temperature": T_n_av,
             "X-averaged negative electrode temperature [K]": param.Delta_T * T_n_av
             + param.T_ref,
@@ -68,7 +69,8 @@ class BaseThermal(pybamm.BaseSubModel):
             "Positive electrode temperature": T_p,
             "Positive electrode temperature [K]": param.Delta_T * T_p + param.T_ref,
             "Positive current collector temperature": T_cp,
-            "Positive current collector temperature [K]": param.Delta_T * T_cp,
+            "Positive current collector temperature [K]": param.Delta_T * T_cp
+            + param.T_ref,
             "Cell temperature": T,
             "Cell temperature [K]": param.Delta_T * T + param.T_ref,
             "X-averaged cell temperature": T_x_av,
