@@ -33,20 +33,33 @@ class ProcessedCasadiVariable(object):
         # Convert variable to casadi
         t_MX = casadi.MX.sym("t")
         y_MX = casadi.MX.sym("y", solution.y.shape[0])
-        inputs_MX = casadi.vertcat(*[p for p in solution.inputs.values()])
-        var = base_variable.to_casadi(t_MX, y_MX, inputs=solution.inputs)
+        # Make all inputs symbolic first for converting to casadi
+        all_inputs_as_MX_dict = {}
+        symbolic_inputs_dict = {}
+        for key, value in solution.inputs.items():
+            if not isinstance(value, casadi.MX):
+                all_inputs_as_MX_dict[key] = casadi.MX.sym("input")
+            else:
+                all_inputs_as_MX_dict[key] = value
+                # Only add symbolic inputs to the "symbolic_inputs" dict
+                symbolic_inputs_dict[key] = value
 
-        self.base_variable = casadi.Function("variable", [t_MX, y_MX, inputs_MX], [var])
+        all_inputs_as_MX = casadi.vertcat(*[p for p in all_inputs_as_MX_dict.values()])
+        all_inputs = casadi.vertcat(*[p for p in solution.inputs.values()])
+        symbolic_inputs = casadi.vertcat(*[p for p in symbolic_inputs_dict.values()])
+        var = base_variable.to_casadi(t_MX, y_MX, inputs=all_inputs_as_MX_dict)
+
+        self.base_variable = casadi.Function(
+            "variable", [t_MX, y_MX, all_inputs_as_MX], [var]
+        )
         self.t_sol = solution.t
         self.u_sol = solution.y
         self.mesh = base_variable.mesh
-        self.input_keys = solution.inputs.keys()
-        self.inputs = inputs_MX
+        self.symbolic_input_keys = symbolic_inputs_dict.keys()
+        self.inputs = all_inputs
         self.domain = base_variable.domain
 
-        self.base_eval = self.base_variable(
-            solution.t[0], solution.y[:, 0], self.inputs,
-        )
+        self.base_eval = self.base_variable(solution.t[0], solution.y[:, 0], all_inputs)
 
         if (
             isinstance(self.base_eval, numbers.Number)
@@ -70,15 +83,19 @@ class ProcessedCasadiVariable(object):
 
         # Make entries a function and compute jacobian
         entries_MX = self.entries
-        self.casadi_entries_fn = casadi.Function("variable", [inputs_MX], [entries_MX])
+        self.casadi_entries_fn = casadi.Function(
+            "variable", [symbolic_inputs], [entries_MX]
+        )
 
         # Don't compute jacobian if the entries are a DM (not symbolic)
         if isinstance(entries_MX, casadi.DM):
             self.casadi_sens_fn = None
         # Do compute jacobian if the entries are symbolic (functions of input)
         else:
-            sens_MX = casadi.jacobian(entries_MX, inputs_MX)
-            self.casadi_sens_fn = casadi.Function("variable", [inputs_MX], [sens_MX])
+            sens_MX = casadi.jacobian(entries_MX, symbolic_inputs)
+            self.casadi_sens_fn = casadi.Function(
+                "variable", [symbolic_inputs], [sens_MX]
+            )
 
     def initialise_0D(self):
         # Evaluate the base_variable index-by-index
@@ -161,10 +178,10 @@ class ProcessedCasadiVariable(object):
         # Convert dict to casadi vector
         if isinstance(inputs, dict):
             # Check keys are consistent
-            if inputs.keys() != self.input_keys:
+            if inputs.keys() != self.symbolic_input_keys:
                 raise ValueError(
                     "Inconsistent input keys: expected {}, actual {}".format(
-                        inputs.keys(), self.input_keys
+                        self.symbolic_input_keys, inputs.keys()
                     )
                 )
             inputs = casadi.vertcat(*[p for p in inputs.values()])
