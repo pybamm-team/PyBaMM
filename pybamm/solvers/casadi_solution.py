@@ -41,5 +41,4 @@ class CasadiSolution(pybamm._BaseSolution):
 
             # Save variable and data
             self._variables[key] = var
-            self.data[key] = var.data
 

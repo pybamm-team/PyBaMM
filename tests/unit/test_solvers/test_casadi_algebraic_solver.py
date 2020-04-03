@@ -88,7 +88,7 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
         # Simple system: a single algebraic equation
         var = pybamm.Variable("var")
         model = pybamm.BaseModel()
-        model.algebraic = {var: var + pybamm.InputParameter("value")}
+        model.algebraic = {var: var + pybamm.InputParameter("param")}
         model.initial_conditions = {var: 2}
 
         # create discretisation
@@ -97,7 +97,7 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
 
         # Solve
         solver = pybamm.CasadiAlgebraicSolver()
-        solution = solver.solve(model, np.linspace(0, 1, 10), inputs={"value": 7})
+        solution = solver.solve(model, np.linspace(0, 1, 10), inputs={"param": 7})
         np.testing.assert_array_equal(solution.y, -7)
 
 
@@ -106,7 +106,7 @@ class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
         # Simple system: a single algebraic equation
         var = pybamm.Variable("var")
         model = pybamm.BaseModel()
-        model.algebraic = {var: (var + pybamm.InputParameter("param")) ** 2}
+        model.algebraic = {var: var + pybamm.InputParameter("param")}
         model.initial_conditions = {var: 2}
         model.variables = {"var": var}
 
@@ -118,8 +118,9 @@ class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
         solver = pybamm.CasadiAlgebraicSolver()
         solution = solver.solve(model, [0], inputs={"param": "[sym]"})
         self.assertIsInstance(solution, pybamm.CasadiSolution)
-        print(solution.y)
-        # np.testing.assert_array_equal(solution.y, -7)
+        np.testing.assert_array_equal(solution["var"].value(7), -7)
+        np.testing.assert_array_equal(solution["var"].value(3), -3)
+        np.testing.assert_array_equal(solution["var"].sensitivity(3), -1)
 
 
 if __name__ == "__main__":

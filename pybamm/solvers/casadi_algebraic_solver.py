@@ -53,19 +53,11 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         y = None
 
         # Set up
-        # Make symbolic inputs where specified by the keyword [sym]
-        symbolic_inputs = {}
-        has_symbolic_inputs = False
-        for k, v in inputs.items():
-            if v == "[sym]":
-                symbolic_inputs[k] = casadi.MX.sym(k)
-                # we have found a symbolic input
-                has_symbolic_inputs = True
-            else:
-                symbolic_inputs[k] = v
+        # Record whether there are any symbolic inputs
+        has_symbolic_inputs = any(isinstance(v, casadi.MX) for v in inputs.values())
 
         # Create casadi objects for the root-finder
-        inputs = casadi.vertcat(*[x for x in symbolic_inputs.values()])
+        inputs = casadi.vertcat(*[x for x in inputs.values()])
         t_sym = casadi.MX.sym("t")
         y_sym = casadi.MX.sym("y_alg", y0.shape[0])
         p_sym = casadi.MX.sym("p", inputs.shape[0])

@@ -164,7 +164,7 @@ class BaseSolver(object):
             # Create placeholder inputs for evaluating rhs and algebraic sizes
             placeholder_inputs = {}
             for k, v in inputs.items():
-                if v == "[sym]":
+                if isinstance(v, casadi.MX):
                     placeholder_inputs[k] = 0
                 else:
                     placeholder_inputs[k] = v
@@ -545,10 +545,14 @@ class BaseSolver(object):
             raise pybamm.SolverError(
                 "Only CasadiAlgebraicSolver can have symbolic inputs"
             )
+        # Make symbolic inputs
+        for k, v in ext_and_inputs.items():
+            if v == "[sym]":
+                ext_and_inputs[k] = casadi.MX.sym(k)
 
         # Set up
         timer = pybamm.Timer()
-        
+
         # Set up (if not done already)
         if model not in self.models_set_up:
             self.set_up(model, ext_and_inputs)
