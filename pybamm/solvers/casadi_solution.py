@@ -4,12 +4,12 @@
 import pybamm
 
 
-class _BaseSymbolicSolution(pybamm._BaseSolution):
+class CasadiSolution(pybamm._BaseSolution):
     """
     (Semi-private) class containing the solution of, and various attributes associated
     with, a PyBaMM model, in the case where the solution depends on as-yet-unspecified
-    inputs. This class is automatically created by the `SymbolicSolution`class,
-    and should never be called from outside the `SymbolicSolution` class.
+    inputs. This class is automatically created by the `CasadiSolution`class,
+    and should never be called from outside the `CasadiSolution` class.
 
     **Extends**: :class:`pybamm._BaseSolution`
     """
@@ -18,6 +18,16 @@ class _BaseSymbolicSolution(pybamm._BaseSolution):
         self, t, y, t_event=None, y_event=None, termination="final time", copy_this=None
     ):
         super().__init__(t, y, t_event, y_event, termination, copy_this)
+
+    @property
+    def inputs(self):
+        "Values of the inputs"
+        return self._inputs
+
+    @inputs.setter
+    def inputs(self, inputs):
+        "Updates the input values"
+        self._inputs = inputs
 
     def update(self, variables):
         """Add ProcessedVariables to the dictionary of variables in the solution"""
@@ -33,16 +43,3 @@ class _BaseSymbolicSolution(pybamm._BaseSolution):
             self._variables[key] = var
             self.data[key] = var.data
 
-
-class SymbolicSolution(pybamm.Solution):
-    """
-    Class extending the base solution, with additional functionality for concatenating
-    different solutions together
-
-    **Extends**: :class:`pybamm.Solution`
-
-    """
-
-    def __init__(self, t, y, t_event=None, y_event=None, termination="final time"):
-        super().__init__(t, y, t_event, y_event, termination)
-        self.base_solution_class = _BaseSymbolicSolution

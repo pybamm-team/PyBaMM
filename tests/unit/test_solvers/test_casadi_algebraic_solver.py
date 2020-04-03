@@ -117,7 +117,7 @@ class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
         # Solve
         solver = pybamm.CasadiAlgebraicSolver()
         solution = solver.solve(model, [0], inputs={"param": "[sym]"})
-        self.assertIsInstance(solution, pybamm.SymbolicSolution)
+        self.assertIsInstance(solution, pybamm.CasadiSolution)
         print(solution.y)
         # np.testing.assert_array_equal(solution.y, -7)
 

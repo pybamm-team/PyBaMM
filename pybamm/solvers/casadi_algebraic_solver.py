@@ -141,4 +141,4 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
             return pybamm.Solution(t_eval, y.full(), termination="success")
         else:
             # symbolic inputs -> must return a symbolic solution
-            return pybamm.SymbolicSolution(t_eval, y, termination="success")
+            return pybamm.CasadiSolution(t_eval, y, termination="success")

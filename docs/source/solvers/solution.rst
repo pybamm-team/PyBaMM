@@ -7,8 +7,8 @@ Solutions
 .. autoclass:: pybamm.Solution
   :members:
 
-.. autoclass:: pybamm._BaseSymbolicSolution
+.. autoclass:: pybamm._BaseCasadiSolution
   :members:
 
-.. autoclass:: pybamm.SymbolicSolution
+.. autoclass:: pybamm.CasadiSolution
   :members:
