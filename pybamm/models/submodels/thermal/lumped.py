@@ -20,8 +20,7 @@ class Lumped(BaseThermal):
     """
 
     def __init__(self, param, cc_dimension=0):
-        self.cc_dimension = cc_dimension
-        super().__init__(param)
+        super().__init__(param, cc_dimension)
 
     def get_fundamental_variables(self):
 

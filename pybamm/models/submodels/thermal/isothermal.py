@@ -59,11 +59,11 @@ class Isothermal(BaseThermal):
     def _x_average(self, var, var_cn, var_cp):
         """
         Temperature is uniform and heat source terms are zero, so the average
-        returns zeros broadcasted onto the current collector domain.
+        returns the input variable.
         This overwrites the default behaviour of
         :meth:`pybamm.thermal.BaseThermal._x_average`
         """
-        return pybamm.PrimaryBroadcast(0, "current collector")
+        return var
 
     def _yz_average(self, var):
         """
