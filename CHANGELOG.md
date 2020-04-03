@@ -1,3 +1,19 @@
+# [Unreleased](https://github.com/pybamm-team/PyBaMM/)
+
+## Optimizations
+
+-   Sped up model building ([#927](https://github.com/pybamm-team/PyBaMM/pull/927))
+-   Changed default solver for lead-acid to `CasadiSolver` ([#927](https://github.com/pybamm-team/PyBaMM/pull/927))
+
+## Bug fixes
+
+-   Reformatted thermal submodels ([#938](https://github.com/pybamm-team/PyBaMM/pull/938)
+-   Reformatted electrolyte submodels ([#927](https://github.com/pybamm-team/PyBaMM/pull/927))
+
+## Breaking changes
+
+-   The thermal option 'xyz-lumped' has been removed. The option 'thermal current collector' has also been removed ([#938](https://github.com/pybamm-team/PyBaMM/pull/938)
+
 # [v0.2.1](https://github.com/pybamm-team/PyBaMM/tree/v0.2.1) - 2020-03-31
 
 New expression tree node types, models, parameter sets and solvers, as well as general bug fixes and new examples.

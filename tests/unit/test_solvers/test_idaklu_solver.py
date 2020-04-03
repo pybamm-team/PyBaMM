@@ -20,10 +20,7 @@ class TestIDAKLUSolver(unittest.TestCase):
             model.rhs = {u: 0.1 * v}
             model.algebraic = {v: 1 - v}
             model.initial_conditions = {u: 0, v: 1}
-            model.events = [
-                pybamm.Event("1", u - 0.2),
-                pybamm.Event("2", v),
-            ]
+            model.events = [pybamm.Event("1", u - 0.2), pybamm.Event("2", v)]
 
             disc = pybamm.Discretisation()
             disc.process_model(model)

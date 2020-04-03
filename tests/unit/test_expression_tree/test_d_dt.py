@@ -17,29 +17,29 @@ class TestDDT(unittest.TestCase):
         self.assertIsInstance(a, pybamm.Scalar)
         self.assertEqual(a.value, 1)
 
-        a = (pybamm.t**2).diff(pybamm.t)
+        a = (pybamm.t ** 2).diff(pybamm.t)
         self.assertEqual(a.id, (2 * pybamm.t ** 1 * 1).id)
         self.assertEqual(a.simplify().id, (2 * pybamm.t).id)
         self.assertEqual(a.evaluate(t=1), 2)
 
-        a = (2 + pybamm.t**2).diff(pybamm.t)
+        a = (2 + pybamm.t ** 2).diff(pybamm.t)
         self.assertEqual(a.simplify().id, (2 * pybamm.t).id)
         self.assertEqual(a.evaluate(t=1), 2)
 
     def test_time_derivative_of_variable(self):
 
-        a = (pybamm.Variable('a')).diff(pybamm.t)
+        a = (pybamm.Variable("a")).diff(pybamm.t)
         self.assertIsInstance(a, pybamm.VariableDot)
         self.assertEqual(a.name, "a'")
 
-        p = pybamm.Parameter('p')
-        a = (1 + p * pybamm.Variable('a')).diff(pybamm.t).simplify()
+        p = pybamm.Parameter("p")
+        a = (1 + p * pybamm.Variable("a")).diff(pybamm.t).simplify()
         self.assertIsInstance(a, pybamm.Multiplication)
-        self.assertEqual(a.children[0].name, 'p')
+        self.assertEqual(a.children[0].name, "p")
         self.assertEqual(a.children[1].name, "a'")
 
         with self.assertRaises(pybamm.ModelError):
-            a = (pybamm.Variable('a')).diff(pybamm.t).diff(pybamm.t)
+            a = (pybamm.Variable("a")).diff(pybamm.t).diff(pybamm.t)
 
         with self.assertRaises(pybamm.ModelError):
             a = pybamm.ExternalVariable("a", 1).diff(pybamm.t)
