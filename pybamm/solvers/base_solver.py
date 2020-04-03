@@ -161,19 +161,31 @@ class BaseSolver(object):
             # set up Jacobian object, for re-use of dict
             jacobian = pybamm.Jacobian()
         else:
+            # Create placeholder inputs for evaluating rhs and algebraic sizes
+            placeholder_inputs = {}
+            for k, v in inputs.items():
+                if v == "[sym]":
+                    placeholder_inputs[k] = 0
+                else:
+                    placeholder_inputs[k] = v
             # Convert model attributes to casadi
             t_casadi = casadi.MX.sym("t")
             y_diff = casadi.MX.sym(
-                "y_diff", len(model.concatenated_rhs.evaluate(0, y0, inputs=inputs))
+                "y_diff",
+                len(model.concatenated_rhs.evaluate(0, y0, inputs=placeholder_inputs)),
             )
             y_alg = casadi.MX.sym(
                 "y_alg",
-                len(model.concatenated_algebraic.evaluate(0, y0, inputs=inputs)),
+                len(
+                    model.concatenated_algebraic.evaluate(
+                        0, y0, inputs=placeholder_inputs
+                    )
+                ),
             )
             y_casadi = casadi.vertcat(y_diff, y_alg)
             p_casadi = {}
             for name, value in inputs.items():
-                if isinstance(value, numbers.Number):
+                if isinstance(value, numbers.Number) or value == "[sym]":
                     p_casadi[name] = casadi.MX.sym(name)
                 else:
                     p_casadi[name] = casadi.MX.sym(name, value.shape[0])
@@ -522,7 +534,13 @@ class BaseSolver(object):
         if (np.diff(t_eval) < 0).any():
             raise pybamm.SolverError("t_eval must increase monotonically")
 
-        # Non-dimensionalise t_eval
+        # Only allow symbolic inputs for CasadiAlgebraicSolver
+        if not isinstance(self, pybamm.CasadiAlgebraicSolver) and any(
+            v == "[sym]" for v in inputs.values()
+        ):
+            raise pybamm.SolverError(
+                "Only CasadiAlgebraicSolver can have symbolic inputs"
+            )
 
         # Set up
         timer = pybamm.Timer()

@@ -50,6 +50,16 @@ class TestBaseSolver(unittest.TestCase):
         ):
             solver.solve(model, np.array([1, 2, 3, 2]))
 
+    def test_block_symbolic_inputs(self):
+        solver = pybamm.BaseSolver(rtol=1e-2, atol=1e-4)
+        model = pybamm.BaseModel()
+        a = pybamm.Scalar(0)
+        model.rhs = {a: a}
+        with self.assertRaisesRegex(
+            pybamm.SolverError, "Only CasadiAlgebraicSolver can have symbolic inputs"
+        ):
+            solver.solve(model, np.array([1, 2, 3]), inputs={"a": "[sym]"})
+
     def test_ode_solver_fail_with_dae(self):
         model = pybamm.BaseModel()
         a = pybamm.Scalar(1)

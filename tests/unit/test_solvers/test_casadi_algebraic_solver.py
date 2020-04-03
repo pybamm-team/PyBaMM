@@ -101,6 +101,27 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
         np.testing.assert_array_equal(solution.y, -7)
 
 
+class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
+    def test_solve_with_symbolic_input(self):
+        # Simple system: a single algebraic equation
+        var = pybamm.Variable("var")
+        model = pybamm.BaseModel()
+        model.algebraic = {var: (var + pybamm.InputParameter("param")) ** 2}
+        model.initial_conditions = {var: 2}
+        model.variables = {"var": var}
+
+        # create discretisation
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        # Solve
+        solver = pybamm.CasadiAlgebraicSolver()
+        solution = solver.solve(model, [0], inputs={"param": "[sym]"})
+        self.assertIsInstance(solution, pybamm.SymbolicSolution)
+        print(solution.y)
+        # np.testing.assert_array_equal(solution.y, -7)
+
+
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys

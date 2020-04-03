@@ -248,6 +248,7 @@ class Solution(_BaseSolution):
 
     def __init__(self, t, y, t_event=None, y_event=None, termination="final time"):
         super().__init__(t, y, t_event, y_event, termination)
+        self.base_solution_class = _BaseSolution
 
     @property
     def sub_solutions(self):
@@ -278,7 +279,7 @@ class Solution(_BaseSolution):
         # functionality compared to normal solutions (can't append other solutions)
         if create_sub_solutions and not hasattr(self, "_sub_solutions"):
             self._sub_solutions = [
-                _BaseSolution(
+                self.base_solution_class(
                     self.t,
                     self.y,
                     self.t_event,
@@ -314,7 +315,7 @@ class Solution(_BaseSolution):
         # Append sub_solutions
         if create_sub_solutions:
             self._sub_solutions.append(
-                _BaseSolution(
+                self.base_solution_class(
                     solution.t,
                     solution.y,
                     solution.t_event,
