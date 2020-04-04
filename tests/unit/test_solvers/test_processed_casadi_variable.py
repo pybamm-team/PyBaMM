@@ -18,7 +18,7 @@ class TestProcessedCasadiVariable(unittest.TestCase):
 
         t_sol = np.linspace(0, 1)
         y_sol = np.array([np.linspace(0, 5)])
-        solution = pybamm.CasadiSolution(t_sol, y_sol)
+        solution = pybamm.Solution(t_sol, y_sol)
         processed_var = pybamm.ProcessedCasadiVariable(var, solution)
         np.testing.assert_array_equal(processed_var.value(), 2 * y_sol)
 
@@ -36,7 +36,7 @@ class TestProcessedCasadiVariable(unittest.TestCase):
 
         t_sol = np.linspace(0, 1)
         y_sol = np.array([np.linspace(0, 5)])
-        solution = pybamm.CasadiSolution(t_sol, y_sol)
+        solution = pybamm.Solution(t_sol, y_sol)
         solution.inputs = {"p": casadi.MX.sym("p"), "q": casadi.MX.sym("q")}
         processed_var = pybamm.ProcessedCasadiVariable(var, solution)
         np.testing.assert_array_equal(
@@ -69,7 +69,7 @@ class TestProcessedCasadiVariable(unittest.TestCase):
 
         t_sol = np.linspace(0, 1)
         y_sol = np.array([np.linspace(0, 5)])
-        solution = pybamm.CasadiSolution(t_sol, y_sol)
+        solution = pybamm.Solution(t_sol, y_sol)
         solution.inputs = {"p": casadi.MX.sym("p"), "q": 2}
         processed_var = pybamm.ProcessedCasadiVariable(var, solution)
         np.testing.assert_array_equal(
@@ -93,7 +93,7 @@ class TestProcessedCasadiVariable(unittest.TestCase):
         # With scalar t_sol
         t_sol = [0]
         y_sol = np.ones_like(x_sol)[:, np.newaxis] * 5
-        sol = pybamm.CasadiSolution(t_sol, y_sol)
+        sol = pybamm.Solution(t_sol, y_sol)
         processed_eqn = pybamm.ProcessedCasadiVariable(eqn_sol, sol)
         np.testing.assert_array_equal(
             processed_eqn.value(), y_sol + x_sol[:, np.newaxis]
@@ -102,7 +102,7 @@ class TestProcessedCasadiVariable(unittest.TestCase):
         # With vector t_sol
         t_sol = np.linspace(0, 1)
         y_sol = np.ones_like(x_sol)[:, np.newaxis] * np.linspace(0, 5)
-        sol = pybamm.CasadiSolution(t_sol, y_sol)
+        sol = pybamm.Solution(t_sol, y_sol)
         processed_eqn = pybamm.ProcessedCasadiVariable(eqn_sol, sol)
         np.testing.assert_array_equal(
             processed_eqn.value(), y_sol + x_sol[:, np.newaxis]
@@ -125,7 +125,7 @@ class TestProcessedCasadiVariable(unittest.TestCase):
         t_sol = [0]
         y_sol = np.ones_like(x_sol)[:, np.newaxis] * 5
 
-        sol = pybamm.CasadiSolution(t_sol, y_sol)
+        sol = pybamm.Solution(t_sol, y_sol)
         sol.inputs = {"p": casadi.MX.sym("p"), "q": casadi.MX.sym("q")}
         processed_eqn = pybamm.ProcessedCasadiVariable(eqn_sol, sol)
 
@@ -146,7 +146,7 @@ class TestProcessedCasadiVariable(unittest.TestCase):
         t_sol = np.linspace(0, 1)
         y_sol = np.ones_like(x_sol)[:, np.newaxis] * np.linspace(0, 5)
 
-        sol = pybamm.CasadiSolution(t_sol, y_sol)
+        sol = pybamm.Solution(t_sol, y_sol)
         sol.inputs = {"p": casadi.MX.sym("p"), "q": casadi.MX.sym("q")}
         processed_eqn = pybamm.ProcessedCasadiVariable(eqn_sol, sol)
 
@@ -179,7 +179,7 @@ class TestProcessedCasadiVariable(unittest.TestCase):
         # Scalar t
         t_sol = [0]
         y_sol = np.ones_like(x_sol)[:, np.newaxis] * 5
-        sol = pybamm.CasadiSolution(t_sol, y_sol)
+        sol = pybamm.Solution(t_sol, y_sol)
         sol.inputs = {"p": casadi.MX.sym("p", n), "q": casadi.MX.sym("q")}
         processed_eqn = pybamm.ProcessedCasadiVariable(eqn_sol, sol)
 

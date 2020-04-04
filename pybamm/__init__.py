@@ -198,7 +198,6 @@ from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 # Solver classes
 #
 from .solvers.solution import Solution, _BaseSolution
-from .solvers.casadi_solution import CasadiSolution
 from .solvers.processed_variable import ProcessedVariable
 from .solvers.processed_casadi_variable import ProcessedCasadiVariable
 from .solvers.base_solver import BaseSolver

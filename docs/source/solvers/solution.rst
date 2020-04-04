@@ -6,6 +6,3 @@ Solutions
 
 .. autoclass:: pybamm.Solution
   :members:
-
-.. autoclass:: pybamm.CasadiSolution
-  :members:

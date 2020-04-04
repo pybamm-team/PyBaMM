@@ -1,6 +1,7 @@
 #
 # Solution class
 #
+import casadi
 import copy
 import numbers
 import numpy as np
@@ -40,6 +41,8 @@ class _BaseSolution(object):
         self, t, y, t_event=None, y_event=None, termination="final time", copy_this=None
     ):
         self._t = t
+        if isinstance(y, casadi.DM):
+            y = y.full()
         self._y = y
         self._t_event = t_event
         self._y_event = y_event
@@ -83,11 +86,18 @@ class _BaseSolution(object):
     @inputs.setter
     def inputs(self, inputs):
         "Updates the input values"
-        self._inputs = {}
-        for name, inp in inputs.items():
-            if isinstance(inp, numbers.Number):
-                inp = inp * np.ones_like(self.t)
-            self._inputs[name] = inp
+        # If there are symbolic inputs, just store them as given
+        if any(isinstance(v, casadi.MX) for v in inputs.values()):
+            self.has_symbolic_inputs = True
+            self._inputs = inputs
+        # Otherwise, make them the same size as the time vector
+        else:
+            self.has_symbolic_inputs = False
+            self._inputs = {}
+            for name, inp in inputs.items():
+                if isinstance(inp, numbers.Number):
+                    inp = inp * np.ones_like(self.t)
+                self._inputs[name] = inp
 
     @property
     def model(self):
@@ -142,13 +152,20 @@ class _BaseSolution(object):
         # Process
         for key in variables:
             pybamm.logger.debug("Post-processing {}".format(key))
-            var = pybamm.ProcessedVariable(
-                self.model.variables[key], self, self._known_evals
-            )
+            # If there are symbolic inputs then we need to make a
+            # ProcessedCasadiVariable
+            if self.has_symbolic_inputs is True:
+                var = pybamm.ProcessedCasadiVariable(self.model.variables[key], self)
 
-            # Update known_evals in order to process any other variables faster
-            for t in var.known_evals:
-                self._known_evals[t].update(var.known_evals[t])
+            # Otherwise a standard ProcessedVariable is ok
+            else:
+                var = pybamm.ProcessedVariable(
+                    self.model.variables[key], self, self._known_evals
+                )
+
+                # Update known_evals in order to process any other variables faster
+                for t in var.known_evals:
+                    self._known_evals[t].update(var.known_evals[t])
 
             # Save variable and data
             self._variables[key] = var

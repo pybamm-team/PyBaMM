@@ -185,7 +185,7 @@ class BaseSolver(object):
             y_casadi = casadi.vertcat(y_diff, y_alg)
             p_casadi = {}
             for name, value in inputs.items():
-                if isinstance(value, numbers.Number) or value == "[sym]":
+                if isinstance(value, numbers.Number):
                     p_casadi[name] = casadi.MX.sym(name)
                 else:
                     p_casadi[name] = casadi.MX.sym(name, value.shape[0])
@@ -540,15 +540,21 @@ class BaseSolver(object):
         ext_and_inputs = {**external_variables, **inputs}
         # Only allow symbolic inputs for CasadiAlgebraicSolver
         if not isinstance(self, pybamm.CasadiAlgebraicSolver) and any(
-            v == "[sym]" for v in inputs.values()
+            isinstance(v, str) and v.startswith("[sym]") for v in inputs.values()
         ):
             raise pybamm.SolverError(
                 "Only CasadiAlgebraicSolver can have symbolic inputs"
             )
         # Make symbolic inputs
         for k, v in ext_and_inputs.items():
-            if v == "[sym]":
-                ext_and_inputs[k] = casadi.MX.sym(k)
+            if isinstance(v, str) and v.startswith("[sym]"):
+                # If only [sym] is specified then symbolic input has size 1
+                if v == "[sym]":
+                    size = 1
+                # Otherwise read symbolic input size n from '[sym]n'
+                else:
+                    size = int(v[5:])
+                ext_and_inputs[k] = casadi.MX.sym(k, size)
 
         # Set up
         timer = pybamm.Timer()

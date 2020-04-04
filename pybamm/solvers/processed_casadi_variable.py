@@ -4,7 +4,6 @@
 import casadi
 import numbers
 import numpy as np
-import pybamm
 
 
 class ProcessedCasadiVariable(object):
@@ -24,12 +23,6 @@ class ProcessedCasadiVariable(object):
     """
 
     def __init__(self, base_variable, solution):
-        # Checks
-        if not isinstance(solution, pybamm.CasadiSolution):
-            raise TypeError(
-                "solution must be a 'CasadiSolution' but is {}".format(solution)
-            )
-
         # Convert variable to casadi
         t_MX = casadi.MX.sym("t")
         y_MX = casadi.MX.sym("y", solution.y.shape[0])
@@ -46,12 +39,14 @@ class ProcessedCasadiVariable(object):
 
         all_inputs_as_MX = casadi.vertcat(*[p for p in all_inputs_as_MX_dict.values()])
         all_inputs = casadi.vertcat(*[p for p in solution.inputs.values()])
+        # The symbolic_inputs dictionary will be used for sensitivity
         symbolic_inputs = casadi.vertcat(*[p for p in symbolic_inputs_dict.values()])
         var = base_variable.to_casadi(t_MX, y_MX, inputs=all_inputs_as_MX_dict)
 
         self.base_variable = casadi.Function(
             "variable", [t_MX, y_MX, all_inputs_as_MX], [var]
         )
+        # Store some attributes
         self.t_sol = solution.t
         self.u_sol = solution.y
         self.mesh = base_variable.mesh
@@ -98,6 +93,7 @@ class ProcessedCasadiVariable(object):
             )
 
     def initialise_0D(self):
+        "Create a 0D variable"
         # Evaluate the base_variable index-by-index
         for idx in range(len(self.t_sol)):
             t = self.t_sol[idx]
@@ -112,6 +108,7 @@ class ProcessedCasadiVariable(object):
         self.dimensions = 0
 
     def initialise_1D(self):
+        "Create a 1D variable"
         len_space = self.base_eval.shape[0]
         entries = np.empty((len_space, len(self.t_sol)))
 
@@ -151,30 +148,61 @@ class ProcessedCasadiVariable(object):
         self.first_dim_pts = nodes
 
     def value(self, inputs=None, check_inputs=True):
+        """
+        Returns the value of the variable at the specified input values
+
+        Parameters
+        ----------
+        inputs : float, array-like, or dict
+            The inputs at which to evaluate the variable. If dict, keys must be the same
+            as the *symbolic* inputs that were used to create the solution, and values
+            must have the same shape. If float or array-like, must have the same shape
+            as all the symbolic inputs stacked together.
+        """
         if inputs is None:
             return self.casadi_entries_fn(casadi.DM())
         else:
             if check_inputs:
-                inputs = self.check_and_transform(inputs)
+                inputs = self._check_and_transform(inputs)
             return self.casadi_entries_fn(inputs)
 
     def sensitivity(self, inputs=None, check_inputs=True):
+        """
+        Returns the sensitivity of the variable to the symbolic inputs at the specified
+        input values
+
+        Parameters
+        ----------
+        inputs : float, array-like, or dict
+            See :meth:`ProcessedCasadiVariable.values`
+        """
         if self.casadi_sens_fn is None:
             raise ValueError(
                 "Variable is not symbolic, so sensitivities are not defined"
             )
         if check_inputs:
-            inputs = self.check_and_transform(inputs)
+            inputs = self._check_and_transform(inputs)
         return self.casadi_sens_fn(inputs)
 
     def value_and_sensitivity(self, inputs=None):
-        inputs = self.check_and_transform(inputs)
+        """
+        Returns the value of the variable and its sensitivity to the symbolic inputs at
+        the specified input values
+
+        Parameters
+        ----------
+        inputs : float, array-like, or dict
+            See :meth:`ProcessedCasadiVariable.values`
+        """
+        inputs = self._check_and_transform(inputs)
+        # Pass check_inputs=False to avoid re-checking inputs
         return (
             self.value(inputs, check_inputs=False),
             self.sensitivity(inputs, check_inputs=False),
         )
 
-    def check_and_transform(self, inputs):
+    def _check_and_transform(self, inputs):
+        "Check dictionary has the right inputs, and convert to a vector"
         # Convert dict to casadi vector
         if isinstance(inputs, dict):
             # Check keys are consistent
@@ -187,4 +215,9 @@ class ProcessedCasadiVariable(object):
             inputs = casadi.vertcat(*[p for p in inputs.values()])
 
         return inputs
+
+    @property
+    def data(self):
+        "Same as entries, but different name"
+        return self.entries
 

@@ -6,6 +6,7 @@ import pybamm
 import unittest
 import numpy as np
 from scipy.optimize import least_squares
+import tests
 
 
 class TestCasadiAlgebraicSolver(unittest.TestCase):
@@ -118,7 +119,6 @@ class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
         # Solve
         solver = pybamm.CasadiAlgebraicSolver()
         solution = solver.solve(model, [0], inputs={"param": "[sym]"})
-        self.assertIsInstance(solution, pybamm.CasadiSolution)
         np.testing.assert_array_equal(solution["var"].value(7), -7)
         np.testing.assert_array_equal(solution["var"].value(3), -3)
         np.testing.assert_array_equal(solution["var"].sensitivity(3), -1)
@@ -153,6 +153,38 @@ class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
         # with jacobian
         lsq_sol = least_squares(objective, 1, jac=jac)
         np.testing.assert_array_almost_equal(lsq_sol.x, np.sqrt(3), decimal=3)
+
+    def test_solve_with_symbolic_input_1D(self):
+        # Simple system: a single algebraic equation
+        var = pybamm.Variable("var", "negative electrode")
+        model = pybamm.BaseModel()
+        model.algebraic = {var: var + pybamm.InputParameter("param")}
+        model.initial_conditions = {var: 2}
+        model.variables = {"var": var}
+
+        # create discretisation
+        disc = tests.get_discretisation_for_testing()
+        disc.process_model(model)
+
+        # Solve - scalar input
+        solver = pybamm.CasadiAlgebraicSolver()
+        solution = solver.solve(model, [0], inputs={"param": "[sym]"})
+        np.testing.assert_array_equal(solution["var"].value(7), -7)
+        np.testing.assert_array_equal(solution["var"].value(3), -3)
+        np.testing.assert_array_equal(solution["var"].sensitivity(3), -1)
+
+        # Solve - vector input
+        solver = pybamm.CasadiAlgebraicSolver()
+        solution = solver.solve(model, [0], inputs={"param": "[sym]40"})
+        p = np.linspace(0, 1, 40)[:, np.newaxis]
+        np.testing.assert_array_almost_equal(solution["var"].value(3), -3)
+        np.testing.assert_array_almost_equal(solution["var"].value(2 * p), -2 * p)
+        np.testing.assert_array_almost_equal(
+            solution["var"].sensitivity(3), -np.eye(40)
+        )
+        np.testing.assert_array_almost_equal(
+            solution["var"].sensitivity(p), -np.eye(40)
+        )
 
 
 if __name__ == "__main__":
