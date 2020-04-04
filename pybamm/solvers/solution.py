@@ -53,11 +53,13 @@ class _BaseSolution(object):
             self._model = None
             self.set_up_time = None
             self.solve_time = None
+            self.has_symbolic_inputs = False
         else:
             self._inputs = copy.copy(copy_this.inputs)
             self._model = copy_this.model
             self.set_up_time = copy_this.set_up_time
             self.solve_time = copy_this.solve_time
+            self.has_symbolic_inputs = copy_this.has_symbolic_inputs
 
         # initiaize empty variables and data
         self._variables = pybamm.FuzzyDict()
