@@ -33,6 +33,23 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
         solution = solver.solve(model, np.linspace(0, 1, 10))
         np.testing.assert_array_equal(solution.y, -2)
 
+    def test_simple_root_find_correct_initial_guess(self):
+        # Simple system: a single algebraic equation
+        var = pybamm.Variable("var")
+        model = pybamm.BaseModel()
+        model.algebraic = {var: var + 2}
+        # initial guess gives right answer
+        model.initial_conditions = {var: -2}
+
+        # create discretisation
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        # Solve
+        solver = pybamm.CasadiAlgebraicSolver()
+        solution = solver.solve(model, np.linspace(0, 1, 10))
+        np.testing.assert_array_equal(solution.y, -2)
+
     def test_root_find_fail(self):
         class Model:
             y0 = np.array([2])

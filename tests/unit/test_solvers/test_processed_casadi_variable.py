@@ -211,6 +211,96 @@ class TestProcessedCasadiVariable(unittest.TestCase):
             ],
         )
 
+    def test_1D_different_domains(self):
+        # Negative electrode domain
+        var = pybamm.Variable("var", domain=["negative electrode"])
+        x = pybamm.SpatialVariable("x", domain=["negative electrode"])
+
+        disc = tests.get_discretisation_for_testing()
+        disc.set_variable_slices([var])
+        x_sol = disc.process_symbol(x).entries[:, 0]
+        var_sol = disc.process_symbol(var)
+
+        t_sol = [0]
+        y_sol = np.ones_like(x_sol)[:, np.newaxis] * 5
+        sol = pybamm.Solution(t_sol, y_sol)
+        pybamm.ProcessedCasadiVariable(var_sol, sol)
+
+        # Particle domain
+        var = pybamm.Variable("var", domain=["negative particle"])
+        r = pybamm.SpatialVariable("r", domain=["negative particle"])
+
+        disc = tests.get_discretisation_for_testing()
+        disc.set_variable_slices([var])
+        r_sol = disc.process_symbol(r).entries[:, 0]
+        var_sol = disc.process_symbol(var)
+
+        t_sol = [0]
+        y_sol = np.ones_like(r_sol)[:, np.newaxis] * 5
+        sol = pybamm.Solution(t_sol, y_sol)
+        pybamm.ProcessedCasadiVariable(var_sol, sol)
+
+        # Current collector domain
+        var = pybamm.Variable("var", domain=["current collector"])
+        z = pybamm.SpatialVariable("z", domain=["current collector"])
+
+        disc = tests.get_1p1d_discretisation_for_testing()
+        disc.set_variable_slices([var])
+        z_sol = disc.process_symbol(z).entries[:, 0]
+        var_sol = disc.process_symbol(var)
+
+        t_sol = [0]
+        y_sol = np.ones_like(z_sol)[:, np.newaxis] * 5
+        sol = pybamm.Solution(t_sol, y_sol)
+        pybamm.ProcessedCasadiVariable(var_sol, sol)
+
+        # Other domain
+        var = pybamm.Variable("var", domain=["line"])
+        x = pybamm.SpatialVariable("x", domain=["line"])
+
+        geometry = pybamm.Geometry(
+            {
+                "line": {
+                    "primary": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
+                }
+            }
+        )
+        submesh_types = {"line": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh)}
+        var_pts = {x: 10}
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+        disc = pybamm.Discretisation(mesh, {"line": pybamm.FiniteVolume()})
+        disc.set_variable_slices([var])
+        x_sol = disc.process_symbol(x).entries[:, 0]
+        var_sol = disc.process_symbol(var)
+
+        t_sol = [0]
+        y_sol = np.ones_like(x_sol)[:, np.newaxis] * 5
+        sol = pybamm.Solution(t_sol, y_sol)
+        pybamm.ProcessedCasadiVariable(var_sol, sol)
+
+        # 2D fails
+        var = pybamm.Variable(
+            "var",
+            domain=["negative particle"],
+            auxiliary_domains={"secondary": "negative electrode"},
+        )
+        r = pybamm.SpatialVariable(
+            "r",
+            domain=["negative particle"],
+            auxiliary_domains={"secondary": "negative electrode"},
+        )
+
+        disc = tests.get_p2d_discretisation_for_testing()
+        disc.set_variable_slices([var])
+        r_sol = disc.process_symbol(r).entries[:, 0]
+        var_sol = disc.process_symbol(var)
+
+        t_sol = [0]
+        y_sol = np.ones_like(r_sol)[:, np.newaxis] * 5
+        sol = pybamm.Solution(t_sol, y_sol)
+        with self.assertRaisesRegex(NotImplementedError, "Shape not recognized"):
+            pybamm.ProcessedCasadiVariable(var_sol, sol)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
