@@ -5,6 +5,7 @@ import casadi
 import pybamm
 import unittest
 import numpy as np
+from scipy.optimize import least_squares
 
 
 class TestCasadiAlgebraicSolver(unittest.TestCase):
@@ -121,6 +122,37 @@ class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
         np.testing.assert_array_equal(solution["var"].value(7), -7)
         np.testing.assert_array_equal(solution["var"].value(3), -3)
         np.testing.assert_array_equal(solution["var"].sensitivity(3), -1)
+
+    def test_least_squares_fit(self):
+        # Simple system: a single algebraic equation
+        var = pybamm.Variable("var")
+        model = pybamm.BaseModel()
+        model.algebraic = {var: (var - pybamm.InputParameter("param"))}
+        model.initial_conditions = {var: 2}
+        model.variables = {"objective": (var ** 2 - 3) ** 2}
+
+        # create discretisation
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        # Solve
+        solver = pybamm.CasadiAlgebraicSolver()
+        solution = solver.solve(model, [0], inputs={"param": "[sym]"})
+        sol_var = solution["objective"]
+
+        def objective(x):
+            return sol_var.value(x).full().flatten()
+
+        # without jacobian
+        lsq_sol = least_squares(objective, 1)
+        np.testing.assert_array_almost_equal(lsq_sol.x, np.sqrt(3), decimal=3)
+
+        def jac(x):
+            return sol_var.sensitivity(x)
+
+        # with jacobian
+        lsq_sol = least_squares(objective, 1, jac=jac)
+        np.testing.assert_array_almost_equal(lsq_sol.x, np.sqrt(3), decimal=3)
 
 
 if __name__ == "__main__":
