@@ -22,8 +22,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 (default), 1 or 2.
             * "surface form" : bool or str, optional
                 Whether to use the surface formulation of the problem. Can be False
-                (default), "differential" or "algebraic". Must be 'False' for
-                lithium-ion models.
+                (default), "differential" or "algebraic".
             * "convection" : bool or str, optional
                 Whether to include the effects of convection in the model. Can be
                 False (default), "differential" or "algebraic". Must be 'False' for

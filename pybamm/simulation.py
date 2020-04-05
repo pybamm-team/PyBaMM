@@ -19,6 +19,8 @@ def is_notebook():
             return nb
         elif shell == "TerminalInteractiveShell":  # pragma: no cover
             return False  # Terminal running IPython
+        elif shell == "Shell":  # pragma: no cover
+            return True  # Google Colab notebook
         else:
             return False  # Other type (?)
     except NameError:
@@ -46,13 +48,12 @@ class Simulation:
     ----------
     model : :class:`pybamm.BaseModel`
         The model to be simulated
-    experiment : : class:`pybamm.Experiment` (optional)
+    experiment : :class:`pybamm.Experiment` (optional)
         The experimental conditions under which to solve the model
     geometry: :class:`pybamm.Geometry` (optional)
         The geometry upon which to solve the model
-    parameter_values: dict (optional)
-        A dictionary of parameters and their corresponding numerical
-        values
+    parameter_values: :class:`pybamm.ParameterValues` (optional)
+        Parameters and their corresponding numerical values.
     submesh_types: dict (optional)
         A dictionary of the types of submesh to use on each subdomain
     var_pts: dict (optional)
@@ -533,9 +534,9 @@ class Simulation:
         if quick_plot_vars is None:
             quick_plot_vars = self.quick_plot_vars
 
-        plot = pybamm.QuickPlot(self._solution, output_variables=quick_plot_vars)
-
-        plot.dynamic_plot(testing=testing)
+        self.quick_plot = pybamm.dynamic_plot(
+            self._solution, output_variables=quick_plot_vars, testing=testing
+        )
 
     @property
     def model(self):

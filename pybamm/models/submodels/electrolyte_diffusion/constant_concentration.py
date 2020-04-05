@@ -38,5 +38,3 @@ class ConstantConcentration(BaseElectrolyteDiffusion):
 
         return variables
 
-    def set_boundary_conditions(self, variables):
-        return None
