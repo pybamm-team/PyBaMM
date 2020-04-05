@@ -17,7 +17,7 @@ def nmc_LGM50_electrolyte_reaction_rate_Chen2020(T):
 
     Returns
     -------
-    : double
+    :class:`pybamm.Symbol`
         Reaction rate
     """
     m_ref = 3.59e-6

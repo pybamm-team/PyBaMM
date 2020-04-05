@@ -19,7 +19,7 @@ def graphite_diffusivity_PeymanMPM(sto, T):
 
     Returns
     -------
-    : double
+    :class:`pybamm.Symbol`
         Solid diffusivity
    """
 

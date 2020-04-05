@@ -23,7 +23,7 @@ def nco_electrolyte_reaction_rate_Ecker2015(T):
         Dimensional temperature
     Returns
     -------
-    : double
+    :class:`pybamm.Symbol`
         Reaction rate
     """
 

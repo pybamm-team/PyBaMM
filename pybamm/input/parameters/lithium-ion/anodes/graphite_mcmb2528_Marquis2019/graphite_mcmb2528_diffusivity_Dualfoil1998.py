@@ -19,7 +19,7 @@ def graphite_mcmb2528_diffusivity_Dualfoil1998(sto, T):
 
     Returns
     -------
-    : double
+    :class:`pybamm.Symbol`
         Solid diffusivity
    """
 

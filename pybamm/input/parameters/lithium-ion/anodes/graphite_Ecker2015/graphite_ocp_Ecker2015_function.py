@@ -24,7 +24,7 @@ def graphite_ocp_Ecker2015_function(sto):
 
     Returns
     -------
-    : double
+    :class:`pybamm.Symbol`
         Open circuit potential
     """
 

@@ -15,7 +15,7 @@ def NMC_electrolyte_reaction_rate_PeymanMPM(T):
         Dimensional temperature
     Returns
     -------
-    : double
+    :class:`pybamm.Symbol`
         Reaction rate
     """
     m_ref = 4.824 * 10 ** (-6)

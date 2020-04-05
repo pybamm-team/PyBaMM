@@ -20,7 +20,7 @@ def nmc_LGM50_diffusivity_Chen2020(sto, T):
 
        Returns
        -------
-       : double
+       :class:`pybamm.Symbol`
           Solid diffusivity
     """
 

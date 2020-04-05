@@ -26,7 +26,7 @@ def nco_diffusivity_Ecker2015(sto, T):
 
     Returns
     -------
-    : double
+    :class:`pybamm.Symbol`
         Solid diffusivity
     """
 

@@ -19,7 +19,7 @@ def lico2_diffusivity_Dualfoil1998(sto, T):
 
     Returns
     -------
-    : double
+    :class:`pybamm.Symbol`
         Solid diffusivity
     """
     D_ref = 1 * 10 ** (-13)

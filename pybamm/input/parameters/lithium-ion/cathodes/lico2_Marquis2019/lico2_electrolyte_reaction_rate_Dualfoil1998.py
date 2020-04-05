@@ -16,7 +16,7 @@ def lico2_electrolyte_reaction_rate_Dualfoil1998(T):
 
     Returns
     -------
-    : double
+    :class:`pybamm.Symbol`
         Reaction rate
     """
     m_ref = 6 * 10 ** (-7)

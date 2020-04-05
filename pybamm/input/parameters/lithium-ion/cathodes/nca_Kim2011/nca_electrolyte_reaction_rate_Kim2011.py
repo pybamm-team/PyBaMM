@@ -19,7 +19,7 @@ def nca_electrolyte_reaction_rate_Kim2011(T):
         Dimensional temperature
     Returns
     -------
-    : double
+    :class:`pybamm.Symbol`
         Reaction rate
     """
     i0_ref = 4  # reference exchange current density at 100% SOC

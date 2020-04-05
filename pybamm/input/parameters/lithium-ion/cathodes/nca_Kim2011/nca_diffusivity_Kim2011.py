@@ -21,7 +21,7 @@ def nca_diffusivity_Kim2011(sto, T):
 
     Returns
     -------
-    : double
+    :class:`pybamm.Symbol`
         Solid diffusivity
     """
 
