@@ -92,11 +92,17 @@ class Composite(BaseElectrolyteDiffusion):
         )
 
     def _get_source_terms_first_order(self, variables):
+        param = self.param
+        c_e_n = variables["Negative electrolyte concentration"]
+        c_e_p = variables["Positive electrolyte concentration"]
+
         return sum(
             pybamm.Concatenation(
-                reaction["Negative"]["s"] * variables[reaction["Negative"]["aj"]],
+                (reaction["Negative"]["s"] - param.t_plus(c_e_n))
+                * variables[reaction["Negative"]["aj"]],
                 pybamm.FullBroadcast(0, "separator", "current collector"),
-                reaction["Positive"]["s"] * variables[reaction["Positive"]["aj"]],
+                (reaction["Positive"]["s"] - param.t_plus(c_e_p))
+                * variables[reaction["Positive"]["aj"]],
             )
             / self.param.gamma_e
             for reaction in self.reactions.values()
