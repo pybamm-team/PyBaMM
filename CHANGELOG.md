@@ -2,6 +2,7 @@
 
 ## Optimizations
 
+-   Made `QuickPlot` compatible with Google Colab ([#935](https://github.com/pybamm-team/PyBaMM/pull/935))
 -   Sped up model building ([#927](https://github.com/pybamm-team/PyBaMM/pull/927))
 -   Changed default solver for lead-acid to `CasadiSolver` ([#927](https://github.com/pybamm-team/PyBaMM/pull/927))
 
