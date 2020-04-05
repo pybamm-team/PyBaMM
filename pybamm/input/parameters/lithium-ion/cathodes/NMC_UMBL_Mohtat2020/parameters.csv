@@ -36,5 +36,3 @@ Positive electrode OCP entropic change [V.K-1],[function]NMC_entropic_change_Pey
 # Activation energies,,,
 Reference temperature [K],298.15,25C,
 Positive electrode reaction rate,[function]NMC_electrolyte_reaction_rate_PeymanMPM,,
-Positive reaction rate activation energy [J.mol-1],39570,,no info from Peyman MPM
-Positive solid diffusion activation energy [J.mol-1],18550,,no info from Peyman MPM

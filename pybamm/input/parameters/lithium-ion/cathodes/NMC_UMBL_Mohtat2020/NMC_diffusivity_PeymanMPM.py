@@ -1,7 +1,7 @@
-import pybamm
+from pybamm import exp, constants
 
 
-def NMC_diffusivity_PeymanMPM(sto, T, T_inf, E_D_s, R_g):
+def NMC_diffusivity_PeymanMPM(sto, T):
     """
     NMC diffusivity as a function of stochiometry, in this case the
     diffusivity is taken to be a constant. The value is taken from Peyman MPM.
@@ -12,16 +12,10 @@ def NMC_diffusivity_PeymanMPM(sto, T, T_inf, E_D_s, R_g):
 
     Parameters
     ----------
-    sto: :class: `numpy.Array`
+    sto: :class:`pybamm.Symbol`
         Electrode stochiometry
-    T: :class: `numpy.Array`
+    T: :class:`pybamm.Symbol`
         Dimensional temperature
-    T_inf: double
-        Reference temperature
-    E_D_s: double
-        Solid diffusion activation energy
-    R_g: double
-        The ideal gas constant
 
     Returns
     -------
@@ -30,7 +24,8 @@ def NMC_diffusivity_PeymanMPM(sto, T, T_inf, E_D_s, R_g):
     """
 
     D_ref = 8 * 10 ** (-15)
-    arrhenius = pybamm.exp(E_D_s / R_g * (1 / T_inf - 1 / T))
+    E_D_s = 18550
+    arrhenius = exp(E_D_s / constants.R * (1 / 298.15 - 1 / T))
 
     # Removing the fudge factor 0 * sto requires different handling of either
     # either simplifications or how sto is passed into this function.

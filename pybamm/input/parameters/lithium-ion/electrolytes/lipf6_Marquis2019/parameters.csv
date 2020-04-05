@@ -10,5 +10,3 @@ Electrolyte conductivity [S.m-1],[function]electrolyte_conductivity_Capiglia1999
 ,,,
 # Activation energies,,,
 Reference temperature [K],298.15,25C,
-Electrolyte diffusion activation energy [J.mol-1],37040,,
-Electrolyte conductivity activation energy [J.mol-1],34700,,

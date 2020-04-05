@@ -34,5 +34,3 @@ Positive electrode OCP entropic change [V.K-1],[function]lico2_entropic_change_M
 # Activation energies,,,
 Reference temperature [K],298.15,25C,
 Positive electrode reaction rate,[function]lico2_electrolyte_reaction_rate_Dualfoil1998,,
-Positive reaction rate activation energy [J.mol-1],39570,,
-Positive solid diffusion activation energy [J.mol-1],18550,,
