@@ -22,8 +22,11 @@ class Full(BaseModel):
 
     def get_fundamental_variables(self):
 
-        eps = pybamm.standard_variables.eps
-        variables = self._get_standard_porosity_variables(eps)
+        eps_n = pybamm.standard_variables.eps_n
+        eps_s = pybamm.standard_variables.eps_s
+        eps_p = pybamm.standard_variables.eps_p
+        variables = self._get_standard_porosity_variables(eps_n, eps_s, eps_p)
+
         return variables
 
     def get_coupled_variables(self, variables):
@@ -31,15 +34,17 @@ class Full(BaseModel):
         j_n = variables["Negative electrode interfacial current density"]
         j_p = variables["Positive electrode interfacial current density"]
 
-        deps_dt_n = -self.param.beta_surf_n * j_n
-        deps_dt_s = pybamm.FullBroadcast(
+        deps_n_dt = -self.param.beta_surf_n * j_n
+        deps_s_dt = pybamm.FullBroadcast(
             0, "separator", auxiliary_domains={"secondary": "current collector"}
         )
-        deps_dt_p = -self.param.beta_surf_p * j_p
+        deps_p_dt = -self.param.beta_surf_p * j_p
 
-        deps_dt = pybamm.Concatenation(deps_dt_n, deps_dt_s, deps_dt_p)
-
-        variables.update(self._get_standard_porosity_change_variables(deps_dt))
+        variables.update(
+            self._get_standard_porosity_change_variables(
+                deps_n_dt, deps_s_dt, deps_p_dt
+            )
+        )
 
         return variables
 
