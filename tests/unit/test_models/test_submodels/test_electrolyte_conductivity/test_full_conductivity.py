@@ -14,20 +14,17 @@ class TestFull(unittest.TestCase):
         variables = {
             "Electrolyte tortuosity": a,
             "Electrolyte concentration": a,
-            "Negative electrode interfacial current density": pybamm.FullBroadcast(
-                a, "negative electrode", "current collector"
+            "Interfacial current density": pybamm.FullBroadcast(
+                a,
+                ["negative electrode", "separator", "positive electrode"],
+                "current collector",
             ),
-            "Positive electrode interfacial current density": pybamm.FullBroadcast(
-                a, "positive electrode", "current collector"
+            "Oxygen interfacial current density": pybamm.FullBroadcast(
+                a,
+                ["negative electrode", "separator", "positive electrode"],
+                "current collector",
             ),
             "Cell temperature": a,
-        }
-        icd = " interfacial current density"
-        reactions = {
-            "main": {
-                "Negative": {"s": 1, "aj": "Negative electrode" + icd},
-                "Positive": {"s": 1, "aj": "Positive electrode" + icd},
-            }
         }
         submodel = pybamm.electrolyte_conductivity.Full(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)

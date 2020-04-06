@@ -20,20 +20,14 @@ class TestLeadingOrderModel(unittest.TestCase):
             "Negative electrolyte concentration": a_n,
             "Negative electrode interfacial current density": a_n,
             "X-averaged negative electrode interfacial current density": a,
+            "X-averaged negative electrode oxygen interfacial current density": a,
             "X-averaged negative electrode total interfacial current density": a,
         }
-        icd = " interfacial current density"
-        reactions = {
-            "main": {
-                "Negative": {"s": 1, "aj": "Negative electrode" + icd},
-                "Positive": {"s": 1, "aj": "Positive electrode" + icd},
-            }
-        }
         spf = pybamm.electrolyte_conductivity.surface_potential_form
-        submodel = spf.LeadingOrderAlgebraic(param, "Negative", reactions)
+        submodel = spf.LeadingOrderAlgebraic(param, "Negative")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
-        submodel = spf.LeadingOrderDifferential(param, "Negative", reactions)
+        submodel = spf.LeadingOrderDifferential(param, "Negative")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
@@ -46,12 +40,13 @@ class TestLeadingOrderModel(unittest.TestCase):
             "Positive electrode porosity": a_p,
             "Positive electrolyte concentration": a_p,
             "X-averaged positive electrode interfacial current density": a,
+            "X-averaged positive electrode oxygen interfacial current density": a,
             "X-averaged positive electrode total interfacial current density": a,
         }
-        submodel = spf.LeadingOrderAlgebraic(param, "Positive", reactions)
+        submodel = spf.LeadingOrderAlgebraic(param, "Positive")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
-        submodel = spf.LeadingOrderDifferential(param, "Positive", reactions)
+        submodel = spf.LeadingOrderDifferential(param, "Positive")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

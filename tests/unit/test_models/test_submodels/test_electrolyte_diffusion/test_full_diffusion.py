@@ -11,18 +11,20 @@ class TestFull(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.standard_parameters_lithium_ion
         a = pybamm.Scalar(0)
+        full = pybamm.FullBroadcast(
+            a,
+            ["negative electrode", "separator", "positive electrode"],
+            "current collector",
+        )
         variables = {
             "Porosity": a,
             "Electrolyte tortuosity": a,
             "Porosity change": a,
             "Volume-averaged velocity": a,
             "Electrolyte concentration": a,
-            "Negative electrode interfacial current density": pybamm.FullBroadcast(
-                a, "negative electrode", "current collector"
-            ),
-            "Positive electrode interfacial current density": pybamm.FullBroadcast(
-                a, "positive electrode", "current collector"
-            ),
+            "Electrolyte current density": full,
+            "Interfacial current density": full,
+            "Oxygen interfacial current density": full,
             "Cell temperature": pybamm.FullBroadcast(
                 a,
                 ["negative electrode", "separator", "positive electrode"],
@@ -33,13 +35,6 @@ class TestFull(unittest.TestCase):
                 ["negative electrode", "separator", "positive electrode"],
                 "current collector",
             ),
-        }
-        icd = " interfacial current density"
-        reactions = {
-            "main": {
-                "Negative": {"s": 1, "aj": "Negative electrode" + icd},
-                "Positive": {"s": 1, "aj": "Positive electrode" + icd},
-            }
         }
         submodel = pybamm.electrolyte_diffusion.Full(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)

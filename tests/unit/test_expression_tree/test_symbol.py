@@ -289,35 +289,26 @@ class TestSymbol(unittest.TestCase):
 
         param = pybamm.standard_parameters_lithium_ion
 
-        one_n = pybamm.FullBroadcast(1, ["negative electrode"], "current collector")
-        one_p = pybamm.FullBroadcast(1, ["positive electrode"], "current collector")
-
         zero_n = pybamm.FullBroadcast(0, ["negative electrode"], "current collector")
         zero_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
         zero_p = pybamm.FullBroadcast(0, ["positive electrode"], "current collector")
 
-        deps_dt = pybamm.Concatenation(zero_n, zero_s, zero_p)
+        zero_nsp = pybamm.Concatenation(zero_n, zero_s, zero_p)
 
         v_box = pybamm.Scalar(0)
 
         variables = {
             "Porosity": param.epsilon,
             "Electrolyte tortuosity": param.epsilon ** 1.5,
-            "Porosity change": deps_dt,
+            "Porosity change": zero_nsp,
+            "Electrolyte current density": zero_nsp,
             "Volume-averaged velocity": v_box,
-            "Negative electrode interfacial current density": one_n,
-            "Positive electrode interfacial current density": one_p,
+            "Interfacial current density": zero_nsp,
+            "Oxygen interfacial current density": zero_nsp,
             "Cell temperature": pybamm.Concatenation(zero_n, zero_s, zero_p),
             "Transverse volume-averaged acceleration": pybamm.Concatenation(
                 zero_n, zero_s, zero_p
             ),
-        }
-        icd = " interfacial current density"
-        reactions = {
-            "main": {
-                "Negative": {"s": 1, "aj": "Negative electrode" + icd},
-                "Positive": {"s": 1, "aj": "Positive electrode" + icd},
-            }
         }
         model = pybamm.electrolyte_diffusion.Full(param)
         variables.update(model.get_fundamental_variables())

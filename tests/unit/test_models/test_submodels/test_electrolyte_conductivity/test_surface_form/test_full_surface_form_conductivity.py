@@ -27,6 +27,7 @@ class TestFull(unittest.TestCase):
             "Negative electrode tortuosity": a_n,
             "Negative electrolyte concentration": a_n,
             "Negative electrode interfacial current density": a_n,
+            "Negative electrode oxygen interfacial current density": a_n,
             "Electrolyte potential": pybamm.Concatenation(a_n, a_s, a_p),
             "Negative electrode temperature": a_n,
             "Separator temperature": a_s,
@@ -34,19 +35,12 @@ class TestFull(unittest.TestCase):
             "Negative electrode potential": a_n,
             "Positive electrode potential": a_p,
         }
-        icd = " interfacial current density"
-        reactions = {
-            "main": {
-                "Negative": {"s": 1, "aj": "Negative electrode" + icd},
-                "Positive": {"s": 1, "aj": "Positive electrode" + icd},
-            }
-        }
 
         spf = pybamm.electrolyte_conductivity.surface_potential_form
-        submodel = spf.FullAlgebraic(param, "Negative", reactions)
+        submodel = spf.FullAlgebraic(param, "Negative")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
-        submodel = spf.FullDifferential(param, "Negative", reactions)
+        submodel = spf.FullDifferential(param, "Negative")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
@@ -63,14 +57,15 @@ class TestFull(unittest.TestCase):
             "Positive electrode tortuosity": a_p,
             "Positive electrolyte concentration": a_p,
             "Positive electrode interfacial current density": a_p,
+            "Positive electrode oxygen interfacial current density": a_p,
             "Positive electrode temperature": a_p,
             "Negative electrode potential": a_n,
             "Positive electrode potential": a_p,
         }
-        submodel = spf.FullAlgebraic(param, "Positive", reactions)
+        submodel = spf.FullAlgebraic(param, "Positive")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
-        submodel = spf.FullDifferential(param, "Positive", reactions)
+        submodel = spf.FullDifferential(param, "Positive")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

@@ -10,18 +10,6 @@ import unittest
 class TestLeadingOrder(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.standard_parameters_lead_acid
-        reactions = {
-            "main": {
-                "Negative": {
-                    "s": -param.s_plus_n_S,
-                    "aj": "Negative electrode interfacial current density",
-                },
-                "Positive": {
-                    "s": -param.s_plus_p_S,
-                    "aj": "Positive electrode interfacial current density",
-                },
-            }
-        }
         a = pybamm.Scalar(0)
         variables = {
             "X-averaged negative electrode porosity": a,
@@ -32,6 +20,8 @@ class TestLeadingOrder(unittest.TestCase):
             "X-averaged positive electrode porosity change": a,
             "X-averaged negative electrode interfacial current density": a,
             "X-averaged positive electrode interfacial current density": a,
+            "X-averaged negative electrode oxygen interfacial current density": a,
+            "X-averaged positive electrode oxygen interfacial current density": a,
             "X-averaged separator transverse volume-averaged acceleration": a,
         }
         submodel = pybamm.electrolyte_diffusion.LeadingOrder(param)

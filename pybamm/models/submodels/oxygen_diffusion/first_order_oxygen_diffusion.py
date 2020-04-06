@@ -48,7 +48,8 @@ class FirstOrder(BaseModel):
 
         # Reactions
         j_ox_0 = variables[
-            "Leading-order x-averaged positive electrode oxygen interfacial current density"
+            "Leading-order x-averaged positive electrode "
+            "oxygen interfacial current density"
         ]
         sj_ox_p = -param.s_ox_Ox * j_ox_0
 
