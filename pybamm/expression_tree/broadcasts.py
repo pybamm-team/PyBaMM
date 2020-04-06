@@ -37,7 +37,7 @@ class Broadcast(pybamm.SpatialOperator):
         child,
         broadcast_domain,
         broadcast_auxiliary_domains=None,
-        broadcast_type="full",
+        broadcast_type="full to nodes",
         name=None,
     ):
         # Convert child to scalar if it is a number
@@ -84,7 +84,9 @@ class PrimaryBroadcast(Broadcast):
     """
 
     def __init__(self, child, broadcast_domain, name=None):
-        super().__init__(child, broadcast_domain, broadcast_type="primary", name=name)
+        super().__init__(
+            child, broadcast_domain, broadcast_type="primary to nodes", name=name
+        )
 
     def check_and_set_domains(
         self, child, broadcast_type, broadcast_domain, broadcast_auxiliary_domains
@@ -127,8 +129,8 @@ class PrimaryBroadcast(Broadcast):
         return domain, auxiliary_domains
 
     def _unary_new_copy(self, child):
-        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
-        return PrimaryBroadcast(child, self.broadcast_domain)
+        """ See :meth:`pybamm.UnaryOperator._unary_new_copy()`. """
+        return self.__class__(child, self.broadcast_domain)
 
     def _evaluate_for_shape(self):
         """
@@ -138,6 +140,18 @@ class PrimaryBroadcast(Broadcast):
         child_eval = self.children[0].evaluate_for_shape()
         vec = pybamm.evaluate_for_shape_using_domain(self.domain)
         return np.outer(child_eval, vec).reshape(-1, 1)
+
+
+class PrimaryBroadcastToEdges(PrimaryBroadcast):
+    "A primary broadcast onto the edges of the domain"
+
+    def __init__(self, child, broadcast_domain, name=None):
+        name = name or "broadcast to edges"
+        super().__init__(child, broadcast_domain, name)
+        self.broadcast_type = "primary to edges"
+
+    def evaluates_on_edges(self):
+        return True
 
 
 class SecondaryBroadcast(Broadcast):
@@ -162,7 +176,9 @@ class SecondaryBroadcast(Broadcast):
     """
 
     def __init__(self, child, broadcast_domain, name=None):
-        super().__init__(child, broadcast_domain, broadcast_type="secondary", name=name)
+        super().__init__(
+            child, broadcast_domain, broadcast_type="secondary to nodes", name=name
+        )
 
     def check_and_set_domains(
         self, child, broadcast_type, broadcast_domain, broadcast_auxiliary_domains
@@ -207,7 +223,7 @@ class SecondaryBroadcast(Broadcast):
         return domain, auxiliary_domains
 
     def _unary_new_copy(self, child):
-        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
+        """ See :meth:`pybamm.UnaryOperator._unary_new_copy()`. """
         return SecondaryBroadcast(child, self.broadcast_domain)
 
     def _evaluate_for_shape(self):
@@ -220,17 +236,29 @@ class SecondaryBroadcast(Broadcast):
         return np.outer(vec, child_eval).reshape(-1, 1)
 
 
+class SecondaryBroadcastToEdges(SecondaryBroadcast):
+    "A secondary broadcast onto the edges of a domain"
+
+    def __init__(self, child, broadcast_domain, name=None):
+        name = name or "broadcast to edges"
+        super().__init__(child, broadcast_domain, name)
+        self.broadcast_type = "secondary to edges"
+
+    def evaluates_on_edges(self):
+        return True
+
+
 class FullBroadcast(Broadcast):
     "A class for full broadcasts"
 
     def __init__(self, child, broadcast_domain, auxiliary_domains, name=None):
-        if auxiliary_domains == "current collector":
-            auxiliary_domains = {"secondary": "current collector"}
+        if isinstance(auxiliary_domains, str):
+            auxiliary_domains = {"secondary": auxiliary_domains}
         super().__init__(
             child,
             broadcast_domain,
             broadcast_auxiliary_domains=auxiliary_domains,
-            broadcast_type="full",
+            broadcast_type="full to nodes",
             name=name,
         )
 
@@ -250,7 +278,7 @@ class FullBroadcast(Broadcast):
         return domain, auxiliary_domains
 
     def _unary_new_copy(self, child):
-        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
+        """ See :meth:`pybamm.UnaryOperator._unary_new_copy()`. """
         return FullBroadcast(child, self.broadcast_domain, self.auxiliary_domains)
 
     def _evaluate_for_shape(self):
@@ -264,6 +292,21 @@ class FullBroadcast(Broadcast):
         )
 
         return child_eval * vec
+
+
+class FullBroadcastToEdges(FullBroadcast):
+    """
+    A full broadcast onto the edges of a domain (edges of primary dimension, nodes of
+    other dimensions)
+    """
+
+    def __init__(self, child, broadcast_domain, auxiliary_domains, name=None):
+        name = name or "broadcast to edges"
+        super().__init__(child, broadcast_domain, auxiliary_domains, name)
+        self.broadcast_type = "full to edges"
+
+    def evaluates_on_edges(self):
+        return True
 
 
 def ones_like(*symbols):

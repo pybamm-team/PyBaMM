@@ -29,12 +29,11 @@ class BaseModel(BaseThermal):
         T_n = pybamm.PrimaryBroadcast(T_x_av, "negative electrode")
         T_s = pybamm.PrimaryBroadcast(T_x_av, "separator")
         T_p = pybamm.PrimaryBroadcast(T_x_av, "positive electrode")
-        T = pybamm.Concatenation(T_n, T_s, T_p)
 
         T_cn = T_x_av
         T_cp = T_x_av
 
-        variables = self._get_standard_fundamental_variables(T, T_cn, T_cp)
+        variables = self._get_standard_fundamental_variables(T_cn, T_n, T_s, T_p, T_cp)
 
         return variables
 
@@ -45,11 +44,12 @@ class BaseModel(BaseThermal):
     def set_rhs(self, variables):
         T_vol_av = variables["Volume-averaged cell temperature"]
         Q_vol_av = variables["Volume-averaged total heating"]
+        T_amb = variables["Ambient temperature"]
 
         cooling_coeff = self._surface_cooling_coefficient()
 
         self.rhs = {
-            T_vol_av: (self.param.B * Q_vol_av + cooling_coeff * T_vol_av)
+            T_vol_av: (self.param.B * Q_vol_av + cooling_coeff * (T_vol_av - T_amb))
             / self.param.C_th
         }
 

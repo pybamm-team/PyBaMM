@@ -42,10 +42,10 @@ class BasicSPM(BaseModel):
         Q = pybamm.Variable("Discharge capacity [A.h]")
         # Variables that vary spatially are created with a domain
         c_s_n = pybamm.Variable(
-            "X-averaged negative particle concentration", domain="negative particle",
+            "X-averaged negative particle concentration", domain="negative particle"
         )
         c_s_p = pybamm.Variable(
-            "X-averaged positive particle concentration", domain="positive particle",
+            "X-averaged positive particle concentration", domain="positive particle"
         )
 
         # Constant temperature

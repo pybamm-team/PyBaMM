@@ -36,6 +36,9 @@ input/*
 !input/comsol_results/
 !input/drive_cycles
 
+# keep images required by notebooks
+!examples/notebooks/Creating%20Models/SEI.png
+
 # simulation outputs
 out/
 config.py
@@ -59,6 +62,7 @@ htmlcov/
 pyproject.toml
 
 # virtual enviroment
+env/
 venv/
 venv3.5/
 PyBaMM-env/

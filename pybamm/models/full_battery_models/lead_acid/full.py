@@ -61,11 +61,11 @@ class Full(BaseModel):
             self.submodels["convection"] = pybamm.convection.Full(self.param)
 
     def set_interfacial_submodel(self):
-        self.submodels["negative interface"] = pybamm.interface.lead_acid.ButlerVolmer(
-            self.param, "Negative"
+        self.submodels["negative interface"] = pybamm.interface.ButlerVolmer(
+            self.param, "Negative", "lead-acid main"
         )
-        self.submodels["positive interface"] = pybamm.interface.lead_acid.ButlerVolmer(
-            self.param, "Positive"
+        self.submodels["positive interface"] = pybamm.interface.ButlerVolmer(
+            self.param, "Positive", "lead-acid main"
         )
 
     def set_solid_submodel(self):
@@ -81,17 +81,16 @@ class Full(BaseModel):
 
     def set_electrolyte_submodel(self):
 
-        electrolyte = pybamm.electrolyte.stefan_maxwell
-        surf_form = electrolyte.conductivity.surface_potential_form
+        surf_form = pybamm.electrolyte_conductivity.surface_potential_form
 
-        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(
+        self.submodels["electrolyte diffusion"] = pybamm.electrolyte_diffusion.Full(
             self.param, self.reactions
         )
 
         if self.options["surface form"] is False:
-            self.submodels["electrolyte conductivity"] = electrolyte.conductivity.Full(
-                self.param, self.reactions
-            )
+            self.submodels[
+                "electrolyte conductivity"
+            ] = pybamm.electrolyte_conductivity.Full(self.param, self.reactions)
         elif self.options["surface form"] == "differential":
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
@@ -108,22 +107,21 @@ class Full(BaseModel):
             self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.Full(
                 self.param, self.reactions
             )
-            self.submodels[
-                "positive oxygen interface"
-            ] = pybamm.interface.lead_acid_oxygen.ForwardTafel(self.param, "Positive")
+            self.submodels["positive oxygen interface"] = pybamm.interface.ForwardTafel(
+                self.param, "Positive", "lead-acid oxygen"
+            )
             self.submodels[
                 "negative oxygen interface"
-            ] = pybamm.interface.lead_acid_oxygen.FullDiffusionLimited(
-                self.param, "Negative"
+            ] = pybamm.interface.DiffusionLimited(
+                self.param, "Negative", "lead-acid oxygen", order="full"
             )
         else:
             self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.NoOxygen(
                 self.param
             )
-            self.submodels[
-                "positive oxygen interface"
-            ] = pybamm.interface.lead_acid_oxygen.NoReaction(self.param, "Positive")
-            self.submodels[
-                "negative oxygen interface"
-            ] = pybamm.interface.lead_acid_oxygen.NoReaction(self.param, "Negative")
-
+            self.submodels["positive oxygen interface"] = pybamm.interface.NoReaction(
+                self.param, "Positive", "lead-acid oxygen"
+            )
+            self.submodels["negative oxygen interface"] = pybamm.interface.NoReaction(
+                self.param, "Negative", "lead-acid oxygen"
+            )

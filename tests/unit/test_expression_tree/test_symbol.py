@@ -168,6 +168,13 @@ class TestSymbol(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             a.evaluate()
 
+    def test_evaluate_ignoring_errors(self):
+        self.assertIsNone(pybamm.t.evaluate_ignoring_errors(t=None))
+        self.assertEqual(pybamm.t.evaluate_ignoring_errors(t=0), 0)
+        self.assertIsNone(pybamm.Parameter("a").evaluate_ignoring_errors())
+        self.assertIsNone(pybamm.StateVector(slice(0, 1)).evaluate_ignoring_errors())
+        self.assertEqual(pybamm.InputParameter("a").evaluate_ignoring_errors(), 1)
+
     def test_symbol_is_constant(self):
         a = pybamm.Variable("a")
         self.assertFalse(a.is_constant())
@@ -309,14 +316,13 @@ class TestSymbol(unittest.TestCase):
                 "Positive": {"s": 1, "aj": "Positive electrode" + icd},
             }
         }
-        model = pybamm.electrolyte.stefan_maxwell.diffusion.Full(param, reactions)
+        model = pybamm.electrolyte_diffusion.Full(param, reactions)
         variables.update(model.get_fundamental_variables())
         variables.update(model.get_coupled_variables(variables))
 
         model.set_rhs(variables)
 
-        c_e = pybamm.standard_variables.c_e
-        rhs = model.rhs[c_e]
+        rhs = list(model.rhs.values())[0]
         rhs.visualise("StefanMaxwell_test.png")
         self.assertTrue(os.path.exists("StefanMaxwell_test.png"))
         with self.assertRaises(ValueError):
@@ -374,7 +380,7 @@ class TestSymbol(unittest.TestCase):
         param = pybamm.Parameter("a")
         self.assertEqual(param.shape_for_testing, ())
 
-        func = pybamm.FunctionParameter("func", state)
+        func = pybamm.FunctionParameter("func", {"state": state})
         self.assertEqual(func.shape_for_testing, state.shape_for_testing)
 
         concat = pybamm.Concatenation()

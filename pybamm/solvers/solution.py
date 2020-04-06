@@ -37,13 +37,7 @@ class _BaseSolution(object):
     """
 
     def __init__(
-        self,
-        t,
-        y,
-        t_event=None,
-        y_event=None,
-        termination="final time",
-        copy_this=None,
+        self, t, y, t_event=None, y_event=None, termination="final time", copy_this=None
     ):
         self._t = t
         self._y = y
@@ -233,10 +227,10 @@ class _BaseSolution(object):
             savemat(filename, data)
         elif to_format == "csv":
             for name, var in data.items():
-                if var.ndim == 2:
+                if var.ndim >= 2:
                     raise ValueError(
-                        "only 1D variables can be saved to csv, but '{}' is 2D".format(
-                            name
+                        "only 0D variables can be saved to csv, but '{}' is {}D".format(
+                            name, var.ndim - 1
                         )
                     )
             df = pd.DataFrame(data)
@@ -252,9 +246,7 @@ class Solution(_BaseSolution):
 
     """
 
-    def __init__(
-        self, t, y, t_event=None, y_event=None, termination="final time",
-    ):
+    def __init__(self, t, y, t_event=None, y_event=None, termination="final time"):
         super().__init__(t, y, t_event, y_event, termination)
 
     @property
@@ -331,4 +323,3 @@ class Solution(_BaseSolution):
                     copy_this=solution,
                 )
             )
-

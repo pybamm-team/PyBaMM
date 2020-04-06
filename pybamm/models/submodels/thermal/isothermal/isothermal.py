@@ -22,17 +22,17 @@ class Isothermal(BaseThermal):
         super().__init__(param)
 
     def get_fundamental_variables(self):
-
-        T_x_av = pybamm.PrimaryBroadcast(self.param.T_init, "current collector")
+        T_amb = self.param.T_amb(pybamm.t * self.param.timescale)
+        T_x_av = pybamm.PrimaryBroadcast(T_amb, "current collector")
         T_n = pybamm.PrimaryBroadcast(T_x_av, "negative electrode")
         T_s = pybamm.PrimaryBroadcast(T_x_av, "separator")
         T_p = pybamm.PrimaryBroadcast(T_x_av, "positive electrode")
-        T = pybamm.Concatenation(T_n, T_s, T_p)
 
         T_cn = T_x_av
         T_cp = T_x_av
 
-        variables = self._get_standard_fundamental_variables(T, T_cn, T_cp)
+        variables = self._get_standard_fundamental_variables(T_cn, T_n, T_s, T_p, T_cp)
+
         return variables
 
     def get_coupled_variables(self, variables):
@@ -56,7 +56,7 @@ class Isothermal(BaseThermal):
 
     def _flux_law(self, T):
         """Zero heat flux since temperature is constant"""
-        q = pybamm.FullBroadcast(
+        q = pybamm.FullBroadcastToEdges(
             pybamm.Scalar(0),
             ["negative electrode", "separator", "positive electrode"],
             "current collector",

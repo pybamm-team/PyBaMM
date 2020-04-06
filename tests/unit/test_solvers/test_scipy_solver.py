@@ -27,7 +27,7 @@ class TestScipySolver(unittest.TestCase):
         disc.process_model(model)
         # Solve
         solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
-        t_eval = np.linspace(0, 1, 100)
+        t_eval = np.linspace(0, 1, 80)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
@@ -69,7 +69,12 @@ class TestScipySolver(unittest.TestCase):
         var = pybamm.Variable("var", domain=domain)
         model.rhs = {var: -0.1 * var}
         model.initial_conditions = {var: 1}
-        model.events = [pybamm.Event("var=0.5", pybamm.min(var - 0.5))]
+        # needs to work with multiple events (to avoid bug where only last event is
+        # used)
+        model.events = [
+            pybamm.Event("var=0.5", pybamm.min(var - 0.5)),
+            pybamm.Event("var=-0.5", pybamm.min(var + 0.5)),
+        ]
         # No need to set parameters; can use base discretisation (no spatial operators)
 
         # create discretisation
@@ -236,7 +241,12 @@ class TestScipySolver(unittest.TestCase):
             var = pybamm.Variable("var", domain=domain)
             model.rhs = {var: -0.1 * var}
             model.initial_conditions = {var: 1}
-            model.events = [pybamm.Event("var=0.5", pybamm.min(var - 0.5))]
+            # needs to work with multiple events (to avoid bug where only last event is
+            # used)
+            model.events = [
+                pybamm.Event("var=0.5", pybamm.min(var - 0.5)),
+                pybamm.Event("var=-0.5", pybamm.min(var + 0.5)),
+            ]
             # No need to set parameters; can use base discretisation (no spatial
             # operators)
 

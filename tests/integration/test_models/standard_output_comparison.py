@@ -68,9 +68,9 @@ class BaseOutputComparison(object):
         var0 = model_variables[0]
 
         spatial_pts = {}
-        if var0.dimensions >= 2:
+        if var0.dimensions >= 1:
             spatial_pts[var0.first_dimension] = var0.first_dim_pts
-        if var0.dimensions >= 3:
+        if var0.dimensions >= 2:
             spatial_pts[var0.second_dimension] = var0.second_dim_pts
 
         # Calculate tolerance based on the value of var0

@@ -20,7 +20,7 @@ class TestParametersCLI(unittest.TestCase):
         # Read a parameter file thta is shipped with PyBaMM
         param_filename = pybamm.get_parameters_filepath(
             "input/parameters/lithium-ion/anodes/"
-            "graphite_mcmb2528_Marquis2019/parameters.csv",
+            "graphite_mcmb2528_Marquis2019/parameters.csv"
         )
         anode = pybamm.ParameterValues({}).read_parameters_csv(param_filename)
 
@@ -50,7 +50,7 @@ class TestParametersCLI(unittest.TestCase):
                 "anodes",
                 os.path.basename(tempdir.name),
                 "parameters.csv",
-            ),
+            )
         )
 
         new_anode = pybamm.ParameterValues({}).read_parameters_csv(
@@ -119,3 +119,13 @@ class TestParametersCLI(unittest.TestCase):
         # ./input/parameters/lithium-ion/cathodes/tmp_dir
         # but must not intefere with existing input dir if it exists
         # in the current dir...
+
+
+if __name__ == "__main__":
+    print("Add -v for more debug output")
+    import sys
+
+    if "-v" in sys.argv:
+        debug = True
+    pybamm.settings.debug_mode = True
+    unittest.main()

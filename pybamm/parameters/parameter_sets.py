@@ -10,17 +10,6 @@ your simulation, add the line "pybamm.print_citations()" to your script.
 #
 # Lithium-ion
 #
-Marquis2019 = {
-    "chemistry": "lithium-ion",
-    "cell": "kokam_Marquis2019",
-    "anode": "graphite_mcmb2528_Marquis2019",
-    "separator": "separator_Marquis2019",
-    "cathode": "lico2_Marquis2019",
-    "electrolyte": "lipf6_Marquis2019",
-    "experiment": "1C_discharge_from_full_Marquis2019",
-    "citation": "marquis2019asymptotic",
-}
-
 NCA_Kim2011 = {
     "chemistry": "lithium-ion",
     "cell": "Kim2011",
@@ -32,6 +21,28 @@ NCA_Kim2011 = {
     "citation": "kim2011multi",
 }
 
+Ecker2015 = {
+    "chemistry": "lithium-ion",
+    "cell": "kokam_Ecker2015",
+    "anode": "graphite_Ecker2015",
+    "separator": "separator_Ecker2015",
+    "cathode": "LiNiCoO2_Ecker2015",
+    "electrolyte": "lipf6_Ecker2015",
+    "experiment": "1C_discharge_from_full_Ecker2015",
+    "citation": ["ecker2015i", "ecker2015ii", "richardson2020"],
+}
+
+Marquis2019 = {
+    "chemistry": "lithium-ion",
+    "cell": "kokam_Marquis2019",
+    "anode": "graphite_mcmb2528_Marquis2019",
+    "separator": "separator_Marquis2019",
+    "cathode": "lico2_Marquis2019",
+    "electrolyte": "lipf6_Marquis2019",
+    "experiment": "1C_discharge_from_full_Marquis2019",
+    "citation": "marquis2019asymptotic",
+}
+
 Chen2020 = {
     "chemistry": "lithium-ion",
     "cell": "LGM50_Chen2020",
@@ -41,6 +52,17 @@ Chen2020 = {
     "electrolyte": "lipf6_Nyman2008",
     "experiment": "1C_discharge_from_full_Chen2020",
     "citation": "Chen2020",
+}
+
+Mohtat2020 = {
+    "chemistry": "lithium-ion",
+    "cell": "UMBL_Mohtat2020",
+    "anode": "graphite_UMBL_Mohtat2020",
+    "separator": "separator_Mohtat2020",
+    "cathode": "NMC_UMBL_Mohtat2020",
+    "electrolyte": "LiPF6_Mohtat2020",
+    "experiment": "1C_charge_from_empty_Mohtat2020",
+    "citation": "Mohtat2020",
 }
 #
 # Lead-acid

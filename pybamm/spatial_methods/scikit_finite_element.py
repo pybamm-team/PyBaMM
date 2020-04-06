@@ -36,7 +36,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         # add npts_for_broadcast to mesh domains for this particular discretisation
         for dom in mesh.keys():
             for i in range(len(mesh[dom])):
-                mesh[dom][i].npts_for_broadcast = mesh[dom][i].npts
+                mesh[dom][i].npts_for_broadcast_to_nodes = mesh[dom][i].npts
 
     def spatial_variable(self, symbol):
         """

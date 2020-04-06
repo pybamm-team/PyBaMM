@@ -19,9 +19,11 @@ class BaseModel(pybamm.BaseSubModel):
     def __init__(self, param):
         super().__init__(param)
 
-    def _get_standard_porosity_variables(self, eps, set_leading_order=False):
+    def _get_standard_porosity_variables(
+        self, eps_n, eps_s, eps_p, set_leading_order=False
+    ):
 
-        eps_n, eps_s, eps_p = eps.orphans
+        eps = pybamm.Concatenation(eps_n, eps_s, eps_p)
 
         variables = {
             "Porosity": eps,
@@ -60,9 +62,11 @@ class BaseModel(pybamm.BaseSubModel):
 
         return variables
 
-    def _get_standard_porosity_change_variables(self, deps_dt, set_leading_order=False):
+    def _get_standard_porosity_change_variables(
+        self, deps_n_dt, deps_s_dt, deps_p_dt, set_leading_order=False
+    ):
 
-        deps_n_dt, deps_s_dt, deps_p_dt = deps_dt.orphans
+        deps_dt = pybamm.Concatenation(deps_n_dt, deps_s_dt, deps_p_dt)
 
         variables = {
             "Porosity change": deps_dt,
@@ -96,25 +100,33 @@ class BaseModel(pybamm.BaseSubModel):
     def set_events(self, variables):
         eps_n = variables["Negative electrode porosity"]
         eps_p = variables["Positive electrode porosity"]
-        self.events.append(pybamm.Event(
-            "Zero negative electrode porosity cut-off",
-            pybamm.min(eps_n),
-            pybamm.EventType.TERMINATION
-        ))
-        self.events.append(pybamm.Event(
-            "Max negative electrode porosity cut-off",
-            pybamm.max(eps_n) - 1,
-            pybamm.EventType.TERMINATION
-        ))
+        self.events.append(
+            pybamm.Event(
+                "Zero negative electrode porosity cut-off",
+                pybamm.min(eps_n),
+                pybamm.EventType.TERMINATION,
+            )
+        )
+        self.events.append(
+            pybamm.Event(
+                "Max negative electrode porosity cut-off",
+                pybamm.max(eps_n) - 1,
+                pybamm.EventType.TERMINATION,
+            )
+        )
 
-        self.events.append(pybamm.Event(
-            "Zero positive electrode porosity cut-off",
-            pybamm.min(eps_p),
-            pybamm.EventType.TERMINATION
-        ))
+        self.events.append(
+            pybamm.Event(
+                "Zero positive electrode porosity cut-off",
+                pybamm.min(eps_p),
+                pybamm.EventType.TERMINATION,
+            )
+        )
 
-        self.events.append(pybamm.Event(
-            "Max positive electrode porosity cut-off",
-            pybamm.max(eps_p) - 1,
-            pybamm.EventType.TERMINATION
-        ))
+        self.events.append(
+            pybamm.Event(
+                "Max positive electrode porosity cut-off",
+                pybamm.max(eps_p) - 1,
+                pybamm.EventType.TERMINATION,
+            )
+        )

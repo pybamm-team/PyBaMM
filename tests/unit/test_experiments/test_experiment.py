@@ -68,7 +68,7 @@ class TestExperiment(unittest.TestCase):
     def test_read_strings_repeat(self):
         experiment = pybamm.Experiment(
             ["Discharge at 10 mA for 0.5 hours"]
-            + ["Charge at 0.5 C for 45 minutes", "Hold at 1 V for 20 seconds"] * 2,
+            + ["Charge at 0.5 C for 45 minutes", "Hold at 1 V for 20 seconds"] * 2
         )
         self.assertEqual(
             experiment.operating_conditions,

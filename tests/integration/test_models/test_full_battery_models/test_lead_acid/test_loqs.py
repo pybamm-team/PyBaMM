@@ -55,6 +55,17 @@ class TestLOQS(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
+    def test_thermal(self):
+        options = {"thermal": "x-lumped"}
+        model = pybamm.lead_acid.LOQS(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+        options = {"thermal": "x-full"}
+        model = pybamm.lead_acid.LOQS(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
