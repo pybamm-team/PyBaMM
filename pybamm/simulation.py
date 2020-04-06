@@ -19,6 +19,8 @@ def is_notebook():
             return nb
         elif shell == "TerminalInteractiveShell":  # pragma: no cover
             return False  # Terminal running IPython
+        elif shell == "Shell":  # pragma: no cover
+            return True  # Google Colab notebook
         else:
             return False  # Other type (?)
     except NameError:
