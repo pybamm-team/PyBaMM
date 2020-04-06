@@ -1,63 +1,39 @@
-# =============================================================================
-#  CADET - The Chromatography Analysis and Design Toolkit
-#  
-#  Copyright © 2008-2020: The CADET Authors
-#            Please see the AUTHORS and CONTRIBUTORS file.
-#  
-#  All rights reserved. This program and the accompanying materials
-#  are made available under the terms of the GNU Public License v3.0 (or, at
-#  your option, any later version) which accompanies this distribution, and
-#  is available at http://www.gnu.org/licenses/gpl.html
-# =============================================================================
+# This module is adapted from that in CADET (`<https://github.com/modsim/CADET)>`_):
 
-# Find SUNDIALS, the SUite of Nonlinear and DIfferential/ALgebraic equation Solvers.
-#
-# The module will optionally accept the COMPONENTS argument. If no COMPONENTS
-# are specified, then the find module will default to find all the SUNDIALS
-# libraries. If one or more COMPONENTS are specified, the module will attempt to
-# find the specified components.
-#
-# Valid components are
-#   * sundials_cvode
-#   * sundials_cvodes
-#   * sundials_ida
-#   * sundials_idas
-#   * sundials_kinsol
-#   * sundials_nvecserial
-#   * sundials_nvecopenmp
-#   * sundials_nvecpthreads
-#
-#
-# On UNIX systems, this module will read the variable SUNDIALS_PREFER_STATIC_LIBRARIES
-# to determine whether or not to prefer a static link to a dynamic link for SUNDIALS
-# and all of it's dependencies.  To use this feature, make sure that the
-# SUNDIALS_PREFER_STATIC_LIBRARIES variable is set before the call to find_package.
-#
-# To provide the module with a hint about where to find your SUNDIALS installation,
-# you can set the environment variable SUNDIALS_ROOT. The FindSUNDIALS module will
-# then look in this path when searching for SUNDIALS paths and libraries.
-#
-# This module will define the following variables:
-#  SUNDIALS_FOUND - true if SUNDIALS was found on the system
-#  SUNDIALS_INCLUDE_DIRS - Location of the SUNDIALS includes
-#  SUNDIALS_LIBRARIES - Required libraries for all requested components
-#  SUNDIALS_VERSION_MAJOR - Major version
-#  SUNDIALS_VERSION_MINOR - Minro version
-#  SUNDIALS_VERSION_PATCH - Patch level
-#  SUNDIALS_VERSION - Full version string
-#
-# This module exports the target SUNDIALS::<component> if it was found.
+# .. cmake_module::
 
+#    Find SUNDIALS, the SUite of Nonlinear and DIfferential/ALgebraic equation Solvers.
+#
+#    The module looks for the following sundials components
+#
+#    * sundials_ida
+#    * sundials_sunlinsolklu
+#    * sundials_sunmatrix_sparse
+#    * sundials_nvecserial
+#
+#    To provide the module with a hint about where to find your SUNDIALS installation,
+#    you can set the environment variable :code:`SUNDIALS_ROOT`. The FindSUNDIALS module will
+#    then look in this path when searching for SUNDIALS paths and libraries.
+#    This behavior is defined in CMake >= 3.12, see policy CMP0074.
+#    It is replicated for older versions by adding the :code:`SUNDIALS_ROOT` variable to the
+#    :code:`PATHS` entry.
+#
+#    This module will define the following variables:
+#    :code:`SUNDIALS_INCLUDE_DIRS` - Location of the SUNDIALS includes
+#    :code:`SUNDIALS_LIBRARIES` - Required libraries for all requested components
 
 # List of the valid SUNDIALS components
 
 # find the SUNDIALS include directories
 find_path(SUNDIALS_INCLUDE_DIR
-  ida/ida.h
-  sundials/sundials_math.h
-  sundials/sundials_types.h
-  sunlinsol/sunlinsol_klu.h
-  sunmatrix/sunmatrix_sparse.h
+  NAMES
+    ida/ida.h
+    sundials/sundials_math.h
+    sundials/sundials_types.h
+    sunlinsol/sunlinsol_klu.h
+    sunmatrix/sunmatrix_sparse.h
+  PATHS
+    ${SUNDIALS_ROOT}
   )
 
 set(SUNDIALS_WANT_COMPONENTS
@@ -85,6 +61,8 @@ foreach(LIB ${SUNDIALS_WANT_COMPONENTS})
         PATH_SUFFIXES
             lib
             Lib
+	PATHS
+	    ${SUNDIALS_ROOT}
     )
 
     set(SUNDIALS_${LIB}_FOUND FALSE)
@@ -98,5 +76,4 @@ endforeach()
 mark_as_advanced(
     SUNDIALS_LIBRARIES
     SUNDIALS_INCLUDE_DIR
-    SUNDIALS_INCLUDE_DIRS
 )
