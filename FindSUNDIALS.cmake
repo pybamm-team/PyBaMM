@@ -32,6 +32,8 @@ find_path(SUNDIALS_INCLUDE_DIR
     sundials/sundials_types.h
     sunlinsol/sunlinsol_klu.h
     sunmatrix/sunmatrix_sparse.h
+  PATH_SUFFIXES
+    include
   PATHS
     ${SUNDIALS_ROOT}
   )
