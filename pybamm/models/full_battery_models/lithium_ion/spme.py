@@ -36,7 +36,6 @@ class SPMe(BaseModel):
         super().__init__(options, name)
 
         self.set_external_circuit_submodel()
-        self.set_reactions()
         self.set_porosity_submodel()
         self.set_tortuosity_submodels()
         self.set_convection_submodel()
@@ -118,7 +117,7 @@ class SPMe(BaseModel):
             "electrolyte conductivity"
         ] = pybamm.electrolyte_conductivity.Composite(self.param)
         self.submodels["electrolyte diffusion"] = pybamm.electrolyte_diffusion.Full(
-            self.param, self.reactions
+            self.param
         )
 
     @property

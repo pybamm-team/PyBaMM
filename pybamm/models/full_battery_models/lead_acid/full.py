@@ -35,7 +35,6 @@ class Full(BaseModel):
         super().__init__(options, name)
 
         self.set_external_circuit_submodel()
-        self.set_reactions()
         self.set_interfacial_submodel()
         self.set_porosity_submodel()
         self.set_tortuosity_submodels()
@@ -85,8 +84,8 @@ class Full(BaseModel):
 
     def set_solid_submodel(self):
         if self.options["surface form"] is False:
-            submod_n = pybamm.electrode.ohm.Full(self.param, "Negative", self.reactions)
-            submod_p = pybamm.electrode.ohm.Full(self.param, "Positive", self.reactions)
+            submod_n = pybamm.electrode.ohm.Full(self.param, "Negative")
+            submod_p = pybamm.electrode.ohm.Full(self.param, "Positive")
         else:
             submod_n = pybamm.electrode.ohm.SurfaceForm(self.param, "Negative")
             submod_p = pybamm.electrode.ohm.SurfaceForm(self.param, "Positive")
@@ -99,28 +98,28 @@ class Full(BaseModel):
         surf_form = pybamm.electrolyte_conductivity.surface_potential_form
 
         self.submodels["electrolyte diffusion"] = pybamm.electrolyte_diffusion.Full(
-            self.param, self.reactions
+            self.param
         )
 
         if self.options["surface form"] is False:
             self.submodels[
                 "electrolyte conductivity"
-            ] = pybamm.electrolyte_conductivity.Full(self.param, self.reactions)
+            ] = pybamm.electrolyte_conductivity.Full(self.param)
         elif self.options["surface form"] == "differential":
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
                     domain.lower() + " electrolyte conductivity"
-                ] = surf_form.FullDifferential(self.param, domain, self.reactions)
+                ] = surf_form.FullDifferential(self.param, domain)
         elif self.options["surface form"] == "algebraic":
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
                     domain.lower() + " electrolyte conductivity"
-                ] = surf_form.FullAlgebraic(self.param, domain, self.reactions)
+                ] = surf_form.FullAlgebraic(self.param, domain)
 
     def set_side_reaction_submodels(self):
         if "oxygen" in self.options["side reactions"]:
             self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.Full(
-                self.param, self.reactions
+                self.param
             )
             self.submodels["positive oxygen interface"] = pybamm.interface.ForwardTafel(
                 self.param, "Positive", "lead-acid oxygen"

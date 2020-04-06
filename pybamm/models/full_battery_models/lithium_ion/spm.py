@@ -32,7 +32,6 @@ class SPM(BaseModel):
     def __init__(self, options=None, name="Single Particle Model", build=True):
         super().__init__(options, name)
 
-        self.set_reactions()
         self.set_external_circuit_submodel()
         self.set_porosity_submodel()
         self.set_tortuosity_submodels()
@@ -123,15 +122,13 @@ class SPM(BaseModel):
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
                     "leading-order " + domain.lower() + " electrolyte conductivity"
-                ] = surf_form.LeadingOrderDifferential(
-                    self.param, domain, self.reactions
-                )
+                ] = surf_form.LeadingOrderDifferential(self.param, domain)
 
         elif self.options["surface form"] == "algebraic":
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
                     "leading-order " + domain.lower() + " electrolyte conductivity"
-                ] = surf_form.LeadingOrderAlgebraic(self.param, domain, self.reactions)
+                ] = surf_form.LeadingOrderAlgebraic(self.param, domain)
         self.submodels[
             "electrolyte diffusion"
         ] = pybamm.electrolyte_diffusion.ConstantConcentration(self.param)
