@@ -153,11 +153,8 @@ class ProcessedSymbolicVariable(object):
 
         Parameters
         ----------
-        inputs : float, array-like, or dict
-            The inputs at which to evaluate the variable. If dict, keys must be the same
-            as the *symbolic* inputs that were used to create the solution, and values
-            must have the same shape. If float or array-like, must have the same shape
-            as all the symbolic inputs stacked together.
+        inputs : dict
+            The inputs at which to evaluate the variable.
         """
         if inputs is None:
             return self.casadi_entries_fn(casadi.DM())
@@ -173,8 +170,8 @@ class ProcessedSymbolicVariable(object):
 
         Parameters
         ----------
-        inputs : float, array-like, or dict
-            See :meth:`ProcessedSymbolicVariable.values`
+        inputs : dict
+            The inputs at which to evaluate the variable.
         """
         if self.casadi_sens_fn is None:
             raise ValueError(
@@ -191,8 +188,8 @@ class ProcessedSymbolicVariable(object):
 
         Parameters
         ----------
-        inputs : float, array-like, or dict
-            See :meth:`ProcessedSymbolicVariable.values`
+        inputs : dict
+            The inputs at which to evaluate the variable.
         """
         inputs = self._check_and_transform(inputs)
         # Pass check_inputs=False to avoid re-checking inputs
@@ -204,15 +201,16 @@ class ProcessedSymbolicVariable(object):
     def _check_and_transform(self, inputs):
         "Check dictionary has the right inputs, and convert to a vector"
         # Convert dict to casadi vector
-        if isinstance(inputs, dict):
-            # Check keys are consistent
-            if inputs.keys() != self.symbolic_input_keys:
-                raise ValueError(
-                    "Inconsistent input keys: expected {}, actual {}".format(
-                        self.symbolic_input_keys, inputs.keys()
-                    )
+        if not isinstance(inputs, dict):
+            raise TypeError("inputs should be 'dict' but are {}".format(inputs))
+        # Check keys are consistent
+        if list(inputs.keys()) != list(self.symbolic_input_keys):
+            raise ValueError(
+                "Inconsistent input keys: expected {}, actual {}".format(
+                    list(self.symbolic_input_keys), list(inputs.keys())
                 )
-            inputs = casadi.vertcat(*[p for p in inputs.values()])
+            )
+        inputs = casadi.vertcat(*[p for p in inputs.values()])
 
         return inputs
 

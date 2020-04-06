@@ -42,22 +42,25 @@ class TestProcessedSymbolicVariable(unittest.TestCase):
         np.testing.assert_array_equal(
             processed_var.value({"p": 3, "q": 4}).full(), 3 * y_sol + 4
         )
-        np.testing.assert_array_equal(processed_var.value([3, 4]).full(), 3 * y_sol + 4)
         np.testing.assert_array_equal(
             processed_var.sensitivity({"p": 3, "q": 4}).full(),
             np.c_[y_sol.T, np.ones_like(y_sol).T],
         )
 
         # via value_and_sensitivity
-        val, sens = processed_var.value_and_sensitivity([3, 4])
+        val, sens = processed_var.value_and_sensitivity({"p": 3, "q": 4})
         np.testing.assert_array_equal(val.full(), 3 * y_sol + 4)
         np.testing.assert_array_equal(
             sens.full(), np.c_[y_sol.T, np.ones_like(y_sol).T]
         )
 
-        # Test bad keys
+        # Test bad inputs
+        with self.assertRaisesRegex(TypeError, "inputs should be 'dict'"):
+            processed_var.value(1)
         with self.assertRaisesRegex(ValueError, "Inconsistent input keys"):
             processed_var.value({"not p": 3})
+        with self.assertRaisesRegex(ValueError, "Inconsistent input keys"):
+            processed_var.value({"q": 3, "p": 2})
 
     def test_processed_variable_0D_some_inputs(self):
         # with some symbolic inputs and some non-symbolic inputs
@@ -130,7 +133,6 @@ class TestProcessedSymbolicVariable(unittest.TestCase):
         processed_eqn = pybamm.ProcessedSymbolicVariable(eqn_sol, sol)
 
         # Test values
-        np.testing.assert_array_equal(processed_eqn.value([2, 3]), 2 * y_sol + 6)
         np.testing.assert_array_equal(
             processed_eqn.value({"p": 27, "q": -42}), 27 * y_sol - 84,
         )
@@ -151,7 +153,6 @@ class TestProcessedSymbolicVariable(unittest.TestCase):
         processed_eqn = pybamm.ProcessedSymbolicVariable(eqn_sol, sol)
 
         # Test values
-        np.testing.assert_array_equal(processed_eqn.value([2, 3]), 2 * y_sol + 6)
         np.testing.assert_array_equal(
             processed_eqn.value({"p": 27, "q": -42}), 27 * y_sol - 84,
         )
@@ -185,16 +186,13 @@ class TestProcessedSymbolicVariable(unittest.TestCase):
 
         # Test values - constant p
         np.testing.assert_array_equal(
-            processed_eqn.value(np.r_[2 * np.ones(n), [3]]), (2 * y_sol) ** 2 + 6
-        )
-        np.testing.assert_array_equal(
             processed_eqn.value({"p": 27 * np.ones(n), "q": -42}),
             (27 * y_sol) ** 2 - 84,
         )
         # Test values - varying p
         p = np.linspace(0, 1, n)
         np.testing.assert_array_equal(
-            processed_eqn.value(np.r_[p, [3]]), (p[:, np.newaxis] * y_sol) ** 2 + 6,
+            processed_eqn.value({"p": p, "q": 3}), (p[:, np.newaxis] * y_sol) ** 2 + 6,
         )
 
         # Test sensitivities - constant p

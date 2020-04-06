@@ -136,9 +136,9 @@ class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
         # Solve
         solver = pybamm.CasadiAlgebraicSolver()
         solution = solver.solve(model, [0], inputs={"param": "[sym]"})
-        np.testing.assert_array_equal(solution["var"].value(7), -7)
-        np.testing.assert_array_equal(solution["var"].value(3), -3)
-        np.testing.assert_array_equal(solution["var"].sensitivity(3), -1)
+        np.testing.assert_array_equal(solution["var"].value({"param": 7}), -7)
+        np.testing.assert_array_equal(solution["var"].value({"param": 3}), -3)
+        np.testing.assert_array_equal(solution["var"].sensitivity({"param": 3}), -1)
 
     def test_least_squares_fit(self):
         # Simple system: a single algebraic equation
@@ -160,14 +160,14 @@ class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
         sol_var = solution["objective"]
 
         def objective(x):
-            return sol_var.value(x).full().flatten()
+            return sol_var.value({"p": x[0], "q": x[1]}).full().flatten()
 
         # without jacobian
         lsq_sol = least_squares(objective, [2, 2], method="lm")
         np.testing.assert_array_almost_equal(lsq_sol.x, [3, 3], decimal=3)
 
         def jac(x):
-            return sol_var.sensitivity(x)
+            return sol_var.sensitivity({"p": x[0], "q": x[1]})
 
         # with jacobian
         lsq_sol = least_squares(objective, [2, 2], jac=jac, method="lm")
@@ -188,21 +188,23 @@ class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
         # Solve - scalar input
         solver = pybamm.CasadiAlgebraicSolver()
         solution = solver.solve(model, [0], inputs={"param": "[sym]"})
-        np.testing.assert_array_equal(solution["var"].value(7), -7)
-        np.testing.assert_array_equal(solution["var"].value(3), -3)
-        np.testing.assert_array_equal(solution["var"].sensitivity(3), -1)
+        np.testing.assert_array_equal(solution["var"].value({"param": 7}), -7)
+        np.testing.assert_array_equal(solution["var"].value({"param": 3}), -3)
+        np.testing.assert_array_equal(solution["var"].sensitivity({"param": 3}), -1)
 
         # Solve - vector input
         solver = pybamm.CasadiAlgebraicSolver()
         solution = solver.solve(model, [0], inputs={"param": "[sym]40"})
         p = np.linspace(0, 1, 40)[:, np.newaxis]
-        np.testing.assert_array_almost_equal(solution["var"].value(3), -3)
-        np.testing.assert_array_almost_equal(solution["var"].value(2 * p), -2 * p)
+        np.testing.assert_array_almost_equal(solution["var"].value({"param": 3}), -3)
         np.testing.assert_array_almost_equal(
-            solution["var"].sensitivity(3), -np.eye(40)
+            solution["var"].value({"param": 2 * p}), -2 * p
         )
         np.testing.assert_array_almost_equal(
-            solution["var"].sensitivity(p), -np.eye(40)
+            solution["var"].sensitivity({"param": 3}), -np.eye(40)
+        )
+        np.testing.assert_array_almost_equal(
+            solution["var"].sensitivity({"param": p}), -np.eye(40)
         )
 
 
