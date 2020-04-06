@@ -44,12 +44,10 @@ class CMakeBuild(build_ext):
     def run(self):
         cmake_args = ["-DPYTHON_EXECUTABLE={}".format(sys.executable)]
         if self.suitesparse_root:
-            print(self.suitesparse_root)
             cmake_args.append(
                 "-DSuiteSparse_ROOT={}".format(os.path.abspath(self.suitesparse_root))
             )
         if self.sundials_root:
-            print(self.sundials_root)
             cmake_args.append(
                 "-DSUNDIALS_ROOT={}".format(os.path.abspath(self.sundials_root))
             )
