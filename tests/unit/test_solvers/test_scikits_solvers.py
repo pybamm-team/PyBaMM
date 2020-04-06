@@ -343,18 +343,16 @@ class TestScikitsSolvers(unittest.TestCase):
         def nonsmooth_mult(t):
             return int(t < discontinuity) + 1.0
 
-        rate = pybamm.Function(nonsmooth_rate, pybamm.t)
-        mult = pybamm.Function(nonsmooth_mult, pybamm.t)
         # put in an extra heaviside with no time dependence, this should be ignored by
         # the solver i.e. no extra discontinuities added
-        model.rhs = {var1: rate * var1 + (var1 < 0)}
-        model.algebraic = {var2: mult * var1 - var2}
+        model.rhs = {var1: 0.1 * var1}
+        model.algebraic = {var2: 2 * var1 - var2}
         model.initial_conditions = {var1: 1, var2: 2}
         disc = get_discretisation_for_testing()
         disc.process_model(model)
 
         # Solve
-        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8, root_method="lm")
+        solver = pybamm.ScikitsDaeSolver(rtol=1e-9, atol=1e-9, root_method="lm")
 
         # create two time series, one without a time point on the discontinuity,
         # and one with
