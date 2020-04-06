@@ -9,6 +9,7 @@
 ## Bug fixes
 
 -   Reformatted electrolyte submodels ([#927](https://github.com/pybamm-team/PyBaMM/pull/927))
+-   Reformatted convection submodels ([#635](https://github.com/pybamm-team/PyBaMM/pull/635))
 
 # [v0.2.1](https://github.com/pybamm-team/PyBaMM/tree/v0.2.1) - 2020-03-31
 
