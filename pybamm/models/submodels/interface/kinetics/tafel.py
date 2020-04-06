@@ -74,8 +74,8 @@ class BackwardTafel(BaseKinetics):
     **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, reaction):
+        super().__init__(param, domain, reaction)
 
     def _get_kinetics(self, j0, ne, eta_r, T):
         return -j0 * pybamm.exp(-(ne / (2 * (1 + self.param.Theta * T))) * eta_r)

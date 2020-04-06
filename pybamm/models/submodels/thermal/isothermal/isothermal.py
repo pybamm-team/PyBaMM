@@ -27,12 +27,11 @@ class Isothermal(BaseThermal):
         T_n = pybamm.PrimaryBroadcast(T_x_av, "negative electrode")
         T_s = pybamm.PrimaryBroadcast(T_x_av, "separator")
         T_p = pybamm.PrimaryBroadcast(T_x_av, "positive electrode")
-        T = pybamm.Concatenation(T_n, T_s, T_p)
 
         T_cn = T_x_av
         T_cp = T_x_av
 
-        variables = self._get_standard_fundamental_variables(T, T_cn, T_cp)
+        variables = self._get_standard_fundamental_variables(T_cn, T_n, T_s, T_p, T_cp)
 
         return variables
 

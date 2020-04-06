@@ -1,10 +1,16 @@
-# [Unreleased](https://github.com/pybamm-team/PyBaMM)
+# [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
-## Features
+## Optimizations
 
 -   Added sensitivity to `CasadiAlgebraicSolver` ([#940](https://github.com/pybamm-team/PyBaMM/pull/940))
 -   Added `ProcessedCasadiVariable` class, which can handle symbolic variables (i.e. variables for which the inputs are symbolic) ([#940](https://github.com/pybamm-team/PyBaMM/pull/940))
 -   Made `QuickPlot` compatible with Google Colab ([#935](https://github.com/pybamm-team/PyBaMM/pull/935))
+-   Sped up model building ([#927](https://github.com/pybamm-team/PyBaMM/pull/927))
+-   Changed default solver for lead-acid to `CasadiSolver` ([#927](https://github.com/pybamm-team/PyBaMM/pull/927))
+
+## Bug fixes
+
+-   Reformatted electrolyte submodels ([#927](https://github.com/pybamm-team/PyBaMM/pull/927))
 
 # [v0.2.1](https://github.com/pybamm-team/PyBaMM/tree/v0.2.1) - 2020-03-31
 
