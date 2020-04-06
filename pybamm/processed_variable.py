@@ -220,9 +220,6 @@ class ProcessedVariable(object):
             self.x_sol = first_dim_pts
             self.z_sol = second_dim_pts
         else:
-            import ipdb
-
-            ipdb.set_trace()
             raise pybamm.DomainError(
                 "Cannot process 3D object with domain '{}' "
                 "and auxiliary_domains '{}'".format(self.domain, self.auxiliary_domains)
