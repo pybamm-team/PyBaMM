@@ -24,6 +24,7 @@ def graphite_LGM50_electrolyte_reaction_rate_Chen2020(T):
     """
 
     m_ref = 6.48e-7
-    arrhenius = exp(3500 / constants.R * (1 / 298.15 - 1 / T))
+    E_r = 35000
+    arrhenius = exp(E_r / constants.R * (1 / 298.15 - 1 / T))
 
     return m_ref * arrhenius

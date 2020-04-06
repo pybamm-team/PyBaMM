@@ -27,6 +27,7 @@ def graphite_LGM50_diffusivity_Chen2020(sto, T):
    """
 
     D_ref = 3.3e-14
-    arrhenius = exp(42770 / constants.R * (1 / 298.15 - 1 / T))
+    E_D_s = 42770
+    arrhenius = exp(E_D_s / constants.R * (1 / 298.15 - 1 / T))
 
     return D_ref * arrhenius

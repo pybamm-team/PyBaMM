@@ -33,6 +33,5 @@ Positive electrode specific heat capacity [J.kg-1.K-1],1100,Peyman MPM, cell lum
 Positive electrode thermal conductivity [W.m-1.K-1],2.1,,no info from Peyman MPM
 Positive electrode OCP entropic change [V.K-1],[function]NMC_entropic_change_PeymanMPM,
 ,,,
-# Activation energies,,,
-Reference temperature [K],298.15,25C,
+# Reaction rate,,,
 Positive electrode reaction rate,[function]NMC_electrolyte_reaction_rate_PeymanMPM,,
