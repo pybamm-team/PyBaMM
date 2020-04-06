@@ -20,8 +20,8 @@ class FirstOrder(BaseElectrolyteDiffusion):
     **Extends:** :class:`pybamm.electrolyte_diffusion.BaseElectrolyteDiffusion`
     """
 
-    def __init__(self, param, reactions):
-        super().__init__(param, reactions)
+    def __init__(self, param):
+        super().__init__(param)
 
     def get_coupled_variables(self, variables):
         param = self.param
@@ -56,20 +56,39 @@ class FirstOrder(BaseElectrolyteDiffusion):
         d_epsc_p_0_dt = c_e_0 * deps_p_0_dt + eps_p_0 * dc_e_0_dt
 
         # Right-hand sides
-        rhs_n = d_epsc_n_0_dt - sum(
-            (reaction["Negative"]["s"] - param.t_plus(c_e_0))
-            * variables[
-                "Leading-order x-averaged " + reaction["Negative"]["aj"].lower()
-            ]
-            for reaction in self.reactions.values()
+        # All possible reactions. Some of these could be zero
+        j_n_0 = variables[
+            "Leading-order x-averaged negative electrode interfacial current density"
+        ]
+        j_p_0 = variables[
+            "Leading-order x-averaged positive electrode interfacial current density"
+        ]
+        j_ox_n_0 = variables[
+            "Leading-order x-averaged negative electrode "
+            "oxygen interfacial current density"
+        ]
+        j_ox_p_0 = variables[
+            "Leading-order x-averaged positive electrode "
+            "oxygen interfacial current density"
+        ]
+        rhs_n = (
+            d_epsc_n_0_dt
+            - (
+                -param.s_plus_n_S * j_n_0
+                - param.s_plus_Ox * j_ox_n_0
+                - param.t_plus(c_e_0) * (j_n_0 + j_ox_n_0)
+            )
+            / param.gamma_e
         )
         rhs_s = d_epsc_s_0_dt
-        rhs_p = d_epsc_p_0_dt - sum(
-            (reaction["Positive"]["s"] - param.t_plus(c_e_0))
-            * variables[
-                "Leading-order x-averaged " + reaction["Positive"]["aj"].lower()
-            ]
-            for reaction in self.reactions.values()
+        rhs_p = (
+            d_epsc_p_0_dt
+            - (
+                -param.s_plus_p_S * j_p_0
+                - param.s_plus_Ox * j_ox_p_0
+                - param.t_plus(c_e_0) * (j_p_0 + j_ox_p_0)
+            )
+            / param.gamma_e
         )
 
         # Diffusivities

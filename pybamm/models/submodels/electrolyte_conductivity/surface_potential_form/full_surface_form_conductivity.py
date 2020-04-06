@@ -22,8 +22,8 @@ class BaseModel(BaseElectrolyteConductivity):
     **Extends:** :class:`pybamm.electrolyte_conductivity.BaseElectrolyteConductivity`
     """
 
-    def __init__(self, param, domain, reactions):
-        super().__init__(param, domain, reactions)
+    def __init__(self, param, domain):
+        super().__init__(param, domain)
 
     def get_fundamental_variables(self):
         if self.domain == "Negative":
@@ -222,8 +222,8 @@ class FullAlgebraic(BaseModel):
      **Extends:** :class:`pybamm.electrolyte_conductivity.surface_potential_form.BaseFull`
     """  # noqa: E501
 
-    def __init__(self, param, domain, reactions):
-        super().__init__(param, domain, reactions)
+    def __init__(self, param, domain):
+        super().__init__(param, domain)
 
     def set_algebraic(self, variables):
         if self.domain == "Separator":
@@ -231,10 +231,12 @@ class FullAlgebraic(BaseModel):
 
         delta_phi = variables[self.domain + " electrode surface potential difference"]
         i_e = variables[self.domain + " electrolyte current density"]
-        sum_j = sum(
-            variables[reaction[self.domain]["aj"]]
-            for reaction in self.reactions.values()
-        )
+
+        # All possible reactions. Some of these could be zero
+        j = variables[self.domain + " electrode interfacial current density"]
+        j_ox = variables[self.domain + " electrode oxygen interfacial current density"]
+
+        sum_j = j + j_ox
         self.algebraic[delta_phi] = pybamm.div(i_e) - sum_j
 
 
@@ -253,8 +255,8 @@ class FullDifferential(BaseModel):
 
     """  # noqa: E501
 
-    def __init__(self, param, domain, reactions):
-        super().__init__(param, domain, reactions)
+    def __init__(self, param, domain):
+        super().__init__(param, domain)
 
     def set_rhs(self, variables):
         if self.domain == "Separator":
@@ -267,9 +269,11 @@ class FullDifferential(BaseModel):
 
         delta_phi = variables[self.domain + " electrode surface potential difference"]
         i_e = variables[self.domain + " electrolyte current density"]
-        sum_j = sum(
-            variables[reaction[self.domain]["aj"]]
-            for reaction in self.reactions.values()
-        )
+
+        # All possible reactions. Some of these could be zero
+        j = variables[self.domain + " electrode interfacial current density"]
+        j_ox = variables[self.domain + " electrode oxygen interfacial current density"]
+
+        sum_j = j + j_ox
 
         self.rhs[delta_phi] = 1 / C_dl * (pybamm.div(i_e) - sum_j)

@@ -30,6 +30,8 @@ class BaseInterface(pybamm.BaseSubModel):
             self.reaction_name = ""  # empty reaction name for the main reaction
         elif reaction == "lead-acid oxygen":
             self.reaction_name = " oxygen"
+        elif reaction == "lithium-ion oxygen":
+            self.reaction_name = " oxygen"
 
     def _get_exchange_current_density(self, variables):
         """
@@ -86,6 +88,8 @@ class BaseInterface(pybamm.BaseSubModel):
                 j0 = pybamm.Scalar(0)
             elif self.domain == "Positive":
                 j0 = self.param.j0_p_Ox_ref * c_e  # ** self.param.exponent_e_Ox
+        else:
+            j0 = pybamm.Scalar(0)
 
         return j0
 
@@ -142,6 +146,10 @@ class BaseInterface(pybamm.BaseSubModel):
                 ocp = self.param.U_p_Ox
             dUdT = pybamm.Scalar(0)
 
+        else:
+            ocp = pybamm.Scalar(0)
+            dUdT = pybamm.Scalar(0)
+
         return ocp, dUdT
 
     def _get_number_of_electrons_in_reaction(self):
@@ -153,6 +161,8 @@ class BaseInterface(pybamm.BaseSubModel):
                 return self.param.ne_p
         elif self.reaction == "lead-acid oxygen":
             return self.param.ne_Ox
+        else:
+            return pybamm.Scalar(0)
 
     def _get_delta_phi(self, variables):
         "Calculate delta_phi, and derived variables, using phi_s and phi_e"

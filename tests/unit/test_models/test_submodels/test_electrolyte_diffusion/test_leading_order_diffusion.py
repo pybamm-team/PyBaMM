@@ -34,7 +34,7 @@ class TestLeadingOrder(unittest.TestCase):
             "X-averaged positive electrode interfacial current density": a,
             "X-averaged separator transverse volume-averaged acceleration": a,
         }
-        submodel = pybamm.electrolyte_diffusion.LeadingOrder(param, reactions)
+        submodel = pybamm.electrolyte_diffusion.LeadingOrder(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

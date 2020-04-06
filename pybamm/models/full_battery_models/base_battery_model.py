@@ -196,8 +196,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         ):
             if len(options["side reactions"]) > 0:
                 raise pybamm.OptionError(
-                    """
-                    must use surface formulation to solve {!s} with side reactions
+                    """must use surface formulation to solve {!s} with side reactions
                     """.format(
                         self
                     )

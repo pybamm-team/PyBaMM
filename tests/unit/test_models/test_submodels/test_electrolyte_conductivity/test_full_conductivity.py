@@ -29,7 +29,7 @@ class TestFull(unittest.TestCase):
                 "Positive": {"s": 1, "aj": "Positive electrode" + icd},
             }
         }
-        submodel = pybamm.electrolyte_conductivity.Full(param, reactions)
+        submodel = pybamm.electrolyte_conductivity.Full(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

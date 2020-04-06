@@ -47,7 +47,7 @@ class TestFull(unittest.TestCase):
                 },
             }
         }
-        submodel = pybamm.oxygen_diffusion.Full(param, reactions)
+        submodel = pybamm.oxygen_diffusion.Full(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

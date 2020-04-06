@@ -38,6 +38,7 @@ class DFN(BaseModel):
         self.set_tortuosity_submodels()
         self.set_convection_submodel()
         self.set_interfacial_submodel()
+        self.set_other_reaction_submodels_to_zero()
         self.set_particle_submodel()
         self.set_solid_submodel()
         self.set_electrolyte_submodel()

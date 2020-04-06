@@ -19,8 +19,8 @@ class Full(BaseModel):
     **Extends:** :class:`pybamm.electrode.ohm.BaseModel`
     """
 
-    def __init__(self, param, domain, reactions):
-        super().__init__(param, domain, reactions)
+    def __init__(self, param, domain):
+        super().__init__(param, domain)
 
     def get_fundamental_variables(self):
 
@@ -59,10 +59,12 @@ class Full(BaseModel):
 
         phi_s = variables[self.domain + " electrode potential"]
         i_s = variables[self.domain + " electrode current density"]
-        sum_j = sum(
-            variables[reaction[self.domain]["aj"]]
-            for reaction in self.reactions.values()
-        )
+
+        # All possible reactions. Some of these could be zero
+        j = variables[self.domain + " electrode interfacial current density"]
+        j_ox = variables[self.domain + " electrode oxygen interfacial current density"]
+
+        sum_j = j + j_ox
 
         self.algebraic[phi_s] = pybamm.div(i_s) + sum_j
 

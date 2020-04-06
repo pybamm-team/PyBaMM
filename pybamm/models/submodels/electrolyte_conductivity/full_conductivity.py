@@ -21,8 +21,8 @@ class Full(BaseElectrolyteConductivity):
     **Extends:** :class:`pybamm.electrolyte_conductivity.BaseElectrolyteConductivity`
     """
 
-    def __init__(self, param, reactions):
-        super().__init__(param, reactions=reactions)
+    def __init__(self, param):
+        super().__init__(param)
 
     def get_fundamental_variables(self):
         phi_e_n = pybamm.standard_variables.phi_e_n
@@ -51,14 +51,12 @@ class Full(BaseElectrolyteConductivity):
     def set_algebraic(self, variables):
         phi_e = variables["Electrolyte potential"]
         i_e = variables["Electrolyte current density"]
-        sum_j = sum(
-            pybamm.Concatenation(
-                variables[reaction["Negative"]["aj"]],
-                pybamm.FullBroadcast(0, "separator", "current collector"),
-                variables[reaction["Positive"]["aj"]],
-            )
-            for reaction in self.reactions.values()
-        )
+
+        # All possible reactions. Some of these could be zero
+        j = variables["Interfacial current density"]
+        j_ox = variables["Oxygen interfacial current density"]
+
+        sum_j = j + j_ox
 
         self.algebraic = {phi_e: pybamm.div(i_e) - sum_j}
 

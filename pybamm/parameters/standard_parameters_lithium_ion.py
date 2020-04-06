@@ -90,6 +90,9 @@ b_s_s = pybamm.geometric_parameters.b_s_s
 b_s_p = pybamm.geometric_parameters.b_s_p
 
 # Electrochemical reactions
+s_plus_n_S = -1
+s_plus_p_S = -1
+s_plus_S = -1
 ne_n = pybamm.Parameter("Negative electrode electrons in reaction")
 ne_p = pybamm.Parameter("Positive electrode electrons in reaction")
 C_dl_n_dimensional = pybamm.Parameter(
@@ -98,6 +101,8 @@ C_dl_n_dimensional = pybamm.Parameter(
 C_dl_p_dimensional = pybamm.Parameter(
     "Positive electrode double-layer capacity [F.m-2]"
 )
+# Oxygen parameters, for reusing same submodels as lead-acid
+s_plus_Ox = 0
 
 
 # Initial conditions
