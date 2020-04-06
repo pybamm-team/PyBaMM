@@ -329,6 +329,43 @@ class TestScikitsSolvers(unittest.TestCase):
             np.testing.assert_allclose(solution.y[0], var1_soln, rtol=1e-06)
             np.testing.assert_allclose(solution.y[-1], var2_soln, rtol=1e-06)
 
+    def test_model_solver_dae_no_nonsmooth_python(self):
+        model = pybamm.BaseModel()
+        model.convert_to_format = "python"
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var1 = pybamm.Variable("var1", domain=whole_cell)
+        var2 = pybamm.Variable("var2", domain=whole_cell)
+        discontinuity = 5.6
+
+        def nonsmooth_rate(t):
+            return 0.1 * int(t < discontinuity) + 0.1
+
+        def nonsmooth_mult(t):
+            return int(t < discontinuity) + 1.0
+
+        rate = pybamm.Function(nonsmooth_rate, pybamm.t)
+        mult = pybamm.Function(nonsmooth_mult, pybamm.t)
+        # put in an extra heaviside with no time dependence, this should be ignored by
+        # the solver i.e. no extra discontinuities added
+        model.rhs = {var1: rate * var1 + (var1 < 0)}
+        model.algebraic = {var2: mult * var1 - var2}
+        model.initial_conditions = {var1: 1, var2: 2}
+        disc = get_discretisation_for_testing()
+        disc.process_model(model)
+
+        # Solve
+        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8, root_method="lm")
+
+        # create two time series, one without a time point on the discontinuity,
+        # and one with
+        t_eval = np.linspace(0, 5, 10)
+        solution = solver.solve(model, t_eval)
+
+        # test solution, discontinuity should not be triggered
+        np.testing.assert_array_equal(solution.t, t_eval)
+        np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
+        np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
+
     def test_model_solver_dae_with_jacobian_python(self):
         model = pybamm.BaseModel()
         model.convert_to_format = "python"
