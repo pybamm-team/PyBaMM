@@ -19,9 +19,9 @@ class BaseThermal(pybamm.BaseSubModel):
     def __init__(self, param):
         super().__init__(param)
 
-    def _get_standard_fundamental_variables(self, T, T_cn, T_cp):
+    def _get_standard_fundamental_variables(self, T_cn, T_n, T_s, T_p, T_cp):
         param = self.param
-        T_n, T_s, T_p = T.orphans
+        T = pybamm.Concatenation(T_n, T_s, T_p)
 
         # Compute the X-average over the current collectors by default.
         # Note: the method 'self._x_average' is overwritten by models which do
@@ -35,24 +35,25 @@ class BaseThermal(pybamm.BaseSubModel):
 
         q = self._flux_law(T)
 
+        T_n_av = pybamm.x_average(T_n)
+        T_s_av = pybamm.x_average(T_s)
+        T_p_av = pybamm.x_average(T_p)
+
         variables = {
             "Negative current collector temperature": T_cn,
             "Negative current collector temperature [K]": param.Delta_T * T_cn,
-            "X-averaged negative electrode temperature": pybamm.x_average(T_n),
-            "X-averaged negative electrode temperature [K]": param.Delta_T
-            * pybamm.x_average(T_n)
+            "X-averaged negative electrode temperature": T_n_av,
+            "X-averaged negative electrode temperature [K]": param.Delta_T * T_n_av
             + param.T_ref,
             "Negative electrode temperature": T_n,
             "Negative electrode temperature [K]": param.Delta_T * T_n + param.T_ref,
-            "X-averaged separator temperature": pybamm.x_average(T_s),
-            "X-averaged separator temperature [K]": param.Delta_T
-            * pybamm.x_average(T_s)
+            "X-averaged separator temperature": T_s_av,
+            "X-averaged separator temperature [K]": param.Delta_T * T_s_av
             + param.T_ref,
             "Separator temperature": T_s,
             "Separator temperature [K]": param.Delta_T * T_s + param.T_ref,
-            "X-averaged positive electrode temperature": pybamm.x_average(T_p),
-            "X-averaged positive electrode temperature [K]": param.Delta_T
-            * pybamm.x_average(T_p)
+            "X-averaged positive electrode temperature": T_p_av,
+            "X-averaged positive electrode temperature [K]": param.Delta_T * T_p_av
             + param.T_ref,
             "Positive electrode temperature": T_p,
             "Positive electrode temperature [K]": param.Delta_T * T_p + param.T_ref,
