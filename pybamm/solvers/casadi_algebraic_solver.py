@@ -48,7 +48,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         inputs : dict, optional
             Any input parameters to pass to the model when solving. If this contains
             symbolic variables (e.g. via the keyword [sym]), then the solution will
-            consist of `ProcessedCasadiVariable` objects, whose sensitivity can be
+            consist of `ProcessedSymbolicVariable` objects, whose sensitivity can be
             evaluated.
         """
         y0 = model.y0

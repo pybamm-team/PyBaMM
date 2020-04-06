@@ -155,9 +155,9 @@ class _BaseSolution(object):
         for key in variables:
             pybamm.logger.debug("Post-processing {}".format(key))
             # If there are symbolic inputs then we need to make a
-            # ProcessedCasadiVariable
+            # ProcessedSymbolicVariable
             if self.has_symbolic_inputs is True:
-                var = pybamm.ProcessedCasadiVariable(self.model.variables[key], self)
+                var = pybamm.ProcessedSymbolicVariable(self.model.variables[key], self)
 
             # Otherwise a standard ProcessedVariable is ok
             else:

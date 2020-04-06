@@ -6,7 +6,7 @@ import numbers
 import numpy as np
 
 
-class ProcessedCasadiVariable(object):
+class ProcessedSymbolicVariable(object):
     """
     An object that can be evaluated at arbitrary (scalars or vectors) t and x, and
     returns the (interpolated) value of the base variable at that t and x.
@@ -174,7 +174,7 @@ class ProcessedCasadiVariable(object):
         Parameters
         ----------
         inputs : float, array-like, or dict
-            See :meth:`ProcessedCasadiVariable.values`
+            See :meth:`ProcessedSymbolicVariable.values`
         """
         if self.casadi_sens_fn is None:
             raise ValueError(
@@ -192,7 +192,7 @@ class ProcessedCasadiVariable(object):
         Parameters
         ----------
         inputs : float, array-like, or dict
-            See :meth:`ProcessedCasadiVariable.values`
+            See :meth:`ProcessedSymbolicVariable.values`
         """
         inputs = self._check_and_transform(inputs)
         # Pass check_inputs=False to avoid re-checking inputs
@@ -220,4 +220,3 @@ class ProcessedCasadiVariable(object):
     def data(self):
         "Same as entries, but different name"
         return self.entries
-

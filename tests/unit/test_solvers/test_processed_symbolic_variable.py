@@ -9,7 +9,7 @@ import unittest
 import tests
 
 
-class TestProcessedCasadiVariable(unittest.TestCase):
+class TestProcessedSymbolicVariable(unittest.TestCase):
     def test_processed_variable_0D(self):
         # without inputs
         y = pybamm.StateVector(slice(0, 1))
@@ -19,7 +19,7 @@ class TestProcessedCasadiVariable(unittest.TestCase):
         t_sol = np.linspace(0, 1)
         y_sol = np.array([np.linspace(0, 5)])
         solution = pybamm.Solution(t_sol, y_sol)
-        processed_var = pybamm.ProcessedCasadiVariable(var, solution)
+        processed_var = pybamm.ProcessedSymbolicVariable(var, solution)
         np.testing.assert_array_equal(processed_var.value(), 2 * y_sol)
 
         # No sensitivity as variable is not symbolic
@@ -38,7 +38,7 @@ class TestProcessedCasadiVariable(unittest.TestCase):
         y_sol = np.array([np.linspace(0, 5)])
         solution = pybamm.Solution(t_sol, y_sol)
         solution.inputs = {"p": casadi.MX.sym("p"), "q": casadi.MX.sym("q")}
-        processed_var = pybamm.ProcessedCasadiVariable(var, solution)
+        processed_var = pybamm.ProcessedSymbolicVariable(var, solution)
         np.testing.assert_array_equal(
             processed_var.value({"p": 3, "q": 4}).full(), 3 * y_sol + 4
         )
@@ -71,7 +71,7 @@ class TestProcessedCasadiVariable(unittest.TestCase):
         y_sol = np.array([np.linspace(0, 5)])
         solution = pybamm.Solution(t_sol, y_sol)
         solution.inputs = {"p": casadi.MX.sym("p"), "q": 2}
-        processed_var = pybamm.ProcessedCasadiVariable(var, solution)
+        processed_var = pybamm.ProcessedSymbolicVariable(var, solution)
         np.testing.assert_array_equal(
             processed_var.value({"p": 3}).full(), 3 * y_sol - 2
         )
@@ -94,7 +94,7 @@ class TestProcessedCasadiVariable(unittest.TestCase):
         t_sol = [0]
         y_sol = np.ones_like(x_sol)[:, np.newaxis] * 5
         sol = pybamm.Solution(t_sol, y_sol)
-        processed_eqn = pybamm.ProcessedCasadiVariable(eqn_sol, sol)
+        processed_eqn = pybamm.ProcessedSymbolicVariable(eqn_sol, sol)
         np.testing.assert_array_equal(
             processed_eqn.value(), y_sol + x_sol[:, np.newaxis]
         )
@@ -103,7 +103,7 @@ class TestProcessedCasadiVariable(unittest.TestCase):
         t_sol = np.linspace(0, 1)
         y_sol = np.ones_like(x_sol)[:, np.newaxis] * np.linspace(0, 5)
         sol = pybamm.Solution(t_sol, y_sol)
-        processed_eqn = pybamm.ProcessedCasadiVariable(eqn_sol, sol)
+        processed_eqn = pybamm.ProcessedSymbolicVariable(eqn_sol, sol)
         np.testing.assert_array_equal(
             processed_eqn.value(), y_sol + x_sol[:, np.newaxis]
         )
@@ -127,7 +127,7 @@ class TestProcessedCasadiVariable(unittest.TestCase):
 
         sol = pybamm.Solution(t_sol, y_sol)
         sol.inputs = {"p": casadi.MX.sym("p"), "q": casadi.MX.sym("q")}
-        processed_eqn = pybamm.ProcessedCasadiVariable(eqn_sol, sol)
+        processed_eqn = pybamm.ProcessedSymbolicVariable(eqn_sol, sol)
 
         # Test values
         np.testing.assert_array_equal(processed_eqn.value([2, 3]), 2 * y_sol + 6)
@@ -148,7 +148,7 @@ class TestProcessedCasadiVariable(unittest.TestCase):
 
         sol = pybamm.Solution(t_sol, y_sol)
         sol.inputs = {"p": casadi.MX.sym("p"), "q": casadi.MX.sym("q")}
-        processed_eqn = pybamm.ProcessedCasadiVariable(eqn_sol, sol)
+        processed_eqn = pybamm.ProcessedSymbolicVariable(eqn_sol, sol)
 
         # Test values
         np.testing.assert_array_equal(processed_eqn.value([2, 3]), 2 * y_sol + 6)
@@ -181,7 +181,7 @@ class TestProcessedCasadiVariable(unittest.TestCase):
         y_sol = np.ones_like(x_sol)[:, np.newaxis] * 5
         sol = pybamm.Solution(t_sol, y_sol)
         sol.inputs = {"p": casadi.MX.sym("p", n), "q": casadi.MX.sym("q")}
-        processed_eqn = pybamm.ProcessedCasadiVariable(eqn_sol, sol)
+        processed_eqn = pybamm.ProcessedSymbolicVariable(eqn_sol, sol)
 
         # Test values - constant p
         np.testing.assert_array_equal(
@@ -224,7 +224,7 @@ class TestProcessedCasadiVariable(unittest.TestCase):
         t_sol = [0]
         y_sol = np.ones_like(x_sol)[:, np.newaxis] * 5
         sol = pybamm.Solution(t_sol, y_sol)
-        pybamm.ProcessedCasadiVariable(var_sol, sol)
+        pybamm.ProcessedSymbolicVariable(var_sol, sol)
 
         # Particle domain
         var = pybamm.Variable("var", domain=["negative particle"])
@@ -238,7 +238,7 @@ class TestProcessedCasadiVariable(unittest.TestCase):
         t_sol = [0]
         y_sol = np.ones_like(r_sol)[:, np.newaxis] * 5
         sol = pybamm.Solution(t_sol, y_sol)
-        pybamm.ProcessedCasadiVariable(var_sol, sol)
+        pybamm.ProcessedSymbolicVariable(var_sol, sol)
 
         # Current collector domain
         var = pybamm.Variable("var", domain=["current collector"])
@@ -252,7 +252,7 @@ class TestProcessedCasadiVariable(unittest.TestCase):
         t_sol = [0]
         y_sol = np.ones_like(z_sol)[:, np.newaxis] * 5
         sol = pybamm.Solution(t_sol, y_sol)
-        pybamm.ProcessedCasadiVariable(var_sol, sol)
+        pybamm.ProcessedSymbolicVariable(var_sol, sol)
 
         # Other domain
         var = pybamm.Variable("var", domain=["line"])
@@ -276,7 +276,7 @@ class TestProcessedCasadiVariable(unittest.TestCase):
         t_sol = [0]
         y_sol = np.ones_like(x_sol)[:, np.newaxis] * 5
         sol = pybamm.Solution(t_sol, y_sol)
-        pybamm.ProcessedCasadiVariable(var_sol, sol)
+        pybamm.ProcessedSymbolicVariable(var_sol, sol)
 
         # 2D fails
         var = pybamm.Variable(
@@ -299,7 +299,7 @@ class TestProcessedCasadiVariable(unittest.TestCase):
         y_sol = np.ones_like(r_sol)[:, np.newaxis] * 5
         sol = pybamm.Solution(t_sol, y_sol)
         with self.assertRaisesRegex(NotImplementedError, "Shape not recognized"):
-            pybamm.ProcessedCasadiVariable(var_sol, sol)
+            pybamm.ProcessedSymbolicVariable(var_sol, sol)
 
 
 if __name__ == "__main__":

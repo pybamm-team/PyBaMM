@@ -4,5 +4,5 @@ Post-Process Variables
 .. autoclass:: pybamm.ProcessedVariable
   :members:
 
-.. autoclass:: pybamm.ProcessedCasadiVariable
+.. autoclass:: pybamm.ProcessedSymbolicVariable
   :members:
