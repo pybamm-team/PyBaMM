@@ -9,19 +9,19 @@ class TestMohtat(unittest.TestCase):
     def test_load_params(self):
         anode = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/" +
-                "anodes/graphite_UMBL_Mohtat2020/parameters.csv"
+                "input/parameters/lithium-ion/"
+                + "anodes/graphite_UMBL_Mohtat2020/parameters.csv"
             )
         )
-        self.assertEqual(anode["Reference temperature [K]"], "298.15")
+        self.assertEqual(anode["Negative electrode porosity"], "0.3")
 
         cathode = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/" +
-                "cathodes/NMC_UMBL_Mohtat2020/parameters.csv"
+                "input/parameters/lithium-ion/"
+                + "cathodes/NMC_UMBL_Mohtat2020/parameters.csv"
             )
         )
-        self.assertEqual(cathode["Reference temperature [K]"], "298.15")
+        self.assertEqual(cathode["Positive electrode porosity"], "0.3")
 
         electrolyte = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
@@ -29,7 +29,7 @@ class TestMohtat(unittest.TestCase):
                 + "parameters.csv"
             )
         )
-        self.assertEqual(electrolyte["Reference temperature [K]"], "298.15")
+        self.assertEqual(electrolyte["Cation transference number"], "0.38")
 
         cell = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
