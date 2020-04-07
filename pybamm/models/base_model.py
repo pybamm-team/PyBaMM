@@ -121,6 +121,9 @@ class BaseModel(object):
         self.use_simplify = True
         self.convert_to_format = "casadi"
 
+        # Model is not initially discretised
+        self.is_discretised = False
+
         # Default timescale is 1 second
         self.timescale = pybamm.Scalar(1)
 

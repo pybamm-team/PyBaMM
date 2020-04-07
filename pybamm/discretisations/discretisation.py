@@ -203,6 +203,9 @@ class Discretisation(object):
 
         pybamm.logger.info("Finish discretising {}".format(model.name))
 
+        # Record that the model has been discretised
+        model_disc.is_discretised = True
+
         return model_disc
 
     def set_variable_slices(self, variables):
