@@ -1,34 +1,31 @@
 # PyBaMM developer install - The KLU sparse solver
 If you wish so simulate large systems such as the 2+1D models, we recommend employing a
 sparse solver.
-PyBaMM currently offers a direct interface to the sparse KLU solver within Sundials.
-
-When installing PyBaMM from source (e.g. from the GitHub repository), the KLU sparse solver must
+PyBaMM currently offers a direct interface to the sparse KLU solver within Sundials, in the form of a C++
+python extension module.
+When installing PyBaMM from source (e.g. from the GitHub repository), the KLU sparse solver module must
 be compiled.
+Running `pip install .` or `python setup.py install ` in the PyBaMM directory will result in a attempt to compile the KLU module.
 
-_In the following we call "project directory" the directory containing the file_ `setup.py`.
-
-Running `pip install .` in the project directory will result in a attempt to compile the
-KLU solver.
 Note that if CMake of pybind11 are not found (see below), the installation of PyBaMM will carry on, however skipping
-the compilation of the `idaklu` module. This allows developers not interesting in the KLU module to install PyBaMM from source
-without having to install the dependencies necessary to compile it.
+the compilation of the `idaklu` module. This allows developers that are not interested in the KLU module to install PyBaMM from source without having to install the required dependencies.
 
-To build and install the KLU solver as part of your PyBaMM installation, you will need:
-+ A C++ compiler (e.g. `g++`)
-+ The python 3 header files
-+ [CMake](https://cmake.org/)
-+ A BLAS implementation (e.g. [openblas](https://www.openblas.net/))
-+ [pybind11](https://github.com/pybind/pybind11)
-+ [sundials](https://computing.llnl.gov/projects/sundials)
-+ [SuiteSparse](http://faculty.cse.tamu.edu/davis/suitesparse.html)
+To build the KLU solver, the following dependencies are required:
 
-The first four dependencies should be available through your package manager.
-Please raise an issue if not!
-For instance on Ubuntu/Debian:
+- A C++ compiler (e.g. `g++`)
+- A Fortran compiler (e.g. `gfortran`)
+- The python 3 header files
+- [CMake](https://cmake.org/)
+- A BLAS implementation (e.g. [openblas](https://www.openblas.net/))
+- [pybind11](https://github.com/pybind/pybind11)
+- [sundials](https://computing.llnl.gov/projects/sundials)
+- [SuiteSparse](http://faculty.cse.tamu.edu/davis/suitesparse.html)
+
+The first four should be available through your favourite package manager.
+On Debian-based GNU/Linux distributions:
 ```bash
 apt update
-apt install python3-dev gcc cmake libopenblas-dev
+apt install python3-dev gcc gfortran cmake libopenblas-dev
 ```
 
 ## pybind11
@@ -36,29 +33,38 @@ The pybind11 source directory should be located in the PyBaMM project directory 
 compilation.
 Simply clone the GitHub repository, for example:
 ```bash
-# In the project dir (next to setup.py)
+# In the PyBaMM project dir (next to setup.py)
 git clone https://github.com/pybind/pybind11.git
 ```
-Should this directory not be present,
-
 ## SuiteSparse and sundials
 ### Method 1 - Using the convenience script
 The PyBaMM repository contains a script `scripts/setup_KLU_module_build.py` that automatically
 downloads, extracts, compiles and installs the two libraries.
-The resulting files are located inside the PyBaMM project directory under `KLU_module_deps/`.
+
+First install the Python `wget` module
 ```
+pip install wget
+```
+Then execute the script
+```
+# In the PyBaMM project dir (next to setup.py)
 python scripts/setup_KLU_module_build.py
 ```
+The resulting files are located inside the PyBaMM project directory under `KLU_module_deps/`.
 
-### Method 2 - Install from package manager
+### Method 2 - Compiling Sundials (advanced)
+
+#### SuiteSparse
 On most current linux distributions and macOS, a recent enough version of
 the suitesparse source package is available through the package manager.
 For instance on Fedora
 ```
 yum install libsuitesparse-dev
 ```
-The PyBaMM KLU solver depends on the version of sundials being _at least_ 4.0.0, and unfortunately such requirement is _not available though most distribution's package managers_.
-As a result the sundials library must be compiled manually.
+
+#### Sundials
+The PyBaMM KLU solver requires Sundials >= 4.0. Because most Linux distribution provide older versions through
+their respective package manager, it is recommended to build and install Sundials manually.
 
 First, download and extract the sundials 5.0.0 source
 ```
@@ -86,14 +92,13 @@ cmake -DLAPACK_ENABLE=ON\
       ../sundials-5.0.0
 ```
 Be careful set the two variables `KLU_INCLUDE_DIR` and `KLU_LIBRARY_DIR`
-to the correct installation location on your system.
-If you installed SuiteSparse through your package manager, this is likely to be something of
-the type:
+to the correct installation location of the SuiteSparse libary on your system.
+If you installed SuiteSparse through your package manager, this is likely to be something similar to:
 ```
 -DKLU_INCLUDE_DIR=/usr/include/suitesparse\
 -DKLU_LIBRARY_DIR=/usr/lib/x86_64-linux-gnu\
 ```
-By default sundials will be installed on your system under `/usr/local` (this varies depending on the
+By default, Sundials will be installed on your system under `/usr/local` (this varies depending on the
 distribution).
 Should you wish to install sundials in a specific location, set the following variable
 ```
@@ -105,7 +110,7 @@ make install
 ```
 You may be asked to run this command as a super-user, depending on the installation location.
 
-### Alternative installation location
+#### Alternative installation location
 By default, commands relying on the `setup.py` like `pip install .` and  `python setup.py install`
 will look for SuiteSparse and sundials in directories `KLU_module_deps/SuiteSparse-5.6.0` and
 `KLU_module_deps/sundials5`, respectively.
@@ -133,23 +138,18 @@ python setup.py install
 python setup.py develop
 ...
 ```
-It doesn't matter if pybamm is already installed. The above command will update your installation by adding the `idaklu` module.
+Note that it doesn't matter if pybamm is already installed. The above commands will update your exisitng installation by adding the `idaklu` module.
 
 ## Check that the solver is correctly installed
-If you think that there is a problem with the installation or want to check that everything ran smoothly, check the log file `setup.log`.
-This file can be found in the PyBaMM installation directory, usually
+If you install PyBaMM in [editable mode](https://pip.pypa.io/en/stable/reference/pip_install/#editable-installs) using the `-e` pip switch or if you use the `python setup.py install` command, a log file will be located in the project directory (next to the `setup.py` file).
 ```
-path/to/your/venv/lib/pythonX.Y/site-packages/pybamm
-```
-where `path/to/your/venv` is your virtual environment directory.
-Alternatively, if you install PyBaMM in [editable mode](https://pip.pypa.io/en/stable/reference/pip_install/#editable-installs) using the `-e` pip switch or `develop` command, the log file will be located in the project directory (next to the `setup.py` file).
-```
-cat setup.og
+cat setup.log
 020-03-24 11:33:50,645 - PyBaMM setup - INFO - Starting PyBaMM setup
 2020-03-24 11:33:50,653 - PyBaMM setup - INFO - Not running on windows
 2020-03-24 11:33:50,654 - PyBaMM setup - INFO - Could not find CMake. Skipping compilation of KLU module.
 2020-03-24 11:33:50,655 - PyBaMM setup - INFO - Could not find pybind11 directory (/io/pybind11). Skipping compilation of KLU module.
 ```
+
 If the KLU sparse solver is correctly installed, then the following command
 should return `True`.
 ```
