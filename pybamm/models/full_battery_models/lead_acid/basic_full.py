@@ -283,4 +283,3 @@ class BasicFull(BaseModel):
                 pybamm.Event("Maximum voltage", voltage - param.voltage_high_cut),
             ]
         )
-
