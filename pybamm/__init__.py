@@ -158,6 +158,7 @@ from .geometry import standard_spatial_vars
 # Parameters class and methods
 #
 from .parameters.parameter_values import ParameterValues
+from .parameters import constants
 from .parameters import geometric_parameters
 from .parameters import electrical_parameters
 from .parameters import thermal_parameters

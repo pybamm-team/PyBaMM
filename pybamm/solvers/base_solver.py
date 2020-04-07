@@ -571,6 +571,13 @@ class BaseSolver(object):
             and v > 0
         ]
 
+        # remove any discontinuities after end of t_eval
+        discontinuities = [
+            v
+            for v in discontinuities
+            if v < t_eval_dimensionless[-1]
+        ]
+
         if len(discontinuities) > 0:
             pybamm.logger.info(
                 "Discontinuity events found at t = {}".format(discontinuities)

@@ -12,7 +12,7 @@ def NMC_ocp_PeymanMPM(sto):
 
     Parameters
     ----------
-    sto: double
+    sto : :class:`pybamm.Symbol`
        Stochiometry of material (li-fraction)
 
     """
