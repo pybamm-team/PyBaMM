@@ -940,6 +940,14 @@ class Discretisation(object):
 
             return new_symbol
 
+        elif isinstance(symbol, pybamm.InputParameter):
+            # Return a new copy of the input parameter, but set the expected size
+            # according to the domain of the input parameter
+            expected_size = self._get_variable_size(symbol)
+            new_input_parameter = symbol.new_copy()
+            new_input_parameter.set_expected_size(expected_size)
+            return new_input_parameter
+
         else:
             # Backup option: return new copy of the object
             try:

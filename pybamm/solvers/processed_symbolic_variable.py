@@ -50,7 +50,8 @@ class ProcessedSymbolicVariable(object):
         self.t_sol = solution.t
         self.u_sol = solution.y
         self.mesh = base_variable.mesh
-        self.symbolic_input_keys = symbolic_inputs_dict.keys()
+        self.symbolic_inputs_dict = symbolic_inputs_dict
+        self.symbolic_inputs_total_shape = symbolic_inputs.shape[0]
         self.inputs = all_inputs
         self.domain = base_variable.domain
 
@@ -198,19 +199,28 @@ class ProcessedSymbolicVariable(object):
             self.sensitivity(inputs, check_inputs=False),
         )
 
-    def _check_and_transform(self, inputs):
+    def _check_and_transform(self, inputs_dict):
         "Check dictionary has the right inputs, and convert to a vector"
         # Convert dict to casadi vector
-        if not isinstance(inputs, dict):
-            raise TypeError("inputs should be 'dict' but are {}".format(inputs))
+        if not isinstance(inputs_dict, dict):
+            raise TypeError("inputs should be 'dict' but are {}".format(inputs_dict))
         # Check keys are consistent
-        if list(inputs.keys()) != list(self.symbolic_input_keys):
+        if list(inputs_dict.keys()) != list(self.symbolic_inputs_dict.keys()):
             raise ValueError(
                 "Inconsistent input keys: expected {}, actual {}".format(
-                    list(self.symbolic_input_keys), list(inputs.keys())
+                    list(self.symbolic_inputs_dict.keys()), list(inputs_dict.keys())
                 )
             )
-        inputs = casadi.vertcat(*[p for p in inputs.values()])
+        inputs = casadi.vertcat(*[p for p in inputs_dict.values()])
+        if inputs.shape[0] != self.symbolic_inputs_total_shape:
+            # Find the variable which caused the error, for a clearer error message
+            for key, inp in inputs_dict.items():
+                if inp.shape[0] != self.symbolic_inputs_dict[key].shape[0]:
+                    raise ValueError(
+                        "Wrong shape for input '{}': expected {}, actual {}".format(
+                            key, self.symbolic_inputs_dict[key].shape[0], inp.shape[0]
+                        )
+                    )
 
         return inputs
 

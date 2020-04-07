@@ -166,7 +166,8 @@ class TestProcessedSymbolicVariable(unittest.TestCase):
     def test_processed_variable_1D_with_vector_inputs(self):
         var = pybamm.Variable("var", domain=["negative electrode", "separator"])
         x = pybamm.SpatialVariable("x", domain=["negative electrode", "separator"])
-        p = pybamm.InputParameter("p")
+        p = pybamm.InputParameter("p", domain=["negative electrode", "separator"])
+        p.set_expected_size(65)
         q = pybamm.InputParameter("q")
         eqn = (var * p) ** 2 + 2 * q
 
@@ -208,6 +209,12 @@ class TestProcessedSymbolicVariable(unittest.TestCase):
                 np.diag((2 * p[:, np.newaxis] * y_sol ** 2).flatten()), 2 * np.ones(n)
             ],
         )
+
+        # Bad shape
+        with self.assertRaisesRegex(
+            ValueError, "Wrong shape for input 'p': expected 65, actual 5"
+        ):
+            processed_eqn.value({"p": casadi.MX.sym("p", 5), "q": 1})
 
     def test_1D_different_domains(self):
         # Negative electrode domain

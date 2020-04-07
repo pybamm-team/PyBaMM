@@ -46,10 +46,10 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         t_eval : :class:`numpy.array`, size (k,)
             The times at which to compute the solution
         inputs : dict, optional
-            Any input parameters to pass to the model when solving. If this contains
-            symbolic variables (e.g. via the keyword [sym]), then the solution will
-            consist of `ProcessedSymbolicVariable` objects, whose sensitivity can be
-            evaluated.
+            Any input parameters to pass to the model when solving. If any input
+            parameters that are present in the model are missing from "inputs", then
+            the solution will consist of `ProcessedSymbolicVariable` objects, which must
+            be provided with inputs to obtain their value.
         """
         y0 = model.y0
 
