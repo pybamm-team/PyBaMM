@@ -67,3 +67,11 @@ class InputError(Exception):
     """
 
     pass
+
+
+class DiscretisationError(Exception):
+    """
+    A model could not be discretised
+    """
+
+    pass

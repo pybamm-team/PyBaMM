@@ -133,6 +133,13 @@ class Discretisation(object):
         # Prepare discretisation
         # set variables (we require the full variable not just id)
         variables = list(model.rhs.keys()) + list(model.algebraic.keys())
+        if self.spatial_methods == {} and any(var.domain != [] for var in variables):
+            for var in variables:
+                if var.domain != []:
+                    raise pybamm.DiscretisationError(
+                        "Spatial method has not been given "
+                        "for variable {} with domain {}".format(var.name, var.domain)
+                    )
 
         # Set the y split for variables
         pybamm.logger.info("Set variable slices for {}".format(model.name))
