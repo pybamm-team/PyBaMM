@@ -1,7 +1,7 @@
-from pybamm import exp
+from pybamm import exp, constants
 
 
-def electrolyte_conductivity_Capiglia1999(c_e, T, T_inf, E_k_e, R_g):
+def electrolyte_conductivity_Capiglia1999(c_e, T):
     """
     Conductivity of LiPF6 in EC:DMC as a function of ion concentration. The original
     data is from [1]. The fit is from Dualfoil [2].
@@ -15,21 +15,16 @@ def electrolyte_conductivity_Capiglia1999(c_e, T, T_inf, E_k_e, R_g):
 
     Parameters
     ----------
-    c_e : :class:`pybamm.Symbol`
-        Dimensional electrolyte concentration [mol.m-3]
-    T : :class:`pybamm.Symbol`
-        Dimensional temperature [K]
-    T_inf: :class:`pybamm.Symbol`
-        Reference temperature [K]
-    E_k_e: :class:`pybamm.Symbol`
-        Electrolyte conductivity activation energy [J.mol-1]
-    R_g: :class:`pybamm.Symbol`
-        The ideal gas constant [J.mol-1.K-1]
+    c_e: :class:`pybamm.Symbol`
+        Dimensional electrolyte concentration
+    T: :class:`pybamm.Symbol`
+        Dimensional temperature
+
 
     Returns
     -------
     :class:`pybamm.Symbol`
-        Dimensional electrolyte conductivity [S.m-1]
+        Solid diffusivity
     """
 
     sigma_e = (
@@ -39,6 +34,7 @@ def electrolyte_conductivity_Capiglia1999(c_e, T, T_inf, E_k_e, R_g):
         + 0.1554 * (c_e / 1000) ** 3
     )
 
-    arrhenius = exp(E_k_e / R_g * (1 / T_inf - 1 / T))
+    E_k_e = 34700
+    arrhenius = exp(E_k_e / constants.R * (1 / 298.15 - 1 / T))
 
     return sigma_e * arrhenius

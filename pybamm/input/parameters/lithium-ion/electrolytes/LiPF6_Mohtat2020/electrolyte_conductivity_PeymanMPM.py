@@ -1,7 +1,7 @@
-import pybamm
+from pybamm import exp, constants
 
 
-def electrolyte_conductivity_PeymanMPM(c_e, T, T_inf, E_k_e, R_g):
+def electrolyte_conductivity_PeymanMPM(c_e, T):
     """
     Conductivity of LiPF6 in EC:DMC as a function of ion concentration. The original
     data is from [1]. The fit is from Dualfoil [2].
@@ -14,25 +14,20 @@ def electrolyte_conductivity_PeymanMPM(c_e, T, T_inf, E_k_e, R_g):
     .. [2] http://www.cchem.berkeley.edu/jsngrp/fortran.html
     Parameters
     ----------
-    c_e: :class: `numpy.Array`
+    c_e: :class:`pybamm.Symbol`
         Dimensional electrolyte concentration
-    T: :class: `numpy.Array`
+    T: :class:`pybamm.Symbol`
         Dimensional temperature
-    T_inf: double
-        Reference temperature
-    E_k_e: double
-        Electrolyte conductivity activation energy
-    R_g: double
-        The ideal gas constant
+
 
     Returns
     -------
-    :`numpy.Array`
+    :class:`pybamm.Symbol`
         Electrolyte conductivity
     """
 
     sigma_e = 1.3
-
-    arrhenius = pybamm.exp(E_k_e / R_g * (1 / T_inf - 1 / T))
+    E_k_e = 34700
+    arrhenius = exp(E_k_e / constants.R * (1 / 298.15 - 1 / T))
 
     return sigma_e * arrhenius

@@ -1,7 +1,7 @@
 from pybamm import exp
 
 
-def electrolyte_conductivity_Kim2011(c_e, T, T_inf, E_k_e, R_g):
+def electrolyte_conductivity_Kim2011(c_e, T):
     """
     Conductivity of LiPF6 in EC as a function of ion concentration from [1].
 
@@ -14,16 +14,11 @@ def electrolyte_conductivity_Kim2011(c_e, T, T_inf, E_k_e, R_g):
 
     Parameters
     ----------
-    c_e : :class:`pybamm.Symbol`
-        Dimensional electrolyte concentration [mol.m-3]
-    T : :class:`pybamm.Symbol`
-        Dimensional temperature [K]
-    T_inf: :class:`pybamm.Symbol`
-        Reference temperature [K]
-    E_k_e: :class:`pybamm.Symbol`
-        Electrolyte conductivity activation energy [J.mol-1]
-    R_g: :class:`pybamm.Symbol`
-        The ideal gas constant [J.mol-1.K-1]
+    c_e: :class:`pybamm.Symbol`
+        Dimensional electrolyte concentration
+    T: :class:`pybamm.Symbol`
+        Dimensional temperature
+
 
     Returns
     -------

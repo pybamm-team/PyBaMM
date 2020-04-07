@@ -1,4 +1,4 @@
-from pybamm import exp, standard_parameters_lithium_ion
+from pybamm import exp, constants
 
 
 def lico2_electrolyte_reaction_rate_Dualfoil1998(T):
@@ -12,15 +12,16 @@ def lico2_electrolyte_reaction_rate_Dualfoil1998(T):
     Parameters
     ----------
     T: :class:`pybamm.Symbol`
-        Dimensional temperature [K]
+        Dimensional temperature
 
     Returns
     -------
     :class:`pybamm.Symbol`
-        Dimensional reaction rate [(A.m-2)(m3.mol-1)^1.5]
+        Reaction rate
     """
     param = standard_parameters_lithium_ion
     m_ref = 6 * 10 ** (-7)
-    arrhenius = exp(param.E_r_p / param.R * (1 / param.T_ref - 1 / T))
+    E_r = 39570
+    arrhenius = exp(E_r / constants.R * (1 / 298.15 - 1 / T))
 
     return m_ref * arrhenius

@@ -1,4 +1,4 @@
-from pybamm import exp, standard_parameters_lithium_ion
+from pybamm import exp, constants
 
 
 def lico2_diffusivity_Dualfoil1998(sto, T):
@@ -12,18 +12,18 @@ def lico2_diffusivity_Dualfoil1998(sto, T):
 
     Parameters
     ----------
-    sto : :class:`pybamm.Symbol`
+    sto: :class:`pybamm.Symbol`
         Electrode stochiometry
-    T : :class:`pybamm.Symbol`
-        Dimensional temperature [K]
+    T: :class:`pybamm.Symbol`
+        Dimensional temperature
 
     Returns
     -------
     :class:`pybamm.Symbol`
-        Solid diffusivity [m2.s-1]
+        Solid diffusivity
     """
-    param = standard_parameters_lithium_ion
     D_ref = 1 * 10 ** (-13)
-    arrhenius = exp(param.E_D_s_p / param.R * (1 / param.T_ref - 1 / T))
+    E_D_s = 18550
+    arrhenius = exp(E_D_s / constants.R * (1 / 298.15 - 1 / T))
 
     return D_ref * arrhenius

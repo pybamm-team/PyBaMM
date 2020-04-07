@@ -1,7 +1,7 @@
-from pybamm import exp
+from pybamm import exp, constants
 
 
-def graphite_diffusivity_Kim2011(sto, T, T_inf, E_D_s, R_g):
+def graphite_diffusivity_Kim2011(sto, T):
     """
     Graphite diffusivity [1].
 
@@ -14,24 +14,19 @@ def graphite_diffusivity_Kim2011(sto, T, T_inf, E_D_s, R_g):
 
     Parameters
     ----------
-    sto : :class:`pybamm.Symbol`
+    sto: :class:`pybamm.Symbol`
         Electrode stochiometry
-    T : :class:`pybamm.Symbol`
-        Dimensional temperature [K]
-    T_inf: :class:`pybamm.Symbol`
-        Reference temperature [K]
-    E_D_s: :class:`pybamm.Symbol`
-        Solid diffusion activation energy [J.mol-1]
-    R_g: :class:`pybamm.Symbol`
-        The ideal gas constant [J.mol-1.K-1]
+    T: :class:`pybamm.Symbol`
+        Dimensional temperature
 
     Returns
     -------
     :class:`pybamm.Symbol`
-        Solid diffusivity [m2.s-1]
+        Solid diffusivity
    """
 
     D_ref = 9 * 10 ** (-14)
-    arrhenius = exp(E_D_s / R_g * (1 / T_inf - 1 / T))
+    E_D_s = 4e3
+    arrhenius = exp(E_D_s / constants.R * (1 / 298.15 - 1 / T))
 
     return D_ref * arrhenius

@@ -1,7 +1,7 @@
-from pybamm import exp
+from pybamm import exp, constants
 
 
-def electrolyte_diffusivity_Capiglia1999(c_e, T, T_inf, E_D_e, R_g):
+def electrolyte_diffusivity_Capiglia1999(c_e, T):
     """
     Diffusivity of LiPF6 in EC:DMC as a function of ion concentration. The original data
     is from [1]. The fit from Dualfoil [2].
@@ -15,24 +15,20 @@ def electrolyte_diffusivity_Capiglia1999(c_e, T, T_inf, E_D_e, R_g):
 
     Parameters
     ----------
-    c_e : :class:`pybamm.Symbol`
-        Dimensional electrolyte concentration [mol.m-3]
-    T : :class:`pybamm.Symbol`
-        Dimensional temperature [K]
-    T_inf: :class:`pybamm.Symbol`
-        Reference temperature [K]
-    E_D_e: :class:`pybamm.Symbol`
-        Electrolyte diffusion activation energy [J.mol-1]
-    R_g: :class:`pybamm.Symbol`
-        The ideal gas constant [J.mol-1.K-1]
+    c_e: :class:`pybamm.Symbol`
+        Dimensional electrolyte concentration
+    T: :class:`pybamm.Symbol`
+        Dimensional temperature
+
 
     Returns
     -------
     :class:`pybamm.Symbol`
-        Dimensional electrolyte diffusivity [m2.s-1]
+        Solid diffusivity
     """
 
     D_c_e = 5.34e-10 * exp(-0.65 * c_e / 1000)
-    arrhenius = exp(E_D_e / R_g * (1 / T_inf - 1 / T))
+    E_D_e = 37040
+    arrhenius = exp(E_D_e / constants.R * (1 / 298.15 - 1 / T))
 
     return D_c_e * arrhenius

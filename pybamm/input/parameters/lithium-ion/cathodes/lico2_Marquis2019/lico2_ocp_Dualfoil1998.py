@@ -18,7 +18,7 @@ def lico2_ocp_Dualfoil1998(sto):
 
     Parameters
     ----------
-    sto: :class:`pybamm.Symbol`
+    sto : :class:`pybamm.Symbol`
        Stochiometry of material (li-fraction)
 
     """

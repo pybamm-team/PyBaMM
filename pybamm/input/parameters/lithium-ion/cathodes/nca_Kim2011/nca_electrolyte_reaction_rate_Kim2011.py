@@ -1,7 +1,7 @@
-from pybamm import exp
+from pybamm import exp, constants
 
 
-def nca_electrolyte_reaction_rate_Kim2011(T, T_inf, E_r, R_g):
+def nca_electrolyte_reaction_rate_Kim2011(T):
     """
     Reaction rate for Butler-Volmer reactions between NCA and LiPF6 in EC:DMC
     [1].
@@ -15,18 +15,11 @@ def nca_electrolyte_reaction_rate_Kim2011(T, T_inf, E_r, R_g):
 
     Parameters
     ----------
-    T : :class:`pybamm.Symbol`
-        Dimensional temperature [K]
-    T_inf: :class:`pybamm.Symbol`
-        Reference temperature [K]
-    E_r: :class:`pybamm.Symbol`
-        Reaction activation energy [J.mol-1]
-    R_g: :class:`pybamm.Symbol`
-        The ideal gas constant [J.mol-1.K-1]
-
+    T: :class:`pybamm.Symbol`
+        Dimensional temperature
     Returns
     -------
-    : :class:`pybamm.Symbol`
+    :class:`pybamm.Symbol`
         Reaction rate
     """
     i0_ref = 4  # reference exchange current density at 100% SOC
@@ -41,6 +34,7 @@ def nca_electrolyte_reaction_rate_Kim2011(T, T_inf, E_r, R_g):
         * i0_ref
         / (c_e_ref ** alpha * (c_s_max - c_s_ref) ** alpha * c_s_ref ** alpha)
     )
-    arrhenius = exp(E_r / R_g * (1 / T_inf - 1 / T))
+    E_r = 3e4
+    arrhenius = exp(E_r / constants.R * (1 / 298.15 - 1 / T))
 
     return m_ref * arrhenius

@@ -86,7 +86,7 @@ class Function(pybamm.Symbol):
             children = self.orphans
             partial_derivatives = [None] * len(children)
             for i, child in enumerate(self.children):
-                # if variable appears in the function,use autograd to differentiate
+                # if variable appears in the function, differentiate
                 # function, and apply chain rule
                 if variable.id in [symbol.id for symbol in child.pre_order()]:
                     partial_derivatives[i] = self._function_diff(
