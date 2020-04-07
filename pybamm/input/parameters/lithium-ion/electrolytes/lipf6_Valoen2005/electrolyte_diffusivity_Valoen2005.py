@@ -1,4 +1,4 @@
-def electrolyte_diffusivity_Valoen2005(c_e, T, T_inf, E_k_e, R_g):
+def electrolyte_diffusivity_Valoen2005(c_e, T):
     """
     Diffusivity of LiPF6 in EC:DMC as a function of ion concentration, from [1]
 
@@ -14,12 +14,6 @@ def electrolyte_diffusivity_Valoen2005(c_e, T, T_inf, E_k_e, R_g):
         Dimensional electrolyte concentration [mol.m-3]
     T : :class:`pybamm.Symbol`
         Dimensional temperature [K]
-    T_inf: :class:`pybamm.Symbol`
-        Reference temperature [K]
-    E_D_e: :class:`pybamm.Symbol`
-        Electrolyte diffusion activation energy [J.mol-1]
-    R_g: :class:`pybamm.Symbol`
-        The ideal gas constant [J.mol-1.K-1]
 
     Returns
     -------
