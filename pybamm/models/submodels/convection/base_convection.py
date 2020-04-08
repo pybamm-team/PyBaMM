@@ -26,8 +26,8 @@ class BaseModel(pybamm.BaseSubModel):
 
         Parameters
         ----------
-        v_box : :class:`pybamm.Symbol`
-            The volume-averaged fluid velocity
+        variables : dict
+            The existing variables in the model
 
         Returns
         -------
@@ -58,8 +58,8 @@ class BaseModel(pybamm.BaseSubModel):
 
         Parameters
         ----------
-        v_box : :class:`pybamm.Symbol`
-            The volume-averaged fluid velocity
+        variables : dict
+            The existing variables in the model
 
         Returns
         -------
@@ -93,8 +93,8 @@ class BaseModel(pybamm.BaseSubModel):
 
         Parameters
         ----------
-        p : :class:`pybamm.Symbol`
-            The fluid pressure
+        variables : dict
+            The existing variables in the model
 
         Returns
         -------
@@ -118,6 +118,7 @@ class BaseModel(pybamm.BaseSubModel):
         ----------
         variables : dict
             Dictionary of variables in the whole model.
+
         Returns
         -------
         v_box_s : :class:`pybamm.Symbol`

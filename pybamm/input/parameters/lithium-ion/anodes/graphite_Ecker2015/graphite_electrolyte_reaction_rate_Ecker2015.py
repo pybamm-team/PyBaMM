@@ -1,8 +1,7 @@
-from pybamm import exp
-from scipy import constants
+from pybamm import exp, constants
 
 
-def graphite_electrolyte_reaction_rate_Ecker2015(T, T_inf, E_r, R_g):
+def graphite_electrolyte_reaction_rate_Ecker2015(T):
     """
     Reaction rate for Butler-Volmer reactions between graphite and LiPF6 in EC:DMC.
 
@@ -20,27 +19,21 @@ def graphite_electrolyte_reaction_rate_Ecker2015(T, T_inf, E_r, R_g):
 
     Parameters
     ----------
-    T: :class: `numpy.Array`
+    T: :class:`pybamm.Symbol`
         Dimensional temperature
-    T_inf: double
-        Reference temperature
-    E_r: double
-        Reaction activation energy
-    R_g: double
-        The ideal gas constant
 
     Returns
     -------
-    :`numpy.Array`
+    :class:`pybamm.Symbol`
         Reaction rate
     """
 
     k_ref = 1.995 * 1e-10
 
     # multiply by Faraday's constant to get correct units
-    F = constants.physical_constants["Faraday constant"][0]
-    m_ref = F * k_ref
+    m_ref = constants.F * k_ref
+    E_r = 53400
 
-    arrhenius = exp(-E_r / (R_g * T)) * exp(E_r / (R_g * T_inf))
+    arrhenius = exp(-E_r / (constants.R * T)) * exp(E_r / (constants.R * 296.15))
 
     return m_ref * arrhenius

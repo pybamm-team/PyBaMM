@@ -11,3 +11,4 @@ from .higher_order import (
     CompositeExtended,
 )
 from .full import Full
+from .basic_full import BasicFull

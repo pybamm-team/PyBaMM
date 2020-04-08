@@ -56,7 +56,7 @@ class TestParametersCLI(unittest.TestCase):
         new_anode = pybamm.ParameterValues({}).read_parameters_csv(
             new_parameter_filename
         )
-        self.assertEqual(new_anode["Reference temperature [K]"], "298.15")
+        self.assertEqual(new_anode["Negative electrode porosity"], "0.3")
 
         # Clean up directories
         tempdir.cleanup()  # Remove temporary local directory
