@@ -51,14 +51,8 @@ class BaseModel(pybamm.BaseBatteryModel):
         # N.B if there is no sei reaction then reaction
         # is set to zero in the submodel.
         self.reactions["sei"] = {
-            "Negative": {
-                "s": (1 - self.param.t_plus),
-                "aj": "Scaled negative electrode sei" + icd,
-            },
-            "Positive": {
-                "s": (1 - self.param.t_plus),
-                "aj": "Scaled positive electrode sei" + icd,
-            },
+            "Negative": {"s": 1, "aj": "Scaled negative electrode sei" + icd},
+            "Positive": {"s": 1, "aj": "Scaled positive electrode sei" + icd},
         }
 
     def set_sei_submodel(self):
@@ -93,4 +87,3 @@ class BaseModel(pybamm.BaseBatteryModel):
         self.submodels["positive sei"] = pybamm.sei.NoSEI(
             self.param, "Positive electrode"
         )
-
