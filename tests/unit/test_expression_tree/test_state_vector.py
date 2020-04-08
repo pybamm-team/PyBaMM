@@ -62,6 +62,27 @@ class TestStateVector(unittest.TestCase):
             pybamm.StateVector(slice(0, 10), 1)
 
 
+class TestStateVectorDot(unittest.TestCase):
+    def test_evaluate(self):
+        sv = pybamm.StateVectorDot(slice(0, 10))
+        y_dot = np.linspace(0, 2, 19)
+        np.testing.assert_array_equal(
+            sv.evaluate(y_dot=y_dot), np.linspace(0, 1, 10)[:, np.newaxis]
+        )
+
+        # Try evaluating with a y that is too short
+        y_dot2 = np.ones(5)
+        with self.assertRaisesRegex(
+            ValueError,
+            "y_dot is too short, so value with slice is smaller than expected",
+        ):
+            sv.evaluate(y_dot=y_dot2)
+
+    def test_name(self):
+        sv = pybamm.StateVectorDot(slice(0, 10))
+        self.assertEqual(sv.name, "y_dot[0:10]")
+
+
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys

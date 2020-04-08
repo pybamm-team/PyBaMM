@@ -67,9 +67,8 @@ def print_parameters(parameters, parameter_values, output_file=None):
                 proc_symbol = parameter_values.process_symbol(symbol)
                 if not (
                     callable(proc_symbol)
-                    or any(
-                        isinstance(x, (pybamm.Concatenation, pybamm.Broadcast))
-                        for x in proc_symbol.pre_order()
+                    or proc_symbol.has_symbol_of_classes(
+                        (pybamm.Concatenation, pybamm.Broadcast)
                     )
                 ):
                     evaluated_parameters[name].append(proc_symbol.evaluate(t=0))

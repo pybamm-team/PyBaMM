@@ -80,17 +80,17 @@ class SPM(BaseModel):
     def set_particle_submodel(self):
 
         if self.options["particle"] == "Fickian diffusion":
-            self.submodels[
-                "negative particle"
-            ] = pybamm.particle.fickian.SingleParticle(self.param, "Negative")
-            self.submodels[
-                "positive particle"
-            ] = pybamm.particle.fickian.SingleParticle(self.param, "Positive")
-        elif self.options["particle"] == "fast diffusion":
-            self.submodels["negative particle"] = pybamm.particle.fast.SingleParticle(
+            self.submodels["negative particle"] = pybamm.particle.FickianSingleParticle(
                 self.param, "Negative"
             )
-            self.submodels["positive particle"] = pybamm.particle.fast.SingleParticle(
+            self.submodels["positive particle"] = pybamm.particle.FickianSingleParticle(
+                self.param, "Positive"
+            )
+        elif self.options["particle"] == "fast diffusion":
+            self.submodels["negative particle"] = pybamm.particle.FastSingleParticle(
+                self.param, "Negative"
+            )
+            self.submodels["positive particle"] = pybamm.particle.FastSingleParticle(
                 self.param, "Positive"
             )
 
@@ -108,13 +108,12 @@ class SPM(BaseModel):
 
     def set_electrolyte_submodel(self):
 
-        electrolyte = pybamm.electrolyte.stefan_maxwell
-        surf_form = electrolyte.conductivity.surface_potential_form
+        surf_form = pybamm.electrolyte_conductivity.surface_potential_form
 
         if self.options["surface form"] is False:
             self.submodels[
                 "leading-order electrolyte conductivity"
-            ] = electrolyte.conductivity.LeadingOrder(self.param)
+            ] = pybamm.electrolyte_conductivity.LeadingOrder(self.param)
 
         elif self.options["surface form"] == "differential":
             for domain in ["Negative", "Separator", "Positive"]:
@@ -131,7 +130,7 @@ class SPM(BaseModel):
                 ] = surf_form.LeadingOrderAlgebraic(self.param, domain, self.reactions)
         self.submodels[
             "electrolyte diffusion"
-        ] = electrolyte.diffusion.ConstantConcentration(self.param)
+        ] = pybamm.electrolyte_diffusion.ConstantConcentration(self.param)
 
     @property
     def default_geometry(self):

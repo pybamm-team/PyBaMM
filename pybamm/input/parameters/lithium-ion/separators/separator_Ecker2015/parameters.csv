@@ -1,0 +1,6 @@
+Name [units],Value,Reference,Notes
+# Empty rows and rows starting with ‘#’ will be ignored,,,
+,,,
+Separator porosity,0.508,,
+Separator Bruggeman coefficient (electrolyte),1.9804586773134942, Solve for permeability factor B=0.304=eps^b,
+Separator Bruggeman coefficient (electrode),0,No Bruggeman correction to solid conductivity,

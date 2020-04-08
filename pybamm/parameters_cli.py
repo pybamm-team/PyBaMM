@@ -33,7 +33,7 @@ def get_parser(description):
     """
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument(
-        "parameter_dir", type=str, help="Name of the parameter directory",
+        "parameter_dir", type=str, help="Name of the parameter directory"
     )
     parser.add_argument("battery_type", choices=["lithium-ion", "lead-acid"])
     parser.add_argument(
@@ -148,8 +148,10 @@ def list_parameters(arguments=None):
     >>> from pybamm.parameters_cli import list_parameters
     >>> list_parameters(["lithium-ion", "anodes"])
     Available package parameters:
+      * graphite_Ecker2015
       * graphite_Chen2020
       * graphite_mcmb2528_Marquis2019
+      * graphite_UMBL_Mohtat2020
       * graphite_Kim2011
     Available local parameters:
     """

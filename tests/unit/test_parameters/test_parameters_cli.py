@@ -20,7 +20,7 @@ class TestParametersCLI(unittest.TestCase):
         # Read a parameter file thta is shipped with PyBaMM
         param_filename = pybamm.get_parameters_filepath(
             "input/parameters/lithium-ion/anodes/"
-            "graphite_mcmb2528_Marquis2019/parameters.csv",
+            "graphite_mcmb2528_Marquis2019/parameters.csv"
         )
         anode = pybamm.ParameterValues({}).read_parameters_csv(param_filename)
 
@@ -50,13 +50,13 @@ class TestParametersCLI(unittest.TestCase):
                 "anodes",
                 os.path.basename(tempdir.name),
                 "parameters.csv",
-            ),
+            )
         )
 
         new_anode = pybamm.ParameterValues({}).read_parameters_csv(
             new_parameter_filename
         )
-        self.assertEqual(new_anode["Reference temperature [K]"], "298.15")
+        self.assertEqual(new_anode["Negative electrode porosity"], "0.3")
 
         # Clean up directories
         tempdir.cleanup()  # Remove temporary local directory

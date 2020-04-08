@@ -43,14 +43,8 @@ class BaseModel(pybamm.BaseBatteryModel):
         icd = " interfacial current density"
         self.reactions = {
             "main": {
-                "Negative": {
-                    "s": 1 - self.param.t_plus,
-                    "aj": "Negative electrode" + icd,
-                },
-                "Positive": {
-                    "s": 1 - self.param.t_plus,
-                    "aj": "Positive electrode" + icd,
-                },
+                "Negative": {"s": 1, "aj": "Negative electrode" + icd},
+                "Positive": {"s": 1, "aj": "Positive electrode" + icd},
             }
         }
 

@@ -63,14 +63,6 @@ Delta_T = (
     pybamm.electrical_parameters.i_typ * Phi_dim / h_dim
 )  # computed from balance of typical cross-cell Ohmic heating with surface heat loss
 
-# Activation energies
-E_r_n = pybamm.Parameter("Negative reaction rate activation energy [J.mol-1]")
-E_r_p = pybamm.Parameter("Positive reaction rate activation energy [J.mol-1]")
-E_D_s_n = pybamm.Parameter("Negative solid diffusion activation energy [J.mol-1]")
-E_D_s_p = pybamm.Parameter("Positive solid diffusion activation energy [J.mol-1]")
-E_D_e = pybamm.Parameter("Electrolyte diffusion activation energy [J.mol-1]")
-E_k_e = pybamm.Parameter("Electrolyte conductivity activation energy [J.mol-1]")
-
 # Initial temperature
 T_init_dim = pybamm.Parameter("Initial temperature [K]")
 
@@ -116,7 +108,7 @@ T_init = (T_init_dim - T_ref) / Delta_T
 
 
 def T_amb_dim(t):
-    return pybamm.FunctionParameter("Ambient temperature [K]", t)
+    return pybamm.FunctionParameter("Ambient temperature [K]", {"Times [s]": t})
 
 
 def T_amb(t):

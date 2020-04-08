@@ -50,9 +50,7 @@ class BaseModel(pybamm.BaseBatteryModel):
         """
         if len(self.algebraic) == 0:
             return pybamm.ScipySolver()
-        elif pybamm.have_scikits_odes():
-            return pybamm.ScikitsDaeSolver()
-        else:  # pragma: no cover
+        else:
             return pybamm.CasadiSolver(mode="safe")
 
     def set_reactions(self):
@@ -63,35 +61,22 @@ class BaseModel(pybamm.BaseBatteryModel):
         icd = " interfacial current density"
         self.reactions = {
             "main": {
-                "Negative": {"s": param.s_n, "aj": "Negative electrode" + icd},
-                "Positive": {"s": param.s_p, "aj": "Positive electrode" + icd},
+                "Negative": {"s": -param.s_plus_n_S, "aj": "Negative electrode" + icd},
+                "Positive": {"s": -param.s_plus_p_S, "aj": "Positive electrode" + icd},
             }
         }
         if "oxygen" in self.options["side reactions"]:
             self.reactions["oxygen"] = {
                 "Negative": {
-                    "s": -(param.s_plus_Ox + param.t_plus),
+                    "s": -param.s_plus_Ox,
                     "s_ox": -param.s_ox_Ox,
                     "aj": "Negative electrode oxygen" + icd,
                 },
                 "Positive": {
-                    "s": -(param.s_plus_Ox + param.t_plus),
+                    "s": -param.s_plus_Ox,
                     "s_ox": -param.s_ox_Ox,
                     "aj": "Positive electrode oxygen" + icd,
                 },
             }
             self.reactions["main"]["Negative"]["s_ox"] = 0
             self.reactions["main"]["Positive"]["s_ox"] = 0
-
-    def set_soc_variables(self):
-        "Set variables relating to the state of charge."
-        # State of Charge defined as function of dimensionless electrolyte concentration
-        soc = self.variables["X-averaged electrolyte concentration"] * 100
-        self.variables.update({"State of Charge": soc, "Depth of Discharge": 100 - soc})
-
-        # Fractional charge input
-        if "Fractional Charge Input" not in self.variables:
-            fci = pybamm.Variable("Fractional Charge Input", domain="current collector")
-            self.variables["Fractional Charge Input"] = fci
-            self.rhs[fci] = -self.variables["Total current density"] * 100
-            self.initial_conditions[fci] = self.param.q_init * 100

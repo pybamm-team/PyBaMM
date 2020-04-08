@@ -82,17 +82,17 @@ class SPMe(BaseModel):
     def set_particle_submodel(self):
 
         if self.options["particle"] == "Fickian diffusion":
-            self.submodels[
-                "negative particle"
-            ] = pybamm.particle.fickian.SingleParticle(self.param, "Negative")
-            self.submodels[
-                "positive particle"
-            ] = pybamm.particle.fickian.SingleParticle(self.param, "Positive")
-        elif self.options["particle"] == "fast diffusion":
-            self.submodels["negative particle"] = pybamm.particle.fast.SingleParticle(
+            self.submodels["negative particle"] = pybamm.particle.FickianSingleParticle(
                 self.param, "Negative"
             )
-            self.submodels["positive particle"] = pybamm.particle.fast.SingleParticle(
+            self.submodels["positive particle"] = pybamm.particle.FickianSingleParticle(
+                self.param, "Positive"
+            )
+        elif self.options["particle"] == "fast diffusion":
+            self.submodels["negative particle"] = pybamm.particle.FastSingleParticle(
+                self.param, "Negative"
+            )
+            self.submodels["positive particle"] = pybamm.particle.FastSingleParticle(
                 self.param, "Positive"
             )
 
@@ -110,12 +110,10 @@ class SPMe(BaseModel):
 
     def set_electrolyte_submodel(self):
 
-        electrolyte = pybamm.electrolyte.stefan_maxwell
-
-        self.submodels["electrolyte conductivity"] = electrolyte.conductivity.Composite(
-            self.param
-        )
-        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(
+        self.submodels[
+            "electrolyte conductivity"
+        ] = pybamm.electrolyte_conductivity.Composite(self.param)
+        self.submodels["electrolyte diffusion"] = pybamm.electrolyte_diffusion.Full(
             self.param, self.reactions
         )
 

@@ -36,10 +36,10 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
             y0 = np.array([2])
             t = casadi.MX.sym("t")
             y = casadi.MX.sym("y")
-            u = casadi.MX.sym("u")
-            casadi_algebraic = casadi.Function("alg", [t, y, u], [y ** 2 + 1])
+            p = casadi.MX.sym("p")
+            casadi_algebraic = casadi.Function("alg", [t, y, p], [y ** 2 + 1])
 
-            def algebraic_eval(self, t, y):
+            def algebraic_eval(self, t, y, inputs):
                 # algebraic equation has no real root
                 return y ** 2 + 1
 
@@ -47,12 +47,12 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
 
         solver = pybamm.CasadiAlgebraicSolver()
         with self.assertRaisesRegex(
-            pybamm.SolverError, "Could not find acceptable solution: .../casadi",
+            pybamm.SolverError, "Could not find acceptable solution: .../casadi"
         ):
             solver._integrate(model, np.array([0]), {})
         solver = pybamm.CasadiAlgebraicSolver(error_on_fail=False)
         with self.assertRaisesRegex(
-            pybamm.SolverError, "Could not find acceptable solution: solver terminated",
+            pybamm.SolverError, "Could not find acceptable solution: solver terminated"
         ):
             solver._integrate(model, np.array([0]), {})
 

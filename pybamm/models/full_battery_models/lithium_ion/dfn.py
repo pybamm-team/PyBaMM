@@ -71,17 +71,17 @@ class DFN(BaseModel):
     def set_particle_submodel(self):
 
         if self.options["particle"] == "Fickian diffusion":
-            self.submodels["negative particle"] = pybamm.particle.fickian.ManyParticles(
+            self.submodels["negative particle"] = pybamm.particle.FickianManyParticles(
                 self.param, "Negative"
             )
-            self.submodels["positive particle"] = pybamm.particle.fickian.ManyParticles(
+            self.submodels["positive particle"] = pybamm.particle.FickianManyParticles(
                 self.param, "Positive"
             )
         elif self.options["particle"] == "fast diffusion":
-            self.submodels["negative particle"] = pybamm.particle.fast.ManyParticles(
+            self.submodels["negative particle"] = pybamm.particle.FastManyParticles(
                 self.param, "Negative"
             )
-            self.submodels["positive particle"] = pybamm.particle.fast.ManyParticles(
+            self.submodels["positive particle"] = pybamm.particle.FastManyParticles(
                 self.param, "Positive"
             )
 
@@ -99,17 +99,16 @@ class DFN(BaseModel):
 
     def set_electrolyte_submodel(self):
 
-        electrolyte = pybamm.electrolyte.stefan_maxwell
-        surf_form = electrolyte.conductivity.surface_potential_form
+        surf_form = pybamm.electrolyte_conductivity.surface_potential_form
 
-        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(
+        self.submodels["electrolyte diffusion"] = pybamm.electrolyte_diffusion.Full(
             self.param, self.reactions
         )
 
         if self.options["surface form"] is False:
-            self.submodels["electrolyte conductivity"] = electrolyte.conductivity.Full(
-                self.param, self.reactions
-            )
+            self.submodels[
+                "electrolyte conductivity"
+            ] = pybamm.electrolyte_conductivity.Full(self.param, self.reactions)
         elif self.options["surface form"] == "differential":
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[

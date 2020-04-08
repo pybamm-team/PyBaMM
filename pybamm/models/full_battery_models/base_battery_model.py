@@ -22,8 +22,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 (default), 1 or 2.
             * "surface form" : bool or str, optional
                 Whether to use the surface formulation of the problem. Can be False
-                (default), "differential" or "algebraic". Must be 'False' for
-                lithium-ion models.
+                (default), "differential" or "algebraic".
             * "convection" : bool or str, optional
                 Whether to include the effects of convection in the model. Can be
                 False (default), "differential" or "algebraic". Must be 'False' for
@@ -43,8 +42,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 Can be "Fickian diffusion" (default) or "fast diffusion".
             * "thermal" : str, optional
                 Sets the thermal model to use. Can be "isothermal" (default),
-                "x-full", "x-lumped", "xyz-lumped" or "lumped". Must be "isothermal" for
-                lead-acid models.
+                "x-full", "x-lumped", "xyz-lumped" or "lumped".
             * "thermal current collector" : bool, optional
                 Whether to include thermal effects in the current collector in
                 one-dimensional models (default is False). Note that this option
@@ -158,14 +156,18 @@ class BaseBatteryModel(pybamm.BaseModel):
             "external submodels": [],
             "sei": None,
         }
-        options = default_options
+        options = pybamm.FuzzyDict(default_options)
         # any extra options overwrite the default options
         if extra_options is not None:
             for name, opt in extra_options.items():
                 if name in default_options:
                     options[name] = opt
                 else:
-                    raise pybamm.OptionError("option {} not recognised".format(name))
+                    raise pybamm.OptionError(
+                        "Option '{}' not recognised. Best matches are {}".format(
+                            name, options.get_best_matches(name)
+                        )
+                    )
 
         # Some standard checks to make sure options are compatible
         if not (
@@ -224,22 +226,21 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         # Options that are incompatible with models
         if isinstance(self, pybamm.lithium_ion.BaseModel):
-            # if options["surface form"] is not False:
-            #     raise pybamm.OptionError(
-            #         "surface form not implemented for lithium-ion models"
-            #     )
             if options["convection"] is True:
                 raise pybamm.OptionError(
                     "convection not implemented for lithium-ion models"
                 )
         if isinstance(self, pybamm.lead_acid.BaseModel):
-            if options["thermal"] != "isothermal":
+            if options["thermal"] != "isothermal" and options["dimensionality"] != 0:
                 raise pybamm.OptionError(
-                    "thermal effects not implemented for lead-acid models"
+                    "Lead-acid models can only have thermal "
+                    "effects if dimensionality is 0."
                 )
+
             if options["thermal current collector"] is True:
                 raise pybamm.OptionError(
-                    "thermal effects not implemented for lead-acid models"
+                    "Thermal current collector effects are not implemented "
+                    "for lead-acid models."
                 )
 
         self._options = options
@@ -273,7 +274,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             }
         )
         if self.options["dimensionality"] == 1:
-            self.variables.update({"y": var.y, "y [m]": var.y * L_y})
+            self.variables.update({"z": var.z, "z [m]": var.z * L_z})
         elif self.options["dimensionality"] == 2:
             self.variables.update(
                 {"y": var.y, "y [m]": var.y * L_y, "z": var.z, "z [m]": var.z * L_z}

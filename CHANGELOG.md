@@ -1,16 +1,57 @@
-# [Unreleased](https://github.com/pybamm-team/PyBaMM)
+# [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
 ## Features
 
+-   Made `QuickPlot` compatible with Google Colab ([#935](https://github.com/pybamm-team/PyBaMM/pull/935))
+-   Added `BasicFull` model for lead-acid ([#932](https://github.com/pybamm-team/PyBaMM/pull/932))
+
+## Optimizations
+
+-   Sped up model building ([#927](https://github.com/pybamm-team/PyBaMM/pull/927))
+-   Changed default solver for lead-acid to `CasadiSolver` ([#927](https://github.com/pybamm-team/PyBaMM/pull/927))
+
+## Bug fixes
+
+-   Reformatted electrolyte submodels ([#927](https://github.com/pybamm-team/PyBaMM/pull/927))
+
+## Breaking changes
+
+-   Removed some inputs like `T_inf`, `R_g` and activation energies to some of the standard function parameters. This is because each of those inputs is specific to a particular function (e.g. the reference temperature at which the function was measured). To change a property such as the activation energy, users should create a new function, specifying the relevant property as a `Parameter` or `InputParameter` ([#942](https://github.com/pybamm-team/PyBaMM/pull/942))
+
+# [v0.2.1](https://github.com/pybamm-team/PyBaMM/tree/v0.2.1) - 2020-03-31
+
+New expression tree node types, models, parameter sets and solvers, as well as general bug fixes and new examples.
+
+## Features
+
+-   Store variable slices in model for inspection ([#925](https://github.com/pybamm-team/PyBaMM/pull/925))
+-   Added LiNiCoO2 parameter set from Ecker et. al. ([#922](https://github.com/pybamm-team/PyBaMM/pull/922))
+-   Made t_plus (optionally) a function of electrolyte concentration, and added (1 + dlnf/dlnc) to models ([#921](https://github.com/pybamm-team/PyBaMM/pull/921))
+-   Added `DummySolver` for empty models ([#915](https://github.com/pybamm-team/PyBaMM/pull/915))
+-   Added functionality to broadcast to edges ([#891](https://github.com/pybamm-team/PyBaMM/pull/891))
+-   Reformatted and cleaned up `QuickPlot` ([#886](https://github.com/pybamm-team/PyBaMM/pull/886))
+-   Added thermal effects to lead-acid models ([#885](https://github.com/pybamm-team/PyBaMM/pull/885))
+-   Added a helper function for info on function parameters ([#881](https://github.com/pybamm-team/PyBaMM/pull/881))
 -   Added additional notebooks showing how to create and compare models ([#877](https://github.com/pybamm-team/PyBaMM/pull/877))
--   Added `Minimum`, `Maximum` and `Sign` operators ([#876](https://github.com/pybamm-team/PyBaMM/pull/876))
+-   Added `Minimum`, `Maximum` and `Sign` operators
+    ([#876](https://github.com/pybamm-team/PyBaMM/pull/876))
 -   Added a search feature to `FuzzyDict` ([#875](https://github.com/pybamm-team/PyBaMM/pull/875))
 -   Add ambient temperature as a function of time ([#872](https://github.com/pybamm-team/PyBaMM/pull/872))
 -   Added `CasadiAlgebraicSolver` for solving algebraic systems with CasADi ([#868](https://github.com/pybamm-team/PyBaMM/pull/868))
 -   Added electrolyte functions from Landesfeind ([#860](https://github.com/pybamm-team/PyBaMM/pull/860))
+-   Add new symbols `VariableDot`, representing the derivative of a variable wrt time,
+    and `StateVectorDot`, representing the derivative of a state vector wrt time
+    ([#858](https://github.com/pybamm-team/PyBaMM/issues/858))
 
 ## Bug fixes
 
+-   Filter out discontinuities that occur after solve times 
+    ([#941](https://github.com/pybamm-team/PyBaMM/pull/945))
+-   Fixed tight layout for QuickPlot in jupyter notebooks ([#930](https://github.com/pybamm-team/PyBaMM/pull/930))
+-   Fixed bug raised if function returns a scalar ([#919](https://github.com/pybamm-team/PyBaMM/pull/919))
+-   Fixed event handling in `ScipySolver` ([#905](https://github.com/pybamm-team/PyBaMM/pull/905))
+-   Made input handling clearer in solvers ([#905](https://github.com/pybamm-team/PyBaMM/pull/905))
+-   Updated Getting started notebook 2 ([#903](https://github.com/pybamm-team/PyBaMM/pull/903))
 -   Reformatted external circuit submodels ([#879](https://github.com/pybamm-team/PyBaMM/pull/879))
 -   Some bug fixes to generalize specifying models that aren't battery models, see [#846](https://github.com/pybamm-team/PyBaMM/issues/846)
 -   Reformatted interface submodels to be more readable ([#866](https://github.com/pybamm-team/PyBaMM/pull/866))
@@ -18,6 +59,7 @@
 
 ## Breaking changes
 
+-   Changed keyword argument `u` for inputs (when evaluating an object) to `inputs` ([#905](https://github.com/pybamm-team/PyBaMM/pull/905))
 -   Removed "set external temperature" and "set external potential" options. Use "external submodels" option instead ([#862](https://github.com/pybamm-team/PyBaMM/pull/862))
 
 # [v0.2.0](https://github.com/pybamm-team/PyBaMM/tree/v0.2.0) - 2020-02-26

@@ -13,7 +13,7 @@ def is_scalar_zero(expr):
     Utility function to test if an expression evaluates to a constant scalar zero
     """
     if expr.is_constant():
-        result = expr.evaluate_ignoring_errors()
+        result = expr.evaluate_ignoring_errors(t=None)
         return isinstance(result, numbers.Number) and result == 0
     else:
         return False
@@ -24,7 +24,7 @@ def is_matrix_zero(expr):
     Utility function to test if an expression evaluates to a constant matrix zero
     """
     if expr.is_constant():
-        result = expr.evaluate_ignoring_errors()
+        result = expr.evaluate_ignoring_errors(t=None)
         return (issparse(result) and result.count_nonzero() == 0) or (
             isinstance(result, np.ndarray) and np.all(result == 0)
         )
@@ -32,12 +32,12 @@ def is_matrix_zero(expr):
         return False
 
 
-def is_one(expr):
+def is_scalar_one(expr):
     """
     Utility function to test if an expression evaluates to a constant scalar one
     """
     if expr.is_constant():
-        result = expr.evaluate_ignoring_errors()
+        result = expr.evaluate_ignoring_errors(t=None)
         return isinstance(result, numbers.Number) and result == 1
     else:
         return False
@@ -162,21 +162,23 @@ class BinaryOperator(pybamm.Symbol):
         "Default behaviour for new_copy"
         return self.__class__(left, right)
 
-    def evaluate(self, t=None, y=None, u=None, known_evals=None):
+    def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         if known_evals is not None:
             id = self.id
             try:
                 return known_evals[id], known_evals
             except KeyError:
-                left, known_evals = self.left.evaluate(t, y, u, known_evals)
-                right, known_evals = self.right.evaluate(t, y, u, known_evals)
+                left, known_evals = self.left.evaluate(t, y, y_dot, inputs, known_evals)
+                right, known_evals = self.right.evaluate(
+                    t, y, y_dot, inputs, known_evals
+                )
                 value = self._binary_evaluate(left, right)
                 known_evals[id] = value
                 return value, known_evals
         else:
-            left = self.left.evaluate(t, y, u)
-            right = self.right.evaluate(t, y, u)
+            left = self.left.evaluate(t, y, y_dot, inputs)
+            right = self.right.evaluate(t, y, y_dot, inputs)
             return self._binary_evaluate(left, right)
 
     def _evaluate_for_shape(self):
@@ -252,8 +254,12 @@ class Power(BinaryOperator):
         if is_scalar_zero(right):
             return pybamm.Scalar(1)
 
-        # anything to the power of one is itself
+        # zero to the power of anything is zero
         if is_scalar_zero(left):
+            return pybamm.Scalar(0)
+
+        # anything to the power of one is itself
+        if is_scalar_one(right):
             return left
 
         return self.__class__(left, right)
@@ -425,9 +431,9 @@ class Multiplication(BinaryOperator):
             return zeros_of_shape(shape)
 
         # anything multiplied by a scalar one returns itself
-        if is_one(left):
+        if is_scalar_one(left):
             return right
-        if is_one(right):
+        if is_scalar_one(right):
             return left
 
         return pybamm.simplify_multiplication_division(self.__class__, left, right)
@@ -549,7 +555,7 @@ class Division(BinaryOperator):
                 return pybamm.Array(np.inf * np.ones(left.shape_for_testing))
 
         # anything divided by one is itself
-        if is_one(right):
+        if is_scalar_one(right):
             return left
 
         return pybamm.simplify_multiplication_division(self.__class__, left, right)
@@ -622,9 +628,9 @@ class Inner(BinaryOperator):
             return zeros_of_shape(shape)
 
         # anything multiplied by a scalar one returns itself
-        if is_one(left):
+        if is_scalar_one(left):
             return right
-        if is_one(right):
+        if is_scalar_one(right):
             return left
 
         return pybamm.simplify_multiplication_division(self.__class__, left, right)

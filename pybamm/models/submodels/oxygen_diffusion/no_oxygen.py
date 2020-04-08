@@ -29,7 +29,7 @@ class NoOxygen(BaseModel):
 
         variables = self._get_standard_concentration_variables(c_ox)
 
-        N_e = pybamm.FullBroadcast(
+        N_e = pybamm.FullBroadcastToEdges(
             0,
             ["negative electrode", "separator", "positive electrode"],
             "current collector",

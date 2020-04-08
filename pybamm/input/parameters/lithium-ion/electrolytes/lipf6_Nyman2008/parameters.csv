@@ -4,10 +4,6 @@ Name [units],Value,Reference,Notes
 # Electrolyte properties,,,
 Typical electrolyte concentration [mol.m-3],1000,Chen 2020,
 Cation transference number,0.2594,Chen 2020,
+1 + dlnf/dlnc,1,,
 Electrolyte diffusivity [m2.s-1],[function]electrolyte_diffusivity_Nyman2008,Nyman 2008," "
 Electrolyte conductivity [S.m-1],[function]electrolyte_conductivity_Nyman2008,Nyman 2008," "
-,,,
-# Activation energies,,,
-Reference temperature [K],298.15,25C,
-Electrolyte diffusion activation energy [J.mol-1],37040,default,
-Electrolyte conductivity activation energy [J.mol-1],34700,default,

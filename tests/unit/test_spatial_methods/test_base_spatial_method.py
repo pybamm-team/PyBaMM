@@ -50,9 +50,9 @@ class TestSpatialMethod(unittest.TestCase):
             )
 
         # edges
-        x1_edge = pybamm.SpatialVariable("x_edge", ["negative electrode"])
-        x2_edge = pybamm.SpatialVariable("x_edge", ["negative electrode", "separator"])
-        r_edge = pybamm.SpatialVariable("r_edge", ["negative particle"])
+        x1_edge = pybamm.SpatialVariableEdge("x", ["negative electrode"])
+        x2_edge = pybamm.SpatialVariableEdge("x", ["negative electrode", "separator"])
+        r_edge = pybamm.SpatialVariableEdge("r", ["negative particle"])
         for var in [x1_edge, x2_edge, r_edge]:
             var_disc = spatial_method.spatial_variable(var)
             self.assertIsInstance(var_disc, pybamm.Vector)

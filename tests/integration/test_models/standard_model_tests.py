@@ -48,12 +48,7 @@ class StandardModelTest(object):
         self.model.check_well_posedness()
         # No Parameter or FunctionParameter nodes in the model
         for eqn in {**self.model.rhs, **self.model.algebraic}.values():
-            if any(
-                [
-                    isinstance(x, (pybamm.Parameter, pybamm.FunctionParameter))
-                    for x in eqn.pre_order()
-                ]
-            ):
+            if eqn.has_symbol_of_classes((pybamm.Parameter, pybamm.FunctionParameter)):
                 raise TypeError(
                     "Not all Parameter and FunctionParameter objects processed"
                 )

@@ -63,15 +63,17 @@ class UnaryOperator(pybamm.Symbol):
         """Perform unary operation on a child. """
         raise NotImplementedError
 
-    def evaluate(self, t=None, y=None, u=None, known_evals=None):
+    def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         if known_evals is not None:
             if self.id not in known_evals:
-                child, known_evals = self.child.evaluate(t, y, u, known_evals)
+                child, known_evals = self.child.evaluate(
+                    t, y, y_dot, inputs, known_evals
+                )
                 known_evals[self.id] = self._unary_evaluate(child)
             return known_evals[self.id], known_evals
         else:
-            child = self.child.evaluate(t, y, u)
+            child = self.child.evaluate(t, y, y_dot, inputs)
             return self._unary_evaluate(child)
 
     def _evaluate_for_shape(self):
@@ -222,7 +224,7 @@ class Index(UnaryOperator):
         # when trying to simplify the node Index(child_jac). Instead, search the
         # tree for StateVectors and return a matrix of zeros of the correct size
         # if none are found.
-        if all([not (isinstance(n, pybamm.StateVector)) for n in self.pre_order()]):
+        if not self.has_symbol_of_classes(pybamm.StateVector):
             jac = csr_matrix((1, child_jac.shape[1]))
             return pybamm.Matrix(jac)
         else:
@@ -295,7 +297,7 @@ class SpatialOperator(UnaryOperator):
         search_types = (pybamm.Variable, pybamm.StateVector, pybamm.SpatialVariable)
 
         # do the search, return a scalar zero node if no relevent nodes are found
-        if all([not (isinstance(n, search_types)) for n in self.pre_order()]):
+        if not self.has_symbol_of_classes(search_types):
             return pybamm.Scalar(0)
         else:
             return self.__class__(simplified_child)
@@ -901,6 +903,9 @@ def x_average(symbol):
     :class:`Symbol`
         the new averaged symbol
     """
+    # Can't take average if the symbol evaluates on edges
+    if symbol.evaluates_on_edges():
+        raise ValueError("Can't take the x-average of a symbol that evaluates on edges")
     # If symbol doesn't have a domain, its average value is itself
     if symbol.domain in [[], ["current collector"]]:
         new_symbol = symbol.new_copy()
@@ -963,6 +968,9 @@ def z_average(symbol):
     :class:`Symbol`
         the new averaged symbol
     """
+    # Can't take average if the symbol evaluates on edges
+    if symbol.evaluates_on_edges():
+        raise ValueError("Can't take the z-average of a symbol that evaluates on edges")
     # Symbol must have domain [] or ["current collector"]
     if symbol.domain not in [[], ["current collector"]]:
         raise pybamm.DomainError(
@@ -1024,6 +1032,38 @@ def yz_average(symbol):
         return Integral(symbol, [y, z]) / (l_y * l_z)
 
 
+def r_average(symbol):
+    """convenience function for creating an average in the r-direction
+
+    Parameters
+    ----------
+    symbol : :class:`pybamm.Symbol`
+        The function to be averaged
+
+    Returns
+    -------
+    :class:`Symbol`
+        the new averaged symbol
+    """
+    # Can't take average if the symbol evaluates on edges
+    if symbol.evaluates_on_edges():
+        raise ValueError("Can't take the r-average of a symbol that evaluates on edges")
+    # If symbol doesn't have a particle domain, its r-averaged value is itself
+    if symbol.domain not in [["positive particle"], ["negative particle"]]:
+        new_symbol = symbol.new_copy()
+        new_symbol.parent = None
+        return new_symbol
+    # If symbol is a Broadcast, its average value is its child
+    elif isinstance(symbol, pybamm.Broadcast):
+        return symbol.orphans[0]
+    else:
+        r = pybamm.SpatialVariable("r", symbol.domain)
+        v = pybamm.FullBroadcast(
+            pybamm.Scalar(1), symbol.domain, symbol.auxiliary_domains
+        )
+        return Integral(symbol, r) / Integral(v, r)
+
+
 def boundary_value(symbol, side):
     """convenience function for creating a :class:`pybamm.BoundaryValue`
 
@@ -1059,35 +1099,6 @@ def boundary_value(symbol, side):
     # Otherwise, calculate boundary value
     else:
         return BoundaryValue(symbol, side)
-
-
-def r_average(symbol):
-    """convenience function for creating an average in the r-direction
-
-    Parameters
-    ----------
-    symbol : :class:`pybamm.Symbol`
-        The function to be averaged
-
-    Returns
-    -------
-    :class:`Symbol`
-        the new averaged symbol
-    """
-    # If symbol doesn't have a particle domain, its r-averaged value is itself
-    if symbol.domain not in [["positive particle"], ["negative particle"]]:
-        new_symbol = symbol.new_copy()
-        new_symbol.parent = None
-        return new_symbol
-    # If symbol is a Broadcast, its average value is its child
-    elif isinstance(symbol, pybamm.Broadcast):
-        return symbol.orphans[0]
-    else:
-        r = pybamm.SpatialVariable("r", symbol.domain)
-        v = pybamm.FullBroadcast(
-            pybamm.Scalar(1), symbol.domain, symbol.auxiliary_domains
-        )
-        return Integral(symbol, r) / Integral(v, r)
 
 
 def sign(symbol):

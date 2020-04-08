@@ -13,7 +13,7 @@ experiment = pybamm.Experiment(
         "Hold at 4.1 V until 50 mA",
         "Rest for 1 hour",
     ]
-    * 3,
+    * 3
 )
 model = pybamm.lithium_ion.DFN()
 sim = pybamm.Simulation(model, experiment=experiment, solver=pybamm.CasadiSolver())

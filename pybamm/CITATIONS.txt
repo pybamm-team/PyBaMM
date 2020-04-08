@@ -72,6 +72,14 @@ year={2019},
 publisher={The Electrochemical Society}
 }
 
+@article{Mohtat2020,
+author = {Mohtat, Peyman and Siegel, Jason B and Stefanopoulou, Anna G},
+title = {{High C-rate Differential Expansion and Voltage Model for Li-ion Batteries}},
+journal = {Submitted for publication},
+year = {2019},
+publisher={ECSarXiv}
+}
+
 @article{scikits-odes,
   year  = {2018},
   month = {feb},
@@ -134,4 +142,38 @@ year={2020}
   version      = {0.4.0},
   doi          = {10.5281/zenodo.3597656},
   url          = {https://doi.org/10.5281/zenodo.3597656}
+}
+
+@article{ecker2015i,
+  title={Parameterization of a physico-chemical model of a lithium-ion battery i. determination of parameters},
+  author={Ecker, Madeleine and Tran, Thi Kim Dung and Dechent, Philipp and K{\"a}bitz, Stefan and Warnecke, Alexander and Sauer, Dirk Uwe},
+  journal={Journal of the Electrochemical Society},
+  volume={162},
+  number={9},
+  pages={A1836--A1848},
+  year={2015},
+  publisher={The Electrochemical Society}
+}
+
+@article{ecker2015ii,
+  title={Parameterization of a physico-chemical model of a lithium-ion battery ii. model validation},
+  author={Ecker, Madeleine and K{\"a}bitz, Stefan and Laresgoiti, Izaro and Sauer, Dirk Uwe},
+  journal={Journal of The Electrochemical Society},
+  volume={162},
+  number={9},
+  pages={A1849--A1857},
+  year={2015},
+  publisher={The Electrochemical Society}
+}
+
+@article{richardson2020,
+title = "Generalised single particle models for high-rate operation of graded lithium-ion electrodes: Systematic derivation and validation",
+journal = "Electrochimica Acta",
+volume = "339",
+pages = "135862",
+year = "2020",
+issn = "0013-4686",
+doi = "https://doi.org/10.1016/j.electacta.2020.135862",
+url = "http://www.sciencedirect.com/science/article/pii/S0013468620302541",
+author = "G. Richardson and I. Korotkin and R. Ranom and M. Castle and J.M. Foster",
 }
