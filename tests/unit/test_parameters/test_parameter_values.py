@@ -23,7 +23,7 @@ class TestParameterValues(unittest.TestCase):
                 )
             )
         )
-        self.assertEqual(data["Reference temperature [K]"], "298.15")
+        self.assertEqual(data["Positive electrode porosity"], "0.3")
 
     def test_init(self):
         # from dict
@@ -40,7 +40,7 @@ class TestParameterValues(unittest.TestCase):
                 + "parameters.csv"
             )
         )
-        self.assertEqual(param["Reference temperature [K]"], 298.15)
+        self.assertEqual(param["Positive electrode porosity"], 0.3)
 
         # values vs chemistry
         with self.assertRaisesRegex(

@@ -19,12 +19,12 @@ def graphite_ocp_Ecker2015_function(sto):
 
     Parameters
     ----------
-    sto: :class: `numpy.Array`
+    sto: :class:`pybamm.Symbol`
         Electrode stochiometry
 
     Returns
     -------
-    : double
+    :class:`pybamm.Symbol`
         Open circuit potential
     """
 

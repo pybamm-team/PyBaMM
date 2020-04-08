@@ -6,7 +6,6 @@ Standard Parameters for lead-acid battery models
 """
 import pybamm
 import numpy as np
-from scipy import constants
 
 
 # --------------------------------------------------------------------------------------
@@ -21,8 +20,8 @@ from scipy import constants
 # --------------------------------------------------------------------------------------
 "1. Dimensional Parameters"
 # Physical constants
-R = pybamm.Scalar(constants.R)
-F = pybamm.Scalar(constants.physical_constants["Faraday constant"][0])
+R = pybamm.constants.R
+F = pybamm.constants.F
 T_ref = pybamm.Parameter("Reference temperature [K]")
 
 # Macroscale geometry

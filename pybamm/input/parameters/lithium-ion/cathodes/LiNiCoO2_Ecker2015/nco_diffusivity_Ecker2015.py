@@ -1,7 +1,7 @@
-from pybamm import exp
+from pybamm import exp, constants
 
 
-def nco_diffusivity_Ecker2015(sto, T, T_inf, E_D_s, R_g):
+def nco_diffusivity_Ecker2015(sto, T):
     """
     NCO diffusivity as a function of stochiometry [1, 2, 3].
 
@@ -19,24 +19,19 @@ def nco_diffusivity_Ecker2015(sto, T, T_inf, E_D_s, R_g):
 
     Parameters
     ----------
-    sto: :class: `numpy.Array`
+    sto: :class:`pybamm.Symbol`
         Electrode stochiometry
-    T: :class: `numpy.Array`
+    T: :class:`pybamm.Symbol`
         Dimensional temperature
-    T_inf: double
-        Reference temperature
-    E_D_s: double
-        Solid diffusion activation energy
-    R_g: double
-        The ideal gas constant
 
     Returns
     -------
-    : double
+    :class:`pybamm.Symbol`
         Solid diffusivity
     """
 
     D_ref = 3.7e-13 - 3.4e-13 * exp(-12 * (sto - 0.62) * (sto - 0.62))
-    arrhenius = exp(-E_D_s / (R_g * T)) * exp(E_D_s / (R_g * T_inf))
+    E_D_s = 8.06e4
+    arrhenius = exp(-E_D_s / (constants.R * T)) * exp(E_D_s / (constants.R * 296.15))
 
     return D_ref * arrhenius

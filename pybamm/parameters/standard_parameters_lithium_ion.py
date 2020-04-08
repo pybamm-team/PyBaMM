@@ -6,7 +6,6 @@ Standard parameters for lithium-ion battery models
 """
 import pybamm
 import numpy as np
-from scipy import constants
 
 
 # --------------------------------------------------------------------------------------
@@ -22,8 +21,8 @@ from scipy import constants
 "1. Dimensional Parameters"
 
 # Physical constants
-R = pybamm.Scalar(constants.R)
-F = pybamm.Scalar(constants.physical_constants["Faraday constant"][0])
+R = pybamm.constants.R
+F = pybamm.constants.F
 T_ref = pybamm.Parameter("Reference temperature [K]")
 
 # Macroscale geometry
@@ -130,14 +129,6 @@ def c_p_init_dimensional(x):
 # thermal
 Delta_T = pybamm.thermal_parameters.Delta_T
 
-# Activation energies
-E_r_n = pybamm.thermal_parameters.E_r_n
-E_r_p = pybamm.thermal_parameters.E_r_p
-E_D_s_n = pybamm.thermal_parameters.E_D_s_n
-E_D_s_p = pybamm.thermal_parameters.E_D_s_p
-E_D_e = pybamm.thermal_parameters.E_D_e
-E_k_e = pybamm.thermal_parameters.E_k_e
-
 # velocity scale
 velocity_scale = pybamm.Scalar(1)
 
@@ -147,75 +138,39 @@ velocity_scale = pybamm.Scalar(1)
 
 def D_e_dimensional(c_e, T):
     "Dimensional diffusivity in electrolyte"
-    inputs = {
-        "Electrolyte concentration [mol.m-3]": c_e,
-        "Temperature [K]": T,
-        "Reference temperature [K]": T_ref,
-        "Activation energy [J.mol-1]": E_D_e,
-        "Ideal gas constant [J.mol-1.K-1]": R,
-    }
+    inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
     return pybamm.FunctionParameter("Electrolyte diffusivity [m2.s-1]", inputs)
 
 
 def kappa_e_dimensional(c_e, T):
     "Dimensional electrolyte conductivity"
-    inputs = {
-        "Electrolyte concentration [mol.m-3]": c_e,
-        "Temperature [K]": T,
-        "Reference temperature [K]": T_ref,
-        "Activation energy [J.mol-1]": E_k_e,
-        "Ideal gas constant [J.mol-1.K-1]": R,
-    }
+    inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
     return pybamm.FunctionParameter("Electrolyte conductivity [S.m-1]", inputs)
 
 
 def D_n_dimensional(sto, T):
     """Dimensional diffusivity in negative particle. Note this is defined as a
     function of stochiometry"""
-
-    inputs = {
-        "Negative particle stoichiometry": sto,
-        "Temperature [K]": T,
-        "Reference temperature [K]": T_ref,
-        "Activation energy [J.mol-1]": E_D_s_n,
-        "Ideal gas constant [J.mol-1.K-1]": R,
-    }
-
+    inputs = {"Negative particle stoichiometry": sto, "Temperature [K]": T}
     return pybamm.FunctionParameter("Negative electrode diffusivity [m2.s-1]", inputs)
 
 
 def D_p_dimensional(sto, T):
     """Dimensional diffusivity in positive particle. Note this is defined as a
     function of stochiometry"""
-    inputs = {
-        "Positive particle stoichiometry": sto,
-        "Temperature [K]": T,
-        "Reference temperature [K]": T_ref,
-        "Activation energy [J.mol-1]": E_D_s_p,
-        "Ideal gas constant [J.mol-1.K-1]": R,
-    }
+    inputs = {"Positive particle stoichiometry": sto, "Temperature [K]": T}
     return pybamm.FunctionParameter("Positive electrode diffusivity [m2.s-1]", inputs)
 
 
 def m_n_dimensional(T):
     "Dimensional negative reaction rate"
-    inputs = {
-        "Temperature [K]": T,
-        "Reference temperature [K]": T_ref,
-        "Activation energy [J.mol-1]": E_r_n,
-        "Ideal gas constant [J.mol-1.K-1]": R,
-    }
+    inputs = {"Temperature [K]": T}
     return pybamm.FunctionParameter("Negative electrode reaction rate", inputs)
 
 
 def m_p_dimensional(T):
     "Dimensional negative reaction rate"
-    inputs = {
-        "Temperature [K]": T,
-        "Reference temperature [K]": T_ref,
-        "Activation energy [J.mol-1]": E_r_p,
-        "Ideal gas constant [J.mol-1.K-1]": R,
-    }
+    inputs = {"Temperature [K]": T}
     return pybamm.FunctionParameter("Positive electrode reaction rate", inputs)
 
 

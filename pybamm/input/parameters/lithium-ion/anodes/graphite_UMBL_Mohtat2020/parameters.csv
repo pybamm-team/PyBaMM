@@ -34,8 +34,5 @@ Negative electrode specific heat capacity [J.kg-1.K-1],1100,Peyman MPM,cell lump
 Negative electrode thermal conductivity [W.m-1.K-1],1.7,,no info from Peyman MPM
 Negative electrode OCP entropic change [V.K-1],[function]graphite_entropic_change_PeymanMPM,,
 ,,,
-# Activation energies,,,
-Reference temperature [K],298.15,25C,
+# Reaction rate,,,
 Negative electrode reaction rate,[function]graphite_electrolyte_reaction_rate_PeymanMPM,,
-Negative reaction rate activation energy [J.mol-1],37480,,no info from Peyman MPM
-Negative solid diffusion activation energy [J.mol-1],42770,,no info from Peyman MPM

@@ -1,7 +1,7 @@
 from pybamm import exp
 
 
-def electrolyte_diffusivity_Kim2011(c_e, T, T_inf, E_D_e, R_g):
+def electrolyte_diffusivity_Kim2011(c_e, T):
     """
     Diffusivity of LiPF6 in EC as a function of ion concentration from [1].
 
@@ -14,20 +14,15 @@ def electrolyte_diffusivity_Kim2011(c_e, T, T_inf, E_D_e, R_g):
 
     Parameters
     ----------
-    c_e: :class: `numpy.Array`
+    c_e: :class:`pybamm.Symbol`
         Dimensional electrolyte concentration
-    T: :class: `numpy.Array`
+    T: :class:`pybamm.Symbol`
         Dimensional temperature
-    T_inf: double
-        Reference temperature
-    E_D_e: double
-        Electrolyte diffusion activation energy
-    R_g: double
-        The ideal gas constant
+
 
     Returns
     -------
-    :`numpy.Array`
+    :class:`pybamm.Symbol`
         Solid diffusivity
     """
 
