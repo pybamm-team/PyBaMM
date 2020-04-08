@@ -220,10 +220,14 @@ class ProcessedVariable(object):
             self.x_sol = first_dim_pts
             self.z_sol = second_dim_pts
         else:
-            raise pybamm.DomainError(
-                "Cannot process 3D object with domain '{}' "
-                "and auxiliary_domains '{}'".format(self.domain, self.auxiliary_domains)
-            )
+            self.first_dimension = "x"
+            self.second_dimension = "y"
+            self.x_sol = first_dim_pts
+            self.y_sol = second_dim_pts
+            # raise pybamm.DomainError(
+            #     "Cannot process 3D object with domain '{}' "
+            #     "and auxiliary_domains '{}'".format(self.domain, self.auxiliary_domains)
+            # )
 
         first_dim_size = len(first_dim_pts)
         second_dim_size = len(second_dim_pts)

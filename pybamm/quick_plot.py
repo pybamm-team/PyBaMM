@@ -169,6 +169,9 @@ class QuickPlot(object):
             self.spatial_scales["current collector y"] = (
                 variables["y [m]"] / variables["y"]
             ).evaluate()[-1] * spatial_factor
+            self.spatial_scales["channel"] = (
+                variables["y [m]"] / variables["y"]
+            ).evaluate()[-1] * spatial_factor
         if "z [m]" in variables and "z" in variables:
             self.spatial_scales["current collector z"] = (
                 variables["z [m]"] / variables["z"]
