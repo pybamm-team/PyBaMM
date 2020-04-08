@@ -64,7 +64,7 @@ else:
         var.x_p: 15,
         var.r_n: 15,
         var.r_p: 15,
-        var.z: 100,
+        var.z: 50,
     }
 
     # solver

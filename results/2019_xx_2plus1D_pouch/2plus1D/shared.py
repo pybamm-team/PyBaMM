@@ -335,10 +335,10 @@ def plot_cc_potentials(t, comsol_model, output_variables, param):
     ax[0, 1].set_title(r"$\phi^*_{\mathrm{s,cp}} - V^*$ [V]")
     ax[1, 0].set_xlabel(r"$y^*$ [mm]")
     ax[1, 0].set_ylabel(r"$z^*$ [mm]")
-    ax[1, 0].set_title(r"$\phi^*_{\mathrm{s,cn}}$ (difference) [V]")
+    ax[1, 0].set_title(r"Error in $\phi^*_{\mathrm{s,cn}}$ [V]")
     ax[1, 1].set_xlabel(r"$y^*$ [mm]")
     ax[1, 1].set_ylabel(r"$z^*$ [mm]")
-    ax[1, 1].set_title(r"$\phi^*_{\mathrm{s,cp}}$ (difference) [V]")
+    ax[1, 1].set_title(r"Error in $\phi^*_{\mathrm{s,cp}}$ [V]")
 
     ax[0, 0].text(-0.1, 1.1, "(a)", transform=ax[0, 0].transAxes)
     ax[0, 1].text(-0.1, 1.1, "(b)", transform=ax[0, 1].transAxes)
@@ -397,7 +397,7 @@ def plot_cc_current(t, comsol_model, output_variables, param):
     ax[0].set_title(r"$\mathcal{I}^*$ [A/m${}^2$]")
     ax[1].set_xlabel(r"$y^*$ [mm]")
     ax[1].set_ylabel(r"$z^*$ [mm]")
-    ax[1].set_title(r"$\mathcal{I}^*$ (difference) [A/m${}^2$]")
+    ax[1].set_title(r"Error in $\mathcal{I}^*$ [A/m${}^2$]")
 
     ax[0].text(-0.1, 1.1, "(a)", transform=ax[0].transAxes)
     ax[1].text(-0.1, 1.1, "(b)", transform=ax[1].transAxes)

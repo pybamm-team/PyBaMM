@@ -216,10 +216,19 @@ class ProcessedVariable(object):
 
         # set up interpolation
         # note that the order of 't' and 'space' is the reverse of what you'd expect
+        if len(self.t_sol) == 1:
 
-        self._interpolation_function = interp.interp2d(
-            self.t_sol, space, entries, kind=self.interp_kind, fill_value=np.nan
-        )
+            def interp_fun(t, z):
+                out = interp.interp1d(
+                    space, entries[:, 0], kind=self.interp_kind, fill_value=np.nan
+                )(z)
+                return out[:, np.newaxis]
+
+            self._interpolation_function = interp_fun
+        else:
+            self._interpolation_function = interp.interp2d(
+                self.t_sol, space, entries, kind=self.interp_kind, fill_value=np.nan
+            )
 
     def initialise_3D(self):
         """

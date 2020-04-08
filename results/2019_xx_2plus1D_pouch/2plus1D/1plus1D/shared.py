@@ -2,10 +2,12 @@ import pybamm
 import numpy as np
 import scipy.interpolate as interp
 import matplotlib.pyplot as plt
+import matplotlib.ticker
 
 
 def make_comsol_model(comsol_variables, mesh, param, z_interp=None, thermal=True):
     "Make Comsol 'model' for comparison"
+    print("Start making COMSOL model")
 
     # comsol time
     comsol_t = comsol_variables["time"]
@@ -100,16 +102,22 @@ def make_comsol_model(comsol_variables, mesh, param, z_interp=None, thermal=True
     if "c_s_n" in comsol_variables.keys():
         comsol_c_s_n = get_interp_fun_curr_coll("c_s_n")
         comsol_model.variables.update(
-            {"X-averaged negative particle surface concentration [mol.m-3]": comsol_c_s_n}
+            {
+                "X-averaged negative particle surface concentration [mol.m-3]": comsol_c_s_n
+            }
         )
     if "c_s_p" in comsol_variables.keys():
         comsol_c_s_p = get_interp_fun_curr_coll("c_s_p")
         comsol_model.variables.update(
-            {"X-averaged positive particle surface concentration [mol.m-3]": comsol_c_s_p}
+            {
+                "X-averaged positive particle surface concentration [mol.m-3]": comsol_c_s_p
+            }
         )
 
     comsol_model.z_interp = z_interp
+    comsol_model.t = comsol_t
 
+    print("Finish making COMSOL model")
     return comsol_model
 
 
@@ -566,90 +574,142 @@ def plot_cc_current_temperature(
 
 
 def plot_tz_var(
-    var,
     t_plot,
-    comsol_model,
-    output_variables,
+    z_plot,
+    t_slices,
+    var_name,
+    units,
+    comsol_var_fun,
+    pybamm_var_fun,
+    pybamm_bar_var_fun,
     param,
     cmap="viridis",
-    error="both",
-    scale=None,
 ):
-    fig, ax = plt.subplots(figsize=(15, 8))
-
-    # get z vals from comsol interp points (will be dimensional)
-    z_plot = comsol_model.z_interp
-
-    # plot pybamm solution
+    # non-dim t and z
     L_z = param.evaluate(pybamm.standard_parameters_lithium_ion.L_z)
     tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
     z_plot_non_dim = z_plot / L_z
     t_non_dim = t_plot / tau
+    t_slices_non_dim = t_slices / tau
 
-    pybamm_var = output_variables[var](z=z_plot_non_dim, t=t_non_dim)
+    fig, ax = plt.subplots(2, 2, figsize=(6.4, 4))
+    fig.subplots_adjust(
+        left=0.15, bottom=0.1, right=0.95, top=0.95, wspace=0.4, hspace=0.8
+    )
+    # plot comsol var
+    comsol_var = comsol_var_fun(t=t_non_dim, z=z_plot_non_dim)
+    comsol_var_plot = ax[0, 0].pcolormesh(
+        z_plot * 1e3, t_plot, np.transpose(comsol_var), shading="gouraud", cmap=cmap
+    )
+    if "cn" in var_name:
+        format = "%.0e"
+    else:
+        format = None
+    fig.colorbar(
+        comsol_var_plot,
+        ax=ax,
+        format=format,
+        location="top",
+        shrink=0.42,
+        aspect=20,
+        anchor=(0.0, 0.0),
+    )
 
-    if error in ["abs", "rel"]:
-        plt.subplot(131)
-    elif error == "both":
-        plt.subplot(221)
-    pybamm_plot = plt.pcolormesh(t_plot, z_plot, pybamm_var, shading="gouraud")
-    plt.axis([0, t_plot[-1], 0, z_plot[-1]])
-    plt.xlabel(r"$t$")
-    plt.ylabel(r"$z$")
-    plt.title(r"PyBaMM: " + var)
-    plt.set_cmap(cmap)
-    plt.colorbar(pybamm_plot)
+    # plot slices
+    ccmap = plt.get_cmap("inferno")
+    for ind, t in enumerate(t_slices_non_dim):
+        color = ccmap(float(ind) / len(t_slices))
+        comsol_var_slice = comsol_var_fun(t=t, z=z_plot_non_dim)
+        pybamm_var_slice = pybamm_var_fun(t=t, z=z_plot_non_dim)
+        pybamm_bar_var_slice = pybamm_bar_var_fun(t=np.array([t]), z=z_plot_non_dim)
+        ax[0, 1].plot(
+            z_plot * 1e3, comsol_var_slice, "o", fillstyle="none", color=color
+        )
+        ax[0, 1].plot(
+            z_plot * 1e3,
+            pybamm_var_slice,
+            "-",
+            color=color,
+            label="{:.0f} s".format(t_slices[ind]),
+        )
+        ax[0, 1].plot(z_plot * 1e3, pybamm_bar_var_slice, ":", color=color)
+    # add dummy points for legend of styles
+    comsol_p, = ax[0, 1].plot(np.nan, np.nan, "ko", fillstyle="none")
+    pybamm_p, = ax[0, 1].plot(np.nan, np.nan, "k-", fillstyle="none")
+    pybamm_bar_p, = ax[0, 1].plot(np.nan, np.nan, "k:", fillstyle="none")
 
-    # plot comsol solution
-    comsol_var = comsol_model.variables[var](t=t_plot)
+    # compute errors
+    pybamm_var = pybamm_var_fun(t=t_non_dim, z=z_plot_non_dim)
+    pybamm_bar_var = pybamm_bar_var_fun(t=t_non_dim, z=z_plot_non_dim)
 
-    if error in ["abs", "rel"]:
-        plt.subplot(132)
-    elif error == "both":
-        plt.subplot(222)
-    comsol_plot = plt.pcolormesh(t_plot, z_plot, comsol_var, shading="gouraud")
-    plt.axis([0, t_plot[-1], 0, z_plot[-1]])
-    plt.xlabel(r"$t$")
-    plt.ylabel(r"$z$")
-    plt.title(r"COMSOL: " + var)
-    plt.set_cmap(cmap)
-    plt.colorbar(comsol_plot)
+    error = np.abs(comsol_var - pybamm_var)
+    error_bar = np.abs(comsol_var - pybamm_bar_var)
 
-    # plot "error"
-    if error in ["abs", "rel"]:
-        plt.subplot(133)
-        if error == "abs":
-            error = np.abs(pybamm_var - comsol_var)
-            diff_plot = plt.pcolormesh(t_plot, z_plot, error, shading="gouraud")
-        elif error == "rel":
-            if scale is None:
-                scale_val = comsol_var
-            error = np.abs((pybamm_var - comsol_var) / scale_val)
-            diff_plot = plt.pcolormesh(t_plot, z_plot, error, shading="gouraud")
-        plt.axis([0, t_plot[-1], 0, z_plot[-1]])
-        plt.xlabel(r"$t$")
-        plt.ylabel(r"$z$")
-        plt.title(r"Error: " + var)
-        plt.set_cmap(cmap)
-        plt.colorbar(diff_plot)
-    elif error == "both":
-        plt.subplot(223)
-        abs_error = np.abs(pybamm_var - comsol_var)
-        abs_diff_plot = plt.pcolormesh(t_plot, z_plot, abs_error, shading="gouraud")
-        plt.axis([0, t_plot[-1], 0, z_plot[-1]])
-        plt.xlabel(r"$t$")
-        plt.ylabel(r"$z$")
-        plt.title(r"Error (abs): " + var)
-        plt.set_cmap(cmap)
-        plt.colorbar(abs_diff_plot)
-        plt.subplot(224)
-        if scale is None:
-            scale_val = comsol_var
-        rel_error = np.abs((pybamm_var - comsol_var) / scale_val)
-        rel_diff_plot = plt.pcolormesh(t_plot, z_plot, rel_error, shading="gouraud")
-        plt.axis([0, t_plot[-1], 0, z_plot[-1]])
-        plt.xlabel(r"$t$")
-        plt.ylabel(r"$z$")
-        plt.title(r"Error (rel): " + var)
-        plt.set_cmap(cmap)
-        plt.colorbar(rel_diff_plot)
+    # plot time averaged error
+    if var_name in ["$\phi^*_{\mathrm{s,cn}}$", "$\mathcal{I}^*$"]:
+        ax[1, 0].set_yscale("log")
+    ax[1, 0].plot(z_plot * 1e3, np.mean(error, axis=1), "k-", label=r"$1+1$D")
+    ax[1, 0].plot(z_plot * 1e3, np.mean(error_bar, axis=1), "k:", label=r"$1+\bar{1}$D")
+
+    # plot z averaged error
+    ax[1, 1].set_yscale("log")
+    ax[1, 1].plot(t_plot, np.mean(error, axis=0), "k-", label=r"$1+1$D")
+    ax[1, 1].plot(t_plot, np.mean(error_bar, axis=0), "k:", label=r"$1+\bar{1}$D")
+
+    # set ticks
+    ax[0, 0].tick_params(which="both")
+    ax[0, 1].tick_params(which="both")
+    ax[1, 0].tick_params(which="both")
+    ax[1, 1].tick_params(which="both")
+
+    # set labels
+    ax[0, 0].set_xlabel(r"$z^*$ [mm]")
+    ax[0, 0].set_ylabel(r"$t^*$ [s]")
+    ax[0, 0].set_title(r"{} {}".format(var_name, units), y=1.5)
+    ax[0, 1].set_xlabel(r"$z^*$ [mm]")
+    ax[0, 1].set_ylabel(r"{}".format(var_name))
+    ax[1, 0].set_xlabel(r"$z^*$ [mm]")
+    ax[1, 0].set_ylabel("Time-averaged" + "\n" + r"absolute error {}".format(units))
+    ax[1, 1].set_xlabel(r"$t^*$ [s]")
+    ax[1, 1].set_ylabel("Space-averaged" + "\n" + r"absolute error {}".format(units))
+
+    ax[0, 0].text(-0.1, 1.6, "(a)", transform=ax[0, 0].transAxes)
+    ax[0, 1].text(-0.1, 1.6, "(b)", transform=ax[0, 1].transAxes)
+    ax[1, 0].text(-0.1, 1.2, "(c)", transform=ax[1, 0].transAxes)
+    ax[1, 1].text(-0.1, 1.2, "(d)", transform=ax[1, 1].transAxes)
+
+    leg1 = ax[0, 1].legend(
+        bbox_to_anchor=(0, 1.1, 1.0, 0.102),
+        loc="lower left",
+        borderaxespad=0.0,
+        ncol=3,
+        mode="expand",
+    )
+
+    leg2 = ax[0, 1].legend(
+        [comsol_p, pybamm_p, pybamm_bar_p],
+        ["COMSOL", r"$1+1$D", r"$1+\bar{1}$D"],
+        bbox_to_anchor=(0, 1.5, 1.0, 0.102),
+        loc="lower left",
+        borderaxespad=0.0,
+        ncol=3,
+        mode="expand",
+    )
+    ax[0, 1].add_artist(leg1)
+
+    ax[1, 0].legend(
+        bbox_to_anchor=(0, 1.1, 1.0, 0.102),
+        loc="lower left",
+        borderaxespad=0.0,
+        ncol=3,
+        mode="expand",
+    )
+    ax[1, 1].legend(
+        bbox_to_anchor=(0, 1.1, 1.0, 0.102),
+        loc="lower left",
+        borderaxespad=0.0,
+        ncol=3,
+        mode="expand",
+    )
+    # ax[1, 0].legend(loc="best")
+    # ax[1, 1].legend(loc="best")

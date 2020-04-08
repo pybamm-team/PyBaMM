@@ -82,6 +82,8 @@ class Geometry(dict):
                 geometry = Geometryxp1p1DMicro(cc_dimension=1)
             elif geometry == "(2+1)+1D micro":
                 geometry = Geometryxp1p1DMicro(cc_dimension=2)
+            elif geometry == "1D current collector":
+                geometry = Geometry1DCurrentCollector()
             elif geometry == "2D current collector":
                 geometry = Geometry2DCurrentCollector()
             # avoid combining geometries that clash
@@ -483,6 +485,37 @@ class Geometryxp1p1DMicro(Geometry1DMicro):
                     cc_dimension
                 )
             )
+
+        # update with custom geometry if non empty
+        self.update(custom_geometry)
+
+
+class Geometry1DCurrentCollector(Geometry):
+    """
+    A geometry class to store the details features of the macroscopic 1D
+    current collector geometry.
+
+    **Extends**: :class:`Geometry`
+
+    Parameters
+    ----------
+
+    custom_geometry : dict containing any extra user defined geometry
+    """
+
+    def __init__(self, custom_geometry={}):
+        super().__init__()
+        var = pybamm.standard_spatial_vars
+
+        self["current collector"] = {
+            "primary": {
+                var.z: {"min": pybamm.Scalar(0), "max": pybamm.geometric_parameters.l_z}
+            },
+            "tabs": {
+                "negative": {"z_centre": pybamm.geometric_parameters.centre_z_tab_n},
+                "positive": {"z_centre": pybamm.geometric_parameters.centre_z_tab_p},
+            },
+        }
 
         # update with custom geometry if non empty
         self.update(custom_geometry)
