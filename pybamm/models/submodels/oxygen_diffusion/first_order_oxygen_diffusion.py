@@ -51,7 +51,7 @@ class FirstOrder(BaseModel):
             "Leading-order x-averaged positive electrode "
             "oxygen interfacial current density"
         ]
-        sj_ox_p = -param.s_ox_Ox * j_ox_0
+        sj_ox_p = param.s_ox_Ox * j_ox_0
 
         # Fluxes
         N_ox_n_1 = pybamm.FullBroadcast(0, "negative electrode", "current collector")

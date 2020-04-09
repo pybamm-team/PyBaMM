@@ -103,19 +103,11 @@ class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):
 
         param = self.param
 
-        # All possible reactions. Some of these could be zero
-        j = variables[
-            "X-averaged "
+        sum_j = variables[
+            "Sum of x-averaged "
             + self.domain.lower()
-            + " electrode interfacial current density"
+            + " electrode interfacial current densities"
         ]
-        j_ox = variables[
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode oxygen interfacial current density"
-        ]
-
-        sum_j = j + j_ox
 
         sum_j_av = variables[
             "X-averaged "
@@ -157,19 +149,11 @@ class LeadingOrderAlgebraic(BaseLeadingOrderSurfaceForm):
         if self.domain == "Separator":
             return
 
-        # All possible reactions. Some of these could be zero
-        j = variables[
-            "X-averaged "
+        sum_j = variables[
+            "Sum of x-averaged "
             + self.domain.lower()
-            + " electrode interfacial current density"
+            + " electrode interfacial current densities"
         ]
-        j_ox = variables[
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode oxygen interfacial current density"
-        ]
-
-        sum_j = j + j_ox
 
         sum_j_av = variables[
             "X-averaged "

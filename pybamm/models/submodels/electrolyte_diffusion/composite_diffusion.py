@@ -64,51 +64,25 @@ class Composite(BaseElectrolyteDiffusion):
         c_e = variables["Electrolyte concentration"]
         N_e = variables["Electrolyte flux"]
         if self.extended is False:
-            source_terms_0 = self._get_source_terms_leading_order(variables)
+            sum_s_j = variables[
+                "Leading-order sum of electrolyte reaction source terms"
+            ]
         elif self.extended == "distributed":
-            source_terms_0 = self._get_source_terms_first_order(variables)
+            sum_s_j = variables["Sum of electrolyte reaction source terms"]
         elif self.extended == "average":
-            source_terms_0 = self._get_source_terms_first_order_average(variables)
+            sum_s_j_0 = variables[
+                "Leading-order sum of electrolyte reaction source terms"
+            ]
+            sum_s_j_1 = variables[
+                "Sum of first-order electrolyte reaction source terms"
+            ]
+            sum_s_j = sum_s_j_0 + param.C_e * sum_s_j_1
+        source_terms_0 = sum_s_j / self.param.gamma_e
 
         self.rhs = {
             c_e: (1 / eps_0)
             * (-pybamm.div(N_e) / param.C_e + source_terms_0 - c_e * deps_0_dt)
         }
-
-    def _get_source_terms_leading_order(self, variables):
-        param = self.param
-
-        # All possible reactions. Some of these could be zero
-        j = variables["Leading-order interfacial current density"]
-        j_ox = variables["Leading-order oxygen interfacial current density"]
-
-        return (-param.s_plus_S * j - param.s_plus_Ox * j_ox) / self.param.gamma_e
-
-    def _get_source_terms_first_order(self, variables):
-        param = self.param
-
-        # All possible reactions. Some of these could be zero
-        j = variables["Interfacial current density"]
-        j_ox = variables["Oxygen interfacial current density"]
-
-        return (-param.s_plus_S * j - param.s_plus_Ox * j_ox) / self.param.gamma_e
-
-    def _get_source_terms_first_order_average(self, variables):
-        param = self.param
-        # All possible reactions. Some of these could be zero
-        j_av = variables["First-order x-averaged interfacial current density"]
-        j_ox_av = variables["First-order x-averaged oxygen interfacial current density"]
-
-        first_order_average = (
-            -param.s_plus_S * j_av - param.s_plus_Ox * j_ox_av
-        ) / param.gamma_e
-
-        return self._get_source_terms_leading_order(
-            variables
-        ) + self.param.C_e * pybamm.PrimaryBroadcast(
-            first_order_average,
-            ["negative electrode", "separator", "positive electrode"],
-        )
 
     def set_initial_conditions(self, variables):
 

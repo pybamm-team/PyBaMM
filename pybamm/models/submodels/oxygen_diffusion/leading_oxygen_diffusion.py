@@ -69,8 +69,8 @@ class LeadingOrder(BaseModel):
         ]
 
         source_terms = (
-            param.l_n * -param.s_ox_Ox * j_ox_n_av
-            + param.l_p * -param.s_ox_Ox * j_ox_p_av
+            param.l_n * param.s_ox_Ox * j_ox_n_av
+            + param.l_p * param.s_ox_Ox * j_ox_p_av
         )
 
         self.rhs = {

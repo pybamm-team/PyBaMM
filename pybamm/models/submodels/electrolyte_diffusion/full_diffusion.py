@@ -61,13 +61,8 @@ class Full(BaseElectrolyteDiffusion):
         N_e = variables["Electrolyte flux"]
         div_Vbox = variables["Transverse volume-averaged acceleration"]
 
-        # All possible reactions. Some of these could be zero
-        j = variables["Interfacial current density"]
-        j_ox = variables["Oxygen interfacial current density"]
-
-        source_terms = (
-            -param.s_plus_S * j - param.s_plus_Ox * j_ox
-        ) / self.param.gamma_e
+        sum_s_j = variables["Sum of electrolyte reaction source terms"]
+        source_terms = sum_s_j / self.param.gamma_e
 
         self.rhs = {
             c_e: (1 / eps)

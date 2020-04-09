@@ -56,39 +56,30 @@ class FirstOrder(BaseElectrolyteDiffusion):
         d_epsc_p_0_dt = c_e_0 * deps_p_0_dt + eps_p_0 * dc_e_0_dt
 
         # Right-hand sides
-        # All possible reactions. Some of these could be zero
-        j_n_0 = variables[
-            "Leading-order x-averaged negative electrode interfacial current density"
+        sum_j_n_0 = variables[
+            "Leading-order sum of x-averaged "
+            "negative electrode interfacial current densities"
         ]
-        j_p_0 = variables[
-            "Leading-order x-averaged positive electrode interfacial current density"
+        sum_j_p_0 = variables[
+            "Leading-order sum of x-averaged "
+            "positive electrode interfacial current densities"
         ]
-        j_ox_n_0 = variables[
-            "Leading-order x-averaged negative electrode "
-            "oxygen interfacial current density"
+        sum_s_j_n_0 = variables[
+            "Leading-order sum of x-averaged "
+            "negative electrode electrolyte reaction source terms"
         ]
-        j_ox_p_0 = variables[
-            "Leading-order x-averaged positive electrode "
-            "oxygen interfacial current density"
+        sum_s_j_p_0 = variables[
+            "Leading-order sum of x-averaged "
+            "positive electrode electrolyte reaction source terms"
         ]
         rhs_n = (
             d_epsc_n_0_dt
-            - (
-                -param.s_plus_n_S * j_n_0
-                - param.s_plus_Ox * j_ox_n_0
-                - param.t_plus(c_e_0) * (j_n_0 + j_ox_n_0)
-            )
-            / param.gamma_e
+            - (sum_s_j_n_0 - param.t_plus(c_e_0) * sum_j_n_0) / param.gamma_e
         )
         rhs_s = d_epsc_s_0_dt
         rhs_p = (
             d_epsc_p_0_dt
-            - (
-                -param.s_plus_p_S * j_p_0
-                - param.s_plus_Ox * j_ox_p_0
-                - param.t_plus(c_e_0) * (j_p_0 + j_ox_p_0)
-            )
-            / param.gamma_e
+            - (sum_s_j_p_0 - param.t_plus(c_e_0) * sum_j_p_0) / param.gamma_e
         )
 
         # Diffusivities

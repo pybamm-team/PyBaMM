@@ -89,9 +89,6 @@ b_s_s = pybamm.geometric_parameters.b_s_s
 b_s_p = pybamm.geometric_parameters.b_s_p
 
 # Electrochemical reactions
-s_plus_n_S = -1
-s_plus_p_S = -1
-s_plus_S = -1
 ne_n = pybamm.Parameter("Negative electrode electrons in reaction")
 ne_p = pybamm.Parameter("Positive electrode electrons in reaction")
 C_dl_n_dimensional = pybamm.Parameter(

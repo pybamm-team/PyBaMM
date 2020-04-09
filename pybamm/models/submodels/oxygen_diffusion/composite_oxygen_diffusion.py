@@ -68,10 +68,10 @@ class Composite(Full):
             j_ox_0 = variables[
                 "Leading-order positive electrode oxygen interfacial current density"
             ]
-            pos_reactions = -param.s_ox_Ox * j_ox_0
+            pos_reactions = param.s_ox_Ox * j_ox_0
         else:
             j_ox_0 = variables["Positive electrode oxygen interfacial current density"]
-            pos_reactions = -param.s_ox_Ox * j_ox_0
+            pos_reactions = param.s_ox_Ox * j_ox_0
         sep_reactions = pybamm.FullBroadcast(0, "separator", "current collector")
         source_terms_0 = (
             pybamm.Concatenation(sep_reactions, pos_reactions) / param.gamma_e

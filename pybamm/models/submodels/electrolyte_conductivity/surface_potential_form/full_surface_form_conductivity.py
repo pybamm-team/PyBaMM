@@ -232,11 +232,11 @@ class FullAlgebraic(BaseModel):
         delta_phi = variables[self.domain + " electrode surface potential difference"]
         i_e = variables[self.domain + " electrolyte current density"]
 
-        # All possible reactions. Some of these could be zero
-        j = variables[self.domain + " electrode interfacial current density"]
-        j_ox = variables[self.domain + " electrode oxygen interfacial current density"]
+        # Variable summing all of the interfacial current densities
+        sum_j = variables[
+            "Sum of " + self.domain.lower() + " electrode interfacial current densities"
+        ]
 
-        sum_j = j + j_ox
         self.algebraic[delta_phi] = pybamm.div(i_e) - sum_j
 
 
@@ -270,10 +270,9 @@ class FullDifferential(BaseModel):
         delta_phi = variables[self.domain + " electrode surface potential difference"]
         i_e = variables[self.domain + " electrolyte current density"]
 
-        # All possible reactions. Some of these could be zero
-        j = variables[self.domain + " electrode interfacial current density"]
-        j_ox = variables[self.domain + " electrode oxygen interfacial current density"]
-
-        sum_j = j + j_ox
+        # Variable summing all of the interfacial current densities
+        sum_j = variables[
+            "Sum of " + self.domain.lower() + " electrode interfacial current densities"
+        ]
 
         self.rhs[delta_phi] = 1 / C_dl * (pybamm.div(i_e) - sum_j)

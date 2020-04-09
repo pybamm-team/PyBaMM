@@ -52,11 +52,8 @@ class Full(BaseElectrolyteConductivity):
         phi_e = variables["Electrolyte potential"]
         i_e = variables["Electrolyte current density"]
 
-        # All possible reactions. Some of these could be zero
-        j = variables["Interfacial current density"]
-        j_ox = variables["Oxygen interfacial current density"]
-
-        sum_j = j + j_ox
+        # Variable summing all of the interfacial current densities
+        sum_j = variables["Sum of interfacial current densities"]
 
         self.algebraic = {phi_e: pybamm.div(i_e) - sum_j}
 

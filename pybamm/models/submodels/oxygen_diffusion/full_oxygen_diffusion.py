@@ -98,7 +98,7 @@ class Full(BaseModel):
         j_ox = variables["Positive electrode oxygen interfacial current density"]
         source_terms = pybamm.Concatenation(
             pybamm.FullBroadcast(0, "separator", "current collector"),
-            -param.s_ox_Ox * j_ox,
+            param.s_ox_Ox * j_ox,
         )
 
         self.rhs = {

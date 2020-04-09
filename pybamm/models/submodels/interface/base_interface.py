@@ -164,6 +164,17 @@ class BaseInterface(pybamm.BaseSubModel):
         else:
             return pybamm.Scalar(0)
 
+    def _get_electrolyte_reaction_signed_stoichiometry(self):
+        "Returns the number of electrons in the reaction"
+        if self.reaction == "lithium-ion main":
+            return pybamm.Scalar(1), pybamm.Scalar(1)
+        elif self.reaction == "lead-acid main":
+            return self.param.s_plus_n_S, self.param.s_plus_p_S
+        elif self.reaction == "lead-acid oxygen":
+            return self.param.s_plus_Ox, self.param.s_plus_Ox
+        else:
+            return pybamm.Scalar(0), pybamm.Scalar(0)
+
     def _get_delta_phi(self, variables):
         "Calculate delta_phi, and derived variables, using phi_s and phi_e"
         phi_s = variables[self.domain + " electrode potential"]
@@ -267,11 +278,25 @@ class BaseInterface(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_whole_cell_interfacial_current_variables(self, variables):
-
+        """
+        Get variables associated with interfacial current over theh whole cell domain
+        This function also automatically increments the "total source term" variables
+        """
         i_typ = self.param.i_typ
         L_x = self.param.L_x
         j_n_scale = i_typ / (self.param.a_n_dim * L_x)
         j_p_scale = i_typ / (self.param.a_p_dim * L_x)
+
+        j_n_av = variables[
+            "X-averaged negative electrode"
+            + self.reaction_name
+            + " interfacial current density"
+        ]
+        j_p_av = variables[
+            "X-averaged positive electrode"
+            + self.reaction_name
+            + " interfacial current density"
+        ]
 
         j_n = variables[
             "Negative electrode" + self.reaction_name + " interfacial current density"
@@ -284,19 +309,55 @@ class BaseInterface(pybamm.BaseSubModel):
         j_dim = pybamm.Concatenation(j_n_scale * j_n, j_s, j_p_scale * j_p)
 
         if self.reaction_name == "":
-            variables = {
-                "Interfacial current density": j,
-                "Interfacial current density [A.m-2]": j_dim,
-                "Interfacial current density per volume [A.m-3]": i_typ / L_x * j,
-            }
+            variables.update(
+                {
+                    "Interfacial current density": j,
+                    "Interfacial current density [A.m-2]": j_dim,
+                    "Interfacial current density per volume [A.m-3]": i_typ / L_x * j,
+                }
+            )
         else:
             reaction_name = self.reaction_name[1:].capitalize()
-            variables = {
-                reaction_name + " interfacial current density": j,
-                reaction_name + " interfacial current density [A.m-2]": j_dim,
-                reaction_name
-                + " interfacial current density per volume [A.m-3]": i_typ / L_x * j,
-            }
+            variables.update(
+                {
+                    reaction_name + " interfacial current density": j,
+                    reaction_name + " interfacial current density [A.m-2]": j_dim,
+                    reaction_name
+                    + " interfacial current density per volume [A.m-3]": i_typ
+                    / L_x
+                    * j,
+                }
+            )
+
+        s_n, s_p = self._get_electrolyte_reaction_signed_stoichiometry()
+        s = pybamm.Concatenation(
+            pybamm.FullBroadcast(s_n, "negative electrode", "current collector"),
+            pybamm.FullBroadcast(0, "separator", "current collector"),
+            pybamm.FullBroadcast(s_p, "positive electrode", "current collector"),
+        )
+        variables["Sum of electrolyte reaction source terms"] += s * j
+        variables["Sum of negative electrode electrolyte reaction source terms"] += (
+            s_n * j_n
+        )
+        variables["Sum of positive electrode electrolyte reaction source terms"] += (
+            s_p * j_p
+        )
+        variables[
+            "Sum of x-averaged negative electrode electrolyte reaction source terms"
+        ] += (s_n * j_n_av)
+        variables[
+            "Sum of x-averaged positive electrode electrolyte reaction source terms"
+        ] += (s_p * j_p_av)
+
+        variables["Sum of interfacial current densities"] += j
+        variables["Sum of negative electrode interfacial current densities"] += j_n
+        variables["Sum of positive electrode interfacial current densities"] += j_p
+        variables[
+            "Sum of x-averaged negative electrode interfacial current densities"
+        ] += j_n_av
+        variables[
+            "Sum of x-averaged positive electrode interfacial current densities"
+        ] += j_p_av
 
         return variables
 

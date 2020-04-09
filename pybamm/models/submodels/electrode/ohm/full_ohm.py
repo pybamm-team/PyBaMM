@@ -60,11 +60,10 @@ class Full(BaseModel):
         phi_s = variables[self.domain + " electrode potential"]
         i_s = variables[self.domain + " electrode current density"]
 
-        # All possible reactions. Some of these could be zero
-        j = variables[self.domain + " electrode interfacial current density"]
-        j_ox = variables[self.domain + " electrode oxygen interfacial current density"]
-
-        sum_j = j + j_ox
+        # Variable summing all of the interfacial current densities
+        sum_j = variables[
+            "Sum of " + self.domain.lower() + " electrode interfacial current densities"
+        ]
 
         self.algebraic[phi_s] = pybamm.div(i_s) + sum_j
 
