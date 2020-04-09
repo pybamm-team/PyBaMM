@@ -24,6 +24,35 @@ def download_extract_library(url, download_dir):
     tar = tarfile.open(archive)
     tar.extractall(download_dir)
 
+def update_activate_or_bashrc(install_dir):
+    # Look for current python virtual env and add export statement
+    # for LD_LIBRARY_PATH in activate script.  If no virtual env found,
+    # then the current user's .bashrc file is modified instead.
+
+    export_statement = "export LD_LIBRARY_PATH={}/lib:$LD_LIBRARY_PATH".format(
+        install_dir
+    )
+
+    venv_path = os.environ.get("VIRTUAL_ENV")
+    if venv_path:
+        script_path = os.path.join(venv_path, "bin/activate")
+    else:
+        script_path = os.path.join(os.environ.get("HOME"), ".bashrc")
+
+    if os.getenv("LD_LIBRARY_PATH") and "{}/lib".format(install_dir) in os.getenv(
+        "LD_LIBRARY_PATH"
+    ):
+        print("{}/lib was found in LD_LIBRARY_PATH.".format(install_dir))
+        print("--> Not updating venv activate or .bashrc scripts")
+    else:
+        with open(script_path, "a+") as fh:
+            # Just check that export statement is not already there.
+            if export_statement not in fh.read():
+                fh.write(export_statement)
+                print(
+                    "Adding {}/lib to LD_LIBRARY_PATH"
+                    " in {}".format(install_dir, script_path)
+                )
 
 # First check requirements: make and cmake
 try:
@@ -126,3 +155,5 @@ subprocess.run(["cmake", sundials_src] + cmake_args, cwd=build_dir)
 print("-" * 10, "Building the sundials", "-" * 40)
 make_cmd = ["make", "install"]
 subprocess.run(make_cmd, cwd=build_dir)
+
+update_activate_or_bashrc(install_dir)
