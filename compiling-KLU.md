@@ -50,18 +50,28 @@ Then execute the script
 # In the PyBaMM project dir (next to setup.py)
 python scripts/setup_KLU_module_build.py
 ```
-The above will install the required component of SuiteSparse and Sundials in your system under
-`/usr/local/`.
-In most cases you will have to execute script with root privileges, i.e.
-```
-sudo env/bin/python scripts/setup_KLU_module_build.py
-```
-where `env/` is the name of your virtual environment directory (created with `python -m venv env` or
-`virtualenv env`).
+The above will install the required component of SuiteSparse and Sundials in your home directory under
+`~/.local/`.
 Note that you can provide the option  `--install-dir=<install/path>` to install both libraries to
 an alternative location. If `<install/path>` is not absolute, it will be interpreted as relative to the PyBaMM project directory.
 
-The build files are located inside the PyBaMM project directory under `KLU_module_deps/`.
+Finally, reactivate your virtual environment by running
+```
+source $(VIRTUAL_ENV)/bin/activate
+```
+Alternatively, you update the `LD_LIBRARY_PATH` environment variable as follows
+```
+export LD_LIBRARY_PATH=$(HOME)/.local:$LD_LIBRARY_PATH
+```
+The above export statement will be ran automatically the next time you activate you python virtual environment.
+
+If did not run the convenience script inside a python virtual environment, execute you bash config file
+```
+source ~/.bashrc
+```
+(or start a new shell).
+
+Build files are located inside the PyBaMM project directory under `KLU_module_deps/`.
 Feel free to remove this directory once everything is installed correctly.
 
 ### Method 2 - Compiling Sundials (advanced)
@@ -123,14 +133,11 @@ make install
 You may be asked to run this command as a super-user, depending on the installation location.
 
 #### Alternative installation location
-By default, commands relying on the `setup.py` like `pip install .` and  `python setup.py install`
-will look for SuiteSparse and sundials in directories `KLU_module_deps/SuiteSparse-5.6.0` and
-`KLU_module_deps/sundials5`, respectively.
-If not found, the system libraries (under `/usr/local/` or `/usr/`) are searched.
-
-It is always possible to install the libraries to a different location, and specify this location
-when invoking the above commands.
-For example
+By default, it is assumed that the SuiteSparse and Sundials libraries are installed in your home directory
+under `~/.local`.
+If you installed the libraries to (a) different location(s), you must set the options
+`suitesparse-root` or/and `sundials-root` when installing PyBaMM.
+Examples:
 
 ```
 python setup.py install --suitesparse-root=path/to/suitesparse
