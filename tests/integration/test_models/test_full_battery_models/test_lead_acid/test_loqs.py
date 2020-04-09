@@ -56,7 +56,7 @@ class TestLOQS(unittest.TestCase):
         modeltest.test_all()
 
     def test_thermal(self):
-        options = {"thermal": "x-lumped"}
+        options = {"thermal": "lumped"}
         model = pybamm.lead_acid.LOQS(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()

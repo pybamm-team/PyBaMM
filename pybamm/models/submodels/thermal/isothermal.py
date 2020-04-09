@@ -3,7 +3,7 @@
 #
 import pybamm
 
-from ..base_thermal import BaseThermal
+from .base_thermal import BaseThermal
 
 
 class Isothermal(BaseThermal):
@@ -24,14 +24,16 @@ class Isothermal(BaseThermal):
     def get_fundamental_variables(self):
         T_amb = self.param.T_amb(pybamm.t * self.param.timescale)
         T_x_av = pybamm.PrimaryBroadcast(T_amb, "current collector")
+        T_vol_av = pybamm.PrimaryBroadcast(T_amb, "current collector")
+        T_cn = T_x_av
         T_n = pybamm.PrimaryBroadcast(T_x_av, "negative electrode")
         T_s = pybamm.PrimaryBroadcast(T_x_av, "separator")
         T_p = pybamm.PrimaryBroadcast(T_x_av, "positive electrode")
-
-        T_cn = T_x_av
         T_cp = T_x_av
 
-        variables = self._get_standard_fundamental_variables(T_cn, T_n, T_s, T_p, T_cp)
+        variables = self._get_standard_fundamental_variables(
+            T_cn, T_n, T_s, T_p, T_cp, T_x_av, T_vol_av
+        )
 
         return variables
 
@@ -54,25 +56,19 @@ class Isothermal(BaseThermal):
         )
         return variables
 
-    def _flux_law(self, T):
-        """Zero heat flux since temperature is constant"""
-        q = pybamm.FullBroadcastToEdges(
-            pybamm.Scalar(0),
-            ["negative electrode", "separator", "positive electrode"],
-            "current collector",
-        )
-        return q
+    def _x_average(self, var, var_cn, var_cp):
+        """
+        Temperature is uniform and heat source terms are zero, so the average
+        returns the input variable.
+        This overwrites the default behaviour of
+        :meth:`pybamm.thermal.BaseThermal._x_average`
+        """
+        return var
 
     def _yz_average(self, var):
         """
         Temperature is uniform and heat source terms are zero, so the average
-        returns the input variable.
+        returns the input variable. This overwrites the default behaviour of
+        :meth:`pybamm.thermal.BaseThermal._x_average`
         """
         return var
-
-    def _x_average(self, var, var_cn, var_cp):
-        """
-        Temperature is uniform and heat source terms are zero, so the average
-        returns zeros broadcasted onto the current collector domain.
-        """
-        return pybamm.PrimaryBroadcast(0, "current collector")
