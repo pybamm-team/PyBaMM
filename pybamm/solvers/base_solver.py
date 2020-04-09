@@ -2,6 +2,7 @@
 # Base solver class
 #
 import casadi
+import copy
 import pybamm
 import numbers
 import numpy as np
@@ -104,6 +105,13 @@ class BaseSolver(object):
     @max_steps.setter
     def max_steps(self, max_steps):
         self._max_steps = max_steps
+
+    def copy(self):
+        "Returns a copy of the solver"
+        new_solver = copy.copy(self)
+        # clear models_set_up
+        new_solver.models_set_up = set()
+        return new_solver
 
     def set_up(self, model, inputs=None):
         """Unpack model, perform checks, simplify and calculate jacobian.

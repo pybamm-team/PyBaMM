@@ -88,9 +88,14 @@ class Simulation:
 
         if experiment is None:
             self.operating_mode = "without experiment"
-            self.C_rate = C_rate
-            if self.C_rate:
-                self._parameter_values.update({"C-rate": self.C_rate})
+            if C_rate:
+                self.C_rate = C_rate
+                self._parameter_values.update(
+                    {
+                        "Current function [A]": self.C_rate
+                        * self._parameter_values["Cell capacity [A.h]"]
+                    }
+                )
             self.model = model
         else:
             self.set_up_experiment(model, experiment)
@@ -344,8 +349,8 @@ class Simulation:
             # input. If the current is provided as data then the "Current function [A]"
             # is the tuple (filename, data).
             # First, read the current function (if provided, otherwise return None)
-            current_function = self._parameter_values.get("Current function [A]")
-            if isinstance(current_function, tuple):
+            current = self._parameter_values.get("Current function [A]")
+            if isinstance(current, tuple):
                 filename = self._parameter_values["Current function [A]"][0]
                 time_data = self._parameter_values["Current function [A]"][1][:, 0]
                 # If no t_eval is provided, we use the times provided in the data.
@@ -392,14 +397,15 @@ class Simulation:
             # If not using a drive cycle and t_eval is not provided, set t_eval
             # to correspond to a single discharge
             elif t_eval is None:
-                # Get C-rate, return None if it doesn't exist
-                C_rate = self._parameter_values.get("C-rate")
-                if C_rate is None:
+                if current is None:
                     t_end = 1
                 else:
-                    if isinstance(C_rate, pybamm.InputParameter):
-                        C_rate = inputs["C-rate"]
+                    # Get C-rate, return None if it doesn't exist
+                    capacity = self.parameter_values["Cell capacity [A.h]"]
+                    if isinstance(current, pybamm.InputParameter):
+                        C_rate = inputs["Current function [A]"] / capacity
                     try:
+                        C_rate = current / capacity
                         t_end = 3600 / C_rate
                     except TypeError:
                         t_end = 3600
@@ -575,7 +581,7 @@ class Simulation:
 
     @geometry.setter
     def geometry(self, geometry):
-        self._geometry = copy.copy(geometry)
+        self._geometry = geometry.copy()
         self._unprocessed_geometry = copy.deepcopy(geometry)
 
     @property
@@ -588,7 +594,7 @@ class Simulation:
 
     @parameter_values.setter
     def parameter_values(self, parameter_values):
-        self._parameter_values = copy.copy(parameter_values)
+        self._parameter_values = parameter_values.copy()
 
     @property
     def submesh_types(self):
@@ -596,7 +602,7 @@ class Simulation:
 
     @submesh_types.setter
     def submesh_types(self, submesh_types):
-        self._submesh_types = copy.copy(submesh_types)
+        self._submesh_types = submesh_types.copy()
 
     @property
     def mesh(self):
@@ -608,7 +614,7 @@ class Simulation:
 
     @var_pts.setter
     def var_pts(self, var_pts):
-        self._var_pts = copy.copy(var_pts)
+        self._var_pts = var_pts.copy()
 
     @property
     def spatial_methods(self):
@@ -616,7 +622,7 @@ class Simulation:
 
     @spatial_methods.setter
     def spatial_methods(self, spatial_methods):
-        self._spatial_methods = copy.copy(spatial_methods)
+        self._spatial_methods = spatial_methods.copy()
 
     @property
     def solver(self):
@@ -624,7 +630,7 @@ class Simulation:
 
     @solver.setter
     def solver(self, solver):
-        self._solver = copy.copy(solver)
+        self._solver = solver.copy()
 
     @property
     def quick_plot_vars(self):
@@ -681,7 +687,7 @@ class Simulation:
         """
 
         if model_options:
-            self._model_options = copy.copy(model_options)
+            self._model_options = model_options.copy()
 
         if geometry:
             self.geometry = geometry
@@ -701,7 +707,12 @@ class Simulation:
 
         if C_rate:
             self.C_rate = C_rate
-            self.parameter_values.update({"C-rate": self.C_rate})
+            self._parameter_values.update(
+                {
+                    "Current function [A]": self.C_rate
+                    * self._parameter_values["Cell capacity [A.h]"]
+                }
+            )
 
         if (
             model_options

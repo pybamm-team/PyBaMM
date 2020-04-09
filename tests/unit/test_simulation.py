@@ -163,10 +163,14 @@ class TestSimulation(unittest.TestCase):
         sim.build()
 
     def test_set_crate(self):
-        sim = pybamm.Simulation(pybamm.lithium_ion.SPM(), C_rate=2)
-        self.assertEqual(sim.parameter_values["C-rate"], 2)
+        model = pybamm.lithium_ion.SPM()
+        current_1C = model.default_parameter_values["Current function [A]"]
+        sim = pybamm.Simulation(model, C_rate=2)
+        self.assertEqual(sim.parameter_values["Current function [A]"], 2 * current_1C)
+        self.assertEqual(sim.C_rate, 2)
         sim.specs(C_rate=3)
-        self.assertEqual(sim.parameter_values["C-rate"], 3)
+        self.assertEqual(sim.parameter_values["Current function [A]"], 3 * current_1C)
+        self.assertEqual(sim.C_rate, 3)
 
     def test_set_defaults(self):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
@@ -330,13 +334,13 @@ class TestSimulation(unittest.TestCase):
         # make simulation with silly options (should this be allowed?)
         sim = pybamm.Simulation(
             model,
-            geometry=1,
-            parameter_values=1,
-            submesh_types=1,
-            var_pts=1,
-            spatial_methods=1,
-            solver=1,
-            quick_plot_vars=1,
+            geometry={},
+            parameter_values={},
+            submesh_types={},
+            var_pts={},
+            spatial_methods={},
+            solver={},
+            quick_plot_vars=[],
         )
 
         # reset and check
