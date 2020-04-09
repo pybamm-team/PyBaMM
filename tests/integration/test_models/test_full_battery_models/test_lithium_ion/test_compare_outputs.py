@@ -52,7 +52,7 @@ class TestCompareOutputs(unittest.TestCase):
             comparison.test_all(skip_first_timestep=True)
 
     def test_compare_outputs_thermal(self):
-        # load models - for the defualt params we expect x-full and lumped to
+        # load models - for the default params we expect x-full and lumped to
         # agree as the temperature is practically independent of x
         options = [{"thermal": opt} for opt in ["lumped", "x-full"]]
         model_combos = [

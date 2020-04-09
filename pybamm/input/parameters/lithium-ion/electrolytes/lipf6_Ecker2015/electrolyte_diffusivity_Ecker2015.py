@@ -1,8 +1,8 @@
 import pybamm
-from scipy import constants
+from pybamm import constants
 
 
-def electrolyte_diffusivity_Ecker2015(c_e, T, T_inf, E_D_e, R_g):
+def electrolyte_diffusivity_Ecker2015(c_e, T):
     """
     Diffusivity of LiPF6 in EC:DMC as a function of ion concentration [1, 2, 3].
 
@@ -20,39 +20,21 @@ def electrolyte_diffusivity_Ecker2015(c_e, T, T_inf, E_D_e, R_g):
 
     Parameters
     ----------
-    c_e: :class: `numpy.Array`
+    c_e: :class:`pybamm.Symbol`
         Dimensional electrolyte concentration
-    T: :class: `numpy.Array`
+    T: :class:`pybamm.Symbol`
         Dimensional temperature
-    T_inf: double
-        Reference temperature
-    E_D_e: double
-        Electrolyte diffusion activation energy
-    R_g: double
-        The ideal gas constant
 
     Returns
     -------
-    :`numpy.Array`
+    :class:`pybamm.Symbol`
         Solid diffusivity
     """
 
     # The diffusivity epends on the electrolyte conductivity
-    E_k_e = pybamm.Parameter("Electrolyte conductivity activation energy [J.mol-1]")
-    inputs = {
-        "Electrolyte concentration [mol.m-3]": c_e,
-        "Temperature [K]": T,
-        "Reference temperature [K]": T_inf,
-        "Activation energy [J.mol-1]": E_k_e,
-        "Ideal gas constant [J.mol-1.K-1]": R_g,
-    }
+    inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
     sigma_e = pybamm.FunctionParameter("Electrolyte conductivity [S.m-1]", inputs)
 
-    # constants
-    k_b = constants.physical_constants["Boltzmann constant"][0]
-    F = constants.physical_constants["Faraday constant"][0]
-    q_e = constants.physical_constants["electron volt"][0]
-
-    D_c_e = (k_b / (F * q_e)) * sigma_e * T / c_e
+    D_c_e = (constants.k_b / (constants.F * constants.q_e)) * sigma_e * T / c_e
 
     return D_c_e

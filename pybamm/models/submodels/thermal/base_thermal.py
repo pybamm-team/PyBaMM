@@ -240,7 +240,7 @@ class BaseThermal(pybamm.BaseSubModel):
         collector.
         Note: we do this as we cannot create a single variable which is
         the concatenation [var_cn, var, var_cp] since var_cn and var_cp share the
-        same domian. (In the N+1D formulation the current collector variables are
+        same domain. (In the N+1D formulation the current collector variables are
         assumed independent of x, so we do not make the distinction between negative
         and positive current collectors in the geometry).
         """

@@ -1,35 +1,33 @@
-from pybamm import exp
+from pybamm import exp, constants
 
 
-def graphite_LGM50_diffusivity_Chen2020(sto, T, T_inf, E_D_s, R_g):
+def graphite_LGM50_diffusivity_Chen2020(sto, T):
     """
       LG M50 Graphite diffusivity as a function of stochiometry, in this case the
       diffusivity is taken to be a constant. The value is taken from [1].
+
       References
       ----------
       .. [1] Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
       Dhammika Widanage, and Emma Kendrick. "Development of Experimental Techniques for
       Parameterization of Multi-scale Lithium-ion Battery Models." Submitted for
       publication (2020).
+
       Parameters
       ----------
-      sto: :class: `numpy.Array`
+      sto: :class:`pybamm.Symbol`
          Electrode stochiometry
-      T: :class: `numpy.Array`
+      T: :class:`pybamm.Symbol`
          Dimensional temperature
-      T_inf: double
-         Reference temperature
-      E_D_s: double
-         Solid diffusion activation energy
-      R_g: double
-         The ideal gas constant
+
       Returns
       -------
-      : double
+      :class:`pybamm.Symbol`
          Solid diffusivity
    """
 
     D_ref = 3.3e-14
-    arrhenius = exp(E_D_s / R_g * (1 / T_inf - 1 / T))
+    E_D_s = 42770
+    arrhenius = exp(E_D_s / constants.R * (1 / 298.15 - 1 / T))
 
     return D_ref * arrhenius

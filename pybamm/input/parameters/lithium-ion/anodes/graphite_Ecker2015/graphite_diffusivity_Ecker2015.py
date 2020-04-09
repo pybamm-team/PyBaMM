@@ -1,7 +1,7 @@
-from pybamm import exp
+from pybamm import exp, constants
 
 
-def graphite_diffusivity_Ecker2015(sto, T, T_inf, E_D_s, R_g):
+def graphite_diffusivity_Ecker2015(sto, T):
     """
     Graphite diffusivity as a function of stochiometry [1, 2, 3].
 
@@ -19,24 +19,19 @@ def graphite_diffusivity_Ecker2015(sto, T, T_inf, E_D_s, R_g):
 
     Parameters
     ----------
-    sto: :class: `numpy.Array`
+    sto: :class:`pybamm.Symbol`
         Electrode stochiometry
-    T: :class: `numpy.Array`
+    T: :class:`pybamm.Symbol`
         Dimensional temperature
-    T_inf: double
-        Reference temperature
-    E_D_s: double
-        Solid diffusion activation energy
-    R_g: double
-        The ideal gas constant
 
     Returns
     -------
-    : double
+    :class:`pybamm.Symbol`
         Solid diffusivity
    """
 
     D_ref = 8.4e-13 * exp(-11.3 * sto) + 8.2e-15
-    arrhenius = exp(-E_D_s / (R_g * T)) * exp(E_D_s / (R_g * 296))
+    E_D_s = 3.03e4
+    arrhenius = exp(-E_D_s / (constants.R * T)) * exp(E_D_s / (constants.R * 296))
 
     return D_ref * arrhenius
