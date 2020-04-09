@@ -35,7 +35,7 @@ class TestAsymptoticConvergence(unittest.TestCase):
         method_options = {"extrapolation": {"order": "linear", "use bcs": False}}
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume(method_options),
-            "current collector": pybamm.ZeroDimensionalMethod(method_options),
+            "current collector": pybamm.ZeroDimensionalSpatialMethod(method_options),
         }
         loqs_disc = pybamm.Discretisation(mesh, spatial_methods)
         loqs_disc.process_model(leading_order_model)
@@ -96,4 +96,5 @@ if __name__ == "__main__":
 
     if "-v" in sys.argv:
         debug = True
+    pybamm.set_logging_level("DEBUG")
     unittest.main()

@@ -55,8 +55,10 @@ class LeadingOrder(BaseElectrolyteConductivity):
         )
         variables.update(self._get_standard_current_variables(i_e))
 
-        eta_c_av = pybamm.Scalar(0)  # concentration overpotential
-        delta_phi_e_av = pybamm.Scalar(0)  # ohmic losses
+        # concentration overpotential
+        eta_c_av = pybamm.PrimaryBroadcast(0, "current collector")
+        # ohmic losses
+        delta_phi_e_av = pybamm.PrimaryBroadcast(0, "current collector")
         variables.update(self._get_split_overpotential(eta_c_av, delta_phi_e_av))
 
         return variables

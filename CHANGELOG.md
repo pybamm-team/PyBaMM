@@ -15,6 +15,7 @@
 
 -   Reformatted thermal submodels ([#938](https://github.com/pybamm-team/PyBaMM/pull/938)
 -   Reformatted electrolyte submodels ([#927](https://github.com/pybamm-team/PyBaMM/pull/927))
+-   Reformatted convection submodels ([#635](https://github.com/pybamm-team/PyBaMM/pull/635))
 
 ## Breaking changes
 

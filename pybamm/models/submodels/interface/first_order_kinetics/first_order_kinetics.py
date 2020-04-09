@@ -1,6 +1,7 @@
 #
 # First-order Butler-Volmer kinetics
 #
+import pybamm
 from ..base_interface import BaseInterface
 
 
@@ -65,6 +66,21 @@ class FirstOrderKinetics(BaseInterface):
         variables.update(self._get_standard_exchange_current_variables(j0))
         variables.update(self._get_standard_overpotential_variables(eta_r))
         variables.update(self._get_standard_ocp_variables(ocp, dUdT))
+
+        # Add first-order averages
+        j_1_bar = dj_dc_0 * pybamm.x_average(c_e_1) + dj_ddeltaphi_0 * pybamm.x_average(
+            delta_phi_1
+        )
+
+        variables.update(
+            {
+                "First-order x-averaged "
+                + self.domain.lower()
+                + " electrode"
+                + self.reaction_name
+                + " interfacial current density": j_1_bar
+            }
+        )
 
         if (
             "Negative electrode" + self.reaction_name + " interfacial current density"
