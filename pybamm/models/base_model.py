@@ -121,6 +121,9 @@ class BaseModel(object):
         self.use_simplify = True
         self.convert_to_format = "casadi"
 
+        # Model is not initially discretised
+        self.is_discretised = False
+
         # Default timescale is 1 second
         self.timescale = pybamm.Scalar(1)
 
@@ -639,6 +642,26 @@ class BaseModel(object):
             symbol.print_input_names()
 
         print(div)
+
+    @property
+    def default_parameter_values(self):
+        return pybamm.ParameterValues({})
+
+    @property
+    def default_var_pts(self):
+        return {}
+
+    @property
+    def default_geometry(self):
+        return {}
+
+    @property
+    def default_submesh_types(self):
+        return {}
+
+    @property
+    def default_spatial_methods(self):
+        return {}
 
     @property
     def default_solver(self):
