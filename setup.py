@@ -50,9 +50,9 @@ class CustomInstall(install):
     def finalize_options(self):
         install.finalize_options(self)
         if not self.suitesparse_root:
-            self.suitesparse_root = "KLU_module_deps/SuiteSparse-5.6.0"
+            self.suitesparse_root = os.path.join(os.getenv("HOME"), ".local")
         if not self.sundials_root:
-            self.sundials_root = "KLU_module_deps/sundials5"
+            self.sundials_root = os.path.join(os.getenv("HOME"), ".local")
 
     def run(self):
         install.run(self)

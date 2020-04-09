@@ -42,10 +42,11 @@ if not os.path.exists(download_dir):
     os.makedirs(download_dir)
 
 # Get installation location
+default_install_dir = os.path.join(os.getenv("HOME"), ".local")
 parser = argparse.ArgumentParser(
     description="Download, compile and install Sundials and SuiteSparse."
 )
-parser.add_argument("--install-dir", type=str, default="/usr/local")
+parser.add_argument("--install-dir", type=str, default=default_install_dir)
 args = parser.parse_args()
 install_dir = (
     args.install_dir
@@ -59,7 +60,7 @@ suitesparse_url = (
     "https://github.com/DrTimothyAldenDavis/"
     + "SuiteSparse/archive/v{}.tar.gz".format(suitesparse_version)
 )
-# download_extract_library(suitesparse_url, download_dir)
+download_extract_library(suitesparse_url, download_dir)
 
 # The SuiteSparse KLU module has 4 dependencies:
 # - suitesparseconfig
@@ -88,7 +89,7 @@ sundials_url = (
     "https://computing.llnl.gov/"
     + "projects/sundials/download/sundials-{}.tar.gz".format(sundials_version)
 )
-# download_extract_library(sundials_url, download_dir)
+download_extract_library(sundials_url, download_dir)
 
 # Set install dir for SuiteSparse libs
 # Ex: if install_dir -> "/usr/local/" then
