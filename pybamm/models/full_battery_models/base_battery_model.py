@@ -171,12 +171,6 @@ class BaseBatteryModel(pybamm.BaseModel):
                     "effects if dimensionality is 0."
                 )
 
-            if options["thermal current collector"] is True:
-                raise pybamm.OptionError(
-                    "Thermal current collector effects are not implemented "
-                    "for lead-acid models."
-                )
-
         # Some standard checks to make sure options are compatible
         if not (
             options["operating mode"] in ["current", "voltage", "power"]
