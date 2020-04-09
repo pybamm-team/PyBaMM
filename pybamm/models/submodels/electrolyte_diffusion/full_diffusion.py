@@ -59,7 +59,7 @@ class Full(BaseElectrolyteDiffusion):
         deps_dt = variables["Porosity change"]
         c_e = variables["Electrolyte concentration"]
         N_e = variables["Electrolyte flux"]
-        div_Vbox_s = variables["Transverse volume-averaged acceleration"]
+        div_Vbox = variables["Transverse volume-averaged acceleration"]
 
         # All possible reactions. Some of these could be zero
         j = variables["Interfacial current density"]
@@ -75,7 +75,7 @@ class Full(BaseElectrolyteDiffusion):
                 -pybamm.div(N_e) / param.C_e
                 + source_terms
                 - c_e * deps_dt
-                - c_e * div_Vbox_s
+                - c_e * div_Vbox
             )
         }
 

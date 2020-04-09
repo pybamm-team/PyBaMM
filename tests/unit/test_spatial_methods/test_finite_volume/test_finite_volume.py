@@ -625,7 +625,7 @@ class TestFiniteVolume(unittest.TestCase):
             "macroscale": pybamm.FiniteVolume(),
             "negative particle": pybamm.FiniteVolume(),
             "positive particle": pybamm.FiniteVolume(),
-            "current collector": pybamm.ZeroDimensionalMethod(),
+            "current collector": pybamm.ZeroDimensionalSpatialMethod(),
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
         # lengths
@@ -722,7 +722,7 @@ class TestFiniteVolume(unittest.TestCase):
             "macroscale": pybamm.FiniteVolume(),
             "negative particle": pybamm.FiniteVolume(),
             "positive particle": pybamm.FiniteVolume(),
-            "current collector": pybamm.ZeroDimensionalMethod(),
+            "current collector": pybamm.ZeroDimensionalSpatialMethod(),
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
@@ -879,7 +879,7 @@ class TestFiniteVolume(unittest.TestCase):
             "macroscale": pybamm.FiniteVolume(),
             "negative particle": pybamm.FiniteVolume(),
             "positive particle": pybamm.FiniteVolume(),
-            "current collector": pybamm.ZeroDimensionalMethod(),
+            "current collector": pybamm.ZeroDimensionalSpatialMethod(),
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
 

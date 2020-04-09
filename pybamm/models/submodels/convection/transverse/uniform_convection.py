@@ -30,9 +30,19 @@ class Uniform(BaseTransverseModel):
 
     def get_coupled_variables(self, variables):
 
+        # Set up
+        param = self.param
         z = pybamm.standard_spatial_vars.z
 
-        div_Vbox_s = self._get_separator_velocity(variables)
+        # Difference in negative and positive electrode velocities determines the
+        # velocity in the separator
+        i_boundary_cc = variables["Current collector current density"]
+        v_box_n_right = param.beta_n * i_boundary_cc
+        v_box_p_left = param.beta_p * i_boundary_cc
+        d_vbox_s_dx = (v_box_p_left - v_box_n_right) / param.l_s
+
+        # Simple formula for velocity in the separator
+        div_Vbox_s = -d_vbox_s_dx
         variables.update(
             self._get_standard_transverse_velocity_variables(div_Vbox_s, "acceleration")
         )

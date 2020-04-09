@@ -38,11 +38,19 @@ class NoConvection(BaseThroughCellModel):
 
         return variables
 
-    def _get_separator_velocity(self, variables):
+    def get_coupled_variables(self, variables):
+
         # Simple formula for velocity in the separator
         v_box_s = pybamm.FullBroadcast(0, "separator", "current collector")
         div_v_box_s = pybamm.FullBroadcast(0, "separator", "current collector")
 
-        variables = self._get_standard_sep_velocity_variables(v_box_s, div_v_box_s)
+        variables.update(
+            self._get_standard_sep_velocity_variables(v_box_s, div_v_box_s)
+        )
+        variables.update(self._get_standard_whole_cell_velocity_variables(variables))
+        variables.update(
+            self._get_standard_whole_cell_acceleration_variables(variables)
+        )
+        variables.update(self._get_standard_whole_cell_pressure_variables(variables))
 
         return variables

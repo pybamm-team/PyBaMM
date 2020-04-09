@@ -19,41 +19,6 @@ class BaseThroughCellModel(BaseModel):
     def __init__(self, param):
         super().__init__(param)
 
-    def _get_separator_velocity(self, variables):
-        # Set up
-        param = self.param
-        l_n = pybamm.geometric_parameters.l_n
-        x_s = pybamm.standard_spatial_vars.x_s
-
-        # Transverse velocity in the separator determines through-cell velocity
-        div_Vbox_s = variables[
-            "X-averaged separator transverse volume-averaged acceleration"
-        ]
-        i_boundary_cc = variables["Current collector current density"]
-        v_box_n_right = param.beta_n * pybamm.PrimaryBroadcast(
-            i_boundary_cc, "separator"
-        )
-        div_v_box_s_av = -div_Vbox_s
-        div_v_box_s = pybamm.PrimaryBroadcast(div_v_box_s_av, "separator")
-
-        # Simple formula for velocity in the separator
-        v_box_s = div_v_box_s_av * (x_s - l_n) + v_box_n_right
-
-        variables = self._get_standard_sep_velocity_variables(v_box_s, div_v_box_s)
-
-        return variables
-
-    def get_coupled_variables(self, variables):
-
-        variables.update(self._get_separator_velocity(variables))
-        variables.update(self._get_standard_whole_cell_velocity_variables(variables))
-        variables.update(
-            self._get_standard_whole_cell_acceleration_variables(variables)
-        )
-        variables.update(self._get_standard_whole_cell_pressure_variables(variables))
-
-        return variables
-
     def _get_standard_sep_velocity_variables(self, v_box_s, div_v_box_s):
         """Volume-averaged velocity in the separator"""
 

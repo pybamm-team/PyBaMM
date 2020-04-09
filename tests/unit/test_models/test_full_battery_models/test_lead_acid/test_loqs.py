@@ -26,7 +26,7 @@ class TestLeadAcidLOQS(unittest.TestCase):
         self.assertTrue(
             isinstance(
                 model.default_spatial_methods["current collector"],
-                pybamm.ZeroDimensionalMethod,
+                pybamm.ZeroDimensionalSpatialMethod,
             )
         )
         self.assertTrue(
