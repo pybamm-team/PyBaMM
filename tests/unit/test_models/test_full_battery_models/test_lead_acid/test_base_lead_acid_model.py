@@ -30,13 +30,6 @@ class TestBaseLeadAcidModel(unittest.TestCase):
     def test_incompatible_options(self):
         with self.assertRaisesRegex(
             pybamm.OptionError,
-            "Thermal current collector effects are "
-            "not implemented for lead-acid models.",
-        ):
-            pybamm.lead_acid.BaseModel({"thermal current collector": True})
-
-        with self.assertRaisesRegex(
-            pybamm.OptionError,
             "Lead-acid models can only have thermal " "effects if dimensionality is 0.",
         ):
             pybamm.lead_acid.BaseModel({"dimensionality": 1, "thermal": "x-full"})

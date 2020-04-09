@@ -87,7 +87,7 @@ class TestLeadAcidCompositeSurfaceForm(unittest.TestCase):
         modeltest.test_all()  # solver=pybamm.CasadiSolver())
 
     # def test_thermal(self):
-    #     options = {"thermal": "x-lumped"}
+    #     options = {"thermal": "lumped"}
     #     model = pybamm.lead_acid.Composite(options)
     #     modeltest = tests.StandardModelTest(model)
     #     modeltest.test_all()

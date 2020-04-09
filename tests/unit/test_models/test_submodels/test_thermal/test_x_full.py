@@ -1,5 +1,5 @@
 #
-# Test x-lumped submodel with no current collectors
+# Test one-dimensional (x-direction) thermal submodel
 #
 
 import pybamm
@@ -11,10 +11,10 @@ from tests.unit.test_models.test_submodels.test_thermal.coupled_variables import
 )
 
 
-class TestLumped(unittest.TestCase):
+class TestOneDimensionalX(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.standard_parameters_lithium_ion
-        submodel = pybamm.thermal.x_lumped.NoCurrentCollector(param)
+        submodel = pybamm.thermal.OneDimensionalX(param)
         std_tests = tests.StandardSubModelTests(submodel, coupled_variables)
         std_tests.test_all()
 
