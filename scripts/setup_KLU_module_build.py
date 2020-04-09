@@ -24,6 +24,7 @@ def download_extract_library(url, download_dir):
     tar = tarfile.open(archive)
     tar.extractall(download_dir)
 
+
 def update_activate_or_bashrc(install_dir):
     # Look for current python virtual env and add export statement
     # for LD_LIBRARY_PATH in activate script.  If no virtual env found,
@@ -53,6 +54,7 @@ def update_activate_or_bashrc(install_dir):
                     "Adding {}/lib to LD_LIBRARY_PATH"
                     " in {}".format(install_dir, script_path)
                 )
+
 
 # First check requirements: make and cmake
 try:
