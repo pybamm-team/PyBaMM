@@ -63,7 +63,7 @@ class Full(BaseElectrolyteDiffusion):
         N_e = variables["Electrolyte flux"]
         c_e_n = variables["Negative electrolyte concentration"]
         c_e_p = variables["Positive electrolyte concentration"]
-        div_Vbox_s = variables["Transverse volume-averaged acceleration"]
+        div_Vbox = variables["Transverse volume-averaged acceleration"]
 
         source_terms = sum(
             pybamm.Concatenation(
@@ -83,7 +83,7 @@ class Full(BaseElectrolyteDiffusion):
                 -pybamm.div(N_e) / param.C_e
                 + source_terms
                 - c_e * deps_dt
-                - c_e * div_Vbox_s
+                - c_e * div_Vbox
             )
         }
 

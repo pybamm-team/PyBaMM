@@ -71,6 +71,10 @@ class TestLeadAcidCompositeExtended(unittest.TestCase):
         model = pybamm.lead_acid.CompositeExtended(options)
         model.check_well_posedness()
 
+    def test_well_posed_average_correction(self):
+        model = pybamm.lead_acid.CompositeAverageCorrection()
+        model.check_well_posedness()
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

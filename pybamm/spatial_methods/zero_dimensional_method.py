@@ -5,7 +5,7 @@ import pybamm
 import numpy as np
 
 
-class ZeroDimensionalMethod(pybamm.SpatialMethod):
+class ZeroDimensionalSpatialMethod(pybamm.SpatialMethod):
     """
     A discretisation class for the zero dimensional mesh
 

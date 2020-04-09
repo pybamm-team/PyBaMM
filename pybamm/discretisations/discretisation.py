@@ -610,7 +610,7 @@ class Discretisation(object):
                 mass_list.append(mass)
                 if isinstance(
                     self.spatial_methods[var.domain[0]],
-                    (pybamm.ZeroDimensionalMethod, pybamm.FiniteVolume),
+                    (pybamm.ZeroDimensionalSpatialMethod, pybamm.FiniteVolume),
                 ):
                     # for 0D methods the mass matrix is just a scalar 1 and for
                     # finite volumes the mass matrix is identity, so no need to

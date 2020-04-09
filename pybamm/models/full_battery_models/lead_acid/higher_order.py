@@ -64,7 +64,6 @@ class BaseHigherOrderModel(BaseModel):
 
         if self.options["current collector"] in [
             "uniform",
-            "potential pair quite conductive averaged",
         ]:
             submodel = cc.Uniform(self.param)
         elif self.options["current collector"] == "potential pair quite conductive":
@@ -303,7 +302,7 @@ class CompositeAverageCorrection(Composite):
     def set_electrolyte_diffusion_submodel(self):
         self.submodels[
             "electrolyte diffusion"
-        ] = pybamm.electrolyte.stefan_maxwell.diffusion.Composite(
+        ] = pybamm.electrolyte_diffusion.Composite(
             self.param, self.reactions, extended="average"
         )
 

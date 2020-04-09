@@ -90,7 +90,7 @@ class TestBaseBatteryModel(unittest.TestCase):
         self.assertTrue(
             isinstance(
                 model.default_spatial_methods["current collector"],
-                pybamm.ZeroDimensionalMethod,
+                pybamm.ZeroDimensionalSpatialMethod,
             )
         )
         model = pybamm.BaseBatteryModel({"dimensionality": 1})
@@ -120,6 +120,8 @@ class TestBaseBatteryModel(unittest.TestCase):
             pybamm.BaseBatteryModel({"dimensionality": 5})
         with self.assertRaisesRegex(pybamm.OptionError, "surface form"):
             pybamm.BaseBatteryModel({"surface form": "bad surface form"})
+        with self.assertRaisesRegex(pybamm.OptionError, "convection option"):
+            pybamm.BaseBatteryModel({"convection": "bad convection"})
         with self.assertRaisesRegex(
             pybamm.OptionError, "cannot have transverse convection in 0D model"
         ):

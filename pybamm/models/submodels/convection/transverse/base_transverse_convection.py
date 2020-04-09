@@ -71,34 +71,3 @@ class BaseTransverseModel(BaseModel):
         }
 
         return variables
-
-    def _get_separator_velocity(self, variables):
-        """
-        A private method to calculate x- and z-components of velocity in the separator
-
-        Parameters
-        ----------
-        variables : dict
-            Dictionary of variables in the whole model.
-
-        Returns
-        -------
-        v_box_s : :class:`pybamm.Symbol`
-            The x-component of velocity in the separator
-        dVbox_dz : :class:`pybamm.Symbol`
-            The z-component of velocity in the separator
-        """
-        # Set up
-        param = self.param
-
-        # Difference in negative and positive electrode velocities determines the
-        # velocity in the separator
-        i_boundary_cc = variables["Current collector current density"]
-        v_box_n_right = param.beta_n * i_boundary_cc
-        v_box_p_left = param.beta_p * i_boundary_cc
-        d_vbox_s_dx = (v_box_p_left - v_box_n_right) / param.l_s
-
-        # Simple formula for velocity in the separator
-        div_Vbox_s = -d_vbox_s_dx
-
-        return div_Vbox_s

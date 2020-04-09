@@ -106,6 +106,13 @@ class TestLeadAcidCompositeExtended(unittest.TestCase):
         modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_all()
 
+    def test_basic_processing_averaged(self):
+        model = pybamm.lead_acid.CompositeAverageCorrection()
+        param = model.default_parameter_values
+        param.update({"Current function [A]": 1})
+        modeltest = tests.StandardModelTest(model, parameter_values=param)
+        modeltest.test_all()
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
