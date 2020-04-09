@@ -1,6 +1,7 @@
 import os
 import subprocess
 import tarfile
+import argparse
 
 try:
     # wget module is required to download SUNDIALS or SuiteSparse.
@@ -11,7 +12,7 @@ except ModuleNotFoundError:
     NO_WGET = True
 
 
-def download_extract_library(url, directory):
+def download_extract_library(url, download_dir):
     # Download and extract archive at url
     if NO_WGET:
         error_msg = (
@@ -19,9 +20,9 @@ def download_extract_library(url, directory):
             " Please install wget module (pip install wget)."
         )
         raise ModuleNotFoundError(error_msg)
-    archive = wget.download(url, out=directory)
+    archive = wget.download(url, out=download_dir)
     tar = tarfile.open(archive)
-    tar.extractall(directory)
+    tar.extractall(download_dir)
 
 
 # First check requirements: make and cmake
@@ -34,47 +35,67 @@ try:
 except OSError:
     raise RuntimeError("CMake must be installed.")
 
-# Get abs path to dir containing "scripts/"
-# Likely PyBaMM/
-parent_dir = os.path.split(os.path.abspath(os.path.dirname(__file__)))[0]
-directory = os.path.join(parent_dir, "KLU_module_deps")
-if not os.path.exists(directory):
-    os.makedirs(directory)
+# Create download directory in PyBaMM dir
+pybamm_dir = os.path.split(os.path.abspath(os.path.dirname(__file__)))[0]
+download_dir = os.path.join(pybamm_dir, "KLU_module_deps")
+if not os.path.exists(download_dir):
+    os.makedirs(download_dir)
 
-# Download SuiteSparse
-suitesparse_url = (
-    "https://github.com/DrTimothyAldenDavis/" + "SuiteSparse/archive/v5.6.0.tar.gz"
+# Get installation location
+parser = argparse.ArgumentParser(
+    description="Download, compile and install Sundials and SuiteSparse."
 )
-download_extract_library(suitesparse_url, directory)
+parser.add_argument("--install-dir", type=str, default="/usr/local")
+args = parser.parse_args()
+install_dir = (
+    args.install_dir
+    if os.path.isabs(args.install_dir)
+    else os.path.join(pybamm_dir, args.install_dir)
+)
+
+# 1 --- Download SuiteSparse
+suitesparse_version = "5.6.0"
+suitesparse_url = (
+    "https://github.com/DrTimothyAldenDavis/"
+    + "SuiteSparse/archive/v{}.tar.gz".format(suitesparse_version)
+)
+# download_extract_library(suitesparse_url, download_dir)
 
 # The SuiteSparse KLU module has 4 dependencies:
 # - suitesparseconfig
 # - AMD
 # - COLAMD
 # - BTF
-suitesparse_src = os.path.join(directory, "SuiteSparse-5.6.0")
+suitesparse_dir = "SuiteSparse-{}".format(suitesparse_version)
+suitesparse_src = os.path.join(download_dir, suitesparse_dir)
 print("-" * 10, "Building SuiteSparse_config", "-" * 40)
-make_cmd = ["make"]
-build_dir = os.path.join(suitesparse_src, "SuiteSparse_config")
-subprocess.run(make_cmd, cwd=build_dir)
-
-print("-" * 10, "Building SuiteSparse KLU module dependencies", "-" * 40)
 make_cmd = ["make", "library"]
-for libdir in ["AMD", "COLAMD", "BTF"]:
+install_cmd = [
+    "make",
+    "install",
+    "INSTALL={}".format(install_dir),
+    "INSTALL_DOC=/tmp/doc",
+]
+print("-" * 10, "Building SuiteSparse", "-" * 40)
+for libdir in ["SuiteSparse_config", "AMD", "COLAMD", "BTF", "KLU"]:
     build_dir = os.path.join(suitesparse_src, libdir)
     subprocess.run(make_cmd, cwd=build_dir)
+    subprocess.run(install_cmd, cwd=build_dir)
 
-print("-" * 10, "Building SuiteSparse KLU module", "-" * 40)
-build_dir = os.path.join(suitesparse_src, "KLU")
-subprocess.run(make_cmd, cwd=build_dir)
-
-# Download SUNDIALS
+# 2 --- Download SUNDIALS
+sundials_version = "5.0.0"
 sundials_url = (
-    "https://computing.llnl.gov/" + "projects/sundials/download/sundials-5.0.0.tar.gz"
+    "https://computing.llnl.gov/"
+    + "projects/sundials/download/sundials-{}.tar.gz".format(sundials_version)
 )
-download_extract_library(sundials_url, directory)
+# download_extract_library(sundials_url, download_dir)
 
-sundials_inst = "../sundials5"
+# Set install dir for SuiteSparse libs
+# Ex: if install_dir -> "/usr/local/" then
+# KLU_INCLUDE_DIR -> "/usr/local/include"
+# KLU_LIBRARY_DIR -> "/usr/local/lib"
+KLU_INCLUDE_DIR = os.path.join(install_dir, "include")
+KLU_LIBRARY_DIR = os.path.join(install_dir, "lib")
 cmake_args = [
     "-DLAPACK_ENABLE=ON",
     "-DSUNDIALS_INDEX_SIZE=32",
@@ -85,22 +106,22 @@ cmake_args = [
     "-DBUILD_KINSOL=OFF",
     "-DEXAMPLES_ENABLE:BOOL=OFF",
     "-DKLU_ENABLE=ON",
-    "-DKLU_INCLUDE_DIR=../SuiteSparse-5.6.0/include",
-    "-DKLU_LIBRARY_DIR=../SuiteSparse-5.6.0/lib",
-    "-DCMAKE_INSTALL_PREFIX=" + sundials_inst,
+    "-DKLU_INCLUDE_DIR={}".format(KLU_INCLUDE_DIR),
+    "-DKLU_LIBRARY_DIR={}".format(KLU_LIBRARY_DIR),
+    "-DCMAKE_INSTALL_PREFIX=" + install_dir,
 ]
 
-# SUNDIALS are built within directory 'build_sundials' in the PyBaMM root
-# directory
-build_directory = os.path.abspath(os.path.join(directory, "build_sundials"))
-if not os.path.exists(build_directory):
+# SUNDIALS are built within download_dir 'build_sundials' in the PyBaMM root
+# download_dir
+build_dir = os.path.abspath(os.path.join(download_dir, "build_sundials"))
+if not os.path.exists(build_dir):
     print("\n-" * 10, "Creating build dir", "-" * 40)
-    os.makedirs(build_directory)
+    os.makedirs(build_dir)
 
-sundials_src = "../sundials-5.0.0"
+sundials_src = "../sundials-{}".format(sundials_version)
 print("-" * 10, "Running CMake prepare", "-" * 40)
-subprocess.run(["cmake", sundials_src] + cmake_args, cwd=build_directory)
+subprocess.run(["cmake", sundials_src] + cmake_args, cwd=build_dir)
 
 print("-" * 10, "Building the sundials", "-" * 40)
 make_cmd = ["make", "install"]
-subprocess.run(make_cmd, cwd=build_directory)
+subprocess.run(make_cmd, cwd=build_dir)

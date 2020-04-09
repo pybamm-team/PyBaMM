@@ -50,7 +50,19 @@ Then execute the script
 # In the PyBaMM project dir (next to setup.py)
 python scripts/setup_KLU_module_build.py
 ```
-The resulting files are located inside the PyBaMM project directory under `KLU_module_deps/`.
+The above will install the required component of SuiteSparse and Sundials in your system under
+`/usr/local/`.
+In most cases you will have to execute script with root privileges, i.e.
+```
+sudo env/bin/python scripts/setup_KLU_module_build.py
+```
+where `env/` is the name of your virtual environment directory (created with `python -m venv env` or
+`virtualenv env`).
+Note that you can provide the option  `--install-dir=<install/path>` to install both libraries to
+an alternative location. If `<install/path>` is not absolute, it will be interpreted as relative to the PyBaMM project directory.
+
+The build files are located inside the PyBaMM project directory under `KLU_module_deps/`.
+Feel free to remove this directory once everything is installed correctly.
 
 ### Method 2 - Compiling Sundials (advanced)
 
