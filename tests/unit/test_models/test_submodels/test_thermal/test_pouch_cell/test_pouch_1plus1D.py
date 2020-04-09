@@ -1,5 +1,5 @@
 #
-# Test x-lumped submodel with 0D current collectors
+# Test 1+1D submodel
 #
 
 import pybamm
@@ -11,14 +11,10 @@ from tests.unit.test_models.test_submodels.test_thermal.coupled_variables import
 )
 
 
-class TestCurrentCollector0D(unittest.TestCase):
+class TestPouchCell1D(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.standard_parameters_lithium_ion
-        i_boundary_cc = pybamm.PrimaryBroadcast(pybamm.Scalar(1), ["current collector"])
-
-        coupled_variables.update({"Current collector current density": i_boundary_cc})
-
-        submodel = pybamm.thermal.x_lumped.CurrentCollector0D(param)
+        submodel = pybamm.thermal.pouch_cell.CurrentCollector1D(param)
         std_tests = tests.StandardSubModelTests(submodel, coupled_variables)
         std_tests.test_all()
 

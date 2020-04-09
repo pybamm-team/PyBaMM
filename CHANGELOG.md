@@ -13,11 +13,13 @@
 
 ## Bug fixes
 
+-   Reformatted thermal submodels ([#938](https://github.com/pybamm-team/PyBaMM/pull/938)
 -   Reformatted electrolyte submodels ([#927](https://github.com/pybamm-team/PyBaMM/pull/927))
 
 ## Breaking changes
 
 -   Removed some inputs like `T_inf`, `R_g` and activation energies to some of the standard function parameters. This is because each of those inputs is specific to a particular function (e.g. the reference temperature at which the function was measured). To change a property such as the activation energy, users should create a new function, specifying the relevant property as a `Parameter` or `InputParameter` ([#942](https://github.com/pybamm-team/PyBaMM/pull/942))
+-   The thermal option 'xyz-lumped' has been removed. The option 'thermal current collector' has also been removed ([#938](https://github.com/pybamm-team/PyBaMM/pull/938)
 
 # [v0.2.1](https://github.com/pybamm-team/PyBaMM/tree/v0.2.1) - 2020-03-31
 
@@ -46,7 +48,7 @@ New expression tree node types, models, parameter sets and solvers, as well as g
 
 ## Bug fixes
 
--   Filter out discontinuities that occur after solve times 
+-   Filter out discontinuities that occur after solve times
     ([#941](https://github.com/pybamm-team/PyBaMM/pull/945))
 -   Fixed tight layout for QuickPlot in jupyter notebooks ([#930](https://github.com/pybamm-team/PyBaMM/pull/930))
 -   Fixed bug raised if function returns a scalar ([#919](https://github.com/pybamm-team/PyBaMM/pull/919))
