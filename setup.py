@@ -15,6 +15,10 @@ except ImportError:
 
 import CMakeBuild
 
+default_lib_dir = (
+    "" if system() == "Windows" else os.path.join(os.getenv("HOME"), ".local")
+)
+
 log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 logger = logging.getLogger("PyBaMM setup")
 
@@ -22,9 +26,7 @@ logger = logging.getLogger("PyBaMM setup")
 logger.setLevel("INFO")
 
 # Use FileHandler() to log to a file
-logfile = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "setup.log"
-)
+logfile = os.path.join(os.path.dirname(os.path.abspath(__file__)), "setup.log")
 file_handler = logging.FileHandler(logfile)
 formatter = logging.Formatter(log_format)
 file_handler.setFormatter(formatter)
@@ -50,9 +52,9 @@ class CustomInstall(install):
     def finalize_options(self):
         install.finalize_options(self)
         if not self.suitesparse_root:
-            self.suitesparse_root = os.path.join(os.getenv("HOME"), ".local")
+            self.suitesparse_root = default_lib_dir
         if not self.sundials_root:
-            self.sundials_root = os.path.join(os.getenv("HOME"), ".local")
+            self.sundials_root = default_lib_dir
 
     def run(self):
         install.run(self)
@@ -74,9 +76,9 @@ class bdist_wheel(orig.bdist_wheel):
     def finalize_options(self):
         orig.bdist_wheel.finalize_options(self)
         if not self.suitesparse_root:
-            self.suitesparse_root = "KLU_module_deps/SuiteSparse-5.6.0"
+            self.suitesparse_root = default_lib_dir
         if not self.sundials_root:
-            self.sundials_root = "KLU_module_deps/sundials5"
+            self.sundials_root = default_lib_dir
 
     def run(self):
         orig.bdist_wheel.run(self)

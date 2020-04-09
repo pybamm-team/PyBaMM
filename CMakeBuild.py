@@ -2,11 +2,16 @@ import os
 import sys
 import subprocess
 from pathlib import Path
+from platform import system
 
 try:
     from setuptools.command.build_ext import build_ext
 except ImportError:
     from distutils.command.build_ext import build_ext
+
+default_lib_dir = (
+    "" if system() == "Windows" else os.path.join(os.getenv("HOME"), ".local")
+)
 
 
 class CMakeBuild(build_ext):
