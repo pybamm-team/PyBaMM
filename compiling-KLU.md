@@ -1,10 +1,7 @@
 # PyBaMM developer install - The KLU sparse solver
-If you wish so simulate large systems such as the 2+1D models, we recommend employing a
-sparse solver.
-PyBaMM currently offers a direct interface to the sparse KLU solver within Sundials, in the form of a C++
-python extension module.
-When installing PyBaMM from source (e.g. from the GitHub repository), the KLU sparse solver module must
-be compiled.
+If you wish to try a different DAE solver, PyBaMM currently offers a direct interface to the sparse KLU solver within Sundials.
+This solver comes as a C++ python extension module.
+Therefore, when installing PyBaMM from source (e.g. from the GitHub repository), the KLU sparse solver module must be compiled.
 Running `pip install .` or `python setup.py install ` in the PyBaMM directory will result in a attempt to compile the KLU module.
 
 Note that if CMake of pybind11 are not found (see below), the installation of PyBaMM will carry on, however skipping
