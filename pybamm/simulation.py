@@ -84,7 +84,7 @@ class Simulation:
         quick_plot_vars=None,
         C_rate=None,
     ):
-        self._parameter_values = parameter_values or model.default_parameter_values
+        self.parameter_values = parameter_values or model.default_parameter_values
 
         if experiment is None:
             self.operating_mode = "without experiment"
@@ -96,11 +96,11 @@ class Simulation:
             self.set_up_experiment(model, experiment)
 
         self.geometry = geometry or self.model.default_geometry
-        self._submesh_types = submesh_types or self.model.default_submesh_types
-        self._var_pts = var_pts or self.model.default_var_pts
-        self._spatial_methods = spatial_methods or self.model.default_spatial_methods
-        self._solver = solver or self.model.default_solver
-        self._quick_plot_vars = quick_plot_vars
+        self.submesh_types = submesh_types or self.model.default_submesh_types
+        self.var_pts = var_pts or self.model.default_var_pts
+        self.spatial_methods = spatial_methods or self.model.default_spatial_methods
+        self.solver = solver or self.model.default_solver
+        self.quick_plot_vars = quick_plot_vars
 
         self.reset(update_model=False)
 
@@ -237,12 +237,12 @@ class Simulation:
         supplied model.
         """
         self.geometry = self._model.default_geometry
-        self._parameter_values = self._model.default_parameter_values
-        self._submesh_types = self._model.default_submesh_types
-        self._var_pts = self._model.default_var_pts
-        self._spatial_methods = self._model.default_spatial_methods
-        self._solver = self._model.default_solver
-        self._quick_plot_vars = None
+        self.parameter_values = self._model.default_parameter_values
+        self.submesh_types = self._model.default_submesh_types
+        self.var_pts = self._model.default_var_pts
+        self.spatial_methods = self._model.default_spatial_methods
+        self.solver = self._model.default_solver
+        self.quick_plot_vars = None
 
     def reset(self, update_model=True):
         """
@@ -267,10 +267,13 @@ class Simulation:
         if self.model_with_set_params:
             return None
 
-        self._model_with_set_params = self._parameter_values.process_model(
-            self._model, inplace=True
-        )
-        self._parameter_values.process_geometry(self._geometry)
+        if self._parameter_values._dict_items == {1: 1}:
+            self._model_with_set_params = self._model
+        else:
+            self._model_with_set_params = self._parameter_values.process_model(
+                self._model, inplace=True
+            )
+            self._parameter_values.process_geometry(self._geometry)
 
     def build(self, check_model=True):
         """
@@ -340,7 +343,9 @@ class Simulation:
             # on t_eval (if provided) to ensure the returned solution captures the
             # input. If the current is provided as data then the "Current function [A]"
             # is the tuple (filename, data).
-            if isinstance(self._parameter_values["Current function [A]"], tuple):
+            # First, read the current function (if provided, otherwise return None)
+            current_function = self._parameter_values.get("Current function [A]")
+            if isinstance(current_function, tuple):
                 filename = self._parameter_values["Current function [A]"][0]
                 time_data = self._parameter_values["Current function [A]"][1][:, 0]
                 # If no t_eval is provided, we use the times provided in the data.
@@ -387,13 +392,17 @@ class Simulation:
             # If not using a drive cycle and t_eval is not provided, set t_eval
             # to correspond to a single discharge
             elif t_eval is None:
-                C_rate = self._parameter_values["C-rate"]
-                if isinstance(C_rate, pybamm.InputParameter):
-                    C_rate = inputs["C-rate"]
-                try:
-                    t_end = 3600 / C_rate
-                except TypeError:
-                    t_end = 3600
+                # Get C-rate, return None if it doesn't exist
+                C_rate = self._parameter_values.get("C-rate")
+                if C_rate is None:
+                    t_end = 1
+                else:
+                    if isinstance(C_rate, pybamm.InputParameter):
+                        C_rate = inputs["C-rate"]
+                    try:
+                        t_end = 3600 / C_rate
+                    except TypeError:
+                        t_end = 3600
                 t_eval = np.linspace(0, t_end, 100)
 
             self.t_eval = t_eval
@@ -544,9 +553,9 @@ class Simulation:
 
     @model.setter
     def model(self, model):
-        self._model = model
+        self._model = copy.copy(model)
         self._model_class = model.__class__
-        self._model_options = model.options
+        self._model_options = model.options.copy()
 
     @property
     def model_with_set_params(self):
@@ -566,7 +575,7 @@ class Simulation:
 
     @geometry.setter
     def geometry(self, geometry):
-        self._geometry = geometry
+        self._geometry = copy.copy(geometry)
         self._unprocessed_geometry = copy.deepcopy(geometry)
 
     @property
@@ -577,9 +586,17 @@ class Simulation:
     def parameter_values(self):
         return self._parameter_values
 
+    @parameter_values.setter
+    def parameter_values(self, parameter_values):
+        self._parameter_values = copy.copy(parameter_values)
+
     @property
     def submesh_types(self):
         return self._submesh_types
+
+    @submesh_types.setter
+    def submesh_types(self, submesh_types):
+        self._submesh_types = copy.copy(submesh_types)
 
     @property
     def mesh(self):
@@ -589,9 +606,17 @@ class Simulation:
     def var_pts(self):
         return self._var_pts
 
+    @var_pts.setter
+    def var_pts(self, var_pts):
+        self._var_pts = copy.copy(var_pts)
+
     @property
     def spatial_methods(self):
         return self._spatial_methods
+
+    @spatial_methods.setter
+    def spatial_methods(self, spatial_methods):
+        self._spatial_methods = copy.copy(spatial_methods)
 
     @property
     def solver(self):
@@ -599,7 +624,7 @@ class Simulation:
 
     @solver.setter
     def solver(self, solver):
-        self._solver = solver
+        self._solver = copy.copy(solver)
 
     @property
     def quick_plot_vars(self):
@@ -607,7 +632,7 @@ class Simulation:
 
     @quick_plot_vars.setter
     def quick_plot_vars(self, quick_plot_vars):
-        self._quick_plot_vars = quick_plot_vars
+        self._quick_plot_vars = copy.copy(quick_plot_vars)
 
     @property
     def solution(self):
@@ -656,27 +681,27 @@ class Simulation:
         """
 
         if model_options:
-            self._model_options = model_options
+            self._model_options = copy.copy(model_options)
 
         if geometry:
             self.geometry = geometry
 
         if parameter_values:
-            self._parameter_values = parameter_values
+            self.parameter_values = parameter_values
         if submesh_types:
-            self._submesh_types = submesh_types
+            self.submesh_types = submesh_types
         if var_pts:
-            self._var_pts = var_pts
+            self.var_pts = var_pts
         if spatial_methods:
-            self._spatial_methods = spatial_methods
+            self.spatial_methods = spatial_methods
         if solver:
-            self._solver = solver
+            self.solver = solver
         if quick_plot_vars:
-            self._quick_plot_vars = quick_plot_vars
+            self.quick_plot_vars = quick_plot_vars
 
         if C_rate:
             self.C_rate = C_rate
-            self._parameter_values.update({"C-rate": self.C_rate})
+            self.parameter_values.update({"C-rate": self.C_rate})
 
         if (
             model_options

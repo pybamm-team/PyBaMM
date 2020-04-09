@@ -644,6 +644,26 @@ class BaseModel(object):
         print(div)
 
     @property
+    def default_parameter_values(self):
+        return pybamm.ParameterValues({})
+
+    @property
+    def default_var_pts(self):
+        return {}
+
+    @property
+    def default_geometry(self):
+        return {}
+
+    @property
+    def default_submesh_types(self):
+        return {}
+
+    @property
+    def default_spatial_methods(self):
+        return {}
+
+    @property
     def default_solver(self):
         "Return default solver based on whether model is ODE model or DAE model"
         if len(self.algebraic) == 0:

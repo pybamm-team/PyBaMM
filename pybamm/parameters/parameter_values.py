@@ -86,6 +86,13 @@ class ParameterValues:
     def __getitem__(self, key):
         return self._dict_items[key]
 
+    def get(self, key, default=None):
+        "Return item correspoonding to key if it exists, otherwise return default"
+        try:
+            return self._dict_items[key]
+        except KeyError:
+            return default
+
     def __setitem__(self, key, value):
         "Call the update functionality when doing a setitem"
         self.update({key: value})

@@ -86,6 +86,23 @@ class TestSimulation(unittest.TestCase):
             if val.size > 1:
                 self.assertTrue(val.has_symbol_of_classes(pybamm.Matrix))
 
+    def test_solve_non_battery_model(self):
+
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        model.rhs = {v: -v}
+        model.initial_conditions = {v: 1}
+        model.variables = {"v": v}
+        sim = pybamm.Simulation(
+            model, solver=pybamm.ScipySolver(rtol=1e-10, atol=1e-10)
+        )
+
+        sim.solve()
+        np.testing.assert_array_equal(sim.solution.t, np.linspace(0, 1, 100))
+        np.testing.assert_array_almost_equal(
+            sim.solution["v"].entries, np.exp(-np.linspace(0, 1, 100))
+        )
+
     def test_reuse_commands(self):
 
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
@@ -210,7 +227,7 @@ class TestSimulation(unittest.TestCase):
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model)
         sim.step(dt)  # 1 step stores first two points
-        tau = model.timescale.evaluate()
+        tau = sim.model.timescale.evaluate()
         self.assertEqual(sim.solution.t.size, 2)
         self.assertEqual(sim.solution.y[0, :].size, 2)
         self.assertEqual(sim.solution.t[0], 0)
@@ -236,7 +253,7 @@ class TestSimulation(unittest.TestCase):
         sim.step(
             dt, inputs={"Current function [A]": 1}
         )  # 1 step stores first two points
-        tau = model.timescale.evaluate()
+        tau = sim.model.timescale.evaluate()
         self.assertEqual(sim.solution.t.size, 2)
         self.assertEqual(sim.solution.y[0, :].size, 2)
         self.assertEqual(sim.solution.t[0], 0)
@@ -371,7 +388,7 @@ class TestSimulation(unittest.TestCase):
 
         # check solution is returned at the times in the data
         sim.solve()
-        tau = model.timescale.evaluate()
+        tau = sim.model.timescale.evaluate()
         np.testing.assert_array_almost_equal(sim.solution.t, time_data / tau)
 
         # check warning raised if the largest gap in t_eval is bigger than the
@@ -405,7 +422,7 @@ class TestSimulation(unittest.TestCase):
         )
         sim.solve()
         current = sim.solution["Current [A]"]
-        tau = model.timescale.evaluate()
+        tau = sim.model.timescale.evaluate()
         self.assertEqual(current(0), 1)
         self.assertEqual(current(1500 / tau), -0.5)
         self.assertEqual(current(3000 / tau), 0.5)
