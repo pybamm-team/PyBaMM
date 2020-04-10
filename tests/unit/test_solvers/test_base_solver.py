@@ -179,6 +179,29 @@ class TestBaseSolver(unittest.TestCase):
         ):
             solver.calculate_consistent_state(Model())
 
+    def test_discretise_model(self):
+        # Make sure 0D model is automatically discretised
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        model.rhs = {v: -1}
+        model.initial_conditions = {v: 1}
+
+        solver = pybamm.BaseSolver()
+        self.assertFalse(model.is_discretised)
+        solver.set_up(model, {})
+        self.assertTrue(model.is_discretised)
+
+        # 1D model cannot be automatically discretised
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v", domain="line")
+        model.rhs = {v: -1}
+        model.initial_conditions = {v: 1}
+
+        with self.assertRaisesRegex(
+            pybamm.DiscretisationError, "Cannot automatically discretise model"
+        ):
+            solver.set_up(model, {})
+
     def test_convert_to_casadi_format(self):
         # Make sure model is converted to casadi format
         model = pybamm.BaseModel()

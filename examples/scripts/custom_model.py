@@ -34,13 +34,12 @@ model.submodels["negative interface"] = pybamm.interface.InverseButlerVolmer(
 model.submodels["positive interface"] = pybamm.interface.InverseButlerVolmer(
     model.param, "Positive", "lithium-ion main"
 )
-electrolyte = pybamm.electrolyte.stefan_maxwell
-model.submodels["electrolyte diffusion"] = electrolyte.diffusion.ConstantConcentration(
-    model.param
-)
-model.submodels["electrolyte conductivity"] = electrolyte.conductivity.LeadingOrder(
-    model.param
-)
+model.submodels[
+    "electrolyte diffusion"
+] = pybamm.electrolyte_diffusion.ConstantConcentration(model.param)
+model.submodels[
+    "electrolyte conductivity"
+] = pybamm.electrolyte_conductivity.LeadingOrder(model.param)
 
 # build model
 model.build_model()

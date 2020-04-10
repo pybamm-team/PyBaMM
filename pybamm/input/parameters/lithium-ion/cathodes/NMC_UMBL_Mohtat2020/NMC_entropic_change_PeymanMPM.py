@@ -15,7 +15,7 @@ def NMC_entropic_change_PeymanMPM(sto, c_p_max):
 
           Parameters
           ----------
-          sto: double
+          sto : :class:`pybamm.Symbol`
                Stochiometry of material (li-fraction)
 
     """

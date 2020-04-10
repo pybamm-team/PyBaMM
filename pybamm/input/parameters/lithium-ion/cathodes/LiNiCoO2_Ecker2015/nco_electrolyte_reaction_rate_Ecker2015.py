@@ -1,8 +1,7 @@
-from pybamm import exp
-from scipy import constants
+from pybamm import exp, constants
 
 
-def nco_electrolyte_reaction_rate_Ecker2015(T, T_inf, E_r, R_g):
+def nco_electrolyte_reaction_rate_Ecker2015(T):
     """
     Reaction rate for Butler-Volmer reactions between NCO and LiPF6 in EC:DMC [1, 2, 3].
 
@@ -20,27 +19,20 @@ def nco_electrolyte_reaction_rate_Ecker2015(T, T_inf, E_r, R_g):
 
     Parameters
     ----------
-    T: :class: `numpy.Array`
+    T: :class:`pybamm.Symbol`
         Dimensional temperature
-    T_inf: double
-        Reference temperature
-    E_r: double
-        Reaction activation energy
-    R_g: double
-        The ideal gas constant
-
     Returns
     -------
-    : double
+    :class:`pybamm.Symbol`
         Reaction rate
     """
 
     k_ref = 5.196e-11
 
     # multiply by Faraday's constant to get correct units
-    F = constants.physical_constants["Faraday constant"][0]
-    m_ref = F * k_ref
+    m_ref = constants.F * k_ref
 
-    arrhenius = exp(-E_r / (R_g * T)) * exp(E_r / (R_g * T_inf))
+    E_r = 4.36e4
+    arrhenius = exp(-E_r / (constants.R * T)) * exp(E_r / (constants.R * 296.15))
 
     return m_ref * arrhenius

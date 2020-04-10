@@ -8,7 +8,7 @@ from .base_interface import BaseInterface
 
 class DiffusionLimited(BaseInterface):
     """
-    Leading-order submodel for diffusion-limited kinetics
+    Submodel for diffusion-limited kinetics
 
     Parameters
     ----------
@@ -70,6 +70,28 @@ class DiffusionLimited(BaseInterface):
                 self._get_standard_whole_cell_exchange_current_variables(variables)
             )
 
+        if self.order == "composite":
+            # For the composite model, adds the first-order x-averaged interfacial
+            # current density to the dictionary of variables.
+            j_0 = variables[
+                "Leading-order "
+                + self.domain.lower()
+                + " electrode"
+                + self.reaction_name
+                + " interfacial current density"
+            ]
+            j_1_bar = (pybamm.x_average(j) - pybamm.x_average(j_0)) / self.param.C_e
+
+            variables.update(
+                {
+                    "First-order x-averaged "
+                    + self.domain.lower()
+                    + " electrode"
+                    + self.reaction_name
+                    + " interfacial current density": j_1_bar
+                }
+            )
+
         return variables
 
     def _get_diffusion_limited_current_density(self, variables):
@@ -82,7 +104,7 @@ class DiffusionLimited(BaseInterface):
                     + " interfacial current density"
                 ]
                 j = -self.param.l_p * j_p / self.param.l_n
-            elif self.order == "full":
+            elif self.order in ["composite", "full"]:
                 tor_s = variables["Separator tortuosity"]
                 c_ox_s = variables["Separator oxygen concentration"]
                 N_ox_neg_sep_interface = (

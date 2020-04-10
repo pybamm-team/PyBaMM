@@ -224,7 +224,7 @@ class Index(UnaryOperator):
         # when trying to simplify the node Index(child_jac). Instead, search the
         # tree for StateVectors and return a matrix of zeros of the correct size
         # if none are found.
-        if all([not (isinstance(n, pybamm.StateVector)) for n in self.pre_order()]):
+        if not self.has_symbol_of_classes(pybamm.StateVector):
             jac = csr_matrix((1, child_jac.shape[1]))
             return pybamm.Matrix(jac)
         else:
@@ -297,7 +297,7 @@ class SpatialOperator(UnaryOperator):
         search_types = (pybamm.Variable, pybamm.StateVector, pybamm.SpatialVariable)
 
         # do the search, return a scalar zero node if no relevent nodes are found
-        if all([not (isinstance(n, search_types)) for n in self.pre_order()]):
+        if not self.has_symbol_of_classes(search_types):
             return pybamm.Scalar(0)
         else:
             return self.__class__(simplified_child)
@@ -663,7 +663,7 @@ class DeltaFunction(SpatialOperator):
             auxiliary_domains = {"secondary": child.domain}
         else:
             auxiliary_domains = {}
-        super().__init__("delta function", child, domain, auxiliary_domains)
+        super().__init__("delta_function", child, domain, auxiliary_domains)
 
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()` """
@@ -684,6 +684,15 @@ class DeltaFunction(SpatialOperator):
     def _unary_new_copy(self, child):
         """ See :meth:`UnaryOperator._unary_new_copy()`. """
         return self.__class__(child, self.side, self.domain)
+
+    def evaluate_for_shape(self):
+        """
+        See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`
+        """
+        child_eval = self.children[0].evaluate_for_shape()
+        vec = pybamm.evaluate_for_shape_using_domain(self.domain)
+
+        return np.outer(child_eval, vec).reshape(-1, 1)
 
 
 class BoundaryOperator(SpatialOperator):

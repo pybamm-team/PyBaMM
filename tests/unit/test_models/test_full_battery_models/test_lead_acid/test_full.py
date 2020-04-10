@@ -11,7 +11,11 @@ class TestLeadAcidFull(unittest.TestCase):
         model.check_well_posedness()
 
     def test_well_posed_with_convection(self):
-        options = {"thermal": "isothermal", "convection": True}
+        options = {"convection": "uniform transverse"}
+        model = pybamm.lead_acid.Full(options)
+        model.check_well_posedness()
+
+        options = {"dimensionality": 1, "convection": "full transverse"}
         model = pybamm.lead_acid.Full(options)
         model.check_well_posedness()
 
@@ -43,11 +47,13 @@ class TestLeadAcidFullSideReactions(unittest.TestCase):
         options = {"side reactions": ["oxygen"], "surface form": "differential"}
         model = pybamm.lead_acid.Full(options)
         model.check_well_posedness()
+        self.assertIsInstance(model.default_solver, pybamm.ScipySolver)
 
     def test_well_posed_surface_form_algebraic(self):
         options = {"side reactions": ["oxygen"], "surface form": "algebraic"}
         model = pybamm.lead_acid.Full(options)
         model.check_well_posedness()
+        self.assertIsInstance(model.default_solver, pybamm.CasadiSolver)
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@ import electrolyte_conductivity_Landesfeind2019_base as base
 import numpy as np
 
 
-def electrolyte_conductivity_Landesfeind2019_EMC_FEC_19_1(c_e, T, T_inf, E_k_e, R_g):
+def electrolyte_conductivity_Landesfeind2019_EMC_FEC_19_1(c_e, T):
     """
     Conductivity of LiPF6 in EMC:FEC (19:1) as a function of ion concentration and
     Temperature. The data comes from [1].
@@ -12,13 +12,13 @@ def electrolyte_conductivity_Landesfeind2019_EMC_FEC_19_1(c_e, T, T_inf, E_k_e, 
     Dependence of the Ionic Transport Properties of Lithium-Ion Battery Electrolytes.
     Journal of The Electrochemical Society, 166(14), pp.A3079-A3097.
     ----------
-    c_e: :class: `numpy.Array`
+    c_e: :class:`pybamm.Symbol`
         Dimensional electrolyte concentration
-    T: :class: `numpy.Array`
+    T: :class:`pybamm.Symbol`
         Dimensional temperature
     Returns
     -------
-    :`numpy.Array`
+    :class:`pybamm.Symbol`
         Electrolyte diffusivity
     """
     coeffs = np.array([2.51e-2, 1.75e2, 1.23, 2.05e-1, -8.81e-2, 2.83e-3])
