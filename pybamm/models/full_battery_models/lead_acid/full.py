@@ -6,7 +6,7 @@ from .base_lead_acid_model import BaseModel
 
 
 class Full(BaseModel):
-    """Porous electrode model for lead-acid, from [1]_, based on the Full
+    """Porous electrode model for lead-acid, from [1]_, based on the Newman-Tiedemann
     model.
 
     Parameters
@@ -56,9 +56,24 @@ class Full(BaseModel):
 
     def set_convection_submodel(self):
         if self.options["convection"] is False:
-            self.submodels["convection"] = pybamm.convection.NoConvection(self.param)
-        if self.options["convection"] is True:
-            self.submodels["convection"] = pybamm.convection.Full(self.param)
+            self.submodels[
+                "transverse convection"
+            ] = pybamm.convection.transverse.NoConvection(self.param)
+            self.submodels[
+                "through-cell convection"
+            ] = pybamm.convection.through_cell.NoConvection(self.param)
+        else:
+            if self.options["convection"] == "uniform transverse":
+                self.submodels[
+                    "transverse convection"
+                ] = pybamm.convection.transverse.Uniform(self.param)
+            elif self.options["convection"] == "full transverse":
+                self.submodels[
+                    "transverse convection"
+                ] = pybamm.convection.transverse.Full(self.param)
+            self.submodels[
+                "through-cell convection"
+            ] = pybamm.convection.through_cell.Full(self.param)
 
     def set_interfacial_submodel(self):
         self.submodels["negative interface"] = pybamm.interface.ButlerVolmer(

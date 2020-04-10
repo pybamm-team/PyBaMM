@@ -1016,6 +1016,7 @@ class TestDiscretise(unittest.TestCase):
             broad_disc.shape,
             (mesh["negative particle"][0].npts * mesh["negative electrode"][0].npts, 1),
         )
+        broad = pybamm.SecondaryBroadcast(var, "negative electrode")
 
         # test broadcast to edges
         broad_to_edges = pybamm.SecondaryBroadcastToEdges(var, "negative electrode")

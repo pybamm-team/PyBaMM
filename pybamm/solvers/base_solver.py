@@ -128,6 +128,18 @@ class BaseSolver(object):
             raise pybamm.SolverError(
                 """Cannot use algebraic solver to solve model with time derivatives"""
             )
+        # Discretise model if it isn't already discretised
+        # This only works with purely 0D models, as otherwise the mesh and spatial
+        # method should be specified by the user
+        if model.is_discretised is False:
+            try:
+                disc = pybamm.Discretisation()
+                disc.process_model(model)
+            except pybamm.DiscretisationError as e:
+                raise pybamm.DiscretisationError(
+                    "Cannot automatically discretise model, "
+                    "model should be discretised before solving ({})".format(e)
+                )
 
         inputs = inputs or {}
         y0 = model.concatenated_initial_conditions.evaluate(0, None, inputs=inputs)
@@ -537,6 +549,10 @@ class BaseSolver(object):
         # Set up external variables and inputs
         ext_and_inputs = self._set_up_ext_and_inputs(model, external_variables, inputs)
 
+        # Make sure t_eval is monotonic
+        if (np.diff(t_eval) < 0).any():
+            raise pybamm.SolverError("t_eval must increase monotonically")
+
         # Set up
         timer = pybamm.Timer()
 
@@ -572,11 +588,7 @@ class BaseSolver(object):
         ]
 
         # remove any discontinuities after end of t_eval
-        discontinuities = [
-            v
-            for v in discontinuities
-            if v < t_eval_dimensionless[-1]
-        ]
+        discontinuities = [v for v in discontinuities if v < t_eval_dimensionless[-1]]
 
         if len(discontinuities) > 0:
             pybamm.logger.info(
@@ -648,6 +660,14 @@ class BaseSolver(object):
 
         # Assign times
         solution.set_up_time = set_up_time
+        solution.solve_time = timer.time()
+
+        # Add model and inputs to solution
+        solution.model = model
+        solution.inputs = inputs
+
+        # Identify the event that caused termination
+        termination = self.get_termination_reason(solution, model.events)
 
         # Add model and inputs to solution
         solution.model = model
