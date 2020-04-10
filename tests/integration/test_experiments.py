@@ -34,7 +34,7 @@ class TestExperiments(unittest.TestCase):
         # An experiment which requires recomputing consistent states
         experiment = pybamm.Experiment(
             ["Rest for 5 minutes", "Discharge at 0.1C until 3V", "Rest for 30 minutes"],
-            period="10 seconds",
+            period="1 minute",
         )
         parameter_values = pybamm.ParameterValues(
             chemistry=pybamm.parameter_sets.Chen2020
@@ -46,7 +46,9 @@ class TestExperiments(unittest.TestCase):
             experiment=experiment,
             solver=pybamm.CasadiSolver(),
         )
-        sim.solve()
+        sol = sim.solve()
+        np.testing.assert_array_almost_equal(sol["Current [A]"].data[:5], 0)
+        np.testing.assert_array_almost_equal(sol["Current [A]"].data[-29:], 0)
 
     def test_gitt(self):
         experiment = pybamm.Experiment(
