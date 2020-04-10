@@ -663,7 +663,7 @@ class DeltaFunction(SpatialOperator):
             auxiliary_domains = {"secondary": child.domain}
         else:
             auxiliary_domains = {}
-        super().__init__("delta function", child, domain, auxiliary_domains)
+        super().__init__("delta_function", child, domain, auxiliary_domains)
 
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()` """
@@ -684,6 +684,15 @@ class DeltaFunction(SpatialOperator):
     def _unary_new_copy(self, child):
         """ See :meth:`UnaryOperator._unary_new_copy()`. """
         return self.__class__(child, self.side, self.domain)
+
+    def evaluate_for_shape(self):
+        """
+        See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`
+        """
+        child_eval = self.children[0].evaluate_for_shape()
+        vec = pybamm.evaluate_for_shape_using_domain(self.domain)
+
+        return np.outer(child_eval, vec).reshape(-1, 1)
 
 
 class BoundaryOperator(SpatialOperator):

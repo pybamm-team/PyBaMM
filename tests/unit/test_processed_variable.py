@@ -159,6 +159,7 @@ class TestProcessedVariable(unittest.TestCase):
         y = disc.mesh["current collector"][0].edges["y"]
         z = disc.mesh["current collector"][0].edges["z"]
         var_sol = disc.process_symbol(var)
+        var_sol.mesh = disc.mesh["current collector"]
         t_sol = np.linspace(0, 1)
         u_sol = np.ones(var_sol.shape[0])[:, np.newaxis] * np.linspace(0, 5)
 
@@ -175,6 +176,7 @@ class TestProcessedVariable(unittest.TestCase):
         y = disc.mesh["current collector"][0].edges["y"]
         z = disc.mesh["current collector"][0].edges["z"]
         var_sol = disc.process_symbol(var)
+        var_sol.mesh = disc.mesh["current collector"]
         t_sol = np.array([0])
         u_sol = np.ones(var_sol.shape[0])[:, np.newaxis]
 
@@ -385,6 +387,7 @@ class TestProcessedVariable(unittest.TestCase):
         y_sol = disc.mesh["current collector"][0].edges["y"]
         z_sol = disc.mesh["current collector"][0].edges["z"]
         var_sol = disc.process_symbol(var)
+        var_sol.mesh = disc.mesh["current collector"]
         t_sol = np.linspace(0, 1)
         u_sol = np.ones(var_sol.shape[0])[:, np.newaxis] * np.linspace(0, 5)
 
@@ -422,6 +425,7 @@ class TestProcessedVariable(unittest.TestCase):
         y_sol = disc.mesh["current collector"][0].edges["y"]
         z_sol = disc.mesh["current collector"][0].edges["z"]
         var_sol = disc.process_symbol(var)
+        var_sol.mesh = disc.mesh["current collector"]
         t_sol = np.array([0])
         u_sol = np.ones(var_sol.shape[0])[:, np.newaxis]
 

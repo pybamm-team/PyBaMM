@@ -245,7 +245,7 @@ class TestExtrapolation(unittest.TestCase):
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume(method_options),
             "negative particle": pybamm.FiniteVolume(method_options),
-            "current collector": pybamm.ZeroDimensionalMethod(method_options),
+            "current collector": pybamm.ZeroDimensionalSpatialMethod(method_options),
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
@@ -312,7 +312,7 @@ class TestExtrapolation(unittest.TestCase):
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume(method_options),
             "negative particle": pybamm.FiniteVolume(method_options),
-            "current collector": pybamm.ZeroDimensionalMethod(method_options),
+            "current collector": pybamm.ZeroDimensionalSpatialMethod(method_options),
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
 

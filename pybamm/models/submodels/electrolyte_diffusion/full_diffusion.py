@@ -43,11 +43,11 @@ class Full(BaseElectrolyteDiffusion):
 
         N_e_diffusion = -tor * param.D_e(c_e, T) * pybamm.grad(c_e)
         # N_e_migration = (param.C_e * param.t_plus) / param.gamma_e * i_e
-        # N_e_convection = c_e * v_box
+        # N_e_convection = param.C_e * c_e * v_box
 
         # N_e = N_e_diffusion + N_e_migration + N_e_convection
 
-        N_e = N_e_diffusion + c_e * v_box
+        N_e = N_e_diffusion + param.C_e * c_e * v_box
 
         variables.update(self._get_standard_flux_variables(N_e))
 
@@ -63,6 +63,7 @@ class Full(BaseElectrolyteDiffusion):
         N_e = variables["Electrolyte flux"]
         c_e_n = variables["Negative electrolyte concentration"]
         c_e_p = variables["Positive electrolyte concentration"]
+        div_Vbox = variables["Transverse volume-averaged acceleration"]
 
         source_terms = sum(
             pybamm.Concatenation(
@@ -78,7 +79,12 @@ class Full(BaseElectrolyteDiffusion):
 
         self.rhs = {
             c_e: (1 / eps)
-            * (-pybamm.div(N_e) / param.C_e + source_terms - c_e * deps_dt)
+            * (
+                -pybamm.div(N_e) / param.C_e
+                + source_terms
+                - c_e * deps_dt
+                - c_e * div_Vbox
+            )
         }
 
     def set_initial_conditions(self, variables):

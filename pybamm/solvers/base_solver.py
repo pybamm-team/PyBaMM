@@ -544,6 +544,10 @@ class BaseSolver(object):
 
         # Non-dimensionalise t_eval
 
+        # Make sure t_eval is monotonic
+        if (np.diff(t_eval) < 0).any():
+            raise pybamm.SolverError("t_eval must increase monotonically")
+
         # Set up
         timer = pybamm.Timer()
 
@@ -656,6 +660,14 @@ class BaseSolver(object):
 
         # Assign times
         solution.set_up_time = set_up_time
+        solution.solve_time = timer.time()
+
+        # Add model and inputs to solution
+        solution.model = model
+        solution.inputs = inputs
+
+        # Identify the event that caused termination
+        termination = self.get_termination_reason(solution, model.events)
 
         # Add model and inputs to solution
         solution.model = model

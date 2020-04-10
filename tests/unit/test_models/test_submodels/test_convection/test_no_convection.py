@@ -12,8 +12,9 @@ class TestNoConvectionModel(unittest.TestCase):
         param = pybamm.standard_parameters_lead_acid
 
         a = pybamm.Scalar(0)
-        variables = {"Current collector current density": a}
-        submodel = pybamm.convection.NoConvection(param)
+        a_s = pybamm.PrimaryBroadcast(a, "separator")
+        variables = {"Current collector current density": a, "Separator pressure": a_s}
+        submodel = pybamm.convection.through_cell.NoConvection(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
