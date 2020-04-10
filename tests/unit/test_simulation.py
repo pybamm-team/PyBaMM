@@ -248,6 +248,14 @@ class TestSimulation(unittest.TestCase):
         self.assertEqual(sim.solution.t[0], 2 * dt / tau)
         self.assertEqual(sim.solution.t[1], 3 * dt / tau)
 
+    def test_solve_with_inputs(self):
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        param.update({"Current function [A]": "[input]"})
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sim.solve(inputs={"Current function [A]": 1})
+        np.testing.assert_array_equal(sim.solution.inputs["Current function [A]"], 1)
+
     def test_step_with_inputs(self):
         dt = 0.001
         model = pybamm.lithium_ion.SPM()

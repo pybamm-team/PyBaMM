@@ -272,7 +272,8 @@ class Simulation:
         if self.model_with_set_params:
             return None
 
-        if self._parameter_values._dict_items == {1: 1}:
+        if self._parameter_values._dict_items == {}:
+            # Don't process if parameter values is empty
             self._model_with_set_params = self._model
         else:
             self._model_with_set_params = self._parameter_values.process_model(
@@ -404,11 +405,13 @@ class Simulation:
                     capacity = self.parameter_values["Cell capacity [A.h]"]
                     if isinstance(current, pybamm.InputParameter):
                         C_rate = inputs["Current function [A]"] / capacity
-                    try:
-                        C_rate = current / capacity
                         t_end = 3600 / C_rate
-                    except TypeError:
-                        t_end = 3600
+                    else:
+                        try:
+                            C_rate = current / capacity
+                            t_end = 3600 / C_rate
+                        except TypeError:
+                            t_end = 3600
                 t_eval = np.linspace(0, t_end, 100)
 
             self.t_eval = t_eval
