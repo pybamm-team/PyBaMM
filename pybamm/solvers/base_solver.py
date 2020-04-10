@@ -181,14 +181,26 @@ class BaseSolver(object):
             # set up Jacobian object, for re-use of dict
             jacobian = pybamm.Jacobian()
         else:
+            # Create placeholder inputs for evaluating rhs and algebraic sizes
+            placeholder_inputs = {}
+            for k, v in inputs.items():
+                if isinstance(v, casadi.MX):
+                    placeholder_inputs[k] = np.zeros(v.shape[0])
+                else:
+                    placeholder_inputs[k] = v
             # Convert model attributes to casadi
             t_casadi = casadi.MX.sym("t")
             y_diff = casadi.MX.sym(
-                "y_diff", len(model.concatenated_rhs.evaluate(0, y0, inputs=inputs))
+                "y_diff",
+                len(model.concatenated_rhs.evaluate(0, y0, inputs=placeholder_inputs)),
             )
             y_alg = casadi.MX.sym(
                 "y_alg",
-                len(model.concatenated_algebraic.evaluate(0, y0, inputs=inputs)),
+                len(
+                    model.concatenated_algebraic.evaluate(
+                        0, y0, inputs=placeholder_inputs
+                    )
+                ),
             )
             y_casadi = casadi.vertcat(y_diff, y_alg)
             p_casadi = {}
@@ -542,7 +554,8 @@ class BaseSolver(object):
         if (np.diff(t_eval) < 0).any():
             raise pybamm.SolverError("t_eval must increase monotonically")
 
-        # Non-dimensionalise t_eval
+        # Set up external variables and inputs
+        ext_and_inputs = self._set_up_ext_and_inputs(model, external_variables, inputs)
 
         # Make sure t_eval is monotonic
         if (np.diff(t_eval) < 0).any():
@@ -550,11 +563,6 @@ class BaseSolver(object):
 
         # Set up
         timer = pybamm.Timer()
-
-        # Set up external variables and inputs
-        external_variables = external_variables or {}
-        inputs = inputs or {}
-        ext_and_inputs = {**external_variables, **inputs}
 
         # Set up (if not done already)
         if model not in self.models_set_up:
@@ -839,6 +847,27 @@ class BaseSolver(object):
             # Add the event to the solution object
             solution.termination = "event: {}".format(termination_event)
             return "the termination event '{}' occurred".format(termination_event)
+
+    def _set_up_ext_and_inputs(self, model, external_variables, inputs):
+        "Set up external variables and input parameters"
+        inputs = inputs or {}
+
+        # Go through all input parameters that can be found in the model
+        # If any of them are *not* provided by "inputs", a symbolic input parameter is
+        # created, with appropriate size
+        for input_param in model.input_parameters:
+            name = input_param.name
+            if name not in inputs:
+                # Only allow symbolic inputs for CasadiAlgebraicSolver
+                if not isinstance(self, pybamm.CasadiAlgebraicSolver):
+                    raise pybamm.SolverError(
+                        "Only CasadiAlgebraicSolver can have symbolic inputs"
+                    )
+                inputs[name] = casadi.MX.sym(name, input_param._expected_size)
+
+        external_variables = external_variables or {}
+        ext_and_inputs = {**external_variables, **inputs}
+        return ext_and_inputs
 
 
 class SolverCallable:

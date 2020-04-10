@@ -138,7 +138,7 @@ class ProcessedVariable(object):
             else:
                 entries[:, idx] = self.base_variable.evaluate(t, u, inputs=inputs)[:, 0]
 
-        # Process the discretisation to get x values
+        # Get node and edge values
         nodes = self.mesh[0].nodes
         edges = self.mesh[0].edges
         if entries.shape[0] == len(nodes):
