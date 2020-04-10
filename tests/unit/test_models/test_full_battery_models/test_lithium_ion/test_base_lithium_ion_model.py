@@ -8,7 +8,7 @@ import unittest
 class TestBaseLithiumIonModel(unittest.TestCase):
     def test_incompatible_options(self):
         with self.assertRaisesRegex(pybamm.OptionError, "convection not implemented"):
-            pybamm.lithium_ion.BaseModel({"convection": True})
+            pybamm.lithium_ion.BaseModel({"convection": "uniform transverse"})
 
 
 if __name__ == "__main__":

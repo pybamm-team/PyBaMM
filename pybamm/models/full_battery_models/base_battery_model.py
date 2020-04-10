@@ -118,7 +118,9 @@ class BaseBatteryModel(pybamm.BaseModel):
         }
         if self.options["dimensionality"] == 0:
             # 0D submesh - use base spatial method
-            base_spatial_methods["current collector"] = pybamm.ZeroDimensionalMethod()
+            base_spatial_methods[
+                "current collector"
+            ] = pybamm.ZeroDimensionalSpatialMethod()
         elif self.options["dimensionality"] == 1:
             base_spatial_methods["current collector"] = pybamm.FiniteVolume()
         elif self.options["dimensionality"] == 2:
@@ -156,6 +158,19 @@ class BaseBatteryModel(pybamm.BaseModel):
                         )
                     )
 
+        # Options that are incompatible with models
+        if isinstance(self, pybamm.lithium_ion.BaseModel):
+            if options["convection"] is not False:
+                raise pybamm.OptionError(
+                    "convection not implemented for lithium-ion models"
+                )
+        if isinstance(self, pybamm.lead_acid.BaseModel):
+            if options["thermal"] != "isothermal" and options["dimensionality"] != 0:
+                raise pybamm.OptionError(
+                    "Lead-acid models can only have thermal "
+                    "effects if dimensionality is 0."
+                )
+
         # Some standard checks to make sure options are compatible
         if not (
             options["operating mode"] in ["current", "voltage", "power"]
@@ -180,6 +195,14 @@ class BaseBatteryModel(pybamm.BaseModel):
             raise pybamm.OptionError(
                 "surface form '{}' not recognised".format(options["surface form"])
             )
+        if options["convection"] not in [
+            False,
+            "uniform transverse",
+            "full transverse",
+        ]:
+            raise pybamm.OptionError(
+                "convection option '{}' not recognised".format(options["convection"])
+            )
         if options["current collector"] not in [
             "uniform",
             "potential pair",
@@ -200,23 +223,21 @@ class BaseBatteryModel(pybamm.BaseModel):
             raise pybamm.OptionError(
                 "Unknown thermal model '{}'".format(options["thermal"])
             )
+        if options["dimensionality"] == 0:
+            if options["current collector"] not in [
+                "uniform",
+            ]:
+                raise pybamm.OptionError(
+                    "current collector model must be uniform in 0D model"
+                )
+            if options["convection"] == "full transverse":
+                raise pybamm.OptionError(
+                    "cannot have transverse convection in 0D model"
+                )
         if options["particle"] not in ["Fickian diffusion", "fast diffusion"]:
             raise pybamm.OptionError(
                 "particle model '{}' not recognised".format(options["particle"])
             )
-
-        # Options that are incompatible with models
-        if isinstance(self, pybamm.lithium_ion.BaseModel):
-            if options["convection"] is True:
-                raise pybamm.OptionError(
-                    "convection not implemented for lithium-ion models"
-                )
-        if isinstance(self, pybamm.lead_acid.BaseModel):
-            if options["thermal"] != "isothermal" and options["dimensionality"] != 0:
-                raise pybamm.OptionError(
-                    "Lead-acid models can only have thermal "
-                    "effects if dimensionality is 0."
-                )
 
         self._options = options
 
@@ -470,7 +491,9 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     def set_current_collector_submodel(self):
 
-        if self.options["current collector"] == "uniform":
+        if self.options["current collector"] in [
+            "uniform",
+        ]:
             submodel = pybamm.current_collector.Uniform(self.param)
         elif self.options["current collector"] == "potential pair":
             if self.options["dimensionality"] == 1:

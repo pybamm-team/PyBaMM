@@ -28,6 +28,11 @@ class TestFull(unittest.TestCase):
                 ["negative electrode", "separator", "positive electrode"],
                 "current collector",
             ),
+            "Transverse volume-averaged acceleration": pybamm.FullBroadcast(
+                a,
+                ["negative electrode", "separator", "positive electrode"],
+                "current collector",
+            ),
         }
         icd = " interfacial current density"
         reactions = {

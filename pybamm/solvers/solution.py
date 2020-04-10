@@ -76,6 +76,17 @@ class _BaseSolution(object):
         return self._y
 
     @property
+    def model(self):
+        "Model used for solution"
+        return self._model
+
+    @model.setter
+    def model(self, value):
+        "Updates the model"
+        assert isinstance(value, pybamm.BaseModel)
+        self._model = value
+
+    @property
     def inputs(self):
         "Values of the inputs"
         return self._inputs
@@ -88,17 +99,6 @@ class _BaseSolution(object):
             if isinstance(inp, numbers.Number):
                 inp = inp * np.ones_like(self.t)
             self._inputs[name] = inp
-
-    @property
-    def model(self):
-        "Model used for solution"
-        return self._model
-
-    @model.setter
-    def model(self, value):
-        "Updates the model"
-        assert isinstance(value, pybamm.BaseModel)
-        self._model = value
 
     @property
     def t_event(self):

@@ -16,7 +16,7 @@ spatial_methods = {
     "negative particle": pybamm.FiniteVolume(method_options),
     "positive particle": pybamm.FiniteVolume(method_options),
     "macroscale": pybamm.FiniteVolume(method_options),
-    "current collector": pybamm.ZeroDimensionalMethod(),
+    "current collector": pybamm.ZeroDimensionalSpatialMethod(),
 }
 sim_quad = pybamm.Simulation(
     model_quad, spatial_methods=spatial_methods, var_pts=var_pts
