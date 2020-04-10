@@ -78,10 +78,15 @@ class TestParameterValues(unittest.TestCase):
         with self.assertRaisesRegex(KeyError, "Cannot update parameter"):
             param.update({"b": 1})
 
-    def test_check_and_update_parameter_values(self):
+    def test_check_parameter_values(self):
         # Can't provide a current density of 0, as this will cause a ZeroDivision error
         bad_values = {"Typical current [A]": 0}
         with self.assertRaisesRegex(ValueError, "Typical current"):
+            pybamm.ParameterValues(bad_values)
+        bad_values = {"C-rate": 0}
+        with self.assertRaisesRegex(
+            ValueError, "The 'C-rate' parameter has been deprecated"
+        ):
             pybamm.ParameterValues(bad_values)
 
     def test_process_symbol(self):

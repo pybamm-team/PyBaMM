@@ -217,6 +217,8 @@ class ParameterValues:
         path : string, optional
             Path from which to load functions
         """
+        # check parameter values
+        self.check_parameter_values(values)
         # update
         for name, value in values.items():
             # check for conflicts
@@ -276,12 +278,10 @@ class ParameterValues:
                     values[name] = float(value)
             else:
                 self._dict_items[name] = value
-        # check parameter values
-        self.check_and_update_parameter_values(values)
         # reset processed symbols
         self._processed_symbols = {}
 
-    def check_and_update_parameter_values(self, values):
+    def check_parameter_values(self, values):
         # Make sure typical current is non-zero
         if "Typical current [A]" in values and values["Typical current [A]"] == 0:
             raise ValueError(
