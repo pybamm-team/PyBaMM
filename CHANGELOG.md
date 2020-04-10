@@ -13,6 +13,7 @@
 
 ## Bug fixes
 
+-   Fixed solver to recompute initial conditions when inputs are changed ([#951](https://github.com/pybamm-team/PyBaMM/pull/951)
 -   Reformatted thermal submodels ([#938](https://github.com/pybamm-team/PyBaMM/pull/938)
 -   Reformatted electrolyte submodels ([#927](https://github.com/pybamm-team/PyBaMM/pull/927))
 -   Reformatted convection submodels ([#635](https://github.com/pybamm-team/PyBaMM/pull/635))
