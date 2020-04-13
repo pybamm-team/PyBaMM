@@ -44,6 +44,8 @@ class SPM(BaseModel):
         self.set_positive_electrode_submodel()
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
+        self.set_anode_decomposition_submodel()
+        self.set_cathode_decomposition_submodel()
 
         if build:
             self.build_model()
@@ -131,6 +133,20 @@ class SPM(BaseModel):
         self.submodels[
             "electrolyte diffusion"
         ] = electrolyte.diffusion.ConstantConcentration(self.param)
+
+    def set_anode_decomposition_submodel(self):
+
+        if self.options["anode decomposition"] is True:
+            self.submodels["anode decomposition"] = pybamm.anode_decomposition.AnodeDecomposition(self.param)
+        else:
+            self.submodels["anode decomposition"] = pybamm.anode_decomposition.NoAnodeDecomposition(self.param)
+
+    def set_cathode_decomposition_submodel(self):
+
+        if self.options["cathode decomposition"] is True:
+            self.submodels["cathode decomposition"] = pybamm.cathode_decomposition.CathodeDecomposition(self.param)
+        else:
+            self.submodels["cathode decomposition"] = pybamm.cathode_decomposition.NoCathodeDecomposition(self.param)
 
     @property
     def default_geometry(self):

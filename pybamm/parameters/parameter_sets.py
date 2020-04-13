@@ -53,6 +53,18 @@ Chen2020 = {
     "experiment": "1C_discharge_from_full_Chen2020",
     "citation": "Chen2020",
 }
+
+Cai2019 = { #same as Chen2020 but includes additional Cai2019 thermal runaway parameters
+    "chemistry": "lithium-ion",
+    "cell": "LGM50_Cai2019",
+    "anode": "graphite_Cai2019",
+    "separator": "separator_Chen2020",
+    "cathode": "nmc_Cai2019",
+    "electrolyte": "lipf6_Nyman2008",
+    "experiment": "1C_discharge_from_full_Chen2020",
+    "citation": ["Chen2020", "cai2019modeling"], 
+}
+
 #
 # Lead-acid
 #

@@ -99,6 +99,19 @@ C_dl_p_dimensional = pybamm.Parameter(
     "Positive electrode double-layer capacity [F.m-2]"
 )
 
+# Thermal runaway species decomposition parameters
+A_an = pybamm.Parameter("Frequency factor for anode decomposition [s-1]")
+A_ca = pybamm.Parameter("Frequency factor for cathode decomposition [s-1]")
+A_sei = pybamm.Parameter("Frequency factor for SEI decomposition [s-1]")
+E_an = pybamm.Parameter("Activation energy for anode decomposition [J]")
+E_ca = pybamm.Parameter("Activation energy for cathode decomposition [J]")
+E_sei = pybamm.Parameter("Activation energy for SEI decomposition [J]")
+h_an = pybamm.Parameter("Enthalpy of anode decomposition [J.g-1]")
+h_ca = pybamm.Parameter("Enthalpy of cathode decomposition [J.g-1]")
+h_sei = pybamm.Parameter("Enthalpy of SEI decomposition [J.g-1]")
+alpha_0 = pybamm.Parameter("Initial degree of conversion of cathode decomposition")
+x_sei_0 = pybamm.Parameter("Initial fraction of Li in SEI")
+z_0 = pybamm.Parameter("Initial SEI thickness")
 
 # Initial conditions
 c_e_init_dimensional = pybamm.Parameter(
