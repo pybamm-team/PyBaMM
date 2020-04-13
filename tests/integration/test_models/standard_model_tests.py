@@ -70,7 +70,10 @@ class StandardModelTest(object):
         self.solver.rtol = 1e-8
         self.solver.atol = 1e-8
 
-        Crate = abs(self.parameter_values["C-rate"])
+        Crate = abs(
+            self.parameter_values["Current function [A]"]
+            * self.parameter_values["Cell capacity [A.h]"]
+        )
         # don't allow zero C-rate
         if Crate == 0:
             Crate = 1
