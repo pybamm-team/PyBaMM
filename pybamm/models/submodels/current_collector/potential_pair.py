@@ -60,7 +60,7 @@ class BasePotentialPair(BaseModel):
 
     def set_initial_conditions(self, variables):
 
-        applied_current = variables["Total current density"]
+        applied_current = self.param.current_with_time
         cc_area = self._get_effective_current_collector_area()
         phi_s_cn = variables["Negative current collector potential"]
         i_boundary_cc = variables["Current collector current density"]
