@@ -461,6 +461,7 @@ class Simulation:
                     timer.format(timer.time())
                 )
             )
+        return self.solution
 
     def step(
         self, dt, solver=None, npts=2, external_variables=None, inputs=None, save=True
