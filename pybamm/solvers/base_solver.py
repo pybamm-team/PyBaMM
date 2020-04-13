@@ -150,7 +150,9 @@ class BaseSolver(object):
                 )
 
         inputs = inputs or {}
-        y0 = model.concatenated_initial_conditions.evaluate(0, None, inputs=inputs)
+        model.y0 = model.concatenated_initial_conditions.evaluate(
+            0, None, inputs=inputs
+        ).flatten()
 
         # Set model timescale
         model.timescale_eval = model.timescale.evaluate(inputs=inputs)
@@ -177,7 +179,7 @@ class BaseSolver(object):
         if model.convert_to_format != "casadi":
             simp = pybamm.Simplification()
             # Create Jacobian from concatenated rhs and algebraic
-            y = pybamm.StateVector(slice(0, np.size(y0)))
+            y = pybamm.StateVector(slice(0, np.size(model.y0)))
             # set up Jacobian object, for re-use of dict
             jacobian = pybamm.Jacobian()
         else:
@@ -192,13 +194,17 @@ class BaseSolver(object):
             t_casadi = casadi.MX.sym("t")
             y_diff = casadi.MX.sym(
                 "y_diff",
-                len(model.concatenated_rhs.evaluate(0, y0, inputs=placeholder_inputs)),
+                len(
+                    model.concatenated_rhs.evaluate(
+                        0, model.y0, inputs=placeholder_inputs
+                    )
+                ),
             )
             y_alg = casadi.MX.sym(
                 "y_alg",
                 len(
                     model.concatenated_algebraic.evaluate(
-                        0, y0, inputs=placeholder_inputs
+                        0, model.y0, inputs=placeholder_inputs
                     )
                 ),
             )
@@ -342,35 +348,68 @@ class BaseSolver(object):
                     "rhs", [t_casadi, y_casadi, p_casadi_stacked], [explicit_rhs]
                 )
             model.casadi_algebraic = algebraic
-        if self.algebraic_solver is True:
-            # we don't calculate consistent initial conditions
-            # for an algebraic solver as this will be the job of the algebraic solver
+        if len(model.rhs) == 0:
+            # No rhs equations: residuals is algebraic only
             model.residuals_eval = Residuals(algebraic, "residuals", model)
             model.jacobian_eval = jac_algebraic
-            model.y0 = y0.flatten()
         elif len(model.algebraic) == 0:
-            # can use DAE solver to solve ODE model
-            # - no initial condition initialization needed
+            # No algebraic equations: residuals is rhs only
             model.residuals_eval = Residuals(rhs, "residuals", model)
             model.jacobian_eval = jac_rhs
-            model.y0 = y0.flatten()
         # Calculate consistent initial conditions for the algebraic equations
         else:
-            if len(model.rhs) > 0:
-                all_states = pybamm.NumpyConcatenation(
-                    model.concatenated_rhs, model.concatenated_algebraic
-                )
-                # Process again, uses caching so should be quick
-                residuals_eval, jacobian_eval = process(all_states, "residuals")[1:]
-                model.residuals_eval = residuals_eval
-                model.jacobian_eval = jacobian_eval
-            else:
-                model.residuals_eval = Residuals(algebraic, "residuals", model)
-                model.jacobian_eval = jac_algebraic
-            y0_guess = y0.flatten()
-            model.y0 = self.calculate_consistent_state(model, 0, y0_guess, inputs)
+            all_states = pybamm.NumpyConcatenation(
+                model.concatenated_rhs, model.concatenated_algebraic
+            )
+            # Process again, uses caching so should be quick
+            residuals_eval, jacobian_eval = process(all_states, "residuals")[1:]
+            model.residuals_eval = residuals_eval
+            model.jacobian_eval = jacobian_eval
 
         pybamm.logger.info("Finish solver set-up")
+
+    def _set_initial_conditions(self, model, inputs, update_rhs):
+        """
+        Set initial conditions for the model. This is skipped if the solver is an
+        algebraic solver (since this would make the algebraic solver redundant), and if
+        the model doesn't have any algebraic equations (since there are no initial
+        conditions to be calculated in this case).
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model for which to calculate initial conditions.
+        inputs : dict
+            Any input parameters to pass to the model when solving
+        update_rhs : bool
+            Whether to update the rhs. True for 'solve', False for 'step'.
+
+        """
+        if self.algebraic_solver is True:
+            return None
+        elif len(model.algebraic) == 0:
+            if update_rhs is True:
+                # Recalculate initial conditions for the rhs equations
+                model.y0 = model.concatenated_initial_conditions.evaluate(
+                    0, None, inputs=inputs
+                ).flatten()
+            else:
+                return None
+        else:
+            if update_rhs is True:
+                # Recalculate initial conditions for the rhs equations
+                y0_from_inputs = model.concatenated_initial_conditions.evaluate(
+                    0, None, inputs=inputs
+                ).flatten()
+                # Reuse old solution for algebraic equations
+                y0_from_model = model.y0
+                len_rhs = len(
+                    model.concatenated_rhs.evaluate(0, model.y0, inputs=inputs)
+                )
+                y0_guess = np.r_[y0_from_inputs[:len_rhs], y0_from_model[len_rhs:]]
+            else:
+                y0_guess = model.y0
+            model.y0 = self.calculate_consistent_state(model, 0, y0_guess, inputs)
 
     def calculate_consistent_state(self, model, time=0, y0_guess=None, inputs=None):
         """
@@ -500,12 +539,9 @@ class BaseSolver(object):
             )
         else:
             raise pybamm.SolverError(
-                """
-                Could not find consistent initial conditions: solver terminated
-                successfully, but maximum solution error ({}) above tolerance ({})
-                """.format(
-                    max_fun, self.root_tol
-                )
+                "Could not find consistent initial conditions: solver terminated "
+                "successfully, but maximum solution error "
+                "({}) above tolerance ({})".format(max_fun, self.root_tol)
             )
 
     def solve(self, model, t_eval=None, external_variables=None, inputs=None):
@@ -571,6 +607,10 @@ class BaseSolver(object):
             self.models_set_up.add(model)
         else:
             set_up_time = 0
+
+        # (Re-)calculate consistent initial conditions
+        self._set_initial_conditions(model, ext_and_inputs, update_rhs=True)
+
         # Non-dimensionalise time
         t_eval_dimensionless = t_eval / model.timescale_eval
         # Solve
@@ -766,6 +806,9 @@ class BaseSolver(object):
             t = old_solution.t[-1]
             model.y0 = old_solution.y[:, -1]
             set_up_time = 0
+
+        # (Re-)calculate consistent initial conditions
+        self._set_initial_conditions(model, ext_and_inputs, update_rhs=False)
 
         # Non-dimensionalise dt
         dt_dimensionless = dt / model.timescale_eval
