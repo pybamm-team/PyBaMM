@@ -149,11 +149,11 @@ class BaseThermal(pybamm.BaseSubModel):
         # Side reaction heating
         m_an = param.rho_n * (param.L_n * param.L_y * param.L_z)
         m_ca = param.rho_p * (param.L_p * param.L_y * param.L_z)
-        m_sei = param.rho_sei * (param.L_sei * param.L_y * param.L_z)
+        # m_sei = param.rho_sei * (param.L_sei * param.L_y * param.L_z)
         Q_an = -m_an * param.h_an * r_an
         Q_ca = -m_ca * param.h_ca * r_ca
-        Q_sei = -m_sei * param.h_sei * pybamm.Scalar(0)
-        Q_exo = Q_sei + Q_an + Q_ca
+        # Q_sei = -m_sei * param.h_sei * pybamm.Scalar(0)
+        Q_exo = Q_an + Q_ca # + Q_sei
 
         # Total heating
         Q = Q_ohm + Q_rxn + Q_rev + Q_exo
