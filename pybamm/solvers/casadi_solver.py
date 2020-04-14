@@ -4,6 +4,22 @@
 import casadi
 import pybamm
 import numpy as np
+from scipy.interpolate import interp1d
+from scipy.optimize import brentq
+from contextlib import contextmanager
+import sys
+import os
+
+
+@contextmanager
+def suppress_stderr():
+    with open(os.devnull, "w") as devnull:
+        old_stderr = sys.stderr
+        sys.stderr = devnull
+        try:
+            yield
+        finally:
+            sys.stderr = old_stderr
 
 
 class CasadiSolver(pybamm.BaseSolver):
@@ -53,7 +69,7 @@ class CasadiSolver(pybamm.BaseSolver):
         **extra_options,
     ):
         super().__init__("problem dependent", rtol, atol, root_method, root_tol)
-        if mode in ["safe", "fast", "new safe"]:
+        if mode in ["safe", "fast"]:
             self.mode = mode
         else:
             raise ValueError(
@@ -125,80 +141,17 @@ class CasadiSolver(pybamm.BaseSolver):
             # Initialize solution
             solution = pybamm.Solution(np.array([t]), y0[:, np.newaxis])
             solution.solve_time = 0
-            for dt in np.diff(t_eval):
-                # Step
-                solved = False
-                count = 0
-                while not solved:
-                    integrator = self.get_integrator(
-                        model, np.array([t, t + dt]), inputs
-                    )
-                    # Try to solve with the current step, if it fails then halve the
-                    # step size and try again. This will make solution.t slightly
-                    # different to t_eval, but shouldn't matter too much as it should
-                    # only happen near events.
-                    try:
-                        current_step_sol = self._run_integrator(
-                            integrator, model, y0, inputs, np.array([t, t + dt])
-                        )
-                        solved = True
-                    except pybamm.SolverError:
-                        dt /= 2
-                    count += 1
-                    if count >= self.max_step_decrease_count:
-                        raise pybamm.SolverError(
-                            """
-                            Maximum number of decreased steps occurred at t={}. Try
-                            solving the model up to this time only
-                            """.format(
-                                t
-                            )
-                        )
-                # Check most recent y
-                new_event_signs = np.sign(
-                    np.concatenate(
-                        [
-                            event(t, current_step_sol.y[:, -1], inputs)
-                            for event in model.terminate_events_eval
-                        ]
-                    )
-                )
-                # Exit loop if the sign of an event changes
-                if (new_event_signs != init_event_signs).any():
-                    solution.termination = "event"
-                    solution.t_event = solution.t[-1]
-                    solution.y_event = solution.y[:, -1]
-                    break
-                else:
-                    # assign temporary solve time
-                    current_step_sol.solve_time = np.nan
-                    # append solution from the current step to solution
-                    solution.append(current_step_sol)
-                    # update time
-                    t += dt
-                    # update y0
-                    y0 = solution.y[:, -1]
-            return solution
-        elif self.mode == "new safe":
-            # Step-and-check
-            t = t_eval[0]
-            init_event_signs = np.sign(
-                np.concatenate(
-                    [
-                        event(t, model.y0, inputs)
-                        for event in model.terminate_events_eval
-                    ]
-                )
-            )
-            pybamm.logger.info("Start solving {} with {}".format(model.name, self.name))
-            y0 = model.y0
-            # Initialize solution
-            solution = pybamm.Solution(np.array([t]), y0[:, np.newaxis])
-            solution.solve_time = 0
-            # Try to integrate in chunks of 1/10th of the size of the integration
-            # window
+
+            # Try to integrate in global steps of size dt_max (arbitrarily taken
+            # to be half of the range of t_eval, up to a maximum of 1 hour)
             t_f = t_eval[-1]
-            dt_max = (t_f - t) / 10
+            # dt_max must be at least as big as the the biggest step in t_eval
+            # to avoid an empty integration window below
+            dt_eval_max = np.max(np.diff(t_eval))
+            dt_max = np.max([(t_f - t) / 2, dt_eval_max])
+            # maximum dt_max corresponds to 1 hour
+            t_one_hour = 3600 / model.timescale_eval
+            dt_max = np.min([dt_max, t_one_hour])
             while t < t_f:
                 # Step
                 solved = False
@@ -208,21 +161,31 @@ class CasadiSolver(pybamm.BaseSolver):
                     # Get window of time to integrate over (so that we return
                     # all the point in t_eval, not just t and t+dt)
                     t_window = np.concatenate(
-                        ([t], t_eval[(t_eval > t) & (t_eval < t + dt)], [t + dt])
+                        ([t], t_eval[(t_eval > t) & (t_eval < t + dt)])
                     )
-
                     integrator = self.get_integrator(model, t_window, inputs)
-                    # Try to solve with the current step, if it fails then halve the
-                    # step size and try again. This will make solution.t slightly
-                    # different to t_eval, but shouldn't matter too much as it should
-                    # only happen near events.
+                    # Try to solve with the current global step, if it fails then
+                    # halve the step size and try again.
                     try:
-                        current_step_sol = self._run_integrator(
-                            integrator, model, y0, inputs, t_window
-                        )
+                        # When not in DEBUG mode (level=10), supress the output
+                        # from the failed steps in the solver
+                        if (
+                            pybamm.logger.getEffectiveLevel() == 10
+                            or pybamm.settings.debug_mode is True
+                        ):
+                            current_step_sol = self._run_integrator(
+                                integrator, model, y0, inputs, t_window
+                            )
+                        else:
+                            with suppress_stderr():
+                                current_step_sol = self._run_integrator(
+                                    integrator, model, y0, inputs, t_window
+                                )
                         solved = True
                     except pybamm.SolverError:
                         dt /= 2
+                        # also reduce maximum step size for future global steps
+                        dt_max = dt
                     count += 1
                     if count >= self.max_step_decrease_count:
                         raise pybamm.SolverError(
@@ -233,7 +196,7 @@ class CasadiSolver(pybamm.BaseSolver):
                                 t
                             )
                         )
-                # Check most recent y
+                # Check most recent y to see if any events have been crossed
                 new_event_signs = np.sign(
                     np.concatenate(
                         [
@@ -243,10 +206,42 @@ class CasadiSolver(pybamm.BaseSolver):
                     )
                 )
                 # Exit loop if the sign of an event changes
+                # Locate the event time using a root finding algorithm and
+                # event state using interpolation. The solution is then truncated
+                # so that only the times up to the event are returned
                 if (new_event_signs != init_event_signs).any():
+                    # get the index of the events that have been crossed
+                    event_ind = np.where(new_event_signs != init_event_signs)[0]
+                    active_events = [model.terminate_events_eval[i] for i in event_ind]
+
+                    # create interpolant to evaluate y in the current integration
+                    # window
+                    y_sol = interp1d(current_step_sol.t, current_step_sol.y)
+
+                    # loop over events to compute the time at which they were triggered
+                    t_events = [None] * len(active_events)
+                    for i, event in enumerate(active_events):
+                        t_events[i] = brentq(
+                            lambda t: event(t, y_sol(t), inputs),
+                            current_step_sol.t[0],
+                            current_step_sol.t[-1],
+                        )
+                    # t_event is the earliest event triggered
+                    t_event = np.min(t_events)
+                    y_event = y_sol(t_event)
+
+                    # return truncated solution
+                    t_truncated = current_step_sol.t[current_step_sol.t < t_event]
+                    y_trunctaed = current_step_sol.y[:, 0 : len(t_truncated)]
+                    truncated_step_sol = pybamm.Solution(t_truncated, y_trunctaed)
+                    # assign temporary solve time
+                    truncated_step_sol.solve_time = np.nan
+                    # append solution from the current step to solution
+                    solution.append(truncated_step_sol)
+
                     solution.termination = "event"
-                    solution.t_event = solution.t[-1]
-                    solution.y_event = solution.y[:, -1]
+                    solution.t_event = t_event
+                    solution.y_event = y_event
                     break
                 else:
                     # assign temporary solve time
@@ -254,7 +249,7 @@ class CasadiSolver(pybamm.BaseSolver):
                     # append solution from the current step to solution
                     solution.append(current_step_sol)
                     # update time
-                    t += dt
+                    t = t_window[-1]
                     # update y0
                     y0 = solution.y[:, -1]
             return solution
