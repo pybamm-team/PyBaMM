@@ -48,5 +48,7 @@ plot = pybamm.QuickPlot(
         "Positive electrode potential [V]",
         "Terminal voltage [V]",
     ],
+    time_unit="seconds",
+    spatial_unit="um",
 )
 plot.dynamic_plot()
