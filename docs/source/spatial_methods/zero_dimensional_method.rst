@@ -1,5 +1,5 @@
 Zero Dimensional Spatial Method
 ===============================
 
-.. autoclass:: pybamm.ZeroDimensionalMethod
+.. autoclass:: pybamm.ZeroDimensionalSpatialMethod
     :members:

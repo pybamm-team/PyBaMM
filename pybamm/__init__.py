@@ -101,6 +101,7 @@ from .expression_tree.operations.evaluate import (
 )
 from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
+from .expression_tree.operations.unpack_symbols import SymbolUnpacker
 
 #
 # Model classes
@@ -123,7 +124,8 @@ from .models.submodels.base_submodel import BaseSubModel
 from .models.submodels import (
     convection,
     current_collector,
-    electrolyte,
+    electrolyte_conductivity,
+    electrolyte_diffusion,
     electrode,
     external_circuit,
     interface,
@@ -156,6 +158,7 @@ from .geometry import standard_spatial_vars
 # Parameters class and methods
 #
 from .parameters.parameter_values import ParameterValues
+from .parameters import constants
 from .parameters import geometric_parameters
 from .parameters import electrical_parameters
 from .parameters import thermal_parameters
@@ -190,7 +193,7 @@ from .meshes.scikit_fem_submeshes import (
 # Spatial Methods
 #
 from .spatial_methods.spatial_method import SpatialMethod
-from .spatial_methods.zero_dimensional_method import ZeroDimensionalMethod
+from .spatial_methods.zero_dimensional_method import ZeroDimensionalSpatialMethod
 from .spatial_methods.finite_volume import FiniteVolume
 from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 

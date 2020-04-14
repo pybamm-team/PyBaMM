@@ -11,53 +11,66 @@ class BaseThermal(pybamm.BaseSubModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
-
+    cc_dimension: int, optional
+        The dimension of the current collectors. Can be 0 (default), 1 or 2.
 
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param):
+    def __init__(self, param, cc_dimension=0):
+        self.cc_dimension = cc_dimension
         super().__init__(param)
 
-    def _get_standard_fundamental_variables(self, T, T_cn, T_cp):
+    def _get_standard_fundamental_variables(
+        self, T_cn, T_n, T_s, T_p, T_cp, T_x_av, T_vol_av
+    ):
+        """
+        Note: here we explicitly pass in the averages for the temperature as computing
+        the average temperature in `BaseThermal` using `self._x_average` requires a
+        messy hack to avoid raising a `ModelError` (as the key in the equation
+        dict gets modified).
+
+        For more information about this method in general,
+        see :meth:`pybamm.base_submodel._get_standard_fundamental_variables`
+        """
         param = self.param
-        T_n, T_s, T_p = T.orphans
 
-        # Compute the X-average over the current collectors by default.
-        # Note: the method 'self._x_average' is overwritten by models which do
-        # not include current collector effects, so that the average is just taken
-        # over the negative electrode, separator and positive electrode.
-        T_x_av = self._x_average(T, T_cn, T_cp)
-        T_vol_av = self._yz_average(T_x_av)
+        # The variable T is the concatenation of the temperature in the negative
+        # electrode, separator and positive electrode, for use the electrochemical
+        # models
+        T = pybamm.Concatenation(T_n, T_s, T_p)
 
+        # Compute averaged temperatures by domain
+        T_n_av = pybamm.x_average(T_n)
+        T_s_av = pybamm.x_average(T_s)
+        T_p_av = pybamm.x_average(T_p)
+
+        # Get the ambient temperature, which can be specified as a function of time
         T_amb_dim = param.T_amb_dim(pybamm.t * param.timescale)
         T_amb = param.T_amb(pybamm.t * param.timescale)
 
-        q = self._flux_law(T)
-
         variables = {
             "Negative current collector temperature": T_cn,
-            "Negative current collector temperature [K]": param.Delta_T * T_cn,
-            "X-averaged negative electrode temperature": pybamm.x_average(T_n),
-            "X-averaged negative electrode temperature [K]": param.Delta_T
-            * pybamm.x_average(T_n)
+            "Negative current collector temperature [K]": param.Delta_T * T_cn
+            + param.T_ref,
+            "X-averaged negative electrode temperature": T_n_av,
+            "X-averaged negative electrode temperature [K]": param.Delta_T * T_n_av
             + param.T_ref,
             "Negative electrode temperature": T_n,
             "Negative electrode temperature [K]": param.Delta_T * T_n + param.T_ref,
-            "X-averaged separator temperature": pybamm.x_average(T_s),
-            "X-averaged separator temperature [K]": param.Delta_T
-            * pybamm.x_average(T_s)
+            "X-averaged separator temperature": T_s_av,
+            "X-averaged separator temperature [K]": param.Delta_T * T_s_av
             + param.T_ref,
             "Separator temperature": T_s,
             "Separator temperature [K]": param.Delta_T * T_s + param.T_ref,
-            "X-averaged positive electrode temperature": pybamm.x_average(T_p),
-            "X-averaged positive electrode temperature [K]": param.Delta_T
-            * pybamm.x_average(T_p)
+            "X-averaged positive electrode temperature": T_p_av,
+            "X-averaged positive electrode temperature [K]": param.Delta_T * T_p_av
             + param.T_ref,
             "Positive electrode temperature": T_p,
             "Positive electrode temperature [K]": param.Delta_T * T_p + param.T_ref,
             "Positive current collector temperature": T_cp,
-            "Positive current collector temperature [K]": param.Delta_T * T_cp,
+            "Positive current collector temperature [K]": param.Delta_T * T_cp
+            + param.T_ref,
             "Cell temperature": T,
             "Cell temperature [K]": param.Delta_T * T + param.T_ref,
             "X-averaged cell temperature": T_x_av,
@@ -65,8 +78,6 @@ class BaseThermal(pybamm.BaseSubModel):
             "Volume-averaged cell temperature": T_vol_av,
             "Volume-averaged cell temperature [K]": param.Delta_T * T_vol_av
             + param.T_ref,
-            "Heat flux": q,
-            "Heat flux [W.m-2]": q,
             "Ambient temperature [K]": T_amb_dim,
             "Ambient temperature": T_amb,
         }
@@ -146,10 +157,7 @@ class BaseThermal(pybamm.BaseSubModel):
         # Total heating
         Q = Q_ohm + Q_rxn + Q_rev
 
-        # Compute the X-average over the current collectors by default.
-        # Note: the method 'self._x_average' is overwritten by models which do
-        # not include current collector effects, so that the average is just taken
-        # over the negative electrode, separator and positive electrode.
+        # Compute the X-average over the entire cell, including current collectors
         Q_ohm_av = self._x_average(Q_ohm, Q_ohm_s_cn, Q_ohm_s_cp)
         Q_rxn_av = self._x_average(Q_rxn, 0, 0)
         Q_rev_av = self._x_average(Q_rev, 0, 0)
@@ -196,64 +204,60 @@ class BaseThermal(pybamm.BaseSubModel):
         )
         return variables
 
-    def _flux_law(self, T):
-        raise NotImplementedError
-
-    def _unpack(self, variables):
-        raise NotImplementedError
-
     def _current_collector_heating(self, variables):
-        raise NotImplementedError
-
-    def _yz_average(self, var):
-        raise NotImplementedError
+        "Compute Ohmic heating in current collectors"
+        # TODO: implement grad in 0D to return a scalar zero
+        # TODO: implement grad_squared in other spatial methods so that the if
+        # statement can be removed
+        # In the limit of infinitely large current collector conductivity (i.e.
+        # 0D current collectors), the Ohmic heating in the current collectors is
+        # zero
+        if self.cc_dimension == 0:
+            Q_s_cn = pybamm.Scalar(0)
+            Q_s_cp = pybamm.Scalar(0)
+        # Otherwise we compute the Ohmic heating for 1 or 2D current collectors
+        elif self.cc_dimension in [1, 2]:
+            phi_s_cn = variables["Negative current collector potential"]
+            phi_s_cp = variables["Positive current collector potential"]
+            if self.cc_dimension == 1:
+                Q_s_cn = self.param.sigma_cn_prime * pybamm.inner(
+                    pybamm.grad(phi_s_cn), pybamm.grad(phi_s_cn)
+                )
+                Q_s_cp = self.param.sigma_cp_prime * pybamm.inner(
+                    pybamm.grad(phi_s_cp), pybamm.grad(phi_s_cp)
+                )
+            elif self.cc_dimension == 2:
+                # Inner not implemented in 2D -- have to call grad_squared directly
+                Q_s_cn = self.param.sigma_cn_prime * pybamm.grad_squared(phi_s_cn)
+                Q_s_cp = self.param.sigma_cp_prime * pybamm.grad_squared(phi_s_cp)
+        return Q_s_cn, Q_s_cp
 
     def _x_average(self, var, var_cn, var_cp):
         """
         Computes the X-average over the whole cell (including current collectors)
         from the variable in the cell (negative electrode, separator,
         positive electrode), negative current collector, and positive current
-        collector. This method is overwritten by models which do not include
-        current collector effects, so that the average is just taken over the
-        negative electrode, separator and positive electrode.
+        collector.
         Note: we do this as we cannot create a single variable which is
         the concatenation [var_cn, var, var_cp] since var_cn and var_cp share the
-        same domian. (In the N+1D formulation the current collector variables are
+        same domain. (In the N+1D formulation the current collector variables are
         assumed independent of x, so we do not make the distinction between negative
         and positive current collectors in the geometry).
         """
-        # When averging the temperature for x-lumped or xyz-lumped models, var
-        # is a concatenation of broadcasts of the X- or Volume- averaged temperature.
-        # In this instance we return the (unmodified) variable corresponding to
-        # the correct average to avoid a ModelError (the unmodified variables must
-        # be the key in model.rhs)
-        if isinstance(var, pybamm.Concatenation) and all(
-            isinstance(child, pybamm.Broadcast) for child in var.children
-        ):
-            # Create list of var.ids
-            var_ids = [child.children[0].id for child in var.children]
-            var_ids.extend([var_cn.id, var_cp.id])
-            # If all var.ids the same, then the variable is uniform in x so can
-            # just return one the values (arbitrarily var_cn here)
-            if len(set(var_ids)) == 1:
-                out = var_cn
-        else:
-            out = (
-                self.param.l_cn * var_cn
-                + pybamm.x_average(var)
-                + self.param.l_cp * var_cp
-            ) / self.param.l
+        out = (
+            self.param.l_cn * var_cn
+            + self.param.l_x * pybamm.x_average(var)
+            + self.param.l_cp * var_cp
+        ) / self.param.l
         return out
 
-    def _effective_properties(self):
-        """
-        Computes the effective effective product of density and specific heat, and
-        effective thermal conductivity, respectively. These are computed differently
-        depending upon whether current collectors are included or not. Defualt
-        behaviour is to assume the presence of current collectors. Due to the choice
-        of non-dimensionalisation, the dimensionless effective properties are equal
-        to 1 in the case where current collectors are accounted for.
-        """
-        rho_eff = pybamm.Scalar(1)
-        lambda_eff = pybamm.Scalar(1)
-        return rho_eff, lambda_eff
+    def _yz_average(self, var):
+        "Computes the y-z average"
+        # TODO: change the behaviour of z_average and yz_average so the if statement
+        # can be removed
+        if self.cc_dimension == 0:
+            return var
+        elif self.cc_dimension == 1:
+            return pybamm.z_average(var)
+        elif self.cc_dimension == 2:
+            return pybamm.yz_average(var)

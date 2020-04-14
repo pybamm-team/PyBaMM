@@ -14,7 +14,7 @@ def nca_ocp_Kim2011_function(sto):
 
     Parameters
     ----------
-    sto: double
+    sto : :class:`pybamm.Symbol`
        Stochiometry of material (li-fraction)
 
     """

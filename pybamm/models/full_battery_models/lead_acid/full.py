@@ -6,7 +6,7 @@ from .base_lead_acid_model import BaseModel
 
 
 class Full(BaseModel):
-    """Porous electrode model for lead-acid, from [1]_, based on the Full
+    """Porous electrode model for lead-acid, from [1]_, based on the Newman-Tiedemann
     model.
 
     Parameters
@@ -56,9 +56,24 @@ class Full(BaseModel):
 
     def set_convection_submodel(self):
         if self.options["convection"] is False:
-            self.submodels["convection"] = pybamm.convection.NoConvection(self.param)
-        if self.options["convection"] is True:
-            self.submodels["convection"] = pybamm.convection.Full(self.param)
+            self.submodels[
+                "transverse convection"
+            ] = pybamm.convection.transverse.NoConvection(self.param)
+            self.submodels[
+                "through-cell convection"
+            ] = pybamm.convection.through_cell.NoConvection(self.param)
+        else:
+            if self.options["convection"] == "uniform transverse":
+                self.submodels[
+                    "transverse convection"
+                ] = pybamm.convection.transverse.Uniform(self.param)
+            elif self.options["convection"] == "full transverse":
+                self.submodels[
+                    "transverse convection"
+                ] = pybamm.convection.transverse.Full(self.param)
+            self.submodels[
+                "through-cell convection"
+            ] = pybamm.convection.through_cell.Full(self.param)
 
     def set_interfacial_submodel(self):
         self.submodels["negative interface"] = pybamm.interface.ButlerVolmer(
@@ -81,17 +96,16 @@ class Full(BaseModel):
 
     def set_electrolyte_submodel(self):
 
-        electrolyte = pybamm.electrolyte.stefan_maxwell
-        surf_form = electrolyte.conductivity.surface_potential_form
+        surf_form = pybamm.electrolyte_conductivity.surface_potential_form
 
-        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(
+        self.submodels["electrolyte diffusion"] = pybamm.electrolyte_diffusion.Full(
             self.param, self.reactions
         )
 
         if self.options["surface form"] is False:
-            self.submodels["electrolyte conductivity"] = electrolyte.conductivity.Full(
-                self.param, self.reactions
-            )
+            self.submodels[
+                "electrolyte conductivity"
+            ] = pybamm.electrolyte_conductivity.Full(self.param, self.reactions)
         elif self.options["surface form"] == "differential":
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[

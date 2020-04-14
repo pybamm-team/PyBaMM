@@ -12,7 +12,6 @@ Number of electrodes connected in parallel to make a cell,1,,
 Number of cells connected in series to make a battery,1,,
 Lower voltage cut-off [V],2.7,,
 Upper voltage cut-off [V],4.5,,
-C-rate,1,,
 ,,,
 # Initial conditions
 Initial concentration in negative electrode [mol.m-3],18081,0.63*2.84E4,

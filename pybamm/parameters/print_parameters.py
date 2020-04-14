@@ -61,15 +61,18 @@ def print_parameters(parameters, parameter_values, output_file=None):
     # Calculate parameters for each C-rate
     for Crate in [1, 10]:
         # Update Crate
-        parameter_values.update({"C-rate": Crate}, check_already_exists=False)
+        capacity = parameter_values.get("Cell capacity [A.h]")
+        if capacity is not None:
+            parameter_values.update(
+                {"Current function [A]": Crate * capacity}, check_already_exists=False
+            )
         for name, symbol in parameters.items():
             if not callable(symbol):
                 proc_symbol = parameter_values.process_symbol(symbol)
                 if not (
                     callable(proc_symbol)
-                    or any(
-                        isinstance(x, (pybamm.Concatenation, pybamm.Broadcast))
-                        for x in proc_symbol.pre_order()
+                    or proc_symbol.has_symbol_of_classes(
+                        (pybamm.Concatenation, pybamm.Broadcast)
                     )
                 ):
                     evaluated_parameters[name].append(proc_symbol.evaluate(t=0))

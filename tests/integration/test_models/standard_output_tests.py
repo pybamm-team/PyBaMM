@@ -604,12 +604,12 @@ class VelocityTests(BaseOutputTest):
 
         self.v_box = solution["Volume-averaged velocity"]
         self.i_e = solution["Electrolyte current density"]
-        self.dVbox_dz = solution["Vertical volume-averaged acceleration"]
+        self.dVbox_dz = solution["Transverse volume-averaged acceleration"]
 
     def test_velocity_boundaries(self):
         """Test the boundary values of the current densities"""
-        np.testing.assert_array_almost_equal(self.v_box(self.t, 0), 0)
-        np.testing.assert_array_almost_equal(self.v_box(self.t, 1), 0)
+        np.testing.assert_array_almost_equal(self.v_box(self.t, 0), 0, decimal=4)
+        np.testing.assert_array_almost_equal(self.v_box(self.t, 1), 0, decimal=4)
 
     def test_vertical_velocity(self):
         """Test the boundary values of the current densities"""
