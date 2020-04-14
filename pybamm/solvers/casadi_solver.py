@@ -145,13 +145,13 @@ class CasadiSolver(pybamm.BaseSolver):
             # Try to integrate in global steps of size dt_max (arbitrarily taken
             # to be half of the range of t_eval, up to a maximum of 1 hour)
             t_f = t_eval[-1]
-            # dt_max must be at least as big as the the biggest step in t_eval
-            # to avoid an empty integration window below
-            dt_eval_max = np.max(np.diff(t_eval))
-            dt_max = np.max([(t_f - t) / 2, dt_eval_max])
-            # maximum dt_max corresponds to 1 hour
             t_one_hour = 3600 / model.timescale_eval
-            dt_max = np.min([dt_max, t_one_hour])
+            dt_max = np.min([(t_f - t) / 2, t_one_hour])
+            # dt_max must be at least as big as the the biggest step in t_eval
+            # (multiplied by some tolerance, here 0.01) to avoid an empty
+            # integration window below
+            dt_eval_max = np.max(np.diff(t_eval)) * 1.01
+            dt_max = np.max([dt_max, dt_eval_max])
             while t < t_f:
                 # Step
                 solved = False
@@ -167,7 +167,7 @@ class CasadiSolver(pybamm.BaseSolver):
                     # Try to solve with the current global step, if it fails then
                     # halve the step size and try again.
                     try:
-                        # When not in DEBUG mode (level=10), supress the output
+                        # When not in DEBUG mode (level=10), suppress the output
                         # from the failed steps in the solver
                         if (
                             pybamm.logger.getEffectiveLevel() == 10
@@ -221,13 +221,32 @@ class CasadiSolver(pybamm.BaseSolver):
                     # loop over events to compute the time at which they were triggered
                     t_events = [None] * len(active_events)
                     for i, event in enumerate(active_events):
-                        t_events[i] = brentq(
-                            lambda t: event(t, y_sol(t), inputs),
-                            current_step_sol.t[0],
-                            current_step_sol.t[-1],
-                        )
+
+                        def event_fun(t):
+                            return event(t, y_sol(t), inputs)
+
+                        if np.isnan(event_fun(current_step_sol.t[-1])[0]):
+                            # bracketed search fails if f(a) or f(b) is NaN, so we
+                            # need to find the times for which we can evaluate the event
+                            times = [
+                                t
+                                for t in current_step_sol.t
+                                if event_fun(t)[0] == event_fun(t)[0]
+                            ]
+                        else:
+                            times = current_step_sol.t
+                        # skip if sign hasn't changed
+                        if np.sign(event_fun(times[0])) != np.sign(
+                            event_fun(times[-1])
+                        ):
+                            t_events[i] = brentq(
+                                lambda t: event_fun(t), times[0], times[-1]
+                            )
+                        else:
+                            t_events[i] = np.nan
+
                     # t_event is the earliest event triggered
-                    t_event = np.min(t_events)
+                    t_event = np.nanmin(t_events)
                     y_event = y_sol(t_event)
 
                     # return truncated solution
