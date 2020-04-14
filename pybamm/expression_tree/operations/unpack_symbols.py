@@ -22,7 +22,7 @@ class SymbolUnpacker(object):
 
     def unpack_list_of_symbols(self, list_of_symbols):
         """
-        Unpack a list of symbols. See :meth:`EquationUnpacker.unpack()`
+        Unpack a list of symbols. See :meth:`SymbolUnpacker.unpack()`
 
         Parameters
         ----------
@@ -65,7 +65,7 @@ class SymbolUnpacker(object):
             return unpacked
 
     def _unpack(self, symbol):
-        """ See :meth:`EquationUnpacker.unpack()`. """
+        """ See :meth:`SymbolUnpacker.unpack()`. """
 
         children = symbol.children
 
@@ -86,4 +86,3 @@ class SymbolUnpacker(object):
                 child_vars = self.unpack_symbol(child)
                 found_vars.update(child_vars)
             return found_vars
-

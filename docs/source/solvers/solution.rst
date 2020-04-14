@@ -1,5 +1,5 @@
-Solution
-========
+Solutions
+=========
 
 .. autoclass:: pybamm._BaseSolution
   :members:
