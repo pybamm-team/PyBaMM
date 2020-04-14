@@ -23,18 +23,9 @@ class TestFull(unittest.TestCase):
             "Volume-averaged velocity": a,
             "Electrolyte concentration": a,
             "Electrolyte current density": full,
-            "Interfacial current density": full,
-            "Oxygen interfacial current density": full,
-            "Cell temperature": pybamm.FullBroadcast(
-                a,
-                ["negative electrode", "separator", "positive electrode"],
-                "current collector",
-            ),
-            "Transverse volume-averaged acceleration": pybamm.FullBroadcast(
-                a,
-                ["negative electrode", "separator", "positive electrode"],
-                "current collector",
-            ),
+            "Sum of electrolyte reaction source terms": full,
+            "Cell temperature": full,
+            "Transverse volume-averaged acceleration": full,
         }
         submodel = pybamm.electrolyte_diffusion.Full(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)

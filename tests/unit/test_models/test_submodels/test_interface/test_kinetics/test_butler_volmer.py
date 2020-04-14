@@ -22,6 +22,7 @@ class TestButlerVolmer(unittest.TestCase):
             "Negative electrolyte concentration": a,
             "Negative particle surface concentration": a,
             "Negative electrode temperature": a,
+            "X-averaged negative electrode interfacial current density": a,
         }
         submodel = pybamm.interface.ButlerVolmer(param, "Negative", "lithium-ion main")
         std_tests = tests.StandardSubModelTests(submodel, variables)
@@ -38,6 +39,8 @@ class TestButlerVolmer(unittest.TestCase):
             "Negative electrode interfacial current density": a_n,
             "Negative electrode exchange current density": a_n,
             "Positive electrode temperature": a_p,
+            "X-averaged negative electrode interfacial current density": a_n,
+            "Sum of electrolyte reaction source terms": a,
         }
         submodel = pybamm.interface.ButlerVolmer(param, "Positive", "lithium-ion main")
         std_tests = tests.StandardSubModelTests(submodel, variables)

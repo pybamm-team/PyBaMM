@@ -14,12 +14,7 @@ class TestFull(unittest.TestCase):
         variables = {
             "Electrolyte tortuosity": a,
             "Electrolyte concentration": a,
-            "Interfacial current density": pybamm.FullBroadcast(
-                a,
-                ["negative electrode", "separator", "positive electrode"],
-                "current collector",
-            ),
-            "Oxygen interfacial current density": pybamm.FullBroadcast(
+            "Sum of interfacial current densities": pybamm.FullBroadcast(
                 a,
                 ["negative electrode", "separator", "positive electrode"],
                 "current collector",

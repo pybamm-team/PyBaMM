@@ -18,10 +18,10 @@ class TestLeadingOrder(unittest.TestCase):
             "X-averaged negative electrode porosity change": a,
             "X-averaged separator porosity change": a,
             "X-averaged positive electrode porosity change": a,
-            "X-averaged negative electrode interfacial current density": a,
-            "X-averaged positive electrode interfacial current density": a,
-            "X-averaged negative electrode oxygen interfacial current density": a,
-            "X-averaged positive electrode oxygen interfacial current density": a,
+            "Sum of x-averaged negative electrode interfacial current densities": a,
+            "Sum of x-averaged positive electrode interfacial current densities": a,
+            "Sum of x-averaged negative electrode electrolyte reaction source terms": a,
+            "Sum of x-averaged positive electrode electrolyte reaction source terms": a,
             "X-averaged separator transverse volume-averaged acceleration": a,
         }
         submodel = pybamm.electrolyte_diffusion.LeadingOrder(param)

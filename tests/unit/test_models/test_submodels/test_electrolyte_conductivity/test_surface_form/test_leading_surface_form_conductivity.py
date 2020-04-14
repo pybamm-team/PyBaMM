@@ -18,9 +18,7 @@ class TestLeadingOrderModel(unittest.TestCase):
             "Current collector current density": a,
             "Negative electrode porosity": a_n,
             "Negative electrolyte concentration": a_n,
-            "Negative electrode interfacial current density": a_n,
-            "X-averaged negative electrode interfacial current density": a,
-            "X-averaged negative electrode oxygen interfacial current density": a,
+            "Sum of x-averaged negative electrode interfacial current densities": a_n,
             "X-averaged negative electrode total interfacial current density": a,
         }
         spf = pybamm.electrolyte_conductivity.surface_potential_form
@@ -39,8 +37,7 @@ class TestLeadingOrderModel(unittest.TestCase):
             "Separator electrolyte current density": a_s,
             "Positive electrode porosity": a_p,
             "Positive electrolyte concentration": a_p,
-            "X-averaged positive electrode interfacial current density": a,
-            "X-averaged positive electrode oxygen interfacial current density": a,
+            "Sum of x-averaged positive electrode interfacial current densities": a,
             "X-averaged positive electrode total interfacial current density": a,
         }
         submodel = spf.LeadingOrderAlgebraic(param, "Positive")
