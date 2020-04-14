@@ -33,7 +33,6 @@ Contents
     source/experiments/index
     source/simulation
     source/quick_plot
-    source/processed_variable
     source/util
     source/citations
     source/parameters_cli

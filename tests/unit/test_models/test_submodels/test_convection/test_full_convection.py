@@ -17,8 +17,15 @@ class TestFull(unittest.TestCase):
                 a, "current collector"
             ),
             "Interfacial current density": a,
+            "Negative electrode interfacial current density": a,
+            "Positive electrode interfacial current density": a,
+            "X-averaged separator transverse volume-averaged acceleration": a,
+            "X-averaged separator pressure": a,
+            "Separator pressure": pybamm.FullBroadcast(
+                a, "separator", "current collector"
+            ),
         }
-        submodel = pybamm.convection.Full(param)
+        submodel = pybamm.convection.through_cell.Full(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

@@ -35,3 +35,4 @@ Positive current collector thermal conductivity [W.m-1.K-1],158.079, 237 * 0.667
 # Electrical,,,
 Cell capacity [A.h],0.43,trial and error,
 Typical current [A],0.43,0.2857,1C current
+Current function [A],0.43,default current function,

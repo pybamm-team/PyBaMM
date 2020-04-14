@@ -19,15 +19,15 @@ class BaseModel(pybamm.BaseSubModel):
     def __init__(self, param):
         super().__init__(param)
 
-    def _get_standard_velocity_variables(self, v_box):
+    def _get_standard_whole_cell_velocity_variables(self, variables):
         """
         A private function to obtain the standard variables which
         can be derived from the fluid velocity.
 
         Parameters
         ----------
-        v_box : :class:`pybamm.Symbol`
-            The volume-averaged fluid velocity
+        variables : dict
+            The existing variables in the model
 
         Returns
         -------
@@ -38,7 +38,12 @@ class BaseModel(pybamm.BaseSubModel):
 
         vel_scale = self.param.velocity_scale
 
-        # add more to this (x-averages etc)
+        v_box_n = variables["Negative electrode volume-averaged velocity"]
+        v_box_s = variables["Separator volume-averaged velocity"]
+        v_box_p = variables["Positive electrode volume-averaged velocity"]
+
+        v_box = pybamm.Concatenation(v_box_n, v_box_s, v_box_p)
+
         variables = {
             "Volume-averaged velocity": v_box,
             "Volume-averaged velocity [m.s-1]": vel_scale * v_box,
@@ -46,56 +51,69 @@ class BaseModel(pybamm.BaseSubModel):
 
         return variables
 
-    def _get_standard_pressure_variables(self, p):
+    def _get_standard_whole_cell_acceleration_variables(self, variables):
+        """
+        A private function to obtain the standard variables which
+        can be derived from the fluid velocity.
+
+        Parameters
+        ----------
+        variables : dict
+            The existing variables in the model
+
+        Returns
+        -------
+        variables : dict
+            The variables which can be derived from the volume-averaged
+            velocity.
+        """
+
+        acc_scale = self.param.velocity_scale / self.param.L_x
+
+        div_v_box_n = variables["Negative electrode volume-averaged acceleration"]
+        div_v_box_s = variables["Separator volume-averaged acceleration"]
+        div_v_box_p = variables["Positive electrode volume-averaged acceleration"]
+
+        div_v_box = pybamm.Concatenation(div_v_box_n, div_v_box_s, div_v_box_p)
+        div_v_box_av = pybamm.x_average(div_v_box)
+
+        variables = {
+            "Volume-averaged acceleration": div_v_box,
+            "X-averaged volume-averaged acceleration": div_v_box_av,
+            "Volume-averaged acceleration [m.s-1]": acc_scale * div_v_box,
+            "X-averaged volume-averaged acceleration [m.s-1]": acc_scale * div_v_box_av,
+        }
+
+        return variables
+
+    def _get_standard_whole_cell_pressure_variables(self, variables):
         """
         A private function to obtain the standard variables which
         can be derived from the pressure in the fluid.
 
         Parameters
         ----------
-        p : :class:`pybamm.Symbol`
-            The fluid pressure
+        variables : dict
+            The existing variables in the model
 
         Returns
         -------
         variables : dict
             The variables which can be derived from the pressure.
         """
+        p_n = variables["Negative electrode pressure"]
+        p_s = variables["Separator pressure"]
+        p_p = variables["Positive electrode pressure"]
 
-        # add more to this (x-averages etc)
-        variables = {"Electrolyte pressure": p}
+        p = pybamm.Concatenation(p_n, p_s, p_p)
 
-        return variables
-
-    def _get_standard_vertical_velocity_variables(self, dVbox_dz):
-        """
-        A private function to obtain the standard variables which
-        can be derived from the vertical velocity of the fluid.
-
-        Parameters
-        ----------
-        dV_box_dz : :class:`pybamm.Symbol`
-            The vertical velocity of the fluid
-
-        Returns
-        -------
-        variables : dict
-            The variables which can be derived from the vertical velocity.
-        """
-        vel_scale = self.param.velocity_scale
-        L_z = self.param.L_z
-
-        variables = {
-            "Vertical volume-averaged acceleration": dVbox_dz,
-            "Vertical volume-averaged acceleration [m.s-2]": vel_scale / L_z * dVbox_dz,
-        }
+        variables = {"Pressure": p}
 
         return variables
 
     def _separator_velocity(self, variables):
         """
         A private method to calculate x- and z-components of velocity in the separator
-
         Parameters
         ----------
         variables : dict

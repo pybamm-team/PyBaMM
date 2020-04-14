@@ -10,3 +10,5 @@ Solvers
   casadi_solver
   algebraic_solvers
   solution
+  processed_variable
+

@@ -62,7 +62,9 @@ class BaseHigherOrderModel(BaseModel):
     def set_current_collector_submodel(self):
         cc = pybamm.current_collector
 
-        if self.options["current collector"] == "uniform":
+        if self.options["current collector"] in [
+            "uniform",
+        ]:
             submodel = cc.Uniform(self.param)
         elif self.options["current collector"] == "potential pair quite conductive":
             if self.options["dimensionality"] == 1:
@@ -111,7 +113,9 @@ class BaseHigherOrderModel(BaseModel):
     def set_electrolyte_conductivity_submodel(self):
         self.submodels[
             "electrolyte conductivity"
-        ] = pybamm.electrolyte.stefan_maxwell.conductivity.FirstOrder(self.param)
+        ] = pybamm.electrolyte_conductivity.Composite(
+            self.param, higher_order_terms="first-order"
+        )
 
     def set_negative_electrode_submodel(self):
         self.submodels["negative electrode"] = pybamm.electrode.ohm.Composite(
@@ -154,7 +158,7 @@ class BaseHigherOrderModel(BaseModel):
             self.submodels[
                 "negative oxygen interface"
             ] = pybamm.interface.DiffusionLimited(
-                self.param, "Negative", "lead-acid oxygen", order="full"
+                self.param, "Negative", "lead-acid oxygen", order="composite"
             )
 
     def set_full_convection_submodel(self):
@@ -162,12 +166,10 @@ class BaseHigherOrderModel(BaseModel):
         Update convection submodel, now that we have the spatially heterogeneous
         interfacial current densities
         """
-        if self.options["convection"] is False:
-            self.submodels["full convection"] = pybamm.convection.NoConvection(
-                self.param
-            )
-        if self.options["convection"] is True:
-            self.submodels["full convection"] = pybamm.convection.Composite(self.param)
+        if self.options["convection"] is not False:
+            self.submodels[
+                "through-cell convection"
+            ] = pybamm.convection.through_cell.Explicit(self.param)
 
     def set_full_porosity_submodel(self):
         """
@@ -202,9 +204,7 @@ class FOQS(BaseHigherOrderModel):
     def set_electrolyte_diffusion_submodel(self):
         self.submodels[
             "electrolyte diffusion"
-        ] = pybamm.electrolyte.stefan_maxwell.diffusion.FirstOrder(
-            self.param, self.reactions
-        )
+        ] = pybamm.electrolyte_diffusion.FirstOrder(self.param, self.reactions)
 
     def set_other_species_diffusion_submodels(self):
         if "oxygen" in self.options["side reactions"]:
@@ -234,9 +234,7 @@ class Composite(BaseHigherOrderModel):
     def set_electrolyte_diffusion_submodel(self):
         self.submodels[
             "electrolyte diffusion"
-        ] = pybamm.electrolyte.stefan_maxwell.diffusion.Composite(
-            self.param, self.reactions
-        )
+        ] = pybamm.electrolyte_diffusion.Composite(self.param, self.reactions)
 
     def set_other_species_diffusion_submodels(self):
         if "oxygen" in self.options["side reactions"]:
@@ -252,8 +250,8 @@ class Composite(BaseHigherOrderModel):
         self.submodels["full porosity"] = pybamm.porosity.Full(self.param)
 
 
-class CompositeExtended(BaseHigherOrderModel):
-    """Extended composite model for lead-acid, from [2]_.
+class CompositeExtended(Composite):
+    """Extended composite model for lead-acid.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
     Parameters
@@ -268,34 +266,48 @@ class CompositeExtended(BaseHigherOrderModel):
         building the complete model (submodels cannot be changed after the model is
         built).
 
-    References
-    ----------
-    .. [2] V Sulzer. Mathematical modelling of lead-acid batteries. PhD thesis,
-           University of Oxford, 2019.
-
 
     **Extends:** :class:`pybamm.lead_acid.BaseHigherOrderModel`
     """
 
-    def __init__(self, options=None, name="Extended composite model", build=True):
+    def __init__(
+        self, options=None, name="Extended composite model (distributed)", build=True
+    ):
         super().__init__(options, name, build=build)
 
     def set_electrolyte_diffusion_submodel(self):
         self.submodels[
             "electrolyte diffusion"
-        ] = pybamm.electrolyte.stefan_maxwell.diffusion.Composite(
-            self.param, self.reactions, extended=True
+        ] = pybamm.electrolyte_diffusion.Composite(
+            self.param, self.reactions, extended="distributed"
         )
 
     def set_other_species_diffusion_submodels(self):
         if "oxygen" in self.options["side reactions"]:
             self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.Composite(
-                self.param, self.reactions, extended=True
+                self.param, self.reactions, extended="distributed"
             )
 
-    def set_full_porosity_submodel(self):
-        """
-        Update porosity submodel, now that we have the spatially heterogeneous
-        interfacial current densities
-        """
-        self.submodels["full porosity"] = pybamm.porosity.Full(self.param)
+
+class CompositeAverageCorrection(Composite):
+    """Extended composite model for lead-acid.
+    Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
+
+    **Extends:** :class:`pybamm.lead_acid.BaseHigherOrderModel`
+    """
+
+    def __init__(self, options=None, name="Extended composite model (average)"):
+        super().__init__(options, name)
+
+    def set_electrolyte_diffusion_submodel(self):
+        self.submodels[
+            "electrolyte diffusion"
+        ] = pybamm.electrolyte_diffusion.Composite(
+            self.param, self.reactions, extended="average"
+        )
+
+    def set_other_species_diffusion_submodels(self):
+        if "oxygen" in self.options["side reactions"]:
+            self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.Composite(
+                self.param, self.reactions, extended="average"
+            )

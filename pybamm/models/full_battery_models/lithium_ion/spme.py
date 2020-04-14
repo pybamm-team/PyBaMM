@@ -59,6 +59,15 @@ class SPMe(BaseModel):
 
         self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
 
+    def set_convection_submodel(self):
+
+        self.submodels[
+            "through-cell convection"
+        ] = pybamm.convection.through_cell.NoConvection(self.param)
+        self.submodels[
+            "transverse convection"
+        ] = pybamm.convection.transverse.NoConvection(self.param)
+
     def set_tortuosity_submodels(self):
         self.submodels["electrolyte tortuosity"] = pybamm.tortuosity.Bruggeman(
             self.param, "Electrolyte", True
@@ -66,10 +75,6 @@ class SPMe(BaseModel):
         self.submodels["electrode tortuosity"] = pybamm.tortuosity.Bruggeman(
             self.param, "Electrode", True
         )
-
-    def set_convection_submodel(self):
-
-        self.submodels["convection"] = pybamm.convection.NoConvection(self.param)
 
     def set_interfacial_submodel(self):
 
@@ -111,12 +116,10 @@ class SPMe(BaseModel):
 
     def set_electrolyte_submodel(self):
 
-        electrolyte = pybamm.electrolyte.stefan_maxwell
-
-        self.submodels["electrolyte conductivity"] = electrolyte.conductivity.Composite(
-            self.param
-        )
-        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(
+        self.submodels[
+            "electrolyte conductivity"
+        ] = pybamm.electrolyte_conductivity.Composite(self.param)
+        self.submodels["electrolyte diffusion"] = pybamm.electrolyte_diffusion.Full(
             self.param, self.reactions
         )
 

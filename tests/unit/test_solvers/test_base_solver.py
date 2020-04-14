@@ -50,6 +50,17 @@ class TestBaseSolver(unittest.TestCase):
         ):
             solver.solve(model, np.array([1, 2, 3, 2]))
 
+    def test_block_symbolic_inputs(self):
+        solver = pybamm.BaseSolver(rtol=1e-2, atol=1e-4)
+        model = pybamm.BaseModel()
+        a = pybamm.Scalar(0)
+        p = pybamm.InputParameter("p")
+        model.rhs = {a: a * p}
+        with self.assertRaisesRegex(
+            pybamm.SolverError, "Only CasadiAlgebraicSolver can have symbolic inputs"
+        ):
+            solver.solve(model, np.array([1, 2, 3]))
+
     def test_ode_solver_fail_with_dae(self):
         model = pybamm.BaseModel()
         a = pybamm.Scalar(1)
@@ -178,6 +189,29 @@ class TestBaseSolver(unittest.TestCase):
             "Could not find consistent initial conditions: .../casadi",
         ):
             solver.calculate_consistent_state(Model())
+
+    def test_discretise_model(self):
+        # Make sure 0D model is automatically discretised
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        model.rhs = {v: -1}
+        model.initial_conditions = {v: 1}
+
+        solver = pybamm.BaseSolver()
+        self.assertFalse(model.is_discretised)
+        solver.set_up(model, {})
+        self.assertTrue(model.is_discretised)
+
+        # 1D model cannot be automatically discretised
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v", domain="line")
+        model.rhs = {v: -1}
+        model.initial_conditions = {v: 1}
+
+        with self.assertRaisesRegex(
+            pybamm.DiscretisationError, "Cannot automatically discretise model"
+        ):
+            solver.set_up(model, {})
 
     def test_convert_to_casadi_format(self):
         # Make sure model is converted to casadi format

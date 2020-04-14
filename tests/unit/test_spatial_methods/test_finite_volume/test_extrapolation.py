@@ -153,8 +153,8 @@ class TestExtrapolation(unittest.TestCase):
 
         linear = {"extrapolation": {"order": "linear", "use bcs": True}}
         quad = {"extrapolation": {"order": "quadratic", "use bcs": True}}
-        l_errors_lin_no_bc, r_errors_lin_no_bc = get_errors(x_cubed, linear, pts,)
-        l_errors_quad_no_bc, r_errors_quad_no_bc = get_errors(x_cubed, quad, pts,)
+        l_errors_lin_no_bc, r_errors_lin_no_bc = get_errors(x_cubed, linear, pts)
+        l_errors_quad_no_bc, r_errors_quad_no_bc = get_errors(x_cubed, quad, pts)
 
         l_errors_lin_with_bc, r_errors_lin_with_bc = get_errors(
             x_cubed, linear, pts, bcs
@@ -208,8 +208,8 @@ class TestExtrapolation(unittest.TestCase):
 
         linear = {"extrapolation": {"order": "linear", "use bcs": True}}
         quad = {"extrapolation": {"order": "quadratic", "use bcs": True}}
-        l_errors_lin_no_bc, r_errors_lin_no_bc = get_errors(x_cubed, linear, pts,)
-        l_errors_quad_no_bc, r_errors_quad_no_bc = get_errors(x_cubed, quad, pts,)
+        l_errors_lin_no_bc, r_errors_lin_no_bc = get_errors(x_cubed, linear, pts)
+        l_errors_quad_no_bc, r_errors_quad_no_bc = get_errors(x_cubed, quad, pts)
 
         l_errors_lin_with_bc, r_errors_lin_with_bc = get_errors(
             x_cubed, linear, pts, bcs
@@ -245,7 +245,7 @@ class TestExtrapolation(unittest.TestCase):
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume(method_options),
             "negative particle": pybamm.FiniteVolume(method_options),
-            "current collector": pybamm.ZeroDimensionalMethod(method_options),
+            "current collector": pybamm.ZeroDimensionalSpatialMethod(method_options),
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
@@ -312,7 +312,7 @@ class TestExtrapolation(unittest.TestCase):
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume(method_options),
             "negative particle": pybamm.FiniteVolume(method_options),
-            "current collector": pybamm.ZeroDimensionalMethod(method_options),
+            "current collector": pybamm.ZeroDimensionalSpatialMethod(method_options),
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
@@ -398,15 +398,10 @@ class TestExtrapolation(unittest.TestCase):
 
         var = pybamm.standard_spatial_vars
         rpts = 10
-        var_pts = {
-            var.r_n: rpts,
-            var.r_p: rpts,
-        }
+        var_pts = {var.r_n: rpts, var.r_p: rpts}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
         method_options = {"extrapolation": {"order": "linear", "use bcs": False}}
-        spatial_methods = {
-            "negative particle": pybamm.FiniteVolume(method_options),
-        }
+        spatial_methods = {"negative particle": pybamm.FiniteVolume(method_options)}
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
         var = pybamm.Variable("var", domain="negative particle")
