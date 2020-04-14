@@ -8,10 +8,7 @@ import numpy as np
 
 class TestExternalThermalModels(unittest.TestCase):
     def test_external_lumped_temperature(self):
-        model_options = {
-            "thermal": "x-lumped",
-            "external submodels": ["thermal"],
-        }
+        model_options = {"thermal": "lumped", "external submodels": ["thermal"]}
         model = pybamm.lithium_ion.SPMe(model_options)
         sim = pybamm.Simulation(model)
 
@@ -21,16 +18,13 @@ class TestExternalThermalModels(unittest.TestCase):
 
         for i in np.arange(1, len(t_eval) - 1):
             dt = t_eval[i + 1] - t_eval[i]
-            external_variables = {"X-averaged cell temperature": T_av}
+            external_variables = {"Volume-averaged cell temperature": T_av}
             T_av += 1
             sim.step(dt, external_variables=external_variables)
 
     def test_external_temperature(self):
 
-        model_options = {
-            "thermal": "x-full",
-            "external submodels": ["thermal"],
-        }
+        model_options = {"thermal": "x-full", "external submodels": ["thermal"]}
 
         model = pybamm.lithium_ion.SPM(model_options)
 
@@ -63,10 +57,7 @@ class TestExternalThermalModels(unittest.TestCase):
     @unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
     def test_dae_external_temperature(self):
 
-        model_options = {
-            "thermal": "x-full",
-            "external submodels": ["thermal"],
-        }
+        model_options = {"thermal": "x-full", "external submodels": ["thermal"]}
 
         model = pybamm.lithium_ion.DFN(model_options)
 

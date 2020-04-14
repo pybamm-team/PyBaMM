@@ -16,7 +16,7 @@ else:
     pybamm.set_logging_level("INFO")
 
 # load models
-options = {"thermal": "x-lumped"}
+options = {"thermal": "lumped"}
 models = [
     pybamm.lithium_ion.SPM(options),
     pybamm.lithium_ion.SPMe(options),

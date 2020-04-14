@@ -308,6 +308,9 @@ class TestSymbol(unittest.TestCase):
             "Negative electrode interfacial current density": one_n,
             "Positive electrode interfacial current density": one_p,
             "Cell temperature": pybamm.Concatenation(zero_n, zero_s, zero_p),
+            "Transverse volume-averaged acceleration": pybamm.Concatenation(
+                zero_n, zero_s, zero_p
+            ),
         }
         icd = " interfacial current density"
         reactions = {
@@ -316,14 +319,13 @@ class TestSymbol(unittest.TestCase):
                 "Positive": {"s": 1, "aj": "Positive electrode" + icd},
             }
         }
-        model = pybamm.electrolyte.stefan_maxwell.diffusion.Full(param, reactions)
+        model = pybamm.electrolyte_diffusion.Full(param, reactions)
         variables.update(model.get_fundamental_variables())
         variables.update(model.get_coupled_variables(variables))
 
         model.set_rhs(variables)
 
-        c_e = pybamm.standard_variables.c_e
-        rhs = model.rhs[c_e]
+        rhs = list(model.rhs.values())[0]
         rhs.visualise("StefanMaxwell_test.png")
         self.assertTrue(os.path.exists("StefanMaxwell_test.png"))
         with self.assertRaises(ValueError):

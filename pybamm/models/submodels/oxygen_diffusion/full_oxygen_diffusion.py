@@ -76,7 +76,7 @@ class Full(BaseModel):
 
         N_ox_diffusion = -tor * param.curlyD_ox * pybamm.grad(c_ox)
 
-        N_ox = N_ox_diffusion + c_ox * v_box
+        N_ox = N_ox_diffusion + param.C_e * c_ox * v_box
         # Flux in the negative electrode is zero
         N_ox = pybamm.Concatenation(
             pybamm.FullBroadcast(0, "negative electrode", "current collector"), N_ox

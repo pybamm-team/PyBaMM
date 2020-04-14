@@ -48,12 +48,7 @@ class StandardModelTest(object):
         self.model.check_well_posedness()
         # No Parameter or FunctionParameter nodes in the model
         for eqn in {**self.model.rhs, **self.model.algebraic}.values():
-            if any(
-                [
-                    isinstance(x, (pybamm.Parameter, pybamm.FunctionParameter))
-                    for x in eqn.pre_order()
-                ]
-            ):
+            if eqn.has_symbol_of_classes((pybamm.Parameter, pybamm.FunctionParameter)):
                 raise TypeError(
                     "Not all Parameter and FunctionParameter objects processed"
                 )
@@ -75,7 +70,10 @@ class StandardModelTest(object):
         self.solver.rtol = 1e-8
         self.solver.atol = 1e-8
 
-        Crate = abs(self.parameter_values["C-rate"])
+        Crate = abs(
+            self.parameter_values["Current function [A]"]
+            * self.parameter_values["Cell capacity [A.h]"]
+        )
         # don't allow zero C-rate
         if Crate == 0:
             Crate = 1
