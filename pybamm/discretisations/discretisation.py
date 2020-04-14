@@ -133,6 +133,13 @@ class Discretisation(object):
         # Prepare discretisation
         # set variables (we require the full variable not just id)
         variables = list(model.rhs.keys()) + list(model.algebraic.keys())
+        if self.spatial_methods == {} and any(var.domain != [] for var in variables):
+            for var in variables:
+                if var.domain != []:
+                    raise pybamm.DiscretisationError(
+                        "Spatial method has not been given "
+                        "for variable {} with domain {}".format(var.name, var.domain)
+                    )
 
         # Set the y split for variables
         pybamm.logger.info("Set variable slices for {}".format(model.name))
@@ -202,6 +209,9 @@ class Discretisation(object):
             self.check_model(model_disc)
 
         pybamm.logger.info("Finish discretising {}".format(model.name))
+
+        # Record that the model has been discretised
+        model_disc.is_discretised = True
 
         return model_disc
 
@@ -610,7 +620,7 @@ class Discretisation(object):
                 mass_list.append(mass)
                 if isinstance(
                     self.spatial_methods[var.domain[0]],
-                    (pybamm.ZeroDimensionalMethod, pybamm.FiniteVolume),
+                    (pybamm.ZeroDimensionalSpatialMethod, pybamm.FiniteVolume),
                 ):
                     # for 0D methods the mass matrix is just a scalar 1 and for
                     # finite volumes the mass matrix is identity, so no need to
@@ -939,6 +949,14 @@ class Discretisation(object):
             new_symbol = spatial_method.concatenation(new_children)
 
             return new_symbol
+
+        elif isinstance(symbol, pybamm.InputParameter):
+            # Return a new copy of the input parameter, but set the expected size
+            # according to the domain of the input parameter
+            expected_size = self._get_variable_size(symbol)
+            new_input_parameter = symbol.new_copy()
+            new_input_parameter.set_expected_size(expected_size)
+            return new_input_parameter
 
         else:
             # Backup option: return new copy of the object

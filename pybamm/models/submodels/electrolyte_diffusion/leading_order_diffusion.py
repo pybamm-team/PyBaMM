@@ -57,6 +57,10 @@ class LeadingOrder(BaseElectrolyteDiffusion):
         deps_n_dt_av = variables["X-averaged negative electrode porosity change"]
         deps_p_dt_av = variables["X-averaged positive electrode porosity change"]
 
+        div_Vbox_s_av = variables[
+            "X-averaged separator transverse volume-averaged acceleration"
+        ]
+
         source_terms = sum(
             param.l_n
             * (rxn["Negative"]["s"] - param.t_plus(c_e_av))
@@ -73,6 +77,7 @@ class LeadingOrder(BaseElectrolyteDiffusion):
             * (
                 source_terms
                 - c_e_av * (param.l_n * deps_n_dt_av + param.l_p * deps_p_dt_av)
+                - c_e_av * param.l_s * div_Vbox_s_av
             )
         }
 

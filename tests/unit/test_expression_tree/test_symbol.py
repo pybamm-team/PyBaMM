@@ -308,6 +308,9 @@ class TestSymbol(unittest.TestCase):
             "Negative electrode interfacial current density": one_n,
             "Positive electrode interfacial current density": one_p,
             "Cell temperature": pybamm.Concatenation(zero_n, zero_s, zero_p),
+            "Transverse volume-averaged acceleration": pybamm.Concatenation(
+                zero_n, zero_s, zero_p
+            ),
         }
         icd = " interfacial current density"
         reactions = {

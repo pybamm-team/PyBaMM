@@ -36,14 +36,13 @@ class Composite(Full):
             variables["Leading-order electrolyte tortuosity"]
         )
         c_ox = variables["Separator and positive electrode oxygen concentration"]
-        # TODO: allow charge and convection?
-        # v_box = pybamm.Scalar(0)
 
         param = self.param
 
         N_ox_diffusion = -tor_0 * param.curlyD_ox * pybamm.grad(c_ox)
 
-        N_ox = N_ox_diffusion  # + c_ox * v_box
+        # Note: no convection because c_ox_0 = 0 (at leading order)
+        N_ox = N_ox_diffusion
         # Flux in the negative electrode is zero
         N_ox = pybamm.Concatenation(
             pybamm.FullBroadcast(0, "negative electrode", "current collector"), N_ox

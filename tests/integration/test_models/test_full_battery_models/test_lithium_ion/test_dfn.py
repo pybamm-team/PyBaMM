@@ -82,7 +82,7 @@ class TestDFN(unittest.TestCase):
         modeltest.test_all()
 
     def test_lumped_thermal(self):
-        options = {"thermal": "x-lumped"}
+        options = {"thermal": "lumped"}
         model = pybamm.lithium_ion.DFN(options)
         var = pybamm.standard_spatial_vars
         var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.r_n: 5, var.r_p: 5}

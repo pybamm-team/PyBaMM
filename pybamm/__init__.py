@@ -193,7 +193,7 @@ from .meshes.scikit_fem_submeshes import (
 # Spatial Methods
 #
 from .spatial_methods.spatial_method import SpatialMethod
-from .spatial_methods.zero_dimensional_method import ZeroDimensionalMethod
+from .spatial_methods.zero_dimensional_method import ZeroDimensionalSpatialMethod
 from .spatial_methods.finite_volume import FiniteVolume
 from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 
@@ -201,6 +201,8 @@ from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 # Solver classes
 #
 from .solvers.solution import Solution, _BaseSolution
+from .solvers.processed_variable import ProcessedVariable
+from .solvers.processed_symbolic_variable import ProcessedSymbolicVariable
 from .solvers.base_solver import BaseSolver
 from .solvers.dummy_solver import DummySolver
 from .solvers.algebraic_solver import AlgebraicSolver
@@ -220,7 +222,6 @@ from . import experiments
 #
 # other
 #
-from .processed_variable import ProcessedVariable
 from .quick_plot import QuickPlot, dynamic_plot, ax_min, ax_max
 
 from .simulation import Simulation, load_sim, is_notebook
