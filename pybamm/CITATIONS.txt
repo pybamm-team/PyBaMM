@@ -169,3 +169,14 @@ doi = "https://doi.org/10.1016/j.electacta.2020.135862",
 url = "http://www.sciencedirect.com/science/article/pii/S0013468620302541",
 author = "G. Richardson and I. Korotkin and R. Ranom and M. Castle and J.M. Foster",
 }
+
+@article{cai2019modeling,
+  title={Modeling Li-Ion Battery Temperature and Expansion Force during the Early Stages of Thermal Runaway Triggered by Internal Shorts},
+  author={Cai, Ting and Stefanopoulou, Anna G and Siegel, Jason B},
+  journal={Journal of The Electrochemical Society},
+  volume={166},
+  number={12},
+  pages={A2431--A2443},
+  year={2019},
+  publisher={The Electrochemical Society}
+}

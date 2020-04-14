@@ -150,6 +150,8 @@ class BaseBatteryModel(pybamm.BaseModel):
             "thermal": "isothermal",
             "thermal current collector": False,
             "external submodels": [],
+            "anode decomposition": False,
+            "cathode decomposition": False,
         }
         options = pybamm.FuzzyDict(default_options)
         # any extra options overwrite the default options
