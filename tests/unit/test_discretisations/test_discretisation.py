@@ -1189,6 +1189,18 @@ class TestDiscretise(unittest.TestCase):
             model.mass_matrix_inv.entries.toarray(), mass_inv.toarray()
         )
 
+    def test_process_input_variable(self):
+        disc = get_discretisation_for_testing()
+
+        a = pybamm.InputParameter("a")
+        a_disc = disc.process_symbol(a)
+        self.assertEqual(a_disc._expected_size, 1)
+
+        a = pybamm.InputParameter("a", ["negative electrode", "separator"])
+        a_disc = disc.process_symbol(a)
+        n = disc.mesh.combine_submeshes(*a.domain)[0].npts
+        self.assertEqual(a_disc._expected_size, n)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
