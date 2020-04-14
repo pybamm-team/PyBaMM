@@ -161,6 +161,8 @@ class ParameterValues:
                     os.path.join(component_path, "parameters.csv")
                 )
             )
+            if component_group == "cell":
+                n = 1
             # Update parameters, making sure to check any conflicts
             self.update(
                 component_params,

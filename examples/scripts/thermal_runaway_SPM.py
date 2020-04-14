@@ -8,8 +8,12 @@ import numpy as np
 pybamm.set_logging_level("DEBUG")
 
 # load model
-options = {"thermal": "x-lumped", "anode decomposition": True, "cathode decomposition": True}
-model = pybamm.lithium_ion.SPM()
+options = {
+    "thermal": "x-lumped",
+    "anode decomposition": True,
+    "cathode decomposition": True,
+}
+model = pybamm.lithium_ion.SPM(options)
 model.convert_to_format = "python"
 
 # create geometry
@@ -19,8 +23,9 @@ geometry = model.default_geometry
 def ambient_temperature(t):
     return 300 + t * 100 / 3600
 
+
 # load parameter values and process model and geometry
-param = pybamm.ParameterValues(chemistry = pybamm.parameter_sets.Cai2019)
+param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Cai2019)
 param.update(
     {"Ambient temperature [K]": ambient_temperature}, check_already_exists=False
 )
@@ -52,8 +57,10 @@ plot = pybamm.QuickPlot(
         "Terminal voltage [V]",
         "Anode decomposition reaction rate",
         "Cathode decomposition reaction rate",
-        "X-averaged cell temperature",
+        "X-averaged cell temperature [K]",
         "Ambient temperature [K]",
+        "Relative SEI thickness",
+        "Degree of conversion of cathode decomposition",
     ],
     time_unit="seconds",
     spatial_unit="um",

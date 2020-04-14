@@ -35,6 +35,7 @@ Positive current collector thermal conductivity [W.m-1.K-1],237,CRC Handbook,alu
 # Electrical,,,
 Cell capacity [A.h],5,Chen 2020,
 Typical current [A],5,Chen 2020,
+Current function [A],5,default current function,
 ,,,
 # SEI decomposition,,,
 Frequency factor for SEI decomposition [s-1],2.25E15, Cai 2019,
