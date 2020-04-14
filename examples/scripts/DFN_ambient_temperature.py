@@ -9,7 +9,9 @@ pybamm.set_logging_level("DEBUG")
 
 
 # load model
-options = {"thermal": "lumped"}
+options = {
+    "thermal": "lumped"
+}  # Should default to false "anode decomposition": False, "cathode decomposition": False}
 model = pybamm.lithium_ion.DFN(options)
 
 # create geometry
