@@ -569,3 +569,19 @@ class ParameterValues:
 
     def _ipython_key_completions_(self):
         return list(self._dict_items.keys())
+
+    def export_csv(self, filename):
+
+        # process functions and data to output
+        # like they appear in inputs csv files
+        parameter_output = {}
+        for key, val in self.items():
+            if callable(val):
+                val = "[function]" + val.__name__
+            elif isinstance(val, tuple):
+                val = "[data]" + val[0]
+            parameter_output[key] = [val]
+
+        df = pd.DataFrame(parameter_output)
+        df = df.transpose()
+        df.to_csv(filename, header=None)
