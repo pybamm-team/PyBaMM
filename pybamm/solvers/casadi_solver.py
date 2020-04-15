@@ -69,7 +69,7 @@ class CasadiSolver(pybamm.BaseSolver):
         **extra_options,
     ):
         super().__init__("problem dependent", rtol, atol, root_method, root_tol)
-        if mode in ["safe", "fast"]:
+        if mode in ["safe", "fast", "old safe"]:
             self.mode = mode
         else:
             raise ValueError(
@@ -143,10 +143,10 @@ class CasadiSolver(pybamm.BaseSolver):
             solution.solve_time = 0
 
             # Try to integrate in global steps of size dt_max (arbitrarily taken
-            # to be half of the range of t_eval, up to a maximum of 1 hour)
+            # to be a quarter of the range of t_eval, up to a maximum of 1 hour)
             t_f = t_eval[-1]
             t_one_hour = 3600 / model.timescale_eval
-            dt_max = np.min([(t_f - t) / 2, t_one_hour])
+            dt_max = np.min([(t_f - t) / 4, t_one_hour])
             # dt_max must be at least as big as the the biggest step in t_eval
             # (multiplied by some tolerance, here 0.01) to avoid an empty
             # integration window below
@@ -271,6 +271,77 @@ class CasadiSolver(pybamm.BaseSolver):
                     t = t_window[-1]
                     # update y0
                     y0 = solution.y[:, -1]
+            return solution
+        elif self.mode == "old safe":
+            # Step-and-check
+            t = t_eval[0]
+            init_event_signs = np.sign(
+                np.concatenate(
+                    [
+                        event(t, model.y0, inputs)
+                        for event in model.terminate_events_eval
+                    ]
+                )
+            )
+            pybamm.logger.info("Start solving {} with {}".format(model.name, self.name))
+            y0 = model.y0
+            # Initialize solution
+            solution = pybamm.Solution(np.array([t]), y0[:, np.newaxis])
+            solution.solve_time = 0
+            for dt in np.diff(t_eval):
+                # Step
+                solved = False
+                count = 0
+                while not solved:
+                    integrator = self.get_integrator(
+                        model, np.array([t, t + dt]), inputs
+                    )
+                    # Try to solve with the current step, if it fails then halve the
+                    # step size and try again. This will make solution.t slightly
+                    # different to t_eval, but shouldn't matter too much as it should
+                    # only happen near events.
+                    try:
+                        current_step_sol = self._run_integrator(
+                            integrator, model, y0, inputs, np.array([t, t + dt])
+                        )
+                        solved = True
+                    except pybamm.SolverError:
+                        dt /= 2
+                    count += 1
+                    if count >= self.max_step_decrease_count:
+                        raise pybamm.SolverError(
+                            """
+                            Maximum number of decreased steps occurred at t={}. Try
+                            solving the model up to this time only
+                            """.format(
+                                t
+                            )
+                        )
+                # Check most recent y
+                new_event_signs = np.sign(
+                    np.concatenate(
+                        [
+                            event(t, current_step_sol.y[:, -1], inputs)
+                            for event in model.terminate_events_eval
+                        ]
+                    )
+                )
+                # Exit loop if the sign of an event changes
+                if (new_event_signs != init_event_signs).any():
+                    solution.termination = "event"
+                    solution.t_event = solution.t[-1]
+                    solution.y_event = solution.y[:, -1]
+                    break
+                else:
+                    # assign temporary solve time
+                    current_step_sol.solve_time = np.nan
+                    # append solution from the current step to solution
+                    solution.append(current_step_sol)
+                    # update time
+                    t += dt
+                    # update y0
+                    y0 = solution.y[:, -1]
+
             return solution
 
     def get_integrator(self, model, t_eval, inputs):
