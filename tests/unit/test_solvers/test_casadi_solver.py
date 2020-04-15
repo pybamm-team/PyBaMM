@@ -123,6 +123,24 @@ class TestCasadiSolver(unittest.TestCase):
             solution.y[-1], 2 * np.exp(0.1 * solution.t), decimal=5
         )
 
+        # Test when an event returns nan
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        model.rhs = {var: 0.1 * var}
+        model.initial_conditions = {var: 1}
+        model.events = [
+            pybamm.Event("event", var - 1.02),
+            pybamm.Event("sqrt event", pybamm.sqrt(1.01 - var)),
+        ]
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+        solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
+        # test integrate doensn't fail when debug mode is off
+        pybamm.settings.debug_mode = False
+        solution = solver.solve(model, t_eval)
+        pybamm.settings.debug_mode = True
+        np.testing.assert_array_less(solution.y[0], 1.02)
+
     def test_model_step(self):
         # Create model
         model = pybamm.BaseModel()
