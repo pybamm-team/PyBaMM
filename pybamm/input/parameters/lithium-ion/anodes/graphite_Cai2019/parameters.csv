@@ -40,5 +40,5 @@ Negative solid diffusion activation energy [J.mol-1],42770,default,
 # Anode decomposition,,,
 Frequency factor for anode decomposition [s-1],2.5E-13, Cai 2019,
 Activation energy for anode decomposition [J],2.24E-19, Cai 2019,
-Enthalpy of anode decomposition [J.g-1],1714, Cai 2019,
+Enthalpy of anode decomposition [J.kg-1],1714000, Cai 2019,
 
