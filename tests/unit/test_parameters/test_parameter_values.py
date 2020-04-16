@@ -331,11 +331,11 @@ class TestParameterValues(unittest.TestCase):
         x = np.linspace(0, 10)[:, np.newaxis]
         data = np.hstack([x, 2 * x])
         parameter_values = pybamm.ParameterValues(
-            {"a": 3.01, "Diffusivity": ("times two", data)}
+            {"a": 3.01, "Times two": ("times two", data)}
         )
 
         a = pybamm.Parameter("a")
-        func = pybamm.FunctionParameter("Diffusivity", {"a": a})
+        func = pybamm.FunctionParameter("Times two", {"a": a})
 
         processed_func = parameter_values.process_symbol(func)
         self.assertIsInstance(processed_func, pybamm.Interpolant)
@@ -345,6 +345,16 @@ class TestParameterValues(unittest.TestCase):
         diff_func = func.diff(a)
         processed_diff_func = parameter_values.process_symbol(diff_func)
         self.assertEqual(processed_diff_func.evaluate(), 2)
+
+        # interpolant defined up front
+        interp2 = pybamm.Interpolant(data, a)
+        processed_interp2 = parameter_values.process_symbol(interp2)
+        self.assertEqual(processed_interp2.evaluate(), 6.02)
+
+        data3 = np.hstack([x, 3 * x])
+        interp3 = pybamm.Interpolant(data3, a)
+        processed_interp3 = parameter_values.process_symbol(interp3)
+        self.assertEqual(processed_interp3.evaluate(), 9.03)
 
     def test_interpolant_against_function(self):
         parameter_values = pybamm.ParameterValues({})
