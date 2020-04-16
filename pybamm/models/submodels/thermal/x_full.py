@@ -51,6 +51,7 @@ class OneDimensionalX(BaseThermal):
         # Fourier's law for heat flux
         q = -self.param.lambda_k * pybamm.grad(T)
 
+        # N.B only y-z surface cooling is implemented for this model
         self.rhs = {
             T: (-pybamm.div(q) / self.param.delta ** 2 + self.param.B * Q)
             / (self.param.C_th * self.param.rho_k)
