@@ -113,8 +113,8 @@ class CurrentCollector2D(BaseThermal):
 
         self.boundary_conditions = {
             T_av: {
-                "negative tab": -(h_tab_n_corrected * (T_av_n - T_amb), "Neumann"),
-                "positive tab": -(h_tab_p_corrected * (T_av_p - T_amb), "Neumann"),
+                "negative tab": (-h_tab_n_corrected * (T_av_n - T_amb), "Neumann"),
+                "positive tab": (-h_tab_p_corrected * (T_av_p - T_amb), "Neumann"),
             }
         }
 

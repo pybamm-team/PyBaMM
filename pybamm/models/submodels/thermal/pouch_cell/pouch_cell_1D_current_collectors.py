@@ -108,11 +108,11 @@ class CurrentCollector1D(BaseThermal):
         )
 
         top_edge_cooling_coefficient = (
-            self.param.h_edge / self.delta * non_tab_top_area / total_top_area
+            self.param.h_edge / self.param.delta * non_tab_top_area / total_top_area
         )
 
         bottom_edge_cooling_coefficient = (
-            self.param.h_edge / self.delta * total_top_area / total_top_area
+            self.param.h_edge / self.param.delta * total_top_area / total_top_area
         )
 
         total_top_cooling_coefficient = (
