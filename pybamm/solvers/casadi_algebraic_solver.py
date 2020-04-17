@@ -46,13 +46,20 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         t_eval : :class:`numpy.array`, size (k,)
             The times at which to compute the solution
         inputs : dict, optional
-            Any input parameters to pass to the model when solving
+            Any input parameters to pass to the model when solving. If any input
+            parameters that are present in the model are missing from "inputs", then
+            the solution will consist of `ProcessedSymbolicVariable` objects, which must
+            be provided with inputs to obtain their value.
         """
         y0 = model.y0
 
-        y = np.empty((len(y0), len(t_eval)))
+        y = None
 
         # Set up
+        # Record whether there are any symbolic inputs
+        has_symbolic_inputs = any(isinstance(v, casadi.MX) for v in inputs.values())
+
+        # Create casadi objects for the root-finder
         inputs = casadi.vertcat(*[x for x in inputs.values()])
         t_sym = casadi.MX.sym("t")
         y_sym = casadi.MX.sym("y_alg", y0.shape[0])
@@ -71,17 +78,23 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         for idx, t in enumerate(t_eval):
             # Evaluate algebraic with new t and previous y0, if it's already close
             # enough then keep it
-            if np.all(abs(model.algebraic_eval(t, y0, inputs)) < self.tol):
+            # We can't do this if there are symbolic inputs
+            if has_symbolic_inputs is False and np.all(
+                abs(model.casadi_algebraic(t, y0, inputs).full()) < self.tol
+            ):
                 pybamm.logger.debug(
                     "Keeping same solution at t={}".format(t * model.timescale_eval)
                 )
-                y[:, idx] = y0
-            # Otherwise calculate new y0
+                if y is None:
+                    y = y0
+                else:
+                    y = casadi.horzcat(y, y0)
+            # Otherwise calculate new y_sol
             else:
                 t_inputs = casadi.vertcat(t, inputs)
                 # Solve
                 try:
-                    y_sol = roots(y0, t_inputs).full().flatten()
+                    y_sol = roots(y0, t_inputs)
                     success = True
                     message = None
                     # Check final output
@@ -91,11 +104,18 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                     message = err.args[0]
                     fun = None
 
-                if success and np.all(casadi.fabs(fun) < self.tol):
+                # If there are no symbolic inputs, check the function is below the tol
+                # Skip this check if there are symbolic inputs
+                if success and (
+                    has_symbolic_inputs is True or np.all(casadi.fabs(fun) < self.tol)
+                ):
                     # update initial guess for the next iteration
                     y0 = y_sol
                     # update solution array
-                    y[:, idx] = y_sol
+                    if y is None:
+                        y = y_sol
+                    else:
+                        y = casadi.horzcat(y, y_sol)
                 elif not success:
                     raise pybamm.SolverError(
                         "Could not find acceptable solution: {}".format(message)
