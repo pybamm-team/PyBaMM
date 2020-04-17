@@ -9,6 +9,22 @@ import unittest
 
 
 class TestFiniteVolumeConvergence(unittest.TestCase):
+    def test_grad_div_broadcast(self):
+        # create mesh and discretisation
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+        mesh = get_mesh_for_testing()
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        a = pybamm.PrimaryBroadcast(1, "negative electrode")
+        grad_a = disc.process_symbol(pybamm.grad(a))
+        np.testing.assert_array_equal(grad_a.evaluate(), 0)
+
+        div_a = disc.process_symbol(pybamm.div(a))
+        np.testing.assert_array_equal(div_a.evaluate(), 0)
+
+        div_grad_a = disc.process_symbol(pybamm.div(pybamm.grad(a)))
+        np.testing.assert_array_equal(div_grad_a.evaluate(), 0)
+
     def test_cartesian_spherical_grad_convergence(self):
         # note that grad function is the same for cartesian and spherical
         spatial_methods = {"macroscale": pybamm.FiniteVolume()}

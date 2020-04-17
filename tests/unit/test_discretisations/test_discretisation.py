@@ -601,6 +601,9 @@ class TestDiscretise(unittest.TestCase):
 
         combined_submesh = mesh.combine_submeshes(*whole_cell)
         disc.process_model(model)
+        # Processing twice should work
+        disc = get_discretisation_for_testing()
+        disc.process_model(model)
 
         y0 = model.concatenated_initial_conditions.evaluate()
         np.testing.assert_array_equal(

@@ -310,6 +310,12 @@ class Gradient(SpatialOperator):
     """
 
     def __init__(self, child):
+        if child.domain == []:
+            raise pybamm.DomainError(
+                "Cannot take gradient of '{}' since its domain is empty. ".format(child)
+                + "Try broadcasting the object first, e.g.\n\n"
+                "\tpybamm.grad(pybamm.PrimaryBroadcast(symbol, 'domain'))"
+            )
         super().__init__("grad", child)
 
     def evaluates_on_edges(self):
@@ -324,6 +330,14 @@ class Divergence(SpatialOperator):
     """
 
     def __init__(self, child):
+        if child.domain == []:
+            raise pybamm.DomainError(
+                "Cannot take divergence of '{}' since its domain is empty. ".format(
+                    child
+                )
+                + "Try broadcasting the object first, e.g.\n\n"
+                "\tpybamm.div(pybamm.PrimaryBroadcast(symbol, 'domain'))"
+            )
         super().__init__("div", child)
 
     def evaluates_on_edges(self):

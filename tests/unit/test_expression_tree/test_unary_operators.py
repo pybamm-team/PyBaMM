@@ -52,9 +52,20 @@ class TestUnaryOperators(unittest.TestCase):
         )
 
     def test_gradient(self):
+        # gradient of scalar symbol should fail
         a = pybamm.Symbol("a")
+        with self.assertRaisesRegex(
+            pybamm.DomainError, "Cannot take gradient of 'a' since its domain is empty"
+        ):
+            pybamm.Gradient(a)
+
+        # gradient of broadcast should return broadcasted zero
+        a = pybamm.Symbol("a", domain="test domain")
         grad = pybamm.Gradient(a)
         self.assertEqual(grad.children[0].name, a.name)
+        self.assertEqual(grad.domain, a.domain)
+
+        # gradient of variable should work
 
     def test_integral(self):
         # time integral
