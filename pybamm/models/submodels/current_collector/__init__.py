@@ -4,6 +4,7 @@ from .homogeneous_current_collector import Uniform
 from .effective_resistance_current_collector import (
     EffectiveResistance1D,
     EffectiveResistance2D,
+    AlternativeEffectiveResistance2D,
 )
 from .single_particle_potential_pair import SingleParticlePotentialPair
 from .potential_pair import (

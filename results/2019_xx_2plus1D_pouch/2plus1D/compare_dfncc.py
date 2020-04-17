@@ -14,7 +14,8 @@ matplotlib.rc_file(
 )
 
 # load current collector and DFN models
-cc_model = pybamm.current_collector.EffectiveResistance2D()
+# cc_model = pybamm.current_collector.EffectiveResistance2D()
+cc_model = pybamm.current_collector.AlternativeEffectiveResistance2D()
 dfn_av = pybamm.lithium_ion.DFN(name="Average DFN")
 dfn = pybamm.lithium_ion.DFN(
     {"current collector": "potential pair", "dimensionality": 2}, name="2+1D DFN"
@@ -112,6 +113,10 @@ R_cp = param.process_symbol(
 R_cc = param.process_symbol(
     cc_model.variables["Effective current collector resistance"]
 ).evaluate(t=solutions["Current collector"].t, y=solutions["Current collector"].y)[0][0]
+
+import ipdb
+
+ipdb.set_trace()
 # plot potentials in current collector
 
 # get processed potentials from DFNCC
@@ -138,18 +143,7 @@ potentials = cc_model.get_processed_potentials(
 )
 phi_s_cn_dfncc = potentials["Negative current collector potential [V]"]
 phi_s_cp_dfncc = potentials["Positive current collector potential [V]"]
-R_cn = pybamm.ProcessedVariable(
-    cc_model.variables["Negative current collector resistance"],
-    solutions["Current collector"].t,
-    solutions["Current collector"].y,
-    mesh=meshes["Current collector"],
-)
-R_cp = pybamm.ProcessedVariable(
-    cc_model.variables["Positive current collector resistance"],
-    solutions["Current collector"].t,
-    solutions["Current collector"].y,
-    mesh=meshes["Current collector"],
-)
+
 
 # get processed potentials from 2+1D DFN
 phi_s_cn = pybamm.ProcessedVariable(
