@@ -1,5 +1,5 @@
 #
-# Compare thermal and isothermal lithium-ion battery models, with comsol models
+# Compare pybamm lithium-ion battery model with comsol model
 #
 import pybamm
 import numpy as np
@@ -11,61 +11,63 @@ import scipy.interpolate as interp
 os.chdir(pybamm.root_dir())
 
 "-----------------------------------------------------------------------------"
-"Create and solve pybamm models"
+"Create and solve pybamm model"
 
-# load models
-models = [
-    pybamm.lithium_ion.DFN({"thermal": "isothermal"}, name="PyBaMM: isothermal"),
-    pybamm.lithium_ion.DFN({"thermal": "x-full"}, name="PyBaMM: thermal"),
-]
+# load model (x-full refers to solving the full PDE for T)
+model = pybamm.lithium_ion.DFN({"thermal": "x-full"}, name="PyBaMM")
 
-# load parameter values and process models and geometry
-param = models[0].default_parameter_values
+# load parameter values and process model
+param = model.default_parameter_values
 C_rate = 1
 param.update({"C-rate": C_rate})
-for model in models:
-    param.process_model(model)
+param.process_model(model)
+
+# create geometry
+geometry = model.default_geometry
+param.process_geometry(geometry)
 
 # set mesh
 var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 101, var.x_s: 31, var.x_p: 101, var.r_n: 31, var.r_p: 31}
+var_pts = {
+    var.x_n: int(param.evaluate(pybamm.geometric_parameters.L_n / 1e-6)),
+    var.x_s: int(param.evaluate(pybamm.geometric_parameters.L_s / 1e-6)),
+    var.x_p: int(param.evaluate(pybamm.geometric_parameters.L_p / 1e-6)),
+    var.r_n: int(param.evaluate(pybamm.geometric_parameters.R_n / 1e-7)),
+    var.r_p: int(param.evaluate(pybamm.geometric_parameters.R_p / 1e-7)),
+}
+mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
 
-# discretise models
-for model in models:
-    # create geometry
-    geometry = model.default_geometry
-    param.process_geometry(geometry)
-    mesh = pybamm.Mesh(geometry, models[-1].default_submesh_types, var_pts)
-    disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-    disc.process_model(model)
+# discretise model
+disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+disc.process_model(model)
 
 # solve model
 tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
-solutions = [None] * len(models)
 t_eval = np.linspace(0, 3600 / tau / C_rate, 60)
-for i, model in enumerate(models):
-    solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6, mode="fast")
-    solutions[i] = solver.solve(model, t_eval)
+solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6, mode="fast")
+solution = solver.solve(model, t_eval)
 
+# variables for plotting
 output_variables = [
     "Negative electrode potential [V]",
-    # "Positive electrode potential [V]",
+    "Positive electrode potential [V]",
     "Negative electrode current density [A.m-2]",
-    # "Positive electrode current density [A.m-2]",
+    "Positive electrode current density [A.m-2]",
     "Electrolyte concentration [mol.m-3]",
     "Electrolyte potential [V]",
-    # "Terminal voltage [V]",
-    # "Volume-averaged cell temperature [K]",
+    "Terminal voltage [V]",
+    "Volume-averaged cell temperature [K]",
 ]
 
 "-----------------------------------------------------------------------------"
-"Make Comsol 'models' for comparison"
+"Make Comsol 'model' for comparison"
 
 
 def make_comsol_model(comsol_variables, name):
     whole_cell = ["negative electrode", "separator", "positive electrode"]
     comsol_t = comsol_variables["time"]
     L_x = param.evaluate(pybamm.standard_parameters_lithium_ion.L_x)
+    interp_kind = "cubic"
 
     def get_interp_fun(variable_name, domain):
         """
@@ -84,10 +86,14 @@ def make_comsol_model(comsol_variables, name):
             comsol_x = comsol_variables["x"]
         # Make sure to use dimensional space
         pybamm_x = mesh.combine_submeshes(*domain)[0].nodes * L_x
-        variable = interp.interp1d(comsol_x, variable, axis=0)(pybamm_x)
+        variable = interp.interp1d(comsol_x, variable, axis=0, kind=interp_kind)(
+            pybamm_x
+        )
 
         def myinterp(t):
-            return interp.interp1d(comsol_t, variable)(t)[:, np.newaxis]
+            return interp.interp1d(comsol_t, variable, kind=interp_kind)(t)[
+                :, np.newaxis
+            ]
 
         # Make sure to use dimensional time
         fun = pybamm.Function(myinterp, pybamm.t * tau, name=variable_name + "_comsol")
@@ -104,10 +110,12 @@ def make_comsol_model(comsol_variables, name):
     comsol_i_s_p = get_interp_fun("i_s_p", ["positive electrode"])
     comsol_i_e_n = get_interp_fun("i_e_n", ["negative electrode"])
     comsol_i_e_p = get_interp_fun("i_e_p", ["positive electrode"])
-    comsol_voltage = interp.interp1d(comsol_t, comsol_variables["voltage"])
+    comsol_voltage = interp.interp1d(
+        comsol_t, comsol_variables["voltage"], kind=interp_kind
+    )
     try:
         comsol_temperature_av = interp.interp1d(
-            comsol_t, comsol_variables["average temperature"]
+            comsol_t, comsol_variables["average temperature"], kind=interp_kind
         )
     except KeyError:
         # isothermal
@@ -127,33 +135,30 @@ def make_comsol_model(comsol_variables, name):
         "Positive electrode current density [A.m-2]": comsol_i_s_p,
         "Negative electrode electrolyte current density [A.m-2]": comsol_i_e_n,
         "Positive electrode electrolyte current density [A.m-2]": comsol_i_e_p,
-        "Terminal voltage [V]": pybamm.Function(comsol_voltage, pybamm.t * tau),
+        "Terminal voltage [V]": pybamm.Function(
+            comsol_voltage, pybamm.t * tau, name="voltage_comsol"
+        ),
         "Volume-averaged cell temperature [K]": pybamm.Function(
-            comsol_temperature_av, pybamm.t * tau
+            comsol_temperature_av, pybamm.t * tau, name="temperature_comsol"
         ),
     }
 
     return comsol_model
 
 
-# Isothermal model
-comsol_variables = pickle.load(
-    open("input/comsol_results/comsol_isothermal_1C.pickle", "rb")
-)
-comsol_model_isothermal = make_comsol_model(comsol_variables, "COMSOL: isothermal")
-models.append(comsol_model_isothermal)
-solutions.append(solutions[0])
-
-# Thermal model
 comsol_variables = pickle.load(
     open("input/comsol_results/comsol_thermal_1C.pickle", "rb")
 )
-comsol_model_thermal = make_comsol_model(comsol_variables, "COMSOL: thermal")
-models.append(comsol_model_thermal)
-solutions.append(solutions[1])
+comsol_model = make_comsol_model(comsol_variables, "COMSOL")
 
 "-----------------------------------------------------------------------------"
 "Make plots"
 
-plot = pybamm.QuickPlot(models, mesh, solutions, output_variables=output_variables)
+plot = pybamm.QuickPlot(
+    [model, comsol_model],
+    mesh,
+    [solution, solution],
+    output_variables=output_variables,
+    linestyles=["-", ":"],
+)
 plot.dynamic_plot()

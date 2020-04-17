@@ -2,7 +2,6 @@ import pybamm
 import numpy as np
 import scipy.interpolate as interp
 import matplotlib.pyplot as plt
-import matplotlib.ticker
 
 
 def make_comsol_model(comsol_variables, mesh, param, z_interp=None, thermal=True):
@@ -17,7 +16,6 @@ def make_comsol_model(comsol_variables, mesh, param, z_interp=None, thermal=True
     tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
 
     # interpolate using *dimensional* space
-    L_x = param.evaluate(pybamm.standard_parameters_lithium_ion.L_x)
     L_z = param.evaluate(pybamm.standard_parameters_lithium_ion.L_z)
 
     if z_interp is None:
@@ -29,28 +27,16 @@ def make_comsol_model(comsol_variables, mesh, param, z_interp=None, thermal=True
         Interpolate in space to plotting nodes, and then create function to interpolate
         in time that can be called for plotting at any t.
         """
-        comsol_x = comsol_variables[variable_name + "_x"]
+
         comsol_z = comsol_variables[variable_name + "_z"]
         variable = comsol_variables[variable_name]
 
-        # can just use L_x as comsol has already x-averaged
-        grid_x, grid_z = np.meshgrid(L_x, z_interp)
-
-        # Note order of rows and cols!
-        interp_var = np.zeros((len(z_interp), len(comsol_x), variable.shape[1]))
-        for i in range(0, variable.shape[1]):
-            interp_var[:, :, i] = interp.griddata(
-                np.column_stack((comsol_x, comsol_z)),
-                variable[:, i],
-                (grid_x, grid_z),
-                method=interp_kind,
-            )
-
-        # average in x (to make the array the correct shape)
-        interp_var = np.nanmean(interp_var, axis=1)
+        variable = interp.interp1d(comsol_z, variable, axis=0, kind=interp_kind)(
+            z_interp
+        )
 
         def myinterp(t):
-            return interp.interp1d(comsol_t, interp_var, axis=1, kind=interp_kind)(t)[
+            return interp.interp1d(comsol_t, variable, kind=interp_kind)(t)[
                 :, np.newaxis
             ]
 

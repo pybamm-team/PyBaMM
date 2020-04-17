@@ -61,14 +61,6 @@ param.process_geometry(geometry)
 # create mesh
 var = pybamm.standard_spatial_vars
 var_pts = {var.x_n: 128, var.x_s: 128, var.x_p: 128, var.r_n: 128, var.r_p: 128}
-# var_pts = {var.x_n: 20, var.x_s: 20, var.x_p: 20, var.r_n: 30, var.r_p: 30}
-#var_pts = {
-#    var.x_n: int(param.evaluate(pybamm.geometric_parameters.L_n / 1e-6)),
-#    var.x_s: int(param.evaluate(pybamm.geometric_parameters.L_s / 1e-6)),
-#    var.x_p: int(param.evaluate(pybamm.geometric_parameters.L_n / 1e-6)),
-#    var.r_n: int(param.evaluate(pybamm.geometric_parameters.R_n / 1e-7)),
-#    var.r_p: int(param.evaluate(pybamm.geometric_parameters.R_p / 1e-7)),
-#}
 mesh = pybamm.Mesh(geometry, pybamm_model.default_submesh_types, var_pts)
 
 # discretise model
@@ -77,7 +69,6 @@ disc = pybamm.Discretisation(mesh, pybamm_model.default_spatial_methods)
 disc.process_model(pybamm_model, check_model=False)
 
 # solver
-# solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
 solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6, mode="fast")
 
 "-----------------------------------------------------------------------------"

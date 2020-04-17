@@ -39,16 +39,12 @@ geometry = pybamm_model.default_geometry
 
 # load parameters and process model and geometry
 param = pybamm_model.default_parameter_values
-param.update(
-    {"C-rate": 1,}
-)
+param.update({"C-rate": 1})
 param.process_model(pybamm_model)
 param.process_geometry(geometry)
 
 # create mesh
 var = pybamm.standard_spatial_vars
-# var_pts = {var.x_n: 101, var.x_s: 101, var.x_p: 101, var.r_n: 101, var.r_p: 101}
-# var_pts = {var.x_n: 45, var.x_s: 11, var.x_p: 56, var.r_n: 51, var.r_p: 51}
 var_pts = {
     var.x_n: int(param.evaluate(pybamm.geometric_parameters.L_n / 1e-6)),
     var.x_s: int(param.evaluate(pybamm.geometric_parameters.L_s / 1e-6)),
@@ -68,7 +64,6 @@ tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
 
 # solve model at comsol times
 time = comsol_variables["time"] / tau
-# solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
 solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6, mode="fast")
 solution = solver.solve(pybamm_model, time)
 
@@ -152,10 +147,12 @@ comsol_model.variables = {
     "Positive electrode current density [A.m-2]": comsol_i_s_p,
     "Negative electrolyte current density [A.m-2]": comsol_i_e_n,
     "Positive electrolyte current density [A.m-2]": comsol_i_e_p,
-    "Terminal voltage [V]": pybamm.Function(comsol_voltage, pybamm.t * tau),
+    "Terminal voltage [V]": pybamm.Function(
+        comsol_voltage, pybamm.t * tau, name="voltage_comsol"
+    ),
     "Cell temperature [K]": comsol_temperature,
     "Volume-averaged cell temperature [K]": pybamm.Function(
-        comsol_temperature_av, pybamm.t * tau
+        comsol_temperature_av, pybamm.t * tau, name="temperature_comsol"
     ),
     "Negative electrode irreversible electrochemical heating [W.m-3]": comsol_q_irrev_n,
     "Positive electrode irreversible electrochemical heating [W.m-3]": comsol_q_irrev_p,
@@ -183,7 +180,7 @@ x_edges = mesh.combine_submeshes(*whole_cell)[0].edges
 
 
 def electrode_comparison_plot(
-    var, labels, plot_times=None, eval_on_edges=False, sharex=False,
+    var, labels, plot_times=None, eval_on_edges=False, sharex=False
 ):
     """
     Plot pybamm variable against comsol variable (both defined separately in the
@@ -286,12 +283,10 @@ def electrode_comparison_plot(
             fillstyle="none",
         )
         ax[0, 1].plot(
-            x_p * L_x * 1e6, pybamm_var_p, "-", color=color, label="{:.0f} s".format(t),
+            x_p * L_x * 1e6, pybamm_var_p, "-", color=color, label="{:.0f} s".format(t)
         )
         error_p = np.abs(pybamm_var_p - comsol_var_p)
-        ax[1, 1].plot(
-            x_p * L_x * 1e6, error_p, "-", color=color,
-        )
+        ax[1, 1].plot(x_p * L_x * 1e6, error_p, "-", color=color)
 
     # force scientific notation outside 10^{+-2}
     ax[0, 0].ticklabel_format(style="sci", scilimits=(-2, 2), axis="y")
@@ -340,7 +335,7 @@ def electrode_comparison_plot(
 
 
 def whole_cell_comparison_plot(
-    var, labels, plot_times=None, eval_on_edges=False, sharex=False,
+    var, labels, plot_times=None, eval_on_edges=False, sharex=False
 ):
     """
     Plot pybamm variable against comsol variable (both defined over whole cell)
@@ -380,9 +375,7 @@ def whole_cell_comparison_plot(
 
     # Make plot
     fig, ax = plt.subplots(1, 2, sharex=sharex, figsize=(6.4, 2))
-    fig.subplots_adjust(
-        left=0.1, bottom=0.2, right=0.95, top=0.7, wspace=0.3,
-    )
+    fig.subplots_adjust(left=0.1, bottom=0.2, right=0.95, top=0.7, wspace=0.3)
     cmap = plt.get_cmap("inferno")
 
     # Loop over plot_times
@@ -460,15 +453,11 @@ labels = [
     r"$\phi^*_{\mathrm{s,n}}$ (difference) [V]",
     r"$\phi^*_{\mathrm{s,p}}$ (difference) [V]",
 ]
-electrode_comparison_plot(
-    var, labels, plot_times=plot_times,
-)
+electrode_comparison_plot(var, labels, plot_times=plot_times)
 plt.savefig("thermal1D_phi_s.eps", format="eps", dpi=1000)
 var = "Electrolyte potential [V]"
 labels = [r"$\phi^*_{\mathrm{e}}$ [V]", r"$\phi^*_{\mathrm{e}}$ (difference) [V]"]
-whole_cell_comparison_plot(
-    var, labels, plot_times=plot_times,
-)
+whole_cell_comparison_plot(var, labels, plot_times=plot_times)
 plt.savefig("thermal1D_phi_e.eps", format="eps", dpi=1000)
 
 # concentrations
@@ -479,17 +468,13 @@ labels = [
     r"$c^*_{\mathrm{s,n}}$ (difference) [mol/m${}^3$]",
     r"$c^*_{\mathrm{s,p}}$ (difference)  [mol/m${}^3$]",
 ]
-electrode_comparison_plot(
-    var, labels, plot_times=plot_times,
-)
+electrode_comparison_plot(var, labels, plot_times=plot_times)
 plt.savefig("thermal1D_c_surf.eps", format="eps", dpi=1000)
 var = "Electrolyte concentration [mol.m-3]"
 labels = [
     r"$c^*_{\mathrm{e}}$ [mol/m${}^3$]",
     r"$c^*_{\mathrm{e}}$ (difference) [mol/m${}^3$]",
 ]
-whole_cell_comparison_plot(
-    var, labels, plot_times=plot_times,
-)
+whole_cell_comparison_plot(var, labels, plot_times=plot_times)
 plt.savefig("thermal1D_c_e.eps", format="eps", dpi=1000)
 plt.show()

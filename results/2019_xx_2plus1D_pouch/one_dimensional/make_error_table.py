@@ -139,9 +139,11 @@ for i, model in enumerate(models):
         "Negative particle surface concentration [mol.m-3]": comsol_c_n_surf,
         "Positive particle surface concentration [mol.m-3]": comsol_c_p_surf,
         "Electrolyte concentration [mol.m-3]": comsol_c_e,
-        "Terminal voltage [V]": pybamm.Function(comsol_voltage, pybamm.t * tau),
+        "Terminal voltage [V]": pybamm.Function(
+            comsol_voltage, pybamm.t * tau, name="voltage_comsol"
+        ),
         "Volume-averaged cell temperature [K]": pybamm.Function(
-            comsol_temperature_av, pybamm.t * tau
+            comsol_temperature_av, pybamm.t * tau, name="temperature_comsol"
         ),
     }
 

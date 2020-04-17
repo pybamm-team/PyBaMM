@@ -337,7 +337,7 @@ class QuickPlot(object):
                             ),
                             lw=2,
                             color=colors[i],
-                            linestyle=linestyles[j],
+                            linestyle=linestyles[i],
                         )
             else:
                 # 1D plot: plot as a function of time, indicating time t with a line
@@ -350,7 +350,7 @@ class QuickPlot(object):
                             variable(full_t, warn=False),
                             lw=2,
                             color=colors[i],
-                            linestyle=linestyles[j],
+                            linestyle=linestyles[i],
                         )
                 y_min, y_max = self.axis[key][2:]
                 self.time_lines[key], = ax.plot(

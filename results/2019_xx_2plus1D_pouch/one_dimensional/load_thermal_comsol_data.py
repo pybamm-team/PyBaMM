@@ -17,14 +17,6 @@ paths = [
     "input/comsol_results_csv/thermal/1C/",
     "input/comsol_results_csv/thermal/2C/",
     "input/comsol_results_csv/thermal/3C/",
-    "input/comsol_results_csv/thermal/extremely_coarse/1C/",
-    "input/comsol_results_csv/thermal/extra_coarse/1C/",
-    "input/comsol_results_csv/thermal/coarser/1C/",
-    "input/comsol_results_csv/thermal/coarse/1C/",
-    "input/comsol_results_csv/thermal/normal/1C/",
-    "input/comsol_results_csv/thermal/fine/1C/",
-    "input/comsol_results_csv/thermal/finer/1C/",
-    "input/comsol_results_csv/thermal/extra_fine/1C/",
     "input/comsol_results_csv/thermal/extremely_fine/1C/",
 ]
 savefiles = [
@@ -32,14 +24,6 @@ savefiles = [
     "input/comsol_results/comsol_thermal_1C.pickle",
     "input/comsol_results/comsol_thermal_2C.pickle",
     "input/comsol_results/comsol_thermal_3C.pickle",
-    "input/comsol_results/comsol_thermal_1C_extremely_coarse.pickle",
-    "input/comsol_results/comsol_thermal_1C_extra_coarse.pickle",
-    "input/comsol_results/comsol_thermal_1C_coarser.pickle",
-    "input/comsol_results/comsol_thermal_1C_coarse.pickle",
-    "input/comsol_results/comsol_thermal_1C_normal.pickle",
-    "input/comsol_results/comsol_thermal_1C_fine.pickle",
-    "input/comsol_results/comsol_thermal_1C_finer.pickle",
-    "input/comsol_results/comsol_thermal_1C_extra_fine.pickle",
     "input/comsol_results/comsol_thermal_1C_extremely_fine.pickle",
 ]
 
