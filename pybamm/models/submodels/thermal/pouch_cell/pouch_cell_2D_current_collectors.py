@@ -60,11 +60,14 @@ class CurrentCollector2D(BaseThermal):
         # Account for surface area to volume ratio of pouch cell in cooling
         # coefficient. Note: the factor 1/delta^2 comes from the choice of
         # non-dimensionalisation
-        A = self.param.l_y * self.param.l_z
-        V = self.param.l * self.param.l_y * self.param.l_z
-        surface_cooling_coefficient = (
-            -(self.param.h_cn + self.param.h_cp) * A / V / (self.param.delta ** 2)
-        )  # cooling on the y-z surfaces
+        yz_surface_area = self.param.l_y * self.param.l_z
+        cell_volume = self.param.l * self.param.l_y * self.param.l_z
+        yz_surface_cooling_coefficient = (
+            -(self.param.h_cn + self.param.h_cp)
+            * yz_surface_area
+            / cell_volume
+            / (self.param.delta ** 2)
+        )
 
         edge_cooling_coefficient = self.param.h_edge / self.param.delta
 
@@ -77,7 +80,7 @@ class CurrentCollector2D(BaseThermal):
             T_av: (
                 pybamm.laplacian(T_av)
                 + self.param.B * pybamm.source(Q_av, T_av)
-                + surface_cooling_coefficient * pybamm.source(T_av - T_amb, T_av)
+                + yz_surface_cooling_coefficient * pybamm.source(T_av - T_amb, T_av)
                 - edge_cooling_coefficient
                 * pybamm.source(T_av - T_amb, T_av, boundary=True)
             )
