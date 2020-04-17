@@ -82,11 +82,13 @@ class TestCasadiSolver(unittest.TestCase):
         disc.process_model(model)
 
         solver = pybamm.CasadiSolver(regularity_check=False)
-
+        solver_old = pybamm.CasadiSolver(mode="old safe", regularity_check=False)
         # Solve with failure at t=2
         t_eval = np.linspace(0, 20, 100)
         with self.assertRaises(pybamm.SolverError):
             solver.solve(model, t_eval)
+        with self.assertRaises(pybamm.SolverError):
+            solver_old.solve(model, t_eval)
         # Solve with failure at t=0
         model.initial_conditions = {var: 0}
         disc.process_model(model)

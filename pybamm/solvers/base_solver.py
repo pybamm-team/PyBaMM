@@ -540,7 +540,7 @@ class BaseSolver(object):
             The model whose solution to calculate. Must have attributes rhs and
             initial_conditions
         t_eval : numeric type
-            The times at which to compute the solution
+            The times (in seconds) at which to compute the solution
         external_variables : dict
             A dictionary of external variables and their corresponding
             values at the current time
@@ -575,12 +575,6 @@ class BaseSolver(object):
         if (np.diff(t_eval) < 0).any():
             raise pybamm.SolverError("t_eval must increase monotonically")
 
-        # Non-dimensionalise t_eval
-
-        # Make sure t_eval is monotonic
-        if (np.diff(t_eval) < 0).any():
-            raise pybamm.SolverError("t_eval must increase monotonically")
-
         # Set up
         timer = pybamm.Timer()
 
@@ -602,7 +596,6 @@ class BaseSolver(object):
 
         # Non-dimensionalise time
         t_eval_dimensionless = t_eval / model.timescale_eval
-        # Solve
 
         # Calculate discontinuities
         discontinuities = [
@@ -746,7 +739,7 @@ class BaseSolver(object):
             The model whose solution to calculate. Must have attributes rhs and
             initial_conditions
         dt : numeric type
-            The timestep over which to step the solution
+            The timestep (in seconds) over which to step the solution
         npts : int, optional
             The number of points at which the solution will be returned during
             the step dt. default is 2 (returns the solution at t0 and t0 + dt).
@@ -808,6 +801,7 @@ class BaseSolver(object):
 
         # Non-dimensionalise dt
         dt_dimensionless = dt / model.timescale_eval
+
         # Step
         t_eval = np.linspace(t, t + dt_dimensionless, npts)
         pybamm.logger.info("Calling solver")

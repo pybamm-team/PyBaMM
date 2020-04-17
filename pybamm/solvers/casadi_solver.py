@@ -24,11 +24,11 @@ class CasadiSolver(pybamm.BaseSolver):
             - "fast": perform direct integration, without accounting for events. \
             Recommended when simulating a drive cycle or other simulation where \
             no events should be triggered.
-            - "safe": perform step-and-check integration in global steps of size
-             dt_max, checking whether events have been triggered. Recommended for \
-             simulations of a full charge or discharge.
-            - "old safe": perform step-and-check integration in stpes of size dt \
-             for each dt in t_eval, checking whether events have been triggered. \
+            - "safe": perform step-and-check integration in global steps of size \
+            dt_max, checking whether events have been triggered. Recommended for \
+            simulations of a full charge or discharge.
+            - "old safe": perform step-and-check integration in steps of size dt \
+            for each dt in t_eval, checking whether events have been triggered.
     rtol : float, optional
         The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
@@ -41,8 +41,9 @@ class CasadiSolver(pybamm.BaseSolver):
         The maximum number of times step size can be decreased before an error is
         raised. Default is 5.
     dt_max : float, optional
-        The maximum global step size used in "safe" mode. Note this is in
-        *non-dimensional* time. Default is 0.1.
+        The maximum global step size (in seconds) used in "safe" mode. If None
+        the default value corresponds to a non-dimensional time of 0.01
+        (i.e. ``0.01 * model.timescale_eval``).
     extra_options : keyword arguments, optional
         Any extra keyword-arguments; these are passed directly to the CasADi integrator.
         Please consult `CasADi documentation <https://tinyurl.com/y5rk76os>`_ for
@@ -58,7 +59,7 @@ class CasadiSolver(pybamm.BaseSolver):
         root_method="casadi",
         root_tol=1e-6,
         max_step_decrease_count=5,
-        dt_max=0.1,
+        dt_max=None,
         **extra_options,
     ):
         super().__init__("problem dependent", rtol, atol, root_method, root_tol)
@@ -75,15 +76,6 @@ class CasadiSolver(pybamm.BaseSolver):
         self.max_step_decrease_count = max_step_decrease_count
         self.dt_max = dt_max
         self.extra_options = extra_options
-
-        # When not in DEBUG mode (level=10), suppress warnings from CasADi
-        if (
-            pybamm.logger.getEffectiveLevel() == 10
-            or pybamm.settings.debug_mode is True
-        ):
-            self.show_eval_warnings = True
-        else:
-            self.show_eval_warnings = False
 
         self.name = "CasADi solver with '{}' mode".format(mode)
 
@@ -150,8 +142,13 @@ class CasadiSolver(pybamm.BaseSolver):
             # Try to integrate in global steps of size dt_max. Note: dt_max must
             # be at least as big as the the biggest step in t_eval (multiplied
             # by some tolerance, here 0.01) to avoid an empty integration window below
+            if self.dt_max:
+                # Non-dimensionalise provided dt_max
+                dt_max = self.dt_max / model.timescale_eval
+            else:
+                dt_max = 0.01
             dt_eval_max = np.max(np.diff(t_eval)) * 1.01
-            dt_max = np.max([self.dt_max, dt_eval_max])
+            dt_max = np.max([dt_max, dt_eval_max])
             while t < t_f:
                 # Step
                 solved = False
@@ -336,7 +333,6 @@ class CasadiSolver(pybamm.BaseSolver):
                     t += dt
                     # update y0
                     y0 = solution.y[:, -1]
-
             return solution
 
     def get_integrator(self, model, t_eval, inputs):
@@ -346,12 +342,21 @@ class CasadiSolver(pybamm.BaseSolver):
             rhs = model.casadi_rhs
             algebraic = model.casadi_algebraic
 
+            # When not in DEBUG mode (level=10), suppress warnings from CasADi
+            if (
+                pybamm.logger.getEffectiveLevel() == 10
+                or pybamm.settings.debug_mode is True
+            ):
+                show_eval_warnings = True
+            else:
+                show_eval_warnings = False
+
             options = {
                 "grid": t_eval,
                 "reltol": self.rtol,
                 "abstol": self.atol,
                 "output_t0": True,
-                "show_eval_warnings": self.show_eval_warnings,
+                "show_eval_warnings": show_eval_warnings,
             }
 
             # set up and solve
