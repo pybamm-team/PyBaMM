@@ -19,7 +19,8 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
         grad_a = disc.process_symbol(pybamm.grad(a))
         np.testing.assert_array_equal(grad_a.evaluate(), 0)
 
-        div_a = disc.process_symbol(pybamm.div(a))
+        a_edge = pybamm.PrimaryBroadcastToEdges(1, "negative electrode")
+        div_a = disc.process_symbol(pybamm.div(a_edge))
         np.testing.assert_array_equal(div_a.evaluate(), 0)
 
         div_grad_a = disc.process_symbol(pybamm.div(pybamm.grad(a)))
@@ -87,10 +88,10 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             disc = pybamm.Discretisation(mesh, spatial_methods)
             combined_submesh = mesh.combine_submeshes(*whole_cell)
             x = combined_submesh[0].nodes
-            x_edge = combined_submesh[0].edges
+            x_edge = pybamm.standard_spatial_vars.x_edge
 
             # Define flux and bcs
-            N = pybamm.Vector(x_edge ** 2 * np.cos(x_edge), domain=whole_cell)
+            N = x_edge ** 2 * pybamm.cos(x_edge)
             div_eqn = pybamm.div(N)
             # Define exact solutions
             # N = x**2 * cos(x) --> dNdx = x*(2cos(x) - xsin(x))
@@ -122,12 +123,10 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             disc = pybamm.Discretisation(mesh, spatial_methods)
             submesh = mesh["negative particle"]
             r = submesh[0].nodes
-            r_edge = submesh[0].edges
+            r_edge = pybamm.standard_spatial_vars.r_n_edge
 
             # Define flux and bcs
-            N = pybamm.Vector(
-                r_edge ** 2 * np.sin(r_edge), domain=["negative particle"]
-            )
+            N = r_edge ** 2 * pybamm.sin(r_edge)
             div_eqn = pybamm.div(N)
             # Define exact solutions
             # N = r**3 --> div(N) = 5 * r**2
@@ -159,10 +158,10 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             disc = pybamm.Discretisation(mesh, spatial_methods)
             submesh = mesh["negative particle"]
             r = submesh[0].nodes
-            r_edge = submesh[0].edges
+            r_edge = pybamm.standard_spatial_vars.r_n_edge
 
             # Define flux and bcs
-            N = pybamm.Vector(r_edge * np.sin(r_edge), domain=["negative particle"])
+            N = r_edge * pybamm.sin(r_edge)
             div_eqn = pybamm.div(N)
             # Define exact solutions
             # N = r*sin(r) --> div(N) = 3*sin(r) + r*cos(r)
@@ -222,7 +221,10 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
 
     def test_p2d_with_x_dep_bcs_spherical_convergence(self):
         # test div_r( (r**2 * sin(r)) * x ) == (4*r*sin(r) - r**2*cos(r)) * x
-        spatial_methods = {"negative particle": pybamm.FiniteVolume()}
+        spatial_methods = {
+            "negative particle": pybamm.FiniteVolume(),
+            "negative electrode": pybamm.FiniteVolume(),
+        }
 
         # Function for convergence testing
         def get_error(m):
@@ -231,18 +233,15 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             disc = pybamm.Discretisation(mesh, spatial_methods)
             submesh_r = mesh["negative particle"]
             r = submesh_r[0].nodes
-            r_edge = submesh_r[0].edges
-            x = pybamm.Vector(mesh["negative electrode"][0].nodes)
+            r_edge = pybamm.standard_spatial_vars.r_n_edge
+            x = pybamm.standard_spatial_vars.x_n
 
-            N = pybamm.Matrix(
-                np.kron(x.entries[:, 0], r_edge ** 2 * np.sin(r_edge)),
-                domain=["negative particle"],
-            )
+            N = pybamm.PrimaryBroadcast(x, "negative particle") * r_edge
             div_eqn = pybamm.div(N)
             # Define exact solutions
             # N = r**2*sin(r) --> div(N) = 4*r*sin(r) - r**2*cos(r)
             div_exact = 4 * r * np.sin(r) + r ** 2 * np.cos(r)
-            div_exact = np.kron(x.entries[:, 0], div_exact)
+            div_exact = np.kron(mesh["negative electrode"][0].nodes, div_exact)
 
             # Discretise and evaluate
             div_eqn_disc = disc.process_symbol(div_eqn)

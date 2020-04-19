@@ -213,6 +213,11 @@ class TestMesh(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.DomainError, "trying"):
             mesh.combine_submeshes("negative electrode", "negative particle")
 
+        with self.assertRaisesRegex(
+            ValueError, "Submesh domains being combined cannot be empty"
+        ):
+            mesh.combine_submeshes()
+
     def test_ghost_cells(self):
         param = pybamm.ParameterValues(
             values={

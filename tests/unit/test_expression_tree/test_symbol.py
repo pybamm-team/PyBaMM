@@ -328,8 +328,7 @@ class TestSymbol(unittest.TestCase):
     def test_has_spatial_derivatives(self):
         var = pybamm.Variable("var", domain="test")
         grad_eqn = pybamm.grad(var)
-        var2 = pybamm.PrimaryBroadcastToEdges(pybamm.Variable("var2"), "test")
-        div_eqn = pybamm.div(var2)
+        div_eqn = pybamm.div(pybamm.standard_spatial_vars.x_edge)
         grad_div_eqn = pybamm.div(grad_eqn)
         algebraic_eqn = 2 * var + 3
         self.assertTrue(grad_eqn.has_symbol_of_classes(pybamm.Gradient))

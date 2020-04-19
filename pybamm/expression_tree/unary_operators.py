@@ -345,7 +345,7 @@ class Divergence(SpatialOperator):
         if child.evaluates_on_edges() is False:
             raise TypeError(
                 "Cannot take divergence of '{}' since it does not ".format(child)
-                + "evaluate on edges. Usually, a gradient should be taken before the "
+                + "evaluates on nodes. Usually, a gradient should be taken before the "
                 "divergence."
             )
         super().__init__("div", child)
@@ -838,8 +838,12 @@ def grad(expression):
     :class:`Gradient`
         the gradient of ``expression``
     """
-
-    return Gradient(expression)
+    # Gradient of a broadcast is zero
+    if isinstance(expression, pybamm.PrimaryBroadcast):
+        new_child = pybamm.PrimaryBroadcast(0, expression.child.domain)
+        return pybamm.PrimaryBroadcastToEdges(new_child, expression.domain)
+    else:
+        return Gradient(expression)
 
 
 def div(expression):
@@ -857,8 +861,12 @@ def div(expression):
     :class:`Divergence`
         the divergence of ``expression``
     """
-
-    return Divergence(expression)
+    # Divergence of a broadcast is zero
+    if isinstance(expression, pybamm.PrimaryBroadcastToEdges):
+        new_child = pybamm.PrimaryBroadcast(0, expression.child.domain)
+        return pybamm.PrimaryBroadcast(new_child, expression.domain)
+    else:
+        return Divergence(expression)
 
 
 def laplacian(expression):

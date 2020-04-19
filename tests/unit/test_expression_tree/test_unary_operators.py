@@ -59,13 +59,49 @@ class TestUnaryOperators(unittest.TestCase):
         ):
             pybamm.Gradient(a)
 
+        # gradient of variable evaluating on edges should fail
+        a = pybamm.PrimaryBroadcastToEdges(pybamm.Scalar(1), "test")
+        with self.assertRaisesRegex(TypeError, "evaluates on edges"):
+            pybamm.Gradient(a)
+
         # gradient of broadcast should return broadcasted zero
+        a = pybamm.PrimaryBroadcast(pybamm.Variable("a"), "test domain")
+        grad = pybamm.grad(a)
+        self.assertIsInstance(grad, pybamm.PrimaryBroadcastToEdges)
+        self.assertIsInstance(grad.child, pybamm.Scalar)
+        self.assertEqual(grad.child.value, 0)
+
+        # otherwise gradient should work
         a = pybamm.Symbol("a", domain="test domain")
         grad = pybamm.Gradient(a)
         self.assertEqual(grad.children[0].name, a.name)
         self.assertEqual(grad.domain, a.domain)
 
-        # gradient of variable should work
+    def test_div(self):
+        # divergence of scalar symbol should fail
+        a = pybamm.Symbol("a")
+        with self.assertRaisesRegex(
+            pybamm.DomainError,
+            "Cannot take divergence of 'a' since its domain is empty",
+        ):
+            pybamm.Divergence(a)
+
+        # divergence of variable evaluating on edges should fail
+        a = pybamm.PrimaryBroadcast(pybamm.Scalar(1), "test")
+        with self.assertRaisesRegex(TypeError, "evaluates on nodes"):
+            pybamm.Divergence(a)
+
+        # divergence of broadcast should return broadcasted zero
+        a = pybamm.PrimaryBroadcastToEdges(pybamm.Variable("a"), "test domain")
+        div = pybamm.div(a)
+        self.assertIsInstance(div, pybamm.PrimaryBroadcast)
+        self.assertIsInstance(div.child, pybamm.Scalar)
+        self.assertEqual(div.child.value, 0)
+
+        # otherwise divergence should work
+        a = pybamm.Symbol("a", domain="test domain")
+        div = pybamm.Divergence(pybamm.Gradient(a))
+        self.assertEqual(div.domain, a.domain)
 
     def test_integral(self):
         # time integral
