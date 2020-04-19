@@ -254,11 +254,11 @@ class TestScipySolver(unittest.TestCase):
             mesh = get_mesh_for_testing()
             spatial_methods = {"macroscale": pybamm.FiniteVolume()}
             disc = pybamm.Discretisation(mesh, spatial_methods)
-            disc.process_model(model)
+            model_disc = disc.process_model(model, inplace=False)
             # Solve
             solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
             t_eval = np.linspace(0, 10, 100)
-            solution = solver.solve(model, t_eval)
+            solution = solver.solve(model_disc, t_eval)
             self.assertLess(len(solution.t), len(t_eval))
             np.testing.assert_array_equal(solution.t, t_eval[: len(solution.t)])
             np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))

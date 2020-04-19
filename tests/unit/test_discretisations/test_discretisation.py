@@ -475,12 +475,11 @@ class TestDiscretise(unittest.TestCase):
         disc.set_variable_slices(variables)
 
         # Simple expressions
-        for eqn in [pybamm.grad(var), pybamm.div(var)]:
+        for eqn in [pybamm.grad(var), pybamm.div(pybamm.grad(var))]:
             eqn_disc = disc.process_symbol(eqn)
 
             self.assertIsInstance(eqn_disc, pybamm.MatrixMultiplication)
             self.assertIsInstance(eqn_disc.children[0], pybamm.Matrix)
-            self.assertIsInstance(eqn_disc.children[1], pybamm.StateVector)
 
             combined_submesh = mesh.combine_submeshes(*whole_cell)
             y = combined_submesh[0].nodes ** 2
@@ -491,14 +490,13 @@ class TestDiscretise(unittest.TestCase):
             )
 
         # More complex expressions
-        for eqn in [var * pybamm.grad(var), var * pybamm.div(var)]:
+        for eqn in [var * pybamm.grad(var), var * pybamm.div(pybamm.grad(var))]:
             eqn_disc = disc.process_symbol(eqn)
 
             self.assertIsInstance(eqn_disc, pybamm.Multiplication)
             self.assertIsInstance(eqn_disc.children[0], pybamm.StateVector)
             self.assertIsInstance(eqn_disc.children[1], pybamm.MatrixMultiplication)
             self.assertIsInstance(eqn_disc.children[1].children[0], pybamm.Matrix)
-            self.assertIsInstance(eqn_disc.children[1].children[1], pybamm.StateVector)
 
             y = combined_submesh[0].nodes ** 2
             var_disc = disc.process_symbol(var)
@@ -601,10 +599,6 @@ class TestDiscretise(unittest.TestCase):
 
         combined_submesh = mesh.combine_submeshes(*whole_cell)
         disc.process_model(model)
-
-        # We cannot re-discretise after discretising a first time
-        with self.assertRaisesRegex(pybamm.ModelError, "Cannot re-discretise a model"):
-            disc.process_model(model)
 
         y0 = model.concatenated_initial_conditions.evaluate()
         np.testing.assert_array_equal(
@@ -766,7 +760,6 @@ class TestDiscretise(unittest.TestCase):
         mesh = disc.mesh
 
         disc.process_model(model)
-
         combined_submesh = mesh.combine_submeshes(*whole_cell)
 
         y0 = model.concatenated_initial_conditions.evaluate()

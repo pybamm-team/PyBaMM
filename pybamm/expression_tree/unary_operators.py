@@ -316,6 +316,10 @@ class Gradient(SpatialOperator):
                 + "Try broadcasting the object first, e.g.\n\n"
                 "\tpybamm.grad(pybamm.PrimaryBroadcast(symbol, 'domain'))"
             )
+        if child.evaluates_on_edges() is True:
+            raise TypeError(
+                "Cannot take gradient of '{}' since it evaluates on edges".format(child)
+            )
         super().__init__("grad", child)
 
     def evaluates_on_edges(self):
@@ -337,6 +341,12 @@ class Divergence(SpatialOperator):
                 )
                 + "Try broadcasting the object first, e.g.\n\n"
                 "\tpybamm.div(pybamm.PrimaryBroadcast(symbol, 'domain'))"
+            )
+        if child.evaluates_on_edges() is False:
+            raise TypeError(
+                "Cannot take divergence of '{}' since it does not ".format(child)
+                + "evaluate on edges. Usually, a gradient should be taken before the "
+                "divergence."
             )
         super().__init__("div", child)
 

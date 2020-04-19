@@ -197,7 +197,7 @@ class TestUnaryOperators(unittest.TestCase):
             spatial_a.diff(a)
 
     def test_printing(self):
-        a = pybamm.Symbol("a")
+        a = pybamm.Symbol("a", domain="test")
         self.assertEqual(str(-a), "-a")
         grad = pybamm.Gradient(a)
         self.assertEqual(grad.name, "grad")
