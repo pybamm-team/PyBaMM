@@ -64,6 +64,20 @@ class TestCompareOutputs(unittest.TestCase):
         for models in model_combos:
             # load parameter values (same for all models)
             param = models[0].default_parameter_values
+
+            # for x-full, cooling is only implemented on the surfaces
+            # so set other forms of cooling to zero for comparison.
+            param.update(
+                {
+                    "Negative current collector"
+                    + " surface heat transfer coefficient [W.m-2.K-1]": 5,
+                    "Positive current collector"
+                    + " surface heat transfer coefficient [W.m-2.K-1]": 5,
+                    "Negative tab heat transfer coefficient [W.m-2.K-1]": 0,
+                    "Positive tab heat transfer coefficient [W.m-2.K-1]": 0,
+                    "Edge heat transfer coefficient [W.m-2.K-1]": 0,
+                }
+            )
             for model in models:
                 param.process_model(model)
 
