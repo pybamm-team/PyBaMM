@@ -464,6 +464,7 @@ h_tab_n = pybamm.thermal_parameters.h_tab_n
 h_tab_p = pybamm.thermal_parameters.h_tab_p
 h_cn = pybamm.thermal_parameters.h_cn
 h_cp = pybamm.thermal_parameters.h_cp
+
 B = (
     i_typ
     * R

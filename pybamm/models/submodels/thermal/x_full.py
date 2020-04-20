@@ -63,14 +63,16 @@ class OneDimensionalX(BaseThermal):
         T_p_right = pybamm.boundary_value(T, "right")
         T_amb = variables["Ambient temperature"]
 
+        # N.B only y-z surface cooling is implemented for this thermal model.
+        # Tab and edge cooling is not accounted for.
         self.boundary_conditions = {
             T: {
                 "left": (
-                    self.param.h * (T_n_left - T_amb) / self.param.lambda_n,
+                    self.param.h_cn * (T_n_left - T_amb) / self.param.lambda_n,
                     "Neumann",
                 ),
                 "right": (
-                    -self.param.h * (T_p_right - T_amb) / self.param.lambda_p,
+                    -self.param.h_cp * (T_p_right - T_amb) / self.param.lambda_p,
                     "Neumann",
                 ),
             }
