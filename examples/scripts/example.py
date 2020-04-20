@@ -16,13 +16,13 @@ model = pybamm.lithium_ion.DFN(options=options)
 
 var = pybamm.standard_spatial_vars
 var_pts = {
-    var.x_n: 5,
-    var.x_s: 5,
-    var.x_p: 5,
-    var.r_n: 5,
-    var.r_p: 5,
-    var.y: 5,
-    var.z: 5,
+    var.x_n: 7,
+    var.x_s: 7,
+    var.x_p: 7,
+    var.r_n: 7,
+    var.r_p: 7,
+    var.y: 7,
+    var.z: 7,
 }
 
 # var_pts = None
