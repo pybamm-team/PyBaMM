@@ -646,13 +646,10 @@ def plot_tz_var(
     error_bar = np.abs(comsol_var - pybamm_bar_var)
 
     # plot time averaged error
-    if var_name in ["$\phi^*_{\mathrm{s,cn}}$", "$\mathcal{I}^*$"]:
-        ax[1, 0].set_yscale("log")
     ax[1, 0].plot(z_plot * 1e3, np.mean(error, axis=1), "k-", label=r"$1+1$D")
     ax[1, 0].plot(z_plot * 1e3, np.mean(error_bar, axis=1), "k:", label=r"$1+\bar{1}$D")
 
     # plot z averaged error
-    ax[1, 1].set_yscale("log")
     ax[1, 1].plot(t_plot, np.mean(error, axis=0), "k-", label=r"$1+1$D")
     ax[1, 1].plot(t_plot, np.mean(error_bar, axis=0), "k:", label=r"$1+\bar{1}$D")
 
@@ -660,7 +657,17 @@ def plot_tz_var(
     ax[0, 0].tick_params(which="both")
     ax[0, 1].tick_params(which="both")
     ax[1, 0].tick_params(which="both")
+    if var_name in ["$\mathcal{I}^*$"]:
+        ax[1, 0].set_yscale("log")
+        ax[1, 0].set_yticks = [1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1e-2, 1e-1, 1]
+    else:
+        ax[1, 0].ticklabel_format(style="sci", scilimits=(-2, 2), axis="y")
     ax[1, 1].tick_params(which="both")
+    if var_name in ["$\phi^*_{\mathrm{s,cn}}$"]:
+        ax[1, 0].ticklabel_format(style="sci", scilimits=(-2, 2), axis="y")
+    else:
+        ax[1, 1].set_yscale("log")
+        ax[1, 1].set_yticks = [1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1e-2, 1e-1, 1]
 
     # set labels
     ax[0, 0].set_xlabel(r"$z^*$ [mm]")
@@ -698,18 +705,18 @@ def plot_tz_var(
     ax[0, 1].add_artist(leg1)
 
     ax[1, 0].legend(
-        bbox_to_anchor=(0, 1.1, 1.0, 0.102),
-        loc="lower left",
+        bbox_to_anchor=(0.0, 1.1, 1.0, 0.102),
+        loc="lower right",
         borderaxespad=0.0,
         ncol=3,
-        mode="expand",
+        # mode="expand",
     )
     ax[1, 1].legend(
-        bbox_to_anchor=(0, 1.1, 1.0, 0.102),
-        loc="lower left",
+        bbox_to_anchor=(0.0, 1.1, 1.0, 0.102),
+        loc="lower right",
         borderaxespad=0.0,
         ncol=3,
-        mode="expand",
+        # mode="expand",
     )
     # ax[1, 0].legend(loc="best")
     # ax[1, 1].legend(loc="best")

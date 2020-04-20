@@ -26,30 +26,31 @@ class EffectiveResistance1D(pybamm.BaseModel):
         sigma_cp_dbl_prime = param.sigma_cp_dbl_prime
         delta = param.delta  # aspect ratio
 
-        # Set model variables
-        R_cn = pybamm.Variable(
-            "Negative current collector resistance", domain="current collector"
+        # Set model variables: Note: we solve using a scaled version that is
+        # better conditioned
+        R_cn_scaled = pybamm.Variable(
+            "Scaled negative current collector resistance", domain="current collector"
         )
-        R_cp = pybamm.Variable(
-            "positive current collector resistance", domain="current collector"
+        R_cp_scaled = pybamm.Variable(
+            "Scaled positive current collector resistance", domain="current collector"
         )
-
-        # We solve using a scaled version that is better conditioned
-        R_cn_scaled = R_cn * l_cn * sigma_cn_dbl_prime / delta
-        R_cp_scaled = R_cp * l_cp * sigma_cp_dbl_prime / delta
+        R_cn = delta * R_cn_scaled / (l_cn * sigma_cn_dbl_prime)
+        R_cp = delta * R_cp_scaled / (l_cp * sigma_cp_dbl_prime)
 
         # Governing equations
         self.algebraic = {
-            R_cn: pybamm.laplacian(R_cn_scaled) - 1,
-            R_cp: pybamm.laplacian(R_cp_scaled) - 1,
+            R_cn_scaled: pybamm.laplacian(R_cn_scaled) - 1,
+            R_cp_scaled: pybamm.laplacian(R_cp_scaled) - 1,
         }
 
         # Boundary conditons
         self.boundary_conditions = {
             R_cn_scaled: {
-                "negative tab": (0, "Dirichlet"),
-                "positive tab": (0, "Neumann"),
-                "no tab": (0, "Neumann"),
+                "left": (0, "Neumann"),
+                "right": (0, "Dirichlet"),
+                # "negative tab": (0, "Dirichlet"),
+                # "positive tab": (0, "Neumann"),
+                # "no tab": (0, "Neumann"),
             },
             R_cp_scaled: {
                 "negative tab": (0, "Neumann"),
@@ -59,7 +60,10 @@ class EffectiveResistance1D(pybamm.BaseModel):
         }
 
         # "Initial conditions" provides initial guess for solver
-        self.initial_conditions = {R_cn: pybamm.Scalar(0), R_cp: pybamm.Scalar(0)}
+        self.initial_conditions = {
+            R_cn_scaled: pybamm.Scalar(0),
+            R_cp_scaled: pybamm.Scalar(0),
+        }
 
         # Define effective current collector resistance
         R_cc_n = -pybamm.z_average(R_cn)
@@ -68,8 +72,10 @@ class EffectiveResistance1D(pybamm.BaseModel):
         R_scale = param.potential_scale / param.I_typ
 
         self.variables = {
+            "Scaled negative current collector resistance": R_cn_scaled,
             "Negative current collector resistance": R_cn,
             "Negative current collector resistance [Ohm]": R_cn * R_scale,
+            "Scaled positive current collector resistance": R_cp_scaled,
             "Positive current collector resistance": R_cp,
             "Positive current collector resistance [Ohm]": R_cp * R_scale,
             "Effective current collector resistance": R_cc,

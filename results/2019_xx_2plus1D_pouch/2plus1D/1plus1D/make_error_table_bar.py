@@ -189,10 +189,10 @@ for i, model in enumerate(models):
             )
 
         # compute RMS difference divided by RMS of comsol_var
-        # error = np.sqrt(np.nanmean((pybamm_var - comsol_var) ** 2)) / np.sqrt(
-        #    np.nanmean((comsol_var) ** 2)
-        # )
-        error = np.sqrt(np.nanmean((pybamm_var - comsol_var) ** 2))
+        error = np.sqrt(np.nanmean((pybamm_var - comsol_var) ** 2)) / np.sqrt(
+            np.nanmean((comsol_var) ** 2)
+        )
+        # error = np.sqrt(np.nanmean((pybamm_var - comsol_var) ** 2))
 
         return error
 

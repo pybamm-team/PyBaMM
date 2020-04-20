@@ -47,12 +47,12 @@ for name, model in models.items():
     # set npts
     var = pybamm.standard_spatial_vars
     var_pts = {
-        var.x_n: 15,
-        var.x_s: 10,
-        var.x_p: 15,
-        var.r_n: 15,
-        var.r_p: 15,
-        var.z: 10,
+        var.x_n: 16,
+        var.x_s: 16,
+        var.x_p: 16,
+        var.r_n: 16,
+        var.r_p: 16,
+        var.z: 16,
     }
     meshes[name] = pybamm.Mesh(geometry, submesh_types, var_pts)
     disc = pybamm.Discretisation(meshes[name], model.default_spatial_methods)
@@ -152,7 +152,18 @@ R_cp = pybamm.ProcessedVariable(
     solutions["Current collector"].y,
     mesh=meshes["Current collector"],
 )
-
+R_cn_scaled = pybamm.ProcessedVariable(
+    cc_model.variables["Scaled negative current collector resistance"],
+    solutions["Current collector"].t,
+    solutions["Current collector"].y,
+    mesh=meshes["Current collector"],
+)
+R_cp_scaled = pybamm.ProcessedVariable(
+    cc_model.variables["Scaled positive current collector resistance"],
+    solutions["Current collector"].t,
+    solutions["Current collector"].y,
+    mesh=meshes["Current collector"],
+)
 # get processed potentials from 2+1D DFN
 phi_s_cn = pybamm.ProcessedVariable(
     model.variables["Negative current collector potential [V]"],
@@ -170,6 +181,10 @@ phi_s_cp = pybamm.ProcessedVariable(
 # make plot
 l_z = phi_s_cp.z_sol[-1]
 z_plot = np.linspace(0, l_z, 21)
+
+import ipdb
+
+ipdb.set_trace()
 
 
 def plot(t):
