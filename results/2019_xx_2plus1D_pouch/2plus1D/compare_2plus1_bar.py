@@ -14,12 +14,13 @@ matplotlib.rc_file(
 )
 
 # load current collector and DFN models
-cc_model = pybamm.current_collector.EffectiveResistance1D()
+# cc_model = pybamm.current_collector.EffectiveResistance2D()
+cc_model = pybamm.current_collector.AlternativeEffectiveResistance2D()
 dfn_av = pybamm.lithium_ion.DFN(name="Average DFN")
 dfn = pybamm.lithium_ion.DFN(
-    {"current collector": "potential pair", "dimensionality": 1}, name="1+1D DFN"
+    {"current collector": "potential pair", "dimensionality": 2}, name="2+1D DFN"
 )
-models = {"Current collector": cc_model, "Average DFN": dfn_av, "1+1D DFN": dfn}
+models = {"Current collector": cc_model, "Average DFN": dfn_av, "2+1D DFN": dfn}
 
 # parameters
 param = dfn.default_parameter_values
@@ -44,14 +45,13 @@ for name, model in models.items():
     # set mesh
     var = pybamm.standard_spatial_vars
     submesh_types = model.default_submesh_types
-    # set npts
-    var = pybamm.standard_spatial_vars
     var_pts = {
-        var.x_n: 15,
-        var.x_s: 10,
-        var.x_p: 15,
-        var.r_n: 15,
-        var.r_p: 15,
+        var.x_n: 5,
+        var.x_s: 5,
+        var.x_p: 5,
+        var.r_n: 10,
+        var.r_p: 10,
+        var.y: 10,
         var.z: 10,
     }
     meshes[name] = pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -67,14 +67,13 @@ for name, model in models.items():
     if name == "Current collector":
         solutions[name] = model.default_solver.solve(model)
     else:
-        # solver
         solver = pybamm.CasadiSolver(
-            atol=1e-6, rtol=1e-6, root_tol=1e-3, root_method="hybr", mode="fast"
+            atol=1e-6, rtol=1e-6, root_tol=1e-3, root_method="krylov", mode="fast"
         )
         solutions[name] = solver.solve(model, t_eval)
 
 # plot terminal voltage
-for name in ["Average DFN", "1+1D DFN"]:
+for name in ["Average DFN", "2+1D DFN"]:
     t, y = solutions[name].t, solutions[name].y
     model = models[name]
     time = pybamm.ProcessedVariable(model.variables["Time [h]"], t, y)(t)
@@ -114,6 +113,8 @@ R_cp = param.process_symbol(
 R_cc = param.process_symbol(
     cc_model.variables["Effective current collector resistance"]
 ).evaluate(t=solutions["Current collector"].t, y=solutions["Current collector"].y)[0][0]
+
+
 # plot potentials in current collector
 
 # get processed potentials from DFNCC
@@ -140,35 +141,26 @@ potentials = cc_model.get_processed_potentials(
 )
 phi_s_cn_dfncc = potentials["Negative current collector potential [V]"]
 phi_s_cp_dfncc = potentials["Positive current collector potential [V]"]
-R_cn = pybamm.ProcessedVariable(
-    cc_model.variables["Negative current collector resistance"],
-    solutions["Current collector"].t,
-    solutions["Current collector"].y,
-    mesh=meshes["Current collector"],
-)
-R_cp = pybamm.ProcessedVariable(
-    cc_model.variables["Positive current collector resistance"],
-    solutions["Current collector"].t,
-    solutions["Current collector"].y,
-    mesh=meshes["Current collector"],
-)
+
 
 # get processed potentials from 2+1D DFN
 phi_s_cn = pybamm.ProcessedVariable(
     model.variables["Negative current collector potential [V]"],
-    solutions["1+1D DFN"].t,
-    solutions["1+1D DFN"].y,
-    mesh=meshes["1+1D DFN"],
+    solutions["2+1D DFN"].t,
+    solutions["2+1D DFN"].y,
+    mesh=meshes["2+1D DFN"],
 )
 phi_s_cp = pybamm.ProcessedVariable(
     model.variables["Positive current collector potential [V]"],
-    solutions["1+1D DFN"].t,
-    solutions["1+1D DFN"].y,
-    mesh=meshes["1+1D DFN"],
+    solutions["2+1D DFN"].t,
+    solutions["2+1D DFN"].y,
+    mesh=meshes["2+1D DFN"],
 )
 
 # make plot
+l_y = phi_s_cp.y_sol[-1]
 l_z = phi_s_cp.z_sol[-1]
+y_plot = np.linspace(0, l_y, 21)
 z_plot = np.linspace(0, l_z, 21)
 
 
@@ -183,10 +175,12 @@ def plot(t):
     def V_av_dim(t):
         return U_ref + V_av(t) * pot_scale
 
-    phi_s_cn_plot = phi_s_cn(z=z_plot, t=t)
-    dfncc_phi_s_cn_plot = phi_s_cn_dfncc(z=z_plot, t=t)
-    phi_s_cp_plot = phi_s_cp(z=z_plot, t=t) - V_av_dim(t)
-    dfncc_phi_s_cp_plot = phi_s_cp_dfncc(z=z_plot, t=t) - V_av_dim(t)
+    phi_s_cn_plot = np.transpose(phi_s_cn(y=y_plot, z=z_plot, t=t))
+    dfncc_phi_s_cn_plot = np.transpose(phi_s_cn_dfncc(y=y_plot, z=z_plot, t=t))
+    phi_s_cp_plot = np.transpose(phi_s_cp(y=y_plot, z=z_plot, t=t)) - V_av_dim(t)
+    dfncc_phi_s_cp_plot = np.transpose(
+        phi_s_cp_dfncc(y=y_plot, z=z_plot, t=t)
+    ) - V_av_dim(t)
     diff_phi_s_cn_plot = np.abs(dfncc_phi_s_cn_plot - phi_s_cn_plot)
     diff_phi_s_cp_plot = np.abs(dfncc_phi_s_cp_plot - phi_s_cp_plot)
 
@@ -196,10 +190,25 @@ def plot(t):
         left=0.1, bottom=0.1, right=0.95, top=0.9, wspace=0.3, hspace=0.5
     )
 
-    ax[0, 0].plot(z_plot * 1e3, dfncc_phi_s_cn_plot)
-    ax[0, 1].plot(z_plot * 1e3, dfncc_phi_s_cp_plot)
-    ax[1, 0].plot(z_plot * 1e3, diff_phi_s_cn_plot)
-    ax[1, 1].plot(z_plot * 1e3, diff_phi_s_cp_plot)
+    cmap_n = plt.get_cmap("cividis")
+    cmap_p = plt.get_cmap("viridis")
+
+    plot_phi_s_cn = ax[0, 0].pcolormesh(
+        y_plot * 1e3, z_plot * 1e3, dfncc_phi_s_cn_plot, shading="gouraud", cmap=cmap_n
+    )
+    plt.colorbar(plot_phi_s_cn, ax=ax[0, 0], format="%.0e")
+    plot_phi_s_cp = ax[0, 1].pcolormesh(
+        y_plot * 1e3, z_plot * 1e3, dfncc_phi_s_cp_plot, shading="gouraud", cmap=cmap_p
+    )
+    plt.colorbar(plot_phi_s_cp, ax=ax[0, 1], format="%.0e")
+    plot_diff_s_cn = ax[1, 0].pcolormesh(
+        y_plot * 1e3, z_plot * 1e3, diff_phi_s_cn_plot, shading="gouraud", cmap=cmap_n
+    )
+    plt.colorbar(plot_diff_s_cn, ax=ax[1, 0], format="%.0e")
+    plot_diff_s_cp = ax[1, 1].pcolormesh(
+        y_plot * 1e3, z_plot * 1e3, diff_phi_s_cp_plot, shading="gouraud", cmap=cmap_p
+    )
+    plt.colorbar(plot_diff_s_cp, ax=ax[1, 1], format="%.0e")
 
     # set ticks
     ax[0, 0].tick_params(which="both")
@@ -208,14 +217,18 @@ def plot(t):
     ax[1, 1].tick_params(which="both")
 
     # set labels
-    ax[0, 0].set_xlabel(r"$z^*$ [mm]")
-    ax[0, 0].set_ylabel(r"$\phi^*_{\mathrm{s,cn}}$ [V]")
-    ax[0, 1].set_xlabel(r"$z^*$ [mm]")
-    ax[0, 1].set_ylabel(r"$\phi^*_{\mathrm{s,cp}} - V^*$ [V]")
-    ax[1, 0].set_xlabel(r"$z^*$ [mm]")
-    ax[1, 0].set_ylabel(r"$\phi^*_{\mathrm{s,cn}}$ (difference) [V]")
-    ax[1, 1].set_xlabel(r"$z^*$ [mm]")
-    ax[1, 1].set_ylabel(r"$\phi^*_{\mathrm{s,cp}}$ (difference) [V]")
+    ax[0, 0].set_xlabel(r"$y^*$ [mm]")
+    ax[0, 0].set_ylabel(r"$z^*$ [mm]")
+    ax[0, 0].set_title(r"$\phi^*_{\mathrm{s,cn}}$ [V]")
+    ax[0, 1].set_xlabel(r"$y^*$ [mm]")
+    ax[0, 1].set_ylabel(r"$z^*$ [mm]")
+    ax[0, 1].set_title(r"$\phi^*_{\mathrm{s,cp}} - V^*$ [V]")
+    ax[1, 0].set_xlabel(r"$y^*$ [mm]")
+    ax[1, 0].set_ylabel(r"$z^*$ [mm]")
+    ax[1, 0].set_title(r"Error in $\phi^*_{\mathrm{s,cn}}$ [V]")
+    ax[1, 1].set_xlabel(r"$y^*$ [mm]")
+    ax[1, 1].set_ylabel(r"$z^*$ [mm]")
+    ax[1, 1].set_title(r"Error in $\phi^*_{\mathrm{s,cp}}$ [V]")
 
     ax[0, 0].text(-0.1, 1.1, "(a)", transform=ax[0, 0].transAxes)
     ax[0, 1].text(-0.1, 1.1, "(b)", transform=ax[0, 1].transAxes)
@@ -223,7 +236,7 @@ def plot(t):
     ax[1, 1].text(-0.1, 1.1, "(d)", transform=ax[1, 1].transAxes)
 
 
-plot(solutions["1+1D DFN"].t[-1] / 2)
+plot(solutions["2+1D DFN"].t[-1] / 2)
 plt.savefig("dfncc_pots.pdf", format="pdf", dpi=1000)
 
 plt.show()

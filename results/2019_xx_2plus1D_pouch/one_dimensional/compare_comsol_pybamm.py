@@ -146,9 +146,7 @@ def make_comsol_model(comsol_variables, name):
     return comsol_model
 
 
-comsol_variables = pickle.load(
-    open("input/comsol_results/comsol_thermal_1C.pickle", "rb")
-)
+comsol_variables = pickle.load(open("input/comsol_results/comsol_1D_1C.pickle", "rb"))
 comsol_model = make_comsol_model(comsol_variables, "COMSOL")
 
 "-----------------------------------------------------------------------------"

@@ -80,7 +80,7 @@ interp_kind = "cubic"
 for key, value in C_rates.items():
     # load comsol_model
     comsol_variables = pickle.load(
-        open("input/comsol_results/comsol_thermal_{}C.pickle".format(key), "rb")
+        open("input/comsol_results/comsol_1D_{}C.pickle".format(key), "rb")
     )
     comsol_t = comsol_variables["time"]
     comsol_voltage = interp.interp1d(

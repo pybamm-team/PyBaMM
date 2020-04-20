@@ -23,7 +23,7 @@ matplotlib.rc_file(
 
 try:
     comsol_variables = pickle.load(
-        open("input/comsol_results/comsol_thermal_1C.pickle", "rb")
+        open("input/comsol_results/comsol_1D_1C.pickle", "rb")
     )
 except FileNotFoundError:
     raise FileNotFoundError("COMSOL data not found. Try running load_comsol_data.py")

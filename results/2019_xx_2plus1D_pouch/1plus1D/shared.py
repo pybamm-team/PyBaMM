@@ -30,10 +30,14 @@ def make_comsol_model(comsol_variables, mesh, param, z_interp=None, thermal=True
 
         comsol_z = comsol_variables[variable_name + "_z"]
         variable = comsol_variables[variable_name]
+        try:
+            variable = interp.interp1d(comsol_z, variable, axis=0, kind=interp_kind)(
+                z_interp
+            )
+        except:
+            import ipdb
 
-        variable = interp.interp1d(comsol_z, variable, axis=0, kind=interp_kind)(
-            z_interp
-        )
+            ipdb.set_trace()
 
         def myinterp(t):
             return interp.interp1d(comsol_t, variable, kind=interp_kind)(t)[

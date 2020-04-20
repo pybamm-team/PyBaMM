@@ -24,7 +24,7 @@ npts = [4, 8, 16, 32]  # number of points per domain
 
 try:
     comsol_variables = pickle.load(
-        open("input/comsol_results/comsol_thermal_1plus1D_1C.pickle", "rb")
+        open("input/comsol_results/comsol_1plus1D_1C.pickle", "rb")
     )
 except FileNotFoundError:
     raise FileNotFoundError(
@@ -189,10 +189,9 @@ for i, model in enumerate(models):
             )
 
         # compute RMS difference divided by RMS of comsol_var
-        # error = np.sqrt(np.nanmean((pybamm_var - comsol_var) ** 2)) / np.sqrt(
-        #    np.nanmean((comsol_var) ** 2)
-        # )
-        error = np.sqrt(np.nanmean((pybamm_var - comsol_var) ** 2))
+        error = np.sqrt(np.nanmean((pybamm_var - comsol_var) ** 2)) / np.sqrt(
+            np.nanmean((comsol_var) ** 2)
+        )
 
         return error
 

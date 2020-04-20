@@ -8,26 +8,8 @@ import numpy as np
 os.chdir(pybamm.root_dir())
 
 # set filepaths for data and names of file to pickle to
-paths = [
-    # "input/comsol_results_csv/1plus1D/thermal/05C/",
-    # "input/comsol_results_csv/1plus1D/thermal/1C/",
-    # "input/comsol_results_csv/1plus1D/thermal/2C/",
-    # "input/comsol_results_csv/1plus1D/thermal/3C/",
-    # "input/comsol_results_csv/1plus1D/thermal/extra_coarse/1C/",
-    "input/comsol_results_csv/1plus1D/thermal/coarse/1C/",
-    # "input/comsol_results_csv/1plus1D/thermal/normal/1C/",
-    # "input/comsol_results_csv/1plus1D/thermal/fine/1C/",
-]
-savefiles = [
-    # "input/comsol_results/comsol_thermal_1plus1D_05C.pickle",
-    # "input/comsol_results/comsol_thermal_1plus1D_1C.pickle",
-    # "input/comsol_results/comsol_thermal_1plus1D_2C.pickle",
-    # "input/comsol_results/comsol_thermal_1plus1D_3C.pickle",
-    # "input/comsol_results/comsol_thermal_1plus1D_1C_extra_coarse.pickle",
-    "input/comsol_results/comsol_thermal_1plus1D_1C_coarse.pickle",
-    # "input/comsol_results/comsol_thermal_1plus1D_1C_normal.pickle",
-    # "input/comsol_results/comsol_thermal_1plus1D_1C_fine.pickle",
-]
+paths = ["input/comsol_results_csv/1plus1D/1C/"]
+savefiles = ["input/comsol_results/comsol_1plus1D_1C.pickle"]
 
 for path, savefile in zip(paths, savefiles):
 
@@ -109,7 +91,7 @@ for path, savefile in zip(paths, savefiles):
             }
         )
     except FileNotFoundError:
-        print("no concentration data for {}".format(path))
+        print("No concentration data for {}".format(path))
 
     with open(savefile, "wb") as f:
         pickle.dump(comsol_variables, f, pickle.HIGHEST_PROTOCOL)

@@ -17,14 +17,14 @@ os.chdir(pybamm.root_dir())
 sys.setrecursionlimit(100000)
 
 # choose npts for comparison
-npts = [4, 8, 16, 32]  # , 64, 128]  # number of points per domain
+npts = [4, 8, 16, 32]  # number of points per domain
 
 "-----------------------------------------------------------------------------"
 "Load comsol data"
 
 try:
     comsol_variables = pickle.load(
-        open("input/comsol_results/comsol_thermal_1plus1D_1C.pickle", "rb")
+        open("input/comsol_results/comsol_1plus1D_1C.pickle", "rb")
     )
 except FileNotFoundError:
     raise FileNotFoundError(

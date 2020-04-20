@@ -13,18 +13,18 @@ os.chdir(pybamm.root_dir())
 
 # set filepaths for data and names of file to pickle to
 paths = [
-    "input/comsol_results_csv/thermal/05C/",
-    "input/comsol_results_csv/thermal/1C/",
-    "input/comsol_results_csv/thermal/2C/",
-    "input/comsol_results_csv/thermal/3C/",
-    "input/comsol_results_csv/thermal/extremely_fine/1C/",
+    "input/comsol_results_csv/1D/05C/",
+    "input/comsol_results_csv/1D/1C/",
+    "input/comsol_results_csv/1D/2C/",
+    "input/comsol_results_csv/1D/3C/",
+    "input/comsol_results_csv/1D/extremely_fine/1C/",
 ]
 savefiles = [
-    "input/comsol_results/comsol_thermal_05C.pickle",
-    "input/comsol_results/comsol_thermal_1C.pickle",
-    "input/comsol_results/comsol_thermal_2C.pickle",
-    "input/comsol_results/comsol_thermal_3C.pickle",
-    "input/comsol_results/comsol_thermal_1C_extremely_fine.pickle",
+    "input/comsol_results/comsol_1D_05C.pickle",
+    "input/comsol_results/comsol_1D_1C.pickle",
+    "input/comsol_results/comsol_1D_2C.pickle",
+    "input/comsol_results/comsol_1D_3C.pickle",
+    "input/comsol_results/comsol_1D_1C_extremely_fine.pickle",
 ]
 
 for path, savefile in zip(paths, savefiles):

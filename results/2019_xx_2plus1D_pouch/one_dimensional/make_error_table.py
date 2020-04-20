@@ -20,7 +20,7 @@ npts = [4, 8, 16, 32, 64, 128]  # number of points per domain
 
 try:
     comsol_variables = pickle.load(
-        open("input/comsol_results/comsol_thermal_1C_extremely_fine.pickle", "rb")
+        open("input/comsol_results/comsol_1D_1C_extremely_fine.pickle", "rb")
     )
 except FileNotFoundError:
     raise FileNotFoundError(
