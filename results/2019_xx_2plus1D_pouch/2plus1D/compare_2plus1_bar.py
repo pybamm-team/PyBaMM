@@ -14,7 +14,6 @@ matplotlib.rc_file(
 )
 
 # load current collector and DFN models
-# cc_model = pybamm.current_collector.EffectiveResistance2D()
 cc_model = pybamm.current_collector.AlternativeEffectiveResistance2D()
 dfn_av = pybamm.lithium_ion.DFN(name="Average DFN")
 dfn = pybamm.lithium_ion.DFN(
@@ -51,8 +50,8 @@ for name, model in models.items():
         var.x_p: 5,
         var.r_n: 10,
         var.r_p: 10,
-        var.y: 10,
-        var.z: 10,
+        var.y: 14,
+        var.z: 9,
     }
     meshes[name] = pybamm.Mesh(geometry, submesh_types, var_pts)
     disc = pybamm.Discretisation(meshes[name], model.default_spatial_methods)
@@ -72,49 +71,6 @@ for name, model in models.items():
         )
         solutions[name] = solver.solve(model, t_eval)
 
-# plot terminal voltage
-for name in ["Average DFN", "2+1D DFN"]:
-    t, y = solutions[name].t, solutions[name].y
-    model = models[name]
-    time = pybamm.ProcessedVariable(model.variables["Time [h]"], t, y)(t)
-    voltage = pybamm.ProcessedVariable(
-        model.variables["Terminal voltage [V]"], t, y, mesh=meshes[name]
-    )(t)
-
-    # add current collector Ohmic losses to average DFN to get DFNCC voltage
-    if model.name == "Average DFN":
-        current = pybamm.ProcessedVariable(model.variables["Current [A]"], t, y)(t)
-        delta = param.evaluate(pybamm.standard_parameters_lithium_ion.delta)
-        R_cc = param.process_symbol(
-            cc_model.variables["Effective current collector resistance [Ohm]"]
-        ).evaluate(
-            t=solutions["Current collector"].t, y=solutions["Current collector"].y
-        )[
-            0
-        ][
-            0
-        ]
-        cc_ohmic_losses = -current * R_cc
-        voltage = voltage + cc_ohmic_losses
-
-    # plot
-    plt.plot(time, voltage, label=model.name)
-plt.xlabel("Time [h]")
-plt.ylabel("Terminal voltage [V]")
-plt.legend()
-
-
-R_cn = param.process_symbol(
-    cc_model.variables["Effective negative current collector resistance"]
-).evaluate(t=solutions["Current collector"].t, y=solutions["Current collector"].y)[0][0]
-R_cp = param.process_symbol(
-    cc_model.variables["Effective positive current collector resistance"]
-).evaluate(t=solutions["Current collector"].t, y=solutions["Current collector"].y)[0][0]
-R_cc = param.process_symbol(
-    cc_model.variables["Effective current collector resistance"]
-).evaluate(t=solutions["Current collector"].t, y=solutions["Current collector"].y)[0][0]
-
-
 # plot potentials in current collector
 
 # get processed potentials from DFNCC
@@ -130,6 +86,9 @@ I_av = pybamm.ProcessedVariable(
     solutions["Average DFN"].y,
     mesh=meshes["Average DFN"],
 )
+R_cc = param.process_symbol(
+    cc_model.variables["Effective current collector resistance"]
+).evaluate(t=solutions["Current collector"].t, y=solutions["Current collector"].y)[0][0]
 
 
 def V_av(t):
@@ -158,10 +117,8 @@ phi_s_cp = pybamm.ProcessedVariable(
 )
 
 # make plot
-l_y = phi_s_cp.y_sol[-1]
-l_z = phi_s_cp.z_sol[-1]
-y_plot = np.linspace(0, l_y, 21)
-z_plot = np.linspace(0, l_z, 21)
+y_plot = phi_s_cp.y_sol
+z_plot = phi_s_cp.z_sol
 
 
 def plot(t):
