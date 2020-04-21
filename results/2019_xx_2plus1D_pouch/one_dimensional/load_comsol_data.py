@@ -13,11 +13,11 @@ os.chdir(pybamm.root_dir())
 
 # set filepaths for data and names of file to pickle to
 paths = [
-    "input/comsol_results_csv/1D/05C/",
-    "input/comsol_results_csv/1D/1C/",
-    "input/comsol_results_csv/1D/2C/",
-    "input/comsol_results_csv/1D/3C/",
-    "input/comsol_results_csv/1D/extremely_fine/1C/",
+    "input/new_comsol_results_csv/1D/05C/",
+    "input/new_comsol_results_csv/1D/1C/",
+    "input/new_comsol_results_csv/1D/2C/",
+    "input/new_comsol_results_csv/1D/3C/",
+    "input/new_comsol_results_csv/1D/extremely_fine/1C/",
 ]
 savefiles = [
     "input/comsol_results/comsol_1D_05C.pickle",

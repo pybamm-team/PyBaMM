@@ -8,25 +8,25 @@ import numpy as np
 os.chdir(pybamm.root_dir())
 
 # set filepath for data and name of file to pickle to
-path = "input/comsol_results_csv/2plus1D/thermal/1C/"
+path = "input/new_comsol_results_csv/2plus1D/thermal/1C/"
 savefile = "input/comsol_results/comsol_thermal_2plus1D_1C.pickle"
 
 # time-voltage (both just 1D arrays)
-comsol = pd.read_csv(path + "voltage.csv", sep=",", header=None,)
+comsol = pd.read_csv(path + "voltage.csv", sep=",", header=None)
 time = comsol[0].values
 time_npts = len(time)
 voltage = comsol[1].values
 
 # negative current collector potential (stored as a (yz_npts, time_npts) size
 # array)
-comsol = pd.read_csv(path + "phi_s_cn.csv", sep=",", header=None,)
+comsol = pd.read_csv(path + "phi_s_cn.csv", sep=",", header=None)
 phi_s_cn_y = comsol[0].values  # first column y
 phi_s_cn_z = comsol[1].values  # second column z
 phi_s_cn = comsol.values[:, 3:]  # fourth to end columns var data
 
 # positive current collector potential (stored as a (yz_npts, time_npts) size
 # array)
-comsol = pd.read_csv(path + "phi_s_cp.csv", sep=",", header=None,)
+comsol = pd.read_csv(path + "phi_s_cp.csv", sep=",", header=None)
 phi_s_cp_y = comsol[0].values  # first column y
 phi_s_cp_z = comsol[1].values  # second column z
 phi_s_cp = comsol.values[:, 3:]  # fourth to end columns var data

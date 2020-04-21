@@ -8,7 +8,7 @@ import numpy as np
 os.chdir(pybamm.root_dir())
 
 # set filepaths for data and names of file to pickle to
-paths = ["input/comsol_results_csv/1plus1D/1C/"]
+paths = ["input/new_comsol_results_csv/1plus1D/1C/"]
 savefiles = ["input/comsol_results/comsol_1plus1D_1C.pickle"]
 
 for path, savefile in zip(paths, savefiles):
@@ -68,27 +68,18 @@ for path, savefile in zip(paths, savefiles):
 
     # add concentrations if provided
     try:
-        # c_s_n_surf_av (stored as a (xz_npts, time_npts)  size array)
+        # c_s_n_surf_av (stored as a (z_npts, time_npts)  size array)
         comsol = pd.read_csv(path + "c_s_n.csv", sep=",", header=None)
-        c_s_n_x = comsol[0].values  # first column x
-        c_s_n_z = comsol[1].values  # second column z
-        c_s_n = comsol.values[:, 2:]  # third to end columns var data
+        c_s_n_z = comsol[0].values  # second column x
+        c_s_n = comsol.values[:, 1:]  # second to end columns var data
 
-        # c_s_p_surf_av (stored as a (xz_npts, time_npts)  size array)
+        # c_s_p_surf_av (stored as a (z_npts, time_npts)  size array)
         comsol = pd.read_csv(path + "c_s_p.csv", sep=",", header=None)
-        c_s_p_x = comsol[0].values  # first column x
-        c_s_p_z = comsol[1].values  # second column z
-        c_s_p = comsol.values[:, 2:]  # third to end columns var data
+        c_s_p_z = comsol[0].values  # first column z
+        c_s_p = comsol.values[:, 1:]  # second to end columns var data
 
         comsol_variables.update(
-            {
-                "c_s_n_x": c_s_n_x,
-                "c_s_n_z": c_s_n_z,
-                "c_s_n": c_s_n,
-                "c_s_p_x": c_s_p_x,
-                "c_s_p_z": c_s_p_z,
-                "c_s_p": c_s_p,
-            }
+            {"c_s_n_z": c_s_n_z, "c_s_n": c_s_n, "c_s_p_z": c_s_p_z, "c_s_p": c_s_p}
         )
     except FileNotFoundError:
         print("No concentration data for {}".format(path))
