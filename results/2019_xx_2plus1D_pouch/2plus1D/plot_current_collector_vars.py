@@ -47,10 +47,7 @@ if compute is False:
         )
 else:
     # model
-    options = {
-        "current collector": "potential pair",
-        "dimensionality": 2,
-    }
+    options = {"current collector": "potential pair", "dimensionality": 2}
     pybamm_model = pybamm.lithium_ion.DFN(options)
 
     # parameters
@@ -60,50 +57,19 @@ else:
     # set mesh
     var = pybamm.standard_spatial_vars
     submesh_types = pybamm_model.default_submesh_types
-
-    # custom mesh in y to ensure edges align with tab edges
-    l_y = param.evaluate(pybamm.geometric_parameters.l_y)
-    l_tab_n = param.evaluate(pybamm.geometric_parameters.l_tab_n)
-    l_tab_p = param.evaluate(pybamm.geometric_parameters.l_tab_p)
-    centre_tab_n = param.evaluate(pybamm.geometric_parameters.centre_y_tab_n)
-    centre_tab_p = param.evaluate(pybamm.geometric_parameters.centre_y_tab_p)
-    y0 = np.linspace(0, centre_tab_n - l_tab_n / 2, 3)  # mesh up to start of neg tab
-    y1 = np.linspace(
-        centre_tab_n - l_tab_n / 2, centre_tab_n + l_tab_n / 2, 4
-    )  # mesh neg tab
-    y2 = np.linspace(
-        centre_tab_n + l_tab_n / 2, centre_tab_p - l_tab_p / 2, 4
-    )  # mesh gap between tabs
-    y3 = np.linspace(
-        centre_tab_p - l_tab_p / 2, centre_tab_p + l_tab_p / 2, 4
-    )  # mesh pos tab
-    y4 = np.linspace(
-        centre_tab_p + l_tab_p / 2, l_y, 3
-    )  # mesh from pos tab to cell edge
-    y_edges = np.concatenate((y0, y1[1:], y2[1:], y3[1:], y4[1:]))
-
-    # square root sequence in z direction
-    z_edges = np.linspace(0, 1, 10) ** (1 / 2)
-    submesh_types["current collector"] = pybamm.MeshGenerator(
-        pybamm.UserSupplied2DSubMesh,
-        submesh_params={"y_edges": y_edges, "z_edges": z_edges},
-    )
-    print("y: {}".format(len(y_edges)))
-    print("z: {}".format(len(z_edges)))
-
     var_pts = {
         var.x_n: 5,
         var.x_s: 5,
         var.x_p: 5,
         var.r_n: 10,
         var.r_p: 10,
-        var.y: len(y_edges),
-        var.z: len(z_edges),
+        var.y: 15,
+        var.z: 10,
     }
 
     # solver
     solver = pybamm.CasadiSolver(
-        atol=1e-6, rtol=1e-6, root_tol=1e-3, root_method="krylov", mode="fast"
+        atol=1e-6, rtol=1e-6, root_tol=1e-3, root_method="hybr", mode="fast"
     )
     # solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
 
@@ -163,12 +129,8 @@ output_variables = simulation.post_process_variables(
 "Make plots"
 
 t_plot = 1800  # dimensional in seconds
-shared.plot_cc_potentials(
-    t_plot, comsol_model, output_variables, param,
-)
+shared.plot_cc_potentials(t_plot, comsol_model, output_variables, param)
 plt.savefig("isothermal2plus1D_cc_pots.pdf", format="pdf", dpi=1000)
-shared.plot_cc_current(
-    t_plot, comsol_model, output_variables, param,
-)
+shared.plot_cc_current(t_plot, comsol_model, output_variables, param)
 plt.savefig("isothermal2plus1D_cc_current.pdf", format="pdf", dpi=1000)
 plt.show()

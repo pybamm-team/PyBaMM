@@ -12,33 +12,29 @@ sys.setrecursionlimit(10000)
 
 # load model and geometry
 pybamm.set_logging_level("INFO")
-options = {
-    "current collector": "potential pair",
-    "dimensionality": 2,
-    "thermal": "x-lumped",
-}
+options = {"current collector": "potential pair", "dimensionality": 2}
 model = pybamm.lithium_ion.DFN(options)
 geometry = model.default_geometry
 
 # load parameters and process model and geometry
 param = model.default_parameter_values
-param.update({"C-rate": 2, "Heat transfer coefficient [W.m-2.K-1]": 0.1})
+param.update({"C-rate": 1})
 param.process_model(model)
 param.process_geometry(geometry)
 
-# set number of points per domain
+# set mesh
 var = pybamm.standard_spatial_vars
+submesh_types = model.default_submesh_types
 var_pts = {
     var.x_n: 5,
     var.x_s: 5,
     var.x_p: 5,
     var.r_n: 10,
     var.r_p: 10,
-    var.y: 10,
+    var.y: 15,
     var.z: 10,
 }
-
-mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
+mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
 # discretise model
 disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
@@ -48,9 +44,9 @@ disc.process_model(model, check_model=False)
 tau = param.evaluate(pybamm.standard_parameters_lithium_ion.tau_discharge)
 
 # solve model
-t_end = 900 / tau
+t_end = 3600 / tau
 t_eval = np.linspace(0, t_end, 120)
-solver = pybamm.IDAKLUSolver(atol=1e-6, rtol=1e-6, root_tol=1e-6)
+solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-6, root_tol=1e-3, mode="fast")
 solution = solver.solve(model, t_eval)
 
 # TO DO: 2+1D automated plotting
@@ -82,6 +78,12 @@ l_y = phi_s_cp.y_sol[-1]
 l_z = phi_s_cp.z_sol[-1]
 y_plot = np.linspace(0, l_y, 21)
 z_plot = np.linspace(0, l_z, 21)
+
+y_pos_tab = param.evaluate(pybamm.standard_parameters_lithium_ion.centre_y_tab_p)
+z_pos_tab = param.evaluate(pybamm.standard_parameters_lithium_ion.centre_z_tab_p)
+width_pos_tab = param.evaluate(pybamm.standard_parameters_lithium_ion.l_tab_p)
+tab_start = y_pos_tab - width_pos_tab / 2
+tab_end = y_pos_tab + width_pos_tab / 2
 
 
 def plot(t):
@@ -115,7 +117,12 @@ def plot(t):
         np.transpose(phi_s_cp(y=y_plot, z=z_plot, t=solution.t[ind])),
         shading="gouraud",
     )
+    from skfem.visuals.matplotlib import draw
 
+    mymesh = mesh["current collector"][0].fem_mesh
+    draw(mymesh)
+    plt.plot(tab_start, z_pos_tab, "ro")
+    plt.plot(tab_end, z_pos_tab, "ro")
     plt.axis([0, l_y, 0, l_z])
     plt.xlabel(r"$y$")
     plt.ylabel(r"$z$")
