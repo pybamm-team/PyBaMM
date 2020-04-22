@@ -43,7 +43,11 @@ class Integrated(BaseElectrolyteConductivity):
 
         tor_n = variables["Negative electrolyte tortuosity"]
         tor_s = variables["Separator tortuosity"]
+<<<<<<< HEAD
         tor_p = variables["Positive electrolyte tortuosity"]
+=======
+        tor_p = variables["Positive electrolyte tortuosity"]        
+>>>>>>> #884 added integrated conductivity model
 
         T_av = variables["X-averaged cell temperature"]
         T_av_n = pybamm.PrimaryBroadcast(T_av, "negative electrode")
