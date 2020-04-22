@@ -6,8 +6,6 @@ import copy
 import pybamm
 import numbers
 import numpy as np
-from scipy import optimize
-from scipy.sparse import issparse
 import sys
 import itertools
 
@@ -23,8 +21,10 @@ class BaseSolver(object):
         The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
         The absolute tolerance for the solver (default is 1e-6).
-    root_method : str, optional
-        The method to use to find initial conditions (for DAE solvers). If "casadi",
+    root_method : str or pybamm solver class, optional
+        The method to use to find initial conditions (for DAE solvers). 
+        If a solver class, must be an algebraic solver class.
+        If "casadi",
         the solver uses casadi's Newton rootfinding algorithm to find initial
         conditions. Otherwise, the solver uses 'scipy.optimize.root' with method
         specified by 'root_method' (e.g. "lm", "hybr", ...)
@@ -93,6 +93,14 @@ class BaseSolver(object):
             method = pybamm.CasadiAlgebraicSolver(self.root_tol)
         elif isinstance(method, str):
             method = pybamm.AlgebraicSolver(method, self.root_tol)
+        elif not (
+            method is None
+            or (
+                isinstance(method, pybamm.BaseSolver)
+                and method.algebraic_solver is True
+            )
+        ):
+            raise pybamm.SolverError("Root method must be an algebraic solver")
         self._root_method = method
 
     @property
@@ -169,8 +177,6 @@ class BaseSolver(object):
         # Set model timescale
         model.timescale_eval = model.timescale.evaluate(inputs=inputs)
 
-        if self.ode_solver is True:
-            self.root_method = None
         if (
             isinstance(self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver))
         ) and model.convert_to_format != "casadi":
@@ -180,7 +186,10 @@ class BaseSolver(object):
                 )
             )
             model.convert_to_format = "casadi"
-        if self.root_method == "casadi" and model.convert_to_format != "casadi":
+        if (
+            isinstance(self.root_method, pybamm.CasadiAlgebraicSolver)
+            and model.convert_to_format != "casadi"
+        ):
             pybamm.logger.warning(
                 "Converting {} to CasADi for calculating ICs with CasADi".format(
                     model.name
@@ -427,7 +436,7 @@ class BaseSolver(object):
     def calculate_consistent_state(self, model, time=0, inputs=None):
         """
         Calculate consistent state for the algebraic equations through
-        root-finding
+        root-finding. model.y0 is used as the initial guess for rootfinding
 
         Parameters
         ----------
@@ -435,8 +444,6 @@ class BaseSolver(object):
             The model for which to calculate initial conditions.
         time : float
             The time at which to calculate the states
-        y0_guess : :class:`np.array`
-            Guess for the rootfinding
         inputs : dict, optional
             Any input parameters to pass to the model when solving
 
@@ -447,115 +454,13 @@ class BaseSolver(object):
             of the algebraic equations)
         """
         pybamm.logger.info("Start calculating consistent states")
-
-        inputs = inputs or {}
-        # if model.convert_to_format == "casadi":
-        #     inputs = casadi.vertcat(*[x for x in inputs.values()])
-
-        # Split y0_guess into differential and algebraic
-        # len_rhs = model.rhs_eval(time, y0_guess, inputs).shape[0]
-        # y0_diff, y0_alg_guess = np.split(y0_guess, [len_rhs])
-
-        root_sol = self.root_method._integrate(model, [time], inputs)
+        try:
+            root_sol = self.root_method._integrate(model, [time], inputs)
+        except pybamm.SolverError as e:
+            raise pybamm.SolverError(
+                "Could not find consistent initial conditions: {}".format(e.args[0])
+            )
         return root_sol.y.flatten()
-        # # Solve using casadi or scipy
-        # if self.root_method == "casadi":
-        #     # Set up
-        #     p = casadi.MX.sym("p", inputs.shape[0])
-        #     y_alg = casadi.MX.sym("y_alg", y0_alg_guess.shape[0])
-        #     y = casadi.vertcat(y0_diff, y_alg)
-        #     alg_root = model.casadi_algebraic(time, y, p)
-        #     # Solve
-        #     roots = casadi.rootfinder(
-        #         "roots",
-        #         "newton",
-        #         dict(x=y_alg, p=p, g=alg_root),
-        #         {"abstol": self.root_tol},
-        #     )
-        #     try:
-        #         y0_alg = roots(y0_alg_guess, inputs).full().flatten()
-        #         success = True
-        #         message = None
-        #         # Check final output
-        #         fun = model.casadi_algebraic(
-        #             time, casadi.vertcat(y0_diff, y0_alg), inputs
-        #         )
-        #         abs_fun = casadi.fabs(fun)
-        #         max_fun = casadi.mmax(fun)
-        #     except RuntimeError as err:
-        #         success = False
-        #         message = err.args[0]
-        #         abs_fun = None
-        #         max_fun = None
-        # else:
-        #     algebraic = model.algebraic_eval
-        #     jac = model.jac_algebraic_eval
-
-        #     def root_fun(y0_alg):
-        #         "Evaluates algebraic using y0_diff (fixed) and y0_alg (changed by algo)"
-        #         y0 = np.concatenate([y0_diff, y0_alg])
-        #         out = algebraic(time, y0, inputs)
-        #         pybamm.logger.debug(
-        #             "Evaluating algebraic equations at t={}, L2-norm is {}".format(
-        #                 time * model.timescale, np.linalg.norm(out)
-        #             )
-        #         )
-        #         return out
-
-        #     if jac:
-        #         if issparse(jac(0, y0_guess, inputs)):
-
-        #             def jac_fn(y0_alg):
-        #                 """
-        #                 Evaluates jacobian using y0_diff (fixed) and y0_alg (varying)
-        #                 """
-        #                 y0 = np.concatenate([y0_diff, y0_alg])
-        #                 return jac(0, y0, inputs)[:, len_rhs:].toarray()
-
-        #         else:
-
-        #             def jac_fn(y0_alg):
-        #                 """
-        #                 Evaluates jacobian using y0_diff (fixed) and y0_alg (varying)
-        #                 """
-        #                 y0 = np.concatenate([y0_diff, y0_alg])
-        #                 return jac(0, y0, inputs)[:, len_rhs:]
-
-        #     else:
-        #         jac_fn = None
-        #     # Find the values of y0_alg that are roots of the algebraic equations
-        #     sol = optimize.root(
-        #         root_fun,
-        #         y0_alg_guess,
-        #         jac=jac_fn,
-        #         method=self.root_method,
-        #         tol=self.root_tol,
-        #     )
-        #     pybamm.citations.register("virtanen2020scipy")
-
-        #     # Set outputs
-        #     y0_alg = sol.x
-        #     success = sol.success
-        #     fun = sol.fun
-        #     abs_fun = np.abs(fun)
-        #     max_fun = np.max(fun)
-        #     message = sol.message
-
-        # if success and np.all(abs_fun < self.root_tol):
-        #     # Return full set of consistent initial conditions (y0_diff unchanged)
-        #     y0_consistent = np.concatenate([y0_diff, y0_alg])
-        #     pybamm.logger.info("Finish calculating consistent initial conditions")
-        #     return y0_consistent
-        # elif not success:
-        #     raise pybamm.SolverError(
-        #         "Could not find consistent initial conditions: {}".format(message)
-        #     )
-        # else:
-        #     raise pybamm.SolverError(
-        #         "Could not find consistent initial conditions: solver terminated "
-        #         "successfully, but maximum solution error "
-        #         "({}) above tolerance ({})".format(max_fun, self.root_tol)
-        #     )
 
     def solve(self, model, t_eval=None, external_variables=None, inputs=None):
         """
@@ -706,15 +611,13 @@ class BaseSolver(object):
             if end_index != len(t_eval_dimensionless):
                 # setup for next integration subsection
                 last_state = solution.y[:, -1]
+                # update y0 (for DAE solvers, this updates the initial guess for the
+                # rootfinder)
+                model.y0 = last_state
                 if len(model.algebraic) > 0:
                     model.y0 = self.calculate_consistent_state(
-                        model,
-                        t_eval_dimensionless[end_index],
-                        last_state,
-                        ext_and_inputs,
+                        model, t_eval_dimensionless[end_index], ext_and_inputs,
                     )
-                else:
-                    model.y0 = last_state
 
         # restore old y0
         model.y0 = old_y0

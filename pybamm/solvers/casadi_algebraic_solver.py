@@ -56,6 +56,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
             be provided with inputs to obtain their value.
         """
         # Record whether there are any symbolic inputs
+        inputs = inputs or {}
         has_symbolic_inputs = any(isinstance(v, casadi.MX) for v in inputs.values())
 
         # Create casadi objects for the root-finder
