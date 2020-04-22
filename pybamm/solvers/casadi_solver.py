@@ -35,8 +35,12 @@ class CasadiSolver(pybamm.BaseSolver):
     max_step_decrease_counts : float, optional
         The maximum number of times step size can be decreased before an error is
         raised. Default is 5.
-    extra_options : keyword arguments, optional
-        Any extra keyword-arguments; these are passed directly to the CasADi integrator.
+    extra_options_setup : dict, optional
+        Any options to pass to the CasADi integrator when creating the integrator.
+        Please consult `CasADi documentation <https://tinyurl.com/y5rk76os>`_ for
+        details.
+    extra_options_call : dict, optional
+        Any options to pass to the CasADi integrator when calling the integrator.
         Please consult `CasADi documentation <https://tinyurl.com/y5rk76os>`_ for
         details.
 
@@ -50,7 +54,8 @@ class CasadiSolver(pybamm.BaseSolver):
         root_method="casadi",
         root_tol=1e-6,
         max_step_decrease_count=5,
-        **extra_options,
+        extra_options_setup=None,
+        extra_options_call=None,
     ):
         super().__init__("problem dependent", rtol, atol, root_method, root_tol)
         if mode in ["safe", "fast"]:
@@ -64,7 +69,8 @@ class CasadiSolver(pybamm.BaseSolver):
                 )
             )
         self.max_step_decrease_count = max_step_decrease_count
-        self.extra_options = extra_options
+        self.extra_options_setup = extra_options_setup or {}
+        self.extra_options_call = extra_options_call or {}
         self.name = "CasADi solver with '{}' mode".format(mode)
 
         # Initialize
@@ -91,13 +97,6 @@ class CasadiSolver(pybamm.BaseSolver):
         # convert inputs to casadi format
         inputs = casadi.vertcat(*[x for x in inputs.values()])
 
-        if len(model.rhs) == 0:
-            # casadi solver won't allow solving algebraic model so we have to raise an
-            # error here
-            raise pybamm.SolverError(
-                "Cannot use CasadiSolver to solve algebraic model, "
-                "use CasadiAlgebraicSolver instead"
-            )
         if self.mode == "fast":
             integrator = self.get_integrator(model, t_eval, inputs)
             solution = self._run_integrator(integrator, model, model.y0, inputs, t_eval)
@@ -189,6 +188,7 @@ class CasadiSolver(pybamm.BaseSolver):
             algebraic = model.casadi_algebraic
 
             options = {
+                **self.extra_options_setup,
                 "grid": t_eval,
                 "reltol": self.rtol,
                 "abstol": self.atol,
@@ -232,7 +232,7 @@ class CasadiSolver(pybamm.BaseSolver):
         y0_diff, y0_alg = np.split(y0, [rhs_size])
         try:
             # Try solving
-            sol = integrator(x0=y0_diff, z0=y0_alg, p=inputs, **self.extra_options)
+            sol = integrator(x0=y0_diff, z0=y0_alg, p=inputs, **self.extra_options_call)
             y_values = np.concatenate([sol["xf"].full(), sol["zf"].full()])
             return pybamm.Solution(t_eval, y_values)
         except RuntimeError as e:

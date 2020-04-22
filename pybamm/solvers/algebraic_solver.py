@@ -10,6 +10,7 @@ from scipy import optimize
 class AlgebraicSolver(pybamm.BaseSolver):
     """Solve a discretised model which contains only (time independent) algebraic
     equations using a root finding algorithm.
+    Uses scipy.optimize.root.
     Note: this solver could be extended for quasi-static models, or models in
     which the time derivative is manually discretised and results in a (possibly
     nonlinear) algebaric system at each time level.
@@ -20,11 +21,16 @@ class AlgebraicSolver(pybamm.BaseSolver):
         The method to use to solve the system (default is "lm")
     tol : float, optional
         The tolerance for the solver (default is 1e-6).
+    extra_options : dict, optional
+        Any options to pass to the rootfinder. Vary depending on which method is chosen.
+        Please consult `SciPy documentation <https://tinyurl.com/ybr6cfqs>`_ for
+        details.
     """
 
-    def __init__(self, method="lm", tol=1e-6):
+    def __init__(self, method="lm", tol=1e-6, extra_options=None):
         super().__init__(method=method)
         self.tol = tol
+        self.extra_options = extra_options or {}
         self.name = "Algebraic solver ({})".format(method)
         self.algebraic_solver = True
         pybamm.citations.register("virtanen2020scipy")
@@ -87,7 +93,12 @@ class AlgebraicSolver(pybamm.BaseSolver):
             # Otherwise calculate new y0
             else:
                 sol = optimize.root(
-                    root_fun, y0, method=self.method, tol=self.tol, jac=jac
+                    root_fun,
+                    y0,
+                    method=self.method,
+                    tol=self.tol,
+                    jac=jac,
+                    options=self.extra_options,
                 )
 
                 if sol.success and np.all(abs(sol.fun) < self.tol):
