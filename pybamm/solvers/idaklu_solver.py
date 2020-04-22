@@ -28,7 +28,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
     atol : float, optional
         The absolute tolerance for the solver (default is 1e-6).
     root_method : str, optional
-        The method to use to find initial conditions (default is "lm")
+        The method to use to find initial conditions (for DAE solvers). 
+        If a solver class, must be an algebraic solver class.
+        If "casadi",
+        the solver uses casadi's Newton rootfinding algorithm to find initial
+        conditions. Otherwise, the solver uses 'scipy.optimize.root' with method
+        specified by 'root_method' (e.g. "lm", "hybr", ...)
     root_tol : float, optional
         The tolerance for the initial-condition solver (default is 1e-8).
     max_steps: int, optional

@@ -56,6 +56,7 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
             t = casadi.MX.sym("t")
             y = casadi.MX.sym("y")
             p = casadi.MX.sym("p")
+            rhs = {}
             casadi_algebraic = casadi.Function("alg", [t, y, p], [y ** 2 + 1])
 
             def algebraic_eval(self, t, y, inputs):
@@ -69,7 +70,7 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
             pybamm.SolverError, "Could not find acceptable solution: .../casadi"
         ):
             solver._integrate(model, np.array([0]), {})
-        solver = pybamm.CasadiAlgebraicSolver(error_on_fail=False)
+        solver = pybamm.CasadiAlgebraicSolver(extra_options={"error_on_fail": False})
         with self.assertRaisesRegex(
             pybamm.SolverError, "Could not find acceptable solution: solver terminated"
         ):

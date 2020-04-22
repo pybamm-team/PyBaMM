@@ -9,7 +9,7 @@ import numpy as np
 
 
 class ScipySolver(pybamm.BaseSolver):
-    """Solve a discretised model, using scipy._integrate.solve_ivp.
+    """Solve a discretised model, using scipy.integrate.solve_ivp.
 
     Parameters
     ----------
@@ -19,11 +19,16 @@ class ScipySolver(pybamm.BaseSolver):
         The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
         The absolute tolerance for the solver (default is 1e-6).
+    extra_options : dict, optional
+        Any options to pass to the solver.
+        Please consult `SciPy documentation <https://tinyurl.com/yafgqg9y>`_ for
+        details.
     """
 
-    def __init__(self, method="BDF", rtol=1e-6, atol=1e-6):
+    def __init__(self, method="BDF", rtol=1e-6, atol=1e-6, extra_options=None):
         super().__init__(method, rtol, atol)
         self.ode_solver = True
+        self.extra_options = extra_options or {}
         self.name = "Scipy solver ({})".format(method)
         pybamm.citations.register("virtanen2020scipy")
 
@@ -50,7 +55,7 @@ class ScipySolver(pybamm.BaseSolver):
         if model.convert_to_format == "casadi":
             inputs = casadi.vertcat(*[x for x in inputs.values()])
 
-        extra_options = {"rtol": self.rtol, "atol": self.atol}
+        extra_options = {**self.extra_options, "rtol": self.rtol, "atol": self.atol}
 
         # check for user-supplied Jacobian
         implicit_methods = ["Radau", "BDF", "LSODA"]
