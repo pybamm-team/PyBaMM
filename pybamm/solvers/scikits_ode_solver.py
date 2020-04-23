@@ -31,16 +31,34 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
         The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
         The absolute tolerance for the solver (default is 1e-6).
-    linsolver : str, optional
-            Can be 'dense' (= default), 'lapackdense', 'spgmr', 'spbcgs', 'sptfqmr'
+    extra_options : dict, optional
+        Any options to pass to the solver.
+        Please consult `scikits.odes documentation
+        <https://bmcage.github.io/odes/dev/index.html>`_ for details.
+        Some common keys:
+
+        - 'linsolver': can be 'dense' (= default), 'lapackdense', 'spgmr', 'spbcgs', \
+        'sptfqmr'
     """
 
-    def __init__(self, method="cvode", rtol=1e-6, atol=1e-6, linsolver="dense"):
+    def __init__(
+        self,
+        method="cvode",
+        rtol=1e-6,
+        atol=1e-6,
+        linsolver="deprecated",
+        extra_options=None,
+    ):
         if scikits_odes_spec is None:
             raise ImportError("scikits.odes is not installed")
 
         super().__init__(method, rtol, atol)
-        self.linsolver = linsolver
+        self.extra_options = extra_options or {}
+        if linsolver != "deprecated":
+            raise ValueError(
+                "linsolver has been deprecated. Pass 'linsolver' to extra_options "
+                "dictionary instead"
+            )
         self.ode_solver = True
         self.name = "Scikits ODE solver ({})".format(method)
 
@@ -104,16 +122,19 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
                 return 0
 
         extra_options = {
+            **self.extra_options,
             "old_api": False,
             "rtol": self.rtol,
             "atol": self.atol,
-            "linsolver": self.linsolver,
         }
 
+        # Read linsolver (defaults to dense)
+        linsolver = extra_options.get("linsolver", "dense")
+
         if jacobian:
-            if self.linsolver in ("dense", "lapackdense"):
+            if linsolver in ("dense", "lapackdense"):
                 extra_options.update({"jacfn": jacfn})
-            elif self.linsolver in ("spgmr", "spbcgs", "sptfqmr"):
+            elif linsolver in ("spgmr", "spbcgs", "sptfqmr"):
                 extra_options.update(
                     {
                         "jac_times_setupfn": jac_times_setupfn,

@@ -21,7 +21,7 @@ class BaseSolver(object):
         The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
         The absolute tolerance for the solver (default is 1e-6).
-    root_method : str or pybamm solver class, optional
+    root_method : str or pybamm algebraic solver class, optional
         The method to use to find initial conditions (for DAE solvers).
         If a solver class, must be an algebraic solver class.
         If "casadi",
@@ -30,9 +30,6 @@ class BaseSolver(object):
         specified by 'root_method' (e.g. "lm", "hybr", ...)
     root_tol : float, optional
         The tolerance for the initial-condition solver (default is 1e-6).
-    max_steps: int, optional
-        The maximum number of steps the solver will take before terminating
-        (default is 1000).
     """
 
     def __init__(
@@ -42,16 +39,18 @@ class BaseSolver(object):
         atol=1e-6,
         root_method=None,
         root_tol=1e-6,
-        max_steps=1000,
-        extra_root_options=None,
+        max_steps="deprecated",
     ):
         self._method = method
         self._rtol = rtol
         self._atol = atol
         self.root_tol = root_tol
         self.root_method = root_method
-        self.max_steps = max_steps
-
+        if max_steps != "deprecated":
+            raise ValueError(
+                "max_steps has been deprecated, and should be set using the "
+                "solver-specific extra-options dictionaries instead"
+            )
         self.models_set_up = set()
 
         # Defaults, can be overwritten by specific solver
@@ -110,14 +109,6 @@ class BaseSolver(object):
     @root_tol.setter
     def root_tol(self, tol):
         self._root_tol = tol
-
-    @property
-    def max_steps(self):
-        return self._max_steps
-
-    @max_steps.setter
-    def max_steps(self, max_steps):
-        self._max_steps = max_steps
 
     def copy(self):
         "Returns a copy of the solver"

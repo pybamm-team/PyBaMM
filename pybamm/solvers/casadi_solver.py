@@ -28,7 +28,7 @@ class CasadiSolver(pybamm.BaseSolver):
         The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
         The absolute tolerance for the solver (default is 1e-6).
-    root_method : str, optional
+    root_method : str or pybamm algebraic solver class, optional
         The method to use to find initial conditions (for DAE solvers).
         If a solver class, must be an algebraic solver class.
         If "casadi",
@@ -198,7 +198,6 @@ class CasadiSolver(pybamm.BaseSolver):
                 "reltol": self.rtol,
                 "abstol": self.atol,
                 "output_t0": True,
-                "max_num_steps": self.max_steps,
             }
 
             # set up and solve
