@@ -28,7 +28,7 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
     atol : float, optional
         The absolute tolerance for the solver (default is 1e-6).
     root_method : str, optional
-        The method to use to find initial conditions (for DAE solvers). 
+        The method to use to find initial conditions (for DAE solvers).
         If a solver class, must be an algebraic solver class.
         If "casadi",
         the solver uses casadi's Newton rootfinding algorithm to find initial
