@@ -47,6 +47,9 @@ class CMakeBuild(build_ext):
             self.sundials_root = os.path.join(default_lib_dir)
 
     def run(self):
+        if not self.extensions:
+            return
+
         cmake_args = ["-DPYTHON_EXECUTABLE={}".format(sys.executable)]
         if self.suitesparse_root:
             cmake_args.append(
