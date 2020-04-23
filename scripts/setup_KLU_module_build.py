@@ -115,7 +115,7 @@ for libdir in ["SuiteSparse_config", "AMD", "COLAMD", "BTF", "KLU"]:
     subprocess.run(install_cmd, cwd=build_dir)
 
 # 2 --- Download SUNDIALS
-sundials_version = "5.0.0"
+sundials_version = "5.1.0"
 sundials_url = (
     "https://computing.llnl.gov/"
     + "projects/sundials/download/sundials-{}.tar.gz".format(sundials_version)
