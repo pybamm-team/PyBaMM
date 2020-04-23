@@ -42,9 +42,9 @@ class CMakeBuild(build_ext):
             ("sundials_root", "sundials_root"),
         )
         if not self.suitesparse_root:
-            self.suitesparse_root = os.path.join(os.getenv("HOME"), ".local")
+            self.suitesparse_root = os.path.join(default_lib_dir)
         if not self.sundials_root:
-            self.sundials_root = os.path.join(os.getenv("HOME"), ".local")
+            self.sundials_root = os.path.join(default_lib_dir)
 
     def run(self):
         cmake_args = ["-DPYTHON_EXECUTABLE={}".format(sys.executable)]
