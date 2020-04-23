@@ -137,6 +137,7 @@ def main(arguments=None):
     # Check is sundials is already installed
     SUNDIALS_LIB_DIRS = [
         join(pybamm_dir(), "scikits.odes/sundials5"),
+        join(os.getenv("HOME"), ".local"),
         "/usr/local",
         "/usr",
     ]
