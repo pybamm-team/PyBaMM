@@ -65,8 +65,11 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
         if model.rhs_eval.form == "casadi":
             inputs = casadi.vertcat(*[x for x in inputs.values()])
 
-        derivs = model.rhs_eval
         y0 = model.y0
+        if isinstance(y0, casadi.DM):
+            y0 = y0.full().flatten()
+
+        derivs = model.rhs_eval
         events = model.terminate_events_eval
         jacobian = model.jacobian_eval
 

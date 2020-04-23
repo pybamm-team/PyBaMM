@@ -126,6 +126,7 @@ class TestBaseSolver(unittest.TestCase):
             def __init__(self):
                 self.y0 = np.zeros_like(vec)
                 self.rhs = {"test": "test"}
+                self.concatenated_rhs = np.array([1])
                 self.jac_algebraic_eval = None
                 self.timescale_eval = 1
                 t = casadi.MX.sym("t")

@@ -68,10 +68,12 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         # equations will be equal to the initial condition provided. This allows this
         # solver to be used for initialising the DAE solvers
         if model.rhs == {}:
-            len_rhs = 0
+            y0_diff = casadi.DM()
+            y0_alg = y0
         else:
-            len_rhs = model.rhs_eval(t_eval[0], y0, inputs).shape[0]
-        y0_diff, y0_alg = np.split(y0, [len_rhs])
+            len_rhs = model.concatenated_rhs.size
+            y0_diff = y0[:len_rhs]
+            y0_alg = y0[len_rhs:]
 
         y_alg = None
 

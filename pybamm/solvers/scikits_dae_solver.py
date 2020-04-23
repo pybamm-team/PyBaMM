@@ -77,8 +77,11 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
         if model.convert_to_format == "casadi":
             inputs = casadi.vertcat(*[x for x in inputs.values()])
 
-        residuals = model.residuals_eval
         y0 = model.y0
+        if isinstance(y0, casadi.DM):
+            y0 = y0.full().flatten()
+
+        residuals = model.residuals_eval
         events = model.terminate_events_eval
         jacobian = model.jacobian_eval
         mass_matrix = model.mass_matrix.entries

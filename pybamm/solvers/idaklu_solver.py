@@ -163,9 +163,13 @@ class IDAKLUSolver(pybamm.BaseSolver):
         except AttributeError:
             atol = self._atol
 
+        y0 = model.y0
+        if isinstance(y0, casadi.DM):
+            y0 = y0.full().flatten()
+
         rtol = self._rtol
         atol = self._check_atol_type(atol, model.y0.size)
-        y0 = model.y0
+
         mass_matrix = model.mass_matrix.entries
 
         if model.jacobian_eval:
