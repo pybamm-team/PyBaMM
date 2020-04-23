@@ -21,8 +21,8 @@ class BaseSolver(object):
         The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
         The absolute tolerance for the solver (default is 1e-6).
-    root_method : str or pybamm solver class, optional
-        The method to use to find initial conditions (for DAE solvers). 
+    root_method : str or pybamm algebraic solver class, optional
+        The method to use to find initial conditions (for DAE solvers).
         If a solver class, must be an algebraic solver class.
         If "casadi",
         the solver uses casadi's Newton rootfinding algorithm to find initial
@@ -30,9 +30,6 @@ class BaseSolver(object):
         specified by 'root_method' (e.g. "lm", "hybr", ...)
     root_tol : float, optional
         The tolerance for the initial-condition solver (default is 1e-6).
-    max_steps: int, optional
-        The maximum number of steps the solver will take before terminating
-        (default is 1000).
     """
 
     def __init__(
@@ -42,16 +39,18 @@ class BaseSolver(object):
         atol=1e-6,
         root_method=None,
         root_tol=1e-6,
-        max_steps=1000,
-        extra_root_options=None,
+        max_steps="deprecated",
     ):
         self._method = method
         self._rtol = rtol
         self._atol = atol
         self.root_tol = root_tol
         self.root_method = root_method
-        self.max_steps = max_steps
-
+        if max_steps != "deprecated":
+            raise ValueError(
+                "max_steps has been deprecated, and should be set using the "
+                "solver-specific extra-options dictionaries instead"
+            )
         self.models_set_up = set()
 
         # Defaults, can be overwritten by specific solver
@@ -111,14 +110,6 @@ class BaseSolver(object):
     def root_tol(self, tol):
         self._root_tol = tol
 
-    @property
-    def max_steps(self):
-        return self._max_steps
-
-    @max_steps.setter
-    def max_steps(self, max_steps):
-        self._max_steps = max_steps
-
     def copy(self):
         "Returns a copy of the solver"
         new_solver = copy.copy(self)
@@ -170,9 +161,6 @@ class BaseSolver(object):
                 )
 
         inputs = inputs or {}
-        model.y0 = model.concatenated_initial_conditions.evaluate(
-            0, None, inputs=inputs
-        ).flatten()
 
         # Set model timescale
         model.timescale_eval = model.timescale.evaluate(inputs=inputs)
@@ -200,35 +188,14 @@ class BaseSolver(object):
         if model.convert_to_format != "casadi":
             simp = pybamm.Simplification()
             # Create Jacobian from concatenated rhs and algebraic
-            y = pybamm.StateVector(slice(0, np.size(model.y0)))
+            y = pybamm.StateVector(slice(0, model.concatenated_initial_conditions.size))
             # set up Jacobian object, for re-use of dict
             jacobian = pybamm.Jacobian()
         else:
-            # Create placeholder inputs for evaluating rhs and algebraic sizes
-            placeholder_inputs = {}
-            for k, v in inputs.items():
-                if isinstance(v, casadi.MX):
-                    placeholder_inputs[k] = np.zeros(v.shape[0])
-                else:
-                    placeholder_inputs[k] = v
             # Convert model attributes to casadi
             t_casadi = casadi.MX.sym("t")
-            y_diff = casadi.MX.sym(
-                "y_diff",
-                len(
-                    model.concatenated_rhs.evaluate(
-                        0, model.y0, inputs=placeholder_inputs
-                    )
-                ),
-            )
-            y_alg = casadi.MX.sym(
-                "y_alg",
-                len(
-                    model.concatenated_algebraic.evaluate(
-                        0, model.y0, inputs=placeholder_inputs
-                    )
-                ),
-            )
+            y_diff = casadi.MX.sym("y_diff", model.concatenated_rhs.size)
+            y_alg = casadi.MX.sym("y_alg", model.concatenated_algebraic.size)
             y_casadi = casadi.vertcat(y_diff, y_alg)
             p_casadi = {}
             for name, value in inputs.items():
@@ -329,6 +296,14 @@ class BaseSolver(object):
                             )
                         )
 
+        # Process initial conditions
+        initial_conditions = process(
+            model.concatenated_initial_conditions,
+            "initial_conditions",
+            use_jacobian=False,
+        )[0]
+        init_eval = InitialConditions(initial_conditions, model)
+
         # Process rhs, algebraic and event expressions
         rhs, rhs_eval, jac_rhs = process(model.concatenated_rhs, "RHS")
         algebraic, algebraic_eval, jac_algebraic = process(
@@ -349,11 +324,15 @@ class BaseSolver(object):
         ]
 
         # Add the solver attributes
+        model.init_eval = init_eval
         model.rhs_eval = rhs_eval
         model.algebraic_eval = algebraic_eval
         model.jac_algebraic_eval = jac_algebraic
         model.terminate_events_eval = terminate_events_eval
         model.discontinuity_events_eval = discontinuity_events_eval
+
+        # Calculate initial conditions
+        model.y0 = init_eval(inputs)
 
         # Save CasADi functions for the CasADi solver
         # Note: when we pass to casadi the ode part of the problem must be in explicit
@@ -409,28 +388,29 @@ class BaseSolver(object):
 
         """
         if self.algebraic_solver is True:
+            # Don't update model.y0
             return None
         elif len(model.algebraic) == 0:
             if update_rhs is True:
                 # Recalculate initial conditions for the rhs equations
-                model.y0 = model.concatenated_initial_conditions.evaluate(
-                    0, None, inputs=inputs
-                ).flatten()
+                model.y0 = model.init_eval(inputs)
             else:
+                # Don't update model.y0
                 return None
         else:
             if update_rhs is True:
                 # Recalculate initial conditions for the rhs equations
-                y0_from_inputs = model.concatenated_initial_conditions.evaluate(
-                    0, None, inputs=inputs
-                ).flatten()
+                y0_from_inputs = model.init_eval(inputs)
                 # Reuse old solution for algebraic equations
                 y0_from_model = model.y0
-                len_rhs = len(
-                    model.concatenated_rhs.evaluate(0, model.y0, inputs=inputs)
-                )
+                len_rhs = model.concatenated_rhs.size
                 # update model.y0, which is used for initialising the algebraic solver
-                model.y0 = np.r_[y0_from_inputs[:len_rhs], y0_from_model[len_rhs:]]
+                if len_rhs == 0:
+                    model.y0 = y0_from_model
+                else:
+                    model.y0 = casadi.vertcat(
+                        y0_from_inputs[:len_rhs], y0_from_model[len_rhs:]
+                    )
             model.y0 = self.calculate_consistent_state(model, 0, inputs)
 
     def calculate_consistent_state(self, model, time=0, inputs=None):
@@ -870,3 +850,19 @@ class Residuals(SolverCallable):
     def __call__(self, t, y, ydot, inputs):
         states_eval = super().__call__(t, y, inputs)
         return states_eval - self.mass_matrix @ ydot
+
+
+class InitialConditions(SolverCallable):
+    "Returns initial conditions given inputs"
+
+    def __init__(self, function, model):
+        super().__init__(function, "initial conditions", model)
+        self.y_dummy = np.zeros(model.concatenated_initial_conditions.shape)
+
+    def __call__(self, inputs):
+        if self.form == "casadi":
+            if isinstance(inputs, dict):
+                inputs = casadi.vertcat(*[x for x in inputs.values()])
+            return self._function(0, self.y_dummy, inputs)
+        else:
+            return self._function(0, self.y_dummy, inputs=inputs).flatten()

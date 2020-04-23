@@ -57,6 +57,11 @@ class ScipySolver(pybamm.BaseSolver):
 
         extra_options = {**self.extra_options, "rtol": self.rtol, "atol": self.atol}
 
+        # Initial conditions
+        y0 = model.y0
+        if isinstance(y0, casadi.DM):
+            y0 = y0.full().flatten()
+
         # check for user-supplied Jacobian
         implicit_methods = ["Radau", "BDF", "LSODA"]
         if np.any([self.method in implicit_methods]):
@@ -81,7 +86,7 @@ class ScipySolver(pybamm.BaseSolver):
         sol = it.solve_ivp(
             lambda t, y: model.rhs_eval(t, y, inputs),
             (t_eval[0], t_eval[-1]),
-            model.y0,
+            y0,
             t_eval=t_eval,
             method=self.method,
             dense_output=True,

@@ -20,6 +20,10 @@ class TestBaseSolver(unittest.TestCase):
         solver.rtol = 1e-7
         self.assertEqual(solver.rtol, 1e-7)
 
+        # max_steps deprecated
+        with self.assertRaisesRegex(ValueError, "max_steps has been deprecated"):
+            pybamm.BaseSolver(max_steps=10)
+
     def test_root_method_init(self):
         solver = pybamm.BaseSolver(root_method="casadi")
         self.assertIsInstance(solver.root_method, pybamm.CasadiAlgebraicSolver)
@@ -126,6 +130,7 @@ class TestBaseSolver(unittest.TestCase):
             def __init__(self):
                 self.y0 = np.zeros_like(vec)
                 self.rhs = {"test": "test"}
+                self.concatenated_rhs = np.array([1])
                 self.jac_algebraic_eval = None
                 self.timescale_eval = 1
                 t = casadi.MX.sym("t")

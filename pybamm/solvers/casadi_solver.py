@@ -28,8 +28,8 @@ class CasadiSolver(pybamm.BaseSolver):
         The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
         The absolute tolerance for the solver (default is 1e-6).
-    root_method : str, optional
-        The method to use to find initial conditions (for DAE solvers). 
+    root_method : str or pybamm algebraic solver class, optional
+        The method to use to find initial conditions (for DAE solvers).
         If a solver class, must be an algebraic solver class.
         If "casadi",
         the solver uses casadi's Newton rootfinding algorithm to find initial
@@ -114,18 +114,18 @@ class CasadiSolver(pybamm.BaseSolver):
             solution.termination = "final time"
             return solution
         elif self.mode == "safe":
+            y0 = model.y0
+            if isinstance(y0, casadi.DM):
+                y0 = y0.full().flatten()
             # Step-and-check
             t = t_eval[0]
             init_event_signs = np.sign(
                 np.concatenate(
-                    [
-                        event(t, model.y0, inputs)
-                        for event in model.terminate_events_eval
-                    ]
+                    [event(t, y0, inputs) for event in model.terminate_events_eval]
                 )
             )
             pybamm.logger.info("Start solving {} with {}".format(model.name, self.name))
-            y0 = model.y0
+
             # Initialize solution
             solution = pybamm.Solution(np.array([t]), y0[:, np.newaxis])
             solution.solve_time = 0
@@ -198,7 +198,6 @@ class CasadiSolver(pybamm.BaseSolver):
                 "reltol": self.rtol,
                 "abstol": self.atol,
                 "output_t0": True,
-                "max_num_steps": self.max_steps,
             }
 
             # set up and solve
@@ -233,7 +232,7 @@ class CasadiSolver(pybamm.BaseSolver):
         )
 
     def _run_integrator(self, integrator, model, y0, inputs, t_eval):
-        rhs_size = model.rhs_eval(t_eval[0], y0, inputs).shape[0]
+        rhs_size = model.concatenated_rhs.size
         y0_diff, y0_alg = np.split(y0, [rhs_size])
         try:
             # Try solving
