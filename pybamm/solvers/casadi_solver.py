@@ -209,7 +209,6 @@ class CasadiSolver(pybamm.BaseSolver):
                 method = "cvodes"
                 problem.update({"ode": rhs(t, y_diff, p)})
             else:
-                options["calc_ic"] = True
                 method = "idas"
                 y_alg = casadi.MX.sym("y_alg", algebraic(t_eval[0], y0, p).shape[0])
                 y_full = casadi.vertcat(y_diff, y_alg)
