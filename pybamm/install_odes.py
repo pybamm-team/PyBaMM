@@ -144,7 +144,10 @@ def main(arguments=None):
     if args.sundials_libs:
         SUNDIALS_LIB_DIRS.insert(0, args.sundials_libs)
     for DIR in SUNDIALS_LIB_DIRS:
-        SUNDIALS_FOUND = isfile(join(DIR, "lib", "libsundials_ida.so"))
+        logger.info("Looking for sundials at {}".format(DIR))
+        SUNDIALS_FOUND = isfile(join(DIR, "lib", "libsundials_ida.so")) or isfile(
+            join(DIR, "lib", "libsundials_ida.dylib")
+        )
         SUNDIALS_LIB_DIR = DIR if SUNDIALS_FOUND else ""
         if SUNDIALS_FOUND:
             logger.info("Found sundials at {}".format(SUNDIALS_LIB_DIR))
