@@ -28,7 +28,7 @@ class BasicFull(BaseModel):
     **Extends:** :class:`pybamm.lead_acid.BaseModel`
     """
 
-    def __init__(self, name="Full model"):
+    def __init__(self, name="Basic full model"):
         super().__init__({}, name)
         # `param` is a class containing all the relevant parameters and functions for
         # this model. These are purely symbolic at this stage, and will be set by the
@@ -276,20 +276,20 @@ class BasicFull(BaseModel):
         pot = param.potential_scale
 
         self.variables = {
-            # "Electrolyte concentration": c_e,
-            # "Current [A]": I,
-            # "Negative electrode potential [V]": pot * phi_s_n,
-            # "Electrolyte potential [V]": -param.U_n_ref + pot * phi_e,
-            # "Positive electrode potential [V]": param.U_p_ref
-            # - param.U_n_ref
-            # + pot * phi_s_p,
-            # "Terminal voltage [V]": param.U_p_ref - param.U_n_ref + pot * voltage,
-            # "x [m]": pybamm.standard_spatial_vars.x * param.L_x,
-            # "x": pybamm.standard_spatial_vars.x,
-            # "Porosity": eps,
+            "Electrolyte concentration": c_e,
+            "Current [A]": I,
+            "Negative electrode potential [V]": pot * phi_s_n,
+            "Electrolyte potential [V]": -param.U_n_ref + pot * phi_e,
+            "Positive electrode potential [V]": param.U_p_ref
+            - param.U_n_ref
+            + pot * phi_s_p,
+            "Terminal voltage [V]": param.U_p_ref - param.U_n_ref + pot * voltage,
+            "x [m]": pybamm.standard_spatial_vars.x * param.L_x,
+            "x": pybamm.standard_spatial_vars.x,
+            "Porosity": eps,
             "Interfacial current density": j,
-            # "Volume-averaged velocity": v,
-            # "X-averaged separator transverse volume-averaged velocity": div_V_s,
+            "Volume-averaged velocity": v,
+            "X-averaged separator transverse volume-averaged velocity": div_V_s,
         }
         self.events.extend(
             [

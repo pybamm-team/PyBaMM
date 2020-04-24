@@ -309,6 +309,7 @@ class TestSymbol(unittest.TestCase):
             "Transverse volume-averaged acceleration": pybamm.Concatenation(
                 zero_n, zero_s, zero_p
             ),
+            "Sum of electrolyte reaction source terms": zero_nsp,
         }
         model = pybamm.electrolyte_diffusion.Full(param)
         variables.update(model.get_fundamental_variables())

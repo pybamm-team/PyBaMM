@@ -70,18 +70,22 @@ class Composite(BaseElectrolyteDiffusion):
         elif self.extended == "distributed":
             sum_s_j = variables["Sum of electrolyte reaction source terms"]
         elif self.extended == "average":
-            sum_s_j_0 = variables[
-                "Leading-order sum of electrolyte reaction source terms"
+            sum_s_j_n_av = variables[
+                "Sum of x-averaged negative electrode electrolyte reaction source terms"
             ]
-            sum_s_j_1 = variables[
-                "Sum of first-order electrolyte reaction source terms"
+            sum_s_j_p_av = variables[
+                "Sum of x-averaged negative electrode electrolyte reaction source terms"
             ]
-            sum_s_j = sum_s_j_0 + param.C_e * sum_s_j_1
-        source_terms_0 = sum_s_j / self.param.gamma_e
+            sum_s_j = pybamm.Concatenation(
+                pybamm.PrimaryBroadcast(sum_s_j_n_av, "negative electrode"),
+                pybamm.FullBroadcast(0, "separator", "current collector"),
+                pybamm.PrimaryBroadcast(sum_s_j_p_av, "positive electrode"),
+            )
+        source_terms = sum_s_j / self.param.gamma_e
 
         self.rhs = {
             c_e: (1 / eps_0)
-            * (-pybamm.div(N_e) / param.C_e + source_terms_0 - c_e * deps_0_dt)
+            * (-pybamm.div(N_e) / param.C_e + source_terms - c_e * deps_0_dt)
         }
 
     def set_initial_conditions(self, variables):
