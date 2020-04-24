@@ -127,11 +127,11 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(processed_integ.integration_variable[0].id, x.id)
 
         # process unary operation
-        grad = pybamm.Gradient(a)
+        v = pybamm.Variable("v", domain="test")
+        grad = pybamm.Gradient(v)
         processed_grad = parameter_values.process_symbol(grad)
         self.assertIsInstance(processed_grad, pybamm.Gradient)
-        self.assertIsInstance(processed_grad.children[0], pybamm.Scalar)
-        self.assertEqual(processed_grad.children[0].value, 1)
+        self.assertIsInstance(processed_grad.children[0], pybamm.Variable)
 
         # process delta function
         aa = pybamm.Parameter("a")
@@ -435,8 +435,8 @@ class TestParameterValues(unittest.TestCase):
         b = pybamm.Parameter("b")
         c = pybamm.Parameter("c")
         d = pybamm.Parameter("d")
-        var1 = pybamm.Variable("var1")
-        var2 = pybamm.Variable("var2")
+        var1 = pybamm.Variable("var1", domain="test")
+        var2 = pybamm.Variable("var2", domain="test")
         model.rhs = {var1: a * pybamm.grad(var1)}
         model.algebraic = {var2: c * var2}
         model.initial_conditions = {var1: b, var2: d}

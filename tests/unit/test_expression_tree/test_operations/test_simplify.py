@@ -10,7 +10,7 @@ from tests import get_discretisation_for_testing
 
 class TestSimplify(unittest.TestCase):
     def test_symbol_simplify(self):
-        a = pybamm.Scalar(0)
+        a = pybamm.Scalar(0, domain="domain")
         b = pybamm.Scalar(1)
         c = pybamm.Parameter("c")
         d = pybamm.Scalar(-1)
@@ -58,13 +58,17 @@ class TestSimplify(unittest.TestCase):
         # Gradient
         self.assertIsInstance((pybamm.grad(a)).simplify(), pybamm.Scalar)
         self.assertEqual((pybamm.grad(a)).simplify().evaluate(), 0)
-        v = pybamm.Variable("v")
-        self.assertIsInstance((pybamm.grad(v)).simplify(), pybamm.Gradient)
+        v = pybamm.Variable("v", domain="domain")
+        grad_v = pybamm.grad(v)
+        self.assertIsInstance(grad_v.simplify(), pybamm.Gradient)
 
         # Divergence
-        self.assertIsInstance((pybamm.div(a)).simplify(), pybamm.Scalar)
-        self.assertEqual((pybamm.div(a)).simplify().evaluate(), 0)
-        self.assertIsInstance((pybamm.div(v)).simplify(), pybamm.Divergence)
+        div_b = pybamm.div(pybamm.PrimaryBroadcastToEdges(b, "domain"))
+        self.assertIsInstance(div_b.simplify(), pybamm.PrimaryBroadcast)
+        self.assertEqual(div_b.simplify().child.child.evaluate(), 0)
+        self.assertIsInstance(
+            (pybamm.div(pybamm.grad(v))).simplify(), pybamm.Divergence
+        )
 
         # Integral
         self.assertIsInstance(

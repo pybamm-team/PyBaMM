@@ -117,6 +117,12 @@ class Discretisation(object):
             `model.variables = {}`)
 
         """
+        if model.is_discretised is True:
+            raise pybamm.ModelError(
+                "Cannot re-discretise a model. "
+                "Set 'inplace=False' when first discretising a model to then be able "
+                "to discretise it more times (e.g. for convergence studies)."
+            )
 
         pybamm.logger.info("Start discretising {}".format(model.name))
 

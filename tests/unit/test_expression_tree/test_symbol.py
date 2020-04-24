@@ -272,12 +272,6 @@ class TestSymbol(unittest.TestCase):
             + r", auxiliary_domains\=\{'sec': \"\['other test'\]\"\}\)",
         )
         self.assertRegex(
-            pybamm.grad(a).__repr__(),
-            r"Gradient\("
-            + hex_regex
-            + r", grad, children\=\['a'\], domain=\[\], auxiliary_domains\=\{\}\)",
-        )
-        self.assertRegex(
             pybamm.grad(c).__repr__(),
             r"Gradient\("
             + hex_regex
@@ -332,9 +326,9 @@ class TestSymbol(unittest.TestCase):
             rhs.visualise("StefanMaxwell_test")
 
     def test_has_spatial_derivatives(self):
-        var = pybamm.Variable("var")
+        var = pybamm.Variable("var", domain="test")
         grad_eqn = pybamm.grad(var)
-        div_eqn = pybamm.div(var)
+        div_eqn = pybamm.div(pybamm.standard_spatial_vars.x_edge)
         grad_div_eqn = pybamm.div(grad_eqn)
         algebraic_eqn = 2 * var + 3
         self.assertTrue(grad_eqn.has_symbol_of_classes(pybamm.Gradient))
