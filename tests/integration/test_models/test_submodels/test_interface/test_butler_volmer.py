@@ -11,18 +11,34 @@ import numpy as np
 class TestButlerVolmer(unittest.TestCase):
     def setUp(self):
         self.delta_phi_s_n = pybamm.Variable(
-            "surface potential difference", ["negative electrode"]
+            "surface potential difference",
+            ["negative electrode"],
+            auxiliary_domains={"secondary": "current collector"},
         )
         self.delta_phi_s_p = pybamm.Variable(
-            "surface potential difference", ["positive electrode"]
+            "surface potential difference",
+            ["positive electrode"],
+            auxiliary_domains={"secondary": "current collector"},
         )
-        self.c_e_n = pybamm.Variable("concentration", domain=["negative electrode"])
-        self.c_e_p = pybamm.Variable("concentration", domain=["positive electrode"])
+        self.c_e_n = pybamm.Variable(
+            "concentration",
+            domain=["negative electrode"],
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.c_e_p = pybamm.Variable(
+            "concentration",
+            domain=["positive electrode"],
+            auxiliary_domains={"secondary": "current collector"},
+        )
         self.c_s_n_surf = pybamm.Variable(
-            "particle surface conc", domain=["negative electrode"]
+            "particle surface conc",
+            domain=["negative electrode"],
+            auxiliary_domains={"secondary": "current collector"},
         )
         self.c_s_p_surf = pybamm.Variable(
-            "particle surface conc", domain=["positive electrode"]
+            "particle surface conc",
+            domain=["positive electrode"],
+            auxiliary_domains={"secondary": "current collector"},
         )
         self.variables = {
             "Negative electrode surface potential difference": self.delta_phi_s_n,
