@@ -40,6 +40,19 @@ class BaseModel(pybamm.BaseSubModel):
         """
         sp = pybamm.sei_parameters
 
+        # Set scales to one for the "no SEI" model so that they are not required
+        # by parameter values in general
+        if isinstance(self, pybamm.sei.NoSEI):
+            L_scale = 1
+            n_scale = 1
+            n_outer_scale = 1
+            v_bar = 1
+        else:
+            L_scale = sp.L_sei_0_dim
+            n_scale = sp.L_sei_0_dim * sp.a_n / sp.V_bar_inner_dimensional
+            n_outer_scale = sp.L_sei_0_dim * sp.a_n / sp.V_bar_outer_dimensional
+            v_bar = sp.v_bar
+
         L_inner_av = pybamm.x_average(L_inner)
         L_outer_av = pybamm.x_average(L_outer)
 
@@ -51,14 +64,10 @@ class BaseModel(pybamm.BaseSubModel):
         n_inner_av = pybamm.x_average(L_inner)
         n_outer_av = pybamm.x_average(L_outer)
 
-        n_SEI = n_inner + n_outer / sp.v_bar  # SEI concentration
+        n_SEI = n_inner + n_outer / v_bar  # SEI concentration
         n_SEI_av = pybamm.x_average(n_SEI)
 
         Q_sei = n_SEI_av * self.param.L_n * self.param.L_y * self.param.L_z
-
-        L_scale = sp.L_sei_0_dim
-        n_scale = sp.L_sei_0_dim * sp.a_n / sp.V_bar_inner_dimensional
-        n_outer_scale = sp.L_sei_0_dim * sp.a_n / sp.V_bar_outer_dimensional
 
         variables = {
             "Inner " + self.domain.lower() + " sei thickness": L_inner,
@@ -119,15 +128,22 @@ class BaseModel(pybamm.BaseSubModel):
             variables : dict
                 The variables which can be derived from the SEI thicknesses.
         """
-
+        # Set scales to one for the "no SEI" model so that they are not required
+        # by parameter values in general
+        if isinstance(self, pybamm.sei.NoSEI):
+            j_scale = 1
+            Gamma_SEI_n = 1
+        else:
+            sp = pybamm.sei_parameters
+            j_scale = (
+                sp.F * sp.L_sei_0_dim / sp.V_bar_inner_dimensional / sp.tau_discharge
+            )
+            Gamma_SEI_n = sp.Gamma_SEI_n
         j_i_av = pybamm.x_average(j_inner)
         j_o_av = pybamm.x_average(j_outer)
 
         j_sei = j_inner + j_outer
         j_sei_av = pybamm.x_average(j_sei)
-
-        sp = pybamm.sei_parameters
-        j_scale = sp.F * sp.L_sei_0_dim / sp.V_bar_inner_dimensional / sp.tau_discharge
 
         variables = {
             "Inner "
@@ -164,7 +180,7 @@ class BaseModel(pybamm.BaseSubModel):
             + " sei interfacial current density [A.m-2]": j_sei_av * j_scale,
             "Scaled "
             + self.domain.lower()
-            + " sei interfacial current density": j_sei * sp.Gamma_SEI_n,
+            + " sei interfacial current density": j_sei * Gamma_SEI_n,
         }
 
         return variables
