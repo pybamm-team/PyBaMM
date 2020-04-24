@@ -401,8 +401,8 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
         models (bug in implementation of boundary conditions?)"""
 
         t, x = self.t, self.x_edge
-        np.testing.assert_array_almost_equal(self.N_e_hat(t, x[0]), 0, decimal=4)
-        np.testing.assert_array_almost_equal(self.N_e_hat(t, x[-1]), 0, decimal=4)
+        np.testing.assert_array_almost_equal(self.N_e_hat(t, x[0]), 0, decimal=3)
+        np.testing.assert_array_almost_equal(self.N_e_hat(t, x[-1]), 0, decimal=3)
 
     def test_splitting(self):
         """Test that when splitting the concentrations and fluxes by negative electrode,
