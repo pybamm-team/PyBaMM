@@ -115,11 +115,15 @@ class BaseModel(object):
         self._jacobian = None
         self._jacobian_algebraic = None
         self.external_variables = []
+        self._input_parameters = None
 
         # Default behaviour is to use the jacobian and simplify
         self.use_jacobian = True
         self.use_simplify = True
         self.convert_to_format = "casadi"
+
+        # Model is not initially discretised
+        self.is_discretised = False
 
         # Default timescale is 1 second
         self.timescale = pybamm.Scalar(1)
@@ -316,6 +320,25 @@ class BaseModel(object):
     def timescale(self, value):
         "Set the timescale"
         self._timescale = value
+
+    @property
+    def input_parameters(self):
+        "Returns all the input parameters in the model"
+        if self._input_parameters is None:
+            self._input_parameters = self._find_input_parameters()
+        return self._input_parameters
+
+    def _find_input_parameters(self):
+        "Find all the input parameters in the model"
+        unpacker = pybamm.SymbolUnpacker(pybamm.InputParameter)
+        all_input_parameters = unpacker.unpack_list_of_symbols(
+            list(self.rhs.values())
+            + list(self.algebraic.values())
+            + list(self.initial_conditions.values())
+            + list(self.variables.values())
+            + [event.expression for event in self.events]
+        )
+        return list(all_input_parameters.values())
 
     def __getitem__(self, key):
         return self.rhs[key]
@@ -639,6 +662,26 @@ class BaseModel(object):
             symbol.print_input_names()
 
         print(div)
+
+    @property
+    def default_parameter_values(self):
+        return pybamm.ParameterValues({})
+
+    @property
+    def default_var_pts(self):
+        return {}
+
+    @property
+    def default_geometry(self):
+        return {}
+
+    @property
+    def default_submesh_types(self):
+        return {}
+
+    @property
+    def default_spatial_methods(self):
+        return {}
 
     @property
     def default_solver(self):

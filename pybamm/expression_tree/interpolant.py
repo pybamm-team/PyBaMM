@@ -31,7 +31,13 @@ class Interpolant(pybamm.Function):
     """
 
     def __init__(
-        self, data, child, name=None, interpolator="cubic spline", extrapolate=True
+        self,
+        data,
+        child,
+        name=None,
+        interpolator="cubic spline",
+        extrapolate=True,
+        entries_string=None,
     ):
         if data.ndim != 2 or data.shape[1] != 2:
             raise ValueError(
@@ -56,15 +62,37 @@ class Interpolant(pybamm.Function):
             name = "interpolating function ({})".format(name)
         else:
             name = "interpolating function"
+        self.data = data
+        self.entries_string = entries_string
         super().__init__(
             interpolating_function, child, name=name, derivative="derivative"
         )
         # Store information as attributes
-        self.data = data
         self.x = data[:, 0]
         self.y = data[:, 1]
         self.interpolator = interpolator
         self.extrapolate = extrapolate
+
+    @property
+    def entries_string(self):
+        return self._entries_string
+
+    @entries_string.setter
+    def entries_string(self, value):
+        # We must include the entries in the hash, since different arrays can be
+        # indistinguishable by class, name and domain alone
+        # Slightly different syntax for sparse and non-sparse matrices
+        if value is not None:
+            self._entries_string = value
+        else:
+            entries = self.data
+            self._entries_string = entries.tostring()
+
+    def set_id(self):
+        """ See :meth:`pybamm.Symbol.set_id()`. """
+        self._id = hash(
+            (self.__class__, self.name, self.entries_string) + tuple(self.domain)
+        )
 
     def _function_new_copy(self, children):
         """ See :meth:`Function._function_new_copy()` """
@@ -73,5 +101,6 @@ class Interpolant(pybamm.Function):
             *children,
             name=self.name,
             interpolator=self.interpolator,
-            extrapolate=self.extrapolate
+            extrapolate=self.extrapolate,
+            entries_string=self.entries_string
         )

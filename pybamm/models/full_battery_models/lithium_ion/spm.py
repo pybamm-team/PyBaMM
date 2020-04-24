@@ -32,12 +32,12 @@ class SPM(BaseModel):
     def __init__(self, options=None, name="Single Particle Model", build=True):
         super().__init__(options, name)
 
-        self.set_reactions()
         self.set_external_circuit_submodel()
         self.set_porosity_submodel()
         self.set_tortuosity_submodels()
         self.set_convection_submodel()
         self.set_interfacial_submodel()
+        self.set_other_reaction_submodels_to_zero()
         self.set_particle_submodel()
         self.set_negative_electrode_submodel()
         self.set_electrolyte_submodel()
@@ -57,7 +57,12 @@ class SPM(BaseModel):
 
     def set_convection_submodel(self):
 
-        self.submodels["convection"] = pybamm.convection.NoConvection(self.param)
+        self.submodels[
+            "through-cell convection"
+        ] = pybamm.convection.through_cell.NoConvection(self.param)
+        self.submodels[
+            "transverse convection"
+        ] = pybamm.convection.transverse.NoConvection(self.param)
 
     def set_interfacial_submodel(self):
 
@@ -119,15 +124,13 @@ class SPM(BaseModel):
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
                     "leading-order " + domain.lower() + " electrolyte conductivity"
-                ] = surf_form.LeadingOrderDifferential(
-                    self.param, domain, self.reactions
-                )
+                ] = surf_form.LeadingOrderDifferential(self.param, domain)
 
         elif self.options["surface form"] == "algebraic":
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
                     "leading-order " + domain.lower() + " electrolyte conductivity"
-                ] = surf_form.LeadingOrderAlgebraic(self.param, domain, self.reactions)
+                ] = surf_form.LeadingOrderAlgebraic(self.param, domain)
         self.submodels[
             "electrolyte diffusion"
         ] = pybamm.electrolyte_diffusion.ConstantConcentration(self.param)

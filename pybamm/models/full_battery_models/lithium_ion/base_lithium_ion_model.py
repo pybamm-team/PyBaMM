@@ -36,24 +36,24 @@ class BaseModel(pybamm.BaseBatteryModel):
             }
         )
 
-    def set_reactions(self):
+    # def set_reactions(self):
 
-        # Should probably refactor as this is a bit clunky at the moment
-        # Maybe each reaction as a Reaction class so we can just list names of classes
-        icd = " interfacial current density"
-        self.reactions = {
-            "main": {
-                "Negative": {"s": 1, "aj": "Negative electrode" + icd},
-                "Positive": {"s": 1, "aj": "Positive electrode" + icd},
-            }
-        }
+    #     # Should probably refactor as this is a bit clunky at the moment
+    #     # Maybe each reaction as a Reaction class so we can just list names of classes
+    #     icd = " interfacial current density"
+    #     self.reactions = {
+    #         "main": {
+    #             "Negative": {"s": 1, "aj": "Negative electrode" + icd},
+    #             "Positive": {"s": 1, "aj": "Positive electrode" + icd},
+    #         }
+    #     }
 
-        # N.B if there is no sei reaction then reaction
-        # is set to zero in the submodel.
-        self.reactions["sei"] = {
-            "Negative": {"s": 1, "aj": "Scaled negative electrode sei" + icd},
-            "Positive": {"s": 1, "aj": "Scaled positive electrode sei" + icd},
-        }
+    #     # N.B if there is no sei reaction then reaction
+    #     # is set to zero in the submodel.
+    #     self.reactions["sei"] = {
+    #         "Negative": {"s": 1, "aj": "Scaled negative electrode sei" + icd},
+    #         "Positive": {"s": 1, "aj": "Scaled positive electrode sei" + icd},
+    #     }
 
     def set_sei_submodel(self):
 
@@ -86,4 +86,12 @@ class BaseModel(pybamm.BaseBatteryModel):
         # positive electrode
         self.submodels["positive sei"] = pybamm.sei.NoSEI(
             self.param, "Positive electrode"
+        )
+
+    def set_other_reaction_submodels_to_zero(self):
+        self.submodels["negative oxygen interface"] = pybamm.interface.NoReaction(
+            self.param, "Negative", "lithium-ion oxygen"
+        )
+        self.submodels["positive oxygen interface"] = pybamm.interface.NoReaction(
+            self.param, "Positive", "lithium-ion oxygen"
         )

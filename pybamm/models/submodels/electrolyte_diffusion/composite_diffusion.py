@@ -22,8 +22,8 @@ class Composite(BaseElectrolyteDiffusion):
     **Extends:** :class:`pybamm.electrolyte_diffusion.BaseElectrolyteDiffusion`
     """
 
-    def __init__(self, param, reactions, extended=False):
-        super().__init__(param, reactions)
+    def __init__(self, param, extended=False):
+        super().__init__(param)
         self.extended = extended
 
     def get_fundamental_variables(self):
@@ -38,18 +38,17 @@ class Composite(BaseElectrolyteDiffusion):
         tor_0 = variables["Leading-order electrolyte tortuosity"]
         c_e_0_av = variables["Leading-order x-averaged electrolyte concentration"]
         c_e = variables["Electrolyte concentration"]
-        # i_e = variables["Electrolyte current density"]
+        i_e = variables["Electrolyte current density"]
         v_box_0 = variables["Leading-order volume-averaged velocity"]
         T_0 = variables["Leading-order cell temperature"]
 
         param = self.param
 
         N_e_diffusion = -tor_0 * param.D_e(c_e_0_av, T_0) * pybamm.grad(c_e)
+        N_e_migration = param.C_e * param.t_plus(c_e) * i_e / param.gamma_e
+        N_e_convection = param.C_e * c_e_0_av * v_box_0
 
-        if v_box_0.id == pybamm.Scalar(0).id:
-            N_e = N_e_diffusion
-        else:
-            N_e = N_e_diffusion + v_box_0 * c_e
+        N_e = N_e_diffusion + N_e_migration + N_e_convection
 
         variables.update(self._get_standard_flux_variables(N_e))
 
@@ -65,48 +64,29 @@ class Composite(BaseElectrolyteDiffusion):
         c_e = variables["Electrolyte concentration"]
         N_e = variables["Electrolyte flux"]
         if self.extended is False:
-            source_terms_0 = self._get_source_terms_leading_order(variables)
-        else:
-            source_terms_0 = self._get_source_terms_first_order(variables)
+            sum_s_j = variables[
+                "Leading-order sum of electrolyte reaction source terms"
+            ]
+        elif self.extended == "distributed":
+            sum_s_j = variables["Sum of electrolyte reaction source terms"]
+        elif self.extended == "average":
+            sum_s_j_n_av = variables[
+                "Sum of x-averaged negative electrode electrolyte reaction source terms"
+            ]
+            sum_s_j_p_av = variables[
+                "Sum of x-averaged positive electrode electrolyte reaction source terms"
+            ]
+            sum_s_j = pybamm.Concatenation(
+                pybamm.PrimaryBroadcast(sum_s_j_n_av, "negative electrode"),
+                pybamm.FullBroadcast(0, "separator", "current collector"),
+                pybamm.PrimaryBroadcast(sum_s_j_p_av, "positive electrode"),
+            )
+        source_terms = sum_s_j / self.param.gamma_e
 
         self.rhs = {
             c_e: (1 / eps_0)
-            * (-pybamm.div(N_e) / param.C_e + source_terms_0 - c_e * deps_0_dt)
+            * (-pybamm.div(N_e) / param.C_e + source_terms - c_e * deps_0_dt)
         }
-
-    def _get_source_terms_leading_order(self, variables):
-        param = self.param
-        c_e_n = variables["Negative electrolyte concentration"]
-        c_e_p = variables["Positive electrolyte concentration"]
-
-        return sum(
-            pybamm.Concatenation(
-                (reaction["Negative"]["s"] - param.t_plus(c_e_n))
-                * variables["Leading-order " + reaction["Negative"]["aj"].lower()],
-                pybamm.FullBroadcast(0, "separator", "current collector"),
-                (reaction["Positive"]["s"] - param.t_plus(c_e_p))
-                * variables["Leading-order " + reaction["Positive"]["aj"].lower()],
-            )
-            / self.param.gamma_e
-            for reaction in self.reactions.values()
-        )
-
-    def _get_source_terms_first_order(self, variables):
-        param = self.param
-        c_e_n = variables["Negative electrolyte concentration"]
-        c_e_p = variables["Positive electrolyte concentration"]
-
-        return sum(
-            pybamm.Concatenation(
-                (reaction["Negative"]["s"] - param.t_plus(c_e_n))
-                * variables[reaction["Negative"]["aj"]],
-                pybamm.FullBroadcast(0, "separator", "current collector"),
-                (reaction["Positive"]["s"] - param.t_plus(c_e_p))
-                * variables[reaction["Positive"]["aj"]],
-            )
-            / self.param.gamma_e
-            for reaction in self.reactions.values()
-        )
 
     def set_initial_conditions(self, variables):
 

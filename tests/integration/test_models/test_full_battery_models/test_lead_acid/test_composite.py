@@ -45,6 +45,29 @@ class TestLeadAcidComposite(unittest.TestCase):
         optimtest.set_up_model(simplify=False, to_python=False)
         optimtest.set_up_model(simplify=True, to_python=False)
 
+    def test_basic_processing_1plus1D(self):
+        options = {"current collector": "potential pair", "dimensionality": 1}
+        model = pybamm.lead_acid.Composite(options)
+        var = pybamm.standard_spatial_vars
+        var_pts = {
+            var.x_n: 5,
+            var.x_s: 5,
+            var.x_p: 5,
+            var.y: 5,
+            var.z: 5,
+        }
+        modeltest = tests.StandardModelTest(model, var_pts=var_pts)
+        modeltest.test_all(skip_output_tests=True)
+
+        options = {
+            "current collector": "potential pair",
+            "dimensionality": 1,
+            "convection": "full transverse",
+        }
+        model = pybamm.lead_acid.Composite(options)
+        modeltest = tests.StandardModelTest(model, var_pts=var_pts)
+        modeltest.test_all(skip_output_tests=True)
+
 
 class TestLeadAcidCompositeSurfaceForm(unittest.TestCase):
     def test_basic_processing_differential(self):
@@ -64,7 +87,7 @@ class TestLeadAcidCompositeSurfaceForm(unittest.TestCase):
         modeltest.test_all()  # solver=pybamm.CasadiSolver())
 
     # def test_thermal(self):
-    #     options = {"thermal": "x-lumped"}
+    #     options = {"thermal": "lumped"}
     #     model = pybamm.lead_acid.Composite(options)
     #     modeltest = tests.StandardModelTest(model)
     #     modeltest.test_all()
@@ -78,6 +101,13 @@ class TestLeadAcidCompositeSurfaceForm(unittest.TestCase):
 class TestLeadAcidCompositeExtended(unittest.TestCase):
     def test_basic_processing(self):
         model = pybamm.lead_acid.CompositeExtended()
+        param = model.default_parameter_values
+        param.update({"Current function [A]": 1})
+        modeltest = tests.StandardModelTest(model, parameter_values=param)
+        modeltest.test_all()
+
+    def test_basic_processing_averaged(self):
+        model = pybamm.lead_acid.CompositeAverageCorrection()
         param = model.default_parameter_values
         param.update({"Current function [A]": 1})
         modeltest = tests.StandardModelTest(model, parameter_values=param)

@@ -2,6 +2,9 @@
 
 ## Features
 
+-   Added functionality to solver to automatically discretise a 0D model ([#947](https://github.com/pybamm-team/PyBaMM/pull/947))
+-   Added sensitivity to `CasadiAlgebraicSolver` ([#940](https://github.com/pybamm-team/PyBaMM/pull/940))
+-   Added `ProcessedSymbolicVariable` class, which can handle symbolic variables (i.e. variables for which the inputs are symbolic) ([#940](https://github.com/pybamm-team/PyBaMM/pull/940))
 -   Made `QuickPlot` compatible with Google Colab ([#935](https://github.com/pybamm-team/PyBaMM/pull/935))
 -   Added `BasicFull` model for lead-acid ([#932](https://github.com/pybamm-team/PyBaMM/pull/932))
 
@@ -12,11 +15,19 @@
 
 ## Bug fixes
 
+-   Fixed `Interpolant` ids to allow processing ([#962](https://github.com/pybamm-team/PyBaMM/pull/962)
+-   Changed simulation attributes to assign copies rather than the objects themselves ([#952](https://github.com/pybamm-team/PyBaMM/pull/952)
+-   Added default values to base model so that it works with the `Simulation` class ([#952](https://github.com/pybamm-team/PyBaMM/pull/952)
+-   Fixed solver to recompute initial conditions when inputs are changed ([#951](https://github.com/pybamm-team/PyBaMM/pull/951)
+-   Reformatted thermal submodels ([#938](https://github.com/pybamm-team/PyBaMM/pull/938)
 -   Reformatted electrolyte submodels ([#927](https://github.com/pybamm-team/PyBaMM/pull/927))
+-   Reformatted convection submodels ([#635](https://github.com/pybamm-team/PyBaMM/pull/635))
 
 ## Breaking changes
 
 -   Removed some inputs like `T_inf`, `R_g` and activation energies to some of the standard function parameters. This is because each of those inputs is specific to a particular function (e.g. the reference temperature at which the function was measured). To change a property such as the activation energy, users should create a new function, specifying the relevant property as a `Parameter` or `InputParameter` ([#942](https://github.com/pybamm-team/PyBaMM/pull/942))
+-   The thermal option 'xyz-lumped' has been removed. The option 'thermal current collector' has also been removed ([#938](https://github.com/pybamm-team/PyBaMM/pull/938)
+-   The 'C-rate' parameter has been deprecated. Use 'Current function [A]' instead. The cell capacity can be accessed as 'Cell capacity [A.h]', and used to calculate current from C-rate ([#952](https://github.com/pybamm-team/PyBaMM/pull/952)
 
 # [v0.2.1](https://github.com/pybamm-team/PyBaMM/tree/v0.2.1) - 2020-03-31
 
@@ -45,7 +56,7 @@ New expression tree node types, models, parameter sets and solvers, as well as g
 
 ## Bug fixes
 
--   Filter out discontinuities that occur after solve times 
+-   Filter out discontinuities that occur after solve times
     ([#941](https://github.com/pybamm-team/PyBaMM/pull/945))
 -   Fixed tight layout for QuickPlot in jupyter notebooks ([#930](https://github.com/pybamm-team/PyBaMM/pull/930))
 -   Fixed bug raised if function returns a scalar ([#919](https://github.com/pybamm-team/PyBaMM/pull/919))

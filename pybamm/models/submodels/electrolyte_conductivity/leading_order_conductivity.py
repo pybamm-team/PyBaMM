@@ -22,8 +22,8 @@ class LeadingOrder(BaseElectrolyteConductivity):
     **Extends:** :class:`pybamm.electrolyte_conductivity.BaseElectrolyteConductivity`
     """
 
-    def __init__(self, param, domain=None, reactions=None):
-        super().__init__(param, domain, reactions)
+    def __init__(self, param, domain=None):
+        super().__init__(param, domain)
 
     def get_coupled_variables(self, variables):
         ocp_n_av = variables["X-averaged negative electrode open circuit potential"]
@@ -55,8 +55,10 @@ class LeadingOrder(BaseElectrolyteConductivity):
         )
         variables.update(self._get_standard_current_variables(i_e))
 
-        eta_c_av = pybamm.Scalar(0)  # concentration overpotential
-        delta_phi_e_av = pybamm.Scalar(0)  # ohmic losses
+        # concentration overpotential
+        eta_c_av = pybamm.PrimaryBroadcast(0, "current collector")
+        # ohmic losses
+        delta_phi_e_av = pybamm.PrimaryBroadcast(0, "current collector")
         variables.update(self._get_split_overpotential(eta_c_av, delta_phi_e_av))
 
         return variables

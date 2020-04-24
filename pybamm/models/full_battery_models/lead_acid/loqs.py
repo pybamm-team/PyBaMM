@@ -34,7 +34,6 @@ class LOQS(BaseModel):
         super().__init__(options, name)
 
         self.set_external_circuit_submodel()
-        self.set_reactions()
         self.set_interfacial_submodel()
         self.set_convection_submodel()
         self.set_porosity_submodel()
@@ -109,13 +108,24 @@ class LOQS(BaseModel):
     def set_convection_submodel(self):
 
         if self.options["convection"] is False:
-            self.submodels["leading-order convection"] = pybamm.convection.NoConvection(
-                self.param
-            )
-        if self.options["convection"] is True:
-            self.submodels["leading-order convection"] = pybamm.convection.LeadingOrder(
-                self.param
-            )
+            self.submodels[
+                "leading-order transverse convection"
+            ] = pybamm.convection.transverse.NoConvection(self.param)
+            self.submodels[
+                "leading-order through-cell convection"
+            ] = pybamm.convection.through_cell.NoConvection(self.param)
+        else:
+            if self.options["convection"] == "uniform transverse":
+                self.submodels[
+                    "leading-order transverse convection"
+                ] = pybamm.convection.transverse.Uniform(self.param)
+            elif self.options["convection"] == "full transverse":
+                self.submodels[
+                    "leading-order transverse convection"
+                ] = pybamm.convection.transverse.Full(self.param)
+            self.submodels[
+                "leading-order through-cell convection"
+            ] = pybamm.convection.through_cell.Explicit(self.param)
 
     def set_interfacial_submodel(self):
 
@@ -174,25 +184,23 @@ class LOQS(BaseModel):
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
                     "leading-order " + domain.lower() + " electrolyte conductivity"
-                ] = surf_form.LeadingOrderDifferential(
-                    self.param, domain, self.reactions
-                )
+                ] = surf_form.LeadingOrderDifferential(self.param, domain)
 
         elif self.options["surface form"] == "algebraic":
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
                     "leading-order " + domain.lower() + " electrolyte conductivity"
-                ] = surf_form.LeadingOrderAlgebraic(self.param, domain, self.reactions)
+                ] = surf_form.LeadingOrderAlgebraic(self.param, domain)
 
         self.submodels[
             "electrolyte diffusion"
-        ] = pybamm.electrolyte_diffusion.LeadingOrder(self.param, self.reactions)
+        ] = pybamm.electrolyte_diffusion.LeadingOrder(self.param)
 
     def set_side_reaction_submodels(self):
         if "oxygen" in self.options["side reactions"]:
             self.submodels[
                 "leading-order oxygen diffusion"
-            ] = pybamm.oxygen_diffusion.LeadingOrder(self.param, self.reactions)
+            ] = pybamm.oxygen_diffusion.LeadingOrder(self.param)
             self.submodels[
                 "leading-order positive oxygen interface"
             ] = pybamm.interface.ForwardTafel(

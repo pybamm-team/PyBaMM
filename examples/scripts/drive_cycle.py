@@ -6,7 +6,7 @@ import pybamm
 pybamm.set_logging_level("INFO")
 
 # load model and update parameters so the input current is the US06 drive cycle
-model = pybamm.lithium_ion.SPMe({"thermal": "x-lumped"})
+model = pybamm.lithium_ion.SPMe({"thermal": "lumped"})
 param = model.default_parameter_values
 param["Current function [A]"] = "[current data]US06"
 

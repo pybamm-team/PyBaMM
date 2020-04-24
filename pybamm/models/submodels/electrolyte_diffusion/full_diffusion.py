@@ -21,8 +21,8 @@ class Full(BaseElectrolyteDiffusion):
     **Extends:** :class:`pybamm.electrolyte_diffusion.BaseElectrolyteDiffusion`
     """
 
-    def __init__(self, param, reactions):
-        super().__init__(param, reactions)
+    def __init__(self, param):
+        super().__init__(param)
 
     def get_fundamental_variables(self):
         c_e_n = pybamm.standard_variables.c_e_n
@@ -35,19 +35,17 @@ class Full(BaseElectrolyteDiffusion):
 
         tor = variables["Electrolyte tortuosity"]
         c_e = variables["Electrolyte concentration"]
-        # i_e = variables["Electrolyte current density"]
+        i_e = variables["Electrolyte current density"]
         v_box = variables["Volume-averaged velocity"]
         T = variables["Cell temperature"]
 
         param = self.param
 
         N_e_diffusion = -tor * param.D_e(c_e, T) * pybamm.grad(c_e)
-        # N_e_migration = (param.C_e * param.t_plus) / param.gamma_e * i_e
-        # N_e_convection = c_e * v_box
+        N_e_migration = param.C_e * param.t_plus(c_e) * i_e / param.gamma_e
+        N_e_convection = param.C_e * c_e * v_box
 
-        # N_e = N_e_diffusion + N_e_migration + N_e_convection
-
-        N_e = N_e_diffusion + c_e * v_box
+        N_e = N_e_diffusion + N_e_migration + N_e_convection
 
         variables.update(self._get_standard_flux_variables(N_e))
 
@@ -61,24 +59,19 @@ class Full(BaseElectrolyteDiffusion):
         deps_dt = variables["Porosity change"]
         c_e = variables["Electrolyte concentration"]
         N_e = variables["Electrolyte flux"]
-        c_e_n = variables["Negative electrolyte concentration"]
-        c_e_p = variables["Positive electrolyte concentration"]
+        div_Vbox = variables["Transverse volume-averaged acceleration"]
 
-        source_terms = sum(
-            pybamm.Concatenation(
-                (reaction["Negative"]["s"] - param.t_plus(c_e_n))
-                * variables[reaction["Negative"]["aj"]],
-                pybamm.FullBroadcast(0, "separator", "current collector"),
-                (reaction["Positive"]["s"] - param.t_plus(c_e_p))
-                * variables[reaction["Positive"]["aj"]],
-            )
-            / param.gamma_e
-            for reaction in self.reactions.values()
-        )
+        sum_s_j = variables["Sum of electrolyte reaction source terms"]
+        source_terms = sum_s_j / self.param.gamma_e
 
         self.rhs = {
             c_e: (1 / eps)
-            * (-pybamm.div(N_e) / param.C_e + source_terms - c_e * deps_dt)
+            * (
+                -pybamm.div(N_e) / param.C_e
+                + source_terms
+                - c_e * deps_dt
+                - c_e * div_Vbox
+            )
         }
 
     def set_initial_conditions(self, variables):

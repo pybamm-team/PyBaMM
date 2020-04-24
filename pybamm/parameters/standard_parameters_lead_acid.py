@@ -60,13 +60,6 @@ nu = nu_plus + nu_minus
 c_ox_init_dim = pybamm.Parameter("Initial oxygen concentration [mol.m-3]")
 c_ox_typ = c_e_typ  # pybamm.Parameter("Typical oxygen concentration [mol.m-3]")
 
-# Electrode properties
-sigma_n_dim = pybamm.Parameter("Negative electrode conductivity [S.m-1]")
-sigma_p_dim = pybamm.Parameter("Positive electrode conductivity [S.m-1]")
-# In lead-acid the current collector and electrodes are the same (same conductivity)
-sigma_cn_dimensional = sigma_n_dim
-sigma_cp_dimensional = sigma_p_dim
-
 # Microstructure
 a_n_dim = pybamm.geometric_parameters.a_n_dim
 a_p_dim = pybamm.geometric_parameters.a_p_dim
@@ -82,6 +75,26 @@ xi_p = pybamm.Parameter("Positive electrode morphological parameter")
 epsilon_inactive_n = pybamm.Scalar(0)
 epsilon_inactive_s = pybamm.Scalar(0)
 epsilon_inactive_p = pybamm.Scalar(0)
+
+# Electrode properties
+V_Pb = pybamm.Parameter("Molar volume of lead [m3.mol-1]")
+V_PbO2 = pybamm.Parameter("Molar volume of lead-dioxide [m3.mol-1]")
+V_PbSO4 = pybamm.Parameter("Molar volume of lead sulfate [m3.mol-1]")
+DeltaVsurf_n = V_Pb - V_PbSO4  # Net Molar Volume consumed in neg electrode [m3.mol-1]
+DeltaVsurf_p = V_PbSO4 - V_PbO2  # Net Molar Volume consumed in pos electrode [m3.mol-1]
+d_n = pybamm.Parameter("Negative electrode pore size [m]")
+d_p = pybamm.Parameter("Positive electrode pore size [m]")
+eps_n_max = pybamm.Parameter("Maximum porosity of negative electrode")
+eps_s_max = pybamm.Parameter("Maximum porosity of separator")
+eps_p_max = pybamm.Parameter("Maximum porosity of positive electrode")
+Q_n_max_dimensional = pybamm.Parameter("Negative electrode volumetric capacity [C.m-3]")
+Q_p_max_dimensional = pybamm.Parameter("Positive electrode volumetric capacity [C.m-3]")
+sigma_n_dim = pybamm.Parameter("Negative electrode conductivity [S.m-1]")
+sigma_p_dim = pybamm.Parameter("Positive electrode conductivity [S.m-1]")
+# In lead-acid the current collector and electrodes are the same (same conductivity)
+# but we correct here for Bruggeman
+sigma_cn_dimensional = sigma_n_dim * (1 - eps_n_max) ** b_s_n
+sigma_cp_dimensional = sigma_p_dim * (1 - eps_p_max) ** b_s_p
 
 # Electrochemical reactions
 # Main
@@ -349,6 +362,8 @@ sigma_p = sigma_p_dim * potential_scale / current_scale / L_x
 sigma_cp = sigma_cp_dimensional * potential_scale / i_typ / L_x
 sigma_n_prime = sigma_n * delta ** 2
 sigma_p_prime = sigma_p * delta ** 2
+sigma_cn_prime = sigma_cn * delta ** 2
+sigma_cp_prime = sigma_cp * delta ** 2
 delta_pore_n = 1 / (a_n_dim * L_x)
 delta_pore_p = 1 / (a_p_dim * L_x)
 Q_n_max = Q_n_max_dimensional / (c_e_typ * F)
@@ -419,7 +434,7 @@ voltage_high_cut = (
 
 # Electrolyte volumetric capacity
 Q_e_max = (l_n * eps_n_max + l_s * eps_s_max + l_p * eps_p_max) / (
-    s_plus_n_S - s_plus_p_S
+    s_plus_p_S - s_plus_n_S
 )
 Q_e_max_dimensional = Q_e_max * c_e_typ * F
 capacity = Q_e_max_dimensional * n_electrodes_parallel * A_cs * L_x

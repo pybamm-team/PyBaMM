@@ -22,9 +22,16 @@ class TestBaseModel(unittest.TestCase):
             "X-averaged positive electrode oxygen interfacial current density": a,
             "Separator tortuosity": a_s,
             "Separator oxygen concentration": a_s,
+            "Leading-order negative electrode oxygen interfacial current density": a,
         }
         submodel = pybamm.interface.DiffusionLimited(
             param, "Negative", "lead-acid oxygen", "leading"
+        )
+        std_tests = tests.StandardSubModelTests(submodel, variables)
+        std_tests.test_all()
+
+        submodel = pybamm.interface.DiffusionLimited(
+            param, "Negative", "lead-acid oxygen", "composite"
         )
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
