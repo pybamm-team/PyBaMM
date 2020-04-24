@@ -23,7 +23,9 @@ class NoSEI(BaseModel):
         super().__init__(param, domain)
 
     def get_fundamental_variables(self):
-        zero = pybamm.PrimaryBroadcast(pybamm.Scalar(0), self.domain.lower())
+        zero = pybamm.FullBroadcast(
+            pybamm.Scalar(0), self.domain.lower(), "current collector"
+        )
         variables = self._get_standard_thickness_variables(zero, zero)
         variables.update(self._get_standard_reaction_variables(zero, zero))
         return variables
