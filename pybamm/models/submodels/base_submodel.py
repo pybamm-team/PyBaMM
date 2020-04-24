@@ -4,7 +4,7 @@
 import pybamm
 
 
-class BaseSubModel:
+class BaseSubModel(pybamm.BaseModel):
     """
     The base class for all submodels. All submodels inherit from this class and must
     only provide public methods which overwrite those in this base class. Any methods
@@ -54,16 +54,15 @@ class BaseSubModel:
         name="Unnamed submodel",
         external=False,
     ):
-        super().__init__()
+        super().__init__(name)
         self.param = param
-        # Initialise empty variables (to avoid overwriting with 'None')
 
-        self.rhs = {}
-        self.algebraic = {}
-        self.boundary_conditions = {}
-        self.initial_conditions = {}
-        self.variables = {}
-        self.events = []
+        # self.rhs = {}
+        # self.algebraic = {}
+        # self.boundary_conditions = {}
+        # self.initial_conditions = {}
+        # self.variables = {}
+        # self.events = []
 
         self.domain = domain
         self.set_domain_for_broadcast()
