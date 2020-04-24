@@ -11,7 +11,7 @@ On Fedora or CentOS, you can use DNF or Yum. For example
 ```bash
 sudo dnf install python3
 ```
-On Mac OS distributions, you can use `homebrew`. 
+On Mac OS distributions, you can use `homebrew`.
 First [install `brew`](https://docs.python-guide.org/starting/install3/osx/):
 
 ```bash
@@ -56,6 +56,23 @@ PyBaMM's dependencies (such as `numpy`, `scipy`, etc) will be installed automati
 
 For an introduction to virtual environments, see (https://realpython.com/python-virtual-environments-a-primer/).
 
+#### Optional - scikits.odes solver
+Users can install [scikits.odes](https://github.com/bmcage/odes) in order to use the
+wrapped SUNDIALS ODE and DAE
+[solvers](https://pybamm.readthedocs.io/en/latest/source/solvers/scikits_solvers.html).
+
+**A pre-requisite** is the installation of a BLAS library (such as [openblas](https://www.openblas.net/)).
+On Ubuntu/debian
+```
+sudo apt install libopenblas-dev
+```
+After installing PyBaMM, the following command can be used to automatically install `scikits.odes`
+and its dependencies
+```
+$ pybamm_install_odes --install-sundials
+```
+The  `--install-sundials` option is used to activate automatic downloads and installation of the sundials library, which is required by `scikits.odes`.
+
 ### Developer install
 
 If you wish to contribute to PyBaMM, you should get the latest version from the GitHub repository.
@@ -85,6 +102,10 @@ Then, to install PyBaMM as a [developer](CONTRIBUTING.md), type
 pip install -e .[dev,docs]
 ```
 
+**KLU sparse solver** If you wish so simulate large systems such as the 2+1D models, we recommend employing a sparse solver.
+PyBaMM currently offers a direct interface to the sparse KLU solver within Sundials, but it is
+unlikely to be installed as you may not have all the dependencies available. If you wish to install the KLU from the PyBaMM sources, see [compiling the KLU sparse solver](compiling_KLU.md).
+
 To check whether PyBaMM has installed properly, you can run the tests:
 
 ```bash
@@ -99,129 +120,6 @@ PyBaMM can be uninstalled by running
 pip uninstall pybamm
 ```
 in your virtual environment.
-
-## Optional dependencies
-The following instructions assume that you downloaded the PyBaMM source code and that all
-commands are run from the PyBaMM root directory (`PyBaMM/`).
-This can be done using `git`, running
-
-```bash
-git clone https://github.com/pybamm-team/PyBaMM.git
-cd PyBaMM
-```
-Alternatively, you can download the source code archive from [the PyBaMM GitHub repo](https://github.com/pybamm-team/PyBaMM.git) and extract it to the location of your choice.
-
-Ideally you should have the python package `wget` installed.
-This allows for the automatic download of some of the dependencies that are part of the installation process.
-You can install it using (within your virtual environment)
-```bash
-pip install wget
-```
-
-### [scikits.odes](https://github.com/bmcage/odes)
-Users can install [scikits.odes](https://github.com/bmcage/odes) in order to use the
-wrapped SUNDIALS ODE and DAE
-[solvers](https://pybamm.readthedocs.io/en/latest/source/solvers/scikits_solvers.html).
-
-Before installing scikits.odes, you need to have installed:
-
-- Python 3 header files (`python3-dev` on Debian/Ubuntu-based distributions)
-- C compiler (e.g. `gcc`)
-- Fortran compiler (e.g. `gfortran`)
-- BLAS/LAPACK install (OpenBLAS is recommended by the scikits.odes developers)
-- CMake (for building Sundials)
-
-You can install these on Ubuntu or Debian using APT:
-
-```bash
-sudo apt update
-sudo apt install python3-dev gfortran gcc cmake libopenblas-dev
-```
-To install scikits.odes, simply run
-```bash
-python setup.py install_odes
-```
-This commands will first download and build the SUNDIALS library, required to install and use `scikits.odes`.
-This will download approximately 16MB of data and should only take a few minutes to compile.
-Alternatively, you can specify a directory containing the source code of the Sundials library
-```bash
-python setup.py install_odes --sundials-src=<path/to/sundials/source>
-```
-By default, sundials is installed in a `sundials` directory located at the root of the PyBaMM package.
-You can provide another location by using the `--sundials-inst=<path/to/other/location>` option.
-
-If you are installing `scikits.odes` within a virtual environment, the `activate` script will be automatically
-updated to add the sundials installation directory to your `LD_LIBRARY_PATH`.
-This is required in order to use `scikits.odes`.
-As a consequence, after installation you should restart your virtual environment.
-
-If you wish to install `scikits.odes` outside of a virtual environment, your `.bashrc` will be modified instead.
-After installation you should therefore run
-```bash
-source ~/.bashrc
-```
-Please see the [scikits.odes
-documentation](https://scikits-odes.readthedocs.io/en/latest/installation.html) for more
-detailed installation instructions.
-
-Finally, you can check your install by running
-```bash
-python -c "import pybamm; print(pybamm.have_scikits_odes())
-```
-### Sundials with KLU sparse solver
-If you wish so simulate large systems such as the 2+1D models, we recommend employing a
-sparse solver.
-PyBaMM currently offers a direct interface to the sparse KLU solver within Sundials.
-
-#### Prerequisites
-The requirements are the same as for the installation of `scikits.odes` (see previous section).
-Additionally, the [pybind11 GitHub repository](https://github.com/pybind/pybind11.git) should be located in `PyBaMM/third-party/`.
-First create a directory `third-party` and clone the repository:
-```bash
-mkdir third-party
-cd third-party
-git clone https://github.com/pybind/pybind11.git
-cd ..
-```
-If you don't have `git` installed, you can download the code source manually from (https://github.com/pybind/pybind11).
-
-#### Install the KLU solver
-The KLU solver is can be installed _via_ the following command:
-```bash
-python setup.py install_klu
-```
-The previous command will download and install both the [SuiteSparse](http://faculty.cse.tamu.edu/davis/suitesparse.html) and [SUNDIALS](https://computing.llnl.gov/projects/sundials) libraries.
-This will download approximately 70MB of data and the compilation should only take a couple of minutes.
-If the source for a library is already present on your system, you can specify its location using options `--suitesparse-src` or `--sundials-src`.
-Example:
-```bash
-python setup.py install_klu --suitesparse-src=<path/to/suitesparse/source>
-```
-This will not download the SuiteSparse library and compile the source code located in `path/to/suitesparse/source`.
-The sundials library will be downloaded.
-
-Finally, you can check your install by running
-```bash
-python -c "import pybamm; print(pybamm.have_idaklu())
-```
-
-### Install everything
-It is possible to install both `scikits.odes` and the KLU solver using the command
-```bash
-python setup.py install_all
-```
-Note that options `--sundials-src`, `--sundials-inst` and  `suitesparse-src` are still usable
-here.
-
-Finally, you can check your install by running
-```bash
-python -c "import pybamm; print(pybamm.have_scikits_odes())
-```
-and
-
-```bash
-python -c "import pybamm; print(pybamm.have_idaklu())
-```
 
 ## Troubleshooting
 
