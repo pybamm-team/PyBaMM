@@ -64,8 +64,8 @@ class TestSimplify(unittest.TestCase):
 
         # Divergence
         div_b = pybamm.div(pybamm.PrimaryBroadcastToEdges(b, "domain"))
-        self.assertIsInstance(div_b.simplify(), pybamm.Scalar)
-        self.assertEqual(div_b.simplify().evaluate(), 0)
+        self.assertIsInstance(div_b.simplify(), pybamm.PrimaryBroadcast)
+        self.assertEqual(div_b.simplify().child.child.evaluate(), 0)
         self.assertIsInstance(
             (pybamm.div(pybamm.grad(v))).simplify(), pybamm.Divergence
         )

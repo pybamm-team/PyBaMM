@@ -193,12 +193,9 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             disc = pybamm.Discretisation(mesh, spatial_methods)
             submesh = mesh["negative particle"]
             r = submesh[0].nodes
-            r_edge = submesh[0].edges
+            r_edge = pybamm.standard_spatial_vars.r_n_edge
 
-            N = pybamm.Matrix(
-                np.kron(np.ones(len(submesh)), r_edge ** 2 * np.sin(r_edge)),
-                domain=["negative particle"],
-            )
+            N = r_edge ** 2 * pybamm.sin(r_edge)
             div_eqn = pybamm.div(N)
             # Define exact solutions
             # N = r**2*sin(r) --> div(N) = 4*r*sin(r) - r**2*cos(r)
@@ -236,7 +233,9 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             r_edge = pybamm.standard_spatial_vars.r_n_edge
             x = pybamm.standard_spatial_vars.x_n
 
-            N = pybamm.PrimaryBroadcast(x, "negative particle") * r_edge
+            N = pybamm.PrimaryBroadcast(x, "negative particle") * (
+                r_edge ** 2 * pybamm.sin(r_edge)
+            )
             div_eqn = pybamm.div(N)
             # Define exact solutions
             # N = r**2*sin(r) --> div(N) = 4*r*sin(r) - r**2*cos(r)
