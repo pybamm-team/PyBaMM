@@ -50,9 +50,15 @@ class TestBaseModel(unittest.TestCase):
 
         # Test number input
         c0 = pybamm.Symbol("c0")
-        model.initial_conditions = {c0: 34}
+        model.initial_conditions[c0] = 34
         self.assertIsInstance(model.initial_conditions[c0], pybamm.Scalar)
         self.assertEqual(model.initial_conditions[c0].value, 34)
+
+        # Variable in initial conditions should fail
+        with self.assertRaisesRegex(
+            TypeError, "Initial conditions cannot contain 'Variable' objects"
+        ):
+            model.initial_conditions = {c0: pybamm.Variable("v")}
 
         # non-matching domains should fail
         with self.assertRaises(pybamm.DomainError):
@@ -72,8 +78,9 @@ class TestBaseModel(unittest.TestCase):
 
         # Test number input
         c0 = pybamm.Symbol("c0")
-        model.boundary_conditions = {
-            c0: {"left": (-2, "Dirichlet"), "right": (4, "Dirichlet")}
+        model.boundary_conditions[c0] = {
+            "left": (-2, "Dirichlet"),
+            "right": (4, "Dirichlet"),
         }
         self.assertIsInstance(model.boundary_conditions[c0]["left"][0], pybamm.Scalar)
         self.assertIsInstance(model.boundary_conditions[c0]["right"][0], pybamm.Scalar)
