@@ -74,7 +74,7 @@ class Composite(BaseElectrolyteDiffusion):
                 "Sum of x-averaged negative electrode electrolyte reaction source terms"
             ]
             sum_s_j_p_av = variables[
-                "Sum of x-averaged negative electrode electrolyte reaction source terms"
+                "Sum of x-averaged positive electrode electrolyte reaction source terms"
             ]
             sum_s_j = pybamm.Concatenation(
                 pybamm.PrimaryBroadcast(sum_s_j_n_av, "negative electrode"),

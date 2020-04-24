@@ -244,15 +244,19 @@ class BasicFull(BaseModel):
         ######################
         # Electrolyte concentration
         ######################
-        N_e = -tor * param.D_e(c_e, T) * pybamm.grad(c_e) + param.C_e * c_e * v
+        N_e = (
+            -tor * param.D_e(c_e, T) * pybamm.grad(c_e)
+            + param.C_e * param.t_plus(c_e) * i_e / param.gamma_e
+            + param.C_e * c_e * v
+        )
         s = pybamm.Concatenation(
-            -pybamm.PrimaryBroadcast(param.s_plus_n_S, "negative electrode"),
+            pybamm.PrimaryBroadcast(param.s_plus_n_S, "negative electrode"),
             pybamm.PrimaryBroadcast(0, "separator"),
-            -pybamm.PrimaryBroadcast(param.s_plus_p_S, "positive electrode"),
+            pybamm.PrimaryBroadcast(param.s_plus_p_S, "positive electrode"),
         )
         self.rhs[c_e] = (1 / eps) * (
             -pybamm.div(N_e) / param.C_e
-            + (s - param.t_plus(c_e)) * j / param.gamma_e
+            + s * j / param.gamma_e
             - c_e * deps_dt
             - c_e * div_V
         )
@@ -287,7 +291,6 @@ class BasicFull(BaseModel):
             "x [m]": pybamm.standard_spatial_vars.x * param.L_x,
             "x": pybamm.standard_spatial_vars.x,
             "Porosity": eps,
-            "Interfacial current density": j,
             "Volume-averaged velocity": v,
             "X-averaged separator transverse volume-averaged velocity": div_V_s,
         }

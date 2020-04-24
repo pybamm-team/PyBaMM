@@ -91,7 +91,7 @@ class TestMainReaction(unittest.TestCase):
             variables = {**self.variables, "Positive electrolyte concentration": c_e}
             return model_p._get_exchange_current_density(variables)
 
-        c_e = pybamm.Scalar(0.5)
+        c_e = pybamm.InputParameter("c_e")
         h = pybamm.Scalar(0.00001)
 
         # Analytical
@@ -102,11 +102,17 @@ class TestMainReaction(unittest.TestCase):
         j0_n_FD = parameter_values.process_symbol(
             (j0_n(c_e + h) - j0_n(c_e - h)) / (2 * h)
         )
-        self.assertAlmostEqual(j0_n_diff.evaluate(), j0_n_FD.evaluate())
+        self.assertAlmostEqual(
+            j0_n_diff.evaluate(inputs={"c_e": 0.5}),
+            j0_n_FD.evaluate(inputs={"c_e": 0.5}),
+        )
         j0_p_FD = parameter_values.process_symbol(
             (j0_p(c_e + h) - j0_p(c_e - h)) / (2 * h)
         )
-        self.assertAlmostEqual(j0_p_diff.evaluate(), j0_p_FD.evaluate())
+        self.assertAlmostEqual(
+            j0_p_diff.evaluate(inputs={"c_e": 0.5}),
+            j0_p_FD.evaluate(inputs={"c_e": 0.5}),
+        )
 
 
 if __name__ == "__main__":

@@ -160,7 +160,7 @@ class TestButlerVolmer(unittest.TestCase):
             }
             return model_n.get_coupled_variables(variables)[
                 "Negative electrode interfacial current density"
-            ]
+            ].orphans[0]
 
         def j_p(c_e):
             variables = {
@@ -170,9 +170,9 @@ class TestButlerVolmer(unittest.TestCase):
             }
             return model_p.get_coupled_variables(variables)[
                 "Positive electrode interfacial current density"
-            ]
+            ].orphans[0]
 
-        c_e = pybamm.Scalar(0.5)
+        c_e = pybamm.InputParameter("c_e")
         h = pybamm.Scalar(0.00001)
 
         # Analytical
@@ -183,11 +183,19 @@ class TestButlerVolmer(unittest.TestCase):
         j_n_FD = parameter_values.process_symbol(
             (j_n(c_e + h) - j_n(c_e - h)) / (2 * h)
         )
-        self.assertAlmostEqual(j_n_diff.evaluate(), j_n_FD.evaluate(), places=5)
+        self.assertAlmostEqual(
+            j_n_diff.evaluate(inputs={"c_e": 0.5}),
+            j_n_FD.evaluate(inputs={"c_e": 0.5}),
+            places=5,
+        )
         j_p_FD = parameter_values.process_symbol(
             (j_p(c_e + h) - j_p(c_e - h)) / (2 * h)
         )
-        self.assertAlmostEqual(j_p_diff.evaluate(), j_p_FD.evaluate(), places=5)
+        self.assertAlmostEqual(
+            j_p_diff.evaluate(inputs={"c_e": 0.5}),
+            j_p_FD.evaluate(inputs={"c_e": 0.5}),
+            places=5,
+        )
 
     def test_diff_delta_phi_e_lead_acid(self):
 
@@ -205,7 +213,7 @@ class TestButlerVolmer(unittest.TestCase):
             }
             return model_n.get_coupled_variables(variables)[
                 "Negative electrode interfacial current density"
-            ]
+            ].orphans[0]
 
         def j_p(delta_phi):
             variables = {
@@ -215,12 +223,14 @@ class TestButlerVolmer(unittest.TestCase):
             }
             return model_p.get_coupled_variables(variables)[
                 "Positive electrode interfacial current density"
-            ]
+            ].orphans[0]
 
-        delta_phi = pybamm.Scalar(0.5)
+        delta_phi = pybamm.InputParameter("delta_phi")
         h = pybamm.Scalar(0.00001)
 
         # Analytical
+        x = j_n(delta_phi)
+        x.diff(delta_phi)
         j_n_diff = parameter_values.process_symbol(j_n(delta_phi).diff(delta_phi))
         j_p_diff = parameter_values.process_symbol(j_p(delta_phi).diff(delta_phi))
 
@@ -228,11 +238,19 @@ class TestButlerVolmer(unittest.TestCase):
         j_n_FD = parameter_values.process_symbol(
             (j_n(delta_phi + h) - j_n(delta_phi - h)) / (2 * h)
         )
-        self.assertAlmostEqual(j_n_diff.evaluate(), j_n_FD.evaluate(), places=5)
+        self.assertAlmostEqual(
+            j_n_diff.evaluate(inputs={"delta_phi": 0.5}),
+            j_n_FD.evaluate(inputs={"delta_phi": 0.5}),
+            places=5,
+        )
         j_p_FD = parameter_values.process_symbol(
             (j_p(delta_phi + h) - j_p(delta_phi - h)) / (2 * h)
         )
-        self.assertAlmostEqual(j_p_diff.evaluate(), j_p_FD.evaluate(), places=5)
+        self.assertAlmostEqual(
+            j_p_diff.evaluate(inputs={"delta_phi": 0.5}),
+            j_p_FD.evaluate(inputs={"delta_phi": 0.5}),
+            places=5,
+        )
 
 
 if __name__ == "__main__":
