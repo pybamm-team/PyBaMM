@@ -101,12 +101,12 @@ class BaseModel(object):
         self.options = {}
 
         # Initialise empty model
-        self._rhs = {}
-        self._algebraic = {}
-        self._initial_conditions = {}
-        self._boundary_conditions = {}
-        self._variables = pybamm.FuzzyDict()
-        self._events = []
+        self.rhs = {}
+        self.algebraic = {}
+        self.initial_conditions = {}
+        self.boundary_conditions = {}
+        self.variables = {}
+        self.events = []
         self._concatenated_rhs = None
         self._concatenated_algebraic = None
         self._concatenated_initial_conditions = None
@@ -259,9 +259,12 @@ class BaseModel(object):
 
     @param.setter
     def param(self, values):
-        # convert module into a class
-        # (StackOverflow: https://tinyurl.com/yk3euon3)
-        self._param = ParamClass(values)
+        if values is None:
+            self._param = None
+        else:
+            # convert module into a class
+            # (StackOverflow: https://tinyurl.com/yk3euon3)
+            self._param = ParamClass(values)
 
     @property
     def options(self):
