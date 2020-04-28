@@ -27,13 +27,22 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
         The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
         The absolute tolerance for the solver (default is 1e-6).
-    root_method : str, optional
-        The method to use to find initial conditions (default is "lm")
+    root_method : str or pybamm algebraic solver class, optional
+        The method to use to find initial conditions (for DAE solvers).
+        If a solver class, must be an algebraic solver class.
+        If "casadi",
+        the solver uses casadi's Newton rootfinding algorithm to find initial
+        conditions. Otherwise, the solver uses 'scipy.optimize.root' with method
+        specified by 'root_method' (e.g. "lm", "hybr", ...)
     root_tol : float, optional
         The tolerance for the initial-condition solver (default is 1e-6).
-    max_steps: int, optional
-        The maximum number of steps the solver will take before terminating
-        (default is 1000).
+    extra_options : dict, optional
+        Any options to pass to the solver.
+        Please consult `scikits.odes documentation
+        <https://bmcage.github.io/odes/dev/index.html>`_ for details.
+        Some common keys:
+
+        - 'max_steps': maximum (int) number of steps the solver can take
     """
 
     def __init__(
@@ -43,13 +52,16 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
         atol=1e-6,
         root_method="casadi",
         root_tol=1e-6,
-        max_steps=1000,
+        extra_options=None,
+        max_steps="deprecated",
     ):
         if scikits_odes_spec is None:
             raise ImportError("scikits.odes is not installed")
 
         super().__init__(method, rtol, atol, root_method, root_tol, max_steps)
         self.name = "Scikits DAE solver ({})".format(method)
+
+        self.extra_options = extra_options or {}
 
         pybamm.citations.register("scikits-odes")
         pybamm.citations.register("hindmarsh2000pvode")
@@ -72,8 +84,11 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
         if model.convert_to_format == "casadi":
             inputs = casadi.vertcat(*[x for x in inputs.values()])
 
-        residuals = model.residuals_eval
         y0 = model.y0
+        if isinstance(y0, casadi.DM):
+            y0 = y0.full().flatten()
+
+        residuals = model.residuals_eval
         events = model.terminate_events_eval
         jacobian = model.jacobian_eval
         mass_matrix = model.mass_matrix.entries
@@ -85,10 +100,10 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
             return_root[:] = [event(t, y, inputs) for event in events]
 
         extra_options = {
+            **self.extra_options,
             "old_api": False,
             "rtol": self.rtol,
             "atol": self.atol,
-            "max_steps": self.max_steps,
         }
 
         if jacobian:

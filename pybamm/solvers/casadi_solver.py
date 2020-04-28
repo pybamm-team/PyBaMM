@@ -33,8 +33,13 @@ class CasadiSolver(pybamm.BaseSolver):
         The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
         The absolute tolerance for the solver (default is 1e-6).
-    root_method : str, optional
-        The method to use for finding consistend initial conditions. Default is 'lm'.
+    root_method : str or pybamm algebraic solver class, optional
+        The method to use to find initial conditions (for DAE solvers).
+        If a solver class, must be an algebraic solver class.
+        If "casadi",
+        the solver uses casadi's Newton rootfinding algorithm to find initial
+        conditions. Otherwise, the solver uses 'scipy.optimize.root' with method
+        specified by 'root_method' (e.g. "lm", "hybr", ...)
     root_tol : float, optional
         The tolerance for root-finding. Default is 1e-6.
     max_step_decrease_counts : float, optional
@@ -44,8 +49,12 @@ class CasadiSolver(pybamm.BaseSolver):
         The maximum global step size (in seconds) used in "safe" mode. If None
         the default value corresponds to a non-dimensional time of 0.01
         (i.e. ``0.01 * model.timescale_eval``).
-    extra_options : keyword arguments, optional
-        Any extra keyword-arguments; these are passed directly to the CasADi integrator.
+    extra_options_setup : dict, optional
+        Any options to pass to the CasADi integrator when creating the integrator.
+        Please consult `CasADi documentation <https://tinyurl.com/y5rk76os>`_ for
+        details.
+    extra_options_call : dict, optional
+        Any options to pass to the CasADi integrator when calling the integrator.
         Please consult `CasADi documentation <https://tinyurl.com/y5rk76os>`_ for
         details.
 
@@ -60,7 +69,8 @@ class CasadiSolver(pybamm.BaseSolver):
         root_tol=1e-6,
         max_step_decrease_count=5,
         dt_max=None,
-        **extra_options,
+        extra_options_setup=None,
+        extra_options_call=None,
     ):
         super().__init__("problem dependent", rtol, atol, root_method, root_tol)
         if mode in ["safe", "fast", "old safe"]:
@@ -75,7 +85,9 @@ class CasadiSolver(pybamm.BaseSolver):
             )
         self.max_step_decrease_count = max_step_decrease_count
         self.dt_max = dt_max
-        self.extra_options = extra_options
+
+        self.extra_options_setup = extra_options_setup or {}
+        self.extra_options_call = extra_options_call or {}
 
         self.name = "CasADi solver with '{}' mode".format(mode)
 
@@ -103,13 +115,6 @@ class CasadiSolver(pybamm.BaseSolver):
         # convert inputs to casadi format
         inputs = casadi.vertcat(*[x for x in inputs.values()])
 
-        if len(model.rhs) == 0:
-            # casadi solver won't allow solving algebraic model so we have to raise an
-            # error here
-            raise pybamm.SolverError(
-                "Cannot use CasadiSolver to solve algebraic model, "
-                "use CasadiAlgebraicSolver instead"
-            )
         if self.mode == "fast":
             integrator = self.get_integrator(model, t_eval, inputs)
             solution = self._run_integrator(integrator, model, model.y0, inputs, t_eval)
@@ -122,6 +127,9 @@ class CasadiSolver(pybamm.BaseSolver):
             solution.termination = "final time"
             return solution
         elif self.mode == "safe":
+            y0 = model.y0
+            if isinstance(y0, casadi.DM):
+                y0 = y0.full().flatten()
             # Step-and-check
             t = t_eval[0]
             t_f = t_eval[-1]
@@ -183,7 +191,7 @@ class CasadiSolver(pybamm.BaseSolver):
                         raise pybamm.SolverError(
                             """
                             Maximum number of decreased steps occurred at t={}. Try
-                            solving the model up to this time only
+                            solving the model up to this time only or reducing dt_max.
                             """.format(
                                 t
                             )
@@ -269,14 +277,11 @@ class CasadiSolver(pybamm.BaseSolver):
             t = t_eval[0]
             init_event_signs = np.sign(
                 np.concatenate(
-                    [
-                        event(t, model.y0, inputs)
-                        for event in model.terminate_events_eval
-                    ]
+                    [event(t, y0, inputs) for event in model.terminate_events_eval]
                 )
             )
             pybamm.logger.info("Start solving {} with {}".format(model.name, self.name))
-            y0 = model.y0
+
             # Initialize solution
             solution = pybamm.Solution(np.array([t]), y0[:, np.newaxis])
             solution.solve_time = 0
@@ -304,7 +309,7 @@ class CasadiSolver(pybamm.BaseSolver):
                         raise pybamm.SolverError(
                             """
                             Maximum number of decreased steps occurred at t={}. Try
-                            solving the model up to this time only or reducing dt_max.
+                            solving the model up to this time only.
                             """.format(
                                 t
                             )
@@ -352,6 +357,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 show_eval_warnings = False
 
             options = {
+                **self.extra_options_setup,
                 "grid": t_eval,
                 "reltol": self.rtol,
                 "abstol": self.atol,
@@ -391,11 +397,11 @@ class CasadiSolver(pybamm.BaseSolver):
         )
 
     def _run_integrator(self, integrator, model, y0, inputs, t_eval):
-        rhs_size = model.rhs_eval(t_eval[0], y0, inputs).shape[0]
+        rhs_size = model.concatenated_rhs.size
         y0_diff, y0_alg = np.split(y0, [rhs_size])
         try:
             # Try solving
-            sol = integrator(x0=y0_diff, z0=y0_alg, p=inputs, **self.extra_options)
+            sol = integrator(x0=y0_diff, z0=y0_alg, p=inputs, **self.extra_options_call)
             y_values = np.concatenate([sol["xf"].full(), sol["zf"].full()])
             return pybamm.Solution(t_eval, y_values)
         except RuntimeError as e:
