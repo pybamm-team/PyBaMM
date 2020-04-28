@@ -26,7 +26,10 @@ class TestScipySolver(unittest.TestCase):
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
         # Solve
-        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
+        # Make sure that passing in extra options works
+        solver = pybamm.ScipySolver(
+            rtol=1e-8, atol=1e-8, method="RK45", extra_options={"first_step": 1e-4}
+        )
         t_eval = np.linspace(0, 1, 80)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
