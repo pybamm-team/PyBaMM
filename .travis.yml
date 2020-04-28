@@ -14,7 +14,6 @@ addons:
     - libopenblas-dev
     - liblapack-dev
     - graphviz
-    - libsuitesparse-dev
 
 matrix:
     include:
@@ -31,7 +30,6 @@ matrix:
                 - liblapack-dev
                 - graphviz
                 - python3.6-dev
-                - libsuitesparse-dev
           env:
             - PYBAMM_UNIT=true
             - PYBAMM_EXAMPLES=true
@@ -49,7 +47,6 @@ matrix:
                 - liblapack-dev
                 - graphviz
                 - python3.7-dev
-                - libsuitesparse-dev
           env:
             - PYBAMM_UNIT=true
             - PYBAMM_EXAMPLES=true
@@ -76,7 +73,6 @@ matrix:
                 - liblapack-dev
                 - graphviz
                 - python3.7-dev
-                - libsuitesparse-dev
           env:
             - PYBAMM_UNIT=true
             - PYBAMM_SCIKITS_ODES=true
@@ -94,7 +90,6 @@ matrix:
                 - liblapack-dev
                 - graphviz
                 - python3.7-dev
-                - libsuitesparse-dev
           env:
             - PYBAMM_UNIT=true
             - PYBAMM_EXAMPLES=true
@@ -112,7 +107,6 @@ matrix:
                 - liblapack-dev
                 - graphviz
                 - python3.7-dev
-                - libsuitesparse-dev
           env:
             - PYBAMM_COVER=true
             - PYBAMM_SCIKITS_ODES=true
@@ -130,7 +124,6 @@ matrix:
                 - liblapack-dev
                 - graphviz
                 - python3.7-dev
-                - libsuitesparse-dev
           env:
             - PYBAMM_DOCS=true
           if: type != cron
@@ -146,7 +139,6 @@ matrix:
                 - liblapack-dev
                 - graphviz
                 - python3.7-dev
-                - libsuitesparse-dev
           env:
             - PYBAMM_STYLE=true
           if: type != cron
@@ -163,7 +155,6 @@ matrix:
                 - liblapack-dev
                 - graphviz
                 - python3.7-dev
-                - libsuitesparse-dev
           env:
             - PYBAMM_UNIT=true
             - PYBAMM_EXAMPLES=true
@@ -195,6 +186,7 @@ before_install: |
     source venv/bin/activate;
     # A manual check that the correct version of Python is running.
     python --version;
+    pip install wheel;
   fi
 
 # Install dependencies
@@ -203,27 +195,24 @@ before_install: |
 #       without the packages from -dev and -doc!
 install:
   - pip install --upgrade pip
-  # In order to download SUNDIALS and SuiteSparse
-  - pip install wget
   - pip install -e .
   - if [[ $PYBAMM_DOCS == true ]]; then pip install -e .[docs]; fi;
   - if [[ $PYBAMM_STYLE == true || $PYBAMM_EXAMPLES ]]; then pip install -e .[dev]; fi;
   - if [[ $PYBAMM_COVER == true ]]; then pip install coverage codecov; fi;
   - |
     if [[ $PYBAMM_SCIKITS_ODES == true ]]; then
-      python setup.py install_odes -f;
-      export LD_LIBRARY_PATH=sundials/lib:$LD_LIBRARY_PATH
+      pip install wget;
+      pybamm_install_odes --install-sundials;
+      export LD_LIBRARY_PATH=scikits.odes/sundials5/lib:$LD_LIBRARY_PATH;
     fi;
   - |
     if [[ $PYBAMM_KLU == true ]]; then
-      mkdir -p third-party;
-      cd third-party;
+      pip install wget
+      python scripts/setup_KLU_module_build.py
+      export LD_LIBRARY_PATH=$(HOME)/.local/lib:$LD_LIBRARY_PATH
       rm -rf pybind11;
       git clone https://github.com/pybind/pybind11.git;
-      cd ../;
-      python setup.py install_klu -f;
-      export LD_LIBRARY_PATH=sundials/lib:$LD_LIBRARY_PATH
-      export LD_LIBRARY_PATH=SuiteSparse-5.6.0/lib:$LD_LIBRARY_PATH
+      pip install -e .
     fi;
 
 before_script:
