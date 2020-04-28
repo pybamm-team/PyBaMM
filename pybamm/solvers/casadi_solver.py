@@ -135,14 +135,11 @@ class CasadiSolver(pybamm.BaseSolver):
             t_f = t_eval[-1]
             init_event_signs = np.sign(
                 np.concatenate(
-                    [
-                        event(t, model.y0, inputs)
-                        for event in model.terminate_events_eval
-                    ]
+                    [event(t, y0, inputs) for event in model.terminate_events_eval]
                 )
             )
             pybamm.logger.info("Start solving {} with {}".format(model.name, self.name))
-            y0 = model.y0
+
             # Initialize solution
             solution = pybamm.Solution(np.array([t]), y0[:, np.newaxis])
             solution.solve_time = 0
@@ -273,6 +270,9 @@ class CasadiSolver(pybamm.BaseSolver):
                     y0 = solution.y[:, -1]
             return solution
         elif self.mode == "old safe":
+            y0 = model.y0
+            if isinstance(y0, casadi.DM):
+                y0 = y0.full().flatten()
             # Step-and-check
             t = t_eval[0]
             init_event_signs = np.sign(

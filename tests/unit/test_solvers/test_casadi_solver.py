@@ -81,8 +81,10 @@ class TestCasadiSolver(unittest.TestCase):
         disc = pybamm.Discretisation()
         disc.process_model(model)
 
-        solver = pybamm.CasadiSolver(regularity_check=False)
-        solver_old = pybamm.CasadiSolver(mode="old safe", regularity_check=False)
+        solver = pybamm.CasadiSolver(extra_options_call={"regularity_check": False})
+        solver_old = pybamm.CasadiSolver(
+            mode="old safe", extra_options_call={"regularity_check": False}
+        )
         # Solve with failure at t=2
         t_eval = np.linspace(0, 20, 100)
         with self.assertRaises(pybamm.SolverError):
