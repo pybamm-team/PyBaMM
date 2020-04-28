@@ -57,13 +57,6 @@ class BaseSubModel(pybamm.BaseModel):
         super().__init__(name)
         self.param = param
 
-        # self.rhs = {}
-        # self.algebraic = {}
-        # self.boundary_conditions = {}
-        # self.initial_conditions = {}
-        # self.variables = {}
-        # self.events = []
-
         self.domain = domain
         self.set_domain_for_broadcast()
         self.reactions = reactions
