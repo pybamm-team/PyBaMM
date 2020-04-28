@@ -141,7 +141,7 @@ class CasadiSolver(pybamm.BaseSolver):
 
             # Try to integrate in global steps of size dt_max. Note: dt_max must
             # be at least as big as the the biggest step in t_eval (multiplied
-            # by some tolerance, here 0.01) to avoid an empty integration window below
+            # by some tolerance, here 1.01) to avoid an empty integration window below
             if self.dt_max:
                 # Non-dimensionalise provided dt_max
                 dt_max = self.dt_max / model.timescale_eval
@@ -304,7 +304,7 @@ class CasadiSolver(pybamm.BaseSolver):
                         raise pybamm.SolverError(
                             """
                             Maximum number of decreased steps occurred at t={}. Try
-                            solving the model up to this time only
+                            solving the model up to this time only or reducing dt_max.
                             """.format(
                                 t
                             )
