@@ -4,6 +4,22 @@
 import casadi
 import pybamm
 import numpy as np
+from scipy.interpolate import interp1d
+from scipy.optimize import brentq
+from contextlib import contextmanager
+import sys
+import os
+
+
+@contextmanager
+def suppress_stderr():
+    with open(os.devnull, "w") as devnull:
+        old_stderr = sys.stderr
+        sys.stderr = devnull
+        try:
+            yield
+        finally:
+            sys.stderr = old_stderr
 
 
 class CasadiSolver(pybamm.BaseSolver):
@@ -129,25 +145,51 @@ class CasadiSolver(pybamm.BaseSolver):
             # Initialize solution
             solution = pybamm.Solution(np.array([t]), y0[:, np.newaxis])
             solution.solve_time = 0
-            for dt in np.diff(t_eval):
+
+            # Try to integrate in global steps of size dt_max (arbitrarily taken
+            # to be a quarter of the range of t_eval, up to a maximum of 1 hour)
+            t_f = t_eval[-1]
+            t_one_hour = 3600 / model.timescale_eval
+            dt_max = np.min([(t_f - t) / 4, t_one_hour])
+            # dt_max must be at least as big as the the biggest step in t_eval
+            # (multiplied by some tolerance, here 0.01) to avoid an empty
+            # integration window below
+            dt_eval_max = np.max(np.diff(t_eval)) * 1.01
+            dt_max = np.max([dt_max, dt_eval_max])
+            while t < t_f:
                 # Step
                 solved = False
                 count = 0
+                dt = dt_max
                 while not solved:
-                    integrator = self.get_integrator(
-                        model, np.array([t, t + dt]), inputs
+                    # Get window of time to integrate over (so that we return
+                    # all the point in t_eval, not just t and t+dt)
+                    t_window = np.concatenate(
+                        ([t], t_eval[(t_eval > t) & (t_eval < t + dt)])
                     )
-                    # Try to solve with the current step, if it fails then halve the
-                    # step size and try again. This will make solution.t slightly
-                    # different to t_eval, but shouldn't matter too much as it should
-                    # only happen near events.
+                    integrator = self.get_integrator(model, t_window, inputs)
+                    # Try to solve with the current global step, if it fails then
+                    # halve the step size and try again.
                     try:
-                        current_step_sol = self._run_integrator(
-                            integrator, model, y0, inputs, np.array([t, t + dt])
-                        )
+                        # When not in DEBUG mode (level=10), suppress the output
+                        # from the failed steps in the solver
+                        if (
+                            pybamm.logger.getEffectiveLevel() == 10
+                            or pybamm.settings.debug_mode is True
+                        ):
+                            current_step_sol = self._run_integrator(
+                                integrator, model, y0, inputs, t_window
+                            )
+                        else:
+                            with suppress_stderr():
+                                current_step_sol = self._run_integrator(
+                                    integrator, model, y0, inputs, t_window
+                                )
                         solved = True
                     except pybamm.SolverError:
                         dt /= 2
+                        # also reduce maximum step size for future global steps
+                        dt_max = dt
                     count += 1
                     if count >= self.max_step_decrease_count:
                         raise pybamm.SolverError(
@@ -158,7 +200,7 @@ class CasadiSolver(pybamm.BaseSolver):
                                 t
                             )
                         )
-                # Check most recent y
+                # Check most recent y to see if any events have been crossed
                 new_event_signs = np.sign(
                     np.concatenate(
                         [
@@ -168,10 +210,61 @@ class CasadiSolver(pybamm.BaseSolver):
                     )
                 )
                 # Exit loop if the sign of an event changes
+                # Locate the event time using a root finding algorithm and
+                # event state using interpolation. The solution is then truncated
+                # so that only the times up to the event are returned
                 if (new_event_signs != init_event_signs).any():
+                    # get the index of the events that have been crossed
+                    event_ind = np.where(new_event_signs != init_event_signs)[0]
+                    active_events = [model.terminate_events_eval[i] for i in event_ind]
+
+                    # create interpolant to evaluate y in the current integration
+                    # window
+                    y_sol = interp1d(current_step_sol.t, current_step_sol.y)
+
+                    # loop over events to compute the time at which they were triggered
+                    t_events = [None] * len(active_events)
+                    for i, event in enumerate(active_events):
+
+                        def event_fun(t):
+                            return event(t, y_sol(t), inputs)
+
+                        if np.isnan(event_fun(current_step_sol.t[-1])[0]):
+                            # bracketed search fails if f(a) or f(b) is NaN, so we
+                            # need to find the times for which we can evaluate the event
+                            times = [
+                                t
+                                for t in current_step_sol.t
+                                if event_fun(t)[0] == event_fun(t)[0]
+                            ]
+                        else:
+                            times = current_step_sol.t
+                        # skip if sign hasn't changed
+                        if np.sign(event_fun(times[0])) != np.sign(
+                            event_fun(times[-1])
+                        ):
+                            t_events[i] = brentq(
+                                lambda t: event_fun(t), times[0], times[-1]
+                            )
+                        else:
+                            t_events[i] = np.nan
+
+                    # t_event is the earliest event triggered
+                    t_event = np.nanmin(t_events)
+                    y_event = y_sol(t_event)
+
+                    # return truncated solution
+                    t_truncated = current_step_sol.t[current_step_sol.t < t_event]
+                    y_trunctaed = current_step_sol.y[:, 0 : len(t_truncated)]
+                    truncated_step_sol = pybamm.Solution(t_truncated, y_trunctaed)
+                    # assign temporary solve time
+                    truncated_step_sol.solve_time = np.nan
+                    # append solution from the current step to solution
+                    solution.append(truncated_step_sol)
+
                     solution.termination = "event"
-                    solution.t_event = solution.t[-1]
-                    solution.y_event = solution.y[:, -1]
+                    solution.t_event = t_event
+                    solution.y_event = y_event
                     break
                 else:
                     # assign temporary solve time
@@ -179,10 +272,9 @@ class CasadiSolver(pybamm.BaseSolver):
                     # append solution from the current step to solution
                     solution.append(current_step_sol)
                     # update time
-                    t += dt
+                    t = t_window[-1]
                     # update y0
                     y0 = solution.y[:, -1]
-
             return solution
 
     def get_integrator(self, model, t_eval, inputs):

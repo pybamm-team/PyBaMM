@@ -710,8 +710,6 @@ class BaseSolver(object):
         dt_dimensionless = dt / model.timescale_eval
         # Step
         t_eval = np.linspace(t, t + dt_dimensionless, npts)
-        # Set inputs and external
-
         pybamm.logger.info("Calling solver")
         timer.reset()
         solution = self._integrate(model, t_eval, ext_and_inputs)
