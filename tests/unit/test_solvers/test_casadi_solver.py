@@ -23,11 +23,11 @@ class TestCasadiSolver(unittest.TestCase):
 
         # create discretisation
         disc = pybamm.Discretisation()
-        disc.process_model(model)
+        model_disc = disc.process_model(model, inplace=False)
         # Solve
         solver = pybamm.CasadiSolver(mode="fast", rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 1, 100)
-        solution = solver.solve(model, t_eval)
+        solution = solver.solve(model_disc, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_array_almost_equal(
             solution.y[0], np.exp(0.1 * solution.t), decimal=5
@@ -79,7 +79,7 @@ class TestCasadiSolver(unittest.TestCase):
 
         # create discretisation
         disc = pybamm.Discretisation()
-        disc.process_model(model)
+        model_disc = disc.process_model(model, inplace=False)
 
         solver = pybamm.CasadiSolver(extra_options_call={"regularity_check": False})
         solver_old = pybamm.CasadiSolver(
@@ -88,15 +88,15 @@ class TestCasadiSolver(unittest.TestCase):
         # Solve with failure at t=2
         t_eval = np.linspace(0, 20, 100)
         with self.assertRaises(pybamm.SolverError):
-            solver.solve(model, t_eval)
+            solver.solve(model_disc, t_eval)
         with self.assertRaises(pybamm.SolverError):
-            solver_old.solve(model, t_eval)
+            solver_old.solve(model_disc, t_eval)
         # Solve with failure at t=0
         model.initial_conditions = {var: 0}
-        disc.process_model(model)
+        model_disc = disc.process_model(model, inplace=False)
         t_eval = np.linspace(0, 20, 100)
         with self.assertRaises(pybamm.SolverError):
-            solver.solve(model, t_eval)
+            solver.solve(model_disc, t_eval)
 
     def test_model_solver_events(self):
         # Create model

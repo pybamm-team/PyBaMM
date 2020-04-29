@@ -446,14 +446,14 @@ class Simulation:
                     or "[experiment]" in self._solution.termination
                 ):
                     pybamm.logger.warning(
-                        """
-                        Experiment is infeasible: '{}' was triggered during '{}'. Try
-                        reducing current, shortening the time interval, or reducing
-                        the period.
-                        """.format(
+                        "\n\n\tExperiment is infeasible: '{}' ".format(
                             self._solution.termination,
+                        )
+                        + "was triggered during '{}'. ".format(
                             self.experiment.operating_conditions_strings[idx],
                         )
+                        + "Try reducing current, shortening the time interval, "
+                        "or reducing the period.\n\n"
                     )
                     break
             pybamm.logger.info(

@@ -169,6 +169,10 @@ class Function(pybamm.Symbol):
             ]
             return self._function_evaluate(evaluated_children)
 
+    def evaluates_on_edges(self):
+        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+        return any(child.evaluates_on_edges() for child in self.children)
+
     def _evaluate_for_shape(self):
         """
         Default behaviour: has same shape as all child
