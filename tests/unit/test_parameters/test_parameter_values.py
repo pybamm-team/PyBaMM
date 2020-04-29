@@ -388,7 +388,13 @@ class TestParameterValues(unittest.TestCase):
                 "interpolation": "[data]lico2_data_example",
             },
             path=os.path.join(
-                "input", "parameters", "lithium-ion", "cathodes", "lico2_Marquis2019"
+                pybamm.root_dir(),
+                "pybamm",
+                "input",
+                "parameters",
+                "lithium-ion",
+                "cathodes",
+                "lico2_Marquis2019",
             ),
             check_already_exists=False,
         )
