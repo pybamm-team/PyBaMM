@@ -47,19 +47,13 @@ class BaseSubModel(pybamm.BaseModel):
     """
 
     def __init__(
-        self,
-        param,
-        domain=None,
-        reactions=None,
-        name="Unnamed submodel",
-        external=False,
+        self, param, domain=None, name="Unnamed submodel", external=False,
     ):
         super().__init__(name)
         self.param = param
 
         self.domain = domain
         self.set_domain_for_broadcast()
-        self.reactions = reactions
         self.name = name
 
         self.external = external

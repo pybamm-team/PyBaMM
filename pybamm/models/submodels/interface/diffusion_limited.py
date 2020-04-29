@@ -114,7 +114,7 @@ class DiffusionLimited(BaseInterface):
                 )
                 N_ox_neg_sep_interface.domain = ["current collector"]
 
-                j = -N_ox_neg_sep_interface / param.C_e / param.s_ox_Ox / param.l_n
+                j = -N_ox_neg_sep_interface / param.C_e / -param.s_ox_Ox / param.l_n
 
         return j
 
@@ -143,7 +143,7 @@ class DiffusionLimited(BaseInterface):
                 N_ox_s_p = variables["Oxygen flux"].orphans[1]
                 N_ox_neg_sep_interface = N_ox_s_p[0]
 
-                j = -N_ox_neg_sep_interface / param.C_e / param.s_ox_Ox / param.l_n
+                j = -N_ox_neg_sep_interface / param.C_e / -param.s_ox_Ox / param.l_n
 
             return (j - j_leading_order) / param.C_e
         else:

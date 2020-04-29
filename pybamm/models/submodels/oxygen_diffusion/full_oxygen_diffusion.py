@@ -41,8 +41,8 @@ class Full(BaseModel):
     **Extends:** :class:`pybamm.oxygen_diffusion.BaseModel`
     """
 
-    def __init__(self, param, reactions):
-        super().__init__(param, reactions)
+    def __init__(self, param):
+        super().__init__(param)
 
     def get_fundamental_variables(self):
         # Oxygen concentration (oxygen concentration is zero in the negative electrode)
@@ -95,12 +95,10 @@ class Full(BaseModel):
         c_ox = variables["Separator and positive electrode oxygen concentration"]
         N_ox = variables["Oxygen flux"].orphans[1]
 
-        source_terms = sum(
-            pybamm.Concatenation(
-                pybamm.FullBroadcast(0, "separator", "current collector"),
-                reaction["Positive"]["s_ox"] * variables[reaction["Positive"]["aj"]],
-            )
-            for reaction in self.reactions.values()
+        j_ox = variables["Positive electrode oxygen interfacial current density"]
+        source_terms = pybamm.Concatenation(
+            pybamm.FullBroadcast(0, "separator", "current collector"),
+            param.s_ox_Ox * j_ox,
         )
 
         self.rhs = {

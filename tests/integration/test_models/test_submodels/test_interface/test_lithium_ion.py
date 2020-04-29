@@ -25,6 +25,8 @@ class TestExchangeCurrentDensity(unittest.TestCase):
             "Positive electrolyte concentration": c_e_p,
             "Negative particle surface concentration": self.c_s_n_surf,
             "Positive particle surface concentration": self.c_s_p_surf,
+            "Negative electrode temperature": 0,
+            "Positive electrode temperature": 0,
         }
 
     def tearDown(self):
@@ -35,26 +37,18 @@ class TestExchangeCurrentDensity(unittest.TestCase):
 
     def test_creation_lithium_ion(self):
         param = pybamm.standard_parameters_lithium_ion
-        model_n = pybamm.interface.lithium_ion.BaseInterfaceLithiumIon(
-            param, "Negative"
-        )
+        model_n = pybamm.interface.BaseInterface(param, "Negative", "lithium-ion main")
         j0_n = model_n._get_exchange_current_density(self.variables)
-        model_p = pybamm.interface.lithium_ion.BaseInterfaceLithiumIon(
-            param, "Positive"
-        )
+        model_p = pybamm.interface.BaseInterface(param, "Positive", "lithium-ion main")
         j0_p = model_p._get_exchange_current_density(self.variables)
         self.assertEqual(j0_n.domain, ["negative electrode"])
         self.assertEqual(j0_p.domain, ["positive electrode"])
 
     def test_set_parameters_lithium_ion(self):
         param = pybamm.standard_parameters_lithium_ion
-        model_n = pybamm.interface.lithium_ion.BaseInterfaceLithiumIon(
-            param, "Negative"
-        )
+        model_n = pybamm.interface.BaseInterface(param, "Negative", "lithium-ion main")
         j0_n = model_n._get_exchange_current_density(self.variables)
-        model_p = pybamm.interface.lithium_ion.BaseInterfaceLithiumIon(
-            param, "Positive"
-        )
+        model_p = pybamm.interface.BaseInterface(param, "Positive", "lithium-ion main")
         j0_p = model_p._get_exchange_current_density(self.variables)
         # Process parameters
         parameter_values = pybamm.lithium_ion.BaseModel().default_parameter_values
@@ -68,13 +62,9 @@ class TestExchangeCurrentDensity(unittest.TestCase):
 
     def test_discretisation_lithium_ion(self):
         param = pybamm.standard_parameters_lithium_ion
-        model_n = pybamm.interface.lithium_ion.BaseInterfaceLithiumIon(
-            param, "Negative"
-        )
+        model_n = pybamm.interface.BaseInterface(param, "Negative", "lithium-ion main")
         j0_n = model_n._get_exchange_current_density(self.variables)
-        model_p = pybamm.interface.lithium_ion.BaseInterfaceLithiumIon(
-            param, "Positive"
-        )
+        model_p = pybamm.interface.BaseInterface(param, "Positive", "lithium-ion main")
         j0_p = model_p._get_exchange_current_density(self.variables)
         # Process parameters and discretise
         parameter_values = pybamm.lithium_ion.BaseModel().default_parameter_values
