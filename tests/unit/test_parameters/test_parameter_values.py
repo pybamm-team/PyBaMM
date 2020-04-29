@@ -52,6 +52,11 @@ class TestParameterValues(unittest.TestCase):
         ):
             pybamm.ParameterValues(values=1, chemistry={})
 
+    def test_repr(self):
+        param = pybamm.ParameterValues({"a": 1})
+        self.assertEqual(repr(param), "{'a': 1}")
+        self.assertEqual(param._ipython_key_completions_(), ["a"])
+
     def test_update_from_chemistry(self):
         # incomplete chemistry
         with self.assertRaisesRegex(KeyError, "must provide 'cell' parameters"):
@@ -291,11 +296,17 @@ class TestParameterValues(unittest.TestCase):
             parameter_values.process_symbol(func)
 
         # function itself as input (different to the variable being an input)
-        parameter_values = pybamm.ParameterValues({"func": "[input]"})
+        parameter_values = pybamm.ParameterValues(
+            {"func": "[input]", "vector func": pybamm.InputParameter("vec", "test")}
+        )
         a = pybamm.Scalar(3)
         func = pybamm.FunctionParameter("func", {"a": a})
         processed_func = parameter_values.process_symbol(func)
         self.assertEqual(processed_func.evaluate(inputs={"func": 13}), 13)
+
+        func = pybamm.FunctionParameter("vector func", {"a": a})
+        processed_func = parameter_values.process_symbol(func)
+        self.assertEqual(processed_func.evaluate(inputs={"vec": 13}), 13)
 
     def test_process_inline_function_parameters(self):
         def D(c):

@@ -691,6 +691,10 @@ class TestDiscretise(unittest.TestCase):
         model_jacobian = model.jacobian.evaluate(0, y0)
         np.testing.assert_array_equal(model_jacobian.toarray(), jacobian.toarray())
 
+        # test that discretising again gives an error
+        with self.assertRaisesRegex(pybamm.ModelError, "Cannot re-discretise a model"):
+            disc.process_model(model)
+
         # test that not enough initial conditions raises an error
         model = pybamm.BaseModel()
         model.rhs = {c: pybamm.div(N), T: pybamm.div(q), S: pybamm.div(p)}
