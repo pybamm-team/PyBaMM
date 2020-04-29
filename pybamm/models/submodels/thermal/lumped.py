@@ -53,12 +53,47 @@ class Lumped(BaseThermal):
         # the choice of non-dimensionalisation.
         # TODO: allow for arbitrary surface area to volume ratio in order to model
         # different cell geometries (see #718)
-        A = self.param.l_y * self.param.l_z
-        V = self.param.l * self.param.l_y * self.param.l_z
-        cooling_coeff = -2 * self.param.h * A / V / (self.param.delta ** 2)
+        cell_volume = self.param.l * self.param.l_y * self.param.l_z
+
+        yz_cell_surface_area = self.param.l_y * self.param.l_z
+        yz_surface_cooling_coefficient = (
+            -(self.param.h_cn + self.param.h_cp)
+            * yz_cell_surface_area
+            / cell_volume
+            / (self.param.delta ** 2)
+        )
+
+        negative_tab_area = self.param.l_tab_n * self.param.l_cn
+        negative_tab_cooling_coefficient = (
+            -self.param.h_tab_n * negative_tab_area / cell_volume / self.param.delta
+        )
+
+        positive_tab_area = self.param.l_tab_p * self.param.l_cp
+        positive_tab_cooling_coefficient = (
+            -self.param.h_tab_p * positive_tab_area / cell_volume / self.param.delta
+        )
+
+        edge_area = (
+            2 * self.param.l_y * self.param.l
+            + 2 * self.param.l_z * self.param.l
+            - negative_tab_area
+            - positive_tab_area
+        )
+        edge_cooling_coefficient = (
+            -self.param.h_edge * edge_area / cell_volume / self.param.delta
+        )
+
+        total_cooling_coefficient = (
+            yz_surface_cooling_coefficient
+            + negative_tab_cooling_coefficient
+            + positive_tab_cooling_coefficient
+            + edge_cooling_coefficient
+        )
 
         self.rhs = {
-            T_vol_av: (self.param.B * Q_vol_av + cooling_coeff * (T_vol_av - T_amb))
+            T_vol_av: (
+                self.param.B * Q_vol_av + total_cooling_coefficient * (T_vol_av - T_amb)
+            )
             / (self.param.C_th * self.param.rho)
         }
 
