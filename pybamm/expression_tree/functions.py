@@ -442,7 +442,7 @@ class Arctan(SpecificFunction):
         return 1 / (children[0] ** 2 + 1)
 
 
-def atan(child):
+def arctan(child):
     " Returns hyperbolic tan function of child. "
     return pybamm.simplify_if_constant(Arctan(child), keep_domains=True)
 
