@@ -1,7 +1,9 @@
 #
 # Tests for the base model class
 #
+import casadi
 import pybamm
+import numpy as np
 import unittest
 
 
@@ -436,6 +438,43 @@ class TestBaseModel(unittest.TestCase):
         model.rhs[d] = -d
         model.initial_conditions[d] = 1
         model.check_well_posedness()
+
+    def test_export_casadi(self):
+        model = pybamm.BaseModel()
+        t = pybamm.t
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+        p = pybamm.InputParameter("p")
+        q = pybamm.InputParameter("q")
+        model.rhs = {a: -a * p}
+        model.algebraic = {b: a - b}
+        model.initial_conditions = {a: q, b: 1}
+        model.variables = {"a+b": a + b - t}
+
+        out = model.export_casadi_functions(["a+b"])
+
+        # Try making a function from the outputs
+        t, x, z, p = out["t"], out["x"], out["z"], out["inputs"]
+        x0, z0 = out["x0"], out["z0"]
+        rhs, alg = out["rhs"], out["algebraic"]
+        var = out["variables"]["a+b"]
+        jac_rhs, jac_alg = out["jac_rhs"], out["jac_algebraic"]
+        x0_fn = casadi.Function("x0", [p], [x0])
+        z0_fn = casadi.Function("x0", [p], [z0])
+        rhs_fn = casadi.Function("rhs", [t, x, z, p], [rhs])
+        alg_fn = casadi.Function("alg", [t, x, z, p], [alg])
+        jac_rhs_fn = casadi.Function("jac_rhs", [t, x, z, p], [jac_rhs])
+        jac_alg_fn = casadi.Function("jac_alg", [t, x, z, p], [jac_alg])
+        var_fn = casadi.Function("var", [t, x, z, p], [var])
+
+        # Test that function values are as expected
+        self.assertEqual(x0_fn([0, 5]), 5)
+        self.assertEqual(z0_fn([0, 0]), 1)
+        self.assertEqual(rhs_fn(0, 3, 2, [7, 2]), -21)
+        self.assertEqual(alg_fn(0, 3, 2, [7, 2]), 1)
+        np.testing.assert_array_equal(np.array(jac_rhs_fn(5, 6, 7, [8, 9])), [[-8, 0]])
+        np.testing.assert_array_equal(np.array(jac_alg_fn(5, 6, 7, [8, 9])), [[1, -1]])
+        self.assertEqual(var_fn(6, 3, 2, [7, 2]), -1)
 
 
 class TestStandardBatteryBaseModel(unittest.TestCase):
