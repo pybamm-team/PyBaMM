@@ -127,11 +127,11 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(processed_integ.integration_variable[0].id, x.id)
 
         # process unary operation
-        grad = pybamm.Gradient(a)
+        v = pybamm.Variable("v", domain="test")
+        grad = pybamm.Gradient(v)
         processed_grad = parameter_values.process_symbol(grad)
         self.assertIsInstance(processed_grad, pybamm.Gradient)
-        self.assertIsInstance(processed_grad.children[0], pybamm.Scalar)
-        self.assertEqual(processed_grad.children[0].value, 1)
+        self.assertIsInstance(processed_grad.children[0], pybamm.Variable)
 
         # process delta function
         aa = pybamm.Parameter("a")
@@ -252,6 +252,8 @@ class TestParameterValues(unittest.TestCase):
                 "func": pybamm.load_function("process_symbol_test_function.py"),
                 "const": 254,
                 "float_func": lambda x: 42,
+                "mult": pybamm.InputParameter("b") * 5,
+                "bad type": np.array([1, 2, 3]),
             }
         )
         a = pybamm.InputParameter("a")
@@ -267,6 +269,12 @@ class TestParameterValues(unittest.TestCase):
         self.assertIsInstance(processed_const, pybamm.Scalar)
         self.assertEqual(processed_const.evaluate(), 254)
 
+        # process case where parameter provided is a pybamm symbol
+        # (e.g. a multiplication)
+        mult = pybamm.FunctionParameter("mult", {"a": a})
+        processed_mult = parameter_values.process_symbol(mult)
+        self.assertEqual(processed_mult.evaluate(inputs={"a": 14, "b": 63}), 63 * 5)
+
         # process differentiated function parameter
         diff_func = func.diff(a)
         processed_diff_func = parameter_values.process_symbol(diff_func)
@@ -276,6 +284,11 @@ class TestParameterValues(unittest.TestCase):
         func = pybamm.FunctionParameter("float_func", {"a": a})
         processed_func = parameter_values.process_symbol(func)
         self.assertEqual(processed_func.evaluate(), 42)
+
+        # weird type raises error
+        func = pybamm.FunctionParameter("bad type", {"a": a})
+        with self.assertRaisesRegex(TypeError, "Parameter provided for"):
+            parameter_values.process_symbol(func)
 
         # function itself as input (different to the variable being an input)
         parameter_values = pybamm.ParameterValues({"func": "[input]"})
@@ -435,8 +448,8 @@ class TestParameterValues(unittest.TestCase):
         b = pybamm.Parameter("b")
         c = pybamm.Parameter("c")
         d = pybamm.Parameter("d")
-        var1 = pybamm.Variable("var1")
-        var2 = pybamm.Variable("var2")
+        var1 = pybamm.Variable("var1", domain="test")
+        var2 = pybamm.Variable("var2", domain="test")
         model.rhs = {var1: a * pybamm.grad(var1)}
         model.algebraic = {var2: c * var2}
         model.initial_conditions = {var1: b, var2: d}

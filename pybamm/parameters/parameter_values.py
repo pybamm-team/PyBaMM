@@ -490,12 +490,24 @@ class ParameterValues:
                 function = pybamm.Scalar(
                     function_name, name=symbol.name
                 ) * pybamm.ones_like(*new_children)
+            elif (
+                isinstance(function_name, pybamm.Symbol)
+                and function_name.evaluates_to_number()
+            ):
+                # If the "function" provided is a pybamm scalar-like, use ones_like to
+                # get the right shape
+                function = function_name * pybamm.ones_like(*new_children)
             elif isinstance(function_name, pybamm.InputParameter):
                 # Replace the function with an input parameter
                 function = function_name
-            else:
+            elif callable(function_name):
                 # otherwise evaluate the function to create a new PyBaMM object
                 function = function_name(*new_children)
+            else:
+                raise TypeError(
+                    "Parameter provided for '{}' ".format(symbol.name)
+                    + "is of the wrong type (should either be scalar-like or callable)"
+                )
             # Differentiate if necessary
             if symbol.diff_variable is None:
                 function_out = function

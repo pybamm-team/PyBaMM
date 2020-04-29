@@ -17,14 +17,18 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
     ----------
     tol : float, optional
         The tolerance for the solver (default is 1e-6).
+    extra_options : dict, optional
+        Any options to pass to the CasADi rootfinder.
+        Please consult `CasADi documentation <https://tinyurl.com/y7hrxm7d>`_ for
+        details.
     """
 
-    def __init__(self, method="lm", tol=1e-6, **extra_options):
+    def __init__(self, tol=1e-6, extra_options=None):
         super().__init__()
         self.tol = tol
         self.name = "CasADi algebraic solver"
         self.algebraic_solver = True
-        self.extra_options = extra_options
+        self.extra_options = extra_options or {}
         pybamm.citations.register("Andersson2019")
 
     @property
@@ -51,18 +55,32 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
             the solution will consist of `ProcessedSymbolicVariable` objects, which must
             be provided with inputs to obtain their value.
         """
-        y0 = model.y0
-
-        y = None
-
-        # Set up
         # Record whether there are any symbolic inputs
+        inputs = inputs or {}
         has_symbolic_inputs = any(isinstance(v, casadi.MX) for v in inputs.values())
 
         # Create casadi objects for the root-finder
         inputs = casadi.vertcat(*[x for x in inputs.values()])
+
+        y0 = model.y0
+        # The casadi algebraic solver can read rhs equations, but leaves them unchanged
+        # i.e. the part of the solution vector that corresponds to the differential
+        # equations will be equal to the initial condition provided. This allows this
+        # solver to be used for initialising the DAE solvers
+        if model.rhs == {}:
+            y0_diff = casadi.DM()
+            y0_alg = y0
+        else:
+            len_rhs = model.concatenated_rhs.size
+            y0_diff = y0[:len_rhs]
+            y0_alg = y0[len_rhs:]
+
+        y_alg = None
+
+        # Set up
         t_sym = casadi.MX.sym("t")
-        y_sym = casadi.MX.sym("y_alg", y0.shape[0])
+        y_alg_sym = casadi.MX.sym("y_alg", y0_alg.shape[0])
+        y_sym = casadi.vertcat(y0_diff, y_alg_sym)
         p_sym = casadi.MX.sym("p", inputs.shape[0])
 
         t_p_sym = casadi.vertcat(t_sym, p_sym)
@@ -72,7 +90,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         roots = casadi.rootfinder(
             "roots",
             "newton",
-            dict(x=y_sym, p=t_p_sym, g=alg),
+            dict(x=y_alg_sym, p=t_p_sym, g=alg),
             {**self.extra_options, "abstol": self.tol},
         )
         for idx, t in enumerate(t_eval):
@@ -85,19 +103,20 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                 pybamm.logger.debug(
                     "Keeping same solution at t={}".format(t * model.timescale_eval)
                 )
-                if y is None:
-                    y = y0
+                if y_alg is None:
+                    y_alg = y0_alg
                 else:
-                    y = casadi.horzcat(y, y0)
+                    y_alg = casadi.horzcat(y_alg, y0_alg)
             # Otherwise calculate new y_sol
             else:
                 t_inputs = casadi.vertcat(t, inputs)
                 # Solve
                 try:
-                    y_sol = roots(y0, t_inputs)
+                    y_alg_sol = roots(y0_alg, t_inputs)
                     success = True
                     message = None
                     # Check final output
+                    y_sol = casadi.vertcat(y0_diff, y_alg_sol)
                     fun = model.casadi_algebraic(t, y_sol, inputs)
                 except RuntimeError as err:
                     success = False
@@ -110,12 +129,12 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                     has_symbolic_inputs is True or np.all(casadi.fabs(fun) < self.tol)
                 ):
                     # update initial guess for the next iteration
-                    y0 = y_sol
+                    y0_alg = y_alg_sol
                     # update solution array
-                    if y is None:
-                        y = y_sol
+                    if y_alg is None:
+                        y_alg = y_alg_sol
                     else:
-                        y = casadi.horzcat(y, y_sol)
+                        y_alg = casadi.horzcat(y_alg, y_alg_sol)
                 elif not success:
                     raise pybamm.SolverError(
                         "Could not find acceptable solution: {}".format(message)
@@ -131,5 +150,8 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                         )
                     )
 
+        # Concatenate differential part
+        y_diff = casadi.horzcat(*[y0_diff] * len(t_eval))
+        y_sol = casadi.vertcat(y_diff, y_alg)
         # Return solution object (no events, so pass None to t_event, y_event)
-        return pybamm.Solution(t_eval, y, termination="success")
+        return pybamm.Solution(t_eval, y_sol, termination="success")
