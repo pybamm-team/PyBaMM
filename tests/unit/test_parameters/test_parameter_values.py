@@ -52,6 +52,11 @@ class TestParameterValues(unittest.TestCase):
         ):
             pybamm.ParameterValues(values=1, chemistry={})
 
+    def test_repr(self):
+        param = pybamm.ParameterValues({"a": 1})
+        self.assertEqual(repr(param), "{'a': 1}")
+        self.assertEqual(param._ipython_key_completions_(), ["a"])
+
     def test_update_from_chemistry(self):
         # incomplete chemistry
         with self.assertRaisesRegex(KeyError, "must provide 'cell' parameters"):
@@ -252,6 +257,8 @@ class TestParameterValues(unittest.TestCase):
                 "func": pybamm.load_function("process_symbol_test_function.py"),
                 "const": 254,
                 "float_func": lambda x: 42,
+                "mult": pybamm.InputParameter("b") * 5,
+                "bad type": np.array([1, 2, 3]),
             }
         )
         a = pybamm.InputParameter("a")
@@ -267,6 +274,12 @@ class TestParameterValues(unittest.TestCase):
         self.assertIsInstance(processed_const, pybamm.Scalar)
         self.assertEqual(processed_const.evaluate(), 254)
 
+        # process case where parameter provided is a pybamm symbol
+        # (e.g. a multiplication)
+        mult = pybamm.FunctionParameter("mult", {"a": a})
+        processed_mult = parameter_values.process_symbol(mult)
+        self.assertEqual(processed_mult.evaluate(inputs={"a": 14, "b": 63}), 63 * 5)
+
         # process differentiated function parameter
         diff_func = func.diff(a)
         processed_diff_func = parameter_values.process_symbol(diff_func)
@@ -277,12 +290,23 @@ class TestParameterValues(unittest.TestCase):
         processed_func = parameter_values.process_symbol(func)
         self.assertEqual(processed_func.evaluate(), 42)
 
+        # weird type raises error
+        func = pybamm.FunctionParameter("bad type", {"a": a})
+        with self.assertRaisesRegex(TypeError, "Parameter provided for"):
+            parameter_values.process_symbol(func)
+
         # function itself as input (different to the variable being an input)
-        parameter_values = pybamm.ParameterValues({"func": "[input]"})
+        parameter_values = pybamm.ParameterValues(
+            {"func": "[input]", "vector func": pybamm.InputParameter("vec", "test")}
+        )
         a = pybamm.Scalar(3)
         func = pybamm.FunctionParameter("func", {"a": a})
         processed_func = parameter_values.process_symbol(func)
         self.assertEqual(processed_func.evaluate(inputs={"func": 13}), 13)
+
+        func = pybamm.FunctionParameter("vector func", {"a": a})
+        processed_func = parameter_values.process_symbol(func)
+        self.assertEqual(processed_func.evaluate(inputs={"vec": 13}), 13)
 
     def test_process_inline_function_parameters(self):
         def D(c):
@@ -364,7 +388,13 @@ class TestParameterValues(unittest.TestCase):
                 "interpolation": "[data]lico2_data_example",
             },
             path=os.path.join(
-                "input", "parameters", "lithium-ion", "cathodes", "lico2_Marquis2019"
+                pybamm.root_dir(),
+                "pybamm",
+                "input",
+                "parameters",
+                "lithium-ion",
+                "cathodes",
+                "lico2_Marquis2019",
             ),
             check_already_exists=False,
         )

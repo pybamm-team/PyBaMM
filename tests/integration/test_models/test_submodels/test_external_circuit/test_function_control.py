@@ -50,6 +50,7 @@ class TestFunctionControl(unittest.TestCase):
         np.testing.assert_array_almost_equal(
             solutions[0]["Terminal voltage [V]"](solutions[0].t),
             solutions[1]["Terminal voltage [V]"](solutions[0].t),
+            decimal=5,
         )
 
     def test_constant_voltage(self):

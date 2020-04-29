@@ -1,6 +1,7 @@
 #
 # Base model class
 #
+import casadi
 import inspect
 import numbers
 import pybamm
@@ -625,6 +626,68 @@ class BaseModel(object):
             symbol.print_input_names()
 
         print(div)
+
+    def export_casadi_functions(self, variable_names):
+        # Discretise model if it isn't already discretised
+        # This only works with purely 0D models, as otherwise the mesh and spatial
+        # method should be specified by the user
+        if self.is_discretised is False:
+            try:
+                disc = pybamm.Discretisation()
+                disc.process_model(self)
+            except pybamm.DiscretisationError as e:
+                raise pybamm.DiscretisationError(
+                    "Cannot automatically discretise model, model should be "
+                    "discretised before exporting casadi functions ({})".format(e)
+                )
+
+        # Create casadi functions for the model
+        t_casadi = casadi.MX.sym("t")
+        y_diff = casadi.MX.sym("y_diff", self.concatenated_rhs.size)
+        y_alg = casadi.MX.sym("y_alg", self.concatenated_algebraic.size)
+        y_casadi = casadi.vertcat(y_diff, y_alg)
+        inputs = {}
+        for input_param in self.input_parameters:
+            name = input_param.name
+            inputs[name] = casadi.MX.sym(name, input_param._expected_size)
+        inputs_stacked = casadi.vertcat(*[p for p in inputs.values()])
+
+        # Convert initial conditions to casadi form
+        y0 = self.concatenated_initial_conditions.to_casadi(
+            t_casadi, y_casadi, inputs=inputs
+        )
+        x0 = y0[: self.concatenated_rhs.size]
+        z0 = y0[self.concatenated_rhs.size :]
+
+        # Convert rhs and algebraic to casadi form and calculate jacobians
+        rhs = self.concatenated_rhs.to_casadi(t_casadi, y_casadi, inputs=inputs)
+        jac_rhs = casadi.jacobian(rhs, y_casadi)
+        algebraic = self.concatenated_algebraic.to_casadi(
+            t_casadi, y_casadi, inputs=inputs
+        )
+        jac_algebraic = casadi.jacobian(algebraic, y_casadi)
+
+        # For specified variables, convert to casadi
+        variables = {}
+        for name in variable_names:
+            var = self.variables[name]
+            variables[name] = var.to_casadi(t_casadi, y_casadi, inputs=inputs)
+
+        casadi_dict = {
+            "t": t_casadi,
+            "x": y_diff,
+            "z": y_alg,
+            "inputs": inputs_stacked,
+            "rhs": rhs,
+            "algebraic": algebraic,
+            "jac_rhs": jac_rhs,
+            "jac_algebraic": jac_algebraic,
+            "variables": variables,
+            "x0": x0,
+            "z0": z0,
+        }
+
+        return casadi_dict
 
     @property
     def default_parameter_values(self):

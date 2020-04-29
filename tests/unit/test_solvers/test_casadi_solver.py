@@ -88,6 +88,8 @@ class TestCasadiSolver(unittest.TestCase):
         # Solve with failure at t=2
         t_eval = np.linspace(0, 20, 100)
         with self.assertRaises(pybamm.SolverError):
+            solver.solve(model_disc, t_eval)
+        with self.assertRaises(pybamm.SolverError):
             solver_old.solve(model_disc, t_eval)
         # Solve with failure at t=0
         model.initial_conditions = {var: 0}

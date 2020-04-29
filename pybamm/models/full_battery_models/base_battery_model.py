@@ -186,8 +186,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         ):
             if len(options["side reactions"]) > 0:
                 raise pybamm.OptionError(
-                    """
-                    must use surface formulation to solve {!s} with side reactions
+                    """must use surface formulation to solve {!s} with side reactions
                     """.format(
                         self
                     )
@@ -283,6 +282,24 @@ class BaseBatteryModel(pybamm.BaseModel):
                 {"y": var.y, "y [m]": var.y * L_y, "z": var.z, "z [m]": var.z * L_z}
             )
 
+        # Initialize "total reaction" variables
+        self.variables.update(
+            {
+                "Sum of electrolyte reaction source terms": 0,
+                "Sum of negative electrode electrolyte reaction source terms": 0,
+                "Sum of positive electrode electrolyte reaction source terms": 0,
+                "Sum of x-averaged negative electrode "
+                "electrolyte reaction source terms": 0,
+                "Sum of x-averaged positive electrode "
+                "electrolyte reaction source terms": 0,
+                "Sum of interfacial current densities": 0,
+                "Sum of negative electrode interfacial current densities": 0,
+                "Sum of positive electrode interfacial current densities": 0,
+                "Sum of x-averaged negative electrode interfacial current densities": 0,
+                "Sum of x-averaged positive electrode interfacial current densities": 0,
+            }
+        )
+
     def build_fundamental_and_external(self):
         # Get the fundamental variables
         for submodel_name, submodel in self.submodels.items():
@@ -339,11 +356,11 @@ class BaseBatteryModel(pybamm.BaseModel):
                         if len(submodels) == 1 or count == 100:
                             # no more submodels to try
                             raise pybamm.ModelError(
-                                """Submodel "{}" requires the variable {}, but it cannot be found.
-                                Check the selected submodels provide all of the required
-                                variables.""".format(
+                                "Submodel '{}' requires the variable {}, ".format(
                                     submodel_name, key
                                 )
+                                + "but it cannot be found. Check the selected "
+                                "submodels provide all of the required variables."
                             )
                         else:
                             # try setting coupled variables on next loop through
