@@ -66,6 +66,10 @@ On Ubuntu/debian
 ```
 sudo apt install libopenblas-dev
 ```
+and on Mac OS
+```
+brew install openblas
+```
 After installing PyBaMM, the following command can be used to automatically install `scikits.odes`
 and its dependencies
 ```
@@ -155,5 +159,5 @@ might say:
 ```
 
 If this is the case, on a Debian or Ubuntu system you can install OpenBLAS using `sudo
-apt-get install libopenblas-dev` and then re-install sundials using the instructions
+apt-get install libopenblas-dev` (or `brew install openblas` for Mac OS) and then re-install sundials using the instructions
 above.
