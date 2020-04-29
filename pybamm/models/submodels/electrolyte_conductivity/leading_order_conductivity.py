@@ -22,8 +22,8 @@ class LeadingOrder(BaseElectrolyteConductivity):
     **Extends:** :class:`pybamm.electrolyte_conductivity.BaseElectrolyteConductivity`
     """
 
-    def __init__(self, param, domain=None, reactions=None):
-        super().__init__(param, domain, reactions)
+    def __init__(self, param, domain=None):
+        super().__init__(param, domain)
 
     def get_coupled_variables(self, variables):
         ocp_n_av = variables["X-averaged negative electrode open circuit potential"]
