@@ -172,8 +172,6 @@ class TestDimensionlessParameterValues(unittest.TestCase):
 
         np.testing.assert_almost_equal(values.evaluate(param.Theta / c_rate), 0.008, 2)
 
-        np.testing.assert_almost_equal(values.evaluate(param.h), 3.7881 * 10 ** (-5), 7)
-
         # np.testing.assert_almost_equal(
         #     values.evaluate(param.B / c_rate), 36.216, 2
         # )

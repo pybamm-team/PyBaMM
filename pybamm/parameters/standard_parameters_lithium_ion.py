@@ -383,7 +383,13 @@ lambda_cp = pybamm.thermal_parameters.lambda_cp
 lambda_k = pybamm.thermal_parameters.lambda_k
 
 Theta = pybamm.thermal_parameters.Theta
-h = pybamm.thermal_parameters.h
+
+h_edge = pybamm.thermal_parameters.h_edge
+h_tab_n = pybamm.thermal_parameters.h_tab_n
+h_tab_p = pybamm.thermal_parameters.h_tab_p
+h_cn = pybamm.thermal_parameters.h_cn
+h_cp = pybamm.thermal_parameters.h_cp
+
 B = (
     i_typ
     * R
