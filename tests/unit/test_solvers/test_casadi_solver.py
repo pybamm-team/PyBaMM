@@ -82,11 +82,15 @@ class TestCasadiSolver(unittest.TestCase):
         model_disc = disc.process_model(model, inplace=False)
 
         solver = pybamm.CasadiSolver(extra_options_call={"regularity_check": False})
-
+        solver_old = pybamm.CasadiSolver(
+            mode="old safe", extra_options_call={"regularity_check": False}
+        )
         # Solve with failure at t=2
         t_eval = np.linspace(0, 20, 100)
         with self.assertRaises(pybamm.SolverError):
             solver.solve(model_disc, t_eval)
+        with self.assertRaises(pybamm.SolverError):
+            solver_old.solve(model_disc, t_eval)
         # Solve with failure at t=0
         model.initial_conditions = {var: 0}
         model_disc = disc.process_model(model, inplace=False)
@@ -110,8 +114,36 @@ class TestCasadiSolver(unittest.TestCase):
         disc = get_discretisation_for_testing()
         disc.process_model(model)
 
-        # Solve
-        solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
+        # Solve using "safe" mode
+        solver = pybamm.CasadiSolver(mode="safe", rtol=1e-8, atol=1e-8)
+        t_eval = np.linspace(0, 5, 100)
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_array_less(solution.y[0], 1.5)
+        np.testing.assert_array_less(solution.y[-1], 2.5)
+        np.testing.assert_array_almost_equal(
+            solution.y[0], np.exp(0.1 * solution.t), decimal=5
+        )
+        np.testing.assert_array_almost_equal(
+            solution.y[-1], 2 * np.exp(0.1 * solution.t), decimal=5
+        )
+
+        # Solve using "safe" mode with debug off
+        pybamm.settings.debug_mode = False
+        solver = pybamm.CasadiSolver(mode="safe", rtol=1e-8, atol=1e-8, dt_max=1)
+        t_eval = np.linspace(0, 5, 100)
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_array_less(solution.y[0], 1.5)
+        np.testing.assert_array_less(solution.y[-1], 2.5)
+        np.testing.assert_array_almost_equal(
+            solution.y[0], np.exp(0.1 * solution.t), decimal=5
+        )
+        np.testing.assert_array_almost_equal(
+            solution.y[-1], 2 * np.exp(0.1 * solution.t), decimal=5
+        )
+        pybamm.settings.debug_mode = True
+
+        # Solve using "old safe" mode
+        solver = pybamm.CasadiSolver(mode="old safe", rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 5, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_less(solution.y[0], 1.5)
@@ -130,15 +162,12 @@ class TestCasadiSolver(unittest.TestCase):
         model.initial_conditions = {var: 1}
         model.events = [
             pybamm.Event("event", var - 1.02),
-            pybamm.Event("sqrt event", pybamm.sqrt(1.01 - var)),
+            pybamm.Event("sqrt event", pybamm.sqrt(1.0199 - var)),
         ]
         disc = pybamm.Discretisation()
         disc.process_model(model)
         solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
-        # test integrate doensn't fail when debug mode is off
-        pybamm.settings.debug_mode = False
         solution = solver.solve(model, t_eval)
-        pybamm.settings.debug_mode = True
         np.testing.assert_array_less(solution.y[0], 1.02)
 
     def test_model_step(self):
