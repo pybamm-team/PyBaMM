@@ -64,6 +64,20 @@ class TestCompareOutputs(unittest.TestCase):
         for models in model_combos:
             # load parameter values (same for all models)
             param = models[0].default_parameter_values
+
+            # for x-full, cooling is only implemented on the surfaces
+            # so set other forms of cooling to zero for comparison.
+            param.update(
+                {
+                    "Negative current collector"
+                    + " surface heat transfer coefficient [W.m-2.K-1]": 5,
+                    "Positive current collector"
+                    + " surface heat transfer coefficient [W.m-2.K-1]": 5,
+                    "Negative tab heat transfer coefficient [W.m-2.K-1]": 0,
+                    "Positive tab heat transfer coefficient [W.m-2.K-1]": 0,
+                    "Edge heat transfer coefficient [W.m-2.K-1]": 0,
+                }
+            )
             for model in models:
                 param.process_model(model)
 
@@ -85,7 +99,7 @@ class TestCompareOutputs(unittest.TestCase):
             solutions = []
             t_eval = np.linspace(0, 3600, 100)
             for model in models:
-                solution = pybamm.CasadiSolver().solve(model, t_eval)
+                solution = pybamm.CasadiSolver(dt_max=0.01).solve(model, t_eval)
                 solutions.append(solution)
 
             # compare outputs

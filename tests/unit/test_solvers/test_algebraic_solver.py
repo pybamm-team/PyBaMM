@@ -9,8 +9,11 @@ from tests import get_discretisation_for_testing
 
 class TestAlgebraicSolver(unittest.TestCase):
     def test_algebraic_solver_init(self):
-        solver = pybamm.AlgebraicSolver(method="hybr", tol=1e-4)
+        solver = pybamm.AlgebraicSolver(
+            method="hybr", tol=1e-4, extra_options={"maxfev": 100}
+        )
         self.assertEqual(solver.method, "hybr")
+        self.assertEqual(solver.extra_options, {"maxfev": 100})
         self.assertEqual(solver.tol, 1e-4)
 
         solver.method = "krylov"
@@ -37,21 +40,31 @@ class TestAlgebraicSolver(unittest.TestCase):
         # Simple system: a single algebraic equation
         class Model:
             y0 = np.array([2])
-            jacobian_eval = None
+            rhs = {}
+            timescale_eval = 1
+            jac_algebraic_eval = None
             convert_to_format = "python"
 
             def algebraic_eval(self, t, y, inputs):
                 return y + 2
 
-        solver = pybamm.AlgebraicSolver()
+        # Try passing extra options to solver
+        solver = pybamm.AlgebraicSolver(extra_options={"maxiter": 100})
         model = Model()
         solution = solver._integrate(model, np.array([0]))
         np.testing.assert_array_equal(solution.y, -2)
 
+        # Relax options and see worse results
+        solver = pybamm.AlgebraicSolver(extra_options={"ftol": 1})
+        solution = solver._integrate(model, np.array([0]))
+        self.assertNotEqual(solution.y, -2)
+
     def test_root_find_fail(self):
         class Model:
             y0 = np.array([2])
-            jacobian_eval = None
+            rhs = {}
+            timescale_eval = 1
+            jac_algebraic_eval = None
             convert_to_format = "casadi"
 
             def algebraic_eval(self, t, y, inputs):
@@ -79,12 +92,14 @@ class TestAlgebraicSolver(unittest.TestCase):
 
         class Model:
             y0 = np.zeros(2)
+            rhs = {}
+            timescale_eval = 1
             convert_to_format = "python"
 
             def algebraic_eval(self, t, y, inputs):
                 return A @ y - b
 
-            def jacobian_eval(self, t, y, inputs):
+            def jac_algebraic_eval(self, t, y, inputs):
                 return A
 
         model = Model()

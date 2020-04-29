@@ -27,17 +27,24 @@ class IDAKLUSolver(pybamm.BaseSolver):
         The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
         The absolute tolerance for the solver (default is 1e-6).
-    root_method : str, optional
-        The method to use to find initial conditions (default is "lm")
+    root_method : str or pybamm algebraic solver class, optional
+        The method to use to find initial conditions (for DAE solvers).
+        If a solver class, must be an algebraic solver class.
+        If "casadi",
+        the solver uses casadi's Newton rootfinding algorithm to find initial
+        conditions. Otherwise, the solver uses 'scipy.optimize.root' with method
+        specified by 'root_method' (e.g. "lm", "hybr", ...)
     root_tol : float, optional
         The tolerance for the initial-condition solver (default is 1e-8).
-    max_steps: int, optional
-        The maximum number of steps the solver will take before terminating
-        (default is 1000).
     """
 
     def __init__(
-        self, rtol=1e-6, atol=1e-6, root_method="casadi", root_tol=1e-6, max_steps=1000
+        self,
+        rtol=1e-6,
+        atol=1e-6,
+        root_method="casadi",
+        root_tol=1e-6,
+        max_steps="deprecated",
     ):
 
         if idaklu_spec is None:
@@ -158,9 +165,13 @@ class IDAKLUSolver(pybamm.BaseSolver):
         except AttributeError:
             atol = self._atol
 
-        rtol = self._rtol
-        atol = self._check_atol_type(atol, model.y0.size)
         y0 = model.y0
+        if isinstance(y0, casadi.DM):
+            y0 = y0.full().flatten()
+
+        rtol = self._rtol
+        atol = self._check_atol_type(atol, y0.size)
+
         mass_matrix = model.mass_matrix.entries
 
         if model.jacobian_eval:
@@ -242,7 +253,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         t = sol.t
         number_of_timesteps = t.size
-        number_of_states = model.y0.size
+        number_of_states = y0.size
         y_out = sol.y.reshape((number_of_timesteps, number_of_states))
 
         # return solution, we need to tranpose y to match scipy's interface

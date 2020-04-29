@@ -20,6 +20,27 @@ class TestBaseSolver(unittest.TestCase):
         solver.rtol = 1e-7
         self.assertEqual(solver.rtol, 1e-7)
 
+        # max_steps deprecated
+        with self.assertRaisesRegex(ValueError, "max_steps has been deprecated"):
+            pybamm.BaseSolver(max_steps=10)
+
+    def test_root_method_init(self):
+        solver = pybamm.BaseSolver(root_method="casadi")
+        self.assertIsInstance(solver.root_method, pybamm.CasadiAlgebraicSolver)
+
+        solver = pybamm.BaseSolver(root_method="lm")
+        self.assertIsInstance(solver.root_method, pybamm.AlgebraicSolver)
+        self.assertEqual(solver.root_method.method, "lm")
+
+        root_solver = pybamm.AlgebraicSolver()
+        solver = pybamm.BaseSolver(root_method=root_solver)
+        self.assertEqual(solver.root_method, root_solver)
+
+        with self.assertRaisesRegex(
+            pybamm.SolverError, "Root method must be an algebraic solver"
+        ):
+            pybamm.BaseSolver(root_method=pybamm.ScipySolver())
+
     def test_step_or_solve_empty_model(self):
         model = pybamm.BaseModel()
         solver = pybamm.BaseSolver()
@@ -74,9 +95,10 @@ class TestBaseSolver(unittest.TestCase):
         # Simple system: a single algebraic equation
         class ScalarModel:
             def __init__(self):
-                self.concatenated_initial_conditions = np.array([[2]])
+                self.y0 = np.array([2])
+                self.rhs = {}
                 self.jac_algebraic_eval = None
-                self.timescale = 1
+                self.timescale_eval = 1
                 t = casadi.MX.sym("t")
                 y = casadi.MX.sym("y")
                 p = casadi.MX.sym("p")
@@ -106,9 +128,11 @@ class TestBaseSolver(unittest.TestCase):
 
         class VectorModel:
             def __init__(self):
-                self.concatenated_initial_conditions = np.zeros_like(vec)
+                self.y0 = np.zeros_like(vec)
+                self.rhs = {"test": "test"}
+                self.concatenated_rhs = np.array([1])
                 self.jac_algebraic_eval = None
-                self.timescale = 1
+                self.timescale_eval = 1
                 t = casadi.MX.sym("t")
                 y = casadi.MX.sym("y", vec.size)
                 p = casadi.MX.sym("p")
@@ -151,9 +175,10 @@ class TestBaseSolver(unittest.TestCase):
     def test_fail_consistent_initial_conditions(self):
         class Model:
             def __init__(self):
-                self.concatenated_initial_conditions = np.array([2])
+                self.y0 = np.array([2])
+                self.rhs = {}
                 self.jac_algebraic_eval = None
-                self.timescale = 1
+                self.timescale_eval = 1
                 t = casadi.MX.sym("t")
                 y = casadi.MX.sym("y")
                 p = casadi.MX.sym("p")
@@ -173,20 +198,18 @@ class TestBaseSolver(unittest.TestCase):
 
         with self.assertRaisesRegex(
             pybamm.SolverError,
-            "Could not find consistent initial conditions: The iteration is not making",
+            "Could not find acceptable solution: The iteration is not making",
         ):
             solver.calculate_consistent_state(Model())
         solver = pybamm.BaseSolver(root_method="lm")
         with self.assertRaisesRegex(
-            pybamm.SolverError,
-            "Could not find consistent initial conditions: solver terminated",
+            pybamm.SolverError, "Could not find acceptable solution: solver terminated",
         ):
             solver.calculate_consistent_state(Model())
         # with casadi
         solver = pybamm.BaseSolver(root_method="casadi")
         with self.assertRaisesRegex(
-            pybamm.SolverError,
-            "Could not find consistent initial conditions: .../casadi",
+            pybamm.SolverError, "Could not find acceptable solution: .../casadi",
         ):
             solver.calculate_consistent_state(Model())
 
@@ -224,7 +247,7 @@ class TestBaseSolver(unittest.TestCase):
         disc = pybamm.Discretisation()
         disc.process_model(model)
 
-        solver = pybamm.BaseSolver()
+        solver = pybamm.BaseSolver(root_method="casadi")
         pybamm.set_logging_level("ERROR")
         solver.set_up(model, {})
         self.assertEqual(model.convert_to_format, "casadi")
