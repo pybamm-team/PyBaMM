@@ -60,15 +60,30 @@ class CurrentCollector1D(BaseThermal):
         # Account for surface area to volume ratio of pouch cell in cooling
         # coefficient. Note: the factor 1/delta^2 comes from the choice of
         # non-dimensionalisation
-        A = self.param.l_y * self.param.l_z
-        V = self.param.l * self.param.l_y * self.param.l_z
-        cooling_coeff = -2 * self.param.h * A / V / (self.param.delta ** 2)
+        cell_volume = self.param.l * self.param.l_y * self.param.l_z
+
+        yz_surface_area = self.param.l_y * self.param.l_z
+        yz_surface_cooling_coefficient = (
+            -(self.param.h_cn + self.param.h_cp)
+            * yz_surface_area
+            / cell_volume
+            / (self.param.delta ** 2)
+        )
+
+        side_edge_area = 2 * self.param.l_z * self.param.l
+        side_edge_cooling_coefficient = (
+            -self.param.h_edge * side_edge_area / cell_volume / self.param.delta
+        )
+
+        total_cooling_coefficient = (
+            yz_surface_cooling_coefficient + side_edge_cooling_coefficient
+        )
 
         self.rhs = {
             T_av: (
                 pybamm.laplacian(T_av)
                 + self.param.B * Q_av
-                + cooling_coeff * (T_av - T_amb)
+                + total_cooling_coefficient * (T_av - T_amb)
             )
             / (self.param.C_th * self.param.rho)
         }
@@ -76,24 +91,51 @@ class CurrentCollector1D(BaseThermal):
     def set_boundary_conditions(self, variables):
         T_amb = variables["Ambient temperature"]
         T_av = variables["X-averaged cell temperature"]
-        T_av_left = pybamm.boundary_value(T_av, "negative tab")
-        T_av_right = pybamm.boundary_value(T_av, "positive tab")
+        T_av_top = pybamm.boundary_value(T_av, "right")
+        T_av_bottom = pybamm.boundary_value(T_av, "left")
 
-        # Three boundary conditions here to handle the cases of both tabs at
-        # the same side (top or bottom), or one either side. For both tabs on the
-        # same side, T_av_left and T_av_right are equal, and the boundary condition
-        # "no tab" is used on the other side.
+        # Tab cooling only implemented for both tabs at the top.
+        negative_tab_area = self.param.l_tab_n * self.param.l_cn
+        positive_tab_area = self.param.l_tab_p * self.param.l_cp
+        total_top_area = self.param.l * self.param.l_y
+        non_tab_top_area = total_top_area - negative_tab_area - positive_tab_area
+
+        negative_tab_cooling_coefficient = (
+            self.param.h_tab_n / self.param.delta * negative_tab_area / total_top_area
+        )
+        positive_tab_cooling_coefficient = (
+            self.param.h_tab_p / self.param.delta * positive_tab_area / total_top_area
+        )
+
+        top_edge_cooling_coefficient = (
+            self.param.h_edge / self.param.delta * non_tab_top_area / total_top_area
+        )
+
+        bottom_edge_cooling_coefficient = (
+            self.param.h_edge / self.param.delta * total_top_area / total_top_area
+        )
+
+        total_top_cooling_coefficient = (
+            negative_tab_cooling_coefficient
+            + positive_tab_cooling_coefficient
+            + top_edge_cooling_coefficient
+        )
+
+        total_bottom_cooling_coefficient = bottom_edge_cooling_coefficient
+
+        # just use left and right for clarity
+        # left = bottom of cell (z=0)
+        # right = top of cell (z=L_z)
         self.boundary_conditions = {
             T_av: {
-                "negative tab": (
-                    self.param.h * (T_av_left - T_amb) / self.param.delta,
+                "left": (
+                    total_bottom_cooling_coefficient * (T_av_bottom - T_amb),
                     "Neumann",
                 ),
-                "positive tab": (
-                    -self.param.h * (T_av_right - T_amb) / self.param.delta,
+                "right": (
+                    -total_top_cooling_coefficient * (T_av_top - T_amb),
                     "Neumann",
                 ),
-                "no tab": (pybamm.Scalar(0), "Neumann"),
             }
         }
 
