@@ -10,12 +10,14 @@
 
 ## Optimizations
 
+-   Changed the behaviour of "safe" mode in `CasadiSolver` ([#956](https://github.com/pybamm-team/PyBaMM/pull/956))
 -   Sped up model building ([#927](https://github.com/pybamm-team/PyBaMM/pull/927))
 -   Changed default solver for lead-acid to `CasadiSolver` ([#927](https://github.com/pybamm-team/PyBaMM/pull/927))
 
 ## Bug fixes
 
 -   Fixed `Interpolant` ids to allow processing ([#962](https://github.com/pybamm-team/PyBaMM/pull/962)
+-   Fixed a bug in the initial conditions of the potential pair model ([#954](https://github.com/pybamm-team/PyBaMM/pull/954))
 -   Changed simulation attributes to assign copies rather than the objects themselves ([#952](https://github.com/pybamm-team/PyBaMM/pull/952)
 -   Added default values to base model so that it works with the `Simulation` class ([#952](https://github.com/pybamm-team/PyBaMM/pull/952)
 -   Fixed solver to recompute initial conditions when inputs are changed ([#951](https://github.com/pybamm-team/PyBaMM/pull/951)
