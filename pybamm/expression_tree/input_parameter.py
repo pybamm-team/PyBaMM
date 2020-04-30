@@ -1,5 +1,5 @@
 #
-# Parameter classes
+# Input Parameter class
 #
 import numbers
 import numpy as np

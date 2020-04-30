@@ -75,3 +75,11 @@ class DiscretisationError(Exception):
     """
 
     pass
+
+
+class UnitsError(Exception):
+    """
+    Inconsistent or wrongly formatted units were found
+    """
+
+    pass

@@ -84,6 +84,7 @@ from .expression_tree.independent_variable import t
 from .expression_tree.vector import Vector
 from .expression_tree.state_vector import StateVectorBase, StateVector, StateVectorDot
 
+from .expression_tree.units import Units
 from .expression_tree.exceptions import *
 
 # Operations
