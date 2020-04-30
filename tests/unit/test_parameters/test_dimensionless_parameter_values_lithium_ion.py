@@ -40,19 +40,26 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         # a_p
         np.testing.assert_almost_equal(values.evaluate(param.a_p), 1.5, 2)
 
-        "reaction rates"
-        # m_n*
+        # j0_m
         np.testing.assert_almost_equal(
-            values.evaluate(param.m_n_dimensional(param.T_ref)), 2 * 10 ** (-5), 8
+            values.evaluate(
+                param.j0_n_dimensional(param.c_e_typ, param.c_n_max / 2, param.T_ref)
+            ),
+            values.evaluate(2 * 10 ** (-5) * param.c_e_typ ** 0.5 * param.c_n_max / 2),
+            8,
         )
 
         np.testing.assert_almost_equal(
             values.evaluate(1 / param.C_r_n * c_rate), 26.6639, 3
         )
 
-        # m_p*
+        # j0_p
         np.testing.assert_almost_equal(
-            values.evaluate(param.m_p_dimensional(param.T_ref)), 6 * 10 ** (-7), 8
+            values.evaluate(
+                param.j0_p_dimensional(param.c_e_typ, param.c_p_max / 2, param.T_ref)
+            ),
+            values.evaluate(6 * 10 ** (-7) * param.c_e_typ ** 0.5 * param.c_p_max / 2),
+            8,
         )
 
         # gamma_p / C_r_p

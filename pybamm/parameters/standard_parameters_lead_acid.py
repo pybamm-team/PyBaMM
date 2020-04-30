@@ -294,11 +294,6 @@ velocity_scale = i_typ / (c_e_typ * F)  # Reaction velocity scale
 # Discharge timescale
 tau_discharge = F * c_e_typ * L_x / i_typ
 
-# Reaction timescales
-# should this be * F?
-tau_r_n = 1 / (j0_n_S_ref_dimensional * a_n_dim * c_e_typ ** 0.5)
-tau_r_p = 1 / (j0_p_S_ref_dimensional * a_p_dim * c_e_typ ** 0.5)
-
 # Electrolyte diffusion timescale
 tau_diffusion_e = L_x ** 2 / D_e_typ
 
@@ -532,16 +527,6 @@ def chi(c_e, c_ox=0, c_hy=0):
 def c_w(c_e):
     "Dimensionless water concentration"
     return c_w_dimensional(c_e_typ * c_e) / c_w_dimensional(c_e_typ)
-
-
-def m_n(T):
-    "Dimensionless negative electrode reaction rate"
-    return 1
-
-
-def m_p(T):
-    "Dimensionless positive electrode reaction rate"
-    return 1
 
 
 def U_n(c_e_n, T):
