@@ -75,8 +75,7 @@ class BaseInterface(pybamm.BaseSubModel):
             # If variable was broadcast, take only the orphan
             if isinstance(c_e, pybamm.Broadcast) and isinstance(T, pybamm.Broadcast):
                 c_e = c_e.orphans[0]
-                T_new = T.orphans[0]
-                T = T_new
+                T = T.orphans[0]
             if self.domain == "Negative":
                 j0 = self.param.j0_n(c_e, T)
             elif self.domain == "Positive":
