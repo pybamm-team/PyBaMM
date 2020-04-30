@@ -34,6 +34,6 @@ def lead_dioxide_exchange_current_density_Sulzer2019(c_e, T):
     c_w = c_w_dim / c_w_ref
 
     j0_ref = 0.004  # srinivasan2003mathematical
-    j0 = j0_ref * (c_e / param.c_e_typ) * c_w
+    j0 = j0_ref * (c_e / param.c_e_typ) ** 2 * c_w
 
     return j0
