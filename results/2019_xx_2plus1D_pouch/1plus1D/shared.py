@@ -593,6 +593,8 @@ def plot_tz_var(
     )
     if "cn" in var_name:
         format = "%.0e"
+    elif "cp" in var_name:
+        format = "%.0e"
     else:
         format = None
     fig.colorbar(
@@ -637,11 +639,11 @@ def plot_tz_var(
 
     # plot time averaged error
     ax[1, 0].plot(z_plot * 1e3, np.mean(error, axis=1), "k-", label=r"$1+1$D")
-    ax[1, 0].plot(z_plot * 1e3, np.mean(error_bar, axis=1), "k:", label=r"$1+\bar{1}$D")
+    ax[1, 0].plot(z_plot * 1e3, np.mean(error_bar, axis=1), "k:", label="DFNCC")
 
     # plot z averaged error
     ax[1, 1].plot(t_plot, np.mean(error, axis=0), "k-", label=r"$1+1$D")
-    ax[1, 1].plot(t_plot, np.mean(error_bar, axis=0), "k:", label=r"$1+\bar{1}$D")
+    ax[1, 1].plot(t_plot, np.mean(error_bar, axis=0), "k:", label="DFNCC")
 
     # set ticks
     ax[0, 0].tick_params(which="both")
@@ -653,7 +655,7 @@ def plot_tz_var(
     else:
         ax[1, 0].ticklabel_format(style="sci", scilimits=(-2, 2), axis="y")
     ax[1, 1].tick_params(which="both")
-    if var_name in ["$\phi^*_{\mathrm{s,cn}}$"]:
+    if var_name in ["$\phi^*_{\mathrm{s,cn}}$", "$\phi^*_{\mathrm{s,cp}} - V^*$"]:
         ax[1, 0].ticklabel_format(style="sci", scilimits=(-2, 2), axis="y")
     else:
         ax[1, 1].set_yscale("log")
@@ -685,7 +687,7 @@ def plot_tz_var(
 
     leg2 = ax[0, 1].legend(
         [comsol_p, pybamm_p, pybamm_bar_p],
-        ["COMSOL", r"$1+1$D", r"$1+\bar{1}$D"],
+        ["COMSOL", r"$1+1$D", "DFNCC"],
         bbox_to_anchor=(0, 1.5, 1.0, 0.102),
         loc="lower left",
         borderaxespad=0.0,

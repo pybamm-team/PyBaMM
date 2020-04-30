@@ -23,3 +23,8 @@ lines.markersize: 3.6
 legend.markerscale: 0.75
 legend.framealpha: 1.0
 legend.handlelength: 0.75
+
+## Set legend properties
+#legend.markerscale: 1.0
+#legend.framealpha: 1.0
+#legend.handlelength: 1.5

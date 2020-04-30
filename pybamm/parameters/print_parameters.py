@@ -63,13 +63,16 @@ def print_parameters(parameters, parameter_values, output_file=None):
         # Update Crate
         parameter_values.update({"C-rate": Crate})
         for name, symbol in parameters.items():
-            if not callable(symbol):
-                proc_symbol = parameter_values.process_symbol(symbol)
-                if not (
-                    callable(proc_symbol)
-                    or isinstance(proc_symbol, pybamm.Concatenation)
-                ):
-                    evaluated_parameters[name].append(proc_symbol.evaluate(t=0))
+            try:
+                if not callable(symbol):
+                    proc_symbol = parameter_values.process_symbol(symbol)
+                    if not (
+                        callable(proc_symbol)
+                        or isinstance(proc_symbol, pybamm.Concatenation)
+                    ):
+                        evaluated_parameters[name].append(proc_symbol.evaluate(t=0))
+            except:
+                print("Parameter {} not supplied".format(name))
 
     # Calculate C-dependence of the parameters based on the difference between the
     # value at 1C and the value at C / 10

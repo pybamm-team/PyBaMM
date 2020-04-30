@@ -68,7 +68,7 @@ class BasePotentialPair(BaseModel):
 
         self.initial_conditions = {
             phi_s_cn: pybamm.Scalar(0),
-            i_boundary_cc: applied_current / cc_area,
+            i_boundary_cc: applied_current,
         }
 
 

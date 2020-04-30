@@ -371,8 +371,8 @@ class ProcessedVariable(object):
         self.second_dimension = "z"
 
         # set up interpolation
-        self._interpolation_function = interp.interp2d(
-            y_sol, z_sol, entries, kind=self.interp_kind, fill_value=np.nan
+        self._interpolation_function = interp.RegularGridInterpolator(
+            (y_sol, z_sol), entries, method=self.interp_kind, fill_value=np.nan
         )
 
     def initialise_3D_scikit_fem(self):
@@ -421,7 +421,9 @@ class ProcessedVariable(object):
             out = self._interpolation_function(t)
         elif self.dimensions == 2:
             if t is None:
-                out = self._interpolation_function(y, z)
+                if isinstance(y, np.ndarray):
+                    y = y[:, np.newaxis]
+                out = self._interpolation_function((y, z))
             else:
                 out = self.call_2D(t, x, r, z)
         elif self.dimensions == 3:

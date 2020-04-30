@@ -8,8 +8,24 @@ import numpy as np
 os.chdir(pybamm.root_dir())
 
 # set filepaths for data and names of file to pickle to
-paths = ["input/new_comsol_results_csv/1plus1D/1C/"]
-savefiles = ["input/comsol_results/comsol_1plus1D_1C.pickle"]
+paths = [
+    "input/new_comsol_results_csv/1plus1D/1C/",
+    "input/new_comsol_results_csv/1plus1D/3C/",
+    "input/new_comsol_results_csv/1plus1D/sigma_1e5/",
+    "input/new_comsol_results_csv/1plus1D/sigma_1e6/",
+    "input/new_comsol_results_csv/1plus1D/sigma_1e7/",
+    "input/new_comsol_results_csv/1plus1D/sigma_1e8/",
+    "input/new_comsol_results_csv/1plus1D/sigma_1e9/",
+]
+savefiles = [
+    "input/comsol_results/comsol_1plus1D_1C.pickle",
+    "input/comsol_results/comsol_1plus1D_3C.pickle",
+    "input/comsol_results/comsol_1plus1D_sigma_1e5.pickle",
+    "input/comsol_results/comsol_1plus1D_sigma_1e6.pickle",
+    "input/comsol_results/comsol_1plus1D_sigma_1e7.pickle",
+    "input/comsol_results/comsol_1plus1D_sigma_1e8.pickle",
+    "input/comsol_results/comsol_1plus1D_sigma_1e9.pickle",
+]
 
 for path, savefile in zip(paths, savefiles):
 
