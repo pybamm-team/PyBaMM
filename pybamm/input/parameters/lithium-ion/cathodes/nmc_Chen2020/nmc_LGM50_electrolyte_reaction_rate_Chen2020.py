@@ -20,7 +20,7 @@ def nmc_LGM50_electrolyte_reaction_rate_Chen2020(T):
     :class:`pybamm.Symbol`
         Reaction rate
     """
-    m_ref = 3.42e-6
+    m_ref = 3.59e-6
     E_r = 17800
     arrhenius = exp(E_r / constants.R * (1 / 298.15 - 1 / T))
 
