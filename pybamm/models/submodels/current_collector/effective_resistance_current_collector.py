@@ -217,4 +217,4 @@ class EffectiveResistance2D(pybamm.BaseModel):
 
     @property
     def default_solver(self):
-        return pybamm.AlgebraicSolver()
+        return pybamm.CasadiAlgebraicSolver()

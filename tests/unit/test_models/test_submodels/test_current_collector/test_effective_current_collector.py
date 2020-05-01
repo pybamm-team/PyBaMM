@@ -19,7 +19,7 @@ class TestEffectiveResistance2D(unittest.TestCase):
 
     def test_default_solver(self):
         model = pybamm.current_collector.EffectiveResistance2D()
-        self.assertIsInstance(model.default_solver, pybamm.AlgebraicSolver)
+        self.assertIsInstance(model.default_solver, pybamm.CasadiAlgebraicSolver)
 
     def test_get_processed_potentials(self):
         # solve cheap SPM to test processed potentials (think of an alternative test?)

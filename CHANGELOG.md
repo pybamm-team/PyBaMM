@@ -11,6 +11,7 @@
 
 ## Optimizations
 
+-   Changed default solver for DAE models to `CasadiSolver` ([]())
 -   Added some extra simplifications to the expression tree ([#971](https://github.com/pybamm-team/PyBaMM/pull/971))
 -   Changed the behaviour of "safe" mode in `CasadiSolver` ([#956](https://github.com/pybamm-team/PyBaMM/pull/956))
 -   Sped up model building ([#927](https://github.com/pybamm-team/PyBaMM/pull/927))
