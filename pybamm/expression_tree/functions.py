@@ -431,6 +431,7 @@ def tanh(child):
     " Returns hyperbolic tan function of child. "
     return pybamm.simplify_if_constant(Tanh(child), keep_domains=True)
 
+
 class Arctan(SpecificFunction):
     """ Arctan function """
 
