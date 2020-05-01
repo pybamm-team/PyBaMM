@@ -792,6 +792,5 @@ if __name__ == "__main__":
     print("Add -v for more debug output")
     if "-v" in sys.argv:
         debug = True
-        pybamm.set_logging_level("DEBUG")
     pybamm.settings.debug_mode = True
     unittest.main()
