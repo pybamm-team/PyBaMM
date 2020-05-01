@@ -151,7 +151,7 @@ class TestSpecificFunctions(unittest.TestCase):
         self.assertAlmostEqual(
             fun.diff(a).evaluate(inputs={"a": 3}),
             (
-                pybamm.arcsinh(pybamm.Scalar(3 + h)).evaluate()
+                pybamm.arctan(pybamm.Scalar(3 + h)).evaluate()
                 - fun.evaluate(inputs={"a": 3})
             )
             / h,
