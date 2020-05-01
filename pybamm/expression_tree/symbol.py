@@ -85,7 +85,9 @@ class Symbol(anytree.NodeMixin):
 
     """
 
-    def __init__(self, name, children=None, domain=None, auxiliary_domains=None):
+    def __init__(
+        self, name, children=None, domain=None, auxiliary_domains=None, units=None
+    ):
         super(Symbol, self).__init__()
         self.name = name
 
@@ -115,6 +117,9 @@ class Symbol(anytree.NodeMixin):
                 for x in self.pre_order()
             ):
                 self.test_shape()
+
+        # Units
+        self.units = units
 
     @property
     def children(self):
@@ -255,6 +260,18 @@ class Symbol(anytree.NodeMixin):
         the expression tree internal data
         """
         return tuple([child.new_copy() for child in self.children])
+
+    @property
+    def units(self):
+        ""
+        return self._units_class.units_str
+
+    @units.setter
+    def units(self, units):
+        if units is None or isinstance(units, str):
+            self._units_class = pybamm.Units(units)
+        else:
+            self._units_class = units
 
     def render(self):  # pragma: no cover
         """print out a visual representation of the tree (this node and its

@@ -18,7 +18,11 @@ class Units:
     """
 
     def __init__(self, units):
-        if isinstance(units, str):
+        # encode empty units
+        if units is None or units == {}:
+            self.units_str = "[-]"
+            self.units = {}
+        elif isinstance(units, str):
             self.units_str = units
             self.units = self.str_to_dict(units)
         else:
@@ -78,7 +82,7 @@ class Units:
         # O(n2) but the dictionary is small so it doesn't matter
         # First loop through the positives
         units_str = ""
-        for name, amount in units_dict.items():
+        for name, amount in sorted(units_dict.items()):
             if amount == 1:
                 # Don't record the amount if there's only 1, e.g. 'm.s-1' instead of
                 # 'm1.s-1'
@@ -86,7 +90,7 @@ class Units:
             elif amount > 1:
                 units_str += name + str(amount) + "."
         # Then loop through the negatives
-        for name, amount in units_dict.items():
+        for name, amount in sorted(units_dict.items()):
             if amount < 0:
                 # The '-' is already in the amount
                 units_str += name + str(amount) + "."
@@ -111,3 +115,26 @@ class Units:
             raise pybamm.UnitsError(
                 "Cannot subtract different units {!s} and {!s}".format(self, other)
             )
+
+    def __mul__(self, other):
+        # Add common elements and keep distinct elements
+        mul_units = {
+            k: self.units.get(k, 0) + other.units.get(k, 0)
+            for k in set(self.units) | set(other.units)
+        }
+        return Units(mul_units)
+
+    def __truediv__(self, other):
+        # Subtract common elements and keep distinct elements
+        div_units = {
+            k: self.units.get(k, 0) - other.units.get(k, 0)
+            for k in set(self.units) | set(other.units)
+        }
+        return Units(div_units)
+
+    def __pow__(self, power):
+        # Multiply units by the power
+        # This is different from the other operations in that "power" has to be an
+        # integer
+        pow_units = {k: power * v for k, v in self.units.items()}
+        return Units(pow_units)

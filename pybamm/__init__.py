@@ -65,6 +65,7 @@ from .citations import Citations, citations, print_citations
 #
 # Classes for the Expression Tree
 #
+from .expression_tree.units import Units
 from .expression_tree.symbol import *
 from .expression_tree.binary_operators import *
 from .expression_tree.concatenations import *
@@ -84,7 +85,6 @@ from .expression_tree.independent_variable import t
 from .expression_tree.vector import Vector
 from .expression_tree.state_vector import StateVectorBase, StateVector, StateVectorDot
 
-from .expression_tree.units import Units
 from .expression_tree.exceptions import *
 
 # Operations
