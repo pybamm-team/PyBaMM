@@ -109,21 +109,12 @@ C_dl_p_dimensional = pybamm.Parameter(
     "Positive electrode double-layer capacity [F.m-2]"
 )
 # Oxygen
-# j0_n_Ox_ref_dimensional = pybamm.Parameter(
-#     "Negative electrode reference exchange-current density (oxygen) [A.m-2]"
-# )
 s_plus_Ox_dim = pybamm.Parameter("Signed stoichiometry of cations (oxygen reaction)")
 s_w_Ox_dim = pybamm.Parameter("Signed stoichiometry of water (oxygen reaction)")
 s_ox_Ox_dim = pybamm.Parameter("Signed stoichiometry of oxygen (oxygen reaction)")
 ne_Ox = pybamm.Parameter("Electrons in oxygen reaction")
 U_Ox_dim = pybamm.Parameter("Oxygen reference OCP vs SHE [V]")
 # Hydrogen
-# j0_n_Hy_ref_dimensional = pybamm.Parameter(
-#     "Negative electrode reference exchange-current density (hydrogen) [A.m-2]"
-# )
-# j0_p_Hy_ref_dimensional = pybamm.Parameter(
-#     "Positive electrode reference exchange-current density (hydrogen) [A.m-2]"
-# )
 s_plus_Hy_dim = pybamm.Parameter("Signed stoichiometry of cations (hydrogen reaction)")
 s_hy_Hy_dim = pybamm.Parameter("Signed stoichiometry of hydrogen (hydrogen reaction)")
 ne_Hy = pybamm.Parameter("Electrons in hydrogen reaction")
