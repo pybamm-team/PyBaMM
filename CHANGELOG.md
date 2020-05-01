@@ -8,6 +8,7 @@
 -   Added `ProcessedSymbolicVariable` class, which can handle symbolic variables (i.e. variables for which the inputs are symbolic) ([#940](https://github.com/pybamm-team/PyBaMM/pull/940))
 -   Made `QuickPlot` compatible with Google Colab ([#935](https://github.com/pybamm-team/PyBaMM/pull/935))
 -   Added `BasicFull` model for lead-acid ([#932](https://github.com/pybamm-team/PyBaMM/pull/932))
+-   Added 'arctan' function  ([#973]https://github.com/pybamm-team/PyBaMM/pull/973)
 
 ## Optimizations
 
