@@ -141,12 +141,12 @@ class TestSpecificFunctions(unittest.TestCase):
             / h,
             places=5,
         )
-        
+
     def test_arctan(self):
         a = pybamm.InputParameter("a")
-        fun = pybamm.arcsinh(a)
-        self.assertIsInstance(fun, pybamm.Arcsinh)
-        self.assertEqual(fun.evaluate(inputs={"a": 3}), np.arcsinh(3))
+        fun = pybamm.arctan(a)
+        self.assertIsInstance(fun, pybamm.Arctan)
+        self.assertEqual(fun.evaluate(inputs={"a": 3}), np.arctan(3))
         h = 0.0000001
         self.assertAlmostEqual(
             fun.diff(a).evaluate(inputs={"a": 3}),
@@ -157,7 +157,7 @@ class TestSpecificFunctions(unittest.TestCase):
             / h,
             places=5,
         )
-        
+
     def test_cos(self):
         a = pybamm.InputParameter("a")
         fun = pybamm.cos(a)
