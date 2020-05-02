@@ -8,10 +8,10 @@ def LFP_electrolyte_reaction_rate_prada2013(T):
     ----------
 Representative Volume Element Model of Lithium-ion Battery
 Electrodes Based on X-ray Nano-tomography
-	Ali Ghorbani Kashkooli
+Ali Ghorbani Kashkooli
 SAFE TEMPERATURE CONTROL OF LITHIUM ION BATTERY
 SYSTEMS FOR HIGH PERFORMANCE AND LONG LIFE
-	Mayank Garg
+Mayank Garg
     ----------
     T: :class:`pybamm.Symbol`
         Dimensional temperature
