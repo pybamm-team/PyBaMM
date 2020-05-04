@@ -407,6 +407,24 @@ class TestCasadiSolver(unittest.TestCase):
         ):
             solver.solve(model, t_eval)
 
+    def test_interpolant_extrapolate(self):
+        model = pybamm.lithium_ion.DFN()
+        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Chen2020)
+        experiment = pybamm.Experiment(
+            ["Discharge at 1C until 2.5 V", "Rest for 2 hours",], period="5 seconds"
+        )
+
+        ci = param["Initial concentration in positive electrode [mol.m-3]"]
+        param["Initial concentration in positive electrode [mol.m-3]"] = 0.8 * ci
+
+        sim = pybamm.Simulation(
+            model,
+            parameter_values=param,
+            experiment=experiment,
+            solver=pybamm.CasadiSolver(mode="safe"),
+        )
+        sim.solve()
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
