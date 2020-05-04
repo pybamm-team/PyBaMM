@@ -15,9 +15,6 @@ class CasadiSolver(pybamm.BaseSolver):
 
     Parameters
     ----------
-    method : str, optional
-        The method to use for solving the system ('cvodes', for ODEs, or 'idas', for
-        DAEs). Default is 'idas'.
     mode : str
             How to solve the model (default is "safe"):
 
