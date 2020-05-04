@@ -18,7 +18,20 @@ models = [full_thermal_model, lumped_thermal_model]
 
 # load parameter values and process models and geometry
 param = models[0].default_parameter_values
-param.update({"Heat transfer coefficient [W.m-2.K-1]": 1})
+
+# for x-full, cooling is only implemented on the surfaces
+# so set other forms of cooling to zero for comparison.
+param.update(
+    {
+        "Negative current collector"
+        + " surface heat transfer coefficient [W.m-2.K-1]": 5,
+        "Positive current collector"
+        + " surface heat transfer coefficient [W.m-2.K-1]": 5,
+        "Negative tab heat transfer coefficient [W.m-2.K-1]": 0,
+        "Positive tab heat transfer coefficient [W.m-2.K-1]": 0,
+        "Edge heat transfer coefficient [W.m-2.K-1]": 0,
+    }
+)
 
 for model in models:
     param.process_model(model)

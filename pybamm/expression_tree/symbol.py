@@ -498,10 +498,16 @@ class Symbol(anytree.NodeMixin):
 
     def jac(self, variable, known_jacs=None, clear_domain=True):
         """
-        Differentiate a symbol with respect to a (slice of) a State Vector.
+        Differentiate a symbol with respect to a (slice of) a StateVector
+        or StateVectorDot.
         See :class:`pybamm.Jacobian`.
         """
         jac = pybamm.Jacobian(known_jacs, clear_domain=clear_domain)
+        if not isinstance(variable, (pybamm.StateVector, pybamm.StateVectorDot)):
+            raise TypeError(
+                "Jacobian can only be taken with respect to a 'StateVector' "
+                "or 'StateVectorDot', but {} is a {}".format(variable, type(variable))
+            )
         return jac.jac(self, variable)
 
     def _jac(self, variable):

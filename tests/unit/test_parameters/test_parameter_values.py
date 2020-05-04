@@ -52,6 +52,11 @@ class TestParameterValues(unittest.TestCase):
         ):
             pybamm.ParameterValues(values=1, chemistry={})
 
+    def test_repr(self):
+        param = pybamm.ParameterValues({"a": 1})
+        self.assertEqual(repr(param), "{'a': 1}")
+        self.assertEqual(param._ipython_key_completions_(), ["a"])
+
     def test_update_from_chemistry(self):
         # incomplete chemistry
         with self.assertRaisesRegex(KeyError, "must provide 'cell' parameters"):
@@ -80,14 +85,16 @@ class TestParameterValues(unittest.TestCase):
 
     def test_check_parameter_values(self):
         # Can't provide a current density of 0, as this will cause a ZeroDivision error
-        bad_values = {"Typical current [A]": 0}
         with self.assertRaisesRegex(ValueError, "Typical current"):
-            pybamm.ParameterValues(bad_values)
-        bad_values = {"C-rate": 0}
+            pybamm.ParameterValues({"Typical current [A]": 0})
         with self.assertRaisesRegex(
             ValueError, "The 'C-rate' parameter has been deprecated"
         ):
-            pybamm.ParameterValues(bad_values)
+            pybamm.ParameterValues({"C-rate": 0})
+        with self.assertRaisesRegex(ValueError, "surface area density"):
+            pybamm.ParameterValues({"Negative surface area density": 1})
+        with self.assertRaisesRegex(ValueError, "reaction rate"):
+            pybamm.ParameterValues({"Negative reaction rate": 1})
 
     def test_process_symbol(self):
         parameter_values = pybamm.ParameterValues({"a": 1, "b": 2, "c": 3})
@@ -127,11 +134,11 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(processed_integ.integration_variable[0].id, x.id)
 
         # process unary operation
-        grad = pybamm.Gradient(a)
+        v = pybamm.Variable("v", domain="test")
+        grad = pybamm.Gradient(v)
         processed_grad = parameter_values.process_symbol(grad)
         self.assertIsInstance(processed_grad, pybamm.Gradient)
-        self.assertIsInstance(processed_grad.children[0], pybamm.Scalar)
-        self.assertEqual(processed_grad.children[0].value, 1)
+        self.assertIsInstance(processed_grad.children[0], pybamm.Variable)
 
         # process delta function
         aa = pybamm.Parameter("a")
@@ -252,6 +259,8 @@ class TestParameterValues(unittest.TestCase):
                 "func": pybamm.load_function("process_symbol_test_function.py"),
                 "const": 254,
                 "float_func": lambda x: 42,
+                "mult": pybamm.InputParameter("b") * 5,
+                "bad type": np.array([1, 2, 3]),
             }
         )
         a = pybamm.InputParameter("a")
@@ -267,6 +276,12 @@ class TestParameterValues(unittest.TestCase):
         self.assertIsInstance(processed_const, pybamm.Scalar)
         self.assertEqual(processed_const.evaluate(), 254)
 
+        # process case where parameter provided is a pybamm symbol
+        # (e.g. a multiplication)
+        mult = pybamm.FunctionParameter("mult", {"a": a})
+        processed_mult = parameter_values.process_symbol(mult)
+        self.assertEqual(processed_mult.evaluate(inputs={"a": 14, "b": 63}), 63 * 5)
+
         # process differentiated function parameter
         diff_func = func.diff(a)
         processed_diff_func = parameter_values.process_symbol(diff_func)
@@ -277,12 +292,23 @@ class TestParameterValues(unittest.TestCase):
         processed_func = parameter_values.process_symbol(func)
         self.assertEqual(processed_func.evaluate(), 42)
 
+        # weird type raises error
+        func = pybamm.FunctionParameter("bad type", {"a": a})
+        with self.assertRaisesRegex(TypeError, "Parameter provided for"):
+            parameter_values.process_symbol(func)
+
         # function itself as input (different to the variable being an input)
-        parameter_values = pybamm.ParameterValues({"func": "[input]"})
+        parameter_values = pybamm.ParameterValues(
+            {"func": "[input]", "vector func": pybamm.InputParameter("vec", "test")}
+        )
         a = pybamm.Scalar(3)
         func = pybamm.FunctionParameter("func", {"a": a})
         processed_func = parameter_values.process_symbol(func)
         self.assertEqual(processed_func.evaluate(inputs={"func": 13}), 13)
+
+        func = pybamm.FunctionParameter("vector func", {"a": a})
+        processed_func = parameter_values.process_symbol(func)
+        self.assertEqual(processed_func.evaluate(inputs={"vec": 13}), 13)
 
     def test_process_inline_function_parameters(self):
         def D(c):
@@ -364,7 +390,13 @@ class TestParameterValues(unittest.TestCase):
                 "interpolation": "[data]lico2_data_example",
             },
             path=os.path.join(
-                "input", "parameters", "lithium-ion", "cathodes", "lico2_Marquis2019"
+                pybamm.root_dir(),
+                "pybamm",
+                "input",
+                "parameters",
+                "lithium-ion",
+                "cathodes",
+                "lico2_Marquis2019",
             ),
             check_already_exists=False,
         )
@@ -435,8 +467,8 @@ class TestParameterValues(unittest.TestCase):
         b = pybamm.Parameter("b")
         c = pybamm.Parameter("c")
         d = pybamm.Parameter("d")
-        var1 = pybamm.Variable("var1")
-        var2 = pybamm.Variable("var2")
+        var1 = pybamm.Variable("var1", domain="test")
+        var2 = pybamm.Variable("var2", domain="test")
         model.rhs = {var1: a * pybamm.grad(var1)}
         model.algebraic = {var2: c * var2}
         model.initial_conditions = {var1: b, var2: d}

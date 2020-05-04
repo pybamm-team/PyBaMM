@@ -19,6 +19,7 @@ class TestBaseModel(unittest.TestCase):
             "Negative electrode potential": a_n,
             "Negative electrolyte potential": a_n,
             "Negative electrolyte concentration": a_n,
+            "Negative electrode temperature": a_n,
             "X-averaged positive electrode oxygen interfacial current density": a,
             "Separator tortuosity": a_s,
             "Separator oxygen concentration": a_s,

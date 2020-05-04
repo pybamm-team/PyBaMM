@@ -567,7 +567,7 @@ class Simplification(object):
     def __init__(self, simplified_symbols=None):
         self._simplified_symbols = simplified_symbols or {}
 
-    def simplify(self, symbol):
+    def simplify(self, symbol, clear_domains=True):
         """
         This function recurses down the tree, applying any simplifications defined in
         classes derived from pybamm.Symbol. E.g. any expression multiplied by a
@@ -577,7 +577,9 @@ class Simplification(object):
         Parameters
         ----------
         symbol : :class:`pybamm.Symbol`
-        The symbol to simplify
+            The symbol to simplify
+        clear_domains : bool
+            Whether to remove a symbol's domain when simplifying. Default is True.
 
         Returns
         -------
@@ -588,15 +590,16 @@ class Simplification(object):
         try:
             return self._simplified_symbols[symbol.id]
         except KeyError:
-            simplified_symbol = self._simplify(symbol)
+            simplified_symbol = self._simplify(symbol, clear_domains)
 
             self._simplified_symbols[symbol.id] = simplified_symbol
 
             return simplified_symbol
 
-    def _simplify(self, symbol):
+    def _simplify(self, symbol, clear_domains=True):
         """ See :meth:`Simplification.simplify()`. """
-        symbol.clear_domains()
+        if clear_domains:
+            symbol.clear_domains()
 
         if isinstance(symbol, pybamm.BinaryOperator):
             left, right = symbol.children
@@ -607,7 +610,11 @@ class Simplification(object):
             new_symbol = symbol._binary_simplify(new_left, new_right)
 
         elif isinstance(symbol, pybamm.UnaryOperator):
-            new_child = self.simplify(symbol.child)
+            # Reassign domain for gradient and divergence
+            if isinstance(symbol, (pybamm.Gradient, pybamm.Divergence)):
+                new_child = self.simplify(symbol.child, clear_domains=False)
+            else:
+                new_child = self.simplify(symbol.child)
             # _unary_simplify defined in derived classes for specific rules
             new_symbol = symbol._unary_simplify(new_child)
 

@@ -294,6 +294,17 @@ class ParameterValues:
                 "use 'Current function [A]' instead. The cell capacity can be accessed "
                 "as 'Cell capacity [A.h]', and used to calculate current from C-rate."
             )
+        for param in values:
+            if "surface area density" in param:
+                raise ValueError(
+                    "Parameters involving 'surface area density' have been renamed to "
+                    "'surface area to volume ratio' ('{}' found)".format(param)
+                )
+            if "reaction rate" in param:
+                raise ValueError(
+                    "Parameters involving 'reaction rate' have been replaced with "
+                    "'exchange-current density' ('{}' found)".format(param)
+                )
 
     def process_model(self, unprocessed_model, inplace=True):
         """Assign parameter values to a model.
@@ -493,9 +504,21 @@ class ParameterValues:
             elif isinstance(function_name, pybamm.InputParameter):
                 # Replace the function with an input parameter
                 function = function_name
-            else:
+            elif (
+                isinstance(function_name, pybamm.Symbol)
+                and function_name.evaluates_to_number()
+            ):
+                # If the "function" provided is a pybamm scalar-like, use ones_like to
+                # get the right shape
+                function = function_name * pybamm.ones_like(*new_children)
+            elif callable(function_name):
                 # otherwise evaluate the function to create a new PyBaMM object
                 function = function_name(*new_children)
+            else:
+                raise TypeError(
+                    "Parameter provided for '{}' ".format(symbol.name)
+                    + "is of the wrong type (should either be scalar-like or callable)"
+                )
             # Differentiate if necessary
             if symbol.diff_variable is None:
                 function_out = function
