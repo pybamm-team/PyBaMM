@@ -1,6 +1,6 @@
 Base SEI
 ========
 
-.. autoclass:: pybamm.sei.BaseSEI
+.. autoclass:: pybamm.sei.BaseModel
     :members:
 
