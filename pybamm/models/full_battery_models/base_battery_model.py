@@ -50,11 +50,16 @@ class BaseBatteryModel(pybamm.BaseModel):
                 are strings that correspond to the submodel names in the keys
                 of `self.submodels`.
             * "sei" : str
-                Set the sei submodel to be used. If None, no SEI model is use. Options
-                are "reaction limited", "solvent diffusion limited",
-                "electron migration limited", or "lithium interstitial
-                diffusion limited".
+                Set the sei submodel to be used. Options are:
 
+                - None: :class:`pybamm.sei.NoSEI` (no SEI growth)
+                - "reaction limited": :class:`pybamm.sei.ReactionLimited`
+                - "solvent diffusion limited": \
+                    :class:`pybamm.sei.SolventDiffusionLimited`
+                - "electron migration limited": \
+                    :class:`pybamm.sei.ElectronMigrationLimited`
+                - "lithium interstitial diffusion limited": \
+                    :class:`pybamm.sei.InterstitialDiffusionLimited`
 
     **Extends:** :class:`pybamm.BaseModel`
     """

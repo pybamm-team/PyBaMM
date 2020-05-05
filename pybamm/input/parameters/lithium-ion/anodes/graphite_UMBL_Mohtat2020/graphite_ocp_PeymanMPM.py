@@ -22,8 +22,6 @@ def graphite_ocp_PeymanMPM(sto):
         - 0.0800 * pybamm.tanh((sto - 1.030) / 0.055)
     )
 
-    # u_eq = 1.0 + (0 * sto)
-
     return u_eq
 
 

@@ -36,25 +36,6 @@ class BaseModel(pybamm.BaseBatteryModel):
             }
         )
 
-    # def set_reactions(self):
-
-    #     # Should probably refactor as this is a bit clunky at the moment
-    #     # Maybe each reaction as a Reaction class so we can just list names of classes
-    #     icd = " interfacial current density"
-    #     self.reactions = {
-    #         "main": {
-    #             "Negative": {"s": 1, "aj": "Negative electrode" + icd},
-    #             "Positive": {"s": 1, "aj": "Positive electrode" + icd},
-    #         }
-    #     }
-
-    #     # N.B if there is no sei reaction then reaction
-    #     # is set to zero in the submodel.
-    #     self.reactions["sei"] = {
-    #         "Negative": {"s": 1, "aj": "Scaled negative electrode sei" + icd},
-    #         "Positive": {"s": 1, "aj": "Scaled positive electrode sei" + icd},
-    #     }
-
     def set_sei_submodel(self):
 
         # negative electrode SEI
