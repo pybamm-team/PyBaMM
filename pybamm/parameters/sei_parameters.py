@@ -7,13 +7,6 @@ import pybamm
 # --------------------------------------------------------------------------------------
 # Dimensional parameters
 
-
-def alpha(m_ratio, phi_s, phi_e, U_inner, U_outer):
-    return pybamm.FunctionParameter(
-        "Inner SEI reaction proportion", m_ratio, phi_s, phi_e, U_inner, U_outer
-    )
-
-
 V_bar_inner_dimensional = pybamm.Parameter("Inner SEI partial molar volume [m3.mol-1]")
 V_bar_outer_dimensional = pybamm.Parameter("Outer SEI partial molar volume [m3.mol-1]")
 
