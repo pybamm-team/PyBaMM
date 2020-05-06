@@ -17,3 +17,4 @@ Submodels
     porosity/index
     thermal/index
     tortuosity/index
+    sei/index
