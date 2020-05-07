@@ -105,7 +105,10 @@ class BaseKinetics(BaseInterface):
         c_e_0 = variables["Leading-order x-averaged electrolyte concentration"] * 1
         hacked_variables = {
             **variables,
-            self.domain + " electrolyte concentration": c_e_0,
+            self.domain
+            + " electrolyte concentration": pybamm.PrimaryBroadcast(
+                c_e_0, self.domain_for_broadcast
+            ),
         }
         delta_phi = variables[
             "Leading-order x-averaged "

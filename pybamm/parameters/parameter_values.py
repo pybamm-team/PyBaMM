@@ -137,14 +137,21 @@ class ParameterValues:
             pybamm.root_dir(), "pybamm", "input", "parameters", base_chemistry
         )
         # Load each component name
-        for component_group in [
+
+        component_groups = [
             "cell",
             "anode",
             "cathode",
             "separator",
             "electrolyte",
             "experiment",
-        ]:
+        ]
+
+        # add sei parameters if provided
+        if "sei" in chemistry:
+            component_groups += ["sei"]
+
+        for component_group in component_groups:
             # Make sure component is provided
             try:
                 component = chemistry[component_group]
@@ -294,6 +301,17 @@ class ParameterValues:
                 "use 'Current function [A]' instead. The cell capacity can be accessed "
                 "as 'Cell capacity [A.h]', and used to calculate current from C-rate."
             )
+        for param in values:
+            if "surface area density" in param:
+                raise ValueError(
+                    "Parameters involving 'surface area density' have been renamed to "
+                    "'surface area to volume ratio' ('{}' found)".format(param)
+                )
+            if "reaction rate" in param:
+                raise ValueError(
+                    "Parameters involving 'reaction rate' have been replaced with "
+                    "'exchange-current density' ('{}' found)".format(param)
+                )
 
     def process_model(self, unprocessed_model, inplace=True):
         """Assign parameter values to a model.

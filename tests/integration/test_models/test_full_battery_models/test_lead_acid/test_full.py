@@ -124,7 +124,6 @@ class TestLeadAcidFullSurfaceForm(unittest.TestCase):
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
-    # pybamm.set_logging_level("DEBUG")
     import sys
 
     if "-v" in sys.argv:

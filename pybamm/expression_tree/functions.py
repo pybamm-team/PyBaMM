@@ -434,3 +434,21 @@ class Tanh(SpecificFunction):
 def tanh(child):
     " Returns hyperbolic tan function of child. "
     return pybamm.simplify_if_constant(Tanh(child), keep_domains=True)
+
+
+class Arctan(SpecificFunction):
+    """ Arctan function """
+
+    def __init__(self, child):
+        super().__init__(np.arctan, child)
+
+    def _function_diff(self, children, idx):
+        """ See :meth:`pybamm.Function._function_diff()`. """
+        return 1 / (children[0] ** 2 + 1)
+
+
+def arctan(child):
+    " Returns hyperbolic tan function of child. "
+    return pybamm.simplify_if_constant(Arctan(child), keep_domains=True)
+
+

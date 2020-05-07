@@ -123,6 +123,32 @@ class TestDFN(unittest.TestCase):
         modeltest.test_all()
 
 
+class TestDFNWithSEI(unittest.TestCase):
+    def test_well_posed_reaction_limited(self):
+        options = {"sei": "reaction limited"}
+        model = pybamm.lithium_ion.DFN(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+    def test_well_posed_solvent_diffusion_limited(self):
+        options = {"sei": "solvent-diffusion limited"}
+        model = pybamm.lithium_ion.DFN(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+    def test_well_posed_electron_migration_limited(self):
+        options = {"sei": "electron-migration limited"}
+        model = pybamm.lithium_ion.DFN(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+    def test_well_posed_interstitial_diffusion_limited(self):
+        options = {"sei": "interstitial-diffusion limited"}
+        model = pybamm.lithium_ion.DFN(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys

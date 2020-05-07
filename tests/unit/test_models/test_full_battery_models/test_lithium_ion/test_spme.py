@@ -118,6 +118,28 @@ class TestSPMe(unittest.TestCase):
         model.check_well_posedness()
 
 
+class TestSPMeWithSEI(unittest.TestCase):
+    def test_well_posed_reaction_limited(self):
+        options = {"sei": "reaction limited"}
+        model = pybamm.lithium_ion.SPMe(options)
+        model.check_well_posedness()
+
+    def test_well_posed_solvent_diffusion_limited(self):
+        options = {"sei": "solvent-diffusion limited"}
+        model = pybamm.lithium_ion.SPMe(options)
+        model.check_well_posedness()
+
+    def test_well_posed_electron_migration_limited(self):
+        options = {"sei": "electron-migration limited"}
+        model = pybamm.lithium_ion.SPMe(options)
+        model.check_well_posedness()
+
+    def test_well_posed_interstitial_diffusion_limited(self):
+        options = {"sei": "interstitial-diffusion limited"}
+        model = pybamm.lithium_ion.SPMe(options)
+        model.check_well_posedness()
+
+
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys
