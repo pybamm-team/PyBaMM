@@ -13,7 +13,7 @@ Negative electrode porosity,0.3,Peyman MPM,
 Negative electrode active material volume fraction,0.61,Peyman MPM,rest is binder
 Negative particle radius [m],2.5E-06,Peyman MPM,
 Negative particle distribution in x,1,,
-Negative electrode surface area density [m-1],732000,Peyman MPM,Eq. (48)
+Negative electrode surface area to volume ratio [m-1],732000,Peyman MPM,Eq. (48)
 Negative electrode Bruggeman coefficient (electrode),1.5,Peyman MPM,
 Negative electrode Bruggeman coefficient (electrolyte),1.5,Peyman MPM,
 Negative electrode tortuosity, 0.16,
@@ -25,6 +25,7 @@ Negative electrode reference exchange-current density [A.m-2(m3.mol)1.5],1.061E-
 Reference OCP vs SHE in the negative electrode [V],,,
 Negative electrode charge transfer coefficient,0.5,Peyman MPM,
 Negative electrode double-layer capacity [F.m-2],0.2,,no info from Peyman MPM
+Negative electrode exchange-current density [A.m-2],[function]graphite_electrolyte_exchange_current_density_PeymanMPM,,
 ,,,
 # Density,,,
 Negative electrode density [kg.m-3],3100,Peyman MPM, cell lumped value 
@@ -33,6 +34,3 @@ Negative electrode density [kg.m-3],3100,Peyman MPM, cell lumped value
 Negative electrode specific heat capacity [J.kg-1.K-1],1100,Peyman MPM,cell lumped value
 Negative electrode thermal conductivity [W.m-1.K-1],1.7,,no info from Peyman MPM
 Negative electrode OCP entropic change [V.K-1],[function]graphite_entropic_change_PeymanMPM,,
-,,,
-# Reaction rate,,,
-Negative electrode reaction rate,[function]graphite_electrolyte_reaction_rate_PeymanMPM,,

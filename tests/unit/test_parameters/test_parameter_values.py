@@ -85,14 +85,16 @@ class TestParameterValues(unittest.TestCase):
 
     def test_check_parameter_values(self):
         # Can't provide a current density of 0, as this will cause a ZeroDivision error
-        bad_values = {"Typical current [A]": 0}
         with self.assertRaisesRegex(ValueError, "Typical current"):
-            pybamm.ParameterValues(bad_values)
-        bad_values = {"C-rate": 0}
+            pybamm.ParameterValues({"Typical current [A]": 0})
         with self.assertRaisesRegex(
             ValueError, "The 'C-rate' parameter has been deprecated"
         ):
-            pybamm.ParameterValues(bad_values)
+            pybamm.ParameterValues({"C-rate": 0})
+        with self.assertRaisesRegex(ValueError, "surface area density"):
+            pybamm.ParameterValues({"Negative surface area density": 1})
+        with self.assertRaisesRegex(ValueError, "reaction rate"):
+            pybamm.ParameterValues({"Negative reaction rate": 1})
 
     def test_process_symbol(self):
         parameter_values = pybamm.ParameterValues({"a": 1, "b": 2, "c": 3})
