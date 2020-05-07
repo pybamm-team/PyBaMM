@@ -270,7 +270,7 @@ class Symbol(anytree.NodeMixin):
 
     @units.setter
     def units(self, units):
-        if units is None or isinstance(units, str):
+        if units is None or isinstance(units, (str, dict)):
             self._units = pybamm.Units(units)
         else:
             self._units = units
@@ -503,7 +503,7 @@ class Symbol(anytree.NodeMixin):
 
         """
         if variable.id == self.id:
-            return pybamm.Scalar(1)
+            return pybamm.Scalar(1)  # units cancel out
         elif any(variable.id == x.id for x in self.pre_order()):
             return self._diff(variable)
         elif variable.id == pybamm.t.id and self.has_symbol_of_classes(
@@ -511,7 +511,7 @@ class Symbol(anytree.NodeMixin):
         ):
             return self._diff(variable)
         else:
-            return pybamm.Scalar(0)
+            return pybamm.Scalar(0, units=self.units / variable.units)
 
     def _diff(self, variable):
         "Default behaviour for differentiation, overriden by Binary and Unary Operators"

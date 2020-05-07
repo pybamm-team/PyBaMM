@@ -1,4 +1,4 @@
-from pybamm import exp, constants
+from pybamm import exp, constants, Scalar
 
 
 def electrolyte_diffusivity_Capiglia1999(c_e, T):
@@ -27,8 +27,8 @@ def electrolyte_diffusivity_Capiglia1999(c_e, T):
         Solid diffusivity
     """
 
-    D_c_e = 5.34e-10 * exp(-0.65 * c_e / 1000)
-    E_D_e = 37040
+    D_c_e = Scalar(5.34e-10, "[m2.s-1]") * exp(-Scalar(0.65, "[m3.mol-1]") * c_e / 1000)
+    E_D_e = Scalar(37040, "[J.mol-1]")
     arrhenius = exp(E_D_e / constants.R * (1 / Scalar(298.15, "[K]") - 1 / T))
 
     return D_c_e * arrhenius

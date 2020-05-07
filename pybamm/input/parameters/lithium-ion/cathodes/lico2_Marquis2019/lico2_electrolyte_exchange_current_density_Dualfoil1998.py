@@ -1,4 +1,4 @@
-from pybamm import exp, constants, standard_parameters_lithium_ion
+from pybamm import exp, constants, standard_parameters_lithium_ion, Scalar
 
 
 def lico2_electrolyte_exchange_current_density_Dualfoil1998(c_e, c_s_surf, T):
@@ -24,8 +24,10 @@ def lico2_electrolyte_exchange_current_density_Dualfoil1998(c_e, c_s_surf, T):
     :class:`pybamm.Symbol`
         Exchange-current density [A.m-2]
     """
-    m_ref = 6 * 10 ** (-7)  # (A/m2)(mol/m3)**1.5 - includes ref concentrations
-    E_r = 39570
+    m_ref = Scalar(
+        6 * 10 ** (-7), {"A": 1, "m": 2.5, "mol": -1.5}
+    )  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
+    E_r = Scalar(39570, "[J.mol-1]")
     arrhenius = exp(E_r / constants.R * (1 / Scalar(298.15, "[K]") - 1 / T))
 
     c_p_max = standard_parameters_lithium_ion.c_p_max

@@ -529,11 +529,8 @@ class ParameterValues:
                     function = pybamm.Scalar(function, units=symbol.units)
                 # Check that the units of the evaluated function are the same as the
                 # units of the original symbol
-                try:
-                    if function.units != symbol.units:
-                        raise pybamm.UnitsError()
-                except AttributeError:
-                    n - 1
+                if function.units != symbol.units:
+                    raise pybamm.UnitsError()
             else:
                 raise TypeError(
                     "Parameter provided for '{}' ".format(symbol.name)

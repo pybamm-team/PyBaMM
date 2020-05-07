@@ -114,7 +114,7 @@ class Units:
                 # Don't record the amount if there's only 1, e.g. 'm.s-1' instead of
                 # 'm1.s-1'
                 units_str += name + "."
-            elif amount > 1:
+            elif amount > 0:
                 units_str += name + str(amount) + "."
         # Then loop through the negatives
         for name, amount in sorted(units_dict.items()):

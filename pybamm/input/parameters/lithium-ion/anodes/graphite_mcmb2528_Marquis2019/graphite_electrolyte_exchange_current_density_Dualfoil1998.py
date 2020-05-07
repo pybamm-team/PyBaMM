@@ -25,8 +25,8 @@ def graphite_electrolyte_exchange_current_density_Dualfoil1998(c_e, c_s_surf, T)
         Exchange-current density [A.m-2]
     """
     m_ref = Scalar(
-        2 * 10 ** (-5), units={"A": 1, "m": -4, "mol": 1.5}
-    )  # (A/m2)(mol/m3)**1.5 - includes ref concentrations
+        2 * 10 ** (-5), units={"A": 1, "m": 2.5, "mol": -1.5}
+    )  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
     E_r = Scalar(37480, "[J.mol-1]")
     arrhenius = exp(E_r / constants.R * (1 / Scalar(298.15, "[K]") - 1 / T))
 

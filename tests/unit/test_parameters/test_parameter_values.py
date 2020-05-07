@@ -391,8 +391,8 @@ class TestParameterValues(unittest.TestCase):
         parameter_values = pybamm.ParameterValues({})
         parameter_values.update(
             {
-                "function": "[function]lico2_ocp_Dualfoil1998",
-                "interpolation": "[data]lico2_data_example",
+                "function [V]": "[function]lico2_ocp_Dualfoil1998",
+                "interpolation [V]": "[data]lico2_data_example",
             },
             path=os.path.join(
                 pybamm.root_dir(),
@@ -407,8 +407,8 @@ class TestParameterValues(unittest.TestCase):
         )
 
         a = pybamm.InputParameter("a")
-        func = pybamm.FunctionParameter("function", {"a": a})
-        interp = pybamm.FunctionParameter("interpolation", {"a": a})
+        func = pybamm.FunctionParameter("function [V]", {"a": a})
+        interp = pybamm.FunctionParameter("interpolation [V]", {"a": a})
 
         processed_func = parameter_values.process_symbol(func)
         processed_interp = parameter_values.process_symbol(interp)

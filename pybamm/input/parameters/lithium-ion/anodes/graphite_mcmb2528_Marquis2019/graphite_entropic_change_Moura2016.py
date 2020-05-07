@@ -1,4 +1,4 @@
-from pybamm import exp, cosh
+from pybamm import exp, cosh, Scalar
 
 
 def graphite_entropic_change_Moura2016(sto, c_n_max):
@@ -19,15 +19,23 @@ def graphite_entropic_change_Moura2016(sto, c_n_max):
     """
 
     du_dT = (
-        -1.5 * (120.0 / c_n_max) * exp(-120 * sto)
-        + (0.0351 / (0.083 * c_n_max)) * ((cosh((sto - 0.286) / 0.083)) ** (-2))
-        - (0.0045 / (0.119 * c_n_max)) * ((cosh((sto - 0.849) / 0.119)) ** (-2))
-        - (0.035 / (0.05 * c_n_max)) * ((cosh((sto - 0.9233) / 0.05)) ** (-2))
-        - (0.0147 / (0.034 * c_n_max)) * ((cosh((sto - 0.5) / 0.034)) ** (-2))
-        - (0.102 / (0.142 * c_n_max)) * ((cosh((sto - 0.194) / 0.142)) ** (-2))
-        - (0.022 / (0.0164 * c_n_max)) * ((cosh((sto - 0.9) / 0.0164)) ** (-2))
-        - (0.011 / (0.0226 * c_n_max)) * ((cosh((sto - 0.124) / 0.0226)) ** (-2))
-        + (0.0155 / (0.029 * c_n_max)) * ((cosh((sto - 0.105) / 0.029)) ** (-2))
+        -1.5 * (Scalar(120.0, "[V.K-1.mol.m-3]") / c_n_max) * exp(-120 * sto)
+        + (Scalar(0.0351, "[V.K-1.mol.m-3]") / (0.083 * c_n_max))
+        * ((cosh((sto - 0.286) / 0.083)) ** (-2))
+        - (Scalar(0.0045, "[V.K-1.mol.m-3]") / (0.119 * c_n_max))
+        * ((cosh((sto - 0.849) / 0.119)) ** (-2))
+        - (Scalar(0.035, "[V.K-1.mol.m-3]") / (0.05 * c_n_max))
+        * ((cosh((sto - 0.9233) / 0.05)) ** (-2))
+        - (Scalar(0.0147, "[V.K-1.mol.m-3]") / (0.034 * c_n_max))
+        * ((cosh((sto - 0.5) / 0.034)) ** (-2))
+        - (Scalar(0.102, "[V.K-1.mol.m-3]") / (0.142 * c_n_max))
+        * ((cosh((sto - 0.194) / 0.142)) ** (-2))
+        - (Scalar(0.022, "[V.K-1.mol.m-3]") / (0.0164 * c_n_max))
+        * ((cosh((sto - 0.9) / 0.0164)) ** (-2))
+        - (Scalar(0.011, "[V.K-1.mol.m-3]") / (0.0226 * c_n_max))
+        * ((cosh((sto - 0.124) / 0.0226)) ** (-2))
+        + (Scalar(0.0155, "[V.K-1.mol.m-3]") / (0.029 * c_n_max))
+        * ((cosh((sto - 0.105) / 0.029)) ** (-2))
     )
 
     return du_dT
