@@ -82,6 +82,8 @@ class Symbol(anytree.NodeMixin):
         "separator" and tertiary domain "current collector" (`domain="negative
         particle", auxiliary_domains={"secondary": "separator", "tertiary": "current
         collector"}`).
+    units : str
+        The units of the symbol
 
     """
 
@@ -264,14 +266,14 @@ class Symbol(anytree.NodeMixin):
     @property
     def units(self):
         ""
-        return self._units_class.units_str
+        return self._units
 
     @units.setter
     def units(self, units):
         if units is None or isinstance(units, str):
-            self._units_class = pybamm.Units(units)
+            self._units = pybamm.Units(units)
         else:
-            self._units_class = units
+            self._units = units
 
     def render(self):  # pragma: no cover
         """print out a visual representation of the tree (this node and its
@@ -369,7 +371,8 @@ class Symbol(anytree.NodeMixin):
     def __repr__(self):
         """returns the string `__class__(id, name, children, domain)`"""
         return (
-            "{!s}({}, {!s}, children={!s}, domain={!s}, auxiliary_domains={!s})"
+            "{!s}({}, {!s}, children={!s}, domain={!s}, "
+            "auxiliary_domains={!s}, units={!s})"
         ).format(
             self.__class__.__name__,
             hex(self.id),
@@ -377,6 +380,7 @@ class Symbol(anytree.NodeMixin):
             [str(child) for child in self.children],
             [str(subdomain) for subdomain in self.domain],
             {k: str(v) for k, v in self.auxiliary_domains.items()},
+            self.units,
         )
 
     def __add__(self, other):

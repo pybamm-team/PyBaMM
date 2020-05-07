@@ -194,7 +194,11 @@ def c_T(c_e, c_ox=0, c_hy=0):
     return (1 + (2 * V_w - V_e) * c_e + (V_w - V_ox) * c_ox + (V_w - V_hy) * c_hy) / V_w
 
 
-def rho_dimensional(c_e, c_ox=0, c_hy=0):
+def rho_dimensional(
+    c_e,
+    c_ox=pybamm.Scalar(0, units="[mol.m-3]"),
+    c_hy=pybamm.Scalar(0, units="[mol.m-3]"),
+):
     """
     Dimensional density of electrolyte [kg.m-3], from thermodynamics. c_k in [mol.m-3].
     """
@@ -332,7 +336,7 @@ centre_z_tab_p = pybamm.geometric_parameters.centre_z_tab_p
 # Diffusive kinematic relationship coefficient
 omega_i = c_e_typ * M_e / rho_typ * (t_plus(1) + M_minus / M_e)
 # Migrative kinematic relationship coefficient (electrolyte)
-omega_c_e = c_e_typ * M_e / rho_typ * (1 - M_w * V_e / V_w * M_e)
+omega_c_e = c_e_typ * M_e / rho_typ * (1 - M_w * V_e / (V_w * M_e))
 C_e = tau_diffusion_e / tau_discharge
 # Ratio of viscous pressure scale to osmotic pressure scale (electrolyte)
 pi_os_e = mu_typ * velocity_scale * L_x / (d_n ** 2 * R * T_ref * c_e_typ)
@@ -344,10 +348,10 @@ Re = rho_typ * velocity_scale * L_x / mu_typ
 # Other species properties
 # Oxygen
 curlyD_ox = D_ox_dimensional / D_e_typ
-omega_c_ox = c_e_typ * M_ox / rho_typ * (1 - M_w * V_ox / V_w * M_ox)
+omega_c_ox = c_e_typ * M_ox / rho_typ * (1 - M_w * V_ox / (V_w * M_ox))
 # Hydrogen
 curlyD_hy = D_hy_dimensional / D_e_typ
-omega_c_hy = c_e_typ * M_hy / rho_typ * (1 - M_w * V_hy / V_w * M_hy)
+omega_c_hy = c_e_typ * M_hy / rho_typ * (1 - M_w * V_hy / (V_w * M_hy))
 
 # Electrode Properties
 sigma_cn = sigma_cn_dimensional * potential_scale / i_typ / L_x

@@ -15,14 +15,21 @@ class Parameter(pybamm.Symbol):
     ----------
 
     name : str
-        name of the node
+        Name of the node. If it contains a [units] string, this is assigned as the
+        node's units
     domain : iterable of str, optional
         list of domains the parameter is valid over, defaults to empty list
 
     """
 
     def __init__(self, name, domain=[]):
-        super().__init__(name, domain=domain)
+        # Read units
+        if "[" and "]" in name:
+            units = name[name.index("[") : name.index("]") + 1]
+        else:
+            units = None
+
+        super().__init__(name, domain=domain, units=units)
 
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
@@ -47,7 +54,8 @@ class FunctionParameter(pybamm.Symbol):
     ----------
 
     name : str
-        name of the node
+        Name of the node. If it contains a [units] string, this is assigned as the
+        node's units
     inputs : dict
         A dictionary with string keys and :class:`pybamm.Symbol` values representing
         the function inputs. The string keys should provide a reasonable description
@@ -73,11 +81,18 @@ class FunctionParameter(pybamm.Symbol):
 
         domain = self.get_children_domains(children_list)
         auxiliary_domains = self.get_children_auxiliary_domains(children_list)
+
+        # Read units
+        if "[" and "]" in name:
+            units = name[name.index("[") : name.index("]") + 1]
+        else:
+            units = None
         super().__init__(
             name,
             children=children_list,
             domain=domain,
             auxiliary_domains=auxiliary_domains,
+            units=units,
         )
 
         self.input_names = list(inputs.keys())

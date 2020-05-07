@@ -9,12 +9,12 @@ class TestUnits(unittest.TestCase):
     def test_unit_init(self):
         speed_str = pybamm.Units("[m.s-1]")
         speed_dict = pybamm.Units({"m": 1, "s": -1})
-        self.assertEqual(speed_str.units, {"m": 1, "s": -1})
+        self.assertEqual(speed_str.units_dict, {"m": 1, "s": -1})
         self.assertEqual(speed_dict.units_str, "[m.s-1]")
 
         # empty units
         no_units = pybamm.Units(None)
-        self.assertEqual(no_units.units, {})
+        self.assertEqual(no_units.units_dict, {})
         self.assertEqual(no_units.units_str, "[-]")
 
         # errors
@@ -44,33 +44,59 @@ class TestUnits(unittest.TestCase):
             speed - conc
 
         speed_times_conc = speed * conc
-        self.assertEqual(speed_times_conc.units, {"m": -2, "mol": 1, "s": -1})
+        self.assertEqual(speed_times_conc.units_dict, {"m": -2, "mol": 1, "s": -1})
 
         speed_over_conc = speed / conc
-        self.assertEqual(speed_over_conc.units, {"m": 4, "mol": -1, "s": -1})
+        self.assertEqual(speed_over_conc.units_dict, {"m": 4, "mol": -1, "s": -1})
 
         conc_over_speed = conc / speed
-        self.assertEqual(conc_over_speed.units, {"m": -4, "mol": 1, "s": 1})
+        self.assertEqual(conc_over_speed.units_dict, {"m": -4, "mol": 1, "s": 1})
 
         speed_cubed = speed ** 3.5
-        self.assertEqual(speed_cubed.units, {"m": 3.5, "s": -3.5})
+        self.assertEqual(speed_cubed.units_dict, {"m": 3.5, "s": -3.5})
+
+    def test_reformat_units(self):
+        # Test that some special units get recast in terms of other units
+        joules = pybamm.Units("[J3]")
+        self.assertEqual(joules.units_dict, {"A": 3, "s": 3, "V": 3})
+
+        joules = pybamm.Units("[C]")
+        self.assertEqual(joules.units_dict, {"A": 1, "s": 1})
+
+        watts = pybamm.Units("[W-2]")
+        self.assertEqual(watts.units_dict, {"A": -2, "V": -2})
+
+        siemens = pybamm.Units("[S2]")
+        self.assertEqual(siemens.units_dict, {"V": -2, "A": 2})
+
+        ohms = pybamm.Units("[Ohm2]")
+        self.assertEqual(ohms.units_dict, {"A": -2, "V": 2})
+
+        # test combined
+        combined = pybamm.Units("[J.C.s.m-1]")
+        self.assertEqual(combined.units_dict, {"A": 2, "s": 3, "V": 1, "m": -1})
 
     def test_symbol_units(self):
         a = pybamm.Symbol("a")
         c = pybamm.Symbol("c", units="[mol.m-3]")
         v = pybamm.Symbol("v", units="[m.s-1]")
 
-        self.assertIsInstance(a._units_class, pybamm.Units)
-        self.assertEqual(a.units, "[-]")
+        self.assertIsInstance(a.units, pybamm.Units)
+        self.assertEqual(str(a.units), "[-]")
 
-        self.assertIsInstance(c._units_class, pybamm.Units)
-        self.assertEqual(c.units, "[mol.m-3]")
+        self.assertIsInstance(c.units, pybamm.Units)
+        self.assertEqual(str(c.units), "[mol.m-3]")
 
-        self.assertEqual((c + c).units, "[mol.m-3]")
-        self.assertEqual((c - c).units, "[mol.m-3]")
-        self.assertEqual((c * v).units, "[mol.m-2.s-1]")
-        self.assertEqual((c / v).units, "[mol.s.m-4]")
-        self.assertEqual((v / c).units, "[m4.mol-1.s-1]")
+        self.assertEqual(str((c + c).units), "[mol.m-3]")
+        self.assertEqual(str((c - c).units), "[mol.m-3]")
+        self.assertEqual(str((c * v).units), "[mol.m-2.s-1]")
+        self.assertEqual(str((c / v).units), "[mol.s.m-4]")
+        self.assertEqual(str((v / c).units), "[m4.mol-1.s-1]")
+
+    def test_simplify_keeps_units(self):
+        # test that simplification retains units
+        s = pybamm.Scalar(1, units="[m]")
+        self.assertEqual(str((s * 2).units), "[m]")
 
 
 if __name__ == "__main__":

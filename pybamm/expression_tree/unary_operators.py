@@ -29,7 +29,11 @@ class UnaryOperator(pybamm.Symbol):
         if auxiliary_domains is None:
             auxiliary_domains = child.auxiliary_domains
         super().__init__(
-            name, children=[child], domain=domain, auxiliary_domains=auxiliary_domains
+            name,
+            children=[child],
+            domain=domain,
+            auxiliary_domains=auxiliary_domains,
+            units=child.units,
         )
         self.child = self.children[0]
 

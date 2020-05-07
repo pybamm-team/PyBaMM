@@ -66,7 +66,7 @@ h_tab_p_dim = pybamm.Parameter("Positive tab heat transfer coefficient [W.m-2.K-
 h_edge_dim = pybamm.Parameter("Edge heat transfer coefficient [W.m-2.K-1]")
 
 # Typical temperature rise
-Delta_T = pybamm.Scalar(1)
+Delta_T = pybamm.Scalar(1, units="[K]")
 
 # Initial temperature
 T_init_dim = pybamm.Parameter("Initial temperature [K]")
