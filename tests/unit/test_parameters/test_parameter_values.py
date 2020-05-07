@@ -97,12 +97,17 @@ class TestParameterValues(unittest.TestCase):
             pybamm.ParameterValues({"Negative reaction rate": 1})
 
     def test_process_symbol(self):
-        parameter_values = pybamm.ParameterValues({"a": 1, "b": 2, "c": 3})
+        parameter_values = pybamm.ParameterValues({"a": 1, "b": 2, "c": 3, "d [m]": 5})
         # process parameter
         a = pybamm.Parameter("a")
         processed_a = parameter_values.process_symbol(a)
         self.assertIsInstance(processed_a, pybamm.Scalar)
         self.assertEqual(processed_a.value, 1)
+
+        # parameter with units
+        d = pybamm.Parameter("d [m]")
+        processed_d = parameter_values.process_symbol(d)
+        self.assertEqual(str(processed_d.units), "[m]")
 
         # process binary operation
         b = pybamm.Parameter("b")

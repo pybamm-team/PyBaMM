@@ -27,6 +27,6 @@ def graphite_diffusivity_Kim2011(sto, T):
 
     D_ref = 9 * 10 ** (-14)
     E_D_s = 4e3
-    arrhenius = exp(E_D_s / constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = exp(E_D_s / constants.R * (1 / Scalar(298.15, "[K]") - 1 / T))
 
     return D_ref * arrhenius

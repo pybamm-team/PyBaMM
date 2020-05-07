@@ -193,3 +193,7 @@ class Units:
         # integer
         pow_units = {k: power * v for k, v in self.units_dict.items()}
         return Units(pow_units)
+
+    def __eq__(self, other):
+        "Two units objects are defined to be equal if their unit_dicts are equal"
+        return self.units_dict == other.units_dict

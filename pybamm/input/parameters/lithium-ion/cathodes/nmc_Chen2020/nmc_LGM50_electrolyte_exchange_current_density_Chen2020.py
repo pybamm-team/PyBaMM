@@ -28,7 +28,7 @@ def nmc_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, T):
     """
     m_ref = 3.59e-6  # (A/m2)(mol/m3)**1.5 - includes ref concentrations
     E_r = 17800
-    arrhenius = exp(E_r / constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = exp(E_r / constants.R * (1 / Scalar(298.15, "[K]") - 1 / T))
 
     c_p_max = standard_parameters_lithium_ion.c_p_max
 

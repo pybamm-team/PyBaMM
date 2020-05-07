@@ -23,6 +23,9 @@ class Function(pybamm.Symbol):
         Default is "autograd".
     differentiated_function : method, optional
         The function which was differentiated to obtain this one. Default is None.
+    units : str
+        The units of the symbol
+
     **Extends:** :class:`pybamm.Symbol`
     """
 
@@ -32,7 +35,8 @@ class Function(pybamm.Symbol):
         *children,
         name=None,
         derivative="autograd",
-        differentiated_function=None
+        differentiated_function=None,
+        units=None,
     ):
         # Turn numbers into scalars
         children = list(children)
@@ -55,7 +59,11 @@ class Function(pybamm.Symbol):
         self.differentiated_function = differentiated_function
 
         super().__init__(
-            name, children=children, domain=domain, auxiliary_domains=auxiliary_domains
+            name,
+            children=children,
+            domain=domain,
+            auxiliary_domains=auxiliary_domains,
+            units=units,
         )
 
     def get_children_domains(self, children_list):
@@ -112,7 +120,7 @@ class Function(pybamm.Symbol):
             return Function(
                 autograd.elementwise_grad(self.function, idx),
                 *children,
-                differentiated_function=self.function
+                differentiated_function=self.function,
             )
         elif self.derivative == "derivative":
             if len(children) > 1:
@@ -128,7 +136,7 @@ class Function(pybamm.Symbol):
                     self.function.derivative(),
                     *children,
                     derivative="derivative",
-                    differentiated_function=self.function
+                    differentiated_function=self.function,
                 )
 
     def _function_jac(self, children_jacs):
@@ -207,7 +215,7 @@ class Function(pybamm.Symbol):
             *children,
             name=self.name,
             derivative=self.derivative,
-            differentiated_function=self.differentiated_function
+            differentiated_function=self.differentiated_function,
         )
 
     def _function_simplify(self, simplified_children):
@@ -450,5 +458,3 @@ class Arctan(SpecificFunction):
 def arctan(child):
     " Returns hyperbolic tan function of child. "
     return pybamm.simplify_if_constant(Arctan(child), keep_domains=True)
-
-

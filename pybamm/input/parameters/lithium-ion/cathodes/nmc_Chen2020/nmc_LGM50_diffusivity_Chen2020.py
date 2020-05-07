@@ -26,6 +26,6 @@ def nmc_LGM50_diffusivity_Chen2020(sto, T):
 
     D_ref = 4e-15
     E_D_s = 18550
-    arrhenius = exp(E_D_s / constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = exp(E_D_s / constants.R * (1 / Scalar(298.15, "[K]") - 1 / T))
 
     return D_ref * arrhenius

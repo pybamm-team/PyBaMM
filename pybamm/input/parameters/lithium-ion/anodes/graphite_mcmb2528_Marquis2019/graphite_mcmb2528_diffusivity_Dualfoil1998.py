@@ -1,4 +1,4 @@
-from pybamm import exp, constants
+from pybamm import exp, constants, Scalar
 
 
 def graphite_mcmb2528_diffusivity_Dualfoil1998(sto, T):
@@ -21,10 +21,10 @@ def graphite_mcmb2528_diffusivity_Dualfoil1998(sto, T):
     -------
     :class:`pybamm.Symbol`
         Solid diffusivity
-   """
+    """
 
-    D_ref = 3.9 * 10 ** (-14)
-    E_D_s = 42770
-    arrhenius = exp(E_D_s / constants.R * (1 / 298.15 - 1 / T))
+    D_ref = Scalar(3.9 * 10 ** (-14), "[m2.s-1]")
+    E_D_s = Scalar(42770, "[J.mol-1]")
+    arrhenius = exp(E_D_s / constants.R * (1 / Scalar(298.15, "[K]") - 1 / T))
 
     return D_ref * arrhenius

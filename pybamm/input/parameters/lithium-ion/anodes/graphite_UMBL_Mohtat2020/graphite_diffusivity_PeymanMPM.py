@@ -25,6 +25,6 @@ def graphite_diffusivity_PeymanMPM(sto, T):
 
     D_ref = 5.0 * 10 ** (-15)
     E_D_s = 42770
-    arrhenius = exp(E_D_s / constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = exp(E_D_s / constants.R * (1 / Scalar(298.15, "[K]") - 1 / T))
 
     return D_ref * arrhenius

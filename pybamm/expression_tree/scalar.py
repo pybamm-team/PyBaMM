@@ -15,24 +15,22 @@ class Scalar(pybamm.Symbol):
 
     value : numeric
         the value returned by the node when evaluated
+    units : str
+        The units of the symbol
     name : str, optional
-        the name of the node. Defaulted to ``str(value)``
+        the name of the node. Defaulted to ``value [units]``
         if not provided
     domain : iterable of str, optional
         list of domains the parameter is valid over, defaults to empty list
-    units : str
-        The units of the symbol
 
     """
 
-    def __init__(self, value, name=None, domain=[], units=None):
-        """
-
-        """
+    def __init__(self, value, units=None, name=None, domain=[]):
         # set default name if not provided
         self.value = value
+        units_str = units or ""
         if name is None:
-            name = str(self.value)
+            name = str(self.value) + " " + str(units_str)
 
         super().__init__(name, domain=domain, units=units)
 
@@ -63,4 +61,4 @@ class Scalar(pybamm.Symbol):
 
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
-        return Scalar(self.value, self.name, self.domain, self.units)
+        return Scalar(self.value, units=self.units, name=self.name, domain=self.domain)

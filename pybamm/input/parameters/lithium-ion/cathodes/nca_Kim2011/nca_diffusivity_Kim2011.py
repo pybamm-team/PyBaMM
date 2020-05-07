@@ -27,6 +27,6 @@ def nca_diffusivity_Kim2011(sto, T):
 
     D_ref = 3 * 10 ** (-15)
     E_D_s = 2e4
-    arrhenius = exp(E_D_s / constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = exp(E_D_s / constants.R * (1 / Scalar(298.15, "[K]") - 1 / T))
 
     return D_ref * arrhenius

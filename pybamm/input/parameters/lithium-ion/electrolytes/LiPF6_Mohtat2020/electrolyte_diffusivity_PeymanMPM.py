@@ -29,6 +29,6 @@ def electrolyte_diffusivity_PeymanMPM(c_e, T):
 
     D_c_e = 5.35 * 10 ** (-10)
     E_D_e = 37040
-    arrhenius = exp(E_D_e / constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = exp(E_D_e / constants.R * (1 / Scalar(298.15, "[K]") - 1 / T))
 
     return D_c_e * arrhenius

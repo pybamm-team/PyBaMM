@@ -26,6 +26,8 @@ class Interpolant(pybamm.Function):
     extrapolate : bool, optional
         Whether to extrapolate for points that are outside of the parametrisation
         range, or return NaN (following default behaviour from scipy). Default is True.
+    units : str
+        The units of the symbol
 
     **Extends**: :class:`pybamm.Function`
     """
@@ -38,6 +40,7 @@ class Interpolant(pybamm.Function):
         interpolator="cubic spline",
         extrapolate=True,
         entries_string=None,
+        units=None,
     ):
         if data.ndim != 2 or data.shape[1] != 2:
             raise ValueError(
@@ -65,7 +68,11 @@ class Interpolant(pybamm.Function):
         self.data = data
         self.entries_string = entries_string
         super().__init__(
-            interpolating_function, child, name=name, derivative="derivative"
+            interpolating_function,
+            child,
+            name=name,
+            derivative="derivative",
+            units=units,
         )
         # Store information as attributes
         self.x = data[:, 0]
@@ -81,7 +88,6 @@ class Interpolant(pybamm.Function):
     def entries_string(self, value):
         # We must include the entries in the hash, since different arrays can be
         # indistinguishable by class, name and domain alone
-        # Slightly different syntax for sparse and non-sparse matrices
         if value is not None:
             self._entries_string = value
         else:
@@ -102,5 +108,6 @@ class Interpolant(pybamm.Function):
             name=self.name,
             interpolator=self.interpolator,
             extrapolate=self.extrapolate,
-            entries_string=self.entries_string
+            entries_string=self.entries_string,
+            units=self.units,
         )

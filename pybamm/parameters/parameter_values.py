@@ -485,8 +485,10 @@ class ParameterValues:
             value = self[symbol.name]
             if isinstance(value, numbers.Number):
                 # Scalar inherits name (for updating parameters) and domain (for
-                # Broadcast)
-                return pybamm.Scalar(value, name=symbol.name, domain=symbol.domain)
+                # Broadcast) and units
+                return pybamm.Scalar(
+                    value, units=symbol.units, name=symbol.name, domain=symbol.domain
+                )
             elif isinstance(value, pybamm.InputParameter):
                 value.domain = symbol.domain
                 return value
@@ -500,13 +502,15 @@ class ParameterValues:
                 # If function_name is a tuple then it should be (name, data) and we need
                 # to create an Interpolant
                 name, data = function_name
-                function = pybamm.Interpolant(data, *new_children, name=name)
+                function = pybamm.Interpolant(
+                    data, *new_children, name=name, units=symbol.units
+                )
             elif isinstance(function_name, numbers.Number):
                 # If the "function" is provided is actually a scalar, return a Scalar
                 # object instead of throwing an error.
                 # Also use ones_like so that we get the right shapes
                 function = pybamm.Scalar(
-                    function_name, name=symbol.name
+                    function_name, units=symbol.units, name=symbol.name
                 ) * pybamm.ones_like(*new_children)
             elif isinstance(function_name, pybamm.InputParameter):
                 # Replace the function with an input parameter
@@ -521,6 +525,15 @@ class ParameterValues:
             elif callable(function_name):
                 # otherwise evaluate the function to create a new PyBaMM object
                 function = function_name(*new_children)
+                if isinstance(function, numbers.Number):
+                    function = pybamm.Scalar(function, units=symbol.units)
+                # Check that the units of the evaluated function are the same as the
+                # units of the original symbol
+                try:
+                    if function.units != symbol.units:
+                        raise pybamm.UnitsError()
+                except AttributeError:
+                    n - 1
             else:
                 raise TypeError(
                     "Parameter provided for '{}' ".format(symbol.name)

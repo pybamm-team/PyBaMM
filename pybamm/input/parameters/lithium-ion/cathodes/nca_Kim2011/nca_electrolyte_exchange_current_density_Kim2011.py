@@ -38,7 +38,7 @@ def nca_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, T):
         c_e_ref ** alpha * (c_s_max - c_s_ref) ** alpha * c_s_ref ** alpha
     )
     E_r = 3e4
-    arrhenius = exp(E_r / constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = exp(E_r / constants.R * (1 / Scalar(298.15, "[K]") - 1 / T))
 
     return (
         m_ref

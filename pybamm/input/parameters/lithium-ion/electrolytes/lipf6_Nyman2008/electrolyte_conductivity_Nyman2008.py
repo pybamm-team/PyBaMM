@@ -28,6 +28,6 @@ def electrolyte_conductivity_Nyman2008(c_e, T):
     )
 
     E_k_e = 34700
-    arrhenius = exp(E_k_e / constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = exp(E_k_e / constants.R * (1 / Scalar(298.15, "[K]") - 1 / T))
 
     return sigma_e * arrhenius

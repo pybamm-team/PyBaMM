@@ -23,11 +23,9 @@ class TestUnits(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.UnitsError, "Units should start with"):
             pybamm.Units("m.s-1")
 
-        # Non-standard units
-        # [W]
-        # [S]
-        # [F]
-        # volts = pybamm.Units("[V]")
+    def test_equality(self):
+        self.assertTrue(pybamm.Units("[m.A.s-1]") == pybamm.Units("[A.m.s-1]"))
+        self.assertFalse(pybamm.Units("[m.A.s-1]") == pybamm.Units("[A]"))
 
     def test_units_operations(self):
         speed = pybamm.Units("[m.s-1]")

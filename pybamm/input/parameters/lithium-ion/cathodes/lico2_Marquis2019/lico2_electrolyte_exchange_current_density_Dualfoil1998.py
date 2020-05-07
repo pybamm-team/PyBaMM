@@ -26,7 +26,7 @@ def lico2_electrolyte_exchange_current_density_Dualfoil1998(c_e, c_s_surf, T):
     """
     m_ref = 6 * 10 ** (-7)  # (A/m2)(mol/m3)**1.5 - includes ref concentrations
     E_r = 39570
-    arrhenius = exp(E_r / constants.R * (1 / 298.15 - 1 / T))
+    arrhenius = exp(E_r / constants.R * (1 / Scalar(298.15, "[K]") - 1 / T))
 
     c_p_max = standard_parameters_lithium_ion.c_p_max
 
