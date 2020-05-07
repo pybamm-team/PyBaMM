@@ -1,4 +1,4 @@
-from pybamm import exp, constants
+from pybamm import exp, constants, Scalar
 
 
 def electrolyte_conductivity_Capiglia1999(c_e, T):
@@ -28,13 +28,13 @@ def electrolyte_conductivity_Capiglia1999(c_e, T):
     """
 
     sigma_e = (
-        0.0911
-        + 1.9101 * (c_e / 1000)
-        - 1.052 * (c_e / 1000) ** 2
-        + 0.1554 * (c_e / 1000) ** 3
+        Scalar(0.0911, "[S.m-1]")
+        + Scalar(1.9101, "[S.m-1]") * (c_e / Scalar(1000, "[mol.m-3]"))
+        - Scalar(1.052, "[S.m-1]") * (c_e / Scalar(1000, "[mol.m-3]")) ** 2
+        + Scalar(0.1554, "[S.m-1]") * (c_e / Scalar(1000, "[mol.m-3]")) ** 3
     )
 
-    E_k_e = 34700
+    E_k_e = Scalar(34700, "[J.mol-1]")
     arrhenius = exp(E_k_e / constants.R * (1 / Scalar(298.15, "[K]") - 1 / T))
 
     return sigma_e * arrhenius

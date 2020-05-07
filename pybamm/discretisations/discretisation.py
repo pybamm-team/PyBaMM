@@ -768,6 +768,8 @@ class Discretisation(object):
             return self._discretised_symbols[symbol.id]
         except KeyError:
             discretised_symbol = self._process_symbol(symbol)
+            # discretisation removes units
+            discretised_symbol.units = None
             self._discretised_symbols[symbol.id] = discretised_symbol
             discretised_symbol.test_shape()
             # Assign mesh as an attribute to the processed variable
