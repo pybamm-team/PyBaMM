@@ -1,4 +1,4 @@
-from pybamm import exp, constants
+from pybamm import exp, constants, Scalar
 
 
 def graphite_LGM50_diffusivity_Chen2020(sto, T):
@@ -26,8 +26,8 @@ def graphite_LGM50_diffusivity_Chen2020(sto, T):
          Solid diffusivity
    """
 
-    D_ref = 3.3e-14
-    E_D_s = 42770
+    D_ref = Scalar(3.3e-14, "[m2.s-1]")
+    E_D_s = Scalar(42770, "[J.mol-1]")
     arrhenius = exp(E_D_s / constants.R * (1 / Scalar(298.15, "[K]") - 1 / T))
 
     return D_ref * arrhenius

@@ -278,7 +278,12 @@ class ParameterValues:
                     self._dict_items[name] = (function_name, data)
                     values[name] = (function_name, data)
                 elif value == "[input]":
-                    self._dict_items[name] = pybamm.InputParameter(name)
+                    # Read units
+                    if "[" in name and "]" in name:
+                        units = name[name.index("[") : name.index("]") + 1]
+                    else:
+                        units = None
+                    self._dict_items[name] = pybamm.InputParameter(name, units=units)
                 # Anything else should be a converted to a float
                 else:
                     self._dict_items[name] = float(value)
@@ -530,7 +535,10 @@ class ParameterValues:
                 # Check that the units of the evaluated function are the same as the
                 # units of the original symbol
                 if function.units != symbol.units:
-                    raise pybamm.UnitsError()
+                    raise pybamm.UnitsError(
+                        "Original function had units {}, ".format(symbol.units)
+                        + "but processed function has units {}".format(function.units)
+                    )
             else:
                 raise TypeError(
                     "Parameter provided for '{}' ".format(symbol.name)
@@ -553,6 +561,8 @@ class ParameterValues:
             # process children
             new_left = self.process_symbol(symbol.left)
             new_right = self.process_symbol(symbol.right)
+            if new_right.units != symbol.right.units:
+                self.process_symbol(symbol.right)
             # make new symbol, ensure domain remains the same
             new_symbol = symbol._binary_new_copy(new_left, new_right)
             new_symbol.domain = symbol.domain

@@ -196,7 +196,7 @@ class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
     def test_solve_with_symbolic_input_1D_vector_input(self):
         var = pybamm.Variable("var", "negative electrode")
         model = pybamm.BaseModel()
-        param = pybamm.InputParameter("param", "negative electrode")
+        param = pybamm.InputParameter("param", domain="negative electrode")
         model.algebraic = {var: var + param}
         model.initial_conditions = {var: 2}
         model.variables = {"var": var}

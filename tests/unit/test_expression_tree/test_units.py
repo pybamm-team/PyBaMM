@@ -12,6 +12,10 @@ class TestUnits(unittest.TestCase):
         self.assertEqual(speed_str.units_dict, {"m": 1, "s": -1})
         self.assertEqual(speed_dict.units_str, "[m.s-1]")
 
+        # non-float units string
+        diff_str = pybamm.Units("[m2.0.s-1.0]")
+        self.assertEqual(diff_str.units_dict, {"m": 2, "s": -1})
+
         # empty units
         no_units = pybamm.Units(None)
         self.assertEqual(no_units.units_dict, {})

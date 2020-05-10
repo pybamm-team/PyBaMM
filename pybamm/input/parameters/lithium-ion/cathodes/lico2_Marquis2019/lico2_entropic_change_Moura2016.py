@@ -22,24 +22,15 @@ def lico2_entropic_change_Moura2016(sto, c_p_max):
     # should this too? If not, the "bumps" in the OCV don't line up.
     stretch = 1.062
     sto = stretch * sto
+    c_p_max /= Scalar(1, "[mol.m-3]")
 
     du_dT = (
-        Scalar(0.07645, "[V.K-1.mol.m-3]")
-        * (-54.4806 / c_p_max)
-        * ((1.0 / cosh(30.834 - 54.4806 * sto)) ** 2)
-        + Scalar(2.1581, "[V.K-1.mol.m-3]")
-        * (-50.294 / c_p_max)
-        * ((cosh(52.294 - 50.294 * sto)) ** (-2))
-        + Scalar(0.14169, "[V.K-1.mol.m-3]")
-        * (19.854 / c_p_max)
-        * ((cosh(11.0923 - 19.8543 * sto)) ** (-2))
-        - Scalar(0.2051, "[V.K-1.mol.m-3]")
-        * (5.4888 / c_p_max)
-        * ((cosh(1.4684 - 5.4888 * sto)) ** (-2))
-        - (Scalar(0.2531, "[V.K-1.mol.m-3]") / 0.1316 / c_p_max)
-        * ((cosh((-sto + 0.56478) / 0.1316)) ** (-2))
-        - (Scalar(0.02167, "[V.K-1.mol.m-3]") / 0.006 / c_p_max)
-        * ((cosh((sto - 0.525) / 0.006)) ** (-2))
-    )
+        0.07645 * (-54.4806 / c_p_max) * ((1.0 / cosh(30.834 - 54.4806 * sto)) ** 2)
+        + 2.1581 * (-50.294 / c_p_max) * ((cosh(52.294 - 50.294 * sto)) ** (-2))
+        + 0.14169 * (19.854 / c_p_max) * ((cosh(11.0923 - 19.8543 * sto)) ** (-2))
+        - 0.2051 * (5.4888 / c_p_max) * ((cosh(1.4684 - 5.4888 * sto)) ** (-2))
+        - (0.2531 / 0.1316 / c_p_max) * ((cosh((-sto + 0.56478) / 0.1316)) ** (-2))
+        - (0.02167 / 0.006 / c_p_max) * ((cosh((sto - 0.525) / 0.006)) ** (-2))
+    ) * Scalar(1, "[V.K-1]")
 
     return du_dT

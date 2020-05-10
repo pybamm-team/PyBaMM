@@ -1,4 +1,4 @@
-from pybamm import exp, constants
+from pybamm import exp, constants, Scalar
 
 
 def electrolyte_conductivity_PeymanMPM(c_e, T):

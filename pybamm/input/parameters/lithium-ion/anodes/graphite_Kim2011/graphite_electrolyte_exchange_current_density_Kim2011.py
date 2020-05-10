@@ -1,4 +1,4 @@
-from pybamm import exp, constants, standard_parameters_lithium_ion
+from pybamm import exp, constants, standard_parameters_lithium_ion, Scalar
 
 
 def graphite_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, T):
@@ -29,7 +29,7 @@ def graphite_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, T):
         Exchange-current density [A.m-2]
     """
 
-    i0_ref = 36  # reference exchange current density at 100% SOC
+    i0_ref = Scalar(36, "[A.m-2]")  # reference exchange current density at 100% SOC
     sto = 0.36  # stochiometry at 100% SOC
     c_s_n_max = standard_parameters_lithium_ion.c_n_max  # max electrode concentration
     c_s_n_ref = sto * c_s_n_max  # reference electrode concentration
@@ -40,7 +40,7 @@ def graphite_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, T):
         c_e_ref ** alpha * (c_s_n_max - c_s_n_ref) ** alpha * c_s_n_ref ** alpha
     )
 
-    E_r = 3e4
+    E_r = Scalar(3e4, "[J.mol-1]")
     arrhenius = exp(E_r / constants.R * (1 / Scalar(298.15, "[K]") - 1 / T))
 
     return (

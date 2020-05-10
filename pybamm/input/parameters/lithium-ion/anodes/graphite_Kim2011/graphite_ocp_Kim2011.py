@@ -1,4 +1,4 @@
-from pybamm import exp, tanh
+from pybamm import exp, tanh, Scalar
 
 
 def graphite_ocp_Kim2011(sto):
@@ -24,6 +24,6 @@ def graphite_ocp_Kim2011(sto):
         - 0.022 * tanh((sto - 0.98) / 0.0164)
         - 0.011 * tanh((sto - 0.124) / 0.0226)
         + 0.0155 * tanh((sto - 0.105) / 0.029)
-    )
+    ) * Scalar(1, "[V]")
 
     return u_eq

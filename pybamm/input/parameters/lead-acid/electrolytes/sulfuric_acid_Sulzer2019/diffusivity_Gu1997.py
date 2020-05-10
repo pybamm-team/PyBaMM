@@ -1,6 +1,7 @@
 #
 # Sulfuric acid diffusivity
 #
+from pybamm import Scalar
 
 
 def diffusivity_Gu1997(c_e):
@@ -22,4 +23,4 @@ def diffusivity_Gu1997(c_e):
            California Univ., Berkeley. Lawrence Radiation Lab., 1968.
 
     """
-    return (1.75 + 260e-6 * c_e) * 1e-9
+    return (1.75 + 260e-6 * c_e / Scalar(1, "[mol.m-3]")) * 1e-9 * Scalar(1, "[m2.s-1]")

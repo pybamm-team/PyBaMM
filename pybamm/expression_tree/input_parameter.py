@@ -16,19 +16,23 @@ class InputParameter(pybamm.Symbol):
     ----------
     name : str
         name of the node
+    units : str
+        units of the node
     domain : iterable of str, or str
         list of domains over which the node is valid (empty list indicates the symbol
         is valid over all domains)
     """
 
-    def __init__(self, name, domain=None):
+    def __init__(self, name, units=None, domain=None):
         # Expected shape defaults to 1
         self._expected_size = 1
-        super().__init__(name, domain=domain)
+        super().__init__(name, domain=domain, units=units)
 
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
-        new_input_parameter = InputParameter(self.name, self.domain)
+        new_input_parameter = InputParameter(
+            self.name, units=self.units, domain=self.domain
+        )
         new_input_parameter._expected_size = self._expected_size
         return new_input_parameter
 

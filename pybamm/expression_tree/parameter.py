@@ -24,7 +24,7 @@ class Parameter(pybamm.Symbol):
 
     def __init__(self, name, domain=[]):
         # Read units
-        if "[" and "]" in name:
+        if "[" in name and "]" in name:
             units = name[name.index("[") : name.index("]") + 1]
         else:
             units = None
@@ -83,7 +83,7 @@ class FunctionParameter(pybamm.Symbol):
         auxiliary_domains = self.get_children_auxiliary_domains(children_list)
 
         # Read units
-        if "[" and "]" in name:
+        if "[" in name and "]" in name:
             units = name[name.index("[") : name.index("]") + 1]
         else:
             units = None

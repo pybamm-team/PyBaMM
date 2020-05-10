@@ -214,12 +214,12 @@ class Power(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
 
         super().__init__("**", left, right)
-        if str(left.units) == "[-]":
+        if str(self.left.units) == "[-]":
             self.units = None
         else:
             if not isinstance(self.right, pybamm.Scalar):
                 raise TypeError("If base has units, exponent must be a scalar")
-            self.units = self.left._units ** self.right.value
+            self.units = self.left.units ** self.right.value
 
     def _diff(self, variable):
         """ See :meth:`pybamm.Symbol._diff()`. """
@@ -281,7 +281,7 @@ class Addition(BinaryOperator):
     def __init__(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
         super().__init__("+", left, right)
-        self.units = self.left._units + self.right._units
+        self.units = self.left.units + self.right.units
 
     def _diff(self, variable):
         """ See :meth:`pybamm.Symbol._diff()`. """
@@ -336,7 +336,7 @@ class Subtraction(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
 
         super().__init__("-", left, right)
-        self.units = self.left._units - self.right._units
+        self.units = self.left.units - self.right.units
 
     def _diff(self, variable):
         """ See :meth:`pybamm.Symbol._diff()`. """
@@ -394,7 +394,7 @@ class Multiplication(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
 
         super().__init__("*", left, right)
-        self.units = self.left._units * self.right._units
+        self.units = self.left.units * self.right.units
 
     def _diff(self, variable):
         """ See :meth:`pybamm.Symbol._diff()`. """
@@ -459,6 +459,8 @@ class MatrixMultiplication(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
 
         super().__init__("@", left, right)
+        # Effect on units is same as multiplying
+        self.units = self.left.units * self.right.units
 
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
@@ -509,7 +511,7 @@ class Division(BinaryOperator):
     def __init__(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
         super().__init__("/", left, right)
-        self.units = self.left._units / self.right._units
+        self.units = self.left.units / self.right.units
 
     def _diff(self, variable):
         """ See :meth:`pybamm.Symbol._diff()`. """
@@ -593,6 +595,8 @@ class Inner(BinaryOperator):
     def __init__(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
         super().__init__("inner product", left, right)
+        # Effect on units is same as multiplying
+        self.units = self.left.units * self.right.units
 
     def _diff(self, variable):
         """ See :meth:`pybamm.Symbol._diff()`. """
@@ -677,6 +681,8 @@ class Heaviside(BinaryOperator):
     def __init__(self, name, left, right):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
         super().__init__(name, left, right)
+        # Effect on units is same as adding
+        self.units = self.left.units + self.right.units
 
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
@@ -731,6 +737,8 @@ class Minimum(BinaryOperator):
 
     def __init__(self, left, right):
         super().__init__("minimum", left, right)
+        # Effect on units is same as adding
+        self.units = self.left.units + self.right.units
 
     def __str__(self):
         """ See :meth:`pybamm.Symbol.__str__()`. """
@@ -759,6 +767,8 @@ class Maximum(BinaryOperator):
 
     def __init__(self, left, right):
         super().__init__("maximum", left, right)
+        # Effect on units is same as adding
+        self.units = self.left.units + self.right.units
 
     def __str__(self):
         """ See :meth:`pybamm.Symbol.__str__()`. """

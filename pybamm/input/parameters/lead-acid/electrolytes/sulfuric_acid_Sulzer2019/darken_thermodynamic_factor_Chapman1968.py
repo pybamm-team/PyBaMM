@@ -1,6 +1,7 @@
 #
 # Darken thermodynamic factor of sulfuric acid
 #
+from pybamm import Scalar
 
 
 def darken_thermodynamic_factor_Chapman1968(c_e):
@@ -18,4 +19,4 @@ def darken_thermodynamic_factor_Chapman1968(c_e):
            1977.
 
     """
-    return 0.49 + 4.1e-4 * c_e
+    return 0.49 + 4.1e-4 * c_e / Scalar(1, "[mol.m-3]")

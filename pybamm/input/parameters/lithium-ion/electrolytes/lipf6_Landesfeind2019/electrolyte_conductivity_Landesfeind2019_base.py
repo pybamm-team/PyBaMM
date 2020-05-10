@@ -1,4 +1,4 @@
-from pybamm import exp, sqrt
+from pybamm import exp, sqrt, Scalar
 
 
 def electrolyte_conductivity_Landesfeind2019_base(c_e, T, coeffs):
@@ -23,10 +23,12 @@ def electrolyte_conductivity_Landesfeind2019_base(c_e, T, coeffs):
         Electrolyte diffusivity
     """
     c = c_e / 1000  # mol.m-3 -> mol.l
+    c /= Scalar(1, "[mol.m-3]")
+    T /= Scalar(1, "[K]")
     p1, p2, p3, p4, p5, p6 = coeffs
     A = p1 * (1 + (T - p2))
     B = 1 + p3 * sqrt(c) + p4 * (1 + p5 * exp(1000 / T)) * c
     C = 1 + c ** 4 * (p6 * exp(1000 / T))
     sigma_e = A * c * B / C  # mS.cm-1
 
-    return sigma_e / 10
+    return sigma_e / 10 * Scalar(1, "[S.m-1]")

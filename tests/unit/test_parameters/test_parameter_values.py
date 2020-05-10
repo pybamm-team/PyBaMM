@@ -241,12 +241,24 @@ class TestParameterValues(unittest.TestCase):
             parameter_values.process_symbol(x)
 
     def test_process_input_parameter(self):
-        parameter_values = pybamm.ParameterValues({"a": "[input]", "b": 3})
+        parameter_values = pybamm.ParameterValues(
+            {
+                "a": "[input]",
+                "b": 3,
+                "c [A]": "[input]",
+                "d [m]": pybamm.InputParameter("d [m]"),
+            }
+        )
         # process input parameter
         a = pybamm.Parameter("a")
         processed_a = parameter_values.process_symbol(a)
         self.assertIsInstance(processed_a, pybamm.InputParameter)
         self.assertEqual(processed_a.evaluate(inputs={"a": 5}), 5)
+
+        # process input parameter with units
+        c = pybamm.Parameter("c [A]")
+        processed_c = parameter_values.process_symbol(c)
+        self.assertEqual(str(processed_c.units), "[A]")
 
         # process binary operation
         b = pybamm.Parameter("b")
@@ -304,7 +316,10 @@ class TestParameterValues(unittest.TestCase):
 
         # function itself as input (different to the variable being an input)
         parameter_values = pybamm.ParameterValues(
-            {"func": "[input]", "vector func": pybamm.InputParameter("vec", "test")}
+            {
+                "func": "[input]",
+                "vector func": pybamm.InputParameter("vec", domain="test"),
+            }
         )
         a = pybamm.Scalar(3)
         func = pybamm.FunctionParameter("func", {"a": a})

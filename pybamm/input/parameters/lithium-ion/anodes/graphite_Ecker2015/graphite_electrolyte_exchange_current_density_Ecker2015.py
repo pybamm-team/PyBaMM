@@ -1,4 +1,4 @@
-from pybamm import exp, constants, standard_parameters_lithium_ion
+from pybamm import exp, constants, standard_parameters_lithium_ion, Scalar
 
 
 def graphite_electrolyte_exchange_current_density_Ecker2015(c_e, c_s_surf, T):
@@ -33,13 +33,15 @@ def graphite_electrolyte_exchange_current_density_Ecker2015(c_e, c_s_surf, T):
         Exchange-current density [A.m-2]
     """
 
-    k_ref = 1.995 * 1e-10
+    k_ref = Scalar(1.995 * 1e-10, "[mol.s.m-2]")
 
     # multiply by Faraday's constant to get correct units
-    m_ref = constants.F * k_ref  # (A/m2)(mol/m3)**1.5 - includes ref concentrations
-    E_r = 53400
+    m_ref = constants.F * k_ref  # (A/m2)(m3/mol)**1.5 - includes ref concentrations
+    E_r = Scalar(53400, "[J.mol-1]")
 
-    arrhenius = exp(-E_r / (constants.R * T)) * exp(E_r / (constants.R * 296.15))
+    arrhenius = exp(-E_r / (constants.R * T)) * exp(
+        E_r / (constants.R * Scalar(296.15, "[K]"))
+    )
 
     c_n_max = standard_parameters_lithium_ion.c_n_max
 

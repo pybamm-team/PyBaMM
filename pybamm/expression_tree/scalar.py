@@ -28,9 +28,21 @@ class Scalar(pybamm.Symbol):
     def __init__(self, value, units=None, name=None, domain=[]):
         # set default name if not provided
         self.value = value
-        units_str = units or ""
         if name is None:
-            name = str(self.value) + " " + str(units_str)
+            name = str(self.value)
+            if not (
+                units is None
+                or (isinstance(units, pybamm.Units) and units.units_dict == {})
+            ):
+                name += " " + str(units)
+        else:
+            # If the name is provided, make sure the units are consistent
+            if "[" in name and "]" in name and units is not None:
+                units_from_name = pybamm.Units(
+                    name[name.index("[") : name.index("]") + 1]
+                )
+                if units_from_name != units:
+                    raise pybamm.UnitsError()
 
         super().__init__(name, domain=domain, units=units)
 

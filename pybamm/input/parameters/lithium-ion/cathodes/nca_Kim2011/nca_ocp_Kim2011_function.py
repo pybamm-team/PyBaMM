@@ -1,4 +1,4 @@
-from pybamm import exp
+from pybamm import exp, Scalar
 
 
 def nca_ocp_Kim2011_function(sto):
@@ -32,6 +32,6 @@ def nca_ocp_Kim2011_function(sto):
         - 66.3691 * sto
         + 11.8058
         - 0.61386 * exp(5.8201 * sto ** 136.4)
-    )
+    ) * Scalar(1, "[V]")
 
     return u_eq

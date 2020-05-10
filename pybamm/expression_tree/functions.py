@@ -251,6 +251,17 @@ class SpecificFunction(Function):
 
     def __init__(self, function, child):
         super().__init__(function, child)
+        if self.children[0].units.units_dict != {}:
+            raise pybamm.UnitsError(
+                "'{}' can only act on dimensionless objects, ".format(
+                    self.__class__.__name__
+                )
+                + "but operand '{}' with units '{!s}' was passed.\n".format(
+                    child, child.units
+                )
+                + "Try non-dimensionalising the operand by dividing it by "
+                "'Scalar(1, {!s})'".format(child.units)
+            )
 
     def _function_new_copy(self, children):
         """ See :meth:`pybamm.Function._function_new_copy()` """

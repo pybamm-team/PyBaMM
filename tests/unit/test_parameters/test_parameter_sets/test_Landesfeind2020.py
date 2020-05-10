@@ -20,11 +20,11 @@ class TestLandesfeind(unittest.TestCase):
         files.sort()
         funcs = [pybamm.load_function(os.path.join(k_path, f)) for f in files]
         T_ref = 298.15
-        T = T_ref + 30.0
-        c = 1000.0
+        T = pybamm.Scalar(T_ref + 30.0, "[K]")
+        c = pybamm.Scalar(1000.0, "[mol.m-3]")
         k = [np.around(f(c, T).value, 6) for f in funcs]
         self.assertEqual(k, [1.839786, 1.361015, 0.750259])
-        T += 20
+        T += pybamm.Scalar(20, "[K]")
         k = [np.around(f(c, T).value, 6) for f in funcs]
         self.assertEqual(k, [2.292425, 1.664438, 0.880755])
 
@@ -48,11 +48,11 @@ class TestLandesfeind(unittest.TestCase):
         files.sort()
         funcs = [pybamm.load_function(os.path.join(d_path, f)) for f in files]
         T_ref = 298.15
-        T = T_ref + 30.0
-        c = 1000.0
+        T = pybamm.Scalar(T_ref + 30.0, "[K]")
+        c = pybamm.Scalar(1000.0, "[mol.m-3]")
         D = [np.around(f(c, T).value, 16) for f in funcs]
         self.assertEqual(D, [5.796505e-10, 5.417881e-10, 5.608856e-10])
-        T += 20
+        T += pybamm.Scalar(20, "[K]")
         D = [np.around(f(c, T).value, 16) for f in funcs]
         self.assertEqual(D, [8.5992e-10, 7.752815e-10, 7.907549e-10])
 

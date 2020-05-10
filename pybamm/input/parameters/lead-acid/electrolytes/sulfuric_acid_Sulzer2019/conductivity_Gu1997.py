@@ -1,7 +1,7 @@
 #
 # Sulfuric acid conductivity
 #
-from pybamm import exp
+from pybamm import exp, Scalar
 
 
 def conductivity_Gu1997(c_e):
@@ -23,4 +23,10 @@ def conductivity_Gu1997(c_e):
            California Univ., Berkeley. Lawrence Radiation Lab., 1968.
 
     """
-    return c_e * exp(6.23 - 1.34e-4 * c_e - 1.61e-8 * c_e ** 2) * 1e-4
+    c_e /= Scalar(1, "[mol.m-3]")
+    return (
+        c_e
+        * exp(6.23 - 1.34e-4 * c_e - 1.61e-8 * c_e ** 2)
+        * 1e-4
+        * Scalar(1, "[S.m-1]")
+    )

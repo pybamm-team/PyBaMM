@@ -27,11 +27,9 @@ def electrolyte_conductivity_Capiglia1999(c_e, T):
         Solid diffusivity
     """
 
-    sigma_e = (
-        Scalar(0.0911, "[S.m-1]")
-        + Scalar(1.9101, "[S.m-1]") * (c_e / Scalar(1000, "[mol.m-3]"))
-        - Scalar(1.052, "[S.m-1]") * (c_e / Scalar(1000, "[mol.m-3]")) ** 2
-        + Scalar(0.1554, "[S.m-1]") * (c_e / Scalar(1000, "[mol.m-3]")) ** 3
+    c_e /= Scalar(1000, "[mol.m-3]")
+    sigma_e = (0.0911 + 1.9101 * c_e - 1.052 * c_e ** 2 + 0.1554 * c_e ** 3) * Scalar(
+        1, "[S.m-1]"
     )
 
     E_k_e = Scalar(34700, "[J.mol-1]")

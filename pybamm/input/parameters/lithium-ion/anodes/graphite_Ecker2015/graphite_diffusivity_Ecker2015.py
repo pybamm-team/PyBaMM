@@ -1,4 +1,4 @@
-from pybamm import exp, constants
+from pybamm import exp, constants, Scalar
 
 
 def graphite_diffusivity_Ecker2015(sto, T):
@@ -30,8 +30,10 @@ def graphite_diffusivity_Ecker2015(sto, T):
         Solid diffusivity
    """
 
-    D_ref = 8.4e-13 * exp(-11.3 * sto) + 8.2e-15
-    E_D_s = 3.03e4
-    arrhenius = exp(-E_D_s / (constants.R * T)) * exp(E_D_s / (constants.R * 296))
+    D_ref = Scalar(8.4e-13, "[m2.s-1]") * exp(-11.3 * sto) + 8.2e-15
+    E_D_s = Scalar(3.03e4, "[J.mol-1]")
+    arrhenius = exp(-E_D_s / (constants.R * T)) * exp(
+        E_D_s / (constants.R * Scalar(296, "[K]"))
+    )
 
     return D_ref * arrhenius

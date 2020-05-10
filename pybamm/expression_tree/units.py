@@ -74,9 +74,23 @@ class Units:
         # Find all the units and add to the dictionary
         units = units_str.split(".")
         units_dict = defaultdict(int)
-        for unit in units:
+        amount = None
+        for i, unit in enumerate(units):
+            # Account for cases like [m1.5.s-1] by looking for points after the decimal
+            if unit.isdigit():
+                # There can't be a digit in the first entry
+                if i == 0:
+                    raise pybamm.UnitsError(
+                        "Units cannot start with a digit but found '{}'".format(
+                            units_str
+                        )
+                    )
+                else:
+                    # Add the digit to the previous entry
+                    # Don't change the name, just add to the amount
+                    amount += "." + unit
             # Look for negative
-            if "-" in unit:
+            elif "-" in unit:
                 # Split by the location of the negative
                 name = unit[: unit.index("-")]
                 amount = unit[unit.index("-") :]
@@ -91,7 +105,11 @@ class Units:
                     name = unit
                     amount = 1
             # Add the unit to the dictionary
-            units_dict[name] = int(amount)
+            float_amount = float(amount)
+            if abs(round(float_amount) - float_amount) < 1e-12:
+                units_dict[name] = int(float_amount)
+            else:
+                units_dict[name] = float_amount
 
         # Update units dictionary for special parameters
         units_dict = self.reformat_dict(units_dict)

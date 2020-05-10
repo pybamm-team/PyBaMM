@@ -1,4 +1,4 @@
-from pybamm import exp, tanh
+from pybamm import exp, tanh, Scalar
 
 
 def graphite_ocp_Ecker2015_function(sto):
@@ -57,6 +57,6 @@ def graphite_ocp_Ecker2015_function(sto):
         - j * tanh(k * (sto - m))
         - n * exp(o * (sto - p))
         + q
-    )
+    ) * Scalar(1, "[V]")
 
     return u_eq

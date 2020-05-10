@@ -126,6 +126,13 @@ class TestFunction(unittest.TestCase):
 
 
 class TestSpecificFunctions(unittest.TestCase):
+    def test_units(self):
+        a = pybamm.InputParameter("a", units="[m]")
+        with self.assertRaisesRegex(
+            pybamm.UnitsError, "can only act on dimensionless objects"
+        ):
+            pybamm.SpecificFunction(np.cos, a)
+
     def test_arcsinh(self):
         a = pybamm.InputParameter("a")
         fun = pybamm.arcsinh(a)

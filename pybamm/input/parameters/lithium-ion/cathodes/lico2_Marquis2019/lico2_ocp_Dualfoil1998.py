@@ -27,13 +27,13 @@ def lico2_ocp_Dualfoil1998(sto):
     sto = stretch * sto
 
     u_eq = (
-        Scalar(2.16216, "[V]")
-        + Scalar(0.07645, "[V]") * tanh(30.834 - 54.4806 * sto)
-        + Scalar(2.1581, "[V]") * tanh(52.294 - 50.294 * sto)
-        - Scalar(0.14169, "[V]") * tanh(11.0923 - 19.8543 * sto)
-        + Scalar(0.2051, "[V]") * tanh(1.4684 - 5.4888 * sto)
-        + Scalar(0.2531, "[V]") * tanh((-sto + 0.56478) / 0.1316)
-        - Scalar(0.02167, "[V]") * tanh((sto - 0.525) / 0.006)
-    )
+        2.16216
+        + 0.07645 * tanh(30.834 - 54.4806 * sto)
+        + 2.1581 * tanh(52.294 - 50.294 * sto)
+        - 0.14169 * tanh(11.0923 - 19.8543 * sto)
+        + 0.2051 * tanh(1.4684 - 5.4888 * sto)
+        + 0.2531 * tanh((-sto + 0.56478) / 0.1316)
+        - 0.02167 * tanh((sto - 0.525) / 0.006)
+    ) * Scalar(1, "[V]")
 
     return u_eq

@@ -323,6 +323,8 @@ def ones_like(*symbols):
     # that takes all the child symbols into account
     sum_symbol = symbols[0]
     for sym in symbols:
+        # ignore units
+        sym.units = None
         sum_symbol += sym
 
     # Just return scalar 1 if symbol has no domain (no broadcasting necessary)

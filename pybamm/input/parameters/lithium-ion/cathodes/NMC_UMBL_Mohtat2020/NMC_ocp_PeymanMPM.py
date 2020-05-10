@@ -25,7 +25,7 @@ def NMC_ocp_PeymanMPM(sto):
         + 3.5146 * sto ** 4
         - 2.2166 * sto ** 5
         - 0.5623 * 10 ** (-4) * pybamm.exp(109.451 * sto - 100.006)
-    )
+    ) * pybamm.Scalar(1, "[V]")
 
     return u_eq
 

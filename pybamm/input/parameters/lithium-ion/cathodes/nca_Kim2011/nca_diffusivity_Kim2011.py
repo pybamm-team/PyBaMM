@@ -1,4 +1,4 @@
-from pybamm import exp, constants
+from pybamm import exp, constants, Scalar
 
 
 def nca_diffusivity_Kim2011(sto, T):
@@ -25,8 +25,8 @@ def nca_diffusivity_Kim2011(sto, T):
         Solid diffusivity
     """
 
-    D_ref = 3 * 10 ** (-15)
-    E_D_s = 2e4
+    D_ref = Scalar(3 * 10 ** (-15), "[m2.s-1]")
+    E_D_s = Scalar(2e4, "[J.mol-1]")
     arrhenius = exp(E_D_s / constants.R * (1 / Scalar(298.15, "[K]") - 1 / T))
 
     return D_ref * arrhenius

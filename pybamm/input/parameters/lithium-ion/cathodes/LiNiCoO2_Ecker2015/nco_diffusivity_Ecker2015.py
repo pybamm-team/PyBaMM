@@ -1,4 +1,4 @@
-from pybamm import exp, constants
+from pybamm import exp, constants, Scalar
 
 
 def nco_diffusivity_Ecker2015(sto, T):
@@ -30,8 +30,12 @@ def nco_diffusivity_Ecker2015(sto, T):
         Solid diffusivity
     """
 
-    D_ref = 3.7e-13 - 3.4e-13 * exp(-12 * (sto - 0.62) * (sto - 0.62))
-    E_D_s = 8.06e4
-    arrhenius = exp(-E_D_s / (constants.R * T)) * exp(E_D_s / (constants.R * 296.15))
+    D_ref = (3.7e-13 - 3.4e-13 * exp(-12 * (sto - 0.62) * (sto - 0.62))) * Scalar(
+        1, "[m2.s-1]"
+    )
+    E_D_s = Scalar(8.06e4, "[J.mol-1]")
+    arrhenius = exp(-E_D_s / (constants.R * T)) * exp(
+        E_D_s / (constants.R * Scalar(296.15, "[K]"))
+    )
 
     return D_ref * arrhenius

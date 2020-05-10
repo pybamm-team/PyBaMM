@@ -1,4 +1,4 @@
-from pybamm import exp, constants
+from pybamm import exp, constants, Scalar
 
 
 def electrolyte_conductivity_Ecker2015(c_e, T):
@@ -31,14 +31,19 @@ def electrolyte_conductivity_Ecker2015(c_e, T):
     """
 
     # mol/m^3 to mol/l
-    cm = 1e-3 * c_e
+    cm = c_e / Scalar(1e3, "[mol.m-3]")
 
     # value at T = 296K
-    sigma_e_296 = 0.2667 * cm ** 3 - 1.2983 * cm ** 2 + 1.7919 * cm + 0.1726
+    sigma_e_296 = (
+        Scalar(0.2667, "[S.m-1]") * cm ** 3
+        - Scalar(1.2983, "[S.m-1]") * cm ** 2
+        + Scalar(1.7919, "[S.m-1]") * cm
+        + Scalar(0.1726, "[S.m-1]")
+    )
 
     # add temperature dependence
     E_k_e = 1.71e4
-    C = 296 * exp(E_k_e / (constants.R * 296))
+    C = 296 * exp(E_k_e / (constants.R * Scalar(296, "[K]")))
     sigma_e = C * sigma_e_296 * exp(-E_k_e / (constants.R * T)) / T
 
     return sigma_e

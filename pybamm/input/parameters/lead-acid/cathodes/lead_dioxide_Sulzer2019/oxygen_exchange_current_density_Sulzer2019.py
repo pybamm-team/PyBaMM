@@ -1,4 +1,4 @@
-from pybamm import standard_parameters_lead_acid
+from pybamm import standard_parameters_lead_acid, Scalar
 
 
 def oxygen_exchange_current_density_Sulzer2019(c_e, T):
@@ -26,7 +26,7 @@ def oxygen_exchange_current_density_Sulzer2019(c_e, T):
         Exchange-current density [A.m-2]
 
     """
-    j0_ref = 2.5e-23  # srinivasan2003mathematical
+    j0_ref = Scalar(2.5e-23, "[A.m-2]")  # srinivasan2003mathematical
     j0 = j0_ref * (c_e / standard_parameters_lead_acid.c_e_typ)
 
     return j0

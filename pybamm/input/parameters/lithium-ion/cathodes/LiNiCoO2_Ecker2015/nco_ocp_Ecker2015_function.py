@@ -1,4 +1,4 @@
-from pybamm import tanh
+from pybamm import tanh, Scalar
 
 
 def nco_ocp_Ecker2015_function(sto):
@@ -52,5 +52,5 @@ def nco_ocp_Ecker2015_function(sto):
         - j * tanh(k * (sto - m))
         - n * tanh(o * (sto - p))
         + q
-    )
+    ) * Scalar(1, "[V]")
     return u_eq

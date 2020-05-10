@@ -1,6 +1,7 @@
 #
 # Sulfuric acid viscosity
 #
+from pybamm import Scalar
 
 
 def viscosity_Chapman1968(c_e):
@@ -15,4 +16,5 @@ def viscosity_Chapman1968(c_e):
            California Univ., Berkeley. Lawrence Radiation Lab., 1968.
 
     """
-    return 0.89e-3 + 1.11e-7 * c_e + 3.29e-11 * c_e ** 2
+    c_e /= Scalar(1, "[mol.m-3]")
+    return (0.89e-3 + 1.11e-7 * c_e + 3.29e-11 * c_e ** 2) * Scalar(1, "[kg.m-1.s-1]")
