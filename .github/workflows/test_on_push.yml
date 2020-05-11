@@ -25,7 +25,10 @@ jobs:
 
     - name: Check style
       run: python -m flake8
-  
+
+  env:
+    LD_LIBRARY_PATH: '$(HOME)/.local/lib:$LD_LIBRARY_PATH'
+
   build:
     needs: style
     runs-on: ${{ matrix.os }}
