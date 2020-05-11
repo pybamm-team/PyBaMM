@@ -422,6 +422,9 @@ class Simulation:
                 pybamm.logger.warning(
                     "Ignoring t_eval as solution times are specified by the experiment"
                 )
+            # Re-initialize solutio, e.g. for solving multiple times with different
+            # inputs without having to build the simulation again
+            # self._solution = None
             # Step through all experimental conditions
             inputs = inputs or {}
             pybamm.logger.info("Start running experiment")
