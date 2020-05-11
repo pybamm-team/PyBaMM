@@ -35,9 +35,6 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: [3.6, 3.7]
 
-    env:
-      LD_LIBRARY_PATH: '$(HOME)/.local/lib:$LD_LIBRARY_PATH'
-
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
@@ -74,7 +71,7 @@ jobs:
         python scripts/setup_KLU_module_build.py
         echo '::set-env name=LD_LIBRARY_PATH::$(HOME)/.local:$LD_LIBRARY_PATH'
         git clone https://github.com/pybind/pybind11.git
-        pip install -e .
+        pip install --force-reinstall -e .
 
     - name: Run unit tests
       run: |
