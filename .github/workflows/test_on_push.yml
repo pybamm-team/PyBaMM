@@ -69,7 +69,7 @@ jobs:
       run: |
         pip install wget
         python scripts/setup_KLU_module_build.py
-        echo '::set-env name=LD_LIBRARY_PATH::$HOME/.local/lib:$LD_LIBRARY_PATH'
+        pybamm_install_odes --install-sundials
         git clone https://github.com/pybind/pybind11.git
         pip install -e .
 
@@ -81,20 +81,20 @@ jobs:
     - name: Run unit tests
       if: matrix.os != 'windows-latest'
       run: |
-        export LD_LIBRARY_PATH=$HOME/.local/lib:$LD_LIBRARY_PATH
+        export LD_LIBRARY_PATH=$HOME/.local/lib:scikits.odes/sundials5/lib:$LD_LIBRARY_PATH
         python run-tests.py --unit --folder all
 
     - name: Install docs dependencies and run doctests
       if: matrix.os != 'windows-latest'
       run: |
-        export LD_LIBRARY_PATH=$HOME/.local/lib:$LD_LIBRARY_PATH
+        export LD_LIBRARY_PATH=$HOME/.local/lib:scikits.odes/sundials5/lib:$LD_LIBRARY_PATH
         pip install -e .[docs]
         python run-tests.py --doctest
     
     - name: Install dev dependencies and run example tests
       if: matrix.os != 'windows-latest'
       run: |
-        export LD_LIBRARY_PATH=$HOME/.local/lib:$LD_LIBRARY_PATH
+        export LD_LIBRARY_PATH=$HOME/.local/lib:scikits.odes/sundials5/lib:$LD_LIBRARY_PATH
         pip install -e .[dev]
         python run-tests.py --examples
         
