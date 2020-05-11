@@ -76,6 +76,8 @@ installed automatically when you install PyBaMM using ``pip``.
 For an introduction to virtual environments, see
 (https://realpython.com/python-virtual-environments-a-primer/).
 
+.. _scikits.odes-label:
+
 Optional - scikits.odes solver
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

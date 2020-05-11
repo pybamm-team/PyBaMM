@@ -36,7 +36,7 @@ PyBaMM is available as a conda package through the conda-forge channel.
 
 Optional solvers
 -----------------
-Some optional features require extra installation steps, :ref:`optional-deps`.
+On GNU/Linux and MacOS, an optional `scikits.odes <https://scikits-odes.readthedocs.io/en/latest/>`_ -based solver is available, see :ref:`scikits.odes-label`.
 
 Installation
 ============
