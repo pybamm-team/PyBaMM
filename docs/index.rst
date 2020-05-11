@@ -38,27 +38,37 @@ Optional solvers
 -----------------
 Some optional features require extra installation steps, :ref:`optional-deps`.
 
+Installation
+============
+
+.. toctree::
+   :maxdepth: 1
+
+   install/GNU-linux
+   install/windows
+   install/windows-wsl
+
 API documentation
 ====================
 
 .. module:: pybamm
 
 .. toctree::
-    :maxdepth: 2
+   :maxdepth: 2
 
-    source/expression_tree/index
-    source/models/index
-    source/parameters/index
-    source/geometry/index
-    source/meshes/index
-    source/spatial_methods/index
-    source/solvers/index
-    source/experiments/index
-    source/simulation
-    source/quick_plot
-    source/util
-    source/citations
-    source/parameters_cli
+   source/expression_tree/index
+   source/models/index
+   source/parameters/index
+   source/geometry/index
+   source/meshes/index
+   source/spatial_methods/index
+   source/solvers/index
+   source/experiments/index
+   source/simulation
+   source/quick_plot
+   source/util
+   source/citations
+   source/parameters_cli
 
 Examples
 ========
