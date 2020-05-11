@@ -47,6 +47,7 @@ Installation
    install/GNU-linux
    install/windows
    install/windows-wsl
+   For developers: compiling the KLU solver <install/install-klu>
 
 API documentation
 ====================
