@@ -148,11 +148,11 @@ def list_parameters(arguments=None):
     >>> from pybamm.parameters_cli import list_parameters
     >>> list_parameters(["lithium-ion", "anodes"])
     Available package parameters:
-      * graphite_Ecker2015
       * graphite_Chen2020
-      * graphite_mcmb2528_Marquis2019
-      * graphite_UMBL_Mohtat2020
+      * graphite_Ecker2015
       * graphite_Kim2011
+      * graphite_UMBL_Mohtat2020
+      * graphite_mcmb2528_Marquis2019
     Available local parameters:
     """
     parser = argparse.ArgumentParser(
@@ -179,7 +179,7 @@ def list_parameters(arguments=None):
     root, package_dirs, files = next(os.walk(package_dir))
 
     print("Available package parameters:")
-    for dirname in package_dirs:
+    for dirname in sorted(package_dirs):
         print("  * {}".format(dirname))
 
     local_dir = os.path.join("input", "parameters", args.battery_type, args.component)
@@ -188,5 +188,5 @@ def list_parameters(arguments=None):
     else:
         local_dirs = []
     print("Available local parameters:")
-    for dirname in local_dirs:
+    for dirname in sorted(local_dirs):
         print("  * {}".format(dirname))
