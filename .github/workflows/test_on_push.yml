@@ -69,11 +69,11 @@ jobs:
       run: |
         pip install wget
         python scripts/setup_KLU_module_build.py
-        echo '::set-env name=LD_LIBRARY_PATH::$(HOME)/.local:$LD_LIBRARY_PATH'
+        echo '::set-env name=LD_LIBRARY_PATH::$HOME/.local/lib:$LD_LIBRARY_PATH'
         git clone https://github.com/pybind/pybind11.git
-        pip install --force-reinstall -e .
+        pip install -e .
 
-    - name: Run unit tests
+    - name: Run unit tests Windows
       run: |
         echo $LD_LIBRARY_PATH
         python run-tests.py --unit --folder all
