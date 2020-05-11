@@ -4,7 +4,10 @@
 import numpy as np
 import os
 import pybamm
+import tempfile
 import unittest
+from unittest.mock import patch
+from io import StringIO
 
 
 class TestUtil(unittest.TestCase):
@@ -44,7 +47,7 @@ class TestUtil(unittest.TestCase):
 
         # Test function load with absolute path
         abs_test_path = os.path.join(
-            os.getcwd(),
+            pybamm.root_dir(),
             "tests",
             "unit",
             "test_parameters",
@@ -82,6 +85,46 @@ class TestUtil(unittest.TestCase):
         self.assertEqual(d["test"], 1)
         with self.assertRaisesRegex(KeyError, "'test3' not found. Best matches are "):
             d["test3"]
+
+    def test_get_parameters_filepath(self):
+        tempfile_obj = tempfile.NamedTemporaryFile("w", dir=".")
+        self.assertTrue(
+            pybamm.get_parameters_filepath(tempfile_obj.name) == tempfile_obj.name
+        )
+        tempfile_obj.close()
+
+        package_dir = os.path.join(pybamm.root_dir(), "pybamm")
+        tempfile_obj = tempfile.NamedTemporaryFile("w", dir=package_dir)
+        path = os.path.join(package_dir, tempfile_obj.name)
+        self.assertTrue(pybamm.get_parameters_filepath(tempfile_obj.name) == path)
+
+
+class TestSearch(unittest.TestCase):
+    def test_url_gets_to_stdout(self):
+        model = pybamm.BaseModel()
+        model.variables = {"Electrolyte concentration": 1, "Electrode potential": 0}
+
+        param = pybamm.ParameterValues({"a": 10, "b": 2})
+
+        # Test variables search (default returns key)
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            model.variables.search("Electrode")
+            self.assertEqual(fake_out.getvalue(), "Electrode potential\n")
+
+        # Test bad var search (returns best matches)
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            model.variables.search("bad var")
+            out = (
+                "No results for search using 'bad var'. "
+                "Best matches are ['Electrolyte concentration', "
+                "'Electrode potential']\n"
+            )
+            self.assertEqual(fake_out.getvalue(), out)
+
+        # Test param search (default returns key, value)
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            param.search("a")
+            self.assertEqual(fake_out.getvalue(), "a\t10\n")
 
 
 if __name__ == "__main__":

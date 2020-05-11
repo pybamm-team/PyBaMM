@@ -57,39 +57,17 @@ ABSOLUTE_PATH = os.path.join(os.path.split(script_path)[0], "..")
 #
 from .util import Timer, FuzzyDict
 from .util import root_dir, load_function, rmse, get_infinite_nested_dict, load
+from .util import get_parameters_filepath
 from .logger import logger, set_logging_level
 from .settings import settings
+from .citations import Citations, citations, print_citations
 
 #
 # Classes for the Expression Tree
 #
-from .expression_tree.symbol import (
-    Symbol,
-    domain_size,
-    create_object_of_size,
-    evaluate_for_shape_using_domain,
-)
-from .expression_tree.binary_operators import (
-    is_scalar_zero,
-    is_matrix_zero,
-    BinaryOperator,
-    Addition,
-    Power,
-    Subtraction,
-    Multiplication,
-    MatrixMultiplication,
-    Division,
-    Inner,
-    inner,
-    Heaviside,
-    source,
-)
-from .expression_tree.concatenations import (
-    Concatenation,
-    NumpyConcatenation,
-    DomainConcatenation,
-    SparseStack,
-)
+from .expression_tree.symbol import *
+from .expression_tree.binary_operators import *
+from .expression_tree.concatenations import *
 from .expression_tree.array import Array
 from .expression_tree.matrix import Matrix
 from .expression_tree.unary_operators import *
@@ -97,36 +75,16 @@ from .expression_tree.functions import *
 from .expression_tree.interpolant import Interpolant
 from .expression_tree.input_parameter import InputParameter
 from .expression_tree.parameter import Parameter, FunctionParameter
-from .expression_tree.broadcasts import (
-    Broadcast,
-    PrimaryBroadcast,
-    SecondaryBroadcast,
-    FullBroadcast,
-    ones_like,
-)
+from .expression_tree.broadcasts import *
 from .expression_tree.scalar import Scalar
-from .expression_tree.variable import Variable, ExternalVariable
-from .expression_tree.independent_variable import (
-    IndependentVariable,
-    Time,
-    SpatialVariable,
-)
+from .expression_tree.variable import Variable, ExternalVariable, VariableDot
+from .expression_tree.variable import VariableBase
+from .expression_tree.independent_variable import *
 from .expression_tree.independent_variable import t
 from .expression_tree.vector import Vector
-from .expression_tree.state_vector import StateVector
+from .expression_tree.state_vector import StateVectorBase, StateVector, StateVectorDot
 
-from .expression_tree.exceptions import (
-    DomainError,
-    OptionError,
-    ModelError,
-    SolverError,
-    SolverWarning,
-    ShapeError,
-    ModelWarning,
-    UndefinedOperationError,
-    GeometryError,
-    InputError,
-)
+from .expression_tree.exceptions import *
 
 # Operations
 from .expression_tree.operations.simplify import (
@@ -143,6 +101,7 @@ from .expression_tree.operations.evaluate import (
 )
 from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
+from .expression_tree.operations.unpack_symbols import SymbolUnpacker
 
 #
 # Model classes
@@ -165,7 +124,8 @@ from .models.submodels.base_submodel import BaseSubModel
 from .models.submodels import (
     convection,
     current_collector,
-    electrolyte,
+    electrolyte_conductivity,
+    electrolyte_diffusion,
     electrode,
     external_circuit,
     interface,
@@ -174,6 +134,7 @@ from .models.submodels import (
     porosity,
     thermal,
     tortuosity,
+    sei,
 )
 
 #
@@ -191,17 +152,19 @@ from .geometry.geometry import (
     Geometry2DCurrentCollector,
 )
 
-from .expression_tree.independent_variable import KNOWN_SPATIAL_VARS, KNOWN_COORD_SYS
+from .expression_tree.independent_variable import KNOWN_COORD_SYS
 from .geometry import standard_spatial_vars
 
 #
 # Parameters class and methods
 #
 from .parameters.parameter_values import ParameterValues
+from .parameters import constants
 from .parameters import geometric_parameters
 from .parameters import electrical_parameters
 from .parameters import thermal_parameters
 from .parameters import standard_parameters_lithium_ion, standard_parameters_lead_acid
+from .parameters import sei_parameters
 from .parameters.print_parameters import print_parameters, print_evaluated_parameters
 from .parameters import parameter_sets
 
@@ -232,7 +195,7 @@ from .meshes.scikit_fem_submeshes import (
 # Spatial Methods
 #
 from .spatial_methods.spatial_method import SpatialMethod
-from .spatial_methods.zero_dimensional_method import ZeroDimensionalMethod
+from .spatial_methods.zero_dimensional_method import ZeroDimensionalSpatialMethod
 from .spatial_methods.finite_volume import FiniteVolume
 from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 
@@ -240,9 +203,13 @@ from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 # Solver classes
 #
 from .solvers.solution import Solution, _BaseSolution
+from .solvers.processed_variable import ProcessedVariable
+from .solvers.processed_symbolic_variable import ProcessedSymbolicVariable
 from .solvers.base_solver import BaseSolver
+from .solvers.dummy_solver import DummySolver
 from .solvers.algebraic_solver import AlgebraicSolver
 from .solvers.casadi_solver import CasadiSolver
+from .solvers.casadi_algebraic_solver import CasadiAlgebraicSolver
 from .solvers.scikits_dae_solver import ScikitsDaeSolver
 from .solvers.scikits_ode_solver import ScikitsOdeSolver, have_scikits_odes
 from .solvers.scipy_solver import ScipySolver
@@ -257,10 +224,9 @@ from . import experiments
 #
 # other
 #
-from .processed_variable import ProcessedVariable
-from .quick_plot import QuickPlot, ax_min, ax_max
+from .quick_plot import QuickPlot, dynamic_plot, ax_min, ax_max
 
-from .simulation import Simulation, load_sim
+from .simulation import Simulation, load_sim, is_notebook
 
 #
 # Remove any imported modules, so we don't expose them as part of pybamm

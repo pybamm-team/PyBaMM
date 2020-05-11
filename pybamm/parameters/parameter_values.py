@@ -5,7 +5,7 @@ import pybamm
 import pandas as pd
 import os
 import numbers
-import numpy as np
+from pprint import pformat
 
 
 class ParameterValues:
@@ -42,8 +42,9 @@ class ParameterValues:
     >>> param = pybamm.ParameterValues(values)
     >>> param["some parameter"]
     1
-    >>> file = "/input/parameters/lithium-ion/cells/kokam_Marquis2019/parameters.csv"
-    >>> param = pybamm.ParameterValues(values=pybamm.root_dir() + file)
+    >>> file = "input/parameters/lithium-ion/cells/kokam_Marquis2019/parameters.csv"
+    >>> values_path = pybamm.get_parameters_filepath(file)
+    >>> param = pybamm.ParameterValues(values=values_path)
     >>> param["Negative current collector thickness [m]"]
     2.5e-05
     >>> param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
@@ -57,12 +58,10 @@ class ParameterValues:
         # Must provide either values or chemistry, not both (nor neither)
         if values is not None and chemistry is not None:
             raise ValueError(
-                """
-                Only one of values and chemistry can be provided. To change parameters
-                slightly from a chemistry, first load parameters with the chemistry
-                (param = pybamm.ParameterValues(chemistry=...)) and then update with
-                param.update({dict of values}).
-                """
+                "Only one of values and chemistry can be provided. To change parameters"
+                " slightly from a chemistry, first load parameters with the chemistry"
+                " (param = pybamm.ParameterValues(chemistry=...)) and then update with"
+                " param.update({dict of values})."
             )
         if values is None and chemistry is None:
             raise ValueError("values and chemistry cannot both be None")
@@ -73,9 +72,12 @@ class ParameterValues:
         if values is not None:
             # If base_parameters is a filename, load from that filename
             if isinstance(values, str):
+                path = os.path.split(values)[0]
                 values = self.read_parameters_csv(values)
+            else:
+                path = None
             # Don't check parameter already exists when first creating it
-            self.update(values, check_already_exists=False)
+            self.update(values, check_already_exists=False, path=path)
 
         # Initialise empty _processed_symbols dict (for caching)
         self._processed_symbols = {}
@@ -83,12 +85,22 @@ class ParameterValues:
     def __getitem__(self, key):
         return self._dict_items[key]
 
+    def get(self, key, default=None):
+        "Return item correspoonding to key if it exists, otherwise return default"
+        try:
+            return self._dict_items[key]
+        except KeyError:
+            return default
+
     def __setitem__(self, key, value):
         "Call the update functionality when doing a setitem"
         self.update({key: value})
 
     def __delitem__(self, key):
         del self._dict_items[key]
+
+    def __repr__(self):
+        return pformat(self._dict_items, width=1)
 
     def keys(self):
         "Get the keys of the dictionary"
@@ -102,22 +114,44 @@ class ParameterValues:
         "Get the items of the dictionary"
         return self._dict_items.items()
 
+    def copy(self):
+        """Returns a copy of the parameter values. Makes sure to copy the internal
+        dictionary."""
+        return ParameterValues(values=self._dict_items.copy())
+
+    def search(self, key, print_values=True):
+        """
+        Search dictionary for keys containing 'key'.
+
+        See :meth:`pybamm.FuzzyDict.search()`.
+        """
+        return self._dict_items.search(key, print_values)
+
     def update_from_chemistry(self, chemistry):
         """
         Load standard set of components from a 'chemistry' dictionary
         """
         base_chemistry = chemistry["chemistry"]
         # Create path to file
-        path = os.path.join(pybamm.root_dir(), "input", "parameters", base_chemistry)
+        path = os.path.join(
+            pybamm.root_dir(), "pybamm", "input", "parameters", base_chemistry
+        )
         # Load each component name
-        for component_group in [
+
+        component_groups = [
             "cell",
             "anode",
             "cathode",
             "separator",
             "electrolyte",
             "experiment",
-        ]:
+        ]
+
+        # add sei parameters if provided
+        if "sei" in chemistry:
+            component_groups += ["sei"]
+
+        for component_group in component_groups:
             # Make sure component is provided
             try:
                 component = chemistry[component_group]
@@ -130,7 +164,9 @@ class ParameterValues:
             # Create path to component and load values
             component_path = os.path.join(path, component_group + "s", component)
             component_params = self.read_parameters_csv(
-                os.path.join(component_path, "parameters.csv")
+                pybamm.get_parameters_filepath(
+                    os.path.join(component_path, "parameters.csv")
+                )
             )
             # Update parameters, making sure to check any conflicts
             self.update(
@@ -139,6 +175,14 @@ class ParameterValues:
                 check_already_exists=False,
                 path=component_path,
             )
+
+        # register (list of) citations
+        if "citation" in chemistry:
+            citations = chemistry["citation"]
+            if not isinstance(citations, list):
+                citations = [citations]
+            for citation in citations:
+                pybamm.citations.register(citation)
 
     def read_parameters_csv(self, filename):
         """Reads parameters from csv file into dict.
@@ -180,6 +224,8 @@ class ParameterValues:
         path : string, optional
             Path from which to load functions
         """
+        # check parameter values
+        self.check_parameter_values(values)
         # update
         for name, value in values.items():
             # check for conflicts
@@ -199,13 +245,10 @@ class ParameterValues:
                     self._dict_items[name]
                 except KeyError as err:
                     raise KeyError(
-                        """
-                        Cannot update parameter '{}' as it does not have a default
-                        value. ({}). If you are sure you want to update this parameter,
-                        use param.update({{name: value}}, check_already_exists=False)
-                        """.format(
-                            name, err.args[0]
-                        )
+                        "Cannot update parameter '{}' as it does not ".format(name)
+                        + "have a default value. ({}). If you are ".format(err.args[0])
+                        + "sure you want to update this parameter, use "
+                        + "param.update({{name: value}}, check_already_exists=False)"
                     )
             # if no conflicts, update, loading functions and data if they are specified
             # Functions are flagged with the string "[function]"
@@ -220,13 +263,14 @@ class ParameterValues:
                 elif value.startswith("[current data]") or value.startswith("[data]"):
                     if value.startswith("[current data]"):
                         data_path = os.path.join(
-                            pybamm.root_dir(), "input", "drive_cycles"
+                            pybamm.root_dir(), "pybamm", "input", "drive_cycles"
                         )
                         filename = os.path.join(data_path, value[14:] + ".csv")
                         function_name = value[14:]
                     else:
                         filename = os.path.join(path, value[6:] + ".csv")
                         function_name = value[6:]
+                    filename = pybamm.get_parameters_filepath(filename)
                     data = pd.read_csv(
                         filename, comment="#", skip_blank_lines=True, header=None
                     ).to_numpy()
@@ -241,68 +285,33 @@ class ParameterValues:
                     values[name] = float(value)
             else:
                 self._dict_items[name] = value
-        # check parameter values
-        self.check_and_update_parameter_values(values)
         # reset processed symbols
         self._processed_symbols = {}
 
-    def check_and_update_parameter_values(self, values):
+    def check_parameter_values(self, values):
         # Make sure typical current is non-zero
         if "Typical current [A]" in values and values["Typical current [A]"] == 0:
             raise ValueError(
-                """
-                "Typical current [A]" cannot be zero. A possible alternative is to set
-                "Current function [A]" to `0` instead.
-                """
+                "'Typical current [A]' cannot be zero. A possible alternative is to "
+                "set 'Current function [A]' to `0` instead."
             )
-        if "C-rate" in values and "Current function [A]" in values:
+        if "C-rate" in values:
             raise ValueError(
-                """
-                Cannot provide both "C-rate" and "Current function [A]" simultaneously
-                """
+                "The 'C-rate' parameter has been deprecated, "
+                "use 'Current function [A]' instead. The cell capacity can be accessed "
+                "as 'Cell capacity [A.h]', and used to calculate current from C-rate."
             )
-        # If the capacity of the cell has been provided, make sure "C-rate" and current
-        # match with the stated capacity
-        if "Cell capacity [A.h]" in values or "Cell capacity [A.h]" in self._dict_items:
-            # Capacity from values takes precedence
-            if "Cell capacity [A.h]" in values:
-                capacity = values["Cell capacity [A.h]"]
-            else:
-                capacity = self._dict_items["Cell capacity [A.h]"]
-            # Make sure they match if both provided
-            # Update the other if only one provided
-            if "C-rate" in values:
-                # Can't provide C-rate as a function
-                if callable(values["C-rate"]):
-                    value = CrateToCurrent(values["C-rate"], capacity)
-                elif isinstance(values["C-rate"], tuple):
-                    data = values["C-rate"][1]
-                    current_data = np.stack([data[:, 0], data[:, 1] * capacity], axis=1)
-                    value = (values["C-rate"][0] + "_to_current", current_data)
-                elif values["C-rate"] == "[input]":
-                    value = CrateToCurrent(values["C-rate"], capacity, typ="input")
-                else:
-                    value = values["C-rate"] * capacity
-                self._dict_items["Current function [A]"] = value
-            elif "Current function [A]" in values:
-                if callable(values["Current function [A]"]):
-                    value = CurrentToCrate(values["Current function [A]"], capacity)
-                elif isinstance(values["Current function [A]"], tuple):
-                    data = values["Current function [A]"][1]
-                    c_rate_data = np.stack([data[:, 0], data[:, 1] / capacity], axis=1)
-                    value = (
-                        values["Current function [A]"][0] + "_to_Crate",
-                        c_rate_data,
-                    )
-                elif values["Current function [A]"] == "[input]":
-                    value = CurrentToCrate(
-                        values["Current function [A]"], capacity, typ="input"
-                    )
-                else:
-                    value = values["Current function [A]"] / capacity
-                self._dict_items["C-rate"] = value
-
-        return values
+        for param in values:
+            if "surface area density" in param:
+                raise ValueError(
+                    "Parameters involving 'surface area density' have been renamed to "
+                    "'surface area to volume ratio' ('{}' found)".format(param)
+                )
+            if "reaction rate" in param:
+                raise ValueError(
+                    "Parameters involving 'reaction rate' have been replaced with "
+                    "'exchange-current density' ('{}' found)".format(param)
+                )
 
     def process_model(self, unprocessed_model, inplace=True):
         """Assign parameter values to a model.
@@ -319,7 +328,8 @@ class ParameterValues:
         Raises
         ------
         :class:`pybamm.ModelError`
-            If an empty model is passed (`model.rhs = {}` and `model.algebraic={}`)
+            If an empty model is passed (`model.rhs = {}` and `model.algebraic = {}` and
+            `model.variables = {}`)
 
         """
         pybamm.logger.info(
@@ -335,7 +345,11 @@ class ParameterValues:
             # create a blank model of the same class
             model = unprocessed_model.new_copy()
 
-        if len(unprocessed_model.rhs) == 0 and len(unprocessed_model.algebraic) == 0:
+        if (
+            len(unprocessed_model.rhs) == 0
+            and len(unprocessed_model.algebraic) == 0
+            and len(unprocessed_model.variables) == 0
+        ):
             raise pybamm.ModelError("Cannot process parameters for empty model")
 
         for variable, equation in model.rhs.items():
@@ -497,9 +511,21 @@ class ParameterValues:
             elif isinstance(function_name, pybamm.InputParameter):
                 # Replace the function with an input parameter
                 function = function_name
-            else:
+            elif (
+                isinstance(function_name, pybamm.Symbol)
+                and function_name.evaluates_to_number()
+            ):
+                # If the "function" provided is a pybamm scalar-like, use ones_like to
+                # get the right shape
+                function = function_name * pybamm.ones_like(*new_children)
+            elif callable(function_name):
                 # otherwise evaluate the function to create a new PyBaMM object
                 function = function_name(*new_children)
+            else:
+                raise TypeError(
+                    "Parameter provided for '{}' ".format(symbol.name)
+                    + "is of the wrong type (should either be scalar-like or callable)"
+                )
             # Differentiate if necessary
             if symbol.diff_variable is None:
                 function_out = function
@@ -507,6 +533,9 @@ class ParameterValues:
                 # return differentiated function
                 new_diff_variable = self.process_symbol(symbol.diff_variable)
                 function_out = function.diff(new_diff_variable)
+            # Convert possible float output to a pybamm scalar
+            if isinstance(function_out, numbers.Number):
+                return pybamm.Scalar(function_out)
             # Process again just to be sure
             return self.process_symbol(function_out)
 
@@ -568,32 +597,5 @@ class ParameterValues:
         else:
             raise ValueError("symbol must evaluate to a constant scalar")
 
-
-class CurrentToCrate:
-    "Convert a current function to a C-rate function"
-
-    def __init__(self, current, capacity, typ="function"):
-        self.current = current
-        self.capacity = capacity
-        self.type = typ
-
-    def __call__(self, t):
-        if self.type == "function":
-            return self.current(t) / self.capacity
-        elif self.type == "input":
-            return pybamm.InputParameter("Current function [A]") / self.capacity
-
-
-class CrateToCurrent:
-    "Convert a C-rate function to a current function"
-
-    def __init__(self, Crate, capacity, typ="function"):
-        self.Crate = Crate
-        self.capacity = capacity
-        self.type = typ
-
-    def __call__(self, t):
-        if self.type == "function":
-            return self.Crate(t) * self.capacity
-        elif self.type == "input":
-            return pybamm.InputParameter("C-rate") * self.capacity
+    def _ipython_key_completions_(self):
+        return list(self._dict_items.keys())

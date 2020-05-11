@@ -42,10 +42,10 @@ class BasicSPM(BaseModel):
         Q = pybamm.Variable("Discharge capacity [A.h]")
         # Variables that vary spatially are created with a domain
         c_s_n = pybamm.Variable(
-            "X-averaged negative particle concentration", domain="negative particle",
+            "X-averaged negative particle concentration", domain="negative particle"
         )
         c_s_p = pybamm.Variable(
-            "X-averaged positive particle concentration", domain="positive particle",
+            "X-averaged positive particle concentration", domain="positive particle"
         )
 
         # Constant temperature
@@ -131,21 +131,8 @@ class BasicSPM(BaseModel):
         # (Some) variables
         ######################
         # Interfacial reactions
-        j0_n = (
-            param.m_n(T)
-            / param.C_r_n
-            * 1 ** (1 / 2)
-            * c_s_surf_n ** (1 / 2)
-            * (1 - c_s_surf_n) ** (1 / 2)
-        )
-        j0_p = (
-            param.gamma_p
-            * param.m_p(T)
-            / param.C_r_p
-            * 1 ** (1 / 2)
-            * c_s_surf_p ** (1 / 2)
-            * (1 - c_s_surf_p) ** (1 / 2)
-        )
+        j0_n = param.j0_n(1, c_s_surf_n, T) / param.C_r_n
+        j0_p = param.gamma_p * param.j0_p(1, c_s_surf_p, T) / param.C_r_p
         eta_n = (2 / param.ne_n) * pybamm.arcsinh(j_n / (2 * j0_n))
         eta_p = (2 / param.ne_p) * pybamm.arcsinh(j_p / (2 * j0_p))
         phi_s_n = 0

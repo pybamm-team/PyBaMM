@@ -17,9 +17,10 @@ C_rates = {"01": 0.1, "05": 0.5, "1": 1, "2": 2, "3": 3}
 C_rate = "1"  # choose the key from the above dictionary of available results
 
 # load the comsol results
-comsol_variables = pickle.load(
-    open("input/comsol_results/comsol_{}C.pickle".format(C_rate), "rb")
+comsol_results_path = pybamm.get_parameters_filepath(
+    "input/comsol_results/comsol_{}C.pickle".format(C_rate)
 )
+comsol_variables = pickle.load(open(comsol_results_path, "rb"))
 
 "-----------------------------------------------------------------------------"
 "Create and solve pybamm model"
@@ -77,18 +78,22 @@ def get_interp_fun(variable_name, domain):
     def myinterp(t):
         try:
             return interp.interp1d(
-                comsol_t, variable, fill_value="extrapolate", bounds_error=False
+                comsol_t, variable, fill_value="extrapolate", bounds_error=False,
             )(t)[:, np.newaxis]
         except ValueError as err:
             raise ValueError(
-                """Failed to interpolate '{}' with time range [{}, {}] at time {}.
-                Original error: {}""".format(
-                    variable_name, comsol_t[0], comsol_t[-1], t, err
-                )
+                (
+                    "Failed to interpolate '{}' with time range [{}, {}] at time {}."
+                    + "Original error: {}"
+                ).format(variable_name, comsol_t[0], comsol_t[-1], t, err)
             )
 
     # Make sure to use dimensional time
-    fun = pybamm.Function(myinterp, pybamm.t, name=variable_name + "_comsol")
+    fun = pybamm.Function(
+        myinterp,
+        pybamm.t * pybamm_model.timescale.evaluate(),
+        name=variable_name + "_comsol",
+    )
     fun.domain = domain
     fun.mesh = mesh.combine_submeshes(*domain)
     fun.secondary_mesh = None
@@ -108,7 +113,7 @@ comsol_voltage = pybamm.Function(
         fill_value="extrapolate",
         bounds_error=False,
     ),
-    pybamm.t,
+    pybamm.t * pybamm_model.timescale.evaluate(),
 )
 comsol_voltage.mesh = None
 comsol_voltage.secondary_mesh = None

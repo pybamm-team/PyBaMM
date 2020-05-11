@@ -5,6 +5,7 @@ import pybamm
 
 import unittest
 import numpy as np
+from scipy.sparse import diags
 
 
 class TestUnaryOperators(unittest.TestCase):
@@ -38,10 +39,71 @@ class TestUnaryOperators(unittest.TestCase):
         absb = pybamm.AbsoluteValue(b)
         self.assertEqual(absb.evaluate(), 4)
 
+    def test_sign(self):
+        b = pybamm.Scalar(-4)
+        signb = pybamm.sign(b)
+        self.assertEqual(signb.evaluate(), -1)
+
+        A = diags(np.linspace(-1, 1, 5))
+        b = pybamm.Matrix(A)
+        signb = pybamm.sign(b)
+        np.testing.assert_array_equal(
+            np.diag(signb.evaluate().toarray()), [-1, -1, 0, 1, 1]
+        )
+
     def test_gradient(self):
+        # gradient of scalar symbol should fail
         a = pybamm.Symbol("a")
+        with self.assertRaisesRegex(
+            pybamm.DomainError, "Cannot take gradient of 'a' since its domain is empty"
+        ):
+            pybamm.Gradient(a)
+
+        # gradient of variable evaluating on edges should fail
+        a = pybamm.PrimaryBroadcastToEdges(pybamm.Scalar(1), "test")
+        with self.assertRaisesRegex(TypeError, "evaluates on edges"):
+            pybamm.Gradient(a)
+
+        # gradient of broadcast should return broadcasted zero
+        a = pybamm.PrimaryBroadcast(pybamm.Variable("a"), "test domain")
+        grad = pybamm.grad(a)
+        self.assertIsInstance(grad, pybamm.PrimaryBroadcastToEdges)
+        self.assertIsInstance(grad.child, pybamm.PrimaryBroadcast)
+        self.assertIsInstance(grad.child.child, pybamm.Scalar)
+        self.assertEqual(grad.child.child.value, 0)
+
+        # otherwise gradient should work
+        a = pybamm.Symbol("a", domain="test domain")
         grad = pybamm.Gradient(a)
         self.assertEqual(grad.children[0].name, a.name)
+        self.assertEqual(grad.domain, a.domain)
+
+    def test_div(self):
+        # divergence of scalar symbol should fail
+        a = pybamm.Symbol("a")
+        with self.assertRaisesRegex(
+            pybamm.DomainError,
+            "Cannot take divergence of 'a' since its domain is empty",
+        ):
+            pybamm.Divergence(a)
+
+        # divergence of variable evaluating on edges should fail
+        a = pybamm.PrimaryBroadcast(pybamm.Scalar(1), "test")
+        with self.assertRaisesRegex(TypeError, "evaluates on nodes"):
+            pybamm.Divergence(a)
+
+        # divergence of broadcast should return broadcasted zero
+        a = pybamm.PrimaryBroadcastToEdges(pybamm.Variable("a"), "test domain")
+        div = pybamm.div(a)
+        self.assertIsInstance(div, pybamm.PrimaryBroadcast)
+        self.assertIsInstance(div.child, pybamm.PrimaryBroadcast)
+        self.assertIsInstance(div.child.child, pybamm.Scalar)
+        self.assertEqual(div.child.child.value, 0)
+
+        # otherwise divergence should work
+        a = pybamm.Symbol("a", domain="test domain")
+        div = pybamm.Divergence(pybamm.Gradient(a))
+        self.assertEqual(div.domain, a.domain)
 
     def test_integral(self):
         # time integral
@@ -158,10 +220,14 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual((-a).diff(a).evaluate(y=y), -1)
         self.assertEqual((-a).diff(-a).evaluate(), 1)
 
-        # absolute value (not implemented)
-        absa = abs(a)
-        with self.assertRaises(pybamm.UndefinedOperationError):
-            absa.diff(a)
+        # absolute value
+        self.assertEqual((a ** 3).diff(a).evaluate(y=y), 3 * 5 ** 2)
+        self.assertEqual((abs(a ** 3)).diff(a).evaluate(y=y), 3 * 5 ** 2)
+        self.assertEqual((a ** 3).diff(a).evaluate(y=-y), 3 * 5 ** 2)
+        self.assertEqual((abs(a ** 3)).diff(a).evaluate(y=-y), -3 * 5 ** 2)
+
+        # sign
+        self.assertEqual((pybamm.sign(a)).diff(a).evaluate(y=y), 0)
 
         # spatial operator (not implemented)
         spatial_a = pybamm.SpatialOperator("name", a)
@@ -169,7 +235,7 @@ class TestUnaryOperators(unittest.TestCase):
             spatial_a.diff(a)
 
     def test_printing(self):
-        a = pybamm.Symbol("a")
+        a = pybamm.Symbol("a", domain="test")
         self.assertEqual(str(-a), "-a")
         grad = pybamm.Gradient(a)
         self.assertEqual(grad.name, "grad")
@@ -252,7 +318,7 @@ class TestUnaryOperators(unittest.TestCase):
             pybamm.boundary_value(var, "negative tab")
             pybamm.boundary_value(var, "positive tab")
 
-    def test_average(self):
+    def test_x_average(self):
         a = pybamm.Scalar(1)
         average_a = pybamm.x_average(a)
         self.assertEqual(average_a.id, a.id)
@@ -282,12 +348,24 @@ class TestUnaryOperators(unittest.TestCase):
             self.assertIsInstance(av_a, pybamm.Division)
             self.assertIsInstance(av_a.children[0], pybamm.Integral)
             self.assertEqual(av_a.children[0].integration_variable[0].domain, x.domain)
-            # electrode domains go to current collector when averaged
             self.assertEqual(av_a.domain, [])
 
-        a = pybamm.Symbol("a", domain="bad domain")
-        with self.assertRaises(pybamm.DomainError):
-            pybamm.x_average(a)
+        a = pybamm.Symbol("a", domain="new domain")
+        av_a = pybamm.x_average(a)
+        self.assertEqual(av_a.domain, [])
+        self.assertIsInstance(av_a, pybamm.Division)
+        self.assertIsInstance(av_a.children[0], pybamm.Integral)
+        self.assertEqual(av_a.children[0].integration_variable[0].domain, a.domain)
+        self.assertIsInstance(av_a.children[1], pybamm.Integral)
+        self.assertEqual(av_a.children[1].integration_variable[0].domain, a.domain)
+        self.assertEqual(av_a.children[1].children[0].id, pybamm.ones_like(a).id)
+
+        # x-average of symbol that evaluates on edges raises error
+        symbol_on_edges = pybamm.PrimaryBroadcastToEdges(1, "domain")
+        with self.assertRaisesRegex(
+            ValueError, "Can't take the x-average of a symbol that evaluates on edges"
+        ):
+            pybamm.x_average(symbol_on_edges)
 
     def test_r_average(self):
         a = pybamm.Scalar(1)
@@ -309,9 +387,12 @@ class TestUnaryOperators(unittest.TestCase):
             # electrode domains go to current collector when averaged
             self.assertEqual(av_a.domain, [])
 
-        a = pybamm.Symbol("a", domain="bad domain")
-        with self.assertRaises(pybamm.DomainError):
-            pybamm.x_average(a)
+        # r-average of symbol that evaluates on edges raises error
+        symbol_on_edges = pybamm.PrimaryBroadcastToEdges(1, "domain")
+        with self.assertRaisesRegex(
+            ValueError, "Can't take the r-average of a symbol that evaluates on edges"
+        ):
+            pybamm.r_average(symbol_on_edges)
 
     def test_yz_average(self):
         a = pybamm.Scalar(1)
@@ -350,6 +431,13 @@ class TestUnaryOperators(unittest.TestCase):
             pybamm.z_average(a)
         with self.assertRaises(pybamm.DomainError):
             pybamm.yz_average(a)
+
+        # average of symbol that evaluates on edges raises error
+        symbol_on_edges = pybamm.PrimaryBroadcastToEdges(1, "domain")
+        with self.assertRaisesRegex(
+            ValueError, "Can't take the z-average of a symbol that evaluates on edges"
+        ):
+            pybamm.z_average(symbol_on_edges)
 
 
 if __name__ == "__main__":

@@ -10,12 +10,13 @@ from tests import get_discretisation_for_testing
 
 class TestSimplify(unittest.TestCase):
     def test_symbol_simplify(self):
-        a = pybamm.Scalar(0)
+        a = pybamm.Scalar(0, domain="domain")
         b = pybamm.Scalar(1)
         c = pybamm.Parameter("c")
         d = pybamm.Scalar(-1)
         e = pybamm.Scalar(2)
         g = pybamm.Variable("g")
+        gdot = pybamm.VariableDot("g'")
 
         # negate
         self.assertIsInstance((-a).simplify(), pybamm.Scalar)
@@ -45,11 +46,11 @@ class TestSimplify(unittest.TestCase):
         self.assertEqual((f).simplify().evaluate(), 0)
 
         # FunctionParameter
-        f = pybamm.FunctionParameter("function", b)
+        f = pybamm.FunctionParameter("function", {"b": b})
         self.assertIsInstance((f).simplify(), pybamm.FunctionParameter)
         self.assertEqual((f).simplify().children[0].id, b.id)
 
-        f = pybamm.FunctionParameter("function", a, b)
+        f = pybamm.FunctionParameter("function", {"a": a, "b": b})
         self.assertIsInstance((f).simplify(), pybamm.FunctionParameter)
         self.assertEqual((f).simplify().children[0].id, a.id)
         self.assertEqual((f).simplify().children[1].id, b.id)
@@ -57,13 +58,17 @@ class TestSimplify(unittest.TestCase):
         # Gradient
         self.assertIsInstance((pybamm.grad(a)).simplify(), pybamm.Scalar)
         self.assertEqual((pybamm.grad(a)).simplify().evaluate(), 0)
-        v = pybamm.Variable("v")
-        self.assertIsInstance((pybamm.grad(v)).simplify(), pybamm.Gradient)
+        v = pybamm.Variable("v", domain="domain")
+        grad_v = pybamm.grad(v)
+        self.assertIsInstance(grad_v.simplify(), pybamm.Gradient)
 
         # Divergence
-        self.assertIsInstance((pybamm.div(a)).simplify(), pybamm.Scalar)
-        self.assertEqual((pybamm.div(a)).simplify().evaluate(), 0)
-        self.assertIsInstance((pybamm.div(v)).simplify(), pybamm.Divergence)
+        div_b = pybamm.div(pybamm.PrimaryBroadcastToEdges(b, "domain"))
+        self.assertIsInstance(div_b.simplify(), pybamm.PrimaryBroadcast)
+        self.assertEqual(div_b.simplify().child.child.evaluate(), 0)
+        self.assertIsInstance(
+            (pybamm.div(pybamm.grad(v))).simplify(), pybamm.Divergence
+        )
 
         # Integral
         self.assertIsInstance(
@@ -174,6 +179,18 @@ class TestSimplify(unittest.TestCase):
         self.assertEqual(expr.children[0].evaluate(), 4.0)
         self.assertIsInstance(expr.children[1], pybamm.Negate)
         self.assertIsInstance(expr.children[1].children[0], pybamm.Parameter)
+
+        expr = (e * g * b).simplify()
+        self.assertIsInstance(expr, pybamm.Multiplication)
+        self.assertIsInstance(expr.children[0], pybamm.Scalar)
+        self.assertEqual(expr.children[0].evaluate(), 2.0)
+        self.assertIsInstance(expr.children[1], pybamm.Variable)
+
+        expr = (e * gdot * b).simplify()
+        self.assertIsInstance(expr, pybamm.Multiplication)
+        self.assertIsInstance(expr.children[0], pybamm.Scalar)
+        self.assertEqual(expr.children[0].evaluate(), 2.0)
+        self.assertIsInstance(expr.children[1], pybamm.VariableDot)
 
         expr = (e + (g - c)).simplify()
         self.assertIsInstance(expr, pybamm.Addition)

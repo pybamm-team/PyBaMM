@@ -5,8 +5,22 @@ import pybamm
 
 
 class Jacobian(object):
-    def __init__(self, known_jacs=None):
+    """
+    Helper class to calculate the jacobian of an expression.
+
+    Parameters
+    ----------
+
+    known_jacs: dict {variable ids -> :class:`pybamm.Symbol`}
+        cached jacobians
+
+    clear_domain: bool
+        wether or not the jacobian clears the domain (default True)
+    """
+
+    def __init__(self, known_jacs=None, clear_domain=True):
         self._known_jacs = known_jacs or {}
+        self._clear_domain = clear_domain
 
     def jac(self, symbol, variable):
         """
@@ -62,7 +76,9 @@ class Jacobian(object):
             jac = symbol._function_jac(children_jacs)
 
         elif isinstance(symbol, pybamm.Concatenation):
-            children_jacs = [child.jac(variable) for child in symbol.cached_children]
+            children_jacs = [
+                self.jac(child, variable) for child in symbol.cached_children
+            ]
             jac = symbol._concatenation_jac(children_jacs)
 
         else:
@@ -75,6 +91,7 @@ class Jacobian(object):
                     )
                 )
 
-        # jacobian removes the domain(s)
-        jac.clear_domains()
+        # jacobian by default removes the domain(s)
+        if self._clear_domain:
+            jac.clear_domains()
         return jac

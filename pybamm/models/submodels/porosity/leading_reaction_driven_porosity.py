@@ -22,8 +22,15 @@ class LeadingOrder(BaseModel):
 
     def get_fundamental_variables(self):
 
-        eps = pybamm.standard_variables.eps_piecewise_constant
-        variables = self._get_standard_porosity_variables(eps)
+        eps_n_pc = pybamm.standard_variables.eps_n_pc
+        eps_s_pc = pybamm.standard_variables.eps_s_pc
+        eps_p_pc = pybamm.standard_variables.eps_p_pc
+
+        eps_n = pybamm.PrimaryBroadcast(eps_n_pc, "negative electrode")
+        eps_s = pybamm.PrimaryBroadcast(eps_s_pc, "separator")
+        eps_p = pybamm.PrimaryBroadcast(eps_p_pc, "positive electrode")
+
+        variables = self._get_standard_porosity_variables(eps_n, eps_s, eps_p)
         return variables
 
     def get_coupled_variables(self, variables):
@@ -31,19 +38,21 @@ class LeadingOrder(BaseModel):
         j_n = variables["X-averaged negative electrode interfacial current density"]
         j_p = variables["X-averaged positive electrode interfacial current density"]
 
-        deps_dt_n = pybamm.PrimaryBroadcast(
+        deps_n_dt = pybamm.PrimaryBroadcast(
             -self.param.beta_surf_n * j_n, ["negative electrode"]
         )
-        deps_dt_s = pybamm.FullBroadcast(
+        deps_s_dt = pybamm.FullBroadcast(
             0, "separator", auxiliary_domains={"secondary": "current collector"}
         )
-        deps_dt_p = pybamm.PrimaryBroadcast(
+        deps_p_dt = pybamm.PrimaryBroadcast(
             -self.param.beta_surf_p * j_p, ["positive electrode"]
         )
 
-        deps_dt = pybamm.Concatenation(deps_dt_n, deps_dt_s, deps_dt_p)
-
-        variables.update(self._get_standard_porosity_change_variables(deps_dt))
+        variables.update(
+            self._get_standard_porosity_change_variables(
+                deps_n_dt, deps_s_dt, deps_p_dt
+            )
+        )
 
         return variables
 

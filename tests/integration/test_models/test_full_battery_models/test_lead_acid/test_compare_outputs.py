@@ -48,10 +48,9 @@ class TestCompareOutputs(unittest.TestCase):
         comparison = StandardOutputComparison(solutions)
         comparison.test_averages()
 
-    def test_compare_outputs_capacitance(self):
+    def test_compare_outputs_surface_form(self):
         """
-        Check that the leading-order model solution converges linearly in C_e to the
-        full model solution
+        Check that the models agree with the different surface forms
         """
         # load models
         options = [
@@ -59,6 +58,7 @@ class TestCompareOutputs(unittest.TestCase):
         ]
         model_combos = [
             ([pybamm.lead_acid.LOQS(opt) for opt in options]),
+            ([pybamm.lead_acid.Composite(opt) for opt in options]),
             ([pybamm.lead_acid.Full(opt) for opt in options]),
         ]
 

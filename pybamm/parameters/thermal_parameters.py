@@ -55,21 +55,18 @@ lambda_eff_dim = (
 ) / pybamm.geometric_parameters.L
 
 # Cooling coefficient
-h_dim = pybamm.Parameter("Heat transfer coefficient [W.m-2.K-1]")
+h_cn_dim = pybamm.Parameter(
+    "Negative current collector surface heat transfer coefficient [W.m-2.K-1]"
+)
+h_cp_dim = pybamm.Parameter(
+    "Positive current collector surface heat transfer coefficient [W.m-2.K-1]"
+)
+h_tab_n_dim = pybamm.Parameter("Negative tab heat transfer coefficient [W.m-2.K-1]")
+h_tab_p_dim = pybamm.Parameter("Positive tab heat transfer coefficient [W.m-2.K-1]")
+h_edge_dim = pybamm.Parameter("Edge heat transfer coefficient [W.m-2.K-1]")
 
 # Typical temperature rise
-Phi_dim = pybamm.Scalar(1)  # typical scale for voltage drop across cell (order 1V)
-Delta_T = (
-    pybamm.electrical_parameters.i_typ * Phi_dim / h_dim
-)  # computed from balance of typical cross-cell Ohmic heating with surface heat loss
-
-# Activation energies
-E_r_n = pybamm.Parameter("Negative reaction rate activation energy [J.mol-1]")
-E_r_p = pybamm.Parameter("Positive reaction rate activation energy [J.mol-1]")
-E_D_s_n = pybamm.Parameter("Negative solid diffusion activation energy [J.mol-1]")
-E_D_s_p = pybamm.Parameter("Positive solid diffusion activation energy [J.mol-1]")
-E_D_e = pybamm.Parameter("Electrolyte diffusion activation energy [J.mol-1]")
-E_k_e = pybamm.Parameter("Electrolyte conductivity activation energy [J.mol-1]")
+Delta_T = pybamm.Scalar(1)
 
 # Initial temperature
 T_init_dim = pybamm.Parameter("Initial temperature [K]")
@@ -107,6 +104,23 @@ lambda_k = pybamm.Concatenation(
 
 
 Theta = Delta_T / T_ref
-h = h_dim * pybamm.geometric_parameters.L_x / lambda_eff_dim
+
+h_edge = h_edge_dim * pybamm.geometric_parameters.L_x / lambda_eff_dim
+h_tab_n = h_tab_n_dim * pybamm.geometric_parameters.L_x / lambda_eff_dim
+h_tab_p = h_tab_p_dim * pybamm.geometric_parameters.L_x / lambda_eff_dim
+h_cn = h_cn_dim * pybamm.geometric_parameters.L_x / lambda_eff_dim
+h_cp = h_cp_dim * pybamm.geometric_parameters.L_x / lambda_eff_dim
+
 
 T_init = (T_init_dim - T_ref) / Delta_T
+
+# --------------------------------------------------------------------------------------
+# Ambient temperature
+
+
+def T_amb_dim(t):
+    return pybamm.FunctionParameter("Ambient temperature [K]", {"Times [s]": t})
+
+
+def T_amb(t):
+    return (T_amb_dim(t) - T_ref) / Delta_T  # dimensionless T_amb

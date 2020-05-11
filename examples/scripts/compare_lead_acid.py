@@ -18,14 +18,14 @@ else:
 # load models
 models = [
     pybamm.lead_acid.LOQS(),
-    # pybamm.lead_acid.FOQS(),
-    pybamm.lead_acid.Composite(),
+    pybamm.lead_acid.FOQS(),
+    pybamm.lead_acid.CompositeExtended(),
     pybamm.lead_acid.Full(),
 ]
 
 # load parameter values and process models and geometry
 param = models[0].default_parameter_values
-param.update({"Current function [A]": 10, "Initial State of Charge": 1})
+param.update({"Current function [A]": 17, "Initial State of Charge": 1})
 for model in models:
     param.process_model(model)
 
@@ -55,5 +55,5 @@ output_variables = [
     "Electrolyte potential [V]",
     "Terminal voltage [V]",
 ]
-plot = pybamm.QuickPlot(solutions, output_variables)
+plot = pybamm.QuickPlot(solutions, output_variables, linestyles=[":", "--", "-"])
 plot.dynamic_plot()

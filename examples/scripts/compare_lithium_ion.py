@@ -16,7 +16,7 @@ else:
     pybamm.set_logging_level("INFO")
 
 # load models
-options = {"thermal": "isothermal"}
+options = {"thermal": "lumped"}
 models = [
     pybamm.lithium_ion.SPM(options),
     pybamm.lithium_ion.SPMe(options),
@@ -51,5 +51,5 @@ for i, model in enumerate(models):
     solutions[i] = model.default_solver.solve(model, t_eval)
 
 # plot
-plot = pybamm.QuickPlot(solutions)
+plot = pybamm.QuickPlot(solutions, linestyles=[":", "--", "-"])
 plot.dynamic_plot()

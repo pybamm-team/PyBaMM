@@ -1,6 +1,7 @@
 #
 # Solver class using Scipy's adaptive time stepper
 #
+import casadi
 import pybamm
 
 import scipy.integrate as it
@@ -8,7 +9,7 @@ import numpy as np
 
 
 class ScipySolver(pybamm.BaseSolver):
-    """Solve a discretised model, using scipy._integrate.solve_ivp.
+    """Solve a discretised model, using scipy.integrate.solve_ivp.
 
     Parameters
     ----------
@@ -18,12 +19,18 @@ class ScipySolver(pybamm.BaseSolver):
         The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
         The absolute tolerance for the solver (default is 1e-6).
+    extra_options : dict, optional
+        Any options to pass to the solver.
+        Please consult `SciPy documentation <https://tinyurl.com/yafgqg9y>`_ for
+        details.
     """
 
-    def __init__(self, method="BDF", rtol=1e-6, atol=1e-6):
+    def __init__(self, method="BDF", rtol=1e-6, atol=1e-6, extra_options=None):
         super().__init__(method, rtol, atol)
         self.ode_solver = True
+        self.extra_options = extra_options or {}
         self.name = "Scipy solver ({})".format(method)
+        pybamm.citations.register("virtanen2020scipy")
 
     def _integrate(self, model, t_eval, inputs=None):
         """
@@ -45,24 +52,41 @@ class ScipySolver(pybamm.BaseSolver):
             various diagnostic messages.
 
         """
-        extra_options = {"rtol": self.rtol, "atol": self.atol}
+        if model.convert_to_format == "casadi":
+            inputs = casadi.vertcat(*[x for x in inputs.values()])
+
+        extra_options = {**self.extra_options, "rtol": self.rtol, "atol": self.atol}
+
+        # Initial conditions
+        y0 = model.y0
+        if isinstance(y0, casadi.DM):
+            y0 = y0.full().flatten()
 
         # check for user-supplied Jacobian
         implicit_methods = ["Radau", "BDF", "LSODA"]
         if np.any([self.method in implicit_methods]):
             if model.jacobian_eval:
-                extra_options.update({"jac": model.jacobian_eval})
+                extra_options.update(
+                    {"jac": lambda t, y: model.jacobian_eval(t, y, inputs)}
+                )
 
         # make events terminal so that the solver stops when they are reached
         if model.terminate_events_eval:
-            for event in model.terminate_events_eval:
-                event.terminal = True
-            extra_options.update({"events": model.terminate_events_eval})
+
+            def event_wrapper(event):
+                def event_fn(t, y):
+                    return event(t, y, inputs)
+
+                event_fn.terminal = True
+                return event_fn
+
+            events = [event_wrapper(event) for event in model.terminate_events_eval]
+            extra_options.update({"events": events})
 
         sol = it.solve_ivp(
-            model.rhs_eval,
+            lambda t, y: model.rhs_eval(t, y, inputs),
             (t_eval[0], t_eval[-1]),
-            model.y0,
+            y0,
             t_eval=t_eval,
             method=self.method,
             dense_output=True,

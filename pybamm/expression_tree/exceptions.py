@@ -61,17 +61,17 @@ class ModelWarning(UserWarning):
     pass
 
 
-class UndefinedOperationError(Exception):
+class InputError(Exception):
     """
-    Undefined operation: Raised when a mathematical operation is not well-defined
+    An external variable has been input incorrectly into PyBaMM
     """
 
     pass
 
 
-class InputError(Exception):
+class DiscretisationError(Exception):
     """
-    An external variable has been input incorrectly into PyBaMM
+    A model could not be discretised
     """
 
     pass

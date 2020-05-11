@@ -30,11 +30,25 @@ disc.process_model(model)
 
 # solve model
 t_eval = np.linspace(0, 3600, 100)
-solver = model.default_solver
+solver = pybamm.CasadiSolver()
 solver.rtol = 1e-3
 solver.atol = 1e-6
 solution = solver.solve(model, t_eval)
 
 # plot
-plot = pybamm.QuickPlot(solution)
+plot = pybamm.QuickPlot(
+    solution,
+    [
+        "Negative particle concentration [mol.m-3]",
+        "Electrolyte concentration [mol.m-3]",
+        "Positive particle concentration [mol.m-3]",
+        "Current [A]",
+        "Negative electrode potential [V]",
+        "Electrolyte potential [V]",
+        "Positive electrode potential [V]",
+        "Terminal voltage [V]",
+    ],
+    time_unit="seconds",
+    spatial_unit="um",
+)
 plot.dynamic_plot()

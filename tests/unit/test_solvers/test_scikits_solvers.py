@@ -11,6 +11,11 @@ import sys
 
 @unittest.skipIf(not pybamm.have_scikits_odes(), "scikits.odes not installed")
 class TestScikitsSolvers(unittest.TestCase):
+    def test_init(self):
+        # linsolver deprecated
+        with self.assertRaisesRegex(ValueError, "linsolver has been deprecated"):
+            pybamm.ScikitsOdeSolver(linsolver="lapackdense")
+
     def test_model_ode_integrate_failure(self):
         # Turn off warnings to ignore sqrt error
         warnings.simplefilter("ignore")
@@ -41,11 +46,12 @@ class TestScikitsSolvers(unittest.TestCase):
             y0 = np.array([0.0, 1.0])
             terminate_events_eval = []
             timescale_eval = 1
+            convert_to_format = "python"
 
-            def residuals_eval(self, t, y, ydot):
+            def residuals_eval(self, t, y, ydot, inputs):
                 return np.array([0.5 * np.ones_like(y[0]) - ydot[0], 2 * y[0] - y[1]])
 
-            def jacobian_eval(self, t, y):
+            def jacobian_eval(self, t, y, inputs):
                 return np.array([[0.0, 0.0], [2.0, -1.0]])
 
         model = Model()
@@ -71,6 +77,7 @@ class TestScikitsSolvers(unittest.TestCase):
 
         t_eval = np.linspace(0, 1, 100)
         solver.set_up(model)
+        solver._set_initial_conditions(model, {}, True)
         # check y0
         np.testing.assert_array_equal(model.y0, [0, 0])
         # check dae solutions
@@ -89,13 +96,14 @@ class TestScikitsSolvers(unittest.TestCase):
             y0 = np.array([0.0, 0.0])
             terminate_events_eval = []
             timescale_eval = 1
+            convert_to_format = "python"
 
-            def residuals_eval(self, t, y, ydot):
+            def residuals_eval(self, t, y, ydot, inputs):
                 return np.array(
                     [0.5 * np.ones_like(y[0]) - 4 * ydot[0], 2.0 * y[0] - y[1]]
                 )
 
-            def jacobian_eval(self, t, y):
+            def jacobian_eval(self, t, y, inputs):
                 return np.array([[0.0, 0.0], [2.0, -1.0]])
 
         model = Model()
@@ -262,7 +270,9 @@ class TestScikitsSolvers(unittest.TestCase):
 
         rate = pybamm.Function(nonsmooth_rate, pybamm.t)
         mult = pybamm.Function(nonsmooth_mult, pybamm.t)
-        model.rhs = {var1: rate * var1}
+        # put in an extra heaviside with no time dependence, this should be ignored by
+        # the solver i.e. no extra discontinuities added
+        model.rhs = {var1: rate * var1 + (var1 < 0)}
         model.algebraic = {var2: mult * var1 - var2}
         model.initial_conditions = {var1: 1, var2: 2}
         model.events = [
@@ -324,6 +334,41 @@ class TestScikitsSolvers(unittest.TestCase):
             ]
             np.testing.assert_allclose(solution.y[0], var1_soln, rtol=1e-06)
             np.testing.assert_allclose(solution.y[-1], var2_soln, rtol=1e-06)
+
+    def test_model_solver_dae_no_nonsmooth_python(self):
+        model = pybamm.BaseModel()
+        model.convert_to_format = "python"
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var1 = pybamm.Variable("var1", domain=whole_cell)
+        var2 = pybamm.Variable("var2", domain=whole_cell)
+        discontinuity = 5.6
+
+        def nonsmooth_rate(t):
+            return 0.1 * int(t < discontinuity) + 0.1
+
+        def nonsmooth_mult(t):
+            return int(t < discontinuity) + 1.0
+
+        # put in an extra heaviside with no time dependence, this should be ignored by
+        # the solver i.e. no extra discontinuities added
+        model.rhs = {var1: 0.1 * var1}
+        model.algebraic = {var2: 2 * var1 - var2}
+        model.initial_conditions = {var1: 1, var2: 2}
+        disc = get_discretisation_for_testing()
+        disc.process_model(model)
+
+        # Solve
+        solver = pybamm.ScikitsDaeSolver(rtol=1e-9, atol=1e-9, root_method="lm")
+
+        # create two time series, one without a time point on the discontinuity,
+        # and one with
+        t_eval = np.linspace(0, 5, 10)
+        solution = solver.solve(model, t_eval)
+
+        # test solution, discontinuity should not be triggered
+        np.testing.assert_array_equal(solution.t, t_eval)
+        np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
+        np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
 
     def test_model_solver_dae_with_jacobian_python(self):
         model = pybamm.BaseModel()
@@ -484,12 +529,12 @@ class TestScikitsSolvers(unittest.TestCase):
                 pybamm.Event("var2 = 2.5", pybamm.min(var2 - 2.5)),
             ]
             disc = get_discretisation_for_testing()
-            disc.process_model(model)
+            model_disc = disc.process_model(model, inplace=False)
 
             # Solve
             solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
             t_eval = np.linspace(0, 5, 100)
-            solution = solver.solve(model, t_eval)
+            solution = solver.solve(model_disc, t_eval)
             np.testing.assert_array_less(solution.y[0], 1.5)
             np.testing.assert_array_less(solution.y[-1], 2.5)
             np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
@@ -524,6 +569,42 @@ class TestScikitsSolvers(unittest.TestCase):
             np.testing.assert_array_less(solution.y[-1], 2.5)
             np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
             np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
+
+    def test_model_solver_dae_inputs_in_initial_conditions(self):
+        # Create model
+        model = pybamm.BaseModel()
+        var1 = pybamm.Variable("var1")
+        var2 = pybamm.Variable("var2")
+        model.rhs = {var1: pybamm.InputParameter("rate") * var1}
+        model.algebraic = {var2: var1 - var2}
+        model.initial_conditions = {
+            var1: pybamm.InputParameter("ic 1"),
+            var2: pybamm.InputParameter("ic 2"),
+        }
+
+        # Solve
+        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
+        t_eval = np.linspace(0, 5, 100)
+        solution = solver.solve(
+            model, t_eval, inputs={"rate": -1, "ic 1": 0.1, "ic 2": 2}
+        )
+        np.testing.assert_array_almost_equal(
+            solution.y[0], 0.1 * np.exp(-solution.t), decimal=5
+        )
+        np.testing.assert_array_almost_equal(
+            solution.y[-1], 0.1 * np.exp(-solution.t), decimal=5
+        )
+
+        # Solve again with different initial conditions
+        solution = solver.solve(
+            model, t_eval, inputs={"rate": -0.1, "ic 1": 1, "ic 2": 3}
+        )
+        np.testing.assert_array_almost_equal(
+            solution.y[0], 1 * np.exp(-0.1 * solution.t), decimal=5
+        )
+        np.testing.assert_array_almost_equal(
+            solution.y[-1], 1 * np.exp(-0.1 * solution.t), decimal=5
+        )
 
     def test_model_solver_dae_with_external(self):
         # Create model
@@ -630,9 +711,7 @@ class TestScikitsSolvers(unittest.TestCase):
         model2.rhs = {var1: (0.1 * (pybamm.t < discontinuity) + 0.1) * var1}
         model2.algebraic = {var2: var2}
         model2.initial_conditions = {var1: 1, var2: 0}
-        model2.events = [
-            pybamm.Event("var1 = 1.5", pybamm.min(var1 - 1.5)),
-        ]
+        model2.events = [pybamm.Event("var1 = 1.5", pybamm.min(var1 - 1.5))]
 
         # third model implicitly adds a discontinuity event via another heaviside
         # function
@@ -640,9 +719,7 @@ class TestScikitsSolvers(unittest.TestCase):
         model3.rhs = {var1: (-0.1 * (discontinuity < pybamm.t) + 0.2) * var1}
         model3.algebraic = {var2: var2}
         model3.initial_conditions = {var1: 1, var2: 0}
-        model3.events = [
-            pybamm.Event("var1 = 1.5", pybamm.min(var1 - 1.5)),
-        ]
+        model3.events = [pybamm.Event("var1 = 1.5", pybamm.min(var1 - 1.5))]
 
         for model in [model1, model2, model3]:
 
@@ -696,12 +773,24 @@ class TestScikitsSolvers(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.SolverError, "Cannot use ODE solver"):
             solver.set_up(model)
 
+    def test_dae_solver_algebraic_model(self):
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        model.algebraic = {var: var + 1}
+        model.initial_conditions = {var: 0}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.ScikitsDaeSolver()
+        t_eval = np.linspace(0, 1)
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_array_equal(solution.y, -1)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
-
     if "-v" in sys.argv:
         debug = True
-        pybamm.set_logging_level("DEBUG")
     pybamm.settings.debug_mode = True
     unittest.main()

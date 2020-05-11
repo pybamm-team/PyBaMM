@@ -56,8 +56,8 @@ for l_n in thicknesses:
                 "Maximum concentration in positive electrode [mol.m-3]": 50000,
                 "Initial concentration in negative electrode [mol.m-3]": 12500,
                 "Initial concentration in positive electrode [mol.m-3]": 25000,
-                "Negative electrode surface area density [m-1]": 180000.0,
-                "Positive electrode surface area density [m-1]": 150000.0,
+                "Negative electrode surface area to volume ratio [m-1]": 180000.0,
+                "Positive electrode surface area to volume ratio [m-1]": 150000.0,
                 "Current function [A]": I_app,
             }
         )

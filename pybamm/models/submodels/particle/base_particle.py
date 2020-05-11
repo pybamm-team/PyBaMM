@@ -72,7 +72,7 @@ class BaseParticle(pybamm.BaseSubModel):
 
     def set_events(self, variables):
         c_s_surf = variables[self.domain + " particle surface concentration"]
-        tol = 0.01
+        tol = 1e-4
 
         self.events.append(
             pybamm.Event(
@@ -89,4 +89,3 @@ class BaseParticle(pybamm.BaseSubModel):
                 pybamm.EventType.TERMINATION,
             )
         )
-

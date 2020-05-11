@@ -4,9 +4,6 @@
 import pybamm
 
 KNOWN_COORD_SYS = ["cartesian", "spherical polar"]
-KNOWN_SPATIAL_VARS = ["x", "y", "z", "r", "x_n", "x_s", "x_p", "r_n", "r_p"]
-KNOWN_SPATIAL_VARS_EXTENDED = [v + "_edge" for v in KNOWN_SPATIAL_VARS]
-KNOWN_SPATIAL_VARS.extend(KNOWN_SPATIAL_VARS_EXTENDED)
 
 
 class IndependentVariable(pybamm.Symbol):
@@ -51,7 +48,7 @@ class Time(IndependentVariable):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
         return Time()
 
-    def _base_evaluate(self, t, y=None, u=None):
+    def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
         """ See :meth:`pybamm.Symbol._base_evaluate()`. """
         if t is None:
             raise ValueError("t must be provided")
@@ -84,8 +81,6 @@ class SpatialVariable(IndependentVariable):
         super().__init__(name, domain=domain, auxiliary_domains=auxiliary_domains)
         domain = self.domain
 
-        if name not in KNOWN_SPATIAL_VARS:
-            raise ValueError(f"name must be in {KNOWN_SPATIAL_VARS}  but is '{name}'")
         if domain == []:
             raise ValueError("domain must be provided")
 
@@ -109,9 +104,31 @@ class SpatialVariable(IndependentVariable):
 
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
-        return SpatialVariable(
+        return self.__class__(
             self.name, self.domain, self.auxiliary_domains, self.coord_sys
         )
+
+
+class SpatialVariableEdge(SpatialVariable):
+    """A node in the expression tree representing a spatial variable, which evaluates
+    on the edges
+
+    Parameters
+    ----------
+    name : str
+        name of the node (e.g. "x", "y", "z", "r", "x_n", "x_s", "x_p", "r_n", "r_p")
+    domain : iterable of str
+        list of domains that this variable is valid over (e.g. "cartesian", "spherical
+        polar")
+
+    *Extends:* :class:`Symbol`
+    """
+
+    def __init__(self, name, domain=None, auxiliary_domains=None, coord_sys=None):
+        super().__init__(name, domain, auxiliary_domains, coord_sys)
+
+    def evaluates_on_edges(self):
+        return True
 
 
 # the independent variable time

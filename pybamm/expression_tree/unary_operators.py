@@ -3,7 +3,7 @@
 #
 import numpy as np
 import pybamm
-from scipy.sparse import csr_matrix
+from scipy.sparse import issparse, csr_matrix
 
 
 class UnaryOperator(pybamm.Symbol):
@@ -63,15 +63,17 @@ class UnaryOperator(pybamm.Symbol):
         """Perform unary operation on a child. """
         raise NotImplementedError
 
-    def evaluate(self, t=None, y=None, u=None, known_evals=None):
+    def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         if known_evals is not None:
             if self.id not in known_evals:
-                child, known_evals = self.child.evaluate(t, y, u, known_evals)
+                child, known_evals = self.child.evaluate(
+                    t, y, y_dot, inputs, known_evals
+                )
                 known_evals[self.id] = self._unary_evaluate(child)
             return known_evals[self.id], known_evals
         else:
-            child = self.child.evaluate(t, y, u)
+            child = self.child.evaluate(t, y, y_dot, inputs)
             return self._unary_evaluate(child)
 
     def _evaluate_for_shape(self):
@@ -125,21 +127,43 @@ class AbsoluteValue(UnaryOperator):
 
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
-        # Derivative is not well-defined
-        raise pybamm.UndefinedOperationError(
-            "Derivative of absolute function is not defined"
-        )
+        child = self.child.new_copy()
+        return Sign(child) * child.diff(variable)
 
     def _unary_jac(self, child_jac):
         """ See :meth:`pybamm.UnaryOperator._unary_jac()`. """
-        # Derivative is not well-defined
-        raise pybamm.UndefinedOperationError(
-            "Derivative of absolute function is not defined"
-        )
+        child = self.child.new_copy()
+        return Sign(child) * child_jac
 
     def _unary_evaluate(self, child):
         """ See :meth:`UnaryOperator._unary_evaluate()`. """
         return np.abs(child)
+
+
+class Sign(UnaryOperator):
+    """A node in the expression tree representing a `sign` operator
+
+    **Extends:** :class:`UnaryOperator`
+    """
+
+    def __init__(self, child):
+        """ See :meth:`pybamm.UnaryOperator.__init__()`. """
+        super().__init__("sign", child)
+
+    def diff(self, variable):
+        """ See :meth:`pybamm.Symbol.diff()`. """
+        return pybamm.Scalar(0)
+
+    def _unary_jac(self, child_jac):
+        """ See :meth:`pybamm.UnaryOperator._unary_jac()`. """
+        return pybamm.Scalar(0)
+
+    def _unary_evaluate(self, child):
+        """ See :meth:`UnaryOperator._unary_evaluate()`. """
+        if issparse(child):
+            return csr_matrix.sign(child)
+        else:
+            return np.sign(child)
 
 
 class Index(UnaryOperator):
@@ -200,7 +224,7 @@ class Index(UnaryOperator):
         # when trying to simplify the node Index(child_jac). Instead, search the
         # tree for StateVectors and return a matrix of zeros of the correct size
         # if none are found.
-        if all([not (isinstance(n, pybamm.StateVector)) for n in self.pre_order()]):
+        if not self.has_symbol_of_classes(pybamm.StateVector):
             jac = csr_matrix((1, child_jac.shape[1]))
             return pybamm.Matrix(jac)
         else:
@@ -273,7 +297,7 @@ class SpatialOperator(UnaryOperator):
         search_types = (pybamm.Variable, pybamm.StateVector, pybamm.SpatialVariable)
 
         # do the search, return a scalar zero node if no relevent nodes are found
-        if all([not (isinstance(n, search_types)) for n in self.pre_order()]):
+        if not self.has_symbol_of_classes(search_types):
             return pybamm.Scalar(0)
         else:
             return self.__class__(simplified_child)
@@ -286,6 +310,16 @@ class Gradient(SpatialOperator):
     """
 
     def __init__(self, child):
+        if child.domain == []:
+            raise pybamm.DomainError(
+                "Cannot take gradient of '{}' since its domain is empty. ".format(child)
+                + "Try broadcasting the object first, e.g.\n\n"
+                "\tpybamm.grad(pybamm.PrimaryBroadcast(symbol, 'domain'))"
+            )
+        if child.evaluates_on_edges() is True:
+            raise TypeError(
+                "Cannot take gradient of '{}' since it evaluates on edges".format(child)
+            )
         super().__init__("grad", child)
 
     def evaluates_on_edges(self):
@@ -300,6 +334,20 @@ class Divergence(SpatialOperator):
     """
 
     def __init__(self, child):
+        if child.domain == []:
+            raise pybamm.DomainError(
+                "Cannot take divergence of '{}' since its domain is empty. ".format(
+                    child
+                )
+                + "Try broadcasting the object first, e.g.\n\n"
+                "\tpybamm.div(pybamm.PrimaryBroadcast(symbol, 'domain'))"
+            )
+        if child.evaluates_on_edges() is False:
+            raise TypeError(
+                "Cannot take divergence of '{}' since it does not ".format(child)
+                + "evaluates on nodes. Usually, a gradient should be taken before the "
+                "divergence."
+            )
         super().__init__("div", child)
 
     def evaluates_on_edges(self):
@@ -431,8 +479,6 @@ class Integral(SpatialOperator):
 
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()` """
-        if not isinstance(self.integration_variable, list):
-            self.integration_variable = [self.integration_variable]
         self._id = hash(
             (self.__class__, self.name)
             + tuple(
@@ -641,7 +687,7 @@ class DeltaFunction(SpatialOperator):
             auxiliary_domains = {"secondary": child.domain}
         else:
             auxiliary_domains = {}
-        super().__init__("delta function", child, domain, auxiliary_domains)
+        super().__init__("delta_function", child, domain, auxiliary_domains)
 
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()` """
@@ -662,6 +708,15 @@ class DeltaFunction(SpatialOperator):
     def _unary_new_copy(self, child):
         """ See :meth:`UnaryOperator._unary_new_copy()`. """
         return self.__class__(child, self.side, self.domain)
+
+    def evaluate_for_shape(self):
+        """
+        See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`
+        """
+        child_eval = self.children[0].evaluate_for_shape()
+        vec = pybamm.evaluate_for_shape_using_domain(self.domain)
+
+        return np.outer(child_eval, vec).reshape(-1, 1)
 
 
 class BoundaryOperator(SpatialOperator):
@@ -783,8 +838,12 @@ def grad(expression):
     :class:`Gradient`
         the gradient of ``expression``
     """
-
-    return Gradient(expression)
+    # Gradient of a broadcast is zero
+    if isinstance(expression, pybamm.PrimaryBroadcast):
+        new_child = pybamm.PrimaryBroadcast(0, expression.child.domain)
+        return pybamm.PrimaryBroadcastToEdges(new_child, expression.domain)
+    else:
+        return Gradient(expression)
 
 
 def div(expression):
@@ -802,8 +861,12 @@ def div(expression):
     :class:`Divergence`
         the divergence of ``expression``
     """
-
-    return Divergence(expression)
+    # Divergence of a broadcast is zero
+    if isinstance(expression, pybamm.PrimaryBroadcastToEdges):
+        new_child = pybamm.PrimaryBroadcast(0, expression.child.domain)
+        return pybamm.PrimaryBroadcast(new_child, expression.domain)
+    else:
+        return Divergence(expression)
 
 
 def laplacian(expression):
@@ -881,6 +944,9 @@ def x_average(symbol):
     :class:`Symbol`
         the new averaged symbol
     """
+    # Can't take average if the symbol evaluates on edges
+    if symbol.evaluates_on_edges():
+        raise ValueError("Can't take the x-average of a symbol that evaluates on edges")
     # If symbol doesn't have a domain, its average value is itself
     if symbol.domain in [[], ["current collector"]]:
         new_symbol = symbol.new_copy()
@@ -924,8 +990,9 @@ def x_average(symbol):
             x = pybamm.standard_spatial_vars.x_p
             l = pybamm.geometric_parameters.l_p
         else:
-            raise pybamm.DomainError("domain '{}' not recognised".format(symbol.domain))
-
+            x = pybamm.SpatialVariable("x", domain=symbol.domain)
+            v = pybamm.ones_like(symbol)
+            l = pybamm.Integral(v, x)
         return Integral(symbol, x) / l
 
 
@@ -942,6 +1009,9 @@ def z_average(symbol):
     :class:`Symbol`
         the new averaged symbol
     """
+    # Can't take average if the symbol evaluates on edges
+    if symbol.evaluates_on_edges():
+        raise ValueError("Can't take the z-average of a symbol that evaluates on edges")
     # Symbol must have domain [] or ["current collector"]
     if symbol.domain not in [[], ["current collector"]]:
         raise pybamm.DomainError(
@@ -1003,6 +1073,38 @@ def yz_average(symbol):
         return Integral(symbol, [y, z]) / (l_y * l_z)
 
 
+def r_average(symbol):
+    """convenience function for creating an average in the r-direction
+
+    Parameters
+    ----------
+    symbol : :class:`pybamm.Symbol`
+        The function to be averaged
+
+    Returns
+    -------
+    :class:`Symbol`
+        the new averaged symbol
+    """
+    # Can't take average if the symbol evaluates on edges
+    if symbol.evaluates_on_edges():
+        raise ValueError("Can't take the r-average of a symbol that evaluates on edges")
+    # If symbol doesn't have a particle domain, its r-averaged value is itself
+    if symbol.domain not in [["positive particle"], ["negative particle"]]:
+        new_symbol = symbol.new_copy()
+        new_symbol.parent = None
+        return new_symbol
+    # If symbol is a Broadcast, its average value is its child
+    elif isinstance(symbol, pybamm.Broadcast):
+        return symbol.orphans[0]
+    else:
+        r = pybamm.SpatialVariable("r", symbol.domain)
+        v = pybamm.FullBroadcast(
+            pybamm.Scalar(1), symbol.domain, symbol.auxiliary_domains
+        )
+        return Integral(symbol, r) / Integral(v, r)
+
+
 def boundary_value(symbol, side):
     """convenience function for creating a :class:`pybamm.BoundaryValue`
 
@@ -1040,30 +1142,6 @@ def boundary_value(symbol, side):
         return BoundaryValue(symbol, side)
 
 
-def r_average(symbol):
-    """convenience function for creating an average in the r-direction
-
-    Parameters
-    ----------
-    symbol : :class:`pybamm.Symbol`
-        The function to be averaged
-
-    Returns
-    -------
-    :class:`Symbol`
-        the new averaged symbol
-    """
-    # If symbol doesn't have a particle domain, its r-averaged value is itself
-    if symbol.domain not in [["positive particle"], ["negative particle"]]:
-        new_symbol = symbol.new_copy()
-        new_symbol.parent = None
-        return new_symbol
-    # If symbol is a Broadcast, its average value is its child
-    elif isinstance(symbol, pybamm.Broadcast):
-        return symbol.orphans[0]
-    else:
-        r = pybamm.SpatialVariable("r", symbol.domain)
-        v = pybamm.FullBroadcast(
-            pybamm.Scalar(1), symbol.domain, symbol.auxiliary_domains
-        )
-        return Integral(symbol, r) / Integral(v, r)
+def sign(symbol):
+    " Returns a :class:`Sign` object. "
+    return Sign(symbol)

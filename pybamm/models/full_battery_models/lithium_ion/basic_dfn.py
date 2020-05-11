@@ -42,13 +42,13 @@ class BasicDFN(BaseModel):
         Q = pybamm.Variable("Discharge capacity [A.h]")
         # Variables that vary spatially are created with a domain
         c_e_n = pybamm.Variable(
-            "Negative electrolyte concentration", domain="negative electrode",
+            "Negative electrolyte concentration", domain="negative electrode"
         )
         c_e_s = pybamm.Variable(
-            "Separator electrolyte concentration", domain="separator",
+            "Separator electrolyte concentration", domain="separator"
         )
         c_e_p = pybamm.Variable(
-            "Positive electrolyte concentration", domain="positive electrode",
+            "Positive electrolyte concentration", domain="positive electrode"
         )
         # Concatenations combine several variables into a single variable, to simplify
         # implementing equations that hold over several domains
@@ -56,22 +56,20 @@ class BasicDFN(BaseModel):
 
         # Electrolyte potential
         phi_e_n = pybamm.Variable(
-            "Negative electrolyte potential", domain="negative electrode",
+            "Negative electrolyte potential", domain="negative electrode"
         )
-        phi_e_s = pybamm.Variable(
-            "Separator electrolyte potential", domain="separator",
-        )
+        phi_e_s = pybamm.Variable("Separator electrolyte potential", domain="separator")
         phi_e_p = pybamm.Variable(
-            "Positive electrolyte potential", domain="positive electrode",
+            "Positive electrolyte potential", domain="positive electrode"
         )
         phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
 
         # Electrode potential
         phi_s_n = pybamm.Variable(
-            "Negative electrode potential", domain="negative electrode",
+            "Negative electrode potential", domain="negative electrode"
         )
         phi_s_p = pybamm.Variable(
-            "Positive electrode potential", domain="positive electrode",
+            "Positive electrode potential", domain="positive electrode"
         )
         # Particle concentrations are variables on the particle domain, but also vary in
         # the x-direction (electrode domain) and so must be provided with auxiliary
@@ -121,13 +119,7 @@ class BasicDFN(BaseModel):
         # right side. This is also accessible via `boundary_value(x, "right")`, with
         # "left" providing the boundary value of the left side
         c_s_surf_n = pybamm.surf(c_s_n)
-        j0_n = (
-            param.m_n(T)
-            / param.C_r_n
-            * c_e_n ** (1 / 2)
-            * c_s_surf_n ** (1 / 2)
-            * (1 - c_s_surf_n) ** (1 / 2)
-        )
+        j0_n = param.j0_n(c_e_n, c_s_surf_n, T) / param.C_r_n
         j_n = (
             2
             * j0_n
@@ -136,14 +128,7 @@ class BasicDFN(BaseModel):
             )
         )
         c_s_surf_p = pybamm.surf(c_s_p)
-        j0_p = (
-            param.gamma_p
-            * param.m_p(T)
-            / param.C_r_p
-            * c_e_p ** (1 / 2)
-            * c_s_surf_p ** (1 / 2)
-            * (1 - c_s_surf_p) ** (1 / 2)
-        )
+        j0_p = param.gamma_p * param.j0_p(c_e_p, c_s_surf_p, T) / param.C_r_p
         j_s = pybamm.PrimaryBroadcast(0, "separator")
         j_p = (
             2
@@ -264,7 +249,7 @@ class BasicDFN(BaseModel):
         ######################
         N_e = -tor * param.D_e(c_e, T) * pybamm.grad(c_e)
         self.rhs[c_e] = (1 / eps) * (
-            -pybamm.div(N_e) / param.C_e + (1 - param.t_plus) * j / param.gamma_e
+            -pybamm.div(N_e) / param.C_e + (1 - param.t_plus(c_e)) * j / param.gamma_e
         )
         self.boundary_conditions[c_e] = {
             "left": (pybamm.Scalar(0), "Neumann"),

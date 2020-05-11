@@ -3,6 +3,7 @@
 #
 
 import pybamm
+import warnings
 
 
 class BaseBatteryModel(pybamm.BaseModel):
@@ -22,8 +23,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 (default), 1 or 2.
             * "surface form" : bool or str, optional
                 Whether to use the surface formulation of the problem. Can be False
-                (default), "differential" or "algebraic". Must be 'False' for
-                lithium-ion models.
+                (default), "differential" or "algebraic".
             * "convection" : bool or str, optional
                 Whether to include the effects of convection in the model. Can be
                 False (default), "differential" or "algebraic". Must be 'False' for
@@ -37,30 +37,29 @@ class BaseBatteryModel(pybamm.BaseModel):
                 (default) or "varying". Not currently implemented in any of the models.
             * "current collector" : str, optional
                 Sets the current collector model to use. Can be "uniform" (default),
-                "potential pair", "potential pair quite conductive", or
-                "set external potential". The submodel "set external potential" can only
-                be used with the SPM.
+                "potential pair" or "potential pair quite conductive".
             * "particle" : str, optional
                 Sets the submodel to use to describe behaviour within the particle.
                 Can be "Fickian diffusion" (default) or "fast diffusion".
             * "thermal" : str, optional
-                Sets the thermal model to use. Can be "isothermal" (default),
-                "x-full", "x-lumped", "xyz-lumped", "lumped" or "set external
-                temperature". Must be "isothermal" for lead-acid models. If the
-                option "set external temperature" is selected then "dimensionality"
-                must be 1.
-            * "thermal current collector" : bool, optional
-                Whether to include thermal effects in the current collector in
-                one-dimensional models (default is False). Note that this option
-                only takes effect if "dimensionality" is 0. If "dimensionality"
-                is 1 or 2 current collector effects are always included. Must be 'False'
-                for lead-acid models.
+                Sets the thermal model to use. Can be "isothermal" (default), "lumped",
+                "x-lumped", or "x-full".
             * "external submodels" : list
                 A list of the submodels that you would like to supply an external
                 variable for instead of solving in PyBaMM. The entries of the lists
                 are strings that correspond to the submodel names in the keys
                 of `self.submodels`.
+            * "sei" : str
+                Set the sei submodel to be used. Options are:
 
+                - None: :class:`pybamm.sei.NoSEI` (no SEI growth)
+                - "reaction limited": :class:`pybamm.sei.ReactionLimited`
+                - "solvent diffusion limited": \
+                    :class:`pybamm.sei.SolventDiffusionLimited`
+                - "electron migration limited": \
+                    :class:`pybamm.sei.ElectronMigrationLimited`
+                - "lithium interstitial diffusion limited": \
+                    :class:`pybamm.sei.InterstitialDiffusionLimited`
 
     **Extends:** :class:`pybamm.BaseModel`
     """
@@ -130,7 +129,9 @@ class BaseBatteryModel(pybamm.BaseModel):
         }
         if self.options["dimensionality"] == 0:
             # 0D submesh - use base spatial method
-            base_spatial_methods["current collector"] = pybamm.ZeroDimensionalMethod()
+            base_spatial_methods[
+                "current collector"
+            ] = pybamm.ZeroDimensionalSpatialMethod()
         elif self.options["dimensionality"] == 1:
             base_spatial_methods["current collector"] = pybamm.FiniteVolume()
         elif self.options["dimensionality"] == 2:
@@ -153,17 +154,34 @@ class BaseBatteryModel(pybamm.BaseModel):
             "current collector": "uniform",
             "particle": "Fickian diffusion",
             "thermal": "isothermal",
-            "thermal current collector": False,
             "external submodels": [],
+            "sei": None,
         }
-        options = default_options
+        options = pybamm.FuzzyDict(default_options)
         # any extra options overwrite the default options
         if extra_options is not None:
             for name, opt in extra_options.items():
                 if name in default_options:
                     options[name] = opt
                 else:
-                    raise pybamm.OptionError("option {} not recognised".format(name))
+                    raise pybamm.OptionError(
+                        "Option '{}' not recognised. Best matches are {}".format(
+                            name, options.get_best_matches(name)
+                        )
+                    )
+
+        # Options that are incompatible with models
+        if isinstance(self, pybamm.lithium_ion.BaseModel):
+            if options["convection"] is not False:
+                raise pybamm.OptionError(
+                    "convection not implemented for lithium-ion models"
+                )
+        if isinstance(self, pybamm.lead_acid.BaseModel):
+            if options["thermal"] != "isothermal" and options["dimensionality"] != 0:
+                raise pybamm.OptionError(
+                    "Lead-acid models can only have thermal "
+                    "effects if dimensionality is 0."
+                )
 
         # Some standard checks to make sure options are compatible
         if not (
@@ -179,8 +197,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         ):
             if len(options["side reactions"]) > 0:
                 raise pybamm.OptionError(
-                    """
-                    must use surface formulation to solve {!s} with side reactions
+                    """must use surface formulation to solve {!s} with side reactions
                     """.format(
                         self
                     )
@@ -189,11 +206,18 @@ class BaseBatteryModel(pybamm.BaseModel):
             raise pybamm.OptionError(
                 "surface form '{}' not recognised".format(options["surface form"])
             )
+        if options["convection"] not in [
+            False,
+            "uniform transverse",
+            "full transverse",
+        ]:
+            raise pybamm.OptionError(
+                "convection option '{}' not recognised".format(options["convection"])
+            )
         if options["current collector"] not in [
             "uniform",
             "potential pair",
             "potential pair quite conductive",
-            "set external potential",
         ]:
             raise pybamm.OptionError(
                 "current collector model '{}' not recognised".format(
@@ -206,48 +230,30 @@ class BaseBatteryModel(pybamm.BaseModel):
                     options["dimensionality"]
                 )
             )
-        if options["thermal"] not in [
-            "isothermal",
-            "x-full",
-            "x-lumped",
-            "xyz-lumped",
-            "lumped",
-            "set external temperature",
-        ]:
+        if options["thermal"] not in ["isothermal", "lumped", "x-lumped", "x-full"]:
             raise pybamm.OptionError(
                 "Unknown thermal model '{}'".format(options["thermal"])
             )
+        if options["dimensionality"] == 0:
+            if options["current collector"] not in [
+                "uniform",
+            ]:
+                raise pybamm.OptionError(
+                    "current collector model must be uniform in 0D model"
+                )
+            if options["convection"] == "full transverse":
+                raise pybamm.OptionError(
+                    "cannot have transverse convection in 0D model"
+                )
         if options["particle"] not in ["Fickian diffusion", "fast diffusion"]:
             raise pybamm.OptionError(
                 "particle model '{}' not recognised".format(options["particle"])
             )
 
-        # Options that are incompatible with models
-        if isinstance(self, pybamm.lithium_ion.BaseModel):
-            if options["surface form"] is not False:
-                raise pybamm.OptionError(
-                    "surface form not implemented for lithium-ion models"
-                )
-            if options["convection"] is True:
-                raise pybamm.OptionError(
-                    "convection not implemented for lithium-ion models"
-                )
-        if isinstance(self, pybamm.lead_acid.BaseModel):
-            if options["thermal"] != "isothermal":
-                raise pybamm.OptionError(
-                    "thermal effects not implemented for lead-acid models"
-                )
-            if options["thermal current collector"] is True:
-                raise pybamm.OptionError(
-                    "thermal effects not implemented for lead-acid models"
-                )
-        if options["current collector"] == "set external potential" and not isinstance(
-            self, pybamm.lithium_ion.SPM
-        ):
-            raise pybamm.OptionError(
-                "option {} only compatible with SPM".format(
-                    options["current collector"]
-                )
+        if options["thermal"] == "x-lumped" and options["dimensionality"] == 1:
+            warnings.warn(
+                "1+1D Thermal models are only valid if both tabs are"
+                + "placed at the top of the cell."
             )
 
         self._options = options
@@ -281,11 +287,29 @@ class BaseBatteryModel(pybamm.BaseModel):
             }
         )
         if self.options["dimensionality"] == 1:
-            self.variables.update({"y": var.y, "y [m]": var.y * L_y})
+            self.variables.update({"z": var.z, "z [m]": var.z * L_z})
         elif self.options["dimensionality"] == 2:
             self.variables.update(
                 {"y": var.y, "y [m]": var.y * L_y, "z": var.z, "z [m]": var.z * L_z}
             )
+
+        # Initialize "total reaction" variables
+        self.variables.update(
+            {
+                "Sum of electrolyte reaction source terms": 0,
+                "Sum of negative electrode electrolyte reaction source terms": 0,
+                "Sum of positive electrode electrolyte reaction source terms": 0,
+                "Sum of x-averaged negative electrode "
+                "electrolyte reaction source terms": 0,
+                "Sum of x-averaged positive electrode "
+                "electrolyte reaction source terms": 0,
+                "Sum of interfacial current densities": 0,
+                "Sum of negative electrode interfacial current densities": 0,
+                "Sum of positive electrode interfacial current densities": 0,
+                "Sum of x-averaged negative electrode interfacial current densities": 0,
+                "Sum of x-averaged positive electrode interfacial current densities": 0,
+            }
+        )
 
     def build_fundamental_and_external(self):
         # Get the fundamental variables
@@ -322,6 +346,9 @@ class BaseBatteryModel(pybamm.BaseModel):
         # there are no more submodels to try, raise an error.
         submodels = list(self.submodels.keys())
         count = 0
+        # For this part the FuzzyDict of variables is briefly converted back into a
+        # normal dictionary for speed with KeyErrors
+        self._variables = dict(self._variables)
         while len(submodels) > 0:
             count += 1
             for submodel_name, submodel in self.submodels.items():
@@ -340,11 +367,11 @@ class BaseBatteryModel(pybamm.BaseModel):
                         if len(submodels) == 1 or count == 100:
                             # no more submodels to try
                             raise pybamm.ModelError(
-                                """Submodel "{}" requires the variable {}, but it cannot be found.
-                                Check the selected submodels provide all of the required
-                                variables.""".format(
+                                "Submodel '{}' requires the variable {}, ".format(
                                     submodel_name, key
                                 )
+                                + "but it cannot be found. Check the selected "
+                                "submodels provide all of the required variables."
                             )
                         else:
                             # try setting coupled variables on next loop through
@@ -353,6 +380,8 @@ class BaseBatteryModel(pybamm.BaseModel):
                                     key
                                 )
                             )
+        # Convert variables back into FuzzyDict
+        self._variables = pybamm.FuzzyDict(self._variables)
 
     def build_model_equations(self):
         # Set model equations
@@ -461,36 +490,27 @@ class BaseBatteryModel(pybamm.BaseModel):
         if self.options["thermal"] == "isothermal":
             thermal_submodel = pybamm.thermal.isothermal.Isothermal(self.param)
 
+        elif self.options["thermal"] == "lumped":
+            thermal_submodel = pybamm.thermal.Lumped(
+                self.param, self.options["dimensionality"]
+            )
+
         elif self.options["thermal"] == "x-lumped":
             if self.options["dimensionality"] == 0:
-                if self.options["thermal current collector"] is False:
-                    thermal_submodel = pybamm.thermal.x_lumped.NoCurrentCollector(
-                        self.param
-                    )
-                elif self.options["thermal current collector"] is True:
-                    thermal_submodel = pybamm.thermal.x_lumped.CurrentCollector0D(
-                        self.param
-                    )
+                # With 0D current collectors x-lumped is equivalent to lumped
+                thermal_submodel = pybamm.thermal.Lumped(self.param)
             elif self.options["dimensionality"] == 1:
-                thermal_submodel = pybamm.thermal.x_lumped.CurrentCollector1D(
+                thermal_submodel = pybamm.thermal.pouch_cell.CurrentCollector1D(
                     self.param
                 )
             elif self.options["dimensionality"] == 2:
-                thermal_submodel = pybamm.thermal.x_lumped.CurrentCollector2D(
+                thermal_submodel = pybamm.thermal.pouch_cell.CurrentCollector2D(
                     self.param
                 )
 
         elif self.options["thermal"] == "x-full":
             if self.options["dimensionality"] == 0:
-                if self.options["thermal current collector"] is False:
-                    thermal_submodel = pybamm.thermal.x_full.NoCurrentCollector(
-                        self.param
-                    )
-                elif self.options["thermal current collector"] is True:
-                    raise NotImplementedError(
-                        """X-full thermal submodels do
-                    not yet account for current collector"""
-                    )
+                thermal_submodel = pybamm.thermal.OneDimensionalX(self.param)
             elif self.options["dimensionality"] == 1:
                 raise NotImplementedError(
                     """X-full thermal submodels do not
@@ -502,76 +522,19 @@ class BaseBatteryModel(pybamm.BaseModel):
                     not yet support 2D current collectors"""
                 )
 
-        elif self.options["thermal"] == "xyz-lumped":
-            if self.options["dimensionality"] == 0:
-                # note here we will just call the x_lumped model
-                # because it is equivalent
-                if self.options["thermal current collector"] is False:
-                    thermal_submodel = pybamm.thermal.x_lumped.NoCurrentCollector(
-                        self.param
-                    )
-                elif self.options["thermal current collector"] is True:
-                    thermal_submodel = pybamm.thermal.x_lumped.CurrentCollector0D(
-                        self.param
-                    )
-            elif self.options["dimensionality"] == 1:
-                thermal_submodel = pybamm.thermal.xyz_lumped.CurrentCollector1D(
-                    self.param
-                )
-            elif self.options["dimensionality"] == 2:
-                thermal_submodel = pybamm.thermal.xyz_lumped.CurrentCollector2D(
-                    self.param
-                )
-
-        elif self.options["thermal"] == "lumped":
-            # Easy option for returning a single Temperature regardless of choice of
-            # current collector model. Note: Always includes current collector effects
-            if self.options["dimensionality"] == 0:
-                thermal_submodel = pybamm.thermal.x_lumped.CurrentCollector0D(
-                    self.param
-                )
-            elif self.options["dimensionality"] == 1:
-                thermal_submodel = pybamm.thermal.xyz_lumped.CurrentCollector1D(
-                    self.param
-                )
-            elif self.options["dimensionality"] == 2:
-                thermal_submodel = pybamm.thermal.xyz_lumped.CurrentCollector2D(
-                    self.param
-                )
-
-        elif self.options["thermal"] == "set external temperature":
-            if self.options["dimensionality"] == 1:
-                thermal_submodel = pybamm.thermal.x_lumped.SetTemperature1D(self.param)
-            elif self.options["dimensionality"] in [0, 2]:
-                raise NotImplementedError(
-                    """Set temperature model only implemented for 1D current
-                    collectors"""
-                )
         self.submodels["thermal"] = thermal_submodel
 
     def set_current_collector_submodel(self):
 
-        if self.options["current collector"] == "uniform":
+        if self.options["current collector"] in [
+            "uniform",
+        ]:
             submodel = pybamm.current_collector.Uniform(self.param)
         elif self.options["current collector"] == "potential pair":
             if self.options["dimensionality"] == 1:
                 submodel = pybamm.current_collector.PotentialPair1plus1D(self.param)
             elif self.options["dimensionality"] == 2:
                 submodel = pybamm.current_collector.PotentialPair2plus1D(self.param)
-        elif self.options["current collector"] == "set external potential":
-            if self.options["dimensionality"] == 1:
-                submodel = pybamm.current_collector.SetPotentialSingleParticle1plus1D(
-                    self.param
-                )
-            elif self.options["dimensionality"] == 2:
-                submodel = pybamm.current_collector.SetPotentialSingleParticle2plus1D(
-                    self.param
-                )
-            elif self.options["dimensionality"] == 0:
-                raise NotImplementedError(
-                    """Set potential model only implemented for 1D or 2D current
-                    collectors"""
-                )
         self.submodels["current collector"] = submodel
 
     def set_voltage_variables(self):

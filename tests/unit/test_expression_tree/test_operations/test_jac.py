@@ -14,6 +14,13 @@ def test_multi_var_function(arg1, arg2):
 
 
 class TestJacobian(unittest.TestCase):
+    def test_variable_is_statevector(self):
+        a = pybamm.Symbol("a")
+        with self.assertRaisesRegex(
+            TypeError, "Jacobian can only be taken with respect to a 'StateVector'"
+        ):
+            a.jac(a)
+
     def test_linear(self):
         y = pybamm.StateVector(slice(0, 4))
         u = pybamm.StateVector(slice(0, 2))
@@ -105,9 +112,57 @@ class TestJacobian(unittest.TestCase):
         dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
 
-        func = pybamm.AbsoluteValue(v)
-        with self.assertRaises(pybamm.UndefinedOperationError):
-            func.jac(y)
+    def test_multislice_raises(self):
+        y1 = pybamm.StateVector(slice(0, 4), slice(7, 8))
+        y_dot1 = pybamm.StateVectorDot(slice(0, 4), slice(7, 8))
+        y2 = pybamm.StateVector(slice(4, 7))
+        with self.assertRaises(NotImplementedError):
+            y1.jac(y1)
+        with self.assertRaises(NotImplementedError):
+            y2.jac(y1)
+        with self.assertRaises(NotImplementedError):
+            y_dot1.jac(y1)
+
+    def test_linear_ydot(self):
+        y = pybamm.StateVector(slice(0, 4))
+        y_dot = pybamm.StateVectorDot(slice(0, 4))
+        u = pybamm.StateVector(slice(0, 2))
+        v = pybamm.StateVector(slice(2, 4))
+        u_dot = pybamm.StateVectorDot(slice(0, 2))
+        v_dot = pybamm.StateVectorDot(slice(2, 4))
+
+        y0 = np.ones(4)
+        y_dot0 = np.ones(4)
+
+        func = u_dot
+        jacobian = np.array([[1, 0, 0, 0], [0, 1, 0, 0]])
+        dfunc_dy = func.jac(y_dot).evaluate(y=y0, y_dot=y_dot0)
+        np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
+
+        func = -v_dot
+        jacobian = np.array([[0, 0, -1, 0], [0, 0, 0, -1]])
+        dfunc_dy = func.jac(y_dot).evaluate(y=y0, y_dot=y_dot0)
+        np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
+
+        func = u_dot
+        jacobian = np.array([[0, 0, 0, 0], [0, 0, 0, 0]])
+        dfunc_dy = func.jac(y).evaluate(y=y0, y_dot=y_dot0)
+        np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
+
+        func = -v_dot
+        jacobian = np.array([[0, 0, 0, 0], [0, 0, 0, 0]])
+        dfunc_dy = func.jac(y).evaluate(y=y0, y_dot=y_dot0)
+        np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
+
+        func = u
+        jacobian = np.array([[0, 0, 0, 0], [0, 0, 0, 0]])
+        dfunc_dy = func.jac(y_dot).evaluate(y=y0, y_dot=y_dot0)
+        np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
+
+        func = -v
+        jacobian = np.array([[0, 0, 0, 0], [0, 0, 0, 0]])
+        dfunc_dy = func.jac(y_dot).evaluate(y=y0, y_dot=y_dot0)
+        np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
 
     def test_functions(self):
         y = pybamm.StateVector(slice(0, 4))
@@ -185,7 +240,7 @@ class TestJacobian(unittest.TestCase):
         a = pybamm.Scalar(1)
         b = pybamm.Scalar(2)
 
-        y = pybamm.Variable("y")
+        y = pybamm.StateVector(slice(0, 1))
 
         self.assertEqual(a.jac(y).evaluate(), 0)
 
@@ -213,14 +268,16 @@ class TestJacobian(unittest.TestCase):
     def test_spatial_operator(self):
         a = pybamm.Variable("a")
         b = pybamm.SpatialOperator("Operator", a)
+        y = pybamm.StateVector(slice(0, 1))
         with self.assertRaises(NotImplementedError):
-            b.jac(None)
+            b.jac(y)
 
     def test_jac_of_unary_operator(self):
         a = pybamm.Scalar(1)
         b = pybamm.UnaryOperator("Operator", a)
+        y = pybamm.StateVector(slice(0, 1))
         with self.assertRaises(NotImplementedError):
-            b.jac(None)
+            b.jac(y)
 
     def test_jac_of_independent_variable(self):
         a = pybamm.IndependentVariable("Variable")
@@ -247,6 +304,34 @@ class TestJacobian(unittest.TestCase):
         np.testing.assert_array_equal(
             ((a < y) * y ** 2).jac(y).evaluate(y=-5 * np.ones(5)), 0
         )
+
+    def test_jac_of_minimum_maximum(self):
+        y = pybamm.StateVector(slice(0, 10))
+        y_test = np.linspace(0, 2, 10)
+        np.testing.assert_array_equal(
+            np.diag(pybamm.minimum(1, y ** 2).jac(y).evaluate(y=y_test)),
+            2 * y_test * (y_test < 1),
+        )
+        np.testing.assert_array_equal(
+            np.diag(pybamm.maximum(1, y ** 2).jac(y).evaluate(y=y_test)),
+            2 * y_test * (y_test > 1),
+        )
+
+    def test_jac_of_abs(self):
+        y = pybamm.StateVector(slice(0, 10))
+        absy = abs(y)
+        jac = absy.jac(y)
+        y_test = np.linspace(-2, 2, 10)
+        np.testing.assert_array_equal(
+            np.diag(jac.evaluate(y=y_test).toarray()), np.sign(y_test)
+        )
+
+    def test_jac_of_sign(self):
+        y = pybamm.StateVector(slice(0, 10))
+        func = pybamm.sign(y) * y
+        jac = func.jac(y)
+        y_test = np.linspace(-2, 2, 10)
+        np.testing.assert_array_equal(np.diag(jac.evaluate(y=y_test)), np.sign(y_test))
 
     def test_jac_of_domain_concatenation(self):
         # create mesh
