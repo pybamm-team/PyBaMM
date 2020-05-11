@@ -15,8 +15,31 @@ documentation* for ``pybamm``.
 * :ref:`modindex`
 * :ref:`search`
 
-Contents
-========
+Quickstart
+=========================
+PyBaMM is available on GNU/Linux, MacOS and Windows.
+
+Using pip
+----------
+
+.. code:: bash
+
+   pip install pybamm
+
+Using conda
+-------------
+PyBaMM is available as a conda package through the conda-forge channel.
+
+.. code:: bash
+
+   conda install -c conda-forge pybamm
+
+Optional solvers
+-----------------
+Some optional features require extra installation steps, :ref:`optional-deps`.
+
+API documentation
+====================
 
 .. module:: pybamm
 
