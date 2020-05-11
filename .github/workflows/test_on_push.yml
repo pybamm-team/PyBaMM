@@ -74,19 +74,27 @@ jobs:
         pip install -e .
 
     - name: Run unit tests Windows
+      if: matrix.os == 'windows-latest'
       run: |
-        echo $LD_LIBRARY_PATH
+        python run-tests.py --unit --folder all
+
+    - name: Run unit tests
+      if: matrix.os != 'windows-latest'
+      run: |
+        export LD_LIBRARY_PATH=$HOME/.local/lib:$LD_LIBRARY_PATH
         python run-tests.py --unit --folder all
 
     - name: Install docs dependencies and run doctests
       if: matrix.os != 'windows-latest'
       run: |
+        export LD_LIBRARY_PATH=$HOME/.local/lib:$LD_LIBRARY_PATH
         pip install -e .[docs]
         python run-tests.py --doctest
     
     - name: Install dev dependencies and run example tests
       if: matrix.os != 'windows-latest'
       run: |
+        export LD_LIBRARY_PATH=$HOME/.local/lib:$LD_LIBRARY_PATH
         pip install -e .[dev]
         python run-tests.py --examples
         
