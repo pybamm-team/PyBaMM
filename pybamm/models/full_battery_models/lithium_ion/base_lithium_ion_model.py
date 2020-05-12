@@ -44,6 +44,11 @@ class BaseModel(pybamm.BaseBatteryModel):
                 self.param, "Negative electrode"
             )
 
+        if self.options["sei"] == "constant":
+            self.submodels["negative sei"] = pybamm.sei.ConstantSEI(
+                self.param, "Negative electrode"
+            )
+
         elif self.options["sei"] == "reaction limited":
             self.submodels["negative sei"] = pybamm.sei.ReactionLimited(
                 self.param, "Negative electrode"

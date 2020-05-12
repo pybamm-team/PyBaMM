@@ -16,17 +16,19 @@ else:
     pybamm.set_logging_level("INFO")
 
 # load models
-options = {"thermal": "lumped"}
+# options = {"thermal": "lumped"}
 models = [
-    pybamm.lithium_ion.SPM(options),
-    pybamm.lithium_ion.SPMe(options),
-    pybamm.lithium_ion.DFN(options),
+    pybamm.lithium_ion.SPM(),
+    pybamm.lithium_ion.SPM({"sei": "constant"}),
+    # pybamm.lithium_ion.SPMe(options),
+    # pybamm.lithium_ion.DFN(options),
 ]
 
 
 # load parameter values and process models and geometry
 param = models[0].default_parameter_values
 param["Current function [A]"] = 1
+param["SEI resistivity [Ohm.m]"] = 1e6
 
 for model in models:
     param.process_model(model)

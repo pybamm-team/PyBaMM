@@ -12,7 +12,7 @@ V_bar_outer_dimensional = pybamm.Parameter("Outer SEI partial molar volume [m3.m
 
 m_sei_dimensional = pybamm.Parameter("SEI reaction exchange current density [A.m-2]")
 
-R_sei_dimensional = pybamm.Parameter("SEI resistance per unit thickness [Ohm.m-1]")
+R_sei_dimensional = pybamm.Parameter("SEI resistivity [Ohm.m]")
 
 D_sol_dimensional = pybamm.Parameter("Outer SEI solvent diffusivity [m2.s-1]")
 c_sol_dimensional = pybamm.Parameter("Bulk solvent concentration [mol.m-3]")
@@ -72,7 +72,7 @@ C_sei_inter = L_sei_0_dim ** 2 / (
 
 U_inner_electron = F * U_inner_dimensional / R / T_ref
 
-R_sei = F * i_typ * R_sei_dimensional * L_sei_0_dim / (a_n * L_x)
+R_sei = F * i_typ * R_sei_dimensional * L_sei_0_dim / (a_n * L_x) / R / T_ref
 
 v_bar = V_bar_outer_dimensional / V_bar_inner_dimensional
 

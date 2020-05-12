@@ -48,7 +48,9 @@ class InverseButlerVolmer(BaseInterface):
         else:
             T = variables[self.domain + " electrode temperature"]
 
-        eta_r = self._get_overpotential(j, j0, ne, T)
+        L_sei = variables["Total " + self.domain.lower() + " electrode sei thickness"]
+
+        eta_r = self._get_overpotential(j, j0, ne, T, L_sei)
         delta_phi = eta_r + ocp
 
         variables.update(self._get_standard_interfacial_current_variables(j))
@@ -79,5 +81,7 @@ class InverseButlerVolmer(BaseInterface):
 
         return variables
 
-    def _get_overpotential(self, j, j0, ne, T):
-        return (2 * (1 + self.param.Theta * T) / ne) * pybamm.arcsinh(j / (2 * j0))
+    def _get_overpotential(self, j, j0, ne, T, L_sei):
+        return (2 * (1 + self.param.Theta * T) / ne) * pybamm.arcsinh(
+            j / (2 * j0)
+        ) + j * L_sei * pybamm.sei_parameters.R_sei

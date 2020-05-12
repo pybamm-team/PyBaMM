@@ -53,6 +53,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 Set the sei submodel to be used. Options are:
 
                 - None: :class:`pybamm.sei.NoSEI` (no SEI growth)
+                - "constant": :class:`pybamm.sei.Constant` (constant SEI thickness)
                 - "reaction limited": :class:`pybamm.sei.ReactionLimited`
                 - "solvent diffusion limited": \
                     :class:`pybamm.sei.SolventDiffusionLimited`
