@@ -1,14 +1,19 @@
 import pybamm as pb
 import numpy as np
 
-pb.set_logging_level("DEBUG")
+pb.set_logging_level("INFO")
 
-options = {
-    "sei": "reaction limited",
-    "sei film resistance": None,
-    # "surface form": "algebraic",
-}
-models = [pb.lithium_ion.SPM(options), pb.lithium_ion.DFN(options)]
+models = [
+    pb.lithium_ion.SPM({"sei": "reaction limited", "sei film resistance": None}),
+    pb.lithium_ion.SPM(
+        {
+            "sei": "reaction limited",
+            "sei film resistance": None,
+            "surface form": "algebraic",
+        }
+    ),
+    pb.lithium_ion.DFN({"sei": "reaction limited", "sei film resistance": None}),
+]
 
 sims = []
 for model in models:
