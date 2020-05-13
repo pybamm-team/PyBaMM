@@ -44,6 +44,7 @@ class LOQS(BaseModel):
         self.set_thermal_submodel()
         self.set_side_reaction_submodels()
         self.set_current_collector_submodel()
+        self.set_sei_submodel()
 
         if build:
             self.build_model()
@@ -139,6 +140,16 @@ class LOQS(BaseModel):
                 "leading-order positive interface"
             ] = pybamm.interface.InverseButlerVolmer(
                 self.param, "Positive", "lead-acid main"
+            )
+            self.submodels[
+                "negative interface current"
+            ] = pybamm.interface.CurrentForInverseButlerVolmer(
+                self.param, "Negative", "lithium-ion main"
+            )
+            self.submodels[
+                "positive interface current"
+            ] = pybamm.interface.CurrentForInverseButlerVolmer(
+                self.param, "Positive", "lithium-ion main"
             )
         else:
             self.submodels[

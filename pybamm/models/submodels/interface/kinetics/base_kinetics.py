@@ -42,7 +42,12 @@ class BaseKinetics(BaseInterface):
                 auxiliary_domains={"secondary": "current collector"},
             )
 
-            variables = self._get_standard_interfacial_current_variables(j)
+            variables = {
+                self.domain
+                + " electrode"
+                + self.reaction_name
+                + " interfacial current density variable": j
+            }
             return variables
         else:
             return {}
@@ -71,7 +76,9 @@ class BaseKinetics(BaseInterface):
             L_sei = variables[
                 "Total " + self.domain.lower() + " electrode sei thickness"
             ]
-            j = variables[self.domain + " electrode interfacial current density"]
+            j = variables[
+                self.domain + " electrode interfacial current density variable"
+            ]
             eta_r -= j * L_sei * pybamm.sei_parameters.R_sei
         elif self.options["sei film resistance"] == "average":
             L_sei = variables[
@@ -91,15 +98,7 @@ class BaseKinetics(BaseInterface):
         # found by solving an algebraic equation
         # (In the "distributed SEI resistance" model, we have already defined j)
         j = self._get_kinetics(j0, ne, eta_r, T)
-        if (
-            self.options["sei film resistance"] == "distributed"
-            and "main" in self.reaction
-        ):
-            variables.update(
-                {self.domain + " electrode" + self.reaction_name + " reaction term": j}
-            )
-        else:
-            variables.update(self._get_standard_interfacial_current_variables(j))
+        variables.update(self._get_standard_interfacial_current_variables(j))
 
         variables.update(
             self._get_standard_total_interfacial_current_variables(j_tot_av)
@@ -115,6 +114,7 @@ class BaseKinetics(BaseInterface):
             + self.reaction_name
             + " interfacial current density"
             in variables
+            and self.Reaction_icd not in variables
         ):
             variables.update(
                 self._get_standard_whole_cell_interfacial_current_variables(variables)
@@ -130,17 +130,20 @@ class BaseKinetics(BaseInterface):
             self.options["sei film resistance"] == "distributed"
             and "main" in self.reaction
         ):
+            j_var = variables[
+                self.domain
+                + " electrode"
+                + self.reaction_name
+                + " interfacial current density variable"
+            ]
             j = variables[
                 self.domain
                 + " electrode"
                 + self.reaction_name
                 + " interfacial current density"
             ]
-            reaction = variables[
-                self.domain + " electrode" + self.reaction_name + " reaction term"
-            ]
-            # Algebraic equation to set j equal to the reaction term
-            self.algebraic[j] = j - reaction
+            # Algebraic equation to set the variable j_var equal to the reaction term j
+            self.algebraic[j_var] = j_var - j
 
     def set_initial_conditions(self, variables):
         if (
@@ -148,18 +151,18 @@ class BaseKinetics(BaseInterface):
             and "main" in self.reaction
         ):
             param = self.param
-            j = variables[
+            j_var = variables[
                 self.domain
                 + " electrode"
                 + self.reaction_name
-                + " interfacial current density"
+                + " interfacial current density variable"
             ]
             if self.domain == "Negative":
                 j_av_init = param.current_with_time / param.l_n
             elif self.domain == "Positive":
                 j_av_init = -param.current_with_time / param.l_p
 
-            self.initial_conditions[j] = j_av_init
+            self.initial_conditions[j_var] = j_av_init
 
     def _get_dj_dc(self, variables):
         """

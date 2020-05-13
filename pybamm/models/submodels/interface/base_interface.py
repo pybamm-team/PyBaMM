@@ -25,16 +25,19 @@ class BaseInterface(pybamm.BaseSubModel):
         super().__init__(param, domain)
         if reaction == "lithium-ion main":
             self.reaction_name = ""  # empty reaction name for the main reaction
+            self.Reaction_icd = "Interfacial current density"
         elif reaction == "lead-acid main":
             self.reaction_name = ""  # empty reaction name for the main reaction
+            self.Reaction_icd = "Interfacial current density"
         elif reaction == "lead-acid oxygen":
             self.reaction_name = " oxygen"
+            self.Reaction_icd = "Oxygen interfacial current density"
         elif reaction == "lithium-ion oxygen":
             self.reaction_name = " oxygen"
+            self.Reaction_icd = "Oxygen interfacial current density"
         elif reaction == "sei":
             self.reaction_name = " sei"
-        else:
-            raise ValueError("Reaction name '{}' not recognized".format(reaction))
+            self.Reaction_icd = "Sei interfacial current density"
         self.reaction = reaction
 
     def _get_exchange_current_density(self, variables):
@@ -316,26 +319,13 @@ class BaseInterface(pybamm.BaseSubModel):
         j = pybamm.Concatenation(j_n, j_s, j_p)
         j_dim = pybamm.Concatenation(j_n_scale * j_n, j_s, j_p_scale * j_p)
 
-        if self.reaction_name == "":
-            variables.update(
-                {
-                    "Interfacial current density": j,
-                    "Interfacial current density [A.m-2]": j_dim,
-                    "Interfacial current density per volume [A.m-3]": i_typ / L_x * j,
-                }
-            )
-        else:
-            reaction_name = self.reaction_name[1:].capitalize()
-            variables.update(
-                {
-                    reaction_name + " interfacial current density": j,
-                    reaction_name + " interfacial current density [A.m-2]": j_dim,
-                    reaction_name
-                    + " interfacial current density per volume [A.m-3]": i_typ
-                    / L_x
-                    * j,
-                }
-            )
+        variables.update(
+            {
+                self.Reaction_icd: j,
+                self.Reaction_icd + " [A.m-2]": j_dim,
+                self.Reaction_icd + " per volume [A.m-3]": i_typ / L_x * j,
+            }
+        )
 
         s_n, s_p = self._get_electrolyte_reaction_signed_stoichiometry()
         s = pybamm.Concatenation(

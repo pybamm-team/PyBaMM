@@ -4,15 +4,16 @@ import numpy as np
 pb.set_logging_level("INFO")
 
 models = [
-    pb.lithium_ion.SPM({"sei": "reaction limited", "sei film resistance": None}),
+    pb.lithium_ion.SPM({"sei": "reaction limited"}),
     pb.lithium_ion.SPM(
         {
             "sei": "reaction limited",
-            "sei film resistance": None,
+            # "sei film resistance": "average",
             "surface form": "algebraic",
-        }
+        },
+        name="Algebraic SPM",
     ),
-    pb.lithium_ion.DFN({"sei": "reaction limited", "sei film resistance": None}),
+    pb.lithium_ion.DFN({"sei": "reaction limited"}),
 ]
 
 sims = []
