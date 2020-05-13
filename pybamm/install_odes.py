@@ -154,7 +154,9 @@ def main(arguments=None):
             break
 
     if not SUNDIALS_FOUND:
-        raise RuntimeError("Could not find sundials libraries.")
+        logger.info("Could not find sundials libraries.")
+        logger.info("Installing sundials")
+        install_sundials()
 
     update_LD_LIBRARY_PATH(SUNDIALS_LIB_DIR)
 
