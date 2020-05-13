@@ -9,3 +9,4 @@ Interface
   inverse_kinetics/index
   first_order_kinetics/index
   diffusion_limited
+  sei/index

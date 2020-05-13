@@ -97,8 +97,6 @@ C_dl_n_dimensional = pybamm.Parameter(
 C_dl_p_dimensional = pybamm.Parameter(
     "Positive electrode double-layer capacity [F.m-2]"
 )
-# Oxygen parameters, for reusing same submodels as lead-acid
-s_plus_Ox = 0
 
 
 # Initial conditions

@@ -23,7 +23,6 @@ class BaseInterface(pybamm.BaseSubModel):
 
     def __init__(self, param, domain, reaction):
         super().__init__(param, domain)
-        self.reaction = reaction
         if reaction == "lithium-ion main":
             self.reaction_name = ""  # empty reaction name for the main reaction
         elif reaction == "lead-acid main":
@@ -32,6 +31,11 @@ class BaseInterface(pybamm.BaseSubModel):
             self.reaction_name = " oxygen"
         elif reaction == "lithium-ion oxygen":
             self.reaction_name = " oxygen"
+        elif reaction == "sei":
+            self.reaction_name = " sei"
+        else:
+            raise ValueError("Reaction name '{}' not recognized".format(reaction))
+        self.reaction = reaction
 
     def _get_exchange_current_density(self, variables):
         """
@@ -168,7 +172,9 @@ class BaseInterface(pybamm.BaseSubModel):
 
     def _get_electrolyte_reaction_signed_stoichiometry(self):
         "Returns the number of electrons in the reaction"
-        if self.reaction == "lithium-ion main":
+        if self.reaction in ["lithium-ion main", "sei"]:
+            # Both the main reaction current contribute to the electrolyte reaction
+            # current
             return pybamm.Scalar(1), pybamm.Scalar(1)
         elif self.reaction == "lead-acid main":
             return self.param.s_plus_n_S, self.param.s_plus_p_S
@@ -281,7 +287,7 @@ class BaseInterface(pybamm.BaseSubModel):
 
     def _get_standard_whole_cell_interfacial_current_variables(self, variables):
         """
-        Get variables associated with interfacial current over theh whole cell domain
+        Get variables associated with interfacial current over the whole cell domain
         This function also automatically increments the "total source term" variables
         """
         i_typ = self.param.i_typ

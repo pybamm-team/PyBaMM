@@ -134,8 +134,8 @@ from .models.submodels import (
     porosity,
     thermal,
     tortuosity,
-    sei,
 )
+from .models.submodels.interface import sei
 
 #
 # Geometry

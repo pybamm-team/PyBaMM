@@ -1,29 +1,37 @@
 import pybamm as pb
 import numpy as np
 
-pb.set_logging_level("INFO")
+pb.set_logging_level("DEBUG")
 
-options = {"sei": "reaction limited"}
-model = pb.lithium_ion.DFN(options)
+options = {
+    "sei": "reaction limited",
+    "sei film resistance": None,
+    # "surface form": "algebraic",
+}
+models = [pb.lithium_ion.SPM(options), pb.lithium_ion.DFN(options)]
 
-parameter_values = model.default_parameter_values
+sims = []
+for model in models:
+    parameter_values = model.default_parameter_values
 
-parameter_values["Current function [A]"] = 0
+    parameter_values["Current function [A]"] = 0
 
-sim = pb.Simulation(model, parameter_values=parameter_values)
+    sim = pb.Simulation(model, parameter_values=parameter_values)
 
-solver = pb.CasadiSolver(mode="fast")
+    solver = pb.CasadiSolver(mode="fast")
 
-years = 3
-days = years * 365
-hours = days * 24
-minutes = hours * 60
-seconds = minutes * 60
+    years = 3
+    days = years * 365
+    hours = days * 24
+    minutes = hours * 60
+    seconds = minutes * 60
 
-t_eval = np.linspace(0, seconds, 100)
+    t_eval = np.linspace(0, seconds, 100)
 
-sim.solve(t_eval=t_eval, solver=solver)
-sim.plot(
+    sim.solve(t_eval=t_eval, solver=solver)
+    sims.append(sim)
+pb.dynamic_plot(
+    sims,
     [
         "Terminal voltage [V]",
         "Negative particle surface concentration",
@@ -42,5 +50,8 @@ sim.plot(
             "X-averaged negative electrode sei interfacial current density [A.m-2]",
             "X-averaged negative electrode interfacial current density [A.m-2]",
         ],
-    ]
+        "Sum of x-averaged negative electrode interfacial current densities",
+        "Sum of negative electrode interfacial current densities",
+        "X-averaged electrolyte concentration",
+    ],
 )
