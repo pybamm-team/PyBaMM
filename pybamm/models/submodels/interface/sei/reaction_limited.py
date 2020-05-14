@@ -54,7 +54,9 @@ class ReactionLimited(BaseModel):
         # alpha = pybamm.sei_parameters.alpha
 
         # need to revise for thermal case
-        j_sei = -(1 / C_sei) * pybamm.exp(-(phi_s_n - phi_e_n - j * L_sei * R_sei))
+        j_sei = -(1 / C_sei) * pybamm.exp(
+            -0.5 * (phi_s_n - phi_e_n - j * L_sei * R_sei)
+        )
 
         j_inner = alpha * j_sei
         j_outer = (1 - alpha) * j_sei

@@ -19,7 +19,7 @@ class BaseModel(BaseInterface):
     """
 
     def __init__(self, param, domain):
-        reaction = "sei"
+        reaction = "scaled sei"
         super().__init__(param, domain, reaction)
 
     def _get_standard_thickness_variables(self, L_inner, L_outer):
@@ -95,7 +95,7 @@ class BaseModel(BaseInterface):
             + " sei concentration [mol.m-3]": n_outer_av * n_outer_scale,
             self.domain + " sei concentration [mol.m-3]": n_SEI * n_scale,
             "X-averaged " + domain + " sei concentration [mol.m-3]": n_SEI_av * n_scale,
-            "Loss of lithium to " + domain + " sei [mols]": Q_sei * n_scale,
+            "Loss of lithium to " + domain + " sei [mol]": Q_sei * n_scale,
         }
 
         return variables
@@ -121,13 +121,16 @@ class BaseModel(BaseInterface):
         # by parameter values in general
         if isinstance(self, pybamm.sei.NoSEI):
             j_scale = 1
-            Gamma_SEI_n = 1
+            Gamma_SEI = 1
         else:
             sp = pybamm.sei_parameters
             j_scale = (
                 sp.F * sp.L_sei_0_dim / sp.V_bar_inner_dimensional / sp.tau_discharge
             )
-            Gamma_SEI_n = sp.Gamma_SEI_n
+            if self.domain == "Negative":
+                Gamma_SEI = sp.Gamma_SEI_n
+            elif self.domain == "Positive":
+                Gamma_SEI = sp.Gamma_SEI_p
         j_i_av = pybamm.x_average(j_inner)
         j_o_av = pybamm.x_average(j_outer)
 
@@ -160,9 +163,10 @@ class BaseModel(BaseInterface):
             "X-averaged "
             + domain
             + " sei interfacial current density [A.m-2]": j_sei_av * j_scale,
-            "Scaled "
+            Domain + " scaled sei interfacial current density": j_sei * Gamma_SEI,
+            "X-averaged "
             + domain
-            + " sei interfacial current density": j_sei * Gamma_SEI_n,
+            + " scaled sei interfacial current density": j_sei_av * Gamma_SEI,
         }
 
         return variables

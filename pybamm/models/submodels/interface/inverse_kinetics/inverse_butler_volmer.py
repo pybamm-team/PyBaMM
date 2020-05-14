@@ -46,10 +46,7 @@ class InverseButlerVolmer(BaseInterface):
                 j_tot_av, [self.domain.lower() + " electrode"]
             )
 
-        if self.domain == "Negative":
-            ne = self.param.ne_n
-        elif self.domain == "Positive":
-            ne = self.param.ne_p
+        ne = self._get_number_of_electrons_in_reaction()
         # Note: T must have the same domain as j0 and eta_r
         if j0.domain in ["current collector", ["current collector"]]:
             T = variables["X-averaged cell temperature"]
@@ -131,7 +128,9 @@ class CurrentForInverseButlerVolmer(BaseInterface):
             + self.domain.lower()
             + " electrode total interfacial current density"
         ]
-        j_sei = variables[self.domain + " electrode sei interfacial current density"]
+        j_sei = variables[
+            self.domain + " electrode scaled sei interfacial current density"
+        ]
         j = j_tot - j_sei
 
         variables.update(self._get_standard_interfacial_current_variables(j))

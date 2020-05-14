@@ -21,7 +21,7 @@ for model in models:
 
     solver = pb.CasadiSolver(mode="fast")
 
-    years = 3
+    years = 30
     days = years * 365
     hours = days * 24
     minutes = hours * 60
@@ -42,7 +42,7 @@ pb.dynamic_plot(
         "X-averaged total negative electrode sei thickness [m]",
         "X-averaged total negative electrode sei thickness",
         "X-averaged negative electrode sei concentration [mol.m-3]",
-        "Loss of lithium to negative electrode sei [mols]",
+        "Loss of lithium to negative electrode sei [mol]",
         [
             "Negative electrode sei interfacial current density [A.m-2]",
             "Negative electrode interfacial current density [A.m-2]",
@@ -50,6 +50,10 @@ pb.dynamic_plot(
         [
             "X-averaged negative electrode sei interfacial current density [A.m-2]",
             "X-averaged negative electrode interfacial current density [A.m-2]",
+        ],
+        [
+            "X-averaged negative electrode sei interfacial current density",
+            "X-averaged negative electrode interfacial current density",
         ],
         "Sum of x-averaged negative electrode interfacial current densities",
         "Sum of negative electrode interfacial current densities",
