@@ -124,6 +124,12 @@ class TestDFN(unittest.TestCase):
 
 
 class TestDFNWithSEI(unittest.TestCase):
+    def test_well_posed_constant(self):
+        options = {"sei": "constant"}
+        model = pybamm.lithium_ion.DFN(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
     def test_well_posed_reaction_limited(self):
         options = {"sei": "reaction limited"}
         model = pybamm.lithium_ion.DFN(options)
