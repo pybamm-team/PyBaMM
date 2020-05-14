@@ -40,8 +40,6 @@ def install_sundials():
     except OSError:
         raise RuntimeError("CMake must be installed to build SUNDIALS.")
 
-    directory = join(pybamm_dir(), "scikits.odes")
-    os.makedirs(directory, exist_ok=True)
     url = (
         "https://computing.llnl.gov/"
         + "projects/sundials/download/sundials-{}.tar.gz".format(sundials_version)
@@ -54,7 +52,7 @@ def install_sundials():
         "-DSUNDIALS_INDEX_SIZE=32",
         "-DBUILD_ARKODE:BOOL=OFF",
         "-DEXAMPLES_ENABLE:BOOL=OFF",
-        "-DCMAKE_INSTALL_PREFIX=" + join(directory, "sundials5"),
+        "-DCMAKE_INSTALL_PREFIX=" + install_dir,
     ]
 
     # SUNDIALS are built within directory 'build_sundials' in the PyBaMM root
@@ -127,20 +125,22 @@ def main(arguments=None):
     desc = "Install scikits.odes."
     parser = argparse.ArgumentParser(description=desc)
     parser.add_argument("--sundials-libs", type=str, help="path to sundials libraries.")
-    parser.add_argument("--install-sundials", action="store_true")
+    default_install_dir = os.path.join(os.getenv("HOME"), ".local")
+    parser.add_argument("--install-dir", type=str, default=default_install_dir)
     args = parser.parse_args(arguments)
-
-    if args.install_sundials:
-        logger.info("Installing sundials")
-        install_sundials()
+    install_dir = (
+        args.install_dir
+        if os.path.isabs(args.install_dir)
+        else os.path.join(pybamm_dir, args.install_dir)
+    )
 
     # Check is sundials is already installed
     SUNDIALS_LIB_DIRS = [
-        join(pybamm_dir(), "scikits.odes/sundials5"),
         join(os.getenv("HOME"), ".local"),
         "/usr/local",
         "/usr",
     ]
+
     if args.sundials_libs:
         SUNDIALS_LIB_DIRS.insert(0, args.sundials_libs)
     for DIR in SUNDIALS_LIB_DIRS:
@@ -155,7 +155,7 @@ def main(arguments=None):
 
     if not SUNDIALS_FOUND:
         logger.info("Could not find sundials libraries.")
-        logger.info("Installing sundials")
+        logger.info("Installing sundials in {}".install_dir)
         install_sundials()
 
     update_LD_LIBRARY_PATH(SUNDIALS_LIB_DIR)
