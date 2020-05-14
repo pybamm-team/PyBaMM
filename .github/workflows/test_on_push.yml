@@ -70,7 +70,7 @@ jobs:
         pip install wget
         git clone https://github.com/pybind/pybind11.git
         python scripts/setup_KLU_module_build.py
-        export SUNDIALS_INST= $HOME/.local
+        export SUNDIALS_INST=$HOME/.local
         pip install scikits.odes
         pip install -e .
 
