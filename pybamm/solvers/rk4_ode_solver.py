@@ -74,14 +74,6 @@ class RK4Solver(pybamm.BaseSolver):
             )
         pybamm.logger.info("Start solving {} with {}".format(model.name, self.name))
 
-        if (
-            pybamm.logger.getEffectiveLevel() == 10
-            or pybamm.settings.debug_mode is True
-        ):
-            show_eval_warnings = True
-        else:
-            show_eval_warnings = False
-
         # set up and solve
         U = inputs
         DT = casadi.MX.sym("DT")
