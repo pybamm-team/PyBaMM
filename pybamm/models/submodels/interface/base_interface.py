@@ -481,6 +481,30 @@ class BaseInterface(pybamm.BaseSubModel):
 
         return variables
 
+    def _get_standard_sei_film_overpotential_variables(self, eta_sei):
+
+        pot_scale = self.param.potential_scale
+        # Average, and broadcast if necessary
+        eta_sei_av = pybamm.x_average(eta_sei)
+        if eta_sei.domain == []:
+            eta_sei = pybamm.FullBroadcast(
+                eta_sei, self.domain_for_broadcast, "current collector"
+            )
+        elif eta_sei.domain == ["current collector"]:
+            eta_sei = pybamm.PrimaryBroadcast(eta_sei, self.domain_for_broadcast)
+
+        domain = self.domain.lower() + " electrode"
+        variables = {
+            self.domain + " electrode sei film overpotential": eta_sei,
+            "X-averaged " + domain + " sei film overpotential": eta_sei_av,
+            self.domain + " electrode sei film overpotential [V]": eta_sei * pot_scale,
+            "X-averaged "
+            + domain
+            + " sei film overpotential [V]": eta_sei_av * pot_scale,
+        }
+
+        return variables
+
     def _get_standard_surface_potential_difference_variables(self, delta_phi):
 
         if self.domain == "Negative":

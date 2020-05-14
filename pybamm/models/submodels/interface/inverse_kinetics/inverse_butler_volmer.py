@@ -66,10 +66,12 @@ class InverseButlerVolmer(BaseInterface):
             L_sei = variables[
                 "Total " + self.domain.lower() + " electrode sei thickness"
             ]
-            delta_phi = eta_r + ocp + j_tot * L_sei * pybamm.sei_parameters.R_sei
+            eta_sei = -j_tot * L_sei * pybamm.sei_parameters.R_sei
         # Without SEI resistance
         else:
-            delta_phi = eta_r + ocp
+            eta_sei = pybamm.Scalar(0)
+
+        delta_phi = eta_r + ocp - eta_sei
 
         variables.update(
             self._get_standard_total_interfacial_current_variables(j_tot_av)
@@ -79,6 +81,7 @@ class InverseButlerVolmer(BaseInterface):
         variables.update(
             self._get_standard_surface_potential_difference_variables(delta_phi)
         )
+        variables.update(self._get_standard_sei_film_overpotential_variables(eta_sei))
         variables.update(self._get_standard_ocp_variables(ocp, dUdT))
 
         return variables

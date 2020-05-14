@@ -79,12 +79,15 @@ class BaseKinetics(BaseInterface):
             j = variables[
                 self.domain + " electrode interfacial current density variable"
             ]
-            eta_r -= j * L_sei * pybamm.sei_parameters.R_sei
+            eta_sei = -j * L_sei * pybamm.sei_parameters.R_sei
         elif self.options["sei film resistance"] == "average":
             L_sei = variables[
                 "Total " + self.domain.lower() + " electrode sei thickness"
             ]
-            eta_r -= j_tot_av * L_sei * pybamm.sei_parameters.R_sei
+            eta_sei = -j_tot_av * L_sei * pybamm.sei_parameters.R_sei
+        else:
+            eta_sei = pybamm.Scalar(0)
+        eta_r += eta_sei
 
         # Get number of electrons in reaction
         ne = self._get_number_of_electrons_in_reaction()
@@ -106,6 +109,11 @@ class BaseKinetics(BaseInterface):
         variables.update(self._get_standard_exchange_current_variables(j0))
         variables.update(self._get_standard_overpotential_variables(eta_r))
         variables.update(self._get_standard_ocp_variables(ocp, dUdT))
+
+        if "main" in self.reaction:
+            variables.update(
+                self._get_standard_sei_film_overpotential_variables(eta_sei)
+            )
 
         if (
             "Negative electrode" + self.reaction_name + " interfacial current density"

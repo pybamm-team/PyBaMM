@@ -110,6 +110,8 @@ class VoltageTests(BaseOutputTest):
         ]
         self.eta_r_av = solution["X-averaged reaction overpotential [V]"]
 
+        self.eta_sei_av = solution["X-averaged sei film overpotential [V]"]
+
         self.eta_e_av = solution["X-averaged electrolyte overpotential [V]"]
         self.delta_phi_s_av = solution["X-averaged solid phase ohmic losses [V]"]
 
@@ -229,7 +231,8 @@ class VoltageTests(BaseOutputTest):
             self.ocv_av(self.t)
             + self.eta_r_av(self.t)
             + self.eta_e_av(self.t)
-            + self.delta_phi_s_av(self.t),
+            + self.delta_phi_s_av(self.t)
+            + self.eta_sei_av(self.t),
             decimal=2,
         )
 
@@ -530,13 +533,17 @@ class CurrentTests(BaseOutputTest):
         self.j_p_av = solution[
             "X-averaged positive electrode interfacial current density"
         ]
-        self.j_n_sei = solution["Negative electrode sei interfacial current density"]
-        self.j_p_sei = solution["Positive electrode sei interfacial current density"]
+        self.j_n_sei = solution[
+            "Negative electrode scaled sei interfacial current density"
+        ]
+        self.j_p_sei = solution[
+            "Positive electrode scaled sei interfacial current density"
+        ]
         self.j_n_sei_av = solution[
-            "X-averaged negative electrode sei interfacial current density"
+            "X-averaged negative electrode scaled sei interfacial current density"
         ]
         self.j_p_sei_av = solution[
-            "X-averaged positive electrode sei interfacial current density"
+            "X-averaged positive electrode scaled sei interfacial current density"
         ]
 
         self.j0_n = solution["Negative electrode exchange current density"]
