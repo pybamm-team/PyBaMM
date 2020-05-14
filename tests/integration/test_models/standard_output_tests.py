@@ -530,6 +530,14 @@ class CurrentTests(BaseOutputTest):
         self.j_p_av = solution[
             "X-averaged positive electrode interfacial current density"
         ]
+        self.j_n_sei = solution["Negative electrode sei interfacial current density"]
+        self.j_p_sei = solution["Positive electrode sei interfacial current density"]
+        self.j_n_sei_av = solution[
+            "X-averaged negative electrode sei interfacial current density"
+        ]
+        self.j_p_sei_av = solution[
+            "X-averaged positive electrode sei interfacial current density"
+        ]
 
         self.j0_n = solution["Negative electrode exchange current density"]
         self.j0_p = solution["Positive electrode exchange current density"]
@@ -543,10 +551,14 @@ class CurrentTests(BaseOutputTest):
         """Test that average of the interfacial current density is equal to the true
         value."""
         np.testing.assert_array_almost_equal(
-            self.j_n_av(self.t), self.i_cell / self.l_n, decimal=4
+            self.j_n_av(self.t) + self.j_n_sei_av(self.t),
+            self.i_cell / self.l_n,
+            decimal=4,
         )
         np.testing.assert_array_almost_equal(
-            self.j_p_av(self.t), -self.i_cell / self.l_p, decimal=4
+            self.j_p_av(self.t) + self.j_p_sei_av(self.t),
+            -self.i_cell / self.l_p,
+            decimal=4,
         )
 
     def test_conservation(self):

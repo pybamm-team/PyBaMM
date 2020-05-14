@@ -23,7 +23,7 @@ class InverseButlerVolmer(BaseInterface):
         A dictionary of options to be passed to the model. In this case "sei film
         resistance" is the important option. See :class:`pybamm.BaseBatteryModel`
 
-    **Extends:** :class:`pybamm.interface.kinetics.ButlerVolmer`
+    **Extends:** :class:`pybamm.interface.BaseInterface`
 
     """
 
@@ -118,7 +118,7 @@ class CurrentForInverseButlerVolmer(BaseInterface):
     reaction : str
         The name of the reaction being implemented
 
-    **Extends:** :class:`pybamm.interface.kinetics.ButlerVolmer`
+    **Extends:** :class:`pybamm.interface.BaseInterface`
 
     """
 

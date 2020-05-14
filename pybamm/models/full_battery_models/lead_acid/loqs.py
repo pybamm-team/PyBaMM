@@ -144,12 +144,12 @@ class LOQS(BaseModel):
             self.submodels[
                 "negative interface current"
             ] = pybamm.interface.CurrentForInverseButlerVolmer(
-                self.param, "Negative", "lithium-ion main"
+                self.param, "Negative", "lead-acid main"
             )
             self.submodels[
                 "positive interface current"
             ] = pybamm.interface.CurrentForInverseButlerVolmer(
-                self.param, "Positive", "lithium-ion main"
+                self.param, "Positive", "lead-acid main"
             )
         else:
             self.submodels[
