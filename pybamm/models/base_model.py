@@ -115,6 +115,7 @@ class BaseModel(object):
         self._jacobian = None
         self._jacobian_algebraic = None
         self.external_variables = []
+        self._parameters = None
         self._input_parameters = None
 
         # Default behaviour is to use the jacobian and simplify
@@ -283,6 +284,25 @@ class BaseModel(object):
     def timescale(self, value):
         "Set the timescale"
         self._timescale = value
+
+    @property
+    def parameters(self):
+        "Returns all the parameters in the model"
+        if self._parameters is None:
+            self._parameters = self._find_parameters()
+        return self._parameters
+
+    def _find_parameters(self):
+        "Find all the parameters in the model"
+        unpacker = pybamm.SymbolUnpacker((pybamm.Parameter, pybamm.InputParameter))
+        all_parameters = unpacker.unpack_list_of_symbols(
+            list(self.rhs.values())
+            + list(self.algebraic.values())
+            + list(self.initial_conditions.values())
+            + list(self.variables.values())
+            + [event.expression for event in self.events]
+        )
+        return list(all_parameters.values())
 
     @property
     def input_parameters(self):
