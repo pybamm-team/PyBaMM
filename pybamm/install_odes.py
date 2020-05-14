@@ -30,7 +30,7 @@ def download_extract_library(url, directory):
     tar.extractall(directory)
 
 
-def install_sundials():
+def install_sundials(download_dir, install_dir):
     # Download the SUNDIALS library and compile it.
     logger = logging.getLogger("scikits.odes setup")
     sundials_version = "5.1.0"
@@ -45,7 +45,7 @@ def install_sundials():
         + "projects/sundials/download/sundials-{}.tar.gz".format(sundials_version)
     )
     logger.info("Downloading sundials")
-    download_extract_library(url, directory)
+    download_extract_library(url, download_dir)
 
     cmake_args = [
         "-DLAPACK_ENABLE=ON",
@@ -57,7 +57,7 @@ def install_sundials():
 
     # SUNDIALS are built within directory 'build_sundials' in the PyBaMM root
     # directory
-    build_directory = os.path.abspath(join(directory, "build_sundials"))
+    build_directory = os.path.abspath(join(download_dir, "build_sundials"))
     if not os.path.exists(build_directory):
         print("\n-" * 10, "Creating build dir", "-" * 40)
         os.makedirs(build_directory)
@@ -156,7 +156,10 @@ def main(arguments=None):
     if not SUNDIALS_FOUND:
         logger.info("Could not find sundials libraries.")
         logger.info("Installing sundials in {}".install_dir)
-        install_sundials()
+        download_dir = os.path.join(pybamm_dir, "sundials")
+        if not os.path.exists(download_dir):
+            os.makedirs(download_dir)
+        install_sundials(download_dir, install_dir)
 
     update_LD_LIBRARY_PATH(SUNDIALS_LIB_DIR)
 
