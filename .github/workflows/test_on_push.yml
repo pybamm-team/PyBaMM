@@ -61,6 +61,9 @@ jobs:
         python -m pip install --upgrade pip wheel setuptools
         python -m pip install tox tox-gh-actions
 
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v2
+
     - name: Run unit tests on GNU/Linux and MacOS
       if: matrix.os != 'windows-latest'
       run: |
