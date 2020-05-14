@@ -5,14 +5,9 @@ import pybamm
 import unittest
 import numpy as np
 from tests import get_mesh_for_testing, get_discretisation_for_testing
-from scipy.sparse import eye
 
 
 class TestRK4Solver(unittest.TestCase):
-    # def test_bad_mode(self):
-    #     with self.assertRaisesRegex(ValueError, "invalid mode"):
-    #         pybamm.RK4Solver(mode="bad mode")
-
     def test_model_solver(self):
         # Create model
         model = pybamm.BaseModel()
@@ -33,16 +28,16 @@ class TestRK4Solver(unittest.TestCase):
             solution.y[0], np.exp(0.1 * solution.t), decimal=5
         )
 
-        # # Safe mode (enforce events that won't be triggered)
-        # model.events = [pybamm.Event("an event", var + 1)]
-        # disc.process_model(model)
-        # solver = pybamm.RK4Solver(N=20)
-        # t_eval = np.linspace(0, 1, 100)
-        # solution = solver.solve(model, t_eval)
-        # np.testing.assert_array_equal(solution.t, t_eval)
-        # np.testing.assert_array_almost_equal(
-        #     solution.y[0], np.exp(0.1 * solution.t), decimal=5
-        # )
+        # Safe mode (enforce events that won't be triggered)
+        model.events = [pybamm.Event("an event", var + 1)]
+        disc.process_model(model)
+        solver = pybamm.RK4Solver(N=20)
+        t_eval = np.linspace(0, 1, 100)
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_array_equal(solution.t, t_eval)
+        np.testing.assert_array_almost_equal(
+            solution.y[0], np.exp(0.1 * solution.t), decimal=5
+        )
 
     def test_model_solver_python(self):
         # Create model
@@ -162,8 +157,6 @@ class TestRK4Solver(unittest.TestCase):
         solver = pybamm.RK4Solver(N=20)
         t_eval = np.linspace(0, 10, 100)
         solution = solver.solve(model, t_eval, inputs={"rate": 0.1})
-        # self.assertLess(len(solution.t), len(t_eval))
-        np.testing.assert_array_equal(solution.t, t_eval[: len(solution.t)])
         np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t), rtol=1e-06)
 
     def test_model_solver_with_external(self):
@@ -189,6 +182,28 @@ class TestRK4Solver(unittest.TestCase):
         t_eval = np.linspace(0, 10, 100)
         solution = solver.solve(model, t_eval, external_variables={"var2": 0.5})
         np.testing.assert_allclose(solution.y[0], 1 - 0.5 * solution.t, rtol=1e-06)
+
+    def test_model_solver_ode_events(self):
+        model = pybamm.BaseModel()
+        # model.convert_to_format = "python"
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var = pybamm.Variable("var", domain=whole_cell)
+        model.rhs = {var: 0.1 * var}
+        model.initial_conditions = {var: 1}
+        model.events = [
+            pybamm.Event("2 * var = 2.5", pybamm.min(2 * var - 2.5)),
+            pybamm.Event("var = 1.5", pybamm.min(var - 1.5)),
+        ]
+        disc = get_discretisation_for_testing()
+        disc.process_model(model)
+
+        # Solve
+        solver = pybamm.RK4Solver(N=20)
+        t_eval = np.linspace(0, 10, 100)
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t), rtol=1e-06)
+        np.testing.assert_array_less(solution.y[0], 1.5)
+        np.testing.assert_array_less(solution.y[0], 1.25)
 
 
 if __name__ == "__main__":
