@@ -53,7 +53,7 @@ jobs:
       run: |
         brew update
         brew install graphviz
-        brew install openblas suitesparse
+        brew install openblas
         
     - name: Install Windows system dependencies
       if: matrix.os == 'windows-latest'
@@ -68,9 +68,10 @@ jobs:
       if: matrix.os != 'windows-latest'
       run: |
         pip install wget
-        python scripts/setup_KLU_module_build.py
-        pybamm_install_odes --install-sundials
         git clone https://github.com/pybind/pybind11.git
+        python scripts/setup_KLU_module_build.py
+        export SUNDIALS_INST= $HOME/.local
+        pip install scikits.odes
         pip install -e .
 
     - name: Run unit tests Windows
