@@ -61,6 +61,8 @@ class Geometry(dict):
     """
 
     def __init__(self, *geometries, custom_geometry={}):
+        self._parameters = None
+
         for geometry in geometries:
             if geometry == "1D macro":
                 geometry = Geometry1DMacro()
@@ -94,6 +96,28 @@ class Geometry(dict):
         # Allow overwriting with a custom geometry
         for k, v in custom_geometry.items():
             self.add_domain(k, v)
+
+    @property
+    def parameters(self):
+        "Returns all the parameters in the geometry"
+        if self._parameters is None:
+            self._parameters = self._find_parameters()
+        return self._parameters
+
+    def _find_parameters(self):
+        "Find all the parameters in the model"
+        unpacker = pybamm.SymbolUnpacker((pybamm.Parameter, pybamm.InputParameter))
+
+        def NestedDictValues(d):
+            "Get all the values from a nested dict"
+            for v in d.values():
+                if isinstance(v, dict):
+                    yield from NestedDictValues(v)
+                else:
+                    yield v
+
+        all_parameters = unpacker.unpack_list_of_symbols(list(NestedDictValues(self)))
+        return list(all_parameters.values())
 
     def add_domain(self, name, geometry):
         """
