@@ -51,12 +51,7 @@ pb.dynamic_plot(
             "X-averaged negative electrode sei interfacial current density [A.m-2]",
             "X-averaged negative electrode interfacial current density [A.m-2]",
         ],
-        [
-            "X-averaged negative electrode sei interfacial current density",
-            "X-averaged negative electrode interfacial current density",
-        ],
         "Sum of x-averaged negative electrode interfacial current densities",
-        "Sum of negative electrode interfacial current densities",
         "X-averaged electrolyte concentration",
     ],
 )
