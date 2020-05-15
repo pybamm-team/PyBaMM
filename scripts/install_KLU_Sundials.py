@@ -25,37 +25,6 @@ def download_extract_library(url, download_dir):
     tar.extractall(download_dir)
 
 
-def update_activate_or_bashrc(install_dir):
-    # Look for current python virtual env and add export statement
-    # for LD_LIBRARY_PATH in activate script.  If no virtual env found,
-    # then the current user's .bashrc file is modified instead.
-
-    export_statement = "export LD_LIBRARY_PATH={}/lib:$LD_LIBRARY_PATH".format(
-        install_dir
-    )
-
-    venv_path = os.environ.get("VIRTUAL_ENV")
-    if venv_path:
-        script_path = os.path.join(venv_path, "bin/activate")
-    else:
-        script_path = os.path.join(os.environ.get("HOME"), ".bashrc")
-
-    if os.getenv("LD_LIBRARY_PATH") and "{}/lib".format(install_dir) in os.getenv(
-        "LD_LIBRARY_PATH"
-    ):
-        print("{}/lib was found in LD_LIBRARY_PATH.".format(install_dir))
-        print("--> Not updating venv activate or .bashrc scripts")
-    else:
-        with open(script_path, "a+") as fh:
-            # Just check that export statement is not already there.
-            if export_statement not in fh.read():
-                fh.write(export_statement)
-                print(
-                    "Adding {}/lib to LD_LIBRARY_PATH"
-                    " in {}".format(install_dir, script_path)
-                )
-
-
 # First check requirements: make and cmake
 try:
     subprocess.run(["make", "--version"])
@@ -68,7 +37,7 @@ except OSError:
 
 # Create download directory in PyBaMM dir
 pybamm_dir = os.path.split(os.path.abspath(os.path.dirname(__file__)))[0]
-download_dir = os.path.join(pybamm_dir, "KLU_module_deps")
+download_dir = os.path.join(pybamm_dir, "install_KLU_Sundials")
 if not os.path.exists(download_dir):
     os.makedirs(download_dir)
 
@@ -153,4 +122,4 @@ print("-" * 10, "Building the sundials", "-" * 40)
 make_cmd = ["make", "install"]
 subprocess.run(make_cmd, cwd=build_dir)
 
-update_activate_or_bashrc(install_dir)
+
