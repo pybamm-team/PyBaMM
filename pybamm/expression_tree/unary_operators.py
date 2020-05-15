@@ -550,6 +550,11 @@ class IndefiniteIntegral(Integral):
     def _evaluate_for_shape(self):
         return self.children[0].evaluate_for_shape()
 
+    def evaluates_on_edges(self):
+        # If child evaluates on edges, indefinite integral doesn't
+        # If child doesn't evaluate on edges, indefinite integral does
+        return not self.child.evaluates_on_edges()
+
 
 class DefiniteIntegralVector(SpatialOperator):
     """A node in the expression tree representing an integral of the basis used
