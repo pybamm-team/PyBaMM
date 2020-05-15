@@ -16,7 +16,7 @@ os.chdir(pybamm.root_dir())
 
 # set style
 matplotlib.rc_file(
-    "results/2019_xx_2plus1D_pouch/_matplotlibrc", use_default_template=True
+    "results/2020_asymptotic_pouch/_matplotlibrc", use_default_template=True
 )
 
 # increase recursion limit for large expression trees

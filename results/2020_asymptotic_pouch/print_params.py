@@ -12,5 +12,5 @@ parameter_values.update(
         "Positive current collector conductivity [S.m-1]": val,
     }
 )
-output_file = "results/2019_xx_2plus1D_pouch/parameters.txt"
+output_file = "results/2020_asymptotic_pouch/parameters.txt"
 pybamm.print_parameters(parameters, parameter_values, output_file)
