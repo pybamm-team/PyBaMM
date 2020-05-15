@@ -95,7 +95,9 @@ class TestSimulationExperiment(unittest.TestCase):
         self.assertIn("event", sim._solution.termination)
 
     def test_inputs(self):
-        experiment = pybamm.Experiment(["Discharge at C/2 for 1 hour"])
+        experiment = pybamm.Experiment(
+            ["Discharge at C/2 for 1 hour", "Rest for 1 hour"]
+        )
         model = pybamm.lithium_ion.SPM()
 
         # Change a parameter to an input
@@ -106,13 +108,12 @@ class TestSimulationExperiment(unittest.TestCase):
 
         # Solve a first time
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
-        solution = sim.solve(inputs={"Dsn": 1})
-        np.testing.assert_array_equal(solution.inputs["Dsn"], 1)
+        sim.solve(inputs={"Dsn": 1})
+        np.testing.assert_array_equal(sim.solution.inputs["Dsn"], 1)
 
         # Solve again, input should change
-        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
-        solution = sim.solve(inputs={"Dsn": 2})
-        np.testing.assert_array_equal(solution.inputs["Dsn"], 2)
+        sim.solve(inputs={"Dsn": 2})
+        np.testing.assert_array_equal(sim.solution.inputs["Dsn"], 2)
 
 
 if __name__ == "__main__":
