@@ -150,6 +150,10 @@ class Integrated(BaseElectrolyteConductivity):
             - integral_p
         )
 
+        # phi_e_n = 0 * phi_e_n
+        # phi_e_s = 0 * phi_e_s
+        # phi_e_p = 0 * phi_e_p
+
         # concentration overpotential
         eta_c_av = (
             chi_av
