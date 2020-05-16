@@ -326,6 +326,50 @@ class TestGeometry2DCurrentCollector(unittest.TestCase):
                 )
 
 
+class TestReadParameters(unittest.TestCase):
+    # This is the most complicated geometry and should test the parameters are
+    # all returned for the deepest dict
+    def test_read_parameters(self):
+        L_n = pybamm.geometric_parameters.L_n
+        L_s = pybamm.geometric_parameters.L_s
+        L_p = pybamm.geometric_parameters.L_p
+        L_y = pybamm.geometric_parameters.L_y
+        L_z = pybamm.geometric_parameters.L_z
+        tab_n_y = pybamm.geometric_parameters.Centre_y_tab_n
+        tab_n_z = pybamm.geometric_parameters.Centre_z_tab_n
+        L_tab_n = pybamm.geometric_parameters.L_tab_n
+        tab_p_y = pybamm.geometric_parameters.Centre_y_tab_p
+        tab_p_z = pybamm.geometric_parameters.Centre_z_tab_p
+        L_tab_p = pybamm.geometric_parameters.L_tab_p
+
+        geometry = pybamm.Geometry("2+1D macro", "(2+1)+1D micro")
+
+        self.assertEqual(
+            set([x.name for x in geometry.parameters]),
+            set(
+                [
+                    x.name
+                    for x in [
+                        L_n,
+                        L_s,
+                        L_p,
+                        L_y,
+                        L_z,
+                        tab_n_y,
+                        tab_n_z,
+                        L_tab_n,
+                        tab_p_y,
+                        tab_p_z,
+                        L_tab_p,
+                    ]
+                ]
+            ),
+        )
+        self.assertTrue(
+            all(isinstance(x, pybamm.Parameter) for x in geometry.parameters)
+        )
+
+
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys

@@ -36,6 +36,39 @@ class BaseModel(pybamm.BaseBatteryModel):
             }
         )
 
+    def set_sei_submodel(self):
+
+        # negative electrode SEI
+        if self.options["sei"] is None:
+            self.submodels["negative sei"] = pybamm.sei.NoSEI(
+                self.param, "Negative electrode"
+            )
+
+        elif self.options["sei"] == "reaction limited":
+            self.submodels["negative sei"] = pybamm.sei.ReactionLimited(
+                self.param, "Negative electrode"
+            )
+
+        elif self.options["sei"] == "solvent-diffusion limited":
+            self.submodels["negative sei"] = pybamm.sei.SolventDiffusionLimited(
+                self.param, "Negative electrode"
+            )
+
+        elif self.options["sei"] == "electron-migration limited":
+            self.submodels["negative sei"] = pybamm.sei.ElectronMigrationLimited(
+                self.param, "Negative electrode"
+            )
+
+        elif self.options["sei"] == "interstitial-diffusion limited":
+            self.submodels["negative sei"] = pybamm.sei.InterstitialDiffusionLimited(
+                self.param, "Negative electrode"
+            )
+
+        # positive electrode
+        self.submodels["positive sei"] = pybamm.sei.NoSEI(
+            self.param, "Positive electrode"
+        )
+
     def set_other_reaction_submodels_to_zero(self):
         self.submodels["negative oxygen interface"] = pybamm.interface.NoReaction(
             self.param, "Negative", "lithium-ion oxygen"

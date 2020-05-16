@@ -137,14 +137,21 @@ class ParameterValues:
             pybamm.root_dir(), "pybamm", "input", "parameters", base_chemistry
         )
         # Load each component name
-        for component_group in [
+
+        component_groups = [
             "cell",
             "anode",
             "cathode",
             "separator",
             "electrolyte",
             "experiment",
-        ]:
+        ]
+
+        # add sei parameters if provided
+        if "sei" in chemistry:
+            component_groups += ["sei"]
+
+        for component_group in component_groups:
             # Make sure component is provided
             try:
                 component = chemistry[component_group]

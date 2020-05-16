@@ -200,3 +200,23 @@ T_cp = pybamm.Variable(
 T = pybamm.Concatenation(T_n, T_s, T_p)
 T_av = pybamm.Variable("X-averaged cell temperature", domain="current collector")
 T_vol_av = pybamm.Variable("Volume-averaged cell temperature")
+
+
+# SEI variables
+L_inner_av = pybamm.Variable(
+    "X-averaged inner SEI thickness", domain="current collector"
+)
+L_inner = pybamm.Variable(
+    "Inner SEI thickness",
+    domain=["negative electrode"],
+    auxiliary_domains={"secondary": "current collector"},
+)
+L_outer_av = pybamm.Variable(
+    "X-averaged outer SEI thickness", domain="current collector"
+)
+L_outer = pybamm.Variable(
+    "Outer SEI thickness",
+    domain=["negative electrode"],
+    auxiliary_domains={"secondary": "current collector"},
+)
+

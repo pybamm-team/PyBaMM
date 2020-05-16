@@ -49,19 +49,24 @@ can be found
 
 For further examples, see the list of repositories that use PyBaMM [here](https://github.com/pybamm-team/pybamm-example-results)
 
-## How can I obtain & install PyBaMM?
+## How can I install PyBaMM?
+PyBaMM is available on GNU/Linux, MacOS and Windows.
+We strongly recommend to install PyBaMM within a python virtual environment, in order not to alter any distribution python files.
+For instructions on how to create a virtual environment for PyBaMM, see [the documentation](https://pybamm.readthedocs.io/en/latest/install/GNU-linux.html#user-install).
 
-### Linux
+### Using pip
+```bash
+pip install pybamm
+```
 
-For instructions on installing PyBaMM on Debian-based distributions, please see [here](INSTALL-LINUX-MAC.md).
+### Using conda
+PyBaMM is available as a conda package through the conda-forge channel.
+```bash
+conda install -c conda-forge pybamm
+```
 
-### Mac OS
-
-For instructions on installing PyBaMM on Mac OS distributions, please see [here](INSTALL-LINUX-MAC.md).
-
-### Windows
-
-For instructions on installing PyBaMM on Windows distributions, please see [here](INSTALL-WINDOWS.md). If you want to install the optional solvers (such as scikits-odes and KLU solvers), install PyBaMM on the Windows Subsystem for Linux following the instructions [here](INSTALL-WINDOWS-WSL.md) 
+### Optional solvers
+On GNU/Linux and MacOS, an optional [scikits.odes](https://scikits-odes.readthedocs.io/en/latest/)-based solver is available, see [the documentation](https://pybamm.readthedocs.io/en/latest/install/GNU-linux.html#scikits-odes-label).
 
 ## Citing PyBaMM
 

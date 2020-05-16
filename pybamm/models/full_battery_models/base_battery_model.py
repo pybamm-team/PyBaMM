@@ -49,7 +49,17 @@ class BaseBatteryModel(pybamm.BaseModel):
                 variable for instead of solving in PyBaMM. The entries of the lists
                 are strings that correspond to the submodel names in the keys
                 of `self.submodels`.
+            * "sei" : str
+                Set the sei submodel to be used. Options are:
 
+                - None: :class:`pybamm.sei.NoSEI` (no SEI growth)
+                - "reaction limited": :class:`pybamm.sei.ReactionLimited`
+                - "solvent diffusion limited": \
+                    :class:`pybamm.sei.SolventDiffusionLimited`
+                - "electron migration limited": \
+                    :class:`pybamm.sei.ElectronMigrationLimited`
+                - "lithium interstitial diffusion limited": \
+                    :class:`pybamm.sei.InterstitialDiffusionLimited`
 
     **Extends:** :class:`pybamm.BaseModel`
     """
@@ -145,6 +155,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "particle": "Fickian diffusion",
             "thermal": "isothermal",
             "external submodels": [],
+            "sei": None,
         }
         options = pybamm.FuzzyDict(default_options)
         # any extra options overwrite the default options
