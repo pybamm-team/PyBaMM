@@ -150,9 +150,15 @@ class Integrated(BaseElectrolyteConductivity):
             - integral_p
         )
 
+<<<<<<< HEAD
         # phi_e_n = 1 * phi_e_n + 10
         # phi_e_s = 1 * phi_e_s + 10
         # phi_e_p = 1 * phi_e_p + 10
+=======
+        # phi_e_n = 0 * phi_e_n
+        # phi_e_s = 0 * phi_e_s
+        # phi_e_p = 0 * phi_e_p
+>>>>>>> #884 debugging new submodel
 
         # concentration overpotential
         eta_c_av = (
