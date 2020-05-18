@@ -82,14 +82,7 @@ class FirstOrderKinetics(BaseInterface):
             }
         )
 
-        if (
-            "Negative electrode" + self.reaction_name + " interfacial current density"
-            in variables
-            and "Positive electrode"
-            + self.reaction_name
-            + " interfacial current density"
-            in variables
-        ):
+        if self.domain == "Positive":
             variables.update(
                 self._get_standard_whole_cell_interfacial_current_variables(variables)
             )

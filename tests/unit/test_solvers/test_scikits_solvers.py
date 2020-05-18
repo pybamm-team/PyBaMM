@@ -11,6 +11,11 @@ import sys
 
 @unittest.skipIf(not pybamm.have_scikits_odes(), "scikits.odes not installed")
 class TestScikitsSolvers(unittest.TestCase):
+    def test_init(self):
+        # linsolver deprecated
+        with self.assertRaisesRegex(ValueError, "linsolver has been deprecated"):
+            pybamm.ScikitsOdeSolver(linsolver="lapackdense")
+
     def test_model_ode_integrate_failure(self):
         # Turn off warnings to ignore sqrt error
         warnings.simplefilter("ignore")
@@ -524,12 +529,12 @@ class TestScikitsSolvers(unittest.TestCase):
                 pybamm.Event("var2 = 2.5", pybamm.min(var2 - 2.5)),
             ]
             disc = get_discretisation_for_testing()
-            disc.process_model(model)
+            model_disc = disc.process_model(model, inplace=False)
 
             # Solve
             solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
             t_eval = np.linspace(0, 5, 100)
-            solution = solver.solve(model, t_eval)
+            solution = solver.solve(model_disc, t_eval)
             np.testing.assert_array_less(solution.y[0], 1.5)
             np.testing.assert_array_less(solution.y[-1], 2.5)
             np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
@@ -787,6 +792,5 @@ if __name__ == "__main__":
     print("Add -v for more debug output")
     if "-v" in sys.argv:
         debug = True
-        pybamm.set_logging_level("DEBUG")
     pybamm.settings.debug_mode = True
     unittest.main()

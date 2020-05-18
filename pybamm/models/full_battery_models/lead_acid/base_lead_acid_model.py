@@ -42,45 +42,6 @@ class BaseModel(pybamm.BaseBatteryModel):
         var = pybamm.standard_spatial_vars
         return {var.x_n: 25, var.x_s: 41, var.x_p: 34, var.y: 10, var.z: 10}
 
-    @property
-    def default_solver(self):
-        """
-        Return default solver based on whether model is ODE model or DAE model.
-        There are bugs with KLU on the lead-acid models.
-        """
-        if len(self.algebraic) == 0:
-            return pybamm.ScipySolver()
-        else:
-            return pybamm.CasadiSolver(mode="safe")
-
-    def set_reactions(self):
-
-        # Should probably refactor as this is a bit clunky at the moment
-        # Maybe each reaction as a Reaction class so we can just list names of classes
-        param = self.param
-        icd = " interfacial current density"
-        self.reactions = {
-            "main": {
-                "Negative": {"s": -param.s_plus_n_S, "aj": "Negative electrode" + icd},
-                "Positive": {"s": -param.s_plus_p_S, "aj": "Positive electrode" + icd},
-            }
-        }
-        if "oxygen" in self.options["side reactions"]:
-            self.reactions["oxygen"] = {
-                "Negative": {
-                    "s": -param.s_plus_Ox,
-                    "s_ox": -param.s_ox_Ox,
-                    "aj": "Negative electrode oxygen" + icd,
-                },
-                "Positive": {
-                    "s": -param.s_plus_Ox,
-                    "s_ox": -param.s_ox_Ox,
-                    "aj": "Positive electrode oxygen" + icd,
-                },
-            }
-            self.reactions["main"]["Negative"]["s_ox"] = 0
-            self.reactions["main"]["Positive"]["s_ox"] = 0
-
     def set_soc_variables(self):
         "Set variables relating to the state of charge."
         # State of Charge defined as function of dimensionless electrolyte concentration

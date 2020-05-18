@@ -3,6 +3,7 @@
 #
 
 import pybamm
+import warnings
 
 
 class BaseBatteryModel(pybamm.BaseModel):
@@ -48,7 +49,17 @@ class BaseBatteryModel(pybamm.BaseModel):
                 variable for instead of solving in PyBaMM. The entries of the lists
                 are strings that correspond to the submodel names in the keys
                 of `self.submodels`.
+            * "sei" : str
+                Set the sei submodel to be used. Options are:
 
+                - None: :class:`pybamm.sei.NoSEI` (no SEI growth)
+                - "reaction limited": :class:`pybamm.sei.ReactionLimited`
+                - "solvent diffusion limited": \
+                    :class:`pybamm.sei.SolventDiffusionLimited`
+                - "electron migration limited": \
+                    :class:`pybamm.sei.ElectronMigrationLimited`
+                - "lithium interstitial diffusion limited": \
+                    :class:`pybamm.sei.InterstitialDiffusionLimited`
 
     **Extends:** :class:`pybamm.BaseModel`
     """
@@ -144,6 +155,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "particle": "Fickian diffusion",
             "thermal": "isothermal",
             "external submodels": [],
+            "sei": None,
         }
         options = pybamm.FuzzyDict(default_options)
         # any extra options overwrite the default options
@@ -185,8 +197,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         ):
             if len(options["side reactions"]) > 0:
                 raise pybamm.OptionError(
-                    """
-                    must use surface formulation to solve {!s} with side reactions
+                    """must use surface formulation to solve {!s} with side reactions
                     """.format(
                         self
                     )
@@ -239,6 +250,12 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "particle model '{}' not recognised".format(options["particle"])
             )
 
+        if options["thermal"] == "x-lumped" and options["dimensionality"] == 1:
+            warnings.warn(
+                "1+1D Thermal models are only valid if both tabs are"
+                + "placed at the top of the cell."
+            )
+
         self._options = options
 
     def set_standard_output_variables(self):
@@ -275,6 +292,24 @@ class BaseBatteryModel(pybamm.BaseModel):
             self.variables.update(
                 {"y": var.y, "y [m]": var.y * L_y, "z": var.z, "z [m]": var.z * L_z}
             )
+
+        # Initialize "total reaction" variables
+        self.variables.update(
+            {
+                "Sum of electrolyte reaction source terms": 0,
+                "Sum of negative electrode electrolyte reaction source terms": 0,
+                "Sum of positive electrode electrolyte reaction source terms": 0,
+                "Sum of x-averaged negative electrode "
+                "electrolyte reaction source terms": 0,
+                "Sum of x-averaged positive electrode "
+                "electrolyte reaction source terms": 0,
+                "Sum of interfacial current densities": 0,
+                "Sum of negative electrode interfacial current densities": 0,
+                "Sum of positive electrode interfacial current densities": 0,
+                "Sum of x-averaged negative electrode interfacial current densities": 0,
+                "Sum of x-averaged positive electrode interfacial current densities": 0,
+            }
+        )
 
     def build_fundamental_and_external(self):
         # Get the fundamental variables
@@ -332,11 +367,11 @@ class BaseBatteryModel(pybamm.BaseModel):
                         if len(submodels) == 1 or count == 100:
                             # no more submodels to try
                             raise pybamm.ModelError(
-                                """Submodel "{}" requires the variable {}, but it cannot be found.
-                                Check the selected submodels provide all of the required
-                                variables.""".format(
+                                "Submodel '{}' requires the variable {}, ".format(
                                     submodel_name, key
                                 )
+                                + "but it cannot be found. Check the selected "
+                                "submodels provide all of the required variables."
                             )
                         else:
                             # try setting coupled variables on next loop through

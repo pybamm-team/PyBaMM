@@ -475,12 +475,11 @@ class TestDiscretise(unittest.TestCase):
         disc.set_variable_slices(variables)
 
         # Simple expressions
-        for eqn in [pybamm.grad(var), pybamm.div(var)]:
+        for eqn in [pybamm.grad(var), pybamm.div(pybamm.grad(var))]:
             eqn_disc = disc.process_symbol(eqn)
 
             self.assertIsInstance(eqn_disc, pybamm.MatrixMultiplication)
             self.assertIsInstance(eqn_disc.children[0], pybamm.Matrix)
-            self.assertIsInstance(eqn_disc.children[1], pybamm.StateVector)
 
             combined_submesh = mesh.combine_submeshes(*whole_cell)
             y = combined_submesh[0].nodes ** 2
@@ -491,14 +490,13 @@ class TestDiscretise(unittest.TestCase):
             )
 
         # More complex expressions
-        for eqn in [var * pybamm.grad(var), var * pybamm.div(var)]:
+        for eqn in [var * pybamm.grad(var), var * pybamm.div(pybamm.grad(var))]:
             eqn_disc = disc.process_symbol(eqn)
 
             self.assertIsInstance(eqn_disc, pybamm.Multiplication)
             self.assertIsInstance(eqn_disc.children[0], pybamm.StateVector)
             self.assertIsInstance(eqn_disc.children[1], pybamm.MatrixMultiplication)
             self.assertIsInstance(eqn_disc.children[1].children[0], pybamm.Matrix)
-            self.assertIsInstance(eqn_disc.children[1].children[1], pybamm.StateVector)
 
             y = combined_submesh[0].nodes ** 2
             var_disc = disc.process_symbol(var)
@@ -692,6 +690,10 @@ class TestDiscretise(unittest.TestCase):
         model.jacobian, _, _ = disc.create_jacobian(model)
         model_jacobian = model.jacobian.evaluate(0, y0)
         np.testing.assert_array_equal(model_jacobian.toarray(), jacobian.toarray())
+
+        # test that discretising again gives an error
+        with self.assertRaisesRegex(pybamm.ModelError, "Cannot re-discretise a model"):
+            disc.process_model(model)
 
         # test that not enough initial conditions raises an error
         model = pybamm.BaseModel()
@@ -1116,7 +1118,7 @@ class TestDiscretise(unittest.TestCase):
 
         # check doesn't raise if concatenation
         model.variables = {c_n.name: pybamm.Concatenation(c_n, c_s)}
-        disc.process_model(model)
+        disc.process_model(model, inplace=False)
 
         # check doesn't raise if broadcast
         model.variables = {

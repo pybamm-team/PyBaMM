@@ -142,6 +142,8 @@ class Mesh(dict):
         submesh: :class:`self.submeshclass`
             A new submesh with the class defined by self.submeshclass
         """
+        if submeshnames == ():
+            raise ValueError("Submesh domains being combined cannot be empty")
         # Check that the final edge of each submesh is the same as the first edge of the
         # next submesh
         for i in range(len(submeshnames) - 1):

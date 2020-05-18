@@ -142,6 +142,22 @@ class TestSpecificFunctions(unittest.TestCase):
             places=5,
         )
 
+    def test_arctan(self):
+        a = pybamm.InputParameter("a")
+        fun = pybamm.arctan(a)
+        self.assertIsInstance(fun, pybamm.Arctan)
+        self.assertEqual(fun.evaluate(inputs={"a": 3}), np.arctan(3))
+        h = 0.0000001
+        self.assertAlmostEqual(
+            fun.diff(a).evaluate(inputs={"a": 3}),
+            (
+                pybamm.arctan(pybamm.Scalar(3 + h)).evaluate()
+                - fun.evaluate(inputs={"a": 3})
+            )
+            / h,
+            places=5,
+        )
+
     def test_cos(self):
         a = pybamm.InputParameter("a")
         fun = pybamm.cos(a)
