@@ -235,8 +235,25 @@ class TestParameterValues(unittest.TestCase):
             x = pybamm.Parameter("x")
             parameter_values.process_symbol(x)
 
+    def test_process_parameter_in_parameter(self):
+        parameter_values = pybamm.ParameterValues(
+            {"a": 2, "2a": pybamm.Parameter("a") * 2, "b": np.array([1, 2, 3])}
+        )
+
+        # process 2a parameter
+        a = pybamm.Parameter("2a")
+        processed_a = parameter_values.process_symbol(a)
+        self.assertEqual(processed_a.evaluate(), 4)
+
+        # case where parameter can't be processed
+        b = pybamm.Parameter("b")
+        with self.assertRaisesRegex(TypeError, "Cannot process parameter"):
+            parameter_values.process_symbol(b)
+
     def test_process_input_parameter(self):
-        parameter_values = pybamm.ParameterValues({"a": "[input]", "b": 3})
+        parameter_values = pybamm.ParameterValues(
+            {"a": "[input]", "b": 3, "c times 2": pybamm.InputParameter("c") * 2}
+        )
         # process input parameter
         a = pybamm.Parameter("a")
         processed_a = parameter_values.process_symbol(a)
@@ -251,6 +268,11 @@ class TestParameterValues(unittest.TestCase):
         self.assertIsInstance(processed_add.children[0], pybamm.InputParameter)
         self.assertIsInstance(processed_add.children[1], pybamm.Scalar)
         self.assertEqual(processed_add.evaluate(inputs={"a": 4}), 7)
+
+        # process complex input parameter
+        c = pybamm.Parameter("c times 2")
+        processed_c = parameter_values.process_symbol(c)
+        self.assertEqual(processed_c.evaluate(inputs={"c": 5}), 10)
 
     def test_process_function_parameter(self):
         parameter_values = pybamm.ParameterValues(

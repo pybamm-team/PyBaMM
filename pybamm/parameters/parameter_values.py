@@ -487,9 +487,12 @@ class ParameterValues:
                 # Scalar inherits name (for updating parameters) and domain (for
                 # Broadcast)
                 return pybamm.Scalar(value, name=symbol.name, domain=symbol.domain)
-            elif isinstance(value, pybamm.InputParameter):
-                value.domain = symbol.domain
-                return value
+            elif isinstance(value, pybamm.Symbol):
+                new_value = self.process_symbol(value)
+                new_value.domain = symbol.domain
+                return new_value
+            else:
+                raise TypeError("Cannot process parameter '{}'".format(value))
 
         elif isinstance(symbol, pybamm.FunctionParameter):
             new_children = [self.process_symbol(child) for child in symbol.children]
