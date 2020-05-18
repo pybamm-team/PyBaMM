@@ -5,12 +5,13 @@ def nmc_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, T):
     """
     Exchange-current density for Butler-Volmer reactions between NMC and LiPF6 in
     EC:DMC.
+
     References
     ----------
     .. [1] Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
     Dhammika Widanage, and Emma Kendrick. "Development of Experimental Techniques for
-    Parameterization of Multi-scale Lithium-ion Battery Models." Submitted for
-    publication (2020).
+    Parameterization of Multi-scale Lithium-ion Battery Models." Journal of the
+    Electrochemical Society 167 (2020): 080534.
 
     Parameters
     ----------
@@ -26,7 +27,7 @@ def nmc_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, T):
     :class:`pybamm.Symbol`
         Exchange-current density [A.m-2]
     """
-    m_ref = 3.59e-6  # (A/m2)(mol/m3)**1.5 - includes ref concentrations
+    m_ref = 3.42e-6  # (A/m2)(mol/m3)**1.5 - includes ref concentrations
     E_r = 17800
     arrhenius = exp(E_r / constants.R * (1 / 298.15 - 1 / T))
 

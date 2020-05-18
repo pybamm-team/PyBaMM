@@ -3,7 +3,7 @@ Name [units],Value,Reference,Notes
 ,,,
 # Electrode properties,,,
 Negative electrode conductivity [S.m-1],215,Chen 2020,graphite
-Maximum concentration in negative electrode [mol.m-3],33429,Chen 2020,tuned for 1C
+Maximum concentration in negative electrode [mol.m-3],33133,Chen 2020,tuned for 1C
 Negative electrode diffusivity [m2.s-1],3.3E-14,Chen 2020,tuned for 1C
 Negative electrode OCP [V],[data]graphite_LGM50_ocp_Chen2020,Chen 2020,
 ,,,
