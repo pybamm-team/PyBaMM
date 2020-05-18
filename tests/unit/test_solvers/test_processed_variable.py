@@ -522,7 +522,8 @@ class TestProcessedVariable(unittest.TestCase):
         t = pybamm.t
         y = pybamm.StateVector(slice(0, 1))
         var = t * y
-        var.mesh = None
+        disc = tests.get_2p1d_discretisation_for_testing()
+        var.mesh = disc.mesh["current collector"]
         t_sol = np.array([1])
         y_sol = np.array([np.linspace(0, 5)])
         with self.assertRaisesRegex(

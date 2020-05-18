@@ -149,6 +149,7 @@ from .geometry.geometry import (
     Geometryxp1DMacro,
     Geometryxp0p1DMicro,
     Geometryxp1p1DMicro,
+    Geometry1DCurrentCollector,
     Geometry2DCurrentCollector,
 )
 
