@@ -235,9 +235,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "Unknown thermal model '{}'".format(options["thermal"])
             )
         if options["dimensionality"] == 0:
-            if options["current collector"] not in [
-                "uniform",
-            ]:
+            if options["current collector"] not in ["uniform"]:
                 raise pybamm.OptionError(
                     "current collector model must be uniform in 0D model"
                 )
@@ -252,8 +250,8 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         if options["thermal"] == "x-lumped" and options["dimensionality"] == 1:
             warnings.warn(
-                "1+1D Thermal models are only valid if both tabs are"
-                + "placed at the top of the cell."
+                "1+1D Thermal models are only valid if both tabs are "
+                "placed at the top of the cell."
             )
 
         self._options = options
@@ -526,9 +524,7 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     def set_current_collector_submodel(self):
 
-        if self.options["current collector"] in [
-            "uniform",
-        ]:
+        if self.options["current collector"] in ["uniform"]:
             submodel = pybamm.current_collector.Uniform(self.param)
         elif self.options["current collector"] == "potential pair":
             if self.options["dimensionality"] == 1:
