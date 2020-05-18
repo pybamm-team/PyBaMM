@@ -51,8 +51,9 @@ class RK4Solver(pybamm.BaseSolver):
         # convert inputs to casadi format
         inputs = casadi.vertcat(*[x for x in inputs.values()])
 
-        integrator = self.get_integrator(model, t_eval, inputs)
+        integrator, F = self.get_integrator(model, t_eval, inputs)
         solution = self._run_integrator(integrator, model, model.y0, inputs, t_eval)
+        solution.F = F
         return solution
 
     def get_integrator(self, model, t_eval, inputs):
@@ -173,7 +174,7 @@ class RK4Solver(pybamm.BaseSolver):
 
             solution.termination = "final"
 
-        return solution
+        return solution, F
 
     def _run_integrator(self, integrator, model, y0, inputs, t_eval):
         try:

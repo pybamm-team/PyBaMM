@@ -205,6 +205,37 @@ class TestRK4Solver(unittest.TestCase):
         np.testing.assert_array_less(solution.y[0], 1.5)
         np.testing.assert_array_less(solution.y[0], 1.25)
 
+    def test_code_gen(self):
+        # Create model
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        model.rhs = {var: 0.1 * var}
+        model.initial_conditions = {var: 1}
+        # No need to set parameters; can use base discretisation (no spatial operators)
+
+        # create discretisation
+        disc = pybamm.Discretisation()
+        model_disc = disc.process_model(model, inplace=False)
+        # Solve
+        solver = pybamm.RK4Solver(N=20)
+        t_eval = np.linspace(0, 1, 100)
+        solution = solver.solve(model_disc, t_eval)
+        opts = dict(main=True, mex=True)
+        solution.F.generate("gen.c", opts)
+        # To test the generated code run the following in the terminal
+        # gcc gen.c -o gen
+        # echo 0 1 0.2 > gen_in.txt
+        # ./gen F < gen_in.txt > gen_out.txt
+        # cat gen_out.txt
+        #
+        # Matlab mex test:
+        # mex gen.c -largeArrayDims
+        # disp(gen('F', 0,1,0.2))
+        np.testing.assert_array_equal(solution.t, t_eval)
+        np.testing.assert_array_almost_equal(
+            solution.y[0], np.exp(0.1 * solution.t), decimal=5
+        )
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
