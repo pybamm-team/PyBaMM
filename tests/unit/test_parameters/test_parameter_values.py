@@ -8,6 +8,8 @@ import numpy as np
 import unittest
 import tests.shared as shared
 
+import pandas as pd
+
 
 class TestParameterValues(unittest.TestCase):
     def test_read_parameters_csv(self):
@@ -586,6 +588,26 @@ class TestParameterValues(unittest.TestCase):
         array = pybamm.Array(np.array([1, 2, 3]))
         with self.assertRaises(ValueError):
             parameter_values.evaluate(array)
+
+    def test_export_csv(self):
+        def some_function(self):
+            return None
+
+        example_data = ("some_data", [0, 1, 2])
+
+        parameter_values = pybamm.ParameterValues(
+            {"a": 0.1, "b": some_function, "c": example_data}
+        )
+
+        filename = "parameter_values_test.csv"
+
+        parameter_values.export_csv(filename)
+
+        df = pd.read_csv(filename, index_col=0, header=None)
+
+        self.assertEqual(df[1]["a"], "0.1")
+        self.assertEqual(df[1]["b"], "[function]some_function")
+        self.assertEqual(df[1]["c"], "[data]some_data")
 
 
 if __name__ == "__main__":
