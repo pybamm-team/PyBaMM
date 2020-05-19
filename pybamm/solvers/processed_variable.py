@@ -64,16 +64,35 @@ class ProcessedVariable(object):
         # check variable shape
         else:
             if len(solution.t) == 1:
-                # 1D function of space only
-                n = self.mesh[0].npts
-                base_shape = self.base_eval.shape[0]
-                if base_shape in [n, n + 1]:
-                    self.initialise_1D(fixed_t=True)
+                if (
+                    isinstance(self.base_eval, numbers.Number)
+                    or len(self.base_eval.shape) == 0
+                    or self.base_eval.shape[0] == 1
+                ):
+                    # Scalar value
+                    t = self.t_sol
+                    u = self.u_sol
+                    inputs = {name: inp[0] for name, inp in self.inputs.items()}
+
+                    entries = self.base_variable.evaluate(t, u, inputs=inputs)
+
+                    def fun(t):
+                        return entries
+
+                    self._interpolation_function = fun
+                    self.entries = entries
+                    self.dimensions = 0
                 else:
-                    raise pybamm.SolverError(
-                        "Solution time vector must have length > 1. Check whether "
-                        "simulation terminated too early."
-                    )
+                    # 1D function of space only
+                    n = self.mesh[0].npts
+                    base_shape = self.base_eval.shape[0]
+                    if base_shape in [n, n + 1]:
+                        self.initialise_1D(fixed_t=True)
+                    else:
+                        raise pybamm.SolverError(
+                            "Solution time vector must have length > 1. Check whether "
+                            "simulation terminated too early."
+                        )
             elif (
                 isinstance(self.base_eval, numbers.Number)
                 or len(self.base_eval.shape) == 0

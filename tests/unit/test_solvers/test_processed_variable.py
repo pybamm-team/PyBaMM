@@ -520,12 +520,12 @@ class TestProcessedVariable(unittest.TestCase):
 
     def test_solution_too_short(self):
         t = pybamm.t
-        y = pybamm.StateVector(slice(0, 1))
+        y = pybamm.StateVector(slice(0, 3))
         var = t * y
         disc = tests.get_2p1d_discretisation_for_testing()
         var.mesh = disc.mesh["current collector"]
         t_sol = np.array([1])
-        y_sol = np.array([np.linspace(0, 5)])
+        y_sol = np.linspace(0, 5)[:, np.newaxis]
         with self.assertRaisesRegex(
             pybamm.SolverError, "Solution time vector must have length > 1"
         ):

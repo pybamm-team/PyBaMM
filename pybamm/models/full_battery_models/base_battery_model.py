@@ -65,8 +65,7 @@ class BaseBatteryModel(pybamm.BaseModel):
     """
 
     def __init__(self, options=None, name="Unnamed battery model"):
-        super().__init__(name)
-        self.options = options
+        super().__init__(options, name)
         self.submodels = {}
         self._built = False
         self._built_fundamental_and_external = False

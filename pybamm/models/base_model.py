@@ -96,9 +96,9 @@ class BaseModel(object):
 
     """
 
-    def __init__(self, name="Unnamed model"):
+    def __init__(self, options=None, name="Unnamed model"):
+        self.options = options or {}
         self.name = name
-        self.options = {}
 
         # Initialise empty model
         self.rhs = {}

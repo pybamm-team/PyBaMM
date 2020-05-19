@@ -54,14 +54,14 @@ class TestAlternativeEffectiveResistance2D(unittest.TestCase):
         self.assertIsInstance(model.default_solver, pybamm.CasadiAlgebraicSolver)
 
 
-class TestEffectiveResistancePotentials(unittest.TestCase):
-    def test_get_processed_potentials(self):
-        # solve cheap SPM to test processed potentials (think of an alternative test?)
+class TestEffectiveResistancePostProcess(unittest.TestCase):
+    def test_get_processed_variables(self):
+        # solve cheap SPM to test post-processing (think of an alternative test?)
         models = [
             pybamm.lithium_ion.SPM(),
             pybamm.current_collector.EffectiveResistance1D(),
-            # pybamm.current_collector.EffectiveResistance2D(),
-            # pybamm.current_collector.AlternativeEffectiveResistance2D(),
+            pybamm.current_collector.EffectiveResistance2D(),
+            pybamm.current_collector.AlternativeEffectiveResistance2D(),
         ]
         var = pybamm.standard_spatial_vars
         var_pts = {
@@ -92,11 +92,11 @@ class TestEffectiveResistancePotentials(unittest.TestCase):
         # for each current collector model
         for model in models[1:]:
             solution = model.default_solver.solve(model)
-            potentials = model.get_processed_potentials(solution, param, V, I)
+            vars = model.post_process(solution, param, V, I)
             pts = np.array([0.1, 0.5, 0.9])
-            for var, processed_var in potentials.items():
-                if isinstance(model, pybamm.current_collector.EffectiveResistance1D):
-                    processed_var(t=solution_1D.t[5], z=pts)
+            for var, processed_var in vars.items():
+                if "Terminal voltage" in var:
+                    processed_var(t=solution_1D.t[5])
                 else:
                     processed_var(t=solution_1D.t[5], y=pts, z=pts)
 
