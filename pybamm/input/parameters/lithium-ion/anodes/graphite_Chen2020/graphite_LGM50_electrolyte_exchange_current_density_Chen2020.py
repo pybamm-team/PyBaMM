@@ -10,8 +10,8 @@ def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, 
     ----------
     .. [1] Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
     Dhammika Widanage, and Emma Kendrick. "Development of Experimental Techniques for
-    Parameterization of Multi-scale Lithium-ion Battery Models." Submitted for
-    publication (2020).
+    Parameterization of Multi-scale Lithium-ion Battery Models." Journal of the
+    Electrochemical Society 167 (2020): 080534.
 
     Parameters
     ----------

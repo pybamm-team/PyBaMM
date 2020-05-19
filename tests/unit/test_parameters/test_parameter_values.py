@@ -237,13 +237,18 @@ class TestParameterValues(unittest.TestCase):
 
     def test_process_parameter_in_parameter(self):
         parameter_values = pybamm.ParameterValues(
-            {"a": 2, "2a": pybamm.Parameter("a") * 2}
+            {"a": 2, "2a": pybamm.Parameter("a") * 2, "b": np.array([1, 2, 3])}
         )
 
         # process 2a parameter
         a = pybamm.Parameter("2a")
         processed_a = parameter_values.process_symbol(a)
         self.assertEqual(processed_a.evaluate(), 4)
+
+        # case where parameter can't be processed
+        b = pybamm.Parameter("b")
+        with self.assertRaisesRegex(TypeError, "Cannot process parameter"):
+            parameter_values.process_symbol(b)
 
     def test_process_input_parameter(self):
         parameter_values = pybamm.ParameterValues(
