@@ -15,9 +15,6 @@ class CasadiSolver(pybamm.BaseSolver):
 
     Parameters
     ----------
-    method : str, optional
-        The method to use for solving the system ('cvodes', for ODEs, or 'idas', for
-        DAEs). Default is 'idas'.
     mode : str
             How to solve the model (default is "safe"):
 
@@ -52,7 +49,10 @@ class CasadiSolver(pybamm.BaseSolver):
     extra_options_setup : dict, optional
         Any options to pass to the CasADi integrator when creating the integrator.
         Please consult `CasADi documentation <https://tinyurl.com/y5rk76os>`_ for
-        details.
+        details. Some typical options:
+
+        - "max_num_steps": Maximum number of integrator steps
+
     extra_options_call : dict, optional
         Any options to pass to the CasADi integrator when calling the integrator.
         Please consult `CasADi documentation <https://tinyurl.com/y5rk76os>`_ for

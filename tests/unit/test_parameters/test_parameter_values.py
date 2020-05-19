@@ -8,6 +8,8 @@ import numpy as np
 import unittest
 import tests.shared as shared
 
+import pandas as pd
+
 
 class TestParameterValues(unittest.TestCase):
     def test_read_parameters_csv(self):
@@ -85,14 +87,16 @@ class TestParameterValues(unittest.TestCase):
 
     def test_check_parameter_values(self):
         # Can't provide a current density of 0, as this will cause a ZeroDivision error
-        bad_values = {"Typical current [A]": 0}
         with self.assertRaisesRegex(ValueError, "Typical current"):
-            pybamm.ParameterValues(bad_values)
-        bad_values = {"C-rate": 0}
+            pybamm.ParameterValues({"Typical current [A]": 0})
         with self.assertRaisesRegex(
             ValueError, "The 'C-rate' parameter has been deprecated"
         ):
-            pybamm.ParameterValues(bad_values)
+            pybamm.ParameterValues({"C-rate": 0})
+        with self.assertRaisesRegex(ValueError, "surface area density"):
+            pybamm.ParameterValues({"Negative surface area density": 1})
+        with self.assertRaisesRegex(ValueError, "reaction rate"):
+            pybamm.ParameterValues({"Negative reaction rate": 1})
 
     def test_process_symbol(self):
         parameter_values = pybamm.ParameterValues({"a": 1, "b": 2, "c": 3})
@@ -233,8 +237,25 @@ class TestParameterValues(unittest.TestCase):
             x = pybamm.Parameter("x")
             parameter_values.process_symbol(x)
 
+    def test_process_parameter_in_parameter(self):
+        parameter_values = pybamm.ParameterValues(
+            {"a": 2, "2a": pybamm.Parameter("a") * 2, "b": np.array([1, 2, 3])}
+        )
+
+        # process 2a parameter
+        a = pybamm.Parameter("2a")
+        processed_a = parameter_values.process_symbol(a)
+        self.assertEqual(processed_a.evaluate(), 4)
+
+        # case where parameter can't be processed
+        b = pybamm.Parameter("b")
+        with self.assertRaisesRegex(TypeError, "Cannot process parameter"):
+            parameter_values.process_symbol(b)
+
     def test_process_input_parameter(self):
-        parameter_values = pybamm.ParameterValues({"a": "[input]", "b": 3})
+        parameter_values = pybamm.ParameterValues(
+            {"a": "[input]", "b": 3, "c times 2": pybamm.InputParameter("c") * 2}
+        )
         # process input parameter
         a = pybamm.Parameter("a")
         processed_a = parameter_values.process_symbol(a)
@@ -249,6 +270,11 @@ class TestParameterValues(unittest.TestCase):
         self.assertIsInstance(processed_add.children[0], pybamm.InputParameter)
         self.assertIsInstance(processed_add.children[1], pybamm.Scalar)
         self.assertEqual(processed_add.evaluate(inputs={"a": 4}), 7)
+
+        # process complex input parameter
+        c = pybamm.Parameter("c times 2")
+        processed_c = parameter_values.process_symbol(c)
+        self.assertEqual(processed_c.evaluate(inputs={"c": 5}), 10)
 
     def test_process_function_parameter(self):
         parameter_values = pybamm.ParameterValues(
@@ -562,6 +588,26 @@ class TestParameterValues(unittest.TestCase):
         array = pybamm.Array(np.array([1, 2, 3]))
         with self.assertRaises(ValueError):
             parameter_values.evaluate(array)
+
+    def test_export_csv(self):
+        def some_function(self):
+            return None
+
+        example_data = ("some_data", [0, 1, 2])
+
+        parameter_values = pybamm.ParameterValues(
+            {"a": 0.1, "b": some_function, "c": example_data}
+        )
+
+        filename = "parameter_values_test.csv"
+
+        parameter_values.export_csv(filename)
+
+        df = pd.read_csv(filename, index_col=0, header=None)
+
+        self.assertEqual(df[1]["a"], "0.1")
+        self.assertEqual(df[1]["b"], "[function]some_function")
+        self.assertEqual(df[1]["c"], "[data]some_data")
 
 
 if __name__ == "__main__":

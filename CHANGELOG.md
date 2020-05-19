@@ -8,9 +8,12 @@
 -   Added `ProcessedSymbolicVariable` class, which can handle symbolic variables (i.e. variables for which the inputs are symbolic) ([#940](https://github.com/pybamm-team/PyBaMM/pull/940))
 -   Made `QuickPlot` compatible with Google Colab ([#935](https://github.com/pybamm-team/PyBaMM/pull/935))
 -   Added `BasicFull` model for lead-acid ([#932](https://github.com/pybamm-team/PyBaMM/pull/932))
+-   Added 'arctan' function  ([#973]https://github.com/pybamm-team/PyBaMM/pull/973)
 
 ## Optimizations
 
+-   Implementing the use of GitHub Actions for CI ([#855](https://github.com/pybamm-team/PyBaMM/pull/855))
+-   Changed default solver for DAE models to `CasadiSolver` ([#978](https://github.com/pybamm-team/PyBaMM/pull/978))
 -   Added some extra simplifications to the expression tree ([#971](https://github.com/pybamm-team/PyBaMM/pull/971))
 -   Changed the behaviour of "safe" mode in `CasadiSolver` ([#956](https://github.com/pybamm-team/PyBaMM/pull/956))
 -   Sped up model building ([#927](https://github.com/pybamm-team/PyBaMM/pull/927))
@@ -18,6 +21,7 @@
 
 ## Bug fixes
 
+-   Fix doctests failing due to mismatch in unsorted output.([#990](https://github.com/pybamm-team/PyBaMM/pull/990))
 -   Added extra checks when creating a model, for clearer errors ([#971](https://github.com/pybamm-team/PyBaMM/pull/971))
 -   Fixed `Interpolant` ids to allow processing ([#962](https://github.com/pybamm-team/PyBaMM/pull/962))
 -   Fixed a bug in the initial conditions of the potential pair model ([#954](https://github.com/pybamm-team/PyBaMM/pull/954))
@@ -30,6 +34,8 @@
 
 ## Breaking changes
 
+-   Renamed "surface area density" to "surface area to volume ratio" ([#975](https://github.com/pybamm-team/PyBaMM/pull/975))
+-   Replaced "reaction rate" with "exchange-current density" ([#975](https://github.com/pybamm-team/PyBaMM/pull/975))
 -   Changed the implementation of reactions in submodels ([#948](https://github.com/pybamm-team/PyBaMM/pull/948))
 -   Removed some inputs like `T_inf`, `R_g` and activation energies to some of the standard function parameters. This is because each of those inputs is specific to a particular function (e.g. the reference temperature at which the function was measured). To change a property such as the activation energy, users should create a new function, specifying the relevant property as a `Parameter` or `InputParameter` ([#942](https://github.com/pybamm-team/PyBaMM/pull/942))
 -   The thermal option 'xyz-lumped' has been removed. The option 'thermal current collector' has also been removed ([#938](https://github.com/pybamm-team/PyBaMM/pull/938))
