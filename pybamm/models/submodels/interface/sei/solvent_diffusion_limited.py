@@ -34,7 +34,8 @@ class SolventDiffusionLimited(BaseModel):
             "Outer " + self.domain.lower() + " electrode sei thickness"
         ]
 
-        C_sei = pybamm.sei_parameters.C_sei_solvent
+        if self.domain == "Negative":
+            C_sei = pybamm.sei_parameters.C_sei_solvent_n
 
         j_sei = -1 / (C_sei * L_sei_outer)
 
@@ -65,7 +66,13 @@ class SolventDiffusionLimited(BaseModel):
 
         v_bar = pybamm.sei_parameters.v_bar
 
-        self.rhs = {L_inner: -j_inner, L_outer: -v_bar * j_outer}
+        if self.domain == "Negative":
+            Gamma_SEI = pybamm.sei_parameters.Gamma_SEI_n
+
+        self.rhs = {
+            L_inner: -Gamma_SEI * j_inner,
+            L_outer: -v_bar * Gamma_SEI * j_outer,
+        }
 
     def set_initial_conditions(self, variables):
         domain = self.domain.lower() + " electrode"

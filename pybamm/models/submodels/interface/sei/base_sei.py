@@ -19,7 +19,11 @@ class BaseModel(BaseInterface):
     """
 
     def __init__(self, param, domain):
-        reaction = "scaled sei"
+        if domain == "Positive" and not isinstance(self, pybamm.sei.NoSEI):
+            raise NotImplementedError(
+                "SEI models are not implemented for the positive electrode"
+            )
+        reaction = "sei"
         super().__init__(param, domain, reaction)
 
     def _get_standard_thickness_variables(self, L_inner, L_outer):
@@ -117,20 +121,10 @@ class BaseModel(BaseInterface):
             variables : dict
                 The variables which can be derived from the SEI thicknesses.
         """
-        # Set scales to one for the "no SEI" model so that they are not required
-        # by parameter values in general
-        if isinstance(self, pybamm.sei.NoSEI):
-            j_scale = 1
-            Gamma_SEI = 1
-        else:
-            sp = pybamm.sei_parameters
-            j_scale = (
-                sp.F * sp.L_sei_0_dim / sp.V_bar_inner_dimensional / sp.tau_discharge
-            )
-            if self.domain == "Negative":
-                Gamma_SEI = sp.Gamma_SEI_n
-            elif self.domain == "Positive":
-                Gamma_SEI = sp.Gamma_SEI_p
+        if self.domain == "Negative":
+            j_scale = self.param.interfacial_current_scale_n
+        elif self.domain == "Positive":
+            j_scale = self.param.interfacial_current_scale_p
         j_i_av = pybamm.x_average(j_inner)
         j_o_av = pybamm.x_average(j_outer)
 
@@ -163,10 +157,6 @@ class BaseModel(BaseInterface):
             "X-averaged "
             + domain
             + " sei interfacial current density [A.m-2]": j_sei_av * j_scale,
-            Domain + " scaled sei interfacial current density": j_sei * Gamma_SEI,
-            "X-averaged "
-            + domain
-            + " scaled sei interfacial current density": j_sei_av * Gamma_SEI,
         }
 
         return variables

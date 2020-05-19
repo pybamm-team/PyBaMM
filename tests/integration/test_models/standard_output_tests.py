@@ -533,17 +533,13 @@ class CurrentTests(BaseOutputTest):
         self.j_p_av = solution[
             "X-averaged positive electrode interfacial current density"
         ]
-        self.j_n_sei = solution[
-            "Negative electrode scaled sei interfacial current density"
-        ]
-        self.j_p_sei = solution[
-            "Positive electrode scaled sei interfacial current density"
-        ]
+        self.j_n_sei = solution["Negative electrode sei interfacial current density"]
+        self.j_p_sei = solution["Positive electrode sei interfacial current density"]
         self.j_n_sei_av = solution[
-            "X-averaged negative electrode scaled sei interfacial current density"
+            "X-averaged negative electrode sei interfacial current density"
         ]
         self.j_p_sei_av = solution[
-            "X-averaged positive electrode scaled sei interfacial current density"
+            "X-averaged positive electrode sei interfacial current density"
         ]
 
         self.j0_n = solution["Negative electrode exchange current density"]

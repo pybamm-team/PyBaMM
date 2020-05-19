@@ -34,11 +34,11 @@ class InterstitialDiffusionLimited(BaseModel):
             "Inner " + self.domain.lower() + " electrode sei thickness"
         ]
         phi_s_n = variables[self.domain + " electrode potential"]
-        phi_e_n = variables[self.domain + " electrolyte potential"]
 
-        C_sei = pybamm.sei_parameters.C_sei_inter
+        if self.domain == "Negative":
+            C_sei = pybamm.sei_parameters.C_sei_inter_n
 
-        j_sei = -pybamm.exp(-(phi_s_n - phi_e_n)) / (C_sei * L_sei_inner)
+        j_sei = -pybamm.exp(-phi_s_n) / (C_sei * L_sei_inner)
 
         alpha = 0.5
         j_inner = alpha * j_sei
@@ -67,7 +67,13 @@ class InterstitialDiffusionLimited(BaseModel):
 
         v_bar = pybamm.sei_parameters.v_bar
 
-        self.rhs = {L_inner: -j_inner, L_outer: -v_bar * j_outer}
+        if self.domain == "Negative":
+            Gamma_SEI = pybamm.sei_parameters.Gamma_SEI_n
+
+        self.rhs = {
+            L_inner: -Gamma_SEI * j_inner,
+            L_outer: -v_bar * Gamma_SEI * j_outer,
+        }
 
     def set_initial_conditions(self, variables):
         domain = self.domain.lower() + " electrode"

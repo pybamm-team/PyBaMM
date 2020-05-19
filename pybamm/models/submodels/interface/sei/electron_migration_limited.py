@@ -35,8 +35,9 @@ class ElectronMigrationLimited(BaseModel):
         ]
         phi_s_n = variables[self.domain + " electrode potential"]
 
-        C_sei = pybamm.sei_parameters.C_sei_electron
         U_inner = pybamm.sei_parameters.U_inner_electron
+        if self.domain == "Negative":
+            C_sei = pybamm.sei_parameters.C_sei_electron_n
 
         j_sei = (phi_s_n - U_inner) / (C_sei * L_sei_inner)
 
@@ -66,8 +67,13 @@ class ElectronMigrationLimited(BaseModel):
         j_outer = variables["Outer " + domain + " sei interfacial current density"]
 
         v_bar = pybamm.sei_parameters.v_bar
+        if self.domain == "Negative":
+            Gamma_SEI = pybamm.sei_parameters.Gamma_SEI_n
 
-        self.rhs = {L_inner: -j_inner, L_outer: -v_bar * j_outer}
+        self.rhs = {
+            L_inner: -Gamma_SEI * j_inner,
+            L_outer: -v_bar * Gamma_SEI * j_outer,
+        }
 
     def set_initial_conditions(self, variables):
         domain = self.domain.lower() + " electrode"
