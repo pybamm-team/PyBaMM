@@ -2,6 +2,7 @@
 
 ## Features
 
+-   Added SEI film resistance as an option ([#994](https://github.com/pybamm-team/PyBaMM/pull/994))
 -   Allow symbolic inputs in initial conditions ([#968](https://github.com/pybamm-team/PyBaMM/pull/968))
 -   Added solver-specific input `extra_options` which gets passed down to each solver ([#968](https://github.com/pybamm-team/PyBaMM/pull/968))
 -   Added tab, edge, and surface cooling ([#965](https://github.com/pybamm-team/PyBaMM/pull/965))

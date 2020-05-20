@@ -78,9 +78,19 @@ class SPMe(BaseModel):
     def set_interfacial_submodel(self):
 
         self.submodels["negative interface"] = pybamm.interface.InverseButlerVolmer(
-            self.param, "Negative", "lithium-ion main"
+            self.param, "Negative", "lithium-ion main", self.options
         )
         self.submodels["positive interface"] = pybamm.interface.InverseButlerVolmer(
+            self.param, "Positive", "lithium-ion main", self.options
+        )
+        self.submodels[
+            "negative interface current"
+        ] = pybamm.interface.CurrentForInverseButlerVolmer(
+            self.param, "Negative", "lithium-ion main"
+        )
+        self.submodels[
+            "positive interface current"
+        ] = pybamm.interface.CurrentForInverseButlerVolmer(
             self.param, "Positive", "lithium-ion main"
         )
 
