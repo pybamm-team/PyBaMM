@@ -567,10 +567,10 @@ class IndefiniteIntegral(BaseIndefiniteIntegral):
         super().__init__(child, integration_variable)
         # Overwrite the name
         self.name = "{} integrated w.r.t {}".format(
-            child.name, integration_variable.name
+            child.name, self.integration_variable[0].name
         )
         if isinstance(integration_variable, pybamm.SpatialVariable):
-            self.name += " on {}".format(integration_variable.domain)
+            self.name += " on {}".format(self.integration_variable[0].domain)
 
 
 class BackwardIndefiniteIntegral(BaseIndefiniteIntegral):
@@ -597,10 +597,10 @@ class BackwardIndefiniteIntegral(BaseIndefiniteIntegral):
         super().__init__(child, integration_variable)
         # Overwrite the name
         self.name = "{} integrated backward w.r.t {}".format(
-            child.name, integration_variable.name
+            child.name, self.integration_variable[0].name
         )
         if isinstance(integration_variable, pybamm.SpatialVariable):
-            self.name += " on {}".format(integration_variable.domain)
+            self.name += " on {}".format(self.integration_variable[0].domain)
 
 
 class DefiniteIntegralVector(SpatialOperator):

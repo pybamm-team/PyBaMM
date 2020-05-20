@@ -342,8 +342,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         Notes
         -----
 
-        Forward integral
-        ^^^^^^^^^^^^^^^^
+        **Forward integral**
 
         .. math::
             F(x) = \\int_0^x\\!f(u)\\,du
@@ -367,8 +366,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         integrand vector `f`, so we add a column of zeros at each end of the
         indefinite integral matrix to ignore these.
 
-        Backward integral
-        ^^^^^^^^^^^^^^^^^
+        **Backward integral**
 
         .. math::
             F(x) = \\int_x^end\\!f(u)\\,du
