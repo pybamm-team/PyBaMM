@@ -23,15 +23,22 @@ class BaseInterface(pybamm.BaseSubModel):
 
     def __init__(self, param, domain, reaction):
         super().__init__(param, domain)
-        self.reaction = reaction
         if reaction == "lithium-ion main":
             self.reaction_name = ""  # empty reaction name for the main reaction
+            self.Reaction_icd = "Interfacial current density"
         elif reaction == "lead-acid main":
             self.reaction_name = ""  # empty reaction name for the main reaction
+            self.Reaction_icd = "Interfacial current density"
         elif reaction == "lead-acid oxygen":
             self.reaction_name = " oxygen"
+            self.Reaction_icd = "Oxygen interfacial current density"
         elif reaction == "lithium-ion oxygen":
             self.reaction_name = " oxygen"
+            self.Reaction_icd = "Oxygen interfacial current density"
+        elif reaction == "sei":
+            self.reaction_name = " sei"
+            self.Reaction_icd = "Sei interfacial current density"
+        self.reaction = reaction
 
     def _get_exchange_current_density(self, variables):
         """
@@ -168,7 +175,9 @@ class BaseInterface(pybamm.BaseSubModel):
 
     def _get_electrolyte_reaction_signed_stoichiometry(self):
         "Returns the number of electrons in the reaction"
-        if self.reaction == "lithium-ion main":
+        if self.reaction in ["lithium-ion main", "sei"]:
+            # Both the main reaction current contribute to the electrolyte reaction
+            # current
             return pybamm.Scalar(1), pybamm.Scalar(1)
         elif self.reaction == "lead-acid main":
             return self.param.s_plus_n_S, self.param.s_plus_p_S
@@ -281,7 +290,7 @@ class BaseInterface(pybamm.BaseSubModel):
 
     def _get_standard_whole_cell_interfacial_current_variables(self, variables):
         """
-        Get variables associated with interfacial current over theh whole cell domain
+        Get variables associated with interfacial current over the whole cell domain
         This function also automatically increments the "total source term" variables
         """
         i_typ = self.param.i_typ
@@ -310,26 +319,13 @@ class BaseInterface(pybamm.BaseSubModel):
         j = pybamm.Concatenation(j_n, j_s, j_p)
         j_dim = pybamm.Concatenation(j_n_scale * j_n, j_s, j_p_scale * j_p)
 
-        if self.reaction_name == "":
-            variables.update(
-                {
-                    "Interfacial current density": j,
-                    "Interfacial current density [A.m-2]": j_dim,
-                    "Interfacial current density per volume [A.m-3]": i_typ / L_x * j,
-                }
-            )
-        else:
-            reaction_name = self.reaction_name[1:].capitalize()
-            variables.update(
-                {
-                    reaction_name + " interfacial current density": j,
-                    reaction_name + " interfacial current density [A.m-2]": j_dim,
-                    reaction_name
-                    + " interfacial current density per volume [A.m-3]": i_typ
-                    / L_x
-                    * j,
-                }
-            )
+        variables.update(
+            {
+                self.Reaction_icd: j,
+                self.Reaction_icd + " [A.m-2]": j_dim,
+                self.Reaction_icd + " per volume [A.m-3]": i_typ / L_x * j,
+            }
+        )
 
         s_n, s_p = self._get_electrolyte_reaction_signed_stoichiometry()
         s = pybamm.Concatenation(
@@ -481,6 +477,30 @@ class BaseInterface(pybamm.BaseSubModel):
             + " electrode"
             + self.reaction_name
             + " reaction overpotential [V]": eta_r_av * pot_scale,
+        }
+
+        return variables
+
+    def _get_standard_sei_film_overpotential_variables(self, eta_sei):
+
+        pot_scale = self.param.potential_scale
+        # Average, and broadcast if necessary
+        eta_sei_av = pybamm.x_average(eta_sei)
+        if eta_sei.domain == []:
+            eta_sei = pybamm.FullBroadcast(
+                eta_sei, self.domain_for_broadcast, "current collector"
+            )
+        elif eta_sei.domain == ["current collector"]:
+            eta_sei = pybamm.PrimaryBroadcast(eta_sei, self.domain_for_broadcast)
+
+        domain = self.domain.lower() + " electrode"
+        variables = {
+            self.domain + " electrode sei film overpotential": eta_sei,
+            "X-averaged " + domain + " sei film overpotential": eta_sei_av,
+            self.domain + " electrode sei film overpotential [V]": eta_sei * pot_scale,
+            "X-averaged "
+            + domain
+            + " sei film overpotential [V]": eta_sei_av * pot_scale,
         }
 
         return variables

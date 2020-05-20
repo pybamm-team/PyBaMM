@@ -14,8 +14,7 @@ class TestLeadingOrder(unittest.TestCase):
         variables = {
             "Current collector current density": a,
             "X-averaged negative electrode potential": a,
-            "X-averaged negative electrode open circuit potential": a,
-            "X-averaged negative electrode reaction overpotential": a,
+            "X-averaged negative electrode surface potential difference": a,
         }
         submodel = pybamm.electrolyte_conductivity.LeadingOrder(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)
