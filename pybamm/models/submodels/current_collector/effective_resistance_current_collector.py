@@ -5,7 +5,8 @@ import pybamm
 
 
 class EffectiveResistance(pybamm.BaseModel):
-    """A model which calculates the effective Ohmic resistance of the current
+    """
+    A model which calculates the effective Ohmic resistance of the current
     collectors in the limit of large electrical conductivity. For details see [1]_.
 
     References
@@ -171,13 +172,9 @@ class EffectiveResistance(pybamm.BaseModel):
 
 
 class EffectiveResistance1D(EffectiveResistance):
-    """A model which calculates the effective Ohmic resistance of the 1D current
-    collectors in the limit of large electrical conductivity. For details see [1]_.
-
-    References
-    ----------
-    .. [1] R Timms, SG Marquis, V Sulzer, CP Please and SJ Chapman. “Asymptotic
-           Reduction of a Lithium-ion Pouch Cell Model”. Submitted, 2020.
+    """
+    A model which calculates the effective Ohmic resistance of the 1D current
+    collectors in the limit of large electrical conductivity.
 
     **Extends:** :class:`pybamm.EffectiveResistance`
     """
@@ -201,16 +198,12 @@ class EffectiveResistance1D(EffectiveResistance):
 
 
 class EffectiveResistance2D(EffectiveResistance):
-    """A model which calculates the effective Ohmic resistance of the 2D current
-    collectors in the limit of large electrical conductivity. For details see [1]_.
-    Note that unlike the model in [1]_, this formulation assumes uniform potential
-    across the tabs. See :class:`pybamm.AlternativeEffectiveResistance2D` for the
-    exact formulation in [1]_ that assumes a uniform current density at the tabs.
-
-    References
-    ----------
-    .. [1] R Timms, SG Marquis, V Sulzer, CP Please and SJ Chapman. “Asymptotic
-           Reduction of a Lithium-ion Pouch Cell Model”. Submitted, 2020.
+    """
+    A model which calculates the effective Ohmic resistance of the 2D current
+    collectors in the limit of large electrical conductivity. Note that this
+    formulation assumes uniform potential across the tabs.
+    See :class:`pybamm.AlternativeEffectiveResistance2D` for the formulation that
+    assumes a uniform current density at the tabs.
 
     **Extends:** :class:`pybamm.EffectiveResistance`
     """
@@ -254,15 +247,11 @@ class EffectiveResistance2D(EffectiveResistance):
 
 
 class AlternativeEffectiveResistance2D(pybamm.BaseModel):
-    """A model which calculates the effective Ohmic resistance of the 2D current
+    """
+    A model which calculates the effective Ohmic resistance of the 2D current
     collectors in the limit of large electrical conductivity. This model assumes
     a uniform current density at the tabs and the solution is computed by first
-    solving and auxilliary problem which is the related to the resistances, see [1]_.
-
-    References
-    ----------
-    .. [1] R Timms, SG Marquis, V Sulzer, CP Please and SJ Chapman. “Asymptotic
-           Reduction of a Lithium-ion Pouch Cell Model”. Submitted, 2020.
+    solving and auxilliary problem which is the related to the resistances.
 
     **Extends:** :class:`pybamm.BaseModel`
     """
@@ -274,8 +263,6 @@ class AlternativeEffectiveResistance2D(pybamm.BaseModel):
 
         # Get necessary parameters
         param = self.param
-        l_y = param.l_y
-        l_z = param.l_z
         l_cn = param.l_cn
         l_cp = param.l_cp
         l_tab_p = param.l_tab_p
@@ -306,7 +293,7 @@ class AlternativeEffectiveResistance2D(pybamm.BaseModel):
         }
 
         # Boundary conditons
-        pos_tab_bc = l_y * l_z * l_cp / A_tab_p
+        pos_tab_bc = l_cp / A_tab_p
         self.boundary_conditions = {
             f_n: {"negative tab": (0, "Dirichlet"), "positive tab": (0, "Neumann")},
             f_p: {
@@ -323,13 +310,11 @@ class AlternativeEffectiveResistance2D(pybamm.BaseModel):
         }
 
         # Define effective current collector resistance
-        R_cc_n = (
-            delta * pybamm.yz_average(f_n) / (l_y * l_z * l_cn * sigma_cn_dbl_prime)
-        )
+        R_cc_n = delta * pybamm.yz_average(f_n) / (l_cn * sigma_cn_dbl_prime)
         R_cc_p = (
             delta
             * pybamm.BoundaryIntegral(f_p, "positive tab")
-            / (l_y * l_z * l_cp * sigma_cp_dbl_prime)
+            / (l_cp * sigma_cp_dbl_prime)
         )
         R_cc = R_cc_n + R_cc_p
         R_scale = param.potential_scale / param.I_typ
