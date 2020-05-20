@@ -324,8 +324,8 @@ class FiniteVolume(pybamm.SpatialMethod):
     def indefinite_integral_matrix_edges(self, domain, direction):
         """
         Matrix for finite-volume implementation of the indefinite integral where the
-        integrand is evaluated on mesh edges. The integral will then be evaluated on
-        mesh nodes.
+        integrand is evaluated on mesh edges (shape (n+1, 1)).
+        The integral will then be evaluated on mesh nodes (shape (n, 1)).
 
         Parameters
         ----------
@@ -361,9 +361,9 @@ class FiniteVolume(pybamm.SpatialMethod):
         Hence we must have
 
         - :math:`F_0 = du_{1/2} * f_{1/2} / 2`
-        - :math:`F_{i+1} = F_i + du * f_{i+1/2}`
+        - :math:`F_{i+1} = F_i + du_{i+1/2} * f_{i+1/2}`
 
-        Note that :math:`f_{-1/2}` and :math:`f_{n+1/2}` are included in the discrete
+        Note that :math:`f_{-1/2}` and :math:`f_{end+1/2}` are included in the discrete
         integrand vector `f`, so we add a column of zeros at each end of the
         indefinite integral matrix to ignore these.
 
@@ -376,19 +376,19 @@ class FiniteVolume(pybamm.SpatialMethod):
         The indefinite integral must satisfy the following conditions:
 
         - :math:`F(end) = 0`
-        - :math:`f(x) = \\frac{dF}{dx}`
+        - :math:`f(x) = -\\frac{dF}{dx}`
 
         or, in discrete form,
 
         - `BoundaryValue(F, "right") = 0`, i.e. :math:`3*F_{end} - F_{end-1} = 0`
-        - :math:`f_{i+1/2} = (F_{i+1} - F_i) / dx_{i+1/2}`
+        - :math:`f_{i+1/2} = -(F_{i+1} - F_i) / dx_{i+1/2}`
 
         Hence we must have
 
-        - :math:`F_end = du_{1/2} * f_{end-1/2} / 2`
-        - :math:`F_{i+1} = F_i + du * f_{i+1/2}`
+        - :math:`F_{end} = du_{end+1/2} * f_{end-1/2} / 2`
+        - :math:`F_{i-1} = F_i + du_{i-1/2} * f_{i-1/2}`
 
-        Note that :math:`f_{-1/2}` and :math:`f_{n+1/2}` are included in the discrete
+        Note that :math:`f_{-1/2}` and :math:`f_{end+1/2}` are included in the discrete
         integrand vector `f`, so we add a column of zeros at each end of the
         indefinite integral matrix to ignore these.
         """
@@ -400,11 +400,18 @@ class FiniteVolume(pybamm.SpatialMethod):
         sec_pts = len(submesh_list)
 
         du_n = submesh.d_nodes
-        du_entries = [du_n] * (n - 1)
-        offset = -np.arange(1, n, 1)
-        main_integral_matrix = diags(du_entries, offset, shape=(n, n - 1))
-        bc_offset_matrix = lil_matrix((n, n - 1))
-        bc_offset_matrix[:, 0] = du_n[0] / 2
+        if direction == "forward":
+            du_entries = [du_n] * (n - 1)
+            offset = -np.arange(1, n, 1)
+            main_integral_matrix = spdiags(du_entries, offset, n, n - 1)
+            bc_offset_matrix = lil_matrix((n, n - 1))
+            bc_offset_matrix[:, 0] = du_n[0] / 2
+        elif direction == "backward":
+            du_entries = [du_n] * (n + 1)
+            offset = np.arange(n, -1, -1)
+            main_integral_matrix = spdiags(du_entries, offset, n, n - 1)
+            bc_offset_matrix = lil_matrix((n, n - 1))
+            bc_offset_matrix[:, -1] = du_n[-1] / 2
         sub_matrix = main_integral_matrix + bc_offset_matrix
         # add a column of zeros at each end
         zero_col = csr_matrix((n, 1))
@@ -420,8 +427,8 @@ class FiniteVolume(pybamm.SpatialMethod):
     def indefinite_integral_matrix_nodes(self, domain, direction):
         """
         Matrix for finite-volume implementation of the (backward) indefinite integral
-        where the integrand is evaluated on mesh nodes. The integral will then be
-        evaluated on mesh edges.
+        where the integrand is evaluated on mesh nodes (shape (n, 1)).
+        The integral will then be evaluated on mesh edges (shape (n+1, 1)).
         This is just a straightforward (backward) cumulative sum of the integrand
 
         Parameters
@@ -446,7 +453,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         du_n = submesh.d_edges
         du_entries = [du_n] * n
         if direction == "forward":
-            offset = -np.arange(1, n + 1, 1)
+            offset = -np.arange(1, n + 1, 1)  # from -1 down to -n
         elif direction == "backward":
             offset = np.arange(n - 1, -1, -1)  # from n-1 down to 0
         sub_matrix = spdiags(du_entries, offset, n + 1, n)
