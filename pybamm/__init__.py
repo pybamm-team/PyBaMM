@@ -68,7 +68,7 @@ from .citations import Citations, citations, print_citations
 from .expression_tree.symbol import *
 from .expression_tree.binary_operators import *
 from .expression_tree.concatenations import *
-from .expression_tree.array import Array
+from .expression_tree.array import Array, linspace, meshgrid
 from .expression_tree.matrix import Matrix
 from .expression_tree.unary_operators import *
 from .expression_tree.functions import *
@@ -223,7 +223,7 @@ from . import experiments
 #
 # other
 #
-from .quick_plot import QuickPlot, dynamic_plot, ax_min, ax_max
+from .quick_plot import QuickPlot, plot, plot2D, dynamic_plot, ax_min, ax_max
 
 from .simulation import Simulation, load_sim, is_notebook
 

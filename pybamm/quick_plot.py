@@ -62,6 +62,96 @@ def dynamic_plot(*args, **kwargs):
     return plot
 
 
+def plot(x, y, xlabel=None, ylabel=None, title=None, testing=False, **kwargs):
+    """
+    Generate a simple 1D plot. Calls `matplotlib.pyplot.plot` with keyword
+    arguments 'kwargs'.
+
+    Parameters
+    ----------
+    x : :class:`pybamm.Array`
+        The array to plot on the x axis
+    y : :class:`pybamm.Array`
+        The array to plot on the y axis
+    xlabel : str, optional
+        The label for the x axis
+    ylabel : str, optional
+        The label for the y axis
+    testing : bool, optional
+        Whether to actually make the plot (turned off for unit tests)
+
+    """
+    import matplotlib.pyplot as plt
+
+    if not isinstance(x, pybamm.Array):
+        raise TypeError("x must be 'pybamm.Array'")
+    if not isinstance(y, pybamm.Array):
+        raise TypeError("y must be 'pybamm.Array'")
+
+    plt.plot(x.entries, y.entries, **kwargs)
+    plt.ylim([ax_min(y.entries), ax_max(y.entries)])
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.title(title)
+
+    if not testing:  # pragma: no cover
+        plt.show()
+
+    return
+
+
+def plot2D(x, y, z, xlabel=None, ylabel=None, title=None, testing=False, **kwargs):
+    """
+    Generate a simple 2D plot. Calls `matplotlib.pyplot.contourf` with keyword
+    arguments 'kwargs'.
+
+    Parameters
+    ----------
+    x : :class:`pybamm.Array`
+        The array to plot on the x axis
+    y : :class:`pybamm.Array`
+        The array to plot on the y axis
+    z : :class:`pybamm.Array`
+        The array to plot on the z axis
+    xlabel : str, optional
+        The label for the x axis
+    ylabel : str, optional
+        The label for the y axis
+    title : str, optional
+        The title for the plot
+    testing : bool, optional
+        Whether to actually make the plot (turned off for unit tests)
+
+    """
+    import matplotlib.pyplot as plt
+
+    if not isinstance(x, pybamm.Array):
+        raise TypeError("x must be 'pybamm.Array'")
+    if not isinstance(y, pybamm.Array):
+        raise TypeError("y must be 'pybamm.Array'")
+    if not isinstance(z, pybamm.Array):
+        raise TypeError("z must be 'pybamm.Array'")
+
+    plt.contourf(
+        x.entries,
+        y.entries,
+        z.entries,
+        vmin=ax_min(z.entries),
+        vmax=ax_max(z.entries),
+        cmap="coolwarm",
+        **kwargs
+    )
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.title(title)
+    plt.colorbar()
+
+    if not testing:  # pragma: no cover
+        plt.show()
+
+    return
+
+
 class QuickPlot(object):
     """
     Generates a quick plot of a subset of key outputs of the model so that the model
