@@ -67,11 +67,13 @@ jobs:
 
     - name: Run unit tests on GNU/Linux and MacOS
       if: matrix.os != 'windows-latest'
-      run: tox -e unit-withscikitsodes
+      run: tox -e unit
 
     - name: Run unit tests on Windows
       if: matrix.os == 'windows-latest'
-      run: tox -e unit
+      run: |
+        pip install -e .
+        python run-tests.py --unit --folder all
 
     - name: Install docs dependencies and run doctests
       if: matrix.os != 'windows-latest'
