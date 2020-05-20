@@ -32,12 +32,6 @@ class TestMatrix(unittest.TestCase):
         )
 
 
-class TestArray(unittest.TestCase):
-    def test_name(self):
-        arr = pybamm.Array(np.array([1, 2, 3]))
-        self.assertEqual(arr.name, "Array of shape (3, 1)")
-
-
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys
