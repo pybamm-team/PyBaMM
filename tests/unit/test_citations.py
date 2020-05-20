@@ -80,24 +80,23 @@ class TestCitations(unittest.TestCase):
 
         citations._reset()
         self.assertNotIn("timms2020", citations._papers_to_cite)
-        options = {"dimensionality": 2}
-        pybamm.lithium_ion.DFN(options, build=False)
-        self.assertIn("timms", citations._papers_to_cite)
+        pybamm.current_collector.BasePotentialPair(param=None)
+        self.assertIn("timms2020", citations._papers_to_cite)
 
         citations._reset()
         self.assertNotIn("timms2020", citations._papers_to_cite)
         pybamm.current_collector.EffectiveResistance1D()
-        self.assertIn("timms", citations._papers_to_cite)
+        self.assertIn("timms2020", citations._papers_to_cite)
 
         citations._reset()
         self.assertNotIn("timms2020", citations._papers_to_cite)
         pybamm.current_collector.EffectiveResistance2D()
-        self.assertIn("timms", citations._papers_to_cite)
+        self.assertIn("timms2020", citations._papers_to_cite)
 
         citations._reset()
         self.assertNotIn("timms2020", citations._papers_to_cite)
         pybamm.current_collector.AlternativeEffectiveResistance2D()
-        self.assertIn("timms", citations._papers_to_cite)
+        self.assertIn("timms2020", citations._papers_to_cite)
 
     def test_scikit_fem(self):
         citations = pybamm.citations
