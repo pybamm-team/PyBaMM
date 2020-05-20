@@ -43,7 +43,7 @@ class Integrated(BaseElectrolyteConductivity):
 
         tor_n = variables["Negative electrolyte tortuosity"]
         tor_s = variables["Separator tortuosity"]
-        tor_p = variables["Positive electrolyte tortuosity"]        
+        tor_p = variables["Positive electrolyte tortuosity"]
 
         T_av = variables["X-averaged cell temperature"]
         T_av_n = pybamm.PrimaryBroadcast(T_av, "negative electrode")
@@ -77,23 +77,37 @@ class Integrated(BaseElectrolyteConductivity):
         # i_e_edge = pybamm.Concatenation(i_e_n_edge, i_e_s_edge, i_e_p_edge)
 
         # electrolyte potential
-        indef_integral_n = pybamm.IndefiniteIntegral(
-            i_e_n_edge / (param.kappa_e(c_e_n, T_av_n) * tor_n), x_n
-        ) * param.C_e / param.gamma_e
-        indef_integral_s = pybamm.IndefiniteIntegral(
-            i_e_s_edge / (param.kappa_e(c_e_s, T_av_s) * tor_s), x_s
-        ) * param.C_e / param.gamma_e
-        indef_integral_p = pybamm.IndefiniteIntegral(
-            i_e_p_edge / (param.kappa_e(c_e_p, T_av_p) * tor_p), x_p
-        ) * param.C_e / param.gamma_e
-        
+        indef_integral_n = (
+            pybamm.IndefiniteIntegral(
+                i_e_n_edge / (param.kappa_e(c_e_n, T_av_n) * tor_n), x_n
+            )
+            * param.C_e
+            / param.gamma_e
+        )
+        indef_integral_s = (
+            pybamm.IndefiniteIntegral(
+                i_e_s_edge / (param.kappa_e(c_e_s, T_av_s) * tor_s), x_s
+            )
+            * param.C_e
+            / param.gamma_e
+        )
+        indef_integral_p = (
+            pybamm.IndefiniteIntegral(
+                i_e_p_edge / (param.kappa_e(c_e_p, T_av_p) * tor_p), x_p
+            )
+            * param.C_e
+            / param.gamma_e
+        )
+
         integral_n = indef_integral_n - pybamm.boundary_value(indef_integral_n, "left")
         integral_s = (
-            indef_integral_s - pybamm.boundary_value(indef_integral_s, "left") 
+            indef_integral_s
+            - pybamm.boundary_value(indef_integral_s, "left")
             + pybamm.boundary_value(integral_n, "right")
         )
         integral_p = (
-            indef_integral_p - pybamm.boundary_value(indef_integral_p, "left")
+            indef_integral_p
+            - pybamm.boundary_value(indef_integral_p, "left")
             + pybamm.boundary_value(integral_s, "right")
         )
 
@@ -153,9 +167,7 @@ class Integrated(BaseElectrolyteConductivity):
         )
 
         # average electrolyte ohmic losses
-        delta_phi_e_av = - (
-            pybamm.x_average(integral_p) - pybamm.x_average(integral_n)
-        )
+        delta_phi_e_av = -(pybamm.x_average(integral_p) - pybamm.x_average(integral_n))
 
         variables.update(
             self._get_standard_potential_variables(phi_e_n, phi_e_s, phi_e_p)
