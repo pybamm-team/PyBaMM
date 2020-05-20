@@ -2,24 +2,29 @@
 # Base class for SEI models.
 #
 import pybamm
+from ..base_interface import BaseInterface
 
 
-class BaseModel(pybamm.BaseSubModel):
+class BaseModel(BaseInterface):
     """Base class for SEI models.
 
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
-    reactions : dict, optional
-        Dictionary of reaction terms
+    domain : str
+        The domain to implement the model, either: 'Negative' or 'Positive'.
 
-    **Extends:** :class:`pybamm.BaseSubModel`
+    **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
     def __init__(self, param, domain):
-        self.domain = domain
-        super().__init__(param)
+        if domain == "Positive" and not isinstance(self, pybamm.sei.NoSEI):
+            raise NotImplementedError(
+                "SEI models are not implemented for the positive electrode"
+            )
+        reaction = "sei"
+        super().__init__(param, domain, reaction)
 
     def _get_standard_thickness_variables(self, L_inner, L_outer):
         """
@@ -69,44 +74,32 @@ class BaseModel(pybamm.BaseSubModel):
 
         Q_sei = n_SEI_av * self.param.L_n * self.param.L_y * self.param.L_z
 
+        domain = self.domain.lower() + " electrode"
+
         variables = {
-            "Inner " + self.domain.lower() + " sei thickness": L_inner,
-            "Inner " + self.domain.lower() + " sei thickness [m]": L_inner * L_scale,
-            "X-averaged inner " + self.domain.lower() + " sei thickness": L_inner_av,
+            "Inner " + domain + " sei thickness": L_inner,
+            "Inner " + domain + " sei thickness [m]": L_inner * L_scale,
+            "X-averaged inner " + domain + " sei thickness": L_inner_av,
+            "X-averaged inner " + domain + " sei thickness [m]": L_inner_av * L_scale,
+            "Outer " + domain + " sei thickness": L_outer,
+            "Outer " + domain + " sei thickness [m]": L_outer * L_scale,
+            "X-averaged outer " + domain + " sei thickness": L_outer_av,
+            "X-averaged outer " + domain + " sei thickness [m]": L_outer_av * L_scale,
+            "Total " + domain + " sei thickness": L_sei,
+            "Total " + domain + " sei thickness [m]": L_sei * L_scale,
+            "X-averaged total " + domain + " sei thickness": L_sei_av,
+            "X-averaged total " + domain + " sei thickness [m]": L_sei_av * L_scale,
+            "Inner " + domain + " sei concentration [mol.m-3]": n_inner * n_scale,
             "X-averaged inner "
-            + self.domain.lower()
-            + " sei thickness [m]": L_inner_av * L_scale,
-            "Outer " + self.domain.lower() + " sei thickness": L_outer,
-            "Outer " + self.domain.lower() + " sei thickness [m]": L_outer * L_scale,
-            "X-averaged outer " + self.domain.lower() + " sei thickness": L_outer_av,
-            "X-averaged outer "
-            + self.domain.lower()
-            + " sei thickness [m]": L_outer_av * L_scale,
-            "Total " + self.domain.lower() + " sei thickness": L_sei,
-            "Total " + self.domain.lower() + " sei thickness [m]": L_sei * L_scale,
-            "X-averaged total " + self.domain.lower() + " sei thickness": L_sei_av,
-            "X-averaged total "
-            + self.domain.lower()
-            + " sei thickness [m]": L_sei_av * L_scale,
-            "Inner "
-            + self.domain.lower()
-            + " sei concentration [mol.m-3]": n_inner * n_scale,
-            "X-averaged inner "
-            + self.domain.lower()
+            + domain
             + " sei concentration [mol.m-3]": n_inner_av * n_scale,
-            "Outer "
-            + self.domain.lower()
-            + " sei concentration [mol.m-3]": n_outer * n_outer_scale,
+            "Outer " + domain + " sei concentration [mol.m-3]": n_outer * n_outer_scale,
             "X-averaged outer "
-            + self.domain.lower()
+            + domain
             + " sei concentration [mol.m-3]": n_outer_av * n_outer_scale,
             self.domain + " sei concentration [mol.m-3]": n_SEI * n_scale,
-            "X-averaged "
-            + self.domain.lower()
-            + " sei concentration [mol.m-3]": n_SEI_av * n_scale,
-            "Loss of lithium to "
-            + self.domain.lower()
-            + " sei [mols]": Q_sei * n_scale,
+            "X-averaged " + domain + " sei concentration [mol.m-3]": n_SEI_av * n_scale,
+            "Loss of lithium to " + domain + " sei [mol]": Q_sei * n_scale,
         }
 
         return variables
@@ -128,59 +121,42 @@ class BaseModel(pybamm.BaseSubModel):
             variables : dict
                 The variables which can be derived from the SEI thicknesses.
         """
-        # Set scales to one for the "no SEI" model so that they are not required
-        # by parameter values in general
-        if isinstance(self, pybamm.sei.NoSEI):
-            j_scale = 1
-            Gamma_SEI_n = 1
-        else:
-            sp = pybamm.sei_parameters
-            j_scale = (
-                sp.F * sp.L_sei_0_dim / sp.V_bar_inner_dimensional / sp.tau_discharge
-            )
-            Gamma_SEI_n = sp.Gamma_SEI_n
+        if self.domain == "Negative":
+            j_scale = self.param.interfacial_current_scale_n
+        elif self.domain == "Positive":
+            j_scale = self.param.interfacial_current_scale_p
         j_i_av = pybamm.x_average(j_inner)
         j_o_av = pybamm.x_average(j_outer)
 
         j_sei = j_inner + j_outer
         j_sei_av = pybamm.x_average(j_sei)
 
+        domain = self.domain.lower() + " electrode"
+        Domain = domain.capitalize()
+
         variables = {
+            "Inner " + domain + " sei interfacial current density": j_inner,
             "Inner "
-            + self.domain.lower()
-            + " sei interfacial current density": j_inner,
-            "Inner "
-            + self.domain.lower()
+            + domain
             + " sei interfacial current density [A.m-2]": j_inner * j_scale,
+            "X-averaged inner " + domain + " sei interfacial current density": j_i_av,
             "X-averaged inner "
-            + self.domain.lower()
-            + " sei interfacial current density": j_i_av,
-            "X-averaged inner "
-            + self.domain.lower()
+            + domain
             + " sei interfacial current density [A.m-2]": j_i_av * j_scale,
+            "Outer " + domain + " sei interfacial current density": j_outer,
             "Outer "
-            + self.domain.lower()
-            + " sei interfacial current density": j_outer,
-            "Outer "
-            + self.domain.lower()
+            + domain
             + " sei interfacial current density [A.m-2]": j_outer * j_scale,
+            "X-averaged outer " + domain + " sei interfacial current density": j_o_av,
             "X-averaged outer "
-            + self.domain.lower()
-            + " sei interfacial current density": j_o_av,
-            "X-averaged outer "
-            + self.domain.lower()
+            + domain
             + " sei interfacial current density [A.m-2]": j_o_av * j_scale,
-            self.domain + " sei interfacial current density": j_sei,
-            self.domain + " sei interfacial current density [A.m-2]": j_sei * j_scale,
+            Domain + " sei interfacial current density": j_sei,
+            Domain + " sei interfacial current density [A.m-2]": j_sei * j_scale,
+            "X-averaged " + domain + " sei interfacial current density": j_sei_av,
             "X-averaged "
-            + self.domain.lower()
-            + " sei interfacial current density": j_sei_av,
-            "X-averaged "
-            + self.domain.lower()
+            + domain
             + " sei interfacial current density [A.m-2]": j_sei_av * j_scale,
-            "Scaled "
-            + self.domain.lower()
-            + " sei interfacial current density": j_sei * Gamma_SEI_n,
         }
 
         return variables

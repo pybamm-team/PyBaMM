@@ -54,6 +54,10 @@ output_variables = [
     "Porosity",
     "Electrolyte potential [V]",
     "Terminal voltage [V]",
+    "Negative electrode reaction overpotential",
+    "Positive electrode reaction overpotential",
+    "Sum of interfacial current densities",
+    "Sum of electrolyte reaction source terms",
 ]
 plot = pybamm.QuickPlot(solutions, output_variables, linestyles=[":", "--", "-"])
 plot.dynamic_plot()

@@ -30,9 +30,11 @@ class TestBaseLeadAcidModel(unittest.TestCase):
     def test_incompatible_options(self):
         with self.assertRaisesRegex(
             pybamm.OptionError,
-            "Lead-acid models can only have thermal " "effects if dimensionality is 0.",
+            "Lead-acid models can only have thermal effects if dimensionality is 0.",
         ):
             pybamm.lead_acid.BaseModel({"dimensionality": 1, "thermal": "x-full"})
+        with self.assertRaisesRegex(pybamm.OptionError, "SEI"):
+            pybamm.lead_acid.BaseModel({"sei": "constant"})
 
 
 if __name__ == "__main__":

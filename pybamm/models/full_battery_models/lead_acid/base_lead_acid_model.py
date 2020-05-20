@@ -58,3 +58,8 @@ class BaseModel(pybamm.BaseBatteryModel):
             self.variables["Fractional Charge Input"] = fci
             self.rhs[fci] = -self.variables["Total current density"] * 100
             self.initial_conditions[fci] = self.param.q_init * 100
+
+    def set_sei_submodel(self):
+
+        self.submodels["negative sei"] = pybamm.sei.NoSEI(self.param, "Negative")
+        self.submodels["positive sei"] = pybamm.sei.NoSEI(self.param, "Positive")
