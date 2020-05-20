@@ -11,7 +11,7 @@ class EffectiveResistance(pybamm.BaseModel):
     References
     ----------
     .. [1] R Timms, SG Marquis, V Sulzer, CP Please and SJ Chapman. “Asymptotic
-           Reduction of a Lithium-ion Pouch Cell Model”. In preparation, 2020.
+           Reduction of a Lithium-ion Pouch Cell Model”. Submitted, 2020.
 
     **Extends:** :class:`pybamm.BaseModel`
     """
@@ -26,6 +26,8 @@ class EffectiveResistance(pybamm.BaseModel):
         self.set_algebraic(self.variables)
         self.set_boundary_conditions(self.variables)
         self.set_initial_conditions(self.variables)
+
+        pybamm.citations.register("timms2020")
 
     def get_fundamental_variables(self):
         # Get necessary parameters
@@ -175,7 +177,7 @@ class EffectiveResistance1D(EffectiveResistance):
     References
     ----------
     .. [1] R Timms, SG Marquis, V Sulzer, CP Please and SJ Chapman. “Asymptotic
-           Reduction of a Lithium-ion Pouch Cell Model”. In preparation, 2020.
+           Reduction of a Lithium-ion Pouch Cell Model”. Submitted, 2020.
 
     **Extends:** :class:`pybamm.EffectiveResistance`
     """
@@ -208,7 +210,7 @@ class EffectiveResistance2D(EffectiveResistance):
     References
     ----------
     .. [1] R Timms, SG Marquis, V Sulzer, CP Please and SJ Chapman. “Asymptotic
-           Reduction of a Lithium-ion Pouch Cell Model”. In preparation, 2020.
+           Reduction of a Lithium-ion Pouch Cell Model”. Submitted, 2020.
 
     **Extends:** :class:`pybamm.EffectiveResistance`
     """
@@ -260,7 +262,7 @@ class AlternativeEffectiveResistance2D(pybamm.BaseModel):
     References
     ----------
     .. [1] R Timms, SG Marquis, V Sulzer, CP Please and SJ Chapman. “Asymptotic
-           Reduction of a Lithium-ion Pouch Cell Model”. In preparation, 2020.
+           Reduction of a Lithium-ion Pouch Cell Model”. Submitted, 2020.
 
     **Extends:** :class:`pybamm.BaseModel`
     """
@@ -342,6 +344,8 @@ class AlternativeEffectiveResistance2D(pybamm.BaseModel):
             "Effective positive current collector resistance": R_cc_p,
             "Effective positive current collector resistance [Ohm]": R_cc_p * R_scale,
         }
+
+        pybamm.citations.register("timms2020")
 
     def post_process(self, solution, param_values, V_av, I_av):
         """

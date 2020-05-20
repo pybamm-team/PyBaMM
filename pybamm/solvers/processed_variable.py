@@ -64,6 +64,9 @@ class ProcessedVariable(object):
         # check variable shape
         else:
             if len(solution.t) == 1:
+                # Implementing a workaround for 0D and 1D variables. Processing
+                # variables that are functions of space only needs to be implemented
+                # properly, see #1006
                 if (
                     isinstance(self.base_eval, numbers.Number)
                     or len(self.base_eval.shape) == 0

@@ -177,3 +177,13 @@ doi = "https://doi.org/10.1016/j.electacta.2020.135862",
 url = "http://www.sciencedirect.com/science/article/pii/S0013468620302541",
 author = "G. Richardson and I. Korotkin and R. Ranom and M. Castle and J.M. Foster",
 }
+
+@article{timms2020,
+title={Asymptotic Reduction of a Lithium-ion Pouch Cell Model}
+journal={Submitted for publication},
+author={R Timms and SG Marquis and V Sulzer and CP Please and SJ Chapman},
+year={2020},
+eprint={2005.05127},
+archivePrefix={arXiv},
+primaryClass={physics.app-ph},
+}
