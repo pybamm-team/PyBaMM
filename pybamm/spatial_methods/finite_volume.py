@@ -5,6 +5,7 @@ import pybamm
 
 from scipy.sparse import (
     diags,
+    spdiags,
     eye,
     kron,
     csr_matrix,
@@ -323,7 +324,8 @@ class FiniteVolume(pybamm.SpatialMethod):
     def indefinite_integral_matrix_edges(self, domain, direction):
         """
         Matrix for finite-volume implementation of the indefinite integral where the
-        integrand is evaluated on mesh edges.
+        integrand is evaluated on mesh edges. The integral will then be evaluated on
+        mesh nodes.
 
         Parameters
         ----------
@@ -418,7 +420,8 @@ class FiniteVolume(pybamm.SpatialMethod):
     def indefinite_integral_matrix_nodes(self, domain, direction):
         """
         Matrix for finite-volume implementation of the (backward) indefinite integral
-        where the integrand is evaluated on mesh nodes.
+        where the integrand is evaluated on mesh nodes. The integral will then be
+        evaluated on mesh edges.
         This is just a straightforward (backward) cumulative sum of the integrand
 
         Parameters
@@ -441,12 +444,12 @@ class FiniteVolume(pybamm.SpatialMethod):
         sec_pts = len(submesh_list)
 
         du_n = submesh.d_edges
-        du_entries = [du_n] * (n)
+        du_entries = [du_n] * n
         if direction == "forward":
             offset = -np.arange(1, n + 1, 1)
         elif direction == "backward":
-            offset = -np.arange(1, n + 1, 1)
-        sub_matrix = diags(du_entries, offset, shape=(n + 1, n))
+            offset = np.arange(n - 1, -1, -1)  # from n-1 down to 0
+        sub_matrix = spdiags(du_entries, offset, n + 1, n)
         # Convert to csr_matrix so that we can take the index (row-slicing), which is
         # not supported by the default kron format
         # Note that this makes column-slicing inefficient, but this should not be an
