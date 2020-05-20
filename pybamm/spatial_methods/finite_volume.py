@@ -248,6 +248,8 @@ class FiniteVolume(pybamm.SpatialMethod):
         else:
             out = integration_vector @ discretised_child
 
+        out.copy_domains(child)
+
         return out
 
     def definite_integral_matrix(self, domain, vector_type="row"):
@@ -296,15 +298,19 @@ class FiniteVolume(pybamm.SpatialMethod):
         matrix = csr_matrix(kron(eye(second_dim_len), vector))
         return pybamm.Matrix(matrix)
 
-    def indefinite_integral(self, child, discretised_child):
+    def indefinite_integral(self, child, discretised_child, direction):
         """Implementation of the indefinite integral operator. """
 
         # Different integral matrix depending on whether the integrand evaluates on
         # edges or nodes
         if child.evaluates_on_edges():
-            integration_matrix = self.indefinite_integral_matrix_edges(child.domain)
+            integration_matrix = self.indefinite_integral_matrix_edges(
+                child.domain, direction
+            )
         else:
-            integration_matrix = self.indefinite_integral_matrix_nodes(child.domain)
+            integration_matrix = self.indefinite_integral_matrix_nodes(
+                child.domain, direction
+            )
 
         # Don't need to check for spherical domains as spherical polars
         # only change the diveregence (childs here have grad and no div)
@@ -314,10 +320,28 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return out
 
-    def indefinite_integral_matrix_edges(self, domain):
+    def indefinite_integral_matrix_edges(self, domain, direction):
         """
         Matrix for finite-volume implementation of the indefinite integral where the
-        integrand is evaluated on mesh edges
+        integrand is evaluated on mesh edges.
+
+        Parameters
+        ----------
+        domain : list
+            The domain(s) of integration
+        direction : str
+            The direction of integration (forward or backward). See notes.
+
+        Returns
+        -------
+        :class:`pybamm.Matrix`
+            The finite volume integral matrix for the domain
+
+        Notes
+        -----
+
+        Forward integral
+        ^^^^^^^^^^^^^^^^
 
         .. math::
             F(x) = \\int_0^x\\!f(u)\\,du
@@ -341,15 +365,30 @@ class FiniteVolume(pybamm.SpatialMethod):
         integrand vector `f`, so we add a column of zeros at each end of the
         indefinite integral matrix to ignore these.
 
-        Parameters
-        ----------
-        domain : list
-            The domain(s) of integration
+        Backward integral
+        ^^^^^^^^^^^^^^^^^
 
-        Returns
-        -------
-        :class:`pybamm.Matrix`
-            The finite volume integral matrix for the domain
+        .. math::
+            F(x) = \\int_x^end\\!f(u)\\,du
+
+        The indefinite integral must satisfy the following conditions:
+
+        - :math:`F(end) = 0`
+        - :math:`f(x) = \\frac{dF}{dx}`
+
+        or, in discrete form,
+
+        - `BoundaryValue(F, "right") = 0`, i.e. :math:`3*F_{end} - F_{end-1} = 0`
+        - :math:`f_{i+1/2} = (F_{i+1} - F_i) / dx_{i+1/2}`
+
+        Hence we must have
+
+        - :math:`F_end = du_{1/2} * f_{end-1/2} / 2`
+        - :math:`F_{i+1} = F_i + du * f_{i+1/2}`
+
+        Note that :math:`f_{-1/2}` and :math:`f_{n+1/2}` are included in the discrete
+        integrand vector `f`, so we add a column of zeros at each end of the
+        indefinite integral matrix to ignore these.
         """
 
         # Create appropriate submesh by combining submeshes in domain
@@ -368,6 +407,46 @@ class FiniteVolume(pybamm.SpatialMethod):
         # add a column of zeros at each end
         zero_col = csr_matrix((n, 1))
         sub_matrix = hstack([zero_col, sub_matrix, zero_col])
+        # Convert to csr_matrix so that we can take the index (row-slicing), which is
+        # not supported by the default kron format
+        # Note that this makes column-slicing inefficient, but this should not be an
+        # issue
+        matrix = csr_matrix(kron(eye(sec_pts), sub_matrix))
+
+        return pybamm.Matrix(matrix)
+
+    def indefinite_integral_matrix_nodes(self, domain, direction):
+        """
+        Matrix for finite-volume implementation of the (backward) indefinite integral
+        where the integrand is evaluated on mesh nodes.
+        This is just a straightforward (backward) cumulative sum of the integrand
+
+        Parameters
+        ----------
+        domain : list
+            The domain(s) of integration
+        direction : str
+            The direction of integration (forward or backward)
+
+        Returns
+        -------
+        :class:`pybamm.Matrix`
+            The finite volume integral matrix for the domain
+        """
+
+        # Create appropriate submesh by combining submeshes in domain
+        submesh_list = self.mesh.combine_submeshes(*domain)
+        submesh = submesh_list[0]
+        n = submesh.npts
+        sec_pts = len(submesh_list)
+
+        du_n = submesh.d_edges
+        du_entries = [du_n] * (n)
+        if direction == "forward":
+            offset = -np.arange(1, n + 1, 1)
+        elif direction == "backward":
+            offset = -np.arange(1, n + 1, 1)
+        sub_matrix = diags(du_entries, offset, shape=(n + 1, n))
         # Convert to csr_matrix so that we can take the index (row-slicing), which is
         # not supported by the default kron format
         # Note that this makes column-slicing inefficient, but this should not be an
@@ -472,41 +551,6 @@ class FiniteVolume(pybamm.SpatialMethod):
         right_symbol_disc.auxiliary_domains = right_auxiliary_domains
 
         return dy / dx
-
-    def indefinite_integral_matrix_nodes(self, domain):
-        """
-        Matrix for finite-volume implementation of the indefinite integral where the
-        integrand is evaluated on mesh nodes.
-        This is just a straightforward cumulative sum of the integrand
-
-        Parameters
-        ----------
-        domain : list
-            The domain(s) of integration
-
-        Returns
-        -------
-        :class:`pybamm.Matrix`
-            The finite volume integral matrix for the domain
-        """
-
-        # Create appropriate submesh by combining submeshes in domain
-        submesh_list = self.mesh.combine_submeshes(*domain)
-        submesh = submesh_list[0]
-        n = submesh.npts
-        sec_pts = len(submesh_list)
-
-        du_n = submesh.d_edges
-        du_entries = [du_n] * (n)
-        offset = -np.arange(1, n + 1, 1)
-        sub_matrix = diags(du_entries, offset, shape=(n + 1, n))
-        # Convert to csr_matrix so that we can take the index (row-slicing), which is
-        # not supported by the default kron format
-        # Note that this makes column-slicing inefficient, but this should not be an
-        # issue
-        matrix = csr_matrix(kron(eye(sec_pts), sub_matrix))
-
-        return pybamm.Matrix(matrix)
 
     def add_ghost_nodes(self, symbol, discretised_symbol, bcs):
         """

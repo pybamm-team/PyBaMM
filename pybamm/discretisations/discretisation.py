@@ -836,7 +836,13 @@ class Discretisation(object):
                 return child_spatial_method.boundary_mass_matrix(child, self.bcs)
 
             elif isinstance(symbol, pybamm.IndefiniteIntegral):
-                return child_spatial_method.indefinite_integral(child, disc_child)
+                return child_spatial_method.indefinite_integral(
+                    child, disc_child, "forward"
+                )
+            elif isinstance(symbol, pybamm.BackwardIndefiniteIntegral):
+                return child_spatial_method.indefinite_integral(
+                    child, disc_child, "backward"
+                )
 
             elif isinstance(symbol, pybamm.Integral):
                 out = child_spatial_method.integral(child, disc_child)

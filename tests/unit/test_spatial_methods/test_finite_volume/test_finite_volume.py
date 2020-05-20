@@ -872,6 +872,58 @@ class TestFiniteVolume(unittest.TestCase):
             left_boundary_value_disc.evaluate(y=c_exact), 0
         )
 
+    def test_backward_indefinite_integral(self):
+
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        # --------------------------------------------------------------------
+        # region which doesn't start at zero
+        phi = pybamm.Variable("phi", domain=["separator", "positive electrode"])
+        i = pybamm.grad(phi)  # create test current (variable on edges)
+        x = pybamm.SpatialVariable("x", ["separator", "positive electrode"])
+        int_grad_phi = pybamm.BackwardIndefiniteIntegral(i, x)
+        disc.set_variable_slices([phi])  # i is not a fundamental variable
+        disc._bcs = {
+            phi.id: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
+        int_grad_phi_disc = disc.process_symbol(int_grad_phi)
+        left_boundary_value = pybamm.BoundaryValue(int_grad_phi, "left")
+        left_boundary_value_disc = disc.process_symbol(left_boundary_value)
+        combined_submesh = mesh.combine_submeshes("separator", "positive electrode")
+
+        # constant case
+        phi_exact = np.ones((combined_submesh[0].npts, 1))
+        phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
+        phi_approx += 1  # add constant of integration
+        np.testing.assert_array_equal(phi_exact, phi_approx)
+        self.assertEqual(left_boundary_value_disc.evaluate(y=phi_exact), 0)
+
+        # linear case
+        phi_exact = (
+            combined_submesh[0].nodes[:, np.newaxis] - combined_submesh[0].edges[0]
+        )
+        phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
+        np.testing.assert_array_almost_equal(phi_exact, phi_approx)
+        np.testing.assert_array_almost_equal(
+            left_boundary_value_disc.evaluate(y=phi_exact), 0
+        )
+
+        # sine case
+        phi_exact = np.sin(
+            combined_submesh[0].nodes[:, np.newaxis] - combined_submesh[0].edges[0]
+        )
+        phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
+        np.testing.assert_array_almost_equal(phi_exact, phi_approx)
+        np.testing.assert_array_almost_equal(
+            left_boundary_value_disc.evaluate(y=phi_exact), 0
+        )
+
     def test_indefinite_integral_of_broadcasted_to_cell_edges(self):
         # create discretisation
         mesh = get_mesh_for_testing()

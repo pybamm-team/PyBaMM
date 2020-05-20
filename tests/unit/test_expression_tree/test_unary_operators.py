@@ -173,6 +173,11 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(
             inta_sec.auxiliary_domains, {"secondary": ["current collector"]}
         )
+        # backward indefinite integral
+        inta = pybamm.BackwardIndefiniteIntegral(a, x)
+        self.assertEqual(
+            inta.name, "a integrated backward w.r.t x on ['negative electrode']"
+        )
 
         # expected errors
         a = pybamm.Symbol("a", domain=["negative electrode"])
