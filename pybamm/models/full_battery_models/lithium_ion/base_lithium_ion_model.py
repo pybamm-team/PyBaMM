@@ -67,6 +67,11 @@ class BaseModel(pybamm.BaseBatteryModel):
                 self.param, "Negative"
             )
 
+        elif self.options["sei"] == "ec reaction limited":
+            self.submodels["negative sei"] = pybamm.sei.EcReactionLimited(
+                self.param, "Negative"
+            )
+
         # positive electrode
         self.submodels["positive sei"] = pybamm.sei.NoSEI(self.param, "Positive")
 
