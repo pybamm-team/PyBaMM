@@ -9,6 +9,12 @@ Positive electrode thickness [m],75.6E-6,Chen 2020,
 Positive current collector thickness [m],16E-6,Chen 2020,
 Electrode height [m],6.5E-2,Chen 2020,Not needed for 1D
 Electrode width [m],1.58,Chen 2020,Not needed for 1D
+Negative tab width [m],0,,Not defined
+Negative tab centre y-coordinate [m],0,,Not defined
+Negative tab centre z-coordinate [m],0,,Not defined
+Positive tab width [m],0,,Not defined
+Positive tab centre y-coordinate [m],0,,Not defined
+Positive tab centre z-coordinate [m],0,,Not defined
 ,,,
 # Current collector properties ,,,
 Negative current collector conductivity [S.m-1],58411000,CRC Handbook,copper
