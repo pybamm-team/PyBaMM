@@ -30,15 +30,16 @@ class Full(BaseModel):
         return variables
 
     def get_coupled_variables(self, variables):
+        j_sei = variables["Negative electrode sei interfacial current density"]
+        C_sei_eps = pybamm.sei_parameters.C_sei_eps
 
-        j_n = variables["Negative electrode interfacial current density"]
-        j_p = variables["Positive electrode interfacial current density"]
-
-        deps_n_dt = -self.param.beta_surf_n * j_n
+        deps_n_dt = C_sei_eps * j_sei
         deps_s_dt = pybamm.FullBroadcast(
             0, "separator", auxiliary_domains={"secondary": "current collector"}
         )
-        deps_p_dt = -self.param.beta_surf_p * j_p
+        # for the moment is not needed but could be used for positive SEI
+        deps_p_dt = pybamm.FullBroadcast(0, "positive electrode",
+                                         "current collector")
 
         variables.update(
             self._get_standard_porosity_change_variables(
