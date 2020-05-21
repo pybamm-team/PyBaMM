@@ -22,6 +22,7 @@
 
 ## Bug fixes
 
+-   Fix CI not triggering for PR. ([#1013](https://github.com/pybamm-team/PyBaMM/pull/1013))
 -   Fix schedule testing running too often. ([#1010](https://github.com/pybamm-team/PyBaMM/pull/1010))
 -   Fix doctests failing due to mismatch in unsorted output.([#990](https://github.com/pybamm-team/PyBaMM/pull/990))
 -   Added extra checks when creating a model, for clearer errors ([#971](https://github.com/pybamm-team/PyBaMM/pull/971))

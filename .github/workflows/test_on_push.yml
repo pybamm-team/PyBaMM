@@ -2,6 +2,8 @@ name: PyBaMM
 
 on:
   push:
+    
+  pull_request:
 
   # everyday at 3 am UTC
   schedule:
