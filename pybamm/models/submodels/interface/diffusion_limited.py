@@ -55,6 +55,10 @@ class DiffusionLimited(BaseInterface):
         variables.update(self._get_standard_overpotential_variables(eta_r))
         variables.update(self._get_standard_ocp_variables(ocp, dUdT))
 
+        # No SEI film resistance in this model
+        eta_sei = pybamm.Scalar(0)
+        variables.update(self._get_standard_sei_film_overpotential_variables(eta_sei))
+
         if (
             "Negative electrode" + self.reaction_name + " interfacial current density"
             in variables

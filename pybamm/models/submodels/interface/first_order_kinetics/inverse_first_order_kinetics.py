@@ -1,6 +1,7 @@
 #
 # First-order Butler-Volmer kinetics
 #
+import pybamm
 from ..base_interface import BaseInterface
 
 
@@ -74,5 +75,9 @@ class InverseFirstOrderKinetics(BaseInterface):
         variables.update(
             self._get_standard_surface_potential_difference_variables(delta_phi)
         )
+
+        # SEI film resistance not implemented in this model
+        eta_sei = pybamm.Scalar(0)
+        variables.update(self._get_standard_sei_film_overpotential_variables(eta_sei))
 
         return variables

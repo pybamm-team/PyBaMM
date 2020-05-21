@@ -107,7 +107,7 @@ class TestBaseBatteryModel(unittest.TestCase):
             )
         )
 
-    def test_bad_options(self):
+    def test_options(self):
         with self.assertRaisesRegex(pybamm.OptionError, "Option"):
             pybamm.BaseBatteryModel({"bad option": "bad option"})
         with self.assertRaisesRegex(pybamm.OptionError, "current collector model"):
@@ -131,6 +131,17 @@ class TestBaseBatteryModel(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.OptionError, "operating mode"):
             pybamm.BaseBatteryModel({"operating mode": "bad operating mode"})
 
+        # SEI options
+        with self.assertRaisesRegex(pybamm.OptionError, "sei"):
+            pybamm.BaseBatteryModel({"sei": "bad sei"})
+        with self.assertRaisesRegex(pybamm.OptionError, "sei film resistance"):
+            pybamm.BaseBatteryModel({"sei film resistance": "bad sei film resistance"})
+        # variable defaults
+        model = pybamm.BaseBatteryModel()
+        self.assertEqual(model.options["sei film resistance"], None)
+        model = pybamm.BaseBatteryModel({"sei": "constant"})
+        self.assertEqual(model.options["sei film resistance"], "distributed")
+
     def test_build_twice(self):
         model = pybamm.lithium_ion.SPM()  # need to pick a model to set vars and build
         with self.assertRaisesRegex(pybamm.ModelError, "Model already built"):
@@ -141,7 +152,7 @@ class TestBaseBatteryModel(unittest.TestCase):
         model.submodels["current collector"] = pybamm.current_collector.Uniform(
             model.param
         )
-        with self.assertRaisesRegex(pybamm.ModelError, "Submodel"):
+        with self.assertRaisesRegex(pybamm.ModelError, "Missing variable"):
             model.build_model()
 
 
