@@ -183,6 +183,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "thermal": "isothermal",
             "external submodels": [],
             "sei": None,
+            "porosity": None,
         }
         # Change the default for SEI film resistance based on which sei option is
         # provided
@@ -280,6 +281,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "solvent-diffusion limited",
             "electron-migration limited",
             "interstitial-diffusion limited",
+            "ec reaction limited",
         ]:
             raise pybamm.OptionError("Unknown sei model '{}'".format(options["sei"]))
         if options["sei film resistance"] not in [
@@ -658,22 +660,6 @@ class BaseBatteryModel(pybamm.BaseModel):
         eta_r_av = eta_r_p_av - eta_r_n_av
         eta_r_av_dim = eta_r_p_av_dim - eta_r_n_av_dim
 
-        # SEI film overpotential
-        eta_sei_n_av = self.variables[
-            "X-averaged negative electrode sei film overpotential"
-        ]
-        eta_sei_p_av = self.variables[
-            "X-averaged positive electrode sei film overpotential"
-        ]
-        eta_sei_n_av_dim = self.variables[
-            "X-averaged negative electrode sei film overpotential [V]"
-        ]
-        eta_sei_p_av_dim = self.variables[
-            "X-averaged positive electrode sei film overpotential [V]"
-        ]
-        eta_sei_av = eta_sei_n_av + eta_sei_p_av
-        eta_sei_av_dim = eta_sei_n_av_dim + eta_sei_p_av_dim
-
         # TODO: add current collector losses to the voltage in 3D
 
         self.variables.update(
@@ -684,8 +670,6 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "Measured open circuit voltage [V]": ocv_dim,
                 "X-averaged reaction overpotential": eta_r_av,
                 "X-averaged reaction overpotential [V]": eta_r_av_dim,
-                "X-averaged sei film overpotential": eta_sei_av,
-                "X-averaged sei film overpotential [V]": eta_sei_av_dim,
                 "X-averaged solid phase ohmic losses": delta_phi_s_av,
                 "X-averaged solid phase ohmic losses [V]": delta_phi_s_av_dim,
             }
