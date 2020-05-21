@@ -24,7 +24,7 @@ class TestSpatialMethod(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             spatial_method.integral(None, None)
         with self.assertRaises(NotImplementedError):
-            spatial_method.indefinite_integral(None, None)
+            spatial_method.indefinite_integral(None, None, None)
         with self.assertRaises(NotImplementedError):
             spatial_method.boundary_integral(None, None, None)
         with self.assertRaises(NotImplementedError):
