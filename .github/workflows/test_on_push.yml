@@ -2,10 +2,12 @@ name: PyBaMM
 
 on:
   push:
+    
+  pull_request:
 
   # everyday at 3 am UTC
   schedule:
-    - cron:  '* 3 * * *'
+    - cron:  '0 3 * * *'
 
 jobs:
   
