@@ -475,7 +475,7 @@ class TestBaseModel(unittest.TestCase):
         model.initial_conditions = {a: q, b: 1}
         model.variables = {"a+b": a + b - t}
 
-        out = model.export_casadi_functions(["a+b"])
+        out = model.export_casadi_objects(["a+b"])
 
         # Try making a function from the outputs
         t, x, z, p = out["t"], out["x"], out["z"], out["inputs"]
@@ -499,6 +499,32 @@ class TestBaseModel(unittest.TestCase):
         np.testing.assert_array_equal(np.array(jac_rhs_fn(5, 6, 7, [8, 9])), [[-8, 0]])
         np.testing.assert_array_equal(np.array(jac_alg_fn(5, 6, 7, [8, 9])), [[1, -1]])
         self.assertEqual(var_fn(6, 3, 2, [7, 2]), -1)
+
+        # Now change the order of input parameters
+        out = model.export_casadi_objects(["a+b"], input_parameter_order=["q", "p"])
+
+        # Try making a function from the outputs
+        t, x, z, p = out["t"], out["x"], out["z"], out["inputs"]
+        x0, z0 = out["x0"], out["z0"]
+        rhs, alg = out["rhs"], out["algebraic"]
+        var = out["variables"]["a+b"]
+        jac_rhs, jac_alg = out["jac_rhs"], out["jac_algebraic"]
+        x0_fn = casadi.Function("x0", [p], [x0])
+        z0_fn = casadi.Function("x0", [p], [z0])
+        rhs_fn = casadi.Function("rhs", [t, x, z, p], [rhs])
+        alg_fn = casadi.Function("alg", [t, x, z, p], [alg])
+        jac_rhs_fn = casadi.Function("jac_rhs", [t, x, z, p], [jac_rhs])
+        jac_alg_fn = casadi.Function("jac_alg", [t, x, z, p], [jac_alg])
+        var_fn = casadi.Function("var", [t, x, z, p], [var])
+
+        # Test that function values are as expected
+        self.assertEqual(x0_fn([5, 0]), 5)
+        self.assertEqual(z0_fn([0, 0]), 1)
+        self.assertEqual(rhs_fn(0, 3, 2, [2, 7]), -21)
+        self.assertEqual(alg_fn(0, 3, 2, [2, 7]), 1)
+        np.testing.assert_array_equal(np.array(jac_rhs_fn(5, 6, 7, [9, 8])), [[-8, 0]])
+        np.testing.assert_array_equal(np.array(jac_alg_fn(5, 6, 7, [9, 8])), [[1, -1]])
+        self.assertEqual(var_fn(6, 3, 2, [2, 7]), -1)
 
 
 class TestStandardBatteryBaseModel(unittest.TestCase):

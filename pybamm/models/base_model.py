@@ -647,7 +647,25 @@ class BaseModel(object):
 
         print(div)
 
-    def export_casadi_functions(self, variable_names):
+    def export_casadi_objects(self, variable_names, input_parameter_order=None):
+        """
+        Export the constituent parts of the model (rhs, algebraic, initial conditions,
+        etc) as casadi objects.
+
+        Parameters
+        ----------
+        variable_names : list
+            Variables to be exported alongside the model structure
+        input_parameter_order : list, optional
+            Order in which the input parameters should be stacked. If None, the order
+            returned by :meth:`BaseModel.input_parameters` is used
+
+        Returns
+        -------
+        casadi_dict : dict
+            Dictionary of {str: casadi object} pairs representing the model in casadi
+            format
+        """
         # Discretise model if it isn't already discretised
         # This only works with purely 0D models, as otherwise the mesh and spatial
         # method should be specified by the user
@@ -666,10 +684,18 @@ class BaseModel(object):
         y_diff = casadi.MX.sym("y_diff", self.concatenated_rhs.size)
         y_alg = casadi.MX.sym("y_alg", self.concatenated_algebraic.size)
         y_casadi = casadi.vertcat(y_diff, y_alg)
-        inputs = {}
+
+        # Read inputs
+        inputs_wrong_order = {}
         for input_param in self.input_parameters:
             name = input_param.name
-            inputs[name] = casadi.MX.sym(name, input_param._expected_size)
+            inputs_wrong_order[name] = casadi.MX.sym(name, input_param._expected_size)
+        # Sort according to input_parameter_order
+        if input_parameter_order is None:
+            inputs = inputs_wrong_order
+        else:
+            inputs = {name: inputs_wrong_order[name] for name in input_parameter_order}
+
         inputs_stacked = casadi.vertcat(*[p for p in inputs.values()])
 
         # Convert initial conditions to casadi form
