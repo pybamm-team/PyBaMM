@@ -170,7 +170,7 @@ class ParameterValues:
                 component_params,
                 check_conflict=True,
                 check_already_exists=False,
-                path=component_path,
+                path=os.path.dirname(file_path),
             )
 
         # register (list of) citations
