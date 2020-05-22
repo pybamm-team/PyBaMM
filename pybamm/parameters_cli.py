@@ -113,6 +113,7 @@ def add_parameter(arguments=None):
     copy_directory(args.parameter_dir, destination_dir, args.force)
     print("Copied {} to {}".format(args.parameter_dir, destination_dir))
 
+
 def remove_parameter(arguments=None):
     """
     Remove a parameter directory from package input directory.
@@ -121,7 +122,7 @@ def remove_parameter(arguments=None):
     "rm_parameter foo lithium-ion anodes" will remove directory foo in
     "pybamm/input/parameters/lithium-ion/anodes".
     """
-    parser = get_parser("Copy parameter to the PyBaMM package directory.")
+    parser = get_parser("Remove parameters from the PyBaMM package directory.")
     args = parser.parse_args(arguments)
 
     parameters_root_dir = os.path.join(pybamm.__path__[0], "input", "parameters")
@@ -131,8 +132,9 @@ def remove_parameter(arguments=None):
         parameters_root_dir, args.battery_type, args.component, parameter_dir_name
     )
 
-    copy_directory(args.parameter_dir, destination_dir, args.force)
-    print("Copied {} to {}".format(args.parameter_dir, destination_dir))
+    if not args.force:
+        yes_or_no("This will remove directory {}, continue?".format(destination_dir))
+    shutil.rmtree(destination_dir, ignore_errors=True)
 
 
 def edit_parameter(arguments=None):
