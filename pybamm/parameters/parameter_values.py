@@ -134,8 +134,7 @@ class ParameterValues:
         Load standard set of components from a 'chemistry' dictionary
         """
         base_chemistry = chemistry["chemistry"]
-        # Create path to file
-        path = self._find_chemistry(base_chemistry)
+
         # Load each component name
 
         component_groups = [
@@ -162,12 +161,10 @@ class ParameterValues:
                     )
                 )
             # Create path to component and load values
-            component_path = os.path.join(path, component_group + "s", component)
-            component_params = self.read_parameters_csv(
-                pybamm.get_parameters_filepath(
-                    os.path.join(component_path, "parameters.csv")
-                )
-            )
+            component_path = os.path.join(base_chemistry, component_group + "s", component)
+            file_path = self._find_parameter(os.path.join(component_path, "parameters.csv"))
+            component_params = self.read_parameters_csv(file_path)
+
             # Update parameters, making sure to check any conflicts
             self.update(
                 component_params,
