@@ -200,6 +200,7 @@ setup(
         "console_scripts": [
             "pybamm_edit_parameter = pybamm.parameters_cli:edit_parameter",
             "pybamm_add_parameter = pybamm.parameters_cli:add_parameter",
+            "pybamm_rm_parameter = pybamm.parameters_cli:remove_parameter",
             "pybamm_list_parameters = pybamm.parameters_cli:list_parameters",
             "pybamm_install_odes = pybamm.install_odes:main",
         ],
