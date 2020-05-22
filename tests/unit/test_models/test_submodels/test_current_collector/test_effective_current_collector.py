@@ -6,52 +6,35 @@ import unittest
 import numpy as np
 
 
-class TestEffectiveResistance1D(unittest.TestCase):
+class TestEffectiveResistance(unittest.TestCase):
     def test_well_posed(self):
-        model = pybamm.current_collector.EffectiveResistance1D()
+        model = pybamm.current_collector.EffectiveResistance({"dimensionality": 1})
+        model.check_well_posedness()
+
+        model = pybamm.current_collector.EffectiveResistance({"dimensionality": 2})
         model.check_well_posedness()
 
     def test_default_geometry(self):
-        model = pybamm.current_collector.EffectiveResistance1D()
+        model = pybamm.current_collector.EffectiveResistance({"dimensionality": 1})
+        self.assertIsInstance(model.default_geometry, pybamm.Geometry)
+        self.assertTrue("current collector" in model.default_geometry)
+        self.assertNotIn("negative electrode", model.default_geometry)
+
+        model = pybamm.current_collector.EffectiveResistance({"dimensionality": 2})
         self.assertIsInstance(model.default_geometry, pybamm.Geometry)
         self.assertTrue("current collector" in model.default_geometry)
         self.assertNotIn("negative electrode", model.default_geometry)
 
     def test_default_solver(self):
-        model = pybamm.current_collector.EffectiveResistance1D()
+        model = pybamm.current_collector.EffectiveResistance({"dimensionality": 1})
         self.assertIsInstance(model.default_solver, pybamm.CasadiAlgebraicSolver)
 
-
-class TestEffectiveResistance2D(unittest.TestCase):
-    def test_well_posed(self):
-        model = pybamm.current_collector.EffectiveResistance2D()
-        model.check_well_posedness()
-
-    def test_default_geometry(self):
-        model = pybamm.current_collector.EffectiveResistance2D()
-        self.assertIsInstance(model.default_geometry, pybamm.Geometry)
-        self.assertTrue("current collector" in model.default_geometry)
-        self.assertNotIn("negative electrode", model.default_geometry)
-
-    def test_default_solver(self):
-        model = pybamm.current_collector.EffectiveResistance2D()
+        model = pybamm.current_collector.EffectiveResistance({"dimensionality": 2})
         self.assertIsInstance(model.default_solver, pybamm.CasadiAlgebraicSolver)
 
-
-class TestAlternativeEffectiveResistance2D(unittest.TestCase):
-    def test_well_posed(self):
-        model = pybamm.current_collector.AlternativeEffectiveResistance2D()
-        model.check_well_posedness()
-
-    def test_default_geometry(self):
-        model = pybamm.current_collector.AlternativeEffectiveResistance2D()
-        self.assertIsInstance(model.default_geometry, pybamm.Geometry)
-        self.assertTrue("current collector" in model.default_geometry)
-        self.assertNotIn("negative electrode", model.default_geometry)
-
-    def test_default_solver(self):
-        model = pybamm.current_collector.AlternativeEffectiveResistance2D()
-        self.assertIsInstance(model.default_solver, pybamm.CasadiAlgebraicSolver)
+    def test_bad_option(self):
+        with self.assertRaisesRegex(pybamm.OptionError, "Dimension of"):
+            pybamm.current_collector.EffectiveResistance({"dimensionality": 10})
 
 
 class TestEffectiveResistancePostProcess(unittest.TestCase):
@@ -59,8 +42,8 @@ class TestEffectiveResistancePostProcess(unittest.TestCase):
         # solve cheap SPM to test post-processing (think of an alternative test?)
         models = [
             pybamm.lithium_ion.SPM(),
-            pybamm.current_collector.EffectiveResistance1D(),
-            pybamm.current_collector.EffectiveResistance2D(),
+            pybamm.current_collector.EffectiveResistance({"dimensionality": 1}),
+            pybamm.current_collector.EffectiveResistance({"dimensionality": 2}),
             pybamm.current_collector.AlternativeEffectiveResistance2D(),
         ]
         var = pybamm.standard_spatial_vars

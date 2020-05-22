@@ -85,12 +85,7 @@ class TestCitations(unittest.TestCase):
 
         citations._reset()
         self.assertNotIn("timms2020", citations._papers_to_cite)
-        pybamm.current_collector.EffectiveResistance1D()
-        self.assertIn("timms2020", citations._papers_to_cite)
-
-        citations._reset()
-        self.assertNotIn("timms2020", citations._papers_to_cite)
-        pybamm.current_collector.EffectiveResistance2D()
+        pybamm.current_collector.EffectiveResistance()
         self.assertIn("timms2020", citations._papers_to_cite)
 
         citations._reset()

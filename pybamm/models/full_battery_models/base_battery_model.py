@@ -92,7 +92,8 @@ class BaseBatteryModel(pybamm.BaseModel):
     """
 
     def __init__(self, options=None, name="Unnamed battery model"):
-        super().__init__(options, name)
+        super().__init__(name)
+        self.options = options
         self.submodels = {}
         self._built = False
         self._built_fundamental_and_external = False
@@ -281,11 +282,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "interstitial-diffusion limited",
         ]:
             raise pybamm.OptionError("Unknown sei model '{}'".format(options["sei"]))
-        if options["sei film resistance"] not in [
-            None,
-            "distributed",
-            "average",
-        ]:
+        if options["sei film resistance"] not in [None, "distributed", "average"]:
             raise pybamm.OptionError(
                 "Unknown sei film resistance model '{}'".format(
                     options["sei film resistance"]

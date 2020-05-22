@@ -2,8 +2,7 @@ from .base_current_collector import BaseModel
 
 from .homogeneous_current_collector import Uniform
 from .effective_resistance_current_collector import (
-    EffectiveResistance1D,
-    EffectiveResistance2D,
+    EffectiveResistance,
     AlternativeEffectiveResistance2D,
 )
 from .potential_pair import (

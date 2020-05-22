@@ -8,6 +8,18 @@ class EffectiveResistance(pybamm.BaseModel):
     """
     A model which calculates the effective Ohmic resistance of the current
     collectors in the limit of large electrical conductivity. For details see [1]_.
+    Note that this formulation assumes uniform *potential* across the tabs. See
+    :class:`pybamm.AlternativeEffectiveResistance2D` for the formulation that
+    assumes a uniform *current density* at the tabs (in 1D the two formulations
+    are equivalent).
+
+    options: dict
+        A dictionary of options to be passed to the model. The options that can
+        be set are listed below.
+
+            * "dimensionality" : int, optional
+                Sets the dimension of the current collector problem. Can be 1
+                (default) or 2.
 
     References
     ----------
@@ -20,7 +32,8 @@ class EffectiveResistance(pybamm.BaseModel):
     def __init__(
         self, options=None, name="Effective resistance in current collector model"
     ):
-        super().__init__(options, name)
+        super().__init__(name)
+        self.options = options
         self.param = pybamm.standard_parameters_lithium_ion
 
         self.variables = self.get_fundamental_variables()
@@ -51,8 +64,12 @@ class EffectiveResistance(pybamm.BaseModel):
         R_cp = delta * R_cp_scaled / (l_cp * sigma_cp_dbl_prime)
 
         # Define effective current collector resistance
-        R_cc_n = -self.average(R_cn)
-        R_cc_p = -self.average(R_cp)
+        if self.options["dimensionality"] == 1:
+            R_cc_n = -pybamm.z_average(R_cn)
+            R_cc_p = -pybamm.z_average(R_cp)
+        elif self.options["dimensionality"] == 2:
+            R_cc_n = -pybamm.yz_average(R_cn)
+            R_cc_p = -pybamm.yz_average(R_cp)
         R_cc = R_cc_n + R_cc_p
         R_scale = param.potential_scale / param.I_typ
 
@@ -80,6 +97,33 @@ class EffectiveResistance(pybamm.BaseModel):
             R_cn_scaled: pybamm.laplacian(R_cn_scaled) - pybamm.source(1, R_cn_scaled),
             R_cp_scaled: pybamm.laplacian(R_cp_scaled) - pybamm.source(1, R_cp_scaled),
         }
+
+    def set_boundary_conditions(self, variables):
+        R_cn_scaled = variables["Scaled negative current collector resistance"]
+        R_cp_scaled = variables["Scaled positive current collector resistance"]
+
+        if self.options["dimensionality"] == 1:
+            self.boundary_conditions = {
+                R_cn_scaled: {
+                    "negative tab": (0, "Dirichlet"),
+                    "no tab": (0, "Neumann"),
+                },
+                R_cp_scaled: {
+                    "positive tab": (0, "Dirichlet"),
+                    "no tab": (0, "Neumann"),
+                },
+            }
+        elif self.options["dimensionality"] == 2:
+            self.boundary_conditions = {
+                R_cn_scaled: {
+                    "negative tab": (0, "Dirichlet"),
+                    "positive tab": (0, "Neumann"),
+                },
+                R_cp_scaled: {
+                    "positive tab": (0, "Dirichlet"),
+                    "negative tab": (0, "Neumann"),
+                },
+            }
 
     def set_initial_conditions(self, variables):
         R_cn_scaled = variables["Scaled negative current collector resistance"]
@@ -151,7 +195,10 @@ class EffectiveResistance(pybamm.BaseModel):
 
     @property
     def default_geometry(self):
-        return pybamm.Geometry("1D current collector")
+        if self.options["dimensionality"] == 1:
+            return pybamm.Geometry("1D current collector")
+        elif self.options["dimensionality"] == 2:
+            return pybamm.Geometry("2D current collector")
 
     @property
     def default_var_pts(self):
@@ -160,97 +207,59 @@ class EffectiveResistance(pybamm.BaseModel):
 
     @property
     def default_submesh_types(self):
-        return {"current collector": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh)}
+        if self.options["dimensionality"] == 1:
+            return {"current collector": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh)}
+        elif self.options["dimensionality"] == 2:
+            return {
+                "current collector": pybamm.MeshGenerator(pybamm.ScikitUniform2DSubMesh)
+            }
 
     @property
     def default_spatial_methods(self):
-        return {"current collector": pybamm.FiniteVolume()}
+        if self.options["dimensionality"] == 1:
+            return {"current collector": pybamm.FiniteVolume()}
+        elif self.options["dimensionality"] == 2:
+            return {"current collector": pybamm.ScikitFiniteElement()}
 
     @property
     def default_solver(self):
         return pybamm.CasadiAlgebraicSolver()
 
-
-class EffectiveResistance1D(EffectiveResistance):
-    """
-    A model which calculates the effective Ohmic resistance of the 1D current
-    collectors in the limit of large electrical conductivity.
-
-    **Extends:** :class:`pybamm.EffectiveResistance`
-    """
-
-    def __init__(
-        self, options=None, name="Effective resistance in current collector model (1D)"
-    ):
-        super().__init__(options, name)
-
-    def set_boundary_conditions(self, variables):
-        R_cn_scaled = variables["Scaled negative current collector resistance"]
-        R_cp_scaled = variables["Scaled positive current collector resistance"]
-        self.boundary_conditions = {
-            R_cn_scaled: {"negative tab": (0, "Dirichlet"), "no tab": (0, "Neumann")},
-            R_cp_scaled: {"positive tab": (0, "Dirichlet"), "no tab": (0, "Neumann")},
-        }
-
-    def average(self, variable):
-        "Compute the average over the 1D current collector"
-        return pybamm.z_average(variable)
-
-
-class EffectiveResistance2D(EffectiveResistance):
-    """
-    A model which calculates the effective Ohmic resistance of the 2D current
-    collectors in the limit of large electrical conductivity. Note that this
-    formulation assumes uniform potential across the tabs.
-    See :class:`pybamm.AlternativeEffectiveResistance2D` for the formulation that
-    assumes a uniform current density at the tabs.
-
-    **Extends:** :class:`pybamm.EffectiveResistance`
-    """
-
-    def __init__(
-        self, options=None, name="Effective resistance in current collector model (2D)"
-    ):
-        super().__init__()
-
-    def set_boundary_conditions(self, variables):
-        R_cn_scaled = variables["Scaled negative current collector resistance"]
-        R_cp_scaled = variables["Scaled positive current collector resistance"]
-        self.boundary_conditions = {
-            R_cn_scaled: {
-                "negative tab": (0, "Dirichlet"),
-                "positive tab": (0, "Neumann"),
-            },
-            R_cp_scaled: {
-                "positive tab": (0, "Dirichlet"),
-                "negative tab": (0, "Neumann"),
-            },
-        }
-
-    def average(self, variable):
-        "Compute the average over the 2D current collector"
-        return pybamm.yz_average(variable)
-
     @property
-    def default_geometry(self):
-        return pybamm.Geometry("2D current collector")
+    def options(self):
+        return self._options
 
-    @property
-    def default_submesh_types(self):
-        return {
-            "current collector": pybamm.MeshGenerator(pybamm.ScikitUniform2DSubMesh)
-        }
+    @options.setter
+    def options(self, extra_options):
+        default_options = {"dimensionality": 1}
+        extra_options = extra_options or {}
 
-    @property
-    def default_spatial_methods(self):
-        return {"current collector": pybamm.ScikitFiniteElement()}
+        options = pybamm.FuzzyDict(default_options)
+        # any extra options overwrite the default options
+        for name, opt in extra_options.items():
+            if name in default_options:
+                options[name] = opt
+            else:
+                raise pybamm.OptionError(
+                    "Option '{}' not recognised. Best matches are {}".format(
+                        name, options.get_best_matches(name)
+                    )
+                )
+
+        if options["dimensionality"] not in [1, 2]:
+            raise pybamm.OptionError(
+                "Dimension of current collectors must be 1 or 2, not {}".format(
+                    options["dimensionality"]
+                )
+            )
+        self._options = options
 
 
 class AlternativeEffectiveResistance2D(pybamm.BaseModel):
     """
     A model which calculates the effective Ohmic resistance of the 2D current
     collectors in the limit of large electrical conductivity. This model assumes
-    a uniform current density at the tabs and the solution is computed by first
+    a uniform *current density* at the tabs and the solution is computed by first
     solving and auxilliary problem which is the related to the resistances.
 
     **Extends:** :class:`pybamm.BaseModel`

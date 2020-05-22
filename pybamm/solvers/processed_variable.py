@@ -212,12 +212,12 @@ class ProcessedVariable(object):
         # TODO: fix processing when variable is a function of space only
         if fixed_t:
             # Hack for 1D space only
+            interpolant = interp.interp1d(
+                space, entries_for_interp[:, 0], kind="linear", fill_value=np.nan
+            )
 
             def interp_fun(t, z):
-                out = interp.interp1d(
-                    space, entries_for_interp[:, 0], kind="linear", fill_value=np.nan
-                )(z)
-                return out[:, np.newaxis]
+                return interpolant(z)[:, np.newaxis]
 
             self._interpolation_function = interp_fun
         else:
