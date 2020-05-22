@@ -73,8 +73,9 @@ class ParameterValues:
         if values is not None:
             # If base_parameters is a filename, load from that filename
             if isinstance(values, str):
-                path = os.path.split(values)[0]
-                values = self.read_parameters_csv(values)
+                file_path = self._find_parameter(values)
+                path = os.path.split(file_path)[0]
+                values = self.read_parameters_csv(file_path)
             else:
                 path = None
             # Don't check parameter already exists when first creating it
@@ -134,9 +135,7 @@ class ParameterValues:
         """
         base_chemistry = chemistry["chemistry"]
         # Create path to file
-        path = os.path.join(
-            pybamm.root_dir(), "pybamm", "input", "parameters", base_chemistry
-        )
+        path = self._find_chemistry(base_chemistry)
         # Load each component name
 
         component_groups = [
