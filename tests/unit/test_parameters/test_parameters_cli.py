@@ -11,8 +11,6 @@ import tempfile
 import unittest
 import platform
 
-from sys import version_info as python_version
-
 
 @unittest.skipUnless(platform.system() != "Windows", "Skipped for Windows")
 class TestParametersCLI(unittest.TestCase):
@@ -106,25 +104,6 @@ class TestParametersCLI(unittest.TestCase):
         # Clean up temporary dicts
         sandbox_dir.cleanup()
         tempdir.cleanup()
-
-    def test_list_params(self):
-        cmd = ["pybamm_list_parameters", "lithium-ion", "cathodes"]
-        if python_version >= (3, 7):
-            output = subprocess.run(cmd, check=True, capture_output=True)
-        else:
-            output = subprocess.run(cmd, check=True, stdout=subprocess.PIPE)
-        # First check that available package parameters are listed
-        # correctly
-        self.assertTrue("lico2_Marquis2019" in str(output.stdout))
-        self.assertTrue("nca_Kim2011" in str(output.stdout))
-        self.assertTrue("nmc_Chen2020" in str(output.stdout))
-
-        # Then create temporary directory in current working dir
-        # and verify it is listed
-        # Must create a temporary directory structure like
-        # ./input/parameters/lithium-ion/cathodes/tmp_dir
-        # but must not intefere with existing input dir if it exists
-        # in the current dir...
 
 
 if __name__ == "__main__":
