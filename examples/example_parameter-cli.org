@@ -1,0 +1,73 @@
+PyBamm comes with a set of pre-defined parameters for common chemistries.
+These files are located inside your PyBaMM installatio ndireectory, typically
+something like 
+#+begin_example
+../venv/lib/pythonX.Y/site-packages/pybamm/input/parameters
+#+end_example
+The ~input~ directory is organised as follows:
+#+begin_example
+input/parameters
+  lithium-ion/ # chemistry
+    anodes/ # Component
+      graphite_Chen2020/ # parameter set
+        parameters.csv
+	graphite_LGM50_diffusivity_Chen2020.py
+        ...
+      graphite_mcmb2528_Marquis2019/
+      graphite_Ecker2015/
+      ...
+    cathodes/
+    cells/
+    electrolytes/
+    seis/
+    separators/
+    experiments/
+  lithium-acid/
+    ...
+#+end_example
+
+When setting parameter values using ~pybamm.ParameterValues~ and a filename, the file is searched in several locations, described by
+the variable ~pybamm.PARAMETER_PATH~.
+The default is 
+#+begin_src python
+>> import pybamm
+>> pybamm.PARAMETER_PATH
+["/tmp", "/home/<user>/venv/lib/python3.6/site-packages/pybamm/input/parameters"]
+#+end_src
+which means that parameter files will first be searched in "/tmp" (the current directory) and the "input/parameters" directory inside the 
+PyBaMM installation directory.
+
+** Adding a parameter directory
+You can add a search location by modifying the list, e.g.
+#+begin_src python
+>> pybamm.PARAMETER_PATH.insert(0, "my/parameter/directory")
+>> pybamm.PARAMETER_PATH
+["my/parameter/directory", "/tmp", "/home/<user>/venv/lib/python3.6/site-packages/pybamm/input/parameters"]
+#+end_src
+
+Note that paths contained in ~pybamm.PARAMETER_PATH~ are considered relative to the current directory.
+
+** Editing the default parameters
+It is often much easier to define new parameters by editing exiting ones.
+
+We recommend not to alter the default parameters provided with the PyBaMM installation. Instead you can pull all parameter set for
+a given chemistry into the current directory:
+#+begin_src bash
+pybamm_edit_parameters lithium-ion
+#+end_src
+The above commands will create a ~lithium-ion~ directory in the current directory, populated with copies of the default parameters, for editing.
+
+** Contributing a new parameter set
+Once you're happy with a particular parameter set of your design, you may want to contribute it to the PyBaMM parameter distribution, so
+that it comes bundled with future release of PyBaMM.
+This will require you to open a Pull Request on the PyBaMM repository, a process that is described here.
+
+A prerequisite is that you add you parameter set to the default parameter directory. 
+You could manually copy the corresponding directory to your installation directory, but the command ~pybamm_add_param~ can do it for you:
+#+begin_src bash
+pybamm_add_param lithium-acid cell <parameter-set-directory>
+#+end_src
+
+If you think you made a mistake, you can always delete a specific parameter set using ~pybamm_rm_param~.
+
+
