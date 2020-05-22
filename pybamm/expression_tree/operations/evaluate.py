@@ -4,9 +4,11 @@
 import pybamm
 
 # need numpy imported for code generated in EvaluatorPython
-import numpy as np  # noqa: F401
+#import numpy as np  # noqa: F401
 import scipy.sparse  # noqa: F401
 from collections import OrderedDict
+
+import jax.numpy as np
 
 
 def id_to_python_variable(symbol_id, constant=False):
@@ -232,6 +234,61 @@ def to_python(symbol, debug=False):
 
 
 class EvaluatorPython:
+    """
+    Converts a pybamm expression tree into pure python code that will calculate the
+    result of calling `evaluate(t, y)` on the given expression tree.
+
+    Parameters
+    ----------
+
+    symbol : :class:`pybamm.Symbol`
+        The symbol to convert to python code
+
+
+    """
+
+    def __init__(self, symbol):
+        constants, self._variable_function = pybamm.to_python(symbol, debug=False)
+
+        # store all the constant symbols in the tree as internal variables of this
+        # object
+        for symbol_id, value in constants.items():
+            setattr(
+                self, id_to_python_variable(symbol_id, True).replace("self.", ""), value
+            )
+
+        # calculate the final variable that will output the result of calling `evaluate`
+        # on `symbol`
+        self._result_var = id_to_python_variable(symbol.id, symbol.is_constant())
+
+        # compile the generated python code
+        self._variable_compiled = compile(
+            self._variable_function, self._result_var, "exec"
+        )
+
+        # compile the line that will return the output of `evaluate`
+        self._return_compiled = compile(
+            self._result_var, "return" + self._result_var, "eval"
+        )
+
+    def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
+        """
+        Acts as a drop-in replacement for :func:`pybamm.Symbol.evaluate`
+        """
+        # generated code assumes y is a column vector
+        if y is not None and y.ndim == 1:
+            y = y.reshape(-1, 1)
+
+        # execute code
+        exec(self._variable_compiled)
+
+        # don't need known_evals, but need to reproduce Symbol.evaluate signature
+        if known_evals is not None:
+            return eval(self._return_compiled), known_evals
+        else:
+            return eval(self._return_compiled)
+
+class EvaluatorJax:
     """
     Converts a pybamm expression tree into pure python code that will calculate the
     result of calling `evaluate(t, y)` on the given expression tree.
