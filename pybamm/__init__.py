@@ -51,6 +51,7 @@ FLOAT_FORMAT = "{: .17e}"
 # Absolute path to the PyBaMM repo
 script_path = os.path.abspath(__file__)
 ABSOLUTE_PATH = os.path.join(os.path.split(script_path)[0], "..")
+PARAMETER_PATH = [os.path.join(script_path, "input", "parameters")]
 
 #
 # Utility classes and methods
