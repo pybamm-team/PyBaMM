@@ -73,7 +73,7 @@ class ParameterValues:
         if values is not None:
             # If base_parameters is a filename, load from that filename
             if isinstance(values, str):
-                file_path = self._find_parameter(values)
+                file_path = self.find_parameter(values)
                 path = os.path.split(file_path)[0]
                 values = self.read_parameters_csv(file_path)
             else:
@@ -162,7 +162,7 @@ class ParameterValues:
                 )
             # Create path to component and load values
             component_path = os.path.join(base_chemistry, component_group + "s", component)
-            file_path = self._find_parameter(os.path.join(component_path, "parameters.csv"))
+            file_path = self.find_parameter(os.path.join(component_path, "parameters.csv"))
             component_params = self.read_parameters_csv(file_path)
 
             # Update parameters, making sure to check any conflicts
@@ -733,3 +733,14 @@ class ParameterValues:
                     file.write(
                         (s + " : {:10.3E}{!s}\n").format(name, value, C_dependence)
                     )
+
+    @staticmethod
+    def find_parameter(path):
+        """Look for parameter file in the different locations
+        in PARAMETER_PATH
+        """
+        for location in pybamm.PARAMETER_PATH:
+            trial_path = os.path.join(location, path)
+            if os.path.isfile(trial_path):
+                return trial_path
+        raise FileNotFoundError("Could not find parameter {}".format(path))
