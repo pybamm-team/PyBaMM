@@ -13,30 +13,25 @@ import pybamm
 import tests.shared as shared
 
 
-
-
 class TestParameterValues(unittest.TestCase):
     def test_find_parameter(self):
         f = tempfile.NamedTemporaryFile()
         pybamm.PARAMETER_PATH.append(tempfile.gettempdir())
 
         tempfile_name = os.path.basename(f.name)
-        self.assertEqual(
-            pybamm.ParameterValues.find_parameter(tempfile_name),
-            f.name
-        )
+        self.assertEqual(pybamm.ParameterValues.find_parameter(tempfile_name), f.name)
 
     def test_read_parameters_csv(self):
         data = pybamm.ParameterValues({}).read_parameters_csv(
-                os.path.join(
-                    pybamm.root_dir(),
-                    "pybamm",
-                    "input",
-                    "parameters",
-                    "lithium-ion",
-                    "cathodes",
-                    "lico2_Marquis2019",
-                    "parameters.csv",
+            os.path.join(
+                pybamm.root_dir(),
+                "pybamm",
+                "input",
+                "parameters",
+                "lithium-ion",
+                "cathodes",
+                "lico2_Marquis2019",
+                "parameters.csv",
             )
         )
         self.assertEqual(data["Positive electrode porosity"], "0.3")
@@ -51,8 +46,7 @@ class TestParameterValues(unittest.TestCase):
 
         # from file
         param = pybamm.ParameterValues(
-            "lithium-ion/cathodes/lico2_Marquis2019/"
-            + "parameters.csv"
+            "lithium-ion/cathodes/lico2_Marquis2019/" + "parameters.csv"
         )
         self.assertEqual(param["Positive electrode porosity"], 0.3)
 

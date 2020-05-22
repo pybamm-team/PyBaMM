@@ -161,8 +161,12 @@ class ParameterValues:
                     )
                 )
             # Create path to component and load values
-            component_path = os.path.join(base_chemistry, component_group + "s", component)
-            file_path = self.find_parameter(os.path.join(component_path, "parameters.csv"))
+            component_path = os.path.join(
+                base_chemistry, component_group + "s", component
+            )
+            file_path = self.find_parameter(
+                os.path.join(component_path, "parameters.csv")
+            )
             component_params = self.read_parameters_csv(file_path)
 
             # Update parameters, making sure to check any conflicts

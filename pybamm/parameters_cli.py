@@ -163,9 +163,7 @@ def edit_parameter(arguments=None):
 
     args = parser.parse_args(arguments)
 
-    path = os.path.join(
-        "input", "parameters", args.chemistry
-    )
+    path = os.path.join("input", "parameters", args.chemistry)
 
     source_dir = os.path.join(pybamm.__path__[0], path)
     copy_directory(source_dir, args.chemistry, args.force)

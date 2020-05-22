@@ -56,7 +56,9 @@ class TestParametersCLI(unittest.TestCase):
         )
         self.assertTrue(os.path.isfile(new_parameter_filename))
 
-        new_anode = pybamm.ParameterValues({}).read_parameters_csv(new_parameter_filename)
+        new_anode = pybamm.ParameterValues({}).read_parameters_csv(
+            new_parameter_filename
+        )
         self.assertEqual(new_anode["Negative electrode porosity"], "0.3")
 
         # Now delete added parameter
