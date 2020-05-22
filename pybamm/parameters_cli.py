@@ -155,9 +155,11 @@ def edit_parameter(arguments=None):
 
     in the current working directory.
     """
-    parser = get_parser(
-        "Pull parameter directory dir to current working directory for editing."
-    )
+    desc = "Pull parameter directory dir to current working directory for editing."
+    parser = argparse.ArgumentParser(description=desc)
+    parser.add_argument("chemistry", choices=["lithium-ion", "lead-acid"])
+    parser.add_argument("-f", "--force", action="store_true")
+
     args = parser.parse_args(arguments)
 
     path = os.path.join(
