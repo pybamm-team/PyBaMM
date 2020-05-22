@@ -65,6 +65,7 @@ class TestParametersCLI(unittest.TestCase):
 
     def test_edit_param(self):
         anodes_dir = os.path.join("input", "parameters", "lithium-ion", "anodes")
+        chemistry = "lithium-ion"
         # Write dummy parameters.csv file in temporary directory
         # in package input dir
         tempdir = tempfile.TemporaryDirectory(
@@ -80,16 +81,15 @@ class TestParametersCLI(unittest.TestCase):
         cmd = [
             "pybamm_edit_parameter",
             "-f",
-            os.path.basename(tempdir.name),
-            "lithium-ion",
-            "anodes",
+            chemistry,
         ]
         subprocess.run(cmd, cwd=sandbox_dir.name)
 
         # Read and compare copied parameters.csv file
         copied_path_parameters_file = os.path.join(
             sandbox_dir.name,
-            anodes_dir,
+            chemistry,
+            "anodes",
             os.path.basename(tempdir.name),
             "parameters.csv",
         )
@@ -97,7 +97,7 @@ class TestParametersCLI(unittest.TestCase):
             content = f.read()
             self.assertTrue(content == "hello")
 
-        # Clean up temporaty dicts
+        # Clean up temporary dicts
         sandbox_dir.cleanup()
         tempdir.cleanup()
 

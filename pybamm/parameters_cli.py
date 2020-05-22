@@ -113,17 +113,46 @@ def add_parameter(arguments=None):
     copy_directory(args.parameter_dir, destination_dir, args.force)
     print("Copied {} to {}".format(args.parameter_dir, destination_dir))
 
+def remove_parameter(arguments=None):
+    """
+    Remove a parameter directory from package input directory.
+
+    Example:
+    "rm_parameter foo lithium-ion anodes" will remove directory foo in
+    "pybamm/input/parameters/lithium-ion/anodes".
+    """
+    parser = get_parser("Copy parameter to the PyBaMM package directory.")
+    args = parser.parse_args(arguments)
+
+    parameters_root_dir = os.path.join(pybamm.__path__[0], "input", "parameters")
+
+    parameter_dir_name = Path(args.parameter_dir).name
+    destination_dir = os.path.join(
+        parameters_root_dir, args.battery_type, args.component, parameter_dir_name
+    )
+
+    copy_directory(args.parameter_dir, destination_dir, args.force)
+    print("Copied {} to {}".format(args.parameter_dir, destination_dir))
+
 
 def edit_parameter(arguments=None):
     """
-    Copy a given parameter package directory to the current working directory
-    for editing. The copy preserves the directory structure within the "input"
-    directory, i.e
+    Copy a given default parameter directory to the current working directory
+    for editing. For example
 
-    ``edit_param(["graphite_Kim2011","lithium-ion","anodes"])``
+    .. code::
 
-    will create the directory structure
-    "input/parameters/lithium-ion/anodes/graphite_Kim2011"
+    edit_param(["lithium-ion"])
+
+    will create the directory structure::
+
+      lithium-ion/
+        anodes/
+          graphite_Chen2020
+          ...
+        cathodes/
+        ...
+
     in the current working directory.
     """
     parser = get_parser(
@@ -132,11 +161,11 @@ def edit_parameter(arguments=None):
     args = parser.parse_args(arguments)
 
     path = os.path.join(
-        "input", "parameters", args.battery_type, args.component, args.parameter_dir
+        "input", "parameters", args.chemistry
     )
 
     source_dir = os.path.join(pybamm.__path__[0], path)
-    copy_directory(source_dir, path, args.force)
+    copy_directory(source_dir, args.chemistry, args.force)
 
 
 def list_parameters(arguments=None):
