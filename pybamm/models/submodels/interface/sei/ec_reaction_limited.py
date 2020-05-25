@@ -45,7 +45,7 @@ class EcReactionLimited(BaseModel):
 
         L_scale = pybamm.sei_parameters.L_sei_0_dim
         # in this model the scale is identical to the intercalation current
-        j_scale = pybamm.sei_parameters.j_scale
+        j_scale = pybamm.sei_parameters.j_scale_n
         c_scale = pybamm.sei_parameters.c_ec_0_dim
 
         variables = {
