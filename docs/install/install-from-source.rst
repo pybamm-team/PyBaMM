@@ -82,6 +82,12 @@ If you want to run the tests for a specific version, say 3.6, run instead
 
 	  tox -e py36
 
+If you want to run the tests for your current python version (returned by :code:`python --version`), run instead
+
+.. code:: bash
+
+	  tox -e py
+
 The documentation is built using
 
 .. code:: bash
