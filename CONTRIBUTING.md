@@ -12,7 +12,8 @@ Before you commit any code, please perform the following checks:
 - [All tests pass](#testing): `$ python run-tests.py --unit`
 - [The documentation builds](#building-the-documentation): `$ cd docs` and then `$ make clean; make html`
 
-You can even run all three at once, using `$ python run-tests.py --quick`.
+You can even run all three at once, using `$ tox`. This will run the above checks in two separate environments
+for python 3.6 and 3.7. To check for only your current python version, use `$ tox -e py`.
 
 
 ## Workflow
@@ -52,14 +53,19 @@ Finally, if you really, really, _really_ love developing PyBaMM, have a look at 
 To install PyBaMM with all developer options, type:
 
 ```bash
-pip install -e .[dev,docs]
+tox -e dev
 ```
 
 This will
 
-1. Install all the dependencies for PyBaMM, including the ones for documentation (docs) and development (dev).
-2. Tell Python to use your local pybamm files when you use `import pybamm` anywhere on your system.
+1. Create a virtual environment located at `.tox/dev`.
+2. Install all the dependencies for PyBaMM, including the ones for documentation and development.
+3. Tell Python to use your local pybamm files when you use `import pybamm` anywhere on your system.
 
+Finally, activate your environment with
+```bash
+source .tox/dev/bin/activate
+```
 ## Coding style guidelines
 
 PyBaMM follows the [PEP8 recommendations](https://www.python.org/dev/peps/pep-0008/) for coding style. These are very common guidelines, and community tools have been developed to check how well projects implement them.
@@ -71,11 +77,7 @@ We use [flake8](http://flake8.pycqa.org/en/latest/) to check our PEP8 adherence.
 ```bash
 flake8
 ```
-The configuration file
-```
-.flake8
-```
-allows us to ignore some errors. If you think this should be added or removed, please submit an [issue](#issues)
+Flake8 is configured inside the file `tox.ini`, under the section `[flake8]`, allowing us to ignore some errors. If you think this should be added or removed, please submit an [issue](#issues)
 
 When you commit your changes they will be checked against flake8 automatically (see [infrastructure](#infrastructure)).
 
@@ -277,16 +279,12 @@ Using [Sphinx](http://www.sphinx-doc.org/en/stable/) the documentation in `docs`
 
 ### Building the documentation
 
-To test and debug the documentation, it's best to build it locally. To do this, make sure you have the relevant dependencies installed (see [installation](#installation)), navigate to your PyBaMM directory in a console, and then type:
+To test and debug the documentation, it's best to build it locally. To do this, navigate to your PyBaMM directory in a console, and then type:
 
 ```
-cd docs
-make clean
-make html
+tox -e docs
 ```
-
-Next, open a browser, and navigate to your local PyBaMM directory (by typing the path, or part of the path into your location bar). Then have a look at `<your pybamm path>/docs/build/html/index.html`.
-
+And then visit the webpage served at http://127.0.0.1:8000. Each time a change to the documentation source is detected, the HTML is rebuilt and the browser automatically reloaded.
 
 ### Example notebooks
 
