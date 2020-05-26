@@ -3,11 +3,7 @@ Name [units],Value,Reference,Notes
 ,,,
 # Temperature
 Reference temperature [K],298.15,25C,
-Negative current collector surface heat transfer coefficient [W.m-2.K-1],0,default,
-Positive current collector surface heat transfer coefficient [W.m-2.K-1],0,default,
-Negative tab heat transfer coefficient [W.m-2.K-1],10,default,
-Positive tab heat transfer coefficient [W.m-2.K-1],10,default,
-Edge heat transfer coefficient [W.m-2.K-1],0.3,default,
+Total heat transfer coefficient [W.m-2.K-1],10,default,
 Ambient temperature [K]," 298.15",,
 ,,,
 # Electrical
