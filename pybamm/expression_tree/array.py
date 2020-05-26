@@ -101,3 +101,24 @@ class Array(pybamm.Symbol):
     def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
         """ See :meth:`pybamm.Symbol._base_evaluate()`. """
         return self._entries
+
+
+def linspace(start, stop, num=50, **kwargs):
+    """
+    Creates a linearly spaced array by calling `numpy.linspace` with keyword
+    arguments 'kwargs'. For a list of 'kwargs' see the
+    `numpy linspace documentation <https://tinyurl.com/yc4ne47x>`_
+    """
+    return pybamm.Array(np.linspace(start, stop, num, **kwargs))
+
+
+def meshgrid(x, y, **kwargs):
+    """
+    Return coordinate matrices as from coordinate vectors by calling
+    `numpy.meshgrid` with keyword arguments 'kwargs'. For a list of 'kwargs'
+    see the `numpy meshgrid documentation <https://tinyurl.com/y8azewrj>`_
+    """
+    [X, Y] = np.meshgrid(x.entries, y.entries)
+    X = pybamm.Array(X)
+    Y = pybamm.Array(Y)
+    return X, Y

@@ -242,7 +242,7 @@ class SpatialMethod:
         """
         raise NotImplementedError
 
-    def indefinite_integral(self, child, discretised_child):
+    def indefinite_integral(self, child, discretised_child, direction):
         """
         Implements the indefinite integral for a spatial method.
 
@@ -252,6 +252,8 @@ class SpatialMethod:
             The symbol to which is being integrated
         discretised_child: :class:`pybamm.Symbol`
             The discretised symbol of the correct size
+        direction : str
+            The direction of integration
 
         Returns
         -------

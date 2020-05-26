@@ -99,7 +99,7 @@ class TestCompareOutputs(unittest.TestCase):
             solutions = []
             t_eval = np.linspace(0, 3600, 100)
             for model in models:
-                solution = pybamm.CasadiSolver(dt_max=0.01).solve(model, t_eval)
+                solution = pybamm.CasadiSolver().solve(model, t_eval)
                 solutions.append(solution)
 
             # compare outputs
