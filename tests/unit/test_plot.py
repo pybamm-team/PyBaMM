@@ -21,6 +21,10 @@ class TestPlot(unittest.TestCase):
         y = pybamm.Array(np.array([6, 16, 78]))
         X, Y = pybamm.meshgrid(x, y)
 
+        # plot with array directly
+        pybamm.plot2D(x, y, Y, xlabel="x", ylabel="y", title="title", testing=True)
+
+        # plot with meshgrid
         pybamm.plot2D(X, Y, Y, xlabel="x", ylabel="y", title="title", testing=True)
 
     def test_plot2D_fail(self):

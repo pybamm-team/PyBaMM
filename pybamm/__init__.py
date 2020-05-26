@@ -221,10 +221,16 @@ from .experiments.experiment import Experiment
 from . import experiments
 
 #
-# other
+# Plotting
 #
-from .quick_plot import QuickPlot, plot, plot2D, dynamic_plot, ax_min, ax_max
+from .plotting.quick_plot import QuickPlot
+from .plotting.plot import plot
+from .plotting.plot2D import plot2D
+from .plotting.dynamic_plot import dynamic_plot
 
+#
+# Simulation
+#
 from .simulation import Simulation, load_sim, is_notebook
 
 #
