@@ -181,6 +181,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "current collector": "uniform",
             "particle": "Fickian diffusion",
             "thermal": "isothermal",
+            "geometry": "arbitrary",
             "external submodels": [],
             "sei": None,
         }
@@ -273,6 +274,10 @@ class BaseBatteryModel(pybamm.BaseModel):
             raise pybamm.OptionError(
                 "Unknown thermal model '{}'".format(options["thermal"])
             )
+        if options["geometry"] not in ["arbitrary", "pouch"]:
+            raise pybamm.OptionError(
+                "Unknown geometry '{}'".format(options["geometry"])
+            )            
         if options["sei"] not in [
             None,
             "constant",
@@ -554,7 +559,7 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         elif self.options["thermal"] == "lumped":
             thermal_submodel = pybamm.thermal.Lumped(
-                self.param, self.options["dimensionality"]
+                self.param, self.options["dimensionality"], self.options["geometry"]
             )
 
         elif self.options["thermal"] == "x-lumped":
