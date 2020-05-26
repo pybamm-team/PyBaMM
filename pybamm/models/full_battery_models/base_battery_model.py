@@ -558,8 +558,8 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         elif self.options["thermal"] == "x-lumped":
             if self.options["dimensionality"] == 0:
-                # With 0D current collectors x-lumped is equivalent to lumped
-                thermal_submodel = pybamm.thermal.Lumped(self.param)
+                # With 0D current collectors x-lumped is equivalent to lumped pouch
+                thermal_submodel = pybamm.thermal.Lumped(self.param, geometry="pouch")
             elif self.options["dimensionality"] == 1:
                 thermal_submodel = pybamm.thermal.pouch_cell.CurrentCollector1D(
                     self.param
