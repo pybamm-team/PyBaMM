@@ -298,13 +298,16 @@ class Simulation:
 
         if self.built_model:
             return None
-
-        self.set_parameters()
-        self._mesh = pybamm.Mesh(self._geometry, self._submesh_types, self._var_pts)
-        self._disc = pybamm.Discretisation(self._mesh, self._spatial_methods)
-        self._built_model = self._disc.process_model(
-            self._model_with_set_params, inplace=False, check_model=check_model
-        )
+        elif self.model.is_discretised:
+            self._model_with_set_params = self.model
+            self._built_model = self.model
+        else:
+            self.set_parameters()
+            self._mesh = pybamm.Mesh(self._geometry, self._submesh_types, self._var_pts)
+            self._disc = pybamm.Discretisation(self._mesh, self._spatial_methods)
+            self._built_model = self._disc.process_model(
+                self._model_with_set_params, inplace=False, check_model=check_model
+            )
 
     def solve(
         self,

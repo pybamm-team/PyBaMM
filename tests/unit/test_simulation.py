@@ -103,6 +103,27 @@ class TestSimulation(unittest.TestCase):
             sim.solution["v"].entries, np.exp(-np.linspace(0, 1, 100))
         )
 
+    def test_solve_already_partially_processed_model(self):
+
+        model = pybamm.lithium_ion.SPM()
+
+        # Process model manually
+        geometry = model.default_geometry
+        param = model.default_parameter_values
+        param.process_model(model)
+        param.process_geometry(geometry)
+        # Let simulation take over
+        sim = pybamm.Simulation(model)
+        sim.solve()
+
+        # Discretised manually
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        disc.process_model(model)
+        # Let simulation take over
+        sim = pybamm.Simulation(model)
+        sim.solve()
+
     def test_reuse_commands(self):
 
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
