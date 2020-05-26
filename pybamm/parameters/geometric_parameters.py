@@ -19,8 +19,8 @@ L = L_cn + L_x + L_cp  # Total cell thickness
 L_y = pybamm.Parameter("Electrode width [m]")
 L_z = pybamm.Parameter("Electrode height [m]")
 A_cc = L_y * L_z  # Area of current collector
-A_cooling = pybamm.Parameter("Electrode height [m]")
-V_cell = pybamm.Parameter("Electrode height [m]")
+A_cooling = pybamm.Parameter("Cell cooling surface area [m2]")
+V_cell = pybamm.Parameter("Cell volume [m3]")
 
 # Tab geometry
 L_tab_n = pybamm.Parameter("Negative tab width [m]")
