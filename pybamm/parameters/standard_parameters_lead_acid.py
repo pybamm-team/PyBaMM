@@ -32,6 +32,8 @@ L_x = pybamm.geometric_parameters.L_x
 L_y = pybamm.geometric_parameters.L_y
 L_z = pybamm.geometric_parameters.L_z
 A_cc = pybamm.geometric_parameters.A_cc
+A_cooling = pybamm.geometric_parameters.A_cooling
+V_cell = pybamm.geometric_parameters.V_cell
 W = L_y
 H = L_z
 A_cs = A_cc
@@ -315,6 +317,8 @@ l_x = pybamm.geometric_parameters.l_x
 l_y = pybamm.geometric_parameters.l_y
 l_z = pybamm.geometric_parameters.l_z
 a_cc = pybamm.geometric_parameters.a_cc
+a_cooling = pybamm.geometric_parameters.a_cooling
+v_cell = pybamm.geometric_parameters.v_cell
 l = pybamm.geometric_parameters.l
 delta = pybamm.geometric_parameters.delta
 # In lead-acid the current collector and electrodes are the same (same thickness)
@@ -455,6 +459,7 @@ h_tab_n = pybamm.thermal_parameters.h_tab_n
 h_tab_p = pybamm.thermal_parameters.h_tab_p
 h_cn = pybamm.thermal_parameters.h_cn
 h_cp = pybamm.thermal_parameters.h_cp
+h_total = pybamm.thermal_parameters.h_total
 
 B = (
     i_typ
