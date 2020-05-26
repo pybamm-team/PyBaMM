@@ -15,11 +15,14 @@ class Lumped(BaseThermal):
         The parameters to use for this submodel
     cc_dimension: int, optional
         The dimension of the current collectors. Can be 0 (default), 1 or 2.
+    geometry: string, optional
+        The geometry for the lumped thermal submodel. Can be "arbitrary" (default) or pouch.
 
     **Extends:** :class:`pybamm.thermal.BaseThermal`
     """
 
-    def __init__(self, param, cc_dimension=0):
+    def __init__(self, param, cc_dimension=0, geometry="arbitrary"):
+        self.geometry = geometry
         super().__init__(param, cc_dimension)
 
     def get_fundamental_variables(self):
@@ -53,42 +56,52 @@ class Lumped(BaseThermal):
         # the choice of non-dimensionalisation.
         # TODO: allow for arbitrary surface area to volume ratio in order to model
         # different cell geometries (see #718)
-        cell_volume = self.param.l * self.param.l_y * self.param.l_z
+        if self.geometry is "pouch":
+            cell_volume = self.param.l * self.param.l_y * self.param.l_z
 
-        yz_cell_surface_area = self.param.l_y * self.param.l_z
-        yz_surface_cooling_coefficient = (
-            -(self.param.h_cn + self.param.h_cp)
-            * yz_cell_surface_area
-            / cell_volume
-            / (self.param.delta ** 2)
-        )
+            yz_cell_surface_area = self.param.l_y * self.param.l_z
+            yz_surface_cooling_coefficient = (
+                -(self.param.h_cn + self.param.h_cp)
+                * yz_cell_surface_area
+                / cell_volume
+                / (self.param.delta ** 2)
+            )
 
-        negative_tab_area = self.param.l_tab_n * self.param.l_cn
-        negative_tab_cooling_coefficient = (
-            -self.param.h_tab_n * negative_tab_area / cell_volume / self.param.delta
-        )
+            negative_tab_area = self.param.l_tab_n * self.param.l_cn
+            negative_tab_cooling_coefficient = (
+                -self.param.h_tab_n * negative_tab_area / cell_volume / self.param.delta
+            )
 
-        positive_tab_area = self.param.l_tab_p * self.param.l_cp
-        positive_tab_cooling_coefficient = (
-            -self.param.h_tab_p * positive_tab_area / cell_volume / self.param.delta
-        )
+            positive_tab_area = self.param.l_tab_p * self.param.l_cp
+            positive_tab_cooling_coefficient = (
+                -self.param.h_tab_p * positive_tab_area / cell_volume / self.param.delta
+            )
 
-        edge_area = (
-            2 * self.param.l_y * self.param.l
-            + 2 * self.param.l_z * self.param.l
-            - negative_tab_area
-            - positive_tab_area
-        )
-        edge_cooling_coefficient = (
-            -self.param.h_edge * edge_area / cell_volume / self.param.delta
-        )
+            edge_area = (
+                2 * self.param.l_y * self.param.l
+                + 2 * self.param.l_z * self.param.l
+                - negative_tab_area
+                - positive_tab_area
+            )
+            edge_cooling_coefficient = (
+                -self.param.h_edge * edge_area / cell_volume / self.param.delta
+            )
 
-        total_cooling_coefficient = (
-            yz_surface_cooling_coefficient
-            + negative_tab_cooling_coefficient
-            + positive_tab_cooling_coefficient
-            + edge_cooling_coefficient
-        )
+            total_cooling_coefficient = (
+                yz_surface_cooling_coefficient
+                + negative_tab_cooling_coefficient
+                + positive_tab_cooling_coefficient
+                + edge_cooling_coefficient
+            )
+        elif self.geometry is "arbitrary":
+            cell_surface_area = self.param.a_cooling
+            cell_volume = self.param.v_cell
+            total_cooling_coefficient = (
+                -self.h_total
+                * cell_surface_area
+                / cell_volume
+                / (self.param.delta ** 2)
+            )
 
         self.rhs = {
             T_vol_av: (
