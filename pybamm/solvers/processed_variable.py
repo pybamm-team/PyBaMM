@@ -64,10 +64,38 @@ class ProcessedVariable(object):
         # check variable shape
         else:
             if len(solution.t) == 1:
-                raise pybamm.SolverError(
-                    "Solution time vector must have length > 1. Check whether "
-                    "simulation terminated too early."
-                )
+                # Implementing a workaround for 0D and 1D variables. Processing
+                # variables that are functions of space only needs to be implemented
+                # properly, see #1006
+                if (
+                    isinstance(self.base_eval, numbers.Number)
+                    or len(self.base_eval.shape) == 0
+                    or self.base_eval.shape[0] == 1
+                ):
+                    # Scalar value
+                    t = self.t_sol
+                    u = self.u_sol
+                    inputs = {name: inp[0] for name, inp in self.inputs.items()}
+
+                    entries = self.base_variable.evaluate(t, u, inputs=inputs)
+
+                    def fun(t):
+                        return entries
+
+                    self._interpolation_function = fun
+                    self.entries = entries
+                    self.dimensions = 0
+                else:
+                    # 1D function of space only
+                    n = self.mesh[0].npts
+                    base_shape = self.base_eval.shape[0]
+                    if base_shape in [n, n + 1]:
+                        self.initialise_1D(fixed_t=True)
+                    else:
+                        raise pybamm.SolverError(
+                            "Solution time vector must have length > 1. Check whether "
+                            "simulation terminated too early."
+                        )
             elif (
                 isinstance(self.base_eval, numbers.Number)
                 or len(self.base_eval.shape) == 0
@@ -120,7 +148,7 @@ class ProcessedVariable(object):
         self.entries = entries
         self.dimensions = 0
 
-    def initialise_1D(self):
+    def initialise_1D(self, fixed_t=False):
         len_space = self.base_eval.shape[0]
         entries = np.empty((len_space, len(self.t_sol)))
 
@@ -181,10 +209,21 @@ class ProcessedVariable(object):
 
         # set up interpolation
         # note that the order of 't' and 'space' is the reverse of what you'd expect
+        # TODO: fix processing when variable is a function of space only
+        if fixed_t:
+            # Hack for 1D space only
+            interpolant = interp.interp1d(
+                space, entries_for_interp[:, 0], kind="linear", fill_value=np.nan
+            )
 
-        self._interpolation_function = interp.interp2d(
-            self.t_sol, space, entries_for_interp, kind="linear", fill_value=np.nan
-        )
+            def interp_fun(t, z):
+                return interpolant(z)[:, np.newaxis]
+
+            self._interpolation_function = interp_fun
+        else:
+            self._interpolation_function = interp.interp2d(
+                self.t_sol, space, entries_for_interp, kind="linear", fill_value=np.nan
+            )
 
     def initialise_2D(self):
         """

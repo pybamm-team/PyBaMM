@@ -282,11 +282,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "interstitial-diffusion limited",
         ]:
             raise pybamm.OptionError("Unknown sei model '{}'".format(options["sei"]))
-        if options["sei film resistance"] not in [
-            None,
-            "distributed",
-            "average",
-        ]:
+        if options["sei film resistance"] not in [None, "distributed", "average"]:
             raise pybamm.OptionError(
                 "Unknown sei film resistance model '{}'".format(
                     options["sei film resistance"]
@@ -294,9 +290,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
 
         if options["dimensionality"] == 0:
-            if options["current collector"] not in [
-                "uniform",
-            ]:
+            if options["current collector"] not in ["uniform"]:
                 raise pybamm.OptionError(
                     "current collector model must be uniform in 0D model"
                 )
@@ -588,9 +582,7 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     def set_current_collector_submodel(self):
 
-        if self.options["current collector"] in [
-            "uniform",
-        ]:
+        if self.options["current collector"] in ["uniform"]:
             submodel = pybamm.current_collector.Uniform(self.param)
         elif self.options["current collector"] == "potential pair":
             if self.options["dimensionality"] == 1:
