@@ -214,16 +214,30 @@ class TestSimulation(unittest.TestCase):
         self.assertIsInstance(c_e, np.ndarray)
 
     def test_set_external_variable(self):
-        model_options = {"thermal": "lumped", "external submodels": ["thermal"]}
+        model_options = {
+            "thermal": "lumped",
+            "external submodels": ["thermal", "negative particle"],
+        }
         model = pybamm.lithium_ion.SPMe(model_options)
         sim = pybamm.Simulation(model)
 
         T_av = 0
+        c_s_n_av = np.ones((10, 1)) * 0.5
+        external_variables = {
+            "Volume-averaged cell temperature": T_av,
+            "X-averaged negative particle concentration": c_s_n_av,
+        }
 
-        dt = 0.001
+        # Step
+        dt = 0.1
+        for i in range(5):
+            sim.step(dt, external_variables=external_variables)
+        sim.plot(testing=True)
 
-        external_variables = {"Volume-averaged cell temperature": T_av}
-        sim.step(dt, external_variables=external_variables)
+        # Solve
+        t_eval = np.linspace(0, 3600)
+        sim.solve(t_eval, external_variables=external_variables)
+        sim.plot(testing=True)
 
     def test_step(self):
 
@@ -280,7 +294,7 @@ class TestSimulation(unittest.TestCase):
         self.assertEqual(sim.solution.t[1], dt / tau)
         self.assertEqual(sim.solution.t[2], 2 * dt / tau)
         np.testing.assert_array_equal(
-            sim.solution.inputs["Current function [A]"], np.array([1, 1, 2])
+            sim.solution.inputs["Current function [A]"], np.array([[1, 1, 2]])
         )
 
     def test_save_load(self):

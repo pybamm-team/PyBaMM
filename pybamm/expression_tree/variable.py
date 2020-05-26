@@ -197,6 +197,8 @@ class ExternalVariable(Variable):
                     )
                 )
             else:
+                if isinstance(out, np.ndarray) and out.ndim == 1:
+                    out = out[:, np.newaxis]
                 return out
         # raise more informative error if can't find name in dict
         except KeyError:
