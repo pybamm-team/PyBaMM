@@ -510,14 +510,8 @@ class Integral(SpatialOperator):
         return False
 
 
-class IndefiniteIntegral(Integral):
-    """A node in the expression tree representing an indefinite integral operator
-
-    .. math::
-        I = \\int_{x_\text{min}}^{x}\\!f(u)\\,du
-
-    where :math:`u\\in\\text{domain}` which can represent either a
-    spatial or temporal variable.
+class BaseIndefiniteIntegral(Integral):
+    """Base class for indefinite integrals (forward or backward).
 
     Parameters
     ----------
@@ -540,15 +534,73 @@ class IndefiniteIntegral(Integral):
         super().__init__(child, integration_variable)
         # overwrite domains with child domains
         self.copy_domains(child)
-        # Overwrite the name
-        self.name = "{} integrated w.r.t {}".format(
-            child.name, integration_variable.name
-        )
-        if isinstance(integration_variable, pybamm.SpatialVariable):
-            self.name += " on {}".format(integration_variable.domain)
 
     def _evaluate_for_shape(self):
         return self.children[0].evaluate_for_shape()
+
+    def evaluates_on_edges(self):
+        # If child evaluates on edges, indefinite integral doesn't
+        # If child doesn't evaluate on edges, indefinite integral does
+        return not self.child.evaluates_on_edges()
+
+
+class IndefiniteIntegral(BaseIndefiniteIntegral):
+    """A node in the expression tree representing an indefinite integral operator
+
+    .. math::
+        I = \\int_{x_\text{min}}^{x}\\!f(u)\\,du
+
+    where :math:`u\\in\\text{domain}` which can represent either a
+    spatial or temporal variable.
+
+    Parameters
+    ----------
+    function : :class:`pybamm.Symbol`
+        The function to be integrated (will become self.children[0])
+    integration_variable : :class:`pybamm.IndependentVariable`
+        The variable over which to integrate
+
+    **Extends:** :class:`BaseIndefiniteIntegral`
+    """
+
+    def __init__(self, child, integration_variable):
+        super().__init__(child, integration_variable)
+        # Overwrite the name
+        self.name = "{} integrated w.r.t {}".format(
+            child.name, self.integration_variable[0].name
+        )
+        if isinstance(integration_variable, pybamm.SpatialVariable):
+            self.name += " on {}".format(self.integration_variable[0].domain)
+
+
+class BackwardIndefiniteIntegral(BaseIndefiniteIntegral):
+    """A node in the expression tree representing a backward indefinite integral
+    operator
+
+    .. math::
+        I = \\int_{x}^{x_\text{max}}\\!f(u)\\,du
+
+    where :math:`u\\in\\text{domain}` which can represent either a
+    spatial or temporal variable.
+
+    Parameters
+    ----------
+    function : :class:`pybamm.Symbol`
+        The function to be integrated (will become self.children[0])
+    integration_variable : :class:`pybamm.IndependentVariable`
+        The variable over which to integrate
+
+    **Extends:** :class:`BaseIndefiniteIntegral`
+    """
+
+    def __init__(self, child, integration_variable):
+        super().__init__(child, integration_variable)
+        # Overwrite the name
+        self.name = "{} integrated backward w.r.t {}".format(
+            child.name, self.integration_variable[0].name
+        )
+        if isinstance(integration_variable, pybamm.SpatialVariable):
+            self.name += " on {}".format(self.integration_variable[0].domain)
 
 
 class DefiniteIntegralVector(SpatialOperator):
