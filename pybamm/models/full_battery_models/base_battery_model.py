@@ -277,7 +277,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         if options["geometry"] not in ["arbitrary", "pouch"]:
             raise pybamm.OptionError(
                 "Unknown geometry '{}'".format(options["geometry"])
-            )            
+            )
         if options["sei"] not in [
             None,
             "constant",
