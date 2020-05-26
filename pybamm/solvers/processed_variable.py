@@ -383,10 +383,14 @@ class ProcessedVariable(object):
         """
         # If t is None and there is only one value of time in the soluton (i.e.
         # the solution is independent of time) then we set t equal to the value
-        # stored in the solution. Otherwise, raise an error
+        # stored in the solution. If the variable is constant (doesn't depend on
+        # time) evaluate arbitrarily at the first value of t. Otherwise, raise
+        # an error
         if t is None:
             if len(self.t_sol) == 1:
                 t = self.t_sol
+            elif self.base_variable.is_constant():
+                t = self.t_sol[0]
             else:
                 raise ValueError("t cannot be None")
 

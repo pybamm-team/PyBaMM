@@ -308,6 +308,12 @@ class TestProcessedVariable(unittest.TestCase):
         # 2 scalars
         self.assertEqual(processed_eqn(0.5, x_sol[-1]).shape, (1,))
 
+        # test x
+        processed_x = pybamm.ProcessedVariable(
+            disc.process_symbol(x), pybamm.Solution(t_sol, y_sol)
+        )
+        np.testing.assert_array_almost_equal(processed_x(x=x_sol), x_sol[:, np.newaxis])
+
         # On microscale
         r_n = pybamm.Matrix(
             disc.mesh["negative particle"][0].nodes, domain="negative particle"
