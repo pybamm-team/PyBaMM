@@ -16,7 +16,8 @@ class Lumped(BaseThermal):
     cc_dimension: int, optional
         The dimension of the current collectors. Can be 0 (default), 1 or 2.
     geometry: string, optional
-        The geometry for the lumped thermal submodel. Can be "arbitrary" (default) or pouch.
+        The geometry for the lumped thermal submodel. Can be "arbitrary" (default) or
+        pouch.
 
     **Extends:** :class:`pybamm.thermal.BaseThermal`
     """
@@ -52,11 +53,8 @@ class Lumped(BaseThermal):
         T_amb = variables["Ambient temperature"]
 
         # Account for surface area to volume ratio in cooling coefficient
-        # Note: assumes pouch cell geometry. The factor 1/delta^2 comes from
-        # the choice of non-dimensionalisation.
-        # TODO: allow for arbitrary surface area to volume ratio in order to model
-        # different cell geometries (see #718)
-        if self.geometry is "pouch":
+        # The factor 1/delta^2 comes from the choice of non-dimensionalisation.
+        if self.geometry == "pouch":
             cell_volume = self.param.l * self.param.l_y * self.param.l_z
 
             yz_cell_surface_area = self.param.l_y * self.param.l_z
@@ -93,11 +91,11 @@ class Lumped(BaseThermal):
                 + positive_tab_cooling_coefficient
                 + edge_cooling_coefficient
             )
-        elif self.geometry is "arbitrary":
+        elif self.geometry == "arbitrary":
             cell_surface_area = self.param.a_cooling
             cell_volume = self.param.v_cell
             total_cooling_coefficient = (
-                -self.h_total
+                -self.param.h_total
                 * cell_surface_area
                 / cell_volume
                 / (self.param.delta ** 2)
