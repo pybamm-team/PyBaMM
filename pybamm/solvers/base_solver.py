@@ -591,7 +591,7 @@ class BaseSolver(object):
                 model.y0 = last_state
                 if len(model.algebraic) > 0:
                     model.y0 = self.calculate_consistent_state(
-                        model, t_eval_dimensionless[end_index], ext_and_inputs,
+                        model, t_eval_dimensionless[end_index], ext_and_inputs
                     )
 
         # restore old y0
