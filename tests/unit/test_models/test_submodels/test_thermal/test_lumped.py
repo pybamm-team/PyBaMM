@@ -37,7 +37,7 @@ class TestLumped(unittest.TestCase):
 
         submodel = pybamm.thermal.Lumped(param, cc_dimension=2, geometry="pouch")
         std_tests = tests.StandardSubModelTests(submodel, coupled_variables)
-        std_tests.test_all()        
+        std_tests.test_all()
 
 
 if __name__ == "__main__":
