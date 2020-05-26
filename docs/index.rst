@@ -66,7 +66,7 @@ API documentation
    source/solvers/index
    source/experiments/index
    source/simulation
-   source/quick_plot
+   source/plotting/index
    source/util
    source/citations
    source/parameters_cli
