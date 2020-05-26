@@ -9,7 +9,7 @@ def dynamic_plot(*args, **kwargs):
     Creates a :class:`pybamm.QuickPlot` object (with arguments 'args' and keyword
     arguments 'kwargs') and then calls :meth:`pybamm.QuickPlot.dynamic_plot`.
     The key-word argument 'testing' is passed to the 'dynamic_plot' method, not the
-    `QuickPlot' class.
+    `QuickPlot` class.
 
     Returns
     -------
