@@ -31,7 +31,10 @@ class SPMeFBP(BaseModel):
     """
 
     def __init__(
-        self, options=None, name="Single Particle Model with electrolyte (FBP)", build=True
+        self,
+        options=None,
+        name="Single Particle Model with electrolyte (FBP)",
+        build=True,
     ):
         super().__init__(options, name)
 
