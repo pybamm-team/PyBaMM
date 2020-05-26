@@ -15,6 +15,8 @@ Negative tab centre z-coordinate [m],0.114,Tab at top,
 Positive tab width [m],0.04,,Estimated value
 Positive tab centre y-coordinate [m],0.147,,Estimated value
 Positive tab centre z-coordinate [m],0.114,Tab at top,
+Cell cooling surface area [m2],1.54E-1,,
+Cell volume [m3],2.70E-4,,
 ,,,
 # Electrical,,,
 Cell capacity [A.h],17,Manufacturer,
@@ -22,9 +24,8 @@ Typical current [A],1,,
 Current function [A],1,default current function,
 ,,,
 # Density,,,
-Negative current collector density [kg.m-3],11300, same as electrode,
+Negative current collector density [kg.m-3],11300," same as electrode",
 Positive current collector density [kg.m-3],9375,same as electrode,
-
 ,,,
 # Specific heat capacity,,,
 Negative current collector specific heat capacity [J.kg-1.K-1],130,CRC Handbook of Chemistry and Physics,
@@ -33,4 +34,3 @@ Positive current collector specific heat capacity [J.kg-1.K-1],256,NIST Chemistr
 # Thermal conductivity,,,
 Negative current collector thermal conductivity [W.m-1.K-1],35,CRC Handbook of Chemistry and Physics,
 Positive current collector thermal conductivity [W.m-1.K-1],35,assume same as lead,
-
