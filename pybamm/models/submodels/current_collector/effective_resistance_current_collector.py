@@ -13,6 +13,8 @@ class EffectiveResistance(pybamm.BaseModel):
     assumes a uniform *current density* at the tabs (in 1D the two formulations
     are equivalent).
 
+    Parameters
+    ----------
     options: dict
         A dictionary of options to be passed to the model. The options that can
         be set are listed below.
@@ -20,6 +22,8 @@ class EffectiveResistance(pybamm.BaseModel):
             * "dimensionality" : int, optional
                 Sets the dimension of the current collector problem. Can be 1
                 (default) or 2.
+    name : str, optional
+        The name of the model.
 
     References
     ----------
