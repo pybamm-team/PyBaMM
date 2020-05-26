@@ -190,7 +190,10 @@ class ProcessedVariable(object):
             )
 
             def interp_fun(t, z):
-                return interpolant(z)[:, np.newaxis]
+                if isinstance(z, np.ndarray):
+                    return interpolant(z)[:, np.newaxis]
+                else:
+                    return interpolant(z)
 
             self._interpolation_function = interp_fun
         else:
@@ -273,26 +276,32 @@ class ProcessedVariable(object):
 
         # set up interpolation
         if len(self.t_sol) == 1:
-            # function of space only
+            # function of space only. Note the order of the points is the reverse
+            # of what you'd expect
             interpolant = interp.interp2d(
-                first_dim_pts, second_dim_pts, entries, kind="linear", fill_value=np.nan
+                second_dim_pts,
+                first_dim_pts,
+                entries[:, :, 0],
+                kind="linear",
+                fill_value=np.nan,
             )
 
             def interp_fun(input):
                 first_dim, second_dim, _ = input
-                if isinstance(first_dim, np.ndarray):
-                    if isinstance(second_dim, np.ndarray):
-                        first_dim = first_dim[:, 0, 0]
-                        second_dim = second_dim[:, 0]
-                        return interpolant(first_dim, second_dim)[:, :, np.newaxis]
-                    else:
-                        first_dim = first_dim[:, 0]
-                        return interpolant(first_dim, second_dim)[:, np.newaxis]
+                if isinstance(first_dim, np.ndarray) and isinstance(
+                    second_dim, np.ndarray
+                ):
+                    first_dim = first_dim[:, 0, 0]
+                    second_dim = second_dim[:, 0]
+                    return interpolant(second_dim, first_dim)
+                elif isinstance(first_dim, np.ndarray):
+                    first_dim = first_dim[:, 0]
+                    return interpolant(second_dim, first_dim)[:, 0]
                 elif isinstance(second_dim, np.ndarray):
                     second_dim = second_dim[:, 0]
-                    return interpolant(first_dim, second_dim)[:, :, np.newaxis]
+                    return interpolant(second_dim, first_dim)
                 else:
-                    return interpolant(first_dim, second_dim)
+                    return interpolant(second_dim, first_dim)[0]
 
             self._interpolation_function = interp_fun
         else:
@@ -387,10 +396,7 @@ class ProcessedVariable(object):
         elif self.dimensions == 1:
             out = self.call_1D(t, x, r, z)
         elif self.dimensions == 2:
-            if t is None:
-                out = self._interpolation_function(y, z)
-            else:
-                out = self.call_2D(t, x, r, y, z)
+            out = self.call_2D(t, x, r, y, z)
         if warn is True and np.isnan(out).any():
             pybamm.logger.warning(
                 "Calling variable outside interpolation range (returns 'nan')"
