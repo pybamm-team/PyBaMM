@@ -123,7 +123,7 @@ class ProcessedVariable(object):
         self.entries = entries
         self.dimensions = 0
 
-    def initialise_1D(self):
+    def initialise_1D(self, fixed_t=False):
         len_space = self.base_eval.shape[0]
         entries = np.empty((len_space, len(self.t_sol)))
 

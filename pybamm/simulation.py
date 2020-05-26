@@ -450,10 +450,10 @@ class Simulation:
                 ):
                     pybamm.logger.warning(
                         "\n\n\tExperiment is infeasible: '{}' ".format(
-                            self._solution.termination,
+                            self._solution.termination
                         )
                         + "was triggered during '{}'. ".format(
-                            self.experiment.operating_conditions_strings[idx],
+                            self.experiment.operating_conditions_strings[idx]
                         )
                         + "Try reducing current, shortening the time interval, "
                         "or reducing the period.\n\n"

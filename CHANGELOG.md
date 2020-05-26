@@ -4,14 +4,16 @@
 
 -   Added `BackwardIndefiniteIntegral` symbol ([#1014](https://github.com/pybamm-team/PyBaMM/pull/1014))
 -   Added `plot` and `plot2D` to enable easy plotting of `pybamm.Array` objects ([#1008](https://github.com/pybamm-team/PyBaMM/pull/1008))
+-   Updated effective current collector models and added example notebook ([#1007](https://github.com/pybamm-team/PyBaMM/pull/1007))
 -   Added SEI film resistance as an option ([#994](https://github.com/pybamm-team/PyBaMM/pull/994))
+-   Added `parameters` attribute to `pybamm.BaseModel` and `pybamm.Geometry` that lists all of the required parameters ([#993](https://github.com/pybamm-team/PyBaMM/pull/993))
 -   Added tab, edge, and surface cooling ([#965](https://github.com/pybamm-team/PyBaMM/pull/965))
 -   Added functionality to solver to automatically discretise a 0D model ([#947](https://github.com/pybamm-team/PyBaMM/pull/947))
 -   Added sensitivity to `CasadiAlgebraicSolver` ([#940](https://github.com/pybamm-team/PyBaMM/pull/940))
 -   Added `ProcessedSymbolicVariable` class, which can handle symbolic variables (i.e. variables for which the inputs are symbolic) ([#940](https://github.com/pybamm-team/PyBaMM/pull/940))
 -   Made `QuickPlot` compatible with Google Colab ([#935](https://github.com/pybamm-team/PyBaMM/pull/935))
 -   Added `BasicFull` model for lead-acid ([#932](https://github.com/pybamm-team/PyBaMM/pull/932))
--   Added 'arctan' function  ([#973]https://github.com/pybamm-team/PyBaMM/pull/973)
+-   Added 'arctan' function  ([#973](https://github.com/pybamm-team/PyBaMM/pull/973))
 
 ## Optimizations
 
