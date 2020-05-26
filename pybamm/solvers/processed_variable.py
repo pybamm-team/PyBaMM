@@ -392,7 +392,9 @@ class ProcessedVariable(object):
             elif self.base_variable.is_constant():
                 t = self.t_sol[0]
             else:
-                raise ValueError("t cannot be None")
+                raise ValueError(
+                    "t cannot be None for variable {}".format(self.base_variable)
+                )
 
         # Call interpolant of correct spatial dimension
         if self.dimensions == 0:
