@@ -2,6 +2,7 @@
 
 ## Features
 
+-   Added arbitrary geometry to the lumped thermal model ([#718](https://github.com/pybamm-team/PyBaMM/issues/718))
 -   Allowed `ProcessedVariable` to handle cases where `len(solution.t)=1` ([#1020](https://github.com/pybamm-team/PyBaMM/pull/1020))
 -   Added `BackwardIndefiniteIntegral` symbol ([#1014](https://github.com/pybamm-team/PyBaMM/pull/1014))
 -   Added `plot` and `plot2D` to enable easy plotting of `pybamm.Array` objects ([#1008](https://github.com/pybamm-team/PyBaMM/pull/1008))
