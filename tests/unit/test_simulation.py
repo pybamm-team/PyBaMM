@@ -251,7 +251,7 @@ class TestSimulation(unittest.TestCase):
 
         # Step
         dt = 0.1
-        for i in range(5):
+        for _ in range(5):
             sim.step(dt, external_variables=external_variables)
         sim.plot(testing=True)
 

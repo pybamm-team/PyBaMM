@@ -94,7 +94,7 @@ class TestSolution(unittest.TestCase):
         # Step
         dt = 0.1
         sol_step = None
-        for i in range(5):
+        for _ in range(5):
             sol_step = solver.step(
                 sol_step, model, dt, external_variables=external_variables
             )
