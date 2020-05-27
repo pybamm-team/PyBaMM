@@ -48,7 +48,9 @@ class TestSolution(unittest.TestCase):
         np.testing.assert_array_equal(sol1.y, np.concatenate([y1, y2[:, 1:]], axis=1))
         np.testing.assert_array_equal(
             sol1.inputs["a"],
-            np.concatenate([1 * np.ones_like(t1), 2 * np.ones_like(t2[1:])]),
+            np.concatenate([1 * np.ones_like(t1), 2 * np.ones_like(t2[1:])])[
+                np.newaxis, :
+            ],
         )
 
         # Test sub-solutions
@@ -57,11 +59,11 @@ class TestSolution(unittest.TestCase):
         np.testing.assert_array_equal(sol1.sub_solutions[1].t, t2)
         self.assertEqual(sol1.sub_solutions[0].model, sol1.model)
         np.testing.assert_array_equal(
-            sol1.sub_solutions[0].inputs["a"], 1 * np.ones_like(t1)
+            sol1.sub_solutions[0].inputs["a"], 1 * np.ones_like(t1)[np.newaxis, :]
         )
         self.assertEqual(sol1.sub_solutions[1].model, sol2.model)
         np.testing.assert_array_equal(
-            sol1.sub_solutions[1].inputs["a"], 2 * np.ones_like(t2)
+            sol1.sub_solutions[1].inputs["a"], 2 * np.ones_like(t2)[np.newaxis, :]
         )
 
     def test_total_time(self):

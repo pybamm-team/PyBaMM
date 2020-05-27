@@ -27,6 +27,8 @@
 
 ## Bug fixes
 
+-   Fix storing and plotting external variables in the solution ([#1026](https://github.com/pybamm-team/PyBaMM/pull/1026))
+-   Fix running a simulation with a model that is already discretized ([#1025](https://github.com/pybamm-team/PyBaMM/pull/1025))
 -   Fix CI not triggering for PR. ([#1013](https://github.com/pybamm-team/PyBaMM/pull/1013))
 -   Fix schedule testing running too often. ([#1010](https://github.com/pybamm-team/PyBaMM/pull/1010))
 -   Fix doctests failing due to mismatch in unsorted output.([#990](https://github.com/pybamm-team/PyBaMM/pull/990))
