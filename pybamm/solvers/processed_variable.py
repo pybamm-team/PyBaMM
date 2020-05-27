@@ -7,6 +7,26 @@ import pybamm
 import scipy.interpolate as interp
 
 
+def make_interp2D_fun(input, interpolant):
+    """
+    Calls and returns a 2D interpolant of the correct shape depending on the
+    shape of the input
+    """
+    first_dim, second_dim, _ = input
+    if isinstance(first_dim, np.ndarray) and isinstance(second_dim, np.ndarray):
+        first_dim = first_dim[:, 0, 0]
+        second_dim = second_dim[:, 0]
+        return interpolant(second_dim, first_dim)
+    elif isinstance(first_dim, np.ndarray):
+        first_dim = first_dim[:, 0]
+        return interpolant(second_dim, first_dim)[:, 0]
+    elif isinstance(second_dim, np.ndarray):
+        second_dim = second_dim[:, 0]
+        return interpolant(second_dim, first_dim)
+    else:
+        return interpolant(second_dim, first_dim)[0]
+
+
 class ProcessedVariable(object):
     """
     An object that can be evaluated at arbitrary (scalars or vectors) t and x, and
@@ -287,21 +307,7 @@ class ProcessedVariable(object):
             )
 
             def interp_fun(input):
-                first_dim, second_dim, _ = input
-                if isinstance(first_dim, np.ndarray) and isinstance(
-                    second_dim, np.ndarray
-                ):
-                    first_dim = first_dim[:, 0, 0]
-                    second_dim = second_dim[:, 0]
-                    return interpolant(second_dim, first_dim)
-                elif isinstance(first_dim, np.ndarray):
-                    first_dim = first_dim[:, 0]
-                    return interpolant(second_dim, first_dim)[:, 0]
-                elif isinstance(second_dim, np.ndarray):
-                    second_dim = second_dim[:, 0]
-                    return interpolant(second_dim, first_dim)
-                else:
-                    return interpolant(second_dim, first_dim)[0]
+                return make_interp2D_fun(input, interpolant)
 
             self._interpolation_function = interp_fun
         else:
@@ -330,11 +336,15 @@ class ProcessedVariable(object):
                 eval_and_known_evals = self.base_variable.evaluate(
                     t, u, inputs=inputs, known_evals=self.known_evals[t]
                 )
-                entries[:, :, idx] = np.reshape(eval_and_known_evals[0], [len_y, len_z])
+                entries[:, :, idx] = np.reshape(
+                    eval_and_known_evals[0], [len_y, len_z], order="F"
+                )
                 self.known_evals[t] = eval_and_known_evals[1]
             else:
                 entries[:, :, idx] = np.reshape(
-                    self.base_variable.evaluate(t, u, inputs=inputs), [len_y, len_z]
+                    self.base_variable.evaluate(t, u, inputs=inputs),
+                    [len_y, len_z],
+                    order="F",
                 )
 
         # assign attributes for reference
@@ -349,26 +359,14 @@ class ProcessedVariable(object):
 
         # set up interpolation
         if len(self.t_sol) == 1:
-            # function of space only
+            # function of space only. Note the order of the points is the reverse
+            # of what you'd expect
             interpolant = interp.interp2d(
-                y_sol, z_sol, entries, kind="linear", fill_value=np.nan
+                z_sol, y_sol, entries, kind="linear", fill_value=np.nan
             )
 
             def interp_fun(input):
-                first_dim, second_dim, _ = input
-                if isinstance(first_dim, np.ndarray):
-                    if isinstance(second_dim, np.ndarray):
-                        first_dim = first_dim[:, 0, 0]
-                        second_dim = second_dim[:, 0]
-                        return interpolant(first_dim, second_dim)[:, :, np.newaxis]
-                    else:
-                        first_dim = first_dim[:, 0]
-                        return interpolant(first_dim, second_dim)[:, np.newaxis]
-                elif isinstance(second_dim, np.ndarray):
-                    second_dim = second_dim[:, 0]
-                    return interpolant(first_dim, second_dim)[:, :, np.newaxis]
-                else:
-                    return interpolant(first_dim, second_dim)
+                return make_interp2D_fun(input, interpolant)
 
             self._interpolation_function = interp_fun
         else:

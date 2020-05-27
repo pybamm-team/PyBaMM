@@ -542,18 +542,12 @@ class TestProcessedVariable(unittest.TestCase):
 
         processed_var = pybamm.ProcessedVariable(var_sol, pybamm.Solution(t_sol, u_sol))
         # 2 vectors
-        np.testing.assert_array_equal(
-            processed_var(t=None, y=y_sol, z=z_sol).shape, (15, 15, 1)
-        )
+        np.testing.assert_array_equal(processed_var(y=y_sol, z=z_sol).shape, (15, 15))
         # 1 vector, 1 scalar
-        np.testing.assert_array_equal(
-            processed_var(t=None, y=0.2, z=z_sol).shape, (15, 1, 1)
-        )
-        np.testing.assert_array_equal(
-            processed_var(t=None, y=y_sol, z=0.5).shape, (15, 1)
-        )
+        np.testing.assert_array_equal(processed_var(y=0.2, z=z_sol).shape, (15,))
+        np.testing.assert_array_equal(processed_var(y=y_sol, z=0.5).shape, (15,))
         # 2 scalars
-        np.testing.assert_array_equal(processed_var(t=None, y=0.2, z=0.2).shape, (1,))
+        np.testing.assert_array_equal(processed_var(t=None, y=0.2, z=0.2).shape, ())
 
     def test_processed_variable_ode_pde_solution(self):
         # without space
