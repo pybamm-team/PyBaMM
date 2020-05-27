@@ -421,7 +421,6 @@ class Integral(SpatialOperator):
 
     where :math:`a` and :math:`b` are the left-hand and right-hand boundaries of
     the domain respectively, and :math:`u\\in\\text{domain}`.
-    Can be integration with respect to time or space.
 
     Parameters
     ----------
@@ -456,26 +455,41 @@ class Integral(SpatialOperator):
                 else:
                     raise pybamm.DomainError(
                         "integration_variable must be the same as child domain or "
-                        "auxiliary domain"
+                        "an auxiliary domain"
                     )
-            elif not isinstance(var, pybamm.IndependentVariable):
-                raise ValueError(
-                    "integration_variable must be of type pybamm.IndependentVariable, "
+            else:
+                raise TypeError(
+                    "integration_variable must be of type pybamm.SpatialVariable, "
                     "not {}".format(type(var))
                 )
             name += " d{}".format(var.name)
 
-        # integral of a child takes the domain from auxiliary domain of the child
-        if child.auxiliary_domains != {}:
-            domain = child.auxiliary_domains["secondary"]
-            try:
-                auxiliary_domains = {"secondary": child.auxiliary_domains["tertiary"]}
-            except KeyError:
+        if self._integration_domain == "primary":
+            # integral of a child takes the domain from auxiliary domain of the child
+            if child.auxiliary_domains != {}:
+                domain = child.auxiliary_domains["secondary"]
+                if "tertiary" in child.auxiliary_domains:
+                    auxiliary_domains = {
+                        "secondary": child.auxiliary_domains["tertiary"]
+                    }
+                else:
+                    auxiliary_domains = {}
+            # if child has no auxiliary domain, integral removes domain
+            else:
+                domain = []
                 auxiliary_domains = {}
-        # if child has no auxiliary domain, integral removes domain
-        else:
-            domain = []
-            auxiliary_domains = {}
+        elif self._integration_domain == "secondary":
+            # integral in the secondary dimension keeps the same domain, moves tertiary
+            # domain to secondary domain
+            domain = child.domain
+            if "tertiary" in child.auxiliary_domains:
+                auxiliary_domains = {"secondary": child.auxiliary_domains["tertiary"]}
+            else:
+                auxiliary_domains = {}
+        elif self._integration_domain == "tertiary":
+            # integral in the tertiary dimension keeps the domain and secondary domain
+            domain = child.domain
+            auxiliary_domains = {"secondary": child.auxiliary_domains["secondary"]}
 
         if any(isinstance(var, pybamm.SpatialVariable) for var in integration_variable):
             name += " {}".format(child.domain)

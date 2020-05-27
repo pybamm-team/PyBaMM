@@ -106,16 +106,6 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(div.domain, a.domain)
 
     def test_integral(self):
-        # time integral
-        a = pybamm.Symbol("a")
-        t = pybamm.t
-        inta = pybamm.Integral(a, t)
-        self.assertEqual(inta.name, "integral dtime")
-        # self.assertTrue(inta.definite)
-        self.assertEqual(inta.children[0].name, a.name)
-        self.assertEqual(inta.integration_variable[0], t)
-        self.assertEqual(inta.domain, [])
-
         # space integral
         a = pybamm.Symbol("a", domain=["negative electrode"])
         x = pybamm.SpatialVariable("x", ["negative electrode"])
@@ -160,7 +150,7 @@ class TestUnaryOperators(unittest.TestCase):
         )
 
         # space integral *in* tertiary domain
-        z = pybamm.SpatialVariable("z", ["some extra  domain"])
+        z = pybamm.SpatialVariable("z", ["some extra domain"])
         inta_tert_z = pybamm.Integral(a_tert, z)
         self.assertEqual(inta_tert_z.domain, ["negative electrode"])
         self.assertEqual(
@@ -202,7 +192,7 @@ class TestUnaryOperators(unittest.TestCase):
         z = pybamm.SpatialVariable("z", ["negative electrode"])
         with self.assertRaises(pybamm.DomainError):
             pybamm.Integral(a, x)
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegex(TypeError, "integration_variable must be"):
             pybamm.Integral(a, y)
 
     def test_index(self):
