@@ -71,6 +71,17 @@ class TestBaseSolver(unittest.TestCase):
         ):
             solver.solve(model, np.array([1, 2, 3, 2]))
 
+    def test_solution_time_length_fail(self):
+        model = pybamm.BaseModel()
+        v = pybamm.Scalar(1)
+        model.variables = {"v": v}
+        solver = pybamm.DummySolver()
+        t_eval = np.array([0])
+        with self.assertRaisesRegex(
+            pybamm.SolverError, "Solution time vector has length 1"
+        ):
+            solver.solve(model, t_eval)
+
     def test_block_symbolic_inputs(self):
         solver = pybamm.BaseSolver(rtol=1e-2, atol=1e-4)
         model = pybamm.BaseModel()
@@ -203,13 +214,13 @@ class TestBaseSolver(unittest.TestCase):
             solver.calculate_consistent_state(Model())
         solver = pybamm.BaseSolver(root_method="lm")
         with self.assertRaisesRegex(
-            pybamm.SolverError, "Could not find acceptable solution: solver terminated",
+            pybamm.SolverError, "Could not find acceptable solution: solver terminated"
         ):
             solver.calculate_consistent_state(Model())
         # with casadi
         solver = pybamm.BaseSolver(root_method="casadi")
         with self.assertRaisesRegex(
-            pybamm.SolverError, "Could not find acceptable solution: .../casadi",
+            pybamm.SolverError, "Could not find acceptable solution: .../casadi"
         ):
             solver.calculate_consistent_state(Model())
 
