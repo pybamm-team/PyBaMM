@@ -22,7 +22,7 @@ jobs:
 
     - name: Build manylinux Python wheels
       if: matrix.os == 'ubuntu-latest'
-      uses: tlestang/python-wheels-manylinux-build@76cadf4
+      uses: tlestang/python-wheels-manylinux-build@66bda7f
       with:
         python-versions: 'cp36-cp36m cp37-cp37m'
         commands: 'commands.sh'
@@ -45,5 +45,11 @@ jobs:
     - name: Build wheels for MacOS and Windows
       if: matrix.os != 'ubuntu-latest'
       run: |
-        python -m pip wheel . -w wheelhouse --no-deps
+        python -m pip wheel . -w dist/ --no-deps
         ls wheelhouse/
+
+    - name: Publish wheels
+      uses: pypa/gh-action-pypi-publish@master
+      with:
+        user: __token__
+        password: ${{ secrets.TESTPYPI_TOKEN }}
