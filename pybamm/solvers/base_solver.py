@@ -616,6 +616,15 @@ class BaseSolver(object):
                 timer.format(solution.total_time),
             )
         )
+
+        # Raise error if solution only contains one timestep (except for algebraic
+        # solvers, where we may only expect one time in the solution)
+        if self.algebraic_solver is False and len(solution.t) == 1:
+            raise pybamm.SolverError(
+                "Solution time vector has length 1. "
+                "Check whether simulation terminated too early."
+            )
+
         return solution
 
     def step(
