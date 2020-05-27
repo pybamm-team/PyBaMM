@@ -1,0 +1,21 @@
+on:
+  push:
+    branches:
+      # TODO: Switch to master branch
+      - develop
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.8
+    - name: Build manylinux Python wheels
+      uses: tlestang/python-wheels-manylinux-build@76cadf4
+      with:
+        python-versions: 'cp36-cp36m cp37-cp37m'
+        commands: 'commands.sh'
+        
