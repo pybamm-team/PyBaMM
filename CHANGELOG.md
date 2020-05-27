@@ -2,6 +2,7 @@
 
 ## Features
 
+-   Allowed `ProcessedVariable` to handle cases where `len(solution.t)=1` ([#1020](https://github.com/pybamm-team/PyBaMM/pull/1020))
 -   Added `BackwardIndefiniteIntegral` symbol ([#1014](https://github.com/pybamm-team/PyBaMM/pull/1014))
 -   Added `plot` and `plot2D` to enable easy plotting of `pybamm.Array` objects ([#1008](https://github.com/pybamm-team/PyBaMM/pull/1008))
 -   Updated effective current collector models and added example notebook ([#1007](https://github.com/pybamm-team/PyBaMM/pull/1007))
@@ -26,6 +27,8 @@
 
 ## Bug fixes
 
+-   Fix storing and plotting external variables in the solution ([#1026](https://github.com/pybamm-team/PyBaMM/pull/1026))
+-   Fix running a simulation with a model that is already discretized ([#1025](https://github.com/pybamm-team/PyBaMM/pull/1025))
 -   Fix CI not triggering for PR. ([#1013](https://github.com/pybamm-team/PyBaMM/pull/1013))
 -   Fix schedule testing running too often. ([#1010](https://github.com/pybamm-team/PyBaMM/pull/1010))
 -   Fix doctests failing due to mismatch in unsorted output.([#990](https://github.com/pybamm-team/PyBaMM/pull/990))
@@ -41,6 +44,7 @@
 
 ## Breaking changes
 
+-   For variables discretised using finite elements the result returned by calling `ProcessedVariable` is now transposed ([#1020](https://github.com/pybamm-team/PyBaMM/pull/1020))
 -   Renamed "surface area density" to "surface area to volume ratio" ([#975](https://github.com/pybamm-team/PyBaMM/pull/975))
 -   Replaced "reaction rate" with "exchange-current density" ([#975](https://github.com/pybamm-team/PyBaMM/pull/975))
 -   Changed the implementation of reactions in submodels ([#948](https://github.com/pybamm-team/PyBaMM/pull/948))
