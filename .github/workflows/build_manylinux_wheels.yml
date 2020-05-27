@@ -46,7 +46,6 @@ jobs:
       if: matrix.os != 'ubuntu-latest'
       run: |
         python -m pip wheel . -w dist/ --no-deps
-        ls wheelhouse/
 
     - name: Publish wheels
       uses: pypa/gh-action-pypi-publish@master
