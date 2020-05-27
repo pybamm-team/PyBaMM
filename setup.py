@@ -160,7 +160,7 @@ ext_modules = [idaklu_ext] if compile_KLU() else []
 
 setup(
     name="pybamm",
-    version=load_version() + ".post3",
+    version=load_version() + ".post4",
     description="Python Battery Mathematical Modelling.",
     long_description="description",
     long_description_content_type="text/markdown",
