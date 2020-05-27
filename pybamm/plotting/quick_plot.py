@@ -128,13 +128,13 @@ class QuickPlot(object):
 
         # Spatial scales (default to 1 if information not in model)
         if spatial_unit == "m":
-            spatial_factor = 1
+            self.spatial_factor = 1
             self.spatial_unit = "m"
         elif spatial_unit == "mm":
-            spatial_factor = 1e3
+            self.spatial_factor = 1e3
             self.spatial_unit = "mm"
         elif spatial_unit == "um":  # micrometers
-            spatial_factor = 1e6
+            self.spatial_factor = 1e6
             self.spatial_unit = "$\mu m$"
         else:
             raise ValueError("spatial unit '{}' not recognized".format(spatial_unit))
@@ -145,24 +145,24 @@ class QuickPlot(object):
         if "x [m]" in variables and "x" in variables:
             x_scale = (variables["x [m]"] / variables["x"]).evaluate()[
                 -1
-            ] * spatial_factor
+            ] * self.spatial_factor
             self.spatial_scales.update({dom: x_scale for dom in variables["x"].domain})
         if "y [m]" in variables and "y" in variables:
             self.spatial_scales["current collector y"] = (
                 variables["y [m]"] / variables["y"]
-            ).evaluate()[-1] * spatial_factor
+            ).evaluate()[-1] * self.spatial_factor
         if "z [m]" in variables and "z" in variables:
             self.spatial_scales["current collector z"] = (
                 variables["z [m]"] / variables["z"]
-            ).evaluate()[-1] * spatial_factor
+            ).evaluate()[-1] * self.spatial_factor
         if "r_n [m]" in variables and "r_n" in variables:
             self.spatial_scales["negative particle"] = (
                 variables["r_n [m]"] / variables["r_n"]
-            ).evaluate()[-1] * spatial_factor
+            ).evaluate()[-1] * self.spatial_factor
         if "r_p [m]" in variables and "r_p" in variables:
             self.spatial_scales["positive particle"] = (
                 variables["r_p [m]"] / variables["r_p"]
-            ).evaluate()[-1] * spatial_factor
+            ).evaluate()[-1] * self.spatial_factor
 
         # Time parameters
         model_timescale_in_seconds = models[0].timescale_eval
@@ -258,8 +258,8 @@ class QuickPlot(object):
         # Set up output variables
         self.variables = {}
         self.spatial_variable_dict = {}
-        self.first_dimensional_spatial_variable = {}
-        self.second_dimensional_spatial_variable = {}
+        self.first_scaled_spatial_variable = {}
+        self.second_scaled_spatial_variable = {}
         self.first_spatial_scale = {}
         self.second_spatial_scale = {}
         self.is_x_r = {}
@@ -314,8 +314,10 @@ class QuickPlot(object):
                 ) = self.get_spatial_var(variable_tuple, first_variable, "first")
                 self.spatial_variable_dict[variable_tuple] = {
                     spatial_var_name: spatial_var_value
+                    * spatial_scale
+                    / self.spatial_factor
                 }
-                self.first_dimensional_spatial_variable[variable_tuple] = (
+                self.first_scaled_spatial_variable[variable_tuple] = (
                     spatial_var_value * spatial_scale
                 )
                 self.first_spatial_scale[variable_tuple] = spatial_scale
@@ -341,13 +343,17 @@ class QuickPlot(object):
                         second_spatial_scale,
                     ) = self.get_spatial_var(variable_tuple, first_variable, "second")
                     self.spatial_variable_dict[variable_tuple] = {
-                        first_spatial_var_name: first_spatial_var_value,
-                        second_spatial_var_name: second_spatial_var_value,
+                        first_spatial_var_name: first_spatial_var_value
+                        * first_spatial_scale
+                        / self.spatial_factor,
+                        second_spatial_var_name: second_spatial_var_value
+                        * second_spatial_scale
+                        / self.spatial_factor,
                     }
-                    self.first_dimensional_spatial_variable[variable_tuple] = (
+                    self.first_scaled_spatial_variable[variable_tuple] = (
                         first_spatial_var_value * first_spatial_scale
                     )
-                    self.second_dimensional_spatial_variable[variable_tuple] = (
+                    self.second_scaled_spatial_variable[variable_tuple] = (
                         second_spatial_var_value * second_spatial_scale
                     )
                     if first_spatial_var_name == "r" and second_spatial_var_name == "x":
@@ -377,6 +383,11 @@ class QuickPlot(object):
             else:
                 domain = variable.auxiliary_domains["secondary"][0]
 
+        # Remove subscript "n" or "p" so spatial_var_name can be used in the
+        # call to a `ProcessedVariable`
+        if spatial_var_name in ["r_n", "r_p"]:
+            spatial_var_name = "r"
+
         if domain == "current collector":
             domain += " {}".format(spatial_var_name)
 
@@ -405,20 +416,20 @@ class QuickPlot(object):
                 x_min = self.min_t
                 x_max = self.max_t
             elif variable_lists[0][0].dimensions == 1:
-                x_min = self.first_dimensional_spatial_variable[key][0]
-                x_max = self.first_dimensional_spatial_variable[key][-1]
+                x_min = self.first_scaled_spatial_variable[key][0]
+                x_max = self.first_scaled_spatial_variable[key][-1]
             elif variable_lists[0][0].dimensions == 2:
                 # different order based on whether the domains are x-r, x-z or y-z
                 if self.is_x_r[key] is True:
-                    x_min = self.second_dimensional_spatial_variable[key][0]
-                    x_max = self.second_dimensional_spatial_variable[key][-1]
-                    y_min = self.first_dimensional_spatial_variable[key][0]
-                    y_max = self.first_dimensional_spatial_variable[key][-1]
+                    x_min = self.second_scaled_spatial_variable[key][0]
+                    x_max = self.second_scaled_spatial_variable[key][-1]
+                    y_min = self.first_scaled_spatial_variable[key][0]
+                    y_max = self.first_scaled_spatial_variable[key][-1]
                 else:
-                    x_min = self.first_dimensional_spatial_variable[key][0]
-                    x_max = self.first_dimensional_spatial_variable[key][-1]
-                    y_min = self.second_dimensional_spatial_variable[key][0]
-                    y_max = self.second_dimensional_spatial_variable[key][-1]
+                    x_min = self.first_scaled_spatial_variable[key][0]
+                    x_max = self.first_scaled_spatial_variable[key][-1]
+                    y_min = self.second_scaled_spatial_variable[key][0]
+                    y_max = self.second_scaled_spatial_variable[key][-1]
 
                 # Create axis for contour plot
                 self.axis_limits[key] = [x_min, x_max, y_min, y_max]
@@ -429,14 +440,22 @@ class QuickPlot(object):
                 spatial_vars = self.spatial_variable_dict[key]
                 var_min = np.min(
                     [
-                        ax_min(var(self.ts[i], **spatial_vars, warn=False))
+                        ax_min(
+                            var(
+                                self.ts[i] * self.time_scale, **spatial_vars, warn=False
+                            )
+                        )
                         for i, variable_list in enumerate(variable_lists)
                         for var in variable_list
                     ]
                 )
                 var_max = np.max(
                     [
-                        ax_max(var(self.ts[i], **spatial_vars, warn=False))
+                        ax_max(
+                            var(
+                                self.ts[i] * self.time_scale, **spatial_vars, warn=False
+                            )
+                        )
                         for i, variable_list in enumerate(variable_lists)
                         for var in variable_list
                     ]
@@ -512,7 +531,7 @@ class QuickPlot(object):
                         full_t = self.ts[i]
                         (self.plots[key][i][j],) = ax.plot(
                             full_t * self.time_scale,
-                            variable(full_t, warn=False),
+                            variable(full_t * self.time_scale, warn=False),
                             lw=2,
                             color=self.colors[i],
                             linestyle=linestyle,
@@ -543,8 +562,8 @@ class QuickPlot(object):
                             # variables (color differentiates models)
                             linestyle = self.linestyles[j]
                         (self.plots[key][i][j],) = ax.plot(
-                            self.first_dimensional_spatial_variable[key],
-                            variable(t, **spatial_vars, warn=False),
+                            self.first_scaled_spatial_variable[key],
+                            variable(t * self.time_scale, **spatial_vars, warn=False),
                             lw=2,
                             color=self.colors[i],
                             linestyle=linestyle,
@@ -569,15 +588,15 @@ class QuickPlot(object):
                 if self.is_x_r[key] is True:
                     x_name = list(spatial_vars.keys())[1][0]
                     y_name = list(spatial_vars.keys())[0][0]
-                    x = self.second_dimensional_spatial_variable[key]
-                    y = self.first_dimensional_spatial_variable[key]
-                    var = variable(t, **spatial_vars, warn=False)
+                    x = self.second_scaled_spatial_variable[key]
+                    y = self.first_scaled_spatial_variable[key]
+                    var = variable(t * self.time_scale, **spatial_vars, warn=False)
                 else:
                     x_name = list(spatial_vars.keys())[0][0]
                     y_name = list(spatial_vars.keys())[1][0]
-                    x = self.first_dimensional_spatial_variable[key]
-                    y = self.second_dimensional_spatial_variable[key]
-                    var = variable(t, **spatial_vars, warn=False).T
+                    x = self.first_scaled_spatial_variable[key]
+                    y = self.second_scaled_spatial_variable[key]
+                    var = variable(t * self.time_scale, **spatial_vars, warn=False).T
                 ax.set_xlabel(
                     "{} [{}]".format(x_name, self.spatial_unit), fontsize=fontsize
                 )
@@ -663,7 +682,6 @@ class QuickPlot(object):
         """
         from matplotlib import cm, colors
 
-        t_dimensionless = t / self.time_scale
         for k, (key, plot) in enumerate(self.plots.items()):
             ax = self.axes[k]
             if self.variables[key][0][0].dimensions == 0:
@@ -673,11 +691,7 @@ class QuickPlot(object):
                 var_max = -np.inf
                 for i, variable_lists in enumerate(self.variables[key]):
                     for j, variable in enumerate(variable_lists):
-                        var = variable(
-                            t_dimensionless,
-                            **self.spatial_variable_dict[key],
-                            warn=False
-                        )
+                        var = variable(t, **self.spatial_variable_dict[key], warn=False)
                         plot[i][j].set_ydata(var)
                         var_min = min(var_min, np.nanmin(var))
                         var_max = max(var_max, np.nanmax(var))
@@ -703,13 +717,13 @@ class QuickPlot(object):
                 variable = self.variables[key][0][0]
                 vmin, vmax = self.variable_limits[key]
                 if self.is_x_r[key] is True:
-                    x = self.second_dimensional_spatial_variable[key]
-                    y = self.first_dimensional_spatial_variable[key]
-                    var = variable(t_dimensionless, **spatial_vars, warn=False)
+                    x = self.second_scaled_spatial_variable[key]
+                    y = self.first_scaled_spatial_variable[key]
+                    var = variable(t, **spatial_vars, warn=False)
                 else:
-                    x = self.first_dimensional_spatial_variable[key]
-                    y = self.second_dimensional_spatial_variable[key]
-                    var = variable(t_dimensionless, **spatial_vars, warn=False).T
+                    x = self.first_scaled_spatial_variable[key]
+                    y = self.second_scaled_spatial_variable[key]
+                    var = variable(t, **spatial_vars, warn=False).T
                 ax.contourf(
                     x, y, var, levels=100, vmin=vmin, vmax=vmax, cmap="coolwarm"
                 )

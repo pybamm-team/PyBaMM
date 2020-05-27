@@ -33,7 +33,8 @@ solution = solver.solve(model, t_eval)
 # step model
 dt = 500
 time = 0
-end_time = solution.t[-1]
+timescale = model.timescale_eval
+end_time = solution.t[-1] * timescale
 step_solver = model.default_solver
 step_solution = None
 while time < end_time:
@@ -43,9 +44,17 @@ while time < end_time:
 # plot
 voltage = solution["Terminal voltage [V]"]
 step_voltage = step_solution["Terminal voltage [V]"]
-plt.plot(solution.t, voltage(solution.t), "b-", label="SPMe (continuous solve)")
 plt.plot(
-    step_solution.t, step_voltage(step_solution.t), "ro", label="SPMe (stepped solve)"
+    solution.t * timescale,
+    voltage(solution.t * timescale),
+    "b-",
+    label="SPMe (continuous solve)",
+)
+plt.plot(
+    step_solution.t * timescale,
+    step_voltage(step_solution.t * timescale),
+    "ro",
+    label="SPMe (stepped solve)",
 )
 plt.xlabel(r"$t$")
 plt.ylabel("Terminal voltage [V]")

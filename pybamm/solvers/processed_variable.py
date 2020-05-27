@@ -27,6 +27,18 @@ def make_interp2D_fun(input, interpolant):
         return interpolant(second_dim, first_dim)[0]
 
 
+def get_spatial_scale(name, variables):
+    "Returns the spatial scale for a named spatial variable"
+    if variables and name + " [m]" in variables and name in variables:
+        scale = (variables[name + " [m]"] / variables[name]).evaluate()[-1]
+    else:
+        pybamm.logger.debug(
+            "No scale set for spatial variable {}. Using default of 1 [m]".format(name)
+        )
+        scale = 1
+    return scale
+
+
 class ProcessedVariable(object):
     """
     An object that can be evaluated at arbitrary (scalars or vectors) t and x, and
@@ -54,6 +66,20 @@ class ProcessedVariable(object):
         self.domain = base_variable.domain
         self.auxiliary_domains = base_variable.auxiliary_domains
         self.known_evals = known_evals
+
+        # Set time and space scales
+        if solution.model:
+            self.timescale = solution.model.timescale_eval
+        else:
+            pybamm.logger.debug("No timescale provided. Using default of 1 [s]")
+            self.timescale = 1
+        self.spatial_scales = {}
+        if solution.model:
+            variables = solution.model.variables
+        else:
+            variables = None
+        for name in ["x", "y", "z", "r_n", "r_p"]:
+            self.spatial_scales[name] = get_spatial_scale(name, variables)
 
         if self.known_evals:
             self.base_eval, self.known_evals[solution.t[0]] = base_variable.evaluate(
@@ -133,7 +159,7 @@ class ProcessedVariable(object):
             self._interpolation_function = fun
         else:
             self._interpolation_function = interp.interp1d(
-                self.t_sol,
+                self.t_sol * self.timescale,
                 entries,
                 kind="linear",
                 fill_value=np.nan,
@@ -182,8 +208,11 @@ class ProcessedVariable(object):
         # assign attributes for reference (either x_sol or r_sol)
         self.entries = entries
         self.dimensions = 1
-        if self.domain[0] in ["negative particle", "positive particle"]:
-            self.first_dimension = "r"
+        if self.domain[0] == "negative particle":
+            self.first_dimension = "r_n"
+            self.r_sol = space
+        elif self.domain[0] == "positive particle":
+            self.first_dimension = "r_p"
             self.r_sol = space
         elif self.domain[0] in [
             "negative electrode",
@@ -206,7 +235,10 @@ class ProcessedVariable(object):
         if len(self.t_sol) == 1:
             # function of space only
             interpolant = interp.interp1d(
-                space, entries_for_interp[:, 0], kind="linear", fill_value=np.nan
+                space * self.spatial_scales[self.first_dimension],
+                entries_for_interp[:, 0],
+                kind="linear",
+                fill_value=np.nan,
             )
 
             def interp_fun(t, z):
@@ -220,7 +252,11 @@ class ProcessedVariable(object):
             # function of space and time. Note that the order of 't' and 'space'
             # is the reverse of what you'd expect
             self._interpolation_function = interp.interp2d(
-                self.t_sol, space, entries_for_interp, kind="linear", fill_value=np.nan
+                self.t_sol * self.timescale,
+                space * self.spatial_scales[self.first_dimension],
+                entries_for_interp,
+                kind="linear",
+                fill_value=np.nan,
             )
 
     def initialise_2D(self):
@@ -243,7 +279,10 @@ class ProcessedVariable(object):
             "negative electrode",
             "positive electrode",
         ]:
-            self.first_dimension = "r"
+            if self.domain[0] == "negative particle":
+                self.first_dimension = "r_n"
+            elif self.domain[0] == "positive particle":
+                self.first_dimension = "r_p"
             self.second_dimension = "x"
             self.r_sol = first_dim_pts
             self.x_sol = second_dim_pts
@@ -299,8 +338,8 @@ class ProcessedVariable(object):
             # function of space only. Note the order of the points is the reverse
             # of what you'd expect
             interpolant = interp.interp2d(
-                second_dim_pts,
-                first_dim_pts,
+                second_dim_pts * self.spatial_scales[self.second_dimension],
+                first_dim_pts * self.spatial_scales[self.first_dimension],
                 entries[:, :, 0],
                 kind="linear",
                 fill_value=np.nan,
@@ -313,9 +352,14 @@ class ProcessedVariable(object):
         else:
             # function of space and time.
             self._interpolation_function = interp.RegularGridInterpolator(
-                (first_dim_pts, second_dim_pts, self.t_sol),
+                (
+                    first_dim_pts * self.spatial_scales[self.first_dimension],
+                    second_dim_pts * self.spatial_scales[self.second_dimension],
+                    self.t_sol * self.timescale,
+                ),
                 entries,
                 method="linear",
+                bounds_error=False,
                 fill_value=np.nan,
             )
 
@@ -362,7 +406,11 @@ class ProcessedVariable(object):
             # function of space only. Note the order of the points is the reverse
             # of what you'd expect
             interpolant = interp.interp2d(
-                z_sol, y_sol, entries, kind="linear", fill_value=np.nan
+                z_sol * self.spatial_scales[self.second_dimension],
+                y_sol * self.spatial_scales[self.first_dimension],
+                entries,
+                kind="linear",
+                fill_value=np.nan,
             )
 
             def interp_fun(input):
@@ -372,12 +420,21 @@ class ProcessedVariable(object):
         else:
             # function of space and time.
             self._interpolation_function = interp.RegularGridInterpolator(
-                (y_sol, z_sol, self.t_sol), entries, method="linear", fill_value=np.nan
+                (
+                    y_sol * self.spatial_scales[self.second_dimension],
+                    z_sol * self.spatial_scales[self.first_dimension],
+                    self.t_sol * self.timescale,
+                ),
+                entries,
+                method="linear",
+                bounds_error=False,
+                fill_value=np.nan,
             )
 
     def __call__(self, t=None, x=None, r=None, y=None, z=None, warn=True):
         """
-        Evaluate the variable at arbitrary t (and x, r, y and/or z), using interpolation
+        Evaluate the variable at arbitrary *dimensional* t (and x, r, y and/or z),
+        using interpolation
         """
         # If t is None and there is only one value of time in the soluton (i.e.
         # the solution is independent of time) then we set t equal to the value
@@ -386,9 +443,9 @@ class ProcessedVariable(object):
         # an error
         if t is None:
             if len(self.t_sol) == 1:
-                t = self.t_sol
+                t = self.t_sol * self.timescale
             elif self.base_variable.is_constant():
-                t = self.t_sol[0]
+                t = self.t_sol[0] * self.timescale
             else:
                 raise ValueError(
                     "t cannot be None for variable {}".format(self.base_variable)
@@ -425,7 +482,6 @@ class ProcessedVariable(object):
         else:
             if isinstance(second_dim, np.ndarray) and isinstance(t, np.ndarray):
                 second_dim = second_dim[:, np.newaxis]
-
         return self._interpolation_function((first_dim, second_dim, t))
 
     @property
@@ -437,7 +493,8 @@ class ProcessedVariable(object):
 def eval_dimension_name(name, x, r, y, z):
     if name == "x":
         out = x
-    elif name == "r":
+    elif name in ["r_n", "r_p"]:
+        name = "r"  # remove subscript to match input name in case of error
         out = r
     elif name == "y":
         out = y
