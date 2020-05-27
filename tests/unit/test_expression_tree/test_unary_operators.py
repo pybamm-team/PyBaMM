@@ -135,7 +135,7 @@ class TestUnaryOperators(unittest.TestCase):
         inta_sec = pybamm.Integral(a_sec, x)
         self.assertEqual(inta_sec.domain, ["current collector"])
         self.assertEqual(inta_sec.auxiliary_domains, {})
-        # space integral with secondary domain
+        # space integral with tertiary domain
         a_tert = pybamm.Symbol(
             "a",
             domain=["negative electrode"],
@@ -149,6 +149,22 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(inta_tert.domain, ["current collector"])
         self.assertEqual(
             inta_tert.auxiliary_domains, {"secondary": ["some extra domain"]}
+        )
+
+        # space integral *in* secondary domain
+        y = pybamm.SpatialVariable("y", ["current collector"])
+        inta_tert_y = pybamm.Integral(a_tert, y)
+        self.assertEqual(inta_tert_y.domain, ["negative electrode"])
+        self.assertEqual(
+            inta_tert_y.auxiliary_domains, {"secondary": ["some extra domain"]}
+        )
+
+        # space integral *in* tertiary domain
+        z = pybamm.SpatialVariable("z", ["some extra  domain"])
+        inta_tert_z = pybamm.Integral(a_tert, z)
+        self.assertEqual(inta_tert_z.domain, ["negative electrode"])
+        self.assertEqual(
+            inta_tert_z.auxiliary_domains, {"secondary": ["current collector"]}
         )
 
         # space integral over two variables

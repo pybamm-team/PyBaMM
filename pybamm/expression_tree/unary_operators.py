@@ -437,6 +437,34 @@ class Integral(SpatialOperator):
         if not isinstance(integration_variable, list):
             integration_variable = [integration_variable]
 
+        name = "integral"
+        for var in integration_variable:
+            if isinstance(var, pybamm.SpatialVariable):
+                # Check that child and integration_variable domains agree
+                if var.domain == child.domain:
+                    self._integration_domain = "primary"
+                elif (
+                    "secondary" in child.auxiliary_domains
+                    and var.domain == child.auxiliary_domains["secondary"]
+                ):
+                    self._integration_domain = "secondary"
+                elif (
+                    "tertiary" in child.auxiliary_domains
+                    and var.domain == child.auxiliary_domains["tertiary"]
+                ):
+                    self._integration_domain = "tertiary"
+                else:
+                    raise pybamm.DomainError(
+                        "integration_variable must be the same as child domain or "
+                        "auxiliary domain"
+                    )
+            elif not isinstance(var, pybamm.IndependentVariable):
+                raise ValueError(
+                    "integration_variable must be of type pybamm.IndependentVariable, "
+                    "not {}".format(type(var))
+                )
+            name += " d{}".format(var.name)
+
         # integral of a child takes the domain from auxiliary domain of the child
         if child.auxiliary_domains != {}:
             domain = child.auxiliary_domains["secondary"]
@@ -448,22 +476,6 @@ class Integral(SpatialOperator):
         else:
             domain = []
             auxiliary_domains = {}
-        name = "integral"
-        for var in integration_variable:
-            if isinstance(var, pybamm.SpatialVariable):
-                # Check that child and integration_variable domains agree
-                if child.domain != var.domain:
-                    raise pybamm.DomainError(
-                        "child and integration_variable must have the same domain"
-                    )
-            elif not isinstance(var, pybamm.IndependentVariable):
-                raise ValueError(
-                    """integration_variable must be of type pybamm.IndependentVariable,
-                           not {}""".format(
-                        type(var)
-                    )
-                )
-            name += " d{}".format(var.name)
 
         if any(isinstance(var, pybamm.SpatialVariable) for var in integration_variable):
             name += " {}".format(child.domain)
