@@ -2,7 +2,7 @@ on:
   push:
 
 jobs:
-  deploy:
+  build-wheels:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -47,9 +47,30 @@ jobs:
       run: |
         python -m pip wheel . -w dist/ --no-deps
 
-    - name: Publish wheels
-      uses: pypa/gh-action-pypi-publish@master
+    - name: Upload wheels
+      uses: actions/upload-artifact@v1
       with:
-        user: __token__
-        password: ${{ secrets.TESTPYPI_TOKEN }}
-        repository_url: https://test.pypi.org/legacy/
+        name: dist
+        path: dist/*.whl
+
+
+  publish-pyi:
+    name: Upload wheels to PyPI 
+    needs: build-wheels
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download wheels
+        uses: actions/download-artifact@v1
+        with:
+          name: dist
+      - name: List wheels
+        shell: bash
+        run: |
+          ls dist/
+
+    # - name: Publish wheels
+    #   uses: pypa/gh-action-pypi-publish@master
+    #   with:
+    #     user: __token__
+    #     password: ${{ secrets.TESTPYPI_TOKEN }}
+    #     repository_url: https://test.pypi.org/legacy/
