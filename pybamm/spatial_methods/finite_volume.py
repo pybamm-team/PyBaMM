@@ -234,13 +234,19 @@ class FiniteVolume(pybamm.SpatialMethod):
         grad = self.gradient(symbol, discretised_symbol, boundary_conditions)
         return self.divergence(grad, grad, boundary_conditions)
 
-    def integral(self, child, discretised_child):
+    def integral(self, child, discretised_child, integration_dimension):
         """Vector-vector dot product to implement the integral operator. """
+        if integration_dimension == "primary":
+            domain = child.domain
+        else:
+            domain = child.auxiliary_domains[integration_dimension]
         # Calculate integration vector
-        integration_vector = self.definite_integral_matrix(child.domain)
+        integration_vector = self.definite_integral_matrix(
+            domain, integration_dimension=integration_dimension
+        )
 
         # Check for spherical domains
-        submesh_list = self.mesh.combine_submeshes(*child.domain)
+        submesh_list = self.mesh.combine_submeshes(*domain)
         if submesh_list[0].coord_sys == "spherical polar":
             second_dim = len(submesh_list)
             r_numpy = np.kron(np.ones(second_dim), submesh_list[0].nodes)
@@ -249,11 +255,11 @@ class FiniteVolume(pybamm.SpatialMethod):
         else:
             out = integration_vector @ discretised_child
 
-        out.copy_domains(child)
-
         return out
 
-    def definite_integral_matrix(self, domain, vector_type="row"):
+    def definite_integral_matrix(
+        self, domain, vector_type="row", integration_dimension="primary"
+    ):
         """
         Matrix for finite-volume implementation of the definite integral in the
         primary dimension
@@ -268,21 +274,23 @@ class FiniteVolume(pybamm.SpatialMethod):
         ----------
         domain : list
             The domain(s) of integration
+        vector_type : str, optional
+            Whether to return a row or column vector in the primary dimension
+            (default is row)
+        integration_dimension : str, optional
+            The dimension in which to integrate (default is "primary")
 
         Returns
         -------
         :class:`pybamm.Matrix`
             The finite volume integral matrix for the domain
-        vector_type : str, optional
-            Whether to return a row or column vector in the primary dimension
-            (default is row)
         """
         # Create appropriate submesh by combining submeshes in domain
         submesh_list = self.mesh.combine_submeshes(*domain)
 
         # Create vector of ones for primary domain submesh
         submesh = submesh_list[0]
-        vector = submesh.d_edges * np.ones_like(submesh.nodes)
+        vector = submesh.d_edges
 
         if vector_type == "row":
             vector = vector[np.newaxis, :]
@@ -309,12 +317,22 @@ class FiniteVolume(pybamm.SpatialMethod):
                 child.domain, direction
             )
         else:
+            # Check coordinate system is not spherical polar for the case where child
+            # evaluates on edges
+            # If it becomes necessary to implement this, will need to think about what
+            # the spherical polar indefinite integral should be
+            submesh_list = self.mesh.combine_submeshes(*child.domain)
+            if submesh_list[0].coord_sys == "spherical polar":
+                raise NotImplementedError(
+                    "Indefinite integral on a spherical polar domain is not implemented"
+                )
             integration_matrix = self.indefinite_integral_matrix_nodes(
                 child.domain, direction
             )
 
-        # Don't need to check for spherical domains as spherical polars
-        # only change the diveregence (childs here have grad and no div)
+        # Don't need to check for spherical domains as we have ruled out spherical
+        # polars in the case that involves integrating a divergence
+        # (child evaluates on nodes)
         out = integration_matrix @ discretised_child
 
         out.copy_domains(child)

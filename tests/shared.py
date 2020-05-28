@@ -99,23 +99,32 @@ def get_p2d_mesh_for_testing(xpts=None, rpts=10):
 
 
 def get_1p1d_mesh_for_testing(
-    xpts=None, zpts=15, cc_submesh=pybamm.MeshGenerator(pybamm.Uniform1DSubMesh)
+    xpts=None,
+    rpts=10,
+    zpts=15,
+    cc_submesh=pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
 ):
-    geometry = pybamm.Geometry("1+1D macro")
+    geometry = pybamm.Geometry("1+1D macro", "1+1D micro")
     return get_mesh_for_testing(
-        xpts=xpts, zpts=zpts, geometry=geometry, cc_submesh=cc_submesh
+        xpts=xpts, rpts=rpts, zpts=zpts, geometry=geometry, cc_submesh=cc_submesh
     )
 
 
 def get_2p1d_mesh_for_testing(
     xpts=None,
+    rpts=10,
     ypts=15,
     zpts=15,
     cc_submesh=pybamm.MeshGenerator(pybamm.ScikitUniform2DSubMesh),
 ):
-    geometry = pybamm.Geometry("2+1D macro")
+    geometry = pybamm.Geometry("2+1D macro", "1+1D micro")
     return get_mesh_for_testing(
-        xpts=xpts, zpts=zpts, geometry=geometry, cc_submesh=cc_submesh
+        xpts=xpts,
+        rpts=rpts,
+        ypts=ypts,
+        zpts=zpts,
+        geometry=geometry,
+        cc_submesh=cc_submesh,
     )
 
 
@@ -170,12 +179,14 @@ def get_p2d_discretisation_for_testing(xpts=None, rpts=10):
     return get_discretisation_for_testing(mesh=get_p2d_mesh_for_testing(xpts, rpts))
 
 
-def get_1p1d_discretisation_for_testing(xpts=None, zpts=15):
-    return get_discretisation_for_testing(mesh=get_1p1d_mesh_for_testing(xpts, zpts))
-
-
-def get_2p1d_discretisation_for_testing(xpts=None, ypts=15, zpts=15):
+def get_1p1d_discretisation_for_testing(xpts=None, rpts=10, zpts=15):
     return get_discretisation_for_testing(
-        mesh=get_2p1d_mesh_for_testing(xpts, ypts, zpts),
+        mesh=get_1p1d_mesh_for_testing(xpts, rpts, zpts)
+    )
+
+
+def get_2p1d_discretisation_for_testing(xpts=None, rpts=10, ypts=15, zpts=15):
+    return get_discretisation_for_testing(
+        mesh=get_2p1d_mesh_for_testing(xpts, rpts, ypts, zpts),
         cc_method=pybamm.ScikitFiniteElement,
     )

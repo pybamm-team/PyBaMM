@@ -845,7 +845,12 @@ class Discretisation(object):
                 )
 
             elif isinstance(symbol, pybamm.Integral):
-                out = child_spatial_method.integral(child, disc_child)
+                integral_spatial_method = self.spatial_methods[
+                    symbol.integration_variable[0].domain[0]
+                ]
+                out = integral_spatial_method.integral(
+                    child, disc_child, symbol._integration_dimension
+                )
                 out.copy_domains(symbol)
                 return out
 
