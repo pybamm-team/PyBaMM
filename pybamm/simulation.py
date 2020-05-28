@@ -418,7 +418,12 @@ class Simulation:
                 t_eval = np.linspace(0, t_end, 100)
 
             self.t_eval = t_eval
-            self._solution = solver.solve(self.built_model, t_eval, inputs=inputs)
+            self._solution = solver.solve(
+                self.built_model,
+                t_eval,
+                external_variables=external_variables,
+                inputs=inputs,
+            )
 
         elif self.operating_mode == "with experiment":
             if t_eval is not None:
