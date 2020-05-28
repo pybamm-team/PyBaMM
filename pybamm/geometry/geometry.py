@@ -47,6 +47,7 @@ class Geometry(dict):
                         along with the microscopic 1D particle geometry.
     - "(2+1)+1D micro": 1D macroscopic cell geometry, with 2D current collector model,
                         along with the microscopic 1D particle geometry.
+    - "1D current collector": macroscopic 1D current collector geometry
     - "2D current collector": macroscopic 2D current collector geometry
 
     **Extends**: :class:`dict`
@@ -61,6 +62,8 @@ class Geometry(dict):
     """
 
     def __init__(self, *geometries, custom_geometry={}):
+        self._parameters = None
+
         for geometry in geometries:
             if geometry == "1D macro":
                 geometry = Geometry1DMacro()
@@ -82,6 +85,8 @@ class Geometry(dict):
                 geometry = Geometryxp1p1DMicro(cc_dimension=1)
             elif geometry == "(2+1)+1D micro":
                 geometry = Geometryxp1p1DMicro(cc_dimension=2)
+            elif geometry == "1D current collector":
+                geometry = Geometry1DCurrentCollector()
             elif geometry == "2D current collector":
                 geometry = Geometry2DCurrentCollector()
             # avoid combining geometries that clash
@@ -94,6 +99,28 @@ class Geometry(dict):
         # Allow overwriting with a custom geometry
         for k, v in custom_geometry.items():
             self.add_domain(k, v)
+
+    @property
+    def parameters(self):
+        "Returns all the parameters in the geometry"
+        if self._parameters is None:
+            self._parameters = self._find_parameters()
+        return self._parameters
+
+    def _find_parameters(self):
+        "Find all the parameters in the model"
+        unpacker = pybamm.SymbolUnpacker((pybamm.Parameter, pybamm.InputParameter))
+
+        def NestedDictValues(d):
+            "Get all the values from a nested dict"
+            for v in d.values():
+                if isinstance(v, dict):
+                    yield from NestedDictValues(v)
+                else:
+                    yield v
+
+        all_parameters = unpacker.unpack_list_of_symbols(list(NestedDictValues(self)))
+        return list(all_parameters.values())
 
     def add_domain(self, name, geometry):
         """
@@ -483,6 +510,37 @@ class Geometryxp1p1DMicro(Geometry1DMicro):
                     cc_dimension
                 )
             )
+
+        # update with custom geometry if non empty
+        self.update(custom_geometry)
+
+
+class Geometry1DCurrentCollector(Geometry):
+    """
+    A geometry class to store the details features of the macroscopic 1D
+    current collector geometry.
+
+    **Extends**: :class:`Geometry`
+
+    Parameters
+    ----------
+
+    custom_geometry : dict containing any extra user defined geometry
+    """
+
+    def __init__(self, custom_geometry={}):
+        super().__init__()
+        var = pybamm.standard_spatial_vars
+
+        self["current collector"] = {
+            "primary": {
+                var.z: {"min": pybamm.Scalar(0), "max": pybamm.geometric_parameters.l_z}
+            },
+            "tabs": {
+                "negative": {"z_centre": pybamm.geometric_parameters.centre_z_tab_n},
+                "positive": {"z_centre": pybamm.geometric_parameters.centre_z_tab_p},
+            },
+        }
 
         # update with custom geometry if non empty
         self.update(custom_geometry)

@@ -1,3 +1,0 @@
-from .base_xyz_lumped import BaseModel
-from .xyz_lumped_1D_current_collector import CurrentCollector1D
-from .xyz_lumped_2D_current_collector import CurrentCollector2D

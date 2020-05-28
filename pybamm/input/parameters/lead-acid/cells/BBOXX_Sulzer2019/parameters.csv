@@ -19,7 +19,7 @@ Positive tab centre z-coordinate [m],0.114,Tab at top,
 # Electrical,,,
 Cell capacity [A.h],17,Manufacturer,
 Typical current [A],1,,
-
+Current function [A],1,default current function,
 ,,,
 # Density,,,
 Negative current collector density [kg.m-3],11300, same as electrode,

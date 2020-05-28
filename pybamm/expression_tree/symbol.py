@@ -485,9 +485,8 @@ class Symbol(anytree.NodeMixin):
             return pybamm.Scalar(1)
         elif any(variable.id == x.id for x in self.pre_order()):
             return self._diff(variable)
-        elif variable.id == pybamm.t.id and any(
-            isinstance(x, (pybamm.VariableBase, pybamm.StateVectorBase))
-            for x in self.pre_order()
+        elif variable.id == pybamm.t.id and self.has_symbol_of_classes(
+            (pybamm.VariableBase, pybamm.StateVectorBase)
         ):
             return self._diff(variable)
         else:
@@ -499,10 +498,16 @@ class Symbol(anytree.NodeMixin):
 
     def jac(self, variable, known_jacs=None, clear_domain=True):
         """
-        Differentiate a symbol with respect to a (slice of) a State Vector.
+        Differentiate a symbol with respect to a (slice of) a StateVector
+        or StateVectorDot.
         See :class:`pybamm.Jacobian`.
         """
         jac = pybamm.Jacobian(known_jacs, clear_domain=clear_domain)
+        if not isinstance(variable, (pybamm.StateVector, pybamm.StateVectorDot)):
+            raise TypeError(
+                "Jacobian can only be taken with respect to a 'StateVector' "
+                "or 'StateVectorDot', but {} is a {}".format(variable, type(variable))
+            )
         return jac.jac(self, variable)
 
     def _jac(self, variable):
@@ -609,7 +614,7 @@ class Symbol(anytree.NodeMixin):
         )
 
         # do the search, return true if no relevent nodes are found
-        return not any((isinstance(n, search_types)) for n in self.pre_order())
+        return not self.has_symbol_of_classes(search_types)
 
     def evaluate_ignoring_errors(self, t=0):
         """
@@ -661,7 +666,9 @@ class Symbol(anytree.NodeMixin):
         """
         result = self.evaluate_ignoring_errors()
 
-        if isinstance(result, numbers.Number):
+        if isinstance(result, numbers.Number) or (
+            isinstance(result, np.ndarray) and result.shape == ()
+        ):
             return True
         else:
             return False
@@ -720,15 +727,14 @@ class Symbol(anytree.NodeMixin):
         Shape of an object, found by evaluating it with appropriate t and y.
         """
         # Default behaviour is to try to evaluate the object directly
-        # Try with some large y, to avoid having to use pre_order (slow)
+        # Try with some large y, to avoid having to unpack (slow)
         try:
             y = np.linspace(0.1, 0.9, int(1e4))
             evaluated_self = self.evaluate(0, y, y, inputs="shape test")
         # If that fails, fall back to calculating how big y should really be
         except ValueError:
-            state_vectors_in_node = [
-                x for x in self.pre_order() if isinstance(x, pybamm.StateVector)
-            ]
+            unpacker = pybamm.SymbolUnpacker(pybamm.StateVector)
+            state_vectors_in_node = unpacker.unpack_symbol(self).values()
             if state_vectors_in_node == []:
                 y = None
             else:

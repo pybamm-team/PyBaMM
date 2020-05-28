@@ -21,12 +21,15 @@ class ButlerVolmer(BaseKinetics):
         The domain to implement the model, either: 'Negative' or 'Positive'.
     reaction : str
         The name of the reaction being implemented
+    options: dict
+        A dictionary of options to be passed to the model. In this case "sei film
+        resistance" is the important option. See :class:`pybamm.BaseBatteryModel`
 
     **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
     """
 
-    def __init__(self, param, domain, reaction):
-        super().__init__(param, domain, reaction)
+    def __init__(self, param, domain, reaction, options=None):
+        super().__init__(param, domain, reaction, options)
 
     def _get_kinetics(self, j0, ne, eta_r, T):
         prefactor = ne / (2 * (1 + self.param.Theta * T))

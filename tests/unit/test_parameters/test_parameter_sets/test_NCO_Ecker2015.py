@@ -26,7 +26,7 @@ class TestEcker(unittest.TestCase):
                 + "parameters.csv"
             )
         )
-        self.assertEqual(electrolyte["Reference temperature [K]"], "296.15")
+        self.assertEqual(electrolyte["Cation transference number"], "0.26")
 
         cell = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(

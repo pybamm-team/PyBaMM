@@ -1,1 +1,1 @@
-from .inverse_butler_volmer import InverseButlerVolmer
+from .inverse_butler_volmer import InverseButlerVolmer, CurrentForInverseButlerVolmer

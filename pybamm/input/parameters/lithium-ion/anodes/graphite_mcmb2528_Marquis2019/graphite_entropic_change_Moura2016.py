@@ -13,7 +13,7 @@ def graphite_entropic_change_Moura2016(sto, c_n_max):
 
           Parameters
           ----------
-          sto: double
+          sto : :class:`pybamm.Symbol`
                Stochiometry of material (li-fraction)
 
     """

@@ -68,7 +68,7 @@ from .citations import Citations, citations, print_citations
 from .expression_tree.symbol import *
 from .expression_tree.binary_operators import *
 from .expression_tree.concatenations import *
-from .expression_tree.array import Array
+from .expression_tree.array import Array, linspace, meshgrid
 from .expression_tree.matrix import Matrix
 from .expression_tree.unary_operators import *
 from .expression_tree.functions import *
@@ -101,6 +101,7 @@ from .expression_tree.operations.evaluate import (
 )
 from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
+from .expression_tree.operations.unpack_symbols import SymbolUnpacker
 
 #
 # Model classes
@@ -123,7 +124,8 @@ from .models.submodels.base_submodel import BaseSubModel
 from .models.submodels import (
     convection,
     current_collector,
-    electrolyte,
+    electrolyte_conductivity,
+    electrolyte_diffusion,
     electrode,
     external_circuit,
     interface,
@@ -133,6 +135,7 @@ from .models.submodels import (
     thermal,
     tortuosity,
 )
+from .models.submodels.interface import sei
 
 #
 # Geometry
@@ -146,6 +149,7 @@ from .geometry.geometry import (
     Geometryxp1DMacro,
     Geometryxp0p1DMicro,
     Geometryxp1p1DMicro,
+    Geometry1DCurrentCollector,
     Geometry2DCurrentCollector,
 )
 
@@ -156,11 +160,12 @@ from .geometry import standard_spatial_vars
 # Parameters class and methods
 #
 from .parameters.parameter_values import ParameterValues
+from .parameters import constants
 from .parameters import geometric_parameters
 from .parameters import electrical_parameters
 from .parameters import thermal_parameters
 from .parameters import standard_parameters_lithium_ion, standard_parameters_lead_acid
-from .parameters.print_parameters import print_parameters, print_evaluated_parameters
+from .parameters import sei_parameters
 from .parameters import parameter_sets
 
 
@@ -190,7 +195,7 @@ from .meshes.scikit_fem_submeshes import (
 # Spatial Methods
 #
 from .spatial_methods.spatial_method import SpatialMethod
-from .spatial_methods.zero_dimensional_method import ZeroDimensionalMethod
+from .spatial_methods.zero_dimensional_method import ZeroDimensionalSpatialMethod
 from .spatial_methods.finite_volume import FiniteVolume
 from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 
@@ -198,6 +203,8 @@ from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 # Solver classes
 #
 from .solvers.solution import Solution, _BaseSolution
+from .solvers.processed_variable import ProcessedVariable
+from .solvers.processed_symbolic_variable import ProcessedSymbolicVariable
 from .solvers.base_solver import BaseSolver
 from .solvers.dummy_solver import DummySolver
 from .solvers.algebraic_solver import AlgebraicSolver
@@ -215,11 +222,16 @@ from .experiments.experiment import Experiment
 from . import experiments
 
 #
-# other
+# Plotting
 #
-from .processed_variable import ProcessedVariable
-from .quick_plot import QuickPlot, dynamic_plot, ax_min, ax_max
+from .plotting.quick_plot import QuickPlot
+from .plotting.plot import plot
+from .plotting.plot2D import plot2D
+from .plotting.dynamic_plot import dynamic_plot
 
+#
+# Simulation
+#
 from .simulation import Simulation, load_sim, is_notebook
 
 #

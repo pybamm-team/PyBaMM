@@ -36,17 +36,18 @@ class SPMe(BaseModel):
         super().__init__(options, name)
 
         self.set_external_circuit_submodel()
-        self.set_reactions()
         self.set_porosity_submodel()
         self.set_tortuosity_submodels()
         self.set_convection_submodel()
         self.set_interfacial_submodel()
+        self.set_other_reaction_submodels_to_zero()
         self.set_particle_submodel()
         self.set_negative_electrode_submodel()
         self.set_electrolyte_submodel()
         self.set_positive_electrode_submodel()
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
+        self.set_sei_submodel()
 
         if build:
             self.build_model()
@@ -57,6 +58,15 @@ class SPMe(BaseModel):
 
         self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
 
+    def set_convection_submodel(self):
+
+        self.submodels[
+            "through-cell convection"
+        ] = pybamm.convection.through_cell.NoConvection(self.param)
+        self.submodels[
+            "transverse convection"
+        ] = pybamm.convection.transverse.NoConvection(self.param)
+
     def set_tortuosity_submodels(self):
         self.submodels["electrolyte tortuosity"] = pybamm.tortuosity.Bruggeman(
             self.param, "Electrolyte", True
@@ -65,16 +75,22 @@ class SPMe(BaseModel):
             self.param, "Electrode", True
         )
 
-    def set_convection_submodel(self):
-
-        self.submodels["convection"] = pybamm.convection.NoConvection(self.param)
-
     def set_interfacial_submodel(self):
 
         self.submodels["negative interface"] = pybamm.interface.InverseButlerVolmer(
-            self.param, "Negative", "lithium-ion main"
+            self.param, "Negative", "lithium-ion main", self.options
         )
         self.submodels["positive interface"] = pybamm.interface.InverseButlerVolmer(
+            self.param, "Positive", "lithium-ion main", self.options
+        )
+        self.submodels[
+            "negative interface current"
+        ] = pybamm.interface.CurrentForInverseButlerVolmer(
+            self.param, "Negative", "lithium-ion main"
+        )
+        self.submodels[
+            "positive interface current"
+        ] = pybamm.interface.CurrentForInverseButlerVolmer(
             self.param, "Positive", "lithium-ion main"
         )
 
@@ -109,13 +125,11 @@ class SPMe(BaseModel):
 
     def set_electrolyte_submodel(self):
 
-        electrolyte = pybamm.electrolyte.stefan_maxwell
-
-        self.submodels["electrolyte conductivity"] = electrolyte.conductivity.Composite(
+        self.submodels[
+            "electrolyte conductivity"
+        ] = pybamm.electrolyte_conductivity.Composite(self.param)
+        self.submodels["electrolyte diffusion"] = pybamm.electrolyte_diffusion.Full(
             self.param
-        )
-        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(
-            self.param, self.reactions
         )
 
     @property
