@@ -314,11 +314,9 @@ class QuickPlot(object):
                 ) = self.get_spatial_var(variable_tuple, first_variable, "first")
                 self.spatial_variable_dict[variable_tuple] = {
                     spatial_var_name: spatial_var_value
-                    * spatial_scale
-                    / self.spatial_factor
                 }
                 self.first_scaled_spatial_variable[variable_tuple] = (
-                    spatial_var_value * spatial_scale
+                    spatial_var_value * self.spatial_factor
                 )
                 self.first_spatial_scale[variable_tuple] = spatial_scale
 
@@ -343,18 +341,14 @@ class QuickPlot(object):
                         second_spatial_scale,
                     ) = self.get_spatial_var(variable_tuple, first_variable, "second")
                     self.spatial_variable_dict[variable_tuple] = {
-                        first_spatial_var_name: first_spatial_var_value
-                        * first_spatial_scale
-                        / self.spatial_factor,
-                        second_spatial_var_name: second_spatial_var_value
-                        * second_spatial_scale
-                        / self.spatial_factor,
+                        first_spatial_var_name: first_spatial_var_value,
+                        second_spatial_var_name: second_spatial_var_value,
                     }
                     self.first_scaled_spatial_variable[variable_tuple] = (
-                        first_spatial_var_value * first_spatial_scale
+                        first_spatial_var_value * self.spatial_factor
                     )
                     self.second_scaled_spatial_variable[variable_tuple] = (
-                        second_spatial_var_value * second_spatial_scale
+                        second_spatial_var_value * self.spatial_factor
                     )
                     if first_spatial_var_name == "r" and second_spatial_var_name == "x":
                         self.is_x_r[variable_tuple] = True
@@ -383,15 +377,11 @@ class QuickPlot(object):
             else:
                 domain = variable.auxiliary_domains["secondary"][0]
 
-        # Remove subscript "n" or "p" so spatial_var_name can be used in the
-        # call to a `ProcessedVariable`
-        if spatial_var_name in ["r_n", "r_p"]:
-            spatial_var_name = "r"
-
         if domain == "current collector":
             domain += " {}".format(spatial_var_name)
 
-        # Get scale
+        # Get scale to go from dimensionless to dimensional in the units
+        # specified by spatial_unit
         try:
             spatial_scale = self.spatial_scales[domain]
         except KeyError:

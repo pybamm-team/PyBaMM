@@ -146,7 +146,7 @@ class ProcessedVariable(object):
             else:
                 entries[idx] = self.base_variable.evaluate(t, u, inputs=inputs)
 
-        # No discretisation provided, or variable has no domain (function of t only)
+        # set up interpolation
         if len(self.t_sol) == 1:
             # Variable is just a scalar value, but we need to create a callable
             # function to be consitent with other processed variables
@@ -205,11 +205,8 @@ class ProcessedVariable(object):
         # assign attributes for reference (either x_sol or r_sol)
         self.entries = entries
         self.dimensions = 1
-        if self.domain[0] == "negative particle":
-            self.first_dimension = "r_n"
-            self.r_sol = space
-        elif self.domain[0] == "positive particle":
-            self.first_dimension = "r_p"
+        if self.domain[0] in ["negative particle", "positive particle"]:
+            self.first_dimension = "r"
             self.r_sol = space
         elif self.domain[0] in [
             "negative electrode",
@@ -225,7 +222,10 @@ class ProcessedVariable(object):
             self.first_dimension = "x"
             self.x_sol = space
 
-        self.first_dim_pts = space * self.get_spatial_scale(self.first_dimension)
+        # assign attributes for reference
+        self.first_dim_pts = space * self.get_spatial_scale(
+            self.first_dimension, self.domain[0]
+        )
         self.internal_boundaries = self.mesh[0].internal_boundaries
 
         # set up interpolation
@@ -278,10 +278,7 @@ class ProcessedVariable(object):
             "negative electrode",
             "positive electrode",
         ]:
-            if self.domain[0] == "negative particle":
-                self.first_dimension = "r_n"
-            elif self.domain[0] == "positive particle":
-                self.first_dimension = "r_p"
+            self.first_dimension = "r"
             self.second_dimension = "x"
             self.r_sol = first_dim_pts
             self.x_sol = second_dim_pts
@@ -330,7 +327,7 @@ class ProcessedVariable(object):
         self.entries = entries
         self.dimensions = 2
         self.first_dim_pts = first_dim_pts * self.get_spatial_scale(
-            self.first_dimension
+            self.first_dimension, self.domain[0]
         )
         self.second_dim_pts = second_dim_pts * self.get_spatial_scale(
             self.second_dimension
@@ -481,8 +478,15 @@ class ProcessedVariable(object):
                 second_dim = second_dim[:, np.newaxis]
         return self._interpolation_function((first_dim, second_dim, t))
 
-    def get_spatial_scale(self, name):
+    def get_spatial_scale(self, name, domain=None):
         "Returns the spatial scale for a named spatial variable"
+        # Different scale in negative and positive particles
+        if domain == "negative particle":
+            name = "r_n"
+        elif domain == "positive particle":
+            name = "r_p"
+
+        # Try to get length scale
         if name + " [m]" in self.spatial_vars and name in self.spatial_vars:
             scale = (
                 self.spatial_vars[name + " [m]"] / self.spatial_vars[name]
@@ -505,8 +509,7 @@ class ProcessedVariable(object):
 def eval_dimension_name(name, x, r, y, z):
     if name == "x":
         out = x
-    elif name in ["r_n", "r_p"]:
-        name = "r"  # remove subscript to match input name in case of error
+    elif name == "r":
         out = r
     elif name == "y":
         out = y

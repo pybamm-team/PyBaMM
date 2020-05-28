@@ -629,14 +629,16 @@ class VelocityTests(BaseOutputTest):
 
     def test_velocity_boundaries(self):
         """Test the boundary values of the current densities"""
+        L = self.v_box.first_dim_pts[-1]
         np.testing.assert_array_almost_equal(self.v_box(self.t, 0), 0, decimal=4)
-        np.testing.assert_array_almost_equal(self.v_box(self.t, 1), 0, decimal=4)
+        np.testing.assert_array_almost_equal(self.v_box(self.t, L), 0, decimal=4)
 
     def test_vertical_velocity(self):
         """Test the boundary values of the current densities"""
+        L = self.v_box.first_dim_pts[-1]
         np.testing.assert_array_equal(self.dVbox_dz(self.t, 0), 0)
-        np.testing.assert_array_less(self.dVbox_dz(self.t, 0.5), 0)
-        np.testing.assert_array_equal(self.dVbox_dz(self.t, 1), 0)
+        np.testing.assert_array_less(self.dVbox_dz(self.t, 0.5 * L), 0)
+        np.testing.assert_array_equal(self.dVbox_dz(self.t, L), 0)
 
     def test_velocity_vs_current(self):
         """Test the boundary values of the current densities"""
