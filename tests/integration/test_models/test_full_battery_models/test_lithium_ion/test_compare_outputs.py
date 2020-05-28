@@ -55,7 +55,7 @@ class TestCompareOutputs(unittest.TestCase):
         # load models - for the default params we expect x-full and lumped to
         # agree as the temperature is practically independent of x
         options = [{"thermal": opt} for opt in ["lumped", "x-full"]]
-        options.append({"thermal": "lumped", "geometry": "pouch"})
+        options.append({"thermal": "lumped", "cell_geometry": "pouch"})
 
         model_combos = [
             ([pybamm.lithium_ion.SPM(opt) for opt in options]),
