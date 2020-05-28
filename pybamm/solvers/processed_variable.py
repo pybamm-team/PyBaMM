@@ -27,18 +27,6 @@ def make_interp2D_fun(input, interpolant):
         return interpolant(second_dim, first_dim)[0]
 
 
-def get_spatial_scale(name, variables):
-    "Returns the spatial scale for a named spatial variable"
-    if variables and name + " [m]" in variables and name in variables:
-        scale = (variables[name + " [m]"] / variables[name]).evaluate()[-1]
-    else:
-        pybamm.logger.warning(
-            "No scale set for spatial variable {}. Using default of 1 [m]".format(name)
-        )
-        scale = 1
-    return scale
-
-
 class ProcessedVariable(object):
     """
     An object that can be evaluated at arbitrary (scalars or vectors) t and x, and
@@ -55,9 +43,12 @@ class ProcessedVariable(object):
         The solution object to be used to create the processed variables
     known_evals : dict
         Dictionary of known evaluations, to be used to speed up finding the solution
+    warn : bool, optional
+        Whether to raise warnings when trying to evaluate time and length scales.
+        Default is True.
     """
 
-    def __init__(self, base_variable, solution, known_evals=None):
+    def __init__(self, base_variable, solution, known_evals=None, warn=True):
         self.base_variable = base_variable
         self.t_sol = solution.t
         self.u_sol = solution.y
@@ -66,22 +57,27 @@ class ProcessedVariable(object):
         self.domain = base_variable.domain
         self.auxiliary_domains = base_variable.auxiliary_domains
         self.known_evals = known_evals
+        self.warn = warn
 
-        # Set time and space scales
+        # Set timescale
         try:
             self.timescale = solution.model.timescale_eval
         except AttributeError:
-            print("{} 1s".format(solution.model.name))
-            pybamm.logger.warning("No timescale provided. Using default of 1 [s]")
+            if self.warn:
+                pybamm.logger.warning("No timescale provided. Using default of 1 [s]")
             self.timescale = 1
-        self.spatial_scales = {}
-        if solution.model:
-            variables = solution.model.variables
-        else:
-            variables = None
-        for name in ["x", "y", "z", "r_n", "r_p"]:
-            self.spatial_scales[name] = get_spatial_scale(name, variables)
 
+        # Store spatial variables to get scales
+        self.spatial_vars = {}
+        if solution.model:
+            for var in ["x", "y", "z", "r_n", "r_p"]:
+                if var and var + " [m]" in solution.model.variables:
+                    self.spatial_vars[var] = solution.model.variables[var]
+                    self.spatial_vars[var + " [m]"] = solution.model.variables[
+                        var + " [m]"
+                    ]
+
+        # Evaluate base variable at initial time
         if self.known_evals:
             self.base_eval, self.known_evals[solution.t[0]] = base_variable.evaluate(
                 solution.t[0],
@@ -229,14 +225,14 @@ class ProcessedVariable(object):
             self.first_dimension = "x"
             self.x_sol = space
 
-        self.first_dim_pts = edges
+        self.first_dim_pts = space * self.get_spatial_scale(self.first_dimension)
         self.internal_boundaries = self.mesh[0].internal_boundaries
 
         # set up interpolation
         if len(self.t_sol) == 1:
             # function of space only
             interpolant = interp.interp1d(
-                space * self.spatial_scales[self.first_dimension],
+                self.first_dim_pts,
                 entries_for_interp[:, 0],
                 kind="linear",
                 fill_value=np.nan,
@@ -255,7 +251,7 @@ class ProcessedVariable(object):
             # is the reverse of what you'd expect
             self._interpolation_function = interp.interp2d(
                 self.t_sol * self.timescale,
-                space * self.spatial_scales[self.first_dimension],
+                self.first_dim_pts,
                 entries_for_interp,
                 kind="linear",
                 fill_value=np.nan,
@@ -333,16 +329,20 @@ class ProcessedVariable(object):
         # assign attributes for reference
         self.entries = entries
         self.dimensions = 2
-        self.first_dim_pts = first_dim_pts
-        self.second_dim_pts = second_dim_pts
+        self.first_dim_pts = first_dim_pts * self.get_spatial_scale(
+            self.first_dimension
+        )
+        self.second_dim_pts = second_dim_pts * self.get_spatial_scale(
+            self.second_dimension
+        )
 
         # set up interpolation
         if len(self.t_sol) == 1:
             # function of space only. Note the order of the points is the reverse
             # of what you'd expect
             interpolant = interp.interp2d(
-                second_dim_pts * self.spatial_scales[self.second_dimension],
-                first_dim_pts * self.spatial_scales[self.first_dimension],
+                self.second_dim_pts,
+                self.first_dim_pts,
                 entries[:, :, 0],
                 kind="linear",
                 fill_value=np.nan,
@@ -356,11 +356,7 @@ class ProcessedVariable(object):
         else:
             # function of space and time.
             self._interpolation_function = interp.RegularGridInterpolator(
-                (
-                    first_dim_pts * self.spatial_scales[self.first_dimension],
-                    second_dim_pts * self.spatial_scales[self.second_dimension],
-                    self.t_sol * self.timescale,
-                ),
+                (self.first_dim_pts, self.second_dim_pts, self.t_sol * self.timescale),
                 entries,
                 method="linear",
                 fill_value=np.nan,
@@ -402,16 +398,16 @@ class ProcessedVariable(object):
         self.z_sol = z_sol
         self.first_dimension = "y"
         self.second_dimension = "z"
-        self.first_dim_pts = y_sol
-        self.second_dim_pts = z_sol
+        self.first_dim_pts = y_sol * self.get_spatial_scale("y")
+        self.second_dim_pts = z_sol * self.get_spatial_scale("z")
 
         # set up interpolation
         if len(self.t_sol) == 1:
             # function of space only. Note the order of the points is the reverse
             # of what you'd expect
             interpolant = interp.interp2d(
-                z_sol * self.spatial_scales[self.second_dimension],
-                y_sol * self.spatial_scales[self.first_dimension],
+                self.second_dim_pts,
+                self.first_dim_pts,
                 entries,
                 kind="linear",
                 fill_value=np.nan,
@@ -425,11 +421,7 @@ class ProcessedVariable(object):
         else:
             # function of space and time.
             self._interpolation_function = interp.RegularGridInterpolator(
-                (
-                    y_sol * self.spatial_scales[self.second_dimension],
-                    z_sol * self.spatial_scales[self.first_dimension],
-                    self.t_sol * self.timescale,
-                ),
+                (self.first_dim_pts, self.second_dim_pts, self.t_sol * self.timescale),
                 entries,
                 method="linear",
                 fill_value=np.nan,
@@ -464,9 +456,6 @@ class ProcessedVariable(object):
         elif self.dimensions == 2:
             out = self.call_2D(t, x, r, y, z)
         if warn is True and np.isnan(out).any():
-            import ipdb
-
-            ipdb.set_trace()
             pybamm.logger.warning(
                 "Calling variable outside interpolation range (returns 'nan')"
             )
@@ -491,6 +480,21 @@ class ProcessedVariable(object):
             if isinstance(second_dim, np.ndarray) and isinstance(t, np.ndarray):
                 second_dim = second_dim[:, np.newaxis]
         return self._interpolation_function((first_dim, second_dim, t))
+
+    def get_spatial_scale(self, name):
+        "Returns the spatial scale for a named spatial variable"
+        if name + " [m]" in self.spatial_vars and name in self.spatial_vars:
+            scale = (
+                self.spatial_vars[name + " [m]"] / self.spatial_vars[name]
+            ).evaluate()[-1]
+        else:
+            if self.warn:
+                pybamm.logger.warning(
+                    "No scale set for spatial variable {}. "
+                    "Using default of 1 [m]".format(name)
+                )
+            scale = 1
+        return scale
 
     @property
     def data(self):
