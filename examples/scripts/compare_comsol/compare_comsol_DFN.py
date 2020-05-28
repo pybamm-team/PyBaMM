@@ -78,7 +78,7 @@ def get_interp_fun(variable_name, domain):
     def myinterp(t):
         try:
             return interp.interp1d(
-                comsol_t, variable, fill_value="extrapolate", bounds_error=False,
+                comsol_t, variable, fill_value="extrapolate", bounds_error=False
             )(t)[:, np.newaxis]
         except ValueError as err:
             raise ValueError(
@@ -129,14 +129,31 @@ comsol_model.variables = {
     "Electrolyte potential [V]": comsol_phi_e,
     "Positive electrode potential [V]": comsol_phi_p,
     "Terminal voltage [V]": comsol_voltage,
+    # Add spatial variables for use in QuickPlot
+    "x": pybamm_model.variables["x"],
+    "x [m]": pybamm_model.variables["x [m]"],
 }
+
 # Make new solution with same t and y
 comsol_solution = pybamm.Solution(pybamm_solution.t, pybamm_solution.y)
+# Update model timescale to match the pybamm model
+comsol_model.timescale_eval = pybamm_model.timescale.evaluate()
 comsol_solution.model = comsol_model
+
 # plot
+output_variables = [
+    "Negative particle surface concentration [mol.m-3]",
+    "Electrolyte concentration [mol.m-3]",
+    "Positive particle surface concentration [mol.m-3]",
+    "Current [A]",
+    "Negative electrode potential [V]",
+    "Electrolyte potential [V]",
+    "Positive electrode potential [V]",
+    "Terminal voltage [V]",
+]
 plot = pybamm.QuickPlot(
     [pybamm_solution, comsol_solution],
-    output_variables=comsol_model.variables.keys(),
+    output_variables=output_variables,
     labels=["PyBaMM", "Comsol"],
 )
 plot.dynamic_plot()

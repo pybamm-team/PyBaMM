@@ -32,7 +32,7 @@ def get_spatial_scale(name, variables):
     if variables and name + " [m]" in variables and name in variables:
         scale = (variables[name + " [m]"] / variables[name]).evaluate()[-1]
     else:
-        pybamm.logger.debug(
+        pybamm.logger.warning(
             "No scale set for spatial variable {}. Using default of 1 [m]".format(name)
         )
         scale = 1
@@ -68,10 +68,11 @@ class ProcessedVariable(object):
         self.known_evals = known_evals
 
         # Set time and space scales
-        if solution.model:
+        try:
             self.timescale = solution.model.timescale_eval
-        else:
-            pybamm.logger.debug("No timescale provided. Using default of 1 [s]")
+        except AttributeError:
+            print("{} 1s".format(solution.model.name))
+            pybamm.logger.warning("No timescale provided. Using default of 1 [s]")
             self.timescale = 1
         self.spatial_scales = {}
         if solution.model:
@@ -239,6 +240,7 @@ class ProcessedVariable(object):
                 entries_for_interp[:, 0],
                 kind="linear",
                 fill_value=np.nan,
+                bounds_error=False,
             )
 
             def interp_fun(t, z):
@@ -257,6 +259,7 @@ class ProcessedVariable(object):
                 entries_for_interp,
                 kind="linear",
                 fill_value=np.nan,
+                bounds_error=False,
             )
 
     def initialise_2D(self):
@@ -343,6 +346,7 @@ class ProcessedVariable(object):
                 entries[:, :, 0],
                 kind="linear",
                 fill_value=np.nan,
+                bounds_error=False,
             )
 
             def interp_fun(input):
@@ -359,8 +363,8 @@ class ProcessedVariable(object):
                 ),
                 entries,
                 method="linear",
-                bounds_error=False,
                 fill_value=np.nan,
+                bounds_error=False,
             )
 
     def initialise_2D_scikit_fem(self):
@@ -411,6 +415,7 @@ class ProcessedVariable(object):
                 entries,
                 kind="linear",
                 fill_value=np.nan,
+                bounds_error=False,
             )
 
             def interp_fun(input):
@@ -427,8 +432,8 @@ class ProcessedVariable(object):
                 ),
                 entries,
                 method="linear",
-                bounds_error=False,
                 fill_value=np.nan,
+                bounds_error=False,
             )
 
     def __call__(self, t=None, x=None, r=None, y=None, z=None, warn=True):
@@ -459,6 +464,9 @@ class ProcessedVariable(object):
         elif self.dimensions == 2:
             out = self.call_2D(t, x, r, y, z)
         if warn is True and np.isnan(out).any():
+            import ipdb
+
+            ipdb.set_trace()
             pybamm.logger.warning(
                 "Calling variable outside interpolation range (returns 'nan')"
             )
