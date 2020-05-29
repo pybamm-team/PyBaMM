@@ -81,14 +81,14 @@ class ProcessedVariable(object):
             self.base_eval, self.known_evals[solution.t[0]] = base_variable.evaluate(
                 solution.t[0],
                 solution.y[:, 0],
-                inputs={name: inp[0] for name, inp in solution.inputs.items()},
+                inputs={name: inp[:, 0] for name, inp in solution.inputs.items()},
                 known_evals=self.known_evals[solution.t[0]],
             )
         else:
             self.base_eval = base_variable.evaluate(
                 solution.t[0],
                 solution.y[:, 0],
-                inputs={name: inp[0] for name, inp in solution.inputs.items()},
+                inputs={name: inp[:, 0] for name, inp in solution.inputs.items()},
             )
 
         # handle 2D (in space) finite element variables differently
@@ -137,7 +137,7 @@ class ProcessedVariable(object):
         for idx in range(len(self.t_sol)):
             t = self.t_sol[idx]
             u = self.u_sol[:, idx]
-            inputs = {name: inp[idx] for name, inp in self.inputs.items()}
+            inputs = {name: inp[:, idx] for name, inp in self.inputs.items()}
             if self.known_evals:
                 entries[idx], self.known_evals[t] = self.base_variable.evaluate(
                     t, u, inputs=inputs, known_evals=self.known_evals[t]
@@ -173,7 +173,7 @@ class ProcessedVariable(object):
         for idx in range(len(self.t_sol)):
             t = self.t_sol[idx]
             u = self.u_sol[:, idx]
-            inputs = {name: inp[idx] for name, inp in self.inputs.items()}
+            inputs = {name: inp[:, idx] for name, inp in self.inputs.items()}
             if self.known_evals:
                 eval_and_known_evals = self.base_variable.evaluate(
                     t, u, inputs=inputs, known_evals=self.known_evals[t]
@@ -304,7 +304,7 @@ class ProcessedVariable(object):
         for idx in range(len(self.t_sol)):
             t = self.t_sol[idx]
             u = self.u_sol[:, idx]
-            inputs = {name: inp[idx] for name, inp in self.inputs.items()}
+            inputs = {name: inp[:, idx] for name, inp in self.inputs.items()}
             if self.known_evals:
                 eval_and_known_evals = self.base_variable.evaluate(
                     t, u, inputs=inputs, known_evals=self.known_evals[t]
@@ -370,7 +370,7 @@ class ProcessedVariable(object):
         for idx in range(len(self.t_sol)):
             t = self.t_sol[idx]
             u = self.u_sol[:, idx]
-            inputs = {name: inp[idx] for name, inp in self.inputs.items()}
+            inputs = {name: inp[:, idx] for name, inp in self.inputs.items()}
 
             if self.known_evals:
                 eval_and_known_evals = self.base_variable.evaluate(

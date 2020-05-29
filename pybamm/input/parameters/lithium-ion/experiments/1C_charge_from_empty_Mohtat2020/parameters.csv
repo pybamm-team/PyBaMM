@@ -8,6 +8,7 @@ Positive current collector surface heat transfer coefficient [W.m-2.K-1],0,,
 Negative tab heat transfer coefficient [W.m-2.K-1],0,,
 Positive tab heat transfer coefficient [W.m-2.K-1],0,,
 Edge heat transfer coefficient [W.m-2.K-1],5,Peyman MPM,
+Total heat transfer coefficient [W.m-2.K-1],5,Peyman MPM,
 Ambient temperature [K], 298.15,,
 ,,,
 # Electrical
