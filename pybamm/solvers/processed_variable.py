@@ -59,9 +59,12 @@ class ProcessedVariable(object):
         self.known_evals = known_evals
         self.warn = warn
 
-        # Set timescale
-        self.timescale = solution.model.timescale.evaluate(inputs=solution.inputs)
-
+        # Set timescale -- used evaluated timescale if available (to account
+        # for inputs set during solve)
+        try:
+            self.timescale = solution.model.timescale_eval
+        except AttributeError:
+            self.timescale = solution.model.timescale.evaluate()
         self.t_pts = self.t_sol * self.timescale
 
         # Store spatial variables to get scales
