@@ -163,7 +163,13 @@ class BaseSolver(object):
         inputs = inputs or {}
 
         # Set model timescale
-        model.timescale_eval = model.timescale.evaluate(inputs=inputs)
+        try:
+            model.timescale_eval = model.timescale.evaluate()
+        except KeyError as e:
+            raise pybamm.SolverError(
+                "The model timescale is a function of an input parameter "
+                "(original error: {})".format(e)
+            )
 
         if (
             isinstance(self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver))

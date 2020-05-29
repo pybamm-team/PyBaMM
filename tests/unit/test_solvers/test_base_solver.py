@@ -264,6 +264,18 @@ class TestBaseSolver(unittest.TestCase):
         self.assertEqual(model.convert_to_format, "casadi")
         pybamm.set_logging_level("WARNING")
 
+    def test_timescale_input_fail(self):
+        # Make sure timescale can't depend on inputs
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        model.rhs = {v: -1}
+        model.initial_conditions = {v: 1}
+        a = pybamm.InputParameter("a")
+        model.timescale = a
+        solver = pybamm.BaseSolver()
+        with self.assertRaisesRegex(pybamm.SolverError, "The model timescale"):
+            solver.set_up(model, inputs={"a": 10})
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

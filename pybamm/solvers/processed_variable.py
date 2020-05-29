@@ -59,12 +59,8 @@ class ProcessedVariable(object):
         self.known_evals = known_evals
         self.warn = warn
 
-        # Set timescale -- used evaluated timescale if available (to account
-        # for inputs set during solve)
-        try:
-            self.timescale = solution.model.timescale_eval
-        except AttributeError:
-            self.timescale = solution.model.timescale.evaluate()
+        # Set timescale
+        self.timescale = solution.model.timescale.evaluate()
         self.t_pts = self.t_sol * self.timescale
 
         # Store spatial variables to get scales
@@ -498,7 +494,7 @@ class ProcessedVariable(object):
             if self.warn:
                 pybamm.logger.warning(
                     "No scale set for spatial variable {}. "
-                    "Using default of 1 [m]".format(name)
+                    "Using default of 1 [m].".format(name)
                 )
             scale = 1
         return scale
