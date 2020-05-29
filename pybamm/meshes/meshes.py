@@ -144,6 +144,9 @@ class Mesh(dict):
         """
         if submeshnames == ():
             raise ValueError("Submesh domains being combined cannot be empty")
+        # If there's only one submesh, we can return it
+        elif len(submeshnames) == 1:
+            return self[submeshnames[0]]
         # Check that the final edge of each submesh is the same as the first edge of the
         # next submesh
         for i in range(len(submeshnames) - 1):
@@ -161,11 +164,6 @@ class Mesh(dict):
                     "trying to combine two meshes in different coordinate systems"
                 )
         submeshes = [None] * len(self[submeshnames[0]])
-        # Hack for the special case of current collector
-        if submeshnames == ("current collector",) and isinstance(
-            self[submeshnames[0]][0].edges, dict
-        ):
-            return self[submeshnames[0]]
         for i in range(len(self[submeshnames[0]])):
             combined_submesh_edges = np.concatenate(
                 [self[submeshnames[0]][i].edges]

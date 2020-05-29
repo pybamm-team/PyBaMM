@@ -236,20 +236,28 @@ class FiniteVolume(pybamm.SpatialMethod):
 
     def integral(self, child, discretised_child, integration_dimension):
         """Vector-vector dot product to implement the integral operator. """
+        domains = {"primary": child.domain, **child.auxiliary_domains}
+        # Calculate integration vector
+        integration_vector = self.definite_integral_matrix(
+            domains, integration_dimension=integration_dimension
+        )
+
+        # Check for spherical domains
         if integration_dimension == "primary":
             domain = child.domain
         else:
             domain = child.auxiliary_domains[integration_dimension]
-        # Calculate integration vector
-        integration_vector = self.definite_integral_matrix(
-            domain, integration_dimension=integration_dimension
-        )
-
-        # Check for spherical domains
         submesh_list = self.mesh.combine_submeshes(*domain)
         if submesh_list[0].coord_sys == "spherical polar":
-            second_dim = len(submesh_list)
-            r_numpy = np.kron(np.ones(second_dim), submesh_list[0].nodes)
+            # Account for secondary dimensions if they are given
+            if "secondary" in discretised_child.auxiliary_domains:
+                secondary_submeshes = self.mesh.combine_submeshes(
+                    *discretised_child.auxiliary_domains["secondary"]
+                )
+                second_dim_npts = sum(submesh.npts for submesh in secondary_submeshes)
+            else:
+                second_dim_npts = 1
+            r_numpy = np.kron(np.ones(second_dim_npts), submesh_list[0].nodes)
             r = pybamm.Vector(r_numpy)
             out = 4 * np.pi ** 2 * integration_vector @ (discretised_child * r)
         else:
@@ -258,7 +266,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         return out
 
     def definite_integral_matrix(
-        self, domain, vector_type="row", integration_dimension="primary"
+        self, domains, vector_type="row", integration_dimension="primary"
     ):
         """
         Matrix for finite-volume implementation of the definite integral in the
@@ -272,8 +280,8 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         Parameters
         ----------
-        domain : list
-            The domain(s) of integration
+        domains : dict
+            The domain(s) of the symbol being integrated
         vector_type : str, optional
             Whether to return a row or column vector in the primary dimension
             (default is row)
@@ -285,27 +293,51 @@ class FiniteVolume(pybamm.SpatialMethod):
         :class:`pybamm.Matrix`
             The finite volume integral matrix for the domain
         """
-        # Create appropriate submesh by combining submeshes in domain
-        submesh_list = self.mesh.combine_submeshes(*domain)
+        if integration_dimension == "primary":
+            # Create appropriate submesh by combining submeshes in domain
+            submesh_list = self.mesh.combine_submeshes(*domains["primary"])
 
-        # Create vector of ones for primary domain submesh
-        submesh = submesh_list[0]
-        vector = submesh.d_edges
+            # Create vector of ones for primary domain submesh
+            submesh = submesh_list[0]
+            vector = submesh.d_edges
 
-        if vector_type == "row":
-            vector = vector[np.newaxis, :]
-        elif vector_type == "column":
-            vector = vector[:, np.newaxis]
+            if vector_type == "row":
+                vector = vector[np.newaxis, :]
+            elif vector_type == "column":
+                vector = vector[:, np.newaxis]
 
-        # repeat matrix for each node in secondary dimensions
-        second_dim_len = len(submesh_list)
-        # generate full matrix from the submatrix
+            # repeat matrix for each node in secondary dimensions
+            # Account for secondary dimensions if they are given
+            if "secondary" in domains:
+                secondary_submeshes = self.mesh.combine_submeshes(*domains["secondary"])
+                second_dim_npts = sum(submesh.npts for submesh in secondary_submeshes)
+            else:
+                second_dim_npts = 1
+            # generate full matrix from the submatrix
+            matrix = kron(eye(second_dim_npts), vector)
+        elif integration_dimension == "secondary":
+            # Create appropriate submesh by combining submeshes in domain
+            primary_submesh_list = self.mesh.combine_submeshes(*domains["primary"])
+            secondary_submesh_list = self.mesh.combine_submeshes(*domains["secondary"])
+
+            # Create matrix which integrates in the secondary dimension
+            d_edges = secondary_submesh_list[0].d_edges
+            n_primary_pts = primary_submesh_list[0].npts
+            int_matrix = hstack([d_edge * eye(n_primary_pts) for d_edge in d_edges])
+
+            if vector_type != "row":
+                raise NotImplementedError(
+                    "Integral in secondary vector only implemented in 'row' form"
+                )
+            # repeat matrix for each node in secondary dimensions
+            third_dim_len = len(secondary_submesh_list)
+            # generate full matrix from the submatrix
+            matrix = kron(eye(third_dim_len), int_matrix)
         # Convert to csr_matrix so that we can take the index (row-slicing), which is
         # not supported by the default kron format
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
-        matrix = csr_matrix(kron(eye(second_dim_len), vector))
-        return pybamm.Matrix(matrix)
+        return pybamm.Matrix(csr_matrix(matrix))
 
     def indefinite_integral(self, child, discretised_child, direction):
         """Implementation of the indefinite integral operator. """

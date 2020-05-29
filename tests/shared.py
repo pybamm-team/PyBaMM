@@ -104,7 +104,7 @@ def get_1p1d_mesh_for_testing(
     zpts=15,
     cc_submesh=pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
 ):
-    geometry = pybamm.Geometry("1+1D macro", "1+1D micro")
+    geometry = pybamm.Geometry("1+1D macro", "(1+1)+1D micro")
     return get_mesh_for_testing(
         xpts=xpts, rpts=rpts, zpts=zpts, geometry=geometry, cc_submesh=cc_submesh
     )
@@ -117,7 +117,7 @@ def get_2p1d_mesh_for_testing(
     zpts=15,
     cc_submesh=pybamm.MeshGenerator(pybamm.ScikitUniform2DSubMesh),
 ):
-    geometry = pybamm.Geometry("2+1D macro", "1+1D micro")
+    geometry = pybamm.Geometry("2+1D macro", "(2+1)+1D micro")
     return get_mesh_for_testing(
         xpts=xpts,
         rpts=rpts,

@@ -1168,7 +1168,11 @@ class TestDiscretise(unittest.TestCase):
             "current collector": pybamm.ScikitFiniteElement(),
         }
         # create model
-        a = pybamm.Variable("a", domain="negative electrode")
+        a = pybamm.Variable(
+            "a",
+            domain="negative electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
         b = pybamm.Variable("b", domain="current collector")
         model = pybamm.BaseModel()
         model.rhs = {a: pybamm.Laplacian(a), b: 4 * pybamm.Laplacian(b)}

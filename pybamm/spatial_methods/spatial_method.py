@@ -97,10 +97,22 @@ class SpatialMethod:
             self.mesh[dom][0].npts_for_broadcast_to_nodes
             for dom in auxiliary_domains.get("secondary", [])
         )  # returns empty list if auxiliary_domains doesn't have "secondary" key
-        full_domain_size = sum(
-            subdom.npts_for_broadcast_to_nodes
-            for dom in domain
-            for subdom in self.mesh[dom]
+        full_domain_size = (
+            sum(self.mesh[dom][0].npts_for_broadcast_to_nodes for dom in domain)
+            * max(
+                sum(
+                    self.mesh[dom][0].npts
+                    for dom in auxiliary_domains.get("secondary", [])
+                ),
+                1,
+            )
+            * max(
+                sum(
+                    self.mesh[dom][0].npts
+                    for dom in auxiliary_domains.get("tertiary", [])
+                ),
+                1,
+            )
         )
         if broadcast_type.endswith("to edges"):
             # add one point to each domain for broadcasting to edges
