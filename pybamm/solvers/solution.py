@@ -50,7 +50,7 @@ class _BaseSolution(object):
         if copy_this is None:
             # initialize empty inputs and model, to be populated later
             self._inputs = pybamm.FuzzyDict()
-            self._model = None
+            self._model = pybamm.BaseModel()
             self.set_up_time = None
             self.solve_time = None
             self.has_symbolic_inputs = False

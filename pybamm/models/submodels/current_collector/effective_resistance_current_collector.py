@@ -92,6 +92,17 @@ class EffectiveResistance(pybamm.BaseModel):
             "Effective positive current collector resistance [Ohm]": R_cc_p * R_scale,
         }
 
+        # Add spatial variables
+        var = pybamm.standard_spatial_vars
+        L_y = pybamm.geometric_parameters.L_y
+        L_z = pybamm.geometric_parameters.L_z
+        if self.options["dimensionality"] == 1:
+            variables.update({"z": var.z, "z [m]": var.z * L_z})
+        elif self.options["dimensionality"] == 2:
+            variables.update(
+                {"y": var.y, "y [m]": var.y * L_y, "z": var.z, "z [m]": var.z * L_z}
+            )
+
         return variables
 
     def set_algebraic(self, variables):
@@ -342,6 +353,14 @@ class AlternativeEffectiveResistance2D(pybamm.BaseModel):
             "Effective positive current collector resistance": R_cc_p,
             "Effective positive current collector resistance [Ohm]": R_cc_p * R_scale,
         }
+
+        # Add spatial variables
+        var = pybamm.standard_spatial_vars
+        L_y = pybamm.geometric_parameters.L_y
+        L_z = pybamm.geometric_parameters.L_z
+        self.variables.update(
+            {"y": var.y, "y [m]": var.y * L_y, "z": var.z, "z [m]": var.z * L_z}
+        )
 
         pybamm.citations.register("timms2020")
 

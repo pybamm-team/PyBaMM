@@ -469,10 +469,9 @@ class TestSimulation(unittest.TestCase):
         )
         sim.solve()
         current = sim.solution["Current [A]"]
-        tau = sim.model.timescale.evaluate()
         self.assertEqual(current(0), 1)
-        self.assertEqual(current(1500 / tau), -0.5)
-        self.assertEqual(current(3000 / tau), 0.5)
+        self.assertEqual(current(1500), -0.5)
+        self.assertEqual(current(3000), 0.5)
 
 
 if __name__ == "__main__":

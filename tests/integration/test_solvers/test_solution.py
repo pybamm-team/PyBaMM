@@ -54,8 +54,8 @@ class TestSolution(unittest.TestCase):
         self.assertLess(step_sol_time, sol_time)
         # Check both give the same answer
         np.testing.assert_array_almost_equal(
-            solution["Terminal voltage"](solution.t[:-1]),
-            step_solution["Terminal voltage"](solution.t[:-1]),
+            solution["Terminal voltage"](solution.t[:-1] * model.timescale_eval),
+            step_solution["Terminal voltage"](solution.t[:-1] * model.timescale_eval),
             decimal=4,
         )
 
