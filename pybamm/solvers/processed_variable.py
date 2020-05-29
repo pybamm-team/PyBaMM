@@ -60,7 +60,8 @@ class ProcessedVariable(object):
         self.warn = warn
 
         # Set timescale
-        self.timescale = solution.model.timescale_eval
+        self.timescale = solution.model.timescale.evaluate(inputs=solution.inputs)
+
         self.t_pts = self.t_sol * self.timescale
 
         # Store spatial variables to get scales
