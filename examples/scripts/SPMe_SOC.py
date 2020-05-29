@@ -85,7 +85,7 @@ for l_n in thicknesses:
         xnsurf = sol["X-averaged negative particle surface concentration"]
         time = sol["Time [h]"]
         # Coulomb counting
-        time_secs = sol.t * model.timescale_eval
+        time_secs = sol["Time [s]"].entries
         time_hours = time(time_secs)
         dc_time = np.around(time_hours[-1], 3)
         # Capacity mAh

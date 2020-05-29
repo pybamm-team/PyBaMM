@@ -20,7 +20,7 @@ class TestSolution(unittest.TestCase):
         self.assertEqual(sol.y_event, None)
         self.assertEqual(sol.termination, "final time")
         self.assertEqual(sol.inputs, {})
-        self.assertEqual(sol.model, None)
+        self.assertIsInstance(sol.model, pybamm.BaseModel)
 
         with self.assertRaisesRegex(AttributeError, "sub solutions"):
             print(sol.sub_solutions)

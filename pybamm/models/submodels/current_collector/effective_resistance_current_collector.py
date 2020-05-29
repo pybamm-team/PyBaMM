@@ -40,9 +40,6 @@ class EffectiveResistance(pybamm.BaseModel):
         self.options = options
         self.param = pybamm.standard_parameters_lithium_ion
 
-        # Default timescale is discharge timescale (used in post process)
-        self.timescale = self.param.tau_discharge
-
         self.variables = self.get_fundamental_variables()
         self.set_algebraic(self.variables)
         self.set_boundary_conditions(self.variables)

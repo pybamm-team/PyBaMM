@@ -60,18 +60,17 @@ class ProcessedVariable(object):
         self.warn = warn
 
         # Set timescale
-        try:
-            self.timescale = solution.model.timescale_eval
-        except AttributeError:
-            if self.warn:
-                pybamm.logger.warning("No timescale provided. Using default of 1 [s]")
-            self.timescale = 1
+        self.timescale = solution.model.timescale_eval
+        self.t_pts = self.t_sol * self.timescale
 
         # Store spatial variables to get scales
         self.spatial_vars = {}
         if solution.model:
             for var in ["x", "y", "z", "r_n", "r_p"]:
-                if var and var + " [m]" in solution.model.variables:
+                if (
+                    var in solution.model.variables
+                    and var + " [m]" in solution.model.variables
+                ):
                     self.spatial_vars[var] = solution.model.variables[var]
                     self.spatial_vars[var + " [m]"] = solution.model.variables[
                         var + " [m]"
@@ -156,7 +155,7 @@ class ProcessedVariable(object):
             self._interpolation_function = fun
         else:
             self._interpolation_function = interp.interp1d(
-                self.t_sol * self.timescale,
+                self.t_pts,
                 entries,
                 kind="linear",
                 fill_value=np.nan,
@@ -250,7 +249,7 @@ class ProcessedVariable(object):
             # function of space and time. Note that the order of 't' and 'space'
             # is the reverse of what you'd expect
             self._interpolation_function = interp.interp2d(
-                self.t_sol * self.timescale,
+                self.t_pts,
                 self.first_dim_pts,
                 entries_for_interp,
                 kind="linear",
@@ -353,7 +352,7 @@ class ProcessedVariable(object):
         else:
             # function of space and time.
             self._interpolation_function = interp.RegularGridInterpolator(
-                (self.first_dim_pts, self.second_dim_pts, self.t_sol * self.timescale),
+                (self.first_dim_pts, self.second_dim_pts, self.t_pts),
                 entries,
                 method="linear",
                 fill_value=np.nan,
@@ -418,7 +417,7 @@ class ProcessedVariable(object):
         else:
             # function of space and time.
             self._interpolation_function = interp.RegularGridInterpolator(
-                (self.first_dim_pts, self.second_dim_pts, self.t_sol * self.timescale),
+                (self.first_dim_pts, self.second_dim_pts, self.t_pts),
                 entries,
                 method="linear",
                 fill_value=np.nan,
@@ -436,10 +435,10 @@ class ProcessedVariable(object):
         # time) evaluate arbitrarily at the first value of t. Otherwise, raise
         # an error
         if t is None:
-            if len(self.t_sol) == 1:
-                t = self.t_sol * self.timescale
+            if len(self.t_pts) == 1:
+                t = self.t_pts
             elif self.base_variable.is_constant():
-                t = self.t_sol[0] * self.timescale
+                t = self.t_pts[0]
             else:
                 raise ValueError(
                     "t cannot be None for variable {}".format(self.base_variable)

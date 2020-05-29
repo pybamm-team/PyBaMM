@@ -42,6 +42,7 @@
 
 ## Breaking changes
 
+-   Calls to `ProcessedVariable` objects are now made using dimensional time and space ([#1028](https://github.com/pybamm-team/PyBaMM/pull/1028))
 -   For variables discretised using finite elements the result returned by calling `ProcessedVariable` is now transposed ([#1020](https://github.com/pybamm-team/PyBaMM/pull/1020))
 -   Renamed "surface area density" to "surface area to volume ratio" ([#975](https://github.com/pybamm-team/PyBaMM/pull/975))
 -   Replaced "reaction rate" with "exchange-current density" ([#975](https://github.com/pybamm-team/PyBaMM/pull/975))

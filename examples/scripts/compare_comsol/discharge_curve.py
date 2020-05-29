@@ -64,7 +64,7 @@ for key, C_rate in C_rates.items():
     solution = pybamm.CasadiSolver(mode="fast").solve(
         model, t, inputs={"Current function [A]": current}
     )
-    time_in_seconds = solution.t * model.timescale_eval
+    time_in_seconds = solution["Time [s]"].entries
 
     # discharge capacity
     discharge_capacity = solution["Discharge capacity [A.h]"]
