@@ -20,7 +20,7 @@ class TestSolution(unittest.TestCase):
         self.assertEqual(sol.y_event, None)
         self.assertEqual(sol.termination, "final time")
         self.assertEqual(sol.inputs, {})
-        self.assertEqual(sol.model, None)
+        self.assertIsInstance(sol.model, pybamm.BaseModel)
 
         with self.assertRaisesRegex(AttributeError, "sub solutions"):
             print(sol.sub_solutions)
@@ -148,7 +148,7 @@ class TestSolution(unittest.TestCase):
         model = pybamm.lithium_ion.SPM()
         geometry = model.default_geometry
         param = model.default_parameter_values
-        param.update({"Electrode height [m]": "[input]"})
+        param.update({"Negative electrode conductivity [S.m-1]": "[input]"})
         param.process_model(model)
         param.process_geometry(geometry)
         var = pybamm.standard_spatial_vars
@@ -163,7 +163,7 @@ class TestSolution(unittest.TestCase):
             spatial_methods=spatial_methods,
             solver=solver,
         )
-        inputs = {"Electrode height [m]": 0.1}
+        inputs = {"Negative electrode conductivity [S.m-1]": 0.1}
         sim.solve(t_eval=np.linspace(0, 10, 10), inputs=inputs)
         time = sim.solution["Time [h]"](sim.solution.t)
         self.assertEqual(len(time), 10)
