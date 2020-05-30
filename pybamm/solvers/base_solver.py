@@ -218,6 +218,16 @@ class BaseSolver(object):
                 if model.use_simplify:
                     report(f"Simplifying {name}")
                     func = simp.simplify(func)
+
+                if model.convert_to_format == "python":
+                    report(f"Converting {name} to python")
+                    func = pybamm.EvaluatorPython(func)
+                if model.convert_to_format == "jax":
+                    report(f"Converting {name} to jax")
+                    func = pybamm.EvaluatorJax(func)
+
+                func = func.evaluate
+
                 if use_jacobian:
                     report(f"Calculating jacobian for {name}")
                     jac = jacobian.jac(func, y)
@@ -227,13 +237,12 @@ class BaseSolver(object):
                     if model.convert_to_format == "python":
                         report(f"Converting jacobian for {name} to python")
                         jac = pybamm.EvaluatorPython(jac)
-                    jac = jac.evaluate
+                    elif model.convert_to_format == "jax":
+                        report(f"Converting jacobian for {name} to jax")
+                        jac = func.get_jacobian()
                 else:
                     jac = None
-                if model.convert_to_format == "python":
-                    report(f"Converting {name} to python")
-                    func = pybamm.EvaluatorPython(func)
-                func = func.evaluate
+
             else:
                 # Process with CasADi
                 report(f"Converting {name} to CasADi")

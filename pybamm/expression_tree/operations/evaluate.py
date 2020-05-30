@@ -353,7 +353,7 @@ class EvaluatorJax:
         python_str = python_str + \
             '\n\nself._jit_evaluate = jax.jit(evaluate_jax, static_argnums=0)'
 
-        # store the jacobian using forward mode autodiff
+        # store the jacobian evaluate function using forward mode autodiff
         python_str = python_str + \
             '\n\njacobian_evaluate = jax.jacfwd(evaluate_jax, argnums=2)' + \
             '\n\nself._jac_evaluate = jax.jit(jacobian_evaluate, static_argnums=0)'
@@ -364,6 +364,9 @@ class EvaluatorJax:
             python_str, result_var, "exec"
         )
         exec(compiled_function)
+
+    def get_jacobian(self):
+        return EvaluatorJaxJacobian(self._jac_evaluate, self._constants)
 
     def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
         """
@@ -381,3 +384,29 @@ class EvaluatorJax:
             return result, known_evals
         else:
             return result
+
+
+class EvaluatorJaxJacobian:
+    def __init__(self, jac_evaluate, constants):
+        self._jac_evaluate = jac_evaluate
+        self._constants = constants
+
+    def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
+        """
+        Acts as a drop-in replacement for :func:`pybamm.Symbol.evaluate`
+        """
+        # generated code assumes y is a column vector
+        if y is not None and y.ndim == 1:
+            y = y.reshape(-1, 1)
+
+        # execute code
+        result = self._jac_evaluate(self._constants, t, y, y_dot, inputs, known_evals)
+
+        # don't need known_evals, but need to reproduce Symbol.evaluate signature
+        if known_evals is not None:
+            return result, known_evals
+        else:
+            return result
+
+
+
