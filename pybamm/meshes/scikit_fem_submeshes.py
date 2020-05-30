@@ -68,6 +68,31 @@ class ScikitSubMesh2D(SubMesh):
             self.fem_mesh, self.element, facets=self.positive_tab_facets
         )
 
+    def read_lims(self, lims):
+        # Separate limits and tabs
+        # Read and remove tabs. If "tabs" is not a key in "lims", then tabs is set to
+        # "None" and nothing is removed from lims
+        tabs = lims.pop("tabs", None)
+
+        # check that two variables have been passed in
+        if len(lims) != 2:
+            raise pybamm.GeometryError(
+                "lims should contain exactly two variables, not {}".format(len(lims))
+            )
+
+        # get spatial variables
+        spatial_vars = list(lims.keys())
+
+        # check coordinate system agrees
+        if spatial_vars[0].coord_sys != spatial_vars[1].coord_sys:
+            raise pybamm.DomainError(
+                """spatial variables should have the same coordinate system,
+                but have coordinate systems {} and {}""".format(
+                    spatial_vars[0].coord_sys, spatial_vars[1].coord_sys
+                )
+            )
+        return spatial_vars, tabs
+
     def on_boundary(self, y, z, tab):
         """
         A method to get the degrees of freedom corresponding to the subdomains
@@ -130,34 +155,13 @@ class ScikitUniform2DSubMesh(ScikitSubMesh2D):
     npts : dict
         A dictionary that contains the number of points to be used on each
         spatial variable
-    tabs : dict
-        A dictionary that contains information about the size and location of
-        the tabs
 
     **Extends:"": :class:`pybamm.ScikitSubMesh2D`
     """
 
-    def __init__(self, lims, npts, tabs):
-
-        # check that two variables have been passed in
-        if len(lims) != 2:
-            raise pybamm.GeometryError(
-                "lims should contain exactly two variables, not {}".format(len(lims))
-            )
-
-        # get spatial variables
-        spatial_vars = list(lims.keys())
-
-        # check coordinate system agrees
-        if spatial_vars[0].coord_sys == spatial_vars[1].coord_sys:
-            coord_sys = spatial_vars[0].coord_sys
-        else:
-            raise pybamm.DomainError(
-                """spatial variables should have the same coordinate system,
-                but have coordinate systems {} and {}""".format(
-                    spatial_vars[0].coord_sys, spatial_vars[1].coord_sys
-                )
-            )
+    def __init__(self, lims, npts):
+        spatial_vars, tabs = self.read_lims(lims)
+        coord_sys = spatial_vars[0].coord_sys
 
         # compute edges
         edges = {}
@@ -200,9 +204,6 @@ class ScikitExponential2DSubMesh(ScikitSubMesh2D):
     npts : dict
         A dictionary that contains the number of points to be used on each
         spatial variable
-    tabs : dict
-        A dictionary that contains information about the size and location of
-        the tabs
     side : str, optional
         Whether the points are clustered near to a particular boundary. At present,
         can only be "top". Default is "top".
@@ -212,7 +213,7 @@ class ScikitExponential2DSubMesh(ScikitSubMesh2D):
     **Extends:"": :class:`pybamm.ScikitSubMesh2D`
     """
 
-    def __init__(self, lims, npts, tabs, side="top", stretch=2.3):
+    def __init__(self, lims, npts, side="top", stretch=2.3):
 
         # check side is top
         if side != "top":
@@ -220,25 +221,8 @@ class ScikitExponential2DSubMesh(ScikitSubMesh2D):
                 "At present, side can only be 'top', but is set to {}".format(side)
             )
 
-        # check that two variables have been passed in
-        if len(lims) != 2:
-            raise pybamm.GeometryError(
-                "lims should contain exactly two variables, not {}".format(len(lims))
-            )
-
-        # get spatial variables
-        spatial_vars = list(lims.keys())
-
-        # check coordinate system agrees
-        if spatial_vars[0].coord_sys == spatial_vars[1].coord_sys:
-            coord_sys = spatial_vars[0].coord_sys
-        else:
-            raise pybamm.DomainError(
-                """spatial variables should have the same coordinate system,
-                but have coordinate systems {} and {}""".format(
-                    spatial_vars[0].coord_sys, spatial_vars[1].coord_sys
-                )
-            )
+        spatial_vars, tabs = self.read_lims(lims)
+        coord_sys = spatial_vars[0].coord_sys
 
         # compute edges
         edges = {}
@@ -288,34 +272,13 @@ class ScikitChebyshev2DSubMesh(ScikitSubMesh2D):
     npts : dict
         A dictionary that contains the number of points to be used on each
         spatial variable
-    tabs : dict
-        A dictionary that contains information about the size and location of
-        the tabs
 
     **Extends:"": :class:`pybamm.ScikitSubMesh2D`
     """
 
-    def __init__(self, lims, npts, tabs):
-
-        # check that two variables have been passed in
-        if len(lims) != 2:
-            raise pybamm.GeometryError(
-                "lims should contain exactly two variables, not {}".format(len(lims))
-            )
-
-        # get spatial variables
-        spatial_vars = list(lims.keys())
-
-        # check coordinate system agrees
-        if spatial_vars[0].coord_sys == spatial_vars[1].coord_sys:
-            coord_sys = spatial_vars[0].coord_sys
-        else:
-            raise pybamm.DomainError(
-                """spatial variables should have the same coordinate system,
-                but have coordinate systems {} and {}""".format(
-                    spatial_vars[0].coord_sys, spatial_vars[1].coord_sys
-                )
-            )
+    def __init__(self, lims, npts):
+        spatial_vars, tabs = self.read_lims(lims)
+        coord_sys = spatial_vars[0].coord_sys
 
         # compute edges
         edges = {}
@@ -355,9 +318,6 @@ class UserSupplied2DSubMesh(ScikitSubMesh2D):
         A dictionary that contains the number of points to be used on each
         spatial variable. Note: the number of nodes (located at the cell centres)
         is npts, and the number of edges is npts+1.
-    tabs : dict
-        A dictionary that contains information about the size and location of
-        the tabs
     y_edges : array_like
         The array of points which correspond to the edges in the y direction
         of the mesh.
@@ -368,7 +328,7 @@ class UserSupplied2DSubMesh(ScikitSubMesh2D):
     **Extends:"": :class:`pybamm.ScikitSubMesh2D`
     """
 
-    def __init__(self, lims, npts, tabs, y_edges=None, z_edges=None):
+    def __init__(self, lims, npts, y_edges=None, z_edges=None):
 
         # raise error if no edges passed
         if y_edges is None:
@@ -376,25 +336,8 @@ class UserSupplied2DSubMesh(ScikitSubMesh2D):
         if z_edges is None:
             raise pybamm.GeometryError("User mesh requires parameter 'z_edges'")
 
-        # check that two variables have been passed in
-        if len(lims) != 2:
-            raise pybamm.GeometryError(
-                "lims should contain exactly two variables, not {}".format(len(lims))
-            )
-
-        # get spatial variables
-        spatial_vars = list(lims.keys())
-
-        # check coordinate system agrees
-        if spatial_vars[0].coord_sys == spatial_vars[1].coord_sys:
-            coord_sys = spatial_vars[0].coord_sys
-        else:
-            raise pybamm.DomainError(
-                """spatial variables should have the same coordinate system,
-                but have coordinate systems {} and {}""".format(
-                    spatial_vars[0].coord_sys, spatial_vars[1].coord_sys
-                )
-            )
+        spatial_vars, tabs = self.read_lims(lims)
+        coord_sys = spatial_vars[0].coord_sys
 
         # check and store edges
         edges = {"y": y_edges, "z": z_edges}

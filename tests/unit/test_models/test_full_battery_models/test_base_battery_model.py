@@ -46,21 +46,12 @@ class TestBaseBatteryModel(unittest.TestCase):
 
         model = pybamm.BaseBatteryModel({"dimensionality": 0})
         self.assertEqual(
-            model.default_geometry["current collector"]["primary"][var.z][
-                "position"
-            ].id,
-            pybamm.Scalar(1).id,
+            model.default_geometry["current collector"][var.z]["position"], 1
         )
         model = pybamm.BaseBatteryModel({"dimensionality": 1})
-        self.assertEqual(
-            model.default_geometry["current collector"]["primary"][var.z]["min"].id,
-            pybamm.Scalar(0).id,
-        )
+        self.assertEqual(model.default_geometry["current collector"][var.z]["min"], 0)
         model = pybamm.BaseBatteryModel({"dimensionality": 2})
-        self.assertEqual(
-            model.default_geometry["current collector"]["primary"][var.y]["min"].id,
-            pybamm.Scalar(0).id,
-        )
+        self.assertEqual(model.default_geometry["current collector"][var.y]["min"], 0)
 
     def test_default_submesh_types(self):
         model = pybamm.BaseBatteryModel({"dimensionality": 0})

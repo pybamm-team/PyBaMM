@@ -72,7 +72,7 @@ def get_interp_fun(variable_name, domain):
     elif domain == whole_cell:
         comsol_x = comsol_variables["x"]
     # Make sure to use dimensional space
-    pybamm_x = mesh.combine_submeshes(*domain)[0].nodes * L_x
+    pybamm_x = mesh.combine_submeshes(*domain).nodes * L_x
     variable = interp.interp1d(comsol_x, variable, axis=0)(pybamm_x)
 
     def myinterp(t):

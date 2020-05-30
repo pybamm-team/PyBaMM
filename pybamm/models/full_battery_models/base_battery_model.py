@@ -106,12 +106,9 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     @property
     def default_geometry(self):
-        if self.options["dimensionality"] == 0:
-            return pybamm.Geometry("1D macro", "1+1D micro")
-        elif self.options["dimensionality"] == 1:
-            return pybamm.Geometry("1+1D macro", "1+1D micro")
-        elif self.options["dimensionality"] == 2:
-            return pybamm.Geometry("2+1D macro", "1+1D micro")
+        return pybamm.battery_geometry(
+            current_collector_dimension=self.options["dimensionality"]
+        )
 
     @property
     def default_var_pts(self):

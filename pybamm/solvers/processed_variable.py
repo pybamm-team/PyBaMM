@@ -95,7 +95,7 @@ class ProcessedVariable(object):
         if (
             self.mesh
             and "current collector" in self.domain
-            and isinstance(self.mesh[0], pybamm.ScikitSubMesh2D)
+            and isinstance(self.mesh, pybamm.ScikitSubMesh2D)
         ):
             self.initialise_2D_scikit_fem()
 
@@ -108,16 +108,16 @@ class ProcessedVariable(object):
             ):
                 self.initialise_0D()
             else:
-                n = self.mesh[0].npts
+                n = self.mesh.npts
                 base_shape = self.base_eval.shape[0]
                 # Try some shapes that could make the variable a 1D variable
                 if base_shape in [n, n + 1]:
                     self.initialise_1D()
                 else:
                     # Try some shapes that could make the variable a 2D variable
-                    first_dim_nodes = self.mesh[0].nodes
-                    first_dim_edges = self.mesh[0].edges
-                    second_dim_pts = self.base_variable.secondary_mesh[0].nodes
+                    first_dim_nodes = self.mesh.nodes
+                    first_dim_edges = self.mesh.edges
+                    second_dim_pts = self.base_variable.secondary_mesh.nodes
                     if self.base_eval.size // len(second_dim_pts) in [
                         len(first_dim_nodes),
                         len(first_dim_edges),
@@ -184,8 +184,8 @@ class ProcessedVariable(object):
                 entries[:, idx] = self.base_variable.evaluate(t, u, inputs=inputs)[:, 0]
 
         # Get node and edge values
-        nodes = self.mesh[0].nodes
-        edges = self.mesh[0].edges
+        nodes = self.mesh.nodes
+        edges = self.mesh.edges
         if entries.shape[0] == len(nodes):
             space = nodes
         elif entries.shape[0] == len(edges):
@@ -225,7 +225,7 @@ class ProcessedVariable(object):
         self.first_dim_pts = space * self.get_spatial_scale(
             self.first_dimension, self.domain[0]
         )
-        self.internal_boundaries = self.mesh[0].internal_boundaries
+        self.internal_boundaries = self.mesh.internal_boundaries
 
         # set up interpolation
         if len(self.t_sol) == 1:
@@ -261,9 +261,9 @@ class ProcessedVariable(object):
         """
         Initialise a 2D object that depends on x and r, or x and z.
         """
-        first_dim_nodes = self.mesh[0].nodes
-        first_dim_edges = self.mesh[0].edges
-        second_dim_pts = self.base_variable.secondary_mesh[0].nodes
+        first_dim_nodes = self.mesh.nodes
+        first_dim_edges = self.mesh.edges
+        second_dim_pts = self.base_variable.secondary_mesh.nodes
         if self.base_eval.size // len(second_dim_pts) == len(first_dim_nodes):
             first_dim_pts = first_dim_nodes
         elif self.base_eval.size // len(second_dim_pts) == len(first_dim_edges):
@@ -360,9 +360,9 @@ class ProcessedVariable(object):
             )
 
     def initialise_2D_scikit_fem(self):
-        y_sol = self.mesh[0].edges["y"]
+        y_sol = self.mesh.edges["y"]
         len_y = len(y_sol)
-        z_sol = self.mesh[0].edges["z"]
+        z_sol = self.mesh.edges["z"]
         len_z = len(z_sol)
         entries = np.empty((len_y, len_z, len(self.t_sol)))
 

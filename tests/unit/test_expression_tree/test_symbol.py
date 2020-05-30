@@ -39,6 +39,7 @@ class TestSymbol(unittest.TestCase):
     def test_symbol_domains(self):
         a = pybamm.Symbol("a", domain="test")
         self.assertEqual(a.domain, ["test"])
+        self.assertEqual(a.domains["primary"], ["test"])
         a = pybamm.Symbol("a", domain=["t", "e", "s"])
         self.assertEqual(a.domain, ["t", "e", "s"])
         with self.assertRaises(TypeError):
@@ -63,6 +64,9 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual(a.domain, ["test"])
         self.assertEqual(
             a.auxiliary_domains, {"secondary": ["sec"], "tertiary": ["tert"]}
+        )
+        self.assertEqual(
+            a.domains, {"primary": ["test"], "secondary": ["sec"], "tertiary": ["tert"]}
         )
         a = pybamm.Symbol("a", domain=["t", "e", "s"])
         self.assertEqual(a.domain, ["t", "e", "s"])

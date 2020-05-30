@@ -57,6 +57,19 @@ class SubMesh1D(SubMesh):
                         )
                     )
 
+    def read_lims(self, lims):
+        # Separate limits and tabs
+        # Read and remove tabs. If "tabs" is not a key in "lims", then tabs is set to
+        # "None" and nothing is removed from lims
+        tabs = lims.pop("tabs", None)
+
+        # check that only one variable passed in
+        if len(lims) != 1:
+            raise pybamm.GeometryError("lims should only contain a single variable")
+
+        ((spatial_var, spatial_lims),) = lims.items()
+        return spatial_var, spatial_lims, tabs
+
 
 class Uniform1DSubMesh(SubMesh1D):
     """
@@ -70,21 +83,13 @@ class Uniform1DSubMesh(SubMesh1D):
         A dictionary that contains the number of points to be used on each
         spatial variable. Note: the number of nodes (located at the cell centres)
         is npts, and the number of edges is npts+1.
-    tabs : dict, optional
-        A dictionary that contains information about the size and location of
-        the tabs
 
     **Extends:"": :class:`pybamm.SubMesh1D`
     """
 
-    def __init__(self, lims, npts, tabs=None):
+    def __init__(self, lims, npts):
 
-        # check that only one variable passed in
-        if len(lims) != 1:
-            raise pybamm.GeometryError("lims should only contain a single variable")
-
-        spatial_var = list(lims.keys())[0]
-        spatial_lims = lims[spatial_var]
+        spatial_var, spatial_lims, tabs = self.read_lims(lims)
         npts = npts[spatial_var.id]
 
         edges = np.linspace(spatial_lims["min"], spatial_lims["max"], npts + 1)
@@ -134,9 +139,6 @@ class Exponential1DSubMesh(SubMesh1D):
         A dictionary that contains the number of points to be used on each
         spatial variable. Note: the number of nodes (located at the cell centres)
         is npts, and the number of edges is npts+1.
-    tabs : dict
-        A dictionary that contains information about the size and location of
-        the tabs
     side : str, optional
         Whether the points are clustered near to the left or right boundary,
         or both boundaries. Can be "left", "right" or "symmetric". Default is
@@ -149,14 +151,9 @@ class Exponential1DSubMesh(SubMesh1D):
     **Extends:"": :class:`pybamm.SubMesh1D`
     """
 
-    def __init__(self, lims, npts, tabs, side="symmetric", stretch=None):
+    def __init__(self, lims, npts, side="symmetric", stretch=None):
 
-        # check that only one variable passed in
-        if len(lims) != 1:
-            raise pybamm.GeometryError("lims should only contain a single variable")
-
-        spatial_var = list(lims.keys())[0]
-        spatial_lims = lims[spatial_var]
+        spatial_var, spatial_lims, tabs = self.read_lims(lims)
         a = spatial_lims["min"]
         b = spatial_lims["max"]
         npts = npts[spatial_var.id]
@@ -236,12 +233,7 @@ class Chebyshev1DSubMesh(SubMesh1D):
 
     def __init__(self, lims, npts, tabs=None):
 
-        # check that only one variable passed in
-        if len(lims) != 1:
-            raise pybamm.GeometryError("lims should only contain a single variable")
-
-        spatial_var = list(lims.keys())[0]
-        spatial_lims = lims[spatial_var]
+        spatial_var, spatial_lims, tabs = self.read_lims(lims)
         npts = npts[spatial_var.id]
 
         # Create N Chebyshev nodes in the interval (a,b)
@@ -272,27 +264,19 @@ class UserSupplied1DSubMesh(SubMesh1D):
         A dictionary that contains the number of points to be used on each
         spatial variable. Note: the number of nodes (located at the cell centres)
         is npts, and the number of edges is npts+1.
-    tabs : dict
-        A dictionary that contains information about the size and location of
-        the tabs
     edges : array_like
         The array of points which correspond to the edges of the mesh.
 
     **Extends:"": :class:`pybamm.SubMesh1D`
     """
 
-    def __init__(self, lims, npts, tabs, edges=None):
+    def __init__(self, lims, npts, edges=None):
 
         # raise error if no edges passed
         if edges is None:
             raise pybamm.GeometryError("User mesh requires parameter 'edges'")
 
-        # check that only one variable passed in
-        if len(lims) != 1:
-            raise pybamm.GeometryError("lims should only contain a single variable")
-
-        spatial_var = list(lims.keys())[0]
-        spatial_lims = lims[spatial_var]
+        spatial_var, spatial_lims, tabs = self.read_lims(lims)
         npts = npts[spatial_var.id]
 
         # check that npts + 1 equals number of user-supplied edges

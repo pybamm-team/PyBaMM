@@ -66,7 +66,7 @@ class TestProcessedVariable(unittest.TestCase):
         )
 
         # On edges
-        x_s_edge = pybamm.Matrix(disc.mesh["separator"][0].edges, domain="separator")
+        x_s_edge = pybamm.Matrix(disc.mesh["separator"].edges, domain="separator")
         x_s_edge.mesh = disc.mesh["separator"]
         processed_x_s_edge = pybamm.ProcessedVariable(
             x_s_edge, pybamm.Solution(t_sol, y_sol), warn=False
@@ -89,10 +89,8 @@ class TestProcessedVariable(unittest.TestCase):
 
     def test_processed_variable_1D_unknown_domain(self):
         x = pybamm.SpatialVariable("x", domain="SEI layer", coord_sys="cartesian")
-        geometry = pybamm.Geometry()
-        geometry.add_domain(
-            "SEI layer",
-            {"primary": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}},
+        geometry = pybamm.Geometry(
+            {"SEI layer": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
         )
 
         submesh_types = {"SEI layer": pybamm.Uniform1DSubMesh}
@@ -120,7 +118,11 @@ class TestProcessedVariable(unittest.TestCase):
             auxiliary_domains={"secondary": ["negative electrode"]},
         )
         x = pybamm.SpatialVariable("x", domain=["negative electrode"])
-        r = pybamm.SpatialVariable("r", domain=["negative particle"])
+        r = pybamm.SpatialVariable(
+            "r",
+            domain=["negative particle"],
+            auxiliary_domains={"secondary": ["negative electrode"]},
+        )
 
         disc = tests.get_p2d_discretisation_for_testing()
         disc.set_variable_slices([var])
@@ -146,7 +148,11 @@ class TestProcessedVariable(unittest.TestCase):
             domain=["negative electrode", "separator"],
             auxiliary_domains={"secondary": "current collector"},
         )
-        x = pybamm.SpatialVariable("x", domain=["negative electrode", "separator"])
+        x = pybamm.SpatialVariable(
+            "x",
+            domain=["negative electrode", "separator"],
+            auxiliary_domains={"secondary": "current collector"},
+        )
         z = pybamm.SpatialVariable("z", domain=["current collector"])
 
         disc = tests.get_1p1d_discretisation_for_testing()
@@ -169,7 +175,7 @@ class TestProcessedVariable(unittest.TestCase):
 
         # On edges
         x_s_edge = pybamm.Matrix(
-            np.tile(disc.mesh["separator"][0].edges, len(z_sol)),
+            np.tile(disc.mesh["separator"].edges, len(z_sol)),
             domain="separator",
             auxiliary_domains={"secondary": "current collector"},
         )
@@ -189,7 +195,11 @@ class TestProcessedVariable(unittest.TestCase):
             auxiliary_domains={"secondary": ["negative electrode"]},
         )
         x = pybamm.SpatialVariable("x", domain=["negative electrode"])
-        r = pybamm.SpatialVariable("r", domain=["negative particle"])
+        r = pybamm.SpatialVariable(
+            "r",
+            domain=["negative particle"],
+            auxiliary_domains={"secondary": ["negative electrode"]},
+        )
 
         disc = tests.get_p2d_discretisation_for_testing()
         disc.set_variable_slices([var])
@@ -214,8 +224,8 @@ class TestProcessedVariable(unittest.TestCase):
 
         disc = tests.get_2p1d_discretisation_for_testing()
         disc.set_variable_slices([var])
-        y = disc.mesh["current collector"][0].edges["y"]
-        z = disc.mesh["current collector"][0].edges["z"]
+        y = disc.mesh["current collector"].edges["y"]
+        z = disc.mesh["current collector"].edges["z"]
         var_sol = disc.process_symbol(var)
         var_sol.mesh = disc.mesh["current collector"]
         t_sol = np.linspace(0, 1)
@@ -233,8 +243,8 @@ class TestProcessedVariable(unittest.TestCase):
 
         disc = tests.get_2p1d_discretisation_for_testing()
         disc.set_variable_slices([var])
-        y = disc.mesh["current collector"][0].edges["y"]
-        z = disc.mesh["current collector"][0].edges["z"]
+        y = disc.mesh["current collector"].edges["y"]
+        z = disc.mesh["current collector"].edges["z"]
         var_sol = disc.process_symbol(var)
         var_sol.mesh = disc.mesh["current collector"]
         t_sol = np.array([0])
@@ -344,7 +354,7 @@ class TestProcessedVariable(unittest.TestCase):
 
         # On microscale
         r_n = pybamm.Matrix(
-            disc.mesh["negative particle"][0].nodes, domain="negative particle"
+            disc.mesh["negative particle"].nodes, domain="negative particle"
         )
         r_n.mesh = disc.mesh["negative particle"]
         processed_r_n = pybamm.ProcessedVariable(
@@ -385,7 +395,11 @@ class TestProcessedVariable(unittest.TestCase):
             auxiliary_domains={"secondary": ["negative electrode"]},
         )
         x = pybamm.SpatialVariable("x", domain=["negative electrode"])
-        r = pybamm.SpatialVariable("r", domain=["negative particle"])
+        r = pybamm.SpatialVariable(
+            "r",
+            domain=["negative particle"],
+            auxiliary_domains={"secondary": ["negative electrode"]},
+        )
 
         disc = tests.get_p2d_discretisation_for_testing()
         disc.set_variable_slices([var])
@@ -426,7 +440,11 @@ class TestProcessedVariable(unittest.TestCase):
             auxiliary_domains={"secondary": ["positive electrode"]},
         )
         x = pybamm.SpatialVariable("x", domain=["positive electrode"])
-        r = pybamm.SpatialVariable("r", domain=["positive particle"])
+        r = pybamm.SpatialVariable(
+            "r",
+            domain=["positive particle"],
+            auxiliary_domains={"secondary": ["positive electrode"]},
+        )
 
         disc.set_variable_slices([var])
         x_sol = disc.process_symbol(x).entries[:, 0]
@@ -452,7 +470,11 @@ class TestProcessedVariable(unittest.TestCase):
             auxiliary_domains={"secondary": ["negative electrode"]},
         )
         x = pybamm.SpatialVariable("x", domain=["negative electrode"])
-        r = pybamm.SpatialVariable("r", domain=["negative particle"])
+        r = pybamm.SpatialVariable(
+            "r",
+            domain=["negative particle"],
+            auxiliary_domains={"secondary": ["negative electrode"]},
+        )
 
         disc = tests.get_p2d_discretisation_for_testing()
         disc.set_variable_slices([var])
@@ -479,7 +501,11 @@ class TestProcessedVariable(unittest.TestCase):
         var = pybamm.Variable("var", domain=["negative particle"])
         broad_var = pybamm.SecondaryBroadcast(var, "negative electrode")
         x = pybamm.SpatialVariable("x", domain=["negative electrode"])
-        r = pybamm.SpatialVariable("r", domain=["negative particle"])
+        r = pybamm.SpatialVariable(
+            "r",
+            domain=["negative particle"],
+            auxiliary_domains={"secondary": ["negative electrode"]},
+        )
 
         disc = tests.get_discretisation_for_testing()
         disc.set_variable_slices([var])
@@ -515,7 +541,11 @@ class TestProcessedVariable(unittest.TestCase):
         var = pybamm.Variable("var", domain=["positive particle"])
         broad_var = pybamm.SecondaryBroadcast(var, "positive electrode")
         x = pybamm.SpatialVariable("x", domain=["positive electrode"])
-        r = pybamm.SpatialVariable("r", domain=["positive particle"])
+        r = pybamm.SpatialVariable(
+            "r",
+            domain=["positive particle"],
+            auxiliary_domains={"secondary": ["positive electrode"]},
+        )
 
         disc.set_variable_slices([var])
         x_sol = disc.process_symbol(x).entries[:, 0]
@@ -537,8 +567,8 @@ class TestProcessedVariable(unittest.TestCase):
 
         disc = tests.get_2p1d_discretisation_for_testing()
         disc.set_variable_slices([var])
-        y_sol = disc.mesh["current collector"][0].edges["y"]
-        z_sol = disc.mesh["current collector"][0].edges["z"]
+        y_sol = disc.mesh["current collector"].edges["y"]
+        z_sol = disc.mesh["current collector"].edges["z"]
         var_sol = disc.process_symbol(var)
         var_sol.mesh = disc.mesh["current collector"]
         t_sol = np.linspace(0, 1)
@@ -577,8 +607,8 @@ class TestProcessedVariable(unittest.TestCase):
 
         disc = tests.get_2p1d_discretisation_for_testing()
         disc.set_variable_slices([var])
-        y_sol = disc.mesh["current collector"][0].edges["y"]
-        z_sol = disc.mesh["current collector"][0].edges["z"]
+        y_sol = disc.mesh["current collector"].edges["y"]
+        z_sol = disc.mesh["current collector"].edges["z"]
         var_sol = disc.process_symbol(var)
         var_sol.mesh = disc.mesh["current collector"]
         t_sol = np.array([0])
@@ -660,7 +690,11 @@ class TestProcessedVariable(unittest.TestCase):
 
         # r domain
         var = pybamm.Variable("var r", domain=["negative particle"])
-        r = pybamm.SpatialVariable("r", domain=["negative particle"])
+        r = pybamm.SpatialVariable(
+            "r",
+            domain=["negative particle"],
+            auxiliary_domains={"secondary": ["negative electrode"]},
+        )
         disc = tests.get_discretisation_for_testing()
         disc.set_variable_slices([var])
         r_sol = disc.process_symbol(r).entries[:, 0]

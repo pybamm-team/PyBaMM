@@ -140,18 +140,8 @@ from .models.submodels.interface import sei
 #
 # Geometry
 #
-from .geometry.geometry import (
-    Geometry,
-    Geometry1DMacro,
-    Geometry3DMacro,
-    Geometry1DMicro,
-    Geometry1p1DMicro,
-    Geometryxp1DMacro,
-    Geometryxp0p1DMicro,
-    Geometryxp1p1DMicro,
-    Geometry1DCurrentCollector,
-    Geometry2DCurrentCollector,
-)
+from .geometry.geometry import Geometry
+from .geometry.battery_geometry import battery_geometry
 
 from .expression_tree.independent_variable import KNOWN_COORD_SYS
 from .geometry import standard_spatial_vars
