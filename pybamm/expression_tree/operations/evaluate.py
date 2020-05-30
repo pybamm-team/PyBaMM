@@ -353,6 +353,11 @@ class EvaluatorJax:
         python_str = python_str + \
             '\n\nself._jit_evaluate = jax.jit(evaluate_jax, static_argnums=0)'
 
+        # store the jacobian using forward mode autodiff
+        python_str = python_str + \
+            '\n\njacobian_evaluate = jax.jacfwd(evaluate_jax, argnums=2)' + \
+            '\n\nself._jac_evaluate = jax.jit(jacobian_evaluate, static_argnums=0)'
+
         # compile and run the generated python code,
         # will store jit evaluate in 'self._jit_evaluate'
         compiled_function = compile(
