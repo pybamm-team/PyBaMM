@@ -413,6 +413,125 @@ class TestEvaluate(unittest.TestCase):
         result = evaluator.evaluate()
         np.testing.assert_allclose(result, expr.evaluate())
 
+    def test_evaluator_jax(self):
+        a = pybamm.StateVector(slice(0, 1))
+        b = pybamm.StateVector(slice(1, 2))
+
+        y_tests = [np.array([[2], [3]]), np.array([[1], [3]])]
+        t_tests = [1, 2]
+
+        # test a * b
+        expr = a * b
+        evaluator = pybamm.EvaluatorJax(expr)
+        result = evaluator.evaluate(t=None, y=np.array([[2], [3]]))
+        self.assertEqual(result, 6)
+        result = evaluator.evaluate(t=None, y=np.array([[1], [3]]))
+        self.assertEqual(result, 3)
+
+        # test function(a*b)
+        expr = pybamm.Function(test_function, a * b)
+        evaluator = pybamm.EvaluatorJax(expr)
+        result = evaluator.evaluate(t=None, y=np.array([[2], [3]]))
+        self.assertEqual(result, 12)
+
+        # test a constant expression
+        expr = pybamm.Scalar(2) * pybamm.Scalar(3)
+        evaluator = pybamm.EvaluatorJax(expr)
+        result = evaluator.evaluate()
+        self.assertEqual(result, 6)
+
+        # test a larger expression
+        expr = a * b + b + a ** 2 / b + 2 * a + b / 2 + 4
+        evaluator = pybamm.EvaluatorJax(expr)
+        for y in y_tests:
+            result = evaluator.evaluate(t=None, y=y)
+            self.assertEqual(result, expr.evaluate(t=None, y=y))
+
+        # test something with time
+        expr = a * pybamm.t
+        evaluator = pybamm.EvaluatorJax(expr)
+        for t, y in zip(t_tests, y_tests):
+            result = evaluator.evaluate(t=t, y=y)
+            self.assertEqual(result, expr.evaluate(t=t, y=y))
+
+        # test something with a matrix multiplication
+        A = pybamm.Matrix(np.array([[1, 2], [3, 4]]))
+        expr = A @ pybamm.StateVector(slice(0, 2))
+        evaluator = pybamm.EvaluatorJax(expr)
+        for t, y in zip(t_tests, y_tests):
+            result = evaluator.evaluate(t=t, y=y)
+            np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
+
+        # test something with a heaviside
+        a = pybamm.Vector(np.array([1, 2]))
+        expr = a <= pybamm.StateVector(slice(0, 2))
+        evaluator = pybamm.EvaluatorJax(expr)
+        for t, y in zip(t_tests, y_tests):
+            result = evaluator.evaluate(t=t, y=y)
+            np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
+
+        expr = a > pybamm.StateVector(slice(0, 2))
+        evaluator = pybamm.EvaluatorJax(expr)
+        for t, y in zip(t_tests, y_tests):
+            result = evaluator.evaluate(t=t, y=y)
+            np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
+
+        # test something with a minimum or maximum
+        a = pybamm.Vector(np.array([1, 2]))
+        expr = pybamm.minimum(a, pybamm.StateVector(slice(0, 2)))
+        evaluator = pybamm.EvaluatorJax(expr)
+        for t, y in zip(t_tests, y_tests):
+            result = evaluator.evaluate(t=t, y=y)
+            np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
+
+        expr = pybamm.maximum(a, pybamm.StateVector(slice(0, 2)))
+        evaluator = pybamm.EvaluatorJax(expr)
+        for t, y in zip(t_tests, y_tests):
+            result = evaluator.evaluate(t=t, y=y)
+            np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
+
+        # test something with an index
+        expr = pybamm.Index(A @ pybamm.StateVector(slice(0, 2)), 0)
+        evaluator = pybamm.EvaluatorJax(expr)
+        for t, y in zip(t_tests, y_tests):
+            result = evaluator.evaluate(t=t, y=y)
+            self.assertEqual(result, expr.evaluate(t=t, y=y))
+
+        # test something with a sparse matrix multiplication
+        A = pybamm.Matrix(np.array([[1, 2], [3, 4]]))
+        B = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))
+        C = pybamm.Matrix(scipy.sparse.coo_matrix(np.array([[1, 0], [0, 4]])))
+        expr = A @ B @ C @ pybamm.StateVector(slice(0, 2))
+        evaluator = pybamm.EvaluatorJax(expr)
+        for t, y in zip(t_tests, y_tests):
+            result = evaluator.evaluate(t=t, y=y)
+            np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
+
+        # test numpy concatenation
+        a = pybamm.Vector(np.array([[1], [2]]))
+        b = pybamm.Vector(np.array([[3]]))
+        expr = pybamm.NumpyConcatenation(a, b)
+        evaluator = pybamm.EvaluatorJax(expr)
+        for t, y in zip(t_tests, y_tests):
+            result = evaluator.evaluate(t=t, y=y)
+            np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
+
+        # test sparse stack
+        A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))
+        B = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[2, 0], [5, 0]])))
+        expr = pybamm.SparseStack(A, B)
+        evaluator = pybamm.EvaluatorJax(expr)
+        for t, y in zip(t_tests, y_tests):
+            result = evaluator.evaluate(t=t, y=y).toarray()
+            np.testing.assert_allclose(result, expr.evaluate(t=t, y=y).toarray())
+
+        # test Inner
+        v = pybamm.Vector(np.ones(5), domain="test")
+        w = pybamm.Vector(2 * np.ones(5), domain="test")
+        expr = pybamm.Inner(v, w)
+        evaluator = pybamm.EvaluatorJax(expr)
+        result = evaluator.evaluate()
+        np.testing.assert_allclose(result, expr.evaluate())
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

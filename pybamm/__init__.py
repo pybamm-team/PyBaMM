@@ -98,6 +98,7 @@ from .expression_tree.operations.evaluate import (
     id_to_python_variable,
     to_python,
     EvaluatorPython,
+    EvaluatorJax,
 )
 from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter

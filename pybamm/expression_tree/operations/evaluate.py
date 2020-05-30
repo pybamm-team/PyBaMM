@@ -8,7 +8,10 @@ import pybamm
 import scipy.sparse  # noqa: F401
 from collections import OrderedDict
 
-import jax.numpy as np
+import numpy as np
+import jax
+from jax.config import config
+config.update("jax_enable_x64", True)
 
 
 def id_to_python_variable(symbol_id, constant=False):
@@ -73,27 +76,36 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
         # TODO: we can pass through a dummy y and t to get the type and then hardcode
         # the right line, avoiding these checks
         if isinstance(symbol, pybamm.Multiplication):
-            symbol_str = (
-                "scipy.sparse.csr_matrix({0}.multiply({1})) "
-                "if scipy.sparse.issparse({0}) else "
-                "scipy.sparse.csr_matrix({1}.multiply({0})) "
-                "if scipy.sparse.issparse({1}) else "
-                "{0} * {1}".format(children_vars[0], children_vars[1])
-            )
+            dummy_eval_left = symbol.children[0].evaluate_for_shape()
+            dummy_eval_right = symbol.children[1].evaluate_for_shape()
+            if scipy.sparse.issparse(dummy_eval_left):
+                symbol_str = "scipy.sparse.csr_matrix({0}.multiply({1}))"\
+                    .format(children_vars[0], children_vars[1])
+            elif scipy.sparse.issparse(dummy_eval_right):
+                symbol_str = "scipy.sparse.csr_matrix({1}.multiply({0}))"\
+                    .format(children_vars[0], children_vars[1])
+            else:
+                symbol_str = "{0} * {1}".format(children_vars[0], children_vars[1])
         elif isinstance(symbol, pybamm.Division):
-            symbol_str = (
-                "scipy.sparse.csr_matrix({0}.multiply(1/{1})) "
-                "if scipy.sparse.issparse({0}) else "
-                "{0} / {1}".format(children_vars[0], children_vars[1])
-            )
+            dummy_eval_left = symbol.children[0].evaluate_for_shape()
+            if scipy.sparse.issparse(dummy_eval_left):
+                symbol_str = "scipy.sparse.csr_matrix({0}.multiply(1/{1}))"\
+                    .format(children_vars[0], children_vars[1])
+            else:
+                symbol_str = "{0} / {1}".format(children_vars[0], children_vars[1])
+
         elif isinstance(symbol, pybamm.Inner):
-            symbol_str = (
-                "{0}.multiply({1}) "
-                "if scipy.sparse.issparse({0}) else "
-                "{1}.multiply({0}) "
-                "if scipy.sparse.issparse({1}) else "
-                "{0} * {1}".format(children_vars[0], children_vars[1])
-            )
+            dummy_eval_left = symbol.children[0].evaluate_for_shape()
+            dummy_eval_right = symbol.children[1].evaluate_for_shape()
+            if scipy.sparse.issparse(dummy_eval_left):
+                symbol_str = "{0}.multiply({1})"\
+                    .format(children_vars[0], children_vars[1])
+            elif scipy.sparse.issparse(dummy_eval_right):
+                symbol_str = "{1}.multiply({0})"\
+                    .format(children_vars[0], children_vars[1])
+            else:
+                symbol_str = "{0} * {1}".format(children_vars[0], children_vars[1])
+
         elif isinstance(symbol, pybamm.Minimum):
             symbol_str = "np.minimum({},{})".format(children_vars[0], children_vars[1])
         elif isinstance(symbol, pybamm.Maximum):
@@ -248,6 +260,7 @@ class EvaluatorPython:
     """
 
     def __init__(self, symbol):
+
         constants, self._variable_function = pybamm.to_python(symbol, debug=False)
 
         # store all the constant symbols in the tree as internal variables of this
@@ -287,6 +300,7 @@ class EvaluatorPython:
             return eval(self._return_compiled), known_evals
         else:
             return eval(self._return_compiled)
+
 
 class EvaluatorJax:
     """
@@ -303,28 +317,48 @@ class EvaluatorJax:
     """
 
     def __init__(self, symbol):
-        constants, self._variable_function = pybamm.to_python(symbol, debug=False)
+
+        self._constants, python_str = pybamm.to_python(symbol, debug=False)
+
+        # remove selfs for vars (not consts!)
+        python_str = python_str.replace("self.", "")
+
+        # replace numpy function calls to jax numpy calls
+        python_str = python_str.replace('np.', 'jax.numpy.')
 
         # store all the constant symbols in the tree as internal variables of this
         # object
-        for symbol_id, value in constants.items():
-            setattr(
-                self, id_to_python_variable(symbol_id, True).replace("self.", ""), value
-            )
+        for symbol_id, value in self._constants.items():
+            const_name = id_to_python_variable(symbol_id, True).replace("self.", "")
+            python_str = '{} = constants[{}]\n'.format(const_name, symbol_id) +\
+                         python_str
+
+        # indent code
+        python_str = '   ' + python_str
+        python_str = python_str.replace('\n', '\n   ')
+
+        # add function def to first line
+        python_str = 'def evaluate_jax(constants, t=None, y=None, '\
+            'y_dot=None, inputs=None, known_evals=None):\n' + python_str
 
         # calculate the final variable that will output the result of calling `evaluate`
         # on `symbol`
-        self._result_var = id_to_python_variable(symbol.id, symbol.is_constant())
+        result_var = id_to_python_variable(symbol.id, symbol.is_constant())
+        result_var = result_var.replace('self.', '')
 
-        # compile the generated python code
-        self._variable_compiled = compile(
-            self._variable_function, self._result_var, "exec"
-        )
+        # add return line
+        python_str = python_str + '\n   return ' + result_var
 
-        # compile the line that will return the output of `evaluate`
-        self._return_compiled = compile(
-            self._result_var, "return" + self._result_var, "eval"
+        # store a jit version of evaluate_jax
+        python_str = python_str + \
+            '\n\nself._jit_evaluate = jax.jit(evaluate_jax, static_argnums=0)'
+
+        # compile and run the generated python code,
+        # will store jit evaluate in 'self._jit_evaluate'
+        compiled_function = compile(
+            python_str, result_var, "exec"
         )
+        exec(compiled_function)
 
     def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
         """
@@ -335,10 +369,10 @@ class EvaluatorJax:
             y = y.reshape(-1, 1)
 
         # execute code
-        exec(self._variable_compiled)
+        result = self._jit_evaluate(self._constants, t, y, y_dot, inputs, known_evals)
 
         # don't need known_evals, but need to reproduce Symbol.evaluate signature
         if known_evals is not None:
-            return eval(self._return_compiled), known_evals
+            return result, known_evals
         else:
-            return eval(self._return_compiled)
+            return result
