@@ -166,9 +166,11 @@ class QuickPlot(object):
 
         # Time parameters
         model_timescale_in_seconds = models[0].timescale_eval
-        self.ts = [solution.t for solution in solutions]
-        min_t = np.min([t[0] for t in self.ts]) * model_timescale_in_seconds
-        max_t = np.max([t[-1] for t in self.ts]) * model_timescale_in_seconds
+        self.ts_seconds = [
+            solution.t * model_timescale_in_seconds for solution in solutions
+        ]
+        min_t = np.min([t[0] for t in self.ts_seconds])
+        max_t = np.max([t[-1] for t in self.ts_seconds])
 
         # Set timescale
         if time_unit is None:
@@ -190,7 +192,7 @@ class QuickPlot(object):
             self.time_unit = "h"
         else:
             raise ValueError("time unit '{}' not recognized".format(time_unit))
-        self.time_scale = model_timescale_in_seconds / time_scaling_factor
+        self.time_scaling_factor = time_scaling_factor
         self.min_t = min_t / time_scaling_factor
         self.max_t = max_t / time_scaling_factor
 
@@ -430,22 +432,14 @@ class QuickPlot(object):
                 spatial_vars = self.spatial_variable_dict[key]
                 var_min = np.min(
                     [
-                        ax_min(
-                            var(
-                                self.ts[i] * self.time_scale, **spatial_vars, warn=False
-                            )
-                        )
+                        ax_min(var(self.ts_seconds[i], **spatial_vars, warn=False))
                         for i, variable_list in enumerate(variable_lists)
                         for var in variable_list
                     ]
                 )
                 var_max = np.max(
                     [
-                        ax_max(
-                            var(
-                                self.ts[i] * self.time_scale, **spatial_vars, warn=False
-                            )
-                        )
+                        ax_max(var(self.ts_seconds[i], **spatial_vars, warn=False))
                         for i, variable_list in enumerate(variable_lists)
                         for var in variable_list
                     ]
@@ -478,7 +472,7 @@ class QuickPlot(object):
         import matplotlib.gridspec as gridspec
         from matplotlib import cm, colors
 
-        t /= self.time_scale
+        t_in_seconds = t / self.time_scaling_factor
         self.fig = plt.figure(figsize=self.figsize)
 
         self.gridspec = gridspec.GridSpec(self.n_rows, self.n_cols)
@@ -518,10 +512,10 @@ class QuickPlot(object):
                             # multiple variables -> use linestyle to differentiate
                             # variables (color differentiates models)
                             linestyle = self.linestyles[j]
-                        full_t = self.ts[i]
+                        full_t = self.ts_seconds[i]
                         (self.plots[key][i][j],) = ax.plot(
-                            full_t * self.time_scale,
-                            variable(full_t * self.time_scale, warn=False),
+                            full_t / self.time_scaling_factor,
+                            variable(full_t, warn=False),
                             lw=2,
                             color=self.colors[i],
                             linestyle=linestyle,
@@ -531,7 +525,12 @@ class QuickPlot(object):
                 y_min, y_max = ax.get_ylim()
                 ax.set_ylim(y_min, y_max)
                 (self.time_lines[key],) = ax.plot(
-                    [t * self.time_scale, t * self.time_scale], [y_min, y_max], "k--"
+                    [
+                        t_in_seconds * self.time_scaling_factor,
+                        t_in_seconds * self.time_scaling_factor,
+                    ],
+                    [y_min, y_max],
+                    "k--",
                 )
             elif variable_lists[0][0].dimensions == 1:
                 # 1D plot: plot as a function of x at time t
@@ -553,7 +552,7 @@ class QuickPlot(object):
                             linestyle = self.linestyles[j]
                         (self.plots[key][i][j],) = ax.plot(
                             self.first_dimensional_spatial_variable[key],
-                            variable(t * self.time_scale, **spatial_vars, warn=False),
+                            variable(t_in_seconds, **spatial_vars, warn=False),
                             lw=2,
                             color=self.colors[i],
                             linestyle=linestyle,
@@ -580,13 +579,13 @@ class QuickPlot(object):
                     y_name = list(spatial_vars.keys())[0][0]
                     x = self.second_dimensional_spatial_variable[key]
                     y = self.first_dimensional_spatial_variable[key]
-                    var = variable(t * self.time_scale, **spatial_vars, warn=False)
+                    var = variable(t_in_seconds, **spatial_vars, warn=False)
                 else:
                     x_name = list(spatial_vars.keys())[0][0]
                     y_name = list(spatial_vars.keys())[1][0]
                     x = self.first_dimensional_spatial_variable[key]
                     y = self.second_dimensional_spatial_variable[key]
-                    var = variable(t * self.time_scale, **spatial_vars, warn=False).T
+                    var = variable(t_in_seconds, **spatial_vars, warn=False).T
                 ax.set_xlabel(
                     "{} [{}]".format(x_name, self.spatial_unit), fontsize=fontsize
                 )
@@ -672,6 +671,7 @@ class QuickPlot(object):
         """
         from matplotlib import cm, colors
 
+        time_in_seconds = t * self.time_scaling_factor
         for k, (key, plot) in enumerate(self.plots.items()):
             ax = self.axes[k]
             if self.variables[key][0][0].dimensions == 0:
@@ -681,7 +681,11 @@ class QuickPlot(object):
                 var_max = -np.inf
                 for i, variable_lists in enumerate(self.variables[key]):
                     for j, variable in enumerate(variable_lists):
-                        var = variable(t, **self.spatial_variable_dict[key], warn=False)
+                        var = variable(
+                            time_in_seconds,
+                            **self.spatial_variable_dict[key],
+                            warn=False
+                        )
                         plot[i][j].set_ydata(var)
                         var_min = min(var_min, np.nanmin(var))
                         var_max = max(var_max, np.nanmax(var))
@@ -709,11 +713,11 @@ class QuickPlot(object):
                 if self.is_x_r[key] is True:
                     x = self.second_dimensional_spatial_variable[key]
                     y = self.first_dimensional_spatial_variable[key]
-                    var = variable(t, **spatial_vars, warn=False)
+                    var = variable(time_in_seconds, **spatial_vars, warn=False)
                 else:
                     x = self.first_dimensional_spatial_variable[key]
                     y = self.second_dimensional_spatial_variable[key]
-                    var = variable(t, **spatial_vars, warn=False).T
+                    var = variable(time_in_seconds, **spatial_vars, warn=False).T
                 ax.contourf(
                     x, y, var, levels=100, vmin=vmin, vmax=vmax, cmap="coolwarm"
                 )

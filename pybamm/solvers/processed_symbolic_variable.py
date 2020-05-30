@@ -64,7 +64,7 @@ class ProcessedSymbolicVariable(object):
         ):
             self.initialise_0D()
         else:
-            n = self.mesh[0].npts
+            n = self.mesh.npts
             base_shape = self.base_eval.shape[0]
             # Try shape that could make the variable a 1D variable
             if base_shape == n:
@@ -124,7 +124,7 @@ class ProcessedSymbolicVariable(object):
                 entries = casadi.horzcat(entries, next_entries)
 
         # Get node values
-        nodes = self.mesh[0].nodes
+        nodes = self.mesh.nodes
 
         # assign attributes for reference (either x_sol or r_sol)
         self.entries = entries

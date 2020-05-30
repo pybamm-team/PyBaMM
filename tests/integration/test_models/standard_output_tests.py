@@ -69,23 +69,23 @@ class BaseOutputTest(object):
         self.t = solution.t * model.timescale_eval
 
         L_x = param.evaluate(pybamm.geometric_parameters.L_x)
-        self.x_n = disc.mesh["negative electrode"][0].nodes * L_x
-        self.x_s = disc.mesh["separator"][0].nodes * L_x
-        self.x_p = disc.mesh["positive electrode"][0].nodes * L_x
+        self.x_n = disc.mesh["negative electrode"].nodes * L_x
+        self.x_s = disc.mesh["separator"].nodes * L_x
+        self.x_p = disc.mesh["positive electrode"].nodes * L_x
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-        self.x = disc.mesh.combine_submeshes(*whole_cell)[0].nodes * L_x
-        self.x_n_edge = disc.mesh["negative electrode"][0].edges * L_x
-        self.x_s_edge = disc.mesh["separator"][0].edges * L_x
-        self.x_p_edge = disc.mesh["positive electrode"][0].edges * L_x
-        self.x_edge = disc.mesh.combine_submeshes(*whole_cell)[0].edges * L_x
+        self.x = disc.mesh.combine_submeshes(*whole_cell).nodes * L_x
+        self.x_n_edge = disc.mesh["negative electrode"].edges * L_x
+        self.x_s_edge = disc.mesh["separator"].edges * L_x
+        self.x_p_edge = disc.mesh["positive electrode"].edges * L_x
+        self.x_edge = disc.mesh.combine_submeshes(*whole_cell).edges * L_x
 
         if isinstance(self.model, pybamm.lithium_ion.BaseModel):
             R_n = param.evaluate(pybamm.geometric_parameters.R_n)
             R_p = param.evaluate(pybamm.geometric_parameters.R_p)
-            self.r_n = disc.mesh["negative particle"][0].nodes * R_n
-            self.r_p = disc.mesh["positive particle"][0].nodes * R_p
-            self.r_n_edge = disc.mesh["negative particle"][0].edges * R_n
-            self.r_p_edge = disc.mesh["positive particle"][0].edges * R_p
+            self.r_n = disc.mesh["negative particle"].nodes * R_n
+            self.r_p = disc.mesh["positive particle"].nodes * R_p
+            self.r_n_edge = disc.mesh["negative particle"].edges * R_n
+            self.r_p_edge = disc.mesh["positive particle"].edges * R_p
 
         # Useful parameters
         self.l_n = param.evaluate(pybamm.geometric_parameters.l_n)

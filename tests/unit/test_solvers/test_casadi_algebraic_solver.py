@@ -208,7 +208,7 @@ class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
         # Solve - scalar input
         solver = pybamm.CasadiAlgebraicSolver()
         solution = solver.solve(model, [0])
-        n = disc.mesh["negative electrode"][0].npts
+        n = disc.mesh["negative electrode"].npts
 
         solver = pybamm.CasadiAlgebraicSolver()
         solution = solver.solve(model, [0])

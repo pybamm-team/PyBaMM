@@ -16,12 +16,10 @@ class TestEffectiveResistance(unittest.TestCase):
 
     def test_default_geometry(self):
         model = pybamm.current_collector.EffectiveResistance({"dimensionality": 1})
-        self.assertIsInstance(model.default_geometry, pybamm.Geometry)
         self.assertTrue("current collector" in model.default_geometry)
         self.assertNotIn("negative electrode", model.default_geometry)
 
         model = pybamm.current_collector.EffectiveResistance({"dimensionality": 2})
-        self.assertIsInstance(model.default_geometry, pybamm.Geometry)
         self.assertTrue("current collector" in model.default_geometry)
         self.assertNotIn("negative electrode", model.default_geometry)
 

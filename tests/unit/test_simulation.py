@@ -161,16 +161,7 @@ class TestSimulation(unittest.TestCase):
         )
         sim.build()
 
-        geometry = sim.unprocessed_geometry
-        custom_geometry = {}
-        x_n = pybamm.standard_spatial_vars.x_n
-        custom_geometry["negative electrode"] = {
-            "primary": {
-                x_n: {"min": pybamm.Scalar(0), "max": pybamm.geometric_parameters.l_n}
-            }
-        }
-        geometry.update(custom_geometry)
-        sim.specs(geometry=geometry)
+        sim.specs(geometry=pybamm.battery_geometry(current_collector_dimension=1))
         sim.build()
 
         var_pts = sim.var_pts
@@ -389,7 +380,6 @@ class TestSimulation(unittest.TestCase):
         # reset and check
         sim.set_defaults()
         # Not sure of best way to test nested dicts?
-        # self.geometry = model.default_geometry
         self.assertEqual(
             sim._parameter_values._dict_items,
             model.default_parameter_values._dict_items,

@@ -436,22 +436,22 @@ class ParameterValues:
 
         Parameters
         ----------
-        geometry : :class:`pybamm.Geometry`
-                Geometry specs to assign parameter values to
+        geometry : dict
+            Geometry specs to assign parameter values to
         """
         for domain in geometry:
-            for prim_sec_tabs, variables in geometry[domain].items():
+            for spatial_variable, spatial_limits in geometry[domain].items():
                 # process tab information if using 1 or 2D current collectors
-                if prim_sec_tabs == "tabs":
-                    for tab, position_size in variables.items():
+                if spatial_variable == "tabs":
+                    for tab, position_size in spatial_limits.items():
                         for position_size, sym in position_size.items():
-                            geometry[domain][prim_sec_tabs][tab][
+                            geometry[domain]["tabs"][tab][
                                 position_size
                             ] = self.process_symbol(sym)
                 else:
-                    for spatial_variable, spatial_limits in variables.items():
-                        for lim, sym in spatial_limits.items():
-                            geometry[domain][prim_sec_tabs][spatial_variable][
+                    for lim, sym in spatial_limits.items():
+                        if isinstance(sym, pybamm.Symbol):
+                            geometry[domain][spatial_variable][
                                 lim
                             ] = self.process_symbol(sym)
 
