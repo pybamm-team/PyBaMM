@@ -40,11 +40,11 @@ class SpatialMethod:
             mesh[dom].npts_for_broadcast_to_nodes = mesh[dom].npts
         self._mesh = mesh
 
-    def _get_auxiliary_domain_repeats(self, auxiliary_domains):
+    def _get_auxiliary_domain_repeats(self, auxiliary_domains, tertiary_only=False):
         """
         Helper method to read the 'auxiliary_domain' meshes
         """
-        if "secondary" in auxiliary_domains:
+        if tertiary_only is False and "secondary" in auxiliary_domains:
             sec_mesh_npts = self.mesh.combine_submeshes(
                 *auxiliary_domains["secondary"]
             ).npts

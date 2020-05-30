@@ -191,9 +191,9 @@ def get_1p1d_discretisation_for_testing(xpts=None, rpts=10, zpts=15):
 
 
 def get_2p1d_discretisation_for_testing(
-    xpts=None, ypts=15, zpts=15, include_particles=True
+    xpts=None, rpts=10, ypts=15, zpts=15, include_particles=True
 ):
     return get_discretisation_for_testing(
-        mesh=get_2p1d_mesh_for_testing(xpts, ypts, zpts, include_particles),
+        mesh=get_2p1d_mesh_for_testing(xpts, rpts, ypts, zpts, include_particles),
         cc_method=pybamm.ScikitFiniteElement,
     )

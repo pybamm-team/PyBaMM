@@ -251,7 +251,7 @@ class TestFiniteVolume(unittest.TestCase):
         spatial_methods = {"negative particle": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
-        combined_submesh = mesh.combine_submeshes("negative particle")
+        submesh = mesh["negative particle"]
 
         # grad
         # grad(r) == 1
@@ -276,10 +276,19 @@ class TestFiniteVolume(unittest.TestCase):
         disc.set_variable_slices([var])
         grad_eqn_disc = disc.process_symbol(grad_eqn)
 
-        constant_y = np.ones_like(combined_submesh.nodes[:, np.newaxis])
+        total_npts = (
+            submesh.npts
+            * mesh["negative electrode"].npts
+            * mesh["current collector"].npts
+        )
+        total_npts_edges = (
+            (submesh.npts + 1)
+            * mesh["negative electrode"].npts
+            * mesh["current collector"].npts
+        )
+        constant_y = np.ones((total_npts, 1))
         np.testing.assert_array_equal(
-            grad_eqn_disc.evaluate(None, constant_y),
-            np.zeros_like(combined_submesh.edges[:, np.newaxis]),
+            grad_eqn_disc.evaluate(None, constant_y), np.zeros((total_npts_edges, 1))
         )
 
         boundary_conditions = {
@@ -290,16 +299,18 @@ class TestFiniteVolume(unittest.TestCase):
         }
         disc.bcs = boundary_conditions
 
-        y_linear = combined_submesh.nodes
+        y_linear = np.tile(
+            submesh.nodes,
+            mesh["negative electrode"].npts * mesh["current collector"].npts,
+        )
         grad_eqn_disc = disc.process_symbol(grad_eqn)
         np.testing.assert_array_almost_equal(
-            grad_eqn_disc.evaluate(None, y_linear),
-            np.ones_like(combined_submesh.edges[:, np.newaxis]),
+            grad_eqn_disc.evaluate(None, y_linear), np.ones((total_npts_edges, 1))
         )
 
         # div: test on linear r^2
         # div (grad r^2) = 6
-        const = 6 * np.ones(combined_submesh.npts)
+        const = 6 * np.ones((total_npts, 1))
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
@@ -312,7 +323,7 @@ class TestFiniteVolume(unittest.TestCase):
 
         div_eqn_disc = disc.process_symbol(div_eqn)
         np.testing.assert_array_almost_equal(
-            div_eqn_disc.evaluate(None, const), np.zeros((combined_submesh.npts, 1))
+            div_eqn_disc.evaluate(None, const), np.zeros((submesh.npts, 1))
         )
 
     def test_p2d_spherical_grad_div_shapes_Dirichlet_bcs(self):
@@ -746,12 +757,22 @@ class TestFiniteVolume(unittest.TestCase):
         integral_eqn_disc = disc.process_symbol(integral_eqn)
 
         submesh = mesh["positive particle"]
-        constant_y = np.ones((submesh.npts * len(submesh), 1))
+        constant_y = np.ones(
+            (
+                submesh.npts
+                * mesh["positive electrode"].npts
+                * mesh["current collector"].npts,
+                1,
+            )
+        )
         np.testing.assert_array_almost_equal(
             integral_eqn_disc.evaluate(None, constant_y),
             lp * np.ones((submesh.npts * mesh["current collector"].npts, 1)),
         )
-        linear_y = np.concatenate([sub.nodes for sub in submesh])
+        linear_y = np.tile(
+            submesh.nodes,
+            mesh["positive electrode"].npts * mesh["current collector"].npts,
+        )
         np.testing.assert_array_almost_equal(
             integral_eqn_disc.evaluate(None, linear_y), (1 - (ln + ls) ** 2) / 2
         )
@@ -795,7 +816,12 @@ class TestFiniteVolume(unittest.TestCase):
 
         # test
         submesh = mesh["positive particle"]
-        cos_y = np.cos(np.concatenate([sub.nodes for sub in submesh]))
+        cos_y = np.cos(
+            np.tile(
+                submesh.nodes,
+                mesh["positive electrode"].npts * mesh["current collector"].npts,
+            )
+        )
         np.testing.assert_array_almost_equal(
             integral_eqn_x_then_r_disc.evaluate(None, cos_y),
             integral_eqn_r_then_x_disc.evaluate(None, cos_y),

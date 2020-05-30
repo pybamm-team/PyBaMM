@@ -307,7 +307,9 @@ class FiniteVolume(pybamm.SpatialMethod):
                     "Integral in secondary vector only implemented in 'row' form"
                 )
             # repeat matrix for each node in secondary dimensions
-            third_dim_repeats = len(secondary_submesh)
+            third_dim_repeats = self._get_auxiliary_domain_repeats(
+                domains, tertiary_only=True
+            )
             # generate full matrix from the submatrix
             matrix = kron(eye(third_dim_repeats), int_matrix)
         # generate full matrix from the submatrix
