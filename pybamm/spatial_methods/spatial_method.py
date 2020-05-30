@@ -114,9 +114,12 @@ class SpatialMethod:
             self.mesh[dom].npts_for_broadcast_to_nodes for dom in domain
         )
         secondary_domain_size = self._get_auxiliary_domain_repeats(auxiliary_domains)
+        full_domain_size = primary_domain_size * secondary_domain_size
         if broadcast_type.endswith("to edges"):
             # add one point to each domain for broadcasting to edges
             primary_domain_size += 1
+            full_domain_size = primary_domain_size * secondary_domain_size
+            secondary_domain_size += 1
 
         if broadcast_type.startswith("primary"):
             # Make copies of the child stacked on top of each other
@@ -134,7 +137,6 @@ class SpatialMethod:
             matrix = vstack([identity for _ in range(secondary_domain_size)])
             out = pybamm.Matrix(matrix) @ symbol
         elif broadcast_type.startswith("full"):
-            full_domain_size = primary_domain_size * secondary_domain_size
             out = symbol * pybamm.Vector(np.ones(full_domain_size), domain=domain)
 
         out.auxiliary_domains = auxiliary_domains

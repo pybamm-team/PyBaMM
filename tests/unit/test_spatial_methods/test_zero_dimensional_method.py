@@ -4,7 +4,7 @@
 import numpy as np
 import pybamm
 import unittest
-from tests import get_mesh_for_testing, get_1p1d_mesh_for_testing
+from tests import get_mesh_for_testing
 
 
 class TestZeroDimensionalSpatialMethod(unittest.TestCase):

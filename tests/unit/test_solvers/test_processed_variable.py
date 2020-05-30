@@ -501,11 +501,7 @@ class TestProcessedVariable(unittest.TestCase):
         var = pybamm.Variable("var", domain=["negative particle"])
         broad_var = pybamm.SecondaryBroadcast(var, "negative electrode")
         x = pybamm.SpatialVariable("x", domain=["negative electrode"])
-        r = pybamm.SpatialVariable(
-            "r",
-            domain=["negative particle"],
-            auxiliary_domains={"secondary": ["negative electrode"]},
-        )
+        r = pybamm.SpatialVariable("r", domain=["negative particle"])
 
         disc = tests.get_discretisation_for_testing()
         disc.set_variable_slices([var])
@@ -541,11 +537,7 @@ class TestProcessedVariable(unittest.TestCase):
         var = pybamm.Variable("var", domain=["positive particle"])
         broad_var = pybamm.SecondaryBroadcast(var, "positive electrode")
         x = pybamm.SpatialVariable("x", domain=["positive electrode"])
-        r = pybamm.SpatialVariable(
-            "r",
-            domain=["positive particle"],
-            auxiliary_domains={"secondary": ["positive electrode"]},
-        )
+        r = pybamm.SpatialVariable("r", domain=["positive particle"])
 
         disc.set_variable_slices([var])
         x_sol = disc.process_symbol(x).entries[:, 0]
