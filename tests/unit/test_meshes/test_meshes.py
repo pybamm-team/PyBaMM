@@ -35,6 +35,17 @@ class TestMesh(unittest.TestCase):
             len(mesh["negative particle"].nodes) + 1,
         )
 
+        # errors if old format
+        geometry = {
+            "negative particle": {
+                "primary": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
+            }
+        }
+        with self.assertRaisesRegex(
+            pybamm.GeometryError, "Geometry should no longer be given keys"
+        ):
+            mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
     def test_mesh_creation(self):
         param = pybamm.ParameterValues(
             values={
