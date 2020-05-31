@@ -80,8 +80,6 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
         else:
             children_vars.append(id_to_python_variable(child.id, False))
 
-
-
     if isinstance(symbol, pybamm.BinaryOperator):
         # Multiplication and Division need special handling for scipy sparse matrices
         # TODO: we can pass through a dummy y and t to get the type and then hardcode
@@ -195,7 +193,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
         else:
             consecutive = np.all(indices[1:] - indices[:-1] == 1)
             if consecutive:
-                symbol_str = "y[{}:{}]".format(indices[0], indices[-1])
+                symbol_str = "y[{}:{}]".format(indices[0], indices[-1] + 1)
             else:
                 indices_array = pybamm.Array(indices)
                 constant_symbols[indices_array.id] = indices
@@ -280,29 +278,49 @@ class EvaluatorPython:
     """
 
     def __init__(self, symbol):
+        constants, python_str = pybamm.to_python(symbol, debug=False)
 
-        constants, self._variable_function = pybamm.to_python(symbol, debug=False)
+        # remove selfs for vars (not consts!)
+        python_str = python_str.replace("self.", "")
 
-        # store all the constant symbols in the tree as internal variables of this
-        # object
-        for symbol_id, value in constants.items():
-            setattr(
-                self, id_to_python_variable(symbol_id, True).replace("self.", ""), value
-            )
+        # extract constants in generated function
+        for i, symbol_id in enumerate(constants.keys()):
+            const_name = id_to_python_variable(symbol_id, True).replace("self.", "")
+            python_str = '{} = constants[{}]\n'.format(const_name, i) + python_str
+
+        # constants passed in as an ordered dict, convert to list
+        self._constants = list(constants.values())
+
+        # indent code
+        python_str = '   ' + python_str
+        python_str = python_str.replace('\n', '\n   ')
+
+        # add function def to first line
+        python_str = 'def evaluate(constants, t=None, y=None, '\
+            'y_dot=None, inputs=None, known_evals=None):\n' + python_str
 
         # calculate the final variable that will output the result of calling `evaluate`
         # on `symbol`
-        self._result_var = id_to_python_variable(symbol.id, symbol.is_constant())
+        result_var = id_to_python_variable(symbol.id, symbol.is_constant())
+        result_var = result_var.replace('self.', '')
+        if symbol.is_constant():
+            result_value = symbol.evaluate()
 
-        # compile the generated python code
-        self._variable_compiled = compile(
-            self._variable_function, self._result_var, "exec"
-        )
+        # add return line
+        if symbol.is_constant() and isinstance(result_value, numbers.Number):
+            python_str = python_str + '\n   return ' + str(result_value)
+        else:
+            python_str = python_str + '\n   return ' + result_var
 
-        # compile the line that will return the output of `evaluate`
-        self._return_compiled = compile(
-            self._result_var, "return" + self._result_var, "eval"
+        # store a copy of examine_jaxpr
+        python_str = python_str + \
+            '\nself._evaluate = evaluate'
+
+        # compile and run the generated python code,
+        compiled_function = compile(
+            python_str, result_var, "exec"
         )
+        exec(compiled_function)
 
     def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
         """
@@ -312,14 +330,13 @@ class EvaluatorPython:
         if y is not None and y.ndim == 1:
             y = y.reshape(-1, 1)
 
-        # execute code
-        exec(self._variable_compiled)
+        result = self._evaluate(self._constants, t, y, y_dot, inputs, known_evals)
 
         # don't need known_evals, but need to reproduce Symbol.evaluate signature
         if known_evals is not None:
-            return eval(self._return_compiled), known_evals
+            return result, known_evals
         else:
-            return eval(self._return_compiled)
+            return result
 
 
 class EvaluatorJax:
@@ -371,15 +388,18 @@ class EvaluatorJax:
         # on `symbol`
         result_var = id_to_python_variable(symbol.id, symbol.is_constant())
         result_var = result_var.replace('self.', '')
+        if symbol.is_constant():
+            result_value = symbol.evaluate()
 
         # add return line
-        python_str = python_str + '\n   return ' + result_var
+        if symbol.is_constant() and isinstance(result_value, numbers.Number):
+            python_str = python_str + '\n   return ' + str(result_value)
+        else:
+            python_str = python_str + '\n   return ' + result_var
 
         # store a copy of examine_jaxpr
         python_str = python_str + \
             '\nself._evaluate_jax = evaluate_jax'
-
-        print(python_str)
 
         # compile and run the generated python code,
         compiled_function = compile(
@@ -392,7 +412,6 @@ class EvaluatorJax:
         # store a jit version of evaluate_jax's jacobian
         jacobian_evaluate = jax.jacfwd(self._evaluate_jax, argnums=2)
         self._jac_evaluate = jax.jit(jacobian_evaluate, static_argnums=(0, 4, 5))
-
 
     def get_jacobian(self):
         return EvaluatorJaxJacobian(self._jac_evaluate, self._constants)
@@ -452,6 +471,3 @@ class EvaluatorJaxJacobian:
             return result, known_evals
         else:
             return result
-
-
-

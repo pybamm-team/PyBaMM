@@ -262,7 +262,6 @@ class TestEvaluate(unittest.TestCase):
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
         pybamm.find_symbols(expr, constant_symbols, variable_symbols)
-        print(constant_symbols)
 
         self.assertEqual(list(variable_symbols.keys())[0], a_disc.id)
         self.assertEqual(list(variable_symbols.keys())[1], b_disc.id)
