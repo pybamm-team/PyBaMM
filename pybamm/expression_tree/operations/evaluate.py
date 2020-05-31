@@ -22,9 +22,9 @@ def id_to_python_variable(symbol_id, constant=False):
     """
 
     if constant:
-        var_format = "self.const_{:05d}"
+        var_format = "const_{:05d}"
     else:
-        var_format = "self.var_{:05d}"
+        var_format = "var_{:05d}"
 
     # Need to replace "-" character to make them valid python variable names
     return var_format.format(symbol_id).replace("-", "m")
@@ -280,12 +280,9 @@ class EvaluatorPython:
     def __init__(self, symbol):
         constants, python_str = pybamm.to_python(symbol, debug=False)
 
-        # remove selfs for vars (not consts!)
-        python_str = python_str.replace("self.", "")
-
         # extract constants in generated function
         for i, symbol_id in enumerate(constants.keys()):
-            const_name = id_to_python_variable(symbol_id, True).replace("self.", "")
+            const_name = id_to_python_variable(symbol_id, True)
             python_str = '{} = constants[{}]\n'.format(const_name, i) + python_str
 
         # constants passed in as an ordered dict, convert to list
@@ -302,7 +299,6 @@ class EvaluatorPython:
         # calculate the final variable that will output the result of calling `evaluate`
         # on `symbol`
         result_var = id_to_python_variable(symbol.id, symbol.is_constant())
-        result_var = result_var.replace('self.', '')
         if symbol.is_constant():
             result_value = symbol.evaluate()
 
@@ -357,9 +353,6 @@ class EvaluatorJax:
 
         constants, python_str = pybamm.to_python(symbol, debug=False)
 
-        # remove selfs for vars (not consts!)
-        python_str = python_str.replace("self.", "")
-
         # replace numpy function calls to jax numpy calls
         python_str = python_str.replace('np.', 'jax.numpy.')
 
@@ -370,7 +363,7 @@ class EvaluatorJax:
 
         # extract constants in generated function
         for i, symbol_id in enumerate(constants.keys()):
-            const_name = id_to_python_variable(symbol_id, True).replace("self.", "")
+            const_name = id_to_python_variable(symbol_id, True)
             python_str = '{} = constants[{}]\n'.format(const_name, i) + python_str
 
         # constants passed in as an ordered dict, convert to list
@@ -387,7 +380,6 @@ class EvaluatorJax:
         # calculate the final variable that will output the result of calling `evaluate`
         # on `symbol`
         result_var = id_to_python_variable(symbol.id, symbol.is_constant())
-        result_var = result_var.replace('self.', '')
         if symbol.is_constant():
             result_value = symbol.evaluate()
 
