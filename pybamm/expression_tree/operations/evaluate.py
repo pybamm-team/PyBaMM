@@ -8,6 +8,7 @@ import pybamm
 import scipy.sparse  # noqa: F401
 from collections import OrderedDict
 
+import numbers
 import numpy as np
 import jax
 from jax.config import config
@@ -57,7 +58,9 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
 
     """
     if symbol.is_constant():
-        constant_symbols[symbol.id] = symbol.evaluate()
+        value = symbol.evaluate()
+        if not isinstance(value, numbers.Number):
+            constant_symbols[symbol.id] = value
         return
 
     # process children recursively
@@ -66,10 +69,18 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
 
     # calculate the variable names that will hold the result of calculating the
     # children variables
-    children_vars = [
-        id_to_python_variable(child.id, child.is_constant())
-        for child in symbol.children
-    ]
+    children_vars = []
+    for child in symbol.children:
+        if child.is_constant():
+            eval = child.evaluate()
+            if isinstance(eval, numbers.Number):
+                children_vars.append(str(eval))
+            else:
+                children_vars.append(id_to_python_variable(child.id, True))
+        else:
+            children_vars.append(id_to_python_variable(child.id, False))
+
+
 
     if isinstance(symbol, pybamm.BinaryOperator):
         # Multiplication and Division need special handling for scipy sparse matrices
@@ -178,9 +189,18 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
 
     # Note: we assume that y is being passed as a column vector
     elif isinstance(symbol, pybamm.StateVector):
-        symbol_str = "y[:{}][{}]".format(
-            len(symbol.evaluation_array), symbol.evaluation_array
-        )
+        indices = np.argwhere(symbol.evaluation_array).reshape(-1).astype(np.int32)
+        if len(indices) == 1:
+            symbol_str = "y[{}]".format(indices[0])
+        else:
+            consecutive = np.all(indices[1:] - indices[:-1] == 1)
+            if consecutive:
+                symbol_str = "y[{}:{}]".format(indices[0], indices[-1])
+            else:
+                indices_array = pybamm.Array(indices)
+                constant_symbols[indices_array.id] = indices
+                index_name = id_to_python_variable(indices_array.id, True)
+                symbol_str = "y[{}]".format(index_name)
 
     elif isinstance(symbol, pybamm.Time):
         symbol_str = "t"
@@ -318,7 +338,7 @@ class EvaluatorJax:
 
     def __init__(self, symbol):
 
-        self._constants, python_str = pybamm.to_python(symbol, debug=False)
+        constants, python_str = pybamm.to_python(symbol, debug=False)
 
         # remove selfs for vars (not consts!)
         python_str = python_str.replace("self.", "")
@@ -326,12 +346,18 @@ class EvaluatorJax:
         # replace numpy function calls to jax numpy calls
         python_str = python_str.replace('np.', 'jax.numpy.')
 
-        # store all the constant symbols in the tree as internal variables of this
-        # object
-        for symbol_id, value in self._constants.items():
+        # convert all numpy constants to device vectors
+        for symbol_id in constants:
+            if isinstance(constants[symbol_id], np.ndarray):
+                constants[symbol_id] = jax.device_put(constants[symbol_id])
+
+        # extract constants in generated function
+        for i, symbol_id in enumerate(constants.keys()):
             const_name = id_to_python_variable(symbol_id, True).replace("self.", "")
-            python_str = '{} = constants[{}]\n'.format(const_name, symbol_id) +\
-                         python_str
+            python_str = '{} = constants[{}]\n'.format(const_name, i) + python_str
+
+        # constants passed in as an ordered dict, convert to list
+        self._constants = list(constants.values())
 
         # indent code
         python_str = '   ' + python_str
@@ -349,24 +375,44 @@ class EvaluatorJax:
         # add return line
         python_str = python_str + '\n   return ' + result_var
 
-        # store a jit version of evaluate_jax
+        # store a copy of examine_jaxpr
         python_str = python_str + \
-            '\n\nself._jit_evaluate = jax.jit(evaluate_jax, static_argnums=0)'
+            '\nself._evaluate_jax = evaluate_jax'
 
-        # store the jacobian evaluate function using forward mode autodiff
-        python_str = python_str + \
-            '\n\njacobian_evaluate = jax.jacfwd(evaluate_jax, argnums=2)' + \
-            '\n\nself._jac_evaluate = jax.jit(jacobian_evaluate, static_argnums=0)'
+        print(python_str)
 
         # compile and run the generated python code,
-        # will store jit evaluate in 'self._jit_evaluate'
         compiled_function = compile(
             python_str, result_var, "exec"
         )
         exec(compiled_function)
 
+        self._jit_evaluate = jax.jit(self._evaluate_jax, static_argnums=(0, 4, 5))
+
+        # store a jit version of evaluate_jax's jacobian
+        jacobian_evaluate = jax.jacfwd(self._evaluate_jax, argnums=2)
+        self._jac_evaluate = jax.jit(jacobian_evaluate, static_argnums=(0, 4, 5))
+
+
     def get_jacobian(self):
         return EvaluatorJaxJacobian(self._jac_evaluate, self._constants)
+
+    def debug(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
+        # generated code assumes y is a column vector
+        if y is not None and y.ndim == 1:
+            y = y.reshape(-1, 1)
+
+        # execute code
+        jaxpr = jax.make_jaxpr(self._evaluate_jax)(
+            self._constants, t, y, y_dot, inputs, known_evals
+        ).jaxpr
+        print("invars:", jaxpr.invars)
+        print("outvars:", jaxpr.outvars)
+        print("constvars:", jaxpr.constvars)
+        for eqn in jaxpr.eqns:
+            print("equation:", eqn.invars, eqn.primitive, eqn.outvars, eqn.params)
+        print()
+        print("jaxpr:", jaxpr)
 
     def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
         """
@@ -376,7 +422,6 @@ class EvaluatorJax:
         if y is not None and y.ndim == 1:
             y = y.reshape(-1, 1)
 
-        # execute code
         result = self._jit_evaluate(self._constants, t, y, y_dot, inputs, known_evals)
 
         # don't need known_evals, but need to reproduce Symbol.evaluate signature
