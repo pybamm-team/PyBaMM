@@ -47,6 +47,11 @@ class Mesh(dict):
                 if len(list(geometry[domain].keys())) > 3:
                     raise pybamm.GeometryError("Too many keys provided")
                 for var in list(geometry[domain].keys()):
+                    if var in ["primary", "secondary"]:
+                        raise pybamm.GeometryError(
+                            "Geometry should no longer be given keys 'primary' or "
+                            "'secondary'. See pybamm.battery_geometry() for example"
+                        )
                     # skip over tabs key
                     if var != "tabs":
                         # Raise error if the number of points for a particular
