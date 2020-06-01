@@ -3,19 +3,17 @@ Name [units],Value,Reference,Notes
 ,,,
 # Temperature
 Reference temperature [K],298.15,25C,
-Heat transfer coefficient [W.m-2.K-1],10,,
-Ambient temperature [K], 298.15,,
-
+Total heat transfer coefficient [W.m-2.K-1],10,default,
+Ambient temperature [K],298.15,,
 ,,,
-# Electrical			
+# Electrical
 Number of electrodes connected in parallel to make a cell,1,,
 Number of cells connected in series to make a battery,1,,
 Lower voltage cut-off [V],2.5,,
 Upper voltage cut-off [V],4.4,,
-C-rate,1,,
 ,,,
 # Initial conditions
-Initial concentration in negative electrode [mol.m-3],30086,Chen 2020,
-Initial concentration in positive electrode [mol.m-3],16407,Chen 2020,
+Initial concentration in negative electrode [mol.m-3],29866,Chen 2020,
+Initial concentration in positive electrode [mol.m-3],17038,Chen 2020,
 Initial concentration in electrolyte [mol.m-3],1000,Chen 2020,
 Initial temperature [K],298.15,,

@@ -26,7 +26,10 @@ class TestScipySolver(unittest.TestCase):
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
         # Solve
-        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
+        # Make sure that passing in extra options works
+        solver = pybamm.ScipySolver(
+            rtol=1e-8, atol=1e-8, method="RK45", extra_options={"first_step": 1e-4}
+        )
         t_eval = np.linspace(0, 1, 80)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
@@ -111,7 +114,7 @@ class TestScipySolver(unittest.TestCase):
         combined_submesh = mesh.combine_submeshes(
             "negative electrode", "separator", "positive electrode"
         )
-        N = combined_submesh[0].npts
+        N = combined_submesh.npts
 
         # construct jacobian in order of model.rhs
         J = []
@@ -254,11 +257,11 @@ class TestScipySolver(unittest.TestCase):
             mesh = get_mesh_for_testing()
             spatial_methods = {"macroscale": pybamm.FiniteVolume()}
             disc = pybamm.Discretisation(mesh, spatial_methods)
-            disc.process_model(model)
+            model_disc = disc.process_model(model, inplace=False)
             # Solve
             solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
             t_eval = np.linspace(0, 10, 100)
-            solution = solver.solve(model, t_eval)
+            solution = solver.solve(model_disc, t_eval)
             self.assertLess(len(solution.t), len(t_eval))
             np.testing.assert_array_equal(solution.t, t_eval[: len(solution.t)])
             np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
@@ -287,6 +290,29 @@ class TestScipySolver(unittest.TestCase):
         self.assertLess(len(solution.t), len(t_eval))
         np.testing.assert_array_equal(solution.t, t_eval[: len(solution.t)])
         np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
+
+    def test_model_solver_inputs_in_initial_conditions(self):
+        # Create model
+        model = pybamm.BaseModel()
+        var1 = pybamm.Variable("var1")
+        model.rhs = {var1: pybamm.InputParameter("rate") * var1}
+        model.initial_conditions = {
+            var1: pybamm.InputParameter("ic 1"),
+        }
+
+        # Solve
+        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8)
+        t_eval = np.linspace(0, 5, 100)
+        solution = solver.solve(model, t_eval, inputs={"rate": -1, "ic 1": 0.1})
+        np.testing.assert_array_almost_equal(
+            solution.y[0], 0.1 * np.exp(-solution.t), decimal=5
+        )
+
+        # Solve again with different initial conditions
+        solution = solver.solve(model, t_eval, inputs={"rate": -0.1, "ic 1": 1})
+        np.testing.assert_array_almost_equal(
+            solution.y[0], 1 * np.exp(-0.1 * solution.t), decimal=5
+        )
 
 
 if __name__ == "__main__":

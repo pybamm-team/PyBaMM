@@ -56,8 +56,8 @@ for l_n in thicknesses:
                 "Maximum concentration in positive electrode [mol.m-3]": 50000,
                 "Initial concentration in negative electrode [mol.m-3]": 12500,
                 "Initial concentration in positive electrode [mol.m-3]": 25000,
-                "Negative electrode surface area density [m-1]": 180000.0,
-                "Positive electrode surface area density [m-1]": 150000.0,
+                "Negative electrode surface area to volume ratio [m-1]": 180000.0,
+                "Positive electrode surface area to volume ratio [m-1]": 150000.0,
                 "Current function [A]": I_app,
             }
         )
@@ -85,15 +85,16 @@ for l_n in thicknesses:
         xnsurf = sol["X-averaged negative particle surface concentration"]
         time = sol["Time [h]"]
         # Coulomb counting
-        time_hours = time(sol.t)
+        time_secs = sol["Time [s]"].entries
+        time_hours = time(time_secs)
         dc_time = np.around(time_hours[-1], 3)
         # Capacity mAh
         cap = np.absolute(I_app * 1000 * dc_time)
         cap_time = np.absolute(I_app * 1000 * time_hours)
-        axes[enum].plot(cap_time, xnext(sol.t), "r-", label="Average Neg")
-        axes[enum].plot(cap_time, xpext(sol.t), "b-", label="Average Pos")
-        axes[enum].plot(cap_time, xnsurf(sol.t), "r--", label="Surface Neg")
-        axes[enum].plot(cap_time, xpsurf(sol.t), "b--", label="Surface Pos")
+        axes[enum].plot(cap_time, xnext(time_secs), "r-", label="Average Neg")
+        axes[enum].plot(cap_time, xpext(time_secs), "b-", label="Average Pos")
+        axes[enum].plot(cap_time, xnsurf(time_secs), "r--", label="Surface Neg")
+        axes[enum].plot(cap_time, xpsurf(time_secs), "b--", label="Surface Pos")
         axes[enum].set_xlabel("Capacity [mAh]")
         handles, labels = axes[enum].get_legend_handles_labels()
         axes[enum].legend(handles, labels)

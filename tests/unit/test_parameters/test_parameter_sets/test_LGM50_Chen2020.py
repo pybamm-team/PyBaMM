@@ -9,29 +9,29 @@ class TestChen(unittest.TestCase):
     def test_load_params(self):
         anode = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/anodes/graphite_Chen2020/parameters.csv",
+                "input/parameters/lithium-ion/anodes/graphite_Chen2020/parameters.csv"
             )
         )
-        self.assertEqual(anode["Reference temperature [K]"], "298.15")
+        self.assertEqual(anode["Negative electrode porosity"], "0.25")
 
         cathode = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/cathodes/nmc_Chen2020/parameters.csv",
+                "input/parameters/lithium-ion/cathodes/nmc_Chen2020/parameters.csv"
             )
         )
-        self.assertEqual(cathode["Reference temperature [K]"], "298.15")
+        self.assertEqual(cathode["Positive electrode porosity"], "0.335")
 
         electrolyte = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
                 "input/parameters/lithium-ion/electrolytes/lipf6_Nyman2008/"
-                + "parameters.csv",
+                + "parameters.csv"
             )
         )
-        self.assertEqual(electrolyte["Reference temperature [K]"], "298.15")
+        self.assertEqual(electrolyte["Cation transference number"], "0.2594")
 
         cell = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/cells/LGM50_Chen2020/parameters.csv",
+                "input/parameters/lithium-ion/cells/LGM50_Chen2020/parameters.csv"
             )
         )
         self.assertAlmostEqual(cell["Negative current collector thickness [m]"], 12e-6)

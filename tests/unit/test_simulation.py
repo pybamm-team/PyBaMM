@@ -86,6 +86,44 @@ class TestSimulation(unittest.TestCase):
             if val.size > 1:
                 self.assertTrue(val.has_symbol_of_classes(pybamm.Matrix))
 
+    def test_solve_non_battery_model(self):
+
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        model.rhs = {v: -v}
+        model.initial_conditions = {v: 1}
+        model.variables = {"v": v}
+        sim = pybamm.Simulation(
+            model, solver=pybamm.ScipySolver(rtol=1e-10, atol=1e-10)
+        )
+
+        sim.solve()
+        np.testing.assert_array_equal(sim.solution.t, np.linspace(0, 1, 100))
+        np.testing.assert_array_almost_equal(
+            sim.solution["v"].entries, np.exp(-np.linspace(0, 1, 100))
+        )
+
+    def test_solve_already_partially_processed_model(self):
+
+        model = pybamm.lithium_ion.SPM()
+
+        # Process model manually
+        geometry = model.default_geometry
+        param = model.default_parameter_values
+        param.process_model(model)
+        param.process_geometry(geometry)
+        # Let simulation take over
+        sim = pybamm.Simulation(model)
+        sim.solve()
+
+        # Discretised manually
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        disc.process_model(model)
+        # Let simulation take over
+        sim = pybamm.Simulation(model)
+        sim.solve()
+
     def test_reuse_commands(self):
 
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
@@ -123,16 +161,7 @@ class TestSimulation(unittest.TestCase):
         )
         sim.build()
 
-        geometry = sim.unprocessed_geometry
-        custom_geometry = {}
-        x_n = pybamm.standard_spatial_vars.x_n
-        custom_geometry["negative electrode"] = {
-            "primary": {
-                x_n: {"min": pybamm.Scalar(0), "max": pybamm.geometric_parameters.l_n}
-            }
-        }
-        geometry.update(custom_geometry)
-        sim.specs(geometry=geometry)
+        sim.specs(geometry=pybamm.battery_geometry(current_collector_dimension=1))
         sim.build()
 
         var_pts = sim.var_pts
@@ -146,10 +175,14 @@ class TestSimulation(unittest.TestCase):
         sim.build()
 
     def test_set_crate(self):
-        sim = pybamm.Simulation(pybamm.lithium_ion.SPM(), C_rate=2)
-        self.assertEqual(sim.parameter_values["C-rate"], 2)
+        model = pybamm.lithium_ion.SPM()
+        current_1C = model.default_parameter_values["Current function [A]"]
+        sim = pybamm.Simulation(model, C_rate=2)
+        self.assertEqual(sim.parameter_values["Current function [A]"], 2 * current_1C)
+        self.assertEqual(sim.C_rate, 2)
         sim.specs(C_rate=3)
-        self.assertEqual(sim.parameter_values["C-rate"], 3)
+        self.assertEqual(sim.parameter_values["Current function [A]"], 3 * current_1C)
+        self.assertEqual(sim.C_rate, 3)
 
     def test_set_defaults(self):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
@@ -193,16 +226,30 @@ class TestSimulation(unittest.TestCase):
         self.assertIsInstance(c_e, np.ndarray)
 
     def test_set_external_variable(self):
-        model_options = {"thermal": "x-lumped", "external submodels": ["thermal"]}
+        model_options = {
+            "thermal": "lumped",
+            "external submodels": ["thermal", "negative particle"],
+        }
         model = pybamm.lithium_ion.SPMe(model_options)
         sim = pybamm.Simulation(model)
 
         T_av = 0
+        c_s_n_av = np.ones((10, 1)) * 0.5
+        external_variables = {
+            "Volume-averaged cell temperature": T_av,
+            "X-averaged negative particle concentration": c_s_n_av,
+        }
 
-        dt = 0.001
+        # Step
+        dt = 0.1
+        for _ in range(5):
+            sim.step(dt, external_variables=external_variables)
+        sim.plot(testing=True)
 
-        external_variables = {"X-averaged cell temperature": T_av}
-        sim.step(dt, external_variables=external_variables)
+        # Solve
+        t_eval = np.linspace(0, 3600)
+        sim.solve(t_eval, external_variables=external_variables)
+        sim.plot(testing=True)
 
     def test_step(self):
 
@@ -210,7 +257,7 @@ class TestSimulation(unittest.TestCase):
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model)
         sim.step(dt)  # 1 step stores first two points
-        tau = model.timescale.evaluate()
+        tau = sim.model.timescale.evaluate()
         self.assertEqual(sim.solution.t.size, 2)
         self.assertEqual(sim.solution.y[0, :].size, 2)
         self.assertEqual(sim.solution.t[0], 0)
@@ -227,6 +274,14 @@ class TestSimulation(unittest.TestCase):
         self.assertEqual(sim.solution.t[0], 2 * dt / tau)
         self.assertEqual(sim.solution.t[1], 3 * dt / tau)
 
+    def test_solve_with_inputs(self):
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        param.update({"Current function [A]": "[input]"})
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sim.solve(inputs={"Current function [A]": 1})
+        np.testing.assert_array_equal(sim.solution.inputs["Current function [A]"], 1)
+
     def test_step_with_inputs(self):
         dt = 0.001
         model = pybamm.lithium_ion.SPM()
@@ -236,7 +291,7 @@ class TestSimulation(unittest.TestCase):
         sim.step(
             dt, inputs={"Current function [A]": 1}
         )  # 1 step stores first two points
-        tau = model.timescale.evaluate()
+        tau = sim.model.timescale.evaluate()
         self.assertEqual(sim.solution.t.size, 2)
         self.assertEqual(sim.solution.y[0, :].size, 2)
         self.assertEqual(sim.solution.t[0], 0)
@@ -251,7 +306,7 @@ class TestSimulation(unittest.TestCase):
         self.assertEqual(sim.solution.t[1], dt / tau)
         self.assertEqual(sim.solution.t[2], 2 * dt / tau)
         np.testing.assert_array_equal(
-            sim.solution.inputs["Current function [A]"], np.array([1, 1, 2])
+            sim.solution.inputs["Current function [A]"], np.array([[1, 1, 2]])
         )
 
     def test_save_load(self):
@@ -313,19 +368,18 @@ class TestSimulation(unittest.TestCase):
         # make simulation with silly options (should this be allowed?)
         sim = pybamm.Simulation(
             model,
-            geometry=1,
-            parameter_values=1,
-            submesh_types=1,
-            var_pts=1,
-            spatial_methods=1,
-            solver=1,
-            quick_plot_vars=1,
+            geometry={},
+            parameter_values={},
+            submesh_types={},
+            var_pts={},
+            spatial_methods={},
+            solver={},
+            quick_plot_vars=[],
         )
 
         # reset and check
         sim.set_defaults()
         # Not sure of best way to test nested dicts?
-        # self.geometry = model.default_geometry
         self.assertEqual(
             sim._parameter_values._dict_items,
             model.default_parameter_values._dict_items,
@@ -371,7 +425,7 @@ class TestSimulation(unittest.TestCase):
 
         # check solution is returned at the times in the data
         sim.solve()
-        tau = model.timescale.evaluate()
+        tau = sim.model.timescale.evaluate()
         np.testing.assert_array_almost_equal(sim.solution.t, time_data / tau)
 
         # check warning raised if the largest gap in t_eval is bigger than the
@@ -405,10 +459,9 @@ class TestSimulation(unittest.TestCase):
         )
         sim.solve()
         current = sim.solution["Current [A]"]
-        tau = model.timescale.evaluate()
         self.assertEqual(current(0), 1)
-        self.assertEqual(current(1500 / tau), -0.5)
-        self.assertEqual(current(3000 / tau), 0.5)
+        self.assertEqual(current(1500), -0.5)
+        self.assertEqual(current(3000), 0.5)
 
 
 if __name__ == "__main__":

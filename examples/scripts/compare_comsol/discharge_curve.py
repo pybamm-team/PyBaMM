@@ -64,18 +64,19 @@ for key, C_rate in C_rates.items():
     solution = pybamm.CasadiSolver(mode="fast").solve(
         model, t, inputs={"Current function [A]": current}
     )
+    time_in_seconds = solution["Time [s]"].entries
 
     # discharge capacity
     discharge_capacity = solution["Discharge capacity [A.h]"]
-    discharge_capacity_sol = discharge_capacity(solution.t)
+    discharge_capacity_sol = discharge_capacity(time_in_seconds)
     comsol_discharge_capacity = comsol_time * current / 3600
 
     # extract the voltage
     voltage = solution["Terminal voltage [V]"]
-    voltage_sol = voltage(solution.t)
+    voltage_sol = voltage(time_in_seconds)
 
     # calculate the difference between the two solution methods
-    end_index = min(len(solution.t), len(comsol_time))
+    end_index = min(len(time_in_seconds), len(comsol_time))
     voltage_difference = np.abs(voltage_sol[0:end_index] - comsol_voltage[0:end_index])
 
     # plot discharge curves and absolute voltage_difference

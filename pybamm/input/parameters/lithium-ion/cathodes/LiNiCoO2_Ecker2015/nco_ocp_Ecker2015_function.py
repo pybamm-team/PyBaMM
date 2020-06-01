@@ -19,7 +19,7 @@ def nco_ocp_Ecker2015_function(sto):
 
     Parameters
     ----------
-    sto: double
+    sto : :class:`pybamm.Symbol`
        Stochiometry of material (li-fraction)
 
     """

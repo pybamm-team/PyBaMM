@@ -139,19 +139,40 @@ class TestQuickPlot(unittest.TestCase):
 
         # Test different time units
         quick_plot = pybamm.QuickPlot(solution, ["a"])
-        self.assertEqual(quick_plot.time_scale, 1)
+        self.assertEqual(quick_plot.time_scaling_factor, 1)
         quick_plot = pybamm.QuickPlot(solution, ["a"], time_unit="seconds")
-        self.assertEqual(quick_plot.time_scale, 1)
+        quick_plot.plot(0)
+        self.assertEqual(quick_plot.time_scaling_factor, 1)
+        np.testing.assert_array_almost_equal(
+            quick_plot.plots[("a",)][0][0].get_xdata(), t_eval
+        )
+        np.testing.assert_array_almost_equal(
+            quick_plot.plots[("a",)][0][0].get_ydata(), 2 * t_eval
+        )
         quick_plot = pybamm.QuickPlot(solution, ["a"], time_unit="minutes")
-        self.assertEqual(quick_plot.time_scale, 1 / 60)
+        quick_plot.plot(0)
+        self.assertEqual(quick_plot.time_scaling_factor, 60)
+        np.testing.assert_array_almost_equal(
+            quick_plot.plots[("a",)][0][0].get_xdata(), t_eval / 60
+        )
+        np.testing.assert_array_almost_equal(
+            quick_plot.plots[("a",)][0][0].get_ydata(), 2 * t_eval
+        )
         quick_plot = pybamm.QuickPlot(solution, ["a"], time_unit="hours")
-        self.assertEqual(quick_plot.time_scale, 1 / 3600)
+        quick_plot.plot(0)
+        self.assertEqual(quick_plot.time_scaling_factor, 3600)
+        np.testing.assert_array_almost_equal(
+            quick_plot.plots[("a",)][0][0].get_xdata(), t_eval / 3600
+        )
+        np.testing.assert_array_almost_equal(
+            quick_plot.plots[("a",)][0][0].get_ydata(), 2 * t_eval
+        )
         with self.assertRaisesRegex(ValueError, "time unit"):
             pybamm.QuickPlot(solution, ["a"], time_unit="bad unit")
         # long solution defaults to hours instead of seconds
         solution_long = solver.solve(model, np.linspace(0, 1e5))
         quick_plot = pybamm.QuickPlot(solution_long, ["a"])
-        self.assertEqual(quick_plot.time_scale, 1 / 3600)
+        self.assertEqual(quick_plot.time_scaling_factor, 3600)
 
         # Test different spatial units
         quick_plot = pybamm.QuickPlot(solution, ["a"])
@@ -237,7 +258,7 @@ class TestQuickPlot(unittest.TestCase):
         # Remove 'x [m]' from the variables and make sure a key error is raise
         del solution.model.variables["x [m]"]
         with self.assertRaisesRegex(
-            KeyError, "Can't find spatial scale for 'negative electrode'",
+            KeyError, "Can't find spatial scale for 'negative electrode'"
         ):
             pybamm.QuickPlot(solution, ["b broadcasted"])
 
@@ -326,7 +347,7 @@ class TestQuickPlot(unittest.TestCase):
 
         with self.assertRaisesRegex(NotImplementedError, "Shape not recognized for"):
             pybamm.QuickPlot(
-                solution_spm, ["Negative particle concentration [mol.m-3]"],
+                solution_spm, ["Negative particle concentration [mol.m-3]"]
             )
 
     def test_failure(self):

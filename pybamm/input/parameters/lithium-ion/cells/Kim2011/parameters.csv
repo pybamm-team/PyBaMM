@@ -15,6 +15,8 @@ Negative tab centre z-coordinate [m],0.2, At top,
 Positive tab width [m],0.044,,
 Positive tab centre y-coordinate [m],0.137,,
 Positive tab centre z-coordinate [m],0.2,At top,
+Cell cooling surface area [m2],5.61E-2,,pouch
+Cell volume [m3],4.62E-6,,pouch
 ,,,
 # Current collector properties ,,,
 Negative current collector conductivity [S.m-1],59.6E6,,
@@ -35,3 +37,4 @@ Positive current collector thermal conductivity [W.m-1.K-1],158.079, 237 * 0.667
 # Electrical,,,
 Cell capacity [A.h],0.43,trial and error,
 Typical current [A],0.43,0.2857,1C current
+Current function [A],0.43,default current function,

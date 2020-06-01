@@ -10,7 +10,7 @@ from tests import get_discretisation_for_testing
 
 class TestSimplify(unittest.TestCase):
     def test_symbol_simplify(self):
-        a = pybamm.Scalar(0)
+        a = pybamm.Scalar(0, domain="domain")
         b = pybamm.Scalar(1)
         c = pybamm.Parameter("c")
         d = pybamm.Scalar(-1)
@@ -58,13 +58,17 @@ class TestSimplify(unittest.TestCase):
         # Gradient
         self.assertIsInstance((pybamm.grad(a)).simplify(), pybamm.Scalar)
         self.assertEqual((pybamm.grad(a)).simplify().evaluate(), 0)
-        v = pybamm.Variable("v")
-        self.assertIsInstance((pybamm.grad(v)).simplify(), pybamm.Gradient)
+        v = pybamm.Variable("v", domain="domain")
+        grad_v = pybamm.grad(v)
+        self.assertIsInstance(grad_v.simplify(), pybamm.Gradient)
 
         # Divergence
-        self.assertIsInstance((pybamm.div(a)).simplify(), pybamm.Scalar)
-        self.assertEqual((pybamm.div(a)).simplify().evaluate(), 0)
-        self.assertIsInstance((pybamm.div(v)).simplify(), pybamm.Divergence)
+        div_b = pybamm.div(pybamm.PrimaryBroadcastToEdges(b, "domain"))
+        self.assertIsInstance(div_b.simplify(), pybamm.PrimaryBroadcast)
+        self.assertEqual(div_b.simplify().child.child.evaluate(), 0)
+        self.assertIsInstance(
+            (pybamm.div(pybamm.grad(v))).simplify(), pybamm.Divergence
+        )
 
         # Integral
         self.assertIsInstance(
@@ -540,8 +544,8 @@ class TestSimplify(unittest.TestCase):
 
         a_dom = ["negative electrode"]
         b_dom = ["positive electrode"]
-        a = 2 * pybamm.Vector(np.ones_like(mesh[a_dom[0]][0].nodes), domain=a_dom)
-        b = pybamm.Vector(np.ones_like(mesh[b_dom[0]][0].nodes), domain=b_dom)
+        a = 2 * pybamm.Vector(np.ones_like(mesh[a_dom[0]].nodes), domain=a_dom)
+        b = pybamm.Vector(np.ones_like(mesh[b_dom[0]].nodes), domain=b_dom)
 
         conc = pybamm.DomainConcatenation([a, b], mesh)
         conc_simp = conc.simplify()
@@ -552,8 +556,8 @@ class TestSimplify(unittest.TestCase):
             conc_simp.evaluate(),
             np.concatenate(
                 [
-                    np.full((mesh[a_dom[0]][0].npts, 1), 2),
-                    np.full((mesh[b_dom[0]][0].npts, 1), 1),
+                    np.full((mesh[a_dom[0]].npts, 1), 2),
+                    np.full((mesh[b_dom[0]].npts, 1), 1),
                 ]
             ),
         )
@@ -570,7 +574,7 @@ class TestSimplify(unittest.TestCase):
         conc_disc = disc.process_symbol(conc)
         conc_simp = conc_disc.simplify()
 
-        y = mesh.combine_submeshes(*conc.domain)[0].nodes ** 2
+        y = mesh.combine_submeshes(*conc.domain).nodes ** 2
         self.assertIsInstance(conc_simp, pybamm.StateVector)
         self.assertEqual(len(conc_simp.y_slices), 1)
         self.assertEqual(conc_simp.y_slices[0].start, 0)

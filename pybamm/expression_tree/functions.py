@@ -86,7 +86,7 @@ class Function(pybamm.Symbol):
             children = self.orphans
             partial_derivatives = [None] * len(children)
             for i, child in enumerate(self.children):
-                # if variable appears in the function,use autograd to differentiate
+                # if variable appears in the function, differentiate
                 # function, and apply chain rule
                 if variable.id in [symbol.id for symbol in child.pre_order()]:
                     partial_derivatives[i] = self._function_diff(
@@ -168,6 +168,10 @@ class Function(pybamm.Symbol):
                 child.evaluate(t, y, y_dot, inputs) for child in self.children
             ]
             return self._function_evaluate(evaluated_children)
+
+    def evaluates_on_edges(self):
+        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+        return any(child.evaluates_on_edges() for child in self.children)
 
     def _evaluate_for_shape(self):
         """
@@ -430,3 +434,21 @@ class Tanh(SpecificFunction):
 def tanh(child):
     " Returns hyperbolic tan function of child. "
     return pybamm.simplify_if_constant(Tanh(child), keep_domains=True)
+
+
+class Arctan(SpecificFunction):
+    """ Arctan function """
+
+    def __init__(self, child):
+        super().__init__(np.arctan, child)
+
+    def _function_diff(self, children, idx):
+        """ See :meth:`pybamm.Function._function_diff()`. """
+        return 1 / (children[0] ** 2 + 1)
+
+
+def arctan(child):
+    " Returns hyperbolic tan function of child. "
+    return pybamm.simplify_if_constant(Arctan(child), keep_domains=True)
+
+

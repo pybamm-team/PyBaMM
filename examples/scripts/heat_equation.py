@@ -38,7 +38,7 @@ model.variables = {"Temperature": T, "Heat flux": N, "Heat source": Q}
 
 
 # Define geometry
-geometry = {"rod": {"primary": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)}}}}
+geometry = {"rod": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(2)}}}
 
 # Set parameter values
 param = pybamm.ParameterValues({"Thermal diffusivity": 0.75})
@@ -104,7 +104,7 @@ def T_exact(x, t):
 
 
 # Plot ------------------------------------------------------------------------
-x_nodes = mesh["rod"][0].nodes  # numerical gridpoints
+x_nodes = mesh["rod"].nodes  # numerical gridpoints
 xx = np.linspace(0, 2, 101)  # fine mesh to plot exact solution
 plot_times = np.linspace(0, 1, 5)
 

@@ -252,8 +252,8 @@ class FullBroadcast(Broadcast):
     "A class for full broadcasts"
 
     def __init__(self, child, broadcast_domain, auxiliary_domains, name=None):
-        if auxiliary_domains == "current collector":
-            auxiliary_domains = {"secondary": "current collector"}
+        if isinstance(auxiliary_domains, str):
+            auxiliary_domains = {"secondary": auxiliary_domains}
         super().__init__(
             child,
             broadcast_domain,

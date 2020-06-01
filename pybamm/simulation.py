@@ -19,6 +19,8 @@ def is_notebook():
             return nb
         elif shell == "TerminalInteractiveShell":  # pragma: no cover
             return False  # Terminal running IPython
+        elif shell == "Shell":  # pragma: no cover
+            return True  # Google Colab notebook
         else:
             return False  # Other type (?)
     except NameError:
@@ -82,23 +84,28 @@ class Simulation:
         quick_plot_vars=None,
         C_rate=None,
     ):
-        self._parameter_values = parameter_values or model.default_parameter_values
+        self.parameter_values = parameter_values or model.default_parameter_values
 
         if experiment is None:
             self.operating_mode = "without experiment"
-            self.C_rate = C_rate
-            if self.C_rate:
-                self._parameter_values.update({"C-rate": self.C_rate})
+            if C_rate:
+                self.C_rate = C_rate
+                self._parameter_values.update(
+                    {
+                        "Current function [A]": self.C_rate
+                        * self._parameter_values["Cell capacity [A.h]"]
+                    }
+                )
             self.model = model
         else:
             self.set_up_experiment(model, experiment)
 
         self.geometry = geometry or self.model.default_geometry
-        self._submesh_types = submesh_types or self.model.default_submesh_types
-        self._var_pts = var_pts or self.model.default_var_pts
-        self._spatial_methods = spatial_methods or self.model.default_spatial_methods
-        self._solver = solver or self.model.default_solver
-        self._quick_plot_vars = quick_plot_vars
+        self.submesh_types = submesh_types or self.model.default_submesh_types
+        self.var_pts = var_pts or self.model.default_var_pts
+        self.spatial_methods = spatial_methods or self.model.default_spatial_methods
+        self.solver = solver or self.model.default_solver
+        self.quick_plot_vars = quick_plot_vars
 
         self.reset(update_model=False)
 
@@ -235,12 +242,12 @@ class Simulation:
         supplied model.
         """
         self.geometry = self._model.default_geometry
-        self._parameter_values = self._model.default_parameter_values
-        self._submesh_types = self._model.default_submesh_types
-        self._var_pts = self._model.default_var_pts
-        self._spatial_methods = self._model.default_spatial_methods
-        self._solver = self._model.default_solver
-        self._quick_plot_vars = None
+        self.parameter_values = self._model.default_parameter_values
+        self.submesh_types = self._model.default_submesh_types
+        self.var_pts = self._model.default_var_pts
+        self.spatial_methods = self._model.default_spatial_methods
+        self.solver = self._model.default_solver
+        self.quick_plot_vars = None
 
     def reset(self, update_model=True):
         """
@@ -265,10 +272,14 @@ class Simulation:
         if self.model_with_set_params:
             return None
 
-        self._model_with_set_params = self._parameter_values.process_model(
-            self._model, inplace=True
-        )
-        self._parameter_values.process_geometry(self._geometry)
+        if self._parameter_values._dict_items == {}:
+            # Don't process if parameter values is empty
+            self._model_with_set_params = self._model
+        else:
+            self._model_with_set_params = self._parameter_values.process_model(
+                self._model, inplace=True
+            )
+            self._parameter_values.process_geometry(self._geometry)
 
     def build(self, check_model=True):
         """
@@ -287,13 +298,16 @@ class Simulation:
 
         if self.built_model:
             return None
-
-        self.set_parameters()
-        self._mesh = pybamm.Mesh(self._geometry, self._submesh_types, self._var_pts)
-        self._disc = pybamm.Discretisation(self._mesh, self._spatial_methods)
-        self._built_model = self._disc.process_model(
-            self._model_with_set_params, inplace=False, check_model=check_model
-        )
+        elif self.model.is_discretised:
+            self._model_with_set_params = self.model
+            self._built_model = self.model
+        else:
+            self.set_parameters()
+            self._mesh = pybamm.Mesh(self._geometry, self._submesh_types, self._var_pts)
+            self._disc = pybamm.Discretisation(self._mesh, self._spatial_methods)
+            self._built_model = self._disc.process_model(
+                self._model_with_set_params, inplace=False, check_model=check_model
+            )
 
     def solve(
         self,
@@ -338,7 +352,9 @@ class Simulation:
             # on t_eval (if provided) to ensure the returned solution captures the
             # input. If the current is provided as data then the "Current function [A]"
             # is the tuple (filename, data).
-            if isinstance(self._parameter_values["Current function [A]"], tuple):
+            # First, read the current function (if provided, otherwise return None)
+            current = self._parameter_values.get("Current function [A]")
+            if isinstance(current, tuple):
                 filename = self._parameter_values["Current function [A]"][0]
                 time_data = self._parameter_values["Current function [A]"][1][:, 0]
                 # If no t_eval is provided, we use the times provided in the data.
@@ -385,23 +401,38 @@ class Simulation:
             # If not using a drive cycle and t_eval is not provided, set t_eval
             # to correspond to a single discharge
             elif t_eval is None:
-                C_rate = self._parameter_values["C-rate"]
-                if isinstance(C_rate, pybamm.InputParameter):
-                    C_rate = inputs["C-rate"]
-                try:
-                    t_end = 3600 / C_rate
-                except TypeError:
-                    t_end = 3600
+                if current is None:
+                    t_end = 1
+                else:
+                    # Get C-rate, return None if it doesn't exist
+                    capacity = self.parameter_values["Cell capacity [A.h]"]
+                    if isinstance(current, pybamm.InputParameter):
+                        C_rate = inputs["Current function [A]"] / capacity
+                        t_end = 3600 / C_rate
+                    else:
+                        try:
+                            C_rate = current / capacity
+                            t_end = 3600 / C_rate
+                        except TypeError:
+                            t_end = 3600
                 t_eval = np.linspace(0, t_end, 100)
 
             self.t_eval = t_eval
-            self._solution = solver.solve(self.built_model, t_eval, inputs=inputs)
+            self._solution = solver.solve(
+                self.built_model,
+                t_eval,
+                external_variables=external_variables,
+                inputs=inputs,
+            )
 
         elif self.operating_mode == "with experiment":
             if t_eval is not None:
                 pybamm.logger.warning(
                     "Ignoring t_eval as solution times are specified by the experiment"
                 )
+            # Re-initialize solution, e.g. for solving multiple times with different
+            # inputs without having to build the simulation again
+            self._solution = None
             # Step through all experimental conditions
             inputs = inputs or {}
             pybamm.logger.info("Start running experiment")
@@ -426,14 +457,14 @@ class Simulation:
                     or "[experiment]" in self._solution.termination
                 ):
                     pybamm.logger.warning(
-                        """
-                        Experiment is infeasible: '{}' was triggered during '{}'. Try
-                        reducing current, shortening the time interval, or reducing
-                        the period.
-                        """.format(
-                            self._solution.termination,
-                            self.experiment.operating_conditions_strings[idx],
+                        "\n\n\tExperiment is infeasible: '{}' ".format(
+                            self._solution.termination
                         )
+                        + "was triggered during '{}'. ".format(
+                            self.experiment.operating_conditions_strings[idx]
+                        )
+                        + "Try reducing current, shortening the time interval, "
+                        "or reducing the period.\n\n"
                     )
                     break
             pybamm.logger.info(
@@ -441,6 +472,7 @@ class Simulation:
                     timer.format(timer.time())
                 )
             )
+        return self.solution
 
     def step(
         self, dt, solver=None, npts=2, external_variables=None, inputs=None, save=True
@@ -542,9 +574,9 @@ class Simulation:
 
     @model.setter
     def model(self, model):
-        self._model = model
+        self._model = copy.copy(model)
         self._model_class = model.__class__
-        self._model_options = model.options
+        self._model_options = model.options.copy()
 
     @property
     def model_with_set_params(self):
@@ -564,7 +596,7 @@ class Simulation:
 
     @geometry.setter
     def geometry(self, geometry):
-        self._geometry = geometry
+        self._geometry = geometry.copy()
         self._unprocessed_geometry = copy.deepcopy(geometry)
 
     @property
@@ -575,9 +607,17 @@ class Simulation:
     def parameter_values(self):
         return self._parameter_values
 
+    @parameter_values.setter
+    def parameter_values(self, parameter_values):
+        self._parameter_values = parameter_values.copy()
+
     @property
     def submesh_types(self):
         return self._submesh_types
+
+    @submesh_types.setter
+    def submesh_types(self, submesh_types):
+        self._submesh_types = submesh_types.copy()
 
     @property
     def mesh(self):
@@ -587,9 +627,17 @@ class Simulation:
     def var_pts(self):
         return self._var_pts
 
+    @var_pts.setter
+    def var_pts(self, var_pts):
+        self._var_pts = var_pts.copy()
+
     @property
     def spatial_methods(self):
         return self._spatial_methods
+
+    @spatial_methods.setter
+    def spatial_methods(self, spatial_methods):
+        self._spatial_methods = spatial_methods.copy()
 
     @property
     def solver(self):
@@ -597,7 +645,7 @@ class Simulation:
 
     @solver.setter
     def solver(self, solver):
-        self._solver = solver
+        self._solver = solver.copy()
 
     @property
     def quick_plot_vars(self):
@@ -605,7 +653,7 @@ class Simulation:
 
     @quick_plot_vars.setter
     def quick_plot_vars(self, quick_plot_vars):
-        self._quick_plot_vars = quick_plot_vars
+        self._quick_plot_vars = copy.copy(quick_plot_vars)
 
     @property
     def solution(self):
@@ -654,27 +702,32 @@ class Simulation:
         """
 
         if model_options:
-            self._model_options = model_options
+            self._model_options = model_options.copy()
 
         if geometry:
             self.geometry = geometry
 
         if parameter_values:
-            self._parameter_values = parameter_values
+            self.parameter_values = parameter_values
         if submesh_types:
-            self._submesh_types = submesh_types
+            self.submesh_types = submesh_types
         if var_pts:
-            self._var_pts = var_pts
+            self.var_pts = var_pts
         if spatial_methods:
-            self._spatial_methods = spatial_methods
+            self.spatial_methods = spatial_methods
         if solver:
-            self._solver = solver
+            self.solver = solver
         if quick_plot_vars:
-            self._quick_plot_vars = quick_plot_vars
+            self.quick_plot_vars = quick_plot_vars
 
         if C_rate:
             self.C_rate = C_rate
-            self._parameter_values.update({"C-rate": self.C_rate})
+            self._parameter_values.update(
+                {
+                    "Current function [A]": self.C_rate
+                    * self._parameter_values["Cell capacity [A.h]"]
+                }
+            )
 
         if (
             model_options

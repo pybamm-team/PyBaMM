@@ -169,8 +169,8 @@ class TestEvaluate(unittest.TestCase):
 
         a_dom = ["negative electrode"]
         b_dom = ["positive electrode"]
-        a_pts = mesh[a_dom[0]][0].npts
-        b_pts = mesh[b_dom[0]][0].npts
+        a_pts = mesh[a_dom[0]].npts
+        b_pts = mesh[b_dom[0]].npts
         a = pybamm.StateVector(slice(0, a_pts), domain=a_dom)
         b = pybamm.StateVector(slice(a_pts, a_pts + b_pts), domain=b_dom)
         y = np.empty((a_pts + b_pts, 1))
@@ -208,9 +208,9 @@ class TestEvaluate(unittest.TestCase):
         # check the reordering in case a child vector has to be split up
         a_dom = ["separator"]
         b_dom = ["negative electrode", "positive electrode"]
-        b0_pts = mesh[b_dom[0]][0].npts
-        a0_pts = mesh[a_dom[0]][0].npts
-        b1_pts = mesh[b_dom[1]][0].npts
+        b0_pts = mesh[b_dom[0]].npts
+        a0_pts = mesh[a_dom[0]].npts
+        b1_pts = mesh[b_dom[1]].npts
 
         a = pybamm.StateVector(slice(0, a0_pts), domain=a_dom)
         b = pybamm.StateVector(slice(a0_pts, a0_pts + b0_pts + b1_pts), domain=b_dom)

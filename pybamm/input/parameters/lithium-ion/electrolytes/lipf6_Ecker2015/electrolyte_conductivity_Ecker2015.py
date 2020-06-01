@@ -1,7 +1,7 @@
-from pybamm import exp
+from pybamm import exp, constants
 
 
-def electrolyte_conductivity_Ecker2015(c_e, T, T_inf, E_k_e, R_g):
+def electrolyte_conductivity_Ecker2015(c_e, T):
     """
     Conductivity of LiPF6 in EC:DMC as a function of ion concentration [1, 2, 3].
 
@@ -19,20 +19,14 @@ def electrolyte_conductivity_Ecker2015(c_e, T, T_inf, E_k_e, R_g):
 
     Parameters
     ----------
-    c_e: :class: `numpy.Array`
+    c_e: :class:`pybamm.Symbol`
         Dimensional electrolyte concentration
-    T: :class: `numpy.Array`
+    T: :class:`pybamm.Symbol`
         Dimensional temperature
-    T_inf: double
-        Reference temperature
-    E_k_e: double
-        Electrolyte conductivity activation energy
-    R_g: double
-        The ideal gas constant
 
     Returns
     -------
-    :`numpy.Array`
+    :class:`pybamm.Symbol`
         Solid diffusivity
     """
 
@@ -43,7 +37,8 @@ def electrolyte_conductivity_Ecker2015(c_e, T, T_inf, E_k_e, R_g):
     sigma_e_296 = 0.2667 * cm ** 3 - 1.2983 * cm ** 2 + 1.7919 * cm + 0.1726
 
     # add temperature dependence
-    C = 296 * exp(E_k_e / (R_g * 296))
-    sigma_e = C * sigma_e_296 * exp(-E_k_e / (R_g * T)) / T
+    E_k_e = 1.71e4
+    C = 296 * exp(E_k_e / (constants.R * 296))
+    sigma_e = C * sigma_e_296 * exp(-E_k_e / (constants.R * T)) / T
 
     return sigma_e

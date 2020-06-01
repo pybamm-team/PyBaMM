@@ -6,7 +6,6 @@ Standard parameters for lithium-ion battery models
 """
 import pybamm
 import numpy as np
-from scipy import constants
 
 
 # --------------------------------------------------------------------------------------
@@ -22,8 +21,8 @@ from scipy import constants
 "1. Dimensional Parameters"
 
 # Physical constants
-R = pybamm.Scalar(constants.R)
-F = pybamm.Scalar(constants.physical_constants["Faraday constant"][0])
+R = pybamm.constants.R
+F = pybamm.constants.F
 T_ref = pybamm.Parameter("Reference temperature [K]")
 
 # Macroscale geometry
@@ -37,6 +36,8 @@ L_y = pybamm.geometric_parameters.L_y
 L_z = pybamm.geometric_parameters.L_z
 L = pybamm.geometric_parameters.L
 A_cc = pybamm.geometric_parameters.A_cc
+A_cooling = pybamm.geometric_parameters.A_cooling
+V_cell = pybamm.geometric_parameters.V_cell
 
 # Tab geometry
 L_tab_n = pybamm.geometric_parameters.L_tab_n
@@ -125,14 +126,6 @@ def c_p_init_dimensional(x):
 # thermal
 Delta_T = pybamm.thermal_parameters.Delta_T
 
-# Activation energies
-E_r_n = pybamm.thermal_parameters.E_r_n
-E_r_p = pybamm.thermal_parameters.E_r_p
-E_D_s_n = pybamm.thermal_parameters.E_D_s_n
-E_D_s_p = pybamm.thermal_parameters.E_D_s_p
-E_D_e = pybamm.thermal_parameters.E_D_e
-E_k_e = pybamm.thermal_parameters.E_k_e
-
 # velocity scale
 velocity_scale = pybamm.Scalar(1)
 
@@ -142,76 +135,52 @@ velocity_scale = pybamm.Scalar(1)
 
 def D_e_dimensional(c_e, T):
     "Dimensional diffusivity in electrolyte"
-    inputs = {
-        "Electrolyte concentration [mol.m-3]": c_e,
-        "Temperature [K]": T,
-        "Reference temperature [K]": T_ref,
-        "Activation energy [J.mol-1]": E_D_e,
-        "Ideal gas constant [J.mol-1.K-1]": R,
-    }
+    inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
     return pybamm.FunctionParameter("Electrolyte diffusivity [m2.s-1]", inputs)
 
 
 def kappa_e_dimensional(c_e, T):
     "Dimensional electrolyte conductivity"
-    inputs = {
-        "Electrolyte concentration [mol.m-3]": c_e,
-        "Temperature [K]": T,
-        "Reference temperature [K]": T_ref,
-        "Activation energy [J.mol-1]": E_k_e,
-        "Ideal gas constant [J.mol-1.K-1]": R,
-    }
+    inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
     return pybamm.FunctionParameter("Electrolyte conductivity [S.m-1]", inputs)
 
 
 def D_n_dimensional(sto, T):
     """Dimensional diffusivity in negative particle. Note this is defined as a
     function of stochiometry"""
-
-    inputs = {
-        "Negative particle stoichiometry": sto,
-        "Temperature [K]": T,
-        "Reference temperature [K]": T_ref,
-        "Activation energy [J.mol-1]": E_D_s_n,
-        "Ideal gas constant [J.mol-1.K-1]": R,
-    }
-
+    inputs = {"Negative particle stoichiometry": sto, "Temperature [K]": T}
     return pybamm.FunctionParameter("Negative electrode diffusivity [m2.s-1]", inputs)
 
 
 def D_p_dimensional(sto, T):
     """Dimensional diffusivity in positive particle. Note this is defined as a
     function of stochiometry"""
-    inputs = {
-        "Positive particle stoichiometry": sto,
-        "Temperature [K]": T,
-        "Reference temperature [K]": T_ref,
-        "Activation energy [J.mol-1]": E_D_s_p,
-        "Ideal gas constant [J.mol-1.K-1]": R,
-    }
+    inputs = {"Positive particle stoichiometry": sto, "Temperature [K]": T}
     return pybamm.FunctionParameter("Positive electrode diffusivity [m2.s-1]", inputs)
 
 
-def m_n_dimensional(T):
-    "Dimensional negative reaction rate"
+def j0_n_dimensional(c_e, c_s_surf, T):
+    "Dimensional negative exchange-current density [A.m-2]"
     inputs = {
+        "Electrolyte concentration [mol.m-3]": c_e,
+        "Negative particle surface concentration [mol.m-3]": c_s_surf,
         "Temperature [K]": T,
-        "Reference temperature [K]": T_ref,
-        "Activation energy [J.mol-1]": E_r_n,
-        "Ideal gas constant [J.mol-1.K-1]": R,
     }
-    return pybamm.FunctionParameter("Negative electrode reaction rate", inputs)
+    return pybamm.FunctionParameter(
+        "Negative electrode exchange-current density [A.m-2]", inputs
+    )
 
 
-def m_p_dimensional(T):
-    "Dimensional negative reaction rate"
+def j0_p_dimensional(c_e, c_s_surf, T):
+    "Dimensional negative exchange-current density [A.m-2]"
     inputs = {
+        "Electrolyte concentration [mol.m-3]": c_e,
+        "Positive particle surface concentration [mol.m-3]": c_s_surf,
         "Temperature [K]": T,
-        "Reference temperature [K]": T_ref,
-        "Activation energy [J.mol-1]": E_r_p,
-        "Ideal gas constant [J.mol-1.K-1]": R,
     }
-    return pybamm.FunctionParameter("Positive electrode reaction rate", inputs)
+    return pybamm.FunctionParameter(
+        "Positive electrode exchange-current density [A.m-2]", inputs
+    )
 
 
 def dUdT_n_dimensional(sto):
@@ -262,8 +231,8 @@ U_n_ref = U_n_dimensional(sto_n_init, T_ref)
 sto_p_init = c_p_init_dimensional(1) / c_p_max
 U_p_ref = U_p_dimensional(sto_p_init, T_ref)
 
-m_n_ref_dimensional = m_n_dimensional(T_ref)
-m_p_ref_dimensional = m_p_dimensional(T_ref)
+j0_n_ref_dimensional = j0_n_dimensional(c_e_typ, c_n_max / 2, T_ref) * 2
+j0_p_ref_dimensional = j0_p_dimensional(c_e_typ, c_p_max / 2, T_ref) * 2
 
 # -------------------------------------------------------------------------------------
 "3. Scales"
@@ -282,11 +251,12 @@ interfacial_current_scale_p = i_typ / (a_p_dim * L_x)
 tau_discharge = F * c_n_max * L_x / i_typ
 
 # Reaction timescales
-tau_r_n = F / (m_n_ref_dimensional * a_n_dim * c_e_typ ** 0.5)
-tau_r_p = F / (m_p_ref_dimensional * a_p_dim * c_e_typ ** 0.5)
+tau_r_n = F * c_n_max / (j0_n_ref_dimensional * a_n_dim)
+tau_r_p = F * c_p_max / (j0_p_ref_dimensional * a_p_dim)
 
 # Electrolyte diffusion timescale
-tau_diffusion_e = L_x ** 2 / D_e_dimensional(c_e_typ, T_ref)
+D_e_typ = D_e_dimensional(c_e_typ, T_ref)
+tau_diffusion_e = L_x ** 2 / D_e_typ
 
 # Particle diffusion timescales
 tau_diffusion_n = R_n ** 2 / D_n_dimensional(pybamm.Scalar(1), T_ref)
@@ -322,6 +292,8 @@ l_x = pybamm.geometric_parameters.l_x
 l_y = pybamm.geometric_parameters.l_y
 l_z = pybamm.geometric_parameters.l_z
 a_cc = pybamm.geometric_parameters.a_cc
+a_cooling = pybamm.geometric_parameters.a_cooling
+v_cell = pybamm.geometric_parameters.v_cell
 l = pybamm.geometric_parameters.l
 delta = pybamm.geometric_parameters.delta
 
@@ -426,7 +398,14 @@ lambda_cp = pybamm.thermal_parameters.lambda_cp
 lambda_k = pybamm.thermal_parameters.lambda_k
 
 Theta = pybamm.thermal_parameters.Theta
-h = pybamm.thermal_parameters.h
+
+h_edge = pybamm.thermal_parameters.h_edge
+h_tab_n = pybamm.thermal_parameters.h_tab_n
+h_tab_p = pybamm.thermal_parameters.h_tab_p
+h_cn = pybamm.thermal_parameters.h_cn
+h_cp = pybamm.thermal_parameters.h_cp
+h_total = pybamm.thermal_parameters.h_total
+
 B = (
     i_typ
     * R
@@ -461,13 +440,13 @@ def D_e(c_e, T):
     "Dimensionless electrolyte diffusivity"
     c_e_dimensional = c_e * c_e_typ
     T_dim = Delta_T * T + T_ref
-    return D_e_dimensional(c_e_dimensional, T_dim) / D_e_dimensional(c_e_typ, T_ref)
+    return D_e_dimensional(c_e_dimensional, T_dim) / D_e_typ
 
 
 def kappa_e(c_e, T):
     "Dimensionless electrolyte conductivity"
     c_e_dimensional = c_e * c_e_typ
-    kappa_scale = F ** 2 * D_e_dimensional(c_e_typ, T_ref) * c_e_typ / (R * T_ref)
+    kappa_scale = F ** 2 * D_e_typ * c_e_typ / (R * T_ref)
     T_dim = Delta_T * T + T_ref
     return kappa_e_dimensional(c_e_dimensional, T_dim) / kappa_scale
 
@@ -486,16 +465,22 @@ def D_p(c_s_p, T):
     return D_p_dimensional(sto, T_dim) / D_p_dimensional(pybamm.Scalar(1), T_ref)
 
 
-def m_n(T):
-    "Dimensionless negative reaction rate"
+def j0_n(c_e, c_s_surf, T):
+    "Dimensionless negative exchange-current density"
+    c_e_dim = c_e * c_e_typ
+    c_s_surf_dim = c_s_surf * c_n_max
     T_dim = Delta_T * T + T_ref
-    return m_n_dimensional(T_dim) / m_n_ref_dimensional
+
+    return j0_n_dimensional(c_e_dim, c_s_surf_dim, T_dim) / j0_n_ref_dimensional
 
 
-def m_p(T):
-    "Dimensionless positive reaction rate"
+def j0_p(c_e, c_s_surf, T):
+    "Dimensionless positive exchange-current density"
+    c_e_dim = c_e * c_e_typ
+    c_s_surf_dim = c_s_surf * c_p_max
     T_dim = Delta_T * T + T_ref
-    return m_p_dimensional(T_dim) / m_p_ref_dimensional
+
+    return j0_p_dimensional(c_e_dim, c_s_surf_dim, T_dim) / j0_p_ref_dimensional
 
 
 def U_n(c_s_n, T):
