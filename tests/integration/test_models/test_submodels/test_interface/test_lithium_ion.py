@@ -81,18 +81,14 @@ class TestExchangeCurrentDensity(unittest.TestCase):
         submesh = mesh.combine_submeshes(*whole_cell)
         y = np.concatenate(
             [
-                submesh[0].nodes ** 2,
-                mesh["negative particle"][0].nodes,
-                mesh["positive particle"][0].nodes,
+                submesh.nodes ** 2,
+                mesh["negative particle"].nodes,
+                mesh["positive particle"].nodes,
             ]
         )
         # should evaluate to vectors with the right shape
-        self.assertEqual(
-            j0_n.evaluate(y=y).shape, (mesh["negative electrode"][0].npts, 1)
-        )
-        self.assertEqual(
-            j0_p.evaluate(y=y).shape, (mesh["positive electrode"][0].npts, 1)
-        )
+        self.assertEqual(j0_n.evaluate(y=y).shape, (mesh["negative electrode"].npts, 1))
+        self.assertEqual(j0_p.evaluate(y=y).shape, (mesh["positive electrode"].npts, 1))
 
 
 if __name__ == "__main__":

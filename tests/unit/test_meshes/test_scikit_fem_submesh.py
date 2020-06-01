@@ -24,7 +24,9 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
             }
         )
 
-        geometry = pybamm.Geometryxp1DMacro(cc_dimension=2)
+        geometry = pybamm.battery_geometry(
+            include_particles=False, current_collector_dimension=2
+        )
         param.process_geometry(geometry)
 
         var = pybamm.standard_spatial_vars
@@ -37,31 +39,27 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
             "current collector": pybamm.MeshGenerator(pybamm.ScikitUniform2DSubMesh),
         }
 
-        mesh_type = pybamm.Mesh
-
         # create mesh
-        mesh = mesh_type(geometry, submesh_types, var_pts)
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
         # check boundary locations
-        self.assertEqual(mesh["negative electrode"][0].edges[0], 0)
-        self.assertEqual(mesh["positive electrode"][0].edges[-1], 1)
+        self.assertEqual(mesh["negative electrode"].edges[0], 0)
+        self.assertEqual(mesh["positive electrode"].edges[-1], 1)
 
         # check internal boundary locations
         self.assertEqual(
-            mesh["negative electrode"][0].edges[-1], mesh["separator"][0].edges[0]
+            mesh["negative electrode"].edges[-1], mesh["separator"].edges[0]
         )
         self.assertEqual(
-            mesh["positive electrode"][0].edges[0], mesh["separator"][0].edges[-1]
+            mesh["positive electrode"].edges[0], mesh["separator"].edges[-1]
         )
         for domain in mesh:
             if domain == "current collector":
                 # NOTE: only for degree 1
                 npts = var_pts[var.y] * var_pts[var.z]
-                self.assertEqual(mesh[domain][0].npts, npts)
+                self.assertEqual(mesh[domain].npts, npts)
             else:
-                self.assertEqual(
-                    len(mesh[domain][0].edges), len(mesh[domain][0].nodes) + 1
-                )
+                self.assertEqual(len(mesh[domain].edges), len(mesh[domain].nodes) + 1)
 
     def test_init_failure(self):
         submesh_types = {
@@ -70,7 +68,9 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
             "positive electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
             "current collector": pybamm.MeshGenerator(pybamm.ScikitUniform2DSubMesh),
         }
-        geometry = pybamm.Geometryxp1DMacro(cc_dimension=2)
+        geometry = pybamm.battery_geometry(
+            include_particles=False, current_collector_dimension=2
+        )
         with self.assertRaises(KeyError):
             pybamm.Mesh(geometry, submesh_types, {})
 
@@ -82,14 +82,14 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
 
         lims = {var.x_n: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
         with self.assertRaises(pybamm.GeometryError):
-            pybamm.ScikitUniform2DSubMesh(lims, None, None)
+            pybamm.ScikitUniform2DSubMesh(lims, None)
 
         lims = {
             var.x_n: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
             var.x_p: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
         }
         with self.assertRaises(pybamm.DomainError):
-            pybamm.ScikitUniform2DSubMesh(lims, None, None)
+            pybamm.ScikitUniform2DSubMesh(lims, None)
 
         lims = {
             var.y: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
@@ -98,7 +98,7 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
         npts = {var.y.id: 10, var.z.id: 10}
         var.z.coord_sys = "not cartesian"
         with self.assertRaises(pybamm.DomainError):
-            pybamm.ScikitUniform2DSubMesh(lims, npts, None)
+            pybamm.ScikitUniform2DSubMesh(lims, npts)
         var.z.coord_sys = "cartesian"
 
     def test_tab_error(self):
@@ -112,8 +112,6 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
             "positive electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
             "current collector": pybamm.MeshGenerator(pybamm.ScikitUniform2DSubMesh),
         }
-
-        mesh_type = pybamm.Mesh
 
         # set base parameters
         param = pybamm.ParameterValues(
@@ -133,10 +131,12 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
         )
 
         # check error raised if tab not on boundary
-        geometry = pybamm.Geometryxp1DMacro(cc_dimension=2)
+        geometry = pybamm.battery_geometry(
+            include_particles=False, current_collector_dimension=2
+        )
         param.process_geometry(geometry)
         with self.assertRaises(pybamm.GeometryError):
-            mesh_type(geometry, submesh_types, var_pts)
+            pybamm.Mesh(geometry, submesh_types, var_pts)
 
     def test_tab_left_right(self):
         # set variables and submesh types
@@ -149,8 +149,6 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
             "positive electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
             "current collector": pybamm.MeshGenerator(pybamm.ScikitUniform2DSubMesh),
         }
-
-        mesh_type = pybamm.Mesh
 
         # set base parameters
         param = pybamm.ParameterValues(
@@ -170,9 +168,11 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
         )
 
         # check mesh can be built
-        geometry = pybamm.Geometryxp1DMacro(cc_dimension=2)
+        geometry = pybamm.battery_geometry(
+            include_particles=False, current_collector_dimension=2
+        )
         param.process_geometry(geometry)
-        mesh_type(geometry, submesh_types, var_pts)
+        pybamm.Mesh(geometry, submesh_types, var_pts)
 
 
 class TestScikitFiniteElementChebyshev2DSubMesh(unittest.TestCase):
@@ -193,7 +193,9 @@ class TestScikitFiniteElementChebyshev2DSubMesh(unittest.TestCase):
             }
         )
 
-        geometry = pybamm.Geometryxp1DMacro(cc_dimension=2)
+        geometry = pybamm.battery_geometry(
+            include_particles=False, current_collector_dimension=2
+        )
         param.process_geometry(geometry)
 
         var = pybamm.standard_spatial_vars
@@ -206,31 +208,27 @@ class TestScikitFiniteElementChebyshev2DSubMesh(unittest.TestCase):
             "current collector": pybamm.MeshGenerator(pybamm.ScikitChebyshev2DSubMesh),
         }
 
-        mesh_type = pybamm.Mesh
-
         # create mesh
-        mesh = mesh_type(geometry, submesh_types, var_pts)
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
         # check boundary locations
-        self.assertEqual(mesh["negative electrode"][0].edges[0], 0)
-        self.assertEqual(mesh["positive electrode"][0].edges[-1], 1)
+        self.assertEqual(mesh["negative electrode"].edges[0], 0)
+        self.assertEqual(mesh["positive electrode"].edges[-1], 1)
 
         # check internal boundary locations
         self.assertEqual(
-            mesh["negative electrode"][0].edges[-1], mesh["separator"][0].edges[0]
+            mesh["negative electrode"].edges[-1], mesh["separator"].edges[0]
         )
         self.assertEqual(
-            mesh["positive electrode"][0].edges[0], mesh["separator"][0].edges[-1]
+            mesh["positive electrode"].edges[0], mesh["separator"].edges[-1]
         )
         for domain in mesh:
             if domain == "current collector":
                 # NOTE: only for degree 1
                 npts = var_pts[var.y] * var_pts[var.z]
-                self.assertEqual(mesh[domain][0].npts, npts)
+                self.assertEqual(mesh[domain].npts, npts)
             else:
-                self.assertEqual(
-                    len(mesh[domain][0].edges), len(mesh[domain][0].nodes) + 1
-                )
+                self.assertEqual(len(mesh[domain].edges), len(mesh[domain].nodes) + 1)
 
     def test_init_failure(self):
         var = pybamm.standard_spatial_vars
@@ -238,7 +236,7 @@ class TestScikitFiniteElementChebyshev2DSubMesh(unittest.TestCase):
         # only one lim
         lims = {var.x_n: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
         with self.assertRaises(pybamm.GeometryError):
-            pybamm.ScikitChebyshev2DSubMesh(lims, None, None)
+            pybamm.ScikitChebyshev2DSubMesh(lims, None)
 
         # different coord_sys
         lims = {
@@ -246,7 +244,7 @@ class TestScikitFiniteElementChebyshev2DSubMesh(unittest.TestCase):
             var.z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
         }
         with self.assertRaises(pybamm.DomainError):
-            pybamm.ScikitChebyshev2DSubMesh(lims, None, None)
+            pybamm.ScikitChebyshev2DSubMesh(lims, None)
 
         # not y and z
         lims = {
@@ -254,7 +252,7 @@ class TestScikitFiniteElementChebyshev2DSubMesh(unittest.TestCase):
             var.z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
         }
         with self.assertRaises(pybamm.DomainError):
-            pybamm.ScikitChebyshev2DSubMesh(lims, None, None)
+            pybamm.ScikitChebyshev2DSubMesh(lims, None)
 
 
 class TestScikitExponential2DSubMesh(unittest.TestCase):
@@ -275,7 +273,9 @@ class TestScikitExponential2DSubMesh(unittest.TestCase):
             }
         )
 
-        geometry = pybamm.Geometryxp1DMacro(cc_dimension=2)
+        geometry = pybamm.battery_geometry(
+            include_particles=False, current_collector_dimension=2
+        )
         param.process_geometry(geometry)
 
         var = pybamm.standard_spatial_vars
@@ -290,31 +290,27 @@ class TestScikitExponential2DSubMesh(unittest.TestCase):
             ),
         }
 
-        mesh_type = pybamm.Mesh
-
         # create mesh
-        mesh = mesh_type(geometry, submesh_types, var_pts)
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
         # check boundary locations
-        self.assertEqual(mesh["negative electrode"][0].edges[0], 0)
-        self.assertEqual(mesh["positive electrode"][0].edges[-1], 1)
+        self.assertEqual(mesh["negative electrode"].edges[0], 0)
+        self.assertEqual(mesh["positive electrode"].edges[-1], 1)
 
         # check internal boundary locations
         self.assertEqual(
-            mesh["negative electrode"][0].edges[-1], mesh["separator"][0].edges[0]
+            mesh["negative electrode"].edges[-1], mesh["separator"].edges[0]
         )
         self.assertEqual(
-            mesh["positive electrode"][0].edges[0], mesh["separator"][0].edges[-1]
+            mesh["positive electrode"].edges[0], mesh["separator"].edges[-1]
         )
         for domain in mesh:
             if domain == "current collector":
                 # NOTE: only for degree 1
                 npts = var_pts[var.y] * var_pts[var.z]
-                self.assertEqual(mesh[domain][0].npts, npts)
+                self.assertEqual(mesh[domain].npts, npts)
             else:
-                self.assertEqual(
-                    len(mesh[domain][0].edges), len(mesh[domain][0].nodes) + 1
-                )
+                self.assertEqual(len(mesh[domain].edges), len(mesh[domain].nodes) + 1)
 
     def test_init_failure(self):
         var = pybamm.standard_spatial_vars
@@ -322,7 +318,7 @@ class TestScikitExponential2DSubMesh(unittest.TestCase):
         # only one lim
         lims = {var.x_n: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
         with self.assertRaises(pybamm.GeometryError):
-            pybamm.ScikitExponential2DSubMesh(lims, None, None)
+            pybamm.ScikitExponential2DSubMesh(lims, None)
 
         # different coord_sys
         lims = {
@@ -330,7 +326,7 @@ class TestScikitExponential2DSubMesh(unittest.TestCase):
             var.z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
         }
         with self.assertRaises(pybamm.DomainError):
-            pybamm.ScikitExponential2DSubMesh(lims, None, None)
+            pybamm.ScikitExponential2DSubMesh(lims, None)
 
         # not y and z
         lims = {
@@ -338,11 +334,11 @@ class TestScikitExponential2DSubMesh(unittest.TestCase):
             var.z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
         }
         with self.assertRaises(pybamm.DomainError):
-            pybamm.ScikitExponential2DSubMesh(lims, None, None)
+            pybamm.ScikitExponential2DSubMesh(lims, None)
 
         # side not top
         with self.assertRaises(pybamm.GeometryError):
-            pybamm.ScikitExponential2DSubMesh(None, None, None, side="bottom")
+            pybamm.ScikitExponential2DSubMesh(None, None, side="bottom")
 
 
 class TestScikitUser2DSubMesh(unittest.TestCase):
@@ -363,7 +359,9 @@ class TestScikitUser2DSubMesh(unittest.TestCase):
             }
         )
 
-        geometry = pybamm.Geometryxp1DMacro(cc_dimension=2)
+        geometry = pybamm.battery_geometry(
+            include_particles=False, current_collector_dimension=2
+        )
         param.process_geometry(geometry)
 
         var = pybamm.standard_spatial_vars
@@ -382,31 +380,27 @@ class TestScikitUser2DSubMesh(unittest.TestCase):
             ),
         }
 
-        mesh_type = pybamm.Mesh
-
         # create mesh
-        mesh = mesh_type(geometry, submesh_types, var_pts)
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
         # check boundary locations
-        self.assertEqual(mesh["negative electrode"][0].edges[0], 0)
-        self.assertEqual(mesh["positive electrode"][0].edges[-1], 1)
+        self.assertEqual(mesh["negative electrode"].edges[0], 0)
+        self.assertEqual(mesh["positive electrode"].edges[-1], 1)
 
         # check internal boundary locations
         self.assertEqual(
-            mesh["negative electrode"][0].edges[-1], mesh["separator"][0].edges[0]
+            mesh["negative electrode"].edges[-1], mesh["separator"].edges[0]
         )
         self.assertEqual(
-            mesh["positive electrode"][0].edges[0], mesh["separator"][0].edges[-1]
+            mesh["positive electrode"].edges[0], mesh["separator"].edges[-1]
         )
         for domain in mesh:
             if domain == "current collector":
                 # NOTE: only for degree 1
                 npts = var_pts[var.y] * var_pts[var.z]
-                self.assertEqual(mesh[domain][0].npts, npts)
+                self.assertEqual(mesh[domain].npts, npts)
             else:
-                self.assertEqual(
-                    len(mesh[domain][0].edges), len(mesh[domain][0].nodes) + 1
-                )
+                self.assertEqual(len(mesh[domain].edges), len(mesh[domain].nodes) + 1)
 
     def test_exceptions(self):
         var = pybamm.standard_spatial_vars

@@ -20,15 +20,14 @@ class SubMesh0D(SubMesh):
     npts : dict, optional
         Number of points to be used. Included for compatibility with other meshes,
         but ignored by this mesh class
-    tabs : dict
-        A dictionary that contains information about the size and location of
-        the tabs. Included for compatibility with other meshes, but
-        ignored by this mesh class
 
     **Extends:"": :class:`pybamm.SubMesh`
     """
 
-    def __init__(self, position, npts=None, tabs=None):
+    def __init__(self, position, npts=None):
+        # Remove tabs
+        position.pop("tabs", None)
+
         # check that only one variable passed in
         if len(position) != 1:
             raise pybamm.GeometryError("position should only contain a single variable")

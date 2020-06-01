@@ -127,8 +127,8 @@ class VariableDot(VariableBase):
         """
         return Variable(
             self.name[:-1],
-            domain=self._domain,
-            auxiliary_domains=self._auxiliary_domains,
+            domain=self.domain,
+            auxiliary_domains=self.auxiliary_domains,
         )
 
     def diff(self, variable):
@@ -197,6 +197,8 @@ class ExternalVariable(Variable):
                     )
                 )
             else:
+                if isinstance(out, np.ndarray) and out.ndim == 1:
+                    out = out[:, np.newaxis]
                 return out
         # raise more informative error if can't find name in dict
         except KeyError:

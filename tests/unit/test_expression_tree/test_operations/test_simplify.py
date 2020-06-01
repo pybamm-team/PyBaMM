@@ -544,8 +544,8 @@ class TestSimplify(unittest.TestCase):
 
         a_dom = ["negative electrode"]
         b_dom = ["positive electrode"]
-        a = 2 * pybamm.Vector(np.ones_like(mesh[a_dom[0]][0].nodes), domain=a_dom)
-        b = pybamm.Vector(np.ones_like(mesh[b_dom[0]][0].nodes), domain=b_dom)
+        a = 2 * pybamm.Vector(np.ones_like(mesh[a_dom[0]].nodes), domain=a_dom)
+        b = pybamm.Vector(np.ones_like(mesh[b_dom[0]].nodes), domain=b_dom)
 
         conc = pybamm.DomainConcatenation([a, b], mesh)
         conc_simp = conc.simplify()
@@ -556,8 +556,8 @@ class TestSimplify(unittest.TestCase):
             conc_simp.evaluate(),
             np.concatenate(
                 [
-                    np.full((mesh[a_dom[0]][0].npts, 1), 2),
-                    np.full((mesh[b_dom[0]][0].npts, 1), 1),
+                    np.full((mesh[a_dom[0]].npts, 1), 2),
+                    np.full((mesh[b_dom[0]].npts, 1), 1),
                 ]
             ),
         )
@@ -574,7 +574,7 @@ class TestSimplify(unittest.TestCase):
         conc_disc = disc.process_symbol(conc)
         conc_simp = conc_disc.simplify()
 
-        y = mesh.combine_submeshes(*conc.domain)[0].nodes ** 2
+        y = mesh.combine_submeshes(*conc.domain).nodes ** 2
         self.assertIsInstance(conc_simp, pybamm.StateVector)
         self.assertEqual(len(conc_simp.y_slices), 1)
         self.assertEqual(conc_simp.y_slices[0].start, 0)

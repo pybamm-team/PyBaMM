@@ -27,6 +27,18 @@ class TestLumped(unittest.TestCase):
         std_tests = tests.StandardSubModelTests(submodel, coupled_variables)
         std_tests.test_all()
 
+        submodel = pybamm.thermal.Lumped(param, cc_dimension=0, geometry="pouch")
+        std_tests = tests.StandardSubModelTests(submodel, coupled_variables)
+        std_tests.test_all()
+
+        submodel = pybamm.thermal.Lumped(param, cc_dimension=1, geometry="pouch")
+        std_tests = tests.StandardSubModelTests(submodel, coupled_variables)
+        std_tests.test_all()
+
+        submodel = pybamm.thermal.Lumped(param, cc_dimension=2, geometry="pouch")
+        std_tests = tests.StandardSubModelTests(submodel, coupled_variables)
+        std_tests.test_all()
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
