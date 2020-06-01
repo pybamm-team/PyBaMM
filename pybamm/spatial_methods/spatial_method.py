@@ -80,7 +80,7 @@ class SpatialMethod:
         """
         symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
         repeats = self._get_auxiliary_domain_repeats(symbol.auxiliary_domains)
-        if symbol.evaluates_on_edges():
+        if symbol.evaluates_on_edges("primary"):
             entries = np.tile(symbol_mesh.edges, repeats)
         else:
             entries = np.tile(symbol_mesh.nodes, repeats)

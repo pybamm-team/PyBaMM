@@ -83,9 +83,9 @@ class UnaryOperator(pybamm.Symbol):
         """
         return self.children[0].evaluate_for_shape()
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
-        return self.child.evaluates_on_edges()
+        return self.child.evaluates_on_edges(dimension)
 
 
 class Negate(UnaryOperator):
@@ -255,7 +255,7 @@ class Index(UnaryOperator):
     def _evaluate_for_shape(self):
         return self._unary_evaluate(self.children[0].evaluate_for_shape())
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
         return False
 
@@ -316,13 +316,13 @@ class Gradient(SpatialOperator):
                 + "Try broadcasting the object first, e.g.\n\n"
                 "\tpybamm.grad(pybamm.PrimaryBroadcast(symbol, 'domain'))"
             )
-        if child.evaluates_on_edges() is True:
+        if child.evaluates_on_edges("primary") is True:
             raise TypeError(
                 "Cannot take gradient of '{}' since it evaluates on edges".format(child)
             )
         super().__init__("grad", child)
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
         return True
 
@@ -342,7 +342,7 @@ class Divergence(SpatialOperator):
                 + "Try broadcasting the object first, e.g.\n\n"
                 "\tpybamm.div(pybamm.PrimaryBroadcast(symbol, 'domain'))"
             )
-        if child.evaluates_on_edges() is False:
+        if child.evaluates_on_edges("primary") is False:
             raise TypeError(
                 "Cannot take divergence of '{}' since it does not ".format(child)
                 + "evaluates on nodes. Usually, a gradient should be taken before the "
@@ -350,7 +350,7 @@ class Divergence(SpatialOperator):
             )
         super().__init__("div", child)
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
         return False
 
@@ -365,7 +365,7 @@ class Laplacian(SpatialOperator):
     def __init__(self, child):
         super().__init__("laplacian", child)
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
         return False
 
@@ -381,7 +381,7 @@ class Gradient_Squared(SpatialOperator):
     def __init__(self, child):
         super().__init__("grad squared", child)
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
         return True
 
@@ -531,7 +531,7 @@ class Integral(SpatialOperator):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
         return pybamm.evaluate_for_shape_using_domain(self.domain)
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
         return False
 
@@ -564,10 +564,10 @@ class BaseIndefiniteIntegral(Integral):
     def _evaluate_for_shape(self):
         return self.children[0].evaluate_for_shape()
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         # If child evaluates on edges, indefinite integral doesn't
         # If child doesn't evaluate on edges, indefinite integral does
-        return not self.child.evaluates_on_edges()
+        return not self.child.evaluates_on_edges(dimension)
 
 
 class IndefiniteIntegral(BaseIndefiniteIntegral):
@@ -739,7 +739,7 @@ class BoundaryIntegral(SpatialOperator):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
         return pybamm.evaluate_for_shape_using_domain(self.domain)
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
         return False
 
@@ -775,7 +775,7 @@ class DeltaFunction(SpatialOperator):
             + tuple([(k, tuple(v)) for k, v in self.auxiliary_domains.items()])
         )
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
         return False
 
@@ -1023,7 +1023,7 @@ def x_average(symbol):
         the new averaged symbol
     """
     # Can't take average if the symbol evaluates on edges
-    if symbol.evaluates_on_edges():
+    if symbol.evaluates_on_edges("primary"):
         raise ValueError("Can't take the x-average of a symbol that evaluates on edges")
     # If symbol doesn't have a domain, its average value is itself
     if symbol.domain in [[], ["current collector"]]:
@@ -1088,7 +1088,7 @@ def z_average(symbol):
         the new averaged symbol
     """
     # Can't take average if the symbol evaluates on edges
-    if symbol.evaluates_on_edges():
+    if symbol.evaluates_on_edges("primary"):
         raise ValueError("Can't take the z-average of a symbol that evaluates on edges")
     # Symbol must have domain [] or ["current collector"]
     if symbol.domain not in [[], ["current collector"]]:
@@ -1165,7 +1165,7 @@ def r_average(symbol):
         the new averaged symbol
     """
     # Can't take average if the symbol evaluates on edges
-    if symbol.evaluates_on_edges():
+    if symbol.evaluates_on_edges("primary"):
         raise ValueError("Can't take the r-average of a symbol that evaluates on edges")
     # If symbol doesn't have a particle domain, its r-averaged value is itself
     if symbol.domain not in [["positive particle"], ["negative particle"]]:

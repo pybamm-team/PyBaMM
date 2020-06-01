@@ -848,6 +848,43 @@ class TestFiniteVolume(unittest.TestCase):
             decimal=4,
         )
 
+    def test_integral_secondary_domain_on_edges_in_primary_domain(self):
+        # create discretisation
+        mesh = get_1p1d_mesh_for_testing()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume(),
+            "negative particle": pybamm.FiniteVolume(),
+            "positive particle": pybamm.FiniteVolume(),
+            "current collector": pybamm.FiniteVolume(),
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        # lengths
+        ln = mesh["negative electrode"].edges[-1]
+        ls = mesh["separator"].edges[-1] - ln
+        lp = 1 - (ln + ls)
+
+        r_edge = pybamm.SpatialVariableEdge(
+            "r_p",
+            domain="positive particle",
+            auxiliary_domains={
+                "secondary": "positive electrode",
+                "tertiary": "current collector",
+            },
+        )
+
+        x = pybamm.SpatialVariable("x", "positive electrode")
+        integral_eqn = pybamm.Integral(r_edge, x)
+        integral_eqn_disc = disc.process_symbol(integral_eqn)
+
+        submesh = mesh["positive particle"]
+        np.testing.assert_array_almost_equal(
+            integral_eqn_disc.evaluate().flatten(),
+            lp
+            * np.tile(
+                np.linspace(0, 1, submesh.npts + 1), mesh["current collector"].npts
+            ),
+        )
+
     def test_definite_integral_vector(self):
         mesh = get_mesh_for_testing()
         spatial_methods = {

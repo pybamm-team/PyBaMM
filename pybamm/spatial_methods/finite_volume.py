@@ -59,7 +59,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         """
         symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
         repeats = self._get_auxiliary_domain_repeats(symbol.auxiliary_domains)
-        if symbol.evaluates_on_edges():
+        if symbol.evaluates_on_edges("primary"):
             entries = np.tile(symbol_mesh.edges, repeats)
         else:
             entries = np.tile(symbol_mesh.nodes, repeats)
@@ -232,7 +232,7 @@ class FiniteVolume(pybamm.SpatialMethod):
     def integral(self, child, discretised_child, integration_dimension):
         """Vector-vector dot product to implement the integral operator. """
         integration_vector = self.definite_integral_matrix(
-            child.domains, integration_dimension=integration_dimension
+            child, integration_dimension=integration_dimension
         )
 
         # Check for spherical domains
@@ -249,7 +249,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         return out
 
     def definite_integral_matrix(
-        self, domains, vector_type="row", integration_dimension="primary"
+        self, child, vector_type="row", integration_dimension="primary"
     ):
         """
         Matrix for finite-volume implementation of the definite integral in the
@@ -263,8 +263,8 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         Parameters
         ----------
-        domains : dict
-            The domain(s) and auxiliary domains of integration
+        child : :class:`pybamm.Symbol`
+            The symbol being integrated
         vector_type : str, optional
             Whether to return a row or column vector in the primary dimension
             (default is row)
@@ -276,6 +276,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         :class:`pybamm.Matrix`
             The finite volume integral matrix for the domain
         """
+        domains = child.domains
         if integration_dimension == "primary":
             # Create appropriate submesh by combining submeshes in domain
             submesh = self.mesh.combine_submeshes(*domains["primary"])
@@ -299,7 +300,12 @@ class FiniteVolume(pybamm.SpatialMethod):
 
             # Create matrix which integrates in the secondary dimension
             d_edges = secondary_submesh.d_edges
-            n_primary_pts = primary_submesh.npts
+            # Different number of edges depending on whether child evaluates on edges
+            # in the primary dimensions
+            if child.evaluates_on_edges("primary"):
+                n_primary_pts = primary_submesh.npts + 1
+            else:
+                n_primary_pts = primary_submesh.npts
             int_matrix = hstack([d_edge * eye(n_primary_pts) for d_edge in d_edges])
 
             if vector_type != "row":
@@ -324,7 +330,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # Different integral matrix depending on whether the integrand evaluates on
         # edges or nodes
-        if child.evaluates_on_edges():
+        if child.evaluates_on_edges("primary"):
             integration_matrix = self.indefinite_integral_matrix_edges(
                 child.domains, direction
             )
@@ -1090,8 +1096,8 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         """
         # Post-processing to make sure discretised dimensions match
-        left_evaluates_on_edges = left.evaluates_on_edges()
-        right_evaluates_on_edges = right.evaluates_on_edges()
+        left_evaluates_on_edges = left.evaluates_on_edges("primary")
+        right_evaluates_on_edges = right.evaluates_on_edges("primary")
 
         # inner product takes fluxes from edges to nodes
         if isinstance(bin_op, pybamm.Inner):
