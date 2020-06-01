@@ -127,7 +127,7 @@ class SpatialVariableEdge(SpatialVariable):
     def __init__(self, name, domain=None, auxiliary_domains=None, coord_sys=None):
         super().__init__(name, domain, auxiliary_domains, coord_sys)
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         return True
 
 

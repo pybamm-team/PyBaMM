@@ -676,10 +676,22 @@ class Symbol(anytree.NodeMixin):
         else:
             return False
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         """
         Returns True if a symbol evaluates on an edge, i.e. symbol contains a gradient
         operator, but not a divergence operator, and is not an IndefiniteIntegral.
+
+        Parameters
+        ----------
+        dimension : str
+            The dimension (primary, secondary, etc) in which to query evaluation on
+            edges
+
+        Returns
+        -------
+        bool
+            Whether the symbol evaluates on edges (in the finite volume discretisation
+            sense)
         """
         # Default behaviour: return False
         return False
