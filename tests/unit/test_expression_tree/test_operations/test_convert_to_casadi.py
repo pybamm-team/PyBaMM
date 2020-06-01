@@ -131,8 +131,8 @@ class TestCasadiConverter(unittest.TestCase):
         mesh = get_mesh_for_testing()
         a_dom = ["negative electrode"]
         b_dom = ["separator"]
-        a = 2 * pybamm.Vector(np.ones_like(mesh[a_dom[0]][0].nodes), domain=a_dom)
-        b = pybamm.Vector(np.ones_like(mesh[b_dom[0]][0].nodes), domain=b_dom)
+        a = 2 * pybamm.Vector(np.ones_like(mesh[a_dom[0]].nodes), domain=a_dom)
+        b = pybamm.Vector(np.ones_like(mesh[b_dom[0]].nodes), domain=b_dom)
         conc = pybamm.DomainConcatenation([b, a], mesh)
         self.assert_casadi_equal(
             conc.to_casadi(), casadi.MX(conc.evaluate()), evalf=True

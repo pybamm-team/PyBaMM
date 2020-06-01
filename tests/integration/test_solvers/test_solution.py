@@ -104,7 +104,7 @@ class TestSolution(unittest.TestCase):
         )
         np.testing.assert_array_equal(
             sol_step.inputs["X-averaged negative particle concentration"],
-            np.ones((mesh["negative particle"][0].npts, len(sol_step.t))) * 0.6,
+            np.ones((mesh["negative particle"].npts, len(sol_step.t))) * 0.6,
         )
 
         # Solve
@@ -115,7 +115,7 @@ class TestSolution(unittest.TestCase):
         )
         np.testing.assert_array_equal(
             sol.inputs["X-averaged negative particle concentration"],
-            np.ones((mesh["negative particle"][0].npts, len(sol.t))) * 0.6,
+            np.ones((mesh["negative particle"].npts, len(sol.t))) * 0.6,
         )
 
 

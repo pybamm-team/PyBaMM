@@ -75,9 +75,7 @@ model.variables = {
 "Using the model"
 
 # define geometry
-geometry = {
-    "SEI layer": {"primary": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
-}
+geometry = {"SEI layer": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
 
 
 # diffusivity function
