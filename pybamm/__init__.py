@@ -50,8 +50,10 @@ def version(formatted=False):
 FLOAT_FORMAT = "{: .17e}"
 # Absolute path to the PyBaMM repo
 script_path = os.path.abspath(__file__)
-ABSOLUTE_PATH = os.path.join(os.path.split(script_path)[0], "..")
-PARAMETER_PATH = [os.getcwd(), os.path.join(os.path.split(script_path)[0], "input", "parameters")]
+
+from .util import root_dir
+ABSOLUTE_PATH = root_dir()
+PARAMETER_PATH = [os.getcwd(), os.path.join(root_dir(), "pybamm", "input", "parameters")]
 
 #
 # Utility classes and methods
