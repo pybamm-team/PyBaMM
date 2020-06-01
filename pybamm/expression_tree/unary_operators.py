@@ -628,10 +628,10 @@ class BackwardIndefiniteIntegral(BaseIndefiniteIntegral):
         if isinstance(integration_variable, pybamm.SpatialVariable):
             self.name += " on {}".format(self.integration_variable[0].domain)
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         # If child evaluates on edges, indefinite integral doesn't
         # If child doesn't evaluate on edges, indefinite integral does
-        return not self.child.evaluates_on_edges()
+        return not self.child.evaluates_on_edges(dimension)
 
 
 class DefiniteIntegralVector(SpatialOperator):
