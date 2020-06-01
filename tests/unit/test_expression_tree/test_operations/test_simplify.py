@@ -72,7 +72,10 @@ class TestSimplify(unittest.TestCase):
 
         # Integral
         self.assertIsInstance(
-            (pybamm.Integral(a, pybamm.t)).simplify(), pybamm.Integral
+            (
+                pybamm.Integral(a, pybamm.SpatialVariable("x", domain="domain"))
+            ).simplify(),
+            pybamm.Integral,
         )
 
         # BoundaryValue

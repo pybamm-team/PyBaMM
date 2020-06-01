@@ -32,7 +32,9 @@ class SubMesh0D(SubMesh):
         if len(position) != 1:
             raise pybamm.GeometryError("position should only contain a single variable")
 
-        spatial_position = list(position.values())[0]
+        # extract the position
+        position = list(position.values())[0]
+        spatial_position = position["position"]
         self.nodes = np.array([spatial_position])
         self.edges = np.array([spatial_position])
         self.coord_sys = None

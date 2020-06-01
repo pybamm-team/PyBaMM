@@ -40,11 +40,11 @@ class SpatialMethod:
             mesh[dom].npts_for_broadcast_to_nodes = mesh[dom].npts
         self._mesh = mesh
 
-    def _get_auxiliary_domain_repeats(self, auxiliary_domains):
+    def _get_auxiliary_domain_repeats(self, auxiliary_domains, tertiary_only=False):
         """
         Helper method to read the 'auxiliary_domain' meshes
         """
-        if "secondary" in auxiliary_domains:
+        if tertiary_only is False and "secondary" in auxiliary_domains:
             sec_mesh_npts = self.mesh.combine_submeshes(
                 *auxiliary_domains["secondary"]
             ).npts
@@ -231,7 +231,7 @@ class SpatialMethod:
         """
         raise NotImplementedError
 
-    def integral(self, child, discretised_child):
+    def integral(self, child, discretised_child, integration_dimension):
         """
         Implements the integral for a spatial method.
 
@@ -241,6 +241,8 @@ class SpatialMethod:
             The symbol to which is being integrated
         discretised_child: :class:`pybamm.Symbol`
             The discretised symbol of the correct size
+        integration_dimension : str, optional
+            The dimension in which to integrate (default is "primary")
 
         Returns
         -------

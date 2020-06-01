@@ -852,7 +852,12 @@ class Discretisation(object):
                 )
 
             elif isinstance(symbol, pybamm.Integral):
-                out = child_spatial_method.integral(child, disc_child)
+                integral_spatial_method = self.spatial_methods[
+                    symbol.integration_variable[0].domain[0]
+                ]
+                out = integral_spatial_method.integral(
+                    child, disc_child, symbol._integration_dimension
+                )
                 out.copy_domains(symbol)
                 return out
 
@@ -1101,16 +1106,19 @@ class Discretisation(object):
         y0 = model.concatenated_initial_conditions
         # Individual
         for var in model.rhs.keys():
-            assert (
-                model.rhs[var].shape == model.initial_conditions[var].shape
-            ), pybamm.ModelError(
-                """
-                rhs and initial_conditions must have the same shape after discretisation
-                but rhs.shape = {} and initial_conditions.shape = {} for variable '{}'.
-                """.format(
-                    model.rhs[var].shape, model.initial_conditions[var].shape, var
+            try:
+                assert (
+                    model.rhs[var].shape == model.initial_conditions[var].shape
+                ), pybamm.ModelError(
+                    """
+                    rhs and initial_conditions must have the same shape after discretisation
+                    but rhs.shape = {} and initial_conditions.shape = {} for variable '{}'.
+                    """.format(
+                        model.rhs[var].shape, model.initial_conditions[var].shape, var
+                    )
                 )
-            )
+            except:
+                n - 1
         # Concatenated
         assert (
             model.concatenated_rhs.shape[0] + model.concatenated_algebraic.shape[0]

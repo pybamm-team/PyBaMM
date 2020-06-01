@@ -143,7 +143,8 @@ class TestSimulation(unittest.TestCase):
 
     def test_specs(self):
         # test can rebuild after setting specs
-        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model)
         sim.build()
 
         model_options = {"thermal": "lumped"}
@@ -161,7 +162,13 @@ class TestSimulation(unittest.TestCase):
         )
         sim.build()
 
-        sim.specs(geometry=pybamm.battery_geometry(current_collector_dimension=1))
+        sim.specs(
+            geometry=pybamm.battery_geometry(current_collector_dimension=1),
+            submesh_types={
+                **model.default_submesh_types,
+                "current collector": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            },
+        )
         sim.build()
 
         var_pts = sim.var_pts

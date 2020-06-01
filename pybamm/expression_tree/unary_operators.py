@@ -421,7 +421,6 @@ class Integral(SpatialOperator):
 
     where :math:`a` and :math:`b` are the left-hand and right-hand boundaries of
     the domain respectively, and :math:`u\\in\\text{domain}`.
-    Can be integration with respect to time or space.
 
     Parameters
     ----------
@@ -437,33 +436,60 @@ class Integral(SpatialOperator):
         if not isinstance(integration_variable, list):
             integration_variable = [integration_variable]
 
-        # integral of a child takes the domain from auxiliary domain of the child
-        if child.auxiliary_domains != {}:
-            domain = child.auxiliary_domains["secondary"]
-            try:
-                auxiliary_domains = {"secondary": child.auxiliary_domains["tertiary"]}
-            except KeyError:
-                auxiliary_domains = {}
-        # if child has no auxiliary domain, integral removes domain
-        else:
-            domain = []
-            auxiliary_domains = {}
         name = "integral"
         for var in integration_variable:
             if isinstance(var, pybamm.SpatialVariable):
                 # Check that child and integration_variable domains agree
-                if child.domain != var.domain:
+                if var.domain == child.domain:
+                    self._integration_dimension = "primary"
+                elif (
+                    "secondary" in child.auxiliary_domains
+                    and var.domain == child.auxiliary_domains["secondary"]
+                ):
+                    self._integration_dimension = "secondary"
+                elif (
+                    "tertiary" in child.auxiliary_domains
+                    and var.domain == child.auxiliary_domains["tertiary"]
+                ):
+                    self._integration_dimension = "tertiary"
+                else:
                     raise pybamm.DomainError(
-                        "child and integration_variable must have the same domain"
+                        "integration_variable must be the same as child domain or "
+                        "an auxiliary domain"
                     )
-            elif not isinstance(var, pybamm.IndependentVariable):
-                raise ValueError(
-                    """integration_variable must be of type pybamm.IndependentVariable,
-                           not {}""".format(
-                        type(var)
-                    )
+            else:
+                raise TypeError(
+                    "integration_variable must be of type pybamm.SpatialVariable, "
+                    "not {}".format(type(var))
                 )
             name += " d{}".format(var.name)
+
+        if self._integration_dimension == "primary":
+            # integral of a child takes the domain from auxiliary domain of the child
+            if child.auxiliary_domains != {}:
+                domain = child.auxiliary_domains["secondary"]
+                if "tertiary" in child.auxiliary_domains:
+                    auxiliary_domains = {
+                        "secondary": child.auxiliary_domains["tertiary"]
+                    }
+                else:
+                    auxiliary_domains = {}
+            # if child has no auxiliary domain, integral removes domain
+            else:
+                domain = []
+                auxiliary_domains = {}
+        elif self._integration_dimension == "secondary":
+            # integral in the secondary dimension keeps the same domain, moves tertiary
+            # domain to secondary domain
+            domain = child.domain
+            if "tertiary" in child.auxiliary_domains:
+                auxiliary_domains = {"secondary": child.auxiliary_domains["tertiary"]}
+            else:
+                auxiliary_domains = {}
+        elif self._integration_dimension == "tertiary":
+            # integral in the tertiary dimension keeps the domain and secondary domain
+            domain = child.domain
+            auxiliary_domains = {"secondary": child.auxiliary_domains["secondary"]}
 
         if any(isinstance(var, pybamm.SpatialVariable) for var in integration_variable):
             name += " {}".format(child.domain)

@@ -292,7 +292,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
         return pybamm.Matrix(stiffness)
 
-    def integral(self, child, discretised_child):
+    def integral(self, child, discretised_child, integration_dimension):
         """Vector-vector dot product to implement the integral operator.
         See :meth:`pybamm.SpatialMethod.integral`
         """
@@ -344,7 +344,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         elif vector_type == "column":
             return pybamm.Matrix(vector[:, np.newaxis])
 
-    def indefinite_integral(self, child, discretised_child):
+    def indefinite_integral(self, child, discretised_child, direction):
         """Implementation of the indefinite integral operator. The
         input discretised child must be defined on the internal mesh edges.
         See :meth:`pybamm.SpatialMethod.indefinite_integral`
