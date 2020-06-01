@@ -101,6 +101,6 @@ jobs:
         pip install -e .[dev]
         python run-tests.py --examples
         
-    - name: Instal and run coverage
-      if: success() && (matrix.os == 'unbuntu-latest' && matrix.python-version == 3.7)
+    - name: Install and run coverage
+      if: success() && (matrix.os == 'ubuntu-latest' && matrix.python-version == 3.7)
       uses: codecov/codecov-action@v1
