@@ -323,7 +323,15 @@ class TestFiniteVolume(unittest.TestCase):
 
         div_eqn_disc = disc.process_symbol(div_eqn)
         np.testing.assert_array_almost_equal(
-            div_eqn_disc.evaluate(None, const), np.zeros((submesh.npts, 1))
+            div_eqn_disc.evaluate(None, const),
+            np.zeros(
+                (
+                    submesh.npts
+                    * mesh["negative electrode"].npts
+                    * mesh["current collector"].npts,
+                    1,
+                )
+            ),
         )
 
     def test_p2d_spherical_grad_div_shapes_Dirichlet_bcs(self):
@@ -769,17 +777,29 @@ class TestFiniteVolume(unittest.TestCase):
             integral_eqn_disc.evaluate(None, constant_y),
             lp * np.ones((submesh.npts * mesh["current collector"].npts, 1)),
         )
-        linear_y = np.tile(
+        linear_in_x = np.tile(
+            np.repeat(mesh["positive electrode"].nodes, submesh.npts),
+            mesh["current collector"].npts,
+        )
+        np.testing.assert_array_almost_equal(
+            integral_eqn_disc.evaluate(None, linear_in_x),
+            (1 - (ln + ls) ** 2)
+            / 2
+            * np.ones((submesh.npts * mesh["current collector"].npts, 1)),
+        )
+        linear_in_r = np.tile(
             submesh.nodes,
             mesh["positive electrode"].npts * mesh["current collector"].npts,
         )
         np.testing.assert_array_almost_equal(
-            integral_eqn_disc.evaluate(None, linear_y), (1 - (ln + ls) ** 2) / 2
+            integral_eqn_disc.evaluate(None, linear_in_r).flatten(),
+            lp * np.tile(submesh.nodes, mesh["current collector"].npts),
         )
-        cos_y = np.cos(linear_y)
+        cos_y = np.cos(linear_in_x)
         np.testing.assert_array_almost_equal(
             integral_eqn_disc.evaluate(None, cos_y),
-            np.sin(1) - np.sin(ln + ls),
+            (np.sin(1) - np.sin(ln + ls))
+            * np.ones((submesh.npts * mesh["current collector"].npts, 1)),
             decimal=4,
         )
 
