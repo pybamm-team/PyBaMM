@@ -123,14 +123,33 @@ class AlgebraicSolver(pybamm.BaseSolver):
                 y_alg[:, idx] = y0_alg
             # Otherwise calculate new y0
             else:
-                sol = optimize.root(
-                    root_fun,
-                    y0_alg,
-                    method=self.method,
-                    tol=self.tol,
-                    jac=jac_fn,
-                    options=self.extra_options,
-                )
+                # Methods which use least-squares are specified as either "lsq", which
+                # uses the default method, or with "lsq__methodname"
+                if self.method.startswith("lsq"):
+
+                    if self.method == "lsq":
+                        method = "lm"
+                    else:
+                        method = self.method[5:]
+                    if jac_fn is None:
+                        jac_fn = "2-point"
+                    sol = optimize.least_squares(
+                        root_fun,
+                        y0_alg,
+                        method=method,
+                        ftol=self.tol,
+                        jac=jac_fn,
+                        **self.extra_options,
+                    )
+                else:
+                    sol = optimize.root(
+                        root_fun,
+                        y0_alg,
+                        method=self.method,
+                        tol=self.tol,
+                        jac=jac_fn,
+                        options=self.extra_options,
+                    )
 
                 if sol.success and np.all(abs(sol.fun) < self.tol):
                     # update initial guess for the next iteration
