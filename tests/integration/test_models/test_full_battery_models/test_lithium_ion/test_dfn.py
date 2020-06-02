@@ -160,6 +160,12 @@ class TestDFNWithSEI(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
+    def test_well_posed_ec_reaction_limited(self):
+        options = {"sei": "ec reaction limited"}
+        model = pybamm.lithium_ion.DFN(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
