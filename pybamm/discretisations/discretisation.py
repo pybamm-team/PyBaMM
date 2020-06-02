@@ -152,6 +152,8 @@ class Discretisation(object):
         self.set_variable_slices(variables)
         # Keep a record of y_slices in the model
         model.y_slices = self.y_slices_explicit
+        # Keep a record of the bounds in the model
+        model.bounds = self.bounds
 
         # now add extrapolated external variables to the boundary conditions
         # if required by the spatial method

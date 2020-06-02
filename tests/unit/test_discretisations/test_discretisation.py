@@ -131,6 +131,7 @@ class TestDiscretise(unittest.TestCase):
         self.assertEqual(disc.y_slices[a.id][0], slice(0, 10, None))
 
         self.assertEqual(model.y_slices[a][0], slice(0, 10, None))
+        self.assertEqual(model.bounds, disc.bounds)
 
         b_test = np.ones((10, 1))
         np.testing.assert_array_equal(

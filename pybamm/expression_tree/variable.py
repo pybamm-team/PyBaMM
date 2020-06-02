@@ -40,6 +40,12 @@ class VariableBase(pybamm.Symbol):
         super().__init__(name, domain=domain, auxiliary_domains=auxiliary_domains)
         if bounds is None:
             bounds = (-np.inf, np.inf)
+        else:
+            if bounds[0] >= bounds[1]:
+                raise ValueError(
+                    "Invalid bounds {}. ".format(bounds)
+                    + "Lower bound should be strictly less than upper bound."
+                )
         self.bounds = bounds
 
     def new_copy(self):

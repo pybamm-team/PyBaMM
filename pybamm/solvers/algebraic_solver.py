@@ -130,7 +130,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
                 if self.method.startswith("lsq"):
 
                     if self.method == "lsq":
-                        method = "lm"
+                        method = "trf"
                     else:
                         method = self.method[5:]
                     if jac_fn is None:
@@ -141,6 +141,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
                         method=method,
                         ftol=self.tol,
                         jac=jac_fn,
+                        bounds=model.bounds,
                         **self.extra_options,
                     )
                 else:

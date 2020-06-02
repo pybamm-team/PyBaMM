@@ -143,7 +143,7 @@ class TestAlgebraicSolver(unittest.TestCase):
             model.variables["var2"].evaluate(t=None, y=solution_no_jac.y), sol[100:]
         )
 
-    def test_model_solver_minimize(self):
+    def test_model_solver_least_squares(self):
         # Create model
         model = pybamm.BaseModel()
         whole_cell = ["negative electrode", "separator", "positive electrode"]
@@ -178,19 +178,19 @@ class TestAlgebraicSolver(unittest.TestCase):
             model.variables["var2"].evaluate(t=None, y=solution_no_jac.y), sol[100:]
         )
 
-    def test_model_solver_minimize_with_bounds(self):
+    def test_model_solver_least_squares_with_bounds(self):
         # Create model
         model = pybamm.BaseModel()
-        var1 = pybamm.Variable("var1", bounds=(0, 1))
+        var1 = pybamm.Variable("var1", bounds=(0, 10))
         model.algebraic = {var1: pybamm.sin(var1) + 1}
-        model.initial_conditions = {var1: pybamm.Scalar(0.01)}
+        model.initial_conditions = {var1: pybamm.Scalar(2)}
         model.variables = {"var1": var1}
 
         # Solve
-        solver = pybamm.AlgebraicSolver("lsq")
+        solver = pybamm.AlgebraicSolver("lsq", extra_options={"verbose": 2})
         solution = solver.solve(model)
         np.testing.assert_array_almost_equal(
-            model.variables["var1"].evaluate(t=None, y=solution.y), 9
+            model.variables["var1"].evaluate(t=None, y=solution.y), 3 * np.pi / 2
         )
 
     def test_model_solver_with_time(self):

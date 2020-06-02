@@ -58,6 +58,7 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
             p = casadi.MX.sym("p")
             rhs = {}
             casadi_algebraic = casadi.Function("alg", [t, y, p], [y ** 2 + 1])
+            bounds = (np.array([-np.inf]), np.array([np.inf]))
 
             def algebraic_eval(self, t, y, inputs):
                 # algebraic equation has no real root
@@ -102,6 +103,21 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
         np.testing.assert_array_almost_equal(
             model.variables["var2"].evaluate(t=t_eval, y=solution.y).flatten(),
             sol[1, :],
+        )
+
+    def test_model_solver_with_bounds(self):
+        # Create model
+        model = pybamm.BaseModel()
+        var1 = pybamm.Variable("var1", bounds=(0, 10))
+        model.algebraic = {var1: pybamm.sin(var1) + 1}
+        model.initial_conditions = {var1: pybamm.Scalar(1)}
+        model.variables = {"var1": var1}
+
+        # Solve
+        solver = pybamm.CasadiAlgebraicSolver(tol=1e-12)
+        solution = solver.solve(model)
+        np.testing.assert_array_almost_equal(
+            model.variables["var1"].evaluate(t=None, y=solution.y), 3 * np.pi / 2
         )
 
     def test_solve_with_input(self):
