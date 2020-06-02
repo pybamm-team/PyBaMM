@@ -230,11 +230,13 @@ class Discretisation(object):
         variables : iterable of :class:`pybamm.Variables`
             The variables for which to set slices
         """
-        # Set up y_slices
+        # Set up y_slices and bounds
         y_slices = defaultdict(list)
         y_slices_explicit = defaultdict(list)
         start = 0
         end = 0
+        lower_bounds = []
+        upper_bounds = []
         # Iterate through unpacked variables, adding appropriate slices to y_slices
         for variable in variables:
             # Add up the size of all the domains in variable.domain
@@ -251,19 +253,32 @@ class Discretisation(object):
                     for child, mesh in meshes.items():
                         for domain_mesh in mesh:
                             end += domain_mesh.npts_for_broadcast_to_nodes
+                        # Add to slices
                         y_slices[child.id].append(slice(start, end))
                         y_slices_explicit[child].append(slice(start, end))
+                        # Add to bounds
+                        lower_bounds.extend([child.bounds[0]] * (end - start))
+                        upper_bounds.extend([child.bounds[1]] * (end - start))
+                        # Increment start
                         start = end
             else:
                 end += self._get_variable_size(variable)
+                # Add to slices
                 y_slices[variable.id].append(slice(start, end))
                 y_slices_explicit[variable].append(slice(start, end))
+                # Add to bounds
+                lower_bounds.extend([variable.bounds[0]] * (end - start))
+                upper_bounds.extend([variable.bounds[1]] * (end - start))
+                # Increment start
                 start = end
 
         # Convert y_slices back to normal dictionary
         self.y_slices = dict(y_slices)
         # Also keep a record of what the y_slices are, to be stored in the model
         self.y_slices_explicit = dict(y_slices_explicit)
+
+        # Also keep a record of bounds
+        self.bounds = (np.array(lower_bounds), np.array(upper_bounds))
 
         # reset discretised_symbols
         self._discretised_symbols = {}
@@ -911,7 +926,7 @@ class Discretisation(object):
             return pybamm.StateVectorDot(
                 *self.y_slices[symbol.get_variable().id],
                 domain=symbol.domain,
-                auxiliary_domains=symbol.auxiliary_domains
+                auxiliary_domains=symbol.auxiliary_domains,
             )
 
         elif isinstance(symbol, pybamm.Variable):
@@ -962,7 +977,7 @@ class Discretisation(object):
                 return pybamm.StateVector(
                     *y_slices,
                     domain=symbol.domain,
-                    auxiliary_domains=symbol.auxiliary_domains
+                    auxiliary_domains=symbol.auxiliary_domains,
                 )
 
         elif isinstance(symbol, pybamm.SpatialVariable):
@@ -1106,19 +1121,16 @@ class Discretisation(object):
         y0 = model.concatenated_initial_conditions
         # Individual
         for var in model.rhs.keys():
-            try:
-                assert (
-                    model.rhs[var].shape == model.initial_conditions[var].shape
-                ), pybamm.ModelError(
-                    """
-                    rhs and initial_conditions must have the same shape after discretisation
-                    but rhs.shape = {} and initial_conditions.shape = {} for variable '{}'.
-                    """.format(
-                        model.rhs[var].shape, model.initial_conditions[var].shape, var
-                    )
+            assert (
+                model.rhs[var].shape == model.initial_conditions[var].shape
+            ), pybamm.ModelError(
+                """
+                rhs and initial_conditions must have the same shape after discretisation
+                but rhs.shape = {} and initial_conditions.shape = {} for variable '{}'.
+                """.format(
+                    model.rhs[var].shape, model.initial_conditions[var].shape, var
                 )
-            except:
-                n - 1
+            )
         # Concatenated
         assert (
             model.concatenated_rhs.shape[0] + model.concatenated_algebraic.shape[0]

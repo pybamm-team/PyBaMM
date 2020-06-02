@@ -178,6 +178,21 @@ class TestAlgebraicSolver(unittest.TestCase):
             model.variables["var2"].evaluate(t=None, y=solution_no_jac.y), sol[100:]
         )
 
+    def test_model_solver_minimize_with_bounds(self):
+        # Create model
+        model = pybamm.BaseModel()
+        var1 = pybamm.Variable("var1", bounds=(0, 1))
+        model.algebraic = {var1: pybamm.sin(var1) + 1}
+        model.initial_conditions = {var1: pybamm.Scalar(0.01)}
+        model.variables = {"var1": var1}
+
+        # Solve
+        solver = pybamm.AlgebraicSolver("lsq")
+        solution = solver.solve(model)
+        np.testing.assert_array_almost_equal(
+            model.variables["var1"].evaluate(t=None, y=solution.y), 9
+        )
+
     def test_model_solver_with_time(self):
         # Create model
         model = pybamm.BaseModel()

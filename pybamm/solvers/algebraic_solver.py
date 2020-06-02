@@ -19,7 +19,9 @@ class AlgebraicSolver(pybamm.BaseSolver):
     Parameters
     ----------
     method : str, optional
-        The method to use to solve the system (default is "lm")
+        The method to use to solve the system (default is "lm"). If it starts with
+        "lsq", least-squares minimization is used. The method for least-squares can be
+        specified in the form "lsq_methodname"
     tol : float, optional
         The tolerance for the solver (default is 1e-6).
     extra_options : dict, optional
@@ -162,12 +164,10 @@ class AlgebraicSolver(pybamm.BaseSolver):
                     )
                 else:
                     raise pybamm.SolverError(
-                        """
-                        Could not find acceptable solution: solver terminated
-                        successfully, but maximum solution error ({})
-                        above tolerance ({})
-                        """.format(
-                            np.max(sol.fun), self.tol
+                        "Could not find acceptable solution: solver terminated "
+                        "successfully, but maximum solution error "
+                        "({}) above tolerance ({})".format(
+                            np.max(abs(sol.fun)), self.tol
                         )
                     )
 

@@ -26,20 +26,27 @@ class VariableBase(pybamm.Symbol):
         collector'. For the DFN, the particle concentration would be a Variable with
         domain 'negative particle', secondary domain 'negative electrode' and tertiary
         domain 'current collector'
+    bounds : tuple, optional
+        Physical bounds on the variable
 
     *Extends:* :class:`Symbol`
     """
 
-    def __init__(self, name, domain=None, auxiliary_domains=None):
+    def __init__(self, name, domain=None, auxiliary_domains=None, bounds=None):
         if domain is None:
             domain = []
         if auxiliary_domains is None:
             auxiliary_domains = {}
         super().__init__(name, domain=domain, auxiliary_domains=auxiliary_domains)
+        if bounds is None:
+            bounds = (-np.inf, np.inf)
+        self.bounds = bounds
 
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
-        return self.__class__(self.name, self.domain, self.auxiliary_domains)
+        return self.__class__(
+            self.name, self.domain, self.auxiliary_domains, self.bounds
+        )
 
     def _evaluate_for_shape(self):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
@@ -59,21 +66,24 @@ class Variable(VariableBase):
 
     name : str
         name of the node
-    domain : iterable of str
+        domain : iterable of str, optional
         list of domains that this variable is valid over
-    auxiliary_domains : dict
+    auxiliary_domains : dict, optional
         dictionary of auxiliary domains ({'secondary': ..., 'tertiary': ...}). For
         example, for the single particle model, the particle concentration would be a
         Variable with domain 'negative particle' and secondary auxiliary domain 'current
         collector'. For the DFN, the particle concentration would be a Variable with
         domain 'negative particle', secondary domain 'negative electrode' and tertiary
         domain 'current collector'
-
+    bounds : tuple, optional
+        Physical bounds on the variable
     *Extends:* :class:`Symbol`
     """
 
-    def __init__(self, name, domain=None, auxiliary_domains=None):
-        super().__init__(name, domain=domain, auxiliary_domains=auxiliary_domains)
+    def __init__(self, name, domain=None, auxiliary_domains=None, bounds=None):
+        super().__init__(
+            name, domain=domain, auxiliary_domains=auxiliary_domains, bounds=bounds
+        )
 
     def diff(self, variable):
         if variable.id == self.id:
