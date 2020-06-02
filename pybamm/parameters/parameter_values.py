@@ -73,8 +73,9 @@ class ParameterValues:
         if values is not None:
             # If base_parameters is a filename, load from that filename
             if isinstance(values, str):
-                path = os.path.split(values)[0]
-                values = self.read_parameters_csv(values)
+                file_path = self.find_parameter(values)
+                path = os.path.split(file_path)[0]
+                values = self.read_parameters_csv(file_path)
             else:
                 path = None
             # Don't check parameter already exists when first creating it
@@ -133,10 +134,7 @@ class ParameterValues:
         Load standard set of components from a 'chemistry' dictionary
         """
         base_chemistry = chemistry["chemistry"]
-        # Create path to file
-        path = os.path.join(
-            pybamm.root_dir(), "pybamm", "input", "parameters", base_chemistry
-        )
+
         # Load each component name
 
         component_groups = [
@@ -163,18 +161,20 @@ class ParameterValues:
                     )
                 )
             # Create path to component and load values
-            component_path = os.path.join(path, component_group + "s", component)
-            component_params = self.read_parameters_csv(
-                pybamm.get_parameters_filepath(
-                    os.path.join(component_path, "parameters.csv")
-                )
+            component_path = os.path.join(
+                base_chemistry, component_group + "s", component
             )
+            file_path = self.find_parameter(
+                os.path.join(component_path, "parameters.csv")
+            )
+            component_params = self.read_parameters_csv(file_path)
+
             # Update parameters, making sure to check any conflicts
             self.update(
                 component_params,
                 check_conflict=True,
                 check_already_exists=False,
-                path=component_path,
+                path=os.path.dirname(file_path),
             )
 
         # register (list of) citations
@@ -737,3 +737,14 @@ class ParameterValues:
                     file.write(
                         (s + " : {:10.3E}{!s}\n").format(name, value, C_dependence)
                     )
+
+    @staticmethod
+    def find_parameter(path):
+        """Look for parameter file in the different locations
+        in PARAMETER_PATH
+        """
+        for location in pybamm.PARAMETER_PATH:
+            trial_path = os.path.join(location, path)
+            if os.path.isfile(trial_path):
+                return trial_path
+        raise FileNotFoundError("Could not find parameter {}".format(path))
