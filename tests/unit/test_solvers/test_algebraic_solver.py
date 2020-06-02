@@ -135,6 +135,7 @@ class TestAlgebraicSolver(unittest.TestCase):
 
         # Test without jacobian
         model.use_jacobian = False
+        solver.models_set_up = set()
         solution_no_jac = solver.solve(model)
         np.testing.assert_array_equal(
             model.variables["var1"].evaluate(t=None, y=solution_no_jac.y), sol[:100]
@@ -178,19 +179,77 @@ class TestAlgebraicSolver(unittest.TestCase):
             model.variables["var2"].evaluate(t=None, y=solution_no_jac.y), sol[100:]
         )
 
+    def test_model_solver_minimize(self):
+        # Create model
+        model = pybamm.BaseModel()
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var1 = pybamm.Variable("var1", domain=whole_cell)
+        var2 = pybamm.Variable("var2", domain=whole_cell)
+        model.algebraic = {var1: var1 - 3, var2: 2 * var1 - var2}
+        model.initial_conditions = {var1: pybamm.Scalar(1), var2: pybamm.Scalar(4)}
+        model.variables = {"var1": var1, "var2": var2}
+        disc = get_discretisation_for_testing()
+        disc.process_model(model)
+
+        sol = np.concatenate((np.ones(100) * 3, np.ones(100) * 6))[:, np.newaxis]
+
+        # Solve
+        solver = pybamm.AlgebraicSolver("minimize", tol=1e-8)
+        solution = solver.solve(model)
+        np.testing.assert_array_almost_equal(
+            model.variables["var1"].evaluate(t=None, y=solution.y), sol[:100]
+        )
+        np.testing.assert_array_almost_equal(
+            model.variables["var2"].evaluate(t=None, y=solution.y), sol[100:]
+        )
+
+        # Test without jacobian and with a different method
+        model.use_jacobian = False
+        solver = pybamm.AlgebraicSolver("minimize__BFGS")
+        solution_no_jac = solver.solve(model)
+        np.testing.assert_array_almost_equal(
+            model.variables["var1"].evaluate(t=None, y=solution_no_jac.y), sol[:100]
+        )
+        np.testing.assert_array_almost_equal(
+            model.variables["var2"].evaluate(t=None, y=solution_no_jac.y), sol[100:]
+        )
+
     def test_model_solver_least_squares_with_bounds(self):
         # Create model
         model = pybamm.BaseModel()
-        var1 = pybamm.Variable("var1", bounds=(0, 10))
-        model.algebraic = {var1: pybamm.sin(var1) + 1}
-        model.initial_conditions = {var1: pybamm.Scalar(2)}
-        model.variables = {"var1": var1}
+        var1 = pybamm.Variable("var1")
+        var2 = pybamm.Variable("var2", bounds=(1.5, np.inf))
+        model.algebraic = {var2: 10 * (var2 - var1 ** 2), var1: 1 - var1}
+        model.initial_conditions = {var1: pybamm.Scalar(2), var2: pybamm.Scalar(2)}
+        model.variables = {"var1": var1, "var2": var2}
 
         # Solve
-        solver = pybamm.AlgebraicSolver("lsq", extra_options={"verbose": 2})
+        solver = pybamm.AlgebraicSolver("lsq")
         solution = solver.solve(model)
         np.testing.assert_array_almost_equal(
-            model.variables["var1"].evaluate(t=None, y=solution.y), 3 * np.pi / 2
+            model.variables["var1"].evaluate(t=None, y=solution.y), 1
+        )
+        np.testing.assert_array_almost_equal(
+            model.variables["var2"].evaluate(t=None, y=solution.y), 1
+        )
+
+    def test_model_solver_minimize_with_bounds(self):
+        # Create model
+        model = pybamm.BaseModel()
+        var1 = pybamm.Variable("var1")
+        var2 = pybamm.Variable("var2", bounds=(1.5, np.inf))
+        model.algebraic = {var2: 10 * (var2 - var1 ** 2), var1: 1 - var1}
+        model.initial_conditions = {var1: pybamm.Scalar(2), var2: pybamm.Scalar(2)}
+        model.variables = {"var1": var1, "var2": var2}
+
+        # Solve
+        solver = pybamm.AlgebraicSolver("minimize", tol=1e-8)
+        solution = solver.solve(model)
+        np.testing.assert_array_almost_equal(
+            model.variables["var1"].evaluate(t=None, y=solution.y), 1
+        )
+        np.testing.assert_array_almost_equal(
+            model.variables["var2"].evaluate(t=None, y=solution.y), 1
         )
 
     def test_model_solver_with_time(self):

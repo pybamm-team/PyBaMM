@@ -144,6 +144,40 @@ class AlgebraicSolver(pybamm.BaseSolver):
                         bounds=model.bounds,
                         **self.extra_options,
                     )
+                # Methods which use minimize are specified as either "minimize", which
+                # uses the default method, or with "minimize__methodname"
+                elif self.method.startswith("minimize"):
+                    # Adapt the root function for minimize
+                    def root_norm(y):
+                        return np.sum(root_fun(y) ** 2)
+
+                    if jac_fn is None:
+                        jac_norm = None
+                    else:
+
+                        def jac_norm(y):
+                            return np.sum(2 * root_fun(y) * jac_fn(y), 0)
+
+                    if self.method == "minimize":
+                        method = None
+                    else:
+                        method = self.method[10:]
+                    extra_options = self.extra_options
+                    if np.any(model.bounds[0] != -np.inf) or np.any(
+                        model.bounds[1] != np.inf
+                    ):
+                        bounds = [
+                            (lb, ub) for lb, ub in zip(model.bounds[0], model.bounds[1])
+                        ]
+                        extra_options["bounds"] = bounds
+                    sol = optimize.minimize(
+                        root_norm,
+                        y0_alg,
+                        method=method,
+                        tol=self.tol,
+                        jac=jac_norm,
+                        **extra_options,
+                    )
                 else:
                     sol = optimize.root(
                         root_fun,
