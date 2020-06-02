@@ -56,7 +56,7 @@ class DFN(BaseModel):
         if self.options["porosity"] is None:
             self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
         elif self.options["porosity"] == "variable porosity":
-            self.submodels["porosity"] = pybamm.porosity.SeiFull(self.param)
+            self.submodels["porosity"] = pybamm.porosity.Full(self.param)
 
     def set_convection_submodel(self):
 
