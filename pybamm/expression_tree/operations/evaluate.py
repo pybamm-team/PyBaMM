@@ -188,7 +188,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
     elif isinstance(symbol, pybamm.StateVector):
         indices = np.argwhere(symbol.evaluation_array).reshape(-1).astype(np.int32)
         consecutive = np.all(indices[1:] - indices[:-1] == 1)
-        if consecutive:
+        if len(indices) == 1 or consecutive:
             symbol_str = "y[{}:{}]".format(indices[0], indices[-1] + 1)
         else:
             indices_array = pybamm.Array(indices)
@@ -307,6 +307,9 @@ class EvaluatorPython:
         # store a copy of examine_jaxpr
         python_str = python_str + \
             '\nself._evaluate = evaluate'
+
+        self._python_str = python_str
+        self._symbol = symbol
 
         # compile and run the generated python code,
         compiled_function = compile(

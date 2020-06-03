@@ -825,7 +825,7 @@ class SolverCallable:
 
     def __call__(self, t, y, inputs):
         y = y[:, np.newaxis]
-        if self.name in ["RHS", "algebraic", "residuals", "event"]:
+        if self.name in ["RHS", "algebraic", "residuals"]:
             pybamm.logger.debug(
                 "Evaluating {} for {} at t={}".format(
                     self.name, self.model.name, t * self.timescale
