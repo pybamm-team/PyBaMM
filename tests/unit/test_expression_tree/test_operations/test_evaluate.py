@@ -434,6 +434,12 @@ class TestEvaluate(unittest.TestCase):
         result = evaluator.evaluate(t=None, y=np.array([[2], [3]]))
         self.assertEqual(result, 12)
 
+        # test exp
+        expr = pybamm.exp(a * b)
+        evaluator = pybamm.EvaluatorJax(expr)
+        result = evaluator.evaluate(t=None, y=np.array([[2], [3]]))
+        self.assertEqual(result, np.exp(6))
+
         # test a constant expression
         expr = pybamm.Scalar(2) * pybamm.Scalar(3)
         evaluator = pybamm.EvaluatorJax(expr)

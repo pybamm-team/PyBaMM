@@ -129,19 +129,22 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
         else:
             symbol_str = symbol.name + children_vars[0]
 
-    # For a Function we create two lines of code, one in constant_symbols that
-    # contains the function handle, the other in variable_symbols that calls that
-    # function on the children variables
     elif isinstance(symbol, pybamm.Function):
-        constant_symbols[symbol.id] = symbol.function
-        funct_var = id_to_python_variable(symbol.id, True)
         children_str = ""
         for child_var in children_vars:
             if children_str == "":
                 children_str = child_var
             else:
                 children_str += ", " + child_var
-        symbol_str = "{}({})".format(funct_var, children_str)
+        if isinstance(symbol.function, np.ufunc):
+            # write any numpy functions directly
+            symbol_str = "np.{}({})".format(symbol.function.__name__, children_str)
+        else:
+            # unknown function, store it as a constant and call this in the
+            # generated code
+            constant_symbols[symbol.id] = symbol.function
+            funct_var = id_to_python_variable(symbol.id, True)
+            symbol_str = "{}({})".format(funct_var, children_str)
 
     elif isinstance(symbol, pybamm.Concatenation):
 
