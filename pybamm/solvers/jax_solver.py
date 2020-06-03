@@ -20,8 +20,9 @@ class JaxSolver(pybamm.BaseSolver):
         The absolute tolerance for the solver (default is 1e-6).
     extra_options : dict, optional
         Any options to pass to the solver.
-        Please consult `SciPy documentation <https://tinyurl.com/yafgqg9y>`_ for
-        details.
+        Please consult `JAX documentation
+        <https://github.com/google/jax/blob/master/jax/experimental/ode.py>`_
+        for details.
     """
 
     def __init__(self, rtol=1e-6, atol=1e-6, extra_options=None):
@@ -32,6 +33,23 @@ class JaxSolver(pybamm.BaseSolver):
         self._cached_solves = dict()
 
     def get_solve(self, model, t_eval):
+        """
+        Return a compiled JAX function that solves an ode model with input arguments.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model whose solution to calculate.
+        t_eval : :class:`numpy.array`, size (k,)
+            The times at which to compute the solution
+
+        Returns
+        -------
+        function
+            A function with signature `f(inputs)`, where inputs are a dict containing
+            any input parameters to pass to the model when solving
+
+        """
         if model not in self._cached_solves:
             if model not in self.models_set_up:
                 raise RuntimeError("Model is not set up for solving, run"
@@ -42,6 +60,23 @@ class JaxSolver(pybamm.BaseSolver):
         return self._cached_solves[model]
 
     def _create_solve(self, model, t_eval):
+        """
+        Return a compiled JAX function that solves an ode model with input arguments.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model whose solution to calculate.
+        t_eval : :class:`numpy.array`, size (k,)
+            The times at which to compute the solution
+
+        Returns
+        -------
+        function
+            A function with signature `f(inputs)`, where inputs are a dict containing
+            any input parameters to pass to the model when solving
+
+        """
         if model.convert_to_format != "jax":
             raise RuntimeError("Model must be converted to JAX to use this solver"
                                " (i.e. `model.convert_to_format = 'jax')")
