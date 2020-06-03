@@ -161,7 +161,7 @@ class TestJaxSolver(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "Model is not set up for solving"):
             solver.get_solve(model, t_eval)
 
-        solution = solver.solve(model, t_eval, inputs={"rate": 0.1})
+        solver.solve(model, t_eval, inputs={"rate": 0.1})
         solver = solver.get_solve(model, t_eval)
         y = solver({"rate": 0.1})
 
