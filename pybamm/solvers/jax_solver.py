@@ -12,6 +12,14 @@ import numpy as onp
 class JaxSolver(pybamm.BaseSolver):
     """Solve a discretised model, using jax.experimental.odeint.
 
+    **Note**: this solver will not work with models that have
+              (a) sparse matrices, or (b) termination events
+
+    Raises
+    ------
+    RuntimeError
+        if model has any sparse matrices or termination events
+
     Parameters
     ----------
     rtol : float, optional

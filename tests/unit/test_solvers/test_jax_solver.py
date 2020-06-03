@@ -3,10 +3,10 @@
 #
 import pybamm
 import unittest
-import numpy as np
 from tests import get_mesh_for_testing
 import sys
 import time
+import numpy as np
 
 from jax.config import config
 config.update("jax_enable_x64", True)

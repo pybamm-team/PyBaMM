@@ -186,17 +186,14 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
     # Note: we assume that y is being passed as a column vector
     elif isinstance(symbol, pybamm.StateVector):
         indices = np.argwhere(symbol.evaluation_array).reshape(-1).astype(np.int32)
-        if len(indices) == 1:
-            symbol_str = "y[{}]".format(indices[0])
+        consecutive = np.all(indices[1:] - indices[:-1] == 1)
+        if consecutive:
+            symbol_str = "y[{}:{}]".format(indices[0], indices[-1] + 1)
         else:
-            consecutive = np.all(indices[1:] - indices[:-1] == 1)
-            if consecutive:
-                symbol_str = "y[{}:{}]".format(indices[0], indices[-1] + 1)
-            else:
-                indices_array = pybamm.Array(indices)
-                constant_symbols[indices_array.id] = indices
-                index_name = id_to_python_variable(indices_array.id, True)
-                symbol_str = "y[{}]".format(index_name)
+            indices_array = pybamm.Array(indices)
+            constant_symbols[indices_array.id] = indices
+            index_name = id_to_python_variable(indices_array.id, True)
+            symbol_str = "y[{}]".format(index_name)
 
     elif isinstance(symbol, pybamm.Time):
         symbol_str = "t"
@@ -336,7 +333,15 @@ class EvaluatorPython:
 class EvaluatorJax:
     """
     Converts a pybamm expression tree into pure python code that will calculate the
-    result of calling `evaluate(t, y)` on the given expression tree.
+    result of calling `evaluate(t, y)` on the given expression tree. The resultant code
+    is compiled with JAX
+
+    Limitations: This evaluator will not work on expressions involving sparse matricesjj
+
+    Raises
+    ------
+    RuntimeError
+        if any sparse matrices are present in the expression tree
 
     Parameters
     ----------
@@ -358,6 +363,9 @@ class EvaluatorJax:
         for symbol_id in constants:
             if isinstance(constants[symbol_id], np.ndarray):
                 constants[symbol_id] = jax.device_put(constants[symbol_id])
+            elif scipy.sparse.issparse(constants[symbol_id]):
+                raise RuntimeError("JAX evaluator cannot be used on expressions"
+                                   " containing sparse matrices")
 
         # extract constants in generated function
         for i, symbol_id in enumerate(constants.keys()):

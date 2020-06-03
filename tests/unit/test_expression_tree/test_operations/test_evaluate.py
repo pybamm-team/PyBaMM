@@ -32,8 +32,8 @@ class TestEvaluate(unittest.TestCase):
         self.assertEqual(list(variable_symbols.keys())[2], expr.id)
 
         # test values of variable_symbols
-        self.assertEqual(list(variable_symbols.values())[0], "y[0]")
-        self.assertEqual(list(variable_symbols.values())[1], "y[1]")
+        self.assertEqual(list(variable_symbols.values())[0], "y[0:1]")
+        self.assertEqual(list(variable_symbols.values())[1], "y[1:2]")
 
         var_a = pybamm.id_to_python_variable(a.id)
         var_b = pybamm.id_to_python_variable(b.id)
@@ -55,8 +55,8 @@ class TestEvaluate(unittest.TestCase):
         self.assertEqual(list(variable_symbols.keys())[3], expr.id)
 
         # test values of variable_symbols
-        self.assertEqual(list(variable_symbols.values())[0], "y[0]")
-        self.assertEqual(list(variable_symbols.values())[1], "y[1]")
+        self.assertEqual(list(variable_symbols.values())[0], "y[0:1]")
+        self.assertEqual(list(variable_symbols.values())[1], "y[1:2]")
         self.assertEqual(
             list(variable_symbols.values())[2], "{} + {}".format(var_a, var_b)
         )
@@ -80,8 +80,8 @@ class TestEvaluate(unittest.TestCase):
         self.assertEqual(list(variable_symbols.keys())[3], expr.id)
 
         # test values of variable_symbols
-        self.assertEqual(list(variable_symbols.values())[0], "y[0]")
-        self.assertEqual(list(variable_symbols.values())[1], "y[1]")
+        self.assertEqual(list(variable_symbols.values())[0], "y[0:1]")
+        self.assertEqual(list(variable_symbols.values())[1], "y[1:2]")
         self.assertEqual(list(variable_symbols.values())[2], "-{}".format(var_b))
         var_child = pybamm.id_to_python_variable(expr.children[1].id)
         self.assertEqual(
@@ -97,7 +97,7 @@ class TestEvaluate(unittest.TestCase):
         self.assertEqual(list(constant_symbols.values())[0], test_function)
         self.assertEqual(list(variable_symbols.keys())[0], a.id)
         self.assertEqual(list(variable_symbols.keys())[1], expr.id)
-        self.assertEqual(list(variable_symbols.values())[0], "y[0]")
+        self.assertEqual(list(variable_symbols.values())[0], "y[0:1]")
         var_funct = pybamm.id_to_python_variable(expr.id, True)
         self.assertEqual(
             list(variable_symbols.values())[1], "{}({})".format(var_funct, var_a)
@@ -286,8 +286,8 @@ class TestEvaluate(unittest.TestCase):
         expr = a + b
         constant_str, variable_str = pybamm.to_python(expr)
         expected_str = (
-            "var_[0-9m]+ = y\[0\].*\\n"
-            "var_[0-9m]+ = y\[1\].*\\n"
+            "var_[0-9m]+ = y\[0:1\].*\\n"
+            "var_[0-9m]+ = y\[1:2\].*\\n"
             "var_[0-9m]+ = var_[0-9m]+ \+ var_[0-9m]+"
         )
 
@@ -445,7 +445,7 @@ class TestEvaluate(unittest.TestCase):
         evaluator = pybamm.EvaluatorJax(expr)
         for y in y_tests:
             result = evaluator.evaluate(t=None, y=y)
-            self.assertEqual(result, expr.evaluate(t=None, y=y))
+            np.testing.assert_allclose(result, expr.evaluate(t=None, y=y))
 
         # test something with time
         expr = a * pybamm.t
@@ -497,15 +497,11 @@ class TestEvaluate(unittest.TestCase):
             result = evaluator.evaluate(t=t, y=y)
             self.assertEqual(result, expr.evaluate(t=t, y=y))
 
-        # test something with a sparse matrix multiplication
-        A = pybamm.Matrix(np.array([[1, 2], [3, 4]]))
-        B = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))
-        C = pybamm.Matrix(scipy.sparse.coo_matrix(np.array([[1, 0], [0, 4]])))
-        expr = A @ B @ C @ pybamm.StateVector(slice(0, 2))
-        evaluator = pybamm.EvaluatorJax(expr)
-        for t, y in zip(t_tests, y_tests):
-            result = evaluator.evaluate(t=t, y=y)
-            np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
+        # test something with a sparse matrix in it, should fail
+        A = pybamm.Matrix(scipy.sparse.coo_matrix(np.array([[1, 0], [0, 4]])))
+        expr = A @ pybamm.StateVector(slice(0, 2))
+        with self.assertRaisesRegex(RuntimeError, "containing sparse matrices"):
+            pybamm.EvaluatorJax(expr)
 
         # test numpy concatenation
         a = pybamm.Vector(np.array([[1], [2]]))
@@ -515,15 +511,6 @@ class TestEvaluate(unittest.TestCase):
         for t, y in zip(t_tests, y_tests):
             result = evaluator.evaluate(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
-
-        # test sparse stack
-        A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))
-        B = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[2, 0], [5, 0]])))
-        expr = pybamm.SparseStack(A, B)
-        evaluator = pybamm.EvaluatorJax(expr)
-        for t, y in zip(t_tests, y_tests):
-            result = evaluator.evaluate(t=t, y=y).toarray()
-            np.testing.assert_allclose(result, expr.evaluate(t=t, y=y).toarray())
 
         # test Inner
         v = pybamm.Vector(np.ones(5), domain="test")
