@@ -3,13 +3,11 @@
 #
 import pybamm
 
-# need numpy imported for code generated in EvaluatorPython
-#import numpy as np  # noqa: F401
-import scipy.sparse  # noqa: F401
+import numpy as np
+import scipy.sparse
 from collections import OrderedDict
 
 import numbers
-import numpy as np
 import jax
 
 
