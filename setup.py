@@ -181,6 +181,8 @@ setup(
         "anytree>=2.4.3",
         "autograd>=1.2",
         "scikit-fem>=0.2.0",
+        "jax>=0.1.68",
+        "jaxlib>=0.1.47",
         "casadi>=3.5.0",
         "jupyter",  # For example notebooks
         # Note: Matplotlib is loaded for debug plots, but to ensure pybamm runs

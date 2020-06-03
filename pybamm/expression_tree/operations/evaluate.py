@@ -11,8 +11,6 @@ from collections import OrderedDict
 import numbers
 import numpy as np
 import jax
-from jax.config import config
-config.update("jax_enable_x64", True)
 
 
 def id_to_python_variable(symbol_id, constant=False):

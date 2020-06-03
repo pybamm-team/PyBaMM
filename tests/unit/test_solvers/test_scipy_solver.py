@@ -19,7 +19,8 @@ class TestScipySolver(unittest.TestCase):
             var = pybamm.Variable("var", domain=domain)
             model.rhs = {var: 0.1 * var}
             model.initial_conditions = {var: 1}
-            # No need to set parameters; can use base discretisation (no spatial operators)
+            # No need to set parameters;
+            # can use base discretisation (no spatial operators)
 
             # create discretisation
             mesh = get_mesh_for_testing()

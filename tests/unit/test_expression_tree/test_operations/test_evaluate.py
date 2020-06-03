@@ -8,7 +8,6 @@ import unittest
 import numpy as np
 import scipy.sparse
 from collections import OrderedDict
-import time
 
 
 def test_function(arg):
@@ -533,6 +532,7 @@ class TestEvaluate(unittest.TestCase):
         evaluator = pybamm.EvaluatorJax(expr)
         result = evaluator.evaluate()
         np.testing.assert_allclose(result, expr.evaluate())
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
