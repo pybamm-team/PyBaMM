@@ -24,7 +24,7 @@ class JaxSolver(pybamm.BaseSolver):
         if model has any termination events
 
     RuntimeError
-        if `model.convert_to_format != 'jax'
+        if `model.convert_to_format != 'jax'`
 
     Parameters
     ----------
