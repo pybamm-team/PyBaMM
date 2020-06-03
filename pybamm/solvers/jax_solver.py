@@ -18,7 +18,13 @@ class JaxSolver(pybamm.BaseSolver):
     Raises
     ------
     RuntimeError
-        if model has any sparse matrices or termination events
+        if model has any sparse matrices
+
+    RuntimeError
+        if model has any termination events
+
+    RuntimeError
+        if `model.convert_to_format != 'jax'
 
     Parameters
     ----------
