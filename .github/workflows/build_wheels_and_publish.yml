@@ -2,7 +2,7 @@ name: Build and deployment
 
 on:
   push:
-    branches: master
+    branches: develop
 
 jobs:
   build-wheels:
@@ -40,10 +40,7 @@ jobs:
       run: |
         brew update
         brew install graphviz
-        brew install openblas
-        pip install wget
-        git clone https://github.com/pybind/pybind11.git
-        python scripts/setup_KLU_module_build.py
+        brew install sundials
 
     - name: Build wheels for MacOS and Windows
       if: matrix.os != 'ubuntu-latest'
