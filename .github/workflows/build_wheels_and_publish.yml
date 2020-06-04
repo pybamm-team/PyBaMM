@@ -25,10 +25,7 @@ jobs:
 
     - name: Build manylinux Python wheels
       if: matrix.os == 'ubuntu-latest'
-      uses: tlestang/python-wheels-manylinux-build@66bda7f
-      with:
-        python-versions: 'cp36-cp36m cp37-cp37m'
-        commands: '.github/workflows/install_deps_manylinux.sh'
+      uses: './build_manylinux_wheels'
 
     - name: Install standard python dependencies
       if: matrix.os != 'ubuntu-latest'
