@@ -105,7 +105,7 @@ jobs:
       if: success() && (matrix.os == 'ubuntu-latest' && matrix.python-version == 3.7)
       run: |
         pip install coverage
-	export LD_LIBRARY_PATH=$HOME/.local/lib:scikits.odes/sundials5/lib:$LD_LIBRARY_PATH
+        export LD_LIBRARY_PATH=$HOME/.local/lib:scikits.odes/sundials5/lib:$LD_LIBRARY_PATH
         coverage run run-tests.py --nosub
 
     - name: Upload coverage report
