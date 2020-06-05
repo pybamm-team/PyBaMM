@@ -37,6 +37,7 @@ jobs:
         brew update
         brew install graphviz
         brew install sundials
+        git clone https://github.com/pybind/pybind11.git
 
     - name: Build wheels for MacOS and Windows
       if: matrix.os != 'ubuntu-latest'
