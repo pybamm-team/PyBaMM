@@ -37,7 +37,7 @@ L_outer_0_dim = pybamm.Parameter("Initial outer SEI thickness [m]")
 
 L_sei_0_dim = L_inner_0_dim + L_outer_0_dim
 
-# EC reaction 
+# EC reaction
 
 c_ec_0_dim = pybamm.Parameter("EC initial concentration in electrolyte [mol.m-3]")
 D_ec_dim = pybamm.Parameter("EC diffusivity [m2.s-1]")
