@@ -13,6 +13,7 @@ for PY_VER in "${arrPY_VERSIONS[@]}"; do
     # Build wheels
     /opt/python/"${PY_VER}"/bin/pip wheel /github/workspace/ -w /github/workspace/wheelhouse/ --no-deps || { echo "Building wheels failed."; exit 1; }
 done
+ls -l /github/workspace/wheelhouse/
 
 # Bundle external shared libraries into the wheels
 for whl in /github/workspace/wheelhouse/*-linux*.whl; do
