@@ -2,6 +2,7 @@ name: Build and deployment
 
 on:
   push:
+    branches: master
 
 jobs:
   build-wheels:
