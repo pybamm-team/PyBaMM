@@ -13,21 +13,21 @@ for dir in SuiteSparse_config AMD COLAMD BTF KLU
 do
     cd $SUITESPARSE_DIR/$dir;
     make library
-    make install INSTALL=$HOME/.local
+    make install INSTALL=/usr
     cd ../
 done
 
-KLU_INCLUDE_DIR=$HOME/.local/include
-KLU_LIBRARY_DIR=$HOME/.local/lib
-mkdir -p $SUITESPARSE_DIR/build_sundials
-cd $SUITESPARSE_DIR/build_sundials
+KLU_INCLUDE_DIR=/usr/include
+KLU_LIBRARY_DIR=/usr/lib
+mkdir -p /deps/build_sundials
+cd /deps/build_sundials
 cmake -DLAPACK_ENABLE=ON\
       -DSUNDIALS_INDEX_SIZE=32\
       -DEXAMPLES_ENABLE:BOOL=OFF\
       -DKLU_ENABLE=ON\
       -DKLU_INCLUDE_DIR=$KLU_INCLUDE_DIR\
       -DKLU_LIBRARY_DIR=$KLU_LIBRARY_DIR\
-      -DCMAKE_INSTALL_PREFIX=$HOME/.local\
+      -DCMAKE_INSTALL_PREFIX=/usr\
       $SUNDIALS_DIR
 make install
 
