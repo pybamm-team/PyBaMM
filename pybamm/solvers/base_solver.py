@@ -163,7 +163,13 @@ class BaseSolver(object):
         inputs = inputs or {}
 
         # Set model timescale
-        model.timescale_eval = model.timescale.evaluate(inputs=inputs)
+        try:
+            model.timescale_eval = model.timescale.evaluate()
+        except KeyError as e:
+            raise pybamm.SolverError(
+                "The model timescale is a function of an input parameter "
+                "(original error: {})".format(e)
+            )
 
         if (
             isinstance(self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver))
@@ -591,7 +597,7 @@ class BaseSolver(object):
                 model.y0 = last_state
                 if len(model.algebraic) > 0:
                     model.y0 = self.calculate_consistent_state(
-                        model, t_eval_dimensionless[end_index], ext_and_inputs,
+                        model, t_eval_dimensionless[end_index], ext_and_inputs
                     )
 
         # restore old y0
@@ -616,6 +622,15 @@ class BaseSolver(object):
                 timer.format(solution.total_time),
             )
         )
+
+        # Raise error if solution only contains one timestep (except for algebraic
+        # solvers, where we may only expect one time in the solution)
+        if self.algebraic_solver is False and len(solution.t) == 1:
+            raise pybamm.SolverError(
+                "Solution time vector has length 1. "
+                "Check whether simulation terminated too early."
+            )
+
         return solution
 
     def step(
@@ -766,7 +781,7 @@ class BaseSolver(object):
                         event.expression.evaluate(
                             solution.t_event,
                             solution.y_event,
-                            inputs={k: v[-1] for k, v in solution.inputs.items()},
+                            inputs={k: v[:, -1] for k, v in solution.inputs.items()},
                         )
                     )
             termination_event = min(final_event_values, key=final_event_values.get)

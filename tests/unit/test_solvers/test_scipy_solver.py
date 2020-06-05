@@ -114,7 +114,7 @@ class TestScipySolver(unittest.TestCase):
         combined_submesh = mesh.combine_submeshes(
             "negative electrode", "separator", "positive electrode"
         )
-        N = combined_submesh[0].npts
+        N = combined_submesh.npts
 
         # construct jacobian in order of model.rhs
         J = []

@@ -20,7 +20,7 @@ class TestSolution(unittest.TestCase):
         self.assertEqual(sol.y_event, None)
         self.assertEqual(sol.termination, "final time")
         self.assertEqual(sol.inputs, {})
-        self.assertEqual(sol.model, None)
+        self.assertIsInstance(sol.model, pybamm.BaseModel)
 
         with self.assertRaisesRegex(AttributeError, "sub solutions"):
             print(sol.sub_solutions)
@@ -48,7 +48,9 @@ class TestSolution(unittest.TestCase):
         np.testing.assert_array_equal(sol1.y, np.concatenate([y1, y2[:, 1:]], axis=1))
         np.testing.assert_array_equal(
             sol1.inputs["a"],
-            np.concatenate([1 * np.ones_like(t1), 2 * np.ones_like(t2[1:])]),
+            np.concatenate([1 * np.ones_like(t1), 2 * np.ones_like(t2[1:])])[
+                np.newaxis, :
+            ],
         )
 
         # Test sub-solutions
@@ -57,11 +59,11 @@ class TestSolution(unittest.TestCase):
         np.testing.assert_array_equal(sol1.sub_solutions[1].t, t2)
         self.assertEqual(sol1.sub_solutions[0].model, sol1.model)
         np.testing.assert_array_equal(
-            sol1.sub_solutions[0].inputs["a"], 1 * np.ones_like(t1)
+            sol1.sub_solutions[0].inputs["a"], 1 * np.ones_like(t1)[np.newaxis, :]
         )
         self.assertEqual(sol1.sub_solutions[1].model, sol2.model)
         np.testing.assert_array_equal(
-            sol1.sub_solutions[1].inputs["a"], 2 * np.ones_like(t2)
+            sol1.sub_solutions[1].inputs["a"], 2 * np.ones_like(t2)[np.newaxis, :]
         )
 
     def test_total_time(self):
@@ -146,7 +148,7 @@ class TestSolution(unittest.TestCase):
         model = pybamm.lithium_ion.SPM()
         geometry = model.default_geometry
         param = model.default_parameter_values
-        param.update({"Electrode height [m]": "[input]"})
+        param.update({"Negative electrode conductivity [S.m-1]": "[input]"})
         param.process_model(model)
         param.process_geometry(geometry)
         var = pybamm.standard_spatial_vars
@@ -161,7 +163,7 @@ class TestSolution(unittest.TestCase):
             spatial_methods=spatial_methods,
             solver=solver,
         )
-        inputs = {"Electrode height [m]": 0.1}
+        inputs = {"Negative electrode conductivity [S.m-1]": 0.1}
         sim.solve(t_eval=np.linspace(0, 10, 10), inputs=inputs)
         time = sim.solution["Time [h]"](sim.solution.t)
         self.assertEqual(len(time), 10)

@@ -68,16 +68,16 @@ def plot(t):
     plt.xlabel(r"$r_n$")
     plt.ylabel("Negative particle concentration [mol.m-3]")
     for i, variables in enumerate(processed_variables):
-        r_n = meshes[i]["negative particle"][0].nodes
+        r_n = solutions[i]["r_n [m]"].entries[:, 0, 0]
         plt.plot(r_n, variables["c_n"](r=r_n, t=t), "-o", label=models[i].name)
     plt.subplot(122)
     plt.xlabel(r"$r_p$")
     plt.ylabel("Positive particle concentration [mol.m-3]")
     for i, variables in enumerate(processed_variables):
-        r_p = meshes[i]["positive particle"][0].nodes
+        r_p = solutions[i]["r_p [m]"].entries[:, 0, 0]
         plt.plot(r_p, variables["c_p"](r=r_p, t=t), "-o", label=models[i].name)
     plt.legend()
     plt.show()
 
 
-plot(0.1)
+plot(600)

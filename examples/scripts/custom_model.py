@@ -57,7 +57,7 @@ model.submodels["positive sei"] = pybamm.sei.NoSEI(model.param, "Positive")
 model.build_model()
 
 # create geometry
-geometry = pybamm.Geometry("1D macro", "1D micro")
+geometry = pybamm.battery_geometry()
 
 # process model and geometry
 param = model.default_parameter_values

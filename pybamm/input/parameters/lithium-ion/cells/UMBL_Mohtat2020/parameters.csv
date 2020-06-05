@@ -9,6 +9,8 @@ Positive electrode thickness [m],67E-06,Peyman MPM,
 Positive current collector thickness [m],2.5E-05,Scott Moura FastDFN,no info from Peyman MPM
 Electrode height [m],1,KOKAM SLPB78205130H,Not needed for 1D
 Electrode width [m],0.2050,KOKAM SLPB78205130H,Not needed for 1D
+Cell cooling surface area [m2],0.41,,pouch
+Cell volume [m3]3.92E-5,,pouch
 ,,,
 # Current collector properties ,,,
 Negative current collector conductivity [S.m-1],59600000,LIONSIMBA,carbon

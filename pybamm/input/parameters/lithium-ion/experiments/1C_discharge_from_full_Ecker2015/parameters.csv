@@ -8,7 +8,8 @@ Positive current collector surface heat transfer coefficient [W.m-2.K-1],0,Paper
 Negative tab heat transfer coefficient [W.m-2.K-1],10,Paper does not consider thermal effects,
 Positive tab heat transfer coefficient [W.m-2.K-1],10,Paper does not consider thermal effects,
 Edge heat transfer coefficient [W.m-2.K-1],0.3,Paper does not consider thermal effects,
-Ambient temperature [K], 298.15,,
+Total heat transfer coefficient [W.m-2.K-1],10,Paper does not consider thermal effects,
+Ambient temperature [K],298.15,,
 
 ,,,
 # Electrical

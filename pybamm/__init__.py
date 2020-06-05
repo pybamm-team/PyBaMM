@@ -50,7 +50,10 @@ def version(formatted=False):
 FLOAT_FORMAT = "{: .17e}"
 # Absolute path to the PyBaMM repo
 script_path = os.path.abspath(__file__)
-ABSOLUTE_PATH = os.path.join(os.path.split(script_path)[0], "..")
+
+from .util import root_dir
+ABSOLUTE_PATH = root_dir()
+PARAMETER_PATH = [os.getcwd(), os.path.join(root_dir(), "pybamm", "input", "parameters")]
 
 #
 # Utility classes and methods
@@ -68,7 +71,7 @@ from .citations import Citations, citations, print_citations
 from .expression_tree.symbol import *
 from .expression_tree.binary_operators import *
 from .expression_tree.concatenations import *
-from .expression_tree.array import Array
+from .expression_tree.array import Array, linspace, meshgrid
 from .expression_tree.matrix import Matrix
 from .expression_tree.unary_operators import *
 from .expression_tree.functions import *
@@ -140,17 +143,8 @@ from .models.submodels.interface import sei
 #
 # Geometry
 #
-from .geometry.geometry import (
-    Geometry,
-    Geometry1DMacro,
-    Geometry3DMacro,
-    Geometry1DMicro,
-    Geometry1p1DMicro,
-    Geometryxp1DMacro,
-    Geometryxp0p1DMicro,
-    Geometryxp1p1DMicro,
-    Geometry2DCurrentCollector,
-)
+from .geometry.geometry import Geometry
+from .geometry.battery_geometry import battery_geometry
 
 from .expression_tree.independent_variable import KNOWN_COORD_SYS
 from .geometry import standard_spatial_vars
@@ -221,10 +215,16 @@ from .experiments.experiment import Experiment
 from . import experiments
 
 #
-# other
+# Plotting
 #
-from .quick_plot import QuickPlot, dynamic_plot, ax_min, ax_max
+from .plotting.quick_plot import QuickPlot
+from .plotting.plot import plot
+from .plotting.plot2D import plot2D
+from .plotting.dynamic_plot import dynamic_plot
 
+#
+# Simulation
+#
 from .simulation import Simulation, load_sim, is_notebook
 
 #
