@@ -317,7 +317,10 @@ inputs = {"Through-cell distance (x_p) [m]": pybamm.standard_spatial_vars.x_p}
 epsilon_p = pybamm.FunctionParameter("Positive electrode porosity", inputs)
 
 epsilon = pybamm.Concatenation(epsilon_n, epsilon_s, epsilon_p)
-
+epsilon_n_init = pybamm.Parameter("Negative electrode porosity")
+epsilon_s_init = pybamm.Parameter("Separator porosity")
+epsilon_p_init = pybamm.Parameter("Positive electrode porosity")
+epsilon_init = pybamm.Concatenation(epsilon_n, epsilon_s, epsilon_p)
 epsilon_s_n = pybamm.Parameter("Negative electrode active material volume fraction")
 epsilon_s_p = pybamm.Parameter("Positive electrode active material volume fraction")
 epsilon_inactive_n = 1 - epsilon_n - epsilon_s_n
@@ -356,6 +359,8 @@ def one_plus_dlnf_dlnc(c_e):
 
 
 beta_surf = pybamm.Scalar(0)
+beta_surf_n = pybamm.Scalar(0)
+beta_surf_p = pybamm.Scalar(0)
 
 
 # (1-2*t_plus) is for Nernst-Planck

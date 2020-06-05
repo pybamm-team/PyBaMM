@@ -4,6 +4,7 @@ New SEI models, simplification of submodel structure, as well as optimisations a
 
 ## Features
 
+-   Added SEI reaction based on Yang et. al. 2017 and reduction in porosity ([#836](https://github.com/pybamm-team/PyBaMM/issues/836)) 
 -   Reformatted `Geometry` and `Mesh` classes ([#1032](https://github.com/pybamm-team/PyBaMM/pull/1032))
 -   Added arbitrary geometry to the lumped thermal model ([#718](https://github.com/pybamm-team/PyBaMM/issues/718))
 -   Allowed `ProcessedVariable` to handle cases where `len(solution.t)=1` ([#1020](https://github.com/pybamm-team/PyBaMM/pull/1020))
