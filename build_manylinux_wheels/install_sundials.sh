@@ -31,4 +31,3 @@ cmake -DLAPACK_ENABLE=ON\
       $SUNDIALS_DIR
 make install
 
-git clone https://github.com/pybind/pybind11.git /github/workspace/pybind11

@@ -4,6 +4,7 @@ set -e -x
 # CLI arguments
 PY_VERSIONS=$1
 
+git clone https://github.com/pybind/pybind11.git /github/workspace/pybind11
 # Compile wheels
 arrPY_VERSIONS=(${PY_VERSIONS// / })
 for PY_VER in "${arrPY_VERSIONS[@]}"; do
