@@ -1,4 +1,4 @@
-FROM quay.io/pypa/manylinux2010_x86_64:latest
+FROM quay.io/pypa/manylinux2010_x86_64:2020-05-29-c06f15c
 
 ENV PLAT manylinux2010_x86_64
 
