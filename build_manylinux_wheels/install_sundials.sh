@@ -1,3 +1,5 @@
+#!/bin/bash
+
 mkdir /deps
 wget https://github.com/DrTimothyAldenDavis/SuiteSparse/archive/v5.7.2.tar.gz .
 wget https://computing.llnl.gov/projects/sundials/download/sundials-5.3.0.tar.gz .
