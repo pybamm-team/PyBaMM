@@ -51,10 +51,10 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
 
             # Define exact solutions
             combined_submesh = mesh.combine_submeshes(*whole_cell)
-            x = combined_submesh[0].nodes
+            x = combined_submesh.nodes
             y = np.sin(x) ** 2
             # var = sin(x)**2 --> dvardx = 2*sin(x)*cos(x)
-            x_edge = combined_submesh[0].edges
+            x_edge = combined_submesh.edges
             grad_exact = 2 * np.sin(x_edge) * np.cos(x_edge)
 
             # Discretise and evaluate
@@ -87,7 +87,7 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             mesh = get_mesh_for_testing(n)
             disc = pybamm.Discretisation(mesh, spatial_methods)
             combined_submesh = mesh.combine_submeshes(*whole_cell)
-            x = combined_submesh[0].nodes
+            x = combined_submesh.nodes
             x_edge = pybamm.standard_spatial_vars.x_edge
 
             # Define flux and bcs
@@ -122,8 +122,8 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             mesh = get_mesh_for_testing(rpts=n)
             disc = pybamm.Discretisation(mesh, spatial_methods)
             submesh = mesh["negative particle"]
-            r = submesh[0].nodes
-            r_edge = pybamm.standard_spatial_vars.r_n_edge
+            r = submesh.nodes
+            r_edge = pybamm.SpatialVariableEdge("r_n", domain=["negative particle"])
 
             # Define flux and bcs
             N = r_edge ** 2 * pybamm.sin(r_edge)
@@ -157,8 +157,8 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             mesh = get_mesh_for_testing(rpts=n)
             disc = pybamm.Discretisation(mesh, spatial_methods)
             submesh = mesh["negative particle"]
-            r = submesh[0].nodes
-            r_edge = pybamm.standard_spatial_vars.r_n_edge
+            r = submesh.nodes
+            r_edge = pybamm.SpatialVariableEdge("r_n", domain=["negative particle"])
 
             # Define flux and bcs
             N = r_edge * pybamm.sin(r_edge)
@@ -192,7 +192,7 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             mesh = get_p2d_mesh_for_testing(3, m)
             disc = pybamm.Discretisation(mesh, spatial_methods)
             submesh = mesh["negative particle"]
-            r = submesh[0].nodes
+            r = submesh.nodes
             r_edge = pybamm.standard_spatial_vars.r_n_edge
 
             N = r_edge ** 2 * pybamm.sin(r_edge)
@@ -200,7 +200,7 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             # Define exact solutions
             # N = r**2*sin(r) --> div(N) = 4*r*sin(r) - r**2*cos(r)
             div_exact = 4 * r * np.sin(r) + r ** 2 * np.cos(r)
-            div_exact = np.kron(np.ones(len(submesh)), div_exact)
+            div_exact = np.kron(np.ones(mesh["negative electrode"].npts), div_exact)
 
             # Discretise and evaluate
             div_eqn_disc = disc.process_symbol(div_eqn)
@@ -229,7 +229,7 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             mesh = get_p2d_mesh_for_testing(6, m)
             disc = pybamm.Discretisation(mesh, spatial_methods)
             submesh_r = mesh["negative particle"]
-            r = submesh_r[0].nodes
+            r = submesh_r.nodes
             r_edge = pybamm.standard_spatial_vars.r_n_edge
             x = pybamm.standard_spatial_vars.x_n
 
@@ -240,7 +240,7 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             # Define exact solutions
             # N = r**2*sin(r) --> div(N) = 4*r*sin(r) - r**2*cos(r)
             div_exact = 4 * r * np.sin(r) + r ** 2 * np.cos(r)
-            div_exact = np.kron(mesh["negative electrode"][0].nodes, div_exact)
+            div_exact = np.kron(mesh["negative electrode"].nodes, div_exact)
 
             # Discretise and evaluate
             div_eqn_disc = disc.process_symbol(div_eqn)

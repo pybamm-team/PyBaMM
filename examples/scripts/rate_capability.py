@@ -21,13 +21,14 @@ for i, C_rate in enumerate(C_rates):
     sim = pybamm.Simulation(model, experiment=experiment, solver=pybamm.CasadiSolver())
     sim.solve()
 
+    time = sim.solution["Time [s]"].entries
     capacity = sim.solution["Discharge capacity [A.h]"]
     current = sim.solution["Current [A]"]
     voltage = sim.solution["Terminal voltage [V]"]
 
-    capacities[i] = capacity(sim.solution.t[-1])
-    currents[i] = current(sim.solution.t[-1])
-    voltage_av[i] = np.mean(voltage(sim.solution.t))
+    capacities[i] = capacity(time[-1])
+    currents[i] = current(time[-1])
+    voltage_av[i] = np.mean(voltage(time))
 
 plt.figure(1)
 plt.scatter(C_rates, capacities)

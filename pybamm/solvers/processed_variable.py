@@ -7,6 +7,26 @@ import pybamm
 import scipy.interpolate as interp
 
 
+def make_interp2D_fun(input, interpolant):
+    """
+    Calls and returns a 2D interpolant of the correct shape depending on the
+    shape of the input
+    """
+    first_dim, second_dim, _ = input
+    if isinstance(first_dim, np.ndarray) and isinstance(second_dim, np.ndarray):
+        first_dim = first_dim[:, 0, 0]
+        second_dim = second_dim[:, 0]
+        return interpolant(second_dim, first_dim)
+    elif isinstance(first_dim, np.ndarray):
+        first_dim = first_dim[:, 0]
+        return interpolant(second_dim, first_dim)[:, 0]
+    elif isinstance(second_dim, np.ndarray):
+        second_dim = second_dim[:, 0]
+        return interpolant(second_dim, first_dim)
+    else:
+        return interpolant(second_dim, first_dim)[0]
+
+
 class ProcessedVariable(object):
     """
     An object that can be evaluated at arbitrary (scalars or vectors) t and x, and
@@ -23,9 +43,12 @@ class ProcessedVariable(object):
         The solution object to be used to create the processed variables
     known_evals : dict
         Dictionary of known evaluations, to be used to speed up finding the solution
+    warn : bool, optional
+        Whether to raise warnings when trying to evaluate time and length scales.
+        Default is True.
     """
 
-    def __init__(self, base_variable, solution, known_evals=None):
+    def __init__(self, base_variable, solution, known_evals=None, warn=True):
         self.base_variable = base_variable
         self.t_sol = solution.t
         self.u_sol = solution.y
@@ -34,57 +57,67 @@ class ProcessedVariable(object):
         self.domain = base_variable.domain
         self.auxiliary_domains = base_variable.auxiliary_domains
         self.known_evals = known_evals
+        self.warn = warn
 
+        # Set timescale
+        self.timescale = solution.model.timescale.evaluate()
+        self.t_pts = self.t_sol * self.timescale
+
+        # Store spatial variables to get scales
+        self.spatial_vars = {}
+        if solution.model:
+            for var in ["x", "y", "z", "r_n", "r_p"]:
+                if (
+                    var in solution.model.variables
+                    and var + " [m]" in solution.model.variables
+                ):
+                    self.spatial_vars[var] = solution.model.variables[var]
+                    self.spatial_vars[var + " [m]"] = solution.model.variables[
+                        var + " [m]"
+                    ]
+
+        # Evaluate base variable at initial time
         if self.known_evals:
             self.base_eval, self.known_evals[solution.t[0]] = base_variable.evaluate(
                 solution.t[0],
                 solution.y[:, 0],
-                inputs={name: inp[0] for name, inp in solution.inputs.items()},
+                inputs={name: inp[:, 0] for name, inp in solution.inputs.items()},
                 known_evals=self.known_evals[solution.t[0]],
             )
         else:
             self.base_eval = base_variable.evaluate(
                 solution.t[0],
                 solution.y[:, 0],
-                inputs={name: inp[0] for name, inp in solution.inputs.items()},
+                inputs={name: inp[:, 0] for name, inp in solution.inputs.items()},
             )
 
         # handle 2D (in space) finite element variables differently
         if (
             self.mesh
             and "current collector" in self.domain
-            and isinstance(self.mesh[0], pybamm.ScikitSubMesh2D)
+            and isinstance(self.mesh, pybamm.ScikitSubMesh2D)
         ):
-            if len(solution.t) == 1:
-                # space only (steady solution)
-                self.initialise_2D_fixed_t_scikit_fem()
-            else:
-                self.initialise_2D_scikit_fem()
+            self.initialise_2D_scikit_fem()
 
         # check variable shape
         else:
-            if len(solution.t) == 1:
-                raise pybamm.SolverError(
-                    "Solution time vector must have length > 1. Check whether "
-                    "simulation terminated too early."
-                )
-            elif (
+            if (
                 isinstance(self.base_eval, numbers.Number)
                 or len(self.base_eval.shape) == 0
                 or self.base_eval.shape[0] == 1
             ):
                 self.initialise_0D()
             else:
-                n = self.mesh[0].npts
+                n = self.mesh.npts
                 base_shape = self.base_eval.shape[0]
                 # Try some shapes that could make the variable a 1D variable
                 if base_shape in [n, n + 1]:
                     self.initialise_1D()
                 else:
                     # Try some shapes that could make the variable a 2D variable
-                    first_dim_nodes = self.mesh[0].nodes
-                    first_dim_edges = self.mesh[0].edges
-                    second_dim_pts = self.base_variable.secondary_mesh[0].nodes
+                    first_dim_nodes = self.mesh.nodes
+                    first_dim_edges = self.mesh.edges
+                    second_dim_pts = self.base_variable.secondary_mesh.nodes
                     if self.base_eval.size // len(second_dim_pts) in [
                         len(first_dim_nodes),
                         len(first_dim_edges),
@@ -104,7 +137,7 @@ class ProcessedVariable(object):
         for idx in range(len(self.t_sol)):
             t = self.t_sol[idx]
             u = self.u_sol[:, idx]
-            inputs = {name: inp[idx] for name, inp in self.inputs.items()}
+            inputs = {name: inp[:, idx] for name, inp in self.inputs.items()}
             if self.known_evals:
                 entries[idx], self.known_evals[t] = self.base_variable.evaluate(
                     t, u, inputs=inputs, known_evals=self.known_evals[t]
@@ -112,15 +145,27 @@ class ProcessedVariable(object):
             else:
                 entries[idx] = self.base_variable.evaluate(t, u, inputs=inputs)
 
-        # No discretisation provided, or variable has no domain (function of t only)
-        self._interpolation_function = interp.interp1d(
-            self.t_sol, entries, kind="linear", fill_value=np.nan, bounds_error=False
-        )
+        # set up interpolation
+        if len(self.t_sol) == 1:
+            # Variable is just a scalar value, but we need to create a callable
+            # function to be consitent with other processed variables
+            def fun(t):
+                return entries
+
+            self._interpolation_function = fun
+        else:
+            self._interpolation_function = interp.interp1d(
+                self.t_pts,
+                entries,
+                kind="linear",
+                fill_value=np.nan,
+                bounds_error=False,
+            )
 
         self.entries = entries
         self.dimensions = 0
 
-    def initialise_1D(self):
+    def initialise_1D(self, fixed_t=False):
         len_space = self.base_eval.shape[0]
         entries = np.empty((len_space, len(self.t_sol)))
 
@@ -128,7 +173,7 @@ class ProcessedVariable(object):
         for idx in range(len(self.t_sol)):
             t = self.t_sol[idx]
             u = self.u_sol[:, idx]
-            inputs = {name: inp[idx] for name, inp in self.inputs.items()}
+            inputs = {name: inp[:, idx] for name, inp in self.inputs.items()}
             if self.known_evals:
                 eval_and_known_evals = self.base_variable.evaluate(
                     t, u, inputs=inputs, known_evals=self.known_evals[t]
@@ -139,8 +184,8 @@ class ProcessedVariable(object):
                 entries[:, idx] = self.base_variable.evaluate(t, u, inputs=inputs)[:, 0]
 
         # Get node and edge values
-        nodes = self.mesh[0].nodes
-        edges = self.mesh[0].edges
+        nodes = self.mesh.nodes
+        edges = self.mesh.edges
         if entries.shape[0] == len(nodes):
             space = nodes
         elif entries.shape[0] == len(edges):
@@ -176,23 +221,49 @@ class ProcessedVariable(object):
             self.first_dimension = "x"
             self.x_sol = space
 
-        self.first_dim_pts = edges
-        self.internal_boundaries = self.mesh[0].internal_boundaries
+        # assign attributes for reference
+        self.first_dim_pts = space * self.get_spatial_scale(
+            self.first_dimension, self.domain[0]
+        )
+        self.internal_boundaries = self.mesh.internal_boundaries
 
         # set up interpolation
-        # note that the order of 't' and 'space' is the reverse of what you'd expect
+        if len(self.t_sol) == 1:
+            # function of space only
+            interpolant = interp.interp1d(
+                self.first_dim_pts,
+                entries_for_interp[:, 0],
+                kind="linear",
+                fill_value=np.nan,
+                bounds_error=False,
+            )
 
-        self._interpolation_function = interp.interp2d(
-            self.t_sol, space, entries_for_interp, kind="linear", fill_value=np.nan
-        )
+            def interp_fun(t, z):
+                if isinstance(z, np.ndarray):
+                    return interpolant(z)[:, np.newaxis]
+                else:
+                    return interpolant(z)
+
+            self._interpolation_function = interp_fun
+        else:
+            # function of space and time. Note that the order of 't' and 'space'
+            # is the reverse of what you'd expect
+            self._interpolation_function = interp.interp2d(
+                self.t_pts,
+                self.first_dim_pts,
+                entries_for_interp,
+                kind="linear",
+                fill_value=np.nan,
+                bounds_error=False,
+            )
 
     def initialise_2D(self):
         """
         Initialise a 2D object that depends on x and r, or x and z.
         """
-        first_dim_nodes = self.mesh[0].nodes
-        first_dim_edges = self.mesh[0].edges
-        second_dim_pts = self.base_variable.secondary_mesh[0].nodes
+        first_dim_nodes = self.mesh.nodes
+        first_dim_edges = self.mesh.edges
+        second_dim_pts = self.base_variable.secondary_mesh.nodes
         if self.base_eval.size // len(second_dim_pts) == len(first_dim_nodes):
             first_dim_pts = first_dim_nodes
         elif self.base_eval.size // len(second_dim_pts) == len(first_dim_edges):
@@ -233,7 +304,7 @@ class ProcessedVariable(object):
         for idx in range(len(self.t_sol)):
             t = self.t_sol[idx]
             u = self.u_sol[:, idx]
-            inputs = {name: inp[idx] for name, inp in self.inputs.items()}
+            inputs = {name: inp[:, idx] for name, inp in self.inputs.items()}
             if self.known_evals:
                 eval_and_known_evals = self.base_variable.evaluate(
                     t, u, inputs=inputs, known_evals=self.known_evals[t]
@@ -254,49 +325,44 @@ class ProcessedVariable(object):
         # assign attributes for reference
         self.entries = entries
         self.dimensions = 2
-        self.first_dim_pts = first_dim_pts
-        self.second_dim_pts = second_dim_pts
+        self.first_dim_pts = first_dim_pts * self.get_spatial_scale(
+            self.first_dimension, self.domain[0]
+        )
+        self.second_dim_pts = second_dim_pts * self.get_spatial_scale(
+            self.second_dimension
+        )
 
         # set up interpolation
-        self._interpolation_function = interp.RegularGridInterpolator(
-            (first_dim_pts, second_dim_pts, self.t_sol),
-            entries,
-            method="linear",
-            fill_value=np.nan,
-        )
+        if len(self.t_sol) == 1:
+            # function of space only. Note the order of the points is the reverse
+            # of what you'd expect
+            interpolant = interp.interp2d(
+                self.second_dim_pts,
+                self.first_dim_pts,
+                entries[:, :, 0],
+                kind="linear",
+                fill_value=np.nan,
+                bounds_error=False,
+            )
 
-    def initialise_2D_fixed_t_scikit_fem(self):
-        y_sol = self.mesh[0].edges["y"]
-        len_y = len(y_sol)
-        z_sol = self.mesh[0].edges["z"]
-        len_z = len(z_sol)
+            def interp_fun(input):
+                return make_interp2D_fun(input, interpolant)
 
-        # Evaluate the base_variable
-        inputs = {name: inp[0] for name, inp in self.inputs.items()}
-
-        entries = np.reshape(
-            self.base_variable.evaluate(0, self.u_sol, inputs=inputs), [len_y, len_z]
-        )
-
-        # assign attributes for reference
-        self.entries = entries
-        self.dimensions = 2
-        self.y_sol = y_sol
-        self.z_sol = z_sol
-        self.first_dimension = "y"
-        self.second_dimension = "z"
-        self.first_dim_pts = y_sol
-        self.second_dim_pts = z_sol
-
-        # set up interpolation
-        self._interpolation_function = interp.interp2d(
-            y_sol, z_sol, entries, kind="linear", fill_value=np.nan
-        )
+            self._interpolation_function = interp_fun
+        else:
+            # function of space and time.
+            self._interpolation_function = interp.RegularGridInterpolator(
+                (self.first_dim_pts, self.second_dim_pts, self.t_pts),
+                entries,
+                method="linear",
+                fill_value=np.nan,
+                bounds_error=False,
+            )
 
     def initialise_2D_scikit_fem(self):
-        y_sol = self.mesh[0].edges["y"]
+        y_sol = self.mesh.edges["y"]
         len_y = len(y_sol)
-        z_sol = self.mesh[0].edges["z"]
+        z_sol = self.mesh.edges["z"]
         len_z = len(z_sol)
         entries = np.empty((len_y, len_z, len(self.t_sol)))
 
@@ -304,17 +370,21 @@ class ProcessedVariable(object):
         for idx in range(len(self.t_sol)):
             t = self.t_sol[idx]
             u = self.u_sol[:, idx]
-            inputs = {name: inp[idx] for name, inp in self.inputs.items()}
+            inputs = {name: inp[:, idx] for name, inp in self.inputs.items()}
 
             if self.known_evals:
                 eval_and_known_evals = self.base_variable.evaluate(
                     t, u, inputs=inputs, known_evals=self.known_evals[t]
                 )
-                entries[:, :, idx] = np.reshape(eval_and_known_evals[0], [len_y, len_z])
+                entries[:, :, idx] = np.reshape(
+                    eval_and_known_evals[0], [len_y, len_z], order="F"
+                )
                 self.known_evals[t] = eval_and_known_evals[1]
             else:
                 entries[:, :, idx] = np.reshape(
-                    self.base_variable.evaluate(t, u, inputs=inputs), [len_y, len_z]
+                    self.base_variable.evaluate(t, u, inputs=inputs),
+                    [len_y, len_z],
+                    order="F",
                 )
 
         # assign attributes for reference
@@ -324,27 +394,63 @@ class ProcessedVariable(object):
         self.z_sol = z_sol
         self.first_dimension = "y"
         self.second_dimension = "z"
-        self.first_dim_pts = y_sol
-        self.second_dim_pts = z_sol
+        self.first_dim_pts = y_sol * self.get_spatial_scale("y")
+        self.second_dim_pts = z_sol * self.get_spatial_scale("z")
 
         # set up interpolation
-        self._interpolation_function = interp.RegularGridInterpolator(
-            (y_sol, z_sol, self.t_sol), entries, method="linear", fill_value=np.nan
-        )
+        if len(self.t_sol) == 1:
+            # function of space only. Note the order of the points is the reverse
+            # of what you'd expect
+            interpolant = interp.interp2d(
+                self.second_dim_pts,
+                self.first_dim_pts,
+                entries,
+                kind="linear",
+                fill_value=np.nan,
+                bounds_error=False,
+            )
+
+            def interp_fun(input):
+                return make_interp2D_fun(input, interpolant)
+
+            self._interpolation_function = interp_fun
+        else:
+            # function of space and time.
+            self._interpolation_function = interp.RegularGridInterpolator(
+                (self.first_dim_pts, self.second_dim_pts, self.t_pts),
+                entries,
+                method="linear",
+                fill_value=np.nan,
+                bounds_error=False,
+            )
 
     def __call__(self, t=None, x=None, r=None, y=None, z=None, warn=True):
         """
-        Evaluate the variable at arbitrary t (and x, r, y and/or z), using interpolation
+        Evaluate the variable at arbitrary *dimensional* t (and x, r, y and/or z),
+        using interpolation
         """
+        # If t is None and there is only one value of time in the soluton (i.e.
+        # the solution is independent of time) then we set t equal to the value
+        # stored in the solution. If the variable is constant (doesn't depend on
+        # time) evaluate arbitrarily at the first value of t. Otherwise, raise
+        # an error
+        if t is None:
+            if len(self.t_pts) == 1:
+                t = self.t_pts
+            elif self.base_variable.is_constant():
+                t = self.t_pts[0]
+            else:
+                raise ValueError(
+                    "t cannot be None for variable {}".format(self.base_variable)
+                )
+
+        # Call interpolant of correct spatial dimension
         if self.dimensions == 0:
             out = self._interpolation_function(t)
         elif self.dimensions == 1:
             out = self.call_1D(t, x, r, z)
         elif self.dimensions == 2:
-            if t is None:
-                out = self._interpolation_function(y, z)
-            else:
-                out = self.call_2D(t, x, r, y, z)
+            out = self.call_2D(t, x, r, y, z)
         if warn is True and np.isnan(out).any():
             pybamm.logger.warning(
                 "Calling variable outside interpolation range (returns 'nan')"
@@ -369,8 +475,29 @@ class ProcessedVariable(object):
         else:
             if isinstance(second_dim, np.ndarray) and isinstance(t, np.ndarray):
                 second_dim = second_dim[:, np.newaxis]
-
         return self._interpolation_function((first_dim, second_dim, t))
+
+    def get_spatial_scale(self, name, domain=None):
+        "Returns the spatial scale for a named spatial variable"
+        # Different scale in negative and positive particles
+        if domain == "negative particle":
+            name = "r_n"
+        elif domain == "positive particle":
+            name = "r_p"
+
+        # Try to get length scale
+        if name + " [m]" in self.spatial_vars and name in self.spatial_vars:
+            scale = (
+                self.spatial_vars[name + " [m]"] / self.spatial_vars[name]
+            ).evaluate()[-1]
+        else:
+            if self.warn:
+                pybamm.logger.warning(
+                    "No scale set for spatial variable {}. "
+                    "Using default of 1 [m].".format(name)
+                )
+            scale = 1
+        return scale
 
     @property
     def data(self):

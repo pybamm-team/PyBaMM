@@ -167,7 +167,3 @@ class BasicSPM(BaseModel):
             pybamm.Event("Minimum voltage", V - param.voltage_low_cut),
             pybamm.Event("Maximum voltage", V - param.voltage_high_cut),
         ]
-
-    @property
-    def default_geometry(self):
-        return pybamm.Geometry("1D macro", "1D micro")

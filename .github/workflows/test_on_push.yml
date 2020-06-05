@@ -2,10 +2,12 @@ name: PyBaMM
 
 on:
   push:
+    
+  pull_request:
 
   # everyday at 3 am UTC
   schedule:
-    - cron:  '* 3 * * *'
+    - cron:  '0 3 * * *'
 
 jobs:
   
@@ -101,6 +103,4 @@ jobs:
         
     - name: Instal and run coverage
       if: success() && (matrix.os == 'unbuntu-latest' && matrix.python-version == 3.7)
-      run: |
-        pip install coverage codecov
-        codecov
+      uses: codecov/codecov-action@v1

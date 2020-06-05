@@ -18,11 +18,11 @@ else:
 # load models
 models = [
     pybamm.lithium_ion.SPM(
-        {"current collector": "potential pair", "dimensionality": 2}, name="2+1D SPM"
+        {"current collector": "potential pair", "dimensionality": 1}, name="2+1D SPM"
     ),
-    # pybamm.lithium_ion.SPMe(
-    #     {"current collector": "potential pair", "dimensionality": 2}, name="2+1D SPMe"
-    # ),
+    pybamm.lithium_ion.SPMe(
+        {"current collector": "potential pair", "dimensionality": 1}, name="2+1D SPMe"
+    ),
 ]
 
 # load parameter values and process models
@@ -36,13 +36,13 @@ for model in models:
     param.process_geometry(geometry)
     var = pybamm.standard_spatial_vars
     var_pts = {
-        var.x_n: 5,
-        var.x_s: 5,
-        var.x_p: 5,
-        var.r_n: 5,
-        var.r_p: 5,
-        var.y: 5,
-        var.z: 5,
+        var.x_n: 10,
+        var.x_s: 10,
+        var.x_p: 10,
+        var.r_n: 10,
+        var.r_p: 10,
+        var.y: 10,
+        var.z: 10,
     }
     mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
     disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
@@ -56,6 +56,10 @@ for i, model in enumerate(models):
     solutions[i] = solution
 
 # plot
-output_variables = ["Terminal voltage [V]", "Negative current collector potential [V]"]
+output_variables = [
+    "Terminal voltage [V]",
+    "Negative current collector potential [V]",
+    "Positive current collector potential [V]",
+]
 plot = pybamm.QuickPlot(solutions, output_variables)
 plot.dynamic_plot()
