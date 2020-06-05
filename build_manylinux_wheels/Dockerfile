@@ -9,4 +9,9 @@ RUN ln -s /opt/python/cp37-cp37m/bin/cmake /usr/bin/cmake
 
 COPY install_sundials.sh /install_sundials.sh
 RUN chmod +x /install_sundials.sh
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 RUN ./install_sundials.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
