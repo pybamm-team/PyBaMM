@@ -22,9 +22,19 @@ PyBaMM is available on GNU/Linux, MacOS and Windows.
 Using pip
 ----------
 
+GNU/Linux and Windows
+~~~~~~~~~~~~~~~~~~~~~~
+
 .. code:: bash
 
    pip install pybamm
+
+macOS
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. code:: bash
+
+   brew install sundials && pip install pybamm
 
 Using conda
 -------------

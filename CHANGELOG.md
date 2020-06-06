@@ -1,4 +1,6 @@
-# [Unreleased](https://github.com/pybamm-team/PyBaMM/)
+# [v0.2.2](https://github.com/pybamm-team/PyBaMM/tree/v0.2.2) - 2020-06-01
+
+New SEI models, simplification of submodel structure, as well as optimisations and general bug fixes.
 
 ## Features
 

@@ -188,6 +188,11 @@ def test_notebook(path, executable="python"):
     env = dict(os.environ)
     env["MPLBACKEND"] = "Template"
 
+    # If notebook makes use of magic commands then
+    # the script must be ran using ipython
+    # https://github.com/jupyter/nbconvert/issues/503#issuecomment-269527834
+    executable = "ipython" if ("run_cell_magic(" in code) else executable
+
     # Run in subprocess
     cmd = [executable] + ["-c", code]
     try:
