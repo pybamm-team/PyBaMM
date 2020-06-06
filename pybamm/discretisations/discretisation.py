@@ -1106,19 +1106,16 @@ class Discretisation(object):
         y0 = model.concatenated_initial_conditions
         # Individual
         for var in model.rhs.keys():
-            try:
-                assert (
-                    model.rhs[var].shape == model.initial_conditions[var].shape
-                ), pybamm.ModelError(
-                    """
-                    rhs and initial_conditions must have the same shape after discretisation
-                    but rhs.shape = {} and initial_conditions.shape = {} for variable '{}'.
-                    """.format(
-                        model.rhs[var].shape, model.initial_conditions[var].shape, var
-                    )
+            assert (
+                model.rhs[var].shape == model.initial_conditions[var].shape
+            ), pybamm.ModelError(
+                """
+                rhs and initial_conditions must have the same shape after discretisation
+                but rhs.shape = {} and initial_conditions.shape = {} for variable '{}'.
+                """.format(
+                    model.rhs[var].shape, model.initial_conditions[var].shape, var
                 )
-            except:
-                n - 1
+            )
         # Concatenated
         assert (
             model.concatenated_rhs.shape[0] + model.concatenated_algebraic.shape[0]
