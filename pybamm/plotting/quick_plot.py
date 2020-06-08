@@ -465,14 +465,14 @@ class QuickPlot(object):
         Parameters
         ----------
         t : float
-            Dimensional time (in hours) at which to plot.
+            Dimensional time (in 'time_units') at which to plot.
         """
 
         import matplotlib.pyplot as plt
         import matplotlib.gridspec as gridspec
         from matplotlib import cm, colors
 
-        t_in_seconds = t / self.time_scaling_factor
+        t_in_seconds = t * self.time_scaling_factor
         self.fig = plt.figure(figsize=self.figsize)
 
         self.gridspec = gridspec.GridSpec(self.n_rows, self.n_cols)
