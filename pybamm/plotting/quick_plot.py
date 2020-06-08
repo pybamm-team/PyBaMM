@@ -526,8 +526,8 @@ class QuickPlot(object):
                 ax.set_ylim(y_min, y_max)
                 (self.time_lines[key],) = ax.plot(
                     [
-                        t_in_seconds * self.time_scaling_factor,
-                        t_in_seconds * self.time_scaling_factor,
+                        t_in_seconds / self.time_scaling_factor,
+                        t_in_seconds / self.time_scaling_factor,
                     ],
                     [y_min, y_max],
                     "k--",
