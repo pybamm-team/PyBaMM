@@ -160,7 +160,7 @@ ext_modules = [idaklu_ext] if compile_KLU() else []
 
 setup(
     name="pybamm",
-    version=load_version() + ".post7",
+    version=load_version() + ".post2",
     description="Python Battery Mathematical Modelling.",
     long_description="description",
     long_description_content_type="text/markdown",
@@ -202,6 +202,6 @@ setup(
             "pybamm_add_parameter = pybamm.parameters_cli:add_parameter",
             "pybamm_rm_parameter = pybamm.parameters_cli:remove_parameter",
             "pybamm_install_odes = pybamm.install_odes:main",
-        ],
+        ]
     },
 )
