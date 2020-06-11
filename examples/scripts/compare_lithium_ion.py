@@ -3,6 +3,8 @@
 #
 import pybamm
 
+pybamm.set_logging_level("INFO")
+
 # load models
 models = [
     pybamm.lithium_ion.SPM(),

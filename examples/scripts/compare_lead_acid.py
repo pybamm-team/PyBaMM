@@ -3,6 +3,8 @@
 #
 import pybamm
 
+pybamm.set_logging_level("INFO")
+
 # load models
 models = [
     pybamm.lead_acid.LOQS(),
