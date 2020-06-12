@@ -158,11 +158,15 @@ pybamm_data.append("./CITATIONS.txt")
 idaklu_ext = Extension("idaklu", ["pybamm/solvers/c_solvers/idaklu.cpp"])
 ext_modules = [idaklu_ext] if compile_KLU() else []
 
+# Load text for description and license
+with open("README.md") as f:
+    readme = f.read()
+
 setup(
     name="pybamm",
     version=load_version() + ".post2",
     description="Python Battery Mathematical Modelling.",
-    long_description="description",
+    long_description=readme,
     long_description_content_type="text/markdown",
     url="https://github.com/pybamm-team/PyBaMM",
     packages=find_packages(include=("pybamm", "pybamm.*")),
