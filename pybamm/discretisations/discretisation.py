@@ -863,7 +863,7 @@ class Discretisation(object):
 
             elif isinstance(symbol, pybamm.DefiniteIntegralVector):
                 return child_spatial_method.definite_integral_matrix(
-                    child, vector_type=symbol.vector_type
+                    child.domains, vector_type=symbol.vector_type
                 )
 
             elif isinstance(symbol, pybamm.BoundaryIntegral):
@@ -939,7 +939,7 @@ class Discretisation(object):
                         domain=parent.domain,
                         auxiliary_domains=parent.auxiliary_domains,
                     )
-                    out = ext[slice(start, end)]
+                    out = pybamm.Index(ext, slice(start, end))
                     out.domain = symbol.domain
                     return out
 

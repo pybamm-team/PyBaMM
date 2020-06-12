@@ -199,17 +199,17 @@ class TestUnaryOperators(unittest.TestCase):
         vec = pybamm.StateVector(slice(0, 5))
         y_test = np.array([1, 2, 3, 4, 5])
         # with integer
-        ind = vec[3]
+        ind = pybamm.Index(vec, 3)
         self.assertIsInstance(ind, pybamm.Index)
         self.assertEqual(ind.slice, slice(3, 4))
         self.assertEqual(ind.evaluate(y=y_test), 4)
         # with slice
-        ind = vec[1:3]
+        ind = pybamm.Index(vec, slice(1, 3))
         self.assertIsInstance(ind, pybamm.Index)
         self.assertEqual(ind.slice, slice(1, 3))
         np.testing.assert_array_equal(ind.evaluate(y=y_test), np.array([[2], [3]]))
         # with only stop slice
-        ind = vec[:3]
+        ind = pybamm.Index(vec, slice(3))
         self.assertIsInstance(ind, pybamm.Index)
         self.assertEqual(ind.slice, slice(3))
         np.testing.assert_array_equal(ind.evaluate(y=y_test), np.array([[1], [2], [3]]))
@@ -283,9 +283,9 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(boundary_a.side, "right")
         self.assertEqual(boundary_a.child.id, a.id)
 
-    def test_evaluates_on_edges(self, dimension):
+    def test_evaluates_on_edges(self):
         a = pybamm.StateVector(slice(0, 10))
-        self.assertFalse(a[1].evaluates_on_edges("primary"))
+        self.assertFalse(pybamm.Index(a, slice(1)).evaluates_on_edges("primary"))
         self.assertFalse(pybamm.Laplacian(a).evaluates_on_edges("primary"))
 
     def test_boundary_value(self):
