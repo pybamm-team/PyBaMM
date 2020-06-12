@@ -666,7 +666,7 @@ class Symbol(anytree.NodeMixin):
         result = self.evaluate_ignoring_errors()
 
         if isinstance(result, numbers.Number) or (
-            isinstance(result, np.ndarray) and result.shape == ()
+            isinstance(result, np.ndarray) and np.prod(result.shape) == 1
         ):
             return True
         else:

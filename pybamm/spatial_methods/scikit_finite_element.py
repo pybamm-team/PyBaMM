@@ -303,7 +303,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
         return out
 
-    def definite_integral_matrix(self, domains, vector_type="row"):
+    def definite_integral_matrix(self, child, vector_type="row"):
         """
         Matrix for finite-element implementation of the definite integral over
         the entire domain
@@ -315,8 +315,8 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
         Parameters
         ----------
-        domains : dict
-            The domain(s) of integration
+        child : :class:`pybamm.Symbol`
+            The symbol being integrated
         vector_type : str, optional
             Whether to return a row or column vector (default is row)
 
@@ -326,7 +326,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             The finite element integral vector for the domain
         """
         # get primary domain mesh
-        domain = domains["primary"]
+        domain = child.domains["primary"]
         if isinstance(domain, list):
             domain = domain[0]
         mesh = self.mesh[domain]
