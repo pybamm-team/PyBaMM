@@ -47,8 +47,18 @@ class Discretisation(object):
                 spatial_methods["positive electrode"] = method
 
             self._spatial_methods = spatial_methods
-            for method in self._spatial_methods.values():
+            for domain, method in self._spatial_methods.items():
                 method.build(mesh)
+                # Check zero-dimensional methods are only applied to zero-dimensional
+                # meshes
+                if isinstance(method, pybamm.ZeroDimensionalSpatialMethod):
+                    if not isinstance(mesh[domain], pybamm.SubMesh0D):
+                        raise pybamm.DiscretisationError(
+                            "Zero-dimensional spatial method for the "
+                            "{} domain requires a zero-dimensional submesh".format(
+                                domain
+                            )
+                        )
 
         self.bcs = {}
         self.y_slices = {}
@@ -863,7 +873,7 @@ class Discretisation(object):
 
             elif isinstance(symbol, pybamm.DefiniteIntegralVector):
                 return child_spatial_method.definite_integral_matrix(
-                    child.domains, vector_type=symbol.vector_type
+                    child, vector_type=symbol.vector_type
                 )
 
             elif isinstance(symbol, pybamm.BoundaryIntegral):

@@ -297,7 +297,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         See :meth:`pybamm.SpatialMethod.integral`
         """
         # Calculate integration vector
-        integration_vector = self.definite_integral_matrix(child.domains)
+        integration_vector = self.definite_integral_matrix(child)
 
         out = integration_vector @ discretised_child
 
