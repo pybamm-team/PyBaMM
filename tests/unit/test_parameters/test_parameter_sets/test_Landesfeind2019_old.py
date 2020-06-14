@@ -1,5 +1,5 @@
 #
-# Tests for LG M50 parameter set loads
+# Tests for Landesfeind (2019) electrolytes parameter set loads
 #
 import pybamm
 import unittest
