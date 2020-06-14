@@ -19,8 +19,8 @@ else:
 options = {"thermal": "lumped"}
 models = [
     pybamm.lithium_ion.SPM(options),
-    pybamm.lithium_ion.SPMe(options),
-    pybamm.lithium_ion.DFN(options),
+    # pybamm.lithium_ion.SPMe(options),
+    # pybamm.lithium_ion.DFN(options),
 ]
 
 

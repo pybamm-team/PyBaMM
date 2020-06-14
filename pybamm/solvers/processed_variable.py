@@ -216,10 +216,11 @@ class ProcessedVariable(object):
             self.x_sol = space
 
         # assign attributes for reference
-        self.first_dim_pts = space * self.get_spatial_scale(
-            self.first_dimension, self.domain[0]
-        )
-        self.internal_boundaries = self.mesh.internal_boundaries
+        length_scale = self.get_spatial_scale(self.first_dimension, self.domain[0])
+        self.first_dim_pts = space * length_scale
+        self.internal_boundaries = [
+            bnd * length_scale for bnd in self.mesh.internal_boundaries
+        ]
 
         # set up interpolation
         if len(self.t_sol) == 1:
@@ -473,16 +474,20 @@ class ProcessedVariable(object):
 
     def get_spatial_scale(self, name, domain):
         "Returns the spatial scale for a named spatial variable"
-        # Different scale in negative and positive particles
-        try:
-            return self.length_scales[domain]
-        except KeyError:
-            if self.warn:
-                pybamm.logger.warning(
-                    "No length scale set for {}. "
-                    "Using default of 1 [m].".format(domain)
-                )
-            return 1
+        if name == "y" and domain == "current collector":
+            return self.length_scales["current collector y"]
+        elif name == "z" and domain == "current collector":
+            return self.length_scales["current collector z"]
+        else:
+            try:
+                return self.length_scales[domain]
+            except KeyError:
+                if self.warn:
+                    pybamm.logger.warning(
+                        "No length scale set for {}. "
+                        "Using default of 1 [m].".format(domain)
+                    )
+                return 1
 
     @property
     def data(self):

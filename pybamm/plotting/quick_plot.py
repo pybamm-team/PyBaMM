@@ -243,8 +243,6 @@ class QuickPlot(object):
         self.spatial_variable_dict = {}
         self.first_dimensional_spatial_variable = {}
         self.second_dimensional_spatial_variable = {}
-        self.first_spatial_scale = {}
-        self.second_spatial_scale = {}
         self.is_x_r = {}
 
         # Calculate subplot positions based on number of variables supplied
@@ -290,18 +288,15 @@ class QuickPlot(object):
 
             # Set the x variable (i.e. "x" or "r" for any one-dimensional variables)
             if first_variable.dimensions == 1:
-                (
-                    spatial_var_name,
-                    spatial_var_value,
-                    spatial_scale,
-                ) = self.get_spatial_var(variable_tuple, first_variable, "first")
+                (spatial_var_name, spatial_var_value,) = self.get_spatial_var(
+                    variable_tuple, first_variable, "first"
+                )
                 self.spatial_variable_dict[variable_tuple] = {
                     spatial_var_name: spatial_var_value
                 }
                 self.first_dimensional_spatial_variable[variable_tuple] = (
                     spatial_var_value * self.spatial_factor
                 )
-                self.first_spatial_scale[variable_tuple] = spatial_scale
 
             elif first_variable.dimensions == 2:
                 # Don't allow 2D variables if there are multiple solutions
@@ -316,12 +311,10 @@ class QuickPlot(object):
                     (
                         first_spatial_var_name,
                         first_spatial_var_value,
-                        first_spatial_scale,
                     ) = self.get_spatial_var(variable_tuple, first_variable, "first")
                     (
                         second_spatial_var_name,
                         second_spatial_var_value,
-                        second_spatial_scale,
                     ) = self.get_spatial_var(variable_tuple, first_variable, "second")
                     self.spatial_variable_dict[variable_tuple] = {
                         first_spatial_var_name: first_spatial_var_value,
@@ -363,19 +356,7 @@ class QuickPlot(object):
         if domain == "current collector":
             domain += " {}".format(spatial_var_name)
 
-        # Get scale to go from dimensionless to dimensional in the units
-        # specified by spatial_unit
-        try:
-            length_scale = self.length_scales[domain]
-        except KeyError:
-            raise KeyError(
-                (
-                    "Can't find length scale for '{}', "
-                    "make sure it is included in model.length_scales"
-                ).format(domain, *[spatial_var_name] * 2)
-            )
-
-        return spatial_var_name, spatial_var_value, length_scale
+        return spatial_var_name, spatial_var_value
 
     def reset_axis(self):
         """
@@ -544,10 +525,14 @@ class QuickPlot(object):
                 # add dashed lines for boundaries between subdomains
                 y_min, y_max = ax.get_ylim()
                 ax.set_ylim(y_min, y_max)
-                for bnd in variable_lists[0][0].internal_boundaries:
-                    bnd_dim = bnd * self.first_spatial_scale[key]
+                for boundary in variable_lists[0][0].internal_boundaries:
+                    boundary_scaled = boundary * self.spatial_factor
                     ax.plot(
-                        [bnd_dim, bnd_dim], [y_min, y_max], color="0.5", lw=1, zorder=0
+                        [boundary_scaled, boundary_scaled],
+                        [y_min, y_max],
+                        color="0.5",
+                        lw=1,
+                        zorder=0,
                     )
             elif variable_lists[0][0].dimensions == 2:
                 # Read dictionary of spatial variables
@@ -675,10 +660,10 @@ class QuickPlot(object):
                 if y_min is None and y_max is None:
                     y_min, y_max = ax_min(var_min), ax_max(var_max)
                     ax.set_ylim(y_min, y_max)
-                    for bnd in self.variables[key][0][0].internal_boundaries:
-                        bnd_dim = bnd * self.first_spatial_scale[key]
+                    for boundary in self.variables[key][0][0].internal_boundaries:
+                        boundary_scaled = boundary * self.spatial_factor
                         ax.plot(
-                            [bnd_dim, bnd_dim],
+                            [boundary_scaled, boundary_scaled],
                             [y_min, y_max],
                             color="0.5",
                             lw=1,
