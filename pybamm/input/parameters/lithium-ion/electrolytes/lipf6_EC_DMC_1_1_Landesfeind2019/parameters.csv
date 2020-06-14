@@ -1,0 +1,9 @@
+Name [units],Value,Reference,Notes
+# Empty rows and rows starting with ‘#’ will be ignored,,,
+,,,
+# Electrolyte properties,,,
+Typical electrolyte concentration [mol.m-3],1000,default,
+Cation transference number,[function]electrolyte_transference_number_EC_DMC_1_1_Landesfeind2019,Landesfeind 2019,
+1 + dlnf/dlnc,[function]electrolyte_TDF_EC_DMC_1_1_Landesfeind2019,Landesfeind 2019,
+Electrolyte diffusivity [m2.s-1],[function]electrolyte_diffusivity_EC_DMC_1_1_Landesfeind2019,Landesfeind 2019," "
+Electrolyte conductivity [S.m-1],[function]electrolyte_conductivity_EC_DMC_1_1_Landesfeind2019,Landesfeind 2019," "
