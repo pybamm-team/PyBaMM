@@ -5,7 +5,7 @@ import numpy as np
 
 class TestQuickPlot(unittest.TestCase):
     def test_simple_ode_model(self):
-        model = pybamm.BaseBatteryModel(name="Simple ODE Model")
+        model = pybamm.lithium_ion.BaseModel(name="Simple ODE Model")
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         # Create variables: domain is explicitly empty since these variables are only
@@ -37,13 +37,8 @@ class TestQuickPlot(unittest.TestCase):
             "c broadcasted positive electrode": pybamm.PrimaryBroadcast(
                 c, "positive particle"
             ),
-            "x [m]": pybamm.standard_spatial_vars.x,
-            "x": pybamm.standard_spatial_vars.x,
-            "r_n [m]": pybamm.standard_spatial_vars.r_n,
-            "r_n": pybamm.standard_spatial_vars.r_n,
-            "r_p [m]": pybamm.standard_spatial_vars.r_p,
-            "r_p": pybamm.standard_spatial_vars.r_p,
         }
+        model.timescale = pybamm.Scalar(1)
 
         # ODEs only (don't use jacobian)
         model.use_jacobian = False
@@ -255,10 +250,10 @@ class TestQuickPlot(unittest.TestCase):
                 [solution, solution], ["a"], labels=["sol 1", "sol 2", "sol 3"]
             )
 
-        # Remove 'x [m]' from the variables and make sure a key error is raise
-        del solution.model.variables["x [m]"]
+        # Remove length scales from the variables and make sure a key error is raised
+        solution.model.length_scales = {}
         with self.assertRaisesRegex(
-            KeyError, "Can't find spatial scale for 'negative electrode'"
+            KeyError, "Can't find length scale for 'negative electrode'"
         ):
             pybamm.QuickPlot(solution, ["b broadcasted"])
 

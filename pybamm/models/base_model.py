@@ -128,6 +128,7 @@ class BaseModel(object):
 
         # Default timescale is 1 second
         self.timescale = pybamm.Scalar(1)
+        self.length_scales = {}
 
     @property
     def name(self):

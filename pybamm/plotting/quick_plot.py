@@ -139,30 +139,11 @@ class QuickPlot(object):
         else:
             raise ValueError("spatial unit '{}' not recognized".format(spatial_unit))
 
-        variables = models[0].variables
-        # empty spatial scales, will raise error later if can't find a particular one
-        self.spatial_scales = {}
-        if "x [m]" in variables and "x" in variables:
-            x_scale = (variables["x [m]"] / variables["x"]).evaluate()[
-                -1
-            ] * self.spatial_factor
-            self.spatial_scales.update({dom: x_scale for dom in variables["x"].domain})
-        if "y [m]" in variables and "y" in variables:
-            self.spatial_scales["current collector y"] = (
-                variables["y [m]"] / variables["y"]
-            ).evaluate()[-1] * self.spatial_factor
-        if "z [m]" in variables and "z" in variables:
-            self.spatial_scales["current collector z"] = (
-                variables["z [m]"] / variables["z"]
-            ).evaluate()[-1] * self.spatial_factor
-        if "r_n [m]" in variables and "r_n" in variables:
-            self.spatial_scales["negative particle"] = (
-                variables["r_n [m]"] / variables["r_n"]
-            ).evaluate()[-1] * self.spatial_factor
-        if "r_p [m]" in variables and "r_p" in variables:
-            self.spatial_scales["positive particle"] = (
-                variables["r_p [m]"] / variables["r_p"]
-            ).evaluate()[-1] * self.spatial_factor
+        # Set length scales
+        self.length_scales = {
+            domain: scale.evaluate() * self.spatial_factor
+            for domain, scale in models[0].length_scales.items()
+        }
 
         # Time parameters
         model_timescale_in_seconds = models[0].timescale_eval
@@ -385,16 +366,16 @@ class QuickPlot(object):
         # Get scale to go from dimensionless to dimensional in the units
         # specified by spatial_unit
         try:
-            spatial_scale = self.spatial_scales[domain]
+            length_scale = self.length_scales[domain]
         except KeyError:
             raise KeyError(
                 (
-                    "Can't find spatial scale for '{}', make sure both '{} [m]' "
-                    + "and '{}' are defined in the model variables"
+                    "Can't find length scale for '{}', "
+                    "make sure it is included in model.length_scales"
                 ).format(domain, *[spatial_var_name] * 2)
             )
 
-        return spatial_var_name, spatial_var_value, spatial_scale
+        return spatial_var_name, spatial_var_value, length_scale
 
     def reset_axis(self):
         """

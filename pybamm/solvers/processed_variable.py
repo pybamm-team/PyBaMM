@@ -63,18 +63,12 @@ class ProcessedVariable(object):
         self.timescale = solution.model.timescale.evaluate()
         self.t_pts = self.t_sol * self.timescale
 
-        # Store spatial variables to get scales
-        self.spatial_vars = {}
+        # Store length scales
         if solution.model:
-            for var in ["x", "y", "z", "r_n", "r_p"]:
-                if (
-                    var in solution.model.variables
-                    and var + " [m]" in solution.model.variables
-                ):
-                    self.spatial_vars[var] = solution.model.variables[var]
-                    self.spatial_vars[var + " [m]"] = solution.model.variables[
-                        var + " [m]"
-                    ]
+            self.length_scales = {
+                domain: scale.evaluate()
+                for domain, scale in solution.model.length_scales.items()
+            }
 
         # Evaluate base variable at initial time
         if self.known_evals:
@@ -329,7 +323,7 @@ class ProcessedVariable(object):
             self.first_dimension, self.domain[0]
         )
         self.second_dim_pts = second_dim_pts * self.get_spatial_scale(
-            self.second_dimension
+            self.second_dimension, self.auxiliary_domains["secondary"][0]
         )
 
         # set up interpolation
@@ -394,8 +388,8 @@ class ProcessedVariable(object):
         self.z_sol = z_sol
         self.first_dimension = "y"
         self.second_dimension = "z"
-        self.first_dim_pts = y_sol * self.get_spatial_scale("y")
-        self.second_dim_pts = z_sol * self.get_spatial_scale("z")
+        self.first_dim_pts = y_sol * self.get_spatial_scale("y", "current collector")
+        self.second_dim_pts = z_sol * self.get_spatial_scale("z", "current collector")
 
         # set up interpolation
         if len(self.t_sol) == 1:
@@ -477,27 +471,18 @@ class ProcessedVariable(object):
                 second_dim = second_dim[:, np.newaxis]
         return self._interpolation_function((first_dim, second_dim, t))
 
-    def get_spatial_scale(self, name, domain=None):
+    def get_spatial_scale(self, name, domain):
         "Returns the spatial scale for a named spatial variable"
         # Different scale in negative and positive particles
-        if domain == "negative particle":
-            name = "r_n"
-        elif domain == "positive particle":
-            name = "r_p"
-
-        # Try to get length scale
-        if name + " [m]" in self.spatial_vars and name in self.spatial_vars:
-            scale = (
-                self.spatial_vars[name + " [m]"] / self.spatial_vars[name]
-            ).evaluate()[-1]
-        else:
+        try:
+            return self.length_scales[domain]
+        except KeyError:
             if self.warn:
                 pybamm.logger.warning(
-                    "No scale set for spatial variable {}. "
-                    "Using default of 1 [m].".format(name)
+                    "No length scale set for {}. "
+                    "Using default of 1 [m].".format(domain)
                 )
-            scale = 1
-        return scale
+            return 1
 
     @property
     def data(self):
