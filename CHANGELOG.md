@@ -1,3 +1,15 @@
+# Unreleased
+
+## Features
+
+## Optimizations
+
+## Bug fixes
+
+-   Fix a bug where variables that depend on y and z were transposed in `QuickPlot` ([]())
+
+## Breaking changes
+
 # [v0.2.2](https://github.com/pybamm-team/PyBaMM/tree/v0.2.2) - 2020-06-01
 
 New SEI models, simplification of submodel structure, as well as optimisations and general bug fixes.

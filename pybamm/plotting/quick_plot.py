@@ -265,6 +265,7 @@ class QuickPlot(object):
         self.first_spatial_scale = {}
         self.second_spatial_scale = {}
         self.is_x_r = {}
+        self.is_y_z = {}
 
         # Calculate subplot positions based on number of variables supplied
         self.subplot_positions = {}
@@ -354,8 +355,15 @@ class QuickPlot(object):
                     )
                     if first_spatial_var_name == "r" and second_spatial_var_name == "x":
                         self.is_x_r[variable_tuple] = True
+                        self.is_y_z[variable_tuple] = False
+                    elif (
+                        first_spatial_var_name == "y" and second_spatial_var_name == "z"
+                    ):
+                        self.is_x_r[variable_tuple] = False
+                        self.is_y_z[variable_tuple] = True
                     else:
                         self.is_x_r[variable_tuple] = False
+                        self.is_y_z[variable_tuple] = False
 
             # Store variables and subplot position
             self.variables[variable_tuple] = variables
@@ -585,7 +593,11 @@ class QuickPlot(object):
                     y_name = list(spatial_vars.keys())[1][0]
                     x = self.first_dimensional_spatial_variable[key]
                     y = self.second_dimensional_spatial_variable[key]
-                    var = variable(t_in_seconds, **spatial_vars, warn=False).T
+                    # need to transpose if domain is x-z
+                    if self.is_y_z[key] is True:
+                        var = variable(t_in_seconds, **spatial_vars, warn=False)
+                    else:
+                        var = variable(t_in_seconds, **spatial_vars, warn=False).T
                 ax.set_xlabel(
                     "{} [{}]".format(x_name, self.spatial_unit), fontsize=fontsize
                 )
@@ -717,7 +729,11 @@ class QuickPlot(object):
                 else:
                     x = self.first_dimensional_spatial_variable[key]
                     y = self.second_dimensional_spatial_variable[key]
-                    var = variable(time_in_seconds, **spatial_vars, warn=False).T
+                    # need to transpose if domain is x-z
+                    if self.is_y_z[key] is True:
+                        var = variable(time_in_seconds, **spatial_vars, warn=False)
+                    else:
+                        var = variable(time_in_seconds, **spatial_vars, warn=False).T
                 ax.contourf(
                     x, y, var, levels=100, vmin=vmin, vmax=vmax, cmap="coolwarm"
                 )
