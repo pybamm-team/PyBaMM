@@ -17,15 +17,15 @@ else:
 
 # load models
 models = [
-    pybamm.lead_acid.LOQS(),
-    pybamm.lead_acid.FOQS(),
-    pybamm.lead_acid.CompositeExtended(),
-    pybamm.lead_acid.Full(),
+    # pybamm.lead_acid.LOQS(),
+    # pybamm.lead_acid.FOQS(),
+    pybamm.lead_acid.Composite(),
+    # pybamm.lead_acid.Full(),
 ]
 
 # load parameter values and process models and geometry
 param = models[0].default_parameter_values
-param.update({"Current function [A]": 17, "Initial State of Charge": 1})
+param.update({"Current function [A]": "[input]", "Initial State of Charge": 1})
 for model in models:
     param.process_model(model)
 
@@ -43,7 +43,9 @@ for model in models:
 solutions = [None] * len(models)
 t_eval = np.linspace(0, 3600 * 2, 1000)
 for i, model in enumerate(models):
-    solution = model.default_solver.solve(model, t_eval)
+    solution = model.default_solver.solve(
+        model, t_eval, inputs={"Current function [A]": 1}
+    )
     solutions[i] = solution
 
 # plot
