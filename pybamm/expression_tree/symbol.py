@@ -101,7 +101,7 @@ class Symbol(anytree.NodeMixin):
         self.cached_children = super(Symbol, self).children
 
         # Set auxiliary domains
-        self._domain = None
+        self._domains = {"primary": None}
         self.auxiliary_domains = auxiliary_domains
         # Set domain (and hence id)
         self.domain = domain
@@ -138,6 +138,10 @@ class Symbol(anytree.NodeMixin):
         self._name = value
 
     @property
+    def domains(self):
+        return self._domains
+
+    @property
     def domain(self):
         """list of applicable domains
 
@@ -145,7 +149,7 @@ class Symbol(anytree.NodeMixin):
         -------
             iterable of str
         """
-        return self._domain
+        return self._domains["primary"]
 
     @domain.setter
     def domain(self, domain):
@@ -164,13 +168,14 @@ class Symbol(anytree.NodeMixin):
         except TypeError:
             raise TypeError("Domain: argument domain is not iterable")
         else:
-            self._domain = domain
+            self._domains["primary"] = domain
             # Update id since domain has changed
             self.set_id()
 
     @property
     def auxiliary_domains(self):
-        return self._auxiliary_domains
+        "Returns domains that are not the primary domain"
+        return {k: v for k, v in self._domains.items() if k != "primary"}
 
     @auxiliary_domains.setter
     def auxiliary_domains(self, auxiliary_domains):
@@ -188,7 +193,7 @@ class Symbol(anytree.NodeMixin):
         if len(set(values)) != len(values):
             raise pybamm.DomainError("All auxiliary domains must be different")
 
-        self._auxiliary_domains = auxiliary_domains
+        self._domains.update(auxiliary_domains)
 
     @property
     def secondary_domain(self):
@@ -197,13 +202,11 @@ class Symbol(anytree.NodeMixin):
 
     def copy_domains(self, symbol):
         "Copy the domains from a given symbol, bypassing checks"
-        self._domain = symbol.domain
-        self._auxiliary_domains = symbol.auxiliary_domains
+        self._domains = symbol.domains
 
     def clear_domains(self):
         "Clear domains, bypassing checks"
-        self._domain = []
-        self._auxiliary_domains = {}
+        self._domains = {"primary": []}
 
     def get_children_auxiliary_domains(self, children):
         "Combine auxiliary domains from children, at all levels"

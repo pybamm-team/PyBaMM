@@ -343,9 +343,9 @@ class TestJacobian(unittest.TestCase):
         a_dom = ["negative electrode"]
         b_dom = ["separator"]
         c_dom = ["positive electrode"]
-        a_npts = mesh[a_dom[0]][0].npts
-        b_npts = mesh[b_dom[0]][0].npts
-        c_npts = mesh[c_dom[0]][0].npts
+        a_npts = mesh[a_dom[0]].npts
+        b_npts = mesh[b_dom[0]].npts
+        c_npts = mesh[c_dom[0]].npts
         a = 2 * pybamm.Vector(np.ones(a_npts), domain=a_dom)
         b = pybamm.Vector(np.ones(b_npts), domain=b_dom)
         c = 3 * pybamm.Vector(np.ones(c_npts), domain=c_dom)

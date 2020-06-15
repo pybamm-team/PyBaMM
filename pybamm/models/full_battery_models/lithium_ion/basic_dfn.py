@@ -282,7 +282,3 @@ class BasicDFN(BaseModel):
             pybamm.Event("Minimum voltage", voltage - param.voltage_low_cut),
             pybamm.Event("Maximum voltage", voltage - param.voltage_high_cut),
         ]
-
-    @property
-    def default_geometry(self):
-        return pybamm.Geometry("1D macro", "1+1D micro")
