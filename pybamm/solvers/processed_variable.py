@@ -217,16 +217,19 @@ class ProcessedVariable(object):
 
         # assign attributes for reference
         length_scale = self.get_spatial_scale(self.first_dimension, self.domain[0])
-        self.first_dim_pts = space * length_scale
+        pts_for_interp = space * length_scale
         self.internal_boundaries = [
             bnd * length_scale for bnd in self.mesh.internal_boundaries
         ]
+
+        # Set first_dim_pts to edges for nicer plotting
+        self.first_dim_pts = edges * length_scale
 
         # set up interpolation
         if len(self.t_sol) == 1:
             # function of space only
             interpolant = interp.interp1d(
-                self.first_dim_pts,
+                pts_for_interp,
                 entries_for_interp[:, 0],
                 kind="linear",
                 fill_value=np.nan,
@@ -245,7 +248,7 @@ class ProcessedVariable(object):
             # is the reverse of what you'd expect
             self._interpolation_function = interp.interp2d(
                 self.t_pts,
-                self.first_dim_pts,
+                pts_for_interp,
                 entries_for_interp,
                 kind="linear",
                 fill_value=np.nan,
@@ -320,12 +323,15 @@ class ProcessedVariable(object):
         # assign attributes for reference
         self.entries = entries
         self.dimensions = 2
-        self.first_dim_pts = first_dim_pts * self.get_spatial_scale(
+        first_length_scale = self.get_spatial_scale(
             self.first_dimension, self.domain[0]
         )
-        self.second_dim_pts = second_dim_pts * self.get_spatial_scale(
+        self.first_dim_pts = first_dim_pts * first_length_scale
+
+        second_length_scale = self.get_spatial_scale(
             self.second_dimension, self.auxiliary_domains["secondary"][0]
         )
+        self.second_dim_pts = second_dim_pts * second_length_scale
 
         # set up interpolation
         if len(self.t_sol) == 1:
@@ -474,20 +480,20 @@ class ProcessedVariable(object):
 
     def get_spatial_scale(self, name, domain):
         "Returns the spatial scale for a named spatial variable"
-        if name == "y" and domain == "current collector":
-            return self.length_scales["current collector y"]
-        elif name == "z" and domain == "current collector":
-            return self.length_scales["current collector z"]
-        else:
-            try:
+        try:
+            if name == "y" and domain == "current collector":
+                return self.length_scales["current collector y"]
+            elif name == "z" and domain == "current collector":
+                return self.length_scales["current collector z"]
+            else:
                 return self.length_scales[domain]
-            except KeyError:
-                if self.warn:
-                    pybamm.logger.warning(
-                        "No length scale set for {}. "
-                        "Using default of 1 [m].".format(domain)
-                    )
-                return 1
+        except KeyError:
+            if self.warn:
+                pybamm.logger.warning(
+                    "No length scale set for {}. "
+                    "Using default of 1 [m].".format(domain)
+                )
+            return 1
 
     @property
     def data(self):
