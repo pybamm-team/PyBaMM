@@ -78,6 +78,14 @@ class TestSimplify(unittest.TestCase):
             pybamm.Integral,
         )
 
+        def_int = (pybamm.DefiniteIntegralVector(a, vector_type="column")).simplify()
+        self.assertIsInstance(def_int, pybamm.DefiniteIntegralVector)
+        self.assertEqual(def_int.vector_type, "column")
+
+        bound_int = (pybamm.BoundaryIntegral(a, region="negative tab")).simplify()
+        self.assertIsInstance(bound_int, pybamm.BoundaryIntegral)
+        self.assertEqual(bound_int.region, "negative tab")
+
         # BoundaryValue
         v_neg = pybamm.Variable("v", domain=["negative electrode"])
         self.assertIsInstance(

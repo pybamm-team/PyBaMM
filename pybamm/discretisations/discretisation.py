@@ -4,7 +4,7 @@
 import pybamm
 import numpy as np
 from collections import defaultdict, OrderedDict
-from scipy.sparse import block_diag, csc_matrix, csr_matrix, issparse
+from scipy.sparse import block_diag, csc_matrix, csr_matrix
 from scipy.sparse.linalg import inv
 
 
@@ -1116,14 +1116,15 @@ class Discretisation(object):
         y0 = model.concatenated_initial_conditions
         # Individual
         for var in model.rhs.keys():
-            if not model.rhs[var].shape == model.initial_conditions[var].shape:
-                raise pybamm.ModelError(
-                    "rhs and initial_conditions must have the same shape after "
-                    "discretisation but rhs.shape = "
-                    "{} and initial_conditions.shape = {} for variable '{}'.".format(
-                        model.rhs[var].shape, model.initial_conditions[var].shape, var
-                    )
+            assert (
+                model.rhs[var].shape == model.initial_conditions[var].shape
+            ), pybamm.ModelError(
+                "rhs and initial_conditions must have the same shape after "
+                "discretisation but rhs.shape = "
+                "{} and initial_conditions.shape = {} for variable '{}'.".format(
+                    model.rhs[var].shape, model.initial_conditions[var].shape, var
                 )
+            )
         # Concatenated
         assert (
             model.concatenated_rhs.shape[0] + model.concatenated_algebraic.shape[0]
@@ -1161,7 +1162,10 @@ class Discretisation(object):
                     isinstance(
                         var, (pybamm.Multiplication, pybamm.MatrixMultiplication)
                     )
-                    and (is_array_one(var.left) or is_array_one(var.right))
+                    and (
+                        pybamm.is_matrix_one(var.left)
+                        or pybamm.is_matrix_one(var.right)
+                    )
                 )
 
                 if different_shapes and not_concatenation and not_mult_by_one_vec:
@@ -1172,13 +1176,3 @@ class Discretisation(object):
                             var.shape, model.rhs[rhs_var].shape, var
                         )
                     )
-
-
-def is_array_one(symbol):
-    if not isinstance(symbol, pybamm.Array):
-        return False
-    entries = symbol.entries
-    if issparse(entries):
-        return np.all(entries.toarray() == 1)
-    else:
-        return np.all(entries == 1)

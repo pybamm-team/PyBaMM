@@ -43,6 +43,19 @@ def is_scalar_one(expr):
         return False
 
 
+def is_matrix_one(expr):
+    """
+    Utility function to test if an expression evaluates to a constant matrix one
+    """
+    if expr.is_constant():
+        result = expr.evaluate_ignoring_errors(t=None)
+        return (issparse(result) and np.all(result.toarray() == 1)) or (
+            isinstance(result, np.ndarray) and np.all(result == 1)
+        )
+    else:
+        return False
+
+
 def zeros_of_shape(shape):
     """
     Utility function to create a scalar zero, or a vector or matrix of zeros of

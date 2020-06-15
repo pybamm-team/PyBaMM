@@ -143,6 +143,11 @@ class TestUnaryOperators(unittest.TestCase):
 
         # space integral *in* secondary domain
         y = pybamm.SpatialVariable("y", ["current collector"])
+        # without a tertiary domain
+        inta_sec_y = pybamm.Integral(a_sec, y)
+        self.assertEqual(inta_sec_y.domain, ["negative electrode"])
+        self.assertEqual(inta_sec_y.auxiliary_domains, {})
+        # with a tertiary domain
         inta_tert_y = pybamm.Integral(a_tert, y)
         self.assertEqual(inta_tert_y.domain, ["negative electrode"])
         self.assertEqual(
@@ -194,6 +199,11 @@ class TestUnaryOperators(unittest.TestCase):
             pybamm.Integral(a, x)
         with self.assertRaisesRegex(TypeError, "integration_variable must be"):
             pybamm.Integral(a, y)
+        with self.assertRaisesRegex(
+            NotImplementedError,
+            "Indefinite integral only implemeted w.r.t. one variable",
+        ):
+            pybamm.IndefiniteIntegral(a, [x, y])
 
     def test_index(self):
         vec = pybamm.StateVector(slice(0, 5))
@@ -203,6 +213,12 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertIsInstance(ind, pybamm.Index)
         self.assertEqual(ind.slice, slice(3, 4))
         self.assertEqual(ind.evaluate(y=y_test), 4)
+        # with -1
+        ind = pybamm.Index(vec, -1)
+        self.assertIsInstance(ind, pybamm.Index)
+        self.assertEqual(ind.slice, slice(-1, None))
+        self.assertEqual(ind.evaluate(y=y_test), 5)
+        self.assertEqual(ind.name, "Index[-1]")
         # with slice
         ind = pybamm.Index(vec, slice(1, 3))
         self.assertIsInstance(ind, pybamm.Index)
@@ -287,6 +303,8 @@ class TestUnaryOperators(unittest.TestCase):
         a = pybamm.StateVector(slice(0, 10))
         self.assertFalse(pybamm.Index(a, slice(1)).evaluates_on_edges("primary"))
         self.assertFalse(pybamm.Laplacian(a).evaluates_on_edges("primary"))
+        self.assertTrue(pybamm.Gradient_Squared(a).evaluates_on_edges("primary"))
+        self.assertFalse(pybamm.BoundaryIntegral(a).evaluates_on_edges("primary"))
 
     def test_boundary_value(self):
         a = pybamm.Scalar(1)
@@ -377,6 +395,29 @@ class TestUnaryOperators(unittest.TestCase):
             ValueError, "Can't take the x-average of a symbol that evaluates on edges"
         ):
             pybamm.x_average(symbol_on_edges)
+
+        # Particle domains
+        a = pybamm.Symbol(
+            "a",
+            domain="negative particle",
+            auxiliary_domains={"secondary": "negative electrode"},
+        )
+        av_a = pybamm.x_average(a)
+        self.assertEqual(a.domain, ["negative particle"])
+        self.assertIsInstance(av_a, pybamm.Division)
+        self.assertIsInstance(av_a.children[0], pybamm.Integral)
+        self.assertEqual(av_a.children[1].id, pybamm.geometric_parameters.l_n.id)
+
+        a = pybamm.Symbol(
+            "a",
+            domain="positive particle",
+            auxiliary_domains={"secondary": "positive electrode"},
+        )
+        av_a = pybamm.x_average(a)
+        self.assertEqual(a.domain, ["positive particle"])
+        self.assertIsInstance(av_a, pybamm.Division)
+        self.assertIsInstance(av_a.children[0], pybamm.Integral)
+        self.assertEqual(av_a.children[1].id, pybamm.geometric_parameters.l_p.id)
 
     def test_r_average(self):
         a = pybamm.Scalar(1)
