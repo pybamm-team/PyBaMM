@@ -736,6 +736,15 @@ class TestFiniteVolume(unittest.TestCase):
             integral_eqn_disc.evaluate(None, one_over_y), 4 * np.pi ** 2
         )
 
+        # test failure for secondary dimension column form
+        finite_volume = pybamm.FiniteVolume()
+        finite_volume.build(mesh)
+        with self.assertRaisesRegex(
+            NotImplementedError,
+            "Integral in secondary vector only implemented in 'row' form",
+        ):
+            finite_volume.definite_integral_matrix(var, "column", "secondary")
+
     def test_integral_secondary_domain(self):
         # create discretisation
         mesh = get_1p1d_mesh_for_testing()

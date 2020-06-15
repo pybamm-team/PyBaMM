@@ -41,7 +41,7 @@ class InputParameter(pybamm.Symbol):
         Returns the scalar 'NaN' to represent the shape of a parameter.
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
         """
-        return np.nan * np.ones_like(self._expected_size)
+        return np.nan * np.ones((self._expected_size, 1))
 
     def _jac(self, variable):
         """ See :meth:`pybamm.Symbol._jac()`. """
@@ -55,7 +55,7 @@ class InputParameter(pybamm.Symbol):
         if not isinstance(inputs, dict):
             # if the special input "shape test" is passed, just return 1
             if inputs == "shape test":
-                return np.ones_like(self._expected_size)
+                return np.ones((self._expected_size, 1))
             raise TypeError("inputs should be a dictionary")
         try:
             input_eval = inputs[self.name]
@@ -64,15 +64,20 @@ class InputParameter(pybamm.Symbol):
             raise KeyError("Input parameter '{}' not found".format(self.name))
 
         if isinstance(input_eval, numbers.Number):
-            input_shape = 1
+            input_size = 1
+            input_ndim = 0
         else:
-            input_shape = input_eval.shape[0]
-        if input_shape == self._expected_size:
-            return input_eval
+            input_size = input_eval.shape[0]
+            input_ndim = len(input_eval.shape)
+        if input_size == self._expected_size:
+            if input_ndim == 1:
+                return input_eval[:, np.newaxis]
+            else:
+                return input_eval
         else:
             raise ValueError(
                 "Input parameter '{}' was given an object of size '{}'".format(
-                    self.name, input_shape
+                    self.name, input_size
                 )
                 + " but was expecting an object of size '{}'.".format(
                     self._expected_size

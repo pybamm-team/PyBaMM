@@ -294,6 +294,10 @@ class FiniteVolume(pybamm.SpatialMethod):
             # generate full matrix from the submatrix
             matrix = kron(eye(second_dim_repeats), vector)
         elif integration_dimension == "secondary":
+            if vector_type != "row":
+                raise NotImplementedError(
+                    "Integral in secondary vector only implemented in 'row' form"
+                )
             # Create appropriate submesh by combining submeshes in domain
             primary_submesh = self.mesh.combine_submeshes(*domains["primary"])
             secondary_submesh = self.mesh.combine_submeshes(*domains["secondary"])
@@ -308,10 +312,6 @@ class FiniteVolume(pybamm.SpatialMethod):
                 n_primary_pts = primary_submesh.npts
             int_matrix = hstack([d_edge * eye(n_primary_pts) for d_edge in d_edges])
 
-            if vector_type != "row":
-                raise NotImplementedError(
-                    "Integral in secondary vector only implemented in 'row' form"
-                )
             # repeat matrix for each node in secondary dimensions
             third_dim_repeats = self._get_auxiliary_domain_repeats(
                 domains, tertiary_only=True

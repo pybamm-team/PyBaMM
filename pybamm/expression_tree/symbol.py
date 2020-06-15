@@ -467,10 +467,6 @@ class Symbol(anytree.NodeMixin):
             pybamm.AbsoluteValue(self), keep_domains=True
         )
 
-    def __getitem__(self, key):
-        """return a :class:`Index` object"""
-        return pybamm.simplify_if_constant(pybamm.Index(self, key), keep_domains=True)
-
     def diff(self, variable):
         """
         Differentiate a symbol with respect to a variable. For any symbol that can be
@@ -670,7 +666,7 @@ class Symbol(anytree.NodeMixin):
         result = self.evaluate_ignoring_errors()
 
         if isinstance(result, numbers.Number) or (
-            isinstance(result, np.ndarray) and result.shape == ()
+            isinstance(result, np.ndarray) and np.prod(result.shape) == 1
         ):
             return True
         else:

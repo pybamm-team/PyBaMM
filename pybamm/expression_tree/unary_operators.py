@@ -188,7 +188,7 @@ class Index(UnaryOperator):
     def __init__(self, child, index, name=None, check_size=True):
         self.index = index
         if index == -1:
-            self.slice = slice(index, None)
+            self.slice = slice(-1, None)
             if name is None:
                 name = "Index[-1]"
         elif isinstance(index, int):
