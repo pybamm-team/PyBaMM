@@ -6,7 +6,7 @@
 
 ## Bug fixes
 
--   Fix a bug where variables that depend on y and z were transposed in `QuickPlot` ([]())
+-   Fix a bug where variables that depend on y and z were transposed in `QuickPlot` ([#1055](https://github.com/pybamm-team/PyBaMM/pull/1055))
 
 ## Breaking changes
 
