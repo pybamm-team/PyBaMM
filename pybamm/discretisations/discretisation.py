@@ -150,10 +150,6 @@ class Discretisation(object):
         # Set the y split for variables
         pybamm.logger.info("Set variable slices for {}".format(model.name))
         self.set_variable_slices(variables)
-        # Keep a record of y_slices in the model
-        model.y_slices = self.y_slices_explicit
-        # Keep a record of the bounds in the model
-        model.bounds = self.bounds
 
         # now add extrapolated external variables to the boundary conditions
         # if required by the spatial method
@@ -174,6 +170,11 @@ class Discretisation(object):
         else:
             # create an empty copy of the original model
             model_disc = model.new_copy()
+
+        # Keep a record of y_slices in the model
+        model_disc.y_slices = self.y_slices_explicit
+        # Keep a record of the bounds in the model
+        model_disc.bounds = self.bounds
 
         model_disc.bcs = self.bcs
 

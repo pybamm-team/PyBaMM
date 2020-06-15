@@ -103,7 +103,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
             {
                 **self.extra_options,
                 "abstol": self.tol,
-                "constraints": list(constraints),
+                "constraints": list(constraints[len_rhs:]),
             },
         )
         for idx, t in enumerate(t_eval):
