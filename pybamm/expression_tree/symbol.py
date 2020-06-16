@@ -467,10 +467,6 @@ class Symbol(anytree.NodeMixin):
             pybamm.AbsoluteValue(self), keep_domains=True
         )
 
-    def __getitem__(self, key):
-        """return a :class:`Index` object"""
-        return pybamm.simplify_if_constant(pybamm.Index(self, key), keep_domains=True)
-
     def diff(self, variable):
         """
         Differentiate a symbol with respect to a variable. For any symbol that can be
@@ -670,16 +666,28 @@ class Symbol(anytree.NodeMixin):
         result = self.evaluate_ignoring_errors()
 
         if isinstance(result, numbers.Number) or (
-            isinstance(result, np.ndarray) and result.shape == ()
+            isinstance(result, np.ndarray) and np.prod(result.shape) == 1
         ):
             return True
         else:
             return False
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         """
         Returns True if a symbol evaluates on an edge, i.e. symbol contains a gradient
         operator, but not a divergence operator, and is not an IndefiniteIntegral.
+
+        Parameters
+        ----------
+        dimension : str
+            The dimension (primary, secondary, etc) in which to query evaluation on
+            edges
+
+        Returns
+        -------
+        bool
+            Whether the symbol evaluates on edges (in the finite volume discretisation
+            sense)
         """
         # Default behaviour: return False
         return False

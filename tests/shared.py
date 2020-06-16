@@ -99,16 +99,20 @@ def get_p2d_mesh_for_testing(xpts=None, rpts=10):
 
 
 def get_1p1d_mesh_for_testing(
-    xpts=None, zpts=15, cc_submesh=pybamm.MeshGenerator(pybamm.Uniform1DSubMesh)
+    xpts=None,
+    rpts=10,
+    zpts=15,
+    cc_submesh=pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
 ):
     geometry = pybamm.battery_geometry(current_collector_dimension=1)
     return get_mesh_for_testing(
-        xpts=xpts, zpts=zpts, geometry=geometry, cc_submesh=cc_submesh
+        xpts=xpts, rpts=rpts, zpts=zpts, geometry=geometry, cc_submesh=cc_submesh
     )
 
 
 def get_2p1d_mesh_for_testing(
     xpts=None,
+    rpts=10,
     ypts=15,
     zpts=15,
     include_particles=True,
@@ -118,7 +122,12 @@ def get_2p1d_mesh_for_testing(
         include_particles=include_particles, current_collector_dimension=2
     )
     return get_mesh_for_testing(
-        xpts=xpts, zpts=zpts, geometry=geometry, cc_submesh=cc_submesh
+        xpts=xpts,
+        rpts=rpts,
+        ypts=ypts,
+        zpts=zpts,
+        geometry=geometry,
+        cc_submesh=cc_submesh,
     )
 
 
@@ -175,14 +184,16 @@ def get_p2d_discretisation_for_testing(xpts=None, rpts=10):
     return get_discretisation_for_testing(mesh=get_p2d_mesh_for_testing(xpts, rpts))
 
 
-def get_1p1d_discretisation_for_testing(xpts=None, zpts=15):
-    return get_discretisation_for_testing(mesh=get_1p1d_mesh_for_testing(xpts, zpts))
+def get_1p1d_discretisation_for_testing(xpts=None, rpts=10, zpts=15):
+    return get_discretisation_for_testing(
+        mesh=get_1p1d_mesh_for_testing(xpts, rpts, zpts)
+    )
 
 
 def get_2p1d_discretisation_for_testing(
-    xpts=None, ypts=15, zpts=15, include_particles=True
+    xpts=None, rpts=10, ypts=15, zpts=15, include_particles=True
 ):
     return get_discretisation_for_testing(
-        mesh=get_2p1d_mesh_for_testing(xpts, ypts, zpts, include_particles),
+        mesh=get_2p1d_mesh_for_testing(xpts, rpts, ypts, zpts, include_particles),
         cc_method=pybamm.ScikitFiniteElement,
     )

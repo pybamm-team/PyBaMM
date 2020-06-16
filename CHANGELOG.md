@@ -1,3 +1,18 @@
+# [Unreleased](https://github.com/pybamm-team/PyBaMM)
+
+## Features
+
+-   Added `length_scales` attribute to models ([#1058](https://github.com/pybamm-team/PyBaMM/pull/1058))
+-   Added averaging in secondary dimensions ([#1057](https://github.com/pybamm-team/PyBaMM/pull/1057))
+
+## Optimizations
+
+## Bug fixes
+
+-   Fix a bug where variables that depend on y and z were transposed in `QuickPlot` ([#1055](https://github.com/pybamm-team/PyBaMM/pull/1055))
+
+## Breaking changes
+
 # [v0.2.2](https://github.com/pybamm-team/PyBaMM/tree/v0.2.2) - 2020-06-01
 
 New SEI models, simplification of submodel structure, as well as optimisations and general bug fixes.

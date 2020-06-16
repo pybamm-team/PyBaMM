@@ -255,9 +255,7 @@ class BaseThermal(pybamm.BaseSubModel):
         "Computes the y-z average"
         # TODO: change the behaviour of z_average and yz_average so the if statement
         # can be removed
-        if self.cc_dimension == 0:
-            return var
-        elif self.cc_dimension == 1:
+        if self.cc_dimension in [0, 1]:
             return pybamm.z_average(var)
         elif self.cc_dimension == 2:
             return pybamm.yz_average(var)
