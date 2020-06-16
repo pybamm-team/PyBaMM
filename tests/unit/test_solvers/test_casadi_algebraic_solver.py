@@ -106,11 +106,12 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
         )
 
     def test_model_solver_with_bounds(self):
+        # Note: we need a better test case to test this functionality properly
         # Create model
         model = pybamm.BaseModel()
         var1 = pybamm.Variable("var1", bounds=(0, 10))
         model.algebraic = {var1: pybamm.sin(var1) + 1}
-        model.initial_conditions = {var1: pybamm.Scalar(1)}
+        model.initial_conditions = {var1: pybamm.Scalar(3)}
         model.variables = {"var1": var1}
 
         # Solve

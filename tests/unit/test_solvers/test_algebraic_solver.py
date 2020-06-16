@@ -215,41 +215,39 @@ class TestAlgebraicSolver(unittest.TestCase):
         )
 
     def test_model_solver_least_squares_with_bounds(self):
+        # Note: we need a better test case to test this functionality properly
         # Create model
         model = pybamm.BaseModel()
-        var1 = pybamm.Variable("var1")
-        var2 = pybamm.Variable("var2", bounds=(1.5, np.inf))
-        model.algebraic = {var2: 10 * (var2 - var1 ** 2), var1: 1 - var1}
-        model.initial_conditions = {var1: pybamm.Scalar(2), var2: pybamm.Scalar(2)}
-        model.variables = {"var1": var1, "var2": var2}
+        var1 = pybamm.Variable("var1", bounds=(0, 10))
+        model.algebraic = {var1: pybamm.sin(var1) + 1}
+        model.initial_conditions = {var1: pybamm.Scalar(3)}
+        model.variables = {"var1": var1}
 
         # Solve
-        solver = pybamm.AlgebraicSolver("lsq")
+        solver = pybamm.AlgebraicSolver("lsq", tol=1e-5)
         solution = solver.solve(model)
         np.testing.assert_array_almost_equal(
-            model.variables["var1"].evaluate(t=None, y=solution.y), 1
-        )
-        np.testing.assert_array_almost_equal(
-            model.variables["var2"].evaluate(t=None, y=solution.y), 1
+            model.variables["var1"].evaluate(t=None, y=solution.y),
+            3 * np.pi / 2,
+            decimal=2,
         )
 
     def test_model_solver_minimize_with_bounds(self):
+        # Note: we need a better test case to test this functionality properly
         # Create model
         model = pybamm.BaseModel()
-        var1 = pybamm.Variable("var1")
-        var2 = pybamm.Variable("var2", bounds=(1.5, np.inf))
-        model.algebraic = {var2: 10 * (var2 - var1 ** 2), var1: 1 - var1}
-        model.initial_conditions = {var1: pybamm.Scalar(2), var2: pybamm.Scalar(2)}
-        model.variables = {"var1": var1, "var2": var2}
+        var1 = pybamm.Variable("var1", bounds=(0, 10))
+        model.algebraic = {var1: pybamm.sin(var1) + 1}
+        model.initial_conditions = {var1: pybamm.Scalar(3)}
+        model.variables = {"var1": var1}
 
         # Solve
-        solver = pybamm.AlgebraicSolver("minimize", tol=1e-8)
+        solver = pybamm.AlgebraicSolver("minimize", tol=1e-16)
         solution = solver.solve(model)
         np.testing.assert_array_almost_equal(
-            model.variables["var1"].evaluate(t=None, y=solution.y), 1
-        )
-        np.testing.assert_array_almost_equal(
-            model.variables["var2"].evaluate(t=None, y=solution.y), 1
+            model.variables["var1"].evaluate(t=None, y=solution.y),
+            3 * np.pi / 2,
+            decimal=4,
         )
 
     def test_model_solver_with_time(self):

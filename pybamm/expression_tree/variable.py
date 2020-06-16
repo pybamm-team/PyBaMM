@@ -126,11 +126,13 @@ class VariableDot(VariableBase):
         collector'. For the DFN, the particle concentration would be a Variable with
         domain 'negative particle', secondary domain 'negative electrode' and tertiary
         domain 'current collector'
-
+    bounds : tuple, optional
+        Physical bounds on the variable. Included for compatibility with `VariableBase`,
+        but ignored.
     *Extends:* :class:`Symbol`
     """
 
-    def __init__(self, name, domain=None, auxiliary_domains=None):
+    def __init__(self, name, domain=None, auxiliary_domains=None, bounds=None):
         super().__init__(name, domain=domain, auxiliary_domains=auxiliary_domains)
 
     def get_variable(self):
