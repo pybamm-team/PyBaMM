@@ -44,6 +44,13 @@ def split_long_string(title, max_words=4):
         return first_line + "\n" + second_line
 
 
+def close_plots():
+    "Close all open figures"
+    import matplotlib.pyplot as plt
+
+    plt.close("all")
+
+
 class QuickPlot(object):
     """
     Generates a quick plot of a subset of key outputs of the model so that the model
@@ -244,6 +251,7 @@ class QuickPlot(object):
         self.first_dimensional_spatial_variable = {}
         self.second_dimensional_spatial_variable = {}
         self.is_x_r = {}
+        self.is_y_z = {}
 
         # Calculate subplot positions based on number of variables supplied
         self.subplot_positions = {}
@@ -328,8 +336,15 @@ class QuickPlot(object):
                     )
                     if first_spatial_var_name == "r" and second_spatial_var_name == "x":
                         self.is_x_r[variable_tuple] = True
+                        self.is_y_z[variable_tuple] = False
+                    elif (
+                        first_spatial_var_name == "y" and second_spatial_var_name == "z"
+                    ):
+                        self.is_x_r[variable_tuple] = False
+                        self.is_y_z[variable_tuple] = True
                     else:
                         self.is_x_r[variable_tuple] = False
+                        self.is_y_z[variable_tuple] = False
 
             # Store variables and subplot position
             self.variables[variable_tuple] = variables
@@ -551,7 +566,11 @@ class QuickPlot(object):
                     y_name = list(spatial_vars.keys())[1][0]
                     x = self.first_dimensional_spatial_variable[key]
                     y = self.second_dimensional_spatial_variable[key]
-                    var = variable(t_in_seconds, **spatial_vars, warn=False).T
+                    # need to transpose if domain is x-z
+                    if self.is_y_z[key] is True:
+                        var = variable(t_in_seconds, **spatial_vars, warn=False)
+                    else:
+                        var = variable(t_in_seconds, **spatial_vars, warn=False).T
                 ax.set_xlabel(
                     "{} [{}]".format(x_name, self.spatial_unit), fontsize=fontsize
                 )
@@ -559,9 +578,12 @@ class QuickPlot(object):
                     "{} [{}]".format(y_name, self.spatial_unit), fontsize=fontsize
                 )
                 vmin, vmax = self.variable_limits[key]
-                ax.contourf(
+                # store the plot and the var data (for testing) as cant access
+                # z data from QuadContourSet object
+                self.plots[key][0][0] = ax.contourf(
                     x, y, var, levels=100, vmin=vmin, vmax=vmax, cmap="coolwarm"
                 )
+                self.plots[key][0][1] = var
                 if vmin is None and vmax is None:
                     vmin = ax_min(var)
                     vmax = ax_max(var)
@@ -683,10 +705,17 @@ class QuickPlot(object):
                 else:
                     x = self.first_dimensional_spatial_variable[key]
                     y = self.second_dimensional_spatial_variable[key]
-                    var = variable(time_in_seconds, **spatial_vars, warn=False).T
-                ax.contourf(
+                    # need to transpose if domain is x-z
+                    if self.is_y_z[key] is True:
+                        var = variable(time_in_seconds, **spatial_vars, warn=False)
+                    else:
+                        var = variable(time_in_seconds, **spatial_vars, warn=False).T
+                # store the plot and the updated var data (for testing) as cant
+                # access z data from QuadContourSet object
+                self.plots[key][0][0] = ax.contourf(
                     x, y, var, levels=100, vmin=vmin, vmax=vmax, cmap="coolwarm"
                 )
+                self.plots[key][0][1] = var
                 if (vmin, vmax) == (None, None):
                     vmin = ax_min(var)
                     vmax = ax_max(var)
