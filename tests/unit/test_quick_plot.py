@@ -292,26 +292,30 @@ class TestQuickPlot(unittest.TestCase):
             pybamm.QuickPlot(solution)
 
             # check 1D (space) variables update properly for different time units
-            c_e = solution["Electrolyte concentration [mol.m-3]"].entries
+            t = solution["Time [s]"].entries
+            c_e_var = solution["Electrolyte concentration [mol.m-3]"]
+            # 1D variables should be evaluated on edges
+            L_x = param.evaluate(pybamm.geometric_parameters.L_x)
+            c_e = c_e_var(t=t, x=mesh.combine_submeshes(*c_e_var.domain).edges * L_x)
 
             for unit, scale in zip(["seconds", "minutes", "hours"], [1, 60, 3600]):
                 quick_plot = pybamm.QuickPlot(
                     solution, ["Electrolyte concentration [mol.m-3]"], time_unit=unit
                 )
                 quick_plot.plot(0)
-                # take off extrapolated points
+
                 qp_data = (
                     quick_plot.plots[("Electrolyte concentration [mol.m-3]",)][0][
                         0
-                    ].get_ydata()[1:-1],
+                    ].get_ydata(),
                 )[0]
                 np.testing.assert_array_almost_equal(qp_data, c_e[:, 0])
                 quick_plot.slider_update(t_eval[-1] / scale)
-                # take off extrapolated points
+
                 qp_data = (
                     quick_plot.plots[("Electrolyte concentration [mol.m-3]",)][0][
                         0
-                    ].get_ydata()[1:-1],
+                    ].get_ydata(),
                 )[0][:, 0]
                 np.testing.assert_array_almost_equal(qp_data, c_e[:, 1])
 
