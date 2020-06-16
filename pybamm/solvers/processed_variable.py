@@ -63,18 +63,12 @@ class ProcessedVariable(object):
         self.timescale = solution.model.timescale.evaluate()
         self.t_pts = self.t_sol * self.timescale
 
-        # Store spatial variables to get scales
-        self.spatial_vars = {}
+        # Store length scales
         if solution.model:
-            for var in ["x", "y", "z", "r_n", "r_p"]:
-                if (
-                    var in solution.model.variables
-                    and var + " [m]" in solution.model.variables
-                ):
-                    self.spatial_vars[var] = solution.model.variables[var]
-                    self.spatial_vars[var + " [m]"] = solution.model.variables[
-                        var + " [m]"
-                    ]
+            self.length_scales = {
+                domain: scale.evaluate()
+                for domain, scale in solution.model.length_scales.items()
+            }
 
         # Evaluate base variable at initial time
         if self.known_evals:
@@ -222,16 +216,20 @@ class ProcessedVariable(object):
             self.x_sol = space
 
         # assign attributes for reference
-        self.first_dim_pts = space * self.get_spatial_scale(
-            self.first_dimension, self.domain[0]
-        )
-        self.internal_boundaries = self.mesh.internal_boundaries
+        length_scale = self.get_spatial_scale(self.first_dimension, self.domain[0])
+        pts_for_interp = space * length_scale
+        self.internal_boundaries = [
+            bnd * length_scale for bnd in self.mesh.internal_boundaries
+        ]
+
+        # Set first_dim_pts to edges for nicer plotting
+        self.first_dim_pts = edges * length_scale
 
         # set up interpolation
         if len(self.t_sol) == 1:
             # function of space only
             interpolant = interp.interp1d(
-                self.first_dim_pts,
+                pts_for_interp,
                 entries_for_interp[:, 0],
                 kind="linear",
                 fill_value=np.nan,
@@ -250,7 +248,7 @@ class ProcessedVariable(object):
             # is the reverse of what you'd expect
             self._interpolation_function = interp.interp2d(
                 self.t_pts,
-                self.first_dim_pts,
+                pts_for_interp,
                 entries_for_interp,
                 kind="linear",
                 fill_value=np.nan,
@@ -325,12 +323,15 @@ class ProcessedVariable(object):
         # assign attributes for reference
         self.entries = entries
         self.dimensions = 2
-        self.first_dim_pts = first_dim_pts * self.get_spatial_scale(
+        first_length_scale = self.get_spatial_scale(
             self.first_dimension, self.domain[0]
         )
-        self.second_dim_pts = second_dim_pts * self.get_spatial_scale(
-            self.second_dimension
+        self.first_dim_pts = first_dim_pts * first_length_scale
+
+        second_length_scale = self.get_spatial_scale(
+            self.second_dimension, self.auxiliary_domains["secondary"][0]
         )
+        self.second_dim_pts = second_dim_pts * second_length_scale
 
         # set up interpolation
         if len(self.t_sol) == 1:
@@ -394,8 +395,8 @@ class ProcessedVariable(object):
         self.z_sol = z_sol
         self.first_dimension = "y"
         self.second_dimension = "z"
-        self.first_dim_pts = y_sol * self.get_spatial_scale("y")
-        self.second_dim_pts = z_sol * self.get_spatial_scale("z")
+        self.first_dim_pts = y_sol * self.get_spatial_scale("y", "current collector")
+        self.second_dim_pts = z_sol * self.get_spatial_scale("z", "current collector")
 
         # set up interpolation
         if len(self.t_sol) == 1:
@@ -477,27 +478,22 @@ class ProcessedVariable(object):
                 second_dim = second_dim[:, np.newaxis]
         return self._interpolation_function((first_dim, second_dim, t))
 
-    def get_spatial_scale(self, name, domain=None):
+    def get_spatial_scale(self, name, domain):
         "Returns the spatial scale for a named spatial variable"
-        # Different scale in negative and positive particles
-        if domain == "negative particle":
-            name = "r_n"
-        elif domain == "positive particle":
-            name = "r_p"
-
-        # Try to get length scale
-        if name + " [m]" in self.spatial_vars and name in self.spatial_vars:
-            scale = (
-                self.spatial_vars[name + " [m]"] / self.spatial_vars[name]
-            ).evaluate()[-1]
-        else:
+        try:
+            if name == "y" and domain == "current collector":
+                return self.length_scales["current collector y"]
+            elif name == "z" and domain == "current collector":
+                return self.length_scales["current collector z"]
+            else:
+                return self.length_scales[domain]
+        except KeyError:
             if self.warn:
                 pybamm.logger.warning(
-                    "No scale set for spatial variable {}. "
-                    "Using default of 1 [m].".format(name)
+                    "No length scale set for {}. "
+                    "Using default of 1 [m].".format(domain)
                 )
-            scale = 1
-        return scale
+            return 1
 
     @property
     def data(self):

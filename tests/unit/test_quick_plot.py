@@ -5,7 +5,7 @@ import numpy as np
 
 class TestQuickPlot(unittest.TestCase):
     def test_simple_ode_model(self):
-        model = pybamm.BaseBatteryModel(name="Simple ODE Model")
+        model = pybamm.lithium_ion.BaseModel(name="Simple ODE Model")
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         # Create variables: domain is explicitly empty since these variables are only
@@ -37,13 +37,8 @@ class TestQuickPlot(unittest.TestCase):
             "c broadcasted positive electrode": pybamm.PrimaryBroadcast(
                 c, "positive particle"
             ),
-            "x [m]": pybamm.standard_spatial_vars.x,
-            "x": pybamm.standard_spatial_vars.x,
-            "r_n [m]": pybamm.standard_spatial_vars.r_n,
-            "r_n": pybamm.standard_spatial_vars.r_n,
-            "r_p [m]": pybamm.standard_spatial_vars.r_p,
-            "r_p": pybamm.standard_spatial_vars.r_p,
         }
+        model.timescale = pybamm.Scalar(1)
 
         # ODEs only (don't use jacobian)
         model.use_jacobian = False
@@ -255,13 +250,6 @@ class TestQuickPlot(unittest.TestCase):
                 [solution, solution], ["a"], labels=["sol 1", "sol 2", "sol 3"]
             )
 
-        # Remove 'x [m]' from the variables and make sure a key error is raise
-        del solution.model.variables["x [m]"]
-        with self.assertRaisesRegex(
-            KeyError, "Can't find spatial scale for 'negative electrode'"
-        ):
-            pybamm.QuickPlot(solution, ["b broadcasted"])
-
         # No variable can be NaN
         model.variables["NaN variable"] = disc.process_symbol(pybamm.Scalar(np.nan))
         with self.assertRaisesRegex(
@@ -304,26 +292,30 @@ class TestQuickPlot(unittest.TestCase):
             pybamm.QuickPlot(solution)
 
             # check 1D (space) variables update properly for different time units
-            c_e = solution["Electrolyte concentration [mol.m-3]"].entries
+            t = solution["Time [s]"].entries
+            c_e_var = solution["Electrolyte concentration [mol.m-3]"]
+            # 1D variables should be evaluated on edges
+            L_x = param.evaluate(pybamm.geometric_parameters.L_x)
+            c_e = c_e_var(t=t, x=mesh.combine_submeshes(*c_e_var.domain).edges * L_x)
 
             for unit, scale in zip(["seconds", "minutes", "hours"], [1, 60, 3600]):
                 quick_plot = pybamm.QuickPlot(
                     solution, ["Electrolyte concentration [mol.m-3]"], time_unit=unit
                 )
                 quick_plot.plot(0)
-                # take off extrapolated points
+
                 qp_data = (
                     quick_plot.plots[("Electrolyte concentration [mol.m-3]",)][0][
                         0
-                    ].get_ydata()[1:-1],
+                    ].get_ydata(),
                 )[0]
                 np.testing.assert_array_almost_equal(qp_data, c_e[:, 0])
                 quick_plot.slider_update(t_eval[-1] / scale)
-                # take off extrapolated points
+
                 qp_data = (
                     quick_plot.plots[("Electrolyte concentration [mol.m-3]",)][0][
                         0
-                    ].get_ydata()[1:-1],
+                    ].get_ydata(),
                 )[0][:, 0]
                 np.testing.assert_array_almost_equal(qp_data, c_e[:, 1])
 
