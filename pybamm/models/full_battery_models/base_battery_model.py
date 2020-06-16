@@ -467,8 +467,6 @@ class BaseBatteryModel(pybamm.BaseModel):
                 pybamm.logger.debug(
                     "Setting rhs for {} submodel ({})".format(submodel_name, self.name)
                 )
-                if submodel_name == "external circuit":
-                    n = 1
 
                 submodel.set_rhs(self.variables)
                 pybamm.logger.debug(
