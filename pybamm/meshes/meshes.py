@@ -153,10 +153,7 @@ class Mesh(dict):
         ]
 
         # Check and add spatial variable names
-        try:
-            spatial_variable_names_0 = self[submeshnames[0]].spatial_variable_names
-        except:
-            n - 1
+        spatial_variable_names_0 = self[submeshnames[0]].spatial_variable_names
         # Check
         for s in submeshnames:
             if self[s].spatial_variable_names != spatial_variable_names_0:
