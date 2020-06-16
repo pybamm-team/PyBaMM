@@ -119,7 +119,7 @@ comsol_voltage.mesh = None
 comsol_voltage.secondary_mesh = None
 
 # Create comsol model with dictionary of Matrix variables
-comsol_model = pybamm.BaseModel()
+comsol_model = pybamm.lithium_ion.BaseModel()
 comsol_model.variables = {
     "Negative particle surface concentration [mol.m-3]": comsol_c_n_surf,
     "Electrolyte concentration [mol.m-3]": comsol_c_e,
@@ -129,15 +129,13 @@ comsol_model.variables = {
     "Electrolyte potential [V]": comsol_phi_e,
     "Positive electrode potential [V]": comsol_phi_p,
     "Terminal voltage [V]": comsol_voltage,
-    # Add spatial variables for use in QuickPlot
-    "x": pybamm_model.variables["x"],
-    "x [m]": pybamm_model.variables["x [m]"],
 }
 
 # Make new solution with same t and y
 comsol_solution = pybamm.Solution(pybamm_solution.t, pybamm_solution.y)
-# Update model timescale to match the pybamm model
+# Update model scales to match the pybamm model
 comsol_model.timescale = pybamm_model.timescale
+comsol_model.length_scales = pybamm_model.length_scales
 comsol_solution.model = comsol_model
 
 # plot
