@@ -104,6 +104,25 @@ class TestSPM(unittest.TestCase):
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
+    def test_new_model(self):
+        model = pybamm.lithium_ion.SPM({"thermal": "x-full"})
+        new_model = model.new_copy()
+        self.assertEqual(new_model.submodels, model.submodels)
+        self.assertEqual(new_model.name, model.name)
+        self.assertEqual(new_model.use_jacobian, model.use_jacobian)
+        self.assertEqual(new_model.use_simplify, model.use_simplify)
+        self.assertEqual(new_model.convert_to_format, model.convert_to_format)
+        self.assertEqual(new_model.timescale, model.timescale)
+
+        # with custom submodels
+        model = pybamm.lithium_ion.SPM({"thermal": "x-full"}, build=False)
+        model.submodels["negative particle"] = pybamm.particle.FastSingleParticle(
+            model.param, "Negative"
+        )
+        model.build_model()
+        new_model = model.new_copy()
+        self.assertEqual(new_model.submodels, model.submodels)
+
 
 class TestSPMExternalCircuits(unittest.TestCase):
     def test_well_posed_voltage(self):

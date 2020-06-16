@@ -444,8 +444,9 @@ class BaseSolver(object):
             root_sol = self.root_method._integrate(model, [time], inputs)
         except pybamm.SolverError as e:
             raise pybamm.SolverError(
-                "Could not find consistent initial conditions: {}".format(e.args[0])
+                "Could not find consistent states: {}".format(e.args[0])
             )
+        pybamm.logger.info("Found consistent states")
         return root_sol.y.flatten()
 
     def solve(self, model, t_eval=None, external_variables=None, inputs=None):

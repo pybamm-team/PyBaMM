@@ -229,6 +229,28 @@ class TestBaseModel(unittest.TestCase):
         self.assertEqual(model.initial_conditions[e], submodel2.initial_conditions[e])
         self.assertEqual(model.boundary_conditions[e], submodel2.boundary_conditions[e])
 
+    def test_new_copy(self):
+        model = pybamm.BaseModel(name="a model")
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        c = pybamm.Variable("c", domain=whole_cell)
+        d = pybamm.Variable("d", domain=whole_cell)
+        model.rhs = {c: 5 * pybamm.div(pybamm.grad(d)) - 1, d: -c}
+        model.initial_conditions = {c: 1, d: 2}
+        model.boundary_conditions = {
+            c: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")},
+            d: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")},
+        }
+        model.use_jacobian = False
+        model.use_simplify = False
+        model.convert_to_format = "python"
+
+        new_model = model.new_copy()
+        self.assertEqual(new_model.name, model.name)
+        self.assertEqual(new_model.use_jacobian, model.use_jacobian)
+        self.assertEqual(new_model.use_simplify, model.use_simplify)
+        self.assertEqual(new_model.convert_to_format, model.convert_to_format)
+        self.assertEqual(new_model.timescale, model.timescale)
+
     def test_check_well_posedness_variables(self):
         # Well-posed ODE model
         model = pybamm.BaseModel()

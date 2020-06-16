@@ -124,12 +124,14 @@ class Simulation:
         time.
         """
         self.operating_mode = "with experiment"
-        self.model = model.new_copy(
-            options={
-                **model.options,
-                "operating mode": constant_current_constant_voltage_constant_power,
-            }
+        new_model = model.new_copy(build=False)
+        new_model.submodels[
+            "external circuit"
+        ] = pybamm.external_circuit.FunctionControl(
+            new_model.param, constant_current_constant_voltage_constant_power
         )
+        new_model.build_model()
+        self.model = new_model
         if not isinstance(experiment, pybamm.Experiment):
             raise TypeError("experiment must be a pybamm `Experiment` instance")
         # Save the experiment

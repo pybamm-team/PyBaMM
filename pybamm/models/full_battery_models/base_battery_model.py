@@ -467,6 +467,8 @@ class BaseBatteryModel(pybamm.BaseModel):
                 pybamm.logger.debug(
                     "Setting rhs for {} submodel ({})".format(submodel_name, self.name)
                 )
+                if submodel_name == "external circuit":
+                    n = 1
 
                 submodel.set_rhs(self.variables)
                 pybamm.logger.debug(
@@ -493,7 +495,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 )
                 self.update(submodel)
 
-    def build_model(self):
+    def build_model(self, build_equations=True):
 
         # Check if already built
         if self._built:
@@ -509,7 +511,10 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         self.build_coupled_variables()
 
-        self.build_model_equations()
+        if build_equations:
+            self.build_model_equations()
+        else:
+            self.update(*self.submodels.values())
 
         pybamm.logger.debug("Setting voltage variables ({})".format(self.name))
         self.set_voltage_variables()
@@ -529,6 +534,30 @@ class BaseBatteryModel(pybamm.BaseModel):
                 self.variables.update(var)
 
         self._built = True
+
+    def new_copy(self, options=None, build=True):
+        """
+        Create a copy of the model. Overwrites the functionality of
+        :class:`pybamm.BaseModel` to make sure that the submodels are updated correctly
+        """
+        options = options or self.options
+        # create without building
+        # 'build' is not a keyword argument for the BaseBatteryModel class, but it
+        # should be for all of the subclasses
+        new_model = self.__class__(name=self.name, options=options, build=False)
+        # update submodels
+        new_model.submodels = self.submodels
+        # now build
+        if build:
+            if self._built is True:
+                new_model.build_model(build_equations=False)
+            else:
+                new_model.build_model(build_equations=True)
+        new_model.use_jacobian = self.use_jacobian
+        new_model.use_simplify = self.use_simplify
+        new_model.convert_to_format = self.convert_to_format
+        new_model.timescale = self.timescale
+        return new_model
 
     def set_external_circuit_submodel(self):
         """
