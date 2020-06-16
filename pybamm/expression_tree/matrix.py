@@ -2,7 +2,7 @@
 # Matrix class
 #
 import pybamm
-
+import numpy as np
 from scipy.sparse import issparse
 
 
@@ -21,6 +21,8 @@ class Matrix(pybamm.Array):
         auxiliary_domains=None,
         entries_string=None,
     ):
+        if isinstance(entries, list):
+            entries = np.array(entries)
         if name is None:
             name = "Matrix {!s}".format(entries.shape)
             if issparse(entries):

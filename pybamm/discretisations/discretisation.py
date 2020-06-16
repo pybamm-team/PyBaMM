@@ -903,7 +903,7 @@ class Discretisation(object):
                 # Broadcast new_child to the domain specified by symbol.domain
                 # Different discretisations may broadcast differently
                 if symbol.domain == []:
-                    symbol = disc_child * pybamm.Vector(np.array([1]))
+                    symbol = disc_child * pybamm.Vector([1])
                 else:
                     symbol = spatial_method.broadcast(
                         disc_child,

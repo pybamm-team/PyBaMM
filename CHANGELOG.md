@@ -2,7 +2,7 @@
 
 ## Features
 
--   Add averaging in secondary dimensions ([#1057](https://github.com/pybamm-team/PyBaMM/pull/1057))
+-   Added averaging in secondary dimensions ([#1057](https://github.com/pybamm-team/PyBaMM/pull/1057))
 
 ## Optimizations
 

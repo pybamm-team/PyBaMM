@@ -351,12 +351,12 @@ class TestDiscretise(unittest.TestCase):
         self.assertIsInstance(scal_disc, pybamm.Scalar)
         self.assertEqual(scal_disc.value, scal.value)
         # vector
-        vec = pybamm.Vector(np.array([1, 2, 3, 4]))
+        vec = pybamm.Vector([1, 2, 3, 4])
         vec_disc = disc.process_symbol(vec)
         self.assertIsInstance(vec_disc, pybamm.Vector)
         np.testing.assert_array_equal(vec_disc.entries, vec.entries)
         # matrix
-        mat = pybamm.Matrix(np.array([[1, 2, 3, 4], [5, 6, 7, 8]]))
+        mat = pybamm.Matrix([[1, 2, 3, 4], [5, 6, 7, 8]])
         mat_disc = disc.process_symbol(mat)
         self.assertIsInstance(mat_disc, pybamm.Matrix)
         np.testing.assert_array_equal(mat_disc.entries, mat.entries)
