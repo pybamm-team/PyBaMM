@@ -28,6 +28,9 @@ class TestMesh(unittest.TestCase):
         self.assertEqual(mesh["negative particle"].edges[0], 0)
         self.assertEqual(mesh["negative particle"].edges[-1], 1)
 
+        # Check spatial variable name
+        self.assertEqual(mesh["negative particle"].spatial_variable_names, ["r"])
+
         # check number of edges and nodes
         self.assertEqual(len(mesh["negative particle"].nodes), var_pts[r])
         self.assertEqual(

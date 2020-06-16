@@ -102,7 +102,10 @@ class Mesh(dict):
         # Create submeshes
         for domain in geometry:
             self[domain] = submesh_types[domain](geometry[domain], submesh_pts[domain])
-
+            # Record spatial variable names
+            self[domain].spatial_variable_names = [
+                var.name[0] for var in geometry[domain].keys()
+            ]
         # add ghost meshes
         self.add_ghost_meshes()
 
@@ -149,6 +152,22 @@ class Mesh(dict):
             self[submeshname].edges[0] for submeshname in submeshnames[1:]
         ]
 
+        # Check and add spatial variable names
+        try:
+            spatial_variable_names_0 = self[submeshnames[0]].spatial_variable_names
+        except:
+            n - 1
+        # Check
+        for s in submeshnames:
+            if self[s].spatial_variable_names != spatial_variable_names_0:
+                raise ValueError(
+                    "Mismatching spatial variable names {} and {}".format(
+                        self[s].spatial_variable_names, spatial_variable_names_0
+                    )
+                )
+        # Add
+        submesh.spatial_variable_names = spatial_variable_names_0
+
         return submesh
 
     def add_ghost_meshes(self):
@@ -172,6 +191,9 @@ class Mesh(dict):
             self[domain + "_left ghost cell"] = pybamm.SubMesh1D(
                 lgs_edges, submesh.coord_sys
             )
+            self[
+                domain + "_left ghost cell"
+            ].spatial_variable_names = submesh.spatial_variable_names
 
             # right ghost cell: two edges, one node, to the right of
             # existing submesh
@@ -179,6 +201,9 @@ class Mesh(dict):
             self[domain + "_right ghost cell"] = pybamm.SubMesh1D(
                 rgs_edges, submesh.coord_sys
             )
+            self[
+                domain + "_right ghost cell"
+            ].spatial_variable_names = submesh.spatial_variable_names
 
 
 class SubMesh:

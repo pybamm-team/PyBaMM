@@ -198,22 +198,15 @@ class ProcessedVariable(object):
         # assign attributes for reference (either x_sol or r_sol)
         self.entries = entries
         self.dimensions = 1
-        if self.domain[0] in ["negative particle", "positive particle"]:
-            self.first_dimension = "r"
-            self.r_sol = space
-        elif self.domain[0] in [
-            "negative electrode",
-            "separator",
-            "positive electrode",
-        ]:
-            self.first_dimension = "x"
-            self.x_sol = space
-        elif self.domain == ["current collector"]:
-            self.first_dimension = "z"
-            self.z_sol = space
+
+        # Read spatial variable name
+        spatial_variable_names = self.mesh.spatial_variable_names
+        if len(spatial_variable_names) != 1:
+            raise ValueError("Found too many spatial variables for a 1D variable")
         else:
-            self.first_dimension = "x"
-            self.x_sol = space
+            spatial_variable = spatial_variable_names[0]
+            self.first_dimension = spatial_variable
+            setattr(self, spatial_variable + "_sol", space)
 
         # assign attributes for reference
         length_scale = self.get_spatial_scale(self.first_dimension, self.domain[0])
@@ -267,36 +260,24 @@ class ProcessedVariable(object):
         elif self.base_eval.size // len(second_dim_pts) == len(first_dim_edges):
             first_dim_pts = first_dim_edges
 
-        # Process r-x or x-z
-        if self.domain[0] in [
-            "negative particle",
-            "positive particle",
-        ] and self.auxiliary_domains["secondary"][0] in [
-            "negative electrode",
-            "positive electrode",
-        ]:
-            self.first_dimension = "r"
-            self.second_dimension = "x"
-            self.r_sol = first_dim_pts
-            self.x_sol = second_dim_pts
-        elif self.domain[0] in [
-            "negative electrode",
-            "separator",
-            "positive electrode",
-        ] and self.auxiliary_domains["secondary"] == ["current collector"]:
-            self.first_dimension = "x"
-            self.second_dimension = "z"
-            self.x_sol = first_dim_pts
-            self.z_sol = second_dim_pts
+        # Set spatial variable names
+        first_spatial_variable_names = self.mesh.spatial_variable_names
+        if len(first_spatial_variable_names) != 1:
+            raise ValueError("Found too many spatial variables for a 1D variable")
         else:
-            self.first_dimension = "x"
-            self.second_dimension = "y"
-            self.x_sol = first_dim_pts
-            self.y_sol = second_dim_pts
-            # raise pybamm.DomainError(
-            #     "Cannot process 3D object with domain '{}' "
-            #     "and auxiliary_domains '{}'".format(self.domain, self.auxiliary_domains)
-            # )
+            first_spatial_variable = first_spatial_variable_names[0]
+            self.first_dimension = first_spatial_variable
+            setattr(self, first_spatial_variable + "_sol", first_dim_pts)
+
+        second_spatial_variable_names = (
+            self.base_variable.secondary_mesh.spatial_variable_names
+        )
+        if len(second_spatial_variable_names) != 1:
+            raise ValueError("Found too many spatial variables for a 1D variable")
+        else:
+            second_spatial_variable = second_spatial_variable_names[0]
+            self.second_dimension = second_spatial_variable
+            setattr(self, second_spatial_variable + "_sol", second_dim_pts)
 
         first_dim_size = len(first_dim_pts)
         second_dim_size = len(second_dim_pts)
@@ -453,7 +434,7 @@ class ProcessedVariable(object):
         if self.dimensions == 0:
             out = self._interpolation_function(t)
         elif self.dimensions == 1:
-            out = self.call_1D(t, x, r, z)
+            out = self.call_1D(t, x, r, y, z)
         elif self.dimensions == 2:
             out = self.call_2D(t, x, r, y, z)
         if warn is True and np.isnan(out).any():
@@ -462,9 +443,9 @@ class ProcessedVariable(object):
             )
         return out
 
-    def call_1D(self, t, x, r, z):
+    def call_1D(self, t, x, r, y, z):
         "Evaluate a 1D variable"
-        spatial_var = eval_dimension_name(self.first_dimension, x, r, None, z)
+        spatial_var = eval_dimension_name(self.first_dimension, x, r, y, z)
         return self._interpolation_function(t, spatial_var)
 
     def call_2D(self, t, x, r, y, z):
