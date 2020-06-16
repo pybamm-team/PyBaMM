@@ -10,6 +10,9 @@ from collections import OrderedDict
 import numbers
 import jax
 
+from jax.config import config
+config.update("jax_enable_x64", True)
+
 
 def id_to_python_variable(symbol_id, constant=False):
     """
@@ -26,7 +29,7 @@ def id_to_python_variable(symbol_id, constant=False):
     return var_format.format(symbol_id).replace("-", "m")
 
 
-def find_symbols(symbol, constant_symbols, variable_symbols):
+def find_symbols(symbol, constant_symbols, variable_symbols, to_dense=False):
     """
     This function converts an expression tree to a dictionary of node id's and strings
     specifying valid python code to calculate that nodes value, given y and t.
@@ -52,16 +55,22 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
     variable_symbol: collections.OrderedDict
         The output dictionary of variable (with y or t) symbol ids to lines of code
 
+    to_dense: bool
+        If True, all constants and expressions are converted to using dense matrices
+
     """
     if symbol.is_constant():
         value = symbol.evaluate()
         if not isinstance(value, numbers.Number):
-            constant_symbols[symbol.id] = value
+            if to_dense and scipy.sparse.issparse(value):
+                constant_symbols[symbol.id] = value.toarray()
+            else:
+                constant_symbols[symbol.id] = value
         return
 
     # process children recursively
     for child in symbol.children:
-        find_symbols(child, constant_symbols, variable_symbols)
+        find_symbols(child, constant_symbols, variable_symbols, to_dense)
 
     # calculate the variable names that will hold the result of calculating the
     # children variables
@@ -83,18 +92,18 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
         if isinstance(symbol, pybamm.Multiplication):
             dummy_eval_left = symbol.children[0].evaluate_for_shape()
             dummy_eval_right = symbol.children[1].evaluate_for_shape()
-            if scipy.sparse.issparse(dummy_eval_left):
-                symbol_str = "scipy.sparse.csr_matrix({0}.multiply({1}))"\
+            if not to_dense and scipy.sparse.issparse(dummy_eval_left):
+                symbol_str = "{0}.multiply({1})"\
                     .format(children_vars[0], children_vars[1])
-            elif scipy.sparse.issparse(dummy_eval_right):
-                symbol_str = "scipy.sparse.csr_matrix({1}.multiply({0}))"\
+            elif not to_dense and scipy.sparse.issparse(dummy_eval_right):
+                symbol_str = "{1}.multiply({0})"\
                     .format(children_vars[0], children_vars[1])
             else:
                 symbol_str = "{0} * {1}".format(children_vars[0], children_vars[1])
         elif isinstance(symbol, pybamm.Division):
             dummy_eval_left = symbol.children[0].evaluate_for_shape()
-            if scipy.sparse.issparse(dummy_eval_left):
-                symbol_str = "scipy.sparse.csr_matrix({0}.multiply(1/{1}))"\
+            if not to_dense and scipy.sparse.issparse(dummy_eval_left):
+                symbol_str = "{0}.multiply(1/{1})"\
                     .format(children_vars[0], children_vars[1])
             else:
                 symbol_str = "{0} / {1}".format(children_vars[0], children_vars[1])
@@ -102,10 +111,10 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
         elif isinstance(symbol, pybamm.Inner):
             dummy_eval_left = symbol.children[0].evaluate_for_shape()
             dummy_eval_right = symbol.children[1].evaluate_for_shape()
-            if scipy.sparse.issparse(dummy_eval_left):
+            if not to_dense and scipy.sparse.issparse(dummy_eval_left):
                 symbol_str = "{0}.multiply({1})"\
                     .format(children_vars[0], children_vars[1])
-            elif scipy.sparse.issparse(dummy_eval_right):
+            elif not to_dense and scipy.sparse.issparse(dummy_eval_right):
                 symbol_str = "{1}.multiply({0})"\
                     .format(children_vars[0], children_vars[1])
             else:
@@ -154,8 +163,10 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
                 symbol_str = "{}".format(",".join(children_vars))
 
         elif isinstance(symbol, pybamm.SparseStack):
-            if len(children_vars) > 1:
+            if not to_dense and len(children_vars) > 1:
                 symbol_str = "scipy.sparse.vstack(({}))".format(",".join(children_vars))
+            elif len(children_vars) > 1:
+                symbol_str = "np.vstack(({}))".format(",".join(children_vars))
             else:
                 symbol_str = "{}".format(",".join(children_vars))
 
@@ -210,7 +221,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
     variable_symbols[symbol.id] = symbol_str
 
 
-def to_python(symbol, debug=False):
+def to_python(symbol, debug=False, to_dense=False):
     """
     This function converts an expression tree into a dict of constant input values, and
     valid python code that acts like the tree's :func:`pybamm.Symbol.evaluate` function
@@ -230,12 +241,14 @@ def to_python(symbol, debug=False):
         the expression tree
     str:
         valid python code that will evaluate all the variable nodes in the tree.
+    to_dense: bool
+        If True, all constants and expressions are converted to using dense matrices
 
     """
 
     constant_values = OrderedDict()
     variable_symbols = OrderedDict()
-    find_symbols(symbol, constant_values, variable_symbols)
+    find_symbols(symbol, constant_values, variable_symbols, to_dense)
 
     line_format = "{} = {}"
 
@@ -340,7 +353,9 @@ class EvaluatorJax:
     result of calling `evaluate(t, y)` on the given expression tree. The resultant code
     is compiled with JAX
 
-    Limitations: This evaluator will not work on expressions involving sparse matricesjj
+    Limitations: JAX currently does not work on expressions involving sparse matrices,
+    so any sparse matrices and operations involved sparse matrices are converted to
+    their dense equivilents before compilation
 
     Raises
     ------
@@ -357,8 +372,7 @@ class EvaluatorJax:
     """
 
     def __init__(self, symbol):
-
-        constants, python_str = pybamm.to_python(symbol, debug=False)
+        constants, python_str = pybamm.to_python(symbol, debug=False, to_dense=True)
 
         # replace numpy function calls to jax numpy calls
         python_str = python_str.replace('np.', 'jax.numpy.')
@@ -367,9 +381,11 @@ class EvaluatorJax:
         for symbol_id in constants:
             if isinstance(constants[symbol_id], np.ndarray):
                 constants[symbol_id] = jax.device_put(constants[symbol_id])
-            elif scipy.sparse.issparse(constants[symbol_id]):
-                raise RuntimeError("JAX evaluator cannot be used on expressions"
-                                   " containing sparse matrices")
+
+            # should be no sparse matrices in the constants
+            if scipy.sparse.issparse(constants[symbol_id]):
+                print(constants[symbol_id])
+            assert not scipy.sparse.issparse(constants[symbol_id])
 
         # extract constants in generated function
         for i, symbol_id in enumerate(constants.keys()):

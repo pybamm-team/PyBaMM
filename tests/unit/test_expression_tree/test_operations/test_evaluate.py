@@ -125,6 +125,17 @@ class TestEvaluate(unittest.TestCase):
             list(constant_symbols.values())[0].toarray(), A.entries.toarray()
         )
 
+        # test sparse to dense conversion
+        constant_symbols = OrderedDict()
+        variable_symbols = OrderedDict()
+        A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[0, 2], [0, 4]])))
+        pybamm.find_symbols(A, constant_symbols, variable_symbols, to_dense=True)
+        self.assertEqual(len(variable_symbols), 0)
+        self.assertEqual(list(constant_symbols.keys())[0], A.id)
+        np.testing.assert_allclose(
+            list(constant_symbols.values())[0], A.entries.toarray()
+        )
+
         # test numpy concatentate
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
@@ -503,11 +514,24 @@ class TestEvaluate(unittest.TestCase):
             result = evaluator.evaluate(t=t, y=y)
             self.assertEqual(result, expr.evaluate(t=t, y=y))
 
-        # test something with a sparse matrix in it, should fail
-        A = pybamm.Matrix(scipy.sparse.coo_matrix(np.array([[1, 0], [0, 4]])))
-        expr = A @ pybamm.StateVector(slice(0, 2))
-        with self.assertRaisesRegex(RuntimeError, "containing sparse matrices"):
-            pybamm.EvaluatorJax(expr)
+        # test something with a sparse matrix multiplication
+        A = pybamm.Matrix(np.array([[1, 2], [3, 4]]))
+        B = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))
+        C = pybamm.Matrix(scipy.sparse.coo_matrix(np.array([[1, 0], [0, 4]])))
+        expr = A @ B @ C @ pybamm.StateVector(slice(0, 2))
+        evaluator = pybamm.EvaluatorJax(expr)
+        for t, y in zip(t_tests, y_tests):
+            result = evaluator.evaluate(t=t, y=y)
+            np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
+
+        # test sparse stack
+        A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))
+        B = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[2, 0], [5, 0]])))
+        expr = pybamm.SparseStack(A, B)
+        evaluator = pybamm.EvaluatorJax(expr)
+        for t, y in zip(t_tests, y_tests):
+            result = evaluator.evaluate(t=t, y=y)
+            np.testing.assert_allclose(result, expr.evaluate(t=t, y=y).toarray())
 
         # test numpy concatenation
         a = pybamm.Vector(np.array([[1], [2]]))

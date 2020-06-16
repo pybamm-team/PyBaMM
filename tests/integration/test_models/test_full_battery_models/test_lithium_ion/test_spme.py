@@ -64,10 +64,12 @@ class TestSPMe(unittest.TestCase):
         using_known_evals = optimtest.evaluate_model(use_known_evals=True)
         simp_and_known = optimtest.evaluate_model(simplify=True, use_known_evals=True)
         simp_and_python = optimtest.evaluate_model(simplify=True, to_python=True)
+        simp_and_jax = optimtest.evaluate_model(simplify=True, to_jax=True)
         np.testing.assert_array_almost_equal(original, simplified)
         np.testing.assert_array_almost_equal(original, using_known_evals)
         np.testing.assert_array_almost_equal(original, simp_and_known)
         np.testing.assert_array_almost_equal(original, simp_and_python)
+        np.testing.assert_array_almost_equal(original, simp_and_jax)
 
     def test_set_up(self):
         model = pybamm.lithium_ion.SPMe()
