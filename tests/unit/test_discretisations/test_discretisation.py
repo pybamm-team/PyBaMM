@@ -1124,6 +1124,18 @@ class TestDiscretise(unittest.TestCase):
         }
         disc.process_model(model)
 
+        # Check setting up a 0D spatial method with 1D mesh raises error
+        mesh = get_mesh_for_testing()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume(),
+            "negative particle": pybamm.FiniteVolume(),
+            "positive particle": pybamm.ZeroDimensionalSpatialMethod(),
+        }
+        with self.assertRaisesRegex(
+            pybamm.DiscretisationError, "Zero-dimensional spatial method for the "
+        ):
+            pybamm.Discretisation(mesh, spatial_methods)
+
     def test_check_tab_bcs_error(self):
         a = pybamm.Variable("a", domain=["current collector"])
         b = pybamm.Variable("b", domain=["negative electrode"])
@@ -1164,7 +1176,11 @@ class TestDiscretise(unittest.TestCase):
             "current collector": pybamm.ScikitFiniteElement(),
         }
         # create model
-        a = pybamm.Variable("a", domain="negative electrode")
+        a = pybamm.Variable(
+            "a",
+            domain="negative electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
         b = pybamm.Variable("b", domain="current collector")
         model = pybamm.BaseModel()
         model.rhs = {a: pybamm.Laplacian(a), b: 4 * pybamm.Laplacian(b)}

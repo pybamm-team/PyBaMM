@@ -294,7 +294,7 @@ class DomainConcatenation(Concatenation):
                         a single domain"""
                     )
                 child_slice = next(iter(slices.values()))
-                jacs.append(child_jac[child_slice[i]])
+                jacs.append(pybamm.Index(child_jac, child_slice[i]))
         return SparseStack(*jacs)
 
     def _concatenation_new_copy(self, children):

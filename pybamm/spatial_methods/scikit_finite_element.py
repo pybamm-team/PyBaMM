@@ -292,18 +292,18 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
         return pybamm.Matrix(stiffness)
 
-    def integral(self, child, discretised_child):
+    def integral(self, child, discretised_child, integration_dimension):
         """Vector-vector dot product to implement the integral operator.
         See :meth:`pybamm.SpatialMethod.integral`
         """
         # Calculate integration vector
-        integration_vector = self.definite_integral_matrix(child.domains)
+        integration_vector = self.definite_integral_matrix(child)
 
         out = integration_vector @ discretised_child
 
         return out
 
-    def definite_integral_matrix(self, domains, vector_type="row"):
+    def definite_integral_matrix(self, child, vector_type="row"):
         """
         Matrix for finite-element implementation of the definite integral over
         the entire domain
@@ -315,8 +315,8 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
         Parameters
         ----------
-        domains : dict
-            The domain(s) of integration
+        child : :class:`pybamm.Symbol`
+            The symbol being integrated
         vector_type : str, optional
             Whether to return a row or column vector (default is row)
 
@@ -326,7 +326,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             The finite element integral vector for the domain
         """
         # get primary domain mesh
-        domain = domains["primary"]
+        domain = child.domains["primary"]
         if isinstance(domain, list):
             domain = domain[0]
         mesh = self.mesh[domain]
@@ -344,7 +344,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         elif vector_type == "column":
             return pybamm.Matrix(vector[:, np.newaxis])
 
-    def indefinite_integral(self, child, discretised_child):
+    def indefinite_integral(self, child, discretised_child, direction):
         """Implementation of the indefinite integral operator. The
         input discretised child must be defined on the internal mesh edges.
         See :meth:`pybamm.SpatialMethod.indefinite_integral`
