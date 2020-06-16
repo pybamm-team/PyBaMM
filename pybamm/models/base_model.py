@@ -737,6 +737,59 @@ class BaseModel(object):
 
         return casadi_dict
 
+    def generate(
+        self, filename, variable_names, input_parameter_order=None, cg_options=None
+    ):
+        """
+        Generate the model in C, using CasADi.
+
+        Parameters
+        ----------
+        filename : str
+            Name of the file to which to save the code
+        variable_names : list
+            Variables to be exported alongside the model structure
+        input_parameter_order : list, optional
+            Order in which the input parameters should be stacked. If None, the order
+            returned by :meth:`BaseModel.input_parameters` is used
+        cg_options : dict
+            Options to pass to the code generator.
+            See https://web.casadi.org/docs/#generating-c-code
+        """
+        model = self.export_casadi_objects(variable_names, input_parameter_order)
+
+        # Read the exported objects
+        t, x, z, p = model["t"], model["x"], model["z"], model["inputs"]
+        x0, z0 = model["x0"], model["z0"]
+        rhs, alg = model["rhs"], model["algebraic"]
+        variables = model["variables"]
+        jac_rhs, jac_alg = model["jac_rhs"], model["jac_algebraic"]
+
+        # Create functions
+        rhs_fn = casadi.Function("rhs_", [t, x, z, p], [rhs])
+        alg_fn = casadi.Function("alg_", [t, x, z, p], [alg])
+        jac_rhs_fn = casadi.Function("jac_rhs", [t, x, z, p], [jac_rhs])
+        jac_alg_fn = casadi.Function("jac_alg", [t, x, z, p], [jac_alg])
+        # Call these functions to initialize initial conditions
+        # (initial conditions are not yet consistent at this stage)
+        x0_fn = casadi.Function("x0", [p], [x0])
+        z0_fn = casadi.Function("z0", [p], [z0])
+        # Variables
+        variables_stacked = casadi.vertcat(*variables.values())
+        variables_fn = casadi.Function("variables", [t, x, z, p], [variables_stacked])
+
+        # Write C files
+        cg_options = cg_options or {}
+        C = casadi.CodeGenerator(filename, cg_options)
+        C.add(rhs_fn)
+        C.add(alg_fn)
+        C.add(jac_rhs_fn)
+        C.add(jac_alg_fn)
+        C.add(x0_fn)
+        C.add(z0_fn)
+        C.add(variables_fn)
+        C.generate()
+
     @property
     def default_parameter_values(self):
         return pybamm.ParameterValues({})
