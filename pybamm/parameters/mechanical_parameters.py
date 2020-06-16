@@ -35,6 +35,7 @@ Eac_cr=pybamm.Parameter("Negative electrode Activation energy for cracking rate 
 T_ref = pybamm.standard_parameters_lithium_ion.T_ref # [K]
 R_p= pybamm.standard_parameters_lithium_ion.R_p # [m]
 R_n= pybamm.standard_parameters_lithium_ion.R_n # [m]
+t0_cr=3600 # typical time for one cycle [s]
 
 theta_p_dim= Omega_p**2/R_p*2/9*E_p*(1-nu_p) # intermediate variable  [K*m^3/mol]
 theta_n_dim= Omega_n**2/R_n*2/9*E_n*(1-nu_n) # intermediate variable  [K*m^3/mol]

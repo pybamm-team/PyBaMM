@@ -1,3 +1,3 @@
-from .base_cracking import BaseModel
-from .particle_plating import ParticleCracking
-from .mechanical_results import Mechanics
+from .base_cracking import BaseCracking
+from .particle_cracking import ParticleCracking
+from .mechanical_results import MechanicalResults

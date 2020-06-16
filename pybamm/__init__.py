@@ -165,7 +165,7 @@ from .parameters import thermal_parameters
 from .parameters import standard_parameters_lithium_ion, standard_parameters_lead_acid
 from .parameters.print_parameters import print_parameters, print_evaluated_parameters
 from .parameters import parameter_sets
-
+from .parameters import mechanical_parameters
 
 #
 # Mesh and Discretisation classes

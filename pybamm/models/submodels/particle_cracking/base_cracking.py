@@ -18,19 +18,27 @@ class BaseCracking(pybamm.BaseSubModel):
         self.domain = domain
         super().__init__(param)
 
+    def get_fundamental_variables(self):
+        l_cr_n=pybamm.Variable("Negative electrode particle crack length [m]")  # crack length in anode particles
+        # L_sei_cr_n=
+        # L_plating_cr_n=
+        variables = {"Negative electrode particle crack length [m]": l_cr_n}
+        variables.update(self._get_standard_surface_variables(l_cr_n))
+        return variables
+
     def _get_standard_surface_variables(self, l_cr_n):
-    """
-    A private function to obtain the standard variables which
-    can be derived from the local particle crack surfaces.
-    Parameters
-    ----------
-    l_cr_n : :class:`pybamm.Symbol`
-        The crack length in anode particles.
-    Returns
-    -------
-    variables : dict
+        """
+        A private function to obtain the standard variables which
+        can be derived from the local particle crack surfaces.
+        Parameters
+        ----------
+        l_cr_n : :class:`pybamm.Symbol`
+            The crack length in anode particles.
+        Returns
+        -------
+        variables : dict
         The variables which can be derived from the crack length.
-    """
+        """
         rho_cr=pybamm.mechanical_parameters.rho_cr
         w_cr=pybamm.mechanical_parameters.w_cr
         a_n=pybamm.standard_parameters_lithium_ion.a_n
