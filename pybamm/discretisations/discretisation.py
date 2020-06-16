@@ -47,8 +47,18 @@ class Discretisation(object):
                 spatial_methods["positive electrode"] = method
 
             self._spatial_methods = spatial_methods
-            for method in self._spatial_methods.values():
+            for domain, method in self._spatial_methods.items():
                 method.build(mesh)
+                # Check zero-dimensional methods are only applied to zero-dimensional
+                # meshes
+                if isinstance(method, pybamm.ZeroDimensionalSpatialMethod):
+                    if not isinstance(mesh[domain], pybamm.SubMesh0D):
+                        raise pybamm.DiscretisationError(
+                            "Zero-dimensional spatial method for the "
+                            "{} domain requires a zero-dimensional submesh".format(
+                                domain
+                            )
+                        )
 
         self.bcs = {}
         self.y_slices = {}
@@ -939,7 +949,7 @@ class Discretisation(object):
                         domain=parent.domain,
                         auxiliary_domains=parent.auxiliary_domains,
                     )
-                    out = ext[slice(start, end)]
+                    out = pybamm.Index(ext, slice(start, end))
                     out.domain = symbol.domain
                     return out
 
@@ -1106,19 +1116,15 @@ class Discretisation(object):
         y0 = model.concatenated_initial_conditions
         # Individual
         for var in model.rhs.keys():
-            try:
-                assert (
-                    model.rhs[var].shape == model.initial_conditions[var].shape
-                ), pybamm.ModelError(
-                    """
-                    rhs and initial_conditions must have the same shape after discretisation
-                    but rhs.shape = {} and initial_conditions.shape = {} for variable '{}'.
-                    """.format(
-                        model.rhs[var].shape, model.initial_conditions[var].shape, var
-                    )
+            assert (
+                model.rhs[var].shape == model.initial_conditions[var].shape
+            ), pybamm.ModelError(
+                "rhs and initial_conditions must have the same shape after "
+                "discretisation but rhs.shape = "
+                "{} and initial_conditions.shape = {} for variable '{}'.".format(
+                    model.rhs[var].shape, model.initial_conditions[var].shape, var
                 )
-            except:
-                n - 1
+            )
         # Concatenated
         assert (
             model.concatenated_rhs.shape[0] + model.concatenated_algebraic.shape[0]
@@ -1153,17 +1159,20 @@ class Discretisation(object):
                 not_concatenation = not isinstance(var, pybamm.Concatenation)
 
                 not_mult_by_one_vec = not (
-                    isinstance(var, pybamm.Multiplication)
-                    and isinstance(var.right, pybamm.Vector)
-                    and np.all(var.right.entries == 1)
+                    isinstance(
+                        var, (pybamm.Multiplication, pybamm.MatrixMultiplication)
+                    )
+                    and (
+                        pybamm.is_matrix_one(var.left)
+                        or pybamm.is_matrix_one(var.right)
+                    )
                 )
 
                 if different_shapes and not_concatenation and not_mult_by_one_vec:
                     raise pybamm.ModelError(
-                        """
-                    variable and its eqn must have the same shape after discretisation
-                    but variable.shape = {} and rhs.shape = {} for variable '{}'.
-                    """.format(
+                        "variable and its eqn must have the same shape after "
+                        "discretisation but variable.shape = "
+                        "{} and rhs.shape = {} for variable '{}'. ".format(
                             var.shape, model.rhs[rhs_var].shape, var
                         )
                     )

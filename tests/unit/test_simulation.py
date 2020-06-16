@@ -168,6 +168,10 @@ class TestSimulation(unittest.TestCase):
                 **model.default_submesh_types,
                 "current collector": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
             },
+            spatial_methods={
+                **model.default_spatial_methods,
+                "current collector": pybamm.FiniteVolume(),
+            },
         )
         sim.build()
 
