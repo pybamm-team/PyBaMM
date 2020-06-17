@@ -170,18 +170,18 @@ class TestDiscretise(unittest.TestCase):
             "div grad b": pybamm.div(pybamm.grad(b)),
         }
 
-        x = pybamm.SpatialVariable("x", domain="test", coord_sys="cartesian")
-        y = pybamm.SpatialVariable("y", domain="test1", coord_sys="cartesian")
+        x1 = pybamm.SpatialVariable("x1", domain="test", coord_sys="cartesian")
+        x2 = pybamm.SpatialVariable("x2", domain="test1", coord_sys="cartesian")
         geometry = {
-            "test": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}},
-            "test1": {y: {"min": pybamm.Scalar(1), "max": pybamm.Scalar(2)}},
+            "test": {x1: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}},
+            "test1": {x2: {"min": pybamm.Scalar(1), "max": pybamm.Scalar(2)}},
         }
 
         submesh_types = {
             "test": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
             "test1": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
         }
-        var_pts = {x: 10, y: 5}
+        var_pts = {x1: 10, x2: 5}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
         spatial_methods = {
