@@ -52,8 +52,12 @@ FLOAT_FORMAT = "{: .17e}"
 script_path = os.path.abspath(__file__)
 
 from .util import root_dir
+
 ABSOLUTE_PATH = root_dir()
-PARAMETER_PATH = [os.getcwd(), os.path.join(root_dir(), "pybamm", "input", "parameters")]
+PARAMETER_PATH = [
+    os.getcwd(),
+    os.path.join(root_dir(), "pybamm", "input", "parameters"),
+]
 
 #
 # Utility classes and methods
@@ -217,7 +221,7 @@ from . import experiments
 #
 # Plotting
 #
-from .plotting.quick_plot import QuickPlot
+from .plotting.quick_plot import QuickPlot, close_plots
 from .plotting.plot import plot
 from .plotting.plot2D import plot2D
 from .plotting.dynamic_plot import dynamic_plot
