@@ -6,7 +6,7 @@ import pybamm
 import numpy as np
 import unittest
 import os
-import stat
+import subprocess
 
 
 class TestBaseModel(unittest.TestCase):
@@ -544,7 +544,7 @@ class TestBaseModel(unittest.TestCase):
         model.generate("test.c", ["a+b"])
 
         # Compile
-        os.system("gcc -fPIC -shared test.c -o test.so")
+        subprocess.run(["gcc", "-fPIC", "-shared", "-o", "test.so", "test.c"])
 
         # Read the generated functions
         x0_fn = casadi.external("x0", "./test.so")
@@ -568,7 +568,6 @@ class TestBaseModel(unittest.TestCase):
         # On Windows, the permissions for the compiled file need
         # to be changed first
         os.remove("test.c")
-        os.chmod("test.so", stat.S_IWRITE)
         os.remove("test.so")
 
 
