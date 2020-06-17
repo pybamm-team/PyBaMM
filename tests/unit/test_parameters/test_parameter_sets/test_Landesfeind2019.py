@@ -3,7 +3,6 @@
 #
 import pybamm
 import unittest
-import numpy as np
 
 
 class TestLandesfeind(unittest.TestCase):
