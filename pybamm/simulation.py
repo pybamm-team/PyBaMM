@@ -107,7 +107,7 @@ class Simulation:
         self.solver = solver or self.model.default_solver
         self.quick_plot_vars = quick_plot_vars
 
-        self.reset(update_model=False)
+        self.reset(reset_model=False)
 
         # ignore runtime warnings in notebooks
         if is_notebook():  # pragma: no cover
@@ -251,12 +251,12 @@ class Simulation:
         self.solver = self._model.default_solver
         self.quick_plot_vars = None
 
-    def reset(self, update_model=True):
+    def reset(self, reset_model=True):
         """
         A method to reset a simulation back to its unprocessed state.
         """
-        if update_model:
-            self.model = self.model.new_copy(self._model_options)
+        if reset_model:
+            self.model = self.model.new_copy()
         self.geometry = copy.deepcopy(self._unprocessed_geometry)
         self._model_with_set_params = None
         self._built_model = None
@@ -578,7 +578,6 @@ class Simulation:
     def model(self, model):
         self._model = copy.copy(model)
         self._model_class = model.__class__
-        self._model_options = model.options.copy()
 
     @property
     def model_with_set_params(self):
@@ -587,10 +586,6 @@ class Simulation:
     @property
     def built_model(self):
         return self._built_model
-
-    @property
-    def model_options(self):
-        return self._model_options
 
     @property
     def geometry(self):
@@ -663,7 +658,6 @@ class Simulation:
 
     def specs(
         self,
-        model_options=None,
         geometry=None,
         parameter_values=None,
         submesh_types=None,
@@ -677,10 +671,11 @@ class Simulation:
         A method to set the various specs of the simulation. This method
         automatically resets the model after the new specs have been set.
 
+        The model cannot be changed after a simulation has been created. We recommend
+        creating a new simulation for each model (see #1011)
+
         Parameters
         ----------
-        model_options: dict, optional
-            A dictionary of options to tweak the model you are using
         geometry: :class:`pybamm.Geometry`, optional
             The geometry upon which to solve the model
         parameter_values: dict, optional
@@ -702,9 +697,6 @@ class Simulation:
             The C_rate at which you would like to run a constant current
             experiment at.
         """
-
-        if model_options:
-            self._model_options = model_options.copy()
 
         if geometry:
             self.geometry = geometry
@@ -731,14 +723,7 @@ class Simulation:
                 }
             )
 
-        if (
-            model_options
-            or geometry
-            or parameter_values
-            or submesh_types
-            or var_pts
-            or spatial_methods
-        ):
+        if geometry or parameter_values or submesh_types or var_pts or spatial_methods:
             self.reset()
 
     def save(self, filename):

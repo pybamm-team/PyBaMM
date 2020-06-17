@@ -12,7 +12,6 @@ class TestSimulation(unittest.TestCase):
         sim = pybamm.Simulation(model)
 
         self.assertEqual(model.__class__, sim._model_class)
-        self.assertEqual(model.options, sim._model_options)
 
         # check that the model is unprocessed
         self.assertEqual(sim._mesh, None)
@@ -147,11 +146,6 @@ class TestSimulation(unittest.TestCase):
         sim = pybamm.Simulation(model)
         sim.build()
 
-        model_options = {"thermal": "lumped"}
-        sim.specs(model_options=model_options)
-        sim.build()
-        self.assertEqual(sim.model.options["thermal"], "lumped")
-
         params = sim.parameter_values
         # normally is 0.0001
         params.update({"Negative electrode thickness [m]": 0.0002})
@@ -198,22 +192,17 @@ class TestSimulation(unittest.TestCase):
     def test_set_defaults(self):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
 
-        model_options = {"thermal": "x-full"}
         submesh_types = {
             "Negative particle": pybamm.MeshGenerator(pybamm.Exponential1DSubMesh)
         }
         solver = pybamm.BaseSolver()
         quick_plot_vars = ["Negative particle surface concentration"]
         sim.specs(
-            model_options=model_options,
-            submesh_types=submesh_types,
-            solver=solver,
-            quick_plot_vars=quick_plot_vars,
+            submesh_types=submesh_types, solver=solver, quick_plot_vars=quick_plot_vars,
         )
 
         sim.set_defaults()
 
-        self.assertEqual(sim.model_options["thermal"], "x-full")
         self.assertEqual(
             sim.submesh_types["negative particle"].submesh_type, pybamm.Uniform1DSubMesh
         )
