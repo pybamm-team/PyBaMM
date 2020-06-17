@@ -6,6 +6,7 @@ import pybamm
 import numpy as np
 import unittest
 import os
+import stat
 
 
 class TestBaseModel(unittest.TestCase):
@@ -563,8 +564,11 @@ class TestBaseModel(unittest.TestCase):
         np.testing.assert_array_equal(np.array(jac_alg_fn(5, 6, 7, [8, 9])), [[1, -1]])
         self.assertEqual(var_fn(6, 3, 2, [7, 2]), -1)
 
-        # Remove generated files
+        # Remove generated files.
+        # On Windows, the permissions for the compiled file need
+        # to be changed first
         os.remove("test.c")
+        os.chmod("test.so", stat.S_IWRITE)
         os.remove("test.so")
 
 
