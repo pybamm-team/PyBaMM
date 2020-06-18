@@ -1,5 +1,5 @@
 #
-# Base class for Li plating models.
+# Base class for particle cracking models.
 #
 import pybamm
 
@@ -10,8 +10,8 @@ class BaseCracking(pybamm.BaseSubModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
-    reactions : dict, optional
-        Dictionary of reaction terms
+    domain : dict, optional
+        Dictionary of either the electrode for "Positive" or "Nagative" 
     **Extends:** :class:`pybamm.BaseSubModel`
     """
     def __init__(self, param, domain):
@@ -20,8 +20,6 @@ class BaseCracking(pybamm.BaseSubModel):
 
     def get_fundamental_variables(self):
         l_cr_n=pybamm.Variable("Negative electrode particle crack length [m]")  # crack length in anode particles
-        # L_sei_cr_n=
-        # L_plating_cr_n=
         variables = {"Negative electrode particle crack length [m]": l_cr_n}
         variables.update(self._get_standard_surface_variables(l_cr_n))
         return variables

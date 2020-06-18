@@ -29,7 +29,7 @@ class MechanicalResults(pybamm.BaseSubModel):
         variables : dict
         The variables of radial and tangential stresses and surface displacement
         """
-        c_s_n_avg=variables["Negative particle average concentration"] 
+        c_s_n_avg=variables["X-averaged negative particle concentration"] 
         # need to check whether is avarage cs in a particle
         c_s_n_surf=variables["Negative particle surface concentration"]
         mp=pybamm.mechanical_parameters

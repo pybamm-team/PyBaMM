@@ -1,3 +1,3 @@
 from .base_cracking import BaseCracking
-from .particle_cracking import ParticleCracking
+from .crack_propagation import CrackPropagation
 from .mechanical_results import MechanicalResults

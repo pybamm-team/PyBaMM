@@ -7,7 +7,7 @@ import pybamm
 from .base_cracking import BaseCracking
 import numpy as np
 
-class ParticleCracking(BaseCracking):
+class CrackPropagation(BaseCracking):
     """cracking behaviour in electrode particles.
     Parameters
     ----------
