@@ -1,5 +1,7 @@
-import numpy as np
+import jax
+import jax.numpy as np
 import scipy
+import pybamm
 
 MAX_ORDER = 5
 NEWTON_MAXITER = 4
@@ -50,18 +52,20 @@ class BDF:
            Nature methods, 17(3), 261-272.
     """
 
-    def __init__(self, y0):
+    def __init__(self, fun, t0, y0, rtol, atol):
         self._n = 2
-        self._t = 0
-        self._y = np.zeros((self._n))
+        self.t = t0
+        self._y = y0
         self._h = 0.1
         self._n_equal_steps = 0
-        self._fun = lambda x: x
-        self._jac = lambda x: x
+        # fun has signature f(t, y)
+        self._fun = fun
+        self._jac = jax.jacfwd(fun, argnums=1)
+        # Nordsieck differences array
         self._D = np.empty((MAX_ORDER + 1, self.n), dtype=self._y.dtype)
         self._D[0] = self._y
         self._order = 1
-        f_eval = self._fun(self._t, self._y)
+        f_eval = self._fun(self.t, self._y)
         self._D[1] = f_eval * self._h
         self._y0 = None
         self._scale_y0 = None
@@ -76,12 +80,12 @@ class BDF:
         self._c = self._h * self._alpha[self._order]
         self._error_const = kappa * self._gamma + 1 / np.arange(1, MAX_ORDER + 2)
 
-        self._J = self._jac(self._t, self._y)
+        self._J = self._jac(self.t, self._y)
         c = self._h * self._alpha[self._order]
         self._LU = scipy.linalg.lu_factor(self._I - c * self._J)
 
-        self._atol = 0
-        self._rtol = 0
+        self._atol = atol
+        self._rtol = rtol
         EPS = np.finfo(self._y.dtype).eps
         self._newton_tol = max(10 * EPS / self._rtol, min(0.03, self._rtol ** 0.5))
         self._U = [compute_R(order, 1) for order in range(MAX_ORDER)]
@@ -167,14 +171,14 @@ class BDF:
         Note: this is slightly different than the standard practice
         of using J(t_{n+1}, y^0_{n+1})
         """
-        self._J = self._jac(self._t, self._y)
+        self._J = self._jac(self.t, self._y)
         self._LU = scipy.linalg.lu_factor(self._I - self._c * self._J)
 
     def _newton_iteration(self):
         D = self._D
         order = self._order
         tol = self._newton_tol
-        t = self._t + self._h
+        t = self.t + self._h
         d = np.zeros_like(y0)
         y = np.copy(y0)
 
@@ -209,7 +213,7 @@ class BDF:
 
         return converged, k + 1, y, d
 
-    def _step(self):
+    def step(self):
         # we will try and use the old jacobian unless convergence of newton iteration
         # fails
         self._updated_jacobian = False
@@ -237,7 +241,8 @@ class BDF:
             scale_y = self._atol + self._rtol * np.abs(y)
 
             # combine eq 3, 4 and 6 from [1] to obtain error
-            # Note that error = C_k * D^{k+1} y_n and d = D^{k+1} y_n
+            # Note that error = C_k * h^{k+1} y^{k+1}
+            # and d = D^{k+1} y_{n+1} \approx h^{k+1} y^{k+1}
             error = self._error_const[self._order] * d
             error_norm = np.sqrt(np.mean((error / scale_y)**2))
 
@@ -256,12 +261,12 @@ class BDF:
 
         # take the accepted step
         self._y = y
-        self._t += self._h
+        self.t += self._h
 
         # a change in order is only done after running at order k for k + 1 steps
         # (see page 83 of [2])
         self._n_equal_steps += 1
-        if self.n_equal_steps < order + 1:
+        if self._n_equal_steps < self._order + 1:
             self._update_difference_for_next_step(d)
             return True, None
 
@@ -285,7 +290,7 @@ class BDF:
 
         error_norms = np.array([error_m_norm, error_norm, error_p_norm])
         with np.errstate(divide='ignore'):
-            factors = error_norms ** (-1 / np.arange(order, order + 3))
+            factors = error_norms ** (-1 / np.arange(self._order, self._order + 3))
 
         # now we have the three factors for orders k-1, k and k+1, pick the maximum in
         # order to maximise the resultant step size
@@ -294,3 +299,35 @@ class BDF:
 
         factor = min(MAX_FACTOR, safety * factors[max_index])
         self._update_step_size(factor)
+
+    def interpolate(self, t_eval):
+        """
+        interpolate solution at time values t* where t-h < t* < t
+
+        definition of the interpolating polynomial can be found on page 7 of [1]
+        """
+
+        time_steps = (self.t - self._h * np.arange(self._order)).reshape((-1, 1))
+        denom = self._h * (1 + np.arange(self._order)).reshape((-1, 1))
+        time_factor = np.cumprod((t_eval - time_steps) / denom, axis=0)
+
+        return self._D[0] + np.dot(self._D[1:self._order + 1].T, time_factor)
+
+
+def jax_bdf_integrate(jax_evaluate, y0, t_eval, rtol=1e-6, atol=1e-6):
+    if not isinstance(jax_evaluate, pybamm.JaxEvaluate):
+        raise ValueError("jax_evaluate must be an instance of pybamm.JaxEvaluate")
+
+    def fun(t, y):
+        return jax_evaluate.evaluate(t=t, y=y)
+
+    stepper=BDF(fun, t_eval[0], y0, rtol, atol)
+
+    i=0
+    y_out=np.empty((len(y0), len(t_eval)), dtype=y0.dtype)
+    while i < len(t_eval):
+        stepper.step()
+        index=np.searchsorted(t_eval, stepper.t)
+        intermediate_times=t_eval[i:index]
+        y_out[i:index]=stepper.interpolate(intermediate_times)
+    return y_out
