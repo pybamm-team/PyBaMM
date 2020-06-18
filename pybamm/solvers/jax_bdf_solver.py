@@ -4,6 +4,11 @@ import numpy as onp
 import scipy
 import pybamm
 
+from jax.config import config
+config.update("jax_enable_x64", True)
+
+
+
 MAX_ORDER = 5
 NEWTON_MAXITER = 4
 MIN_FACTOR = 0.2
@@ -22,11 +27,11 @@ def compute_R(order, factor):
     found using factor = 1, which corresponds to R with a constant step size
 
     """
-    I = np.arange(1, order + 1)[:, None]
+    I = np.arange(1, order + 1).reshape(-1, 1)
     J = np.arange(1, order + 1)
     M = np.zeros((order + 1, order + 1))
-    jax.ops.index_update(M, jax.ops.index[1:, 1:], (I - 1 - factor * J) / I)
-    jax.ops.index_update(M, jax.ops.index[0], 1)
+    M = jax.ops.index_update(M, jax.ops.index[1:, 1:], (I - 1 - factor * J) / I)
+    M = jax.ops.index_update(M, jax.ops.index[0], 1)
     return np.cumprod(M, axis=0)
 
 
@@ -87,8 +92,8 @@ class BDF:
         self._jac = jac
         # Nordsieck differences array
         self._D = np.empty((MAX_ORDER + 1, len(y0)), dtype=self._y.dtype)
-        jax.ops.index_update(self._D, jax.ops.index[0], self._y)
-        jax.ops.index_update(self._D, jax.ops.index[1], f0 * self._h)
+        self._D = jax.ops.index_update(self._D, jax.ops.index[0, :], self._y)
+        self._D = jax.ops.index_update(self._D, jax.ops.index[1, :], f0 * self._h)
         self._y0 = None
         self._scale_y0 = None
         self._predict()
@@ -103,8 +108,7 @@ class BDF:
         self._error_const = kappa * self._gamma + 1 / np.arange(1, MAX_ORDER + 2)
 
         self._J = self._jac(self.t, self._y)
-        c = self._h * self._alpha[self._order]
-        self._LU = scipy.linalg.lu_factor(self._I - c * self._J)
+        self._LU = scipy.linalg.lu_factor(self._I - self._c * self._J)
 
         self._U = [compute_R(order, 1) for order in range(MAX_ORDER)]
 
@@ -132,7 +136,6 @@ class BDF:
         """
         predict forward to new step (eq 2 in [1])
         """
-        print('predict')
         self._y0 = np.sum(self._D[:self._order + 1], axis=0)
         self._scale_y0 = self._atol + self._rtol * np.abs(self._y0)
 
@@ -140,11 +143,10 @@ class BDF:
         """
         update psi term as defined in second equation on page 9 of [1]
         """
-        print('update psi')
         self._psi = np.dot(
             self._D[1: self._order + 1].T,
             self._gamma[1: self._order + 1]
-        ) / self._alpha[self._order]
+        ) * self._alpha[self._order]
 
     def _update_difference_for_next_step(self, d, only_update_D=False):
         """
@@ -159,12 +161,14 @@ class BDF:
 
         Combining these gives the following algorithm
         """
-        print('update_differences for next step')
         order = self._order
-        jax.ops.index_update(self._D, jax.ops.index[order + 2], d - self._D[order + 1])
-        jax.ops.index_update(self._D, jax.ops.index[order + 1], d)
+        self._D = jax.ops.index_update(self._D, jax.ops.index[order + 2],
+                                       d - self._D[order + 1])
+        self._D = jax.ops.index_update(self._D, jax.ops.index[order + 1],
+                                       d)
         for i in reversed(range(order + 1)):
-            jax.ops.index_add(self._D, jax.ops.index[i], self._D[i + 1])
+            self._D = jax.ops.index_add(self._D, jax.ops.index[i],
+                                        self._D[i + 1])
 
         if not only_update_D:
             # update psi (D has changed)
@@ -173,7 +177,7 @@ class BDF:
             # update y0 (D has changed)
             self._predict()
 
-    def _update_step_size(self, factor):
+    def _update_step_size(self, factor, dont_update_lu=False):
         """
         If step size h is changed then also need to update the terms in
         the first equation of page 9 of [1]:
@@ -182,7 +186,6 @@ class BDF:
         - lu factorisation of (I - c * J) used in newton iteration (same equation)
         - psi term
         """
-        print('update_step_size')
         self._h *= factor
 
         self._n_equal_steps = 0
@@ -190,12 +193,13 @@ class BDF:
         self._c = self._h * self._alpha[order]
 
         # redo lu (c has changed)
-        self._LU = scipy.linalg.lu_factor(self._I - self._c * self._J)
+        if not dont_update_lu:
+            self._LU = scipy.linalg.lu_factor(self._I - self._c * self._J)
 
         # update D using equations in section 3.2 of [1]
         RU = compute_R(order, factor).dot(self._U[order])
-        jax.ops.index_update(self._D, jax.ops.index[:order + 1],
-                             np.dot(RU.T, self._D[:order + 1]))
+        self._D = jax.ops.index_update(self._D, jax.ops.index[:order + 1],
+                                       np.dot(RU.T, self._D[:order + 1]))
 
         # update psi (D has changed)
         self._update_psi()
@@ -210,7 +214,6 @@ class BDF:
         Note: this is slightly different than the standard practice
         of using J(t_{n+1}, y^0_{n+1})
         """
-        print('update_jacobian')
         self._J = self._jac(self.t, self._y)
         self._LU = scipy.linalg.lu_factor(self._I - self._c * self._J)
 
@@ -249,7 +252,6 @@ class BDF:
 
         dy_norm_old = dy_norm
 
-        print('newton iteration, converged = ',converged)
         return converged, k + 1, y, d
 
     def step(self):
@@ -259,7 +261,6 @@ class BDF:
         # initialise step size and try to make the step,
         # iterate, reducing step size until error is in bounds
         step_accepted = False
-        print('start step at t =', self.t)
         while not step_accepted:
 
             # solve BDF equation using self._y0 as starting point
@@ -338,7 +339,6 @@ class BDF:
         # order to maximise the resultant step size
         max_index = np.argmax(factors)
         self._order += max_index - 1
-        print('recalculate order, new order =', self._order)
 
         factor = min(MAX_FACTOR, safety * factors[max_index])
         self._update_step_size(factor)
@@ -349,7 +349,6 @@ class BDF:
 
         definition of the interpolating polynomial can be found on page 7 of [1]
         """
-
         time_steps = (self.t - self._h * np.arange(self._order)).reshape((-1, 1))
         denom = self._h * (1 + np.arange(self._order)).reshape((-1, 1))
         time_factor = np.cumprod((t_eval - time_steps) / denom, axis=0)
@@ -380,7 +379,7 @@ def jax_bdf_integrate(jax_evaluate, y0, t_eval, rtol=1e-6, atol=1e-6):
         stepper.step()
         index = np.searchsorted(t_eval_device, stepper.t)
         intermediate_times = t_eval_device[i:index]
-        jax.ops.index_update(y_out, jax.ops.index[:, i:index],
-                             stepper.interpolate(intermediate_times))
+        y_out = jax.ops.index_update(y_out, jax.ops.index[:, i:index],
+                                     stepper.interpolate(intermediate_times))
         i = index
     return np.array(y_out)
