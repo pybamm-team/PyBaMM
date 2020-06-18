@@ -1,5 +1,6 @@
 import jax
 import jax.numpy as np
+import numpy as onp
 import scipy
 import pybamm
 
@@ -66,26 +67,28 @@ class BDF:
            T., Cournapeau, D., ... & van der Walt, S. J. (2020). SciPy 1.0:
            fundamental algorithms for scientific computing in Python.
            Nature methods, 17(3), 261-272.
+    .. [4] E. Hairer, S. P. Norsett G. Wanner, "Solving Ordinary Differential
+               Equations I: Nonstiff Problems", Sec. II.4.
     """
 
-    def __init__(self, fun, jac, t0, y0, rtol, atol):
+    def __init__(self, fun, jac, t0, y0, h0, rtol, atol):
         self.t = t0
         self._y = y0
-        self._h = 0.1
+        # fun has signature f(t, y)
+        self._fun = fun
+        f0 = self._fun(self.t, self._y)
         self._atol = atol
         self._rtol = rtol
+        self._order = 1
+        self._h = self._select_initial_step(t0, y0, f0, h0)
         EPS = np.finfo(self._y.dtype).eps
         self._newton_tol = max(10 * EPS / self._rtol, min(0.03, self._rtol ** 0.5))
         self._n_equal_steps = 0
-        # fun has signature f(t, y)
-        self._fun = fun
         self._jac = jac
         # Nordsieck differences array
         self._D = np.empty((MAX_ORDER + 1, len(y0)), dtype=self._y.dtype)
         jax.ops.index_update(self._D, jax.ops.index[0], self._y)
-        self._order = 1
-        f_eval = self._fun(self.t, self._y)
-        jax.ops.index_update(self._D, jax.ops.index[1], f_eval * self._h)
+        jax.ops.index_update(self._D, jax.ops.index[1], f0 * self._h)
         self._y0 = None
         self._scale_y0 = None
         self._predict()
@@ -108,10 +111,28 @@ class BDF:
         self._psi = None
         self._update_psi()
 
+    def _select_initial_step(self, t0, y0, f0, h0):
+        """
+        Select a good initial step by stepping forward one step of forward euler, and
+        comparing the predicted state against that using the provided function.
+
+        Optimal step size based on the selected order is obtained using formula (4.12)
+        in [4]
+        """
+        scale = self._atol + np.abs(y0) * self._rtol
+        y1 = y0 + h0 * f0
+        f1 = self._fun(t0 + h0, y1)
+        d2 = np.sqrt(np.mean(((f1 - f0) / scale)))
+        order = 1
+        h1 = h0 * d2 ** (-1 / (order + 1))
+
+        return min(100 * h0, h1)
+
     def _predict(self):
         """
         predict forward to new step (eq 2 in [1])
         """
+        print('predict')
         self._y0 = np.sum(self._D[:self._order + 1], axis=0)
         self._scale_y0 = self._atol + self._rtol * np.abs(self._y0)
 
@@ -119,6 +140,7 @@ class BDF:
         """
         update psi term as defined in second equation on page 9 of [1]
         """
+        print('update psi')
         self._psi = np.dot(
             self._D[1: self._order + 1].T,
             self._gamma[1: self._order + 1]
@@ -137,6 +159,7 @@ class BDF:
 
         Combining these gives the following algorithm
         """
+        print('update_differences for next step')
         order = self._order
         jax.ops.index_update(self._D, jax.ops.index[order + 2], d - self._D[order + 1])
         jax.ops.index_update(self._D, jax.ops.index[order + 1], d)
@@ -159,6 +182,7 @@ class BDF:
         - lu factorisation of (I - c * J) used in newton iteration (same equation)
         - psi term
         """
+        print('update_step_size')
         self._h *= factor
 
         self._n_equal_steps = 0
@@ -186,6 +210,7 @@ class BDF:
         Note: this is slightly different than the standard practice
         of using J(t_{n+1}, y^0_{n+1})
         """
+        print('update_jacobian')
         self._J = self._jac(self.t, self._y)
         self._LU = scipy.linalg.lu_factor(self._I - self._c * self._J)
 
@@ -224,6 +249,7 @@ class BDF:
 
         dy_norm_old = dy_norm
 
+        print('newton iteration, converged = ',converged)
         return converged, k + 1, y, d
 
     def step(self):
@@ -233,6 +259,7 @@ class BDF:
         # initialise step size and try to make the step,
         # iterate, reducing step size until error is in bounds
         step_accepted = False
+        print('start step at t =', self.t)
         while not step_accepted:
 
             # solve BDF equation using self._y0 as starting point
@@ -311,6 +338,7 @@ class BDF:
         # order to maximise the resultant step size
         max_index = np.argmax(factors)
         self._order += max_index - 1
+        print('recalculate order, new order =', self._order)
 
         factor = min(MAX_FACTOR, safety * factors[max_index])
         self._update_step_size(factor)
@@ -341,14 +369,18 @@ def jax_bdf_integrate(jax_evaluate, y0, t_eval, rtol=1e-6, atol=1e-6):
 
     y0_device = jax.device_put(y0).reshape(-1)
     t_eval_device = jax.device_put(t_eval)
-    stepper = BDF(fun, jac, t_eval[0], y0_device, rtol, atol)
+
+    t0 = t_eval_device[0]
+    h0 = t_eval_device[1] - t0
+    stepper = BDF(fun, jac, t0, y0_device, h0, rtol, atol)
 
     i = 0
-    y_out = np.empty((len(y0), len(t_eval)), dtype=y0.dtype)
-    while i < len(t_eval):
+    y_out = np.empty((len(y0), len(t_eval_device)), dtype=y0.dtype)
+    while i < len(t_eval_device):
         stepper.step()
-        index = np.searchsorted(t_eval, stepper.t)
-        intermediate_times = t_eval[i:index]
+        index = np.searchsorted(t_eval_device, stepper.t)
+        intermediate_times = t_eval_device[i:index]
         jax.ops.index_update(y_out, jax.ops.index[:, i:index],
                              stepper.interpolate(intermediate_times))
-    return y_out.asarray()
+        i = index
+    return np.array(y_out)
