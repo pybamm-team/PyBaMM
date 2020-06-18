@@ -315,19 +315,19 @@ class BDF:
 
 
 def jax_bdf_integrate(jax_evaluate, y0, t_eval, rtol=1e-6, atol=1e-6):
-    if not isinstance(jax_evaluate, pybamm.JaxEvaluate):
-        raise ValueError("jax_evaluate must be an instance of pybamm.JaxEvaluate")
+    if not isinstance(jax_evaluate, pybamm.EvaluatorJax):
+        raise ValueError("jax_evaluate must be an instance of pybamm.EvaluatorJax")
 
     def fun(t, y):
         return jax_evaluate.evaluate(t=t, y=y)
 
-    stepper=BDF(fun, t_eval[0], y0, rtol, atol)
+    stepper = BDF(fun, t_eval[0], y0, rtol, atol)
 
-    i=0
-    y_out=np.empty((len(y0), len(t_eval)), dtype=y0.dtype)
+    i = 0
+    y_out = np.empty((len(y0), len(t_eval)), dtype=y0.dtype)
     while i < len(t_eval):
         stepper.step()
-        index=np.searchsorted(t_eval, stepper.t)
-        intermediate_times=t_eval[i:index]
-        y_out[i:index]=stepper.interpolate(intermediate_times)
+        index = np.searchsorted(t_eval, stepper.t)
+        intermediate_times = t_eval[i:index]
+        y_out[i:index] = stepper.interpolate(intermediate_times)
     return y_out

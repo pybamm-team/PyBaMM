@@ -1,16 +1,9 @@
-#
-# Tests for the Scipy Solver class
-#
 import pybamm
 import unittest
 from tests import get_mesh_for_testing
 import sys
 import time
 import numpy as np
-
-from jax.config import config
-config.update("jax_enable_x64", True)
-
 
 class TestJaxSolver(unittest.TestCase):
     def test_model_solver(self):
