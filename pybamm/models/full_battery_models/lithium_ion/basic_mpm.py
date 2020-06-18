@@ -8,10 +8,8 @@ from .base_lithium_ion_model import BaseModel
 class BasicMPM(BaseModel):
     """Many Particle Model (MPM) model of a lithium-ion battery, from [1]_.
 
-    This class differs from the :class:`pybamm.lithium_ion.SPM` model class in that it
-    shows the whole model in a single class. This comes at the cost of flexibility in
-    combining different physical effects, and in general the main SPM class should be
-    used instead.
+    This class is similar to the :class:`pybamm.lithium_ion.SPM` model class in that it
+    shows the whole model in a single class.
 
     Parameters
     ----------
@@ -37,27 +35,31 @@ class BasicMPM(BaseModel):
         # (in turn from pybamm.standard_parameters_lithium_ion)
         param = self.param
 
-        # additional parameters
+        # Additional parameters for this model
+        # Dimensionless standard deviations
         sd_a_n = pybamm.Parameter("negative area-weighted particle size standard deviation")
         sd_a_p = pybamm.Parameter("positive area-weighted particle size standard deviation")
 
+        # Particle size distributions (area-weighted)
         def f_a_dist_n(R,R_av_a,sd_a):
-            return pybamm.FunctionParameter(
-            "negative area-weighted particle size distribution",
-            {
+            inputs = {
             "negative particle size variable": R,
             "negative area-weighted mean particle size": R_av_a,
             "negative area-weighted particle size standard deviation": sd_a,
             }
+            return pybamm.FunctionParameter(
+            "negative area-weighted particle size distribution",
+            inputs,
             )
         def f_a_dist_p(R,R_av_a,sd_a):
-            return pybamm.FunctionParameter(
-            "positive area-weighted particle size distribution",
-            {
+            inputs = {
             "positive particle size variable": R,
             "positive area-weighted mean particle size": R_av_a,
             "positive area-weighted particle size standard deviation": sd_a,
             }
+            return pybamm.FunctionParameter(
+            "positive area-weighted particle size distribution",
+            inputs,
             )
 
 
@@ -66,7 +68,8 @@ class BasicMPM(BaseModel):
         ######################
         # Discharge capacity
         Q = pybamm.Variable("Discharge capacity [A.h]")
-        # X-averaged particle concentrations
+        # X-averaged particle concentrations: these now depend continuously on particle size, and so
+        # have secondary domains "negative/positive particle size domain"
         c_s_n = pybamm.Variable(
             "X-averaged negative particle concentration",
             domain="negative particle",
@@ -83,13 +86,9 @@ class BasicMPM(BaseModel):
                 #"tertiary": "positive electrode"
             }
         )
-        # Electrode potentials (leave them with a domain for now)
-        phi_s_n = pybamm.Variable(
-            "Negative electrode potential"
-#            domain="negative particle size domain",
-#            auxiliary_domains={
-#                "secondary": "negative electrode",
-#            }
+        # Electrode potentials (leave them without a domain for now)
+        phi_e = pybamm.Variable(
+            "Electrolyte potential"
         )
         phi_s_p = pybamm.Variable(
             "Positive electrode potential"
@@ -102,12 +101,12 @@ class BasicMPM(BaseModel):
         # Spatial Variables
         R_variable_n = pybamm.SpatialVariable(
             "negative particle size variable",
-            domain=["negative particle size domain"],
+            domain=["negative particle size domain"], #could add auxiliary domains
             coord_sys="cartesian"
             )
         R_variable_p = pybamm.SpatialVariable(
             "positive particle size variable",
-            domain=["positive particle size domain"],
+            domain=["positive particle size domain"], #could add auxiliary domains
             coord_sys="cartesian"
             )
 
@@ -120,8 +119,6 @@ class BasicMPM(BaseModel):
 
         # Current density
         i_cell = param.current_with_time
-#        j_n = i_cell / param.l_n
-#        j_p = -i_cell / param.l_p
 
         ######################
         # State of Charge
@@ -138,20 +135,19 @@ class BasicMPM(BaseModel):
         ######################
 
         c_s_surf_n = pybamm.surf(c_s_n)
-        phi_e = 0
+        phi_s_n = 0
 
 
-        j0_n = param.j0_n(1, c_s_surf_n, T) / param.C_r_n
+        j0_n = param.j0_n(1, c_s_surf_n, T) / param.C_r_n # setting c_e = 1
         j_n = (
             2
             * j0_n
             * pybamm.sinh(
-                param.ne_n / 2 * (phi_s_n
-                - phi_e - param.U_n(c_s_surf_n, T))
+                param.ne_n / 2 * (phi_s_n - phi_e - param.U_n(c_s_surf_n, T))
             )
         )
         c_s_surf_p = pybamm.surf(c_s_p)
-        j0_p = param.gamma_p * param.j0_p(1, c_s_surf_p, T) / param.C_r_p
+        j0_p = param.gamma_p * param.j0_p(1, c_s_surf_p, T) / param.C_r_p # setting c_e = 1
 
         j_p = (
             2
@@ -161,18 +157,19 @@ class BasicMPM(BaseModel):
             )
         )
 
-        self.algebraic[phi_s_n] = pybamm.Integral(
+        # integral equation for phi_e
+        self.algebraic[phi_e] = pybamm.Integral(
             f_a_dist_n(R_variable_n, 1, sd_a_n)*j_n,
             R_variable_n
         ) - i_cell/param.l_n
 
+        # integral equation for phi_s_p
         self.algebraic[phi_s_p] = pybamm.Integral(
             f_a_dist_p(R_variable_p, 1, sd_a_p)*j_p,
             R_variable_p
         ) + i_cell/param.l_p
 
-        self.initial_conditions[phi_s_n] = pybamm.Scalar(1)#pybamm.PrimaryBroadcast(1, "negative particle size domain")
-
+        self.initial_conditions[phi_e] = pybamm.Scalar(1)#pybamm.PrimaryBroadcast(1, "negative particle size domain")
         self.initial_conditions[phi_s_p] = pybamm.Scalar(1)#pybamm.PrimaryBroadcast(1, "positive particle size domain")
 
         ######################
@@ -232,49 +229,99 @@ class BasicMPM(BaseModel):
         # Primary broadcasts are used to broadcast scalar quantities across a domain
         # into a vector of the right shape, for multiplying with other vectors
 
-        V = phi_s_p - phi_s_n
+        V = phi_s_p
+
+        # Dimensional output variables
+        V_dim = param.potential_scale * V + (param.U_p_ref - param.U_n_ref)
+        c_s_surf_n_dim = c_s_surf_n
+        c_s_surf_p_dim = c_s_surf_p
+        c_e = 1
+        c_e_dim = c_e
+        phi_s_n_dim = phi_s_n
+        phi_s_p_dim = phi_s_p
+        phi_e_dim = phi_e
+
+
+
+
+
         whole_cell = ["negative electrode", "separator", "positive electrode"]
 
         self.variables = {
             "Negative particle surface concentration": c_s_surf_n,
-            "Electrolyte concentration": pybamm.PrimaryBroadcast(1, whole_cell),
+            "Negative particle surface concentration [mol.m-3]": c_s_surf_n_dim,
+            "Electrolyte concentration": pybamm.PrimaryBroadcast(c_e, whole_cell),
+            "Electrolyte concentration [mol.m-3]": pybamm.PrimaryBroadcast(c_e_dim, whole_cell),
             "Positive particle surface concentration": c_s_surf_p,
+            "Positive particle surface concentration [mol.m-3]": c_s_surf_p_dim,
             "Current [A]": I,
             "Negative electrode potential": pybamm.PrimaryBroadcast(
                 phi_s_n, "negative electrode"
             ),
+            "Negative electrode potential [V]": pybamm.PrimaryBroadcast(
+                phi_s_n_dim, "negative electrode"
+            ),
             "Electrolyte potential": pybamm.PrimaryBroadcast(phi_e, whole_cell),
+            "Electrolyte potential [V]": pybamm.PrimaryBroadcast(phi_e_dim, whole_cell),
             "Positive electrode potential": pybamm.PrimaryBroadcast(
                 phi_s_p, "positive electrode"
             ),
+            "Positive electrode potential [V]": pybamm.PrimaryBroadcast(
+                phi_s_p_dim, "positive electrode"
+            ),
             "Terminal voltage": V,
+            "Terminal voltage [V]": V_dim,
         }
+
+
         self.events += [
             pybamm.Event("Minimum voltage", V - param.voltage_low_cut),
             pybamm.Event("Maximum voltage", V - param.voltage_high_cut),
         ]
 
 
+    ####################
+    # Overwrite defaults
+    ####################
     @property
     def default_parameter_values(self):
         # Default parameter values
         # Lion parameters left as default parameter set for tests
-        import numpy as np
+        default_params = super().default_parameter_values
 
-        def f_a_dist_Gaussian(R,R_av_a,sd_a):
-            return pybamm.exp(-(R-R_av_a)**2/(2*sd_a**2))/pybamm.sqrt(2*np.pi)/sd_a
 
-        default_params = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
-        default_params.update({"negative area-weighted particle size standard deviation": 0.3}, check_already_exists=False)
-        default_params.update({"positive area-weighted particle size standard deviation": 0.3}, check_already_exists=False)
-        default_params.update({"negative area-weighted particle size distribution": f_a_dist_Gaussian}, check_already_exists=False)
-        default_params.update({"positive area-weighted particle size distribution": f_a_dist_Gaussian}, check_already_exists=False)
+        # append new parameter values
+
+        # lognormal area-weighted particle size distribution
+        def lognormal_dist(R,R_av,sd):
+            import numpy as np
+            # inputs are particle radius R, the mean R_av, and standard deviation sd
+            mu_ln = pybamm.log(R_av**2/pybamm.sqrt(R_av**2+sd**2))
+            sigma_ln = pybamm.sqrt(pybamm.log(1 + sd**2/R_av**2))
+            return pybamm.exp(-(pybamm.log(R)-mu_ln)**2/(2*sigma_ln**2))/pybamm.sqrt(2*np.pi*sigma_ln**2)/R
+
+        default_params.update(
+            {"negative area-weighted particle size standard deviation": 0.3},
+            check_already_exists=False
+        )
+        default_params.update(
+            {"positive area-weighted particle size standard deviation": 0.3},
+            check_already_exists=False
+        )
+        default_params.update(
+            {"negative area-weighted particle size distribution": lognormal_dist},
+            check_already_exists=False
+        )
+        default_params.update(
+            {"positive area-weighted particle size distribution": lognormal_dist},
+            check_already_exists=False
+        )
 
         return default_params
 
     @property
     def default_geometry(self):
-        default_geom = pybamm.battery_geometry()
+        default_geom = super().default_geometry
 
         # New Spatial Variables
         R_variable_n = pybamm.SpatialVariable(
@@ -288,94 +335,69 @@ class BasicMPM(BaseModel):
             coord_sys="cartesian"
             )
 
-        # input new domains
-        default_geom.update({"negative particle size domain":
+        # append new domains
+        default_geom.update(
             {
-                R_variable_n: {
-                    "min": pybamm.Scalar(0),
-                    "max": pybamm.Scalar(5),
-                }
+                "negative particle size domain": {
+                    R_variable_n: {
+                        "min": pybamm.Scalar(0),
+                        "max": pybamm.Scalar(5),
+                    }
+                },
+                "positive particle size domain": {
+                    R_variable_p: {
+                        "min": pybamm.Scalar(0),
+                        "max": pybamm.Scalar(5),
+                    }
+                },
             }
-        }
-        )
-        default_geom.update({"positive particle size domain":
-            {
-                R_variable_p: {
-                    "min": pybamm.Scalar(0),
-                    "max": pybamm.Scalar(5),
-                }
-            }
-        }
         )
         return default_geom
 
     @property
     def default_var_pts(self):
-        var = pybamm.standard_spatial_vars
+        defaults = super().default_var_pts
 
         # New Spatial Variables
         R_variable_n = pybamm.SpatialVariable(
             "negative particle size variable",
             domain=["negative particle size domain"],
             coord_sys="cartesian"
-            )
+        )
         R_variable_p = pybamm.SpatialVariable(
             "positive particle size variable",
             domain=["positive particle size domain"],
             coord_sys="cartesian"
-            )
-
-        return {
-            var.x_n: 20,
-            var.x_s: 20,
-            var.x_p: 20,
-            var.r_n: 10,
-            var.r_p: 10,
-            var.y: 10,
-            var.z: 10,
-            R_variable_n: 30,
-            R_variable_p: 30,
-        }
+        )
+        # add to dictionary
+        defaults.update(
+            {
+                R_variable_n: 50,
+                R_variable_p: 50,
+            }
+        )
+        return defaults
 
     @property
     def default_submesh_types(self):
-        base_submeshes = {
-            "negative electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "separator": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "positive electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "negative particle": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "positive particle": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "negative particle size domain": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "positive particle size domain": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-        }
-        if self.options["dimensionality"] == 0:
-            base_submeshes["current collector"] = pybamm.MeshGenerator(pybamm.SubMesh0D)
-        elif self.options["dimensionality"] == 1:
-            base_submeshes["current collector"] = pybamm.MeshGenerator(
-                pybamm.Uniform1DSubMesh
-            )
-        elif self.options["dimensionality"] == 2:
-            base_submeshes["current collector"] = pybamm.MeshGenerator(
-                pybamm.ScikitUniform2DSubMesh
-            )
-        return base_submeshes
+        default_submeshes = super().default_submesh_types
+
+        default_submeshes.update(
+            {
+                "negative particle size domain": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+                "positive particle size domain": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            }
+        )
+        return default_submeshes
 
     @property
     def default_spatial_methods(self):
-        base_spatial_methods = {
-            "macroscale": pybamm.FiniteVolume(),
-            "negative particle": pybamm.FiniteVolume(),
-            "positive particle": pybamm.FiniteVolume(),
-            "negative particle size domain": pybamm.FiniteVolume(),
-            "positive particle size domain": pybamm.FiniteVolume(),
-        }
-        if self.options["dimensionality"] == 0:
-            # 0D submesh - use base spatial method
-            base_spatial_methods[
-                "current collector"
-            ] = pybamm.ZeroDimensionalSpatialMethod()
-        elif self.options["dimensionality"] == 1:
-            base_spatial_methods["current collector"] = pybamm.FiniteVolume()
-        elif self.options["dimensionality"] == 2:
-            base_spatial_methods["current collector"] = pybamm.ScikitFiniteElement()
-        return base_spatial_methods
+        default_spatials = super().default_spatial_methods
+
+        default_spatials.update(
+            {
+                "negative particle size domain": pybamm.FiniteVolume(),
+                "positive particle size domain": pybamm.FiniteVolume(),
+            }
+        )
+        return default_spatials
