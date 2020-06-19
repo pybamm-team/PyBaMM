@@ -8,7 +8,6 @@ from jax.config import config
 config.update("jax_enable_x64", True)
 
 
-
 MAX_ORDER = 5
 NEWTON_MAXITER = 4
 MIN_FACTOR = 0.2
@@ -35,7 +34,7 @@ def compute_R(order, factor):
     return np.cumprod(M, axis=0)
 
 
-class BDF:
+def _bdf_init(fun, jac, t0, y0, h0, rtol, atol):
     """
     Backward Difference formula (BDF) implicit multistep integrator. The basic algorithm
     is derived in [2]. This particular implementation follows that implemented in the
@@ -75,292 +74,367 @@ class BDF:
     .. [4] E. Hairer, S. P. Norsett G. Wanner, "Solving Ordinary Differential
                Equations I: Nonstiff Problems", Sec. II.4.
     """
+    state = {}
+    state['t'] = t0
+    state['y'] = y0
+    state['fun'] = fun
+    f0 = fun(t0, y0)
+    state['atol'] = atol
+    state['rtol'] = rtol
+    order = 1
+    state['order'] = order
+    state['h'] = _select_initial_step(state, t0, y0, f0, h0)
+    EPS = np.finfo(y0.dtype).eps
+    state['newton_tol'] = max(10 * EPS / rtol, min(0.03, rtol ** 0.5))
+    state['n_equal_steps'] = 0
+    state['jac'] = jac
+    D = np.empty((MAX_ORDER + 1, len(y0)), dtype=y0.dtype)
+    D = jax.ops.index_update(D, jax.ops.index[0, :], y0)
+    D = jax.ops.index_update(D, jax.ops.index[1, :], f0 * h0)
+    state['D'] = D
+    state['y0'] = None
+    state['scale_y0'] = None
+    state = _predict(state)
+    I = np.identity(len(y0), dtype=y0.dtype)
+    state['I'] = I
 
-    def __init__(self, fun, jac, t0, y0, h0, rtol, atol):
-        self.t = t0
-        self._y = y0
-        # fun has signature f(t, y)
-        self._fun = fun
-        f0 = self._fun(self.t, self._y)
-        self._atol = atol
-        self._rtol = rtol
-        self._order = 1
-        self._h = self._select_initial_step(t0, y0, f0, h0)
-        EPS = np.finfo(self._y.dtype).eps
-        self._newton_tol = max(10 * EPS / self._rtol, min(0.03, self._rtol ** 0.5))
-        self._n_equal_steps = 0
-        self._jac = jac
-        # Nordsieck differences array
-        self._D = np.empty((MAX_ORDER + 1, len(y0)), dtype=self._y.dtype)
-        self._D = jax.ops.index_update(self._D, jax.ops.index[0, :], self._y)
-        self._D = jax.ops.index_update(self._D, jax.ops.index[1, :], f0 * self._h)
-        self._y0 = None
-        self._scale_y0 = None
-        self._predict()
+    # kappa values for difference orders, taken from Table 1 of [1]
+    kappa = np.array([0, -0.1850, -1 / 9, -0.0823, -0.0415, 0])
+    gamma = np.hstack((0, np.cumsum(1 / np.arange(1, MAX_ORDER + 1))))
+    alpha = 1.0 / ((1 - kappa) * gamma)
+    c = h0 * alpha[order]
+    error_const = kappa * gamma + 1 / np.arange(1, MAX_ORDER + 2)
 
-        self._I = np.identity(len(y0), dtype=self._y.dtype)
+    state['kappa'] = kappa
+    state['gamma'] = gamma
+    state['alpha'] = alpha
+    state['c'] = c
+    state['error_const'] = error_const
 
-        # kappa values for difference orders, taken from Table 1 of [1]
-        kappa = np.array([0, -0.1850, -1 / 9, -0.0823, -0.0415, 0])
-        self._gamma = np.hstack((0, np.cumsum(1 / np.arange(1, MAX_ORDER + 1))))
-        self._alpha = 1.0 / ((1 - kappa) * self._gamma)
-        self._c = self._h * self._alpha[self._order]
-        self._error_const = kappa * self._gamma + 1 / np.arange(1, MAX_ORDER + 2)
+    J = jac(t0, y0)
+    state['J'] = J
+    state['LU'] = scipy.linalg.lu_factor(I - c * J)
 
-        self._J = self._jac(self.t, self._y)
-        self._LU = scipy.linalg.lu_factor(self._I - self._c * self._J)
+    state['U'] = [compute_R(order, 1) for order in range(MAX_ORDER)]
+    state['psi'] = None
+    state = _update_psi(state)
+    return state
 
-        self._U = [compute_R(order, 1) for order in range(MAX_ORDER)]
 
-        self._psi = None
-        self._update_psi()
+def _select_initial_step(state, t0, y0, f0, h0):
+    """
+    Select a good initial step by stepping forward one step of forward euler, and
+    comparing the predicted state against that using the provided function.
 
-    def _select_initial_step(self, t0, y0, f0, h0):
-        """
-        Select a good initial step by stepping forward one step of forward euler, and
-        comparing the predicted state against that using the provided function.
+    Optimal step size based on the selected order is obtained using formula (4.12)
+    in [4]
+    """
+    scale = state['atol'] + np.abs(y0) * state['rtol']
+    y1 = y0 + h0 * f0
+    f1 = state['fun'](t0 + h0, y1)
+    d2 = np.sqrt(np.mean(((f1 - f0) / scale)))
+    order = 1
+    h1 = h0 * d2 ** (-1 / (order + 1))
+    return min(100 * h0, h1)
 
-        Optimal step size based on the selected order is obtained using formula (4.12)
-        in [4]
-        """
-        scale = self._atol + np.abs(y0) * self._rtol
-        y1 = y0 + h0 * f0
-        f1 = self._fun(t0 + h0, y1)
-        d2 = np.sqrt(np.mean(((f1 - f0) / scale)))
-        order = 1
-        h1 = h0 * d2 ** (-1 / (order + 1))
 
-        return min(100 * h0, h1)
+def _predict(state):
+    """
+    predict forward to new step (eq 2 in [1])
+    """
+    state['y0'] = np.sum(state['D'][:state['order'] + 1], axis=0)
+    state['scale_y0'] = state['atol'] + state['rtol'] * np.abs(state['y0'])
+    return state
 
-    def _predict(self):
-        """
-        predict forward to new step (eq 2 in [1])
-        """
-        self._y0 = np.sum(self._D[:self._order + 1], axis=0)
-        self._scale_y0 = self._atol + self._rtol * np.abs(self._y0)
 
-    def _update_psi(self):
-        """
-        update psi term as defined in second equation on page 9 of [1]
-        """
-        self._psi = np.dot(
-            self._D[1: self._order + 1].T,
-            self._gamma[1: self._order + 1]
-        ) * self._alpha[self._order]
+def _update_psi(state):
+    """
+    update psi term as defined in second equation on page 9 of [1]
+    """
+    order = state['order']
+    state['psi'] = np.dot(
+        state['D'][1: order + 1].T,
+        state['gamma'][1: order + 1]
+    ) * state['alpha'][order]
+    return state
 
-    def _update_difference_for_next_step(self, d, only_update_D=False):
-        """
-        update of difference equations can be done efficiently
-        by reusing d and D.
 
-        From first equation on page 4 of [1]:
-        d = y_n - y^0_n = D^{k + 1} y_n
+def _update_difference_for_next_step(state, d, only_update_D=False):
+    """
+    update of difference equations can be done efficiently
+    by reusing d and D.
 
-        Standard backwards difference gives
-        D^{j + 1} y_n = D^{j} y_n - D^{j} y_{n - 1}
+    From first equation on page 4 of [1]:
+    d = y_n - y^0_n = D^{k + 1} y_n
 
-        Combining these gives the following algorithm
-        """
-        order = self._order
-        self._D = jax.ops.index_update(self._D, jax.ops.index[order + 2],
-                                       d - self._D[order + 1])
-        self._D = jax.ops.index_update(self._D, jax.ops.index[order + 1],
-                                       d)
-        for i in reversed(range(order + 1)):
-            self._D = jax.ops.index_add(self._D, jax.ops.index[i],
-                                        self._D[i + 1])
+    Standard backwards difference gives
+    D^{j + 1} y_n = D^{j} y_n - D^{j} y_{n - 1}
 
-        if not only_update_D:
-            # update psi (D has changed)
-            self._update_psi()
+    Combining these gives the following algorithm
+    """
+    order = state['order']
+    D = state['D']
+    D = jax.ops.index_update(D, jax.ops.index[order + 2],
+                             d - D[order + 1])
+    D = jax.ops.index_update(D, jax.ops.index[order + 1],
+                             d)
+    for i in reversed(range(order + 1)):
+        D = jax.ops.index_add(D, jax.ops.index[i],
+                              D[i + 1])
+    state['D'] = D
 
-            # update y0 (D has changed)
-            self._predict()
-
-    def _update_step_size(self, factor, dont_update_lu=False):
-        """
-        If step size h is changed then also need to update the terms in
-        the first equation of page 9 of [1]:
-
-        - constant c = h / (1-kappa) gamma_k term
-        - lu factorisation of (I - c * J) used in newton iteration (same equation)
-        - psi term
-        """
-        self._h *= factor
-
-        self._n_equal_steps = 0
-        order = self._order
-        self._c = self._h * self._alpha[order]
-
-        # redo lu (c has changed)
-        if not dont_update_lu:
-            self._LU = scipy.linalg.lu_factor(self._I - self._c * self._J)
-
-        # update D using equations in section 3.2 of [1]
-        RU = compute_R(order, factor).dot(self._U[order])
-        self._D = jax.ops.index_update(self._D, jax.ops.index[:order + 1],
-                                       np.dot(RU.T, self._D[:order + 1]))
-
+    if not only_update_D:
         # update psi (D has changed)
-        self._update_psi()
+        state = _update_psi(state)
 
         # update y0 (D has changed)
-        self._predict()
+        state = _predict(state)
 
-    def _update_jacobian(self):
-        """
-        we update the jacobian using J(t_n, y_n) as per [1]
+    return state
 
-        Note: this is slightly different than the standard practice
-        of using J(t_{n+1}, y^0_{n+1})
-        """
-        self._J = self._jac(self.t, self._y)
-        self._LU = scipy.linalg.lu_factor(self._I - self._c * self._J)
 
-    def _newton_iteration(self):
-        tol = self._newton_tol
-        t = self.t + self._h
-        d = np.zeros_like(self._y0)
-        y = self._y0.copy()
+def _update_step_size(state, factor, dont_update_lu=False):
+    """
+    If step size h is changed then also need to update the terms in
+    the first equation of page 9 of [1]:
 
-        converged = False
-        dy_norm_old = None
-        for k in range(NEWTON_MAXITER):
-            f_eval = self._fun(t, y)
-            b = self._c * f_eval - self._psi - d
-            dy = scipy.linalg.lu_solve(self._LU, b)
-            dy_norm = np.sqrt(np.mean((dy / self._scale_y0)**2))
-            if dy_norm_old is None:
-                rate = None
-            else:
-                rate = dy_norm / dy_norm_old
+    - constant c = h / (1-kappa) gamma_k term
+    - lu factorisation of (I - c * J) used in newton iteration (same equation)
+    - psi term
+    """
+    order = state['order']
+    h = state['h']
 
-            # if iteration is not going to converge in NEWTON_MAXITER
-            # (assuming the current rate), then abort
-            if (rate is not None and
-                    (rate >= 1 or
-                     rate ** (NEWTON_MAXITER - k) / (1 - rate) * dy_norm > tol)):
-                break
-            d += dy
-            y = self._y0 + d
+    h *= factor
+    state['n_equal_steps'] = 0
+    c = h * state['alpha'][order]
 
-            # if converged then break out of iteration early
-            if (dy_norm == 0 or
-                    rate is not None and rate / (1 - rate) * dy_norm < tol):
-                converged = True
-                break
+    # redo lu (c has changed)
+    if not dont_update_lu:
+        state['LU'] = scipy.linalg.lu_factor(state['I'] - c * state['J'])
 
-        dy_norm_old = dy_norm
+    state['h'] = h
+    state['c'] = c
 
-        return converged, k + 1, y, d
+    # update D using equations in section 3.2 of [1]
+    RU = compute_R(order, factor).dot(state['U'][order])
+    D = state['D']
+    D = jax.ops.index_update(D, jax.ops.index[:order + 1],
+                             np.dot(RU.T, D[:order + 1]))
+    state['D'] = D
 
-    def step(self):
-        # we will try and use the old jacobian unless convergence of newton iteration
-        # fails
-        self._updated_jacobian = False
-        # initialise step size and try to make the step,
-        # iterate, reducing step size until error is in bounds
-        step_accepted = False
-        while not step_accepted:
+    # update psi (D has changed)
+    state = _update_psi(state)
 
-            # solve BDF equation using self._y0 as starting point
-            converged, n_iter, y, d = self._newton_iteration()
+    # update y0 (D has changed)
+    state = _predict(state)
 
-            # if not converged update the jacobian for J(t_n,y_n) and try again
-            if not converged and not self._updated_jacobian:
-                self._update_jacobian()
-                self._updated_jacobian = True
-                continue
+    return state
 
-            # if still not converged then multiply step size by 0.3 (as per [1])
-            # and try again
-            if not converged:
-                self._update_step_size(factor=0.3)
-                continue
 
-            # yay, converged, now check error is within bounds
-            scale_y = self._atol + self._rtol * np.abs(y)
+def _update_jacobian(state):
+    """
+    we update the jacobian using J(t_n, y_n) as per [1]
 
-            # combine eq 3, 4 and 6 from [1] to obtain error
-            # Note that error = C_k * h^{k+1} y^{k+1}
-            # and d = D^{k+1} y_{n+1} \approx h^{k+1} y^{k+1}
-            error = self._error_const[self._order] * d
-            error_norm = np.sqrt(np.mean((error / scale_y)**2))
+    Note: this is slightly different than the standard practice
+    of using J(t_{n+1}, y^0_{n+1})
+    """
+    J = state['jac'](state['t'], state['y'])
+    state['LU'] = scipy.linalg.lu_factor(state['I'] - state['c'] * J)
+    state['J'] = J
+    return state
 
-            # calculate safety outside if since we will reuse later
-            safety = 0.9 * (2 * NEWTON_MAXITER + 1) / (2 * NEWTON_MAXITER
-                                                       + n_iter)
 
-            # if error too large, reduce step size and try again
-            if error_norm > 1:
-                # calculate optimal step size factor as per eq 2.46 of [2]
-                factor = max(MIN_FACTOR,
-                             safety * error_norm ** (-1 / (self._order + 1)))
-                self._update_step_size(factor)
-                continue
+def _newton_iteration(state):
+    tol = state['newton_tol']
+    fun = state['fun']
+    c = state['c']
+    psi = state['psi']
+    y0 = state['y0']
+    LU = state['LU']
+    scale_y0 = state['scale_y0']
+    t = state['t'] + state['h']
+    d = np.zeros_like(y0)
+    y = y0.copy()
 
-            # if we get here we can accept the step
-            step_accepted = True
-
-        # take the accepted step
-        self._y = y
-        self.t += self._h
-
-        # a change in order is only done after running at order k for k + 1 steps
-        # (see page 83 of [2])
-        self._n_equal_steps += 1
-        if self._n_equal_steps < self._order + 1:
-            self._update_difference_for_next_step(d)
-            return True, None
-
-        # don't need to update psi and y0 yet as we will be changing D again soon
-        self._update_difference_for_next_step(d, only_update_D=True)
-
-        # similar to the optimal step size factor we calculated above for the current
-        # order k, we need to calculate the optimal step size factors for orders
-        # k-1 and k+1. To do this, we note that the error = C_k * D^{k+1} y_n
-        if self._order > 1:
-            error_m = self._error_const[self._order - 1] * self._D[self._order]
-            error_m_norm = np.sqrt(np.mean((error_m / scale_y)**2))
+    converged = False
+    dy_norm_old = None
+    for k in range(NEWTON_MAXITER):
+        f_eval = fun(t, y)
+        b = c * f_eval - psi - d
+        dy = scipy.linalg.lu_solve(LU, b)
+        dy_norm = np.sqrt(np.mean((dy / scale_y0)**2))
+        if dy_norm_old is None:
+            rate = None
         else:
-            error_m_norm = np.inf
+            rate = dy_norm / dy_norm_old
 
-        if self._order < MAX_ORDER:
-            error_p = self._error_const[self._order + 1] * self._D[self._order + 2]
-            error_p_norm = np.sqrt(np.mean((error_p / scale_y)**2))
-        else:
-            error_p_norm = np.inf
+        # if iteration is not going to converge in NEWTON_MAXITER
+        # (assuming the current rate), then abort
+        if (rate is not None and
+                (rate >= 1 or
+                 rate ** (NEWTON_MAXITER - k) / (1 - rate) * dy_norm > tol)):
+            break
+        d += dy
+        y = y0 + d
 
-        error_norms = np.array([error_m_norm, error_norm, error_p_norm])
-        # with np.errstate(divide='ignore'):
-        factors = error_norms ** (-1 / np.arange(self._order, self._order + 3))
+        # if converged then break out of iteration early
+        if (dy_norm == 0 or
+                rate is not None and rate / (1 - rate) * dy_norm < tol):
+            converged = True
+            break
 
-        # now we have the three factors for orders k-1, k and k+1, pick the maximum in
-        # order to maximise the resultant step size
-        max_index = np.argmax(factors)
-        self._order += max_index - 1
+    dy_norm_old = dy_norm
 
-        factor = min(MAX_FACTOR, safety * factors[max_index])
-        self._update_step_size(factor)
+    return converged, k + 1, y, d
 
-    def interpolate(self, t_eval):
-        """
-        interpolate solution at time values t* where t-h < t* < t
 
-        definition of the interpolating polynomial can be found on page 7 of [1]
-        """
-        time_steps = (self.t - self._h * np.arange(self._order)).reshape((-1, 1))
-        denom = self._h * (1 + np.arange(self._order)).reshape((-1, 1))
-        time_factor = np.cumprod((t_eval - time_steps) / denom, axis=0)
+def _bdf_step(state):
+    order = state['order']
+    # we will try and use the old jacobian unless convergence of newton iteration
+    # fails
+    updated_jacobian = False
+    # initialise step size and try to make the step,
+    # iterate, reducing step size until error is in bounds
+    step_accepted = False
+    while not step_accepted:
 
-        order_summation = np.dot(self._D[1:self._order + 1].T, time_factor)
-        return self._D[0].reshape(-1, 1) + order_summation
+        # solve BDF equation using y0 as starting point
+        converged, n_iter, y, d = _newton_iteration(state)
+
+        # if not converged update the jacobian for J(t_n,y_n) and try again
+        if not converged and not updated_jacobian:
+            state = _update_jacobian(state)
+            updated_jacobian = True
+            continue
+
+        # if still not converged then multiply step size by 0.3 (as per [1])
+        # and try again
+        if not converged:
+            state = _update_step_size(state, factor=0.3)
+            continue
+
+        # yay, converged, now check error is within bounds
+        scale_y = state['atol'] + state['rtol'] * np.abs(y)
+
+        # combine eq 3, 4 and 6 from [1] to obtain error
+        # Note that error = C_k * h^{k+1} y^{k+1}
+        # and d = D^{k+1} y_{n+1} \approx h^{k+1} y^{k+1}
+        error = state['error_const'][order] * d
+        error_norm = np.sqrt(np.mean((error / scale_y)**2))
+
+        # calculate safety outside if since we will reuse later
+        safety = 0.9 * (2 * NEWTON_MAXITER + 1) / (2 * NEWTON_MAXITER
+                                                   + n_iter)
+
+        # if error too large, reduce step size and try again
+        if error_norm > 1:
+            # calculate optimal step size factor as per eq 2.46 of [2]
+            factor = max(MIN_FACTOR,
+                         safety * error_norm ** (-1 / (order + 1)))
+            state = _update_step_size(state, factor)
+            continue
+
+        # if we get here we can accept the step
+        step_accepted = True
+
+    # take the accepted step
+    state['y'] = y
+    state['t'] += state['h']
+
+    # a change in order is only done after running at order k for k + 1 steps
+    # (see page 83 of [2])
+    state['n_equal_steps'] += 1
+    if state['n_equal_steps'] < order + 1:
+        state = _update_difference_for_next_step(state, d)
+        return
+
+    # don't need to update psi and y0 yet as we will be changing D again soon
+    state = _update_difference_for_next_step(state, d, only_update_D=True)
+
+    # similar to the optimal step size factor we calculated above for the current
+    # order k, we need to calculate the optimal step size factors for orders
+    # k-1 and k+1. To do this, we note that the error = C_k * D^{k+1} y_n
+    if order > 1:
+        error_m = state['error_const'][order - 1] * state['D'][order]
+        error_m_norm = np.sqrt(np.mean((error_m / scale_y)**2))
+    else:
+        error_m_norm = np.inf
+
+    if order < MAX_ORDER:
+        error_p = state['error_const'][order + 1] * state['D'][order + 2]
+        error_p_norm = np.sqrt(np.mean((error_p / scale_y)**2))
+    else:
+        error_p_norm = np.inf
+
+    error_norms = np.array([error_m_norm, error_norm, error_p_norm])
+    # with np.errstate(divide='ignore'):
+    factors = error_norms ** (-1 / np.arange(order, order + 3))
+
+    # now we have the three factors for orders k-1, k and k+1, pick the maximum in
+    # order to maximise the resultant step size
+    max_index = np.argmax(factors)
+    order += max_index - 1
+    state['order'] = order
+
+    factor = min(MAX_FACTOR, safety * factors[max_index])
+    state = _update_step_size(state, factor)
+    return state
+
+
+def _bdf_interpolate(state, t_eval):
+    """
+    interpolate solution at time values t* where t-h < t* < t
+
+    definition of the interpolating polynomial can be found on page 7 of [1]
+    """
+    order = state['order']
+    t = state['t']
+    h = state['h']
+    D = state['D']
+    time_steps = (t - h * np.arange(order)).reshape((-1, 1))
+    denom = h * (1 + np.arange(order)).reshape((-1, 1))
+    time_factor = np.cumprod((t_eval - time_steps) / denom, axis=0)
+
+    order_summation = np.dot(D[1:order + 1].T, time_factor)
+    return D[0].reshape(-1, 1) + order_summation
+
+
+@jit(static_argnums=(0, 1, 4, 5))
+def _bdf_odeint(fun, jac, y0, t_eval, rtol, atol):
+    t0 = t_eval[0]
+    h0 = t_eval[1] - t0
+
+    stepper = _bdf_init(fun, jac, t0, y0, h0, rtol, atol)
+    i = 0
+    y_out = np.empty((len(y0), len(t_eval)), dtype=y0.dtype)
+
+    init_state = [stepper, t_eval, i, y_out]
+
+    def cond_fun(state):
+        _, t_eval, i, _ = state
+        return i < len(t_eval)
+
+    def body_fun(state):
+        stepper, t_eval, i, y_out = state
+        stepper = _bdf_step(stepper)
+        index = np.searchsorted(t_eval, stepper.t)
+        intermediate_times = t_eval[i:index]
+        y_out = jax.ops.index_update(y_out, jax.ops.index[:, i:index],
+                                     _bdf_interpolate(stepper, intermediate_times))
+        i = index
+        return [stepper, t_eval, i, y_out]
+
+    stepper, t_eval, i, y_out = jax.lax.while_loop(cond_fun, body_fun, init_state)
+
+    return y_out
 
 
 def jax_bdf_integrate(jax_evaluate, y0, t_eval, rtol=1e-6, atol=1e-6):
     if not isinstance(jax_evaluate, pybamm.EvaluatorJax):
         raise ValueError("jax_evaluate must be an instance of pybamm.EvaluatorJax")
 
+    @jax.jit
     def fun(t, y):
         return jax_evaluate.evaluate(t=t, y=y).reshape(-1)
 
@@ -369,9 +443,11 @@ def jax_bdf_integrate(jax_evaluate, y0, t_eval, rtol=1e-6, atol=1e-6):
     y0_device = jax.device_put(y0).reshape(-1)
     t_eval_device = jax.device_put(t_eval)
 
+    _bdf_odeint(fun, jac, y0_device, t_eval_device, rtol, atol)
+
     t0 = t_eval_device[0]
     h0 = t_eval_device[1] - t0
-    stepper = BDF(fun, jac, t0, y0_device, h0, rtol, atol)
+    stepper = bdf_init(fun, jac, t0, y0_device, h0, rtol, atol)
 
     i = 0
     y_out = np.empty((len(y0), len(t_eval_device)), dtype=y0.dtype)
