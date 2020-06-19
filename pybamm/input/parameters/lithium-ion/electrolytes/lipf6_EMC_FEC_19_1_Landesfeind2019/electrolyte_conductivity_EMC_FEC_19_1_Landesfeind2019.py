@@ -8,7 +8,6 @@ def electrolyte_conductivity_EMC_FEC_19_1_Landesfeind2019(c_e, T):
     """
     Conductivity of LiPF6 in EMC:FEC (19:1 w:w) as a function of ion concentration and
     temperature. The data comes from [1].
-
     References
     ----------
     .. [1] Landesfeind, J. and Gasteiger, H.A., 2019. Temperature and Concentration
@@ -21,7 +20,6 @@ def electrolyte_conductivity_EMC_FEC_19_1_Landesfeind2019(c_e, T):
         Dimensional electrolyte concentration
     T: :class:`pybamm.Symbol`
         Dimensional temperature
-
     Returns
     -------
     :class:`pybamm.Symbol`
