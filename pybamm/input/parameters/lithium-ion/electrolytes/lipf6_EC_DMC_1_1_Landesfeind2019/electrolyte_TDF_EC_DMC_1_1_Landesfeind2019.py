@@ -1,8 +1,8 @@
-from ..lipf6_base_Landesfeind2019 import electrolyte_TDF_base_Landesfeind2019
+from electrolyte_base_Landesfeind2019 import electrolyte_TDF_base_Landesfeind2019
 import numpy as np
 
 
-def electrolyte_TDF_EC_DMC_1_1_Landesfeind2019(c_e, T):
+def electrolyte_TDF_EC_DMC_1_1_Landesfeind2019(c_e, T=298.15):
     """
     Diffusivity of LiPF6 in EC:DMC (1:1 w:w) as a function of ion concentration and
     temperature. The data comes from [1].
