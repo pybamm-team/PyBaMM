@@ -3,54 +3,83 @@
 #
 import pybamm
 import unittest
+import os
 
 
 class TestLandesfeind(unittest.TestCase):
     def test_load_params(self):
-        data_D_e = {"EC-DMC_1-1": [1.94664e-10, 1.94233e-10]}
-        data_sigma_e = {"EC-DMC_1-1": [0.870352, 0.839076]}
-        data_TDF = {"EC-DMM_1-1": [1.84644, 4.16915]}
-        data_tplus = {"EC-DMC_1-1": [0.17651, 0.241924]}
+        data_D_e = {
+            "EC_DMC_1_1": [1.94664e-10, 1.94233e-10],
+            "EC_EMC_3_7": [2.01038e-10, 1.78391e-10],
+            "EMC_FEC_19_1": [2.16871e-10, 1.8992e-10],
+        }
+        data_sigma_e = {
+            "EC_DMC_1_1": [0.870352, 0.839076],
+            "EC_EMC_3_7": [0.695252, 0.668677],
+            "EMC_FEC_19_1": [0.454054, 0.632419],
+        }
+        data_TDF = {
+            "EC_DMC_1_1": [1.84644, 4.16915],
+            "EC_EMC_3_7": [1.82671, 3.9218],
+            "EMC_FEC_19_1": [0.92532, 3.22481],
+        }
+        data_tplus = {
+            "EC_DMC_1_1": [0.17651, 0.241924],
+            "EC_EMC_3_7": [0.0118815, 0.151879],
+            "EMC_FEC_19_1": [-0.0653014, 0.0416203],
+        }
 
-        T1 = 273.15 + 10.0
-        c1 = 1000.0
+        T = [273.15 + 10.0, 273.15 + 30.0]
+        c = [1000.0, 2000.0]
 
-        T2 = 273.15 + 30.0
-        c2 = 2000.0
+        for solvent in ["EC_DMC_1_1", "EC_EMC_3_7", "EMC_FEC_19_1"]:
+            root = pybamm.root_dir()
+            p = (
+                "pybamm/input/parameters/lithium-ion/electrolytes/lipf6_"
+                + solvent
+                + "_Landesfeind2019/"
+            )
+            k_path = os.path.join(root, p)
 
-        for solvent in ["EC_DMC_1_1"]:
-            electrolyte = pybamm.ParameterValues({}).read_parameters_csv(
-                pybamm.get_parameters_filepath(
-                    "input/parameters/lithium-ion/electrolytes/lipf6_"
+            sigma_e = pybamm.load_function(
+                os.path.join(
+                    k_path,
+                    "electrolyte_conductivity_" + solvent + "_Landesfeind2019.py",
+                )
+            )
+            D_e = pybamm.load_function(
+                os.path.join(
+                    k_path, "electrolyte_diffusivity_" + solvent + "_Landesfeind2019.py"
+                )
+            )
+            TDF = pybamm.load_function(
+                os.path.join(
+                    k_path, "electrolyte_TDF_" + solvent + "_Landesfeind2019.py"
+                )
+            )
+            tplus = pybamm.load_function(
+                os.path.join(
+                    k_path,
+                    "electrolyte_transference_number_"
                     + solvent
-                    + "_Landesfeind2019/parameters.csv"
+                    + "_Landesfeind2019.py",
                 )
             )
 
-            sigma_e = electrolyte["Electrolyte conductivity [S.m-1]"]
-            D_e = electrolyte["Electrolyte diffusivity [m2.s-1]"]
-            TDF = electrolyte["1 + dlnf/dlnc"]
-            tplus = electrolyte["Cation transference number"]
-
-            self.assertAlmostEqual(
-                [sigma_e(c1, T1).value, sigma_e(c2, T2).value],
-                data_sigma_e[solvent],
-                places=5,
-            )
-            self.assertAlmostEqual(
-                [D_e(c1, T1).value, D_e(c2, T2).value], data_D_e[solvent], places=15
-            )
-            self.assertAlmostEqual(
-                [TDF(c1, T1).value, TDF(c2, T2).value], data_TDF[solvent], places=5
-            )
-            self.assertAlmostEqual(
-                [tplus(c1, T1).value, tplus(c2, T2).value],
-                data_tplus[solvent],
-                places=5,
-            )
+            for i, _ in enumerate(T):
+                self.assertAlmostEqual(
+                    sigma_e(c[i], T[i]).value, data_sigma_e[solvent][i], places=5,
+                )
+                self.assertAlmostEqual(
+                    D_e(c[i], T[i]).value, data_D_e[solvent][i], places=5,
+                )
+                self.assertAlmostEqual(TDF(c[i], T[i]), data_TDF[solvent][i], places=5)
+                self.assertAlmostEqual(
+                    tplus(c[i], T[i]), data_tplus[solvent][i], places=5,
+                )
 
     def test_standard_lithium_parameters(self):
-        for solvent in ["EC_DMC_1_1"]:
+        for solvent in ["EC_DMC_1_1", "EC_EMC_3_7", "EMC_FEC_19_1"]:
             chemistry = pybamm.parameter_sets.Chen2020
             chemistry["electrolyte"] = "lipf6_" + solvent + "_Landesfeind2019"
             parameter_values = pybamm.ParameterValues(chemistry=chemistry)
