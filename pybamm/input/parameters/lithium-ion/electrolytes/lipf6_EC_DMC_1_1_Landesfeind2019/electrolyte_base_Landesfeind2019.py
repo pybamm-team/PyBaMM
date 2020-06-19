@@ -38,20 +38,13 @@ def electrolyte_diffusivity_base_Landesfeind2019(c_e, T, coeffs):
     """
     Diffusivity of LiPF6 in solvent_X as a function of ion concentration and
     temperature. The data comes from [1].
-<<<<<<< HEAD
-
-=======
->>>>>>> #1048 fixed EC-DMC electrolyte
     References
     ----------
     .. [1] Landesfeind, J. and Gasteiger, H.A., 2019. Temperature and Concentration
     Dependence of the Ionic Transport Properties of Lithium-Ion Battery Electrolytes.
     Journal of The Electrochemical Society, 166(14), pp.A3079-A3097.
-<<<<<<< HEAD
 
     Parameters
-=======
->>>>>>> #1048 fixed EC-DMC electrolyte
     ----------
     c_e: :class:`pybamm.Symbol`
         Dimensional electrolyte concentration
@@ -59,10 +52,6 @@ def electrolyte_diffusivity_base_Landesfeind2019(c_e, T, coeffs):
         Dimensional temperature
     coeffs: :class:`pybamm.Symbol`
         Fitting parameter coefficients
-<<<<<<< HEAD
-
-=======
->>>>>>> #1048 fixed EC-DMC electrolyte
     Returns
     -------
     :class:`pybamm.Symbol`
@@ -82,20 +71,13 @@ def electrolyte_TDF_base_Landesfeind2019(c_e, T, coeffs):
     """
     Thermodynamic factor (TDF) of LiPF6 in solvent_X as a function of ion concentration
     and temperature. The data comes from [1].
-<<<<<<< HEAD
-
-=======
->>>>>>> #1048 fixed EC-DMC electrolyte
     References
     ----------
     .. [1] Landesfeind, J. and Gasteiger, H.A., 2019. Temperature and Concentration
     Dependence of the Ionic Transport Properties of Lithium-Ion Battery Electrolytes.
     Journal of The Electrochemical Society, 166(14), pp.A3079-A3097.
-<<<<<<< HEAD
 
     Parameters
-=======
->>>>>>> #1048 fixed EC-DMC electrolyte
     ----------
     c_e: :class:`pybamm.Symbol`
         Dimensional electrolyte concentration
@@ -103,10 +85,6 @@ def electrolyte_TDF_base_Landesfeind2019(c_e, T, coeffs):
         Dimensional temperature
     coeffs: :class:`pybamm.Symbol`
         Fitting parameter coefficients
-<<<<<<< HEAD
-
-=======
->>>>>>> #1048 fixed EC-DMC electrolyte
     Returns
     -------
     :class:`pybamm.Symbol`
@@ -133,20 +111,13 @@ def electrolyte_transference_number_base_Landesfeind2019(c_e, T, coeffs):
     """
     Transference number of LiPF6 in solvent_X as a function of ion concentration and
     temperature. The data comes from [1].
-<<<<<<< HEAD
-
-=======
->>>>>>> #1048 fixed EC-DMC electrolyte
     References
     ----------
     .. [1] Landesfeind, J. and Gasteiger, H.A., 2019. Temperature and Concentration
     Dependence of the Ionic Transport Properties of Lithium-Ion Battery Electrolytes.
     Journal of The Electrochemical Society, 166(14), pp.A3079-A3097.
-<<<<<<< HEAD
 
     Parameters
-=======
->>>>>>> #1048 fixed EC-DMC electrolyte
     ----------
     c_e: :class:`pybamm.Symbol`
         Dimensional electrolyte concentration
@@ -154,10 +125,6 @@ def electrolyte_transference_number_base_Landesfeind2019(c_e, T, coeffs):
         Dimensional temperature
     coeffs: :class:`pybamm.Symbol`
         Fitting parameter coefficients
-<<<<<<< HEAD
-
-=======
->>>>>>> #1048 fixed EC-DMC electrolyte
     Returns
     -------
     :class:`pybamm.Symbol`
