@@ -6,7 +6,7 @@ import numpy as np
 
 def electrolyte_transference_number_EMC_FEC_19_1_Landesfeind2019(c_e, T=298.15):
     """
-    Transference number of LiPF6 in EMC:FEC (19:1 w:w) as a function of ion 
+    Transference number of LiPF6 in EMC:FEC (19:1 w:w) as a function of ion
     concentration and temperature. The data comes from [1].
     References
     ----------
@@ -24,17 +24,7 @@ def electrolyte_transference_number_EMC_FEC_19_1_Landesfeind2019(c_e, T=298.15):
         Electrolyte transference number
     """
     coeffs = np.array(
-        [
-            -1.22e1,
-            -3.05,
-            8.38e-2,
-            1.78,
-            1.51e-3,
-            -1.37e-4,
-            -2.45e-2,
-            -5.15e-3,
-            2.14e-5,
-        ]
+        [-1.22e1, -3.05, 8.38e-2, 1.78, 1.51e-3, -1.37e-4, -2.45e-2, -5.15e-3, 2.14e-5]
     )
 
     return electrolyte_transference_number_base_Landesfeind2019(c_e, T, coeffs)
