@@ -2,6 +2,7 @@
 
 ## Features
 
+-   Reformatted Landesfeind electrolytes ([#1064](https://github.com/pybamm-team/PyBaMM/pull/1064))
 -   Added `length_scales` attribute to models ([#1058](https://github.com/pybamm-team/PyBaMM/pull/1058))
 -   Added averaging in secondary dimensions ([#1057](https://github.com/pybamm-team/PyBaMM/pull/1057))
 
