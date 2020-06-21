@@ -155,7 +155,15 @@ class IDAKLUSolver(pybamm.BaseSolver):
             The times at which to compute the solution
         """
         if model.rhs_eval.form == "casadi":
+            # stack inputs
             inputs = casadi.vertcat(*[x for x in inputs.values()])
+            # raise warning about casadi format being slow
+            pybamm.logger.warning(
+                "Using casadi form for the IDA KLU solver is slow. "
+                "Set `model.convert_to_format='python'` for better performance. "
+                "For DAE models, this may also require changing the root method to "
+                "'lm'."
+            )
 
         if model.jacobian_eval is None:
             raise pybamm.SolverError("KLU requires the Jacobian to be provided")
