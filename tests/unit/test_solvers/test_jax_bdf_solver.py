@@ -27,7 +27,25 @@ class TestJaxBDFSolver(unittest.TestCase):
         t_eval = np.linspace(0, 1, 80)
         y0 = model.concatenated_initial_conditions.evaluate()
         rhs = pybamm.EvaluatorJax(model.concatenated_rhs)
-        y = pybamm.jax_bdf_integrate(rhs, y0, t_eval, rtol=1e-8, atol=1e-8)
+        def fun(t, y):
+            return rhs.evaluate(t=t, y=y).reshape(-1)
+
+        t0 = time.perf_counter()
+        y = pybamm.jax_bdf_integrate(fun, y0, t_eval, rtol=1e-8, atol=1e-8)
+        t1 = time.perf_counter() - t0
+
+        # test accuracy
+        np.testing.assert_allclose(y[0], np.exp(0.1 * t_eval),
+                                   rtol=1e-7, atol=1e-7)
+
+        t0 = time.perf_counter()
+        y = pybamm.jax_bdf_integrate(fun, y0, t_eval, rtol=1e-8, atol=1e-8)
+        t2 = time.perf_counter() - t0
+
+        # second run should be much quicker
+        self.assertLess(t2, t1)
+
+        # test second run is accurate
         np.testing.assert_allclose(y[0], np.exp(0.1 * t_eval),
                                    rtol=1e-7, atol=1e-7)
 
