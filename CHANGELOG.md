@@ -1,12 +1,12 @@
-# [Unreleased](https://github.com/pybamm-team/PyBaMM)
+# [v0.2.3](https://github.com/pybamm-team/PyBaMM/tree/v0.2.3) - 2020-06-22
+
+This release enables the use of [Google Colab](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/master/) for running example notebooks, and adds some small new features and bug fixes.
 
 ## Features
 
 -   Adapted examples to be run in Google Colab ([#1061](https://github.com/pybamm-team/PyBaMM/pull/1061))
 -   Added `length_scales` attribute to models ([#1058](https://github.com/pybamm-team/PyBaMM/pull/1058))
 -   Added averaging in secondary dimensions ([#1057](https://github.com/pybamm-team/PyBaMM/pull/1057))
-
-## Optimizations
 
 ## Bug fixes
 
