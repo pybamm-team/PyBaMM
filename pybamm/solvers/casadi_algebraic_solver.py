@@ -139,9 +139,9 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
 
                 # If there are no symbolic inputs, check the function is below the tol
                 # Skip this check if there are symbolic inputs
-                if success and (
-                    has_symbolic_inputs is True or np.all(casadi.fabs(fun) < self.tol)
-                ):
+                if success:  # and (
+                    #     has_symbolic_inputs is True or np.all(casadi.fabs(fun) < self.tol)
+                    # ):
                     # update initial guess for the next iteration
                     y0_alg = y_alg_sol
                     # update solution array
