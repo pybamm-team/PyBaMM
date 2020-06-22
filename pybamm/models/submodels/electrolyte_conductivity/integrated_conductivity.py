@@ -57,7 +57,6 @@ class Integrated(BaseElectrolyteConductivity):
         x_s = pybamm.standard_spatial_vars.x_s
         x_p = pybamm.standard_spatial_vars.x_p
         x_n_edge = pybamm.standard_spatial_vars.x_n_edge
-        # x_s_edge = pybamm.standard_spatial_vars.x_s_edge
         x_p_edge = pybamm.standard_spatial_vars.x_p_edge
 
         chi_av = param.chi(c_e_av)
@@ -74,7 +73,6 @@ class Integrated(BaseElectrolyteConductivity):
         i_e_n_edge = i_boundary_cc_0 * x_n_edge / l_n
         i_e_s_edge = pybamm.PrimaryBroadcastToEdges(i_boundary_cc_0, "separator")
         i_e_p_edge = i_boundary_cc_0 * (1 - x_p_edge) / l_p
-        # i_e_edge = pybamm.Concatenation(i_e_n_edge, i_e_s_edge, i_e_p_edge)
 
         # electrolyte potential
         indef_integral_n = (
@@ -151,10 +149,6 @@ class Integrated(BaseElectrolyteConductivity):
             )
             - integral_p
         )
-
-        # phi_e_n = 1 * phi_e_n + 10
-        # phi_e_s = 1 * phi_e_s + 10
-        # phi_e_p = 1 * phi_e_p + 10
 
         # concentration overpotential
         eta_c_av = (
