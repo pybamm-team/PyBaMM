@@ -4,7 +4,7 @@ import numpy as np
 
 def electrolyte_TDF_EC_EMC_3_7_Landesfeind2019(c_e, T=298.15):
     """
-    Thermodynamic factor of LiPF6 in EC:EMC (3:7 w:w) as a function of ion
+    Thermodynamic factor (TDF) of LiPF6 in EC:EMC (3:7 w:w) as a function of ion
     concentration and temperature. The data comes from [1].
 
     References

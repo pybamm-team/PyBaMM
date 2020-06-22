@@ -6,7 +6,7 @@ import numpy as np
 
 def electrolyte_transference_number_EC_DMC_1_1_Landesfeind2019(c_e, T=298.15):
     """
-    Transference number (TDF) of LiPF6 in EC:DMC (1:1 w:w) as a function of ion
+    Transference number of LiPF6 in EC:DMC (1:1 w:w) as a function of ion
     concentration and temperature. The data comes from [1].
 
     References
