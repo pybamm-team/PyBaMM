@@ -142,7 +142,6 @@ class CasadiConverter(object):
                 return casadi_func_diff(*converted_children)
             # Other functions
             else:
-                print('function is ',symbol.function)
                 return symbol._function_evaluate(converted_children)
         elif isinstance(symbol, pybamm.Concatenation):
             converted_children = [
