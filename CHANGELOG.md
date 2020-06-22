@@ -1,4 +1,4 @@
-# [v0.2.3](https://github.com/pybamm-team/PyBaMM/tree/v0.2.3) - 2020-06-22
+# [v0.2.3](https://github.com/pybamm-team/PyBaMM/tree/v0.2.3) - 2020-06-23
 
 This release enables the use of [Google Colab](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/master/) for running example notebooks, and adds some small new features and bug fixes.
 
