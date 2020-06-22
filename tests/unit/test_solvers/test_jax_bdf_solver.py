@@ -27,11 +27,12 @@ class TestJaxBDFSolver(unittest.TestCase):
         t_eval = np.linspace(0, 1, 80)
         y0 = model.concatenated_initial_conditions.evaluate()
         rhs = pybamm.EvaluatorJax(model.concatenated_rhs)
-        def fun(t, y):
-            return rhs.evaluate(t=t, y=y).reshape(-1)
+
+        def fun(t, y, inputs):
+            return rhs.evaluate(t=t, y=y, inputs=inputs).reshape(-1)
 
         t0 = time.perf_counter()
-        y = pybamm.jax_bdf_integrate(fun, y0, t_eval, rtol=1e-8, atol=1e-8)
+        y = pybamm.jax_bdf_integrate(fun, y0, t_eval, inputs=None, rtol=1e-8, atol=1e-8)
         t1 = time.perf_counter() - t0
 
         # test accuracy
@@ -48,6 +49,35 @@ class TestJaxBDFSolver(unittest.TestCase):
         # test second run is accurate
         np.testing.assert_allclose(y[0], np.exp(0.1 * t_eval),
                                    rtol=1e-7, atol=1e-7)
+
+    def test_solver_with_inputs(self):
+        # Create model
+        model = pybamm.BaseModel()
+        model.convert_to_format = "jax"
+        domain = ["negative electrode", "separator", "positive electrode"]
+        var = pybamm.Variable("var", domain=domain)
+        model.rhs = {var: -pybamm.InputParameter("rate") * var}
+        model.initial_conditions = {var: 1}
+
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
+
+        # Solve
+        t_eval = np.linspace(0, 10, 100)
+        y0 = model.concatenated_initial_conditions.evaluate()
+        rhs = pybamm.EvaluatorJax(model.concatenated_rhs)
+
+        def fun(t, y, inputs):
+            return rhs.evaluate(t=t, y=y, inputs=inputs).reshape(-1)
+
+        y = pybamm.jax_bdf_integrate(fun, y0, t_eval, inputs={
+                                     "rate": 0.1}, rtol=1e-9, atol=1e-9)
+
+        np.testing.assert_allclose(y[0], np.exp(-0.1 * t_eval))
+
 
 
 if __name__ == "__main__":
