@@ -74,7 +74,7 @@ class Array(pybamm.Symbol):
             if issparse(entries):
                 self._entries_string = str(entries.__dict__)
             else:
-                self._entries_string = entries.tostring()
+                self._entries_string = entries.tobytes()
 
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()`. """
