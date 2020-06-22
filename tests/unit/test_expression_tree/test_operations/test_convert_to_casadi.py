@@ -30,11 +30,11 @@ class TestCasadiConverter(unittest.TestCase):
         self.assertEqual(abs(c).to_casadi(), casadi.MX(1))
 
         # function
-        def sin(x):
-            return np.sin(x)
+        def square_plus_one(x):
+            return x ** 2 + 1
 
-        f = pybamm.Function(sin, b)
-        self.assertEqual(f.to_casadi(), casadi.MX(np.sin(1)))
+        f = pybamm.Function(square_plus_one, b)
+        self.assertEqual(f.to_casadi(), 2)
 
         def myfunction(x, y):
             return x + y
