@@ -21,6 +21,7 @@ def electrolyte_transference_number_EC_DMC_1_1_Landesfeind2019(c_e, T=298.15):
         Dimensional electrolyte concentration
     T: :class:`pybamm.Symbol`
         Dimensional temperature
+
     Returns
     -------
     :class:`pybamm.Symbol`

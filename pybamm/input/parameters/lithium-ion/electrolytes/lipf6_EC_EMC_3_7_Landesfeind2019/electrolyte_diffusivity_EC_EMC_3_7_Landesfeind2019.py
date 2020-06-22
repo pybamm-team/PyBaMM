@@ -8,6 +8,7 @@ def electrolyte_diffusivity_EC_EMC_3_7_Landesfeind2019(c_e, T):
     """
     Diffusivity of LiPF6 in EC:EMC (3:7 w:w) as a function of ion concentration and
     temperature. The data comes from [1].
+
     References
     ----------
     .. [1] Landesfeind, J. and Gasteiger, H.A., 2019. Temperature and Concentration
@@ -20,6 +21,7 @@ def electrolyte_diffusivity_EC_EMC_3_7_Landesfeind2019(c_e, T):
         Dimensional electrolyte concentration
     T: :class:`pybamm.Symbol`
         Dimensional temperature
+
     Returns
     -------
     :class:`pybamm.Symbol`
