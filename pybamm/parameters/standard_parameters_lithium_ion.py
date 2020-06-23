@@ -427,7 +427,8 @@ rho_p = pybamm.thermal_parameters.rho_p
 rho_cp = pybamm.thermal_parameters.rho_cp
 
 rho_k = pybamm.thermal_parameters.rho_k
-rho = rho_n * l_n + rho_s * l_s + rho_p * l_p
+# effective volumetric heat capacity
+rho = (rho_cn * l_cn + rho_n * l_n + rho_s * l_s + rho_p * l_p + rho_cp * l_cp) / l
 
 lambda_cn = pybamm.thermal_parameters.lambda_cn
 lambda_n = pybamm.thermal_parameters.lambda_n
