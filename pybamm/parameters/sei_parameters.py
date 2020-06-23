@@ -37,6 +37,13 @@ L_outer_0_dim = pybamm.Parameter("Initial outer SEI thickness [m]")
 
 L_sei_0_dim = L_inner_0_dim + L_outer_0_dim
 
+# EC reaction
+
+c_ec_0_dim = pybamm.Parameter("EC initial concentration in electrolyte [mol.m-3]")
+D_ec_dim = pybamm.Parameter("EC diffusivity [m2.s-1]")
+k_sei_dim = pybamm.Parameter("SEI kinetic rate constant [m.s-1]")
+U_sei_dim = pybamm.Parameter("SEI open-circuit potential [V]")
+
 # --------------------------------------------------------------------------------------
 # Dimensionless parameters
 
@@ -88,3 +95,10 @@ Gamma_SEI_n = (V_bar_inner_dimensional * i_typ * tau_discharge) / (
 Gamma_SEI_p = (V_bar_inner_dimensional * i_typ * tau_discharge) / (
     F * L_sei_0_dim * a_p * L_x
 )
+# EC reaction
+C_ec = L_sei_0_dim * j_scale_n / (F * c_ec_0_dim * D_ec_dim)
+C_sei_ec = F * k_sei_dim * c_ec_0_dim / j_scale_n * (
+    pybamm.exp(-(F * (U_n_ref - U_sei_dim) / (2 * R * T_ref))))
+C_sei_j = V_bar_inner_dimensional * j_scale_n * tau_discharge / (
+    2 * F * L_sei_0_dim)
+C_sei_eps = a_n * L_sei_0_dim * C_sei_j

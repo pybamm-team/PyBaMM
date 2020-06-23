@@ -69,6 +69,18 @@ Mohtat2020 = {
     "sei": "example",
     "citation": "Mohtat2020",
 }
+Ramadass2004 = {
+    "chemistry": "lithium-ion",
+    "cell": "sony_Ramadass2004",
+    "anode": "graphite_Ramadass2004",
+    "separator": "separator_Ecker2015",  # no values found, relevance?
+    "cathode": "lico2_Ramadass2004",
+    "electrolyte": "lipf6_Ramadass2004",
+    "experiment": "1C_discharge_from_full_Ramadass2004",
+    "sei": "ramadass2004",
+    "citation": "marquis2019asymptotic",
+}
+
 #
 # Lead-acid
 #
