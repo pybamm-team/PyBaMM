@@ -740,7 +740,7 @@ class Symbol(anytree.NodeMixin):
         # Default behaviour is to try to evaluate the object directly
         # Try with some large y, to avoid having to unpack (slow)
         try:
-            y = np.linspace(0.1, 0.9, int(1e4))
+            y = np.nan * np.ones((1000, 1))
             evaluated_self = self.evaluate(0, y, y, inputs="shape test")
         # If that fails, fall back to calculating how big y should really be
         except ValueError:
@@ -753,7 +753,7 @@ class Symbol(anytree.NodeMixin):
                     len(x._evaluation_array) for x in state_vectors_in_node
                 )
                 # Pick a y that won't cause RuntimeWarnings
-                y = np.linspace(0.1, 0.9, min_y_size)
+                y = np.nan * np.ones((min_y_size, 1))
             evaluated_self = self.evaluate(0, y, y, inputs="shape test")
 
         # Return shape of evaluated object
