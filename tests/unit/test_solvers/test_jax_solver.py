@@ -5,6 +5,7 @@ import sys
 import time
 import numpy as np
 
+
 class TestJaxSolver(unittest.TestCase):
     def test_model_solver(self):
         # Create model
@@ -21,31 +22,33 @@ class TestJaxSolver(unittest.TestCase):
         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
-        # Solve
-        # Make sure that passing in extra options works
-        solver = pybamm.JaxSolver(
-            rtol=1e-8, atol=1e-8
-        )
-        t_eval = np.linspace(0, 1, 80)
-        t0 = time.perf_counter()
-        solution = solver.solve(model, t_eval)
-        t_first_solve = time.perf_counter() - t0
-        np.testing.assert_array_equal(solution.t, t_eval)
-        np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t),
-                                   rtol=1e-7, atol=1e-7)
 
-        # Test time
-        self.assertEqual(
-            solution.total_time, solution.solve_time + solution.set_up_time
-        )
-        self.assertEqual(solution.termination, "final time")
+        for method in ['RK45', 'BDF']:
+            # Solve
+            # Make sure that passing in extra options works
+            solver = pybamm.JaxSolver(
+                method='BDF', rtol=1e-8, atol=1e-8
+            )
+            t_eval = np.linspace(0, 1, 80)
+            t0 = time.perf_counter()
+            solution = solver.solve(model, t_eval)
+            t_first_solve = time.perf_counter() - t0
+            np.testing.assert_array_equal(solution.t, t_eval)
+            np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t),
+                                       rtol=1e-7, atol=1e-7)
 
-        t0 = time.perf_counter()
-        second_solution = solver.solve(model, t_eval)
-        t_second_solve = time.perf_counter() - t0
+            # Test time
+            self.assertEqual(
+                solution.total_time, solution.solve_time + solution.set_up_time
+            )
+            self.assertEqual(solution.termination, "final time")
 
-        self.assertLess(t_second_solve, t_first_solve)
-        np.testing.assert_array_equal(second_solution.y, solution.y)
+            t0 = time.perf_counter()
+            second_solution = solver.solve(model, t_eval)
+            t_second_solve = time.perf_counter() - t0
+
+            self.assertLess(t_second_solve, t_first_solve)
+            np.testing.assert_array_equal(second_solution.y, solution.y)
 
     def test_solver_only_works_with_jax(self):
         model = pybamm.BaseModel()
