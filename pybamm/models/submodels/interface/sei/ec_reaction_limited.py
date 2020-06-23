@@ -74,9 +74,11 @@ class EcReactionLimited(BaseModel):
 
         j_sei = variables[self.domain + " electrode sei interfacial current density"]
         L_sei = variables["Total " + self.domain.lower() + " electrode sei thickness"]
-        C_ec = self.param.C_ec
         c_scale = self.param.c_ec_0_dim
         # concentration of EC on graphite surface, base case = 1
+        if self.domain == "Negative":
+            C_ec = self.param.C_ec_n
+
         c_ec = pybamm.Scalar(1) + j_sei * L_sei * C_ec
         c_ec_av = pybamm.x_average(c_ec)
         variables = {
@@ -107,9 +109,10 @@ class EcReactionLimited(BaseModel):
         L_sei = variables["Total " + domain + " sei thickness"]
         j_sei = variables[self.domain + " electrode sei interfacial current density"]
 
-        C_sei_j = self.param.C_sei_j
+        if self.domain == "Negative":
+            Gamma_SEI = self.param.Gamma_SEI_n
 
-        self.rhs = {L_sei: -j_sei * C_sei_j}
+        self.rhs = {L_sei: -Gamma_SEI * j_sei / 2}
 
     def set_algebraic(self, variables):
         phi_s_n = variables[self.domain + " electrode potential"]
@@ -135,8 +138,10 @@ class EcReactionLimited(BaseModel):
                 + self.domain.lower()
                 + " electrode total interfacial current density"
             ]
-        C_sei_ec = self.param.C_sei_ec
-        R_sei = self.param.R_sei
+
+        if self.domain == "Negative":
+            C_sei_ec = self.param.C_sei_ec_n
+            R_sei = self.param.R_sei_n
 
         # need to revise for thermal case
 

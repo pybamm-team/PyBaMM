@@ -61,6 +61,8 @@ class BaseBatteryModel(pybamm.BaseModel):
                     :class:`pybamm.sei.ElectronMigrationLimited`
                 - "interstitial-diffusion limited": \
                     :class:`pybamm.sei.InterstitialDiffusionLimited`
+                - "ec reaction limited": \
+                    :class:`pybamm.sei.EcReactionLimited`
             * "sei film resistance" : str
                 Set the submodel for additional term in the overpotential due to SEI.
                 The default value is "None" if the "sei" option is "None", and
@@ -86,7 +88,8 @@ class BaseBatteryModel(pybamm.BaseModel):
                     .. math::
                         \\eta_r = \\frac{F}{RT}
                         * (\\phi_s - \\phi_e - U - R_{sei} * L_{sei} * \\frac{I}{aL})
-
+            * "sei porosity change" : bool
+                Whether to include porosity change due to SEI formation (default False)
 
     **Extends:** :class:`pybamm.BaseModel`
     """
@@ -181,7 +184,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "cell_geometry": None,
             "external submodels": [],
             "sei": None,
-            "porosity": None,
+            "sei porosity change": False,
         }
         # Change the default for cell geometry based on which thermal option is provided
         extra_options = extra_options or {}

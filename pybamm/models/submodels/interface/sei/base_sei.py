@@ -54,9 +54,9 @@ class BaseModel(BaseInterface):
             v_bar = 1
         else:
             L_scale = param.L_sei_0_dim
-            n_scale = param.L_sei_0_dim * param.a_n / param.V_bar_inner_dimensional
+            n_scale = param.L_sei_0_dim * param.a_n_dim / param.V_bar_inner_dimensional
             n_outer_scale = (
-                param.L_sei_0_dim * param.a_n / param.V_bar_outer_dimensional
+                param.L_sei_0_dim * param.a_n_dim / param.V_bar_outer_dimensional
             )
             v_bar = param.v_bar
 

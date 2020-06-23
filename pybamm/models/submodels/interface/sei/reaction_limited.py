@@ -49,7 +49,8 @@ class ReactionLimited(BaseModel):
             ]
         L_sei = variables["Total " + self.domain.lower() + " electrode sei thickness"]
 
-        R_sei = param.R_sei
+        if self.domain == "Negative":
+            R_sei = self.param.R_sei_n
         alpha = 0.5
         # alpha = param.alpha
         if self.domain == "Negative":
