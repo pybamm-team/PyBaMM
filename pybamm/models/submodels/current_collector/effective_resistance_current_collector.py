@@ -319,6 +319,12 @@ class AlternativeEffectiveResistance2D(pybamm.BaseModel):
         self.name = "Effective resistance in current collector model (2D)"
         self.param = pybamm.standard_parameters_lithium_ion
 
+        # Set default length scales
+        self.length_scales = {
+            "current collector y": self.param.L_y,
+            "current collector z": self.param.L_z,
+        }
+
         # Get necessary parameters
         param = self.param
         l_cn = param.l_cn
