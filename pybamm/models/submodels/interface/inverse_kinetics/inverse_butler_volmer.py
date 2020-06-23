@@ -66,7 +66,7 @@ class InverseButlerVolmer(BaseInterface):
             L_sei = variables[
                 "Total " + self.domain.lower() + " electrode sei thickness"
             ]
-            eta_sei = -j_tot * L_sei * pybamm.sei_parameters.R_sei
+            eta_sei = -j_tot * L_sei * self.param.R_sei
         # Without SEI resistance
         else:
             eta_sei = pybamm.Scalar(0)

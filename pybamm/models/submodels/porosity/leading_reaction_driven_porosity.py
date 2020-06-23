@@ -38,12 +38,12 @@ class LeadingOrder(BaseModel):
         j_n = variables["X-averaged negative electrode interfacial current density"]
         j_p = variables["X-averaged positive electrode interfacial current density"]
         j_sei_n = variables[
-            "X-averaged negative electrode sei interfacial current density"]
-        beta_sei = pybamm.sei_parameters.C_sei_eps
+            "X-averaged negative electrode sei interfacial current density"
+        ]
+        beta_sei = self.param.beta_sei
 
         deps_n_dt = pybamm.PrimaryBroadcast(
-            -self.param.beta_surf_n * j_n
-            + beta_sei * j_sei_n, ["negative electrode"]
+            -self.param.beta_surf_n * j_n + beta_sei * j_sei_n, ["negative electrode"]
         )
         deps_s_dt = pybamm.FullBroadcast(
             0, "separator", auxiliary_domains={"secondary": "current collector"}

@@ -43,7 +43,7 @@ class BaseModel(BaseInterface):
         variables : dict
             The variables which can be derived from the SEI thicknesses.
         """
-        sp = pybamm.sei_parameters
+        param = self.param
 
         # Set scales to one for the "no SEI" model so that they are not required
         # by parameter values in general
@@ -53,10 +53,12 @@ class BaseModel(BaseInterface):
             n_outer_scale = 1
             v_bar = 1
         else:
-            L_scale = sp.L_sei_0_dim
-            n_scale = sp.L_sei_0_dim * sp.a_n / sp.V_bar_inner_dimensional
-            n_outer_scale = sp.L_sei_0_dim * sp.a_n / sp.V_bar_outer_dimensional
-            v_bar = sp.v_bar
+            L_scale = param.L_sei_0_dim
+            n_scale = param.L_sei_0_dim * param.a_n / param.V_bar_inner_dimensional
+            n_outer_scale = (
+                param.L_sei_0_dim * param.a_n / param.V_bar_outer_dimensional
+            )
+            v_bar = param.v_bar
 
         L_inner_av = pybamm.x_average(L_inner)
         L_outer_av = pybamm.x_average(L_outer)
@@ -122,9 +124,9 @@ class BaseModel(BaseInterface):
                 The variables which can be derived from the SEI thicknesses.
         """
         if self.domain == "Negative":
-            j_scale = self.param.interfacial_current_scale_n
+            j_scale = self.param.j_scale_n
         elif self.domain == "Positive":
-            j_scale = self.param.interfacial_current_scale_p
+            j_scale = self.param.j_scale_p
         j_i_av = pybamm.x_average(j_inner)
         j_o_av = pybamm.x_average(j_outer)
 
