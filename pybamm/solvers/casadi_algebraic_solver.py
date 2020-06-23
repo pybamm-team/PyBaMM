@@ -160,7 +160,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                         successfully, but maximum solution error ({})
                         above tolerance ({})
                         """.format(
-                            casadi.mmax(fun), self.tol
+                            casadi.mmax(casadi.fabs(fun)), self.tol
                         )
                     )
 

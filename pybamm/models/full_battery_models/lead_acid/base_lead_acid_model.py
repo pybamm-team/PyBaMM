@@ -21,6 +21,16 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         # Default timescale is discharge timescale
         self.timescale = self.param.tau_discharge
+
+        # Set default length scales
+        self.length_scales = {
+            "negative electrode": self.param.L_x,
+            "separator": self.param.L_x,
+            "positive electrode": self.param.L_x,
+            "current collector y": self.param.L_y,
+            "current collector z": self.param.L_z,
+        }
+
         self.set_standard_output_variables()
 
     @property

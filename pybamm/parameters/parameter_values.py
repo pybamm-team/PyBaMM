@@ -386,6 +386,10 @@ class ParameterValues:
         # Process timescale
         model.timescale = self.process_symbol(model.timescale)
 
+        # Process length scales
+        for domain, scale in model.length_scales.items():
+            model.length_scales[domain] = self.process_symbol(scale)
+
         pybamm.logger.info("Finish setting parameters for {}".format(model.name))
 
         return model
