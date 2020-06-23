@@ -40,6 +40,12 @@ class EffectiveResistance(pybamm.BaseModel):
         self.options = options
         self.param = pybamm.standard_parameters_lithium_ion
 
+        # Set default length scales
+        self.length_scales = {
+            "current collector y": self.param.L_y,
+            "current collector z": self.param.L_z,
+        }
+
         self.variables = self.get_fundamental_variables()
         self.set_algebraic(self.variables)
         self.set_boundary_conditions(self.variables)
