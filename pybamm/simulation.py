@@ -298,13 +298,16 @@ class Simulation:
 
         if self.built_model:
             return None
-
-        self.set_parameters()
-        self._mesh = pybamm.Mesh(self._geometry, self._submesh_types, self._var_pts)
-        self._disc = pybamm.Discretisation(self._mesh, self._spatial_methods)
-        self._built_model = self._disc.process_model(
-            self._model_with_set_params, inplace=False, check_model=check_model
-        )
+        elif self.model.is_discretised:
+            self._model_with_set_params = self.model
+            self._built_model = self.model
+        else:
+            self.set_parameters()
+            self._mesh = pybamm.Mesh(self._geometry, self._submesh_types, self._var_pts)
+            self._disc = pybamm.Discretisation(self._mesh, self._spatial_methods)
+            self._built_model = self._disc.process_model(
+                self._model_with_set_params, inplace=False, check_model=check_model
+            )
 
     def solve(
         self,
@@ -415,13 +418,21 @@ class Simulation:
                 t_eval = np.linspace(0, t_end, 100)
 
             self.t_eval = t_eval
-            self._solution = solver.solve(self.built_model, t_eval, inputs=inputs)
+            self._solution = solver.solve(
+                self.built_model,
+                t_eval,
+                external_variables=external_variables,
+                inputs=inputs,
+            )
 
         elif self.operating_mode == "with experiment":
             if t_eval is not None:
                 pybamm.logger.warning(
                     "Ignoring t_eval as solution times are specified by the experiment"
                 )
+            # Re-initialize solution, e.g. for solving multiple times with different
+            # inputs without having to build the simulation again
+            self._solution = None
             # Step through all experimental conditions
             inputs = inputs or {}
             pybamm.logger.info("Start running experiment")
@@ -447,10 +458,10 @@ class Simulation:
                 ):
                     pybamm.logger.warning(
                         "\n\n\tExperiment is infeasible: '{}' ".format(
-                            self._solution.termination,
+                            self._solution.termination
                         )
                         + "was triggered during '{}'. ".format(
-                            self.experiment.operating_conditions_strings[idx],
+                            self.experiment.operating_conditions_strings[idx]
                         )
                         + "Try reducing current, shortening the time interval, "
                         "or reducing the period.\n\n"

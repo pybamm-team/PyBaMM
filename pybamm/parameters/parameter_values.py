@@ -6,6 +6,7 @@ import pandas as pd
 import os
 import numbers
 from pprint import pformat
+from collections import defaultdict
 
 
 class ParameterValues:
@@ -72,8 +73,9 @@ class ParameterValues:
         if values is not None:
             # If base_parameters is a filename, load from that filename
             if isinstance(values, str):
-                path = os.path.split(values)[0]
-                values = self.read_parameters_csv(values)
+                file_path = self.find_parameter(values)
+                path = os.path.split(file_path)[0]
+                values = self.read_parameters_csv(file_path)
             else:
                 path = None
             # Don't check parameter already exists when first creating it
@@ -132,10 +134,7 @@ class ParameterValues:
         Load standard set of components from a 'chemistry' dictionary
         """
         base_chemistry = chemistry["chemistry"]
-        # Create path to file
-        path = os.path.join(
-            pybamm.root_dir(), "pybamm", "input", "parameters", base_chemistry
-        )
+
         # Load each component name
 
         component_groups = [
@@ -162,18 +161,20 @@ class ParameterValues:
                     )
                 )
             # Create path to component and load values
-            component_path = os.path.join(path, component_group + "s", component)
-            component_params = self.read_parameters_csv(
-                pybamm.get_parameters_filepath(
-                    os.path.join(component_path, "parameters.csv")
-                )
+            component_path = os.path.join(
+                base_chemistry, component_group + "s", component
             )
+            file_path = self.find_parameter(
+                os.path.join(component_path, "parameters.csv")
+            )
+            component_params = self.read_parameters_csv(file_path)
+
             # Update parameters, making sure to check any conflicts
             self.update(
                 component_params,
                 check_conflict=True,
                 check_already_exists=False,
-                path=component_path,
+                path=os.path.dirname(file_path),
             )
 
         # register (list of) citations
@@ -385,6 +386,10 @@ class ParameterValues:
         # Process timescale
         model.timescale = self.process_symbol(model.timescale)
 
+        # Process length scales
+        for domain, scale in model.length_scales.items():
+            model.length_scales[domain] = self.process_symbol(scale)
+
         pybamm.logger.info("Finish setting parameters for {}".format(model.name))
 
         return model
@@ -435,22 +440,22 @@ class ParameterValues:
 
         Parameters
         ----------
-        geometry : :class:`pybamm.Geometry`
-                Geometry specs to assign parameter values to
+        geometry : dict
+            Geometry specs to assign parameter values to
         """
         for domain in geometry:
-            for prim_sec_tabs, variables in geometry[domain].items():
+            for spatial_variable, spatial_limits in geometry[domain].items():
                 # process tab information if using 1 or 2D current collectors
-                if prim_sec_tabs == "tabs":
-                    for tab, position_size in variables.items():
+                if spatial_variable == "tabs":
+                    for tab, position_size in spatial_limits.items():
                         for position_size, sym in position_size.items():
-                            geometry[domain][prim_sec_tabs][tab][
+                            geometry[domain]["tabs"][tab][
                                 position_size
                             ] = self.process_symbol(sym)
                 else:
-                    for spatial_variable, spatial_limits in variables.items():
-                        for lim, sym in spatial_limits.items():
-                            geometry[domain][prim_sec_tabs][spatial_variable][
+                    for lim, sym in spatial_limits.items():
+                        if isinstance(sym, pybamm.Symbol):
+                            geometry[domain][spatial_variable][
                                 lim
                             ] = self.process_symbol(sym)
 
@@ -487,9 +492,12 @@ class ParameterValues:
                 # Scalar inherits name (for updating parameters) and domain (for
                 # Broadcast)
                 return pybamm.Scalar(value, name=symbol.name, domain=symbol.domain)
-            elif isinstance(value, pybamm.InputParameter):
-                value.domain = symbol.domain
-                return value
+            elif isinstance(value, pybamm.Symbol):
+                new_value = self.process_symbol(value)
+                new_value.domain = symbol.domain
+                return new_value
+            else:
+                raise TypeError("Cannot process parameter '{}'".format(value))
 
         elif isinstance(symbol, pybamm.FunctionParameter):
             new_children = [self.process_symbol(child) for child in symbol.children]
@@ -599,3 +607,148 @@ class ParameterValues:
 
     def _ipython_key_completions_(self):
         return list(self._dict_items.keys())
+
+    def export_csv(self, filename):
+
+        # process functions and data to output
+        # like they appear in inputs csv files
+        parameter_output = {}
+        for key, val in self.items():
+            if callable(val):
+                val = "[function]" + val.__name__
+            elif isinstance(val, tuple):
+                val = "[data]" + val[0]
+            parameter_output[key] = [val]
+
+        df = pd.DataFrame(parameter_output)
+        df = df.transpose()
+        df.to_csv(filename, header=None)
+
+    def print_parameters(self, parameters, output_file=None):
+        """
+        Return dictionary of evaluated parameters, and optionally print these evaluated
+        parameters to an output file.
+        For dimensionless parameters that depend on the C-rate, the value is given as a
+        function of the C-rate (either x * Crate or x / Crate depending on the
+        dependence)
+
+        Parameters
+        ----------
+        parameters : class or dict containing :class:`pybamm.Parameter` objects
+            Class or dictionary containing all the parameters to be evaluated
+        output_file : string, optional
+            The file to print parameters to. If None, the parameters are not printed,
+            and this function simply acts as a test that all the parameters can be
+            evaluated, and returns the dictionary of evaluated parameters.
+
+        Returns
+        -------
+        evaluated_parameters : defaultdict
+            The evaluated parameters, for further processing if needed
+
+        Notes
+        -----
+        A C-rate of 1 C is the current required to fully discharge the battery in 1
+        hour, 2 C is current to discharge the battery in 0.5 hours, etc
+        """
+        # Set list of attributes to ignore, for when we are evaluating parameters from
+        # a class of parameters
+        ignore = [
+            "__name__",
+            "__doc__",
+            "__package__",
+            "__loader__",
+            "__spec__",
+            "__file__",
+            "__cached__",
+            "__builtins__",
+            "absolute_import",
+            "division",
+            "print_function",
+            "unicode_literals",
+            "pybamm",
+            "constants",
+            "np",
+        ]
+
+        # If 'parameters' is a class, extract the dict
+        if not isinstance(parameters, dict):
+            parameters = {
+                k: v for k, v in parameters.__dict__.items() if k not in ignore
+            }
+
+        evaluated_parameters = defaultdict(list)
+        # Calculate parameters for each C-rate
+        for Crate in [1, 10]:
+            # Update Crate
+            capacity = self.get("Cell capacity [A.h]")
+            if capacity is not None:
+                self.update(
+                    {"Current function [A]": Crate * capacity},
+                    check_already_exists=False,
+                )
+            for name, symbol in parameters.items():
+                if not callable(symbol):
+                    proc_symbol = self.process_symbol(symbol)
+                    if not (
+                        callable(proc_symbol)
+                        or proc_symbol.has_symbol_of_classes(
+                            (pybamm.Concatenation, pybamm.Broadcast)
+                        )
+                    ):
+                        evaluated_parameters[name].append(proc_symbol.evaluate(t=0))
+
+        # Calculate C-dependence of the parameters based on the difference between the
+        # value at 1C and the value at C / 10
+        for name, values in evaluated_parameters.items():
+            if values[1] == 0 or abs(values[0] / values[1] - 1) < 1e-10:
+                C_dependence = ""
+            elif abs(values[0] / values[1] - 10) < 1e-10:
+                C_dependence = " * Crate"
+            elif abs(values[0] / values[1] - 0.1) < 1e-10:
+                C_dependence = " / Crate"
+            evaluated_parameters[name] = (values[0], C_dependence)
+        # Print the evaluated_parameters dict to output_file
+        if output_file:
+            self.print_evaluated_parameters(evaluated_parameters, output_file)
+
+        return evaluated_parameters
+
+    def print_evaluated_parameters(self, evaluated_parameters, output_file):
+        """
+        Print a dictionary of evaluated parameters to an output file
+
+        Parameters
+        ----------
+        evaluated_parameters : defaultdict
+            The evaluated parameters, for further processing if needed
+        output_file : string, optional
+            The file to print parameters to. If None, the parameters are not printed,
+            and this function simply acts as a test that all the parameters can be
+            evaluated
+
+        """
+        # Get column width for pretty printing
+        column_width = max(len(name) for name in evaluated_parameters.keys())
+        s = "{{:>{}}}".format(column_width)
+        with open(output_file, "w") as file:
+            for name, (value, C_dependence) in sorted(evaluated_parameters.items()):
+                if 0.001 < abs(value) < 1000:
+                    file.write(
+                        (s + " : {:10.4g}{!s}\n").format(name, value, C_dependence)
+                    )
+                else:
+                    file.write(
+                        (s + " : {:10.3E}{!s}\n").format(name, value, C_dependence)
+                    )
+
+    @staticmethod
+    def find_parameter(path):
+        """Look for parameter file in the different locations
+        in PARAMETER_PATH
+        """
+        for location in pybamm.PARAMETER_PATH:
+            trial_path = os.path.join(location, path)
+            if os.path.isfile(trial_path):
+                return trial_path
+        raise FileNotFoundError("Could not find parameter {}".format(path))

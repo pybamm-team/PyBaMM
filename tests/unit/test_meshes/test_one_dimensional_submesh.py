@@ -20,7 +20,7 @@ class TestSubMesh1D(unittest.TestCase):
 
 class TestUniform1DSubMesh(unittest.TestCase):
     def test_exceptions(self):
-        lims = [[0, 1], [0, 1]]
+        lims = {"a": 1, "b": 2}
         with self.assertRaises(pybamm.GeometryError):
             pybamm.Uniform1DSubMesh(lims, None)
 
@@ -30,48 +30,37 @@ class TestUniform1DSubMesh(unittest.TestCase):
         )
 
         geometry = {
-            "negative particle": {
-                "primary": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
-            }
+            "negative particle": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
         }
 
         submesh_types = {
             "negative particle": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh)
         }
         var_pts = {r: 20}
-        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
         # create mesh
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
         # check boundary locations
-        self.assertEqual(mesh["negative particle"][0].edges[0], 0)
-        self.assertEqual(mesh["negative particle"][0].edges[-1], 1)
+        self.assertEqual(mesh["negative particle"].edges[0], 0)
+        self.assertEqual(mesh["negative particle"].edges[-1], 1)
 
         # check number of edges and nodes
-        self.assertEqual(len(mesh["negative particle"][0].nodes), var_pts[r])
+        self.assertEqual(len(mesh["negative particle"].nodes), var_pts[r])
         self.assertEqual(
-            len(mesh["negative particle"][0].edges),
-            len(mesh["negative particle"][0].nodes) + 1,
+            len(mesh["negative particle"].edges),
+            len(mesh["negative particle"].nodes) + 1,
         )
 
 
 class TestExponential1DSubMesh(unittest.TestCase):
-    def test_exceptions(self):
-        lims = [[0, 1], [0, 1]]
-        mesh = pybamm.MeshGenerator(pybamm.Exponential1DSubMesh)
-        with self.assertRaises(pybamm.GeometryError):
-            mesh(lims, None)
-
     def test_symmetric_mesh_creation_no_parameters_even(self):
         r = pybamm.SpatialVariable(
             "r", domain=["negative particle"], coord_sys="spherical polar"
         )
 
         geometry = {
-            "negative particle": {
-                "primary": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
-            }
+            "negative particle": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
         }
 
         submesh_params = {"side": "symmetric"}
@@ -81,20 +70,19 @@ class TestExponential1DSubMesh(unittest.TestCase):
             )
         }
         var_pts = {r: 20}
-        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
         # create mesh
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
         # check boundary locations
-        self.assertEqual(mesh["negative particle"][0].edges[0], 0)
-        self.assertEqual(mesh["negative particle"][0].edges[-1], 1)
+        self.assertEqual(mesh["negative particle"].edges[0], 0)
+        self.assertEqual(mesh["negative particle"].edges[-1], 1)
 
         # check number of edges and nodes
-        self.assertEqual(len(mesh["negative particle"][0].nodes), var_pts[r])
+        self.assertEqual(len(mesh["negative particle"].nodes), var_pts[r])
         self.assertEqual(
-            len(mesh["negative particle"][0].edges),
-            len(mesh["negative particle"][0].nodes) + 1,
+            len(mesh["negative particle"].edges),
+            len(mesh["negative particle"].nodes) + 1,
         )
 
     def test_symmetric_mesh_creation_no_parameters_odd(self):
@@ -103,9 +91,7 @@ class TestExponential1DSubMesh(unittest.TestCase):
         )
 
         geometry = {
-            "negative particle": {
-                "primary": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
-            }
+            "negative particle": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
         }
 
         submesh_params = {"side": "symmetric", "stretch": 1.5}
@@ -115,20 +101,19 @@ class TestExponential1DSubMesh(unittest.TestCase):
             )
         }
         var_pts = {r: 21}
-        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
         # create mesh
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
         # check boundary locations
-        self.assertEqual(mesh["negative particle"][0].edges[0], 0)
-        self.assertEqual(mesh["negative particle"][0].edges[-1], 1)
+        self.assertEqual(mesh["negative particle"].edges[0], 0)
+        self.assertEqual(mesh["negative particle"].edges[-1], 1)
 
         # check number of edges and nodes
-        self.assertEqual(len(mesh["negative particle"][0].nodes), var_pts[r])
+        self.assertEqual(len(mesh["negative particle"].nodes), var_pts[r])
         self.assertEqual(
-            len(mesh["negative particle"][0].edges),
-            len(mesh["negative particle"][0].nodes) + 1,
+            len(mesh["negative particle"].edges),
+            len(mesh["negative particle"].nodes) + 1,
         )
 
     def test_left_mesh_creation_no_parameters(self):
@@ -137,9 +122,7 @@ class TestExponential1DSubMesh(unittest.TestCase):
         )
 
         geometry = {
-            "negative particle": {
-                "primary": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
-            }
+            "negative particle": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
         }
 
         submesh_params = {"side": "left"}
@@ -149,20 +132,19 @@ class TestExponential1DSubMesh(unittest.TestCase):
             )
         }
         var_pts = {r: 21}
-        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
         # create mesh
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
         # check boundary locations
-        self.assertEqual(mesh["negative particle"][0].edges[0], 0)
-        self.assertEqual(mesh["negative particle"][0].edges[-1], 1)
+        self.assertEqual(mesh["negative particle"].edges[0], 0)
+        self.assertEqual(mesh["negative particle"].edges[-1], 1)
 
         # check number of edges and nodes
-        self.assertEqual(len(mesh["negative particle"][0].nodes), var_pts[r])
+        self.assertEqual(len(mesh["negative particle"].nodes), var_pts[r])
         self.assertEqual(
-            len(mesh["negative particle"][0].edges),
-            len(mesh["negative particle"][0].nodes) + 1,
+            len(mesh["negative particle"].edges),
+            len(mesh["negative particle"].nodes) + 1,
         )
 
     def test_right_mesh_creation_no_parameters(self):
@@ -171,9 +153,7 @@ class TestExponential1DSubMesh(unittest.TestCase):
         )
 
         geometry = {
-            "negative particle": {
-                "primary": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
-            }
+            "negative particle": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
         }
 
         submesh_params = {"side": "right", "stretch": 2}
@@ -183,70 +163,57 @@ class TestExponential1DSubMesh(unittest.TestCase):
             )
         }
         var_pts = {r: 20}
-        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
         # create mesh
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
         # check boundary locations
-        self.assertEqual(mesh["negative particle"][0].edges[0], 0)
-        self.assertEqual(mesh["negative particle"][0].edges[-1], 1)
+        self.assertEqual(mesh["negative particle"].edges[0], 0)
+        self.assertEqual(mesh["negative particle"].edges[-1], 1)
 
         # check number of edges and nodes
-        self.assertEqual(len(mesh["negative particle"][0].nodes), var_pts[r])
+        self.assertEqual(len(mesh["negative particle"].nodes), var_pts[r])
         self.assertEqual(
-            len(mesh["negative particle"][0].edges),
-            len(mesh["negative particle"][0].nodes) + 1,
+            len(mesh["negative particle"].edges),
+            len(mesh["negative particle"].nodes) + 1,
         )
 
 
 class TestChebyshev1DSubMesh(unittest.TestCase):
-    def test_exceptions(self):
-        lims = [[0, 1], [0, 1]]
-        with self.assertRaises(pybamm.GeometryError):
-            pybamm.Chebyshev1DSubMesh(lims, None)
-
     def test_mesh_creation_no_parameters(self):
         r = pybamm.SpatialVariable(
             "r", domain=["negative particle"], coord_sys="spherical polar"
         )
 
         geometry = {
-            "negative particle": {
-                "primary": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
-            }
+            "negative particle": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
         }
 
         submesh_types = {
             "negative particle": pybamm.MeshGenerator(pybamm.Chebyshev1DSubMesh)
         }
         var_pts = {r: 20}
-        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
         # create mesh
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
         # check boundary locations
-        self.assertEqual(mesh["negative particle"][0].edges[0], 0)
-        self.assertEqual(mesh["negative particle"][0].edges[-1], 1)
+        self.assertEqual(mesh["negative particle"].edges[0], 0)
+        self.assertEqual(mesh["negative particle"].edges[-1], 1)
 
         # check number of edges and nodes
-        self.assertEqual(len(mesh["negative particle"][0].nodes), var_pts[r])
+        self.assertEqual(len(mesh["negative particle"].nodes), var_pts[r])
         self.assertEqual(
-            len(mesh["negative particle"][0].edges),
-            len(mesh["negative particle"][0].nodes) + 1,
+            len(mesh["negative particle"].edges),
+            len(mesh["negative particle"].nodes) + 1,
         )
 
 
 class TestUser1DSubMesh(unittest.TestCase):
     def test_exceptions(self):
-        lims = [[0, 1], [0, 1]]
         edges = np.array([0, 0.3, 1])
         submesh_params = {"edges": edges}
         mesh = pybamm.MeshGenerator(pybamm.UserSupplied1DSubMesh, submesh_params)
-        # test too many lims
-        with self.assertRaises(pybamm.GeometryError):
-            mesh(lims, None)
 
         x_n = pybamm.standard_spatial_vars.x_n
 
@@ -279,9 +246,7 @@ class TestUser1DSubMesh(unittest.TestCase):
         )
 
         geometry = {
-            "negative particle": {
-                "primary": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
-            }
+            "negative particle": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
         }
 
         edges = np.array([0, 0.3, 1])
@@ -292,20 +257,19 @@ class TestUser1DSubMesh(unittest.TestCase):
             )
         }
         var_pts = {r: len(edges) - 1}
-        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
         # create mesh
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
         # check boundary locations
-        self.assertEqual(mesh["negative particle"][0].edges[0], 0)
-        self.assertEqual(mesh["negative particle"][0].edges[-1], 1)
+        self.assertEqual(mesh["negative particle"].edges[0], 0)
+        self.assertEqual(mesh["negative particle"].edges[-1], 1)
 
         # check number of edges and nodes
-        self.assertEqual(len(mesh["negative particle"][0].nodes), var_pts[r])
+        self.assertEqual(len(mesh["negative particle"].nodes), var_pts[r])
         self.assertEqual(
-            len(mesh["negative particle"][0].edges),
-            len(mesh["negative particle"][0].nodes) + 1,
+            len(mesh["negative particle"].edges),
+            len(mesh["negative particle"].nodes) + 1,
         )
 
 

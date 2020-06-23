@@ -2,10 +2,12 @@ name: PyBaMM
 
 on:
   push:
+    
+  pull_request:
 
   # everyday at 3 am UTC
   schedule:
-    - cron:  '* 3 * * *'
+    - cron:  '0 3 * * *'
 
 jobs:
   
@@ -91,16 +93,22 @@ jobs:
         export LD_LIBRARY_PATH=$HOME/.local/lib:scikits.odes/sundials5/lib:$LD_LIBRARY_PATH
         pip install -e .[docs]
         python run-tests.py --doctest
-    
+
     - name: Install dev dependencies and run example tests
       if: matrix.os != 'windows-latest'
       run: |
         export LD_LIBRARY_PATH=$HOME/.local/lib:scikits.odes/sundials5/lib:$LD_LIBRARY_PATH
         pip install -e .[dev]
         python run-tests.py --examples
-        
-    - name: Instal and run coverage
-      if: success() && (matrix.os == 'unbuntu-latest' && matrix.python-version == 3.7)
+
+    - name: Install and run coverage
+      if: success() && (matrix.os == 'ubuntu-latest' && matrix.python-version == 3.7)
       run: |
-        pip install coverage codecov
-        codecov
+        pip install coverage
+        export LD_LIBRARY_PATH=$HOME/.local/lib:scikits.odes/sundials5/lib:$LD_LIBRARY_PATH
+        coverage run run-tests.py --nosub
+        coverage xml
+
+    - name: Upload coverage report
+      if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.7
+      uses: codecov/codecov-action@v1

@@ -101,6 +101,28 @@ class CasadiConverter(object):
                 return casadi.mmax(*converted_children)
             elif symbol.function == np.abs:
                 return casadi.fabs(*converted_children)
+            elif symbol.function == np.sqrt:
+                return casadi.sqrt(*converted_children)
+            elif symbol.function == np.sin:
+                return casadi.sin(*converted_children)
+            elif symbol.function == np.arcsinh:
+                return casadi.arcsinh(*converted_children)
+            elif symbol.function == np.arccosh:
+                return casadi.arccosh(*converted_children)
+            elif symbol.function == np.tanh:
+                return casadi.tanh(*converted_children)
+            elif symbol.function == np.cosh:
+                return casadi.cosh(*converted_children)
+            elif symbol.function == np.sinh:
+                return casadi.sinh(*converted_children)
+            elif symbol.function == np.cos:
+                return casadi.cos(*converted_children)
+            elif symbol.function == np.exp:
+                return casadi.exp(*converted_children)
+            elif symbol.function == np.log:
+                return casadi.log(*converted_children)
+            elif symbol.function == np.sign:
+                return casadi.sign(*converted_children)
             elif isinstance(symbol.function, (PchipInterpolator, CubicSpline)):
                 return casadi.interpolant("LUT", "bspline", [symbol.x], symbol.y)(
                     *converted_children

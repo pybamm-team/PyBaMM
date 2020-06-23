@@ -150,7 +150,7 @@ class PrimaryBroadcastToEdges(PrimaryBroadcast):
         super().__init__(child, broadcast_domain, name)
         self.broadcast_type = "primary to edges"
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         return True
 
 
@@ -244,7 +244,7 @@ class SecondaryBroadcastToEdges(SecondaryBroadcast):
         super().__init__(child, broadcast_domain, name)
         self.broadcast_type = "secondary to edges"
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         return True
 
 
@@ -305,7 +305,7 @@ class FullBroadcastToEdges(FullBroadcast):
         super().__init__(child, broadcast_domain, auxiliary_domains, name)
         self.broadcast_type = "full to edges"
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         return True
 
 

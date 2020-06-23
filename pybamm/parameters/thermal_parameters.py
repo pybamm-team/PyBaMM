@@ -65,6 +65,8 @@ h_tab_n_dim = pybamm.Parameter("Negative tab heat transfer coefficient [W.m-2.K-
 h_tab_p_dim = pybamm.Parameter("Positive tab heat transfer coefficient [W.m-2.K-1]")
 h_edge_dim = pybamm.Parameter("Edge heat transfer coefficient [W.m-2.K-1]")
 
+h_total_dim = pybamm.Parameter("Total heat transfer coefficient [W.m-2.K-1]")
+
 # Typical temperature rise
 Delta_T = pybamm.Scalar(1)
 
@@ -110,6 +112,7 @@ h_tab_n = h_tab_n_dim * pybamm.geometric_parameters.L_x / lambda_eff_dim
 h_tab_p = h_tab_p_dim * pybamm.geometric_parameters.L_x / lambda_eff_dim
 h_cn = h_cn_dim * pybamm.geometric_parameters.L_x / lambda_eff_dim
 h_cp = h_cp_dim * pybamm.geometric_parameters.L_x / lambda_eff_dim
+h_total = h_total_dim * pybamm.geometric_parameters.L_x / lambda_eff_dim
 
 
 T_init = (T_init_dim - T_ref) / Delta_T

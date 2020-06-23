@@ -64,23 +64,28 @@ class BaseOutputTest(object):
         self.disc = disc
         self.solution = solution
         self.operating_condition = operating_condition
-        self.t = solution.t
 
-        self.x_n = disc.mesh["negative electrode"][0].nodes
-        self.x_s = disc.mesh["separator"][0].nodes
-        self.x_p = disc.mesh["positive electrode"][0].nodes
+        # Use dimensional time and space
+        self.t = solution.t * model.timescale_eval
+
+        L_x = param.evaluate(pybamm.geometric_parameters.L_x)
+        self.x_n = disc.mesh["negative electrode"].nodes * L_x
+        self.x_s = disc.mesh["separator"].nodes * L_x
+        self.x_p = disc.mesh["positive electrode"].nodes * L_x
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-        self.x = disc.mesh.combine_submeshes(*whole_cell)[0].nodes
-        self.x_n_edge = disc.mesh["negative electrode"][0].edges
-        self.x_s_edge = disc.mesh["separator"][0].edges
-        self.x_p_edge = disc.mesh["positive electrode"][0].edges
-        self.x_edge = disc.mesh.combine_submeshes(*whole_cell)[0].edges
+        self.x = disc.mesh.combine_submeshes(*whole_cell).nodes * L_x
+        self.x_n_edge = disc.mesh["negative electrode"].edges * L_x
+        self.x_s_edge = disc.mesh["separator"].edges * L_x
+        self.x_p_edge = disc.mesh["positive electrode"].edges * L_x
+        self.x_edge = disc.mesh.combine_submeshes(*whole_cell).edges * L_x
 
         if isinstance(self.model, pybamm.lithium_ion.BaseModel):
-            self.r_n = disc.mesh["negative particle"][0].nodes
-            self.r_p = disc.mesh["positive particle"][0].nodes
-            self.r_n_edge = disc.mesh["negative particle"][0].edges
-            self.r_p_edge = disc.mesh["positive particle"][0].edges
+            R_n = param.evaluate(pybamm.geometric_parameters.R_n)
+            R_p = param.evaluate(pybamm.geometric_parameters.R_p)
+            self.r_n = disc.mesh["negative particle"].nodes * R_n
+            self.r_p = disc.mesh["positive particle"].nodes * R_p
+            self.r_n_edge = disc.mesh["negative particle"].edges * R_n
+            self.r_p_edge = disc.mesh["positive particle"].edges * R_p
 
         # Useful parameters
         self.l_n = param.evaluate(pybamm.geometric_parameters.l_n)
@@ -93,7 +98,7 @@ class BaseOutputTest(object):
         else:
             current_param = pybamm.electrical_parameters.current_with_time
 
-        self.i_cell = param.process_symbol(current_param).evaluate(self.t)
+        self.i_cell = param.process_symbol(current_param).evaluate(solution.t)
 
 
 class VoltageTests(BaseOutputTest):
@@ -109,6 +114,8 @@ class VoltageTests(BaseOutputTest):
             "X-averaged positive electrode reaction overpotential [V]"
         ]
         self.eta_r_av = solution["X-averaged reaction overpotential [V]"]
+
+        self.eta_sei_av = solution["X-averaged sei film overpotential [V]"]
 
         self.eta_e_av = solution["X-averaged electrolyte overpotential [V]"]
         self.delta_phi_s_av = solution["X-averaged solid phase ohmic losses [V]"]
@@ -229,7 +236,8 @@ class VoltageTests(BaseOutputTest):
             self.ocv_av(self.t)
             + self.eta_r_av(self.t)
             + self.eta_e_av(self.t)
-            + self.delta_phi_s_av(self.t),
+            + self.delta_phi_s_av(self.t)
+            + self.eta_sei_av(self.t),
             decimal=2,
         )
 
@@ -530,6 +538,14 @@ class CurrentTests(BaseOutputTest):
         self.j_p_av = solution[
             "X-averaged positive electrode interfacial current density"
         ]
+        self.j_n_sei = solution["Negative electrode sei interfacial current density"]
+        self.j_p_sei = solution["Positive electrode sei interfacial current density"]
+        self.j_n_sei_av = solution[
+            "X-averaged negative electrode sei interfacial current density"
+        ]
+        self.j_p_sei_av = solution[
+            "X-averaged positive electrode sei interfacial current density"
+        ]
 
         self.j0_n = solution["Negative electrode exchange current density"]
         self.j0_p = solution["Positive electrode exchange current density"]
@@ -543,10 +559,14 @@ class CurrentTests(BaseOutputTest):
         """Test that average of the interfacial current density is equal to the true
         value."""
         np.testing.assert_array_almost_equal(
-            self.j_n_av(self.t), self.i_cell / self.l_n, decimal=4
+            self.j_n_av(self.t) + self.j_n_sei_av(self.t),
+            self.i_cell / self.l_n,
+            decimal=4,
         )
         np.testing.assert_array_almost_equal(
-            self.j_p_av(self.t), -self.i_cell / self.l_p, decimal=4
+            self.j_p_av(self.t) + self.j_p_sei_av(self.t),
+            -self.i_cell / self.l_p,
+            decimal=4,
         )
 
     def test_conservation(self):
@@ -609,14 +629,16 @@ class VelocityTests(BaseOutputTest):
 
     def test_velocity_boundaries(self):
         """Test the boundary values of the current densities"""
+        L_x = self.x_edge[-1]
         np.testing.assert_array_almost_equal(self.v_box(self.t, 0), 0, decimal=4)
-        np.testing.assert_array_almost_equal(self.v_box(self.t, 1), 0, decimal=4)
+        np.testing.assert_array_almost_equal(self.v_box(self.t, L_x), 0, decimal=4)
 
     def test_vertical_velocity(self):
         """Test the boundary values of the current densities"""
+        L_x = self.x_edge[-1]
         np.testing.assert_array_equal(self.dVbox_dz(self.t, 0), 0)
-        np.testing.assert_array_less(self.dVbox_dz(self.t, 0.5), 0)
-        np.testing.assert_array_equal(self.dVbox_dz(self.t, 1), 0)
+        np.testing.assert_array_less(self.dVbox_dz(self.t, 0.5 * L_x), 0)
+        np.testing.assert_array_equal(self.dVbox_dz(self.t, L_x), 0)
 
     def test_velocity_vs_current(self):
         """Test the boundary values of the current densities"""

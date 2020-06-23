@@ -217,7 +217,7 @@ class TestJacobian(unittest.TestCase):
         a_dom = ["negative electrode"]
         b_dom = ["separator"]
         c_dom = ["positive electrode"]
-        cc_npts = mesh["current collector"][0].npts
+        cc_npts = mesh["current collector"].npts
         curr_coll_vector = pybamm.Vector(np.ones(cc_npts), domain="current collector")
         a = 2 * pybamm.PrimaryBroadcast(curr_coll_vector, a_dom)
         b = pybamm.PrimaryBroadcast(curr_coll_vector, b_dom)
@@ -230,9 +230,15 @@ class TestJacobian(unittest.TestCase):
         np.testing.assert_array_equal(jac, np.zeros((1500, 1500)))
 
         # Jacobian of a DomainConcatenation of StateVectors
-        a = pybamm.Variable("a", domain=a_dom)
-        b = pybamm.Variable("b", domain=b_dom)
-        c = pybamm.Variable("c", domain=c_dom)
+        a = pybamm.Variable(
+            "a", domain=a_dom, auxiliary_domains={"secondary": "current collector"}
+        )
+        b = pybamm.Variable(
+            "b", domain=b_dom, auxiliary_domains={"secondary": "current collector"}
+        )
+        c = pybamm.Variable(
+            "c", domain=c_dom, auxiliary_domains={"secondary": "current collector"}
+        )
         conc = pybamm.Concatenation(a, b, c)
         disc.set_variable_slices([conc])
         conc_disc = disc.process_symbol(conc)

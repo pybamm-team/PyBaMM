@@ -210,7 +210,9 @@ class DomainConcatenation(Concatenation):
                 )
 
             # create dict of domain => slice of final vector
-            self.secondary_dimensions_npts = len(self.full_mesh[self.domain[0]])
+            self.secondary_dimensions_npts = self._get_auxiliary_domain_repeats(
+                self.domains
+            )
             self._slices = self.create_slices(self)
 
             # store size of final vector
@@ -227,6 +229,24 @@ class DomainConcatenation(Concatenation):
             self._children_slices = copy.copy(copy_this._children_slices)
             self.secondary_dimensions_npts = copy_this.secondary_dimensions_npts
 
+    def _get_auxiliary_domain_repeats(self, auxiliary_domains):
+        """
+        Helper method to read the 'auxiliary_domain' meshes
+        """
+        if "secondary" in auxiliary_domains:
+            sec_mesh_npts = self.full_mesh.combine_submeshes(
+                *auxiliary_domains["secondary"]
+            ).npts
+        else:
+            sec_mesh_npts = 1
+        if "tertiary" in auxiliary_domains:
+            tert_mesh_npts = self.full_mesh.combine_submeshes(
+                *auxiliary_domains["tertiary"]
+            ).npts
+        else:
+            tert_mesh_npts = 1
+        return sec_mesh_npts * tert_mesh_npts
+
     @property
     def full_mesh(self):
         return self._full_mesh
@@ -235,7 +255,7 @@ class DomainConcatenation(Concatenation):
         slices = defaultdict(list)
         start = 0
         end = 0
-        second_pts = len(self.full_mesh[node.domain[0]])
+        second_pts = self._get_auxiliary_domain_repeats(self.domains)
         if second_pts != self.secondary_dimensions_npts:
             raise ValueError(
                 """Concatenation and children must have the same number of
@@ -243,7 +263,7 @@ class DomainConcatenation(Concatenation):
             )
         for i in range(second_pts):
             for dom in node.domain:
-                end += self.full_mesh[dom][i].npts
+                end += self.full_mesh[dom].npts
                 slices[dom].append(slice(start, end))
                 start = end
         return slices
@@ -274,7 +294,7 @@ class DomainConcatenation(Concatenation):
                         a single domain"""
                     )
                 child_slice = next(iter(slices.values()))
-                jacs.append(child_jac[child_slice[i]])
+                jacs.append(pybamm.Index(child_jac, child_slice[i]))
         return SparseStack(*jacs)
 
     def _concatenation_new_copy(self, children):

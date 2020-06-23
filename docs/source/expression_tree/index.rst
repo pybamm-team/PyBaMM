@@ -8,6 +8,7 @@ Expression Tree
   variable
   independent_variable
   scalar
+  array
   matrix
   vector
   state_vector

@@ -145,20 +145,20 @@ class TestButlerVolmer(unittest.TestCase):
 
         # test butler-volmer in each electrode
         submesh = np.concatenate(
-            [mesh["negative electrode"][0].nodes, mesh["positive electrode"][0].nodes]
+            [mesh["negative electrode"].nodes, mesh["positive electrode"].nodes]
         )
         y = np.concatenate([submesh ** 2, submesh ** 3, submesh ** 4])
         self.assertEqual(
-            j_n.evaluate(None, y).shape, (mesh["negative electrode"][0].npts, 1)
+            j_n.evaluate(None, y).shape, (mesh["negative electrode"].npts, 1)
         )
         self.assertEqual(
-            j_p.evaluate(None, y).shape, (mesh["positive electrode"][0].npts, 1)
+            j_p.evaluate(None, y).shape, (mesh["positive electrode"].npts, 1)
         )
 
         # test concatenated butler-volmer
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         whole_cell_mesh = disc.mesh.combine_submeshes(*whole_cell)
-        self.assertEqual(j.evaluate(None, y).shape, (whole_cell_mesh[0].npts, 1))
+        self.assertEqual(j.evaluate(None, y).shape, (whole_cell_mesh.npts, 1))
 
     def test_diff_c_e_lead_acid(self):
 

@@ -5,6 +5,7 @@ import pybamm
 
 from scipy.sparse import (
     diags,
+    spdiags,
     eye,
     kron,
     csr_matrix,
@@ -39,8 +40,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # add npts_for_broadcast to mesh domains for this particular discretisation
         for dom in mesh.keys():
-            for i in range(len(mesh[dom])):
-                mesh[dom][i].npts_for_broadcast_to_nodes = mesh[dom][i].npts
+            mesh[dom].npts_for_broadcast_to_nodes = mesh[dom].npts
 
     def spatial_variable(self, symbol):
         """
@@ -58,10 +58,11 @@ class FiniteVolume(pybamm.SpatialMethod):
             Contains the discretised spatial variable
         """
         symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
-        if symbol.evaluates_on_edges():
-            entries = np.concatenate([mesh.edges for mesh in symbol_mesh])
+        repeats = self._get_auxiliary_domain_repeats(symbol.auxiliary_domains)
+        if symbol.evaluates_on_edges("primary"):
+            entries = np.tile(symbol_mesh.edges, repeats)
         else:
-            entries = np.concatenate([mesh.nodes for mesh in symbol_mesh])
+            entries = np.tile(symbol_mesh.nodes, repeats)
         return pybamm.Vector(
             entries, domain=symbol.domain, auxiliary_domains=symbol.auxiliary_domains
         )
@@ -83,7 +84,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 )
 
         # note in 1D spherical grad and normal grad are the same
-        gradient_matrix = self.gradient_matrix(domain)
+        gradient_matrix = self.gradient_matrix(domain, symbol.auxiliary_domains)
 
         # Multiply by gradient matrix
         out = gradient_matrix @ discretised_symbol
@@ -122,15 +123,17 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return new_bcs
 
-    def gradient_matrix(self, domain):
+    def gradient_matrix(self, domain, auxiliary_domains):
         """
         Gradient matrix for finite volumes in the appropriate domain.
         Equivalent to grad(y) = (y[1:] - y[:-1])/dx
 
         Parameters
         ----------
-        domain : list
-            The domain(s) in which to compute the gradient matrix
+        domains : list
+            The domain(s) in which to compute the gradient matrix, including ghost nodes
+        auxiliary_domains : dict
+            The auxiliary domains in which to compute the gradient matrix
 
         Returns
         -------
@@ -138,25 +141,22 @@ class FiniteVolume(pybamm.SpatialMethod):
             The (sparse) finite volume gradient matrix for the domain
         """
         # Create appropriate submesh by combining submeshes in domain
-        submesh_list = self.mesh.combine_submeshes(*domain)
-
-        # can just use 1st entry of list to obtain the point etc
-        submesh = submesh_list[0]
+        submesh = self.mesh.combine_submeshes(*domain)
 
         # Create 1D matrix using submesh
         n = submesh.npts
         e = 1 / submesh.d_nodes
         sub_matrix = diags([-e, e], [0, 1], shape=(n - 1, n))
 
-        # second dim length
-        second_dim_len = len(submesh_list)
+        # number of repeats
+        second_dim_repeats = self._get_auxiliary_domain_repeats(auxiliary_domains)
 
         # generate full matrix from the submatrix
         # Convert to csr_matrix so that we can take the index (row-slicing), which is
         # not supported by the default kron format
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
-        matrix = csr_matrix(kron(eye(second_dim_len), sub_matrix))
+        matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
 
         return pybamm.Matrix(matrix)
 
@@ -164,19 +164,18 @@ class FiniteVolume(pybamm.SpatialMethod):
         """Matrix-vector multiplication to implement the divergence operator.
         See :meth:`pybamm.SpatialMethod.divergence`
         """
-        domain = symbol.domain
-        submesh_list = self.mesh.combine_submeshes(*domain)
+        submesh = self.mesh.combine_submeshes(*symbol.domain)
 
-        divergence_matrix = self.divergence_matrix(domain)
+        divergence_matrix = self.divergence_matrix(symbol.domains)
 
         # check for particle domain
-        if submesh_list[0].coord_sys == "spherical polar":
-            second_dim = len(submesh_list)
-            edges = submesh_list[0].edges
+        if submesh.coord_sys == "spherical polar":
+            second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
+            edges = submesh.edges
 
-            # create np.array of repeated submesh[0].nodes
-            r_numpy = np.kron(np.ones(second_dim), submesh_list[0].nodes)
-            r_edges_numpy = np.kron(np.ones(second_dim), edges)
+            # create np.array of repeated submesh.nodes
+            r_numpy = np.kron(np.ones(second_dim_repeats), submesh.nodes)
+            r_edges_numpy = np.kron(np.ones(second_dim_repeats), edges)
 
             r = pybamm.Vector(r_numpy)
             r_edges = pybamm.Vector(r_edges_numpy)
@@ -189,15 +188,15 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return out
 
-    def divergence_matrix(self, domain):
+    def divergence_matrix(self, domains):
         """
         Divergence matrix for finite volumes in the appropriate domain.
         Equivalent to div(N) = (N[1:] - N[:-1])/dx
 
         Parameters
         ----------
-        domain : list
-            The domain(s) in which to compute the divergence matrix
+        domains : dict
+            The domain(s) and auxiliary domain in which to compute the divergence matrix
 
         Returns
         -------
@@ -205,10 +204,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             The (sparse) finite volume divergence matrix for the domain
         """
         # Create appropriate submesh by combining submeshes in domain
-        submesh_list = self.mesh.combine_submeshes(*domain)
-
-        # can just use 1st entry of list to obtain the point etc
-        submesh = submesh_list[0]
+        submesh = self.mesh.combine_submeshes(*domains["primary"])
         e = 1 / submesh.d_edges
 
         # Create matrix using submesh
@@ -216,13 +212,13 @@ class FiniteVolume(pybamm.SpatialMethod):
         sub_matrix = diags([-e, e], [0, 1], shape=(n - 1, n))
 
         # repeat matrix for each node in secondary dimensions
-        second_dim_len = len(submesh_list)
+        second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
         # generate full matrix from the submatrix
         # Convert to csr_matrix so that we can take the index (row-slicing), which is
         # not supported by the default kron format
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
-        matrix = csr_matrix(kron(eye(second_dim_len), sub_matrix))
+        matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
         return pybamm.Matrix(matrix)
 
     def laplacian(self, symbol, discretised_symbol, boundary_conditions):
@@ -233,16 +229,18 @@ class FiniteVolume(pybamm.SpatialMethod):
         grad = self.gradient(symbol, discretised_symbol, boundary_conditions)
         return self.divergence(grad, grad, boundary_conditions)
 
-    def integral(self, child, discretised_child):
+    def integral(self, child, discretised_child, integration_dimension):
         """Vector-vector dot product to implement the integral operator. """
-        # Calculate integration vector
-        integration_vector = self.definite_integral_matrix(child.domain)
+        integration_vector = self.definite_integral_matrix(
+            child, integration_dimension=integration_dimension
+        )
 
         # Check for spherical domains
-        submesh_list = self.mesh.combine_submeshes(*child.domain)
-        if submesh_list[0].coord_sys == "spherical polar":
-            second_dim = len(submesh_list)
-            r_numpy = np.kron(np.ones(second_dim), submesh_list[0].nodes)
+        domain = child.domains[integration_dimension]
+        submesh = self.mesh.combine_submeshes(*domain)
+        if submesh.coord_sys == "spherical polar":
+            second_dim_repeats = self._get_auxiliary_domain_repeats(child.domains)
+            r_numpy = np.kron(np.ones(second_dim_repeats), submesh.nodes)
             r = pybamm.Vector(r_numpy)
             out = 4 * np.pi ** 2 * integration_vector @ (discretised_child * r)
         else:
@@ -250,7 +248,9 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return out
 
-    def definite_integral_matrix(self, domain, vector_type="row"):
+    def definite_integral_matrix(
+        self, child, vector_type="row", integration_dimension="primary"
+    ):
         """
         Matrix for finite-volume implementation of the definite integral in the
         primary dimension
@@ -263,61 +263,122 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         Parameters
         ----------
-        domain : list
-            The domain(s) of integration
+        child : :class:`pybamm.Symbol`
+            The symbol being integrated
+        vector_type : str, optional
+            Whether to return a row or column vector in the primary dimension
+            (default is row)
+        integration_dimension : str, optional
+            The dimension in which to integrate (default is "primary")
 
         Returns
         -------
         :class:`pybamm.Matrix`
             The finite volume integral matrix for the domain
-        vector_type : str, optional
-            Whether to return a row or column vector in the primary dimension
-            (default is row)
         """
-        # Create appropriate submesh by combining submeshes in domain
-        submesh_list = self.mesh.combine_submeshes(*domain)
+        domains = child.domains
+        if integration_dimension == "primary":
+            # Create appropriate submesh by combining submeshes in domain
+            submesh = self.mesh.combine_submeshes(*domains["primary"])
 
-        # Create vector of ones for primary domain submesh
-        submesh = submesh_list[0]
-        vector = submesh.d_edges * np.ones_like(submesh.nodes)
+            # Create vector of ones for primary domain submesh
+            vector = submesh.d_edges
 
-        if vector_type == "row":
-            vector = vector[np.newaxis, :]
-        elif vector_type == "column":
-            vector = vector[:, np.newaxis]
+            if vector_type == "row":
+                vector = vector[np.newaxis, :]
+            elif vector_type == "column":
+                vector = vector[:, np.newaxis]
 
-        # repeat matrix for each node in secondary dimensions
-        second_dim_len = len(submesh_list)
+            # repeat matrix for each node in secondary dimensions
+            second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
+            # generate full matrix from the submatrix
+            matrix = kron(eye(second_dim_repeats), vector)
+        elif integration_dimension == "secondary":
+            if vector_type != "row":
+                raise NotImplementedError(
+                    "Integral in secondary vector only implemented in 'row' form"
+                )
+            # Create appropriate submesh by combining submeshes in domain
+            primary_submesh = self.mesh.combine_submeshes(*domains["primary"])
+            secondary_submesh = self.mesh.combine_submeshes(*domains["secondary"])
+
+            # Create matrix which integrates in the secondary dimension
+            d_edges = secondary_submesh.d_edges
+            # Different number of edges depending on whether child evaluates on edges
+            # in the primary dimensions
+            if child.evaluates_on_edges("primary"):
+                n_primary_pts = primary_submesh.npts + 1
+            else:
+                n_primary_pts = primary_submesh.npts
+            int_matrix = hstack([d_edge * eye(n_primary_pts) for d_edge in d_edges])
+
+            # repeat matrix for each node in secondary dimensions
+            third_dim_repeats = self._get_auxiliary_domain_repeats(
+                domains, tertiary_only=True
+            )
+            # generate full matrix from the submatrix
+            matrix = kron(eye(third_dim_repeats), int_matrix)
         # generate full matrix from the submatrix
         # Convert to csr_matrix so that we can take the index (row-slicing), which is
         # not supported by the default kron format
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
-        matrix = csr_matrix(kron(eye(second_dim_len), vector))
-        return pybamm.Matrix(matrix)
+        return pybamm.Matrix(csr_matrix(matrix))
 
-    def indefinite_integral(self, child, discretised_child):
+    def indefinite_integral(self, child, discretised_child, direction):
         """Implementation of the indefinite integral operator. """
 
         # Different integral matrix depending on whether the integrand evaluates on
         # edges or nodes
-        if child.evaluates_on_edges():
-            integration_matrix = self.indefinite_integral_matrix_edges(child.domain)
+        if child.evaluates_on_edges("primary"):
+            integration_matrix = self.indefinite_integral_matrix_edges(
+                child.domains, direction
+            )
         else:
-            integration_matrix = self.indefinite_integral_matrix_nodes(child.domain)
+            # Check coordinate system is not spherical polar for the case where child
+            # evaluates on edges
+            # If it becomes necessary to implement this, will need to think about what
+            # the spherical polar indefinite integral should be
+            submesh = self.mesh.combine_submeshes(*child.domain)
+            if submesh.coord_sys == "spherical polar":
+                raise NotImplementedError(
+                    "Indefinite integral on a spherical polar domain is not implemented"
+                )
+            integration_matrix = self.indefinite_integral_matrix_nodes(
+                child.domains, direction
+            )
 
-        # Don't need to check for spherical domains as spherical polars
-        # only change the diveregence (childs here have grad and no div)
+        # Don't need to check for spherical domains as we have ruled out spherical
+        # polars in the case that involves integrating a divergence
+        # (child evaluates on nodes)
         out = integration_matrix @ discretised_child
 
         out.copy_domains(child)
 
         return out
 
-    def indefinite_integral_matrix_edges(self, domain):
+    def indefinite_integral_matrix_edges(self, domains, direction):
         """
         Matrix for finite-volume implementation of the indefinite integral where the
-        integrand is evaluated on mesh edges
+        integrand is evaluated on mesh edges (shape (n+1, 1)).
+        The integral will then be evaluated on mesh nodes (shape (n, 1)).
+
+        Parameters
+        ----------
+        domains : dict
+            The domain(s) and auxiliary domains of integration
+        direction : str
+            The direction of integration (forward or backward). See notes.
+
+        Returns
+        -------
+        :class:`pybamm.Matrix`
+            The finite volume integral matrix for the domain
+
+        Notes
+        -----
+
+        **Forward integral**
 
         .. math::
             F(x) = \\int_0^x\\!f(u)\\,du
@@ -335,35 +396,55 @@ class FiniteVolume(pybamm.SpatialMethod):
         Hence we must have
 
         - :math:`F_0 = du_{1/2} * f_{1/2} / 2`
-        - :math:`F_{i+1} = F_i + du * f_{i+1/2}`
+        - :math:`F_{i+1} = F_i + du_{i+1/2} * f_{i+1/2}`
 
-        Note that :math:`f_{-1/2}` and :math:`f_{n+1/2}` are included in the discrete
+        Note that :math:`f_{-1/2}` and :math:`f_{end+1/2}` are included in the discrete
         integrand vector `f`, so we add a column of zeros at each end of the
         indefinite integral matrix to ignore these.
 
-        Parameters
-        ----------
-        domain : list
-            The domain(s) of integration
+        **Backward integral**
 
-        Returns
-        -------
-        :class:`pybamm.Matrix`
-            The finite volume integral matrix for the domain
+        .. math::
+            F(x) = \\int_x^end\\!f(u)\\,du
+
+        The indefinite integral must satisfy the following conditions:
+
+        - :math:`F(end) = 0`
+        - :math:`f(x) = -\\frac{dF}{dx}`
+
+        or, in discrete form,
+
+        - `BoundaryValue(F, "right") = 0`, i.e. :math:`3*F_{end} - F_{end-1} = 0`
+        - :math:`f_{i+1/2} = -(F_{i+1} - F_i) / dx_{i+1/2}`
+
+        Hence we must have
+
+        - :math:`F_{end} = du_{end+1/2} * f_{end-1/2} / 2`
+        - :math:`F_{i-1} = F_i + du_{i-1/2} * f_{i-1/2}`
+
+        Note that :math:`f_{-1/2}` and :math:`f_{end+1/2}` are included in the discrete
+        integrand vector `f`, so we add a column of zeros at each end of the
+        indefinite integral matrix to ignore these.
         """
 
         # Create appropriate submesh by combining submeshes in domain
-        submesh_list = self.mesh.combine_submeshes(*domain)
-        submesh = submesh_list[0]
+        submesh = self.mesh.combine_submeshes(*domains["primary"])
         n = submesh.npts
-        sec_pts = len(submesh_list)
+        second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
 
         du_n = submesh.d_nodes
-        du_entries = [du_n] * (n - 1)
-        offset = -np.arange(1, n, 1)
-        main_integral_matrix = diags(du_entries, offset, shape=(n, n - 1))
-        bc_offset_matrix = lil_matrix((n, n - 1))
-        bc_offset_matrix[:, 0] = du_n[0] / 2
+        if direction == "forward":
+            du_entries = [du_n] * (n - 1)
+            offset = -np.arange(1, n, 1)
+            main_integral_matrix = spdiags(du_entries, offset, n, n - 1)
+            bc_offset_matrix = lil_matrix((n, n - 1))
+            bc_offset_matrix[:, 0] = du_n[0] / 2
+        elif direction == "backward":
+            du_entries = [du_n] * (n + 1)
+            offset = np.arange(n, -1, -1)
+            main_integral_matrix = spdiags(du_entries, offset, n, n - 1)
+            bc_offset_matrix = lil_matrix((n, n - 1))
+            bc_offset_matrix[:, -1] = du_n[-1] / 2
         sub_matrix = main_integral_matrix + bc_offset_matrix
         # add a column of zeros at each end
         zero_col = csr_matrix((n, 1))
@@ -372,7 +453,47 @@ class FiniteVolume(pybamm.SpatialMethod):
         # not supported by the default kron format
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
-        matrix = csr_matrix(kron(eye(sec_pts), sub_matrix))
+        matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
+
+        return pybamm.Matrix(matrix)
+
+    def indefinite_integral_matrix_nodes(self, domains, direction):
+        """
+        Matrix for finite-volume implementation of the (backward) indefinite integral
+        where the integrand is evaluated on mesh nodes (shape (n, 1)).
+        The integral will then be evaluated on mesh edges (shape (n+1, 1)).
+        This is just a straightforward (backward) cumulative sum of the integrand
+
+        Parameters
+        ----------
+        domains : dict
+            The domain(s) and auxiliary domains of integration
+        direction : str
+            The direction of integration (forward or backward)
+
+        Returns
+        -------
+        :class:`pybamm.Matrix`
+            The finite volume integral matrix for the domain
+        """
+
+        # Create appropriate submesh by combining submeshes in domain
+        submesh = self.mesh.combine_submeshes(*domains["primary"])
+        n = submesh.npts
+        second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
+
+        du_n = submesh.d_edges
+        du_entries = [du_n] * n
+        if direction == "forward":
+            offset = -np.arange(1, n + 1, 1)  # from -1 down to -n
+        elif direction == "backward":
+            offset = np.arange(n - 1, -1, -1)  # from n-1 down to 0
+        sub_matrix = spdiags(du_entries, offset, n + 1, n)
+        # Convert to csr_matrix so that we can take the index (row-slicing), which is
+        # not supported by the default kron format
+        # Note that this makes column-slicing inefficient, but this should not be an
+        # issue
+        matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
 
         return pybamm.Matrix(matrix)
 
@@ -387,28 +508,28 @@ class FiniteVolume(pybamm.SpatialMethod):
         See :meth:`pybamm.SpatialMethod.delta_function`
         """
         # Find the number of submeshes
-        submesh_list = self.mesh.combine_submeshes(*symbol.domain)
+        submesh = self.mesh.combine_submeshes(*symbol.domain)
 
-        prim_pts = submesh_list[0].npts
-        sec_pts = len(submesh_list)
+        prim_pts = submesh.npts
+        second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
 
         # Create submatrix to compute delta function as a flux
         if symbol.side == "left":
-            dx = submesh_list[0].d_nodes[0]
+            dx = submesh.d_nodes[0]
             sub_matrix = csr_matrix(([1], ([0], [0])), shape=(prim_pts, 1))
         elif symbol.side == "right":
-            dx = submesh_list[0].d_nodes[-1]
+            dx = submesh.d_nodes[-1]
             sub_matrix = csr_matrix(([1], ([prim_pts - 1], [0])), shape=(prim_pts, 1))
 
         # Calculate domain width, to make sure that the integral of the delta function
         # is the same as the integral of the child
-        domain_width = submesh_list[0].edges[-1] - submesh_list[0].edges[0]
+        domain_width = submesh.edges[-1] - submesh.edges[0]
         # Generate full matrix from the submatrix
         # Convert to csr_matrix so that we can take the index (row-slicing), which is
         # not supported by the default kron format
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
-        matrix = kron(eye(sec_pts), sub_matrix).toarray()
+        matrix = kron(eye(second_dim_repeats), sub_matrix).toarray()
 
         # Return delta function, keep domains
         delta_fn = pybamm.Matrix(domain_width / dx * matrix) * discretised_symbol
@@ -435,23 +556,31 @@ class FiniteVolume(pybamm.SpatialMethod):
             The mesh on the right subdomain
         """
 
-        left_npts = left_mesh[0].npts
-        right_npts = right_mesh[0].npts
+        left_npts = left_mesh.npts
+        right_npts = right_mesh.npts
 
-        sec_pts = len(left_mesh)
+        second_dim_repeats = self._get_auxiliary_domain_repeats(
+            left_symbol_disc.domains
+        )
 
-        if sec_pts != len(right_mesh):
+        if second_dim_repeats != self._get_auxiliary_domain_repeats(
+            right_symbol_disc.domains
+        ):
             raise pybamm.DomainError(
                 """Number of secondary points in subdomains do not match"""
             )
 
         left_sub_matrix = np.zeros((1, left_npts))
         left_sub_matrix[0][left_npts - 1] = 1
-        left_matrix = pybamm.Matrix(csr_matrix(kron(eye(sec_pts), left_sub_matrix)))
+        left_matrix = pybamm.Matrix(
+            csr_matrix(kron(eye(second_dim_repeats), left_sub_matrix))
+        )
 
         right_sub_matrix = np.zeros((1, right_npts))
         right_sub_matrix[0][0] = 1
-        right_matrix = pybamm.Matrix(csr_matrix(kron(eye(sec_pts), right_sub_matrix)))
+        right_matrix = pybamm.Matrix(
+            csr_matrix(kron(eye(second_dim_repeats), right_sub_matrix))
+        )
 
         # Remove domains to avoid clash
         left_domain = left_symbol_disc.domain
@@ -463,7 +592,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # Finite volume derivative
         dy = right_matrix @ right_symbol_disc - left_matrix @ left_symbol_disc
-        dx = right_mesh[0].nodes[0] - left_mesh[0].nodes[-1]
+        dx = right_mesh.nodes[0] - left_mesh.nodes[-1]
 
         # Change domains back
         left_symbol_disc.domain = left_domain
@@ -472,41 +601,6 @@ class FiniteVolume(pybamm.SpatialMethod):
         right_symbol_disc.auxiliary_domains = right_auxiliary_domains
 
         return dy / dx
-
-    def indefinite_integral_matrix_nodes(self, domain):
-        """
-        Matrix for finite-volume implementation of the indefinite integral where the
-        integrand is evaluated on mesh nodes.
-        This is just a straightforward cumulative sum of the integrand
-
-        Parameters
-        ----------
-        domain : list
-            The domain(s) of integration
-
-        Returns
-        -------
-        :class:`pybamm.Matrix`
-            The finite volume integral matrix for the domain
-        """
-
-        # Create appropriate submesh by combining submeshes in domain
-        submesh_list = self.mesh.combine_submeshes(*domain)
-        submesh = submesh_list[0]
-        n = submesh.npts
-        sec_pts = len(submesh_list)
-
-        du_n = submesh.d_edges
-        du_entries = [du_n] * (n)
-        offset = -np.arange(1, n + 1, 1)
-        sub_matrix = diags(du_entries, offset, shape=(n + 1, n))
-        # Convert to csr_matrix so that we can take the index (row-slicing), which is
-        # not supported by the default kron format
-        # Note that this makes column-slicing inefficient, but this should not be an
-        # issue
-        matrix = csr_matrix(kron(eye(sec_pts), sub_matrix))
-
-        return pybamm.Matrix(matrix)
 
     def add_ghost_nodes(self, symbol, discretised_symbol, bcs):
         """
@@ -541,11 +635,11 @@ class FiniteVolume(pybamm.SpatialMethod):
         """
         # get relevant grid points
         domain = symbol.domain
-        submesh_list = self.mesh.combine_submeshes(*domain)
+        submesh = self.mesh.combine_submeshes(*domain)
 
         # Prepare sizes and empty bcs_vector
-        n = submesh_list[0].npts
-        sec_pts = len(submesh_list)
+        n = submesh.npts
+        second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
 
         bcs_vector = pybamm.Vector(np.array([]))  # starts empty
 
@@ -565,14 +659,16 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Calculate values for ghost nodes for any Dirichlet boundary conditions
         if lbc_type == "Dirichlet":
             lbc_sub_matrix = coo_matrix(([1], ([0], [0])), shape=(n + n_bcs, 1))
-            lbc_matrix = csr_matrix(kron(eye(sec_pts), lbc_sub_matrix))
+            lbc_matrix = csr_matrix(kron(eye(second_dim_repeats), lbc_sub_matrix))
             if lbc_value.evaluates_to_number():
-                left_ghost_constant = 2 * lbc_value * pybamm.Vector(np.ones(sec_pts))
+                left_ghost_constant = (
+                    2 * lbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+                )
             else:
                 left_ghost_constant = 2 * lbc_value
             lbc_vector = pybamm.Matrix(lbc_matrix) @ left_ghost_constant
         elif lbc_type == "Neumann":
-            lbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * sec_pts))
+            lbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
         else:
             raise ValueError(
                 "boundary condition must be Dirichlet or Neumann, not '{}'".format(
@@ -584,14 +680,16 @@ class FiniteVolume(pybamm.SpatialMethod):
             rbc_sub_matrix = coo_matrix(
                 ([1], ([n + n_bcs - 1], [0])), shape=(n + n_bcs, 1)
             )
-            rbc_matrix = csr_matrix(kron(eye(sec_pts), rbc_sub_matrix))
+            rbc_matrix = csr_matrix(kron(eye(second_dim_repeats), rbc_sub_matrix))
             if rbc_value.evaluates_to_number():
-                right_ghost_constant = 2 * rbc_value * pybamm.Vector(np.ones(sec_pts))
+                right_ghost_constant = (
+                    2 * rbc_value * pybamm.Vector(np.ones(second_dim_repeats))
+                )
             else:
                 right_ghost_constant = 2 * rbc_value
             rbc_vector = pybamm.Matrix(rbc_matrix) @ right_ghost_constant
         elif rbc_type == "Neumann":
-            rbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * sec_pts))
+            rbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
         else:
             raise ValueError(
                 "boundary condition must be Dirichlet or Neumann, not '{}'".format(
@@ -623,7 +721,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # not supported by the default kron format
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
-        matrix = csr_matrix(kron(eye(sec_pts), sub_matrix))
+        matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
 
         new_symbol = pybamm.Matrix(matrix) @ discretised_symbol + bcs_vector
 
@@ -659,11 +757,13 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         """
         # get relevant grid points
-        submesh_list = self.mesh.combine_submeshes(*domain)
+        submesh = self.mesh.combine_submeshes(*domain)
 
         # Prepare sizes and empty bcs_vector
-        n = submesh_list[0].npts - 1
-        sec_pts = len(submesh_list)
+        n = submesh.npts - 1
+        second_dim_repeats = self._get_auxiliary_domain_repeats(
+            symbol.auxiliary_domains
+        )
 
         lbc_value, lbc_type = bcs["left"]
         rbc_value, rbc_type = bcs["right"]
@@ -678,14 +778,14 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Add any values from Neumann boundary conditions to the bcs vector
         if lbc_type == "Neumann":
             lbc_sub_matrix = coo_matrix(([1], ([0], [0])), shape=(n + n_bcs, 1))
-            lbc_matrix = csr_matrix(kron(eye(sec_pts), lbc_sub_matrix))
+            lbc_matrix = csr_matrix(kron(eye(second_dim_repeats), lbc_sub_matrix))
             if lbc_value.evaluates_to_number():
-                left_bc = lbc_value * pybamm.Vector(np.ones(sec_pts))
+                left_bc = lbc_value * pybamm.Vector(np.ones(second_dim_repeats))
             else:
                 left_bc = lbc_value
             lbc_vector = pybamm.Matrix(lbc_matrix) @ left_bc
         elif lbc_type == "Dirichlet":
-            lbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * sec_pts))
+            lbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
         else:
             raise ValueError(
                 "boundary condition must be Dirichlet or Neumann, not '{}'".format(
@@ -696,14 +796,14 @@ class FiniteVolume(pybamm.SpatialMethod):
             rbc_sub_matrix = coo_matrix(
                 ([1], ([n + n_bcs - 1], [0])), shape=(n + n_bcs, 1)
             )
-            rbc_matrix = csr_matrix(kron(eye(sec_pts), rbc_sub_matrix))
+            rbc_matrix = csr_matrix(kron(eye(second_dim_repeats), rbc_sub_matrix))
             if rbc_value.evaluates_to_number():
-                right_bc = rbc_value * pybamm.Vector(np.ones(sec_pts))
+                right_bc = rbc_value * pybamm.Vector(np.ones(second_dim_repeats))
             else:
                 right_bc = rbc_value
             rbc_vector = pybamm.Matrix(rbc_matrix) @ right_bc
         elif rbc_type == "Dirichlet":
-            rbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * sec_pts))
+            rbc_vector = pybamm.Vector(np.zeros((n + n_bcs) * second_dim_repeats))
         else:
             raise ValueError(
                 "boundary condition must be Dirichlet or Neumann, not '{}'".format(
@@ -737,7 +837,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # not supported by the default kron format
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
-        matrix = csr_matrix(kron(eye(sec_pts), sub_matrix))
+        matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
 
         new_gradient = pybamm.Matrix(matrix) @ discretised_gradient + bcs_vector
 
@@ -752,10 +852,12 @@ class FiniteVolume(pybamm.SpatialMethod):
         """
 
         # Find the number of submeshes
-        submesh_list = self.mesh.combine_submeshes(*discretised_child.domain)
+        submesh = self.mesh.combine_submeshes(*discretised_child.domain)
 
-        prim_pts = submesh_list[0].npts
-        sec_pts = len(submesh_list)
+        prim_pts = submesh.npts
+        repeats = self._get_auxiliary_domain_repeats(
+            discretised_child.auxiliary_domains
+        )
 
         if bcs is None:
             bcs = {}
@@ -763,16 +865,16 @@ class FiniteVolume(pybamm.SpatialMethod):
         extrap_order = self.options["extrapolation"]["order"]
         use_bcs = self.options["extrapolation"]["use bcs"]
 
-        nodes = submesh_list[0].nodes
-        edges = submesh_list[0].edges
+        nodes = submesh.nodes
+        edges = submesh.edges
 
         dx0 = nodes[0] - edges[0]
-        dx1 = submesh_list[0].d_nodes[0]
-        dx2 = submesh_list[0].d_nodes[1]
+        dx1 = submesh.d_nodes[0]
+        dx2 = submesh.d_nodes[1]
 
         dxN = edges[-1] - nodes[-1]
-        dxNm1 = submesh_list[0].d_nodes[-1]
-        dxNm2 = submesh_list[0].d_nodes[-2]
+        dxNm1 = submesh.d_nodes[-1]
+        dxNm2 = submesh.d_nodes[-2]
 
         child = symbol.child
 
@@ -955,7 +1057,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # not supported by the default kron format
         # Note that this makes column-slicing inefficient, but this should not be an
         # issue
-        matrix = csr_matrix(kron(eye(sec_pts), sub_matrix))
+        matrix = csr_matrix(kron(eye(repeats), sub_matrix))
 
         # Return boundary value with domain given by symbol
         boundary_value = pybamm.Matrix(matrix) @ discretised_child
@@ -994,8 +1096,8 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         """
         # Post-processing to make sure discretised dimensions match
-        left_evaluates_on_edges = left.evaluates_on_edges()
-        right_evaluates_on_edges = right.evaluates_on_edges()
+        left_evaluates_on_edges = left.evaluates_on_edges("primary")
+        right_evaluates_on_edges = right.evaluates_on_edges("primary")
 
         # inner product takes fluxes from edges to nodes
         if isinstance(bin_op, pybamm.Inner):
@@ -1038,12 +1140,10 @@ class FiniteVolume(pybamm.SpatialMethod):
         See :meth:`pybamm.SpatialMethod.concatenation`
         """
         for idx, child in enumerate(disc_children):
-            n_nodes = sum(
-                len(mesh.nodes) for mesh in self.mesh.combine_submeshes(*child.domain)
-            )
-            n_edges = sum(
-                len(mesh.edges) for mesh in self.mesh.combine_submeshes(*child.domain)
-            )
+            submesh = self.mesh.combine_submeshes(*child.domain)
+            repeats = self._get_auxiliary_domain_repeats(child.domains)
+            n_nodes = len(submesh.nodes) * repeats
+            n_edges = len(submesh.edges) * repeats
             child_size = child.size
             if child_size != n_nodes:
                 # Average any children that evaluate on the edges (size n_edges) to
@@ -1109,10 +1209,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         def arithmetic_mean(array):
             """Calculate the arithmetic mean of an array using matrix multiplication"""
             # Create appropriate submesh by combining submeshes in domain
-            submesh_list = self.mesh.combine_submeshes(*array.domain)
-
-            # Can just use 1st entry of list to obtain the point etc
-            submesh = submesh_list[0]
+            submesh = self.mesh.combine_submeshes(*array.domain)
 
             # Create 1D matrix using submesh
             n = submesh.npts
@@ -1133,14 +1230,16 @@ class FiniteVolume(pybamm.SpatialMethod):
             else:
                 raise ValueError("shift key '{}' not recognised".format(shift_key))
             # Second dimension length
-            second_dim_len = len(submesh_list)
+            second_dim_repeats = self._get_auxiliary_domain_repeats(
+                discretised_symbol.domains
+            )
 
             # Generate full matrix from the submatrix
             # Convert to csr_matrix so that we can take the index (row-slicing), which
             # is not supported by the default kron format
             # Note that this makes column-slicing inefficient, but this should not be an
             # issue
-            matrix = csr_matrix(kron(eye(second_dim_len), sub_matrix))
+            matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
 
             return pybamm.Matrix(matrix) @ array
 
@@ -1168,11 +1267,12 @@ class FiniteVolume(pybamm.SpatialMethod):
             approximation to the diffusion equation." (2012).
             """
             # Create appropriate submesh by combining submeshes in domain
-            submesh_list = self.mesh.combine_submeshes(*array.domain)
-            submesh = submesh_list[0]
+            submesh = self.mesh.combine_submeshes(*array.domain)
 
             # Get second dimension length for use later
-            second_dim_len = len(submesh_list)
+            second_dim_repeats = self._get_auxiliary_domain_repeats(
+                discretised_symbol.domains
+            )
 
             # Create 1D matrix using submesh
             n = submesh.npts
@@ -1199,26 +1299,28 @@ class FiniteVolume(pybamm.SpatialMethod):
                 # which is not supported by the default kron format
                 # Note that this makes column-slicing inefficient, but this should
                 # not be an issue
-                edges_matrix = csr_matrix(kron(eye(second_dim_len), edges_sub_matrix))
+                edges_matrix = csr_matrix(
+                    kron(eye(second_dim_repeats), edges_sub_matrix)
+                )
 
                 # Matrix to extract the node values running from the first node
                 # to the penultimate node in the primary dimension (D_1 in the
                 # definiton of the harmonic mean)
                 sub_matrix_D1 = hstack([eye(n - 1), csr_matrix((n - 1, 1))])
-                matrix_D1 = csr_matrix(kron(eye(second_dim_len), sub_matrix_D1))
+                matrix_D1 = csr_matrix(kron(eye(second_dim_repeats), sub_matrix_D1))
                 D1 = pybamm.Matrix(matrix_D1) @ array
 
                 # Matrix to extract the node values running from the second node
                 # to the final node in the primary dimension  (D_2 in the
                 # definiton of the harmonic mean)
                 sub_matrix_D2 = hstack([csr_matrix((n - 1, 1)), eye(n - 1)])
-                matrix_D2 = csr_matrix(kron(eye(second_dim_len), sub_matrix_D2))
+                matrix_D2 = csr_matrix(kron(eye(second_dim_repeats), sub_matrix_D2))
                 D2 = pybamm.Matrix(matrix_D2) @ array
 
                 # Compute weight beta
                 dx = submesh.d_edges
                 sub_beta = (dx[:-1] / (dx[1:] + dx[:-1]))[:, np.newaxis]
-                beta = pybamm.Array(np.kron(np.ones((second_dim_len, 1)), sub_beta))
+                beta = pybamm.Array(np.kron(np.ones((second_dim_repeats, 1)), sub_beta))
 
                 # Compute harmonic mean on internal edges
                 # Note: add small number to denominator to regularise D_eff
@@ -1235,7 +1337,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 # which is not supported by the default kron format
                 # Note that this makes column-slicing inefficient, but this should
                 # not be an issue
-                matrix = csr_matrix(kron(eye(second_dim_len), sub_matrix))
+                matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
 
                 return (
                     pybamm.Matrix(edges_matrix) @ array + pybamm.Matrix(matrix) @ D_eff
@@ -1246,14 +1348,14 @@ class FiniteVolume(pybamm.SpatialMethod):
                 # to the penultimate edge in the primary dimension (D_1 in the
                 # definiton of the harmonic mean)
                 sub_matrix_D1 = hstack([eye(n), csr_matrix((n, 1))])
-                matrix_D1 = csr_matrix(kron(eye(second_dim_len), sub_matrix_D1))
+                matrix_D1 = csr_matrix(kron(eye(second_dim_repeats), sub_matrix_D1))
                 D1 = pybamm.Matrix(matrix_D1) @ array
 
                 # Matrix to extract the edge values running from the second edge
                 # to the final edge in the primary dimension  (D_2 in the
                 # definiton of the harmonic mean)
                 sub_matrix_D2 = hstack([csr_matrix((n, 1)), eye(n)])
-                matrix_D2 = csr_matrix(kron(eye(second_dim_len), sub_matrix_D2))
+                matrix_D2 = csr_matrix(kron(eye(second_dim_repeats), sub_matrix_D2))
                 D2 = pybamm.Matrix(matrix_D2) @ array
 
                 # Compute weight beta
@@ -1261,7 +1363,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 dxN = submesh.edges[-1] - submesh.nodes[-1]  # last node to edge
                 dx = np.concatenate(([dx0], submesh.d_nodes, [dxN]))
                 sub_beta = (dx[:-1] / (dx[1:] + dx[:-1]))[:, np.newaxis]
-                beta = pybamm.Array(np.kron(np.ones((second_dim_len, 1)), sub_beta))
+                beta = pybamm.Array(np.kron(np.ones((second_dim_repeats, 1)), sub_beta))
 
                 # Compute harmonic mean on nodes
                 # Note: add small number to denominator to regularise D_eff

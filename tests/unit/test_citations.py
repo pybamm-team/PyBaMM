@@ -74,6 +74,25 @@ class TestCitations(unittest.TestCase):
         pybamm.lead_acid.Full(build=False)
         self.assertIn("sulzer2019physical", citations._papers_to_cite)
 
+    def test_timms_2020(self):
+        # Test that calling relevant bits of code adds the right paper to citations
+        citations = pybamm.citations
+
+        citations._reset()
+        self.assertNotIn("timms2020", citations._papers_to_cite)
+        pybamm.current_collector.BasePotentialPair(param=None)
+        self.assertIn("timms2020", citations._papers_to_cite)
+
+        citations._reset()
+        self.assertNotIn("timms2020", citations._papers_to_cite)
+        pybamm.current_collector.EffectiveResistance()
+        self.assertIn("timms2020", citations._papers_to_cite)
+
+        citations._reset()
+        self.assertNotIn("timms2020", citations._papers_to_cite)
+        pybamm.current_collector.AlternativeEffectiveResistance2D()
+        self.assertIn("timms2020", citations._papers_to_cite)
+
     def test_scikit_fem(self):
         citations = pybamm.citations
 

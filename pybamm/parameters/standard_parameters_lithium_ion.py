@@ -36,6 +36,8 @@ L_y = pybamm.geometric_parameters.L_y
 L_z = pybamm.geometric_parameters.L_z
 L = pybamm.geometric_parameters.L
 A_cc = pybamm.geometric_parameters.A_cc
+A_cooling = pybamm.geometric_parameters.A_cooling
+V_cell = pybamm.geometric_parameters.V_cell
 
 # Tab geometry
 L_tab_n = pybamm.geometric_parameters.L_tab_n
@@ -97,8 +99,6 @@ C_dl_n_dimensional = pybamm.Parameter(
 C_dl_p_dimensional = pybamm.Parameter(
     "Positive electrode double-layer capacity [F.m-2]"
 )
-# Oxygen parameters, for reusing same submodels as lead-acid
-s_plus_Ox = 0
 
 
 # Initial conditions
@@ -255,7 +255,8 @@ tau_r_n = F * c_n_max / (j0_n_ref_dimensional * a_n_dim)
 tau_r_p = F * c_p_max / (j0_p_ref_dimensional * a_p_dim)
 
 # Electrolyte diffusion timescale
-tau_diffusion_e = L_x ** 2 / D_e_dimensional(c_e_typ, T_ref)
+D_e_typ = D_e_dimensional(c_e_typ, T_ref)
+tau_diffusion_e = L_x ** 2 / D_e_typ
 
 # Particle diffusion timescales
 tau_diffusion_n = R_n ** 2 / D_n_dimensional(pybamm.Scalar(1), T_ref)
@@ -291,6 +292,8 @@ l_x = pybamm.geometric_parameters.l_x
 l_y = pybamm.geometric_parameters.l_y
 l_z = pybamm.geometric_parameters.l_z
 a_cc = pybamm.geometric_parameters.a_cc
+a_cooling = pybamm.geometric_parameters.a_cooling
+v_cell = pybamm.geometric_parameters.v_cell
 l = pybamm.geometric_parameters.l
 delta = pybamm.geometric_parameters.delta
 
@@ -401,6 +404,7 @@ h_tab_n = pybamm.thermal_parameters.h_tab_n
 h_tab_p = pybamm.thermal_parameters.h_tab_p
 h_cn = pybamm.thermal_parameters.h_cn
 h_cp = pybamm.thermal_parameters.h_cp
+h_total = pybamm.thermal_parameters.h_total
 
 B = (
     i_typ
@@ -436,13 +440,13 @@ def D_e(c_e, T):
     "Dimensionless electrolyte diffusivity"
     c_e_dimensional = c_e * c_e_typ
     T_dim = Delta_T * T + T_ref
-    return D_e_dimensional(c_e_dimensional, T_dim) / D_e_dimensional(c_e_typ, T_ref)
+    return D_e_dimensional(c_e_dimensional, T_dim) / D_e_typ
 
 
 def kappa_e(c_e, T):
     "Dimensionless electrolyte conductivity"
     c_e_dimensional = c_e * c_e_typ
-    kappa_scale = F ** 2 * D_e_dimensional(c_e_typ, T_ref) * c_e_typ / (R * T_ref)
+    kappa_scale = F ** 2 * D_e_typ * c_e_typ / (R * T_ref)
     T_dim = Delta_T * T + T_ref
     return kappa_e_dimensional(c_e_dimensional, T_dim) / kappa_scale
 

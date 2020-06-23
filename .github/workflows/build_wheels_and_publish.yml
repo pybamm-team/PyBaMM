@@ -1,0 +1,70 @@
+name: Build and deployment
+
+on:
+  push:
+    branches: master
+
+jobs:
+  build-wheels:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest]
+        python-version: [3.6, 3.7]
+        include:
+          - os: ubuntu-latest
+            python-version: 3.8
+          - os: windows-latest
+            python-version: 3.6
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+       python-version: ${{ matrix.python-version }}
+
+    - name: Build manylinux Python wheels
+      if: matrix.os == 'ubuntu-latest'
+      uses: './build_manylinux_wheels'
+
+    - name: Install standard python dependencies
+      if: matrix.os != 'ubuntu-latest'
+      run: |
+        python -m pip install --upgrade pip wheel setuptools
+
+    - name: Install build-time deps for MacOS
+      if: matrix.os == 'macos-latest'
+      run: |
+        brew update
+        brew install graphviz
+        brew install sundials
+        git clone https://github.com/pybind/pybind11.git
+
+    - name: Build wheels for MacOS and Windows
+      if: matrix.os != 'ubuntu-latest'
+      run: |
+        python -m pip wheel . -w dist/ --no-deps
+
+    - name: Upload wheels
+      uses: actions/upload-artifact@v1
+      with:
+        name: dist
+        path: dist
+
+
+  publish-pyi:
+    name: Upload wheels to PyPI 
+    needs: build-wheels
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download wheels
+        uses: actions/download-artifact@v1
+        with:
+          name: dist
+
+      - name: Publish wheels
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_TOKEN }}
+

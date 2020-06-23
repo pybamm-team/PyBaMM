@@ -13,11 +13,17 @@
 }
 
 @article{Chen2020,
-author = {Chen, Chang-Hui and Brosa Planella, Ferran and O'Regan, Kieran and Gastol, Dominika and Widanage, W. Dhammika and Kendrick, Emma},
-title = {{Development of Experimental Techniques for Parameterization of Multi-scale Lithium-ion Battery Models}},
-journal = {Submitted for publication},
-year = {2020}
+  author = {Chen, Chang-Hui and Brosa Planella, Ferran and O'Regan, Kieran and Gastol, Dominika and Widanage, W. Dhammika and Kendrick, Emma},
+  title = {{Development of Experimental Techniques for Parameterization of Multi-scale Lithium-ion Battery Models}},
+  journal={Journal of The Electrochemical Society},
+  volume={167},
+  number={8},
+  pages={080534},
+  year={2020},
+  publisher={The Electrochemical Society}
+
 }
+
 
 @article{doyle1993modeling,
   title={Modeling of galvanostatic charge and discharge of the lithium/polymer/insertion cell},
@@ -176,4 +182,14 @@ issn = "0013-4686",
 doi = "https://doi.org/10.1016/j.electacta.2020.135862",
 url = "http://www.sciencedirect.com/science/article/pii/S0013468620302541",
 author = "G. Richardson and I. Korotkin and R. Ranom and M. Castle and J.M. Foster",
+}
+
+@article{timms2020,
+title={Asymptotic Reduction of a Lithium-ion Pouch Cell Model}
+journal={Submitted for publication},
+author={R Timms and SG Marquis and V Sulzer and CP Please and SJ Chapman},
+year={2020},
+eprint={2005.05127},
+archivePrefix={arXiv},
+primaryClass={physics.app-ph},
 }

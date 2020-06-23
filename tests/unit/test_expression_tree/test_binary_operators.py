@@ -270,7 +270,7 @@ class TestBinaryOperators(unittest.TestCase):
         disc.process_model(model)
 
         # check doesn't evaluate on edges anymore
-        self.assertEqual(model.variables["inner"].evaluates_on_edges(), False)
+        self.assertEqual(model.variables["inner"].evaluates_on_edges("primary"), False)
 
     def test_source(self):
         u = pybamm.Variable("u", domain="current collector")

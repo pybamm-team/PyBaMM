@@ -53,13 +53,40 @@ class BaseBatteryModel(pybamm.BaseModel):
                 Set the sei submodel to be used. Options are:
 
                 - None: :class:`pybamm.sei.NoSEI` (no SEI growth)
+                - "constant": :class:`pybamm.sei.Constant` (constant SEI thickness)
                 - "reaction limited": :class:`pybamm.sei.ReactionLimited`
-                - "solvent diffusion limited": \
+                - "solvent-diffusion limited": \
                     :class:`pybamm.sei.SolventDiffusionLimited`
-                - "electron migration limited": \
+                - "electron-migration limited": \
                     :class:`pybamm.sei.ElectronMigrationLimited`
-                - "lithium interstitial diffusion limited": \
+                - "interstitial-diffusion limited": \
                     :class:`pybamm.sei.InterstitialDiffusionLimited`
+            * "sei film resistance" : str
+                Set the submodel for additional term in the overpotential due to SEI.
+                The default value is "None" if the "sei" option is "None", and
+                "distributed" otherwise. This is because the "distributed" model is more
+                complex than the model with no additional resistance, which adds
+                unnecessary complexity if there is no SEI in the first place
+
+                - None: no additional resistance\
+
+                    .. math::
+                        \\eta_r = \\frac{F}{RT} * (\\phi_s - \\phi_e - U)
+
+                - "distributed": properly included additional resistance term\
+
+                    .. math::
+                        \\eta_r = \\frac{F}{RT}
+                        * (\\phi_s - \\phi_e - U - R_{sei} * L_{sei} * j)
+
+                - "average": constant additional resistance term (approximation to the \
+                    true model). This model can give similar results to the \
+                    "distributed" case without needing to make j an algebraic state\
+
+                    .. math::
+                        \\eta_r = \\frac{F}{RT}
+                        * (\\phi_s - \\phi_e - U - R_{sei} * L_{sei} * \\frac{I}{aL})
+
 
     **Extends:** :class:`pybamm.BaseModel`
     """
@@ -79,12 +106,9 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     @property
     def default_geometry(self):
-        if self.options["dimensionality"] == 0:
-            return pybamm.Geometry("1D macro", "1+1D micro")
-        elif self.options["dimensionality"] == 1:
-            return pybamm.Geometry("1+1D macro", "1+1D micro")
-        elif self.options["dimensionality"] == 2:
-            return pybamm.Geometry("2+1D macro", "1+1D micro")
+        return pybamm.battery_geometry(
+            current_collector_dimension=self.options["dimensionality"]
+        )
 
     @property
     def default_var_pts(self):
@@ -154,21 +178,44 @@ class BaseBatteryModel(pybamm.BaseModel):
             "current collector": "uniform",
             "particle": "Fickian diffusion",
             "thermal": "isothermal",
+            "cell_geometry": None,
             "external submodels": [],
             "sei": None,
         }
+        # Change the default for cell geometry based on which thermal option is provided
+        extra_options = extra_options or {}
+        thermal_option = extra_options.get(
+            "thermal", None
+        )  # return None if option not given
+        if thermal_option is None or thermal_option in ["isothermal", "lumped"]:
+            default_options["cell_geometry"] = "arbitrary"
+        else:
+            default_options["cell_geometry"] = "pouch"
+        # The "cell_geometry" option will still be overridden by extra_options if
+        # provided
+
+        # Change the default for SEI film resistance based on which sei option is
+        # provided
+        # extra_options = extra_options or {}
+        sei_option = extra_options.get("sei", None)  # return None if option not given
+        if sei_option is None:
+            default_options["sei film resistance"] = None
+        else:
+            default_options["sei film resistance"] = "distributed"
+        # The "sei film resistance" option will still be overridden by extra_options if
+        # provided
+
         options = pybamm.FuzzyDict(default_options)
         # any extra options overwrite the default options
-        if extra_options is not None:
-            for name, opt in extra_options.items():
-                if name in default_options:
-                    options[name] = opt
-                else:
-                    raise pybamm.OptionError(
-                        "Option '{}' not recognised. Best matches are {}".format(
-                            name, options.get_best_matches(name)
-                        )
+        for name, opt in extra_options.items():
+            if name in default_options:
+                options[name] = opt
+            else:
+                raise pybamm.OptionError(
+                    "Option '{}' not recognised. Best matches are {}".format(
+                        name, options.get_best_matches(name)
                     )
+                )
 
         # Options that are incompatible with models
         if isinstance(self, pybamm.lithium_ion.BaseModel):
@@ -176,12 +223,21 @@ class BaseBatteryModel(pybamm.BaseModel):
                 raise pybamm.OptionError(
                     "convection not implemented for lithium-ion models"
                 )
+            if (
+                options["thermal"] in ["x-lumped", "x-full"]
+                and options["cell_geometry"] != "pouch"
+            ):
+                raise pybamm.OptionError(
+                    options["thermal"] + " model must have pouch geometry."
+                )
         if isinstance(self, pybamm.lead_acid.BaseModel):
             if options["thermal"] != "isothermal" and options["dimensionality"] != 0:
                 raise pybamm.OptionError(
                     "Lead-acid models can only have thermal "
                     "effects if dimensionality is 0."
                 )
+            if options["sei"] is not None or options["sei film resistance"] is not None:
+                raise pybamm.OptionError("Lead-acid models cannot have SEI formation")
 
         # Some standard checks to make sure options are compatible
         if not (
@@ -234,10 +290,28 @@ class BaseBatteryModel(pybamm.BaseModel):
             raise pybamm.OptionError(
                 "Unknown thermal model '{}'".format(options["thermal"])
             )
+        if options["cell_geometry"] not in ["arbitrary", "pouch"]:
+            raise pybamm.OptionError(
+                "Unknown geometry '{}'".format(options["cell_geometry"])
+            )
+        if options["sei"] not in [
+            None,
+            "constant",
+            "reaction limited",
+            "solvent-diffusion limited",
+            "electron-migration limited",
+            "interstitial-diffusion limited",
+        ]:
+            raise pybamm.OptionError("Unknown sei model '{}'".format(options["sei"]))
+        if options["sei film resistance"] not in [None, "distributed", "average"]:
+            raise pybamm.OptionError(
+                "Unknown sei film resistance model '{}'".format(
+                    options["sei film resistance"]
+                )
+            )
+
         if options["dimensionality"] == 0:
-            if options["current collector"] not in [
-                "uniform",
-            ]:
+            if options["current collector"] not in ["uniform"]:
                 raise pybamm.OptionError(
                     "current collector model must be uniform in 0D model"
                 )
@@ -252,8 +326,8 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         if options["thermal"] == "x-lumped" and options["dimensionality"] == 1:
             warnings.warn(
-                "1+1D Thermal models are only valid if both tabs are"
-                + "placed at the top of the cell."
+                "1+1D Thermal models are only valid if both tabs are "
+                "placed at the top of the cell."
             )
 
         self._options = options
@@ -294,6 +368,9 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
 
         # Initialize "total reaction" variables
+        # These will get populated by the "get_coupled_variables" methods, and then used
+        # later by "set_rhs" or "set_algebraic", which ensures that we always have
+        # added all the necessary variables by the time the sum is used
         self.variables.update(
             {
                 "Sum of electrolyte reaction source terms": 0,
@@ -367,10 +444,10 @@ class BaseBatteryModel(pybamm.BaseModel):
                         if len(submodels) == 1 or count == 100:
                             # no more submodels to try
                             raise pybamm.ModelError(
-                                "Submodel '{}' requires the variable {}, ".format(
+                                "Missing variable for submodel '{}': {}.\n".format(
                                     submodel_name, key
                                 )
-                                + "but it cannot be found. Check the selected "
+                                + "Check the selected "
                                 "submodels provide all of the required variables."
                             )
                         else:
@@ -492,13 +569,15 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         elif self.options["thermal"] == "lumped":
             thermal_submodel = pybamm.thermal.Lumped(
-                self.param, self.options["dimensionality"]
+                self.param,
+                self.options["dimensionality"],
+                self.options["cell_geometry"],
             )
 
         elif self.options["thermal"] == "x-lumped":
             if self.options["dimensionality"] == 0:
-                # With 0D current collectors x-lumped is equivalent to lumped
-                thermal_submodel = pybamm.thermal.Lumped(self.param)
+                # With 0D current collectors x-lumped is equivalent to lumped pouch
+                thermal_submodel = pybamm.thermal.Lumped(self.param, geometry="pouch")
             elif self.options["dimensionality"] == 1:
                 thermal_submodel = pybamm.thermal.pouch_cell.CurrentCollector1D(
                     self.param
@@ -526,9 +605,7 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     def set_current_collector_submodel(self):
 
-        if self.options["current collector"] in [
-            "uniform",
-        ]:
+        if self.options["current collector"] in ["uniform"]:
             submodel = pybamm.current_collector.Uniform(self.param)
         elif self.options["current collector"] == "potential pair":
             if self.options["dimensionality"] == 1:
@@ -596,6 +673,22 @@ class BaseBatteryModel(pybamm.BaseModel):
         eta_r_av = eta_r_p_av - eta_r_n_av
         eta_r_av_dim = eta_r_p_av_dim - eta_r_n_av_dim
 
+        # SEI film overpotential
+        eta_sei_n_av = self.variables[
+            "X-averaged negative electrode sei film overpotential"
+        ]
+        eta_sei_p_av = self.variables[
+            "X-averaged positive electrode sei film overpotential"
+        ]
+        eta_sei_n_av_dim = self.variables[
+            "X-averaged negative electrode sei film overpotential [V]"
+        ]
+        eta_sei_p_av_dim = self.variables[
+            "X-averaged positive electrode sei film overpotential [V]"
+        ]
+        eta_sei_av = eta_sei_n_av + eta_sei_p_av
+        eta_sei_av_dim = eta_sei_n_av_dim + eta_sei_p_av_dim
+
         # TODO: add current collector losses to the voltage in 3D
 
         self.variables.update(
@@ -606,6 +699,8 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "Measured open circuit voltage [V]": ocv_dim,
                 "X-averaged reaction overpotential": eta_r_av,
                 "X-averaged reaction overpotential [V]": eta_r_av_dim,
+                "X-averaged sei film overpotential": eta_sei_av,
+                "X-averaged sei film overpotential [V]": eta_sei_av_dim,
                 "X-averaged solid phase ohmic losses": delta_phi_s_av,
                 "X-averaged solid phase ohmic losses [V]": delta_phi_s_av_dim,
             }

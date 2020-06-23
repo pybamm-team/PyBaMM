@@ -47,8 +47,18 @@ class Discretisation(object):
                 spatial_methods["positive electrode"] = method
 
             self._spatial_methods = spatial_methods
-            for method in self._spatial_methods.values():
+            for domain, method in self._spatial_methods.items():
                 method.build(mesh)
+                # Check zero-dimensional methods are only applied to zero-dimensional
+                # meshes
+                if isinstance(method, pybamm.ZeroDimensionalSpatialMethod):
+                    if not isinstance(mesh[domain], pybamm.SubMesh0D):
+                        raise pybamm.DiscretisationError(
+                            "Zero-dimensional spatial method for the "
+                            "{} domain requires a zero-dimensional submesh".format(
+                                domain
+                            )
+                        )
 
         self.bcs = {}
         self.y_slices = {}
@@ -239,18 +249,18 @@ class Discretisation(object):
         for variable in variables:
             # Add up the size of all the domains in variable.domain
             if isinstance(variable, pybamm.Concatenation):
+                spatial_method = self.spatial_methods[variable.domain[0]]
                 children = variable.children
                 meshes = OrderedDict()
                 for child in children:
-                    meshes[child] = [
-                        self.spatial_methods[dom].mesh[dom] for dom in child.domain
-                    ]
-                sec_points = len(list(meshes.values())[0][0])
+                    meshes[child] = [spatial_method.mesh[dom] for dom in child.domain]
+                sec_points = spatial_method._get_auxiliary_domain_repeats(
+                    variable.domains
+                )
                 for i in range(sec_points):
                     for child, mesh in meshes.items():
                         for domain_mesh in mesh:
-                            submesh = domain_mesh[i]
-                            end += submesh.npts_for_broadcast_to_nodes
+                            end += domain_mesh.npts_for_broadcast_to_nodes
                         y_slices[child.id].append(slice(start, end))
                         y_slices_explicit[child].append(slice(start, end))
                         start = end
@@ -275,9 +285,12 @@ class Discretisation(object):
             return 1
         else:
             size = 0
+            spatial_method = self.spatial_methods[variable.domain[0]]
+            repeats = spatial_method._get_auxiliary_domain_repeats(
+                variable.auxiliary_domains
+            )
             for dom in variable.domain:
-                for submesh in self.spatial_methods[dom].mesh[dom]:
-                    size += submesh.npts_for_broadcast_to_nodes
+                size += spatial_method.mesh[dom].npts_for_broadcast_to_nodes * repeats
             return size
 
     def _preprocess_external_variables(self, model):
@@ -330,7 +343,12 @@ class Discretisation(object):
                 end = 0
                 for child in var.children:
                     dom = child.domain[0]
-                    if len(self.spatial_methods[dom].mesh[dom]) > 1:
+                    if (
+                        self.spatial_methods[dom]._get_auxiliary_domain_repeats(
+                            child.domains
+                        )
+                        > 1
+                    ):
                         raise NotImplementedError(
                             "Cannot create 2D external variable with concatenations"
                         )
@@ -494,7 +512,7 @@ class Discretisation(object):
         """
         # Check symbol domain
         domain = symbol.domain[0]
-        mesh = self.mesh[domain][0]
+        mesh = self.mesh[domain]
 
         if domain != "current collector":
             raise pybamm.ModelError(
@@ -808,7 +826,6 @@ class Discretisation(object):
                 return spatial_method.process_binary_operators(
                     symbol, left, right, disc_left, disc_right
                 )
-
         elif isinstance(symbol, pybamm.UnaryOperator):
             child = symbol.child
             disc_child = self.process_symbol(child)
@@ -836,16 +853,27 @@ class Discretisation(object):
                 return child_spatial_method.boundary_mass_matrix(child, self.bcs)
 
             elif isinstance(symbol, pybamm.IndefiniteIntegral):
-                return child_spatial_method.indefinite_integral(child, disc_child)
+                return child_spatial_method.indefinite_integral(
+                    child, disc_child, "forward"
+                )
+            elif isinstance(symbol, pybamm.BackwardIndefiniteIntegral):
+                return child_spatial_method.indefinite_integral(
+                    child, disc_child, "backward"
+                )
 
             elif isinstance(symbol, pybamm.Integral):
-                out = child_spatial_method.integral(child, disc_child)
+                integral_spatial_method = self.spatial_methods[
+                    symbol.integration_variable[0].domain[0]
+                ]
+                out = integral_spatial_method.integral(
+                    child, disc_child, symbol._integration_dimension
+                )
                 out.copy_domains(symbol)
                 return out
 
             elif isinstance(symbol, pybamm.DefiniteIntegralVector):
                 return child_spatial_method.definite_integral_matrix(
-                    child.domain, vector_type=symbol.vector_type
+                    child, vector_type=symbol.vector_type
                 )
 
             elif isinstance(symbol, pybamm.BoundaryIntegral):
@@ -875,7 +903,7 @@ class Discretisation(object):
                 # "positive tab" *and* the mesh is 1D then change side to
                 # "left" or "right" as appropriate
                 if symbol.side in ["negative tab", "positive tab"]:
-                    mesh = self.mesh[symbol.children[0].domain[0]][0]
+                    mesh = self.mesh[symbol.children[0].domain[0]]
                     if isinstance(mesh, pybamm.SubMesh1D):
                         symbol.side = mesh.tabs[symbol.side]
                 return child_spatial_method.boundary_value_or_flux(
@@ -921,7 +949,7 @@ class Discretisation(object):
                         domain=parent.domain,
                         auxiliary_domains=parent.auxiliary_domains,
                     )
-                    out = ext[slice(start, end)]
+                    out = pybamm.Index(ext, slice(start, end))
                     out.domain = symbol.domain
                     return out
 
@@ -1091,10 +1119,9 @@ class Discretisation(object):
             assert (
                 model.rhs[var].shape == model.initial_conditions[var].shape
             ), pybamm.ModelError(
-                """
-                rhs and initial_conditions must have the same shape after discretisation
-                but rhs.shape = {} and initial_conditions.shape = {} for variable '{}'.
-                """.format(
+                "rhs and initial_conditions must have the same shape after "
+                "discretisation but rhs.shape = "
+                "{} and initial_conditions.shape = {} for variable '{}'.".format(
                     model.rhs[var].shape, model.initial_conditions[var].shape, var
                 )
             )
@@ -1132,17 +1159,20 @@ class Discretisation(object):
                 not_concatenation = not isinstance(var, pybamm.Concatenation)
 
                 not_mult_by_one_vec = not (
-                    isinstance(var, pybamm.Multiplication)
-                    and isinstance(var.right, pybamm.Vector)
-                    and np.all(var.right.entries == 1)
+                    isinstance(
+                        var, (pybamm.Multiplication, pybamm.MatrixMultiplication)
+                    )
+                    and (
+                        pybamm.is_matrix_one(var.left)
+                        or pybamm.is_matrix_one(var.right)
+                    )
                 )
 
                 if different_shapes and not_concatenation and not_mult_by_one_vec:
                     raise pybamm.ModelError(
-                        """
-                    variable and its eqn must have the same shape after discretisation
-                    but variable.shape = {} and rhs.shape = {} for variable '{}'.
-                    """.format(
+                        "variable and its eqn must have the same shape after "
+                        "discretisation but variable.shape = "
+                        "{} and rhs.shape = {} for variable '{}'. ".format(
                             var.shape, model.rhs[rhs_var].shape, var
                         )
                     )
