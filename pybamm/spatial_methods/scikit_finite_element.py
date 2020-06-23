@@ -103,7 +103,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         # for the symbol we are taking the gradient of. we just want to get the
         # correct weights)
         @skfem.BilinearForm
-        def mass_form(u, du, v, dv, w):
+        def mass_form(u, v, w):
             return u * v
 
         mass = skfem.asm(mass_form, mesh.basis)
@@ -207,7 +207,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         if "Neumann" in [neg_bc_type, pos_bc_type]:
             # make form for unit load over the boundary
             @skfem.LinearForm
-            def unit_bc_load_form(v, dv, w):
+            def unit_bc_load_form(v, w):
                 return v
 
         if neg_bc_type == "Neumann":
@@ -269,8 +269,8 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
         # make form for the stiffness
         @skfem.BilinearForm
-        def stiffness_form(u, du, v, dv, w):
-            return sum(du * dv)
+        def stiffness_form(u, v, w):
+            return sum(u.grad * v.grad)
 
         # assemble the stifnness matrix
         stiffness = skfem.asm(stiffness_form, mesh.basis)
@@ -333,7 +333,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
         # make form for the integral
         @skfem.LinearForm
-        def integral_form(v, dv, w):
+        def integral_form(v, w):
             return v
 
         # assemble
@@ -397,7 +397,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
         # make form for the boundary integral
         @skfem.LinearForm
-        def integral_form(v, dv, w):
+        def integral_form(v, w):
             return v
 
         if region == "entire":
@@ -515,7 +515,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
         # create form for mass
         @skfem.BilinearForm
-        def mass_form(u, du, v, dv, w):
+        def mass_form(u, v, w):
             return u * v
 
         # assemble mass matrix
