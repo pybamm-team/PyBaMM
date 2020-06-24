@@ -336,7 +336,7 @@ class TestIsZero(unittest.TestCase):
 
         a = pybamm.Matrix(np.zeros((10, 10)))
         b = pybamm.Matrix(np.ones((10, 10)))
-        c = pybamm.Matrix(np.array([1, 0, 0]))
+        c = pybamm.Matrix([1, 0, 0])
         self.assertTrue(pybamm.is_matrix_zero(a))
         self.assertFalse(pybamm.is_matrix_zero(b))
         self.assertFalse(pybamm.is_matrix_zero(c))

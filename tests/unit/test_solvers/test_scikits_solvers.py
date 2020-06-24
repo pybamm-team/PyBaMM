@@ -42,7 +42,7 @@ class TestScikitsSolvers(unittest.TestCase):
 
         # Create custom model so that custom ics
         class Model:
-            mass_matrix = pybamm.Matrix(np.array([[1.0, 0.0], [0.0, 0.0]]))
+            mass_matrix = pybamm.Matrix([[1.0, 0.0], [0.0, 0.0]])
             y0 = np.array([0.0, 1.0])
             terminate_events_eval = []
             timescale_eval = 1
@@ -92,7 +92,7 @@ class TestScikitsSolvers(unittest.TestCase):
 
         # Create custom model so that custom mass matrix can be used
         class Model:
-            mass_matrix = pybamm.Matrix(np.array([[4.0, 0.0], [0.0, 0.0]]))
+            mass_matrix = pybamm.Matrix([[4.0, 0.0], [0.0, 0.0]])
             y0 = np.array([0.0, 0.0])
             terminate_events_eval = []
             timescale_eval = 1

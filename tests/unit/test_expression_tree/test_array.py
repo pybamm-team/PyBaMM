@@ -12,6 +12,12 @@ class TestArray(unittest.TestCase):
         arr = pybamm.Array(np.array([1, 2, 3]))
         self.assertEqual(arr.name, "Array of shape (3, 1)")
 
+    def test_list_entries(self):
+        vect = pybamm.Array([1, 2, 3])
+        np.testing.assert_array_equal(vect.entries, np.array([[1], [2], [3]]))
+        vect = pybamm.Array([[1], [2], [3]])
+        np.testing.assert_array_equal(vect.entries, np.array([[1], [2], [3]]))
+
     def test_linspace(self):
         x = np.linspace(0, 1, 100)[:, np.newaxis]
         y = pybamm.linspace(0, 1, 100)

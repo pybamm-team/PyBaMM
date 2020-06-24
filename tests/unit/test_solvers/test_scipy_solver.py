@@ -314,6 +314,30 @@ class TestScipySolver(unittest.TestCase):
             solution.y[0], 1 * np.exp(-0.1 * solution.t), decimal=5
         )
 
+    def test_model_solver_manually_update_initial_conditions(self):
+        # Create model
+        model = pybamm.BaseModel()
+        var1 = pybamm.Variable("var1")
+        model.rhs = {var1: -var1}
+        model.initial_conditions = {var1: 1}
+
+        # Solve
+        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8)
+        t_eval = np.linspace(0, 5, 100)
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_array_almost_equal(
+            solution.y[0], 1 * np.exp(-solution.t), decimal=5
+        )
+
+        # Change initial conditions and solve again
+        model.concatenated_initial_conditions = pybamm.NumpyConcatenation(
+            pybamm.Vector([[2]])
+        )
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_array_almost_equal(
+            solution.y[0], 2 * np.exp(-solution.t), decimal=5
+        )
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
