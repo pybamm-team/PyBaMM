@@ -314,6 +314,12 @@ class BaseBatteryModel(pybamm.BaseModel):
                     options["sei film resistance"]
                 )
             )
+        if options["sei porosity change"] not in [True, False]:
+            raise pybamm.OptionError(
+                "Unknown sei porosity change '{}'".format(
+                    options["sei porosity change"]
+                )
+            )
 
         if options["dimensionality"] == 0:
             if options["current collector"] not in ["uniform"]:

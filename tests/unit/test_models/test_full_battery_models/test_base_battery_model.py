@@ -127,6 +127,8 @@ class TestBaseBatteryModel(unittest.TestCase):
             pybamm.BaseBatteryModel({"sei": "bad sei"})
         with self.assertRaisesRegex(pybamm.OptionError, "sei film resistance"):
             pybamm.BaseBatteryModel({"sei film resistance": "bad sei film resistance"})
+        with self.assertRaisesRegex(pybamm.OptionError, "sei porosity change"):
+            pybamm.BaseBatteryModel({"sei porosity change": "bad sei porosity change"})
         # variable defaults
         model = pybamm.BaseBatteryModel()
         self.assertEqual(model.options["sei film resistance"], None)
