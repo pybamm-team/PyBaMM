@@ -483,6 +483,7 @@ class EvaluatorJaxJacobian:
 
         # execute code
         result = self._jac_evaluate(self._constants, t, y, y_dot, inputs, known_evals)
+        result = result.reshape(result.shape[0], -1)
 
         # don't need known_evals, but need to reproduce Symbol.evaluate signature
         if known_evals is not None:
