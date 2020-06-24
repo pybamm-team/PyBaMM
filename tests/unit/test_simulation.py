@@ -244,8 +244,11 @@ class TestSimulation(unittest.TestCase):
         model = pybamm.lithium_ion.SPMe(model_options)
         sim = pybamm.Simulation(model)
 
+        var = pybamm.standard_spatial_vars
+        Nr = model.default_var_pts[var.r_n]
+
         T_av = 0
-        c_s_n_av = np.ones((10, 1)) * 0.5
+        c_s_n_av = np.ones((Nr, 1)) * 0.5
         external_variables = {
             "Volume-averaged cell temperature": T_av,
             "X-averaged negative particle concentration": c_s_n_av,

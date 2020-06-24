@@ -113,15 +113,19 @@ class BaseBatteryModel(pybamm.BaseModel):
     @property
     def default_var_pts(self):
         var = pybamm.standard_spatial_vars
-        return {
+        base_var_pts = {
             var.x_n: 20,
             var.x_s: 20,
             var.x_p: 20,
-            var.r_n: 10,
-            var.r_p: 10,
+            var.r_n: 30,
+            var.r_p: 30,
             var.y: 10,
             var.z: 10,
         }
+        # Reduce the default points for 2D current collectors
+        if self.options["dimensionality"] == 2:
+            base_var_pts.update({var.x_n: 10, var.x_s: 10, var.x_p: 10})
+        return base_var_pts
 
     @property
     def default_submesh_types(self):
