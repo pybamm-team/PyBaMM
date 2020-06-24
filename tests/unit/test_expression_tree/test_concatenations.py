@@ -18,9 +18,9 @@ class TestConcatenations(unittest.TestCase):
         self.assertEqual(conc.children[0].name, "a")
         self.assertEqual(conc.children[1].name, "b")
         self.assertEqual(conc.children[2].name, "c")
-        d = pybamm.Vector(np.array([2]))
-        e = pybamm.Vector(np.array([1]))
-        f = pybamm.Vector(np.array([3]))
+        d = pybamm.Vector([2])
+        e = pybamm.Vector([1])
+        f = pybamm.Vector([3])
         conc2 = pybamm.Concatenation(d, e, f)
         with self.assertRaises(TypeError):
             conc2.evaluate()

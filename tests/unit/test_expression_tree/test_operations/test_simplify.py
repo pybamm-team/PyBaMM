@@ -336,7 +336,7 @@ class TestSimplify(unittest.TestCase):
         b = pybamm.Matrix(np.ones((2, 2)))
 
         # matrix multiplication
-        A = pybamm.Matrix(np.array([[1, 0], [0, 1]]))
+        A = pybamm.Matrix([[1, 0], [0, 1]])
         self.assertIsInstance((a @ A).simplify(), pybamm.Matrix)
         np.testing.assert_array_equal(
             (a @ A).simplify().evaluate().toarray(), np.zeros((2, 2))
@@ -347,8 +347,8 @@ class TestSimplify(unittest.TestCase):
         )
 
         # matrix * matrix
-        m1 = pybamm.Matrix(np.array([[2, 0], [0, 2]]))
-        m2 = pybamm.Matrix(np.array([[3, 0], [0, 3]]))
+        m1 = pybamm.Matrix([[2, 0], [0, 2]])
+        m2 = pybamm.Matrix([[3, 0], [0, 3]])
         v = pybamm.StateVector(slice(0, 2))
         v2 = pybamm.StateVector(slice(2, 4))
 
@@ -412,8 +412,8 @@ class TestSimplify(unittest.TestCase):
             )
 
         # matrix * vector
-        m1 = pybamm.Matrix(np.array([[2, 0], [0, 2]]))
-        v1 = pybamm.Vector(np.array([1, 1]))
+        m1 = pybamm.Matrix([[2, 0], [0, 2]])
+        v1 = pybamm.Vector([1, 1])
 
         for expr in [(m1 @ v1).simplify()]:
             self.assertIsInstance(expr, pybamm.Vector)
