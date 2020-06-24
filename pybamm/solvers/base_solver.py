@@ -839,7 +839,7 @@ class SolverCallable:
         self.timescale = self.model.timescale_eval
 
     def __call__(self, t, y, inputs):
-        y = y[:, np.newaxis]
+        y = y.reshape(-1, 1)
         if self.name in ["RHS", "algebraic", "residuals"]:
             pybamm.logger.debug(
                 "Evaluating {} for {} at t={}".format(

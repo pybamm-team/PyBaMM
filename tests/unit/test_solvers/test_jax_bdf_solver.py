@@ -36,7 +36,7 @@ class TestJaxBDFSolver(unittest.TestCase):
         t1 = time.perf_counter() - t0
 
         # test accuracy
-        np.testing.assert_allclose(y[0], np.exp(0.1 * t_eval),
+        np.testing.assert_allclose(y[:, 0], np.exp(0.1 * t_eval),
                                    rtol=1e-7, atol=1e-7)
 
         t0 = time.perf_counter()
@@ -47,7 +47,7 @@ class TestJaxBDFSolver(unittest.TestCase):
         self.assertLess(t2, t1)
 
         # test second run is accurate
-        np.testing.assert_allclose(y[0], np.exp(0.1 * t_eval),
+        np.testing.assert_allclose(y[:, 0], np.exp(0.1 * t_eval),
                                    rtol=1e-7, atol=1e-7)
 
     def test_solver_with_inputs(self):
@@ -76,7 +76,7 @@ class TestJaxBDFSolver(unittest.TestCase):
         y = pybamm.jax_bdf_integrate(fun, y0, t_eval, inputs={
                                      "rate": 0.1}, rtol=1e-9, atol=1e-9)
 
-        np.testing.assert_allclose(y[0], np.exp(-0.1 * t_eval))
+        np.testing.assert_allclose(y[:, 0], np.exp(-0.1 * t_eval))
 
 
 

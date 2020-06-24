@@ -592,7 +592,7 @@ def _bdf_interpolate(state, t_eval):
 @jax.partial(jax.jit, static_argnums=(0, 1, 2))
 def _bdf_odeint(fun, rtol, atol, y0, t_eval, inputs):
 
-    fun_bind_inputs = lambda t, y: fun(t, y, inputs)
+    def fun_bind_inputs(t, y): return fun(t, y, inputs)
 
     jac = jax.jacfwd(fun_bind_inputs, argnums=1)
     t0 = t_eval[0]
@@ -613,18 +613,14 @@ def _bdf_odeint(fun, rtol, atol, y0, t_eval, inputs):
         stepper = _bdf_step(stepper, fun_bind_inputs, jac)
         index = np.searchsorted(t_eval, stepper['t'])
 
-        for_state = [y_out, i]
-
-        def for_body(j, for_state):
-            y_out, i = for_state
+        def for_body(j, y_out):
             t = t_eval[j]
             y_out = jax.ops.index_update(y_out, jax.ops.index[:, j],
                                          _bdf_interpolate(stepper, t))
-            i += 1
-            return [y_out, i]
+            return y_out
 
-        y_out, i = jax.lax.fori_loop(i, index, for_body, for_state)
-        return [stepper, t_eval, i, y_out]
+        y_out = jax.lax.fori_loop(i, index, for_body, y_out)
+        return [stepper, t_eval, index, y_out]
 
     stepper, t_eval, i, y_out = jax.lax.while_loop(cond_fun, body_fun, init_state)
 
@@ -648,4 +644,4 @@ def jax_bdf_integrate(fun, y0, t_eval, inputs=None, rtol=1e-6, atol=1e-6):
     y0_device = jax.device_put(y0).reshape(-1)
     t_eval_device = jax.device_put(t_eval)
     y_out = _bdf_odeint(fun, rtol, atol, y0_device, t_eval_device, inputs)
-    return np.array(y_out)
+    return np.array(y_out.T)

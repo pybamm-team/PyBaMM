@@ -14,7 +14,7 @@ class TestJaxSolver(unittest.TestCase):
         domain = ["negative electrode", "separator", "positive electrode"]
         var = pybamm.Variable("var", domain=domain)
         model.rhs = {var: 0.1 * var}
-        model.initial_conditions = {var: 1}
+        model.initial_conditions = {var: 1.0}
         # No need to set parameters; can use base discretisation (no spatial operators)
 
         # create discretisation
@@ -23,11 +23,10 @@ class TestJaxSolver(unittest.TestCase):
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
 
-        for method in ['RK45', 'BDF']:
+        for method in ['BDF', 'RK45']:
             # Solve
-            # Make sure that passing in extra options works
             solver = pybamm.JaxSolver(
-                method='BDF', rtol=1e-8, atol=1e-8
+                method=method, rtol=1e-8, atol=1e-8
             )
             t_eval = np.linspace(0, 1, 80)
             t0 = time.perf_counter()

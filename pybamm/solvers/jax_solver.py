@@ -9,6 +9,7 @@ import jax.numpy as np
 import numpy as onp
 from .jax_bdf_solver import jax_bdf_integrate
 
+
 class JaxSolver(pybamm.BaseSolver):
     """Solve a discretised model, using jax.experimental.odeint.
 
@@ -17,8 +18,6 @@ class JaxSolver(pybamm.BaseSolver):
 
     Raises
     ------
-    RuntimeError
-        if model has any sparse matrices
 
     RuntimeError
         if model has any termination events
@@ -40,12 +39,11 @@ class JaxSolver(pybamm.BaseSolver):
     """
 
     def __init__(self, method='RK45', rtol=1e-6, atol=1e-6, extra_options=None):
-        super().__init__(rtol, atol)
+        super().__init__(method, rtol, atol)
         self.ode_solver = True
         method_options = ['RK45', 'BDF']
         if method not in method_options:
             raise ValueError('method must be one of {}'.format(method_options))
-        self.method = method
         self.extra_options = extra_options or {}
         self.name = "JAX solver"
         self._cached_solves = dict()
@@ -107,13 +105,13 @@ class JaxSolver(pybamm.BaseSolver):
         # Initial conditions
         y0 = model.y0
 
-        def rhs(y, t, inputs):
+        def rhs_odeint(y, t, inputs):
             return model.rhs_eval(t, y, inputs)
 
         def solve_model_rk45(inputs):
             return np.transpose(
                 odeint(
-                    rhs,
+                    rhs_odeint,
                     y0,
                     t_eval,
                     inputs,
@@ -126,7 +124,7 @@ class JaxSolver(pybamm.BaseSolver):
         def solve_model_bdf(inputs):
             return np.transpose(
                 jax_bdf_integrate(
-                    rhs,
+                    model.rhs_eval,
                     y0,
                     t_eval,
                     inputs,
@@ -140,7 +138,6 @@ class JaxSolver(pybamm.BaseSolver):
             return jax.jit(solve_model_rk45)
         else:
             return jax.jit(solve_model_bdf)
-
 
     def _integrate(self, model, t_eval, inputs=None):
         """
