@@ -19,7 +19,9 @@ class AlgebraicSolver(pybamm.BaseSolver):
     Parameters
     ----------
     method : str, optional
-        The method to use to solve the system (default is "lm")
+        The method to use to solve the system (default is "lm"). If it starts with
+        "lsq", least-squares minimization is used. The method for least-squares can be
+        specified in the form "lsq_methodname"
     tol : float, optional
         The tolerance for the solver (default is 1e-6).
     extra_options : dict, optional
@@ -123,14 +125,68 @@ class AlgebraicSolver(pybamm.BaseSolver):
                 y_alg[:, idx] = y0_alg
             # Otherwise calculate new y0
             else:
-                sol = optimize.root(
-                    root_fun,
-                    y0_alg,
-                    method=self.method,
-                    tol=self.tol,
-                    jac=jac_fn,
-                    options=self.extra_options,
-                )
+                # Methods which use least-squares are specified as either "lsq", which
+                # uses the default method, or with "lsq__methodname"
+                if self.method.startswith("lsq"):
+
+                    if self.method == "lsq":
+                        method = "trf"
+                    else:
+                        method = self.method[5:]
+                    if jac_fn is None:
+                        jac_fn = "2-point"
+                    sol = optimize.least_squares(
+                        root_fun,
+                        y0_alg,
+                        method=method,
+                        ftol=self.tol,
+                        jac=jac_fn,
+                        bounds=model.bounds,
+                        **self.extra_options,
+                    )
+                # Methods which use minimize are specified as either "minimize", which
+                # uses the default method, or with "minimize__methodname"
+                elif self.method.startswith("minimize"):
+                    # Adapt the root function for minimize
+                    def root_norm(y):
+                        return np.sum(root_fun(y) ** 2)
+
+                    if jac_fn is None:
+                        jac_norm = None
+                    else:
+
+                        def jac_norm(y):
+                            return np.sum(2 * root_fun(y) * jac_fn(y), 0)
+
+                    if self.method == "minimize":
+                        method = None
+                    else:
+                        method = self.method[10:]
+                    extra_options = self.extra_options
+                    if np.any(model.bounds[0] != -np.inf) or np.any(
+                        model.bounds[1] != np.inf
+                    ):
+                        bounds = [
+                            (lb, ub) for lb, ub in zip(model.bounds[0], model.bounds[1])
+                        ]
+                        extra_options["bounds"] = bounds
+                    sol = optimize.minimize(
+                        root_norm,
+                        y0_alg,
+                        method=method,
+                        tol=self.tol,
+                        jac=jac_norm,
+                        **extra_options,
+                    )
+                else:
+                    sol = optimize.root(
+                        root_fun,
+                        y0_alg,
+                        method=self.method,
+                        tol=self.tol,
+                        jac=jac_fn,
+                        options=self.extra_options,
+                    )
 
                 if sol.success and np.all(abs(sol.fun) < self.tol):
                     # update initial guess for the next iteration
@@ -143,12 +199,10 @@ class AlgebraicSolver(pybamm.BaseSolver):
                     )
                 else:
                     raise pybamm.SolverError(
-                        """
-                        Could not find acceptable solution: solver terminated
-                        successfully, but maximum solution error ({})
-                        above tolerance ({})
-                        """.format(
-                            np.max(sol.fun), self.tol
+                        "Could not find acceptable solution: solver terminated "
+                        "successfully, but maximum solution error "
+                        "({}) above tolerance ({})".format(
+                            np.max(abs(sol.fun)), self.tol
                         )
                     )
 
