@@ -211,6 +211,12 @@ class ProcessedVariable(object):
         elif self.domain == ["current collector"]:
             self.first_dimension = "z"
             self.z_sol = space
+        elif self.domain[0] in [
+            "negative particle-size domain",
+            "positive particle-size domain",
+        ]:
+            self.first_dimension = "R"
+            self.R_sol = space
         else:
             self.first_dimension = "x"
             self.x_sol = space
@@ -425,9 +431,9 @@ class ProcessedVariable(object):
                 bounds_error=False,
             )
 
-    def __call__(self, t=None, x=None, r=None, y=None, z=None, warn=True):
+    def __call__(self, t=None, x=None, r=None, y=None, z=None, R=None, warn=True):
         """
-        Evaluate the variable at arbitrary *dimensional* t (and x, r, y and/or z),
+        Evaluate the variable at arbitrary *dimensional* t (and x, r, y, z and/or R),
         using interpolation
         """
         # If t is None and there is only one value of time in the soluton (i.e.
@@ -449,7 +455,7 @@ class ProcessedVariable(object):
         if self.dimensions == 0:
             out = self._interpolation_function(t)
         elif self.dimensions == 1:
-            out = self.call_1D(t, x, r, z)
+            out = self.call_1D(t, x, r, z, R)
         elif self.dimensions == 2:
             out = self.call_2D(t, x, r, y, z)
         if warn is True and np.isnan(out).any():
@@ -458,15 +464,15 @@ class ProcessedVariable(object):
             )
         return out
 
-    def call_1D(self, t, x, r, z):
+    def call_1D(self, t, x, r, z, R):
         "Evaluate a 1D variable"
-        spatial_var = eval_dimension_name(self.first_dimension, x, r, None, z)
+        spatial_var = eval_dimension_name(self.first_dimension, x, r, None, z, R)
         return self._interpolation_function(t, spatial_var)
 
     def call_2D(self, t, x, r, y, z):
         "Evaluate a 2D variable"
-        first_dim = eval_dimension_name(self.first_dimension, x, r, y, z)
-        second_dim = eval_dimension_name(self.second_dimension, x, r, y, z)
+        first_dim = eval_dimension_name(self.first_dimension, x, r, y, z, R)
+        second_dim = eval_dimension_name(self.second_dimension, x, r, y, z, R)
         if isinstance(first_dim, np.ndarray):
             if isinstance(second_dim, np.ndarray) and isinstance(t, np.ndarray):
                 first_dim = first_dim[:, np.newaxis, np.newaxis]
@@ -501,7 +507,7 @@ class ProcessedVariable(object):
         return self.entries
 
 
-def eval_dimension_name(name, x, r, y, z):
+def eval_dimension_name(name, x, r, y, z, R):
     if name == "x":
         out = x
     elif name == "r":
@@ -510,6 +516,8 @@ def eval_dimension_name(name, x, r, y, z):
         out = y
     elif name == "z":
         out = z
+    elif name == "R":
+        out = R
 
     if out is None:
         raise ValueError("inputs {} cannot be None".format(name))

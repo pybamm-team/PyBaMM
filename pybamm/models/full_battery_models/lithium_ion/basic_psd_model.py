@@ -62,6 +62,13 @@ class BasicPSDModel(BaseModel):
             inputs,
             )
 
+        # Set length scales for additional domains (particle-size domains)
+        self.length_scales.update(
+            {
+                "negative particle-size domain": param.R_n,
+                "positive particle-size domain": param.R_p,
+            }
+        )
 
         ######################
         # Variables
@@ -236,7 +243,22 @@ class BasicPSDModel(BaseModel):
         V = phi_s_p
         c_e = 1
 
-
+        c_s_n_size_av = pybamm.Integral(
+            f_a_dist_n(R_variable_n, 1, sd_a_n)*c_s_n,
+            R_variable_n
+        )
+        c_s_p_size_av = pybamm.Integral(
+            f_a_dist_p(R_variable_p, 1, sd_a_p)*c_s_p,
+            R_variable_p
+        )
+        c_s_surf_n_size_av = pybamm.Integral(
+            f_a_dist_n(R_variable_n, 1, sd_a_n)*c_s_surf_n,
+            R_variable_n
+        )
+        c_s_surf_p_size_av = pybamm.Integral(
+            f_a_dist_p(R_variable_p, 1, sd_a_p)*c_s_surf_p,
+            R_variable_p
+        )
         # Dimensional output variables
         V_dim = param.potential_scale * V + (param.U_p_ref - param.U_n_ref)
 
@@ -244,6 +266,12 @@ class BasicPSDModel(BaseModel):
         c_s_p_dim = c_s_p * param.c_p_max
         c_s_surf_n_dim = c_s_surf_n * param.c_n_max
         c_s_surf_p_dim = c_s_surf_p * param.c_p_max
+
+        c_s_n_size_av_dim = c_s_n_size_av * param.c_n_max
+        c_s_p_size_av_dim = c_s_p_size_av * param.c_p_max
+        c_s_surf_n_size_av_dim = c_s_surf_n_size_av * param.c_n_max
+        c_s_surf_p_size_av_dim = c_s_surf_p_size_av * param.c_p_max
+
 
         c_e_dim = c_e * param.c_e_typ
         phi_s_n_dim = phi_s_n * param.potential_scale
@@ -256,16 +284,28 @@ class BasicPSDModel(BaseModel):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
 
         self.variables.update({
-            "Negative particle concentration": c_s_n,
-            "Negative particle concentration [mol.m-3]": c_s_n_dim,
-            "Negative particle surface concentration": c_s_surf_n,
-            "Negative particle surface concentration [mol.m-3]": c_s_surf_n_dim,
+            # New "Distribution" variables, those depending on R_variable_n, R_variable_p
+            "Negative particle concentration distribution": c_s_n,
+            "Negative particle concentration distribution [mol.m-3]": c_s_n_dim,
+            "Negative particle surface concentration distribution": c_s_surf_n,
+            "Negative particle surface concentration distribution [mol.m-3]": c_s_surf_n_dim,
+            "Positive particle concentration distribution": c_s_p,
+            "Positive particle concentration distribution [mol.m-3]": c_s_p_dim,
+            "Positive particle surface concentration distribution": c_s_surf_p,
+            "Positive particle surface concentration distribution [mol.m-3]": c_s_surf_p_dim,
+
+
+            # Standard output quantities (no PSD)
+            "Negative particle concentration": c_s_n_size_av,
+            "Negative particle concentration [mol.m-3]": c_s_n_size_av_dim,
+            "Negative particle surface concentration": c_s_surf_n_size_av,
+            "Negative particle surface concentration [mol.m-3]": c_s_surf_n_size_av_dim,
             "Electrolyte concentration": pybamm.PrimaryBroadcast(c_e, whole_cell),
             "Electrolyte concentration [mol.m-3]": pybamm.PrimaryBroadcast(c_e_dim, whole_cell),
-            "Positive particle concentration": c_s_p,
-            "Positive particle concentration [mol.m-3]": c_s_p_dim,
-            "Positive particle surface concentration": c_s_surf_p,
-            "Positive particle surface concentration [mol.m-3]": c_s_surf_p_dim,
+            "Positive particle concentration": c_s_p_size_av,
+            "Positive particle concentration [mol.m-3]": c_s_p_size_av_dim,
+            "Positive particle surface concentration": c_s_surf_p_size_av,
+            "Positive particle surface concentration [mol.m-3]": c_s_surf_p_size_av_dim,
             "Negative electrode potential": pybamm.PrimaryBroadcast(
                 phi_s_n, "negative electrode"
             ),
