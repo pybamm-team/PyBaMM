@@ -33,40 +33,9 @@ class EcReactionLimited(BaseModel):
             domain=self.domain.lower() + " electrode",
             auxiliary_domains={"secondary": "current collector"},
         )
-        L_sei_av = pybamm.x_average(L_sei)
-        j_sei_av = pybamm.x_average(j_sei)
 
-        L_scale = self.param.L_sei_0_dim
-        # in this model the scale is identical to the intercalation current
-        j_scale = self.param.j_scale_n
-        R_sei_dim = self.param.R_sei_dimensional
-
-        variables = {
-            "Total " + self.domain.lower() + " electrode sei thickness": L_sei,
-            "Total " + self.domain.lower() + " sei thickness [m]": L_sei * L_scale,
-            "X-averaged total "
-            + self.domain.lower()
-            + " electrode sei thickness": L_sei_av,
-            "X-averaged total "
-            + self.domain.lower()
-            + " electrode sei thickness [m]": L_sei_av * L_scale,
-            self.domain + " electrode sei interfacial current density": j_sei,
-            self.domain + " electrode scaled sei interfacial current density": j_sei,
-            self.domain
-            + " electrode sei interfacial current density [A.m-2]": j_sei * j_scale,
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode sei interfacial current density": j_sei_av,
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode sei interfacial current density [A.m-2]": j_sei_av * j_scale,
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode scaled sei interfacial current density": j_sei_av,
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode resistance [Ohm.m2]": L_sei_av * L_scale * R_sei_dim,
-        }
+        variables = self._get_standard_total_thickness_variables(L_sei)
+        variables.update(self._get_standard_total_reaction_variables(j_sei))
 
         return variables
 
@@ -81,17 +50,19 @@ class EcReactionLimited(BaseModel):
 
         c_ec = pybamm.Scalar(1) + j_sei * L_sei * C_ec
         c_ec_av = pybamm.x_average(c_ec)
-        variables = {
-            self.domain + " electrode EC surface concentration": c_ec,
-            self.domain
-            + " electrode EC surface concentration [mol.m-3]": c_ec * c_scale,
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode EC surface concentration": c_ec_av,
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode EC surface concentration": c_ec_av * c_scale,
-        }
+        variables.update(
+            {
+                self.domain + " electrode EC surface concentration": c_ec,
+                self.domain
+                + " electrode EC surface concentration [mol.m-3]": c_ec * c_scale,
+                "X-averaged "
+                + self.domain.lower()
+                + " electrode EC surface concentration": c_ec_av,
+                "X-averaged "
+                + self.domain.lower()
+                + " electrode EC surface concentration": c_ec_av * c_scale,
+            }
+        )
         # Update whole cell variables, which also updates the "sum of" variables
         if (
             "Negative electrode sei interfacial current density" in variables

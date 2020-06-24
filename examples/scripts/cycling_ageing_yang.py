@@ -44,6 +44,7 @@ sim.plot(
         "Electrolyte concentration [mol.m-3]",
         "Total negative electrode sei thickness",
         "Negative electrode porosity",
+        "X-averaged negative electrode porosity",
         "Negative electrode sei interfacial current density [A.m-2]",
         "X-averaged total negative electrode sei thickness [m]",
     ]
