@@ -7,4 +7,4 @@ from .spme import SPMe
 from .dfn import DFN
 from .basic_dfn import BasicDFN
 from .basic_spm import BasicSPM
-from .basic_mpm import BasicPSDModel
+from .basic_psd_model import BasicPSDModel
