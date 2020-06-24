@@ -20,16 +20,16 @@ class BasicSPM(BaseModel):
 
     References
     ----------
-    .. [2] Marquis, S. G., Sulzer, V.,  Timms, R.,  Please, C. P.,  &  Chapman, S. J.
-    (2019). “An  asymptotic derivation of a single particle model with electrolyte”.
-    Journal of The Electrochemical Society, 166(15), A3693-A3706.
-
+    .. [2] SG Marquis, V Sulzer, R Timms, CP Please and SJ Chapman. “An asymptotic
+           derivation of a single particle model with electrolyte”. Journal of The
+           Electrochemical Society, 166(15):A3693–A3706, 2019
 
     **Extends:** :class:`pybamm.lithium_ion.BaseModel`
     """
 
     def __init__(self, name="Single Particle Model"):
         super().__init__({}, name)
+        pybamm.citations.register("marquis2019asymptotic")
         # `param` is a class containing all the relevant parameters and functions for
         # this model. These are purely symbolic at this stage, and will be set by the
         # `ParameterValues` class when the model is processed.
