@@ -76,6 +76,24 @@ class TestBaseBatteryModel(unittest.TestCase):
             )
         )
 
+    def test_default_var_pts(self):
+        var = pybamm.standard_spatial_vars
+        var_pts = {
+            var.x_n: 20,
+            var.x_s: 20,
+            var.x_p: 20,
+            var.r_n: 30,
+            var.r_p: 30,
+            var.y: 10,
+            var.z: 10,
+        }
+        model = pybamm.BaseBatteryModel({"dimensionality": 0})
+        self.assertDictEqual(var_pts, model.default_var_pts)
+
+        var_pts.update({var.x_n: 10, var.x_s: 10, var.x_p: 10})
+        model = pybamm.BaseBatteryModel({"dimensionality": 2})
+        self.assertDictEqual(var_pts, model.default_var_pts)
+
     def test_default_spatial_methods(self):
         model = pybamm.BaseBatteryModel({"dimensionality": 0})
         self.assertTrue(
