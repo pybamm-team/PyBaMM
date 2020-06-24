@@ -20,35 +20,30 @@ class CrackPropagation(BaseCracking):
     def __init__(self, param, domain):
         super().__init__(param, domain)
 
-    #def get_fundamental_variables(self):
-      #  l_cr_n=pybamm.standard_variables.l_cr_n # crack length in anode particles
-        # L_sei_cr_n=
-        # L_plating_cr_n=
-      #  return variables
+    def get_fundamental_variables(self):
+        return self.get_standard_variables()
         
-
-    # def get_coupled_variables(self, variables):
-
-       # return variables
+    def get_coupled_variables(self, variables):
+        variables.update(self._get_mechanical_results(variables))
+        return variables
 
     def set_rhs(self,variables):
         T_n=variables["Negative electrode temperature"]
-        l_cr_n=variables["Negative electrode crack length"]  
-        stress_t_surf_n=variables["Negative electrode surface tangential stress"]
+        stress_t_surf_n=variables["Negative particle surface tangential stress [Pa]"]
+        l_cr_n=pybamm.Variable("Negative particle crack length")  # crack length in anode particles
         mp= pybamm.mechanical_parameters
         R = pybamm.standard_parameters_lithium_ion.R
         Delta_T = pybamm.thermal_parameters.Delta_T
+        l_cr_n_0=pybamm.mechanical_parameters.l_cr_n_0
         k_cr_n=mp.k_cr*np.exp( mp.Eac_cr/R*(1/T_n/Delta_T-1/mp.T_ref) ) # cracking rate with temperature dependence
         # stress_t_surf_n[stress_t_surf_n<0]=pybamm.Scalr(0) # compressive stress will not lead to crack propagation
-        dK_SIF = stress_t_surf_n*mp.b_cr*np.sqrt(np.pi*l_cr_n) * (stress_t_surf_n >= 0)
-        dl_cr_n=mp.crack_flag*k_cr_n*dK_SIF^mp.m_cr/mp.t0_cr
+        dK_SIF = stress_t_surf_n*mp.b_cr*np.sqrt(np.pi*l_cr_n_dim) * (stress_t_surf_n >= 0)
+        dl_cr_n=mp.crack_flag*k_cr_n*dK_SIF^mp.m_cr/mp.t0_cr/l_cr_n_0
         self.rhs={l_cr_n: dl_cr_n}
 
     def set_initial_conditions(self,variables):
-        l_cr_n=variables["Negative electrode crack length"]
-        l_cr_n_0=pybamm.mechanical_parameters.l_cr_n_0
-
-        self.initial_conditions={l_cr_n:l_cr_n_0}
+        l_cr_n=variables["Negative particle crack length"]
+        self.initial_conditions={l_cr_n:1}
 
     # same code for the cathode with changing "_p" to "_n"
     #

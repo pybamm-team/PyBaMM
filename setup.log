@@ -1,0 +1,8 @@
+2020-06-19 14:28:54,829 - PyBaMM setup - INFO - Starting PyBaMM setup
+2020-06-19 14:28:55,558 - PyBaMM setup - INFO - Not running on windows
+2020-06-19 14:28:56,035 - PyBaMM setup - INFO - Found CMake.
+2020-06-19 14:28:56,036 - PyBaMM setup - INFO - Could not find PyBind11 directory (/home/aishine/GEM/PyBaMM/pybind11). Skipping compilation of KLU module.
+2020-06-19 14:29:13,833 - PyBaMM setup - INFO - Starting PyBaMM setup
+2020-06-19 14:29:14,441 - PyBaMM setup - INFO - Not running on windows
+2020-06-19 14:29:14,830 - PyBaMM setup - INFO - Found CMake.
+2020-06-19 14:29:14,831 - PyBaMM setup - INFO - Could not find PyBind11 directory (/home/aishine/GEM/PyBaMM/pybind11). Skipping compilation of KLU module.

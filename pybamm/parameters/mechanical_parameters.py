@@ -26,7 +26,7 @@ crack_flag=1  #  1 - enable crack propagation; 0 - disable cracking in battery d
 l_cr_p_0=pybamm.Parameter("Positive electrode Initial crack length [m]")
 l_cr_n_0=pybamm.Parameter("Negative electrode Initial crack length [m]")
 w_cr=pybamm.Parameter("Negative electrode Initial crack width [m]")
-rho_cr=pybamm.Parameter("Negative electrode Number of cracks per unit area of the particle [m-2]")
+rho_cr_dim=pybamm.Parameter("Negative electrode Number of cracks per unit area of the particle [m-2]")
 b_cr=pybamm.Parameter("Negative electrode Paris' law constant b")
 m_cr=pybamm.Parameter("Negative electrode Paris' law constant m")
 k_cr=pybamm.Parameter("Negative electrode Cracking rate")
@@ -41,3 +41,4 @@ theta_p_dim= Omega_p**2/R_p*2/9*E_p*(1-nu_p) # intermediate variable  [K*m^3/mol
 theta_n_dim= Omega_n**2/R_n*2/9*E_n*(1-nu_n) # intermediate variable  [K*m^3/mol]
 
 # Dimensionless parameters
+rho_cr=rho_cr_dim*l_cr_n_0*w_cr
