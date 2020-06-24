@@ -8,7 +8,9 @@ def graphite_electrolyte_exchange_current_density_Ramadass2004(c_e, c_s_surf, T)
 
     References
     ----------
-    .. [2]
+    .. [1] P. Ramadass, Bala Haran, Parthasarathy M. Gomadam, Ralph White, and Branko
+    N. Popov. "Development of First Principles Capacity Fade Model for Li-Ion Cells."
+    (2004)
 
     Parameters
     ----------

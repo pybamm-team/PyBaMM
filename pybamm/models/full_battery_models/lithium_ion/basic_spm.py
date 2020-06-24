@@ -20,9 +20,9 @@ class BasicSPM(BaseModel):
 
     References
     ----------
-    .. [2] SG Marquis, V Sulzer, R Timms, CP Please and SJ Chapman. “An asymptotic
-           derivation of a single particle model with electrolyte”. In: arXiv preprint
-           arXiv:1905.12553 (2019).
+    .. [2] Marquis, S. G., Sulzer, V.,  Timms, R.,  Please, C. P.,  &  Chapman, S. J.
+    (2019). “An  asymptotic derivation of a single particle model with electrolyte”.
+    Journal of The Electrochemical Society, 166(15), A3693-A3706.
 
 
     **Extends:** :class:`pybamm.lithium_ion.BaseModel`

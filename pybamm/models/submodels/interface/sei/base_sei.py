@@ -108,9 +108,10 @@ class BaseModel(BaseInterface):
         domain = self.domain.lower() + " electrode"
         if isinstance(self, pybamm.sei.NoSEI):
             L_scale = 1
+            R_sei_dim = 1
         else:
             L_scale = self.param.L_sei_0_dim
-        R_sei_dim = self.param.R_sei_dimensional
+            R_sei_dim = self.param.R_sei_dimensional
         L_sei_av = pybamm.x_average(L_sei)
 
         variables = {

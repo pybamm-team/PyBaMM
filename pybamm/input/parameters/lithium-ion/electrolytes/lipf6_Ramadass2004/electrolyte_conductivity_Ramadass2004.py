@@ -8,7 +8,9 @@ def electrolyte_conductivity_Ramadass2004(c_e, T):
 
     References
     ----------
-    .. [1]
+    .. [1] P. Ramadass, Bala Haran, Parthasarathy M. Gomadam, Ralph White, and Branko
+    N. Popov. "Development of First Principles Capacity Fade Model for Li-Ion Cells."
+    (2004)
 
     Parameters
     ----------
@@ -28,7 +30,8 @@ def electrolyte_conductivity_Ramadass2004(c_e, T):
     cm = 1e-6 * c_e  # here it should be only 1e-3
 
     sigma_e = (
-        4.1253 * (10 ** (-4)) + 5.007 * cm
+        4.1253 * (10 ** (-4))
+        + 5.007 * cm
         - 4.7212 * (10 ** 3) * (cm ** 2)
         + 1.5094 * (10 ** 6) * (cm ** 3)
         - 1.6018 * (10 ** 8) * (cm ** 4)
