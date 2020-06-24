@@ -277,7 +277,7 @@ class TestEvaluate(unittest.TestCase):
         self.assertEqual(list(variable_symbols.keys())[1], b_disc.id)
         self.assertEqual(list(variable_symbols.keys())[2], expr.id)
 
-        self.assertEqual(len(constant_symbols), 2)
+        self.assertEqual(len(constant_symbols), 0)
 
         evaluator = pybamm.EvaluatorPython(expr)
         result = evaluator.evaluate(y=y)

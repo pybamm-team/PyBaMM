@@ -164,9 +164,11 @@ class JaxSolver(pybamm.BaseSolver):
 
         y = self._cached_solves[model](inputs)
 
+        # note - the actual solve is not done until this line!
+        y = onp.array(y)
+
         termination = "final time"
         t_event = None
         y_event = onp.array(None)
-        return pybamm.Solution(t_eval,
-                               jax.numpy.asarray(y),
+        return pybamm.Solution(t_eval, y,
                                t_event, y_event, termination)

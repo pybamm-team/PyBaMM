@@ -15,6 +15,7 @@ MIN_FACTOR = 0.2
 MAX_FACTOR = 10
 
 
+
 def flax_cond(pred, true_operand, true_fun, false_operand, false_fun):
     if pred:
         return true_fun(true_operand)
@@ -34,7 +35,6 @@ def flax_fori_loop(start, stop, body_fun, init_val):
     for i in range(start, stop):
         val = body_fun(i, val)
     return val
-
 
 def compute_R(order, factor):
     """
@@ -157,7 +157,7 @@ def _select_initial_step(state, fun, t0, y0, f0, h0):
     scale = state['atol'] + np.abs(y0) * state['rtol']
     y1 = y0 + h0 * f0
     f1 = fun(t0 + h0, y1)
-    d2 = np.sqrt(np.mean(((f1 - f0) / scale)))
+    d2 = np.sqrt(np.mean(((f1 - f0) / scale)**2))
     order = 1
     h1 = h0 * d2 ** (-1 / (order + 1))
     return np.min((100 * h0, h1))
@@ -472,7 +472,6 @@ def _bdf_step(state, fun, jac):
 
     state, step_accepted, not_updated_jacobian, y, d, n_iter = \
         jax.lax.while_loop(while_cond, while_body, while_state)
-
     # take the accepted step
     state['y'] = y
     state['t'] += state['h']
@@ -644,4 +643,4 @@ def jax_bdf_integrate(fun, y0, t_eval, inputs=None, rtol=1e-6, atol=1e-6):
     y0_device = jax.device_put(y0).reshape(-1)
     t_eval_device = jax.device_put(t_eval)
     y_out = _bdf_odeint(fun, rtol, atol, y0_device, t_eval_device, inputs)
-    return np.array(y_out.T)
+    return y_out.T
