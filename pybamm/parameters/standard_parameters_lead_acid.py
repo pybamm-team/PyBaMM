@@ -163,6 +163,7 @@ Q_p_max_dimensional = pybamm.Parameter("Positive electrode volumetric capacity [
 Delta_T = pybamm.thermal_parameters.Delta_T
 
 # SEI parameters (for compatibility)
+R_sei_dimensional = pybamm.Scalar(0)
 beta_sei_n = pybamm.Scalar(0)
 
 # --------------------------------------------------------------------------------------
