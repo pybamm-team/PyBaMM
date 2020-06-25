@@ -457,7 +457,7 @@ class ProcessedVariable(object):
         elif self.dimensions == 1:
             out = self.call_1D(t, x, r, z, R)
         elif self.dimensions == 2:
-            out = self.call_2D(t, x, r, y, z)
+            out = self.call_2D(t, x, r, y, z, R)
         if warn is True and np.isnan(out).any():
             pybamm.logger.warning(
                 "Calling variable outside interpolation range (returns 'nan')"
@@ -469,7 +469,7 @@ class ProcessedVariable(object):
         spatial_var = eval_dimension_name(self.first_dimension, x, r, None, z, R)
         return self._interpolation_function(t, spatial_var)
 
-    def call_2D(self, t, x, r, y, z):
+    def call_2D(self, t, x, r, y, z, R):
         "Evaluate a 2D variable"
         first_dim = eval_dimension_name(self.first_dimension, x, r, y, z, R)
         second_dim = eval_dimension_name(self.second_dimension, x, r, y, z, R)
