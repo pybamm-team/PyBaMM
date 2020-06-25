@@ -146,30 +146,11 @@ class QuickPlot(object):
         else:
             raise ValueError("spatial unit '{}' not recognized".format(spatial_unit))
 
-        variables = models[0].variables
-        # empty spatial scales, will raise error later if can't find a particular one
-        self.spatial_scales = {}
-        if "x [m]" in variables and "x" in variables:
-            x_scale = (variables["x [m]"] / variables["x"]).evaluate()[
-                -1
-            ] * self.spatial_factor
-            self.spatial_scales.update({dom: x_scale for dom in variables["x"].domain})
-        if "y [m]" in variables and "y" in variables:
-            self.spatial_scales["current collector y"] = (
-                variables["y [m]"] / variables["y"]
-            ).evaluate()[-1] * self.spatial_factor
-        if "z [m]" in variables and "z" in variables:
-            self.spatial_scales["current collector z"] = (
-                variables["z [m]"] / variables["z"]
-            ).evaluate()[-1] * self.spatial_factor
-        if "r_n [m]" in variables and "r_n" in variables:
-            self.spatial_scales["negative particle"] = (
-                variables["r_n [m]"] / variables["r_n"]
-            ).evaluate()[-1] * self.spatial_factor
-        if "r_p [m]" in variables and "r_p" in variables:
-            self.spatial_scales["positive particle"] = (
-                variables["r_p [m]"] / variables["r_p"]
-            ).evaluate()[-1] * self.spatial_factor
+        # Set length scales
+        self.length_scales = {
+            domain: scale.evaluate() * self.spatial_factor
+            for domain, scale in models[0].length_scales.items()
+        }
 
         # Time parameters
         model_timescale_in_seconds = models[0].timescale_eval
@@ -269,8 +250,6 @@ class QuickPlot(object):
         self.spatial_variable_dict = {}
         self.first_dimensional_spatial_variable = {}
         self.second_dimensional_spatial_variable = {}
-        self.first_spatial_scale = {}
-        self.second_spatial_scale = {}
         self.is_x_r = {}
         self.is_y_z = {}
 
@@ -317,18 +296,15 @@ class QuickPlot(object):
 
             # Set the x variable (i.e. "x" or "r" for any one-dimensional variables)
             if first_variable.dimensions == 1:
-                (
-                    spatial_var_name,
-                    spatial_var_value,
-                    spatial_scale,
-                ) = self.get_spatial_var(variable_tuple, first_variable, "first")
+                (spatial_var_name, spatial_var_value) = self.get_spatial_var(
+                    variable_tuple, first_variable, "first"
+                )
                 self.spatial_variable_dict[variable_tuple] = {
                     spatial_var_name: spatial_var_value
                 }
                 self.first_dimensional_spatial_variable[variable_tuple] = (
                     spatial_var_value * self.spatial_factor
                 )
-                self.first_spatial_scale[variable_tuple] = spatial_scale
 
             elif first_variable.dimensions == 2:
                 # Don't allow 2D variables if there are multiple solutions
@@ -343,12 +319,10 @@ class QuickPlot(object):
                     (
                         first_spatial_var_name,
                         first_spatial_var_value,
-                        first_spatial_scale,
                     ) = self.get_spatial_var(variable_tuple, first_variable, "first")
                     (
                         second_spatial_var_name,
                         second_spatial_var_value,
-                        second_spatial_scale,
                     ) = self.get_spatial_var(variable_tuple, first_variable, "second")
                     self.spatial_variable_dict[variable_tuple] = {
                         first_spatial_var_name: first_spatial_var_value,
@@ -397,19 +371,7 @@ class QuickPlot(object):
         if domain == "current collector":
             domain += " {}".format(spatial_var_name)
 
-        # Get scale to go from dimensionless to dimensional in the units
-        # specified by spatial_unit
-        try:
-            spatial_scale = self.spatial_scales[domain]
-        except KeyError:
-            raise KeyError(
-                (
-                    "Can't find spatial scale for '{}', make sure both '{} [m]' "
-                    + "and '{}' are defined in the model variables"
-                ).format(domain, *[spatial_var_name] * 2)
-            )
-
-        return spatial_var_name, spatial_var_value, spatial_scale
+        return spatial_var_name, spatial_var_value
 
     def reset_axis(self):
         """
@@ -578,10 +540,14 @@ class QuickPlot(object):
                 # add dashed lines for boundaries between subdomains
                 y_min, y_max = ax.get_ylim()
                 ax.set_ylim(y_min, y_max)
-                for bnd in variable_lists[0][0].internal_boundaries:
-                    bnd_dim = bnd * self.first_spatial_scale[key]
+                for boundary in variable_lists[0][0].internal_boundaries:
+                    boundary_scaled = boundary * self.spatial_factor
                     ax.plot(
-                        [bnd_dim, bnd_dim], [y_min, y_max], color="0.5", lw=1, zorder=0
+                        [boundary_scaled, boundary_scaled],
+                        [y_min, y_max],
+                        color="0.5",
+                        lw=1,
+                        zorder=0,
                     )
             elif variable_lists[0][0].dimensions == 2:
                 # Read dictionary of spatial variables
@@ -613,10 +579,21 @@ class QuickPlot(object):
                 )
                 vmin, vmax = self.variable_limits[key]
                 # store the plot and the var data (for testing) as cant access
-                # z data from QuadContourSet object
-                self.plots[key][0][0] = ax.contourf(
-                    x, y, var, levels=100, vmin=vmin, vmax=vmax, cmap="coolwarm"
-                )
+                # z data from QuadMesh or QuadContourSet object
+                if self.is_y_z[key] is True:
+                    self.plots[key][0][0] = ax.pcolormesh(
+                        x,
+                        y,
+                        var,
+                        vmin=vmin,
+                        vmax=vmax,
+                        cmap="coolwarm",
+                        shading="gouraud",
+                    )
+                else:
+                    self.plots[key][0][0] = ax.contourf(
+                        x, y, var, levels=100, vmin=vmin, vmax=vmax, cmap="coolwarm"
+                    )
                 self.plots[key][0][1] = var
                 if vmin is None and vmax is None:
                     vmin = ax_min(var)
@@ -716,10 +693,10 @@ class QuickPlot(object):
                 if y_min is None and y_max is None:
                     y_min, y_max = ax_min(var_min), ax_max(var_max)
                     ax.set_ylim(y_min, y_max)
-                    for bnd in self.variables[key][0][0].internal_boundaries:
-                        bnd_dim = bnd * self.first_spatial_scale[key]
+                    for boundary in self.variables[key][0][0].internal_boundaries:
+                        boundary_scaled = boundary * self.spatial_factor
                         ax.plot(
-                            [bnd_dim, bnd_dim],
+                            [boundary_scaled, boundary_scaled],
                             [y_min, y_max],
                             color="0.5",
                             lw=1,
@@ -744,11 +721,22 @@ class QuickPlot(object):
                         var = variable(time_in_seconds, **spatial_vars, warn=False)
                     else:
                         var = variable(time_in_seconds, **spatial_vars, warn=False).T
-                # store the plot and the updated var data (for testing) as cant
-                # access z data from QuadContourSet object
-                self.plots[key][0][0] = ax.contourf(
-                    x, y, var, levels=100, vmin=vmin, vmax=vmax, cmap="coolwarm"
-                )
+                # store the plot and the var data (for testing) as cant access
+                # z data from QuadMesh or QuadContourSet object
+                if self.is_y_z[key] is True:
+                    self.plots[key][0][0] = ax.pcolormesh(
+                        x,
+                        y,
+                        var,
+                        vmin=vmin,
+                        vmax=vmax,
+                        cmap="coolwarm",
+                        shading="gouraud",
+                    )
+                else:
+                    self.plots[key][0][0] = ax.contourf(
+                        x, y, var, levels=100, vmin=vmin, vmax=vmax, cmap="coolwarm"
+                    )
                 self.plots[key][0][1] = var
                 if (vmin, vmax) == (None, None):
                     vmin = ax_min(var)

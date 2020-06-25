@@ -13,8 +13,9 @@ class Array(pybamm.Symbol):
     Parameters
     ----------
 
-    entries : numpy.array
-        the array associated with the node
+    entries : numpy.array or list
+        the array associated with the node. If a list is provided, it is converted to a
+        numpy array
     name : str, optional
         the name of the node
     domain : iterable of str, optional
@@ -35,6 +36,8 @@ class Array(pybamm.Symbol):
         auxiliary_domains=None,
         entries_string=None,
     ):
+        if isinstance(entries, list):
+            entries = np.array(entries)
         if entries.ndim == 1:
             entries = entries[:, np.newaxis]
         if name is None:
@@ -74,7 +77,7 @@ class Array(pybamm.Symbol):
             if issparse(entries):
                 self._entries_string = str(entries.__dict__)
             else:
-                self._entries_string = entries.tostring()
+                self._entries_string = entries.tobytes()
 
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()`. """

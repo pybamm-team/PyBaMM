@@ -127,7 +127,7 @@ class NumpyConcatenation(Concatenation):
         # so that we can concatenate them
         for i, child in enumerate(children):
             if child.evaluates_to_number():
-                children[i] = child * pybamm.Vector(np.array([1]))
+                children[i] = child * pybamm.Vector([1])
         super().__init__(
             *children,
             name="numpy concatenation",

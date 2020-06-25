@@ -288,8 +288,6 @@ class BasicFull(BaseModel):
             - param.U_n_ref
             + pot * phi_s_p,
             "Terminal voltage [V]": param.U_p_ref - param.U_n_ref + pot * voltage,
-            "x [m]": pybamm.standard_spatial_vars.x * param.L_x,
-            "x": pybamm.standard_spatial_vars.x,
             "Porosity": eps,
             "Volume-averaged velocity": v,
             "X-averaged separator transverse volume-averaged velocity": div_V_s,

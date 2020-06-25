@@ -106,7 +106,7 @@ class TestEvaluate(unittest.TestCase):
         # test matrix
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
-        A = pybamm.Matrix(np.array([[1, 2], [3, 4]]))
+        A = pybamm.Matrix([[1, 2], [3, 4]])
         pybamm.find_symbols(A, constant_symbols, variable_symbols)
         self.assertEqual(len(variable_symbols), 0)
         self.assertEqual(list(constant_symbols.keys())[0], A.id)
@@ -335,7 +335,7 @@ class TestEvaluate(unittest.TestCase):
             self.assertEqual(result, expr.evaluate(t=t, y=y))
 
         # test something with a matrix multiplication
-        A = pybamm.Matrix(np.array([[1, 2], [3, 4]]))
+        A = pybamm.Matrix([[1, 2], [3, 4]])
         expr = A @ pybamm.StateVector(slice(0, 2))
         evaluator = pybamm.EvaluatorPython(expr)
         for t, y in zip(t_tests, y_tests):
@@ -343,7 +343,7 @@ class TestEvaluate(unittest.TestCase):
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         # test something with a heaviside
-        a = pybamm.Vector(np.array([1, 2]))
+        a = pybamm.Vector([1, 2])
         expr = a <= pybamm.StateVector(slice(0, 2))
         evaluator = pybamm.EvaluatorPython(expr)
         for t, y in zip(t_tests, y_tests):
@@ -357,7 +357,7 @@ class TestEvaluate(unittest.TestCase):
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         # test something with a minimum or maximum
-        a = pybamm.Vector(np.array([1, 2]))
+        a = pybamm.Vector([1, 2])
         expr = pybamm.minimum(a, pybamm.StateVector(slice(0, 2)))
         evaluator = pybamm.EvaluatorPython(expr)
         for t, y in zip(t_tests, y_tests):
@@ -378,7 +378,7 @@ class TestEvaluate(unittest.TestCase):
             self.assertEqual(result, expr.evaluate(t=t, y=y))
 
         # test something with a sparse matrix multiplication
-        A = pybamm.Matrix(np.array([[1, 2], [3, 4]]))
+        A = pybamm.Matrix([[1, 2], [3, 4]])
         B = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))
         C = pybamm.Matrix(scipy.sparse.coo_matrix(np.array([[1, 0], [0, 4]])))
         expr = A @ B @ C @ pybamm.StateVector(slice(0, 2))
@@ -388,8 +388,8 @@ class TestEvaluate(unittest.TestCase):
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         # test numpy concatenation
-        a = pybamm.Vector(np.array([[1], [2]]))
-        b = pybamm.Vector(np.array([[3]]))
+        a = pybamm.Vector([[1], [2]])
+        b = pybamm.Vector([[3]])
         expr = pybamm.NumpyConcatenation(a, b)
         evaluator = pybamm.EvaluatorPython(expr)
         for t, y in zip(t_tests, y_tests):

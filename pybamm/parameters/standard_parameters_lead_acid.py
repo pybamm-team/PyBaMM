@@ -162,6 +162,10 @@ Q_p_max_dimensional = pybamm.Parameter("Positive electrode volumetric capacity [
 # thermal
 Delta_T = pybamm.thermal_parameters.Delta_T
 
+# SEI parameters (for compatibility)
+R_sei_dimensional = pybamm.Scalar(0)
+beta_sei_n = pybamm.Scalar(0)
+
 # --------------------------------------------------------------------------------------
 "2. Dimensional Functions"
 
@@ -287,8 +291,8 @@ electrolyte_concentration_scale = c_e_typ
 # electrical
 potential_scale = R * T_ref / F
 current_scale = i_typ
-interfacial_current_scale_n = i_typ / (a_n_dim * L_x)
-interfacial_current_scale_p = i_typ / (a_p_dim * L_x)
+j_scale_n = i_typ / (a_n_dim * L_x)
+j_scale_p = i_typ / (a_p_dim * L_x)
 
 velocity_scale = i_typ / (c_e_typ * F)  # Reaction velocity scale
 
@@ -378,26 +382,22 @@ s_plus_S = pybamm.Concatenation(
     pybamm.FullBroadcast(0, ["separator"], "current collector"),
     pybamm.FullBroadcast(s_plus_p_S, ["positive electrode"], "current collector"),
 )
-C_dl_n = (
-    C_dl_n_dimensional * potential_scale / interfacial_current_scale_n / tau_discharge
-)
-C_dl_p = (
-    C_dl_p_dimensional * potential_scale / interfacial_current_scale_p / tau_discharge
-)
+C_dl_n = C_dl_n_dimensional * potential_scale / j_scale_n / tau_discharge
+C_dl_p = C_dl_p_dimensional * potential_scale / j_scale_p / tau_discharge
 ne_n = ne_n_S
 ne_p = ne_p_S
 # Oxygen
 s_plus_Ox = s_plus_Ox_dim / ne_Ox
 s_w_Ox = s_w_Ox_dim / ne_Ox
 s_ox_Ox = s_ox_Ox_dim / ne_Ox
-# j0_n_Ox_ref = j0_n_Ox_ref_dimensional / interfacial_current_scale_n
+# j0_n_Ox_ref = j0_n_Ox_ref_dimensional / j_scale_n
 U_n_Ox = (U_Ox_dim - U_n_ref) / potential_scale
 U_p_Ox = (U_Ox_dim - U_p_ref) / potential_scale
 # Hydrogen
 s_plus_Hy = s_plus_Hy_dim / ne_Hy
 s_hy_Hy = s_hy_Hy_dim / ne_Hy
-# j0_n_Hy_ref = j0_n_Hy_ref_dimensional / interfacial_current_scale_n
-# j0_p_Hy_ref = j0_p_Hy_ref_dimensional / interfacial_current_scale_p
+# j0_n_Hy_ref = j0_n_Hy_ref_dimensional / j_scale_n
+# j0_p_Hy_ref = j0_p_Hy_ref_dimensional / j_scale_p
 U_n_Hy = (U_Hy_dim - U_n_ref) / potential_scale
 U_p_Hy = (U_Hy_dim - U_p_ref) / potential_scale
 
@@ -442,7 +442,8 @@ rho_p = pybamm.thermal_parameters.rho_p
 rho_cp = pybamm.thermal_parameters.rho_cp
 
 rho_k = pybamm.thermal_parameters.rho_k
-rho = rho_n * l_n + rho_s * l_s + rho_p * l_p
+# effective volumetric heat capacity
+rho = (rho_cn * l_cn + rho_n * l_n + rho_s * l_s + rho_p * l_p + rho_cp * l_cp) / l
 
 lambda_cn = pybamm.thermal_parameters.lambda_cn
 lambda_n = pybamm.thermal_parameters.lambda_n
@@ -543,21 +544,21 @@ def j0_n(c_e, T):
     "Dimensionless exchange-current density in the negative electrode"
     c_e_dim = c_e * c_e_typ
     T_dim = Delta_T * T + T_ref
-    return j0_n_dimensional(c_e_dim, T_dim) / interfacial_current_scale_n
+    return j0_n_dimensional(c_e_dim, T_dim) / j_scale_n
 
 
 def j0_p(c_e, T):
     "Dimensionless exchange-current density in the positive electrode"
     c_e_dim = c_e * c_e_typ
     T_dim = Delta_T * T + T_ref
-    return j0_p_dimensional(c_e_dim, T_dim) / interfacial_current_scale_p
+    return j0_p_dimensional(c_e_dim, T_dim) / j_scale_p
 
 
 def j0_p_Ox(c_e, T):
     "Dimensionless oxygen exchange-current density in the positive electrode"
     c_e_dim = c_e * c_e_typ
     T_dim = Delta_T * T + T_ref
-    return j0_p_Ox_dimensional(c_e_dim, T_dim) / interfacial_current_scale_p
+    return j0_p_Ox_dimensional(c_e_dim, T_dim) / j_scale_p
 
 
 # --------------------------------------------------------------------------------------

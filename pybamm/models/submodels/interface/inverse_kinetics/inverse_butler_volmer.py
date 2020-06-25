@@ -63,10 +63,14 @@ class InverseButlerVolmer(BaseInterface):
 
         # With SEI resistance (distributed and averaged have the same effect here)
         if self.options["sei film resistance"] is not None:
+            if self.domain == "Negative":
+                R_sei = self.param.R_sei_n
+            elif self.domain == "Positive":
+                R_sei = self.param.R_sei_p
             L_sei = variables[
                 "Total " + self.domain.lower() + " electrode sei thickness"
             ]
-            eta_sei = -j_tot * L_sei * pybamm.sei_parameters.R_sei
+            eta_sei = -j_tot * L_sei * R_sei
         # Without SEI resistance
         else:
             eta_sei = pybamm.Scalar(0)
