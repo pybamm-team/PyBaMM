@@ -7,7 +7,7 @@ Positive electrode Young's modulus [Pa],375e9,,
 Positive electrode Reference concentration for free of deformation [m3.mol-1],0,,
 Positive electrode Partial molar volume [m3.mol-1],-7.28e-7,,
 ,,,
-# Crack model
+# Crack model,,,
 Positive electrode Initial crack length [m],20e-9,,
 Positive electrode Initial crack width [m],15e-9,,
 Positive electrode Number of cracks per unit area of the particle [m-2],3.18e15,,

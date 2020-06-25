@@ -149,6 +149,8 @@ class ParameterValues:
         # add sei parameters if provided
         if "sei" in chemistry:
             component_groups += ["sei"]
+        elif "mechanical" in chemistry:
+            component_groups += ["mechanical"]
 
         for component_group in component_groups:
             # Make sure component is provided
