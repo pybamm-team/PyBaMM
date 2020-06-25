@@ -18,6 +18,7 @@ NCA_Kim2011 = {
     "cathode": "nca_Kim2011",
     "electrolyte": "lipf6_Kim2011",
     "experiment": "1C_discharge_from_full_Kim2011",
+    "sei": "example",
     "citation": "kim2011multi",
 }
 
@@ -29,6 +30,7 @@ Ecker2015 = {
     "cathode": "LiNiCoO2_Ecker2015",
     "electrolyte": "lipf6_Ecker2015",
     "experiment": "1C_discharge_from_full_Ecker2015",
+    "sei": "example",
     "citation": ["ecker2015i", "ecker2015ii", "richardson2020"],
 }
 
@@ -40,6 +42,7 @@ Marquis2019 = {
     "cathode": "lico2_Marquis2019",
     "electrolyte": "lipf6_Marquis2019",
     "experiment": "1C_discharge_from_full_Marquis2019",
+    "sei": "example",
     "citation": "marquis2019asymptotic",
 }
 
@@ -51,6 +54,7 @@ Chen2020 = {
     "cathode": "nmc_Chen2020",
     "electrolyte": "lipf6_Nyman2008",
     "experiment": "1C_discharge_from_full_Chen2020",
+    "sei": "example",
     "citation": "Chen2020",
 }
 
@@ -62,6 +66,7 @@ Mohtat2020 = {
     "cathode": "NMC_UMBL_Mohtat2020",
     "electrolyte": "LiPF6_Mohtat2020",
     "experiment": "1C_charge_from_empty_Mohtat2020",
+    "sei": "example",
     "citation": "Mohtat2020",
 }
 #

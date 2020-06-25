@@ -15,27 +15,71 @@ documentation* for ``pybamm``.
 * :ref:`modindex`
 * :ref:`search`
 
-Contents
-========
+Quickstart
+=========================
+PyBaMM is available on GNU/Linux, MacOS and Windows.
+
+Using pip
+----------
+
+GNU/Linux and Windows
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. code:: bash
+
+   pip install pybamm
+
+macOS
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. code:: bash
+
+   brew install sundials && pip install pybamm
+
+Using conda
+-------------
+PyBaMM is available as a conda package through the conda-forge channel.
+
+.. code:: bash
+
+   conda install -c conda-forge pybamm
+
+Optional solvers
+-----------------
+On GNU/Linux and MacOS, an optional `scikits.odes <https://scikits-odes.readthedocs.io/en/latest/>`_ -based solver is available, see :ref:`scikits.odes-label`.
+
+Installation
+============
+
+.. toctree::
+   :maxdepth: 1
+
+   install/GNU-linux
+   install/windows
+   install/windows-wsl
+   For developers: compiling the KLU solver <install/install-klu>
+
+API documentation
+====================
 
 .. module:: pybamm
 
 .. toctree::
-    :maxdepth: 2
+   :maxdepth: 2
 
-    source/expression_tree/index
-    source/models/index
-    source/parameters/index
-    source/geometry/index
-    source/meshes/index
-    source/spatial_methods/index
-    source/solvers/index
-    source/experiments/index
-    source/simulation
-    source/quick_plot
-    source/util
-    source/citations
-    source/parameters_cli
+   source/expression_tree/index
+   source/models/index
+   source/parameters/index
+   source/geometry/index
+   source/meshes/index
+   source/spatial_methods/index
+   source/solvers/index
+   source/experiments/index
+   source/simulation
+   source/plotting/index
+   source/util
+   source/citations
+   source/parameters_cli
 
 Examples
 ========

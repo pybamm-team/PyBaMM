@@ -22,14 +22,16 @@ class LeadingOrder(BaseElectrolyteConductivity):
     **Extends:** :class:`pybamm.electrolyte_conductivity.BaseElectrolyteConductivity`
     """
 
-    def __init__(self, param, domain=None, reactions=None):
-        super().__init__(param, domain, reactions)
+    def __init__(self, param, domain=None):
+        super().__init__(param, domain)
 
     def get_coupled_variables(self, variables):
-        ocp_n_av = variables["X-averaged negative electrode open circuit potential"]
-        eta_r_n_av = variables["X-averaged negative electrode reaction overpotential"]
+        # delta_phi = phi_s - phi_e
+        delta_phi_n_av = variables[
+            "X-averaged negative electrode surface potential difference"
+        ]
         phi_s_n_av = variables["X-averaged negative electrode potential"]
-        phi_e_av = phi_s_n_av - eta_r_n_av - ocp_n_av
+        phi_e_av = phi_s_n_av - delta_phi_n_av
         return self._get_coupled_variables_from_potential(variables, phi_e_av)
 
     def _get_coupled_variables_from_potential(self, variables, phi_e_av):

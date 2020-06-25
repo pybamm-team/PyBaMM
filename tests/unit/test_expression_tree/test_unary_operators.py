@@ -52,9 +52,58 @@ class TestUnaryOperators(unittest.TestCase):
         )
 
     def test_gradient(self):
+        # gradient of scalar symbol should fail
         a = pybamm.Symbol("a")
+        with self.assertRaisesRegex(
+            pybamm.DomainError, "Cannot take gradient of 'a' since its domain is empty"
+        ):
+            pybamm.Gradient(a)
+
+        # gradient of variable evaluating on edges should fail
+        a = pybamm.PrimaryBroadcastToEdges(pybamm.Scalar(1), "test")
+        with self.assertRaisesRegex(TypeError, "evaluates on edges"):
+            pybamm.Gradient(a)
+
+        # gradient of broadcast should return broadcasted zero
+        a = pybamm.PrimaryBroadcast(pybamm.Variable("a"), "test domain")
+        grad = pybamm.grad(a)
+        self.assertIsInstance(grad, pybamm.PrimaryBroadcastToEdges)
+        self.assertIsInstance(grad.child, pybamm.PrimaryBroadcast)
+        self.assertIsInstance(grad.child.child, pybamm.Scalar)
+        self.assertEqual(grad.child.child.value, 0)
+
+        # otherwise gradient should work
+        a = pybamm.Symbol("a", domain="test domain")
         grad = pybamm.Gradient(a)
         self.assertEqual(grad.children[0].name, a.name)
+        self.assertEqual(grad.domain, a.domain)
+
+    def test_div(self):
+        # divergence of scalar symbol should fail
+        a = pybamm.Symbol("a")
+        with self.assertRaisesRegex(
+            pybamm.DomainError,
+            "Cannot take divergence of 'a' since its domain is empty",
+        ):
+            pybamm.Divergence(a)
+
+        # divergence of variable evaluating on edges should fail
+        a = pybamm.PrimaryBroadcast(pybamm.Scalar(1), "test")
+        with self.assertRaisesRegex(TypeError, "evaluates on nodes"):
+            pybamm.Divergence(a)
+
+        # divergence of broadcast should return broadcasted zero
+        a = pybamm.PrimaryBroadcastToEdges(pybamm.Variable("a"), "test domain")
+        div = pybamm.div(a)
+        self.assertIsInstance(div, pybamm.PrimaryBroadcast)
+        self.assertIsInstance(div.child, pybamm.PrimaryBroadcast)
+        self.assertIsInstance(div.child.child, pybamm.Scalar)
+        self.assertEqual(div.child.child.value, 0)
+
+        # otherwise divergence should work
+        a = pybamm.Symbol("a", domain="test domain")
+        div = pybamm.Divergence(pybamm.Gradient(a))
+        self.assertEqual(div.domain, a.domain)
 
     def test_integral(self):
         # time integral
@@ -124,6 +173,11 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(
             inta_sec.auxiliary_domains, {"secondary": ["current collector"]}
         )
+        # backward indefinite integral
+        inta = pybamm.BackwardIndefiniteIntegral(a, x)
+        self.assertEqual(
+            inta.name, "a integrated backward w.r.t x on ['negative electrode']"
+        )
 
         # expected errors
         a = pybamm.Symbol("a", domain=["negative electrode"])
@@ -186,7 +240,7 @@ class TestUnaryOperators(unittest.TestCase):
             spatial_a.diff(a)
 
     def test_printing(self):
-        a = pybamm.Symbol("a")
+        a = pybamm.Symbol("a", domain="test")
         self.assertEqual(str(-a), "-a")
         grad = pybamm.Gradient(a)
         self.assertEqual(grad.name, "grad")

@@ -67,17 +67,15 @@ model.variables = {
     "SEI growth rate": dLdt,
     "Solvent concentration": c,
     "SEI thickness [m]": L_0_dim * L,
-    "SEI growth rate [m/s]": (D_dim(c_inf_dim) / L_0_dim) * dLdt,
-    "Solvent concentration [mols/m^3]": c_inf_dim * c,
+    "SEI growth rate [m.s-1]": (D_dim(c_inf_dim) / L_0_dim) * dLdt,
+    "Solvent concentration [mol.m-3]": c_inf_dim * c,
 }
 
 "--------------------------------------------------------------------------------------"
 "Using the model"
 
 # define geometry
-geometry = {
-    "SEI layer": {"primary": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
-}
+geometry = {"SEI layer": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
 
 
 # diffusivity function

@@ -8,10 +8,15 @@ import unittest
 
 class TestTafel(unittest.TestCase):
     def test_public_function(self):
+        # Test forward Tafel on the negative
         param = pybamm.standard_parameters_lithium_ion
 
-        a_n = pybamm.PrimaryBroadcast(pybamm.Scalar(0), ["negative electrode"])
-        a_p = pybamm.PrimaryBroadcast(pybamm.Scalar(0), ["positive electrode"])
+        a_n = pybamm.FullBroadcast(
+            pybamm.Scalar(0), ["negative electrode"], "current collector"
+        )
+        a_p = pybamm.FullBroadcast(
+            pybamm.Scalar(0), ["positive electrode"], "current collector"
+        )
         a = pybamm.Scalar(0)
         variables = {
             "Current collector current density": a,
@@ -27,6 +32,7 @@ class TestTafel(unittest.TestCase):
 
         std_tests.test_all()
 
+        # Test backward Tafel on the positive
         variables = {
             "Current collector current density": a,
             "Positive electrode potential": a_p,
@@ -37,6 +43,20 @@ class TestTafel(unittest.TestCase):
             "Negative electrode interfacial current density": a_n,
             "Negative electrode exchange current density": a_n,
             "Positive electrode temperature": a_p,
+            "X-averaged negative electrode interfacial current density": a,
+            "X-averaged positive electrode interfacial current density": a,
+            "Sum of electrolyte reaction source terms": 0,
+            "Sum of negative electrode electrolyte reaction source terms": 0,
+            "Sum of positive electrode electrolyte reaction source terms": 0,
+            "Sum of x-averaged negative electrode "
+            "electrolyte reaction source terms": 0,
+            "Sum of x-averaged positive electrode "
+            "electrolyte reaction source terms": 0,
+            "Sum of interfacial current densities": 0,
+            "Sum of negative electrode interfacial current densities": 0,
+            "Sum of positive electrode interfacial current densities": 0,
+            "Sum of x-averaged negative electrode interfacial current densities": 0,
+            "Sum of x-averaged positive electrode interfacial current densities": 0,
         }
         submodel = pybamm.interface.BackwardTafel(param, "Positive", "lithium-ion main")
         std_tests = tests.StandardSubModelTests(submodel, variables)

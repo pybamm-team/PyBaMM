@@ -17,7 +17,7 @@ class BasePotentialPair(BaseModel):
     References
     ----------
     .. [1] R Timms, SG Marquis, V Sulzer, CP Please and SJ Chapman. “Asymptotic
-           Reduction of a Lithium-ion Pouch Cell Model”. In preparation, 2020.
+           Reduction of a Lithium-ion Pouch Cell Model”. Submitted, 2020.
     .. [2] SG Marquis, R Timms, V Sulzer, CP Please and SJ Chapman. “A Suite of
            Reduced-Order Models of a Single-Layer Lithium-ion Pouch Cell”. In
            preparation, 2020.
@@ -27,6 +27,8 @@ class BasePotentialPair(BaseModel):
 
     def __init__(self, param):
         super().__init__(param)
+
+        pybamm.citations.register("timms2020")
 
     def get_fundamental_variables(self):
 
@@ -69,13 +71,12 @@ class BasePotentialPair(BaseModel):
     def set_initial_conditions(self, variables):
 
         applied_current = self.param.current_with_time
-        cc_area = self._get_effective_current_collector_area()
         phi_s_cn = variables["Negative current collector potential"]
         i_boundary_cc = variables["Current collector current density"]
 
         self.initial_conditions = {
             phi_s_cn: pybamm.Scalar(0),
-            i_boundary_cc: applied_current / cc_area,
+            i_boundary_cc: applied_current,
         }
 
 

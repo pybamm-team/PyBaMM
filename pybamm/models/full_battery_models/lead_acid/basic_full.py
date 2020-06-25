@@ -28,7 +28,7 @@ class BasicFull(BaseModel):
     **Extends:** :class:`pybamm.lead_acid.BaseModel`
     """
 
-    def __init__(self, name="Full model"):
+    def __init__(self, name="Basic full model"):
         super().__init__({}, name)
         # `param` is a class containing all the relevant parameters and functions for
         # this model. These are purely symbolic at this stage, and will be set by the
@@ -108,13 +108,13 @@ class BasicFull(BaseModel):
         )
 
         # Interfacial reactions
-        j0_n = param.j0_n_S_ref * c_e_n
+        j0_n = param.j0_n(c_e_n, T)
         j_n = (
             2
             * j0_n
             * pybamm.sinh(param.ne_n / 2 * (phi_s_n - phi_e_n - param.U_n(c_e_n, T)))
         )
-        j0_p = param.j0_p_S_ref * c_e_p ** 2 * param.c_w(c_e_p)
+        j0_p = param.j0_p(c_e_p, T)
         j_s = pybamm.PrimaryBroadcast(0, "separator")
         j_p = (
             2
@@ -244,15 +244,19 @@ class BasicFull(BaseModel):
         ######################
         # Electrolyte concentration
         ######################
-        N_e = -tor * param.D_e(c_e, T) * pybamm.grad(c_e) + param.C_e * c_e * v
+        N_e = (
+            -tor * param.D_e(c_e, T) * pybamm.grad(c_e)
+            + param.C_e * param.t_plus(c_e) * i_e / param.gamma_e
+            + param.C_e * c_e * v
+        )
         s = pybamm.Concatenation(
-            -pybamm.PrimaryBroadcast(param.s_plus_n_S, "negative electrode"),
+            pybamm.PrimaryBroadcast(param.s_plus_n_S, "negative electrode"),
             pybamm.PrimaryBroadcast(0, "separator"),
-            -pybamm.PrimaryBroadcast(param.s_plus_p_S, "positive electrode"),
+            pybamm.PrimaryBroadcast(param.s_plus_p_S, "positive electrode"),
         )
         self.rhs[c_e] = (1 / eps) * (
             -pybamm.div(N_e) / param.C_e
-            + (s - param.t_plus(c_e)) * j / param.gamma_e
+            + s * j / param.gamma_e
             - c_e * deps_dt
             - c_e * div_V
         )
@@ -286,6 +290,7 @@ class BasicFull(BaseModel):
             "Terminal voltage [V]": param.U_p_ref - param.U_n_ref + pot * voltage,
             "x [m]": pybamm.standard_spatial_vars.x * param.L_x,
             "x": pybamm.standard_spatial_vars.x,
+            "Porosity": eps,
             "Volume-averaged velocity": v,
             "X-averaged separator transverse volume-averaged velocity": div_V_s,
         }

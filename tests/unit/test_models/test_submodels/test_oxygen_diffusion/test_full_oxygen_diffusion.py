@@ -34,20 +34,12 @@ class TestFull(unittest.TestCase):
             "Positive electrode interfacial current density": pybamm.FullBroadcast(
                 a, "positive electrode", "current collector"
             ),
+            "Positive electrode oxygen interfacial current "
+            "density": pybamm.FullBroadcast(
+                a, "positive electrode", "current collector"
+            ),
         }
-        reactions = {
-            "main": {
-                "Negative": {
-                    "s_ox": param.s_ox_Ox,
-                    "aj": "Negative electrode interfacial current density",
-                },
-                "Positive": {
-                    "s_ox": param.s_ox_Ox,
-                    "aj": "Positive electrode interfacial current density",
-                },
-            }
-        }
-        submodel = pybamm.oxygen_diffusion.Full(param, reactions)
+        submodel = pybamm.oxygen_diffusion.Full(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

@@ -1,31 +1,48 @@
 #
-# Tests for the Effective Current Collector Resistance model
+# Tests for the Effective Current Collector Resistance models
 #
 import pybamm
 import unittest
 import numpy as np
 
 
-class TestEffectiveResistance2D(unittest.TestCase):
+class TestEffectiveResistance(unittest.TestCase):
     def test_well_posed(self):
-        model = pybamm.current_collector.EffectiveResistance2D()
+        model = pybamm.current_collector.EffectiveResistance({"dimensionality": 1})
+        model.check_well_posedness()
+
+        model = pybamm.current_collector.EffectiveResistance({"dimensionality": 2})
         model.check_well_posedness()
 
     def test_default_geometry(self):
-        model = pybamm.current_collector.EffectiveResistance2D()
-        self.assertIsInstance(model.default_geometry, pybamm.Geometry)
+        model = pybamm.current_collector.EffectiveResistance({"dimensionality": 1})
+        self.assertTrue("current collector" in model.default_geometry)
+        self.assertNotIn("negative electrode", model.default_geometry)
+
+        model = pybamm.current_collector.EffectiveResistance({"dimensionality": 2})
         self.assertTrue("current collector" in model.default_geometry)
         self.assertNotIn("negative electrode", model.default_geometry)
 
     def test_default_solver(self):
-        model = pybamm.current_collector.EffectiveResistance2D()
-        self.assertIsInstance(model.default_solver, pybamm.AlgebraicSolver)
+        model = pybamm.current_collector.EffectiveResistance({"dimensionality": 1})
+        self.assertIsInstance(model.default_solver, pybamm.CasadiAlgebraicSolver)
 
-    def test_get_processed_potentials(self):
-        # solve cheap SPM to test processed potentials (think of an alternative test?)
+        model = pybamm.current_collector.EffectiveResistance({"dimensionality": 2})
+        self.assertIsInstance(model.default_solver, pybamm.CasadiAlgebraicSolver)
+
+    def test_bad_option(self):
+        with self.assertRaisesRegex(pybamm.OptionError, "Dimension of"):
+            pybamm.current_collector.EffectiveResistance({"dimensionality": 10})
+
+
+class TestEffectiveResistancePostProcess(unittest.TestCase):
+    def test_get_processed_variables(self):
+        # solve cheap SPM to test post-processing (think of an alternative test?)
         models = [
-            pybamm.current_collector.EffectiveResistance2D(),
             pybamm.lithium_ion.SPM(),
+            pybamm.current_collector.EffectiveResistance({"dimensionality": 1}),
+            pybamm.current_collector.EffectiveResistance({"dimensionality": 2}),
+            pybamm.current_collector.AlternativeEffectiveResistance2D(),
         ]
         var = pybamm.standard_spatial_vars
         var_pts = {
@@ -37,7 +54,7 @@ class TestEffectiveResistance2D(unittest.TestCase):
             var.y: 5,
             var.z: 5,
         }
-        param = models[1].default_parameter_values
+        param = models[0].default_parameter_values
         meshes = [None] * len(models)
         for i, model in enumerate(models):
             param.process_model(model)
@@ -46,19 +63,23 @@ class TestEffectiveResistance2D(unittest.TestCase):
             meshes[i] = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
             disc = pybamm.Discretisation(meshes[i], model.default_spatial_methods)
             disc.process_model(model)
-        solutions = [None] * len(models)
         t_eval = np.linspace(0, 100, 10)
-        solutions[0] = models[0].default_solver.solve(models[0])
-        solutions[1] = models[1].default_solver.solve(models[1], t_eval)
-
+        solution_1D = models[0].default_solver.solve(models[0], t_eval)
         # Process SPM V and I
-        V = solutions[1]["Terminal voltage"]
-        I = solutions[1]["Total current density"]
+        V = solution_1D["Terminal voltage"]
+        I = solution_1D["Total current density"]
 
         # Test potential can be constructed and evaluated without raising error
-        potentials = models[0].get_processed_potentials(solutions[0], param, V, I)
-        for var, processed_var in potentials.items():
-            processed_var(0.05, 0.5, 0.5)
+        # for each current collector model
+        for model in models[1:]:
+            solution = model.default_solver.solve(model)
+            vars = model.post_process(solution, param, V, I)
+            pts = np.array([0.1, 0.5, 0.9])
+            for var, processed_var in vars.items():
+                if "Terminal voltage" in var:
+                    processed_var(t=solution_1D.t[5])
+                else:
+                    processed_var(t=solution_1D.t[5], y=pts, z=pts)
 
 
 if __name__ == "__main__":

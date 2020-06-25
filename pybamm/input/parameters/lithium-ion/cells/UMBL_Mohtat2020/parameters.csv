@@ -9,12 +9,8 @@ Positive electrode thickness [m],67E-06,Peyman MPM,
 Positive current collector thickness [m],2.5E-05,Scott Moura FastDFN,no info from Peyman MPM
 Electrode height [m],1,KOKAM SLPB78205130H,Not needed for 1D
 Electrode width [m],0.2050,KOKAM SLPB78205130H,Not needed for 1D
-Negative tab width [m],0.04,,Need to find actual value for KOKAM cell
-Negative tab centre y-coordinate [m],0.06,,Need to find actual value for KOKAM cell
-Negative tab centre z-coordinate [m],0.137,,Need to find actual value for KOKAM cell
-Positive tab width [m],0.04,,Need to find actual value for KOKAM cell
-Positive tab centre y-coordinate [m],0.147,,Need to find actual value for KOKAM cell
-Positive tab centre z-coordinate [m],0.137,,Need to find actual value for KOKAM cell
+Cell cooling surface area [m2],0.41,,pouch
+Cell volume [m3]3.92E-5,,pouch
 ,,,
 # Current collector properties ,,,
 Negative current collector conductivity [S.m-1],59600000,LIONSIMBA,carbon

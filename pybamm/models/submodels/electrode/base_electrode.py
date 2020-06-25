@@ -19,8 +19,8 @@ class BaseElectrode(pybamm.BaseSubModel):
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param, domain, reactions=None, set_positive_potential=True):
-        super().__init__(param, domain, reactions)
+    def __init__(self, param, domain, set_positive_potential=True):
+        super().__init__(param, domain)
         self.set_positive_potential = set_positive_potential
 
     def _get_standard_potential_variables(self, phi_s):
@@ -190,4 +190,3 @@ class BaseElectrode(pybamm.BaseSubModel):
             )
 
         return variables
-

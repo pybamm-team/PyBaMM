@@ -310,6 +310,16 @@ class Gradient(SpatialOperator):
     """
 
     def __init__(self, child):
+        if child.domain == []:
+            raise pybamm.DomainError(
+                "Cannot take gradient of '{}' since its domain is empty. ".format(child)
+                + "Try broadcasting the object first, e.g.\n\n"
+                "\tpybamm.grad(pybamm.PrimaryBroadcast(symbol, 'domain'))"
+            )
+        if child.evaluates_on_edges() is True:
+            raise TypeError(
+                "Cannot take gradient of '{}' since it evaluates on edges".format(child)
+            )
         super().__init__("grad", child)
 
     def evaluates_on_edges(self):
@@ -324,6 +334,20 @@ class Divergence(SpatialOperator):
     """
 
     def __init__(self, child):
+        if child.domain == []:
+            raise pybamm.DomainError(
+                "Cannot take divergence of '{}' since its domain is empty. ".format(
+                    child
+                )
+                + "Try broadcasting the object first, e.g.\n\n"
+                "\tpybamm.div(pybamm.PrimaryBroadcast(symbol, 'domain'))"
+            )
+        if child.evaluates_on_edges() is False:
+            raise TypeError(
+                "Cannot take divergence of '{}' since it does not ".format(child)
+                + "evaluates on nodes. Usually, a gradient should be taken before the "
+                "divergence."
+            )
         super().__init__("div", child)
 
     def evaluates_on_edges(self):
@@ -486,14 +510,8 @@ class Integral(SpatialOperator):
         return False
 
 
-class IndefiniteIntegral(Integral):
-    """A node in the expression tree representing an indefinite integral operator
-
-    .. math::
-        I = \\int_{x_\text{min}}^{x}\\!f(u)\\,du
-
-    where :math:`u\\in\\text{domain}` which can represent either a
-    spatial or temporal variable.
+class BaseIndefiniteIntegral(Integral):
+    """Base class for indefinite integrals (forward or backward).
 
     Parameters
     ----------
@@ -516,15 +534,73 @@ class IndefiniteIntegral(Integral):
         super().__init__(child, integration_variable)
         # overwrite domains with child domains
         self.copy_domains(child)
-        # Overwrite the name
-        self.name = "{} integrated w.r.t {}".format(
-            child.name, integration_variable.name
-        )
-        if isinstance(integration_variable, pybamm.SpatialVariable):
-            self.name += " on {}".format(integration_variable.domain)
 
     def _evaluate_for_shape(self):
         return self.children[0].evaluate_for_shape()
+
+    def evaluates_on_edges(self):
+        # If child evaluates on edges, indefinite integral doesn't
+        # If child doesn't evaluate on edges, indefinite integral does
+        return not self.child.evaluates_on_edges()
+
+
+class IndefiniteIntegral(BaseIndefiniteIntegral):
+    """A node in the expression tree representing an indefinite integral operator
+
+    .. math::
+        I = \\int_{x_\text{min}}^{x}\\!f(u)\\,du
+
+    where :math:`u\\in\\text{domain}` which can represent either a
+    spatial or temporal variable.
+
+    Parameters
+    ----------
+    function : :class:`pybamm.Symbol`
+        The function to be integrated (will become self.children[0])
+    integration_variable : :class:`pybamm.IndependentVariable`
+        The variable over which to integrate
+
+    **Extends:** :class:`BaseIndefiniteIntegral`
+    """
+
+    def __init__(self, child, integration_variable):
+        super().__init__(child, integration_variable)
+        # Overwrite the name
+        self.name = "{} integrated w.r.t {}".format(
+            child.name, self.integration_variable[0].name
+        )
+        if isinstance(integration_variable, pybamm.SpatialVariable):
+            self.name += " on {}".format(self.integration_variable[0].domain)
+
+
+class BackwardIndefiniteIntegral(BaseIndefiniteIntegral):
+    """A node in the expression tree representing a backward indefinite integral
+    operator
+
+    .. math::
+        I = \\int_{x}^{x_\text{max}}\\!f(u)\\,du
+
+    where :math:`u\\in\\text{domain}` which can represent either a
+    spatial or temporal variable.
+
+    Parameters
+    ----------
+    function : :class:`pybamm.Symbol`
+        The function to be integrated (will become self.children[0])
+    integration_variable : :class:`pybamm.IndependentVariable`
+        The variable over which to integrate
+
+    **Extends:** :class:`BaseIndefiniteIntegral`
+    """
+
+    def __init__(self, child, integration_variable):
+        super().__init__(child, integration_variable)
+        # Overwrite the name
+        self.name = "{} integrated backward w.r.t {}".format(
+            child.name, self.integration_variable[0].name
+        )
+        if isinstance(integration_variable, pybamm.SpatialVariable):
+            self.name += " on {}".format(self.integration_variable[0].domain)
 
 
 class DefiniteIntegralVector(SpatialOperator):
@@ -814,8 +890,12 @@ def grad(expression):
     :class:`Gradient`
         the gradient of ``expression``
     """
-
-    return Gradient(expression)
+    # Gradient of a broadcast is zero
+    if isinstance(expression, pybamm.PrimaryBroadcast):
+        new_child = pybamm.PrimaryBroadcast(0, expression.child.domain)
+        return pybamm.PrimaryBroadcastToEdges(new_child, expression.domain)
+    else:
+        return Gradient(expression)
 
 
 def div(expression):
@@ -833,8 +913,12 @@ def div(expression):
     :class:`Divergence`
         the divergence of ``expression``
     """
-
-    return Divergence(expression)
+    # Divergence of a broadcast is zero
+    if isinstance(expression, pybamm.PrimaryBroadcastToEdges):
+        new_child = pybamm.PrimaryBroadcast(0, expression.child.domain)
+        return pybamm.PrimaryBroadcast(new_child, expression.domain)
+    else:
+        return Divergence(expression)
 
 
 def laplacian(expression):

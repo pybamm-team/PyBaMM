@@ -11,20 +11,6 @@ class TestSPMe(unittest.TestCase):
         model = pybamm.lithium_ion.SPMe(options)
         model.check_well_posedness()
 
-    def test_default_geometry(self):
-        options = {"thermal": "isothermal"}
-        model = pybamm.lithium_ion.SPMe(options)
-        self.assertIsInstance(model.default_geometry, pybamm.Geometry)
-        self.assertTrue("negative particle" in model.default_geometry)
-
-        options = {"current collector": "potential pair", "dimensionality": 1}
-        model = pybamm.lithium_ion.SPMe(options)
-        self.assertIn("current collector", model.default_geometry)
-
-        options = {"current collector": "potential pair", "dimensionality": 2}
-        model = pybamm.lithium_ion.SPMe(options)
-        self.assertIn("current collector", model.default_geometry)
-
     def test_well_posed_2plus1D(self):
         options = {"current collector": "potential pair", "dimensionality": 1}
         model = pybamm.lithium_ion.SPMe(options)
@@ -114,6 +100,28 @@ class TestSPMe(unittest.TestCase):
 
     def test_surface_form_algebraic(self):
         options = {"surface form": "algebraic"}
+        model = pybamm.lithium_ion.SPMe(options)
+        model.check_well_posedness()
+
+
+class TestSPMeWithSEI(unittest.TestCase):
+    def test_well_posed_reaction_limited(self):
+        options = {"sei": "reaction limited"}
+        model = pybamm.lithium_ion.SPMe(options)
+        model.check_well_posedness()
+
+    def test_well_posed_solvent_diffusion_limited(self):
+        options = {"sei": "solvent-diffusion limited"}
+        model = pybamm.lithium_ion.SPMe(options)
+        model.check_well_posedness()
+
+    def test_well_posed_electron_migration_limited(self):
+        options = {"sei": "electron-migration limited"}
+        model = pybamm.lithium_ion.SPMe(options)
+        model.check_well_posedness()
+
+    def test_well_posed_interstitial_diffusion_limited(self):
+        options = {"sei": "interstitial-diffusion limited"}
         model = pybamm.lithium_ion.SPMe(options)
         model.check_well_posedness()
 

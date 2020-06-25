@@ -23,8 +23,8 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
     **Extends:** :class:`pybamm.electrolyte_conductivity.LeadingOrder`
     """
 
-    def __init__(self, param, domain, reactions):
-        super().__init__(param, domain, reactions)
+    def __init__(self, param, domain):
+        super().__init__(param, domain)
 
     def get_fundamental_variables(self):
 
@@ -94,8 +94,8 @@ class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):
 
     """
 
-    def __init__(self, param, domain, reactions):
-        super().__init__(param, domain, reactions)
+    def __init__(self, param, domain):
+        super().__init__(param, domain)
 
     def set_rhs(self, variables):
         if self.domain == "Separator":
@@ -103,10 +103,11 @@ class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):
 
         param = self.param
 
-        sum_j = sum(
-            variables["X-averaged " + reaction[self.domain]["aj"].lower()]
-            for reaction in self.reactions.values()
-        )
+        sum_j = variables[
+            "Sum of x-averaged "
+            + self.domain.lower()
+            + " electrode interfacial current densities"
+        ]
 
         sum_j_av = variables[
             "X-averaged "
@@ -141,17 +142,18 @@ class LeadingOrderAlgebraic(BaseLeadingOrderSurfaceForm):
     **Extends:** :class:`BaseLeadingOrderSurfaceForm`
     """
 
-    def __init__(self, param, domain, reactions):
-        super().__init__(param, domain, reactions)
+    def __init__(self, param, domain):
+        super().__init__(param, domain)
 
     def set_algebraic(self, variables):
         if self.domain == "Separator":
             return
 
-        sum_j = sum(
-            variables["X-averaged " + reaction[self.domain]["aj"].lower()]
-            for reaction in self.reactions.values()
-        )
+        sum_j = variables[
+            "Sum of x-averaged "
+            + self.domain.lower()
+            + " electrode interfacial current densities"
+        ]
 
         sum_j_av = variables[
             "X-averaged "

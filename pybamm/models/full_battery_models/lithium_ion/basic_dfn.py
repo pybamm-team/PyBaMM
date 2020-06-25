@@ -119,13 +119,7 @@ class BasicDFN(BaseModel):
         # right side. This is also accessible via `boundary_value(x, "right")`, with
         # "left" providing the boundary value of the left side
         c_s_surf_n = pybamm.surf(c_s_n)
-        j0_n = (
-            param.m_n(T)
-            / param.C_r_n
-            * c_e_n ** (1 / 2)
-            * c_s_surf_n ** (1 / 2)
-            * (1 - c_s_surf_n) ** (1 / 2)
-        )
+        j0_n = param.j0_n(c_e_n, c_s_surf_n, T) / param.C_r_n
         j_n = (
             2
             * j0_n
@@ -134,14 +128,7 @@ class BasicDFN(BaseModel):
             )
         )
         c_s_surf_p = pybamm.surf(c_s_p)
-        j0_p = (
-            param.gamma_p
-            * param.m_p(T)
-            / param.C_r_p
-            * c_e_p ** (1 / 2)
-            * c_s_surf_p ** (1 / 2)
-            * (1 - c_s_surf_p) ** (1 / 2)
-        )
+        j0_p = param.gamma_p * param.j0_p(c_e_p, c_s_surf_p, T) / param.C_r_p
         j_s = pybamm.PrimaryBroadcast(0, "separator")
         j_p = (
             2
@@ -295,7 +282,3 @@ class BasicDFN(BaseModel):
             pybamm.Event("Minimum voltage", voltage - param.voltage_low_cut),
             pybamm.Event("Maximum voltage", voltage - param.voltage_high_cut),
         ]
-
-    @property
-    def default_geometry(self):
-        return pybamm.Geometry("1D macro", "1+1D micro")

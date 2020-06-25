@@ -55,6 +55,8 @@ class TestCompareOutputs(unittest.TestCase):
         # load models - for the default params we expect x-full and lumped to
         # agree as the temperature is practically independent of x
         options = [{"thermal": opt} for opt in ["lumped", "x-full"]]
+        options.append({"thermal": "lumped", "cell_geometry": "pouch"})
+
         model_combos = [
             ([pybamm.lithium_ion.SPM(opt) for opt in options]),
             ([pybamm.lithium_ion.SPMe(opt) for opt in options]),
@@ -64,6 +66,20 @@ class TestCompareOutputs(unittest.TestCase):
         for models in model_combos:
             # load parameter values (same for all models)
             param = models[0].default_parameter_values
+
+            # for x-full, cooling is only implemented on the surfaces
+            # so set other forms of cooling to zero for comparison.
+            param.update(
+                {
+                    "Negative current collector"
+                    + " surface heat transfer coefficient [W.m-2.K-1]": 5,
+                    "Positive current collector"
+                    + " surface heat transfer coefficient [W.m-2.K-1]": 5,
+                    "Negative tab heat transfer coefficient [W.m-2.K-1]": 0,
+                    "Positive tab heat transfer coefficient [W.m-2.K-1]": 0,
+                    "Edge heat transfer coefficient [W.m-2.K-1]": 0,
+                }
+            )
             for model in models:
                 param.process_model(model)
 
