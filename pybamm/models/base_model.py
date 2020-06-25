@@ -692,6 +692,11 @@ class BaseModel(object):
         for input_param in self.input_parameters:
             name = input_param.name
             inputs_wrong_order[name] = casadi.MX.sym(name, input_param._expected_size)
+        # Read external variables
+        for external_varaiable in self.external_variables:
+            name = external_varaiable.name
+            ev_size = external_varaiable._evaluate_for_shape().shape[0]
+            inputs_wrong_order[name] = casadi.MX.sym(name, ev_size)
         # Sort according to input_parameter_order
         if input_parameter_order is None:
             inputs = inputs_wrong_order
