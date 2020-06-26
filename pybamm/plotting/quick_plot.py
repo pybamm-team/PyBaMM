@@ -296,7 +296,7 @@ class QuickPlot(object):
 
             # Set the x variable (i.e. "x" or "r" for any one-dimensional variables)
             if first_variable.dimensions == 1:
-                (spatial_var_name, spatial_var_value,) = self.get_spatial_var(
+                (spatial_var_name, spatial_var_value) = self.get_spatial_var(
                     variable_tuple, first_variable, "first"
                 )
                 self.spatial_variable_dict[variable_tuple] = {
@@ -579,10 +579,21 @@ class QuickPlot(object):
                 )
                 vmin, vmax = self.variable_limits[key]
                 # store the plot and the var data (for testing) as cant access
-                # z data from QuadContourSet object
-                self.plots[key][0][0] = ax.contourf(
-                    x, y, var, levels=100, vmin=vmin, vmax=vmax, cmap="coolwarm"
-                )
+                # z data from QuadMesh or QuadContourSet object
+                if self.is_y_z[key] is True:
+                    self.plots[key][0][0] = ax.pcolormesh(
+                        x,
+                        y,
+                        var,
+                        vmin=vmin,
+                        vmax=vmax,
+                        cmap="coolwarm",
+                        shading="gouraud",
+                    )
+                else:
+                    self.plots[key][0][0] = ax.contourf(
+                        x, y, var, levels=100, vmin=vmin, vmax=vmax, cmap="coolwarm"
+                    )
                 self.plots[key][0][1] = var
                 if vmin is None and vmax is None:
                     vmin = ax_min(var)
@@ -710,11 +721,22 @@ class QuickPlot(object):
                         var = variable(time_in_seconds, **spatial_vars, warn=False)
                     else:
                         var = variable(time_in_seconds, **spatial_vars, warn=False).T
-                # store the plot and the updated var data (for testing) as cant
-                # access z data from QuadContourSet object
-                self.plots[key][0][0] = ax.contourf(
-                    x, y, var, levels=100, vmin=vmin, vmax=vmax, cmap="coolwarm"
-                )
+                # store the plot and the var data (for testing) as cant access
+                # z data from QuadMesh or QuadContourSet object
+                if self.is_y_z[key] is True:
+                    self.plots[key][0][0] = ax.pcolormesh(
+                        x,
+                        y,
+                        var,
+                        vmin=vmin,
+                        vmax=vmax,
+                        cmap="coolwarm",
+                        shading="gouraud",
+                    )
+                else:
+                    self.plots[key][0][0] = ax.contourf(
+                        x, y, var, levels=100, vmin=vmin, vmax=vmax, cmap="coolwarm"
+                    )
                 self.plots[key][0][1] = var
                 if (vmin, vmax) == (None, None):
                     vmin = ax_min(var)
