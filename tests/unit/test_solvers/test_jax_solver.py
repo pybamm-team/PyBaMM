@@ -158,12 +158,12 @@ class TestJaxSolver(unittest.TestCase):
 
         solver.solve(model, t_eval, inputs={"rate": 0.1})
         solver = solver.get_solve(model, t_eval)
-        y = solver({"rate": 0.1})
+        y, _ = solver({"rate": 0.1})
 
         np.testing.assert_allclose(y[0], np.exp(-0.1 * t_eval),
                                    rtol=1e-6, atol=1e-6)
 
-        y = solver({"rate": 0.2})
+        y, _ = solver({"rate": 0.2})
 
         np.testing.assert_allclose(y[0], np.exp(-0.2 * t_eval),
                                    rtol=1e-6, atol=1e-6)
