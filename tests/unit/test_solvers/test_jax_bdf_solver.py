@@ -32,7 +32,8 @@ class TestJaxBDFSolver(unittest.TestCase):
             return rhs.evaluate(t=t, y=y, inputs=inputs).reshape(-1)
 
         t0 = time.perf_counter()
-        y, _ = pybamm.jax_bdf_integrate(fun, y0, t_eval, inputs=None, rtol=1e-8, atol=1e-8)
+        y, _ = pybamm.jax_bdf_integrate(
+            fun, y0, t_eval, inputs=None, rtol=1e-8, atol=1e-8)
         t1 = time.perf_counter() - t0
 
         # test accuracy
@@ -74,7 +75,7 @@ class TestJaxBDFSolver(unittest.TestCase):
             return rhs.evaluate(t=t, y=y, inputs=inputs).reshape(-1)
 
         y, _ = pybamm.jax_bdf_integrate(fun, y0, t_eval, inputs={
-                                     "rate": 0.1}, rtol=1e-9, atol=1e-9)
+            "rate": 0.1}, rtol=1e-9, atol=1e-9)
 
         np.testing.assert_allclose(y[0, :], np.exp(-0.1 * t_eval))
 
