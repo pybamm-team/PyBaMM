@@ -32,22 +32,22 @@ class TestJaxBDFSolver(unittest.TestCase):
             return rhs.evaluate(t=t, y=y, inputs=inputs).reshape(-1)
 
         t0 = time.perf_counter()
-        y = pybamm.jax_bdf_integrate(fun, y0, t_eval, inputs=None, rtol=1e-8, atol=1e-8)
+        y, _ = pybamm.jax_bdf_integrate(fun, y0, t_eval, inputs=None, rtol=1e-8, atol=1e-8)
         t1 = time.perf_counter() - t0
 
         # test accuracy
-        np.testing.assert_allclose(y[:, 0], np.exp(0.1 * t_eval),
+        np.testing.assert_allclose(y[0, :], np.exp(0.1 * t_eval),
                                    rtol=1e-7, atol=1e-7)
 
         t0 = time.perf_counter()
-        y = pybamm.jax_bdf_integrate(fun, y0, t_eval, rtol=1e-8, atol=1e-8)
+        y, _ = pybamm.jax_bdf_integrate(fun, y0, t_eval, rtol=1e-8, atol=1e-8)
         t2 = time.perf_counter() - t0
 
         # second run should be much quicker
         self.assertLess(t2, t1)
 
         # test second run is accurate
-        np.testing.assert_allclose(y[:, 0], np.exp(0.1 * t_eval),
+        np.testing.assert_allclose(y[0, :], np.exp(0.1 * t_eval),
                                    rtol=1e-7, atol=1e-7)
 
     def test_solver_with_inputs(self):
@@ -73,11 +73,10 @@ class TestJaxBDFSolver(unittest.TestCase):
         def fun(t, y, inputs):
             return rhs.evaluate(t=t, y=y, inputs=inputs).reshape(-1)
 
-        y = pybamm.jax_bdf_integrate(fun, y0, t_eval, inputs={
+        y, _ = pybamm.jax_bdf_integrate(fun, y0, t_eval, inputs={
                                      "rate": 0.1}, rtol=1e-9, atol=1e-9)
 
-        np.testing.assert_allclose(y[:, 0], np.exp(-0.1 * t_eval))
-
+        np.testing.assert_allclose(y[0, :], np.exp(-0.1 * t_eval))
 
 
 if __name__ == "__main__":

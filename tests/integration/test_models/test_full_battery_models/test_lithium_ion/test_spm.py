@@ -64,7 +64,6 @@ class TestSPM(unittest.TestCase):
         np.testing.assert_array_almost_equal(original, simp_and_python)
         np.testing.assert_array_almost_equal(original, simp_and_jax)
 
-
     def test_set_up(self):
         model = pybamm.lithium_ion.SPM()
         optimtest = tests.OptimisationsTest(model)

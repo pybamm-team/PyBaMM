@@ -77,9 +77,9 @@ def find_symbols(symbol, constant_symbols, variable_symbols, to_dense=False):
     children_vars = []
     for child in symbol.children:
         if child.is_constant():
-            eval = child.evaluate()
-            if isinstance(eval, numbers.Number):
-                children_vars.append(str(eval))
+            child_eval = child.evaluate()
+            if isinstance(child_eval, numbers.Number):
+                children_vars.append(str(child_eval))
             else:
                 children_vars.append(id_to_python_variable(child.id, True))
         else:
@@ -381,11 +381,6 @@ class EvaluatorJax:
         for symbol_id in constants:
             if isinstance(constants[symbol_id], np.ndarray):
                 constants[symbol_id] = jax.device_put(constants[symbol_id])
-
-            # should be no sparse matrices in the constants
-            if scipy.sparse.issparse(constants[symbol_id]):
-                print(constants[symbol_id])
-            assert not scipy.sparse.issparse(constants[symbol_id])
 
         # extract constants in generated function
         for i, symbol_id in enumerate(constants.keys()):

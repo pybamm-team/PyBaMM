@@ -109,30 +109,28 @@ class JaxSolver(pybamm.BaseSolver):
             return model.rhs_eval(t, y, inputs)
 
         def solve_model_rk45(inputs):
-            return np.transpose(
-                odeint(
-                    rhs_odeint,
-                    y0,
-                    t_eval,
-                    inputs,
-                    rtol=self.rtol,
-                    atol=self.atol,
-                    **self.extra_options
-                )
+            y = odeint(
+                rhs_odeint,
+                y0,
+                t_eval,
+                inputs,
+                rtol=self.rtol,
+                atol=self.atol,
+                **self.extra_options
             )
+            return np.transpose(y), None
 
         def solve_model_bdf(inputs):
-            return np.transpose(
-                jax_bdf_integrate(
-                    model.rhs_eval,
-                    y0,
-                    t_eval,
-                    inputs,
-                    rtol=self.rtol,
-                    atol=self.atol,
-                    **self.extra_options
-                )
+            y, stepper = jax_bdf_integrate(
+                model.rhs_eval,
+                y0,
+                t_eval,
+                inputs=inputs,
+                rtol=self.rtol,
+                atol=self.atol,
+                **self.extra_options
             )
+            return y, stepper
 
         if self.method == 'RK45':
             return jax.jit(solve_model_rk45)
@@ -162,10 +160,24 @@ class JaxSolver(pybamm.BaseSolver):
         if model not in self._cached_solves:
             self._cached_solves[model] = self._create_solve(model, t_eval)
 
-        y = self._cached_solves[model](inputs)
+        y, stepper = self._cached_solves[model](inputs)
 
         # note - the actual solve is not done until this line!
         y = onp.array(y)
+
+        if stepper is not None:
+            sstring = ''
+            sstring += 'JAX {} solver - stats\n'.format(self.method)
+            sstring += '\tNumber of steps: {}\n'.format(stepper['n_steps'])
+            sstring += '\tnumber of function evaluations: {}\n'.format(
+                stepper['n_function_evals'])
+            sstring += '\tnumber of jacobian evaluations: {}\n'.format(
+                stepper['n_jacobian_evals'])
+            sstring += '\tnumber of LU decompositions: {}\n'.format(
+                stepper['n_lu_decompositions'])
+            sstring += '\tnumber of error test failures: {}'.format(
+                stepper['n_error_test_failures'])
+            pybamm.logger.info(sstring)
 
         termination = "final time"
         t_event = None

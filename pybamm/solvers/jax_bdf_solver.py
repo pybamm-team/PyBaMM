@@ -1,9 +1,5 @@
 import jax
 import jax.numpy as np
-import numpy as onp
-import scipy
-import pybamm
-import time
 
 from jax.config import config
 config.update("jax_enable_x64", True)
@@ -15,8 +11,10 @@ MIN_FACTOR = 0.2
 MAX_FACTOR = 10
 
 
-
 def flax_cond(pred, true_operand, true_fun, false_operand, false_fun):
+    """
+    for debugging purposes, use this instead of jax.lax.cond
+    """
     if pred:
         return true_fun(true_operand)
     else:
@@ -24,6 +22,9 @@ def flax_cond(pred, true_operand, true_fun, false_operand, false_fun):
 
 
 def flax_while_loop(cond_fun, body_fun, init_val):
+    """
+    for debugging purposes, use this instead of jax.lax.while_loop
+    """
     val = init_val
     while cond_fun(val):
         val = body_fun(val)
@@ -31,12 +32,16 @@ def flax_while_loop(cond_fun, body_fun, init_val):
 
 
 def flax_fori_loop(start, stop, body_fun, init_val):
+    """
+    for debugging purposes, use this instead of jax.lax.fori_loop
+    """
     val = init_val
     for i in range(start, stop):
         val = body_fun(i, val)
     return val
 
-def compute_R(order, factor):
+
+def _compute_R(order, factor):
     """
     computes the R matrix with entries
     given by the first equation on page 8 of [1]
@@ -46,7 +51,6 @@ def compute_R(order, factor):
 
     Note that the U matrix also defined in the same section can be also be
     found using factor = 1, which corresponds to R with a constant step size
-
     """
     I = np.arange(1, MAX_ORDER + 1).reshape(-1, 1)
     J = np.arange(1, MAX_ORDER + 1)
@@ -140,9 +144,14 @@ def _bdf_init(fun, jac, t0, y0, h0, rtol, atol):
     state['J'] = J
     state['LU'] = jax.scipy.linalg.lu_factor(I - c * J)
 
-    state['U'] = [compute_R(order, 1) for order in range(MAX_ORDER)]
+    state['U'] = _compute_R(order, 1)
     state['psi'] = None
     state = _update_psi(state)
+
+    state['n_function_evals'] = 2
+    state['n_jacobian_evals'] = 1
+    state['n_lu_decompositions'] = 1
+    state['n_error_test_failures'] = 0
     return state
 
 
@@ -216,7 +225,7 @@ def _update_difference_for_next_step(state, d, only_update_D=False):
     while_state = [i, D]
 
     def while_cond(while_state):
-        i, D = while_state
+        i, _ = while_state
         return i >= 0
 
     def while_body(while_state):
@@ -239,7 +248,7 @@ def _update_difference_for_next_step(state, d, only_update_D=False):
 
         return state
 
-    state = jax.lax.cond(only_update_D == False,
+    state = jax.lax.cond(only_update_D == False,  # noqa: E712
                          state, update_psi_and_predict,
                          state, lambda x: x)
 
@@ -265,9 +274,10 @@ def _update_step_size(state, factor, dont_update_lu):
     # redo lu (c has changed)
     def update_lu(state):
         state['LU'] = jax.scipy.linalg.lu_factor(state['I'] - c * state['J'])
+        state['n_lu_decompositions'] += 1
         return state
 
-    state = jax.lax.cond(dont_update_lu == False,
+    state = jax.lax.cond(dont_update_lu == False,  # noqa: E712
                          state, update_lu,
                          state, lambda x: x)
 
@@ -275,7 +285,7 @@ def _update_step_size(state, factor, dont_update_lu):
     state['c'] = c
 
     # update D using equations in section 3.2 of [1]
-    RU = compute_R(order, factor).dot(state['U'][0])
+    RU = _compute_R(order, factor).dot(state['U'])
     I = np.arange(0, MAX_ORDER + 1).reshape(-1, 1)
     J = np.arange(0, MAX_ORDER + 1)
 
@@ -299,13 +309,13 @@ def _update_step_size(state, factor, dont_update_lu):
 
 def _update_jacobian(state, jac):
     """
-    we update the jacobian using J(t_n, y_n) as per [1]
-
-    Note: this is slightly different than the standard practice
-    of using J(t_{n+1}, y^0_{n+1})
+    we update the jacobian using J(t_{n+1}, y^0_{n+1})
+    following the scipy bdf implementation rather than J(t_n, y_n) as per [1]
     """
-    J = jac(state['t'], state['y'])
+    J = jac(state['t'] + state['h'], state['y0'])
+    state['n_jacobian_evals'] += 1
     state['LU'] = jax.scipy.linalg.lu_factor(state['I'] - state['c'] * J)
+    state['n_lu_decompositions'] += 1
     state['J'] = J
     return state
 
@@ -324,15 +334,16 @@ def _newton_iteration(state, fun):
     not_converged = True
     dy_norm_old = -1.0
     k = 0
-    while_state = [k, not_converged, dy_norm_old, d, y]
+    while_state = [k, not_converged, dy_norm_old, d, y, state]
 
-    def while_cond(state):
-        k, not_converged, _, _, _ = state
+    def while_cond(while_state):
+        k, not_converged, _, _, _, _ = while_state
         return not_converged * (k < NEWTON_MAXITER)
 
-    def while_body(state):
-        k, not_converged, dy_norm_old, d, y = state
+    def while_body(while_state):
+        k, not_converged, dy_norm_old, d, y, state = while_state
         f_eval = fun(t, y)
+        state['n_function_evals'] += 1
         b = c * f_eval - psi - d
         dy = jax.scipy.linalg.lu_solve(LU, b)
         dy_norm = np.sqrt(np.mean((dy / scale_y0)**2))
@@ -340,39 +351,38 @@ def _newton_iteration(state, fun):
 
         # if iteration is not going to converge in NEWTON_MAXITER
         # (assuming the current rate), then abort
-        pred = rate ** (NEWTON_MAXITER - k) / (1 - rate) * dy_norm
         pred = rate >= 1
         pred += rate ** (NEWTON_MAXITER - k) / (1 - rate) * dy_norm > tol
-        pred *= dy_norm_old < -1
+        pred *= dy_norm_old >= 0
         k = jax.lax.cond(pred, k, lambda k: NEWTON_MAXITER, k, lambda k: k)
 
         d += dy
         y = y0 + d
 
         # if converged then break out of iteration early
-        pred = rate > 0.0
+        pred = dy_norm_old >= 0
         pred *= rate / (1 - rate) * dy_norm < tol
         pred += dy_norm == 0
 
-        def converged_fun(state):
-            k, not_converged, dy_norm_old = state
+        def converged_fun(not_converged):
             not_converged = False
-            return [k, not_converged, dy_norm_old]
+            return not_converged
 
-        def not_converged_fun(state):
-            k, not_converged, dy_norm_old = state
-            dy_norm_old = dy_norm
-            k += 1
-            return [k, not_converged, dy_norm_old]
+        def not_converged_fun(not_converged):
+            return not_converged
 
-        if_state = [k, not_converged, dy_norm_old]
-        k, not_converged, dy_norm_old = \
-            jax.lax.cond(pred, if_state, converged_fun, if_state, not_converged_fun)
-        return [k, not_converged, dy_norm_old, d, y]
+        dy_norm_old = dy_norm
 
-    k, not_converged, dy_norm_old, d, y = jax.lax.while_loop(while_cond, while_body,
-                                                             while_state)
-    return not_converged, k + 1, y, d
+        not_converged = \
+            jax.lax.cond(pred,
+                         not_converged, converged_fun,
+                         not_converged, not_converged_fun)
+        return [k + 1, not_converged, dy_norm_old, d, y, state]
+
+    k, not_converged, dy_norm_old, d, y, state = jax.lax.while_loop(while_cond,
+                                                                    while_body,
+                                                                    while_state)
+    return not_converged, k, y, d, state
 
 
 def _bdf_step(state, fun, jac):
@@ -385,23 +395,26 @@ def _bdf_step(state, fun, jac):
     y = np.empty_like(state['y'])
     d = np.empty_like(state['y'])
     n_iter = -1
+
+    # loop until step is accepted
     while_state = [state, step_accepted, not_updated_jacobian, y, d, n_iter]
 
     def while_cond(while_state):
         _, step_accepted, _, _, _, _ = while_state
-        return step_accepted == False
+        return step_accepted == False  # noqa: E712
 
     def while_body(while_state):
         state, step_accepted, not_updated_jacobian, y, d, n_iter = while_state
 
         # solve BDF equation using y0 as starting point
-        not_converged, n_iter, y, d = _newton_iteration(state, fun)
+        not_converged, n_iter, y, d, state = _newton_iteration(state, fun)
 
         # if not converged update the jacobian for J(t_n,y_n) and try again
         pred = not_converged * not_updated_jacobian
         if_state = [state, not_updated_jacobian, step_accepted]
 
         def need_to_update_jacobian(if_state):
+            # newton iteration did not converge, update the jacobian and try again
             state, not_updated_jacobian, step_accepted = if_state
             state = _update_jacobian(state, jac)
             not_updated_jacobian = False
@@ -411,10 +424,10 @@ def _bdf_step(state, fun, jac):
             state, not_updated_jacobian, step_accepted = if_state
 
             if_state2 = [state, step_accepted]
-            # if still not converged then multiply step size by 0.3 (as per [1])
-            # and try again
 
             def need_to_update_step_size(if_state2):
+                # newton iteration did not converge, but jacobian has already been
+                # evaluated so reduce step size by 0.3 (as per [1]) and try again
                 state, step_accepted = if_state2
                 state = _update_step_size(state, 0.3, False)
                 return [state, step_accepted]
@@ -435,18 +448,20 @@ def _bdf_step(state, fun, jac):
                                                            + n_iter)
 
                 if_state3 = [state, step_accepted]
-                # if error too large, reduce step size and try again
 
                 def error_too_large(if_state3):
+                    # error too large, reduce step size and try again
                     state, step_accepted = if_state3
+                    state['n_error_test_failures'] += 1
                     # calculate optimal step size factor as per eq 2.46 of [2]
                     factor = np.max((MIN_FACTOR,
-                                     safety * error_norm ** (-1 / (state['order'] + 1))))
+                                     safety *
+                                     error_norm ** (-1 / (state['order'] + 1))))
                     state = _update_step_size(state, factor, False)
                     return [state, step_accepted]
 
-                # if we get here we can accept the step
-                def step_accepted(if_state3):
+                def accept_step(if_state3):
+                    # if we get here we can accept the step
                     state, step_accepted = if_state3
                     step_accepted = True
                     return [state, step_accepted]
@@ -454,7 +469,7 @@ def _bdf_step(state, fun, jac):
                 state, step_accepted = \
                     jax.lax.cond(error_norm > 1,
                                  if_state3, error_too_large,
-                                 if_state3, step_accepted)
+                                 if_state3, accept_step)
 
                 return [state, step_accepted]
 
@@ -472,6 +487,7 @@ def _bdf_step(state, fun, jac):
 
     state, step_accepted, not_updated_jacobian, y, d, n_iter = \
         jax.lax.while_loop(while_cond, while_body, while_state)
+
     # take the accepted step
     state['y'] = y
     state['t'] += state['h']
@@ -483,6 +499,7 @@ def _bdf_step(state, fun, jac):
     if_state = [state, d, y, n_iter]
 
     def no_change_in_order(if_state):
+        # no change in order this step, update differences D and exit
         state, d, _, _ = if_state
         state = _update_difference_for_next_step(state, d, False)
         return state
@@ -535,7 +552,6 @@ def _bdf_step(state, fun, jac):
                                     if_state2, order_max)
 
         error_norms = np.array([error_m_norm, error_norm, error_p_norm])
-        # with np.errstate(divide='ignore'):
         factors = error_norms ** (-1 / (np.arange(3) + order))
 
         # now we have the three factors for orders k-1, k and k+1, pick the maximum in
@@ -572,13 +588,13 @@ def _bdf_interpolate(state, t_eval):
     while_state = [j, time_factor, order_summation]
 
     def while_cond(while_state):
-        j, time_factor, order_summation = while_state
+        j, _, _ = while_state
         return j < order
 
     def while_body(while_state):
         j, time_factor, order_summation = while_state
-        time_factor *= (t_eval - (t - h*j)) / (h * (1 + j))
-        order_summation += D[j+1] * time_factor
+        time_factor *= (t_eval - (t - h * j)) / (h * (1 + j))
+        order_summation += D[j + 1] * time_factor
         j += 1
         return [j, time_factor, order_summation]
 
@@ -588,28 +604,38 @@ def _bdf_interpolate(state, t_eval):
     return order_summation
 
 
-@jax.partial(jax.jit, static_argnums=(0, 1, 2))
-def _bdf_odeint(fun, rtol, atol, y0, t_eval, inputs):
+@jax.partial(jax.jit, static_argnums=(0, 1, 2, 3))
+def _bdf_odeint(fun, jac, rtol, atol, y0, t_eval, inputs):
+    """
+    main solver loop - creates a stepper object and steps through time, interpolating to
+    the time points in t_eval
+    """
 
-    def fun_bind_inputs(t, y): return fun(t, y, inputs)
+    def fun_bind_inputs(t, y):
+        return fun(t, y, inputs)
 
-    jac = jax.jacfwd(fun_bind_inputs, argnums=1)
+    if jac is None:
+        jac_bind_inputs = jax.jacfwd(fun_bind_inputs, argnums=1)
+    else:
+        def jac_bind_inputs(t, y):
+            jac(t, y, inputs)
+
     t0 = t_eval[0]
     h0 = t_eval[1] - t0
 
-    stepper = _bdf_init(fun_bind_inputs, jac, t0, y0, h0, rtol, atol)
+    stepper = _bdf_init(fun_bind_inputs, jac_bind_inputs, t0, y0, h0, rtol, atol)
     i = 0
     y_out = np.empty((len(y0), len(t_eval)), dtype=y0.dtype)
 
-    init_state = [stepper, t_eval, i, y_out]
+    init_state = [stepper, t_eval, i, y_out, 0]
 
     def cond_fun(state):
-        _, t_eval, i, _ = state
+        _, t_eval, i, _, _ = state
         return i < len(t_eval)
 
     def body_fun(state):
-        stepper, t_eval, i, y_out = state
-        stepper = _bdf_step(stepper, fun_bind_inputs, jac)
+        stepper, t_eval, i, y_out, n_steps = state
+        stepper = _bdf_step(stepper, fun_bind_inputs, jac_bind_inputs)
         index = np.searchsorted(t_eval, stepper['t'])
 
         def for_body(j, y_out):
@@ -619,28 +645,71 @@ def _bdf_odeint(fun, rtol, atol, y0, t_eval, inputs):
             return y_out
 
         y_out = jax.lax.fori_loop(i, index, for_body, y_out)
-        return [stepper, t_eval, index, y_out]
+        return [stepper, t_eval, index, y_out, n_steps + 1]
 
-    stepper, t_eval, i, y_out = jax.lax.while_loop(cond_fun, body_fun, init_state)
+    stepper, t_eval, i, y_out, n_steps = jax.lax.while_loop(cond_fun, body_fun,
+                                                            init_state)
 
-    return y_out
+    stepper['n_steps'] = n_steps
+
+    return y_out, stepper
 
 
-def jax_bdf_integrate(fun, y0, t_eval, inputs=None, rtol=1e-6, atol=1e-6):
+def jax_bdf_integrate(fun, y0, t_eval, jac=None, inputs=None, rtol=1e-6, atol=1e-6):
     """
+    Backward Difference formula (BDF) implicit multistep integrator. The basic algorithm
+    is derived in [2]. This particular implementation follows that implemented in the
+    Matlab routine ode15s described in [1] and the SciPy implementation [3], which
+    features the NDF formulas for improved stability, with associated differences in the
+    error constants, and calculates the jacobian at J(t_{n+1}, y^0_{n+1}).  This
+    implementation was based on that implemented in the scipy library [3], which also
+    mainly follows [1] but uses the more standard jacobian update.
 
     Parameters
     ----------
 
     fun: callable
-        function with signature (t, y, in), where t is a scalar time, y is a ndarray with
-        shape (n,), in is a dict of input parameters. Returns the rhs of the system of ODE
-        equations as an nd array with shape (n,)
+        function with signature (t, y, in), where t is a scalar time, y is a ndarray
+        with shape (n,), in is a dict of input parameters. Returns the rhs of the system
+        of ODE equations as an nd array with shape (n,)
     y0: ndarray
         initial state vector
+    t_eval: ndarray
+        time points to evaluate the solution, has shape (m,)
+    jac: (optional) callable
+        function with signature (t, y, in),returns the jacobian matrix of fun as an
+        ndarray with shape (n,n)
+    inputs: (optional) dict
+        dict mapping input parameter names to values
+    rtol: (optional) float
+        relative tolerance for the solver
+    rtol: (optional) float
+        absolute tolerance for the solver
 
+    Returns
+    -------
+    y: ndarray with shape (n, m)
+        calculated state vector at each of the m time points
+
+    stepper: dict
+        internal variables of the stepper object
+
+    References
+    ----------
+    .. [1] L. F. Shampine, M. W. Reichelt, "THE MATLAB ODE SUITE", SIAM J. SCI.
+           COMPUTE., Vol. 18, No. 1, pp. 1-22, January 1997.
+    .. [2] G. D. Byrne, A. C. Hindmarsh, "A Polyalgorithm for the Numerical
+           Solution of Ordinary Differential Equations", ACM Transactions on
+           Mathematical Software, Vol. 1, No. 1, pp. 71-96, March 1975.
+    .. [3] Virtanen, P., Gommers, R., Oliphant, T. E., Haberland, M., Reddy,
+           T., Cournapeau, D., ... & van der Walt, S. J. (2020). SciPy 1.0:
+           fundamental algorithms for scientific computing in Python.
+           Nature methods, 17(3), 261-272.
+    .. [4] E. Hairer, S. P. Norsett G. Wanner, "Solving Ordinary Differential
+               Equations I: Nonstiff Problems", Sec. II.4.
     """
+
     y0_device = jax.device_put(y0).reshape(-1)
     t_eval_device = jax.device_put(t_eval)
-    y_out = _bdf_odeint(fun, rtol, atol, y0_device, t_eval_device, inputs)
-    return y_out.T
+    y_out, stepper = _bdf_odeint(fun, jac, rtol, atol, y0_device, t_eval_device, inputs)
+    return y_out, stepper
