@@ -158,6 +158,14 @@ pybamm_data.append("./CITATIONS.txt")
 idaklu_ext = Extension("idaklu", ["pybamm/solvers/c_solvers/idaklu.cpp"])
 ext_modules = [idaklu_ext] if compile_KLU() else []
 
+jax_dependencies = []
+if system() != "Windows":
+    jax_dependencies = [
+        "jax>=0.1.68",
+        "jaxlib>=0.1.47",
+    ]
+
+
 # Load text for description and license
 with open("README.md") as f:
     readme = f.read()
@@ -185,9 +193,8 @@ setup(
         "anytree>=2.4.3",
         "autograd>=1.2",
         "scikit-fem>=0.2.0",
-        "jax>=0.1.68",
-        "jaxlib>=0.1.47",
         "casadi>=3.5.0",
+        *jax_dependencies,
         "jupyter",  # For example notebooks
         # Note: Matplotlib is loaded for debug plots, but to ensure pybamm runs
         # on systems without an attached display, it should never be imported

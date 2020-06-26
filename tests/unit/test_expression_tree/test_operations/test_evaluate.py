@@ -8,6 +8,7 @@ import unittest
 import numpy as np
 import scipy.sparse
 from collections import OrderedDict
+from platform import system
 
 
 def test_function(arg):
@@ -424,6 +425,7 @@ class TestEvaluate(unittest.TestCase):
         result = evaluator.evaluate()
         np.testing.assert_allclose(result, expr.evaluate())
 
+    @unittest.skipIf(system() == "Windows", "JAX not supported on windows")
     def test_evaluator_jax(self):
         a = pybamm.StateVector(slice(0, 1))
         b = pybamm.StateVector(slice(1, 2))

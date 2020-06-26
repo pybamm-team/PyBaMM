@@ -7,11 +7,18 @@ import numpy as np
 from tests import get_mesh_for_testing
 import warnings
 import sys
+from platform import system
 
 
 class TestScipySolver(unittest.TestCase):
     def test_model_solver_python_and_jax(self):
-        for convert_to_format in ["python", "jax"]:
+
+        if system() != "Windows"
+            formats = ["python", "jax"]
+        else:
+            formats = ["python"]
+
+        for convert_to_format in formats:
             # Create model
             model = pybamm.BaseModel()
             model.convert_to_format = convert_to_format

@@ -7,7 +7,6 @@ import jax
 from jax.experimental.ode import odeint
 import jax.numpy as np
 import numpy as onp
-from .jax_bdf_solver import jax_bdf_integrate
 
 
 class JaxSolver(pybamm.BaseSolver):
@@ -30,7 +29,7 @@ class JaxSolver(pybamm.BaseSolver):
     ----------
     method: str
         'RK45' (default) uses jax.experimental.odeint
-        'BDF' uses custom jax_bdf_solver (see jax_bdf_solver.py for details)
+        'BDF' uses custom jax_bdf_integrate (see jax_bdf_integrate.py for details)
     rtol : float, optional
         The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
@@ -125,7 +124,7 @@ class JaxSolver(pybamm.BaseSolver):
             return np.transpose(y), None
 
         def solve_model_bdf(inputs):
-            y, stepper = jax_bdf_integrate(
+            y, stepper = pybamm.jax_bdf_integrate(
                 model.rhs_eval,
                 y0,
                 t_eval,
