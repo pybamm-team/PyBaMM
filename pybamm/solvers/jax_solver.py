@@ -128,16 +128,16 @@ class JaxSolver(pybamm.BaseSolver):
             return np.transpose(y), None
 
         def solve_model_bdf(inputs):
-            y, stepper = pybamm.jax_bdf_integrate(
-                model.rhs_eval,
+            y = pybamm.jax_bdf_integrate(
+                rhs_odeint,
                 y0,
                 t_eval,
-                inputs=inputs,
+                inputs,
                 rtol=self.rtol,
                 atol=self.atol,
                 **self.extra_options
             )
-            return y, stepper
+            return y, None
 
         if self.method == 'RK45':
             return jax.jit(solve_model_rk45)

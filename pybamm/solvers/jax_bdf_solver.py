@@ -1,11 +1,27 @@
+from functools import partial
+import operator as op
+
 import jax
-import jax.numpy as np
+import jax.numpy as jnp
+from jax import core
+from jax import lax
+from jax import ops
+from jax.util import safe_map, safe_zip, cache, split_list
+from jax.api_util import flatten_fun_nokwargs
+from jax.flatten_util import ravel_pytree
+from jax.tree_util import tree_map, tree_flatten, tree_unflatten
+from jax.interpreters import partial_eval as pe
+from jax import linear_util as lu
+
+map = safe_map
+zip = safe_zip
+
 
 from jax.config import config
 config.update("jax_enable_x64", True)
 
 
-def jax_bdf_integrate(fun, y0, t_eval, jac=None, inputs=None, rtol=1e-6, atol=1e-6):
+def jax_bdf_integrate(func, y0, t_eval, *args, rtol=1e-6, atol=1e-6):
     """
     Backward Difference formula (BDF) implicit multistep integrator. The basic algorithm
     is derived in [2]_. This particular implementation follows that implemented in the
@@ -18,19 +34,17 @@ def jax_bdf_integrate(fun, y0, t_eval, jac=None, inputs=None, rtol=1e-6, atol=1e
     Parameters
     ----------
 
-    fun: callable
-        function with signature (t, y, in), where t is a scalar time, y is a ndarray
-        with shape (n,), in is a dict of input parameters. Returns the rhs of the system
-        of ODE equations as an nd array with shape (n,)
+    func: callable
+        function to evaluate the time derivative of the solution `y` at time
+        `t` as `func(y, t, *args)`, producing the same shape/structure as `y0`.
     y0: ndarray
         initial state vector
     t_eval: ndarray
         time points to evaluate the solution, has shape (m,)
-    jac: (optional) callable
-        function with signature (t, y, in),returns the jacobian matrix of fun as an
-        ndarray with shape (n,n)
-    inputs: (optional) dict
-        dict mapping input parameter names to values
+    args: (optional)
+        tuple of additional arguments for `fun`, which must be arrays
+        scalars, or (nested) standard Python containers (tuples, lists, dicts,
+        namedtuples, i.e. pytrees) of those types.
     rtol: (optional) float
         relative tolerance for the solver
     atol: (optional) float
@@ -56,11 +70,17 @@ def jax_bdf_integrate(fun, y0, t_eval, jac=None, inputs=None, rtol=1e-6, atol=1e
            fundamental algorithms for scientific computing in Python.
            Nature methods, 17(3), 261-272.
     """
+    def _check_arg(arg):
+        if not isinstance(arg, core.Tracer) and not core.valid_jaxtype(arg):
+            msg = ("The contents of odeint *args must be arrays or scalars, but got "
+                   "\n{}.")
+        raise TypeError(msg.format(arg))
 
-    y0_device = jax.device_put(y0).reshape(-1)
-    t_eval_device = jax.device_put(t_eval)
-    y_out, stepper = _bdf_odeint(fun, jac, rtol, atol, y0_device, t_eval_device, inputs)
-    return y_out, stepper
+    flat_args, in_tree = tree_flatten((y0, t_eval[0], *args))
+    in_avals = tuple(map(abstractify, flat_args))
+    converted, consts = closure_convert(func, in_tree, in_avals)
+
+    return _bdf_odeint_wrapper(converted, rtol, atol, y0, t_eval, *consts, *args)
 
 
 MAX_ORDER = 5
@@ -111,13 +131,13 @@ def _compute_R(order, factor):
     Note that the U matrix also defined in the same section can be also be
     found using factor = 1, which corresponds to R with a constant step size
     """
-    I = np.arange(1, MAX_ORDER + 1).reshape(-1, 1)
-    J = np.arange(1, MAX_ORDER + 1)
-    M = np.empty((MAX_ORDER + 1, MAX_ORDER + 1))
+    I = jnp.arange(1, MAX_ORDER + 1).reshape(-1, 1)
+    J = jnp.arange(1, MAX_ORDER + 1)
+    M = jnp.empty((MAX_ORDER + 1, MAX_ORDER + 1))
     M = jax.ops.index_update(M, jax.ops.index[1:, 1:],
                              (I - 1 - factor * J) / I)
     M = jax.ops.index_update(M, jax.ops.index[0], 1)
-    R = np.cumprod(M, axis=0)
+    R = jnp.cumprod(M, axis=0)
 
     return R
 
@@ -160,25 +180,25 @@ def _bdf_init(fun, jac, t0, y0, h0, rtol, atol):
     order = 1
     state['order'] = order
     state['h'] = _select_initial_step(state, fun, t0, y0, f0, h0)
-    EPS = np.finfo(y0.dtype).eps
-    state['newton_tol'] = np.max((10 * EPS / rtol, np.min((0.03, rtol ** 0.5))))
+    EPS = jnp.finfo(y0.dtype).eps
+    state['newton_tol'] = jnp.max((10 * EPS / rtol, jnp.min((0.03, rtol ** 0.5))))
     state['n_equal_steps'] = 0
-    D = np.empty((MAX_ORDER + 1, len(y0)), dtype=y0.dtype)
+    D = jnp.empty((MAX_ORDER + 1, len(y0)), dtype=y0.dtype)
     D = jax.ops.index_update(D, jax.ops.index[0, :], y0)
     D = jax.ops.index_update(D, jax.ops.index[1, :], f0 * h0)
     state['D'] = D
     state['y0'] = None
     state['scale_y0'] = None
     state = _predict(state)
-    I = np.identity(len(y0), dtype=y0.dtype)
+    I = jnp.identity(len(y0), dtype=y0.dtype)
     state['I'] = I
 
     # kappa values for difference orders, taken from Table 1 of [1]
-    kappa = np.array([0, -0.1850, -1 / 9, -0.0823, -0.0415, 0])
-    gamma = np.hstack((0, np.cumsum(1 / np.arange(1, MAX_ORDER + 1))))
+    kappa = jnp.array([0, -0.1850, -1 / 9, -0.0823, -0.0415, 0])
+    gamma = jnp.hstack((0, jnp.cumsum(1 / jnp.arange(1, MAX_ORDER + 1))))
     alpha = 1.0 / ((1 - kappa) * gamma)
     c = h0 * alpha[order]
-    error_const = kappa * gamma + 1 / np.arange(1, MAX_ORDER + 2)
+    error_const = kappa * gamma + 1 / jnp.arange(1, MAX_ORDER + 2)
 
     state['kappa'] = kappa
     state['gamma'] = gamma
@@ -214,13 +234,13 @@ def _select_initial_step(state, fun, t0, y0, f0, h0):
     .. [1] E. Hairer, S. P. Norsett G. Wanner, "Solving Ordinary Differential
                Equations I: Nonstiff Problems", Sec. II.4.
     """
-    scale = state['atol'] + np.abs(y0) * state['rtol']
+    scale = state['atol'] + jnp.abs(y0) * state['rtol']
     y1 = y0 + h0 * f0
     f1 = fun(t0 + h0, y1)
-    d2 = np.sqrt(np.mean(((f1 - f0) / scale)**2))
+    d2 = jnp.sqrt(jnp.mean(((f1 - f0) / scale)**2))
     order = 1
     h1 = h0 * d2 ** (-1 / (order + 1))
-    return np.min((100 * h0, h1))
+    return jnp.min((100 * h0, h1))
 
 
 def _predict(state):
@@ -229,10 +249,10 @@ def _predict(state):
     """
     n = len(state['y'])
     order = state['order']
-    orders = np.repeat(np.arange(MAX_ORDER + 1).reshape(-1, 1), n, axis=1)
-    subD = np.where(orders <= order, state['D'], 0)
-    state['y0'] = np.sum(subD, axis=0)
-    state['scale_y0'] = state['atol'] + state['rtol'] * np.abs(state['y0'])
+    orders = jnp.repeat(jnp.arange(MAX_ORDER + 1).reshape(-1, 1), n, axis=1)
+    subD = jnp.where(orders <= order, state['D'], 0)
+    state['y0'] = jnp.sum(subD, axis=0)
+    state['scale_y0'] = state['atol'] + state['rtol'] * jnp.abs(state['y0'])
     return state
 
 
@@ -242,11 +262,11 @@ def _update_psi(state):
     """
     order = state['order']
     n = len(state['y'])
-    orders = np.arange(MAX_ORDER + 1)
-    subGamma = np.where(orders > 0, np.where(orders <= order, state['gamma'], 0), 0)
-    orders = np.repeat(orders.reshape(-1, 1), n, axis=1)
-    subD = np.where(orders > 0, np.where(orders <= order, state['D'], 0), 0)
-    state['psi'] = np.dot(
+    orders = jnp.arange(MAX_ORDER + 1)
+    subGamma = jnp.where(orders > 0, jnp.where(orders <= order, state['gamma'], 0), 0)
+    orders = jnp.repeat(orders.reshape(-1, 1), n, axis=1)
+    subD = jnp.where(orders > 0, jnp.where(orders <= order, state['D'], 0), 0)
+    state['psi'] = jnp.dot(
         subD.T,
         subGamma
     ) * state['alpha'][order]
@@ -337,16 +357,16 @@ def _update_step_size(state, factor, dont_update_lu):
 
     # update D using equations in section 3.2 of [1]
     RU = _compute_R(order, factor).dot(state['U'])
-    I = np.arange(0, MAX_ORDER + 1).reshape(-1, 1)
-    J = np.arange(0, MAX_ORDER + 1)
+    I = jnp.arange(0, MAX_ORDER + 1).reshape(-1, 1)
+    J = jnp.arange(0, MAX_ORDER + 1)
 
     # only update order+1, order+1 entries of D
-    RU = np.where(np.logical_and(I <= order, J <= order),
-                  RU, np.identity(MAX_ORDER + 1))
+    RU = jnp.where(jnp.logical_and(I <= order, J <= order),
+                  RU, jnp.identity(MAX_ORDER + 1))
     D = state['D']
-    D = np.dot(RU.T, D)
+    D = jnp.dot(RU.T, D)
     # D = jax.ops.index_update(D, jax.ops.index[:order + 1],
-    #                         np.dot(RU.T, D[:order + 1]))
+    #                         jnp.dot(RU.T, D[:order + 1]))
     state['D'] = D
 
     # update psi (D has changed)
@@ -379,8 +399,8 @@ def _newton_iteration(state, fun):
     LU = state['LU']
     scale_y0 = state['scale_y0']
     t = state['t'] + state['h']
-    d = np.zeros_like(y0)
-    y = np.array(y0, copy=True)
+    d = jnp.zeros_like(y0)
+    y = jnp.array(y0, copy=True)
 
     not_converged = True
     dy_norm_old = -1.0
@@ -397,7 +417,7 @@ def _newton_iteration(state, fun):
         state['n_function_evals'] += 1
         b = c * f_eval - psi - d
         dy = jax.scipy.linalg.lu_solve(LU, b)
-        dy_norm = np.sqrt(np.mean((dy / scale_y0)**2))
+        dy_norm = jnp.sqrt(jnp.mean((dy / scale_y0)**2))
         rate = dy_norm / dy_norm_old
 
         # if iteration is not going to converge in NEWTON_MAXITER
@@ -443,8 +463,8 @@ def _bdf_step(state, fun, jac):
     # initialise step size and try to make the step,
     # iterate, reducing step size until error is in bounds
     step_accepted = False
-    y = np.empty_like(state['y'])
-    d = np.empty_like(state['y'])
+    y = jnp.empty_like(state['y'])
+    d = jnp.empty_like(state['y'])
     n_iter = -1
 
     # loop until step is accepted
@@ -486,13 +506,13 @@ def _bdf_step(state, fun, jac):
             def converged(if_state2):
                 state, step_accepted = if_state2
                 # yay, converged, now check error is within bounds
-                scale_y = state['atol'] + state['rtol'] * np.abs(y)
+                scale_y = state['atol'] + state['rtol'] * jnp.abs(y)
 
                 # combine eq 3, 4 and 6 from [1] to obtain error
                 # Note that error = C_k * h^{k+1} y^{k+1}
                 # and d = D^{k+1} y_{n+1} \approx h^{k+1} y^{k+1}
                 error = state['error_const'][state['order']] * d
-                error_norm = np.sqrt(np.mean((error / scale_y)**2))
+                error_norm = jnp.sqrt(jnp.mean((error / scale_y)**2))
 
                 # calculate safety outside if since we will reuse later
                 safety = 0.9 * (2 * NEWTON_MAXITER + 1) / (2 * NEWTON_MAXITER
@@ -505,7 +525,7 @@ def _bdf_step(state, fun, jac):
                     state, step_accepted = if_state3
                     state['n_error_test_failures'] += 1
                     # calculate optimal step size factor as per eq 2.46 of [2]
-                    factor = np.max((MIN_FACTOR,
+                    factor = jnp.max((MIN_FACTOR,
                                      safety *
                                      error_norm ** (-1 / (state['order'] + 1))))
                     state = _update_step_size(state, factor, False)
@@ -560,9 +580,9 @@ def _bdf_step(state, fun, jac):
         order = state['order']
 
         # Note: we are recalculating these from the while loop above, could re-use?
-        scale_y = state['atol'] + state['rtol'] * np.abs(y)
+        scale_y = state['atol'] + state['rtol'] * jnp.abs(y)
         error = state['error_const'][order] * d
-        error_norm = np.sqrt(np.mean((error / scale_y)**2))
+        error_norm = jnp.sqrt(jnp.mean((error / scale_y)**2))
         safety = 0.9 * (2 * NEWTON_MAXITER + 1) / (2 * NEWTON_MAXITER
                                                    + n_iter)
 
@@ -577,11 +597,11 @@ def _bdf_step(state, fun, jac):
         def order_greater_one(if_state2):
             state, scale_y, order = if_state2
             error_m = state['error_const'][order - 1] * state['D'][order]
-            error_m_norm = np.sqrt(np.mean((error_m / scale_y)**2))
+            error_m_norm = jnp.sqrt(jnp.mean((error_m / scale_y)**2))
             return error_m_norm
 
         def order_equal_one(if_state2):
-            error_m_norm = np.inf
+            error_m_norm = jnp.inf
             return error_m_norm
 
         error_m_norm = jax.lax.cond(order > 1,
@@ -591,27 +611,27 @@ def _bdf_step(state, fun, jac):
         def order_less_max(if_state2):
             state, scale_y, order = if_state2
             error_p = state['error_const'][order + 1] * state['D'][order + 2]
-            error_p_norm = np.sqrt(np.mean((error_p / scale_y)**2))
+            error_p_norm = jnp.sqrt(jnp.mean((error_p / scale_y)**2))
             return error_p_norm
 
         def order_max(if_state2):
-            error_p_norm = np.inf
+            error_p_norm = jnp.inf
             return error_p_norm
 
         error_p_norm = jax.lax.cond(order < MAX_ORDER,
                                     if_state2, order_less_max,
                                     if_state2, order_max)
 
-        error_norms = np.array([error_m_norm, error_norm, error_p_norm])
-        factors = error_norms ** (-1 / (np.arange(3) + order))
+        error_norms = jnp.array([error_m_norm, error_norm, error_p_norm])
+        factors = error_norms ** (-1 / (jnp.arange(3) + order))
 
         # now we have the three factors for orders k-1, k and k+1, pick the maximum in
         # order to maximise the resultant step size
-        max_index = np.argmax(factors)
+        max_index = jnp.argmax(factors)
         order += max_index - 1
         state['order'] = order
 
-        factor = np.min((MAX_FACTOR, safety * factors[max_index]))
+        factor = jnp.min((MAX_FACTOR, safety * factors[max_index]))
         state = _update_step_size(state, factor, False)
 
         return state
@@ -655,28 +675,24 @@ def _bdf_interpolate(state, t_eval):
     return order_summation
 
 
-@jax.partial(jax.jit, static_argnums=(0, 1, 2, 3))
-def _bdf_odeint(fun, jac, rtol, atol, y0, t_eval, inputs):
+@jax.partial(jax.custom_vjp, nondiff_argnums=(0, 1, 2))
+def _bdf_odeint(fun, rtol, atol, y0, t_eval, *args):
     """
     main solver loop - creates a stepper object and steps through time, interpolating to
     the time points in t_eval
     """
 
     def fun_bind_inputs(t, y):
-        return fun(t, y, inputs)
+        return fun(y, t, *args)
 
-    if jac is None:
-        jac_bind_inputs = jax.jacfwd(fun_bind_inputs, argnums=1)
-    else:
-        def jac_bind_inputs(t, y):
-            jac(t, y, inputs)
+    jac_bind_inputs = jax.jacfwd(fun_bind_inputs, argnums=1)
 
     t0 = t_eval[0]
     h0 = t_eval[1] - t0
 
     stepper = _bdf_init(fun_bind_inputs, jac_bind_inputs, t0, y0, h0, rtol, atol)
     i = 0
-    y_out = np.empty((len(y0), len(t_eval)), dtype=y0.dtype)
+    y_out = jnp.empty((len(y0), len(t_eval)), dtype=y0.dtype)
 
     init_state = [stepper, t_eval, i, y_out, 0]
 
@@ -687,7 +703,7 @@ def _bdf_odeint(fun, jac, rtol, atol, y0, t_eval, inputs):
     def body_fun(state):
         stepper, t_eval, i, y_out, n_steps = state
         stepper = _bdf_step(stepper, fun_bind_inputs, jac_bind_inputs)
-        index = np.searchsorted(t_eval, stepper['t'])
+        index = jnp.searchsorted(t_eval, stepper['t'])
 
         def for_body(j, y_out):
             t = t_eval[j]
@@ -703,4 +719,93 @@ def _bdf_odeint(fun, jac, rtol, atol, y0, t_eval, inputs):
 
     stepper['n_steps'] = n_steps
 
-    return y_out, stepper
+    return y_out
+
+
+@partial(jax.jit, static_argnums=(0, 1, 2))
+def _bdf_odeint_wrapper(func, rtol, atol, y0, ts, *args):
+    y0, unravel = ravel_pytree(y0)
+    func = ravel_first_arg(func, unravel)
+    out = _bdf_odeint(func, rtol, atol, y0, ts, *args)
+    return jax.vmap(unravel)(out)
+
+
+def _bdf_odeint_fwd(func, rtol, atol, y0, ts, *args):
+    ys = _bdf_odeint(func, rtol, atol, y0, ts, *args)
+    return ys, (ys, ts, args)
+
+
+def _bdf_odeint_rev(func, rtol, atol, res, g):
+    ys, ts, args = res
+
+    def aug_dynamics(augmented_state, t, *args):
+        """Original system augmented with vjp_y, vjp_t and vjp_args."""
+        y, y_bar, *_ = augmented_state
+        # `t` here is negatice time, so we need to negate again to get back to
+        # normal time. See the `odeint` invocation in `scan_fun` below.
+        y_dot, vjpfun = jax.vjp(func, y, -t, *args)
+        return (-y_dot, *vjpfun(y_bar))
+
+    y_bar = g[-1]
+    ts_bar = []
+    t0_bar = 0.
+
+    def scan_fun(carry, i):
+        y_bar, t0_bar, args_bar = carry
+        # Compute effect of moving measurement time
+        t_bar = jnp.dot(func(ys[i], ts[i], *args), g[i])
+        t0_bar = t0_bar - t_bar
+        # Run augmented system backwards to previous observation
+        _, y_bar, t0_bar, args_bar = jax_bdf_integrate(
+            aug_dynamics, (ys[i], y_bar, t0_bar, args_bar),
+            jnp.array([-ts[i], -ts[i - 1]]),
+            *args, rtol=rtol, atol=atol)
+        y_bar, t0_bar, args_bar = tree_map(op.itemgetter(1), (y_bar, t0_bar, args_bar))
+        # Add gradient from current output
+        y_bar = y_bar + g[i - 1]
+        return (y_bar, t0_bar, args_bar), t_bar
+
+    init_carry = (g[-1], 0., tree_map(jnp.zeros_like, args))
+    (y_bar, t0_bar, args_bar), rev_ts_bar = lax.scan(
+        scan_fun, init_carry, jnp.arange(len(ts) - 1, 0, -1))
+    ts_bar = jnp.concatenate([jnp.array([t0_bar]), rev_ts_bar[::-1]])
+    return (y_bar, ts_bar, *args_bar)
+
+
+_bdf_odeint.defvjp(_bdf_odeint_fwd, _bdf_odeint_rev)
+
+
+@cache()
+def closure_convert(fun, in_tree, in_avals):
+    in_pvals = [pe.PartialVal.unknown(aval) for aval in in_avals]
+    wrapped_fun, out_tree = flatten_fun_nokwargs(lu.wrap_init(fun), in_tree)
+    with core.initial_style_staging():
+        jaxpr, out_pvals, consts = pe.trace_to_jaxpr(
+            wrapped_fun, in_pvals, instantiate=True, stage_out=False)
+    out_tree = out_tree()
+    num_consts = len(consts)
+
+    def converted_fun(y, t, *consts_args):
+        consts, args = split_list(consts_args, [num_consts])
+        all_args, in_tree2 = tree_flatten((y, t, *args))
+        assert in_tree == in_tree2
+        out_flat = core.eval_jaxpr(jaxpr, consts, *all_args)
+        return tree_unflatten(out_tree, out_flat)
+
+    return converted_fun, consts
+
+
+def abstractify(x):
+    return core.raise_to_shaped(core.get_aval(x))
+
+
+def ravel_first_arg(f, unravel):
+    return ravel_first_arg_(lu.wrap_init(f), unravel).call_wrapped
+
+
+@lu.transformation
+def ravel_first_arg_(unravel, y_flat, *args):
+    y = unravel(y_flat)
+    ans = yield (y,) + args, {}
+    ans_flat, _ = ravel_pytree(ans)
+    yield ans_flat
