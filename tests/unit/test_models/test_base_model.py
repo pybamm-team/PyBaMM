@@ -575,6 +575,7 @@ class TestBaseModel(unittest.TestCase):
             os.chmod("test.so", stat.S_IWRITE)
             os.remove("test.so")
 
+
 class TestStandardBatteryBaseModel(unittest.TestCase):
     def test_default_solver(self):
         model = pybamm.BaseBatteryModel()
