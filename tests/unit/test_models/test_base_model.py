@@ -571,7 +571,7 @@ class TestBaseModel(unittest.TestCase):
         os.remove("test.c")
         try:
             os.remove("test.so")
-        except:
+        except PermissionError:
             os.chmod("test.so", stat.S_IWRITE)
             os.remove("test.so")
 
