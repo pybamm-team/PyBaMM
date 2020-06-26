@@ -5,6 +5,66 @@ from jax.config import config
 config.update("jax_enable_x64", True)
 
 
+def jax_bdf_integrate(fun, y0, t_eval, jac=None, inputs=None, rtol=1e-6, atol=1e-6):
+    """
+    Backward Difference formula (BDF) implicit multistep integrator. The basic algorithm
+    is derived in [2]. This particular implementation follows that implemented in the
+    Matlab routine ode15s described in [1] and the SciPy implementation [3], which
+    features the NDF formulas for improved stability, with associated differences in the
+    error constants, and calculates the jacobian at J(t_{n+1}, y^0_{n+1}).  This
+    implementation was based on that implemented in the scipy library [3], which also
+    mainly follows [1] but uses the more standard jacobian update.
+
+    Parameters
+    ----------
+
+    fun: callable
+        function with signature (t, y, in), where t is a scalar time, y is a ndarray
+        with shape (n,), in is a dict of input parameters. Returns the rhs of the system
+        of ODE equations as an nd array with shape (n,)
+    y0: ndarray
+        initial state vector
+    t_eval: ndarray
+        time points to evaluate the solution, has shape (m,)
+    jac: (optional) callable
+        function with signature (t, y, in),returns the jacobian matrix of fun as an
+        ndarray with shape (n,n)
+    inputs: (optional) dict
+        dict mapping input parameter names to values
+    rtol: (optional) float
+        relative tolerance for the solver
+    rtol: (optional) float
+        absolute tolerance for the solver
+
+    Returns
+    -------
+    y: ndarray with shape (n, m)
+        calculated state vector at each of the m time points
+
+    stepper: dict
+        internal variables of the stepper object
+
+    References
+    ----------
+    .. [1] L. F. Shampine, M. W. Reichelt, "THE MATLAB ODE SUITE", SIAM J. SCI.
+           COMPUTE., Vol. 18, No. 1, pp. 1-22, January 1997.
+    .. [2] G. D. Byrne, A. C. Hindmarsh, "A Polyalgorithm for the Numerical
+           Solution of Ordinary Differential Equations", ACM Transactions on
+           Mathematical Software, Vol. 1, No. 1, pp. 71-96, March 1975.
+    .. [3] Virtanen, P., Gommers, R., Oliphant, T. E., Haberland, M., Reddy,
+           T., Cournapeau, D., ... & van der Walt, S. J. (2020). SciPy 1.0:
+           fundamental algorithms for scientific computing in Python.
+           Nature methods, 17(3), 261-272.
+    .. [4] E. Hairer, S. P. Norsett G. Wanner, "Solving Ordinary Differential
+               Equations I: Nonstiff Problems", Sec. II.4.
+    """
+
+    y0_device = jax.device_put(y0).reshape(-1)
+    t_eval_device = jax.device_put(t_eval)
+    y_out, stepper = _bdf_odeint(fun, jac, rtol, atol, y0_device, t_eval_device, inputs)
+    return y_out, stepper
+
+
 MAX_ORDER = 5
 NEWTON_MAXITER = 4
 MIN_FACTOR = 0.2
@@ -652,64 +712,4 @@ def _bdf_odeint(fun, jac, rtol, atol, y0, t_eval, inputs):
 
     stepper['n_steps'] = n_steps
 
-    return y_out, stepper
-
-
-def jax_bdf_integrate(fun, y0, t_eval, jac=None, inputs=None, rtol=1e-6, atol=1e-6):
-    """
-    Backward Difference formula (BDF) implicit multistep integrator. The basic algorithm
-    is derived in [2]. This particular implementation follows that implemented in the
-    Matlab routine ode15s described in [1] and the SciPy implementation [3], which
-    features the NDF formulas for improved stability, with associated differences in the
-    error constants, and calculates the jacobian at J(t_{n+1}, y^0_{n+1}).  This
-    implementation was based on that implemented in the scipy library [3], which also
-    mainly follows [1] but uses the more standard jacobian update.
-
-    Parameters
-    ----------
-
-    fun: callable
-        function with signature (t, y, in), where t is a scalar time, y is a ndarray
-        with shape (n,), in is a dict of input parameters. Returns the rhs of the system
-        of ODE equations as an nd array with shape (n,)
-    y0: ndarray
-        initial state vector
-    t_eval: ndarray
-        time points to evaluate the solution, has shape (m,)
-    jac: (optional) callable
-        function with signature (t, y, in),returns the jacobian matrix of fun as an
-        ndarray with shape (n,n)
-    inputs: (optional) dict
-        dict mapping input parameter names to values
-    rtol: (optional) float
-        relative tolerance for the solver
-    rtol: (optional) float
-        absolute tolerance for the solver
-
-    Returns
-    -------
-    y: ndarray with shape (n, m)
-        calculated state vector at each of the m time points
-
-    stepper: dict
-        internal variables of the stepper object
-
-    References
-    ----------
-    .. [1] L. F. Shampine, M. W. Reichelt, "THE MATLAB ODE SUITE", SIAM J. SCI.
-           COMPUTE., Vol. 18, No. 1, pp. 1-22, January 1997.
-    .. [2] G. D. Byrne, A. C. Hindmarsh, "A Polyalgorithm for the Numerical
-           Solution of Ordinary Differential Equations", ACM Transactions on
-           Mathematical Software, Vol. 1, No. 1, pp. 71-96, March 1975.
-    .. [3] Virtanen, P., Gommers, R., Oliphant, T. E., Haberland, M., Reddy,
-           T., Cournapeau, D., ... & van der Walt, S. J. (2020). SciPy 1.0:
-           fundamental algorithms for scientific computing in Python.
-           Nature methods, 17(3), 261-272.
-    .. [4] E. Hairer, S. P. Norsett G. Wanner, "Solving Ordinary Differential
-               Equations I: Nonstiff Problems", Sec. II.4.
-    """
-
-    y0_device = jax.device_put(y0).reshape(-1)
-    t_eval_device = jax.device_put(t_eval)
-    y_out, stepper = _bdf_odeint(fun, jac, rtol, atol, y0_device, t_eval_device, inputs)
     return y_out, stepper
