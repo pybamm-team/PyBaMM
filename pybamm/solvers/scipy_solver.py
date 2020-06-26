@@ -93,11 +93,6 @@ class ScipySolver(pybamm.BaseSolver):
             **extra_options
         )
 
-        print('Statistics for forward integration (Scipy):')
-        print('\tnumber of function evaluations:', sol.nfev)
-        print('\tnumber of jacobian evaluations:', sol.njev)
-        print('\tnumber of LU decompositions:', sol.nlu)
-
         if sol.success:
             # Set the reason for termination
             if sol.message == "A termination event occurred.":

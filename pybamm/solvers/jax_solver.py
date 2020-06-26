@@ -11,10 +11,11 @@ from .jax_bdf_solver import jax_bdf_integrate
 
 
 class JaxSolver(pybamm.BaseSolver):
-    """Solve a discretised model, using jax.experimental.odeint.
+    """
+    Solve a discretised model using a JAX compiled solver.
 
     **Note**: this solver will not work with models that have
-              (a) sparse matrices, or (b) termination events
+              termination events or are not converted to jax format
 
     Raises
     ------
@@ -27,6 +28,9 @@ class JaxSolver(pybamm.BaseSolver):
 
     Parameters
     ----------
+    method: str
+        'RK45' (default) uses jax.experimental.odeint
+        'BDF' uses custom jax_bdf_solver (see jax_bdf_solver.py for details)
     rtol : float, optional
         The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
