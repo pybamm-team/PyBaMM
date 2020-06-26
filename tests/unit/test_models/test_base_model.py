@@ -6,6 +6,7 @@ import pybamm
 import numpy as np
 import unittest
 import os
+import stat
 import subprocess
 
 
@@ -568,8 +569,11 @@ class TestBaseModel(unittest.TestCase):
         # On Windows, the permissions for the compiled file need
         # to be changed first
         os.remove("test.c")
-        os.remove("test.so")
-
+        try:
+            os.remove("test.so")
+        except:
+            os.chmod("test.so", stat.S_IWRITE)
+            os.remove("test.so")
 
 class TestStandardBatteryBaseModel(unittest.TestCase):
     def test_default_solver(self):
