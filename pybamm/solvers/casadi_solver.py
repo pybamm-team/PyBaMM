@@ -92,7 +92,9 @@ class CasadiSolver(pybamm.BaseSolver):
         self.name = "CasADi solver with '{}' mode".format(mode)
 
         # Initialize
-        self.integrators = {}
+        self.problems = {}
+        self.options = {}
+        self.methods = {}
 
         pybamm.citations.register("Andersson2019")
 
@@ -112,14 +114,15 @@ class CasadiSolver(pybamm.BaseSolver):
         inputs = inputs or {}
         # convert inputs to casadi format
         inputs = casadi.vertcat(*[x for x in inputs.values()])
-        integrator = self.get_integrator(model, inputs)
 
         if self.mode == "fast":
+            integrator = self.get_integrator(model, t_eval, inputs)
             solution = self._run_integrator(integrator, model, model.y0, inputs, t_eval)
             solution.termination = "final time"
             return solution
         elif not model.events:
             pybamm.logger.info("No events found, running fast mode")
+            integrator = self.get_integrator(model, t_eval, inputs)
             solution = self._run_integrator(integrator, model, model.y0, inputs, t_eval)
             solution.termination = "final time"
             return solution
@@ -148,7 +151,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 # Non-dimensionalise provided dt_max
                 dt_max = self.dt_max / model.timescale_eval
             else:
-                dt_max = 0.05 * min(model.timescale_eval, t_f) / model.timescale_eval
+                dt_max = 0.01 * min(model.timescale_eval, t_f) / model.timescale_eval
             dt_eval_max = np.max(np.diff(t_eval)) * 1.01
             dt_max = np.max([dt_max, dt_eval_max])
             while t < t_f:
@@ -256,10 +259,10 @@ class CasadiSolver(pybamm.BaseSolver):
                     truncated_step_sol.solve_time = np.nan
                     # append solution from the current step to solution
                     solution.append(truncated_step_sol)
-
                     solution.termination = "event"
                     solution.t_event = t_event
                     solution.y_event = y_event
+
                     break
                 else:
                     # assign temporary solve time
@@ -342,11 +345,9 @@ class CasadiSolver(pybamm.BaseSolver):
                     y0 = solution.y[:, -1]
             return solution
 
-    def get_integrator(self, model, inputs):
+    def get_integrator(self, model, t_eval, inputs):
         # Only set up problem once
-        if model in self.integrators:
-            return self.integrators[model]
-        else:
+        if model not in self.problems:
             y0 = model.y0
             rhs = model.casadi_rhs
             algebraic = model.casadi_algebraic
@@ -362,53 +363,50 @@ class CasadiSolver(pybamm.BaseSolver):
 
             options = {
                 **self.extra_options_setup,
+                "grid": t_eval,
                 "reltol": self.rtol,
                 "abstol": self.atol,
+                "output_t0": True,
                 "show_eval_warnings": show_eval_warnings,
             }
 
             # set up and solve
-            # rescale time so that the integrator is always [0,1]
-            # this also requires multiplying the rhs by (t_max - t_min) further down
             t = casadi.MX.sym("t")
-            t_min = casadi.MX.sym("t_min")
-            t_max = casadi.MX.sym("t_max")
-            t_scaled = t_min + (t_max - t_min) * t
-            # add time limits as inputs
             p = casadi.MX.sym("p", inputs.shape[0])
-            p_with_tlims = casadi.vertcat(p, t_min, t_max)
-            y_diff = casadi.MX.sym("y_diff", rhs(0, y0, p).shape[0])
-            problem = {"t": t, "x": y_diff, "p": p_with_tlims}
-            if algebraic(0, y0, p).is_empty():
+            y_diff = casadi.MX.sym("y_diff", rhs(t_eval[0], y0, p).shape[0])
+            problem = {"t": t, "x": y_diff, "p": p}
+            if algebraic(t_eval[0], y0, p).is_empty():
                 method = "cvodes"
-                # rescale rhs by (t_max - t_min)
-                problem.update({"ode": (t_max - t_min) * rhs(t_scaled, y_diff, p)})
+                problem.update({"ode": rhs(t, y_diff, p)})
             else:
                 options["calc_ic"] = True
                 method = "idas"
-                y_alg = casadi.MX.sym("y_alg", algebraic(0, y0, p).shape[0])
+                y_alg = casadi.MX.sym("y_alg", algebraic(t_eval[0], y0, p).shape[0])
                 y_full = casadi.vertcat(y_diff, y_alg)
-                # rescale rhs by (t_max - t_min)
                 problem.update(
                     {
                         "z": y_alg,
-                        "ode": (t_max - t_min) * rhs(t_scaled, y_full, p),
-                        "alg": algebraic(t_scaled, y_full, p),
+                        "ode": rhs(t, y_full, p),
+                        "alg": algebraic(t, y_full, p),
                     }
                 )
-            integrator = casadi.integrator("F", method, problem, options)
-            self.integrators[model] = integrator
-            return integrator
+            self.problems[model] = problem
+            self.options[model] = options
+            self.methods[model] = method
+        else:
+            # problem stays the same
+            # just update options
+            self.options[model]["grid"] = t_eval
+        return casadi.integrator(
+            "F", self.methods[model], self.problems[model], self.options[model]
+        )
 
     def _run_integrator(self, integrator, model, y0, inputs, t_eval):
         rhs_size = model.concatenated_rhs.size
         y0_diff, y0_alg = np.split(y0, [rhs_size])
-        inputs_with_tlims = casadi.vertcat(inputs, t_eval[0], t_eval[-1])
         try:
             # Try solving
-            sol = integrator(
-                x0=y0_diff, z0=y0_alg, p=inputs_with_tlims, **self.extra_options_call
-            )
+            sol = integrator(x0=y0_diff, z0=y0_alg, p=inputs, **self.extra_options_call)
             y_values = np.concatenate([sol["xf"].full(), sol["zf"].full()])
             return pybamm.Solution(t_eval, y_values)
         except RuntimeError as e:
