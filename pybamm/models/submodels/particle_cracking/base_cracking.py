@@ -65,10 +65,11 @@ class BaseCracking(pybamm.BaseSubModel):
         The variables of radial and tangential stresses and surface displacement
         """
         c_s_n=variables["Negative particle concentration"]
-        #c_s_n_avg=pybamm.r_average(c_s_n)
+        c_s_n_avg=pybamm.r_average(c_s_n) # average concentration for particles
+        c_s_n_avg.domain=["Negative electrode"]
         # need to check whether is avarage cs in a particle
         c_s_n_surf=variables["Negative particle surface concentration"]
-        c_s_n_avg=2*c_s_n_surf # for testing only, need to be the above definition
+        #c_s_n_avg=2*c_s_n_surf
         mp=pybamm.mechanical_parameters
         c_scale = self.param.c_n_max
         disp_n_surf_dim=mp.Omega_n*mp.R_n/3*(c_s_n_avg-mp.c_n_0)*c_scale # c0 reference concentration for no deformation
