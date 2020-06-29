@@ -297,8 +297,12 @@ class ProcessedVariable(object):
 
         # add points outside first dimension domain for extrapolation to
         # boundaries
-        extrap_space_first_dim_left = np.array([2 * first_dim_pts[0] - first_dim_pts[1]])
-        extrap_space_first_dim_right = np.array([2 * first_dim_pts[-1] - first_dim_pts[-2]])
+        extrap_space_first_dim_left = np.array(
+            [2 * first_dim_pts[0] - first_dim_pts[1]]
+        )
+        extrap_space_first_dim_right = np.array(
+            [2 * first_dim_pts[-1] - first_dim_pts[-2]]
+        )
         first_dim_pts = np.concatenate(
             [extrap_space_first_dim_left, first_dim_pts, extrap_space_first_dim_right]
         )
@@ -364,8 +368,6 @@ class ProcessedVariable(object):
                 "Cannot process 3D object with domain '{}' "
                 "and auxiliary_domains '{}'".format(self.domain, self.auxiliary_domains)
             )
-
-
 
         # assign attributes for reference
         self.entries = entries

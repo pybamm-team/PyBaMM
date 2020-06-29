@@ -348,7 +348,9 @@ class TestQuickPlot(unittest.TestCase):
                     qp_data = quick_plot.plots[
                         ("Negative particle concentration [mol.m-3]",)
                     ][0][1]
-                    c_n_eval = c_n(t_eval[-1], r=c_n.first_dim_pts, x=c_n.second_dim_pts)
+                    c_n_eval = c_n(
+                        t_eval[-1], r=c_n.first_dim_pts, x=c_n.second_dim_pts
+                    )
                     np.testing.assert_array_almost_equal(qp_data, c_n_eval)
 
         pybamm.close_plots()
