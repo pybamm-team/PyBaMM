@@ -151,7 +151,9 @@ class CasadiSolver(pybamm.BaseSolver):
                 # Non-dimensionalise provided dt_max
                 dt_max = self.dt_max / model.timescale_eval
             else:
-                dt_max = 0.01 * min(model.timescale_eval, t_f) / model.timescale_eval
+                # t_f is the dimensionless final time (scaled with the timescale)
+                # Keeping a safe factor of 0.01 but could potentially be bigger
+                dt_max = 0.01 * min(1, t_f)
             dt_eval_max = np.max(np.diff(t_eval)) * 1.01
             dt_max = np.max([dt_max, dt_eval_max])
             while t < t_f:
@@ -244,7 +246,13 @@ class CasadiSolver(pybamm.BaseSolver):
                     y_event = y_sol(t_event)
 
                     # solve again until the event time
-                    t_window = np.array([t, t_event])
+                    # See comments above on creating t_window
+                    t_window = np.concatenate(
+                        ([t], t_eval[(t_eval > t) & (t_eval < t_event)])
+                    )
+                    if len(t_window) == 1:
+                        t_window = np.array([t, t_event])
+
                     integrator = self.get_integrator(model, t_window, inputs)
                     current_step_sol = self._run_integrator(
                         integrator, model, y0, inputs, t_window
