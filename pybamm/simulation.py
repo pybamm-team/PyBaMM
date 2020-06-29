@@ -96,6 +96,7 @@ class Simulation:
                         * self._parameter_values["Cell capacity [A.h]"]
                     }
                 )
+            self._unprocessed_model = model
             self.model = model
         else:
             self.set_up_experiment(model, experiment)
@@ -107,7 +108,12 @@ class Simulation:
         self.solver = solver or self.model.default_solver
         self.quick_plot_vars = quick_plot_vars
 
-        self.reset(reset_model=False)
+        # Initialize empty built states
+        self._model_with_set_params = None
+        self._built_model = None
+        self._mesh = None
+        self._disc = None
+        self._solution = None
 
         # ignore runtime warnings in notebooks
         if is_notebook():  # pragma: no cover
@@ -124,16 +130,24 @@ class Simulation:
         time.
         """
         self.operating_mode = "with experiment"
+
+        # Update model
         new_model = model.new_copy(build=False)
         new_model.submodels[
             "external circuit"
         ] = pybamm.external_circuit.FunctionControl(
             new_model.param, constant_current_constant_voltage_constant_power
         )
+        new_model.submodels[
+            "experiment events"
+        ] = pybamm.external_circuit.ExperimentEvents(new_model.param)
         new_model.build_model()
+        self._unprocessed_model = new_model
         self.model = new_model
+
         if not isinstance(experiment, pybamm.Experiment):
             raise TypeError("experiment must be a pybamm `Experiment` instance")
+
         # Save the experiment
         self.experiment = experiment
         # Update parameter values with experiment parameters
@@ -215,29 +229,6 @@ class Simulation:
                 dt = 7 * 24 * 3600
             self._experiment_times.append(dt)
 
-        # add current and voltage events to the model
-        # current events both negative and positive to catch specification
-        n_cells = pybamm.electrical_parameters.n_cells
-        self.model.events.extend(
-            [
-                pybamm.Event(
-                    "Current cut-off (positive) [A] [experiment]",
-                    self.model.variables["Current [A]"]
-                    - abs(pybamm.InputParameter("Current cut-off [A]")),
-                ),
-                pybamm.Event(
-                    "Current cut-off (negative) [A] [experiment]",
-                    self.model.variables["Current [A]"]
-                    + abs(pybamm.InputParameter("Current cut-off [A]")),
-                ),
-                pybamm.Event(
-                    "Voltage cut-off [V] [experiment]",
-                    self.model.variables["Terminal voltage [V]"]
-                    - pybamm.InputParameter("Voltage cut-off [V]") / n_cells,
-                ),
-            ]
-        )
-
     def set_defaults(self):
         """
         A method to set all the simulation specs to default values for the
@@ -251,24 +242,9 @@ class Simulation:
         self.solver = self._model.default_solver
         self.quick_plot_vars = None
 
-    def reset(self, reset_model=True):
-        """
-        A method to reset a simulation back to its unprocessed state.
-        """
-        if reset_model:
-            self.model = self.model.new_copy()
-        self.geometry = copy.deepcopy(self._unprocessed_geometry)
-        self._model_with_set_params = None
-        self._built_model = None
-        self._mesh = None
-        self._disc = None
-        self._solution = None
-
     def set_parameters(self):
         """
-        A method to set the parameters in the model and the associated geometry. If
-        the model has already been built or solved then this will first reset to the
-        unprocessed state and then set the parameter values.
+        A method to set the parameters in the model and the associated geometry.
         """
 
         if self.model_with_set_params:
@@ -276,19 +252,20 @@ class Simulation:
 
         if self._parameter_values._dict_items == {}:
             # Don't process if parameter values is empty
-            self._model_with_set_params = self._model
+            self._model_with_set_params = self._unprocessed_model
         else:
             self._model_with_set_params = self._parameter_values.process_model(
-                self._model, inplace=True
+                self._unprocessed_model, inplace=False
             )
             self._parameter_values.process_geometry(self._geometry)
+        self.model = self._model_with_set_params
 
     def build(self, check_model=True):
         """
         A method to build the model into a system of matrices and vectors suitable for
         performing numerical computations. If the model has already been built or
-        solved then this function will have no effect. If you want to rebuild,
-        first use "reset()". This method will automatically set the parameters
+        solved then this function will have no effect.
+        This method will automatically set the parameters
         if they have not already been set.
 
         Parameters
@@ -594,11 +571,6 @@ class Simulation:
     @geometry.setter
     def geometry(self, geometry):
         self._geometry = geometry.copy()
-        self._unprocessed_geometry = copy.deepcopy(geometry)
-
-    @property
-    def unprocessed_geometry(self):
-        return self._unprocessed_geometry
 
     @property
     def parameter_values(self):
@@ -667,64 +639,11 @@ class Simulation:
         quick_plot_vars=None,
         C_rate=None,
     ):
-        """
-        A method to set the various specs of the simulation. This method
-        automatically resets the model after the new specs have been set.
-
-        The model cannot be changed after a simulation has been created. We recommend
-        creating a new simulation for each model (see #1011)
-
-        Parameters
-        ----------
-        geometry: :class:`pybamm.Geometry`, optional
-            The geometry upon which to solve the model
-        parameter_values: dict, optional
-            A dictionary of parameters and their corresponding numerical
-            values
-        submesh_types: dict, optional
-            A dictionary of the types of submesh to use on each subdomain
-        var_pts: dict, optional
-            A dictionary of the number of points used by each spatial
-            variable
-        spatial_methods: dict, optional
-            A dictionary of the types of spatial method to use on each
-            domain (e.g. pybamm.FiniteVolume)
-        solver: :class:`pybamm.BaseSolver` (optional)
-            The solver to use to solve the model.
-        quick_plot_vars: list (optional)
-            A list of variables to plot automatically
-        C_rate: float (optional)
-            The C_rate at which you would like to run a constant current
-            experiment at.
-        """
-
-        if geometry:
-            self.geometry = geometry
-
-        if parameter_values:
-            self.parameter_values = parameter_values
-        if submesh_types:
-            self.submesh_types = submesh_types
-        if var_pts:
-            self.var_pts = var_pts
-        if spatial_methods:
-            self.spatial_methods = spatial_methods
-        if solver:
-            self.solver = solver
-        if quick_plot_vars:
-            self.quick_plot_vars = quick_plot_vars
-
-        if C_rate:
-            self.C_rate = C_rate
-            self._parameter_values.update(
-                {
-                    "Current function [A]": self.C_rate
-                    * self._parameter_values["Cell capacity [A.h]"]
-                }
-            )
-
-        if geometry or parameter_values or submesh_types or var_pts or spatial_methods:
-            self.reset()
+        "Deprecated method for setting specs"
+        raise NotImplementedError(
+            "The 'specs' method has been deprecated. "
+            "Create a new simulation for each different case instead."
+        )
 
     def save(self, filename):
         """Save simulation using pickle"""

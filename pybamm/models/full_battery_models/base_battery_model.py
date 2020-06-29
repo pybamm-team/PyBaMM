@@ -569,6 +569,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         new_model.use_simplify = self.use_simplify
         new_model.convert_to_format = self.convert_to_format
         new_model.timescale = self.timescale
+        new_model.length_scales = self.length_scales
         return new_model
 
     def set_external_circuit_submodel(self):
