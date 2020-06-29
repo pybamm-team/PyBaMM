@@ -261,11 +261,82 @@ class ProcessedVariable(object):
         """
         first_dim_nodes = self.mesh.nodes
         first_dim_edges = self.mesh.edges
-        second_dim_pts = self.base_variable.secondary_mesh.nodes
-        if self.base_eval.size // len(second_dim_pts) == len(first_dim_nodes):
+        second_dim_nodes = self.base_variable.secondary_mesh.nodes
+        second_dim_edges = self.base_variable.secondary_mesh.edges
+        if self.base_eval.size // len(second_dim_nodes) == len(first_dim_nodes):
             first_dim_pts = first_dim_nodes
-        elif self.base_eval.size // len(second_dim_pts) == len(first_dim_edges):
+        elif self.base_eval.size // len(second_dim_nodes) == len(first_dim_edges):
             first_dim_pts = first_dim_edges
+
+        second_dim_pts = second_dim_nodes
+        first_dim_size = len(first_dim_pts)
+        second_dim_size = len(second_dim_pts)
+        entries = np.empty((first_dim_size, second_dim_size, len(self.t_sol)))
+
+        # Evaluate the base_variable index-by-index
+        for idx in range(len(self.t_sol)):
+            t = self.t_sol[idx]
+            u = self.u_sol[:, idx]
+            inputs = {name: inp[:, idx] for name, inp in self.inputs.items()}
+            if self.known_evals:
+                eval_and_known_evals = self.base_variable.evaluate(
+                    t, u, inputs=inputs, known_evals=self.known_evals[t]
+                )
+                entries[:, :, idx] = np.reshape(
+                    eval_and_known_evals[0],
+                    [first_dim_size, second_dim_size],
+                    order="F",
+                )
+                self.known_evals[t] = eval_and_known_evals[1]
+            else:
+                entries[:, :, idx] = np.reshape(
+                    self.base_variable.evaluate(t, u, inputs=inputs),
+                    [first_dim_size, second_dim_size],
+                    order="F",
+                )
+
+        # add points outside first dimension domain for extrapolation to
+        # boundaries
+        extrap_space_first_dim_left = np.array([2 * first_dim_pts[0] - first_dim_pts[1]])
+        extrap_space_first_dim_right = np.array([2 * first_dim_pts[-1] - first_dim_pts[-2]])
+        first_dim_pts = np.concatenate(
+            [extrap_space_first_dim_left, first_dim_pts, extrap_space_first_dim_right]
+        )
+        extrap_entries_left = np.expand_dims(2 * entries[0] - entries[1], axis=0)
+        extrap_entries_right = np.expand_dims(2 * entries[-1] - entries[-2], axis=0)
+        entries_for_interp = np.concatenate(
+            [extrap_entries_left, entries, extrap_entries_right], axis=0
+        )
+
+        # add points outside second dimension domain for extrapolation to
+        # boundaries
+        extrap_space_second_dim_left = np.array(
+            [2 * second_dim_pts[0] - second_dim_pts[1]]
+        )
+        extrap_space_second_dim_right = np.array(
+            [2 * second_dim_pts[-1] - second_dim_pts[-2]]
+        )
+        second_dim_pts = np.concatenate(
+            [
+                extrap_space_second_dim_left,
+                second_dim_pts,
+                extrap_space_second_dim_right,
+            ]
+        )
+        extrap_entries_second_dim_left = np.expand_dims(
+            2 * entries_for_interp[:, 0, :] - entries_for_interp[:, 1, :], axis=1
+        )
+        extrap_entries_second_dim_right = np.expand_dims(
+            2 * entries_for_interp[:, -1, :] - entries_for_interp[:, -2, :], axis=1
+        )
+        entries_for_interp = np.concatenate(
+            [
+                extrap_entries_second_dim_left,
+                entries_for_interp,
+                extrap_entries_second_dim_right,
+            ],
+            axis=1,
+        )
 
         # Process r-x or x-z
         if self.domain[0] in [
@@ -294,82 +365,7 @@ class ProcessedVariable(object):
                 "and auxiliary_domains '{}'".format(self.domain, self.auxiliary_domains)
             )
 
-        first_dim_size = len(first_dim_pts)
-        second_dim_size = len(second_dim_pts)
-        entries = np.empty((first_dim_size, second_dim_size, len(self.t_sol)))
 
-        # Evaluate the base_variable index-by-index
-        for idx in range(len(self.t_sol)):
-            t = self.t_sol[idx]
-            u = self.u_sol[:, idx]
-            inputs = {name: inp[:, idx] for name, inp in self.inputs.items()}
-            if self.known_evals:
-                eval_and_known_evals = self.base_variable.evaluate(
-                    t, u, inputs=inputs, known_evals=self.known_evals[t]
-                )
-                entries[:, :, idx] = np.reshape(
-                    eval_and_known_evals[0],
-                    [first_dim_size, second_dim_size],
-                    order="F",
-                )
-                self.known_evals[t] = eval_and_known_evals[1]
-            else:
-                entries[:, :, idx] = np.reshape(
-                    self.base_variable.evaluate(t, u, inputs=inputs),
-                    [first_dim_size, second_dim_size],
-                    order="F",
-                )
-
-        # Get node and edge values
-        nodes = self.mesh.nodes
-        edges = self.mesh.edges
-        if entries.shape[0] == len(nodes):
-            space = nodes
-        elif entries.shape[0] == len(edges):
-            space = edges
-
-        # add points outside first dimension domain for extrapolation to
-        # boundaries
-        extrap_space_first_dim_left = np.array([2 * space[0] - space[1]])
-        extrap_space_first_dim_right = np.array([2 * space[-1] - space[-2]])
-        space_first_dim = np.concatenate(
-            [extrap_space_first_dim_left, space, extrap_space_first_dim_right]
-        )
-        extrap_entries_left = np.expand_dims(2 * entries[0] - entries[1], axis=0)
-        extrap_entries_right = np.expand_dims(2 * entries[-1] - entries[-2], axis=0)
-        entries_for_interp = np.concatenate(
-            [extrap_entries_left, entries, extrap_entries_right], axis=0
-        )
-
-        # add points outside second dimension domain for extrapolation to
-        # boundaries
-        extrap_space_second_dim_left = np.array(
-            [2 * second_dim_pts[0] - second_dim_pts[1]]
-        )
-        extrap_space_second_dim_right = np.array(
-            [2 * second_dim_pts[-1] - second_dim_pts[-2]]
-        )
-        space_second_dim = np.concatenate(
-            [
-                extrap_space_second_dim_left,
-                second_dim_pts,
-                extrap_space_second_dim_right,
-            ]
-        )
-        extrap_entries_second_dim_left = np.expand_dims(
-            2 * entries_for_interp[:, 0, :] - entries_for_interp[:, 1, :], axis=1
-        )
-        extrap_entries_second_dim_right = np.expand_dims(
-            2 * entries_for_interp[:, -1, :] - entries_for_interp[:, -2, :], axis=1
-        )
-        entries_for_interp = np.concatenate(
-            [
-                extrap_entries_second_dim_left,
-                entries_for_interp,
-                extrap_entries_second_dim_right,
-            ],
-            axis=1,
-        )
 
         # assign attributes for reference
         self.entries = entries
@@ -377,16 +373,16 @@ class ProcessedVariable(object):
         first_length_scale = self.get_spatial_scale(
             self.first_dimension, self.domain[0]
         )
-        first_dim_pts_for_interp = space_first_dim * first_length_scale
+        first_dim_pts_for_interp = first_dim_pts * first_length_scale
 
         second_length_scale = self.get_spatial_scale(
             self.second_dimension, self.auxiliary_domains["secondary"][0]
         )
-        second_dim_pts_for_interp = space_second_dim * second_length_scale
-        self.second_dim_pts = second_dim_pts * second_length_scale
+        second_dim_pts_for_interp = second_dim_pts * second_length_scale
 
-        # Set first_dim_pts to edges for nicer plotting
-        self.first_dim_pts = edges * first_length_scale
+        # Set pts to edges for nicer plotting
+        self.first_dim_pts = first_dim_edges * first_length_scale
+        self.second_dim_pts = second_dim_edges * second_length_scale
 
         # set up interpolation
         if len(self.t_sol) == 1:
