@@ -479,6 +479,8 @@ class BaseBatteryModel(pybamm.BaseModel):
         # Set model equations
         for submodel_name, submodel in self.submodels.items():
             if submodel.external is False:
+                if submodel_name == "negative interface":
+                    n = 1
                 pybamm.logger.debug(
                     "Setting rhs for {} submodel ({})".format(submodel_name, self.name)
                 )
@@ -489,12 +491,14 @@ class BaseBatteryModel(pybamm.BaseModel):
                         submodel_name, self.name
                     )
                 )
+
                 submodel.set_algebraic(self.variables)
                 pybamm.logger.debug(
                     "Setting boundary conditions for {} submodel ({})".format(
                         submodel_name, self.name
                     )
                 )
+
                 submodel.set_boundary_conditions(self.variables)
                 pybamm.logger.debug(
                     "Setting initial conditions for {} submodel ({})".format(
@@ -507,8 +511,9 @@ class BaseBatteryModel(pybamm.BaseModel):
                     "Updating {} submodel ({})".format(submodel_name, self.name)
                 )
                 self.update(submodel)
+                self.check_no_repeated_keys()
 
-    def build_model(self, build_equations=True):
+    def build_model(self):
 
         # Check if already built
         if self._built:
@@ -524,7 +529,7 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         self.build_coupled_variables()
 
-        if build_equations:
+        if self._built:
             self.build_model_equations()
         else:
             self.update(*self.submodels.values())

@@ -252,6 +252,8 @@ class Discretisation(object):
         upper_bounds = []
         # Iterate through unpacked variables, adding appropriate slices to y_slices
         for variable in variables:
+            if variable.name == "Total negative electrode interfacial current density":
+                n = 1
             # Add up the size of all the domains in variable.domain
             if isinstance(variable, pybamm.Concatenation):
                 spatial_method = self.spatial_methods[variable.domain[0]]
@@ -805,7 +807,10 @@ class Discretisation(object):
         except KeyError:
             discretised_symbol = self._process_symbol(symbol)
             self._discretised_symbols[symbol.id] = discretised_symbol
-            discretised_symbol.test_shape()
+            try:
+                discretised_symbol.test_shape()
+            except:
+                self._process_symbol(symbol.left.child)
             # Assign mesh as an attribute to the processed variable
             if symbol.domain != []:
                 discretised_symbol.mesh = self.mesh.combine_submeshes(*symbol.domain)

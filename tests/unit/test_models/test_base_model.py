@@ -251,6 +251,24 @@ class TestBaseModel(unittest.TestCase):
         self.assertEqual(new_model.convert_to_format, model.convert_to_format)
         self.assertEqual(new_model.timescale, model.timescale)
 
+    def test_check_no_repeated_keys(self):
+        model = pybamm.BaseModel()
+
+        # rhs twice
+        var = pybamm.Variable("var")
+        model.rhs = {var: -1}
+        var = pybamm.Variable("var")
+        model.rhs.update({var: -1})
+        with self.assertRaisesRegex(pybamm.ModelError, "Multiple equations specified"):
+            model.check_no_repeated_keys()
+
+        # rhs and algebraic
+        model.rhs = {var: -1}
+        var = pybamm.Variable("var")
+        model.algebraic.update({var: var})
+        with self.assertRaisesRegex(pybamm.ModelError, "Multiple equations specified"):
+            model.check_no_repeated_keys()
+
     def test_check_well_posedness_variables(self):
         # Well-posed ODE model
         model = pybamm.BaseModel()
