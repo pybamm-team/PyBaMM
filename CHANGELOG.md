@@ -18,7 +18,7 @@
 -   Fix `QuickPlot` to display variables discretised by FEM (in y-z) properly ([#1078](https://github.com/pybamm-team/PyBaMM/pull/1078))
 -   Add length scales to `EffectiveResistance` models ([#1071](https://github.com/pybamm-team/PyBaMM/pull/1071))
 -   Allowed for pybamm functions exp, sin, cos, sqrt to be used in expression trees that
-    are converted to casadi format ([#1067](https://github.com/pybamm-team/PyBaMM/pull/1067)
+    are converted to casadi format ([#1067](https://github.com/pybamm-team/PyBaMM/pull/1067))
 -   Fix a bug where variables that depend on y and z were transposed in `QuickPlot` ([#1055](https://github.com/pybamm-team/PyBaMM/pull/1055))
 
 ## Breaking changes
