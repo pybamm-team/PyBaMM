@@ -479,8 +479,6 @@ class BaseBatteryModel(pybamm.BaseModel):
         # Set model equations
         for submodel_name, submodel in self.submodels.items():
             if submodel.external is False:
-                if submodel_name == "negative interface":
-                    n = 1
                 pybamm.logger.debug(
                     "Setting rhs for {} submodel ({})".format(submodel_name, self.name)
                 )
@@ -529,10 +527,7 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         self.build_coupled_variables()
 
-        if self._built:
-            self.build_model_equations()
-        else:
-            self.update(*self.submodels.values())
+        self.build_model_equations()
 
         pybamm.logger.debug("Setting voltage variables ({})".format(self.name))
         self.set_voltage_variables()
@@ -564,12 +559,18 @@ class BaseBatteryModel(pybamm.BaseModel):
         new_model = self.__class__(options=self.options, name=self.name, build=False)
         # update submodels
         new_model.submodels = self.submodels
+        # clear submodel equations to avoid weird conflicts
+        for submodel in self.submodels.values():
+            submodel._rhs = {}
+            submodel._algebraic = {}
+            submodel._initial_conditions = {}
+            submodel._boundary_conditions = {}
+            submodel._variables = {}
+            submodel._events = []
+
         # now build
         if build:
-            if self._built is True:
-                new_model.build_model(build_equations=False)
-            else:
-                new_model.build_model(build_equations=True)
+            new_model.build_model()
         new_model.use_jacobian = self.use_jacobian
         new_model.use_simplify = self.use_simplify
         new_model.convert_to_format = self.convert_to_format

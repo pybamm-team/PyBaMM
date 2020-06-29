@@ -1,6 +1,6 @@
 import pybamm as pb
 
-pb.set_logging_level("DEBUG")
+pb.set_logging_level("INFO")
 options = {"sei": "ec reaction limited", "sei porosity change": True}
 param = pb.ParameterValues(chemistry=pb.parameter_sets.Ramadass2004)
 model = pb.lithium_ion.DFN(options)
