@@ -556,7 +556,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         # create without building
         # 'build' is not a keyword argument for the BaseBatteryModel class, but it
         # should be for all of the subclasses
-        new_model = self.__class__(name=self.name, build=False)
+        new_model = self.__class__(options=self.options, name=self.name, build=False)
         # update submodels
         new_model.submodels = self.submodels
         # now build
