@@ -320,27 +320,82 @@ class ProcessedVariable(object):
                     order="F",
                 )
 
+        # Get node and edge values
+        nodes = self.mesh.nodes
+        edges = self.mesh.edges
+        if entries.shape[0] == len(nodes):
+            space = nodes
+        elif entries.shape[0] == len(edges):
+            space = edges
+
+        # add points outside first dimension domain for extrapolation to
+        # boundaries
+        extrap_space_first_dim_left = np.array([2 * space[0] - space[1]])
+        extrap_space_first_dim_right = np.array([2 * space[-1] - space[-2]])
+        space_first_dim = np.concatenate(
+            [extrap_space_first_dim_left, space, extrap_space_first_dim_right]
+        )
+        extrap_entries_left = np.expand_dims(2 * entries[0] - entries[1], axis=0)
+        extrap_entries_right = np.expand_dims(2 * entries[-1] - entries[-2], axis=0)
+        entries_for_interp = np.concatenate(
+            [extrap_entries_left, entries, extrap_entries_right], axis=0
+        )
+
+        # add points outside second dimension domain for extrapolation to
+        # boundaries
+        extrap_space_second_dim_left = np.array(
+            [2 * second_dim_pts[0] - second_dim_pts[1]]
+        )
+        extrap_space_second_dim_right = np.array(
+            [2 * second_dim_pts[-1] - second_dim_pts[-2]]
+        )
+        space_second_dim = np.concatenate(
+            [
+                extrap_space_second_dim_left,
+                second_dim_pts,
+                extrap_space_second_dim_right,
+            ]
+        )
+        extrap_entries_second_dim_left = np.expand_dims(
+            2 * entries_for_interp[:, 0, :] - entries_for_interp[:, 1, :], axis=1
+        )
+        extrap_entries_second_dim_right = np.expand_dims(
+            2 * entries_for_interp[:, -1, :] - entries_for_interp[:, -2, :], axis=1
+        )
+        entries_for_interp = np.concatenate(
+            [
+                extrap_entries_second_dim_left,
+                entries_for_interp,
+                extrap_entries_second_dim_right,
+            ],
+            axis=1,
+        )
+
         # assign attributes for reference
         self.entries = entries
         self.dimensions = 2
         first_length_scale = self.get_spatial_scale(
             self.first_dimension, self.domain[0]
         )
-        self.first_dim_pts = first_dim_pts * first_length_scale
+        first_dim_pts_for_interp = space_first_dim * first_length_scale
 
         second_length_scale = self.get_spatial_scale(
             self.second_dimension, self.auxiliary_domains["secondary"][0]
         )
+        second_dim_pts_for_interp = space_second_dim * second_length_scale
         self.second_dim_pts = second_dim_pts * second_length_scale
+
+        # Set first_dim_pts to edges for nicer plotting
+        self.first_dim_pts = edges * first_length_scale
 
         # set up interpolation
         if len(self.t_sol) == 1:
             # function of space only. Note the order of the points is the reverse
             # of what you'd expect
             interpolant = interp.interp2d(
-                self.second_dim_pts,
-                self.first_dim_pts,
-                entries[:, :, 0],
+                second_dim_pts_for_interp,
+                first_dim_pts_for_interp,
+                entries_for_interp[:, :, 0],
                 kind="linear",
                 fill_value=np.nan,
                 bounds_error=False,
@@ -353,8 +408,8 @@ class ProcessedVariable(object):
         else:
             # function of space and time.
             self._interpolation_function = interp.RegularGridInterpolator(
-                (self.first_dim_pts, self.second_dim_pts, self.t_pts),
-                entries,
+                (first_dim_pts_for_interp, second_dim_pts_for_interp, self.t_pts),
+                entries_for_interp,
                 method="linear",
                 fill_value=np.nan,
                 bounds_error=False,
