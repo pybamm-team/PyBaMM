@@ -186,12 +186,9 @@ class CasadiSolver(pybamm.BaseSolver):
                     count += 1
                     if count >= self.max_step_decrease_count:
                         raise pybamm.SolverError(
-                            """
-                            Maximum number of decreased steps occurred at t={}. Try
-                            solving the model up to this time only or reducing dt_max.
-                            """.format(
-                                t
-                            )
+                            "Maximum number of decreased steps occurred at t={}. Try "
+                            "solving the model up to this time only or reducing dt_max."
+                            "".format(t)
                         )
                 # Check most recent y to see if any events have been crossed
                 new_event_signs = np.sign(
@@ -246,19 +243,17 @@ class CasadiSolver(pybamm.BaseSolver):
                     t_event = np.nanmin(t_events)
                     y_event = y_sol(t_event)
 
-                    # return truncated solution
-                    t_truncated = current_step_sol.t[current_step_sol.t < t_event]
-                    y_truncated = current_step_sol.y[:, 0 : len(t_truncated)]
-                    # add the event to the truncated solution
-                    t_truncated = np.concatenate([t_truncated, np.array([t_event])])
-                    y_truncated = np.concatenate(
-                        [y_truncated, y_event[:, np.newaxis]], axis=1
+                    # solve again until the event time
+                    t_window = np.array([t, t_event])
+                    integrator = self.get_integrator(model, t_window, inputs)
+                    current_step_sol = self._run_integrator(
+                        integrator, model, y0, inputs, t_window
                     )
-                    truncated_step_sol = pybamm.Solution(t_truncated, y_truncated)
+
                     # assign temporary solve time
-                    truncated_step_sol.solve_time = np.nan
+                    current_step_sol.solve_time = np.nan
                     # append solution from the current step to solution
-                    solution.append(truncated_step_sol)
+                    solution.append(current_step_sol)
                     solution.termination = "event"
                     solution.t_event = t_event
                     solution.y_event = y_event

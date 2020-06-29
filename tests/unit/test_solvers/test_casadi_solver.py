@@ -135,7 +135,7 @@ class TestCasadiSolver(unittest.TestCase):
         np.testing.assert_array_less(solution.y[0], 1.5)
         np.testing.assert_array_less(solution.y[-1], 2.5 + 1e-10)
         # test the last entry is exactly 2.5
-        np.testing.assert_array_equal(solution.y[-1, -1], 2.5)
+        np.testing.assert_array_almost_equal(solution.y[-1, -1], 2.5, decimal=5)
         np.testing.assert_array_almost_equal(
             solution.y[0], np.exp(0.1 * solution.t), decimal=5
         )
@@ -171,7 +171,7 @@ class TestCasadiSolver(unittest.TestCase):
         solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_less(solution.y[0], 1.02 + 1e-10)
-        np.testing.assert_array_equal(solution.y[0, -1], 1.02)
+        np.testing.assert_array_almost_equal(solution.y[0, -1], 1.02)
 
     def test_model_step(self):
         # Create model
