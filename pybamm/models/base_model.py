@@ -145,8 +145,6 @@ class BaseModel(object):
     @rhs.setter
     def rhs(self, rhs):
         self._rhs = EquationDict("rhs", rhs)
-        # Make sure there are no repeated keys (including algebraic)
-        self.check_no_repeated_keys()
 
     @property
     def algebraic(self):
@@ -155,8 +153,6 @@ class BaseModel(object):
     @algebraic.setter
     def algebraic(self, algebraic):
         self._algebraic = EquationDict("algebraic", algebraic)
-        # Make sure there are no repeated keys (including algebraic)
-        self.check_no_repeated_keys()
 
     @property
     def initial_conditions(self):
