@@ -22,7 +22,7 @@
 
 ## Breaking changes
 
--  The solution times `t_eval` must now be provided when solving a simulation without an experiment or drive cycle data ([#1086](https://github.com/pybamm-team/PyBaMM/pull/1086))
+-  The solution times `t_eval` must now be provided to `Simulation.solve()` when not using an experiment or prescribing the current using drive cycle data ([#1086](https://github.com/pybamm-team/PyBaMM/pull/1086))
 
 # [v0.2.2](https://github.com/pybamm-team/PyBaMM/tree/v0.2.2) - 2020-06-01
 
