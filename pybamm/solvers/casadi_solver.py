@@ -93,6 +93,7 @@ class CasadiSolver(pybamm.BaseSolver):
 
         # Initialize
         self.integrators = {}
+        self.integrator_specs = {}
 
         pybamm.citations.register("Andersson2019")
 
@@ -112,18 +113,18 @@ class CasadiSolver(pybamm.BaseSolver):
         inputs = inputs or {}
         # convert inputs to casadi format
         inputs = casadi.vertcat(*[x for x in inputs.values()])
-        integrator = self.get_integrator(model, inputs)
 
-        if self.mode == "fast":
-            solution = self._run_integrator(integrator, model, model.y0, inputs, t_eval)
-            solution.termination = "final time"
-            return solution
-        elif not model.events:
-            pybamm.logger.info("No events found, running fast mode")
-            solution = self._run_integrator(integrator, model, model.y0, inputs, t_eval)
+        if self.mode == "fast" or not model.events:
+            if not model.events:
+                pybamm.logger.info("No events found, running fast mode")
+            # Create an integrator with the grid (we just need to do this once)
+            self.get_integrator(model, inputs, t_eval)
+            solution = self._run_integrator(model, model.y0, inputs, t_eval)
             solution.termination = "final time"
             return solution
         elif self.mode == "safe":
+            # Create integrator without grid to avoid having to create several times
+            self.get_integrator(model, inputs)
             y0 = model.y0
             if isinstance(y0, casadi.DM):
                 y0 = y0.full().flatten()
@@ -168,12 +169,12 @@ class CasadiSolver(pybamm.BaseSolver):
                     if len(t_window) == 1:
                         t_window = np.array([t, t + dt])
 
-                    integrator = self.get_integrator(model, t_window, inputs)
+                    # integrator = self.get_integrator(model, t_window, inputs)
                     # Try to solve with the current global step, if it fails then
                     # halve the step size and try again.
                     try:
                         current_step_sol = self._run_integrator(
-                            integrator, model, y0, inputs, t_window
+                            model, y0, inputs, t_window
                         )
                         solved = True
                     except pybamm.SolverError:
@@ -272,6 +273,9 @@ class CasadiSolver(pybamm.BaseSolver):
                     y0 = solution.y[:, -1]
             return solution
         elif self.mode == "old safe":
+            # Create integrator without grid to avoid having to create several times
+            self.get_integrator(model, inputs)
+
             y0 = model.y0
             if isinstance(y0, casadi.DM):
                 y0 = y0.full().flatten()
@@ -292,16 +296,16 @@ class CasadiSolver(pybamm.BaseSolver):
                 solved = False
                 count = 0
                 while not solved:
-                    integrator = self.get_integrator(
-                        model, np.array([t, t + dt]), inputs
-                    )
+                    # integrator = self.get_integrator(
+                    #     model, np.array([t, t + dt]), inputs
+                    # )
                     # Try to solve with the current step, if it fails then halve the
                     # step size and try again. This will make solution.t slightly
                     # different to t_eval, but shouldn't matter too much as it should
                     # only happen near events.
                     try:
                         current_step_sol = self._run_integrator(
-                            integrator, model, y0, inputs, np.array([t, t + dt])
+                            model, y0, inputs, np.array([t, t + dt])
                         )
                         solved = True
                     except pybamm.SolverError:
@@ -342,10 +346,25 @@ class CasadiSolver(pybamm.BaseSolver):
                     y0 = solution.y[:, -1]
             return solution
 
-    def get_integrator(self, model, inputs):
+    def get_integrator(self, model, inputs, t_eval=None):
+        """
+        Method to create a casadi integrator object. 
+        If t_eval is provided, the integrator uses t_eval to make the grid. 
+        Otherwise, the integrator has grid [0,1].
+        """
+        # Use grid if t_eval is given
+        use_grid = not (t_eval is None)
         # Only set up problem once
         if model in self.integrators:
-            return self.integrators[model]
+            # If we're not using the grid, we don't need to change the integrator
+            if use_grid is False:
+                return self.integrators[model]
+            # Otherwise, create new integrator with an updated grid
+            method, problem, options = self.integrator_specs[model]
+            options["grid"] = t_eval
+            integrator = casadi.integrator("F", method, problem, options)
+            self.integrators[model] = (integrator, use_grid)
+            return integrator
         else:
             y0 = model.y0
             rhs = model.casadi_rhs
@@ -371,46 +390,89 @@ class CasadiSolver(pybamm.BaseSolver):
             # rescale time so that the integrator is always [0,1]
             # this also requires multiplying the rhs by (t_max - t_min) further down
             t = casadi.MX.sym("t")
-            t_min = casadi.MX.sym("t_min")
-            t_max = casadi.MX.sym("t_max")
-            t_scaled = t_min + (t_max - t_min) * t
-            # add time limits as inputs
             p = casadi.MX.sym("p", inputs.shape[0])
-            p_with_tlims = casadi.vertcat(p, t_min, t_max)
             y_diff = casadi.MX.sym("y_diff", rhs(0, y0, p).shape[0])
+
+            if use_grid is True:
+                # with grid, add the grid as an option
+                p_with_tlims = p
+                options.update({"grid": t_eval, "output_t0": True})
+            else:
+                # without grid, rescale time
+                t_min = casadi.MX.sym("t_min")
+                t_max = casadi.MX.sym("t_max")
+                t_scaled = t_min + (t_max - t_min) * t
+                # add time limits as inputs
+                p_with_tlims = casadi.vertcat(p, t_min, t_max)
+
             problem = {"t": t, "x": y_diff, "p": p_with_tlims}
             if algebraic(0, y0, p).is_empty():
                 method = "cvodes"
-                # rescale rhs by (t_max - t_min)
-                problem.update({"ode": (t_max - t_min) * rhs(t_scaled, y_diff, p)})
+                if use_grid is True:
+                    problem.update({"ode": rhs(t, y_diff, p)})
+                else:
+                    # rescale rhs by (t_max - t_min)
+                    problem.update({"ode": (t_max - t_min) * rhs(t_scaled, y_diff, p)})
             else:
                 options["calc_ic"] = True
                 method = "idas"
                 y_alg = casadi.MX.sym("y_alg", algebraic(0, y0, p).shape[0])
                 y_full = casadi.vertcat(y_diff, y_alg)
-                # rescale rhs by (t_max - t_min)
-                problem.update(
-                    {
-                        "z": y_alg,
-                        "ode": (t_max - t_min) * rhs(t_scaled, y_full, p),
-                        "alg": algebraic(t_scaled, y_full, p),
-                    }
-                )
+                if use_grid is True:
+                    problem.update(
+                        {
+                            "ode": rhs(t, y_full, p),
+                            "z": y_alg,
+                            "alg": algebraic(t, y_full, p),
+                        }
+                    )
+                else:
+                    # rescale rhs by (t_max - t_min)
+                    problem.update(
+                        {
+                            "ode": (t_max - t_min) * rhs(t_scaled, y_full, p),
+                            "z": y_alg,
+                            "alg": algebraic(t_scaled, y_full, p),
+                        }
+                    )
             integrator = casadi.integrator("F", method, problem, options)
-            self.integrators[model] = integrator
+            self.integrator_specs[model] = method, problem, options
+            self.integrators[model] = (integrator, use_grid)
             return integrator
 
-    def _run_integrator(self, integrator, model, y0, inputs, t_eval):
+    def _run_integrator(self, model, y0, inputs, t_eval):
+        integrator, use_grid = self.integrators[model]
         rhs_size = model.concatenated_rhs.size
         y0_diff, y0_alg = np.split(y0, [rhs_size])
-        inputs_with_tlims = casadi.vertcat(inputs, t_eval[0], t_eval[-1])
         try:
             # Try solving
-            sol = integrator(
-                x0=y0_diff, z0=y0_alg, p=inputs_with_tlims, **self.extra_options_call
-            )
-            y_values = np.concatenate([sol["xf"].full(), sol["zf"].full()])
-            return pybamm.Solution(t_eval, y_values)
+            if use_grid is True:
+                # Call the integrator once, with the grid
+                sol = integrator(
+                    x0=y0_diff, z0=y0_alg, p=inputs, **self.extra_options_call
+                )
+                y_values = np.concatenate([sol["xf"].full(), sol["zf"].full()])
+                return pybamm.Solution(t_eval, y_values)
+            else:
+                # Repeated calls to the integrator
+                x = y0_diff
+                z = y0_alg
+                X = x
+                Z = z
+                for i in range(len(t_eval) - 1):
+                    t_min = t_eval[i]
+                    t_max = t_eval[i + 1]
+                    inputs_with_tlims = casadi.vertcat(inputs, t_min, t_max)
+                    sol = integrator(
+                        x0=x, z0=z, p=inputs_with_tlims, **self.extra_options_call
+                    )
+                    x = sol["xf"]
+                    z = sol["zf"]
+                    X = casadi.horzcat(X, x)
+                    Z = casadi.horzcat(Z, z)
+                y_values = np.concatenate([X.full(), Z.full()])
+                return pybamm.Solution(t_eval, y_values)
         except RuntimeError as e:
             # If it doesn't work raise error
             raise pybamm.SolverError(e.args[0])
+
