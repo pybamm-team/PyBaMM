@@ -188,8 +188,11 @@ class CasadiSolver(pybamm.BaseSolver):
                     if count >= self.max_step_decrease_count:
                         raise pybamm.SolverError(
                             "Maximum number of decreased steps occurred at t={}. Try "
-                            "solving the model up to this time only or reducing dt_max."
-                            "".format(t)
+                            "solving the model up to this time only or reducing dt_max "
+                            "(currently, dt_max={})."
+                            "".format(
+                                t * model.timescale_eval, dt_max * model.timescale_eval
+                            )
                         )
                 # Check most recent y to see if any events have been crossed
                 new_event_signs = np.sign(
