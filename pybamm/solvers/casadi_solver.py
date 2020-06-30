@@ -24,8 +24,6 @@ class CasadiSolver(pybamm.BaseSolver):
             - "safe": perform step-and-check integration in global steps of size \
             dt_max, checking whether events have been triggered. Recommended for \
             simulations of a full charge or discharge.
-            - "old safe": perform step-and-check integration in steps of size dt \
-            for each dt in t_eval, checking whether events have been triggered.
     rtol : float, optional
         The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
@@ -73,15 +71,12 @@ class CasadiSolver(pybamm.BaseSolver):
         extra_options_call=None,
     ):
         super().__init__("problem dependent", rtol, atol, root_method, root_tol)
-        if mode in ["safe", "fast", "old safe"]:
+        if mode in ["safe", "fast"]:
             self.mode = mode
         else:
             raise ValueError(
-                """
-                invalid mode '{}'. Must be either 'safe' or 'old safe', for solving
-                with events, or 'fast', for solving quickly without events""".format(
-                    mode
-                )
+                "invalid mode '{}'. Must be 'safe', for solving with events, "
+                "or 'fast', for solving quickly without events".format(mode)
             )
         self.max_step_decrease_count = max_step_decrease_count
         self.dt_max = dt_max
@@ -272,79 +267,6 @@ class CasadiSolver(pybamm.BaseSolver):
                     solution.append(current_step_sol)
                     # update time
                     t = t_window[-1]
-                    # update y0
-                    y0 = solution.y[:, -1]
-            return solution
-        elif self.mode == "old safe":
-            # Create integrator without grid to avoid having to create several times
-            self.get_integrator(model, inputs)
-
-            y0 = model.y0
-            if isinstance(y0, casadi.DM):
-                y0 = y0.full().flatten()
-            # Step-and-check
-            t = t_eval[0]
-            init_event_signs = np.sign(
-                np.concatenate(
-                    [event(t, y0, inputs) for event in model.terminate_events_eval]
-                )
-            )
-            pybamm.logger.info("Start solving {} with {}".format(model.name, self.name))
-
-            # Initialize solution
-            solution = pybamm.Solution(np.array([t]), y0[:, np.newaxis])
-            solution.solve_time = 0
-            for dt in np.diff(t_eval):
-                # Step
-                solved = False
-                count = 0
-                while not solved:
-                    # integrator = self.get_integrator(
-                    #     model, np.array([t, t + dt]), inputs
-                    # )
-                    # Try to solve with the current step, if it fails then halve the
-                    # step size and try again. This will make solution.t slightly
-                    # different to t_eval, but shouldn't matter too much as it should
-                    # only happen near events.
-                    try:
-                        current_step_sol = self._run_integrator(
-                            model, y0, inputs, np.array([t, t + dt])
-                        )
-                        solved = True
-                    except pybamm.SolverError:
-                        dt /= 2
-                    count += 1
-                    if count >= self.max_step_decrease_count:
-                        raise pybamm.SolverError(
-                            """
-                            Maximum number of decreased steps occurred at t={}. Try
-                            solving the model up to this time only.
-                            """.format(
-                                t
-                            )
-                        )
-                # Check most recent y
-                new_event_signs = np.sign(
-                    np.concatenate(
-                        [
-                            event(t, current_step_sol.y[:, -1], inputs)
-                            for event in model.terminate_events_eval
-                        ]
-                    )
-                )
-                # Exit loop if the sign of an event changes
-                if (new_event_signs != init_event_signs).any():
-                    solution.termination = "event"
-                    solution.t_event = solution.t[-1]
-                    solution.y_event = solution.y[:, -1]
-                    break
-                else:
-                    # assign temporary solve time
-                    current_step_sol.solve_time = np.nan
-                    # append solution from the current step to solution
-                    solution.append(current_step_sol)
-                    # update time
-                    t += dt
                     # update y0
                     y0 = solution.y[:, -1]
             return solution
