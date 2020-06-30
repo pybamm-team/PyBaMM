@@ -2,7 +2,7 @@
 
 ## Features
 
--   Reformatted Getting Starte notebooks ([#1083](https://github.com/pybamm-team/PyBaMM/pull/1083))
+-   Reformatted Getting Started notebooks ([#1083](https://github.com/pybamm-team/PyBaMM/pull/1083))
 -   Reformatted Landesfeind electrolytes ([#1064](https://github.com/pybamm-team/PyBaMM/pull/1064))
 -   Adapted examples to be run in Google Colab ([#1061](https://github.com/pybamm-team/PyBaMM/pull/1061))
 -   Added some new solvers for algebraic models ([#1059](https://github.com/pybamm-team/PyBaMM/pull/1059))
@@ -11,6 +11,8 @@
 -   Added SEI reaction based on Yang et. al. 2017 and reduction in porosity ([#1009](https://github.com/pybamm-team/PyBaMM/issues/1009)) 
 
 ## Optimizations
+
+-   Reformatted CasADi "safe" mode to deal with events better ([#1089](https://github.com/pybamm-team/PyBaMM/pull/1089))
 
 ## Bug fixes
 
