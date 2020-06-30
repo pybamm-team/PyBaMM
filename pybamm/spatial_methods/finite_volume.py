@@ -641,7 +641,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         n = submesh.npts
         second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
 
-        bcs_vector = pybamm.Vector(np.array([]))  # starts empty
+        bcs_vector = pybamm.Vector([])  # starts empty
 
         lbc_value, lbc_type = bcs["left"]
         rbc_value, rbc_type = bcs["right"]

@@ -30,6 +30,7 @@ class ReactionLimited(BaseModel):
         return variables
 
     def get_coupled_variables(self, variables):
+        param = self.param
         phi_s_n = variables[self.domain + " electrode potential"]
         phi_e_n = variables[self.domain + " electrolyte potential"]
 
@@ -48,11 +49,12 @@ class ReactionLimited(BaseModel):
             ]
         L_sei = variables["Total " + self.domain.lower() + " electrode sei thickness"]
 
-        R_sei = pybamm.sei_parameters.R_sei
-        alpha = 0.5
-        # alpha = pybamm.sei_parameters.alpha
         if self.domain == "Negative":
-            C_sei = pybamm.sei_parameters.C_sei_reaction_n
+            R_sei = self.param.R_sei_n
+        alpha = 0.5
+        # alpha = param.alpha
+        if self.domain == "Negative":
+            C_sei = param.C_sei_reaction_n
 
         # need to revise for thermal case
         j_sei = -(1 / C_sei) * pybamm.exp(
@@ -83,9 +85,9 @@ class ReactionLimited(BaseModel):
         j_inner = variables["Inner " + domain + " sei interfacial current density"]
         j_outer = variables["Outer " + domain + " sei interfacial current density"]
 
-        v_bar = pybamm.sei_parameters.v_bar
+        v_bar = self.param.v_bar
         if self.domain == "Negative":
-            Gamma_SEI = pybamm.sei_parameters.Gamma_SEI_n
+            Gamma_SEI = self.param.Gamma_SEI_n
 
         self.rhs = {
             L_inner: -Gamma_SEI * j_inner,
@@ -97,7 +99,7 @@ class ReactionLimited(BaseModel):
         L_inner = variables["Inner " + domain + " sei thickness"]
         L_outer = variables["Outer " + domain + " sei thickness"]
 
-        L_inner_0 = pybamm.sei_parameters.L_inner_0
-        L_outer_0 = pybamm.sei_parameters.L_outer_0
+        L_inner_0 = self.param.L_inner_0
+        L_outer_0 = self.param.L_outer_0
 
         self.initial_conditions = {L_inner: L_inner_0, L_outer: L_outer_0}
