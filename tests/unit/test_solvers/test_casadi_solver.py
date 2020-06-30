@@ -119,7 +119,7 @@ class TestCasadiSolver(unittest.TestCase):
         t_eval = np.linspace(0, 5, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_less(solution.y[0], 1.5)
-        np.testing.assert_array_less(solution.y[-1], 2.5)
+        np.testing.assert_array_less(solution.y[-1], 2.5 + 1e-10)
         np.testing.assert_array_almost_equal(
             solution.y[0], np.exp(0.1 * solution.t), decimal=5
         )
@@ -133,7 +133,9 @@ class TestCasadiSolver(unittest.TestCase):
         t_eval = np.linspace(0, 5, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_less(solution.y[0], 1.5)
-        np.testing.assert_array_less(solution.y[-1], 2.5)
+        np.testing.assert_array_less(solution.y[-1], 2.5 + 1e-10)
+        # test the last entry is exactly 2.5
+        np.testing.assert_array_almost_equal(solution.y[-1, -1], 2.5, decimal=2)
         np.testing.assert_array_almost_equal(
             solution.y[0], np.exp(0.1 * solution.t), decimal=5
         )
@@ -168,7 +170,8 @@ class TestCasadiSolver(unittest.TestCase):
         disc.process_model(model)
         solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
         solution = solver.solve(model, t_eval)
-        np.testing.assert_array_less(solution.y[0], 1.02)
+        np.testing.assert_array_less(solution.y[0], 1.02 + 1e-10)
+        np.testing.assert_array_almost_equal(solution.y[0, -1], 1.02, decimal=2)
 
     def test_model_step(self):
         # Create model
@@ -299,8 +302,7 @@ class TestCasadiSolver(unittest.TestCase):
         t_eval = np.linspace(0, 10, 100)
         solution = solver.solve(model, t_eval, inputs={"rate": 0.1})
         self.assertLess(len(solution.t), len(t_eval))
-        np.testing.assert_array_equal(solution.t, t_eval[: len(solution.t)])
-        np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t), rtol=1e-06)
+        np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t), rtol=1e-04)
 
     def test_model_solver_dae_inputs_in_initial_conditions(self):
         # Create model
