@@ -41,6 +41,12 @@ class TestSimulation(unittest.TestCase):
             if val.size > 1:
                 self.assertTrue(val.has_symbol_of_classes(pybamm.Matrix))
 
+    def test_specs_deprecated(self):
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model)
+        with self.assertRaisesRegex(NotImplementedError, "specs"):
+            sim.specs()
+
     def test_solve(self):
 
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
@@ -122,28 +128,6 @@ class TestSimulation(unittest.TestCase):
         sim = pybamm.Simulation(model, C_rate=2)
         self.assertEqual(sim.parameter_values["Current function [A]"], 2 * current_1C)
         self.assertEqual(sim.C_rate, 2)
-
-    def test_set_defaults(self):
-
-        submesh_types = {
-            "Negative particle": pybamm.MeshGenerator(pybamm.Exponential1DSubMesh)
-        }
-        solver = pybamm.BaseSolver()
-        quick_plot_vars = ["Negative particle surface concentration"]
-        sim = pybamm.Simulation(
-            pybamm.lithium_ion.SPM(),
-            submesh_types=submesh_types,
-            solver=solver,
-            quick_plot_vars=quick_plot_vars,
-        )
-
-        sim.set_defaults()
-
-        self.assertEqual(
-            sim.submesh_types["negative particle"].submesh_type, pybamm.Uniform1DSubMesh
-        )
-        self.assertEqual(sim.quick_plot_vars, None)
-        self.assertIsInstance(sim.solver, pybamm.ScipySolver)
 
     def test_get_variable_array(self):
 
@@ -300,38 +284,6 @@ class TestSimulation(unittest.TestCase):
         sim.save("test.pickle")
         sim_load = pybamm.load_sim("test.pickle")
         self.assertEqual(sim.model.name, sim_load.model.name)
-
-    def test_set_defaults2(self):
-        model = pybamm.lithium_ion.SPM()
-
-        # make simulation with silly options (should this be allowed?)
-        sim = pybamm.Simulation(
-            model,
-            geometry={},
-            parameter_values={},
-            submesh_types={},
-            var_pts={},
-            spatial_methods={},
-            solver={},
-            quick_plot_vars=[],
-        )
-
-        # reset and check
-        sim.set_defaults()
-        # Not sure of best way to test nested dicts?
-        self.assertEqual(
-            sim._parameter_values._dict_items,
-            model.default_parameter_values._dict_items,
-        )
-        for domain, submesh in model.default_submesh_types.items():
-            self.assertEqual(
-                sim._submesh_types[domain].submesh_type, submesh.submesh_type
-            )
-        self.assertEqual(sim._var_pts, model.default_var_pts)
-        for domain, method in model.default_spatial_methods.items():
-            self.assertIsInstance(sim._spatial_methods[domain], type(method))
-        self.assertIsInstance(sim._solver, type(model.default_solver))
-        self.assertEqual(sim._quick_plot_vars, None)
 
     def test_plot(self):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())

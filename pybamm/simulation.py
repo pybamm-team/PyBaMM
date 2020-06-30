@@ -229,19 +229,6 @@ class Simulation:
                 dt = 7 * 24 * 3600
             self._experiment_times.append(dt)
 
-    def set_defaults(self):
-        """
-        A method to set all the simulation specs to default values for the
-        supplied model.
-        """
-        self.geometry = self._model.default_geometry
-        self.parameter_values = self._model.default_parameter_values
-        self.submesh_types = self._model.default_submesh_types
-        self.var_pts = self._model.default_var_pts
-        self.spatial_methods = self._model.default_spatial_methods
-        self.solver = self._model.default_solver
-        self.quick_plot_vars = None
-
     def set_parameters(self):
         """
         A method to set the parameters in the model and the associated geometry.
