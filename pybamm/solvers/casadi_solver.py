@@ -149,7 +149,8 @@ class CasadiSolver(pybamm.BaseSolver):
                 # Non-dimensionalise provided dt_max
                 dt_max = self.dt_max / model.timescale_eval
             else:
-                dt_max = 0.05 * min(model.timescale_eval, t_f) / model.timescale_eval
+                # t_f is the dimensionless final time (scaled with the timescale)
+                dt_max = 0.1 * min(1, t_f)
             dt_eval_max = np.max(np.diff(t_eval)) * 1.01
             dt_max = np.max([dt_max, dt_eval_max])
             while t < t_f:
@@ -184,11 +185,11 @@ class CasadiSolver(pybamm.BaseSolver):
                     count += 1
                     if count >= self.max_step_decrease_count:
                         raise pybamm.SolverError(
-                            """
-                            Maximum number of decreased steps occurred at t={}. Try
-                            solving the model up to this time only or reducing dt_max.
-                            """.format(
-                                t
+                            "Maximum number of decreased steps occurred at t={}. Try "
+                            "solving the model up to this time only or reducing dt_max "
+                            "(currently, dt_max={})."
+                            "".format(
+                                t * model.timescale_eval, dt_max * model.timescale_eval
                             )
                         )
                 # Check most recent y to see if any events have been crossed
@@ -244,23 +245,25 @@ class CasadiSolver(pybamm.BaseSolver):
                     t_event = np.nanmin(t_events)
                     y_event = y_sol(t_event)
 
-                    # return truncated solution
-                    t_truncated = current_step_sol.t[current_step_sol.t < t_event]
-                    y_truncated = current_step_sol.y[:, 0 : len(t_truncated)]
-                    # add the event to the truncated solution
-                    t_truncated = np.concatenate([t_truncated, np.array([t_event])])
-                    y_truncated = np.concatenate(
-                        [y_truncated, y_event[:, np.newaxis]], axis=1
+                    # solve again until the event time
+                    # See comments above on creating t_window
+                    t_window = np.concatenate(
+                        ([t], t_eval[(t_eval > t) & (t_eval < t_event)])
                     )
-                    truncated_step_sol = pybamm.Solution(t_truncated, y_truncated)
-                    # assign temporary solve time
-                    truncated_step_sol.solve_time = np.nan
-                    # append solution from the current step to solution
-                    solution.append(truncated_step_sol)
+                    if len(t_window) == 1:
+                        t_window = np.array([t, t_event])
 
+                    # integrator = self.get_integrator(model, t_window, inputs)
+                    current_step_sol = self._run_integrator(model, y0, inputs, t_window)
+
+                    # assign temporary solve time
+                    current_step_sol.solve_time = np.nan
+                    # append solution from the current step to solution
+                    solution.append(current_step_sol)
                     solution.termination = "event"
                     solution.t_event = t_event
                     solution.y_event = y_event
+
                     break
                 else:
                     # assign temporary solve time
@@ -387,8 +390,6 @@ class CasadiSolver(pybamm.BaseSolver):
             }
 
             # set up and solve
-            # rescale time so that the integrator is always [0,1]
-            # this also requires multiplying the rhs by (t_max - t_min) further down
             t = casadi.MX.sym("t")
             p = casadi.MX.sym("p", inputs.shape[0])
             y_diff = casadi.MX.sym("y_diff", rhs(0, y0, p).shape[0])
