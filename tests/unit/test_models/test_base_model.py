@@ -8,6 +8,7 @@ import unittest
 import os
 import stat
 import subprocess
+import platform
 
 
 class TestBaseModel(unittest.TestCase):
@@ -529,6 +530,7 @@ class TestBaseModel(unittest.TestCase):
         np.testing.assert_array_equal(np.array(jac_alg_fn(5, 6, 7, [9, 8])), [[1, -1]])
         self.assertEqual(var_fn(6, 3, 2, [2, 7]), -1)
 
+    @unittest.skipIf(platform.system() == "Windows", "Skipped for Windows")
     def test_generate_casadi(self):
         model = pybamm.BaseModel()
         t = pybamm.t
@@ -566,14 +568,8 @@ class TestBaseModel(unittest.TestCase):
         self.assertEqual(var_fn(6, 3, 2, [7, 2]), -1)
 
         # Remove generated files.
-        # On Windows, the permissions for the compiled file need
-        # to be changed first
         os.remove("test.c")
-        try:
-            os.remove("test.so")
-        except PermissionError:
-            os.chmod("test.so", stat.S_IWRITE)
-            os.remove("test.so")
+        os.remove("test.so")
 
 
 class TestStandardBatteryBaseModel(unittest.TestCase):
