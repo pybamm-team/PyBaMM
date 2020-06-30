@@ -68,7 +68,7 @@ class Simulation:
         A list of variables to plot automatically
     C_rate: float (optional)
         The C_rate at which you would like to run a constant current
-        experiment at.
+        (dis)charge at.
     """
 
     def __init__(
@@ -87,15 +87,20 @@ class Simulation:
         self.parameter_values = parameter_values or model.default_parameter_values
 
         if experiment is None:
-            self.operating_mode = "without experiment"
-            if C_rate:
-                self.C_rate = C_rate
-                self._parameter_values.update(
-                    {
-                        "Current function [A]": self.C_rate
-                        * self._parameter_values["Cell capacity [A.h]"]
-                    }
-                )
+            # Check to see if the current is provided as data (i.e. drive cycle)
+            current = self._parameter_values.get("Current function [A]")
+            if isinstance(current, tuple):
+                self.operating_mode = "drive cycle"
+            else:
+                self.operating_mode = "without experiment"
+                if C_rate:
+                    self.C_rate = C_rate
+                    self._parameter_values.update(
+                        {
+                            "Current function [A]": self.C_rate
+                            * self._parameter_values["Cell capacity [A.h]"]
+                        }
+                    )
             self.model = model
         else:
             self.set_up_experiment(model, experiment)
@@ -324,11 +329,21 @@ class Simulation:
         Parameters
         ----------
         t_eval : numeric type, optional
-            The times at which to compute the solution. If None and the parameter
-            "Current function [A]" is not read from data the model will
-            be solved for a full discharge (1 hour / C_rate). If None and the
-            parameter "Current function [A]" is read from data the model will be
-            solved at the times provided in the data.
+            The times (in seconds) at which to compute the solution. Can be
+            provided as an array of times at which to return the solution, or as a
+            list `[t0, tf]` where `t0` is the initial time and `tf` is the final time.
+            If provided as a list the solution is returned at 100 points within the
+            interval `[t0, tf]`.
+
+            If not using an experiment or running a drive cycle simulation (current
+            provided as data) `t_eval` *must* be provided.
+
+            If running an experiment the values in `t_eval` are ignored, and the
+            solution times are specified by the experiment.
+
+            If None and the parameter "Current function [A]" is read from data
+            (i.e. drive cycle simulation) the model will be solved at the times
+            provided in the data.
         solver : :class:`pybamm.BaseSolver`
             The solver to use to solve the model.
         external_variables : dict
@@ -347,14 +362,36 @@ class Simulation:
         if solver is None:
             solver = self.solver
 
-        if self.operating_mode == "without experiment":
-            # For drive cycles (current provided as data) we perform additional tests
-            # on t_eval (if provided) to ensure the returned solution captures the
-            # input. If the current is provided as data then the "Current function [A]"
-            # is the tuple (filename, data).
-            # First, read the current function (if provided, otherwise return None)
-            current = self._parameter_values.get("Current function [A]")
-            if isinstance(current, tuple):
+        if self.operating_mode in ["without experiment", "drive cycle"]:
+            # If t_eval is provided as [t0, tf] return the solution at 100 points
+            if isinstance(t_eval, list):
+                if len(t_eval) != 2:
+                    raise pybamm.SolverError(
+                        "'t_eval' can be provided as an array of times at which to "
+                        "return the solution, or as a list [t0, tf] where t0 is the "
+                        "initial time and tf is the final time, but has been provided "
+                        "as a list of length {}.".format(len(t_eval))
+                    )
+                else:
+                    t_eval = np.linspace(t_eval[0], t_eval[-1], 100)
+
+            if self.operating_mode == "without experiment":
+                if t_eval is None:
+                    raise pybamm.SolverError(
+                        "'t_eval' must be provided if not using an experiment or "
+                        "simulating a drive cycle. 't_eval' can be provided as an "
+                        "array of times at which to return the solution, or as a "
+                        "list [t0, tf] where t0 is the initial time and tf is the "
+                        "final time. "
+                        "For a constant current (dis)charge the suggested 't_eval'  "
+                        "is [0, 3700/C] where C is the C-rate."
+                    )
+
+            elif self.operating_mode == "drive cycle":
+                # For drive cycles (current provided as data) we perform additional
+                # tests on t_eval (if provided) to ensure the returned solution
+                # captures the input. If the current is provided as data then the
+                # "Current function [A]" is the tuple (filename, data).
                 filename = self._parameter_values["Current function [A]"][0]
                 time_data = self._parameter_values["Current function [A]"][1][:, 0]
                 # If no t_eval is provided, we use the times provided in the data.
@@ -363,10 +400,10 @@ class Simulation:
                         "Setting t_eval as specified by the data '{}'".format(filename)
                     )
                     t_eval = time_data
-                # If t_eval is provided we first check if it contains all of the times
-                # in the data to within 10-12. If it doesn't, we then check
-                # that the largest gap in t_eval is smaller than the smallest gap in the
-                # time data (to ensure the resolution of t_eval is fine enough).
+                # If t_eval is provided we first check if it contains all of the
+                # times in the data to within 10-12. If it doesn't, we then check
+                # that the largest gap in t_eval is smaller than the smallest gap in
+                # the time data (to ensure the resolution of t_eval is fine enough).
                 # We only raise a warning here as users may genuinely only want
                 # the solution returned at some specified points.
                 elif (
@@ -398,24 +435,6 @@ class Simulation:
                             ),
                             pybamm.SolverWarning,
                         )
-            # If not using a drive cycle and t_eval is not provided, set t_eval
-            # to correspond to a single discharge
-            elif t_eval is None:
-                if current is None:
-                    t_end = 1
-                else:
-                    # Get C-rate, return None if it doesn't exist
-                    capacity = self.parameter_values["Cell capacity [A.h]"]
-                    if isinstance(current, pybamm.InputParameter):
-                        C_rate = inputs["Current function [A]"] / capacity
-                        t_end = 3600 / C_rate
-                    else:
-                        try:
-                            C_rate = current / capacity
-                            t_end = 3600 / C_rate
-                        except TypeError:
-                            t_end = 3600
-                t_eval = np.linspace(0, t_end, 100)
 
             self.t_eval = t_eval
             self._solution = solver.solve(
@@ -472,6 +491,7 @@ class Simulation:
                     timer.format(timer.time())
                 )
             )
+
         return self.solution
 
     def step(
@@ -489,7 +509,7 @@ class Simulation:
             The solver to use to solve the model.
         npts : int, optional
             The number of points at which the solution will be returned during
-            the step dt. default is 2 (returns the solution at t0 and t0 + dt).
+            the step dt. Default is 2 (returns the solution at t0 and t0 + dt).
         external_variables : dict
             A dictionary of external variables and their corresponding
             values at the current time. The variables must correspond to
