@@ -813,10 +813,13 @@ class BaseSolver(object):
         for input_param in model.input_parameters:
             name = input_param.name
             if name not in inputs:
-                # Only allow symbolic inputs for CasadiAlgebraicSolver
-                if not isinstance(self, pybamm.CasadiAlgebraicSolver):
+                # Only allow symbolic inputs for CasadiSolver and CasadiAlgebraicSolver
+                if not isinstance(
+                    self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver)
+                ):
                     raise pybamm.SolverError(
-                        "Only CasadiAlgebraicSolver can have symbolic inputs"
+                        "Only CasadiSolver and CasadiAlgebraicSolver "
+                        "can have symbolic inputs"
                     )
                 inputs[name] = casadi.MX.sym(name, input_param._expected_size)
 

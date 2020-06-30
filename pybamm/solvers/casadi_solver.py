@@ -105,11 +105,20 @@ class CasadiSolver(pybamm.BaseSolver):
         inputs : dict, optional
             Any external variables or input parameters to pass to the model when solving
         """
+        # Record whether there are any symbolic inputs
         inputs = inputs or {}
+        has_symbolic_inputs = any(isinstance(v, casadi.MX) for v in inputs.values())
+
         # convert inputs to casadi format
         inputs = casadi.vertcat(*[x for x in inputs.values()])
 
-        if self.mode == "fast" or not model.events:
+        if has_symbolic_inputs:
+            # Create integrator without grid to avoid having to create several times
+            self.get_integrator(model, inputs)
+            solution = self._run_integrator(model, model.y0, inputs, t_eval)
+            solution.termination = "final time"
+            return solution
+        elif self.mode == "fast" or not model.events:
             if not model.events:
                 pybamm.logger.info("No events found, running fast mode")
             # Create an integrator with the grid (we just need to do this once)
@@ -355,8 +364,9 @@ class CasadiSolver(pybamm.BaseSolver):
 
     def _run_integrator(self, model, y0, inputs, t_eval):
         integrator, use_grid = self.integrators[model]
-        rhs_size = model.concatenated_rhs.size
-        y0_diff, y0_alg = np.split(y0, [rhs_size])
+        len_rhs = model.concatenated_rhs.size
+        y0_diff = y0[:len_rhs]
+        y0_alg = y0[len_rhs:]
         try:
             # Try solving
             if use_grid is True:
@@ -370,14 +380,14 @@ class CasadiSolver(pybamm.BaseSolver):
                     p=inputs_with_tlims,
                     **self.extra_options_call
                 )
-                y_values = np.concatenate([sol["xf"].full(), sol["zf"].full()])
-                return pybamm.Solution(t_eval, y_values)
+                y_sol = np.concatenate([sol["xf"].full(), sol["zf"].full()])
+                return pybamm.Solution(t_eval, y_sol)
             else:
                 # Repeated calls to the integrator
                 x = y0_diff
                 z = y0_alg
-                X = x
-                Z = z
+                y_diff = x
+                y_alg = z
                 for i in range(len(t_eval) - 1):
                     t_min = t_eval[i]
                     t_max = t_eval[i + 1]
@@ -387,10 +397,14 @@ class CasadiSolver(pybamm.BaseSolver):
                     )
                     x = sol["xf"]
                     z = sol["zf"]
-                    X = casadi.horzcat(X, x)
-                    Z = casadi.horzcat(Z, z)
-                y_values = np.concatenate([X.full(), Z.full()])
-                return pybamm.Solution(t_eval, y_values)
+                    y_diff = casadi.horzcat(y_diff, x)
+                    if not z.is_empty():
+                        y_alg = casadi.horzcat(y_alg, z)
+                if z.is_empty():
+                    return pybamm.Solution(t_eval, y_diff)
+                else:
+                    y_sol = casadi.vertcat(y_diff, y_alg)
+                    return pybamm.Solution(t_eval, y_sol)
         except RuntimeError as e:
             # If it doesn't work raise error
             raise pybamm.SolverError(e.args[0])
