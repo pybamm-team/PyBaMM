@@ -6,7 +6,6 @@ import pybamm
 import numpy as np
 import unittest
 import os
-import stat
 import subprocess
 import platform
 
