@@ -152,8 +152,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 dt_max = self.dt_max / model.timescale_eval
             else:
                 # t_f is the dimensionless final time (scaled with the timescale)
-                # Keeping a safe factor of 0.01 but could potentially be bigger
-                dt_max = 0.01 * min(1, t_f)
+                dt_max = 0.1 * min(1, t_f)
             dt_eval_max = np.max(np.diff(t_eval)) * 1.01
             dt_max = np.max([dt_max, dt_eval_max])
             while t < t_f:
