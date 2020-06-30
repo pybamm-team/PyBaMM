@@ -284,12 +284,14 @@ class CasadiSolver(pybamm.BaseSolver):
             # If we're not using the grid, we don't need to change the integrator
             if use_grid is False:
                 return self.integrators[model]
-            # Otherwise, create new integrator with an updated grid
-            method, problem, options = self.integrator_specs[model]
-            options["grid"] = t_eval
-            integrator = casadi.integrator("F", method, problem, options)
-            self.integrators[model] = (integrator, use_grid)
-            return integrator
+            # Otherwise, create new integrator with an updated (scaled) grid
+            else:
+                method, problem, options = self.integrator_specs[model]
+                t_eval_scaled = (t_eval - t_eval[0]) / (t_eval[-1] - t_eval[0])
+                options["grid"] = t_eval_scaled
+                integrator = casadi.integrator("F", method, problem, options)
+                self.integrators[model] = (integrator, use_grid)
+                return integrator
         else:
             y0 = model.y0
             rhs = model.casadi_rhs
@@ -316,48 +318,36 @@ class CasadiSolver(pybamm.BaseSolver):
             p = casadi.MX.sym("p", inputs.shape[0])
             y_diff = casadi.MX.sym("y_diff", rhs(0, y0, p).shape[0])
 
+            # rescale time
+            t_min = casadi.MX.sym("t_min")
+            t_max = casadi.MX.sym("t_max")
+            t_scaled = t_min + (t_max - t_min) * t
+            # add time limits as inputs
+            p_with_tlims = casadi.vertcat(p, t_min, t_max)
+
+            # save (scaled) grid
             if use_grid is True:
-                # with grid, add the grid as an option
-                p_with_tlims = p
-                options.update({"grid": t_eval, "output_t0": True})
-            else:
-                # without grid, rescale time
-                t_min = casadi.MX.sym("t_min")
-                t_max = casadi.MX.sym("t_max")
-                t_scaled = t_min + (t_max - t_min) * t
-                # add time limits as inputs
-                p_with_tlims = casadi.vertcat(p, t_min, t_max)
+                t_eval_scaled = (t_eval - t_eval[0]) / (t_eval[-1] - t_eval[0])
+                options.update({"grid": t_eval_scaled, "output_t0": True})
 
             problem = {"t": t, "x": y_diff, "p": p_with_tlims}
             if algebraic(0, y0, p).is_empty():
                 method = "cvodes"
-                if use_grid is True:
-                    problem.update({"ode": rhs(t, y_diff, p)})
-                else:
-                    # rescale rhs by (t_max - t_min)
-                    problem.update({"ode": (t_max - t_min) * rhs(t_scaled, y_diff, p)})
+                # rescale rhs by (t_max - t_min)
+                problem.update({"ode": (t_max - t_min) * rhs(t_scaled, y_diff, p)})
             else:
                 options["calc_ic"] = True
                 method = "idas"
                 y_alg = casadi.MX.sym("y_alg", algebraic(0, y0, p).shape[0])
                 y_full = casadi.vertcat(y_diff, y_alg)
-                if use_grid is True:
-                    problem.update(
-                        {
-                            "ode": rhs(t, y_full, p),
-                            "z": y_alg,
-                            "alg": algebraic(t, y_full, p),
-                        }
-                    )
-                else:
-                    # rescale rhs by (t_max - t_min)
-                    problem.update(
-                        {
-                            "ode": (t_max - t_min) * rhs(t_scaled, y_full, p),
-                            "z": y_alg,
-                            "alg": algebraic(t_scaled, y_full, p),
-                        }
-                    )
+                # rescale rhs by (t_max - t_min)
+                problem.update(
+                    {
+                        "ode": (t_max - t_min) * rhs(t_scaled, y_full, p),
+                        "z": y_alg,
+                        "alg": algebraic(t_scaled, y_full, p),
+                    }
+                )
             integrator = casadi.integrator("F", method, problem, options)
             self.integrator_specs[model] = method, problem, options
             self.integrators[model] = (integrator, use_grid)
@@ -370,9 +360,15 @@ class CasadiSolver(pybamm.BaseSolver):
         try:
             # Try solving
             if use_grid is True:
+                t_min = t_eval[0]
+                t_max = t_eval[-1]
+                inputs_with_tlims = casadi.vertcat(inputs, t_min, t_max)
                 # Call the integrator once, with the grid
                 sol = integrator(
-                    x0=y0_diff, z0=y0_alg, p=inputs, **self.extra_options_call
+                    x0=y0_diff,
+                    z0=y0_alg,
+                    p=inputs_with_tlims,
+                    **self.extra_options_call
                 )
                 y_values = np.concatenate([sol["xf"].full(), sol["zf"].full()])
                 return pybamm.Solution(t_eval, y_values)
