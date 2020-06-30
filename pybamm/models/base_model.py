@@ -6,6 +6,7 @@ import inspect
 import numbers
 import pybamm
 import warnings
+from collections import OrderedDict
 
 
 class ParamClass:
@@ -721,7 +722,7 @@ class BaseModel(object):
         jac_algebraic = casadi.jacobian(algebraic, y_casadi)
 
         # For specified variables, convert to casadi
-        variables = {}
+        variables = OrderedDict()
         for name in variable_names:
             var = self.variables[name]
             variables[name] = var.to_casadi(t_casadi, y_casadi, inputs=inputs)
