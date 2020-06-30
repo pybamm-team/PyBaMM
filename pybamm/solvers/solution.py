@@ -258,6 +258,8 @@ class _BaseSolution(object):
                     )
             df = pd.DataFrame(data)
             df.to_csv(filename, index=False)
+        else:
+            raise ValueError("format '{}' not recognised".format(to_format))
 
 
 class Solution(_BaseSolution):

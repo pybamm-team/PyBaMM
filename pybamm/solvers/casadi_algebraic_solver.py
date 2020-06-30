@@ -68,6 +68,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         # equations will be equal to the initial condition provided. This allows this
         # solver to be used for initialising the DAE solvers
         if model.rhs == {}:
+            len_rhs = 0
             y0_diff = casadi.DM()
             y0_alg = y0
         else:
@@ -86,12 +87,25 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         t_p_sym = casadi.vertcat(t_sym, p_sym)
         alg = model.casadi_algebraic(t_sym, y_sym, p_sym)
 
+        # Set constraints vector in the casadi format
+        # Constrain the unknowns. 0 (default): no constraint on ui, 1: ui >= 0.0,
+        # -1: ui <= 0.0, 2: ui > 0.0, -2: ui < 0.0.
+        constraints = np.zeros_like(model.bounds[0], dtype=int)
+        # If the lower bound is positive then the variable must always be positive
+        constraints[model.bounds[0] >= 0] = 1
+        # If the upper bound is negative then the variable must always be negative
+        constraints[model.bounds[1] <= 0] = -1
+
         # Set up rootfinder
         roots = casadi.rootfinder(
             "roots",
             "newton",
             dict(x=y_alg_sym, p=t_p_sym, g=alg),
-            {**self.extra_options, "abstol": self.tol},
+            {
+                **self.extra_options,
+                "abstol": self.tol,
+                "constraints": list(constraints[len_rhs:]),
+            },
         )
         for idx, t in enumerate(t_eval):
             # Evaluate algebraic with new t and previous y0, if it's already close
@@ -146,7 +160,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                         successfully, but maximum solution error ({})
                         above tolerance ({})
                         """.format(
-                            casadi.mmax(fun), self.tol
+                            casadi.mmax(casadi.fabs(fun)), self.tol
                         )
                     )
 
