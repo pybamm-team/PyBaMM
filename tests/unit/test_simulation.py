@@ -12,7 +12,6 @@ class TestSimulation(unittest.TestCase):
         sim = pybamm.Simulation(model)
 
         self.assertEqual(model.__class__, sim._model_class)
-        self.assertEqual(model.options, sim._model_options)
 
         # check that the model is unprocessed
         self.assertEqual(sim._mesh, None)
@@ -27,6 +26,11 @@ class TestSimulation(unittest.TestCase):
         for val in list(sim.model_with_set_params.rhs.values()):
             self.assertFalse(val.has_symbol_of_classes(pybamm.Parameter))
             self.assertFalse(val.has_symbol_of_classes(pybamm.Matrix))
+        # Make sure model is unchanged
+        self.assertNotEqual(sim.model, model)
+        for val in list(model.rhs.values()):
+            self.assertTrue(val.has_symbol_of_classes(pybamm.Parameter))
+            self.assertFalse(val.has_symbol_of_classes(pybamm.Matrix))
 
         sim.build()
         self.assertFalse(sim._mesh is None)
@@ -37,25 +41,11 @@ class TestSimulation(unittest.TestCase):
             if val.size > 1:
                 self.assertTrue(val.has_symbol_of_classes(pybamm.Matrix))
 
-        sim.reset()
-        sim.set_parameters()
-        self.assertEqual(sim._mesh, None)
-        self.assertEqual(sim._disc, None)
-        self.assertEqual(sim.built_model, None)
-
-        for val in list(sim.model_with_set_params.rhs.values()):
-            self.assertFalse(val.has_symbol_of_classes(pybamm.Parameter))
-            self.assertFalse(val.has_symbol_of_classes(pybamm.Matrix))
-
-        sim.build()
-        sim.reset()
-        self.assertEqual(sim._mesh, None)
-        self.assertEqual(sim._disc, None)
-        self.assertEqual(sim.model_with_set_params, None)
-        self.assertEqual(sim.built_model, None)
-        for val in list(sim.model.rhs.values()):
-            self.assertTrue(val.has_symbol_of_classes(pybamm.Parameter))
-            self.assertFalse(val.has_symbol_of_classes(pybamm.Matrix))
+    def test_specs_deprecated(self):
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model)
+        with self.assertRaisesRegex(NotImplementedError, "specs"):
+            sim.specs()
 
     def test_solve(self):
 
@@ -68,17 +58,8 @@ class TestSimulation(unittest.TestCase):
             if val.size > 1:
                 self.assertTrue(val.has_symbol_of_classes(pybamm.Matrix))
 
-        sim.reset()
-        self.assertEqual(sim.model_with_set_params, None)
-        self.assertEqual(sim.built_model, None)
-        for val in list(sim.model.rhs.values()):
-            self.assertTrue(val.has_symbol_of_classes(pybamm.Parameter))
-            self.assertFalse(val.has_symbol_of_classes(pybamm.Matrix))
-
-        self.assertEqual(sim._solution, None)
-
         # test solve without check
-        sim.reset()
+        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
         sim.solve(t_eval=[0, 600], check_model=False)
         for val in list(sim.built_model.rhs.values()):
             self.assertFalse(val.has_symbol_of_classes(pybamm.Parameter))
@@ -141,84 +122,12 @@ class TestSimulation(unittest.TestCase):
         sim.solve([0, 600])
         sim.set_parameters()
 
-    def test_specs(self):
-        # test can rebuild after setting specs
-        model = pybamm.lithium_ion.SPM()
-        sim = pybamm.Simulation(model)
-        sim.build()
-
-        model_options = {"thermal": "lumped"}
-        sim.specs(model_options=model_options)
-        sim.build()
-        self.assertEqual(sim.model.options["thermal"], "lumped")
-
-        params = sim.parameter_values
-        # normally is 0.0001
-        params.update({"Negative electrode thickness [m]": 0.0002})
-        sim.specs(parameter_values=params)
-
-        self.assertEqual(
-            sim.parameter_values["Negative electrode thickness [m]"], 0.0002
-        )
-        sim.build()
-
-        sim.specs(
-            geometry=pybamm.battery_geometry(current_collector_dimension=1),
-            submesh_types={
-                **model.default_submesh_types,
-                "current collector": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            },
-            spatial_methods={
-                **model.default_spatial_methods,
-                "current collector": pybamm.FiniteVolume(),
-            },
-        )
-        sim.build()
-
-        var_pts = sim.var_pts
-        var_pts[pybamm.standard_spatial_vars.x_n] = 5
-        sim.specs(var_pts=var_pts)
-        sim.build()
-
-        spatial_methods = sim.spatial_methods
-        # nothing to change this to at the moment but just reload in
-        sim.specs(spatial_methods=spatial_methods)
-        sim.build()
-
     def test_set_crate(self):
         model = pybamm.lithium_ion.SPM()
         current_1C = model.default_parameter_values["Current function [A]"]
         sim = pybamm.Simulation(model, C_rate=2)
         self.assertEqual(sim.parameter_values["Current function [A]"], 2 * current_1C)
         self.assertEqual(sim.C_rate, 2)
-        sim.specs(C_rate=3)
-        self.assertEqual(sim.parameter_values["Current function [A]"], 3 * current_1C)
-        self.assertEqual(sim.C_rate, 3)
-
-    def test_set_defaults(self):
-        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
-
-        model_options = {"thermal": "x-full"}
-        submesh_types = {
-            "Negative particle": pybamm.MeshGenerator(pybamm.Exponential1DSubMesh)
-        }
-        solver = pybamm.BaseSolver()
-        quick_plot_vars = ["Negative particle surface concentration"]
-        sim.specs(
-            model_options=model_options,
-            submesh_types=submesh_types,
-            solver=solver,
-            quick_plot_vars=quick_plot_vars,
-        )
-
-        sim.set_defaults()
-
-        self.assertEqual(sim.model_options["thermal"], "x-full")
-        self.assertEqual(
-            sim.submesh_types["negative particle"].submesh_type, pybamm.Uniform1DSubMesh
-        )
-        self.assertEqual(sim.quick_plot_vars, None)
-        self.assertIsInstance(sim.solver, pybamm.ScipySolver)
 
     def test_get_variable_array(self):
 
@@ -376,38 +285,6 @@ class TestSimulation(unittest.TestCase):
         sim_load = pybamm.load_sim("test.pickle")
         self.assertEqual(sim.model.name, sim_load.model.name)
 
-    def test_set_defaults2(self):
-        model = pybamm.lithium_ion.SPM()
-
-        # make simulation with silly options (should this be allowed?)
-        sim = pybamm.Simulation(
-            model,
-            geometry={},
-            parameter_values={},
-            submesh_types={},
-            var_pts={},
-            spatial_methods={},
-            solver={},
-            quick_plot_vars=[],
-        )
-
-        # reset and check
-        sim.set_defaults()
-        # Not sure of best way to test nested dicts?
-        self.assertEqual(
-            sim._parameter_values._dict_items,
-            model.default_parameter_values._dict_items,
-        )
-        for domain, submesh in model.default_submesh_types.items():
-            self.assertEqual(
-                sim._submesh_types[domain].submesh_type, submesh.submesh_type
-            )
-        self.assertEqual(sim._var_pts, model.default_var_pts)
-        for domain, method in model.default_spatial_methods.items():
-            self.assertIsInstance(sim._spatial_methods[domain], type(method))
-        self.assertIsInstance(sim._solver, type(model.default_solver))
-        self.assertEqual(sim._quick_plot_vars, None)
-
     def test_plot(self):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
 
@@ -444,14 +321,12 @@ class TestSimulation(unittest.TestCase):
 
         # check warning raised if the largest gap in t_eval is bigger than the
         # smallest gap in the data
-        sim.reset()
         with self.assertWarns(pybamm.SolverWarning):
             sim.solve(t_eval=np.linspace(0, 1, 100))
 
         # check warning raised if t_eval doesnt contain time_data , but has a finer
         # resolution (can still solve, but good for users to know they dont have
         # the solution returned at the data points)
-        sim.reset()
         with self.assertWarns(pybamm.SolverWarning):
             sim.solve(t_eval=np.linspace(0, time_data[-1], 800))
 
