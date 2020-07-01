@@ -327,8 +327,11 @@ class BaseModel(object):
     def __getitem__(self, key):
         return self.rhs[key]
 
-    def new_copy(self):
-        "Create an empty copy with identical options, or new options if specified"
+    def new_copy(self, build=False):
+        """
+        Create an empty copy with identical options, or new options if specified.
+        The 'build' parameter is included for compatibility with subclasses, but unused.
+        """
         new_model = self.__class__(name=self.name)
         new_model.use_jacobian = self.use_jacobian
         new_model.use_simplify = self.use_simplify

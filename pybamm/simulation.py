@@ -101,6 +101,8 @@ class Simulation:
                             * self._parameter_values["Cell capacity [A.h]"]
                         }
                     )
+
+            self._unprocessed_model = model
             self.model = model
         else:
             self.set_up_experiment(model, experiment)
