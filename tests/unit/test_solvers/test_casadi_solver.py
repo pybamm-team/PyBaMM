@@ -6,6 +6,7 @@ import unittest
 import numpy as np
 from tests import get_mesh_for_testing, get_discretisation_for_testing
 from scipy.sparse import eye
+from scipy.optimize import least_squares
 
 
 # class TestCasadiSolver(unittest.TestCase):
@@ -432,92 +433,119 @@ class TestCasadiSolverSensitivity(unittest.TestCase):
             solution["var"].sensitivity({"param": 3}).full().flatten(), t_eval
         )
 
-    def test_least_squares_fit(self):
-        # Simple system: a single algebraic equation
-        var1 = pybamm.Variable("var1", domain="negative electrode")
-        var2 = pybamm.Variable("var2", domain="negative electrode")
+    # def test_least_squares_fit(self):
+    #     # Simple system: a single algebraic equation
+    #     var1 = pybamm.Variable("var1", domain="negative electrode")
+    #     var2 = pybamm.Variable("var2", domain="negative electrode")
+    #     model = pybamm.BaseModel()
+    #     p = pybamm.InputParameter("p")
+    #     q = pybamm.InputParameter("q")
+    #     model.rhs = {var1: -var1}
+    #     model.algebraic = {var2: (var2 - p)}
+    #     model.initial_conditions = {var1: 1, var2: 3}
+    #     model.variables = {"objective": (var2 - q) ** 2 + (p - 3) ** 2}
+
+    #     # create discretisation
+    #     disc = get_discretisation_for_testing()
+    #     disc.process_model(model)
+
+    #     # Solve
+    #     solver = pybamm.CasadiSolver()
+    #     solution = solver.solve(model, np.linspace(0, 1))
+    #     sol_var = solution["objective"]
+
+    #     def objective(x):
+    #         return sol_var.value({"p": x[0], "q": x[1]}).full().flatten()
+
+    #     # without jacobian
+    #     lsq_sol = least_squares(objective, [2, 2], method="lm")
+    #     np.testing.assert_array_almost_equal(lsq_sol.x, [3, 3], decimal=3)
+
+    #     def jac(x):
+    #         return sol_var.sensitivity({"p": x[0], "q": x[1]})
+
+    #     # with jacobian
+    #     lsq_sol = least_squares(objective, [2, 2], jac=jac, method="lm")
+    #     np.testing.assert_array_almost_equal(lsq_sol.x, [3, 3], decimal=3)
+
+    def test_solve_with_symbolic_input_1D_scalar_input(self):
+        var = pybamm.Variable("var", "negative electrode")
         model = pybamm.BaseModel()
-        p = pybamm.InputParameter("p")
-        q = pybamm.InputParameter("q")
-        model.rhs = {var1: -var1}
-        model.algebraic = {var2: (var2 - p)}
-        model.initial_conditions = {var1: 1, var2: 3}
-        model.variables = {"objective": (var2 - q) ** 2 + (p - 3) ** 2}
+        param = pybamm.InputParameter("param")
+        model.rhs = {var: -param * var}
+        model.initial_conditions = {var: 2}
+        model.variables = {"var": var}
 
         # create discretisation
         disc = get_discretisation_for_testing()
         disc.process_model(model)
 
-        # Solve
+        # Solve - scalar input
+        solver = pybamm.CasadiSolver()
+        t_eval = np.linspace(0, 1)
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_array_almost_equal(
+            solution["var"].value({"param": 7}),
+            np.repeat(2 * np.exp(-7 * t_eval), 40)[:, np.newaxis],
+            decimal=4,
+        )
+        np.testing.assert_array_almost_equal(
+            solution["var"].value({"param": 3}),
+            np.repeat(2 * np.exp(-3 * t_eval), 40)[:, np.newaxis],
+            decimal=4,
+        )
+        np.testing.assert_array_almost_equal(
+            solution["var"].sensitivity({"param": 3}),
+            np.repeat(
+                -2 * t_eval * np.exp(-3 * t_eval), disc.mesh["negative electrode"].npts
+            )[:, np.newaxis],
+            decimal=4,
+        )
+
+    def test_solve_with_symbolic_input_1D_vector_input(self):
+        var = pybamm.Variable("var", "negative electrode")
+        model = pybamm.BaseModel()
+        param = pybamm.InputParameter("param", "negative electrode")
+        model.rhs = {var: -param * var}
+        model.initial_conditions = {var: 2}
+        model.variables = {"var": var}
+
+        # create discretisation
+        disc = get_discretisation_for_testing()
+        disc.process_model(model)
+
+        # Solve - scalar input
         solver = pybamm.CasadiSolver()
         solution = solver.solve(model, np.linspace(0, 1))
-        sol_var = solution["objective"]
+        n = disc.mesh["negative electrode"].npts
 
-        def objective(x):
-            return sol_var.value({"p": x[0], "q": x[1]}).full().flatten()
+        solver = pybamm.CasadiSolver()
+        t_eval = np.linspace(0, 1)
+        solution = solver.solve(model, t_eval)
+        p = np.linspace(0, 1, n)[:, np.newaxis]
+        np.testing.assert_array_almost_equal(
+            solution["var"].value({"param": 3 * np.ones(n)}),
+            np.repeat(2 * np.exp(-3 * t_eval), 40)[:, np.newaxis],
+            decimal=4,
+        )
+        np.testing.assert_array_almost_equal(
+            solution["var"].value({"param": 2 * p}),
+            2 * np.exp(-2 * p * t_eval).T.reshape(-1, 1),
+            decimal=4,
+        )
+        np.testing.assert_array_almost_equal(
+            solution["var"].sensitivity({"param": 3 * np.ones(n)}),
+            np.kron(-2 * t_eval * np.exp(-3 * t_eval), np.eye(40)).T,
+            decimal=4,
+        )
 
-        # without jacobian
-        lsq_sol = least_squares(objective, [2, 2], method="lm")
-        np.testing.assert_array_almost_equal(lsq_sol.x, [3, 3], decimal=3)
-
-        def jac(x):
-            return sol_var.sensitivity({"p": x[0], "q": x[1]})
-
-        # with jacobian
-        lsq_sol = least_squares(objective, [2, 2], jac=jac, method="lm")
-        np.testing.assert_array_almost_equal(lsq_sol.x, [3, 3], decimal=3)
-
-    # def test_solve_with_symbolic_input_1D_scalar_input(self):
-    #     var = pybamm.Variable("var", "negative electrode")
-    #     model = pybamm.BaseModel()
-    #     param = pybamm.InputParameter("param")
-    #     model.algebraic = {var: var + param}
-    #     model.initial_conditions = {var: 2}
-    #     model.variables = {"var": var}
-
-    #     # create discretisation
-    #     disc = tests.get_discretisation_for_testing()
-    #     disc.process_model(model)
-
-    #     # Solve - scalar input
-    #     solver = pybamm.CasadiSolver()
-    #     solution = solver.solve(model, np.linspace(0,1))
-    #     np.testing.assert_array_equal(solution["var"].value({"param": 7}), -7)
-    #     np.testing.assert_array_equal(solution["var"].value({"param": 3}), -3)
-    #     np.testing.assert_array_equal(solution["var"].sensitivity({"param": 3}), -1)
-
-    # def test_solve_with_symbolic_input_1D_vector_input(self):
-    #     var = pybamm.Variable("var", "negative electrode")
-    #     model = pybamm.BaseModel()
-    #     param = pybamm.InputParameter("param", "negative electrode")
-    #     model.algebraic = {var: var + param}
-    #     model.initial_conditions = {var: 2}
-    #     model.variables = {"var": var}
-
-    #     # create discretisation
-    #     disc = tests.get_discretisation_for_testing()
-    #     disc.process_model(model)
-
-    #     # Solve - scalar input
-    #     solver = pybamm.CasadiSolver()
-    #     solution = solver.solve(model, np.linspace(0,1))
-    #     n = disc.mesh["negative electrode"].npts
-
-    #     solver = pybamm.CasadiSolver()
-    #     solution = solver.solve(model, np.linspace(0,1))
-    #     p = np.linspace(0, 1, n)[:, np.newaxis]
-    #     np.testing.assert_array_almost_equal(
-    #         solution["var"].value({"param": 3 * np.ones(n)}), -3
-    #     )
-    #     np.testing.assert_array_almost_equal(
-    #         solution["var"].value({"param": 2 * p}), -2 * p
-    #     )
-    #     np.testing.assert_array_almost_equal(
-    #         solution["var"].sensitivity({"param": 3 * np.ones(n)}), -np.eye(40)
-    #     )
-    #     np.testing.assert_array_almost_equal(
-    #         solution["var"].sensitivity({"param": p}), -np.eye(40)
-    #     )
+        sens = solution["var"].sensitivity({"param": p}).full()
+        for idx in range(len(t_eval)):
+            np.testing.assert_array_almost_equal(
+                sens[40 * idx : 40 * (idx + 1), :],
+                -2 * t_eval[idx] * np.exp(-p * t_eval[idx]) * np.eye(40),
+                decimal=4,
+            )
 
     # def test_solve_with_symbolic_input_in_initial_conditions(self):
     #     # Simple system: a single algebraic equation
@@ -549,7 +577,7 @@ class TestCasadiSolverSensitivity(unittest.TestCase):
     #     model.variables = {"objective": (var - q) ** 2 + (p - 3) ** 2}
 
     #     # create discretisation
-    #     disc = tests.get_discretisation_for_testing()
+    #     disc = get_discretisation_for_testing()
     #     disc.process_model(model)
 
     #     # Solve

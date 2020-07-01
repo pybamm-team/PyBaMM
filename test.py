@@ -4,7 +4,7 @@ import time
 # Define ode
 t = MX.sym("t")
 x = MX.sym("x")
-p = MX.sym("p")
+p = MX.sym("p", 2)
 
 x0 = np.ones(x.shape[0])
 t_eval = np.linspace(0, 1, 1000)
@@ -13,10 +13,10 @@ t_max = MX.sym("t_min")
 t_min = MX.sym("t_max")
 tlims = casadi.vertcat(t_min, t_max)
 
-ode = -(t_max - t_min) * p * x
+ode = -(t_max - t_min) * p[0] * p[1] * x
 
 # value of the parameter for evaluating
-p_eval = 1
+p_eval = [1, 1]
 
 # First approach: simple integrator without a grid
 # fastest but doesn't give the intermediate points
@@ -27,14 +27,14 @@ itg_nogrid = integrator(
 )
 
 start = time.time()
-itg_nogrid(x0=1, p=[p_eval, 0, 1])
+itg_nogrid(x0=1, p=p_eval + [0, 1])
 print("value:", time.time() - start)
 
 jac_nogrid = Function(
     "j", [p], [jacobian(itg_nogrid(x0=x0, p=casadi.vertcat(p, 0, 1))["xf"], p)]
 )
 start = time.time()
-jac_nogrid(1)
+jac_nogrid(p_eval)
 print("jacobian:", time.time() - start)
 
 # Second approach: integrator with a grid
@@ -44,7 +44,7 @@ print("*" * 10)
 itg_grid_auto = integrator(
     "F",
     "cvodes",
-    {"t": t, "x": x, "ode": -p * x, "p": p},
+    {"t": t, "x": x, "ode": -p[0] * p[1] * x, "p": p},
     {"grid": t_eval, "output_t0": True},
 )
 
@@ -57,7 +57,7 @@ print("value:", time.time() - start)
 # jac_grid_auto = Function(
 #     "j", [p], [itg_grid_auto(x0=x0, p=p * DM.ones(len(t_eval), 1))["xf"]]
 # )
-# jac_grid_auto(1)
+# jac_grid_auto(p_eval)
 print("jacobian: fails")
 
 # Third approach: multiple calls through manual for loop
@@ -82,7 +82,7 @@ print("value:", time.time() - start)
 
 jac_grid_manual = Function("j", [p], [jacobian(itg_grid_manual(x0, p, t_eval), p)],)
 start = time.time()
-jac_grid_manual(1)
+jac_grid_manual(p_eval)
 print("jacobian:", time.time() - start)
 
 
@@ -109,7 +109,7 @@ jac_grid_mapaccum = Function(
     "j", [p], [jacobian(itg_grid_mapaccum(x0, p, tlims_eval), p)]
 )
 start = time.time()
-jac_grid_mapaccum(1)
+jac_grid_mapaccum(p_eval)
 print("jacobian:", time.time() - start)
 
 #

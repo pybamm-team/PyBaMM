@@ -113,7 +113,7 @@ class CasadiSolver(pybamm.BaseSolver):
         inputs = casadi.vertcat(*[x for x in inputs.values()])
 
         if has_symbolic_inputs:
-            # Create integrator without grid to avoid having to create several times
+            # Create integrax`tor without grid to avoid having to create several times
             self.get_integrator(model, inputs)
             solution = self._run_integrator(model, model.y0, inputs, t_eval)
             solution.termination = "final time"

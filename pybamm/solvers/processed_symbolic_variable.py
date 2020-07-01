@@ -121,7 +121,7 @@ class ProcessedSymbolicVariable(object):
             if idx == 0:
                 entries = next_entries
             else:
-                entries = casadi.horzcat(entries, next_entries)
+                entries = casadi.vertcat(entries, next_entries)
 
         # Get node values
         nodes = self.mesh.nodes
@@ -156,6 +156,13 @@ class ProcessedSymbolicVariable(object):
         ----------
         inputs : dict
             The inputs at which to evaluate the variable.
+
+        Returns
+        -------
+        casadi.DM
+            A casadi matrix of size (n_x * n_t, 1), where n_x is the number of spatial
+            discretisation points for the variable, and n_t is the length of the time
+            vector
         """
         if inputs is None:
             return self.casadi_entries_fn(casadi.DM())
@@ -173,6 +180,13 @@ class ProcessedSymbolicVariable(object):
         ----------
         inputs : dict
             The inputs at which to evaluate the variable.
+
+        Returns
+        -------
+        casadi.DM
+            A casadi matrix of size (n_x * n_t, n_p), where n_x is the number of spatial
+            discretisation points for the variable, n_t is the length of the time
+            vector, and n_p is the number of input parameters
         """
         if self.casadi_sens_fn is None:
             raise ValueError(
