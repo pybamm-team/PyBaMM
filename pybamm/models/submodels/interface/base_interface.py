@@ -604,7 +604,9 @@ class BaseInterface(pybamm.BaseSubModel):
             variables.update(
                 {
                     self.domain + " electrode entropic change": dUdT,
-                    "X-averaged " + self.domain.lower() + " electrode entropic change": dUdT_av,
+                    "X-averaged "
+                    + self.domain.lower()
+                    + " electrode entropic change": dUdT_av,
                 }
             )
 
