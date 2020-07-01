@@ -511,6 +511,9 @@ class TestParameterValues(unittest.TestCase):
             "grad_var1": pybamm.grad(var1),
             "d_var1": d * var1,
         }
+        model.timescale = b
+        model.length_scales = {"test": c}
+
         parameter_values = pybamm.ParameterValues({"a": 1, "b": 2, "c": 3, "d": 42})
         parameter_values.process_model(model)
         # rhs
@@ -547,6 +550,9 @@ class TestParameterValues(unittest.TestCase):
         self.assertTrue(
             isinstance(model.variables["d_var1"].children[1], pybamm.Variable)
         )
+        # timescale and length scales
+        self.assertEqual(model.timescale.evaluate(), 2)
+        self.assertEqual(model.length_scales["test"].evaluate(), 3)
 
         # bad boundary conditions
         model = pybamm.BaseModel()

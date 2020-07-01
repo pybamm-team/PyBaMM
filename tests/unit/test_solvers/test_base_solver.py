@@ -117,6 +117,7 @@ class TestBaseSolver(unittest.TestCase):
                     "alg", [t, y, p], [self.algebraic_eval(t, y, p)]
                 )
                 self.convert_to_format = "casadi"
+                self.bounds = (np.array([-np.inf]), np.array([np.inf]))
 
             def rhs_eval(self, t, y, inputs):
                 return np.array([])
@@ -151,6 +152,7 @@ class TestBaseSolver(unittest.TestCase):
                     "alg", [t, y, p], [self.algebraic_eval(t, y, p)]
                 )
                 self.convert_to_format = "casadi"
+                self.bounds = (-np.inf * np.ones(4), np.inf * np.ones(4))
 
             def rhs_eval(self, t, y, inputs):
                 return y[0:1]
@@ -197,6 +199,7 @@ class TestBaseSolver(unittest.TestCase):
                     "alg", [t, y, p], [self.algebraic_eval(t, y, p)]
                 )
                 self.convert_to_format = "casadi"
+                self.bounds = (np.array([-np.inf]), np.array([np.inf]))
 
             def rhs_eval(self, t, y, inputs):
                 return np.array([])

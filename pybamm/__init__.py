@@ -52,8 +52,12 @@ FLOAT_FORMAT = "{: .17e}"
 script_path = os.path.abspath(__file__)
 
 from .util import root_dir
+
 ABSOLUTE_PATH = root_dir()
-PARAMETER_PATH = [os.getcwd(), os.path.join(root_dir(), "pybamm", "input", "parameters")]
+PARAMETER_PATH = [
+    os.getcwd(),
+    os.path.join(root_dir(), "pybamm", "input", "parameters"),
+]
 
 #
 # Utility classes and methods
@@ -158,7 +162,6 @@ from .parameters import geometric_parameters
 from .parameters import electrical_parameters
 from .parameters import thermal_parameters
 from .parameters import standard_parameters_lithium_ion, standard_parameters_lead_acid
-from .parameters import sei_parameters
 from .parameters import parameter_sets
 
 
@@ -217,7 +220,7 @@ from . import experiments
 #
 # Plotting
 #
-from .plotting.quick_plot import QuickPlot
+from .plotting.quick_plot import QuickPlot, close_plots
 from .plotting.plot import plot
 from .plotting.plot2D import plot2D
 from .plotting.dynamic_plot import dynamic_plot

@@ -63,18 +63,12 @@ class ProcessedVariable(object):
         self.timescale = solution.model.timescale.evaluate()
         self.t_pts = self.t_sol * self.timescale
 
-        # Store spatial variables to get scales
-        self.spatial_vars = {}
+        # Store length scales
         if solution.model:
-            for var in ["x", "y", "z", "r_n", "r_p"]:
-                if (
-                    var in solution.model.variables
-                    and var + " [m]" in solution.model.variables
-                ):
-                    self.spatial_vars[var] = solution.model.variables[var]
-                    self.spatial_vars[var + " [m]"] = solution.model.variables[
-                        var + " [m]"
-                    ]
+            self.length_scales = {
+                domain: scale.evaluate()
+                for domain, scale in solution.model.length_scales.items()
+            }
 
         # Evaluate base variable at initial time
         if self.known_evals:
@@ -222,16 +216,20 @@ class ProcessedVariable(object):
             self.x_sol = space
 
         # assign attributes for reference
-        self.first_dim_pts = space * self.get_spatial_scale(
-            self.first_dimension, self.domain[0]
-        )
-        self.internal_boundaries = self.mesh.internal_boundaries
+        length_scale = self.get_spatial_scale(self.first_dimension, self.domain[0])
+        pts_for_interp = space * length_scale
+        self.internal_boundaries = [
+            bnd * length_scale for bnd in self.mesh.internal_boundaries
+        ]
+
+        # Set first_dim_pts to edges for nicer plotting
+        self.first_dim_pts = edges * length_scale
 
         # set up interpolation
         if len(self.t_sol) == 1:
             # function of space only
             interpolant = interp.interp1d(
-                self.first_dim_pts,
+                pts_for_interp,
                 entries_for_interp[:, 0],
                 kind="linear",
                 fill_value=np.nan,
@@ -250,7 +248,7 @@ class ProcessedVariable(object):
             # is the reverse of what you'd expect
             self._interpolation_function = interp.interp2d(
                 self.t_pts,
-                self.first_dim_pts,
+                pts_for_interp,
                 entries_for_interp,
                 kind="linear",
                 fill_value=np.nan,
@@ -263,11 +261,86 @@ class ProcessedVariable(object):
         """
         first_dim_nodes = self.mesh.nodes
         first_dim_edges = self.mesh.edges
-        second_dim_pts = self.base_variable.secondary_mesh.nodes
-        if self.base_eval.size // len(second_dim_pts) == len(first_dim_nodes):
+        second_dim_nodes = self.base_variable.secondary_mesh.nodes
+        second_dim_edges = self.base_variable.secondary_mesh.edges
+        if self.base_eval.size // len(second_dim_nodes) == len(first_dim_nodes):
             first_dim_pts = first_dim_nodes
-        elif self.base_eval.size // len(second_dim_pts) == len(first_dim_edges):
+        elif self.base_eval.size // len(second_dim_nodes) == len(first_dim_edges):
             first_dim_pts = first_dim_edges
+
+        second_dim_pts = second_dim_nodes
+        first_dim_size = len(first_dim_pts)
+        second_dim_size = len(second_dim_pts)
+        entries = np.empty((first_dim_size, second_dim_size, len(self.t_sol)))
+
+        # Evaluate the base_variable index-by-index
+        for idx in range(len(self.t_sol)):
+            t = self.t_sol[idx]
+            u = self.u_sol[:, idx]
+            inputs = {name: inp[:, idx] for name, inp in self.inputs.items()}
+            if self.known_evals:
+                eval_and_known_evals = self.base_variable.evaluate(
+                    t, u, inputs=inputs, known_evals=self.known_evals[t]
+                )
+                entries[:, :, idx] = np.reshape(
+                    eval_and_known_evals[0],
+                    [first_dim_size, second_dim_size],
+                    order="F",
+                )
+                self.known_evals[t] = eval_and_known_evals[1]
+            else:
+                entries[:, :, idx] = np.reshape(
+                    self.base_variable.evaluate(t, u, inputs=inputs),
+                    [first_dim_size, second_dim_size],
+                    order="F",
+                )
+
+        # add points outside first dimension domain for extrapolation to
+        # boundaries
+        extrap_space_first_dim_left = np.array(
+            [2 * first_dim_pts[0] - first_dim_pts[1]]
+        )
+        extrap_space_first_dim_right = np.array(
+            [2 * first_dim_pts[-1] - first_dim_pts[-2]]
+        )
+        first_dim_pts = np.concatenate(
+            [extrap_space_first_dim_left, first_dim_pts, extrap_space_first_dim_right]
+        )
+        extrap_entries_left = np.expand_dims(2 * entries[0] - entries[1], axis=0)
+        extrap_entries_right = np.expand_dims(2 * entries[-1] - entries[-2], axis=0)
+        entries_for_interp = np.concatenate(
+            [extrap_entries_left, entries, extrap_entries_right], axis=0
+        )
+
+        # add points outside second dimension domain for extrapolation to
+        # boundaries
+        extrap_space_second_dim_left = np.array(
+            [2 * second_dim_pts[0] - second_dim_pts[1]]
+        )
+        extrap_space_second_dim_right = np.array(
+            [2 * second_dim_pts[-1] - second_dim_pts[-2]]
+        )
+        second_dim_pts = np.concatenate(
+            [
+                extrap_space_second_dim_left,
+                second_dim_pts,
+                extrap_space_second_dim_right,
+            ]
+        )
+        extrap_entries_second_dim_left = np.expand_dims(
+            2 * entries_for_interp[:, 0, :] - entries_for_interp[:, 1, :], axis=1
+        )
+        extrap_entries_second_dim_right = np.expand_dims(
+            2 * entries_for_interp[:, -1, :] - entries_for_interp[:, -2, :], axis=1
+        )
+        entries_for_interp = np.concatenate(
+            [
+                extrap_entries_second_dim_left,
+                entries_for_interp,
+                extrap_entries_second_dim_right,
+            ],
+            axis=1,
+        )
 
         # Process r-x or x-z
         if self.domain[0] in [
@@ -296,50 +369,31 @@ class ProcessedVariable(object):
                 "and auxiliary_domains '{}'".format(self.domain, self.auxiliary_domains)
             )
 
-        first_dim_size = len(first_dim_pts)
-        second_dim_size = len(second_dim_pts)
-        entries = np.empty((first_dim_size, second_dim_size, len(self.t_sol)))
-
-        # Evaluate the base_variable index-by-index
-        for idx in range(len(self.t_sol)):
-            t = self.t_sol[idx]
-            u = self.u_sol[:, idx]
-            inputs = {name: inp[:, idx] for name, inp in self.inputs.items()}
-            if self.known_evals:
-                eval_and_known_evals = self.base_variable.evaluate(
-                    t, u, inputs=inputs, known_evals=self.known_evals[t]
-                )
-                entries[:, :, idx] = np.reshape(
-                    eval_and_known_evals[0],
-                    [first_dim_size, second_dim_size],
-                    order="F",
-                )
-                self.known_evals[t] = eval_and_known_evals[1]
-            else:
-                entries[:, :, idx] = np.reshape(
-                    self.base_variable.evaluate(t, u, inputs=inputs),
-                    [first_dim_size, second_dim_size],
-                    order="F",
-                )
-
         # assign attributes for reference
         self.entries = entries
         self.dimensions = 2
-        self.first_dim_pts = first_dim_pts * self.get_spatial_scale(
+        first_length_scale = self.get_spatial_scale(
             self.first_dimension, self.domain[0]
         )
-        self.second_dim_pts = second_dim_pts * self.get_spatial_scale(
-            self.second_dimension
+        first_dim_pts_for_interp = first_dim_pts * first_length_scale
+
+        second_length_scale = self.get_spatial_scale(
+            self.second_dimension, self.auxiliary_domains["secondary"][0]
         )
+        second_dim_pts_for_interp = second_dim_pts * second_length_scale
+
+        # Set pts to edges for nicer plotting
+        self.first_dim_pts = first_dim_edges * first_length_scale
+        self.second_dim_pts = second_dim_edges * second_length_scale
 
         # set up interpolation
         if len(self.t_sol) == 1:
             # function of space only. Note the order of the points is the reverse
             # of what you'd expect
             interpolant = interp.interp2d(
-                self.second_dim_pts,
-                self.first_dim_pts,
-                entries[:, :, 0],
+                second_dim_pts_for_interp,
+                first_dim_pts_for_interp,
+                entries_for_interp[:, :, 0],
                 kind="linear",
                 fill_value=np.nan,
                 bounds_error=False,
@@ -352,8 +406,8 @@ class ProcessedVariable(object):
         else:
             # function of space and time.
             self._interpolation_function = interp.RegularGridInterpolator(
-                (self.first_dim_pts, self.second_dim_pts, self.t_pts),
-                entries,
+                (first_dim_pts_for_interp, second_dim_pts_for_interp, self.t_pts),
+                entries_for_interp,
                 method="linear",
                 fill_value=np.nan,
                 bounds_error=False,
@@ -394,8 +448,8 @@ class ProcessedVariable(object):
         self.z_sol = z_sol
         self.first_dimension = "y"
         self.second_dimension = "z"
-        self.first_dim_pts = y_sol * self.get_spatial_scale("y")
-        self.second_dim_pts = z_sol * self.get_spatial_scale("z")
+        self.first_dim_pts = y_sol * self.get_spatial_scale("y", "current collector")
+        self.second_dim_pts = z_sol * self.get_spatial_scale("z", "current collector")
 
         # set up interpolation
         if len(self.t_sol) == 1:
@@ -477,27 +531,22 @@ class ProcessedVariable(object):
                 second_dim = second_dim[:, np.newaxis]
         return self._interpolation_function((first_dim, second_dim, t))
 
-    def get_spatial_scale(self, name, domain=None):
+    def get_spatial_scale(self, name, domain):
         "Returns the spatial scale for a named spatial variable"
-        # Different scale in negative and positive particles
-        if domain == "negative particle":
-            name = "r_n"
-        elif domain == "positive particle":
-            name = "r_p"
-
-        # Try to get length scale
-        if name + " [m]" in self.spatial_vars and name in self.spatial_vars:
-            scale = (
-                self.spatial_vars[name + " [m]"] / self.spatial_vars[name]
-            ).evaluate()[-1]
-        else:
+        try:
+            if name == "y" and domain == "current collector":
+                return self.length_scales["current collector y"]
+            elif name == "z" and domain == "current collector":
+                return self.length_scales["current collector z"]
+            else:
+                return self.length_scales[domain]
+        except KeyError:
             if self.warn:
                 pybamm.logger.warning(
-                    "No scale set for spatial variable {}. "
-                    "Using default of 1 [m].".format(name)
+                    "No length scale set for {}. "
+                    "Using default of 1 [m].".format(domain)
                 )
-            scale = 1
-        return scale
+            return 1
 
     @property
     def data(self):

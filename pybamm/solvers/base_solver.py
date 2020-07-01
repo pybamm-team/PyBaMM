@@ -51,7 +51,7 @@ class BaseSolver(object):
                 "max_steps has been deprecated, and should be set using the "
                 "solver-specific extra-options dictionaries instead"
             )
-        self.models_set_up = set()
+        self.models_set_up = {}
 
         # Defaults, can be overwritten by specific solver
         self.name = "Base solver"
@@ -114,7 +114,7 @@ class BaseSolver(object):
         "Returns a copy of the solver"
         new_solver = copy.copy(self)
         # clear models_set_up
-        new_solver.models_set_up = set()
+        new_solver.models_set_up = {}
         return new_solver
 
     def set_up(self, model, inputs=None):
@@ -444,8 +444,9 @@ class BaseSolver(object):
             root_sol = self.root_method._integrate(model, [time], inputs)
         except pybamm.SolverError as e:
             raise pybamm.SolverError(
-                "Could not find consistent initial conditions: {}".format(e.args[0])
+                "Could not find consistent states: {}".format(e.args[0])
             )
+        pybamm.logger.info("Found consistent states")
         return root_sol.y.flatten()
 
     def solve(self, model, t_eval=None, external_variables=None, inputs=None):
@@ -504,9 +505,23 @@ class BaseSolver(object):
         if model not in self.models_set_up:
             self.set_up(model, ext_and_inputs)
             set_up_time = timer.time()
-            self.models_set_up.add(model)
+            self.models_set_up.update(
+                {model: {"initial conditions": model.concatenated_initial_conditions}}
+            )
         else:
-            set_up_time = 0
+            ics_set_up = self.models_set_up[model]["initial conditions"]
+            # Check that initial conditions have not been updated
+            if ics_set_up.id == model.concatenated_initial_conditions.id:
+                set_up_time = 0
+            else:
+                # If the new initial conditions are different, set up again
+                # Doing the whole setup again might be slow, but no need to prematurely
+                # optimize this
+                self.set_up(model, ext_and_inputs)
+                self.models_set_up[model][
+                    "initial conditions"
+                ] = model.concatenated_initial_conditions
+                set_up_time = timer.time()
 
         # (Re-)calculate consistent initial conditions
         self._set_initial_conditions(model, ext_and_inputs, update_rhs=True)

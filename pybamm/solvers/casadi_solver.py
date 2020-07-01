@@ -186,11 +186,11 @@ class CasadiSolver(pybamm.BaseSolver):
                     count += 1
                     if count >= self.max_step_decrease_count:
                         raise pybamm.SolverError(
-                            """
-                            Maximum number of decreased steps occurred at t={}. Try
-                            solving the model up to this time only or reducing dt_max.
-                            """.format(
-                                t
+                            "Maximum number of decreased steps occurred at t={}. Try "
+                            "solving the model up to this time only or reducing dt_max "
+                            "(currently, dt_max={})."
+                            "".format(
+                                t * model.timescale_eval, dt_max * model.timescale_eval
                             )
                         )
                 # Check most recent y to see if any events have been crossed
@@ -246,18 +246,27 @@ class CasadiSolver(pybamm.BaseSolver):
                     t_event = np.nanmin(t_events)
                     y_event = y_sol(t_event)
 
-                    # return truncated solution
-                    t_truncated = current_step_sol.t[current_step_sol.t < t_event]
-                    y_trunctaed = current_step_sol.y[:, 0 : len(t_truncated)]
-                    truncated_step_sol = pybamm.Solution(t_truncated, y_trunctaed)
-                    # assign temporary solve time
-                    truncated_step_sol.solve_time = np.nan
-                    # append solution from the current step to solution
-                    solution.append(truncated_step_sol)
+                    # solve again until the event time
+                    # See comments above on creating t_window
+                    t_window = np.concatenate(
+                        ([t], t_eval[(t_eval > t) & (t_eval < t_event)])
+                    )
+                    if len(t_window) == 1:
+                        t_window = np.array([t, t_event])
 
+                    integrator = self.get_integrator(model, t_window, inputs)
+                    current_step_sol = self._run_integrator(
+                        integrator, model, y0, inputs, t_window
+                    )
+
+                    # assign temporary solve time
+                    current_step_sol.solve_time = np.nan
+                    # append solution from the current step to solution
+                    solution.append(current_step_sol)
                     solution.termination = "event"
                     solution.t_event = t_event
                     solution.y_event = y_event
+
                     break
                 else:
                     # assign temporary solve time

@@ -21,6 +21,12 @@ class TestVector(unittest.TestCase):
         vect1d = pybamm.Vector(np.array([1, 2, 3]))
         np.testing.assert_array_equal(self.vect.entries, vect1d.entries)
 
+    def test_list_entries(self):
+        vect = pybamm.Vector([1, 2, 3])
+        np.testing.assert_array_equal(vect.entries, np.array([[1], [2], [3]]))
+        vect = pybamm.Vector([[1], [2], [3]])
+        np.testing.assert_array_equal(vect.entries, np.array([[1], [2], [3]]))
+
     def test_vector_evaluate(self):
         np.testing.assert_array_equal(self.vect.evaluate(), self.x)
 
