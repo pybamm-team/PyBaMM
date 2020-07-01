@@ -92,6 +92,7 @@ pybamm.print_citations()
 ```
 
 to the end of your script. This will print bibtex information to the terminal; passing a filename to `print_citations` will print the bibtex information to the specified file instead. A list of all citations can also be found in the [citations file](pybamm/CITATIONS.txt). In particular, PyBaMM relies heavily on [CasADi](https://web.casadi.org/publications/).
+See [CONTRIBUTING.md](CONTRIBUTING.md#citations) for information on how to add your own citations when you contribute.
 
 ## How can I contribute to PyBaMM?
 
