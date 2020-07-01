@@ -25,7 +25,7 @@ class StandardOutputComparison(object):
 
         # Assign common time
         solution0 = self.solutions[0]
-        max_index = np.where(solution0.t == max_t)[0][0]
+        max_index = np.where(solution0.t >= max_t)[0][0]
         t_common = solution0.t[:max_index]
 
         # Check times

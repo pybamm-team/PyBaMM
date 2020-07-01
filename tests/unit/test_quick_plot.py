@@ -330,7 +330,7 @@ class TestQuickPlot(unittest.TestCase):
                 pybamm.QuickPlot(solution, output_variables)
 
                 # check 2D (space) variables update properly for different time units
-                c_n = solution["Negative particle concentration [mol.m-3]"].entries
+                c_n = solution["Negative particle concentration [mol.m-3]"]
 
                 for unit, scale in zip(["seconds", "minutes", "hours"], [1, 60, 3600]):
                     quick_plot = pybamm.QuickPlot(
@@ -342,12 +342,16 @@ class TestQuickPlot(unittest.TestCase):
                     qp_data = quick_plot.plots[
                         ("Negative particle concentration [mol.m-3]",)
                     ][0][1]
-                    np.testing.assert_array_almost_equal(qp_data, c_n[:, :, 0])
+                    c_n_eval = c_n(t_eval[0], r=c_n.first_dim_pts, x=c_n.second_dim_pts)
+                    np.testing.assert_array_almost_equal(qp_data, c_n_eval)
                     quick_plot.slider_update(t_eval[-1] / scale)
                     qp_data = quick_plot.plots[
                         ("Negative particle concentration [mol.m-3]",)
                     ][0][1]
-                    np.testing.assert_array_almost_equal(qp_data, c_n[:, :, 1])
+                    c_n_eval = c_n(
+                        t_eval[-1], r=c_n.first_dim_pts, x=c_n.second_dim_pts
+                    )
+                    np.testing.assert_array_almost_equal(qp_data, c_n_eval)
 
         pybamm.close_plots()
 
@@ -369,7 +373,7 @@ class TestQuickPlot(unittest.TestCase):
 
         # check 2D (x,z space) variables update properly for different time units
         # Note: these should be the transpose of the entries in the processed variable
-        c_e = solution["Electrolyte concentration [mol.m-3]"].entries
+        c_e = solution["Electrolyte concentration [mol.m-3]"]
 
         for unit, scale in zip(["seconds", "minutes", "hours"], [1, 60, 3600]):
             quick_plot = pybamm.QuickPlot(
@@ -377,10 +381,12 @@ class TestQuickPlot(unittest.TestCase):
             )
             quick_plot.plot(0)
             qp_data = quick_plot.plots[("Electrolyte concentration [mol.m-3]",)][0][1]
-            np.testing.assert_array_almost_equal(qp_data.T, c_e[:, :, 0])
+            c_e_eval = c_e(t_eval[0], x=c_e.first_dim_pts, z=c_e.second_dim_pts)
+            np.testing.assert_array_almost_equal(qp_data.T, c_e_eval)
             quick_plot.slider_update(t_eval[-1] / scale)
             qp_data = quick_plot.plots[("Electrolyte concentration [mol.m-3]",)][0][1]
-            np.testing.assert_array_almost_equal(qp_data.T, c_e[:, :, -1])
+            c_e_eval = c_e(t_eval[-1], x=c_e.first_dim_pts, z=c_e.second_dim_pts)
+            np.testing.assert_array_almost_equal(qp_data.T, c_e_eval)
 
         pybamm.close_plots()
 
