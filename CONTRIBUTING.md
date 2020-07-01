@@ -296,6 +296,25 @@ All example notebooks should be listed in [examples/README.md](https://github.co
 
 Where possible, notebooks are tested daily. A list of slow notebooks (which time-out and fail tests) is maintained in `.slow-books`, these notebooks will be excluded from daily testing.
 
+## Citations
+
+We aim to recognize all contributions by automatically generating citations to the relevant papers on which different parts of the code are built. 
+These will change depending on what models and solvers you use.
+Adding the command
+
+```python3
+pybamm.print_citations()
+```
+
+to the end of a script will print all citations that were used by that script. This will print bibtex information to the terminal; passing a filename to `print_citations` will print the bibtex information to the specified file instead.
+
+When you contribute code to PyBaMM, you can add your own papers that you would like to be cited if that code is used. First, add the bibtex for your paper to [CITATIONS.txt](pybamm/CITATIONS.txt). Then, add the line
+
+```python3
+pybamm.citations.register("your_paper_bibtex_identifier")
+```
+
+wherever code is called that uses that citation (for example, in functions or in the `__init__` method of a class such as a model or solver).
 
 ## Infrastructure
 
