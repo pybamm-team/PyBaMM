@@ -281,8 +281,8 @@ class CasadiSolver(pybamm.BaseSolver):
 
     def get_integrator(self, model, inputs, t_eval=None):
         """
-        Method to create a casadi integrator object. 
-        If t_eval is provided, the integrator uses t_eval to make the grid. 
+        Method to create a casadi integrator object.
+        If t_eval is provided, the integrator uses t_eval to make the grid.
         Otherwise, the integrator has grid [0,1].
         """
         # Use grid if t_eval is given

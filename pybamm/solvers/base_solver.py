@@ -447,7 +447,10 @@ class BaseSolver(object):
                 "Could not find consistent states: {}".format(e.args[0])
             )
         pybamm.logger.info("Found consistent states")
-        return root_sol.y
+        y0 = root_sol.y
+        if isinstance(y0, np.ndarray):
+            y0 = y0.flatten()
+        return y0
 
     def solve(self, model, t_eval=None, external_variables=None, inputs=None):
         """

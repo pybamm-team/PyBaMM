@@ -125,10 +125,10 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                     y_alg = casadi.horzcat(y_alg, y0_alg)
             # Otherwise calculate new y_sol
             else:
-                t_inputs = casadi.vertcat(t, inputs)
+                t_eval_inputs_sym = casadi.vertcat(t, symbolic_inputs)
                 # Solve
                 try:
-                    y_alg_sol = roots(y0_alg, t_inputs)
+                    y_alg_sol = roots(y0_alg, t_eval_inputs_sym)
                     success = True
                     message = None
                     # Check final output

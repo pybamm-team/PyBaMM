@@ -666,9 +666,9 @@ class Simulation:
         # Clear solver problem (not pickle-able, will automatically be recomputed)
         if (
             isinstance(self._solver, pybamm.CasadiSolver)
-            and self._solver.problems != {}
+            and self._solver.integrator_specs != {}
         ):
-            self._solver.problems = {}
+            self._solver.integrator_specs = {}
         with open(filename, "wb") as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 
