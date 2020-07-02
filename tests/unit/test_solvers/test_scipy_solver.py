@@ -13,7 +13,7 @@ from platform import system
 class TestScipySolver(unittest.TestCase):
     def test_model_solver_python_and_jax(self):
 
-        if system() != "Windows"
+        if system() != "Windows":
             formats = ["python", "jax"]
         else:
             formats = ["python"]
