@@ -8,12 +8,12 @@ config.update("jax_enable_x64", True)
 def jax_bdf_integrate(fun, y0, t_eval, jac=None, inputs=None, rtol=1e-6, atol=1e-6):
     """
     Backward Difference formula (BDF) implicit multistep integrator. The basic algorithm
-    is derived in _[2]. This particular implementation follows that implemented in the
-    Matlab routine ode15s described in [1] and the SciPy implementation [3], which
+    is derived in [2]_. This particular implementation follows that implemented in the
+    Matlab routine ode15s described in [1]_ and the SciPy implementation [3]_, which
     features the NDF formulas for improved stability, with associated differences in the
     error constants, and calculates the jacobian at J(t_{n+1}, y^0_{n+1}).  This
-    implementation was based on that implemented in the scipy library [3], which also
-    mainly follows [1] but uses the more standard jacobian update.
+    implementation was based on that implemented in the scipy library [3]_, which also
+    mainly follows [1]_ but uses the more standard jacobian update.
 
     Parameters
     ----------
@@ -55,8 +55,6 @@ def jax_bdf_integrate(fun, y0, t_eval, jac=None, inputs=None, rtol=1e-6, atol=1e
            T., Cournapeau, D., ... & van der Walt, S. J. (2020). SciPy 1.0:
            fundamental algorithms for scientific computing in Python.
            Nature methods, 17(3), 261-272.
-    .. [4] E. Hairer, S. P. Norsett G. Wanner, "Solving Ordinary Differential
-               Equations I: Nonstiff Problems", Sec. II.4.
     """
 
     y0_device = jax.device_put(y0).reshape(-1)
@@ -221,7 +219,12 @@ def _select_initial_step(state, fun, t0, y0, f0, h0):
     comparing the predicted state against that using the provided function.
 
     Optimal step size based on the selected order is obtained using formula (4.12)
-    in [4]
+    in [1]
+
+    References
+    ----------
+    .. [1] E. Hairer, S. P. Norsett G. Wanner, "Solving Ordinary Differential
+               Equations I: Nonstiff Problems", Sec. II.4.
     """
     scale = state['atol'] + np.abs(y0) * state['rtol']
     y1 = y0 + h0 * f0
