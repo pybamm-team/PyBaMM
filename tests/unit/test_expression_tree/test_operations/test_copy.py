@@ -14,7 +14,7 @@ class TestCopy(unittest.TestCase):
         v_n = pybamm.Variable("v", "negative electrode")
         x_n = pybamm.standard_spatial_vars.x_n
         v_s = pybamm.Variable("v", "separator")
-        vec = pybamm.Vector(np.array([1, 2, 3, 4, 5]))
+        vec = pybamm.Vector([1, 2, 3, 4, 5])
         mesh = get_mesh_for_testing()
 
         for symbol in [
