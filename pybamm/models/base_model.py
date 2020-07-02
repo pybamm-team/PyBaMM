@@ -710,17 +710,20 @@ class BaseModel(object):
             name = input_param.name
             inputs_wrong_order[name] = casadi.MX.sym(name, input_param._expected_size)
         # Read external variables
+        external_casadi = {}
         for external_varaiable in self.external_variables:
             name = external_varaiable.name
             ev_size = external_varaiable._evaluate_for_shape().shape[0]
-            inputs_wrong_order[name] = casadi.MX.sym(name, ev_size)
+            external_casadi[name] = casadi.MX.sym(name, ev_size)
         # Sort according to input_parameter_order
         if input_parameter_order is None:
             inputs = inputs_wrong_order
         else:
             inputs = {name: inputs_wrong_order[name] for name in input_parameter_order}
-
-        inputs_stacked = casadi.vertcat(*[p for p in inputs.values()])
+        # Set up external variables and inputs
+        # Put external variables first like the integrator expects
+        ext_and_in = {**external_casadi, **inputs}
+        inputs_stacked = casadi.vertcat(*[p for p in ext_and_in.values()])
 
         # Convert initial conditions to casadi form
         y0 = self.concatenated_initial_conditions.to_casadi(
@@ -730,7 +733,7 @@ class BaseModel(object):
         z0 = y0[self.concatenated_rhs.size :]
 
         # Convert rhs and algebraic to casadi form and calculate jacobians
-        rhs = self.concatenated_rhs.to_casadi(t_casadi, y_casadi, inputs=inputs)
+        rhs = self.concatenated_rhs.to_casadi(t_casadi, y_casadi, inputs=ext_and_in)
         jac_rhs = casadi.jacobian(rhs, y_casadi)
         algebraic = self.concatenated_algebraic.to_casadi(
             t_casadi, y_casadi, inputs=inputs
@@ -741,7 +744,7 @@ class BaseModel(object):
         variables = OrderedDict()
         for name in variable_names:
             var = self.variables[name]
-            variables[name] = var.to_casadi(t_casadi, y_casadi, inputs=inputs)
+            variables[name] = var.to_casadi(t_casadi, y_casadi, inputs=ext_and_in)
 
         casadi_dict = {
             "t": t_casadi,
