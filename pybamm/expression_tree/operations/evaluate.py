@@ -8,10 +8,12 @@ import scipy.sparse
 from collections import OrderedDict
 
 import numbers
-import jax
+from platform import system
+if system() != "Windows":
+    import jax
 
-from jax.config import config
-config.update("jax_enable_x64", True)
+    from jax.config import config
+    config.update("jax_enable_x64", True)
 
 
 def id_to_python_variable(symbol_id, constant=False):
