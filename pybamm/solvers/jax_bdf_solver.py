@@ -675,7 +675,7 @@ def _bdf_interpolate(state, t_eval):
     return order_summation
 
 
-@jax.partial(jax.custom_vjp, nondiff_argnums=(0, 1, 2))
+#@jax.partial(jax.custom_vjp, nondiff_argnums=(0, 1, 2))
 def _bdf_odeint(fun, rtol, atol, y0, t_eval, *args):
     """
     main solver loop - creates a stepper object and steps through time, interpolating to
@@ -772,7 +772,7 @@ def _bdf_odeint_rev(func, rtol, atol, res, g):
     return (y_bar, ts_bar, *args_bar)
 
 
-_bdf_odeint.defvjp(_bdf_odeint_fwd, _bdf_odeint_rev)
+#_bdf_odeint.defvjp(_bdf_odeint_fwd, _bdf_odeint_rev)
 
 
 @cache()

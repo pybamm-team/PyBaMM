@@ -117,7 +117,7 @@ class TestJaxSolver(unittest.TestCase):
         disc.process_model(model)
         # Solve
         solver = pybamm.JaxSolver(rtol=1e-8, atol=1e-8)
-        t_eval = np.linspace(0, 5, 100)
+        t_eval = np.linspace(0, 5, 80)
 
         t0 = time.perf_counter()
         solution = solver.solve(model, t_eval, inputs={"rate": 0.1})
@@ -153,7 +153,7 @@ class TestJaxSolver(unittest.TestCase):
         disc.process_model(model)
         # Solve
         solver = pybamm.JaxSolver(rtol=1e-8, atol=1e-8)
-        t_eval = np.linspace(0, 5, 100)
+        t_eval = np.linspace(0, 5, 80)
 
         with self.assertRaisesRegex(RuntimeError, "Model is not set up for solving"):
             solver.get_solve(model, t_eval)
