@@ -43,7 +43,7 @@ Marquis2019 = {
     "electrolyte": "lipf6_Marquis2019",
     "experiment": "1C_discharge_from_full_Marquis2019",
     "sei": "example",
-    "mechanical":"lico2_graphite_Ai2020",
+    "mechanical": "lico2_graphite_Ai2020",
     "citation": "marquis2019asymptotic",
 }
 

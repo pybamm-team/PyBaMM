@@ -2,7 +2,7 @@
 # Base class for particle cracking models.
 #
 import pybamm
-from .mechanical_results import MechanicalResults
+
 
 class BaseCracking(pybamm.BaseSubModel):
     """Base class for particle cracking models.
@@ -19,8 +19,10 @@ class BaseCracking(pybamm.BaseSubModel):
         super().__init__(param)
 
     def get_standard_variables(self):
-        l_cr_n=pybamm.Variable("Negative particle crack length")  # crack length in anode particles
-        l_cr_n_dim=pybamm.Variable("Negative particle crack length")  # crack length in anode particles
+        l_cr_n = pybamm.Variable("Negative particle crack length")  
+        # crack length in anode particles
+        l_cr_n_dim = pybamm.Variable("Negative particle crack length")  
+        # crack length in anode particles
         variables = {
             "Negative particle crack length [m]": l_cr_n_dim,
             "Negative particle crack length": l_cr_n,
@@ -41,10 +43,10 @@ class BaseCracking(pybamm.BaseSubModel):
         variables : dict
         The variables which can be derived from the crack length.
         """
-        rho_cr=pybamm.mechanical_parameters.rho_cr
-        a_n=pybamm.standard_parameters_lithium_ion.a_n
-        a_n_cr= l_cr_n*2*rho_cr # crack surface area normalised by a_n
-        a_n_cr_dim= a_n_cr*a_n # crack surface area [m-1]
+        rho_cr = pybamm.mechanical_parameters.rho_cr
+        a_n = pybamm.standard_parameters_lithium_ion.a_n
+        a_n_cr = l_cr_n*2*rho_cr # crack surface area normalised by a_n
+        a_n_cr_dim = a_n_cr*a_n # crack surface area [m-1]
         #a_n_cr_xavg=pybamm.x_average(a_n_cr)
         variables = {
             "Crack surface to volume ratio [m-1]": a_n_cr_dim,
@@ -64,23 +66,25 @@ class BaseCracking(pybamm.BaseSubModel):
         variables : dict
         The variables of radial and tangential stresses and surface displacement
         """
-        c_s_n=variables["Negative particle concentration"]
-        c_s_n_avg=pybamm.r_average(c_s_n) # average concentration for particles
-        c_s_n_avg.domain=["Negative electrode"]
+        c_s_n = variables["Negative particle concentration"]
+        c_s_n_avg = pybamm.r_average(c_s_n) # average concentration for particles
+        c_s_n_avg.domain = ["Negative electrode"]
         # need to check whether is avarage cs in a particle
-        c_s_n_surf=variables["Negative particle surface concentration"]
-        #c_s_n_avg=2*c_s_n_surf
-        mp=pybamm.mechanical_parameters
+        c_s_n_surf = variables["Negative particle surface concentration"]
+        #c_s_n_avg = 2*c_s_n_surf
+        mp = pybamm.mechanical_parameters
         c_scale = self.param.c_n_max
-        disp_n_surf_dim=mp.Omega_n*mp.R_n/3*(c_s_n_avg-mp.c_n_0)*c_scale # c0 reference concentration for no deformation
-        stress_r_n_surf_dim=0*mp.E_n
-        stress_t_n_surf_dim=mp.Omega_n*mp.E_n/3.0/(1.0-mp.nu_n) *(c_s_n_avg - c_s_n_surf)*c_scale
+        disp_n_surf_dim = mp.Omega_n * mp.R_n / 3 * (c_s_n_avg - mp.c_n_0) * c_scale 
+        # c0 reference concentration for no deformation
+        stress_r_n_surf_dim = 0 * mp.E_n
+        stress_t_n_surf_dim = mp.Omega_n * mp.E_n / 3.0 / (1.0 - mp.nu_n) \
+                                * (c_s_n_avg - c_s_n_surf) * c_scale
 
-        disp_n_surf=disp_n_surf_dim/mp.R_n
-        stress_r_n_surf=stress_r_n_surf_dim/mp.E_n
-        stress_t_n_surf=stress_t_n_surf_dim/mp.E_n
-        # stress_r_n_centre=2.0*mp.Omega_n*mp.E_n/9.0/(1.0-mp.nu_n)(c_s_n_avg-Cs_n_centre)
-        # stress_t_n_centre=2.0*mp.Omega_n*mp.E_n/9.0/(1.0-mp.nu_n)*(c_s_n_avg-Cs_n_centre)
+        disp_n_surf = disp_n_surf_dim/mp.R_n
+        stress_r_n_surf = stress_r_n_surf_dim/mp.E_n
+        stress_t_n_surf = stress_t_n_surf_dim/mp.E_n
+        # stress_r_n_centre = 2.0*mp.Omega_n*mp.E_n/9.0/(1.0-mp.nu_n)(c_s_n_avg-Cs_n_centre)
+        # stress_t_n_centre = 2.0*mp.Omega_n*mp.E_n/9.0/(1.0-mp.nu_n)*(c_s_n_avg-Cs_n_centre)
 
         return {
             "Negative particle surface tangential stress": stress_t_n_surf,
