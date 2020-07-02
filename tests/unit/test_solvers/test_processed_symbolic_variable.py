@@ -108,7 +108,7 @@ class TestProcessedSymbolicVariable(unittest.TestCase):
         sol = pybamm.Solution(t_sol, y_sol)
         processed_eqn = pybamm.ProcessedSymbolicVariable(eqn_sol, sol)
         np.testing.assert_array_equal(
-            processed_eqn.value(), y_sol + x_sol[:, np.newaxis]
+            processed_eqn.value(), (y_sol + x_sol[:, np.newaxis]).T.reshape(-1, 1)
         )
 
     def test_processed_variable_1D_with_scalar_inputs(self):
@@ -154,7 +154,8 @@ class TestProcessedSymbolicVariable(unittest.TestCase):
 
         # Test values
         np.testing.assert_array_equal(
-            processed_eqn.value({"p": 27, "q": -42}), 27 * y_sol - 84,
+            processed_eqn.value({"p": 27, "q": -42}),
+            (27 * y_sol - 84).T.reshape(-1, 1),
         )
 
         # Test sensitivities

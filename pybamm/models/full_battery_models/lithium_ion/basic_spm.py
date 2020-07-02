@@ -167,3 +167,7 @@ class BasicSPM(BaseModel):
             pybamm.Event("Minimum voltage", V - param.voltage_low_cut),
             pybamm.Event("Maximum voltage", V - param.voltage_high_cut),
         ]
+
+    def new_copy(self, build=False):
+        return pybamm.BaseModel.new_copy(self)
+
