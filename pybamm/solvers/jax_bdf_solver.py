@@ -8,7 +8,7 @@ config.update("jax_enable_x64", True)
 def jax_bdf_integrate(fun, y0, t_eval, jac=None, inputs=None, rtol=1e-6, atol=1e-6):
     """
     Backward Difference formula (BDF) implicit multistep integrator. The basic algorithm
-    is derived in [2]. This particular implementation follows that implemented in the
+    is derived in _[2]. This particular implementation follows that implemented in the
     Matlab routine ode15s described in [1] and the SciPy implementation [3], which
     features the NDF formulas for improved stability, with associated differences in the
     error constants, and calculates the jacobian at J(t_{n+1}, y^0_{n+1}).  This
