@@ -123,31 +123,6 @@ class ProcessedSymbolicVariable(object):
             else:
                 entries = casadi.vertcat(entries, next_entries)
 
-        # Get node values
-        nodes = self.mesh.nodes
-
-        # assign attributes for reference (either x_sol or r_sol)
-        self.entries = entries
-        self.dimensions = 1
-        if self.domain[0] in ["negative particle", "positive particle"]:
-            self.first_dimension = "r"
-            self.r_sol = nodes
-        elif self.domain[0] in [
-            "negative electrode",
-            "separator",
-            "positive electrode",
-        ]:
-            self.first_dimension = "x"
-            self.x_sol = nodes
-        elif self.domain == ["current collector"]:
-            self.first_dimension = "z"
-            self.z_sol = nodes
-        else:
-            self.first_dimension = "x"
-            self.x_sol = nodes
-
-        self.first_dim_pts = nodes
-
     def value(self, inputs=None, check_inputs=True):
         """
         Returns the value of the variable at the specified input values
@@ -218,17 +193,16 @@ class ProcessedSymbolicVariable(object):
         # Convert dict to casadi vector
         if not isinstance(inputs_dict, dict):
             raise TypeError("inputs should be 'dict' but are {}".format(inputs_dict))
-        # Check keys are consistent
-        if list(inputs_dict.keys()) != list(self.symbolic_inputs_dict.keys()):
-            raise ValueError(
-                "Inconsistent input keys: expected {}, actual {}".format(
-                    list(self.symbolic_inputs_dict.keys()), list(inputs_dict.keys())
-                )
-            )
-        inputs = casadi.vertcat(*[p for p in inputs_dict.values()])
+        # Sort input dictionary keys according to the symbolic inputs dictionary
+        # For practical number of input parameters this should be extremely fast and
+        # so is ok to do at each step
+        inputs_dict_sorted = {
+            k: inputs_dict[k] for k in self.symbolic_inputs_dict.keys()
+        }
+        inputs = casadi.vertcat(*[p for p in inputs_dict_sorted.values()])
         if inputs.shape[0] != self.symbolic_inputs_total_shape:
             # Find the variable which caused the error, for a clearer error message
-            for key, inp in inputs_dict.items():
+            for key, inp in inputs_dict_sorted.items():
                 if inp.shape[0] != self.symbolic_inputs_dict[key].shape[0]:
                     raise ValueError(
                         "Wrong shape for input '{}': expected {}, actual {}".format(
