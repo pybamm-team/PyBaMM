@@ -68,7 +68,7 @@ class BaseCracking(pybamm.BaseSubModel):
         """
         c_s_n = variables["Negative particle concentration"]
         c_s_n_avg = pybamm.r_average(c_s_n) # average concentration for particles
-        c_s_n_avg.domain = ["Negative electrode"]
+        c_s_n_avg.domain = ["negative electrode"]
         # need to check whether is avarage cs in a particle
         c_s_n_surf = variables["Negative particle surface concentration"]
         #c_s_n_avg = 2*c_s_n_surf
