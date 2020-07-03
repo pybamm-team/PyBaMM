@@ -575,6 +575,29 @@ class TestEvaluate(unittest.TestCase):
         result = evaluator.evaluate()
         np.testing.assert_allclose(result, expr.evaluate())
 
+    @unittest.skipIf(system() == "Windows", "JAX not supported on windows")
+    def test_evaluator_jax_jacobian(self):
+        a = pybamm.StateVector(slice(0, 1))
+        y_tests = [np.array([[2.0]]), np.array([[1.0]])]
+
+        expr = a ** 2
+        expr_jac = 2 * a
+        evaluator = pybamm.EvaluatorJax(expr)
+        evaluator_jac_test = evaluator.get_jacobian()
+        evaluator_jac = pybamm.EvaluatorJax(expr_jac)
+        for y in y_tests:
+            result_test = evaluator_jac_test.evaluate(t=None, y=y)
+            result_true = evaluator_jac.evaluate(t=None, y=y)
+            np.testing.assert_allclose(result_test, result_true)
+
+    @unittest.skipIf(system() == "Windows", "JAX not supported on windows")
+    def test_evaluator_jax_debug(self):
+        a = pybamm.StateVector(slice(0, 1))
+        expr = a ** 2
+        y_test = np.array([[2.0], [3.0]])
+        evaluator = pybamm.EvaluatorJax(expr)
+        evaluator.debug(y=y_test)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
