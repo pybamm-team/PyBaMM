@@ -15,6 +15,10 @@ def test_function(arg):
     return arg + arg
 
 
+def test_function2(arg1, arg2):
+    return arg1 + arg2
+
+
 class TestEvaluate(unittest.TestCase):
     def test_find_symbols(self):
         a = pybamm.StateVector(slice(0, 1))
@@ -326,6 +330,11 @@ class TestEvaluate(unittest.TestCase):
         result = evaluator.evaluate(t=None, y=np.array([[2], [3]]))
         self.assertEqual(result, 12)
 
+        expr = pybamm.Function(test_function2, a, b)
+        evaluator = pybamm.EvaluatorPython(expr)
+        result = evaluator.evaluate(t=None, y=np.array([[2], [3]]))
+        self.assertEqual(result, 5)
+
         # test a constant expression
         expr = pybamm.Scalar(2) * pybamm.Scalar(3)
         evaluator = pybamm.EvaluatorPython(expr)
@@ -399,10 +408,25 @@ class TestEvaluate(unittest.TestCase):
             result = evaluator.evaluate(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
+        expr = B @ pybamm.StateVector(slice(0, 2))
+        evaluator = pybamm.EvaluatorPython(expr)
+        for t, y in zip(t_tests, y_tests):
+            result = evaluator.evaluate(t=t, y=y)
+            np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
+
         # test numpy concatenation
-        a = pybamm.Vector([[1], [2]])
-        b = pybamm.Vector([[3]])
+        a = pybamm.StateVector(slice(0, 1))
+        b = pybamm.StateVector(slice(1, 2))
+        c = pybamm.StateVector(slice(2, 3))
+
+        y_tests = [np.array([[2], [3], [4]]), np.array([[1], [3], [2]])]
+        t_tests = [1, 2]
         expr = pybamm.NumpyConcatenation(a, b)
+        evaluator = pybamm.EvaluatorPython(expr)
+        for t, y in zip(t_tests, y_tests):
+            result = evaluator.evaluate(t=t, y=y)
+            np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
+        expr = pybamm.NumpyConcatenation(a, c)
         evaluator = pybamm.EvaluatorPython(expr)
         for t, y in zip(t_tests, y_tests):
             result = evaluator.evaluate(t=t, y=y)
@@ -418,12 +442,11 @@ class TestEvaluate(unittest.TestCase):
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y).toarray())
 
         # test Inner
-        v = pybamm.Vector(np.ones(5), domain="test")
-        w = pybamm.Vector(2 * np.ones(5), domain="test")
-        expr = pybamm.Inner(v, w)
+        expr = pybamm.Inner(a, b)
         evaluator = pybamm.EvaluatorPython(expr)
-        result = evaluator.evaluate()
-        np.testing.assert_allclose(result, expr.evaluate())
+        for t, y in zip(t_tests, y_tests):
+            result = evaluator.evaluate(t=t, y=y)
+            np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
     @unittest.skipIf(system() == "Windows", "JAX not supported on windows")
     def test_evaluator_jax(self):
