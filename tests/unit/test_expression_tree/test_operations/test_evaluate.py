@@ -435,7 +435,8 @@ class TestEvaluate(unittest.TestCase):
         # test sparse stack
         A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))
         B = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[2, 0], [5, 0]])))
-        expr = pybamm.SparseStack(A, B)
+        a = pybamm.StateVector(slice(0, 1))
+        expr = pybamm.SparseStack(A, a * B)
         evaluator = pybamm.EvaluatorPython(expr)
         for t, y in zip(t_tests, y_tests):
             result = evaluator.evaluate(t=t, y=y).toarray()
@@ -443,6 +444,24 @@ class TestEvaluate(unittest.TestCase):
 
         # test Inner
         expr = pybamm.Inner(a, b)
+        evaluator = pybamm.EvaluatorPython(expr)
+        for t, y in zip(t_tests, y_tests):
+            result = evaluator.evaluate(t=t, y=y)
+            np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
+
+        v = pybamm.StateVector(slice(0, 2))
+        A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))
+        expr = pybamm.Inner(A, v)
+        evaluator = pybamm.EvaluatorPython(expr)
+        for t, y in zip(t_tests, y_tests):
+            result = evaluator.evaluate(t=t, y=y).toarray()
+            np.testing.assert_allclose(result, expr.evaluate(t=t, y=y).toarray())
+
+        y_tests = [np.array([[2], [3], [4], [5]]), np.array([[1], [3], [2], [1]])]
+        t_tests = [1, 2]
+        a = pybamm.StateVector(slice(0, 1), slice(3, 4))
+        b = pybamm.StateVector(slice(1, 3))
+        expr = a * b
         evaluator = pybamm.EvaluatorPython(expr)
         for t, y in zip(t_tests, y_tests):
             result = evaluator.evaluate(t=t, y=y)
@@ -552,7 +571,8 @@ class TestEvaluate(unittest.TestCase):
         # test sparse stack
         A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))
         B = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[2, 0], [5, 0]])))
-        expr = pybamm.SparseStack(A, B)
+        a = pybamm.StateVector(slice(0, 1))
+        expr = pybamm.SparseStack(A, a * B)
         evaluator = pybamm.EvaluatorJax(expr)
         for t, y in zip(t_tests, y_tests):
             result = evaluator.evaluate(t=t, y=y)

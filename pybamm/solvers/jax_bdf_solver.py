@@ -69,7 +69,8 @@ MIN_FACTOR = 0.2
 MAX_FACTOR = 10
 
 
-def flax_cond(pred, true_operand, true_fun, false_operand, false_fun):
+def flax_cond(pred, true_operand, true_fun,
+              false_operand, false_fun):  # pragma: no cover
     """
     for debugging purposes, use this instead of jax.lax.cond
     """
@@ -79,7 +80,7 @@ def flax_cond(pred, true_operand, true_fun, false_operand, false_fun):
         return false_fun(false_operand)
 
 
-def flax_while_loop(cond_fun, body_fun, init_val):
+def flax_while_loop(cond_fun, body_fun, init_val):  # pragma: no cover
     """
     for debugging purposes, use this instead of jax.lax.while_loop
     """
@@ -89,7 +90,7 @@ def flax_while_loop(cond_fun, body_fun, init_val):
     return val
 
 
-def flax_fori_loop(start, stop, body_fun, init_val):
+def flax_fori_loop(start, stop, body_fun, init_val):  # pragma: no cover
     """
     for debugging purposes, use this instead of jax.lax.fori_loop
     """
