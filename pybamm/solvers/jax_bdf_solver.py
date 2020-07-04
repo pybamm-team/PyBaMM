@@ -1,11 +1,11 @@
 from functools import partial
 import operator as op
+import numpy as onp
 
 import jax
 import jax.numpy as jnp
 from jax import core
-from jax import lax
-from jax import ops
+from jax import dtypes
 from jax.util import safe_map, safe_zip, cache, split_list
 from jax.api_util import flatten_fun_nokwargs
 from jax.flatten_util import ravel_pytree
@@ -118,6 +118,19 @@ def flax_fori_loop(start, stop, body_fun, init_val):  # pragma: no cover
     for i in range(start, stop):
         val = body_fun(i, val)
     return val
+
+def flax_scan(f, init, xs, length=None):  # pragma: no cover
+    """
+    for debugging purposes, use this instead of jax.lax.scan
+    """
+    if xs is None:
+        xs = [None] * length
+    carry = init
+    ys = []
+    for x in xs:
+        carry, y = f(carry, x)
+        ys.append(y)
+    return carry, onp.stack(ys)
 
 
 def _compute_R(order, factor):
@@ -675,7 +688,7 @@ def _bdf_interpolate(state, t_eval):
     return order_summation
 
 
-#@jax.partial(jax.custom_vjp, nondiff_argnums=(0, 1, 2))
+@jax.partial(jax.custom_vjp, nondiff_argnums=(0, 1, 2))
 def _bdf_odeint(fun, rtol, atol, y0, t_eval, *args):
     """
     main solver loop - creates a stepper object and steps through time, interpolating to
@@ -692,7 +705,7 @@ def _bdf_odeint(fun, rtol, atol, y0, t_eval, *args):
 
     stepper = _bdf_init(fun_bind_inputs, jac_bind_inputs, t0, y0, h0, rtol, atol)
     i = 0
-    y_out = jnp.empty((len(y0), len(t_eval)), dtype=y0.dtype)
+    y_out = jnp.empty((len(t_eval), len(y0)), dtype=y0.dtype)
 
     init_state = [stepper, t_eval, i, y_out, 0]
 
@@ -707,7 +720,7 @@ def _bdf_odeint(fun, rtol, atol, y0, t_eval, *args):
 
         def for_body(j, y_out):
             t = t_eval[j]
-            y_out = jax.ops.index_update(y_out, jax.ops.index[:, j],
+            y_out = jax.ops.index_update(y_out, jax.ops.index[j, :],
                                          _bdf_interpolate(stepper, t))
             return y_out
 
@@ -741,7 +754,7 @@ def _bdf_odeint_rev(func, rtol, atol, res, g):
     def aug_dynamics(augmented_state, t, *args):
         """Original system augmented with vjp_y, vjp_t and vjp_args."""
         y, y_bar, *_ = augmented_state
-        # `t` here is negatice time, so we need to negate again to get back to
+        # `t` here is negative time, so we need to negate again to get back to
         # normal time. See the `odeint` invocation in `scan_fun` below.
         y_dot, vjpfun = jax.vjp(func, y, -t, *args)
         return (-y_dot, *vjpfun(y_bar))
@@ -766,14 +779,13 @@ def _bdf_odeint_rev(func, rtol, atol, res, g):
         return (y_bar, t0_bar, args_bar), t_bar
 
     init_carry = (g[-1], 0., tree_map(jnp.zeros_like, args))
-    (y_bar, t0_bar, args_bar), rev_ts_bar = lax.scan(
+    (y_bar, t0_bar, args_bar), rev_ts_bar = jax.lax.scan(
         scan_fun, init_carry, jnp.arange(len(ts) - 1, 0, -1))
     ts_bar = jnp.concatenate([jnp.array([t0_bar]), rev_ts_bar[::-1]])
     return (y_bar, ts_bar, *args_bar)
 
 
-#_bdf_odeint.defvjp(_bdf_odeint_fwd, _bdf_odeint_rev)
-
+_bdf_odeint.defvjp(_bdf_odeint_fwd, _bdf_odeint_rev)
 
 @cache()
 def closure_convert(fun, in_tree, in_avals):
@@ -781,19 +793,33 @@ def closure_convert(fun, in_tree, in_avals):
     wrapped_fun, out_tree = flatten_fun_nokwargs(lu.wrap_init(fun), in_tree)
     with core.initial_style_staging():
         jaxpr, out_pvals, consts = pe.trace_to_jaxpr(
-            wrapped_fun, in_pvals, instantiate=True, stage_out=False)
+        wrapped_fun, in_pvals, instantiate=True, stage_out=False)
     out_tree = out_tree()
-    num_consts = len(consts)
 
-    def converted_fun(y, t, *consts_args):
-        consts, args = split_list(consts_args, [num_consts])
+    # We only want to closure convert for constants with respect to which we're
+    # differentiating. As a proxy for that, we hoist consts with float dtype.
+    # TODO(mattjj): revise this approach
+    is_float = lambda c: dtypes.issubdtype(dtypes.dtype(c), jnp.inexact)
+    (closure_consts, hoisted_consts), merge = partition_list(is_float, consts)
+    num_consts = len(hoisted_consts)
+
+    def converted_fun(y, t, *hconsts_args):
+        hoisted_consts, args = split_list(hconsts_args, [num_consts])
+        consts = merge(closure_consts, hoisted_consts)
         all_args, in_tree2 = tree_flatten((y, t, *args))
         assert in_tree == in_tree2
         out_flat = core.eval_jaxpr(jaxpr, consts, *all_args)
         return tree_unflatten(out_tree, out_flat)
 
-    return converted_fun, consts
+    return converted_fun, hoisted_consts
 
+def partition_list(choice, lst):
+    out = [], []
+    which = [out[choice(elt)].append(elt) or choice(elt) for elt in lst]
+    def merge(l1, l2):
+        i1, i2 = iter(l1), iter(l2)
+        return [next(i2 if snd else i1) for snd in which]
+    return out, merge
 
 def abstractify(x):
     return core.raise_to_shaped(core.get_aval(x))
@@ -801,7 +827,6 @@ def abstractify(x):
 
 def ravel_first_arg(f, unravel):
     return ravel_first_arg_(lu.wrap_init(f), unravel).call_wrapped
-
 
 @lu.transformation
 def ravel_first_arg_(unravel, y_flat, *args):

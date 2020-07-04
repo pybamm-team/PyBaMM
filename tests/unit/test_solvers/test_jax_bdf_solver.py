@@ -27,7 +27,7 @@ class TestJaxBDFSolver(unittest.TestCase):
         disc.process_model(model)
 
         # Solve
-        t_eval = np.linspace(0, 1, 80)
+        t_eval = np.linspace(0.0, 1.0, 80)
         y0 = model.concatenated_initial_conditions.evaluate().reshape(-1)
         rhs = pybamm.EvaluatorJax(model.concatenated_rhs)
 
@@ -76,10 +76,23 @@ class TestJaxBDFSolver(unittest.TestCase):
         def fun(y, t, inputs):
             return rhs.evaluate(t=t, y=y, inputs=inputs).reshape(-1)
 
-        grad_integrate = jax.jacfwd(pybamm.jax_bdf_integrate, argnums=3)
+        h = 0.0001
+        rate = 0.1
 
-        grad = grad_integrate(fun, y0, t_eval, {"rate": 0.1}, rtol=1e-9, atol=1e-9)
+
+        grad_integrate = jax.jacrev(pybamm.jax_bdf_integrate, argnums=3)
+
+        grad = grad_integrate(fun, y0, t_eval, {"rate": rate}, rtol=1e-9, atol=1e-9)
         print(grad)
+
+        eval_plus = pybamm.jax_bdf_integrate(fun, y0, t_eval, {"rate": rate + h},
+                                             rtol=1e-9, atol=1e-9)
+        eval_neg = pybamm.jax_bdf_integrate(fun, y0, t_eval, {"rate": rate - h},
+                                             rtol=1e-9, atol=1e-9)
+        grad_num = (eval_plus - eval_neg) / (2 * h)
+        print(grad_num)
+
+
 
         np.testing.assert_allclose(y[0, :].reshape(-1), np.exp(-0.1 * t_eval))
 
