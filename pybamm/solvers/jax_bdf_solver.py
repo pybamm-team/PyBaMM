@@ -167,11 +167,11 @@ def _bdf_init(fun, jac, t0, y0, h0, rtol, atol):
     ----------
 
     fun: callable
-        function with signature (t, y), where t is a scalar time and y is a ndarray with
+        function with signature (y, t), where t is a scalar time and y is a ndarray with
         shape (n,), returns the rhs of the system of ODE equations as an nd array with
         shape (n,)
     jac: callable
-        function with signature (t, y), where t is a scalar time and y is a ndarray with
+        function with signature (y, t), where t is a scalar time and y is a ndarray with
         shape (n,), returns the jacobian matrix of fun as an ndarray with shape (n,n)
     t0: float
         initial time
@@ -187,7 +187,7 @@ def _bdf_init(fun, jac, t0, y0, h0, rtol, atol):
     state = {}
     state['t'] = t0
     state['y'] = y0
-    f0 = fun(t0, y0)
+    f0 = fun(y0, t0)
     state['atol'] = atol
     state['rtol'] = rtol
     order = 1
@@ -219,7 +219,7 @@ def _bdf_init(fun, jac, t0, y0, h0, rtol, atol):
     state['c'] = c
     state['error_const'] = error_const
 
-    J = jac(t0, y0)
+    J = jac(y0, t0)
     state['J'] = J
     state['LU'] = jax.scipy.linalg.lu_factor(I - c * J)
 
@@ -249,7 +249,7 @@ def _select_initial_step(state, fun, t0, y0, f0, h0):
     """
     scale = state['atol'] + jnp.abs(y0) * state['rtol']
     y1 = y0 + h0 * f0
-    f1 = fun(t0 + h0, y1)
+    f1 = fun(y1, t0 + h0)
     d2 = jnp.sqrt(jnp.mean(((f1 - f0) / scale)**2))
     order = 1
     h1 = h0 * d2 ** (-1 / (order + 1))
@@ -396,7 +396,7 @@ def _update_jacobian(state, jac):
     we update the jacobian using J(t_{n+1}, y^0_{n+1})
     following the scipy bdf implementation rather than J(t_n, y_n) as per [1]
     """
-    J = jac(state['t'] + state['h'], state['y0'])
+    J = jac(state['y0'], state['t'] + state['h'])
     state['n_jacobian_evals'] += 1
     state['LU'] = jax.scipy.linalg.lu_factor(state['I'] - state['c'] * J)
     state['n_lu_decompositions'] += 1
@@ -426,7 +426,7 @@ def _newton_iteration(state, fun):
 
     def while_body(while_state):
         k, not_converged, dy_norm_old, d, y, state = while_state
-        f_eval = fun(t, y)
+        f_eval = fun(y, t)
         state['n_function_evals'] += 1
         b = c * f_eval - psi - d
         dy = jax.scipy.linalg.lu_solve(LU, b)
@@ -695,10 +695,10 @@ def _bdf_odeint(fun, rtol, atol, y0, t_eval, *args):
     the time points in t_eval
     """
 
-    def fun_bind_inputs(t, y):
+    def fun_bind_inputs(y, t):
         return fun(y, t, *args)
 
-    jac_bind_inputs = jax.jacfwd(fun_bind_inputs, argnums=1)
+    jac_bind_inputs = jax.jacfwd(fun_bind_inputs, argnums=0)
 
     t0 = t_eval[0]
     h0 = t_eval[1] - t0

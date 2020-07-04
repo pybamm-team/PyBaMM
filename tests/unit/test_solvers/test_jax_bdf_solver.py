@@ -39,7 +39,7 @@ class TestJaxBDFSolver(unittest.TestCase):
         t1 = time.perf_counter() - t0
 
         # test accuracy
-        np.testing.assert_allclose(y[0, :], np.exp(0.1 * t_eval),
+        np.testing.assert_allclose(y[:, 0], np.exp(0.1 * t_eval),
                                    rtol=1e-7, atol=1e-7)
 
         t0 = time.perf_counter()
@@ -50,7 +50,7 @@ class TestJaxBDFSolver(unittest.TestCase):
         self.assertLess(t2, t1)
 
         # test second run is accurate
-        np.testing.assert_allclose(y[0, :], np.exp(0.1 * t_eval),
+        np.testing.assert_allclose(y[:, 0], np.exp(0.1 * t_eval),
                                    rtol=1e-7, atol=1e-7)
 
     def test_solver_sensitivities(self):
