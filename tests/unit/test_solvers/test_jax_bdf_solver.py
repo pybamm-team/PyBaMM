@@ -68,8 +68,21 @@ class TestJaxBDFSolver(unittest.TestCase):
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
 
+        #model = pybamm.BaseModel()
+        #var = pybamm.Variable("var")
+        #model.rhs = {var: -pybamm.InputParameter("rate") * var}
+        #model.initial_conditions = {var: 1}
+        ## No need to set parameters; can use base discretisation (no spatial operators)
+
+        ## create discretisation
+        #disc = pybamm.Discretisation()
+        #disc.process_model(model)
+
+        #t_eval = np.linspace(0, 10, 4)
+
+
         # Solve
-        t_eval = np.linspace(0, 10, 80)
+        t_eval = np.linspace(0, 10, 4)
         y0 = model.concatenated_initial_conditions.evaluate().reshape(-1)
         rhs = pybamm.EvaluatorJax(model.concatenated_rhs)
 
@@ -79,22 +92,68 @@ class TestJaxBDFSolver(unittest.TestCase):
         h = 0.0001
         rate = 0.1
 
+        @jax.jit
+        def solve(rate):
+            return pybamm.jax_bdf_integrate(fun, y0, t_eval,
+                                            {'rate': rate},
+                                            rtol=1e-9, atol=1e-9)
 
-        grad_integrate = jax.jacrev(pybamm.jax_bdf_integrate, argnums=3)
+        @jax.jit
+        def solve_odeint(rate):
+            return jax.experimental.ode.odeint(fun, y0, t_eval,
+                                            {'rate': rate},
+                                            rtol=1e-9, atol=1e-9)
 
-        grad = grad_integrate(fun, y0, t_eval, {"rate": rate}, rtol=1e-9, atol=1e-9)
+
+        grad_solve = jax.jit(jax.jacrev(solve))
+        grad = grad_solve(rate)
         print(grad)
 
-        eval_plus = pybamm.jax_bdf_integrate(fun, y0, t_eval, {"rate": rate + h},
-                                             rtol=1e-9, atol=1e-9)
-        eval_neg = pybamm.jax_bdf_integrate(fun, y0, t_eval, {"rate": rate - h},
-                                             rtol=1e-9, atol=1e-9)
+        eval_plus = solve(rate + h)
+        eval_plus2 = solve_odeint(rate + h)
+        print(eval_plus.shape)
+        print(eval_plus2.shape)
+        eval_neg = solve(rate - h)
         grad_num = (eval_plus - eval_neg) / (2 * h)
         print(grad_num)
 
+        grad_solve = jax.jit(jax.jacrev(solve))
+        print('finished calculating jacobian',grad_solve)
+        print('5')
+        time.sleep(1)
+        print('4')
+        time.sleep(1)
+        print('3')
+        time.sleep(1)
+        print('2')
+        time.sleep(1)
+        print('1')
+        time.sleep(1)
+        print('go')
+
+        grad = grad_solve(rate)
+        print('finished executing jacobian')
+        print(grad)
+
+        print('5')
+        time.sleep(1)
+        print('4')
+        time.sleep(1)
+        print('3')
+        time.sleep(1)
+        print('2')
+        time.sleep(1)
+        print('1')
+        time.sleep(1)
+        print('go')
+
+        grad = grad_solve(rate)
+        print(grad)
+        print('finished executing jacobian')
 
 
-        np.testing.assert_allclose(y[0, :].reshape(-1), np.exp(-0.1 * t_eval))
+
+        #np.testing.assert_allclose(y[0, :].reshape(-1), np.exp(-0.1 * t_eval))
 
     def test_solver_with_inputs(self):
         # Create model
