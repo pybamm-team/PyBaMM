@@ -154,7 +154,6 @@ def _bdf_init(fun, jac, t0, y0, h0, rtol, atol):
     state = {}
     state['t'] = t0
     state['y'] = y0
-    #state['fun'] = fun
     f0 = fun(t0, y0)
     state['atol'] = atol
     state['rtol'] = rtol
@@ -164,7 +163,6 @@ def _bdf_init(fun, jac, t0, y0, h0, rtol, atol):
     EPS = np.finfo(y0.dtype).eps
     state['newton_tol'] = np.max((10 * EPS / rtol, np.min((0.03, rtol ** 0.5))))
     state['n_equal_steps'] = 0
-    #state['jac'] = jac
     D = np.empty((MAX_ORDER + 1, len(y0)), dtype=y0.dtype)
     D = jax.ops.index_update(D, jax.ops.index[0, :], y0)
     D = jax.ops.index_update(D, jax.ops.index[1, :], f0 * h0)
