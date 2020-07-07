@@ -10,7 +10,7 @@
 
 ## Breaking changes
 
--   Renamed `quick_plot_vars` to `output_variables` in `Simulation` to be consistent with `QuickPlot` ([#1099](https://github.com/pybamm-team/PyBaMM/pull/1099))
+-  Renamed `quick_plot_vars` to `output_variables` in `Simulation` to be consistent with `QuickPlot`. Passing `quick_plot_vars` to `Simulation.plot()` has been deprecated and `output_variables` should be passed instead ([#1099](https://github.com/pybamm-team/PyBaMM/pull/1099))
 
 
 # [v0.2.3](https://github.com/pybamm-team/PyBaMM/tree/v0.2.3) - 2020-07-01
