@@ -10,7 +10,7 @@ class BaseModel(pybamm.BaseBatteryModel):
     lithium-ion models
 
     **Extends:** :class:`pybamm.BaseBatteryModel`
-
+    
     """
 
     def __init__(self, options=None, name="Unnamed lithium-ion model"):
@@ -19,6 +19,17 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         # Default timescale is discharge timescale
         self.timescale = self.param.tau_discharge
+
+        # Set default length scales
+        self.length_scales = {
+            "negative electrode": self.param.L_x,
+            "separator": self.param.L_x,
+            "positive electrode": self.param.L_x,
+            "negative particle": self.param.R_n,
+            "positive particle": self.param.R_p,
+            "current collector y": self.param.L_y,
+            "current collector z": self.param.L_z,
+        }
         self.set_standard_output_variables()
 
     def set_standard_output_variables(self):
@@ -64,6 +75,11 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         elif self.options["sei"] == "interstitial-diffusion limited":
             self.submodels["negative sei"] = pybamm.sei.InterstitialDiffusionLimited(
+                self.param, "Negative"
+            )
+
+        elif self.options["sei"] == "ec reaction limited":
+            self.submodels["negative sei"] = pybamm.sei.EcReactionLimited(
                 self.param, "Negative"
             )
 
