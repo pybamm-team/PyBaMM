@@ -531,7 +531,7 @@ class Simulation:
         else:
             return tuple(variable_arrays)
 
-    def plot(self, quick_plot_vars=None, output_variables=None, **kwargs):
+    def plot(self, output_variables=None, quick_plot_vars=None, **kwargs):
         """
         A method to quickly plot the outputs of the simulation. Creates a
         :class:`pybamm.QuickPlot` object (with keyword arguments 'kwargs') and
@@ -541,6 +541,8 @@ class Simulation:
         ----------
         output_variables: list, optional
             A list of the variables to plot.
+        quick_plot_vars: list, optional
+            A list of the variables to plot. Deprecated, use output_variables instead.
         **kwargs
             Additional keyword arguments passed to
             :meth:`pybamm.QuickPlot.dynamic_plot`.
