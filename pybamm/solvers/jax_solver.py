@@ -103,7 +103,11 @@ class JaxSolver(pybamm.BaseSolver):
         if model.terminate_events_eval:
             raise RuntimeError("Terminate events not supported for this solver."
                                " Model has the following events:"
-                               " {}".format(model.events))
+                               " {}.\nYou can remove events using `model.events = []`."
+                               " It might be useful to first solve the model using a"
+                               " different solver to obtain the time of the event, then"
+                               " re-solve using no events and a fixed"
+                               " end-time".format(model.events))
 
         # Initial conditions
         y0 = model.y0
