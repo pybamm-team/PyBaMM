@@ -124,13 +124,11 @@ def _compute_R(order, factor):
 
 def _bdf_init(fun, jac, t0, y0, h0, rtol, atol):
     """
-    Backward Difference formula (BDF) implicit multistep integrator. The basic algorithm
-    is derived in [2]. This particular implementation follows that implemented in the
-    Matlab routine ode15s, described in [1], which features the NDF formulas for
-    improved stability, with associated differences in the error constants, and
-    calculates the jacobian at J(t_n, y_n), rather than at the more standard J(t_{n+1},
-    y^0_{n+1}). This implementation was based on that implemented in the scipy library
-    [3], which also mainly follows [1] but uses the more standard jacobian update.
+    Initiation routine for Backward Difference formula (BDF) implicit multistep
+    integrator.
+
+    See jax_bdf_solver function above for details, this function returns a dict with the
+    initial state of the solver
 
     Parameters
     ----------
@@ -146,21 +144,12 @@ def _bdf_init(fun, jac, t0, y0, h0, rtol, atol):
         initial time
     y0: ndarray
         initial state vector with shape (n,)
-
-
-    References
-    ----------
-    .. [1] L. F. Shampine, M. W. Reichelt, "THE MATLAB ODE SUITE", SIAM J. SCI.
-           COMPUTE., Vol. 18, No. 1, pp. 1-22, January 1997.
-    .. [2] G. D. Byrne, A. C. Hindmarsh, "A Polyalgorithm for the Numerical
-           Solution of Ordinary Differential Equations", ACM Transactions on
-           Mathematical Software, Vol. 1, No. 1, pp. 71-96, March 1975.
-    .. [3] Virtanen, P., Gommers, R., Oliphant, T. E., Haberland, M., Reddy,
-           T., Cournapeau, D., ... & van der Walt, S. J. (2020). SciPy 1.0:
-           fundamental algorithms for scientific computing in Python.
-           Nature methods, 17(3), 261-272.
-    .. [4] E. Hairer, S. P. Norsett G. Wanner, "Solving Ordinary Differential
-               Equations I: Nonstiff Problems", Sec. II.4.
+    h0: float
+        initial step size
+    rtol: (optional) float
+        relative tolerance for the solver
+    atol: (optional) float
+        absolute tolerance for the solver
     """
     state = {}
     state['t'] = t0
