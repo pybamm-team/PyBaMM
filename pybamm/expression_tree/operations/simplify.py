@@ -611,7 +611,9 @@ class Simplification(object):
 
         elif isinstance(symbol, pybamm.UnaryOperator):
             # Reassign domain for gradient and divergence
-            if isinstance(symbol, (pybamm.Gradient, pybamm.Divergence)):
+            if isinstance(
+                symbol, (pybamm.Gradient, pybamm.Divergence, pybamm.Integral)
+            ):
                 new_child = self.simplify(symbol.child, clear_domains=False)
             else:
                 new_child = self.simplify(symbol.child)

@@ -21,6 +21,16 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         # Default timescale is discharge timescale
         self.timescale = self.param.tau_discharge
+
+        # Set default length scales
+        self.length_scales = {
+            "negative electrode": self.param.L_x,
+            "separator": self.param.L_x,
+            "positive electrode": self.param.L_x,
+            "current collector y": self.param.L_y,
+            "current collector z": self.param.L_z,
+        }
+
         self.set_standard_output_variables()
 
     @property
@@ -29,12 +39,10 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     @property
     def default_geometry(self):
-        if self.options["dimensionality"] == 0:
-            return pybamm.Geometry("1D macro")
-        elif self.options["dimensionality"] == 1:
-            return pybamm.Geometry("1+1D macro")
-        elif self.options["dimensionality"] == 2:
-            return pybamm.Geometry("2+1D macro")
+        return pybamm.battery_geometry(
+            include_particles=False,
+            current_collector_dimension=self.options["dimensionality"],
+        )
 
     @property
     def default_var_pts(self):

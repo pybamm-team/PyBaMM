@@ -33,8 +33,10 @@ class Full(BaseModel):
 
         j_n = variables["Negative electrode interfacial current density"]
         j_p = variables["Positive electrode interfacial current density"]
+        j_sei_n = variables["Negative electrode sei interfacial current density"]
+        beta_sei_n = self.param.beta_sei_n
 
-        deps_n_dt = -self.param.beta_surf_n * j_n
+        deps_n_dt = -self.param.beta_surf_n * j_n + beta_sei_n * j_sei_n
         deps_s_dt = pybamm.FullBroadcast(
             0, "separator", auxiliary_domains={"secondary": "current collector"}
         )

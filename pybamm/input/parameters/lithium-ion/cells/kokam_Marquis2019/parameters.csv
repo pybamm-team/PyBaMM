@@ -15,6 +15,8 @@ Negative tab centre z-coordinate [m],0.137,,Need to find actual value for KOKAM 
 Positive tab width [m],0.04,,Need to find actual value for KOKAM cell
 Positive tab centre y-coordinate [m],0.147,,Need to find actual value for KOKAM cell
 Positive tab centre z-coordinate [m],0.137,,Need to find actual value for KOKAM cell
+Cell cooling surface area [m2],5.69E-2,,pouch
+Cell volume [m3],7.80E-6,,pouch
 ,,,
 # Current collector properties ,,,
 Negative current collector conductivity [S.m-1],59600000,LIONSIMBA,carbon

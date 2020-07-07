@@ -51,7 +51,7 @@ class BaseSolver(object):
                 "max_steps has been deprecated, and should be set using the "
                 "solver-specific extra-options dictionaries instead"
             )
-        self.models_set_up = set()
+        self.models_set_up = {}
 
         # Defaults, can be overwritten by specific solver
         self.name = "Base solver"
@@ -114,7 +114,7 @@ class BaseSolver(object):
         "Returns a copy of the solver"
         new_solver = copy.copy(self)
         # clear models_set_up
-        new_solver.models_set_up = set()
+        new_solver.models_set_up = {}
         return new_solver
 
     def set_up(self, model, inputs=None):
@@ -163,7 +163,13 @@ class BaseSolver(object):
         inputs = inputs or {}
 
         # Set model timescale
-        model.timescale_eval = model.timescale.evaluate(inputs=inputs)
+        try:
+            model.timescale_eval = model.timescale.evaluate()
+        except KeyError as e:
+            raise pybamm.SolverError(
+                "The model timescale is a function of an input parameter "
+                "(original error: {})".format(e)
+            )
 
         if (
             isinstance(self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver))
@@ -438,8 +444,9 @@ class BaseSolver(object):
             root_sol = self.root_method._integrate(model, [time], inputs)
         except pybamm.SolverError as e:
             raise pybamm.SolverError(
-                "Could not find consistent initial conditions: {}".format(e.args[0])
+                "Could not find consistent states: {}".format(e.args[0])
             )
+        pybamm.logger.info("Found consistent states")
         return root_sol.y.flatten()
 
     def solve(self, model, t_eval=None, external_variables=None, inputs=None):
@@ -498,9 +505,23 @@ class BaseSolver(object):
         if model not in self.models_set_up:
             self.set_up(model, ext_and_inputs)
             set_up_time = timer.time()
-            self.models_set_up.add(model)
+            self.models_set_up.update(
+                {model: {"initial conditions": model.concatenated_initial_conditions}}
+            )
         else:
-            set_up_time = 0
+            ics_set_up = self.models_set_up[model]["initial conditions"]
+            # Check that initial conditions have not been updated
+            if ics_set_up.id == model.concatenated_initial_conditions.id:
+                set_up_time = 0
+            else:
+                # If the new initial conditions are different, set up again
+                # Doing the whole setup again might be slow, but no need to prematurely
+                # optimize this
+                self.set_up(model, ext_and_inputs)
+                self.models_set_up[model][
+                    "initial conditions"
+                ] = model.concatenated_initial_conditions
+                set_up_time = timer.time()
 
         # (Re-)calculate consistent initial conditions
         self._set_initial_conditions(model, ext_and_inputs, update_rhs=True)
@@ -591,7 +612,7 @@ class BaseSolver(object):
                 model.y0 = last_state
                 if len(model.algebraic) > 0:
                     model.y0 = self.calculate_consistent_state(
-                        model, t_eval_dimensionless[end_index], ext_and_inputs,
+                        model, t_eval_dimensionless[end_index], ext_and_inputs
                     )
 
         # restore old y0
@@ -616,6 +637,15 @@ class BaseSolver(object):
                 timer.format(solution.total_time),
             )
         )
+
+        # Raise error if solution only contains one timestep (except for algebraic
+        # solvers, where we may only expect one time in the solution)
+        if self.algebraic_solver is False and len(solution.t) == 1:
+            raise pybamm.SolverError(
+                "Solution time vector has length 1. "
+                "Check whether simulation terminated too early."
+            )
+
         return solution
 
     def step(
@@ -766,7 +796,7 @@ class BaseSolver(object):
                         event.expression.evaluate(
                             solution.t_event,
                             solution.y_event,
-                            inputs={k: v[-1] for k, v in solution.inputs.items()},
+                            inputs={k: v[:, -1] for k, v in solution.inputs.items()},
                         )
                     )
             termination_event = min(final_event_values, key=final_event_values.get)

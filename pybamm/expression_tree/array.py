@@ -13,8 +13,9 @@ class Array(pybamm.Symbol):
     Parameters
     ----------
 
-    entries : numpy.array
-        the array associated with the node
+    entries : numpy.array or list
+        the array associated with the node. If a list is provided, it is converted to a
+        numpy array
     name : str, optional
         the name of the node
     domain : iterable of str, optional
@@ -35,6 +36,8 @@ class Array(pybamm.Symbol):
         auxiliary_domains=None,
         entries_string=None,
     ):
+        if isinstance(entries, list):
+            entries = np.array(entries)
         if entries.ndim == 1:
             entries = entries[:, np.newaxis]
         if name is None:
@@ -74,7 +77,7 @@ class Array(pybamm.Symbol):
             if issparse(entries):
                 self._entries_string = str(entries.__dict__)
             else:
-                self._entries_string = entries.tostring()
+                self._entries_string = entries.tobytes()
 
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()`. """
@@ -101,3 +104,24 @@ class Array(pybamm.Symbol):
     def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
         """ See :meth:`pybamm.Symbol._base_evaluate()`. """
         return self._entries
+
+
+def linspace(start, stop, num=50, **kwargs):
+    """
+    Creates a linearly spaced array by calling `numpy.linspace` with keyword
+    arguments 'kwargs'. For a list of 'kwargs' see the
+    `numpy linspace documentation <https://tinyurl.com/yc4ne47x>`_
+    """
+    return pybamm.Array(np.linspace(start, stop, num, **kwargs))
+
+
+def meshgrid(x, y, **kwargs):
+    """
+    Return coordinate matrices as from coordinate vectors by calling
+    `numpy.meshgrid` with keyword arguments 'kwargs'. For a list of 'kwargs'
+    see the `numpy meshgrid documentation <https://tinyurl.com/y8azewrj>`_
+    """
+    [X, Y] = np.meshgrid(x.entries, y.entries)
+    X = pybamm.Array(X)
+    Y = pybamm.Array(Y)
+    return X, Y

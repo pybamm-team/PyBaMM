@@ -4,7 +4,7 @@
 import numpy as np
 import pybamm
 import unittest
-from tests import get_mesh_for_testing, get_1p1d_mesh_for_testing
+from tests import get_mesh_for_testing
 
 
 class TestZeroDimensionalSpatialMethod(unittest.TestCase):
@@ -15,9 +15,12 @@ class TestZeroDimensionalSpatialMethod(unittest.TestCase):
         np.testing.assert_array_equal(spatial_method._mesh, test_mesh)
 
         a = pybamm.Symbol("a")
-        self.assertEqual(a, spatial_method.integral(None, a))
-        self.assertEqual(a, spatial_method.indefinite_integral(None, a))
+        self.assertEqual(a, spatial_method.integral(None, a, "primary"))
+        self.assertEqual(a, spatial_method.indefinite_integral(None, a, "forward"))
         self.assertEqual(a, spatial_method.boundary_value_or_flux(None, a))
+        self.assertEqual(
+            (-a).id, spatial_method.indefinite_integral(None, a, "backward").id
+        )
 
         mass_matrix = spatial_method.mass_matrix(None, None)
         self.assertIsInstance(mass_matrix, pybamm.Matrix)
@@ -38,7 +41,7 @@ class TestZeroDimensionalSpatialMethod(unittest.TestCase):
             var_disc = spatial_method.spatial_variable(var)
             self.assertIsInstance(var_disc, pybamm.Vector)
             np.testing.assert_array_equal(
-                var_disc.evaluate()[:, 0], mesh.combine_submeshes(*var.domain)[0].nodes
+                var_disc.evaluate()[:, 0], mesh.combine_submeshes(*var.domain).nodes
             )
 
         # edges
@@ -49,23 +52,8 @@ class TestZeroDimensionalSpatialMethod(unittest.TestCase):
             var_disc = spatial_method.spatial_variable(var)
             self.assertIsInstance(var_disc, pybamm.Vector)
             np.testing.assert_array_equal(
-                var_disc.evaluate()[:, 0], mesh.combine_submeshes(*var.domain)[0].edges
+                var_disc.evaluate()[:, 0], mesh.combine_submeshes(*var.domain).edges
             )
-
-    def test_broadcast_checks(self):
-        child = pybamm.Symbol("sym", domain=["negative electrode"])
-        symbol = pybamm.BoundaryGradient(child, "left")
-        mesh = get_mesh_for_testing()
-        spatial_method = pybamm.SpatialMethod()
-        spatial_method.build(mesh)
-        with self.assertRaisesRegex(TypeError, "Cannot process BoundaryGradient"):
-            spatial_method.boundary_value_or_flux(symbol, child)
-
-        mesh = get_1p1d_mesh_for_testing()
-        spatial_method = pybamm.SpatialMethod()
-        spatial_method.build(mesh)
-        with self.assertRaisesRegex(NotImplementedError, "Cannot process 2D symbol"):
-            spatial_method.boundary_value_or_flux(symbol, child)
 
 
 if __name__ == "__main__":

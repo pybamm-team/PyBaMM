@@ -42,7 +42,7 @@ class TestScikitsSolvers(unittest.TestCase):
 
         # Create custom model so that custom ics
         class Model:
-            mass_matrix = pybamm.Matrix(np.array([[1.0, 0.0], [0.0, 0.0]]))
+            mass_matrix = pybamm.Matrix([[1.0, 0.0], [0.0, 0.0]])
             y0 = np.array([0.0, 1.0])
             terminate_events_eval = []
             timescale_eval = 1
@@ -92,7 +92,7 @@ class TestScikitsSolvers(unittest.TestCase):
 
         # Create custom model so that custom mass matrix can be used
         class Model:
-            mass_matrix = pybamm.Matrix(np.array([[4.0, 0.0], [0.0, 0.0]]))
+            mass_matrix = pybamm.Matrix([[4.0, 0.0], [0.0, 0.0]])
             y0 = np.array([0.0, 0.0])
             terminate_events_eval = []
             timescale_eval = 1
@@ -170,7 +170,7 @@ class TestScikitsSolvers(unittest.TestCase):
         combined_submesh = mesh.combine_submeshes(
             "negative electrode", "separator", "positive electrode"
         )
-        N = combined_submesh[0].npts
+        N = combined_submesh.npts
 
         # Solve
         solver = pybamm.ScikitsOdeSolver(rtol=1e-9, atol=1e-9)
@@ -388,7 +388,7 @@ class TestScikitsSolvers(unittest.TestCase):
         combined_submesh = mesh.combine_submeshes(
             "negative electrode", "separator", "positive electrode"
         )
-        N = combined_submesh[0].npts
+        N = combined_submesh.npts
 
         def jacobian(t, y):
             return np.block(

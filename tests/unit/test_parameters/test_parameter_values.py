@@ -1,28 +1,37 @@
 #
 # Tests for the Base Parameter Values class
 #
-import pybamm
+
 import os
-import numpy as np
-
+import tempfile
 import unittest
-import tests.shared as shared
 
+import numpy as np
 import pandas as pd
+
+import pybamm
+import tests.shared as shared
 
 
 class TestParameterValues(unittest.TestCase):
+    def test_find_parameter(self):
+        f = tempfile.NamedTemporaryFile()
+        pybamm.PARAMETER_PATH.append(tempfile.gettempdir())
+
+        tempfile_name = os.path.basename(f.name)
+        self.assertEqual(pybamm.ParameterValues.find_parameter(tempfile_name), f.name)
+
     def test_read_parameters_csv(self):
         data = pybamm.ParameterValues({}).read_parameters_csv(
-            pybamm.get_parameters_filepath(
-                os.path.join(
-                    "input",
-                    "parameters",
-                    "lithium-ion",
-                    "cathodes",
-                    "lico2_Marquis2019",
-                    "parameters.csv",
-                )
+            os.path.join(
+                pybamm.root_dir(),
+                "pybamm",
+                "input",
+                "parameters",
+                "lithium-ion",
+                "cathodes",
+                "lico2_Marquis2019",
+                "parameters.csv",
             )
         )
         self.assertEqual(data["Positive electrode porosity"], "0.3")
@@ -37,10 +46,7 @@ class TestParameterValues(unittest.TestCase):
 
         # from file
         param = pybamm.ParameterValues(
-            values=pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/cathodes/lico2_Marquis2019/"
-                + "parameters.csv"
-            )
+            "lithium-ion/cathodes/lico2_Marquis2019/" + "parameters.csv"
         )
         self.assertEqual(param["Positive electrode porosity"], 0.3)
 
@@ -505,6 +511,9 @@ class TestParameterValues(unittest.TestCase):
             "grad_var1": pybamm.grad(var1),
             "d_var1": d * var1,
         }
+        model.timescale = b
+        model.length_scales = {"test": c}
+
         parameter_values = pybamm.ParameterValues({"a": 1, "b": 2, "c": 3, "d": 42})
         parameter_values.process_model(model)
         # rhs
@@ -541,6 +550,9 @@ class TestParameterValues(unittest.TestCase):
         self.assertTrue(
             isinstance(model.variables["d_var1"].children[1], pybamm.Variable)
         )
+        # timescale and length scales
+        self.assertEqual(model.timescale.evaluate(), 2)
+        self.assertEqual(model.length_scales["test"].evaluate(), 3)
 
         # bad boundary conditions
         model = pybamm.BaseModel()

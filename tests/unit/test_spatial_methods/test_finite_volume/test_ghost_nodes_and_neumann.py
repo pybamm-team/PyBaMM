@@ -31,7 +31,7 @@ class TestGhostNodes(unittest.TestCase):
         sp_meth.build(mesh)
         sym_ghost, _ = sp_meth.add_ghost_nodes(var, discretised_symbol, bcs)
         combined_submesh = mesh.combine_submeshes(*whole_cell)
-        y_test = np.linspace(0, 1, combined_submesh[0].npts)
+        y_test = np.linspace(0, 1, combined_submesh.npts)
         np.testing.assert_array_equal(
             sym_ghost.evaluate(y=y_test)[1:-1], discretised_symbol.evaluate(y=y_test)
         )
@@ -77,7 +77,7 @@ class TestGhostNodes(unittest.TestCase):
 
         # Test
         combined_submesh = mesh.combine_submeshes(*whole_cell)
-        y_test = np.ones_like(combined_submesh[0].nodes[:, np.newaxis])
+        y_test = np.ones_like(combined_submesh.nodes[:, np.newaxis])
 
         # both
         sp_meth = pybamm.FiniteVolume()
@@ -117,8 +117,16 @@ class TestGhostNodes(unittest.TestCase):
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
         # add ghost nodes
-        c_s_n = pybamm.Variable("c_s_n", domain=["negative particle"])
-        c_s_p = pybamm.Variable("c_s_p", domain=["positive particle"])
+        c_s_n = pybamm.Variable(
+            "c_s_n",
+            domain=["negative particle"],
+            auxiliary_domains={"secondary": "negative electrode"},
+        )
+        c_s_p = pybamm.Variable(
+            "c_s_p",
+            domain=["positive particle"],
+            auxiliary_domains={"secondary": "positive electrode"},
+        )
 
         disc.set_variable_slices([c_s_n])
         disc_c_s_n = pybamm.StateVector(*disc.y_slices[c_s_n.id])
@@ -137,11 +145,11 @@ class TestGhostNodes(unittest.TestCase):
         mesh_s_n = mesh["negative particle"]
         mesh_s_p = mesh["positive particle"]
 
-        n_prim_pts = mesh_s_n[0].npts
-        n_sec_pts = len(mesh_s_n)
+        n_prim_pts = mesh_s_n.npts
+        n_sec_pts = mesh["negative electrode"].npts
 
-        p_prim_pts = mesh_s_p[0].npts
-        p_sec_pts = len(mesh_s_p)
+        p_prim_pts = mesh_s_p.npts
+        p_sec_pts = mesh["positive electrode"].npts
 
         y_s_n_test = np.kron(np.ones(n_sec_pts), np.ones(n_prim_pts))
         y_s_p_test = np.kron(np.ones(p_sec_pts), np.ones(p_prim_pts))

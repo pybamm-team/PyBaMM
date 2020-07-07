@@ -264,11 +264,7 @@ class TestProcessedSymbolicVariable(unittest.TestCase):
         x = pybamm.SpatialVariable("x", domain=["line"])
 
         geometry = pybamm.Geometry(
-            {
-                "line": {
-                    "primary": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
-                }
-            }
+            {"line": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
         )
         submesh_types = {"line": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh)}
         var_pts = {x: 10}
