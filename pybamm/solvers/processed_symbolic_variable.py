@@ -123,6 +123,8 @@ class ProcessedSymbolicVariable(object):
             else:
                 entries = casadi.vertcat(entries, next_entries)
 
+        self.entries = entries
+
     def value(self, inputs=None, check_inputs=True):
         """
         Returns the value of the variable at the specified input values
