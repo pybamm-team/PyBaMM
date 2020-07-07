@@ -33,7 +33,7 @@ def jax_bdf_integrate(fun, y0, t_eval, jac=None, inputs=None, rtol=1e-6, atol=1e
         dict mapping input parameter names to values
     rtol: (optional) float
         relative tolerance for the solver
-    rtol: (optional) float
+    atol: (optional) float
         absolute tolerance for the solver
 
     Returns
