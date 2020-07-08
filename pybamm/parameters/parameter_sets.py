@@ -10,6 +10,18 @@ your simulation, add the line "pybamm.print_citations()" to your script.
 #
 # Lithium-ion
 #
+
+Prada2013 = {
+    "chemistry": "lithium-ion",
+    "cell": "LGM50_Chen2020",
+    "anode": "graphite_Chen2020",
+    "separator": "separator_Chen2020",
+    "cathode": "LFP_Prada2013",
+    "electrolyte": "lipf6_Nyman2008",
+    "experiment": "1C_discharge_from_full_Chen2020",
+    "citation": "Chen2020",
+}
+
 NCA_Kim2011 = {
     "chemistry": "lithium-ion",
     "cell": "Kim2011",
@@ -77,3 +89,5 @@ Sulzer2019 = {
     "experiment": "1C_discharge_from_full",
     "citation": "sulzer2019physical",
 }
+
+
