@@ -4,12 +4,13 @@
 import pybamm
 import unittest
 import numpy as np
-from tests import get_mesh_for_testing
+from tests import get_mesh_for_testing, get_discretisation_for_testing
 import warnings
 import sys
 from platform import system
 
 
+@unittest.skip("")
 class TestScipySolver(unittest.TestCase):
     def test_model_solver_python_and_jax(self):
 
@@ -345,6 +346,96 @@ class TestScipySolver(unittest.TestCase):
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_almost_equal(
             solution.y[0], 2 * np.exp(-solution.t), decimal=5
+        )
+
+
+class TestScipySolverWithSensitivity(unittest.TestCase):
+    @unittest.skip("")
+    def test_solve_sensitivity_scalar_var_scalar_input(self):
+        # Create model
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        p = pybamm.InputParameter("p")
+        model.rhs = {var: p * var}
+        model.initial_conditions = {var: 1}
+        model.variables = {"var squared": var ** 2}
+
+        # Solve
+        # Make sure that passing in extra options works
+        solver = pybamm.ScipySolver(
+            rtol=1e-10, atol=1e-10, solve_sensitivity_equations=True
+        )
+        t_eval = np.linspace(0, 1, 80)
+        solution = solver.solve(model, t_eval, inputs={"p": 0.1})
+        np.testing.assert_array_equal(solution.t, t_eval)
+        np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
+        np.testing.assert_allclose(
+            solution.sensitivity["p"],
+            (solution.t * np.exp(0.1 * solution.t))[:, np.newaxis],
+        )
+        np.testing.assert_allclose(
+            solution["var squared"].data, np.exp(0.1 * solution.t) ** 2
+        )
+        np.testing.assert_allclose(
+            solution["var squared"].sensitivity["p"],
+            (2 * np.exp(0.1 * solution.t) * solution.t * np.exp(0.1 * solution.t))[
+                :, np.newaxis
+            ],
+        )
+
+    @unittest.skip("")
+    def test_solve_sensitivity_vector_var_scalar_input(self):
+        var = pybamm.Variable("var", "negative electrode")
+        model = pybamm.BaseModel()
+        param = pybamm.InputParameter("param")
+        model.rhs = {var: -param * var}
+        model.initial_conditions = {var: 2}
+        model.variables = {"var": var}
+
+        # create discretisation
+        disc = get_discretisation_for_testing()
+        disc.process_model(model)
+        n = disc.mesh["negative electrode"].npts
+
+        # Solve - scalar input
+        solver = pybamm.ScipySolver(solve_sensitivity_equations=True)
+        t_eval = np.linspace(0, 1)
+        solution = solver.solve(model, t_eval, inputs={"param": 7})
+        np.testing.assert_array_almost_equal(
+            solution["var"].data, np.tile(2 * np.exp(-7 * t_eval), (n, 1)), decimal=4,
+        )
+        np.testing.assert_array_almost_equal(
+            solution["var"].sensitivity["param"],
+            np.repeat(-2 * t_eval * np.exp(-7 * t_eval), n)[:, np.newaxis],
+            decimal=4,
+        )
+
+    def test_solve_sensitivity_scalar_var_vector_input(self):
+        var = pybamm.Variable("var", "negative electrode")
+        model = pybamm.BaseModel()
+        param = pybamm.InputParameter("param", "negative electrode")
+        model.rhs = {var: -param * var}
+        model.initial_conditions = {var: 2}
+        model.variables = {"x-average of var": pybamm.x_average(var)}
+
+        # create discretisation
+        mesh = get_mesh_for_testing(xpts=5)
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
+        n = disc.mesh["negative electrode"].npts
+
+        # Solve - scalar input
+        solver = pybamm.ScipySolver(solve_sensitivity_equations=True)
+        t_eval = np.linspace(0, 1, 3)
+        solution = solver.solve(model, t_eval, inputs={"param": 7 * np.ones(n)})
+        np.testing.assert_array_almost_equal(
+            solution["var"].data, np.tile(2 * np.exp(-7 * t_eval), (n, 1)), decimal=4,
+        )
+        np.testing.assert_array_almost_equal(
+            solution["var"].sensitivity["param"],
+            np.repeat(-2 * t_eval * np.exp(-7 * t_eval), n)[:, np.newaxis],
+            decimal=4,
         )
 
 

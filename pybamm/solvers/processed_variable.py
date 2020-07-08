@@ -1,6 +1,7 @@
 #
 # Processed Variable class
 #
+import casadi
 import numbers
 import numpy as np
 import pybamm
@@ -58,6 +59,10 @@ class ProcessedVariable(object):
         self.auxiliary_domains = base_variable.auxiliary_domains
         self.known_evals = known_evals
         self.warn = warn
+
+        # Sensitivity starts off uninitialized, only set when called
+        self._sensitivity = None
+        self.solution_sensitivity = solution.sensitivity
 
         # Set timescale
         self.timescale = solution.model.timescale.evaluate()
@@ -552,6 +557,76 @@ class ProcessedVariable(object):
     def data(self):
         "Same as entries, but different name"
         return self.entries
+
+    @property
+    def sensitivity(self):
+        """
+        Returns a dictionary of sensitivity for each input parameter.
+        The keys are the input parameters, and the value is a matrix of size
+        (n_x * n_t, n_p), where n_x is the number of states, n_t is the number of time
+        points, and n_p is the size of the input parameter
+        """
+        # No sensitivity if there are no inputs
+        if len(self.inputs) == 0:
+            return {}
+        # Otherwise initialise and return sensitivity
+        if self._sensitivity is None:
+            self.initialise_sensitivity()
+        return self._sensitivity
+
+    def initialise_sensitivity(self):
+        "Set up the sensitivity dictionary"
+        inputs_stacked = casadi.vertcat(*[p for p in self.inputs.values()])
+
+        # Set up symbolic variables
+        t_casadi = casadi.MX.sym("t")
+        y_casadi = casadi.MX.sym("y", self.u_sol.shape[0])
+        p_casadi = {
+            name: casadi.MX.sym(name, value.shape[0])
+            for name, value in self.inputs.items()
+        }
+        p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
+
+        # Convert variable to casadi format for differentiating
+        var_casadi = self.base_variable.to_casadi(t_casadi, y_casadi, inputs=p_casadi)
+        dvar_dy = casadi.jacobian(var_casadi, y_casadi)
+        dvar_dp = casadi.jacobian(var_casadi, p_casadi_stacked)
+
+        # Convert to functions and evaluate index-by-index
+        dvar_dy_func = casadi.Function(
+            "dvar_dy", [t_casadi, y_casadi, p_casadi_stacked], [dvar_dy]
+        )
+        dvar_dp_func = casadi.Function(
+            "dvar_dp", [t_casadi, y_casadi, p_casadi_stacked], [dvar_dp]
+        )
+        for idx in range(len(self.t_sol)):
+            t = self.t_sol[idx]
+            u = self.u_sol[:, idx]
+            inp = inputs_stacked[:, idx]
+            next_dvar_dy_eval = dvar_dy_func(t, u, inp)
+            next_dvar_dp_eval = dvar_dp_func(t, u, inp)
+            if idx == 0:
+                dvar_dy_eval = next_dvar_dy_eval
+                dvar_dp_eval = next_dvar_dp_eval
+            else:
+                dvar_dy_eval = casadi.diagcat(dvar_dy_eval, next_dvar_dy_eval)
+                dvar_dp_eval = casadi.vertcat(dvar_dp_eval, next_dvar_dp_eval)
+
+        # Compute sensitivity
+        dy_dp = self.solution_sensitivity["all"]
+        S_var = dvar_dy_eval @ dy_dp + dvar_dp_eval
+
+        sensitivity = {"all": S_var}
+
+        # Add the individual sensitivity
+        start = 0
+        for name, inp in self.inputs.items():
+            end = start + inp.shape[0]
+            sensitivity[name] = S_var[:, start:end]
+            start = end
+
+        # Save attribute
+        self._sensitivity = sensitivity
 
 
 def eval_dimension_name(name, x, r, y, z):

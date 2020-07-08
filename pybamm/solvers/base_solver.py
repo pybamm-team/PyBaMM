@@ -30,6 +30,12 @@ class BaseSolver(object):
         specified by 'root_method' (e.g. "lm", "hybr", ...)
     root_tol : float, optional
         The tolerance for the initial-condition solver (default is 1e-6).
+    solve_sensitivity_equations : bool, optional
+        Whether to explicitly formulate the sensitivity equations for sensitivity
+        to input parameters. The formulation is as per "Park, S., Kato, D., Gima, Z.,
+        Klein, R., & Moura, S. (2018). Optimal experimental design for parameterization
+        of an electrochemical lithium-ion battery model. Journal of The Electrochemical
+        Society, 165(7), A1309.". See #1100 for details
     """
 
     def __init__(
@@ -40,6 +46,7 @@ class BaseSolver(object):
         root_method=None,
         root_tol=1e-6,
         max_steps="deprecated",
+        solve_sensitivity_equations=False,
     ):
         self._method = method
         self._rtol = rtol
@@ -57,6 +64,7 @@ class BaseSolver(object):
         self.name = "Base solver"
         self.ode_solver = False
         self.algebraic_solver = False
+        self.solve_sensitivity_equations = solve_sensitivity_equations
 
     @property
     def method(self):
@@ -191,17 +199,28 @@ class BaseSolver(object):
             )
             model.convert_to_format = "casadi"
 
+        # Only allow solving sensitivity equations with the casadi format for now
+        if (
+            self.solve_sensitivity_equations is True
+            and model.convert_to_format != "casadi"
+        ):
+            raise NotImplementedError(
+                "model should be converted to casadi format in order to solve "
+                "sensitivity equations"
+            )
+
         if model.convert_to_format != "casadi":
             simp = pybamm.Simplification()
             # Create Jacobian from concatenated rhs and algebraic
-            y = pybamm.StateVector(slice(0, model.concatenated_initial_conditions.size))
+            y = pybamm.StateVector(slice(0, model.len_rhs_and_alg))
             # set up Jacobian object, for re-use of dict
             jacobian = pybamm.Jacobian()
         else:
             # Convert model attributes to casadi
             t_casadi = casadi.MX.sym("t")
-            y_diff = casadi.MX.sym("y_diff", model.concatenated_rhs.size)
-            y_alg = casadi.MX.sym("y_alg", model.concatenated_algebraic.size)
+            # Create the symbolic state vectors
+            y_diff = casadi.MX.sym("y_diff", model.len_rhs)
+            y_alg = casadi.MX.sym("y_alg", model.len_alg)
             y_casadi = casadi.vertcat(y_diff, y_alg)
             p_casadi = {}
             for name, value in inputs.items():
@@ -210,6 +229,13 @@ class BaseSolver(object):
                 else:
                     p_casadi[name] = casadi.MX.sym(name, value.shape[0])
             p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
+            # sensitivity vectors
+            if self.solve_sensitivity_equations is True:
+                S_x = casadi.MX.sym("S_x", model.len_rhs * p_casadi_stacked.shape[0])
+                S_z = casadi.MX.sym("S_z", model.len_alg * p_casadi_stacked.shape[0])
+                y_and_S = casadi.vertcat(y_diff, S_x, y_alg, S_z)
+            else:
+                y_and_S = y_casadi
 
         def process(func, name, use_jacobian=None):
             def report(string):
@@ -258,16 +284,40 @@ class BaseSolver(object):
                 # Process with CasADi
                 report(f"Converting {name} to CasADi")
                 func = func.to_casadi(t_casadi, y_casadi, inputs=p_casadi)
+                # Add sensitivity vectors to the rhs and algebraic equations
+                if self.solve_sensitivity_equations is True:
+                    if name == "rhs":
+                        report(f"Creating sensitivity equations for rhs using CasADi")
+                        df_dx = casadi.jacobian(func, y_diff)
+                        df_dp = casadi.jacobian(func, p_casadi_stacked)
+                        if model.len_alg == 0:
+                            S_rhs = df_dx @ S_x + df_dp
+                        else:
+                            df_dz = casadi.jacobian(func, y_alg)
+                            S_rhs = df_dx @ S_x + df_dz @ S_z + df_dp
+                        func = casadi.vertcat(func, S_rhs)
+                    elif name == "initial_conditions":
+                        if model.len_rhs == 0 or model.len_alg == 0:
+                            S_0 = casadi.jacobian(func, p_casadi_stacked).reshape(
+                                (-1, 1)
+                            )
+                            func = casadi.vertcat(func, S_0)
+                        else:
+                            x0 = func[: model.len_rhs]
+                            z0 = func[model.len_rhs :]
+                            Sx_0 = casadi.jacobian(x0, p_casadi_stacked)
+                            Sz_0 = casadi.jacobian(z0, p_casadi_stacked)
+                            func = casadi.vertcat(x0, Sx_0, z0, Sz_0)
                 if use_jacobian:
                     report(f"Calculating jacobian for {name} using CasADi")
-                    jac_casadi = casadi.jacobian(func, y_casadi)
+                    jac_casadi = casadi.jacobian(func, y_and_S)
                     jac = casadi.Function(
-                        name, [t_casadi, y_casadi, p_casadi_stacked], [jac_casadi]
+                        name, [t_casadi, y_and_S, p_casadi_stacked], [jac_casadi]
                     )
                 else:
                     jac = None
                 func = casadi.Function(
-                    name, [t_casadi, y_casadi, p_casadi_stacked], [func]
+                    name, [t_casadi, y_and_S, p_casadi_stacked], [func]
                 )
             if name == "residuals":
                 func_call = Residuals(func, name, model)
@@ -277,6 +327,7 @@ class BaseSolver(object):
                 jac_call = SolverCallable(jac, name + "_jac", model)
             else:
                 jac_call = None
+
             return func, func_call, jac_call
 
         # Check for heaviside functions in rhs and algebraic and add discontinuity
@@ -324,8 +375,18 @@ class BaseSolver(object):
         )[0]
         init_eval = InitialConditions(initial_conditions, model)
 
+        if self.solve_sensitivity_equations is True:
+            init_eval.y_dummy = np.zeros(
+                (
+                    model.len_rhs_and_alg * (np.vstack(list(inputs.values())).size + 1),
+                    1,
+                )
+            )
+        else:
+            init_eval.y_dummy = np.zeros((model.len_rhs_and_alg, 1))
+
         # Process rhs, algebraic and event expressions
-        rhs, rhs_eval, jac_rhs = process(model.concatenated_rhs, "RHS")
+        rhs, rhs_eval, jac_rhs = process(model.concatenated_rhs, "rhs")
         algebraic, algebraic_eval, jac_algebraic = process(
             model.concatenated_algebraic, "algebraic"
         )
@@ -423,7 +484,7 @@ class BaseSolver(object):
                 y0_from_inputs = model.init_eval(inputs)
                 # Reuse old solution for algebraic equations
                 y0_from_model = model.y0
-                len_rhs = model.concatenated_rhs.size
+                len_rhs = model.len_rhs
                 # update model.y0, which is used for initialising the algebraic solver
                 if len_rhs == 0:
                     model.y0 = y0_from_model
@@ -861,7 +922,7 @@ class SolverCallable:
 
     def __call__(self, t, y, inputs):
         y = y.reshape(-1, 1)
-        if self.name in ["RHS", "algebraic", "residuals"]:
+        if self.name in ["rhs", "algebraic", "residuals"]:
             pybamm.logger.debug(
                 "Evaluating {} for {} at t={}".format(
                     self.name, self.model.name, t * self.timescale
@@ -874,7 +935,7 @@ class SolverCallable:
     def function(self, t, y, inputs):
         if self.form == "casadi":
             states_eval = self._function(t, y, inputs)
-            if self.name in ["RHS", "algebraic", "residuals", "event"]:
+            if self.name in ["rhs", "algebraic", "residuals", "event"]:
                 return states_eval.full()
             else:
                 # keep jacobians sparse
@@ -901,7 +962,6 @@ class InitialConditions(SolverCallable):
 
     def __init__(self, function, model):
         super().__init__(function, "initial conditions", model)
-        self.y_dummy = np.zeros(model.concatenated_initial_conditions.shape)
 
     def __call__(self, inputs):
         if self.form == "casadi":

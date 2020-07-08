@@ -110,9 +110,6 @@ class ProcessedSymbolicVariable(object):
 
     def initialise_1D(self):
         "Create a 1D variable"
-        len_space = self.base_eval.shape[0]
-        entries = np.empty((len_space, len(self.t_sol)))
-
         # Evaluate the base_variable index-by-index
         for idx in range(len(self.t_sol)):
             t = self.t_sol[idx]

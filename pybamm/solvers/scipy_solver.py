@@ -23,10 +23,24 @@ class ScipySolver(pybamm.BaseSolver):
         Any options to pass to the solver.
         Please consult `SciPy documentation <https://tinyurl.com/yafgqg9y>`_ for
         details.
+    solve_sensitivity_equations : bool, optional
+        See :class:`pybamm.BaseSolver`
     """
 
-    def __init__(self, method="BDF", rtol=1e-6, atol=1e-6, extra_options=None):
-        super().__init__(method, rtol, atol)
+    def __init__(
+        self,
+        method="BDF",
+        rtol=1e-6,
+        atol=1e-6,
+        extra_options=None,
+        solve_sensitivity_equations=False,
+    ):
+        super().__init__(
+            method=method,
+            rtol=rtol,
+            atol=atol,
+            solve_sensitivity_equations=solve_sensitivity_equations,
+        )
         self.ode_solver = True
         self.extra_options = extra_options or {}
         self.name = "Scipy solver ({})".format(method)
@@ -52,8 +66,10 @@ class ScipySolver(pybamm.BaseSolver):
             various diagnostic messages.
 
         """
+        # Save inputs dictionary, and if necessary convert inputs to a casadi vector
+        inputs_dict = inputs
         if model.convert_to_format == "casadi":
-            inputs = casadi.vertcat(*[x for x in inputs.values()])
+            inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
 
         extra_options = {**self.extra_options, "rtol": self.rtol, "atol": self.atol}
 
@@ -107,6 +123,14 @@ class ScipySolver(pybamm.BaseSolver):
                 termination = "final time"
                 t_event = None
                 y_event = np.array(None)
-            return pybamm.Solution(sol.t, sol.y, t_event, y_event, termination)
+            return pybamm.Solution(
+                sol.t,
+                sol.y,
+                t_event,
+                y_event,
+                termination,
+                model=model,
+                inputs=inputs_dict,
+            )
         else:
             raise pybamm.SolverError(sol.message)

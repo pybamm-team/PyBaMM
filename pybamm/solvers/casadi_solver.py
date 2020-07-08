@@ -363,9 +363,8 @@ class CasadiSolver(pybamm.BaseSolver):
 
     def _run_integrator(self, model, y0, inputs, t_eval):
         integrator, use_grid = self.integrators[model]
-        len_rhs = model.concatenated_rhs.size
-        y0_diff = y0[:len_rhs]
-        y0_alg = y0[len_rhs:]
+        y0_diff = y0[: model.len_rhs]
+        y0_alg = y0[model.len_rhs :]
         try:
             # Try solving
             if use_grid is True:

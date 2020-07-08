@@ -34,29 +34,98 @@ class _BaseSolution(object):
         String to indicate why the solution terminated
     copy_this : :class:`pybamm.Solution`, optional
         A solution to copy, if provided. Default is None.
+    model : a pybamm model, optional
+        Model from which the solution was obtained. Default is None, in which case
+        :class:`pybamm.BaseModel` is used.
+    inputs : dict, optional
+        Inputs for the solution. Default is None (empty dict)
 
     """
 
     def __init__(
-        self, t, y, t_event=None, y_event=None, termination="final time", copy_this=None
+        self,
+        t,
+        y,
+        t_event=None,
+        y_event=None,
+        termination="final time",
+        copy_this=None,
+        model=None,
+        inputs=None,
     ):
         self._t = t
         if isinstance(y, casadi.DM):
             y = y.full()
-        self._y = y
+
+        # if model or inputs are None, initialize empty, to be populated later
+        self.inputs = inputs or pybamm.FuzzyDict()
+        self._model = model or pybamm.BaseModel()
+
+        # If the model has been provided, split up y into solution and sensitivity
+        # Don't do this if the sensitivity equations have not been computed (i.e. if
+        # y only has the shape or the rhs and alg solution)
+        if model is None or model.len_rhs_and_alg == y.shape[0]:
+            self._y = y
+        else:
+            all_inputs_size = np.vstack(list(inputs.values())).size
+            # Get the point where the algebraic equations start
+            len_rhs_and_sens = all_inputs_size * model.len_rhs
+            # self._y gets the part of the solution vector that correspond to the
+            # actual ODE/DAE solution
+            self._y = np.vstack(
+                [
+                    y[: model.len_rhs, :],
+                    y[len_rhs_and_sens : len_rhs_and_sens + model.len_alg, :],
+                ]
+            )
+            # save sensitivities as a dictionary
+            # first save the whole sensitivity matrix
+            # reshape using Fortran order to get the right array:
+            #   t0_x0_p0, t0_x0_p1, ..., t0_x0_pn
+            #   t0_x1_p0, t0_x1_p1, ..., t0_x1_pn
+            #   ...
+            #   t0_xn_p0, t0_xn_p1, ..., t0_xn_pn
+            #   t1_x0_p0, t1_x0_p1, ..., t1_x0_pn
+            #   t1_x1_p0, t1_x1_p1, ..., t1_x1_pn
+            #   ...
+            #   t1_xn_p0, t1_xn_p1, ..., t1_xn_pn
+            #   ...
+            #   tn_x0_p0, tn_x0_p1, ..., tn_x0_pn
+            #   tn_x1_p0, tn_x1_p1, ..., tn_x1_pn
+            #   ...
+            #   tn_xn_p0, tn_xn_p1, ..., tn_xn_pn
+            full_sens_matrix = np.vstack(
+                [
+                    y[model.len_rhs : len_rhs_and_sens, :],
+                    y[len_rhs_and_sens + model.len_alg :, :],
+                ]
+            ).reshape(np.prod(self._y.shape), all_inputs_size, order="F")
+            sensitivity = {"all": full_sens_matrix}
+            # also save the sensitivity wrt each parameter
+            start_rhs = model.len_rhs
+            start_alg = len_rhs_and_sens + model.len_alg
+            for i, (name, inp) in enumerate(inputs.items()):
+                if isinstance(inp, numbers.Number):
+                    input_size = 1
+                else:
+                    input_size = inp.shape[0]
+                end_rhs = start_rhs + model.len_rhs * input_size
+                end_alg = start_alg + model.len_alg * input_size
+                sensitivity[name] = np.vstack(
+                    [y[start_rhs:end_rhs, :], y[start_alg:end_alg, :],]
+                ).reshape(-1, 1)
+                start_rhs = end_rhs
+                start_alg = end_alg
+            self.sensitivity = sensitivity
+
         self._t_event = t_event
         self._y_event = y_event
         self._termination = termination
         if copy_this is None:
-            # initialize empty inputs and model, to be populated later
-            self._inputs = pybamm.FuzzyDict()
-            self._model = pybamm.BaseModel()
             self.set_up_time = None
             self.solve_time = None
             self.has_symbolic_inputs = False
         else:
-            self._inputs = copy.copy(copy_this.inputs)
-            self._model = copy_this.model
             self.set_up_time = copy_this.set_up_time
             self.solve_time = copy_this.solve_time
             self.has_symbolic_inputs = copy_this.has_symbolic_inputs
@@ -271,8 +340,19 @@ class Solution(_BaseSolution):
 
     """
 
-    def __init__(self, t, y, t_event=None, y_event=None, termination="final time"):
-        super().__init__(t, y, t_event, y_event, termination)
+    def __init__(
+        self,
+        t,
+        y,
+        t_event=None,
+        y_event=None,
+        termination="final time",
+        model=None,
+        inputs=None,
+    ):
+        super().__init__(
+            t, y, t_event, y_event, termination, model=model, inputs=inputs
+        )
         self.base_solution_class = _BaseSolution
 
     @property
@@ -311,6 +391,8 @@ class Solution(_BaseSolution):
                     self.y_event,
                     self.termination,
                     copy_this=self,
+                    model=self.model,
+                    inputs=copy.copy(self.inputs),
                 )
             ]
 
@@ -347,5 +429,7 @@ class Solution(_BaseSolution):
                     solution.y_event,
                     solution.termination,
                     copy_this=solution,
+                    model=self.model,
+                    inputs=copy.copy(self.inputs),
                 )
             )
