@@ -50,9 +50,15 @@ class TestBaseModel(unittest.TestCase):
 
         # Test number input
         c0 = pybamm.Symbol("c0")
-        model.initial_conditions = {c0: 34}
+        model.initial_conditions[c0] = 34
         self.assertIsInstance(model.initial_conditions[c0], pybamm.Scalar)
         self.assertEqual(model.initial_conditions[c0].value, 34)
+
+        # Variable in initial conditions should fail
+        with self.assertRaisesRegex(
+            TypeError, "Initial conditions cannot contain 'Variable' objects"
+        ):
+            model.initial_conditions = {c0: pybamm.Variable("v")}
 
         # non-matching domains should fail
         with self.assertRaises(pybamm.DomainError):
@@ -72,8 +78,9 @@ class TestBaseModel(unittest.TestCase):
 
         # Test number input
         c0 = pybamm.Symbol("c0")
-        model.boundary_conditions = {
-            c0: {"left": (-2, "Dirichlet"), "right": (4, "Dirichlet")}
+        model.boundary_conditions[c0] = {
+            "left": (-2, "Dirichlet"),
+            "right": (4, "Dirichlet"),
         }
         self.assertIsInstance(model.boundary_conditions[c0]["left"][0], pybamm.Scalar)
         self.assertIsInstance(model.boundary_conditions[c0]["right"][0], pybamm.Scalar)
@@ -106,6 +113,56 @@ class TestBaseModel(unittest.TestCase):
         model.rhs = rhs
         self.assertEqual(model[key], rhs[key])
         self.assertEqual(model[key], model.rhs[key])
+
+    def test_read_parameters(self):
+        # Read parameters from different parts of the model
+        model = pybamm.BaseModel()
+        a = pybamm.Parameter("a")
+        b = pybamm.Parameter("b")
+        c = pybamm.Parameter("c")
+        d = pybamm.Parameter("d")
+        e = pybamm.Parameter("e")
+        f = pybamm.Parameter("f")
+
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        model.rhs = {u: -u * a}
+        model.algebraic = {v: v - b}
+        model.initial_conditions = {u: c, v: d}
+        model.events = [pybamm.Event("u=e", u - e)]
+        model.variables = {"v+f": v + f}
+
+        self.assertEqual(
+            set([x.name for x in model.parameters]),
+            set([x.name for x in [a, b, c, d, e, f]]),
+        )
+        self.assertTrue(all(isinstance(x, pybamm.Parameter) for x in model.parameters))
+
+    def test_read_input_parameters(self):
+        # Read input parameters from different parts of the model
+        model = pybamm.BaseModel()
+        a = pybamm.InputParameter("a")
+        b = pybamm.InputParameter("b")
+        c = pybamm.InputParameter("c")
+        d = pybamm.InputParameter("d")
+        e = pybamm.InputParameter("e")
+        f = pybamm.InputParameter("f")
+
+        u = pybamm.Variable("u")
+        v = pybamm.Variable("v")
+        model.rhs = {u: -u * a}
+        model.algebraic = {v: v - b}
+        model.initial_conditions = {u: c, v: d}
+        model.events = [pybamm.Event("u=e", u - e)]
+        model.variables = {"v+f": v + f}
+
+        self.assertEqual(
+            set([x.name for x in model.input_parameters]),
+            set([x.name for x in [a, b, c, d, e, f]]),
+        )
+        self.assertTrue(
+            all(isinstance(x, pybamm.InputParameter) for x in model.input_parameters)
+        )
 
     def test_update(self):
         # model
@@ -171,6 +228,46 @@ class TestBaseModel(unittest.TestCase):
         self.assertEqual(model.rhs[e], submodel2.rhs[e])
         self.assertEqual(model.initial_conditions[e], submodel2.initial_conditions[e])
         self.assertEqual(model.boundary_conditions[e], submodel2.boundary_conditions[e])
+
+    def test_new_copy(self):
+        model = pybamm.BaseModel(name="a model")
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        c = pybamm.Variable("c", domain=whole_cell)
+        d = pybamm.Variable("d", domain=whole_cell)
+        model.rhs = {c: 5 * pybamm.div(pybamm.grad(d)) - 1, d: -c}
+        model.initial_conditions = {c: 1, d: 2}
+        model.boundary_conditions = {
+            c: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")},
+            d: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")},
+        }
+        model.use_jacobian = False
+        model.use_simplify = False
+        model.convert_to_format = "python"
+
+        new_model = model.new_copy()
+        self.assertEqual(new_model.name, model.name)
+        self.assertEqual(new_model.use_jacobian, model.use_jacobian)
+        self.assertEqual(new_model.use_simplify, model.use_simplify)
+        self.assertEqual(new_model.convert_to_format, model.convert_to_format)
+        self.assertEqual(new_model.timescale, model.timescale)
+
+    def test_check_no_repeated_keys(self):
+        model = pybamm.BaseModel()
+
+        # rhs twice
+        var = pybamm.Variable("var")
+        model.rhs = {var: -1}
+        var = pybamm.Variable("var")
+        model.rhs.update({var: -1})
+        with self.assertRaisesRegex(pybamm.ModelError, "Multiple equations specified"):
+            model.check_no_repeated_keys()
+
+        # rhs and algebraic
+        model.rhs = {var: -1}
+        var = pybamm.Variable("var")
+        model.algebraic.update({var: var})
+        with self.assertRaisesRegex(pybamm.ModelError, "Multiple equations specified"):
+            model.check_no_repeated_keys()
 
     def test_check_well_posedness_variables(self):
         # Well-posed ODE model
@@ -254,7 +351,7 @@ class TestBaseModel(unittest.TestCase):
         model.rhs = {c: d.diff(pybamm.t), d: -1}
         model.initial_conditions = {c: 1, d: 1}
         with self.assertRaisesRegex(
-            pybamm.ModelError, "time derivative of variable found",
+            pybamm.ModelError, "time derivative of variable found"
         ):
             model.check_well_posedness()
 
@@ -263,7 +360,7 @@ class TestBaseModel(unittest.TestCase):
         model.algebraic = {c: 2 * d - c, d: c * d.diff(pybamm.t) - d}
         model.initial_conditions = {c: 1, d: 1}
         with self.assertRaisesRegex(
-            pybamm.ModelError, "time derivative of variable found",
+            pybamm.ModelError, "time derivative of variable found"
         ):
             model.check_well_posedness()
 
@@ -272,7 +369,7 @@ class TestBaseModel(unittest.TestCase):
         model.rhs = {c: d.diff(pybamm.t), d: -1}
         model.initial_conditions = {c: 1, d: 1}
         with self.assertRaisesRegex(
-            pybamm.ModelError, "time derivative of variable found",
+            pybamm.ModelError, "time derivative of variable found"
         ):
             model.check_well_posedness()
 
@@ -283,7 +380,7 @@ class TestBaseModel(unittest.TestCase):
             c: 5 * pybamm.StateVectorDot(slice(0, 15)) - 1,
         }
         with self.assertRaisesRegex(
-            pybamm.ModelError, "time derivative of state vector found",
+            pybamm.ModelError, "time derivative of state vector found"
         ):
             model.check_well_posedness(post_discretisation=True)
 
@@ -292,7 +389,7 @@ class TestBaseModel(unittest.TestCase):
         model.rhs = {c: 5 * pybamm.StateVectorDot(slice(0, 15)) - 1}
         model.initial_conditions = {c: 1}
         with self.assertRaisesRegex(
-            pybamm.ModelError, "time derivative of state vector found",
+            pybamm.ModelError, "time derivative of state vector found"
         ):
             model.check_well_posedness(post_discretisation=True)
 

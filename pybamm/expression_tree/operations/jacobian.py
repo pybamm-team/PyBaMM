@@ -76,7 +76,9 @@ class Jacobian(object):
             jac = symbol._function_jac(children_jacs)
 
         elif isinstance(symbol, pybamm.Concatenation):
-            children_jacs = [child.jac(variable) for child in symbol.cached_children]
+            children_jacs = [
+                self.jac(child, variable) for child in symbol.cached_children
+            ]
             jac = symbol._concatenation_jac(children_jacs)
 
         else:

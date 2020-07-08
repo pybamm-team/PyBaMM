@@ -39,6 +39,7 @@ class TestSymbol(unittest.TestCase):
     def test_symbol_domains(self):
         a = pybamm.Symbol("a", domain="test")
         self.assertEqual(a.domain, ["test"])
+        self.assertEqual(a.domains["primary"], ["test"])
         a = pybamm.Symbol("a", domain=["t", "e", "s"])
         self.assertEqual(a.domain, ["t", "e", "s"])
         with self.assertRaises(TypeError):
@@ -63,6 +64,9 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual(a.domain, ["test"])
         self.assertEqual(
             a.auxiliary_domains, {"secondary": ["sec"], "tertiary": ["tert"]}
+        )
+        self.assertEqual(
+            a.domains, {"primary": ["test"], "secondary": ["sec"], "tertiary": ["tert"]}
         )
         a = pybamm.Symbol("a", domain=["t", "e", "s"])
         self.assertEqual(a.domain, ["t", "e", "s"])
@@ -272,12 +276,6 @@ class TestSymbol(unittest.TestCase):
             + r", auxiliary_domains\=\{'sec': \"\['other test'\]\"\}\)",
         )
         self.assertRegex(
-            pybamm.grad(a).__repr__(),
-            r"Gradient\("
-            + hex_regex
-            + r", grad, children\=\['a'\], domain=\[\], auxiliary_domains\=\{\}\)",
-        )
-        self.assertRegex(
             pybamm.grad(c).__repr__(),
             r"Gradient\("
             + hex_regex
@@ -289,34 +287,29 @@ class TestSymbol(unittest.TestCase):
 
         param = pybamm.standard_parameters_lithium_ion
 
-        one_n = pybamm.FullBroadcast(1, ["negative electrode"], "current collector")
-        one_p = pybamm.FullBroadcast(1, ["positive electrode"], "current collector")
-
         zero_n = pybamm.FullBroadcast(0, ["negative electrode"], "current collector")
         zero_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
         zero_p = pybamm.FullBroadcast(0, ["positive electrode"], "current collector")
 
-        deps_dt = pybamm.Concatenation(zero_n, zero_s, zero_p)
+        zero_nsp = pybamm.Concatenation(zero_n, zero_s, zero_p)
 
         v_box = pybamm.Scalar(0)
 
         variables = {
             "Porosity": param.epsilon,
             "Electrolyte tortuosity": param.epsilon ** 1.5,
-            "Porosity change": deps_dt,
+            "Porosity change": zero_nsp,
+            "Electrolyte current density": zero_nsp,
             "Volume-averaged velocity": v_box,
-            "Negative electrode interfacial current density": one_n,
-            "Positive electrode interfacial current density": one_p,
+            "Interfacial current density": zero_nsp,
+            "Oxygen interfacial current density": zero_nsp,
             "Cell temperature": pybamm.Concatenation(zero_n, zero_s, zero_p),
+            "Transverse volume-averaged acceleration": pybamm.Concatenation(
+                zero_n, zero_s, zero_p
+            ),
+            "Sum of electrolyte reaction source terms": zero_nsp,
         }
-        icd = " interfacial current density"
-        reactions = {
-            "main": {
-                "Negative": {"s": 1, "aj": "Negative electrode" + icd},
-                "Positive": {"s": 1, "aj": "Positive electrode" + icd},
-            }
-        }
-        model = pybamm.electrolyte_diffusion.Full(param, reactions)
+        model = pybamm.electrolyte_diffusion.Full(param)
         variables.update(model.get_fundamental_variables())
         variables.update(model.get_coupled_variables(variables))
 
@@ -329,9 +322,9 @@ class TestSymbol(unittest.TestCase):
             rhs.visualise("StefanMaxwell_test")
 
     def test_has_spatial_derivatives(self):
-        var = pybamm.Variable("var")
+        var = pybamm.Variable("var", domain="test")
         grad_eqn = pybamm.grad(var)
-        div_eqn = pybamm.div(var)
+        div_eqn = pybamm.div(pybamm.standard_spatial_vars.x_edge)
         grad_div_eqn = pybamm.div(grad_eqn)
         algebraic_eqn = 2 * var + 3
         self.assertTrue(grad_eqn.has_symbol_of_classes(pybamm.Gradient))

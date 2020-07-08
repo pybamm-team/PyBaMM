@@ -10,7 +10,6 @@ import numpy as np
 
 class TestLeadAcidFOQS(unittest.TestCase):
     def test_basic_processing(self):
-        # pybamm.set_logging_level("DEBUG")
         options = {"thermal": "isothermal", "convection": False}
         model = pybamm.lead_acid.FOQS(options)
         param = model.default_parameter_values
@@ -19,7 +18,7 @@ class TestLeadAcidFOQS(unittest.TestCase):
         modeltest.test_all()
 
     def test_basic_processing_with_convection(self):
-        options = {"thermal": "isothermal", "convection": True}
+        options = {"thermal": "isothermal", "convection": "uniform transverse"}
         model = pybamm.lead_acid.FOQS(options)
         param = model.default_parameter_values
         param.update({"Current function [A]": 1})

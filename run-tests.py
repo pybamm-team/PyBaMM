@@ -177,6 +177,18 @@ def test_notebook(path, executable="python"):
     print("Test " + path + " ... ", end="")
     sys.stdout.flush()
 
+    # Make sure the notebook has a "%pip install pybamm -q" command, for using Google
+    # Colab
+    with open(path, "r") as f:
+        if "%pip install pybamm -q" not in f.read():
+            # print error and exit
+            print("\n" + "-" * 70)
+            print("ERROR")
+            print("-" * 70)
+            print("Installation command '%pip install pybamm -q' not found in notebook")
+            print("-" * 70)
+            return False
+
     # Load notebook, convert to python
     e = nbconvert.exporters.PythonExporter()
     code, __ = e.from_filename(path)
@@ -187,6 +199,15 @@ def test_notebook(path, executable="python"):
     # Tell matplotlib not to produce any figures
     env = dict(os.environ)
     env["MPLBACKEND"] = "Template"
+
+    # If notebook makes use of magic commands then
+    # the script must be ran using ipython
+    # https://github.com/jupyter/nbconvert/issues/503#issuecomment-269527834
+    executable = (
+        "ipython"
+        if (("run_cell_magic(" in code) or ("run_line_magic(" in code))
+        else executable
+    )
 
     # Run in subprocess
     cmd = [executable] + ["-c", code]

@@ -111,82 +111,59 @@ def add_parameter(arguments=None):
     )
 
     copy_directory(args.parameter_dir, destination_dir, args.force)
-    print("Copied {} to {}".format(args.parameter_dir, destination_dir))
+
+
+def remove_parameter(arguments=None):
+    """
+    Remove a parameter directory from package input directory.
+
+    Example:
+    "rm_parameter foo lithium-ion anodes" will remove directory foo in
+    "pybamm/input/parameters/lithium-ion/anodes".
+    """
+    parser = get_parser("Remove parameters from the PyBaMM package directory.")
+    args = parser.parse_args(arguments)
+
+    parameters_root_dir = os.path.join(pybamm.__path__[0], "input", "parameters")
+
+    parameter_dir_name = Path(args.parameter_dir).name
+    destination_dir = os.path.join(
+        parameters_root_dir, args.battery_type, args.component, parameter_dir_name
+    )
+
+    if not args.force:
+        yes_or_no("This will remove directory {}, continue?".format(destination_dir))
+    shutil.rmtree(destination_dir, ignore_errors=True)
 
 
 def edit_parameter(arguments=None):
     """
-    Copy a given parameter package directory to the current working directory
-    for editing. The copy preserves the directory structure within the "input"
-    directory, i.e
+    Copy a given default parameter directory to the current working directory
+    for editing. For example
 
-    ``edit_param(["graphite_Kim2011","lithium-ion","anodes"])``
+    .. code::
 
-    will create the directory structure
-    "input/parameters/lithium-ion/anodes/graphite_Kim2011"
+      edit_param(["lithium-ion"])
+
+    will create the directory structure::
+
+      lithium-ion/
+        anodes/
+          graphite_Chen2020
+          ...
+        cathodes/
+        ...
+
     in the current working directory.
     """
-    parser = get_parser(
-        "Pull parameter directory dir to current working directory for editing."
-    )
+    desc = "Pull parameter directory dir to current working directory for editing."
+    parser = argparse.ArgumentParser(description=desc)
+    parser.add_argument("chemistry", choices=["lithium-ion", "lead-acid"])
+    parser.add_argument("-f", "--force", action="store_true")
+
     args = parser.parse_args(arguments)
 
-    path = os.path.join(
-        "input", "parameters", args.battery_type, args.component, args.parameter_dir
-    )
+    path = os.path.join("input", "parameters", args.chemistry)
 
     source_dir = os.path.join(pybamm.__path__[0], path)
-    copy_directory(source_dir, path, args.force)
-
-
-def list_parameters(arguments=None):
-    """
-    Output a list of available parameter sets for a given chemistry and component.
-    The list is divided into package parameter serts and local parameter sets,
-    located in the current working directory.
-
-    >>> from pybamm.parameters_cli import list_parameters
-    >>> list_parameters(["lithium-ion", "anodes"])
-    Available package parameters:
-      * graphite_Ecker2015
-      * graphite_Chen2020
-      * graphite_mcmb2528_Marquis2019
-      * graphite_UMBL_Mohtat2020
-      * graphite_Kim2011
-    Available local parameters:
-    """
-    parser = argparse.ArgumentParser(
-        description="List available parameter sets for a given chemistry and component."
-    )
-    parser.add_argument("battery_type", choices=["lithium-ion", "lead-acid"])
-    parser.add_argument(
-        "component",
-        choices=[
-            "anodes",
-            "cathodes",
-            "cells",
-            "electrolytes",
-            "experiments",
-            "separators",
-        ],
-    )
-
-    args = parser.parse_args(arguments)
-
-    package_dir = os.path.join(
-        pybamm.__path__[0], "input", "parameters", args.battery_type, args.component
-    )
-    root, package_dirs, files = next(os.walk(package_dir))
-
-    print("Available package parameters:")
-    for dirname in package_dirs:
-        print("  * {}".format(dirname))
-
-    local_dir = os.path.join("input", "parameters", args.battery_type, args.component)
-    if os.path.isdir(local_dir):
-        root, local_dirs, files = next(os.walk(local_dir))
-    else:
-        local_dirs = []
-    print("Available local parameters:")
-    for dirname in local_dirs:
-        print("  * {}".format(dirname))
+    copy_directory(source_dir, args.chemistry, args.force)

@@ -12,8 +12,9 @@ class TestCopy(unittest.TestCase):
         a = pybamm.Scalar(0)
         b = pybamm.Scalar(1)
         v_n = pybamm.Variable("v", "negative electrode")
+        x_n = pybamm.standard_spatial_vars.x_n
         v_s = pybamm.Variable("v", "separator")
-        vec = pybamm.Vector(np.array([1, 2, 3, 4, 5]))
+        vec = pybamm.Vector([1, 2, 3, 4, 5])
         mesh = get_mesh_for_testing()
 
         for symbol in [
@@ -26,9 +27,10 @@ class TestCopy(unittest.TestCase):
             abs(a),
             pybamm.Function(np.sin, a),
             pybamm.FunctionParameter("function", {"a": a}),
-            pybamm.grad(a),
-            pybamm.div(a),
-            pybamm.Integral(a, pybamm.t),
+            pybamm.grad(v_n),
+            pybamm.div(pybamm.grad(v_n)),
+            pybamm.IndefiniteIntegral(v_n, x_n),
+            pybamm.BackwardIndefiniteIntegral(v_n, x_n),
             pybamm.BoundaryValue(v_n, "right"),
             pybamm.BoundaryGradient(v_n, "right"),
             pybamm.PrimaryBroadcast(a, "domain"),

@@ -27,7 +27,4 @@ def NMC_diffusivity_PeymanMPM(sto, T):
     E_D_s = 18550
     arrhenius = exp(E_D_s / constants.R * (1 / 298.15 - 1 / T))
 
-    # Removing the fudge factor 0 * sto requires different handling of either
-    # either simplifications or how sto is passed into this function.
-    # See #547
-    return D_ref * arrhenius + 0 * sto
+    return D_ref * arrhenius

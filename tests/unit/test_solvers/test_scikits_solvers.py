@@ -11,6 +11,11 @@ import sys
 
 @unittest.skipIf(not pybamm.have_scikits_odes(), "scikits.odes not installed")
 class TestScikitsSolvers(unittest.TestCase):
+    def test_init(self):
+        # linsolver deprecated
+        with self.assertRaisesRegex(ValueError, "linsolver has been deprecated"):
+            pybamm.ScikitsOdeSolver(linsolver="lapackdense")
+
     def test_model_ode_integrate_failure(self):
         # Turn off warnings to ignore sqrt error
         warnings.simplefilter("ignore")
@@ -37,7 +42,7 @@ class TestScikitsSolvers(unittest.TestCase):
 
         # Create custom model so that custom ics
         class Model:
-            mass_matrix = pybamm.Matrix(np.array([[1.0, 0.0], [0.0, 0.0]]))
+            mass_matrix = pybamm.Matrix([[1.0, 0.0], [0.0, 0.0]])
             y0 = np.array([0.0, 1.0])
             terminate_events_eval = []
             timescale_eval = 1
@@ -72,6 +77,7 @@ class TestScikitsSolvers(unittest.TestCase):
 
         t_eval = np.linspace(0, 1, 100)
         solver.set_up(model)
+        solver._set_initial_conditions(model, {}, True)
         # check y0
         np.testing.assert_array_equal(model.y0, [0, 0])
         # check dae solutions
@@ -86,7 +92,7 @@ class TestScikitsSolvers(unittest.TestCase):
 
         # Create custom model so that custom mass matrix can be used
         class Model:
-            mass_matrix = pybamm.Matrix(np.array([[4.0, 0.0], [0.0, 0.0]]))
+            mass_matrix = pybamm.Matrix([[4.0, 0.0], [0.0, 0.0]])
             y0 = np.array([0.0, 0.0])
             terminate_events_eval = []
             timescale_eval = 1
@@ -164,7 +170,7 @@ class TestScikitsSolvers(unittest.TestCase):
         combined_submesh = mesh.combine_submeshes(
             "negative electrode", "separator", "positive electrode"
         )
-        N = combined_submesh[0].npts
+        N = combined_submesh.npts
 
         # Solve
         solver = pybamm.ScikitsOdeSolver(rtol=1e-9, atol=1e-9)
@@ -382,7 +388,7 @@ class TestScikitsSolvers(unittest.TestCase):
         combined_submesh = mesh.combine_submeshes(
             "negative electrode", "separator", "positive electrode"
         )
-        N = combined_submesh[0].npts
+        N = combined_submesh.npts
 
         def jacobian(t, y):
             return np.block(
@@ -523,12 +529,12 @@ class TestScikitsSolvers(unittest.TestCase):
                 pybamm.Event("var2 = 2.5", pybamm.min(var2 - 2.5)),
             ]
             disc = get_discretisation_for_testing()
-            disc.process_model(model)
+            model_disc = disc.process_model(model, inplace=False)
 
             # Solve
             solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
             t_eval = np.linspace(0, 5, 100)
-            solution = solver.solve(model, t_eval)
+            solution = solver.solve(model_disc, t_eval)
             np.testing.assert_array_less(solution.y[0], 1.5)
             np.testing.assert_array_less(solution.y[-1], 2.5)
             np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
@@ -563,6 +569,42 @@ class TestScikitsSolvers(unittest.TestCase):
             np.testing.assert_array_less(solution.y[-1], 2.5)
             np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
             np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
+
+    def test_model_solver_dae_inputs_in_initial_conditions(self):
+        # Create model
+        model = pybamm.BaseModel()
+        var1 = pybamm.Variable("var1")
+        var2 = pybamm.Variable("var2")
+        model.rhs = {var1: pybamm.InputParameter("rate") * var1}
+        model.algebraic = {var2: var1 - var2}
+        model.initial_conditions = {
+            var1: pybamm.InputParameter("ic 1"),
+            var2: pybamm.InputParameter("ic 2"),
+        }
+
+        # Solve
+        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
+        t_eval = np.linspace(0, 5, 100)
+        solution = solver.solve(
+            model, t_eval, inputs={"rate": -1, "ic 1": 0.1, "ic 2": 2}
+        )
+        np.testing.assert_array_almost_equal(
+            solution.y[0], 0.1 * np.exp(-solution.t), decimal=5
+        )
+        np.testing.assert_array_almost_equal(
+            solution.y[-1], 0.1 * np.exp(-solution.t), decimal=5
+        )
+
+        # Solve again with different initial conditions
+        solution = solver.solve(
+            model, t_eval, inputs={"rate": -0.1, "ic 1": 1, "ic 2": 3}
+        )
+        np.testing.assert_array_almost_equal(
+            solution.y[0], 1 * np.exp(-0.1 * solution.t), decimal=5
+        )
+        np.testing.assert_array_almost_equal(
+            solution.y[-1], 1 * np.exp(-0.1 * solution.t), decimal=5
+        )
 
     def test_model_solver_dae_with_external(self):
         # Create model
@@ -750,6 +792,5 @@ if __name__ == "__main__":
     print("Add -v for more debug output")
     if "-v" in sys.argv:
         debug = True
-        pybamm.set_logging_level("DEBUG")
     pybamm.settings.debug_mode = True
     unittest.main()

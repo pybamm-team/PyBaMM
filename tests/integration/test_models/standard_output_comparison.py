@@ -25,14 +25,17 @@ class StandardOutputComparison(object):
 
         # Assign common time
         solution0 = self.solutions[0]
-        max_index = np.where(solution0.t == max_t)[0][0]
+        max_index = np.where(solution0.t >= max_t)[0][0]
         t_common = solution0.t[:max_index]
 
         # Check times
         for solution in self.solutions:
             np.testing.assert_array_equal(t_common, solution.t[:max_index])
 
-        return t_common
+        # Get timescale
+        timescale = self.solutions[0].model.timescale_eval
+
+        return t_common * timescale
 
     def run_test_class(self, ClassName, skip_first_timestep=False):
         "Run all tests from a class 'ClassName'"

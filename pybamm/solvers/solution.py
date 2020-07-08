@@ -1,6 +1,7 @@
 #
 # Solution class
 #
+import casadi
 import copy
 import numbers
 import numpy as np
@@ -40,6 +41,8 @@ class _BaseSolution(object):
         self, t, y, t_event=None, y_event=None, termination="final time", copy_this=None
     ):
         self._t = t
+        if isinstance(y, casadi.DM):
+            y = y.full()
         self._y = y
         self._t_event = t_event
         self._y_event = y_event
@@ -47,14 +50,16 @@ class _BaseSolution(object):
         if copy_this is None:
             # initialize empty inputs and model, to be populated later
             self._inputs = pybamm.FuzzyDict()
-            self._model = None
+            self._model = pybamm.BaseModel()
             self.set_up_time = None
             self.solve_time = None
+            self.has_symbolic_inputs = False
         else:
             self._inputs = copy.copy(copy_this.inputs)
             self._model = copy_this.model
             self.set_up_time = copy_this.set_up_time
             self.solve_time = copy_this.solve_time
+            self.has_symbolic_inputs = copy_this.has_symbolic_inputs
 
         # initiaize empty variables and data
         self._variables = pybamm.FuzzyDict()
@@ -76,20 +81,6 @@ class _BaseSolution(object):
         return self._y
 
     @property
-    def inputs(self):
-        "Values of the inputs"
-        return self._inputs
-
-    @inputs.setter
-    def inputs(self, inputs):
-        "Updates the input values"
-        self._inputs = {}
-        for name, inp in inputs.items():
-            if isinstance(inp, numbers.Number):
-                inp = inp * np.ones_like(self.t)
-            self._inputs[name] = inp
-
-    @property
     def model(self):
         "Model used for solution"
         return self._model
@@ -99,6 +90,31 @@ class _BaseSolution(object):
         "Updates the model"
         assert isinstance(value, pybamm.BaseModel)
         self._model = value
+
+    @property
+    def inputs(self):
+        "Values of the inputs"
+        return self._inputs
+
+    @inputs.setter
+    def inputs(self, inputs):
+        "Updates the input values"
+        # If there are symbolic inputs, just store them as given
+        if any(isinstance(v, casadi.MX) for v in inputs.values()):
+            self.has_symbolic_inputs = True
+            self._inputs = inputs
+        # Otherwise, make them the same size as the time vector
+        else:
+            self.has_symbolic_inputs = False
+            self._inputs = {}
+            for name, inp in inputs.items():
+                # Convert number to vector of the right shape
+                if isinstance(inp, numbers.Number):
+                    inp = inp * np.ones((1, len(self.t)))
+                # Tile a vector
+                else:
+                    inp = np.tile(inp, len(self.t))
+                self._inputs[name] = inp
 
     @property
     def t_event(self):
@@ -142,13 +158,20 @@ class _BaseSolution(object):
         # Process
         for key in variables:
             pybamm.logger.debug("Post-processing {}".format(key))
-            var = pybamm.ProcessedVariable(
-                self.model.variables[key], self, self._known_evals
-            )
+            # If there are symbolic inputs then we need to make a
+            # ProcessedSymbolicVariable
+            if self.has_symbolic_inputs is True:
+                var = pybamm.ProcessedSymbolicVariable(self.model.variables[key], self)
 
-            # Update known_evals in order to process any other variables faster
-            for t in var.known_evals:
-                self._known_evals[t].update(var.known_evals[t])
+            # Otherwise a standard ProcessedVariable is ok
+            else:
+                var = pybamm.ProcessedVariable(
+                    self.model.variables[key], self, self._known_evals
+                )
+
+                # Update known_evals in order to process any other variables faster
+                for t in var.known_evals:
+                    self._known_evals[t].update(var.known_evals[t])
 
             # Save variable and data
             self._variables[key] = var
@@ -235,6 +258,8 @@ class _BaseSolution(object):
                     )
             df = pd.DataFrame(data)
             df.to_csv(filename, index=False)
+        else:
+            raise ValueError("format '{}' not recognised".format(to_format))
 
 
 class Solution(_BaseSolution):
@@ -248,6 +273,7 @@ class Solution(_BaseSolution):
 
     def __init__(self, t, y, t_event=None, y_event=None, termination="final time"):
         super().__init__(t, y, t_event, y_event, termination)
+        self.base_solution_class = _BaseSolution
 
     @property
     def sub_solutions(self):
@@ -278,7 +304,7 @@ class Solution(_BaseSolution):
         # functionality compared to normal solutions (can't append other solutions)
         if create_sub_solutions and not hasattr(self, "_sub_solutions"):
             self._sub_solutions = [
-                _BaseSolution(
+                self.base_solution_class(
                     self.t,
                     self.y,
                     self.t_event,
@@ -296,7 +322,7 @@ class Solution(_BaseSolution):
         self._y = np.concatenate((self._y, solution.y[:, start_index:]), axis=1)
         for name, inp in self.inputs.items():
             solution_inp = solution.inputs[name]
-            self.inputs[name] = np.concatenate((inp, solution_inp[start_index:]))
+            self.inputs[name] = np.c_[inp, solution_inp[:, start_index:]]
         # Update solution time
         self.solve_time += solution.solve_time
         # Update termination
@@ -314,7 +340,7 @@ class Solution(_BaseSolution):
         # Append sub_solutions
         if create_sub_solutions:
             self._sub_solutions.append(
-                _BaseSolution(
+                self.base_solution_class(
                     solution.t,
                     solution.y,
                     solution.t_event,

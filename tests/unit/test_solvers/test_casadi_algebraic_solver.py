@@ -5,6 +5,8 @@ import casadi
 import pybamm
 import unittest
 import numpy as np
+from scipy.optimize import least_squares
+import tests
 
 
 class TestCasadiAlgebraicSolver(unittest.TestCase):
@@ -31,13 +33,32 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
         solution = solver.solve(model, np.linspace(0, 1, 10))
         np.testing.assert_array_equal(solution.y, -2)
 
+    def test_simple_root_find_correct_initial_guess(self):
+        # Simple system: a single algebraic equation
+        var = pybamm.Variable("var")
+        model = pybamm.BaseModel()
+        model.algebraic = {var: var + 2}
+        # initial guess gives right answer
+        model.initial_conditions = {var: -2}
+
+        # create discretisation
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        # Solve
+        solver = pybamm.CasadiAlgebraicSolver()
+        solution = solver.solve(model, np.linspace(0, 1, 10))
+        np.testing.assert_array_equal(solution.y, -2)
+
     def test_root_find_fail(self):
         class Model:
             y0 = np.array([2])
             t = casadi.MX.sym("t")
             y = casadi.MX.sym("y")
             p = casadi.MX.sym("p")
+            rhs = {}
             casadi_algebraic = casadi.Function("alg", [t, y, p], [y ** 2 + 1])
+            bounds = (np.array([-np.inf]), np.array([np.inf]))
 
             def algebraic_eval(self, t, y, inputs):
                 # algebraic equation has no real root
@@ -50,7 +71,7 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
             pybamm.SolverError, "Could not find acceptable solution: .../casadi"
         ):
             solver._integrate(model, np.array([0]), {})
-        solver = pybamm.CasadiAlgebraicSolver(error_on_fail=False)
+        solver = pybamm.CasadiAlgebraicSolver(extra_options={"error_on_fail": False})
         with self.assertRaisesRegex(
             pybamm.SolverError, "Could not find acceptable solution: solver terminated"
         ):
@@ -84,11 +105,27 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
             sol[1, :],
         )
 
+    def test_model_solver_with_bounds(self):
+        # Note: we need a better test case to test this functionality properly
+        # Create model
+        model = pybamm.BaseModel()
+        var1 = pybamm.Variable("var1", bounds=(0, 10))
+        model.algebraic = {var1: pybamm.sin(var1) + 1}
+        model.initial_conditions = {var1: pybamm.Scalar(3)}
+        model.variables = {"var1": var1}
+
+        # Solve
+        solver = pybamm.CasadiAlgebraicSolver(tol=1e-12)
+        solution = solver.solve(model)
+        np.testing.assert_array_almost_equal(
+            model.variables["var1"].evaluate(t=None, y=solution.y), 3 * np.pi / 2
+        )
+
     def test_solve_with_input(self):
         # Simple system: a single algebraic equation
         var = pybamm.Variable("var")
         model = pybamm.BaseModel()
-        model.algebraic = {var: var + pybamm.InputParameter("value")}
+        model.algebraic = {var: var + pybamm.InputParameter("param")}
         model.initial_conditions = {var: 2}
 
         # create discretisation
@@ -97,8 +134,159 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
 
         # Solve
         solver = pybamm.CasadiAlgebraicSolver()
-        solution = solver.solve(model, np.linspace(0, 1, 10), inputs={"value": 7})
+        solution = solver.solve(model, np.linspace(0, 1, 10), inputs={"param": 7})
         np.testing.assert_array_equal(solution.y, -7)
+
+
+class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
+    def test_solve_with_symbolic_input(self):
+        # Simple system: a single algebraic equation
+        var = pybamm.Variable("var")
+        model = pybamm.BaseModel()
+        model.algebraic = {var: var + pybamm.InputParameter("param")}
+        model.initial_conditions = {var: 2}
+        model.variables = {"var": var}
+
+        # create discretisation
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        # Solve
+        solver = pybamm.CasadiAlgebraicSolver()
+        solution = solver.solve(model, [0])
+        np.testing.assert_array_equal(solution["var"].value({"param": 7}), -7)
+        np.testing.assert_array_equal(solution["var"].value({"param": 3}), -3)
+        np.testing.assert_array_equal(solution["var"].sensitivity({"param": 3}), -1)
+
+    def test_least_squares_fit(self):
+        # Simple system: a single algebraic equation
+        var = pybamm.Variable("var", domain="negative electrode")
+        model = pybamm.BaseModel()
+        p = pybamm.InputParameter("p")
+        q = pybamm.InputParameter("q")
+        model.algebraic = {var: (var - p)}
+        model.initial_conditions = {var: 3}
+        model.variables = {"objective": (var - q) ** 2 + (p - 3) ** 2}
+
+        # create discretisation
+        disc = tests.get_discretisation_for_testing()
+        disc.process_model(model)
+
+        # Solve
+        solver = pybamm.CasadiAlgebraicSolver()
+        solution = solver.solve(model, [0])
+        sol_var = solution["objective"]
+
+        def objective(x):
+            return sol_var.value({"p": x[0], "q": x[1]}).full().flatten()
+
+        # without jacobian
+        lsq_sol = least_squares(objective, [2, 2], method="lm")
+        np.testing.assert_array_almost_equal(lsq_sol.x, [3, 3], decimal=3)
+
+        def jac(x):
+            return sol_var.sensitivity({"p": x[0], "q": x[1]})
+
+        # with jacobian
+        lsq_sol = least_squares(objective, [2, 2], jac=jac, method="lm")
+        np.testing.assert_array_almost_equal(lsq_sol.x, [3, 3], decimal=3)
+
+    def test_solve_with_symbolic_input_1D_scalar_input(self):
+        var = pybamm.Variable("var", "negative electrode")
+        model = pybamm.BaseModel()
+        param = pybamm.InputParameter("param")
+        model.algebraic = {var: var + param}
+        model.initial_conditions = {var: 2}
+        model.variables = {"var": var}
+
+        # create discretisation
+        disc = tests.get_discretisation_for_testing()
+        disc.process_model(model)
+
+        # Solve - scalar input
+        solver = pybamm.CasadiAlgebraicSolver()
+        solution = solver.solve(model, [0])
+        np.testing.assert_array_equal(solution["var"].value({"param": 7}), -7)
+        np.testing.assert_array_equal(solution["var"].value({"param": 3}), -3)
+        np.testing.assert_array_equal(solution["var"].sensitivity({"param": 3}), -1)
+
+    def test_solve_with_symbolic_input_1D_vector_input(self):
+        var = pybamm.Variable("var", "negative electrode")
+        model = pybamm.BaseModel()
+        param = pybamm.InputParameter("param", "negative electrode")
+        model.algebraic = {var: var + param}
+        model.initial_conditions = {var: 2}
+        model.variables = {"var": var}
+
+        # create discretisation
+        disc = tests.get_discretisation_for_testing()
+        disc.process_model(model)
+
+        # Solve - scalar input
+        solver = pybamm.CasadiAlgebraicSolver()
+        solution = solver.solve(model, [0])
+        n = disc.mesh["negative electrode"].npts
+
+        solver = pybamm.CasadiAlgebraicSolver()
+        solution = solver.solve(model, [0])
+        p = np.linspace(0, 1, n)[:, np.newaxis]
+        np.testing.assert_array_almost_equal(
+            solution["var"].value({"param": 3 * np.ones(n)}), -3
+        )
+        np.testing.assert_array_almost_equal(
+            solution["var"].value({"param": 2 * p}), -2 * p
+        )
+        np.testing.assert_array_almost_equal(
+            solution["var"].sensitivity({"param": 3 * np.ones(n)}), -np.eye(40)
+        )
+        np.testing.assert_array_almost_equal(
+            solution["var"].sensitivity({"param": p}), -np.eye(40)
+        )
+
+    def test_solve_with_symbolic_input_in_initial_conditions(self):
+        # Simple system: a single algebraic equation
+        var = pybamm.Variable("var")
+        model = pybamm.BaseModel()
+        model.algebraic = {var: var + 2}
+        model.initial_conditions = {var: pybamm.InputParameter("param")}
+        model.variables = {"var": var}
+
+        # create discretisation
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        # Solve
+        solver = pybamm.CasadiAlgebraicSolver()
+        solution = solver.solve(model, [0])
+        np.testing.assert_array_equal(solution["var"].value({"param": 7}), -2)
+        np.testing.assert_array_equal(solution["var"].value({"param": 3}), -2)
+        np.testing.assert_array_equal(solution["var"].sensitivity({"param": 3}), 0)
+
+    def test_least_squares_fit_input_in_initial_conditions(self):
+        # Simple system: a single algebraic equation
+        var = pybamm.Variable("var", domain="negative electrode")
+        model = pybamm.BaseModel()
+        p = pybamm.InputParameter("p")
+        q = pybamm.InputParameter("q")
+        model.algebraic = {var: (var - p)}
+        model.initial_conditions = {var: p}
+        model.variables = {"objective": (var - q) ** 2 + (p - 3) ** 2}
+
+        # create discretisation
+        disc = tests.get_discretisation_for_testing()
+        disc.process_model(model)
+
+        # Solve
+        solver = pybamm.CasadiAlgebraicSolver()
+        solution = solver.solve(model, [0])
+        sol_var = solution["objective"]
+
+        def objective(x):
+            return sol_var.value({"p": x[0], "q": x[1]}).full().flatten()
+
+        # without jacobian
+        lsq_sol = least_squares(objective, [2, 2], method="lm")
+        np.testing.assert_array_almost_equal(lsq_sol.x, [3, 3], decimal=3)
 
 
 if __name__ == "__main__":

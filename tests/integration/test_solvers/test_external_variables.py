@@ -13,10 +13,10 @@ class TestExternalVariables(unittest.TestCase):
         model = pybamm.lithium_ion.DFN()
         geometry = model.default_geometry
         param = model.default_parameter_values
-        param.update({"Electrode height [m]": "[input]"})
+        param.update({"Negative electrode conductivity [S.m-1]": "[input]"})
         param.process_model(model)
         param.process_geometry(geometry)
-        inputs = {"Electrode height [m]": e_height}
+        inputs = {"Negative electrode conductivity [S.m-1]": e_height}
         var = pybamm.standard_spatial_vars
         var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.r_n: 10, var.r_p: 10}
         spatial_methods = model.default_spatial_methods
@@ -33,14 +33,14 @@ class TestExternalVariables(unittest.TestCase):
         sim.solve(t_eval=np.linspace(0, 3600, 100), inputs=inputs)
 
     def test_external_variables_SPMe(self):
-        model_options = {"thermal": "x-lumped", "external submodels": ["thermal"]}
+        model_options = {"thermal": "lumped", "external submodels": ["thermal"]}
         model = pybamm.lithium_ion.SPMe(model_options)
         sim = pybamm.Simulation(model)
         t_eval = np.linspace(0, 100, 3)
         T_av = 0
         for i in np.arange(1, len(t_eval) - 1):
             dt = t_eval[i + 1] - t_eval[i]
-            external_variables = {"X-averaged cell temperature": T_av}
+            external_variables = {"Volume-averaged cell temperature": T_av}
             T_av += 1
             sim.step(dt, external_variables=external_variables)
         var = "Terminal voltage [V]"

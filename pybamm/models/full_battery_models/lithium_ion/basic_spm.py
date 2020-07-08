@@ -21,15 +21,15 @@ class BasicSPM(BaseModel):
     References
     ----------
     .. [2] SG Marquis, V Sulzer, R Timms, CP Please and SJ Chapman. “An asymptotic
-           derivation of a single particle model with electrolyte”. In: arXiv preprint
-           arXiv:1905.12553 (2019).
-
+           derivation of a single particle model with electrolyte”. Journal of The
+           Electrochemical Society, 166(15):A3693–A3706, 2019
 
     **Extends:** :class:`pybamm.lithium_ion.BaseModel`
     """
 
     def __init__(self, name="Single Particle Model"):
         super().__init__({}, name)
+        pybamm.citations.register("marquis2019asymptotic")
         # `param` is a class containing all the relevant parameters and functions for
         # this model. These are purely symbolic at this stage, and will be set by the
         # `ParameterValues` class when the model is processed.
@@ -131,21 +131,8 @@ class BasicSPM(BaseModel):
         # (Some) variables
         ######################
         # Interfacial reactions
-        j0_n = (
-            param.m_n(T)
-            / param.C_r_n
-            * 1 ** (1 / 2)
-            * c_s_surf_n ** (1 / 2)
-            * (1 - c_s_surf_n) ** (1 / 2)
-        )
-        j0_p = (
-            param.gamma_p
-            * param.m_p(T)
-            / param.C_r_p
-            * 1 ** (1 / 2)
-            * c_s_surf_p ** (1 / 2)
-            * (1 - c_s_surf_p) ** (1 / 2)
-        )
+        j0_n = param.j0_n(1, c_s_surf_n, T) / param.C_r_n
+        j0_p = param.gamma_p * param.j0_p(1, c_s_surf_p, T) / param.C_r_p
         eta_n = (2 / param.ne_n) * pybamm.arcsinh(j_n / (2 * j0_n))
         eta_p = (2 / param.ne_p) * pybamm.arcsinh(j_p / (2 * j0_p))
         phi_s_n = 0
@@ -181,6 +168,6 @@ class BasicSPM(BaseModel):
             pybamm.Event("Maximum voltage", V - param.voltage_high_cut),
         ]
 
-    @property
-    def default_geometry(self):
-        return pybamm.Geometry("1D macro", "1D micro")
+    def new_copy(self, build=False):
+        return pybamm.BaseModel.new_copy(self)
+

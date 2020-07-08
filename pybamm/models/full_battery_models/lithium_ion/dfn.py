@@ -34,16 +34,17 @@ class DFN(BaseModel):
         super().__init__(options, name)
 
         self.set_external_circuit_submodel()
-        self.set_reactions()
         self.set_porosity_submodel()
         self.set_tortuosity_submodels()
         self.set_convection_submodel()
         self.set_interfacial_submodel()
+        self.set_other_reaction_submodels_to_zero()
         self.set_particle_submodel()
         self.set_solid_submodel()
         self.set_electrolyte_submodel()
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
+        self.set_sei_submodel()
 
         if build:
             self.build_model()
@@ -52,19 +53,27 @@ class DFN(BaseModel):
 
     def set_porosity_submodel(self):
 
-        self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
+        if self.options["sei porosity change"] is False:
+            self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
+        elif self.options["sei porosity change"] is True:
+            self.submodels["porosity"] = pybamm.porosity.Full(self.param)
 
     def set_convection_submodel(self):
 
-        self.submodels["convection"] = pybamm.convection.NoConvection(self.param)
+        self.submodels[
+            "transverse convection"
+        ] = pybamm.convection.transverse.NoConvection(self.param)
+        self.submodels[
+            "through-cell convection"
+        ] = pybamm.convection.through_cell.NoConvection(self.param)
 
     def set_interfacial_submodel(self):
 
         self.submodels["negative interface"] = pybamm.interface.ButlerVolmer(
-            self.param, "Negative", "lithium-ion main"
+            self.param, "Negative", "lithium-ion main", self.options
         )
         self.submodels["positive interface"] = pybamm.interface.ButlerVolmer(
-            self.param, "Positive", "lithium-ion main"
+            self.param, "Positive", "lithium-ion main", self.options
         )
 
     def set_particle_submodel(self):
@@ -87,8 +96,8 @@ class DFN(BaseModel):
     def set_solid_submodel(self):
 
         if self.options["surface form"] is False:
-            submod_n = pybamm.electrode.ohm.Full(self.param, "Negative", self.reactions)
-            submod_p = pybamm.electrode.ohm.Full(self.param, "Positive", self.reactions)
+            submod_n = pybamm.electrode.ohm.Full(self.param, "Negative")
+            submod_p = pybamm.electrode.ohm.Full(self.param, "Positive")
         else:
             submod_n = pybamm.electrode.ohm.SurfaceForm(self.param, "Negative")
             submod_p = pybamm.electrode.ohm.SurfaceForm(self.param, "Positive")
@@ -101,30 +110,20 @@ class DFN(BaseModel):
         surf_form = pybamm.electrolyte_conductivity.surface_potential_form
 
         self.submodels["electrolyte diffusion"] = pybamm.electrolyte_diffusion.Full(
-            self.param, self.reactions
+            self.param
         )
 
         if self.options["surface form"] is False:
             self.submodels[
                 "electrolyte conductivity"
-            ] = pybamm.electrolyte_conductivity.Full(self.param, self.reactions)
+            ] = pybamm.electrolyte_conductivity.Full(self.param)
         elif self.options["surface form"] == "differential":
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
                     domain.lower() + " electrolyte conductivity"
-                ] = surf_form.FullDifferential(self.param, domain, self.reactions)
+                ] = surf_form.FullDifferential(self.param, domain)
         elif self.options["surface form"] == "algebraic":
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
                     domain.lower() + " electrolyte conductivity"
-                ] = surf_form.FullAlgebraic(self.param, domain, self.reactions)
-
-    @property
-    def default_geometry(self):
-        dimensionality = self.options["dimensionality"]
-        if dimensionality == 0:
-            return pybamm.Geometry("1D macro", "1+1D micro")
-        elif dimensionality == 1:
-            return pybamm.Geometry("1+1D macro", "(1+1)+1D micro")
-        elif dimensionality == 2:
-            return pybamm.Geometry("2+1D macro", "(2+1)+1D micro")
+                ] = surf_form.FullAlgebraic(self.param, domain)

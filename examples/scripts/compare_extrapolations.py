@@ -8,7 +8,7 @@ x_p = pybamm.standard_spatial_vars.x_p
 var_pts = {x_n: 10, x_s: 3, x_p: 10}
 model_lin = pybamm.lead_acid.Full()
 sim_lin = pybamm.Simulation(model_lin, var_pts=var_pts)
-sim_lin.solve()
+sim_lin.solve([0, 3600])
 
 model_quad = pybamm.lead_acid.Full()
 method_options = {"extrapolation": {"order": "quadratic", "use bcs": False}}
@@ -16,12 +16,12 @@ spatial_methods = {
     "negative particle": pybamm.FiniteVolume(method_options),
     "positive particle": pybamm.FiniteVolume(method_options),
     "macroscale": pybamm.FiniteVolume(method_options),
-    "current collector": pybamm.ZeroDimensionalMethod(),
+    "current collector": pybamm.ZeroDimensionalSpatialMethod(),
 }
 sim_quad = pybamm.Simulation(
     model_quad, spatial_methods=spatial_methods, var_pts=var_pts
 )
-sim_quad.solve()
+sim_quad.solve([0, 3600])
 
 
 # plot the two sols

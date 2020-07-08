@@ -10,19 +10,15 @@ class TestBasicModels(unittest.TestCase):
         model = pybamm.lithium_ion.BasicDFN()
         model.check_well_posedness()
 
-    def test_dfn_default_geometry(self):
-        model = pybamm.lithium_ion.BasicDFN()
-        self.assertIsInstance(model.default_geometry, pybamm.Geometry)
-        self.assertTrue("secondary" in model.default_geometry["negative particle"])
+        copy = model.new_copy()
+        copy.check_well_posedness()
 
     def test_spm_well_posed(self):
         model = pybamm.lithium_ion.BasicSPM()
         model.check_well_posedness()
 
-    def test_spm_default_geometry(self):
-        model = pybamm.lithium_ion.BasicSPM()
-        self.assertIsInstance(model.default_geometry, pybamm.Geometry)
-        self.assertTrue("secondary" not in model.default_geometry["negative particle"])
+        copy = model.new_copy()
+        copy.check_well_posedness()
 
 
 if __name__ == "__main__":

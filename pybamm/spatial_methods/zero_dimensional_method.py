@@ -5,7 +5,7 @@ import pybamm
 import numpy as np
 
 
-class ZeroDimensionalMethod(pybamm.SpatialMethod):
+class ZeroDimensionalSpatialMethod(pybamm.SpatialMethod):
     """
     A discretisation class for the zero dimensional mesh
 
@@ -36,3 +36,20 @@ class ZeroDimensionalMethod(pybamm.SpatialMethod):
         zero dimensional, this is simply the number 1.
         """
         return pybamm.Matrix(np.ones((1, 1)))
+
+    def indefinite_integral(self, child, discretised_child, direction):
+        """
+        Calculates the zero-dimensional indefinite integral.
+        If 'direction' is forward, this is the identity operator.
+        If 'direction' is backward, this is the negation operator.
+        """
+        if direction == "forward":
+            return discretised_child
+        elif direction == "backward":
+            return -discretised_child
+
+    def integral(self, child, discretised_child, integration_dimension):
+        """
+        Calculates the zero-dimensional integral, i.e. the identity operator
+        """
+        return discretised_child

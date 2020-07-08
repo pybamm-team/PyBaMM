@@ -36,7 +36,7 @@ class TestIndependentVariable(unittest.TestCase):
     def test_spatial_variable(self):
         x = pybamm.SpatialVariable("x", "negative electrode")
         self.assertEqual(x.name, "x")
-        self.assertFalse(x.evaluates_on_edges())
+        self.assertFalse(x.evaluates_on_edges("primary"))
         y = pybamm.SpatialVariable("y", "separator")
         self.assertEqual(y.name, "y")
         z = pybamm.SpatialVariable("z", "positive electrode")
@@ -60,7 +60,7 @@ class TestIndependentVariable(unittest.TestCase):
     def test_spatial_variable_edge(self):
         x = pybamm.SpatialVariableEdge("x", "negative electrode")
         self.assertEqual(x.name, "x")
-        self.assertTrue(x.evaluates_on_edges())
+        self.assertTrue(x.evaluates_on_edges("primary"))
 
 
 if __name__ == "__main__":

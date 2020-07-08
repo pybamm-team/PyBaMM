@@ -19,6 +19,8 @@ L = L_cn + L_x + L_cp  # Total cell thickness
 L_y = pybamm.Parameter("Electrode width [m]")
 L_z = pybamm.Parameter("Electrode height [m]")
 A_cc = L_y * L_z  # Area of current collector
+A_cooling = pybamm.Parameter("Cell cooling surface area [m2]")
+V_cell = pybamm.Parameter("Cell volume [m3]")
 
 # Tab geometry
 L_tab_n = pybamm.Parameter("Negative tab width [m]")
@@ -32,8 +34,8 @@ A_tab_p = L_tab_p * L_cp  # Area of negative tab
 
 
 # Microscale geometry
-a_n_dim = pybamm.Parameter("Negative electrode surface area density [m-1]")
-a_p_dim = pybamm.Parameter("Positive electrode surface area density [m-1]")
+a_n_dim = pybamm.Parameter("Negative electrode surface area to volume ratio [m-1]")
+a_p_dim = pybamm.Parameter("Positive electrode surface area to volume ratio [m-1]")
 R_n = pybamm.Parameter("Negative particle radius [m]")
 R_p = pybamm.Parameter("Positive particle radius [m]")
 b_e_n = pybamm.Parameter("Negative electrode Bruggeman coefficient (electrolyte)")
@@ -55,6 +57,8 @@ l_x = L_x / L_x
 l_y = L_y / L_z
 l_z = L_z / L_z
 a_cc = l_y * l_z
+a_cooling = A_cooling / (L_z ** 2)
+v_cell = V_cell / (L_x * L_z ** 2)
 
 l = L / L_x
 delta = L_x / L_z  # Aspect ratio

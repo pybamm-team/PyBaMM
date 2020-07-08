@@ -1,7 +1,7 @@
 #
 # Tests for the InputParameter class
 #
-import numbers
+import numpy as np
 import pybamm
 import unittest
 
@@ -13,9 +13,27 @@ class TestInputParameter(unittest.TestCase):
         self.assertEqual(a.evaluate(inputs={"a": 1}), 1)
         self.assertEqual(a.evaluate(inputs={"a": 5}), 5)
 
+    def test_set_expected_size(self):
+        a = pybamm.InputParameter("a")
+        a.set_expected_size(10)
+        self.assertEqual(a._expected_size, 10)
+        np.testing.assert_array_equal(a.evaluate(inputs="shape test"), np.ones((10, 1)))
+        y = np.linspace(0, 1, 10)
+        np.testing.assert_array_equal(a.evaluate(inputs={"a": y}), y[:, np.newaxis])
+        with self.assertRaisesRegex(
+            ValueError,
+            "Input parameter 'a' was given an object of size '1' but was expecting an "
+            "object of size '10'",
+        ):
+            a.evaluate(inputs={"a": 5})
+
     def test_evaluate_for_shape(self):
         a = pybamm.InputParameter("a")
-        self.assertIsInstance(a.evaluate_for_shape(), numbers.Number)
+        self.assertTrue(np.isnan(a.evaluate_for_shape()))
+        self.assertEqual(a.shape, (1, 1))
+
+        a.set_expected_size(10)
+        self.assertEqual(a.shape, (10, 1))
 
     def test_errors(self):
         a = pybamm.InputParameter("a")

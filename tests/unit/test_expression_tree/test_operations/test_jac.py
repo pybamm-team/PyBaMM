@@ -14,6 +14,13 @@ def test_multi_var_function(arg1, arg2):
 
 
 class TestJacobian(unittest.TestCase):
+    def test_variable_is_statevector(self):
+        a = pybamm.Symbol("a")
+        with self.assertRaisesRegex(
+            TypeError, "Jacobian can only be taken with respect to a 'StateVector'"
+        ):
+            a.jac(a)
+
     def test_linear(self):
         y = pybamm.StateVector(slice(0, 4))
         u = pybamm.StateVector(slice(0, 2))
@@ -233,7 +240,7 @@ class TestJacobian(unittest.TestCase):
         a = pybamm.Scalar(1)
         b = pybamm.Scalar(2)
 
-        y = pybamm.Variable("y")
+        y = pybamm.StateVector(slice(0, 1))
 
         self.assertEqual(a.jac(y).evaluate(), 0)
 
@@ -261,14 +268,16 @@ class TestJacobian(unittest.TestCase):
     def test_spatial_operator(self):
         a = pybamm.Variable("a")
         b = pybamm.SpatialOperator("Operator", a)
+        y = pybamm.StateVector(slice(0, 1))
         with self.assertRaises(NotImplementedError):
-            b.jac(None)
+            b.jac(y)
 
     def test_jac_of_unary_operator(self):
         a = pybamm.Scalar(1)
         b = pybamm.UnaryOperator("Operator", a)
+        y = pybamm.StateVector(slice(0, 1))
         with self.assertRaises(NotImplementedError):
-            b.jac(None)
+            b.jac(y)
 
     def test_jac_of_independent_variable(self):
         a = pybamm.IndependentVariable("Variable")
@@ -334,9 +343,9 @@ class TestJacobian(unittest.TestCase):
         a_dom = ["negative electrode"]
         b_dom = ["separator"]
         c_dom = ["positive electrode"]
-        a_npts = mesh[a_dom[0]][0].npts
-        b_npts = mesh[b_dom[0]][0].npts
-        c_npts = mesh[c_dom[0]][0].npts
+        a_npts = mesh[a_dom[0]].npts
+        b_npts = mesh[b_dom[0]].npts
+        c_npts = mesh[c_dom[0]].npts
         a = 2 * pybamm.Vector(np.ones(a_npts), domain=a_dom)
         b = pybamm.Vector(np.ones(b_npts), domain=b_dom)
         c = 3 * pybamm.Vector(np.ones(c_npts), domain=c_dom)

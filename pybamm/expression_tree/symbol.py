@@ -101,7 +101,7 @@ class Symbol(anytree.NodeMixin):
         self.cached_children = super(Symbol, self).children
 
         # Set auxiliary domains
-        self._domain = None
+        self._domains = {"primary": None}
         self.auxiliary_domains = auxiliary_domains
         # Set domain (and hence id)
         self.domain = domain
@@ -138,6 +138,10 @@ class Symbol(anytree.NodeMixin):
         self._name = value
 
     @property
+    def domains(self):
+        return self._domains
+
+    @property
     def domain(self):
         """list of applicable domains
 
@@ -145,7 +149,7 @@ class Symbol(anytree.NodeMixin):
         -------
             iterable of str
         """
-        return self._domain
+        return self._domains["primary"]
 
     @domain.setter
     def domain(self, domain):
@@ -164,13 +168,14 @@ class Symbol(anytree.NodeMixin):
         except TypeError:
             raise TypeError("Domain: argument domain is not iterable")
         else:
-            self._domain = domain
+            self._domains["primary"] = domain
             # Update id since domain has changed
             self.set_id()
 
     @property
     def auxiliary_domains(self):
-        return self._auxiliary_domains
+        "Returns domains that are not the primary domain"
+        return {k: v for k, v in self._domains.items() if k != "primary"}
 
     @auxiliary_domains.setter
     def auxiliary_domains(self, auxiliary_domains):
@@ -188,7 +193,7 @@ class Symbol(anytree.NodeMixin):
         if len(set(values)) != len(values):
             raise pybamm.DomainError("All auxiliary domains must be different")
 
-        self._auxiliary_domains = auxiliary_domains
+        self._domains.update(auxiliary_domains)
 
     @property
     def secondary_domain(self):
@@ -197,13 +202,11 @@ class Symbol(anytree.NodeMixin):
 
     def copy_domains(self, symbol):
         "Copy the domains from a given symbol, bypassing checks"
-        self._domain = symbol.domain
-        self._auxiliary_domains = symbol.auxiliary_domains
+        self._domains = symbol.domains
 
     def clear_domains(self):
         "Clear domains, bypassing checks"
-        self._domain = []
-        self._auxiliary_domains = {}
+        self._domains = {"primary": []}
 
     def get_children_auxiliary_domains(self, children):
         "Combine auxiliary domains from children, at all levels"
@@ -464,10 +467,6 @@ class Symbol(anytree.NodeMixin):
             pybamm.AbsoluteValue(self), keep_domains=True
         )
 
-    def __getitem__(self, key):
-        """return a :class:`Index` object"""
-        return pybamm.simplify_if_constant(pybamm.Index(self, key), keep_domains=True)
-
     def diff(self, variable):
         """
         Differentiate a symbol with respect to a variable. For any symbol that can be
@@ -498,10 +497,16 @@ class Symbol(anytree.NodeMixin):
 
     def jac(self, variable, known_jacs=None, clear_domain=True):
         """
-        Differentiate a symbol with respect to a (slice of) a State Vector.
+        Differentiate a symbol with respect to a (slice of) a StateVector
+        or StateVectorDot.
         See :class:`pybamm.Jacobian`.
         """
         jac = pybamm.Jacobian(known_jacs, clear_domain=clear_domain)
+        if not isinstance(variable, (pybamm.StateVector, pybamm.StateVectorDot)):
+            raise TypeError(
+                "Jacobian can only be taken with respect to a 'StateVector' "
+                "or 'StateVectorDot', but {} is a {}".format(variable, type(variable))
+            )
         return jac.jac(self, variable)
 
     def _jac(self, variable):
@@ -660,15 +665,29 @@ class Symbol(anytree.NodeMixin):
         """
         result = self.evaluate_ignoring_errors()
 
-        if isinstance(result, numbers.Number):
+        if isinstance(result, numbers.Number) or (
+            isinstance(result, np.ndarray) and np.prod(result.shape) == 1
+        ):
             return True
         else:
             return False
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         """
         Returns True if a symbol evaluates on an edge, i.e. symbol contains a gradient
         operator, but not a divergence operator, and is not an IndefiniteIntegral.
+
+        Parameters
+        ----------
+        dimension : str
+            The dimension (primary, secondary, etc) in which to query evaluation on
+            edges
+
+        Returns
+        -------
+        bool
+            Whether the symbol evaluates on edges (in the finite volume discretisation
+            sense)
         """
         # Default behaviour: return False
         return False
@@ -721,7 +740,7 @@ class Symbol(anytree.NodeMixin):
         # Default behaviour is to try to evaluate the object directly
         # Try with some large y, to avoid having to unpack (slow)
         try:
-            y = np.linspace(0.1, 0.9, int(1e4))
+            y = np.nan * np.ones((1000, 1))
             evaluated_self = self.evaluate(0, y, y, inputs="shape test")
         # If that fails, fall back to calculating how big y should really be
         except ValueError:
@@ -734,7 +753,7 @@ class Symbol(anytree.NodeMixin):
                     len(x._evaluation_array) for x in state_vectors_in_node
                 )
                 # Pick a y that won't cause RuntimeWarnings
-                y = np.linspace(0.1, 0.9, min_y_size)
+                y = np.nan * np.ones((min_y_size, 1))
             evaluated_self = self.evaluate(0, y, y, inputs="shape test")
 
         # Return shape of evaluated object

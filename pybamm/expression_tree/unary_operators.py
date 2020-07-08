@@ -83,9 +83,9 @@ class UnaryOperator(pybamm.Symbol):
         """
         return self.children[0].evaluate_for_shape()
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
-        return self.child.evaluates_on_edges()
+        return self.child.evaluates_on_edges(dimension)
 
 
 class Negate(UnaryOperator):
@@ -188,7 +188,7 @@ class Index(UnaryOperator):
     def __init__(self, child, index, name=None, check_size=True):
         self.index = index
         if index == -1:
-            self.slice = slice(index, None)
+            self.slice = slice(-1, None)
             if name is None:
                 name = "Index[-1]"
         elif isinstance(index, int):
@@ -255,7 +255,7 @@ class Index(UnaryOperator):
     def _evaluate_for_shape(self):
         return self._unary_evaluate(self.children[0].evaluate_for_shape())
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
         return False
 
@@ -310,9 +310,19 @@ class Gradient(SpatialOperator):
     """
 
     def __init__(self, child):
+        if child.domain == []:
+            raise pybamm.DomainError(
+                "Cannot take gradient of '{}' since its domain is empty. ".format(child)
+                + "Try broadcasting the object first, e.g.\n\n"
+                "\tpybamm.grad(pybamm.PrimaryBroadcast(symbol, 'domain'))"
+            )
+        if child.evaluates_on_edges("primary") is True:
+            raise TypeError(
+                "Cannot take gradient of '{}' since it evaluates on edges".format(child)
+            )
         super().__init__("grad", child)
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
         return True
 
@@ -324,9 +334,23 @@ class Divergence(SpatialOperator):
     """
 
     def __init__(self, child):
+        if child.domain == []:
+            raise pybamm.DomainError(
+                "Cannot take divergence of '{}' since its domain is empty. ".format(
+                    child
+                )
+                + "Try broadcasting the object first, e.g.\n\n"
+                "\tpybamm.div(pybamm.PrimaryBroadcast(symbol, 'domain'))"
+            )
+        if child.evaluates_on_edges("primary") is False:
+            raise TypeError(
+                "Cannot take divergence of '{}' since it does not ".format(child)
+                + "evaluates on nodes. Usually, a gradient should be taken before the "
+                "divergence."
+            )
         super().__init__("div", child)
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
         return False
 
@@ -341,7 +365,7 @@ class Laplacian(SpatialOperator):
     def __init__(self, child):
         super().__init__("laplacian", child)
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
         return False
 
@@ -357,7 +381,7 @@ class Gradient_Squared(SpatialOperator):
     def __init__(self, child):
         super().__init__("grad squared", child)
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
         return True
 
@@ -397,7 +421,6 @@ class Integral(SpatialOperator):
 
     where :math:`a` and :math:`b` are the left-hand and right-hand boundaries of
     the domain respectively, and :math:`u\\in\\text{domain}`.
-    Can be integration with respect to time or space.
 
     Parameters
     ----------
@@ -413,33 +436,60 @@ class Integral(SpatialOperator):
         if not isinstance(integration_variable, list):
             integration_variable = [integration_variable]
 
-        # integral of a child takes the domain from auxiliary domain of the child
-        if child.auxiliary_domains != {}:
-            domain = child.auxiliary_domains["secondary"]
-            try:
-                auxiliary_domains = {"secondary": child.auxiliary_domains["tertiary"]}
-            except KeyError:
-                auxiliary_domains = {}
-        # if child has no auxiliary domain, integral removes domain
-        else:
-            domain = []
-            auxiliary_domains = {}
         name = "integral"
         for var in integration_variable:
             if isinstance(var, pybamm.SpatialVariable):
                 # Check that child and integration_variable domains agree
-                if child.domain != var.domain:
+                if var.domain == child.domain:
+                    self._integration_dimension = "primary"
+                elif (
+                    "secondary" in child.auxiliary_domains
+                    and var.domain == child.auxiliary_domains["secondary"]
+                ):
+                    self._integration_dimension = "secondary"
+                elif (
+                    "tertiary" in child.auxiliary_domains
+                    and var.domain == child.auxiliary_domains["tertiary"]
+                ):
+                    self._integration_dimension = "tertiary"
+                else:
                     raise pybamm.DomainError(
-                        "child and integration_variable must have the same domain"
+                        "integration_variable must be the same as child domain or "
+                        "an auxiliary domain"
                     )
-            elif not isinstance(var, pybamm.IndependentVariable):
-                raise ValueError(
-                    """integration_variable must be of type pybamm.IndependentVariable,
-                           not {}""".format(
-                        type(var)
-                    )
+            else:
+                raise TypeError(
+                    "integration_variable must be of type pybamm.SpatialVariable, "
+                    "not {}".format(type(var))
                 )
             name += " d{}".format(var.name)
+
+        if self._integration_dimension == "primary":
+            # integral of a child takes the domain from auxiliary domain of the child
+            if child.auxiliary_domains != {}:
+                domain = child.auxiliary_domains["secondary"]
+                if "tertiary" in child.auxiliary_domains:
+                    auxiliary_domains = {
+                        "secondary": child.auxiliary_domains["tertiary"]
+                    }
+                else:
+                    auxiliary_domains = {}
+            # if child has no auxiliary domain, integral removes domain
+            else:
+                domain = []
+                auxiliary_domains = {}
+        elif self._integration_dimension == "secondary":
+            # integral in the secondary dimension keeps the same domain, moves tertiary
+            # domain to secondary domain
+            domain = child.domain
+            if "tertiary" in child.auxiliary_domains:
+                auxiliary_domains = {"secondary": child.auxiliary_domains["tertiary"]}
+            else:
+                auxiliary_domains = {}
+        elif self._integration_dimension == "tertiary":
+            # integral in the tertiary dimension keeps the domain and secondary domain
+            domain = child.domain
+            auxiliary_domains = {"secondary": child.auxiliary_domains["secondary"]}
 
         if any(isinstance(var, pybamm.SpatialVariable) for var in integration_variable):
             name += " {}".format(child.domain)
@@ -481,19 +531,13 @@ class Integral(SpatialOperator):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
         return pybamm.evaluate_for_shape_using_domain(self.domain)
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
         return False
 
 
-class IndefiniteIntegral(Integral):
-    """A node in the expression tree representing an indefinite integral operator
-
-    .. math::
-        I = \\int_{x_\text{min}}^{x}\\!f(u)\\,du
-
-    where :math:`u\\in\\text{domain}` which can represent either a
-    spatial or temporal variable.
+class BaseIndefiniteIntegral(Integral):
+    """Base class for indefinite integrals (forward or backward).
 
     Parameters
     ----------
@@ -516,15 +560,73 @@ class IndefiniteIntegral(Integral):
         super().__init__(child, integration_variable)
         # overwrite domains with child domains
         self.copy_domains(child)
-        # Overwrite the name
-        self.name = "{} integrated w.r.t {}".format(
-            child.name, integration_variable.name
-        )
-        if isinstance(integration_variable, pybamm.SpatialVariable):
-            self.name += " on {}".format(integration_variable.domain)
 
     def _evaluate_for_shape(self):
         return self.children[0].evaluate_for_shape()
+
+    def evaluates_on_edges(self, dimension):
+        # If child evaluates on edges, indefinite integral doesn't
+        # If child doesn't evaluate on edges, indefinite integral does
+        return not self.child.evaluates_on_edges(dimension)
+
+
+class IndefiniteIntegral(BaseIndefiniteIntegral):
+    """A node in the expression tree representing an indefinite integral operator
+
+    .. math::
+        I = \\int_{x_\text{min}}^{x}\\!f(u)\\,du
+
+    where :math:`u\\in\\text{domain}` which can represent either a
+    spatial or temporal variable.
+
+    Parameters
+    ----------
+    function : :class:`pybamm.Symbol`
+        The function to be integrated (will become self.children[0])
+    integration_variable : :class:`pybamm.IndependentVariable`
+        The variable over which to integrate
+
+    **Extends:** :class:`BaseIndefiniteIntegral`
+    """
+
+    def __init__(self, child, integration_variable):
+        super().__init__(child, integration_variable)
+        # Overwrite the name
+        self.name = "{} integrated w.r.t {}".format(
+            child.name, self.integration_variable[0].name
+        )
+        if isinstance(integration_variable, pybamm.SpatialVariable):
+            self.name += " on {}".format(self.integration_variable[0].domain)
+
+
+class BackwardIndefiniteIntegral(BaseIndefiniteIntegral):
+    """A node in the expression tree representing a backward indefinite integral
+    operator
+
+    .. math::
+        I = \\int_{x}^{x_\text{max}}\\!f(u)\\,du
+
+    where :math:`u\\in\\text{domain}` which can represent either a
+    spatial or temporal variable.
+
+    Parameters
+    ----------
+    function : :class:`pybamm.Symbol`
+        The function to be integrated (will become self.children[0])
+    integration_variable : :class:`pybamm.IndependentVariable`
+        The variable over which to integrate
+
+    **Extends:** :class:`BaseIndefiniteIntegral`
+    """
+
+    def __init__(self, child, integration_variable):
+        super().__init__(child, integration_variable)
+        # Overwrite the name
+        self.name = "{} integrated backward w.r.t {}".format(
+            child.name, self.integration_variable[0].name
+        )
+        if isinstance(integration_variable, pybamm.SpatialVariable):
+            self.name += " on {}".format(self.integration_variable[0].domain)
 
 
 class DefiniteIntegralVector(SpatialOperator):
@@ -637,7 +739,7 @@ class BoundaryIntegral(SpatialOperator):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
         return pybamm.evaluate_for_shape_using_domain(self.domain)
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
         return False
 
@@ -663,7 +765,7 @@ class DeltaFunction(SpatialOperator):
             auxiliary_domains = {"secondary": child.domain}
         else:
             auxiliary_domains = {}
-        super().__init__("delta function", child, domain, auxiliary_domains)
+        super().__init__("delta_function", child, domain, auxiliary_domains)
 
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()` """
@@ -673,7 +775,7 @@ class DeltaFunction(SpatialOperator):
             + tuple([(k, tuple(v)) for k, v in self.auxiliary_domains.items()])
         )
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
         return False
 
@@ -684,6 +786,15 @@ class DeltaFunction(SpatialOperator):
     def _unary_new_copy(self, child):
         """ See :meth:`UnaryOperator._unary_new_copy()`. """
         return self.__class__(child, self.side, self.domain)
+
+    def evaluate_for_shape(self):
+        """
+        See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`
+        """
+        child_eval = self.children[0].evaluate_for_shape()
+        vec = pybamm.evaluate_for_shape_using_domain(self.domain)
+
+        return np.outer(child_eval, vec).reshape(-1, 1)
 
 
 class BoundaryOperator(SpatialOperator):
@@ -805,8 +916,12 @@ def grad(expression):
     :class:`Gradient`
         the gradient of ``expression``
     """
-
-    return Gradient(expression)
+    # Gradient of a broadcast is zero
+    if isinstance(expression, pybamm.PrimaryBroadcast):
+        new_child = pybamm.PrimaryBroadcast(0, expression.child.domain)
+        return pybamm.PrimaryBroadcastToEdges(new_child, expression.domain)
+    else:
+        return Gradient(expression)
 
 
 def div(expression):
@@ -824,8 +939,12 @@ def div(expression):
     :class:`Divergence`
         the divergence of ``expression``
     """
-
-    return Divergence(expression)
+    # Divergence of a broadcast is zero
+    if isinstance(expression, pybamm.PrimaryBroadcastToEdges):
+        new_child = pybamm.PrimaryBroadcast(0, expression.child.domain)
+        return pybamm.PrimaryBroadcast(new_child, expression.domain)
+    else:
+        return Divergence(expression)
 
 
 def laplacian(expression):
@@ -904,7 +1023,7 @@ def x_average(symbol):
         the new averaged symbol
     """
     # Can't take average if the symbol evaluates on edges
-    if symbol.evaluates_on_edges():
+    if symbol.evaluates_on_edges("primary"):
         raise ValueError("Can't take the x-average of a symbol that evaluates on edges")
     # If symbol doesn't have a domain, its average value is itself
     if symbol.domain in [[], ["current collector"]]:
@@ -969,7 +1088,7 @@ def z_average(symbol):
         the new averaged symbol
     """
     # Can't take average if the symbol evaluates on edges
-    if symbol.evaluates_on_edges():
+    if symbol.evaluates_on_edges("primary"):
         raise ValueError("Can't take the z-average of a symbol that evaluates on edges")
     # Symbol must have domain [] or ["current collector"]
     if symbol.domain not in [[], ["current collector"]]:
@@ -1046,7 +1165,7 @@ def r_average(symbol):
         the new averaged symbol
     """
     # Can't take average if the symbol evaluates on edges
-    if symbol.evaluates_on_edges():
+    if symbol.evaluates_on_edges("primary"):
         raise ValueError("Can't take the r-average of a symbol that evaluates on edges")
     # If symbol doesn't have a particle domain, its r-averaged value is itself
     if symbol.domain not in [["positive particle"], ["negative particle"]]:

@@ -2,6 +2,7 @@
 # Test setting up a simulation with an experiment
 #
 import pybamm
+import numpy as np
 import unittest
 
 
@@ -92,6 +93,27 @@ class TestSimulationExperiment(unittest.TestCase):
         sim.solve(t_eval, solver=pybamm.CasadiSolver())
         pybamm.set_logging_level("WARNING")
         self.assertIn("event", sim._solution.termination)
+
+    def test_inputs(self):
+        experiment = pybamm.Experiment(
+            ["Discharge at C/2 for 1 hour", "Rest for 1 hour"]
+        )
+        model = pybamm.lithium_ion.SPM()
+
+        # Change a parameter to an input
+        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
+        param["Negative electrode diffusivity [m2.s-1]"] = (
+            pybamm.InputParameter("Dsn") * 3.9e-14
+        )
+
+        # Solve a first time
+        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+        sim.solve(inputs={"Dsn": 1})
+        np.testing.assert_array_equal(sim.solution.inputs["Dsn"], 1)
+
+        # Solve again, input should change
+        sim.solve(inputs={"Dsn": 2})
+        np.testing.assert_array_equal(sim.solution.inputs["Dsn"], 2)
 
 
 if __name__ == "__main__":

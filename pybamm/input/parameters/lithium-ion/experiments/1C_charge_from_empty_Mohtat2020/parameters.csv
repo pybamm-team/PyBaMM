@@ -3,15 +3,19 @@ Name [units],Value,Reference,Notes
 ,,,
 # Temperature
 Reference temperature [K],298.15,25C,
-Heat transfer coefficient [W.m-2.K-1],5,Peyman MPM,
+Negative current collector surface heat transfer coefficient [W.m-2.K-1],0,,
+Positive current collector surface heat transfer coefficient [W.m-2.K-1],0,,
+Negative tab heat transfer coefficient [W.m-2.K-1],0,,
+Positive tab heat transfer coefficient [W.m-2.K-1],0,,
+Edge heat transfer coefficient [W.m-2.K-1],5,Peyman MPM,
+Total heat transfer coefficient [W.m-2.K-1],5,Peyman MPM,
 Ambient temperature [K], 298.15,,
 ,,,
-# Electrical			
+# Electrical
 Number of electrodes connected in parallel to make a cell,1,,
 Number of cells connected in series to make a battery,1,,
 Lower voltage cut-off [V],2.5,,
-Upper voltage cut-off [V],4.2,,
-C-rate,-1,,
+Upper voltage cut-off [V],4.25,,just above 4.2
 ,,,
 # Initial conditions
 Initial concentration in negative electrode [mol.m-3],48.8682,Peyman MPM, x0 (0.0017) * Csmax_n
