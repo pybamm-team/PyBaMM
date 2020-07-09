@@ -288,7 +288,7 @@ class BaseSolver(object):
                 # Add sensitivity vectors to the rhs and algebraic equations
                 if self.solve_sensitivity_equations is True:
                     if name == "rhs":
-                        report(f"Creating sensitivity equations for rhs using CasADi")
+                        report("Creating sensitivity equations for rhs using CasADi")
                         df_dx = casadi.jacobian(func, y_diff)
                         df_dp = casadi.jacobian(func, p_casadi_stacked)
                         S_x_mat = S_x.reshape(

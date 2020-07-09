@@ -3,7 +3,6 @@
 #
 import casadi
 import numbers
-import numpy as np
 
 
 class ProcessedSymbolicVariable(object):
