@@ -10,7 +10,6 @@ import sys
 from platform import system
 
 
-@unittest.skip("")
 class TestScipySolver(unittest.TestCase):
     def test_model_solver_python_and_jax(self):
 
@@ -350,7 +349,6 @@ class TestScipySolver(unittest.TestCase):
 
 
 class TestScipySolverWithSensitivity(unittest.TestCase):
-    @unittest.skip("")
     def test_solve_sensitivity_scalar_var_scalar_input(self):
         # Create model
         model = pybamm.BaseModel()
@@ -452,7 +450,6 @@ class TestScipySolverWithSensitivity(unittest.TestCase):
             ),
         )
 
-    @unittest.skip("")
     def test_solve_sensitivity_vector_var_scalar_input(self):
         var = pybamm.Variable("var", "negative electrode")
         model = pybamm.BaseModel()
@@ -596,7 +593,7 @@ class TestScipySolverWithSensitivity(unittest.TestCase):
         )
         np.testing.assert_array_almost_equal(
             solution["integral of var"].sensitivity["param"],
-            np.tile(-2 * t_eval * np.exp(-7 * t_eval) * l_n / 40, (40, 1)).T,
+            np.tile(-2 * t_eval * np.exp(-7 * t_eval) * l_n / n, (n, 1)).T,
         )
 
         # Solve - linspace input
@@ -626,7 +623,7 @@ class TestScipySolverWithSensitivity(unittest.TestCase):
         )
         np.testing.assert_array_almost_equal(
             solution["integral of var"].sensitivity["param"],
-            np.vstack([-2 * t * np.exp(-p_eval * t) * l_n / 40 for t in t_eval]),
+            np.vstack([-2 * t * np.exp(-p_eval * t) * l_n / n for t in t_eval]),
         )
 
 

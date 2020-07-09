@@ -66,6 +66,7 @@ class _BaseSolution(object):
         # y only has the shape or the rhs and alg solution)
         if model is None or model.len_rhs_and_alg == y.shape[0]:
             self._y = y
+            self.sensitivity = {}
         else:
             n_states = model.len_rhs_and_alg
             n_t = len(t)
@@ -133,11 +134,9 @@ class _BaseSolution(object):
         if copy_this is None:
             self.set_up_time = None
             self.solve_time = None
-            self.has_symbolic_inputs = False
         else:
             self.set_up_time = copy_this.set_up_time
             self.solve_time = copy_this.solve_time
-            self.has_symbolic_inputs = copy_this.has_symbolic_inputs
 
         # initiaize empty variables and data
         self._variables = pybamm.FuzzyDict()

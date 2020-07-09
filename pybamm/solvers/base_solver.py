@@ -8,6 +8,7 @@ import numbers
 import numpy as np
 import sys
 import itertools
+from scipy.linalg import block_diag
 
 
 class BaseSolver(object):
@@ -426,12 +427,21 @@ class BaseSolver(object):
         ):
             # can use DAE solver to solve model with algebraic equations only
             if len(model.rhs) > 0:
-                mass_matrix_inv = casadi.MX(model.mass_matrix_inv.entries)
+                if self.solve_sensitivity_equations is True:
+                    # Copy mass matrix blocks diagonally
+                    single_mass_matrix_inv = model.mass_matrix_inv.entries.toarray()
+                    n_inputs = p_casadi_stacked.shape[0]
+                    block_mass_matrix = block_diag(
+                        *[single_mass_matrix_inv] * (n_inputs + 1)
+                    )
+                    mass_matrix_inv = casadi.MX(block_mass_matrix)
+                else:
+                    mass_matrix_inv = casadi.MX(model.mass_matrix_inv.entries)
                 explicit_rhs = mass_matrix_inv @ rhs(
-                    t_casadi, y_casadi, p_casadi_stacked
+                    t_casadi, y_and_S, p_casadi_stacked
                 )
                 model.casadi_rhs = casadi.Function(
-                    "rhs", [t_casadi, y_casadi, p_casadi_stacked], [explicit_rhs]
+                    "rhs", [t_casadi, y_and_S, p_casadi_stacked], [explicit_rhs]
                 )
             model.casadi_algebraic = algebraic
         if len(model.rhs) == 0:
@@ -702,10 +712,6 @@ class BaseSolver(object):
         # Assign times
         solution.set_up_time = set_up_time
         solution.solve_time = timer.time()
-
-        # Add model and inputs to solution
-        solution.model = model
-        solution.inputs = ext_and_inputs
 
         # Identify the event that caused termination
         termination = self.get_termination_reason(solution, model.events)
