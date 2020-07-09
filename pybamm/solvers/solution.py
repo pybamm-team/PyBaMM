@@ -67,9 +67,11 @@ class _BaseSolution(object):
         if model is None or model.len_rhs_and_alg == y.shape[0]:
             self._y = y
         else:
-            all_inputs_size = np.vstack(list(inputs.values())).size
+            n_states = model.len_rhs_and_alg
+            n_t = len(t)
+            n_p = np.vstack(list(inputs.values())).size
             # Get the point where the algebraic equations start
-            len_rhs_and_sens = all_inputs_size * model.len_rhs
+            len_rhs_and_sens = (n_p + 1) * model.len_rhs
             # self._y gets the part of the solution vector that correspond to the
             # actual ODE/DAE solution
             self._y = np.vstack(
@@ -94,28 +96,35 @@ class _BaseSolution(object):
             #   tn_x1_p0, tn_x1_p1, ..., tn_x1_pn
             #   ...
             #   tn_xn_p0, tn_xn_p1, ..., tn_xn_pn
+            # 1. Extract the relevant parts of y
+            # This makes a (n_states * n_p, n_t) matrix
             full_sens_matrix = np.vstack(
                 [
                     y[model.len_rhs : len_rhs_and_sens, :],
                     y[len_rhs_and_sens + model.len_alg :, :],
                 ]
-            ).reshape(np.prod(self._y.shape), all_inputs_size, order="F")
+            )
+            # 2. Transpose into a (n_t, n_states * n_p) matrix
+            full_sens_matrix = full_sens_matrix.T
+            # 3. Reshape into a (n_t, n_p, n_states) matrix,
+            # then tranpose n_p and n_states to get (n_t, n_states, n_p) matrix
+            full_sens_matrix = full_sens_matrix.reshape(n_t, n_p, n_states).transpose(
+                0, 2, 1
+            )
+            # 3. Stack time and space to get a (n_t * n_states, n_p) matrix
+            full_sens_matrix = full_sens_matrix.reshape(n_t * n_states, n_p)
+
+            # Save the full sensitivity matrix
+
             sensitivity = {"all": full_sens_matrix}
-            # also save the sensitivity wrt each parameter
-            start_rhs = model.len_rhs
-            start_alg = len_rhs_and_sens + model.len_alg
-            for i, (name, inp) in enumerate(inputs.items()):
-                if isinstance(inp, numbers.Number):
-                    input_size = 1
-                else:
-                    input_size = inp.shape[0]
-                end_rhs = start_rhs + model.len_rhs * input_size
-                end_alg = start_alg + model.len_alg * input_size
-                sensitivity[name] = np.vstack(
-                    [y[start_rhs:end_rhs, :], y[start_alg:end_alg, :],]
-                ).reshape(-1, 1)
-                start_rhs = end_rhs
-                start_alg = end_alg
+            # also save the sensitivity wrt each parameter (read the columns of the
+            # sensitivity matrix)
+            start = 0
+            for i, (name, inp) in enumerate(self.inputs.items()):
+                input_size = inp.shape[0]
+                end = start + input_size
+                sensitivity[name] = full_sens_matrix[:, start:end]
+                start = end
             self.sensitivity = sensitivity
 
         self._t_event = t_event
@@ -182,7 +191,10 @@ class _BaseSolution(object):
                     inp = inp * np.ones((1, len(self.t)))
                 # Tile a vector
                 else:
-                    inp = np.tile(inp, len(self.t))
+                    if inp.ndim == 1:
+                        inp = np.tile(inp, (len(self.t), 1)).T
+                    else:
+                        inp = np.tile(inp, len(self.t))
                 self._inputs[name] = inp
 
     @property

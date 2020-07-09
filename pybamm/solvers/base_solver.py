@@ -290,11 +290,14 @@ class BaseSolver(object):
                         report(f"Creating sensitivity equations for rhs using CasADi")
                         df_dx = casadi.jacobian(func, y_diff)
                         df_dp = casadi.jacobian(func, p_casadi_stacked)
+                        S_x_mat = S_x.reshape(
+                            (model.len_rhs_and_alg, p_casadi_stacked.shape[0])
+                        )
                         if model.len_alg == 0:
-                            S_rhs = df_dx @ S_x + df_dp
+                            S_rhs = (df_dx @ S_x_mat + df_dp).reshape((-1, 1))
                         else:
                             df_dz = casadi.jacobian(func, y_alg)
-                            S_rhs = df_dx @ S_x + df_dz @ S_z + df_dp
+                            S_rhs = df_dx @ S_x_mat + df_dz @ S_z + df_dp
                         func = casadi.vertcat(func, S_rhs)
                     elif name == "initial_conditions":
                         if model.len_rhs == 0 or model.len_alg == 0:

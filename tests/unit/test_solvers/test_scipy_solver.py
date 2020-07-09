@@ -383,10 +383,81 @@ class TestScipySolverWithSensitivity(unittest.TestCase):
             ],
         )
 
+        # More complicated model
+        # Create model
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        p = pybamm.InputParameter("p")
+        q = pybamm.InputParameter("q")
+        r = pybamm.InputParameter("r")
+        s = pybamm.InputParameter("s")
+        model.rhs = {var: p * q}
+        model.initial_conditions = {var: r}
+        model.variables = {"var times s": var * s}
+
+        # Solve
+        # Make sure that passing in extra options works
+        solver = pybamm.ScipySolver(
+            rtol=1e-10, atol=1e-10, solve_sensitivity_equations=True
+        )
+        t_eval = np.linspace(0, 1, 80)
+        solution = solver.solve(
+            model, t_eval, inputs={"p": 0.1, "q": 2, "r": -1, "s": 0.5}
+        )
+        np.testing.assert_allclose(solution.y[0], -1 + 0.2 * solution.t)
+        np.testing.assert_allclose(
+            solution.sensitivity["p"], (2 * solution.t)[:, np.newaxis],
+        )
+        np.testing.assert_allclose(
+            solution.sensitivity["q"], (0.1 * solution.t)[:, np.newaxis],
+        )
+        np.testing.assert_allclose(solution.sensitivity["r"], 1)
+        np.testing.assert_allclose(solution.sensitivity["s"], 0)
+        np.testing.assert_allclose(
+            solution.sensitivity["all"],
+            np.hstack(
+                [
+                    solution.sensitivity["p"],
+                    solution.sensitivity["q"],
+                    solution.sensitivity["r"],
+                    solution.sensitivity["s"],
+                ]
+            ),
+        )
+        np.testing.assert_allclose(
+            solution["var times s"].data, 0.5 * (-1 + 0.2 * solution.t)
+        )
+        np.testing.assert_allclose(
+            solution["var times s"].sensitivity["p"],
+            0.5 * (2 * solution.t)[:, np.newaxis],
+        )
+        np.testing.assert_allclose(
+            solution["var times s"].sensitivity["q"],
+            0.5 * (0.1 * solution.t)[:, np.newaxis],
+        )
+        np.testing.assert_allclose(solution["var times s"].sensitivity["r"], 0.5)
+        np.testing.assert_allclose(
+            solution["var times s"].sensitivity["s"],
+            (-1 + 0.2 * solution.t)[:, np.newaxis],
+        )
+        np.testing.assert_allclose(
+            solution["var times s"].sensitivity["all"],
+            np.hstack(
+                [
+                    solution["var times s"].sensitivity["p"],
+                    solution["var times s"].sensitivity["q"],
+                    solution["var times s"].sensitivity["r"],
+                    solution["var times s"].sensitivity["s"],
+                ]
+            ),
+        )
+
     @unittest.skip("")
     def test_solve_sensitivity_vector_var_scalar_input(self):
         var = pybamm.Variable("var", "negative electrode")
         model = pybamm.BaseModel()
+        # Set length scales to avoid warning
+        model.length_scales = {"negative electrode": 1}
         param = pybamm.InputParameter("param")
         model.rhs = {var: -param * var}
         model.initial_conditions = {var: 2}
@@ -410,32 +481,152 @@ class TestScipySolverWithSensitivity(unittest.TestCase):
             decimal=4,
         )
 
+        # More complicated model
+        # Create model
+        model = pybamm.BaseModel()
+        # Set length scales to avoid warning
+        model.length_scales = {"negative electrode": 1}
+        var = pybamm.Variable("var", "negative electrode")
+        p = pybamm.InputParameter("p")
+        q = pybamm.InputParameter("q")
+        r = pybamm.InputParameter("r")
+        s = pybamm.InputParameter("s")
+        model.rhs = {var: p * q}
+        model.initial_conditions = {var: r}
+        model.variables = {"var times s": var * s}
+
+        # Discretise
+        disc.process_model(model)
+
+        # Solve
+        # Make sure that passing in extra options works
+        solver = pybamm.ScipySolver(
+            rtol=1e-10, atol=1e-10, solve_sensitivity_equations=True
+        )
+        t_eval = np.linspace(0, 1, 80)
+        solution = solver.solve(
+            model, t_eval, inputs={"p": 0.1, "q": 2, "r": -1, "s": 0.5}
+        )
+        np.testing.assert_allclose(solution.y, np.tile(-1 + 0.2 * solution.t, (n, 1)))
+        np.testing.assert_allclose(
+            solution.sensitivity["p"], np.repeat(2 * solution.t, n)[:, np.newaxis],
+        )
+        np.testing.assert_allclose(
+            solution.sensitivity["q"], np.repeat(0.1 * solution.t, n)[:, np.newaxis],
+        )
+        np.testing.assert_allclose(solution.sensitivity["r"], 1)
+        np.testing.assert_allclose(solution.sensitivity["s"], 0)
+        np.testing.assert_allclose(
+            solution.sensitivity["all"],
+            np.hstack(
+                [
+                    solution.sensitivity["p"],
+                    solution.sensitivity["q"],
+                    solution.sensitivity["r"],
+                    solution.sensitivity["s"],
+                ]
+            ),
+        )
+        np.testing.assert_allclose(
+            solution["var times s"].data, np.tile(0.5 * (-1 + 0.2 * solution.t), (n, 1))
+        )
+        np.testing.assert_allclose(
+            solution["var times s"].sensitivity["p"],
+            np.repeat(0.5 * (2 * solution.t), n)[:, np.newaxis],
+        )
+        np.testing.assert_allclose(
+            solution["var times s"].sensitivity["q"],
+            np.repeat(0.5 * (0.1 * solution.t), n)[:, np.newaxis],
+        )
+        np.testing.assert_allclose(solution["var times s"].sensitivity["r"], 0.5)
+        np.testing.assert_allclose(
+            solution["var times s"].sensitivity["s"],
+            np.repeat(-1 + 0.2 * solution.t, n)[:, np.newaxis],
+        )
+        np.testing.assert_allclose(
+            solution["var times s"].sensitivity["all"],
+            np.hstack(
+                [
+                    solution["var times s"].sensitivity["p"],
+                    solution["var times s"].sensitivity["q"],
+                    solution["var times s"].sensitivity["r"],
+                    solution["var times s"].sensitivity["s"],
+                ]
+            ),
+        )
+
     def test_solve_sensitivity_scalar_var_vector_input(self):
         var = pybamm.Variable("var", "negative electrode")
         model = pybamm.BaseModel()
+        # Set length scales to avoid warning
+        model.length_scales = {"negative electrode": 1}
+
         param = pybamm.InputParameter("param", "negative electrode")
         model.rhs = {var: -param * var}
         model.initial_conditions = {var: 2}
-        model.variables = {"x-average of var": pybamm.x_average(var)}
+        model.variables = {
+            "var": var,
+            "integral of var": pybamm.Integral(var, pybamm.standard_spatial_vars.x_n),
+        }
 
         # create discretisation
-        mesh = get_mesh_for_testing(xpts=5)
+        mesh = get_mesh_for_testing()
         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
         n = disc.mesh["negative electrode"].npts
 
-        # Solve - scalar input
-        solver = pybamm.ScipySolver(solve_sensitivity_equations=True)
-        t_eval = np.linspace(0, 1, 3)
+        # Solve - constant input
+        solver = pybamm.ScipySolver(
+            rtol=1e-10, atol=1e-10, solve_sensitivity_equations=True
+        )
+        t_eval = np.linspace(0, 1)
         solution = solver.solve(model, t_eval, inputs={"param": 7 * np.ones(n)})
+        l_n = mesh["negative electrode"].edges[-1]
         np.testing.assert_array_almost_equal(
             solution["var"].data, np.tile(2 * np.exp(-7 * t_eval), (n, 1)), decimal=4,
         )
+
         np.testing.assert_array_almost_equal(
             solution["var"].sensitivity["param"],
-            np.repeat(-2 * t_eval * np.exp(-7 * t_eval), n)[:, np.newaxis],
-            decimal=4,
+            np.vstack([np.eye(n) * -2 * t * np.exp(-7 * t) for t in t_eval]),
+        )
+        np.testing.assert_array_almost_equal(
+            solution["integral of var"].data, 2 * np.exp(-7 * t_eval) * l_n, decimal=4,
+        )
+        np.testing.assert_array_almost_equal(
+            solution["integral of var"].sensitivity["param"],
+            np.tile(-2 * t_eval * np.exp(-7 * t_eval) * l_n / 40, (40, 1)).T,
+        )
+
+        # Solve - linspace input
+        solver = pybamm.ScipySolver(
+            rtol=1e-10, atol=1e-10, solve_sensitivity_equations=True
+        )
+        t_eval = np.linspace(0, 1)
+        p_eval = np.linspace(1, 2, n)
+        solution = solver.solve(model, t_eval, inputs={"param": p_eval})
+        l_n = mesh["negative electrode"].edges[-1]
+        np.testing.assert_array_almost_equal(
+            solution["var"].data, 2 * np.exp(-p_eval[:, np.newaxis] * t_eval), decimal=4
+        )
+        np.testing.assert_array_almost_equal(
+            solution["var"].sensitivity["param"],
+            np.vstack([np.diag(-2 * t * np.exp(-p_eval * t)) for t in t_eval]),
+        )
+
+        np.testing.assert_array_almost_equal(
+            solution["integral of var"].data,
+            np.sum(
+                2
+                * np.exp(-p_eval[:, np.newaxis] * t_eval)
+                * mesh["negative electrode"].d_edges[:, np.newaxis],
+                axis=0,
+            ),
+        )
+        np.testing.assert_array_almost_equal(
+            solution["integral of var"].sensitivity["param"],
+            np.vstack([-2 * t * np.exp(-p_eval * t) * l_n / 40 for t in t_eval]),
         )
 
 
