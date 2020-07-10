@@ -695,7 +695,7 @@ def _bdf_odeint(fun, rtol, atol, y0, t_eval, *args):
     the time points in t_eval
     """
     def fun_bind_inputs(y, t):
-        fun(y, t, *args)
+        return fun(y, t, *args)
 
     jac_bind_inputs = jax.jacfwd(fun_bind_inputs, argnums=0)
 
@@ -800,9 +800,10 @@ def closure_convert(fun, in_tree, in_avals):
     # We only want to closure convert for constants with respect to which we're
     # differentiating. As a proxy for that, we hoist consts with float dtype.
     # TODO(mattjj): revise this approach
-    def is_float(c):
-        dtypes.issubdtype(dtypes.dtype(c), jnp.inexact)
-    (closure_consts, hoisted_consts), merge = partition_list(is_float, consts)
+    (closure_consts, hoisted_consts), merge = partition_list(
+        lambda c: dtypes.issubdtype(dtypes.dtype(c), jnp.inexact),
+        consts
+    )
     num_consts = len(hoisted_consts)
 
     def converted_fun(y, t, *hconsts_args):

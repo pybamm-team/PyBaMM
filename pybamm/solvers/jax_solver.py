@@ -137,7 +137,7 @@ class JaxSolver(pybamm.BaseSolver):
                 atol=self.atol,
                 **self.extra_options
             )
-            return y
+            return np.transpose(y)
 
         if self.method == 'RK45':
             return jax.jit(solve_model_rk45)

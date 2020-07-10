@@ -27,7 +27,7 @@ class TestJaxSolver(unittest.TestCase):
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
 
-        for method in ['BDF', 'RK45']:
+        for method in ['RK45', 'BDF']:
             # Solve
             solver = pybamm.JaxSolver(
                 method=method, rtol=1e-8, atol=1e-8
@@ -59,7 +59,7 @@ class TestJaxSolver(unittest.TestCase):
         model.convert_to_format = "jax"
         domain = ["negative electrode", "separator", "positive electrode"]
         var = pybamm.Variable("var", domain=domain)
-        model.rhs = {var: 0.1 * var}
+        model.rhs = {var: -pybamm.InputParameter("rate") * var}
         model.initial_conditions = {var: 1.0}
         # No need to set parameters; can use base discretisation (no spatial operators)
 
@@ -76,12 +76,12 @@ class TestJaxSolver(unittest.TestCase):
             )
             t_eval = np.linspace(0, 1, 80)
 
-            # need to solve the model once to get it set up by the base solver
-            solver.solve(model, t_eval)
-            solve = solver.get_solve(model, t_eval)
-
             h = 0.0001
             rate = 0.1
+
+            # need to solve the model once to get it set up by the base solver
+            solver.solve(model, t_eval, {'rate': rate})
+            solve = solver.get_solve(model, t_eval)
 
             # create a dummy "model" where we calculate the sum of the time series
             def solve_model(rate):
@@ -206,12 +206,12 @@ class TestJaxSolver(unittest.TestCase):
 
         solver.solve(model, t_eval, inputs={"rate": 0.1})
         solver = solver.get_solve(model, t_eval)
-        y, _ = solver({"rate": 0.1})
+        y = solver({"rate": 0.1})
 
         np.testing.assert_allclose(y[0], np.exp(-0.1 * t_eval),
                                    rtol=1e-6, atol=1e-6)
 
-        y, _ = solver({"rate": 0.2})
+        y = solver({"rate": 0.2})
 
         np.testing.assert_allclose(y[0], np.exp(-0.2 * t_eval),
                                    rtol=1e-6, atol=1e-6)
