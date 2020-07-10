@@ -7,7 +7,6 @@ import numpy as np
 from platform import system
 import jax
 
-
 @unittest.skipIf(system() == "Windows", "JAX not supported on windows")
 class TestJaxBDFSolver(unittest.TestCase):
     def test_solver(self):
@@ -63,23 +62,10 @@ class TestJaxBDFSolver(unittest.TestCase):
         model.initial_conditions = {var: 1}
 
         # create discretisation
-        mesh = get_mesh_for_testing()
+        mesh = get_mesh_for_testing(xpts=10)
         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
-
-        #model = pybamm.BaseModel()
-        #var = pybamm.Variable("var")
-        #model.rhs = {var: -pybamm.InputParameter("rate") * var}
-        #model.initial_conditions = {var: 1}
-        ## No need to set parameters; can use base discretisation (no spatial operators)
-
-        ## create discretisation
-        #disc = pybamm.Discretisation()
-        #disc.process_model(model)
-
-        #t_eval = np.linspace(0, 10, 4)
-
 
         # Solve
         t_eval = np.linspace(0, 10, 4)
@@ -92,68 +78,22 @@ class TestJaxBDFSolver(unittest.TestCase):
         h = 0.0001
         rate = 0.1
 
+        # create a couple of dummy "models" were we calculate the sum of the time series
         @jax.jit
-        def solve(rate):
-            return pybamm.jax_bdf_integrate(fun, y0, t_eval,
+        def solve_bdf(rate):
+            return jax.numpy.sum(pybamm.jax_bdf_integrate(fun, y0, t_eval,
                                             {'rate': rate},
-                                            rtol=1e-9, atol=1e-9)
+                                            rtol=1e-9, atol=1e-9))
 
-        @jax.jit
-        def solve_odeint(rate):
-            return jax.experimental.ode.odeint(fun, y0, t_eval,
-                                            {'rate': rate},
-                                            rtol=1e-9, atol=1e-9)
-
-
-        grad_solve = jax.jit(jax.jacrev(solve))
-        grad = grad_solve(rate)
-        print(grad)
-
-        eval_plus = solve(rate + h)
-        eval_plus2 = solve_odeint(rate + h)
-        print(eval_plus.shape)
-        print(eval_plus2.shape)
-        eval_neg = solve(rate - h)
+        # check answers with finite difference
+        eval_plus = solve_bdf(rate + h)
+        eval_neg = solve_bdf(rate - h)
         grad_num = (eval_plus - eval_neg) / (2 * h)
-        print(grad_num)
 
-        grad_solve = jax.jit(jax.jacrev(solve))
-        print('finished calculating jacobian',grad_solve)
-        print('5')
-        time.sleep(1)
-        print('4')
-        time.sleep(1)
-        print('3')
-        time.sleep(1)
-        print('2')
-        time.sleep(1)
-        print('1')
-        time.sleep(1)
-        print('go')
+        grad_solve_bdf = jax.jit(jax.grad(solve_bdf))
+        grad_bdf = grad_solve_bdf(rate)
 
-        grad = grad_solve(rate)
-        print('finished executing jacobian')
-        print(grad)
-
-        print('5')
-        time.sleep(1)
-        print('4')
-        time.sleep(1)
-        print('3')
-        time.sleep(1)
-        print('2')
-        time.sleep(1)
-        print('1')
-        time.sleep(1)
-        print('go')
-
-        grad = grad_solve(rate)
-        print(grad)
-        print('finished executing jacobian')
-
-
-
-        #np.testing.assert_allclose(y[0, :].reshape(-1), np.exp(-0.1 * t_eval))
+        self.assertAlmostEqual(grad_bdf, grad_num, places=3)
 
     def test_solver_with_inputs(self):
         # Create model

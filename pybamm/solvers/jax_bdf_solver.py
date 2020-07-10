@@ -696,7 +696,7 @@ def _bdf_odeint(fun, rtol, atol, y0, t_eval, *args):
     """
     fun_bind_inputs = lambda y, t: fun(y, t, *args)
 
-    jac_bind_inputs = jax.jacrev(fun_bind_inputs, argnums=0)
+    jac_bind_inputs = jax.jacfwd(fun_bind_inputs, argnums=0)
 
     t0 = t_eval[0]
     h0 = t_eval[1] - t0
