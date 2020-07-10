@@ -5,7 +5,6 @@ import sys
 import time
 import numpy as np
 from platform import system
-from platform import system
 if system() != "Windows":
     import jax
 
@@ -97,27 +96,6 @@ class TestJaxSolver(unittest.TestCase):
             grad = grad_solve(rate)
 
             self.assertAlmostEqual(grad, grad_num, places=3)
-
-    def test_solver_only_works_with_jax(self):
-        model = pybamm.BaseModel()
-        var = pybamm.Variable("var")
-        model.rhs = {var: -pybamm.sqrt(var)}
-        model.initial_conditions = {var: 1}
-        # No need to set parameters; can use base discretisation (no spatial operators)
-
-        # create discretisation
-        disc = pybamm.Discretisation()
-        disc.process_model(model)
-
-        t_eval = np.linspace(0, 3, 100)
-
-        # solver needs a model converted to jax
-        for convert_to_format in ["casadi", "python", "something_else"]:
-            model.convert_to_format = convert_to_format
-
-            solver = pybamm.JaxSolver()
-            with self.assertRaisesRegex(RuntimeError, "must be converted to JAX"):
-                solver.solve(model, t_eval)
 
     def test_solver_only_works_with_jax(self):
         model = pybamm.BaseModel()

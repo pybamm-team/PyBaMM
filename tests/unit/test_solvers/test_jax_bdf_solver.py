@@ -7,6 +7,7 @@ import numpy as np
 from platform import system
 import jax
 
+
 @unittest.skipIf(system() == "Windows", "JAX not supported on windows")
 class TestJaxBDFSolver(unittest.TestCase):
     def test_solver(self):
@@ -81,9 +82,11 @@ class TestJaxBDFSolver(unittest.TestCase):
         # create a dummy "model" where we calculate the sum of the time series
         @jax.jit
         def solve_bdf(rate):
-            return jax.numpy.sum(pybamm.jax_bdf_integrate(fun, y0, t_eval,
-                                            {'rate': rate},
-                                            rtol=1e-9, atol=1e-9))
+            return jax.numpy.sum(
+                pybamm.jax_bdf_integrate(fun, y0, t_eval,
+                                         {'rate': rate},
+                                         rtol=1e-9, atol=1e-9)
+            )
 
         # check answers with finite difference
         eval_plus = solve_bdf(rate + h)

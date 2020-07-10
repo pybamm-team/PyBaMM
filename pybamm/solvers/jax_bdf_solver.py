@@ -12,13 +12,12 @@ from jax.flatten_util import ravel_pytree
 from jax.tree_util import tree_map, tree_flatten, tree_unflatten
 from jax.interpreters import partial_eval as pe
 from jax import linear_util as lu
+from jax.config import config
+
+config.update("jax_enable_x64", True)
 
 map = safe_map
 zip = safe_zip
-
-
-from jax.config import config
-config.update("jax_enable_x64", True)
 
 
 def jax_bdf_integrate(func, y0, t_eval, *args, rtol=1e-6, atol=1e-6):
@@ -118,6 +117,7 @@ def flax_fori_loop(start, stop, body_fun, init_val):  # pragma: no cover
     for i in range(start, stop):
         val = body_fun(i, val)
     return val
+
 
 def flax_scan(f, init, xs, length=None):  # pragma: no cover
     """
@@ -375,7 +375,7 @@ def _update_step_size(state, factor, dont_update_lu):
 
     # only update order+1, order+1 entries of D
     RU = jnp.where(jnp.logical_and(I <= order, J <= order),
-                  RU, jnp.identity(MAX_ORDER + 1))
+                   RU, jnp.identity(MAX_ORDER + 1))
     D = state['D']
     D = jnp.dot(RU.T, D)
     # D = jax.ops.index_update(D, jax.ops.index[:order + 1],
@@ -694,7 +694,8 @@ def _bdf_odeint(fun, rtol, atol, y0, t_eval, *args):
     main solver loop - creates a stepper object and steps through time, interpolating to
     the time points in t_eval
     """
-    fun_bind_inputs = lambda y, t: fun(y, t, *args)
+    def fun_bind_inputs(y, t):
+        fun(y, t, *args)
 
     jac_bind_inputs = jax.jacfwd(fun_bind_inputs, argnums=0)
 
@@ -785,19 +786,22 @@ def _bdf_odeint_rev(func, rtol, atol, res, g):
 
 _bdf_odeint.defvjp(_bdf_odeint_fwd, _bdf_odeint_rev)
 
+
 @cache()
 def closure_convert(fun, in_tree, in_avals):
     in_pvals = [pe.PartialVal.unknown(aval) for aval in in_avals]
     wrapped_fun, out_tree = flatten_fun_nokwargs(lu.wrap_init(fun), in_tree)
     with core.initial_style_staging():
         jaxpr, out_pvals, consts = pe.trace_to_jaxpr(
-        wrapped_fun, in_pvals, instantiate=True, stage_out=False)
+            wrapped_fun, in_pvals, instantiate=True, stage_out=False
+        )
     out_tree = out_tree()
 
     # We only want to closure convert for constants with respect to which we're
     # differentiating. As a proxy for that, we hoist consts with float dtype.
     # TODO(mattjj): revise this approach
-    is_float = lambda c: dtypes.issubdtype(dtypes.dtype(c), jnp.inexact)
+    def is_float(c):
+        dtypes.issubdtype(dtypes.dtype(c), jnp.inexact)
     (closure_consts, hoisted_consts), merge = partition_list(is_float, consts)
     num_consts = len(hoisted_consts)
 
@@ -811,13 +815,16 @@ def closure_convert(fun, in_tree, in_avals):
 
     return converted_fun, hoisted_consts
 
+
 def partition_list(choice, lst):
     out = [], []
     which = [out[choice(elt)].append(elt) or choice(elt) for elt in lst]
+
     def merge(l1, l2):
         i1, i2 = iter(l1), iter(l2)
         return [next(i2 if snd else i1) for snd in which]
     return out, merge
+
 
 def abstractify(x):
     return core.raise_to_shaped(core.get_aval(x))
@@ -825,6 +832,7 @@ def abstractify(x):
 
 def ravel_first_arg(f, unravel):
     return ravel_first_arg_(lu.wrap_init(f), unravel).call_wrapped
+
 
 @lu.transformation
 def ravel_first_arg_(unravel, y_flat, *args):
