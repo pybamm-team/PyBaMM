@@ -78,7 +78,7 @@ class TestJaxBDFSolver(unittest.TestCase):
         h = 0.0001
         rate = 0.1
 
-        # create a couple of dummy "models" were we calculate the sum of the time series
+        # create a dummy "model" where we calculate the sum of the time series
         @jax.jit
         def solve_bdf(rate):
             return jax.numpy.sum(pybamm.jax_bdf_integrate(fun, y0, t_eval,

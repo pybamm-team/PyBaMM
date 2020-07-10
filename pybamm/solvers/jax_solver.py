@@ -74,11 +74,11 @@ class JaxSolver(pybamm.BaseSolver):
                 raise RuntimeError("Model is not set up for solving, run"
                                    "`solver.solve(model)` first")
 
-            self._cached_solves[model] = self._create_solve(model, t_eval)
+            self._cached_solves[model] = self.create_solve(model, t_eval)
 
         return self._cached_solves[model]
 
-    def _create_solve(self, model, t_eval):
+    def create_solve(self, model, t_eval):
         """
         Return a compiled JAX function that solves an ode model with input arguments.
 
@@ -125,7 +125,7 @@ class JaxSolver(pybamm.BaseSolver):
                 atol=self.atol,
                 **self.extra_options
             )
-            return np.transpose(y), None
+            return np.transpose(y)
 
         def solve_model_bdf(inputs):
             y = pybamm.jax_bdf_integrate(
@@ -137,7 +137,7 @@ class JaxSolver(pybamm.BaseSolver):
                 atol=self.atol,
                 **self.extra_options
             )
-            return y, None
+            return y
 
         if self.method == 'RK45':
             return jax.jit(solve_model_rk45)
@@ -165,13 +165,14 @@ class JaxSolver(pybamm.BaseSolver):
 
         """
         if model not in self._cached_solves:
-            self._cached_solves[model] = self._create_solve(model, t_eval)
+            self._cached_solves[model] = self.create_solve(model, t_eval)
 
-        y, stepper = self._cached_solves[model](inputs)
+        y = self._cached_solves[model](inputs)
 
         # note - the actual solve is not done until this line!
         y = onp.array(y)
 
+        stepper = None
         if stepper is not None:
             sstring = ''
             sstring += 'JAX {} solver - stats\n'.format(self.method)

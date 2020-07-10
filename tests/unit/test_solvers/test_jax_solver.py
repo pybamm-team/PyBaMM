@@ -5,6 +5,9 @@ import sys
 import time
 import numpy as np
 from platform import system
+from platform import system
+if system() != "Windows":
+    import jax
 
 
 @unittest.skipIf(system() == "Windows", "JAX not supported on windows")
@@ -50,6 +53,71 @@ class TestJaxSolver(unittest.TestCase):
 
             self.assertLess(t_second_solve, t_first_solve)
             np.testing.assert_array_equal(second_solution.y, solution.y)
+
+    def test_solver_sensitivities(self):
+        # Create model
+        model = pybamm.BaseModel()
+        model.convert_to_format = "jax"
+        domain = ["negative electrode", "separator", "positive electrode"]
+        var = pybamm.Variable("var", domain=domain)
+        model.rhs = {var: 0.1 * var}
+        model.initial_conditions = {var: 1.0}
+        # No need to set parameters; can use base discretisation (no spatial operators)
+
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
+
+        for method in ['RK45', 'BDF']:
+            # Solve
+            solver = pybamm.JaxSolver(
+                method=method, rtol=1e-8, atol=1e-8
+            )
+            t_eval = np.linspace(0, 1, 80)
+
+            # need to solve the model once to get it set up by the base solver
+            solver.solve(model, t_eval)
+            solve = solver.get_solve(model, t_eval)
+
+            h = 0.0001
+            rate = 0.1
+
+            # create a dummy "model" where we calculate the sum of the time series
+            def solve_model(rate):
+                return jax.numpy.sum(solve({'rate': rate}))
+
+            # check answers with finite difference
+            eval_plus = solve_model(rate + h)
+            eval_neg = solve_model(rate - h)
+            grad_num = (eval_plus - eval_neg) / (2 * h)
+
+            grad_solve = jax.jit(jax.grad(solve_model))
+            grad = grad_solve(rate)
+
+            self.assertAlmostEqual(grad, grad_num, places=3)
+
+    def test_solver_only_works_with_jax(self):
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        model.rhs = {var: -pybamm.sqrt(var)}
+        model.initial_conditions = {var: 1}
+        # No need to set parameters; can use base discretisation (no spatial operators)
+
+        # create discretisation
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        t_eval = np.linspace(0, 3, 100)
+
+        # solver needs a model converted to jax
+        for convert_to_format in ["casadi", "python", "something_else"]:
+            model.convert_to_format = convert_to_format
+
+            solver = pybamm.JaxSolver()
+            with self.assertRaisesRegex(RuntimeError, "must be converted to JAX"):
+                solver.solve(model, t_eval)
 
     def test_solver_only_works_with_jax(self):
         model = pybamm.BaseModel()
