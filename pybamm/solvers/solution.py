@@ -69,6 +69,8 @@ class _BaseSolution(object):
             self.sensitivity = {}
         else:
             n_states = model.len_rhs_and_alg
+            n_rhs = model.len_rhs
+            n_alg = model.len_alg
             n_t = len(t)
             n_p = np.vstack(list(inputs.values())).size
             # Get the point where the algebraic equations start
@@ -97,26 +99,19 @@ class _BaseSolution(object):
             #   tn_x1_p0, tn_x1_p1, ..., tn_x1_pn
             #   ...
             #   tn_xn_p0, tn_xn_p1, ..., tn_xn_pn
-            # 1. Extract the relevant parts of y
-            # This makes a (n_states * n_p, n_t) matrix
-            full_sens_matrix = np.vstack(
-                [
-                    y[model.len_rhs : len_rhs_and_sens, :],
-                    y[len_rhs_and_sens + model.len_alg :, :],
-                ]
+            # 1, Extract rhs and alg sensitivities and reshape into 3D matrices
+            # with shape (n_p, n_states, n_t)
+            ode_sens = y[n_rhs:len_rhs_and_sens, :].reshape(n_p, n_rhs, n_t)
+            alg_sens = y[len_rhs_and_sens + n_alg :, :].reshape(n_p, n_alg, n_t)
+            # 2. Concatenate into a single 3D matrix with shape (n_p, n_states, n_t)
+            # i.e. along first axis
+            full_sens_matrix = np.concatenate([ode_sens, alg_sens], axis=1)
+            # Transpose and reshape into a (n_states * n_t, n_p) matrix
+            full_sens_matrix = full_sens_matrix.transpose(2, 1, 0).reshape(
+                n_t * n_states, n_p
             )
-            # 2. Transpose into a (n_t, n_states * n_p) matrix
-            full_sens_matrix = full_sens_matrix.T
-            # 3. Reshape into a (n_t, n_p, n_states) matrix,
-            # then tranpose n_p and n_states to get (n_t, n_states, n_p) matrix
-            full_sens_matrix = full_sens_matrix.reshape(n_t, n_p, n_states).transpose(
-                0, 2, 1
-            )
-            # 3. Stack time and space to get a (n_t * n_states, n_p) matrix
-            full_sens_matrix = full_sens_matrix.reshape(n_t * n_states, n_p)
 
             # Save the full sensitivity matrix
-
             sensitivity = {"all": full_sens_matrix}
             # also save the sensitivity wrt each parameter (read the columns of the
             # sensitivity matrix)

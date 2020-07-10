@@ -75,7 +75,11 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
             y0_diff = casadi.DM()
             y0_alg = y0
         else:
-            len_rhs = model.concatenated_rhs.size
+            # Check y0 to see if it includes sensitivities
+            if model.len_rhs_and_alg == y0.shape[0]:
+                len_rhs = model.len_rhs
+            else:
+                len_rhs = model.len_rhs * (inputs.shape[0] + 1)
             y0_diff = y0[:len_rhs]
             y0_alg = y0[len_rhs:]
 

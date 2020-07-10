@@ -108,6 +108,7 @@ from .expression_tree.operations.evaluate import (
     to_python,
     EvaluatorPython,
 )
+
 if system() != "Windows":
     from .expression_tree.operations.evaluate import EvaluatorJax
 

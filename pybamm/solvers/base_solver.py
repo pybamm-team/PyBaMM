@@ -287,19 +287,44 @@ class BaseSolver(object):
                 func = func.to_casadi(t_casadi, y_casadi, inputs=p_casadi)
                 # Add sensitivity vectors to the rhs and algebraic equations
                 if self.solve_sensitivity_equations is True:
-                    if name == "rhs":
+                    if name == "rhs" and model.len_rhs > 0:
                         report("Creating sensitivity equations for rhs using CasADi")
                         df_dx = casadi.jacobian(func, y_diff)
                         df_dp = casadi.jacobian(func, p_casadi_stacked)
                         S_x_mat = S_x.reshape(
-                            (model.len_rhs_and_alg, p_casadi_stacked.shape[0])
+                            (model.len_rhs, p_casadi_stacked.shape[0])
                         )
                         if model.len_alg == 0:
                             S_rhs = (df_dx @ S_x_mat + df_dp).reshape((-1, 1))
                         else:
                             df_dz = casadi.jacobian(func, y_alg)
-                            S_rhs = df_dx @ S_x_mat + df_dz @ S_z + df_dp
+                            S_z_mat = S_z.reshape(
+                                (model.len_rhs, p_casadi_stacked.shape[0])
+                            )
+                            S_rhs = (df_dx @ S_x_mat + df_dz @ S_z_mat + df_dp).reshape(
+                                (-1, 1)
+                            )
                         func = casadi.vertcat(func, S_rhs)
+                    if name == "algebraic" and model.len_alg > 0:
+                        report(
+                            "Creating sensitivity equations for algebraic using CasADi"
+                        )
+                        dg_dz = casadi.jacobian(func, y_alg)
+                        dg_dp = casadi.jacobian(func, p_casadi_stacked)
+                        S_z_mat = S_z.reshape(
+                            (model.len_rhs, p_casadi_stacked.shape[0])
+                        )
+                        if model.len_rhs == 0:
+                            S_alg = (dg_dz @ S_z_mat + dg_dp).reshape((-1, 1))
+                        else:
+                            dg_dx = casadi.jacobian(func, y_diff)
+                            S_x_mat = S_x.reshape(
+                                (model.len_rhs, p_casadi_stacked.shape[0])
+                            )
+                            S_alg = (dg_dx @ S_x_mat + dg_dz @ S_z_mat + dg_dp).reshape(
+                                (-1, 1)
+                            )
+                        func = casadi.vertcat(func, S_alg)
                     elif name == "initial_conditions":
                         if model.len_rhs == 0 or model.len_alg == 0:
                             S_0 = casadi.jacobian(func, p_casadi_stacked).reshape(
@@ -309,8 +334,12 @@ class BaseSolver(object):
                         else:
                             x0 = func[: model.len_rhs]
                             z0 = func[model.len_rhs :]
-                            Sx_0 = casadi.jacobian(x0, p_casadi_stacked)
-                            Sz_0 = casadi.jacobian(z0, p_casadi_stacked)
+                            Sx_0 = casadi.jacobian(x0, p_casadi_stacked).reshape(
+                                (-1, 1)
+                            )
+                            Sz_0 = casadi.jacobian(z0, p_casadi_stacked).reshape(
+                                (-1, 1)
+                            )
                             func = casadi.vertcat(x0, Sx_0, z0, Sz_0)
                 if use_jacobian:
                     report(f"Calculating jacobian for {name} using CasADi")
