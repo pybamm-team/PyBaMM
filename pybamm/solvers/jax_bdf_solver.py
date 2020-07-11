@@ -19,16 +19,23 @@ config.update("jax_enable_x64", True)
 map = safe_map
 zip = safe_zip
 
+MAX_ORDER = 5
+NEWTON_MAXITER = 4
+MIN_FACTOR = 0.2
+MAX_FACTOR = 10
 
-def jax_bdf_integrate(func, y0, t_eval, *args, rtol=1e-6, atol=1e-6):
+
+@jax.partial(jax.custom_vjp, nondiff_argnums=(0, 1, 2))
+def _bdf_odeint(fun, rtol, atol, y0, t_eval, *args):
     """
-    Backward Difference formula (BDF) implicit multistep integrator. The basic algorithm
-    is derived in [2]_. This particular implementation follows that implemented in the
-    Matlab routine ode15s described in [1]_ and the SciPy implementation [3]_, which
-    features the NDF formulas for improved stability, with associated differences in the
-    error constants, and calculates the jacobian at J(t_{n+1}, y^0_{n+1}).  This
-    implementation was based on that implemented in the scipy library [3]_, which also
-    mainly follows [1]_ but uses the more standard jacobian update.
+    This implements a Backward Difference formula (BDF) implicit multistep integrator.
+    The basic algorithm is derived in [2]_. This particular implementation follows that
+    implemented in the Matlab routine ode15s described in [1]_ and the SciPy
+    implementation [3]_, which features the NDF formulas for improved stability, with
+    associated differences in the error constants, and calculates the jacobian at
+    J(t_{n+1}, y^0_{n+1}).  This implementation was based on that implemented in the
+    scipy library [3]_, which also mainly follows [1]_ but uses the more standard
+    jacobian update.
 
     Parameters
     ----------
@@ -54,9 +61,6 @@ def jax_bdf_integrate(func, y0, t_eval, *args, rtol=1e-6, atol=1e-6):
     y: ndarray with shape (n, m)
         calculated state vector at each of the m time points
 
-    stepper: dict
-        internal variables of the stepper object
-
     References
     ----------
     .. [1] L. F. Shampine, M. W. Reichelt, "THE MATLAB ODE SUITE", SIAM J. SCI.
@@ -69,90 +73,45 @@ def jax_bdf_integrate(func, y0, t_eval, *args, rtol=1e-6, atol=1e-6):
            fundamental algorithms for scientific computing in Python.
            Nature methods, 17(3), 261-272.
     """
-    def _check_arg(arg):
-        if not isinstance(arg, core.Tracer) and not core.valid_jaxtype(arg):
-            msg = ("The contents of odeint *args must be arrays or scalars, but got "
-                   "\n{}.")
-        raise TypeError(msg.format(arg))
 
-    flat_args, in_tree = tree_flatten((y0, t_eval[0], *args))
-    in_avals = tuple(map(abstractify, flat_args))
-    converted, consts = closure_convert(func, in_tree, in_avals)
+    def fun_bind_inputs(y, t):
+        return fun(y, t, *args)
 
-    return _bdf_odeint_wrapper(converted, rtol, atol, y0, t_eval, *consts, *args)
+    jac_bind_inputs = jax.jacfwd(fun_bind_inputs, argnums=0)
 
+    t0 = t_eval[0]
+    h0 = t_eval[1] - t0
 
-MAX_ORDER = 5
-NEWTON_MAXITER = 4
-MIN_FACTOR = 0.2
-MAX_FACTOR = 10
+    stepper = _bdf_init(fun_bind_inputs, jac_bind_inputs, t0, y0, h0, rtol, atol)
+    i = 0
+    y_out = jnp.empty((len(t_eval), len(y0)), dtype=y0.dtype)
 
+    init_state = [stepper, t_eval, i, y_out, 0]
 
-def flax_cond(pred, true_operand, true_fun,
-              false_operand, false_fun):  # pragma: no cover
-    """
-    for debugging purposes, use this instead of jax.lax.cond
-    """
-    if pred:
-        return true_fun(true_operand)
-    else:
-        return false_fun(false_operand)
+    def cond_fun(state):
+        _, t_eval, i, _, _ = state
+        return i < len(t_eval)
 
+    def body_fun(state):
+        stepper, t_eval, i, y_out, n_steps = state
+        stepper = _bdf_step(stepper, fun_bind_inputs, jac_bind_inputs)
+        index = jnp.searchsorted(t_eval, stepper['t'])
 
-def flax_while_loop(cond_fun, body_fun, init_val):  # pragma: no cover
-    """
-    for debugging purposes, use this instead of jax.lax.while_loop
-    """
-    val = init_val
-    while cond_fun(val):
-        val = body_fun(val)
-    return val
+        def for_body(j, y_out):
+            t = t_eval[j]
+            y_out = jax.ops.index_update(y_out, jax.ops.index[j, :],
+                                         _bdf_interpolate(stepper, t))
+            return y_out
 
+        y_out = jax.lax.fori_loop(i, index, for_body, y_out)
+        return [stepper, t_eval, index, y_out, n_steps + 1]
 
-def flax_fori_loop(start, stop, body_fun, init_val):  # pragma: no cover
-    """
-    for debugging purposes, use this instead of jax.lax.fori_loop
-    """
-    val = init_val
-    for i in range(start, stop):
-        val = body_fun(i, val)
-    return val
+    stepper, t_eval, i, y_out, n_steps = jax.lax.while_loop(cond_fun, body_fun,
+                                                            init_state)
 
+    stepper['n_steps'] = n_steps
 
-def flax_scan(f, init, xs, length=None):  # pragma: no cover
-    """
-    for debugging purposes, use this instead of jax.lax.scan
-    """
-    if xs is None:
-        xs = [None] * length
-    carry = init
-    ys = []
-    for x in xs:
-        carry, y = f(carry, x)
-        ys.append(y)
-    return carry, onp.stack(ys)
-
-
-def _compute_R(order, factor):
-    """
-    computes the R matrix with entries
-    given by the first equation on page 8 of [1]
-
-    This is used to update the differences matrix when step size h is varied according
-    to factor = h_{n+1} / h_n
-
-    Note that the U matrix also defined in the same section can be also be
-    found using factor = 1, which corresponds to R with a constant step size
-    """
-    I = jnp.arange(1, MAX_ORDER + 1).reshape(-1, 1)
-    J = jnp.arange(1, MAX_ORDER + 1)
-    M = jnp.empty((MAX_ORDER + 1, MAX_ORDER + 1))
-    M = jax.ops.index_update(M, jax.ops.index[1:, 1:],
-                             (I - 1 - factor * J) / I)
-    M = jax.ops.index_update(M, jax.ops.index[0], 1)
-    R = jnp.cumprod(M, axis=0)
-
-    return R
+    return y_out
 
 
 def _bdf_init(fun, jac, t0, y0, h0, rtol, atol):
@@ -160,7 +119,7 @@ def _bdf_init(fun, jac, t0, y0, h0, rtol, atol):
     Initiation routine for Backward Difference formula (BDF) implicit multistep
     integrator.
 
-    See jax_bdf_solver function above for details, this function returns a dict with the
+    See _bdf_odeint function above for details, this function returns a dict with the
     initial state of the solver
 
     Parameters
@@ -232,6 +191,28 @@ def _bdf_init(fun, jac, t0, y0, h0, rtol, atol):
     state['n_lu_decompositions'] = 1
     state['n_error_test_failures'] = 0
     return state
+
+
+def _compute_R(order, factor):
+    """
+    computes the R matrix with entries
+    given by the first equation on page 8 of [1]
+
+    This is used to update the differences matrix when step size h is varied according
+    to factor = h_{n+1} / h_n
+
+    Note that the U matrix also defined in the same section can be also be
+    found using factor = 1, which corresponds to R with a constant step size
+    """
+    I = jnp.arange(1, MAX_ORDER + 1).reshape(-1, 1)
+    J = jnp.arange(1, MAX_ORDER + 1)
+    M = jnp.empty((MAX_ORDER + 1, MAX_ORDER + 1))
+    M = jax.ops.index_update(M, jax.ops.index[1:, 1:],
+                             (I - 1 - factor * J) / I)
+    M = jax.ops.index_update(M, jax.ops.index[0], 1)
+    R = jnp.cumprod(M, axis=0)
+
+    return R
 
 
 def _select_initial_step(state, fun, t0, y0, f0, h0):
@@ -539,8 +520,8 @@ def _bdf_step(state, fun, jac):
                     state['n_error_test_failures'] += 1
                     # calculate optimal step size factor as per eq 2.46 of [2]
                     factor = jnp.max((MIN_FACTOR,
-                                     safety *
-                                     error_norm ** (-1 / (state['order'] + 1))))
+                                      safety *
+                                      error_norm ** (-1 / (state['order'] + 1))))
                     state = _update_step_size(state, factor, False)
                     return [state, step_accepted]
 
@@ -688,50 +669,126 @@ def _bdf_interpolate(state, t_eval):
     return order_summation
 
 
-@jax.partial(jax.custom_vjp, nondiff_argnums=(0, 1, 2))
-def _bdf_odeint(fun, rtol, atol, y0, t_eval, *args):
+# NOTE: all code below (except the docstring on jax_bdf_integrate), to define the API of
+# the jax solver and the ability to solve the adjoint sensitivities, has been copied
+# from the JAX library at https://github.com/google/jax. This is under an Apache
+# license, a short form of which is given here:
+#
+# Copyright 2018 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
+# file except in compliance with the License.  You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
+# ANY KIND, either express or implied.  See the License for the specific language
+# governing permissions and limitations under the License.
+
+
+def jax_bdf_integrate(func, y0, t_eval, *args, rtol=1e-6, atol=1e-6):
     """
-    main solver loop - creates a stepper object and steps through time, interpolating to
-    the time points in t_eval
+    Backward Difference formula (BDF) implicit multistep integrator. The basic algorithm
+    is derived in [2]_. This particular implementation follows that implemented in the
+    Matlab routine ode15s described in [1]_ and the SciPy implementation [3]_, which
+    features the NDF formulas for improved stability, with associated differences in the
+    error constants, and calculates the jacobian at J(t_{n+1}, y^0_{n+1}).  This
+    implementation was based on that implemented in the scipy library [3]_, which also
+    mainly follows [1]_ but uses the more standard jacobian update.
+
+    Parameters
+    ----------
+
+    func: callable
+        function to evaluate the time derivative of the solution `y` at time
+        `t` as `func(y, t, *args)`, producing the same shape/structure as `y0`.
+    y0: ndarray
+        initial state vector
+    t_eval: ndarray
+        time points to evaluate the solution, has shape (m,)
+    args: (optional)
+        tuple of additional arguments for `fun`, which must be arrays
+        scalars, or (nested) standard Python containers (tuples, lists, dicts,
+        namedtuples, i.e. pytrees) of those types.
+    rtol: (optional) float
+        relative tolerance for the solver
+    atol: (optional) float
+        absolute tolerance for the solver
+
+    Returns
+    -------
+    y: ndarray with shape (n, m)
+        calculated state vector at each of the m time points
+
+    References
+    ----------
+    .. [1] L. F. Shampine, M. W. Reichelt, "THE MATLAB ODE SUITE", SIAM J. SCI.
+           COMPUTE., Vol. 18, No. 1, pp. 1-22, January 1997.
+    .. [2] G. D. Byrne, A. C. Hindmarsh, "A Polyalgorithm for the Numerical
+           Solution of Ordinary Differential Equations", ACM Transactions on
+           Mathematical Software, Vol. 1, No. 1, pp. 71-96, March 1975.
+    .. [3] Virtanen, P., Gommers, R., Oliphant, T. E., Haberland, M., Reddy,
+           T., Cournapeau, D., ... & van der Walt, S. J. (2020). SciPy 1.0:
+           fundamental algorithms for scientific computing in Python.
+           Nature methods, 17(3), 261-272.
     """
-    def fun_bind_inputs(y, t):
-        return fun(y, t, *args)
+    def _check_arg(arg):
+        if not isinstance(arg, core.Tracer) and not core.valid_jaxtype(arg):
+            msg = ("The contents of odeint *args must be arrays or scalars, but got "
+                   "\n{}.")
+        raise TypeError(msg.format(arg))
 
-    jac_bind_inputs = jax.jacfwd(fun_bind_inputs, argnums=0)
+    flat_args, in_tree = tree_flatten((y0, t_eval[0], *args))
+    in_avals = tuple(map(abstractify, flat_args))
+    converted, consts = closure_convert(func, in_tree, in_avals)
 
-    t0 = t_eval[0]
-    h0 = t_eval[1] - t0
+    return _bdf_odeint_wrapper(converted, rtol, atol, y0, t_eval, *consts, *args)
 
-    stepper = _bdf_init(fun_bind_inputs, jac_bind_inputs, t0, y0, h0, rtol, atol)
-    i = 0
-    y_out = jnp.empty((len(t_eval), len(y0)), dtype=y0.dtype)
 
-    init_state = [stepper, t_eval, i, y_out, 0]
+def flax_cond(pred, true_operand, true_fun,
+              false_operand, false_fun):  # pragma: no cover
+    """
+    for debugging purposes, use this instead of jax.lax.cond
+    """
+    if pred:
+        return true_fun(true_operand)
+    else:
+        return false_fun(false_operand)
 
-    def cond_fun(state):
-        _, t_eval, i, _, _ = state
-        return i < len(t_eval)
 
-    def body_fun(state):
-        stepper, t_eval, i, y_out, n_steps = state
-        stepper = _bdf_step(stepper, fun_bind_inputs, jac_bind_inputs)
-        index = jnp.searchsorted(t_eval, stepper['t'])
+def flax_while_loop(cond_fun, body_fun, init_val):  # pragma: no cover
+    """
+    for debugging purposes, use this instead of jax.lax.while_loop
+    """
+    val = init_val
+    while cond_fun(val):
+        val = body_fun(val)
+    return val
 
-        def for_body(j, y_out):
-            t = t_eval[j]
-            y_out = jax.ops.index_update(y_out, jax.ops.index[j, :],
-                                         _bdf_interpolate(stepper, t))
-            return y_out
 
-        y_out = jax.lax.fori_loop(i, index, for_body, y_out)
-        return [stepper, t_eval, index, y_out, n_steps + 1]
+def flax_fori_loop(start, stop, body_fun, init_val):  # pragma: no cover
+    """
+    for debugging purposes, use this instead of jax.lax.fori_loop
+    """
+    val = init_val
+    for i in range(start, stop):
+        val = body_fun(i, val)
+    return val
 
-    stepper, t_eval, i, y_out, n_steps = jax.lax.while_loop(cond_fun, body_fun,
-                                                            init_state)
 
-    stepper['n_steps'] = n_steps
-
-    return y_out
+def flax_scan(f, init, xs, length=None):  # pragma: no cover
+    """
+    for debugging purposes, use this instead of jax.lax.scan
+    """
+    if xs is None:
+        xs = [None] * length
+    carry = init
+    ys = []
+    for x in xs:
+        carry, y = f(carry, x)
+        ys.append(y)
+    return carry, onp.stack(ys)
 
 
 @partial(jax.jit, static_argnums=(0, 1, 2))
