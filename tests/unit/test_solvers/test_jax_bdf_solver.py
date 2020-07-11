@@ -124,7 +124,7 @@ class TestJaxBDFSolver(unittest.TestCase):
         y = pybamm.jax_bdf_integrate(fun, y0, t_eval, {
             "rate": 0.1}, rtol=1e-9, atol=1e-9)
 
-        np.testing.assert_allclose(y[0, :].reshape(-1), np.exp(-0.1 * t_eval))
+        np.testing.assert_allclose(y[:, 0].reshape(-1), np.exp(-0.1 * t_eval))
 
 
 if __name__ == "__main__":
