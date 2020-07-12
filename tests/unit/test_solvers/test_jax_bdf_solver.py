@@ -54,6 +54,46 @@ class TestJaxBDFSolver(unittest.TestCase):
         np.testing.assert_allclose(y[:, 0], np.exp(0.1 * t_eval),
                                    rtol=1e-7, atol=1e-7)
 
+    def test_mass_matrix(self):
+        # Solve
+        t_eval = np.linspace(0.0, 1.0, 80)
+
+        def fun(y, t):
+            return jax.numpy.stack([
+                0.1 * y[0],
+                y[1] - 2.0 * y[0],
+            ])
+
+        mass = jax.numpy.array([
+            [1.0, 0.0],
+            [0.0, 0.0],
+        ])
+
+        y0 = jax.numpy.array([1.0, 2.0])
+
+        t0 = time.perf_counter()
+        y = pybamm.jax_bdf_integrate(fun, y0, t_eval, mass=mass, rtol=1e-8, atol=1e-8)
+        t1 = time.perf_counter() - t0
+
+        # test accuracy
+        soln = np.exp(0.1 * t_eval)
+        np.testing.assert_allclose(y[:, 0], soln,
+                                   rtol=1e-7, atol=1e-7)
+        np.testing.assert_allclose(y[:, 1], 2.0 * soln,
+                                   rtol=1e-7, atol=1e-7)
+
+        t0 = time.perf_counter()
+        y = pybamm.jax_bdf_integrate(fun, y0, t_eval, mass=mass, rtol=1e-8, atol=1e-8)
+        t2 = time.perf_counter() - t0
+
+        # second run should be much quicker
+        self.assertLess(t2, t1)
+
+        # test second run is accurate
+        np.testing.assert_allclose(y[:, 0], np.exp(0.1 * t_eval),
+                                   rtol=1e-7, atol=1e-7)
+
+
     def test_solver_sensitivities(self):
         # Create model
         model = pybamm.BaseModel()
