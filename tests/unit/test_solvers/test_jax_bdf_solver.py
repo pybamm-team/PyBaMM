@@ -93,7 +93,6 @@ class TestJaxBDFSolver(unittest.TestCase):
         np.testing.assert_allclose(y[:, 0], np.exp(0.1 * t_eval),
                                    rtol=1e-7, atol=1e-7)
 
-
     def test_solver_sensitivities(self):
         # Create model
         model = pybamm.BaseModel()

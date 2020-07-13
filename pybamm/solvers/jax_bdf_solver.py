@@ -13,7 +13,6 @@ from jax.tree_util import tree_map, tree_flatten, tree_unflatten
 from jax.interpreters import partial_eval as pe
 from jax import linear_util as lu
 from jax.config import config
-from jax.lib import pytree
 
 config.update("jax_enable_x64", True)
 
@@ -685,8 +684,8 @@ def block_diag(lst):
             )
 
     blocks = [
-        [ block_fun(i, j, Ai, Aj) for j, Aj in enumerate(lst)]
-            for i, Ai in enumerate(lst)
+        [block_fun(i, j, Ai, Aj) for j, Aj in enumerate(lst)]
+        for i, Ai in enumerate(lst)
     ]
 
     return jnp.block(blocks)
