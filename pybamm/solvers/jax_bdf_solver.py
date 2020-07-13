@@ -863,7 +863,7 @@ def closure_convert(fun, in_tree, in_avals):
     def converted_fun(y, t, *hconsts_args):
         hoisted_consts, args = split_list(hconsts_args, [num_consts])
         consts = merge(closure_consts, hoisted_consts)
-        all_args, in_tree2 = tree_flatten((y, t, *args))
+        all_args, _ = tree_flatten((y, t, *args))
         out_flat = core.eval_jaxpr(jaxpr, consts, *all_args)
         return tree_unflatten(out_tree, out_flat)
 
