@@ -490,12 +490,14 @@ class BaseBatteryModel(pybamm.BaseModel):
                         submodel_name, self.name
                     )
                 )
+
                 submodel.set_algebraic(self.variables)
                 pybamm.logger.debug(
                     "Setting boundary conditions for {} submodel ({})".format(
                         submodel_name, self.name
                     )
                 )
+
                 submodel.set_boundary_conditions(self.variables)
                 pybamm.logger.debug(
                     "Setting initial conditions for {} submodel ({})".format(
@@ -508,6 +510,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                     "Updating {} submodel ({})".format(submodel_name, self.name)
                 )
                 self.update(submodel)
+                self.check_no_repeated_keys()
 
     def build_model(self):
 
@@ -545,6 +548,36 @@ class BaseBatteryModel(pybamm.BaseModel):
                 self.variables.update(var)
 
         self._built = True
+
+    def new_copy(self, build=True):
+        """
+        Create a copy of the model. Overwrites the functionality of
+        :class:`pybamm.BaseModel` to make sure that the submodels are updated correctly
+        """
+        # create without building
+        # 'build' is not a keyword argument for the BaseBatteryModel class, but it
+        # should be for all of the subclasses
+        new_model = self.__class__(options=self.options, name=self.name, build=False)
+        # update submodels
+        new_model.submodels = self.submodels
+        # clear submodel equations to avoid weird conflicts
+        for submodel in self.submodels.values():
+            submodel._rhs = {}
+            submodel._algebraic = {}
+            submodel._initial_conditions = {}
+            submodel._boundary_conditions = {}
+            submodel._variables = {}
+            submodel._events = []
+
+        # now build
+        if build:
+            new_model.build_model()
+        new_model.use_jacobian = self.use_jacobian
+        new_model.use_simplify = self.use_simplify
+        new_model.convert_to_format = self.convert_to_format
+        new_model.timescale = self.timescale
+        new_model.length_scales = self.length_scales
+        return new_model
 
     def set_external_circuit_submodel(self):
         """

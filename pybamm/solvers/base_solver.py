@@ -224,6 +224,11 @@ class BaseSolver(object):
                 if model.use_simplify:
                     report(f"Simplifying {name}")
                     func = simp.simplify(func)
+
+                if model.convert_to_format == "jax":
+                    report(f"Converting {name} to jax")
+                    jax_func = pybamm.EvaluatorJax(func)
+
                 if use_jacobian:
                     report(f"Calculating jacobian for {name}")
                     jac = jacobian.jac(func, y)
@@ -233,13 +238,22 @@ class BaseSolver(object):
                     if model.convert_to_format == "python":
                         report(f"Converting jacobian for {name} to python")
                         jac = pybamm.EvaluatorPython(jac)
+                    elif model.convert_to_format == "jax":
+                        report(f"Converting jacobian for {name} to jax")
+                        jac = jax_func.get_jacobian()
                     jac = jac.evaluate
                 else:
                     jac = None
+
                 if model.convert_to_format == "python":
                     report(f"Converting {name} to python")
                     func = pybamm.EvaluatorPython(func)
+                if model.convert_to_format == "jax":
+                    report(f"Converting {name} to jax")
+                    func = jax_func
+
                 func = func.evaluate
+
             else:
                 # Process with CasADi
                 report(f"Converting {name} to CasADi")
@@ -444,8 +458,9 @@ class BaseSolver(object):
             root_sol = self.root_method._integrate(model, [time], inputs)
         except pybamm.SolverError as e:
             raise pybamm.SolverError(
-                "Could not find consistent initial conditions: {}".format(e.args[0])
+                "Could not find consistent states: {}".format(e.args[0])
             )
+        pybamm.logger.info("Found consistent states")
         return root_sol.y.flatten()
 
     def solve(self, model, t_eval=None, external_variables=None, inputs=None):
@@ -839,8 +854,8 @@ class SolverCallable:
         self.timescale = self.model.timescale_eval
 
     def __call__(self, t, y, inputs):
-        y = y[:, np.newaxis]
-        if self.name in ["RHS", "algebraic", "residuals", "event"]:
+        y = y.reshape(-1, 1)
+        if self.name in ["RHS", "algebraic", "residuals"]:
             pybamm.logger.debug(
                 "Evaluating {} for {} at t={}".format(
                     self.name, self.model.name, t * self.timescale

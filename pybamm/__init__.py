@@ -7,6 +7,7 @@
 #
 import sys
 import os
+from platform import system
 
 #
 # Version info
@@ -100,12 +101,16 @@ from .expression_tree.operations.simplify import (
     simplify_addition_subtraction,
     simplify_multiplication_division,
 )
+
 from .expression_tree.operations.evaluate import (
     find_symbols,
     id_to_python_variable,
     to_python,
     EvaluatorPython,
 )
+if system() != "Windows":
+    from .expression_tree.operations.evaluate import EvaluatorJax
+
 from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
 from .expression_tree.operations.unpack_symbols import SymbolUnpacker
@@ -209,6 +214,12 @@ from .solvers.casadi_algebraic_solver import CasadiAlgebraicSolver
 from .solvers.scikits_dae_solver import ScikitsDaeSolver
 from .solvers.scikits_ode_solver import ScikitsOdeSolver, have_scikits_odes
 from .solvers.scipy_solver import ScipySolver
+
+# Jax not supported under windows
+if system() != "Windows":
+    from .solvers.jax_solver import JaxSolver
+    from .solvers.jax_bdf_solver import jax_bdf_integrate
+
 from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
 
 #

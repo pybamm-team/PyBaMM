@@ -678,8 +678,15 @@ class BaseInterface(pybamm.BaseSubModel):
             + " electrode"
             + self.reaction_name
             + " open circuit potential [V]": ocp_av_dim,
-            self.domain + " electrode entropic change": dUdT,
-            "X-averaged " + self.domain.lower() + " electrode entropic change": dUdT_av,
         }
+        if self.reaction_name == "":
+            variables.update(
+                {
+                    self.domain + " electrode entropic change": dUdT,
+                    "X-averaged "
+                    + self.domain.lower()
+                    + " electrode entropic change": dUdT_av,
+                }
+            )
 
         return variables

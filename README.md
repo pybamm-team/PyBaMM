@@ -13,9 +13,9 @@ PyBaMM (Python Battery Mathematical Modelling) solves physics-based electrochemi
 The easiest way to use PyBaMM is to run a 1C constant-current discharge with a model of your choice with all the default settings:
 ```python3
 import pybamm
-model = pybamm.lithium_ion.DFN() # Doyle-Fuller-Newman model
+model = pybamm.lithium_ion.DFN()  # Doyle-Fuller-Newman model
 sim = pybamm.Simulation(model)
-sim.solve()
+sim.solve([0, 3600])  # solve for 1 hour
 sim.plot()
 ```
 or simulate an experiment such as CCCV:
@@ -42,7 +42,7 @@ For new users we recommend the [Getting Started](examples/notebooks/Getting%20St
 
 Further details can be found in a number of [detailed examples](examples/notebooks/README.md), hosted here on
 github. In addition, there is a [full API documentation](http://pybamm.readthedocs.io/),
-hosted on [Read The Docs](readthedocs.io). 
+hosted on [Read The Docs](readthedocs.io).
 Additional supporting material can be found
 [here](https://github.com/pybamm-team/pybamm-supporting-material/).
 
@@ -92,6 +92,7 @@ pybamm.print_citations()
 ```
 
 to the end of your script. This will print bibtex information to the terminal; passing a filename to `print_citations` will print the bibtex information to the specified file instead. A list of all citations can also be found in the [citations file](pybamm/CITATIONS.txt). In particular, PyBaMM relies heavily on [CasADi](https://web.casadi.org/publications/).
+See [CONTRIBUTING.md](CONTRIBUTING.md#citations) for information on how to add your own citations when you contribute.
 
 ## How can I contribute to PyBaMM?
 

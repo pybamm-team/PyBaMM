@@ -46,12 +46,13 @@ User install
 ------------
 
 We recommend to install PyBaMM within a virtual environment, in order
-not to alter any distribution python files. To create a virtual
-environment ``env`` within your current directory type:
+not to alter any distribution python files. 
+First, make sure you are using python 3.6 or 3.7. 
+To create a virtual environment ``env`` within your current directory type:
 
 .. code:: bash
 
-   python3 -m venv env
+   virtualenv env
 
 You can then “activate” the environment using:
 

@@ -298,3 +298,6 @@ class BasicFull(BaseModel):
                 pybamm.Event("Maximum voltage", voltage - param.voltage_high_cut),
             ]
         )
+
+    def new_copy(self, build=False):
+        return pybamm.BaseModel.new_copy(self)

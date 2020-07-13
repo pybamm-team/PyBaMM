@@ -6,6 +6,7 @@ import tests
 
 import numpy as np
 import unittest
+from platform import system
 
 
 class TestSPMe(unittest.TestCase):
@@ -68,6 +69,10 @@ class TestSPMe(unittest.TestCase):
         np.testing.assert_array_almost_equal(original, using_known_evals)
         np.testing.assert_array_almost_equal(original, simp_and_known)
         np.testing.assert_array_almost_equal(original, simp_and_python)
+
+        if system() != "Windows":
+            simp_and_jax = optimtest.evaluate_model(simplify=True, to_jax=True)
+            np.testing.assert_array_almost_equal(original, simp_and_jax)
 
     def test_set_up(self):
         model = pybamm.lithium_ion.SPMe()
