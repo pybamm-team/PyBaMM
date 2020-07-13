@@ -64,7 +64,7 @@ class Simulation:
         domain (e.g. pybamm.FiniteVolume)
     solver: :class:`pybamm.BaseSolver` (optional)
         The solver to use to solve the model.
-    quick_plot_vars: list (optional)
+    output_variables: list (optional)
         A list of variables to plot automatically
     C_rate: float (optional)
         The C_rate at which you would like to run a constant current
@@ -81,7 +81,7 @@ class Simulation:
         var_pts=None,
         spatial_methods=None,
         solver=None,
-        quick_plot_vars=None,
+        output_variables=None,
         C_rate=None,
     ):
         self.parameter_values = parameter_values or model.default_parameter_values
@@ -112,7 +112,7 @@ class Simulation:
         self.var_pts = var_pts or self.model.default_var_pts
         self.spatial_methods = spatial_methods or self.model.default_spatial_methods
         self.solver = solver or self.model.default_solver
-        self.quick_plot_vars = quick_plot_vars
+        self.output_variables = output_variables
 
         # Initialize empty built states
         self._model_with_set_params = None
@@ -531,28 +531,39 @@ class Simulation:
         else:
             return tuple(variable_arrays)
 
-    def plot(self, quick_plot_vars=None, testing=False):
+    def plot(self, output_variables=None, quick_plot_vars=None, **kwargs):
         """
-        A method to quickly plot the outputs of the simulation.
+        A method to quickly plot the outputs of the simulation. Creates a
+        :class:`pybamm.QuickPlot` object (with keyword arguments 'kwargs') and
+        then calls :meth:`pybamm.QuickPlot.dynamic_plot`.
 
         Parameters
         ----------
-        quick_plot_vars: list, optional
+        output_variables: list, optional
             A list of the variables to plot.
-        testing, bool, optional
-            If False the plot will not be displayed
+        quick_plot_vars: list, optional
+            A list of the variables to plot. Deprecated, use output_variables instead.
+        **kwargs
+            Additional keyword arguments passed to
+            :meth:`pybamm.QuickPlot.dynamic_plot`.
+            For a list of all possible keyword arguments see :class:`pybamm.QuickPlot`.
         """
+
+        if quick_plot_vars is not None:
+            raise NotImplementedError(
+                "'quick_plot_vars' has been deprecated. Use 'output_variables' instead."
+            )
 
         if self._solution is None:
             raise ValueError(
                 "Model has not been solved, please solve the model before plotting."
             )
 
-        if quick_plot_vars is None:
-            quick_plot_vars = self.quick_plot_vars
+        if output_variables is None:
+            output_variables = self.output_variables
 
         self.quick_plot = pybamm.dynamic_plot(
-            self._solution, output_variables=quick_plot_vars, testing=testing
+            self._solution, output_variables=output_variables, **kwargs
         )
 
     @property
@@ -625,12 +636,12 @@ class Simulation:
         self._solver = solver.copy()
 
     @property
-    def quick_plot_vars(self):
-        return self._quick_plot_vars
+    def output_variables(self):
+        return self._output_variables
 
-    @quick_plot_vars.setter
-    def quick_plot_vars(self, quick_plot_vars):
-        self._quick_plot_vars = copy.copy(quick_plot_vars)
+    @output_variables.setter
+    def output_variables(self, output_variables):
+        self._output_variables = copy.copy(output_variables)
 
     @property
     def solution(self):
@@ -644,7 +655,7 @@ class Simulation:
         var_pts=None,
         spatial_methods=None,
         solver=None,
-        quick_plot_vars=None,
+        output_variables=None,
         C_rate=None,
     ):
         "Deprecated method for setting specs"
