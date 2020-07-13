@@ -184,6 +184,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "interfacial surface area": "constant",
             "current collector": "uniform",
             "particle": "Fickian diffusion",
+            "particle-size distribution": False,
             "thermal": "isothermal",
             "cell_geometry": None,
             "external submodels": [],

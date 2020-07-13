@@ -340,7 +340,8 @@ class BasicPSDModel(BaseModel):
         ]
 
     def set_standard_output_variables(self):
-        # This overwrites the method in parent class, base_lithium_ion_model.BaseModel
+        # This overwrites the method in parent class, base_lithium_ion_model.BaseModel,
+        # adding "particle-size variables" R_variable_n and R_variable_p
 
         # Time
         self.variables.update(

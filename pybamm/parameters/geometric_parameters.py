@@ -44,6 +44,12 @@ b_e_p = pybamm.Parameter("Positive electrode Bruggeman coefficient (electrolyte)
 b_s_n = pybamm.Parameter("Negative electrode Bruggeman coefficient (electrode)")
 b_s_s = pybamm.Parameter("Separator Bruggeman coefficient (electrode)")
 b_s_p = pybamm.Parameter("Positive electrode Bruggeman coefficient (electrode)")
+sd_a_n_dim = pybamm.Parameter(
+    "Negative area-weighted particle-size standard deviation [m]"
+)
+sd_a_p_dim = pybamm.Parameter(
+    "Positive area-weighted particle-size standard deviation [m]"
+)
 
 # --------------------------------------------------------------------------------------
 "Dimensionless Parameters"
@@ -70,3 +76,7 @@ centre_z_tab_n = Centre_z_tab_n / L_z
 l_tab_p = L_tab_p / L_z
 centre_y_tab_p = Centre_y_tab_p / L_z
 centre_z_tab_p = Centre_z_tab_p / L_z
+
+# Microscale geometry
+sd_a_n = sd_a_n_dim / R_n
+sd_a_p = sd_a_p_dim / R_p

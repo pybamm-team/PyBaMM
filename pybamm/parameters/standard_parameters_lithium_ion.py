@@ -89,6 +89,8 @@ b_e_p = pybamm.geometric_parameters.b_e_p
 b_s_n = pybamm.geometric_parameters.b_s_n
 b_s_s = pybamm.geometric_parameters.b_s_s
 b_s_p = pybamm.geometric_parameters.b_s_p
+sd_a_n_dim = pybamm.geometric_parameters.sd_a_n_dim
+sd_a_p_dim = pybamm.geometric_parameters.sd_a_p_dim
 
 # Electrochemical reactions
 ne_n = pybamm.Parameter("Negative electrode electrons in reaction")
@@ -273,6 +275,31 @@ U_p_ref = U_p_dimensional(sto_p_init, T_ref)
 j0_n_ref_dimensional = j0_n_dimensional(c_e_typ, c_n_max / 2, T_ref) * 2
 j0_p_ref_dimensional = j0_p_dimensional(c_e_typ, c_p_max / 2, T_ref) * 2
 
+# Area-weighted particle-size distributions
+def f_a_dist_n_dimensional(R, R_av_a, sd_a):
+    "Dimensional negative electrode particle-size distribution (area-weighted)"
+    inputs = {
+        "Negative particle-size variable [m]": R,
+        "Negative area-weighted mean particle size [m]": R_av_a,
+        "Negative area-weighted particle-size standard deviation [m]": sd_a,
+    }
+    return pybamm.FunctionParameter(
+        "Negative area-weighted particle-size distribution [m]", inputs,
+    )
+
+
+def f_a_dist_p_dimensional(R, R_av_a, sd_a):
+    "Dimensional positive electrode particle-size distribution (area-weighted)"
+    inputs = {
+        "Positive particle-size variable [m]": R,
+        "Positive area-weighted mean particle size [m]": R_av_a,
+        "Positive area-weighted particle-size standard deviation [m]": sd_a,
+    }
+    return pybamm.FunctionParameter(
+        "Positive area-weighted particle-size distribution [m]", inputs,
+    )
+
+
 # -------------------------------------------------------------------------------------
 "3. Scales"
 # concentration
@@ -367,6 +394,8 @@ epsilon_inactive_s = 1 - epsilon_s
 epsilon_inactive_p = 1 - epsilon_p - epsilon_s_p
 a_n = a_n_dim * R_n
 a_p = a_p_dim * R_p
+sd_a_n = sd_a_n_dim / R_n
+sd_a_p = sd_a_p_dim / R_p
 
 # Electrode Properties
 sigma_cn = sigma_cn_dimensional * potential_scale / i_typ / L_x
@@ -590,6 +619,23 @@ def dUdT_p(c_s_p):
     "Dimensionless entropic change in positive open-circuit potential"
     sto = c_s_p
     return dUdT_p_dimensional(sto) * Delta_T / potential_scale
+
+
+# Area-weighted particle-size distributions
+def f_a_dist_n(R, R_av_a, sd_a):
+    "Dimensionless negative electrode particle-size distribution (area-weighted)"
+    R_dim = R * R_n
+    R_av_a_dim = R_av_a * R_n
+    sd_a_dim = sd_a * R_n
+    return f_a_dist_n_dimensional(R_dim, R_av_a_dim, sd_a_dim) * R_n
+
+
+def f_a_dist_p(R, R_av_a, sd_a):
+    "Dimensionless positive electrode particle-size distribution (area-weighted)"
+    R_dim = R * R_p
+    R_av_a_dim = R_av_a * R_p
+    sd_a_dim = sd_a * R_p
+    return f_a_dist_p_dimensional(R_dim, R_av_a_dim, sd_a_dim) * R_p
 
 
 # --------------------------------------------------------------------------------------
