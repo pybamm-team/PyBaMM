@@ -666,10 +666,10 @@ def _bdf_interpolate(state, t_eval):
     return order_summation
 
 
-# NOTE: all code below (except the docstring on jax_bdf_integrate), to define the API of
-# the jax solver and the ability to solve the adjoint sensitivities, has been copied
-# from the JAX library at https://github.com/google/jax. This is under an Apache
-# license, a short form of which is given here:
+# NOTE: all code below (except the docstring on jax_bdf_integrate and other minor
+# edits), to define the API of the jax solver and the ability to solve the adjoint
+# sensitivities, has been copied from the JAX library at https://github.com/google/jax.
+# This is under an Apache license, a short form of which is given here:
 #
 # Copyright 2018 Google LLC
 #
