@@ -42,7 +42,9 @@ class JaxSolver(pybamm.BaseSolver):
     """
 
     def __init__(self, method='RK45', rtol=1e-6, atol=1e-6, extra_options=None):
-        super().__init__(method, rtol, atol, root_method='lm')
+        # note: bdf solver itself calculates consistent initial conditions so can set
+        # root_method to none
+        super().__init__(method, rtol, atol, root_method=None)
         method_options = ['RK45', 'BDF']
         if method not in method_options:
             raise ValueError('method must be one of {}'.format(method_options))
@@ -111,8 +113,8 @@ class JaxSolver(pybamm.BaseSolver):
                                " re-solve using no events and a fixed"
                                " end-time".format(model.events))
 
-        # Initial conditions
-        y0 = model.y0
+        # Initial conditions, make sure they are an 0D array
+        y0 = jnp.array(model.y0).reshape(-1)
         mass = None
         if self.method == 'BDF':
             mass = model.mass_matrix.entries.toarray()

@@ -62,6 +62,7 @@ class TestJaxSolver(unittest.TestCase):
         var2 = pybamm.Variable("var2", domain=domain)
         model.rhs = {var: 0.1 * var}
         model.algebraic = {var2: var2 - 2.0 * var}
+        # give inconsistent initial conditions, should calculate correct ones
         model.initial_conditions = {var: 1.0, var2: 1.0}
         # No need to set parameters; can use base discretisation (no spatial operators)
 

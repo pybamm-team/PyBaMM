@@ -18,6 +18,7 @@ config.update("jax_enable_x64", True)
 
 MAX_ORDER = 5
 NEWTON_MAXITER = 4
+ROOT_SOLVE_MAXITER = 15
 MIN_FACTOR = 0.2
 MAX_FACTOR = 10
 
@@ -146,23 +147,27 @@ def _bdf_init(fun, jac, mass, t0, y0, h0, rtol, atol):
     """
     state = {}
     state['t'] = t0
-    state['y'] = y0
-    f0 = fun(y0, t0)
     state['atol'] = atol
     state['rtol'] = rtol
+    state['M'] = mass
+    EPS = jnp.finfo(y0.dtype).eps
+    state['newton_tol'] = jnp.max((10 * EPS / rtol, jnp.min((0.03, rtol ** 0.5))))
+
+    scale_y0 = atol + rtol * jnp.abs(y0)
+    y0 = _select_initial_conditions(fun, mass, t0, y0, state['newton_tol'], scale_y0)
+    state['y'] = y0
+
+    f0 = fun(y0, t0)
     order = 1
     state['order'] = order
     state['h'] = _select_initial_step(state, fun, t0, y0, f0, h0)
-    EPS = jnp.finfo(y0.dtype).eps
-    state['newton_tol'] = jnp.max((10 * EPS / rtol, jnp.min((0.03, rtol ** 0.5))))
     state['n_equal_steps'] = 0
     D = jnp.empty((MAX_ORDER + 1, len(y0)), dtype=y0.dtype)
     D = jax.ops.index_update(D, jax.ops.index[0, :], y0)
     D = jax.ops.index_update(D, jax.ops.index[1, :], f0 * state['h'])
     state['D'] = D
     state['y0'] = None
-    state['scale_y0'] = None
-    state['M'] = mass
+    state['scale_y0'] = scale_y0
     state = _predict(state)
 
     # kappa values for difference orders, taken from Table 1 of [1]
@@ -213,6 +218,83 @@ def _compute_R(order, factor):
     R = jnp.cumprod(M, axis=0)
 
     return R
+
+
+def _select_initial_conditions(fun, M, t0, y0, tol, scale_y0):
+    # identify differentiable variables as zeros on diagonal
+    algebraic_variables = jnp.diag(M) == 0.
+
+    # if all differentiable variables then return y0 (can use normal python if since M
+    # is static)
+    if not jnp.any(algebraic_variables):
+        return y0
+
+    # calculate consistent initial conditions via a newton on -J_a @ delta = f_a This
+    # follows this reference:
+    #
+    # Shampine, L. F., Reichelt, M. W., & Kierzenka, J. A. (1999). Solving index-1 DAEs
+    # in MATLAB and Simulink. SIAM review, 41(3), 538-552.
+
+    # calculate fun_a, function of algebraic variables
+    def fun_a(y_a):
+        y_full = jax.ops.index_update(y0, algebraic_variables, y_a)
+        return fun(y_full, t0)[algebraic_variables]
+
+    y0_a = y0[algebraic_variables]
+    scale_y0_a = scale_y0[algebraic_variables]
+
+    d = jnp.zeros(y0_a.shape[0], dtype=y0.dtype)
+    y_a = jnp.array(y0_a)
+
+    # calculate neg jacobian of fun_a
+    J_a = jax.jacfwd(fun_a)(y_a)
+    LU = jax.scipy.linalg.lu_factor(-J_a)
+
+    not_converged = True
+    dy_norm_old = -1.0
+    k = 0
+    while_state = [k, not_converged, dy_norm_old, d, y_a]
+
+    def while_cond(while_state):
+        k, not_converged, _, _, _ = while_state
+        return not_converged * (k < ROOT_SOLVE_MAXITER)
+
+    def while_body(while_state):
+        k, not_converged, dy_norm_old, d, y_a = while_state
+        f_eval = fun_a(y_a)
+        dy = jax.scipy.linalg.lu_solve(LU, f_eval)
+        dy_norm = jnp.sqrt(jnp.mean((dy / scale_y0_a)**2))
+        rate = dy_norm / dy_norm_old
+
+        d += dy
+        y_a = y0_a + d
+
+        # if converged then break out of iteration early
+        pred = dy_norm_old >= 0
+        pred *= rate / (1 - rate) * dy_norm < tol
+        pred += dy_norm == 0
+
+        def converged_fun(not_converged):
+            not_converged = False
+            return not_converged
+
+        def not_converged_fun(not_converged):
+            return not_converged
+
+        dy_norm_old = dy_norm
+
+        not_converged = \
+            jax.lax.cond(pred,
+                         not_converged, converged_fun,
+                         not_converged, not_converged_fun)
+        return [k + 1, not_converged, dy_norm_old, d, y_a]
+
+    k, not_converged, dy_norm_old, d, y_a = jax.lax.while_loop(while_cond,
+                                                               while_body,
+                                                               while_state)
+    y_tilde = jax.ops.index_update(y0, algebraic_variables, y_a)
+
+    return y_tilde
 
 
 def _select_initial_step(state, fun, t0, y0, f0, h0):
@@ -394,7 +476,7 @@ def _newton_iteration(state, fun):
     M = state['M']
     scale_y0 = state['scale_y0']
     t = state['t'] + state['h']
-    d = jnp.zeros_like(y0)
+    d = jnp.zeros(y0.shape, dtype=y0.dtype)
     y = jnp.array(y0, copy=True)
 
     not_converged = True

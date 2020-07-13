@@ -69,7 +69,9 @@ class TestJaxBDFSolver(unittest.TestCase):
             [0.0, 0.0],
         ])
 
-        y0 = jax.numpy.array([1.0, 2.0])
+        # give some bad initial conditions, solver should calculate correct ones using
+        # this as a guess
+        y0 = jax.numpy.array([1.0, 1.5])
 
         t0 = time.perf_counter()
         y = pybamm.jax_bdf_integrate(fun, y0, t_eval, mass=mass, rtol=1e-8, atol=1e-8)
@@ -138,7 +140,6 @@ class TestJaxBDFSolver(unittest.TestCase):
 
         self.assertAlmostEqual(grad_bdf, grad_num, places=3)
 
-    @unittest.skip("sensitivities do not yet work with semi-explict dae")
     def test_mass_matrix_with_sensitivities(self):
         # Solve
         t_eval = np.linspace(0.0, 1.0, 80)
