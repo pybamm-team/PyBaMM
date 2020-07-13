@@ -5,7 +5,8 @@ import sys
 import time
 import numpy as np
 from platform import system
-import jax
+if system() != "Windows":
+    import jax
 
 
 @unittest.skipIf(system() == "Windows", "JAX not supported on windows")
