@@ -53,6 +53,52 @@ class TestJaxSolver(unittest.TestCase):
             self.assertLess(t_second_solve, t_first_solve)
             np.testing.assert_array_equal(second_solution.y, solution.y)
 
+    def test_semi_explicit_model(self):
+        # Create model
+        model = pybamm.BaseModel()
+        model.convert_to_format = "jax"
+        domain = ["negative electrode", "separator", "positive electrode"]
+        var = pybamm.Variable("var", domain=domain)
+        var2 = pybamm.Variable("var2", domain=domain)
+        model.rhs = {var: 0.1 * var}
+        model.algebraic = {var2: var2 - 2.0 * var}
+        model.initial_conditions = {var: 1.0, var2: 1.0}
+        # No need to set parameters; can use base discretisation (no spatial operators)
+
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
+
+        # Solve
+        solver = pybamm.JaxSolver(
+            method='BDF', rtol=1e-8, atol=1e-8
+        )
+        t_eval = np.linspace(0, 1, 80)
+        t0 = time.perf_counter()
+        solution = solver.solve(model, t_eval)
+        t_first_solve = time.perf_counter() - t0
+        np.testing.assert_array_equal(solution.t, t_eval)
+        soln = np.exp(0.1 * solution.t)
+        np.testing.assert_allclose(solution.y[0], soln,
+                                   rtol=1e-7, atol=1e-7)
+        np.testing.assert_allclose(solution.y[-1], 2 * soln,
+                                   rtol=1e-7, atol=1e-7)
+
+        # Test time
+        self.assertEqual(
+            solution.total_time, solution.solve_time + solution.set_up_time
+        )
+        self.assertEqual(solution.termination, "final time")
+
+        t0 = time.perf_counter()
+        second_solution = solver.solve(model, t_eval)
+        t_second_solve = time.perf_counter() - t0
+
+        self.assertLess(t_second_solve, t_first_solve)
+        np.testing.assert_array_equal(second_solution.y, solution.y)
+
     def test_solver_sensitivities(self):
         # Create model
         model = pybamm.BaseModel()

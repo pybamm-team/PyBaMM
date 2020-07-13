@@ -13,6 +13,7 @@ from jax.tree_util import tree_map, tree_flatten, tree_unflatten
 from jax.interpreters import partial_eval as pe
 from jax import linear_util as lu
 from jax.config import config
+from jax.lib import pytree
 
 config.update("jax_enable_x64", True)
 
@@ -162,11 +163,8 @@ def _bdf_init(fun, jac, mass, t0, y0, h0, rtol, atol):
     state['D'] = D
     state['y0'] = None
     state['scale_y0'] = None
+    state['M'] = mass
     state = _predict(state)
-    if mass is None:
-        state['M'] = jnp.identity(len(y0), dtype=y0.dtype)
-    else:
-        state['M'] = mass
 
     # kappa values for difference orders, taken from Table 1 of [1]
     kappa = jnp.array([0, -0.1850, -1 / 9, -0.0823, -0.0415, 0])
@@ -678,7 +676,13 @@ def block_diag(lst):
         if i == j:
             return Ai
         else:
-            return jnp.zeros(Ai.shape[0], Aj.shape[1])
+            return jnp.zeros(
+                (
+                    Ai.shape[0] if Ai.ndim > 1 else 1,
+                    Aj.shape[1] if Aj.ndim > 1 else 1,
+                ),
+                dtype=Ai.dtype
+            )
 
     blocks = [
         [ block_fun(i, j, Ai, Aj) for j, Aj in enumerate(lst)]
@@ -811,10 +815,12 @@ def flax_scan(f, init, xs, length=None):  # pragma: no cover
     return carry, onp.stack(ys)
 
 
-#@partial(jax.jit, static_argnums=(0, 1, 2, 3))
+@partial(jax.jit, static_argnums=(0, 1, 2, 3))
 def _bdf_odeint_wrapper(func, mass, rtol, atol, y0, ts, *args):
     y0, unravel = ravel_pytree(y0)
-    if mass is not None:
+    if mass is None:
+        mass = jnp.identity(y0.shape[0], dtype=y0.dtype)
+    else:
         mass = block_diag(tree_flatten(mass)[0])
     func = ravel_first_arg(func, unravel)
     out = _bdf_odeint(func, mass, rtol, atol, y0, ts, *args)
@@ -840,7 +846,11 @@ def _bdf_odeint_rev(func, mass, rtol, atol, res, g):
     y_bar = g[-1]
     ts_bar = []
     t0_bar = 0.
-    aug_mass = (mass, mass, jnp.ones((1, 1)), tree_map(jnp.ones_like, args))
+
+    def arg_to_identity(arg):
+        return jnp.identity(arg.shape[0] if arg.ndim > 0 else 1, dtype=arg.dtype)
+
+    aug_mass = (mass, mass, jnp.array(1.), tree_map(arg_to_identity, args))
 
     def scan_fun(carry, i):
         y_bar, t0_bar, args_bar = carry

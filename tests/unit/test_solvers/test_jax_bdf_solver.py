@@ -139,6 +139,47 @@ class TestJaxBDFSolver(unittest.TestCase):
 
         self.assertAlmostEqual(grad_bdf, grad_num, places=3)
 
+    @unittest.skip("sensitivities do not yet work with semi-explict dae")
+    def test_mass_matrix_with_sensitivities(self):
+        # Solve
+        t_eval = np.linspace(0.0, 1.0, 80)
+
+        def fun(y, t, inputs):
+            return jax.numpy.stack([
+                inputs['rate'] * y[0],
+                y[1] - 2.0 * y[0],
+            ])
+
+        mass = jax.numpy.array([
+            [1.0, 0.0],
+            [0.0, 0.0],
+        ])
+
+        y0 = jax.numpy.array([1.0, 2.0])
+
+        h = 0.0001
+        rate = 0.1
+
+        # create a dummy "model" where we calculate the sum of the time series
+        @jax.jit
+        def solve_bdf(rate):
+            return jax.numpy.sum(
+                pybamm.jax_bdf_integrate(fun, y0, t_eval,
+                                         {'rate': rate},
+                                         mass=mass,
+                                         rtol=1e-9, atol=1e-9)
+            )
+
+        # check answers with finite difference
+        eval_plus = solve_bdf(rate + h)
+        eval_neg = solve_bdf(rate - h)
+        grad_num = (eval_plus - eval_neg) / (2 * h)
+
+        grad_solve_bdf = jax.jit(jax.grad(solve_bdf))
+        grad_bdf = grad_solve_bdf(rate)
+
+        self.assertAlmostEqual(grad_bdf, grad_num, places=3)
+
     def test_solver_with_inputs(self):
         # Create model
         model = pybamm.BaseModel()

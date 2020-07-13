@@ -5,7 +5,7 @@ import pybamm
 
 import jax
 from jax.experimental.ode import odeint
-import jax.numpy as np
+import jax.numpy as jnp
 import numpy as onp
 
 
@@ -42,13 +42,15 @@ class JaxSolver(pybamm.BaseSolver):
     """
 
     def __init__(self, method='RK45', rtol=1e-6, atol=1e-6, extra_options=None):
-        super().__init__(method, rtol, atol)
-        self.ode_solver = True
+        super().__init__(method, rtol, atol, root_method='lm')
         method_options = ['RK45', 'BDF']
         if method not in method_options:
             raise ValueError('method must be one of {}'.format(method_options))
+        self.ode_solver = False
+        if method == 'RK45':
+            self.ode_solver = True
         self.extra_options = extra_options or {}
-        self.name = "JAX solver"
+        self.name = "JAX solver ({})".format(method)
         self._cached_solves = dict()
 
     def get_solve(self, model, t_eval):
@@ -111,13 +113,22 @@ class JaxSolver(pybamm.BaseSolver):
 
         # Initial conditions
         y0 = model.y0
+        mass = None
+        if self.method == 'BDF':
+            mass = model.mass_matrix.entries.toarray()
 
-        def rhs_odeint(y, t, inputs):
-            return model.rhs_eval(t, y, inputs)
+        def rhs_ode(y, t, inputs):
+            return model.rhs_eval(t, y, inputs),
+
+        def rhs_dae(y, t, inputs):
+            return jnp.concatenate([
+                model.rhs_eval(t, y, inputs),
+                model.algebraic_eval(t, y, inputs),
+            ])
 
         def solve_model_rk45(inputs):
             y = odeint(
-                rhs_odeint,
+                rhs_ode,
                 y0,
                 t_eval,
                 inputs,
@@ -125,19 +136,20 @@ class JaxSolver(pybamm.BaseSolver):
                 atol=self.atol,
                 **self.extra_options
             )
-            return np.transpose(y)
+            return jnp.transpose(y)
 
         def solve_model_bdf(inputs):
             y = pybamm.jax_bdf_integrate(
-                rhs_odeint,
+                rhs_dae,
                 y0,
                 t_eval,
                 inputs,
                 rtol=self.rtol,
                 atol=self.atol,
+                mass=mass,
                 **self.extra_options
             )
-            return np.transpose(y)
+            return jnp.transpose(y)
 
         if self.method == 'RK45':
             return jax.jit(solve_model_rk45)
