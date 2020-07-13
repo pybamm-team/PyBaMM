@@ -172,21 +172,6 @@ class JaxSolver(pybamm.BaseSolver):
         # note - the actual solve is not done until this line!
         y = onp.array(y)
 
-        stepper = None
-        if stepper is not None:
-            sstring = ''
-            sstring += 'JAX {} solver - stats\n'.format(self.method)
-            sstring += '\tNumber of steps: {}\n'.format(stepper['n_steps'])
-            sstring += '\tnumber of function evaluations: {}\n'.format(
-                stepper['n_function_evals'])
-            sstring += '\tnumber of jacobian evaluations: {}\n'.format(
-                stepper['n_jacobian_evals'])
-            sstring += '\tnumber of LU decompositions: {}\n'.format(
-                stepper['n_lu_decompositions'])
-            sstring += '\tnumber of error test failures: {}'.format(
-                stepper['n_error_test_failures'])
-            pybamm.logger.info(sstring)
-
         termination = "final time"
         t_event = None
         y_event = onp.array(None)
