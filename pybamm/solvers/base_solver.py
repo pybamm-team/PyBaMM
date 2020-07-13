@@ -299,7 +299,7 @@ class BaseSolver(object):
                         else:
                             df_dz = casadi.jacobian(func, y_alg)
                             S_z_mat = S_z.reshape(
-                                (model.len_rhs, p_casadi_stacked.shape[0])
+                                (model.len_alg, p_casadi_stacked.shape[0])
                             )
                             S_rhs = (df_dx @ S_x_mat + df_dz @ S_z_mat + df_dp).reshape(
                                 (-1, 1)
@@ -312,7 +312,7 @@ class BaseSolver(object):
                         dg_dz = casadi.jacobian(func, y_alg)
                         dg_dp = casadi.jacobian(func, p_casadi_stacked)
                         S_z_mat = S_z.reshape(
-                            (model.len_rhs, p_casadi_stacked.shape[0])
+                            (model.len_alg, p_casadi_stacked.shape[0])
                         )
                         if model.len_rhs == 0:
                             S_alg = (dg_dz @ S_z_mat + dg_dp).reshape((-1, 1))
@@ -930,6 +930,12 @@ class BaseSolver(object):
         for input_param in model.input_parameters:
             name = input_param.name
             if name not in inputs:
+                # Don't allow symbolic inputs if using `solve_sensitivity_equations`
+                if self.solve_sensitivity_equations is True:
+                    raise pybamm.SolverError(
+                        "Cannot have symbolic inputs if explicitly solving forward"
+                        "sensitivity equations"
+                    )
                 # Only allow symbolic inputs for CasadiSolver and CasadiAlgebraicSolver
                 if not isinstance(
                     self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver)
