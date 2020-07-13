@@ -187,18 +187,6 @@ class PSDModel(BaseModel):
             mu_ln = pybamm.log(R_av ** 2 / pybamm.sqrt(R_av ** 2 + sd ** 2))
             sigma_ln = pybamm.sqrt(pybamm.log(1 + sd ** 2 / R_av ** 2))
             return (
-                pybamm.exp(-((pybamm.log(R + 0.01) - mu_ln) ** 2) / (2 * sigma_ln ** 2))
-                / pybamm.sqrt(2 * np.pi * sigma_ln ** 2)
-                / (R + 0.01)
-            )
-        def lognormal_distribution(R, R_av, sd):
-            import numpy as np
-
-            # inputs are particle radius R, the mean R_av, and standard deviation sd
-            # inputs can be dimensional or dimensionless
-            mu_ln = pybamm.log(R_av ** 2 / pybamm.sqrt(R_av ** 2 + sd ** 2))
-            sigma_ln = pybamm.sqrt(pybamm.log(1 + sd ** 2 / R_av ** 2))
-            return (
                 pybamm.exp(-((pybamm.log(R) - mu_ln) ** 2) / (2 * sigma_ln ** 2))
                 / pybamm.sqrt(2 * np.pi * sigma_ln ** 2)
                 / (R)

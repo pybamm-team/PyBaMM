@@ -95,12 +95,7 @@ class LeadingOrderSizeDistribution(BaseModel):
             + self.domain.lower()
             + " electrode surface potential difference"
         ]
-#        i_cell = self.param.current_with_time
-#        if self.domain == "Negative":
-#            j_tot_av = i_cell/self.param.l_n
-#        elif self.domain == "Positive":
-#            j_tot_av = -i_cell/self.param.l_p
-        self.algebraic[delta_phi_av] = sum_j_av - j_tot_av#delta_phi_av - 1#
+        self.algebraic[delta_phi_av] = sum_j_av - j_tot_av
 
     def set_initial_conditions(self, variables):
 
