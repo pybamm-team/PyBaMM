@@ -6,7 +6,7 @@ import jax
 import jax.numpy as jnp
 from jax import core
 from jax import dtypes
-from jax.util import safe_map, safe_zip, cache, split_list
+from jax.util import safe_map, cache, split_list
 from jax.api_util import flatten_fun_nokwargs
 from jax.flatten_util import ravel_pytree
 from jax.tree_util import tree_map, tree_flatten, tree_unflatten
@@ -15,9 +15,6 @@ from jax import linear_util as lu
 from jax.config import config
 
 config.update("jax_enable_x64", True)
-
-map = safe_map
-zip = safe_zip
 
 MAX_ORDER = 5
 NEWTON_MAXITER = 4
@@ -740,7 +737,7 @@ def jax_bdf_integrate(func, y0, t_eval, *args, rtol=1e-6, atol=1e-6):
         raise TypeError(msg.format(arg))
 
     flat_args, in_tree = tree_flatten((y0, t_eval[0], *args))
-    in_avals = tuple(map(abstractify, flat_args))
+    in_avals = tuple(safe_map(abstractify, flat_args))
     converted, consts = closure_convert(func, in_tree, in_avals)
 
     return _bdf_odeint_wrapper(converted, rtol, atol, y0, t_eval, *consts, *args)
@@ -849,7 +846,7 @@ def closure_convert(fun, in_tree, in_avals):
     in_pvals = [pe.PartialVal.unknown(aval) for aval in in_avals]
     wrapped_fun, out_tree = flatten_fun_nokwargs(lu.wrap_init(fun), in_tree)
     with core.initial_style_staging():
-        jaxpr, out_pvals, consts = pe.trace_to_jaxpr(
+        jaxpr, _, consts = pe.trace_to_jaxpr(
             wrapped_fun, in_pvals, instantiate=True, stage_out=False
         )
     out_tree = out_tree()
@@ -867,7 +864,6 @@ def closure_convert(fun, in_tree, in_avals):
         hoisted_consts, args = split_list(hconsts_args, [num_consts])
         consts = merge(closure_consts, hoisted_consts)
         all_args, in_tree2 = tree_flatten((y, t, *args))
-        assert in_tree == in_tree2
         out_flat = core.eval_jaxpr(jaxpr, consts, *all_args)
         return tree_unflatten(out_tree, out_flat)
 
