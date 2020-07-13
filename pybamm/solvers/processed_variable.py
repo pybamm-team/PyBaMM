@@ -263,7 +263,7 @@ class ProcessedVariable(object):
 
     def initialise_2D(self):
         """
-        Initialise a 2D object that depends on x and r, or x and z.
+        Initialise a 2D object that depends on x and r, x and z, x and R, or R and r.
         """
         first_dim_nodes = self.mesh.nodes
         first_dim_edges = self.mesh.edges
@@ -348,7 +348,7 @@ class ProcessedVariable(object):
             axis=1,
         )
 
-        # Process r-x or x-z
+        # Process r-x, x-z, r-R, or R-x
         if self.domain[0] in [
             "negative particle",
             "positive particle",
@@ -369,6 +369,28 @@ class ProcessedVariable(object):
             self.second_dimension = "z"
             self.x_sol = first_dim_pts
             self.z_sol = second_dim_pts
+        elif self.domain[0] in [
+            "negative particle",
+            "positive particle",
+        ] and self.auxiliary_domains["secondary"][0] in [
+            "negative particle-size domain",
+            "positive particle-size domain",
+        ]:
+            self.first_dimension = "r"
+            self.second_dimension = "R"
+            self.r_sol = first_dim_pts
+            self.R_sol = second_dim_pts
+        elif self.domain[0] in [
+            "negative particle-size domain",
+            "positive particle-size domain",
+        ] and self.auxiliary_domains["secondary"][0] in [
+            "negative electrode",
+            "positive electrode",
+        ]:
+            self.first_dimension = "R"
+            self.second_dimension = "x"
+            self.R_sol = first_dim_pts
+            self.x_sol = second_dim_pts
         else:
             raise pybamm.DomainError(
                 "Cannot process 3D object with domain '{}' "

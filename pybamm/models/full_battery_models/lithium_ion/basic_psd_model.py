@@ -533,3 +533,6 @@ class BasicPSDModel(BaseModel):
             }
         )
         return default_spatials
+
+    def new_copy(self, build=False):
+        return pybamm.BaseModel.new_copy(self)
