@@ -297,6 +297,10 @@ class TestSimulation(unittest.TestCase):
         sim.solve(t_eval=t_eval)
         sim.plot(testing=True)
 
+        # test quick_plot_vars deprecation error
+        with self.assertRaisesRegex(NotImplementedError, "'quick_plot_vars'"):
+            sim.plot(quick_plot_vars=["var"])
+
     def test_drive_cycle_data(self):
         model = pybamm.lithium_ion.SPM()
         param = model.default_parameter_values
