@@ -65,7 +65,7 @@ class BaseKinetics(BaseInterface):
         # broadcast to "particle-size domain"
         if (
             self.reaction == "lithium-ion main"
-            and self.options["particle-size distribution"] == True
+            and self.options["particle-size distribution"] is True
         ):
             delta_phi = pybamm.PrimaryBroadcast(
                 delta_phi, [self.domain.lower() + " particle-size domain"]
@@ -120,11 +120,12 @@ class BaseKinetics(BaseInterface):
         # Update j, except in the "distributed SEI resistance" model, where j will be
         # found by solving an algebraic equation.
         # (In the "distributed SEI resistance" model, we have already defined j)
-        # Calculate j differently for "particle-size distribution"
         if (
             self.reaction == "lithium-ion main"
-            and self.options["particle-size distribution"] == True
+            and self.options["particle-size distribution"] is True
         ):
+            # For "particle-size distribution" models, additional steps (R-averaging)
+            # are necessary to calculate j
             j, j_distribution = self._get_PSD_current_densities(j0, ne, eta_r, T)
             variables.update(
                 self._get_standard_PSD_interfacial_current_variables(j_distribution)
@@ -258,61 +259,4 @@ class BaseKinetics(BaseInterface):
         """
         return pybamm.Scalar(0)
 
-    def _get_PSD_current_densities(self, j0, ne, eta_r, T):
-        """
-        Calculates current densities that depend on particle size for the
-        particle-size distribution models.
-        """
-        # T must have same domains as j0, eta_r, so reverse any broadcast to
-        # "electrode" then broadcast onto "particle-size domain"
-        if isinstance(T, pybamm.Broadcast):
-            T = T.orphans[0]
-        T = pybamm.PrimaryBroadcast(
-            T, [self.domain.lower() + " particle-size domain"]
-        )
 
-        # current density that depends on particle size
-        j_distribution = self._get_kinetics(j0, ne, eta_r, T)
-        if self.domain == "Negative":
-            R_variable = pybamm.standard_spatial_vars.R_variable_n
-            f_a_dist = self.param.f_a_dist_n(R_variable, 1, self.param.sd_a_n)
-        elif self.domain == "Positive":
-            R_variable = pybamm.standard_spatial_vars.R_variable_p
-            f_a_dist = self.param.f_a_dist_p(R_variable, 1, self.param.sd_a_p)
-
-        # R-average
-        j = pybamm.Integral(f_a_dist * j_distribution, R_variable)#pybamm.PrimaryBroadcast(1, ["current collector"])#
-        return j, j_distribution
-
-    def _get_standard_PSD_interfacial_current_variables(self, j_distribution):
-        """
-        Blah blah
-        """
-        # X-average and broadcast if necessary
-        if self.domain.lower() + " electrode" in j_distribution.auxiliary_domains:
-
-            if self.domain == "Negative":
-                l = self.param.l_n
-                x = pybamm.standard_spatial_vars.x_n
-            elif self.domain == "Positive":
-                l = self.param.l_p
-                x = pybamm.standard_spatial_vars.x_p
-            # x-average
-            j_xav_distribution = pybamm.Integral(j_distribution, x) / l
-        else:
-            j_xav_distribution = j_distribution
-            j_distribution = pybamm.SecondaryBroadcast(
-                j_xav_distribution, [self.domain.lower() + " electrode"]
-            )
-
-        variables = {
-                self.domain
-                + " electrode interfacial current density"
-                + " distribution": j_distribution,
-                "X-averaged "
-                + self.domain.lower()
-                + " electrode interfacial current density"
-                + " distribution": j_xav_distribution,
-        }
-
-        return variables

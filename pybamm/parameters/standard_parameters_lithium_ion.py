@@ -276,24 +276,22 @@ j0_n_ref_dimensional = j0_n_dimensional(c_e_typ, c_n_max / 2, T_ref) * 2
 j0_p_ref_dimensional = j0_p_dimensional(c_e_typ, c_p_max / 2, T_ref) * 2
 
 # Area-weighted particle-size distributions
-def f_a_dist_n_dimensional(R, R_av_a, sd_a):
+
+
+def f_a_dist_n_dimensional(R):
     "Dimensional negative electrode particle-size distribution (area-weighted)"
     inputs = {
         "Negative particle-size variable [m]": R,
-        "Negative area-weighted mean particle size [m]": R_av_a,
-        "Negative area-weighted particle-size standard deviation [m]": sd_a,
     }
     return pybamm.FunctionParameter(
         "Negative area-weighted particle-size distribution [m]", inputs,
     )
 
 
-def f_a_dist_p_dimensional(R, R_av_a, sd_a):
+def f_a_dist_p_dimensional(R):
     "Dimensional positive electrode particle-size distribution (area-weighted)"
     inputs = {
         "Positive particle-size variable [m]": R,
-        "Positive area-weighted mean particle size [m]": R_av_a,
-        "Positive area-weighted particle-size standard deviation [m]": sd_a,
     }
     return pybamm.FunctionParameter(
         "Positive area-weighted particle-size distribution [m]", inputs,
@@ -622,20 +620,16 @@ def dUdT_p(c_s_p):
 
 
 # Area-weighted particle-size distributions
-def f_a_dist_n(R, R_av_a, sd_a):
+def f_a_dist_n(R):
     "Dimensionless negative electrode particle-size distribution (area-weighted)"
     R_dim = R * R_n
-    R_av_a_dim = R_av_a * R_n
-    sd_a_dim = sd_a * R_n
-    return f_a_dist_n_dimensional(R_dim, R_av_a_dim, sd_a_dim) * R_n
+    return f_a_dist_n_dimensional(R_dim) * R_n
 
 
-def f_a_dist_p(R, R_av_a, sd_a):
+def f_a_dist_p(R):
     "Dimensionless positive electrode particle-size distribution (area-weighted)"
     R_dim = R * R_p
-    R_av_a_dim = R_av_a * R_p
-    sd_a_dim = sd_a * R_p
-    return f_a_dist_p_dimensional(R_dim, R_av_a_dim, sd_a_dim) * R_p
+    return f_a_dist_p_dimensional(R_dim) * R_p
 
 
 # --------------------------------------------------------------------------------------

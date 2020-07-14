@@ -27,6 +27,8 @@ class BaseModel(pybamm.BaseBatteryModel):
             "positive electrode": self.param.L_x,
             "negative particle": self.param.R_n,
             "positive particle": self.param.R_p,
+            "negative particle-size domain": self.param.R_n,
+            "positive particle-size domain": self.param.R_p,
             "current collector y": self.param.L_y,
             "current collector z": self.param.L_z,
         }
@@ -44,6 +46,10 @@ class BaseModel(pybamm.BaseBatteryModel):
                 "r_n [m]": var.r_n * param.R_n,
                 "r_p": var.r_p,
                 "r_p [m]": var.r_p * param.R_p,
+                "Negative particle size": var.R_variable_n,
+                "Negative particle size [m]": var.R_variable_n * param.R_n,
+                "Positive particle size": var.R_variable_p,
+                "Positive particle size [m]": var.R_variable_p * param.R_p,
             }
         )
 

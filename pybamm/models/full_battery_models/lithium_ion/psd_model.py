@@ -22,8 +22,9 @@ class PSDModel(BaseModel):
 
     References
     ----------
-    .. [1] TL Kirk, J Evans, CP Please and SJ Chapman. “Modelling electrode heterogeneity
-        in lithium-ion batteries: unimodal and bimodal particle-size distributions”.
+    .. [1] TL Kirk, J Evans, CP Please and SJ Chapman. “Modelling electrode
+        heterogeneity in lithium-ion batteries: unimodal and bimodal particle-size
+        distributions”.
         In: arXiv preprint arXiv:2006.12208 (2020).
 
     **Extends:** :class:`pybamm.lithium_ion.BaseModel`
@@ -34,16 +35,6 @@ class PSDModel(BaseModel):
     ):
         super().__init__(options, name)
         self.options["particle-size distribution"] = True
-
-        # Set length scales for additional domains (particle-size domains)
-        self.length_scales.update(
-            {
-                "negative particle-size domain": self.param.R_n,
-                "positive particle-size domain": self.param.R_p,
-            }
-        )
-        # Update standard output variables
-        self.set_standard_output_variables()
 
         # Set submodels
         self.set_external_circuit_submodel()
@@ -140,8 +131,8 @@ class PSDModel(BaseModel):
         self.submodels[
             "electrolyte diffusion"
         ] = pybamm.electrolyte_diffusion.ConstantConcentration(self.param)
-
-    def set_standard_output_variables(self):
+        """
+        def set_standard_output_variables(self):
         super().set_standard_output_variables()
 
         # add particle-size variables
@@ -156,29 +147,30 @@ class PSDModel(BaseModel):
                 "Positive particle size [m]": var.R_variable_p * R_p,
             }
         )
-
+        """
     ####################
     # Overwrite defaults
     ####################
     @property
     def default_parameter_values(self):
         # Default parameter values
-        # Lion parameters left as default parameter set for tests
         default_params = super().default_parameter_values
+        R_n_dim = default_params["Negative particle radius [m]"]
+        R_p_dim = default_params["Positive particle radius [m]"]
 
         # New parameter values
         # Area-weighted standard deviations
         sd_a_n = 0.5
         sd_a_p = 0.3
-        sd_a_n_dim = sd_a_n * default_params["Negative particle radius [m]"]
-        sd_a_p_dim = sd_a_p * default_params["Positive particle radius [m]"]
+        sd_a_n_dim = sd_a_n * R_n_dim
+        sd_a_p_dim = sd_a_p * R_p_dim
 
-        # Max radius in the particle-size distribution (dimensionless)
+        # Max radius in the particle-size distribution (dimensionless).
+        # Either 5 s.d.'s above the mean or the value 2, whichever is larger
         R_n_max = max(2, 1 + sd_a_n * 5)
         R_p_max = max(2, 1 + sd_a_p * 5)
 
         # lognormal area-weighted particle-size distribution
-
         def lognormal_distribution(R, R_av, sd):
             import numpy as np
 
@@ -192,41 +184,29 @@ class PSDModel(BaseModel):
                 / (R)
             )
 
-        default_params.update(
-            {"Negative area-weighted particle-size standard deviation": sd_a_n},
-            check_already_exists=False,
-        )
-        default_params.update(
-            {"Negative area-weighted particle-size standard deviation [m]": sd_a_n_dim},
-            check_already_exists=False,
-        )
-        default_params.update(
-            {"Positive area-weighted particle-size standard deviation": sd_a_p},
-            check_already_exists=False,
-        )
-        default_params.update(
-            {"Positive area-weighted particle-size standard deviation [m]": sd_a_p_dim},
-            check_already_exists=False,
-        )
-        default_params.update(
-            {"Negative maximum particle radius": R_n_max}, check_already_exists=False
-        )
-        default_params.update(
-            {"Positive maximum particle radius": R_p_max}, check_already_exists=False
-        )
-        default_params.update(
-            {
-                "Negative area-weighted particle-size distribution [m]": lognormal_distribution
-            },
-            check_already_exists=False,
-        )
-        default_params.update(
-            {
-                "Positive area-weighted particle-size distribution [m]": lognormal_distribution
-            },
-            check_already_exists=False,
-        )
+        def f_a_dist_n_dim(R):
+            return lognormal_distribution(R, R_n_dim, sd_a_n_dim)
 
+        def f_a_dist_p_dim(R):
+            return lognormal_distribution(R, R_p_dim, sd_a_p_dim)
+
+        default_params.update(
+            {
+                "Negative area-weighted particle-size standard deviation": sd_a_n,
+                "Negative area-weighted particle-size "
+                + "standard deviation [m]": sd_a_n_dim,
+                "Positive area-weighted particle-size standard deviation": sd_a_p,
+                "Positive area-weighted particle-size "
+                + "standard deviation [m]": sd_a_p_dim,
+                "Negative maximum particle radius": R_n_max,
+                "Positive maximum particle radius": R_p_max,
+                "Negative area-weighted "
+                + "particle-size distribution [m]": f_a_dist_n_dim,
+                "Positive area-weighted "
+                + "particle-size distribution [m]": f_a_dist_p_dim,
+            },
+            check_already_exists=False,
+        )
         return default_params
 
     @property

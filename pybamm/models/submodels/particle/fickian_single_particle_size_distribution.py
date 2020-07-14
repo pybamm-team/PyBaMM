@@ -36,19 +36,11 @@ class FickianSinglePSD(BaseParticle):
                 },
                 bounds=(0, 1),
             )
-            j_xav_distribution = pybamm.Variable(
-                "X-averaged negative electrode interfacial current density",
-                domain="negative particle-size domain",
-                auxiliary_domains={"secondary": "current collector",},
-            )
             R_variable = pybamm.standard_spatial_vars.R_variable_n
-
-            # Additional parameters for this model
-            # Dimensionless standard deviation
-            sd_a = self.param.sd_a_n
+            R_dim = self.param.R_n
 
             # Particle-size distribution (area-weighted)
-            f_a_dist = self.param.f_a_dist_n(R_variable, 1, sd_a)
+            f_a_dist = self.param.f_a_dist_n(R_variable)
 
         elif self.domain == "Positive":
             # distribution variables
@@ -61,45 +53,31 @@ class FickianSinglePSD(BaseParticle):
                 },
                 bounds=(0, 1),
             )
-            j_xav_distribution = pybamm.Variable(
-                "X-averaged positive electrode interfacial current density",
-                domain="positive particle-size domain",
-                auxiliary_domains={"secondary": "current collector"},
-            )
             R_variable = pybamm.standard_spatial_vars.R_variable_p
-
-            # Additional parameters for this model
-            # Dimensionless standard deviation
-            sd_a = self.param.sd_a_p
+            R_dim = self.param.R_p
 
             # Particle-size distribution (area-weighted)
-            f_a_dist = self.param.f_a_dist_p(R_variable, 1, sd_a)
+            f_a_dist = self.param.f_a_dist_p(R_variable)
 
-        # R-averaged variables
+        # Standard R-averaged variables
         c_s_xav = pybamm.Integral(f_a_dist * c_s_xav_distribution, R_variable)
         c_s = pybamm.SecondaryBroadcast(c_s_xav, [self.domain.lower() + " electrode"])
-
-        c_s_surf_xav_distribution = pybamm.surf(c_s_xav_distribution)
-        c_s_surf_distribution = pybamm.SecondaryBroadcast(
-            c_s_surf_xav_distribution, [self.domain.lower() + " electrode"]
-        )
         variables = self._get_standard_concentration_variables(c_s, c_s_xav)
+
+        # Standard distribution variables (R-dependent)
+        variables.update(
+            self._get_standard_concentration_distribution_variables(
+                c_s_xav_distribution
+            )
+        )
         variables.update(
             {
                 self.domain + " particle size": R_variable,
-                "X-averaged "
-                + self.domain.lower()
-                + " particle concentration distribution": c_s_xav_distribution,
-                "X-averaged "
-                + self.domain.lower()
-                + " particle surface concentration"
-                + " distribution": c_s_surf_xav_distribution,
-                self.domain
-                + " particle surface concentration"
-                + " distribution": c_s_surf_distribution,
-                self.domain
-                + " area-weighted particle-size"
+                self.domain + " particle size [m]": R_variable * R_dim,
+                self.domain + " area-weighted particle-size"
                 + " distribution": f_a_dist,
+                self.domain + " area-weighted particle-size"
+                + " distribution [m]": f_a_dist / R_dim,
             }
         )
         return variables
@@ -109,32 +87,31 @@ class FickianSinglePSD(BaseParticle):
             "X-averaged " + self.domain.lower() + " particle concentration distribution"
         ]
         R_variable = variables[self.domain + " particle size"]
+        f_a_dist = variables[self.domain + " area-weighted particle-size distribution"]
 
-        # broadcast to particle-size domain
+        # broadcast to particle-size domain then again into particle
         T_k_xav = pybamm.PrimaryBroadcast(
             variables["X-averaged " + self.domain.lower() + " electrode temperature"],
             [self.domain.lower() + " particle-size domain"],
         )
-
-        # broadcast again into particle
         T_k_xav = pybamm.PrimaryBroadcast(T_k_xav, [self.domain.lower() + " particle"],)
 
         if self.domain == "Negative":
             N_s_xav_distribution = -self.param.D_n(
                 c_s_xav_distribution, T_k_xav
-            ) * pybamm.grad(c_s_xav_distribution)
-            f_a_dist = variables["Negative area-weighted particle-size distribution"]
-            N_s_xav = pybamm.Integral(f_a_dist * N_s_xav_distribution, R_variable)
+            ) * pybamm.grad(c_s_xav_distribution) / R_variable
         elif self.domain == "Positive":
             N_s_xav_distribution = -self.param.D_p(
                 c_s_xav_distribution, T_k_xav
-            ) * pybamm.grad(c_s_xav_distribution)
-            f_a_dist = variables["Positive area-weighted particle-size distribution"]
-            N_s_xav = pybamm.Integral(f_a_dist * N_s_xav_distribution, R_variable)
+            ) * pybamm.grad(c_s_xav_distribution) / R_variable
 
+        # Standard R-averaged flux variables
+        N_s_xav = pybamm.Integral(f_a_dist * N_s_xav_distribution, R_variable)
         N_s = pybamm.SecondaryBroadcast(N_s_xav, [self._domain.lower() + " electrode"])
-
         variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
+
+        # Standard distribution flux variables (R-dependent)
+        # (Cannot currently broadcast to "x" as it is a tertiary domain)
         variables.update(
             {
                 "X-averaged "
@@ -158,32 +135,33 @@ class FickianSinglePSD(BaseParticle):
             self.rhs = {
                 c_s_xav_distribution: -(1 / self.param.C_n)
                 * pybamm.div(N_s_xav_distribution)
-                / R_variable ** 2
+                / R_variable
             }
         elif self.domain == "Positive":
             self.rhs = {
                 c_s_xav_distribution: -(1 / self.param.C_p)
                 * pybamm.div(N_s_xav_distribution)
-                / R_variable ** 2
+                / R_variable
             }
 
     def set_boundary_conditions(self, variables):
+        # Extract variables
         c_s_xav_distribution = variables[
             "X-averaged " + self.domain.lower() + " particle concentration distribution"
         ]
-
         c_s_surf_xav_distribution = variables[
             "X-averaged "
             + self.domain.lower()
             + " particle surface concentration distribution"
         ]
-
         j_xav_distribution = variables[
             "X-averaged "
             + self.domain.lower()
             + " electrode interfacial current density distribution"
         ]
+        R_variable = variables[self.domain + " particle size"]
 
+        # Extract x-av T and broadcast to particle-size domain
         T_k_xav = variables[
             "X-averaged " + self.domain.lower() + " electrode temperature"
         ]
@@ -191,8 +169,7 @@ class FickianSinglePSD(BaseParticle):
             T_k_xav, [self.domain.lower() + " particle-size domain"]
         )
 
-        R_variable = variables[self.domain + " particle size"]
-
+        # Set surface Neumann boundary values
         if self.domain == "Negative":
             rbc = (
                 -self.param.C_n
@@ -262,3 +239,47 @@ class FickianSinglePSD(BaseParticle):
                 pybamm.EventType.TERMINATION,
             )
         )
+
+    def _get_standard_concentration_distribution_variables(self, c_s_xav_distribution):
+        '''
+        Forms concentration variables that depend on particle size R given the input
+        c_s_distribution.
+        '''
+        # Currently not possible to broadcast from (r, R) to (r, R, x) since
+        # domain x for broadcast is in "tertiary" position.
+
+        # Surface concentration distribution variables
+        c_s_surf_xav_distribution = pybamm.surf(c_s_xav_distribution)
+        c_s_surf_distribution = pybamm.SecondaryBroadcast(
+            c_s_surf_xav_distribution, [self.domain.lower() + " electrode"]
+        )
+        if self.domain == "Negative":
+            c_scale = self.param.c_n_max
+        elif self.domain == "Positive":
+            c_scale = self.param.c_p_max
+
+        variables = {
+            "X-averaged "
+            + self.domain.lower()
+            + " particle concentration distribution": c_s_xav_distribution,
+            "X-averaged "
+            + self.domain.lower()
+            + " particle concentration distribution "
+            + "[mol.m-3]": c_scale * c_s_xav_distribution,
+            "X-averaged "
+            + self.domain.lower()
+            + " particle surface concentration"
+            + " distribution": c_s_surf_xav_distribution,
+            "X-averaged "
+            + self.domain.lower()
+            + " particle surface concentration distribution "
+            + "[mol.m-3]": c_scale * c_s_surf_xav_distribution,
+            self.domain
+            + " particle surface concentration"
+            + " distribution": c_s_surf_distribution,
+            self.domain
+            + " particle surface concentration"
+            + " distribution [mol.m-3]": c_scale * c_s_surf_distribution,
+        }
+        return variables
+   

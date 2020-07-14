@@ -41,6 +41,9 @@ class BaseBatteryModel(pybamm.BaseModel):
             * "particle" : str, optional
                 Sets the submodel to use to describe behaviour within the particle.
                 Can be "Fickian diffusion" (default) or "fast diffusion".
+            * "particle-size distribution" : bool, optional
+                Whether to include a distribution of particle sizes or a single size for
+                each electrode. Can be True or False (default).
             * "thermal" : str, optional
                 Sets the thermal model to use. Can be "isothermal" (default), "lumped",
                 "x-lumped", or "x-full".
@@ -339,7 +342,11 @@ class BaseBatteryModel(pybamm.BaseModel):
             raise pybamm.OptionError(
                 "particle model '{}' not recognised".format(options["particle"])
             )
-
+        if options["particle-size distribution"] not in [True, False]:
+            raise pybamm.OptionError(
+                "Particle-size distribution must be True or False, option "
+                "'{}' not recognised".format(options["particle-size distribution"])
+            )
         if options["thermal"] == "x-lumped" and options["dimensionality"] == 1:
             warnings.warn(
                 "1+1D Thermal models are only valid if both tabs are "
