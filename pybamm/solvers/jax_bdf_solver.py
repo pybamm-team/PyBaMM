@@ -1,6 +1,7 @@
 from functools import partial
 import operator as op
 import numpy as onp
+import collections
 
 import jax
 import jax.numpy as jnp
@@ -9,7 +10,7 @@ from jax import dtypes
 from jax.util import safe_map, cache, split_list
 from jax.api_util import flatten_fun_nokwargs
 from jax.flatten_util import ravel_pytree
-from jax.tree_util import tree_map, tree_flatten, tree_unflatten
+from jax.tree_util import tree_map, tree_flatten, tree_unflatten, tree_multimap, partial
 from jax.interpreters import partial_eval as pe
 from jax import linear_util as lu
 from jax.config import config
@@ -86,16 +87,16 @@ def _bdf_odeint(fun, mass, rtol, atol, y0, t_eval, *args):
     i = 0
     y_out = jnp.empty((len(t_eval), len(y0)), dtype=y0.dtype)
 
-    init_state = [stepper, t_eval, i, y_out, 0]
+    init_state = [stepper, t_eval, i, y_out]
 
     def cond_fun(state):
-        _, t_eval, i, _, _ = state
+        _, t_eval, i, _ = state
         return i < len(t_eval)
 
     def body_fun(state):
-        stepper, t_eval, i, y_out, n_steps = state
+        stepper, t_eval, i, y_out = state
         stepper = _bdf_step(stepper, fun_bind_inputs, jac_bind_inputs)
-        index = jnp.searchsorted(t_eval, stepper['t'])
+        index = jnp.searchsorted(t_eval, stepper.t)
 
         def for_body(j, y_out):
             t = t_eval[j]
@@ -104,15 +105,24 @@ def _bdf_odeint(fun, mass, rtol, atol, y0, t_eval, *args):
             return y_out
 
         y_out = jax.lax.fori_loop(i, index, for_body, y_out)
-        return [stepper, t_eval, index, y_out, n_steps + 1]
+        return [stepper, t_eval, index, y_out]
 
-    stepper, t_eval, i, y_out, n_steps = jax.lax.while_loop(cond_fun, body_fun,
+    stepper, t_eval, i, y_out = jax.lax.while_loop(cond_fun, body_fun,
                                                             init_state)
-
-    stepper['n_steps'] = n_steps
 
     return y_out
 
+
+BDFInternalStates = [
+        't', 'atol', 'rtol', 'M', 'newton_tol', 'order', 'h', 'n_equal_steps', 'D',
+        'y0', 'scale_y0', 'kappa', 'gamma', 'alpha', 'c', 'error_const', 'J', 'LU', 'U',
+        'psi', 'n_function_evals', 'n_jacobian_evals', 'n_lu_decompositions', 'n_steps']
+BDFState = collections.namedtuple('BDFState', BDFInternalStates)
+
+jax.tree_util.register_pytree_node(
+                      BDFState,
+                      lambda xs: (tuple(xs), None),
+                      lambda _, xs: BDFState(*xs))
 
 def _bdf_init(fun, jac, mass, t0, y0, h0, rtol, atol):
     """
@@ -145,6 +155,7 @@ def _bdf_init(fun, jac, mass, t0, y0, h0, rtol, atol):
     atol: (optional) float
         absolute tolerance for the solver
     """
+
     state = {}
     state['t'] = t0
     state['atol'] = atol
@@ -155,20 +166,18 @@ def _bdf_init(fun, jac, mass, t0, y0, h0, rtol, atol):
 
     scale_y0 = atol + rtol * jnp.abs(y0)
     y0 = _select_initial_conditions(fun, mass, t0, y0, state['newton_tol'], scale_y0)
-    state['y'] = y0
 
     f0 = fun(y0, t0)
     order = 1
     state['order'] = order
-    state['h'] = _select_initial_step(state, fun, t0, y0, f0, h0)
+    state['h'] = _select_initial_step(atol, rtol, fun, t0, y0, f0, h0)
     state['n_equal_steps'] = 0
     D = jnp.empty((MAX_ORDER + 1, len(y0)), dtype=y0.dtype)
     D = jax.ops.index_update(D, jax.ops.index[0, :], y0)
     D = jax.ops.index_update(D, jax.ops.index[1, :], f0 * state['h'])
     state['D'] = D
-    state['y0'] = None
+    state['y0'] = y0
     state['scale_y0'] = scale_y0
-    state = _predict(state)
 
     # kappa values for difference orders, taken from Table 1 of [1]
     kappa = jnp.array([0, -0.1850, -1 / 9, -0.0823, -0.0415, 0])
@@ -189,13 +198,16 @@ def _bdf_init(fun, jac, mass, t0, y0, h0, rtol, atol):
 
     state['U'] = _compute_R(order, 1)
     state['psi'] = None
-    state = _update_psi(state)
 
     state['n_function_evals'] = 2
     state['n_jacobian_evals'] = 1
     state['n_lu_decompositions'] = 1
-    state['n_error_test_failures'] = 0
-    return state
+    state['n_steps'] = 0
+
+    tuple_state = BDFState(*[state[k] for k in BDFInternalStates])
+    y0, scale_y0 = _predict(tuple_state, D)
+    psi = _update_psi(tuple_state, D)
+    return tuple_state._replace(y0=y0, scale_y0=scale_y0, psi=psi)
 
 
 def _compute_R(order, factor):
@@ -272,22 +284,12 @@ def _select_initial_conditions(fun, M, t0, y0, tol, scale_y0):
         # if converged then break out of iteration early
         pred = dy_norm_old >= 0
         pred *= rate / (1 - rate) * dy_norm < tol
-        pred += dy_norm == 0
-
-        def converged_fun(not_converged):
-            not_converged = False
-            return not_converged
-
-        def not_converged_fun(not_converged):
-            return not_converged
+        not_converged = dy_norm == 0 + pred
 
         dy_norm_old = dy_norm
 
-        not_converged = \
-            jax.lax.cond(pred,
-                         not_converged, converged_fun,
-                         not_converged, not_converged_fun)
         return [k + 1, not_converged, dy_norm_old, d, y_a]
+
 
     k, not_converged, dy_norm_old, d, y_a = jax.lax.while_loop(while_cond,
                                                                while_body,
@@ -297,7 +299,7 @@ def _select_initial_conditions(fun, M, t0, y0, tol, scale_y0):
     return y_tilde
 
 
-def _select_initial_step(state, fun, t0, y0, f0, h0):
+def _select_initial_step(atol, rtol, fun, t0, y0, f0, h0):
     """
     Select a good initial step by stepping forward one step of forward euler, and
     comparing the predicted state against that using the provided function.
@@ -310,7 +312,7 @@ def _select_initial_step(state, fun, t0, y0, f0, h0):
     .. [1] E. Hairer, S. P. Norsett G. Wanner, "Solving Ordinary Differential
                Equations I: Nonstiff Problems", Sec. II.4.
     """
-    scale = state['atol'] + jnp.abs(y0) * state['rtol']
+    scale = atol + jnp.abs(y0) * rtol
     y1 = y0 + h0 * f0
     f1 = fun(y1, t0 + h0)
     d2 = jnp.sqrt(jnp.mean(((f1 - f0) / scale)**2))
@@ -319,37 +321,37 @@ def _select_initial_step(state, fun, t0, y0, f0, h0):
     return jnp.min((100 * h0, h1))
 
 
-def _predict(state):
+def _predict(state, D):
     """
     predict forward to new step (eq 2 in [1])
     """
-    n = len(state['y'])
-    order = state['order']
+    n = len(state.y0)
+    order = state.order
     orders = jnp.repeat(jnp.arange(MAX_ORDER + 1).reshape(-1, 1), n, axis=1)
-    subD = jnp.where(orders <= order, state['D'], 0)
-    state['y0'] = jnp.sum(subD, axis=0)
-    state['scale_y0'] = state['atol'] + state['rtol'] * jnp.abs(state['y0'])
-    return state
+    subD = jnp.where(orders <= order, D, 0)
+    y0 = jnp.sum(subD, axis=0)
+    scale_y0 = state.atol + state.rtol * jnp.abs(state.y0)
+    return y0, scale_y0
 
 
-def _update_psi(state):
+def _update_psi(state, D):
     """
     update psi term as defined in second equation on page 9 of [1]
     """
-    order = state['order']
-    n = len(state['y'])
+    order = state.order
+    n = len(state.y0)
     orders = jnp.arange(MAX_ORDER + 1)
-    subGamma = jnp.where(orders > 0, jnp.where(orders <= order, state['gamma'], 0), 0)
+    subGamma = jnp.where(orders > 0, jnp.where(orders <= order, state.gamma, 0), 0)
     orders = jnp.repeat(orders.reshape(-1, 1), n, axis=1)
-    subD = jnp.where(orders > 0, jnp.where(orders <= order, state['D'], 0), 0)
-    state['psi'] = jnp.dot(
+    subD = jnp.where(orders > 0, jnp.where(orders <= order, D, 0), 0)
+    psi = jnp.dot(
         subD.T,
         subGamma
-    ) * state['alpha'][order]
-    return state
+    ) * state.alpha[order]
+    return psi
 
 
-def _update_difference_for_next_step(state, d, only_update_D=False):
+def _update_difference_for_next_step(state, d):
     """
     update of difference equations can be done efficiently
     by reusing d and D.
@@ -362,8 +364,8 @@ def _update_difference_for_next_step(state, d, only_update_D=False):
 
     Combining these gives the following algorithm
     """
-    order = state['order']
-    D = state['D']
+    order = state.order
+    D = state.D
     D = jax.ops.index_update(D, jax.ops.index[order + 2],
                              d - D[order + 1])
     D = jax.ops.index_update(D, jax.ops.index[order + 1],
@@ -384,22 +386,7 @@ def _update_difference_for_next_step(state, d, only_update_D=False):
 
     i, D = jax.lax.while_loop(while_cond, while_body, while_state)
 
-    state['D'] = D
-
-    def update_psi_and_predict(state):
-        # update psi (D has changed)
-        state = _update_psi(state)
-
-        # update y0 (D has changed)
-        state = _predict(state)
-
-        return state
-
-    state = jax.lax.cond(only_update_D == False,  # noqa: E712
-                         state, update_psi_and_predict,
-                         state, lambda x: x)
-
-    return state
+    return D
 
 
 def _update_step_size(state, factor):
@@ -411,81 +398,79 @@ def _update_step_size(state, factor):
     - lu factorisation of (M - c * J) used in newton iteration (same equation)
     - psi term
     """
-    order = state['order']
-    h = state['h']
+    order = state.order
+    h = state.h
 
     h *= factor
-    state['n_equal_steps'] = 0
-    c = h * state['alpha'][order]
+    n_equal_steps = 0
+    c = h * state.alpha[order]
 
     # redo lu (c has changed)
-    state['LU'] = jax.scipy.linalg.lu_factor(state['M'] - c * state['J'])
-    state['n_lu_decompositions'] += 1
-
-    state['h'] = h
-    state['c'] = c
+    LU = jax.scipy.linalg.lu_factor(state.M - c * state.J)
+    n_lu_decompositions = state.n_lu_decompositions + 1
 
     # update D using equations in section 3.2 of [1]
-    RU = _compute_R(order, factor).dot(state['U'])
+    RU = _compute_R(order, factor).dot(state.U)
     I = jnp.arange(0, MAX_ORDER + 1).reshape(-1, 1)
     J = jnp.arange(0, MAX_ORDER + 1)
 
     # only update order+1, order+1 entries of D
     RU = jnp.where(jnp.logical_and(I <= order, J <= order),
                    RU, jnp.identity(MAX_ORDER + 1))
-    D = state['D']
+    D = state.D
     D = jnp.dot(RU.T, D)
     # D = jax.ops.index_update(D, jax.ops.index[:order + 1],
     #                         jnp.dot(RU.T, D[:order + 1]))
-    state['D'] = D
 
     # update psi (D has changed)
-    state = _update_psi(state)
+    psi = _update_psi(state, D)
 
     # update y0 (D has changed)
-    state = _predict(state)
+    y0, scale_y0 = _predict(state, D)
 
-    return state
-
+    return state._replace(n_equal_steps=n_equal_steps, LU=LU,
+                          n_lu_decompositions=n_lu_decompositions, h=h, c=c,
+                          D=D, psi=psi, y0=y0, scale_y0=scale_y0)
 
 def _update_jacobian(state, jac):
     """
     we update the jacobian using J(t_{n+1}, y^0_{n+1})
     following the scipy bdf implementation rather than J(t_n, y_n) as per [1]
     """
-    J = jac(state['y0'], state['t'] + state['h'])
-    state['n_jacobian_evals'] += 1
-    state['LU'] = jax.scipy.linalg.lu_factor(state['M'] - state['c'] * J)
-    state['n_lu_decompositions'] += 1
-    state['J'] = J
-    return state
+    J = jac(state.y0, state.t + state.h)
+    n_jacobian_evals = state.n_jacobian_evals + 1
+    LU = jax.scipy.linalg.lu_factor(state.M - state.c * J)
+    n_lu_decompositions = state.n_lu_decompositions + 1
+    return state._replace(J=J, n_jacobian_evals=n_jacobian_evals, LU=LU,
+                          n_lu_decompositions=n_lu_decompositions)
 
 
 def _newton_iteration(state, fun):
-    tol = state['newton_tol']
-    c = state['c']
-    psi = state['psi']
-    y0 = state['y0']
-    LU = state['LU']
-    M = state['M']
-    scale_y0 = state['scale_y0']
-    t = state['t'] + state['h']
+    tol = state.newton_tol
+    c = state.c
+    psi = state.psi
+    y0 = state.y0
+    LU = state.LU
+    M = state.M
+    scale_y0 = state.scale_y0
+    t = state.t + state.h
     d = jnp.zeros(y0.shape, dtype=y0.dtype)
     y = jnp.array(y0, copy=True)
+    n_function_evals = state.n_function_evals
 
     not_converged = True
     dy_norm_old = -1.0
     k = 0
-    while_state = [k, not_converged, dy_norm_old, d, y, state]
+    while_state = [k, not_converged, dy_norm_old, d, y, n_function_evals]
 
     def while_cond(while_state):
         k, not_converged, _, _, _, _ = while_state
         return not_converged * (k < NEWTON_MAXITER)
 
     def while_body(while_state):
-        k, not_converged, dy_norm_old, d, y, state = while_state
+        k, not_converged, dy_norm_old, d, y, n_function_evals = while_state
         f_eval = fun(y, t)
-        state['n_function_evals'] += 1
+        n_function_evals += 1
         b = c * f_eval - M @ (psi + d)
         dy = jax.scipy.linalg.lu_solve(LU, b)
         dy_norm = jnp.sqrt(jnp.mean((dy / scale_y0)**2))
@@ -496,7 +481,7 @@ def _newton_iteration(state, fun):
         pred = rate >= 1
         pred += rate ** (NEWTON_MAXITER - k) / (1 - rate) * dy_norm > tol
         pred *= dy_norm_old >= 0
-        k = jax.lax.cond(pred, k, lambda k: NEWTON_MAXITER, k, lambda k: k)
+        k += pred * (NEWTON_MAXITER - k)
 
         d += dy
         y = y0 + d
@@ -508,197 +493,146 @@ def _newton_iteration(state, fun):
 
         dy_norm_old = dy_norm
 
-        return [k + 1, not_converged, dy_norm_old, d, y, state]
+        return [k + 1, not_converged, dy_norm_old, d, y, n_function_evals]
 
-    k, not_converged, dy_norm_old, d, y, state = jax.lax.while_loop(while_cond,
+    k, not_converged, dy_norm_old, d, y, n_function_evals = jax.lax.while_loop(while_cond,
                                                                     while_body,
                                                                     while_state)
-    return not_converged, k, y, d, state
+    return not_converged, k, y, d, state._replace(n_function_evals=n_function_evals)
+
+def rms_norm(arg):
+    return jnp.sqrt(jnp.mean(arg**2))
+
+
+def _prepare_next_step(state, d):
+    D = _update_difference_for_next_step(state, d)
+    psi = _update_psi(state, D)
+    y0, scale_y0 = _predict(state, D)
+    return state._replace(D=D,psi=psi,y0=y0,scale_y0=scale_y0)
+
+
+def _prepare_next_step_order_change(state, d, y, n_iter):
+    order = state.order
+
+    D = _update_difference_for_next_step(state, d)
+
+    # Note: we are recalculating these from the while loop above, could re-use?
+    scale_y = state.atol + state.rtol * jnp.abs(y)
+    error = state.error_const[order] * d
+    error_norm = rms_norm(error / scale_y)
+    safety = 0.9 * (2 * NEWTON_MAXITER + 1) / (2 * NEWTON_MAXITER
+                                               + n_iter)
+
+    # similar to the optimal step size factor we calculated above for the current
+    # order k, we need to calculate the optimal step size factors for orders
+    # k-1 and k+1. To do this, we note that the error = C_k * D^{k+1} y_n
+    error_m_norm = jnp.where(
+        order > 1,
+        rms_norm(state.error_const[order - 1] * D[order] / scale_y),
+        jnp.inf
+    )
+    error_p_norm = jnp.where(
+        order < MAX_ORDER,
+        rms_norm(state.error_const[order + 1] * D[order + 2] / scale_y),
+        jnp.inf
+    )
+
+    error_norms = jnp.array([error_m_norm, error_norm, error_p_norm])
+    factors = error_norms ** (-1 / (jnp.arange(3) + order))
+
+    # now we have the three factors for orders k-1, k and k+1, pick the maximum in
+    # order to maximise the resultant step size
+    max_index = jnp.argmax(factors)
+    order = order + max_index - 1
+
+    factor = jnp.min((MAX_FACTOR, safety * factors[max_index]))
+
+    new_state = _update_step_size(state._replace(D=D, order=order), factor)
+    return new_state
 
 
 def _bdf_step(state, fun, jac):
     # we will try and use the old jacobian unless convergence of newton iteration
     # fails
-    not_updated_jacobian = True
+    updated_jacobian = False
     # initialise step size and try to make the step,
     # iterate, reducing step size until error is in bounds
     step_accepted = False
-    y = jnp.empty_like(state['y'])
-    d = jnp.empty_like(state['y'])
+    y = jnp.empty_like(state.y0)
+    d = jnp.empty_like(state.y0)
     n_iter = -1
 
     # loop until step is accepted
-    while_state = [state, step_accepted, not_updated_jacobian, y, d, n_iter]
+    while_state = [state, step_accepted, updated_jacobian, y, d, n_iter]
 
     def while_cond(while_state):
         _, step_accepted, _, _, _, _ = while_state
         return step_accepted == False  # noqa: E712
 
     def while_body(while_state):
-        state, step_accepted, not_updated_jacobian, y, d, n_iter = while_state
+        state, step_accepted, updated_jacobian, y, d, n_iter = while_state
 
         # solve BDF equation using y0 as starting point
         not_converged, n_iter, y, d, state = _newton_iteration(state, fun)
 
-        # if not converged update the jacobian for J(t_n,y_n) and try again
-        pred = not_converged * not_updated_jacobian
-        if_state = [state, not_updated_jacobian, step_accepted]
+        # newton iteration did not converge, but jacobian has already been
+        # evaluated so reduce step size by 0.3 (as per [1]) and try again
+        state = tree_multimap(
+                    partial(jnp.where, not_converged * updated_jacobian),
+                    _update_step_size(state, 0.3),
+                    state
+        )
 
-        def need_to_update_jacobian(if_state):
-            # newton iteration did not converge, update the jacobian and try again
-            state, not_updated_jacobian, step_accepted = if_state
-            state = _update_jacobian(state, jac)
-            not_updated_jacobian = False
-            return [state, not_updated_jacobian, step_accepted]
+        # if not converged and jacobian not updated, then update the jacobian and try again
+        (state, updated_jacobian) = tree_multimap(
+                      partial(jnp.where, not_converged * (updated_jacobian == False)),
+                      (_update_jacobian(state, jac), True),
+                      (state, False)
+        )
 
-        def dont_need_to_update_jacobian(if_state):
-            state, not_updated_jacobian, step_accepted = if_state
+        safety = 0.9 * (2 * NEWTON_MAXITER + 1) / (2 * NEWTON_MAXITER + n_iter)
+        scale_y = state.atol + state.rtol * jnp.abs(y)
 
-            if_state2 = [state, step_accepted]
+        # combine eq 3, 4 and 6 from [1] to obtain error
+        # Note that error = C_k * h^{k+1} y^{k+1}
+        # and d = D^{k+1} y_{n+1} \approx h^{k+1} y^{k+1}
+        error = state.error_const[state.order] * d
 
-            def need_to_update_step_size(if_state2):
-                # newton iteration did not converge, but jacobian has already been
-                # evaluated so reduce step size by 0.3 (as per [1]) and try again
-                state, step_accepted = if_state2
-                state = _update_step_size(state, 0.3)
-                return [state, step_accepted]
+        error_norm = rms_norm(error / scale_y)
 
-            def converged(if_state2):
-                state, step_accepted = if_state2
-                # yay, converged, now check error is within bounds
-                scale_y = state['atol'] + state['rtol'] * jnp.abs(y)
+        # calculate optimal step size factor as per eq 2.46 of [2]
+        factor = jnp.max((MIN_FACTOR,
+                          safety *
+                          error_norm ** (-1 / (state.order + 1))))
 
-                # combine eq 3, 4 and 6 from [1] to obtain error
-                # Note that error = C_k * h^{k+1} y^{k+1}
-                # and d = D^{k+1} y_{n+1} \approx h^{k+1} y^{k+1}
-                error = state['error_const'][state['order']] * d
-                error_norm = jnp.sqrt(jnp.mean((error / scale_y)**2))
+        (state, step_accepted) = tree_multimap(
+            partial(jnp.where, (not_converged == False) * (error_norm > 1)),
+            (_update_step_size(state, factor), False),
+            (state, True)
+        )
 
-                # calculate safety outside if since we will reuse later
-                safety = 0.9 * (2 * NEWTON_MAXITER + 1) / (2 * NEWTON_MAXITER
-                                                           + n_iter)
+        return [state, step_accepted, updated_jacobian, y, d, n_iter]
 
-                if_state3 = [state, step_accepted]
-
-                def error_too_large(if_state3):
-                    # error too large, reduce step size and try again
-                    state, step_accepted = if_state3
-                    state['n_error_test_failures'] += 1
-                    # calculate optimal step size factor as per eq 2.46 of [2]
-                    factor = jnp.max((MIN_FACTOR,
-                                      safety *
-                                      error_norm ** (-1 / (state['order'] + 1))))
-                    state = _update_step_size(state, factor)
-                    return [state, step_accepted]
-
-                def accept_step(if_state3):
-                    # if we get here we can accept the step
-                    state, step_accepted = if_state3
-                    step_accepted = True
-                    return [state, step_accepted]
-
-                state, step_accepted = \
-                    jax.lax.cond(error_norm > 1,
-                                 if_state3, error_too_large,
-                                 if_state3, accept_step)
-
-                return [state, step_accepted]
-
-            state, step_accepted = jax.lax.cond(not_converged,
-                                                if_state2, need_to_update_step_size,
-                                                if_state2, converged)
-
-            return [state, not_updated_jacobian, step_accepted]
-
-        state, not_updated_jacobian, step_accepted = \
-            jax.lax.cond(pred,
-                         if_state, need_to_update_jacobian,
-                         if_state, dont_need_to_update_jacobian)
-        return [state, step_accepted, not_updated_jacobian, y, d, n_iter]
-
-    state, step_accepted, not_updated_jacobian, y, d, n_iter = \
+    state, step_accepted, updated_jacobian, y, d, n_iter = \
         jax.lax.while_loop(while_cond, while_body, while_state)
 
+
     # take the accepted step
-    state['y'] = y
-    state['t'] += state['h']
+    n_steps = state.n_steps + 1
+    t = state.t + state.h
 
     # a change in order is only done after running at order k for k + 1 steps
     # (see page 83 of [2])
-    state['n_equal_steps'] += 1
+    n_equal_steps = state.n_equal_steps + 1
 
-    if_state = [state, d, y, n_iter]
 
-    def no_change_in_order(if_state):
-        # no change in order this step, update differences D and exit
-        state, d, _, _ = if_state
-        state = _update_difference_for_next_step(state, d, False)
-        return state
+    state = state._replace(n_equal_steps=n_equal_steps, t=t, n_steps=n_steps)
 
-    def order_change(if_state):
-        state, d, y, n_iter = if_state
-        order = state['order']
-
-        # Note: we are recalculating these from the while loop above, could re-use?
-        scale_y = state['atol'] + state['rtol'] * jnp.abs(y)
-        error = state['error_const'][order] * d
-        error_norm = jnp.sqrt(jnp.mean((error / scale_y)**2))
-        safety = 0.9 * (2 * NEWTON_MAXITER + 1) / (2 * NEWTON_MAXITER
-                                                   + n_iter)
-
-        # don't need to update psi and y0 yet as we will be changing D again soon
-        state = _update_difference_for_next_step(state, d, True)
-
-        if_state2 = [state, scale_y, order]
-        # similar to the optimal step size factor we calculated above for the current
-        # order k, we need to calculate the optimal step size factors for orders
-        # k-1 and k+1. To do this, we note that the error = C_k * D^{k+1} y_n
-
-        def order_greater_one(if_state2):
-            state, scale_y, order = if_state2
-            error_m = state['error_const'][order - 1] * state['D'][order]
-            error_m_norm = jnp.sqrt(jnp.mean((error_m / scale_y)**2))
-            return error_m_norm
-
-        def order_equal_one(if_state2):
-            error_m_norm = jnp.inf
-            return error_m_norm
-
-        error_m_norm = jax.lax.cond(order > 1,
-                                    if_state2, order_greater_one,
-                                    if_state2, order_equal_one)
-
-        def order_less_max(if_state2):
-            state, scale_y, order = if_state2
-            error_p = state['error_const'][order + 1] * state['D'][order + 2]
-            error_p_norm = jnp.sqrt(jnp.mean((error_p / scale_y)**2))
-            return error_p_norm
-
-        def order_max(if_state2):
-            error_p_norm = jnp.inf
-            return error_p_norm
-
-        error_p_norm = jax.lax.cond(order < MAX_ORDER,
-                                    if_state2, order_less_max,
-                                    if_state2, order_max)
-
-        error_norms = jnp.array([error_m_norm, error_norm, error_p_norm])
-        factors = error_norms ** (-1 / (jnp.arange(3) + order))
-
-        # now we have the three factors for orders k-1, k and k+1, pick the maximum in
-        # order to maximise the resultant step size
-        max_index = jnp.argmax(factors)
-        order += max_index - 1
-        state['order'] = order
-
-        factor = jnp.min((MAX_FACTOR, safety * factors[max_index]))
-        state = _update_step_size(state, factor)
-
-        return state
-
-    state = jax.lax.cond(state['n_equal_steps'] < state['order'] + 1,
-                         if_state, no_change_in_order,
-                         if_state, order_change)
+    state = tree_multimap(
+        partial(jnp.where, n_equal_steps < state.order + 1),
+        _prepare_next_step(state, d),
+        _prepare_next_step_order_change(state, d, y, n_iter)
+    )
 
     return state
 
@@ -709,10 +643,10 @@ def _bdf_interpolate(state, t_eval):
 
     definition of the interpolating polynomial can be found on page 7 of [1]
     """
-    order = state['order']
-    t = state['t']
-    h = state['h']
-    D = state['D']
+    order = state.order
+    t = state.t
+    h = state.h
+    D = state.D
     j = 0
     time_factor = 1.0
     order_summation = D[0]
@@ -832,17 +766,6 @@ def jax_bdf_integrate(func, y0, t_eval, *args, rtol=1e-6, atol=1e-6, mass=None):
     converted, consts = closure_convert(func, in_tree, in_avals)
 
     return _bdf_odeint_wrapper(converted, mass, rtol, atol, y0, t_eval, *consts, *args)
-
-
-def flax_cond(pred, true_operand, true_fun,
-              false_operand, false_fun):  # pragma: no cover
-    """
-    for debugging purposes, use this instead of jax.lax.cond
-    """
-    if pred:
-        return true_fun(true_operand)
-    else:
-        return false_fun(false_operand)
 
 
 def flax_while_loop(cond_fun, body_fun, init_val):  # pragma: no cover
