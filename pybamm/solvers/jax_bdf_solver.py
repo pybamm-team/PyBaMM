@@ -504,21 +504,10 @@ def _newton_iteration(state, fun):
         # if converged then break out of iteration early
         pred = dy_norm_old >= 0
         pred *= rate / (1 - rate) * dy_norm < tol
-        pred += dy_norm == 0
-
-        def converged_fun(not_converged):
-            not_converged = False
-            return not_converged
-
-        def not_converged_fun(not_converged):
-            return not_converged
+        not_converged = dy_norm == 0 + pred
 
         dy_norm_old = dy_norm
 
-        not_converged = \
-            jax.lax.cond(pred,
-                         not_converged, converged_fun,
-                         not_converged, not_converged_fun)
         return [k + 1, not_converged, dy_norm_old, d, y, state]
 
     k, not_converged, dy_norm_old, d, y, state = jax.lax.while_loop(while_cond,
