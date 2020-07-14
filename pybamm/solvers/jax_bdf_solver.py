@@ -402,7 +402,7 @@ def _update_difference_for_next_step(state, d, only_update_D=False):
     return state
 
 
-def _update_step_size(state, factor, dont_update_lu):
+def _update_step_size(state, factor):
     """
     If step size h is changed then also need to update the terms in
     the first equation of page 9 of [1]:
@@ -419,14 +419,8 @@ def _update_step_size(state, factor, dont_update_lu):
     c = h * state['alpha'][order]
 
     # redo lu (c has changed)
-    def update_lu(state):
-        state['LU'] = jax.scipy.linalg.lu_factor(state['M'] - c * state['J'])
-        state['n_lu_decompositions'] += 1
-        return state
-
-    state = jax.lax.cond(dont_update_lu == False,  # noqa: E712
-                         state, update_lu,
-                         state, lambda x: x)
+    state['LU'] = jax.scipy.linalg.lu_factor(state['M'] - c * state['J'])
+    state['n_lu_decompositions'] += 1
 
     state['h'] = h
     state['c'] = c
@@ -577,7 +571,7 @@ def _bdf_step(state, fun, jac):
                 # newton iteration did not converge, but jacobian has already been
                 # evaluated so reduce step size by 0.3 (as per [1]) and try again
                 state, step_accepted = if_state2
-                state = _update_step_size(state, 0.3, False)
+                state = _update_step_size(state, 0.3)
                 return [state, step_accepted]
 
             def converged(if_state2):
@@ -605,7 +599,7 @@ def _bdf_step(state, fun, jac):
                     factor = jnp.max((MIN_FACTOR,
                                       safety *
                                       error_norm ** (-1 / (state['order'] + 1))))
-                    state = _update_step_size(state, factor, False)
+                    state = _update_step_size(state, factor)
                     return [state, step_accepted]
 
                 def accept_step(if_state3):
@@ -709,7 +703,7 @@ def _bdf_step(state, fun, jac):
         state['order'] = order
 
         factor = jnp.min((MAX_FACTOR, safety * factors[max_index]))
-        state = _update_step_size(state, factor, False)
+        state = _update_step_size(state, factor)
 
         return state
 
