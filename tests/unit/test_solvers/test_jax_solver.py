@@ -244,6 +244,11 @@ class TestJaxSolver(unittest.TestCase):
         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
+
+        # test that another method string gives error
+        with self.assertRaises(ValueError):
+            solver = pybamm.JaxSolver(method='not_real')
+
         # Solve
         solver = pybamm.JaxSolver(rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 5, 80)

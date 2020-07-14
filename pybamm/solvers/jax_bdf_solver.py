@@ -919,19 +919,6 @@ def abstractify(x):
     return core.raise_to_shaped(core.get_aval(x))
 
 
-def ravel_2d_pytree(pytree):
-    leaves, treedef = tree_flatten(pytree)
-    flat, unravel_list = jax.api.vjp(ravel_2d_list, *leaves)
-
-    def unravel_pytree(flat):
-        return tree_unflatten(treedef, unravel_list(flat))
-    return flat, unravel_pytree
-
-
-def ravel_2d_list(*lst):
-    return jnp.concatenate([jnp.ravel(elt) for elt in lst]) if lst else jnp.array([])
-
-
 def ravel_first_arg(f, unravel):
     return ravel_first_arg_(lu.wrap_init(f), unravel).call_wrapped
 
