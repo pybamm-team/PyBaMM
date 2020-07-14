@@ -38,7 +38,7 @@ class TestJaxSolver(unittest.TestCase):
             t_first_solve = time.perf_counter() - t0
             np.testing.assert_array_equal(solution.t, t_eval)
             np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t),
-                                       rtol=1e-7, atol=1e-7)
+                                       rtol=1e-6, atol=1e-6)
 
             # Test time
             self.assertEqual(
