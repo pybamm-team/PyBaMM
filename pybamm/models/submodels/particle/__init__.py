@@ -4,3 +4,4 @@ from .fickian_single_particle import FickianSingleParticle
 from .fickian_single_particle_size_distribution import FickianSinglePSD
 from .fast_many_particles import FastManyParticles
 from .fast_single_particle import FastSingleParticle
+from .fast_single_particle_size_distribution import FastSinglePSD

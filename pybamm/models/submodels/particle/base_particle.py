@@ -70,6 +70,68 @@ class BaseParticle(pybamm.BaseSubModel):
 
         return variables
 
+    def _get_standard_concentration_distribution_variables(self, c_s):
+        """
+        Forms standard concentration variables that depend on particle size R given
+        the input c_s_distribution.
+        """
+        # Currently not possible to broadcast from (r, R) to (r, R, x) since
+        # domain x for broadcast is in "tertiary" position.
+
+        if (
+            c_s.domain == [self.domain.lower() + " particle-size domain"]
+            and c_s.auxiliary_domains["secondary"] != [self.domain.lower() + " electrode"]
+        ): 
+            c_s_xav_distribution = pybamm.PrimaryBroadcast(
+                c_s, [self.domain.lower() + " particle"]
+            )
+
+            # Surface concentration distribution variables
+            c_s_surf_xav_distribution = c_s
+            c_s_surf_distribution = pybamm.SecondaryBroadcast(
+                c_s_surf_xav_distribution, [self.domain.lower() + " electrode"]
+            )
+        elif c_s.domain == [self.domain.lower() + " particle"] and (
+            c_s.auxiliary_domains["tertiary"] != [self.domain.lower() + " electrode"]
+        ):
+            c_s_xav_distribution = c_s
+
+            # Surface concentration distribution variables
+            c_s_surf_xav_distribution = pybamm.surf(c_s_xav_distribution)
+            c_s_surf_distribution = pybamm.SecondaryBroadcast(
+                c_s_surf_xav_distribution, [self.domain.lower() + " electrode"]
+            )
+
+        if self.domain == "Negative":
+            c_scale = self.param.c_n_max
+        elif self.domain == "Positive":
+            c_scale = self.param.c_p_max
+
+        variables = {
+            "X-averaged "
+            + self.domain.lower()
+            + " particle concentration distribution": c_s_xav_distribution,
+            "X-averaged "
+            + self.domain.lower()
+            + " particle concentration distribution "
+            + "[mol.m-3]": c_scale * c_s_xav_distribution,
+            "X-averaged "
+            + self.domain.lower()
+            + " particle surface concentration"
+            + " distribution": c_s_surf_xav_distribution,
+            "X-averaged "
+            + self.domain.lower()
+            + " particle surface concentration distribution "
+            + "[mol.m-3]": c_scale * c_s_surf_xav_distribution,
+            self.domain
+            + " particle surface concentration"
+            + " distribution": c_s_surf_distribution,
+            self.domain
+            + " particle surface concentration"
+            + " distribution [mol.m-3]": c_scale * c_s_surf_distribution,
+        }
+        return variables
+
     def set_events(self, variables):
         c_s_surf = variables[self.domain + " particle surface concentration"]
         tol = 1e-4
