@@ -47,7 +47,7 @@ class CrackPropagation(BaseCracking):
     def set_initial_conditions(self,variables):
         l_cr_n = variables["negative particle crack length"]
         l0 = pybamm.PrimaryBroadcast(
-            pybamm.mechanical_parameters.l_cr_n_0, "negative particle"
+            pybamm.Scalar(1), "negative particle"
         )
         self.initial_conditions={l_cr_n: l0}
 
