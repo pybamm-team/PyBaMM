@@ -268,17 +268,17 @@ def _select_initial_conditions(fun, M, t0, y0, tol, scale_y0):
     J_a = jax.jacfwd(fun_a)(y_a)
     LU = jax.scipy.linalg.lu_factor(-J_a)
 
-    not_converged = True
+    converged = True
     dy_norm_old = -1.0
     k = 0
-    while_state = [k, not_converged, dy_norm_old, d, y_a]
+    while_state = [k, converged, dy_norm_old, d, y_a]
 
     def while_cond(while_state):
-        k, not_converged, _, _, _ = while_state
-        return not_converged * (k < ROOT_SOLVE_MAXITER)
+        k, converged, _, _, _ = while_state
+        return (converged == False) * (k < ROOT_SOLVE_MAXITER)
 
     def while_body(while_state):
-        k, not_converged, dy_norm_old, d, y_a = while_state
+        k, converged, dy_norm_old, d, y_a = while_state
         f_eval = fun_a(y_a)
         dy = jax.scipy.linalg.lu_solve(LU, f_eval)
         dy_norm = jnp.sqrt(jnp.mean((dy / scale_y0_a)**2))
@@ -288,20 +288,20 @@ def _select_initial_conditions(fun, M, t0, y0, tol, scale_y0):
         y_a = y0_a + d
 
         # if converged then break out of iteration early
-        pred = dy_norm_old >= 0
+        pred = dy_norm_old >= 0.
         pred *= rate / (1 - rate) * dy_norm < tol
-        not_converged = dy_norm == 0 + pred
+        converged = (dy_norm == 0.) + pred
 
         dy_norm_old = dy_norm
 
-        return [k + 1, not_converged, dy_norm_old, d, y_a]
+        return [k + 1, converged, dy_norm_old, d, y_a]
 
-    k, not_converged, dy_norm_old, d, y_a = jax.lax.while_loop(while_cond,
-                                                               while_body,
-                                                               while_state)
+    k, converged, dy_norm_old, d, y_a = jax.lax.while_loop(while_cond,
+                                                        while_body,
+                                                        while_state)
     y_tilde = jax.ops.index_update(y0, algebraic_variables, y_a)
 
-    return y_tilde, not_converged
+    return y_tilde, converged
 
 
 def _select_initial_step(atol, rtol, fun, t0, y0, f0, h0):
@@ -462,17 +462,17 @@ def _newton_iteration(state, fun):
     y = jnp.array(y0, copy=True)
     n_function_evals = state.n_function_evals
 
-    not_converged = True
+    converged = False
     dy_norm_old = -1.0
     k = 0
-    while_state = [k, not_converged, dy_norm_old, d, y, n_function_evals]
+    while_state = [k, converged, dy_norm_old, d, y, n_function_evals]
 
     def while_cond(while_state):
-        k, not_converged, _, _, _, _ = while_state
-        return not_converged * (k < NEWTON_MAXITER)
+        k, converged, _, _, _, _ = while_state
+        return (converged == False) * (k < NEWTON_MAXITER)
 
     def while_body(while_state):
-        k, not_converged, dy_norm_old, d, y, n_function_evals = while_state
+        k, converged, dy_norm_old, d, y, n_function_evals = while_state
         f_eval = fun(y, t)
         n_function_evals += 1
         b = c * f_eval - M @ (psi + d)
@@ -491,19 +491,19 @@ def _newton_iteration(state, fun):
         y = y0 + d
 
         # if converged then break out of iteration early
-        pred = dy_norm_old >= 0
+        pred = dy_norm_old >= 0.
         pred *= rate / (1 - rate) * dy_norm < tol
-        not_converged = dy_norm == 0 + pred
+        converged = (dy_norm == 0.) + pred
 
         dy_norm_old = dy_norm
 
-        return [k + 1, not_converged, dy_norm_old, d, y, n_function_evals]
+        return [k + 1, converged, dy_norm_old, d, y, n_function_evals]
 
-    k, not_converged, dy_norm_old, d, y, n_function_evals = \
+    k, converged, dy_norm_old, d, y, n_function_evals = \
         jax.lax.while_loop(while_cond,
                            while_body,
                            while_state)
-    return not_converged, k, y, d, state._replace(n_function_evals=n_function_evals)
+    return converged, k, y, d, state._replace(n_function_evals=n_function_evals)
 
 
 def rms_norm(arg):
@@ -558,6 +558,7 @@ def _prepare_next_step_order_change(state, d, y, n_iter):
 
 
 def _bdf_step(state, fun, jac):
+    #print('bdf_step', state.t, state.h)
     # we will try and use the old jacobian unless convergence of newton iteration
     # fails
     updated_jacobian = False
@@ -579,7 +580,8 @@ def _bdf_step(state, fun, jac):
         state, step_accepted, updated_jacobian, y, d, n_iter = while_state
 
         # solve BDF equation using y0 as starting point
-        not_converged, n_iter, y, d, state = _newton_iteration(state, fun)
+        converged, n_iter, y, d, state = _newton_iteration(state, fun)
+        not_converged = converged == False
 
         # newton iteration did not converge, but jacobian has already been
         # evaluated so reduce step size by 0.3 (as per [1]) and try again
@@ -588,6 +590,11 @@ def _bdf_step(state, fun, jac):
             _update_step_size(state, 0.3),
             state
         )
+
+        #if not_converged * updated_jacobian:
+        #    print('not converged, update step size by 0.3')
+        #if not_converged * (updated_jacobian == False):
+        #    print('not converged, update jacobian')
 
         # if not converged and jacobian not updated, then update the jacobian and try
         # again
@@ -615,13 +622,16 @@ def _bdf_step(state, fun, jac):
                           safety *
                           error_norm ** (-1 / (state.order + 1))))
 
+        #if converged * (error_norm > 1):
+        #    print('converged, but error is too large',error_norm, factor, d, scale_y)
+
         (state, step_accepted) = tree_multimap(
             partial(
                 jnp.where,
-                (not_converged == False) * (error_norm > 1)  # noqa: E712
+                converged * (error_norm > 1)  # noqa: E712
             ),
             (_update_step_size(state, factor), False),
-            (state, not_converged == False)
+            (state, converged)
         )
 
         return [state, step_accepted, updated_jacobian, y, d, n_iter]
