@@ -82,10 +82,10 @@ def _bdf_odeint(fun, mass, rtol, atol, y0, t_eval, *args):
     t0 = t_eval[0]
     h0 = t_eval[1] - t0
 
-    stepper, failed = _bdf_init(
+    stepper = _bdf_init(
         fun_bind_inputs, jac_bind_inputs, mass, t0, y0, h0, rtol, atol
     )
-    i = failed * len(t_eval)
+    i = 0
     y_out = jnp.empty((len(t_eval), len(y0)), dtype=y0.dtype)
 
     init_state = [stepper, t_eval, i, y_out]
@@ -110,14 +110,14 @@ def _bdf_odeint(fun, mass, rtol, atol, y0, t_eval, *args):
 
     stepper, t_eval, i, y_out = jax.lax.while_loop(cond_fun, body_fun,
                                                    init_state)
-
     return y_out
 
 
 BDFInternalStates = [
     't', 'atol', 'rtol', 'M', 'newton_tol', 'order', 'h', 'n_equal_steps', 'D',
     'y0', 'scale_y0', 'kappa', 'gamma', 'alpha', 'c', 'error_const', 'J', 'LU', 'U',
-    'psi', 'n_function_evals', 'n_jacobian_evals', 'n_lu_decompositions', 'n_steps'
+    'psi', 'n_function_evals', 'n_jacobian_evals', 'n_lu_decompositions', 'n_steps',
+    'consistent_y0_failed'
 ]
 BDFState = collections.namedtuple('BDFState', BDFInternalStates)
 
@@ -172,6 +172,7 @@ def _bdf_init(fun, jac, mass, t0, y0, h0, rtol, atol):
     y0, not_converged = _select_initial_conditions(
         fun, mass, t0, y0, state['newton_tol'], scale_y0
     )
+    state['consistent_y0_failed'] = not_converged
 
     f0 = fun(y0, t0)
     order = 1
@@ -213,7 +214,7 @@ def _bdf_init(fun, jac, mass, t0, y0, h0, rtol, atol):
     tuple_state = BDFState(*[state[k] for k in BDFInternalStates])
     y0, scale_y0 = _predict(tuple_state, D)
     psi = _update_psi(tuple_state, D)
-    return tuple_state._replace(y0=y0, scale_y0=scale_y0, psi=psi), not_converged
+    return tuple_state._replace(y0=y0, scale_y0=scale_y0, psi=psi)
 
 
 def _compute_R(order, factor):
@@ -268,14 +269,14 @@ def _select_initial_conditions(fun, M, t0, y0, tol, scale_y0):
     J_a = jax.jacfwd(fun_a)(y_a)
     LU = jax.scipy.linalg.lu_factor(-J_a)
 
-    converged = True
+    converged = False
     dy_norm_old = -1.0
     k = 0
     while_state = [k, converged, dy_norm_old, d, y_a]
 
     def while_cond(while_state):
         k, converged, _, _, _ = while_state
-        return (converged == False) * (k < ROOT_SOLVE_MAXITER)
+        return (converged == False) * (k < ROOT_SOLVE_MAXITER)  # noqa: E712
 
     def while_body(while_state):
         k, converged, dy_norm_old, d, y_a = while_state
@@ -297,8 +298,8 @@ def _select_initial_conditions(fun, M, t0, y0, tol, scale_y0):
         return [k + 1, converged, dy_norm_old, d, y_a]
 
     k, converged, dy_norm_old, d, y_a = jax.lax.while_loop(while_cond,
-                                                        while_body,
-                                                        while_state)
+                                                           while_body,
+                                                           while_state)
     y_tilde = jax.ops.index_update(y0, algebraic_variables, y_a)
 
     return y_tilde, converged
@@ -394,6 +395,16 @@ def _update_difference_for_next_step(state, d):
     return D
 
 
+def _update_step_size_and_lu(state, factor):
+    state = _update_step_size(state, factor)
+
+    # redo lu (c has changed)
+    LU = jax.scipy.linalg.lu_factor(state.M - state.c * state.J)
+    n_lu_decompositions = state.n_lu_decompositions + 1
+
+    return state._replace(LU=LU, n_lu_decompositions=n_lu_decompositions)
+
+
 def _update_step_size(state, factor):
     """
     If step size h is changed then also need to update the terms in
@@ -407,10 +418,6 @@ def _update_step_size(state, factor):
     h = state.h * factor
     n_equal_steps = 0
     c = h * state.alpha[order]
-
-    # redo lu (c has changed)
-    LU = jax.scipy.linalg.lu_factor(state.M - c * state.J)
-    n_lu_decompositions = state.n_lu_decompositions + 1
 
     # update D using equations in section 3.2 of [1]
     RU = _compute_R(order, factor).dot(state.U)
@@ -431,8 +438,8 @@ def _update_step_size(state, factor):
     # update y0 (D has changed)
     y0, scale_y0 = _predict(state, D)
 
-    return state._replace(n_equal_steps=n_equal_steps, LU=LU,
-                          n_lu_decompositions=n_lu_decompositions, h=h, c=c,
+    return state._replace(n_equal_steps=n_equal_steps,
+                          h=h, c=c,
                           D=D, psi=psi, y0=y0, scale_y0=scale_y0)
 
 
@@ -469,7 +476,7 @@ def _newton_iteration(state, fun):
 
     def while_cond(while_state):
         k, converged, _, _, _, _ = while_state
-        return (converged == False) * (k < NEWTON_MAXITER)
+        return (converged == False) * (k < NEWTON_MAXITER)  # noqa: E712
 
     def while_body(while_state):
         k, converged, dy_norm_old, d, y, n_function_evals = while_state
@@ -553,7 +560,7 @@ def _prepare_next_step_order_change(state, d, y, n_iter):
 
     factor = jnp.min((MAX_FACTOR, safety * factors[max_index]))
 
-    new_state = _update_step_size(state._replace(D=D, order=order), factor)
+    new_state = _update_step_size_and_lu(state._replace(D=D, order=order), factor)
     return new_state
 
 
@@ -581,13 +588,13 @@ def _bdf_step(state, fun, jac):
 
         # solve BDF equation using y0 as starting point
         converged, n_iter, y, d, state = _newton_iteration(state, fun)
-        not_converged = converged == False
+        not_converged = converged == False  # noqa: E712
 
         # newton iteration did not converge, but jacobian has already been
         # evaluated so reduce step size by 0.3 (as per [1]) and try again
         state = tree_multimap(
             partial(jnp.where, not_converged * updated_jacobian),
-            _update_step_size(state, 0.3),
+            _update_step_size_and_lu(state, 0.3),
             state
         )
 
@@ -630,7 +637,7 @@ def _bdf_step(state, fun, jac):
                 jnp.where,
                 converged * (error_norm > 1)  # noqa: E712
             ),
-            (_update_step_size(state, factor), False),
+            (_update_step_size_and_lu(state, factor), False),
             (state, converged)
         )
 
