@@ -140,7 +140,6 @@ class TestJaxBDFSolver(unittest.TestCase):
 
         self.assertAlmostEqual(grad_bdf, grad_num, places=3)
 
-    @unittest.skip("sensitivities not yet supported on for dae models")
     def test_mass_matrix_with_sensitivities(self):
         # Solve
         t_eval = np.linspace(0.0, 1.0, 80)
