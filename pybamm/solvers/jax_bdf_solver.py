@@ -852,11 +852,11 @@ def _bdf_odeint_rev(func, mass, rtol, atol, res, g):
         # y_bar_dot_d = -J_dd^T y_bar_d - J_ad^T y_bar_a
         #           0 =  J_da^T y_bar_d + J_aa^T y_bar_d
 
-        y_bar_dot, t_bar, args_bar = vjpfun(y_bar)
+        y_bar_dot, *rest = vjpfun(y_bar)
         # identify algebraic variables as zeros on diagonal
         y_bar_dot = jnp.where(diag_mass == 0., -y_bar_dot, y_bar_dot)
 
-        return (-y_dot, y_bar_dot, t_bar, args_bar)
+        return (-y_dot, y_bar_dot, *rest)
 
     y_bar = g[-1]
     ts_bar = []
