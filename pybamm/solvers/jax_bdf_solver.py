@@ -202,9 +202,7 @@ def _bdf_init(fun, jac, mass, t0, y0, h0, rtol, atol):
     J = jac(y0, t0)
     state['J'] = J
 
-    Psi = -c * J
-    Psi = jax.ops.index_add(Psi, jnp.diag_indices_from(J), state['M'])
-    state['LU'] = jax.scipy.linalg.lu_factor(Psi)
+    state['LU'] = jax.scipy.linalg.lu_factor(state['M'] - c * J)
 
     state['U'] = _compute_R(order, 1)
     state['psi'] = None
@@ -244,7 +242,7 @@ def _compute_R(order, factor):
 
 def _select_initial_conditions(fun, M, t0, y0, tol, scale_y0):
     # identify algebraic variables as zeros on diagonal
-    algebraic_variables = M == 0.
+    algebraic_variables = jnp.diag(M == 0.)
 
     # if all differentiable variables then return y0 (can use normal python if since M
     # is static)
@@ -402,9 +400,7 @@ def _update_step_size_and_lu(state, factor):
     state = _update_step_size(state, factor)
 
     # redo lu (c has changed)
-    Psi = -state.c * state.J
-    Psi = jax.ops.index_add(Psi, jnp.diag_indices_from(state.J), state.M)
-    LU = jax.scipy.linalg.lu_factor(Psi)
+    LU = jax.scipy.linalg.lu_factor(state.M - state.c * state.J)
     n_lu_decompositions = state.n_lu_decompositions + 1
 
     return state._replace(LU=LU, n_lu_decompositions=n_lu_decompositions)
@@ -455,9 +451,7 @@ def _update_jacobian(state, jac):
     """
     J = jac(state.y0, state.t + state.h)
     n_jacobian_evals = state.n_jacobian_evals + 1
-    Psi = -state.c * state.J
-    Psi = jax.ops.index_add(Psi, jnp.diag_indices_from(state.J), state.M)
-    LU = jax.scipy.linalg.lu_factor(Psi)
+    LU = jax.scipy.linalg.lu_factor(state.M - state.c * J)
     n_lu_decompositions = state.n_lu_decompositions + 1
     return state._replace(J=J, n_jacobian_evals=n_jacobian_evals, LU=LU,
                           n_lu_decompositions=n_lu_decompositions)
@@ -489,7 +483,7 @@ def _newton_iteration(state, fun):
         k, converged, dy_norm_old, d, y, n_function_evals = while_state
         f_eval = fun(y, t)
         n_function_evals += 1
-        b = c * f_eval - M * (psi + d)
+        b = c * f_eval - M @ (psi + d)
         dy = jax.scipy.linalg.lu_solve(LU, b)
         dy_norm = jnp.sqrt(jnp.mean((dy / scale_y0)**2))
         rate = dy_norm / dy_norm_old
@@ -800,10 +794,6 @@ def jax_bdf_integrate(func, y0, t_eval, *args, rtol=1e-6, atol=1e-6, mass=None):
     flat_args, in_tree = tree_flatten((y0, t_eval[0], *args))
     in_avals = tuple(safe_map(abstractify, flat_args))
     converted, consts = closure_convert(func, in_tree, in_avals)
-
-    if mass is None:
-        mass = onp.ones(y0.shape[0], dtype=y0.dtype)
-
     return _bdf_odeint_wrapper(converted, mass, rtol, atol, y0, t_eval, *consts, *args)
 
 
@@ -844,7 +834,10 @@ def flax_scan(f, init, xs, length=None):  # pragma: no cover
 @jax.partial(jax.jit, static_argnums=(0, 1, 2, 3))
 def _bdf_odeint_wrapper(func, mass, rtol, atol, y0, ts, *args):
     y0, unravel = ravel_pytree(y0)
-    mass, _ = ravel_pytree(mass)
+    if mass is None:
+        mass = onp.identity(y0.shape[0], dtype=y0.dtype)
+    else:
+        mass = block_diag(tree_flatten(mass)[0])
     func = ravel_first_arg(func, unravel)
     out = _bdf_odeint(func, mass, rtol, atol, y0, ts, *args)
     return jax.vmap(unravel)(out)
@@ -878,12 +871,20 @@ def _bdf_odeint_rev(func, mass, rtol, atol, res, g):
 
         return (-y_dot, y_bar_dot, *rest)
 
-    algebraic_variables = mass == 0.
+    algebraic_variables = jnp.diag(mass) == 0.
     differentiable_variables = algebraic_variables == False  # noqa: E712
+    mass_is_I = (mass == jnp.eye(mass.shape[0])).all()
+    is_dae = jnp.any(algebraic_variables)
+
+    if not mass_is_I:
+        M_dd = mass[onp.ix_(differentiable_variables, differentiable_variables)]
+        LU_invM_dd = jax.scipy.linalg.lu_factor(M_dd)
 
     def initialise(g0, y0, t0):
         # [1] gives init conditions for y_bar_a = g_d - J_ad^T (J_aa^T)^-1 g_a
-        if jnp.any(algebraic_variables):
+        if mass_is_I:
+            y_bar = g0
+        elif is_dae:
             J = jax.jacfwd(func)(y0, t0, *args)
 
             # boolean arguments not implemented in jnp.ix_
@@ -894,19 +895,21 @@ def _bdf_odeint_rev(func, mass, rtol, atol, res, g):
             invJ_aa = jax.scipy.linalg.lu_solve(LU, g0_a)
             y_bar = jax.ops.index_update(
                 g0, differentiable_variables,
-                (g0_a - J_ad @ invJ_aa) / mass[differentiable_variables]
+                jax.scipy.linalg.lu_solve(LU_invM_dd,
+                                          g0_a - J_ad @ invJ_aa)
             )
         else:
-            y_bar = g0 / mass
+            y_bar = jax.scipy.linalg.lu_solve(LU_invM_dd, g0)
         return y_bar
 
     y_bar = initialise(g[-1], ys[-1], ts[-1])
     ts_bar = []
     t0_bar = 0.
 
-    def arg_to_ones(arg):
-        return onp.ones(arg.shape[0] if arg.ndim > 0 else 1, dtype=arg.dtype)
-    aug_mass = (mass, mass, jnp.array(1.), tree_map(arg_to_ones, args))
+    def arg_to_identity(arg):
+        return onp.identity(arg.shape[0] if arg.ndim > 0 else 1, dtype=arg.dtype)
+
+    aug_mass = (mass, mass, jnp.array(1.), tree_map(arg_to_identity, args))
 
     def scan_fun(carry, i):
         y_bar, t0_bar, args_bar = carry

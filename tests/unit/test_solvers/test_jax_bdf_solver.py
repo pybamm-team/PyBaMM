@@ -64,7 +64,10 @@ class TestJaxBDFSolver(unittest.TestCase):
                 y[1] - 2.0 * y[0],
             ])
 
-        mass = jax.numpy.array([2.0, 0.0])
+        mass = jax.numpy.array([
+            [2.0, 0.0],
+            [0.0, 0.0],
+        ])
 
         # give some bad initial conditions, solver should calculate correct ones using
         # this as a guess
@@ -147,7 +150,10 @@ class TestJaxBDFSolver(unittest.TestCase):
                 y[1] - 2.0 * y[0],
             ])
 
-        mass = jax.numpy.array([2.0, 0.0])
+        mass = jax.numpy.array([
+            [2.0, 0.0],
+            [0.0, 0.0],
+        ])
 
         y0 = jax.numpy.array([1.0, 2.0])
 
