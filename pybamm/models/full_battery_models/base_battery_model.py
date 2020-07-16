@@ -113,6 +113,7 @@ class BaseBatteryModel(pybamm.BaseModel):
     @property
     def default_geometry(self):
         return pybamm.battery_geometry(
+            particle_size_distribution=self.options["particle-size distribution"],
             current_collector_dimension=self.options["dimensionality"]
         )
 
@@ -127,6 +128,8 @@ class BaseBatteryModel(pybamm.BaseModel):
             var.r_p: 30,
             var.y: 10,
             var.z: 10,
+            var.R_variable_n: 50,
+            var.R_variable_p: 50,
         }
         # Reduce the default points for 2D current collectors
         if self.options["dimensionality"] == 2:
@@ -141,6 +144,12 @@ class BaseBatteryModel(pybamm.BaseModel):
             "positive electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
             "negative particle": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
             "positive particle": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "negative particle-size domain": pybamm.MeshGenerator(
+                pybamm.Uniform1DSubMesh
+            ),
+            "positive particle-size domain": pybamm.MeshGenerator(
+                pybamm.Uniform1DSubMesh
+            ),
         }
         if self.options["dimensionality"] == 0:
             base_submeshes["current collector"] = pybamm.MeshGenerator(pybamm.SubMesh0D)
@@ -160,6 +169,8 @@ class BaseBatteryModel(pybamm.BaseModel):
             "macroscale": pybamm.FiniteVolume(),
             "negative particle": pybamm.FiniteVolume(),
             "positive particle": pybamm.FiniteVolume(),
+            "negative particle-size domain": pybamm.FiniteVolume(),
+            "positive particle-size domain": pybamm.FiniteVolume(),
         }
         if self.options["dimensionality"] == 0:
             # 0D submesh - use base spatial method

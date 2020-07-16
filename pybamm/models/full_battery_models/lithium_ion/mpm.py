@@ -158,7 +158,8 @@ class PSDModel(BaseModel):
         R_n_dim = default_params["Negative particle radius [m]"]
         R_p_dim = default_params["Positive particle radius [m]"]
 
-        # New parameter values
+        # Additional particle distribution parameter values
+
         # Area-weighted standard deviations
         sd_a_n = 0.5
         sd_a_p = 0.3
@@ -166,16 +167,21 @@ class PSDModel(BaseModel):
         sd_a_p_dim = sd_a_p * R_p_dim
 
         # Max radius in the particle-size distribution (dimensionless).
-        # Either 5 s.d.'s above the mean or the value 2, whichever is larger
+        # Either 5 s.d.'s above the mean or 2 times the mean, whichever is larger
         R_n_max = max(2, 1 + sd_a_n * 5)
         R_p_max = max(2, 1 + sd_a_p * 5)
 
         # lognormal area-weighted particle-size distribution
         def lognormal_distribution(R, R_av, sd):
+            '''
+            A lognormal distribution with arguments
+                R :     particle radius
+                R_av:   mean particle radius
+                sd :    standard deviation
+            (Inputs can be dimensional or dimensionless)
+            '''
             import numpy as np
 
-            # inputs are particle radius R, the mean R_av, and standard deviation sd
-            # inputs can be dimensional or dimensionless
             mu_ln = pybamm.log(R_av ** 2 / pybamm.sqrt(R_av ** 2 + sd ** 2))
             sigma_ln = pybamm.sqrt(pybamm.log(1 + sd ** 2 / R_av ** 2))
             return (
@@ -184,12 +190,14 @@ class PSDModel(BaseModel):
                 / (R)
             )
 
+        # Set the (area-weighted) particle-size distributions (dimensional)
         def f_a_dist_n_dim(R):
             return lognormal_distribution(R, R_n_dim, sd_a_n_dim)
 
         def f_a_dist_p_dim(R):
             return lognormal_distribution(R, R_p_dim, sd_a_p_dim)
 
+        # Update default parameters
         default_params.update(
             {
                 "Negative area-weighted particle-size standard deviation": sd_a_n,
@@ -198,8 +206,10 @@ class PSDModel(BaseModel):
                 "Positive area-weighted particle-size standard deviation": sd_a_p,
                 "Positive area-weighted particle-size "
                 + "standard deviation [m]": sd_a_p_dim,
-                "Negative maximum particle radius": R_n_max,
+                "Negative maximum particle radius": R_n_max ,
+                "Negative maximum particle radius [m]": R_n_max * R_n_dim,
                 "Positive maximum particle radius": R_p_max,
+                "Positive maximum particle radius [m]": R_p_max * R_p_dim,
                 "Negative area-weighted "
                 + "particle-size distribution [m]": f_a_dist_n_dim,
                 "Positive area-weighted "
@@ -209,6 +219,8 @@ class PSDModel(BaseModel):
         )
         return default_params
 
+
+'''
     @property
     def default_geometry(self):
         default_geom = super().default_geometry
@@ -235,7 +247,8 @@ class PSDModel(BaseModel):
             }
         )
         return default_geom
-
+'''
+'''
     @property
     def default_var_pts(self):
         defaults = super().default_var_pts
@@ -246,7 +259,8 @@ class PSDModel(BaseModel):
         # add to dictionary
         defaults.update({R_variable_n: 50, R_variable_p: 50})
         return defaults
-
+'''
+'''
     @property
     def default_submesh_types(self):
         default_submeshes = super().default_submesh_types
@@ -262,7 +276,8 @@ class PSDModel(BaseModel):
             }
         )
         return default_submeshes
-
+'''
+'''
     @property
     def default_spatial_methods(self):
         default_spatials = super().default_spatial_methods
@@ -274,3 +289,4 @@ class PSDModel(BaseModel):
             }
         )
         return default_spatials
+'''

@@ -4,7 +4,11 @@
 import pybamm
 
 
-def battery_geometry(include_particles=True, current_collector_dimension=0):
+def battery_geometry(
+    include_particles=True,
+    particle_size_distribution=False,
+    current_collector_dimension=0,
+):
     """
     A convenience function to create battery geometries.
 
@@ -12,6 +16,8 @@ def battery_geometry(include_particles=True, current_collector_dimension=0):
     ----------
     include_particles : bool
         Whether to include particle domains
+    particle_size_distribution : bool
+        Whether to include size domains for particle-size distributions
     current_collector_dimensions : int, default
         The dimensions of the current collector. Should be 0 (default), 1 or 2
 
@@ -36,6 +42,20 @@ def battery_geometry(include_particles=True, current_collector_dimension=0):
             {
                 "negative particle": {var.r_n: {"min": 0, "max": 1}},
                 "positive particle": {var.r_p: {"min": 0, "max": 1}},
+            }
+        )
+    # Add particle-size domains
+    if particle_size_distribution is True:
+        R_max_n = pybamm.Parameter("Negative maximum particle radius")
+        R_max_p = pybamm.Parameter("Positive maximum particle radius")
+        geometry.update(
+            {
+                "negative particle-size domain": {
+                    var.R_variable_n: {"min": 0, "max": R_max_n}
+                },
+                "positive particle-size domain": {
+                    var.R_variable_p: {"min": 0, "max": R_max_p}
+                },
             }
         )
 

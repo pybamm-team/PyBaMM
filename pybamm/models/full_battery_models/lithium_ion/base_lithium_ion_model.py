@@ -46,10 +46,6 @@ class BaseModel(pybamm.BaseBatteryModel):
                 "r_n [m]": var.r_n * param.R_n,
                 "r_p": var.r_p,
                 "r_p [m]": var.r_p * param.R_p,
-                "Negative particle size": var.R_variable_n,
-                "Negative particle size [m]": var.R_variable_n * param.R_n,
-                "Positive particle size": var.R_variable_p,
-                "Positive particle size [m]": var.R_variable_p * param.R_p,
             }
         )
 

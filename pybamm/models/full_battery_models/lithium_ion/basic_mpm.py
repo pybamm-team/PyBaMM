@@ -5,7 +5,7 @@ import pybamm
 from .base_lithium_ion_model import BaseModel
 
 
-class BasicPSDModel(BaseModel):
+class BasicMPM(BaseModel):
     """Particle-Size Distribution (PSD) model of a lithium-ion battery, from [1]_.
 
     This class is similar to the :class:`pybamm.lithium_ion.SPM` model class in that it
