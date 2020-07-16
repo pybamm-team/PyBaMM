@@ -64,10 +64,7 @@ class TestJaxBDFSolver(unittest.TestCase):
                 y[1] - 2.0 * y[0],
             ])
 
-        mass = jax.numpy.array([
-            [1.0, 0.0],
-            [0.0, 0.0],
-        ])
+        mass = jax.numpy.array([2.0, 0.0])
 
         # give some bad initial conditions, solver should calculate correct ones using
         # this as a guess
@@ -78,7 +75,7 @@ class TestJaxBDFSolver(unittest.TestCase):
         t1 = time.perf_counter() - t0
 
         # test accuracy
-        soln = np.exp(0.1 * t_eval)
+        soln = np.exp(0.05 * t_eval)
         np.testing.assert_allclose(y[:, 0], soln,
                                    rtol=1e-7, atol=1e-7)
         np.testing.assert_allclose(y[:, 1], 2.0 * soln,
@@ -92,7 +89,7 @@ class TestJaxBDFSolver(unittest.TestCase):
         self.assertLess(t2, t1)
 
         # test second run is accurate
-        np.testing.assert_allclose(y[:, 0], np.exp(0.1 * t_eval),
+        np.testing.assert_allclose(y[:, 0], np.exp(0.05 * t_eval),
                                    rtol=1e-7, atol=1e-7)
 
     def test_solver_sensitivities(self):
@@ -150,10 +147,7 @@ class TestJaxBDFSolver(unittest.TestCase):
                 y[1] - 2.0 * y[0],
             ])
 
-        mass = jax.numpy.array([
-            [1.0, 0.0],
-            [0.0, 0.0],
-        ])
+        mass = jax.numpy.array([2.0, 0.0])
 
         y0 = jax.numpy.array([1.0, 2.0])
 

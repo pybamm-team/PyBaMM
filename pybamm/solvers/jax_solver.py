@@ -122,7 +122,9 @@ class JaxSolver(pybamm.BaseSolver):
         y0 = jnp.array(model.y0).reshape(-1)
         mass = None
         if self.method == 'BDF':
-            mass = model.mass_matrix.entries.toarray()
+            mass = model.mass_matrix.entries.diagonal()
+            if onp.count_nonzero(mass) != model.mass_matrix.entries.nnz:
+                raise RuntimeError("Solver only supports a diagonal mass matrix")
 
         def rhs_ode(y, t, inputs):
             return model.rhs_eval(t, y, inputs),
@@ -146,7 +148,7 @@ class JaxSolver(pybamm.BaseSolver):
             return jnp.transpose(y)
 
         def solve_model_bdf(inputs):
-            y, stepper = pybamm.jax_bdf_integrate(
+            y = pybamm.jax_bdf_integrate(
                 rhs_dae,
                 y0,
                 t_eval,
