@@ -7,5 +7,5 @@ from .spme import SPMe
 from .dfn import DFN
 from .basic_dfn import BasicDFN
 from .basic_spm import BasicSPM
-from .basic_MPM import BasicMPM
+from .basic_mpm import BasicMPM
 from .mpm import MPM

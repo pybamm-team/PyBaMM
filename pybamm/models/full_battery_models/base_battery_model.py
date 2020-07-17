@@ -128,8 +128,8 @@ class BaseBatteryModel(pybamm.BaseModel):
             var.r_p: 30,
             var.y: 10,
             var.z: 10,
-            var.R_variable_n: 50,
-            var.R_variable_p: 50,
+            var.R_variable_n: 30,
+            var.R_variable_p: 30,
         }
         # Reduce the default points for 2D current collectors
         if self.options["dimensionality"] == 2:
