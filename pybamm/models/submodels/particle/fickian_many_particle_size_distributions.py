@@ -1,5 +1,5 @@
 #
-# Class for a many particle-size distributions, one distribution at every
+# Class for many particle-size distributions, one distribution at every
 # x location of the electrode, and Fickian diffusion within each particle
 #
 import pybamm
@@ -8,8 +8,9 @@ from .base_particle import BaseParticle
 
 
 class FickianManyPSDs(BaseParticle):
-    """Class for molar conservation in a single (i.e., x-averaged) particle-size
-    distribution (PSD) with Fickian diffusion within each particle.
+    """Class for molar conservation in many particle-size
+    distributions (PSD), one distribution at every x location of the electrode,
+    with Fickian diffusion within each particle.
 
     Parameters
     ----------
@@ -200,13 +201,6 @@ class FickianManyPSDs(BaseParticle):
         }
 
     def set_initial_conditions(self, variables):
-        """
-        For single particle-size distribution models, initial conditions can't
-        depend on x so we arbitrarily set the initial values of the single
-        particles to be given by the values at x=0 in the negative electrode
-        and x=1 in the positive electrode. Typically, supplied initial
-        conditions are uniform x.
-        """
         c_s_distribution = variables[
             self.domain + " particle concentration distribution"
         ]

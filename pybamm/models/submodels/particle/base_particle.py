@@ -73,7 +73,7 @@ class BaseParticle(pybamm.BaseSubModel):
     def _get_standard_concentration_distribution_variables(self, c_s):
         """
         Forms standard concentration variables that depend on particle size R given
-        the input c_s_distribution.
+        one concentration distribution variable c_s.
         """
         if self.domain == "Negative":
             c_scale = self.param.c_n_max
@@ -125,6 +125,26 @@ class BaseParticle(pybamm.BaseSubModel):
             c_s_surf_xav_distribution = pybamm.surf(c_s_xav_distribution)
             c_s_surf_distribution = pybamm.SecondaryBroadcast(
                 c_s_surf_xav_distribution, [self.domain.lower() + " electrode"]
+            )
+        elif c_s.domain == [
+            self.domain.lower() + " particle-size domain"
+        ] and c_s.auxiliary_domains["secondary"] == [
+            self.domain.lower() + " electrode"
+        ]:
+            c_s_surf_distribution = c_s
+            c_s_surf_xav_distribution = pybamm.x_average(c_s)
+
+            c_s_xav_distribution = pybamm.PrimaryBroadcast(
+                c_s_surf_xav_distribution, [self.domain.lower() + " particle"]
+            )
+            # Placeholder broadcast to x, filled with zeros only
+            c_s_distribution = pybamm.FullBroadcast(
+                0,
+                [self.domain.lower() + " particle"],
+                {
+                    "secondary": self.domain.lower() + " particle-size domain",
+                    "tertiary": self.domain.lower() + " electrode",
+                },
             )
         else:
             c_s_distribution = c_s
