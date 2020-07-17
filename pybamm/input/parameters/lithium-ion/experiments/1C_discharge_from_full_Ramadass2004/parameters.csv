@@ -1,0 +1,23 @@
+Name [units],Value,Reference,Notes
+# Empty rows and rows starting with ‘#’ will be ignored,,,
+,,,
+# Temperature
+Reference temperature [K],298.15,25C,
+Ambient temperature [K], 298.15,,
+Negative current collector surface heat transfer coefficient [W.m-2.K-1],0,,
+Positive current collector surface heat transfer coefficient [W.m-2.K-1],0,,
+Negative tab heat transfer coefficient [W.m-2.K-1],10,,
+Positive tab heat transfer coefficient [W.m-2.K-1],10,,
+Edge heat transfer coefficient [W.m-2.K-1],0.3,,
+,,,
+# Electrical
+Number of electrodes connected in parallel to make a cell,1,,
+Number of cells connected in series to make a battery,1,,
+Lower voltage cut-off [V],2,,
+Upper voltage cut-off [V],4.3,,
+,,,
+# Initial conditions
+Initial concentration in negative electrode [mol.m-3],22610.7,Ramadass 2002,
+Initial concentration in positive electrode [mol.m-3],25777.5,Ramadass 2002,
+Initial concentration in electrolyte [mol.m-3],1000,Ramadass,
+Initial temperature [K],298.15,,

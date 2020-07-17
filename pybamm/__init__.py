@@ -7,6 +7,7 @@
 #
 import sys
 import os
+from platform import system
 
 #
 # Version info
@@ -52,8 +53,12 @@ FLOAT_FORMAT = "{: .17e}"
 script_path = os.path.abspath(__file__)
 
 from .util import root_dir
+
 ABSOLUTE_PATH = root_dir()
-PARAMETER_PATH = [os.getcwd(), os.path.join(root_dir(), "pybamm", "input", "parameters")]
+PARAMETER_PATH = [
+    os.getcwd(),
+    os.path.join(root_dir(), "pybamm", "input", "parameters"),
+]
 
 #
 # Utility classes and methods
@@ -96,12 +101,16 @@ from .expression_tree.operations.simplify import (
     simplify_addition_subtraction,
     simplify_multiplication_division,
 )
+
 from .expression_tree.operations.evaluate import (
     find_symbols,
     id_to_python_variable,
     to_python,
     EvaluatorPython,
 )
+if system() != "Windows":
+    from .expression_tree.operations.evaluate import EvaluatorJax
+
 from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
 from .expression_tree.operations.unpack_symbols import SymbolUnpacker
@@ -159,7 +168,6 @@ from .parameters import geometric_parameters
 from .parameters import electrical_parameters
 from .parameters import thermal_parameters
 from .parameters import standard_parameters_lithium_ion, standard_parameters_lead_acid
-from .parameters import sei_parameters
 from .parameters import parameter_sets
 from .parameters import mechanical_parameters
 
@@ -207,6 +215,12 @@ from .solvers.casadi_algebraic_solver import CasadiAlgebraicSolver
 from .solvers.scikits_dae_solver import ScikitsDaeSolver
 from .solvers.scikits_ode_solver import ScikitsOdeSolver, have_scikits_odes
 from .solvers.scipy_solver import ScipySolver
+
+# Jax not supported under windows
+if system() != "Windows":
+    from .solvers.jax_solver import JaxSolver
+    from .solvers.jax_bdf_solver import jax_bdf_integrate
+
 from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
 
 #
@@ -218,7 +232,7 @@ from . import experiments
 #
 # Plotting
 #
-from .plotting.quick_plot import QuickPlot
+from .plotting.quick_plot import QuickPlot, close_plots
 from .plotting.plot import plot
 from .plotting.plot2D import plot2D
 from .plotting.dynamic_plot import dynamic_plot

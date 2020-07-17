@@ -467,10 +467,6 @@ class Symbol(anytree.NodeMixin):
             pybamm.AbsoluteValue(self), keep_domains=True
         )
 
-    def __getitem__(self, key):
-        """return a :class:`Index` object"""
-        return pybamm.simplify_if_constant(pybamm.Index(self, key), keep_domains=True)
-
     def diff(self, variable):
         """
         Differentiate a symbol with respect to a variable. For any symbol that can be
@@ -670,16 +666,28 @@ class Symbol(anytree.NodeMixin):
         result = self.evaluate_ignoring_errors()
 
         if isinstance(result, numbers.Number) or (
-            isinstance(result, np.ndarray) and result.shape == ()
+            isinstance(result, np.ndarray) and np.prod(result.shape) == 1
         ):
             return True
         else:
             return False
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         """
         Returns True if a symbol evaluates on an edge, i.e. symbol contains a gradient
         operator, but not a divergence operator, and is not an IndefiniteIntegral.
+
+        Parameters
+        ----------
+        dimension : str
+            The dimension (primary, secondary, etc) in which to query evaluation on
+            edges
+
+        Returns
+        -------
+        bool
+            Whether the symbol evaluates on edges (in the finite volume discretisation
+            sense)
         """
         # Default behaviour: return False
         return False
@@ -732,7 +740,7 @@ class Symbol(anytree.NodeMixin):
         # Default behaviour is to try to evaluate the object directly
         # Try with some large y, to avoid having to unpack (slow)
         try:
-            y = np.linspace(0.1, 0.9, int(1e4))
+            y = np.nan * np.ones((1000, 1))
             evaluated_self = self.evaluate(0, y, y, inputs="shape test")
         # If that fails, fall back to calculating how big y should really be
         except ValueError:
@@ -745,7 +753,7 @@ class Symbol(anytree.NodeMixin):
                     len(x._evaluation_array) for x in state_vectors_in_node
                 )
                 # Pick a y that won't cause RuntimeWarnings
-                y = np.linspace(0.1, 0.9, min_y_size)
+                y = np.nan * np.ones((min_y_size, 1))
             evaluated_self = self.evaluate(0, y, y, inputs="shape test")
 
         # Return shape of evaluated object

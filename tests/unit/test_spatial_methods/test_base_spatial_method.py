@@ -22,7 +22,7 @@ class TestSpatialMethod(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             spatial_method.gradient_squared(None, None, None)
         with self.assertRaises(NotImplementedError):
-            spatial_method.integral(None, None)
+            spatial_method.integral(None, None, None)
         with self.assertRaises(NotImplementedError):
             spatial_method.indefinite_integral(None, None, None)
         with self.assertRaises(NotImplementedError):
@@ -55,7 +55,7 @@ class TestSpatialMethod(unittest.TestCase):
             repeats, mesh["negative electrode"].npts + mesh["separator"].npts
         )
 
-        # Just tertiary domain
+        # With tertiary domain
         repeats = spatial_method._get_auxiliary_domain_repeats(
             {
                 "secondary": ["negative electrode", "separator"],
@@ -67,6 +67,16 @@ class TestSpatialMethod(unittest.TestCase):
             (mesh["negative electrode"].npts + mesh["separator"].npts)
             * mesh["current collector"].npts,
         )
+
+        # Just tertiary domain
+        repeats = spatial_method._get_auxiliary_domain_repeats(
+            {
+                "secondary": ["negative electrode", "separator"],
+                "tertiary": ["current collector"],
+            },
+            tertiary_only=True,
+        )
+        self.assertEqual(repeats, mesh["current collector"].npts)
 
     def test_discretise_spatial_variable(self):
         # create discretisation

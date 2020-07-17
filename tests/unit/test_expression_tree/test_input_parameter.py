@@ -17,8 +17,9 @@ class TestInputParameter(unittest.TestCase):
         a = pybamm.InputParameter("a")
         a.set_expected_size(10)
         self.assertEqual(a._expected_size, 10)
+        np.testing.assert_array_equal(a.evaluate(inputs="shape test"), np.ones((10, 1)))
         y = np.linspace(0, 1, 10)
-        np.testing.assert_array_equal(a.evaluate(inputs={"a": y}), y)
+        np.testing.assert_array_equal(a.evaluate(inputs={"a": y}), y[:, np.newaxis])
         with self.assertRaisesRegex(
             ValueError,
             "Input parameter 'a' was given an object of size '1' but was expecting an "
@@ -29,6 +30,10 @@ class TestInputParameter(unittest.TestCase):
     def test_evaluate_for_shape(self):
         a = pybamm.InputParameter("a")
         self.assertTrue(np.isnan(a.evaluate_for_shape()))
+        self.assertEqual(a.shape, (1, 1))
+
+        a.set_expected_size(10)
+        self.assertEqual(a.shape, (10, 1))
 
     def test_errors(self):
         a = pybamm.InputParameter("a")
