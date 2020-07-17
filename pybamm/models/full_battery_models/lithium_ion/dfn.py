@@ -78,20 +78,36 @@ class DFN(BaseModel):
 
     def set_particle_submodel(self):
 
-        if self.options["particle"] == "Fickian diffusion":
-            self.submodels["negative particle"] = pybamm.particle.FickianManyParticles(
-                self.param, "Negative"
-            )
-            self.submodels["positive particle"] = pybamm.particle.FickianManyParticles(
-                self.param, "Positive"
-            )
-        elif self.options["particle"] == "fast diffusion":
-            self.submodels["negative particle"] = pybamm.particle.FastManyParticles(
-                self.param, "Negative"
-            )
-            self.submodels["positive particle"] = pybamm.particle.FastManyParticles(
-                self.param, "Positive"
-            )
+        if self.options["particle-size distribution"]:
+            if self.options["particle"] == "Fickian diffusion":
+                self.submodels["negative particle"] = pybamm.particle.FickianManyPSDs(
+                    self.param, "Negative"
+                )
+                self.submodels["positive particle"] = pybamm.particle.FickianManyPSDs(
+                    self.param, "Positive"
+                )
+            elif self.options["particle"] == "fast diffusion":
+                self.submodels["negative particle"] = pybamm.particle.FastManyPSDs(
+                    self.param, "Negative"
+                )
+                self.submodels["positive particle"] = pybamm.particle.FastManyPSDs(
+                    self.param, "Positive"
+                )
+        else:
+            if self.options["particle"] == "Fickian diffusion":
+                self.submodels[
+                    "negative particle"
+                ] = pybamm.particle.FickianManyParticles(self.param, "Negative")
+                self.submodels[
+                    "positive particle"
+                ] = pybamm.particle.FickianManyParticles(self.param, "Positive")
+            elif self.options["particle"] == "fast diffusion":
+                self.submodels[
+                    "negative particle"
+                ] = pybamm.particle.FastManyParticles(self.param, "Negative")
+                self.submodels[
+                    "positive particle"
+                ] = pybamm.particle.FastManyParticles(self.param, "Positive")
 
     def set_solid_submodel(self):
 

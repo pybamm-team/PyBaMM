@@ -1,12 +1,13 @@
 #
-# Single Particle Model (SPM)
+# Many-Particle Model (MPM)
 #
 import pybamm
 from .base_lithium_ion_model import BaseModel
 
 
-class PSDModel(BaseModel):
-    """Particle-Size Distribution (PSD) Model of a lithium-ion battery, from [1]_.
+class MPM(BaseModel):
+    """Many-Particle Model (MPM) of a lithium-ion battery with particle-size
+    distributions for each electrode, from [1]_.
 
     Parameters
     ----------
@@ -31,7 +32,7 @@ class PSDModel(BaseModel):
     """
 
     def __init__(
-        self, options=None, name="Particle-Size Distribution Model", build=True
+        self, options=None, name="Many-Particle Model", build=True
     ):
         super().__init__(options, name)
         self.options["particle-size distribution"] = True

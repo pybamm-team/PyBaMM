@@ -400,15 +400,8 @@ class BaseInterface(pybamm.BaseSubModel):
         # If j0 depends on particle size R then must R-average to get standard
         # output exchange current density
         if j0.domain == [self.domain.lower() + " particle-size domain"]:
-            if self.domain == "Negative":
-                R_variable = pybamm.standard_spatial_vars.R_variable_n
-                f_a_dist = self.param.f_a_dist_n(R_variable)
-            elif self.domain == "Positive":
-                R_variable = pybamm.standard_spatial_vars.R_variable_p
-                f_a_dist = self.param.f_a_dist_p(R_variable)
-
             # R-average
-            j0 = pybamm.Integral(f_a_dist * j0, R_variable)
+            j0 = pybamm.R_average(j0, self.domain)
 
         # X-average, and broadcast if necessary
         if j0.domain == []:
@@ -494,15 +487,8 @@ class BaseInterface(pybamm.BaseSubModel):
         # If eta_r depends on particle size R then must R-average to get standard
         # output reaction overpotential
         if eta_r.domain == [self.domain.lower() + " particle-size domain"]:
-            if self.domain == "Negative":
-                R_variable = pybamm.standard_spatial_vars.R_variable_n
-                f_a_dist = self.param.f_a_dist_n(R_variable)
-            elif self.domain == "Positive":
-                R_variable = pybamm.standard_spatial_vars.R_variable_p
-                f_a_dist = self.param.f_a_dist_p(R_variable)
-
             # R-average
-            eta_r = pybamm.Integral(f_a_dist * eta_r, R_variable)
+            eta_r = pybamm.R_average(eta_r, self.domain)
 
         # X-average, and broadcast if necessary
         eta_r_av = pybamm.x_average(eta_r)
@@ -617,15 +603,8 @@ class BaseInterface(pybamm.BaseSubModel):
         # If ocp depends on particle size R then must R-average to get standard
         # output open circuit potential
         if ocp.domain == [self.domain.lower() + " particle-size domain"]:
-            if self.domain == "Negative":
-                R_variable = pybamm.standard_spatial_vars.R_variable_n
-                f_a_dist = self.param.f_a_dist_n(R_variable)
-            elif self.domain == "Positive":
-                R_variable = pybamm.standard_spatial_vars.R_variable_p
-                f_a_dist = self.param.f_a_dist_p(R_variable)
-
             # R-average
-            ocp = pybamm.Integral(f_a_dist * ocp, R_variable)
+            ocp = pybamm.R_average(ocp, self.domain)
 
         # X-average, and broadcast if necessary
         if ocp.domain == []:
@@ -642,15 +621,8 @@ class BaseInterface(pybamm.BaseSubModel):
         # If dUdT depends on particle size R then must R-average to get standard
         # output entropic change
         if dUdT.domain == [self.domain.lower() + " particle-size domain"]:
-            if self.domain == "Negative":
-                R_variable = pybamm.standard_spatial_vars.R_variable_n
-                f_a_dist = self.param.f_a_dist_n(R_variable)
-            elif self.domain == "Positive":
-                R_variable = pybamm.standard_spatial_vars.R_variable_p
-                f_a_dist = self.param.f_a_dist_p(R_variable)
-
             # R-average
-            dUdT = pybamm.Integral(f_a_dist * dUdT, R_variable)
+            dUdT = pybamm.R_average(dUdT, self.domain)
 
         dUdT_av = pybamm.x_average(dUdT)
 
@@ -699,25 +671,21 @@ class BaseInterface(pybamm.BaseSubModel):
         particle size for "particle-size distribution" models, and
         the standard R-averaged current density (j)
         """
-        # T must have same domains as j0, eta_r, so reverse any broadcast to
-        # "electrode" then broadcast onto "particle-size domain"
-        if isinstance(T, pybamm.Broadcast):
-            T = T.orphans[0]
+        # T must have same domains as j0, eta_r, so remove electrode domain from T
+        # if necessary (only check eta_r, as j0 should already match)
+        if eta_r.domains["secondary"] != [self.domain.lower() + " electrode"]:
+            T = pybamm.x_average(T)
+
+        # Broadcast T onto "particle-size domain"
         T = pybamm.PrimaryBroadcast(
             T, [self.domain.lower() + " particle-size domain"]
         )
 
         # current density that depends on particle size R
         j_distribution = self._get_kinetics(j0, ne, eta_r, T)
-        if self.domain == "Negative":
-            R_variable = pybamm.standard_spatial_vars.R_variable_n
-            f_a_dist = self.param.f_a_dist_n(R_variable)
-        elif self.domain == "Positive":
-            R_variable = pybamm.standard_spatial_vars.R_variable_p
-            f_a_dist = self.param.f_a_dist_p(R_variable)
 
         # R-average
-        j = pybamm.Integral(f_a_dist * j_distribution, R_variable)
+        j = pybamm.R_average(j_distribution, self.domain)
         return j, j_distribution
 
     def _get_standard_PSD_interfacial_current_variables(self, j_distribution):
@@ -726,16 +694,9 @@ class BaseInterface(pybamm.BaseSubModel):
         relevant if "particle-size distribution" option is True.
         """
         # X-average and broadcast if necessary
-        if self.domain.lower() + " electrode" in j_distribution.auxiliary_domains:
-
-            if self.domain == "Negative":
-                l = self.param.l_n
-                x = pybamm.standard_spatial_vars.x_n
-            elif self.domain == "Positive":
-                l = self.param.l_p
-                x = pybamm.standard_spatial_vars.x_p
+        if j_distribution.domains["secondary"] == [self.domain.lower() + " electrode"]:
             # x-average
-            j_xav_distribution = pybamm.Integral(j_distribution, x) / l
+            j_xav_distribution = pybamm.x_average(j_distribution)
         else:
             j_xav_distribution = j_distribution
             j_distribution = pybamm.SecondaryBroadcast(
