@@ -69,7 +69,10 @@ class SPM(BaseModel):
 
     def set_interfacial_submodel(self):
 
-        if self.options["surface form"] is False:
+        if (
+            self.options["surface form"] is False
+            and self.options["particle-size distribution"] is False
+        ):
             self.submodels["negative interface"] = pybamm.interface.InverseButlerVolmer(
                 self.param, "Negative", "lithium-ion main", self.options
             )
@@ -97,32 +100,62 @@ class SPM(BaseModel):
 
     def set_particle_submodel(self):
 
-        if self.options["particle"] == "Fickian diffusion":
-            self.submodels["negative particle"] = pybamm.particle.FickianSingleParticle(
-                self.param, "Negative"
-            )
-            self.submodels["positive particle"] = pybamm.particle.FickianSingleParticle(
-                self.param, "Positive"
-            )
-        elif self.options["particle"] == "fast diffusion":
-            self.submodels["negative particle"] = pybamm.particle.FastSingleParticle(
-                self.param, "Negative"
-            )
-            self.submodels["positive particle"] = pybamm.particle.FastSingleParticle(
-                self.param, "Positive"
-            )
+        if self.options["particle-size distribution"]:
+            if self.options["particle"] == "Fickian diffusion":
+                self.submodels["negative particle"] = pybamm.particle.FickianSinglePSD(
+                    self.param, "Negative"
+                )
+                self.submodels["positive particle"] = pybamm.particle.FickianSinglePSD(
+                    self.param, "Positive"
+                )
+            elif self.options["particle"] == "fast diffusion":
+                self.submodels["negative particle"] = pybamm.particle.FastSinglePSD(
+                    self.param, "Negative"
+                )
+                self.submodels["positive particle"] = pybamm.particle.FastSinglePSD(
+                    self.param, "Positive"
+                )
+        else:
+            if self.options["particle"] == "Fickian diffusion":
+                self.submodels[
+                    "negative particle"
+                ] = pybamm.particle.FickianSingleParticle(self.param, "Negative")
+                self.submodels[
+                    "positive particle"
+                ] = pybamm.particle.FickianSingleParticle(self.param, "Positive")
+            elif self.options["particle"] == "fast diffusion":
+                self.submodels[
+                    "negative particle"
+                ] = pybamm.particle.FastSingleParticle(self.param, "Negative")
+                self.submodels[
+                    "positive particle"
+                ] = pybamm.particle.FastSingleParticle(self.param, "Positive")
 
     def set_negative_electrode_submodel(self):
 
-        self.submodels["negative electrode"] = pybamm.electrode.ohm.LeadingOrder(
-            self.param, "Negative"
-        )
+        if self.options["particle-size distribution"]:
+            self.submodels[
+                "negative electrode"
+            ] = pybamm.electrode.ohm.LeadingOrderSizeDistribution(
+                self.param, "Negative"
+            )
+        else:
+            self.submodels["negative electrode"] = pybamm.electrode.ohm.LeadingOrder(
+                self.param, "Negative"
+            )
 
     def set_positive_electrode_submodel(self):
 
-        self.submodels["positive electrode"] = pybamm.electrode.ohm.LeadingOrder(
-            self.param, "Positive"
-        )
+        if self.options["particle-size distribution"]:
+            self.submodels[
+                "positive electrode"
+            ] = pybamm.electrode.ohm.LeadingOrderSizeDistribution(
+                self.param, "Positive"
+            )
+        else:
+            self.submodels["positive electrode"] = pybamm.electrode.ohm.LeadingOrder(
+                self.param, "Positive"
+            )
 
     def set_electrolyte_submodel(self):
 
