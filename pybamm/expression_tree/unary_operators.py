@@ -1061,10 +1061,14 @@ def x_average(symbol):
         elif symbol.domain == ["negative electrode", "separator", "positive electrode"]:
             x = pybamm.standard_spatial_vars.x
             l = pybamm.Scalar(1)
-        elif symbol.domain == ["negative particle"]:
+        elif symbol.domain == ["negative particle"] or symbol.domain == [
+            "negative particle-size domain"
+        ]:
             x = pybamm.standard_spatial_vars.x_n
             l = pybamm.geometric_parameters.l_n
-        elif symbol.domain == ["positive particle"]:
+        elif symbol.domain == ["positive particle"] or symbol.domain == [
+            "positive particle-size domain"
+        ]:
             x = pybamm.standard_spatial_vars.x_p
             l = pybamm.geometric_parameters.l_p
         else:
@@ -1181,6 +1185,57 @@ def r_average(symbol):
             pybamm.Scalar(1), symbol.domain, symbol.auxiliary_domains
         )
         return Integral(symbol, r) / Integral(v, r)
+
+
+def R_average(symbol, domain):
+    """convenience function for averaging over particle size R.
+
+    Parameters
+    ----------
+    symbol : :class:`pybamm.Symbol`
+        The function to be averaged
+    domain : str
+        The electrode for averaging, either "negative" or "positive"
+    Returns
+    -------
+    :class:`Symbol`
+        the new averaged symbol
+    """
+    # Can't take average if the symbol evaluates on edges
+    if symbol.evaluates_on_edges("primary"):
+        raise ValueError("Can't take the R-average of a symbol that evaluates on edges")
+
+    if domain.lower() not in ["negative", "positive"]:
+        raise ValueError(
+            """Electrode domain must be "positive" or "negative" not {}""".format(
+                domain.lower()
+            )
+        )
+
+    if symbol.domain not in [
+        ["negative particle-size domain"],
+        ["positive particle-size domain"],
+    ]:
+        raise pybamm.DomainError(
+            """R-average only implemented for primary 'particle size' domains,
+            but symbol has domains {}""".format(
+                symbol.domain
+            )
+        )
+
+    # Define spatial variable with same domains as symbol
+    R = pybamm.SpatialVariable(
+        "R",
+        domain=symbol.domain,
+        auxiliary_domains=symbol.auxiliary_domains,
+        coord_sys="cartesian",
+    )
+    if domain.lower() == "negative":
+        f_a_dist = pybamm.standard_parameters_lithium_ion.f_a_dist_n(R)
+    elif domain.lower() == "positive":
+        f_a_dist = pybamm.standard_parameters_lithium_ion.f_a_dist_p(R)
+
+    return Integral(f_a_dist * symbol, R)
 
 
 def boundary_value(symbol, side):
