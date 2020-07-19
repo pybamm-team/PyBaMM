@@ -156,16 +156,6 @@ class JaxSolver(pybamm.BaseSolver):
                 mass=mass,
                 **self.extra_options
             )
-            #sstring = ''
-            #sstring += 'JAX {} solver - stats\n'.format(self.method)
-            #sstring += '\tNumber of steps: {}\n'.format(stepper.n_steps)
-            #sstring += '\tnumber of function evaluations: {}\n'.format(
-            #    stepper.n_function_evals)
-            #sstring += '\tnumber of jacobian evaluations: {}\n'.format(
-            #    stepper.n_jacobian_evals)
-            #sstring += '\tnumber of LU decompositions: {}\n'.format(
-            #    stepper.n_lu_decompositions)
-            #pybamm.logger.info(sstring)
             return jnp.transpose(y)
 
         if self.method == 'RK45':
