@@ -451,9 +451,12 @@ class BaseSolver(object):
         -------
         y0_consistent : array-like, same shape as y0_guess
             Initial conditions that are consistent with the algebraic equations (roots
-            of the algebraic equations)
+            of the algebraic equations). If self.root_method == None then returns
+            model.y0.
         """
         pybamm.logger.info("Start calculating consistent states")
+        if self.root_method is None:
+            return model.y0
         try:
             root_sol = self.root_method._integrate(model, [time], inputs)
         except pybamm.SolverError as e:
