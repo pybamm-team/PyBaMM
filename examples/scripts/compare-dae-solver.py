@@ -1,6 +1,5 @@
 import pybamm
 import numpy as np
-import time
 
 pybamm.set_logging_level("INFO")
 
@@ -50,12 +49,6 @@ else:
         Please consult installation instructions on GitHub.
         """
     )
-
-model.convert_to_format = 'jax'
-model.events = []
-solver = pybamm.JaxSolver(method='BDF', root_method='lm', atol=1e-8, rtol=1e-8)
-jax_bdf_sol = solver.solve(model, t_eval)
-solutions.append(jax_bdf_sol)
 
 # plot
 plot = pybamm.QuickPlot(solutions)
