@@ -38,7 +38,14 @@ class TestCasadiSolver(unittest.TestCase):
         model.events = [pybamm.Event("an event", var + 1)]
         disc.process_model(model)
         solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
-        t_eval = np.linspace(0, 1, 100)
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_array_equal(solution.t, t_eval)
+        np.testing.assert_array_almost_equal(
+            solution.y[0], np.exp(0.1 * solution.t), decimal=5
+        )
+
+        # Safe mode, without grid (enforce events that won't be triggered)
+        solver = pybamm.CasadiSolver(mode="safe without grid", rtol=1e-8, atol=1e-8)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_array_almost_equal(
