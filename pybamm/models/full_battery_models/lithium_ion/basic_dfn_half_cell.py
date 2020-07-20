@@ -117,9 +117,7 @@ class BasicDFNHalfCell(BaseModel):
         # tor = pybamm.Concatenation(
         #     eps_n ** param.b_e_n, eps_s ** param.b_e_s, eps_p ** param.b_e_p
         # )
-        tor = pybamm.Concatenation(
-            eps_n ** param.b_e_n, eps_s ** param.b_e_s
-        )        
+        tor = pybamm.Concatenation(eps_n ** param.b_e_n, eps_s ** param.b_e_s)
 
         # Interfacial reactions
         # Surf takes the surface value of a variable, i.e. its boundary value on the
@@ -137,7 +135,7 @@ class BasicDFNHalfCell(BaseModel):
         c_s_surf_p = pybamm.surf(c_s_p)
         # j0_p = param.gamma_p * param.j0_p(c_e_p, c_s_surf_p, T) / param.C_r_p
         j_s = pybamm.PrimaryBroadcast(0, "separator")
-        j_p = pybamm.PrimaryBroadcast(0, "positive electrode")        
+        j_p = pybamm.PrimaryBroadcast(0, "positive electrode")
         # j_p = (
         #     2
         #     * j0_p
@@ -223,11 +221,13 @@ class BasicDFNHalfCell(BaseModel):
         # the main scalar variable of interest in the equation
         self.algebraic[phi_s_n] = pybamm.div(i_s_n) + j_n
         self.algebraic[phi_s_p] = pybamm.div(i_s_p) + j_p
-        OCV_p = param.U_p(
-            param.c_p_init(1), param.T_init
-        ) - param.U_n(param.c_n_init(0), param.T_init)
+        OCV_p = param.U_p(param.c_p_init(1), param.T_init) - param.U_n(
+            param.c_n_init(0), param.T_init
+        )
         self.boundary_conditions[phi_s_n] = {
-            # "left": (i_cell / pybamm.boundary_value(-sigma_eff_n, "right"), "Neumann"),
+            # "left": (
+            #     i_cell / pybamm.boundary_value(-sigma_eff_n, "right"), "Neumann"
+            # ),
             "left": (pybamm.Scalar(0), "Dirichlet"),
             "right": (pybamm.Scalar(0), "Neumann"),
         }
@@ -252,7 +252,12 @@ class BasicDFNHalfCell(BaseModel):
         self.rhs[c_e] = (1 / eps) * (
             -pybamm.div(N_e) / param.C_e + (1 - param.t_plus(c_e)) * j / param.gamma_e
         )
-        dce_dx = - (1 - param.t_plus(c_e)) * i_cell * param.C_e / (tor * param.gamma_e * param.D_e(c_e, T))
+        dce_dx = (
+            -(1 - param.t_plus(c_e))
+            * i_cell
+            * param.C_e
+            / (tor * param.gamma_e * param.D_e(c_e, T))
+        )
         self.boundary_conditions[c_e] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (pybamm.boundary_value(dce_dx, "right"), "Neumann"),
@@ -271,18 +276,21 @@ class BasicDFNHalfCell(BaseModel):
             param.chi(c_e) * pybamm.grad(c_e) / c_e - pybamm.grad(phi_e)
         )
         self.algebraic[phi_e] = pybamm.div(i_e) - j
-        dphie_dx = - i_cell / (param.kappa_e(c_e, T) * tor * param.gamma_e / param.C_e) + param.chi(c_e) * dce_dx / c_e
+        dphie_dx = (
+            -i_cell / (param.kappa_e(c_e, T) * tor * param.gamma_e / param.C_e)
+            + param.chi(c_e) * dce_dx / c_e
+        )
         self.boundary_conditions[phi_e] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             # "right": (pybamm.Scalar(0), "Dirichlet"),
             "right": (pybamm.boundary_value(dphie_dx, "right"), "Neumann"),
         }
-        self.initial_conditions[phi_e] = - param.U_n(param.c_n_init(0), param.T_init)
+        self.initial_conditions[phi_e] = -param.U_n(param.c_n_init(0), param.T_init)
 
         ######################
         # (Some) variables
         ######################
-        voltage = - pybamm.boundary_value(phi_e, "right")
+        voltage = -pybamm.boundary_value(phi_e, "right")
         pot = param.potential_scale
         # voltage = pybamm.boundary_value(phi_s_n, "left")
         # The `variables` dictionary contains all variables that might be useful for
@@ -290,17 +298,28 @@ class BasicDFNHalfCell(BaseModel):
         self.variables = {
             "Negative particle surface concentration": c_s_surf_n,
             "Negative particle concentration": c_s_n,
+            "Negative particle surface concentration [mol.m-3]": param.c_n_max
+            * c_s_surf_n,
+            "Negative particle concentration [mol.m-3]": param.c_n_max * c_s_n,
             "Electrolyte concentration": c_e,
+            "Electrolyte concentration [mol.m-3]": param.c_e_typ * c_e,
             "Positive particle surface concentration": c_s_surf_p,
             "Positive particle concentration": c_s_p,
+            "Positive particle surface concentration [mol.m-3]": param.c_p_max
+            * c_s_surf_p,
+            "Positive particle concentration [mol.m-3]": param.c_p_max * c_s_p,
             "Current [A]": I,
             "Negative electrode potential": phi_s_n,
+            "Negative electrode potential [V]": pot * phi_s_n,
             "Electrolyte potential": phi_e,
+            "Electrolyte potential [V]": -param.U_n_ref + pot * phi_e,
             "Positive electrode potential": phi_s_p,
+            "Positive electrode potential [V]": (param.U_p_ref - param.U_n_ref)
+            + pot * phi_s_p,
             "Terminal voltage": voltage,
-            "Terminal voltage [V]": -param.U_n_ref + pot * voltage
+            "Terminal voltage [V]": -param.U_n_ref + pot * voltage,
         }
-        self.events += [
-            pybamm.Event("Minimum voltage", voltage - param.voltage_low_cut),
-            pybamm.Event("Maximum voltage", voltage - param.voltage_high_cut),
-        ]
+        # self.events += [
+        #     pybamm.Event("Minimum voltage", voltage - param.voltage_low_cut),
+        #     pybamm.Event("Maximum voltage", voltage - param.voltage_high_cut),
+        # ]
