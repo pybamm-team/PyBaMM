@@ -15,11 +15,10 @@ model = pybamm.lithium_ion.BasicDFNHalfCell()
 geometry = model.default_geometry
 
 # load parameter values and process model and geometry
+Crate = 0.1
 chemistry = pybamm.parameter_sets.Chen2020
-chemistry["anode"] = "lithium"
 param = pybamm.ParameterValues(chemistry=chemistry)
-param["Initial concentration in positive electrode [mol.m-3]"] = 50000
-param["Current function [A]"] = -5
+param["Current function [A]"] = Crate * 5
 param.process_model(model)
 param.process_geometry(geometry)
 
@@ -41,13 +40,13 @@ solution = solver.solve(model, t_eval)
 plot = pybamm.QuickPlot(
     solution,
     [
-        "Negative particle concentration [mol.m-3]",
-        "Electrolyte concentration [mol.m-3]",
-        "Positive particle concentration [mol.m-3]",
+        "Negative particle surface concentration",
+        "Electrolyte concentration",
+        "Positive particle surface concentration",
         "Current [A]",
-        "Negative electrode potential [V]",
-        "Electrolyte potential [V]",
-        "Positive electrode potential [V]",
+        "Negative electrode potential",
+        "Electrolyte potential",
+        "Positive electrode potential",
         "Terminal voltage [V]",
     ],
     time_unit="seconds",
