@@ -24,6 +24,9 @@ class CasadiSolver(pybamm.BaseSolver):
             - "safe": perform step-and-check integration in global steps of size \
             dt_max, checking whether events have been triggered. Recommended for \
             simulations of a full charge or discharge.
+            - "safe without grid": perform step-and-check integration step-by-step. \
+            Takes more steps than "safe" mode, but doesn't require creating the grid \
+            each time, so may be faster. Experimental only.
     rtol : float, optional
         The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
@@ -55,7 +58,7 @@ class CasadiSolver(pybamm.BaseSolver):
         Any options to pass to the CasADi integrator when calling the integrator.
         Please consult `CasADi documentation <https://tinyurl.com/y5rk76os>`_ for
         details.
-    solve_sensitivity_equations : bool, optional
+    sensitivity : bool, optional
         Whether to explicitly formulate and solve the forward sensitivity equations.
         See :class:`pybamm.BaseSolver`
 
@@ -72,7 +75,7 @@ class CasadiSolver(pybamm.BaseSolver):
         dt_max=None,
         extra_options_setup=None,
         extra_options_call=None,
-        solve_sensitivity_equations=False,
+        sensitivity=False,
     ):
         super().__init__(
             "problem dependent",
@@ -80,14 +83,15 @@ class CasadiSolver(pybamm.BaseSolver):
             atol,
             root_method,
             root_tol,
-            solve_sensitivity_equations=solve_sensitivity_equations,
+            sensitivity=sensitivity,
         )
-        if mode in ["safe", "fast"]:
+        if mode in ["safe", "fast", "safe without grid"]:
             self.mode = mode
         else:
             raise ValueError(
                 "invalid mode '{}'. Must be 'safe', for solving with events, "
-                "or 'fast', for solving quickly without events".format(mode)
+                "'fast', for solving quickly without events, or 'safe without grid' "
+                "(experimental)".format(mode)
             )
         self.max_step_decrease_count = max_step_decrease_count
         self.dt_max = dt_max
@@ -126,8 +130,8 @@ class CasadiSolver(pybamm.BaseSolver):
         inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
 
         if has_symbolic_inputs:
-            # Create integrax`tor without grid to avoid having to create several times
-            self.get_integrator(model, inputs)
+            # Create integrator without grid to avoid having to create several times
+            self.create_integrator(model, inputs)
             solution = self._run_integrator(model, model.y0, inputs_dict, t_eval)
             solution.termination = "final time"
             return solution
@@ -135,13 +139,11 @@ class CasadiSolver(pybamm.BaseSolver):
             if not model.events:
                 pybamm.logger.info("No events found, running fast mode")
             # Create an integrator with the grid (we just need to do this once)
-            self.get_integrator(model, inputs, t_eval)
+            self.create_integrator(model, inputs, t_eval)
             solution = self._run_integrator(model, model.y0, inputs_dict, t_eval)
             solution.termination = "final time"
             return solution
-        elif self.mode == "safe":
-            # Create integrator without grid to avoid having to create several times
-            self.get_integrator(model, inputs)
+        elif self.mode in ["safe", "safe without grid"]:
             y0 = model.y0
             if isinstance(y0, casadi.DM):
                 y0 = y0.full().flatten()
@@ -155,11 +157,18 @@ class CasadiSolver(pybamm.BaseSolver):
             )
             pybamm.logger.info("Start solving {} with {}".format(model.name, self.name))
 
-            # Initialize solution
-            solution = pybamm.Solution(
-                np.array([t]), y0[:, np.newaxis], model=model, inputs=inputs_dict
-            )
-            solution.solve_time = 0
+            if self.mode == "safe without grid":
+                # in "safe without grid" mode,
+                # create integrator once, without grid,
+                # to avoid having to create several times
+                self.create_integrator(model, inputs)
+                # Initialize solution
+                solution = pybamm.Solution(
+                    np.array([t]), y0[:, np.newaxis], model=model, inputs=inputs_dict
+                )
+                solution.solve_time = 0
+            else:
+                solution = None
 
             # Try to integrate in global steps of size dt_max. Note: dt_max must
             # be at least as big as the the biggest step in t_eval (multiplied
@@ -188,7 +197,9 @@ class CasadiSolver(pybamm.BaseSolver):
                     if len(t_window) == 1:
                         t_window = np.array([t, t + dt])
 
-                    # integrator = self.get_integrator(model, t_window, inputs)
+                    if self.mode == "safe":
+                        # update integrator with the grid
+                        self.create_integrator(model, inputs, t_window)
                     # Try to solve with the current global step, if it fails then
                     # halve the step size and try again.
                     try:
@@ -271,15 +282,19 @@ class CasadiSolver(pybamm.BaseSolver):
                     if len(t_window) == 1:
                         t_window = np.array([t, t_event])
 
-                    # integrator = self.get_integrator(model, t_window, inputs)
+                    if self.mode == "safe":
+                        self.create_integrator(model, inputs_dict, t_window)
                     current_step_sol = self._run_integrator(
                         model, y0, inputs_dict, t_window
                     )
 
                     # assign temporary solve time
                     current_step_sol.solve_time = np.nan
-                    # append solution from the current step to solution
-                    solution.append(current_step_sol)
+                    if solution is None:
+                        solution = current_step_sol
+                    else:
+                        # append solution from the current step to solution
+                        solution.append(current_step_sol)
                     solution.termination = "event"
                     solution.t_event = t_event
                     solution.y_event = y_event
@@ -288,15 +303,18 @@ class CasadiSolver(pybamm.BaseSolver):
                 else:
                     # assign temporary solve time
                     current_step_sol.solve_time = np.nan
-                    # append solution from the current step to solution
-                    solution.append(current_step_sol)
+                    if solution is None:
+                        solution = current_step_sol
+                    else:
+                        # append solution from the current step to solution
+                        solution.append(current_step_sol)
                     # update time
                     t = t_window[-1]
                     # update y0
                     y0 = solution.y[:, -1]
             return solution
 
-    def get_integrator(self, model, inputs, t_eval=None):
+    def create_integrator(self, model, inputs, t_eval=None):
         """
         Method to create a casadi integrator object.
         If t_eval is provided, the integrator uses t_eval to make the grid.
@@ -309,11 +327,10 @@ class CasadiSolver(pybamm.BaseSolver):
             # If we're not using the grid, we don't need to change the integrator
             if use_grid is False:
                 return self.integrators[model]
-            # Otherwise, create new integrator with an updated (scaled) grid
+            # Otherwise, create new integrator with an updated grid
             else:
                 method, problem, options = self.integrator_specs[model]
-                t_eval_scaled = (t_eval - t_eval[0]) / (t_eval[-1] - t_eval[0])
-                options["grid"] = t_eval_scaled
+                options["grid"] = t_eval
                 integrator = casadi.integrator("F", method, problem, options)
                 self.integrators[model] = (integrator, use_grid)
                 return integrator
@@ -343,17 +360,20 @@ class CasadiSolver(pybamm.BaseSolver):
             p = casadi.MX.sym("p", inputs.shape[0])
             y_diff = casadi.MX.sym("y_diff", rhs(0, y0, p).shape[0])
 
-            # rescale time
-            t_min = casadi.MX.sym("t_min")
-            t_max = casadi.MX.sym("t_max")
-            t_scaled = t_min + (t_max - t_min) * t
-            # add time limits as inputs
-            p_with_tlims = casadi.vertcat(p, t_min, t_max)
-
-            # save (scaled) grid
-            if use_grid is True:
-                t_eval_scaled = (t_eval - t_eval[0]) / (t_eval[-1] - t_eval[0])
-                options.update({"grid": t_eval_scaled, "output_t0": True})
+            if use_grid is False:
+                # rescale time
+                t_min = casadi.MX.sym("t_min")
+                t_max = casadi.MX.sym("t_max")
+                t_scaled = t_min + (t_max - t_min) * t
+                # add time limits as inputs
+                p_with_tlims = casadi.vertcat(p, t_min, t_max)
+            else:
+                options.update({"grid": t_eval, "output_t0": True})
+                # Set dummy parameters for consistency with rescaled time
+                t_max = 1
+                t_min = 0
+                t_scaled = t
+                p_with_tlims = p
 
             problem = {"t": t, "x": y_diff, "p": p_with_tlims}
             if algebraic(0, y0, p).is_empty():
@@ -393,15 +413,9 @@ class CasadiSolver(pybamm.BaseSolver):
         try:
             # Try solving
             if use_grid is True:
-                t_min = t_eval[0]
-                t_max = t_eval[-1]
-                inputs_with_tlims = casadi.vertcat(inputs, t_min, t_max)
                 # Call the integrator once, with the grid
                 sol = integrator(
-                    x0=y0_diff,
-                    z0=y0_alg,
-                    p=inputs_with_tlims,
-                    **self.extra_options_call
+                    x0=y0_diff, z0=y0_alg, p=inputs, **self.extra_options_call
                 )
                 y_sol = np.concatenate([sol["xf"].full(), sol["zf"].full()])
                 return pybamm.Solution(t_eval, y_sol, model=model, inputs=inputs_dict)

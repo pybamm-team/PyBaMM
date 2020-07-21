@@ -23,24 +23,16 @@ class ScipySolver(pybamm.BaseSolver):
         Any options to pass to the solver.
         Please consult `SciPy documentation <https://tinyurl.com/yafgqg9y>`_ for
         details.
-    solve_sensitivity_equations : bool, optional
+    sensitivity : bool, optional
         Whether to explicitly formulate and solve the forward sensitivity equations.
         See :class:`pybamm.BaseSolver`
     """
 
     def __init__(
-        self,
-        method="BDF",
-        rtol=1e-6,
-        atol=1e-6,
-        extra_options=None,
-        solve_sensitivity_equations=False,
+        self, method="BDF", rtol=1e-6, atol=1e-6, extra_options=None, sensitivity=False,
     ):
         super().__init__(
-            method=method,
-            rtol=rtol,
-            atol=atol,
-            solve_sensitivity_equations=solve_sensitivity_equations,
+            method=method, rtol=rtol, atol=atol, sensitivity=sensitivity,
         )
         self.ode_solver = True
         self.extra_options = extra_options or {}

@@ -31,7 +31,7 @@ class BaseSolver(object):
         specified by 'root_method' (e.g. "lm", "hybr", ...)
     root_tol : float, optional
         The tolerance for the initial-condition solver (default is 1e-6).
-    solve_sensitivity_equations : bool, optional
+    sensitivity : bool, optional
         Whether to explicitly formulate the sensitivity equations for sensitivity
         to input parameters. The formulation is as per "Park, S., Kato, D., Gima, Z.,
         Klein, R., & Moura, S. (2018). Optimal experimental design for parameterization
@@ -47,7 +47,7 @@ class BaseSolver(object):
         root_method=None,
         root_tol=1e-6,
         max_steps="deprecated",
-        solve_sensitivity_equations=False,
+        sensitivity=False,
     ):
         self._method = method
         self._rtol = rtol
@@ -65,7 +65,7 @@ class BaseSolver(object):
         self.name = "Base solver"
         self.ode_solver = False
         self.algebraic_solver = False
-        self.solve_sensitivity_equations = solve_sensitivity_equations
+        self.sensitivity = sensitivity
 
     @property
     def method(self):
@@ -201,10 +201,7 @@ class BaseSolver(object):
             model.convert_to_format = "casadi"
 
         # Only allow solving sensitivity equations with the casadi format for now
-        if (
-            self.solve_sensitivity_equations is True
-            and model.convert_to_format != "casadi"
-        ):
+        if self.sensitivity is True and model.convert_to_format != "casadi":
             raise NotImplementedError(
                 "model should be converted to casadi format in order to solve "
                 "sensitivity equations"
@@ -231,7 +228,7 @@ class BaseSolver(object):
                     p_casadi[name] = casadi.MX.sym(name, value.shape[0])
             p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
             # sensitivity vectors
-            if self.solve_sensitivity_equations is True:
+            if self.sensitivity is True:
                 S_x = casadi.MX.sym("S_x", model.len_rhs * p_casadi_stacked.shape[0])
                 S_z = casadi.MX.sym("S_z", model.len_alg * p_casadi_stacked.shape[0])
                 y_and_S = casadi.vertcat(y_diff, S_x, y_alg, S_z)
@@ -286,7 +283,7 @@ class BaseSolver(object):
                 report(f"Converting {name} to CasADi")
                 func = func.to_casadi(t_casadi, y_casadi, inputs=p_casadi)
                 # Add sensitivity vectors to the rhs and algebraic equations
-                if self.solve_sensitivity_equations is True:
+                if self.sensitivity is True:
                     if name == "rhs" and model.len_rhs > 0:
                         report("Creating sensitivity equations for rhs using CasADi")
                         df_dx = casadi.jacobian(func, y_diff)
@@ -408,7 +405,7 @@ class BaseSolver(object):
         )[0]
         init_eval = InitialConditions(initial_conditions, model)
 
-        if self.solve_sensitivity_equations is True:
+        if self.sensitivity is True:
             init_eval.y_dummy = np.zeros(
                 (
                     model.len_rhs_and_alg * (np.vstack(list(inputs.values())).size + 1),
@@ -456,7 +453,7 @@ class BaseSolver(object):
         ):
             # can use DAE solver to solve model with algebraic equations only
             if len(model.rhs) > 0:
-                if self.solve_sensitivity_equations is True:
+                if self.sensitivity is True:
                     # Copy mass matrix blocks diagonally
                     single_mass_matrix_inv = model.mass_matrix_inv.entries.toarray()
                     n_inputs = p_casadi_stacked.shape[0]
@@ -554,9 +551,12 @@ class BaseSolver(object):
         -------
         y0_consistent : array-like, same shape as y0_guess
             Initial conditions that are consistent with the algebraic equations (roots
-            of the algebraic equations)
+            of the algebraic equations). If self.root_method == None then returns
+            model.y0.
         """
         pybamm.logger.info("Start calculating consistent states")
+        if self.root_method is None:
+            return model.y0
         try:
             root_sol = self.root_method._integrate(model, [time], inputs)
         except pybamm.SolverError as e:
@@ -930,8 +930,8 @@ class BaseSolver(object):
         for input_param in model.input_parameters:
             name = input_param.name
             if name not in inputs:
-                # Don't allow symbolic inputs if using `solve_sensitivity_equations`
-                if self.solve_sensitivity_equations is True:
+                # Don't allow symbolic inputs if using `sensitivity`
+                if self.sensitivity is True:
                     raise pybamm.SolverError(
                         "Cannot have symbolic inputs if explicitly solving forward"
                         "sensitivity equations"

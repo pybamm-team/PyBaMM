@@ -8,7 +8,7 @@ param["Separator porosity"] = 0.3
 param["Positive electrode porosity"] = 0.3
 param["Cation transference number"] = pybamm.InputParameter("t")
 
-solver = pybamm.CasadiSolver(mode="fast")  # , solve_sensitivity_equations=True)
+solver = pybamm.CasadiSolver(mode="fast")  # , sensitivity=True)
 sim = pybamm.Simulation(model, parameter_values=param, solver=solver)
 sol = sim.solve([0, 3600], inputs={"t": 0.5})
 

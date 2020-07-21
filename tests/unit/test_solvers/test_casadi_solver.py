@@ -38,7 +38,14 @@ class TestCasadiSolver(unittest.TestCase):
         model.events = [pybamm.Event("an event", var + 1)]
         disc.process_model(model)
         solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
-        t_eval = np.linspace(0, 1, 100)
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_array_equal(solution.t, t_eval)
+        np.testing.assert_array_almost_equal(
+            solution.y[0], np.exp(0.1 * solution.t), decimal=5
+        )
+
+        # Safe mode, without grid (enforce events that won't be triggered)
+        solver = pybamm.CasadiSolver(mode="safe without grid", rtol=1e-8, atol=1e-8)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_array_almost_equal(
@@ -615,7 +622,7 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
         # Solve
         # Make sure that passing in extra options works
         solver = pybamm.CasadiSolver(
-            mode="fast", rtol=1e-10, atol=1e-10, solve_sensitivity_equations=True
+            mode="fast", rtol=1e-10, atol=1e-10, sensitivity=True
         )
         t_eval = np.linspace(0, 1, 80)
         solution = solver.solve(model, t_eval, inputs={"p": 0.1})
@@ -649,9 +656,7 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
 
         # Solve
         # Make sure that passing in extra options works
-        solver = pybamm.CasadiSolver(
-            rtol=1e-10, atol=1e-10, solve_sensitivity_equations=True
-        )
+        solver = pybamm.CasadiSolver(rtol=1e-10, atol=1e-10, sensitivity=True)
         t_eval = np.linspace(0, 1, 80)
         solution = solver.solve(
             model, t_eval, inputs={"p": 0.1, "q": 2, "r": -1, "s": 0.5}
@@ -720,7 +725,7 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
         n = disc.mesh["negative electrode"].npts
 
         # Solve - scalar input
-        solver = pybamm.CasadiSolver(solve_sensitivity_equations=True)
+        solver = pybamm.CasadiSolver(sensitivity=True)
         t_eval = np.linspace(0, 1)
         solution = solver.solve(model, t_eval, inputs={"param": 7})
         np.testing.assert_array_almost_equal(
@@ -751,9 +756,7 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
 
         # Solve
         # Make sure that passing in extra options works
-        solver = pybamm.CasadiSolver(
-            rtol=1e-10, atol=1e-10, solve_sensitivity_equations=True
-        )
+        solver = pybamm.CasadiSolver(rtol=1e-10, atol=1e-10, sensitivity=True)
         t_eval = np.linspace(0, 1, 80)
         solution = solver.solve(
             model, t_eval, inputs={"p": 0.1, "q": 2, "r": -1, "s": 0.5}
@@ -829,7 +832,7 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
 
         # Solve - constant input
         solver = pybamm.CasadiSolver(
-            mode="fast", rtol=1e-10, atol=1e-10, solve_sensitivity_equations=True
+            mode="fast", rtol=1e-10, atol=1e-10, sensitivity=True
         )
         t_eval = np.linspace(0, 1)
         solution = solver.solve(model, t_eval, inputs={"param": 7 * np.ones(n)})
@@ -892,7 +895,7 @@ class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
         # Solve
         # Make sure that passing in extra options works
         solver = pybamm.CasadiSolver(
-            mode="fast", rtol=1e-10, atol=1e-10, solve_sensitivity_equations=True
+            mode="fast", rtol=1e-10, atol=1e-10, sensitivity=True
         )
         t_eval = np.linspace(0, 1, 80)
         solution = solver.solve(model, t_eval, inputs={"p": 0.1})
@@ -932,9 +935,7 @@ class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
 
         # Solve
         # Make sure that passing in extra options works
-        solver = pybamm.CasadiSolver(
-            rtol=1e-10, atol=1e-10, solve_sensitivity_equations=True
-        )
+        solver = pybamm.CasadiSolver(rtol=1e-10, atol=1e-10, sensitivity=True)
         t_eval = np.linspace(0, 1, 3)
         solution = solver.solve(
             model, t_eval, inputs={"p": 0.1, "q": 2, "r": -1, "s": 0.5}
@@ -1012,7 +1013,7 @@ class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
         n = disc.mesh["negative electrode"].npts
 
         # Solve - scalar input
-        solver = pybamm.CasadiSolver(solve_sensitivity_equations=True)
+        solver = pybamm.CasadiSolver(sensitivity=True)
         t_eval = np.linspace(0, 1)
         solution = solver.solve(model, t_eval, inputs={"param": 7})
         np.testing.assert_array_almost_equal(

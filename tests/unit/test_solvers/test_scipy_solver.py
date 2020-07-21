@@ -360,9 +360,7 @@ class TestScipySolverWithSensitivity(unittest.TestCase):
 
         # Solve
         # Make sure that passing in extra options works
-        solver = pybamm.ScipySolver(
-            rtol=1e-10, atol=1e-10, solve_sensitivity_equations=True
-        )
+        solver = pybamm.ScipySolver(rtol=1e-10, atol=1e-10, sensitivity=True)
         t_eval = np.linspace(0, 1, 80)
         solution = solver.solve(model, t_eval, inputs={"p": 0.1})
         np.testing.assert_array_equal(solution.t, t_eval)
@@ -395,9 +393,7 @@ class TestScipySolverWithSensitivity(unittest.TestCase):
 
         # Solve
         # Make sure that passing in extra options works
-        solver = pybamm.ScipySolver(
-            rtol=1e-10, atol=1e-10, solve_sensitivity_equations=True
-        )
+        solver = pybamm.ScipySolver(rtol=1e-10, atol=1e-10, sensitivity=True)
         t_eval = np.linspace(0, 1, 80)
         solution = solver.solve(
             model, t_eval, inputs={"p": 0.1, "q": 2, "r": -1, "s": 0.5}
@@ -466,7 +462,7 @@ class TestScipySolverWithSensitivity(unittest.TestCase):
         n = disc.mesh["negative electrode"].npts
 
         # Solve - scalar input
-        solver = pybamm.ScipySolver(solve_sensitivity_equations=True)
+        solver = pybamm.ScipySolver(sensitivity=True)
         t_eval = np.linspace(0, 1)
         solution = solver.solve(model, t_eval, inputs={"param": 7})
         np.testing.assert_array_almost_equal(
@@ -497,9 +493,7 @@ class TestScipySolverWithSensitivity(unittest.TestCase):
 
         # Solve
         # Make sure that passing in extra options works
-        solver = pybamm.ScipySolver(
-            rtol=1e-10, atol=1e-10, solve_sensitivity_equations=True
-        )
+        solver = pybamm.ScipySolver(rtol=1e-10, atol=1e-10, sensitivity=True)
         t_eval = np.linspace(0, 1, 80)
         solution = solver.solve(
             model, t_eval, inputs={"p": 0.1, "q": 2, "r": -1, "s": 0.5}
@@ -574,9 +568,7 @@ class TestScipySolverWithSensitivity(unittest.TestCase):
         n = disc.mesh["negative electrode"].npts
 
         # Solve - constant input
-        solver = pybamm.ScipySolver(
-            rtol=1e-10, atol=1e-10, solve_sensitivity_equations=True
-        )
+        solver = pybamm.ScipySolver(rtol=1e-10, atol=1e-10, sensitivity=True)
         t_eval = np.linspace(0, 1)
         solution = solver.solve(model, t_eval, inputs={"param": 7 * np.ones(n)})
         l_n = mesh["negative electrode"].edges[-1]
@@ -597,9 +589,7 @@ class TestScipySolverWithSensitivity(unittest.TestCase):
         )
 
         # Solve - linspace input
-        solver = pybamm.ScipySolver(
-            rtol=1e-10, atol=1e-10, solve_sensitivity_equations=True
-        )
+        solver = pybamm.ScipySolver(rtol=1e-10, atol=1e-10, sensitivity=True)
         t_eval = np.linspace(0, 1)
         p_eval = np.linspace(1, 2, n)
         solution = solver.solve(model, t_eval, inputs={"param": p_eval})

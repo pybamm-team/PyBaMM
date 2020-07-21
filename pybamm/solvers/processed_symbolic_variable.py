@@ -194,9 +194,12 @@ class ProcessedSymbolicVariable(object):
         # Sort input dictionary keys according to the symbolic inputs dictionary
         # For practical number of input parameters this should be extremely fast and
         # so is ok to do at each step
-        inputs_dict_sorted = {
-            k: inputs_dict[k] for k in self.symbolic_inputs_dict.keys()
-        }
+        try:
+            inputs_dict_sorted = {
+                k: inputs_dict[k] for k in self.symbolic_inputs_dict.keys()
+            }
+        except KeyError as e:
+            raise KeyError("Inconsistent input keys. '{}' not found".format(e.args[0]))
         inputs = casadi.vertcat(*[p for p in inputs_dict_sorted.values()])
         if inputs.shape[0] != self.symbolic_inputs_total_shape:
             # Find the variable which caused the error, for a clearer error message
