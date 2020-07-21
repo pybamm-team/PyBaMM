@@ -28,9 +28,7 @@ class BasicDFNHalfCell(BaseModel):
     **Extends:** :class:`pybamm.lithium_ion.BaseModel`
     """
 
-    def __init__(
-        self, name="Doyle-Fuller-Newman half cell model", working_electrode="anode"
-    ):
+    def __init__(self, name="Doyle-Fuller-Newman half cell model"):
         super().__init__({}, name)
         pybamm.citations.register("marquis2019asymptotic")
         # `param` is a class containing all the relevant parameters and functions for
@@ -38,55 +36,36 @@ class BasicDFNHalfCell(BaseModel):
         # `ParameterValues` class when the model is processed.
         param = self.param
 
-        if working_electrode not in ["anode", "cathode"]:
-            raise ValueError(
-                "The value of working_electrode should be either 'cathode' or 'anode'"
-            )
-
         ######################
         # Variables
         ######################
         # Variables that depend on time only are created without a domain
         Q = pybamm.Variable("Discharge capacity [A.h]")
         # Variables that vary spatially are created with a domain
-        if working_electrode == "anode":
-            c_e_n = pybamm.Variable(
-                "Negative electrolyte concentration", domain="negative electrode"
-            )
-            c_e_s = pybamm.Variable(
-                "Separator electrolyte concentration", domain="separator"
-            )
-            # Concatenations combine several variables into a single variable, to
-            # simplify implementing equations that hold over several domains
-            c_e = pybamm.Concatenation(c_e_n, c_e_s)
-        else:
-            c_e_p = pybamm.Variable(
-                "Positive electrolyte concentration", domain="positive electrode"
-            )
-            c_e_s = pybamm.Variable(
-                "Separator electrolyte concentration", domain="separator"
-            )
-            # Concatenations combine several variables into a single variable, to
-            # simplify implementing equations that hold over several domains
-            c_e = pybamm.Concatenation(c_e_s, c_e_p)
+        c_e_n = pybamm.Variable(
+            "Negative electrolyte concentration", domain="negative electrode"
+        )
+        c_e_s = pybamm.Variable(
+            "Separator electrolyte concentration", domain="separator"
+        )
+        # c_e_p = pybamm.Variable(
+        #     "Positive electrolyte concentration", domain="positive electrode"
+        # )
+        # Concatenations combine several variables into a single variable, to simplify
+        # implementing equations that hold over several domains
+        # c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
+        c_e = pybamm.Concatenation(c_e_n, c_e_s)
 
         # Electrolyte potential
-        if working_electrode == "anode":
-            phi_e_n = pybamm.Variable(
-                "Negative electrolyte potential", domain="negative electrode"
-            )
-            phi_e_s = pybamm.Variable(
-                "Separator electrolyte potential", domain="separator"
-            )
-            phi_e = pybamm.Concatenation(phi_e_n, phi_e_s)
-        else:
-            phi_e_s = pybamm.Variable(
-                "Separator electrolyte potential", domain="separator"
-            )
-            phi_e_p = pybamm.Variable(
-                "Positive electrolyte potential", domain="positive electrode"
-            )
-            phi_e = pybamm.Concatenation(phi_e_s, phi_e_p)
+        phi_e_n = pybamm.Variable(
+            "Negative electrolyte potential", domain="negative electrode"
+        )
+        phi_e_s = pybamm.Variable("Separator electrolyte potential", domain="separator")
+        # phi_e_p = pybamm.Variable(
+        #     "Positive electrolyte potential", domain="positive electrode"
+        # )
+        # phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
+        phi_e = pybamm.Concatenation(phi_e_n, phi_e_s)
 
         # Electrode potential
         phi_s_n = pybamm.Variable(
@@ -119,7 +98,7 @@ class BasicDFNHalfCell(BaseModel):
         # Current density
         i_cell = param.current_with_time
 
-        # Porosity and Tortuosity
+        # Porosity
         # Primary broadcasts are used to broadcast scalar quantities across a domain
         # into a vector of the right shape, for multiplying with other vectors
         eps_n = pybamm.PrimaryBroadcast(
@@ -131,45 +110,41 @@ class BasicDFNHalfCell(BaseModel):
         eps_p = pybamm.PrimaryBroadcast(
             pybamm.Parameter("Positive electrode porosity"), "positive electrode"
         )
+        # eps = pybamm.Concatenation(eps_n, eps_s, eps_p)
+        eps = pybamm.Concatenation(eps_n, eps_s)
 
-        if working_electrode == "anode":
-            eps = pybamm.Concatenation(eps_n, eps_s)
-            tor = pybamm.Concatenation(eps_n ** param.b_e_n, eps_s ** param.b_e_s)
-        else:
-            eps = pybamm.Concatenation(eps_s, eps_p)
-            tor = pybamm.Concatenation(eps_s ** param.b_e_s, eps_p ** param.b_e_p)
+        # Tortuosity
+        # tor = pybamm.Concatenation(
+        #     eps_n ** param.b_e_n, eps_s ** param.b_e_s, eps_p ** param.b_e_p
+        # )
+        tor = pybamm.Concatenation(eps_n ** param.b_e_n, eps_s ** param.b_e_s)
 
         # Interfacial reactions
         # Surf takes the surface value of a variable, i.e. its boundary value on the
         # right side. This is also accessible via `boundary_value(x, "right")`, with
         # "left" providing the boundary value of the left side
         c_s_surf_n = pybamm.surf(c_s_n)
+        j0_n = param.j0_n(c_e_n, c_s_surf_n, T) / param.C_r_n
+        j_n = (
+            2
+            * j0_n
+            * pybamm.sinh(
+                param.ne_n / 2 * (phi_s_n - phi_e_n - param.U_n(c_s_surf_n, T))
+            )
+        )
         c_s_surf_p = pybamm.surf(c_s_p)
-
-        if working_electrode == "anode":
-            j0_n = param.j0_n(c_e_n, c_s_surf_n, T) / param.C_r_n
-            j_n = (
-                2
-                * j0_n
-                * pybamm.sinh(
-                    param.ne_n / 2 * (phi_s_n - phi_e_n - param.U_n(c_s_surf_n, T))
-                )
-            )
-            j_s = pybamm.PrimaryBroadcast(0, "separator")
-            j_p = pybamm.PrimaryBroadcast(0, "positive electrode")
-            j = pybamm.Concatenation(j_n, j_s)
-        else:
-            j0_p = param.gamma_p * param.j0_p(c_e_p, c_s_surf_p, T) / param.C_r_p
-            j_p = (
-                2
-                * j0_p
-                * pybamm.sinh(
-                    param.ne_p / 2 * (phi_s_p - phi_e_p - param.U_p(c_s_surf_p, T))
-                )
-            )
-            j_s = pybamm.PrimaryBroadcast(0, "separator")
-            j_n = pybamm.PrimaryBroadcast(0, "negative electrode")
-            j = pybamm.Concatenation(j_s, j_p)
+        # j0_p = param.gamma_p * param.j0_p(c_e_p, c_s_surf_p, T) / param.C_r_p
+        j_s = pybamm.PrimaryBroadcast(0, "separator")
+        j_p = pybamm.PrimaryBroadcast(0, "positive electrode")
+        # j_p = (
+        #     2
+        #     * j0_p
+        #     * pybamm.sinh(
+        #         param.ne_p / 2 * (phi_s_p - phi_e_p - param.U_p(c_s_surf_p, T))
+        #     )
+        # )
+        # j = pybamm.Concatenation(j_n, j_s, j_p)
+        j = pybamm.Concatenation(j_n, j_s)
 
         ######################
         # State of Charge
@@ -246,37 +221,29 @@ class BasicDFNHalfCell(BaseModel):
         # the main scalar variable of interest in the equation
         self.algebraic[phi_s_n] = pybamm.div(i_s_n) + j_n
         self.algebraic[phi_s_p] = pybamm.div(i_s_p) + j_p
-
-        if working_electrode == "anode":
-            self.boundary_conditions[phi_s_n] = {
-                "left": (
-                    i_cell / pybamm.boundary_value(-sigma_eff_n, "left"),
-                    "Neumann",
-                ),
-                "right": (pybamm.Scalar(0), "Neumann"),
-            }
-            self.boundary_conditions[phi_s_p] = {
-                "left": (pybamm.Scalar(0), "Neumann"),
-                "right": (param.U_p(param.c_p_init(1), param.T_init), "Dirichlet"),
-            }
-        else:
-            self.boundary_conditions[phi_s_n] = {
-                "left": (param.U_n(param.c_n_init(0), param.T_init), "Dirichlet"),
-                "right": (pybamm.Scalar(0), "Neumann",),
-            }
-            self.boundary_conditions[phi_s_p] = {
-                "left": (pybamm.Scalar(0), "Neumann"),
-                "right": (
-                    i_cell / pybamm.boundary_value(-sigma_eff_p, "right"),
-                    "Neumann",
-                ),
-            }
-
+        OCV_p = param.U_p(param.c_p_init(1), param.T_init) - param.U_n(
+            param.c_n_init(0), param.T_init
+        )
+        self.boundary_conditions[phi_s_n] = {
+            # "left": (
+            #     i_cell / pybamm.boundary_value(-sigma_eff_n, "right"), "Neumann"
+            # ),
+            "left": (pybamm.Scalar(0), "Dirichlet"),
+            "right": (pybamm.Scalar(0), "Neumann"),
+        }
+        self.boundary_conditions[phi_s_p] = {
+            "left": (pybamm.Scalar(0), "Neumann"),
+            "right": (OCV_p, "Dirichlet"),
+        }
         # Initial conditions must also be provided for algebraic equations, as an
-        # initial guess for a root-finding algorithm which calculates consistent
-        # initial conditions
-        self.initial_conditions[phi_s_n] = param.U_n(param.c_n_init(0), param.T_init)
-        self.initial_conditions[phi_s_p] = param.U_p(param.c_p_init(1), param.T_init)
+        # initial guess for a root-finding algorithm which calculates consistent initial
+        # conditions
+        # We evaluate c_n_init at x=0 and c_p_init at x=1 (this is just an initial
+        # guess so actual value is not too important)
+        self.initial_conditions[phi_s_n] = pybamm.Scalar(0)
+        self.initial_conditions[phi_s_p] = param.U_p(
+            param.c_p_init(1), param.T_init
+        ) - param.U_n(param.c_n_init(0), param.T_init)
 
         ######################
         # Electrolyte concentration
@@ -291,18 +258,10 @@ class BasicDFNHalfCell(BaseModel):
             * param.C_e
             / (tor * param.gamma_e * param.D_e(c_e, T))
         )
-
-        if working_electrode == "anode":
-            self.boundary_conditions[c_e] = {
-                "left": (pybamm.Scalar(0), "Neumann"),
-                "right": (pybamm.boundary_value(dce_dx, "right"), "Neumann"),
-            }
-        else:
-            self.boundary_conditions[c_e] = {
-                "left": (pybamm.boundary_value(dce_dx, "left"), "Neumann"),
-                "right": (pybamm.Scalar(0), "Neumann"),
-            }
-
+        self.boundary_conditions[c_e] = {
+            "left": (pybamm.Scalar(0), "Neumann"),
+            "right": (pybamm.boundary_value(dce_dx, "right"), "Neumann"),
+        }
         self.initial_conditions[c_e] = param.c_e_init
         self.events.append(
             pybamm.Event(
@@ -317,47 +276,23 @@ class BasicDFNHalfCell(BaseModel):
             param.chi(c_e) * pybamm.grad(c_e) / c_e - pybamm.grad(phi_e)
         )
         self.algebraic[phi_e] = pybamm.div(i_e) - j
-        # dphie_dx = (
-        #     -i_cell / (param.kappa_e(c_e, T) * tor * param.gamma_e / param.C_e)
-        #     + param.chi(c_e) * dce_dx / c_e
-        # )
-
-        if working_electrode == "anode":
-            self.boundary_conditions[phi_e] = {
-                "left": (pybamm.Scalar(0), "Neumann"),
-                "right": (pybamm.Scalar(0), "Dirichlet"),
-                # "right": (pybamm.boundary_value(dphie_dx, "right"), "Neumann"),
-            }
-        else:
-            self.boundary_conditions[phi_e] = {
-                "left": (pybamm.Scalar(0), "Dirichlet"),
-                "right": (pybamm.Scalar(0), "Neumann"),
-                # "right": (pybamm.boundary_value(dphie_dx, "right"), "Neumann"),
-            }
-
-        self.initial_conditions[phi_e] = pybamm.Scalar(0)
+        dphie_dx = (
+            -i_cell / (param.kappa_e(c_e, T) * tor * param.gamma_e / param.C_e)
+            + param.chi(c_e) * dce_dx / c_e
+        )
+        self.boundary_conditions[phi_e] = {
+            "left": (pybamm.Scalar(0), "Neumann"),
+            # "right": (pybamm.Scalar(0), "Dirichlet"),
+            "right": (pybamm.boundary_value(dphie_dx, "right"), "Neumann"),
+        }
+        self.initial_conditions[phi_e] = -param.U_n(param.c_n_init(0), param.T_init)
 
         ######################
         # (Some) variables
         ######################
-        L_Li = pybamm.Parameter("Lithium counter electrode thickness [m]")
-        sigma_Li = pybamm.Parameter("Lithium counter electrode conductivity [S.m-1]")
-        j_Li = pybamm.Parameter(
-            "Lithium counter electrode exchange-current density [A.m-2]"
-        )
-
+        voltage = -pybamm.boundary_value(phi_e, "right")
         pot = param.potential_scale
-        i_typ = param.current_scale
-
-        print(i_typ)
-
-        if working_electrode == "anode":
-            voltage = pybamm.boundary_value(phi_s_n, "left")
-            voltage_dim = param.U_n_ref + pot * voltage
-        else:
-            voltage = pybamm.boundary_value(phi_s_p, "right")
-            voltage_dim = param.U_p_ref + pot * voltage
-
+        # voltage = pybamm.boundary_value(phi_s_n, "left")
         # The `variables` dictionary contains all variables that might be useful for
         # visualising the solution of the model
         self.variables = {
@@ -375,17 +310,16 @@ class BasicDFNHalfCell(BaseModel):
             "Positive particle concentration [mol.m-3]": param.c_p_max * c_s_p,
             "Current [A]": I,
             "Negative electrode potential": phi_s_n,
-            "Negative electrode potential [V]": param.U_n_ref + pot * phi_s_n,
+            "Negative electrode potential [V]": pot * phi_s_n,
             "Electrolyte potential": phi_e,
-            "Electrolyte potential [V]": pot * phi_e,
+            "Electrolyte potential [V]": -param.U_n_ref + pot * phi_e,
             "Positive electrode potential": phi_s_p,
-            "Positive electrode potential [V]": param.U_p_ref + pot * phi_s_p,
-            "Voltage drop": voltage,
-            "Voltage drop [V]": voltage_dim,
-            "Terminal voltage": voltage
-            + 2 * pybamm.arcsinh(i_cell * i_typ / j_Li)
-            + L_Li * i_typ * i_cell / (sigma_Li * pot),
-            "Terminal voltage [V]": voltage_dim
-            + 2 * pot * pybamm.arcsinh(i_cell * i_typ / j_Li)
-            + L_Li * i_typ * i_cell / sigma_Li,
+            "Positive electrode potential [V]": (param.U_p_ref - param.U_n_ref)
+            + pot * phi_s_p,
+            "Terminal voltage": voltage,
+            "Terminal voltage [V]": -param.U_n_ref + pot * voltage,
         }
+        # self.events += [
+        #     pybamm.Event("Minimum voltage", voltage - param.voltage_low_cut),
+        #     pybamm.Event("Maximum voltage", voltage - param.voltage_high_cut),
+        # ]

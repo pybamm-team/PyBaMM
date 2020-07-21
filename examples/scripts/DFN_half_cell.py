@@ -7,9 +7,8 @@ import numpy as np
 
 pybamm.set_logging_level("INFO")
 
-
 # load model
-model = pybamm.lithium_ion.BasicDFNHalfCell()
+model = pybamm.lithium_ion.BasicDFNHalfCell(working_electrode="cathode")
 
 # create geometry
 geometry = model.default_geometry
@@ -18,6 +17,14 @@ geometry = model.default_geometry
 Crate = 0.5
 chemistry = pybamm.parameter_sets.Chen2020
 param = pybamm.ParameterValues(chemistry=chemistry)
+param.update(
+    {
+        "Lithium counter electrode exchange-current density [A.m-2]": 12.6,
+        "Lithium counter electrode conductivity [S.m-1]": 1.0776e7,
+        "Lithium counter electrode thickness [m]": 250e-6,
+    },
+    check_already_exists=False
+)
 param["Current function [A]"] = Crate * 5
 param.process_model(model)
 param.process_geometry(geometry)
@@ -47,7 +54,7 @@ plot = pybamm.QuickPlot(
         "Negative electrode potential [V]",
         "Electrolyte potential [V]",
         "Positive electrode potential [V]",
-        "Terminal voltage [V]",
+        ["Terminal voltage [V]", "Voltage drop [V]"],
     ],
     time_unit="seconds",
     spatial_unit="um",
