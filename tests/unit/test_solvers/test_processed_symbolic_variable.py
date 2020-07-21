@@ -57,10 +57,8 @@ class TestProcessedSymbolicVariable(unittest.TestCase):
         # Test bad inputs
         with self.assertRaisesRegex(TypeError, "inputs should be 'dict'"):
             processed_var.value(1)
-        with self.assertRaisesRegex(ValueError, "Inconsistent input keys"):
+        with self.assertRaisesRegex(KeyError, "Inconsistent input keys"):
             processed_var.value({"not p": 3})
-        with self.assertRaisesRegex(ValueError, "Inconsistent input keys"):
-            processed_var.value({"q": 3, "p": 2})
 
     def test_processed_variable_0D_some_inputs(self):
         # with some symbolic inputs and some non-symbolic inputs
