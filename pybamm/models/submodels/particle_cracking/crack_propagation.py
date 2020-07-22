@@ -40,14 +40,14 @@ class CrackPropagation(BaseCracking):
         # cracking rate with temperature dependence
         # stress_t_surf_n[stress_t_surf_n<0]=pybamm.Scalr(0) 
         # # compressive stress will not lead to crack propagation
-        dK_SIF = stress_t_surf_n * mp.b_cr * pybamm.sqrt(np.pi * l_cr_n * l_cr_n_0) * (stress_t_surf_n >= 0)
+        dK_SIF = stress_t_surf_n * mp.b_cr * pybamm.Sqrt(np.pi * l_cr_n * l_cr_n_0) * (stress_t_surf_n >= 0)
         dl_cr_n = mp.crack_flag * k_cr_n * pybamm.Power(dK_SIF , mp.m_cr) / mp.t0_cr / l_cr_n_0
         self.rhs = {l_cr_n: dl_cr_n}
 
     def set_initial_conditions(self,variables):
         l_cr_n = variables["Negative particle crack length"]
         l0 = pybamm.PrimaryBroadcast(
-            pybamm.Scalar(1), "negative particle"
+            pybamm.Scalar(1), "negative electrode"
         )
         self.initial_conditions={l_cr_n: l0}
 
