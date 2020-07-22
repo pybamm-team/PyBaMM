@@ -61,6 +61,8 @@ class BaseBatteryModel(pybamm.BaseModel):
                     :class:`pybamm.sei.ElectronMigrationLimited`
                 - "interstitial-diffusion limited": \
                     :class:`pybamm.sei.InterstitialDiffusionLimited`
+                - "ec reaction limited": \
+                    :class:`pybamm.sei.EcReactionLimited`
             * "sei film resistance" : str
                 Set the submodel for additional term in the overpotential due to SEI.
                 The default value is "None" if the "sei" option is "None", and
@@ -86,7 +88,8 @@ class BaseBatteryModel(pybamm.BaseModel):
                     .. math::
                         \\eta_r = \\frac{F}{RT}
                         * (\\phi_s - \\phi_e - U - R_{sei} * L_{sei} * \\frac{I}{aL})
-
+            * "sei porosity change" : bool
+                Whether to include porosity change due to SEI formation (default False)
 
     **Extends:** :class:`pybamm.BaseModel`
     """
@@ -113,15 +116,19 @@ class BaseBatteryModel(pybamm.BaseModel):
     @property
     def default_var_pts(self):
         var = pybamm.standard_spatial_vars
-        return {
+        base_var_pts = {
             var.x_n: 20,
             var.x_s: 20,
             var.x_p: 20,
-            var.r_n: 10,
-            var.r_p: 10,
+            var.r_n: 30,
+            var.r_p: 30,
             var.y: 10,
             var.z: 10,
         }
+        # Reduce the default points for 2D current collectors
+        if self.options["dimensionality"] == 2:
+            base_var_pts.update({var.x_n: 10, var.x_s: 10, var.x_p: 10})
+        return base_var_pts
 
     @property
     def default_submesh_types(self):
@@ -181,6 +188,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "cell_geometry": None,
             "external submodels": [],
             "sei": None,
+            "sei porosity change": False,
         }
         # Change the default for cell geometry based on which thermal option is provided
         extra_options = extra_options or {}
@@ -301,12 +309,19 @@ class BaseBatteryModel(pybamm.BaseModel):
             "solvent-diffusion limited",
             "electron-migration limited",
             "interstitial-diffusion limited",
+            "ec reaction limited",
         ]:
             raise pybamm.OptionError("Unknown sei model '{}'".format(options["sei"]))
         if options["sei film resistance"] not in [None, "distributed", "average"]:
             raise pybamm.OptionError(
                 "Unknown sei film resistance model '{}'".format(
                     options["sei film resistance"]
+                )
+            )
+        if options["sei porosity change"] not in [True, False]:
+            raise pybamm.OptionError(
+                "Unknown sei porosity change '{}'".format(
+                    options["sei porosity change"]
                 )
             )
 
@@ -474,12 +489,14 @@ class BaseBatteryModel(pybamm.BaseModel):
                         submodel_name, self.name
                     )
                 )
+
                 submodel.set_algebraic(self.variables)
                 pybamm.logger.debug(
                     "Setting boundary conditions for {} submodel ({})".format(
                         submodel_name, self.name
                     )
                 )
+
                 submodel.set_boundary_conditions(self.variables)
                 pybamm.logger.debug(
                     "Setting initial conditions for {} submodel ({})".format(
@@ -492,6 +509,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                     "Updating {} submodel ({})".format(submodel_name, self.name)
                 )
                 self.update(submodel)
+                self.check_no_repeated_keys()
 
     def build_model(self):
 
@@ -529,6 +547,36 @@ class BaseBatteryModel(pybamm.BaseModel):
                 self.variables.update(var)
 
         self._built = True
+
+    def new_copy(self, build=True):
+        """
+        Create a copy of the model. Overwrites the functionality of
+        :class:`pybamm.BaseModel` to make sure that the submodels are updated correctly
+        """
+        # create without building
+        # 'build' is not a keyword argument for the BaseBatteryModel class, but it
+        # should be for all of the subclasses
+        new_model = self.__class__(options=self.options, name=self.name, build=False)
+        # update submodels
+        new_model.submodels = self.submodels
+        # clear submodel equations to avoid weird conflicts
+        for submodel in self.submodels.values():
+            submodel._rhs = {}
+            submodel._algebraic = {}
+            submodel._initial_conditions = {}
+            submodel._boundary_conditions = {}
+            submodel._variables = {}
+            submodel._events = []
+
+        # now build
+        if build:
+            new_model.build_model()
+        new_model.use_jacobian = self.use_jacobian
+        new_model.use_simplify = self.use_simplify
+        new_model.convert_to_format = self.convert_to_format
+        new_model.timescale = self.timescale
+        new_model.length_scales = self.length_scales
+        return new_model
 
     def set_external_circuit_submodel(self):
         """

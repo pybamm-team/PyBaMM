@@ -6,6 +6,7 @@ import tests
 
 import numpy as np
 import unittest
+from platform import system
 
 
 class TestSPMe(unittest.TestCase):
@@ -69,6 +70,10 @@ class TestSPMe(unittest.TestCase):
         np.testing.assert_array_almost_equal(original, simp_and_known)
         np.testing.assert_array_almost_equal(original, simp_and_python)
 
+        if system() != "Windows":
+            simp_and_jax = optimtest.evaluate_model(simplify=True, to_jax=True)
+            np.testing.assert_array_almost_equal(original, simp_and_jax)
+
     def test_set_up(self):
         model = pybamm.lithium_ion.SPMe()
         optimtest = tests.OptimisationsTest(model)
@@ -129,6 +134,12 @@ class TestSPMeWithSEI(unittest.TestCase):
 
     def test_well_posed_interstitial_diffusion_limited(self):
         options = {"sei": "interstitial-diffusion limited"}
+        model = pybamm.lithium_ion.SPMe(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+    def test_well_posed_ec_reaction_limited(self):
+        options = {"sei": "ec reaction limited", "sei porosity change": True}
         model = pybamm.lithium_ion.SPMe(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()

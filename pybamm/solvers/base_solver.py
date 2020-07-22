@@ -51,7 +51,7 @@ class BaseSolver(object):
                 "max_steps has been deprecated, and should be set using the "
                 "solver-specific extra-options dictionaries instead"
             )
-        self.models_set_up = set()
+        self.models_set_up = {}
 
         # Defaults, can be overwritten by specific solver
         self.name = "Base solver"
@@ -114,7 +114,7 @@ class BaseSolver(object):
         "Returns a copy of the solver"
         new_solver = copy.copy(self)
         # clear models_set_up
-        new_solver.models_set_up = set()
+        new_solver.models_set_up = {}
         return new_solver
 
     def set_up(self, model, inputs=None):
@@ -224,6 +224,11 @@ class BaseSolver(object):
                 if model.use_simplify:
                     report(f"Simplifying {name}")
                     func = simp.simplify(func)
+
+                if model.convert_to_format == "jax":
+                    report(f"Converting {name} to jax")
+                    jax_func = pybamm.EvaluatorJax(func)
+
                 if use_jacobian:
                     report(f"Calculating jacobian for {name}")
                     jac = jacobian.jac(func, y)
@@ -233,13 +238,22 @@ class BaseSolver(object):
                     if model.convert_to_format == "python":
                         report(f"Converting jacobian for {name} to python")
                         jac = pybamm.EvaluatorPython(jac)
+                    elif model.convert_to_format == "jax":
+                        report(f"Converting jacobian for {name} to jax")
+                        jac = jax_func.get_jacobian()
                     jac = jac.evaluate
                 else:
                     jac = None
+
                 if model.convert_to_format == "python":
                     report(f"Converting {name} to python")
                     func = pybamm.EvaluatorPython(func)
+                if model.convert_to_format == "jax":
+                    report(f"Converting {name} to jax")
+                    func = jax_func
+
                 func = func.evaluate
+
             else:
                 # Process with CasADi
                 report(f"Converting {name} to CasADi")
@@ -437,15 +451,19 @@ class BaseSolver(object):
         -------
         y0_consistent : array-like, same shape as y0_guess
             Initial conditions that are consistent with the algebraic equations (roots
-            of the algebraic equations)
+            of the algebraic equations). If self.root_method == None then returns
+            model.y0.
         """
         pybamm.logger.info("Start calculating consistent states")
+        if self.root_method is None:
+            return model.y0
         try:
             root_sol = self.root_method._integrate(model, [time], inputs)
         except pybamm.SolverError as e:
             raise pybamm.SolverError(
-                "Could not find consistent initial conditions: {}".format(e.args[0])
+                "Could not find consistent states: {}".format(e.args[0])
             )
+        pybamm.logger.info("Found consistent states")
         return root_sol.y.flatten()
 
     def solve(self, model, t_eval=None, external_variables=None, inputs=None):
@@ -504,9 +522,23 @@ class BaseSolver(object):
         if model not in self.models_set_up:
             self.set_up(model, ext_and_inputs)
             set_up_time = timer.time()
-            self.models_set_up.add(model)
+            self.models_set_up.update(
+                {model: {"initial conditions": model.concatenated_initial_conditions}}
+            )
         else:
-            set_up_time = 0
+            ics_set_up = self.models_set_up[model]["initial conditions"]
+            # Check that initial conditions have not been updated
+            if ics_set_up.id == model.concatenated_initial_conditions.id:
+                set_up_time = 0
+            else:
+                # If the new initial conditions are different, set up again
+                # Doing the whole setup again might be slow, but no need to prematurely
+                # optimize this
+                self.set_up(model, ext_and_inputs)
+                self.models_set_up[model][
+                    "initial conditions"
+                ] = model.concatenated_initial_conditions
+                set_up_time = timer.time()
 
         # (Re-)calculate consistent initial conditions
         self._set_initial_conditions(model, ext_and_inputs, update_rhs=True)
@@ -825,8 +857,8 @@ class SolverCallable:
         self.timescale = self.model.timescale_eval
 
     def __call__(self, t, y, inputs):
-        y = y[:, np.newaxis]
-        if self.name in ["RHS", "algebraic", "residuals", "event"]:
+        y = y.reshape(-1, 1)
+        if self.name in ["RHS", "algebraic", "residuals"]:
             pybamm.logger.debug(
                 "Evaluating {} for {} at t={}".format(
                     self.name, self.model.name, t * self.timescale

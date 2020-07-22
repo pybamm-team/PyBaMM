@@ -4,7 +4,7 @@ For new users we recommend the [Getting Started](./Getting%20Started/) notebooks
 
 # Examples
 
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/pybamm-team/PyBaMM/master)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/master/)
 
 This page contains a number of examples showing how to use PyBaMM.
 
