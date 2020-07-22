@@ -722,11 +722,7 @@ class ProcessedVariable(object):
                     + "implemented)"
                 )
 
-        # Make entries a function and compute jacobian
-        casadi_entries_fn = casadi.Function(
-            "variable", [self.symbolic_inputs], [entries_MX]
-        )
-
+        # Compute jacobian
         sens_MX = casadi.jacobian(entries_MX, self.symbolic_inputs)
         casadi_sens_fn = casadi.Function("variable", [self.symbolic_inputs], [sens_MX])
 

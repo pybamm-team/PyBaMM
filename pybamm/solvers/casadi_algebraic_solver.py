@@ -40,6 +40,9 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         self.extra_options = extra_options or {}
         pybamm.citations.register("Andersson2019")
 
+        self.rootfinders = {}
+        self.y_sols = {}
+
     @property
     def tol(self):
         return self._tol
@@ -62,24 +65,12 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
             Any input parameters to pass to the model when solving.
         """
         # Record whether there are any symbolic inputs
-        inputs = inputs or {}
+        inputs_dict = inputs or {}
         # Create casadi objects for the root-finder
-        inputs_dict = inputs
         inputs = casadi.vertcat(*[v for v in inputs.values()])
 
-        if self.sensitivity == "casadi" and inputs_dict != {}:
-            # Create symbolic inputs for sensitivity analysis
-            symbolic_inputs_list = []
-            for name, value in inputs_dict.items():
-                if isinstance(value, numbers.Number):
-                    symbolic_inputs_list.append(casadi.MX.sym(name))
-                else:
-                    symbolic_inputs_list.append(casadi.MX.sym(name, value.shape[0]))
-            symbolic_inputs = casadi.vertcat(*[p for p in symbolic_inputs_list])
-            inputs_for_alg = symbolic_inputs
-        else:
-            symbolic_inputs = casadi.DM()
-            inputs_for_alg = inputs
+        # Create symbolic inputs
+        symbolic_inputs = casadi.MX.sym("inputs", inputs.shape[0])
 
         y0 = model.y0
         # The casadi algebraic solver can read rhs equations, but leaves them unchanged
@@ -101,34 +92,50 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
 
         y_alg = None
 
-        # Set up
-        t_sym = casadi.MX.sym("t")
-        y_alg_sym = casadi.MX.sym("y_alg", y0_alg.shape[0])
-        y_sym = casadi.vertcat(y0_diff, y_alg_sym)
+        if model in self.rootfinders:
+            if self.sensitivity == "casadi":
+                # Reuse (symbolic) solution with new inputs
+                y_sol = self.y_sols[model]
+                return pybamm.Solution(
+                    t_eval,
+                    y_sol,
+                    termination="success",
+                    model=model,
+                    inputs=inputs_dict,
+                )
+            roots = self.rootfinders[model]
+        else:
+            # Set up
+            t_sym = casadi.MX.sym("t")
+            y_alg_sym = casadi.MX.sym("y_alg", y0_alg.shape[0])
+            y_sym = casadi.vertcat(y0_diff, y_alg_sym)
 
-        t_and_inputs_sym = casadi.vertcat(t_sym, symbolic_inputs)
-        alg = model.casadi_algebraic(t_sym, y_sym, inputs_for_alg)
+            t_and_inputs_sym = casadi.vertcat(t_sym, symbolic_inputs)
+            alg = model.casadi_algebraic(t_sym, y_sym, symbolic_inputs)
 
-        # Set constraints vector in the casadi format
-        # Constrain the unknowns. 0 (default): no constraint on ui, 1: ui >= 0.0,
-        # -1: ui <= 0.0, 2: ui > 0.0, -2: ui < 0.0.
-        constraints = np.zeros_like(model.bounds[0], dtype=int)
-        # If the lower bound is positive then the variable must always be positive
-        constraints[model.bounds[0] >= 0] = 1
-        # If the upper bound is negative then the variable must always be negative
-        constraints[model.bounds[1] <= 0] = -1
+            # Set constraints vector in the casadi format
+            # Constrain the unknowns. 0 (default): no constraint on ui, 1: ui >= 0.0,
+            # -1: ui <= 0.0, 2: ui > 0.0, -2: ui < 0.0.
+            constraints = np.zeros_like(model.bounds[0], dtype=int)
+            # If the lower bound is positive then the variable must always be positive
+            constraints[model.bounds[0] >= 0] = 1
+            # If the upper bound is negative then the variable must always be negative
+            constraints[model.bounds[1] <= 0] = -1
 
-        # Set up rootfinder
-        roots = casadi.rootfinder(
-            "roots",
-            "newton",
-            dict(x=y_alg_sym, p=t_and_inputs_sym, g=alg),
-            {
-                **self.extra_options,
-                "abstol": self.tol,
-                "constraints": list(constraints[len_rhs:]),
-            },
-        )
+            # Set up rootfinder
+            roots = casadi.rootfinder(
+                "roots",
+                "newton",
+                dict(x=y_alg_sym, p=t_and_inputs_sym, g=alg),
+                {
+                    **self.extra_options,
+                    "abstol": self.tol,
+                    "constraints": list(constraints[len_rhs:]),
+                },
+            )
+
+            self.rootfinders[model] = roots
+
         for idx, t in enumerate(t_eval):
             # Evaluate algebraic with new t and previous y0, if it's already close
             # enough then keep it
@@ -145,10 +152,15 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                     y_alg = casadi.horzcat(y_alg, y0_alg)
             # Otherwise calculate new y_sol
             else:
-                t_eval_inputs_sym = casadi.vertcat(t, symbolic_inputs)
+                # If doing sensitivity with casadi, evaluate with symbolic inputs
+                # Otherwise, evaluate with actual inputs
+                if self.sensitivity == "casadi":
+                    t_eval_and_inputs = casadi.vertcat(t, symbolic_inputs)
+                else:
+                    t_eval_and_inputs = casadi.vertcat(t, inputs)
                 # Solve
                 try:
-                    y_alg_sol = roots(y0_alg, t_eval_inputs_sym)
+                    y_alg_sol = roots(y0_alg, t_eval_and_inputs)
                     success = True
                     message = None
                     # Check final output
@@ -193,6 +205,8 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         # If doing sensitivity, return the solution as a function of the inputs
         if self.sensitivity == "casadi":
             y_sol = casadi.Function("y_sol", [symbolic_inputs], [y_sol])
+            # Save the solution, can just reuse and change the inputs
+            self.y_sols[model] = y_sol
         # Return solution object (no events, so pass None to t_event, y_event)
         return pybamm.Solution(
             t_eval, y_sol, termination="success", model=model, inputs=inputs_dict
