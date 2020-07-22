@@ -75,7 +75,7 @@ class CasadiSolver(pybamm.BaseSolver):
         dt_max=None,
         extra_options_setup=None,
         extra_options_call=None,
-        sensitivity=False,
+        sensitivity=None,
     ):
         super().__init__(
             "problem dependent",

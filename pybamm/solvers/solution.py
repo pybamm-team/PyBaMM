@@ -64,7 +64,13 @@ class _BaseSolution(object):
         # If the model has been provided, split up y into solution and sensitivity
         # Don't do this if the sensitivity equations have not been computed (i.e. if
         # y only has the shape or the rhs and alg solution)
-        if model is None or model.len_rhs_and_alg == y.shape[0]:
+        # Don't do this if y is symbolic (sensitivities will be calculated a different
+        # way)
+        if (
+            model is None
+            or isinstance(y, casadi.Function)
+            or model.len_rhs_and_alg == y.shape[0]
+        ):
             self._y = y
             self.sensitivity = {}
         else:
@@ -243,7 +249,6 @@ class _BaseSolution(object):
                 var = pybamm.ProcessedVariable(
                     self.model.variables[key], self, self._known_evals
                 )
-
                 # Update known_evals in order to process any other variables faster
                 for t in var.known_evals:
                     self._known_evals[t].update(var.known_evals[t])

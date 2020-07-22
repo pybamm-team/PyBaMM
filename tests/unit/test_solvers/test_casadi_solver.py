@@ -622,7 +622,7 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
         # Solve
         # Make sure that passing in extra options works
         solver = pybamm.CasadiSolver(
-            mode="fast", rtol=1e-10, atol=1e-10, sensitivity=True
+            mode="fast", rtol=1e-10, atol=1e-10, sensitivity="explicit forward"
         )
         t_eval = np.linspace(0, 1, 80)
         solution = solver.solve(model, t_eval, inputs={"p": 0.1})
@@ -656,7 +656,9 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
 
         # Solve
         # Make sure that passing in extra options works
-        solver = pybamm.CasadiSolver(rtol=1e-10, atol=1e-10, sensitivity=True)
+        solver = pybamm.CasadiSolver(
+            rtol=1e-10, atol=1e-10, sensitivity="explicit forward"
+        )
         t_eval = np.linspace(0, 1, 80)
         solution = solver.solve(
             model, t_eval, inputs={"p": 0.1, "q": 2, "r": -1, "s": 0.5}
@@ -725,7 +727,7 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
         n = disc.mesh["negative electrode"].npts
 
         # Solve - scalar input
-        solver = pybamm.CasadiSolver(sensitivity=True)
+        solver = pybamm.CasadiSolver(sensitivity="explicit forward")
         t_eval = np.linspace(0, 1)
         solution = solver.solve(model, t_eval, inputs={"param": 7})
         np.testing.assert_array_almost_equal(
@@ -756,7 +758,9 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
 
         # Solve
         # Make sure that passing in extra options works
-        solver = pybamm.CasadiSolver(rtol=1e-10, atol=1e-10, sensitivity=True)
+        solver = pybamm.CasadiSolver(
+            rtol=1e-10, atol=1e-10, sensitivity="explicit forward"
+        )
         t_eval = np.linspace(0, 1, 80)
         solution = solver.solve(
             model, t_eval, inputs={"p": 0.1, "q": 2, "r": -1, "s": 0.5}
@@ -832,7 +836,7 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
 
         # Solve - constant input
         solver = pybamm.CasadiSolver(
-            mode="fast", rtol=1e-10, atol=1e-10, sensitivity=True
+            mode="fast", rtol=1e-10, atol=1e-10, sensitivity="explicit forward"
         )
         t_eval = np.linspace(0, 1)
         solution = solver.solve(model, t_eval, inputs={"param": 7 * np.ones(n)})
@@ -895,7 +899,7 @@ class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
         # Solve
         # Make sure that passing in extra options works
         solver = pybamm.CasadiSolver(
-            mode="fast", rtol=1e-10, atol=1e-10, sensitivity=True
+            mode="fast", rtol=1e-10, atol=1e-10, sensitivity="explicit forward"
         )
         t_eval = np.linspace(0, 1, 80)
         solution = solver.solve(model, t_eval, inputs={"p": 0.1})
@@ -935,7 +939,9 @@ class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
 
         # Solve
         # Make sure that passing in extra options works
-        solver = pybamm.CasadiSolver(rtol=1e-10, atol=1e-10, sensitivity=True)
+        solver = pybamm.CasadiSolver(
+            rtol=1e-10, atol=1e-10, sensitivity="explicit forward"
+        )
         t_eval = np.linspace(0, 1, 3)
         solution = solver.solve(
             model, t_eval, inputs={"p": 0.1, "q": 2, "r": -1, "s": 0.5}
@@ -1013,7 +1019,7 @@ class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
         n = disc.mesh["negative electrode"].npts
 
         # Solve - scalar input
-        solver = pybamm.CasadiSolver(sensitivity=True)
+        solver = pybamm.CasadiSolver(sensitivity="explicit forward")
         t_eval = np.linspace(0, 1)
         solution = solver.solve(model, t_eval, inputs={"param": 7})
         np.testing.assert_array_almost_equal(

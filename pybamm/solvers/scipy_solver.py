@@ -29,7 +29,7 @@ class ScipySolver(pybamm.BaseSolver):
     """
 
     def __init__(
-        self, method="BDF", rtol=1e-6, atol=1e-6, extra_options=None, sensitivity=False,
+        self, method="BDF", rtol=1e-6, atol=1e-6, extra_options=None, sensitivity=None,
     ):
         super().__init__(
             method=method, rtol=rtol, atol=atol, sensitivity=sensitivity,

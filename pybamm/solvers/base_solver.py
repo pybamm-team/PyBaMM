@@ -31,12 +31,15 @@ class BaseSolver(object):
         specified by 'root_method' (e.g. "lm", "hybr", ...)
     root_tol : float, optional
         The tolerance for the initial-condition solver (default is 1e-6).
-    sensitivity : bool, optional
-        Whether to explicitly formulate the sensitivity equations for sensitivity
-        to input parameters. The formulation is as per "Park, S., Kato, D., Gima, Z.,
+    sensitivity : str, optional
+        Whether (and how) to calculate sensitivities when solving. Options are:
+
+        - "explicit forward": explicitly formulate the sensitivity equations.
+        The formulation is as per "Park, S., Kato, D., Gima, Z.,
         Klein, R., & Moura, S. (2018). Optimal experimental design for parameterization
         of an electrochemical lithium-ion battery model. Journal of The Electrochemical
         Society, 165(7), A1309.". See #1100 for details
+        - see specific solvers for other options
     """
 
     def __init__(
@@ -47,7 +50,7 @@ class BaseSolver(object):
         root_method=None,
         root_tol=1e-6,
         max_steps="deprecated",
-        sensitivity=False,
+        sensitivity=None,
     ):
         self._method = method
         self._rtol = rtol

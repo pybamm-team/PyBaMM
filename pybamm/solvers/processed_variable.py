@@ -64,6 +64,40 @@ class ProcessedVariable(object):
         self._sensitivity = None
         self.solution_sensitivity = solution.sensitivity
 
+        # Special case: symbolic solution, with casadi
+        if isinstance(solution.y, casadi.Function):
+            # Evaluate solution at specific inputs value
+            inputs_stacked = casadi.vertcat(*solution.inputs.values())
+            self.u_sol = solution.y(inputs_stacked).full()
+            # Convert variable to casadi
+            t_MX = casadi.MX.sym("t")
+            y_MX = casadi.MX.sym("y", self.u_sol.shape[0])
+            # Make all inputs symbolic first for converting to casadi
+            symbolic_inputs_dict = {
+                name: casadi.MX.sym(name, value.shape[0])
+                for name, value in solution.inputs.items()
+            }
+
+            # The symbolic_inputs will be used for sensitivity
+            symbolic_inputs = casadi.vertcat(*symbolic_inputs_dict.values())
+            try:
+                var_casadi = base_variable.to_casadi(
+                    t_MX, y_MX, inputs=symbolic_inputs_dict
+                )
+            except:
+                n = 1
+            self.base_variable_sym = casadi.Function(
+                "variable", [t_MX, y_MX, symbolic_inputs], [var_casadi]
+            )
+            # Store symbolic inputs for sensitivity
+            self.symbolic_inputs = symbolic_inputs
+            self.y_sym = solution.y(symbolic_inputs)
+        else:
+            self.u_sol = solution.y
+            self.base_variable_sym = None
+            self.symbolic_inputs = None
+            self.y_sym = None
+
         # Set timescale
         self.timescale = solution.model.timescale.evaluate()
         self.t_pts = self.t_sol * self.timescale
@@ -78,8 +112,8 @@ class ProcessedVariable(object):
         # Evaluate base variable at initial time
         if self.known_evals:
             self.base_eval, self.known_evals[solution.t[0]] = base_variable.evaluate(
-                solution.t[0],
-                solution.y[:, 0],
+                self.t_sol[0],
+                self.u_sol[:, 0],
                 inputs={name: inp[:, 0] for name, inp in solution.inputs.items()},
                 known_evals=self.known_evals[solution.t[0]],
             )
@@ -571,10 +605,20 @@ class ProcessedVariable(object):
             return {}
         # Otherwise initialise and return sensitivity
         if self._sensitivity is None:
-            self.initialise_sensitivity()
+            # Check that we can compute sensitivities
+            if self.base_variable_sym is None and self.solution_sensitivity == {}:
+                raise ValueError(
+                    "Cannot compute sensitivities. The 'sensitivity' argument of the "
+                    "solver should be changed from 'None' to allow sensitivity "
+                    "calculations. Check solver documentation for details."
+                )
+            if self.base_variable_sym is None:
+                self.initialise_sensitivity_explicit_forward()
+            else:
+                self.initialise_sensitivity_casadi()
         return self._sensitivity
 
-    def initialise_sensitivity(self):
+    def initialise_sensitivity_explicit_forward(self):
         "Set up the sensitivity dictionary"
         inputs_stacked = casadi.vertcat(*[p for p in self.inputs.values()])
 
@@ -626,6 +670,79 @@ class ProcessedVariable(object):
             start = end
 
         # Save attribute
+        self._sensitivity = sensitivity
+
+    def initialise_sensitivity_casadi(self):
+        def initialise_0D_symbolic():
+            "Create a 0D symbolic variable"
+            # Evaluate the base_variable index-by-index
+            for idx in range(len(self.t_sol)):
+                t = self.t_sol[idx]
+                u = self.y_sym[:, idx]
+                next_entries = self.base_variable_sym(t, u, self.symbolic_inputs)
+                if idx == 0:
+                    entries = next_entries
+                else:
+                    entries = casadi.horzcat(entries, next_entries)
+
+            return entries
+
+        def initialise_1D_symbolic():
+            "Create a 1D symbolic variable"
+            # Evaluate the base_variable index-by-index
+            for idx in range(len(self.t_sol)):
+                t = self.t_sol[idx]
+                u = self.y_sym[:, idx]
+                next_entries = self.base_variable_sym(t, u, self.symbolic_inputs)
+                if idx == 0:
+                    entries = next_entries
+                else:
+                    entries = casadi.vertcat(entries, next_entries)
+
+            return entries
+
+        inputs_stacked = casadi.vertcat(*self.inputs.values())
+        self.base_eval = self.base_variable_sym(
+            self.t_sol[0], self.u_sol[:, 0], inputs_stacked
+        )
+        if (
+            isinstance(self.base_eval, numbers.Number)
+            or len(self.base_eval.shape) == 0
+            or self.base_eval.shape[0] == 1
+        ):
+            entries_MX = initialise_0D_symbolic()
+        else:
+            n = self.mesh.npts
+            base_shape = self.base_eval.shape[0]
+            # Try shape that could make the variable a 1D variable
+            if base_shape == n:
+                entries_MX = initialise_1D_symbolic()
+            else:
+                # Raise error for 2D variable
+                raise NotImplementedError(
+                    "Shape not recognized for {} ".format(self.base_variable)
+                    + "(note processing of 2D and 3D variables is not yet "
+                    + "implemented)"
+                )
+
+        # Make entries a function and compute jacobian
+        casadi_entries_fn = casadi.Function(
+            "variable", [self.symbolic_inputs], [entries_MX]
+        )
+
+        sens_MX = casadi.jacobian(entries_MX, self.symbolic_inputs)
+        casadi_sens_fn = casadi.Function("variable", [self.symbolic_inputs], [sens_MX])
+
+        sens_eval = casadi_sens_fn(inputs_stacked)
+        sensitivity = {"all": sens_eval}
+
+        # Add the individual sensitivity
+        start = 0
+        for name, inp in self.inputs.items():
+            end = start + inp.shape[0]
+            sensitivity[name] = sens_eval[:, start:end]
+            start = end
+
         self._sensitivity = sensitivity
 
 
