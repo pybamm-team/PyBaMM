@@ -239,19 +239,12 @@ class _BaseSolution(object):
         # Process
         for key in variables:
             pybamm.logger.debug("Post-processing {}".format(key))
-            # If there are symbolic inputs then we need to make a
-            # ProcessedSymbolicVariable
-            if self.has_symbolic_inputs is True:
-                var = pybamm.ProcessedSymbolicVariable(self.model.variables[key], self)
-
-            # Otherwise a standard ProcessedVariable is ok
-            else:
-                var = pybamm.ProcessedVariable(
-                    self.model.variables[key], self, self._known_evals
-                )
-                # Update known_evals in order to process any other variables faster
-                for t in var.known_evals:
-                    self._known_evals[t].update(var.known_evals[t])
+            var = pybamm.ProcessedVariable(
+                self.model.variables[key], self, self._known_evals
+            )
+            # Update known_evals in order to process any other variables faster
+            for t in var.known_evals:
+                self._known_evals[t].update(var.known_evals[t])
 
             # Save variable and data
             self._variables[key] = var

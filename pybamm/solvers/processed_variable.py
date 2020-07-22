@@ -80,12 +80,9 @@ class ProcessedVariable(object):
 
             # The symbolic_inputs will be used for sensitivity
             symbolic_inputs = casadi.vertcat(*symbolic_inputs_dict.values())
-            try:
-                var_casadi = base_variable.to_casadi(
-                    t_MX, y_MX, inputs=symbolic_inputs_dict
-                )
-            except:
-                n = 1
+            var_casadi = base_variable.to_casadi(
+                t_MX, y_MX, inputs=symbolic_inputs_dict
+            )
             self.base_variable_sym = casadi.Function(
                 "variable", [t_MX, y_MX, symbolic_inputs], [var_casadi]
             )
