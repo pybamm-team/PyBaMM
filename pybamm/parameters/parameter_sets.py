@@ -70,6 +70,18 @@ Ecker2015 = {
     "citation": ["ecker2015i", "ecker2015ii", "richardson2020"],
 }
 
+Ecker2015_v2 = {
+    "chemistry": "lithium-ion",
+    "cell": "kokam_Ecker2015",
+    "anode": "graphite_Ecker2015_v2",
+    "separator": "separator_Ecker2015",
+    "cathode": "LiNiCoO2_Ecker2015_v2",
+    "electrolyte": "lipf6_Ecker2015",
+    "experiment": "1C_discharge_from_full_Ecker2015",
+    "sei": "example",
+    "citation": ["ecker2015i", "ecker2015ii", "richardson2020"],
+}
+
 Marquis2019 = {
     "chemistry": "lithium-ion",
     "cell": "kokam_Marquis2019",
