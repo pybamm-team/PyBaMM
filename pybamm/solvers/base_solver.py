@@ -464,7 +464,10 @@ class BaseSolver(object):
                 "Could not find consistent states: {}".format(e.args[0])
             )
         pybamm.logger.info("Found consistent states")
-        return root_sol.y.flatten()
+        y0 = root_sol.y
+        if isinstance(y0, np.ndarray):
+            y0 = y0.flatten()
+        return y0
 
     def solve(self, model, t_eval=None, external_variables=None, inputs=None):
         """
@@ -831,10 +834,13 @@ class BaseSolver(object):
         for input_param in model.input_parameters:
             name = input_param.name
             if name not in inputs:
-                # Only allow symbolic inputs for CasadiAlgebraicSolver
-                if not isinstance(self, pybamm.CasadiAlgebraicSolver):
+                # Only allow symbolic inputs for CasadiSolver and CasadiAlgebraicSolver
+                if not isinstance(
+                    self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver)
+                ):
                     raise pybamm.SolverError(
-                        "Only CasadiAlgebraicSolver can have symbolic inputs"
+                        "Only CasadiSolver and CasadiAlgebraicSolver "
+                        "can have symbolic inputs"
                     )
                 inputs[name] = casadi.MX.sym(name, input_param._expected_size)
 
