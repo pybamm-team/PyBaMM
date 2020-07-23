@@ -204,7 +204,10 @@ class BaseSolver(object):
             model.convert_to_format = "casadi"
 
         # Only allow solving sensitivity equations with the casadi format for now
-        if self.sensitivity is True and model.convert_to_format != "casadi":
+        if (
+            self.sensitivity is "explicit forward"
+            and model.convert_to_format != "casadi"
+        ):
             raise NotImplementedError(
                 "model should be converted to casadi format in order to solve "
                 "sensitivity equations"
@@ -231,7 +234,7 @@ class BaseSolver(object):
                     p_casadi[name] = casadi.MX.sym(name, value.shape[0])
             p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
             # sensitivity vectors
-            if self.sensitivity is True:
+            if self.sensitivity == "explicit forward":
                 S_x = casadi.MX.sym("S_x", model.len_rhs * p_casadi_stacked.shape[0])
                 S_z = casadi.MX.sym("S_z", model.len_alg * p_casadi_stacked.shape[0])
                 y_and_S = casadi.vertcat(y_diff, S_x, y_alg, S_z)
@@ -286,7 +289,7 @@ class BaseSolver(object):
                 report(f"Converting {name} to CasADi")
                 func = func.to_casadi(t_casadi, y_casadi, inputs=p_casadi)
                 # Add sensitivity vectors to the rhs and algebraic equations
-                if self.sensitivity is True:
+                if self.sensitivity == "explicit forward":
                     if name == "rhs" and model.len_rhs > 0:
                         report("Creating sensitivity equations for rhs using CasADi")
                         df_dx = casadi.jacobian(func, y_diff)
@@ -408,7 +411,7 @@ class BaseSolver(object):
         )[0]
         init_eval = InitialConditions(initial_conditions, model)
 
-        if self.sensitivity is True:
+        if self.sensitivity == "explicit forward":
             init_eval.y_dummy = np.zeros(
                 (
                     model.len_rhs_and_alg * (np.vstack(list(inputs.values())).size + 1),
@@ -456,7 +459,7 @@ class BaseSolver(object):
         ):
             # can use DAE solver to solve model with algebraic equations only
             if len(model.rhs) > 0:
-                if self.sensitivity is True:
+                if self.sensitivity == "explicit forward":
                     # Copy mass matrix blocks diagonally
                     single_mass_matrix_inv = model.mass_matrix_inv.entries.toarray()
                     n_inputs = p_casadi_stacked.shape[0]
@@ -946,7 +949,7 @@ class BaseSolver(object):
             name = input_param.name
             if name not in inputs:
                 # Don't allow symbolic inputs if using `sensitivity`
-                if self.sensitivity is True:
+                if self.sensitivity == "explicit forward":
                     raise pybamm.SolverError(
                         "Cannot have symbolic inputs if explicitly solving forward"
                         "sensitivity equations"
