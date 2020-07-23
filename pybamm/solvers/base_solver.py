@@ -205,7 +205,7 @@ class BaseSolver(object):
 
         # Only allow solving sensitivity equations with the casadi format for now
         if (
-            self.sensitivity is "explicit forward"
+            self.sensitivity == "explicit forward"
             and model.convert_to_format != "casadi"
         ):
             raise NotImplementedError(

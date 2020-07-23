@@ -3,7 +3,6 @@
 #
 import casadi
 import pybamm
-import numbers
 import numpy as np
 
 

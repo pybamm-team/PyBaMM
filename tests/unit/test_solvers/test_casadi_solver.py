@@ -6,7 +6,6 @@ import unittest
 import numpy as np
 from tests import get_mesh_for_testing, get_discretisation_for_testing
 from scipy.sparse import eye
-from scipy.optimize import least_squares
 
 
 class TestCasadiSolver(unittest.TestCase):
