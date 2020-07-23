@@ -19,9 +19,9 @@ class BaseCracking(pybamm.BaseSubModel):
         super().__init__(param)
 
     def get_standard_variables(self):
-        l_cr_n = pybamm.Variable("Negative particle crack length")  
+        l_cr_n = pybamm.Variable("Negative particle crack length", domain="negative electrode")
         # crack length in anode particles
-        l_cr_n_dim = pybamm.Variable("Negative particle crack length")  
+        l_cr_n_dim = pybamm.Variable("Negative particle crack length", domain="negative electrode")
         # crack length in anode particles
         variables = {
             "Negative particle crack length [m]": l_cr_n_dim,
