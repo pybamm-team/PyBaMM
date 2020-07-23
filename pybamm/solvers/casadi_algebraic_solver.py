@@ -107,10 +107,11 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         else:
             # Set up
             t_sym = casadi.MX.sym("t")
+            y0_diff_sym = casadi.MX.sym("y0_diff", y0_diff.shape[0])
             y_alg_sym = casadi.MX.sym("y_alg", y0_alg.shape[0])
-            y_sym = casadi.vertcat(y0_diff, y_alg_sym)
+            y_sym = casadi.vertcat(y0_diff_sym, y_alg_sym)
 
-            t_and_inputs_sym = casadi.vertcat(t_sym, symbolic_inputs)
+            t_y0diff_inputs_sym = casadi.vertcat(t_sym, y0_diff_sym, symbolic_inputs)
             alg = model.casadi_algebraic(t_sym, y_sym, symbolic_inputs)
 
             # Set constraints vector in the casadi format
@@ -126,7 +127,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
             roots = casadi.rootfinder(
                 "roots",
                 "newton",
-                dict(x=y_alg_sym, p=t_and_inputs_sym, g=alg),
+                dict(x=y_alg_sym, p=t_y0diff_inputs_sym, g=alg),
                 {
                     **self.extra_options,
                     "abstol": self.tol,
@@ -155,12 +156,12 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                 # If doing sensitivity with casadi, evaluate with symbolic inputs
                 # Otherwise, evaluate with actual inputs
                 if self.sensitivity == "casadi":
-                    t_eval_and_inputs = casadi.vertcat(t, symbolic_inputs)
+                    t_y0_diff_inputs = casadi.vertcat(t, y0_diff, symbolic_inputs)
                 else:
-                    t_eval_and_inputs = casadi.vertcat(t, inputs)
+                    t_y0_diff_inputs = casadi.vertcat(t, y0_diff, inputs)
                 # Solve
                 try:
-                    y_alg_sol = roots(y0_alg, t_eval_and_inputs)
+                    y_alg_sol = roots(y0_alg, t_y0_diff_inputs)
                     success = True
                     message = None
                     # Check final output

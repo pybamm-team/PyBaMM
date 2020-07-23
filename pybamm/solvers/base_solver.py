@@ -510,20 +510,27 @@ class BaseSolver(object):
             Whether to update the rhs. True for 'solve', False for 'step'.
 
         """
+        # Make inputs symbolic if calculating sensitivities with casadi
+        if self.sensitivity == "casadi":
+            symbolic_inputs = casadi.MX.sym(
+                "inputs", casadi.vertcat(*inputs.values()).shape[0]
+            )
+        else:
+            symbolic_inputs = inputs
         if self.algebraic_solver is True:
             # Don't update model.y0
             return None
         elif len(model.algebraic) == 0:
             if update_rhs is True:
                 # Recalculate initial conditions for the rhs equations
-                model.y0 = model.init_eval(inputs)
+                y0 = model.init_eval(symbolic_inputs)
             else:
                 # Don't update model.y0
                 return None
         else:
             if update_rhs is True:
                 # Recalculate initial conditions for the rhs equations
-                y0_from_inputs = model.init_eval(inputs)
+                y0_from_inputs = model.init_eval(symbolic_inputs)
                 # Reuse old solution for algebraic equations
                 y0_from_model = model.y0
                 len_rhs = model.len_rhs
@@ -534,7 +541,12 @@ class BaseSolver(object):
                     model.y0 = casadi.vertcat(
                         y0_from_inputs[:len_rhs], y0_from_model[len_rhs:]
                     )
-            model.y0 = self.calculate_consistent_state(model, 0, inputs)
+            y0 = self.calculate_consistent_state(model, 0, inputs)
+        # Make y0 a function of inputs if doing symbolic with casadi
+        if self.sensitivity == "casadi":
+            model.y0 = casadi.Function("y0", [symbolic_inputs], [y0])
+        else:
+            model.y0 = y0
 
     def calculate_consistent_state(self, model, time=0, inputs=None):
         """

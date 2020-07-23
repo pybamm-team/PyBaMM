@@ -208,7 +208,7 @@ class CasadiSolver(pybamm.BaseSolver):
 
                     if self.mode == "safe":
                         # update integrator with the grid
-                        self.create_integrator(model, inputs, t_window)
+                        self.create_integrator(model, inputs_dict, t_window)
                     # Try to solve with the current global step, if it fails then
                     # halve the step size and try again.
                     try:
@@ -347,7 +347,6 @@ class CasadiSolver(pybamm.BaseSolver):
                 self.integrators[model] = (integrator, use_grid)
                 return integrator
         else:
-            y0 = model.y0
             rhs = model.casadi_rhs
             algebraic = model.casadi_algebraic
 
@@ -370,6 +369,12 @@ class CasadiSolver(pybamm.BaseSolver):
             # set up and solve
             t = casadi.MX.sym("t")
             p = casadi.MX.sym("p", inputs.shape[0])
+            # If the initial conditions depend on inputs, evaluate the function
+            if isinstance(model.y0, casadi.Function):
+                y0 = model.y0(p)
+            else:
+                y0 = model.y0
+
             y_diff = casadi.MX.sym("y_diff", rhs(0, y0, p).shape[0])
 
             if use_grid is False:
@@ -420,6 +425,13 @@ class CasadiSolver(pybamm.BaseSolver):
         else:
             inputs_eval = inputs
         integrator, use_grid = self.integrators[model]
+
+        # If the initial conditions depend on inputs, evaluate the function
+        if isinstance(y0, casadi.Function):
+            y0 = y0(symbolic_inputs)
+        else:
+            y0 = y0
+
         # Split up initial conditions into differential and algebraic
         # Check y0 to see if it includes sensitivities
         if model.len_rhs_and_alg == y0.shape[0]:
