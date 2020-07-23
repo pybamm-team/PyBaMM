@@ -307,6 +307,16 @@ class TestCasadiSolver(unittest.TestCase):
         self.assertLess(len(solution.t), len(t_eval))
         np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t), rtol=1e-04)
 
+        # Without grid
+        solver = pybamm.CasadiSolver(mode="safe without grid", rtol=1e-8, atol=1e-8)
+        t_eval = np.linspace(0, 10, 100)
+        solution = solver.solve(model, t_eval, inputs={"rate": 0.1})
+        self.assertLess(len(solution.t), len(t_eval))
+        np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t), rtol=1e-04)
+        solution = solver.solve(model, t_eval, inputs={"rate": 1.1})
+        self.assertLess(len(solution.t), len(t_eval))
+        np.testing.assert_allclose(solution.y[0], np.exp(-1.1 * solution.t), rtol=1e-04)
+
     def test_model_solver_dae_inputs_in_initial_conditions(self):
         # Create model
         model = pybamm.BaseModel()
@@ -547,10 +557,10 @@ class TestCasadiSolverSensitivity(unittest.TestCase):
         )
 
         sens = solution["var"].sensitivity({"param": p}).full()
-        for idx in range(len(t_eval)):
+        for idx, t in enumerate(t_eval):
             np.testing.assert_array_almost_equal(
                 sens[40 * idx : 40 * (idx + 1), :],
-                -2 * t_eval[idx] * np.exp(-p * t_eval[idx]) * np.eye(40),
+                -2 * t * np.exp(-p * t) * np.eye(40),
                 decimal=4,
             )
 
