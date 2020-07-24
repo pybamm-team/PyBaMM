@@ -330,17 +330,6 @@ class Simulation:
             solver = self.solver
 
         if self.operating_mode in ["without experiment", "drive cycle"]:
-            # If t_eval is provided as [t0, tf] return the solution at 100 points
-            if isinstance(t_eval, list):
-                if len(t_eval) != 2:
-                    raise pybamm.SolverError(
-                        "'t_eval' can be provided as an array of times at which to "
-                        "return the solution, or as a list [t0, tf] where t0 is the "
-                        "initial time and tf is the final time, but has been provided "
-                        "as a list of length {}.".format(len(t_eval))
-                    )
-                else:
-                    t_eval = np.linspace(t_eval[0], t_eval[-1], 100)
 
             if self.operating_mode == "without experiment":
                 if t_eval is None:
@@ -403,13 +392,13 @@ class Simulation:
                             pybamm.SolverWarning,
                         )
 
-            self.t_eval = t_eval
             self._solution = solver.solve(
                 self.built_model,
                 t_eval,
                 external_variables=external_variables,
                 inputs=inputs,
             )
+            self.t_eval = self._solution.t * self.model.timescale.evaluate()
 
         elif self.operating_mode == "with experiment":
             if t_eval is not None:
