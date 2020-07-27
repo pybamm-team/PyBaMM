@@ -51,7 +51,7 @@ class BasicDFNHalfCell(BaseModel):
         # Variables
         ######################
         # Variables that depend on time only are created without a domain
-        # Q = pybamm.Variable("Discharge capacity [A.h]")
+        Q = pybamm.Variable("Discharge capacity [A.h]")
         # Variables that vary spatially are created with a domain
         if working_electrode == "anode":
             c_e_n = pybamm.Variable(
@@ -181,9 +181,9 @@ class BasicDFNHalfCell(BaseModel):
         I = param.dimensional_current_with_time
         # The `rhs` dictionary contains differential equations, with the key being the
         # variable in the d/dt
-        # self.rhs[Q] = I * param.timescale / 3600
+        self.rhs[Q] = I * param.timescale / 3600
         # Initial conditions must be provided for the ODEs
-        # self.initial_conditions[Q] = pybamm.Scalar(0)
+        self.initial_conditions[Q] = pybamm.Scalar(0)
 
         ######################
         # Particles
