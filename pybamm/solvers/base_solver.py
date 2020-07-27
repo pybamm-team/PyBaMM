@@ -628,6 +628,19 @@ class BaseSolver(object):
                 t_eval = np.array([0])
             else:
                 raise ValueError("t_eval cannot be None")
+        # If t_eval is provided as [t0, tf] return the solution at 100 points
+        elif isinstance(t_eval, list):
+            if len(t_eval) == 1 and self.algebraic_solver is True:
+                pass
+            elif len(t_eval) != 2:
+                raise pybamm.SolverError(
+                    "'t_eval' can be provided as an array of times at which to "
+                    "return the solution, or as a list [t0, tf] where t0 is the "
+                    "initial time and tf is the final time, but has been provided "
+                    "as a list of length {}.".format(len(t_eval))
+                )
+            else:
+                t_eval = np.linspace(t_eval[0], t_eval[-1], 100)
 
         # Make sure t_eval is monotonic
         if (np.diff(t_eval) < 0).any():
