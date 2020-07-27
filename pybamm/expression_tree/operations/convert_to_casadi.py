@@ -76,6 +76,8 @@ class CasadiConverter(object):
             converted_left = self.convert(left, t, y, y_dot, inputs)
             converted_right = self.convert(right, t, y, y_dot, inputs)
 
+            if isinstance(symbol, pybamm.Modulo):
+                return casadi.fmod(converted_left, converted_right)
             if isinstance(symbol, pybamm.Minimum):
                 return casadi.fmin(converted_left, converted_right)
             if isinstance(symbol, pybamm.Maximum):

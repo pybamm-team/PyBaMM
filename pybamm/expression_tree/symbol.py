@@ -466,6 +466,12 @@ class Symbol(anytree.NodeMixin):
         return pybamm.simplify_if_constant(
             pybamm.AbsoluteValue(self), keep_domains=True
         )
+    
+    def __mod__(self, other):
+        """return an :class:`Modulo` object"""
+        return pybamm.simplify_if_constant(
+            pybamm.Modulo(self, other), keep_domains=True
+        )
 
     def diff(self, variable):
         """

@@ -279,8 +279,8 @@ class BaseSolver(object):
                 jac_call = None
             return func, func_call, jac_call
 
-        # Check for heaviside functions in rhs and algebraic and add discontinuity
-        # events if these exist.
+        # Check for heaviside and modulo functions in rhs and algebraic and add 
+        # discontinuity events if these exist.
         # Note: only checks for the case of t < X, t <= X, X < t, or X <= t, but also
         # accounts for the fact that t might be dimensional
         # Only do this for DAE models as ODE models can deal with discontinuities fine
@@ -290,6 +290,32 @@ class BaseSolver(object):
                 model.concatenated_algebraic.pre_order(),
             ):
                 if isinstance(symbol, pybamm.Heaviside):
+                    found_t = False
+                    # Dimensionless
+                    if symbol.right.id == pybamm.t.id:
+                        expr = symbol.left
+                        found_t = True
+                    elif symbol.left.id == pybamm.t.id:
+                        expr = symbol.right
+                        found_t = True
+                    # Dimensional
+                    elif symbol.right.id == (pybamm.t * model.timescale).id:
+                        expr = symbol.left.new_copy() / symbol.right.right.new_copy()
+                        found_t = True
+                    elif symbol.left.id == (pybamm.t * model.timescale).id:
+                        expr = symbol.right.new_copy() / symbol.left.right.new_copy()
+                        found_t = True
+
+                    # Update the events if the heaviside function depended on t
+                    if found_t:
+                        model.events.append(
+                            pybamm.Event(
+                                str(symbol),
+                                expr.new_copy(),
+                                pybamm.EventType.DISCONTINUITY,
+                            )
+                        )
+                elif isinstance(symbol, pybamm.Modulo):
                     found_t = False
                     # Dimensionless
                     if symbol.right.id == pybamm.t.id:

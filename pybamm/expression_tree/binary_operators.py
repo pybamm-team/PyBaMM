@@ -730,6 +730,21 @@ class NotEqualHeaviside(Heaviside):
             return left < right
 
 
+class Modulo(BinaryOperator):
+    "Calculates the remainder of an integer division"
+
+    def __init__(self, left, right):
+        super().__init__("%", left, right)
+
+    def __str__(self):
+        """ See :meth:`pybamm.Symbol.__str__()`. """
+        return "{!s} mod {!s}".format(self.left, self.right)
+
+    def _binary_evaluate(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        return left % right
+
+
 class Minimum(BinaryOperator):
     " Returns the smaller of two objects "
 
