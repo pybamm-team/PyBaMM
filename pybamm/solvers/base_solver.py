@@ -279,7 +279,7 @@ class BaseSolver(object):
                 jac_call = None
             return func, func_call, jac_call
 
-        # Check for heaviside and modulo functions in rhs and algebraic and add 
+        # Check for heaviside and modulo functions in rhs and algebraic and add
         # discontinuity events if these exist.
         # Note: only checks for the case of t < X, t <= X, X < t, or X <= t, but also
         # accounts for the fact that t might be dimensional
