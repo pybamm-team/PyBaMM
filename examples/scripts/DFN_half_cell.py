@@ -14,7 +14,7 @@ model = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
 
 def GITT_current(Crate, tpulse, trest):
     def current(t):
-        return Crate * pybamm.EqualHeaviside(t, tpulse)
+        return Crate * pybamm.EqualHeaviside(t % (tpulse + trest), tpulse)
 
     return current
 
@@ -34,7 +34,7 @@ param.update(
     },
     check_already_exists=False,
 )
-param["Current function [A]"] = GITT_current(Crate, 300, 1000)
+param["Current function [A]"] = GITT_current(Crate, 300, 200)
 param.process_model(model)
 param.process_geometry(geometry)
 
@@ -48,7 +48,7 @@ disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
 
 # solve model
-t_eval = np.linspace(0, 3800 / Crate, 100)
+t_eval = np.linspace(0, 2000, 3000)
 solver = pybamm.CasadiSolver(atol=1e-6, rtol=1e-3)
 solution = solver.solve(model, t_eval)
 
