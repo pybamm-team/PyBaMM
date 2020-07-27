@@ -8,7 +8,13 @@ import numpy as np
 pybamm.set_logging_level("INFO")
 
 # load model
-model = pybamm.lithium_ion.BasicDFNHalfCell(working_electrode="cathode")
+options = {"working electrode": "cathode"}
+model = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
+
+def GITT_current(Crate, tpulse, trest):
+    def current(t):
+        return Crate * pybamm.EqualHeaviside(t, tpulse)
+    return current
 
 # create geometry
 geometry = model.default_geometry
@@ -25,7 +31,7 @@ param.update(
     },
     check_already_exists=False
 )
-param["Current function [A]"] = Crate * 5
+param["Current function [A]"] = GITT_current(Crate, 300, 1000)
 param.process_model(model)
 param.process_geometry(geometry)
 

@@ -29,7 +29,10 @@ class BasicDFNHalfCell(BaseModel):
     """
 
     def __init__(
-        self, name="Doyle-Fuller-Newman half cell model", working_electrode="anode"
+        self,
+        name="Doyle-Fuller-Newman half cell model",
+        options={"working electrode": "anode"},
+        build=True,
     ):
         super().__init__({}, name)
         pybamm.citations.register("marquis2019asymptotic")
@@ -37,6 +40,7 @@ class BasicDFNHalfCell(BaseModel):
         # this model. These are purely symbolic at this stage, and will be set by the
         # `ParameterValues` class when the model is processed.
         param = self.param
+        working_electrode = options["working electrode"]
 
         if working_electrode not in ["anode", "cathode"]:
             raise ValueError(
@@ -47,7 +51,7 @@ class BasicDFNHalfCell(BaseModel):
         # Variables
         ######################
         # Variables that depend on time only are created without a domain
-        Q = pybamm.Variable("Discharge capacity [A.h]")
+        # Q = pybamm.Variable("Discharge capacity [A.h]")
         # Variables that vary spatially are created with a domain
         if working_electrode == "anode":
             c_e_n = pybamm.Variable(
@@ -177,9 +181,9 @@ class BasicDFNHalfCell(BaseModel):
         I = param.dimensional_current_with_time
         # The `rhs` dictionary contains differential equations, with the key being the
         # variable in the d/dt
-        self.rhs[Q] = I * param.timescale / 3600
+        # self.rhs[Q] = I * param.timescale / 3600
         # Initial conditions must be provided for the ODEs
-        self.initial_conditions[Q] = pybamm.Scalar(0)
+        # self.initial_conditions[Q] = pybamm.Scalar(0)
 
         ######################
         # Particles
@@ -349,14 +353,28 @@ class BasicDFNHalfCell(BaseModel):
         pot = param.potential_scale
         i_typ = param.current_scale
 
-        print(i_typ)
-
         if working_electrode == "anode":
             voltage = pybamm.boundary_value(phi_s_n, "left")
             voltage_dim = param.U_n_ref + pot * voltage
+            # vdrop_Li = 2 * pybamm.arcsinh(i_cell * i_typ / j_Li)
+            # + L_Li * i_typ * i_cell / (sigma_Li * pot)
+            # vdrop_Li_dim = 2 * pot * pybamm.arcsinh(i_cell * i_typ / j_Li)
+            # +L_Li * i_typ * i_cell / sigma_Li
+            vdrop_Li = 0
+            vdrop_Li_dim = 0
         else:
             voltage = pybamm.boundary_value(phi_s_p, "right")
             voltage_dim = param.U_p_ref + pot * voltage
+            # vdrop_Li = -(
+            #     2 * pybamm.arcsinh(i_cell * i_typ / j_Li)
+            #     + L_Li * i_typ * i_cell / (sigma_Li * pot)
+            # )
+            # vdrop_Li_dim = -(
+            #     2 * pot * pybamm.arcsinh(i_cell * i_typ / j_Li)
+            #     + L_Li * i_typ * i_cell / sigma_Li
+            # )
+            vdrop_Li = 0
+            vdrop_Li_dim = 0            
 
         # The `variables` dictionary contains all variables that might be useful for
         # visualising the solution of the model
@@ -376,16 +394,14 @@ class BasicDFNHalfCell(BaseModel):
             "Current [A]": I,
             "Negative electrode potential": phi_s_n,
             "Negative electrode potential [V]": param.U_n_ref + pot * phi_s_n,
+            "Negative electrode open circuit potential": param.U_n(c_s_surf_n, T),
             "Electrolyte potential": phi_e,
             "Electrolyte potential [V]": pot * phi_e,
             "Positive electrode potential": phi_s_p,
             "Positive electrode potential [V]": param.U_p_ref + pot * phi_s_p,
+            "Positive electrode open circuit potential": param.U_p(c_s_surf_p, T),
             "Voltage drop": voltage,
             "Voltage drop [V]": voltage_dim,
-            "Terminal voltage": voltage
-            + 2 * pybamm.arcsinh(i_cell * i_typ / j_Li)
-            + L_Li * i_typ * i_cell / (sigma_Li * pot),
-            "Terminal voltage [V]": voltage_dim
-            + 2 * pot * pybamm.arcsinh(i_cell * i_typ / j_Li)
-            + L_Li * i_typ * i_cell / sigma_Li,
+            "Terminal voltage": voltage + vdrop_Li,
+            "Terminal voltage [V]": voltage_dim + vdrop_Li_dim,
         }
