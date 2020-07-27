@@ -8,13 +8,16 @@ import numpy as np
 pybamm.set_logging_level("INFO")
 
 # load model
-options = {"working electrode": "cathode"}
+options = {"working electrode": "anode"}
 model = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
+
 
 def GITT_current(Crate, tpulse, trest):
     def current(t):
         return Crate * pybamm.EqualHeaviside(t, tpulse)
+
     return current
+
 
 # create geometry
 geometry = model.default_geometry
@@ -29,7 +32,7 @@ param.update(
         "Lithium counter electrode conductivity [S.m-1]": 1.0776e7,
         "Lithium counter electrode thickness [m]": 250e-6,
     },
-    check_already_exists=False
+    check_already_exists=False,
 )
 param["Current function [A]"] = GITT_current(Crate, 300, 1000)
 param.process_model(model)

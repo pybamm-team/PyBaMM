@@ -356,25 +356,24 @@ class BasicDFNHalfCell(BaseModel):
         if working_electrode == "anode":
             voltage = pybamm.boundary_value(phi_s_n, "left")
             voltage_dim = param.U_n_ref + pot * voltage
-            # vdrop_Li = 2 * pybamm.arcsinh(i_cell * i_typ / j_Li)
-            # + L_Li * i_typ * i_cell / (sigma_Li * pot)
-            # vdrop_Li_dim = 2 * pot * pybamm.arcsinh(i_cell * i_typ / j_Li)
-            # +L_Li * i_typ * i_cell / sigma_Li
-            vdrop_Li = 0
-            vdrop_Li_dim = 0
+            vdrop_Li = 2 * pybamm.arcsinh(
+                i_cell * i_typ / j_Li
+            ) + L_Li * i_typ * i_cell / (sigma_Li * pot)
+            vdrop_Li_dim = (
+                2 * pot * pybamm.arcsinh(i_cell * i_typ / j_Li)
+                + L_Li * i_typ * i_cell / sigma_Li
+            )
         else:
             voltage = pybamm.boundary_value(phi_s_p, "right")
             voltage_dim = param.U_p_ref + pot * voltage
-            # vdrop_Li = -(
-            #     2 * pybamm.arcsinh(i_cell * i_typ / j_Li)
-            #     + L_Li * i_typ * i_cell / (sigma_Li * pot)
-            # )
-            # vdrop_Li_dim = -(
-            #     2 * pot * pybamm.arcsinh(i_cell * i_typ / j_Li)
-            #     + L_Li * i_typ * i_cell / sigma_Li
-            # )
-            vdrop_Li = 0
-            vdrop_Li_dim = 0            
+            vdrop_Li = -(
+                2 * pybamm.arcsinh(i_cell * i_typ / j_Li)
+                + L_Li * i_typ * i_cell / (sigma_Li * pot)
+            )
+            vdrop_Li_dim = -(
+                2 * pot * pybamm.arcsinh(i_cell * i_typ / j_Li)
+                + L_Li * i_typ * i_cell / sigma_Li
+            )
 
         # The `variables` dictionary contains all variables that might be useful for
         # visualising the solution of the model
