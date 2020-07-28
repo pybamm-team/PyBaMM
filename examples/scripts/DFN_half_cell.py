@@ -17,6 +17,7 @@ trest = 3600
 Npulse = np.ceil(3600 / (tpulse * Crate))
 tend = (tpulse + trest) * Npulse
 
+
 def GITT_current(Crate, tpulse, trest):
     def current(t):
         # return Crate * pybamm.EqualHeaviside(t % (tpulse + trest), tpulse)
