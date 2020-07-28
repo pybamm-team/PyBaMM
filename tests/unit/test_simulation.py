@@ -370,7 +370,7 @@ class TestSimulation(unittest.TestCase):
 
         # tets list gets turned into np.linspace(t0, tf, 100)
         sim.solve(t_eval=[0, 10])
-        np.testing.assert_array_equal(sim.t_eval, np.linspace(0, 10, 100))
+        np.testing.assert_array_almost_equal(sim.t_eval, np.linspace(0, 10, 100))
 
 
 if __name__ == "__main__":
