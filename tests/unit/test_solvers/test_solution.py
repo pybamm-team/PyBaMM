@@ -29,17 +29,16 @@ class TestSolution(unittest.TestCase):
         # Set up first solution
         t1 = np.linspace(0, 1)
         y1 = np.tile(t1, (20, 1))
-        sol1 = pybamm.Solution(t1, y1)
+        model = pybamm.BaseModel()
+        model.len_rhs_and_alg = 20
+        sol1 = pybamm.Solution(t1, y1, model=model, inputs={"a": 1})
         sol1.solve_time = 1.5
-        sol1.model = pybamm.BaseModel()
-        sol1.inputs = {"a": 1}
 
         # Set up second solution
         t2 = np.linspace(1, 2)
         y2 = np.tile(t2, (20, 1))
-        sol2 = pybamm.Solution(t2, y2)
+        sol2 = pybamm.Solution(t2, y2, model=model, inputs={"a": 2})
         sol2.solve_time = 1
-        sol2.inputs = {"a": 2}
         sol1.append(sol2, create_sub_solutions=True)
 
         # Test
@@ -98,6 +97,7 @@ class TestSolution(unittest.TestCase):
 
     def test_save(self):
         model = pybamm.BaseModel()
+        model.length_scales = {"negative electrode": 1}
         # create both 1D and 2D variables
         c = pybamm.Variable("c")
         d = pybamm.Variable("d", domain="negative electrode")
@@ -138,9 +138,7 @@ class TestSolution(unittest.TestCase):
         np.testing.assert_array_almost_equal(df["2c"], solution.data["2c"])
 
         # raise error if format is unknown
-        with self.assertRaisesRegex(
-            ValueError, "format 'wrong_format' not recognised"
-        ):
+        with self.assertRaisesRegex(ValueError, "format 'wrong_format' not recognised"):
             solution.save_data("test.csv", to_format="wrong_format")
 
         # test save whole solution

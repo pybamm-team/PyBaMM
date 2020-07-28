@@ -44,6 +44,7 @@ class TestAlgebraicSolver(unittest.TestCase):
             timescale_eval = 1
             jac_algebraic_eval = None
             convert_to_format = "python"
+            len_rhs_and_alg = 1
 
             def algebraic_eval(self, t, y, inputs):
                 return y + 2
@@ -66,6 +67,7 @@ class TestAlgebraicSolver(unittest.TestCase):
             timescale_eval = 1
             jac_algebraic_eval = None
             convert_to_format = "casadi"
+            len_rhs_and_alg = 1
 
             def algebraic_eval(self, t, y, inputs):
                 # algebraic equation has no real root
@@ -95,6 +97,7 @@ class TestAlgebraicSolver(unittest.TestCase):
             rhs = {}
             timescale_eval = 1
             convert_to_format = "python"
+            len_rhs_and_alg = 2
 
             def algebraic_eval(self, t, y, inputs):
                 return A @ y - b

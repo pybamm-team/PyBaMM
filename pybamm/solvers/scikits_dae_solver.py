@@ -81,6 +81,7 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
             Any input parameters to pass to the model when solving
 
         """
+        inputs_dict = inputs
         if model.convert_to_format == "casadi":
             inputs = casadi.vertcat(*[x for x in inputs.values()])
 
@@ -150,6 +151,8 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
                 t_root,
                 np.transpose(sol.roots.y),
                 termination,
+                model=model,
+                inputs=inputs_dict,
             )
         else:
             raise pybamm.SolverError(sol.message)

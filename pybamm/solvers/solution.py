@@ -57,9 +57,9 @@ class _BaseSolution(object):
         if isinstance(y, casadi.DM):
             y = y.full()
 
-        # if model or inputs are None, initialize empty, to be populated later
-        self.inputs = inputs or pybamm.FuzzyDict()
-        self._model = model or pybamm.BaseModel()
+        # if inputs are None, initialize empty, to be populated later
+        inputs = inputs or pybamm.FuzzyDict()
+        self.set_inputs(inputs)
 
         # If the model has been provided, split up y into solution and sensitivity
         # Don't do this if the sensitivity equations have not been computed (i.e. if
@@ -70,6 +70,7 @@ class _BaseSolution(object):
             model is None
             or isinstance(y, casadi.Function)
             or model.len_rhs_and_alg == y.shape[0]
+            or model.len_rhs_and_alg == 0  # for the dummy solver
         ):
             self._y = y
             self.sensitivity = {}
@@ -129,6 +130,8 @@ class _BaseSolution(object):
                 start = end
             self.sensitivity = sensitivity
 
+        model = model or pybamm.BaseModel()
+        self.set_model(model)
         self._t_event = t_event
         self._y_event = y_event
         self._termination = termination
@@ -163,10 +166,8 @@ class _BaseSolution(object):
         "Model used for solution"
         return self._model
 
-    @model.setter
-    def model(self, value):
+    def set_model(self, value):
         "Updates the model"
-        assert isinstance(value, pybamm.BaseModel)
         self._model = value
 
     @property
@@ -174,28 +175,19 @@ class _BaseSolution(object):
         "Values of the inputs"
         return self._inputs
 
-    @inputs.setter
-    def inputs(self, inputs):
+    def set_inputs(self, inputs):
         "Updates the input values"
-        # If there are symbolic inputs, just store them as given
-        if any(isinstance(v, casadi.MX) for v in inputs.values()):
-            self.has_symbolic_inputs = True
-            self._inputs = inputs
-        # Otherwise, make them the same size as the time vector
-        else:
-            self.has_symbolic_inputs = False
-            self._inputs = {}
-            for name, inp in inputs.items():
-                # Convert number to vector of the right shape
-                if isinstance(inp, numbers.Number):
-                    inp = inp * np.ones((1, len(self.t)))
-                # Tile a vector
-                else:
-                    if inp.ndim == 1:
-                        inp = np.tile(inp, (len(self.t), 1)).T
-                    else:
-                        inp = np.tile(inp, len(self.t))
-                self._inputs[name] = inp
+        self._inputs = {}
+        for name, inp in inputs.items():
+            # Convert number to vector of the right shape
+            if isinstance(inp, numbers.Number):
+                inp = inp * np.ones((1, len(self.t)))
+            # Otherwise, tile a vector
+            elif inp.ndim == 1:
+                inp = np.tile(inp, (len(self.t), 1)).T
+            elif inp.shape[1] != len(self.t):
+                inp = np.tile(inp, len(self.t))
+            self._inputs[name] = inp
 
     @property
     def t_event(self):
@@ -434,6 +426,6 @@ class Solution(_BaseSolution):
                     solution.termination,
                     copy_this=solution,
                     model=self.model,
-                    inputs=copy.copy(self.inputs),
+                    inputs=copy.copy(solution.inputs),
                 )
             )

@@ -34,11 +34,11 @@ class BaseSolver(object):
     sensitivity : str, optional
         Whether (and how) to calculate sensitivities when solving. Options are:
 
-        - "explicit forward": explicitly formulate the sensitivity equations.
-        The formulation is as per "Park, S., Kato, D., Gima, Z.,
-        Klein, R., & Moura, S. (2018). Optimal experimental design for parameterization
-        of an electrochemical lithium-ion battery model. Journal of The Electrochemical
-        Society, 165(7), A1309.". See #1100 for details
+        - "explicit forward": explicitly formulate the sensitivity equations. \
+        The formulation is as per "Park, S., Kato, D., Gima, Z., \
+        Klein, R., & Moura, S. (2018). Optimal experimental design for parameterization\
+        of an electrochemical lithium-ion battery model. Journal of The Electrochemical\
+        Society, 165(7), A1309.". See #1100 for details \
         - see specific solvers for other options
     """
 
@@ -890,10 +890,6 @@ class BaseSolver(object):
         # Assign times
         solution.set_up_time = set_up_time
         solution.solve_time = timer.time()
-
-        # Add model and inputs to solution
-        solution.model = model
-        solution.inputs = ext_and_inputs
 
         # Identify the event that caused termination
         termination = self.get_termination_reason(solution, model.events)

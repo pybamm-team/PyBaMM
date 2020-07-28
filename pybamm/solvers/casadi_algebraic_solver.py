@@ -25,7 +25,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         Whether (and how) to calculate sensitivities when solving. Options are:
 
         - None: no sensitivities
-        - "explicit forward": explicitly formulate the sensitivity equations.
+        - "explicit forward": explicitly formulate the sensitivity equations. \
         See :class:`pybamm.BaseSolver`
         - "casadi": use casadi to differentiate through the rootfinding operator
 
@@ -66,7 +66,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         # Record whether there are any symbolic inputs
         inputs_dict = inputs or {}
         # Create casadi objects for the root-finder
-        inputs = casadi.vertcat(*[v for v in inputs.values()])
+        inputs = casadi.vertcat(*[v for v in inputs_dict.values()])
 
         # Create symbolic inputs
         symbolic_inputs = casadi.MX.sym("inputs", inputs.shape[0])

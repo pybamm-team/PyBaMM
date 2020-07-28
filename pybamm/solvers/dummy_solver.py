@@ -33,4 +33,6 @@ class DummySolver(pybamm.BaseSolver):
 
         """
         y_sol = np.zeros((1, t_eval.size))
-        return pybamm.Solution(t_eval, y_sol, termination="final time")
+        return pybamm.Solution(
+            t_eval, y_sol, termination="final time", model=model, inputs=inputs
+        )

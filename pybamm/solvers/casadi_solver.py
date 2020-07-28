@@ -58,11 +58,11 @@ class CasadiSolver(pybamm.BaseSolver):
         Any options to pass to the CasADi integrator when calling the integrator.
         Please consult `CasADi documentation <https://tinyurl.com/y5rk76os>`_ for
         details.
-    sensitivity : bool, optional
+    sensitivity : str, optional
         Whether (and how) to calculate sensitivities when solving. Options are:
 
         - None: no sensitivities
-        - "explicit forward": explicitly formulate the sensitivity equations.
+        - "explicit forward": explicitly formulate the sensitivity equations. \
         See :class:`pybamm.BaseSolver`
         - "casadi": use casadi to differentiate through the integrator
     """

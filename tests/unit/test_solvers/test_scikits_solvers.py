@@ -97,6 +97,7 @@ class TestScikitsSolvers(unittest.TestCase):
             terminate_events_eval = []
             timescale_eval = 1
             convert_to_format = "python"
+            len_rhs_and_alg = 2
 
             def residuals_eval(self, t, y, ydot, inputs):
                 return np.array(

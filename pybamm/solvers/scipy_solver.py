@@ -23,8 +23,11 @@ class ScipySolver(pybamm.BaseSolver):
         Any options to pass to the solver.
         Please consult `SciPy documentation <https://tinyurl.com/yafgqg9y>`_ for
         details.
-    sensitivity : bool, optional
-        Whether to explicitly formulate and solve the forward sensitivity equations.
+    sensitivity : str, optional
+        Whether (and how) to calculate sensitivities when solving. Options are:
+
+        - None: no sensitivities
+        - "explicit forward": explicitly formulate the sensitivity equations. \
         See :class:`pybamm.BaseSolver`
     """
 

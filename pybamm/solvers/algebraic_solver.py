@@ -59,9 +59,9 @@ class AlgebraicSolver(pybamm.BaseSolver):
         inputs : dict, optional
             Any input parameters to pass to the model when solving
         """
-        inputs = inputs or {}
+        inputs_dict = inputs or {}
         if model.convert_to_format == "casadi":
-            inputs = casadi.vertcat(*[x for x in inputs.values()])
+            inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
 
         y0 = model.y0
         if isinstance(y0, casadi.DM):
@@ -210,4 +210,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
         y_diff = np.r_[[y0_diff] * len(t_eval)].T
         y_sol = np.r_[y_diff, y_alg]
         # Return solution object (no events, so pass None to t_event, y_event)
-        return pybamm.Solution(t_eval, y_sol, termination="success")
+        return pybamm.Solution(
+            t_eval, y_sol, termination="success", model=model, inputs=inputs_dict
+        )
+

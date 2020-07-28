@@ -154,6 +154,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         t_eval : numeric type
             The times at which to compute the solution
         """
+        inputs_dict = inputs
         if model.rhs_eval.form == "casadi":
             # stack inputs
             inputs = casadi.vertcat(*[x for x in inputs.values()])
@@ -272,6 +273,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 t[-1],
                 np.transpose(y_out[-1])[:, np.newaxis],
                 termination,
+                model=model,
+                inputs=inputs_dict,
             )
         else:
             raise pybamm.SolverError(sol.message)
