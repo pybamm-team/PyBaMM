@@ -55,7 +55,7 @@ pybamm_solution = pybamm.CasadiSolver(mode="fast").solve(pybamm_model, time)
 # Make Comsol 'model' for comparison
 whole_cell = ["negative electrode", "separator", "positive electrode"]
 comsol_t = comsol_variables["time"]
-L_x = param.evaluate(pybamm.standard_parameters_lithium_ion.L_x)
+L_x = param.evaluate(pybamm_model.param.L_x)
 
 
 def get_interp_fun(variable_name, domain):

@@ -204,10 +204,10 @@ class BaseInterface(pybamm.BaseSubModel):
         i_boundary_cc = variables["Current collector current density"]
 
         if self.domain == "Negative":
-            j_total_average = i_boundary_cc / pybamm.geometric_parameters.l_n
+            j_total_average = i_boundary_cc / self.param.l_n
 
         elif self.domain == "Positive":
-            j_total_average = -i_boundary_cc / pybamm.geometric_parameters.l_p
+            j_total_average = -i_boundary_cc / self.param.l_p
 
         return j_total_average
 

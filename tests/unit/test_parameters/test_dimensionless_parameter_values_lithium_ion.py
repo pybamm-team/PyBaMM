@@ -14,7 +14,7 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         are those converted from those in Scott's transfer which previous versions of
         the DFN work with. A 1C rate corresponds to a 24A/m^2 current density"""
         values = pybamm.lithium_ion.BaseModel().default_parameter_values
-        param = pybamm.standard_parameters_lithium_ion
+        param = pybamm.LithiumIonParameters()
 
         c_rate = param.i_typ / 24  # roughly for the numbers I used before
 
@@ -152,7 +152,7 @@ class TestDimensionlessParameterValues(unittest.TestCase):
 
     def test_thermal_parameters(self):
         values = pybamm.lithium_ion.BaseModel().default_parameter_values
-        param = pybamm.standard_parameters_lithium_ion
+        param = pybamm.LithiumIonParameters()
         c_rate = param.i_typ / 24
 
         # Density
@@ -190,7 +190,7 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         #     values.evaluate(param.tau_th_yz), 1.4762 * 10 ** (3), 2
         # )
 
-        # thermal = pybamm.thermal_parameters
+        # thermal = pybamm.ThermalParameters()
         # np.testing.assert_almost_equal(
         # values.evaluate(thermal.rho_eff_dim), 1.8116 * 10 ** (6), 2
         # )
@@ -200,7 +200,7 @@ class TestDimensionlessParameterValues(unittest.TestCase):
 
     def test_parameter_functions(self):
         values = pybamm.lithium_ion.BaseModel().default_parameter_values
-        param = pybamm.standard_parameters_lithium_ion
+        param = pybamm.LithiumIonParameters()
 
         c_test = pybamm.Scalar(0.5)
         T_test = pybamm.Scalar(0)

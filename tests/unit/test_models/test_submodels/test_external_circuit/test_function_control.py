@@ -9,19 +9,21 @@ import unittest
 def external_circuit_function(variables):
     I = variables["Current [A]"]
     V = variables["Terminal voltage [V]"]
+    liion_param = pybamm.LithiumIonParameters()
+
     return (
         V
         + I
         - pybamm.FunctionParameter(
             "Current plus voltage function",
-            {"Time [s]": pybamm.t * pybamm.standard_parameters_lithium_ion.timescale},
+            {"Time [s]": pybamm.t * liion_param.timescale},
         )
     )
 
 
 class TestFunctionControl(unittest.TestCase):
     def test_public_functions(self):
-        param = pybamm.standard_parameters_lithium_ion
+        param = pybamm.LithiumIonParameters()
         submodel = pybamm.external_circuit.FunctionControl(
             param, external_circuit_function
         )

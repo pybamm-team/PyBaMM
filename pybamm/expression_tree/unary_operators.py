@@ -1043,30 +1043,32 @@ def x_average(symbol):
         if a.id == b.id == c.id:
             return a
         else:
-            l_n = pybamm.geometric_parameters.l_n
-            l_s = pybamm.geometric_parameters.l_s
-            l_p = pybamm.geometric_parameters.l_p
+            geo = pybamm.GeometricParameters()
+            l_n = geo.l_n
+            l_s = geo.l_s
+            l_p = geo.l_p
             return (l_n * a + l_s * b + l_p * c) / (l_n + l_s + l_p)
     # Otherwise, use Integral to calculate average value
     else:
+        geo = pybamm.GeometricParameters()
         if symbol.domain == ["negative electrode"]:
             x = pybamm.standard_spatial_vars.x_n
-            l = pybamm.geometric_parameters.l_n
+            l = geo.l_n
         elif symbol.domain == ["separator"]:
             x = pybamm.standard_spatial_vars.x_s
-            l = pybamm.geometric_parameters.l_s
+            l = geo.l_s
         elif symbol.domain == ["positive electrode"]:
             x = pybamm.standard_spatial_vars.x_p
-            l = pybamm.geometric_parameters.l_p
+            l = geo.l_p
         elif symbol.domain == ["negative electrode", "separator", "positive electrode"]:
             x = pybamm.standard_spatial_vars.x
             l = pybamm.Scalar(1)
         elif symbol.domain == ["negative particle"]:
             x = pybamm.standard_spatial_vars.x_n
-            l = pybamm.geometric_parameters.l_n
+            l = geo.l_n
         elif symbol.domain == ["positive particle"]:
             x = pybamm.standard_spatial_vars.x_p
-            l = pybamm.geometric_parameters.l_p
+            l = geo.l_p
         else:
             x = pybamm.SpatialVariable("x", domain=symbol.domain)
             v = pybamm.ones_like(symbol)
@@ -1108,8 +1110,9 @@ def z_average(symbol):
         return symbol.orphans[0]
     # Otherwise, use Integral to calculate average value
     else:
+        geo = pybamm.GeometricParameters()
         z = pybamm.standard_spatial_vars.z
-        l_z = pybamm.geometric_parameters.l_z
+        l_z = geo.l_z
         return Integral(symbol, z) / l_z
 
 
@@ -1144,10 +1147,11 @@ def yz_average(symbol):
         return symbol.orphans[0]
     # Otherwise, use Integral to calculate average value
     else:
+        geo = pybamm.GeometricParameters()
         y = pybamm.standard_spatial_vars.y
         z = pybamm.standard_spatial_vars.z
-        l_y = pybamm.geometric_parameters.l_y
-        l_z = pybamm.geometric_parameters.l_z
+        l_y = geo.l_y
+        l_z = geo.l_z
         return Integral(symbol, [y, z]) / (l_y * l_z)
 
 

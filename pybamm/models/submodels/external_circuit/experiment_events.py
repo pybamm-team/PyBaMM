@@ -13,7 +13,7 @@ class ExperimentEvents(pybamm.BaseSubModel):
     def set_events(self, variables):
         # add current and voltage events to the model
         # current events both negative and positive to catch specification
-        n_cells = pybamm.electrical_parameters.n_cells
+        n_cells = self.param.n_cells
         self.events.extend(
             [
                 pybamm.Event(
