@@ -318,29 +318,24 @@ class BaseSolver(object):
                 elif isinstance(symbol, pybamm.Modulo):
                     found_t = False
                     # Dimensionless
-                    if symbol.right.id == pybamm.t.id:
-                        expr = symbol.left
-                        found_t = True
-                    elif symbol.left.id == pybamm.t.id:
+                    if symbol.left.id == pybamm.t.id:
                         expr = symbol.right
                         found_t = True
                     # Dimensional
-                    elif symbol.right.id == (pybamm.t * model.timescale).id:
-                        expr = symbol.left.new_copy() / symbol.right.right.new_copy()
-                        found_t = True
                     elif symbol.left.id == (pybamm.t * model.timescale).id:
                         expr = symbol.right.new_copy() / symbol.left.right.new_copy()
                         found_t = True
 
-                    # Update the events if the heaviside function depended on t
+                    # Update the events if the modulo function depended on t
                     if found_t:
-                        model.events.append(
-                            pybamm.Event(
-                                str(symbol),
-                                expr.new_copy(),
-                                pybamm.EventType.DISCONTINUITY,
+                        for i in np.arange(200):
+                            model.events.append(
+                                pybamm.Event(
+                                    str(symbol),
+                                    expr.new_copy() * (i + 1),
+                                    pybamm.EventType.DISCONTINUITY,
+                                )
                             )
-                        )
 
         # Process initial conditions
         initial_conditions = process(
