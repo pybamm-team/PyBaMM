@@ -1,7 +1,6 @@
 #
 # Base model class
 #
-import inspect
 import numbers
 import pybamm
 import warnings
