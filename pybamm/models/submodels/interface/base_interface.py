@@ -173,6 +173,22 @@ class BaseInterface(pybamm.BaseSubModel):
         else:
             return pybamm.Scalar(0)
 
+    def _get_surface_area_per_unit_volume_distribution(self, variables):
+        "Returns the distribution of surface area per unit volume in x"
+        x_n = pybamm.standard_spatial_vars.x_n
+        x_p = pybamm.standard_spatial_vars.x_p
+        a_n = self.param.a_n_of_x(x_n)
+        a_p = self.param.a_p_of_x(x_p)
+
+        variables.update(
+            {
+                "Negative surface area per unit volume distribution in x": a_n,
+                "Positive surface area per unit volume distribution in x": a_p,
+            }
+        )
+
+        return a_n, a_p
+
     def _get_electrolyte_reaction_signed_stoichiometry(self):
         "Returns the number of electrons in the reaction"
         if self.reaction in ["lithium-ion main", "sei"]:
@@ -327,25 +343,29 @@ class BaseInterface(pybamm.BaseSubModel):
             }
         )
 
+        a_n, a_p = self._get_surface_area_per_unit_volume_distribution(variables)
+        a = pybamm.Concatenation(
+            a_n, pybamm.FullBroadcast(0, "separator", "current collector"), a_p
+        )
         s_n, s_p = self._get_electrolyte_reaction_signed_stoichiometry()
         s = pybamm.Concatenation(
             pybamm.FullBroadcast(s_n, "negative electrode", "current collector"),
             pybamm.FullBroadcast(0, "separator", "current collector"),
             pybamm.FullBroadcast(s_p, "positive electrode", "current collector"),
         )
-        variables["Sum of electrolyte reaction source terms"] += s * j
+        variables["Sum of electrolyte reaction source terms"] += a * s * j
         variables["Sum of negative electrode electrolyte reaction source terms"] += (
-            s_n * j_n
+            a_n * s_n * j_n
         )
         variables["Sum of positive electrode electrolyte reaction source terms"] += (
-            s_p * j_p
+            a_p * s_p * j_p
         )
         variables[
             "Sum of x-averaged negative electrode electrolyte reaction source terms"
-        ] += (s_n * j_n_av)
+        ] += pybamm.x_average(a_n * s_n * j_n)
         variables[
             "Sum of x-averaged positive electrode electrolyte reaction source terms"
-        ] += (s_p * j_p_av)
+        ] += pybamm.x_average(a_p * s_p * j_p)
 
         variables["Sum of interfacial current densities"] += j
         variables["Sum of negative electrode interfacial current densities"] += j_n

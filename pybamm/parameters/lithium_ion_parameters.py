@@ -25,14 +25,15 @@ class LithiumIonParameters:
         can be set are listed below.
 
             * "particle shape" : str, optional
-                Sets the model shape of the particles in the electrode. This is
-                used to calculate the surface area per unit volume. Can be "speherical"
+                Sets the model shape of the electrode particles. This is used to
+                calculate the surface area per unit volume. Can be "spherical"
                 (default) or "user". For the "user" option the surface area per
                 unit volume can be passed as a parameter, and is therefore not
                 necessarily consistent with the particle shape.
     """
 
     def __init__(self, options=None):
+        self.options = options
 
         # Get geometric, electrical and thermal parameters
         self.geo = pybamm.GeometricParameters()
@@ -109,8 +110,44 @@ class LithiumIonParameters:
         )
 
         # Microscale geometry
-        self.a_n_dim = self.geo.a_n_dim
-        self.a_p_dim = self.geo.a_p_dim
+        inputs = {"Through-cell distance (x_n) [m]": pybamm.standard_spatial_vars.x_n}
+        self.epsilon_n = pybamm.FunctionParameter("Negative electrode porosity", inputs)
+
+        inputs = {"Through-cell distance (x_s) [m]": pybamm.standard_spatial_vars.x_s}
+        self.epsilon_s = pybamm.FunctionParameter("Separator porosity", inputs)
+
+        inputs = {"Through-cell distance (x_p) [m]": pybamm.standard_spatial_vars.x_p}
+        self.epsilon_p = pybamm.FunctionParameter("Positive electrode porosity", inputs)
+
+        self.epsilon = pybamm.Concatenation(
+            self.epsilon_n, self.epsilon_s, self.epsilon_p
+        )
+        self.epsilon_s_n = pybamm.Parameter(
+            "Negative electrode active material volume fraction"
+        )
+        self.epsilon_s_p = pybamm.Parameter(
+            "Positive electrode active material volume fraction"
+        )
+        self.epsilon_inactive_n = 1 - self.epsilon_n - self.epsilon_s_n
+        self.epsilon_inactive_s = 1 - self.epsilon_s
+        self.epsilon_inactive_p = 1 - self.epsilon_p - self.epsilon_s_p
+        self.b_e_n = self.geo.b_e_n
+        self.b_e_s = self.geo.b_e_s
+        self.b_e_p = self.geo.b_e_p
+        self.b_s_n = self.geo.b_s_n
+        self.b_s_s = self.geo.b_s_s
+        self.b_s_p = self.geo.b_s_p
+
+        self.R_n = self.geo.R_n
+        self.R_p = self.geo.R_p
+
+        if self.options["particle shape"] == "spherical":
+            self.a_n_dim = 3 * self.epsilon_s_n / self.R_n
+            self.a_p_dim = 3 * self.epsilon_s_p / self.R_p
+        elif self.options["particle shape"] == "user":
+            self.a_n_dim = self.geo.a_n_dim
+            self.a_p_dim = self.geo.a_p_dim
+
         self.a_k_dim = pybamm.Concatenation(
             pybamm.FullBroadcast(
                 self.a_n_dim, ["negative electrode"], "current collector"
@@ -120,14 +157,6 @@ class LithiumIonParameters:
                 self.a_p_dim, ["positive electrode"], "current collector"
             ),
         )
-        self.R_n = self.geo.R_n
-        self.R_p = self.geo.R_p
-        self.b_e_n = self.geo.b_e_n
-        self.b_e_s = self.geo.b_e_s
-        self.b_e_p = self.geo.b_e_p
-        self.b_s_n = self.geo.b_s_n
-        self.b_s_s = self.geo.b_s_s
-        self.b_s_p = self.geo.b_s_p
 
         # Electrochemical reactions
         self.ne_n = pybamm.Parameter("Negative electrode electrons in reaction")
@@ -400,34 +429,9 @@ class LithiumIonParameters:
         self.centre_y_tab_p = self.geo.centre_y_tab_p
         self.centre_z_tab_p = self.geo.centre_z_tab_p
 
-        # Microscale geometry
-        inputs = {"Through-cell distance (x_n) [m]": pybamm.standard_spatial_vars.x_n}
-        self.epsilon_n = pybamm.FunctionParameter("Negative electrode porosity", inputs)
-
-        inputs = {"Through-cell distance (x_s) [m]": pybamm.standard_spatial_vars.x_s}
-        self.epsilon_s = pybamm.FunctionParameter("Separator porosity", inputs)
-
-        inputs = {"Through-cell distance (x_p) [m]": pybamm.standard_spatial_vars.x_p}
-        self.epsilon_p = pybamm.FunctionParameter("Positive electrode porosity", inputs)
-
-        self.epsilon = pybamm.Concatenation(
-            self.epsilon_n, self.epsilon_s, self.epsilon_p
-        )
-        self.epsilon_n_init = pybamm.Parameter("Negative electrode porosity")
-        self.epsilon_s_init = pybamm.Parameter("Separator porosity")
-        self.epsilon_p_init = pybamm.Parameter("Positive electrode porosity")
-        self.epsilon_init = pybamm.Concatenation(
-            self.epsilon_n, self.epsilon_s, self.epsilon_p
-        )
-        self.epsilon_s_n = pybamm.Parameter(
-            "Negative electrode active material volume fraction"
-        )
-        self.epsilon_s_p = pybamm.Parameter(
-            "Positive electrode active material volume fraction"
-        )
-        self.epsilon_inactive_n = 1 - self.epsilon_n - self.epsilon_s_n
-        self.epsilon_inactive_s = 1 - self.epsilon_s
-        self.epsilon_inactive_p = 1 - self.epsilon_p - self.epsilon_s_p
+        # Microscale geometry, see 'self._set_dimensional_parameters' for the
+        # definition on the dimensional surface area to volume ratio based on
+        # particle shape
         self.a_n = self.a_n_dim * self.R_n
         self.a_p = self.a_p_dim * self.R_p
 
@@ -615,6 +619,12 @@ class LithiumIonParameters:
         self.beta_sei_n = self.a_n_dim * self.L_sei_0_dim * self.Gamma_SEI_n
 
         # Initial conditions
+        self.epsilon_n_init = pybamm.Parameter("Negative electrode porosity")
+        self.epsilon_s_init = pybamm.Parameter("Separator porosity")
+        self.epsilon_p_init = pybamm.Parameter("Positive electrode porosity")
+        self.epsilon_init = pybamm.Concatenation(
+            self.epsilon_n, self.epsilon_s, self.epsilon_p
+        )
         self.T_init = self.therm.T_init
         self.c_e_init = self.c_e_init_dimensional / self.c_e_typ
 
@@ -717,6 +727,60 @@ class LithiumIonParameters:
         "Dimensionless initial concentration as a function of dimensionless position x"
         return self.c_p_init_dimensional(x) / self.c_p_max
 
+    def R_n_of_x(self, x):
+        """
+        Dimensionless negative particle distribution in x. The particle distribution is
+        defined so that the actual particle radius as a function of x is given by
+        R*R_of_x (so that R_of_x = 1 gives particles of uniform size in x).
+        """
+        inputs = {"Through-cell distance (x_n) [m]": x}
+        return pybamm.FunctionParameter("Negative particle distribution in x", inputs)
+
+    def R_p_of_x(self, x):
+        """
+        Dimensionless positive particle distribution in x. The particle distribution is
+        defined so that the actual particle radius as a function of x is given by
+        R*R_of_x (so that R_of_x = 1 gives particles of uniform size in x).
+        """
+        inputs = {"Through-cell distance (x_p) [m]": x}
+        return pybamm.FunctionParameter("Positive particle distribution in x", inputs)
+
+    def a_n_of_x(self, x):
+        """
+        Dimensionless surface area per unit volume distribution in x. The surface
+        area per unit volume distribution is defined so that the actual surface
+        area per unit volume as a function of x is given by a*a_of_x (so that
+        a_of_x = 1 gives uniform surface area per unit volume in x).
+        """
+        if self.options["particle shape"] == "spherical":
+            # Currently the active material volume fraction is a scalar, so the
+            # distribution of surface are per unit volume is simply the reciprocal
+            # of the particle radius distribution
+            return 1 / self.R_n_of_x(x)
+        elif self.options["particle shape"] == "user":
+            inputs = {"Through-cell distance (x_n) [m]": x}
+            return pybamm.FunctionParameter(
+                "Negative surface area per unit volume distribution in x", inputs
+            )
+
+    def a_p_of_x(self, x):
+        """
+        Dimensionless surface area per unit volume distribution in x. The surface
+        area per unit volume distribution is defined so that the actual surface
+        area per unit volume as a function of x is given by a*a_of_x (so that
+        a_of_x = 1 gives uniform surface area per unit volume in x).
+        """
+        if self.options["particle shape"] == "spherical":
+            # Currently the active material volume fraction is a scalar, so the
+            # distribution of surface are per unit volume is simply the reciprocal
+            # of the particle radius distribution
+            return 1 / self.R_p_of_x(x)
+        elif self.options["particle shape"] == "user":
+            inputs = {"Through-cell distance (x_p) [m]": x}
+            return pybamm.FunctionParameter(
+                "Positive surface area per unit volume distribution in x", inputs
+            )
+
     def _set_input_current(self):
         "Set the input current"
 
@@ -732,3 +796,30 @@ class LithiumIonParameters:
             / self.I_typ
             * pybamm.Function(np.sign, self.I_typ)
         )
+
+    @property
+    def options(self):
+        return self._options
+
+    @options.setter
+    def options(self, extra_options):
+        extra_options = extra_options or {}
+
+        # Default options
+        options = {"particle shape": "spherical"}
+
+        # All model options get passed to the parameter class, so we just need
+        # to update the options in the default options and ignore the rest
+        for name, opt in extra_options.items():
+            if name in options:
+                options[name] = opt
+
+        # Check the options are valid (this check also happens in 'BaseBatteryModel',
+        # but we check here incase the parameter class is instantiated separetly
+        # from the model)
+        if options["particle shape"] not in ["spherical", "user"]:
+            raise pybamm.OptionError(
+                "particle shape '{}' not recognised".format(options["particle shape"])
+            )
+
+        self._options = options

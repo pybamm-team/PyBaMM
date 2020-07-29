@@ -29,10 +29,10 @@ class BaseParticle(pybamm.BaseSubModel):
 
         if self.domain == "Negative":
             c_scale = self.param.c_n_max
-            active_volume = param.a_n_dim * param.R_n / 3
+            active_volume = param.epsilon_s_n
         elif self.domain == "Positive":
             c_scale = self.param.c_p_max
-            active_volume = param.a_p_dim * param.R_p / 3
+            active_volume = param.epsilon_s_p
         c_s_av = pybamm.r_average(c_s_xav)
         c_s_av_vol = active_volume * c_s_av
         variables = {

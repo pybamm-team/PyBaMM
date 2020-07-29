@@ -711,6 +711,30 @@ class LeadAcidParameters:
         """
         return self.c_e_init
 
+    def a_n_of_x(self, x):
+        """
+        Dimensionless surface area per unit volume distribution in x (as a function
+        for consistency with lithium-ion). The surface area per unit volume
+        distribution is defined so that the actual surface area per unit volume
+        as a function of x is given by a*a_of_x (so that a_of_x = 1 gives uniform
+        surface area per unit volume in x).
+
+        Returns 1 to give uniform surface area per unit volume in x.
+        """
+        return pybamm.FullBroadcast(1, "negative electrode", "current collector")
+
+    def a_p_of_x(self, x):
+        """
+        Dimensionless surface area per unit volume distribution in x (as a function
+        for consistency with lithium-ion). The surface area per unit volume
+        distribution is defined so that the actual surface area per unit volume
+        as a function of x is given by a*a_of_x (so that a_of_x = 1 gives uniform
+        surface area per unit volume in x).
+
+        Returns 1 to give uniform surface area per unit volume in x.
+        """
+        return pybamm.FullBroadcast(1, "positive electrode", "current collector")
+
     def _set_input_current(self):
         "Set the input current"
 

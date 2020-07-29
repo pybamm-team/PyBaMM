@@ -41,6 +41,12 @@ class BaseBatteryModel(pybamm.BaseModel):
             * "particle" : str, optional
                 Sets the submodel to use to describe behaviour within the particle.
                 Can be "Fickian diffusion" (default) or "fast diffusion".
+            * "particle shape" : str, optional
+                Sets the model shape of the electrode particles. This is used to
+                calculate the surface area per unit volume. Can be "spherical"
+                (default) or "user". For the "user" option the surface area per
+                unit volume can be passed as a parameter, and is therefore not
+                necessarily consistent with the particle shape.
             * "thermal" : str, optional
                 Sets the thermal model to use. Can be "isothermal" (default), "lumped",
                 "x-lumped", or "x-full".
@@ -184,6 +190,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "interfacial surface area": "constant",
             "current collector": "uniform",
             "particle": "Fickian diffusion",
+            "particle shape": "spherical",
             "thermal": "isothermal",
             "cell_geometry": None,
             "external submodels": [],
@@ -337,6 +344,10 @@ class BaseBatteryModel(pybamm.BaseModel):
         if options["particle"] not in ["Fickian diffusion", "fast diffusion"]:
             raise pybamm.OptionError(
                 "particle model '{}' not recognised".format(options["particle"])
+            )
+        if options["particle shape"] not in ["spherical", "user"]:
+            raise pybamm.OptionError(
+                "particle shape '{}' not recognised".format(options["particle shape"])
             )
 
         if options["thermal"] == "x-lumped" and options["dimensionality"] == 1:

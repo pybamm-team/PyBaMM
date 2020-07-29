@@ -588,13 +588,6 @@ class CurrentTests(BaseOutputTest):
         """Test the boundary values of the current densities"""
         t, x_n, x_p = self.t, self.x_n_edge, self.x_p_edge
 
-        # if isinstance(self.model, pybamm.lithium_ion.BaseModel):
-        #    current_param = pybamm.standard_parameters_lithium_ion.current_with_time
-        # elif isinstance(self.model, pybamm.lead_acid.BaseModel):
-        #    current_param = pybamm.standard_parameters_lead_acid.current_with_time
-        # else:
-        #    current_param = pybamm.electrical_parameters.current_with_time
-
         current_param = self.model.param.current_with_time
 
         i_cell = self.param.process_symbol(current_param).evaluate(t=t)
