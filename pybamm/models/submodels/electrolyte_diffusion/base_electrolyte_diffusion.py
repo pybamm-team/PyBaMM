@@ -55,7 +55,7 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
         eps_p = self.param.epsilon_p
         eps = pybamm.Concatenation(eps_n, eps_s, eps_p)
 
-        c_e_total = pybamm.Integral(eps * c_e, pybamm.standard_spatial_vars.x)
+        c_e_total = pybamm.x_average(eps * c_e)
 
         variables = {
             "Electrolyte concentration": c_e,
