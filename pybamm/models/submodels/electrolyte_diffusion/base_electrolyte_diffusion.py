@@ -42,12 +42,20 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
         """
 
         c_e_typ = self.param.c_e_typ
+        L_x = self.param.L_x
 
         c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
         c_e_av = pybamm.x_average(c_e)
         c_e_n_av = pybamm.x_average(c_e_n)
         c_e_s_av = pybamm.x_average(c_e_s)
         c_e_p_av = pybamm.x_average(c_e_p)
+
+        eps_n = self.param.epsilon_n
+        eps_s = self.param.epsilon_s
+        eps_p = self.param.epsilon_p
+        eps = pybamm.Concatenation(eps_n, eps_s, eps_p)
+
+        c_e_total = pybamm.Integral(eps * c_e, pybamm.standard_spatial_vars.x)
 
         variables = {
             "Electrolyte concentration": c_e,
@@ -74,6 +82,9 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
             "X-averaged positive electrolyte concentration": c_e_p_av,
             "X-averaged positive electrolyte concentration [mol.m-3]": c_e_typ
             * c_e_p_av,
+            "Total lithium concentration in electrolyte [mol.m-2]": c_e_typ
+            * L_x
+            * c_e_total,
         }
 
         return variables

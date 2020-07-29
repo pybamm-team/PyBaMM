@@ -24,18 +24,19 @@ class BaseParticle(pybamm.BaseSubModel):
     def _get_standard_concentration_variables(self, c_s, c_s_xav):
 
         c_s_surf = pybamm.surf(c_s)
-
         c_s_surf_av = pybamm.x_average(c_s_surf)
-        geo_param = pybamm.geometric_parameters
 
         if self.domain == "Negative":
             c_scale = self.param.c_n_max
-            active_volume = geo_param.a_n_dim * geo_param.R_n / 3
+            eps_s = self.param.epsilon_s_n
+            L = self.param.L_n
         elif self.domain == "Positive":
             c_scale = self.param.c_p_max
-            active_volume = geo_param.a_p_dim * geo_param.R_p / 3
-        c_s_av = pybamm.r_average(c_s_xav)
-        c_s_av_vol = active_volume * c_s_av
+            eps_s = self.param.epsilon_s_p
+            L = self.param.L_p
+
+        c_s_rav = pybamm.r_average(c_s)
+        c_s_vol_av = pybamm.x_average(eps_s * c_s_rav)
         variables = {
             self.domain + " particle concentration": c_s,
             self.domain + " particle concentration [mol.m-3]": c_s * c_scale,
@@ -52,12 +53,13 @@ class BaseParticle(pybamm.BaseSubModel):
             "X-averaged "
             + self.domain.lower()
             + " particle surface concentration [mol.m-3]": c_scale * c_s_surf_av,
-            self.domain + " electrode active volume fraction": active_volume,
-            self.domain + " electrode volume-averaged concentration": c_s_av_vol,
+            self.domain + " electrode active volume fraction": eps_s,
+            self.domain + " electrode volume-averaged concentration": c_s_vol_av,
             self.domain
             + " electrode "
-            + "volume-averaged concentration [mol.m-3]": c_s_av_vol * c_scale,
-            self.domain + " electrode average extent of lithiation": c_s_av,
+            + "volume-averaged concentration [mol.m-3]": c_s_vol_av * c_scale,
+            self.domain + " electrode average extent of lithiation": c_s_rav,
+            "Total lithium concentration in " + self.domain.lower() + " electrode [mol.m-2]": c_s_vol_av * c_scale * L,
         }
 
         return variables
