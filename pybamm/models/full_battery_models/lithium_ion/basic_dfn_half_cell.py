@@ -375,20 +375,30 @@ class BasicDFNHalfCell(BaseModel):
                 + L_Li * i_typ * i_cell / sigma_Li
             )
 
+        c_s_surf_p_av = pybamm.x_average(c_s_surf_p)
+        c_s_surf_n_av = pybamm.x_average(c_s_surf_n)
+
         # The `variables` dictionary contains all variables that might be useful for
         # visualising the solution of the model
         self.variables = {
+            "Time [s]": param.timescale * pybamm.t,
             "Negative particle surface concentration": c_s_surf_n,
+            "X-averaged negative particle surface concentration": c_s_surf_n_av,
             "Negative particle concentration": c_s_n,
             "Negative particle surface concentration [mol.m-3]": param.c_n_max
             * c_s_surf_n,
+            "X-averaged negative particle surface concentration [mol.m-3]": 
+            param.c_n_max * c_s_surf_n_av,
             "Negative particle concentration [mol.m-3]": param.c_n_max * c_s_n,
             "Electrolyte concentration": c_e,
             "Electrolyte concentration [mol.m-3]": param.c_e_typ * c_e,
             "Positive particle surface concentration": c_s_surf_p,
+            "X-averaged positive particle surface concentration": c_s_surf_p_av,
             "Positive particle concentration": c_s_p,
             "Positive particle surface concentration [mol.m-3]": param.c_p_max
             * c_s_surf_p,
+            "X-averaged positive particle surface concentration [mol.m-3]": 
+            param.c_p_max * c_s_surf_p_av,
             "Positive particle concentration [mol.m-3]": param.c_p_max * c_s_p,
             "Current [A]": I,
             "Negative electrode potential": phi_s_n,
