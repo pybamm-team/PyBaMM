@@ -92,7 +92,10 @@ class Simulation:
             if isinstance(current, pybamm.Interpolant):
                 self.operating_mode = "drive cycle"
             elif isinstance(current, tuple):
-                self.operating_mode = "drive cycle"
+                raise NotImplementedError(
+                    "Drive cycle from data has been deprecated. " +
+                    "Define an Interpolant instead."
+                )
             else:
                 self.operating_mode = "without experiment"
                 if C_rate:
