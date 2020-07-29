@@ -439,6 +439,15 @@ class TestUnaryOperators(unittest.TestCase):
             # electrode domains go to current collector when averaged
             self.assertEqual(av_a.domain, [])
 
+        # r-average of a symbol that is broadcast to x
+        # takes the average of the child then broadcasts it
+        a = pybamm.Scalar(1, domain="positive particle")
+        broad_a = pybamm.SecondaryBroadcast(a, "positive electrode")
+        average_broad_a = pybamm.r_average(broad_a)
+        self.assertIsInstance(average_broad_a, pybamm.PrimaryBroadcast)
+        self.assertEqual(average_broad_a.domain, ["positive electrode"])
+        self.assertEqual(average_broad_a.children[0].id, pybamm.r_average(a).id)
+
         # r-average of symbol that evaluates on edges raises error
         symbol_on_edges = pybamm.PrimaryBroadcastToEdges(1, "domain")
         with self.assertRaisesRegex(

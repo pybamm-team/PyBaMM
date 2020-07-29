@@ -1167,13 +1167,25 @@ def r_average(symbol):
     # Can't take average if the symbol evaluates on edges
     if symbol.evaluates_on_edges("primary"):
         raise ValueError("Can't take the r-average of a symbol that evaluates on edges")
-    # If symbol doesn't have a particle domain, its r-averaged value is itself
-    if symbol.domain not in [["positive particle"], ["negative particle"]]:
+    # Otherwise, if symbol doesn't have a particle domain,
+    # its r-averaged value is itself
+    elif symbol.domain not in [["positive particle"], ["negative particle"]]:
         new_symbol = symbol.new_copy()
         new_symbol.parent = None
         return new_symbol
-    # If symbol is a Broadcast, its average value is its child
-    elif isinstance(symbol, pybamm.Broadcast):
+    # If symbol is a secondary broadcast onto "negative electrode" or
+    # "positive electrode", take the r-average of the child then broadcast back
+    elif isinstance(symbol, pybamm.SecondaryBroadcast) and symbol.domains[
+        "secondary"
+    ] in [["positive electrode"], ["negative electrode"],]:
+        child = symbol.orphans[0]
+        child_av = pybamm.r_average(child)
+        return pybamm.PrimaryBroadcast(child_av, symbol.domains["secondary"])
+    # If symbol is a Broadcast onto a particle domain, its average value is its child
+    elif isinstance(symbol, pybamm.PrimaryBroadcast) and symbol.domain in [
+        ["positive particle"],
+        ["negative particle"],
+    ]:
         return symbol.orphans[0]
     else:
         r = pybamm.SpatialVariable("r", symbol.domain)
