@@ -334,6 +334,46 @@ class TestSimulation(unittest.TestCase):
         with self.assertWarns(pybamm.SolverWarning):
             sim.solve(t_eval=np.linspace(0, time_data[-1], 800))
 
+    def test_drive_cycle_interpolant(self):
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        # Import drive cycle from file
+        drive_cycle = pd.read_csv(
+            pybamm.get_parameters_filepath(
+                os.path.join("input", "drive_cycles", "US06.csv")
+            ),
+            comment="#",
+            skip_blank_lines=True,
+            header=None,
+        )
+
+        timescale = param.evaluate(model.timescale)
+        current_interpolant = pybamm.Interpolant(
+            drive_cycle.to_numpy(), timescale * pybamm.t
+        )
+
+        param["Current function [A]"] = current_interpolant
+
+        time_data = drive_cycle.values[:, 0]
+
+        sim = pybamm.Simulation(model, parameter_values=param)
+
+        # check solution is returned at the times in the data
+        sim.solve()
+        tau = sim.model.timescale.evaluate()
+        np.testing.assert_array_almost_equal(sim.solution.t, time_data / tau)
+
+        # check warning raised if the largest gap in t_eval is bigger than the
+        # smallest gap in the data
+        with self.assertWarns(pybamm.SolverWarning):
+            sim.solve(t_eval=np.linspace(0, 1, 100))
+
+        # check warning raised if t_eval doesnt contain time_data , but has a finer
+        # resolution (can still solve, but good for users to know they dont have
+        # the solution returned at the data points)
+        with self.assertWarns(pybamm.SolverWarning):
+            sim.solve(t_eval=np.linspace(0, time_data[-1], 800))
+
     def test_discontinuous_current(self):
         def car_current(t):
             current = (
