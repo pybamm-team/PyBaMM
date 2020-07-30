@@ -42,6 +42,10 @@ class LeadingOrder(BaseElectrolyteDiffusion):
 
         variables.update(self._get_standard_flux_variables(N_e))
 
+        eps = pybamm.standard_variables.eps
+        c_e = pybamm.standard_variables.c_e
+        variables.update(self._get_total_concentration_electrolyte(c_e, eps))
+
         return variables
 
     def set_rhs(self, variables):

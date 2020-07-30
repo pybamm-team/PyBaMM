@@ -138,4 +138,8 @@ class FirstOrder(BaseElectrolyteDiffusion):
         )
         variables.update(self._get_standard_flux_variables(N_e))
 
+        c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
+        eps = pybamm.Concatenation(eps_n_0, eps_s_0, eps_p_0)
+        variables.update(self._get_total_concentration_electrolyte(c_e, eps))
+
         return variables

@@ -42,26 +42,12 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
         """
 
         c_e_typ = self.param.c_e_typ
-        L_x = self.param.L_x
 
         c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
         c_e_av = pybamm.x_average(c_e)
         c_e_n_av = pybamm.x_average(c_e_n)
         c_e_s_av = pybamm.x_average(c_e_s)
         c_e_p_av = pybamm.x_average(c_e_p)
-
-        # if "epsilon_n" in vars(self.param).values():
-        #     eps_n = self.param.epsilon_n
-        #     eps_s = self.param.epsilon_s
-        #     eps_p = self.param.epsilon_p
-        #     eps = pybamm.Concatenation(eps_n, eps_s, eps_p)
-
-        #     c_e_total = pybamm.x_average(eps * c_e)
-
-        #     raise NotImplementedError("I entered the if statement!!!!")
-        # else:
-        #     c_e_total = pybamm.x_average(c_e)
-        c_e_total = c_e
 
         variables = {
             "Electrolyte concentration": c_e,
@@ -88,9 +74,6 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
             "X-averaged positive electrolyte concentration": c_e_p_av,
             "X-averaged positive electrolyte concentration [mol.m-3]": c_e_typ
             * c_e_p_av,
-            "Total lithium concentration in electrolyte [mol.m-2]": c_e_typ
-            * L_x
-            * c_e_total,
         }
 
         return variables
@@ -118,6 +101,37 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
         variables = {
             "Electrolyte flux": N_e,
             "Electrolyte flux [mol.m-2.s-1]": N_e * flux_scale,
+        }
+
+        return variables
+
+    def _get_total_concentration_electrolyte(self, c_e, epsilon):
+        """
+        A private function to obtain the total ion concentration in the electrolyte.
+
+        Parameters
+        ----------
+        c_e : :class:`pybamm.Symbol`
+            The electrolyte concentration
+        epsilon : :class:`pybamm.Symbol`
+            The porosity
+
+        Returns
+        -------
+        variables : dict
+            The variables which can be derived from the flux in the
+            electrolyte.
+        """
+
+        c_e_typ = self.param.c_e_typ
+        L_x = self.param.L_x
+
+        c_e_total = pybamm.x_average(c_e)
+
+        variables = {
+            "Total concentration in electrolyte [mol.m-2]": c_e_typ
+            * L_x
+            * c_e_total,
         }
 
         return variables
