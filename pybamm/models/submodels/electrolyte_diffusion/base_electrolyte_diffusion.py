@@ -50,12 +50,17 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
         c_e_s_av = pybamm.x_average(c_e_s)
         c_e_p_av = pybamm.x_average(c_e_p)
 
-        # eps_n = self.param.epsilon_n
-        # eps_s = self.param.epsilon_s
-        # eps_p = self.param.epsilon_p
-        # eps = pybamm.Concatenation(eps_n, eps_s, eps_p)
+        # if "epsilon_n" in vars(self.param).values():
+        #     eps_n = self.param.epsilon_n
+        #     eps_s = self.param.epsilon_s
+        #     eps_p = self.param.epsilon_p
+        #     eps = pybamm.Concatenation(eps_n, eps_s, eps_p)
 
-        # c_e_total = pybamm.x_average(eps * c_e)
+        #     c_e_total = pybamm.x_average(eps * c_e)
+
+        #     raise NotImplementedError("I entered the if statement!!!!")
+        # else:
+        #     c_e_total = pybamm.x_average(c_e)
         c_e_total = c_e
 
         variables = {

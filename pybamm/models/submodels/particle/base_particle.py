@@ -60,7 +60,7 @@ class BaseParticle(pybamm.BaseSubModel):
             + " electrode "
             + "volume-averaged concentration [mol.m-3]": c_s_vol_av * c_scale,
             self.domain + " electrode average extent of lithiation": c_s_rav,
-            "Total lithium concentration in "
+            "Total lithium in "
             + self.domain.lower()
             + " electrode [mol.m-2]": c_s_vol_av * c_scale * L,
         }
