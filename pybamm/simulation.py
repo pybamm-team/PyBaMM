@@ -351,16 +351,8 @@ class Simulation:
             elif self.operating_mode == "drive cycle":
                 # For drive cycles (current provided as data) we perform additional
                 # tests on t_eval (if provided) to ensure the returned solution
-                # captures the input. If the current is provided as data then the
-                # "Current function [A]" is the tuple (filename, data).
-                if isinstance(
-                    self._parameter_values["Current function [A]"], pybamm.Interpolant
-                ):
-                    time_data = self._parameter_values["Current function [A]"].data[
-                        :, 0
-                    ]
-                else:
-                    time_data = self._parameter_values["Current function [A]"][1][:, 0]
+                # captures the input.
+                time_data = self._parameter_values["Current function [A]"].data[:, 0]
                 # If no t_eval is provided, we use the times provided in the data.
                 if t_eval is None:
                     pybamm.logger.info("Setting t_eval as specified by the data")
