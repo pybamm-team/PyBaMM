@@ -372,7 +372,7 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
         "Test conservation of species in the electrolyte."
         # sufficient to check average concentration is constant
 
-        diff = self.c_e_tot.entries[:, 1:] - self.c_e_tot.entries[:, :-1]
+        diff = self.c_e_tot(self.solution.t[1:]) - self.c_e_tot(self.solution.t[:-1])
         np.testing.assert_array_almost_equal(diff, 0)
 
     def test_concentration_profile(self):
