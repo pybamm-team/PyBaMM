@@ -355,11 +355,11 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
         self.c_e_s = solution["Separator electrolyte concentration"]
         self.c_e_p = solution["Positive electrolyte concentration"]
 
-        # TODO: output average electrolyte concentration
-        # self.c_e_av = solution["X-averaged electrolyte concentration"]
-        # self.c_e_n_av = solution["X-averaged negative electrolyte concentration"]
-        # self.c_e_s_av = solution["X-averaged separator electrolyte concentration"]
-        # self.c_e_p_av = solution["X-averaged positive electrolyte concentration"]
+        self.c_e_av = solution["X-averaged electrolyte concentration"]
+        self.c_e_n_av = solution["X-averaged negative electrolyte concentration"]
+        self.c_e_s_av = solution["X-averaged separator electrolyte concentration"]
+        self.c_e_p_av = solution["X-averaged positive electrolyte concentration"]
+        self.c_e_tot = solution["Total concentration in electrolyte [mol.m-2]"]
 
         self.N_e_hat = solution["Electrolyte flux"]
         # self.N_e_hat = solution["Reduced cation flux"]
@@ -372,8 +372,8 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
         "Test conservation of species in the electrolyte."
         # sufficient to check average concentration is constant
 
-        # diff = self.c_e_av.entries[:, 1:] - self.c_e_av.entries[:, :-1]
-        # np.testing.assert_array_almost_equal(diff, 0)
+        diff = self.c_e_tot.entries[:, 1:] - self.c_e_tot.entries[:, :-1]
+        np.testing.assert_array_almost_equal(diff, 0)
 
     def test_concentration_profile(self):
         """Test continuity of the concentration profile. Test average concentration is
