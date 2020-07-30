@@ -46,15 +46,17 @@ def battery_geometry(
         )
     # Add particle-size domains
     if particle_size_distribution is True:
-        R_max_n = pybamm.Parameter("Negative maximum particle radius")
-        R_max_p = pybamm.Parameter("Positive maximum particle radius")
+        R_min_n = pybamm.geometric_parameters.R_min_n
+        R_min_p = pybamm.geometric_parameters.R_min_p
+        R_max_n = pybamm.geometric_parameters.R_max_n
+        R_max_p = pybamm.geometric_parameters.R_max_p
         geometry.update(
             {
                 "negative particle-size domain": {
-                    var.R_variable_n: {"min": 0, "max": R_max_n}
+                    var.R_variable_n: {"min": R_min_n, "max": R_max_n}
                 },
                 "positive particle-size domain": {
-                    var.R_variable_p: {"min": 0, "max": R_max_p}
+                    var.R_variable_p: {"min": R_min_p, "max": R_max_p}
                 },
             }
         )

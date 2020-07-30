@@ -284,7 +284,7 @@ def f_a_dist_n_dimensional(R):
         "Negative particle-size variable [m]": R,
     }
     return pybamm.FunctionParameter(
-        "Negative area-weighted particle-size distribution [m]", inputs,
+        "Negative area-weighted particle-size distribution [m-1]", inputs,
     )
 
 
@@ -294,7 +294,7 @@ def f_a_dist_p_dimensional(R):
         "Positive particle-size variable [m]": R,
     }
     return pybamm.FunctionParameter(
-        "Positive area-weighted particle-size distribution [m]", inputs,
+        "Positive area-weighted particle-size distribution [m-1]", inputs,
     )
 
 

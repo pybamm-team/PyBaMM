@@ -82,7 +82,7 @@ class FickianManyPSDs(BaseParticle):
                 + " distribution": pybamm.x_average(f_a_dist),
                 self.domain
                 + " area-weighted particle-size"
-                + " distribution [m]": pybamm.x_average(f_a_dist) / R_dim,
+                + " distribution [m-1]": pybamm.x_average(f_a_dist) / R_dim,
             }
         )
         return variables

@@ -44,6 +44,12 @@ b_e_p = pybamm.Parameter("Positive electrode Bruggeman coefficient (electrolyte)
 b_s_n = pybamm.Parameter("Negative electrode Bruggeman coefficient (electrode)")
 b_s_s = pybamm.Parameter("Separator Bruggeman coefficient (electrode)")
 b_s_p = pybamm.Parameter("Positive electrode Bruggeman coefficient (electrode)")
+
+# Particle-size distribution geometry
+R_min_n_dim = pybamm.Parameter("Negative minimum particle radius [m]")
+R_min_p_dim = pybamm.Parameter("Positive minimum particle radius [m]")
+R_max_n_dim = pybamm.Parameter("Negative maximum particle radius [m]")
+R_max_p_dim = pybamm.Parameter("Positive maximum particle radius [m]")
 sd_a_n_dim = pybamm.Parameter(
     "Negative area-weighted particle-size standard deviation [m]"
 )
@@ -80,3 +86,9 @@ centre_z_tab_p = Centre_z_tab_p / L_z
 # Microscale geometry
 sd_a_n = sd_a_n_dim / R_n
 sd_a_p = sd_a_p_dim / R_p
+
+# Particle-size distribution geometry
+R_min_n = R_min_n_dim / R_n
+R_min_p = R_min_p_dim / R_p
+R_max_n = R_max_n_dim / R_n
+R_max_p = R_max_p_dim / R_p

@@ -79,7 +79,7 @@ class FickianSinglePSD(BaseParticle):
                 self.domain + " area-weighted particle-size"
                 + " distribution": f_a_dist,
                 self.domain + " area-weighted particle-size"
-                + " distribution [m]": f_a_dist / R_dim,
+                + " distribution [m-1]": f_a_dist / R_dim,
             }
         )
         return variables

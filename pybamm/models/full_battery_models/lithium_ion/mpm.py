@@ -149,30 +149,31 @@ class MPM(BaseModel):
             }
         )
         """
-    ####################
-    # Overwrite defaults
-    ####################
+
     @property
     def default_parameter_values(self):
         # Default parameter values
         default_params = super().default_parameter_values
+        # Extract the particle radius, taken to be the average radius
         R_n_dim = default_params["Negative particle radius [m]"]
         R_p_dim = default_params["Positive particle radius [m]"]
 
         # Additional particle distribution parameter values
 
         # Area-weighted standard deviations
-        sd_a_n = 0.5
+        sd_a_n = 0.3
         sd_a_p = 0.3
-        sd_a_n_dim = sd_a_n * R_n_dim
-        sd_a_p_dim = sd_a_p * R_p_dim
 
-        # Max radius in the particle-size distribution (dimensionless).
+        # Minimum radius in the particle-size distributions (dimensionless).
+        R_min_n = 0
+        R_min_p = 0
+
+        # Max radius in the particle-size distributions (dimensionless).
         # Either 5 s.d.'s above the mean or 2 times the mean, whichever is larger
-        R_n_max = max(2, 1 + sd_a_n * 5)
-        R_p_max = max(2, 1 + sd_a_p * 5)
+        R_max_n = max(2, 1 + sd_a_n * 5)
+        R_max_p = max(2, 1 + sd_a_p * 5)
 
-        # lognormal area-weighted particle-size distribution
+        # Define lognormal distribution
         def lognormal_distribution(R, R_av, sd):
             '''
             A lognormal distribution with arguments
@@ -193,28 +194,26 @@ class MPM(BaseModel):
 
         # Set the (area-weighted) particle-size distributions (dimensional)
         def f_a_dist_n_dim(R):
-            return lognormal_distribution(R, R_n_dim, sd_a_n_dim)
+            return lognormal_distribution(R, R_n_dim, sd_a_n * R_n_dim)
 
         def f_a_dist_p_dim(R):
-            return lognormal_distribution(R, R_p_dim, sd_a_p_dim)
+            return lognormal_distribution(R, R_p_dim, sd_a_p * R_p_dim)
 
-        # Update default parameters
+        # Append to default parameters (dimensional)
         default_params.update(
             {
-                "Negative area-weighted particle-size standard deviation": sd_a_n,
                 "Negative area-weighted particle-size "
-                + "standard deviation [m]": sd_a_n_dim,
-                "Positive area-weighted particle-size standard deviation": sd_a_p,
+                + "standard deviation [m]": sd_a_n * R_n_dim,
                 "Positive area-weighted particle-size "
-                + "standard deviation [m]": sd_a_p_dim,
-                "Negative maximum particle radius": R_n_max ,
-                "Negative maximum particle radius [m]": R_n_max * R_n_dim,
-                "Positive maximum particle radius": R_p_max,
-                "Positive maximum particle radius [m]": R_p_max * R_p_dim,
+                + "standard deviation [m]": sd_a_p * R_p_dim,
+                "Negative minimum particle radius [m]": R_min_n * R_n_dim,
+                "Positive minimum particle radius [m]": R_min_p * R_p_dim,
+                "Negative maximum particle radius [m]": R_max_n * R_n_dim,
+                "Positive maximum particle radius [m]": R_max_p * R_p_dim,
                 "Negative area-weighted "
-                + "particle-size distribution [m]": f_a_dist_n_dim,
+                + "particle-size distribution [m-1]": f_a_dist_n_dim,
                 "Positive area-weighted "
-                + "particle-size distribution [m]": f_a_dist_p_dim,
+                + "particle-size distribution [m-1]": f_a_dist_p_dim,
             },
             check_already_exists=False,
         )
