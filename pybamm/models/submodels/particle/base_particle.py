@@ -36,8 +36,8 @@ class BaseParticle(pybamm.BaseSubModel):
             L = self.param.L_p
 
         c_s_rav = pybamm.r_average(c_s)
-        c_s_vol_av = pybamm.x_average(eps_s * c_s_rav)
-        # c_s_vol_av = c_s_rav
+        # c_s_vol_av = pybamm.x_average(eps_s * c_s_rav)
+        c_s_vol_av = c_s_rav
         variables = {
             self.domain + " particle concentration": c_s,
             self.domain + " particle concentration [mol.m-3]": c_s * c_scale,
