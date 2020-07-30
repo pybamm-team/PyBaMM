@@ -89,8 +89,13 @@ class Simulation:
         if experiment is None:
             # Check to see if the current is provided as data (i.e. drive cycle)
             current = self._parameter_values.get("Current function [A]")
-            if isinstance(current, tuple):
+            if isinstance(current, pybamm.Interpolant):
                 self.operating_mode = "drive cycle"
+            elif isinstance(current, tuple):
+                raise NotImplementedError(
+                    "Drive cycle from data has been deprecated. " +
+                    "Define an Interpolant instead."
+                )
             else:
                 self.operating_mode = "without experiment"
                 if C_rate:
@@ -346,15 +351,11 @@ class Simulation:
             elif self.operating_mode == "drive cycle":
                 # For drive cycles (current provided as data) we perform additional
                 # tests on t_eval (if provided) to ensure the returned solution
-                # captures the input. If the current is provided as data then the
-                # "Current function [A]" is the tuple (filename, data).
-                filename = self._parameter_values["Current function [A]"][0]
-                time_data = self._parameter_values["Current function [A]"][1][:, 0]
+                # captures the input.
+                time_data = self._parameter_values["Current function [A]"].data[:, 0]
                 # If no t_eval is provided, we use the times provided in the data.
                 if t_eval is None:
-                    pybamm.logger.info(
-                        "Setting t_eval as specified by the data '{}'".format(filename)
-                    )
+                    pybamm.logger.info("Setting t_eval as specified by the data")
                     t_eval = time_data
                 # If t_eval is provided we first check if it contains all of the
                 # times in the data to within 10-12. If it doesn't, we then check
@@ -368,11 +369,9 @@ class Simulation:
                     warnings.warn(
                         """
                         t_eval does not contain all of the time points in the data
-                        '{}'. Note: passing t_eval = None automatically sets t_eval
+                        set. Note: passing t_eval = None automatically sets t_eval
                         to be the points in the data.
-                        """.format(
-                            filename
-                        ),
+                        """,
                         pybamm.SolverWarning,
                     )
                     dt_data_min = np.min(np.diff(time_data))
