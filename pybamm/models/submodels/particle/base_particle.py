@@ -36,6 +36,7 @@ class BaseParticle(pybamm.BaseSubModel):
             L = self.param.L_p
 
         c_s_rav = pybamm.r_average(c_s)
+        c_s_av = pybamm.x_average(c_s_rav)
         c_s_vol_av = pybamm.x_average(eps_s * c_s_rav)
 
         variables = {
@@ -63,7 +64,8 @@ class BaseParticle(pybamm.BaseSubModel):
             self.domain
             + " electrode "
             + "volume-averaged concentration [mol.m-3]": c_s_vol_av * c_scale,
-            self.domain + " electrode average extent of lithiation": c_s_rav,
+            self.domain + " electrode extent of lithiation": c_s_rav,
+            "X-averaged " + self.domain.lower() + " electrode extent of lithiation": c_s_av,
             "Total lithium in "
             + self.domain.lower()
             + " electrode [mol.m-2]": c_s_vol_av * c_scale * L,
