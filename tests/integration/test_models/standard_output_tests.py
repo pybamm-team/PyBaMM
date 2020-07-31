@@ -551,19 +551,42 @@ class CurrentTests(BaseOutputTest):
         self.i_s = solution["Electrode current density"]
         self.i_e = solution["Electrolyte current density"]
 
+        self.a_n = solution["Negative surface area per unit volume distribution in x"]
+        self.a_p = solution["Positive surface area per unit volume distribution in x"]
+
     def test_interfacial_current_average(self):
-        """Test that average of the interfacial current density is equal to the true
+        """Test that average of the surface area density distribution (in x)
+        multiplied by the interfacial current density is equal to the true
         value."""
+
         np.testing.assert_array_almost_equal(
-            self.j_n_av(self.t) + self.j_n_sei_av(self.t),
+            np.mean(
+                self.a_n(x=self.x_n)
+                * (self.j_n(self.t, self.x_n) + self.j_n_sei(self.t, self.x_n)),
+                axis=0,
+            ),
             self.i_cell / self.l_n,
             decimal=4,
         )
         np.testing.assert_array_almost_equal(
-            self.j_p_av(self.t) + self.j_p_sei_av(self.t),
+            np.mean(
+                self.a_p(x=self.x_p)
+                * (self.j_p(self.t, self.x_p) + self.j_p_sei(self.t, self.x_p)),
+                axis=0,
+            ),
             -self.i_cell / self.l_p,
             decimal=4,
         )
+        # np.testing.assert_array_almost_equal(
+        #    (self.j_n_av(self.t) + self.j_n_sei_av(self.t)),
+        #    self.i_cell / self.l_n,
+        #    decimal=4,
+        # )
+        # np.testing.assert_array_almost_equal(
+        #    self.j_p_av(self.t) + self.j_p_sei_av(self.t),
+        #    -self.i_cell / self.l_p,
+        #    decimal=4,
+        # )
 
     def test_conservation(self):
         """Test sum of electrode and electrolyte current densities give the applied
