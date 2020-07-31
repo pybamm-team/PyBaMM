@@ -242,7 +242,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             second_dim_repeats = self._get_auxiliary_domain_repeats(child.domains)
             r_numpy = np.kron(np.ones(second_dim_repeats), submesh.nodes)
             r = pybamm.Vector(r_numpy)
-            out = 4 * np.pi ** 2 * integration_vector @ (discretised_child * r)
+            out = 4 * np.pi * integration_vector @ (discretised_child * r ** 2)
         else:
             out = integration_vector @ discretised_child
 
