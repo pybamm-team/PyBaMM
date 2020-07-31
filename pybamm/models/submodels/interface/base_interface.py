@@ -215,6 +215,20 @@ class BaseInterface(pybamm.BaseSubModel):
     def _get_average_total_interfacial_current_density(self, variables):
         """
         Method to obtain the average total interfacial current density.
+
+        Note: this is only exact if surface area per unit volume is uniform
+        in space. Since we currently assume the active material volume fraction is
+        uniform in space the only way to get non-uniform surface area per unit volume
+        is to introduce a particle size distibution in x (see issue #1119). This only
+        makes sense for the DFN model in which the correct average interfacial
+        current density is computed in 'base_kinetics.py' by averaging the actual
+        interfacial current density. The approximation here is only used to get the
+        approximate constant additional resistance term for the "average" sei film
+        resistance model (if using), where only negligible errors will be introduced.
+
+        For "leading-order" and "composite" submodels (as used in the SPM and SPMe)
+        the surface area per unit volume is uniform anyway, so this method returns
+        correct result.
         """
 
         i_boundary_cc = variables["Current collector current density"]

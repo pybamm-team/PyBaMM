@@ -76,14 +76,18 @@ class FickianManyParticles(BaseParticle):
         c_s_surf = variables[self.domain + " particle surface concentration"]
         T_k = variables[self.domain + " electrode temperature"]
         j = variables[self.domain + " electrode interfacial current density"]
+        R = variables[self.domain + " particle distribution in x"]
 
         if self.domain == "Negative":
-            rbc = -self.param.C_n * j / self.param.a_n / self.param.D_n(c_s_surf, T_k)
+            rbc = (
+                -self.param.C_n * j * R / self.param.a_n / self.param.D_n(c_s_surf, T_k)
+            )
 
         elif self.domain == "Positive":
             rbc = (
                 -self.param.C_p
                 * j
+                * R
                 / self.param.a_p
                 / self.param.gamma_p
                 / self.param.D_p(c_s_surf, T_k)

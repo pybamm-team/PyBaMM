@@ -18,6 +18,12 @@ class BaseBatteryModel(pybamm.BaseModel):
         be set are listed below. Note that not all of the options are compatible with
         each other and with all of the models implemented in PyBaMM.
 
+            * "cell geometry" : str, optional
+                Sets the geometry of the cell. Can be "pouch" (default) or
+                "arbitrary". The arbitrary geometry option solves a 1D electrochemical
+                model with prescribed cell volume and cross-sectional area, and
+                (if thermal effects are included) solves a lumped thermal model
+                with prescribed surface area for cooling.
             * "dimensionality" : int, optional
                 Sets the dimension of the current collector problem. Can be 0
                 (default), 1 or 2.
@@ -192,7 +198,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "particle": "Fickian diffusion",
             "particle shape": "spherical",
             "thermal": "isothermal",
-            "cell_geometry": None,
+            "cell geometry": None,
             "external submodels": [],
             "sei": None,
             "sei porosity change": False,
@@ -203,10 +209,10 @@ class BaseBatteryModel(pybamm.BaseModel):
             "thermal", None
         )  # return None if option not given
         if thermal_option is None or thermal_option in ["isothermal", "lumped"]:
-            default_options["cell_geometry"] = "arbitrary"
+            default_options["cell geometry"] = "arbitrary"
         else:
-            default_options["cell_geometry"] = "pouch"
-        # The "cell_geometry" option will still be overridden by extra_options if
+            default_options["cell geometry"] = "pouch"
+        # The "cell geometry" option will still be overridden by extra_options if
         # provided
 
         # Change the default for SEI film resistance based on which sei option is
@@ -240,7 +246,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 )
             if (
                 options["thermal"] in ["x-lumped", "x-full"]
-                and options["cell_geometry"] != "pouch"
+                and options["cell geometry"] != "pouch"
             ):
                 raise pybamm.OptionError(
                     options["thermal"] + " model must have pouch geometry."
@@ -305,9 +311,9 @@ class BaseBatteryModel(pybamm.BaseModel):
             raise pybamm.OptionError(
                 "Unknown thermal model '{}'".format(options["thermal"])
             )
-        if options["cell_geometry"] not in ["arbitrary", "pouch"]:
+        if options["cell geometry"] not in ["arbitrary", "pouch"]:
             raise pybamm.OptionError(
-                "Unknown geometry '{}'".format(options["cell_geometry"])
+                "Unknown geometry '{}'".format(options["cell geometry"])
             )
         if options["sei"] not in [
             None,
@@ -630,7 +636,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             thermal_submodel = pybamm.thermal.Lumped(
                 self.param,
                 self.options["dimensionality"],
-                self.options["cell_geometry"],
+                self.options["cell geometry"],
             )
 
         elif self.options["thermal"] == "x-lumped":

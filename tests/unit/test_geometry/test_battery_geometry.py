@@ -33,6 +33,10 @@ class TestBatteryGeometry(unittest.TestCase):
         geometry = pybamm.battery_geometry(include_particles=False)
         self.assertNotIn("negative particle", geometry)
 
+    def test_geometry_error(self):
+        with self.assertRaisesRegex(pybamm.GeometryError, "Invalid current"):
+            pybamm.battery_geometry(current_collector_dimension=4)
+
 
 class TestReadParameters(unittest.TestCase):
     # This is the most complicated geometry and should test the parameters are

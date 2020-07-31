@@ -8,6 +8,10 @@ import numpy as np
 
 
 class TestDimensionlessParameterValues(unittest.TestCase):
+    def test_options(self):
+        with self.assertRaisesRegex(pybamm.OptionError, "particle shape"):
+            pybamm.LithiumIonParameters({"particle shape": "bad shape"})
+
     def test_lithium_ion(self):
         """This test checks that all the dimensionless parameters are being calculated
         correctly for the specific set of parameters for LCO from dualfoil. The values
