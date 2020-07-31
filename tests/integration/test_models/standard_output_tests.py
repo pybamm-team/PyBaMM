@@ -260,6 +260,10 @@ class ParticleConcentrationTests(BaseOutputTest):
         self.c_s_n_surf = solution["Negative particle surface concentration"]
         self.c_s_p_surf = solution["Positive particle surface concentration"]
 
+        self.c_s_n_tot = solution["Total lithium in negative electrode [mol.m-2]"]
+        self.c_s_p_tot = solution["Total lithium in positive electrode [mol.m-2]"]
+        self.c_s_tot = self.c_s_n_tot + self.c_s_p_tot
+
         self.N_s_n = solution["Negative particle flux"]
         self.N_s_p = solution["Positive particle flux"]
 
@@ -294,7 +298,11 @@ class ParticleConcentrationTests(BaseOutputTest):
 
     def test_conservation(self):
         "Test amount of lithium stored across all particles is constant."
-        # TODO: add an output for total lithium in particles
+        if isinstance(self.model.submodels["negative sei"], pybamm.sei.NoSEI):
+            diff = self.c_s_tot(self.solution.t[1:]) - self.c_s_tot(
+                self.solution.t[:-1]
+            )
+            np.testing.assert_array_almost_equal(diff, 0)
 
     def test_concentration_profile(self):
         """Test that the concentration in the centre of the negative particles is
