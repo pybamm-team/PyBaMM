@@ -3,9 +3,9 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 os.chdir(pybamm.__path__[0]+'/..')
-model = pybamm.lithium_ion.SPM(build=False)
-model.submodels["negative particle"] = pybamm.particle.FickianSingleParticle(model.param, "Negative")
-model.submodels["positive particle"] = pybamm.particle.FickianSingleParticle(model.param, "Positive")
+model = pybamm.lithium_ion.DFN(build=False)
+model.submodels["negative particle"] = pybamm.particle.FickianManyParticles(model.param, "Negative")
+model.submodels["positive particle"] = pybamm.particle.FickianManyParticles(model.param, "Positive")
 model.submodels["particle cracking"] = pybamm.particle_cracking.CrackPropagation(model.param, "Negative")
 model.build_model()
 param = model.default_parameter_values
@@ -35,11 +35,12 @@ solution = model.default_solver.solve(model, t_eval)
 # extract voltage
 c_s_n = model.variables["Negative particle concentration"]
 c_s_n_avg = pybamm.r_average(c_s_n)  # average concentration for particles
-
 stress_t_n_surf = solution["Negative particle surface tangential stress [Pa]"]
+
 c_s_n_t = solution["Negative particle concentration"]
 c_s_surf_t=solution["Negative particle surface concentration"]
 disp_t = solution["Negative particle surface displacement [m]"]
+l_cr_n_t = solution["Negative particle crack length"]
 # plot
 plt.plot(solution["Time [h]"](solution.t), stress_t_n_surf(solution.t, x=0))
 plt.xlabel(r'$t$')

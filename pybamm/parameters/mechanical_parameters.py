@@ -13,7 +13,7 @@ import pybamm
 '''
 # Dimensional parameters
 
-mechanics_flag = 1   # flag: 1 - activate mechanical effects; 0 - disable
+mechanics_flag = pybamm.Scalar(1)   # flag: 1 - activate mechanical effects; 0 - disable
 nu_p = pybamm.Parameter("Positive electrode Poisson's ratio")
 E_p = pybamm.Parameter("Positive electrode Young's modulus [Pa]")
 c_p_0 = pybamm.Parameter("Positive electrode Reference concentration " \
@@ -25,7 +25,7 @@ c_n_0 = pybamm.Parameter("Negative electrode Reference concentration " \
                         "for free of deformation [m3.mol-1]")
 Omega_n = pybamm.Parameter("Negative electrode Partial molar volume [m3.mol-1]")
 
-crack_flag = 1  
+crack_flag = pybamm.Scalar(1)  
 #  1 - enable crack propagation; 0 - disable cracking in battery degradation 
 l_cr_p_0 = pybamm.Parameter("Positive electrode Initial crack length [m]")
 l_cr_n_0 = pybamm.Parameter("Negative electrode Initial crack length [m]")
@@ -41,11 +41,11 @@ Eac_cr = pybamm.Parameter("Negative electrode Activation energy " \
 T_ref = pybamm.standard_parameters_lithium_ion.T_ref # [K]
 R_p = pybamm.standard_parameters_lithium_ion.R_p # [m]
 R_n = pybamm.standard_parameters_lithium_ion.R_n # [m]
-t0_cr = 3600 # typical time for one cycle [s]
+t0_cr = pybamm.Scalar(3600) # typical time for one cycle [s]
 
-theta_p_dim = Omega_p**2 / R_p * 2 / 9 * E_p * (1 - nu_p) 
+theta_p_dim = mechanics_flag * Omega_p**2 / R_p * 2 / 9 * E_p * (1 - nu_p) 
 # intermediate variable  [K*m^3/mol]
-theta_n_dim = Omega_n**2 / R_n * 2 / 9 * E_n * (1 - nu_n) 
+theta_n_dim = mechanics_flag * Omega_n**2 / R_n * 2 / 9 * E_n * (1 - nu_n) 
 # intermediate variable  [K*m^3/mol]
 
 # Dimensionless parameters
