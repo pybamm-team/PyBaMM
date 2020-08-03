@@ -21,16 +21,16 @@ class TestBasicModels(unittest.TestCase):
         copy.check_well_posedness()
 
     def test_dfn_half_cell_well_posed(self):
-        options = {"working electrode": "cathode"}
+        options = {"working electrode": "positive"}
         model = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
         model.check_well_posedness()
 
-        copy = model.new_copy()
-        copy.check_well_posedness()
+        # copy = model.new_copy()
+        # copy.check_well_posedness()
 
-        # options = {"working electrode": "anode"}
-        # model = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
-        # model.check_well_posedness()
+        options = {"working electrode": "negative"}
+        model = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
+        model.check_well_posedness()
 
         # copy = model.new_copy()
         # copy.check_well_posedness()
