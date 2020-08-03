@@ -34,6 +34,14 @@ class TestBasicModels(unittest.TestCase):
 
         copy = model.new_copy()
         copy.check_well_posedness()
+    
+    def test_dfn_half_cell_simulation_error(self):
+        model = pybamm.lithium_ion.BasicDFNHalfCell()
+        with self.assertRaisesRegex(
+            NotImplementedError, 
+            "not compatible with Simulations yet."
+        ):
+            pybamm.Simulation(model)
 
 
 if __name__ == "__main__":
