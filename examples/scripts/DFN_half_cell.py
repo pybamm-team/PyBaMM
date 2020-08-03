@@ -1,5 +1,5 @@
 #
-# Example showing how to load and solve the DFN
+# Example showing how to load and solve the DFN for the half cell
 #
 
 import pybamm
@@ -11,27 +11,14 @@ pybamm.set_logging_level("INFO")
 options = {"working electrode": "positive"}
 model = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
 
-Crate = 0.5
-tpulse = 360
-trest = 3600
-Npulse = np.ceil(3600 / (tpulse * Crate))
-tend = (tpulse + trest) * Npulse
-
-
-def GITT_current(Crate, tpulse, trest):
-    def current(t):
-        # return Crate * pybamm.EqualHeaviside(t % (tpulse + trest), tpulse)
-        return Crate * pybamm.EqualHeaviside(t, tpulse)
-
-    return current
-
-
 # create geometry
 geometry = model.default_geometry
 
-# load parameter values and process model and geometry
+# load parameter values
 chemistry = pybamm.parameter_sets.Chen2020
 param = pybamm.ParameterValues(chemistry=chemistry)
+
+# add lithium counter electrode parameter values
 param.update(
     {
         "Lithium counter electrode exchange-current density [A.m-2]": 12.6,
@@ -40,7 +27,8 @@ param.update(
     },
     check_already_exists=False,
 )
-param["Current function [A]"] = GITT_current(Crate, tpulse, trest)
+
+# process model and geometry
 param.process_model(model)
 param.process_geometry(geometry)
 
@@ -54,7 +42,6 @@ disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
 
 # solve model
-# t_eval = np.linspace(0, tend, tend // 10)
 t_eval = np.linspace(0, 3800, 1000)
 solver = pybamm.CasadiSolver(mode="fast", atol=1e-6, rtol=1e-3)
 solution = solver.solve(model, t_eval)
