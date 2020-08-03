@@ -2,6 +2,7 @@
 
 ## Features
 
+-   Added DFN model for a half cell ([#1121](https://github.com/pybamm-team/PyBaMM/pull/1121))
 -   Added support for index 1 semi-explicit dae equations and sensitivity calculations to JAX BDF solver ([#1107](https://github.com/pybamm-team/PyBaMM/pull/1107))
 -   Allowed keyword arguments to be passed to `Simulation.plot()` ([#1099](https://github.com/pybamm-team/PyBaMM/pull/1099))
 
