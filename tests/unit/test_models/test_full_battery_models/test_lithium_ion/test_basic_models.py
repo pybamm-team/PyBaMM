@@ -25,15 +25,15 @@ class TestBasicModels(unittest.TestCase):
         model = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
         model.check_well_posedness()
 
-        # copy = model.new_copy()
-        # copy.check_well_posedness()
+        copy = model.new_copy()
+        copy.check_well_posedness()
 
         options = {"working electrode": "negative"}
         model = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
         model.check_well_posedness()
 
-        # copy = model.new_copy()
-        # copy.check_well_posedness()
+        copy = model.new_copy()
+        copy.check_well_posedness()
 
 
 if __name__ == "__main__":

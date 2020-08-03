@@ -415,3 +415,6 @@ class BasicDFNHalfCell(BaseModel):
             "Terminal voltage": voltage + vdrop_Li,
             "Terminal voltage [V]": voltage_dim + vdrop_Li_dim,
         }
+
+    def new_copy(self, build=False):
+        return pybamm.BaseModel.new_copy(self)
