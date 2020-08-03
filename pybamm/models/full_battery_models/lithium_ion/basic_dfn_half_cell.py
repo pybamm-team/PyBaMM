@@ -44,7 +44,8 @@ class BasicDFNHalfCell(BaseModel):
 
         if working_electrode not in ["negative", "positive"]:
             raise ValueError(
-                "The value of working_electrode should be either 'positive' or 'negative'"
+                "The value of working_electrode should be either 'positive'"
+                "or 'negative'"
             )
 
         ######################
@@ -387,7 +388,7 @@ class BasicDFNHalfCell(BaseModel):
             "Negative particle concentration": c_s_n,
             "Negative particle surface concentration [mol.m-3]": param.c_n_max
             * c_s_surf_n,
-            "X-averaged negative particle surface concentration [mol.m-3]": 
+            "X-averaged negative particle surface concentration [mol.m-3]":
             param.c_n_max * c_s_surf_n_av,
             "Negative particle concentration [mol.m-3]": param.c_n_max * c_s_n,
             "Electrolyte concentration": c_e,
@@ -397,7 +398,7 @@ class BasicDFNHalfCell(BaseModel):
             "Positive particle concentration": c_s_p,
             "Positive particle surface concentration [mol.m-3]": param.c_p_max
             * c_s_surf_p,
-            "X-averaged positive particle surface concentration [mol.m-3]": 
+            "X-averaged positive particle surface concentration [mol.m-3]":
             param.c_p_max * c_s_surf_p_av,
             "Positive particle concentration [mol.m-3]": param.c_p_max * c_s_p,
             "Current [A]": I,
