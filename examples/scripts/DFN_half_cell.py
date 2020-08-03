@@ -8,7 +8,7 @@ import numpy as np
 pybamm.set_logging_level("INFO")
 
 # load model
-options = {"working electrode": "cathode"}
+options = {"working electrode": "positive"}
 model = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
 
 Crate = 0.5
@@ -70,7 +70,7 @@ plot = pybamm.QuickPlot(
         "Negative electrode potential [V]",
         "Electrolyte potential [V]",
         "Positive electrode potential [V]",
-        ["Terminal voltage [V]", "Voltage drop [V]"],
+        "Terminal voltage [V]",
     ],
     time_unit="seconds",
     spatial_unit="um",

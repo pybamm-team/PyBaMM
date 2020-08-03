@@ -31,7 +31,7 @@ class BasicDFNHalfCell(BaseModel):
     def __init__(
         self,
         name="Doyle-Fuller-Newman half cell model",
-        options={"working electrode": "anode"},
+        options={"working electrode": "negative"},
         build=True,
     ):
         super().__init__({}, name)
@@ -42,9 +42,9 @@ class BasicDFNHalfCell(BaseModel):
         param = self.param
         working_electrode = options["working electrode"]
 
-        if working_electrode not in ["anode", "cathode"]:
+        if working_electrode not in ["negative", "positive"]:
             raise ValueError(
-                "The value of working_electrode should be either 'cathode' or 'anode'"
+                "The value of working_electrode should be either 'positive' or 'negative'"
             )
 
         ######################
@@ -53,7 +53,7 @@ class BasicDFNHalfCell(BaseModel):
         # Variables that depend on time only are created without a domain
         Q = pybamm.Variable("Discharge capacity [A.h]")
         # Variables that vary spatially are created with a domain
-        if working_electrode == "anode":
+        if working_electrode == "negative":
             c_e_n = pybamm.Variable(
                 "Negative electrolyte concentration", domain="negative electrode"
             )
@@ -75,7 +75,7 @@ class BasicDFNHalfCell(BaseModel):
             c_e = pybamm.Concatenation(c_e_s, c_e_p)
 
         # Electrolyte potential
-        if working_electrode == "anode":
+        if working_electrode == "negative":
             phi_e_n = pybamm.Variable(
                 "Negative electrolyte potential", domain="negative electrode"
             )
@@ -136,7 +136,7 @@ class BasicDFNHalfCell(BaseModel):
             pybamm.Parameter("Positive electrode porosity"), "positive electrode"
         )
 
-        if working_electrode == "anode":
+        if working_electrode == "negative":
             eps = pybamm.Concatenation(eps_n, eps_s)
             tor = pybamm.Concatenation(eps_n ** param.b_e_n, eps_s ** param.b_e_s)
         else:
@@ -150,7 +150,7 @@ class BasicDFNHalfCell(BaseModel):
         c_s_surf_n = pybamm.surf(c_s_n)
         c_s_surf_p = pybamm.surf(c_s_p)
 
-        if working_electrode == "anode":
+        if working_electrode == "negative":
             j0_n = param.j0_n(c_e_n, c_s_surf_n, T) / param.C_r_n
             j_n = (
                 2
@@ -251,7 +251,7 @@ class BasicDFNHalfCell(BaseModel):
         self.algebraic[phi_s_n] = pybamm.div(i_s_n) + j_n
         self.algebraic[phi_s_p] = pybamm.div(i_s_p) + j_p
 
-        if working_electrode == "anode":
+        if working_electrode == "negative":
             self.boundary_conditions[phi_s_n] = {
                 "left": (
                     i_cell / pybamm.boundary_value(-sigma_eff_n, "left"),
@@ -296,7 +296,7 @@ class BasicDFNHalfCell(BaseModel):
             / (tor * param.gamma_e * param.D_e(c_e, T))
         )
 
-        if working_electrode == "anode":
+        if working_electrode == "negative":
             self.boundary_conditions[c_e] = {
                 "left": (pybamm.Scalar(0), "Neumann"),
                 "right": (pybamm.boundary_value(dce_dx, "right"), "Neumann"),
@@ -326,7 +326,7 @@ class BasicDFNHalfCell(BaseModel):
         #     + param.chi(c_e) * dce_dx / c_e
         # )
 
-        if working_electrode == "anode":
+        if working_electrode == "negative":
             self.boundary_conditions[phi_e] = {
                 "left": (pybamm.Scalar(0), "Neumann"),
                 "right": (pybamm.Scalar(0), "Dirichlet"),
@@ -353,7 +353,7 @@ class BasicDFNHalfCell(BaseModel):
         pot = param.potential_scale
         i_typ = param.current_scale
 
-        if working_electrode == "anode":
+        if working_electrode == "negative":
             voltage = pybamm.boundary_value(phi_s_n, "left")
             voltage_dim = param.U_n_ref + pot * voltage
             vdrop_Li = 2 * pybamm.arcsinh(
