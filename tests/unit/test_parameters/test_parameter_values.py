@@ -340,6 +340,28 @@ class TestParameterValues(unittest.TestCase):
         processed_func = parameter_values.process_symbol(func)
         self.assertEqual(processed_func.evaluate(inputs={"vec": 13}), 13)
 
+        # make sure function keeps the domain of the original function
+
+        def my_func(x):
+            return 2 * x
+
+        x = pybamm.standard_spatial_vars.x_n
+        func = pybamm.FunctionParameter("func", {"x": x})
+
+        parameter_values = pybamm.ParameterValues({"func": my_func})
+        func1 = parameter_values.process_symbol(func)
+
+        parameter_values = pybamm.ParameterValues({"func": pybamm.InputParameter("a")})
+        func2 = parameter_values.process_symbol(func)
+
+        parameter_values = pybamm.ParameterValues(
+            {"func": pybamm.InputParameter("a", "negative electrode")}
+        )
+        func3 = parameter_values.process_symbol(func)
+
+        self.assertEqual(func1.domains, func2.domains)
+        self.assertEqual(func1.domains, func3.domains)
+
     def test_process_inline_function_parameters(self):
         def D(c):
             return c ** 2

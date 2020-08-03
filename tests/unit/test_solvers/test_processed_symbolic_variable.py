@@ -57,10 +57,8 @@ class TestProcessedSymbolicVariable(unittest.TestCase):
         # Test bad inputs
         with self.assertRaisesRegex(TypeError, "inputs should be 'dict'"):
             processed_var.value(1)
-        with self.assertRaisesRegex(ValueError, "Inconsistent input keys"):
+        with self.assertRaisesRegex(KeyError, "Inconsistent input keys"):
             processed_var.value({"not p": 3})
-        with self.assertRaisesRegex(ValueError, "Inconsistent input keys"):
-            processed_var.value({"q": 3, "p": 2})
 
     def test_processed_variable_0D_some_inputs(self):
         # with some symbolic inputs and some non-symbolic inputs
@@ -108,7 +106,7 @@ class TestProcessedSymbolicVariable(unittest.TestCase):
         sol = pybamm.Solution(t_sol, y_sol)
         processed_eqn = pybamm.ProcessedSymbolicVariable(eqn_sol, sol)
         np.testing.assert_array_equal(
-            processed_eqn.value(), y_sol + x_sol[:, np.newaxis]
+            processed_eqn.value(), (y_sol + x_sol[:, np.newaxis]).T.reshape(-1, 1)
         )
 
     def test_processed_variable_1D_with_scalar_inputs(self):
@@ -154,7 +152,8 @@ class TestProcessedSymbolicVariable(unittest.TestCase):
 
         # Test values
         np.testing.assert_array_equal(
-            processed_eqn.value({"p": 27, "q": -42}), 27 * y_sol - 84,
+            processed_eqn.value({"p": 27, "q": -42}),
+            (27 * y_sol - 84).T.reshape(-1, 1),
         )
 
         # Test sensitivities
