@@ -33,7 +33,7 @@ def constant_current_constant_voltage_constant_power(variables):
     s_I = pybamm.InputParameter("Current switch")
     s_V = pybamm.InputParameter("Voltage switch")
     s_P = pybamm.InputParameter("Power switch")
-    n_cells = pybamm.electrical_parameters.n_cells
+    n_cells = pybamm.Parameter("Number of cells connected in series to make a battery")
     return (
         s_I * (I - pybamm.InputParameter("Current input [A]"))
         + s_V * (V - pybamm.InputParameter("Voltage input [V]") / n_cells)

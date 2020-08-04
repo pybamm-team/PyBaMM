@@ -9,7 +9,7 @@ import unittest
 
 class TestConstantConcentration(unittest.TestCase):
     def test_public_functions(self):
-        param = pybamm.standard_parameters_lithium_ion
+        param = pybamm.LithiumIonParameters()
         submodel = pybamm.electrolyte_diffusion.ConstantConcentration(
             param
         )

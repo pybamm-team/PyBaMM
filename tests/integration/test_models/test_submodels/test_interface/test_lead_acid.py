@@ -30,7 +30,7 @@ class TestMainReaction(unittest.TestCase):
 
     def test_creation_main_reaction(self):
         # With intercalation
-        param = pybamm.standard_parameters_lead_acid
+        param = pybamm.LeadAcidParameters()
         model_n = pybamm.interface.BaseInterface(param, "Negative", "lead-acid main")
         j0_n = model_n._get_exchange_current_density(self.variables)
         model_p = pybamm.interface.BaseInterface(param, "Positive", "lead-acid main")
@@ -40,7 +40,7 @@ class TestMainReaction(unittest.TestCase):
 
     def test_set_parameters_main_reaction(self):
         # With intercalation
-        param = pybamm.standard_parameters_lead_acid
+        param = pybamm.LeadAcidParameters()
         model_n = pybamm.interface.BaseInterface(param, "Negative", "lead-acid main")
         j0_n = model_n._get_exchange_current_density(self.variables)
         model_p = pybamm.interface.BaseInterface(param, "Positive", "lead-acid main")
@@ -57,7 +57,7 @@ class TestMainReaction(unittest.TestCase):
 
     def test_discretisation_main_reaction(self):
         # With intercalation
-        param = pybamm.standard_parameters_lead_acid
+        param = pybamm.LeadAcidParameters()
         model_n = pybamm.interface.BaseInterface(param, "Negative", "lead-acid main")
         j0_n = model_n._get_exchange_current_density(self.variables)
         model_p = pybamm.interface.BaseInterface(param, "Positive", "lead-acid main")
@@ -80,7 +80,7 @@ class TestMainReaction(unittest.TestCase):
 
     def test_diff_main_reaction(self):
         # With intercalation
-        param = pybamm.standard_parameters_lead_acid
+        param = pybamm.LeadAcidParameters()
         model_n = pybamm.interface.BaseInterface(param, "Negative", "lead-acid main")
         model_p = pybamm.interface.BaseInterface(param, "Positive", "lead-acid main")
         parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values

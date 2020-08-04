@@ -1,20 +1,9 @@
 #
 # Base model class
 #
-import inspect
 import numbers
 import pybamm
 import warnings
-
-
-class ParamClass:
-    """Class for converting a module of parameters into a class. For pickling."""
-
-    def __init__(self, methods):
-        for k, v in methods.__dict__.items():
-            # don't save module attributes (e.g. pybamm, numpy)
-            if not (k.startswith("__") or inspect.ismodule(v)):
-                self.__dict__[k] = v
 
 
 class BaseModel(object):
@@ -261,12 +250,7 @@ class BaseModel(object):
 
     @param.setter
     def param(self, values):
-        if values is None:
-            self._param = None
-        else:
-            # convert module into a class
-            # (StackOverflow: https://tinyurl.com/yk3euon3)
-            self._param = ParamClass(values)
+        self._param = values
 
     @property
     def options(self):

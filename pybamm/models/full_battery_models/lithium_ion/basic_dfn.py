@@ -109,6 +109,10 @@ class BasicDFN(BaseModel):
         )
         eps = pybamm.Concatenation(eps_n, eps_s, eps_p)
 
+        # Active material volume fraction (eps + eps_s + eps_inactive = 1)
+        eps_s_n = pybamm.Parameter("Negative electrode active material volume fraction")
+        eps_s_p = pybamm.Parameter("Positive electrode active material volume fraction")
+
         # Tortuosity
         tor = pybamm.Concatenation(
             eps_n ** param.b_e_n, eps_s ** param.b_e_s, eps_p ** param.b_e_p
@@ -206,8 +210,9 @@ class BasicDFN(BaseModel):
         ######################
         # Current in the solid
         ######################
-        i_s_n = -param.sigma_n * (1 - eps_n) ** param.b_s_n * pybamm.grad(phi_s_n)
-        sigma_eff_p = param.sigma_p * (1 - eps_p) ** param.b_s_p
+        sigma_eff_n = param.sigma_n * eps_s_n ** param.b_s_n
+        i_s_n = -sigma_eff_n * pybamm.grad(phi_s_n)
+        sigma_eff_p = param.sigma_p * eps_s_p ** param.b_s_p
         i_s_p = -sigma_eff_p * pybamm.grad(phi_s_p)
         # The `algebraic` dictionary contains differential equations, with the key being
         # the main scalar variable of interest in the equation

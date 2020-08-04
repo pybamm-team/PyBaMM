@@ -667,6 +667,9 @@ class ParameterValues:
             "pybamm",
             "constants",
             "np",
+            "geo",
+            "elec",
+            "therm",
         ]
 
         # If 'parameters' is a class, extract the dict
