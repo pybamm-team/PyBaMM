@@ -9,7 +9,7 @@ import unittest
 class TestTafel(unittest.TestCase):
     def test_public_function(self):
         # Test forward Tafel on the negative
-        param = pybamm.standard_parameters_lithium_ion
+        param = pybamm.LithiumIonParameters()
 
         a_n = pybamm.FullBroadcast(
             pybamm.Scalar(0), ["negative electrode"], "current collector"

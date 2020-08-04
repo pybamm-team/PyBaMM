@@ -1,4 +1,4 @@
 Electrical Parameters
 =====================
 
-.. automodule:: pybamm.parameters.electrical_parameters
+.. autoclass:: pybamm.ElectricalParameters
