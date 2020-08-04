@@ -340,12 +340,12 @@ class SpectralVolumes1DSubMesh(SubMesh1D):
         coord_sys = spatial_var.coord_sys
 
         cv_edges = np.array([edges[0]] + [
-                x
-                for (a, b) in zip(edges[:-1], edges[1:])
-                for x in np.flip(
-                    self.chebyshev_collocation_points(order + 1, a, b)
-                )[1:]
-            ])
+            x
+            for (a, b) in zip(edges[:-1], edges[1:])
+            for x in np.flip(
+                self.chebyshev_collocation_points(order + 1, a, b)
+            )[1:]
+        ])
 
         self.sv_edges = edges
         self.sv_nodes = (edges[:-1] + edges[1:]) / 2
