@@ -58,9 +58,12 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         # Record whether there are any symbolic inputs
         inputs = inputs or {}
         has_symbolic_inputs = any(isinstance(v, casadi.MX) for v in inputs.values())
+        symbolic_inputs = casadi.vertcat(
+            *[v for v in inputs.values() if isinstance(v, casadi.MX)]
+        )
 
         # Create casadi objects for the root-finder
-        inputs = casadi.vertcat(*[x for x in inputs.values()])
+        inputs = casadi.vertcat(*[v for v in inputs.values()])
 
         y0 = model.y0
         # The casadi algebraic solver can read rhs equations, but leaves them unchanged
@@ -82,10 +85,9 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         t_sym = casadi.MX.sym("t")
         y_alg_sym = casadi.MX.sym("y_alg", y0_alg.shape[0])
         y_sym = casadi.vertcat(y0_diff, y_alg_sym)
-        p_sym = casadi.MX.sym("p", inputs.shape[0])
 
-        t_p_sym = casadi.vertcat(t_sym, p_sym)
-        alg = model.casadi_algebraic(t_sym, y_sym, p_sym)
+        t_and_inputs_sym = casadi.vertcat(t_sym, symbolic_inputs)
+        alg = model.casadi_algebraic(t_sym, y_sym, inputs)
 
         # Set constraints vector in the casadi format
         # Constrain the unknowns. 0 (default): no constraint on ui, 1: ui >= 0.0,
@@ -100,7 +102,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         roots = casadi.rootfinder(
             "roots",
             "newton",
-            dict(x=y_alg_sym, p=t_p_sym, g=alg),
+            dict(x=y_alg_sym, p=t_and_inputs_sym, g=alg),
             {
                 **self.extra_options,
                 "abstol": self.tol,
@@ -123,10 +125,10 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                     y_alg = casadi.horzcat(y_alg, y0_alg)
             # Otherwise calculate new y_sol
             else:
-                t_inputs = casadi.vertcat(t, inputs)
+                t_eval_inputs_sym = casadi.vertcat(t, symbolic_inputs)
                 # Solve
                 try:
-                    y_alg_sol = roots(y0_alg, t_inputs)
+                    y_alg_sol = roots(y0_alg, t_eval_inputs_sym)
                     success = True
                     message = None
                     # Check final output

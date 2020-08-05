@@ -16,13 +16,11 @@ import pybamm
 mechanics_flag = pybamm.Scalar(1)   # flag: 1 - activate mechanical effects; 0 - disable
 nu_p = pybamm.Parameter("Positive electrode Poisson's ratio")
 E_p = pybamm.Parameter("Positive electrode Young's modulus [Pa]")
-c_p_0 = pybamm.Parameter("Positive electrode Reference concentration " \
-                        "for free of deformation [m3.mol-1]")
+c_p_0 = pybamm.Parameter("Positive electrode Reference concentration for free of deformation [m3.mol-1]") # noqa
 Omega_p = pybamm.Parameter("Positive electrode Partial molar volume [m3.mol-1]")
 nu_n = pybamm.Parameter("Negative electrode Poisson's ratio")
 E_n = pybamm.Parameter("Negative electrode Young's modulus [Pa]")
-c_n_0 = pybamm.Parameter("Negative electrode Reference concentration " \
-                        "for free of deformation [m3.mol-1]")
+c_n_0 = pybamm.Parameter("Negative electrode Reference concentration for free of deformation [m3.mol-1]") # noqa
 Omega_n = pybamm.Parameter("Negative electrode Partial molar volume [m3.mol-1]")
 
 crack_flag = pybamm.Scalar(1)  
@@ -30,13 +28,11 @@ crack_flag = pybamm.Scalar(1)
 l_cr_p_0 = pybamm.Parameter("Positive electrode Initial crack length [m]")
 l_cr_n_0 = pybamm.Parameter("Negative electrode Initial crack length [m]")
 w_cr = pybamm.Parameter("Negative electrode Initial crack width [m]")
-rho_cr_dim = pybamm.Parameter("Negative electrode Number of cracks " \
-                            "per unit area of the particle [m-2]")
+rho_cr_dim = pybamm.Parameter("Negative electrode Number of cracks per unit area of the particle [m-2]") # noqa
 b_cr = pybamm.Parameter("Negative electrode Paris' law constant b")
 m_cr = pybamm.Parameter("Negative electrode Paris' law constant m")
 k_cr = pybamm.Parameter("Negative electrode Cracking rate")
-Eac_cr = pybamm.Parameter("Negative electrode Activation energy " \
-                            "for cracking rate [kJ.mol-1]")
+Eac_cr = pybamm.Parameter("Negative electrode Activation energy for cracking rate [kJ.mol-1]") # noqa
 
 T_ref = pybamm.standard_parameters_lithium_ion.T_ref # [K]
 R_p = pybamm.standard_parameters_lithium_ion.R_p # [m]

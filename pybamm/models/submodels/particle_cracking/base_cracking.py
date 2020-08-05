@@ -73,7 +73,7 @@ class BaseCracking(pybamm.BaseSubModel):
         """
         c_s_n = variables["Negative particle concentration"]
         c_s_n_avg = pybamm.r_average(c_s_n)  # average concentration for particles
-        c_s_n_avg.domain=["negative electrode"]
+        # c_s_n_avg = variables["R-average negative particle concentration"]
         # need to check whether is avarage cs in a particle
         c_s_n_surf = variables["Negative particle surface concentration"]
         # c_s_n_avg = 2*c_s_n_surf
@@ -82,7 +82,7 @@ class BaseCracking(pybamm.BaseSubModel):
         disp_n_surf_dim = mp.Omega_n * mp.R_n / 3 * (c_s_n_avg - mp.c_n_0) * c_scale
         # c0 reference concentration for no deformation
         stress_r_n_surf_dim = 0 * mp.E_n
-        stress_t_n_surf_dim = ( mp.Omega_n * mp.E_n / 3.0 / (1.0 - mp.nu_n) * (c_s_n_avg - 0.5 * c_s_n_surf) * c_scale ) # noqa        
+        stress_t_n_surf_dim = ( mp.Omega_n * mp.E_n / 3.0 / (1.0 - mp.nu_n) * (c_s_n_avg - c_s_n_surf) * c_scale ) # noqa        
         disp_n_surf = disp_n_surf_dim / mp.R_n
         stress_r_n_surf = stress_r_n_surf_dim / mp.E_n
         stress_t_n_surf = stress_t_n_surf_dim / mp.E_n

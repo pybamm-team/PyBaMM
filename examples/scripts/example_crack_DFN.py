@@ -33,14 +33,12 @@ t_eval = np.linspace(0, 3600, 100)
 solution = model.default_solver.solve(model, t_eval)
 
 # extract voltage
-c_s_n = model.variables["Negative particle concentration"]
-c_s_n_avg = pybamm.r_average(c_s_n)  # average concentration for particles
 stress_t_n_surf = solution["Negative particle surface tangential stress [Pa]"]
-
 c_s_n_t = solution["Negative particle concentration"]
 c_s_surf_t=solution["Negative particle surface concentration"]
 disp_t = solution["Negative particle surface displacement [m]"]
 l_cr_n_t = solution["Negative particle crack length"]
+dl_cr = solution ["Negative particle cracking rate"]
 # plot
 plt.plot(solution["Time [h]"](solution.t), stress_t_n_surf(solution.t, x=0))
 plt.xlabel(r'$t$')

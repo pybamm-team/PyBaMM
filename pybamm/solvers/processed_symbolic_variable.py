@@ -121,32 +121,9 @@ class ProcessedSymbolicVariable(object):
             if idx == 0:
                 entries = next_entries
             else:
-                entries = casadi.horzcat(entries, next_entries)
+                entries = casadi.vertcat(entries, next_entries)
 
-        # Get node values
-        nodes = self.mesh.nodes
-
-        # assign attributes for reference (either x_sol or r_sol)
         self.entries = entries
-        self.dimensions = 1
-        if self.domain[0] in ["negative particle", "positive particle"]:
-            self.first_dimension = "r"
-            self.r_sol = nodes
-        elif self.domain[0] in [
-            "negative electrode",
-            "separator",
-            "positive electrode",
-        ]:
-            self.first_dimension = "x"
-            self.x_sol = nodes
-        elif self.domain == ["current collector"]:
-            self.first_dimension = "z"
-            self.z_sol = nodes
-        else:
-            self.first_dimension = "x"
-            self.x_sol = nodes
-
-        self.first_dim_pts = nodes
 
     def value(self, inputs=None, check_inputs=True):
         """
@@ -156,6 +133,13 @@ class ProcessedSymbolicVariable(object):
         ----------
         inputs : dict
             The inputs at which to evaluate the variable.
+
+        Returns
+        -------
+        casadi.DM
+            A casadi matrix of size (n_x * n_t, 1), where n_x is the number of spatial
+            discretisation points for the variable, and n_t is the length of the time
+            vector
         """
         if inputs is None:
             return self.casadi_entries_fn(casadi.DM())
@@ -173,6 +157,13 @@ class ProcessedSymbolicVariable(object):
         ----------
         inputs : dict
             The inputs at which to evaluate the variable.
+
+        Returns
+        -------
+        casadi.DM
+            A casadi matrix of size (n_x * n_t, n_p), where n_x is the number of spatial
+            discretisation points for the variable, n_t is the length of the time
+            vector, and n_p is the number of input parameters
         """
         if self.casadi_sens_fn is None:
             raise ValueError(
@@ -204,17 +195,19 @@ class ProcessedSymbolicVariable(object):
         # Convert dict to casadi vector
         if not isinstance(inputs_dict, dict):
             raise TypeError("inputs should be 'dict' but are {}".format(inputs_dict))
-        # Check keys are consistent
-        if list(inputs_dict.keys()) != list(self.symbolic_inputs_dict.keys()):
-            raise ValueError(
-                "Inconsistent input keys: expected {}, actual {}".format(
-                    list(self.symbolic_inputs_dict.keys()), list(inputs_dict.keys())
-                )
-            )
-        inputs = casadi.vertcat(*[p for p in inputs_dict.values()])
+        # Sort input dictionary keys according to the symbolic inputs dictionary
+        # For practical number of input parameters this should be extremely fast and
+        # so is ok to do at each step
+        try:
+            inputs_dict_sorted = {
+                k: inputs_dict[k] for k in self.symbolic_inputs_dict.keys()
+            }
+        except KeyError as e:
+            raise KeyError("Inconsistent input keys. '{}' not found".format(e.args[0]))
+        inputs = casadi.vertcat(*[p for p in inputs_dict_sorted.values()])
         if inputs.shape[0] != self.symbolic_inputs_total_shape:
             # Find the variable which caused the error, for a clearer error message
-            for key, inp in inputs_dict.items():
+            for key, inp in inputs_dict_sorted.items():
                 if inp.shape[0] != self.symbolic_inputs_dict[key].shape[0]:
                     raise ValueError(
                         "Wrong shape for input '{}': expected {}, actual {}".format(
