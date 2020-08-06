@@ -33,13 +33,27 @@ t_eval = np.linspace(0, 3600, 100)
 solution = model.default_solver.solve(model, t_eval)
 
 # extract voltage
-stress_t_n_surf = solution["Negative particle surface tangential stress"]
-c_s_n_t = solution["Negative particle concentration"]
-c_s_surf_t=solution["Negative particle surface concentration"]
-disp_t = solution["Negative particle surface displacement [m]"]
+stress_t_n_surf = solution['Negative particle surface tangential stress']
+c_s_n = solution['Negative particle concentration']
+t_all = solution["Time [s]"].entries
+x = solution["x [m]"].entries[:, 0]
 
 # plot
-plt.plot(solution["Time [h]"](solution.t), stress_t_n_surf(solution.t, x=0.3))
-plt.xlabel(r'$t$')
-plt.ylabel('Negative particle surface tangential stress')
-plt.show()
+c_s_n = solution['Negative particle concentration']
+r_n = solution["r_n [m]"].entries[:, 0, 0]
+
+def plot_concentrations(t):
+    f, (ax1, ax2) = plt.subplots(1, 2 ,figsize=(10,5))
+    ax1.plot(t_all, stress_t_n_surf(t=t_all,x=x[0]))
+    ax1.set_xlabel(r'$t$ [s]')
+    ax1.set_ylabel('$\sigma_t/E_n$')
+    ax1.set_ylim(0, 0.0015)
+    
+    plot_c_n, = ax2.plot(r_n, c_s_n(r=r_n,t=t,x=x[0]))  # can evaluate at arbitrary x (single representative particle)
+    ax2.set_ylabel('Negative particle concentration')
+    ax2.set_xlabel(r'$r_n$ [m]')
+    ax2.set_ylim(0, 1)
+    plt.show()
+    
+import ipywidgets as widgets
+widgets.interact(plot_concentrations, t=widgets.FloatSlider(min=0,max=3600,step=10,value=0));
