@@ -67,8 +67,9 @@ class BaseOutputTest(object):
 
         # Use dimensional time and space
         self.t = solution.t * model.timescale_eval
+        geo = pybamm.GeometricParameters()
 
-        L_x = param.evaluate(pybamm.geometric_parameters.L_x)
+        L_x = param.evaluate(geo.L_x)
         self.x_n = disc.mesh["negative electrode"].nodes * L_x
         self.x_s = disc.mesh["separator"].nodes * L_x
         self.x_p = disc.mesh["positive electrode"].nodes * L_x
@@ -80,23 +81,18 @@ class BaseOutputTest(object):
         self.x_edge = disc.mesh.combine_submeshes(*whole_cell).edges * L_x
 
         if isinstance(self.model, pybamm.lithium_ion.BaseModel):
-            R_n = param.evaluate(pybamm.geometric_parameters.R_n)
-            R_p = param.evaluate(pybamm.geometric_parameters.R_p)
+            R_n = param.evaluate(geo.R_n)
+            R_p = param.evaluate(geo.R_p)
             self.r_n = disc.mesh["negative particle"].nodes * R_n
             self.r_p = disc.mesh["positive particle"].nodes * R_p
             self.r_n_edge = disc.mesh["negative particle"].edges * R_n
             self.r_p_edge = disc.mesh["positive particle"].edges * R_p
 
         # Useful parameters
-        self.l_n = param.evaluate(pybamm.geometric_parameters.l_n)
-        self.l_p = param.evaluate(pybamm.geometric_parameters.l_p)
+        self.l_n = param.evaluate(geo.l_n)
+        self.l_p = param.evaluate(geo.l_p)
 
-        if isinstance(self.model, pybamm.lithium_ion.BaseModel):
-            current_param = pybamm.standard_parameters_lithium_ion.current_with_time
-        elif isinstance(self.model, pybamm.lead_acid.BaseModel):
-            current_param = pybamm.standard_parameters_lead_acid.current_with_time
-        else:
-            current_param = pybamm.electrical_parameters.current_with_time
+        current_param = self.model.param.current_with_time
 
         self.i_cell = param.process_symbol(current_param).evaluate(solution.t)
 
@@ -563,31 +559,49 @@ class CurrentTests(BaseOutputTest):
         self.i_s = solution["Electrode current density"]
         self.i_e = solution["Electrolyte current density"]
 
+        self.a_n = solution["Negative surface area per unit volume distribution in x"]
+        self.a_p = solution["Positive surface area per unit volume distribution in x"]
+
     def test_interfacial_current_average(self):
-        """Test that average of the interfacial current density is equal to the true
+        """Test that average of the surface area density distribution (in x)
+        multiplied by the interfacial current density is equal to the true
         value."""
+
         np.testing.assert_array_almost_equal(
-            self.j_n_av(self.t) + self.j_n_sei_av(self.t),
+            np.mean(
+                self.a_n(x=self.x_n)
+                * (self.j_n(self.t, self.x_n) + self.j_n_sei(self.t, self.x_n)),
+                axis=0,
+            ),
             self.i_cell / self.l_n,
             decimal=4,
         )
         np.testing.assert_array_almost_equal(
-            self.j_p_av(self.t) + self.j_p_sei_av(self.t),
+            np.mean(
+                self.a_p(x=self.x_p)
+                * (self.j_p(self.t, self.x_p) + self.j_p_sei(self.t, self.x_p)),
+                axis=0,
+            ),
             -self.i_cell / self.l_p,
             decimal=4,
         )
+        # np.testing.assert_array_almost_equal(
+        #    (self.j_n_av(self.t) + self.j_n_sei_av(self.t)),
+        #    self.i_cell / self.l_n,
+        #    decimal=4,
+        # )
+        # np.testing.assert_array_almost_equal(
+        #    self.j_p_av(self.t) + self.j_p_sei_av(self.t),
+        #    -self.i_cell / self.l_p,
+        #    decimal=4,
+        # )
 
     def test_conservation(self):
         """Test sum of electrode and electrolyte current densities give the applied
         current density"""
         t, x_n, x_s, x_p = self.t, self.x_n, self.x_s, self.x_p
 
-        if isinstance(self.model, pybamm.lithium_ion.BaseModel):
-            current_param = pybamm.standard_parameters_lithium_ion.current_with_time
-        elif isinstance(self.model, pybamm.lead_acid.BaseModel):
-            current_param = pybamm.standard_parameters_lead_acid.current_with_time
-        else:
-            current_param = pybamm.electrical_parameters.current_with_time
+        current_param = self.model.param.current_with_time
 
         i_cell = self.param.process_symbol(current_param).evaluate(t=t)
         for x in [x_n, x_s, x_p]:
@@ -605,12 +619,7 @@ class CurrentTests(BaseOutputTest):
         """Test the boundary values of the current densities"""
         t, x_n, x_p = self.t, self.x_n_edge, self.x_p_edge
 
-        if isinstance(self.model, pybamm.lithium_ion.BaseModel):
-            current_param = pybamm.standard_parameters_lithium_ion.current_with_time
-        elif isinstance(self.model, pybamm.lead_acid.BaseModel):
-            current_param = pybamm.standard_parameters_lead_acid.current_with_time
-        else:
-            current_param = pybamm.electrical_parameters.current_with_time
+        current_param = self.model.param.current_with_time
 
         i_cell = self.param.process_symbol(current_param).evaluate(t=t)
         np.testing.assert_array_almost_equal(self.i_s_n(t, x_n[0]), i_cell, decimal=2)
@@ -652,9 +661,9 @@ class VelocityTests(BaseOutputTest):
         """Test the boundary values of the current densities"""
         t, x_n, x_p = self.t, self.x_n, self.x_p
 
-        beta_n = pybamm.standard_parameters_lead_acid.beta_n
+        beta_n = self.model.param.beta_n
         beta_n = self.param.evaluate(beta_n)
-        beta_p = pybamm.standard_parameters_lead_acid.beta_p
+        beta_p = self.model.param.beta_p
         beta_p = self.param.evaluate(beta_p)
 
         np.testing.assert_array_almost_equal(

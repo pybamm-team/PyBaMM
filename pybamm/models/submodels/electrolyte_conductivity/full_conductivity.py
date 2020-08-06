@@ -52,10 +52,18 @@ class Full(BaseElectrolyteConductivity):
         phi_e = variables["Electrolyte potential"]
         i_e = variables["Electrolyte current density"]
 
+        # Get surface area per unit volume distribution in x (to account for
+        # graded electrodes)
+        a_n = variables["Negative surface area per unit volume distribution in x"]
+        a_p = variables["Positive surface area per unit volume distribution in x"]
+        a = pybamm.Concatenation(
+            a_n, pybamm.FullBroadcast(0, "separator", "current collector"), a_p
+        )
+
         # Variable summing all of the interfacial current densities
         sum_j = variables["Sum of interfacial current densities"]
 
-        self.algebraic = {phi_e: pybamm.div(i_e) - sum_j}
+        self.algebraic = {phi_e: pybamm.div(i_e) - a * sum_j}
 
     def set_initial_conditions(self, variables):
         phi_e = variables["Electrolyte potential"]
