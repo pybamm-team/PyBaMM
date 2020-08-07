@@ -43,6 +43,10 @@ class FastManyParticles(BaseParticle):
             )
             N_s_xav = pybamm.FullBroadcast(0, "negative electrode", "current collector")
 
+            x = pybamm.standard_spatial_vars.x_n
+            R = self.param.R_n_of_x(x)
+            variables = {"Negative particle distribution in x": R}
+
         elif self.domain == "Positive":
             c_s_surf = pybamm.standard_variables.c_s_p_surf
             c_s = pybamm.PrimaryBroadcast(c_s_surf, ["positive particle"])
@@ -58,7 +62,11 @@ class FastManyParticles(BaseParticle):
             )
             N_s_xav = pybamm.FullBroadcast(0, "positive electrode", "current collector")
 
-        variables = self._get_standard_concentration_variables(c_s, c_s_xav)
+            x = pybamm.standard_spatial_vars.x_p
+            R = self.param.R_p_of_x(x)
+            variables = {"Positive particle distribution in x": R}
+
+        variables.update(self._get_standard_concentration_variables(c_s, c_s_xav))
         variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
 
         return variables
@@ -66,11 +74,13 @@ class FastManyParticles(BaseParticle):
     def set_rhs(self, variables):
         c_s_surf = variables[self.domain + " particle surface concentration"]
         j = variables[self.domain + " electrode interfacial current density"]
+        R = variables[self.domain + " particle distribution in x"]
+
         if self.domain == "Negative":
-            self.rhs = {c_s_surf: -3 * j / self.param.a_n}
+            self.rhs = {c_s_surf: -3 * j / self.param.a_n / R}
 
         elif self.domain == "Positive":
-            self.rhs = {c_s_surf: -3 * j / self.param.a_p / self.param.gamma_p}
+            self.rhs = {c_s_surf: -3 * j / self.param.a_p / self.param.gamma_p / R}
 
     def set_initial_conditions(self, variables):
         c_s_surf = variables[self.domain + " particle surface concentration"]

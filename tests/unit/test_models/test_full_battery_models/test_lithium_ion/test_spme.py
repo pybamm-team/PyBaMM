@@ -93,6 +93,11 @@ class TestSPMe(unittest.TestCase):
         model = pybamm.lithium_ion.SPMe(options)
         model.check_well_posedness()
 
+    def test_particle_shape_user(self):
+        options = {"particle shape": "user"}
+        model = pybamm.lithium_ion.SPMe(options)
+        model.check_well_posedness()
+
     def test_surface_form_differential(self):
         options = {"surface form": "differential"}
         model = pybamm.lithium_ion.SPMe(options)

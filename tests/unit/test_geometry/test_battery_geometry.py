@@ -17,6 +17,7 @@ class TestBatteryGeometry(unittest.TestCase):
 
     def test_geometry(self):
         var = pybamm.standard_spatial_vars
+        geo = pybamm.GeometricParameters()
         for cc_dimension in [0, 1, 2]:
             geometry = pybamm.battery_geometry(current_collector_dimension=cc_dimension)
             self.assertIsInstance(geometry, pybamm.Geometry)
@@ -24,8 +25,7 @@ class TestBatteryGeometry(unittest.TestCase):
             self.assertIn("negative particle", geometry)
             self.assertEqual(geometry["negative electrode"][var.x_n]["min"], 0)
             self.assertEqual(
-                geometry["negative electrode"][var.x_n]["max"].id,
-                pybamm.geometric_parameters.l_n.id,
+                geometry["negative electrode"][var.x_n]["max"].id, geo.l_n.id
             )
             if cc_dimension == 1:
                 self.assertIn("tabs", geometry["current collector"])
@@ -33,22 +33,27 @@ class TestBatteryGeometry(unittest.TestCase):
         geometry = pybamm.battery_geometry(include_particles=False)
         self.assertNotIn("negative particle", geometry)
 
+    def test_geometry_error(self):
+        with self.assertRaisesRegex(pybamm.GeometryError, "Invalid current"):
+            pybamm.battery_geometry(current_collector_dimension=4)
+
 
 class TestReadParameters(unittest.TestCase):
     # This is the most complicated geometry and should test the parameters are
     # all returned for the deepest dict
     def test_read_parameters(self):
-        L_n = pybamm.geometric_parameters.L_n
-        L_s = pybamm.geometric_parameters.L_s
-        L_p = pybamm.geometric_parameters.L_p
-        L_y = pybamm.geometric_parameters.L_y
-        L_z = pybamm.geometric_parameters.L_z
-        tab_n_y = pybamm.geometric_parameters.Centre_y_tab_n
-        tab_n_z = pybamm.geometric_parameters.Centre_z_tab_n
-        L_tab_n = pybamm.geometric_parameters.L_tab_n
-        tab_p_y = pybamm.geometric_parameters.Centre_y_tab_p
-        tab_p_z = pybamm.geometric_parameters.Centre_z_tab_p
-        L_tab_p = pybamm.geometric_parameters.L_tab_p
+        geo = pybamm.GeometricParameters()
+        L_n = geo.L_n
+        L_s = geo.L_s
+        L_p = geo.L_p
+        L_y = geo.L_y
+        L_z = geo.L_z
+        tab_n_y = geo.Centre_y_tab_n
+        tab_n_z = geo.Centre_z_tab_n
+        L_tab_n = geo.L_tab_n
+        tab_p_y = geo.Centre_y_tab_p
+        tab_p_z = geo.Centre_z_tab_p
+        L_tab_p = geo.L_tab_p
 
         geometry = pybamm.battery_geometry(current_collector_dimension=2)
 
