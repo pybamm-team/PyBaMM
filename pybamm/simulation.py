@@ -64,7 +64,7 @@ class Simulation:
         domain (e.g. pybamm.FiniteVolume)
     solver: :class:`pybamm.BaseSolver` (optional)
         The solver to use to solve the model.
-    quick_plot_vars: list (optional)
+    output_variables: list (optional)
         A list of variables to plot automatically
     C_rate: float (optional)
         The C_rate at which you would like to run a constant current
@@ -81,7 +81,7 @@ class Simulation:
         var_pts=None,
         spatial_methods=None,
         solver=None,
-        quick_plot_vars=None,
+        output_variables=None,
         C_rate=None,
     ):
         self.parameter_values = parameter_values or model.default_parameter_values
@@ -89,8 +89,13 @@ class Simulation:
         if experiment is None:
             # Check to see if the current is provided as data (i.e. drive cycle)
             current = self._parameter_values.get("Current function [A]")
-            if isinstance(current, tuple):
+            if isinstance(current, pybamm.Interpolant):
                 self.operating_mode = "drive cycle"
+            elif isinstance(current, tuple):
+                raise NotImplementedError(
+                    "Drive cycle from data has been deprecated. " +
+                    "Define an Interpolant instead."
+                )
             else:
                 self.operating_mode = "without experiment"
                 if C_rate:
@@ -112,7 +117,7 @@ class Simulation:
         self.var_pts = var_pts or self.model.default_var_pts
         self.spatial_methods = spatial_methods or self.model.default_spatial_methods
         self.solver = solver or self.model.default_solver
-        self.quick_plot_vars = quick_plot_vars
+        self.output_variables = output_variables
 
         # Initialize empty built states
         self._model_with_set_params = None
@@ -330,17 +335,6 @@ class Simulation:
             solver = self.solver
 
         if self.operating_mode in ["without experiment", "drive cycle"]:
-            # If t_eval is provided as [t0, tf] return the solution at 100 points
-            if isinstance(t_eval, list):
-                if len(t_eval) != 2:
-                    raise pybamm.SolverError(
-                        "'t_eval' can be provided as an array of times at which to "
-                        "return the solution, or as a list [t0, tf] where t0 is the "
-                        "initial time and tf is the final time, but has been provided "
-                        "as a list of length {}.".format(len(t_eval))
-                    )
-                else:
-                    t_eval = np.linspace(t_eval[0], t_eval[-1], 100)
 
             if self.operating_mode == "without experiment":
                 if t_eval is None:
@@ -357,15 +351,11 @@ class Simulation:
             elif self.operating_mode == "drive cycle":
                 # For drive cycles (current provided as data) we perform additional
                 # tests on t_eval (if provided) to ensure the returned solution
-                # captures the input. If the current is provided as data then the
-                # "Current function [A]" is the tuple (filename, data).
-                filename = self._parameter_values["Current function [A]"][0]
-                time_data = self._parameter_values["Current function [A]"][1][:, 0]
+                # captures the input.
+                time_data = self._parameter_values["Current function [A]"].data[:, 0]
                 # If no t_eval is provided, we use the times provided in the data.
                 if t_eval is None:
-                    pybamm.logger.info(
-                        "Setting t_eval as specified by the data '{}'".format(filename)
-                    )
+                    pybamm.logger.info("Setting t_eval as specified by the data")
                     t_eval = time_data
                 # If t_eval is provided we first check if it contains all of the
                 # times in the data to within 10-12. If it doesn't, we then check
@@ -379,11 +369,9 @@ class Simulation:
                     warnings.warn(
                         """
                         t_eval does not contain all of the time points in the data
-                        '{}'. Note: passing t_eval = None automatically sets t_eval
+                        set. Note: passing t_eval = None automatically sets t_eval
                         to be the points in the data.
-                        """.format(
-                            filename
-                        ),
+                        """,
                         pybamm.SolverWarning,
                     )
                     dt_data_min = np.min(np.diff(time_data))
@@ -403,13 +391,13 @@ class Simulation:
                             pybamm.SolverWarning,
                         )
 
-            self.t_eval = t_eval
             self._solution = solver.solve(
                 self.built_model,
                 t_eval,
                 external_variables=external_variables,
                 inputs=inputs,
             )
+            self.t_eval = self._solution.t * self.model.timescale.evaluate()
 
         elif self.operating_mode == "with experiment":
             if t_eval is not None:
@@ -531,28 +519,39 @@ class Simulation:
         else:
             return tuple(variable_arrays)
 
-    def plot(self, quick_plot_vars=None, testing=False):
+    def plot(self, output_variables=None, quick_plot_vars=None, **kwargs):
         """
-        A method to quickly plot the outputs of the simulation.
+        A method to quickly plot the outputs of the simulation. Creates a
+        :class:`pybamm.QuickPlot` object (with keyword arguments 'kwargs') and
+        then calls :meth:`pybamm.QuickPlot.dynamic_plot`.
 
         Parameters
         ----------
-        quick_plot_vars: list, optional
+        output_variables: list, optional
             A list of the variables to plot.
-        testing, bool, optional
-            If False the plot will not be displayed
+        quick_plot_vars: list, optional
+            A list of the variables to plot. Deprecated, use output_variables instead.
+        **kwargs
+            Additional keyword arguments passed to
+            :meth:`pybamm.QuickPlot.dynamic_plot`.
+            For a list of all possible keyword arguments see :class:`pybamm.QuickPlot`.
         """
+
+        if quick_plot_vars is not None:
+            raise NotImplementedError(
+                "'quick_plot_vars' has been deprecated. Use 'output_variables' instead."
+            )
 
         if self._solution is None:
             raise ValueError(
                 "Model has not been solved, please solve the model before plotting."
             )
 
-        if quick_plot_vars is None:
-            quick_plot_vars = self.quick_plot_vars
+        if output_variables is None:
+            output_variables = self.output_variables
 
         self.quick_plot = pybamm.dynamic_plot(
-            self._solution, output_variables=quick_plot_vars, testing=testing
+            self._solution, output_variables=output_variables, **kwargs
         )
 
     @property
@@ -625,12 +624,12 @@ class Simulation:
         self._solver = solver.copy()
 
     @property
-    def quick_plot_vars(self):
-        return self._quick_plot_vars
+    def output_variables(self):
+        return self._output_variables
 
-    @quick_plot_vars.setter
-    def quick_plot_vars(self, quick_plot_vars):
-        self._quick_plot_vars = copy.copy(quick_plot_vars)
+    @output_variables.setter
+    def output_variables(self, output_variables):
+        self._output_variables = copy.copy(output_variables)
 
     @property
     def solution(self):
@@ -644,7 +643,7 @@ class Simulation:
         var_pts=None,
         spatial_methods=None,
         solver=None,
-        quick_plot_vars=None,
+        output_variables=None,
         C_rate=None,
     ):
         "Deprecated method for setting specs"
@@ -666,9 +665,9 @@ class Simulation:
         # Clear solver problem (not pickle-able, will automatically be recomputed)
         if (
             isinstance(self._solver, pybamm.CasadiSolver)
-            and self._solver.problems != {}
+            and self._solver.integrator_specs != {}
         ):
-            self._solver.problems = {}
+            self._solver.integrator_specs = {}
         with open(filename, "wb") as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 
