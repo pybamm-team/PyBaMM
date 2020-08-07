@@ -12,12 +12,12 @@ from scipy.sparse import (
 )
 
 
-class SpectralVolumes(pybamm.FiniteVolume):
+class SpectralVolume(pybamm.FiniteVolume):
     """
-    A class which implements the steps specific to the spectral volumes
+    A class which implements the steps specific to the Spectral Volume
     discretisation. It is implemented in such a way that it is very
     similar to FiniteVolume; that comes at the cost that it is only
-    compatible with the SpectralVolumes1DSubMesh (which is a certain
+    compatible with the SpectralVolume1DSubMesh (which is a certain
     subdivision of any 1D mesh, so it shouldn't be a problem).
 
     For broadcast and mass_matrix, we follow the default behaviour from
@@ -27,17 +27,17 @@ class SpectralVolumes(pybamm.FiniteVolume):
     indefinite_integral_matrix, indefinite_integral_matrix_nodes,
     indefinite_integral_matrix_edges, delta_function
     we follow the behaviour from FiniteVolume. This is possible since
-    the node values are integral averages with Spectral Volumes, just
-    as with Finite Volumes. delta_function assigns the integral value
+    the node values are integral averages with Spectral Volume, just
+    as with Finite Volume. delta_function assigns the integral value
     to a CV instead of a SV this way, but that doesn't matter too much.
     Additional methods that are inherited by FiniteVolume which
-    technically are not suitable for Spectral Volumes are
+    technically are not suitable for Spectral Volume are
     boundary_value_or_flux, process_binary_operators, concatenation,
     node_to_edge, edge_to_node and shift. While node_to_edge (as well as
     boundary_value_or_flux and process_binary_operators)
-    could utilize the reconstruction approach of Spectral Volumes, the
+    could utilize the reconstruction approach of Spectral Volume, the
     inverse edge_to_node would still have to fall back to the Finite
-    Volumes behaviour. So these are simply inherited for consistency.
+    Volume behaviour. So these are simply inherited for consistency.
     boundary_value_or_flux might not benefit from the reconstruction
     approach at all, as it seems to only preprocess symbols.
 
@@ -61,6 +61,12 @@ class SpectralVolumes(pybamm.FiniteVolume):
         ----------
         noe: integer
             The number of the collocation points. "number of edges"
+        a: float
+            Left end of the interval on which the Chebyshev collocation
+            points are constructed. Default is -1.
+        b: float
+            Right end of the interval on which the Chebyshev collocation
+            points are constructed. Default is 1.
 
         Returns
         -------
@@ -91,8 +97,9 @@ class SpectralVolumes(pybamm.FiniteVolume):
                178:210–251, 2002
         """
 
-        # While Spectral Volumes in general may use any point
+        # While Spectral Volume in general may use any point
         # distribution for CVs, the Chebyshev nodes are the most stable.
+        # The differentiation matrices are only implemented for those.
         edges = np.flip(
             self.chebyshev_collocation_points(self.order + 1))
 
@@ -285,9 +292,9 @@ class SpectralVolumes(pybamm.FiniteVolume):
 
         return out
 
-    def gradient_matrix(self, domain, auxiliary_domains):
+    def gradient_matrix(self, domain, auxiliary_domains, boundary=0):
         """
-        Gradient matrix for Spectral Volumes in the appropriate domain.
+        Gradient matrix for Spectral Volume in the appropriate domain.
         Note that it contains the averaging of the duplicate SV edge
         gradient values, such that the product of it and a reconstructed
         discretised symbol simply represents CV edge values.
@@ -299,11 +306,15 @@ class SpectralVolumes(pybamm.FiniteVolume):
         auxiliary_domains : dict
             The auxiliary domains in which to compute the gradient
             matrix
+        boundary : int
+            Default is 0, where the whole gradient matrix gets returned.
+            -1 returns the gradient for the left boundary.
+            1 returns the gradient for the right boundary.
 
         Returns
         -------
         :class:`pybamm.Matrix`
-            The (sparse) Spectral Volumes gradient matrix for the domain
+            The (sparse) Spectral Volume gradient matrix for the domain
         """
         # Create appropriate submesh by combining submeshes in domain
         submesh = self.mesh.combine_submeshes(*domain)
@@ -318,8 +329,12 @@ class SpectralVolumes(pybamm.FiniteVolume):
         # submesh.npts is the number of CVs and n the number of SVs
         n = submesh.npts // self.order
         d = self.order
-        # The 0.5 scales from [-1,1] (Chebyshev default) to [0,1].
-        e = 0.5 / submesh.d_sv_edges
+        # Compute the lengths of the Spectral Volumes.
+        d_sv_edges = np.array([np.sum(submesh.d_edges[d * i:d * i + d])
+                               for i in range(len(submesh.d_edges) // d)])
+        # The 2 scales from [-1,1] (Chebyshev default) to [0,1].
+        # e = 2 / submesh.d_sv_edges
+        e = 2 / d_sv_edges
         # Here, the differentials are scaled to the SV.
         sub_matrix_raw = csr_matrix(kron(diags(e), chebdiff))
         if n == 1:
@@ -357,7 +372,12 @@ class SpectralVolumes(pybamm.FiniteVolume):
         # but this should not be an issue.
         matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
 
-        return pybamm.Matrix(matrix)
+        if boundary == 0:
+            return pybamm.Matrix(matrix)
+        elif boundary < 0:
+            return pybamm.Matrix(matrix[0])
+        elif boundary > 0:
+            return pybamm.Matrix(matrix[-1])
 
     def internal_neumann_condition(
         self, left_symbol_disc, right_symbol_disc, left_mesh, right_mesh
@@ -388,18 +408,28 @@ class SpectralVolumes(pybamm.FiniteVolume):
                 """Number of secondary points in subdomains do not match"""
             )
 
-        # Use the Spectral Volumes reconstruction and differentiation.
-        left_matrix = self.gradient_matrix(
-            self,
+        # Use the Spectral Volume reconstruction and differentiation.
+        left_reconstruction_matrix = self.cv_boundary_reconstruction_matrix(
             left_symbol_disc.domain,
             left_symbol_disc.auxiliary_domains
-        )[-1]
+        )
+        left_gradient_matrix = self.gradient_matrix(
+            left_symbol_disc.domain,
+            left_symbol_disc.auxiliary_domains,
+            boundary=1
+        )
+        left_matrix = left_gradient_matrix @ left_reconstruction_matrix
 
-        right_matrix = self.gradient_matrix(
-            self,
+        right_reconstruction_matrix = self.cv_boundary_reconstruction_matrix(
             right_symbol_disc.domain,
             right_symbol_disc.auxiliary_domains
-        )[0]
+        )
+        right_gradient_matrix = self.gradient_matrix(
+            right_symbol_disc.domain,
+            right_symbol_disc.auxiliary_domains,
+            boundary=-1
+        )
+        right_matrix = right_gradient_matrix @ right_reconstruction_matrix
 
         # Remove domains to avoid clash
         left_domain = left_symbol_disc.domain
@@ -409,7 +439,7 @@ class SpectralVolumes(pybamm.FiniteVolume):
         left_symbol_disc.clear_domains()
         right_symbol_disc.clear_domains()
 
-        # Spectral Volumes derivative (i.e., the mean of the two
+        # Spectral Volume derivative (i.e., the mean of the two
         # reconstructed gradients from each side)
         dy_dx = 0.5 * (right_matrix @ right_symbol_disc
                        + left_matrix @ left_symbol_disc)

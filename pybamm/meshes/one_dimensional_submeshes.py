@@ -309,11 +309,12 @@ class UserSupplied1DSubMesh(SubMesh1D):
         super().__init__(edges, coord_sys=coord_sys, tabs=tabs)
 
 
-class SpectralVolumes1DSubMesh(SubMesh1D):
+class SpectralVolume1DSubMesh(SubMesh1D):
     """
     A class to subdivide any mesh to incorporate Chebyshev collocation
-    Control Volumes. Note that while the Spectral Volumes method can use
-    any mesh with the right number of nodes, in 1D the only sensible
+    Control Volumes. Note that the Spectral Volume method is optimized
+    to only work with this submesh. The underlying theory could use any
+    mesh with the right number of nodes, but in 1D the only sensible
     choice are the Chebyshev collocation points.
 
     Parameters
@@ -325,18 +326,47 @@ class SpectralVolumes1DSubMesh(SubMesh1D):
         each spatial variable. Note: the number of nodes (located at the
         cell centres) is npts, and the number of edges is npts+1.
     order : int, optional
-        The order of the Spectral Volumes method that is to be used with
+        The order of the Spectral Volume method that is to be used with
         this submesh. The default is 2, the same as the default for the
-        SpectralVolumes class. If the orders of the submesh and the
-        Spectral Volumes method don't match, the method will fail.
+        SpectralVolume class. If the orders of the submesh and the
+        Spectral Volume method don't match, the method will fail.
     **Extends:"": :class:`pybamm.SubMesh1D`
     """
 
-    def __init__(self, lims, npts, order=2):
+    def __init__(self, lims, npts, edges=None, order=2):
 
         spatial_var, spatial_lims, tabs = self.read_lims(lims)
         npts = npts[spatial_var.id]
-        edges = np.linspace(spatial_lims["min"], spatial_lims["max"], npts + 1)
+
+        # default: Spectral Volumes of equal size
+        if edges is None:
+            edges = np.linspace(spatial_lims["min"], spatial_lims["max"],
+                                npts + 1)
+        # check that npts + 1 equals number of user-supplied edges
+        elif (npts + 1) != len(edges):
+            raise pybamm.GeometryError(
+                "User-suppled edges should have length (npts + 1) but has len"
+                "gth {}. Number of points (npts) for domain {} is {}.".format(
+                    len(edges), spatial_var.domain, npts
+                )
+            )
+
+        # check end points of edges agree with spatial_lims
+        if edges[0] != spatial_lims["min"]:
+            raise pybamm.GeometryError(
+                """First entry of edges is {}, but should be equal to {}
+                 for domain {}.""".format(
+                    edges[0], spatial_lims["min"], spatial_var.domain
+                )
+            )
+        if edges[-1] != spatial_lims["max"]:
+            raise pybamm.GeometryError(
+                """Last entry of edges is {}, but should be equal to {}
+                for domain {}.""".format(
+                    edges[-1], spatial_lims["max"], spatial_var.domain
+                )
+            )
+
         coord_sys = spatial_var.coord_sys
 
         cv_edges = np.array([edges[0]] + [
