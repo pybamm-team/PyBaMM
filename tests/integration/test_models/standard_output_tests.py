@@ -258,10 +258,16 @@ class ParticleConcentrationTests(BaseOutputTest):
 
         self.c_s_n_tot = solution["Total lithium in negative electrode [mol.m-2]"]
         self.c_s_p_tot = solution["Total lithium in positive electrode [mol.m-2]"]
-        self.c_s_tot = self.c_s_n_tot + self.c_s_p_tot
 
         self.N_s_n = solution["Negative particle flux"]
         self.N_s_p = solution["Positive particle flux"]
+
+        self.n_SEI_n_av = solution[
+                "X-averaged negative electrode sei concentration [mol.m-3]"
+            ]
+        self.n_SEI_p_av = solution[
+                "X-averaged positive electrode sei concentration [mol.m-3]"
+            ]
 
     def test_concentration_increase_decrease(self):
         """Test all concentrations in negative particles decrease and all
@@ -293,12 +299,18 @@ class ParticleConcentrationTests(BaseOutputTest):
         np.testing.assert_array_less(self.c_s_p(t, x_p, r_p), 1)
 
     def test_conservation(self):
-        "Test amount of lithium stored across all particles is constant."
-        if isinstance(self.model.submodels["negative sei"], pybamm.sei.NoSEI):
-            diff = self.c_s_tot(self.solution.t[1:]) - self.c_s_tot(
-                self.solution.t[:-1]
-            )
-            np.testing.assert_array_almost_equal(diff, 0)
+        """Test amount of lithium stored across all particles and in SEI layers is
+        constant."""
+        L_n = self.param["Negative electrode thickness [m]"]
+        L_p = self.param["Positive electrode thickness [m]"]
+        self.c_s_tot = (
+            self.c_s_n_tot(self.solution.t)
+            + self.c_s_p_tot(self.solution.t)
+            + self.n_SEI_n_av(self.solution.t) * L_n
+            + self.n_SEI_p_av(self.solution.t) * L_p
+        )
+        diff = (self.c_s_tot[1:] - self.c_s_tot[:-1]) / self.c_s_tot[:-1]
+        np.testing.assert_array_almost_equal(diff, 0)
 
     def test_concentration_profile(self):
         """Test that the concentration in the centre of the negative particles is
@@ -376,7 +388,9 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
         "Test conservation of species in the electrolyte."
         # sufficient to check average concentration is constant
 
-        diff = self.c_e_tot(self.solution.t[1:]) - self.c_e_tot(self.solution.t[:-1])
+        diff = (
+            self.c_e_tot(self.solution.t[1:]) - self.c_e_tot(self.solution.t[:-1])
+        ) / self.c_e_tot(self.solution.t[:-1])
         np.testing.assert_array_almost_equal(diff, 0)
 
     def test_concentration_profile(self):
