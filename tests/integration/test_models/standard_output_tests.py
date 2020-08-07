@@ -263,11 +263,11 @@ class ParticleConcentrationTests(BaseOutputTest):
         self.N_s_p = solution["Positive particle flux"]
 
         self.n_SEI_n_av = solution[
-                "X-averaged negative electrode sei concentration [mol.m-3]"
-            ]
+            "X-averaged negative electrode sei concentration [mol.m-3]"
+        ]
         self.n_SEI_p_av = solution[
-                "X-averaged positive electrode sei concentration [mol.m-3]"
-            ]
+            "X-averaged positive electrode sei concentration [mol.m-3]"
+        ]
 
     def test_concentration_increase_decrease(self):
         """Test all concentrations in negative particles decrease and all
