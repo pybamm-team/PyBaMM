@@ -8,13 +8,14 @@ import unittest
 
 class TestGeometricParameters(unittest.TestCase):
     def test_macroscale_parameters(self):
-        L_n = pybamm.geometric_parameters.L_n
-        L_s = pybamm.geometric_parameters.L_s
-        L_p = pybamm.geometric_parameters.L_p
-        L_x = pybamm.geometric_parameters.L_x
-        l_n = pybamm.geometric_parameters.l_n
-        l_s = pybamm.geometric_parameters.l_s
-        l_p = pybamm.geometric_parameters.l_p
+        geo = pybamm.GeometricParameters()
+        L_n = geo.L_n
+        L_s = geo.L_s
+        L_p = geo.L_p
+        L_x = geo.L_x
+        l_n = geo.l_n
+        l_s = geo.l_s
+        l_p = geo.l_p
 
         parameter_values = pybamm.ParameterValues(
             values={

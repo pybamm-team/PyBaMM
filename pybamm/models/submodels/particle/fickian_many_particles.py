@@ -44,39 +44,30 @@ class FickianManyParticles(BaseParticle):
 
         if self.domain == "Negative":
             N_s = -self.param.D_n(c_s, T_k) * pybamm.grad(c_s)
-        elif self.domain == "Positive":
-            N_s = -self.param.D_p(c_s, T_k) * pybamm.grad(c_s)
-
-        variables.update(self._get_standard_flux_variables(N_s, N_s))
-
-        if self.domain == "Negative":
             x = pybamm.standard_spatial_vars.x_n
-            R = pybamm.FunctionParameter(
-                "Negative particle distribution in x",
-                {"Dimensionless through-cell position (x_n)": x},
-            )
+            R = self.param.R_n_of_x(x)
             variables.update({"Negative particle distribution in x": R})
 
         elif self.domain == "Positive":
+            N_s = -self.param.D_p(c_s, T_k) * pybamm.grad(c_s)
+
             x = pybamm.standard_spatial_vars.x_p
-            R = pybamm.FunctionParameter(
-                "Positive particle distribution in x",
-                {"Dimensionless through-cell position (x_p)": x},
-            )
+            R = self.param.R_p_of_x(x)
             variables.update({"Positive particle distribution in x": R})
+
+        variables.update(self._get_standard_flux_variables(N_s, N_s))
 
         return variables
 
     def set_rhs(self, variables):
         c_s = variables[self.domain + " particle concentration"]
         N_s = variables[self.domain + " particle flux"]
+        R = variables[self.domain + " particle distribution in x"]
 
         if self.domain == "Negative":
-            R = variables["Negative particle distribution in x"]
             self.rhs = {c_s: -(1 / (R ** 2 * self.param.C_n)) * pybamm.div(N_s)}
 
         elif self.domain == "Positive":
-            R = variables["Positive particle distribution in x"]
             self.rhs = {c_s: -(1 / (R ** 2 * self.param.C_p)) * pybamm.div(N_s)}
 
     def set_boundary_conditions(self, variables):
@@ -85,14 +76,18 @@ class FickianManyParticles(BaseParticle):
         c_s_surf = variables[self.domain + " particle surface concentration"]
         T_k = variables[self.domain + " electrode temperature"]
         j = variables[self.domain + " electrode interfacial current density"]
+        R = variables[self.domain + " particle distribution in x"]
 
         if self.domain == "Negative":
-            rbc = -self.param.C_n * j / self.param.a_n / self.param.D_n(c_s_surf, T_k)
+            rbc = (
+                -self.param.C_n * j * R / self.param.a_n / self.param.D_n(c_s_surf, T_k)
+            )
 
         elif self.domain == "Positive":
             rbc = (
                 -self.param.C_p
                 * j
+                * R
                 / self.param.a_p
                 / self.param.gamma_p
                 / self.param.D_p(c_s_surf, T_k)

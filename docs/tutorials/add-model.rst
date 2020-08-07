@@ -142,10 +142,11 @@ The inbuilt models in PyBaMM do not add all the model attributes within their ow
 In addition to calling submodels, common sets of variables and parameters found in
 lithium-ion and lead acid batteries are provided in
 `standard_variables.py`,
-`standard_parameters_lithium_ion.py`,
-`standard_parameters_lead_acid.py`,
+`lithium_ion_parameters.py`,
+`lead_acid_parameters.py`,
 `electrical_parameters.py`,
 `geometric_parameters.py`,
+`thermal_parameters.py`,
 and `standard_spatial_vars.py`
 which we encourage use of to save redefining the same parameters and variables in
 every model and submodel.

@@ -72,7 +72,7 @@ class TestButlerVolmer(unittest.TestCase):
         del self.delta_phi_s_p
 
     def test_creation(self):
-        param = pybamm.standard_parameters_lithium_ion
+        param = pybamm.LithiumIonParameters()
         model_n = pybamm.interface.ButlerVolmer(param, "Negative", "lithium-ion main")
         j_n = model_n.get_coupled_variables(self.variables)[
             "Negative electrode interfacial current density"
@@ -91,7 +91,7 @@ class TestButlerVolmer(unittest.TestCase):
         self.assertEqual(j_p.domain, ["positive electrode"])
 
     def test_set_parameters(self):
-        param = pybamm.standard_parameters_lithium_ion
+        param = pybamm.LithiumIonParameters()
         model_n = pybamm.interface.ButlerVolmer(param, "Negative", "lithium-ion main")
         j_n = model_n.get_coupled_variables(self.variables)[
             "Negative electrode interfacial current density"
@@ -113,7 +113,7 @@ class TestButlerVolmer(unittest.TestCase):
             self.assertNotIsInstance(x, pybamm.Parameter)
 
     def test_discretisation(self):
-        param = pybamm.standard_parameters_lithium_ion
+        param = pybamm.LithiumIonParameters()
         model_n = pybamm.interface.ButlerVolmer(param, "Negative", "lithium-ion main")
         j_n = model_n.get_coupled_variables(self.variables)[
             "Negative electrode interfacial current density"
@@ -163,7 +163,7 @@ class TestButlerVolmer(unittest.TestCase):
     def test_diff_c_e_lead_acid(self):
 
         # With intercalation
-        param = pybamm.standard_parameters_lead_acid
+        param = pybamm.LeadAcidParameters()
         model_n = pybamm.interface.ButlerVolmer(param, "Negative", "lead-acid main")
         model_p = pybamm.interface.ButlerVolmer(param, "Positive", "lead-acid main")
         parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values
@@ -216,7 +216,7 @@ class TestButlerVolmer(unittest.TestCase):
     def test_diff_delta_phi_e_lead_acid(self):
 
         # With intercalation
-        param = pybamm.standard_parameters_lead_acid
+        param = pybamm.LeadAcidParameters()
         model_n = pybamm.interface.ButlerVolmer(param, "Negative", "lead-acid main")
         model_p = pybamm.interface.ButlerVolmer(param, "Positive", "lead-acid main")
         parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values
