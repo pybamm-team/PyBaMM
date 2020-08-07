@@ -94,6 +94,11 @@ class TestSPM(unittest.TestCase):
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
+    def test_quadratic_particle(self):
+        options = {"particle": "quadratic profile"}
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
+
     def test_particle_shape_user(self):
         options = {"particle shape": "user"}
         model = pybamm.lithium_ion.SPM(options)

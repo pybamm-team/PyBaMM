@@ -111,6 +111,17 @@ class SPM(BaseModel):
             self.submodels["positive particle"] = pybamm.particle.FastSingleParticle(
                 self.param, "Positive"
             )
+        elif self.options["particle"] == "quadratic profile":
+            self.submodels[
+                "negative particle"
+            ] = pybamm.particle.PolynomialSingleParticle(
+                self.param, "Negative", order=2
+            )
+            self.submodels[
+                "positive particle"
+            ] = pybamm.particle.PolynomialSingleParticle(
+                self.param, "Positive", order=2
+            )
 
     def set_negative_electrode_submodel(self):
 

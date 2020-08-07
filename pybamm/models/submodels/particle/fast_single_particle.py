@@ -32,35 +32,28 @@ class FastSingleParticle(BaseParticle):
 
         if self.domain == "Negative":
             c_s_surf_xav = pybamm.standard_variables.c_s_n_surf_xav
-            c_s_xav = pybamm.PrimaryBroadcast(c_s_surf_xav, ["negative particle"])
-            c_s = pybamm.SecondaryBroadcast(c_s_xav, ["negative electrode"])
-
-            N_s = pybamm.FullBroadcastToEdges(
-                0,
-                ["negative particle"],
-                auxiliary_domains={
-                    "secondary": "negative electrode",
-                    "tertiary": "current collector",
-                },
-            )
-            N_s_xav = pybamm.FullBroadcast(0, "negative electrode", "current collector")
-
         elif self.domain == "Positive":
             c_s_surf_xav = pybamm.standard_variables.c_s_p_surf_xav
-            c_s_xav = pybamm.PrimaryBroadcast(c_s_surf_xav, ["positive particle"])
-            c_s = pybamm.SecondaryBroadcast(c_s_xav, ["positive electrode"])
 
-            N_s = pybamm.FullBroadcastToEdges(
-                0,
-                ["positive particle"],
-                auxiliary_domains={
-                    "secondary": "positive electrode",
-                    "tertiary": "current collector",
-                },
-            )
-            N_s_xav = pybamm.FullBroadcast(0, "positive electrode", "current collector")
+        c_s_xav = pybamm.PrimaryBroadcast(
+            c_s_surf_xav, [self.domain.lower() + " particle"]
+        )
+        c_s = pybamm.SecondaryBroadcast(c_s_xav, [self.domain.lower() + " electrode"])
 
-        variables = self._get_standard_concentration_variables(c_s, c_s_xav)
+        N_s = pybamm.FullBroadcastToEdges(
+            0,
+            [self.domain.lower() + " particle"],
+            auxiliary_domains={
+                "secondary": self.domain.lower() + " electrode",
+                "tertiary": "current collector",
+            },
+        )
+        N_s_xav = pybamm.FullBroadcast(
+            0, self.domain.lower() + " electrode", "current collector"
+        )
+
+        c_s_rav = pybamm.r_average(c_s)
+        variables = self._get_standard_concentration_variables(c_s, c_s_xav, c_s_rav)
         variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
 
         return variables

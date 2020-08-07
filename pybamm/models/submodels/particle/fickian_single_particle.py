@@ -33,7 +33,9 @@ class FickianSingleParticle(BaseParticle):
             c_s_xav = pybamm.standard_variables.c_s_p_xav
             c_s = pybamm.SecondaryBroadcast(c_s_xav, ["positive electrode"])
 
-        variables = self._get_standard_concentration_variables(c_s, c_s_xav)
+        c_s_rav = pybamm.r_average(c_s)
+
+        variables = self._get_standard_concentration_variables(c_s, c_s_xav, c_s_rav)
 
         return variables
 

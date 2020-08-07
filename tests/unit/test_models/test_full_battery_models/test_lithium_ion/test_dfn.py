@@ -93,6 +93,11 @@ class TestDFN(unittest.TestCase):
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()
 
+    def test_polynomial_particle(self):
+        options = {"particle": "quadratic profile"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
     def test_particle_shape_user(self):
         options = {"particle shape": "user"}
         model = pybamm.lithium_ion.DFN(options)

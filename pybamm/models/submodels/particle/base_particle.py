@@ -21,7 +21,7 @@ class BaseParticle(pybamm.BaseSubModel):
     def __init__(self, param, domain):
         super().__init__(param, domain)
 
-    def _get_standard_concentration_variables(self, c_s, c_s_xav):
+    def _get_standard_concentration_variables(self, c_s, c_s_xav, c_s_rav):
 
         param = self.param
         c_s_surf = pybamm.surf(c_s)
@@ -34,7 +34,6 @@ class BaseParticle(pybamm.BaseSubModel):
             c_scale = self.param.c_p_max
             active_volume = param.epsilon_s_p
 
-        c_s_rav = pybamm.r_average(c_s)
         c_s_av = pybamm.r_average(c_s_xav)
         c_s_av_vol = active_volume * c_s_av
 
