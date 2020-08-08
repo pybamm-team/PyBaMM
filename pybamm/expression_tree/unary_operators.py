@@ -165,6 +165,7 @@ class Sign(UnaryOperator):
         else:
             return np.sign(child)
 
+
 class Floor(UnaryOperator):
     """A node in the expression tree representing an `floor` operator
 
@@ -186,6 +187,7 @@ class Floor(UnaryOperator):
     def _unary_evaluate(self, child):
         """ See :meth:`UnaryOperator._unary_evaluate()`. """
         return np.floor(child)
+
 
 class Ceiling(UnaryOperator):
     """A node in the expression tree representing a `ceil` operator
