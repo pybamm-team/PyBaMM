@@ -165,6 +165,50 @@ class Sign(UnaryOperator):
         else:
             return np.sign(child)
 
+class Floor(UnaryOperator):
+    """A node in the expression tree representing an `floor` operator
+
+    **Extends:** :class:`UnaryOperator`
+    """
+
+    def __init__(self, child):
+        """ See :meth:`pybamm.UnaryOperator.__init__()`. """
+        super().__init__("floor", child)
+
+    def diff(self, variable):
+        """ See :meth:`pybamm.Symbol.diff()`. """
+        return pybamm.Scalar(0)
+
+    def _unary_jac(self, child_jac):
+        """ See :meth:`pybamm.UnaryOperator._unary_jac()`. """
+        return pybamm.Scalar(0)
+
+    def _unary_evaluate(self, child):
+        """ See :meth:`UnaryOperator._unary_evaluate()`. """
+        return np.floor(child)
+
+class Ceiling(UnaryOperator):
+    """A node in the expression tree representing a `ceil` operator
+
+    **Extends:** :class:`UnaryOperator`
+    """
+
+    def __init__(self, child):
+        """ See :meth:`pybamm.UnaryOperator.__init__()`. """
+        super().__init__("ceil", child)
+
+    def diff(self, variable):
+        """ See :meth:`pybamm.Symbol.diff()`. """
+        return pybamm.Scalar(0)
+
+    def _unary_jac(self, child_jac):
+        """ See :meth:`pybamm.UnaryOperator._unary_jac()`. """
+        return pybamm.Scalar(0)
+
+    def _unary_evaluate(self, child):
+        """ See :meth:`UnaryOperator._unary_evaluate()`. """
+        return np.ceil(child)
+
 
 class Index(UnaryOperator):
     """A node in the expression tree, which stores the index that should be
