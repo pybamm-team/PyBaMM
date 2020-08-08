@@ -36,7 +36,8 @@ class TestBasicModels(unittest.TestCase):
         copy.check_well_posedness()
 
     def test_dfn_half_cell_simulation_error(self):
-        model = pybamm.lithium_ion.BasicDFNHalfCell()
+        options = {"working electrode": "negative"}
+        model = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
         with self.assertRaisesRegex(
             NotImplementedError, "not compatible with Simulations yet."
         ):

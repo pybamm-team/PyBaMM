@@ -7,32 +7,33 @@ from .base_lithium_ion_model import BaseModel
 
 class BasicDFNHalfCell(BaseModel):
     """Doyle-Fuller-Newman (DFN) model of a lithium-ion battery with lithium counter
-    electrode, from [2]_.
+    electrode, adapted from [2]_.
 
-    This class differs from the :class:`pybamm.lithium_ion.DFN` model class in that it
-    shows the whole model in a single class. This comes at the cost of flexibility in
-    comparing different physical effects, and in general the main DFN class should be
-    used instead.
+    This class differs from the :class:`pybamm.lithium_ion.BasicDFN` model class in
+    that it is for a cell with a lithium counter electrode (half cell). This is a
+    feature under development (for example, it cannot be used with the Simulation class
+    for the moment) and in the future it will be incorporated as a standard model with
+    the full functionality.
 
     Parameters
     ----------
     name : str, optional
         The name of the model.
+    options : dict
+        A dictionary of options to be passed to the model. For the half cell it should
+        include which is the working electrode.
 
     References
     ----------
-    .. [2] SG Marquis, V Sulzer, R Timms, CP Please and SJ Chapman. “An asymptotic
-           derivation of a single particle model with electrolyte”. Journal of The
-           Electrochemical Society, 166(15):A3693–A3706, 2019
+    .. [2] M Doyle, TF Fuller and JS Nwman. “Modeling of Galvanostatic Charge and
+        Discharge of the Lithium/Polymer/Insertion Cell”. Journal of The
+        Electrochemical Society, 140(6):1526-1533, 1993
 
     **Extends:** :class:`pybamm.lithium_ion.BaseModel`
     """
 
     def __init__(
-        self,
-        name="Doyle-Fuller-Newman half cell model",
-        options={"working electrode": "negative"},
-        build=True,
+        self, name="Doyle-Fuller-Newman half cell model", options={},
     ):
         super().__init__({}, name)
         pybamm.citations.register("marquis2019asymptotic")
@@ -40,21 +41,25 @@ class BasicDFNHalfCell(BaseModel):
         # this model. These are purely symbolic at this stage, and will be set by the
         # `ParameterValues` class when the model is processed.
         param = self.param
-        working_electrode = options["working electrode"]
 
-        if working_electrode not in ["negative", "positive"]:
+        if options["working electrode"] not in ["negative", "positive"]:
             raise ValueError(
-                "The value of working_electrode should be either 'positive'"
+                "The option 'working electrode' should be either 'positive'"
                 "or 'negative'"
             )
+
+        self.options.update(options)
+        working_electrode = options["working electrode"]
 
         ######################
         # Variables
         ######################
         # Variables that depend on time only are created without a domain
         Q = pybamm.Variable("Discharge capacity [A.h]")
-        # Variables that vary spatially are created with a domain
+        # Variables that vary spatially are created with a domain. Depending on
+        # which is the working electrode we need to define a set variables or another
         if working_electrode == "negative":
+            # Electrolyte concentration
             c_e_n = pybamm.Variable(
                 "Negative electrolyte concentration", domain="negative electrode"
             )
@@ -64,6 +69,37 @@ class BasicDFNHalfCell(BaseModel):
             # Concatenations combine several variables into a single variable, to
             # simplify implementing equations that hold over several domains
             c_e = pybamm.Concatenation(c_e_n, c_e_s)
+
+            # Electrolyte potential
+            phi_e_n = pybamm.Variable(
+                "Negative electrolyte potential", domain="negative electrode"
+            )
+            phi_e_s = pybamm.Variable(
+                "Separator electrolyte potential", domain="separator"
+            )
+            phi_e = pybamm.Concatenation(phi_e_n, phi_e_s)
+
+            # Particle concentrations are variables on the particle domain, but also
+            # vary in the x-direction (electrode domain) and so must be provided with
+            # auxiliary domains
+            c_s_n = pybamm.Variable(
+                "Negative particle concentration",
+                domain="negative particle",
+                auxiliary_domains={"secondary": "negative electrode"},
+            )
+            # Set concentration in positive particle to be equal to the initial
+            # concentration as it is not the working electrode
+            x_p = pybamm.PrimaryBroadcast(
+                pybamm.standard_spatial_vars.x_p, "positive particle"
+            )
+            c_s_p = param.c_n_init(x_p)
+
+            # Electrode potential
+            phi_s_n = pybamm.Variable(
+                "Negative electrode potential", domain="negative electrode"
+            )
+            # Set potential in positive electrode to be equal to the initial OCV
+            phi_s_p = param.U_p(pybamm.surf(param.c_p_init(x_p)), param.T_init)
         else:
             c_e_p = pybamm.Variable(
                 "Positive electrolyte concentration", domain="positive electrode"
@@ -75,16 +111,7 @@ class BasicDFNHalfCell(BaseModel):
             # simplify implementing equations that hold over several domains
             c_e = pybamm.Concatenation(c_e_s, c_e_p)
 
-        # Electrolyte potential
-        if working_electrode == "negative":
-            phi_e_n = pybamm.Variable(
-                "Negative electrolyte potential", domain="negative electrode"
-            )
-            phi_e_s = pybamm.Variable(
-                "Separator electrolyte potential", domain="separator"
-            )
-            phi_e = pybamm.Concatenation(phi_e_n, phi_e_s)
-        else:
+            # Electrolyte potential
             phi_e_s = pybamm.Variable(
                 "Separator electrolyte potential", domain="separator"
             )
@@ -93,26 +120,27 @@ class BasicDFNHalfCell(BaseModel):
             )
             phi_e = pybamm.Concatenation(phi_e_s, phi_e_p)
 
-        # Electrode potential
-        phi_s_n = pybamm.Variable(
-            "Negative electrode potential", domain="negative electrode"
-        )
-        phi_s_p = pybamm.Variable(
-            "Positive electrode potential", domain="positive electrode"
-        )
-        # Particle concentrations are variables on the particle domain, but also vary in
-        # the x-direction (electrode domain) and so must be provided with auxiliary
-        # domains
-        c_s_n = pybamm.Variable(
-            "Negative particle concentration",
-            domain="negative particle",
-            auxiliary_domains={"secondary": "negative electrode"},
-        )
-        c_s_p = pybamm.Variable(
-            "Positive particle concentration",
-            domain="positive particle",
-            auxiliary_domains={"secondary": "positive electrode"},
-        )
+            # Particle concentrations are variables on the particle domain, but also
+            # vary in the x-direction (electrode domain) and so must be provided with
+            # auxiliary domains
+            c_s_p = pybamm.Variable(
+                "Positive particle concentration",
+                domain="positive particle",
+                auxiliary_domains={"secondary": "positive electrode"},
+            )
+            # Set concentration in negative particle to be equal to the initial
+            # concentration as it is not the working electrode
+            x_n = pybamm.PrimaryBroadcast(
+                pybamm.standard_spatial_vars.x_n, "positive particle"
+            )
+            c_s_n = param.c_n_init(x_n)
+
+            # Electrode potential
+            phi_s_p = pybamm.Variable(
+                "Positive electrode potential", domain="positive electrode"
+            )
+            # Set potential in negative electrode to be equal to the initial OCV
+            phi_s_n = param.U_n(pybamm.surf(param.c_n_init(x_n)), param.T_init)
 
         # Constant temperature
         T = param.T_init
@@ -190,69 +218,86 @@ class BasicDFNHalfCell(BaseModel):
         # Particles
         ######################
 
-        # The div and grad operators will be converted to the appropriate matrix
-        # multiplication at the discretisation stage
-        N_s_n = -param.D_n(c_s_n, T) * pybamm.grad(c_s_n)
-        N_s_p = -param.D_p(c_s_p, T) * pybamm.grad(c_s_p)
-        self.rhs[c_s_n] = -(1 / param.C_n) * pybamm.div(N_s_n)
-        self.rhs[c_s_p] = -(1 / param.C_p) * pybamm.div(N_s_p)
-        # Boundary conditions must be provided for equations with spatial derivatives
-        self.boundary_conditions[c_s_n] = {
-            "left": (pybamm.Scalar(0), "Neumann"),
-            "right": (
-                -param.C_n * j_n / param.a_n / param.D_n(c_s_surf_n, T),
-                "Neumann",
-            ),
-        }
-        self.boundary_conditions[c_s_p] = {
-            "left": (pybamm.Scalar(0), "Neumann"),
-            "right": (
-                -param.C_p * j_p / param.a_p / param.gamma_p / param.D_p(c_s_surf_p, T),
-                "Neumann",
-            ),
-        }
-        # c_n_init and c_p_init can in general be functions of x
-        # Note the broadcasting, for domains
-        x_n = pybamm.PrimaryBroadcast(
-            pybamm.standard_spatial_vars.x_n, "negative particle"
-        )
-        self.initial_conditions[c_s_n] = param.c_n_init(x_n)
-        x_p = pybamm.PrimaryBroadcast(
-            pybamm.standard_spatial_vars.x_p, "positive particle"
-        )
-        self.initial_conditions[c_s_p] = param.c_p_init(x_p)
-        # Events specify points at which a solution should terminate
-        self.events += [
-            pybamm.Event(
-                "Minimum negative particle surface concentration",
-                pybamm.min(c_s_surf_n) - 0.01,
-            ),
-            pybamm.Event(
-                "Maximum negative particle surface concentration",
-                (1 - 0.01) - pybamm.max(c_s_surf_n),
-            ),
-            pybamm.Event(
-                "Minimum positive particle surface concentration",
-                pybamm.min(c_s_surf_p) - 0.01,
-            ),
-            pybamm.Event(
-                "Maximum positive particle surface concentration",
-                (1 - 0.01) - pybamm.max(c_s_surf_p),
-            ),
-        ]
+        if working_electrode == "negative":
+            # The div and grad operators will be converted to the appropriate matrix
+            # multiplication at the discretisation stage
+            N_s_n = -param.D_n(c_s_n, T) * pybamm.grad(c_s_n)
+            self.rhs[c_s_n] = -(1 / param.C_n) * pybamm.div(N_s_n)
+
+            # Boundary conditions must be provided for equations with spatial
+            # derivatives
+            self.boundary_conditions[c_s_n] = {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (
+                    -param.C_n * j_n / param.a_n / param.D_n(c_s_surf_n, T),
+                    "Neumann",
+                ),
+            }
+
+            # c_n_init can in general be a function of x
+            # Note the broadcasting, for domains
+            x_n = pybamm.PrimaryBroadcast(
+                pybamm.standard_spatial_vars.x_n, "negative particle"
+            )
+            self.initial_conditions[c_s_n] = param.c_n_init(x_n)
+
+            # Events specify points at which a solution should terminate
+            self.events += [
+                pybamm.Event(
+                    "Minimum negative particle surface concentration",
+                    pybamm.min(c_s_surf_n) - 0.01,
+                ),
+                pybamm.Event(
+                    "Maximum negative particle surface concentration",
+                    (1 - 0.01) - pybamm.max(c_s_surf_n),
+                ),
+            ]
+        else:
+            # The div and grad operators will be converted to the appropriate matrix
+            # multiplication at the discretisation stage
+            N_s_p = -param.D_p(c_s_p, T) * pybamm.grad(c_s_p)
+            self.rhs[c_s_p] = -(1 / param.C_p) * pybamm.div(N_s_p)
+
+            # Boundary conditions must be provided for equations with spatial
+            # derivatives
+            self.boundary_conditions[c_s_p] = {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (
+                    -param.C_p
+                    * j_p
+                    / param.a_p
+                    / param.gamma_p
+                    / param.D_p(c_s_surf_p, T),
+                    "Neumann",
+                ),
+            }
+
+            # c_p_init can in general be a function of x
+            # Note the broadcasting, for domains
+            x_p = pybamm.PrimaryBroadcast(
+                pybamm.standard_spatial_vars.x_p, "positive particle"
+            )
+            self.initial_conditions[c_s_p] = param.c_p_init(x_p)
+
+            # Events specify points at which a solution should terminate
+            self.events += [
+                pybamm.Event(
+                    "Minimum positive particle surface concentration",
+                    pybamm.min(c_s_surf_p) - 0.01,
+                ),
+                pybamm.Event(
+                    "Maximum positive particle surface concentration",
+                    (1 - 0.01) - pybamm.max(c_s_surf_p),
+                ),
+            ]
+
         ######################
         # Current in the solid
         ######################
-        sigma_eff_n = param.sigma_n * (1 - eps_n) ** param.b_s_n
-        i_s_n = -sigma_eff_n * pybamm.grad(phi_s_n)
-        sigma_eff_p = param.sigma_p * (1 - eps_p) ** param.b_s_p
-        i_s_p = -sigma_eff_p * pybamm.grad(phi_s_p)
-        # The `algebraic` dictionary contains differential equations, with the key being
-        # the main scalar variable of interest in the equation
-        self.algebraic[phi_s_n] = pybamm.div(i_s_n) + j_n
-        self.algebraic[phi_s_p] = pybamm.div(i_s_p) + j_p
 
         if working_electrode == "negative":
+            sigma_eff_n = param.sigma_n * (1 - eps_n) ** param.b_s_n
+            i_s_n = -sigma_eff_n * pybamm.grad(phi_s_n)
             self.boundary_conditions[phi_s_n] = {
                 "left": (
                     i_cell / pybamm.boundary_value(-sigma_eff_n, "left"),
@@ -260,15 +305,19 @@ class BasicDFNHalfCell(BaseModel):
                 ),
                 "right": (pybamm.Scalar(0), "Neumann"),
             }
-            self.boundary_conditions[phi_s_p] = {
-                "left": (pybamm.Scalar(0), "Neumann"),
-                "right": (param.U_p(param.c_p_init(1), param.T_init), "Dirichlet"),
-            }
+            # The `algebraic` dictionary contains differential equations, with the key
+            # being the main scalar variable of interest in the equation
+            self.algebraic[phi_s_n] = pybamm.div(i_s_n) + j_n
+
+            # Initial conditions must also be provided for algebraic equations, as an
+            # initial guess for a root-finding algorithm which calculates consistent
+            # initial conditions
+            self.initial_conditions[phi_s_n] = param.U_n(
+                param.c_n_init(0), param.T_init
+            )
         else:
-            self.boundary_conditions[phi_s_n] = {
-                "left": (param.U_n(param.c_n_init(0), param.T_init), "Dirichlet"),
-                "right": (pybamm.Scalar(0), "Neumann",),
-            }
+            sigma_eff_p = param.sigma_p * (1 - eps_p) ** param.b_s_p
+            i_s_p = -sigma_eff_p * pybamm.grad(phi_s_p)
             self.boundary_conditions[phi_s_p] = {
                 "left": (pybamm.Scalar(0), "Neumann"),
                 "right": (
@@ -276,12 +325,13 @@ class BasicDFNHalfCell(BaseModel):
                     "Neumann",
                 ),
             }
-
-        # Initial conditions must also be provided for algebraic equations, as an
-        # initial guess for a root-finding algorithm which calculates consistent
-        # initial conditions
-        self.initial_conditions[phi_s_n] = param.U_n(param.c_n_init(0), param.T_init)
-        self.initial_conditions[phi_s_p] = param.U_p(param.c_p_init(1), param.T_init)
+            self.algebraic[phi_s_p] = pybamm.div(i_s_p) + j_p
+            # Initial conditions must also be provided for algebraic equations, as an
+            # initial guess for a root-finding algorithm which calculates consistent
+            # initial conditions
+            self.initial_conditions[phi_s_p] = param.U_p(
+                param.c_p_init(1), param.T_init
+            )
 
         ######################
         # Electrolyte concentration
@@ -322,22 +372,16 @@ class BasicDFNHalfCell(BaseModel):
             param.chi(c_e) * pybamm.grad(c_e) / c_e - pybamm.grad(phi_e)
         )
         self.algebraic[phi_e] = pybamm.div(i_e) - j
-        # dphie_dx = (
-        #     -i_cell / (param.kappa_e(c_e, T) * tor * param.gamma_e / param.C_e)
-        #     + param.chi(c_e) * dce_dx / c_e
-        # )
 
         if working_electrode == "negative":
             self.boundary_conditions[phi_e] = {
                 "left": (pybamm.Scalar(0), "Neumann"),
                 "right": (pybamm.Scalar(0), "Dirichlet"),
-                # "right": (pybamm.boundary_value(dphie_dx, "right"), "Neumann"),
             }
         else:
             self.boundary_conditions[phi_e] = {
                 "left": (pybamm.Scalar(0), "Dirichlet"),
                 "right": (pybamm.Scalar(0), "Neumann"),
-                # "right": (pybamm.boundary_value(dphie_dx, "right"), "Neumann"),
             }
 
         self.initial_conditions[phi_e] = pybamm.Scalar(0)
@@ -389,7 +433,8 @@ class BasicDFNHalfCell(BaseModel):
             "Negative particle surface concentration [mol.m-3]": param.c_n_max
             * c_s_surf_n,
             "X-averaged negative particle surface concentration [mol.m-3]":
-            param.c_n_max * c_s_surf_n_av,
+            param.c_n_max
+            * c_s_surf_n_av,
             "Negative particle concentration [mol.m-3]": param.c_n_max * c_s_n,
             "Electrolyte concentration": c_e,
             "Electrolyte concentration [mol.m-3]": param.c_e_typ * c_e,
@@ -399,7 +444,8 @@ class BasicDFNHalfCell(BaseModel):
             "Positive particle surface concentration [mol.m-3]": param.c_p_max
             * c_s_surf_p,
             "X-averaged positive particle surface concentration [mol.m-3]":
-            param.c_p_max * c_s_surf_p_av,
+            param.c_p_max
+            * c_s_surf_p_av,
             "Positive particle concentration [mol.m-3]": param.c_p_max * c_s_p,
             "Current [A]": I,
             "Negative electrode potential": phi_s_n,
@@ -417,4 +463,10 @@ class BasicDFNHalfCell(BaseModel):
         }
 
     def new_copy(self, build=False):
-        return pybamm.BaseModel.new_copy(self)
+        new_model = self.__class__(name=self.name, options=self.options)
+        new_model.use_jacobian = self.use_jacobian
+        new_model.use_simplify = self.use_simplify
+        new_model.convert_to_format = self.convert_to_format
+        new_model.timescale = self.timescale
+        new_model.length_scales = self.length_scales
+        return new_model
