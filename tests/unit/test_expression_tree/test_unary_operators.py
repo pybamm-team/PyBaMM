@@ -425,6 +425,10 @@ class TestUnaryOperators(unittest.TestCase):
             pybamm.x_average(symbol_on_edges)
 
         # Particle domains
+        geo = pybamm.GeometricParameters()
+        l_n = geo.l_n
+        l_p = geo.l_p
+
         a = pybamm.Symbol(
             "a",
             domain="negative particle",
@@ -434,7 +438,7 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(a.domain, ["negative particle"])
         self.assertIsInstance(av_a, pybamm.Division)
         self.assertIsInstance(av_a.children[0], pybamm.Integral)
-        self.assertEqual(av_a.children[1].id, pybamm.geometric_parameters.l_n.id)
+        self.assertEqual(av_a.children[1].id, l_n.id)
 
         a = pybamm.Symbol(
             "a",
@@ -445,7 +449,7 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(a.domain, ["positive particle"])
         self.assertIsInstance(av_a, pybamm.Division)
         self.assertIsInstance(av_a.children[0], pybamm.Integral)
-        self.assertEqual(av_a.children[1].id, pybamm.geometric_parameters.l_p.id)
+        self.assertEqual(av_a.children[1].id, l_p.id)
 
     def test_r_average(self):
         a = pybamm.Scalar(1)

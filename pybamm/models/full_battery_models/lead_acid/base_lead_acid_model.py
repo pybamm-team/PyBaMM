@@ -17,7 +17,7 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     def __init__(self, options=None, name="Unnamed lead-acid model"):
         super().__init__(options, name)
-        self.param = pybamm.standard_parameters_lead_acid
+        self.param = pybamm.LeadAcidParameters()
 
         # Default timescale is discharge timescale
         self.timescale = self.param.tau_discharge
