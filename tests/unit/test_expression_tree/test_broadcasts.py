@@ -55,6 +55,9 @@ class TestBroadcasts(unittest.TestCase):
             {"secondary": ["negative electrode"], "tertiary": ["current collector"]},
         )
 
+        a = pybamm.Symbol("a")
+        with self.assertRaisesRegex(TypeError, "empty domain"):
+            pybamm.SecondaryBroadcast(a, "current collector")
         a = pybamm.Symbol("a", domain="negative particle")
         with self.assertRaisesRegex(
             pybamm.DomainError, "Secondary broadcast from particle"

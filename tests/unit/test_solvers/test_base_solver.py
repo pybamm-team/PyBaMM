@@ -89,7 +89,8 @@ class TestBaseSolver(unittest.TestCase):
         p = pybamm.InputParameter("p")
         model.rhs = {a: a * p}
         with self.assertRaisesRegex(
-            pybamm.SolverError, "Only CasadiAlgebraicSolver can have symbolic inputs"
+            pybamm.SolverError,
+            "Only CasadiSolver and CasadiAlgebraicSolver can have symbolic inputs",
         ):
             solver.solve(model, np.array([1, 2, 3]))
 

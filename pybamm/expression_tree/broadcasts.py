@@ -184,7 +184,11 @@ class SecondaryBroadcast(Broadcast):
         self, child, broadcast_type, broadcast_domain, broadcast_auxiliary_domains
     ):
         "See :meth:`Broadcast.check_and_set_domains`"
-
+        if child.domain == []:
+            raise TypeError(
+                "Cannot take SecondaryBroadcast of an object with empty domain. "
+                "Use PrimaryBroadcast instead."
+            )
         # Can only do secondary broadcast from particle to electrode or from
         # electrode to current collector
         if child.domain[0] in [

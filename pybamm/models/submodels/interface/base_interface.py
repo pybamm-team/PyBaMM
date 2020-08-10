@@ -173,6 +173,14 @@ class BaseInterface(pybamm.BaseSubModel):
         else:
             return pybamm.Scalar(0)
 
+    def _get_surface_area_per_unit_volume_distribution(self):
+        "Returns the distribution of surface area per unit volume in x"
+        x_n = pybamm.standard_spatial_vars.x_n
+        x_p = pybamm.standard_spatial_vars.x_p
+        a_n = self.param.a_n_of_x(x_n)
+        a_p = self.param.a_p_of_x(x_p)
+        return a_n, a_p
+
     def _get_electrolyte_reaction_signed_stoichiometry(self):
         "Returns the number of electrons in the reaction"
         if self.reaction in ["lithium-ion main", "sei"]:
@@ -199,15 +207,27 @@ class BaseInterface(pybamm.BaseSubModel):
     def _get_average_total_interfacial_current_density(self, variables):
         """
         Method to obtain the average total interfacial current density.
+
+        Note: for lithium-ion models this is only exact if all the particles have
+        the same radius. For the current set of models implemeted in pybamm,
+        having the radius as a function of through-cell distance only makes sense
+        for the DFN model. In the DFN, the correct average interfacial current density
+        is computed in 'base_kinetics.py' by averaging the actual interfacial current
+        density. The approximation here is only used to get the approximate constant
+        additional resistance term for the "average" sei film resistance model
+        (if using), where only negligible errors will be introduced.
+
+        For "leading-order" and "composite" submodels (as used in the SPM and SPMe)
+        there is only a single particle radius, so this method returns correct result.
         """
 
         i_boundary_cc = variables["Current collector current density"]
 
         if self.domain == "Negative":
-            j_total_average = i_boundary_cc / pybamm.geometric_parameters.l_n
+            j_total_average = i_boundary_cc / self.param.l_n
 
         elif self.domain == "Positive":
-            j_total_average = -i_boundary_cc / pybamm.geometric_parameters.l_p
+            j_total_average = -i_boundary_cc / self.param.l_p
 
         return j_total_average
 
@@ -327,25 +347,37 @@ class BaseInterface(pybamm.BaseSubModel):
             }
         )
 
+        a_n, a_p = self._get_surface_area_per_unit_volume_distribution()
+        a = pybamm.Concatenation(
+            a_n, pybamm.FullBroadcast(0, "separator", "current collector"), a_p
+        )
+        variables.update(
+            {
+                "Negative surface area per unit volume distribution in x": a_n,
+                "Positive surface area per unit volume distribution in x": a_p,
+            }
+        )
+
         s_n, s_p = self._get_electrolyte_reaction_signed_stoichiometry()
         s = pybamm.Concatenation(
             pybamm.FullBroadcast(s_n, "negative electrode", "current collector"),
             pybamm.FullBroadcast(0, "separator", "current collector"),
             pybamm.FullBroadcast(s_p, "positive electrode", "current collector"),
         )
-        variables["Sum of electrolyte reaction source terms"] += s * j
+
+        variables["Sum of electrolyte reaction source terms"] += a * s * j
         variables["Sum of negative electrode electrolyte reaction source terms"] += (
-            s_n * j_n
+            a_n * s_n * j_n
         )
         variables["Sum of positive electrode electrolyte reaction source terms"] += (
-            s_p * j_p
+            a_p * s_p * j_p
         )
         variables[
             "Sum of x-averaged negative electrode electrolyte reaction source terms"
-        ] += (s_n * j_n_av)
+        ] += pybamm.x_average(a_n * s_n * j_n)
         variables[
             "Sum of x-averaged positive electrode electrolyte reaction source terms"
-        ] += (s_p * j_p_av)
+        ] += pybamm.x_average(a_p * s_p * j_p)
 
         variables["Sum of interfacial current densities"] += j
         variables["Sum of negative electrode interfacial current densities"] += j_n

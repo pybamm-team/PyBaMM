@@ -1,9 +1,37 @@
+# Unreleased
+
+## Features
+
+
+-   Automatically compute surface area per unit volume based on particle shape for li-ion models ([#1120])(https://github.com/pybamm-team/PyBaMM/pull/1120)
+-   Added "R-averaged particle concentration" variables ([#1118](https://github.com/pybamm-team/PyBaMM/pull/1118))
+-   Added support for sensitivity calculations to the casadi solver ([#1109](https://github.com/pybamm-team/PyBaMM/pull/1109))
+-   Added support for index 1 semi-explicit dae equations and sensitivity calculations to JAX BDF solver ([#1107](https://github.com/pybamm-team/PyBaMM/pull/1107))
+-   Allowed keyword arguments to be passed to `Simulation.plot()` ([#1099](https://github.com/pybamm-team/PyBaMM/pull/1099))
+
+## Optimizations
+
+## Bug fixes
+
+-   Fixed `r_average` to work with `SecondaryBroadcast` ([#1118](https://github.com/pybamm-team/PyBaMM/pull/1118))
+-   Fixed finite volume discretisation of spherical integrals ([#1118](https://github.com/pybamm-team/PyBaMM/pull/1118))
+-   `t_eval` now gets changed to a `linspace` if a list of length 2 is passed ([#1113](https://github.com/pybamm-team/PyBaMM/pull/1113))
+-   Fixed bug when setting a function with an `InputParameter` ([#1111](https://github.com/pybamm-team/PyBaMM/pull/1111))
+
+## Breaking changes
+
+-  The modules containing standard parameters are now classes so they can take options
+(e.g. `standard_parameters_lithium_ion` is now `LithiumIonParameters`) ([#1120])(https://github.com/pybamm-team/PyBaMM/pull/1120)
+-  Renamed `quick_plot_vars` to `output_variables` in `Simulation` to be consistent with `QuickPlot`. Passing `quick_plot_vars` to `Simulation.plot()` has been deprecated and `output_variables` should be passed instead ([#1099](https://github.com/pybamm-team/PyBaMM/pull/1099))
+
+
 # [v0.2.3](https://github.com/pybamm-team/PyBaMM/tree/v0.2.3) - 2020-07-01
 
 This release enables the use of [Google Colab](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/master/) for running example notebooks, and adds some small new features and bug fixes.
 
 ## Features
 
+-   Added JAX evaluator, and ODE solver ([#1038](https://github.com/pybamm-team/PyBaMM/pull/1038))
 -   Reformatted Getting Started notebooks ([#1083](https://github.com/pybamm-team/PyBaMM/pull/1083))
 -   Reformatted Landesfeind electrolytes ([#1064](https://github.com/pybamm-team/PyBaMM/pull/1064))
 -   Adapted examples to be run in Google Colab ([#1061](https://github.com/pybamm-team/PyBaMM/pull/1061))
@@ -18,6 +46,7 @@ This release enables the use of [Google Colab](https://colab.research.google.com
 
 ## Bug fixes
 
+-   Fixed a bug in `InterstitialDiffusionLimited` ([#1097](https://github.com/pybamm-team/PyBaMM/pull/1097))
 -   Fixed `Simulation` to keep different copies of the model so that parameters can be changed between simulations ([#1090](https://github.com/pybamm-team/PyBaMM/pull/1090))
 -   Fixed `model.new_copy()` to keep custom submodels ([#1090](https://github.com/pybamm-team/PyBaMM/pull/1090))
 -   2D processed variables can now be evaluated at the domain boundaries ([#1088](https://github.com/pybamm-team/PyBaMM/pull/1088))
@@ -31,7 +60,7 @@ This release enables the use of [Google Colab](https://colab.research.google.com
 ## Breaking changes
 
 -   `Simulation.specs` and `Simulation.set_defaults` have been deprecated. Users should create a new `Simulation` object for each different case instead ([#1090](https://github.com/pybamm-team/PyBaMM/pull/1090))
--  The solution times `t_eval` must now be provided to `Simulation.solve()` when not using an experiment or prescribing the current using drive cycle data ([#1086](https://github.com/pybamm-team/PyBaMM/pull/1086))
+-   The solution times `t_eval` must now be provided to `Simulation.solve()` when not using an experiment or prescribing the current using drive cycle data ([#1086](https://github.com/pybamm-team/PyBaMM/pull/1086))
 
 # [v0.2.2](https://github.com/pybamm-team/PyBaMM/tree/v0.2.2) - 2020-06-01
 

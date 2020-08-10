@@ -224,6 +224,11 @@ class BaseSolver(object):
                 if model.use_simplify:
                     report(f"Simplifying {name}")
                     func = simp.simplify(func)
+
+                if model.convert_to_format == "jax":
+                    report(f"Converting {name} to jax")
+                    jax_func = pybamm.EvaluatorJax(func)
+
                 if use_jacobian:
                     report(f"Calculating jacobian for {name}")
                     jac = jacobian.jac(func, y)
@@ -233,13 +238,22 @@ class BaseSolver(object):
                     if model.convert_to_format == "python":
                         report(f"Converting jacobian for {name} to python")
                         jac = pybamm.EvaluatorPython(jac)
+                    elif model.convert_to_format == "jax":
+                        report(f"Converting jacobian for {name} to jax")
+                        jac = jax_func.get_jacobian()
                     jac = jac.evaluate
                 else:
                     jac = None
+
                 if model.convert_to_format == "python":
                     report(f"Converting {name} to python")
                     func = pybamm.EvaluatorPython(func)
+                if model.convert_to_format == "jax":
+                    report(f"Converting {name} to jax")
+                    func = jax_func
+
                 func = func.evaluate
+
             else:
                 # Process with CasADi
                 report(f"Converting {name} to CasADi")
@@ -437,9 +451,12 @@ class BaseSolver(object):
         -------
         y0_consistent : array-like, same shape as y0_guess
             Initial conditions that are consistent with the algebraic equations (roots
-            of the algebraic equations)
+            of the algebraic equations). If self.root_method == None then returns
+            model.y0.
         """
         pybamm.logger.info("Start calculating consistent states")
+        if self.root_method is None:
+            return model.y0
         try:
             root_sol = self.root_method._integrate(model, [time], inputs)
         except pybamm.SolverError as e:
@@ -447,7 +464,10 @@ class BaseSolver(object):
                 "Could not find consistent states: {}".format(e.args[0])
             )
         pybamm.logger.info("Found consistent states")
-        return root_sol.y.flatten()
+        y0 = root_sol.y
+        if isinstance(y0, np.ndarray):
+            y0 = y0.flatten()
+        return y0
 
     def solve(self, model, t_eval=None, external_variables=None, inputs=None):
         """
@@ -490,6 +510,19 @@ class BaseSolver(object):
                 t_eval = np.array([0])
             else:
                 raise ValueError("t_eval cannot be None")
+        # If t_eval is provided as [t0, tf] return the solution at 100 points
+        elif isinstance(t_eval, list):
+            if len(t_eval) == 1 and self.algebraic_solver is True:
+                pass
+            elif len(t_eval) != 2:
+                raise pybamm.SolverError(
+                    "'t_eval' can be provided as an array of times at which to "
+                    "return the solution, or as a list [t0, tf] where t0 is the "
+                    "initial time and tf is the final time, but has been provided "
+                    "as a list of length {}.".format(len(t_eval))
+                )
+            else:
+                t_eval = np.linspace(t_eval[0], t_eval[-1], 100)
 
         # Make sure t_eval is monotonic
         if (np.diff(t_eval) < 0).any():
@@ -814,10 +847,13 @@ class BaseSolver(object):
         for input_param in model.input_parameters:
             name = input_param.name
             if name not in inputs:
-                # Only allow symbolic inputs for CasadiAlgebraicSolver
-                if not isinstance(self, pybamm.CasadiAlgebraicSolver):
+                # Only allow symbolic inputs for CasadiSolver and CasadiAlgebraicSolver
+                if not isinstance(
+                    self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver)
+                ):
                     raise pybamm.SolverError(
-                        "Only CasadiAlgebraicSolver can have symbolic inputs"
+                        "Only CasadiSolver and CasadiAlgebraicSolver "
+                        "can have symbolic inputs"
                     )
                 inputs[name] = casadi.MX.sym(name, input_param._expected_size)
 
@@ -840,8 +876,8 @@ class SolverCallable:
         self.timescale = self.model.timescale_eval
 
     def __call__(self, t, y, inputs):
-        y = y[:, np.newaxis]
-        if self.name in ["RHS", "algebraic", "residuals", "event"]:
+        y = y.reshape(-1, 1)
+        if self.name in ["RHS", "algebraic", "residuals"]:
             pybamm.logger.debug(
                 "Evaluating {} for {} at t={}".format(
                     self.name, self.model.name, t * self.timescale

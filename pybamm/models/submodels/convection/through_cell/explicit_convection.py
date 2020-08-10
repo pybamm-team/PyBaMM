@@ -24,7 +24,7 @@ class Explicit(BaseThroughCellModel):
 
         # Set up
         param = self.param
-        l_n = pybamm.geometric_parameters.l_n
+        l_n = param.l_n
         x_n = pybamm.standard_spatial_vars.x_n
         x_s = pybamm.standard_spatial_vars.x_s
         x_p = pybamm.standard_spatial_vars.x_p

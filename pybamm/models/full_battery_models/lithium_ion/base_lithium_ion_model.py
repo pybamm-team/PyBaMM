@@ -15,7 +15,7 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     def __init__(self, options=None, name="Unnamed lithium-ion model"):
         super().__init__(options, name)
-        self.param = pybamm.standard_parameters_lithium_ion
+        self.param = pybamm.LithiumIonParameters(options)
 
         # Default timescale is discharge timescale
         self.timescale = self.param.tau_discharge
@@ -37,13 +37,12 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         # Particle concentration position
         var = pybamm.standard_spatial_vars
-        param = pybamm.geometric_parameters
         self.variables.update(
             {
                 "r_n": var.r_n,
-                "r_n [m]": var.r_n * param.R_n,
+                "r_n [m]": var.r_n * self.param.R_n,
                 "r_p": var.r_p,
-                "r_p [m]": var.r_p * param.R_p,
+                "r_p [m]": var.r_p * self.param.R_p,
             }
         )
 

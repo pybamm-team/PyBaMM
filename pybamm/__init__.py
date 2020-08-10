@@ -7,6 +7,7 @@
 #
 import sys
 import os
+from platform import system
 
 #
 # Version info
@@ -100,12 +101,17 @@ from .expression_tree.operations.simplify import (
     simplify_addition_subtraction,
     simplify_multiplication_division,
 )
+
 from .expression_tree.operations.evaluate import (
     find_symbols,
     id_to_python_variable,
     to_python,
     EvaluatorPython,
 )
+
+if system() != "Windows":
+    from .expression_tree.operations.evaluate import EvaluatorJax
+
 from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
 from .expression_tree.operations.unpack_symbols import SymbolUnpacker
@@ -154,14 +160,15 @@ from .expression_tree.independent_variable import KNOWN_COORD_SYS
 from .geometry import standard_spatial_vars
 
 #
-# Parameters class and methods
+# Parameter classes and methods
 #
 from .parameters.parameter_values import ParameterValues
 from .parameters import constants
-from .parameters import geometric_parameters
-from .parameters import electrical_parameters
-from .parameters import thermal_parameters
-from .parameters import standard_parameters_lithium_ion, standard_parameters_lead_acid
+from .parameters.geometric_parameters import GeometricParameters
+from .parameters.electrical_parameters import ElectricalParameters
+from .parameters.thermal_parameters import ThermalParameters
+from .parameters.lithium_ion_parameters import LithiumIonParameters
+from .parameters.lead_acid_parameters import LeadAcidParameters
 from .parameters import parameter_sets
 
 
@@ -209,6 +216,12 @@ from .solvers.casadi_algebraic_solver import CasadiAlgebraicSolver
 from .solvers.scikits_dae_solver import ScikitsDaeSolver
 from .solvers.scikits_ode_solver import ScikitsOdeSolver, have_scikits_odes
 from .solvers.scipy_solver import ScipySolver
+
+# Jax not supported under windows
+if system() != "Windows":
+    from .solvers.jax_solver import JaxSolver
+    from .solvers.jax_bdf_solver import jax_bdf_integrate
+
 from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
 
 #
