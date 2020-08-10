@@ -309,12 +309,19 @@ class TestJacobian(unittest.TestCase):
         a = pybamm.Scalar(3)
         y = pybamm.StateVector(slice(0, 5))
         np.testing.assert_array_equal(
+            (a % (3*a)).jac(y).evaluate(y=5 * np.ones(5)), 0
+        )
+        np.testing.assert_array_equal(
             ((y % a) * y ** 2).jac(y).evaluate(y=5 * np.ones(5)).toarray(),
             45 * np.eye(5),
         )
         np.testing.assert_array_equal(
             ((a % y) * y ** 2).jac(y).evaluate(y=5 * np.ones(5)).toarray(),
             30 * np.eye(5),
+        )
+        np.testing.assert_array_equal(
+            (((y + 1) ** 2 % y) * y ** 2).jac(y).evaluate(y=5 * np.ones(5)).toarray(),
+            135 * np.eye(5),
         )
 
     def test_jac_of_minimum_maximum(self):
