@@ -12,7 +12,6 @@ Positive electrode porosity,0.385,Ramadass,electrolyte volume fraction
 Positive electrode active material volume fraction,0.59,Ramadass,
 Positive particle radius [m],2e-06,Ramadass,
 Positive particle distribution in x,1,,
-Positive electrode surface area to volume ratio [m-1],885000,3eps.radi-1,
 Positive electrode Bruggeman coefficient (electrolyte),4,Ramadass,
 Positive electrode Bruggeman coefficient (electrode),4,Ramadass,
 ,,,

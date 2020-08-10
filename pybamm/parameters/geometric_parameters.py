@@ -1,72 +1,103 @@
 #
 # Geometric Parameters
 #
-"""
-Standard geometric parameters
-"""
 import pybamm
 
-# --------------------------------------------------------------------------------------
-"Dimensional Parameters"
-# Macroscale geometry
-L_cn = pybamm.Parameter("Negative current collector thickness [m]")
-L_n = pybamm.Parameter("Negative electrode thickness [m]")
-L_s = pybamm.Parameter("Separator thickness [m]")
-L_p = pybamm.Parameter("Positive electrode thickness [m]")
-L_cp = pybamm.Parameter("Positive current collector thickness [m]")
-L_x = L_n + L_s + L_p  # Total distance between current collectors
-L = L_cn + L_x + L_cp  # Total cell thickness
-L_y = pybamm.Parameter("Electrode width [m]")
-L_z = pybamm.Parameter("Electrode height [m]")
-A_cc = L_y * L_z  # Area of current collector
-A_cooling = pybamm.Parameter("Cell cooling surface area [m2]")
-V_cell = pybamm.Parameter("Cell volume [m3]")
 
-# Tab geometry
-L_tab_n = pybamm.Parameter("Negative tab width [m]")
-Centre_y_tab_n = pybamm.Parameter("Negative tab centre y-coordinate [m]")
-Centre_z_tab_n = pybamm.Parameter("Negative tab centre z-coordinate [m]")
-L_tab_p = pybamm.Parameter("Positive tab width [m]")
-Centre_y_tab_p = pybamm.Parameter("Positive tab centre y-coordinate [m]")
-Centre_z_tab_p = pybamm.Parameter("Positive tab centre z-coordinate [m]")
-A_tab_n = L_tab_n * L_cn  # Area of negative tab
-A_tab_p = L_tab_p * L_cp  # Area of negative tab
+class GeometricParameters:
+    """
+    Standard geometric parameters
 
+    Layout:
+        1. Dimensional Parameters
+        2. Dimensionless Parameters
+    """
 
-# Microscale geometry
-a_n_dim = pybamm.Parameter("Negative electrode surface area to volume ratio [m-1]")
-a_p_dim = pybamm.Parameter("Positive electrode surface area to volume ratio [m-1]")
-R_n = pybamm.Parameter("Negative particle radius [m]")
-R_p = pybamm.Parameter("Positive particle radius [m]")
-b_e_n = pybamm.Parameter("Negative electrode Bruggeman coefficient (electrolyte)")
-b_e_s = pybamm.Parameter("Separator Bruggeman coefficient (electrolyte)")
-b_e_p = pybamm.Parameter("Positive electrode Bruggeman coefficient (electrolyte)")
-b_s_n = pybamm.Parameter("Negative electrode Bruggeman coefficient (electrode)")
-b_s_s = pybamm.Parameter("Separator Bruggeman coefficient (electrode)")
-b_s_p = pybamm.Parameter("Positive electrode Bruggeman coefficient (electrode)")
+    def __init__(self):
 
-# --------------------------------------------------------------------------------------
-"Dimensionless Parameters"
-# Macroscale Geometry
-l_cn = L_cn / L_x
-l_n = L_n / L_x
-l_s = L_s / L_x
-l_p = L_p / L_x
-l_cp = L_cp / L_x
-l_x = L_x / L_x
-l_y = L_y / L_z
-l_z = L_z / L_z
-a_cc = l_y * l_z
-a_cooling = A_cooling / (L_z ** 2)
-v_cell = V_cell / (L_x * L_z ** 2)
+        # Set parameters
+        self._set_dimensional_parameters()
+        self._set_dimensionless_parameters()
 
-l = L / L_x
-delta = L_x / L_z  # Aspect ratio
+    def _set_dimensional_parameters(self):
+        "Defines the dimensional parameters"
 
-# Tab geometry
-l_tab_n = L_tab_n / L_z
-centre_y_tab_n = Centre_y_tab_n / L_z
-centre_z_tab_n = Centre_z_tab_n / L_z
-l_tab_p = L_tab_p / L_z
-centre_y_tab_p = Centre_y_tab_p / L_z
-centre_z_tab_p = Centre_z_tab_p / L_z
+        # Macroscale geometry
+        self.L_cn = pybamm.Parameter("Negative current collector thickness [m]")
+        self.L_n = pybamm.Parameter("Negative electrode thickness [m]")
+        self.L_s = pybamm.Parameter("Separator thickness [m]")
+        self.L_p = pybamm.Parameter("Positive electrode thickness [m]")
+        self.L_cp = pybamm.Parameter("Positive current collector thickness [m]")
+        self.L_x = (
+            self.L_n + self.L_s + self.L_p
+        )  # Total distance between current collectors
+        self.L = self.L_cn + self.L_x + self.L_cp  # Total cell thickness
+        self.L_y = pybamm.Parameter("Electrode width [m]")
+        self.L_z = pybamm.Parameter("Electrode height [m]")
+        self.A_cc = self.L_y * self.L_z  # Area of current collector
+        self.A_cooling = pybamm.Parameter("Cell cooling surface area [m2]")
+        self.V_cell = pybamm.Parameter("Cell volume [m3]")
+
+        # Tab geometry
+        self.L_tab_n = pybamm.Parameter("Negative tab width [m]")
+        self.Centre_y_tab_n = pybamm.Parameter("Negative tab centre y-coordinate [m]")
+        self.Centre_z_tab_n = pybamm.Parameter("Negative tab centre z-coordinate [m]")
+        self.L_tab_p = pybamm.Parameter("Positive tab width [m]")
+        self.Centre_y_tab_p = pybamm.Parameter("Positive tab centre y-coordinate [m]")
+        self.Centre_z_tab_p = pybamm.Parameter("Positive tab centre z-coordinate [m]")
+        self.A_tab_n = self.L_tab_n * self.L_cn  # Area of negative tab
+        self.A_tab_p = self.L_tab_p * self.L_cp  # Area of negative tab
+
+        # Microscale geometry
+        # Note: the definition of the surface area to volume ratio is
+        # overwritten in lithium_ion_parameters.py to be computed
+        # based on the assumed particle shape
+        self.a_n_dim = pybamm.Parameter(
+            "Negative electrode surface area to volume ratio [m-1]"
+        )
+        self.a_p_dim = pybamm.Parameter(
+            "Positive electrode surface area to volume ratio [m-1]"
+        )
+        self.R_n = pybamm.Parameter("Negative particle radius [m]")
+        self.R_p = pybamm.Parameter("Positive particle radius [m]")
+        self.b_e_n = pybamm.Parameter(
+            "Negative electrode Bruggeman coefficient (electrolyte)"
+        )
+        self.b_e_s = pybamm.Parameter("Separator Bruggeman coefficient (electrolyte)")
+        self.b_e_p = pybamm.Parameter(
+            "Positive electrode Bruggeman coefficient (electrolyte)"
+        )
+        self.b_s_n = pybamm.Parameter(
+            "Negative electrode Bruggeman coefficient (electrode)"
+        )
+        self.b_s_s = pybamm.Parameter("Separator Bruggeman coefficient (electrode)")
+        self.b_s_p = pybamm.Parameter(
+            "Positive electrode Bruggeman coefficient (electrode)"
+        )
+
+    def _set_dimensionless_parameters(self):
+        "Defines the dimensionless parameters"
+
+        # Macroscale Geometry
+        self.l_cn = self.L_cn / self.L_x
+        self.l_n = self.L_n / self.L_x
+        self.l_s = self.L_s / self.L_x
+        self.l_p = self.L_p / self.L_x
+        self.l_cp = self.L_cp / self.L_x
+        self.l_x = self.L_x / self.L_x
+        self.l_y = self.L_y / self.L_z
+        self.l_z = self.L_z / self.L_z
+        self.a_cc = self.l_y * self.l_z
+        self.a_cooling = self.A_cooling / (self.L_z ** 2)
+        self.v_cell = self.V_cell / (self.L_x * self.L_z ** 2)
+
+        self.l = self.L / self.L_x
+        self.delta = self.L_x / self.L_z  # Aspect ratio
+
+        # Tab geometry
+        self.l_tab_n = self.L_tab_n / self.L_z
+        self.centre_y_tab_n = self.Centre_y_tab_n / self.L_z
+        self.centre_z_tab_n = self.Centre_z_tab_n / self.L_z
+        self.l_tab_p = self.L_tab_p / self.L_z
+        self.centre_y_tab_p = self.Centre_y_tab_p / self.L_z
+        self.centre_z_tab_p = self.Centre_z_tab_p / self.L_z

@@ -1,4 +1,4 @@
-from pybamm import exp, constants, standard_parameters_lithium_ion
+from pybamm import exp, constants, Parameter
 
 
 def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, T):
@@ -32,7 +32,7 @@ def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, 
     E_r = 35000
     arrhenius = exp(E_r / constants.R * (1 / 298.15 - 1 / T))
 
-    c_n_max = standard_parameters_lithium_ion.c_n_max
+    c_n_max = Parameter("Maximum concentration in negative electrode [mol.m-3]")
 
     return (
         m_ref * arrhenius * c_e ** 0.5 * c_s_surf ** 0.5 * (c_n_max - c_s_surf) ** 0.5

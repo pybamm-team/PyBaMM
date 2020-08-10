@@ -9,27 +9,23 @@ import unittest
 
 class TestStandardParametersLeadAcid(unittest.TestCase):
     def test_scipy_constants(self):
-        R = pybamm.standard_parameters_lead_acid.R
-        self.assertAlmostEqual(R.evaluate(), 8.314, places=3)
-        F = pybamm.standard_parameters_lead_acid.F
-        self.assertAlmostEqual(F.evaluate(), 96485, places=0)
+        param = pybamm.LeadAcidParameters()
+        self.assertAlmostEqual(param.R.evaluate(), 8.314, places=3)
+        self.assertAlmostEqual(param.F.evaluate(), 96485, places=0)
 
     def test_all_defined(self):
-        parameters = pybamm.standard_parameters_lead_acid
+        parameters = pybamm.LeadAcidParameters()
         parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values
         output_file = "lead_acid_parameters.txt"
         parameter_values.print_parameters(parameters, output_file)
         # test print_parameters with dict and without C-rate
         del parameter_values["Cell capacity [A.h]"]
-        parameters = {
-            "C_e": pybamm.standard_parameters_lead_acid.C_e,
-            "sigma_n": pybamm.standard_parameters_lead_acid.sigma_n,
-        }
+        parameters = {"C_e": parameters.C_e, "sigma_n": parameters.sigma_n}
         parameter_values.print_parameters(parameters)
 
     def test_parameters_defaults_lead_acid(self):
         # Load parameters to be tested
-        parameters = pybamm.standard_parameters_lead_acid
+        parameters = pybamm.LeadAcidParameters()
         parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values
         param_eval = parameter_values.print_parameters(parameters)
         param_eval = {k: v[0] for k, v in param_eval.items()}
@@ -50,7 +46,8 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
 
     def test_concatenated_parameters(self):
         # create
-        s_param = pybamm.standard_parameters_lead_acid.s_plus_S
+        param = pybamm.LeadAcidParameters()
+        s_param = param.s_plus_S
         self.assertIsInstance(s_param, pybamm.Concatenation)
         self.assertEqual(
             s_param.domain, ["negative electrode", "separator", "positive electrode"]
@@ -71,12 +68,9 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
 
     def test_current_functions(self):
         # create current functions
-        dimensional_current_density = (
-            pybamm.standard_parameters_lead_acid.dimensional_current_density_with_time
-        )
-        dimensionless_current_density = (
-            pybamm.standard_parameters_lead_acid.current_with_time
-        )
+        param = pybamm.LeadAcidParameters()
+        dimensional_current_density = param.dimensional_current_density_with_time
+        dimensionless_current_density = param.current_with_time
 
         # process
         parameter_values = pybamm.ParameterValues(
@@ -105,27 +99,16 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
 
     def test_functions_lead_acid(self):
         # Load parameters to be tested
+        param = pybamm.LeadAcidParameters()
         parameters = {
-            "D_e_1": pybamm.standard_parameters_lead_acid.D_e(
-                pybamm.Scalar(1), pybamm.Scalar(0)
-            ),
-            "kappa_e_0": pybamm.standard_parameters_lead_acid.kappa_e(
-                pybamm.Scalar(0), pybamm.Scalar(0)
-            ),
-            "chi_1": pybamm.standard_parameters_lead_acid.chi(pybamm.Scalar(1)),
-            "chi_0.5": pybamm.standard_parameters_lead_acid.chi(pybamm.Scalar(0.5)),
-            "U_n_1": pybamm.standard_parameters_lead_acid.U_n(
-                pybamm.Scalar(1), pybamm.Scalar(0)
-            ),
-            "U_n_0.5": pybamm.standard_parameters_lead_acid.U_n(
-                pybamm.Scalar(0.5), pybamm.Scalar(0)
-            ),
-            "U_p_1": pybamm.standard_parameters_lead_acid.U_p(
-                pybamm.Scalar(1), pybamm.Scalar(0)
-            ),
-            "U_p_0.5": pybamm.standard_parameters_lead_acid.U_p(
-                pybamm.Scalar(0.5), pybamm.Scalar(0)
-            ),
+            "D_e_1": param.D_e(pybamm.Scalar(1), pybamm.Scalar(0)),
+            "kappa_e_0": param.kappa_e(pybamm.Scalar(0), pybamm.Scalar(0)),
+            "chi_1": param.chi(pybamm.Scalar(1)),
+            "chi_0.5": param.chi(pybamm.Scalar(0.5)),
+            "U_n_1": param.U_n(pybamm.Scalar(1), pybamm.Scalar(0)),
+            "U_n_0.5": param.U_n(pybamm.Scalar(0.5), pybamm.Scalar(0)),
+            "U_p_1": param.U_p(pybamm.Scalar(1), pybamm.Scalar(0)),
+            "U_p_0.5": param.U_p(pybamm.Scalar(0.5), pybamm.Scalar(0)),
         }
         # Process
         parameter_values = pybamm.ParameterValues(
@@ -144,7 +127,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
 
     def test_update_initial_state_of_charge(self):
         # Load parameters to be tested
-        parameters = pybamm.standard_parameters_lead_acid
+        parameters = pybamm.LeadAcidParameters()
         parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values
         param_eval = parameter_values.print_parameters(parameters)
         param_eval = {k: v[0] for k, v in param_eval.items()}

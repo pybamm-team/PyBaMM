@@ -13,7 +13,7 @@ from tests.unit.test_models.test_submodels.test_thermal.coupled_variables import
 
 class TestOneDimensionalX(unittest.TestCase):
     def test_public_functions(self):
-        param = pybamm.standard_parameters_lithium_ion
+        param = pybamm.LithiumIonParameters()
         submodel = pybamm.thermal.OneDimensionalX(param)
         std_tests = tests.StandardSubModelTests(submodel, coupled_variables)
         std_tests.test_all()
