@@ -33,7 +33,9 @@ class BasicDFNHalfCell(BaseModel):
     """
 
     def __init__(
-        self, name="Doyle-Fuller-Newman half cell model", options={},
+        self,
+        name="Doyle-Fuller-Newman half cell model",
+        options={"working electrode": None},
     ):
         super().__init__({}, name)
         pybamm.citations.register("marquis2019asymptotic")

@@ -284,6 +284,12 @@ class TestUnaryOperators(unittest.TestCase):
         # sign
         self.assertEqual((pybamm.sign(a)).diff(a).evaluate(y=y), 0)
 
+        # floor
+        self.assertEqual((pybamm.Floor(a)).diff(a).evaluate(y=y), 0)
+
+        # ceil
+        self.assertEqual((pybamm.Ceiling(a)).diff(a).evaluate(y=y), 0)
+
         # spatial operator (not implemented)
         spatial_a = pybamm.SpatialOperator("name", a)
         with self.assertRaises(NotImplementedError):
