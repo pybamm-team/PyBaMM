@@ -309,7 +309,7 @@ class TestJacobian(unittest.TestCase):
         a = pybamm.Scalar(3)
         y = pybamm.StateVector(slice(0, 5))
         np.testing.assert_array_equal(
-            (a % (3*a)).jac(y).evaluate(y=5 * np.ones(5)), 0
+            (a % (3 * a)).jac(y).evaluate(y=5 * np.ones(5)), 0
         )
         np.testing.assert_array_equal(
             ((y % a) * y ** 2).jac(y).evaluate(y=5 * np.ones(5)).toarray(),
