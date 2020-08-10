@@ -2,7 +2,6 @@
 # Base model class
 #
 import casadi
-import inspect
 import numbers
 import pybamm
 import warnings
