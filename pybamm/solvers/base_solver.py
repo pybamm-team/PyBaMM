@@ -333,7 +333,7 @@ class BaseSolver(object):
                         if t_eval is None:
                             N_events = 200
                         else:
-                            N_events = t_eval[-1] // expr.new_copy().value
+                            N_events = t_eval[-1] // expr.value
 
                         for i in np.arange(N_events):
                             model.events.append(
