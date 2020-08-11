@@ -588,6 +588,10 @@ class BaseBatteryModel(pybamm.BaseModel):
         # now build
         if build:
             new_model.build_model()
+            algebraic_only = new_model.options.get("algebraic only", False)
+            if algebraic_only is True:
+                new_model.algebraic = {**new_model.rhs, **new_model.algebraic}
+                new_model.rhs = {}
         new_model.use_jacobian = self.use_jacobian
         new_model.use_simplify = self.use_simplify
         new_model.convert_to_format = self.convert_to_format
