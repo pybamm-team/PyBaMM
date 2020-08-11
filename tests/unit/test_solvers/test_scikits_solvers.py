@@ -742,6 +742,52 @@ class TestScikitsSolvers(unittest.TestCase):
             step_solution.y[-1], 2 * np.exp(0.1 * step_solution.t), decimal=5
         )
 
+    def test_model_step_nonsmooth_events(self):
+        # Create model
+        model = pybamm.BaseModel()
+        model.timescale = pybamm.Scalar(1)
+        var1 = pybamm.Variable("var1")
+        var2 = pybamm.Variable("var2")
+        a = 0.6
+        discontinuities = (np.arange(3) + 1) * a
+
+        model.rhs = {var1: pybamm.Modulo(pybamm.t * model.timescale, a)}
+        model.algebraic = {var2: 2 * var1 - var2}
+        model.initial_conditions = {var1: 0, var2: 0}
+        model.events = [
+            pybamm.Event("var1 = 0.55", pybamm.min(var1 - 0.55)),
+            pybamm.Event("var2 = 1.2", pybamm.min(var2 - 1.2)),
+        ]
+        for discontinuity in discontinuities:
+            model.events.append(
+                pybamm.Event(
+                    "nonsmooth rate",
+                    pybamm.Scalar(discontinuity),
+                )
+            )
+        disc = get_discretisation_for_testing()
+        disc.process_model(model)
+
+        # Solve
+        step_solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
+        dt = 0.05
+        time = 0
+        end_time = 3
+        step_solution = None
+        while time < end_time:
+            step_solution = step_solver.step(step_solution, model, dt=dt, npts=10)
+            time += dt
+        np.testing.assert_array_less(step_solution.y[0], 0.55)
+        np.testing.assert_array_less(step_solution.y[-1], 1.2)
+        var1_soln = (step_solution.t % a) ** 2 / 2 + a ** 2 / 2 * (step_solution.t // a)
+        var2_soln = 2 * var1_soln
+        np.testing.assert_array_almost_equal(
+            step_solution.y[0], var1_soln, decimal=5
+        )
+        np.testing.assert_array_almost_equal(
+            step_solution.y[-1], var2_soln, decimal=5
+        )
+
     def test_model_solver_dae_nonsmooth(self):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         var1 = pybamm.Variable("var1", domain=whole_cell)
