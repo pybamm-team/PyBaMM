@@ -33,7 +33,7 @@ def constant_current_constant_voltage_constant_power(variables):
     s_I = pybamm.InputParameter("Current switch")
     s_V = pybamm.InputParameter("Voltage switch")
     s_P = pybamm.InputParameter("Power switch")
-    n_cells = pybamm.electrical_parameters.n_cells
+    n_cells = pybamm.Parameter("Number of cells connected in series to make a battery")
     return (
         s_I * (I - pybamm.InputParameter("Current input [A]"))
         + s_V * (V - pybamm.InputParameter("Voltage input [V]") / n_cells)
@@ -89,8 +89,13 @@ class Simulation:
         if experiment is None:
             # Check to see if the current is provided as data (i.e. drive cycle)
             current = self._parameter_values.get("Current function [A]")
-            if isinstance(current, tuple):
+            if isinstance(current, pybamm.Interpolant):
                 self.operating_mode = "drive cycle"
+            elif isinstance(current, tuple):
+                raise NotImplementedError(
+                    "Drive cycle from data has been deprecated. " +
+                    "Define an Interpolant instead."
+                )
             else:
                 self.operating_mode = "without experiment"
                 if C_rate:
@@ -330,17 +335,6 @@ class Simulation:
             solver = self.solver
 
         if self.operating_mode in ["without experiment", "drive cycle"]:
-            # If t_eval is provided as [t0, tf] return the solution at 100 points
-            if isinstance(t_eval, list):
-                if len(t_eval) != 2:
-                    raise pybamm.SolverError(
-                        "'t_eval' can be provided as an array of times at which to "
-                        "return the solution, or as a list [t0, tf] where t0 is the "
-                        "initial time and tf is the final time, but has been provided "
-                        "as a list of length {}.".format(len(t_eval))
-                    )
-                else:
-                    t_eval = np.linspace(t_eval[0], t_eval[-1], 100)
 
             if self.operating_mode == "without experiment":
                 if t_eval is None:
@@ -357,15 +351,11 @@ class Simulation:
             elif self.operating_mode == "drive cycle":
                 # For drive cycles (current provided as data) we perform additional
                 # tests on t_eval (if provided) to ensure the returned solution
-                # captures the input. If the current is provided as data then the
-                # "Current function [A]" is the tuple (filename, data).
-                filename = self._parameter_values["Current function [A]"][0]
-                time_data = self._parameter_values["Current function [A]"][1][:, 0]
+                # captures the input.
+                time_data = self._parameter_values["Current function [A]"].data[:, 0]
                 # If no t_eval is provided, we use the times provided in the data.
                 if t_eval is None:
-                    pybamm.logger.info(
-                        "Setting t_eval as specified by the data '{}'".format(filename)
-                    )
+                    pybamm.logger.info("Setting t_eval as specified by the data")
                     t_eval = time_data
                 # If t_eval is provided we first check if it contains all of the
                 # times in the data to within 10-12. If it doesn't, we then check
@@ -379,11 +369,9 @@ class Simulation:
                     warnings.warn(
                         """
                         t_eval does not contain all of the time points in the data
-                        '{}'. Note: passing t_eval = None automatically sets t_eval
+                        set. Note: passing t_eval = None automatically sets t_eval
                         to be the points in the data.
-                        """.format(
-                            filename
-                        ),
+                        """,
                         pybamm.SolverWarning,
                     )
                     dt_data_min = np.min(np.diff(time_data))
@@ -403,13 +391,13 @@ class Simulation:
                             pybamm.SolverWarning,
                         )
 
-            self.t_eval = t_eval
             self._solution = solver.solve(
                 self.built_model,
                 t_eval,
                 external_variables=external_variables,
                 inputs=inputs,
             )
+            self.t_eval = self._solution.t * self.model.timescale.evaluate()
 
         elif self.operating_mode == "with experiment":
             if t_eval is not None:
@@ -677,9 +665,9 @@ class Simulation:
         # Clear solver problem (not pickle-able, will automatically be recomputed)
         if (
             isinstance(self._solver, pybamm.CasadiSolver)
-            and self._solver.problems != {}
+            and self._solver.integrator_specs != {}
         ):
-            self._solver.problems = {}
+            self._solver.integrator_specs = {}
         with open(filename, "wb") as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 

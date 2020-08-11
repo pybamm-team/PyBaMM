@@ -464,7 +464,10 @@ class BaseSolver(object):
                 "Could not find consistent states: {}".format(e.args[0])
             )
         pybamm.logger.info("Found consistent states")
-        return root_sol.y.flatten()
+        y0 = root_sol.y
+        if isinstance(y0, np.ndarray):
+            y0 = y0.flatten()
+        return y0
 
     def solve(self, model, t_eval=None, external_variables=None, inputs=None):
         """
@@ -507,6 +510,19 @@ class BaseSolver(object):
                 t_eval = np.array([0])
             else:
                 raise ValueError("t_eval cannot be None")
+        # If t_eval is provided as [t0, tf] return the solution at 100 points
+        elif isinstance(t_eval, list):
+            if len(t_eval) == 1 and self.algebraic_solver is True:
+                pass
+            elif len(t_eval) != 2:
+                raise pybamm.SolverError(
+                    "'t_eval' can be provided as an array of times at which to "
+                    "return the solution, or as a list [t0, tf] where t0 is the "
+                    "initial time and tf is the final time, but has been provided "
+                    "as a list of length {}.".format(len(t_eval))
+                )
+            else:
+                t_eval = np.linspace(t_eval[0], t_eval[-1], 100)
 
         # Make sure t_eval is monotonic
         if (np.diff(t_eval) < 0).any():
@@ -831,10 +847,13 @@ class BaseSolver(object):
         for input_param in model.input_parameters:
             name = input_param.name
             if name not in inputs:
-                # Only allow symbolic inputs for CasadiAlgebraicSolver
-                if not isinstance(self, pybamm.CasadiAlgebraicSolver):
+                # Only allow symbolic inputs for CasadiSolver and CasadiAlgebraicSolver
+                if not isinstance(
+                    self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver)
+                ):
                     raise pybamm.SolverError(
-                        "Only CasadiAlgebraicSolver can have symbolic inputs"
+                        "Only CasadiSolver and CasadiAlgebraicSolver "
+                        "can have symbolic inputs"
                     )
                 inputs[name] = casadi.MX.sym(name, input_param._expected_size)
 

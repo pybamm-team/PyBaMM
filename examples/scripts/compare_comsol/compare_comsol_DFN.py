@@ -32,9 +32,16 @@ geometry = pybamm_model.default_geometry
 
 # load parameters and process model and geometry
 param = pybamm_model.default_parameter_values
-param["Electrode width [m]"] = 1
-param["Electrode height [m]"] = 1
-param["Current function [A]"] = 24 * C_rates[C_rate]
+param.update(
+    {
+        "Electrode width [m]": 1,
+        "Electrode height [m]": 1,
+        "Negative electrode conductivity [S.m-1]": 126,
+        "Positive electrode conductivity [S.m-1]": 16.6,
+        "Current function [A]": 24 * C_rates[C_rate],
+    }
+)
+
 param.process_model(pybamm_model)
 param.process_geometry(geometry)
 
@@ -55,7 +62,7 @@ pybamm_solution = pybamm.CasadiSolver(mode="fast").solve(pybamm_model, time)
 # Make Comsol 'model' for comparison
 whole_cell = ["negative electrode", "separator", "positive electrode"]
 comsol_t = comsol_variables["time"]
-L_x = param.evaluate(pybamm.standard_parameters_lithium_ion.L_x)
+L_x = param.evaluate(pybamm_model.param.L_x)
 
 
 def get_interp_fun(variable_name, domain):

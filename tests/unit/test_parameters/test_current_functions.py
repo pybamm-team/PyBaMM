@@ -10,7 +10,8 @@ import numpy as np
 class TestCurrentFunctions(unittest.TestCase):
     def test_constant_current(self):
         # test simplify
-        current = pybamm.electrical_parameters.current_with_time
+        param = pybamm.ElectricalParameters()
+        current = param.current_with_time
         parameter_values = pybamm.ParameterValues(
             {
                 "Typical current [A]": 2,
@@ -23,7 +24,8 @@ class TestCurrentFunctions(unittest.TestCase):
 
     def test_get_current_data(self):
         # test process parameters
-        dimensional_current = pybamm.electrical_parameters.dimensional_current_with_time
+        param = pybamm.ElectricalParameters()
+        dimensional_current = param.dimensional_current_with_time
         parameter_values = pybamm.ParameterValues(
             {
                 "Typical current [A]": 2,
@@ -45,7 +47,8 @@ class TestCurrentFunctions(unittest.TestCase):
             return A * pybamm.sin(2 * np.pi * omega * t)
 
         # choose amplitude and frequency
-        A = pybamm.electrical_parameters.I_typ
+        param = pybamm.ElectricalParameters()
+        A = param.I_typ
         omega = pybamm.Parameter("omega")
 
         def current(t):
@@ -60,7 +63,7 @@ class TestCurrentFunctions(unittest.TestCase):
                 "Current function [A]": current,
             }
         )
-        dimensional_current = pybamm.electrical_parameters.dimensional_current_with_time
+        dimensional_current = param.dimensional_current_with_time
         dimensional_current_eval = parameter_values.process_symbol(dimensional_current)
 
         def user_current(t):

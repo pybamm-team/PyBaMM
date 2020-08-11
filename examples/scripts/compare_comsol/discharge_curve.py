@@ -17,9 +17,15 @@ geometry = model.default_geometry
 
 # load parameters and process model and geometry
 param = model.default_parameter_values
-param["Electrode width [m]"] = 1
-param["Electrode height [m]"] = 1
-param["Current function [A]"] = "[input]"
+param.update(
+    {
+        "Electrode width [m]": 1,
+        "Electrode height [m]": 1,
+        "Negative electrode conductivity [S.m-1]": 126,
+        "Positive electrode conductivity [S.m-1]": 16.6,
+        "Current function [A]": "[input]",
+    }
+)
 param.process_model(model)
 param.process_geometry(geometry)
 
