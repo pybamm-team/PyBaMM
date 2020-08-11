@@ -117,7 +117,7 @@ class BaseSolver(object):
         new_solver.models_set_up = {}
         return new_solver
 
-    def set_up(self, model, inputs=None):
+    def set_up(self, model, inputs=None, t_eval=None):
         """Unpack model, perform checks, simplify and calculate jacobian.
 
         Parameters
@@ -127,6 +127,8 @@ class BaseSolver(object):
             initial_conditions
         inputs : dict, optional
             Any input parameters to pass to the model when solving
+        t_eval : numeric type, optional
+            The times (in seconds) at which to compute the solution
 
         """
 
@@ -328,11 +330,16 @@ class BaseSolver(object):
 
                     # Update the events if the modulo function depended on t
                     if found_t:
-                        for i in np.arange(200):
+                        if t_eval is None:
+                            N_events = 200
+                        else:
+                            N_events = t_eval[-1] // expr.new_copy().value
+
+                        for i in np.arange(N_events):
                             model.events.append(
                                 pybamm.Event(
                                     str(symbol),
-                                    expr.new_copy() * (i + 1),
+                                    expr.new_copy() * pybamm.Scalar(i + 1),
                                     pybamm.EventType.DISCONTINUITY,
                                 )
                             )
@@ -557,7 +564,7 @@ class BaseSolver(object):
 
         # Set up (if not done already)
         if model not in self.models_set_up:
-            self.set_up(model, ext_and_inputs)
+            self.set_up(model, ext_and_inputs, t_eval)
             set_up_time = timer.time()
             self.models_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
@@ -571,7 +578,7 @@ class BaseSolver(object):
                 # If the new initial conditions are different, set up again
                 # Doing the whole setup again might be slow, but no need to prematurely
                 # optimize this
-                self.set_up(model, ext_and_inputs)
+                self.set_up(model, ext_and_inputs, t_eval)
                 self.models_set_up[model][
                     "initial conditions"
                 ] = model.concatenated_initial_conditions
