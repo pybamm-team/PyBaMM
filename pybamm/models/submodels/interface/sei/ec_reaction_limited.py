@@ -50,6 +50,10 @@ class EcReactionLimited(BaseModel):
 
         c_ec = pybamm.Scalar(1) + j_sei * L_sei * C_ec
         c_ec_av = pybamm.x_average(c_ec)
+        n_SEI = j_sei * L_sei * C_ec
+        n_SEI_av = pybamm.x_average(n_SEI)
+        Q_sei = n_SEI_av * self.param.L_n * self.param.L_y * self.param.L_z
+
         variables.update(
             {
                 self.domain + " electrode EC surface concentration": c_ec,
@@ -61,6 +65,13 @@ class EcReactionLimited(BaseModel):
                 "X-averaged "
                 + self.domain.lower()
                 + " electrode EC surface concentration": c_ec_av * c_scale,
+                self.domain + " electrode sei concentration [mol.m-3]": n_SEI * c_scale,
+                "X-averaged "
+                + self.domain.lower()
+                + " electrode sei concentration [mol.m-3]": n_SEI_av * c_scale,
+                "Loss of lithium to "
+                + self.domain.lower()
+                + " electrode sei [mol]": Q_sei * c_scale,
             }
         )
         # Update whole cell variables, which also updates the "sum of" variables
