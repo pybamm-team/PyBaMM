@@ -20,6 +20,29 @@ class TestBasicModels(unittest.TestCase):
         copy = model.new_copy()
         copy.check_well_posedness()
 
+    def test_dfn_half_cell_well_posed(self):
+        options = {"working electrode": "positive"}
+        model = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
+        model.check_well_posedness()
+
+        copy = model.new_copy()
+        copy.check_well_posedness()
+
+        options = {"working electrode": "negative"}
+        model = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
+        model.check_well_posedness()
+
+        copy = model.new_copy()
+        copy.check_well_posedness()
+
+    def test_dfn_half_cell_simulation_error(self):
+        options = {"working electrode": "negative"}
+        model = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
+        with self.assertRaisesRegex(
+            NotImplementedError, "not compatible with Simulations yet."
+        ):
+            pybamm.Simulation(model)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

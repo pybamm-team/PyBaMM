@@ -2,7 +2,8 @@
 
 ## Features
 
-
+-   Added Modulo, Floor and Ceiling operators ([#1121](https://github.com/pybamm-team/PyBaMM/pull/1121))
+-   Added DFN model for a half cell ([#1121](https://github.com/pybamm-team/PyBaMM/pull/1121))
 -   Automatically compute surface area per unit volume based on particle shape for li-ion models ([#1120])(https://github.com/pybamm-team/PyBaMM/pull/1120)
 -   Added "R-averaged particle concentration" variables ([#1118](https://github.com/pybamm-team/PyBaMM/pull/1118))
 -   Added support for sensitivity calculations to the casadi solver ([#1109](https://github.com/pybamm-team/PyBaMM/pull/1109))
