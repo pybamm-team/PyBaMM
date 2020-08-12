@@ -9,6 +9,7 @@ from scipy.sparse import (
     csr_matrix,
     lil_matrix,
     coo_matrix,
+    vstack,
 )
 
 
@@ -280,9 +281,14 @@ class SpectralVolume(pybamm.FiniteVolume):
             domain,
             symbol.auxiliary_domains
         )
+        penalty_matrix = self.penalty_matrix(
+            domain,
+            symbol.auxiliary_domains
+        )
 
         # Multiply by gradient matrix
-        out = gradient_matrix @ reconstructed_symbol
+        out = (gradient_matrix @ reconstructed_symbol
+            + penalty_matrix @ discretised_symbol)
 
         # Add Neumann boundary conditions, if defined
         if symbol.id in boundary_conditions:
@@ -292,12 +298,19 @@ class SpectralVolume(pybamm.FiniteVolume):
 
         return out
 
-    def gradient_matrix(self, domain, auxiliary_domains, boundary=0):
+    def gradient_matrix(self, domain, auxiliary_domains):
         """
         Gradient matrix for Spectral Volume in the appropriate domain.
         Note that it contains the averaging of the duplicate SV edge
         gradient values, such that the product of it and a reconstructed
         discretised symbol simply represents CV edge values.
+        On its own, it only works on non-concatenated domains, since
+        only then the boundary conditions ensure correct behaviour.
+        More generally, it only works if gradients are a result of
+        boundary conditions rather than continuity conditions.
+        For example, two adjacent SVs with gradient zero in each of them
+        but with different variable values will have zero gradient
+        between them. This is fixed with "penalty_matrix".
 
         Parameters
         ----------
@@ -306,10 +319,6 @@ class SpectralVolume(pybamm.FiniteVolume):
         auxiliary_domains : dict
             The auxiliary domains in which to compute the gradient
             matrix
-        boundary : int
-            Default is 0, where the whole gradient matrix gets returned.
-            -1 returns the gradient for the left boundary.
-            1 returns the gradient for the right boundary.
 
         Returns
         -------
@@ -335,6 +344,12 @@ class SpectralVolume(pybamm.FiniteVolume):
         # The 2 scales from [-1,1] (Chebyshev default) to [0,1].
         # e = 2 / submesh.d_sv_edges
         e = 2 / d_sv_edges
+        # This factor scales the contribution of the reconstructed
+        # gradient to the finite difference at the SV edges.
+        # 0.0 is the value that makes it work with the "penalty_matrix".
+        # 0.5 is the value that makes it work without it, but remember,
+        # that effectively removes any implicit continuity conditions.
+        f = 0.0
         # Here, the differentials are scaled to the SV.
         sub_matrix_raw = csr_matrix(kron(diags(e), chebdiff))
         if n == 1:
@@ -342,11 +357,11 @@ class SpectralVolume(pybamm.FiniteVolume):
         else:
             sub_matrix = lil_matrix((n * d + 1, n * (d + 1)))
             sub_matrix[:d, :d + 1] = sub_matrix_raw[:d, :d + 1]
-            sub_matrix[d, :d + 1] = 0.5 * sub_matrix_raw[d, :d + 1]
+            sub_matrix[d, :d + 1] = f * sub_matrix_raw[d, :d + 1]
             # for loop of shame (optimisation potential via vectorisation)
             for i in range(1, n - 1):
                 sub_matrix[i * d, i * (d + 1):(i + 1) * (d + 1)] = (
-                    0.5 * sub_matrix_raw[i * (d + 1),
+                    f * sub_matrix_raw[i * (d + 1),
                                          i * (d + 1):(i + 1) * (d + 1)]
                 )
                 sub_matrix[i * d + 1:(i + 1) * d,
@@ -355,10 +370,10 @@ class SpectralVolume(pybamm.FiniteVolume):
                                    i * (d + 1):(i + 1) * (d + 1)]
                 )
                 sub_matrix[(i + 1) * d, i * (d + 1):(i + 1) * (d + 1)] = (
-                    0.5 * sub_matrix_raw[i * (d + 1) + d,
+                    f * sub_matrix_raw[i * (d + 1) + d,
                                          i * (d + 1):(i + 1) * (d + 1)]
                 )
-            sub_matrix[-d - 1, -d - 1:] = 0.5 * sub_matrix_raw[-d - 1, -d - 1:]
+            sub_matrix[-d - 1, -d - 1:] = f * sub_matrix_raw[-d - 1, -d - 1:]
             sub_matrix[-d:, -d - 1:] = sub_matrix_raw[-d:, -d - 1:]
 
         # number of repeats
@@ -372,19 +387,64 @@ class SpectralVolume(pybamm.FiniteVolume):
         # but this should not be an issue.
         matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
 
-        if boundary == 0:
-            return pybamm.Matrix(matrix)
-        elif boundary < 0:
-            return pybamm.Matrix(matrix[0])
-        elif boundary > 0:
-            return pybamm.Matrix(matrix[-1])
+        return pybamm.Matrix(matrix)
 
-    def internal_neumann_condition(
+    def penalty_matrix(self, domain, auxiliary_domains):
+        """
+        Penalty matrix for Spectral Volume in the appropriate domain.
+        This works the same as the "gradient_matrix" of FiniteVolume
+        does, just between SVs and not between CVs. Think of it as a
+        continuity penalty.
+
+        Parameters
+        ----------
+        domain : list
+            The domain(s) in which to compute the gradient matrix
+        auxiliary_domains : dict
+            The auxiliary domains in which to compute the gradient
+            matrix
+
+        Returns
+        -------
+        :class:`pybamm.Matrix`
+            The (sparse) Spectral Volume penalty matrix for the domain
+        """
+        # Create appropriate submesh by combining submeshes in domain
+        submesh = self.mesh.combine_submeshes(*domain)
+
+        # Create 1D matrix using submesh
+        n = submesh.npts
+        d = self.order
+        e = np.zeros(n - 1)
+        e[d-1::d] = 1 / submesh.d_nodes[d-1::d]
+        sub_matrix = vstack([
+            np.zeros(n),
+            diags([-e, e], [0, 1], shape=(n - 1, n)),
+            np.zeros(n),
+        ])
+
+        # number of repeats
+        second_dim_repeats = self._get_auxiliary_domain_repeats(
+            auxiliary_domains
+        )
+
+        # generate full matrix from the submatrix
+        # Convert to csr_matrix so that we can take the index
+        # (row-slicing), which is not supported by the default kron
+        # format. Note that this makes column-slicing inefficient, but
+        # this should not be an issue.
+        matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
+
+        return pybamm.Matrix(matrix)
+
+    def spectral_volume_internal_neumann_condition(
         self, left_symbol_disc, right_symbol_disc, left_mesh, right_mesh
     ):
         """
         A method to find the internal neumann conditions between two
-        symbols on adjacent subdomains.
+        symbols on adjacent subdomains. This method is never called,
+        it's just here to show how a reconstructed gradient-based
+        internal neumann_condition would look like.
         Parameters
         ----------
         left_symbol_disc : :class:`pybamm.Symbol`
@@ -405,7 +465,7 @@ class SpectralVolume(pybamm.FiniteVolume):
             right_symbol_disc.domains
         ):
             raise pybamm.DomainError(
-                """Number of secondary points in subdomains do not match"""
+                "Number of secondary points in subdomains do not match"
             )
 
         # Use the Spectral Volume reconstruction and differentiation.
@@ -415,9 +475,8 @@ class SpectralVolume(pybamm.FiniteVolume):
         )
         left_gradient_matrix = self.gradient_matrix(
             left_symbol_disc.domain,
-            left_symbol_disc.auxiliary_domains,
-            boundary=1
-        )
+            left_symbol_disc.auxiliary_domains
+        ).entries[-1]
         left_matrix = left_gradient_matrix @ left_reconstruction_matrix
 
         right_reconstruction_matrix = self.cv_boundary_reconstruction_matrix(
@@ -426,9 +485,8 @@ class SpectralVolume(pybamm.FiniteVolume):
         )
         right_gradient_matrix = self.gradient_matrix(
             right_symbol_disc.domain,
-            right_symbol_disc.auxiliary_domains,
-            boundary=-1
-        )
+            right_symbol_disc.auxiliary_domains
+        ).entries[0]
         right_matrix = right_gradient_matrix @ right_reconstruction_matrix
 
         # Remove domains to avoid clash
@@ -441,6 +499,7 @@ class SpectralVolume(pybamm.FiniteVolume):
 
         # Spectral Volume derivative (i.e., the mean of the two
         # reconstructed gradients from each side)
+        # Note that this is the version without "penalty_matrix".
         dy_dx = 0.5 * (right_matrix @ right_symbol_disc
                        + left_matrix @ left_symbol_disc)
 
