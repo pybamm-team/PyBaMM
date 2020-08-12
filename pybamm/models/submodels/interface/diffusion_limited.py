@@ -145,7 +145,7 @@ class DiffusionLimited(BaseInterface):
             param = self.param
             if self.domain == "Negative":
                 N_ox_s_p = variables["Oxygen flux"].orphans[1]
-                N_ox_neg_sep_interface = N_ox_s_p[0]
+                N_ox_neg_sep_interface = pybamm.Index(N_ox_s_p, slice(0, 1))
 
                 j = -N_ox_neg_sep_interface / param.C_e / -param.s_ox_Ox / param.l_n
 

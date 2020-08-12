@@ -106,7 +106,7 @@ class TestEvaluate(unittest.TestCase):
         # test matrix
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
-        A = pybamm.Matrix(np.array([[1, 2], [3, 4]]))
+        A = pybamm.Matrix([[1, 2], [3, 4]])
         pybamm.find_symbols(A, constant_symbols, variable_symbols)
         self.assertEqual(len(variable_symbols), 0)
         self.assertEqual(list(constant_symbols.keys())[0], A.id)
@@ -169,8 +169,8 @@ class TestEvaluate(unittest.TestCase):
 
         a_dom = ["negative electrode"]
         b_dom = ["positive electrode"]
-        a_pts = mesh[a_dom[0]][0].npts
-        b_pts = mesh[b_dom[0]][0].npts
+        a_pts = mesh[a_dom[0]].npts
+        b_pts = mesh[b_dom[0]].npts
         a = pybamm.StateVector(slice(0, a_pts), domain=a_dom)
         b = pybamm.StateVector(slice(a_pts, a_pts + b_pts), domain=b_dom)
         y = np.empty((a_pts + b_pts, 1))
@@ -208,9 +208,9 @@ class TestEvaluate(unittest.TestCase):
         # check the reordering in case a child vector has to be split up
         a_dom = ["separator"]
         b_dom = ["negative electrode", "positive electrode"]
-        b0_pts = mesh[b_dom[0]][0].npts
-        a0_pts = mesh[a_dom[0]][0].npts
-        b1_pts = mesh[b_dom[1]][0].npts
+        b0_pts = mesh[b_dom[0]].npts
+        a0_pts = mesh[a_dom[0]].npts
+        b1_pts = mesh[b_dom[1]].npts
 
         a = pybamm.StateVector(slice(0, a0_pts), domain=a_dom)
         b = pybamm.StateVector(slice(a0_pts, a0_pts + b0_pts + b1_pts), domain=b_dom)
@@ -335,7 +335,7 @@ class TestEvaluate(unittest.TestCase):
             self.assertEqual(result, expr.evaluate(t=t, y=y))
 
         # test something with a matrix multiplication
-        A = pybamm.Matrix(np.array([[1, 2], [3, 4]]))
+        A = pybamm.Matrix([[1, 2], [3, 4]])
         expr = A @ pybamm.StateVector(slice(0, 2))
         evaluator = pybamm.EvaluatorPython(expr)
         for t, y in zip(t_tests, y_tests):
@@ -343,7 +343,7 @@ class TestEvaluate(unittest.TestCase):
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         # test something with a heaviside
-        a = pybamm.Vector(np.array([1, 2]))
+        a = pybamm.Vector([1, 2])
         expr = a <= pybamm.StateVector(slice(0, 2))
         evaluator = pybamm.EvaluatorPython(expr)
         for t, y in zip(t_tests, y_tests):
@@ -357,7 +357,7 @@ class TestEvaluate(unittest.TestCase):
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         # test something with a minimum or maximum
-        a = pybamm.Vector(np.array([1, 2]))
+        a = pybamm.Vector([1, 2])
         expr = pybamm.minimum(a, pybamm.StateVector(slice(0, 2)))
         evaluator = pybamm.EvaluatorPython(expr)
         for t, y in zip(t_tests, y_tests):
@@ -378,7 +378,7 @@ class TestEvaluate(unittest.TestCase):
             self.assertEqual(result, expr.evaluate(t=t, y=y))
 
         # test something with a sparse matrix multiplication
-        A = pybamm.Matrix(np.array([[1, 2], [3, 4]]))
+        A = pybamm.Matrix([[1, 2], [3, 4]])
         B = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))
         C = pybamm.Matrix(scipy.sparse.coo_matrix(np.array([[1, 0], [0, 4]])))
         expr = A @ B @ C @ pybamm.StateVector(slice(0, 2))
@@ -388,8 +388,8 @@ class TestEvaluate(unittest.TestCase):
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         # test numpy concatenation
-        a = pybamm.Vector(np.array([[1], [2]]))
-        b = pybamm.Vector(np.array([[3]]))
+        a = pybamm.Vector([[1], [2]])
+        b = pybamm.Vector([[3]])
         expr = pybamm.NumpyConcatenation(a, b)
         evaluator = pybamm.EvaluatorPython(expr)
         for t, y in zip(t_tests, y_tests):

@@ -53,7 +53,10 @@ class SPM(BaseModel):
 
     def set_porosity_submodel(self):
 
-        self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
+        if self.options["sei porosity change"] is False:
+            self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
+        elif self.options["sei porosity change"] is True:
+            self.submodels["porosity"] = pybamm.porosity.LeadingOrder(self.param)
 
     def set_convection_submodel(self):
 
@@ -144,13 +147,3 @@ class SPM(BaseModel):
         self.submodels[
             "electrolyte diffusion"
         ] = pybamm.electrolyte_diffusion.ConstantConcentration(self.param)
-
-    @property
-    def default_geometry(self):
-        dimensionality = self.options["dimensionality"]
-        if dimensionality == 0:
-            return pybamm.Geometry("1D macro", "1D micro")
-        elif dimensionality == 1:
-            return pybamm.Geometry("1+1D macro", "(1+0)+1D micro")
-        elif dimensionality == 2:
-            return pybamm.Geometry("2+1D macro", "(2+0)+1D micro")

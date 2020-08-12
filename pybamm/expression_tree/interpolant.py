@@ -86,7 +86,7 @@ class Interpolant(pybamm.Function):
             self._entries_string = value
         else:
             entries = self.data
-            self._entries_string = entries.tostring()
+            self._entries_string = entries.tobytes()
 
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()`. """

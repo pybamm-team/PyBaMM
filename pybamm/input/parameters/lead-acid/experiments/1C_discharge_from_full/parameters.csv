@@ -9,6 +9,7 @@ Negative current collector surface heat transfer coefficient [W.m-2.K-1],0,,
 Positive current collector surface heat transfer coefficient [W.m-2.K-1],0,,
 Negative tab heat transfer coefficient [W.m-2.K-1],10,,
 Positive tab heat transfer coefficient [W.m-2.K-1],10,,
+Total heat transfer coefficient [W.m-2.K-1],10,,
 Edge heat transfer coefficient [W.m-2.K-1],0.3,,
 
 ,,,

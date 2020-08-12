@@ -61,6 +61,8 @@ class BaseBatteryModel(pybamm.BaseModel):
                     :class:`pybamm.sei.ElectronMigrationLimited`
                 - "interstitial-diffusion limited": \
                     :class:`pybamm.sei.InterstitialDiffusionLimited`
+                - "ec reaction limited": \
+                    :class:`pybamm.sei.EcReactionLimited`
             * "sei film resistance" : str
                 Set the submodel for additional term in the overpotential due to SEI.
                 The default value is "None" if the "sei" option is "None", and
@@ -86,7 +88,8 @@ class BaseBatteryModel(pybamm.BaseModel):
                     .. math::
                         \\eta_r = \\frac{F}{RT}
                         * (\\phi_s - \\phi_e - U - R_{sei} * L_{sei} * \\frac{I}{aL})
-
+            * "sei porosity change" : bool
+                Whether to include porosity change due to SEI formation (default False)
 
     **Extends:** :class:`pybamm.BaseModel`
     """
@@ -106,25 +109,26 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     @property
     def default_geometry(self):
-        if self.options["dimensionality"] == 0:
-            return pybamm.Geometry("1D macro", "1+1D micro")
-        elif self.options["dimensionality"] == 1:
-            return pybamm.Geometry("1+1D macro", "1+1D micro")
-        elif self.options["dimensionality"] == 2:
-            return pybamm.Geometry("2+1D macro", "1+1D micro")
+        return pybamm.battery_geometry(
+            current_collector_dimension=self.options["dimensionality"]
+        )
 
     @property
     def default_var_pts(self):
         var = pybamm.standard_spatial_vars
-        return {
+        base_var_pts = {
             var.x_n: 20,
             var.x_s: 20,
             var.x_p: 20,
-            var.r_n: 10,
-            var.r_p: 10,
+            var.r_n: 30,
+            var.r_p: 30,
             var.y: 10,
             var.z: 10,
         }
+        # Reduce the default points for 2D current collectors
+        if self.options["dimensionality"] == 2:
+            base_var_pts.update({var.x_n: 10, var.x_s: 10, var.x_p: 10})
+        return base_var_pts
 
     @property
     def default_submesh_types(self):
@@ -181,12 +185,26 @@ class BaseBatteryModel(pybamm.BaseModel):
             "current collector": "uniform",
             "particle": "Fickian diffusion",
             "thermal": "isothermal",
+            "cell_geometry": None,
             "external submodels": [],
             "sei": None,
+            "sei porosity change": False,
         }
+        # Change the default for cell geometry based on which thermal option is provided
+        extra_options = extra_options or {}
+        thermal_option = extra_options.get(
+            "thermal", None
+        )  # return None if option not given
+        if thermal_option is None or thermal_option in ["isothermal", "lumped"]:
+            default_options["cell_geometry"] = "arbitrary"
+        else:
+            default_options["cell_geometry"] = "pouch"
+        # The "cell_geometry" option will still be overridden by extra_options if
+        # provided
+
         # Change the default for SEI film resistance based on which sei option is
         # provided
-        extra_options = extra_options or {}
+        # extra_options = extra_options or {}
         sei_option = extra_options.get("sei", None)  # return None if option not given
         if sei_option is None:
             default_options["sei film resistance"] = None
@@ -212,6 +230,13 @@ class BaseBatteryModel(pybamm.BaseModel):
             if options["convection"] is not False:
                 raise pybamm.OptionError(
                     "convection not implemented for lithium-ion models"
+                )
+            if (
+                options["thermal"] in ["x-lumped", "x-full"]
+                and options["cell_geometry"] != "pouch"
+            ):
+                raise pybamm.OptionError(
+                    options["thermal"] + " model must have pouch geometry."
                 )
         if isinstance(self, pybamm.lead_acid.BaseModel):
             if options["thermal"] != "isothermal" and options["dimensionality"] != 0:
@@ -273,6 +298,10 @@ class BaseBatteryModel(pybamm.BaseModel):
             raise pybamm.OptionError(
                 "Unknown thermal model '{}'".format(options["thermal"])
             )
+        if options["cell_geometry"] not in ["arbitrary", "pouch"]:
+            raise pybamm.OptionError(
+                "Unknown geometry '{}'".format(options["cell_geometry"])
+            )
         if options["sei"] not in [
             None,
             "constant",
@@ -280,23 +309,24 @@ class BaseBatteryModel(pybamm.BaseModel):
             "solvent-diffusion limited",
             "electron-migration limited",
             "interstitial-diffusion limited",
+            "ec reaction limited",
         ]:
             raise pybamm.OptionError("Unknown sei model '{}'".format(options["sei"]))
-        if options["sei film resistance"] not in [
-            None,
-            "distributed",
-            "average",
-        ]:
+        if options["sei film resistance"] not in [None, "distributed", "average"]:
             raise pybamm.OptionError(
                 "Unknown sei film resistance model '{}'".format(
                     options["sei film resistance"]
                 )
             )
+        if options["sei porosity change"] not in [True, False]:
+            raise pybamm.OptionError(
+                "Unknown sei porosity change '{}'".format(
+                    options["sei porosity change"]
+                )
+            )
 
         if options["dimensionality"] == 0:
-            if options["current collector"] not in [
-                "uniform",
-            ]:
+            if options["current collector"] not in ["uniform"]:
                 raise pybamm.OptionError(
                     "current collector model must be uniform in 0D model"
                 )
@@ -554,13 +584,15 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         elif self.options["thermal"] == "lumped":
             thermal_submodel = pybamm.thermal.Lumped(
-                self.param, self.options["dimensionality"]
+                self.param,
+                self.options["dimensionality"],
+                self.options["cell_geometry"],
             )
 
         elif self.options["thermal"] == "x-lumped":
             if self.options["dimensionality"] == 0:
-                # With 0D current collectors x-lumped is equivalent to lumped
-                thermal_submodel = pybamm.thermal.Lumped(self.param)
+                # With 0D current collectors x-lumped is equivalent to lumped pouch
+                thermal_submodel = pybamm.thermal.Lumped(self.param, geometry="pouch")
             elif self.options["dimensionality"] == 1:
                 thermal_submodel = pybamm.thermal.pouch_cell.CurrentCollector1D(
                     self.param
@@ -588,9 +620,7 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     def set_current_collector_submodel(self):
 
-        if self.options["current collector"] in [
-            "uniform",
-        ]:
+        if self.options["current collector"] in ["uniform"]:
             submodel = pybamm.current_collector.Uniform(self.param)
         elif self.options["current collector"] == "potential pair":
             if self.options["dimensionality"] == 1:

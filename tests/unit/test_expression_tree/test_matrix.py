@@ -19,6 +19,12 @@ class TestMatrix(unittest.TestCase):
         self.assertEqual(self.mat.shape, (3, 3))
         self.assertEqual(self.mat.size, 9)
 
+    def test_list_entry(self):
+        mat = pybamm.Matrix([[1, 2, 0], [0, 1, 0], [0, 0, 1]])
+        np.testing.assert_array_equal(
+            mat.entries, np.array([[1, 2, 0], [0, 1, 0], [0, 0, 1]])
+        )
+
     def test_matrix_evaluate(self):
         np.testing.assert_array_equal(self.mat.evaluate(), self.A)
 
@@ -30,12 +36,6 @@ class TestMatrix(unittest.TestCase):
         np.testing.assert_array_equal(
             (self.mat @ self.vect).evaluate(), np.array([[5], [2], [3]])
         )
-
-
-class TestArray(unittest.TestCase):
-    def test_name(self):
-        arr = pybamm.Array(np.array([1, 2, 3]))
-        self.assertEqual(arr.name, "Array of shape (3, 1)")
 
 
 if __name__ == "__main__":

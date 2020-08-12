@@ -46,21 +46,12 @@ class TestBaseBatteryModel(unittest.TestCase):
 
         model = pybamm.BaseBatteryModel({"dimensionality": 0})
         self.assertEqual(
-            model.default_geometry["current collector"]["primary"][var.z][
-                "position"
-            ].id,
-            pybamm.Scalar(1).id,
+            model.default_geometry["current collector"][var.z]["position"], 1
         )
         model = pybamm.BaseBatteryModel({"dimensionality": 1})
-        self.assertEqual(
-            model.default_geometry["current collector"]["primary"][var.z]["min"].id,
-            pybamm.Scalar(0).id,
-        )
+        self.assertEqual(model.default_geometry["current collector"][var.z]["min"], 0)
         model = pybamm.BaseBatteryModel({"dimensionality": 2})
-        self.assertEqual(
-            model.default_geometry["current collector"]["primary"][var.y]["min"].id,
-            pybamm.Scalar(0).id,
-        )
+        self.assertEqual(model.default_geometry["current collector"][var.y]["min"], 0)
 
     def test_default_submesh_types(self):
         model = pybamm.BaseBatteryModel({"dimensionality": 0})
@@ -84,6 +75,24 @@ class TestBaseBatteryModel(unittest.TestCase):
                 pybamm.ScikitUniform2DSubMesh,
             )
         )
+
+    def test_default_var_pts(self):
+        var = pybamm.standard_spatial_vars
+        var_pts = {
+            var.x_n: 20,
+            var.x_s: 20,
+            var.x_p: 20,
+            var.r_n: 30,
+            var.r_p: 30,
+            var.y: 10,
+            var.z: 10,
+        }
+        model = pybamm.BaseBatteryModel({"dimensionality": 0})
+        self.assertDictEqual(var_pts, model.default_var_pts)
+
+        var_pts.update({var.x_n: 10, var.x_s: 10, var.x_p: 10})
+        model = pybamm.BaseBatteryModel({"dimensionality": 2})
+        self.assertDictEqual(var_pts, model.default_var_pts)
 
     def test_default_spatial_methods(self):
         model = pybamm.BaseBatteryModel({"dimensionality": 0})
@@ -136,6 +145,8 @@ class TestBaseBatteryModel(unittest.TestCase):
             pybamm.BaseBatteryModel({"sei": "bad sei"})
         with self.assertRaisesRegex(pybamm.OptionError, "sei film resistance"):
             pybamm.BaseBatteryModel({"sei film resistance": "bad sei film resistance"})
+        with self.assertRaisesRegex(pybamm.OptionError, "sei porosity change"):
+            pybamm.BaseBatteryModel({"sei porosity change": "bad sei porosity change"})
         # variable defaults
         model = pybamm.BaseBatteryModel()
         self.assertEqual(model.options["sei film resistance"], None)

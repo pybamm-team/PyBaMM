@@ -5,7 +5,7 @@ import numpy as np
 
 class TestQuickPlot(unittest.TestCase):
     def test_simple_ode_model(self):
-        model = pybamm.BaseBatteryModel(name="Simple ODE Model")
+        model = pybamm.lithium_ion.BaseModel(name="Simple ODE Model")
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         # Create variables: domain is explicitly empty since these variables are only
@@ -37,13 +37,8 @@ class TestQuickPlot(unittest.TestCase):
             "c broadcasted positive electrode": pybamm.PrimaryBroadcast(
                 c, "positive particle"
             ),
-            "x [m]": pybamm.standard_spatial_vars.x,
-            "x": pybamm.standard_spatial_vars.x,
-            "r_n [m]": pybamm.standard_spatial_vars.r_n,
-            "r_n": pybamm.standard_spatial_vars.r_n,
-            "r_p [m]": pybamm.standard_spatial_vars.r_p,
-            "r_p": pybamm.standard_spatial_vars.r_p,
         }
+        model.timescale = pybamm.Scalar(1)
 
         # ODEs only (don't use jacobian)
         model.use_jacobian = False
@@ -139,19 +134,40 @@ class TestQuickPlot(unittest.TestCase):
 
         # Test different time units
         quick_plot = pybamm.QuickPlot(solution, ["a"])
-        self.assertEqual(quick_plot.time_scale, 1)
+        self.assertEqual(quick_plot.time_scaling_factor, 1)
         quick_plot = pybamm.QuickPlot(solution, ["a"], time_unit="seconds")
-        self.assertEqual(quick_plot.time_scale, 1)
+        quick_plot.plot(0)
+        self.assertEqual(quick_plot.time_scaling_factor, 1)
+        np.testing.assert_array_almost_equal(
+            quick_plot.plots[("a",)][0][0].get_xdata(), t_eval
+        )
+        np.testing.assert_array_almost_equal(
+            quick_plot.plots[("a",)][0][0].get_ydata(), 2 * t_eval
+        )
         quick_plot = pybamm.QuickPlot(solution, ["a"], time_unit="minutes")
-        self.assertEqual(quick_plot.time_scale, 1 / 60)
+        quick_plot.plot(0)
+        self.assertEqual(quick_plot.time_scaling_factor, 60)
+        np.testing.assert_array_almost_equal(
+            quick_plot.plots[("a",)][0][0].get_xdata(), t_eval / 60
+        )
+        np.testing.assert_array_almost_equal(
+            quick_plot.plots[("a",)][0][0].get_ydata(), 2 * t_eval
+        )
         quick_plot = pybamm.QuickPlot(solution, ["a"], time_unit="hours")
-        self.assertEqual(quick_plot.time_scale, 1 / 3600)
+        quick_plot.plot(0)
+        self.assertEqual(quick_plot.time_scaling_factor, 3600)
+        np.testing.assert_array_almost_equal(
+            quick_plot.plots[("a",)][0][0].get_xdata(), t_eval / 3600
+        )
+        np.testing.assert_array_almost_equal(
+            quick_plot.plots[("a",)][0][0].get_ydata(), 2 * t_eval
+        )
         with self.assertRaisesRegex(ValueError, "time unit"):
             pybamm.QuickPlot(solution, ["a"], time_unit="bad unit")
         # long solution defaults to hours instead of seconds
         solution_long = solver.solve(model, np.linspace(0, 1e5))
         quick_plot = pybamm.QuickPlot(solution_long, ["a"])
-        self.assertEqual(quick_plot.time_scale, 1 / 3600)
+        self.assertEqual(quick_plot.time_scaling_factor, 3600)
 
         # Test different spatial units
         quick_plot = pybamm.QuickPlot(solution, ["a"])
@@ -234,19 +250,14 @@ class TestQuickPlot(unittest.TestCase):
                 [solution, solution], ["a"], labels=["sol 1", "sol 2", "sol 3"]
             )
 
-        # Remove 'x [m]' from the variables and make sure a key error is raise
-        del solution.model.variables["x [m]"]
-        with self.assertRaisesRegex(
-            KeyError, "Can't find spatial scale for 'negative electrode'"
-        ):
-            pybamm.QuickPlot(solution, ["b broadcasted"])
-
         # No variable can be NaN
         model.variables["NaN variable"] = disc.process_symbol(pybamm.Scalar(np.nan))
         with self.assertRaisesRegex(
             ValueError, "All-NaN variable 'NaN variable' provided"
         ):
             pybamm.QuickPlot(solution, ["NaN variable"])
+
+        pybamm.close_plots()
 
     def test_spm_simulation(self):
         # SPM
@@ -261,26 +272,55 @@ class TestQuickPlot(unittest.TestCase):
         quick_plot = pybamm.QuickPlot([sim, sim.solution])
         quick_plot.plot(0)
 
-    def test_loqs_spm_base(self):
+        pybamm.close_plots()
+
+    def test_loqs_spme(self):
         t_eval = np.linspace(0, 10, 2)
 
-        # SPM
-        for model in [pybamm.lithium_ion.SPM(), pybamm.lead_acid.LOQS()]:
+        for model in [pybamm.lithium_ion.SPMe(), pybamm.lead_acid.LOQS()]:
             geometry = model.default_geometry
             param = model.default_parameter_values
             param.process_model(model)
             param.process_geometry(geometry)
-            mesh = pybamm.Mesh(
-                geometry, model.default_submesh_types, model.default_var_pts
-            )
+            var = pybamm.standard_spatial_vars
+            var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.r_n: 5, var.r_p: 5}
+            mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
             disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
             disc.process_model(model)
             solver = model.default_solver
             solution = solver.solve(model, t_eval)
             pybamm.QuickPlot(solution)
 
-            # test quick plot of particle for spm
-            if model.name == "Single Particle Model":
+            # check 1D (space) variables update properly for different time units
+            t = solution["Time [s]"].entries
+            c_e_var = solution["Electrolyte concentration [mol.m-3]"]
+            # 1D variables should be evaluated on edges
+            L_x = param.evaluate(pybamm.geometric_parameters.L_x)
+            c_e = c_e_var(t=t, x=mesh.combine_submeshes(*c_e_var.domain).edges * L_x)
+
+            for unit, scale in zip(["seconds", "minutes", "hours"], [1, 60, 3600]):
+                quick_plot = pybamm.QuickPlot(
+                    solution, ["Electrolyte concentration [mol.m-3]"], time_unit=unit
+                )
+                quick_plot.plot(0)
+
+                qp_data = (
+                    quick_plot.plots[("Electrolyte concentration [mol.m-3]",)][0][
+                        0
+                    ].get_ydata(),
+                )[0]
+                np.testing.assert_array_almost_equal(qp_data, c_e[:, 0])
+                quick_plot.slider_update(t_eval[-1] / scale)
+
+                qp_data = (
+                    quick_plot.plots[("Electrolyte concentration [mol.m-3]",)][0][
+                        0
+                    ].get_ydata(),
+                )[0][:, 0]
+                np.testing.assert_array_almost_equal(qp_data, c_e[:, 1])
+
+            # test quick plot of particle for spme
+            if model.name == "Single Particle Model with electrolyte":
                 output_variables = [
                     "X-averaged negative particle concentration [mol.m-3]",
                     "X-averaged positive particle concentration [mol.m-3]",
@@ -288,6 +328,61 @@ class TestQuickPlot(unittest.TestCase):
                     "Positive particle concentration [mol.m-3]",
                 ]
                 pybamm.QuickPlot(solution, output_variables)
+
+                # check 2D (space) variables update properly for different time units
+                c_n = solution["Negative particle concentration [mol.m-3]"].entries
+
+                for unit, scale in zip(["seconds", "minutes", "hours"], [1, 60, 3600]):
+                    quick_plot = pybamm.QuickPlot(
+                        solution,
+                        ["Negative particle concentration [mol.m-3]"],
+                        time_unit=unit,
+                    )
+                    quick_plot.plot(0)
+                    qp_data = quick_plot.plots[
+                        ("Negative particle concentration [mol.m-3]",)
+                    ][0][1]
+                    np.testing.assert_array_almost_equal(qp_data, c_n[:, :, 0])
+                    quick_plot.slider_update(t_eval[-1] / scale)
+                    qp_data = quick_plot.plots[
+                        ("Negative particle concentration [mol.m-3]",)
+                    ][0][1]
+                    np.testing.assert_array_almost_equal(qp_data, c_n[:, :, 1])
+
+        pybamm.close_plots()
+
+    def test_plot_1plus1D_spme(self):
+        spm = pybamm.lithium_ion.SPMe(
+            {"current collector": "potential pair", "dimensionality": 1}
+        )
+        geometry = spm.default_geometry
+        param = spm.default_parameter_values
+        param.process_model(spm)
+        param.process_geometry(geometry)
+        var = pybamm.standard_spatial_vars
+        var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.r_n: 5, var.r_p: 5, var.z: 5}
+        mesh = pybamm.Mesh(geometry, spm.default_submesh_types, var_pts)
+        disc_spm = pybamm.Discretisation(mesh, spm.default_spatial_methods)
+        disc_spm.process_model(spm)
+        t_eval = np.linspace(0, 100, 10)
+        solution = spm.default_solver.solve(spm, t_eval)
+
+        # check 2D (x,z space) variables update properly for different time units
+        # Note: these should be the transpose of the entries in the processed variable
+        c_e = solution["Electrolyte concentration [mol.m-3]"].entries
+
+        for unit, scale in zip(["seconds", "minutes", "hours"], [1, 60, 3600]):
+            quick_plot = pybamm.QuickPlot(
+                solution, ["Electrolyte concentration [mol.m-3]"], time_unit=unit
+            )
+            quick_plot.plot(0)
+            qp_data = quick_plot.plots[("Electrolyte concentration [mol.m-3]",)][0][1]
+            np.testing.assert_array_almost_equal(qp_data.T, c_e[:, :, 0])
+            quick_plot.slider_update(t_eval[-1] / scale)
+            qp_data = quick_plot.plots[("Electrolyte concentration [mol.m-3]",)][0][1]
+            np.testing.assert_array_almost_equal(qp_data.T, c_e[:, :, -1])
+
+        pybamm.close_plots()
 
     def test_plot_2plus1D_spm(self):
         spm = pybamm.lithium_ion.SPM(
@@ -310,11 +405,11 @@ class TestQuickPlot(unittest.TestCase):
         mesh = pybamm.Mesh(geometry, spm.default_submesh_types, var_pts)
         disc_spm = pybamm.Discretisation(mesh, spm.default_spatial_methods)
         disc_spm.process_model(spm)
-        t_eval = np.linspace(0, 3600, 100)
-        solution_spm = spm.default_solver.solve(spm, t_eval)
+        t_eval = np.linspace(0, 100, 10)
+        solution = spm.default_solver.solve(spm, t_eval)
 
         quick_plot = pybamm.QuickPlot(
-            solution_spm,
+            solution,
             [
                 "Negative current collector potential [V]",
                 "Positive current collector potential [V]",
@@ -324,10 +419,28 @@ class TestQuickPlot(unittest.TestCase):
         quick_plot.dynamic_plot(testing=True)
         quick_plot.slider_update(1)
 
-        with self.assertRaisesRegex(NotImplementedError, "Shape not recognized for"):
-            pybamm.QuickPlot(
-                solution_spm, ["Negative particle concentration [mol.m-3]"]
+        # check 2D (y,z space) variables update properly for different time units
+        phi_n = solution["Negative current collector potential [V]"].entries
+
+        for unit, scale in zip(["seconds", "minutes", "hours"], [1, 60, 3600]):
+            quick_plot = pybamm.QuickPlot(
+                solution, ["Negative current collector potential [V]"], time_unit=unit
             )
+            quick_plot.plot(0)
+            qp_data = quick_plot.plots[("Negative current collector potential [V]",)][
+                0
+            ][1]
+            np.testing.assert_array_almost_equal(qp_data, phi_n[:, :, 0])
+            quick_plot.slider_update(t_eval[-1] / scale)
+            qp_data = quick_plot.plots[("Negative current collector potential [V]",)][
+                0
+            ][1]
+            np.testing.assert_array_almost_equal(qp_data, phi_n[:, :, -1])
+
+        with self.assertRaisesRegex(NotImplementedError, "Shape not recognized for"):
+            pybamm.QuickPlot(solution, ["Negative particle concentration [mol.m-3]"])
+
+        pybamm.close_plots()
 
     def test_failure(self):
         with self.assertRaisesRegex(TypeError, "solutions must be"):

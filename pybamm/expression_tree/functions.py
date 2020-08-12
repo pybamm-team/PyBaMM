@@ -169,9 +169,9 @@ class Function(pybamm.Symbol):
             ]
             return self._function_evaluate(evaluated_children)
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
-        return any(child.evaluates_on_edges() for child in self.children)
+        return any(child.evaluates_on_edges(dimension) for child in self.children)
 
     def _evaluate_for_shape(self):
         """
@@ -450,5 +450,3 @@ class Arctan(SpecificFunction):
 def arctan(child):
     " Returns hyperbolic tan function of child. "
     return pybamm.simplify_if_constant(Arctan(child), keep_domains=True)
-
-

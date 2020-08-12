@@ -50,7 +50,7 @@ class _BaseSolution(object):
         if copy_this is None:
             # initialize empty inputs and model, to be populated later
             self._inputs = pybamm.FuzzyDict()
-            self._model = None
+            self._model = pybamm.BaseModel()
             self.set_up_time = None
             self.solve_time = None
             self.has_symbolic_inputs = False
@@ -108,8 +108,12 @@ class _BaseSolution(object):
             self.has_symbolic_inputs = False
             self._inputs = {}
             for name, inp in inputs.items():
+                # Convert number to vector of the right shape
                 if isinstance(inp, numbers.Number):
-                    inp = inp * np.ones_like(self.t)
+                    inp = inp * np.ones((1, len(self.t)))
+                # Tile a vector
+                else:
+                    inp = np.tile(inp, len(self.t))
                 self._inputs[name] = inp
 
     @property
@@ -316,7 +320,7 @@ class Solution(_BaseSolution):
         self._y = np.concatenate((self._y, solution.y[:, start_index:]), axis=1)
         for name, inp in self.inputs.items():
             solution_inp = solution.inputs[name]
-            self.inputs[name] = np.concatenate((inp, solution_inp[start_index:]))
+            self.inputs[name] = np.c_[inp, solution_inp[:, start_index:]]
         # Update solution time
         self.solve_time += solution.solve_time
         # Update termination
