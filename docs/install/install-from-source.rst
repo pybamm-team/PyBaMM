@@ -3,6 +3,12 @@ Install from source (developer install)
 
 .. contents::
 
+This page describes the build and installation of PyBaMM from the source code, available on GitHub. Note that this is **not the recommended approach for most users** and should be reserved to people wanting to participate in the development of PyBaMM, or people who really need to use bleeding-edge feature(s) not yet available in the latest released version. If you do not fall in the two previous categories, you would be better off installing PyBaMM using pip or conda.
+
+Lastly, familiarity with the python ecosystem is recommended (pip, virtualenvs).
+Here is a gentle introduction/refresher: `Python Virtual Environments: A Primer <https://realpython.com/python-virtual-environments-a-primer/>`_.
+
+
 Prerequisites
 ---------------
 
@@ -19,17 +25,19 @@ or download the source archive on the repository's homepage.
 
 To install PyBaMM, you will need:
 
-- Python 3.6 and/or 3.7
-- The python headers
-- A BLAS library (for instance `openblas <https://www.openblas.net/>`_)
-- A C compiler (ex: :code:`gcc`)
-- A Fortran compiler (ex: :code:`gfortran`)
+- Python 3 (PyBaMM support versions 3.6, 3.7 and 3.8)
+- The python headers file for your current python version.
+- A BLAS library (for instance `openblas <https://www.openblas.net/>`_).
+- A C compiler (ex: ``gcc``).
+- A Fortran compiler (ex: ``gfortran``).
 
 On Ubuntu, you can install the above with
 
 .. code:: bash
 
-	  sudo apt install python3 python3-dev python3.7 python3.7-dev libopenblas-dev gcc gfortran
+	  sudo apt install python3.X python3.X-dev libopenblas-dev gcc gfortran
+
+Where ``X`` is the version sub-number.
 
 On MacOS,
 
@@ -37,27 +45,79 @@ On MacOS,
 
 	  brew install python openblas gcc gfortran
 
-Finally, the following assumes that you have Tox installed:
+Finally, we recommend using Tox. You can install it with
 
 .. code:: bash
 
-	  python3.7 -m pip install --upgrade pip tox
+	  python3.X -m pip install --user pip tox
 
-Depending on your operating system, you may or may not have :code:`pip` installed along python.
-If :code:`pip` is not found, you probably want to install the :code:`python3-pip` package.
+Depending on your operating system, you may or may not have ``pip`` installed along python.
+If ``pip` is not found, you probably want to install the ``python3-pip`` package.
 
-Installation
--------------
-To install PyBaMM
+Installing the build-time requirements
+-------------------------------
+
+Using Tox (recommended)
+~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code:: bash
 
-	  cd PyBaMM/
-	  tox -e sundials
+	  # in the PyBaMM/ directory
+	  tox -e build-requires
+
+This will download, compile and install the SuiteSparse and SUNDIALS libraries.
+Both libraries are installed in ``~/.local``.
+
+Using Homebrew (recommended for MacOS users)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you're using MacOS, an alternative to the above is to get the required SUNDIALS components from Homebrew:
+
+.. code:: bash
+
+	  brew install sundials
+
+Next, clone the pybind11 repository:
+
+.. code:: bash
+
+	  # in the PyBaMM/ directory
+	  git clone https://github.com/pybind/pybind11.git
+
+That's it.
+
+Manual install of build time requirements
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you'd rather do things yourself,
+
+1. Make sure you have CMake installed
+2. Compile and install SuiteSparse (PyBaMM only requires the ``KLU`` component).
+3. Compile and install SUNDIALS.
+4. Clone the pybind11 repository in the ``PyBaMM/`` directory (make sure the directory is named ``pybind11``).
+
+PyBaMM ships with a python script that automates points 2. and 3. You can run it with
+
+.. code:: bash
+
+	  python scripts/install_KLU_Sundials.py
+
+Installing PyBaMM
+-----------------
+
+You should now have everything ready to build and install PyBaMM successfully.
+
+Using Tox (recommended)
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code:: bash
+
+	  # in the PyBaMM/ directory
 	  tox -e dev
 
-The first command will install the Sundials library in :code:`~/.local`.
-The second step creates a virtual environment, ready with PyBaMM and the useful tools `flake8 <https://flake8.pycqa.org/en/latest/>`_ and `black <https://black.readthedocs.io/en/stable/>`_.
+
+This creates a virtual environment ``.tox/dev`` inside the ``PyBaMM/`` directory.
+It comes ready with PyBaMM and some useful development tools like `flake8 <https://flake8.pycqa.org/en/latest/>`_ and `black <https://black.readthedocs.io/en/stable/>`_.
 
 You can now activate the environment with
 
@@ -65,8 +125,30 @@ You can now activate the environment with
 
 	  source .tox/dev/bin/activate
 
+and run the tests to check your installation.
+
+Manual install
+~~~~~~~~~~~~~~
+
+From the ``PyBaMM/`` directory, you can install PyBaMM using ``python setup.py install`` or 
+
+.. code:: bash
+
+	  pip install .
+
+
+If you intend to contribute to the development of PyBaMM, it is convenient to install in "editable mode", along with useful tools for development and documentation:
+
+.. code:: bash
+
+	  pip install -e .[dev,docs]
+
 Running the tests
 --------------------
+
+Using Tox (recommended)
+~~~~~~~~~~~~~~~~~~~~~~~
+
 You can use Tox to run the unit tests and example notebooks in isolated virtual environments.
 
 The default command
@@ -75,14 +157,14 @@ The default command
 
 	  tox
 
-will run the unit tests, doctests and check for style in both python3.6 and python3.7, assuming you have both versions installed.
+will run the unit tests, doctests and check for style in both python 3.6 and python 3.7, assuming you have both versions installed.
 If you want to run the tests for a specific version, say 3.6, run instead
 
 .. code:: bash
 
 	  tox -e py36
 
-If you want to run the tests for your current python version (returned by :code:`python --version`), run instead
+If you want to run the tests for your current python version (returned by ``python --version``), run instead
 
 .. code:: bash
 
@@ -99,11 +181,33 @@ The preview will be updated automatically following changes.
 
 In addition, the following tox commands are available:
 
-- :code:`tox -e examples`: Run the example scripts in :code:`examples/scripts`
-- :code:`tox -e flake8`: Check for PEP8 compliance
-- :code:`tox -e doctests`: Run doctests
-- :code:`tox -e coverage`: Measure current test coverage
+- ``tox -e examples``: Run the example scripts in ``examples/scripts``.
+- ``tox -e flake8``: Check for PEP8 compliance.
+- ``tox -e doctests``: Run doctests.
+- ``tox -e coverage``: Measure current test coverage.
+
+Using the test runner 
+~~~~~~~~~~~~~~~~~~~~~~
+
+You can run unit tests for PyBaMM using
+
+.. code:: bash
+
+	  # in the PyBaMM/ directory
+	  python run-tests.py --unit
 
 
+The above starts a sub-process using the current python interpreter (i.e. using your current
+python environment) and run the unit tests. This can take a few minutes.
 
+You can also use the test runner to run the doctests:
+.. code:: bash
+
+	  python run-tests.py --doctests
+
+There is more to the PyBaMM test runner. To see a list of all options, type
+
+.. code:: bash
+
+	  python run-tests.py --help
 
