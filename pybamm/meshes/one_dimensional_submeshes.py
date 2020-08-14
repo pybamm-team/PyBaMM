@@ -373,7 +373,10 @@ class SpectralVolume1DSubMesh(SubMesh1D):
             x
             for (a, b) in zip(edges[:-1], edges[1:])
             for x in np.flip(
-                self.chebyshev_collocation_points(order + 1, a, b)
+                a + 0.5 * (b - a) * (1 + np.sin(np.pi * np.array(
+                    [((order + 1) - 1 - 2 * i) / (2 * (order + 1) - 2)
+                     for i in range(order + 1)]
+                )))
             )[1:]
         ])
 
@@ -386,21 +389,3 @@ class SpectralVolume1DSubMesh(SubMesh1D):
         # "edges" and "nodes" properties. This makes some of the
         # code of FiniteVolume directly applicable.
         super().__init__(cv_edges, coord_sys=coord_sys, tabs=tabs)
-
-    def chebyshev_collocation_points(self, noe, a=-1.0, b=1.0):
-        """
-        Calculates Chebyshev collocation points in descending order.
-
-        Parameters
-        ----------
-        noe: integer
-            The number of the collocation points. "number of edges"
-
-        Returns
-        -------
-        :class:`numpy.array`
-        Chebyshev collocation points on [a,b].
-        """
-
-        return a + 0.5 * (b - a) * (1 + np.sin(np.pi * np.array(
-            [(noe - 1 - 2 * i) / (2 * noe - 2) for i in range(noe)])))
