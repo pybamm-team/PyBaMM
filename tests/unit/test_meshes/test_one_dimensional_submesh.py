@@ -341,6 +341,21 @@ class TestSpectralVolume1DSubMesh(unittest.TestCase):
                           [0, 0.075, 0.225, 0.3, 0.475, 0.825, 1]):
             self.assertAlmostEqual(a, b)
 
+        # test uniform submesh creation
+        submesh_params = {"order": order}
+        submesh_types = {
+            "negative particle": pybamm.MeshGenerator(
+                pybamm.SpectralVolume1DSubMesh, submesh_params
+            )
+        }
+        var_pts = {r: 2}
+
+        # create mesh
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+        for (a, b) in zip(mesh["negative particle"].edges.tolist(),
+                          [0.0, 0.125, 0.375, 0.5, 0.625, 0.875, 1.0]):
+            self.assertAlmostEqual(a, b)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
