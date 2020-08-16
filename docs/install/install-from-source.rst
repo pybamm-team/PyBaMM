@@ -45,14 +45,15 @@ On MacOS,
 
 	  brew install python openblas gcc gfortran
 
-Finally, we recommend using Tox. You can install it with
+Finally, we recommend using `Tox <https://tox.readthedocs.io/en/latest/>`_.
+You can install it with
 
 .. code:: bash
 
-	  python3.X -m pip install --user pip tox
+	  python3.X -m pip install --user tox
 
 Depending on your operating system, you may or may not have ``pip`` installed along python.
-If ``pip` is not found, you probably want to install the ``python3-pip`` package.
+If ``pip`` is not found, you probably want to install the ``python3-pip`` package.
 
 Installing the build-time requirements
 -------------------------------
