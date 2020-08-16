@@ -25,7 +25,7 @@ or download the source archive on the repository's homepage.
 
 To install PyBaMM, you will need:
 
-- Python 3 (PyBaMM support versions 3.6, 3.7 and 3.8)
+- Python 3 (PyBaMM supports versions 3.6, 3.7 and 3.8)
 - The python headers file for your current python version.
 - A BLAS library (for instance `openblas <https://www.openblas.net/>`_).
 - A C compiler (ex: ``gcc``).
@@ -72,7 +72,7 @@ Both libraries are installed in ``~/.local``.
 Using Homebrew (recommended for MacOS users)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If you're using MacOS, an alternative to the above is to get the required SUNDIALS components from Homebrew:
+If you are using MacOS, an alternative to the above is to get the required SUNDIALS components from Homebrew:
 
 .. code:: bash
 
