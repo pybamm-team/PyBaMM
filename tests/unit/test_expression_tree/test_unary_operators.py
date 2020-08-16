@@ -117,7 +117,7 @@ class TestUnaryOperators(unittest.TestCase):
 
         # divergence of variable evaluating on edges should fail
         a = pybamm.PrimaryBroadcast(pybamm.Scalar(1), "test")
-        with self.assertRaisesRegex(TypeError, "evaluates on nodes"):
+        with self.assertRaisesRegex(TypeError, "evaluate on edges"):
             pybamm.Divergence(a)
 
         # divergence of broadcast should return broadcasted zero
@@ -266,6 +266,26 @@ class TestUnaryOperators(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "slice size exceeds child size"):
             pybamm.Index(vec, 5)
         pybamm.settings.debug_mode = debug_mode
+
+    def test_upwind(self):
+        # upwind of scalar symbol should fail
+        a = pybamm.Symbol("a")
+        with self.assertRaisesRegex(
+            pybamm.DomainError, "Cannot upwind 'a' since its domain is empty"
+        ):
+            pybamm.Upwind(a)
+
+        # upwind of variable evaluating on edges should fail
+        a = pybamm.PrimaryBroadcastToEdges(pybamm.Scalar(1), "test")
+        with self.assertRaisesRegex(TypeError, "evaluate on nodes"):
+            pybamm.Upwind(a)
+
+        # otherwise upwind should work
+        a = pybamm.Symbol("a", domain="test domain")
+        upwind = pybamm.upwind(a)
+        self.assertIsInstance(upwind, pybamm.Upwind)
+        self.assertEqual(upwind.children[0].name, a.name)
+        self.assertEqual(upwind.domain, a.domain)
 
     def test_diff(self):
         a = pybamm.StateVector(slice(0, 1))

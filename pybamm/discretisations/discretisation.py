@@ -927,7 +927,8 @@ class Discretisation(object):
                 return child_spatial_method.boundary_value_or_flux(
                     symbol, disc_child, self.bcs
                 )
-
+            elif isinstance(symbol, pybamm.Upwind):
+                return spatial_method.upwind(child, disc_child, self.bcs)
             else:
                 return symbol._unary_new_copy(disc_child)
 
