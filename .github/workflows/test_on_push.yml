@@ -65,7 +65,7 @@ jobs:
 
     - name: Install SuiteSparse and Sundials
       if: matrix.os != 'windows-latest'
-      run: tox -e sundials
+      run: tox -e pybamm-requires
 
     - name: Run unit tests on GNU/Linux and MacOS
       if: matrix.os != 'windows-latest'
