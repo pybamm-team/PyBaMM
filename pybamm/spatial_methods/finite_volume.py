@@ -1384,3 +1384,17 @@ class FiniteVolume(pybamm.SpatialMethod):
         else:
             raise ValueError("method '{}' not recognised".format(method))
         return out
+
+    def upwind(self, symbol, discretised_symbol, bcs):
+        """
+        Implement an upwinding operator. Currently, this requires the symbol to have
+        a Dirichlet boundary condition on the left side. Then, the upwinding operator
+        simply consists of concatenating the boundary condition and the symbol.
+        """
+        if symbol.id not in bcs:
+            raise pybamm.ModelError
+        bc, typ = bcs[symbol.id]["left"]
+        if typ != "Dirichlet":
+            raise pybamm.ModelError
+        symbol_out = pybamm.NumpyConcatenation(bc, discretised_symbol)
+        return symbol_out
