@@ -1385,16 +1385,35 @@ class FiniteVolume(pybamm.SpatialMethod):
             raise ValueError("method '{}' not recognised".format(method))
         return out
 
-    def upwind(self, symbol, discretised_symbol, bcs):
+    def upwind_or_downwind(self, symbol, discretised_symbol, bcs, direction):
         """
         Implement an upwinding operator. Currently, this requires the symbol to have
         a Dirichlet boundary condition on the left side. Then, the upwinding operator
         simply consists of concatenating the boundary condition and the symbol.
+
+        Parameters
+        ----------
+        symbol : :class:`pybamm.SpatialVariable`
+            The variable to be discretised
+        discretised_gradient : :class:`pybamm.Vector`
+            Contains the discretised gradient of symbol
+        bcs : dict of tuples (:class:`pybamm.Scalar`, str)
+            Dictionary (with keys "left" and "right") of boundary conditions. Each
+            boundary condition consists of a value and a flag indicating its type
+            (e.g. "Dirichlet")
+        direction : str
+            Direction in which to apply the operator (upwind or downwind)
         """
         if symbol.id not in bcs:
             raise pybamm.ModelError
-        bc, typ = bcs[symbol.id]["left"]
-        if typ != "Dirichlet":
-            raise pybamm.ModelError
-        symbol_out = pybamm.NumpyConcatenation(bc, discretised_symbol)
+        if direction == "upwind":
+            bc, typ = bcs[symbol.id]["left"]
+            if typ != "Dirichlet":
+                raise pybamm.ModelError
+            symbol_out = pybamm.NumpyConcatenation(bc, discretised_symbol)
+        elif direction == "downwind":
+            bc, typ = bcs[symbol.id]["right"]
+            if typ != "Dirichlet":
+                raise pybamm.ModelError
+            symbol_out = pybamm.NumpyConcatenation(discretised_symbol, bc)
         return symbol_out

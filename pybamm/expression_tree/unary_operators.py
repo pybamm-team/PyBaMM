@@ -942,14 +942,14 @@ class BoundaryGradient(BoundaryOperator):
         super().__init__("boundary flux", child, side)
 
 
-class Upwind(SpatialOperator):
-    """A node in the expression tree representing an upwinding operator. Usually to be
-    used for better stability in convection-dominated equations.
+class UpwindDownwind(SpatialOperator):
+    """A node in the expression tree representing an upwinding or downwinding operator.
+    Usually to be used for better stability in convection-dominated equations.
 
     **Extends:** :class:`SpatialOperator`
     """
 
-    def __init__(self, child):
+    def __init__(self, name, child):
         if child.domain == []:
             raise pybamm.DomainError(
                 "Cannot upwind '{}' since its domain is empty. ".format(child)
@@ -961,11 +961,33 @@ class Upwind(SpatialOperator):
                 "Cannot upwind '{}' since it does not ".format(child)
                 + "evaluate on nodes."
             )
-        super().__init__("upwind", child)
+        super().__init__(name, child)
 
     def evaluates_on_edges(self, dimension):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
         return True
+
+
+class Upwind(UpwindDownwind):
+    """
+    Upwinding operator. To be used if flow velocity is positive (left to right).
+    
+    **Extends:** :class:`UpwindDownwind`
+    """
+
+    def __init__(self, child):
+        super().__init__("upwind", child)
+
+
+class Downwind(UpwindDownwind):
+    """
+    Downwinding operator. To be used if flow velocity is negative (right to left).
+    
+    **Extends:** :class:`UpwindDownwind`
+    """
+
+    def __init__(self, child):
+        super().__init__("downwind", child)
 
 
 #
@@ -1061,6 +1083,11 @@ def grad_squared(symbol):
 def upwind(symbol):
     "convenience function for creating a :class:`Upwind`"
     return Upwind(symbol)
+
+
+def downwind(symbol):
+    "convenience function for creating a :class:`Downwind`"
+    return Downwind(symbol)
 
 
 #
