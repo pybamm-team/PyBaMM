@@ -21,10 +21,24 @@ class BaseParticle(pybamm.BaseSubModel):
     def __init__(self, param, domain):
         super().__init__(param, domain)
 
-    def _get_standard_concentration_variables(self, c_s, c_s_xav, c_s_rav):
+    def _get_standard_concentration_variables(
+        self, c_s, c_s_xav=None, c_s_rav=None, c_s_av=None, c_s_surf=None
+    ):
+        """
+        All particle submodels must provide the particle concentration as an argument
+        to this method. Some submodels solve for quantities other than the concentration
+        itself, for example the 'FickianSingleParticle' models solves for the x-averaged
+        concentration. In such cases the variables being solved for (set in
+        'get_fundamental_variables') must also be passed as keyword arguments. If not
+        passed as keyword arguments, the various average concentrations and surface
+        concentration are computed automatically from the particle concentration.
+        """
 
         param = self.param
-        c_s_surf = pybamm.surf(c_s)
+
+        # Get surface concentration if not provided as fundamental variable to
+        # solve for
+        c_s_surf = c_s_surf or pybamm.surf(c_s)
         c_s_surf_av = pybamm.x_average(c_s_surf)
 
         if self.domain == "Negative":
@@ -34,7 +48,11 @@ class BaseParticle(pybamm.BaseSubModel):
             c_scale = self.param.c_p_max
             active_volume = param.epsilon_s_p
 
-        c_s_av = pybamm.r_average(c_s_xav)
+        # Get average concentration(s) if not provided as fundamental variable to
+        # solve for
+        c_s_xav = c_s_xav or pybamm.x_average(c_s)
+        c_s_rav = c_s_rav or pybamm.r_average(c_s)
+        c_s_av = c_s_av or pybamm.r_average(c_s_xav)
         c_s_av_vol = active_volume * c_s_av
 
         variables = {
@@ -48,6 +66,10 @@ class BaseParticle(pybamm.BaseSubModel):
             "R-averaged "
             + self.domain.lower()
             + " particle concentration [mol.m-3]": c_s_rav * c_scale,
+            "R-X-averaged " + self.domain.lower() + " particle concentration": c_s_av,
+            "R-X-averaged "
+            + self.domain.lower()
+            + " particle concentration [mol.m-3]": c_s_av * c_scale,
             self.domain + " particle surface concentration": c_s_surf,
             self.domain
             + " particle surface concentration [mol.m-3]": c_scale * c_s_surf,

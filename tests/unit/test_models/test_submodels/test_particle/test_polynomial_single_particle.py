@@ -13,6 +13,7 @@ class TestSingleParticle(unittest.TestCase):
 
         a = pybamm.PrimaryBroadcast(pybamm.Scalar(0), "current collector")
         variables = {
+            "Current collector current density": a,
             "X-averaged negative electrode interfacial current density": a,
             "X-averaged negative electrode temperature": a,
         }
@@ -22,6 +23,7 @@ class TestSingleParticle(unittest.TestCase):
         std_tests.test_all()
 
         variables = {
+            "Current collector current density": a,
             "X-averaged positive electrode interfacial current density": a,
             "X-averaged positive electrode temperature": a,
         }

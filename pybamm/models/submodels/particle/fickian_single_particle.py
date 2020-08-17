@@ -33,9 +33,7 @@ class FickianSingleParticle(BaseParticle):
             c_s_xav = pybamm.standard_variables.c_s_p_xav
             c_s = pybamm.SecondaryBroadcast(c_s_xav, ["positive electrode"])
 
-        c_s_rav = pybamm.r_average(c_s)
-
-        variables = self._get_standard_concentration_variables(c_s, c_s_xav, c_s_rav)
+        variables = self._get_standard_concentration_variables(c_s, c_s_xav=c_s_xav)
 
         return variables
 
@@ -43,7 +41,6 @@ class FickianSingleParticle(BaseParticle):
         c_s_xav = variables[
             "X-averaged " + self.domain.lower() + " particle concentration"
         ]
-
         T_k_xav = pybamm.PrimaryBroadcast(
             variables["X-averaged " + self.domain.lower() + " electrode temperature"],
             [self.domain.lower() + " particle"],
@@ -51,6 +48,7 @@ class FickianSingleParticle(BaseParticle):
 
         if self.domain == "Negative":
             N_s_xav = -self.param.D_n(c_s_xav, T_k_xav) * pybamm.grad(c_s_xav)
+
         elif self.domain == "Positive":
             N_s_xav = -self.param.D_p(c_s_xav, T_k_xav) * pybamm.grad(c_s_xav)
 
@@ -64,11 +62,11 @@ class FickianSingleParticle(BaseParticle):
         c_s_xav = variables[
             "X-averaged " + self.domain.lower() + " particle concentration"
         ]
-
         N_s_xav = variables["X-averaged " + self.domain.lower() + " particle flux"]
 
         if self.domain == "Negative":
             self.rhs = {c_s_xav: -(1 / self.param.C_n) * pybamm.div(N_s_xav)}
+
         elif self.domain == "Positive":
             self.rhs = {c_s_xav: -(1 / self.param.C_p) * pybamm.div(N_s_xav)}
 
@@ -76,15 +74,12 @@ class FickianSingleParticle(BaseParticle):
         c_s_xav = variables[
             "X-averaged " + self.domain.lower() + " particle concentration"
         ]
-
         c_s_surf_xav = variables[
             "X-averaged " + self.domain.lower() + " particle surface concentration"
         ]
-
         T_k_xav = variables[
             "X-averaged " + self.domain.lower() + " electrode temperature"
         ]
-
         j_xav = variables[
             "X-averaged "
             + self.domain.lower()

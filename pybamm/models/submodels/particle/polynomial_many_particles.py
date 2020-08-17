@@ -45,11 +45,11 @@ class PolynomialManyParticles(BaseParticle):
         B = pybamm.PrimaryBroadcast(
             (5 / 2) * (c_s_surf - c_s_rav), [self.domain.lower() + " particle"]
         )
-
         c_s = A + B * r ** 2
-        c_s_xav = pybamm.x_average(c_s)
 
-        variables = self._get_standard_concentration_variables(c_s, c_s_xav, c_s_rav)
+        variables = self._get_standard_concentration_variables(
+            c_s, c_s_rav=c_s_rav, c_s_surf=c_s_surf
+        )
 
         return variables
 
@@ -90,7 +90,7 @@ class PolynomialManyParticles(BaseParticle):
         elif self.domain == "Positive":
             self.rhs = {c_s_rav: -3 * j / self.param.a_p / self.param.gamma_p / R}
 
-    def set_algeraic(self, variables):
+    def set_algebraic(self, variables):
         c_s_surf = variables[self.domain + " particle surface concentration"]
         c_s_rav = variables[
             "R-averaged " + self.domain.lower() + " particle concentration"
@@ -131,6 +131,7 @@ class PolynomialManyParticles(BaseParticle):
         if self.domain == "Negative":
             x_n = pybamm.standard_spatial_vars.x_n
             c_init = self.param.c_n_init(x_n)
+
         elif self.domain == "Positive":
             x_p = pybamm.standard_spatial_vars.x_p
             c_init = self.param.c_p_init(x_p)

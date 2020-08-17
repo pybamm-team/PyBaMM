@@ -55,10 +55,9 @@ class FastManyParticles(BaseParticle):
         )
 
         c_s_xav = pybamm.x_average(c_s)
-        c_s_rav = pybamm.r_average(c_s)
 
         variables.update(
-            self._get_standard_concentration_variables(c_s, c_s_xav, c_s_rav)
+            self._get_standard_concentration_variables(c_s, c_s_xav=c_s_xav)
         )
         variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
 

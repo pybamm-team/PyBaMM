@@ -30,9 +30,7 @@ class FickianManyParticles(BaseParticle):
         elif self.domain == "Positive":
             c_s = pybamm.standard_variables.c_s_p
 
-        c_s_xav = pybamm.x_average(c_s)
-        c_s_rav = pybamm.r_average(c_s)
-        variables = self._get_standard_concentration_variables(c_s, c_s_xav, c_s_rav)
+        variables = self._get_standard_concentration_variables(c_s)
 
         return variables
 

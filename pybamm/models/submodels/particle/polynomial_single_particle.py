@@ -37,28 +37,36 @@ class PolynomialSingleParticle(BaseParticle):
         variables = {
             "R-X-averaged " + self.domain.lower() + " particle concentration": c_s_rxav
         }
+
         return variables
 
     def get_coupled_variables(self, variables):
         c_s_rxav = variables[
             "R-X-averaged " + self.domain.lower() + " particle concentration"
         ]
-        j_xav = variables[
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode interfacial current density"
-        ]
+        i_boundary_cc = variables["Current collector current density"]
         T_k_xav = pybamm.PrimaryBroadcast(
             variables["X-averaged " + self.domain.lower() + " electrode temperature"],
             [self.domain.lower() + " particle"],
         )
 
         # Compute the surface concentration
+        # Note 1: here we use the total average interfacial current for the single
+        # particle. We explicitly write this as the current density divided by the
+        # electrode thickness instead of getting the average current from the interface
+        # submodel since the interface requires the surface concentration to be defined
+        # to compute the exchange current density. Expliciyly writing out the average
+        # interfacial current here avoids KeyErrors where variables have not been
+        # set in the right order
+        # Note 2: the concentration, c, inside the diffusion coefficient, D, here
+        # should really be the surface value, but this requires solving a nonlinear
+        # equation for c_surf (if the diffusion coefficient is nonlinear), adding
+        # an extra algebraic equation to solve. For now, using the average c is an
+        # ok approximation and means the SPM(e) still gives a system of ODEs rather
+        # than DAEs
         if self.domain == "Negative":
-            # The c inside D_n here should really be the surface value, but
-            # then you have to solve a nonlinear equation for c_surf (if the
-            # diffusion coefficient is nonlinear), adding an extra algebraic
-            # equation to solve. For now, using the average c is an ok approximation.
+            j_xav = i_boundary_cc / self.param.l_n
+
             c_s_surf_xav = c_s_rxav - self.param.C_n * (
                 j_xav
                 / 5
@@ -67,10 +75,8 @@ class PolynomialSingleParticle(BaseParticle):
             )
 
         elif self.domain == "Positive":
-            # The c inside D_p here should really be the surface value, but
-            # then you have to solve a nonlinear equation for c_surf (if the
-            # diffusion coefficient is nonlinear), adding an extra algebraic
-            # equation to solve. For now, using the average c is an ok approximation.
+            j_xav = -i_boundary_cc / self.param.l_p
+
             c_s_surf_xav = c_s_rxav - self.param.C_p * (
                 j_xav
                 / 5
@@ -87,10 +93,9 @@ class PolynomialSingleParticle(BaseParticle):
         B = pybamm.PrimaryBroadcast(
             (5 / 2) * (c_s_surf_xav - c_s_rxav), [self.domain.lower() + " particle"]
         )
-        # A = pybamm.SecondaryBroadcast(A, [self.domain.lower() + " electrode"])
-        # B = pybamm.SecondaryBroadcast(B, [self.domain.lower() + " electrode"])
 
         if self.domain == "Negative":
+            # TODO: figure out how to just use r here without getting shape errors
             # r = pybamm.standard_spatial_vars.r_n
             r = pybamm.SpatialVariable(
                 "r_n",
@@ -100,7 +105,9 @@ class PolynomialSingleParticle(BaseParticle):
             )
             c_s_xav = A + B * r ** 2
             N_s_xav = -self.param.D_n(c_s_xav, T_k_xav) * pybamm.grad(c_s_xav)
+
         if self.domain == "Positive":
+            # TODO: figure out how to just use r here without getting shape errors
             # r = pybamm.standard_spatial_vars.r_p
             r = pybamm.SpatialVariable(
                 "r_p",
@@ -114,9 +121,7 @@ class PolynomialSingleParticle(BaseParticle):
         c_s = pybamm.SecondaryBroadcast(c_s_xav, [self.domain.lower() + " electrode"])
         N_s = pybamm.SecondaryBroadcast(N_s_xav, [self.domain.lower() + " electrode"])
 
-        c_s_rav = pybamm.r_average(c_s)
-
-        variables = self._get_standard_concentration_variables(c_s, c_s_xav, c_s_rav)
+        variables = self._get_standard_concentration_variables(c_s, c_s_av=c_s_rxav)
         variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
 
         return variables

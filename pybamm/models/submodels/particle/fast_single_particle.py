@@ -52,8 +52,7 @@ class FastSingleParticle(BaseParticle):
             0, self.domain.lower() + " electrode", "current collector"
         )
 
-        c_s_rav = pybamm.r_average(c_s)
-        variables = self._get_standard_concentration_variables(c_s, c_s_xav, c_s_rav)
+        variables = self._get_standard_concentration_variables(c_s, c_s_xav=c_s_xav)
         variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
 
         return variables
