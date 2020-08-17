@@ -1415,30 +1415,25 @@ class FiniteVolume(pybamm.SpatialMethod):
             if typ != "Dirichlet":
                 raise pybamm.ModelError
 
+            concat_bc = pybamm.NumpyConcatenation(bc, discretised_symbol)
+
             upwind_mat = vstack(
                 [
-                    csr_matrix(([-1, 2], ([0, 1], [0, 0])), shape=(2, n)),
-                    diags([-0.5, 1.5], [0, 1], shape=(n - 1, n)),
+                    csr_matrix(([1], ([0], [0])), shape=(1, n + 1)),
+                    diags([-0.5, 1.5], [0, 1], shape=(n, n + 1)),
                 ]
             )
-            bc_vector = csr_matrix(([2], ([0], [0])), shape=(n + 1, 1))
-            symbol_out = (
-                pybamm.Matrix(upwind_mat) @ discretised_symbol
-                + pybamm.Vector(bc_vector) * bc
-            )
+            symbol_out = pybamm.Matrix(upwind_mat) @ concat_bc
         elif direction == "downwind":
             bc, typ = bcs[symbol.id]["right"]
             if typ != "Dirichlet":
                 raise pybamm.ModelError
+            concat_bc = pybamm.NumpyConcatenation(discretised_symbol, bc)
             downwind_mat = vstack(
                 [
-                    diags([1.5, -0.5], [0, 1], shape=(n - 1, n)),
-                    csr_matrix(([2, -1], ([0, 1], [n - 1, n - 1])), shape=(2, n)),
+                    diags([1.5, -0.5], [0, 1], shape=(n, n + 1)),
+                    csr_matrix(([1], ([0], [n])), shape=(1, n + 1)),
                 ]
             )
-            bc_vector = csr_matrix(([2], ([n], [0])), shape=(n + 1, 1))
-            symbol_out = (
-                pybamm.Matrix(downwind_mat) @ discretised_symbol
-                + pybamm.Vector(bc_vector) * bc
-            )
+            symbol_out = pybamm.Matrix(downwind_mat) @ concat_bc
         return symbol_out
