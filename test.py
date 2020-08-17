@@ -5,10 +5,12 @@ model = pybamm.BaseModel()
 # x = pybamm.SpatialVariableEdge("x", domain=["negative electrode"])
 # v = 0.5 + 0.5 * x
 v = pybamm.PrimaryBroadcastToEdges(1, ["negative electrode"])
-model.rhs = {c: -pybamm.div(-pybamm.downwind(c) * v) + 2}
-model.initial_conditions = {c: 0}
-model.boundary_conditions = {c: {"left": (0, "Neumann"), "right": (0, "Dirichlet")}}
-# model.boundary_conditions = {c: {"left": (0, "Dirichlet"), "right": (0, "Neumann")}}
+# Upwind
+model.rhs = {c: -pybamm.div(pybamm.upwind(c) * v) + 1}
+# # Downwind (switch sign of v)
+# model.rhs = {c: -pybamm.div(pybamm.downwind(c) * -v) + 1}
+model.initial_conditions = {c: 1}
+model.boundary_conditions = {c: {"left": (1, "Dirichlet"), "right": (1, "Dirichlet")}}
 model.variables = {"c": c}
 
 spm = pybamm.lithium_ion.SPM()
