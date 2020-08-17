@@ -1404,16 +1404,41 @@ class FiniteVolume(pybamm.SpatialMethod):
         direction : str
             Direction in which to apply the operator (upwind or downwind)
         """
+        submesh = self.mesh.combine_submeshes(*symbol.domain)
+        n = submesh.npts
+
         if symbol.id not in bcs:
             raise pybamm.ModelError
+
         if direction == "upwind":
             bc, typ = bcs[symbol.id]["left"]
             if typ != "Dirichlet":
                 raise pybamm.ModelError
-            symbol_out = pybamm.NumpyConcatenation(bc, discretised_symbol)
+
+            upwind_mat = vstack(
+                [
+                    csr_matrix(([-1, 2], ([0, 1], [0, 0])), shape=(2, n)),
+                    diags([-0.5, 1.5], [0, 1], shape=(n - 1, n)),
+                ]
+            )
+            bc_vector = csr_matrix(([2], ([0], [0])), shape=(n + 1, 1))
+            symbol_out = (
+                pybamm.Matrix(upwind_mat) @ discretised_symbol
+                + pybamm.Vector(bc_vector) * bc
+            )
         elif direction == "downwind":
             bc, typ = bcs[symbol.id]["right"]
             if typ != "Dirichlet":
                 raise pybamm.ModelError
-            symbol_out = pybamm.NumpyConcatenation(discretised_symbol, bc)
+            downwind_mat = vstack(
+                [
+                    diags([1.5, -0.5], [0, 1], shape=(n - 1, n)),
+                    csr_matrix(([2, -1], ([0, 1], [n - 1, n - 1])), shape=(2, n)),
+                ]
+            )
+            bc_vector = csr_matrix(([2], ([n], [0])), shape=(n + 1, 1))
+            symbol_out = (
+                pybamm.Matrix(downwind_mat) @ discretised_symbol
+                + pybamm.Vector(bc_vector) * bc
+            )
         return symbol_out

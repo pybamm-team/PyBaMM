@@ -800,4 +800,5 @@ class Symbol(anytree.NodeMixin):
         try:
             self.shape_for_testing
         except ValueError as e:
+            self.shape_for_testing
             raise pybamm.ShapeError("Cannot find shape (original error: {})".format(e))
