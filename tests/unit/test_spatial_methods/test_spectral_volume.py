@@ -91,13 +91,40 @@ def get_1p1d_mesh_for_testing(
 
 
 class TestSpectralVolume(unittest.TestCase):
+    def test_exceptions(self):
+        sp_meth = pybamm.SpectralVolume()
+        with self.assertRaises(ValueError):
+            sp_meth.chebyshev_differentiation_matrices(3, 3)
+
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.SpectralVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var = pybamm.Variable("var", domain=whole_cell)
+        disc.set_variable_slices([var])
+        discretised_symbol = pybamm.StateVector(*disc.y_slices[var.id])
+        sp_meth.build(mesh)
+
+        bcs = {"left": (pybamm.Scalar(0), "x"), "right": (pybamm.Scalar(3), "Neumann")}
+        with self.assertRaisesRegex(ValueError, "boundary condition must be"):
+            sp_meth.replace_dirichlet_values(var, discretised_symbol, bcs)
+        with self.assertRaisesRegex(ValueError, "boundary condition must be"):
+            sp_meth.replace_neumann_values(var, discretised_symbol, bcs)
+        bcs = {"left": (pybamm.Scalar(0), "Neumann"), "right": (pybamm.Scalar(3), "x")}
+        with self.assertRaisesRegex(ValueError, "boundary condition must be"):
+            sp_meth.replace_dirichlet_values(var, discretised_symbol, bcs)
+        with self.assertRaisesRegex(ValueError, "boundary condition must be"):
+            sp_meth.replace_neumann_values(var, discretised_symbol, bcs)
+
     def test_grad_div_shapes_Dirichlet_bcs(self):
         """
         Test grad and div with Dirichlet boundary conditions (applied by grad on var)
+        and also test the case where only one Spectral Volume is discretised
         """
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         # create discretisation
-        mesh = get_mesh_for_testing()
+        mesh = get_mesh_for_testing(1)
         spatial_methods = {"macroscale": pybamm.SpectralVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
