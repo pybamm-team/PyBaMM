@@ -44,7 +44,7 @@ class FastManyPSDs(BaseParticle):
                 },
                 bounds=(0, 1),
             )
-            R = pybamm.standard_spatial_vars.R_variable_n
+            R = pybamm.standard_spatial_vars.R_variable_n  # used for averaging
             R_variable = pybamm.SecondaryBroadcast(R, ["current collector"])
             R_variable = pybamm.SecondaryBroadcast(R_variable, ["negative electrode"])
             R_dim = self.param.R_n
@@ -63,13 +63,17 @@ class FastManyPSDs(BaseParticle):
                 },
                 bounds=(0, 1),
             )
-            R = pybamm.standard_spatial_vars.R_variable_p
+            R = pybamm.standard_spatial_vars.R_variable_p  # used for averaging
             R_variable = pybamm.SecondaryBroadcast(R, ["current collector"])
             R_variable = pybamm.SecondaryBroadcast(R_variable, ["positive electrode"])
             R_dim = self.param.R_p
 
             # Particle-size distribution (area-weighted)
             f_a_dist = self.param.f_a_dist_p(R_variable)
+
+        # Ensure the distribution is normalised, irrespective of discretisation
+        # or user input
+        f_a_dist = f_a_dist / pybamm.Integral(f_a_dist, R)
 
         # Flux variables (zero)
         N_s = pybamm.FullBroadcastToEdges(

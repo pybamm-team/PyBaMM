@@ -60,6 +60,10 @@ class FastSinglePSD(BaseParticle):
             # Particle-size distribution (area-weighted)
             f_a_dist = self.param.f_a_dist_p(R_variable)
 
+        # Ensure the distribution is normalised, irrespective of discretisation
+        # or user input
+        f_a_dist = f_a_dist / pybamm.Integral(f_a_dist, R_variable)
+
         # Flux variables (zero)
         N_s = pybamm.FullBroadcastToEdges(
             0,

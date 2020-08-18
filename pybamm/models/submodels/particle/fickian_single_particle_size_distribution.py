@@ -61,7 +61,11 @@ class FickianSinglePSD(BaseParticle):
             # Particle-size distribution (area-weighted)
             f_a_dist = self.param.f_a_dist_p(R_variable)
 
-        # Standard R-averaged variables
+        # Ensure the distribution is normalised, irrespective of discretisation
+        # or user input
+        f_a_dist = f_a_dist / pybamm.Integral(f_a_dist, R_variable)
+
+        # Standard R-averaged variables (avg secondary domain)
         c_s_xav = pybamm.Integral(f_a_dist * c_s_xav_distribution, R_variable)
         c_s = pybamm.SecondaryBroadcast(c_s_xav, [self.domain.lower() + " electrode"])
         variables = self._get_standard_concentration_variables(c_s, c_s_xav)

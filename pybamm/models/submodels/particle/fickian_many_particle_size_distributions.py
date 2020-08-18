@@ -39,7 +39,7 @@ class FickianManyPSDs(BaseParticle):
                 },
                 bounds=(0, 1),
             )
-            R = pybamm.standard_spatial_vars.R_variable_n
+            R = pybamm.standard_spatial_vars.R_variable_n  # used for averaging
             R_variable = pybamm.SecondaryBroadcast(R, ["negative electrode"])
             R_dim = self.param.R_n
 
@@ -57,14 +57,18 @@ class FickianManyPSDs(BaseParticle):
                 },
                 bounds=(0, 1),
             )
-            R = pybamm.standard_spatial_vars.R_variable_p
+            R = pybamm.standard_spatial_vars.R_variable_p  # used for averaging
             R_variable = pybamm.SecondaryBroadcast(R, ["positive electrode"])
             R_dim = self.param.R_p
 
             # Particle-size distribution (area-weighted)
             f_a_dist = self.param.f_a_dist_p(R_variable)
 
-        # Standard R-averaged variables
+        # Ensure the distribution is normalised, irrespective of discretisation
+        # or user input
+        f_a_dist = f_a_dist / pybamm.Integral(f_a_dist, R)
+
+        # Standard R-averaged variables (avg secondary domain)
         c_s = pybamm.Integral(f_a_dist * c_s_distribution, R)
         c_s_xav = pybamm.x_average(c_s)
         variables = self._get_standard_concentration_variables(c_s, c_s_xav)

@@ -1235,7 +1235,8 @@ def R_average(symbol, domain):
     elif domain.lower() == "positive":
         f_a_dist = pybamm.standard_parameters_lithium_ion.f_a_dist_p(R)
 
-    return Integral(f_a_dist * symbol, R)
+    # enforce true average, normalising f_a_dist if it is not already
+    return Integral(f_a_dist * symbol, R) / Integral(f_a_dist, R)
 
 
 def boundary_value(symbol, side):
