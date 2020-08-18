@@ -14,7 +14,7 @@ import unittest
 import subprocess
 
 
-def run_code_tests(executable=False, folder: str = "unit"):
+def run_code_tests(executable=False, folder: str = "unit", interpreter="python"):
     """
     Runs tests, exits if they don't finish.
     Parameters
@@ -35,8 +35,8 @@ def run_code_tests(executable=False, folder: str = "unit"):
         suite = unittest.defaultTestLoader.discover(tests, pattern="test*.py")
         unittest.TextTestRunner(verbosity=2).run(suite)
     else:
-        print("Running {} tests with executable 'python'".format(folder))
-        cmd = ["python", "-m", "unittest", "discover", "-v", tests]
+        print("Running {} tests with executable '{}'".format(folder, interpreter))
+        cmd = [interpreter, "-m", "unittest", "discover", "-v", tests]
         p = subprocess.Popen(cmd)
         try:
             ret = p.wait()
@@ -365,6 +365,14 @@ if __name__ == "__main__":
         action="store_true",
         help="Run quick checks (unit tests, flake8, docs)",
     )
+    # Non-standard Python interpreter name for subprocesses
+    parser.add_argument(
+        "--interpreter",
+        nargs="?",
+        default="python",
+        metavar="python",
+        help="Give the name of the Python interpreter if it is not 'python'",
+    )
 
     # Parse!
     args = parser.parse_args()
@@ -373,13 +381,14 @@ if __name__ == "__main__":
     has_run = False
     # Unit vs integration
     folder = args.folder[0]
+    interpreter = args.interpreter
     # Unit tests
     if args.unit:
         has_run = True
-        run_code_tests(True, folder)
+        run_code_tests(True, folder, interpreter)
     if args.nosub:
         has_run = True
-        run_code_tests(folder=folder)
+        run_code_tests(folder=folder, interpreter=interpreter)
     # Flake8
     if args.flake8:
         has_run = True
@@ -391,10 +400,10 @@ if __name__ == "__main__":
     # Notebook tests
     if args.allexamples:
         has_run = True
-        run_notebook_and_scripts()
+        run_notebook_and_scripts(executable=interpreter)
     elif args.examples:
         has_run = True
-        run_notebook_and_scripts(True)
+        run_notebook_and_scripts(True, interpreter)
     if args.debook:
         has_run = True
         export_notebook(*args.debook)
@@ -402,7 +411,7 @@ if __name__ == "__main__":
     if args.quick:
         has_run = True
         run_flake8()
-        run_code_tests(folder)
+        run_code_tests(folder, interpreter=interpreter)
         run_doc_tests()
     # Help
     if not has_run:
