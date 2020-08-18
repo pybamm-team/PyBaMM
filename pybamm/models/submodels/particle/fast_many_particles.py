@@ -50,8 +50,8 @@ class FastManyParticles(BaseParticle):
                 "tertiary": "current collector",
             },
         )
-        N_s_xav = pybamm.FullBroadcast(
-            0, self.domain.lower() + " electrode", "current collector"
+        N_s_xav = pybamm.FullBroadcastToEdges(
+            0, self.domain.lower() + " particle", "current collector"
         )
 
         c_s_xav = pybamm.x_average(c_s)

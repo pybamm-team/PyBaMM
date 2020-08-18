@@ -92,13 +92,20 @@ class DFN(BaseModel):
             self.submodels["positive particle"] = pybamm.particle.FastManyParticles(
                 self.param, "Positive"
             )
+        elif self.options["particle"] == "uniform":
+            self.submodels[
+                "negative particle"
+            ] = pybamm.particle.PolynomialManyParticles(self.param, "Negative", order=0)
+            self.submodels[
+                "positive particle"
+            ] = pybamm.particle.PolynomialManyParticles(self.param, "Positive", order=0)
         elif self.options["particle"] == "quadratic profile":
             self.submodels[
                 "negative particle"
-            ] = pybamm.particle.PolynomialManyParticles(self.param, "Negative")
+            ] = pybamm.particle.PolynomialManyParticles(self.param, "Negative", order=2)
             self.submodels[
                 "positive particle"
-            ] = pybamm.particle.PolynomialManyParticles(self.param, "Positive")
+            ] = pybamm.particle.PolynomialManyParticles(self.param, "Positive", order=2)
 
     def set_solid_submodel(self):
 
