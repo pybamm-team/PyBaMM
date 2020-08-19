@@ -226,6 +226,13 @@ class Function(pybamm.Symbol):
         """
         return self._function_new_copy(simplified_children)
 
+    @property
+    def julia_name(self):
+        "Return the name of the equivalent Julia function, for generating Julia code"
+        raise NotImplementedError(
+            "No julia name defined for function {}".format(self.function)
+        )
+
 
 class SpecificFunction(Function):
     """
@@ -252,6 +259,13 @@ class SpecificFunction(Function):
         """ See :meth:`pybamm.Function._function_simplify()` """
         return self.__class__(*simplified_children)
 
+    @property
+    def julia_name(self):
+        """ See :meth:`pybamm.Function.julia_name` """
+        # By default, the julia name for a specific function is the function's name
+        # Some functions may overwrite this
+        return self.function.__name__
+
 
 class Arcsinh(SpecificFunction):
     """ Arcsinh function """
@@ -262,6 +276,11 @@ class Arcsinh(SpecificFunction):
     def _function_diff(self, children, idx):
         """ See :meth:`pybamm.Symbol._function_diff()`. """
         return 1 / Sqrt(children[0] ** 2 + 1)
+
+    @property
+    def julia_name(self):
+        """ See :meth:`pybamm.Function.julia_name` """
+        return "asinh"
 
 
 def arcsinh(child):
@@ -445,6 +464,11 @@ class Arctan(SpecificFunction):
     def _function_diff(self, children, idx):
         """ See :meth:`pybamm.Function._function_diff()`. """
         return 1 / (children[0] ** 2 + 1)
+
+    @property
+    def julia_name(self):
+        """ See :meth:`pybamm.Function.julia_name` """
+        return "atan"
 
 
 def arctan(child):

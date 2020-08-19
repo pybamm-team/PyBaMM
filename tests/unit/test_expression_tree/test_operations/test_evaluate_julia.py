@@ -37,29 +37,27 @@ class TestEvaluate(unittest.TestCase):
         result = evaluator(None, [1, 3], None)
         self.assertEqual(result, 3)
 
-        # # test function(a*b)
-        # expr = pybamm.Function(test_function, a * b)
-        # evaluator = pybamm.EvaluatorPython(expr)
-        # result = evaluator.evaluate(t=None, y=np.array([[2], [3]]))
-        # self.assertEqual(result, 12)
+        # test function(a*b)
+        expr = pybamm.cos(a * b)
+        evaluator_str = pybamm.get_julia_function(expr)
+        evaluator = Main.eval(evaluator_str)
+        result = evaluator(None, np.array([[2], [3]]), None)
+        self.assertAlmostEqual(result, np.cos(6))
 
-        # expr = pybamm.Function(test_function2, a, b)
-        # evaluator = pybamm.EvaluatorPython(expr)
-        # result = evaluator.evaluate(t=None, y=np.array([[2], [3]]))
-        # self.assertEqual(result, 5)
+        # test a constant expression
+        expr = pybamm.Scalar(2) * pybamm.Scalar(3)
+        evaluator_str = pybamm.get_julia_function(expr)
+        evaluator = Main.eval(evaluator_str)
+        result = evaluator(None, None, None)
+        self.assertEqual(result, 6)
 
-        # # test a constant expression
-        # expr = pybamm.Scalar(2) * pybamm.Scalar(3)
-        # evaluator = pybamm.EvaluatorPython(expr)
-        # result = evaluator.evaluate()
-        # self.assertEqual(result, 6)
-
-        # # test a larger expression
-        # expr = a * b + b + a ** 2 / b + 2 * a + b / 2 + 4
-        # evaluator = pybamm.EvaluatorPython(expr)
-        # for y in y_tests:
-        #     result = evaluator.evaluate(t=None, y=y)
-        #     self.assertEqual(result, expr.evaluate(t=None, y=y))
+        # test a larger expression
+        expr = a * b + b + a ** 2 / b + 2 * a + b / 2 + 4
+        evaluator_str = pybamm.get_julia_function(expr)
+        evaluator = Main.eval(evaluator_str)
+        for y in y_tests:
+            result = evaluator(None, y, None)
+            self.assertEqual(result, expr.evaluate(t=None, y=y))
 
         # # test something with time
         # expr = a * pybamm.t
@@ -179,6 +177,29 @@ class TestEvaluate(unittest.TestCase):
         # for t, y in zip(t_tests, y_tests):
         #     result = evaluator.evaluate(t=t, y=y)
         #     np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
+
+    def test_evaluator_julia_all_functions(self):
+        a = pybamm.StateVector(slice(0, 1))
+        y_test = np.array([1])
+
+        for function in [
+            pybamm.arcsinh,
+            pybamm.cos,
+            pybamm.cosh,
+            pybamm.exp,
+            pybamm.log,
+            pybamm.log10,
+            pybamm.sin,
+            pybamm.sinh,
+            pybamm.sqrt,
+            pybamm.tanh,
+            pybamm.arctan,
+        ]:
+            expr = function(a)
+            evaluator_str = pybamm.get_julia_function(expr)
+            evaluator = Main.eval(evaluator_str)
+            result = evaluator(None, [1], None)
+            self.assertAlmostEqual(result, expr.evaluate(y=y_test))
 
 
 if __name__ == "__main__":

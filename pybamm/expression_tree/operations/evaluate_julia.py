@@ -125,6 +125,8 @@ def find_symbols(symbol, constant_symbols, variable_symbols, to_dense=False):
             symbol_str = "np.minimum({},{})".format(children_vars[0], children_vars[1])
         elif isinstance(symbol, pybamm.Maximum):
             symbol_str = "np.maximum({},{})".format(children_vars[0], children_vars[1])
+        elif isinstance(symbol, pybamm.Power):
+            symbol_str = children_vars[0] + " ^ " + children_vars[1]
         else:
             symbol_str = children_vars[0] + " " + symbol.name + " " + children_vars[1]
 
@@ -144,15 +146,9 @@ def find_symbols(symbol, constant_symbols, variable_symbols, to_dense=False):
                 children_str = child_var
             else:
                 children_str += ", " + child_var
-        if isinstance(symbol.function, np.ufunc):
-            # write any numpy functions directly
-            symbol_str = "np.{}({})".format(symbol.function.__name__, children_str)
-        else:
-            # unknown function, store it as a constant and call this in the
-            # generated code
-            constant_symbols[symbol.id] = symbol.function
-            funct_var = id_to_julia_variable(symbol.id, True)
-            symbol_str = "{}({})".format(funct_var, children_str)
+        # write functions directly
+        julia_name = symbol.julia_name
+        symbol_str = "{}({})".format(julia_name, children_str)
 
     elif isinstance(symbol, pybamm.Concatenation):
 
@@ -312,11 +308,16 @@ def get_julia_function(symbol):
     # add function def to first line
     julia_str = "function f(t, y, p)\n" + julia_str
 
-    # calculate the final variable that will output the result of calling the function
+    # calculate the final variable that will output the result
     result_var = id_to_julia_variable(symbol.id, symbol.is_constant())
+    if symbol.is_constant():
+        result_value = symbol.evaluate()
 
     # add return line
-    julia_str = julia_str + "\n   return " + result_var + "\n  end"
+    if symbol.is_constant() and isinstance(result_value, numbers.Number):
+        julia_str = julia_str + "\n   return " + str(result_value) + "\n  end"
+    else:
+        julia_str = julia_str + "\n   return " + result_var + "\n  end"
 
     return julia_str
 
