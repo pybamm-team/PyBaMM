@@ -102,7 +102,7 @@ from .expression_tree.operations.simplify import (
     simplify_multiplication_division,
 )
 
-from .expression_tree.operations.evaluate import (
+from .expression_tree.operations.evaluate_python import (
     find_symbols,
     id_to_python_variable,
     to_python,
@@ -110,11 +110,12 @@ from .expression_tree.operations.evaluate import (
 )
 
 if system() != "Windows":
-    from .expression_tree.operations.evaluate import EvaluatorJax
+    from .expression_tree.operations.evaluate_python import EvaluatorJax
 
 from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
 from .expression_tree.operations.unpack_symbols import SymbolUnpacker
+from .expression_tree.operations.evaluate_julia import get_julia_function
 
 #
 # Model classes

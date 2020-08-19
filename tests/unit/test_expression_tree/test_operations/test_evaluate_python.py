@@ -1,5 +1,5 @@
 #
-# Test for the evaluate functions
+# Test for the evaluate-to-python functions
 #
 import pybamm
 
