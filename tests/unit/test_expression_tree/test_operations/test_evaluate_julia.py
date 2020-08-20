@@ -3,7 +3,11 @@
 #
 import pybamm
 
-from tests import get_discretisation_for_testing, get_1p1d_discretisation_for_testing
+from tests import (
+    get_mesh_for_testing,
+    get_discretisation_for_testing,
+    get_1p1d_discretisation_for_testing,
+)
 import unittest
 import numpy as np
 import scipy.sparse
@@ -88,39 +92,46 @@ class TestEvaluate(unittest.TestCase):
         # # test something with a minimum or maximum
         # a = pybamm.Vector([1, 2])
         # expr = pybamm.minimum(a, pybamm.StateVector(slice(0, 2)))
-        # evaluator = pybamm.EvaluatorPython(expr)
+        # evaluator_str = pybamm.get_julia_function(expr)
+        # evaluator = Main.eval(evaluator_str)
         # for t, y in zip(t_tests, y_tests):
         #     result = evaluator(t,y,None)
         #     np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         # expr = pybamm.maximum(a, pybamm.StateVector(slice(0, 2)))
-        # evaluator = pybamm.EvaluatorPython(expr)
+        # evaluator_str = pybamm.get_julia_function(expr)
+        # evaluator = Main.eval(evaluator_str)
         # for t, y in zip(t_tests, y_tests):
         #     result = evaluator(t,y,None)
         #     np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         # # test something with an index
         # expr = pybamm.Index(A @ pybamm.StateVector(slice(0, 2)), 0)
-        # evaluator = pybamm.EvaluatorPython(expr)
+        # evaluator_str = pybamm.get_julia_function(expr)
+        # evaluator = Main.eval(evaluator_str)
         # for t, y in zip(t_tests, y_tests):
         #     result = evaluator(t,y,None)
         #     self.assertEqual(result, expr.evaluate(t=t, y=y))
 
-        # # test something with a sparse matrix multiplication
-        # A = pybamm.Matrix([[1, 2], [3, 4]])
-        # B = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))
-        # C = pybamm.Matrix(scipy.sparse.coo_matrix(np.array([[1, 0], [0, 4]])))
-        # expr = A @ B @ C @ pybamm.StateVector(slice(0, 2))
-        # evaluator = pybamm.EvaluatorPython(expr)
-        # for t, y in zip(t_tests, y_tests):
-        #     result = evaluator(t,y,None)
-        #     np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
+        # test something with a sparse matrix multiplication
+        A = pybamm.Matrix([[1, 2], [3, 4]])
+        B = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))
+        C = pybamm.Matrix(scipy.sparse.coo_matrix(np.array([[1, 0], [0, 4]])))
+        expr = A @ B @ C @ pybamm.StateVector(slice(0, 2))
+        evaluator_str = pybamm.get_julia_function(expr)
+        evaluator = Main.eval(evaluator_str)
+        for t, y in zip(t_tests, y_tests):
+            result = evaluator(t, y, None)
+            # note 1D arrays are flattened in Julia
+            np.testing.assert_allclose(result, expr.evaluate(t=t, y=y).flatten())
 
-        # expr = B @ pybamm.StateVector(slice(0, 2))
-        # evaluator = pybamm.EvaluatorPython(expr)
-        # for t, y in zip(t_tests, y_tests):
-        #     result = evaluator(t,y,None)
-        #     np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
+        expr = B @ pybamm.StateVector(slice(0, 2))
+        evaluator_str = pybamm.get_julia_function(expr)
+        evaluator = Main.eval(evaluator_str)
+        for t, y in zip(t_tests, y_tests):
+            result = evaluator(t, y, None)
+            # note 1D arrays are flattened in Julia
+            np.testing.assert_allclose(result, expr.evaluate(t=t, y=y).flatten())
 
         # test numpy concatenation
         a = pybamm.StateVector(slice(0, 1))
@@ -151,14 +162,16 @@ class TestEvaluate(unittest.TestCase):
         # B = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[2, 0], [5, 0]])))
         # a = pybamm.StateVector(slice(0, 1))
         # expr = pybamm.SparseStack(A, a * B)
-        # evaluator = pybamm.EvaluatorPython(expr)
+        # evaluator_str = pybamm.get_julia_function(expr)
+        # evaluator = Main.eval(evaluator_str)
         # for t, y in zip(t_tests, y_tests):
         #     result = evaluator(t,y,None).toarray()
         #     np.testing.assert_allclose(result, expr.evaluate(t=t, y=y).toarray())
 
         # # test Inner
         # expr = pybamm.Inner(a, b)
-        # evaluator = pybamm.EvaluatorPython(expr)
+        # evaluator_str = pybamm.get_julia_function(expr)
+        # evaluator = Main.eval(evaluator_str)
         # for t, y in zip(t_tests, y_tests):
         #     result = evaluator(t,y,None)
         #     np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
@@ -166,7 +179,8 @@ class TestEvaluate(unittest.TestCase):
         # v = pybamm.StateVector(slice(0, 2))
         # A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))
         # expr = pybamm.Inner(A, v)
-        # evaluator = pybamm.EvaluatorPython(expr)
+        # evaluator_str = pybamm.get_julia_function(expr)
+        # evaluator = Main.eval(evaluator_str)
         # for t, y in zip(t_tests, y_tests):
         #     result = evaluator(t,y,None).toarray()
         #     np.testing.assert_allclose(result, expr.evaluate(t=t, y=y).toarray())
@@ -176,7 +190,8 @@ class TestEvaluate(unittest.TestCase):
         # a = pybamm.StateVector(slice(0, 1), slice(3, 4))
         # b = pybamm.StateVector(slice(1, 3))
         # expr = a * b
-        # evaluator = pybamm.EvaluatorPython(expr)
+        # evaluator_str = pybamm.get_julia_function(expr)
+        # evaluator = Main.eval(evaluator_str)
         # for t, y in zip(t_tests, y_tests):
         #     result = evaluator(t,y,None)
         #     np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
@@ -203,6 +218,64 @@ class TestEvaluate(unittest.TestCase):
             evaluator = Main.eval(evaluator_str)
             result = evaluator(None, y_test, None)
             np.testing.assert_almost_equal(result, expr.evaluate(y=y_test).flatten())
+
+    def test_evaluator_julia_discretised_operators(self):
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        combined_submesh = mesh.combine_submeshes(*whole_cell)
+
+        # grad
+        var = pybamm.Variable("var", domain=whole_cell)
+        grad_eqn = pybamm.grad(var)
+        boundary_conditions = {
+            var.id: {
+                "left": (pybamm.Scalar(1), "Dirichlet"),
+                "right": (pybamm.Scalar(1), "Dirichlet"),
+            }
+        }
+        disc.bcs = boundary_conditions
+
+        disc.set_variable_slices([var])
+        grad_eqn_disc = disc.process_symbol(grad_eqn)
+
+        # test
+        constant_y = np.ones_like(combined_submesh.nodes[:, np.newaxis])
+
+        evaluator_str = pybamm.get_julia_function(grad_eqn_disc)
+        evaluator = Main.eval(evaluator_str)
+        result = evaluator(None, constant_y, None)
+        np.testing.assert_almost_equal(
+            result, grad_eqn_disc.evaluate(y=constant_y).flatten()
+        )
+
+        # # div: test on linear y (should have laplacian zero) so change bcs
+        # linear_y = combined_submesh.nodes
+        # N = pybamm.grad(var)
+        # div_eqn = pybamm.div(N)
+        # boundary_conditions = {
+        #     var.id: {
+        #         "left": (pybamm.Scalar(0), "Dirichlet"),
+        #         "right": (pybamm.Scalar(1), "Dirichlet"),
+        #     }
+        # }
+
+        # disc.bcs = boundary_conditions
+
+        # grad_eqn_disc = disc.process_symbol(grad_eqn)
+        # np.testing.assert_array_almost_equal(
+        #     grad_eqn_disc.evaluate(None, linear_y),
+        #     np.ones_like(combined_submesh.edges[:, np.newaxis]),
+        # )
+
+        # div_eqn_disc = disc.process_symbol(div_eqn)
+        # np.testing.assert_array_almost_equal(
+        #     div_eqn_disc.evaluate(None, linear_y),
+        #     np.zeros_like(combined_submesh.nodes[:, np.newaxis]),
+        # )
 
 
 if __name__ == "__main__":

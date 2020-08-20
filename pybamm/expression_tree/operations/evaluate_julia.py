@@ -58,8 +58,19 @@ def find_symbols(symbol, constant_symbols, variable_symbols, to_dense=False):
     if symbol.is_constant():
         value = symbol.evaluate()
         if not isinstance(value, numbers.Number):
-            if to_dense and scipy.sparse.issparse(value):
-                constant_symbols[symbol.id] = value.toarray()
+            if scipy.sparse.issparse(value):
+                # Create Julia SparseArray
+                row, col, data = scipy.sparse.find(value)
+                m, n = value.shape
+                # add 1 to correct for 1-indexing in Julia
+                # use array2string so that commas are included
+                constant_symbols[symbol.id] = "sparse({}, {}, {}, {}, {})".format(
+                    np.array2string(row + 1, separator=","),
+                    np.array2string(col + 1, separator=","),
+                    np.array2string(data, separator=","),
+                    m,
+                    n,
+                )
             else:
                 constant_symbols[symbol.id] = value
         return
@@ -270,8 +281,9 @@ def get_julia_function(symbol):
     julia_str = "   " + julia_str
     julia_str = julia_str.replace("\n", "\n   ")
 
-    # add function def to first line
-    julia_str = "function f(t, y, p)\n" + julia_str
+    # add function def and sparse arrays to first line
+    imports = "using SparseArrays\n"
+    julia_str = imports + "function f_pybamm(t, y, p)\n" + julia_str
 
     # calculate the final variable that will output the result
     result_var = id_to_julia_variable(symbol.id, symbol.is_constant())
@@ -280,9 +292,9 @@ def get_julia_function(symbol):
 
     # add return line
     if symbol.is_constant() and isinstance(result_value, numbers.Number):
-        julia_str = julia_str + "\n   return " + str(result_value) + "\n  end"
+        julia_str = julia_str + "\n   return " + str(result_value) + "\nend"
     else:
-        julia_str = julia_str + "\n   return " + result_var + "\n  end"
+        julia_str = julia_str + "\n   return " + result_var + "\nend"
 
     return julia_str
 
