@@ -33,6 +33,7 @@ rhs = pybamm.get_julia_function(model.concatenated_rhs.simplify())
 from julia import Main
 
 rhs_eval = Main.eval(rhs)
+rhs_eval(0, model.concatenated_initial_conditions.evaluate(), None)
 n = 1
 
 

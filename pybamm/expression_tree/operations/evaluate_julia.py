@@ -62,6 +62,11 @@ def find_symbols(symbol, constant_symbols, variable_symbols, to_dense=False):
                 # Create Julia SparseArray
                 row, col, data = scipy.sparse.find(value)
                 m, n = value.shape
+                # Set print options large enough to avoid ellipsis
+                # at least as big is len(row) = len(col) = len(data)
+                np.set_printoptions(
+                    threshold=max(np.get_printoptions()["threshold"], len(row) + 10)
+                )
                 # add 1 to correct for 1-indexing in Julia
                 # use array2string so that commas are included
                 constant_symbols[symbol.id] = "sparse({}, {}, {}, {}, {})".format(
@@ -96,21 +101,22 @@ def find_symbols(symbol, constant_symbols, variable_symbols, to_dense=False):
         # Multiplication and Division need special handling for scipy sparse matrices
         # TODO: we can pass through a dummy y and t to get the type and then hardcode
         # the right line, avoiding these checks
-        if isinstance(symbol, (pybamm.Multiplication, pybamm.Inner)):
-            symbol_str = "{0} .* {1}".format(children_vars[0], children_vars[1])
         if isinstance(symbol, pybamm.MatrixMultiplication):
             symbol_str = "{0} * {1}".format(children_vars[0], children_vars[1])
-        elif isinstance(symbol, pybamm.Division):
-            symbol_str = "{0} ./ {1}".format(children_vars[0], children_vars[1])
-
+        elif isinstance(symbol, pybamm.Inner):
+            symbol_str = "{0} .* {1}".format(children_vars[0], children_vars[1])
         elif isinstance(symbol, pybamm.Minimum):
             symbol_str = "np.minimum({},{})".format(children_vars[0], children_vars[1])
         elif isinstance(symbol, pybamm.Maximum):
             symbol_str = "np.maximum({},{})".format(children_vars[0], children_vars[1])
         elif isinstance(symbol, pybamm.Power):
-            symbol_str = children_vars[0] + " ^ " + children_vars[1]
+            # julia uses ^ instead of ** for power
+            # include dot for elementwise operations
+            symbol_str = children_vars[0] + " .^ " + children_vars[1]
         else:
-            symbol_str = children_vars[0] + " " + symbol.name + " " + children_vars[1]
+            # all other operations use the same symbol
+            # include dot: all other operations should be elementwise
+            symbol_str = children_vars[0] + " ." + symbol.name + " " + children_vars[1]
 
     elif isinstance(symbol, pybamm.UnaryOperator):
         # Index has a different syntax than other univariate operations
