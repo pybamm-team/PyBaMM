@@ -81,14 +81,16 @@ class TestEvaluate(unittest.TestCase):
         evaluator = Main.eval(evaluator_str)
         for t, y in zip(t_tests, y_tests):
             result = evaluator(t, y, None)
-            np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
+            # note 1D arrays are flattened in Julia
+            np.testing.assert_allclose(result, expr.evaluate(t=t, y=y).flatten())
 
         expr = a > pybamm.StateVector(slice(0, 2))
         evaluator_str = pybamm.get_julia_function(expr)
         evaluator = Main.eval(evaluator_str)
         for t, y in zip(t_tests, y_tests):
             result = evaluator(t, y, None)
-            np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
+            # note 1D arrays are flattened in Julia
+            np.testing.assert_allclose(result, expr.evaluate(t=t, y=y).flatten())
 
         # # test something with a minimum or maximum
         # a = pybamm.Vector([1, 2])

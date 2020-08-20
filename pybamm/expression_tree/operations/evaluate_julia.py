@@ -76,6 +76,21 @@ def find_symbols(symbol, constant_symbols, variable_symbols, to_dense=False):
                     m,
                     n,
                 )
+            elif value.shape == (1, 1):
+                # Extract value if array has only one entry
+                constant_symbols[symbol.id] = value[0, 0]
+            elif value.shape[1] == 1:
+                # Set print options large enough to avoid ellipsis
+                # at least as big is len(row) = len(col) = len(data)
+                np.set_printoptions(
+                    threshold=max(
+                        np.get_printoptions()["threshold"], value.shape[0] + 10
+                    )
+                )
+                # Flatten a 1D array
+                constant_symbols[symbol.id] = np.array2string(
+                    value.flatten(), separator=","
+                )
             else:
                 constant_symbols[symbol.id] = value
         return
@@ -288,7 +303,7 @@ def get_julia_function(symbol):
     julia_str = julia_str.replace("\n", "\n   ")
 
     # add function def and sparse arrays to first line
-    imports = "using SparseArrays\n"
+    imports = "begin\nusing SparseArrays\n"
     julia_str = imports + "function f_pybamm(t, y, p)\n" + julia_str
 
     # calculate the final variable that will output the result
@@ -297,10 +312,11 @@ def get_julia_function(symbol):
         result_value = symbol.evaluate()
 
     # add return line
+    # two "end"s: one to close the function, one to close the "begin"
     if symbol.is_constant() and isinstance(result_value, numbers.Number):
-        julia_str = julia_str + "\n   return " + str(result_value) + "\nend"
+        julia_str = julia_str + "\n   return " + str(result_value) + "\nend\nend"
     else:
-        julia_str = julia_str + "\n   return " + result_var + "\nend"
+        julia_str = julia_str + "\n   return " + result_var + "\nend\nend"
 
     return julia_str
 
