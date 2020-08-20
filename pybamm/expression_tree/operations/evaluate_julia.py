@@ -85,41 +85,12 @@ def find_symbols(symbol, constant_symbols, variable_symbols, to_dense=False):
         # Multiplication and Division need special handling for scipy sparse matrices
         # TODO: we can pass through a dummy y and t to get the type and then hardcode
         # the right line, avoiding these checks
-        if isinstance(symbol, pybamm.Multiplication):
-            dummy_eval_left = symbol.children[0].evaluate_for_shape()
-            dummy_eval_right = symbol.children[1].evaluate_for_shape()
-            if not to_dense and scipy.sparse.issparse(dummy_eval_left):
-                symbol_str = "{0}.multiply({1})".format(
-                    children_vars[0], children_vars[1]
-                )
-            elif not to_dense and scipy.sparse.issparse(dummy_eval_right):
-                symbol_str = "{1}.multiply({0})".format(
-                    children_vars[0], children_vars[1]
-                )
-            else:
-                symbol_str = "{0} .* {1}".format(children_vars[0], children_vars[1])
+        if isinstance(symbol, (pybamm.Multiplication, pybamm.Inner)):
+            symbol_str = "{0} .* {1}".format(children_vars[0], children_vars[1])
+        if isinstance(symbol, pybamm.MatrixMultiplication):
+            symbol_str = "{0} * {1}".format(children_vars[0], children_vars[1])
         elif isinstance(symbol, pybamm.Division):
-            dummy_eval_left = symbol.children[0].evaluate_for_shape()
-            if not to_dense and scipy.sparse.issparse(dummy_eval_left):
-                symbol_str = "{0}.multiply(1/{1})".format(
-                    children_vars[0], children_vars[1]
-                )
-            else:
-                symbol_str = "{0} / {1}".format(children_vars[0], children_vars[1])
-
-        elif isinstance(symbol, pybamm.Inner):
-            dummy_eval_left = symbol.children[0].evaluate_for_shape()
-            dummy_eval_right = symbol.children[1].evaluate_for_shape()
-            if not to_dense and scipy.sparse.issparse(dummy_eval_left):
-                symbol_str = "{0}.multiply({1})".format(
-                    children_vars[0], children_vars[1]
-                )
-            elif not to_dense and scipy.sparse.issparse(dummy_eval_right):
-                symbol_str = "{1}.multiply({0})".format(
-                    children_vars[0], children_vars[1]
-                )
-            else:
-                symbol_str = "{0} * {1}".format(children_vars[0], children_vars[1])
+            symbol_str = "{0} ./ {1}".format(children_vars[0], children_vars[1])
 
         elif isinstance(symbol, pybamm.Minimum):
             symbol_str = "np.minimum({},{})".format(children_vars[0], children_vars[1])
@@ -133,8 +104,10 @@ def find_symbols(symbol, constant_symbols, variable_symbols, to_dense=False):
     elif isinstance(symbol, pybamm.UnaryOperator):
         # Index has a different syntax than other univariate operations
         if isinstance(symbol, pybamm.Index):
+            # Because of how julia indexing works, add 1 to the start, but not to the
+            # stop
             symbol_str = "{}[{}:{}]".format(
-                children_vars[0], symbol.slice.start, symbol.slice.stop
+                children_vars[0], symbol.slice.start + 1, symbol.slice.stop
             )
         else:
             symbol_str = symbol.name + children_vars[0]
@@ -148,24 +121,17 @@ def find_symbols(symbol, constant_symbols, variable_symbols, to_dense=False):
                 children_str += ", " + child_var
         # write functions directly
         julia_name = symbol.julia_name
-        symbol_str = "{}({})".format(julia_name, children_str)
+        # add a . to allow elementwise operations
+        symbol_str = "{}.({})".format(julia_name, children_str)
 
     elif isinstance(symbol, pybamm.Concatenation):
 
         # don't bother to concatenate if there is only a single child
-        if isinstance(symbol, pybamm.NumpyConcatenation):
-            if len(children_vars) > 1:
-                symbol_str = "np.concatenate(({}))".format(",".join(children_vars))
+        if isinstance(symbol, (pybamm.NumpyConcatenation, pybamm.SparseStack)):
+            if len(children_vars) == 1:
+                symbol_str = children_vars
             else:
-                symbol_str = "{}".format(",".join(children_vars))
-
-        elif isinstance(symbol, pybamm.SparseStack):
-            if not to_dense and len(children_vars) > 1:
-                symbol_str = "scipy.sparse.vstack(({}))".format(",".join(children_vars))
-            elif len(children_vars) > 1:
-                symbol_str = "np.vstack(({}))".format(",".join(children_vars))
-            else:
-                symbol_str = "{}".format(",".join(children_vars))
+                symbol_str = "vcat({})".format(",".join(children_vars))
 
         # DomainConcatenation specifies a particular ordering for the concatenation,
         # which we must follow
@@ -217,7 +183,9 @@ def find_symbols(symbol, constant_symbols, variable_symbols, to_dense=False):
 
     else:
         raise NotImplementedError(
-            "Not implemented for a symbol of type '{}'".format(type(symbol))
+            "Conversion to Julia not implemented for a symbol of type '{}'".format(
+                type(symbol)
+            )
         )
 
     variable_symbols[symbol.id] = symbol_str
@@ -294,12 +262,9 @@ def get_julia_function(symbol):
     constants, julia_str = to_julia(symbol, debug=False)
 
     # extract constants in generated function
-    for i, symbol_id in enumerate(constants.keys()):
+    for symbol_id, const_value in constants.items():
         const_name = id_to_julia_variable(symbol_id, True)
-        julia_str = "{} = constants[{}]\n".format(const_name, i) + julia_str
-
-    # constants passed in as an ordered dict, convert to list
-    constants = list(constants.values())
+        julia_str = "{} = {}\n".format(const_name, const_value) + julia_str
 
     # indent code
     julia_str = "   " + julia_str
