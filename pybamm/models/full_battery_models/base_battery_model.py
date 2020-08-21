@@ -203,6 +203,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "external submodels": [],
             "sei": None,
             "sei porosity change": False,
+            "working electrode": None
         }
         # Change the default for cell geometry based on which thermal option is provided
         extra_options = extra_options or {}

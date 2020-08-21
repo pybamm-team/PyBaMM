@@ -20,6 +20,8 @@ class TestCasadiConverter(unittest.TestCase):
         b = pybamm.Scalar(1)
         c = pybamm.Scalar(-1)
         d = pybamm.Scalar(2)
+        e = pybamm.Scalar(3)
+        g = pybamm.Scalar(3.3)
 
         self.assertEqual(a.to_casadi(), casadi.MX(0))
         self.assertEqual(d.to_casadi(), casadi.MX(2))
@@ -28,6 +30,10 @@ class TestCasadiConverter(unittest.TestCase):
         self.assertEqual((-b).to_casadi(), casadi.MX(-1))
         # absolute value
         self.assertEqual(abs(c).to_casadi(), casadi.MX(1))
+        # floor
+        self.assertEqual(pybamm.Floor(g).to_casadi(), casadi.MX(3))
+        # ceiling
+        self.assertEqual(pybamm.Ceiling(g).to_casadi(), casadi.MX(4))
 
         # function
         def square_plus_one(x):
@@ -53,6 +59,9 @@ class TestCasadiConverter(unittest.TestCase):
         self.assertEqual(pybamm.Power(c, d).to_casadi(), casadi.MX(1))
         # division
         self.assertEqual(pybamm.Division(b, d).to_casadi(), casadi.MX(1 / 2))
+
+        # modulo
+        self.assertEqual(pybamm.Modulo(e, d).to_casadi(), casadi.MX(1))
 
         # minimum and maximum
         self.assertEqual(pybamm.Minimum(a, b).to_casadi(), casadi.MX(0))
@@ -95,9 +104,19 @@ class TestCasadiConverter(unittest.TestCase):
         self.assert_casadi_equal(
             pybamm.Function(np.abs, c).to_casadi(), casadi.MX(3), evalf=True
         )
-        for np_fun in [np.sqrt, np.tanh, np.cosh, np.sinh,
-                       np.exp, np.log, np.sign, np.sin, np.cos,
-                       np.arccosh, np.arcsinh]:
+        for np_fun in [
+            np.sqrt,
+            np.tanh,
+            np.cosh,
+            np.sinh,
+            np.exp,
+            np.log,
+            np.sign,
+            np.sin,
+            np.cos,
+            np.arccosh,
+            np.arcsinh,
+        ]:
             self.assert_casadi_equal(
                 pybamm.Function(np_fun, c).to_casadi(), casadi.MX(np_fun(3)), evalf=True
             )
