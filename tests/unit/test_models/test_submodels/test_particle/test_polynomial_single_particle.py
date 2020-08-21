@@ -12,13 +12,22 @@ class TestSingleParticle(unittest.TestCase):
         param = pybamm.LithiumIonParameters()
 
         a = pybamm.PrimaryBroadcast(pybamm.Scalar(0), "current collector")
+
         variables = {
             "Current collector current density": a,
             "X-averaged negative electrode interfacial current density": a,
             "X-averaged negative electrode temperature": a,
         }
 
-        submodel = pybamm.particle.PolynomialSingleParticle(param, "Negative")
+        submodel = pybamm.particle.PolynomialSingleParticle(param, "Negative", order=0)
+        std_tests = tests.StandardSubModelTests(submodel, variables)
+        std_tests.test_all()
+
+        submodel = pybamm.particle.PolynomialSingleParticle(param, "Negative", order=2)
+        std_tests = tests.StandardSubModelTests(submodel, variables)
+        std_tests.test_all()
+
+        submodel = pybamm.particle.PolynomialSingleParticle(param, "Negative", order=4)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
@@ -27,7 +36,16 @@ class TestSingleParticle(unittest.TestCase):
             "X-averaged positive electrode interfacial current density": a,
             "X-averaged positive electrode temperature": a,
         }
-        submodel = pybamm.particle.PolynomialSingleParticle(param, "Positive")
+
+        submodel = pybamm.particle.PolynomialSingleParticle(param, "Positive", order=0)
+        std_tests = tests.StandardSubModelTests(submodel, variables)
+        std_tests.test_all()
+
+        submodel = pybamm.particle.PolynomialSingleParticle(param, "Positive", order=2)
+        std_tests = tests.StandardSubModelTests(submodel, variables)
+        std_tests.test_all()
+
+        submodel = pybamm.particle.PolynomialSingleParticle(param, "Positive", order=4)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

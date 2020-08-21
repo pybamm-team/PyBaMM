@@ -7,7 +7,8 @@ from .base_particle import BaseParticle
 
 
 class FickianSingleParticle(BaseParticle):
-    """Base class for molar conservation in a single x-averaged particle which employs
+    """
+    Class for molar conservation in a single x-averaged particle which employs
     Fick's law.
 
     Parameters
@@ -16,7 +17,6 @@ class FickianSingleParticle(BaseParticle):
         The parameters to use for this submodel
     domain : str
         The domain of the model either 'Negative' or 'Positive'
-
 
     **Extends:** :class:`pybamm.particle.BaseParticle`
     """

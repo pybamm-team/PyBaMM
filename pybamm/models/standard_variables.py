@@ -178,7 +178,25 @@ c_s_p_surf_xav = pybamm.Variable(
     domain="current collector",
     bounds=(0, 1),
 )
-
+# Average particle concentration gradient (for polynomial particle concentration
+# models). Note: we make the distinction here between the flux defined as
+# N = -D*dc/dr and the concentration gradient q = dc/dr
+q_s_n_rav = pybamm.Variable(
+    "R-averaged negative particle concentration gradient",
+    domain="negative electrode",
+    auxiliary_domains={"secondary": "current collector"},
+)
+q_s_p_rav = pybamm.Variable(
+    "R-averaged positive particle concentration gradient",
+    domain="positive electrode",
+    auxiliary_domains={"secondary": "current collector"},
+)
+q_s_n_rxav = pybamm.Variable(
+    "R-X-averaged negative particle concentration gradient", domain="current collector"
+)
+q_s_p_rxav = pybamm.Variable(
+    "R-X-averaged positive particle concentration gradient", domain="current collector"
+)
 
 # Porosity
 eps_n = pybamm.Variable(

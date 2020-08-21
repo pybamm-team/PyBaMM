@@ -106,14 +106,7 @@ class SPMe(BaseModel):
             self.submodels["positive particle"] = pybamm.particle.FickianSingleParticle(
                 self.param, "Positive"
             )
-        elif self.options["particle"] == "fast diffusion":
-            self.submodels["negative particle"] = pybamm.particle.FastSingleParticle(
-                self.param, "Negative"
-            )
-            self.submodels["positive particle"] = pybamm.particle.FastSingleParticle(
-                self.param, "Positive"
-            )
-        elif self.options["particle"] == "uniform":
+        elif self.options["particle"] == "uniform profile":
             self.submodels[
                 "negative particle"
             ] = pybamm.particle.PolynomialSingleParticle(
@@ -134,6 +127,17 @@ class SPMe(BaseModel):
                 "positive particle"
             ] = pybamm.particle.PolynomialSingleParticle(
                 self.param, "Positive", order=2
+            )
+        elif self.options["particle"] == "quartic profile":
+            self.submodels[
+                "negative particle"
+            ] = pybamm.particle.PolynomialSingleParticle(
+                self.param, "Negative", order=4
+            )
+            self.submodels[
+                "positive particle"
+            ] = pybamm.particle.PolynomialSingleParticle(
+                self.param, "Positive", order=4
             )
 
     def set_negative_electrode_submodel(self):

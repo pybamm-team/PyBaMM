@@ -85,14 +85,7 @@ class DFN(BaseModel):
             self.submodels["positive particle"] = pybamm.particle.FickianManyParticles(
                 self.param, "Positive"
             )
-        elif self.options["particle"] == "fast diffusion":
-            self.submodels["negative particle"] = pybamm.particle.FastManyParticles(
-                self.param, "Negative"
-            )
-            self.submodels["positive particle"] = pybamm.particle.FastManyParticles(
-                self.param, "Positive"
-            )
-        elif self.options["particle"] == "uniform":
+        elif self.options["particle"] == "uniform profile":
             self.submodels[
                 "negative particle"
             ] = pybamm.particle.PolynomialManyParticles(self.param, "Negative", order=0)
@@ -106,6 +99,13 @@ class DFN(BaseModel):
             self.submodels[
                 "positive particle"
             ] = pybamm.particle.PolynomialManyParticles(self.param, "Positive", order=2)
+        elif self.options["particle"] == "quartic profile":
+            self.submodels[
+                "negative particle"
+            ] = pybamm.particle.PolynomialManyParticles(self.param, "Negative", order=4)
+            self.submodels[
+                "positive particle"
+            ] = pybamm.particle.PolynomialManyParticles(self.param, "Positive", order=4)
 
     def set_solid_submodel(self):
 

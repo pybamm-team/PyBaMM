@@ -3,26 +3,29 @@
 #
 import pybamm
 
-# pybamm.set_logging_level("INFO")
-# pybamm.set_logging_level("DEBUG")
 # load models
 models = [
-    pybamm.lithium_ion.SPMe(
+    pybamm.lithium_ion.DFN(
         options={"particle": "Fickian diffusion"}, name="Fickian diffusion"
     ),
-    pybamm.lithium_ion.SPMe(
-        options={"particle": "fast diffusion"}, name="fast diffusion"
+    pybamm.lithium_ion.DFN(
+        options={"particle": "uniform profile"}, name="uniform profile"
     ),
-    pybamm.lithium_ion.SPMe(options={"particle": "uniform"}, name="uniform profile"),
-    pybamm.lithium_ion.SPMe(
+    pybamm.lithium_ion.DFN(
         options={"particle": "quadratic profile"}, name="quadratic profile"
     ),
+    pybamm.lithium_ion.DFN(
+        options={"particle": "quartic profile"}, name="quartic profile"
+    ),
 ]
+
+# pick parameter values
+parameter_values = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Ecker2015)
 
 # create and solve simulations
 sims = []
 for model in models:
-    sim = pybamm.Simulation(model)
+    sim = pybamm.Simulation(model, parameter_values=parameter_values)
     sim.solve([0, 3600])
     sims.append(sim)
     print("Particle model: {}".format(model.name))

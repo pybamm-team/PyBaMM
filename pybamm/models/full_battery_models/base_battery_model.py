@@ -46,8 +46,8 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "potential pair" or "potential pair quite conductive".
             * "particle" : str, optional
                 Sets the submodel to use to describe behaviour within the particle.
-                Can be "Fickian diffusion" (default), "fast diffusion", "uniform" or
-                "quadratic profile".
+                Can be "Fickian diffusion" (default), "uniform profile",
+                "quadratic profile", or "quartic profile".
             * "particle shape" : str, optional
                 Sets the model shape of the electrode particles. This is used to
                 calculate the surface area per unit volume. Can be "spherical"
@@ -351,11 +351,17 @@ class BaseBatteryModel(pybamm.BaseModel):
         if options["particle"] not in [
             "Fickian diffusion",
             "fast diffusion",
-            "uniform",
+            "uniform profile",
             "quadratic profile",
+            "quartic profile",
         ]:
             raise pybamm.OptionError(
                 "particle model '{}' not recognised".format(options["particle"])
+            )
+        if options["particle"] == "fast diffusion":
+            raise NotImplementedError(
+                "The 'fast diffusion' option has been renamed. "
+                "Use 'uniform profile' instead."
             )
         if options["particle shape"] not in ["spherical", "user"]:
             raise pybamm.OptionError(

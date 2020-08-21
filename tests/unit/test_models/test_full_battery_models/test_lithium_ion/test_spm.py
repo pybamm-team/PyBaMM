@@ -89,13 +89,18 @@ class TestSPM(unittest.TestCase):
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
-    def test_particle_fast_diffusion(self):
-        options = {"particle": "fast diffusion"}
+    def test_particle_uniform(self):
+        options = {"particle": "uniform profile"}
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
-    def test_quadratic_particle(self):
+    def test_particle_quadratic(self):
         options = {"particle": "quadratic profile"}
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
+
+    def test_particle_quartic(self):
+        options = {"particle": "quartic profile"}
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
@@ -126,8 +131,8 @@ class TestSPM(unittest.TestCase):
 
         # with custom submodels
         model = pybamm.lithium_ion.SPM({"thermal": "x-full"}, build=False)
-        model.submodels["negative particle"] = pybamm.particle.FastSingleParticle(
-            model.param, "Negative"
+        model.submodels["negative particle"] = pybamm.particle.PolynomialSingleParticle(
+            model.param, "Negative", order=0
         )
         model.build_model()
         new_model = model.new_copy()

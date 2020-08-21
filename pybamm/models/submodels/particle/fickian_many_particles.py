@@ -6,8 +6,8 @@ from .base_particle import BaseParticle
 
 
 class FickianManyParticles(BaseParticle):
-    """Base class for molar conservation in many particles which employs
-    Fick's law.
+    """
+    Class for molar conservation in many particles which employs Fick's law.
 
     Parameters
     ----------
@@ -15,7 +15,6 @@ class FickianManyParticles(BaseParticle):
         The parameters to use for this submodel
     domain : str
         The domain of the model either 'Negative' or 'Positive'
-
 
     **Extends:** :class:`pybamm.particle.BaseParticle`
     """
