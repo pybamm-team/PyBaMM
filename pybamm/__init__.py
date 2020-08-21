@@ -185,6 +185,7 @@ from .meshes.one_dimensional_submeshes import (
     Exponential1DSubMesh,
     Chebyshev1DSubMesh,
     UserSupplied1DSubMesh,
+    SpectralVolume1DSubMesh,
 )
 from .meshes.scikit_fem_submeshes import (
     ScikitSubMesh2D,
@@ -200,6 +201,7 @@ from .meshes.scikit_fem_submeshes import (
 from .spatial_methods.spatial_method import SpatialMethod
 from .spatial_methods.zero_dimensional_method import ZeroDimensionalSpatialMethod
 from .spatial_methods.finite_volume import FiniteVolume
+from .spatial_methods.spectral_volume import SpectralVolume
 from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 
 #
