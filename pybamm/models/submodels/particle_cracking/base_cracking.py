@@ -49,7 +49,7 @@ class BaseCracking(pybamm.BaseSubModel):
         The variables which can be derived from the crack length.
         """
         rho_cr = pybamm.mechanical_parameters.rho_cr
-        a_n = pybamm.standard_parameters_lithium_ion.a_n
+        a_n = pybamm.LithiumIonParameters().a_n
         a_n_cr = l_cr_n * 2 * rho_cr  # crack surface area normalised by a_n
         a_n_cr_dim = a_n_cr * a_n  # crack surface area [m-1]
         # a_n_cr_xavg=pybamm.x_average(a_n_cr)

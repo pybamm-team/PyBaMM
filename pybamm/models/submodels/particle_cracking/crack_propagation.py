@@ -33,11 +33,10 @@ class CrackPropagation(BaseCracking):
         l_cr_n = variables["Negative particle crack length"]
         # crack length in anode particles
         mp = pybamm.mechanical_parameters
-        R = pybamm.standard_parameters_lithium_ion.R
-        Delta_T = pybamm.thermal_parameters.Delta_T
+        R = pybamm.LithiumIonParameters().R
+        Delta_T = pybamm.LithiumIonParameters().Delta_T
         k_cr_n=mp.k_cr # pybamm.exp( mp.Eac_cr / R * (1 / T_n / Delta_T - 1 / mp.T_ref)) 
         # cracking rate with temperature dependence
-        # stress_t_surf_n[stress_t_surf_n<0]=pybamm.Scalr(0) 
         # # compressive stress will not lead to crack propagation
         dK_SIF = stress_t_surf_n * mp.b_cr * pybamm.Sqrt(np.pi * l_cr_n * mp.l_cr_n_0) * (stress_t_surf_n >= 0)
         dl_cr_n = mp.crack_flag * k_cr_n * pybamm.Power(dK_SIF , mp.m_cr) / mp.t0_cr / mp.l_cr_n_0

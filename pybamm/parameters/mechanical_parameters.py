@@ -34,9 +34,9 @@ m_cr = pybamm.Parameter("Negative electrode Paris' law constant m")
 k_cr = pybamm.Parameter("Negative electrode Cracking rate")
 Eac_cr = pybamm.Parameter("Negative electrode Activation energy for cracking rate [kJ.mol-1]") # noqa
 
-T_ref = pybamm.standard_parameters_lithium_ion.T_ref # [K]
-R_p = pybamm.standard_parameters_lithium_ion.R_p # [m]
-R_n = pybamm.standard_parameters_lithium_ion.R_n # [m]
+T_ref = pybamm.LithiumIonParameters().T_ref # [K]
+R_p = pybamm.LithiumIonParameters().R_p # [m]
+R_n = pybamm.LithiumIonParameters().R_n # [m]
 t0_cr = pybamm.Scalar(3600) # typical time for one cycle [s]
 
 theta_p_dim = mechanics_flag * Omega_p**2 / R_p * 2 / 9 * E_p * (1 - nu_p) 
