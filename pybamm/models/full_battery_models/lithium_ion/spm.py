@@ -104,39 +104,23 @@ class SPM(BaseModel):
             self.submodels["positive particle"] = pybamm.particle.FickianSingleParticle(
                 self.param, "Positive"
             )
-        elif self.options["particle"] == "uniform profile":
+        elif self.options["particle"] in [
+            "uniform profile",
+            "quadratic profile",
+            "quartic profile",
+        ]:
+            if self.options["particle"] == "uniform profile":
+                order = 0
+            elif self.options["particle"] == "quadratic profile":
+                order = 2
+            elif self.options["particle"] == "quartic profile":
+                order = 4
             self.submodels[
                 "negative particle"
-            ] = pybamm.particle.PolynomialSingleParticle(
-                self.param, "Negative", order=0
-            )
+            ] = pybamm.particle.PolynomialSingleParticle(self.param, "Negative", order)
             self.submodels[
                 "positive particle"
-            ] = pybamm.particle.PolynomialSingleParticle(
-                self.param, "Positive", order=0
-            )
-        elif self.options["particle"] == "quadratic profile":
-            self.submodels[
-                "negative particle"
-            ] = pybamm.particle.PolynomialSingleParticle(
-                self.param, "Negative", order=2
-            )
-            self.submodels[
-                "positive particle"
-            ] = pybamm.particle.PolynomialSingleParticle(
-                self.param, "Positive", order=2
-            )
-        elif self.options["particle"] == "quartic profile":
-            self.submodels[
-                "negative particle"
-            ] = pybamm.particle.PolynomialSingleParticle(
-                self.param, "Negative", order=4
-            )
-            self.submodels[
-                "positive particle"
-            ] = pybamm.particle.PolynomialSingleParticle(
-                self.param, "Positive", order=4
-            )
+            ] = pybamm.particle.PolynomialSingleParticle(self.param, "Positive", order)
 
     def set_negative_electrode_submodel(self):
 

@@ -23,15 +23,15 @@ class TestManyParticles(unittest.TestCase):
             "Negative electrode temperature": a_n,
         }
 
-        submodel = pybamm.particle.PolynomialManyParticles(param, "Negative", order=0)
+        submodel = pybamm.particle.PolynomialManyParticles(param, "Negative", 0)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
-        submodel = pybamm.particle.PolynomialManyParticles(param, "Negative", order=2)
+        submodel = pybamm.particle.PolynomialManyParticles(param, "Negative", 2)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
-        submodel = pybamm.particle.PolynomialManyParticles(param, "Negative", order=4)
+        submodel = pybamm.particle.PolynomialManyParticles(param, "Negative", 4)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
@@ -40,15 +40,15 @@ class TestManyParticles(unittest.TestCase):
             "Positive electrode temperature": a_p,
         }
 
-        submodel = pybamm.particle.PolynomialManyParticles(param, "Positive", order=0)
+        submodel = pybamm.particle.PolynomialManyParticles(param, "Positive", 0)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
-        submodel = pybamm.particle.PolynomialManyParticles(param, "Positive", order=2)
+        submodel = pybamm.particle.PolynomialManyParticles(param, "Positive", 2)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
-        submodel = pybamm.particle.PolynomialManyParticles(param, "Positive", order=4)
+        submodel = pybamm.particle.PolynomialManyParticles(param, "Positive", 4)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
