@@ -28,9 +28,9 @@ class CrackPropagation(BaseCracking):
         return variables
 
     def set_rhs(self,variables):
-        T_n = variables["Negative electrode temperature"]
-        stress_t_surf_n = variables["Negative particle surface tangential stress [Pa]"]
-        l_cr_n = variables["Negative particle crack length"]
+        T_n = variables[self.domain + " electrode temperature"]
+        stress_t_surf_n = variables[self.domain + " particle surface tangential stress [Pa]"]
+        l_cr_n = variables[self.domain +" particle crack length"]
         # crack length in anode particles
         mp = pybamm.mechanical_parameters
         R = pybamm.LithiumIonParameters().R
@@ -42,16 +42,13 @@ class CrackPropagation(BaseCracking):
         dl_cr_n = mp.crack_flag * k_cr_n * pybamm.Power(dK_SIF , mp.m_cr) / mp.t0_cr / mp.l_cr_n_0
         self.rhs = {l_cr_n: dl_cr_n}
         variables.update({
-             "Negative particle cracking rate": dl_cr_n,}
+             self.domain + " particle cracking rate": dl_cr_n,}
         )
         #return variables
 
     def set_initial_conditions(self,variables):
-        l_cr_n = variables["Negative particle crack length"]
+        l_cr_n = variables[self.domain + " particle crack length"]
         l0 = pybamm.PrimaryBroadcast(
-            pybamm.Scalar(1), ["negative electrode"]
+            pybamm.Scalar(1), [self.domain.lower() + " electrode"]
         )
         self.initial_conditions={l_cr_n: l0}
-
-    # same code for the cathode with changing "_p" to "_n"
-    #
