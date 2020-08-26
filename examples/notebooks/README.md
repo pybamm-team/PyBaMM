@@ -68,7 +68,7 @@ Once you are comfortable with the expression tree structure, a good starting poi
 
 The following spatial methods are implemented
 - [Finite Volumes](./spatial_methods/finite-volumes.ipynb) (1D only)
-- Spectral volumes (1D only)
+- Spectral Volumes (1D only)
 - Finite Elements (only for 2D current collector domains)
 
 See [here](https://pybamm.readthedocs.io/en/latest/tutorials/add-spatial-method.html) for instructions on adding new spatial methods.
