@@ -23,15 +23,21 @@ class TestManyParticles(unittest.TestCase):
             "Negative electrode temperature": a_n,
         }
 
-        submodel = pybamm.particle.PolynomialManyParticles(param, "Negative", 0)
+        submodel = pybamm.particle.PolynomialManyParticles(
+            param, "Negative", "uniform profile"
+        )
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
-        submodel = pybamm.particle.PolynomialManyParticles(param, "Negative", 2)
+        submodel = pybamm.particle.PolynomialManyParticles(
+            param, "Negative", "quadratic profile"
+        )
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
-        submodel = pybamm.particle.PolynomialManyParticles(param, "Negative", 4)
+        submodel = pybamm.particle.PolynomialManyParticles(
+            param, "Negative", "quartic profile"
+        )
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
@@ -40,15 +46,21 @@ class TestManyParticles(unittest.TestCase):
             "Positive electrode temperature": a_p,
         }
 
-        submodel = pybamm.particle.PolynomialManyParticles(param, "Positive", 0)
+        submodel = pybamm.particle.PolynomialManyParticles(
+            param, "Positive", "uniform profile"
+        )
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
-        submodel = pybamm.particle.PolynomialManyParticles(param, "Positive", 2)
+        submodel = pybamm.particle.PolynomialManyParticles(
+            param, "Positive", "quadratic profile"
+        )
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
-        submodel = pybamm.particle.PolynomialManyParticles(param, "Positive", 4)
+        submodel = pybamm.particle.PolynomialManyParticles(
+            param, "Positive", "quartic profile"
+        )
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

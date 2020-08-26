@@ -90,18 +90,16 @@ class DFN(BaseModel):
             "quadratic profile",
             "quartic profile",
         ]:
-            if self.options["particle"] == "uniform profile":
-                order = 0
-            elif self.options["particle"] == "quadratic profile":
-                order = 2
-            elif self.options["particle"] == "quartic profile":
-                order = 4
             self.submodels[
                 "negative particle"
-            ] = pybamm.particle.PolynomialManyParticles(self.param, "Negative", order)
+            ] = pybamm.particle.PolynomialManyParticles(
+                self.param, "Negative", self.options["particle"]
+            )
             self.submodels[
                 "positive particle"
-            ] = pybamm.particle.PolynomialManyParticles(self.param, "Positive", order)
+            ] = pybamm.particle.PolynomialManyParticles(
+                self.param, "Positive", self.options["particle"]
+            )
 
     def set_solid_submodel(self):
 

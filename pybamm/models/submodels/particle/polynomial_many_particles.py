@@ -17,8 +17,9 @@ class PolynomialManyParticles(BaseParticle):
         The parameters to use for this submodel
     domain : str
         The domain of the model either 'Negative' or 'Positive'
-    order : int
-        The order of the polynomial, can be 0, 2 or 4.
+    name : str
+        The name of the polynomial approximation to be used. Can be "uniform
+        profile", "quadratic profile" or "quartic profile".
 
     References
     ----------
@@ -29,9 +30,9 @@ class PolynomialManyParticles(BaseParticle):
     **Extends:** :class:`pybamm.particle.BaseParticle`
     """
 
-    def __init__(self, param, domain, order):
+    def __init__(self, param, domain, name):
         super().__init__(param, domain)
-        self.order = order
+        self.name = name
 
         pybamm.citations.register("subramanian2005")
 
@@ -42,16 +43,16 @@ class PolynomialManyParticles(BaseParticle):
             x = pybamm.standard_spatial_vars.x_n
             R = self.param.R_n_of_x(x)
             variables = {"Negative particle distribution in x": R}
-            if self.order == 0:
+            if self.name == "uniform profile":
                 # The concentration is uniform so the surface value is equal to
                 # the average
                 c_s_surf = c_s_rav
-            elif self.order in [2, 4]:
+            elif self.name in ["quadratic profile", "quartic profile"]:
                 # We solve an equation for the surface concentration, so it is
                 # a variable in the model
                 c_s_surf = pybamm.standard_variables.c_s_n_surf
                 r = pybamm.standard_spatial_vars.r_n
-            if self.order == 4:
+            if self.name == "quartic profile":
                 # For the fourth order polynomial approximation we also solve an
                 # equation for the average concentration gradient. Note: in the original
                 # paper this quantity is referred to as the flux, but here we make the
@@ -68,16 +69,16 @@ class PolynomialManyParticles(BaseParticle):
             x = pybamm.standard_spatial_vars.x_p
             R = self.param.R_p_of_x(x)
             variables = {"Positive particle distribution in x": R}
-            if self.order == 0:
+            if self.name == "uniform profile":
                 # The concentration is uniform so the surface value is equal to
                 # the average
                 c_s_surf = c_s_rav
-            elif self.order in [2, 4]:
+            elif self.name in ["quadratic profile", "quartic profile"]:
                 # We solve an equation for the surface concentration, so it is
                 # a variable in the model
                 c_s_surf = pybamm.standard_variables.c_s_p_surf
                 r = pybamm.standard_spatial_vars.r_p
-            if self.order == 4:
+            if self.name == "quartic profile":
                 # For the fourth order polynomial approximation we also solve an
                 # equation for the average concentration gradient. Note: in the original
                 # paper this quantity is referred to as the flux, but here we make the
@@ -89,10 +90,10 @@ class PolynomialManyParticles(BaseParticle):
                 )
 
         # Set concentration depending on polynomial order
-        if self.order == 0:
+        if self.name == "uniform profile":
             # The concentration is uniform
             c_s = pybamm.PrimaryBroadcast(c_s_rav, [self.domain.lower() + " particle"])
-        elif self.order == 2:
+        elif self.name == "quadratic profile":
             # The concentration is given by c = A + B*r**2
             A = pybamm.PrimaryBroadcast(
                 (1 / 2) * (5 * c_s_rav - 3 * c_s_surf),
@@ -102,7 +103,7 @@ class PolynomialManyParticles(BaseParticle):
                 (5 / 2) * (c_s_surf - c_s_rav), [self.domain.lower() + " particle"]
             )
             c_s = A + B * r ** 2
-        elif self.order == 4:
+        elif self.name == "quartic profile":
             # The concentration is given by c = A + B*r**2 + C*r**4
             A = pybamm.PrimaryBroadcast(
                 39 * c_s_surf / 4 - 3 * q_s_rav - 35 * c_s_rav / 4,
@@ -138,7 +139,7 @@ class PolynomialManyParticles(BaseParticle):
         )
 
         # Set flux depending on polynomial order
-        if self.order == 0:
+        if self.name == "uniform profile":
             # The flux is zero since there is no concentration gradient
             N_s = pybamm.FullBroadcastToEdges(
                 0,
@@ -151,7 +152,7 @@ class PolynomialManyParticles(BaseParticle):
             N_s_xav = pybamm.FullBroadcastToEdges(
                 0, self.domain.lower() + " particle", "current collector"
             )
-        elif self.order == 2:
+        elif self.name == "quadratic profile":
             # The flux may be computed directly from the polynomial for c
             if self.domain == "Negative":
                 r = pybamm.standard_spatial_vars.r_n
@@ -160,7 +161,7 @@ class PolynomialManyParticles(BaseParticle):
                 r = pybamm.standard_spatial_vars.r_p
                 N_s = -self.param.D_p(c_s, T) * 5 * (c_s_surf - c_s_rav) * r
             N_s_xav = pybamm.x_average(N_s)
-        elif self.order == 4:
+        elif self.name == "quartic profile":
             q_s_rav = variables[
                 "R-averaged " + self.domain.lower() + " particle concentration gradient"
             ]
@@ -196,7 +197,7 @@ class PolynomialManyParticles(BaseParticle):
         elif self.domain == "Positive":
             self.rhs = {c_s_rav: -3 * j / self.param.a_p / self.param.gamma_p / R}
 
-        if self.order == 4:
+        if self.name == "quartic profile":
             # We solve an extra ODE for the average particle flux
             q_s_rav = variables[
                 "R-averaged " + self.domain.lower() + " particle concentration gradient"
@@ -234,10 +235,10 @@ class PolynomialManyParticles(BaseParticle):
         j = variables[self.domain + " electrode interfacial current density"]
         T = variables[self.domain + " electrode temperature"]
         R = variables[self.domain + " particle distribution in x"]
-        if self.order == 0:
+        if self.name == "uniform profile":
             # No algebraic equations since we only solve for the average concentration
             pass
-        elif self.order == 2:
+        elif self.name == "quadratic profile":
             # We solve an algebraic equation for the surface concentration
             if self.domain == "Negative":
                 self.algebraic = {
@@ -250,7 +251,7 @@ class PolynomialManyParticles(BaseParticle):
                     c_s_surf: self.param.D_p(c_s_surf, T) * (c_s_surf - c_s_rav)
                     + self.param.C_p * (j * R / self.param.a_p / self.param.gamma_p / 5)
                 }
-        elif self.order == 4:
+        elif self.name == "quartic profile":
             # We solve a different algebraic equation for the surface concentration
             # that accounts for the average concentration gradient inside the particle
             q_s_rav = variables[
@@ -285,14 +286,14 @@ class PolynomialManyParticles(BaseParticle):
 
         self.initial_conditions = {c_s_rav: c_init}
 
-        if self.order in [2, 4]:
+        if self.name in ["quadratic profile", "quartic profile"]:
             # We also need to provide an initial condition (initial guess for the
             # algebraic solver) for the surface concentration
             c_s_surf = variables[self.domain + " particle surface concentration"]
             self.initial_conditions.update({c_s_surf: c_init})
-        if self.order == 4:
-            # We also need to provide an initial condition (initial guess for the
-            # algebraic solver) for the average concentration gradient
+        if self.name == "quartic profile":
+            # We also need to provide an initial condition for the average
+            # concentration gradient
             q_s_rav = variables[
                 "R-averaged " + self.domain.lower() + " particle concentration gradient"
             ]

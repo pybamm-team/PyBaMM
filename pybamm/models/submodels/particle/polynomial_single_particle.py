@@ -17,8 +17,9 @@ class PolynomialSingleParticle(BaseParticle):
         The parameters to use for this submodel
     domain : str
         The domain of the model either 'Negative' or 'Positive'
-    order : int
-        The order of the polynomial, can be 0, 2 or 4.
+    name : str
+        The name of the polynomial approximation to be used. Can be "uniform
+        profile", "quadratic profile" or "quartic profile".
 
     References
     ----------
@@ -29,9 +30,9 @@ class PolynomialSingleParticle(BaseParticle):
     **Extends:** :class:`pybamm.particle.BaseParticle`
     """
 
-    def __init__(self, param, domain, order):
+    def __init__(self, param, domain, name):
         super().__init__(param, domain)
-        self.order = order
+        self.name = name
 
         pybamm.citations.register("subramanian2005")
 
@@ -44,7 +45,7 @@ class PolynomialSingleParticle(BaseParticle):
             c_s_rxav = pybamm.standard_variables.c_s_p_rxav
 
         variables = {
-            "R-X-averaged " + self.domain.lower() + " particle concentration": c_s_rxav
+            "Average " + self.domain.lower() + " particle concentration": c_s_rxav
         }
 
         # For the fourth order polynomial approximation we also solve an
@@ -52,14 +53,14 @@ class PolynomialSingleParticle(BaseParticle):
         # paper this quantity is referred to as the flux, but here we make the
         # distinction between the flux defined as N = -D*dc/dr and the concentration
         # gradient q = dc/dr
-        if self.order == 4:
+        if self.name == "quartic profile":
             if self.domain == "Negative":
                 q_s_rxav = pybamm.standard_variables.q_s_n_rxav
             elif self.domain == "Positive":
                 q_s_rxav = pybamm.standard_variables.q_s_p_rxav
             variables.update(
                 {
-                    "R-X-averaged "
+                    "Average "
                     + self.domain.lower()
                     + " particle concentration gradient": q_s_rxav
                 }
@@ -69,7 +70,7 @@ class PolynomialSingleParticle(BaseParticle):
 
     def get_coupled_variables(self, variables):
         c_s_rxav = variables[
-            "R-X-averaged " + self.domain.lower() + " particle concentration"
+            "Average " + self.domain.lower() + " particle concentration"
         ]
         i_boundary_cc = variables["Current collector current density"]
         T_xav = pybamm.PrimaryBroadcast(
@@ -78,11 +79,11 @@ class PolynomialSingleParticle(BaseParticle):
         )
 
         # Set surface concentration based on polynomial order
-        if self.order == 0:
+        if self.name == "uniform profile":
             # The concentration is uniform so the surface value is equal to
             # the average
             c_s_surf_xav = c_s_rxav
-        elif self.order == 2:
+        elif self.name == "quadratic profile":
             # The surface concentration is computed from the average concentration
             # and boundary flux
             # Note 1: here we use the total average interfacial current for the single
@@ -116,14 +117,12 @@ class PolynomialSingleParticle(BaseParticle):
                     / self.param.gamma_p
                     / self.param.D_p(c_s_rxav, pybamm.surf(T_xav))
                 )
-        elif self.order == 4:
+        elif self.name == "quartic profile":
             # The surface concentration is computed from the average concentration,
             # the average concentration gradient and the boundary flux (see notes
             # for the case order=2)
             q_s_rxav = variables[
-                "R-X-averaged "
-                + self.domain.lower()
-                + " particle concentration gradient"
+                "Average " + self.domain.lower() + " particle concentration gradient"
             ]
             if self.domain == "Negative":
                 j_xav = i_boundary_cc / self.param.l_n
@@ -155,12 +154,12 @@ class PolynomialSingleParticle(BaseParticle):
                 )
 
         # Set concentration depending on polynomial order
-        if self.order == 0:
+        if self.name == "uniform profile":
             # The concentration is uniform
             c_s_xav = pybamm.PrimaryBroadcast(
                 c_s_rxav, [self.domain.lower() + " particle"]
             )
-        elif self.order == 2:
+        elif self.name == "quadratic profile":
             # The concentration is given by c = A + B*r**2
             A = pybamm.PrimaryBroadcast(
                 (1 / 2) * (5 * c_s_rxav - 3 * c_s_surf_xav),
@@ -170,9 +169,9 @@ class PolynomialSingleParticle(BaseParticle):
                 (5 / 2) * (c_s_surf_xav - c_s_rxav), [self.domain.lower() + " particle"]
             )
             if self.domain == "Negative":
-                # TODO: figure out how to just use r from standard_spatial_vars
-                # here without getting shape errors
-                # r = pybamm.standard_spatial_vars.r_n
+                # Since c_s_xav doesn't depend on x, we need to define a spatial
+                # variable r which only has "negative particle" and "current
+                # collector" as domains
                 r = pybamm.SpatialVariable(
                     "r_n",
                     domain=["negative particle"],
@@ -181,9 +180,9 @@ class PolynomialSingleParticle(BaseParticle):
                 )
                 c_s_xav = A + B * r ** 2
             if self.domain == "Positive":
-                # TODO: figure out how to just use r from standard_spatial_vars
-                # here without getting shape errors
-                # r = pybamm.standard_spatial_vars.r_p
+                # Since c_s_xav doesn't depend on x, we need to define a spatial
+                # variable r which only has "positive particle" and "current
+                # collector" as domains
                 r = pybamm.SpatialVariable(
                     "r_p",
                     domain=["positive particle"],
@@ -192,7 +191,7 @@ class PolynomialSingleParticle(BaseParticle):
                 )
                 c_s_xav = A + B * r ** 2
 
-        elif self.order == 4:
+        elif self.name == "quartic profile":
             # The concentration is given by c = A + B*r**2 + C*r**4
             A = pybamm.PrimaryBroadcast(
                 39 * c_s_surf_xav / 4 - 3 * q_s_rxav - 35 * c_s_rxav / 4,
@@ -207,9 +206,9 @@ class PolynomialSingleParticle(BaseParticle):
                 [self.domain.lower() + " particle"],
             )
             if self.domain == "Negative":
-                # TODO: figure out how to just use r from standard_spatial_vars
-                # here without getting shape errors
-                # r = pybamm.standard_spatial_vars.r_n
+                # Since c_s_xav doesn't depend on x, we need to define a spatial
+                # variable r which only has "negative particle" and "current
+                # collector" as domains
                 r = pybamm.SpatialVariable(
                     "r_n",
                     domain=["negative particle"],
@@ -218,9 +217,9 @@ class PolynomialSingleParticle(BaseParticle):
                 )
                 c_s_xav = A + B * r ** 2 + C * r ** 4
             if self.domain == "Positive":
-                # TODO: figure out how to just use r from standard_spatial_vars
-                # here without getting shape errors
-                # r = pybamm.standard_spatial_vars.r_p
+                # Since c_s_xav doesn't depend on x, we need to define a spatial
+                # variable r which only has "positive particle" and "current
+                # collector" as domains
                 r = pybamm.SpatialVariable(
                     "r_p",
                     domain=["positive particle"],
@@ -235,12 +234,12 @@ class PolynomialSingleParticle(BaseParticle):
         )
 
         # Set flux based on polynomial order
-        if self.order == 0:
+        if self.name == "uniform profile":
             # The flux is zero since there is no concentration gradient
             N_s_xav = pybamm.FullBroadcastToEdges(
                 0, self.domain.lower() + " particle", "current collector"
             )
-        elif self.order == 2:
+        elif self.name == "quadratic profile":
             # The flux may be computed directly from the polynomial for c
             if self.domain == "Negative":
                 N_s_xav = (
@@ -250,11 +249,9 @@ class PolynomialSingleParticle(BaseParticle):
                 N_s_xav = (
                     -self.param.D_p(c_s_xav, T_xav) * 5 * (c_s_surf_xav - c_s_rxav) * r
                 )
-        elif self.order == 4:
+        elif self.name == "quartic profile":
             q_s_rxav = variables[
-                "R-X-averaged "
-                + self.domain.lower()
-                + " particle concentration gradient"
+                "Average " + self.domain.lower() + " particle concentration gradient"
             ]
             # The flux may be computed directly from the polynomial for c
             if self.domain == "Negative":
@@ -280,7 +277,7 @@ class PolynomialSingleParticle(BaseParticle):
     def set_rhs(self, variables):
 
         c_s_rxav = variables[
-            "R-X-averaged " + self.domain.lower() + " particle concentration"
+            "Average " + self.domain.lower() + " particle concentration"
         ]
         j_xav = variables[
             "X-averaged "
@@ -294,12 +291,10 @@ class PolynomialSingleParticle(BaseParticle):
         elif self.domain == "Positive":
             self.rhs = {c_s_rxav: -3 * j_xav / self.param.a_p / self.param.gamma_p}
 
-        if self.order == 4:
+        if self.name == "quartic profile":
             # We solve an extra ODE for the average particle concentration gradient
             q_s_rxav = variables[
-                "R-X-averaged "
-                + self.domain.lower()
-                + " particle concentration gradient"
+                "Average " + self.domain.lower() + " particle concentration gradient"
             ]
             c_s_surf_xav = variables[
                 "X-averaged " + self.domain.lower() + " particle surface concentration"
@@ -335,7 +330,7 @@ class PolynomialSingleParticle(BaseParticle):
         positive electrode (they will usually be constant)
         """
         c_s_rxav = variables[
-            "R-X-averaged " + self.domain.lower() + " particle concentration"
+            "Average " + self.domain.lower() + " particle concentration"
         ]
 
         if self.domain == "Negative":
@@ -345,12 +340,10 @@ class PolynomialSingleParticle(BaseParticle):
             c_init = self.param.c_p_init(1)
 
         self.initial_conditions = {c_s_rxav: c_init}
-        if self.order == 4:
-            # We also need to provide an initial condition (initial guess for the
-            # algebraic solver) for the average concentration gradient
+        if self.name == "quartic profile":
+            # We also need to provide an initial condition for the average
+            # concentration gradient
             q_s_rxav = variables[
-                "R-X-averaged "
-                + self.domain.lower()
-                + " particle concentration gradient"
+                "Average " + self.domain.lower() + " particle concentration gradient"
             ]
             self.initial_conditions.update({q_s_rxav: 0})

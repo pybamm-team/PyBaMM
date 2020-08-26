@@ -109,18 +109,16 @@ class SPM(BaseModel):
             "quadratic profile",
             "quartic profile",
         ]:
-            if self.options["particle"] == "uniform profile":
-                order = 0
-            elif self.options["particle"] == "quadratic profile":
-                order = 2
-            elif self.options["particle"] == "quartic profile":
-                order = 4
             self.submodels[
                 "negative particle"
-            ] = pybamm.particle.PolynomialSingleParticle(self.param, "Negative", order)
+            ] = pybamm.particle.PolynomialSingleParticle(
+                self.param, "Negative", self.options["particle"]
+            )
             self.submodels[
                 "positive particle"
-            ] = pybamm.particle.PolynomialSingleParticle(self.param, "Positive", order)
+            ] = pybamm.particle.PolynomialSingleParticle(
+                self.param, "Positive", self.options["particle"]
+            )
 
     def set_negative_electrode_submodel(self):
 

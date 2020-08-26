@@ -66,8 +66,8 @@ class BaseParticle(pybamm.BaseSubModel):
             "R-averaged "
             + self.domain.lower()
             + " particle concentration [mol.m-3]": c_s_rav * c_scale,
-            "R-X-averaged " + self.domain.lower() + " particle concentration": c_s_av,
-            "R-X-averaged "
+            "Average " + self.domain.lower() + " particle concentration": c_s_av,
+            "Average "
             + self.domain.lower()
             + " particle concentration [mol.m-3]": c_s_av * c_scale,
             self.domain + " particle surface concentration": c_s_surf,

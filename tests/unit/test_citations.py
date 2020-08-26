@@ -99,12 +99,12 @@ class TestCitations(unittest.TestCase):
 
         citations._reset()
         self.assertNotIn("subramanian2005", citations._papers_to_cite)
-        pybamm.particle.PolynomialSingleParticle(None, "Negative", order=0)
+        pybamm.particle.PolynomialSingleParticle(None, "Negative", "quadratic profile")
         self.assertIn("subramanian2005", citations._papers_to_cite)
 
         citations._reset()
         self.assertNotIn("subramanian2005", citations._papers_to_cite)
-        pybamm.particle.PolynomialManyParticles(None, "Negative", order=0)
+        pybamm.particle.PolynomialManyParticles(None, "Negative", "quadratic profile")
         self.assertIn("subramanian2005", citations._papers_to_cite)
 
     def test_scikit_fem(self):
