@@ -41,8 +41,8 @@ For more advanced usage, new sets of parameters, spatial methods and solvers can
 
 PyBaMM is built around an expression tree structure.
 
-- [The expression tree notebook](expression_tree/expression-tree.ipynb) explains how this works, from model creation to solution. 
-- [The broadcast notebook](expression_tree/broadcasts.ipynb) explains the different types of broadcast. 
+- [The expression tree notebook](expression_tree/expression-tree.ipynb) explains how this works, from model creation to solution.
+- [The broadcast notebook](expression_tree/broadcasts.ipynb) explains the different types of broadcast.
 
 The following notebooks are specific to different stages of the PyBaMM pipeline, such as choosing a model, spatial method, or solver.
 
