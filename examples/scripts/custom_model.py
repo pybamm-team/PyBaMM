@@ -23,10 +23,10 @@ model.submodels["positive electrode"] = pybamm.electrode.ohm.LeadingOrder(
     model.param, "Positive"
 )
 model.submodels["negative particle"] = pybamm.particle.PolynomialSingleParticle(
-    model.param, "Negative", 0
+    model.param, "Negative", "uniform profile"
 )
 model.submodels["positive particle"] = pybamm.particle.PolynomialSingleParticle(
-    model.param, "Positive", 0
+    model.param, "Positive", "uniform profile"
 )
 model.submodels["negative interface"] = pybamm.interface.InverseButlerVolmer(
     model.param, "Negative", "lithium-ion main"
