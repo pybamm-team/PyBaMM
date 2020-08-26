@@ -253,6 +253,9 @@ class ParticleConcentrationTests(BaseOutputTest):
         self.c_s_n = solution["Negative particle concentration"]
         self.c_s_p = solution["Positive particle concentration"]
 
+        self.c_s_n_rav = solution["R-averaged negative particle concentration"]
+        self.c_s_p_rav = solution["R-averaged positive particle concentration"]
+
         self.c_s_n_surf = solution["Negative particle surface concentration"]
         self.c_s_p_surf = solution["Positive particle surface concentration"]
 
@@ -265,8 +268,19 @@ class ParticleConcentrationTests(BaseOutputTest):
 
         t, x_n, x_p, r_n, r_p = self.t, self.x_n, self.x_p, self.r_n, self.r_p
 
-        neg_end_vs_start = self.c_s_n(t[1:], x_n, r_n) - self.c_s_n(t[:-1], x_n, r_n)
-        pos_end_vs_start = self.c_s_p(t[1:], x_p, r_p) - self.c_s_p(t[:-1], x_p, r_p)
+        if self.model.options["particle"] in ["quadratic profile", "quartic profile"]:
+            # For the assumed polynomial concentration profiles the values
+            # can increase/decrease within the particle as the polynomial shifts,
+            # so we just check the average instead
+            neg_end_vs_start = self.c_s_n_rav(t[1:], x_n) - self.c_s_n_rav(t[:-1], x_n)
+            pos_end_vs_start = self.c_s_p_rav(t[1:], x_p) - self.c_s_p_rav(t[:-1], x_p)
+        else:
+            neg_end_vs_start = self.c_s_n(t[1:], x_n, r_n) - self.c_s_n(
+                t[:-1], x_n, r_n
+            )
+            pos_end_vs_start = self.c_s_p(t[1:], x_p, r_p) - self.c_s_p(
+                t[:-1], x_p, r_p
+            )
 
         if self.operating_condition == "discharge":
             np.testing.assert_array_less(neg_end_vs_start, 0)
@@ -304,25 +318,29 @@ class ParticleConcentrationTests(BaseOutputTest):
         """Test that no flux holds in the centre of the particle. Test that surface
         flux in the negative particles is greater than zero and that the flux in the
         positive particles is less than zero during a discharge."""
-        # At the moment the zero flux is Broadcasted onto cell centres, not edges
-        # in the case of fast diffusion. This should be fixed by allowing Broadcasting
-        # to edges. For now, evaluate on r nodes for "fast diffusion" in particles
-        if self.model.options["particle"] == "fast diffusion":
-            t, x_n, x_p, r_n, r_p = self.t, self.x_n, self.x_p, self.r_n, self.r_p
+
+        t, x_n, x_p, r_n, r_p = (
+            self.t,
+            self.x_n,
+            self.x_p,
+            self.r_n_edge,
+            self.r_p_edge,
+        )
+        if self.model.options["particle"] == "uniform profile":
+            # Fluxes are zero everywhere since the concentration is uniform
             np.testing.assert_array_almost_equal(self.N_s_n(t, x_n, r_n), 0)
             np.testing.assert_array_almost_equal(self.N_s_p(t, x_p, r_p), 0)
         else:
-            t, x_n, x_p, r_n, r_p = (
-                self.t,
-                self.x_n,
-                self.x_p,
-                self.r_n_edge,
-                self.r_p_edge,
-            )
-
             if self.operating_condition == "discharge":
-                np.testing.assert_array_less(0, self.N_s_n(t[1:], x_n, r_n[1:]))
-                np.testing.assert_array_less(self.N_s_p(t[1:], x_p, r_p[1:]), 0)
+                if self.model.options["particle"] == "quartic profile":
+                    # quartic profile has a transient at the beginning where
+                    # the concentration "rearranges" giving flux of the opposite
+                    # sign, so ignore first two times
+                    np.testing.assert_array_less(0, self.N_s_n(t[2:], x_n, r_n[1:]))
+                    np.testing.assert_array_less(self.N_s_p(t[2:], x_p, r_p[1:]), 0)
+                else:
+                    np.testing.assert_array_less(0, self.N_s_n(t[1:], x_n, r_n[1:]))
+                    np.testing.assert_array_less(self.N_s_p(t[1:], x_p, r_p[1:]), 0)
             if self.operating_condition == "charge":
                 np.testing.assert_array_less(self.N_s_n(t[1:], x_n, r_n[1:]), 0)
                 np.testing.assert_array_less(0, self.N_s_p(t[1:], x_p, r_p[1:]))
@@ -330,8 +348,8 @@ class ParticleConcentrationTests(BaseOutputTest):
                 np.testing.assert_array_almost_equal(self.N_s_n(t, x_n, r_n), 0)
                 np.testing.assert_array_almost_equal(self.N_s_p(t, x_p, r_p), 0)
 
-            np.testing.assert_array_equal(0, self.N_s_n(t, x_n, r_n[0]))
-            np.testing.assert_array_equal(0, self.N_s_p(t, x_p, r_p[0]))
+        np.testing.assert_array_almost_equal(0, self.N_s_n(t, x_n, r_n[0]), decimal=4)
+        np.testing.assert_array_almost_equal(0, self.N_s_p(t, x_p, r_p[0]), decimal=4)
 
     def test_all(self):
         self.test_concentration_increase_decrease()
