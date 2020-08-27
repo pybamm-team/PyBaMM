@@ -33,9 +33,7 @@ class BasicDFNHalfCell(BaseModel):
     """
 
     def __init__(
-        self,
-        name="Doyle-Fuller-Newman half cell model",
-        options=None,
+        self, name="Doyle-Fuller-Newman half cell model", options=None,
     ):
         super().__init__({}, name)
         pybamm.citations.register("marquis2019asymptotic")
@@ -59,7 +57,7 @@ class BasicDFNHalfCell(BaseModel):
         ######################
         # Variables that depend on time only are created without a domain
         Q = pybamm.Variable("Discharge capacity [A.h]")
-        
+
         # Define some useful scalings
         pot = param.potential_scale
         i_typ = param.current_scale
@@ -441,8 +439,7 @@ class BasicDFNHalfCell(BaseModel):
             "Negative particle surface concentration [mol.m-3]": param.c_n_max
             * c_s_surf_n,
             "X-averaged negative particle surface concentration [mol.m-3]":
-            param.c_n_max
-            * c_s_surf_n_av,
+            param.c_n_max * c_s_surf_n_av,
             "Negative particle concentration [mol.m-3]": param.c_n_max * c_s_n,
             "Electrolyte concentration": c_e,
             "Electrolyte concentration [mol.m-3]": param.c_e_typ * c_e,
@@ -452,17 +449,16 @@ class BasicDFNHalfCell(BaseModel):
             "Positive particle surface concentration [mol.m-3]": param.c_p_max
             * c_s_surf_p,
             "X-averaged positive particle surface concentration [mol.m-3]":
-            param.c_p_max
-            * c_s_surf_p_av,
+            param.c_p_max * c_s_surf_p_av,
             "Positive particle concentration [mol.m-3]": param.c_p_max * c_s_p,
             "Current [A]": I,
             "Negative electrode potential": phi_s_n,
             "Negative electrode potential [V]": pot * phi_s_n,
             "Negative electrode open circuit potential": param.U_n(c_s_surf_n, T),
             "Electrolyte potential": phi_e,
-            "Electrolyte potential [V]": - param.U_n_ref + pot * phi_e,
+            "Electrolyte potential [V]": -param.U_n_ref + pot * phi_e,
             "Positive electrode potential": phi_s_p,
-            "Positive electrode potential [V]": (param.U_p_ref - param.U_n_ref) 
+            "Positive electrode potential [V]": (param.U_p_ref - param.U_n_ref)
             + pot * phi_s_p,
             "Positive electrode open circuit potential": param.U_p(c_s_surf_p, T),
             "Voltage drop": voltage,
