@@ -33,9 +33,7 @@ class BasicDFNHalfCell(BaseModel):
     """
 
     def __init__(
-        self,
-        name="Doyle-Fuller-Newman half cell model",
-        options=None,
+        self, name="Doyle-Fuller-Newman half cell model", options=None,
     ):
         super().__init__({}, name)
         pybamm.citations.register("marquis2019asymptotic")
@@ -48,7 +46,7 @@ class BasicDFNHalfCell(BaseModel):
         if options["working electrode"] not in ["negative", "positive"]:
             raise ValueError(
                 "The option 'working electrode' should be either 'positive'"
-                "or 'negative'"
+                " or 'negative'"
             )
 
         self.options.update(options)
@@ -59,6 +57,11 @@ class BasicDFNHalfCell(BaseModel):
         ######################
         # Variables that depend on time only are created without a domain
         Q = pybamm.Variable("Discharge capacity [A.h]")
+
+        # Define some useful scalings
+        pot = param.potential_scale
+        i_typ = param.current_scale
+
         # Variables that vary spatially are created with a domain. Depending on
         # which is the working electrode we need to define a set variables or another
         if working_electrode == "negative":
@@ -134,7 +137,7 @@ class BasicDFNHalfCell(BaseModel):
             # Set concentration in negative particle to be equal to the initial
             # concentration as it is not the working electrode
             x_n = pybamm.PrimaryBroadcast(
-                pybamm.standard_spatial_vars.x_n, "positive particle"
+                pybamm.standard_spatial_vars.x_n, "negative particle"
             )
             c_s_n = param.c_n_init(x_n)
 
@@ -297,9 +300,11 @@ class BasicDFNHalfCell(BaseModel):
         ######################
         # Current in the solid
         ######################
+        eps_s_n = pybamm.Parameter("Negative electrode active material volume fraction")
+        eps_s_p = pybamm.Parameter("Positive electrode active material volume fraction")
 
         if working_electrode == "negative":
-            sigma_eff_n = param.sigma_n * (1 - eps_n) ** param.b_s_n
+            sigma_eff_n = param.sigma_n * eps_s_n ** param.b_s_n
             i_s_n = -sigma_eff_n * pybamm.grad(phi_s_n)
             self.boundary_conditions[phi_s_n] = {
                 "left": (
@@ -319,7 +324,7 @@ class BasicDFNHalfCell(BaseModel):
                 param.c_n_init(0), param.T_init
             )
         else:
-            sigma_eff_p = param.sigma_p * (1 - eps_p) ** param.b_s_p
+            sigma_eff_p = param.sigma_p * eps_s_p ** param.b_s_p
             i_s_p = -sigma_eff_p * pybamm.grad(phi_s_p)
             self.boundary_conditions[phi_s_p] = {
                 "left": (pybamm.Scalar(0), "Neumann"),
@@ -376,19 +381,20 @@ class BasicDFNHalfCell(BaseModel):
         )
         self.algebraic[phi_e] = pybamm.div(i_e) - j
 
+        ref_potential = param.U_n_ref / pot
+
         if working_electrode == "negative":
             self.boundary_conditions[phi_e] = {
                 "left": (pybamm.Scalar(0), "Neumann"),
-                "right": (pybamm.Scalar(0), "Dirichlet"),
+                "right": (ref_potential, "Dirichlet"),
             }
         else:
             self.boundary_conditions[phi_e] = {
-                "left": (pybamm.Scalar(0), "Dirichlet"),
+                "left": (ref_potential, "Dirichlet"),
                 "right": (pybamm.Scalar(0), "Neumann"),
             }
 
-        self.initial_conditions[phi_e] = pybamm.Scalar(0)
-
+        self.initial_conditions[phi_e] = ref_potential
         ######################
         # (Some) variables
         ######################
@@ -398,12 +404,9 @@ class BasicDFNHalfCell(BaseModel):
             "Lithium counter electrode exchange-current density [A.m-2]"
         )
 
-        pot = param.potential_scale
-        i_typ = param.current_scale
-
         if working_electrode == "negative":
-            voltage = pybamm.boundary_value(phi_s_n, "left")
-            voltage_dim = param.U_n_ref + pot * voltage
+            voltage = pybamm.boundary_value(phi_s_n, "left") - ref_potential
+            voltage_dim = pot * pybamm.boundary_value(phi_s_n, "left")
             vdrop_Li = 2 * pybamm.arcsinh(
                 i_cell * i_typ / j_Li
             ) + L_Li * i_typ * i_cell / (sigma_Li * pot)
@@ -412,7 +415,7 @@ class BasicDFNHalfCell(BaseModel):
                 + L_Li * i_typ * i_cell / sigma_Li
             )
         else:
-            voltage = pybamm.boundary_value(phi_s_p, "right")
+            voltage = pybamm.boundary_value(phi_s_p, "right") - ref_potential
             voltage_dim = param.U_p_ref + pot * voltage
             vdrop_Li = -(
                 2 * pybamm.arcsinh(i_cell * i_typ / j_Li)
@@ -436,8 +439,7 @@ class BasicDFNHalfCell(BaseModel):
             "Negative particle surface concentration [mol.m-3]": param.c_n_max
             * c_s_surf_n,
             "X-averaged negative particle surface concentration [mol.m-3]":
-            param.c_n_max
-            * c_s_surf_n_av,
+            param.c_n_max * c_s_surf_n_av,
             "Negative particle concentration [mol.m-3]": param.c_n_max * c_s_n,
             "Electrolyte concentration": c_e,
             "Electrolyte concentration [mol.m-3]": param.c_e_typ * c_e,
@@ -447,17 +449,17 @@ class BasicDFNHalfCell(BaseModel):
             "Positive particle surface concentration [mol.m-3]": param.c_p_max
             * c_s_surf_p,
             "X-averaged positive particle surface concentration [mol.m-3]":
-            param.c_p_max
-            * c_s_surf_p_av,
+            param.c_p_max * c_s_surf_p_av,
             "Positive particle concentration [mol.m-3]": param.c_p_max * c_s_p,
             "Current [A]": I,
             "Negative electrode potential": phi_s_n,
-            "Negative electrode potential [V]": param.U_n_ref + pot * phi_s_n,
+            "Negative electrode potential [V]": pot * phi_s_n,
             "Negative electrode open circuit potential": param.U_n(c_s_surf_n, T),
             "Electrolyte potential": phi_e,
-            "Electrolyte potential [V]": pot * phi_e,
+            "Electrolyte potential [V]": -param.U_n_ref + pot * phi_e,
             "Positive electrode potential": phi_s_p,
-            "Positive electrode potential [V]": param.U_p_ref + pot * phi_s_p,
+            "Positive electrode potential [V]": (param.U_p_ref - param.U_n_ref)
+            + pot * phi_s_p,
             "Positive electrode open circuit potential": param.U_p(c_s_surf_p, T),
             "Voltage drop": voltage,
             "Voltage drop [V]": voltage_dim,
