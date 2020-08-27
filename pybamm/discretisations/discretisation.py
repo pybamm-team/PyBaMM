@@ -805,10 +805,7 @@ class Discretisation(object):
         except KeyError:
             discretised_symbol = self._process_symbol(symbol)
             self._discretised_symbols[symbol.id] = discretised_symbol
-            try:
-                discretised_symbol.test_shape()
-            except:
-                discretised_symbol.test_shape()
+            discretised_symbol.test_shape()
             # Assign mesh as an attribute to the processed variable
             if symbol.domain != []:
                 discretised_symbol.mesh = self.mesh.combine_submeshes(*symbol.domain)

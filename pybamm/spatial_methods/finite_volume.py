@@ -1388,8 +1388,8 @@ class FiniteVolume(pybamm.SpatialMethod):
     def upwind_or_downwind(self, symbol, discretised_symbol, bcs, direction):
         """
         Implement an upwinding operator. Currently, this requires the symbol to have
-        a Dirichlet boundary condition on the left side. Then, the upwinding operator
-        simply consists of concatenating the boundary condition and the symbol.
+        a Dirichlet boundary condition on the left side (for upwinding) or right side
+        (for downwinding).
 
         Parameters
         ----------
@@ -1408,12 +1408,18 @@ class FiniteVolume(pybamm.SpatialMethod):
         n = submesh.npts
 
         if symbol.id not in bcs:
-            raise pybamm.ModelError
+            raise pybamm.ModelError(
+                "Boundary conditions must be provided for "
+                "{}ing '{}'".format(direction, symbol)
+            )
 
         if direction == "upwind":
             bc, typ = bcs[symbol.id]["left"]
             if typ != "Dirichlet":
-                raise pybamm.ModelError
+                raise pybamm.ModelError(
+                    "Dirichlet boundary conditions must be provided for "
+                    "{}ing '{}'".format(direction, symbol)
+                )
 
             concat_bc = pybamm.NumpyConcatenation(bc, discretised_symbol)
 

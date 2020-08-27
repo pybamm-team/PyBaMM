@@ -971,7 +971,7 @@ class UpwindDownwind(SpatialOperator):
 class Upwind(UpwindDownwind):
     """
     Upwinding operator. To be used if flow velocity is positive (left to right).
-    
+
     **Extends:** :class:`UpwindDownwind`
     """
 
@@ -982,7 +982,7 @@ class Upwind(UpwindDownwind):
 class Downwind(UpwindDownwind):
     """
     Downwinding operator. To be used if flow velocity is negative (right to left).
-    
+
     **Extends:** :class:`UpwindDownwind`
     """
 
@@ -1077,7 +1077,7 @@ def grad_squared(symbol):
         inner product of the gradient of ``symbol`` with itself
     """
 
-    return Gradient_Squared(expression)
+    return Gradient_Squared(symbol)
 
 
 def upwind(symbol):

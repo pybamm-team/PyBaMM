@@ -1543,18 +1543,34 @@ class TestFiniteVolume(unittest.TestCase):
         disc_downwind = disc.process_symbol(downwind)
 
         nodes = mesh["negative electrode"].nodes
+        n = mesh["negative electrode"].npts
         self.assertEqual(disc_upwind.size, nodes.size + 1)
         self.assertEqual(disc_downwind.size, nodes.size + 1)
 
         y_test = 2 * np.ones_like(nodes)
         np.testing.assert_array_equal(
             disc_upwind.evaluate(y=y_test),
-            np.concatenate([np.array([5]), y_test])[:, np.newaxis],
+            np.concatenate([np.array([5, 0.5]), 2 * np.ones(n - 1)])[:, np.newaxis],
         )
         np.testing.assert_array_equal(
             disc_downwind.evaluate(y=y_test),
-            np.concatenate([y_test, np.array([3])])[:, np.newaxis],
+            np.concatenate([2 * np.ones(n - 1), np.array([1.5, 3]),])[:, np.newaxis],
         )
+
+        # Remove boundary conditions and check error is raised
+        disc.bcs = {}
+        with self.assertRaisesRegex(pybamm.ModelError, "Boundary conditions"):
+            disc.process_symbol(upwind)
+
+        # Set wrong boundary conditions and check error is raised
+        disc.bcs = {
+            var.id: {
+                "left": (pybamm.Scalar(5), "Neumann"),
+                "right": (pybamm.Scalar(3), "Neumann"),
+            }
+        }
+        with self.assertRaisesRegex(pybamm.ModelError, "Dirichlet boundary conditions"):
+            disc.process_symbol(upwind)
 
     def test_grad_div_with_bcs_on_tab(self):
         # 2d macroscale
