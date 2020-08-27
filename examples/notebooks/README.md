@@ -13,7 +13,7 @@ These notebooks can be downloaded and used locally by running
 ```
 $ jupyter notebook
 ```
-from your local PyBaMM repository, or used online through [Google Colab](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/master/) or [Binder](https://mybinder.org/v2/gh/pybamm-team/PyBaMM/master). Alternatively, you can simply copy/paste the relevant code.
+from your local PyBaMM repository or used online through [Google Colab](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/master/). Alternatively, you can simply copy/paste the relevant code.
 
 ## Using PyBaMM
 
