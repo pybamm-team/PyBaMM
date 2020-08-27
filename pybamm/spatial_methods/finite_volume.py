@@ -1418,7 +1418,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             if typ != "Dirichlet":
                 raise pybamm.ModelError(
                     "Dirichlet boundary conditions must be provided for "
-                    "{}ing '{}'".format(direction, symbol)
+                    "upwinding '{}'".format(symbol)
                 )
 
             concat_bc = pybamm.NumpyConcatenation(bc, discretised_symbol)
@@ -1433,7 +1433,11 @@ class FiniteVolume(pybamm.SpatialMethod):
         elif direction == "downwind":
             bc, typ = bcs[symbol.id]["right"]
             if typ != "Dirichlet":
-                raise pybamm.ModelError
+                raise pybamm.ModelError(
+                    "Dirichlet boundary conditions must be provided for "
+                    "downwinding '{}'".format(symbol)
+                )
+
             concat_bc = pybamm.NumpyConcatenation(discretised_symbol, bc)
             downwind_mat = vstack(
                 [

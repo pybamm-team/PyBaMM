@@ -1571,6 +1571,8 @@ class TestFiniteVolume(unittest.TestCase):
         }
         with self.assertRaisesRegex(pybamm.ModelError, "Dirichlet boundary conditions"):
             disc.process_symbol(upwind)
+        with self.assertRaisesRegex(pybamm.ModelError, "Dirichlet boundary conditions"):
+            disc.process_symbol(downwind)
 
     def test_grad_div_with_bcs_on_tab(self):
         # 2d macroscale
