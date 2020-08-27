@@ -34,8 +34,6 @@ class BaseParticle(pybamm.BaseSubModel):
         concentration are computed automatically from the particle concentration.
         """
 
-        param = self.param
-
         # Get surface concentration if not provided as fundamental variable to
         # solve for
         c_s_surf = c_s_surf or pybamm.surf(c_s)
@@ -49,7 +47,7 @@ class BaseParticle(pybamm.BaseSubModel):
             c_scale = self.param.c_p_max
             eps_s = self.param.epsilon_s_p
             L = self.param.L_p
-        
+
         # Get average concentration(s) if not provided as fundamental variable to
         # solve for
         c_s_xav = c_s_xav or pybamm.x_average(c_s)
