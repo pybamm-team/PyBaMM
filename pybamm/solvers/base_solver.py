@@ -117,7 +117,7 @@ class BaseSolver(object):
         new_solver.models_set_up = {}
         return new_solver
 
-    def set_up(self, model, inputs=None):
+    def set_up(self, model, inputs=None, t_eval=None):
         """Unpack model, perform checks, simplify and calculate jacobian.
 
         Parameters
@@ -127,6 +127,8 @@ class BaseSolver(object):
             initial_conditions
         inputs : dict, optional
             Any input parameters to pass to the model when solving
+        t_eval : numeric type, optional
+            The times (in seconds) at which to compute the solution
 
         """
 
@@ -279,8 +281,8 @@ class BaseSolver(object):
                 jac_call = None
             return func, func_call, jac_call
 
-        # Check for heaviside functions in rhs and algebraic and add discontinuity
-        # events if these exist.
+        # Check for heaviside and modulo functions in rhs and algebraic and add
+        # discontinuity events if these exist.
         # Note: only checks for the case of t < X, t <= X, X < t, or X <= t, but also
         # accounts for the fact that t might be dimensional
         # Only do this for DAE models as ODE models can deal with discontinuities fine
@@ -315,6 +317,32 @@ class BaseSolver(object):
                                 pybamm.EventType.DISCONTINUITY,
                             )
                         )
+                elif isinstance(symbol, pybamm.Modulo):
+                    found_t = False
+                    # Dimensionless
+                    if symbol.left.id == pybamm.t.id:
+                        expr = symbol.right
+                        found_t = True
+                    # Dimensional
+                    elif symbol.left.id == (pybamm.t * model.timescale).id:
+                        expr = symbol.right.new_copy() / symbol.left.right.new_copy()
+                        found_t = True
+
+                    # Update the events if the modulo function depended on t
+                    if found_t:
+                        if t_eval is None:
+                            N_events = 200
+                        else:
+                            N_events = t_eval[-1] // expr.value
+
+                        for i in np.arange(N_events):
+                            model.events.append(
+                                pybamm.Event(
+                                    str(symbol),
+                                    expr.new_copy() * pybamm.Scalar(i + 1),
+                                    pybamm.EventType.DISCONTINUITY,
+                                )
+                            )
 
         # Process initial conditions
         initial_conditions = process(
@@ -536,7 +564,7 @@ class BaseSolver(object):
 
         # Set up (if not done already)
         if model not in self.models_set_up:
-            self.set_up(model, ext_and_inputs)
+            self.set_up(model, ext_and_inputs, t_eval)
             set_up_time = timer.time()
             self.models_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
@@ -550,7 +578,7 @@ class BaseSolver(object):
                 # If the new initial conditions are different, set up again
                 # Doing the whole setup again might be slow, but no need to prematurely
                 # optimize this
-                self.set_up(model, ext_and_inputs)
+                self.set_up(model, ext_and_inputs, t_eval)
                 self.models_set_up[model][
                     "initial conditions"
                 ] = model.concatenated_initial_conditions

@@ -105,6 +105,7 @@ class TestSymbol(unittest.TestCase):
         self.assertIsInstance(a <= b, pybamm.Heaviside)
         self.assertIsInstance(a > b, pybamm.Heaviside)
         self.assertIsInstance(a >= b, pybamm.Heaviside)
+        self.assertIsInstance(a % b, pybamm.Modulo)
 
         # binary - symbol and number
         self.assertIsInstance(a + 2, pybamm.Addition)
