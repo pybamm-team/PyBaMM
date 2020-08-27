@@ -22,11 +22,11 @@ model.submodels["negative electrode"] = pybamm.electrode.ohm.LeadingOrder(
 model.submodels["positive electrode"] = pybamm.electrode.ohm.LeadingOrder(
     model.param, "Positive"
 )
-model.submodels["negative particle"] = pybamm.particle.FastSingleParticle(
-    model.param, "Negative"
+model.submodels["negative particle"] = pybamm.particle.PolynomialSingleParticle(
+    model.param, "Negative", "uniform profile"
 )
-model.submodels["positive particle"] = pybamm.particle.FastSingleParticle(
-    model.param, "Positive"
+model.submodels["positive particle"] = pybamm.particle.PolynomialSingleParticle(
+    model.param, "Positive", "uniform profile"
 )
 model.submodels["negative interface"] = pybamm.interface.InverseButlerVolmer(
     model.param, "Negative", "lithium-ion main"
