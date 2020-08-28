@@ -68,7 +68,7 @@ jobs:
       run: tox -e pybamm-requires
 
     - name: Run unit tests
-      run: python -m tox -e unit
+      run: python -m tox
 
     - name: Install docs dependencies and run doctests
       if: matrix.os != 'windows-latest'
