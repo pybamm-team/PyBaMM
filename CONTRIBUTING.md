@@ -53,18 +53,24 @@ Finally, if you really, really, _really_ love developing PyBaMM, have a look at 
 To install PyBaMM with all developer options, type:
 
 ```bash
-tox -e pybamm-dev
+tox -e dev # (GNU/Linux and MacOS)
+#
+python -m tox -e windows-dev # (Windows)
 ```
 
 This will
 
-1. Create a virtual environment located at `.tox/pybamm-dev`.
+1. Create a virtual environment located at `.tox/dev`.
 2. Install all the dependencies for PyBaMM, including the ones for documentation and development.
 3. Tell Python to use your local pybamm files when you use `import pybamm` anywhere on your system.
 
-Finally, activate your environment with
+Finally, activate your environment.
+
+
 ```bash
-source .tox/pybamm-dev/bin/activate
+source .tox/dev/bin/activate # (GNU/Linux and MacOS)
+#
+.tox\dev\Scripts\activate.bat # (Windows)
 ```
 
 
@@ -149,7 +155,9 @@ All code requires testing. We use the [unittest](https://docs.python.org/3.3/lib
 To run quick tests, type
 
 ```bash
-python run-tests.py --unit
+tox -e quick # (GNU/Linux and MacOS)
+#
+python -m tox -e windows-quick (Windows)
 ```
 
 ### Writing tests
@@ -164,7 +172,9 @@ The tests are divided into `unit` tests, whose aim is to check individual bits o
 If you want to check integration tests as well as unit tests, type
 
 ```bash
-python run-tests.py --unit --folder all
+tox -e tests # (GNU/Linux and MacOS)
+#
+python -m tox -e windows-tests (Windows)
 ```
 
 When you commit anything to PyBaMM, these checks will also be run automatically (see [infrastructure](#infrastructure)).
@@ -174,7 +184,9 @@ When you commit anything to PyBaMM, these checks will also be run automatically 
 To test all example scripts and notebooks, type
 
 ```bash
-python run-tests.py --examples
+tox -e examples # (GNU/Linux and MacOS)
+#
+python -m tox -e windows-examples (Windows)
 ```
 
 If notebooks fail because of changes to pybamm, it can be a bit of a hassle to debug. In these cases, you can create a temporary export of a notebook's Python content using
@@ -284,7 +296,7 @@ Using [Sphinx](http://www.sphinx-doc.org/en/stable/) the documentation in `docs`
 To test and debug the documentation, it's best to build it locally. To do this, navigate to your PyBaMM directory in a console, and then type:
 
 ```
-tox -e docs
+python -m tox -e docs (GNU/Linux, MacOS and Windows)
 ```
 And then visit the webpage served at http://127.0.0.1:8000. Each time a change to the documentation source is detected, the HTML is rebuilt and the browser automatically reloaded.
 
