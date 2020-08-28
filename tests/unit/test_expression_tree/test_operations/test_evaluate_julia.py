@@ -108,13 +108,13 @@ class TestEvaluate(unittest.TestCase):
         #     result = evaluator(t,y,None)
         #     np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
-        # # test something with an index
-        # expr = pybamm.Index(A @ pybamm.StateVector(slice(0, 2)), 0)
-        # evaluator_str = pybamm.get_julia_function(expr)
-        # evaluator = Main.eval(evaluator_str)
-        # for t, y in zip(t_tests, y_tests):
-        #     result = evaluator(t,y,None)
-        #     self.assertEqual(result, expr.evaluate(t=t, y=y))
+        # test something with an index
+        expr = pybamm.Index(A @ pybamm.StateVector(slice(0, 2)), 0)
+        evaluator_str = pybamm.get_julia_function(expr)
+        evaluator = Main.eval(evaluator_str)
+        for t, y in zip(t_tests, y_tests):
+            result = evaluator(t, y, None)
+            self.assertEqual(result, expr.evaluate(t=t, y=y))
 
         # test something with a sparse matrix multiplication
         A = pybamm.Matrix([[1, 2], [3, 4]])
@@ -168,7 +168,7 @@ class TestEvaluate(unittest.TestCase):
         # evaluator_str = pybamm.get_julia_function(expr)
         # evaluator = Main.eval(evaluator_str)
         # for t, y in zip(t_tests, y_tests):
-        #     result = evaluator(t,y,None).toarray()
+        #     result = evaluator(t, y, None).toarray()
         #     np.testing.assert_allclose(result, expr.evaluate(t=t, y=y).toarray())
 
         # # test Inner
