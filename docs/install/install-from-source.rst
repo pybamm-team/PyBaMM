@@ -58,7 +58,19 @@ If ``pip`` is not found, you probably want to install the ``python3-pip`` packag
 Installing the build-time requirements
 --------------------------------------
 
-Using Tox (recommended)
+Part of PyBaMM relies on the IDA DAE solver provided by the SUNDIALS library.
+Before installing PyBaMM, you must make sure that you have the necessary SUNDIALS components
+installed on your system.
+
+On GNU/Linux, the version of SUNDIALS provided by pacakge manaers is often too old to be used
+for PyBaMM, and the library must therefore be built from source.
+Fortunately, it can be done with a single command using tox.
+
+On MacOS, a recent version of SUNDIALS can be installed using homebrew.
+
+On Windows, the PyBaMM IDA-based solver is current unavailable. You can therefore skip this
+section 
+Using Tox (recommended for GNU/Linux users)
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code:: bash
