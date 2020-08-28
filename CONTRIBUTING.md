@@ -9,12 +9,8 @@ If you're already familiar with our workflow, maybe have a quick look at the [pr
 Before you commit any code, please perform the following checks:
 
 - [No style issues](#coding-style-guidelines): `$ flake8`
-- [All tests pass](#testing): `$ python run-tests.py --unit`
-- [The documentation builds](#building-the-documentation): `$ cd docs` and then `$ make clean; make html`
-
-You can even run all three at once, using `$ tox`. This will run the above checks in two separate environments
-for python 3.6 and 3.7. To check for only your current python version, use `$ tox -e py`.
-
+- [All tests pass](#testing): `$ tox -e quick` (GNU/Linux and MacOS), `$ python -m tox -e windows-quick` (Windows)
+- [The documentation builds](#building-the-documentation): `$ python -m tox -e docs`
 
 ## Workflow
 
