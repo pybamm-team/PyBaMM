@@ -53,19 +53,21 @@ Finally, if you really, really, _really_ love developing PyBaMM, have a look at 
 To install PyBaMM with all developer options, type:
 
 ```bash
-tox -e dev
+tox -e pybamm-dev
 ```
 
 This will
 
-1. Create a virtual environment located at `.tox/dev`.
+1. Create a virtual environment located at `.tox/pybamm-dev`.
 2. Install all the dependencies for PyBaMM, including the ones for documentation and development.
 3. Tell Python to use your local pybamm files when you use `import pybamm` anywhere on your system.
 
 Finally, activate your environment with
 ```bash
-source .tox/dev/bin/activate
+source .tox/pybamm-dev/bin/activate
 ```
+
+
 ## Coding style guidelines
 
 PyBaMM follows the [PEP8 recommendations](https://www.python.org/dev/peps/pep-0008/) for coding style. These are very common guidelines, and community tools have been developed to check how well projects implement them.
