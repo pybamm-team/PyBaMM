@@ -66,12 +66,12 @@ The IDA-based solver is currently unavailable on windows.
 If you are running windows, you can simply skip this section and jump to :ref:`pybamm-install`.
 
 Using Tox (recommended for GNU/Linux users)
-~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code:: bash
 
 	  # in the PyBaMM/ directory
-	  tox -e build-requires
+	  tox -e pybamm-requires
 
 This will download, compile and install the SuiteSparse and SUNDIALS libraries.
 Both libraries are installed in ``~/.local``.
@@ -123,7 +123,9 @@ Using Tox (recommended)
 .. code:: bash
 
 	  # in the PyBaMM/ directory
-	  tox -e dev
+	  tox -e dev # (GNU/Linux and MacOS)
+	  #
+	  python -m tox -e windows-dev # (Windows)
 
 
 This creates a virtual environment ``.tox/dev`` inside the ``PyBaMM/`` directory.
@@ -133,7 +135,9 @@ You can now activate the environment with
 
 .. code:: bash
 
-	  source .tox/dev/bin/activate
+	  source .tox/dev/bin/activate # (GNU/Linux and MacOS)
+	  #
+	  .tox\dev\Scripts\activate.bat # (Windows)
 
 and run the tests to check your installation.
 
@@ -165,20 +169,20 @@ The default command
 
 .. code:: bash
 
-	  tox
+	  tox -e tests # (GNU/Linux and MacOS)
+	  #
+	  python -m tox -e windows-tests # (Windows)
 
-will run the unit tests, doctests and check for style in both python 3.6 and python 3.7, assuming you have both versions installed.
-If you want to run the tests for a specific version, say 3.6, run instead
+will run the full test suite (integration and unit tests).
+This can take several minutes.
 
-.. code:: bash
+Is is often sufficient to run the unit tests only. To do so, use
 
-	  tox -e py36
+   .. code:: bash
 
-If you want to run the tests for your current python version (returned by ``python --version``), run instead
-
-.. code:: bash
-
-	  tox -e py
+      tox -e quick # (GNU/Linux and MacOS)
+      #
+      python -m tox -e windows-quick # (Windows)
 
 The documentation is built using
 
@@ -195,6 +199,24 @@ In addition, the following tox commands are available:
 - ``tox -e flake8``: Check for PEP8 compliance.
 - ``tox -e doctests``: Run doctests.
 - ``tox -e coverage``: Measure current test coverage.
+
+Note for Windows users
+^^^^^^^^^^^^^^^^^^^^^^
+
+If you are running Windows, the following tox commands must be prefixed by ``windows-``:
+- ``tests``
+- ``quick``
+- ``examples``
+- ``doctests``
+- ``dev``
+
+For example, to run the full test suite on Windows you would type:
+
+.. code:: bash
+
+	  python -m tox -e windows-tests
+
+
 
 Using the test runner 
 ~~~~~~~~~~~~~~~~~~~~~~
