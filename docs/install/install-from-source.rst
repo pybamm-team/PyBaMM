@@ -184,39 +184,6 @@ Is is often sufficient to run the unit tests only. To do so, use
       #
       python -m tox -e windows-quick # (Windows)
 
-The documentation is built using
-
-.. code:: bash
-
-	  tox -e docs
-
-This will build the documentation and serve it on the localhost (thanks to `sphinx-autobuild <https://github.com/GaretJax/sphinx-autobuild>`_) for preview.
-The preview will be updated automatically following changes.
-
-In addition, the following tox commands are available:
-
-- ``tox -e examples``: Run the example scripts in ``examples/scripts``.
-- ``tox -e flake8``: Check for PEP8 compliance.
-- ``tox -e doctests``: Run doctests.
-- ``tox -e coverage``: Measure current test coverage.
-
-Note for Windows users
-^^^^^^^^^^^^^^^^^^^^^^
-
-If you are running Windows, the following tox commands must be prefixed by ``windows-``:
-- ``tests``
-- ``quick``
-- ``examples``
-- ``doctests``
-- ``dev``
-
-For example, to run the full test suite on Windows you would type:
-
-.. code:: bash
-
-	  python -m tox -e windows-tests
-
-
 
 Using the test runner 
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -233,6 +200,7 @@ The above starts a sub-process using the current python interpreter (i.e. using 
 python environment) and run the unit tests. This can take a few minutes.
 
 You can also use the test runner to run the doctests:
+
 .. code:: bash
 
 	  python run-tests.py --doctests
@@ -243,3 +211,39 @@ There is more to the PyBaMM test runner. To see a list of all options, type
 
 	  python run-tests.py --help
 
+How to build the PyBaMM documentation
+-------------------------------------
+
+The documentation is built using
+
+.. code:: bash
+
+	  tox -e docs
+
+This will build the documentation and serve it locally (thanks to `sphinx-autobuild <https://github.com/GaretJax/sphinx-autobuild>`_) for preview.
+The preview will be updated automatically following changes.
+
+Doctests, examples, style and coverage
+--------------------------------------
+
+- ``tox -e examples``: Run the example scripts in ``examples/scripts``.
+- ``tox -e flake8``: Check for PEP8 compliance.
+- ``tox -e doctests``: Run doctests.
+- ``tox -e coverage``: Measure current test coverage.
+
+Note for Windows users
+----------------------
+
+If you are running Windows, the following tox commands must be prefixed by ``windows-``:
+
+- ``tests``
+- ``quick``
+- ``examples``
+- ``doctests``
+- ``dev``
+
+For example, to run the full test suite on Windows you would type:
+
+.. code:: bash
+
+	  python -m tox -e windows-tests  
