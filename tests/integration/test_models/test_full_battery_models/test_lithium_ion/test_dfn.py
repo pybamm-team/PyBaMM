@@ -89,8 +89,20 @@ class TestDFN(unittest.TestCase):
         modeltest = tests.StandardModelTest(model, var_pts=var_pts)
         modeltest.test_all()
 
-    def test_particle_fast_diffusion(self):
-        options = {"particle": "fast diffusion"}
+    def test_particle_uniform(self):
+        options = {"particle": "uniform profile"}
+        model = pybamm.lithium_ion.DFN(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+    def test_particle_quadratic(self):
+        options = {"particle": "quadratic profile"}
+        model = pybamm.lithium_ion.DFN(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+    def test_particle_quartic(self):
+        options = {"particle": "quartic profile"}
         model = pybamm.lithium_ion.DFN(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
