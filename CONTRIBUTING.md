@@ -9,11 +9,8 @@ If you're already familiar with our workflow, maybe have a quick look at the [pr
 Before you commit any code, please perform the following checks:
 
 - [No style issues](#coding-style-guidelines): `$ flake8`
-- [All tests pass](#testing): `$ python run-tests.py --unit`
-- [The documentation builds](#building-the-documentation): `$ cd docs` and then `$ make clean; make html`
-
-You can even run all three at once, using `$ python run-tests.py --quick`.
-
+- [All tests pass](#testing): `$ tox -e quick` (GNU/Linux and MacOS), `$ python -m tox -e windows-quick` (Windows)
+- [The documentation builds](#building-the-documentation): `$ python -m tox -e docs`
 
 ## Workflow
 
@@ -52,13 +49,26 @@ Finally, if you really, really, _really_ love developing PyBaMM, have a look at 
 To install PyBaMM with all developer options, type:
 
 ```bash
-pip install -e .[dev,docs]
+tox -e dev # (GNU/Linux and MacOS)
+#
+python -m tox -e windows-dev # (Windows)
 ```
 
 This will
 
-1. Install all the dependencies for PyBaMM, including the ones for documentation (docs) and development (dev).
-2. Tell Python to use your local pybamm files when you use `import pybamm` anywhere on your system.
+1. Create a virtual environment located at `.tox/dev`.
+2. Install all the dependencies for PyBaMM, including the ones for documentation and development.
+3. Tell Python to use your local pybamm files when you use `import pybamm` anywhere on your system.
+
+Finally, activate your environment.
+
+
+```bash
+source .tox/dev/bin/activate # (GNU/Linux and MacOS)
+#
+.tox\dev\Scripts\activate.bat # (Windows)
+```
+
 
 ## Coding style guidelines
 
@@ -71,11 +81,7 @@ We use [flake8](http://flake8.pycqa.org/en/latest/) to check our PEP8 adherence.
 ```bash
 flake8
 ```
-The configuration file
-```
-.flake8
-```
-allows us to ignore some errors. If you think this should be added or removed, please submit an [issue](#issues)
+Flake8 is configured inside the file `tox.ini`, under the section `[flake8]`, allowing us to ignore some errors. If you think this should be added or removed, please submit an [issue](#issues)
 
 When you commit your changes they will be checked against flake8 automatically (see [infrastructure](#infrastructure)).
 
@@ -145,7 +151,9 @@ All code requires testing. We use the [unittest](https://docs.python.org/3.3/lib
 To run quick tests, type
 
 ```bash
-python run-tests.py --unit
+tox -e quick # (GNU/Linux and MacOS)
+#
+python -m tox -e windows-quick (Windows)
 ```
 
 ### Writing tests
@@ -160,7 +168,9 @@ The tests are divided into `unit` tests, whose aim is to check individual bits o
 If you want to check integration tests as well as unit tests, type
 
 ```bash
-python run-tests.py --unit --folder all
+tox -e tests # (GNU/Linux and MacOS)
+#
+python -m tox -e windows-tests (Windows)
 ```
 
 When you commit anything to PyBaMM, these checks will also be run automatically (see [infrastructure](#infrastructure)).
@@ -170,7 +180,9 @@ When you commit anything to PyBaMM, these checks will also be run automatically 
 To test all example scripts and notebooks, type
 
 ```bash
-python run-tests.py --examples
+tox -e examples # (GNU/Linux and MacOS)
+#
+python -m tox -e windows-examples (Windows)
 ```
 
 If notebooks fail because of changes to pybamm, it can be a bit of a hassle to debug. In these cases, you can create a temporary export of a notebook's Python content using
@@ -277,16 +289,12 @@ Using [Sphinx](http://www.sphinx-doc.org/en/stable/) the documentation in `docs`
 
 ### Building the documentation
 
-To test and debug the documentation, it's best to build it locally. To do this, make sure you have the relevant dependencies installed (see [installation](#installation)), navigate to your PyBaMM directory in a console, and then type:
+To test and debug the documentation, it's best to build it locally. To do this, navigate to your PyBaMM directory in a console, and then type:
 
 ```
-cd docs
-make clean
-make html
+python -m tox -e docs (GNU/Linux, MacOS and Windows)
 ```
-
-Next, open a browser, and navigate to your local PyBaMM directory (by typing the path, or part of the path into your location bar). Then have a look at `<your pybamm path>/docs/build/html/index.html`.
-
+And then visit the webpage served at http://127.0.0.1:8000. Each time a change to the documentation source is detected, the HTML is rebuilt and the browser automatically reloaded.
 
 ### Example notebooks
 
