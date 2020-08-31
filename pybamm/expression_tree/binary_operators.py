@@ -428,8 +428,6 @@ class Multiplication(BinaryOperator):
         elif issparse(right):
             # Hadamard product is commutative, so we can switch right and left
             return csr_matrix(right.multiply(left))
-        elif isinstance(left, np.matrix):
-            return left.A * right
         else:
             return left * right
 
