@@ -15,18 +15,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: Check style
+    - name: Setup python
       uses: actions/setup-python@v1
       with:
         python-version: 3.7
 
-    - name: Install package
-      run: |
-        python -m pip install --upgrade pip wheel setuptools
-        pip install -e .[dev]
-
     - name: Check style
-      run: python -m flake8
+      run: |
+        python -m pip install tox
+        tox -e flake8
 
   build:
     needs: style
@@ -47,7 +44,7 @@ jobs:
     - name: Install Linux system dependencies
       if: matrix.os == 'ubuntu-latest'
       run: |
-        sudo apt install gfortran gcc libopenblas-dev liblapack-dev graphviz
+        sudo apt install gfortran gcc libopenblas-dev graphviz
         sudo apt install python${{ matrix.python-version }}.dev
     
     - name: Install MacOS system dependencies
@@ -64,51 +61,33 @@ jobs:
     - name: Install standard python dependencies
       run: |
         python -m pip install --upgrade pip wheel setuptools
-        pip install -e .
+        python -m pip install tox
 
-    - name: Install SUNDIALS and SuiteSparse
+    - name: Install SuiteSparse and Sundials
       if: matrix.os != 'windows-latest'
-      run: |
-        pip install wget
-        git clone https://github.com/pybind/pybind11.git
-        python scripts/setup_KLU_module_build.py
-        export SUNDIALS_INST=$HOME/.local
-        pip install scikits.odes
-        pip install -e .
+      run: tox -e pybamm-requires
 
-    - name: Run unit tests Windows
+    - name: Run unit tests for GNU/Linux and MacOS
+      if: matrix.os != 'windows-latest'
+      run: python -m tox -e tests
+
+    - name: Run unit tests for Windows
       if: matrix.os == 'windows-latest'
-      run: |
-        python run-tests.py --unit --folder all
-
-    - name: Run unit tests
-      if: matrix.os != 'windows-latest'
-      run: |
-        export LD_LIBRARY_PATH=$HOME/.local/lib:scikits.odes/sundials5/lib:$LD_LIBRARY_PATH
-        python run-tests.py --unit --folder all
+      run: python -m tox -e windows-tests
 
     - name: Install docs dependencies and run doctests
       if: matrix.os != 'windows-latest'
-      run: |
-        export LD_LIBRARY_PATH=$HOME/.local/lib:scikits.odes/sundials5/lib:$LD_LIBRARY_PATH
-        pip install -e .[docs]
-        python run-tests.py --doctest
-
+      run: tox -e doctests
+    
     - name: Install dev dependencies and run example tests
       if: matrix.os != 'windows-latest'
-      run: |
-        export LD_LIBRARY_PATH=$HOME/.local/lib:scikits.odes/sundials5/lib:$LD_LIBRARY_PATH
-        pip install -e .[dev]
-        python run-tests.py --examples
-
-    - name: Install and run coverage
-      if: success() && (matrix.os == 'ubuntu-latest' && matrix.python-version == 3.7)
-      run: |
-        pip install coverage
-        export LD_LIBRARY_PATH=$HOME/.local/lib:scikits.odes/sundials5/lib:$LD_LIBRARY_PATH
-        coverage run run-tests.py --nosub
-        coverage xml
+      run: tox -e examples
+        
+    - name: Instal and run coverage
+      if: success() && (matrix.os == 'unbuntu-latest' && matrix.python-version == 3.7)
+      run: tox -e coverage
 
     - name: Upload coverage report
       if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.7
       uses: codecov/codecov-action@v1
+

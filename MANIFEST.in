@@ -84,3 +84,4 @@ include pybamm/input/parameters/lithium-ion/separators/separator_Chen2020/README
 include pybamm/input/parameters/lithium-ion/separators/separator_Marquis2019/README.md
 include pybamm/version
 include pybamm/CITATIONS.txt
+include CMakeBuild.py
