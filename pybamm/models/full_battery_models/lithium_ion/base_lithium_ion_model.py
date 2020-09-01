@@ -13,7 +13,7 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     """
 
-    def __init__(self, options=None, name="Unnamed lithium-ion model"):
+    def __init__(self, options=None, name="Unnamed lithium-ion model", build=False):
         super().__init__(options, name)
         self.param = pybamm.LithiumIonParameters(options)
 
