@@ -86,6 +86,11 @@ class Simulation:
     ):
         self.parameter_values = parameter_values or model.default_parameter_values
 
+        if isinstance(model, pybamm.lithium_ion.BasicDFNHalfCell):
+            raise NotImplementedError(
+                "BasicDFNHalfCell is not compatible with Simulations yet."
+            )
+
         if experiment is None:
             # Check to see if the current is provided as data (i.e. drive cycle)
             current = self._parameter_values.get("Current function [A]")

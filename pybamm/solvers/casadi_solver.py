@@ -361,7 +361,6 @@ class CasadiSolver(pybamm.BaseSolver):
                 # rescale rhs by (t_max - t_min)
                 problem.update({"ode": (t_max - t_min) * rhs(t_scaled, y_diff, p)})
             else:
-                options["calc_ic"] = True
                 method = "idas"
                 y_alg = casadi.MX.sym("y_alg", algebraic(0, y0, p).shape[0])
                 y_full = casadi.vertcat(y_diff, y_alg)
@@ -418,4 +417,3 @@ class CasadiSolver(pybamm.BaseSolver):
         except RuntimeError as e:
             # If it doesn't work raise error
             raise pybamm.SolverError(e.args[0])
-

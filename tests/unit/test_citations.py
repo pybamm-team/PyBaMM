@@ -93,6 +93,20 @@ class TestCitations(unittest.TestCase):
         pybamm.current_collector.AlternativeEffectiveResistance2D()
         self.assertIn("timms2020", citations._papers_to_cite)
 
+    def test_subramanian_2005(self):
+        # Test that calling relevant bits of code adds the right paper to citations
+        citations = pybamm.citations
+
+        citations._reset()
+        self.assertNotIn("subramanian2005", citations._papers_to_cite)
+        pybamm.particle.PolynomialSingleParticle(None, "Negative", "quadratic profile")
+        self.assertIn("subramanian2005", citations._papers_to_cite)
+
+        citations._reset()
+        self.assertNotIn("subramanian2005", citations._papers_to_cite)
+        pybamm.particle.PolynomialManyParticles(None, "Negative", "quadratic profile")
+        self.assertIn("subramanian2005", citations._papers_to_cite)
+
     def test_scikit_fem(self):
         citations = pybamm.citations
 

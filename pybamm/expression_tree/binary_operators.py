@@ -730,6 +730,46 @@ class NotEqualHeaviside(Heaviside):
             return left < right
 
 
+class Modulo(BinaryOperator):
+    "Calculates the remainder of an integer division"
+
+    def __init__(self, left, right):
+        super().__init__("%", left, right)
+
+    def _diff(self, variable):
+        """ See :meth:`pybamm.Symbol._diff()`. """
+        # apply chain rule and power rule
+        left, right = self.orphans
+        # derivative if variable is in the base
+        diff = left.diff(variable)
+        # derivative if variable is in the right term (rare, check separately to avoid
+        # unecessarily big tree)
+        if any(variable.id == x.id for x in right.pre_order()):
+            diff += - pybamm.Floor(left / right) * right.diff(variable)
+        return diff
+
+    def _binary_jac(self, left_jac, right_jac):
+        """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
+        # apply chain rule and power rule
+        left, right = self.orphans
+        if left.evaluates_to_number() and right.evaluates_to_number():
+            return pybamm.Scalar(0)
+        elif right.evaluates_to_number():
+            return left_jac
+        elif left.evaluates_to_number():
+            return - right_jac * pybamm.Floor(left / right)
+        else:
+            return left_jac - right_jac * pybamm.Floor(left / right)
+
+    def __str__(self):
+        """ See :meth:`pybamm.Symbol.__str__()`. """
+        return "{!s} mod {!s}".format(self.left, self.right)
+
+    def _binary_evaluate(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        return left % right
+
+
 class Minimum(BinaryOperator):
     " Returns the smaller of two objects "
 
