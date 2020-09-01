@@ -30,7 +30,7 @@ def download_extract_library(url, directory):
     tar.extractall(directory)
 
 
-def install_sundials():
+def install_sundials(download_dir, install_dir):
     # Download the SUNDIALS library and compile it.
     logger = logging.getLogger("scikits.odes setup")
     sundials_version = "5.1.0"
@@ -40,26 +40,24 @@ def install_sundials():
     except OSError:
         raise RuntimeError("CMake must be installed to build SUNDIALS.")
 
-    directory = join(pybamm_dir(), "scikits.odes")
-    os.makedirs(directory, exist_ok=True)
     url = (
         "https://computing.llnl.gov/"
         + "projects/sundials/download/sundials-{}.tar.gz".format(sundials_version)
     )
     logger.info("Downloading sundials")
-    download_extract_library(url, directory)
+    download_extract_library(url, download_dir)
 
     cmake_args = [
         "-DLAPACK_ENABLE=ON",
         "-DSUNDIALS_INDEX_SIZE=32",
         "-DBUILD_ARKODE:BOOL=OFF",
         "-DEXAMPLES_ENABLE:BOOL=OFF",
-        "-DCMAKE_INSTALL_PREFIX=" + join(directory, "sundials5"),
+        "-DCMAKE_INSTALL_PREFIX=" + install_dir,
     ]
 
     # SUNDIALS are built within directory 'build_sundials' in the PyBaMM root
     # directory
-    build_directory = os.path.abspath(join(directory, "build_sundials"))
+    build_directory = os.path.abspath(join(download_dir, "build_sundials"))
     if not os.path.exists(build_directory):
         print("\n-" * 10, "Creating build dir", "-" * 40)
         os.makedirs(build_directory)
@@ -127,20 +125,22 @@ def main(arguments=None):
     desc = "Install scikits.odes."
     parser = argparse.ArgumentParser(description=desc)
     parser.add_argument("--sundials-libs", type=str, help="path to sundials libraries.")
-    parser.add_argument("--install-sundials", action="store_true")
+    default_install_dir = os.path.join(os.getenv("HOME"), ".local")
+    parser.add_argument("--install-dir", type=str, default=default_install_dir)
     args = parser.parse_args(arguments)
-
-    if args.install_sundials:
-        logger.info("Installing sundials")
-        install_sundials()
+    install_dir = (
+        args.install_dir
+        if os.path.isabs(args.install_dir)
+        else os.path.join(pybamm_dir, args.install_dir)
+    )
 
     # Check is sundials is already installed
     SUNDIALS_LIB_DIRS = [
-        join(pybamm_dir(), "scikits.odes/sundials5"),
         join(os.getenv("HOME"), ".local"),
         "/usr/local",
         "/usr",
     ]
+
     if args.sundials_libs:
         SUNDIALS_LIB_DIRS.insert(0, args.sundials_libs)
     for DIR in SUNDIALS_LIB_DIRS:
@@ -154,7 +154,12 @@ def main(arguments=None):
             break
 
     if not SUNDIALS_FOUND:
-        raise RuntimeError("Could not find sundials libraries.")
+        logger.info("Could not find sundials libraries.")
+        logger.info("Installing sundials in {}".install_dir)
+        download_dir = os.path.join(pybamm_dir, "sundials")
+        if not os.path.exists(download_dir):
+            os.makedirs(download_dir)
+        install_sundials(download_dir, install_dir)
 
     update_LD_LIBRARY_PATH(SUNDIALS_LIB_DIR)
 
