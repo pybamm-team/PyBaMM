@@ -13,7 +13,7 @@ These notebooks can be downloaded and used locally by running
 ```
 $ jupyter notebook
 ```
-from your local PyBaMM repository, or used online through [Binder](https://mybinder.org/v2/gh/pybamm-team/PyBaMM/master), or you can simply copy/paste the relevant code.
+from your local PyBaMM repository or used online through [Google Colab](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/master/). Alternatively, you can simply copy/paste the relevant code.
 
 ## Using PyBaMM
 
@@ -67,7 +67,8 @@ Once you are comfortable with the expression tree structure, a good starting poi
 ### Spatial Methods
 
 The following spatial methods are implemented
-- [Finite Volumes](./spatial_methods/finite-volumes.ipynb)
+- [Finite Volumes](./spatial_methods/finite-volumes.ipynb) (1D only)
+- Spectral Volumes (1D only)
 - Finite Elements (only for 2D current collector domains)
 
 See [here](https://pybamm.readthedocs.io/en/latest/tutorials/add-spatial-method.html) for instructions on adding new spatial methods.
