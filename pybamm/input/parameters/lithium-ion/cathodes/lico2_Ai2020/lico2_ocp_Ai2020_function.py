@@ -9,8 +9,8 @@ def lico2_ocp_Ai2020_function(sto):
 
         References
         ----------
-        .. [1] Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020). 
-        Electrochemical Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells.
+        .. [1] Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020). Electrochemical 
+        Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells.
         Journal of The Electrochemical Society, 167(1), 013512. DOI: 10.1149/2.0122001JES
 
     Parameters
@@ -41,5 +41,5 @@ def lico2_ocp_Ai2020_function(sto):
         + p8 * sto ** 2
         + p9 * sto
         + p10
-    ) 
+    )
     return u_eq

@@ -21,11 +21,13 @@ class BaseCracking(pybamm.BaseSubModel):
 
     def get_standard_variables(self):
         l_cr_n = pybamm.Variable(
-            self.domain + " particle crack length", domain=self.domain.lower() + " electrode"
+            self.domain + " particle crack length",
+            domain=self.domain.lower() + " electrode",
         )
         # crack length in anode particles
         l_cr_n_dim = pybamm.Variable(
-            self.domain + " particle crack length", domain=self.domain.lower() + " electrode"
+            self.domain + " particle crack length",
+            domain=self.domain.lower() + " electrode",
         )
         # crack length in anode particles
         variables = {
@@ -99,7 +101,9 @@ class BaseCracking(pybamm.BaseSubModel):
         disp_n_surf_dim = Omega_n * R_n / 3 * (c_s_n_avg - c_n_0) * c_scale
         # c0 reference concentration for no deformation
         stress_r_n_surf_dim = 0 * E_n
-        stress_t_n_surf_dim = ( Omega_n * E_n / 3.0 / (1.0 - nu_n) * (c_s_n_avg - c_s_n_surf) * c_scale ) # noqa        
+        stress_t_n_surf_dim = (
+            Omega_n * E_n / 3.0 / (1.0 - nu_n) * (c_s_n_avg - c_s_n_surf) * c_scale
+        )  # noqa
         disp_n_surf = disp_n_surf_dim / R_n
         stress_r_n_surf = stress_r_n_surf_dim / E_n
         stress_t_n_surf = stress_t_n_surf_dim / E_n
@@ -110,7 +114,8 @@ class BaseCracking(pybamm.BaseSubModel):
             self.domain + " particle surface tangential stress": stress_t_n_surf,
             self.domain + " particle surface radial stress": stress_r_n_surf,
             self.domain + " particle surface displacement": disp_n_surf,
-            self.domain + " particle surface tangential stress [Pa]": stress_t_n_surf_dim,
+            self.domain
+            + " particle surface tangential stress [Pa]": stress_t_n_surf_dim,
             self.domain + " particle surface radial stress [Pa]": stress_r_n_surf_dim,
             self.domain + " particle surface displacement [m]": disp_n_surf_dim,
         }

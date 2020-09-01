@@ -98,8 +98,8 @@ class Simulation:
                 self.operating_mode = "drive cycle"
             elif isinstance(current, tuple):
                 raise NotImplementedError(
-                    "Drive cycle from data has been deprecated. " +
-                    "Define an Interpolant instead."
+                    "Drive cycle from data has been deprecated. "
+                    + "Define an Interpolant instead."
                 )
             else:
                 self.operating_mode = "without experiment"

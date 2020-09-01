@@ -17,9 +17,9 @@ class TestBaseCracking(unittest.TestCase):
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
-        #submodel = pybamm.particle.BaseParticle(None, "Positive")
-        #std_tests = tests.StandardSubModelTests(submodel, variables)
-        #std_tests.test_all()
+        # submodel = pybamm.particle.BaseParticle(None, "Positive")
+        # std_tests = tests.StandardSubModelTests(submodel, variables)
+        # std_tests.test_all()
 
 
 if __name__ == "__main__":

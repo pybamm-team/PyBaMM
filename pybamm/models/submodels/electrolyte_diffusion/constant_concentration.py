@@ -37,4 +37,3 @@ class ConstantConcentration(BaseElectrolyteDiffusion):
         variables.update(self._get_standard_flux_variables(N_e))
 
         return variables
-

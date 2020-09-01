@@ -1,5 +1,3 @@
-
-
 def graphite_ocp_Enertech_Ai2020_function(sto):
     """
     Graphite  Open Circuit Potential (OCP) as a a function of the
@@ -19,8 +17,8 @@ def graphite_ocp_Enertech_Ai2020_function(sto):
 
     """
 
-    p1 =  0.07031
-    p2 =  -0.4612
+    p1 = 0.07031
+    p2 = -0.4612
     u_eq = p1 * sto ** p2
-    # 
+    #
     return u_eq

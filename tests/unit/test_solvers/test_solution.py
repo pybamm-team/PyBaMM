@@ -138,9 +138,7 @@ class TestSolution(unittest.TestCase):
         np.testing.assert_array_almost_equal(df["2c"], solution.data["2c"])
 
         # raise error if format is unknown
-        with self.assertRaisesRegex(
-            ValueError, "format 'wrong_format' not recognised"
-        ):
+        with self.assertRaisesRegex(ValueError, "format 'wrong_format' not recognised"):
             solution.save_data("test.csv", to_format="wrong_format")
 
         # test save whole solution

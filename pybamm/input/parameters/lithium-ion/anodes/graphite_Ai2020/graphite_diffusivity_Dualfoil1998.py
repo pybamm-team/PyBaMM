@@ -28,8 +28,8 @@ def graphite_diffusivity_Dualfoil1998(sto, T):
         Solid diffusivity
    """
 
-    D_ref = 3.9E-14
+    D_ref = 3.9e-14
     E_D_s = 5000
-    arrhenius = exp( - E_D_s / (constants.R * T)) * exp(E_D_s / (constants.R * 298))
+    arrhenius = exp(-E_D_s / (constants.R * T)) * exp(E_D_s / (constants.R * 298))
 
     return D_ref * arrhenius

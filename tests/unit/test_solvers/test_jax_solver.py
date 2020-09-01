@@ -5,6 +5,7 @@ import sys
 import time
 import numpy as np
 from platform import system
+
 if system() != "Windows":
     import jax
 
@@ -27,18 +28,17 @@ class TestJaxSolver(unittest.TestCase):
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
 
-        for method in ['RK45', 'BDF']:
+        for method in ["RK45", "BDF"]:
             # Solve
-            solver = pybamm.JaxSolver(
-                method=method, rtol=1e-8, atol=1e-8
-            )
+            solver = pybamm.JaxSolver(method=method, rtol=1e-8, atol=1e-8)
             t_eval = np.linspace(0, 1, 80)
             t0 = time.perf_counter()
             solution = solver.solve(model, t_eval)
             t_first_solve = time.perf_counter() - t0
             np.testing.assert_array_equal(solution.t, t_eval)
-            np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t),
-                                       rtol=1e-6, atol=1e-6)
+            np.testing.assert_allclose(
+                solution.y[0], np.exp(0.1 * solution.t), rtol=1e-6, atol=1e-6
+            )
 
             # Test time
             self.assertEqual(
@@ -73,19 +73,15 @@ class TestJaxSolver(unittest.TestCase):
         disc.process_model(model)
 
         # Solve
-        solver = pybamm.JaxSolver(
-            method='BDF', rtol=1e-8, atol=1e-8
-        )
+        solver = pybamm.JaxSolver(method="BDF", rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 1, 80)
         t0 = time.perf_counter()
         solution = solver.solve(model, t_eval)
         t_first_solve = time.perf_counter() - t0
         np.testing.assert_array_equal(solution.t, t_eval)
         soln = np.exp(0.1 * solution.t)
-        np.testing.assert_allclose(solution.y[0], soln,
-                                   rtol=1e-7, atol=1e-7)
-        np.testing.assert_allclose(solution.y[-1], 2 * soln,
-                                   rtol=1e-7, atol=1e-7)
+        np.testing.assert_allclose(solution.y[0], soln, rtol=1e-7, atol=1e-7)
+        np.testing.assert_allclose(solution.y[-1], 2 * soln, rtol=1e-7, atol=1e-7)
 
         # Test time
         self.assertEqual(
@@ -116,23 +112,21 @@ class TestJaxSolver(unittest.TestCase):
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
 
-        for method in ['RK45', 'BDF']:
+        for method in ["RK45", "BDF"]:
             # Solve
-            solver = pybamm.JaxSolver(
-                method=method, rtol=1e-8, atol=1e-8
-            )
+            solver = pybamm.JaxSolver(method=method, rtol=1e-8, atol=1e-8)
             t_eval = np.linspace(0, 1, 80)
 
             h = 0.0001
             rate = 0.1
 
             # need to solve the model once to get it set up by the base solver
-            solver.solve(model, t_eval, inputs={'rate': rate})
+            solver.solve(model, t_eval, inputs={"rate": rate})
             solve = solver.get_solve(model, t_eval)
 
             # create a dummy "model" where we calculate the sum of the time series
             def solve_model(rate):
-                return jax.numpy.sum(solve({'rate': rate}))
+                return jax.numpy.sum(solve({"rate": rate}))
 
             # check answers with finite difference
             eval_plus = solve_model(rate + h)
@@ -216,15 +210,17 @@ class TestJaxSolver(unittest.TestCase):
         solution = solver.solve(model, t_eval, inputs={"rate": 0.1})
         t_first_solve = time.perf_counter() - t0
 
-        np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t),
-                                   rtol=1e-6, atol=1e-6)
+        np.testing.assert_allclose(
+            solution.y[0], np.exp(-0.1 * solution.t), rtol=1e-6, atol=1e-6
+        )
 
         t0 = time.perf_counter()
         solution = solver.solve(model, t_eval, inputs={"rate": 0.2})
         t_second_solve = time.perf_counter() - t0
 
-        np.testing.assert_allclose(solution.y[0], np.exp(-0.2 * solution.t),
-                                   rtol=1e-6, atol=1e-6)
+        np.testing.assert_allclose(
+            solution.y[0], np.exp(-0.2 * solution.t), rtol=1e-6, atol=1e-6
+        )
 
         self.assertLess(t_second_solve, t_first_solve)
 
@@ -247,7 +243,7 @@ class TestJaxSolver(unittest.TestCase):
 
         # test that another method string gives error
         with self.assertRaises(ValueError):
-            solver = pybamm.JaxSolver(method='not_real')
+            solver = pybamm.JaxSolver(method="not_real")
 
         # Solve
         solver = pybamm.JaxSolver(rtol=1e-8, atol=1e-8)
@@ -260,13 +256,11 @@ class TestJaxSolver(unittest.TestCase):
         solver = solver.get_solve(model, t_eval)
         y = solver({"rate": 0.1})
 
-        np.testing.assert_allclose(y[0], np.exp(-0.1 * t_eval),
-                                   rtol=1e-6, atol=1e-6)
+        np.testing.assert_allclose(y[0], np.exp(-0.1 * t_eval), rtol=1e-6, atol=1e-6)
 
         y = solver({"rate": 0.2})
 
-        np.testing.assert_allclose(y[0], np.exp(-0.2 * t_eval),
-                                   rtol=1e-6, atol=1e-6)
+        np.testing.assert_allclose(y[0], np.exp(-0.2 * t_eval), rtol=1e-6, atol=1e-6)
 
 
 if __name__ == "__main__":

@@ -75,8 +75,13 @@ class SpectralVolume(pybamm.FiniteVolume):
         Chebyshev collocation points on [a,b].
         """
 
-        return a + 0.5 * (b - a) * (1 + np.sin(np.pi * np.array(
-            [(noe - 1 - 2 * i) / (2 * noe - 2) for i in range(noe)])))
+        return a + 0.5 * (b - a) * (
+            1
+            + np.sin(
+                np.pi
+                * np.array([(noe - 1 - 2 * i) / (2 * noe - 2) for i in range(noe)])
+            )
+        )
 
     def cv_boundary_reconstruction_sub_matrix(self):
         """
@@ -101,8 +106,7 @@ class SpectralVolume(pybamm.FiniteVolume):
         # While Spectral Volume in general may use any point
         # distribution for CVs, the Chebyshev nodes are the most stable.
         # The differentiation matrices are only implemented for those.
-        edges = np.flip(
-            self.chebyshev_collocation_points(self.order + 1))
+        edges = np.flip(self.chebyshev_collocation_points(self.order + 1))
 
         # Nomenclature in the reference:
         # c[j,l] are the coefficients from the reference.
@@ -118,23 +122,30 @@ class SpectralVolume(pybamm.FiniteVolume):
         def d_omega_d_x(j):
             return np.prod(
                 edges[j] - edges,
-                where=[True] * j + [False] + [True] * (len(edges) - 1 - j)
+                where=[True] * j + [False] + [True] * (len(edges) - 1 - j),
             )
 
         for j in range(self.order + 1):
             for ell in range(self.order):
-                c[j, ell] = h[ell] * np.sum([
-                    1.0 / d_omega_d_x(r) * np.sum(
-                        [
-                            np.prod(edges[j] - edges,
-                                    where=[q != r and q != m
-                                           for q in range(self.order + 1)])
-                            for m in range(self.order + 1)
-                        ],
-                        where=[m != r for m in range(self.order + 1)]
-                    )
-                    for r in range(ell + 1, self.order + 1)
-                ])
+                c[j, ell] = h[ell] * np.sum(
+                    [
+                        1.0
+                        / d_omega_d_x(r)
+                        * np.sum(
+                            [
+                                np.prod(
+                                    edges[j] - edges,
+                                    where=[
+                                        q != r and q != m for q in range(self.order + 1)
+                                    ],
+                                )
+                                for m in range(self.order + 1)
+                            ],
+                            where=[m != r for m in range(self.order + 1)],
+                        )
+                        for r in range(ell + 1, self.order + 1)
+                    ]
+                )
 
         return c
 
@@ -171,8 +182,7 @@ class SpectralVolume(pybamm.FiniteVolume):
         sub_matrix = csr_matrix(kron(eye(n), recon_sub_matrix))
 
         # number of repeats
-        second_dim_repeats = self._get_auxiliary_domain_repeats(
-            auxiliary_domains)
+        second_dim_repeats = self._get_auxiliary_domain_repeats(auxiliary_domains)
 
         # generate full matrix from the submatrix
         # Convert to csr_matrix so that we can take the index
@@ -212,31 +222,32 @@ class SpectralVolume(pybamm.FiniteVolume):
                Society for Industrial and Applied Mathematics,
                24(5):1465–1487, 2003
         """
-        if(dod >= noe):
+        if dod >= noe:
             raise ValueError(
                 "Too many degrees of differentiation. At most "
-                + str(noe - 1) + " are possible for " + str(noe) + " edges."
+                + str(noe - 1)
+                + " are possible for "
+                + str(noe)
+                + " edges."
             )
 
         edges = self.chebyshev_collocation_points(noe)
 
         # These matrices tend to be dense, thus numpy arrays are used.
-        prefactors = np.array([
-            [(i - j + 1) % 2 - (i - j) % 2
-             for j in range(noe)]
-            for i in range(noe)
-        ])
-        prefactors = (prefactors * np.array(
-            [2] + [1 for i in range(noe - 2)] + [2])).T
-        prefactors = prefactors * np.array(
-            [0.5] + [1 for i in range(noe - 2)] + [0.5])
+        prefactors = np.array(
+            [[(i - j + 1) % 2 - (i - j) % 2 for j in range(noe)] for i in range(noe)]
+        )
+        prefactors = (prefactors * np.array([2] + [1 for i in range(noe - 2)] + [2])).T
+        prefactors = prefactors * np.array([0.5] + [1 for i in range(noe - 2)] + [0.5])
 
-        inverse_difference = np.array([
-            [1.0 / (edges[i] - edges[j]) for j in range(i)]
-            + [0.0]
-            + [1.0 / (edges[i] - edges[j]) for j in range(i + 1, noe)]
-            for i in range(noe)
-        ])
+        inverse_difference = np.array(
+            [
+                [1.0 / (edges[i] - edges[j]) for j in range(i)]
+                + [0.0]
+                + [1.0 / (edges[i] - edges[j]) for j in range(i + 1, noe)]
+                for i in range(noe)
+            ]
+        )
 
         differentiation_matrices = []
         # This matrix changes in each of the following iterations.
@@ -264,8 +275,10 @@ class SpectralVolume(pybamm.FiniteVolume):
         domain = symbol.domain
 
         # Reconstruct edge values from node values.
-        reconstructed_symbol = self.cv_boundary_reconstruction_matrix(
-            domain, symbol.auxiliary_domains) @ discretised_symbol
+        reconstructed_symbol = (
+            self.cv_boundary_reconstruction_matrix(domain, symbol.auxiliary_domains)
+            @ discretised_symbol
+        )
 
         # Add Dirichlet boundary conditions, if defined
         if symbol.id in boundary_conditions:
@@ -277,18 +290,13 @@ class SpectralVolume(pybamm.FiniteVolume):
                 )
 
         # note in 1D spherical grad and normal grad are the same
-        gradient_matrix = self.gradient_matrix(
-            domain,
-            symbol.auxiliary_domains
-        )
-        penalty_matrix = self.penalty_matrix(
-            domain,
-            symbol.auxiliary_domains
-        )
+        gradient_matrix = self.gradient_matrix(domain, symbol.auxiliary_domains)
+        penalty_matrix = self.penalty_matrix(domain, symbol.auxiliary_domains)
 
         # Multiply by gradient matrix
-        out = (gradient_matrix @ reconstructed_symbol
-               + penalty_matrix @ discretised_symbol)
+        out = (
+            gradient_matrix @ reconstructed_symbol + penalty_matrix @ discretised_symbol
+        )
 
         # Add Neumann boundary conditions, if defined
         if symbol.id in boundary_conditions:
@@ -331,16 +339,21 @@ class SpectralVolume(pybamm.FiniteVolume):
         # Obtain the Chebyshev differentiation matrix.
         # Flip it, since it is defined for the Chebyshev
         # collocation points in descending order.
-        chebdiff = np.flip(self.chebyshev_differentiation_matrices(
-            self.order + 1, 1)[0])
+        chebdiff = np.flip(
+            self.chebyshev_differentiation_matrices(self.order + 1, 1)[0]
+        )
 
         # Create 1D matrix using submesh
         # submesh.npts is the number of CVs and n the number of SVs
         n = submesh.npts // self.order
         d = self.order
         # Compute the lengths of the Spectral Volumes.
-        d_sv_edges = np.array([np.sum(submesh.d_edges[d * i:d * i + d])
-                               for i in range(len(submesh.d_edges) // d)])
+        d_sv_edges = np.array(
+            [
+                np.sum(submesh.d_edges[d * i : d * i + d])
+                for i in range(len(submesh.d_edges) // d)
+            ]
+        )
         # The 2 scales from [-1,1] (Chebyshev default) to [0,1].
         # e = 2 / submesh.d_sv_edges
         e = 2 / d_sv_edges
@@ -356,29 +369,27 @@ class SpectralVolume(pybamm.FiniteVolume):
             sub_matrix = sub_matrix_raw
         else:
             sub_matrix = lil_matrix((n * d + 1, n * (d + 1)))
-            sub_matrix[:d, :d + 1] = sub_matrix_raw[:d, :d + 1]
-            sub_matrix[d, :d + 1] = f * sub_matrix_raw[d, :d + 1]
+            sub_matrix[:d, : d + 1] = sub_matrix_raw[:d, : d + 1]
+            sub_matrix[d, : d + 1] = f * sub_matrix_raw[d, : d + 1]
             # for loop of shame (optimisation potential via vectorisation)
             for i in range(1, n - 1):
-                sub_matrix[i * d, i * (d + 1):(i + 1) * (d + 1)] = (
-                    f * sub_matrix_raw[i * (d + 1),
-                                       i * (d + 1):(i + 1) * (d + 1)]
+                sub_matrix[i * d, i * (d + 1) : (i + 1) * (d + 1)] = (
+                    f * sub_matrix_raw[i * (d + 1), i * (d + 1) : (i + 1) * (d + 1)]
                 )
-                sub_matrix[i * d + 1:(i + 1) * d,
-                           i * (d + 1):(i + 1) * (d + 1)] = (
-                    sub_matrix_raw[i * (d + 1) + 1:(i + 1) * (d + 1) - 1,
-                                   i * (d + 1):(i + 1) * (d + 1)]
+                sub_matrix[
+                    i * d + 1 : (i + 1) * d, i * (d + 1) : (i + 1) * (d + 1)
+                ] = sub_matrix_raw[
+                    i * (d + 1) + 1 : (i + 1) * (d + 1) - 1,
+                    i * (d + 1) : (i + 1) * (d + 1),
+                ]
+                sub_matrix[(i + 1) * d, i * (d + 1) : (i + 1) * (d + 1)] = (
+                    f * sub_matrix_raw[i * (d + 1) + d, i * (d + 1) : (i + 1) * (d + 1)]
                 )
-                sub_matrix[(i + 1) * d, i * (d + 1):(i + 1) * (d + 1)] = (
-                    f * sub_matrix_raw[i * (d + 1) + d,
-                                       i * (d + 1):(i + 1) * (d + 1)]
-                )
-            sub_matrix[-d - 1, -d - 1:] = f * sub_matrix_raw[-d - 1, -d - 1:]
-            sub_matrix[-d:, -d - 1:] = sub_matrix_raw[-d:, -d - 1:]
+            sub_matrix[-d - 1, -d - 1 :] = f * sub_matrix_raw[-d - 1, -d - 1 :]
+            sub_matrix[-d:, -d - 1 :] = sub_matrix_raw[-d:, -d - 1 :]
 
         # number of repeats
-        second_dim_repeats = self._get_auxiliary_domain_repeats(
-            auxiliary_domains)
+        second_dim_repeats = self._get_auxiliary_domain_repeats(auxiliary_domains)
 
         # generate full matrix from the submatrix
         # Convert to csr_matrix so that we can take the index
@@ -416,17 +427,13 @@ class SpectralVolume(pybamm.FiniteVolume):
         n = submesh.npts
         d = self.order
         e = np.zeros(n - 1)
-        e[d - 1::d] = 1 / submesh.d_nodes[d - 1::d]
-        sub_matrix = vstack([
-            np.zeros(n),
-            diags([-e, e], [0, 1], shape=(n - 1, n)),
-            np.zeros(n),
-        ])
+        e[d - 1 :: d] = 1 / submesh.d_nodes[d - 1 :: d]
+        sub_matrix = vstack(
+            [np.zeros(n), diags([-e, e], [0, 1], shape=(n - 1, n)), np.zeros(n),]
+        )
 
         # number of repeats
-        second_dim_repeats = self._get_auxiliary_domain_repeats(
-            auxiliary_domains
-        )
+        second_dim_repeats = self._get_auxiliary_domain_repeats(auxiliary_domains)
 
         # generate full matrix from the submatrix
         # Convert to csr_matrix so that we can take the index
@@ -437,9 +444,9 @@ class SpectralVolume(pybamm.FiniteVolume):
 
         return pybamm.Matrix(matrix)
 
-    #def spectral_volume_internal_neumann_condition(
+    # def spectral_volume_internal_neumann_condition(
     #    self, left_symbol_disc, right_symbol_disc, left_mesh, right_mesh
-    #):
+    # ):
     #    """
     #    A method to find the internal neumann conditions between two
     #    symbols on adjacent subdomains. This method is never called,
@@ -548,11 +555,9 @@ class SpectralVolume(pybamm.FiniteVolume):
         # write boundary values into vectors of according shape
         if lbc_type == "Dirichlet":
             lbc_sub_matrix = coo_matrix(([1], ([0], [0])), shape=(n, 1))
-            lbc_matrix = csr_matrix(kron(eye(second_dim_repeats),
-                                         lbc_sub_matrix))
+            lbc_matrix = csr_matrix(kron(eye(second_dim_repeats), lbc_sub_matrix))
             if lbc_value.evaluates_to_number():
-                left_bc = lbc_value * pybamm.Vector(
-                    np.ones(second_dim_repeats))
+                left_bc = lbc_value * pybamm.Vector(np.ones(second_dim_repeats))
             else:
                 left_bc = lbc_value
             lbc_vector = pybamm.Matrix(lbc_matrix) @ left_bc
@@ -566,11 +571,9 @@ class SpectralVolume(pybamm.FiniteVolume):
 
         if rbc_type == "Dirichlet":
             rbc_sub_matrix = coo_matrix(([1], ([n - 1], [0])), shape=(n, 1))
-            rbc_matrix = csr_matrix(kron(eye(second_dim_repeats),
-                                         rbc_sub_matrix))
+            rbc_matrix = csr_matrix(kron(eye(second_dim_repeats), rbc_sub_matrix))
             if rbc_value.evaluates_to_number():
-                right_bc = rbc_value * pybamm.Vector(
-                    np.ones(second_dim_repeats))
+                right_bc = rbc_value * pybamm.Vector(np.ones(second_dim_repeats))
             else:
                 right_bc = rbc_value
             rbc_vector = pybamm.Matrix(rbc_matrix) @ right_bc
@@ -592,9 +595,11 @@ class SpectralVolume(pybamm.FiniteVolume):
         # Make matrix which makes "gaps" at the boundaries into which
         # the known Dirichlet values will be added. If the boundary
         # condition is not Dirichlet, it acts as identity.
-        sub_matrix = diags([int(lbc_type != "Dirichlet")]
-                           + [1 for i in range(n - 2)]
-                           + [int(rbc_type != "Dirichlet")])
+        sub_matrix = diags(
+            [int(lbc_type != "Dirichlet")]
+            + [1 for i in range(n - 2)]
+            + [int(rbc_type != "Dirichlet")]
+        )
 
         # repeat matrix for secondary dimensions
         # Convert to csr_matrix so that we can take the index
@@ -644,12 +649,9 @@ class SpectralVolume(pybamm.FiniteVolume):
         # Add any values from Neumann boundary conditions to the bcs vector
         if lbc_type == "Neumann":
             lbc_sub_matrix = coo_matrix(([1], ([0], [0])), shape=(n, 1))
-            lbc_matrix = csr_matrix(kron(eye(second_dim_repeats),
-                                         lbc_sub_matrix))
+            lbc_matrix = csr_matrix(kron(eye(second_dim_repeats), lbc_sub_matrix))
             if lbc_value.evaluates_to_number():
-                left_bc = lbc_value * pybamm.Vector(
-                    np.ones(second_dim_repeats)
-                )
+                left_bc = lbc_value * pybamm.Vector(np.ones(second_dim_repeats))
             else:
                 left_bc = lbc_value
             lbc_vector = pybamm.Matrix(lbc_matrix) @ left_bc
@@ -663,11 +665,9 @@ class SpectralVolume(pybamm.FiniteVolume):
 
         if rbc_type == "Neumann":
             rbc_sub_matrix = coo_matrix(([1], ([n - 1], [0])), shape=(n, 1))
-            rbc_matrix = csr_matrix(kron(eye(second_dim_repeats),
-                                         rbc_sub_matrix))
+            rbc_matrix = csr_matrix(kron(eye(second_dim_repeats), rbc_sub_matrix))
             if rbc_value.evaluates_to_number():
-                right_bc = rbc_value * pybamm.Vector(
-                    np.ones(second_dim_repeats))
+                right_bc = rbc_value * pybamm.Vector(np.ones(second_dim_repeats))
             else:
                 right_bc = rbc_value
             rbc_vector = pybamm.Matrix(rbc_matrix) @ right_bc
@@ -689,9 +689,11 @@ class SpectralVolume(pybamm.FiniteVolume):
         # Make matrix which makes "gaps" at the boundaries into which
         # the known Neumann values will be added. If the boundary
         # condition is not Neumann, it acts as identity.
-        sub_matrix = diags([int(lbc_type != "Neumann")]
-                           + [1 for i in range(n - 2)]
-                           + [int(rbc_type != "Neumann")])
+        sub_matrix = diags(
+            [int(lbc_type != "Neumann")]
+            + [1 for i in range(n - 2)]
+            + [int(rbc_type != "Neumann")]
+        )
 
         # repeat matrix for secondary dimensions
         # Convert to csr_matrix so that we can take the index
@@ -700,7 +702,6 @@ class SpectralVolume(pybamm.FiniteVolume):
         # this should not be an issue.
         matrix = csr_matrix(kron(eye(second_dim_repeats), sub_matrix))
 
-        new_gradient = (pybamm.Matrix(matrix) @ discretised_gradient
-                        + bcs_vector)
+        new_gradient = pybamm.Matrix(matrix) @ discretised_gradient + bcs_vector
 
         return new_gradient
