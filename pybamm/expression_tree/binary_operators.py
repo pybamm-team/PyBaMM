@@ -745,7 +745,7 @@ class Modulo(BinaryOperator):
         # derivative if variable is in the right term (rare, check separately to avoid
         # unecessarily big tree)
         if any(variable.id == x.id for x in right.pre_order()):
-            diff += - pybamm.Floor(left / right) * right.diff(variable)
+            diff += -pybamm.Floor(left / right) * right.diff(variable)
         return diff
 
     def _binary_jac(self, left_jac, right_jac):
@@ -757,7 +757,7 @@ class Modulo(BinaryOperator):
         elif right.evaluates_to_number():
             return left_jac
         elif left.evaluates_to_number():
-            return - right_jac * pybamm.Floor(left / right)
+            return -right_jac * pybamm.Floor(left / right)
         else:
             return left_jac - right_jac * pybamm.Floor(left / right)
 
