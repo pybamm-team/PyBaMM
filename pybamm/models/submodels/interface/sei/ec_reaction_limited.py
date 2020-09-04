@@ -41,39 +41,9 @@ class EcReactionLimited(BaseModel):
 
     def get_coupled_variables(self, variables):
 
-        j_sei = variables[self.domain + " electrode sei interfacial current density"]
-        L_sei = variables["Total " + self.domain.lower() + " electrode sei thickness"]
-        c_scale = self.param.c_ec_0_dim
-        # concentration of EC on graphite surface, base case = 1
-        if self.domain == "Negative":
-            C_ec = self.param.C_ec_n
+        # Get variables related to the concentration
+        variables.update(self._get_standard_concentraion_variables(variables))
 
-        c_ec = pybamm.Scalar(1) + j_sei * L_sei * C_ec
-        c_ec_av = pybamm.x_average(c_ec)
-        n_SEI = j_sei * L_sei * C_ec
-        n_SEI_av = pybamm.x_average(n_SEI)
-        Q_sei = n_SEI_av * self.param.L_n * self.param.L_y * self.param.L_z
-
-        variables.update(
-            {
-                self.domain + " electrode EC surface concentration": c_ec,
-                self.domain
-                + " electrode EC surface concentration [mol.m-3]": c_ec * c_scale,
-                "X-averaged "
-                + self.domain.lower()
-                + " electrode EC surface concentration": c_ec_av,
-                "X-averaged "
-                + self.domain.lower()
-                + " electrode EC surface concentration": c_ec_av * c_scale,
-                self.domain + " electrode sei concentration [mol.m-3]": n_SEI * c_scale,
-                "X-averaged "
-                + self.domain.lower()
-                + " electrode sei concentration [mol.m-3]": n_SEI_av * c_scale,
-                "Loss of lithium to "
-                + self.domain.lower()
-                + " electrode sei [mol]": Q_sei * c_scale,
-            }
-        )
         # Update whole cell variables, which also updates the "sum of" variables
         if (
             "Negative electrode sei interfacial current density" in variables
@@ -126,7 +96,6 @@ class EcReactionLimited(BaseModel):
             R_sei = self.param.R_sei_n
 
         # need to revise for thermal case
-
         self.algebraic = {
             j_sei: j_sei
             + C_sei_ec
@@ -142,3 +111,48 @@ class EcReactionLimited(BaseModel):
         j_sei_0 = pybamm.Scalar(0)
 
         self.initial_conditions = {L_sei: L_sei_0, j_sei: j_sei_0}
+
+    def _get_standard_concentraion_variables(self, variables):
+        """
+        Update variables related to the SEI concentration. Note this overwrites
+        the behaviour of
+        :meth:`pybamm.sei.BaseModel._get_standard_concentraion_variables`. Here
+        we set the variables for the EC surface concentration, whereas in the base
+        model we set the variables related to the concentration in the inner and
+        outer SEI layers.
+        """
+        j_sei = variables[self.domain + " electrode sei interfacial current density"]
+        L_sei = variables["Total " + self.domain.lower() + " electrode sei thickness"]
+        c_scale = self.param.c_ec_0_dim
+        # concentration of EC on graphite surface, base case = 1
+        if self.domain == "Negative":
+            C_ec = self.param.C_ec_n
+
+        c_ec = pybamm.Scalar(1) + j_sei * L_sei * C_ec
+        c_ec_av = pybamm.x_average(c_ec)
+        n_SEI = j_sei * L_sei * C_ec
+        n_SEI_av = pybamm.x_average(n_SEI)
+        Q_sei = n_SEI_av * self.param.L_n * self.param.L_y * self.param.L_z
+
+        variables.update(
+            {
+                self.domain + " electrode EC surface concentration": c_ec,
+                self.domain
+                + " electrode EC surface concentration [mol.m-3]": c_ec * c_scale,
+                "X-averaged "
+                + self.domain.lower()
+                + " electrode EC surface concentration": c_ec_av,
+                "X-averaged "
+                + self.domain.lower()
+                + " electrode EC surface concentration": c_ec_av * c_scale,
+                self.domain + " electrode sei concentration [mol.m-3]": n_SEI * c_scale,
+                "X-averaged "
+                + self.domain.lower()
+                + " electrode sei concentration [mol.m-3]": n_SEI_av * c_scale,
+                "Loss of lithium to "
+                + self.domain.lower()
+                + " electrode sei [mol]": Q_sei * c_scale,
+            }
+        )
+
+        return variables
