@@ -47,6 +47,7 @@ class BaseParticle(pybamm.BaseSubModel):
             c_scale = self.param.c_p_max
             eps_s = self.param.epsilon_s_p
             L = self.param.L_p
+        A = self.param.A_cc
 
         # Get average concentration(s) if not provided as fundamental variable to
         # solve for
@@ -90,7 +91,7 @@ class BaseParticle(pybamm.BaseSubModel):
             + " electrode extent of lithiation": c_s_av,
             "Total lithium in "
             + self.domain.lower()
-            + " electrode [mol.m-2]": c_s_vol_av * c_scale * L,
+            + " electrode [mol]": c_s_vol_av * c_scale * L * A,
         }
 
         return variables

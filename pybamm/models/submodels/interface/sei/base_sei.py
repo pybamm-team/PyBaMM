@@ -71,10 +71,6 @@ class BaseModel(BaseInterface):
         L_sei = L_inner + L_outer
         variables.update(self._get_standard_total_thickness_variables(L_sei))
 
-        # Get variables related to the concentration (in general these can be
-        # obtained explicitly from the thicknesses)
-        variables.update(self._get_standard_concentraion_variables(variables))
-
         return variables
 
     def _get_standard_total_thickness_variables(self, L_sei):
@@ -110,6 +106,11 @@ class BaseModel(BaseInterface):
             n_scale = 1
             n_outer_scale = 1
             v_bar = 1
+        # Set scales for the "EC Reaction Limited" model
+        elif isinstance(self, pybamm.sei.EcReactionLimited):
+            n_scale = 1
+            n_outer_scale = self.param.c_ec_0_dim
+            v_bar = 1
         else:
             n_scale = param.L_sei_0_dim * param.a_n_dim / param.V_bar_inner_dimensional
             n_outer_scale = (
@@ -120,8 +121,25 @@ class BaseModel(BaseInterface):
         L_inner = variables["Inner " + domain + " sei thickness"]
         L_outer = variables["Outer " + domain + " sei thickness"]
 
-        n_inner = L_inner  # inner SEI concentration
-        n_outer = L_outer  # outer SEI concentration
+        # Set SEI concentration variables. Note these are defined differently for
+        # the "EC Reaction Limited" model
+        if isinstance(self, pybamm.sei.EcReactionLimited):
+            j_outer = variables["Outer " + domain + " sei interfacial current density"]
+            # concentration of EC on graphite surface, base case = 1
+            if self.domain == "Negative":
+                C_ec = self.param.C_ec_n
+
+            c_ec = pybamm.Scalar(1) + j_outer * L_outer * C_ec
+            c_ec_av = pybamm.x_average(c_ec)
+
+            n_inner = pybamm.FullBroadcast(
+                0, self.domain.lower() + " electrode", "current collector"
+            )  # inner SEI concentration
+            n_outer = j_outer * L_outer * C_ec  # outer SEI concentration
+        else:
+            n_inner = L_inner  # inner SEI concentration
+            n_outer = L_outer  # outer SEI concentration
+
         n_inner_av = pybamm.x_average(L_inner)
         n_outer_av = pybamm.x_average(L_outer)
 
@@ -149,6 +167,23 @@ class BaseModel(BaseInterface):
                 "Loss of lithium to " + domain + " sei [mol]": Q_sei * n_scale,
             }
         )
+
+        # Also set variables for EC surface concentration
+        if isinstance(self, pybamm.sei.EcReactionLimited):
+            variables.update(
+                {
+                    self.domain + " electrode EC surface concentration": c_ec,
+                    self.domain
+                    + " electrode EC surface concentration [mol.m-3]": c_ec
+                    * n_outer_scale,
+                    "X-averaged "
+                    + self.domain.lower()
+                    + " electrode EC surface concentration": c_ec_av,
+                    "X-averaged "
+                    + self.domain.lower()
+                    + " electrode EC surface concentration": c_ec_av * n_outer_scale,
+                }
+            )
 
         return variables
 

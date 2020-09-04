@@ -119,19 +119,17 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
         Returns
         -------
         variables : dict
-            The variables which can be derived from the flux in the
-            electrolyte.
+            The "Total concentration in electrolyte [mol]" variable.
         """
 
         c_e_typ = self.param.c_e_typ
         L_x = self.param.L_x
+        A = self.param.A_cc
 
-        c_e_total = pybamm.x_average(c_e)
+        c_e_total = pybamm.x_average(epsilon * c_e)
 
         variables = {
-            "Total concentration in electrolyte [mol.m-2]": c_e_typ
-            * L_x
-            * c_e_total,
+            "Total concentration in electrolyte [mol]": c_e_typ * L_x * A * c_e_total
         }
 
         return variables
