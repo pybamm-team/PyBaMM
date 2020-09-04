@@ -391,7 +391,7 @@ class Divergence(SpatialOperator):
         if child.evaluates_on_edges("primary") is False:
             raise TypeError(
                 "Cannot take divergence of '{}' since it does not ".format(child)
-                + "evaluates on nodes. Usually, a gradient should be taken before the "
+                + "evaluate on edges. Usually, a gradient should be taken before the "
                 "divergence."
             )
         super().__init__("div", child)
@@ -942,94 +942,152 @@ class BoundaryGradient(BoundaryOperator):
         super().__init__("boundary flux", child, side)
 
 
+class UpwindDownwind(SpatialOperator):
+    """A node in the expression tree representing an upwinding or downwinding operator.
+    Usually to be used for better stability in convection-dominated equations.
+
+    **Extends:** :class:`SpatialOperator`
+    """
+
+    def __init__(self, name, child):
+        if child.domain == []:
+            raise pybamm.DomainError(
+                "Cannot upwind '{}' since its domain is empty. ".format(child)
+                + "Try broadcasting the object first, e.g.\n\n"
+                "\tpybamm.div(pybamm.PrimaryBroadcast(symbol, 'domain'))"
+            )
+        if child.evaluates_on_edges("primary") is True:
+            raise TypeError(
+                "Cannot upwind '{}' since it does not ".format(child)
+                + "evaluate on nodes."
+            )
+        super().__init__(name, child)
+
+    def evaluates_on_edges(self, dimension):
+        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+        return True
+
+
+class Upwind(UpwindDownwind):
+    """
+    Upwinding operator. To be used if flow velocity is positive (left to right).
+
+    **Extends:** :class:`UpwindDownwind`
+    """
+
+    def __init__(self, child):
+        super().__init__("upwind", child)
+
+
+class Downwind(UpwindDownwind):
+    """
+    Downwinding operator. To be used if flow velocity is negative (right to left).
+
+    **Extends:** :class:`UpwindDownwind`
+    """
+
+    def __init__(self, child):
+        super().__init__("downwind", child)
+
+
 #
 # Methods to call Gradient, Divergence, Laplacian and Gradient_Squared
 #
 
 
-def grad(expression):
+def grad(symbol):
     """convenience function for creating a :class:`Gradient`
 
     Parameters
     ----------
 
-    expression : :class:`Symbol`
-        the gradient will be performed on this sub-expression
+    symbol : :class:`Symbol`
+        the gradient will be performed on this sub-symbol
 
     Returns
     -------
 
     :class:`Gradient`
-        the gradient of ``expression``
+        the gradient of ``symbol``
     """
     # Gradient of a broadcast is zero
-    if isinstance(expression, pybamm.PrimaryBroadcast):
-        new_child = pybamm.PrimaryBroadcast(0, expression.child.domain)
-        return pybamm.PrimaryBroadcastToEdges(new_child, expression.domain)
+    if isinstance(symbol, pybamm.PrimaryBroadcast):
+        new_child = pybamm.PrimaryBroadcast(0, symbol.child.domain)
+        return pybamm.PrimaryBroadcastToEdges(new_child, symbol.domain)
     else:
-        return Gradient(expression)
+        return Gradient(symbol)
 
 
-def div(expression):
+def div(symbol):
     """convenience function for creating a :class:`Divergence`
 
     Parameters
     ----------
 
-    expression : :class:`Symbol`
-        the divergence will be performed on this sub-expression
+    symbol : :class:`Symbol`
+        the divergence will be performed on this sub-symbol
 
     Returns
     -------
 
     :class:`Divergence`
-        the divergence of ``expression``
+        the divergence of ``symbol``
     """
     # Divergence of a broadcast is zero
-    if isinstance(expression, pybamm.PrimaryBroadcastToEdges):
-        new_child = pybamm.PrimaryBroadcast(0, expression.child.domain)
-        return pybamm.PrimaryBroadcast(new_child, expression.domain)
+    if isinstance(symbol, pybamm.PrimaryBroadcastToEdges):
+        new_child = pybamm.PrimaryBroadcast(0, symbol.child.domain)
+        return pybamm.PrimaryBroadcast(new_child, symbol.domain)
     else:
-        return Divergence(expression)
+        return Divergence(symbol)
 
 
-def laplacian(expression):
+def laplacian(symbol):
     """convenience function for creating a :class:`Laplacian`
 
     Parameters
     ----------
 
-    expression : :class:`Symbol`
-        the laplacian will be performed on this sub-expression
+    symbol : :class:`Symbol`
+        the laplacian will be performed on this sub-symbol
 
     Returns
     -------
 
     :class:`Laplacian`
-        the laplacian of ``expression``
+        the laplacian of ``symbol``
     """
 
-    return Laplacian(expression)
+    return Laplacian(symbol)
 
 
-def grad_squared(expression):
+def grad_squared(symbol):
     """convenience function for creating a :class:`Gradient_Squared`
 
     Parameters
     ----------
 
-    expression : :class:`Symbol`
+    symbol : :class:`Symbol`
         the inner product of the gradient with itself will be performed on this
-        sub-expression
+        sub-symbol
 
     Returns
     -------
 
     :class:`Gradient_Squared`
-        inner product of the gradient of ``expression`` with itself
+        inner product of the gradient of ``symbol`` with itself
     """
 
-    return Gradient_Squared(expression)
+    return Gradient_Squared(symbol)
+
+
+def upwind(symbol):
+    "convenience function for creating a :class:`Upwind`"
+    return Upwind(symbol)
+
+
+def downwind(symbol):
+    "convenience function for creating a :class:`Downwind`"
+    return Downwind(symbol)
 
 
 #
