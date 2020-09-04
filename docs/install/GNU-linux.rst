@@ -148,16 +148,9 @@ repository
 
 Then, to install PyBaMM as a `developer <CONTRIBUTING.md>`__, type
 
-.. code:: bash
+ .. code:: bash
 
    pip install -e .[dev,docs]
-
-**KLU sparse solver** If you wish so simulate large systems such as the
-2+1D models, we recommend employing a sparse solver. PyBaMM currently
-offers a direct interface to the sparse KLU solver within Sundials, but
-it is unlikely to be installed as you may not have all the dependencies
-available. If you wish to install the KLU from the PyBaMM sources, see
-:doc:`the instructions for compiling the KLU sparse solver <install-klu>`.
 
 To check whether PyBaMM has installed properly, you can run the tests:
 
