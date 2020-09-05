@@ -203,7 +203,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "external submodels": [],
             "sei": None,
             "sei porosity change": False,
-            "working electrode": None
+            "working electrode": None,
         }
         # Change the default for cell geometry based on which thermal option is provided
         extra_options = extra_options or {}
@@ -648,8 +648,8 @@ class BaseBatteryModel(pybamm.BaseModel):
         elif self.options["thermal"] == "lumped":
             thermal_submodel = pybamm.thermal.Lumped(
                 self.param,
-                self.options["dimensionality"],
-                self.options["cell geometry"],
+                cc_dimension=self.options["dimensionality"],
+                geometry=self.options["cell geometry"],
             )
 
         elif self.options["thermal"] == "x-lumped":
