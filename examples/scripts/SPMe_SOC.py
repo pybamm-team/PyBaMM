@@ -74,8 +74,8 @@ for l_n in thicknesses:
         # solve model
         t_eval = np.linspace(0, 3600, 100)
         sol = model.default_solver.solve(model, t_eval)
-        xpext = sol["Positive electrode average extent of lithiation"]
-        xnext = sol["Negative electrode average extent of lithiation"]
+        xpext = sol["X-averaged positive electrode extent of lithiation"]
+        xnext = sol["X-averaged negative electrode extent of lithiation"]
         xpsurf = sol["X-averaged positive particle surface concentration"]
         xnsurf = sol["X-averaged negative particle surface concentration"]
         time = sol["Time [h]"]
