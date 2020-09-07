@@ -1,4 +1,3 @@
-import pybamm
 from .solvent_diffusion_limited import SolventDiffusionLimited
 
 
