@@ -1,4 +1,6 @@
-# Unreleased
+# [v0.2.4](https://github.com/pybamm-team/PyBaMM/tree/v0.2.4) - 2020-09-07
+
+This release adds new operators for more complex models, some basic sensitivity analysis, and a spectral volumes spatial method, as well as some small bug fixes.
 
 ## Features
 
@@ -6,7 +8,7 @@
 -   Added `Upwind` and `Downwind` operators for convection ([#1134](https://github.com/pybamm-team/PyBaMM/pull/1134))
 -   Added Getting Started notebook on solver options and changing the mesh. Also added a notebook detailing the different thermal options, and a notebook explaining the steps that occur behind the scenes in the `Simulation` class ([#1131](https://github.com/pybamm-team/PyBaMM/pull/1131))
 -   Added particle submodel that use a polynomial approximation to the concentration within the electrode particles ([#1130](https://github.com/pybamm-team/PyBaMM/pull/1130))
--   Added Modulo, Floor and Ceiling operators ([#1121](https://github.com/pybamm-team/PyBaMM/pull/1121))
+-   Added `Modulo`, `Floor` and `Ceiling` operators ([#1121](https://github.com/pybamm-team/PyBaMM/pull/1121))
 -   Added DFN model for a half cell ([#1121](https://github.com/pybamm-team/PyBaMM/pull/1121))
 -   Automatically compute surface area per unit volume based on particle shape for li-ion models ([#1120](https://github.com/pybamm-team/PyBaMM/pull/1120))
 -   Added "R-averaged particle concentration" variables ([#1118](https://github.com/pybamm-team/PyBaMM/pull/1118))
@@ -15,11 +17,9 @@
 -   Allowed keyword arguments to be passed to `Simulation.plot()` ([#1099](https://github.com/pybamm-team/PyBaMM/pull/1099))
 -   Added the Spectral Volumes spatial method and the submesh that it works with ([#900](https://github.com/pybamm-team/PyBaMM/pull/900))
 
-## Optimizations
-
 ## Bug fixes
 
--   Fixed bug where some parameters were not being set by the `EcRectionLimited` SEI model ([#1136](https://github.com/pybamm-team/PyBaMM/pull/1136))
+-   Fixed bug where some parameters were not being set by the `EcReactionLimited` SEI model ([#1136](https://github.com/pybamm-team/PyBaMM/pull/1136))
 -   Fixed bug on electrolyte potential for `BasicDFNHalfCell` ([#1133](https://github.com/pybamm-team/PyBaMM/pull/1133))
 -   Fixed `r_average` to work with `SecondaryBroadcast` ([#1118](https://github.com/pybamm-team/PyBaMM/pull/1118))
 -   Fixed finite volume discretisation of spherical integrals ([#1118](https://github.com/pybamm-team/PyBaMM/pull/1118))
