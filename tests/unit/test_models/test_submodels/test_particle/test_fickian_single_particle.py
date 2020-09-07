@@ -9,7 +9,7 @@ import unittest
 
 class TestSingleParticle(unittest.TestCase):
     def test_public_functions(self):
-        param = pybamm.standard_parameters_lithium_ion
+        param = pybamm.LithiumIonParameters()
 
         a = pybamm.PrimaryBroadcast(pybamm.Scalar(0), "current collector")
         variables = {

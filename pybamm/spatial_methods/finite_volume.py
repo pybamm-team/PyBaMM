@@ -242,7 +242,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             second_dim_repeats = self._get_auxiliary_domain_repeats(child.domains)
             r_numpy = np.kron(np.ones(second_dim_repeats), submesh.nodes)
             r = pybamm.Vector(r_numpy)
-            out = 4 * np.pi ** 2 * integration_vector @ (discretised_child * r)
+            out = 4 * np.pi * integration_vector @ (discretised_child * r ** 2)
         else:
             out = integration_vector @ discretised_child
 
@@ -1384,3 +1384,66 @@ class FiniteVolume(pybamm.SpatialMethod):
         else:
             raise ValueError("method '{}' not recognised".format(method))
         return out
+
+    def upwind_or_downwind(self, symbol, discretised_symbol, bcs, direction):
+        """
+        Implement an upwinding operator. Currently, this requires the symbol to have
+        a Dirichlet boundary condition on the left side (for upwinding) or right side
+        (for downwinding).
+
+        Parameters
+        ----------
+        symbol : :class:`pybamm.SpatialVariable`
+            The variable to be discretised
+        discretised_gradient : :class:`pybamm.Vector`
+            Contains the discretised gradient of symbol
+        bcs : dict of tuples (:class:`pybamm.Scalar`, str)
+            Dictionary (with keys "left" and "right") of boundary conditions. Each
+            boundary condition consists of a value and a flag indicating its type
+            (e.g. "Dirichlet")
+        direction : str
+            Direction in which to apply the operator (upwind or downwind)
+        """
+        submesh = self.mesh.combine_submeshes(*symbol.domain)
+        n = submesh.npts
+
+        if symbol.id not in bcs:
+            raise pybamm.ModelError(
+                "Boundary conditions must be provided for "
+                "{}ing '{}'".format(direction, symbol)
+            )
+
+        if direction == "upwind":
+            bc, typ = bcs[symbol.id]["left"]
+            if typ != "Dirichlet":
+                raise pybamm.ModelError(
+                    "Dirichlet boundary conditions must be provided for "
+                    "upwinding '{}'".format(symbol)
+                )
+
+            concat_bc = pybamm.NumpyConcatenation(bc, discretised_symbol)
+
+            upwind_mat = vstack(
+                [
+                    csr_matrix(([1], ([0], [0])), shape=(1, n + 1)),
+                    diags([-0.5, 1.5], [0, 1], shape=(n, n + 1)),
+                ]
+            )
+            symbol_out = pybamm.Matrix(upwind_mat) @ concat_bc
+        elif direction == "downwind":
+            bc, typ = bcs[symbol.id]["right"]
+            if typ != "Dirichlet":
+                raise pybamm.ModelError(
+                    "Dirichlet boundary conditions must be provided for "
+                    "downwinding '{}'".format(symbol)
+                )
+
+            concat_bc = pybamm.NumpyConcatenation(discretised_symbol, bc)
+            downwind_mat = vstack(
+                [
+                    diags([1.5, -0.5], [0, 1], shape=(n, n + 1)),
+                    csr_matrix(([1], ([0], [n])), shape=(1, n + 1)),
+                ]
+            )
+            symbol_out = pybamm.Matrix(downwind_mat) @ concat_bc
+        return symbol_out

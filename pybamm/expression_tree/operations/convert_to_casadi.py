@@ -76,6 +76,8 @@ class CasadiConverter(object):
             converted_left = self.convert(left, t, y, y_dot, inputs)
             converted_right = self.convert(right, t, y, y_dot, inputs)
 
+            if isinstance(symbol, pybamm.Modulo):
+                return casadi.fmod(converted_left, converted_right)
             if isinstance(symbol, pybamm.Minimum):
                 return casadi.fmin(converted_left, converted_right)
             if isinstance(symbol, pybamm.Maximum):
@@ -88,6 +90,10 @@ class CasadiConverter(object):
             converted_child = self.convert(symbol.child, t, y, y_dot, inputs)
             if isinstance(symbol, pybamm.AbsoluteValue):
                 return casadi.fabs(converted_child)
+            if isinstance(symbol, pybamm.Floor):
+                return casadi.floor(converted_child)
+            if isinstance(symbol, pybamm.Ceiling):
+                return casadi.ceil(converted_child)
             return symbol._unary_evaluate(converted_child)
 
         elif isinstance(symbol, pybamm.Function):

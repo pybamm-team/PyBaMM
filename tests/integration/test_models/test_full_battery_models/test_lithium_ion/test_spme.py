@@ -6,6 +6,7 @@ import tests
 
 import numpy as np
 import unittest
+from platform import system
 
 
 class TestSPMe(unittest.TestCase):
@@ -69,6 +70,10 @@ class TestSPMe(unittest.TestCase):
         np.testing.assert_array_almost_equal(original, simp_and_known)
         np.testing.assert_array_almost_equal(original, simp_and_python)
 
+        if system() != "Windows":
+            simp_and_jax = optimtest.evaluate_model(simplify=True, to_jax=True)
+            np.testing.assert_array_almost_equal(original, simp_and_jax)
+
     def test_set_up(self):
         model = pybamm.lithium_ion.SPMe()
         optimtest = tests.OptimisationsTest(model)
@@ -89,8 +94,20 @@ class TestSPMe(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-    def test_particle_fast_diffusion(self):
-        options = {"particle": "fast diffusion"}
+    def test_particle_uniform(self):
+        options = {"particle": "uniform profile"}
+        model = pybamm.lithium_ion.SPMe(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+    def test_particle_quadratic(self):
+        options = {"particle": "quadratic profile"}
+        model = pybamm.lithium_ion.SPMe(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+    def test_particle_quartic(self):
+        options = {"particle": "quartic profile"}
         model = pybamm.lithium_ion.SPMe(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()

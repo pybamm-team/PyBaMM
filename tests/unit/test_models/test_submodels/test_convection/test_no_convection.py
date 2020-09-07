@@ -9,7 +9,7 @@ import unittest
 
 class TestNoConvectionModel(unittest.TestCase):
     def test_public_functions(self):
-        param = pybamm.standard_parameters_lead_acid
+        param = pybamm.LeadAcidParameters()
 
         a = pybamm.Scalar(0)
         a_s = pybamm.PrimaryBroadcast(a, "separator")

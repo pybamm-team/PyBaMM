@@ -38,7 +38,7 @@ class EffectiveResistance(pybamm.BaseModel):
     ):
         super().__init__(name)
         self.options = options
-        self.param = pybamm.standard_parameters_lithium_ion
+        self.param = pybamm.LithiumIonParameters()
 
         # Set default length scales
         self.length_scales = {
@@ -100,8 +100,8 @@ class EffectiveResistance(pybamm.BaseModel):
 
         # Add spatial variables
         var = pybamm.standard_spatial_vars
-        L_y = pybamm.geometric_parameters.L_y
-        L_z = pybamm.geometric_parameters.L_z
+        L_y = param.L_y
+        L_z = param.L_z
         if self.options["dimensionality"] == 1:
             variables.update({"z": var.z, "z [m]": var.z * L_z})
         elif self.options["dimensionality"] == 2:
@@ -217,33 +217,30 @@ class EffectiveResistance(pybamm.BaseModel):
     @property
     def default_geometry(self):
         geometry = {}
+        param = self.param
         var = pybamm.standard_spatial_vars
         if self.options["dimensionality"] == 1:
             geometry["current collector"] = {
                 var.z: {"min": 0, "max": 1},
                 "tabs": {
-                    "negative": {
-                        "z_centre": pybamm.geometric_parameters.centre_z_tab_n
-                    },
-                    "positive": {
-                        "z_centre": pybamm.geometric_parameters.centre_z_tab_p
-                    },
+                    "negative": {"z_centre": param.centre_z_tab_n},
+                    "positive": {"z_centre": param.centre_z_tab_p},
                 },
             }
         elif self.options["dimensionality"] == 2:
             geometry["current collector"] = {
-                var.y: {"min": 0, "max": pybamm.geometric_parameters.l_y},
-                var.z: {"min": 0, "max": pybamm.geometric_parameters.l_z},
+                var.y: {"min": 0, "max": param.l_y},
+                var.z: {"min": 0, "max": param.l_z},
                 "tabs": {
                     "negative": {
-                        "y_centre": pybamm.geometric_parameters.centre_y_tab_n,
-                        "z_centre": pybamm.geometric_parameters.centre_z_tab_n,
-                        "width": pybamm.geometric_parameters.l_tab_n,
+                        "y_centre": param.centre_y_tab_n,
+                        "z_centre": param.centre_z_tab_n,
+                        "width": param.l_tab_n,
                     },
                     "positive": {
-                        "y_centre": pybamm.geometric_parameters.centre_y_tab_p,
-                        "z_centre": pybamm.geometric_parameters.centre_z_tab_p,
-                        "width": pybamm.geometric_parameters.l_tab_p,
+                        "y_centre": param.centre_y_tab_p,
+                        "z_centre": param.centre_z_tab_p,
+                        "width": param.l_tab_p,
                     },
                 },
             }
@@ -317,7 +314,7 @@ class AlternativeEffectiveResistance2D(pybamm.BaseModel):
     def __init__(self):
         super().__init__()
         self.name = "Effective resistance in current collector model (2D)"
-        self.param = pybamm.standard_parameters_lithium_ion
+        self.param = pybamm.LithiumIonParameters()
 
         # Set default length scales
         self.length_scales = {
@@ -396,8 +393,8 @@ class AlternativeEffectiveResistance2D(pybamm.BaseModel):
 
         # Add spatial variables
         var = pybamm.standard_spatial_vars
-        L_y = pybamm.geometric_parameters.L_y
-        L_z = pybamm.geometric_parameters.L_z
+        L_y = param.L_y
+        L_z = param.L_z
         self.variables.update(
             {"y": var.y, "y [m]": var.y * L_y, "z": var.z, "z [m]": var.z * L_z}
         )
@@ -475,21 +472,22 @@ class AlternativeEffectiveResistance2D(pybamm.BaseModel):
 
     @property
     def default_geometry(self):
+        param = self.param
         var = pybamm.standard_spatial_vars
         geometry = {
             "current collector": {
-                var.y: {"min": 0, "max": pybamm.geometric_parameters.l_y},
-                var.z: {"min": 0, "max": pybamm.geometric_parameters.l_z},
+                var.y: {"min": 0, "max": param.l_y},
+                var.z: {"min": 0, "max": param.l_z},
                 "tabs": {
                     "negative": {
-                        "y_centre": pybamm.geometric_parameters.centre_y_tab_n,
-                        "z_centre": pybamm.geometric_parameters.centre_z_tab_n,
-                        "width": pybamm.geometric_parameters.l_tab_n,
+                        "y_centre": param.centre_y_tab_n,
+                        "z_centre": param.centre_z_tab_n,
+                        "width": param.l_tab_n,
                     },
                     "positive": {
-                        "y_centre": pybamm.geometric_parameters.centre_y_tab_p,
-                        "z_centre": pybamm.geometric_parameters.centre_z_tab_p,
-                        "width": pybamm.geometric_parameters.l_tab_p,
+                        "y_centre": param.centre_y_tab_p,
+                        "z_centre": param.centre_z_tab_p,
+                        "width": param.l_tab_p,
                     },
                 },
             }
