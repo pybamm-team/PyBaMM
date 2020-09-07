@@ -6,7 +6,8 @@ from .base_sei import BaseModel
 
 
 class InterstitialDiffusionLimited(BaseModel):
-    """Base class for interstitial-diffusion limited SEI growth.
+    """
+    Class for interstitial-diffusion limited SEI growth.
 
     Parameters
     ----------
@@ -26,6 +27,7 @@ class InterstitialDiffusionLimited(BaseModel):
         L_outer = pybamm.standard_variables.L_outer
 
         variables = self._get_standard_thickness_variables(L_inner, L_outer)
+        variables.update(self._get_standard_concentraion_variables(variables))
 
         return variables
 
