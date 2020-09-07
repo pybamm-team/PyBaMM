@@ -32,8 +32,9 @@ class SolventDiffusionLimited(BaseModel):
         return variables
 
     def get_coupled_variables(self, variables):
-        L_sei_outer = variables[f"Outer {self.domain.lower()} " \
-                                f"electrode{self.reaction_name} thickness"]
+        L_sei_outer = variables[
+            f"Outer {self.domain.lower()} electrode{self.reaction_name} thickness"
+        ]
 
         if self.domain == "Negative":
             C_sei = self.param.C_sei_solvent_n
