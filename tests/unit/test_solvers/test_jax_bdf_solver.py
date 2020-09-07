@@ -5,6 +5,7 @@ import sys
 import time
 import numpy as np
 from platform import system
+
 if system() != "Windows":
     import jax
 
@@ -40,8 +41,7 @@ class TestJaxBDFSolver(unittest.TestCase):
         t1 = time.perf_counter() - t0
 
         # test accuracy
-        np.testing.assert_allclose(y[:, 0], np.exp(0.1 * t_eval),
-                                   rtol=1e-6, atol=1e-6)
+        np.testing.assert_allclose(y[:, 0], np.exp(0.1 * t_eval), rtol=1e-6, atol=1e-6)
 
         t0 = time.perf_counter()
         y = pybamm.jax_bdf_integrate(fun, y0, t_eval, rtol=1e-8, atol=1e-8)
@@ -51,23 +51,16 @@ class TestJaxBDFSolver(unittest.TestCase):
         self.assertLess(t2, t1)
 
         # test second run is accurate
-        np.testing.assert_allclose(y[:, 0], np.exp(0.1 * t_eval),
-                                   rtol=1e-6, atol=1e-6)
+        np.testing.assert_allclose(y[:, 0], np.exp(0.1 * t_eval), rtol=1e-6, atol=1e-6)
 
     def test_mass_matrix(self):
         # Solve
         t_eval = np.linspace(0.0, 1.0, 80)
 
         def fun(y, t):
-            return jax.numpy.stack([
-                0.1 * y[0],
-                y[1] - 2.0 * y[0],
-            ])
+            return jax.numpy.stack([0.1 * y[0], y[1] - 2.0 * y[0],])
 
-        mass = jax.numpy.array([
-            [2.0, 0.0],
-            [0.0, 0.0],
-        ])
+        mass = jax.numpy.array([[2.0, 0.0], [0.0, 0.0],])
 
         # give some bad initial conditions, solver should calculate correct ones using
         # this as a guess
@@ -79,10 +72,8 @@ class TestJaxBDFSolver(unittest.TestCase):
 
         # test accuracy
         soln = np.exp(0.05 * t_eval)
-        np.testing.assert_allclose(y[:, 0], soln,
-                                   rtol=1e-7, atol=1e-7)
-        np.testing.assert_allclose(y[:, 1], 2.0 * soln,
-                                   rtol=1e-7, atol=1e-7)
+        np.testing.assert_allclose(y[:, 0], soln, rtol=1e-7, atol=1e-7)
+        np.testing.assert_allclose(y[:, 1], 2.0 * soln, rtol=1e-7, atol=1e-7)
 
         t0 = time.perf_counter()
         y = pybamm.jax_bdf_integrate(fun, y0, t_eval, mass=mass, rtol=1e-8, atol=1e-8)
@@ -92,8 +83,7 @@ class TestJaxBDFSolver(unittest.TestCase):
         self.assertLess(t2, t1)
 
         # test second run is accurate
-        np.testing.assert_allclose(y[:, 0], np.exp(0.05 * t_eval),
-                                   rtol=1e-7, atol=1e-7)
+        np.testing.assert_allclose(y[:, 0], np.exp(0.05 * t_eval), rtol=1e-7, atol=1e-7)
 
     def test_solver_sensitivities(self):
         # Create model
@@ -125,9 +115,9 @@ class TestJaxBDFSolver(unittest.TestCase):
         @jax.jit
         def solve_bdf(rate):
             return jax.numpy.sum(
-                pybamm.jax_bdf_integrate(fun, y0, t_eval,
-                                         {'rate': rate},
-                                         rtol=1e-9, atol=1e-9)
+                pybamm.jax_bdf_integrate(
+                    fun, y0, t_eval, {"rate": rate}, rtol=1e-9, atol=1e-9
+                )
             )
 
         # check answers with finite difference
@@ -145,15 +135,9 @@ class TestJaxBDFSolver(unittest.TestCase):
         t_eval = np.linspace(0.0, 1.0, 80)
 
         def fun(y, t, inputs):
-            return jax.numpy.stack([
-                inputs['rate'] * y[0],
-                y[1] - 2.0 * y[0],
-            ])
+            return jax.numpy.stack([inputs["rate"] * y[0], y[1] - 2.0 * y[0],])
 
-        mass = jax.numpy.array([
-            [2.0, 0.0],
-            [0.0, 0.0],
-        ])
+        mass = jax.numpy.array([[2.0, 0.0], [0.0, 0.0],])
 
         y0 = jax.numpy.array([1.0, 2.0])
 
@@ -164,10 +148,9 @@ class TestJaxBDFSolver(unittest.TestCase):
         @jax.jit
         def solve_bdf(rate):
             return jax.numpy.sum(
-                pybamm.jax_bdf_integrate(fun, y0, t_eval,
-                                         {'rate': rate},
-                                         mass=mass,
-                                         rtol=1e-9, atol=1e-9)
+                pybamm.jax_bdf_integrate(
+                    fun, y0, t_eval, {"rate": rate}, mass=mass, rtol=1e-9, atol=1e-9
+                )
             )
 
         # check answers with finite difference
@@ -203,8 +186,9 @@ class TestJaxBDFSolver(unittest.TestCase):
         def fun(y, t, inputs):
             return rhs.evaluate(t=t, y=y, inputs=inputs).reshape(-1)
 
-        y = pybamm.jax_bdf_integrate(fun, y0, t_eval, {
-            "rate": 0.1}, rtol=1e-9, atol=1e-9)
+        y = pybamm.jax_bdf_integrate(
+            fun, y0, t_eval, {"rate": 0.1}, rtol=1e-9, atol=1e-9
+        )
 
         np.testing.assert_allclose(y[:, 0].reshape(-1), np.exp(-0.1 * t_eval))
 

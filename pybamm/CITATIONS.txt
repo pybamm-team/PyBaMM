@@ -194,6 +194,16 @@ archivePrefix={arXiv},
 primaryClass={physics.app-ph},
 }
 
+@article{Ai2020JES,
+  title={Electrochemical Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells},
+  author={Ai, Weilong and Kraft, Ludwig and Sturm, Johannes and Jossen, Andreas and Wu, Billy},
+  journal={Journal of The Electrochemical Society},
+  volume={167},
+  number={1},
+  pages={013512},
+  year={2019},
+  publisher={IOP Publishing}
+}
 @article{subramanian2005,
   title={Efficient macro-micro scale coupled modeling of batteries},
   author={Subramanian, Venkat R and Diwakar, Vinten D and Tapriyal, Deepak},

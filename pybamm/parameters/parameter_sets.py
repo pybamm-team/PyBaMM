@@ -33,6 +33,11 @@ Lithium-ion parameter sets
         P. Ramadass, B. Haran, P. M. Gomadam, R. White, and B. N. Popov. “Development
         of First Principles Capacity Fade Model for Li-Ion Cells.” Journal of the
         Electrochemical Society, 151(2), A196-A203 (2004).
+    * Ai 2020 :
+        > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020). 
+        Electrochemical Thermal-Mechanical Modelling of Stress Inhomogeneity 
+        in Lithium-Ion Pouch Cells. Journal of The Electrochemical Society, 
+        167(1), 013512. DOI: 10.1149/2.0122001JES.
 
 Lead-acid parameter sets
 --------------------------
@@ -79,6 +84,7 @@ Marquis2019 = {
     "electrolyte": "lipf6_Marquis2019",
     "experiment": "1C_discharge_from_full_Marquis2019",
     "sei": "example",
+    "mechanical": "lico2_graphite_Ai2020",
     "citation": "marquis2019asymptotic",
 }
 
@@ -129,4 +135,17 @@ Sulzer2019 = {
     "electrolyte": "sulfuric_acid_Sulzer2019",
     "experiment": "1C_discharge_from_full",
     "citation": "sulzer2019physical",
+}
+
+Ai2020 = {
+    "chemistry": "lithium-ion",
+    "cell": "Enertech_Ai2020",
+    "anode": "graphite_Ai2020",
+    # "anode": "graphite_mcmb2528_Marquis2019",
+    "separator": "separator_Ai2020",
+    #"cathode": "lico2_Ai2020",
+    "cathode": "lico2_Marquis2019",
+    "electrolyte": "lipf6_Enertech_Ai2020",
+    "experiment": "1C_discharge_from_full_Ai2020",
+    "citation": "Ai2020JES",
 }
