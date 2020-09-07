@@ -32,9 +32,7 @@ class SolventDiffusionLimited(BaseModel):
         return variables
 
     def get_coupled_variables(self, variables):
-        L_sei_outer = variables[
-            "Outer " + self.domain.lower() + " electrode sei thickness"
-        ]
+        L_sei_outer = variables[f"Outer {self.domain.lower()} electrode sei thickness"]
 
         if self.domain == "Negative":
             C_sei = self.param.C_sei_solvent_n
@@ -49,9 +47,12 @@ class SolventDiffusionLimited(BaseModel):
 
         # Update whole cell variables, which also updates the "sum of" variables
         if (
-            "Negative electrode sei interfacial current density" in variables
-            and "Positive electrode sei interfacial current density" in variables
-            and "Sei interfacial current density" not in variables
+            f"Negative electrode{self.reaction_name} interfacial current density"
+            in variables
+            and f"Positive electrode{self.reaction_name} interfacial current density"
+            in variables
+            and f"{self.reaction.capitalize()} interfacial current density"
+            not in variables
         ):
             variables.update(
                 self._get_standard_whole_cell_interfacial_current_variables(variables)
@@ -61,10 +62,14 @@ class SolventDiffusionLimited(BaseModel):
 
     def set_rhs(self, variables):
         domain = self.domain.lower() + " electrode"
-        L_inner = variables["Inner " + domain + " sei thickness"]
-        L_outer = variables["Outer " + domain + " sei thickness"]
-        j_inner = variables["Inner " + domain + " sei interfacial current density"]
-        j_outer = variables["Outer " + domain + " sei interfacial current density"]
+        L_inner = variables[f"Inner {domain}{self.reaction_name} thickness"]
+        L_outer = variables[f"Outer {domain}{self.reaction_name} thickness"]
+        j_inner = variables[
+            f"Inner {domain}{self.reaction_name} interfacial current density"
+        ]
+        j_outer = variables[
+            f"Outer {domain}{self.reaction_name} interfacial current density"
+        ]
 
         v_bar = self.param.v_bar
 
@@ -78,8 +83,8 @@ class SolventDiffusionLimited(BaseModel):
 
     def set_initial_conditions(self, variables):
         domain = self.domain.lower() + " electrode"
-        L_inner = variables["Inner " + domain + " sei thickness"]
-        L_outer = variables["Outer " + domain + " sei thickness"]
+        L_inner = variables[f"Inner {domain}{self.reaction_name} thickness"]
+        L_outer = variables[f"Outer {domain}{self.reaction_name} thickness"]
 
         L_inner_0 = self.param.L_inner_0
         L_outer_0 = self.param.L_outer_0
