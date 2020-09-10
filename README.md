@@ -114,7 +114,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
 <!-- markdownlint-disable -->
 <table>
   <tr>
-    <td align="center"><a href="https://www.brosaplanella.com"><img src="https://avatars3.githubusercontent.com/u/28443643?v=4" width="100px;" alt=""/><br /><sub><b>Ferran Brosa Planella</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/pulls?q=is%3Apr+reviewed-by%3Aferranbrosa" title="Reviewed Pull Requests">👀</a></td>
+    <td align="center"><a href="https://www.brosaplanella.com"><img src="https://avatars3.githubusercontent.com/u/28443643?v=4" width="100px;" alt=""/><br /><sub><b>Ferran Brosa Planella</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/pulls?q=is%3Apr+reviewed-by%3Aferranbrosa" title="Reviewed Pull Requests">👀</a> <a href="https://github.com/pybamm-team/PyBaMM/issues?q=author%3Aferranbrosa" title="Bug reports">🐛</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=ferranbrosa" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=ferranbrosa" title="Documentation">📖</a> <a href="#example-ferranbrosa" title="Examples">💡</a> <a href="#ideas-ferranbrosa" title="Ideas, Planning, & Feedback">🤔</a> <a href="#maintenance-ferranbrosa" title="Maintenance">🚧</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=ferranbrosa" title="Tests">⚠️</a> <a href="#tutorial-ferranbrosa" title="Tutorials">✅</a> <a href="#blog-ferranbrosa" title="Blogposts">📝</a></td>
   </tr>
 </table>
 
