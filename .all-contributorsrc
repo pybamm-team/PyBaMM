@@ -1,0 +1,24 @@
+{
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 100,
+  "commit": false,
+  "contributors": [
+    {
+      "login": "FaradayInstitution",
+      "name": "Faraday Institution",
+      "avatar_url": "https://avatars2.githubusercontent.com/u/42166506?v=4",
+      "profile": "https://faraday.ac.uk",
+      "contributions": [
+        "financial"
+      ]
+    }
+  ],
+  "contributorsPerLine": 7,
+  "projectName": "PyBaMM",
+  "projectOwner": "pybamm-team",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "skipCi": true
+}
