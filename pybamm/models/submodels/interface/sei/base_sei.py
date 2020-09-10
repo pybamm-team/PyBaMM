@@ -106,6 +106,11 @@ class BaseModel(BaseInterface):
         param = self.param
         domain = self.domain.lower() + " electrode"
 
+        if self.reaction_name == " sei-cracks":
+            roughness = variables[self.domain + " electrode roughness ratio"]
+        else:
+            roughness = 1
+
         # Set scales to one for the "no SEI" model so that they are not required
         # by parameter values in general
         if isinstance(self, pybamm.sei.NoSEI):
@@ -124,8 +129,8 @@ class BaseModel(BaseInterface):
             )
             v_bar = param.v_bar
 
-        L_inner = variables[f"Inner {domain}{self.reaction_name} thickness"]
-        L_outer = variables[f"Outer {domain}{self.reaction_name} thickness"]
+        L_inner = variables[f"Inner {domain}{self.reaction_name} thickness"] * roughness
+        L_outer = variables[f"Outer {domain}{self.reaction_name} thickness"] * roughness
 
         # Set SEI concentration variables. Note these are defined differently for
         # the "EC Reaction Limited" model
@@ -142,11 +147,11 @@ class BaseModel(BaseInterface):
 
             n_inner = pybamm.FullBroadcast(
                 0, self.domain.lower() + " electrode", "current collector"
-            )  # inner SEI concentration
+            )  # inner SEI concentration to 0
             n_outer = j_outer * L_outer * C_ec  # outer SEI concentration
         else:
-            n_inner = L_inner  # inner SEI concentration
-            n_outer = L_outer  # outer SEI concentration
+            n_inner = L_inner # inner SEI concentration
+            n_outer = L_outer # outer SEI concentration
 
         n_inner_av = pybamm.x_average(L_inner)
         n_outer_av = pybamm.x_average(L_outer)

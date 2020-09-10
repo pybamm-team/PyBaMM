@@ -60,7 +60,7 @@ class InverseButlerVolmer(BaseInterface):
         # negligible errors. For the exact answer, the surface form submodels should
         # be used instead
         eta_r = self._get_overpotential(j_tot, j0, ne, T)
-
+        domain = self.domain.lower() + " electrode"
         # With SEI resistance (distributed and averaged have the same effect here)
         if self.options["sei film resistance"] is not None:
             if self.domain == "Negative":
@@ -68,7 +68,7 @@ class InverseButlerVolmer(BaseInterface):
             elif self.domain == "Positive":
                 R_sei = self.param.R_sei_p
             L_sei = variables[
-                "Total " + self.domain.lower() + " electrode sei thickness"
+                f"Total {domain}{self.reaction_name} thickness"
             ]
             eta_sei = -j_tot * L_sei * R_sei
         # Without SEI resistance
@@ -136,7 +136,16 @@ class CurrentForInverseButlerVolmer(BaseInterface):
             + " electrode total interfacial current density"
         ]
         j_sei = variables[self.domain + " electrode sei interfacial current density"]
-        j = j_tot - j_sei
+        # additional feature for sei on cracks
+        if self.domain + " electrode sei-cracks interfacial current density" in variables:
+            j_sei_cr = variables[
+                self.domain + " electrode sei-cracks interfacial current density"
+                ]
+            a_n_cr = variables[self.domain + " crack surface to volume ratio"]
+        else:
+            j_sei_cr = 0 * j_sei # no cracks
+            a_n_cr = 0
+        j = j_tot - j_sei - j_sei_cr * a_n_cr
 
         variables.update(self._get_standard_interfacial_current_variables(j))
 

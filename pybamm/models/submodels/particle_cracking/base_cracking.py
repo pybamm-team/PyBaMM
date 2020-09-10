@@ -34,36 +34,6 @@ class BaseCracking(pybamm.BaseSubModel):
             self.domain + " particle crack length [m]": l_cr_n_dim,
             self.domain + " particle crack length": l_cr_n,
         }
-        variables.update(self._get_standard_surface_variables(l_cr_n))
-        return variables
-
-    def _get_standard_surface_variables(self, l_cr_n):
-        """
-        A private function to obtain the standard variables which
-        can be derived from the local particle crack surfaces.
-        Parameters
-        ----------
-        l_cr_n : :class:`pybamm.Symbol`
-            The crack length in electrode particles.
-        Returns
-        -------
-        variables : dict
-        The variables which can be derived from the crack length.
-        """
-        rho_cr = pybamm.mechanical_parameters.rho_cr
-        if self.domain == "Negative":
-            a_n = pybamm.LithiumIonParameters().a_n
-        elif self.domain == "Positive":
-            a_n = pybamm.LithiumIonParameters().a_p
-        a_n_cr = l_cr_n * 2 * rho_cr  # crack surface area normalised by a_n
-        a_n_cr_dim = a_n_cr * a_n  # crack surface area [m-1]
-        # a_n_cr_xavg=pybamm.x_average(a_n_cr)
-        variables = {
-            self.domain + "crack surface to volume ratio [m-1]": a_n_cr_dim,
-            self.domain + "crack surface to volume ratio": a_n_cr,
-            # self.domain + "X-averaged crack surface to volume ratio [m-1]": a_n_cr_xavg*a_n,
-            # self.domain + "X-averaged crack surface to volume ratio": a_n_cr_xavg,
-        }
         return variables
 
     def _get_mechanical_results(self, variables):

@@ -27,18 +27,15 @@ class CrackPropagation(BaseCracking):
 
     def get_coupled_variables(self, variables):
         variables.update(self._get_mechanical_results(variables))
-        return variables
-
-    def set_rhs(self, variables):
-        T_n = variables[self.domain + " electrode temperature"]
+        # T_n = variables[self.domain + " electrode temperature"]
         stress_t_surf_n = variables[
             self.domain + " particle surface tangential stress [Pa]"
         ]
         l_cr_n = variables[self.domain + " particle crack length"]
         # crack length in anode particles
         mp = pybamm.mechanical_parameters
-        R = pybamm.LithiumIonParameters().R
-        Delta_T = pybamm.LithiumIonParameters().Delta_T
+        # R = pybamm.LithiumIonParameters().R
+        # Delta_T = pybamm.LithiumIonParameters().Delta_T
         k_cr_n = (
             mp.k_cr
         )  # pybamm.exp( mp.Eac_cr / R * (1 / T_n / Delta_T - 1 / mp.T_ref))
@@ -57,11 +54,20 @@ class CrackPropagation(BaseCracking):
             / mp.t0_cr
             / mp.l_cr_n_0
         )
-        self.rhs = {l_cr_n: dl_cr_n}
         variables.update(
-            {self.domain + " particle cracking rate": dl_cr_n,}
+            {self.domain + " particle cracking rate": dl_cr_n, }
         )
-        # return variables
+        domain = self.domain.lower() + " electrode"
+        if f"Outer {domain} sei-cracks thickness" in variables:
+            # recalculate average seithickness on cracks
+            variables[f"Inner {domain} sei-cracks thickness"] *= l_cr_n / (l_cr_n + dl_cr_n)
+            variables[f"Outer {domain} sei-cracks thickness"] *= l_cr_n / (l_cr_n + dl_cr_n)
+        return variables
+
+    def set_rhs(self, variables):
+        l_cr_n = variables[self.domain + " particle crack length"]
+        dl_cr_n = variables[self.domain + " particle cracking rate"]
+        self.rhs = {l_cr_n: dl_cr_n}
 
     def set_initial_conditions(self, variables):
         l_cr_n = variables[self.domain + " particle crack length"]

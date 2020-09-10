@@ -38,6 +38,9 @@ class BaseInterface(pybamm.BaseSubModel):
         elif reaction == "sei":
             self.reaction_name = " sei"
             self.Reaction_icd = "Sei interfacial current density"
+        elif reaction == "sei-cracks":
+            self.reaction_name = " sei-cracks"
+            self.reaction_icd = "Sei-cracks interfacial current density"
         self.reaction = reaction
 
     def _get_exchange_current_density(self, variables):
@@ -514,7 +517,9 @@ class BaseInterface(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_sei_film_overpotential_variables(self, eta_sei):
-
+        reaction_name = self.reaction_name
+        if reaction_name == "":
+            reaction_name = " sei"
         pot_scale = self.param.potential_scale
         # Average, and broadcast if necessary
         eta_sei_av = pybamm.x_average(eta_sei)
@@ -527,12 +532,11 @@ class BaseInterface(pybamm.BaseSubModel):
 
         domain = self.domain.lower() + " electrode"
         variables = {
-            self.domain + " electrode sei film overpotential": eta_sei,
-            "X-averaged " + domain + " sei film overpotential": eta_sei_av,
-            self.domain + " electrode sei film overpotential [V]": eta_sei * pot_scale,
-            "X-averaged "
-            + domain
-            + " sei film overpotential [V]": eta_sei_av * pot_scale,
+            f"Inner {domain}{reaction_name} film overpotential": eta_sei,
+            f"X-averaged {domain}{reaction_name} film overpotential": eta_sei_av,
+            f"{domain}{reaction_name} film overpotential [V]": eta_sei * pot_scale,
+            f"X-averaged {domain}{reaction_name}"
+            + " film overpotential [V]": eta_sei_av * pot_scale,
         }
 
         return variables
