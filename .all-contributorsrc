@@ -1,0 +1,26 @@
+{
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 100,
+  "commit": false,
+  "contributors": [
+    {
+      "login": "gyouhoc",
+      "name": "gyouhoc",
+      "avatar_url": "https://avatars0.githubusercontent.com/u/60714526?v=4",
+      "profile": "https://github.com/gyouhoc",
+      "contributions": [
+        "bug",
+        "code",
+        "test"
+      ]
+    }
+  ],
+  "contributorsPerLine": 7,
+  "projectName": "PyBaMM",
+  "projectOwner": "pybamm-team",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "skipCi": true
+}
