@@ -1,0 +1,26 @@
+{
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 100,
+  "commit": false,
+  "contributors": [
+    {
+      "login": "jedgedrudd",
+      "name": "Jacqueline Edge",
+      "avatar_url": "https://avatars2.githubusercontent.com/u/39409226?v=4",
+      "profile": "http://batterymodel.co.uk",
+      "contributions": [
+        "ideas",
+        "eventOrganizing",
+        "fundingFinding"
+      ]
+    }
+  ],
+  "contributorsPerLine": 7,
+  "projectName": "PyBaMM",
+  "projectOwner": "pybamm-team",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "skipCi": true
+}
