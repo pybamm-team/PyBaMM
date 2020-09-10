@@ -1,0 +1,31 @@
+{
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 100,
+  "commit": false,
+  "contributors": [
+    {
+      "login": "tlestang",
+      "name": "Thibault Lestang",
+      "avatar_url": "https://avatars3.githubusercontent.com/u/13448239?v=4",
+      "profile": "http://tlestang.github.io",
+      "contributions": [
+        "bug",
+        "code",
+        "doc",
+        "example",
+        "ideas",
+        "review",
+        "test",
+        "infra"
+      ]
+    }
+  ],
+  "contributorsPerLine": 7,
+  "projectName": "PyBaMM",
+  "projectOwner": "pybamm-team",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "skipCi": true
+}
