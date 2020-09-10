@@ -1,0 +1,25 @@
+{
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 100,
+  "commit": false,
+  "contributors": [
+    {
+      "login": "jonchapman1",
+      "name": "jonchapman1",
+      "avatar_url": "https://avatars1.githubusercontent.com/u/28925818?v=4",
+      "profile": "https://github.com/jonchapman1",
+      "contributions": [
+        "ideas",
+        "fundingFinding"
+      ]
+    }
+  ],
+  "contributorsPerLine": 7,
+  "projectName": "PyBaMM",
+  "projectOwner": "pybamm-team",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "skipCi": true
+}
