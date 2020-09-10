@@ -11,7 +11,16 @@
       "avatar_url": "https://avatars3.githubusercontent.com/u/28443643?v=4",
       "profile": "https://www.brosaplanella.com",
       "contributions": [
-        "review"
+        "review",
+        "bug",
+        "code",
+        "doc",
+        "example",
+        "ideas",
+        "maintenance",
+        "test",
+        "tutorial",
+        "blog"
       ]
     }
   ],
