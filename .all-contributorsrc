@@ -1,0 +1,32 @@
+{
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 100,
+  "commit": false,
+  "contributors": [
+    {
+      "login": "rtimms",
+      "name": "Robert Timms",
+      "avatar_url": "https://avatars1.githubusercontent.com/u/43040151?v=4",
+      "profile": "http://www.robertwtimms.com",
+      "contributions": [
+        "bug",
+        "code",
+        "doc",
+        "example",
+        "ideas",
+        "maintenance",
+        "review",
+        "test",
+        "tutorial"
+      ]
+    }
+  ],
+  "contributorsPerLine": 7,
+  "projectName": "PyBaMM",
+  "projectOwner": "pybamm-team",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "skipCi": true
+}
