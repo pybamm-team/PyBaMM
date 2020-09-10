@@ -1,4 +1,7 @@
 # PyBaMM
+<!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
+[![All Contributors](https://img.shields.io/badge/all_contributors-1-orange.svg?style=flat-square)](#contributors-)
+<!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 [![Build](https://github.com/pybamm-team/PyBaMM/workflows/PyBaMM/badge.svg)](https://github.com/pybamm-team/PyBaMM/actions?query=workflow%3APyBaMM+branch%3Adevelop)
 [![readthedocs](https://readthedocs.org/projects/pybamm/badge/?version=latest)](https://pybamm.readthedocs.io/en/latest/?badge=latest)
@@ -101,3 +104,22 @@ If you'd like to help us develop PyBaMM by adding new methods, writing documenta
 ## Licensing
 
 PyBaMM is fully open source. For more information about its license, see [LICENSE](./LICENSE.txt).
+
+## Contributors ✨
+
+Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+<table>
+  <tr>
+    <td align="center"><a href="https://sites.google.com/view/valentinsulzer"><img src="https://avatars3.githubusercontent.com/u/20817509?v=4" width="100px;" alt=""/><br /><sub><b>Valentin Sulzer</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/issues?q=author%3Atinosulzer" title="Bug reports">🐛</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=tinosulzer" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=tinosulzer" title="Documentation">📖</a> <a href="#example-tinosulzer" title="Examples">💡</a> <a href="#ideas-tinosulzer" title="Ideas, Planning, & Feedback">🤔</a> <a href="#maintenance-tinosulzer" title="Maintenance">🚧</a> <a href="https://github.com/pybamm-team/PyBaMM/pulls?q=is%3Apr+reviewed-by%3Atinosulzer" title="Reviewed Pull Requests">👀</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=tinosulzer" title="Tests">⚠️</a> <a href="#tutorial-tinosulzer" title="Tutorials">✅</a> <a href="#blog-tinosulzer" title="Blogposts">📝</a></td>
+  </tr>
+</table>
+
+<!-- markdownlint-enable -->
+<!-- prettier-ignore-end -->
+<!-- ALL-CONTRIBUTORS-LIST:END -->
+
+This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification. Contributions of any kind welcome!
