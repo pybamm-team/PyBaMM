@@ -1,4 +1,7 @@
 # PyBaMM
+<!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
+[![All Contributors](https://img.shields.io/badge/all_contributors-1-orange.svg?style=flat-square)](#contributors-)
+<!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 [![Build](https://github.com/pybamm-team/PyBaMM/workflows/PyBaMM/badge.svg)](https://github.com/pybamm-team/PyBaMM/actions?query=workflow%3APyBaMM+branch%3Adevelop)
 [![readthedocs](https://readthedocs.org/projects/pybamm/badge/?version=latest)](https://pybamm.readthedocs.io/en/latest/?badge=latest)
@@ -101,3 +104,22 @@ If you'd like to help us develop PyBaMM by adding new methods, writing documenta
 ## Licensing
 
 PyBaMM is fully open source. For more information about its license, see [LICENSE](./LICENSE.txt).
+
+## Contributors ✨
+
+Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+<table>
+  <tr>
+    <td align="center"><a href="https://github.com/Scottmar93"><img src="https://avatars1.githubusercontent.com/u/22661308?v=4" width="100px;" alt=""/><br /><sub><b>Scott Marquis</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/issues?q=author%3AScottmar93" title="Bug reports">🐛</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=Scottmar93" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=Scottmar93" title="Documentation">📖</a> <a href="#example-Scottmar93" title="Examples">💡</a> <a href="#ideas-Scottmar93" title="Ideas, Planning, & Feedback">🤔</a> <a href="#maintenance-Scottmar93" title="Maintenance">🚧</a> <a href="https://github.com/pybamm-team/PyBaMM/pulls?q=is%3Apr+reviewed-by%3AScottmar93" title="Reviewed Pull Requests">👀</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=Scottmar93" title="Tests">⚠️</a> <a href="#tutorial-Scottmar93" title="Tutorials">✅</a></td>
+  </tr>
+</table>
+
+<!-- markdownlint-enable -->
+<!-- prettier-ignore-end -->
+<!-- ALL-CONTRIBUTORS-LIST:END -->
+
+This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification. Contributions of any kind welcome!
