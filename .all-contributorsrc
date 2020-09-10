@@ -1,0 +1,25 @@
+{
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 100,
+  "commit": false,
+  "contributors": [
+    {
+      "login": "suhaklee",
+      "name": "suhaklee",
+      "avatar_url": "https://avatars3.githubusercontent.com/u/57151989?v=4",
+      "profile": "https://github.com/suhaklee",
+      "contributions": [
+        "code",
+        "test"
+      ]
+    }
+  ],
+  "contributorsPerLine": 7,
+  "projectName": "PyBaMM",
+  "projectOwner": "pybamm-team",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "skipCi": true
+}
