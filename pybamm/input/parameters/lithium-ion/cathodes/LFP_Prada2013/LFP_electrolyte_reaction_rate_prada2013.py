@@ -1,4 +1,4 @@
-from pybamm import exp, constants
+from pybamm import exp, constants, Parameter
 
 
 def LFP_electrolyte_reaction_rate_prada2013(c_e, c_s_surf,T): # , 1 
