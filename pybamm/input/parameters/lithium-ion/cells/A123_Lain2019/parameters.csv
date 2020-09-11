@@ -8,7 +8,7 @@ Separator thickness [m],1.80E-05,Lain 2019,
 Positive electrode thickness [m],8.10E-05,Lain 2019,
 Positive current collector thickness [m],1.90E-05,Lain 2019,
 Electrode height [m],6.49E-02,A123 18650 datasheet,Not needed for 1D
-Electrode width [m],1.68,fit to Severson 2019,Not needed for 1D
+Electrode width [m],1.78,fit to Severson 2019,Not needed for 1D
 Negative tab width [m],0.04,default,Need to find actual value for LG M50 cell
 Negative tab centre y-coordinate [m],0.06,default,Need to find actual value for LG M50 cell
 Negative tab centre z-coordinate [m],0.137,default,Need to find actual value for LG M50 cell
