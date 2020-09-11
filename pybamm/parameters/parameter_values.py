@@ -516,15 +516,13 @@ class ParameterValues:
                 function = pybamm.Scalar(
                     function_name, name=symbol.name
                 ) * pybamm.ones_like(*new_children)
-            elif isinstance(function_name, pybamm.InputParameter):
-                # Replace the function with an input parameter
-                function = function_name
             elif (
                 isinstance(function_name, pybamm.Symbol)
                 and function_name.evaluates_to_number()
             ):
                 # If the "function" provided is a pybamm scalar-like, use ones_like to
                 # get the right shape
+                # This also catches input parameters
                 function = function_name * pybamm.ones_like(*new_children)
             elif callable(function_name):
                 # otherwise evaluate the function to create a new PyBaMM object
@@ -669,6 +667,9 @@ class ParameterValues:
             "pybamm",
             "constants",
             "np",
+            "geo",
+            "elec",
+            "therm",
         ]
 
         # If 'parameters' is a class, extract the dict

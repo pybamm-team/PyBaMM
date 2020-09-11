@@ -105,6 +105,35 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
 
         return variables
 
+    def _get_total_concentration_electrolyte(self, c_e, epsilon):
+        """
+        A private function to obtain the total ion concentration in the electrolyte.
+
+        Parameters
+        ----------
+        c_e : :class:`pybamm.Symbol`
+            The electrolyte concentration
+        epsilon : :class:`pybamm.Symbol`
+            The porosity
+
+        Returns
+        -------
+        variables : dict
+            The "Total concentration in electrolyte [mol]" variable.
+        """
+
+        c_e_typ = self.param.c_e_typ
+        L_x = self.param.L_x
+        A = self.param.A_cc
+
+        c_e_total = pybamm.x_average(epsilon * c_e)
+
+        variables = {
+            "Total concentration in electrolyte [mol]": c_e_typ * L_x * A * c_e_total
+        }
+
+        return variables
+
     def set_events(self, variables):
         c_e = variables["Electrolyte concentration"]
         self.events.append(

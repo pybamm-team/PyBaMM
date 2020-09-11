@@ -22,8 +22,9 @@ def battery_geometry(include_particles=True, current_collector_dimension=0):
 
     """
     var = pybamm.standard_spatial_vars
-    l_n = pybamm.geometric_parameters.l_n
-    l_s = pybamm.geometric_parameters.l_s
+    geo = pybamm.GeometricParameters()
+    l_n = geo.l_n
+    l_s = geo.l_s
 
     geometry = {
         "negative electrode": {var.x_n: {"min": 0, "max": l_n}},
@@ -45,24 +46,24 @@ def battery_geometry(include_particles=True, current_collector_dimension=0):
         geometry["current collector"] = {
             var.z: {"min": 0, "max": 1},
             "tabs": {
-                "negative": {"z_centre": pybamm.geometric_parameters.centre_z_tab_n},
-                "positive": {"z_centre": pybamm.geometric_parameters.centre_z_tab_p},
+                "negative": {"z_centre": geo.centre_z_tab_n},
+                "positive": {"z_centre": geo.centre_z_tab_p},
             },
         }
     elif current_collector_dimension == 2:
         geometry["current collector"] = {
-            var.y: {"min": 0, "max": pybamm.geometric_parameters.l_y},
-            var.z: {"min": 0, "max": pybamm.geometric_parameters.l_z},
+            var.y: {"min": 0, "max": geo.l_y},
+            var.z: {"min": 0, "max": geo.l_z},
             "tabs": {
                 "negative": {
-                    "y_centre": pybamm.geometric_parameters.centre_y_tab_n,
-                    "z_centre": pybamm.geometric_parameters.centre_z_tab_n,
-                    "width": pybamm.geometric_parameters.l_tab_n,
+                    "y_centre": geo.centre_y_tab_n,
+                    "z_centre": geo.centre_z_tab_n,
+                    "width": geo.l_tab_n,
                 },
                 "positive": {
-                    "y_centre": pybamm.geometric_parameters.centre_y_tab_p,
-                    "z_centre": pybamm.geometric_parameters.centre_z_tab_p,
-                    "width": pybamm.geometric_parameters.l_tab_p,
+                    "y_centre": geo.centre_y_tab_p,
+                    "z_centre": geo.centre_z_tab_p,
+                    "width": geo.l_tab_p,
                 },
             },
         }

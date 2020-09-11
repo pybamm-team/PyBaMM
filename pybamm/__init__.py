@@ -108,6 +108,7 @@ from .expression_tree.operations.evaluate import (
     to_python,
     EvaluatorPython,
 )
+
 if system() != "Windows":
     from .expression_tree.operations.evaluate import EvaluatorJax
 
@@ -159,14 +160,15 @@ from .expression_tree.independent_variable import KNOWN_COORD_SYS
 from .geometry import standard_spatial_vars
 
 #
-# Parameters class and methods
+# Parameter classes and methods
 #
 from .parameters.parameter_values import ParameterValues
 from .parameters import constants
-from .parameters import geometric_parameters
-from .parameters import electrical_parameters
-from .parameters import thermal_parameters
-from .parameters import standard_parameters_lithium_ion, standard_parameters_lead_acid
+from .parameters.geometric_parameters import GeometricParameters
+from .parameters.electrical_parameters import ElectricalParameters
+from .parameters.thermal_parameters import ThermalParameters
+from .parameters.lithium_ion_parameters import LithiumIonParameters
+from .parameters.lead_acid_parameters import LeadAcidParameters
 from .parameters import parameter_sets
 
 
@@ -183,6 +185,7 @@ from .meshes.one_dimensional_submeshes import (
     Exponential1DSubMesh,
     Chebyshev1DSubMesh,
     UserSupplied1DSubMesh,
+    SpectralVolume1DSubMesh,
 )
 from .meshes.scikit_fem_submeshes import (
     ScikitSubMesh2D,
@@ -198,6 +201,7 @@ from .meshes.scikit_fem_submeshes import (
 from .spatial_methods.spatial_method import SpatialMethod
 from .spatial_methods.zero_dimensional_method import ZeroDimensionalSpatialMethod
 from .spatial_methods.finite_volume import FiniteVolume
+from .spatial_methods.spectral_volume import SpectralVolume
 from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 
 #

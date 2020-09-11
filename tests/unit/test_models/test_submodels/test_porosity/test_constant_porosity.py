@@ -9,7 +9,7 @@ import unittest
 
 class TestConstantPorosity(unittest.TestCase):
     def test_public_functions(self):
-        param = pybamm.standard_parameters_lithium_ion
+        param = pybamm.LithiumIonParameters()
         submodel = pybamm.porosity.Constant(param)
         std_tests = tests.StandardSubModelTests(submodel)
         std_tests.test_all()
