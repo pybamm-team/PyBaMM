@@ -41,6 +41,71 @@
       ]
     },
     {
+      "login": "Scottmar93",
+      "name": "Scott Marquis",
+      "avatar_url": "https://avatars1.githubusercontent.com/u/22661308?v=4",
+      "profile": "https://github.com/Scottmar93",
+      "contributions": [
+        "bug",
+        "code",
+        "doc",
+        "example",
+        "ideas",
+        "maintenance",
+        "review",
+        "test",
+        "tutorial"
+      ]
+    },
+    {
+      "login": "martinjrobins",
+      "name": "Martin Robinson",
+      "avatar_url": "https://avatars3.githubusercontent.com/u/1148404?v=4",
+      "profile": "https://github.com/martinjrobins",
+      "contributions": [
+        "bug",
+        "code",
+        "doc",
+        "example",
+        "ideas",
+        "review",
+        "test"
+      ]
+    },
+    {
+      "login": "ferranbrosa",
+      "name": "Ferran Brosa Planella",
+      "avatar_url": "https://avatars3.githubusercontent.com/u/28443643?v=4",
+      "profile": "https://www.brosaplanella.com",
+      "contributions": [
+        "review",
+        "bug",
+        "code",
+        "doc",
+        "example",
+        "ideas",
+        "maintenance",
+        "test",
+        "tutorial",
+        "blog"
+      ]
+    },
+    {
+      "login": "TomTranter",
+      "name": "Tom Tranter",
+      "avatar_url": "https://avatars3.githubusercontent.com/u/7068741?v=4",
+      "profile": "https://github.com/TomTranter",
+      "contributions": [
+        "bug",
+        "code",
+        "doc",
+        "example",
+        "ideas",
+        "review",
+        "test"
+      ]
+    },
+    {
       "login": "tlestang",
       "name": "Thibault Lestang",
       "avatar_url": "https://avatars3.githubusercontent.com/u/13448239?v=4",
@@ -53,6 +118,18 @@
         "ideas",
         "review",
         "test",
+        "infra"
+      ]
+    },
+    {
+      "login": "dalonsoa",
+      "name": "Diego",
+      "avatar_url": "https://avatars1.githubusercontent.com/u/6095790?v=4",
+      "profile": "https://www.imperial.ac.uk/admin-services/ict/self-service/research-support/rcs/research-software-engineering/",
+      "contributions": [
+        "bug",
+        "review",
+        "code",
         "infra"
       ]
     }
