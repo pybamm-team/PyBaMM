@@ -24,6 +24,23 @@
       ]
     },
     {
+      "login": "rtimms",
+      "name": "Robert Timms",
+      "avatar_url": "https://avatars1.githubusercontent.com/u/43040151?v=4",
+      "profile": "http://www.robertwtimms.com",
+      "contributions": [
+        "bug",
+        "code",
+        "doc",
+        "example",
+        "ideas",
+        "maintenance",
+        "review",
+        "test",
+        "tutorial",
+      ]
+    },
+    {
       "login": "tlestang",
       "name": "Thibault Lestang",
       "avatar_url": "https://avatars3.githubusercontent.com/u/13448239?v=4",
