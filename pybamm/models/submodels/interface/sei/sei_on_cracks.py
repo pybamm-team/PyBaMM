@@ -89,10 +89,6 @@ class SEIonCracks(SolventDiffusionLimited):
         elif self.domain == "Positive":
             a_n = pybamm.LithiumIonParameters().a_p
             R_n = pybamm.LithiumIonParameters().R_p
-        a_n_cr = pybamm.Variable(
-            self.domain + " crack surface to volume ratio",
-            domain=self.domain.lower() + " electrode",
-        )
         roughness =  l_cr_n * 2 * rho_cr # the ratio of cracks to normal surface
         a_n_cr = roughness * a_n # normalised crack surface area
         a_n_cr_dim = a_n_cr / R_n  # crack surface area to volume ratio [m-1]

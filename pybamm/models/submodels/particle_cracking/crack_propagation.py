@@ -57,11 +57,6 @@ class CrackPropagation(BaseCracking):
         variables.update(
             {self.domain + " particle cracking rate": dl_cr_n, }
         )
-        domain = self.domain.lower() + " electrode"
-        if f"Outer {domain} sei-cracks thickness" in variables:
-            # recalculate average seithickness on cracks
-            variables[f"Inner {domain} sei-cracks thickness"] *= l_cr_n / (l_cr_n + dl_cr_n)
-            variables[f"Outer {domain} sei-cracks thickness"] *= l_cr_n / (l_cr_n + dl_cr_n)
         return variables
 
     def set_rhs(self, variables):

@@ -40,7 +40,6 @@ class SolventDiffusionLimited(BaseModel):
             C_sei = self.param.C_sei_solvent_n
 
         j_sei = -1 / (C_sei * L_sei_outer)
-
         alpha = 0.5
         j_inner = alpha * j_sei
         j_outer = (1 - alpha) * j_sei
@@ -72,15 +71,21 @@ class SolventDiffusionLimited(BaseModel):
         j_outer = variables[
             f"Outer {domain}{self.reaction_name} interfacial current density"
         ]
-
+        l_cr_n = variables[f"{self.domain} particle crack length"]
+        dl_cr_n = variables[f"{self.domain} particle cracking rate"]
+        # ratio of average sei thickness between before and after crack propagation
+        if self.reaction_name == "sei-cracks":
+            ratio_avg =  l_cr_n / (l_cr_n + dl_cr_n)  
+        else:
+            ratio_avg = 1
         v_bar = self.param.v_bar
 
         if self.domain == "Negative":
             Gamma_SEI = self.param.Gamma_SEI_n
 
         self.rhs = {
-            L_inner: -Gamma_SEI * j_inner,
-            L_outer: -v_bar * Gamma_SEI * j_outer,
+            L_inner: -Gamma_SEI * j_inner / ratio_avg - L_inner * (1 - ratio_avg),
+            L_outer: -v_bar * Gamma_SEI * j_outer / ratio_avg - L_outer * (1 - ratio_avg),
         }
 
     def set_initial_conditions(self, variables):
