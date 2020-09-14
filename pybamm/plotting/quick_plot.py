@@ -742,7 +742,7 @@ class QuickPlot(object):
                     vmin = ax_min(var)
                     vmax = ax_max(var)
                     cb = self.colorbars[key]
-                    cb.update_bruteforce(
+                    cb.update_normal(
                         cm.ScalarMappable(
                             colors.Normalize(vmin=vmin, vmax=vmax), cmap="coolwarm"
                         )

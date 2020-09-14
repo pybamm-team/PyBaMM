@@ -12,6 +12,7 @@ class TestLeadingOrder(unittest.TestCase):
         param = pybamm.LeadAcidParameters()
         a = pybamm.Scalar(0)
         variables = {
+            "Porosity": a,
             "X-averaged negative electrode porosity": a,
             "X-averaged separator porosity": a,
             "X-averaged positive electrode porosity": a,
