@@ -67,8 +67,11 @@ class InverseButlerVolmer(BaseInterface):
                 R_sei = self.param.R_sei_n
             elif self.domain == "Positive":
                 R_sei = self.param.R_sei_p
+            reaction_name = self.reaction_name
+            if reaction_name == "":
+                reaction_name = " sei"
             L_sei = variables[
-                f"Total {domain}{self.reaction_name} thickness"
+                f"Total {domain}{reaction_name} thickness"
             ]
             eta_sei = -j_tot * L_sei * R_sei
         # Without SEI resistance
@@ -141,11 +144,11 @@ class CurrentForInverseButlerVolmer(BaseInterface):
             j_sei_cr = variables[
                 self.domain + " electrode sei-cracks interfacial current density"
                 ]
-            a_n_cr = variables[self.domain + " crack surface to volume ratio"]
+            roughness = variables[self.domain + " electrode roughness ratio"] - 1
         else:
             j_sei_cr = 0 * j_sei # no cracks
-            a_n_cr = 0
-        j = j_tot - j_sei - j_sei_cr * a_n_cr
+            roughness = 1
+        j = j_tot - j_sei - j_sei_cr * roughness
 
         variables.update(self._get_standard_interfacial_current_variables(j))
 

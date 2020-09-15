@@ -40,7 +40,7 @@ class SolventDiffusionLimited(BaseModel):
             C_sei = self.param.C_sei_solvent_n
 
         j_sei = -1 / (C_sei * L_sei_outer)
-        alpha = 0.5
+        alpha = pybamm.Parameter("Inner SEI reaction proportion") #0.5
         j_inner = alpha * j_sei
         j_outer = (1 - alpha) * j_sei
 
@@ -71,10 +71,10 @@ class SolventDiffusionLimited(BaseModel):
         j_outer = variables[
             f"Outer {domain}{self.reaction_name} interfacial current density"
         ]
-        l_cr_n = variables[f"{self.domain} particle crack length"]
-        dl_cr_n = variables[f"{self.domain} particle cracking rate"]
         # ratio of average sei thickness between before and after crack propagation
         if self.reaction_name == "sei-cracks":
+            l_cr_n = variables[f"{self.domain} particle crack length"]
+            dl_cr_n = variables[f"{self.domain} particle cracking rate"]
             ratio_avg =  l_cr_n / (l_cr_n + dl_cr_n)  
         else:
             ratio_avg = 1

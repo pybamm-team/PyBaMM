@@ -107,7 +107,7 @@ class BaseModel(BaseInterface):
         domain = self.domain.lower() + " electrode"
 
         if self.reaction_name == " sei-cracks":
-            roughness = variables[self.domain + " electrode roughness ratio"]
+            roughness = variables[self.domain + " electrode roughness ratio"] - 1
         else:
             roughness = 1
 

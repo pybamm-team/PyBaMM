@@ -16,82 +16,68 @@ model.submodels["negative sei on cracks"] = pybamm.sei.SEIonCracks(
 )
 model.build_model()
 param = model.default_parameter_values
-# chemistry = pybamm.parameter_sets.Ai2020
-# param = pybamm.ParameterValues(chemistry=chemistry)
+chemistry = pybamm.parameter_sets.Chen2020
+param = pybamm.ParameterValues(chemistry=chemistry)
+param.update({"Initial concentration in negative electrode [mol.m-3]": 29866})
+param.update({"Initial concentration in positive electrode [mol.m-3]": 14778})
+param.update({"Maximum concentration in negative electrode [mol.m-3]": 33133})
+param.update({"Maximum concentration in positive electrode [mol.m-3]": 56840})
+param.update({"Negative electrode diffusivity [m2.s-1]": 6e-15}) #6e-15 good value
+param.update({"Negative current collector surface heat transfer coefficient [W.m-2.K-1]": 0.1, 
+"Positive current collector surface heat transfer coefficient [W.m-2.K-1]": 0.1}, check_already_exists=False)
+param.update({"Total heat transfer coefficient [W.m-2.K-1]": 0.1})
+param.update({"Ambient temperature [K]": 298.15})
+param.update({"Initial temperature [K]": 298.15})
+param.update({"Initial inner SEI thickness [m]": 0})
+param.update({"Inner SEI reaction proportion": 0})
+param.update({"Outer SEI solvent diffusivity [m2.s-1]": 2.5e-22*1000})
+param2 = param
+
+# add mechanical properties
 import pandas as pd
 mechanics = pd.read_csv("pybamm/input/parameters/lithium-ion/mechanicals/lico2_graphite_Ai2020/parameters.csv", 
                         index_col=0, comment="#", skip_blank_lines=True, header=None)[1][1:].dropna().astype(float).to_dict()
 param.update(mechanics, check_already_exists=False)
-# create geometry
-geometry = model.default_geometry
+# params.update({"Negative electrode Number of cracks per unit area of the particle [m-2]": 3.18e15/100})
+param.update({"Negative electrode Cracking rate":3.9e-20*1000})
 
-# load parameter values and process model and geometry
-param.process_model(model)
-param.process_geometry(geometry)
-
-# set mesh
-mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
-
-# discretise model
-disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-disc.process_model(model)
-
-# solve model
-t_eval = np.linspace(0, 3600, 100)
-solution = model.default_solver.solve(model, t_eval)
-
-# extract voltage
-stress_t_n_surf = solution["Negative particle surface tangential stress"]
-c_s_n = solution["Negative particle concentration"]
-c_s_surf_t = solution["Negative particle surface concentration"]
-disp_t = solution["Negative particle surface displacement [m]"]
-l_cr_n_t = solution["Negative particle crack length"]
-dl_cr = solution["Negative particle cracking rate"]
-T_n = solution["Negative electrode temperature"]
-t_all = solution["Time [s]"].entries
-x = solution["x [m]"].entries[0:19, 0]
-c_s_n = solution["Negative particle concentration"]
-r_n = solution["r_n [m]"].entries[:, 0, 0]
-
-# plot
-def plot_concentrations(t):
-    f, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(16, 4))
-    ax1.plot(x, stress_t_n_surf(t=t, x=x))
-    ax1.set_xlabel(r"$x$ [m]")
-    ax1.set_ylabel("$\sigma_t/E_n$")
-    # ax1.set_ylim(0, 0.0015)
-
-    (plot_c_n,) = ax2.plot(
-        r_n, c_s_n(r=r_n, t=t, x=x[0])
-    )  # can evaluate at arbitrary x (single representative particle)
-    ax2.set_ylabel("Negative particle concentration")
-    ax2.set_xlabel(r"$r_n$ [m]")
-    ax2.set_ylim(0, 1)
-    ax2.set_title("Close to current collector")
-    ax2.grid()
-
-    (plot_c_n,) = ax3.plot(
-        r_n, c_s_n(r=r_n, t=t, x=x[10])
-    )  # can evaluate at arbitrary x (single representative particle)
-    ax3.set_ylabel("Negative particle concentration")
-    ax3.set_xlabel(r"$r_n$ [m]")
-    ax3.set_ylim(0, 1)
-    ax3.set_title("In the middle")
-    ax3.grid()
-
-    (plot_c_n,) = ax4.plot(
-        r_n, c_s_n(r=r_n, t=t, x=x[-1])
-    )  # can evaluate at arbitrary x (single representative particle)
-    ax4.set_ylabel("Negative particle concentration")
-    ax4.set_xlabel(r"$r_n$ [m]")
-    ax4.set_ylim(0, 1)
-    ax4.set_title("Close to separator")
-    ax4.grid()
-    plt.show()
-
-
-import ipywidgets as widgets
-
-widgets.interact(
-    plot_concentrations, t=widgets.FloatSlider(min=0, max=3600, step=10, value=0)
+total_cycles=3
+experiment = pybamm.Experiment(
+    [
+        "Discharge at C/10 for 10 hours or until 3.3 V",
+        "Rest for 1 hour",
+        "Charge at 1 A until 4.1 V",
+        "Hold at 4.1 V until 50 mA",
+        "Rest for 1 hour",
+    ] * total_cycles
 )
+
+sim1 = pybamm.Simulation(model, experiment=experiment,parameter_values=param)
+solution1 = sim1.solve()
+
+# Use the default setup without sei-crack model
+model2 = pybamm.lithium_ion.DFN(
+    build=True, options={"particle": "Fickian diffusion", "sei":"solvent-diffusion limited", "sei film resistance":"distributed", "sei porosity change":False}
+)
+sim2 = pybamm.Simulation(model2, experiment=experiment,parameter_values=param2)
+solution2 = sim2.solve()
+
+# plot results
+cycle_number1 = []
+Qdis_delta1 = []
+Qdis_delta2 = []
+for i in range(total_cycles):
+    t1 = solution1.sub_solutions[i*5]["Time [h]"].entries
+    Qdis1 = solution1.sub_solutions[i*5]["Discharge capacity [A.h]"].entries
+    Qdis_delta1.append(Qdis1[-1]-Qdis1[-0])
+    cycle_number1.append(i)
+    t2 = solution2.sub_solutions[i*5]["Time [h]"].entries
+    Qdis2 = solution2.sub_solutions[i*5]["Discharge capacity [A.h]"].entries
+    Qdis_delta2.append(Qdis2[-1]-Qdis2[-0])
+plt.plot(cycle_number1, Qdis_delta1,label='with sei-cracks')
+plt.plot(cycle_number1, Qdis_delta2,label='without sei-cracks')
+plt.xlabel("Cycle nunber")
+plt.ylabel("Discharge capacity [A.h]")
+plt.legend()
+plt.show()
+
