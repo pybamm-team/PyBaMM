@@ -1,20 +1,9 @@
 #
 # Base model class
 #
-import inspect
 import numbers
 import pybamm
 import warnings
-
-
-class ParamClass:
-    """Class for converting a module of parameters into a class. For pickling."""
-
-    def __init__(self, methods):
-        for k, v in methods.__dict__.items():
-            # don't save module attributes (e.g. pybamm, numpy)
-            if not (k.startswith("__") or inspect.ismodule(v)):
-                self.__dict__[k] = v
 
 
 class BaseModel(object):
@@ -101,12 +90,12 @@ class BaseModel(object):
         self.options = {}
 
         # Initialise empty model
-        self.rhs = {}
-        self.algebraic = {}
-        self.initial_conditions = {}
-        self.boundary_conditions = {}
-        self.variables = {}
-        self.events = []
+        self._rhs = {}
+        self._algebraic = {}
+        self._initial_conditions = {}
+        self._boundary_conditions = {}
+        self._variables = {}
+        self._events = []
         self._concatenated_rhs = None
         self._concatenated_algebraic = None
         self._concatenated_initial_conditions = None
@@ -261,12 +250,7 @@ class BaseModel(object):
 
     @param.setter
     def param(self, values):
-        if values is None:
-            self._param = None
-        else:
-            # convert module into a class
-            # (StackOverflow: https://tinyurl.com/yk3euon3)
-            self._param = ParamClass(values)
+        self._param = values
 
     @property
     def options(self):
@@ -327,11 +311,12 @@ class BaseModel(object):
     def __getitem__(self, key):
         return self.rhs[key]
 
-    def new_copy(self, options=None):
-        "Create an empty copy with identical options, or new options if specified"
-        options = options or self.options
-        new_model = self.__class__(options)
-        new_model.name = self.name
+    def new_copy(self, build=False):
+        """
+        Create an empty copy with identical options, or new options if specified.
+        The 'build' parameter is included for compatibility with subclasses, but unused.
+        """
+        new_model = self.__class__(name=self.name)
         new_model.use_jacobian = self.use_jacobian
         new_model.use_simplify = self.use_simplify
         new_model.convert_to_format = self.convert_to_format
@@ -349,7 +334,6 @@ class BaseModel(object):
             The submodels from which to create new model
         """
         for submodel in submodels:
-
             # check and then update dicts
             self.check_and_combine_dict(self._rhs, submodel.rhs)
             self.check_and_combine_dict(self._algebraic, submodel.algebraic)
@@ -394,6 +378,7 @@ class BaseModel(object):
         self.check_algebraic_equations(post_discretisation)
         self.check_ics_bcs()
         self.check_default_variables_dictionaries()
+        self.check_no_repeated_keys()
         # Can't check variables after discretising, since Variable objects get replaced
         # by StateVector objects
         # Checking variables is slow, so only do it in debug mode
@@ -621,6 +606,21 @@ class BaseModel(object):
                         var
                     )
                 )
+
+    def check_no_repeated_keys(self):
+        "Check that no equation keys are repeated"
+        rhs_alg = {**self.rhs, **self.algebraic}
+        rhs_alg_keys = []
+
+        for var in rhs_alg.keys():
+            # Check the variable has not already been defined
+            if var.id in rhs_alg_keys:
+                raise pybamm.ModelError(
+                    "Multiple equations specified for variable {!r}".format(var)
+                )
+            # Update list of variables
+            else:
+                rhs_alg_keys.append(var.id)
 
     def info(self, symbol_name):
         """

@@ -9,7 +9,7 @@ import unittest
 
 class TestIsothermal(unittest.TestCase):
     def test_public_functions(self):
-        param = pybamm.standard_parameters_lithium_ion
+        param = pybamm.LithiumIonParameters()
         submodel = pybamm.thermal.isothermal.Isothermal(param)
         std_tests = tests.StandardSubModelTests(submodel)
         std_tests.test_all()

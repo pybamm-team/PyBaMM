@@ -18,6 +18,12 @@ class BaseBatteryModel(pybamm.BaseModel):
         be set are listed below. Note that not all of the options are compatible with
         each other and with all of the models implemented in PyBaMM.
 
+            * "cell geometry" : str, optional
+                Sets the geometry of the cell. Can be "pouch" (default) or
+                "arbitrary". The arbitrary geometry option solves a 1D electrochemical
+                model with prescribed cell volume and cross-sectional area, and
+                (if thermal effects are included) solves a lumped thermal model
+                with prescribed surface area for cooling.
             * "dimensionality" : int, optional
                 Sets the dimension of the current collector problem. Can be 0
                 (default), 1 or 2.
@@ -40,7 +46,14 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "potential pair" or "potential pair quite conductive".
             * "particle" : str, optional
                 Sets the submodel to use to describe behaviour within the particle.
-                Can be "Fickian diffusion" (default) or "fast diffusion".
+                Can be "Fickian diffusion" (default), "uniform profile",
+                "quadratic profile", or "quartic profile".
+            * "particle shape" : str, optional
+                Sets the model shape of the electrode particles. This is used to
+                calculate the surface area per unit volume. Can be "spherical"
+                (default) or "user". For the "user" option the surface area per
+                unit volume can be passed as a parameter, and is therefore not
+                necessarily consistent with the particle shape.
             * "thermal" : str, optional
                 Sets the thermal model to use. Can be "isothermal" (default), "lumped",
                 "x-lumped", or "x-full".
@@ -61,6 +74,8 @@ class BaseBatteryModel(pybamm.BaseModel):
                     :class:`pybamm.sei.ElectronMigrationLimited`
                 - "interstitial-diffusion limited": \
                     :class:`pybamm.sei.InterstitialDiffusionLimited`
+                - "ec reaction limited": \
+                    :class:`pybamm.sei.EcReactionLimited`
             * "sei film resistance" : str
                 Set the submodel for additional term in the overpotential due to SEI.
                 The default value is "None" if the "sei" option is "None", and
@@ -86,7 +101,8 @@ class BaseBatteryModel(pybamm.BaseModel):
                     .. math::
                         \\eta_r = \\frac{F}{RT}
                         * (\\phi_s - \\phi_e - U - R_{sei} * L_{sei} * \\frac{I}{aL})
-
+            * "sei porosity change" : bool
+                Whether to include porosity change due to SEI formation (default False)
 
     **Extends:** :class:`pybamm.BaseModel`
     """
@@ -113,15 +129,19 @@ class BaseBatteryModel(pybamm.BaseModel):
     @property
     def default_var_pts(self):
         var = pybamm.standard_spatial_vars
-        return {
+        base_var_pts = {
             var.x_n: 20,
             var.x_s: 20,
             var.x_p: 20,
-            var.r_n: 10,
-            var.r_p: 10,
+            var.r_n: 30,
+            var.r_p: 30,
             var.y: 10,
             var.z: 10,
         }
+        # Reduce the default points for 2D current collectors
+        if self.options["dimensionality"] == 2:
+            base_var_pts.update({var.x_n: 10, var.x_s: 10, var.x_p: 10})
+        return base_var_pts
 
     @property
     def default_submesh_types(self):
@@ -177,10 +197,13 @@ class BaseBatteryModel(pybamm.BaseModel):
             "interfacial surface area": "constant",
             "current collector": "uniform",
             "particle": "Fickian diffusion",
+            "particle shape": "spherical",
             "thermal": "isothermal",
-            "cell_geometry": None,
+            "cell geometry": None,
             "external submodels": [],
             "sei": None,
+            "sei porosity change": False,
+            "working electrode": None,
         }
         # Change the default for cell geometry based on which thermal option is provided
         extra_options = extra_options or {}
@@ -188,10 +211,10 @@ class BaseBatteryModel(pybamm.BaseModel):
             "thermal", None
         )  # return None if option not given
         if thermal_option is None or thermal_option in ["isothermal", "lumped"]:
-            default_options["cell_geometry"] = "arbitrary"
+            default_options["cell geometry"] = "arbitrary"
         else:
-            default_options["cell_geometry"] = "pouch"
-        # The "cell_geometry" option will still be overridden by extra_options if
+            default_options["cell geometry"] = "pouch"
+        # The "cell geometry" option will still be overridden by extra_options if
         # provided
 
         # Change the default for SEI film resistance based on which sei option is
@@ -225,7 +248,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 )
             if (
                 options["thermal"] in ["x-lumped", "x-full"]
-                and options["cell_geometry"] != "pouch"
+                and options["cell geometry"] != "pouch"
             ):
                 raise pybamm.OptionError(
                     options["thermal"] + " model must have pouch geometry."
@@ -290,9 +313,9 @@ class BaseBatteryModel(pybamm.BaseModel):
             raise pybamm.OptionError(
                 "Unknown thermal model '{}'".format(options["thermal"])
             )
-        if options["cell_geometry"] not in ["arbitrary", "pouch"]:
+        if options["cell geometry"] not in ["arbitrary", "pouch"]:
             raise pybamm.OptionError(
-                "Unknown geometry '{}'".format(options["cell_geometry"])
+                "Unknown geometry '{}'".format(options["cell geometry"])
             )
         if options["sei"] not in [
             None,
@@ -301,12 +324,19 @@ class BaseBatteryModel(pybamm.BaseModel):
             "solvent-diffusion limited",
             "electron-migration limited",
             "interstitial-diffusion limited",
+            "ec reaction limited",
         ]:
             raise pybamm.OptionError("Unknown sei model '{}'".format(options["sei"]))
         if options["sei film resistance"] not in [None, "distributed", "average"]:
             raise pybamm.OptionError(
                 "Unknown sei film resistance model '{}'".format(
                     options["sei film resistance"]
+                )
+            )
+        if options["sei porosity change"] not in [True, False]:
+            raise pybamm.OptionError(
+                "Unknown sei porosity change '{}'".format(
+                    options["sei porosity change"]
                 )
             )
 
@@ -319,9 +349,24 @@ class BaseBatteryModel(pybamm.BaseModel):
                 raise pybamm.OptionError(
                     "cannot have transverse convection in 0D model"
                 )
-        if options["particle"] not in ["Fickian diffusion", "fast diffusion"]:
+        if options["particle"] not in [
+            "Fickian diffusion",
+            "fast diffusion",
+            "uniform profile",
+            "quadratic profile",
+            "quartic profile",
+        ]:
             raise pybamm.OptionError(
                 "particle model '{}' not recognised".format(options["particle"])
+            )
+        if options["particle"] == "fast diffusion":
+            raise NotImplementedError(
+                "The 'fast diffusion' option has been renamed. "
+                "Use 'uniform profile' instead."
+            )
+        if options["particle shape"] not in ["spherical", "user"]:
+            raise pybamm.OptionError(
+                "particle shape '{}' not recognised".format(options["particle shape"])
             )
 
         if options["thermal"] == "x-lumped" and options["dimensionality"] == 1:
@@ -345,9 +390,9 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         # Spatial
         var = pybamm.standard_spatial_vars
-        L_x = pybamm.geometric_parameters.L_x
-        L_y = pybamm.geometric_parameters.L_y
-        L_z = pybamm.geometric_parameters.L_z
+        L_x = self.param.L_x
+        L_y = self.param.L_y
+        L_z = self.param.L_z
         self.variables.update(
             {
                 "x": var.x,
@@ -474,12 +519,14 @@ class BaseBatteryModel(pybamm.BaseModel):
                         submodel_name, self.name
                     )
                 )
+
                 submodel.set_algebraic(self.variables)
                 pybamm.logger.debug(
                     "Setting boundary conditions for {} submodel ({})".format(
                         submodel_name, self.name
                     )
                 )
+
                 submodel.set_boundary_conditions(self.variables)
                 pybamm.logger.debug(
                     "Setting initial conditions for {} submodel ({})".format(
@@ -492,6 +539,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                     "Updating {} submodel ({})".format(submodel_name, self.name)
                 )
                 self.update(submodel)
+                self.check_no_repeated_keys()
 
     def build_model(self):
 
@@ -529,6 +577,36 @@ class BaseBatteryModel(pybamm.BaseModel):
                 self.variables.update(var)
 
         self._built = True
+
+    def new_copy(self, build=True):
+        """
+        Create a copy of the model. Overwrites the functionality of
+        :class:`pybamm.BaseModel` to make sure that the submodels are updated correctly
+        """
+        # create without building
+        # 'build' is not a keyword argument for the BaseBatteryModel class, but it
+        # should be for all of the subclasses
+        new_model = self.__class__(options=self.options, name=self.name, build=False)
+        # update submodels
+        new_model.submodels = self.submodels
+        # clear submodel equations to avoid weird conflicts
+        for submodel in self.submodels.values():
+            submodel._rhs = {}
+            submodel._algebraic = {}
+            submodel._initial_conditions = {}
+            submodel._boundary_conditions = {}
+            submodel._variables = {}
+            submodel._events = []
+
+        # now build
+        if build:
+            new_model.build_model()
+        new_model.use_jacobian = self.use_jacobian
+        new_model.use_simplify = self.use_simplify
+        new_model.convert_to_format = self.convert_to_format
+        new_model.timescale = self.timescale
+        new_model.length_scales = self.length_scales
+        return new_model
 
     def set_external_circuit_submodel(self):
         """
@@ -570,8 +648,8 @@ class BaseBatteryModel(pybamm.BaseModel):
         elif self.options["thermal"] == "lumped":
             thermal_submodel = pybamm.thermal.Lumped(
                 self.param,
-                self.options["dimensionality"],
-                self.options["cell_geometry"],
+                cc_dimension=self.options["dimensionality"],
+                geometry=self.options["cell geometry"],
             )
 
         elif self.options["thermal"] == "x-lumped":

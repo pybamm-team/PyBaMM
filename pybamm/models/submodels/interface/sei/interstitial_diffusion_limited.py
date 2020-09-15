@@ -6,7 +6,8 @@ from .base_sei import BaseModel
 
 
 class InterstitialDiffusionLimited(BaseModel):
-    """Base class for interstitial-diffusion limited SEI growth.
+    """
+    Class for interstitial-diffusion limited SEI growth.
 
     Parameters
     ----------
@@ -26,6 +27,7 @@ class InterstitialDiffusionLimited(BaseModel):
         L_outer = pybamm.standard_variables.L_outer
 
         variables = self._get_standard_thickness_variables(L_inner, L_outer)
+        variables.update(self._get_standard_concentraion_variables(variables))
 
         return variables
 
@@ -34,11 +36,12 @@ class InterstitialDiffusionLimited(BaseModel):
             "Inner " + self.domain.lower() + " electrode sei thickness"
         ]
         phi_s_n = variables[self.domain + " electrode potential"]
+        phi_e_n = variables[self.domain + " electrolyte potential"]
 
         if self.domain == "Negative":
-            C_sei = pybamm.sei_parameters.C_sei_inter_n
+            C_sei = self.param.C_sei_inter_n
 
-        j_sei = -pybamm.exp(-phi_s_n) / (C_sei * L_sei_inner)
+            j_sei = -pybamm.exp(-(phi_s_n - phi_e_n)) / (C_sei * L_sei_inner)
 
         alpha = 0.5
         j_inner = alpha * j_sei
@@ -65,10 +68,10 @@ class InterstitialDiffusionLimited(BaseModel):
         j_inner = variables["Inner " + domain + " sei interfacial current density"]
         j_outer = variables["Outer " + domain + " sei interfacial current density"]
 
-        v_bar = pybamm.sei_parameters.v_bar
+        v_bar = self.param.v_bar
 
         if self.domain == "Negative":
-            Gamma_SEI = pybamm.sei_parameters.Gamma_SEI_n
+            Gamma_SEI = self.param.Gamma_SEI_n
 
         self.rhs = {
             L_inner: -Gamma_SEI * j_inner,
@@ -80,7 +83,7 @@ class InterstitialDiffusionLimited(BaseModel):
         L_inner = variables["Inner " + domain + " sei thickness"]
         L_outer = variables["Outer " + domain + " sei thickness"]
 
-        L_inner_0 = pybamm.sei_parameters.L_inner_0
-        L_outer_0 = pybamm.sei_parameters.L_outer_0
+        L_inner_0 = self.param.L_inner_0
+        L_outer_0 = self.param.L_outer_0
 
         self.initial_conditions = {L_inner: L_inner_0, L_outer: L_outer_0}

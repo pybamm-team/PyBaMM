@@ -9,7 +9,7 @@ import unittest
 
 class TestBruggeman(unittest.TestCase):
     def test_public_functions(self):
-        param = pybamm.standard_parameters_lithium_ion
+        param = pybamm.LithiumIonParameters()
         a = pybamm.Concatenation(
             pybamm.FullBroadcast(0, ["negative electrode"], "current collector"),
             pybamm.FullBroadcast(0, ["separator"], "current collector"),

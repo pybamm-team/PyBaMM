@@ -58,9 +58,12 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         # Record whether there are any symbolic inputs
         inputs = inputs or {}
         has_symbolic_inputs = any(isinstance(v, casadi.MX) for v in inputs.values())
+        symbolic_inputs = casadi.vertcat(
+            *[v for v in inputs.values() if isinstance(v, casadi.MX)]
+        )
 
         # Create casadi objects for the root-finder
-        inputs = casadi.vertcat(*[x for x in inputs.values()])
+        inputs = casadi.vertcat(*[v for v in inputs.values()])
 
         y0 = model.y0
         # The casadi algebraic solver can read rhs equations, but leaves them unchanged
@@ -68,6 +71,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         # equations will be equal to the initial condition provided. This allows this
         # solver to be used for initialising the DAE solvers
         if model.rhs == {}:
+            len_rhs = 0
             y0_diff = casadi.DM()
             y0_alg = y0
         else:
@@ -81,17 +85,29 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         t_sym = casadi.MX.sym("t")
         y_alg_sym = casadi.MX.sym("y_alg", y0_alg.shape[0])
         y_sym = casadi.vertcat(y0_diff, y_alg_sym)
-        p_sym = casadi.MX.sym("p", inputs.shape[0])
 
-        t_p_sym = casadi.vertcat(t_sym, p_sym)
-        alg = model.casadi_algebraic(t_sym, y_sym, p_sym)
+        t_and_inputs_sym = casadi.vertcat(t_sym, symbolic_inputs)
+        alg = model.casadi_algebraic(t_sym, y_sym, inputs)
+
+        # Set constraints vector in the casadi format
+        # Constrain the unknowns. 0 (default): no constraint on ui, 1: ui >= 0.0,
+        # -1: ui <= 0.0, 2: ui > 0.0, -2: ui < 0.0.
+        constraints = np.zeros_like(model.bounds[0], dtype=int)
+        # If the lower bound is positive then the variable must always be positive
+        constraints[model.bounds[0] >= 0] = 1
+        # If the upper bound is negative then the variable must always be negative
+        constraints[model.bounds[1] <= 0] = -1
 
         # Set up rootfinder
         roots = casadi.rootfinder(
             "roots",
             "newton",
-            dict(x=y_alg_sym, p=t_p_sym, g=alg),
-            {**self.extra_options, "abstol": self.tol},
+            dict(x=y_alg_sym, p=t_and_inputs_sym, g=alg),
+            {
+                **self.extra_options,
+                "abstol": self.tol,
+                "constraints": list(constraints[len_rhs:]),
+            },
         )
         for idx, t in enumerate(t_eval):
             # Evaluate algebraic with new t and previous y0, if it's already close
@@ -109,10 +125,10 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                     y_alg = casadi.horzcat(y_alg, y0_alg)
             # Otherwise calculate new y_sol
             else:
-                t_inputs = casadi.vertcat(t, inputs)
+                t_eval_inputs_sym = casadi.vertcat(t, symbolic_inputs)
                 # Solve
                 try:
-                    y_alg_sol = roots(y0_alg, t_inputs)
+                    y_alg_sol = roots(y0_alg, t_eval_inputs_sym)
                     success = True
                     message = None
                     # Check final output
@@ -146,7 +162,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                         successfully, but maximum solution error ({})
                         above tolerance ({})
                         """.format(
-                            casadi.mmax(fun), self.tol
+                            casadi.mmax(casadi.fabs(fun)), self.tol
                         )
                     )
 

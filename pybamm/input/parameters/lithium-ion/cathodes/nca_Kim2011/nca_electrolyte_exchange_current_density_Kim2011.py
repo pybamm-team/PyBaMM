@@ -1,4 +1,4 @@
-from pybamm import exp, constants, standard_parameters_lithium_ion
+from pybamm import exp, constants, Parameter
 
 
 def nca_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, T):
@@ -29,9 +29,9 @@ def nca_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, T):
     """
     i0_ref = 4  # reference exchange current density at 100% SOC
     sto = 0.41  # stochiometry at 100% SOC
-    c_s_max = standard_parameters_lithium_ion.c_p_max  # max electrode concentration
+    c_s_max = Parameter("Maximum concentration in positive electrode [mol.m-3]")
     c_s_ref = sto * c_s_max  # reference electrode concentration
-    c_e_ref = standard_parameters_lithium_ion.c_e_typ  # ref electrolyte concentration
+    c_e_ref = Parameter("Typical electrolyte concentration [mol.m-3]")
     alpha = 0.5  # charge transfer coefficient
 
     m_ref = i0_ref / (

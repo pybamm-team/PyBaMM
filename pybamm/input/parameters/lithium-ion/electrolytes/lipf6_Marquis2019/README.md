@@ -2,6 +2,6 @@
 
 Parameters for a LiPF6 electrolyte, from the paper
 
-> Scott G. Marquis, Valentin Sulzer, Robert Timms, Colin P. Please, and S. Jon Chapman. "An asymptotic derivation of a single particle model with electrolyte." [arXiv preprint arXiv:1905.12553](https://arxiv.org/abs/1905.12553) (2019).
+> Marquis, S. G., Sulzer, V.,  Timms, R.,  Please, C. P.,  &  Chapman, S. J. (2019). “An  asymptotic derivation of a single particle model with electrolyte”. [Journal of The Electrochemical Society](https://doi.org/10.1149/2.0341915jes), 166(15), A3693-A3706. 
 
 and references therein.

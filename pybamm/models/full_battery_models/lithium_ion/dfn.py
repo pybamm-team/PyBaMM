@@ -53,7 +53,10 @@ class DFN(BaseModel):
 
     def set_porosity_submodel(self):
 
-        self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
+        if self.options["sei porosity change"] is False:
+            self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
+        elif self.options["sei porosity change"] is True:
+            self.submodels["porosity"] = pybamm.porosity.Full(self.param)
 
     def set_convection_submodel(self):
 
@@ -82,12 +85,20 @@ class DFN(BaseModel):
             self.submodels["positive particle"] = pybamm.particle.FickianManyParticles(
                 self.param, "Positive"
             )
-        elif self.options["particle"] == "fast diffusion":
-            self.submodels["negative particle"] = pybamm.particle.FastManyParticles(
-                self.param, "Negative"
+        elif self.options["particle"] in [
+            "uniform profile",
+            "quadratic profile",
+            "quartic profile",
+        ]:
+            self.submodels[
+                "negative particle"
+            ] = pybamm.particle.PolynomialManyParticles(
+                self.param, "Negative", self.options["particle"]
             )
-            self.submodels["positive particle"] = pybamm.particle.FastManyParticles(
-                self.param, "Positive"
+            self.submodels[
+                "positive particle"
+            ] = pybamm.particle.PolynomialManyParticles(
+                self.param, "Positive", self.options["particle"]
             )
 
     def set_solid_submodel(self):

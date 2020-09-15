@@ -1,21 +1,75 @@
-# [Unreleased](https://github.com/pybamm-team/PyBaMM)
+# [v0.2.4](https://github.com/pybamm-team/PyBaMM/tree/v0.2.4) - 2020-09-07
+
+This release adds new operators for more complex models, some basic sensitivity analysis, and a spectral volumes spatial method, as well as some small bug fixes.
 
 ## Features
 
--   Reformatted Landesfeind electrolytes ([#1064](https://github.com/pybamm-team/PyBaMM/pull/1064))
--   Adapted examples to be run in Google Colab ([#1061](https://github.com/pybamm-team/PyBaMM/pull/1061))
--   Added `length_scales` attribute to models ([#1058](https://github.com/pybamm-team/PyBaMM/pull/1058))
--   Added averaging in secondary dimensions ([#1057](https://github.com/pybamm-team/PyBaMM/pull/1057))
-
-## Optimizations
+-   Added variables which track the total amount of lithium in the system ([#1136](https://github.com/pybamm-team/PyBaMM/pull/1136))
+-   Added `Upwind` and `Downwind` operators for convection ([#1134](https://github.com/pybamm-team/PyBaMM/pull/1134))
+-   Added Getting Started notebook on solver options and changing the mesh. Also added a notebook detailing the different thermal options, and a notebook explaining the steps that occur behind the scenes in the `Simulation` class ([#1131](https://github.com/pybamm-team/PyBaMM/pull/1131))
+-   Added particle submodel that use a polynomial approximation to the concentration within the electrode particles ([#1130](https://github.com/pybamm-team/PyBaMM/pull/1130))
+-   Added `Modulo`, `Floor` and `Ceiling` operators ([#1121](https://github.com/pybamm-team/PyBaMM/pull/1121))
+-   Added DFN model for a half cell ([#1121](https://github.com/pybamm-team/PyBaMM/pull/1121))
+-   Automatically compute surface area per unit volume based on particle shape for li-ion models ([#1120](https://github.com/pybamm-team/PyBaMM/pull/1120))
+-   Added "R-averaged particle concentration" variables ([#1118](https://github.com/pybamm-team/PyBaMM/pull/1118))
+-   Added support for sensitivity calculations to the casadi solver ([#1109](https://github.com/pybamm-team/PyBaMM/pull/1109))
+-   Added support for index 1 semi-explicit dae equations and sensitivity calculations to JAX BDF solver ([#1107](https://github.com/pybamm-team/PyBaMM/pull/1107))
+-   Allowed keyword arguments to be passed to `Simulation.plot()` ([#1099](https://github.com/pybamm-team/PyBaMM/pull/1099))
+-   Added the Spectral Volumes spatial method and the submesh that it works with ([#900](https://github.com/pybamm-team/PyBaMM/pull/900))
 
 ## Bug fixes
 
--   Allowed for pybamm functions exp, sin, cos, sqrt to be used in expression trees that 
-    are converted to casadi format ([#1067](https://github.com/pybamm-team/PyBaMM/pull/1067)
+-   Fixed bug where some parameters were not being set by the `EcReactionLimited` SEI model ([#1136](https://github.com/pybamm-team/PyBaMM/pull/1136))
+-   Fixed bug on electrolyte potential for `BasicDFNHalfCell` ([#1133](https://github.com/pybamm-team/PyBaMM/pull/1133))
+-   Fixed `r_average` to work with `SecondaryBroadcast` ([#1118](https://github.com/pybamm-team/PyBaMM/pull/1118))
+-   Fixed finite volume discretisation of spherical integrals ([#1118](https://github.com/pybamm-team/PyBaMM/pull/1118))
+-   `t_eval` now gets changed to a `linspace` if a list of length 2 is passed ([#1113](https://github.com/pybamm-team/PyBaMM/pull/1113))
+-   Fixed bug when setting a function with an `InputParameter` ([#1111](https://github.com/pybamm-team/PyBaMM/pull/1111))
+
+## Breaking changes
+
+-   The "fast diffusion" particle option has been renamed "uniform profile" ([#1130](https://github.com/pybamm-team/PyBaMM/pull/1130))
+-   The modules containing standard parameters are now classes so they can take options
+(e.g. `standard_parameters_lithium_ion` is now `LithiumIonParameters`) ([#1120](https://github.com/pybamm-team/PyBaMM/pull/1120))
+-   Renamed `quick_plot_vars` to `output_variables` in `Simulation` to be consistent with `QuickPlot`. Passing `quick_plot_vars` to `Simulation.plot()` has been deprecated and `output_variables` should be passed instead ([#1099](https://github.com/pybamm-team/PyBaMM/pull/1099))
+
+
+# [v0.2.3](https://github.com/pybamm-team/PyBaMM/tree/v0.2.3) - 2020-07-01
+
+This release enables the use of [Google Colab](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/master/) for running example notebooks, and adds some small new features and bug fixes.
+
+## Features
+
+-   Added JAX evaluator, and ODE solver ([#1038](https://github.com/pybamm-team/PyBaMM/pull/1038))
+-   Reformatted Getting Started notebooks ([#1083](https://github.com/pybamm-team/PyBaMM/pull/1083))
+-   Reformatted Landesfeind electrolytes ([#1064](https://github.com/pybamm-team/PyBaMM/pull/1064))
+-   Adapted examples to be run in Google Colab ([#1061](https://github.com/pybamm-team/PyBaMM/pull/1061))
+-   Added some new solvers for algebraic models ([#1059](https://github.com/pybamm-team/PyBaMM/pull/1059))
+-   Added `length_scales` attribute to models ([#1058](https://github.com/pybamm-team/PyBaMM/pull/1058))
+-   Added averaging in secondary dimensions ([#1057](https://github.com/pybamm-team/PyBaMM/pull/1057))
+-   Added SEI reaction based on Yang et. al. 2017 and reduction in porosity ([#1009](https://github.com/pybamm-team/PyBaMM/issues/1009))
+
+## Optimizations
+
+-   Reformatted CasADi "safe" mode to deal with events better ([#1089](https://github.com/pybamm-team/PyBaMM/pull/1089))
+
+## Bug fixes
+
+-   Fixed a bug in `InterstitialDiffusionLimited` ([#1097](https://github.com/pybamm-team/PyBaMM/pull/1097))
+-   Fixed `Simulation` to keep different copies of the model so that parameters can be changed between simulations ([#1090](https://github.com/pybamm-team/PyBaMM/pull/1090))
+-   Fixed `model.new_copy()` to keep custom submodels ([#1090](https://github.com/pybamm-team/PyBaMM/pull/1090))
+-   2D processed variables can now be evaluated at the domain boundaries ([#1088](https://github.com/pybamm-team/PyBaMM/pull/1088))
+-   Update the default variable points to better capture behaviour in the solid particles in li-ion models ([#1081](https://github.com/pybamm-team/PyBaMM/pull/1081))
+-   Fix `QuickPlot` to display variables discretised by FEM (in y-z) properly ([#1078](https://github.com/pybamm-team/PyBaMM/pull/1078))
+-   Add length scales to `EffectiveResistance` models ([#1071](https://github.com/pybamm-team/PyBaMM/pull/1071))
+-   Allowed for pybamm functions exp, sin, cos, sqrt to be used in expression trees that
+    are converted to casadi format ([#1067](https://github.com/pybamm-team/PyBaMM/pull/1067))
 -   Fix a bug where variables that depend on y and z were transposed in `QuickPlot` ([#1055](https://github.com/pybamm-team/PyBaMM/pull/1055))
 
 ## Breaking changes
+
+-   `Simulation.specs` and `Simulation.set_defaults` have been deprecated. Users should create a new `Simulation` object for each different case instead ([#1090](https://github.com/pybamm-team/PyBaMM/pull/1090))
+-   The solution times `t_eval` must now be provided to `Simulation.solve()` when not using an experiment or prescribing the current using drive cycle data ([#1086](https://github.com/pybamm-team/PyBaMM/pull/1086))
 
 # [v0.2.2](https://github.com/pybamm-team/PyBaMM/tree/v0.2.2) - 2020-06-01
 

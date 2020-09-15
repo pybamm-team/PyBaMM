@@ -21,3 +21,6 @@ SEI models
 
 .. autoclass:: pybamm.sei.SolventDiffusionLimited
     :members:
+
+.. autoclass:: pybamm.sei.EcReactionLimited
+    :members:

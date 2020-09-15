@@ -12,9 +12,6 @@ import pybamm
 import numpy as np
 import matplotlib.pyplot as plt
 
-plt.close("all")
-pybamm.set_logging_level(30)
-
 factor = 6.38
 capacities = []
 specific_capacities = []
@@ -56,8 +53,6 @@ for l_n in thicknesses:
                 "Maximum concentration in positive electrode [mol.m-3]": 50000,
                 "Initial concentration in negative electrode [mol.m-3]": 12500,
                 "Initial concentration in positive electrode [mol.m-3]": 25000,
-                "Negative electrode surface area to volume ratio [m-1]": 180000.0,
-                "Positive electrode surface area to volume ratio [m-1]": 150000.0,
                 "Current function [A]": I_app,
             }
         )
@@ -79,8 +74,8 @@ for l_n in thicknesses:
         # solve model
         t_eval = np.linspace(0, 3600, 100)
         sol = model.default_solver.solve(model, t_eval)
-        xpext = sol["Positive electrode average extent of lithiation"]
-        xnext = sol["Negative electrode average extent of lithiation"]
+        xpext = sol["X-averaged positive electrode extent of lithiation"]
+        xnext = sol["X-averaged negative electrode extent of lithiation"]
         xpsurf = sol["X-averaged positive particle surface concentration"]
         xnsurf = sol["X-averaged negative particle surface concentration"]
         time = sol["Time [h]"]
@@ -133,3 +128,4 @@ ax2.plot(thicknesses / l_p, specific_capacities)
 ax1.set_ylabel("Capacity [mAh]")
 ax2.set_ylabel("Specific Capacity [mAh.cm-3]")
 ax2.set_xlabel("Anode : Cathode thickness")
+plt.show()
