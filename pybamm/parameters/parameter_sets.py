@@ -142,5 +142,3 @@ Sulzer2019 = {
     "experiment": "1C_discharge_from_full",
     "citation": "sulzer2019physical",
 }
-
-

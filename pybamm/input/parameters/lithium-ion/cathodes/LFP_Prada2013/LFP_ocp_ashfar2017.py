@@ -20,7 +20,7 @@ Sepideh Afshar, Kirsten Morris, Amir Khajepour
     """
 
     c1 = -150 * sto
-    c2 =  - 30 * ( 1 - sto )
-    k = 3.4077 - .020269 * sto + .5 * exp(c1) - .9 * exp(c2)
-    
+    c2 = -30 * (1 - sto)
+    k = 3.4077 - 0.020269 * sto + 0.5 * exp(c1) - 0.9 * exp(c2)
+
     return k

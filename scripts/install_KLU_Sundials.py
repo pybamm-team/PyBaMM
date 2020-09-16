@@ -121,5 +121,3 @@ subprocess.run(["cmake", sundials_src] + cmake_args, cwd=build_dir)
 print("-" * 10, "Building the sundials", "-" * 40)
 make_cmd = ["make", "install"]
 subprocess.run(make_cmd, cwd=build_dir)
-
-

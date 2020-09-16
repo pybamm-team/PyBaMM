@@ -1,7 +1,7 @@
 from pybamm import exp, constants, Parameter
 
 
-def LFP_electrolyte_reaction_rate_prada2013(c_e, c_s_surf,T): # , 1 
+def LFP_electrolyte_reaction_rate_prada2013(c_e, c_s_surf, T):  # , 1
     """
     Reaction rate for Butler-Volmer reactions
     References
@@ -26,8 +26,6 @@ Mayank Garg
     arrhenius = exp(E_r / constants.R * (1 / 298.15 - 1 / T))
     c_p_max = Parameter("Maximum concentration in positive electrode [mol.m-3]")
 
-
     return (
         m_ref * arrhenius * c_e ** 0.5 * c_s_surf ** 0.5 * (c_p_max - c_s_surf) ** 0.5
     )
-
