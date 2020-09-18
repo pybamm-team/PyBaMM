@@ -14,7 +14,7 @@ model.submodels["negative particle cracking"] = pybamm.particle_cracking.CrackPr
 model.submodels["negative sei on cracks"] = pybamm.sei.SEIonCracks(
     model.param, "Negative"
 )
-model.build_model()
+# model.build_model()
 param = model.default_parameter_values
 chemistry = pybamm.parameter_sets.Chen2020
 param = pybamm.ParameterValues(chemistry=chemistry)
@@ -45,39 +45,38 @@ total_cycles=3
 experiment = pybamm.Experiment(
     [
         "Discharge at C/10 for 10 hours or until 3.3 V",
-        "Rest for 1 hour",
-        "Charge at 1 A until 4.1 V",
-        "Hold at 4.1 V until 50 mA",
-        "Rest for 1 hour",
+        #"Rest for 1 hour",
+        #"Charge at 1 A until 4.1 V",
+        #"Hold at 4.1 V until 50 mA",
+        #"Rest for 1 hour",
     ] * total_cycles
 )
-
 sim1 = pybamm.Simulation(model, experiment=experiment,parameter_values=param)
-solution1 = sim1.solve()
+#solution1 = sim1.solve()
 
 # Use the default setup without sei-crack model
-model2 = pybamm.lithium_ion.DFN(
-    build=True, options={"particle": "Fickian diffusion", "sei":"solvent-diffusion limited", "sei film resistance":"distributed", "sei porosity change":False}
-)
-sim2 = pybamm.Simulation(model2, experiment=experiment,parameter_values=param2)
-solution2 = sim2.solve()
+#model2 = pybamm.lithium_ion.DFN(
+#     build=True, options={"particle": "Fickian diffusion", "sei":"solvent-diffusion limited", "sei film resistance":"distributed", "sei porosity change":False}
+#)
+#sim2 = pybamm.Simulation(model2, experiment=experiment,parameter_values=param2)
+#solution2 = sim2.solve()
 
 # plot results
-cycle_number1 = []
-Qdis_delta1 = []
-Qdis_delta2 = []
-for i in range(total_cycles):
-    t1 = solution1.sub_solutions[i*5]["Time [h]"].entries
-    Qdis1 = solution1.sub_solutions[i*5]["Discharge capacity [A.h]"].entries
-    Qdis_delta1.append(Qdis1[-1]-Qdis1[-0])
-    cycle_number1.append(i)
-    t2 = solution2.sub_solutions[i*5]["Time [h]"].entries
-    Qdis2 = solution2.sub_solutions[i*5]["Discharge capacity [A.h]"].entries
-    Qdis_delta2.append(Qdis2[-1]-Qdis2[-0])
-plt.plot(cycle_number1, Qdis_delta1,label='with sei-cracks')
-plt.plot(cycle_number1, Qdis_delta2,label='without sei-cracks')
-plt.xlabel("Cycle nunber")
-plt.ylabel("Discharge capacity [A.h]")
-plt.legend()
-plt.show()
+# cycle_number1 = []
+# Qdis_delta1 = []
+# Qdis_delta2 = []
+# for i in range(total_cycles):
+#     t1 = solution1.sub_solutions[i*5]["Time [h]"].entries
+#     Qdis1 = solution1.sub_solutions[i*5]["Discharge capacity [A.h]"].entries
+#     Qdis_delta1.append(Qdis1[-1]-Qdis1[-0])
+#     cycle_number1.append(i)
+#     t2 = solution2.sub_solutions[i*5]["Time [h]"].entries
+#     Qdis2 = solution2.sub_solutions[i*5]["Discharge capacity [A.h]"].entries
+#     Qdis_delta2.append(Qdis2[-1]-Qdis2[-0])
+# plt.plot(cycle_number1, Qdis_delta1,label='with sei-cracks')
+# plt.plot(cycle_number1, Qdis_delta2,label='without sei-cracks')
+# plt.xlabel("Cycle nunber")
+# plt.ylabel("Discharge capacity [A.h]")
+# plt.legend()
+# plt.show()
 

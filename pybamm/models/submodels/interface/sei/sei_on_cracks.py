@@ -22,6 +22,7 @@ class SEIonCracks(SolventDiffusionLimited):
 
         # Reaction name and icd are updated, but not the variable "self.reaction"
         # as this is still a SEI reaction, after all.
+        self.reaction = "sei-cracks"
         self.reaction_name = " sei-cracks"
         self.reaction_icd = "Sei-cracks interfacial current density"
 
@@ -64,4 +65,27 @@ class SEIonCracks(SolventDiffusionLimited):
         variables.update(self._get_standard_thickness_variables(L_inner_cr, L_outer_cr))
         variables.update(self._get_standard_concentraion_variables(variables))
         # Now we get the normal coupled variables for the parent submodel
-        return super().get_coupled_variables(variables)
+        variables.update(self._no_sei_cracks_in_positive_electrode())
+        variables.update(super().get_coupled_variables(variables))
+        return variables
+
+    def _no_sei_cracks_in_positive_electrode(self):
+        """Define no sei on cracks in the Positive electrode
+
+        """
+        domain = "positive electrode"
+        Domain = "Positive electrode"
+        reaction_name = " sei-cracks"
+        j_zeros = pybamm.FullBroadcast(
+            pybamm.Scalar(0), "positive electrode", "current collector"
+        )
+        j_zeros_av = pybamm.x_average(j_zeros)
+        variables = {
+            f"{Domain}{reaction_name} interfacial current density": j_zeros,
+            f"{Domain}{reaction_name} interfacial current density [A.m-2]": j_zeros,
+            f"X-averaged {domain}{reaction_name} "
+            "interfacial current density": j_zeros_av,
+            f"X-averaged {domain}{reaction_name} "
+            "interfacial current density [A.m-2]": j_zeros_av,
+        }       
+        return variables

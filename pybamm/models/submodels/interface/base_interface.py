@@ -186,7 +186,7 @@ class BaseInterface(pybamm.BaseSubModel):
 
     def _get_electrolyte_reaction_signed_stoichiometry(self):
         "Returns the number of electrons in the reaction"
-        if self.reaction in ["lithium-ion main", "sei"]:
+        if self.reaction in ["lithium-ion main", "sei","sei-cracks"]:
             # Both the main reaction current contribute to the electrolyte reaction
             # current
             return pybamm.Scalar(1), pybamm.Scalar(1)
@@ -318,8 +318,13 @@ class BaseInterface(pybamm.BaseSubModel):
         """
         i_typ = self.param.i_typ
         L_x = self.param.L_x
-        j_n_scale = i_typ / (self.param.a_n_dim * L_x)
-        j_p_scale = i_typ / (self.param.a_p_dim * L_x)
+        if self.reaction_name == " sei-cracks":
+            roughness_n = variables["Negative electrode roughness ratio"] - 1
+            j_n_scale = i_typ / (self.param.a_n_dim * L_x) * roughness_n
+            j_p_scale = i_typ / (self.param.a_p_dim * L_x)
+        else:
+            j_n_scale = i_typ / (self.param.a_n_dim * L_x)
+            j_p_scale = i_typ / (self.param.a_p_dim * L_x)
 
         j_n_av = variables[
             "X-averaged negative electrode"
@@ -339,6 +344,7 @@ class BaseInterface(pybamm.BaseSubModel):
         j_p = variables[
             "Positive electrode" + self.reaction_name + " interfacial current density"
         ]
+
         j = pybamm.Concatenation(j_n, j_s, j_p)
         j_dim = pybamm.Concatenation(j_n_scale * j_n, j_s, j_p_scale * j_p)
 

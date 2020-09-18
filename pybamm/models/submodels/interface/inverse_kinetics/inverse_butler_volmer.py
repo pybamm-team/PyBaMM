@@ -140,7 +140,8 @@ class CurrentForInverseButlerVolmer(BaseInterface):
         ]
         j_sei = variables[self.domain + " electrode sei interfacial current density"]
         # additional feature for sei on cracks
-        if self.domain + " electrode sei-cracks interfacial current density" in variables:
+        if (self.domain == "Negative" and 
+            self.domain + " electrode sei-cracks interfacial current density" in variables):
             j_sei_cr = variables[
                 self.domain + " electrode sei-cracks interfacial current density"
                 ]
