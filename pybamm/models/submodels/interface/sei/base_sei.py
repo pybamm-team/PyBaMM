@@ -129,8 +129,8 @@ class BaseModel(BaseInterface):
             )
             v_bar = param.v_bar
 
-        L_inner = variables[f"Inner {domain}{self.reaction_name} thickness"] * roughness
-        L_outer = variables[f"Outer {domain}{self.reaction_name} thickness"] * roughness
+        L_inner = variables[f"Inner {domain}{self.reaction_name} thickness"]
+        L_outer = variables[f"Outer {domain}{self.reaction_name} thickness"]
 
         # Set SEI concentration variables. Note these are defined differently for
         # the "EC Reaction Limited" model
@@ -150,11 +150,11 @@ class BaseModel(BaseInterface):
             )  # inner SEI concentration to 0
             n_outer = j_outer * L_outer * C_ec  # outer SEI concentration
         else:
-            n_inner = L_inner # inner SEI concentration
-            n_outer = L_outer # outer SEI concentration
+            n_inner = L_inner * roughness # inner SEI concentration
+            n_outer = L_outer * roughness # outer SEI concentration
 
-        n_inner_av = pybamm.x_average(L_inner)
-        n_outer_av = pybamm.x_average(L_outer)
+        n_inner_av = pybamm.x_average(L_inner * roughness)
+        n_outer_av = pybamm.x_average(L_outer * roughness)
 
         n_SEI = n_inner + n_outer / v_bar  # SEI concentration
         n_SEI_av = pybamm.x_average(n_SEI)

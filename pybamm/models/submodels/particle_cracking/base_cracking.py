@@ -127,11 +127,13 @@ class BaseCracking(pybamm.BaseSubModel):
         a_n_cr = (roughness - 1) * a_n # normalised crack surface area
         a_n_cr_dim = a_n_cr / R_n  # crack surface area to volume ratio [m-1]
         # a_n_cr_xavg=pybamm.x_average(a_n_cr)
+        roughness_xavg = pybamm.x_average(roughness)
         variables = {
             self.domain + " crack surface to volume ratio [m-1]": a_n_cr_dim,
             self.domain + " crack surface to volume ratio": a_n_cr,
             # self.domain + " X-averaged crack surface to volume ratio [m-1]": a_n_cr_xavg / R_n,
             # self.domain + " X-averaged crack surface to volume ratio": a_n_cr_xavg,
             self.domain + " electrode roughness ratio": roughness,
+            f"X-averaged {self.domain.lower()} electrode roughness ratio": roughness_xavg,
         }
         return variables

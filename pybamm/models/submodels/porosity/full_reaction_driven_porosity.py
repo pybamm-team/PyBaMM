@@ -34,6 +34,13 @@ class Full(BaseModel):
         j_n = variables["Negative electrode interfacial current density"]
         j_p = variables["Positive electrode interfacial current density"]
         j_sei_n = variables["Negative electrode sei interfacial current density"]
+        if ("Negative electrode sei-cracks interfacial current density" in variables and
+            "Negative electrode roughness ratio" in variables):
+            j_sei_cr = variables[
+                "Negative electrode sei-cracks interfacial current density"
+                ]
+            roughness = variables["Negative electrode roughness ratio"] - 1
+            j_sei_n +=  j_sei_cr * roughness  # additional sei on cracks
         beta_sei_n = self.param.beta_sei_n
 
         deps_n_dt = -self.param.beta_surf_n * j_n + beta_sei_n * j_sei_n

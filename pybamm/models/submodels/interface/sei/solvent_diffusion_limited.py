@@ -72,7 +72,7 @@ class SolventDiffusionLimited(BaseModel):
             f"Outer {domain}{self.reaction_name} interfacial current density"
         ]
         # ratio of average sei thickness between before and after crack propagation
-        if self.reaction_name == "sei-cracks":
+        if self.reaction_name == " sei-cracks":
             l_cr_n = variables[f"{self.domain} particle crack length"]
             dl_cr_n = variables[f"{self.domain} particle cracking rate"]
             ratio_avg =  l_cr_n / (l_cr_n + dl_cr_n)  
