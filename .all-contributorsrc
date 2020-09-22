@@ -132,6 +132,107 @@
         "code",
         "infra"
       ]
+    },
+    {
+      "login": "felipe-salinas",
+      "name": "felipe-salinas",
+      "avatar_url": "https://avatars2.githubusercontent.com/u/64426781?v=4",
+      "profile": "https://github.com/felipe-salinas",
+      "contributions": [
+        "code",
+        "test"
+      ]
+    },
+    {
+      "login": "suhaklee",
+      "name": "suhaklee",
+      "avatar_url": "https://avatars3.githubusercontent.com/u/57151989?v=4",
+      "profile": "https://github.com/suhaklee",
+      "contributions": [
+        "code",
+        "test"
+      ]
+    },
+    {
+      "login": "viviantran27",
+      "name": "viviantran27",
+      "avatar_url": "https://avatars0.githubusercontent.com/u/6379429?v=4",
+      "profile": "https://github.com/viviantran27",
+      "contributions": [
+        "code",
+        "test"
+      ]
+    },
+    {
+      "login": "gyouhoc",
+      "name": "gyouhoc",
+      "avatar_url": "https://avatars0.githubusercontent.com/u/60714526?v=4",
+      "profile": "https://github.com/gyouhoc",
+      "contributions": [
+        "bug",
+        "code",
+        "test"
+      ]
+    },
+    {
+      "login": "YannickNoelStephanKuhn",
+      "name": "Yannick Kuhn",
+      "avatar_url": "https://avatars0.githubusercontent.com/u/62429912?v=4",
+      "profile": "https://github.com/YannickNoelStephanKuhn",
+      "contributions": [
+        "code",
+        "test"
+      ]
+    },
+    {
+      "login": "jedgedrudd",
+      "name": "Jacqueline Edge",
+      "avatar_url": "https://avatars2.githubusercontent.com/u/39409226?v=4",
+      "profile": "http://batterymodel.co.uk",
+      "contributions": [
+        "ideas",
+        "eventOrganizing",
+        "fundingFinding"
+      ]
+    },
+    {
+      "login": "fcooper8472",
+      "name": "Fergus Cooper",
+      "avatar_url": "https://avatars3.githubusercontent.com/u/3770306?v=4",
+      "profile": "https://www.rse.ox.ac.uk/",
+      "contributions": [
+        "code",
+        "test"
+      ]
+    },
+    {
+      "login": "jonchapman1",
+      "name": "jonchapman1",
+      "avatar_url": "https://avatars1.githubusercontent.com/u/28925818?v=4",
+      "profile": "https://github.com/jonchapman1",
+      "contributions": [
+        "ideas",
+        "fundingFinding"
+      ]
+    },
+    {
+      "login": "colinplease",
+      "name": "Colin Please",
+      "avatar_url": "https://avatars3.githubusercontent.com/u/44977104?v=4",
+      "profile": "https://github.com/colinplease",
+      "contributions": [
+        "ideas",
+        "fundingFinding"
+      ]
+    },
+    {
+      "login": "FaradayInstitution",
+      "name": "Faraday Institution",
+      "avatar_url": "https://avatars2.githubusercontent.com/u/42166506?v=4",
+      "profile": "https://faraday.ac.uk",
+      "contributions": [
+        "financial"
+      ]
     }
   ],
   "contributorsPerLine": 7,
