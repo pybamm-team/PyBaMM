@@ -25,9 +25,6 @@ class BaseModel(BaseInterface):
             )
         reaction = "sei"
         super().__init__(param, domain, reaction)
-        self.reaction = reaction
-        self.reaction_name = f" {reaction}"
-        self.reaction_icd = f"{reaction.capitalize()} interfacial current density"
 
     def _get_standard_thickness_variables(self, L_inner, L_outer):
         """

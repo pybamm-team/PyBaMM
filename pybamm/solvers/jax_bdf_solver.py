@@ -82,7 +82,9 @@ def _bdf_odeint(fun, mass, rtol, atol, y0, t_eval, *args):
     t0 = t_eval[0]
     h0 = t_eval[1] - t0
 
-    stepper = _bdf_init(fun_bind_inputs, jac_bind_inputs, mass, t0, y0, h0, rtol, atol)
+    stepper = _bdf_init(
+        fun_bind_inputs, jac_bind_inputs, mass, t0, y0, h0, rtol, atol
+    )
     i = 0
     y_out = jnp.empty((len(t_eval), len(y0)), dtype=y0.dtype)
 
@@ -99,49 +101,30 @@ def _bdf_odeint(fun, mass, rtol, atol, y0, t_eval, *args):
 
         def for_body(j, y_out):
             t = t_eval[j]
-            y_out = jax.ops.index_update(
-                y_out, jax.ops.index[j, :], _bdf_interpolate(stepper, t)
-            )
+            y_out = jax.ops.index_update(y_out, jax.ops.index[j, :],
+                                         _bdf_interpolate(stepper, t))
             return y_out
 
         y_out = jax.lax.fori_loop(i, index, for_body, y_out)
         return [stepper, t_eval, index, y_out]
 
-    stepper, t_eval, i, y_out = jax.lax.while_loop(cond_fun, body_fun, init_state)
+    stepper, t_eval, i, y_out = jax.lax.while_loop(cond_fun, body_fun,
+                                                   init_state)
     return y_out
 
 
 BDFInternalStates = [
-    "t",
-    "atol",
-    "rtol",
-    "M",
-    "newton_tol",
-    "order",
-    "h",
-    "n_equal_steps",
-    "D",
-    "y0",
-    "scale_y0",
-    "kappa",
-    "gamma",
-    "alpha",
-    "c",
-    "error_const",
-    "J",
-    "LU",
-    "U",
-    "psi",
-    "n_function_evals",
-    "n_jacobian_evals",
-    "n_lu_decompositions",
-    "n_steps",
-    "consistent_y0_failed",
+    't', 'atol', 'rtol', 'M', 'newton_tol', 'order', 'h', 'n_equal_steps', 'D',
+    'y0', 'scale_y0', 'kappa', 'gamma', 'alpha', 'c', 'error_const', 'J', 'LU', 'U',
+    'psi', 'n_function_evals', 'n_jacobian_evals', 'n_lu_decompositions', 'n_steps',
+    'consistent_y0_failed'
 ]
-BDFState = collections.namedtuple("BDFState", BDFInternalStates)
+BDFState = collections.namedtuple('BDFState', BDFInternalStates)
 
 jax.tree_util.register_pytree_node(
-    BDFState, lambda xs: (tuple(xs), None), lambda _, xs: BDFState(*xs)
+    BDFState,
+    lambda xs: (tuple(xs), None),
+    lambda _, xs: BDFState(*xs)
 )
 
 
@@ -178,56 +161,56 @@ def _bdf_init(fun, jac, mass, t0, y0, h0, rtol, atol):
     """
 
     state = {}
-    state["t"] = t0
-    state["atol"] = atol
-    state["rtol"] = rtol
-    state["M"] = mass
+    state['t'] = t0
+    state['atol'] = atol
+    state['rtol'] = rtol
+    state['M'] = mass
     EPS = jnp.finfo(y0.dtype).eps
-    state["newton_tol"] = jnp.max((10 * EPS / rtol, jnp.min((0.03, rtol ** 0.5))))
+    state['newton_tol'] = jnp.maximum(10 * EPS / rtol, jnp.minimum(0.03, rtol ** 0.5))
 
     scale_y0 = atol + rtol * jnp.abs(y0)
     y0, not_converged = _select_initial_conditions(
-        fun, mass, t0, y0, state["newton_tol"], scale_y0
+        fun, mass, t0, y0, state['newton_tol'], scale_y0
     )
-    state["consistent_y0_failed"] = not_converged
+    state['consistent_y0_failed'] = not_converged
 
     f0 = fun(y0, t0)
     order = 1
-    state["order"] = order
-    state["h"] = _select_initial_step(atol, rtol, fun, t0, y0, f0, h0)
-    state["n_equal_steps"] = 0
+    state['order'] = order
+    state['h'] = _select_initial_step(atol, rtol, fun, t0, y0, f0, h0)
+    state['n_equal_steps'] = 0
     D = jnp.empty((MAX_ORDER + 1, len(y0)), dtype=y0.dtype)
     D = jax.ops.index_update(D, jax.ops.index[0, :], y0)
-    D = jax.ops.index_update(D, jax.ops.index[1, :], f0 * state["h"])
-    state["D"] = D
-    state["y0"] = y0
-    state["scale_y0"] = scale_y0
+    D = jax.ops.index_update(D, jax.ops.index[1, :], f0 * state['h'])
+    state['D'] = D
+    state['y0'] = y0
+    state['scale_y0'] = scale_y0
 
     # kappa values for difference orders, taken from Table 1 of [1]
     kappa = jnp.array([0, -0.1850, -1 / 9, -0.0823, -0.0415, 0])
     gamma = jnp.hstack((0, jnp.cumsum(1 / jnp.arange(1, MAX_ORDER + 1))))
     alpha = 1.0 / ((1 - kappa) * gamma)
-    c = state["h"] * alpha[order]
+    c = state['h'] * alpha[order]
     error_const = kappa * gamma + 1 / jnp.arange(1, MAX_ORDER + 2)
 
-    state["kappa"] = kappa
-    state["gamma"] = gamma
-    state["alpha"] = alpha
-    state["c"] = c
-    state["error_const"] = error_const
+    state['kappa'] = kappa
+    state['gamma'] = gamma
+    state['alpha'] = alpha
+    state['c'] = c
+    state['error_const'] = error_const
 
     J = jac(y0, t0)
-    state["J"] = J
+    state['J'] = J
 
-    state["LU"] = jax.scipy.linalg.lu_factor(state["M"] - c * J)
+    state['LU'] = jax.scipy.linalg.lu_factor(state['M'] - c * J)
 
-    state["U"] = _compute_R(order, 1)
-    state["psi"] = None
+    state['U'] = _compute_R(order, 1)
+    state['psi'] = None
 
-    state["n_function_evals"] = 2
-    state["n_jacobian_evals"] = 1
-    state["n_lu_decompositions"] = 1
-    state["n_steps"] = 0
+    state['n_function_evals'] = 2
+    state['n_jacobian_evals'] = 1
+    state['n_lu_decompositions'] = 1
+    state['n_steps'] = 0
 
     tuple_state = BDFState(*[state[k] for k in BDFInternalStates])
     y0, scale_y0 = _predict(tuple_state, D)
@@ -249,7 +232,8 @@ def _compute_R(order, factor):
     I = jnp.arange(1, MAX_ORDER + 1).reshape(-1, 1)
     J = jnp.arange(1, MAX_ORDER + 1)
     M = jnp.empty((MAX_ORDER + 1, MAX_ORDER + 1))
-    M = jax.ops.index_update(M, jax.ops.index[1:, 1:], (I - 1 - factor * J) / I)
+    M = jax.ops.index_update(M, jax.ops.index[1:, 1:],
+                             (I - 1 - factor * J) / I)
     M = jax.ops.index_update(M, jax.ops.index[0], 1)
     R = jnp.cumprod(M, axis=0)
 
@@ -258,7 +242,7 @@ def _compute_R(order, factor):
 
 def _select_initial_conditions(fun, M, t0, y0, tol, scale_y0):
     # identify algebraic variables as zeros on diagonal
-    algebraic_variables = jnp.diag(M == 0.0)
+    algebraic_variables = jnp.diag(M == 0.)
 
     # if all differentiable variables then return y0 (can use normal python if since M
     # is static)
@@ -299,24 +283,24 @@ def _select_initial_conditions(fun, M, t0, y0, tol, scale_y0):
         k, converged, dy_norm_old, d, y_a = while_state
         f_eval = fun_a(y_a)
         dy = jax.scipy.linalg.lu_solve(LU, f_eval)
-        dy_norm = jnp.sqrt(jnp.mean((dy / scale_y0_a) ** 2))
+        dy_norm = jnp.sqrt(jnp.mean((dy / scale_y0_a)**2))
         rate = dy_norm / dy_norm_old
 
         d += dy
         y_a = y0_a + d
 
         # if converged then break out of iteration early
-        pred = dy_norm_old >= 0.0
+        pred = dy_norm_old >= 0.
         pred *= rate / (1 - rate) * dy_norm < tol
-        converged = (dy_norm == 0.0) + pred
+        converged = (dy_norm == 0.) + pred
 
         dy_norm_old = dy_norm
 
         return [k + 1, converged, dy_norm_old, d, y_a]
 
-    k, converged, dy_norm_old, d, y_a = jax.lax.while_loop(
-        while_cond, while_body, while_state
-    )
+    k, converged, dy_norm_old, d, y_a = jax.lax.while_loop(while_cond,
+                                                           while_body,
+                                                           while_state)
     y_tilde = jax.ops.index_update(y0, algebraic_variables, y_a)
 
     return y_tilde, converged
@@ -338,10 +322,10 @@ def _select_initial_step(atol, rtol, fun, t0, y0, f0, h0):
     scale = atol + jnp.abs(y0) * rtol
     y1 = y0 + h0 * f0
     f1 = fun(y1, t0 + h0)
-    d2 = jnp.sqrt(jnp.mean(((f1 - f0) / scale) ** 2))
+    d2 = jnp.sqrt(jnp.mean(((f1 - f0) / scale)**2))
     order = 1
     h1 = h0 * d2 ** (-1 / (order + 1))
-    return jnp.min((100 * h0, h1))
+    return jnp.minimum(100 * h0, h1)
 
 
 def _predict(state, D):
@@ -367,7 +351,10 @@ def _update_psi(state, D):
     subGamma = jnp.where(orders > 0, jnp.where(orders <= order, state.gamma, 0), 0)
     orders = jnp.repeat(orders.reshape(-1, 1), n, axis=1)
     subD = jnp.where(orders > 0, jnp.where(orders <= order, D, 0), 0)
-    psi = jnp.dot(subD.T, subGamma) * state.alpha[order]
+    psi = jnp.dot(
+        subD.T,
+        subGamma
+    ) * state.alpha[order]
     return psi
 
 
@@ -386,8 +373,10 @@ def _update_difference_for_next_step(state, d):
     """
     order = state.order
     D = state.D
-    D = jax.ops.index_update(D, jax.ops.index[order + 2], d - D[order + 1])
-    D = jax.ops.index_update(D, jax.ops.index[order + 1], d)
+    D = jax.ops.index_update(D, jax.ops.index[order + 2],
+                             d - D[order + 1])
+    D = jax.ops.index_update(D, jax.ops.index[order + 1],
+                             d)
     i = order
     while_state = [i, D]
 
@@ -397,7 +386,8 @@ def _update_difference_for_next_step(state, d):
 
     def while_body(while_state):
         i, D = while_state
-        D = jax.ops.index_add(D, jax.ops.index[i], D[i + 1])
+        D = jax.ops.index_add(D, jax.ops.index[i],
+                              D[i + 1])
         i -= 1
         return [i, D]
 
@@ -436,9 +426,8 @@ def _update_step_size(state, factor):
     J = jnp.arange(0, MAX_ORDER + 1)
 
     # only update order+1, order+1 entries of D
-    RU = jnp.where(
-        jnp.logical_and(I <= order, J <= order), RU, jnp.identity(MAX_ORDER + 1)
-    )
+    RU = jnp.where(jnp.logical_and(I <= order, J <= order),
+                   RU, jnp.identity(MAX_ORDER + 1))
     D = state.D
     D = jnp.dot(RU.T, D)
     # D = jax.ops.index_update(D, jax.ops.index[:order + 1],
@@ -450,9 +439,9 @@ def _update_step_size(state, factor):
     # update y0 (D has changed)
     y0, scale_y0 = _predict(state, D)
 
-    return state._replace(
-        n_equal_steps=n_equal_steps, h=h, c=c, D=D, psi=psi, y0=y0, scale_y0=scale_y0
-    )
+    return state._replace(n_equal_steps=n_equal_steps,
+                          h=h, c=c,
+                          D=D, psi=psi, y0=y0, scale_y0=scale_y0)
 
 
 def _update_jacobian(state, jac):
@@ -464,12 +453,8 @@ def _update_jacobian(state, jac):
     n_jacobian_evals = state.n_jacobian_evals + 1
     LU = jax.scipy.linalg.lu_factor(state.M - state.c * J)
     n_lu_decompositions = state.n_lu_decompositions + 1
-    return state._replace(
-        J=J,
-        n_jacobian_evals=n_jacobian_evals,
-        LU=LU,
-        n_lu_decompositions=n_lu_decompositions,
-    )
+    return state._replace(J=J, n_jacobian_evals=n_jacobian_evals, LU=LU,
+                          n_lu_decompositions=n_lu_decompositions)
 
 
 def _newton_iteration(state, fun):
@@ -500,7 +485,7 @@ def _newton_iteration(state, fun):
         n_function_evals += 1
         b = c * f_eval - M @ (psi + d)
         dy = jax.scipy.linalg.lu_solve(LU, b)
-        dy_norm = jnp.sqrt(jnp.mean((dy / scale_y0) ** 2))
+        dy_norm = jnp.sqrt(jnp.mean((dy / scale_y0)**2))
         rate = dy_norm / dy_norm_old
 
         # if iteration is not going to converge in NEWTON_MAXITER
@@ -514,22 +499,23 @@ def _newton_iteration(state, fun):
         y = y0 + d
 
         # if converged then break out of iteration early
-        pred = dy_norm_old >= 0.0
+        pred = dy_norm_old >= 0.
         pred *= rate / (1 - rate) * dy_norm < tol
-        converged = (dy_norm == 0.0) + pred
+        converged = (dy_norm == 0.) + pred
 
         dy_norm_old = dy_norm
 
         return [k + 1, converged, dy_norm_old, d, y, n_function_evals]
 
-    k, converged, dy_norm_old, d, y, n_function_evals = jax.lax.while_loop(
-        while_cond, while_body, while_state
-    )
+    k, converged, dy_norm_old, d, y, n_function_evals = \
+        jax.lax.while_loop(while_cond,
+                           while_body,
+                           while_state)
     return converged, k, y, d, state._replace(n_function_evals=n_function_evals)
 
 
 def rms_norm(arg):
-    return jnp.sqrt(jnp.mean(arg ** 2))
+    return jnp.sqrt(jnp.mean(arg**2))
 
 
 def _prepare_next_step(state, d):
@@ -548,18 +534,21 @@ def _prepare_next_step_order_change(state, d, y, n_iter):
     scale_y = state.atol + state.rtol * jnp.abs(y)
     error = state.error_const[order] * d
     error_norm = rms_norm(error / scale_y)
-    safety = 0.9 * (2 * NEWTON_MAXITER + 1) / (2 * NEWTON_MAXITER + n_iter)
+    safety = 0.9 * (2 * NEWTON_MAXITER + 1) / (2 * NEWTON_MAXITER
+                                               + n_iter)
 
     # similar to the optimal step size factor we calculated above for the current
     # order k, we need to calculate the optimal step size factors for orders
     # k-1 and k+1. To do this, we note that the error = C_k * D^{k+1} y_n
     error_m_norm = jnp.where(
-        order > 1, rms_norm(state.error_const[order - 1] * D[order] / scale_y), jnp.inf
+        order > 1,
+        rms_norm(state.error_const[order - 1] * D[order] / scale_y),
+        jnp.inf
     )
     error_p_norm = jnp.where(
         order < MAX_ORDER,
         rms_norm(state.error_const[order + 1] * D[order + 2] / scale_y),
-        jnp.inf,
+        jnp.inf
     )
 
     error_norms = jnp.array([error_m_norm, error_norm, error_p_norm])
@@ -570,14 +559,14 @@ def _prepare_next_step_order_change(state, d, y, n_iter):
     max_index = jnp.argmax(factors)
     order += max_index - 1
 
-    factor = jnp.min((MAX_FACTOR, safety * factors[max_index]))
+    factor = jnp.minimum(MAX_FACTOR, safety * factors[max_index])
 
     new_state = _update_step_size_and_lu(state._replace(D=D, order=order), factor)
     return new_state
 
 
 def _bdf_step(state, fun, jac):
-    # print('bdf_step', state.t, state.h)
+    #print('bdf_step', state.t, state.h)
     # we will try and use the old jacobian unless convergence of newton iteration
     # fails
     updated_jacobian = False
@@ -607,7 +596,7 @@ def _bdf_step(state, fun, jac):
         state = tree_multimap(
             partial(jnp.where, not_converged * updated_jacobian),
             _update_step_size_and_lu(state, 0.3),
-            state,
+            state
         )
 
         # if not_converged * updated_jacobian:
@@ -619,10 +608,11 @@ def _bdf_step(state, fun, jac):
         # again
         (state, updated_jacobian) = tree_multimap(
             partial(
-                jnp.where, not_converged * (updated_jacobian == False)  # noqa: E712
+                jnp.where,
+                not_converged * (updated_jacobian == False)  # noqa: E712
             ),
             (_update_jacobian(state, jac), True),
-            (state, False + updated_jacobian),
+            (state, False + updated_jacobian)
         )
 
         safety = 0.9 * (2 * NEWTON_MAXITER + 1) / (2 * NEWTON_MAXITER + n_iter)
@@ -636,22 +626,26 @@ def _bdf_step(state, fun, jac):
         error_norm = rms_norm(error / scale_y)
 
         # calculate optimal step size factor as per eq 2.46 of [2]
-        factor = jnp.max((MIN_FACTOR, safety * error_norm ** (-1 / (state.order + 1))))
+        factor = jnp.maximum(MIN_FACTOR,
+                             safety *
+                             error_norm ** (-1 / (state.order + 1)))
 
         # if converged * (error_norm > 1):
         #    print('converged, but error is too large',error_norm, factor, d, scale_y)
 
         (state, step_accepted) = tree_multimap(
-            partial(jnp.where, converged * (error_norm > 1)),  # noqa: E712
+            partial(
+                jnp.where,
+                converged * (error_norm > 1)  # noqa: E712
+            ),
             (_update_step_size_and_lu(state, factor), False),
-            (state, converged),
+            (state, converged)
         )
 
         return [state, step_accepted, updated_jacobian, y, d, n_iter]
 
-    state, step_accepted, updated_jacobian, y, d, n_iter = jax.lax.while_loop(
-        while_cond, while_body, while_state
-    )
+    state, step_accepted, updated_jacobian, y, d, n_iter = \
+        jax.lax.while_loop(while_cond, while_body, while_state)
 
     # take the accepted step
     n_steps = state.n_steps + 1
@@ -666,7 +660,7 @@ def _bdf_step(state, fun, jac):
     state = tree_multimap(
         partial(jnp.where, n_equal_steps < state.order + 1),
         _prepare_next_step(state, d),
-        _prepare_next_step_order_change(state, d, y, n_iter),
+        _prepare_next_step_order_change(state, d, y, n_iter)
     )
 
     return state
@@ -698,9 +692,9 @@ def _bdf_interpolate(state, t_eval):
         j += 1
         return [j, time_factor, order_summation]
 
-    j, time_factor, order_summation = jax.lax.while_loop(
-        while_cond, while_body, while_state
-    )
+    j, time_factor, order_summation = jax.lax.while_loop(while_cond,
+                                                         while_body,
+                                                         while_state)
     return order_summation
 
 
@@ -710,8 +704,11 @@ def block_diag(lst):
             return Ai
         else:
             return jnp.zeros(
-                (Ai.shape[0] if Ai.ndim > 1 else 1, Aj.shape[1] if Aj.ndim > 1 else 1,),
-                dtype=Ai.dtype,
+                (
+                    Ai.shape[0] if Ai.ndim > 1 else 1,
+                    Aj.shape[1] if Aj.ndim > 1 else 1,
+                ),
+                dtype=Ai.dtype
             )
 
     blocks = [
@@ -720,7 +717,6 @@ def block_diag(lst):
     ]
 
     return jnp.block(blocks)
-
 
 # NOTE: the code below (except the docstring on jax_bdf_integrate and other minor
 # edits), has been modified from the JAX library at https://github.com/google/jax.
@@ -789,13 +785,10 @@ def jax_bdf_integrate(func, y0, t_eval, *args, rtol=1e-6, atol=1e-6, mass=None):
            fundamental algorithms for scientific computing in Python.
            Nature methods, 17(3), 261-272.
     """
-
     def _check_arg(arg):
         if not isinstance(arg, core.Tracer) and not core.valid_jaxtype(arg):
-            msg = (
-                "The contents of odeint *args must be arrays or scalars, but got "
-                "\n{}."
-            )
+            msg = ("The contents of odeint *args must be arrays or scalars, but got "
+                   "\n{}.")
         raise TypeError(msg.format(arg))
 
     flat_args, in_tree = tree_flatten((y0, t_eval[0], *args))
@@ -878,7 +871,7 @@ def _bdf_odeint_rev(func, mass, rtol, atol, res, g):
 
         return (-y_dot, y_bar_dot, *rest)
 
-    algebraic_variables = jnp.diag(mass) == 0.0
+    algebraic_variables = jnp.diag(mass) == 0.
     differentiable_variables = algebraic_variables == False  # noqa: E712
     mass_is_I = (mass == jnp.eye(mass.shape[0])).all()
     is_dae = jnp.any(algebraic_variables)
@@ -901,9 +894,9 @@ def _bdf_odeint_rev(func, mass, rtol, atol, res, g):
             g0_a = g0[algebraic_variables]
             invJ_aa = jax.scipy.linalg.lu_solve(LU, g0_a)
             y_bar = jax.ops.index_update(
-                g0,
-                differentiable_variables,
-                jax.scipy.linalg.lu_solve(LU_invM_dd, g0_a - J_ad @ invJ_aa),
+                g0, differentiable_variables,
+                jax.scipy.linalg.lu_solve(LU_invM_dd,
+                                          g0_a - J_ad @ invJ_aa)
             )
         else:
             y_bar = jax.scipy.linalg.lu_solve(LU_invM_dd, g0)
@@ -911,12 +904,12 @@ def _bdf_odeint_rev(func, mass, rtol, atol, res, g):
 
     y_bar = initialise(g[-1], ys[-1], ts[-1])
     ts_bar = []
-    t0_bar = 0.0
+    t0_bar = 0.
 
     def arg_to_identity(arg):
         return onp.identity(arg.shape[0] if arg.ndim > 0 else 1, dtype=arg.dtype)
 
-    aug_mass = (mass, mass, jnp.array(1.0), tree_map(arg_to_identity, args))
+    aug_mass = (mass, mass, jnp.array(1.), tree_map(arg_to_identity, args))
 
     def scan_fun(carry, i):
         y_bar, t0_bar, args_bar = carry
@@ -925,14 +918,10 @@ def _bdf_odeint_rev(func, mass, rtol, atol, res, g):
         t0_bar = t0_bar - t_bar
         # Run augmented system backwards to previous observation
         _, y_bar, t0_bar, args_bar = jax_bdf_integrate(
-            aug_dynamics,
-            (ys[i], y_bar, t0_bar, args_bar),
+            aug_dynamics, (ys[i], y_bar, t0_bar, args_bar),
             jnp.array([-ts[i], -ts[i - 1]]),
-            *args,
-            mass=aug_mass,
-            rtol=rtol,
-            atol=atol
-        )
+            *args, mass=aug_mass,
+            rtol=rtol, atol=atol)
         y_bar, t0_bar, args_bar = tree_map(op.itemgetter(1), (y_bar, t0_bar, args_bar))
         # Add gradient from current output
         y_bar = y_bar + initialise(g[i - 1], ys[i - 1], ts[i - 1])
@@ -940,8 +929,7 @@ def _bdf_odeint_rev(func, mass, rtol, atol, res, g):
 
     init_carry = (y_bar, t0_bar, tree_map(jnp.zeros_like, args))
     (y_bar, t0_bar, args_bar), rev_ts_bar = jax.lax.scan(
-        scan_fun, init_carry, jnp.arange(len(ts) - 1, 0, -1)
-    )
+        scan_fun, init_carry, jnp.arange(len(ts) - 1, 0, -1))
     ts_bar = jnp.concatenate([jnp.array([t0_bar]), rev_ts_bar[::-1]])
     return (y_bar, ts_bar, *args_bar)
 
@@ -963,7 +951,8 @@ def closure_convert(fun, in_tree, in_avals):
     # differentiating. As a proxy for that, we hoist consts with float dtype.
     # TODO(mattjj): revise this approach
     (closure_consts, hoisted_consts), merge = partition_list(
-        lambda c: dtypes.issubdtype(dtypes.dtype(c), jnp.inexact), consts
+        lambda c: dtypes.issubdtype(dtypes.dtype(c), jnp.inexact),
+        consts
     )
     num_consts = len(hoisted_consts)
 
@@ -984,7 +973,6 @@ def partition_list(choice, lst):
     def merge(l1, l2):
         i1, i2 = iter(l1), iter(l2)
         return [next(i2 if snd else i1) for snd in which]
-
     return out, merge
 
 
