@@ -492,6 +492,8 @@ class Discretisation(object):
         for key, bcs in model.boundary_conditions.items():
             processed_bcs[key.id] = {}
 
+            # check if the boundary condition at the origin for sphere domains is other
+            # than no flux
             if key not in model.external_variables:
                 for subdomain in key.domain:
                     if self.mesh[subdomain].coord_sys == "spherical polar":
