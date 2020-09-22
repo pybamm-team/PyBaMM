@@ -496,7 +496,8 @@ class Discretisation(object):
                 if self.mesh[subdomain].coord_sys == "spherical polar":
                     if bcs["left"][0].value != 0 or bcs["left"][1] != "Neumann":
                         raise pybamm.ModelError(
-                            """Boundary condition at r = 0 must be a homogeneous Neumann condition for {} coordinates""".format(
+                            """Boundary condition at r = 0 must be a homogeneous
+                             Neumann condition for {} coordinates""".format(
                                 self.mesh[subdomain].coord_sys
                             )
                         )
