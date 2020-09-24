@@ -259,8 +259,18 @@ class ParticleConcentrationTests(BaseOutputTest):
         self.c_s_n_surf = solution["Negative particle surface concentration"]
         self.c_s_p_surf = solution["Positive particle surface concentration"]
 
+        self.c_s_n_tot = solution["Total lithium in negative electrode [mol]"]
+        self.c_s_p_tot = solution["Total lithium in positive electrode [mol]"]
+
         self.N_s_n = solution["Negative particle flux"]
         self.N_s_p = solution["Positive particle flux"]
+
+        self.n_SEI_n_av = solution[
+            "X-averaged negative electrode sei concentration [mol.m-3]"
+        ]
+        self.n_SEI_p_av = solution[
+            "X-averaged positive electrode sei concentration [mol.m-3]"
+        ]
 
     def test_concentration_increase_decrease(self):
         """Test all concentrations in negative particles decrease and all
@@ -303,8 +313,22 @@ class ParticleConcentrationTests(BaseOutputTest):
         np.testing.assert_array_less(self.c_s_p(t, x_p, r_p), 1)
 
     def test_conservation(self):
-        "Test amount of lithium stored across all particles is constant."
-        # TODO: add an output for total lithium in particles
+        """Test amount of lithium stored across all particles and in SEI layers is
+        constant."""
+        L_n = self.param["Negative electrode thickness [m]"]
+        L_p = self.param["Positive electrode thickness [m]"]
+        L_y = self.param["Electrode width [m]"]
+        L_z = self.param["Electrode height [m]"]
+        A = L_y * L_z
+
+        self.c_s_tot = (
+            self.c_s_n_tot(self.solution.t)
+            + self.c_s_p_tot(self.solution.t)
+            + self.n_SEI_n_av(self.solution.t) * L_n * A
+            + self.n_SEI_p_av(self.solution.t) * L_p * A
+        )
+        diff = (self.c_s_tot[1:] - self.c_s_tot[:-1]) / self.c_s_tot[:-1]
+        np.testing.assert_array_almost_equal(diff, 0)
 
     def test_concentration_profile(self):
         """Test that the concentration in the centre of the negative particles is
@@ -369,11 +393,11 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
         self.c_e_s = solution["Separator electrolyte concentration"]
         self.c_e_p = solution["Positive electrolyte concentration"]
 
-        # TODO: output average electrolyte concentration
-        # self.c_e_av = solution["X-averaged electrolyte concentration"]
-        # self.c_e_n_av = solution["X-averaged negative electrolyte concentration"]
-        # self.c_e_s_av = solution["X-averaged separator electrolyte concentration"]
-        # self.c_e_p_av = solution["X-averaged positive electrolyte concentration"]
+        self.c_e_av = solution["X-averaged electrolyte concentration"]
+        self.c_e_n_av = solution["X-averaged negative electrolyte concentration"]
+        self.c_e_s_av = solution["X-averaged separator electrolyte concentration"]
+        self.c_e_p_av = solution["X-averaged positive electrolyte concentration"]
+        self.c_e_tot = solution["Total concentration in electrolyte [mol]"]
 
         self.N_e_hat = solution["Electrolyte flux"]
         # self.N_e_hat = solution["Reduced cation flux"]
@@ -386,8 +410,10 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
         "Test conservation of species in the electrolyte."
         # sufficient to check average concentration is constant
 
-        # diff = self.c_e_av.entries[:, 1:] - self.c_e_av.entries[:, :-1]
-        # np.testing.assert_array_almost_equal(diff, 0)
+        diff = (
+            self.c_e_tot(self.solution.t[1:]) - self.c_e_tot(self.solution.t[:-1])
+        ) / self.c_e_tot(self.solution.t[:-1])
+        np.testing.assert_array_almost_equal(diff, 0)
 
     def test_concentration_profile(self):
         """Test continuity of the concentration profile. Test average concentration is
