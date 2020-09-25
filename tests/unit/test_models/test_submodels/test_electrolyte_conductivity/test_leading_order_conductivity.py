@@ -9,13 +9,12 @@ import unittest
 
 class TestLeadingOrder(unittest.TestCase):
     def test_public_functions(self):
-        param = pybamm.standard_parameters_lithium_ion
+        param = pybamm.LithiumIonParameters()
         a = pybamm.Scalar(0)
         variables = {
             "Current collector current density": a,
             "X-averaged negative electrode potential": a,
-            "X-averaged negative electrode open circuit potential": a,
-            "X-averaged negative electrode reaction overpotential": a,
+            "X-averaged negative electrode surface potential difference": a,
         }
         submodel = pybamm.electrolyte_conductivity.LeadingOrder(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)

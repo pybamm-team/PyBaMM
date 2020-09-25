@@ -305,6 +305,25 @@ class TestJacobian(unittest.TestCase):
             ((a < y) * y ** 2).jac(y).evaluate(y=-5 * np.ones(5)), 0
         )
 
+    def test_jac_of_modulo(self):
+        a = pybamm.Scalar(3)
+        y = pybamm.StateVector(slice(0, 5))
+        np.testing.assert_array_equal(
+            (a % (3 * a)).jac(y).evaluate(y=5 * np.ones(5)), 0
+        )
+        np.testing.assert_array_equal(
+            ((y % a) * y ** 2).jac(y).evaluate(y=5 * np.ones(5)).toarray(),
+            45 * np.eye(5),
+        )
+        np.testing.assert_array_equal(
+            ((a % y) * y ** 2).jac(y).evaluate(y=5 * np.ones(5)).toarray(),
+            30 * np.eye(5),
+        )
+        np.testing.assert_array_equal(
+            (((y + 1) ** 2 % y) * y ** 2).jac(y).evaluate(y=5 * np.ones(5)).toarray(),
+            135 * np.eye(5),
+        )
+
     def test_jac_of_minimum_maximum(self):
         y = pybamm.StateVector(slice(0, 10))
         y_test = np.linspace(0, 2, 10)
@@ -333,6 +352,20 @@ class TestJacobian(unittest.TestCase):
         y_test = np.linspace(-2, 2, 10)
         np.testing.assert_array_equal(np.diag(jac.evaluate(y=y_test)), np.sign(y_test))
 
+    def test_jac_of_floor(self):
+        y = pybamm.StateVector(slice(0, 10))
+        func = pybamm.Floor(y) * y
+        jac = func.jac(y)
+        y_test = np.linspace(-2, 2, 10)
+        np.testing.assert_array_equal(np.diag(jac.evaluate(y=y_test)), np.floor(y_test))
+
+    def test_jac_of_ceiling(self):
+        y = pybamm.StateVector(slice(0, 10))
+        func = pybamm.Ceiling(y) * y
+        jac = func.jac(y)
+        y_test = np.linspace(-2, 2, 10)
+        np.testing.assert_array_equal(np.diag(jac.evaluate(y=y_test)), np.ceil(y_test))
+
     def test_jac_of_domain_concatenation(self):
         # create mesh
         mesh = get_mesh_for_testing()
@@ -343,9 +376,9 @@ class TestJacobian(unittest.TestCase):
         a_dom = ["negative electrode"]
         b_dom = ["separator"]
         c_dom = ["positive electrode"]
-        a_npts = mesh[a_dom[0]][0].npts
-        b_npts = mesh[b_dom[0]][0].npts
-        c_npts = mesh[c_dom[0]][0].npts
+        a_npts = mesh[a_dom[0]].npts
+        b_npts = mesh[b_dom[0]].npts
+        c_npts = mesh[c_dom[0]].npts
         a = 2 * pybamm.Vector(np.ones(a_npts), domain=a_dom)
         b = pybamm.Vector(np.ones(b_npts), domain=b_dom)
         c = 3 * pybamm.Vector(np.ones(c_npts), domain=c_dom)

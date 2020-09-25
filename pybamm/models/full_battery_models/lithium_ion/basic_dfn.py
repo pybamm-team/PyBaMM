@@ -21,15 +21,15 @@ class BasicDFN(BaseModel):
     References
     ----------
     .. [2] SG Marquis, V Sulzer, R Timms, CP Please and SJ Chapman. “An asymptotic
-           derivation of a single particle model with electrolyte”. In: arXiv preprint
-           arXiv:1905.12553 (2019).
-
+           derivation of a single particle model with electrolyte”. Journal of The
+           Electrochemical Society, 166(15):A3693–A3706, 2019
 
     **Extends:** :class:`pybamm.lithium_ion.BaseModel`
     """
 
     def __init__(self, name="Doyle-Fuller-Newman model"):
         super().__init__({}, name)
+        pybamm.citations.register("marquis2019asymptotic")
         # `param` is a class containing all the relevant parameters and functions for
         # this model. These are purely symbolic at this stage, and will be set by the
         # `ParameterValues` class when the model is processed.
@@ -108,6 +108,10 @@ class BasicDFN(BaseModel):
             pybamm.Parameter("Positive electrode porosity"), "positive electrode"
         )
         eps = pybamm.Concatenation(eps_n, eps_s, eps_p)
+
+        # Active material volume fraction (eps + eps_s + eps_inactive = 1)
+        eps_s_n = pybamm.Parameter("Negative electrode active material volume fraction")
+        eps_s_p = pybamm.Parameter("Positive electrode active material volume fraction")
 
         # Tortuosity
         tor = pybamm.Concatenation(
@@ -206,8 +210,9 @@ class BasicDFN(BaseModel):
         ######################
         # Current in the solid
         ######################
-        i_s_n = -param.sigma_n * (1 - eps_n) ** param.b_s_n * pybamm.grad(phi_s_n)
-        sigma_eff_p = param.sigma_p * (1 - eps_p) ** param.b_s_p
+        sigma_eff_n = param.sigma_n * eps_s_n ** param.b_s_n
+        i_s_n = -sigma_eff_n * pybamm.grad(phi_s_n)
+        sigma_eff_p = param.sigma_p * eps_s_p ** param.b_s_p
         i_s_p = -sigma_eff_p * pybamm.grad(phi_s_p)
         # The `algebraic` dictionary contains differential equations, with the key being
         # the main scalar variable of interest in the equation
@@ -283,6 +288,5 @@ class BasicDFN(BaseModel):
             pybamm.Event("Maximum voltage", voltage - param.voltage_high_cut),
         ]
 
-    @property
-    def default_geometry(self):
-        return pybamm.Geometry("1D macro", "1+1D micro")
+    def new_copy(self, build=False):
+        return pybamm.BaseModel.new_copy(self)

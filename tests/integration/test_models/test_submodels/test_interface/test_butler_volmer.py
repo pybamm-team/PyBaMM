@@ -72,7 +72,7 @@ class TestButlerVolmer(unittest.TestCase):
         del self.delta_phi_s_p
 
     def test_creation(self):
-        param = pybamm.standard_parameters_lithium_ion
+        param = pybamm.LithiumIonParameters()
         model_n = pybamm.interface.ButlerVolmer(param, "Negative", "lithium-ion main")
         j_n = model_n.get_coupled_variables(self.variables)[
             "Negative electrode interfacial current density"
@@ -91,7 +91,7 @@ class TestButlerVolmer(unittest.TestCase):
         self.assertEqual(j_p.domain, ["positive electrode"])
 
     def test_set_parameters(self):
-        param = pybamm.standard_parameters_lithium_ion
+        param = pybamm.LithiumIonParameters()
         model_n = pybamm.interface.ButlerVolmer(param, "Negative", "lithium-ion main")
         j_n = model_n.get_coupled_variables(self.variables)[
             "Negative electrode interfacial current density"
@@ -113,7 +113,7 @@ class TestButlerVolmer(unittest.TestCase):
             self.assertNotIsInstance(x, pybamm.Parameter)
 
     def test_discretisation(self):
-        param = pybamm.standard_parameters_lithium_ion
+        param = pybamm.LithiumIonParameters()
         model_n = pybamm.interface.ButlerVolmer(param, "Negative", "lithium-ion main")
         j_n = model_n.get_coupled_variables(self.variables)[
             "Negative electrode interfacial current density"
@@ -145,25 +145,25 @@ class TestButlerVolmer(unittest.TestCase):
 
         # test butler-volmer in each electrode
         submesh = np.concatenate(
-            [mesh["negative electrode"][0].nodes, mesh["positive electrode"][0].nodes]
+            [mesh["negative electrode"].nodes, mesh["positive electrode"].nodes]
         )
         y = np.concatenate([submesh ** 2, submesh ** 3, submesh ** 4])
         self.assertEqual(
-            j_n.evaluate(None, y).shape, (mesh["negative electrode"][0].npts, 1)
+            j_n.evaluate(None, y).shape, (mesh["negative electrode"].npts, 1)
         )
         self.assertEqual(
-            j_p.evaluate(None, y).shape, (mesh["positive electrode"][0].npts, 1)
+            j_p.evaluate(None, y).shape, (mesh["positive electrode"].npts, 1)
         )
 
         # test concatenated butler-volmer
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         whole_cell_mesh = disc.mesh.combine_submeshes(*whole_cell)
-        self.assertEqual(j.evaluate(None, y).shape, (whole_cell_mesh[0].npts, 1))
+        self.assertEqual(j.evaluate(None, y).shape, (whole_cell_mesh.npts, 1))
 
     def test_diff_c_e_lead_acid(self):
 
         # With intercalation
-        param = pybamm.standard_parameters_lead_acid
+        param = pybamm.LeadAcidParameters()
         model_n = pybamm.interface.ButlerVolmer(param, "Negative", "lead-acid main")
         model_p = pybamm.interface.ButlerVolmer(param, "Positive", "lead-acid main")
         parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values
@@ -216,7 +216,7 @@ class TestButlerVolmer(unittest.TestCase):
     def test_diff_delta_phi_e_lead_acid(self):
 
         # With intercalation
-        param = pybamm.standard_parameters_lead_acid
+        param = pybamm.LeadAcidParameters()
         model_n = pybamm.interface.ButlerVolmer(param, "Negative", "lead-acid main")
         model_p = pybamm.interface.ButlerVolmer(param, "Positive", "lead-acid main")
         parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values

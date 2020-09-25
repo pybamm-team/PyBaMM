@@ -44,6 +44,7 @@ class SPM(BaseModel):
         self.set_positive_electrode_submodel()
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
+        self.set_sei_submodel()
 
         if build:
             self.build_model()
@@ -52,7 +53,10 @@ class SPM(BaseModel):
 
     def set_porosity_submodel(self):
 
-        self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
+        if self.options["sei porosity change"] is False:
+            self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
+        elif self.options["sei porosity change"] is True:
+            self.submodels["porosity"] = pybamm.porosity.LeadingOrder(self.param)
 
     def set_convection_submodel(self):
 
@@ -67,18 +71,28 @@ class SPM(BaseModel):
 
         if self.options["surface form"] is False:
             self.submodels["negative interface"] = pybamm.interface.InverseButlerVolmer(
-                self.param, "Negative", "lithium-ion main"
+                self.param, "Negative", "lithium-ion main", self.options
             )
             self.submodels["positive interface"] = pybamm.interface.InverseButlerVolmer(
+                self.param, "Positive", "lithium-ion main", self.options
+            )
+            self.submodels[
+                "negative interface current"
+            ] = pybamm.interface.CurrentForInverseButlerVolmer(
+                self.param, "Negative", "lithium-ion main"
+            )
+            self.submodels[
+                "positive interface current"
+            ] = pybamm.interface.CurrentForInverseButlerVolmer(
                 self.param, "Positive", "lithium-ion main"
             )
         else:
             self.submodels["negative interface"] = pybamm.interface.ButlerVolmer(
-                self.param, "Negative", "lithium-ion main"
+                self.param, "Negative", "lithium-ion main", self.options
             )
 
             self.submodels["positive interface"] = pybamm.interface.ButlerVolmer(
-                self.param, "Positive", "lithium-ion main"
+                self.param, "Positive", "lithium-ion main", self.options
             )
 
     def set_particle_submodel(self):
@@ -90,12 +104,20 @@ class SPM(BaseModel):
             self.submodels["positive particle"] = pybamm.particle.FickianSingleParticle(
                 self.param, "Positive"
             )
-        elif self.options["particle"] == "fast diffusion":
-            self.submodels["negative particle"] = pybamm.particle.FastSingleParticle(
-                self.param, "Negative"
+        elif self.options["particle"] in [
+            "uniform profile",
+            "quadratic profile",
+            "quartic profile",
+        ]:
+            self.submodels[
+                "negative particle"
+            ] = pybamm.particle.PolynomialSingleParticle(
+                self.param, "Negative", self.options["particle"]
             )
-            self.submodels["positive particle"] = pybamm.particle.FastSingleParticle(
-                self.param, "Positive"
+            self.submodels[
+                "positive particle"
+            ] = pybamm.particle.PolynomialSingleParticle(
+                self.param, "Positive", self.options["particle"]
             )
 
     def set_negative_electrode_submodel(self):
@@ -133,13 +155,3 @@ class SPM(BaseModel):
         self.submodels[
             "electrolyte diffusion"
         ] = pybamm.electrolyte_diffusion.ConstantConcentration(self.param)
-
-    @property
-    def default_geometry(self):
-        dimensionality = self.options["dimensionality"]
-        if dimensionality == 0:
-            return pybamm.Geometry("1D macro", "1D micro")
-        elif dimensionality == 1:
-            return pybamm.Geometry("1+1D macro", "(1+0)+1D micro")
-        elif dimensionality == 2:
-            return pybamm.Geometry("2+1D macro", "(2+0)+1D micro")

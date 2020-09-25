@@ -7,39 +7,48 @@ import numpy as np
 from tests import get_mesh_for_testing
 import warnings
 import sys
+from platform import system
 
 
 class TestScipySolver(unittest.TestCase):
-    def test_model_solver_python(self):
-        # Create model
-        model = pybamm.BaseModel()
-        model.convert_to_format = "python"
-        domain = ["negative electrode", "separator", "positive electrode"]
-        var = pybamm.Variable("var", domain=domain)
-        model.rhs = {var: 0.1 * var}
-        model.initial_conditions = {var: 1}
-        # No need to set parameters; can use base discretisation (no spatial operators)
+    def test_model_solver_python_and_jax(self):
 
-        # create discretisation
-        mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
-        disc = pybamm.Discretisation(mesh, spatial_methods)
-        disc.process_model(model)
-        # Solve
-        # Make sure that passing in extra options works
-        solver = pybamm.ScipySolver(
-            rtol=1e-8, atol=1e-8, method="RK45", extra_options={"first_step": 1e-4}
-        )
-        t_eval = np.linspace(0, 1, 80)
-        solution = solver.solve(model, t_eval)
-        np.testing.assert_array_equal(solution.t, t_eval)
-        np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
+        if system() != "Windows":
+            formats = ["python", "jax"]
+        else:
+            formats = ["python"]
 
-        # Test time
-        self.assertEqual(
-            solution.total_time, solution.solve_time + solution.set_up_time
-        )
-        self.assertEqual(solution.termination, "final time")
+        for convert_to_format in formats:
+            # Create model
+            model = pybamm.BaseModel()
+            model.convert_to_format = convert_to_format
+            domain = ["negative electrode", "separator", "positive electrode"]
+            var = pybamm.Variable("var", domain=domain)
+            model.rhs = {var: 0.1 * var}
+            model.initial_conditions = {var: 1}
+            # No need to set parameters;
+            # can use base discretisation (no spatial operators)
+
+            # create discretisation
+            mesh = get_mesh_for_testing()
+            spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+            disc = pybamm.Discretisation(mesh, spatial_methods)
+            disc.process_model(model)
+            # Solve
+            # Make sure that passing in extra options works
+            solver = pybamm.ScipySolver(
+                rtol=1e-8, atol=1e-8, method="RK45", extra_options={"first_step": 1e-4}
+            )
+            t_eval = np.linspace(0, 1, 80)
+            solution = solver.solve(model, t_eval)
+            np.testing.assert_array_equal(solution.t, t_eval)
+            np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
+
+            # Test time
+            self.assertEqual(
+                solution.total_time, solution.solve_time + solution.set_up_time
+            )
+            self.assertEqual(solution.termination, "final time")
 
     def test_model_solver_failure(self):
         # Turn off warnings to ignore sqrt error
@@ -114,7 +123,7 @@ class TestScipySolver(unittest.TestCase):
         combined_submesh = mesh.combine_submeshes(
             "negative electrode", "separator", "positive electrode"
         )
-        N = combined_submesh[0].npts
+        N = combined_submesh.npts
 
         # construct jacobian in order of model.rhs
         J = []
@@ -312,6 +321,30 @@ class TestScipySolver(unittest.TestCase):
         solution = solver.solve(model, t_eval, inputs={"rate": -0.1, "ic 1": 1})
         np.testing.assert_array_almost_equal(
             solution.y[0], 1 * np.exp(-0.1 * solution.t), decimal=5
+        )
+
+    def test_model_solver_manually_update_initial_conditions(self):
+        # Create model
+        model = pybamm.BaseModel()
+        var1 = pybamm.Variable("var1")
+        model.rhs = {var1: -var1}
+        model.initial_conditions = {var1: 1}
+
+        # Solve
+        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8)
+        t_eval = np.linspace(0, 5, 100)
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_array_almost_equal(
+            solution.y[0], 1 * np.exp(-solution.t), decimal=5
+        )
+
+        # Change initial conditions and solve again
+        model.concatenated_initial_conditions = pybamm.NumpyConcatenation(
+            pybamm.Vector([[2]])
+        )
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_array_almost_equal(
+            solution.y[0], 2 * np.exp(-solution.t), decimal=5
         )
 
 

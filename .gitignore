@@ -80,6 +80,7 @@ sundials4
 sundials-*
 SuiteSparse-*
 build_sundials
+KLU_module_deps
 
 # downloads
 *.gz
@@ -94,8 +95,15 @@ cmake_install.cmake
 *.so
 *.json
 
-
 third-party/pybind11
+pybind11/
 
 # Build dependencies/
 KLU_module_deps
+
+# setup
+setup.log
+
+# tox
+.tox/
+

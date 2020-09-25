@@ -16,17 +16,18 @@ model.submodels["external circuit"] = pybamm.external_circuit.CurrentControl(
 )
 model.submodels["current collector"] = pybamm.current_collector.Uniform(model.param)
 model.submodels["thermal"] = pybamm.thermal.isothermal.Isothermal(model.param)
+model.submodels["porosity"] = pybamm.porosity.Constant(model.param)
 model.submodels["negative electrode"] = pybamm.electrode.ohm.LeadingOrder(
     model.param, "Negative"
 )
 model.submodels["positive electrode"] = pybamm.electrode.ohm.LeadingOrder(
     model.param, "Positive"
 )
-model.submodels["negative particle"] = pybamm.particle.FastSingleParticle(
-    model.param, "Negative"
+model.submodels["negative particle"] = pybamm.particle.PolynomialSingleParticle(
+    model.param, "Negative", "uniform profile"
 )
-model.submodels["positive particle"] = pybamm.particle.FastSingleParticle(
-    model.param, "Positive"
+model.submodels["positive particle"] = pybamm.particle.PolynomialSingleParticle(
+    model.param, "Positive", "uniform profile"
 )
 model.submodels["negative interface"] = pybamm.interface.InverseButlerVolmer(
     model.param, "Negative", "lithium-ion main"
@@ -35,17 +36,29 @@ model.submodels["positive interface"] = pybamm.interface.InverseButlerVolmer(
     model.param, "Positive", "lithium-ion main"
 )
 model.submodels[
+    "negative interface current"
+] = pybamm.interface.CurrentForInverseButlerVolmer(
+    model.param, "Negative", "lithium-ion main"
+)
+model.submodels[
+    "positive interface current"
+] = pybamm.interface.CurrentForInverseButlerVolmer(
+    model.param, "Positive", "lithium-ion main"
+)
+model.submodels[
     "electrolyte diffusion"
 ] = pybamm.electrolyte_diffusion.ConstantConcentration(model.param)
 model.submodels[
     "electrolyte conductivity"
 ] = pybamm.electrolyte_conductivity.LeadingOrder(model.param)
+model.submodels["negative sei"] = pybamm.sei.NoSEI(model.param, "Negative")
+model.submodels["positive sei"] = pybamm.sei.NoSEI(model.param, "Positive")
 
 # build model
 model.build_model()
 
 # create geometry
-geometry = pybamm.Geometry("1D macro", "1D micro")
+geometry = pybamm.battery_geometry()
 
 # process model and geometry
 param = model.default_parameter_values

@@ -12,9 +12,6 @@ import pybamm
 import numpy as np
 import matplotlib.pyplot as plt
 
-plt.close("all")
-pybamm.set_logging_level(30)
-
 factor = 6.38
 capacities = []
 specific_capacities = []
@@ -56,8 +53,6 @@ for l_n in thicknesses:
                 "Maximum concentration in positive electrode [mol.m-3]": 50000,
                 "Initial concentration in negative electrode [mol.m-3]": 12500,
                 "Initial concentration in positive electrode [mol.m-3]": 25000,
-                "Negative electrode surface area to volume ratio [m-1]": 180000.0,
-                "Positive electrode surface area to volume ratio [m-1]": 150000.0,
                 "Current function [A]": I_app,
             }
         )
@@ -79,21 +74,22 @@ for l_n in thicknesses:
         # solve model
         t_eval = np.linspace(0, 3600, 100)
         sol = model.default_solver.solve(model, t_eval)
-        xpext = sol["Positive electrode average extent of lithiation"]
-        xnext = sol["Negative electrode average extent of lithiation"]
+        xpext = sol["X-averaged positive electrode extent of lithiation"]
+        xnext = sol["X-averaged negative electrode extent of lithiation"]
         xpsurf = sol["X-averaged positive particle surface concentration"]
         xnsurf = sol["X-averaged negative particle surface concentration"]
         time = sol["Time [h]"]
         # Coulomb counting
-        time_hours = time(sol.t)
+        time_secs = sol["Time [s]"].entries
+        time_hours = time(time_secs)
         dc_time = np.around(time_hours[-1], 3)
         # Capacity mAh
         cap = np.absolute(I_app * 1000 * dc_time)
         cap_time = np.absolute(I_app * 1000 * time_hours)
-        axes[enum].plot(cap_time, xnext(sol.t), "r-", label="Average Neg")
-        axes[enum].plot(cap_time, xpext(sol.t), "b-", label="Average Pos")
-        axes[enum].plot(cap_time, xnsurf(sol.t), "r--", label="Surface Neg")
-        axes[enum].plot(cap_time, xpsurf(sol.t), "b--", label="Surface Pos")
+        axes[enum].plot(cap_time, xnext(time_secs), "r-", label="Average Neg")
+        axes[enum].plot(cap_time, xpext(time_secs), "b-", label="Average Pos")
+        axes[enum].plot(cap_time, xnsurf(time_secs), "r--", label="Surface Neg")
+        axes[enum].plot(cap_time, xpsurf(time_secs), "b--", label="Surface Pos")
         axes[enum].set_xlabel("Capacity [mAh]")
         handles, labels = axes[enum].get_legend_handles_labels()
         axes[enum].legend(handles, labels)
@@ -132,3 +128,4 @@ ax2.plot(thicknesses / l_p, specific_capacities)
 ax1.set_ylabel("Capacity [mAh]")
 ax2.set_ylabel("Specific Capacity [mAh.cm-3]")
 ax2.set_xlabel("Anode : Cathode thickness")
+plt.show()

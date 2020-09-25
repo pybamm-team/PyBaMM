@@ -1,4 +1,4 @@
-Copyright (c) 2018-2020, University of Oxford (University of Oxford means the Chancellor, Masters and Scholars of the University of Oxford, having an administrative office at Wellington Square, Oxford OX1 2JD, UK).
+Copyright (c) 2018-2020, the PyBaMM team.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without

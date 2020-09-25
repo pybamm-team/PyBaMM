@@ -155,6 +155,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             The times at which to compute the solution
         """
         if model.rhs_eval.form == "casadi":
+            # stack inputs
             inputs = casadi.vertcat(*[x for x in inputs.values()])
 
         if model.jacobian_eval is None:

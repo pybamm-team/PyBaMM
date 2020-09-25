@@ -30,7 +30,7 @@ class TestMainReaction(unittest.TestCase):
 
     def test_creation_main_reaction(self):
         # With intercalation
-        param = pybamm.standard_parameters_lead_acid
+        param = pybamm.LeadAcidParameters()
         model_n = pybamm.interface.BaseInterface(param, "Negative", "lead-acid main")
         j0_n = model_n._get_exchange_current_density(self.variables)
         model_p = pybamm.interface.BaseInterface(param, "Positive", "lead-acid main")
@@ -40,7 +40,7 @@ class TestMainReaction(unittest.TestCase):
 
     def test_set_parameters_main_reaction(self):
         # With intercalation
-        param = pybamm.standard_parameters_lead_acid
+        param = pybamm.LeadAcidParameters()
         model_n = pybamm.interface.BaseInterface(param, "Negative", "lead-acid main")
         j0_n = model_n._get_exchange_current_density(self.variables)
         model_p = pybamm.interface.BaseInterface(param, "Positive", "lead-acid main")
@@ -57,7 +57,7 @@ class TestMainReaction(unittest.TestCase):
 
     def test_discretisation_main_reaction(self):
         # With intercalation
-        param = pybamm.standard_parameters_lead_acid
+        param = pybamm.LeadAcidParameters()
         model_n = pybamm.interface.BaseInterface(param, "Negative", "lead-acid main")
         j0_n = model_n._get_exchange_current_density(self.variables)
         model_p = pybamm.interface.BaseInterface(param, "Positive", "lead-acid main")
@@ -73,18 +73,14 @@ class TestMainReaction(unittest.TestCase):
         # Test
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         submesh = mesh.combine_submeshes(*whole_cell)
-        y = submesh[0].nodes ** 2
+        y = submesh.nodes ** 2
         # should evaluate to vectors with the right shape
-        self.assertEqual(
-            j0_n.evaluate(y=y).shape, (mesh["negative electrode"][0].npts, 1)
-        )
-        self.assertEqual(
-            j0_p.evaluate(y=y).shape, (mesh["positive electrode"][0].npts, 1)
-        )
+        self.assertEqual(j0_n.evaluate(y=y).shape, (mesh["negative electrode"].npts, 1))
+        self.assertEqual(j0_p.evaluate(y=y).shape, (mesh["positive electrode"].npts, 1))
 
     def test_diff_main_reaction(self):
         # With intercalation
-        param = pybamm.standard_parameters_lead_acid
+        param = pybamm.LeadAcidParameters()
         model_n = pybamm.interface.BaseInterface(param, "Negative", "lead-acid main")
         model_p = pybamm.interface.BaseInterface(param, "Positive", "lead-acid main")
         parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values

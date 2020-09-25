@@ -14,6 +14,6 @@ To get a list of currently available parameter sets, use ``pybamm_list_parameter
 
 .. autofunction:: pybamm.parameters_cli.add_parameter
 
-.. autofunction:: pybamm.parameters_cli.edit_parameter
+.. autofunction:: pybamm.parameters_cli.remove_parameter
 
-.. autofunction:: pybamm.parameters_cli.list_parameters
+.. autofunction:: pybamm.parameters_cli.edit_parameter

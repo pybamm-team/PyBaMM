@@ -44,6 +44,7 @@ class DFN(BaseModel):
         self.set_electrolyte_submodel()
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
+        self.set_sei_submodel()
 
         if build:
             self.build_model()
@@ -52,7 +53,10 @@ class DFN(BaseModel):
 
     def set_porosity_submodel(self):
 
-        self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
+        if self.options["sei porosity change"] is False:
+            self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
+        elif self.options["sei porosity change"] is True:
+            self.submodels["porosity"] = pybamm.porosity.Full(self.param)
 
     def set_convection_submodel(self):
 
@@ -66,10 +70,10 @@ class DFN(BaseModel):
     def set_interfacial_submodel(self):
 
         self.submodels["negative interface"] = pybamm.interface.ButlerVolmer(
-            self.param, "Negative", "lithium-ion main"
+            self.param, "Negative", "lithium-ion main", self.options
         )
         self.submodels["positive interface"] = pybamm.interface.ButlerVolmer(
-            self.param, "Positive", "lithium-ion main"
+            self.param, "Positive", "lithium-ion main", self.options
         )
 
     def set_particle_submodel(self):
@@ -81,12 +85,20 @@ class DFN(BaseModel):
             self.submodels["positive particle"] = pybamm.particle.FickianManyParticles(
                 self.param, "Positive"
             )
-        elif self.options["particle"] == "fast diffusion":
-            self.submodels["negative particle"] = pybamm.particle.FastManyParticles(
-                self.param, "Negative"
+        elif self.options["particle"] in [
+            "uniform profile",
+            "quadratic profile",
+            "quartic profile",
+        ]:
+            self.submodels[
+                "negative particle"
+            ] = pybamm.particle.PolynomialManyParticles(
+                self.param, "Negative", self.options["particle"]
             )
-            self.submodels["positive particle"] = pybamm.particle.FastManyParticles(
-                self.param, "Positive"
+            self.submodels[
+                "positive particle"
+            ] = pybamm.particle.PolynomialManyParticles(
+                self.param, "Positive", self.options["particle"]
             )
 
     def set_solid_submodel(self):
@@ -123,13 +135,3 @@ class DFN(BaseModel):
                 self.submodels[
                     domain.lower() + " electrolyte conductivity"
                 ] = surf_form.FullAlgebraic(self.param, domain)
-
-    @property
-    def default_geometry(self):
-        dimensionality = self.options["dimensionality"]
-        if dimensionality == 0:
-            return pybamm.Geometry("1D macro", "1+1D micro")
-        elif dimensionality == 1:
-            return pybamm.Geometry("1+1D macro", "(1+1)+1D micro")
-        elif dimensionality == 2:
-            return pybamm.Geometry("2+1D macro", "(2+1)+1D micro")

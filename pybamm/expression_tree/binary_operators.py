@@ -43,6 +43,19 @@ def is_scalar_one(expr):
         return False
 
 
+def is_matrix_one(expr):
+    """
+    Utility function to test if an expression evaluates to a constant matrix one
+    """
+    if expr.is_constant():
+        result = expr.evaluate_ignoring_errors(t=None)
+        return (issparse(result) and np.all(result.toarray() == 1)) or (
+            isinstance(result, np.ndarray) and np.all(result == 1)
+        )
+    else:
+        return False
+
+
 def zeros_of_shape(shape):
     """
     Utility function to create a scalar zero, or a vector or matrix of zeros of
@@ -199,9 +212,11 @@ class BinaryOperator(pybamm.Symbol):
         """ Perform binary operation on nodes 'left' and 'right'. """
         raise NotImplementedError
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
-        return self.left.evaluates_on_edges() or self.right.evaluates_on_edges()
+        return self.left.evaluates_on_edges(dimension) or self.right.evaluates_on_edges(
+            dimension
+        )
 
 
 class Power(BinaryOperator):
@@ -635,7 +650,7 @@ class Inner(BinaryOperator):
 
         return pybamm.simplify_multiplication_division(self.__class__, left, right)
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
         return False
 
@@ -713,6 +728,46 @@ class NotEqualHeaviside(Heaviside):
         # don't raise RuntimeWarning for NaNs
         with np.errstate(invalid="ignore"):
             return left < right
+
+
+class Modulo(BinaryOperator):
+    "Calculates the remainder of an integer division"
+
+    def __init__(self, left, right):
+        super().__init__("%", left, right)
+
+    def _diff(self, variable):
+        """ See :meth:`pybamm.Symbol._diff()`. """
+        # apply chain rule and power rule
+        left, right = self.orphans
+        # derivative if variable is in the base
+        diff = left.diff(variable)
+        # derivative if variable is in the right term (rare, check separately to avoid
+        # unecessarily big tree)
+        if any(variable.id == x.id for x in right.pre_order()):
+            diff += -pybamm.Floor(left / right) * right.diff(variable)
+        return diff
+
+    def _binary_jac(self, left_jac, right_jac):
+        """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
+        # apply chain rule and power rule
+        left, right = self.orphans
+        if left.evaluates_to_number() and right.evaluates_to_number():
+            return pybamm.Scalar(0)
+        elif right.evaluates_to_number():
+            return left_jac
+        elif left.evaluates_to_number():
+            return -right_jac * pybamm.Floor(left / right)
+        else:
+            return left_jac - right_jac * pybamm.Floor(left / right)
+
+    def __str__(self):
+        """ See :meth:`pybamm.Symbol.__str__()`. """
+        return "{!s} mod {!s}".format(self.left, self.right)
+
+    def _binary_evaluate(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        return left % right
 
 
 class Minimum(BinaryOperator):

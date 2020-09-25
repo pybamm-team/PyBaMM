@@ -89,8 +89,20 @@ class TestDFN(unittest.TestCase):
         modeltest = tests.StandardModelTest(model, var_pts=var_pts)
         modeltest.test_all()
 
-    def test_particle_fast_diffusion(self):
-        options = {"particle": "fast diffusion"}
+    def test_particle_uniform(self):
+        options = {"particle": "uniform profile"}
+        model = pybamm.lithium_ion.DFN(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+    def test_particle_quadratic(self):
+        options = {"particle": "quadratic profile"}
+        model = pybamm.lithium_ion.DFN(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+    def test_particle_quartic(self):
+        options = {"particle": "quartic profile"}
         model = pybamm.lithium_ion.DFN(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
@@ -120,6 +132,50 @@ class TestDFN(unittest.TestCase):
         param["Negative particle distribution in x"] = negative_distribution
         param["Positive particle distribution in x"] = positive_distribution
         modeltest = tests.StandardModelTest(model, parameter_values=param)
+        modeltest.test_all()
+
+
+class TestDFNWithSEI(unittest.TestCase):
+    def test_well_posed_constant(self):
+        options = {"sei": "constant"}
+        model = pybamm.lithium_ion.DFN(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+    def test_well_posed_reaction_limited(self):
+        options = {"sei": "reaction limited"}
+        model = pybamm.lithium_ion.DFN(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+    def test_well_posed_reaction_limited_average_film_resistance(self):
+        options = {"sei": "reaction limited", "sei film resistance": "average"}
+        model = pybamm.lithium_ion.DFN(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+    def test_well_posed_solvent_diffusion_limited(self):
+        options = {"sei": "solvent-diffusion limited"}
+        model = pybamm.lithium_ion.DFN(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+    def test_well_posed_electron_migration_limited(self):
+        options = {"sei": "electron-migration limited"}
+        model = pybamm.lithium_ion.DFN(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+    def test_well_posed_interstitial_diffusion_limited(self):
+        options = {"sei": "interstitial-diffusion limited"}
+        model = pybamm.lithium_ion.DFN(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+    def test_well_posed_ec_reaction_limited(self):
+        options = {"sei": "ec reaction limited", "sei porosity change": True}
+        model = pybamm.lithium_ion.DFN(options)
+        modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
 

@@ -8,7 +8,8 @@ import unittest
 
 class TestTafel(unittest.TestCase):
     def test_public_function(self):
-        param = pybamm.standard_parameters_lithium_ion
+        # Test forward Tafel on the negative
+        param = pybamm.LithiumIonParameters()
 
         a_n = pybamm.FullBroadcast(
             pybamm.Scalar(0), ["negative electrode"], "current collector"
@@ -31,6 +32,7 @@ class TestTafel(unittest.TestCase):
 
         std_tests.test_all()
 
+        # Test backward Tafel on the positive
         variables = {
             "Current collector current density": a,
             "Positive electrode potential": a_p,
@@ -56,7 +58,7 @@ class TestTafel(unittest.TestCase):
             "Sum of x-averaged negative electrode interfacial current densities": 0,
             "Sum of x-averaged positive electrode interfacial current densities": 0,
         }
-        submodel = pybamm.interface.ForwardTafel(param, "Positive", "lithium-ion main")
+        submodel = pybamm.interface.BackwardTafel(param, "Positive", "lithium-ion main")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

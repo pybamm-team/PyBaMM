@@ -13,7 +13,7 @@ from tests.unit.test_models.test_submodels.test_thermal.coupled_variables import
 
 class TestLumped(unittest.TestCase):
     def test_public_functions(self):
-        param = pybamm.standard_parameters_lithium_ion
+        param = pybamm.LithiumIonParameters()
 
         submodel = pybamm.thermal.Lumped(param)
         std_tests = tests.StandardSubModelTests(submodel, coupled_variables)
@@ -24,6 +24,18 @@ class TestLumped(unittest.TestCase):
         std_tests.test_all()
 
         submodel = pybamm.thermal.Lumped(param, cc_dimension=2)
+        std_tests = tests.StandardSubModelTests(submodel, coupled_variables)
+        std_tests.test_all()
+
+        submodel = pybamm.thermal.Lumped(param, cc_dimension=0, geometry="pouch")
+        std_tests = tests.StandardSubModelTests(submodel, coupled_variables)
+        std_tests.test_all()
+
+        submodel = pybamm.thermal.Lumped(param, cc_dimension=1, geometry="pouch")
+        std_tests = tests.StandardSubModelTests(submodel, coupled_variables)
+        std_tests.test_all()
+
+        submodel = pybamm.thermal.Lumped(param, cc_dimension=2, geometry="pouch")
         std_tests = tests.StandardSubModelTests(submodel, coupled_variables)
         std_tests.test_all()
 

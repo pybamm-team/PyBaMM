@@ -56,7 +56,7 @@ class Full(BaseThroughCellModel):
 
         # Set up
         param = self.param
-        l_n = pybamm.geometric_parameters.l_n
+        l_n = param.l_n
         x_s = pybamm.standard_spatial_vars.x_s
 
         # Transverse velocity in the separator determines through-cell velocity

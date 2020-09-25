@@ -10,8 +10,8 @@ def graphite_LGM50_diffusivity_Chen2020(sto, T):
       ----------
       .. [1] Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
       Dhammika Widanage, and Emma Kendrick. "Development of Experimental Techniques for
-      Parameterization of Multi-scale Lithium-ion Battery Models." Submitted for
-      publication (2020).
+      Parameterization of Multi-scale Lithium-ion Battery Models." Journal of the
+      Electrochemical Society 167 (2020): 080534.
 
       Parameters
       ----------
@@ -27,7 +27,7 @@ def graphite_LGM50_diffusivity_Chen2020(sto, T):
    """
 
     D_ref = 3.3e-14
-    E_D_s = 42770
+    E_D_s = 0  # to be implemented
     arrhenius = exp(E_D_s / constants.R * (1 / 298.15 - 1 / T))
 
     return D_ref * arrhenius

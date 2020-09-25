@@ -150,7 +150,7 @@ class PrimaryBroadcastToEdges(PrimaryBroadcast):
         super().__init__(child, broadcast_domain, name)
         self.broadcast_type = "primary to edges"
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         return True
 
 
@@ -184,7 +184,11 @@ class SecondaryBroadcast(Broadcast):
         self, child, broadcast_type, broadcast_domain, broadcast_auxiliary_domains
     ):
         "See :meth:`Broadcast.check_and_set_domains`"
-
+        if child.domain == []:
+            raise TypeError(
+                "Cannot take SecondaryBroadcast of an object with empty domain. "
+                "Use PrimaryBroadcast instead."
+            )
         # Can only do secondary broadcast from particle to electrode or from
         # electrode to current collector
         if child.domain[0] in [
@@ -244,7 +248,7 @@ class SecondaryBroadcastToEdges(SecondaryBroadcast):
         super().__init__(child, broadcast_domain, name)
         self.broadcast_type = "secondary to edges"
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         return True
 
 
@@ -305,7 +309,7 @@ class FullBroadcastToEdges(FullBroadcast):
         super().__init__(child, broadcast_domain, auxiliary_domains, name)
         self.broadcast_type = "full to edges"
 
-    def evaluates_on_edges(self):
+    def evaluates_on_edges(self, dimension):
         return True
 
 

@@ -36,7 +36,7 @@ class TestExchangeCurrentDensity(unittest.TestCase):
         del self.c_s_p_surf
 
     def test_creation_lithium_ion(self):
-        param = pybamm.standard_parameters_lithium_ion
+        param = pybamm.LithiumIonParameters()
         model_n = pybamm.interface.BaseInterface(param, "Negative", "lithium-ion main")
         j0_n = model_n._get_exchange_current_density(self.variables)
         model_p = pybamm.interface.BaseInterface(param, "Positive", "lithium-ion main")
@@ -45,7 +45,7 @@ class TestExchangeCurrentDensity(unittest.TestCase):
         self.assertEqual(j0_p.domain, ["positive electrode"])
 
     def test_set_parameters_lithium_ion(self):
-        param = pybamm.standard_parameters_lithium_ion
+        param = pybamm.LithiumIonParameters()
         model_n = pybamm.interface.BaseInterface(param, "Negative", "lithium-ion main")
         j0_n = model_n._get_exchange_current_density(self.variables)
         model_p = pybamm.interface.BaseInterface(param, "Positive", "lithium-ion main")
@@ -61,7 +61,7 @@ class TestExchangeCurrentDensity(unittest.TestCase):
             self.assertNotIsInstance(x, pybamm.Parameter)
 
     def test_discretisation_lithium_ion(self):
-        param = pybamm.standard_parameters_lithium_ion
+        param = pybamm.LithiumIonParameters()
         model_n = pybamm.interface.BaseInterface(param, "Negative", "lithium-ion main")
         j0_n = model_n._get_exchange_current_density(self.variables)
         model_p = pybamm.interface.BaseInterface(param, "Positive", "lithium-ion main")
@@ -81,18 +81,14 @@ class TestExchangeCurrentDensity(unittest.TestCase):
         submesh = mesh.combine_submeshes(*whole_cell)
         y = np.concatenate(
             [
-                submesh[0].nodes ** 2,
-                mesh["negative particle"][0].nodes,
-                mesh["positive particle"][0].nodes,
+                submesh.nodes ** 2,
+                mesh["negative particle"].nodes,
+                mesh["positive particle"].nodes,
             ]
         )
         # should evaluate to vectors with the right shape
-        self.assertEqual(
-            j0_n.evaluate(y=y).shape, (mesh["negative electrode"][0].npts, 1)
-        )
-        self.assertEqual(
-            j0_p.evaluate(y=y).shape, (mesh["positive electrode"][0].npts, 1)
-        )
+        self.assertEqual(j0_n.evaluate(y=y).shape, (mesh["negative electrode"].npts, 1))
+        self.assertEqual(j0_p.evaluate(y=y).shape, (mesh["positive electrode"].npts, 1))
 
 
 if __name__ == "__main__":

@@ -9,7 +9,7 @@ import unittest
 
 class TestLeadAcid(unittest.TestCase):
     def test_public_functions(self):
-        param = pybamm.standard_parameters_lead_acid
+        param = pybamm.LeadAcidParameters()
 
         a_n = pybamm.FullBroadcast(
             pybamm.Scalar(0), ["negative electrode"], "current collector"

@@ -1,4 +1,4 @@
-from pybamm import standard_parameters_lead_acid
+from pybamm import LeadAcidParameters
 
 
 def lead_dioxide_exchange_current_density_Sulzer2019(c_e, T):
@@ -28,7 +28,7 @@ def lead_dioxide_exchange_current_density_Sulzer2019(c_e, T):
     """
     c_ox = 0
     c_hy = 0
-    param = standard_parameters_lead_acid
+    param = LeadAcidParameters()
     c_w_dim = (1 - c_e * param.V_e - c_ox * param.V_ox - c_hy * param.V_hy) / param.V_w
     c_w_ref = (1 - param.c_e_typ * param.V_e) / param.V_w
     c_w = c_w_dim / c_w_ref

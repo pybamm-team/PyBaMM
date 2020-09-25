@@ -20,6 +20,8 @@ class TestCasadiConverter(unittest.TestCase):
         b = pybamm.Scalar(1)
         c = pybamm.Scalar(-1)
         d = pybamm.Scalar(2)
+        e = pybamm.Scalar(3)
+        g = pybamm.Scalar(3.3)
 
         self.assertEqual(a.to_casadi(), casadi.MX(0))
         self.assertEqual(d.to_casadi(), casadi.MX(2))
@@ -28,13 +30,17 @@ class TestCasadiConverter(unittest.TestCase):
         self.assertEqual((-b).to_casadi(), casadi.MX(-1))
         # absolute value
         self.assertEqual(abs(c).to_casadi(), casadi.MX(1))
+        # floor
+        self.assertEqual(pybamm.Floor(g).to_casadi(), casadi.MX(3))
+        # ceiling
+        self.assertEqual(pybamm.Ceiling(g).to_casadi(), casadi.MX(4))
 
         # function
-        def sin(x):
-            return np.sin(x)
+        def square_plus_one(x):
+            return x ** 2 + 1
 
-        f = pybamm.Function(sin, b)
-        self.assertEqual(f.to_casadi(), casadi.MX(np.sin(1)))
+        f = pybamm.Function(square_plus_one, b)
+        self.assertEqual(f.to_casadi(), 2)
 
         def myfunction(x, y):
             return x + y
@@ -53,6 +59,9 @@ class TestCasadiConverter(unittest.TestCase):
         self.assertEqual(pybamm.Power(c, d).to_casadi(), casadi.MX(1))
         # division
         self.assertEqual(pybamm.Division(b, d).to_casadi(), casadi.MX(1 / 2))
+
+        # modulo
+        self.assertEqual(pybamm.Modulo(e, d).to_casadi(), casadi.MX(1))
 
         # minimum and maximum
         self.assertEqual(pybamm.Minimum(a, b).to_casadi(), casadi.MX(0))
@@ -95,6 +104,22 @@ class TestCasadiConverter(unittest.TestCase):
         self.assert_casadi_equal(
             pybamm.Function(np.abs, c).to_casadi(), casadi.MX(3), evalf=True
         )
+        for np_fun in [
+            np.sqrt,
+            np.tanh,
+            np.cosh,
+            np.sinh,
+            np.exp,
+            np.log,
+            np.sign,
+            np.sin,
+            np.cos,
+            np.arccosh,
+            np.arcsinh,
+        ]:
+            self.assert_casadi_equal(
+                pybamm.Function(np_fun, c).to_casadi(), casadi.MX(np_fun(3)), evalf=True
+            )
 
     def test_interpolation(self):
         x = np.linspace(0, 1)[:, np.newaxis]
@@ -131,8 +156,8 @@ class TestCasadiConverter(unittest.TestCase):
         mesh = get_mesh_for_testing()
         a_dom = ["negative electrode"]
         b_dom = ["separator"]
-        a = 2 * pybamm.Vector(np.ones_like(mesh[a_dom[0]][0].nodes), domain=a_dom)
-        b = pybamm.Vector(np.ones_like(mesh[b_dom[0]][0].nodes), domain=b_dom)
+        a = 2 * pybamm.Vector(np.ones_like(mesh[a_dom[0]].nodes), domain=a_dom)
+        b = pybamm.Vector(np.ones_like(mesh[b_dom[0]].nodes), domain=b_dom)
         conc = pybamm.DomainConcatenation([b, a], mesh)
         self.assert_casadi_equal(
             conc.to_casadi(), casadi.MX(conc.evaluate()), evalf=True
