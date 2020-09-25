@@ -87,5 +87,5 @@ class SEIonCracks(SolventDiffusionLimited):
             "interfacial current density": j_zeros_av,
             f"X-averaged {domain}{reaction_name} "
             "interfacial current density [A.m-2]": j_zeros_av,
-        }       
+        }
         return variables

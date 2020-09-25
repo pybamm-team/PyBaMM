@@ -58,9 +58,9 @@ class TestJaxBDFSolver(unittest.TestCase):
         t_eval = np.linspace(0.0, 1.0, 80)
 
         def fun(y, t):
-            return jax.numpy.stack([0.1 * y[0], y[1] - 2.0 * y[0],])
+            return jax.numpy.stack([0.1 * y[0], y[1] - 2.0 * y[0]])
 
-        mass = jax.numpy.array([[2.0, 0.0], [0.0, 0.0],])
+        mass = jax.numpy.array([[2.0, 0.0], [0.0, 0.0]])
 
         # give some bad initial conditions, solver should calculate correct ones using
         # this as a guess
@@ -135,9 +135,9 @@ class TestJaxBDFSolver(unittest.TestCase):
         t_eval = np.linspace(0.0, 1.0, 80)
 
         def fun(y, t, inputs):
-            return jax.numpy.stack([inputs["rate"] * y[0], y[1] - 2.0 * y[0],])
+            return jax.numpy.stack([inputs["rate"] * y[0], y[1] - 2.0 * y[0]])
 
-        mass = jax.numpy.array([[2.0, 0.0], [0.0, 0.0],])
+        mass = jax.numpy.array([[2.0, 0.0], [0.0, 0.0]])
 
         y0 = jax.numpy.array([1.0, 2.0])
 

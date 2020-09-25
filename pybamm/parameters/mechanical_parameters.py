@@ -7,7 +7,7 @@ import pybamm
 # --------------------------------------------------------------------------------------
 # Should find a proper place to add the following mechanics parameters
 """
-# values are from W.Ai et al. Journal of The Electrochemical Society, 
+# values are from W.Ai et al. Journal of The Electrochemical Society,
 # 2020 167 013512 [DOI: 10.1149/2.0122001JES]
 # and J. Purewal et al. Journal of Power Sources 272 (2014) 1154-1161
 """

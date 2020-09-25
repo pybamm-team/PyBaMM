@@ -55,7 +55,7 @@ class CrackPropagation(BaseCracking):
             / mp.l_cr_n_0
         )
         variables.update(
-            {self.domain + " particle cracking rate": dl_cr_n, }
+            {self.domain + " particle cracking rate": dl_cr_n}
         )
         return variables
 

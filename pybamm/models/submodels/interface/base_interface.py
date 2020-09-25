@@ -186,7 +186,7 @@ class BaseInterface(pybamm.BaseSubModel):
 
     def _get_electrolyte_reaction_signed_stoichiometry(self):
         "Returns the number of electrons in the reaction"
-        if self.reaction in ["lithium-ion main", "sei","sei-cracks"]:
+        if self.reaction in ["lithium-ion main", "sei", "sei-cracks"]:
             # Both the main reaction current contribute to the electrolyte reaction
             # current
             return pybamm.Scalar(1), pybamm.Scalar(1)

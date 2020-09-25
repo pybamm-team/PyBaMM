@@ -43,9 +43,11 @@ class LeadingOrder(BaseModel):
         if "Negative electrode sei-cracks interfacial current density" in variables:
             j_sei_cr = variables[
                 "Negative electrode sei-cracks interfacial current density"
-                ]
+            ]
             roughness = variables["Negative electrode roughness ratio"] - 1
-            j_sei_n +=  pybamm.x_average(j_sei_cr * roughness)  # additional sei on cracks
+            j_sei_n += pybamm.x_average(
+                j_sei_cr * roughness
+            )  # additional sei on cracks
         beta_sei_n = self.param.beta_sei_n
 
         deps_n_dt = pybamm.PrimaryBroadcast(

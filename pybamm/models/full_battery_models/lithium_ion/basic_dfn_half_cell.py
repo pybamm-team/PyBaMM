@@ -438,8 +438,8 @@ class BasicDFNHalfCell(BaseModel):
             "Negative particle concentration": c_s_n,
             "Negative particle surface concentration [mol.m-3]": param.c_n_max
             * c_s_surf_n,
-            "X-averaged negative particle surface concentration [mol.m-3]": param.c_n_max
-            * c_s_surf_n_av,
+            "X-averaged negative particle surface "
+            "concentration [mol.m-3]": param.c_n_max * c_s_surf_n_av,
             "Negative particle concentration [mol.m-3]": param.c_n_max * c_s_n,
             "Electrolyte concentration": c_e,
             "Electrolyte concentration [mol.m-3]": param.c_e_typ * c_e,
@@ -448,8 +448,8 @@ class BasicDFNHalfCell(BaseModel):
             "Positive particle concentration": c_s_p,
             "Positive particle surface concentration [mol.m-3]": param.c_p_max
             * c_s_surf_p,
-            "X-averaged positive particle surface concentration [mol.m-3]": param.c_p_max
-            * c_s_surf_p_av,
+            "X-averaged positive particle surface "
+            "concentration [mol.m-3]": param.c_p_max * c_s_surf_p_av,
             "Positive particle concentration [mol.m-3]": param.c_p_max * c_s_p,
             "Current [A]": I,
             "Negative electrode potential": phi_s_n,

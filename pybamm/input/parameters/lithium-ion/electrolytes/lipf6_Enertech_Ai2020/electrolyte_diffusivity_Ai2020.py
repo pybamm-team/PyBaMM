@@ -4,9 +4,9 @@ def electrolyte_diffusivity_Ai2020(c_e, T):
 
     References
     ----------
-    .. [1] Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020). 
-    Electrochemical Thermal-Mechanical Modelling of Stress Inhomogeneity 
-    in Lithium-Ion Pouch Cells. Journal of The Electrochemical Society, 
+    .. [1] Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020).
+    Electrochemical Thermal-Mechanical Modelling of Stress Inhomogeneity
+    in Lithium-Ion Pouch Cells. Journal of The Electrochemical Society,
     167(1), 013512. DOI: 10.1149/2.0122001JES.
 
     Parameters

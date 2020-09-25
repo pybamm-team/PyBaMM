@@ -24,16 +24,10 @@ class BaseCracking(pybamm.BaseSubModel):
             self.domain + " particle crack length",
             domain=self.domain.lower() + " electrode",
         )
+
         # crack length in anode particles
-        l_cr_n_dim = pybamm.Variable(
-            self.domain + " particle crack length [m]",
-            domain=self.domain.lower() + " electrode",
-        )
         domain = self.domain.lower() + " particle"
-        L_cr_n_av = pybamm.Variable(
-            f"X-averaged {domain} crack length [m]", 
-            domain="current collector"
-        )
+
         if self.domain == "Positive":
             l_cr_n0 = pybamm.mechanical_parameters.l_cr_p_0
         else:
@@ -61,9 +55,8 @@ class BaseCracking(pybamm.BaseSubModel):
         """
         c_s_n = variables[self.domain + " particle concentration"]
         c_s_n_avg = pybamm.r_average(c_s_n)  # average concentration for particles
-        # c_s_n_avg = variables["R-average " + self.domain.lower() + " particle concentration"]
         c_s_n_surf = variables[self.domain + " particle surface concentration"]
-        # c_s_n_avg = 2*c_s_n_surf
+
         mp = pybamm.mechanical_parameters
 
         if self.domain == "Negative":
@@ -86,12 +79,10 @@ class BaseCracking(pybamm.BaseSubModel):
         stress_r_n_surf_dim = 0 * E_n
         stress_t_n_surf_dim = (
             Omega_n * E_n / 3.0 / (1.0 - nu_n) * (c_s_n_avg - c_s_n_surf) * c_scale
-        )  # noqa
+        )
         disp_n_surf = disp_n_surf_dim / R_n
         stress_r_n_surf = stress_r_n_surf_dim / E_n
         stress_t_n_surf = stress_t_n_surf_dim / E_n
-        # stress_r_n_centre = 2.0 * Omega_n * E_n / 9.0 / (1.0 - nu_n) * (c_s_n_avg - Cs_n_centre) # noqa
-        # stress_t_n_centre = 2.0 * Omega_n * E_n / 9.0 / (1.0 - nu_n) * (c_s_n_avg - Cs_n_centre) # noqa
 
         return {
             self.domain + " particle surface tangential stress": stress_t_n_surf,
@@ -123,17 +114,17 @@ class BaseCracking(pybamm.BaseSubModel):
         elif self.domain == "Positive":
             a_n = pybamm.LithiumIonParameters().a_p
             R_n = pybamm.LithiumIonParameters().R_p
-        roughness =  l_cr_n * 2 * rho_cr + 1 # the ratio of cracks to normal surface
-        a_n_cr = (roughness - 1) * a_n # normalised crack surface area
+
+        roughness = l_cr_n * 2 * rho_cr + 1  # the ratio of cracks to normal surface
+        a_n_cr = (roughness - 1) * a_n  # normalised crack surface area
         a_n_cr_dim = a_n_cr / R_n  # crack surface area to volume ratio [m-1]
-        # a_n_cr_xavg=pybamm.x_average(a_n_cr)
+
         roughness_xavg = pybamm.x_average(roughness)
         variables = {
             self.domain + " crack surface to volume ratio [m-1]": a_n_cr_dim,
             self.domain + " crack surface to volume ratio": a_n_cr,
-            # self.domain + " X-averaged crack surface to volume ratio [m-1]": a_n_cr_xavg / R_n,
-            # self.domain + " X-averaged crack surface to volume ratio": a_n_cr_xavg,
             self.domain + " electrode roughness ratio": roughness,
-            f"X-averaged {self.domain.lower()} electrode roughness ratio": roughness_xavg,
+            f"X-averaged {self.domain.lower()} "
+            "electrode roughness ratio": roughness_xavg,
         }
         return variables

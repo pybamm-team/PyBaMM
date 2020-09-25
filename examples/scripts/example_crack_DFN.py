@@ -2,6 +2,8 @@ import pybamm
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
+import ipywidgets as widgets
 
 os.chdir(pybamm.__path__[0] + "/..")
 model = pybamm.lithium_ion.DFN(build=False)
@@ -11,17 +13,16 @@ model.submodels["negative particle"] = pybamm.particle.FickianManyParticles(
 model.submodels["positive particle"] = pybamm.particle.FickianManyParticles(
     model.param, "Positive"
 )
-model.submodels["negative particle cracking"] = pybamm.particle_cracking.CrackPropagation(
-    model.param, "Negative"
-)
+model.submodels[
+    "negative particle cracking"
+] = pybamm.particle_cracking.CrackPropagation(model.param, "Negative")
 model.build_model()
 param = model.default_parameter_values
 
-import pandas as pd
-
 mechanics = (
     pd.read_csv(
-        "pybamm/input/parameters/lithium-ion/mechanicals/lico2_graphite_Ai2020/parameters.csv",
+        "pybamm/input/parameters/lithium-ion/mechanicals"
+        "/lico2_graphite_Ai2020/parameters.csv",
         index_col=0,
         comment="#",
         skip_blank_lines=True,
@@ -62,6 +63,7 @@ x = solution["x [m]"].entries[0:19, 0]
 c_s_n = solution["Negative particle concentration"]
 r_n = solution["r_n [m]"].entries[:, 0, 0]
 
+
 # plot
 def plot_concentrations(t):
     f, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(16, 4))
@@ -98,8 +100,6 @@ def plot_concentrations(t):
     ax4.grid()
     plt.show()
 
-
-import ipywidgets as widgets
 
 widgets.interact(
     plot_concentrations, t=widgets.FloatSlider(min=0, max=3600, step=10, value=0)

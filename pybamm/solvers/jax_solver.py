@@ -135,7 +135,7 @@ class JaxSolver(pybamm.BaseSolver):
 
         def rhs_dae(y, t, inputs):
             return jnp.concatenate(
-                [model.rhs_eval(t, y, inputs), model.algebraic_eval(t, y, inputs),]
+                [model.rhs_eval(t, y, inputs), model.algebraic_eval(t, y, inputs)]
             )
 
         def solve_model_rk45(inputs):

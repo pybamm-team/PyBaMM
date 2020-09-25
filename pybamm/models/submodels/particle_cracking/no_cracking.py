@@ -27,9 +27,7 @@ class NoSEI(BaseCracking):
             pybamm.Scalar(0), self.domain.lower() + " electrode", "current collector"
         )
         domain = self.domain.lower() + " particle"
-        zero_av = pybamm.FullBroadcast(
-            pybamm.Scalar(0), "current collector"
-        )       
+        zero_av = pybamm.FullBroadcast(pybamm.Scalar(0), "current collector")
         variables = {
             self.domain + " particle crack length [m]": zero,
             self.domain + " particle crack length": zero,
@@ -44,12 +42,13 @@ class NoSEI(BaseCracking):
             pybamm.Scalar(0), self.domain.lower() + " electrode", "current collector"
         )
         variables.update(
-            self.domain + " particle surface tangential stress": zero,
-            self.domain + " particle surface radial stress": zero,
-            self.domain + " particle surface displacement": zero,
-            self.domain
-            + " particle surface tangential stress [Pa]": zero,
-            self.domain + " particle surface radial stress [Pa]": zero,
-            self.domain + " particle surface displacement [m]": zero,
+            {
+                self.domain + " particle surface tangential stress": zero,
+                self.domain + " particle surface radial stress": zero,
+                self.domain + " particle surface displacement": zero,
+                self.domain + " particle surface tangential stress [Pa]": zero,
+                self.domain + " particle surface radial stress [Pa]": zero,
+                self.domain + " particle surface displacement [m]": zero,
+            }
         )
         return variables
