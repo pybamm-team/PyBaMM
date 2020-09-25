@@ -167,7 +167,7 @@ if system() != "Windows":
 
 
 # Load text for description and license
-with open("README.md") as f:
+with open("README.md", encoding="utf-8") as f:
     readme = f.read()
 
 setup(

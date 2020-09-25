@@ -1,3 +1,19 @@
+# [Unreleased](https://github.com/pybamm-team/PyBaMM)
+
+## Features
+
+
+## Optimizations
+
+
+## Bug fixes
+
+-   Raise error if the boundary condition at the origin in a spherical domain is other than no-flux ([#1175](https://github.com/pybamm-team/PyBaMM/pull/1175))
+-   Fix boundary conditions at r = 0 for Creating Models notebooks ([#1173](https://github.com/pybamm-team/PyBaMM/pull/1173))
+
+## Breaking changes
+
+
 # [v0.2.4](https://github.com/pybamm-team/PyBaMM/tree/v0.2.4) - 2020-09-07
 
 This release adds new operators for more complex models, some basic sensitivity analysis, and a spectral volumes spatial method, as well as some small bug fixes.
