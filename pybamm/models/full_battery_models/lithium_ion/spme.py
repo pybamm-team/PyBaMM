@@ -48,6 +48,7 @@ class SPMe(BaseModel):
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
         self.set_sei_submodel()
+        self.set_loss_of_active_materials_submodels()
 
         if build:
             self.build_model()
@@ -60,6 +61,16 @@ class SPMe(BaseModel):
             self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
         elif self.options["sei porosity change"] is True:
             self.submodels["porosity"] = pybamm.porosity.LeadingOrder(self.param)
+
+    def set_loss_of_active_materials_submodels(self):
+        if self.options["loss of active materials"] is False:
+            self.submodels[
+                "loss of active materials"
+            ] = pybamm.loss_of_active_materials.Constant(self.param)
+        elif self.options["loss of active materials"] is True:
+            self.submodels[
+                "loss of active materials"
+            ] = pybamm.loss_of_active_materials.LeadingOrder(self.param)
 
     def set_convection_submodel(self):
 

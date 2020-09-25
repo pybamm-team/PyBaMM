@@ -205,6 +205,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "sei porosity change": False,
             "working electrode": None,
             "sei-cracks": None,
+            "loss of active materials": False,
         }
         # Change the default for cell geometry based on which thermal option is provided
         extra_options = extra_options or {}
@@ -338,6 +339,13 @@ class BaseBatteryModel(pybamm.BaseModel):
             raise pybamm.OptionError(
                 "Unknown sei porosity change '{}'".format(
                     options["sei porosity change"]
+                )
+            )
+
+        if options["loss of active materials"] not in [True, False]:
+            raise pybamm.OptionError(
+                "Unknown loss of active materials '{}'".format(
+                    options["loss of active materials"]
                 )
             )
 

@@ -48,7 +48,7 @@ class CrackPropagation(BaseCracking):
             * (stress_t_surf_n >= 0)
         )
         dl_cr_n = (
-            mp.crack_flag
+            mp.flag_crack
             * k_cr_n
             * pybamm.Power(dK_SIF, mp.m_cr)
             / mp.t0_cr
