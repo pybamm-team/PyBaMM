@@ -233,6 +233,16 @@
       "contributions": [
         "financial"
       ]
+    },
+    {
+      "login": "bessman",
+      "name": "Alexander Bessman",
+      "avatar_url": "https://avatars3.githubusercontent.com/u/1999462?v=4",
+      "profile": "https://github.com/bessman",
+      "contributions": [
+        "bug",
+        "example"
+      ]
     }
   ],
   "contributorsPerLine": 7,
