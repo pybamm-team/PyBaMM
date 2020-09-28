@@ -10,16 +10,12 @@ import unittest
 class TestBaseCracking(unittest.TestCase):
     def test_public_functions(self):
         variables = {
-            "Negative particle crack length": 0,
-            "Negative particle surface tangential stress": 0,
+            "Negative particle crack length": pybamm.Scalar(0),
+            "Negative particle concentration": pybamm.Scalar(0),
         }
         submodel = pybamm.particle_cracking.BaseCracking(None, "Negative")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
-
-        # submodel = pybamm.particle.BaseParticle(None, "Positive")
-        # std_tests = tests.StandardSubModelTests(submodel, variables)
-        # std_tests.test_all()
 
 
 if __name__ == "__main__":
