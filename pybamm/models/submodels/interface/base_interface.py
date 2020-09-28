@@ -523,7 +523,7 @@ class BaseInterface(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_sei_film_overpotential_variables(self, eta_sei):
-        reaction_name = self.reaction_name
+        reaction_name = getattr(self, "reaction_name", "")
         if reaction_name == "":
             reaction_name = " sei"
         pot_scale = self.param.potential_scale

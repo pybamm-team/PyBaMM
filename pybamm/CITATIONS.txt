@@ -204,6 +204,7 @@ primaryClass={physics.app-ph},
   year={2019},
   publisher={IOP Publishing}
 }
+
 @article{subramanian2005,
   title={Efficient macro-micro scale coupled modeling of batteries},
   author={Subramanian, Venkat R and Diwakar, Vinten D and Tapriyal, Deepak},

@@ -54,3 +54,63 @@
 2020-07-23 13:57:30,203 - PyBaMM setup - INFO - Not running on windows
 2020-07-23 13:57:30,434 - PyBaMM setup - INFO - Found CMake.
 2020-07-23 13:57:30,435 - PyBaMM setup - INFO - Could not find PyBind11 directory (/home/aishine/GEM/PyBaMM/pybind11). Skipping compilation of KLU module.
+2020-09-25 11:46:20,476 - PyBaMM setup - INFO - Starting PyBaMM setup
+2020-09-25 11:46:20,512 - PyBaMM setup - INFO - Not running on windows
+2020-09-25 11:46:20,550 - PyBaMM setup - INFO - Found CMake.
+2020-09-25 11:46:20,550 - PyBaMM setup - INFO - Found pybind11 directory (/Users/diego/PycharmProjects/PyBaMM-GEM/PyBaMM-GEM/pybind11)
+2020-09-25 11:46:21,380 - PyBaMM setup - INFO - Starting PyBaMM setup
+2020-09-25 11:46:21,399 - PyBaMM setup - INFO - Not running on windows
+2020-09-25 11:46:21,406 - PyBaMM setup - INFO - Found CMake.
+2020-09-25 11:46:21,406 - PyBaMM setup - INFO - Found pybind11 directory (/Users/diego/PycharmProjects/PyBaMM-GEM/PyBaMM-GEM/pybind11)
+2020-09-25 11:46:22,167 - PyBaMM setup - INFO - Starting PyBaMM setup
+2020-09-25 11:46:22,186 - PyBaMM setup - INFO - Not running on windows
+2020-09-25 11:46:22,192 - PyBaMM setup - INFO - Found CMake.
+2020-09-25 11:46:22,193 - PyBaMM setup - INFO - Found pybind11 directory (/Users/diego/PycharmProjects/PyBaMM-GEM/PyBaMM-GEM/pybind11)
+2020-09-28 06:42:47,862 - PyBaMM setup - INFO - Starting PyBaMM setup
+2020-09-28 06:42:47,890 - PyBaMM setup - INFO - Not running on windows
+2020-09-28 06:42:47,938 - PyBaMM setup - INFO - Found CMake.
+2020-09-28 06:42:47,939 - PyBaMM setup - INFO - Found pybind11 directory (/Users/diego/PycharmProjects/PyBaMM-GEM/PyBaMM-GEM/pybind11)
+2020-09-28 06:42:48,806 - PyBaMM setup - INFO - Starting PyBaMM setup
+2020-09-28 06:42:48,826 - PyBaMM setup - INFO - Not running on windows
+2020-09-28 06:42:48,832 - PyBaMM setup - INFO - Found CMake.
+2020-09-28 06:42:48,832 - PyBaMM setup - INFO - Found pybind11 directory (/Users/diego/PycharmProjects/PyBaMM-GEM/PyBaMM-GEM/pybind11)
+2020-09-28 06:42:49,647 - PyBaMM setup - INFO - Starting PyBaMM setup
+2020-09-28 06:42:49,667 - PyBaMM setup - INFO - Not running on windows
+2020-09-28 06:42:49,673 - PyBaMM setup - INFO - Found CMake.
+2020-09-28 06:42:49,673 - PyBaMM setup - INFO - Found pybind11 directory (/Users/diego/PycharmProjects/PyBaMM-GEM/PyBaMM-GEM/pybind11)
+2020-09-28 06:53:09,894 - PyBaMM setup - INFO - Starting PyBaMM setup
+2020-09-28 06:53:09,930 - PyBaMM setup - INFO - Not running on windows
+2020-09-28 06:53:09,966 - PyBaMM setup - INFO - Found CMake.
+2020-09-28 06:53:09,966 - PyBaMM setup - INFO - Found pybind11 directory (/Users/diego/PycharmProjects/PyBaMM-GEM/PyBaMM-GEM/pybind11)
+2020-09-28 06:53:10,752 - PyBaMM setup - INFO - Starting PyBaMM setup
+2020-09-28 06:53:10,772 - PyBaMM setup - INFO - Not running on windows
+2020-09-28 06:53:10,778 - PyBaMM setup - INFO - Found CMake.
+2020-09-28 06:53:10,778 - PyBaMM setup - INFO - Found pybind11 directory (/Users/diego/PycharmProjects/PyBaMM-GEM/PyBaMM-GEM/pybind11)
+2020-09-28 06:53:11,267 - PyBaMM setup - INFO - Starting PyBaMM setup
+2020-09-28 06:53:11,288 - PyBaMM setup - INFO - Not running on windows
+2020-09-28 06:53:11,294 - PyBaMM setup - INFO - Found CMake.
+2020-09-28 06:53:11,295 - PyBaMM setup - INFO - Found pybind11 directory (/Users/diego/PycharmProjects/PyBaMM-GEM/PyBaMM-GEM/pybind11)
+2020-09-28 07:26:50,744 - PyBaMM setup - INFO - Starting PyBaMM setup
+2020-09-28 07:26:50,777 - PyBaMM setup - INFO - Not running on windows
+2020-09-28 07:26:50,832 - PyBaMM setup - INFO - Found CMake.
+2020-09-28 07:26:50,833 - PyBaMM setup - INFO - Found pybind11 directory (/Users/diego/PycharmProjects/PyBaMM-GEM/PyBaMM-GEM/pybind11)
+2020-09-28 07:26:51,640 - PyBaMM setup - INFO - Starting PyBaMM setup
+2020-09-28 07:26:51,660 - PyBaMM setup - INFO - Not running on windows
+2020-09-28 07:26:51,666 - PyBaMM setup - INFO - Found CMake.
+2020-09-28 07:26:51,666 - PyBaMM setup - INFO - Found pybind11 directory (/Users/diego/PycharmProjects/PyBaMM-GEM/PyBaMM-GEM/pybind11)
+2020-09-28 07:26:52,400 - PyBaMM setup - INFO - Starting PyBaMM setup
+2020-09-28 07:26:52,420 - PyBaMM setup - INFO - Not running on windows
+2020-09-28 07:26:52,427 - PyBaMM setup - INFO - Found CMake.
+2020-09-28 07:26:52,428 - PyBaMM setup - INFO - Found pybind11 directory (/Users/diego/PycharmProjects/PyBaMM-GEM/PyBaMM-GEM/pybind11)
+2020-09-28 07:28:50,845 - PyBaMM setup - INFO - Starting PyBaMM setup
+2020-09-28 07:28:50,866 - PyBaMM setup - INFO - Not running on windows
+2020-09-28 07:28:50,875 - PyBaMM setup - INFO - Found CMake.
+2020-09-28 07:28:50,876 - PyBaMM setup - INFO - Found pybind11 directory (/Users/diego/PycharmProjects/PyBaMM-GEM/PyBaMM-GEM/pybind11)
+2020-09-28 07:28:51,541 - PyBaMM setup - INFO - Starting PyBaMM setup
+2020-09-28 07:28:51,567 - PyBaMM setup - INFO - Not running on windows
+2020-09-28 07:28:51,576 - PyBaMM setup - INFO - Found CMake.
+2020-09-28 07:28:51,576 - PyBaMM setup - INFO - Found pybind11 directory (/Users/diego/PycharmProjects/PyBaMM-GEM/PyBaMM-GEM/pybind11)
+2020-09-28 07:28:52,107 - PyBaMM setup - INFO - Starting PyBaMM setup
+2020-09-28 07:28:52,133 - PyBaMM setup - INFO - Not running on windows
+2020-09-28 07:28:52,141 - PyBaMM setup - INFO - Found CMake.
+2020-09-28 07:28:52,141 - PyBaMM setup - INFO - Found pybind11 directory (/Users/diego/PycharmProjects/PyBaMM-GEM/PyBaMM-GEM/pybind11)
