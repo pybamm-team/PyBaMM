@@ -816,7 +816,10 @@ class Discretisation(object):
         try:
             return self._discretised_symbols[symbol.id]
         except KeyError:
-            discretised_symbol = self._process_symbol(symbol)
+            try:
+                discretised_symbol = self._process_symbol(symbol)
+            except:
+                self._process_symbol(symbol.child.right.right.right.left.right)
             self._discretised_symbols[symbol.id] = discretised_symbol
             discretised_symbol.test_shape()
             # Assign mesh as an attribute to the processed variable
@@ -1158,6 +1161,16 @@ class Discretisation(object):
                 "discretisation but rhs.shape = "
                 "{} and initial_conditions.shape = {} for variable '{}'.".format(
                     model.rhs[var].shape, model.initial_conditions[var].shape, var
+                )
+            )
+        for var in model.algebraic.keys():
+            assert (
+                model.algebraic[var].shape == model.initial_conditions[var].shape
+            ), pybamm.ModelError(
+                "algebraic and initial_conditions must have the same shape after "
+                "discretisation but algebraic.shape = "
+                "{} and initial_conditions.shape = {} for variable '{}'.".format(
+                    model.algebraic[var].shape, model.initial_conditions[var].shape, var
                 )
             )
         # Concatenated

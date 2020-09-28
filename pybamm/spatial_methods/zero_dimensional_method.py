@@ -28,7 +28,10 @@ class ZeroDimensionalSpatialMethod(pybamm.SpatialMethod):
         In 0D, the boundary value is the identity operator.
         See :meth:`SpatialMethod.boundary_value_or_flux`
         """
-        return discretised_child
+        out = discretised_child
+        # boundary value removes domains
+        out.clear_domains()
+        return out
 
     def mass_matrix(self, symbol, boundary_conditions):
         """
