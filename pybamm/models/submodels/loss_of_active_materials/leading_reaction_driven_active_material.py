@@ -30,7 +30,9 @@ class LeadingOrder(BaseModel):
         eps_am_s = pybamm.PrimaryBroadcast(eps_am_s_pc, "separator")
         eps_am_p = pybamm.PrimaryBroadcast(eps_am_p_pc, "positive electrode")
 
-        variables = self._get_standard_active_material_variables(eps_am_n, eps_am_s, eps_am_p)
+        variables = self._get_standard_active_material_variables(
+            eps_am_n, eps_am_s, eps_am_p
+        )
         return variables
 
     def get_coupled_variables(self, variables):
@@ -41,7 +43,9 @@ class LeadingOrder(BaseModel):
             stress_t_surf_n *= stress_t_surf_n > 0
         else:
             stress_t_surf_n = pybamm.FullBroadcast(
-                0, "negative electrode", auxiliary_domains={"secondary": "current collector"}
+                0,
+                "negative electrode",
+                auxiliary_domains={"secondary": "current collector"},
             )
         if "X-averaged positive particle surface tangential stress" in variables:
             stress_t_surf_p = variables[
@@ -49,7 +53,9 @@ class LeadingOrder(BaseModel):
             ]
         else:
             stress_t_surf_p = pybamm.FullBroadcast(
-                0, "positive electrode", auxiliary_domains={"secondary": "current collector"}
+                0,
+                "positive electrode",
+                auxiliary_domains={"secondary": "current collector"},
             )
             stress_t_surf_p *= stress_t_surf_p > 0
 

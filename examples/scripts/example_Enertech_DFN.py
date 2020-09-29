@@ -8,16 +8,27 @@ os.chdir(pybamm.__path__[0] + "/..")
 model = pybamm.lithium_ion.DFN(
     build=False, options={"particle": "Fickian diffusion", "thermal": "lumped"}
 )
-model.submodels["negative particle cracking"] = pybamm.particle_cracking.CrackPropagation(
-    model.param, "Negative"
-)
+model.submodels[
+    "negative particle cracking"
+] = pybamm.particle_cracking.CrackPropagation(model.param, "Negative")
 model.build_model()
 # param = model.default_parameter_values
 chemistry = pybamm.parameter_sets.Ai2020
 param = pybamm.ParameterValues(chemistry=chemistry)
 import pandas as pd
-mechanics = pd.read_csv("pybamm/input/parameters/lithium-ion/mechanicals/lico2_graphite_Ai2020/parameters.csv", 
-                        index_col=0, comment="#", skip_blank_lines=True, header=None)[1][1:].dropna().astype(float).to_dict()
+
+mechanics = (
+    pd.read_csv(
+        "pybamm/input/parameters/lithium-ion/mechanicals/lico2_graphite_Ai2020/parameters.csv",
+        index_col=0,
+        comment="#",
+        skip_blank_lines=True,
+        header=None,
+    )[1][1:]
+    .dropna()
+    .astype(float)
+    .to_dict()
+)
 param.update(mechanics, check_already_exists=False)
 # create geometry
 geometry = model.default_geometry

@@ -186,7 +186,7 @@ class BaseInterface(pybamm.BaseSubModel):
 
     def _get_electrolyte_reaction_signed_stoichiometry(self):
         "Returns the number of electrons in the reaction"
-        if self.reaction in ["lithium-ion main", "sei","sei-cracks"]:
+        if self.reaction in ["lithium-ion main", "sei", "sei-cracks"]:
             # Both the main reaction current contribute to the electrolyte reaction
             # current
             return pybamm.Scalar(1), pybamm.Scalar(1)
@@ -343,7 +343,7 @@ class BaseInterface(pybamm.BaseSubModel):
             "Positive electrode" + self.reaction_name + " interfacial current density"
         ]
         j_n *= roughness_n
-        
+
         j = pybamm.Concatenation(j_n, j_s, j_p)
         j_dim = pybamm.Concatenation(j_n_scale * j_n, j_s, j_p_scale * j_p)
 
@@ -357,7 +357,9 @@ class BaseInterface(pybamm.BaseSubModel):
 
         ratio_LAM_n = variables["Negative electrode LAM ratio"]
         ratio_LAM_p = variables["Positive electrode LAM ratio"]
-        a_n, a_p = self._get_surface_area_per_unit_volume_distribution(ratio_LAM_n, ratio_LAM_p)
+        a_n, a_p = self._get_surface_area_per_unit_volume_distribution(
+            ratio_LAM_n, ratio_LAM_p
+        )
         a = pybamm.Concatenation(
             a_n, pybamm.FullBroadcast(0, "separator", "current collector"), a_p
         )

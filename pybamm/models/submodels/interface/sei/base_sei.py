@@ -150,8 +150,8 @@ class BaseModel(BaseInterface):
             )  # inner SEI concentration to 0
             n_outer = j_outer * L_outer * C_ec  # outer SEI concentration
         else:
-            n_inner = L_inner * roughness # inner SEI concentration
-            n_outer = L_outer * roughness # outer SEI concentration
+            n_inner = L_inner * roughness  # inner SEI concentration
+            n_outer = L_outer * roughness  # outer SEI concentration
 
         n_inner_av = pybamm.x_average(L_inner * roughness)
         n_outer_av = pybamm.x_average(L_outer * roughness)

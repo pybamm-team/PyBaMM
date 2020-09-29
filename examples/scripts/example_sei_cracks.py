@@ -6,11 +6,17 @@ import matplotlib.pyplot as plt
 os.chdir(pybamm.__path__[0] + "/..")
 # model = pybamm.lithium_ion.DFN(build=False,options = {"particle": "Fickian diffusion", "thermal": "lumped"})
 model = pybamm.lithium_ion.DFN(
-    build=False, options={"particle": "Fickian diffusion", "sei":"solvent-diffusion limited", "sei film resistance":"distributed", "sei porosity change":True}
+    build=False,
+    options={
+        "particle": "Fickian diffusion",
+        "sei": "solvent-diffusion limited",
+        "sei film resistance": "distributed",
+        "sei porosity change": True,
+    },
 )
-model.submodels["negative particle cracking"] = pybamm.particle_cracking.CrackPropagation(
-    model.param, "Negative"
-)
+model.submodels[
+    "negative particle cracking"
+] = pybamm.particle_cracking.CrackPropagation(model.param, "Negative")
 model.submodels["negative sei on cracks"] = pybamm.sei.SEIonCracks(
     model.param, "Negative"
 )
@@ -22,9 +28,14 @@ param.update({"Initial concentration in negative electrode [mol.m-3]": 29866})
 param.update({"Initial concentration in positive electrode [mol.m-3]": 14778})
 param.update({"Maximum concentration in negative electrode [mol.m-3]": 33133})
 param.update({"Maximum concentration in positive electrode [mol.m-3]": 56840})
-param.update({"Negative electrode diffusivity [m2.s-1]": 6e-15}) #6e-15 good value
-param.update({"Negative current collector surface heat transfer coefficient [W.m-2.K-1]": 0.1, 
-"Positive current collector surface heat transfer coefficient [W.m-2.K-1]": 0.1}, check_already_exists=False)
+param.update({"Negative electrode diffusivity [m2.s-1]": 6e-15})  # 6e-15 good value
+param.update(
+    {
+        "Negative current collector surface heat transfer coefficient [W.m-2.K-1]": 0.1,
+        "Positive current collector surface heat transfer coefficient [W.m-2.K-1]": 0.1,
+    },
+    check_already_exists=False,
+)
 param.update({"Total heat transfer coefficient [W.m-2.K-1]": 0.1})
 param.update({"Ambient temperature [K]": 298.15})
 param.update({"Initial temperature [K]": 298.15})
@@ -35,23 +46,40 @@ param2 = param
 
 # add mechanical properties
 import pandas as pd
-mechanics = pd.read_csv("pybamm/input/parameters/lithium-ion/mechanicals/lico2_graphite_Ai2020/parameters.csv", 
-                        index_col=0, comment="#", skip_blank_lines=True, header=None)[1][1:].dropna().astype(float).to_dict()
-param.update(mechanics, check_already_exists=False)
-param.update({"Negative electrode Number of cracks per unit area of the particle [m-2]": 3.18e15/100})
-param.update({"Negative electrode Cracking rate":3.9e-20*100})
 
-total_cycles=2
+mechanics = (
+    pd.read_csv(
+        "pybamm/input/parameters/lithium-ion/mechanicals/lico2_graphite_Ai2020/parameters.csv",
+        index_col=0,
+        comment="#",
+        skip_blank_lines=True,
+        header=None,
+    )[1][1:]
+    .dropna()
+    .astype(float)
+    .to_dict()
+)
+param.update(mechanics, check_already_exists=False)
+param.update(
+    {
+        "Negative electrode Number of cracks per unit area of the particle [m-2]": 3.18e15
+        / 100
+    }
+)
+param.update({"Negative electrode Cracking rate": 3.9e-20 * 100})
+
+total_cycles = 2
 experiment = pybamm.Experiment(
-    ["Hold at 4.2 V until 1 mA",] +
-    [
+    ["Hold at 4.2 V until 1 mA",]
+    + [
         "Discharge at 1C until 2.5 V",
         "Rest for 600 seconds",
         "Charge at 1C until 4.2 V",
         "Hold at 4.2 V until 1 mA",
-    ] * total_cycles
+    ]
+    * total_cycles
 )
-sim1 = pybamm.Simulation(model, experiment=experiment,parameter_values=param)
+sim1 = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
 solution1 = sim1.solve()
 
 # Use the default setup without sei-crack model
@@ -79,4 +107,3 @@ solution1 = sim1.solve()
 # plt.ylabel("Discharge capacity [A.h]")
 # plt.legend()
 # plt.show()
-

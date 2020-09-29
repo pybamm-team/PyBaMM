@@ -328,7 +328,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "electron-migration limited",
             "interstitial-diffusion limited",
             "ec reaction limited",
-            "sei on cracks"
+            "sei on cracks",
         ]:
             raise pybamm.OptionError("Unknown sei model '{}'".format(options["sei"]))
         if options["sei film resistance"] not in [None, "distributed", "average"]:
@@ -350,7 +350,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                     options["loss of active materials"]
                 )
             )
-        
+
         if options["particle cracking"] not in [True, False]:
             raise pybamm.OptionError(
                 "Unknown particle cracking '{}'".format(

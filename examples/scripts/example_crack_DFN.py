@@ -11,9 +11,9 @@ model.submodels["negative particle"] = pybamm.particle.FickianManyParticles(
 model.submodels["positive particle"] = pybamm.particle.FickianManyParticles(
     model.param, "Positive"
 )
-model.submodels["negative particle cracking"] = pybamm.particle_cracking.CrackPropagation(
-    model.param, "Negative"
-)
+model.submodels[
+    "negative particle cracking"
+] = pybamm.particle_cracking.CrackPropagation(model.param, "Negative")
 model.build_model()
 param = model.default_parameter_values
 

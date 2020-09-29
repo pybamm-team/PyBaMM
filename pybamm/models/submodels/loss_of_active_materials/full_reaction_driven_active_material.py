@@ -34,30 +34,37 @@ class Full(BaseModel):
     def get_coupled_variables(self, variables):
         if "Negative particle surface tangential stress" in variables:
             stress_t_surf_n = variables["Negative particle surface tangential stress"]
-            stress_t_surf_n *= (stress_t_surf_n > 0)
+            stress_t_surf_n *= stress_t_surf_n > 0
         else:
             stress_t_surf_n = pybamm.FullBroadcast(
-                0, "negative electrode", auxiliary_domains={"secondary": "current collector"}
+                0,
+                "negative electrode",
+                auxiliary_domains={"secondary": "current collector"},
             )
         if "Positive particle surface tangential stress" in variables:
             stress_t_surf_p = variables["Positive particle surface tangential stress"]
-            stress_t_surf_p *= (stress_t_surf_p > 0)
+            stress_t_surf_p *= stress_t_surf_p > 0
         else:
             stress_t_surf_p = pybamm.FullBroadcast(
-                0, "positive electrode", auxiliary_domains={"secondary": "current collector"}
+                0,
+                "positive electrode",
+                auxiliary_domains={"secondary": "current collector"},
             )
-
 
         mp = pybamm.mechanical_parameters
 
         deps_am_n_dt = (
-            -mp.beta_LAM_n * pybamm.Power(stress_t_surf_n / mp.stress_c_n, mp.m_LAM_n) / mp.t0_cr
+            -mp.beta_LAM_n
+            * pybamm.Power(stress_t_surf_n / mp.stress_c_n, mp.m_LAM_n)
+            / mp.t0_cr
         )
         deps_am_s_dt = pybamm.FullBroadcast(
             0, "separator", auxiliary_domains={"secondary": "current collector"}
         )
         deps_am_p_dt = (
-            -mp.beta_LAM_p * pybamm.Power(stress_t_surf_p / mp.stress_c_p, mp.m_LAM_p) / mp.t0_cr
+            -mp.beta_LAM_p
+            * pybamm.Power(stress_t_surf_p / mp.stress_c_p, mp.m_LAM_p)
+            / mp.t0_cr
         )
 
         variables.update(

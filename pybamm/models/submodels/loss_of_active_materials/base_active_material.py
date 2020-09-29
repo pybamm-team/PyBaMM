@@ -38,9 +38,11 @@ class BaseModel(pybamm.BaseSubModel):
             "X-averaged separator " + am: eps_am_s_av,
             "X-averaged positive electrode " + am: eps_am_p_av,
             "Negative electrode LAM ratio": eps_am_n / self.param.epsilon_s_n,
-            "X-averaged negative electrode LAM ratio": eps_am_n_av / self.param.epsilon_s_n,
+            "X-averaged negative electrode LAM ratio": eps_am_n_av
+            / self.param.epsilon_s_n,
             "Positive electrode LAM ratio": eps_am_p / self.param.epsilon_s_p,
-            "X-averaged positive electrode LAM ratio": eps_am_p_av / self.param.epsilon_s_p,
+            "X-averaged positive electrode LAM ratio": eps_am_p_av
+            / self.param.epsilon_s_p,
         }
 
         if set_leading_order is True:

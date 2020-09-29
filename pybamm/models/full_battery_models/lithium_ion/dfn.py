@@ -59,7 +59,7 @@ class DFN(BaseModel):
             self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
         elif self.options["sei porosity change"] is True:
             self.submodels["porosity"] = pybamm.porosity.Full(self.param)
-    
+
     def set_loss_of_active_materials_submodels(self):
         if self.options["loss of active materials"] is False:
             self.submodels[

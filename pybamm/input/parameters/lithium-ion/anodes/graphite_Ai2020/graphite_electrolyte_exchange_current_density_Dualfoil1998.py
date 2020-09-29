@@ -24,7 +24,9 @@ def graphite_electrolyte_exchange_current_density_Dualfoil1998(c_e, c_s_surf, T)
     :class:`pybamm.Symbol`
         Exchange-current density [A.m-2]
     """
-    m_ref = 1 * 10 ** (-11) * constants.F  # (A/m2)(mol/m3)**1.5 - includes ref concentrations
+    m_ref = (
+        1 * 10 ** (-11) * constants.F
+    )  # (A/m2)(mol/m3)**1.5 - includes ref concentrations
     E_r = 5000  # activation energy for Temperature Dependent Reaction Constant [ J / mol ]
     arrhenius = exp(E_r / constants.R * (1 / 298.15 - 1 / T))
 

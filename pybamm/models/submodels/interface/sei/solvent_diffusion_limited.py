@@ -40,7 +40,7 @@ class SolventDiffusionLimited(BaseModel):
             C_sei = self.param.C_sei_solvent_n
 
         j_sei = -1 / (C_sei * L_sei_outer)
-        alpha = pybamm.Parameter("Inner SEI reaction proportion") #0.5
+        alpha = pybamm.Parameter("Inner SEI reaction proportion")  # 0.5
         j_inner = alpha * j_sei
         j_outer = (1 - alpha) * j_sei
 
@@ -75,7 +75,7 @@ class SolventDiffusionLimited(BaseModel):
         if self.reaction_name == " sei-cracks":
             l_cr_n = variables[f"{self.domain} particle crack length"]
             dl_cr_n = variables[f"{self.domain} particle cracking rate"]
-            ratio_avg =  l_cr_n / (l_cr_n + dl_cr_n)  
+            ratio_avg = l_cr_n / (l_cr_n + dl_cr_n)
         else:
             ratio_avg = 1
         v_bar = self.param.v_bar
@@ -85,7 +85,8 @@ class SolventDiffusionLimited(BaseModel):
 
         self.rhs = {
             L_inner: -Gamma_SEI * j_inner / ratio_avg - L_inner * (1 - ratio_avg),
-            L_outer: -v_bar * Gamma_SEI * j_outer / ratio_avg - L_outer * (1 - ratio_avg),
+            L_outer: -v_bar * Gamma_SEI * j_outer / ratio_avg
+            - L_outer * (1 - ratio_avg),
         }
 
     def set_initial_conditions(self, variables):

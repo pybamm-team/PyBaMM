@@ -61,7 +61,8 @@ class CrackPropagation(BaseCracking):
         variables.update(
             {
                 self.domain + " particle cracking rate": dl_cr_n,
-                "X-averaged " + self.domain.lower() 
+                "X-averaged "
+                + self.domain.lower()
                 + " particle cracking rate": pybamm.x_average(dl_cr_n),
             }
         )

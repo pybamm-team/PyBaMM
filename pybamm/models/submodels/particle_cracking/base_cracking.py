@@ -19,7 +19,7 @@ class BaseCracking(pybamm.BaseSubModel):
         self.domain = domain
         super().__init__(param)
 
-    def _get_standard_variables(self,l_cr_n):
+    def _get_standard_variables(self, l_cr_n):
         domain = self.domain.lower() + " particle"
         if self.domain == "Positive":
             l_cr_n0 = pybamm.mechanical_parameters.l_cr_p_0
