@@ -19,21 +19,8 @@ class BaseCracking(pybamm.BaseSubModel):
         self.domain = domain
         super().__init__(param)
 
-    def get_standard_variables(self):
-        l_cr_n = pybamm.Variable(
-            self.domain + " particle crack length",
-            domain=self.domain.lower() + " electrode",
-        )
-        # crack length in anode particles
-        l_cr_n_dim = pybamm.Variable(
-            self.domain + " particle crack length [m]",
-            domain=self.domain.lower() + " electrode",
-        )
+    def _get_standard_variables(self,l_cr_n):
         domain = self.domain.lower() + " particle"
-        L_cr_n_av = pybamm.Variable(
-            f"X-averaged {domain} crack length [m]", 
-            domain="current collector"
-        )
         if self.domain == "Positive":
             l_cr_n0 = pybamm.mechanical_parameters.l_cr_p_0
         else:
@@ -92,7 +79,8 @@ class BaseCracking(pybamm.BaseSubModel):
         stress_t_n_surf = stress_t_n_surf_dim / E_n
         # stress_r_n_centre = 2.0 * Omega_n * E_n / 9.0 / (1.0 - nu_n) * (c_s_n_avg - Cs_n_centre) # noqa
         # stress_t_n_centre = 2.0 * Omega_n * E_n / 9.0 / (1.0 - nu_n) * (c_s_n_avg - Cs_n_centre) # noqa
-
+        stress_r_n_surf_av = pybamm.x_average(stress_r_n_surf)
+        stress_t_n_surf_av = pybamm.x_average(stress_t_n_surf)
         return {
             self.domain + " particle surface tangential stress": stress_t_n_surf,
             self.domain + " particle surface radial stress": stress_r_n_surf,
@@ -101,6 +89,18 @@ class BaseCracking(pybamm.BaseSubModel):
             + " particle surface tangential stress [Pa]": stress_t_n_surf_dim,
             self.domain + " particle surface radial stress [Pa]": stress_r_n_surf_dim,
             self.domain + " particle surface displacement [m]": disp_n_surf_dim,
+            "X-averaged "
+            + self.domain.lower()
+            + " particle surface radial stress": stress_r_n_surf_av,
+            "X-averaged "
+            + self.domain.lower()
+            + " particle surface radial stress [Pa]": stress_r_n_surf_av * E_n,
+            "X-averaged "
+            + self.domain.lower()
+            + " particle surface tangential stress": stress_t_n_surf_av,
+            "X-averaged "
+            + self.domain.lower()
+            + " particle surface tangential stress [Pa]": stress_t_n_surf_av * E_n,
         }
 
     def _get_standard_surface_variables(self, l_cr_n):
@@ -123,8 +123,8 @@ class BaseCracking(pybamm.BaseSubModel):
         elif self.domain == "Positive":
             a_n = pybamm.LithiumIonParameters().a_p
             R_n = pybamm.LithiumIonParameters().R_p
-        roughness =  l_cr_n * 2 * rho_cr + 1 # the ratio of cracks to normal surface
-        a_n_cr = (roughness - 1) * a_n # normalised crack surface area
+        roughness = l_cr_n * 2 * rho_cr + 1  # the ratio of cracks to normal surface
+        a_n_cr = (roughness - 1) * a_n  # normalised crack surface area
         a_n_cr_dim = a_n_cr / R_n  # crack surface area to volume ratio [m-1]
         # a_n_cr_xavg=pybamm.x_average(a_n_cr)
         roughness_xavg = pybamm.x_average(roughness)

@@ -54,3 +54,11 @@ theta_n_dim = flag_mechanics * Omega_n ** 2 / R_n * 2 / 9 * E_n * (1 - nu_n)
 
 # Dimensionless parameters
 rho_cr = rho_cr_dim * l_cr_n_0 * w_cr
+
+# Dimensionliss parameters for loss of active materials
+m_LAM_n = pybamm.Parameter("Negative electrode LAM constant m")
+beta_LAM_n = pybamm.Parameter("Negative electrode LAM constant beta")
+stress_c_n = pybamm.Parameter("Negative electrode critical stress over elastic modulus")
+m_LAM_p = pybamm.Parameter("Positive electrode LAM constant m")
+beta_LAM_p = pybamm.Parameter("Positive electrode LAM constant beta")
+stress_c_p = pybamm.Parameter("Positive electrode critical stress over elastic modulus")

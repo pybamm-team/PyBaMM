@@ -44,6 +44,7 @@ class SPM(BaseModel):
         self.set_positive_electrode_submodel()
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
+        self.set_crack_submodel()
         self.set_sei_submodel()
         self.set_loss_of_active_materials_submodels()
 
@@ -166,3 +167,19 @@ class SPM(BaseModel):
         self.submodels[
             "electrolyte diffusion"
         ] = pybamm.electrolyte_diffusion.ConstantConcentration(self.param)
+
+    def set_crack_submodel(self):
+        if self.options["particle cracking"] is False:
+            self.submodels[
+                "negative particle cracking"
+            ] = pybamm.particle_cracking.NoCracking(self.param, "Negative")
+            self.submodels[
+                "positive particle cracking"
+            ] = pybamm.particle_cracking.NoCracking(self.param, "Positive")
+        elif self.options["particle cracking"] is True:
+            self.submodels[
+                "negative particle cracking"
+            ] = pybamm.particle_cracking.CrackPropagation(self.param, "Negative")
+            self.submodels[
+                "positive particle cracking"
+            ] = pybamm.particle_cracking.CrackPropagation(self.param, "Positive")

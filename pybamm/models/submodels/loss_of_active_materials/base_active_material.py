@@ -1,5 +1,6 @@
 #
-# Base class for porosity
+# Base class for activate material
+
 #
 import pybamm
 

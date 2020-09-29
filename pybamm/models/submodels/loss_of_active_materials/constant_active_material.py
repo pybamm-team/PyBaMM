@@ -15,7 +15,7 @@ class Constant(BaseModel):
         The parameters to use for this submodel
 
 
-    **Extends:** :class:`pybamm.loss_of_active_material.BaseModel`
+    **Extends:** :class:`pybamm.loss_of_active_materials.BaseModel`
     """
 
     def get_fundamental_variables(self):
