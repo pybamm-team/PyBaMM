@@ -7,7 +7,7 @@ Total heat transfer coefficient [W.m-2.K-1],35,default,
 Ambient temperature [K],298.15,,
 ,,,
 # Electrical
-Number of electrodes connected in parallel to make a cell,1,,
+Number of electrodes connected in parallel to make a cell,34,,
 Number of cells connected in series to make a battery,1,,
 Lower voltage cut-off [V],3,,
 Upper voltage cut-off [V],4.2,,

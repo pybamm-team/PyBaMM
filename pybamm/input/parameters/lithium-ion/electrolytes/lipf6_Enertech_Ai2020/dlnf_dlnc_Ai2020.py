@@ -1,4 +1,4 @@
-def dlnf_dlnc_Ai2020(c_e, T, T_inf, t_plus):
+def dlnf_dlnc_Ai2020(c_e, T, T_ref = 298.3, t_plus = 0.38):
     """
     Activity dependence of LiPF6 in EC:DMC as a function of ion concentration.
 
@@ -15,7 +15,7 @@ def dlnf_dlnc_Ai2020(c_e, T, T_inf, t_plus):
         Dimensional electrolyte concentration, mol/m^3
     T: :class:`pybamm.Symbol`
         Dimensional temperature, K
-    T_inf: :class:`pybamm.Symbol`
+    T_ref: :class:`pybamm.Symbol`
         Dimensional reference temperature, K
     t_plus: :class:`pybamm.Symbol`
         Dimensionaless transfer number
@@ -29,6 +29,6 @@ def dlnf_dlnc_Ai2020(c_e, T, T_inf, t_plus):
     dlnf_dlnc = (
         0.601
         - 0.24 * (c_e / 1000) ** 0.5
-        + 0.982 * (1 - 0.0052 * (T - T_inf)) * (c_e / 1000) ** 1.5
+        + 0.982 * (1 - 0.0052 * (T - T_ref)) * (c_e / 1000) ** 1.5
     ) / (1 - t_plus)
     return dlnf_dlnc
