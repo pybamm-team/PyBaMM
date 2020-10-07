@@ -4,6 +4,7 @@
 import autograd
 import numbers
 import numpy as np
+from scipy import special
 import pybamm
 
 
@@ -450,3 +451,35 @@ class Arctan(SpecificFunction):
 def arctan(child):
     " Returns hyperbolic tan function of child. "
     return pybamm.simplify_if_constant(Arctan(child), keep_domains=True)
+
+
+class Erf(SpecificFunction):
+    """ Error function """
+
+    def __init__(self, child):
+        super().__init__(special.erf, child)
+
+    def _function_diff(self, children, idx):
+        """ See :meth:`pybamm.Function._function_diff()`. """
+        return 2 / np.sqrt(np.pi) * Exponential(-children[0] ** 2)
+
+
+def erf(child):
+    " Returns error function of child. "
+    return pybamm.simplify_if_constant(Erf(child), keep_domains=True)
+
+
+class Erfc(SpecificFunction):
+    """ Complementary error function """
+
+    def __init__(self, child):
+        super().__init__(1 - special.erf, child)
+
+    def _function_diff(self, children, idx):
+        """ See :meth:`pybamm.Function._function_diff()`. """
+        return -2 / np.sqrt(np.pi) * Exponential(-children[0] ** 2)
+
+
+def erfc(child):
+    " Returns complementary error function of child. "
+    return pybamm.simplify_if_constant(1 - Erf(child), keep_domains=True)

@@ -6,6 +6,7 @@ import numpy as np
 import pybamm
 import unittest
 from tests import get_mesh_for_testing, get_1p1d_discretisation_for_testing
+from scipy import special
 
 
 class TestCasadiConverter(unittest.TestCase):
@@ -116,6 +117,7 @@ class TestCasadiConverter(unittest.TestCase):
             np.cos,
             np.arccosh,
             np.arcsinh,
+            special.erf,
         ]:
             self.assert_casadi_equal(
                 pybamm.Function(np_fun, c).to_casadi(), casadi.MX(np_fun(3)), evalf=True
