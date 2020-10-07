@@ -2,6 +2,7 @@
 
 ## Features
 
+-   Added `erf` and `erfc` functions ([#1184](https://github.com/pybamm-team/PyBaMM/pull/1184))
 
 ## Optimizations
 
