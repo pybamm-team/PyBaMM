@@ -235,7 +235,7 @@ from . import experiments
 #
 # Plotting
 #
-from .plotting.quick_plot import QuickPlot, close_plots
+from .plotting.quick_plot import QuickPlot, close_plots, split_long_string
 from .plotting.plot import plot
 from .plotting.plot2D import plot2D
 from .plotting.dynamic_plot import dynamic_plot

@@ -297,8 +297,8 @@ class Symbol(anytree.NodeMixin):
             pybamm.logger.error("Please install graphviz>=2.42.2 to use dot exporter")
 
     def relabel_tree(self, symbol, counter):
-        """ Finds all children of a symbol and assigns them a new id so that they can be
-                visualised properly using the graphviz output
+        """Finds all children of a symbol and assigns them a new id so that they can be
+        visualised properly using the graphviz output
         """
         name = symbol.name
         if name == "div":
@@ -659,7 +659,8 @@ class Symbol(anytree.NodeMixin):
 
     def evaluates_to_number(self):
         """
-        Returns True if evaluating the expression returns a number.
+        Returns True if evaluating the expression returns a number, a vector of size 1,
+        or a matrix of size (1,1).
         Returns False otherwise, including if NotImplementedError or TyperError
         is raised.
         !Not to be confused with isinstance(self, pybamm.Scalar)!
@@ -669,14 +670,9 @@ class Symbol(anytree.NodeMixin):
         evaluate : evaluate the expression
 
         """
-        result = self.evaluate_ignoring_errors()
+        shape = self.shape_for_testing
 
-        if isinstance(result, numbers.Number) or (
-            isinstance(result, np.ndarray) and np.prod(result.shape) == 1
-        ):
-            return True
-        else:
-            return False
+        return np.prod(shape) == 1
 
     def evaluates_on_edges(self, dimension):
         """

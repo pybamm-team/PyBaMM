@@ -873,7 +873,12 @@ def source(left, right, boundary=False):
     if isinstance(left, numbers.Number):
         left = pybamm.PrimaryBroadcast(left, "current collector")
 
-    if left.domain != ["current collector"] or right.domain != ["current collector"]:
+    if left.domain[0] not in ["current collector", "channel"] or right.domain[
+        0
+    ] not in [
+        "current collector",
+        "channel",
+    ]:
         raise pybamm.DomainError(
             """'source' only implemented in the 'current collector' domain,
             but symbols have domains {} and {}""".format(

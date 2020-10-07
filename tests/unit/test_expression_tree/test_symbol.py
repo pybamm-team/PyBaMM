@@ -204,7 +204,7 @@ class TestSymbol(unittest.TestCase):
         self.assertTrue(a.evaluates_to_number())
 
         a = pybamm.Parameter("a")
-        self.assertFalse(a.evaluates_to_number())
+        self.assertTrue(a.evaluates_to_number())
 
         a = pybamm.Scalar(3) * pybamm.Time()
         self.assertTrue(a.evaluates_to_number())
@@ -212,6 +212,9 @@ class TestSymbol(unittest.TestCase):
         self.assertNotIsInstance(a, pybamm.Scalar)
 
         a = pybamm.Variable("a")
+        self.assertTrue(a.evaluates_to_number())
+
+        a = pybamm.Variable("a", "test domain")
         self.assertFalse(a.evaluates_to_number())
 
         a = pybamm.Scalar(3) - 2

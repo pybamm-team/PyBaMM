@@ -22,8 +22,8 @@ class InputParameter(pybamm.Symbol):
     """
 
     def __init__(self, name, domain=None):
-        # Expected shape defaults to 1
-        self._expected_size = 1
+        # Expected shape defaults to None
+        self._expected_size = None
         super().__init__(name, domain=domain)
 
     def new_copy(self):
@@ -41,7 +41,12 @@ class InputParameter(pybamm.Symbol):
         Returns the scalar 'NaN' to represent the shape of a parameter.
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
         """
-        return np.nan * np.ones((self._expected_size, 1))
+        if self._expected_size is None:
+            return pybamm.evaluate_for_shape_using_domain(
+                self.domain, self.auxiliary_domains
+            )
+        else:
+            return np.nan * np.ones((self._expected_size, 1))
 
     def _jac(self, variable):
         """ See :meth:`pybamm.Symbol._jac()`. """

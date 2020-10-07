@@ -93,6 +93,8 @@ class AlgebraicSolver(pybamm.BaseSolver):
                         t * model.timescale_eval, np.linalg.norm(out)
                     )
                 )
+                if any(np.isnan(out)):
+                    n = 1
                 return out
 
             jac = model.jac_algebraic_eval
