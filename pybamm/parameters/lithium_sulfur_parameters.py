@@ -7,15 +7,6 @@ import pybamm
 class LithiumSulfurParameters:
     """
     Standard parameters for lithium-sulfur battery models
-
-    Layout:
-        1. Dimensional Parameters
-        2. Dimensional Functions
-        3. Scalings
-        4. Dimensionless Parameters
-        5. Dimensionless Functions
-        6. Input Current
-
     """
 
     def __init__(self):
