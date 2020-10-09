@@ -206,6 +206,18 @@ class QuickPlot(object):
                     "Electrolyte potential [V]",
                     "Terminal voltage [V]",
                 ]
+            # Note: the OriginalMarinescuEtAl2016 is an instance of a
+            # pybamm.BaseModel since I wanted to leave it unchanged. It can be
+            # removed once you're happy the MarinescuEtAl2016 model works.
+            elif isinstance(
+                models[0],
+                (
+                    pybamm.lithium_sulfur.OriginalMarinescuEtAl2016,
+                    pybamm.lithium_sulfur.BaseModel,
+                ),
+            ):
+                # TODO: set other standard output variables
+                output_variables = ["Current [A]", "Terminal voltage [V]"]
 
         # Prepare dictionary of variables
         # output_variables is a list of strings or lists, e.g.

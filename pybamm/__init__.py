@@ -128,6 +128,7 @@ from .models.event import EventType
 from .models.full_battery_models.base_battery_model import BaseBatteryModel
 from .models.full_battery_models import lead_acid
 from .models.full_battery_models import lithium_ion
+from .models.full_battery_models import lithium_sulfur
 
 #
 # Submodel classes
@@ -169,6 +170,7 @@ from .parameters.electrical_parameters import ElectricalParameters
 from .parameters.thermal_parameters import ThermalParameters
 from .parameters.lithium_ion_parameters import LithiumIonParameters
 from .parameters.lead_acid_parameters import LeadAcidParameters
+from .parameters.lithium_sulfur_parameters import LithiumSulfurParameters
 from .parameters import parameter_sets
 
 
