@@ -27,7 +27,7 @@ def electrolyte_conductivity_Nyman2008(c_e, T):
         0.1297 * (c_e / 1000) ** 3 - 2.51 * (c_e / 1000) ** 1.5 + 3.329 * (c_e / 1000)
     )
 
-    E_k_e = 34700
+    E_k_e = 0   # no activation energy provided
     arrhenius = exp(E_k_e / constants.R * (1 / 298.15 - 1 / T))
 
     return sigma_e * arrhenius

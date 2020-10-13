@@ -24,7 +24,7 @@ def electrolyte_diffusivity_Nyman2008(c_e, T):
     """
 
     D_c_e = 8.794e-11 * (c_e / 1000) ** 2 - 3.972e-10 * (c_e / 1000) + 4.862e-10
-    E_D_e = 37040
+    E_D_e = 0   # no activation energy provided
     arrhenius = exp(E_D_e / constants.R * (1 / 298.15 - 1 / T))
 
     return D_c_e * arrhenius
