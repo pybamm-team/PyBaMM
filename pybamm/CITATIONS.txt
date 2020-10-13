@@ -204,3 +204,13 @@ primaryClass={physics.app-ph},
   year={2005},
   publisher={IOP Publishing}
 }
+
+@article{brosaplanella2020TSPMe,
+title={Systematic derivation and validation of reduced thermal-electrochemical for Li-ion batteries using asymptotic methods}
+journal={Submitted for publication},
+author={Brosa Planella, Ferran and Sheikh, Muhammad and Widanage, Dhammika W},
+year={2020},
+eprint={},
+archivePrefix={arXiv},
+primaryClass={},
+}

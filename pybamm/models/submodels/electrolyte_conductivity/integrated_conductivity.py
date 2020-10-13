@@ -22,6 +22,7 @@ class Integrated(BaseElectrolyteConductivity):
     """
 
     def __init__(self, param, domain=None):
+        pybamm.citations.register("brosaplanella2020TSPMe")
         super().__init__(param, domain)
 
     def _higher_order_macinnes_function(self, x):
