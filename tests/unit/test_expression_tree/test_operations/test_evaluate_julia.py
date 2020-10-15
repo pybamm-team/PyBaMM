@@ -14,7 +14,8 @@ import numpy as np
 import scipy.sparse
 from collections import OrderedDict
 
-from julia import Main
+from julia import Main, ModelingToolkit
+from diffeqpy import de
 
 
 @unittest.skip("")
@@ -326,6 +327,39 @@ class TestEvaluateMTKModel(unittest.TestCase):
         mtk_str = pybamm.get_julia_mtk_model(model)
 
         print(mtk_str)
+        Main.eval("using ModelingToolkit")
+        Main.eval(mtk_str)
+
+        tspan = (0, 10)
+        prob = de.ODEProblem(Main.sys, Main.u0, tspan)
+        sol = de.solve(prob, de.Tsit5())
+        print(sol)
+
+        Main.eval(
+            """
+        begin
+        # v -> x1
+        @variables t, x1(t)
+        @derivatives D'~t
+
+        # 'v' equation
+        var_4375622258206212481 = -2.0 .* x1
+
+        eqs = [
+        D(x1) ~ var_4375622258206212481,
+        ]
+        sys = ODESystem(eqs, t)
+
+
+        u0 = [
+        x1 => 1.0,
+        ]
+
+        prob = ODEProblem(sys, u0, (0.0,10.0))
+        sol = solve(prob)
+        end
+        """
+        )
 
 
 if __name__ == "__main__":
