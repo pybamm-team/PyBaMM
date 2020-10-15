@@ -115,7 +115,10 @@ if system() != "Windows":
 from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
 from .expression_tree.operations.unpack_symbols import SymbolUnpacker
-from .expression_tree.operations.evaluate_julia import get_julia_function
+from .expression_tree.operations.evaluate_julia import (
+    get_julia_function,
+    get_julia_mtk_model,
+)
 
 #
 # Model classes

@@ -17,6 +17,7 @@ from collections import OrderedDict
 from julia import Main
 
 
+@unittest.skip("")
 class TestEvaluate(unittest.TestCase):
     def test_evaluator_julia(self):
         a = pybamm.StateVector(slice(0, 1))
@@ -313,6 +314,18 @@ class TestEvaluate(unittest.TestCase):
                 np.testing.assert_almost_equal(
                     result, expr.evaluate(y=y_test).flatten()
                 )
+
+
+class TestEvaluateMTKModel(unittest.TestCase):
+    def test_exponential_decay_model(self):
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        model.rhs = {v: -2 * v}
+        model.initial_conditions = {v: 1}
+
+        mtk_str = pybamm.get_julia_mtk_model(model)
+
+        print(mtk_str)
 
 
 if __name__ == "__main__":

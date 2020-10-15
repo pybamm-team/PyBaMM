@@ -25,7 +25,7 @@ def id_to_julia_variable(symbol_id, constant=False):
     return var_format.format(symbol_id).replace("-", "m")
 
 
-def find_symbols(symbol, constant_symbols, variable_symbols, to_dense=False):
+def find_symbols(symbol, constant_symbols, variable_symbols):
     """
     This function converts an expression tree to a dictionary of node id's and strings
     specifying valid julia code to calculate that nodes value, given y and t.
@@ -45,14 +45,11 @@ def find_symbols(symbol, constant_symbols, variable_symbols, to_dense=False):
     symbol : :class:`pybamm.Symbol`
         The symbol or expression tree to convert
 
-    constant_symbol: collections.OrderedDict
+    constant_symbol : collections.OrderedDict
         The output dictionary of constant symbol ids to lines of code
 
-    variable_symbol: collections.OrderedDict
+    variable_symbol : collections.OrderedDict
         The output dictionary of variable (with y or t) symbol ids to lines of code
-
-    to_dense: bool
-        If True, all constants and expressions are converted to using dense matrices
 
     """
     if symbol.is_constant():
@@ -81,7 +78,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols, to_dense=False):
                 constant_symbols[symbol.id] = value[0, 0]
             elif value.shape[1] == 1:
                 # Set print options large enough to avoid ellipsis
-                # at least as big is len(row) = len(col) = len(data)
+                # at least as big as len(row) = len(col) = len(data)
                 np.set_printoptions(
                     threshold=max(
                         np.get_printoptions()["threshold"], value.shape[0] + 10
@@ -97,7 +94,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols, to_dense=False):
 
     # process children recursively
     for child in symbol.children:
-        find_symbols(child, constant_symbols, variable_symbols, to_dense)
+        find_symbols(child, constant_symbols, variable_symbols)
 
     # calculate the variable names that will hold the result of calculating the
     # children variables
@@ -213,6 +210,10 @@ def find_symbols(symbol, constant_symbols, variable_symbols, to_dense=False):
     elif isinstance(symbol, pybamm.InputParameter):
         symbol_str = "inputs['{}']".format(symbol.name)
 
+    elif isinstance(symbol, pybamm.Variable):
+        # No need to do anything if a Variable is found
+        return
+
     else:
         raise NotImplementedError(
             "Conversion to Julia not implemented for a symbol of type '{}'".format(
@@ -223,7 +224,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols, to_dense=False):
     variable_symbols[symbol.id] = symbol_str
 
 
-def to_julia(symbol, debug=False, to_dense=False):
+def to_julia(symbol, debug=False):
     """
     This function converts an expression tree into a dict of constant input values, and
     valid julia code that acts like the tree's :func:`pybamm.Symbol.evaluate` function
@@ -233,24 +234,19 @@ def to_julia(symbol, debug=False, to_dense=False):
     symbol : :class:`pybamm.Symbol`
         The symbol to convert to julia code
 
-    debug : bool
-        If set to True, the function also emits debug code
-
     Returns
     -------
-    collections.OrderedDict:
+    constant_values : collections.OrderedDict
         dict mapping node id to a constant value. Represents all the constant nodes in
         the expression tree
-    str:
+    str
         valid julia code that will evaluate all the variable nodes in the tree.
-    to_dense: bool
-        If True, all constants and expressions are converted to using dense matrices
 
     """
 
     constant_values = OrderedDict()
     variable_symbols = OrderedDict()
-    find_symbols(symbol, constant_values, variable_symbols, to_dense)
+    find_symbols(symbol, constant_values, variable_symbols)
 
     line_format = "{} = {}"
 
@@ -320,3 +316,103 @@ def get_julia_function(symbol):
 
     return julia_str
 
+
+def get_julia_mtk_model(model):
+    """
+    Converts a pybamm model into a Julia ModelingToolkit model
+
+    Parameters
+    ----------
+    model : :class:`pybamm.BaseModel`
+        The model to be converted
+
+    Returns
+    -------
+    mtk_str : str
+        String of julia code representing a model in MTK,
+        to be evaluated by ``julia.Main.eval``
+    """
+
+    # Define variables
+    # Returns something like "@variables t, x1(t), x2(t)"
+    variables = {var.id: f"x{i+1}" for i, var in enumerate(model.rhs.keys())}
+    mtk_str = "@variables t"
+    for var in variables.values():
+        mtk_str += f", {var}(t)"
+    mtk_str += "\n\n"
+
+    # Define derivatives
+    mtk_str += "@derivatives D'~t\n\n"
+
+    # Define equations
+    all_eqns_str = ""
+    all_constants_str = ""
+    all_julia_str = ""
+    for var, eqn in model.rhs.items():
+        constants, julia_str = to_julia(eqn, debug=False)
+
+        # extract constants in generated function
+        for eqn_id, const_value in constants.items():
+            const_name = id_to_julia_variable(eqn_id, True)
+            all_constants_str += "{} = {}\n".format(const_name, const_value)
+
+        # add a comment labeling the equation, and the equation itself
+        all_julia_str += f"# '{var.name}' equation\n" + julia_str + "\n"
+
+        # calculate the final variable that will output the result
+        result_var = id_to_julia_variable(eqn.id, eqn.is_constant())
+        if eqn.is_constant():
+            result_value = eqn.evaluate()
+
+        # define the variable that goes into the equation
+        if eqn.is_constant() and isinstance(result_value, numbers.Number):
+            eqn_str = str(result_value)
+        else:
+            eqn_str = result_var
+
+        all_eqns_str += f"\tD({variables[var.id]}) ~ {eqn_str},\n"
+
+    # Replace variables in the julia strings that correspond to pybamm variables with
+    # their julia equivalent
+    for var_id, julia_id in variables.items():
+        all_julia_str = all_julia_str.replace(
+            id_to_julia_variable(var_id, False), julia_id
+        )
+
+    # Update the MTK string
+    mtk_str += all_constants_str + all_julia_str + "\n" + f"eqs = [\n{all_eqns_str}]\n"
+
+    # Create ODESystem
+    mtk_str += "sys = ODESystem(eqs, t)\n"
+
+    # Create initial conditions
+    all_ics_str = ""
+    all_constants_str = ""
+    all_julia_str = ""
+    for var, eqn in model.initial_conditions.items():
+        constants, julia_str = to_julia(eqn, debug=False)
+
+        # extract constants in generated function
+        for eqn_id, const_value in constants.items():
+            const_name = id_to_julia_variable(eqn_id, True)
+            all_constants_str += "{} = {}\n".format(const_name, const_value)
+
+        # add a comment labeling the equation, and the equation itself
+        all_julia_str += f"# '{var.name}' initial conditions\n" + julia_str + "\n"
+
+        # calculate the final variable that will output the result
+        result_var = id_to_julia_variable(eqn.id, eqn.is_constant())
+        if eqn.is_constant():
+            result_value = eqn.evaluate()
+
+        # define the variable that goes into the equation
+        if eqn.is_constant() and isinstance(result_value, numbers.Number):
+            eqn_str = str(result_value)
+        else:
+            raise pybamm.ModelError
+
+        all_ics_str += f"\t{variables[var.id]} => {eqn_str},\n"
+
+    mtk_str += all_constants_str + all_julia_str + "\n" + f"u0 = [\n{all_ics_str}]\n"
+
+    return mtk_str
