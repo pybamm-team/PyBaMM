@@ -332,14 +332,18 @@ def get_julia_mtk_model(model):
         String of julia code representing a model in MTK,
         to be evaluated by ``julia.Main.eval``
     """
-
+    mtk_str = "begin\n"
     # Define variables
-    # Returns something like "@variables t, x1(t), x2(t)"
     variables = {var.id: f"x{i+1}" for i, var in enumerate(model.rhs.keys())}
-    mtk_str = "@variables t"
+
+    # Add a comment with the variable names
+    for var in model.rhs.keys():
+        mtk_str += f"# {var.name} -> {variables[var.id]}\n"
+    # Returns something like "@variables t, x1(t), x2(t)"
+    mtk_str += "@variables t"
     for var in variables.values():
         mtk_str += f", {var}(t)"
-    mtk_str += "\n\n"
+    mtk_str += "\n"
 
     # Define derivatives
     mtk_str += "@derivatives D'~t\n\n"
@@ -357,7 +361,10 @@ def get_julia_mtk_model(model):
             all_constants_str += "{} = {}\n".format(const_name, const_value)
 
         # add a comment labeling the equation, and the equation itself
-        all_julia_str += f"# '{var.name}' equation\n" + julia_str + "\n"
+        if julia_str == "":
+            all_julia_str = ""
+        else:
+            all_julia_str += f"# '{var.name}' equation\n" + julia_str + "\n"
 
         # calculate the final variable that will output the result
         result_var = id_to_julia_variable(eqn.id, eqn.is_constant())
@@ -370,7 +377,7 @@ def get_julia_mtk_model(model):
         else:
             eqn_str = result_var
 
-        all_eqns_str += f"\tD({variables[var.id]}) ~ {eqn_str},\n"
+        all_eqns_str += f"   D({variables[var.id]}) ~ {eqn_str},\n"
 
     # Replace variables in the julia strings that correspond to pybamm variables with
     # their julia equivalent
@@ -383,7 +390,7 @@ def get_julia_mtk_model(model):
     mtk_str += all_constants_str + all_julia_str + "\n" + f"eqs = [\n{all_eqns_str}]\n"
 
     # Create ODESystem
-    mtk_str += "sys = ODESystem(eqs, t)\n"
+    mtk_str += "sys = ODESystem(eqs, t)\n\n"
 
     # Create initial conditions
     all_ics_str = ""
@@ -398,7 +405,10 @@ def get_julia_mtk_model(model):
             all_constants_str += "{} = {}\n".format(const_name, const_value)
 
         # add a comment labeling the equation, and the equation itself
-        all_julia_str += f"# '{var.name}' initial conditions\n" + julia_str + "\n"
+        if julia_str == "":
+            all_julia_str = ""
+        else:
+            all_julia_str += f"# '{var.name}' initial conditions\n" + julia_str + "\n"
 
         # calculate the final variable that will output the result
         result_var = id_to_julia_variable(eqn.id, eqn.is_constant())
@@ -411,8 +421,10 @@ def get_julia_mtk_model(model):
         else:
             raise pybamm.ModelError
 
-        all_ics_str += f"\t{variables[var.id]} => {eqn_str},\n"
+        all_ics_str += f"   {variables[var.id]} => {eqn_str},\n"
 
     mtk_str += all_constants_str + all_julia_str + "\n" + f"u0 = [\n{all_ics_str}]\n"
+
+    mtk_str += "end\n"
 
     return mtk_str

@@ -10,8 +10,11 @@ import importlib
 
 idaklu_spec = importlib.util.find_spec("idaklu")
 if idaklu_spec is not None:
-    idaklu = importlib.util.module_from_spec(idaklu_spec)
-    idaklu_spec.loader.exec_module(idaklu)
+    try:
+        idaklu = importlib.util.module_from_spec(idaklu_spec)
+        idaklu_spec.loader.exec_module(idaklu)
+    except ImportError:
+        idaklu_spec = None
 
 
 def have_idaklu():
