@@ -14,11 +14,9 @@ import numpy as np
 import scipy.sparse
 from collections import OrderedDict
 
-from julia import Main, ModelingToolkit
-from diffeqpy import de
+from julia import Main
 
 
-@unittest.skip("")
 class TestEvaluate(unittest.TestCase):
     def test_evaluator_julia(self):
         a = pybamm.StateVector(slice(0, 1))
@@ -315,51 +313,6 @@ class TestEvaluate(unittest.TestCase):
                 np.testing.assert_almost_equal(
                     result, expr.evaluate(y=y_test).flatten()
                 )
-
-
-class TestEvaluateMTKModel(unittest.TestCase):
-    def test_exponential_decay_model(self):
-        model = pybamm.BaseModel()
-        v = pybamm.Variable("v")
-        model.rhs = {v: -2 * v}
-        model.initial_conditions = {v: 1}
-
-        mtk_str = pybamm.get_julia_mtk_model(model)
-
-        print(mtk_str)
-        Main.eval("using ModelingToolkit")
-        Main.eval(mtk_str)
-
-        tspan = (0, 10)
-        prob = de.ODEProblem(Main.sys, Main.u0, tspan)
-        sol = de.solve(prob, de.Tsit5())
-        print(sol)
-
-        Main.eval(
-            """
-        begin
-        # v -> x1
-        @variables t, x1(t)
-        @derivatives D'~t
-
-        # 'v' equation
-        var_4375622258206212481 = -2.0 .* x1
-
-        eqs = [
-        D(x1) ~ var_4375622258206212481,
-        ]
-        sys = ODESystem(eqs, t)
-
-
-        u0 = [
-        x1 => 1.0,
-        ]
-
-        prob = ODEProblem(sys, u0, (0.0,10.0))
-        sol = solve(prob)
-        end
-        """
-        )
 
 
 if __name__ == "__main__":

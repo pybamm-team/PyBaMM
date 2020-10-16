@@ -342,7 +342,13 @@ def get_julia_mtk_model(model):
     # Returns something like "@variables t, x1(t), x2(t)"
     mtk_str += "@variables t"
     for var in variables.values():
-        mtk_str += f", {var}(t)"
+        mtk_str += f" {var}(t)"
+    mtk_str += "\n"
+
+    # Define parameters
+    mtk_str += "@parameters"
+    for param in model.input_parameters:
+        mtk_str += f" {param.name}"
     mtk_str += "\n"
 
     # Define derivatives
@@ -384,6 +390,18 @@ def get_julia_mtk_model(model):
     for var_id, julia_id in variables.items():
         all_julia_str = all_julia_str.replace(
             id_to_julia_variable(var_id, False), julia_id
+        )
+
+    # Replace parameters in the julia strings in the form "inputs[name]"
+    # with just "name"
+    for param in model.input_parameters:
+        # Replace 'var_id' with 'paran.name'
+        all_julia_str = all_julia_str.replace(
+            id_to_julia_variable(param.id, False), param.name
+        )
+        # Remove the line where the variable is re-defined
+        all_julia_str = all_julia_str.replace(
+            f"{param.name} = inputs['{param.name}']\n", ""
         )
 
     # Update the MTK string
