@@ -128,7 +128,6 @@ class TestCasadiConverter(unittest.TestCase):
             np.cos,
             np.arccosh,
             np.arcsinh,
-            special.erf,
         ]:
             self.assert_casadi_equal(
                 pybamm.Function(np_fun, c).to_casadi(), casadi.MX(np_fun(3)), evalf=True
