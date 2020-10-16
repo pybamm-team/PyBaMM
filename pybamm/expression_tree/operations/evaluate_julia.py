@@ -333,22 +333,24 @@ def get_julia_mtk_model(model):
         to be evaluated by ``julia.Main.eval``
     """
     mtk_str = "begin\n"
-    # Define variables
-    variables = {var.id: f"x{i+1}" for i, var in enumerate(model.rhs.keys())}
-
-    # Add a comment with the variable names
-    for var in model.rhs.keys():
-        mtk_str += f"# {var.name} -> {variables[var.id]}\n"
-    # Returns something like "@variables t, x1(t), x2(t)"
-    mtk_str += "@variables t"
-    for var in variables.values():
-        mtk_str += f" {var}(t)"
-    mtk_str += "\n"
-
     # Define parameters
-    mtk_str += "@parameters"
+    # Makes a line of the form '@parameters t a b c d'
+    mtk_str += "@parameters t"
     for param in model.input_parameters:
         mtk_str += f" {param.name}"
+    mtk_str += "\n"
+
+    # Define variables
+    variables = {**model.rhs, **model.algebraic}.keys()
+    variable_id_to_number = {var.id: f"x{i+1}" for i, var in enumerate(variables)}
+
+    # Add a comment with the variable names
+    for var in variables:
+        mtk_str += f"# {var.name} -> {variable_id_to_number[var.id]}\n"
+    # Makes a line of the form '@variables x1(t) x2(t)'
+    mtk_str += "@variables"
+    for var in variable_id_to_number.values():
+        mtk_str += f" {var}(t)"
     mtk_str += "\n"
 
     # Define derivatives
@@ -358,7 +360,7 @@ def get_julia_mtk_model(model):
     all_eqns_str = ""
     all_constants_str = ""
     all_julia_str = ""
-    for var, eqn in model.rhs.items():
+    for var, eqn in {**model.rhs, **model.algebraic}.items():
         constants, julia_str = to_julia(eqn, debug=False)
 
         # extract constants in generated function
@@ -383,11 +385,14 @@ def get_julia_mtk_model(model):
         else:
             eqn_str = result_var
 
-        all_eqns_str += f"   D({variables[var.id]}) ~ {eqn_str},\n"
+        if var in model.rhs:
+            all_eqns_str += f"   D({variable_id_to_number[var.id]}) ~ {eqn_str},\n"
+        elif var in model.algebraic:
+            all_eqns_str += f"   0 ~ {eqn_str},\n"
 
     # Replace variables in the julia strings that correspond to pybamm variables with
     # their julia equivalent
-    for var_id, julia_id in variables.items():
+    for var_id, julia_id in variable_id_to_number.items():
         all_julia_str = all_julia_str.replace(
             id_to_julia_variable(var_id, False), julia_id
         )
@@ -439,7 +444,7 @@ def get_julia_mtk_model(model):
         else:
             raise pybamm.ModelError
 
-        all_ics_str += f"   {variables[var.id]} => {eqn_str},\n"
+        all_ics_str += f"   {variable_id_to_number[var.id]} => {eqn_str},\n"
 
     mtk_str += all_constants_str + all_julia_str + "\n" + f"u0 = [\n{all_ics_str}]\n"
 
