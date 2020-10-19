@@ -8,7 +8,6 @@ jobs:
   build-wheels:
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
       matrix:
         os: [macos-latest]
         python-version: [3.6, 3.7, 3.8]
