@@ -85,9 +85,7 @@ jobs:
         
     - name: Install and run coverage
       if: success() && (matrix.os == 'ubuntu-latest' && matrix.python-version == 3.7)
-      run: |
-        tox -e coverage
-        coverage xml
+      run: tox -e coverage
 
     - name: Upload coverage report
       if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.7
