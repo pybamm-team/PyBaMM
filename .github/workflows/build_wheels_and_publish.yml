@@ -2,7 +2,7 @@ name: Build and deployment
 
 on:
   push:
-    branches: master
+    branches: build_wheel_py38
 
 jobs:
   build-wheels:
