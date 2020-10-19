@@ -54,7 +54,7 @@ jobs:
         path: dist
 
 
-  publish-pypi:
+  publish-pyi:
     name: Upload wheels to PyPI 
     needs: build-wheels
     runs-on: ubuntu-latest
@@ -68,6 +68,5 @@ jobs:
         uses: pypa/gh-action-pypi-publish@master
         with:
           user: __token__
-          password: ${{ secrets.TESTPYPI_TOKEN }}
-          repository_url: https://test.pypi.org/legacy/
+          password: ${{ secrets.PYPI_TOKEN }}
 
