@@ -58,3 +58,21 @@ class LithiumSulfurParameters:
         self.dimensional_current_with_time = pybamm.FunctionParameter(
             "Current function [A]", {"Time[s]": pybamm.t * self.timescale}
         )
+
+        # Initial conditions defined as parameter objects
+        self.S8_initial = pybamm.Parameter("Initial Condition for S8 ion [g]")
+        self.S4_initial = pybamm.Parameter("Initial Condition for S4 ion [g]")
+        self.S2_initial = pybamm.Parameter("Initial Condition for S2 ion [g]")
+        self.S_initial = pybamm.Parameter("Initial Condition for S ion [g]")
+        self.Sp_initial = pybamm.Parameter(
+            "Initial Condition for Precipitated Sulfur [g]"
+        )
+        self.V_initial = pybamm.Parameter("Initial Condition for Terminal Voltage [V]")
+
+        # Standard charge initial conditions
+        # self.S8_initial_charge = 7.701508424389238e-12
+        # self.S4_initial_charge = 0.004128610073594744
+        # self.S2_initial_charge = 1.3492829940762894
+        # self.S_initial_charge = 0.00012808077128429035
+        # self.Sp_initial_charge = 1.3464603150711534
+        # self.V_initial_charge = 2.254181286879344
