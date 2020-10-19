@@ -27,7 +27,7 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       uses: './build_manylinux_wheels'
       with:
-        python-versions: "cp36-cp36m cp37-cp37m cp38-38"
+        python-versions: "cp36-cp36m cp37-cp37m cp38-cp38"
 
     - name: Install standard python dependencies
       if: matrix.os != 'ubuntu-latest'
