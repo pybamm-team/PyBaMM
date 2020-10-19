@@ -181,7 +181,8 @@ class BaseModel(BaseInterface):
                     + " electrode EC surface concentration": c_ec_av,
                     "X-averaged "
                     + self.domain.lower()
-                    + " electrode EC surface concentration": c_ec_av * n_outer_scale,
+                    + " electrode EC surface concentration [mol.m-3]": c_ec_av
+                    * n_outer_scale,
                 }
             )
 

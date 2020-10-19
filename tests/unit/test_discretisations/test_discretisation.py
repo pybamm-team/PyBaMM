@@ -1237,6 +1237,58 @@ class TestDiscretise(unittest.TestCase):
         n = disc.mesh.combine_submeshes(*a.domain).npts
         self.assertEqual(a_disc._expected_size, n)
 
+    def test_bc_symmetry(self):
+        # define model
+        model = pybamm.BaseModel()
+        c = pybamm.Variable("Concentration", domain="negative particle")
+        N = -pybamm.grad(c)
+        dcdt = -pybamm.div(N)
+        model.rhs = {c: dcdt}
+
+        # initial conditions
+        model.initial_conditions = {c: pybamm.Scalar(1)}
+
+        # define geometry
+        r = pybamm.SpatialVariable(
+            "r", domain=["negative particle"], coord_sys="spherical polar"
+        )
+        geometry = {
+            "negative particle": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
+        }
+
+        # mesh
+        submesh_types = {
+            "negative particle": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh)
+        }
+        var_pts = {r: 20}
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        spatial_methods = {"negative particle": pybamm.FiniteVolume()}
+
+        # boundary conditions (Dirichlet)
+        lbc = pybamm.Scalar(0)
+        rbc = pybamm.Scalar(2)
+        model.boundary_conditions = {
+            c: {"left": (lbc, "Dirichlet"), "right": (rbc, "Neumann")}
+        }
+
+        # discretise
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        with self.assertRaisesRegex(pybamm.ModelError, "Boundary condition at r = 0"):
+            disc.process_model(model)
+
+        # boundary conditions (non-homog Neumann)
+        lbc = pybamm.Scalar(0)
+        rbc = pybamm.Scalar(2)
+        model.boundary_conditions = {
+            c: {"left": (rbc, "Neumann"), "right": (rbc, "Neumann")}
+        }
+
+        # discretise
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        with self.assertRaisesRegex(pybamm.ModelError, "Boundary condition at r = 0"):
+            disc.process_model(model)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

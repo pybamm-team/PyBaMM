@@ -23,7 +23,9 @@ Lithium-ion parameter sets
         asymptotic derivation of a single particle model with electrolyte.” Journal of
         the Electrochemical Society, 166(15), A3693–A3706 (2019).
     * Mohtat2020 :
-        Submitted for publication.
+        P. Mohtat, S. Lee, V. Sulzer, J. B. Siegel & A. G. Stefanopoulou. "Differential
+        Expansion and Voltage Model for Li-ion Batteries at Practical Charging Rates".
+        Journal of The Electrochemical Society, 167(11), 110561 (2020).
     * NCA_Kim2011 :
         G. H. Kim, K. Smith, K. J. Lee, S. Santhanagopalan, and A. Pesaran.
         “Multi-domain modeling of lithium-ion batteries encompassing multi-physics in
@@ -49,13 +51,13 @@ Lead-acid parameter sets
 
 Prada2013 = {
     "chemistry": "lithium-ion",
-    "cell": "LGM50_Chen2020",
+    "cell": "A123_Lain2019",
     "anode": "graphite_Chen2020",
     "separator": "separator_Chen2020",
     "cathode": "LFP_Prada2013",
     "electrolyte": "lipf6_Nyman2008",
-    "experiment": "1C_discharge_from_full_Chen2020",
-    "citation": "Chen2020",
+    "experiment": "4C_discharge_from_full_Prada2013",
+    "citation": ["Chen2020"],
 }
 
 NCA_Kim2011 = {
@@ -115,7 +117,7 @@ Mohtat2020 = {
     "electrolyte": "LiPF6_Mohtat2020",
     "experiment": "1C_charge_from_empty_Mohtat2020",
     "sei": "example",
-    "citation": "Mohtat2020",
+    "citation": "mohtat2020differential",
 }
 Ramadass2004 = {
     "chemistry": "lithium-ion",
