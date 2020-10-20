@@ -17,7 +17,7 @@ class Integrated(BaseElectrolyteConductivity):
         What kind of higher-order terms to use ('composite' or 'first-order')
     domain : str, optional
         The domain in which the model holds
-    
+
     References
     ----------
     .. [1] F. Brosa Planella, M. Sheikh, and W. D. Widanage, "Systematic derivation and
@@ -105,14 +105,8 @@ class Integrated(BaseElectrolyteConductivity):
         )
 
         integral_n = indef_integral_n
-        integral_s = (
-            indef_integral_s
-            + pybamm.boundary_value(integral_n, "right")
-        )
-        integral_p = (
-            indef_integral_p
-            + pybamm.boundary_value(integral_s, "right")
-        )
+        integral_s = indef_integral_s + pybamm.boundary_value(integral_n, "right")
+        integral_p = indef_integral_p + pybamm.boundary_value(integral_s, "right")
 
         phi_e_const = (
             -delta_phi_n_av
