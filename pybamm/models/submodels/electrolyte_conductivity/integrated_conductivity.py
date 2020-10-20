@@ -6,8 +6,9 @@ from .base_electrolyte_conductivity import BaseElectrolyteConductivity
 
 
 class Integrated(BaseElectrolyteConductivity):
-    """Integrated model for conservation of charge in the electrolyte derived from
-    integrating the Stefan-Maxwell constitutive equations [1].
+    """
+    Integrated model for conservation of charge in the electrolyte derived from
+    integrating the Stefan-Maxwell constitutive equations, from [1]_.
 
     Parameters
     ----------
@@ -25,6 +26,7 @@ class Integrated(BaseElectrolyteConductivity):
     methods," arXiv preprint, 2020.
 
     **Extends:** :class:`pybamm.electrolyte_conductivity.BaseElectrolyteConductivity`
+
     """
 
     def __init__(self, param, domain=None):
