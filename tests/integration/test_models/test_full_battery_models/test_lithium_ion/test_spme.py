@@ -124,6 +124,15 @@ class TestSPMe(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
+    def test_integrated_conductivity(self):
+        model = pybamm.lithium_ion.SPMe(build=False)
+        model.submodels[
+            "electrolyte conductivity"
+        ] = pybamm.electrolyte_conductivity.Integrated(model.param)
+        model.build_model()
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
 
 class TestSPMeWithSEI(unittest.TestCase):
     def test_well_posed_reaction_limited(self):
