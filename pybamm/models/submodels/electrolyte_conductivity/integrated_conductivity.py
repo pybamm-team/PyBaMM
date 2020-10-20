@@ -14,16 +14,16 @@ class Integrated(BaseElectrolyteConductivity):
     ----------
     param : parameter class
         The parameters to use for this submodel
-    higher_order_terms : str
-        What kind of higher-order terms to use ('composite' or 'first-order')
     domain : str, optional
         The domain in which the model holds
+    reactions : dict, optional
+        Dictionary of reaction terms
 
     References
     ----------
-    .. [1] F. Brosa Planella, M. Sheikh, and W. D. Widanage, "Systematic derivation and
-    validation of reduced thermal-electrochemical for Li-ion batteries using asymptotic
-    methods," arXiv preprint, 2020.
+    .. [1] F. Brosa Planella, M. Sheikh, and W. D. Widanage, “Systematic derivation and
+           validation of reduced thermal-electrochemical models for lithium-ion
+           batteries using asymptotic methods.” arXiv preprint, 2020.
 
     **Extends:** :class:`pybamm.electrolyte_conductivity.BaseElectrolyteConductivity`
 
