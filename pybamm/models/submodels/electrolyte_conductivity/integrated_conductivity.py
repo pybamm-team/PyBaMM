@@ -104,15 +104,13 @@ class Integrated(BaseElectrolyteConductivity):
             / param.gamma_e
         )
 
-        integral_n = indef_integral_n - pybamm.boundary_value(indef_integral_n, "left")
+        integral_n = indef_integral_n
         integral_s = (
             indef_integral_s
-            - pybamm.boundary_value(indef_integral_s, "left")
             + pybamm.boundary_value(integral_n, "right")
         )
         integral_p = (
             indef_integral_p
-            - pybamm.boundary_value(indef_integral_p, "left")
             + pybamm.boundary_value(integral_s, "right")
         )
 
