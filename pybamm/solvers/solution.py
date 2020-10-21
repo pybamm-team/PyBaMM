@@ -201,6 +201,23 @@ class _BaseSolution(object):
             self.update(key)
             return self._variables[key]
 
+    def plot(self, output_variables=None, **kwargs):
+        """
+        A method to quickly plot the outputs of the solution. Creates a
+        :class:`pybamm.QuickPlot` object (with keyword arguments 'kwargs') and
+        then calls :meth:`pybamm.QuickPlot.dynamic_plot`.
+
+        Parameters
+        ----------
+        output_variables: list, optional
+            A list of the variables to plot.
+        **kwargs
+            Additional keyword arguments passed to
+            :meth:`pybamm.QuickPlot.dynamic_plot`.
+            For a list of all possible keyword arguments see :class:`pybamm.QuickPlot`.
+        """
+        return pybamm.dynamic_plot(self, output_variables=output_variables, **kwargs)
+
     def save(self, filename):
         """Save the whole solution using pickle"""
         # No warning here if len(self.data)==0 as solution can be loaded
@@ -208,7 +225,7 @@ class _BaseSolution(object):
         with open(filename, "wb") as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 
-    def save_data(self, filename, variables=None, to_format="pickle"):
+    def save_data(self, filename, variables=None, to_format="pickle", short_names=None):
         """
         Save solution data only (raw arrays)
 
@@ -225,6 +242,11 @@ class _BaseSolution(object):
             - 'pickle' (default): creates a pickle file with the data dictionary
             - 'matlab': creates a .mat file, for loading in matlab
             - 'csv': creates a csv file (1D variables only)
+        short_names : dict, optional
+            Dictionary of shortened names to use when saving. This may be necessary when
+            saving to MATLAB, since no spaces or special characters are allowed in
+            MATLAB variable names. Note that not all the variables need to be given
+            a short name.
 
         """
         if variables is None:
@@ -243,20 +265,55 @@ class _BaseSolution(object):
                 to save.
                 """
             )
+
+        # Use any short names if provided
+        data_short_names = {}
+        short_names = short_names or {}
+        for name, var in data.items():
+            # change to short name if it exists
+            if name in short_names:
+                data_short_names[short_names[name]] = var
+            else:
+                data_short_names[name] = var
+
         if to_format == "pickle":
             with open(filename, "wb") as f:
-                pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(data_short_names, f, pickle.HIGHEST_PROTOCOL)
         elif to_format == "matlab":
-            savemat(filename, data)
+            # Check all the variable names only contain a-z, A-Z or _ or numbers
+            for name in data_short_names.keys():
+                # Check the string only contains the following ASCII:
+                # a-z (97-122)
+                # A-Z (65-90)
+                # _ (95)
+                # 0-9 (48-57) but not in the first position
+                for i, s in enumerate(name):
+                    if not (
+                        97 <= ord(s) <= 122
+                        or 65 <= ord(s) <= 90
+                        or ord(s) == 95
+                        or (i > 0 and 48 <= ord(s) <= 57)
+                    ):
+                        raise ValueError(
+                            "Invalid character '{}' found in '{}'. ".format(s, name)
+                            + "MATLAB variable names must only contain a-z, A-Z, _, "
+                            "or 0-9 (except the first position). "
+                            "Use the 'short_names' argument to pass an alternative "
+                            "variable name, e.g. \n\n"
+                            "\tsolution.save_data(filename, "
+                            "['Electrolyte concentration'], to_format='matlab, "
+                            "short_names={'Electrolyte concentration': 'c_e'})"
+                        )
+            savemat(filename, data_short_names)
         elif to_format == "csv":
-            for name, var in data.items():
+            for name, var in data_short_names.items():
                 if var.ndim >= 2:
                     raise ValueError(
                         "only 0D variables can be saved to csv, but '{}' is {}D".format(
                             name, var.ndim - 1
                         )
                     )
-            df = pd.DataFrame(data)
+            df = pd.DataFrame(data_short_names)
             df.to_csv(filename, index=False)
         else:
             raise ValueError("format '{}' not recognised".format(to_format))
