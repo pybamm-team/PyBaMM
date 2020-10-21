@@ -41,19 +41,27 @@ k_cr = pybamm.Parameter("Negative electrode Cracking rate")
 Eac_cr = pybamm.Parameter(
     "Negative electrode Activation energy for cracking rate [kJ.mol-1]"
 )  # noqa
+alpha_T_cell_dim = pybamm.Parameter("Cell thermal expansion coefficien [m.K-1]")
+n_layers = pybamm.Parameter("Number of electrodes connected in parallel to make a cell")
 
 T_ref = pybamm.LithiumIonParameters().T_ref  # [K]
-R_p = pybamm.LithiumIonParameters().R_p  # [m]
-R_n = pybamm.LithiumIonParameters().R_n  # [m]
-t0_cr = pybamm.Scalar(3600)  # typical time for one cycle [s]
+R_n = pybamm.LithiumIonParameters().R_n # [m]
+R_p = pybamm.LithiumIonParameters().R_p # [m]
+R_const = pybamm.constants.R
+c_p_max = pybamm.LithiumIonParameters().c_p_max
+c_n_max = pybamm.LithiumIonParameters().c_n_max
+T_ref = pybamm.LithiumIonParameters().T_ref
 
-theta_p_dim = flag_mechanics * Omega_p ** 2 / R_p * 2 / 9 * E_p * (1 - nu_p)
+theta_p_dim = flag_mechanics * Omega_p ** 2 / R_const * 2 / 9 * E_p / (1 - nu_p)
 # intermediate variable  [K*m^3/mol]
-theta_n_dim = flag_mechanics * Omega_n ** 2 / R_n * 2 / 9 * E_n * (1 - nu_n)
+theta_n_dim = flag_mechanics * Omega_n ** 2 / R_const * 2 / 9 * E_n / (1 - nu_n)
 # intermediate variable  [K*m^3/mol]
 
 # Dimensionless parameters
 rho_cr = rho_cr_dim * l_cr_n_0 * w_cr
+theta_p = theta_p_dim * c_p_max / T_ref
+theta_n = theta_n_dim * c_n_max / T_ref
+t0_cr = 3600/pybamm.LithiumIonParameters().timescale # nomarlised typical time for one cycle
 
 # Dimensionliss parameters for loss of active materials
 m_LAM_n = pybamm.Parameter("Negative electrode LAM constant m")

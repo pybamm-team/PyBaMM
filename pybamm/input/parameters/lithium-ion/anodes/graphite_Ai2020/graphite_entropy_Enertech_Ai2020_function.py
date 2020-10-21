@@ -18,8 +18,6 @@ def graphite_entropy_Enertech_Ai2020_function(sto, c_n_max):
 
     """
 
-    # Since the equation for LiCo2 from this ref. has the stretch factor,
-    # should this too? If not, the "bumps" in the OCV don't line up.
 
     du_dT = (
         0.001

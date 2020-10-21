@@ -91,6 +91,14 @@ class Lumped(BaseThermal):
                 + positive_tab_cooling_coefficient
                 + edge_cooling_coefficient
             )
+            emissivity_coefficient = (
+                -self.param.s_b
+                * self.param.emissivity
+                * (
+                    edge_area / cell_volume / self.param.delta
+                    + yz_cell_surface_area * 2 / cell_volume / (self.param.delta ** 2)
+                )
+            )
         elif self.geometry == "arbitrary":
             cell_surface_area = self.param.a_cooling
             cell_volume = self.param.v_cell
@@ -100,10 +108,22 @@ class Lumped(BaseThermal):
                 / cell_volume
                 / (self.param.delta ** 2)
             )
-
+            emissivity_coefficient = (
+                -self.param.s_b
+                * self.param.emissivity
+                * cell_surface_area
+                / cell_volume
+                / (self.param.delta ** 2)
+            )
         self.rhs = {
             T_vol_av: (
-                self.param.B * Q_vol_av + total_cooling_coefficient * (T_vol_av - T_amb)
+                self.param.B * Q_vol_av
+                + total_cooling_coefficient * (T_vol_av - T_amb)
+                + emissivity_coefficient
+                * (
+                    (T_vol_av * self.param.Delta_T + self.param.T_ref) ** 4
+                    - (T_amb * self.param.Delta_T + self.param.T_ref) ** 4
+                )
             )
             / (self.param.C_th * self.param.rho)
         }
