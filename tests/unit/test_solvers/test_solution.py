@@ -112,12 +112,18 @@ class TestSolution(unittest.TestCase):
 
     def test_save(self):
         model = pybamm.BaseModel()
+        model.length_scales = {"negative electrode": pybamm.Scalar(1)}
         # create both 1D and 2D variables
         c = pybamm.Variable("c")
         d = pybamm.Variable("d", domain="negative electrode")
         model.rhs = {c: -c, d: 1}
         model.initial_conditions = {c: 1, d: 2}
-        model.variables = {"c": c, "d": d, "2c": 2 * c, "c + d": c + d}
+        model.variables = {
+            "c": c,
+            "d": d,
+            "2c": 2 * c,
+            "c + d": c + d,
+        }
 
         disc = get_discretisation_for_testing()
         disc.process_model(model)
@@ -139,9 +145,16 @@ class TestSolution(unittest.TestCase):
         np.testing.assert_array_equal(solution.data["c"], data_load["c"].flatten())
         np.testing.assert_array_equal(solution.data["d"], data_load["d"])
 
-        # to matlab with bad variables name
+        # to matlab with bad variables name fails
         solution.update(["c + d"])
-        solution.save_data("test.mat", to_format="matlab")
+        with self.assertRaisesRegex(ValueError, "Invalid character"):
+            solution.save_data("test.mat", to_format="matlab")
+        # Works if providing alternative name
+        solution.save_data(
+            "test.mat", to_format="matlab", short_names={"c + d": "c_plus_d"}
+        )
+        data_load = loadmat("test.mat")
+        np.testing.assert_array_equal(solution.data["c + d"], data_load["c_plus_d"])
 
         # to csv
         with self.assertRaisesRegex(
@@ -166,29 +179,29 @@ class TestSolution(unittest.TestCase):
         np.testing.assert_array_equal(solution["c"].entries, solution_load["c"].entries)
         np.testing.assert_array_equal(solution["d"].entries, solution_load["d"].entries)
 
-    # def test_solution_evals_with_inputs(self):
-    #     model = pybamm.lithium_ion.SPM()
-    #     geometry = model.default_geometry
-    #     param = model.default_parameter_values
-    #     param.update({"Negative electrode conductivity [S.m-1]": "[input]"})
-    #     param.process_model(model)
-    #     param.process_geometry(geometry)
-    #     var = pybamm.standard_spatial_vars
-    #     var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.r_n: 10, var.r_p: 10}
-    #     spatial_methods = model.default_spatial_methods
-    #     solver = model.default_solver
-    #     sim = pybamm.Simulation(
-    #         model=model,
-    #         geometry=geometry,
-    #         parameter_values=param,
-    #         var_pts=var_pts,
-    #         spatial_methods=spatial_methods,
-    #         solver=solver,
-    #     )
-    #     inputs = {"Negative electrode conductivity [S.m-1]": 0.1}
-    #     sim.solve(t_eval=np.linspace(0, 10, 10), inputs=inputs)
-    #     time = sim.solution["Time [h]"](sim.solution.t)
-    #     self.assertEqual(len(time), 10)
+    def test_solution_evals_with_inputs(self):
+        model = pybamm.lithium_ion.SPM()
+        geometry = model.default_geometry
+        param = model.default_parameter_values
+        param.update({"Negative electrode conductivity [S.m-1]": "[input]"})
+        param.process_model(model)
+        param.process_geometry(geometry)
+        var = pybamm.standard_spatial_vars
+        var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.r_n: 10, var.r_p: 10}
+        spatial_methods = model.default_spatial_methods
+        solver = model.default_solver
+        sim = pybamm.Simulation(
+            model=model,
+            geometry=geometry,
+            parameter_values=param,
+            var_pts=var_pts,
+            spatial_methods=spatial_methods,
+            solver=solver,
+        )
+        inputs = {"Negative electrode conductivity [S.m-1]": 0.1}
+        sim.solve(t_eval=np.linspace(0, 10, 10), inputs=inputs)
+        time = sim.solution["Time [h]"](sim.solution.t)
+        self.assertEqual(len(time), 10)
 
 
 if __name__ == "__main__":
