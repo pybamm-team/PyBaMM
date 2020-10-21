@@ -5,7 +5,7 @@ import pybamm
 from .base_cracking import BaseCracking
 
 
-class NoSEI(BaseCracking):
+class NoCracking(BaseCracking):
     """
     Class for no cracking.
 
@@ -27,28 +27,16 @@ class NoSEI(BaseCracking):
             pybamm.Scalar(0), self.domain.lower() + " electrode", "current collector"
         )
         domain = self.domain.lower() + " particle"
-        zero_av = pybamm.FullBroadcast(pybamm.Scalar(0), "current collector")
-        variables = {
-            self.domain + " particle crack length [m]": zero,
-            self.domain + " particle crack length": zero,
-            f"X-averaged {domain} crack length": zero_av,
-            f"X-averaged {domain} crack length [m]": zero_av,
-        }
+        zero_av = pybamm.x_average(zero)
+        variables = self._get_standard_variables(zero)
+        variables.update(
+            {
+                self.domain + " particle cracking rate": zero,
+                "X-averaged " + self.domain + " particle cracking rate": zero_av,
+            }
+        )
         return variables
 
     def get_coupled_variables(self, variables):
-        # Update whole cell variables
-        zero = pybamm.FullBroadcast(
-            pybamm.Scalar(0), self.domain.lower() + " electrode", "current collector"
-        )
-        variables.update(
-            {
-                self.domain + " particle surface tangential stress": zero,
-                self.domain + " particle surface radial stress": zero,
-                self.domain + " particle surface displacement": zero,
-                self.domain + " particle surface tangential stress [Pa]": zero,
-                self.domain + " particle surface radial stress [Pa]": zero,
-                self.domain + " particle surface displacement [m]": zero,
-            }
-        )
+        variables.update(self._get_mechanical_results(variables))
         return variables

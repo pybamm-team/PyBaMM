@@ -25,7 +25,14 @@ class Bruggeman(BaseModel):
                 eps_n ** param.b_e_n, eps_s ** param.b_e_s, eps_p ** param.b_e_p
             )
         elif self.phase == "Electrode":
-            eps_n, eps_s, eps_p = variables["Active material volume fraction"].orphans
+            # eps_n, eps_s, eps_p = variables["Active material volume fraction"].orphans
+            eps_n = pybamm.FullBroadcast(
+                self.param.epsilon_s_n, "negative electrode", "current collector"
+            )
+            eps_s = pybamm.FullBroadcast(0, "separator", "current collector")
+            eps_p = pybamm.FullBroadcast(
+                self.param.epsilon_s_p, "positive electrode", "current collector"
+            )
             tor = pybamm.Concatenation(
                 eps_n ** param.b_s_n, eps_s ** param.b_s_s, eps_p ** param.b_s_p
             )

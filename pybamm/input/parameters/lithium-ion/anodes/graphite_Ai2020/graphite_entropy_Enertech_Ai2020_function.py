@@ -1,4 +1,4 @@
-def graphite_entropy_Enertech_Ai2020(sto, c_n_max):
+def graphite_entropy_Enertech_Ai2020_function(sto, c_n_max):
     """
         Lithium Cobalt Oxide (LiCO2) entropic change in open circuit potential (OCP) at
         a temperature of 298.15K as a function of the stochiometry. The fit is taken
@@ -18,8 +18,6 @@ def graphite_entropy_Enertech_Ai2020(sto, c_n_max):
 
     """
 
-    # Since the equation for LiCo2 from this ref. has the stretch factor,
-    # should this too? If not, the "bumps" in the OCV don't line up.
 
     du_dT = (
         0.001

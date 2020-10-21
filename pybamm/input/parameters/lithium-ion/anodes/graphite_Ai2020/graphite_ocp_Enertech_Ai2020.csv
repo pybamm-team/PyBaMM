@@ -1,5 +1,8 @@
-
-# OCP for graphite from Ai 2020 [mV K^-1]
+# OCP for graphite from Ai 2020
+# sto,ocp
+# extra point to avoid extrapolation
+0,3.5
+# experimentally measured data
 0.0005, 3
 0.00127041, 1.04
 0.00152479, 1.01

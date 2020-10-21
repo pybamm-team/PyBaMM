@@ -1,4 +1,4 @@
-from pybamm import exp, constants
+from pybamm import exp, constants, mechanical_parameters
 
 
 def lico2_diffusivity_Dualfoil1998(sto, T):
@@ -24,6 +24,9 @@ def lico2_diffusivity_Dualfoil1998(sto, T):
     """
     D_ref = 5.387 * 10 ** (-15)
     E_D_s = 5000
-    arrhenius = exp(E_D_s / constants.R * (1 / 298.15 - 1 / T))
+    T_ref = mechanical_parameters.T_ref
+    theta_p = mechanical_parameters.theta_p
+    D_ref *= (1 + theta_p * sto / T * T_ref)
+    arrhenius = exp(E_D_s / constants.R * (1 / T_ref - 1 / T))
 
     return D_ref * arrhenius

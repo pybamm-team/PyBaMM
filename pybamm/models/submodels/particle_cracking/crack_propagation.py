@@ -23,7 +23,11 @@ class CrackPropagation(BaseCracking):
         super().__init__(param, domain)
 
     def get_fundamental_variables(self):
-        return self.get_standard_variables()
+        l_cr_n = pybamm.Variable(
+            self.domain + " particle crack length",
+            domain=self.domain.lower() + " electrode",
+        )
+        return self._get_standard_variables(l_cr_n)
 
     def get_coupled_variables(self, variables):
         variables.update(self._get_mechanical_results(variables))
@@ -48,14 +52,19 @@ class CrackPropagation(BaseCracking):
             * (stress_t_surf_n >= 0)
         )
         dl_cr_n = (
-            mp.crack_flag
+            mp.flag_crack
             * k_cr_n
             * pybamm.Power(dK_SIF, mp.m_cr)
             / mp.t0_cr
             / mp.l_cr_n_0
         )
         variables.update(
-            {self.domain + " particle cracking rate": dl_cr_n}
+            {
+                self.domain + " particle cracking rate": dl_cr_n,
+                "X-averaged "
+                + self.domain.lower()
+                + " particle cracking rate": pybamm.x_average(dl_cr_n),
+            }
         )
         return variables
 

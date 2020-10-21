@@ -8,3 +8,4 @@ R = Scalar(constants.R)
 F = Scalar(constants.physical_constants["Faraday constant"][0])
 k_b = constants.physical_constants["Boltzmann constant"][0]
 q_e = constants.physical_constants["electron volt"][0]
+s_b = Scalar(constants.Stefan_Boltzmann) # W⋅m−2⋅K−4

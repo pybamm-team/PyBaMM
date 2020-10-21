@@ -47,6 +47,7 @@ class SPMe(BaseModel):
         self.set_positive_electrode_submodel()
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
+        self.set_crack_submodel()
         self.set_sei_submodel()
 
         if build:
@@ -60,6 +61,7 @@ class SPMe(BaseModel):
             self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
         elif self.options["sei porosity change"] is True:
             self.submodels["porosity"] = pybamm.porosity.LeadingOrder(self.param)
+
 
     def set_convection_submodel(self):
 
@@ -142,3 +144,19 @@ class SPMe(BaseModel):
         self.submodels["electrolyte diffusion"] = pybamm.electrolyte_diffusion.Full(
             self.param
         )
+
+    def set_crack_submodel(self):
+        if self.options["particle cracking"] is False:
+            self.submodels[
+                "negative particle cracking"
+            ] = pybamm.particle_cracking.NoCracking(self.param, "Negative")
+            self.submodels[
+                "positive particle cracking"
+            ] = pybamm.particle_cracking.NoCracking(self.param, "Positive")
+        elif self.options["particle cracking"] is True:
+            self.submodels[
+                "negative particle cracking"
+            ] = pybamm.particle_cracking.CrackPropagation(self.param, "Negative")
+            self.submodels[
+                "positive particle cracking"
+            ] = pybamm.particle_cracking.CrackPropagation(self.param, "Positive")
