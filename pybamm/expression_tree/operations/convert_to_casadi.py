@@ -5,6 +5,7 @@ import pybamm
 import casadi
 import numpy as np
 from scipy.interpolate import PchipInterpolator, CubicSpline
+from scipy import special
 
 
 class CasadiConverter(object):
@@ -129,6 +130,8 @@ class CasadiConverter(object):
                 return casadi.log(*converted_children)
             elif symbol.function == np.sign:
                 return casadi.sign(*converted_children)
+            elif symbol.function == special.erf:
+                return casadi.erf(*converted_children)
             elif isinstance(symbol.function, (PchipInterpolator, CubicSpline)):
                 return casadi.interpolant("LUT", "bspline", [symbol.x], symbol.y)(
                     *converted_children
