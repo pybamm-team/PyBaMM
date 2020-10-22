@@ -1,7 +1,7 @@
 from pybamm import exp, constants, Parameter
 
 
-def LFP_electrolyte_exchage_current_density_kashkooli2017(c_e, c_s_surf, T):  # , 1
+def LFP_electrolyte_exchange_current_density_kashkooli2017(c_e, c_s_surf, T):  # , 1
     """
     Exchange-current density for Butler-Volmer reactions between LFP and electrolyte
 
