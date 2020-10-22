@@ -8,7 +8,6 @@ import numbers
 import numpy as np
 import sys
 import itertools
-import warnings
 
 
 class BaseSolver(object):
@@ -169,9 +168,9 @@ class BaseSolver(object):
         model.timescale_eval = model.timescale.evaluate(inputs=inputs)
         # Set model lengthscales
         model.length_scales_eval = {
-                domain: scale.evaluate(inputs=inputs)
-                for domain, scale in model.length_scales.items()
-            }
+            domain: scale.evaluate(inputs=inputs)
+            for domain, scale in model.length_scales.items()
+        }
         if (
             isinstance(self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver))
         ) and model.convert_to_format != "casadi":
