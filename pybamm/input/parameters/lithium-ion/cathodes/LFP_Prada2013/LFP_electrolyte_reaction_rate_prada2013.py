@@ -1,24 +1,30 @@
 from pybamm import exp, constants, Parameter
 
 
-def LFP_electrolyte_reaction_rate_prada2013(c_e, c_s_surf, T):  # , 1
+def LFP_electrolyte_exchage_current_density_kashkooli2017(c_e, c_s_surf, T):  # , 1
     """
-    Reaction rate for Butler-Volmer reactions
+    Exchange-current density for Butler-Volmer reactions between LFP and electrolyte
+
     References
     ----------
-Representative Volume Element Model of Lithium-ion Battery
-Electrodes Based on X-ray Nano-tomography
-Ali Ghorbani Kashkooli
-SAFE TEMPERATURE CONTROL OF LITHIUM ION BATTERY
-SYSTEMS FOR HIGH PERFORMANCE AND LONG LIFE
-Mayank Garg
+    .. [1] Kashkooli, A. G., Amirfazli, A., Farhad, S., Lee, D. U., Felicelli, S., Park,
+    H. W., ... & Chen, Z. (2017). Representative volume element model of lithium-ion
+    battery electrodes based on X-ray nano-tomography. Journal of Applied
+    Electrochemistry, 47(3), 281-293.
+
+    Parameters
     ----------
-    T: :class:`pybamm.Symbol`
-        Dimensional temperature
+    c_e : :class:`pybamm.Symbol`
+        Electrolyte concentration [mol.m-3]
+    c_s_surf : :class:`pybamm.Symbol`
+        Particle concentration [mol.m-3]
+    T : :class:`pybamm.Symbol`
+        Temperature [K]
+
     Returns
     -------
     :class:`pybamm.Symbol`
-        Reaction rate
+        Exchange-current density [A.m-2]
     """
 
     m_ref = 6 * 10 ** (-7)  # (A/m2)(mol/m3)**1.5 - includes ref concentrations

@@ -3,20 +3,18 @@ from pybamm import exp
 
 def LFP_ocp_ashfar2017(sto):
     """
-    exchange-current density for Butler-Volmer reactions
+    Open-circuit potential for LFP
+
     References
     ----------
+    .. [1] Afshar, S., Morris, K., & Khajepour, A. (2017). Efficient electrochemical
+    model for lithium-ion cells. arXiv preprint arXiv:1709.03970.
 
-Efficient electrochemical model for lithium-ion cells
-Sepideh Afshar, Kirsten Morris, Amir Khajepour
-
+    Parameters
     ----------
-    T: :class:`pybamm.Symbol`
-        Dimensional temperature
-    Returns
-    -------
-    :class:`pybamm.Symbol`
-        exchange-current density
+    sto : :class:`pybamm.Symbol`
+       Stochiometry of material (li-fraction)
+
     """
 
     c1 = -150 * sto
