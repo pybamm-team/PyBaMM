@@ -207,3 +207,25 @@ primaryClass={physics.app-ph},
   year={2005},
   publisher={IOP Publishing}
 }
+
+@article{lain2019design,
+  title={Design Strategies for High Power vs. High Energy Lithium Ion Cells},
+  author={Lain, Michael J and Brandon, James and Kendrick, Emma},
+  journal={Batteries},
+  volume={5},
+  number={4},
+  pages={64},
+  year={2019},
+  publisher={Multidisciplinary Digital Publishing Institute}
+}
+
+@article{prada2013simplified,
+  title={A simplified electrochemical and thermal aging model of LiFePO4-graphite Li-ion batteries: power and capacity fade simulations},
+  author={Prada, Eric and Di Domenico, D and Creff, Y and Bernard, J and Sauvant-Moynot, Val{\'e}rie and Huet, Fran{\c{c}}ois},
+  journal={Journal of The Electrochemical Society},
+  volume={160},
+  number={4},
+  pages={A616},
+  year={2013},
+  publisher={IOP Publishing}
+}
