@@ -685,6 +685,10 @@ class BaseSolver(object):
         solution.model = model
         solution.inputs = ext_and_inputs
 
+        # Copy the timescale_eval and lengthscale_evals
+        solution.timescale_eval = model.timescale_eval
+        solution.length_scales_eval = model.length_scales_eval
+
         # Identify the event that caused termination
         termination = self.get_termination_reason(solution, model.events)
 
@@ -773,6 +777,28 @@ class BaseSolver(object):
         inputs = inputs or {}
         ext_and_inputs = {**external_variables, **inputs}
 
+        # Check that any inputs that may affect the scaling have not changed
+        # Set model timescale
+        temp_timescale_eval = model.timescale.evaluate(inputs=inputs)
+        # Set model lengthscales
+        temp_length_scales_eval = {
+            domain: scale.evaluate(inputs=inputs)
+            for domain, scale in model.length_scales.items()
+        }
+        if old_solution is not None:
+            if temp_timescale_eval != old_solution.timescale_eval:
+                raise pybamm.SolverError(
+                    "The model timescale is a function of an input parameter "
+                    "and the value has changed between steps!"
+                )
+            for domain in temp_length_scales_eval.keys():
+                old_dom_eval = old_solution.length_scales_eval[domain]
+                if temp_length_scales_eval[domain] != old_dom_eval:
+                    pybamm.logger.error(
+                        "The model lengthscale is a function of an input "
+                        "parameter {} and the value has changed between "
+                        "steps!".format(domain)
+                    )
         # Run set up on first step
         if old_solution is None:
             pybamm.logger.info(
@@ -806,6 +832,10 @@ class BaseSolver(object):
         # Add model and inputs to solution
         solution.model = model
         solution.inputs = ext_and_inputs
+
+        # Copy the timescale_eval and lengthscale_evals
+        solution.timescale_eval = temp_timescale_eval
+        solution.length_scales_eval = temp_length_scales_eval
 
         # Identify the event that caused termination
         termination = self.get_termination_reason(solution, model.events)

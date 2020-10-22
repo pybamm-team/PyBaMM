@@ -70,6 +70,10 @@ class _BaseSolution(object):
         for time in t:
             self._known_evals[time] = {}
 
+        # Copy the timescale_eval and lengthscale_evals
+        self.timescale_eval = self._model.timescale_eval
+        self.length_scales_eval = self._model.length_scales_eval
+
     @property
     def t(self):
         "Times at which the solution is evaluated"
