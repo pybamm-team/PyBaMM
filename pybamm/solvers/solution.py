@@ -241,7 +241,7 @@ class _BaseSolution(object):
 
             - 'pickle' (default): creates a pickle file with the data dictionary
             - 'matlab': creates a .mat file, for loading in matlab
-            - 'csv': creates a csv file (1D variables only)
+            - 'csv': creates a csv file (0D variables only)
         short_names : dict, optional
             Dictionary of shortened names to use when saving. This may be necessary when
             saving to MATLAB, since no spaces or special characters are allowed in
