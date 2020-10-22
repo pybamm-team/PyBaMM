@@ -119,11 +119,8 @@ class TestSPMe(unittest.TestCase):
         model.check_well_posedness()
 
     def test_integrated_conductivity(self):
-        model = pybamm.lithium_ion.SPMe(build=False)
-        model.submodels[
-            "electrolyte conductivity"
-        ] = pybamm.electrolyte_conductivity.Integrated(model.param)
-        model.build_model()
+        options = {"electrolyte conductivity": "integrated"}
+        model = pybamm.lithium_ion.SPMe(options)
         model.check_well_posedness()
 
 

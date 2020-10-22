@@ -136,9 +136,21 @@ class SPMe(BaseModel):
 
     def set_electrolyte_submodel(self):
 
-        self.submodels[
-            "electrolyte conductivity"
-        ] = pybamm.electrolyte_conductivity.Composite(self.param)
+        if self.options["electrolyte conductivity"] == "composite":
+            self.submodels[
+                "electrolyte conductivity"
+            ] = pybamm.electrolyte_conductivity.Composite(self.param)
+        elif self.options["electrolyte conductivity"] == "integrated":
+            self.submodels[
+                "electrolyte conductivity"
+            ] = pybamm.electrolyte_conductivity.Integrated(self.param)
+        else:
+            raise pybamm.OptionError(
+                "electrolyte conductivity '{}' not suitable for SPMe".format(
+                    self.options["electrolyte conductivity"]
+                )
+            )
+
         self.submodels["electrolyte diffusion"] = pybamm.electrolyte_diffusion.Full(
             self.param
         )

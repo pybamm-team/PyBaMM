@@ -125,13 +125,15 @@ class TestSPMe(unittest.TestCase):
         modeltest.test_all()
 
     def test_integrated_conductivity(self):
-        model = pybamm.lithium_ion.SPMe(build=False)
-        model.submodels[
-            "electrolyte conductivity"
-        ] = pybamm.electrolyte_conductivity.Integrated(model.param)
-        model.build_model()
+        options = {"electrolyte conductivity": "integrated"}
+        model = pybamm.lithium_ion.SPMe(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
+
+    def test_electrolyte_conductivity_options(self):
+        options = {"electrolyte conductivity": "full"}
+        with self.assertRaisesRegex(pybamm.OptionError, "electrolyte conductivity"):
+            pybamm.lithium_ion.SPMe(options)
 
 
 class TestSPMeWithSEI(unittest.TestCase):
