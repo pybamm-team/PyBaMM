@@ -8,6 +8,7 @@ import numbers
 import numpy as np
 import sys
 import itertools
+import warnings
 
 
 class BaseSolver(object):
@@ -165,14 +166,12 @@ class BaseSolver(object):
         inputs = inputs or {}
 
         # Set model timescale
-        try:
-            model.timescale_eval = model.timescale.evaluate()
-        except KeyError as e:
-            raise pybamm.SolverError(
-                "The model timescale is a function of an input parameter "
-                "(original error: {})".format(e)
-            )
-
+        model.timescale_eval = model.timescale.evaluate(inputs=inputs)
+        # Set model lengthscales
+        model.length_scales_eval = {
+                domain: scale.evaluate(inputs=inputs)
+                for domain, scale in model.length_scales.items()
+            }
         if (
             isinstance(self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver))
         ) and model.convert_to_format != "casadi":
