@@ -795,8 +795,8 @@ class BaseSolver(object):
                 old_dom_eval = old_solution.length_scales_eval[domain]
                 if temp_length_scales_eval[domain] != old_dom_eval:
                     pybamm.logger.error(
-                        "The model lengthscale is a function of an input "
-                        "parameter {} and the value has changed between "
+                        "The {} domain lengthscale is a function of an input "
+                        "parameter and the value has changed between "
                         "steps!".format(domain)
                     )
         # Run set up on first step

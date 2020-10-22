@@ -70,9 +70,19 @@ class _BaseSolution(object):
         for time in t:
             self._known_evals[time] = {}
 
-        # Copy the timescale_eval and lengthscale_evals
-        self.timescale_eval = self._model.timescale_eval
-        self.length_scales_eval = self._model.length_scales_eval
+        # Copy the timescale_eval and lengthscale_evals if they exist
+        if hasattr(self._model, "timescale_eval"):
+            self.timescale_eval = self._model.timescale_eval
+        else:
+            self.timescale_eval = self._model.timescale.evaluate()
+        # self.timescale_eval = self._model.timescale_eval
+        if hasattr(self._model, "length_scales_eval"):
+            self.length_scales_eval = self._model.length_scales_eval
+        else:
+            self.length_scales_eval = {
+                domain: scale.evaluate()
+                for domain, scale in self._model.length_scales.items()
+            }
 
     @property
     def t(self):
