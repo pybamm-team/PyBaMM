@@ -138,10 +138,6 @@ class SPMe(BaseModel):
 
         surf_form = pybamm.electrolyte_conductivity.surface_potential_form
 
-        self.submodels["electrolyte diffusion"] = pybamm.electrolyte_diffusion.Full(
-            self.param
-        )
-
         if self.options["electrolyte conductivity"] not in [
             "default",
             "composite",
@@ -163,30 +159,18 @@ class SPMe(BaseModel):
                     "electrolyte conductivity"
                 ] = pybamm.electrolyte_conductivity.Integrated(self.param)
         elif self.options["surface form"] == "differential":
-            if self.options["electrolyte conductivity"] in ["default", "composite"]:
-                for domain in ["Negative", "Separator", "Positive"]:
-                    self.submodels[
-                        domain.lower() + " electrolyte conductivity"
-                    ] = surf_form.FullDifferential(self.param, domain)
-            else:
-                raise pybamm.OptionError(
-                    "electrolyte conductivity '{}' not compatible with surface form "
-                    "'{}'".format(
-                        self.options["electrolyte conductivity"],
-                        self.options["surface form"],
-                    )
+            raise NotImplementedError(
+                "surface form '{}' has not been implemented for SPMe yet".format(
+                    self.options["surface form"]
                 )
+            )
         elif self.options["surface form"] == "algebraic":
-            if self.options["electrolyte conductivity"] in ["default", "composite"]:
-                for domain in ["Negative", "Separator", "Positive"]:
-                    self.submodels[
-                        domain.lower() + " electrolyte conductivity"
-                    ] = surf_form.FullAlgebraic(self.param, domain)
-            else:
-                raise pybamm.OptionError(
-                    "electrolyte conductivity '{}' not compatible with surface form "
-                    "'{}'".format(
-                        self.options["electrolyte conductivity"],
-                        self.options["surface form"],
-                    )
+            raise NotImplementedError(
+                "surface form '{}' has not been implemented for SPMe yet".format(
+                    self.options["surface form"]
                 )
+            )
+
+        self.submodels["electrolyte diffusion"] = pybamm.electrolyte_diffusion.Full(
+            self.param
+        )
