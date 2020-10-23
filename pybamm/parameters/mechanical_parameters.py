@@ -20,6 +20,7 @@ c_p_0 = pybamm.Parameter(
     "Positive electrode Reference concentration for free of deformation [m3.mol-1]"
 )  # noqa
 Omega_p = pybamm.Parameter("Positive electrode Partial molar volume [m3.mol-1]")
+
 nu_n = pybamm.Parameter("Negative electrode Poisson's ratio")
 E_n = pybamm.Parameter("Negative electrode Young's modulus [Pa]")
 c_n_0 = pybamm.Parameter(
@@ -50,7 +51,6 @@ R_p = pybamm.LithiumIonParameters().R_p # [m]
 R_const = pybamm.constants.R
 c_p_max = pybamm.LithiumIonParameters().c_p_max
 c_n_max = pybamm.LithiumIonParameters().c_n_max
-T_ref = pybamm.LithiumIonParameters().T_ref
 
 theta_p_dim = flag_mechanics * Omega_p ** 2 / R_const * 2 / 9 * E_p / (1 - nu_p)
 # intermediate variable  [K*m^3/mol]

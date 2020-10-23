@@ -26,7 +26,6 @@ class BaseCracking(pybamm.BaseSubModel):
         else:
             l_cr_n0 = pybamm.mechanical_parameters.l_cr_n_0
         l_cr_n_av = pybamm.x_average(l_cr_n)
-        # crack length [m] in anode particles
         variables = {
             self.domain + " particle crack length [m]": l_cr_n * l_cr_n0,
             self.domain + " particle crack length": l_cr_n,
@@ -69,7 +68,7 @@ class BaseCracking(pybamm.BaseSubModel):
             eps_s_n = self.param.epsilon_s_n
             L_n = self.param.L_n
             c_init = self.param.c_n_init(1)
-            # cell_thickness_change += mp.n_layers * eps_s_n * Omega_n *c_s_n_rxav *c_scale * L_n
+            # cell_thickness_change += mp.n_layers * eps_s_n * Omega_n * (c_s_n_rxav - c_init) *c_scale * L_n
             cell_thickness_change += (
                 mp.n_layers
                 * eps_s_n
