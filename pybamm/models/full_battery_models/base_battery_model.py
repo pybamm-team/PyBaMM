@@ -198,7 +198,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "current collector": "uniform",
             "particle": "Fickian diffusion",
             "particle shape": "spherical",
-            "electrolyte conductivity": "composite",
+            "electrolyte conductivity": "default",
             "thermal": "isothermal",
             "cell geometry": None,
             "external submodels": [],
@@ -377,6 +377,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
 
         if options["electrolyte conductivity"] not in [
+            "default",
             "full",
             "leading order",
             "composite",

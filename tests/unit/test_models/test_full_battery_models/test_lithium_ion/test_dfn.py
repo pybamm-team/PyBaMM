@@ -118,6 +118,11 @@ class TestDFN(unittest.TestCase):
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()
 
+    def test_electrolyte_options(self):
+        options = {"electrolyte conductivity": "integrated"}
+        with self.assertRaisesRegex(pybamm.OptionError, "electrolyte conductivity"):
+            pybamm.lithium_ion.DFN(options)
+
 
 class TestDFNWithSEI(unittest.TestCase):
     def test_well_posed_constant(self):

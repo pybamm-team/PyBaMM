@@ -130,11 +130,6 @@ class TestSPMe(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-    def test_electrolyte_conductivity_options(self):
-        options = {"electrolyte conductivity": "full"}
-        with self.assertRaisesRegex(pybamm.OptionError, "electrolyte conductivity"):
-            pybamm.lithium_ion.SPMe(options)
-
 
 class TestSPMeWithSEI(unittest.TestCase):
     def test_well_posed_reaction_limited(self):

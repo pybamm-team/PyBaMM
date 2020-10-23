@@ -136,21 +136,57 @@ class SPMe(BaseModel):
 
     def set_electrolyte_submodel(self):
 
-        if self.options["electrolyte conductivity"] == "composite":
-            self.submodels[
-                "electrolyte conductivity"
-            ] = pybamm.electrolyte_conductivity.Composite(self.param)
-        elif self.options["electrolyte conductivity"] == "integrated":
-            self.submodels[
-                "electrolyte conductivity"
-            ] = pybamm.electrolyte_conductivity.Integrated(self.param)
-        else:
+        surf_form = pybamm.electrolyte_conductivity.surface_potential_form
+
+        self.submodels["electrolyte diffusion"] = pybamm.electrolyte_diffusion.Full(
+            self.param
+        )
+
+        if self.options["electrolyte conductivity"] not in [
+            "default",
+            "composite",
+            "integrated",
+        ]:
             raise pybamm.OptionError(
                 "electrolyte conductivity '{}' not suitable for SPMe".format(
                     self.options["electrolyte conductivity"]
                 )
             )
 
-        self.submodels["electrolyte diffusion"] = pybamm.electrolyte_diffusion.Full(
-            self.param
-        )
+        if self.options["surface form"] is False:
+            if self.options["electrolyte conductivity"] in ["default", "composite"]:
+                self.submodels[
+                    "electrolyte conductivity"
+                ] = pybamm.electrolyte_conductivity.Composite(self.param)
+            elif self.options["electrolyte conductivity"] == "integrated":
+                self.submodels[
+                    "electrolyte conductivity"
+                ] = pybamm.electrolyte_conductivity.Integrated(self.param)
+        elif self.options["surface form"] == "differential":
+            if self.options["electrolyte conductivity"] in ["default", "composite"]:
+                for domain in ["Negative", "Separator", "Positive"]:
+                    self.submodels[
+                        domain.lower() + " electrolyte conductivity"
+                    ] = surf_form.FullDifferential(self.param, domain)
+            else:
+                raise pybamm.OptionError(
+                    "electrolyte conductivity '{}' not compatible with surface form "
+                    "'{}'".format(
+                        self.options["electrolyte conductivity"],
+                        self.options["surface form"],
+                    )
+                )
+        elif self.options["surface form"] == "algebraic":
+            if self.options["electrolyte conductivity"] in ["default", "composite"]:
+                for domain in ["Negative", "Separator", "Positive"]:
+                    self.submodels[
+                        domain.lower() + " electrolyte conductivity"
+                    ] = surf_form.FullAlgebraic(self.param, domain)
+            else:
+                raise pybamm.OptionError(
+                    "electrolyte conductivity '{}' not compatible with surface form "
+                    "'{}'".format(
+                        self.options["electrolyte conductivity"],
+                        self.options["surface form"],
+                    )
+                )

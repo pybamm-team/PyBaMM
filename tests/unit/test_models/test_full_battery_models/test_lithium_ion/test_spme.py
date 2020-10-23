@@ -123,6 +123,25 @@ class TestSPMe(unittest.TestCase):
         model = pybamm.lithium_ion.SPMe(options)
         model.check_well_posedness()
 
+    def test_electrolyte_options(self):
+        options = {"electrolyte conductivity": "full"}
+        with self.assertRaisesRegex(pybamm.OptionError, "electrolyte conductivity"):
+            pybamm.lithium_ion.SPMe(options)
+
+        options = {
+            "surface form": "algebraic",
+            "electrolyte conductivity": "integrated",
+        }
+        with self.assertRaisesRegex(pybamm.OptionError, "electrolyte conductivity"):
+            pybamm.lithium_ion.SPMe(options)
+
+        options = {
+            "surface form": "differential",
+            "electrolyte conductivity": "integrated",
+        }
+        with self.assertRaisesRegex(pybamm.OptionError, "electrolyte conductivity"):
+            pybamm.lithium_ion.SPMe(options)
+
 
 class TestSPMeWithSEI(unittest.TestCase):
     def test_well_posed_reaction_limited(self):
