@@ -1,11 +1,11 @@
 #
-# Tests for LG M50 parameter set loads
+# Tests for LFP Prada 2013 parameter set
 #
 import pybamm
 import unittest
 
 
-class TestChen(unittest.TestCase):
+class TestLFPPrada2013(unittest.TestCase):
     def test_load_params(self):
         cathode = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
