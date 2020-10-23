@@ -453,9 +453,7 @@ class OriginalMarinescuEtAl2016(pybamm.BaseModel):
                 "High plateau current [A]": i_H((S8, S4, S2, S, Sp, V)),
                 "Low plateau current [A]": i_L((S8, S4, S2, S, Sp, V)),
                 "Theoretical capacity [Ah]": cth((S8, S4, S2, S, Sp, V)),
-                "Algebraic condition [-]": algebraic_condition_func(
-                    S8, S4, S2, S, Sp, V
-                ),
+                "Algebraic condition": algebraic_condition_func(S8, S4, S2, S, Sp, V),
             }
         )
 

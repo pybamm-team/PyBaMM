@@ -168,7 +168,7 @@ class xOriginalMarinescuEtAl2016(BaseModel):
                 "High plateau current [A]": i_H,
                 "Low plateau current [A]": i_L,
                 "Theoretical capacity [Ah]": cth,
-                "Algebraic condition [-]": algebraic_condition,
+                "Algebraic condition": algebraic_condition,
             }
         )
 
