@@ -173,7 +173,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
                     for child_dom, child_slice in slices.items():
                         slice_starts.append(symbol._slices[child_dom][i].start)
                         child_vectors.append(
-                            "{}[{}:{}]".format(
+                            "@view {}[{}:{}]".format(
                                 child_var, child_slice[i].start, child_slice[i].stop
                             )
                         )
@@ -194,15 +194,15 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
         indices += 1
         consecutive = np.all(indices[1:] - indices[:-1] == 1)
         if len(indices) == 1:
-            symbol_str = "y[{}]".format(indices[0])
+            symbol_str = "@view y[{}]".format(indices[0])
         elif consecutive:
             # julia does include the final value
-            symbol_str = "y[{}:{}]".format(indices[0], indices[-1])
+            symbol_str = "@view y[{}:{}]".format(indices[0], indices[-1])
         else:
             indices_array = pybamm.Array(indices)
             constant_symbols[indices_array.id] = indices
             index_name = id_to_julia_variable(indices_array.id, True)
-            symbol_str = "y[{}]".format(index_name)
+            symbol_str = "@view y[{}]".format(index_name)
 
     elif isinstance(symbol, pybamm.Time):
         symbol_str = "t"
@@ -287,20 +287,21 @@ def get_julia_function(symbol):
 
     """
 
-    constants, julia_str = to_julia(symbol, debug=False)
+    constants, var_str = to_julia(symbol, debug=False)
 
     # extract constants in generated function
+    const_str = ""
     for symbol_id, const_value in constants.items():
         const_name = id_to_julia_variable(symbol_id, True)
-        julia_str = "{} = {}\n".format(const_name, const_value) + julia_str
+        const_str = const_str + "{} = {}\n".format(const_name, const_value)
 
     # indent code
-    julia_str = "   " + julia_str
-    julia_str = julia_str.replace("\n", "\n   ")
+    var_str = "   " + var_str
+    var_str = var_str.replace("\n", "\n   ")
 
     # add function def and sparse arrays to first line
     imports = "begin\nusing SparseArrays\n"
-    julia_str = imports + "function f_pybamm(t, y, p)\n" + julia_str
+    julia_str = imports + const_str + "\nfunction f_pybamm(t, y, p)\n" + var_str
 
     # calculate the final variable that will output the result
     result_var = id_to_julia_variable(symbol.id, symbol.is_constant())
