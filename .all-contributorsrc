@@ -243,6 +243,15 @@
         "bug",
         "example"
       ]
+    },
+    {
+      "login": "dalbamont",
+      "name": "dalbamont",
+      "avatar_url": "https://avatars1.githubusercontent.com/u/19659095?v=4",
+      "profile": "https://github.com/dalbamont",
+      "contributions": [
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,
