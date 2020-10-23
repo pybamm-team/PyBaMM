@@ -6,10 +6,12 @@ models = [
     pybamm.lithium_sulfur.OriginalMarinescuEtAl2016(),
     pybamm.lithium_sulfur.MarinescuEtAl2016(),
 ]
+
 sims = []
 for model in models:
-    sim = pybamm.Simulation(model)
-    sim.solve([0, 3600])
+    solver = pybamm.CasadiSolver(mode="fast")
+    sim = pybamm.Simulation(model, solver=solver)
+    sim.solve([0, 3.06 * 3600])
     sims.append(sim)
 pybamm.dynamic_plot(sims)
 
