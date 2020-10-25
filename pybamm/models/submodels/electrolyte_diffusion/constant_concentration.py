@@ -38,3 +38,10 @@ class ConstantConcentration(BaseElectrolyteDiffusion):
 
         return variables
 
+    def get_coupled_variables(self, variables):
+        c_e = variables["Electrolyte concentration"]
+        eps = variables["Porosity"]
+
+        variables.update(self._get_total_concentration_electrolyte(c_e, eps))
+
+        return variables

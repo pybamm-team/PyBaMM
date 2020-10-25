@@ -467,6 +467,12 @@ class Symbol(anytree.NodeMixin):
             pybamm.AbsoluteValue(self), keep_domains=True
         )
 
+    def __mod__(self, other):
+        """return an :class:`Modulo` object"""
+        return pybamm.simplify_if_constant(
+            pybamm.Modulo(self, other), keep_domains=True
+        )
+
     def diff(self, variable):
         """
         Differentiate a symbol with respect to a variable. For any symbol that can be
