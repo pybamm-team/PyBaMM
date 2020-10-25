@@ -6,7 +6,7 @@ import pybamm
 import numpy as np
 import unittest
 import os
-import subprocess
+import subprocess  # nosec
 import platform
 
 
@@ -586,7 +586,7 @@ class TestBaseModel(unittest.TestCase):
         model.generate("test.c", ["a+b"])
 
         # Compile
-        subprocess.run(["gcc", "-fPIC", "-shared", "-o", "test.so", "test.c"])
+        subprocess.run(["gcc", "-fPIC", "-shared", "-o", "test.so", "test.c"])  # nosec
 
         # Read the generated functions
         x0_fn = casadi.external("x0", "./test.so")
