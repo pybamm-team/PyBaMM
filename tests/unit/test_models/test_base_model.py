@@ -645,7 +645,6 @@ class TestStandardBatteryBaseModel(unittest.TestCase):
         )
 
         # change path and try again
-        import os
 
         cwd = os.getcwd()
         os.chdir("..")
