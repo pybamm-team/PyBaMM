@@ -86,9 +86,9 @@ class BaseModel(pybamm.BaseBatteryModel):
             self.submodels["negative sei"] = pybamm.sei.SolventDiffusionLimited(
                 self.param, "Negative"
             )
-            self.submodels["negative sei on cracks"] = pybamm.sei.SEIonCracks(
-                self.param, "Negative"
-            )
+            #self.submodels["negative sei on cracks"] = pybamm.sei.SEIonCracks(
+            #    self.param, "Negative"
+            #)
         # positive electrode
         self.submodels["positive sei"] = pybamm.sei.NoSEI(self.param, "Positive")
 

@@ -41,5 +41,5 @@ Negative electrode LAM constant beta, 0,,
 Negative electrode LAM constant m, 2,,
 Negative electrode critical stress over elastic modulus, 0.001,,
 # Cell properties missing in other parameter sets
-Cell emissivity,0.95,Ai2020,estimation
-Cell thermal expansion coefficien [m.K-1], 1.1E-6,Ai2020,
+Cell emissivity,0.95,Ai 2020,estimation
+Cell thermal expansion coefficien [m.K-1], 1.1E-6,Ai 2020,

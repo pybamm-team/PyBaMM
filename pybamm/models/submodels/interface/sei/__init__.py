@@ -6,4 +6,3 @@ from .solvent_diffusion_limited import SolventDiffusionLimited
 from .electron_migration_limited import ElectronMigrationLimited
 from .interstitial_diffusion_limited import InterstitialDiffusionLimited
 from .ec_reaction_limited import EcReactionLimited
-from .sei_on_cracks import SEIonCracks
