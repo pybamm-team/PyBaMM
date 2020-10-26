@@ -569,6 +569,14 @@ class TestBaseModel(unittest.TestCase):
         np.testing.assert_array_equal(np.array(jac_alg_fn(5, 6, 7, [9, 8])), [[1, -1]])
         self.assertEqual(var_fn(6, 3, 2, [2, 7]), -1)
 
+        # Test model with external variable runs
+        model_options = {"thermal": "lumped", "external submodels": ["thermal"]}
+        model = pybamm.lithium_ion.SPMe(model_options)
+        sim = pybamm.Simulation(model)
+        sim.build()
+        variable_names = ["Volume-averaged cell temperature"]
+        out = sim.built_model.export_casadi_objects(variable_names)
+
     @unittest.skipIf(platform.system() == "Windows", "Skipped for Windows")
     def test_generate_casadi(self):
         model = pybamm.BaseModel()
