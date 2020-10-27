@@ -170,4 +170,3 @@ class BasicSPM(BaseModel):
 
     def new_copy(self, build=False):
         return pybamm.BaseModel.new_copy(self)
-

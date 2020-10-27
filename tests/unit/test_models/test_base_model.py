@@ -5,6 +5,9 @@ import casadi
 import pybamm
 import numpy as np
 import unittest
+import os
+import subprocess  # nosec
+import platform
 
 
 class TestBaseModel(unittest.TestCase):
@@ -566,6 +569,55 @@ class TestBaseModel(unittest.TestCase):
         np.testing.assert_array_equal(np.array(jac_alg_fn(5, 6, 7, [9, 8])), [[1, -1]])
         self.assertEqual(var_fn(6, 3, 2, [2, 7]), -1)
 
+        # Test model with external variable runs
+        model_options = {"thermal": "lumped", "external submodels": ["thermal"]}
+        model = pybamm.lithium_ion.SPMe(model_options)
+        sim = pybamm.Simulation(model)
+        sim.build()
+        variable_names = ["Volume-averaged cell temperature"]
+        out = sim.built_model.export_casadi_objects(variable_names)
+
+    @unittest.skipIf(platform.system() == "Windows", "Skipped for Windows")
+    def test_generate_casadi(self):
+        model = pybamm.BaseModel()
+        t = pybamm.t
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+        p = pybamm.InputParameter("p")
+        q = pybamm.InputParameter("q")
+        model.rhs = {a: -a * p}
+        model.algebraic = {b: a - b}
+        model.initial_conditions = {a: q, b: 1}
+        model.variables = {"a+b": a + b - t}
+
+        # Generate C code
+        model.generate("test.c", ["a+b"])
+
+        # Compile
+        subprocess.run(["gcc", "-fPIC", "-shared", "-o", "test.so", "test.c"])  # nosec
+
+        # Read the generated functions
+        x0_fn = casadi.external("x0", "./test.so")
+        z0_fn = casadi.external("z0", "./test.so")
+        rhs_fn = casadi.external("rhs_", "./test.so")
+        alg_fn = casadi.external("alg_", "./test.so")
+        jac_rhs_fn = casadi.external("jac_rhs", "./test.so")
+        jac_alg_fn = casadi.external("jac_alg", "./test.so")
+        var_fn = casadi.external("variables", "./test.so")
+
+        # Test that function values are as expected
+        self.assertEqual(x0_fn([0, 5]), 5)
+        self.assertEqual(z0_fn([0, 0]), 1)
+        self.assertEqual(rhs_fn(0, 3, 2, [7, 2]), -21)
+        self.assertEqual(alg_fn(0, 3, 2, [7, 2]), 1)
+        np.testing.assert_array_equal(np.array(jac_rhs_fn(5, 6, 7, [8, 9])), [[-8, 0]])
+        np.testing.assert_array_equal(np.array(jac_alg_fn(5, 6, 7, [8, 9])), [[1, -1]])
+        self.assertEqual(var_fn(6, 3, 2, [7, 2]), -1)
+
+        # Remove generated files.
+        os.remove("test.c")
+        os.remove("test.so")
+
 
 class TestStandardBatteryBaseModel(unittest.TestCase):
     def test_default_solver(self):
@@ -601,7 +653,6 @@ class TestStandardBatteryBaseModel(unittest.TestCase):
         )
 
         # change path and try again
-        import os
 
         cwd = os.getcwd()
         os.chdir("..")

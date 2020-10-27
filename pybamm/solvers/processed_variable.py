@@ -60,15 +60,12 @@ class ProcessedVariable(object):
         self.warn = warn
 
         # Set timescale
-        self.timescale = solution.model.timescale.evaluate()
+        self.timescale = solution.timescale_eval
         self.t_pts = self.t_sol * self.timescale
 
         # Store length scales
         if solution.model:
-            self.length_scales = {
-                domain: scale.evaluate()
-                for domain, scale in solution.model.length_scales.items()
-            }
+            self.length_scales = solution.length_scales_eval
 
         # Evaluate base variable at initial time
         if self.known_evals:
