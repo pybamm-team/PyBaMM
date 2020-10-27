@@ -2,15 +2,7 @@ import pybamm
 
 import numpy as np
 
-from scipy.sparse import (
-    diags,
-    eye,
-    kron,
-    csr_matrix,
-    lil_matrix,
-    coo_matrix,
-    vstack,
-)
+from scipy.sparse import diags, eye, kron, csr_matrix, lil_matrix, coo_matrix, vstack
 
 
 class SpectralVolume(pybamm.FiniteVolume):
@@ -86,7 +78,7 @@ class SpectralVolume(pybamm.FiniteVolume):
     def cv_boundary_reconstruction_sub_matrix(self):
         """
         Coefficients for reconstruction of a function through averages.
-        The resulting matrix is scale-invariant.
+        The resulting matrix is scale-invariant [2]_.
 
         Parameters
         ----------
@@ -195,7 +187,7 @@ class SpectralVolume(pybamm.FiniteVolume):
 
     def chebyshev_differentiation_matrices(self, noe, dod):
         """
-        Chebyshev differentiation matrices.
+        Chebyshev differentiation matrices [1]_.
 
         Parameters
         ----------
