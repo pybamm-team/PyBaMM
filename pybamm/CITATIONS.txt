@@ -216,6 +216,8 @@ year={2020},
 eprint={},
 archivePrefix={arXiv},
 primaryClass={},
+}
+
 @article{lain2019design,
   title={Design Strategies for High Power vs. High Energy Lithium Ion Cells},
   author={Lain, Michael J and Brandon, James and Kendrick, Emma},
