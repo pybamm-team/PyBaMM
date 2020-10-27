@@ -45,13 +45,13 @@ class BaseCracking(pybamm.BaseSubModel):
         variables : dict
         The variables of radial and tangential stresses and surface displacement
         """
-        c_s_n = variables[self.domain + " particle concentration"]
-        # c_s_n_rav = pybamm.r_average(c_s_n)  # average concentration for particles
-        c_s_n_rav = variables["R-averaged " + self.domain.lower() + " particle concentration"]
+        c_s_n_rav = variables[
+            "R-averaged " + self.domain.lower() + " particle concentration"
+        ]
         c_s_n_surf = variables[self.domain + " particle surface concentration"]
         T_xav = variables["X-averaged cell temperature"]
         c_s_n_rxav = pybamm.x_average(c_s_n_rav)
-    
+
         mp = pybamm.mechanical_parameters
         if "Cell thickness change [m]" not in variables:
             cell_thickness_change = T_xav * mp.alpha_T_cell_dim  # thermal expansion
@@ -68,7 +68,7 @@ class BaseCracking(pybamm.BaseSubModel):
             eps_s_n = self.param.epsilon_s_n
             L_n = self.param.L_n
             c_init = self.param.c_n_init(1)
-            # cell_thickness_change += mp.n_layers * eps_s_n * Omega_n * (c_s_n_rxav - c_init) *c_scale * L_n
+
             cell_thickness_change += (
                 mp.n_layers
                 * eps_s_n
@@ -167,16 +167,16 @@ class BaseCracking(pybamm.BaseSubModel):
         # to replace omega_n * c_s_n for nonlinear volume change
         # the output `t_change` is dimentionless
         #
-        p1 = 145.907211824551
-        p2 = -681.229006419332
-        p3 = 1334.44278382046
-        p4 = -1415.71022625176
-        p5 = 873.906900740570
-        p6 = -312.528233210250
-        p7 = 60.6414651271472
-        p8 = -5.70656909217242
-        p9 = 0.386655325716176
-        p10 = -4.96699807984626e-05
+        p1 = 145.907_211_824_551
+        p2 = -681.229_006_419_332
+        p3 = 1334.442_783_820_46
+        p4 = -1415.710_226_251_76
+        p5 = 873.906_900_740_570
+        p6 = -312.528_233_210_250
+        p7 = 60.641_465_127_147_2
+        p8 = -5.706_569_092_172_42
+        p9 = 0.386_655_325_716_176
+        p10 = -4.966_998_079_846_26e-05
         t_change = (
             p1 * sto ** 9
             + p2 * sto ** 8

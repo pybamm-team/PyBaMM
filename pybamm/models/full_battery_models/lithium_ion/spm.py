@@ -59,7 +59,6 @@ class SPM(BaseModel):
         elif self.options["sei porosity change"] is True:
             self.submodels["porosity"] = pybamm.porosity.LeadingOrder(self.param)
 
-
     def set_convection_submodel(self):
 
         self.submodels[

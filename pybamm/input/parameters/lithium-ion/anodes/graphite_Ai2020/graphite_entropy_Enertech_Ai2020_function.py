@@ -18,7 +18,6 @@ def graphite_entropy_Enertech_Ai2020_function(sto, c_n_max):
 
     """
 
-
     du_dT = (
         0.001
         * (

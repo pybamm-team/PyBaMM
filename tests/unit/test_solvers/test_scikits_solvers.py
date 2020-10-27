@@ -353,7 +353,7 @@ class TestScikitsSolvers(unittest.TestCase):
         ]
         for discontinuity in discontinuities:
             model.events.append(
-                pybamm.Event("nonsmooth rate", pybamm.Scalar(discontinuity),)
+                pybamm.Event("nonsmooth rate", pybamm.Scalar(discontinuity))
             )
         disc = get_discretisation_for_testing()
         disc.process_model(model)
@@ -757,7 +757,7 @@ class TestScikitsSolvers(unittest.TestCase):
         ]
         for discontinuity in discontinuities:
             model.events.append(
-                pybamm.Event("nonsmooth rate", pybamm.Scalar(discontinuity),)
+                pybamm.Event("nonsmooth rate", pybamm.Scalar(discontinuity))
             )
         disc = get_discretisation_for_testing()
         disc.process_model(model)

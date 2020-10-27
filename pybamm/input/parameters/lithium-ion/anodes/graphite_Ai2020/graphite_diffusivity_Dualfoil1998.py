@@ -28,9 +28,9 @@ def graphite_diffusivity_Dualfoil1998(sto, T):
         Solid diffusivity
    """
     theta_n = mechanical_parameters.theta_n
-    D_ref = 3.9 * 10 ** (-14) 
+    D_ref = 3.9 * 10 ** (-14)
     E_D_s = 5000
     T_ref = mechanical_parameters.T_ref
-    D_ref *= (1+ theta_n * sto / T * T_ref) # mechanical affected diffusion 
+    D_ref *= 1 + theta_n * sto / T * T_ref  # mechanical affected diffusion
     arrhenius = exp(E_D_s / constants.R * (1 / T_ref - 1 / T))
     return D_ref * arrhenius

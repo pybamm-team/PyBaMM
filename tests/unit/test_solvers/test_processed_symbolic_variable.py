@@ -132,7 +132,7 @@ class TestProcessedSymbolicVariable(unittest.TestCase):
 
         # Test values
         np.testing.assert_array_equal(
-            processed_eqn.value({"p": 27, "q": -42}), 27 * y_sol - 84,
+            processed_eqn.value({"p": 27, "q": -42}), 27 * y_sol - 84
         )
 
         # Test sensitivities
@@ -152,8 +152,7 @@ class TestProcessedSymbolicVariable(unittest.TestCase):
 
         # Test values
         np.testing.assert_array_equal(
-            processed_eqn.value({"p": 27, "q": -42}),
-            (27 * y_sol - 84).T.reshape(-1, 1),
+            processed_eqn.value({"p": 27, "q": -42}), (27 * y_sol - 84).T.reshape(-1, 1)
         )
 
         # Test sensitivities
@@ -192,7 +191,7 @@ class TestProcessedSymbolicVariable(unittest.TestCase):
         # Test values - varying p
         p = np.linspace(0, 1, n)
         np.testing.assert_array_equal(
-            processed_eqn.value({"p": p, "q": 3}), (p[:, np.newaxis] * y_sol) ** 2 + 6,
+            processed_eqn.value({"p": p, "q": 3}), (p[:, np.newaxis] * y_sol) ** 2 + 6
         )
 
         # Test sensitivities - constant p

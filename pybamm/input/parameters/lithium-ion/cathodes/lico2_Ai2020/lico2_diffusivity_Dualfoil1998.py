@@ -26,7 +26,7 @@ def lico2_diffusivity_Dualfoil1998(sto, T):
     E_D_s = 5000
     T_ref = mechanical_parameters.T_ref
     theta_p = mechanical_parameters.theta_p
-    D_ref *= (1 + theta_p * sto / T * T_ref)
+    D_ref *= 1 + theta_p * sto / T * T_ref
     arrhenius = exp(E_D_s / constants.R * (1 / T_ref - 1 / T))
 
     return D_ref * arrhenius

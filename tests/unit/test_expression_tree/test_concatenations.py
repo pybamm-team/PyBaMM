@@ -153,11 +153,11 @@ class TestConcatenations(unittest.TestCase):
         )
         # test size and shape
         self.assertEqual(
-            conc.size, mesh[b_dom[0]].npts + mesh[a_dom[0]].npts + mesh[b_dom[1]].npts,
+            conc.size, mesh[b_dom[0]].npts + mesh[a_dom[0]].npts + mesh[b_dom[1]].npts
         )
         self.assertEqual(
             conc.shape,
-            (mesh[b_dom[0]].npts + mesh[a_dom[0]].npts + mesh[b_dom[1]].npts, 1,),
+            (mesh[b_dom[0]].npts + mesh[a_dom[0]].npts + mesh[b_dom[1]].npts, 1),
         )
 
     def test_domain_concatenation_domains(self):

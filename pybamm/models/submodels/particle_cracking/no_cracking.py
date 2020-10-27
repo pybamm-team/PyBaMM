@@ -26,7 +26,6 @@ class NoCracking(BaseCracking):
         zero = pybamm.FullBroadcast(
             pybamm.Scalar(0), self.domain.lower() + " electrode", "current collector"
         )
-        domain = self.domain.lower() + " particle"
         zero_av = pybamm.x_average(zero)
         variables = self._get_standard_variables(zero)
         variables.update(

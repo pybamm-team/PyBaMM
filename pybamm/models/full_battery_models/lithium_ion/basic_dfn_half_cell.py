@@ -32,11 +32,7 @@ class BasicDFNHalfCell(BaseModel):
     **Extends:** :class:`pybamm.lithium_ion.BaseModel`
     """
 
-    def __init__(
-        self,
-        name="Doyle-Fuller-Newman half cell model",
-        options=None,
-    ):
+    def __init__(self, name="Doyle-Fuller-Newman half cell model", options=None):
         super().__init__({}, name)
         pybamm.citations.register("marquis2019asymptotic")
         # `param` is a class containing all the relevant parameters and functions for

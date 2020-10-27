@@ -46,8 +46,8 @@ alpha_T_cell_dim = pybamm.Parameter("Cell thermal expansion coefficien [m.K-1]")
 n_layers = pybamm.Parameter("Number of electrodes connected in parallel to make a cell")
 
 T_ref = pybamm.LithiumIonParameters().T_ref  # [K]
-R_n = pybamm.LithiumIonParameters().R_n # [m]
-R_p = pybamm.LithiumIonParameters().R_p # [m]
+R_n = pybamm.LithiumIonParameters().R_n  # [m]
+R_p = pybamm.LithiumIonParameters().R_p  # [m]
 R_const = pybamm.constants.R
 c_p_max = pybamm.LithiumIonParameters().c_p_max
 c_n_max = pybamm.LithiumIonParameters().c_n_max
@@ -61,6 +61,6 @@ theta_n_dim = flag_mechanics * Omega_n ** 2 / R_const * 2 / 9 * E_n / (1 - nu_n)
 rho_cr = rho_cr_dim * l_cr_n_0 * w_cr
 theta_p = theta_p_dim * c_p_max / T_ref
 theta_n = theta_n_dim * c_n_max / T_ref
-t0_cr = 3600/pybamm.LithiumIonParameters().timescale # nomarlised typical time for one cycle
-
-
+t0_cr = (
+    3600 / pybamm.LithiumIonParameters().timescale
+)  # nomarlised typical time for one cycle

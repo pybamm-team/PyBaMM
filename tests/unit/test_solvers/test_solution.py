@@ -118,12 +118,7 @@ class TestSolution(unittest.TestCase):
         d = pybamm.Variable("d", domain="negative electrode")
         model.rhs = {c: -c, d: 1}
         model.initial_conditions = {c: 1, d: 2}
-        model.variables = {
-            "c": c,
-            "d": d,
-            "2c": 2 * c,
-            "c + d": c + d,
-        }
+        model.variables = {"c": c, "d": d, "2c": 2 * c, "c + d": c + d}
 
         disc = get_discretisation_for_testing()
         disc.process_model(model)

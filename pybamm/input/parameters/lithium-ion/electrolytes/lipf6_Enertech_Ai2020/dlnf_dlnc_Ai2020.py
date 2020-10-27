@@ -1,4 +1,4 @@
-def dlnf_dlnc_Ai2020(c_e, T, T_ref = 298.3, t_plus = 0.38):
+def dlnf_dlnc_Ai2020(c_e, T, T_ref=298.3, t_plus=0.38):
     """
     Activity dependence of LiPF6 in EC:DMC as a function of ion concentration.
 

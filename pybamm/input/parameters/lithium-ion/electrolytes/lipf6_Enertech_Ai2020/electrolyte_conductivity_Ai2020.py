@@ -9,7 +9,7 @@ def electrolyte_conductivity_Ai2020(c_e, T):
     Electrochemical Thermal-Mechanical Modelling of Stress Inhomogeneity
     in Lithium-Ion Pouch Cells. Journal of The Electrochemical Society,
     167(1), 013512. DOI: 10.1149/2.0122001JES.
-    .. [2] Torchio, Marcello, et al. "Lionsimba: a matlab framework based 
+    .. [2] Torchio, Marcello, et al. "Lionsimba: a matlab framework based
     on a finite volume model suitable for li-ion battery design, simulation,
     and control." Journal of The Electrochemical Society 163.7 (2016): A1192.
 
