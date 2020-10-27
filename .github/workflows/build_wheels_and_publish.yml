@@ -2,7 +2,7 @@ name: Build and deployment
 
 on:
   push:
-    branches: master
+    branches: fix_wheels_master
 
 jobs:
   build-wheels:
@@ -68,5 +68,6 @@ jobs:
         uses: pypa/gh-action-pypi-publish@master
         with:
           user: __token__
-          password: ${{ secrets.PYPI_TOKEN }}
+          password: ${{ secrets.TEST_PYPI_TOKEN }}
+          repository_url: https://test.pypi.org/legacy/
 
