@@ -78,12 +78,15 @@ year={2019},
 publisher={The Electrochemical Society}
 }
 
-@article{Mohtat2020,
-author = {Mohtat, Peyman and Siegel, Jason B and Stefanopoulou, Anna G},
-title = {{High C-rate Differential Expansion and Voltage Model for Li-ion Batteries}},
-journal = {Submitted for publication},
-year = {2019},
-publisher={ECSarXiv}
+@article{mohtat2020differential,
+  title={Differential Expansion and Voltage Model for Li-ion Batteries at Practical Charging Rates},
+  author={Mohtat, Peyman and Lee, Suhak and Sulzer, Valentin and Siegel, Jason B and Stefanopoulou, Anna G},
+  journal={Journal of The Electrochemical Society},
+  volume={167},
+  number={11},
+  pages={110561},
+  year={2020},
+  publisher={IOP Publishing}
 }
 
 @article{scikits-odes,
@@ -213,4 +216,24 @@ year={2020},
 eprint={},
 archivePrefix={arXiv},
 primaryClass={},
+@article{lain2019design,
+  title={Design Strategies for High Power vs. High Energy Lithium Ion Cells},
+  author={Lain, Michael J and Brandon, James and Kendrick, Emma},
+  journal={Batteries},
+  volume={5},
+  number={4},
+  pages={64},
+  year={2019},
+  publisher={Multidisciplinary Digital Publishing Institute}
+}
+
+@article{prada2013simplified,
+  title={A simplified electrochemical and thermal aging model of LiFePO4-graphite Li-ion batteries: power and capacity fade simulations},
+  author={Prada, Eric and Di Domenico, D and Creff, Y and Bernard, J and Sauvant-Moynot, Val{\'e}rie and Huet, Fran{\c{c}}ois},
+  journal={Journal of The Electrochemical Society},
+  volume={160},
+  number={4},
+  pages={A616},
+  year={2013},
+  publisher={IOP Publishing}
 }
